@@ -10,6 +10,7 @@
 #include <inet6.h>
 #include <inttypes.h>
 #include <lib/abr/data.h>
+#include <log.h>
 #include <mdns.h>
 #include <netifc.h>
 #include <stdio.h>
@@ -291,7 +292,7 @@ void fb_recv(void *data, size_t len, void *saddr, uint16_t sport, uint16_t dport
     } else if (pkt->pkt_id == FASTBOOT_TYPE) {
       respond_to_fastboot_pkt(pkt, len);
     } else if (pkt->pkt_id == ERROR_TYPE) {
-      printf("got error from host: %s", (char *)(pkt->data));
+      LOG("got error from host: %s", (char *)(pkt->data));
     } else {
       // Send an error to the host.
       pkt_to_send.pkt_id = ERROR_TYPE;
@@ -300,7 +301,7 @@ void fb_recv(void *data, size_t len, void *saddr, uint16_t sport, uint16_t dport
       udp6_send((void *)&pkt_to_send,
                 FB_HDR_SIZE + strnlen((char *)pkt_to_send.data, FB_MAX_PAYLOAD_SIZE),
                 dest_addr.daddr, dest_addr.dport, dest_addr.sport);
-      printf("error: malformed type: %#02x", pkt->pkt_id);
+      ELOG("malformed type: %#02x", pkt->pkt_id);
       return;
     }
     expected_seq_num += 1;

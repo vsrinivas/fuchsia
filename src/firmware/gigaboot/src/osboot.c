@@ -11,6 +11,7 @@
 #include <inet6.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <log.h>
 #include <netifc.h>
 #include <stdio.h>
 #include <string.h>
@@ -43,7 +44,7 @@ static nbfile nbcmdline;
 static char cmdbuf[CMDLINE_MAX];
 void print_cmdline(void) {
   cmdline_to_string(cmdbuf, sizeof(cmdbuf));
-  printf("cmdline: %s\n", cmdbuf);
+  LOG("cmdline: %s", cmdbuf);
 }
 
 nbfile* netboot_get_buffer(const char* name, size_t size) {
@@ -70,13 +71,13 @@ char key_prompt(const char* valid_keys, int timeout_s) {
   if (timeout_s < INT_MAX) {
     status = gBS->CreateEvent(EVT_TIMER, 0, NULL, NULL, &timer_event);
     if (status != EFI_SUCCESS) {
-      printf("could not create event timer: %s\n", xefi_strerror(status));
+      ELOG_S(status, "could not create event timer");
       return 0;
     }
 
     status = gBS->SetTimer(timer_event, TimerPeriodic, 10000000);
     if (status != EFI_SUCCESS) {
-      printf("could not set timer: %s\n", xefi_strerror(status));
+      ELOG_S(status, "could not set timer");
       return 0;
     }
   }
@@ -88,7 +89,7 @@ char key_prompt(const char* valid_keys, int timeout_s) {
 
   char pressed = 0;
   if (timeout_s < INT_MAX) {
-    printf("Auto-boot in %ds\n", timeout_s);
+    LOG("Auto-boot in %ds", timeout_s);
   }
   do {
     int key;
@@ -109,7 +110,7 @@ char key_prompt(const char* valid_keys, int timeout_s) {
     if (timer_event != NULL && gBS->CheckEvent(timer_event) == EFI_SUCCESS) {
       timeout_s--;
       gConOut->SetCursorPosition(gConOut, col, row);
-      printf("Auto-boot in %ds\n", timeout_s);
+      LOG("Auto-boot in %ds", timeout_s);
     }
   } while (timeout_s);
 
@@ -131,12 +132,12 @@ void list_abr_info(void) {
     AbrResult result;
     result = zircon_abr_get_slot_info(i, &info);
     if (result != kAbrResultOk) {
-      printf("Failed to get zircon%s slot info: %d\n", AbrGetSlotSuffix(i), result);
+      ELOG("Failed to get zircon%s slot info: %d", AbrGetSlotSuffix(i), result);
       return;
     }
-    printf("Slot zircon%s : Bootable? %d, Successful boot? %d, Active? %d, Retry# %d\n",
-           AbrGetSlotSuffix(i), info.is_bootable, info.is_marked_successful, info.is_active,
-           info.num_tries_remaining);
+    LOG("Slot zircon%s : Bootable? %d, Successful boot? %d, Active? %d, Retry# %d",
+        AbrGetSlotSuffix(i), info.is_bootable, info.is_marked_successful, info.is_active,
+        info.num_tries_remaining);
   }
 }
 
@@ -167,7 +168,7 @@ void do_select_fb(void) {
 }
 
 void do_fastboot(efi_handle img, efi_system_table* sys, uint32_t namegen) {
-  printf("entering fastboot mode\n");
+  LOG("entering fastboot mode");
   fb_bootimg_t bootimg;
   mdns_start(namegen);
   fb_poll_next_action action = POLL;
@@ -227,7 +228,7 @@ static char netboot_cmdline[CMDLINE_MAX];
 void do_netboot(void) {
   efi_physical_addr mem = 0xFFFFFFFF;
   if (gBS->AllocatePages(AllocateMaxAddress, EfiLoaderData, KBUFSIZE / 4096, &mem)) {
-    printf("Failed to allocate network io buffer\n");
+    ELOG("Failed to allocate network io buffer");
     return;
   }
   nbzbi.data = (void*)mem;
@@ -237,7 +238,7 @@ void do_netboot(void) {
   nbcmdline.size = sizeof(netboot_cmdline);
   nbcmdline.offset = 0;
 
-  printf("\nNetBoot Server Started...\n\n");
+  LOG("NetBoot server started");
   efi_tpl prev_tpl = gBS->RaiseTPL(TPL_NOTIFY);
   while (true) {
     int n = netboot_poll();
@@ -284,19 +285,19 @@ void do_netboot(void) {
           },
       };
 
-      printf("Attempting to run EFI binary...\n");
+      LOG("Attempting to run EFI binary");
       r = gBS->LoadImage(false, gImg, (efi_device_path_protocol*)mempath, (void*)nbzbi.data,
                          nbzbi.offset, &h);
       if (EFI_ERROR(r)) {
-        printf("LoadImage Failed (%s)\n", xefi_strerror(r));
+        ELOG_S(r, "LoadImage failed");
         continue;
       }
       r = gBS->StartImage(h, &exitdatasize, NULL);
       if (EFI_ERROR(r)) {
-        printf("StartImage Failed %zu\n", r);
+        ELOG_S(r, "StartImage failed");
         continue;
       }
-      printf("\nNetBoot Server Resuming...\n");
+      LOG("NetBoot server resuming");
       continue;
     }
 
@@ -402,11 +403,11 @@ BootAction get_boot_action(bool have_network, bool have_fb) {
       if (have_network) {
         return kBootActionNetboot;
       } else {
-        printf("No network, skipping netboot and booting from disk\n");
+        LOG("No network, skipping netboot and booting from disk");
         return kBootActionDefault;
       }
     } else {
-      printf("Warning: ignoring unknown bootloader.default: '%s'\n", defboot);
+      WLOG("Ignoring unknown bootloader.default: '%s'", defboot);
     }
   }
 
@@ -461,7 +462,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   gConOut->SetAttribute(gConOut, prev_attr);
 
   if (have_fb) {
-    printf("Framebuffer base is at %" PRIx64 "\n\n", gop->Mode->FrameBufferBase);
+    LOG("Framebuffer base is at %" PRIx64, gop->Mode->FrameBufferBase);
   }
 
   // Set aside space for the kernel down at the 1MB mark up front
@@ -476,8 +477,8 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
   if (gBS->AllocatePages(AllocateAddress, EfiLoaderData, BYTES_TO_PAGES(kernel_zone_size),
                          &kernel_zone_base)) {
-    printf("boot: cannot obtain %zu bytes for kernel @ %p\n", kernel_zone_size,
-           (void*)kernel_zone_base);
+    ELOG("boot: cannot obtain %zu bytes for kernel @ %p", kernel_zone_size,
+         (void*)kernel_zone_base);
     kernel_zone_size = 0;
   }
   // HACK: Try again with a smaller size - certain platforms (ex: GCE) are unable
@@ -487,12 +488,12 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
     efi_status status = gBS->AllocatePages(AllocateAddress, EfiLoaderData,
                                            BYTES_TO_PAGES(kernel_zone_size), &kernel_zone_base);
     if (status) {
-      printf("boot: cannot obtain %zu bytes for kernel @ %p\n", kernel_zone_size,
-             (void*)kernel_zone_base);
+      ELOG("boot: cannot obtain %zu bytes for kernel @ %p", kernel_zone_size,
+           (void*)kernel_zone_base);
       kernel_zone_size = 0;
     }
   }
-  printf("KALLOC DONE\n");
+  LOG("Kernel allocation done");
 
   const char* nodename = cmdline_get("zircon.nodename", "");
   uint32_t namegen = cmdline_get_uint32("zircon.namegen", 1);
@@ -503,7 +504,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
     if (have_fb) {
       draw_nodename(netboot_nodename());
     } else {
-      printf("\nNodename: %s\n", netboot_nodename());
+      LOG("Nodename: %s", netboot_nodename());
     }
     // If nodename was set through cmdline earlier in the code path then
     // netboot_nodename will return that same value, otherwise it will
@@ -552,13 +553,13 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
     if (utf8_to_utf16((const uint8_t*)zircon_a_filename, strlen(zircon_a_filename) + 1,
                       zircon_a_wfilename, &wfilename_converted_size) == ZX_OK) {
       if (wfilename_converted_size >= sizeof(zircon_a_wfilename)) {
-        printf("Warning: bootloader.zircon-a string truncated\n");
+        WLOG("bootloader.zircon-a string truncated");
         wfilename_converted_size = sizeof(zircon_a_wfilename) - sizeof(uint16_t);
       }
       zircon_a_wfilename[wfilename_converted_size / sizeof(uint16_t)] = 0;
       boot_list[0].wfilename = zircon_a_wfilename;
       boot_list[0].filename = zircon_a_filename;
-      printf("Using zircon-a=%s\n", zircon_a_filename);
+      LOG("Using zircon-a=%s", zircon_a_filename);
     }
   }
   const char* zircon_b_filename = cmdline_get("bootloader.zircon-b", NULL);
@@ -568,13 +569,13 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
     if (utf8_to_utf16((const uint8_t*)zircon_b_filename, strlen(zircon_b_filename) + 1,
                       zircon_b_wfilename, &wfilename_converted_size) == ZX_OK) {
       if (wfilename_converted_size >= sizeof(zircon_b_wfilename)) {
-        printf("Warning: bootloader.zircon-b string truncated\n");
+        WLOG("bootloader.zircon-b string truncated");
         wfilename_converted_size = sizeof(zircon_b_wfilename) - sizeof(uint16_t);
       }
       zircon_b_wfilename[wfilename_converted_size / sizeof(uint16_t)] = 0;
       boot_list[1].wfilename = zircon_b_wfilename;
       boot_list[1].filename = zircon_b_filename;
-      printf("Using zircon-b=%s\n", zircon_b_filename);
+      LOG("Using zircon-b=%s", zircon_b_filename);
     }
   }
   const char* zircon_r_filename = cmdline_get("bootloader.zircon-r", NULL);
@@ -584,13 +585,13 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
     if (utf8_to_utf16((const uint8_t*)zircon_r_filename, strlen(zircon_r_filename) + 1,
                       zircon_r_wfilename, &wfilename_converted_size) == ZX_OK) {
       if (wfilename_converted_size >= sizeof(zircon_r_wfilename)) {
-        printf("Warning: bootloader.zircon-r string truncated\n");
+        WLOG("bootloader.zircon-r string truncated");
         wfilename_converted_size = sizeof(zircon_r_wfilename) - sizeof(uint16_t);
       }
       zircon_r_wfilename[wfilename_converted_size / sizeof(uint16_t)] = 0;
       boot_list[2].wfilename = zircon_r_wfilename;
       boot_list[2].filename = zircon_r_filename;
-      printf("Using zircon-r=%s\n", zircon_r_filename);
+      LOG("Using zircon-r=%s", zircon_r_filename);
     }
   }
 
@@ -600,21 +601,21 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
                                                 boot_list[i].guid_value, boot_list[i].guid_name);
 
     if (*boot_list[i].kernel != NULL) {
-      printf("zircon image loaded from zircon partition %s\n", boot_list[i].guid_name);
+      LOG("zircon image loaded from zircon partition %s", boot_list[i].guid_name);
     } else if (boot_list[i].wfilename != NULL) {
       *boot_list[i].kernel = xefi_load_file(boot_list[i].wfilename, boot_list[i].size, 0);
       if (image_is_valid(*boot_list[i].kernel, *boot_list[i].size)) {
-        printf("%s is a valid image\n", boot_list[i].filename);
+        LOG("%s is a valid image", boot_list[i].filename);
       } else {
         *boot_list[i].kernel = NULL;
         *boot_list[i].size = 0;
-        printf("%s is not a valid image\n", boot_list[i].filename);
+        LOG("%s is not a valid image", boot_list[i].filename);
       }
     }
   }
 
   if (!have_network && zedboot_kernel == NULL && kernel == NULL && kernel_b == NULL) {
-    printf("No valid kernel image found to load. Abort.\n");
+    ELOG("No valid kernel image found to load. Abort.");
     xefi_getc(-1);
     return EFI_SUCCESS;
   }
@@ -636,7 +637,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
     case kBootActionNetboot:
       // do_netboot() only returns on error.
       do_netboot();
-      printf("Error: netboot failure\n");
+      ELOG("netboot failure");
       xefi_getc(-1);
       return EFI_SUCCESS;
     case kBootActionSlotA:
@@ -681,22 +682,22 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
     // No verified boot yet, if we have a non-NULL ZBI we assume it's good.
     if (zbi != NULL) {
-      printf("Booting slot %d\n", slot);
+      LOG("Booting slot %d", slot);
       break;
     }
-    printf("Failed to find a kernel in slot %d\n", slot);
+    LOG("Failed to find a kernel in slot %d", slot);
 
     // R is always the last slot to try, if we got here there's nothing else
     // we can do.
     if (slot == kAbrSlotIndexR) {
-      printf("Error: no valid kernel was found\n");
+      ELOG("no valid kernel was found");
       break;
     }
 
     // Move to the next slot since we don't have a kernel in this one.
     AbrResult result = zircon_abr_mark_slot_unbootable(slot);
     if (result != kAbrResultOk) {
-      printf("Error: failed to mark slot %d unbootable (%d)\n", slot, result);
+      ELOG("failed to mark slot %d unbootable (%d)", slot, result);
       break;
     }
   }
@@ -705,7 +706,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
     // Only set these flags when not booting zedboot. See http://fxbug.dev/72713
     // for more information.
     if (slot != kAbrSlotIndexR && is_booting_from_usb(img, sys)) {
-      printf("booting from usb!\n");
+      LOG("booting from usb");
       // TODO(fxbug.dev/44586): remove devmgr.bind-eager once better driver
       // prioritisation exists.
       static const char* usb_boot_args = "boot.usb=true devmgr.bind-eager=usb_composite";
@@ -718,7 +719,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   }
 
   // We only get here if we ran out of slots to try or zbi_boot() failed.
-  printf("Error: failed to boot from disk\n");
+  ELOG("failed to boot from disk");
   xefi_getc(-1);
   return EFI_SUCCESS;
 }

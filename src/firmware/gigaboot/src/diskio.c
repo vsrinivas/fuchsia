@@ -4,6 +4,7 @@
 
 #include <diskio.h>
 #include <inttypes.h>
+#include <log.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/compiler.h>
@@ -67,12 +68,12 @@ static void print_path(efi_boot_services* bs, efi_device_path_protocol* path) {
   efi_device_path_to_text_protocol* ptt;
   efi_status status = bs->LocateProtocol(&DevicePathToTextProtocol, NULL, (void**)&ptt);
   if (status != EFI_SUCCESS) {
-    printf("<cannot print path>");
+    ELOG_S(status, "<cannot print path>");
     return;
   }
   char16_t* txt = ptt->ConvertDevicePathToText(path, false, false);
   if (txt == NULL) {
-    printf("<cannot print path>");
+    ELOG("<cannot print path>");
     return;
   }
   puts16(txt);
@@ -87,9 +88,9 @@ efi_status disk_read(const disk_t* disk, size_t offset, void* data, size_t lengt
 
   uint64_t size = (disk->last - disk->first) * disk->blksz;
   if ((offset > size) || ((size - offset) < length)) {
-    printf("ERROR: Disk read invalid params. offset:%zu length:%zu disk: [%" PRIu64 " to %" PRIu64
-           "] size:%" PRIu64 " blksz:%d\n",
-           offset, length, disk->first, disk->last, size, disk->blksz);
+    ELOG("Disk read invalid params. offset:%zu length:%zu disk: [%" PRIu64 " to %" PRIu64
+         "] size:%" PRIu64 " blksz:%d",
+         offset, length, disk->first, disk->last, size, disk->blksz);
     return EFI_INVALID_PARAMETER;
   }
 
@@ -185,7 +186,7 @@ int disk_find_boot(efi_handle img, efi_system_table* sys, bool verbose, disk_t* 
 
   status = bs->LocateHandleBuffer(ByProtocol, &BlockIoProtocol, NULL, &count, &list);
   if (status != EFI_SUCCESS) {
-    printf("find_boot_disk() - no block io devices found\n");
+    ELOG_S(status, "find_boot_disk() - no block io devices found");
     goto fail_get_list;
   }
 
@@ -227,7 +228,7 @@ int disk_find_boot(efi_handle img, efi_system_table* sys, bool verbose, disk_t* 
       status = bs->OpenProtocol(list[n], &DiskIoProtocol, (void**)&disk->io, img, NULL,
                                 EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
       if (status != EFI_SUCCESS) {
-        printf("find_boot_disk() - cannot get disk io protocol\n");
+        ELOG_S(status, "find_boot_disk() - cannot get disk io protocol");
       } else {
         disk->first = 0;
         disk->last = bio->Media->LastBlock;
@@ -265,20 +266,20 @@ int disk_scan_partitions(const disk_t* disk, bool verbose, partition_matcher_cb 
   }
 
   if (verbose) {
-    printf("gpt: size:    %u\n", gpt.size);
-    printf("gpt: current: %" PRIu64 "\n", gpt.current);
-    printf("gpt: backup:  %" PRIu64 "\n", gpt.backup);
-    printf("gpt: first:   %" PRIu64 "\n", gpt.first);
-    printf("gpt: last:    %" PRIu64 "\n", gpt.last);
-    printf("gpt: entries: %" PRIu64 "\n", gpt.entries);
-    printf("gpt: e.count: %u\n", gpt.entries_count);
-    printf("gpt: e.size:  %u\n", gpt.entries_size);
+    LOG("gpt: size:    %u", gpt.size);
+    LOG("gpt: current: %" PRIu64, gpt.current);
+    LOG("gpt: backup:  %" PRIu64, gpt.backup);
+    LOG("gpt: first:   %" PRIu64, gpt.first);
+    LOG("gpt: last:    %" PRIu64, gpt.last);
+    LOG("gpt: entries: %" PRIu64, gpt.entries);
+    LOG("gpt: e.count: %u", gpt.entries_count);
+    LOG("gpt: e.size:  %u", gpt.entries_size);
   }
 
   // TODO(69527): checksum validation and backup GPT support.
   if ((gpt.magic != GPT_MAGIC) || (gpt.size != GPT_HEADER_SIZE) ||
       (gpt.entries_size != GPT_ENTRY_SIZE) || (gpt.entries_count > 256)) {
-    printf("gpt - malformed header\n");
+    ELOG("gpt - malformed header");
     return -1;
   }
 
@@ -287,14 +288,14 @@ int disk_scan_partitions(const disk_t* disk, bool verbose, partition_matcher_cb 
   size_t tsize = gpt.entries_count * gpt.entries_size;
   status = disk->bs->AllocatePool(EfiLoaderData, tsize, (void**)&table);
   if (status != EFI_SUCCESS) {
-    printf("gpt - allocation failure\n");
+    ELOG_S(status, "gpt - allocation failure");
     return -1;
   }
 
   status = disk_read(disk, disk->blksz * gpt.entries, table, tsize);
   if (status != EFI_SUCCESS) {
     disk->bs->FreePool(table);
-    printf("gpt - io error\n");
+    ELOG_S(status, "gpt - io error");
     return -1;
   }
 
@@ -314,8 +315,8 @@ int disk_scan_partitions(const disk_t* disk, bool verbose, partition_matcher_cb 
                     &gpt_name_length);
       gpt_name[GPT_NAME_LEN / 2 - 1] = '\0';
 
-      printf("#%03d %" PRIu64 "..%" PRIu64 " %16s %" PRIx64 "\n", n, table[n].first, table[n].last,
-             gpt_name, table[n].flags);
+      LOG("#%03d %" PRIu64 "..%" PRIu64 " %16s %" PRIx64, n, table[n].first, table[n].last,
+          gpt_name, table[n].flags);
     }
     if (!matcher(matcher_ctx, &table[n])) {
       break;
@@ -359,7 +360,7 @@ int disk_find_partition(const disk_t* disk, bool verbose, const uint8_t* type, c
     zx_status_t status =
         utf8_to_utf16((const uint8_t*)name, strlen(name) + 1, name_utf16, &name_utf16_len);
     if (status != ZX_OK) {
-      printf("gpt - failed to convert name '%s' to UTF-16: %d\n", name, status);
+      ELOG_S(status, "gpt - failed to convert name '%s' to UTF-16", name);
       return -1;
     }
   }
@@ -388,26 +389,26 @@ void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t extra_s
   disk_t disk;
 
   if (disk_find_boot(img, sys, verbose, &disk) < 0) {
-    printf("Cannot find bootloader disk.\n");
+    WLOG("Cannot find bootloader disk");
     return NULL;
   }
 
   gpt_entry_t partition;
   if (disk_find_partition(&disk, verbose, guid_value, NULL, NULL, &partition)) {
-    printf("Cannot find %s partition on bootloader disk.\n", guid_name);
+    WLOG("Cannot find %s partition on bootloader disk", guid_name);
     goto fail0;
   }
   const uint64_t partition_offset = partition.first * disk.blksz;
 
   efi_status status = disk_read(&disk, partition_offset, sector, 512);
   if (status != EFI_SUCCESS) {
-    printf("Failed to read disk: %zu\n", status);
+    WLOG_S(status, "Failed to read disk");
     goto fail0;
   }
 
   size_t sz = image_getsize(sector, 512);
   if (sz == 0) {
-    printf("%s partition has no valid header\n", guid_name);
+    WLOG("%s partition has no valid header", guid_name);
     goto fail0;
   }
 
@@ -416,18 +417,18 @@ void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t extra_s
   void* image;
   status = bs->AllocatePages(AllocateAnyPages, EfiLoaderData, pages, (efi_physical_addr*)&image);
   if (status != EFI_SUCCESS) {
-    printf("Failed to allocate %zu bytes to load %s image\n", sz, guid_name);
+    WLOG_S(status, "Failed to allocate %zu bytes to load %s image", sz, guid_name);
     goto fail0;
   }
 
   status = disk_read(&disk, partition_offset, image, sz);
   if (status != EFI_SUCCESS) {
-    printf("Failed to read image from %s partition\n", guid_name);
+    WLOG_S(status, "Failed to read image from %s partition", guid_name);
     goto fail1;
   }
 
   if (!image_is_valid(image, sz)) {
-    printf("%s partition has no valid image\n", guid_name);
+    WLOG("%s partition has no valid image", guid_name);
     goto fail1;
   }
 
@@ -448,13 +449,13 @@ efi_status read_partition(efi_handle img, efi_system_table* sys, const uint8_t* 
   disk_t disk;
 
   if (disk_find_boot(img, sys, verbose, &disk) < 0) {
-    printf("Cannot find bootloader disk.\n");
+    ELOG("Cannot find bootloader disk");
     return EFI_NOT_FOUND;
   }
 
   gpt_entry_t partition;
   if (disk_find_partition(&disk, verbose, guid_value, NULL, NULL, &partition)) {
-    printf("Cannot find %s partition on bootloader disk.\n", guid_name);
+    ELOG("Cannot find %s partition on bootloader disk", guid_name);
     disk_close(&disk);
     return EFI_NOT_FOUND;
   }
@@ -472,13 +473,13 @@ efi_status write_partition(efi_handle img, efi_system_table* sys, const uint8_t*
   disk_t disk;
 
   if (disk_find_boot(img, sys, verbose, &disk) < 0) {
-    printf("Cannot find bootloader disk.\n");
+    ELOG("Cannot find bootloader disk");
     return EFI_NOT_FOUND;
   }
 
   gpt_entry_t partition;
   if (disk_find_partition(&disk, verbose, guid_value, NULL, NULL, &partition)) {
-    printf("Cannot find %s partition on bootloader disk.\n", guid_name);
+    ELOG("Cannot find %s partition on bootloader disk", guid_name);
     disk_close(&disk);
     return EFI_NOT_FOUND;
   }
