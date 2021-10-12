@@ -15,9 +15,11 @@ use fidl_fuchsia_archivist_tests::{
     SocketPuppetControllerRequest, SocketPuppetControllerRequestStream, SocketPuppetProxy,
 };
 use fidl_fuchsia_component as fcomponent;
+use fidl_fuchsia_component::RealmMarker;
+use fidl_fuchsia_component_decl::ChildRef;
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_io::DirectoryMarker;
-use fidl_fuchsia_sys2::{ChildRef, EventSourceMarker, RealmMarker};
+use fidl_fuchsia_sys2::EventSourceMarker;
 use fuchsia_async::{Task, Timer};
 use fuchsia_component::{client, server::ServiceFs};
 use fuchsia_component_test::{builder::*, mock, RealmInstance};

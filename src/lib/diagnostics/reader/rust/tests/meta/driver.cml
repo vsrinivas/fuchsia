@@ -1,7 +1,7 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/archive_reader_integration_test",
@@ -15,10 +15,6 @@
     use: [
         {
             protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
-        },
-        {
-            protocol: "fuchsia.sys2.Realm",
-            from: "framework",
         },
     ],
     offer: [

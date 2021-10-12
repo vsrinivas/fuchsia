@@ -142,17 +142,17 @@ pub async fn expose_test_realm_protocol(realm: &mut Realm) {
     let mut test_decl = realm.get_decl(&"test".into()).await.unwrap();
     test_decl.exposes.push(ExposeDecl::Protocol(ExposeProtocolDecl {
         source: ExposeSource::Framework,
-        source_name: "fuchsia.sys2.Realm".into(),
+        source_name: "fuchsia.component.Realm".into(),
         target: ExposeTarget::Parent,
-        target_name: "fuchsia.sys2.Realm".into(),
+        target_name: "fuchsia.component.Realm".into(),
     }));
     realm.set_component(&"test".into(), test_decl).await.unwrap();
     let mut root_decl = realm.get_decl(&Moniker::root()).await.unwrap();
     root_decl.exposes.push(ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
         source: ExposeSource::Child("test".to_string()),
-        source_name: "fuchsia.sys2.Realm".into(),
+        source_name: "fuchsia.component.Realm".into(),
         target: ExposeTarget::Parent,
-        target_name: "fuchsia.sys2.Realm".into(),
+        target_name: "fuchsia.component.Realm".into(),
     }));
     realm.set_component(&Moniker::root(), root_decl).await.unwrap();
 }
