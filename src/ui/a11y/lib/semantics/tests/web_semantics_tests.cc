@@ -54,13 +54,15 @@ using sys::testing::Protocol;
 static constexpr auto kStaticHtml = R"(
 <html>
   <head>
-    <title>Say something. Anything.</title>
+    <title>Title</title>
   </head>
   <body>
-    <p hidden>Anything but... that.</p>
-    <button type="button">Click here</button>
+    <p>Paragraph</p>
+    <p hidden>Hidden</p>
+    <button type="button" aria-label="Button"></button>
   </body>
-</html>)";
+</html>
+)";
 
 static constexpr auto kDynamicHtml = R"(
 <html>
@@ -381,11 +383,21 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
 };
 
 TEST_F(WebSemanticsTest, StaticSemantics) {
+  /* The semantic tree for static.html:
+   *
+   * ID: 0 Label:Title Role: UNKNOWN
+   *     ID: 2 Label:no label Role: UNKNOWN
+   *         ID: 3 Label:no label Role: UNKNOWN
+   *             ID: 4 Label:no label Role: UNKNOWN
+   *                 ID: 6 Label:Paragraph Role: STATIC_TEXT
+   *                     ID: 8 Label:Paragraph Role: UNKNOWN
+   *             ID: 5 Label:Button Role: BUTTON
+   */
   LoadHtml(kStaticHtml);
 
-  RunLoopUntilNodeExistsWithLabel("Say something. Anything.");
+  RunLoopUntilNodeExistsWithLabel("Title");
 
-  RunLoopUntilNodeExistsWithLabel("Click here");
+  RunLoopUntilNodeExistsWithLabel("Paragraph");
 }
 
 TEST_F(WebSemanticsTest, PerformAction) {
@@ -408,18 +420,23 @@ TEST_F(WebSemanticsTest, PerformAction) {
   RunLoopUntilNodeExistsWithLabel("1");
 }
 
-// BUG(fxb.dev/60002): Disable this test until the flakes are resolved.
-TEST_F(WebSemanticsTest, DISABLED_HitTesting) {
+TEST_F(WebSemanticsTest, HitTesting) {
   LoadHtml(kStaticHtml);
+
+  // Ensure that chrome has received the device scale from scenic, and updated
+  // the fuchsia root node's transform to reflect the value. This is necessary
+  // to avoid a race condition in which chrome has received the device scale,
+  // but fuchsia has not, which could result in a false hit test miss.
+  RunLoopUntil([this] {
+    auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
+    return node->has_transform() && node->transform().matrix[0] != 1.f;
+  });
 
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
 
-  // When performing hit tests, aim for just inside the node's bounding box.  Note
-  // that for nodes from Chrome, the min corner has a larger y value than the max.
-  fuchsia::math::PointF offset = {1., -1.};
-
   // Hit test the plain text
-  auto node = FindNodeWithLabel(root, view_ref_koid(), "Test 1 2 3... ");
+  RunLoopUntilNodeExistsWithLabel("Paragraph");
+  auto node = FindNodeWithLabel(root, view_ref_koid(), "Paragraph");
   ASSERT_TRUE(node);
   auto hit_node = HitTest(
       view_ref_koid(), CalculateCenterOfSemanticNodeBoundingBoxCoordinate(view_ref_koid(), node));
@@ -427,7 +444,8 @@ TEST_F(WebSemanticsTest, DISABLED_HitTesting) {
   ASSERT_EQ(*hit_node, node->node_id());
 
   // Hit test the button
-  node = FindNodeWithLabel(root, view_ref_koid(), "Click here");
+  RunLoopUntilNodeExistsWithLabel("Button");
+  node = FindNodeWithLabel(root, view_ref_koid(), "Button");
   ASSERT_TRUE(node);
   hit_node = HitTest(view_ref_koid(),
                      CalculateCenterOfSemanticNodeBoundingBoxCoordinate(view_ref_koid(), node));
