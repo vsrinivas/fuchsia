@@ -540,18 +540,25 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
 
                return bridge.consumer.promise();
              })
-      .and_then([](const fuchsia::virtualization::GuestPtr& guest_controller)
+      .and_then([](fuchsia::virtualization::GuestPtr& guest_controller)
                     -> fpromise::promise<zx::socket, SandboxResult> {
         fpromise::bridge<zx::socket, SandboxResult> bridge;
+        std::shared_ptr completer =
+            std::make_shared<decltype(bridge.completer)>(std::move(bridge.completer));
+        guest_controller.set_error_handler([completer](zx_status_t status) {
+          std::stringstream ss;
+          ss << "Could not create guest console: " << zx_status_get_string(status);
+          completer->complete_error(SandboxResult(SandboxResult::Status::SETUP_FAILED, ss.str()));
+        });
         guest_controller->GetConsole(
-            [completer = std::move(bridge.completer)](
-                fuchsia::virtualization::Guest_GetConsole_Result result) mutable {
+            [completer](fuchsia::virtualization::Guest_GetConsole_Result result) mutable {
               if (result.is_err()) {
-                completer.complete_error(SandboxResult(SandboxResult::Status::SETUP_FAILED,
-                                                       "Could not create guest socket connection"));
+                completer->complete_error(
+                    SandboxResult(SandboxResult::Status::SETUP_FAILED,
+                                  "Could not create guest socket connection"));
                 return;
               }
-              completer.complete_ok(std::move(result.response().socket));
+              completer->complete_ok(std::move(result.response().socket));
             });
 
         return bridge.consumer.promise();
