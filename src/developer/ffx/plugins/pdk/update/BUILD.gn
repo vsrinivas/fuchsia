@@ -21,7 +21,6 @@ ffx_plugin("ffx_pdk_update") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:serde_json5",
-    "//third_party/rust_crates:tempfile",
   ]
 
   inputs = [
@@ -29,5 +28,15 @@ ffx_plugin("ffx_pdk_update") {
     "test_data/artifact_spec.json",
     "test_data/artifact_groups.json",
     "test_data/artifact_groups2.json",
+    "test_data/golden_tuf_artifact_lock.json",
+    "test_data/tuf_artifact_spec.json",
+    "test_data/tuf_artifact_groups.json",
+  ]
+
+  test_deps = [
+    "//src/developer/ffx/lib/pkg:empty-repo",
+    "//src/developer/ffx/lib/pkg:pkg",
+    "//src/sys/pkg/lib/fuchsia-pkg",
+    "//third_party/rust_crates:tempfile",
   ]
 }

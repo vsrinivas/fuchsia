@@ -1,0 +1,23 @@
+{
+  product: 'workstation',
+  artifact_groups: [
+    {
+      artifact_store: {
+        name: 'workstation_tuf_repo',
+        type: 'tuf',
+        repo: 'tuf_repo_url'
+      },
+      attributes: {
+        architecture: 'x64'
+      },
+      artifacts: [
+        {
+          name: 'flutter_aot_product_runner/0'
+        },
+        {
+          name: 'twentyfortyeight/0'
+        }
+      ]
+    }
+  ]
+}

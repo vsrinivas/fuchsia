@@ -27,7 +27,7 @@ use {
 
 // URL path to artifact_groups.json for tuf artifact store
 //
-const TUF_ARTIFACT_GROUPS_PATH: &str = "/targets/artifact_groups.json";
+const TUF_ARTIFACT_GROUPS_PATH: &str = "targets/artifact_groups.json";
 
 #[ffx_plugin("ffx_pdk")]
 pub async fn cmd_update(cmd: UpdateCommand) -> Result<()> {
@@ -180,7 +180,7 @@ async fn read_artifact_groups(
                 ffx_bail!("Missing repo field in artifact store")
             }
             let repo = store.repo.as_ref().unwrap();
-            let uri = format!("https://{}/{}", repo, TUF_ARTIFACT_GROUPS_PATH).parse::<Uri>()?;
+            let uri = format!("{}/{}", repo, TUF_ARTIFACT_GROUPS_PATH).parse::<Uri>()?;
             let client = new_https_client();
             let response = client.get(uri.clone()).await?;
             if response.status() != StatusCode::OK {
@@ -324,7 +324,16 @@ async fn process_spec(spec: &Spec, cmd: &UpdateCommand) -> Result<()> {
 
 #[cfg(test)]
 mod test {
-    use {super::*, serde_json::json, serde_json5, std::fs, std::path::PathBuf};
+    use super::*;
+    use fuchsia_async as fasync;
+    use pkg::repository::{RepositoryManager, RepositoryServer};
+    use pkg::test_utils::make_writable_empty_repository;
+    use serde_json::json;
+    use serde_json5;
+    use std::fs;
+    use std::net::Ipv4Addr;
+    use std::path::PathBuf;
+    use std::sync::Arc;
 
     /// Test artifact hash
     #[test]
@@ -481,5 +490,67 @@ mod test {
         let golden_artifact_lock: Lock =
             serde_json::from_str(include_str!("../test_data/golden_artifact_lock.json")).unwrap();
         assert_eq!(new_artifact_lock, golden_artifact_lock);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_end_to_end_tuf() {
+        let manager = RepositoryManager::new();
+        let tempdir = tempfile::tempdir().unwrap();
+        let root = tempdir.path().join("artifact_store");
+        let repo = make_writable_empty_repository("artifact_store", root.clone()).await.unwrap();
+        let out_filename = tempdir.path().join("artifact_lock.json");
+
+        // write artifact_groups.json to server.
+        let tuf_dir = root.join("targets/");
+        fs::create_dir(&tuf_dir).unwrap();
+        let artifact_group_path = tuf_dir.join("artifact_groups.json");
+        fs::write(artifact_group_path, include_str!("../test_data/tuf_artifact_groups.json"))
+            .unwrap();
+
+        manager.add(Arc::new(repo));
+
+        let addr = (Ipv4Addr::LOCALHOST, 0).into();
+        let (server_fut, server) =
+            RepositoryServer::builder(addr, Arc::clone(&manager)).start().await.unwrap();
+
+        // Run the server in the background.
+        let task = fasync::Task::local(server_fut);
+
+        let tuf_repo_url = server.local_url() + "/artifact_store";
+
+        // write spec file.
+        let spec_file_path = tempdir.path().join("artifact_spec.json");
+        fs::write(
+            &spec_file_path,
+            include_str!("../test_data/tuf_artifact_spec.json")
+                .replace("tuf_repo_url", &tuf_repo_url),
+        )
+        .unwrap();
+
+        let cmd = UpdateCommand {
+            spec_file: spec_file_path,
+            out: out_filename.clone(),
+            artifact_root: None,
+        };
+
+        cmd_update(cmd).await.unwrap();
+        let new_artifact_lock: Lock = File::open(&out_filename)
+            .map(BufReader::new)
+            .map(serde_json::from_reader)
+            .unwrap()
+            .unwrap();
+        let golden_artifact_lock: Lock = serde_json::from_str(
+            include_str!("../test_data/golden_tuf_artifact_lock.json")
+                .replace("tuf_repo_url", &tuf_repo_url)
+                .as_str(),
+        )
+        .unwrap();
+        assert_eq!(new_artifact_lock, golden_artifact_lock);
+
+        // Signal the server to shutdown.
+        server.stop();
+
+        // Wait for the server to actually shut down.
+        task.await;
     }
 }
