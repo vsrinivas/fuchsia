@@ -8,8 +8,9 @@
 //! This program is written as a test so that it can be easily launched with `fx test`.
 
 use {
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_examples_services as fexamples, fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys2 as fsys2, fuchsia_component::client as fclient, log::*,
+    fuchsia_component::client as fclient, log::*,
 };
 
 const COLLECTION_NAME: &'static str = "account_providers";
@@ -18,7 +19,7 @@ const TEST_PACKAGE: &'static str = "fuchsia-pkg://fuchsia.com/service-examples";
 #[fuchsia::test]
 async fn read_and_write_to_multiple_service_instances() {
     // Launch two BankAccount providers into the `account_providers` collection.
-    let realm = fuchsia_component::client::connect_to_protocol::<fsys2::RealmMarker>()
+    let realm = fuchsia_component::client::connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("connect to Realm service");
     start_provider(&realm, "a", &format!("{}#meta/provider-a.cm", TEST_PACKAGE)).await;
     start_provider(&realm, "b", &format!("{}#meta/provider-b.cm", TEST_PACKAGE)).await;
@@ -55,19 +56,25 @@ async fn read_and_write_to_multiple_service_instances() {
     }
 }
 
-async fn start_provider(realm: &fsys2::RealmProxy, name: &str, url: &str) -> fio::DirectoryProxy {
+async fn start_provider(
+    realm: &fcomponent::RealmProxy,
+    name: &str,
+    url: &str,
+) -> fio::DirectoryProxy {
     info!("creating BankAccount provider \"{}\" with url={}", name, url);
-    let child_args =
-        fsys2::CreateChildArgs { numbered_handles: None, ..fsys2::CreateChildArgs::EMPTY };
+    let child_args = fcomponent::CreateChildArgs {
+        numbered_handles: None,
+        ..fcomponent::CreateChildArgs::EMPTY
+    };
     realm
         .create_child(
-            &mut fsys2::CollectionRef { name: COLLECTION_NAME.to_string() },
-            fsys2::ChildDecl {
+            &mut fdecl::CollectionRef { name: COLLECTION_NAME.to_string() },
+            fdecl::Child {
                 name: Some(name.to_string()),
                 url: Some(url.to_string()),
-                startup: Some(fsys2::StartupMode::Lazy),
+                startup: Some(fdecl::StartupMode::Lazy),
                 environment: None,
-                ..fsys2::ChildDecl::EMPTY
+                ..fdecl::Child::EMPTY
             },
             child_args,
         )
@@ -81,7 +88,7 @@ async fn start_provider(realm: &fsys2::RealmProxy, name: &str, url: &str) -> fio
     info!("open exposed dir of BankAccount provider \"{}\" with url={}", name, url);
     realm
         .open_exposed_dir(
-            &mut fsys2::ChildRef {
+            &mut fdecl::ChildRef {
                 name: name.to_string(),
                 collection: Some(COLLECTION_NAME.to_string()),
             },

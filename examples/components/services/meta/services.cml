@@ -26,7 +26,7 @@
 
         // Needed to launch providers into the `account_providers` collection.
         {
-            protocol: "fuchsia.sys2.Realm",
+            protocol: "fuchsia.component.Realm",
             from: "framework",
             to: [ "#bank_branch" ],
         },

@@ -13,7 +13,7 @@
         { service: "fuchsia.examples.services.BankAccount" },
         {
             // The branch component launches components in its parent collection.
-            protocol: "fuchsia.sys2.Realm",
+            protocol: "fuchsia.component.Realm",
             from: "parent",
         },
     ],
