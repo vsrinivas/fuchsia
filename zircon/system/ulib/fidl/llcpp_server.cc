@@ -49,7 +49,7 @@ void Dispatch(void* impl, ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn
 ::fidl::Result WeakEventSenderInner::SendEvent(::fidl::OutgoingMessage& message) const {
   if (auto binding = binding_.lock()) {
     message.set_txid(0);
-    message.Write(binding->channel());
+    message.Write(binding->transport());
     if (!message.ok()) {
       HandleSendError(message.error());
       return message.error();

@@ -166,7 +166,8 @@ class WireClient {
   // variable with a new instance.
   void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
             fidl::WireAsyncEventHandler<Protocol>* event_handler = nullptr) {
-    controller_.Bind(std::make_shared<ClientImpl>(), client_end.TakeChannel(), dispatcher,
+    controller_.Bind(std::make_shared<ClientImpl>(),
+                     internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
                      event_handler, fidl::AnyTeardownObserver::Noop(),
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread);
   }
@@ -405,7 +406,8 @@ class WireSharedClient final {
   void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
             fidl::WireAsyncEventHandler<Protocol>* event_handler,
             fidl::AnyTeardownObserver teardown_observer = fidl::AnyTeardownObserver::Noop()) {
-    controller_.Bind(std::make_shared<ClientImpl>(), client_end.TakeChannel(), dispatcher,
+    controller_.Bind(std::make_shared<ClientImpl>(),
+                     internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
                      event_handler, std::move(teardown_observer),
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
   }

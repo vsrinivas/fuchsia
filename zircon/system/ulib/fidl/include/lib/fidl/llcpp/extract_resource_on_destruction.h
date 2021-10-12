@@ -18,7 +18,7 @@ namespace internal {
 // Wraps some value that can be optionally moved out of the containing object
 // during destruction. See |DestroyAndExtract| for more rationale.
 // |Resource| is the type of the value, which is generally some resource
-// (e.g. channel).
+// (e.g. transport).
 template <typename Resource>
 class ExtractedOnDestruction {
  public:
@@ -57,7 +57,7 @@ class ExtractedOnDestruction {
 // often like to observe the destruction of this object, and extract important
 // resource within it, on some specific thread. For example, a server binding
 // object may be destroyed on any thread, but the "on-unbound" handler should
-// always run from the dispatcher thread, and need to extract the channel within
+// always run from the dispatcher thread, and need to extract the transport within
 // the server binding as it is being destructed.
 //
 // That extraction can be safely implemented by declaring a local resource

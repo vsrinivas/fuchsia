@@ -29,7 +29,7 @@ zx_status_t SyncTransaction::Reply(fidl::OutgoingMessage* message) {
 
   ZX_ASSERT(binding_);
   message->set_txid(txid);
-  message->Write(binding_->channel());
+  message->Write(binding_->transport());
   return message->status();
 }
 
@@ -107,7 +107,7 @@ zx_status_t AsyncTransaction::Reply(fidl::OutgoingMessage* message) {
     return ZX_ERR_CANCELED;
 
   message->set_txid(txid);
-  message->Write(binding->channel());
+  message->Write(binding->transport());
   return message->status();
 }
 

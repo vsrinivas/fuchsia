@@ -88,6 +88,8 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/internal/client_details.h",
                     "lib/fidl/llcpp/internal/server_details.h",
                     "lib/fidl/llcpp/internal/thread_checker.h",
+                    "lib/fidl/llcpp/internal/transport.h",
+                    "lib/fidl/llcpp/internal/transport_channel.h",
                     "lib/fidl/llcpp/message_storage.h",
                     "lib/fidl/llcpp/message.h",
                     "lib/fidl/llcpp/object_view.h",
@@ -115,6 +117,7 @@ if (is_fuchsia) {
       "llcpp_result.cc",
       "llcpp_server.cc",
       "llcpp_transaction.cc",
+      "llcpp_transport_channel.cc",
     ]
     public_deps = [
       ":headers",

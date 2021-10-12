@@ -121,11 +121,12 @@ class AsyncBinding : private async_wait_t, public std::enable_shared_from_this<A
     StartTeardownWithInfo(std::move(calling_ref), ::fidl::UnbindInfo::Unbind());
   }
 
-  zx::unowned_channel channel() const { return zx::unowned_channel(handle()); }
+  // TODO(fxbug.dev/85734) Remove dependency on async_wait_t.
   zx_handle_t handle() const { return async_wait_t::object; }
 
  protected:
-  AsyncBinding(async_dispatcher_t* dispatcher, const zx::unowned_channel& borrowed_channel,
+  AsyncBinding(async_dispatcher_t* dispatcher,
+               const internal::AnyUnownedTransport& borrowed_transport,
                ThreadingPolicy threading_policy);
 
   // |InitKeepAlive| must be called after a concrete subclass is constructed
@@ -316,22 +317,23 @@ class IncomingMessageDispatcher;
 // The bindings runtime need to convert this pointer to the specific server
 // implementation type before invoking the public unbinding completion callback
 // that is |fidl::OnUnboundFn<ServerImpl>|.
-using AnyOnUnboundFn = fit::callback<void(IncomingMessageDispatcher*, UnbindInfo, zx::channel)>;
+using AnyOnUnboundFn =
+    fit::callback<void(IncomingMessageDispatcher*, UnbindInfo, fidl::internal::AnyTransport)>;
 
-// The async server binding. It directly owns the channel.
+// The async server binding. It directly owns the transport.
 class AsyncServerBinding : public AsyncBinding {
  private:
   struct ConstructionKey {};
 
  public:
   static std::shared_ptr<AsyncServerBinding> Create(async_dispatcher_t* dispatcher,
-                                                    zx::channel&& server_end,
+                                                    fidl::internal::AnyTransport&& server_end,
                                                     IncomingMessageDispatcher* interface,
                                                     AnyOnUnboundFn&& on_unbound_fn);
 
   virtual ~AsyncServerBinding() = default;
 
-  zx::unowned_channel channel() const { return server_end_.get().borrow(); }
+  fidl::internal::AnyUnownedTransport transport() const { return server_end_.get().borrow(); }
 
   std::shared_ptr<AsyncServerBinding> shared_from_this() {
     return std::static_pointer_cast<AsyncServerBinding>(AsyncBinding::shared_from_this());
@@ -347,7 +349,7 @@ class AsyncServerBinding : public AsyncBinding {
 
   // Do not construct this object outside of this class. This constructor takes
   // a private type following the pass-key idiom to support |make_shared|.
-  AsyncServerBinding(async_dispatcher_t* dispatcher, zx::channel&& server_end,
+  AsyncServerBinding(async_dispatcher_t* dispatcher, fidl::internal::AnyTransport&& server_end,
                      IncomingMessageDispatcher* interface, AnyOnUnboundFn&& on_unbound_fn,
                      ConstructionKey key)
       : AsyncBinding(dispatcher, server_end.borrow(),
@@ -366,8 +368,8 @@ class AsyncServerBinding : public AsyncBinding {
   // The server interface that handles FIDL method calls.
   IncomingMessageDispatcher* interface_ = nullptr;
 
-  // The channel is owned by AsyncServerBinding.
-  ExtractedOnDestruction<zx::channel> server_end_;
+  // The transport is owned by AsyncServerBinding.
+  ExtractedOnDestruction<fidl::internal::AnyTransport> server_end_;
 
   // The user callback to invoke after teardown has completed.
   AnyOnUnboundFn on_unbound_fn_ = {};
@@ -380,26 +382,25 @@ class AsyncServerBinding : public AsyncBinding {
 class ClientBase;
 
 // The async client binding. The client supports both synchronous and
-// asynchronous calls. Because the channel lifetime must outlast the duration
+// asynchronous calls. Because the transport lifetime must outlast the duration
 // of any synchronous calls, and that synchronous calls do not yet support
-// cancellation, the client binding does not own the channel directly.
-// Rather, it co-owns the channel between itself and any in-flight sync
+// cancellation, the client binding does not own the transport directly.
+// Rather, it co-owns the transport between itself and any in-flight sync
 // calls, using shared pointers.
 class AsyncClientBinding final : public AsyncBinding {
  public:
-  static std::shared_ptr<AsyncClientBinding> Create(async_dispatcher_t* dispatcher,
-                                                    std::shared_ptr<zx::channel> channel,
-                                                    std::shared_ptr<ClientBase> client,
-                                                    AsyncEventHandler* event_handler,
-                                                    AnyTeardownObserver&& teardown_observer,
-                                                    ThreadingPolicy threading_policy);
+  static std::shared_ptr<AsyncClientBinding> Create(
+      async_dispatcher_t* dispatcher, std::shared_ptr<fidl::internal::AnyTransport> transport,
+      std::shared_ptr<ClientBase> client, AsyncEventHandler* event_handler,
+      AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
 
   virtual ~AsyncClientBinding() = default;
 
-  std::shared_ptr<zx::channel> GetChannel() const { return channel_; }
+  std::shared_ptr<fidl::internal::AnyTransport> GetChannel() const { return transport_; }
 
  private:
-  AsyncClientBinding(async_dispatcher_t* dispatcher, std::shared_ptr<zx::channel> channel,
+  AsyncClientBinding(async_dispatcher_t* dispatcher,
+                     std::shared_ptr<fidl::internal::AnyTransport> transport,
                      std::shared_ptr<ClientBase> client, AsyncEventHandler* event_handler,
                      AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
 
@@ -408,7 +409,7 @@ class AsyncClientBinding final : public AsyncBinding {
 
   void FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) override;
 
-  std::shared_ptr<zx::channel> channel_;
+  std::shared_ptr<fidl::internal::AnyTransport> transport_;
   std::shared_ptr<ClientBase> client_;
   AsyncEventHandler* event_handler_;
   AnyTeardownObserver teardown_observer_;

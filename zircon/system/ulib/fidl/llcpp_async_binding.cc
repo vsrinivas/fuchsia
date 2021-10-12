@@ -42,11 +42,12 @@ bool DispatchError::RequiresImmediateTeardown() {
   return !(origin == fidl::ErrorOrigin::kSend && info.reason() == fidl::Reason::kPeerClosed);
 }
 
-AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, const zx::unowned_channel& channel,
+AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher,
+                           const fidl::internal::AnyUnownedTransport& transport,
                            ThreadingPolicy threading_policy)
     : async_wait_t({{ASYNC_STATE_INIT},
                     &AsyncBinding::OnMessage,
-                    channel->get(),
+                    transport.get<fidl::internal::ChannelTransport>()->get(),
                     ZX_CHANNEL_PEER_CLOSED | ZX_CHANNEL_READABLE,
                     0}),
       dispatcher_(dispatcher),
@@ -337,10 +338,9 @@ fidl::UnbindInfo AsyncBinding::Lifecycle::TransitionToTorndown() {
 // Server binding specifics
 //
 
-std::shared_ptr<AsyncServerBinding> AsyncServerBinding::Create(async_dispatcher_t* dispatcher,
-                                                               zx::channel&& server_end,
-                                                               IncomingMessageDispatcher* interface,
-                                                               AnyOnUnboundFn&& on_unbound_fn) {
+std::shared_ptr<AsyncServerBinding> AsyncServerBinding::Create(
+    async_dispatcher_t* dispatcher, fidl::internal::AnyTransport&& server_end,
+    IncomingMessageDispatcher* interface, AnyOnUnboundFn&& on_unbound_fn) {
   auto binding = std::make_shared<AsyncServerBinding>(dispatcher, std::move(server_end), interface,
                                                       std::move(on_unbound_fn), ConstructionKey{});
   binding->InitKeepAlive();
@@ -368,20 +368,21 @@ void AsyncServerBinding::FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_
 
   // Delete the calling reference.
   // Wait for any transient references to be released.
-  DestroyAndExtract(std::move(server_binding), &AsyncServerBinding::server_end_,
-                    [&info, the_interface, &on_unbound_fn](zx::channel server_end) {
-                      // `this` is no longer valid.
+  DestroyAndExtract(
+      std::move(server_binding), &AsyncServerBinding::server_end_,
+      [&info, the_interface, &on_unbound_fn](fidl::internal::AnyTransport server_end) {
+        // `this` is no longer valid.
 
-                      // If required, send the epitaph.
-                      if (info.reason() == Reason::kClose) {
-                        info =
-                            UnbindInfo::Close(fidl_epitaph_write(server_end.get(), info.status()));
-                      }
+        // If required, send the epitaph.
+        if (info.reason() == Reason::kClose) {
+          info = UnbindInfo::Close(fidl_epitaph_write(
+              server_end.get<fidl::internal::ChannelTransport>()->get(), info.status()));
+        }
 
-                      // Execute the unbound hook if specified.
-                      if (on_unbound_fn)
-                        on_unbound_fn(the_interface, info, std::move(server_end));
-                    });
+        // Execute the unbound hook if specified.
+        if (on_unbound_fn)
+          on_unbound_fn(the_interface, info, std::move(server_end));
+      });
 }
 
 //
@@ -389,24 +390,24 @@ void AsyncServerBinding::FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_
 //
 
 std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(
-    async_dispatcher_t* dispatcher, std::shared_ptr<zx::channel> channel,
+    async_dispatcher_t* dispatcher, std::shared_ptr<fidl::internal::AnyTransport> transport,
     std::shared_ptr<ClientBase> client, AsyncEventHandler* event_handler,
     AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy) {
   auto binding = std::shared_ptr<AsyncClientBinding>(
-      new AsyncClientBinding(dispatcher, std::move(channel), std::move(client), event_handler,
+      new AsyncClientBinding(dispatcher, std::move(transport), std::move(client), event_handler,
                              std::move(teardown_observer), threading_policy));
   binding->InitKeepAlive();
   return binding;
 }
 
 AsyncClientBinding::AsyncClientBinding(async_dispatcher_t* dispatcher,
-                                       std::shared_ptr<zx::channel> channel,
+                                       std::shared_ptr<fidl::internal::AnyTransport> transport,
                                        std::shared_ptr<ClientBase> client,
                                        AsyncEventHandler* event_handler,
                                        AnyTeardownObserver&& teardown_observer,
                                        ThreadingPolicy threading_policy)
-    : AsyncBinding(dispatcher, zx::unowned_channel(channel->get()), threading_policy),
-      channel_(std::move(channel)),
+    : AsyncBinding(dispatcher, transport->borrow(), threading_policy),
+      transport_(std::move(transport)),
       client_(std::move(client)),
       event_handler_(event_handler),
       teardown_observer_(std::move(teardown_observer)) {}
@@ -432,12 +433,12 @@ void AsyncClientBinding::FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_
   std::shared_ptr<ClientBase> client = std::move(client_);
 
   // Delete the calling reference.
-  // We are not returning the channel to the user, so don't wait for transient
+  // We are not returning the transport to the user, so don't wait for transient
   // references to go away.
   binding = nullptr;
 
   // There could be residual references to the binding, but those are only held
-  // briefly when obtaining the channel. To be conservative, assume that `this`
+  // briefly when obtaining the transport. To be conservative, assume that `this`
   // is no longer valid past this point.
 
   // Outstanding async responses will no longer be received, so release the contexts.

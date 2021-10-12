@@ -14,14 +14,14 @@ namespace internal {
 // TODO(madhaviyengar): Move this constant to zircon/fidl.h
 constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
 
-void ClientBase::Bind(std::shared_ptr<ClientBase> client, zx::channel channel,
+void ClientBase::Bind(std::shared_ptr<ClientBase> client, fidl::internal::AnyTransport transport,
                       async_dispatcher_t* dispatcher, AsyncEventHandler* event_handler,
                       AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy) {
   ZX_DEBUG_ASSERT(!binding_.lock());
   ZX_DEBUG_ASSERT(client.get() == this);
   auto binding = AsyncClientBinding::Create(
-      dispatcher, std::make_shared<zx::channel>(std::move(channel)), std::move(client),
-      event_handler, std::move(teardown_observer), threading_policy);
+      dispatcher, std::make_shared<fidl::internal::AnyTransport>(std::move(transport)),
+      std::move(client), event_handler, std::move(teardown_observer), threading_policy);
   binding_ = binding;
   dispatcher_ = dispatcher;
   binding->BeginFirstWait();
@@ -94,10 +94,10 @@ void ClientBase::ReleaseResponseContexts(fidl::UnbindInfo info) {
 }
 
 void ClientBase::SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* context) {
-  if (auto channel = GetChannel()) {
+  if (auto transport = GetChannel()) {
     PrepareAsyncTxn(context);
     message.set_txid(context->Txid());
-    message.Write(channel->get());
+    message.Write(*transport);
     if (!message.ok()) {
       ForgetAsyncTxn(context);
       TryAsyncDeliverError(message.error(), context);
@@ -109,9 +109,9 @@ void ClientBase::SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* c
 }
 
 fidl::Result ClientBase::SendOneWay(::fidl::OutgoingMessage& message) {
-  if (auto channel = GetChannel()) {
+  if (auto transport = GetChannel()) {
     message.set_txid(0);
-    message.Write(channel->get());
+    message.Write(*transport);
     if (!message.ok()) {
       HandleSendError(message.error());
       return message.error();
@@ -162,8 +162,9 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg,
   return context->OnRawResult(std::move(msg));
 }
 
-void ClientController::Bind(std::shared_ptr<ClientBase>&& client_impl, zx::channel client_end,
-                            async_dispatcher_t* dispatcher, AsyncEventHandler* event_handler,
+void ClientController::Bind(std::shared_ptr<ClientBase>&& client_impl,
+                            fidl::internal::AnyTransport client_end, async_dispatcher_t* dispatcher,
+                            AsyncEventHandler* event_handler,
                             AnyTeardownObserver&& teardown_observer,
                             ThreadingPolicy threading_policy) {
   ZX_ASSERT(!client_impl_);

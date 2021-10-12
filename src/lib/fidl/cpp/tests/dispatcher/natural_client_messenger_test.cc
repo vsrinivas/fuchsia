@@ -102,7 +102,8 @@ class NaturalClientMessengerTest : public zxtest::Test {
   static fidl::internal::ClientController Create(async_dispatcher_t* dispatcher) {
     std::shared_ptr impl = std::make_shared<FakeClientImpl>();
     fidl::internal::ClientController controller;
-    controller.Bind(impl, impl->endpoints().client.TakeChannel(), dispatcher,
+    controller.Bind(impl, fidl::internal::MakeAnyTransport(impl->endpoints().client.TakeChannel()),
+                    dispatcher,
                     /* event_handler */ nullptr, fidl::AnyTeardownObserver::Noop(),
                     fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread);
     return controller;

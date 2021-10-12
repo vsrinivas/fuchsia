@@ -171,22 +171,22 @@ class ClientBase {
   ClientBase(ClientBase&& other) = delete;
   ClientBase& operator=(ClientBase&& other) = delete;
 
-  // Bind the channel to the dispatcher. Notifies |teardown_observer| on binding
+  // Bind the transport to the dispatcher. Notifies |teardown_observer| on binding
   // teardown. NOTE: This is not thread-safe and must be called exactly once,
   // before any other APIs.
-  void Bind(std::shared_ptr<ClientBase> client, zx::channel channel, async_dispatcher_t* dispatcher,
-            AsyncEventHandler* event_handler, fidl::AnyTeardownObserver&& teardown_observer,
-            ThreadingPolicy threading_policy);
+  void Bind(std::shared_ptr<ClientBase> client, AnyTransport transport,
+            async_dispatcher_t* dispatcher, AsyncEventHandler* event_handler,
+            fidl::AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
 
   // Asynchronously unbind the client from the dispatcher. |teardown_observer|
   // will be notified on a dispatcher thread.
   void AsyncTeardown();
 
-  // Makes a two-way synchronous call with the channel that is managed by this
+  // Makes a two-way synchronous call with the transport that is managed by this
   // client.
   //
-  // It invokes |sync_call| with a strong reference to the channel to prevent
-  // its destruction during a |zx_channel_call|. The |sync_call| callable must
+  // It invokes |sync_call| with a strong reference to the transport to prevent
+  // its destruction during a |transport.Call|. The |sync_call| callable must
   // have a return type that could be instantiated with a |fidl::Result| to
   // propagate failures.
   //
@@ -197,14 +197,14 @@ class ClientBase {
   template <typename Callable>
   auto MakeSyncCallWith(Callable&& sync_call) {
     using ReturnType = typename fit::callable_traits<Callable>::return_type;
-    std::shared_ptr<zx::channel> channel = GetChannel();
-    if (!channel) {
+    std::shared_ptr<AnyTransport> transport = GetChannel();
+    if (!transport) {
       return ReturnType(fidl::Result::Unbound());
     }
     // TODO(fxbug.dev/78906): We should report errors to binding teardown
     // by calling |HandleSendError|. A naive approach of checking the result
     // here doesn't work because the result must be a temporary.
-    return sync_call(std::move(channel));
+    return sync_call(std::move(transport));
   }
 
  public:
@@ -307,7 +307,7 @@ class ClientBase {
   // (e.g. dispatcher shutting down), notify it synchronously as a last resort.
   void TryAsyncDeliverError(::fidl::Result error, ResponseContext* context);
 
-  std::shared_ptr<zx::channel> GetChannel() {
+  std::shared_ptr<AnyTransport> GetChannel() {
     if (auto binding = binding_.lock()) {
       return binding->GetChannel();
     }
@@ -363,11 +363,11 @@ class ClientController {
   // Takes ownership of |client_impl| and starts managing its lifetime.
   //
   // It is an error to call |Bind| more than once on the same controller.
-  void Bind(std::shared_ptr<ClientBase>&& client_impl, zx::channel client_end,
+  void Bind(std::shared_ptr<ClientBase>&& client_impl, AnyTransport client_end,
             async_dispatcher_t* dispatcher, AsyncEventHandler* event_handler,
             fidl::AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
 
-  // Begins to unbind the channel from the dispatcher. In particular, it
+  // Begins to unbind the transport from the dispatcher. In particular, it
   // triggers the asynchronous destruction of the bound |ClientImpl|. May be
   // called from any thread. If provided, the |AsyncEventHandler::Unbound| is
   // invoked asynchronously on a dispatcher thread.
@@ -383,7 +383,7 @@ class ClientController {
  private:
   // |ControlBlock| controls the lifecycle of a client binding, such that
   // teardown will only happen after all clones of a |Client| managing
-  // the same channel goes out of scope.
+  // the same transport goes out of scope.
   //
   // Specifically, all clones of a |Client| will share the same |ControlBlock|
   // instance, which in turn references the |ClientImpl|, and is responsible

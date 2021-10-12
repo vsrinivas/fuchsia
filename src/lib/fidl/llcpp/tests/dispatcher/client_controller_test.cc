@@ -23,7 +23,7 @@ TEST(ClientController, BindingTwicePanics) {
   ASSERT_OK(zx::channel::create(0, &h1, &h2));
   ClientController controller;
 
-  controller.Bind(std::make_shared<WireClientImpl<TestProtocol>>(), std::move(h1),
+  controller.Bind(std::make_shared<WireClientImpl<TestProtocol>>(), MakeAnyTransport(std::move(h1)),
                   loop.dispatcher(), nullptr, fidl::AnyTeardownObserver::Noop(),
                   fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
 
@@ -32,8 +32,9 @@ TEST(ClientController, BindingTwicePanics) {
     // Disable LSAN for this thread. It is expected to leak by way of a crash.
     __lsan::ScopedDisabler _;
 #endif
-    controller.Bind(std::make_shared<WireClientImpl<TestProtocol>>(), std::move(h2),
-                    loop.dispatcher(), nullptr, fidl::AnyTeardownObserver::Noop(),
+    controller.Bind(std::make_shared<WireClientImpl<TestProtocol>>(),
+                    MakeAnyTransport(std::move(h2)), loop.dispatcher(), nullptr,
+                    fidl::AnyTeardownObserver::Noop(),
                     fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
   });
 }

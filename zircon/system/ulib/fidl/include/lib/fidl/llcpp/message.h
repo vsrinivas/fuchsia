@@ -19,6 +19,7 @@
 
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client_end.h>
+#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/zx/channel.h>
 #endif  // __Fuchsia__
@@ -144,6 +145,12 @@ class OutgoingMessage : public ::fidl::Result {
   void Write(zx_handle_t channel) { WriteImpl(channel); }
 
   // Various helper functions for writing to other channel-like types.
+
+  void Write(const internal::AnyTransport& transport) { Write(transport.borrow()); }
+
+  void Write(internal::AnyUnownedTransport transport) {
+    Write(transport.get<internal::ChannelTransport>());
+  }
 
   void Write(const ::zx::channel& channel) { Write(channel.get()); }
 

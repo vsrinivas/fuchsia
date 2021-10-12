@@ -123,8 +123,9 @@ ServerBindingRef<Protocol> BindServerTypeErased(async_dispatcher_t* dispatcher,
                                                 fidl::ServerEnd<Protocol> server_end,
                                                 IncomingMessageDispatcher* interface,
                                                 internal::AnyOnUnboundFn on_unbound) {
-  auto internal_binding = internal::AsyncServerBinding::Create(dispatcher, server_end.TakeChannel(),
-                                                               interface, std::move(on_unbound));
+  auto internal_binding = internal::AsyncServerBinding::Create(
+      dispatcher, internal::MakeAnyTransport(server_end.TakeChannel()), interface,
+      std::move(on_unbound));
   auto binding_ref = fidl::ServerBindingRef<Protocol>(internal_binding);
   auto* binding_ptr = internal_binding.get();
   // The binding object keeps itself alive until unbinding, so dropping the
@@ -151,11 +152,13 @@ ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServerImpl(
       dispatcher, std::move(server_end), impl,
       [on_unbound = std::forward<OnUnbound>(on_unbound)](
           internal::IncomingMessageDispatcher* any_interface, UnbindInfo info,
-          zx::channel channel) mutable {
+          AnyTransport channel) mutable {
         // Note: this cast may change the value of the pointer, due to how C++
         // implements classes with virtual tables.
         auto* impl = static_cast<ServerImpl*>(any_interface);
-        std::invoke(on_unbound, impl, info, fidl::ServerEnd<ProtocolType>(std::move(channel)));
+        std::invoke(
+            on_unbound, impl, info,
+            fidl::ServerEnd<ProtocolType>(channel.release<fidl::internal::ChannelTransport>()));
       });
 }
 
