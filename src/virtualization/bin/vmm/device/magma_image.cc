@@ -9,6 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/service/llcpp/service.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/global.h>
 #include <lib/zx/channel.h>
 
@@ -32,16 +33,21 @@ static uint32_t to_uint32(uint64_t value) {
 }
 
 static uint64_t SysmemModifierToDrmModifier(uint64_t modifier) {
+  static_assert(DRM_FORMAT_MOD_LINEAR == fuchsia_sysmem::wire::kFormatModifierLinear);
+  static_assert(I915_FORMAT_MOD_X_TILED == fuchsia_sysmem::wire::kFormatModifierIntelI915XTiled);
+  static_assert(I915_FORMAT_MOD_Y_TILED == fuchsia_sysmem::wire::kFormatModifierIntelI915YTiled);
+  static_assert(I915_FORMAT_MOD_Yf_TILED == fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiled);
   switch (modifier) {
     case fuchsia_sysmem::wire::kFormatModifierLinear:
-      return DRM_FORMAT_MOD_LINEAR;
     case fuchsia_sysmem::wire::kFormatModifierIntelI915XTiled:
-      return I915_FORMAT_MOD_X_TILED;
     case fuchsia_sysmem::wire::kFormatModifierIntelI915YTiled:
-      return I915_FORMAT_MOD_Y_TILED;
     case fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiled:
-      return I915_FORMAT_MOD_Yf_TILED;
+      return modifier;
+    case fuchsia_sysmem::wire::kFormatModifierArmLinearTe:
+      // No DRM format modifier available.
+      return DRM_FORMAT_MOD_INVALID;
   }
+  FX_CHECK(false) << "Unhandled format modifier";
   return DRM_FORMAT_MOD_INVALID;
 }
 
