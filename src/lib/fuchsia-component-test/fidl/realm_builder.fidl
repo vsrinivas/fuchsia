@@ -5,11 +5,11 @@
 library fuchsia.realm.builder;
 
 using fuchsia.component;
+using fuchsia.component.decl;
 using fuchsia.component.runner;
 using fuchsia.component.types;
 using fuchsia.io;
 using fuchsia.io2;
-using fuchsia.sys2;
 
 type RealmBuilderError = strict enum : uint32 {
     /// An attempt was made to interact with a component declaration for a
@@ -94,7 +94,7 @@ type MockComponentStartInfo = resource table {
 /// declaration that RealmBuilder should provide or an external URL that should
 /// be referenced in a child decl.
 type Component = flexible union {
-    1: decl fuchsia.sys2.ComponentDecl;
+    1: decl fuchsia.component.decl.Component;
     2: url string:fuchsia.component.types.MAX_URL_LENGTH;
     3: legacy_url string:fuchsia.component.types.MAX_URL_LENGTH;
 };
@@ -152,7 +152,7 @@ type RouteEndpoint = flexible union {
 
 /// The capability route's endpoint exists above the constructed realm, and is
 /// offered to the realm's collection or will be accessed by the parent using
-/// `fuchsia.sys2#Realm`.
+/// `fuchsia.component#Realm`.
 type AboveRoot = struct {};
 
 /// The capability route's endpoint exists in the environment and is offered as
@@ -192,7 +192,7 @@ protocol FrameworkIntermediary {
         component Component;
     }) -> (struct {}) error RealmBuilderError;
 
-    /// Sets the component to be a mock component. A new ComponentDecl is
+    /// Sets the component to be a mock component. A new Component decl is
     /// generated for the component, and assigned a new mock id. This id is
     /// returned by this function, and when the mock component should start
     /// running a new OnMockRunRequest is issued with this same id.
@@ -210,7 +210,7 @@ protocol FrameworkIntermediary {
     GetComponentDecl(struct {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
     }) -> (struct {
-        component_decl fuchsia.sys2.ComponentDecl;
+        component_decl fuchsia.component.decl.Component;
     }) error RealmBuilderError;
 
     /// Adds a capability route to the realm being constructed, adding any
