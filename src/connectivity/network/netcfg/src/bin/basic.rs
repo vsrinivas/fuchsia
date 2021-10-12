@@ -4,5 +4,7 @@
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
-    match netcfg::run::<netcfg::BasicMode>().await.expect("netcfg exited") {}
+    let _never = netcfg::run::<netcfg::BasicMode>().await.expect("netcfg exited");
+    // TODO(https://github.com/rust-lang/rust/issues/89779): enforce uninhabited on compile
+    unreachable!("{} should be uninhabited", _never);
 }
