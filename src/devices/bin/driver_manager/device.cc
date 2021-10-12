@@ -5,7 +5,7 @@
 #include "device.h"
 
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
-#include <fidl/fuchsia.driver.test/cpp/wire.h>
+#include <fidl/fuchsia.driver.test.logger/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/ddk/driver.h>
 #include <lib/fidl/coding.h>
@@ -600,10 +600,10 @@ void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* w
   test_reporter->TestStart();
 
   fidl::BindServer(dispatcher,
-                   fidl::ServerEnd<fuchsia_driver_test::Logger>(std::move(test_output_)),
+                   fidl::ServerEnd<fuchsia_driver_test_logger::Logger>(std::move(test_output_)),
                    test_reporter.get(),
                    [this](DriverTestReporter* test_reporter, fidl::UnbindInfo info,
-                          fidl::ServerEnd<fuchsia_driver_test::Logger> server_end) {
+                          fidl::ServerEnd<fuchsia_driver_test_logger::Logger> server_end) {
                      switch (info.reason()) {
                        case fidl::Reason::kPeerClosed:
                          test_reporter->TestFinished();

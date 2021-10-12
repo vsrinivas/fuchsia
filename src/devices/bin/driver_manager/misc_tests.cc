@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.driver.test/cpp/wire.h>
+#include <fidl/fuchsia.driver.test.logger/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/binding.h>
@@ -31,7 +31,7 @@
 constexpr char kDriverPath[] = "/pkg/driver/mock-device.so";
 constexpr char kLogMessage[] = "log message text";
 constexpr char kLogTestCaseName[] = "log test case";
-constexpr fuchsia_driver_test::wire::TestCaseResult kLogTestCaseResult = {
+constexpr fuchsia_driver_test_logger::wire::TestCaseResult kLogTestCaseResult = {
     .passed = 1,
     .failed = 2,
     .skipped = 3,
@@ -77,7 +77,7 @@ class FidlTransaction : public fidl::Transaction {
 
 class FakeDevice : public fidl::WireServer<fuchsia_device_manager::DeviceController> {
  public:
-  FakeDevice(fidl::ServerEnd<fuchsia_driver_test::Logger> test_output,
+  FakeDevice(fidl::ServerEnd<fuchsia_driver_test_logger::Logger> test_output,
              const fidl::StringView expected_driver = {})
       : test_output_(std::move(test_output)), expected_driver_(expected_driver) {}
 
@@ -102,7 +102,7 @@ class FakeDevice : public fidl::WireServer<fuchsia_device_manager::DeviceControl
   bool bind_called() { return bind_called_; }
 
  private:
-  fidl::ServerEnd<fuchsia_driver_test::Logger> test_output_;
+  fidl::ServerEnd<fuchsia_driver_test_logger::Logger> test_output_;
   const fidl::StringView expected_driver_;
   bool bind_called_ = false;
 };
@@ -111,7 +111,7 @@ class FakeDevice : public fidl::WireServer<fuchsia_device_manager::DeviceControl
 // driver, and then sends a ZX_OK response.
 void BindDriverTestOutput(
     const fidl::ServerEnd<fuchsia_device_manager::DeviceController>& controller,
-    fidl::ServerEnd<fuchsia_driver_test::Logger> test_output) {
+    fidl::ServerEnd<fuchsia_driver_test_logger::Logger> test_output) {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl::IncomingMessage msg = fidl::MessageRead(
@@ -143,7 +143,7 @@ void CheckBindDriverReceived(
   auto* header = msg.header();
   FidlTransaction txn(header->txid, zx::unowned(controller.channel()));
 
-  FakeDevice fake(fidl::ServerEnd<fuchsia_driver_test::Logger>(), expected_driver);
+  FakeDevice fake(fidl::ServerEnd<fuchsia_driver_test_logger::Logger>(), expected_driver);
   fidl::WireDispatch(
       static_cast<fidl::WireServer<fuchsia_device_manager::DeviceController>*>(&fake),
       std::move(msg), &txn);
@@ -433,7 +433,7 @@ TEST(MiscTestCase, TestOutput) {
   ASSERT_OK(status);
 
   // Check the BindDriver request.
-  zx::status test_endpoints = fidl::CreateEndpoints<fuchsia_driver_test::Logger>();
+  zx::status test_endpoints = fidl::CreateEndpoints<fuchsia_driver_test_logger::Logger>();
   ASSERT_OK(test_endpoints.status_value());
   ASSERT_NO_FATAL_FAILURES(
       BindDriverTestOutput(controller_endpoints->server, std::move(test_endpoints->server)));

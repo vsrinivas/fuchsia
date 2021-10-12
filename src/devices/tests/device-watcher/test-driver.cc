@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.driver.test/cpp/wire.h>
+#include <fidl/fuchsia.driver.test.logger/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -18,7 +18,8 @@
 #include "src/devices/tests/device-watcher/test-driver-bind.h"
 
 class TestDriver;
-using DeviceType = ddk::Device<TestDriver, ddk::Messageable<fuchsia_driver_test::Logger>::Mixin>;
+using DeviceType =
+    ddk::Device<TestDriver, ddk::Messageable<fuchsia_driver_test_logger::Logger>::Mixin>;
 
 class TestDriver : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_USB_DEVICE> {
  public:

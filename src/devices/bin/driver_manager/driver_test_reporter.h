@@ -5,11 +5,11 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_TEST_REPORTER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_TEST_REPORTER_H_
 
-#include <fidl/fuchsia.driver.test/cpp/wire.h>
+#include <fidl/fuchsia.driver.test.logger/cpp/wire.h>
 
 #include <fbl/string.h>
 
-class DriverTestReporter : public fidl::WireServer<fuchsia_driver_test::Logger> {
+class DriverTestReporter : public fidl::WireServer<fuchsia_driver_test_logger::Logger> {
  public:
   explicit DriverTestReporter(const fbl::String& driver_name) : driver_name_(driver_name) {}
   virtual ~DriverTestReporter() = default;

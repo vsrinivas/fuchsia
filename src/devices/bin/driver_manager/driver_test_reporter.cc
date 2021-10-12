@@ -18,7 +18,7 @@ void DriverTestReporter::LogMessage(LogMessageRequestView request,
 void DriverTestReporter::LogTestCase(LogTestCaseRequestView request,
                                      LogTestCaseCompleter::Sync& completer) {
   const fidl::StringView& name = request->name;
-  const fuchsia_driver_test::wire::TestCaseResult& result = request->result;
+  const fuchsia_driver_test_logger::wire::TestCaseResult& result = request->result;
   uint64_t ran = result.passed + result.failed;
   LOGF(INFO, "[----------] %lu tests from %s.%.*s\n", ran, driver_name_.data(),
        static_cast<int>(name.size()), name.data());

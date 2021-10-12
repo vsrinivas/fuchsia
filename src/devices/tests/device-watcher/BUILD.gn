@@ -20,7 +20,7 @@ fuchsia_driver("test-driver-driver") {
   sources = [ "test-driver.cc" ]
   deps = [
     ":test-bind",
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
+    "//sdk/fidl/fuchsia.driver.test.logger:fuchsia.driver.test.logger_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",

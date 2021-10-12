@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/driver/test/c/fidl.h>
+#include <fuchsia/driver/test/logger/c/fidl.h>
 #include <lib/driver-unit-test/logger.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_builder.h>
@@ -37,17 +37,17 @@ zx_status_t Logger::SendLogMessage(const char* log_msg) {
     return ZX_ERR_BAD_STATE;
   }
   size_t log_msg_size =
-      std::min(strlen(log_msg), static_cast<size_t>(fuchsia_driver_test_LOG_MESSAGE_MAX));
+      std::min(strlen(log_msg), static_cast<size_t>(fuchsia_driver_test_logger_LOG_MESSAGE_MAX));
 
-  uint32_t len = static_cast<uint32_t>(sizeof(fuchsia_driver_test_LoggerLogMessageRequest) +
+  uint32_t len = static_cast<uint32_t>(sizeof(fuchsia_driver_test_logger_LoggerLogMessageRequest) +
                                        FIDL_ALIGN(log_msg_size));
 
   FIDL_ALIGNDECL char buf[len];
   fidl::Builder builder(buf, len);
 
-  auto* req = builder.New<fuchsia_driver_test_LoggerLogMessageRequest>();
+  auto* req = builder.New<fuchsia_driver_test_logger_LoggerLogMessageRequest>();
   fidl_init_txn_header(&req->hdr, FIDL_TXID_NO_RESPONSE,
-                       fuchsia_driver_test_LoggerLogMessageOrdinal);
+                       fuchsia_driver_test_logger_LoggerLogMessageOrdinal);
 
   auto* data = builder.NewArray<char>(static_cast<uint32_t>(log_msg_size));
   req->msg.data = data;
@@ -56,7 +56,7 @@ zx_status_t Logger::SendLogMessage(const char* log_msg) {
 
   fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandleDispositionPart());
   const char* err = nullptr;
-  auto status = msg.Encode(&fuchsia_driver_test_LoggerLogMessageRequestTable, &err);
+  auto status = msg.Encode(&fuchsia_driver_test_logger_LoggerLogMessageRequestTable, &err);
   if (status != ZX_OK) {
     return status;
   }
@@ -64,18 +64,19 @@ zx_status_t Logger::SendLogMessage(const char* log_msg) {
 }
 
 zx_status_t Logger::SendLogTestCase() {
-  size_t test_name_size = std::min(strlen(test_case_name_.c_str()),
-                                   static_cast<size_t>(fuchsia_driver_test_TEST_CASE_NAME_MAX));
+  size_t test_name_size =
+      std::min(strlen(test_case_name_.c_str()),
+               static_cast<size_t>(fuchsia_driver_test_logger_TEST_CASE_NAME_MAX));
 
-  uint32_t len = static_cast<uint32_t>(sizeof(fuchsia_driver_test_LoggerLogTestCaseRequest) +
+  uint32_t len = static_cast<uint32_t>(sizeof(fuchsia_driver_test_logger_LoggerLogTestCaseRequest) +
                                        FIDL_ALIGN(test_name_size));
 
   FIDL_ALIGNDECL char buf[len];
   fidl::Builder builder(buf, len);
 
-  auto* req = builder.New<fuchsia_driver_test_LoggerLogTestCaseRequest>();
+  auto* req = builder.New<fuchsia_driver_test_logger_LoggerLogTestCaseRequest>();
   fidl_init_txn_header(&req->hdr, FIDL_TXID_NO_RESPONSE,
-                       fuchsia_driver_test_LoggerLogTestCaseOrdinal);
+                       fuchsia_driver_test_logger_LoggerLogTestCaseOrdinal);
 
   auto* data = builder.NewArray<char>(static_cast<uint32_t>(test_name_size));
   req->name.data = data;
@@ -88,7 +89,7 @@ zx_status_t Logger::SendLogTestCase() {
 
   fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandleDispositionPart());
   const char* err = nullptr;
-  auto status = msg.Encode(&fuchsia_driver_test_LoggerLogTestCaseRequestTable, &err);
+  auto status = msg.Encode(&fuchsia_driver_test_logger_LoggerLogTestCaseRequestTable, &err);
   if (status != ZX_OK) {
     return status;
   }

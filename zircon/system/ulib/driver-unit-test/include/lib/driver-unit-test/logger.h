@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_DRIVER_UNIT_TEST_LOGGER_H_
+#define LIB_DRIVER_UNIT_TEST_LOGGER_H_
+
+#include <fuchsia/driver/test/logger/c/fidl.h>
+#include <lib/zx/channel.h>
 
 #include <utility>
 
 #include <fbl/string.h>
-#include <fuchsia/driver/test/c/fidl.h>
-#include <lib/zx/channel.h>
 #include <zxtest/base/observer.h>
 
 namespace driver_unit_test {
@@ -48,7 +50,9 @@ class Logger : public zxtest::LifecycleObserver {
 
   // Current test case information.
   fbl::String test_case_name_;
-  fuchsia_driver_test_TestCaseResult test_case_result_;
+  fuchsia_driver_test_logger_TestCaseResult test_case_result_;
 };
 
 }  // namespace driver_unit_test
+
+#endif  // LIB_DRIVER_UNIT_TEST_LOGGER_H_
