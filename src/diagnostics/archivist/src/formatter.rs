@@ -184,7 +184,7 @@ impl JsonString {
             DataType::Logs => 4096, // page size
         });
         let batch_writer = BufWriter::new(writer.clone());
-        serde_json::to_writer_pretty(batch_writer, source).map_err(AccessorError::Serialization)?;
+        serde_json::to_writer(batch_writer, source).map_err(AccessorError::Serialization)?;
         // Safe to unwrap we should always be able to take the vmo here.
         let (vmo, tail) = writer.finalize().unwrap();
         Ok(Self { vmo, size: tail })

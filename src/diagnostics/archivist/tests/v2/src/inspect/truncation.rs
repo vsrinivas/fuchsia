@@ -48,7 +48,7 @@ async fn accessor_truncation_test() {
     assert_eq!(count_dropped_schemas_per_moniker(&data, "child_a"), 2);
 
     let data = reader
-        .with_aggregated_result_bytes_limit(10000)
+        .with_aggregated_result_bytes_limit(5000)
         .add_selector("child_a:root")
         .with_minimum_schema_count(3)
         .snapshot::<Inspect>()
@@ -85,7 +85,7 @@ async fn accessor_truncation_test() {
     assert_eq!(count_dropped_schemas_per_moniker(&data, "child_b"), 3);
 
     let data = reader
-        .with_aggregated_result_bytes_limit(10000)
+        .with_aggregated_result_bytes_limit(5000)
         .add_selector("child_b:root")
         .add_selector("child_a:root")
         .with_minimum_schema_count(6)
