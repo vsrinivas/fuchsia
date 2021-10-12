@@ -235,12 +235,8 @@ toc:
   section:
   - title: "zx_nanosleep"
     path: /docs/reference/syscalls/nanosleep.md
-  - title: "zx_clock_adjust"
-    path: /docs/reference/syscalls/clock_adjust.md
   - title: "zx_clock_create"
     path: /docs/reference/syscalls/clock_create.md
-  - title: "zx_clock_get"
-    path: /docs/reference/syscalls/clock_get.md
   - title: "zx_clock_get_details"
     path: /docs/reference/syscalls/clock_get_details.md
   - title: "zx_clock_get_monotonic"

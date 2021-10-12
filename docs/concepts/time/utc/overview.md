@@ -25,8 +25,4 @@ read [UTC behavior](behavior.md) to learn how to acquire UTC time and understand
 the behavior the UTC clock may exhibit both before and after time
 synchronization.
 
-Previously the kernel maintained an additional internal UTC clock that could be
-accessed through [`zx_clock_get`](/docs/reference/syscalls/clock_get.md). This
-clock is deprecated and should no longer be used.
-
 [1]: https://en.wikipedia.org/wiki/Coordinated_Universal_Time
