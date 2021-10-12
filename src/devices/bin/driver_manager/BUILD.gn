@@ -235,9 +235,10 @@ source_set("driver_runner") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_llcpp",
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_llcpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_llcpp",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/inspect",
   ]
@@ -263,8 +264,9 @@ executable("driver_runner_test") {
 
   deps = [
     ":driver_runner",
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.decl",
     "//sdk/fidl/fuchsia.driver.framework",
-    "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",

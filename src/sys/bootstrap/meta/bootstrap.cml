@@ -220,7 +220,7 @@
             to: "#driver_manager",
         },
         {
-            protocol: "fuchsia.sys2.Realm",
+            protocol: "fuchsia.component.Realm",
             from: "framework",
             to: "#driver_manager",
         },

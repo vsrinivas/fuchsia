@@ -4,9 +4,10 @@
 
 #include "src/devices/bin/driver_manager/driver_runner.h"
 
+#include <fuchsia/component/cpp/fidl_test_base.h>
+#include <fuchsia/component/decl/cpp/fidl.h>
 #include <fuchsia/driver/framework/cpp/fidl_test_base.h>
 #include <fuchsia/io/cpp/fidl_test_base.h>
-#include <fuchsia/sys2/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -25,7 +26,8 @@ namespace fdf = fuchsia::driver::framework;
 namespace fio = fuchsia::io;
 namespace fprocess = fuchsia_process;
 namespace frunner = fuchsia_component_runner;
-namespace fsys = fuchsia::sys2;
+namespace fcomponent = fuchsia::component;
+namespace fdecl = fuchsia::component::decl;
 
 using namespace testing;
 using namespace inspect::testing;
@@ -47,12 +49,12 @@ fidl::AnyTeardownObserver TeardownWatcher(size_t index, std::vector<size_t>& ind
   return fidl::ObserveTeardown([&indices = indices, index] { indices.emplace_back(index); });
 };
 
-class TestRealm : public fsys::testing::Realm_TestBase {
+class TestRealm : public fcomponent::testing::Realm_TestBase {
  public:
   using CreateChildHandler =
-      fit::function<void(fsys::CollectionRef collection, fsys::ChildDecl decl)>;
-  using OpenExposedDirHandler =
-      fit::function<void(fsys::ChildRef child, fidl::InterfaceRequest<fio::Directory> exposed_dir)>;
+      fit::function<void(fdecl::CollectionRef collection, fdecl::Child decl)>;
+  using OpenExposedDirHandler = fit::function<void(
+      fdecl::ChildRef child, fidl::InterfaceRequest<fio::Directory> exposed_dir)>;
 
   void SetCreateChildHandler(CreateChildHandler create_child_handler) {
     create_child_handler_ = std::move(create_child_handler);
@@ -67,8 +69,8 @@ class TestRealm : public fsys::testing::Realm_TestBase {
   }
 
  private:
-  void CreateChild(fsys::CollectionRef collection, fsys::ChildDecl decl, fsys::CreateChildArgs args,
-                   CreateChildCallback callback) override {
+  void CreateChild(fdecl::CollectionRef collection, fdecl::Child decl,
+                   fcomponent::CreateChildArgs args, CreateChildCallback callback) override {
     handles_.clear();
     for (auto& info : *args.mutable_numbered_handles()) {
       handles_.push_back(fprocess::wire::HandleInfo{
@@ -77,13 +79,13 @@ class TestRealm : public fsys::testing::Realm_TestBase {
       });
     }
     create_child_handler_(std::move(collection), std::move(decl));
-    callback(fsys::Realm_CreateChild_Result(fpromise::ok()));
+    callback(fcomponent::Realm_CreateChild_Result(fpromise::ok()));
   }
 
-  void OpenExposedDir(fsys::ChildRef child, fidl::InterfaceRequest<fio::Directory> exposed_dir,
+  void OpenExposedDir(fdecl::ChildRef child, fidl::InterfaceRequest<fio::Directory> exposed_dir,
                       OpenExposedDirCallback callback) override {
     open_exposed_dir_handler_(std::move(child), std::move(exposed_dir));
-    callback(fsys::Realm_OpenExposedDir_Result(fpromise::ok()));
+    callback(fcomponent::Realm_OpenExposedDir_Result(fpromise::ok()));
   }
 
   void NotImplemented_(const std::string& name) override {
@@ -195,7 +197,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
     TestLoopFixture::SetUp();
-    fidl::InterfaceRequestHandler<fsys::Realm> handler = [this](auto request) {
+    fidl::InterfaceRequestHandler<fcomponent::Realm> handler = [this](auto request) {
       EXPECT_EQ(ZX_OK, realm_binding_.Bind(std::move(request), dispatcher()));
     };
     ASSERT_EQ(ZX_OK, provider_.context()->outgoing()->AddPublicService(std::move(handler)));
@@ -207,10 +209,10 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
   TestDirectory& driver_dir() { return driver_dir_; }
   TestDriverHost& driver_host() { return driver_host_; }
 
-  fidl::ClientEnd<fuchsia_sys2::Realm> ConnectToRealm() {
-    fsys::RealmPtr realm;
+  fidl::ClientEnd<fuchsia_component::Realm> ConnectToRealm() {
+    fcomponent::RealmPtr realm;
     provider_.ConnectToPublicService(realm.NewRequest(dispatcher()));
-    return fidl::ClientEnd<fuchsia_sys2::Realm>(realm.Unbind().TakeChannel());
+    return fidl::ClientEnd<fuchsia_component::Realm>(realm.Unbind().TakeChannel());
   }
 
   FakeDriverIndex CreateDriverIndex() {
@@ -238,13 +240,12 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
   }
 
   void StartDriverHost(std::string coll, std::string name) {
-    realm().SetCreateChildHandler(
-        [coll, name](fsys::CollectionRef collection, fsys::ChildDecl decl) {
-          EXPECT_EQ(coll, collection.name);
-          EXPECT_EQ(name, decl.name());
-          EXPECT_EQ("#meta/driver_host2.cm", decl.url());
-        });
-    realm().SetOpenExposedDirHandler([this, coll, name](fsys::ChildRef child, auto exposed_dir) {
+    realm().SetCreateChildHandler([coll, name](fdecl::CollectionRef collection, fdecl::Child decl) {
+      EXPECT_EQ(coll, collection.name);
+      EXPECT_EQ(name, decl.name());
+      EXPECT_EQ("#meta/driver_host2.cm", decl.url());
+    });
+    realm().SetOpenExposedDirHandler([this, coll, name](fdecl::ChildRef child, auto exposed_dir) {
       EXPECT_EQ(coll, child.collection.value_or(""));
       EXPECT_EQ(name, child.name);
       driver_host_dir_.Bind(std::move(exposed_dir));
@@ -294,12 +295,12 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
 
   zx::status<fidl::ClientEnd<frunner::ComponentController>> StartRootDriver(
       std::string url, DriverRunner& driver_runner) {
-    realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {
+    realm().SetCreateChildHandler([](fdecl::CollectionRef collection, fdecl::Child decl) {
       EXPECT_EQ("boot-drivers", collection.name);
       EXPECT_EQ("root", decl.name());
       EXPECT_EQ("fuchsia-boot:///#meta/root-driver.cm", decl.url());
     });
-    realm().SetOpenExposedDirHandler([this](fsys::ChildRef child, auto exposed_dir) {
+    realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
       EXPECT_EQ("boot-drivers", child.collection);
       EXPECT_EQ("root", child.name);
       driver_dir_.Bind(std::move(exposed_dir));
@@ -342,7 +343,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
   TestDirectory driver_host_dir_{dispatcher()};
   TestDirectory driver_dir_{dispatcher()};
   TestDriverHost driver_host_;
-  fidl::Binding<fsys::Realm> realm_binding_{&realm_};
+  fidl::Binding<fcomponent::Realm> realm_binding_{&realm_};
   fidl::Binding<fdf::DriverHost> driver_host_binding_{&driver_host_};
   fidl::BindingSet<fdf::Driver> driver_bindings_;
 
@@ -603,12 +604,12 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
         EXPECT_EQ("colocate", entries[1].key);
         EXPECT_EQ("false", entries[1].value->str());
 
-        realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {
+        realm().SetCreateChildHandler([](fdecl::CollectionRef collection, fdecl::Child decl) {
           EXPECT_EQ("boot-drivers", collection.name);
           EXPECT_EQ("root.second", decl.name());
           EXPECT_EQ("fuchsia-boot:///#meta/second-driver.cm", decl.url());
         });
-        realm().SetOpenExposedDirHandler([this](fsys::ChildRef child, auto exposed_dir) {
+        realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
           EXPECT_EQ("boot-drivers", child.collection);
           EXPECT_EQ("root.second", child.name);
           driver_dir().Bind(std::move(exposed_dir));
@@ -673,12 +674,12 @@ TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
         EXPECT_EQ("colocate", entries[1].key);
         EXPECT_EQ("false", entries[1].value->str());
 
-        realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {
+        realm().SetCreateChildHandler([](fdecl::CollectionRef collection, fdecl::Child decl) {
           EXPECT_EQ("boot-drivers", collection.name);
           EXPECT_EQ("root.second", decl.name());
           EXPECT_EQ("fuchsia-boot:///#meta/second-driver.cm", decl.url());
         });
-        realm().SetOpenExposedDirHandler([this](fsys::ChildRef child, auto exposed_dir) {
+        realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
           EXPECT_EQ("boot-drivers", child.collection);
           EXPECT_EQ("root.second", child.name);
           driver_dir().Bind(std::move(exposed_dir));
@@ -757,12 +758,12 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UseProperties) {
         EXPECT_EQ("colocate", entries[1].key);
         EXPECT_EQ("false", entries[1].value->str());
 
-        realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {
+        realm().SetCreateChildHandler([](fdecl::CollectionRef collection, fdecl::Child decl) {
           EXPECT_EQ("boot-drivers", collection.name);
           EXPECT_EQ("root.second", decl.name());
           EXPECT_EQ("fuchsia-boot:///#meta/second-driver.cm", decl.url());
         });
-        realm().SetOpenExposedDirHandler([this](fsys::ChildRef child, auto exposed_dir) {
+        realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
           EXPECT_EQ("boot-drivers", child.collection);
           EXPECT_EQ("root.second", child.name);
           driver_dir().Bind(std::move(exposed_dir));
@@ -843,8 +844,8 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindSecondNode) {
   fdf::NodeControllerPtr node_controller;
   driver_host().SetStartHandler(
       [this, &node_controller](fdf::DriverStartArgs start_args, auto request) {
-        realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
-        realm().SetOpenExposedDirHandler([this](fsys::ChildRef child, auto exposed_dir) {
+        realm().SetCreateChildHandler([](fdecl::CollectionRef collection, fdecl::Child decl) {});
+        realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
           driver_dir().Bind(std::move(exposed_dir));
         });
 
@@ -894,8 +895,8 @@ TEST_F(DriverRunnerTest, StartSecondDriver_CloseSecondDriver) {
   fdf::NodeControllerPtr node_controller;
   driver_host().SetStartHandler(
       [this, &node_controller](fdf::DriverStartArgs start_args, auto request) {
-        realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
-        realm().SetOpenExposedDirHandler([this](fsys::ChildRef child, auto exposed_dir) {
+        realm().SetCreateChildHandler([](fdecl::CollectionRef collection, fdecl::Child decl) {});
+        realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
           driver_dir().Bind(std::move(exposed_dir));
         });
 
@@ -953,8 +954,8 @@ TEST_F(DriverRunnerTest, StartDriverChain_UnbindSecondNode) {
   fdf::NodeControllerPtr node_controller;
   driver_host().SetStartHandler(
       [this, &node_controller](fdf::DriverStartArgs start_args, auto request) {
-        realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
-        realm().SetOpenExposedDirHandler([this](fsys::ChildRef child, auto exposed_dir) {
+        realm().SetCreateChildHandler([](fdecl::CollectionRef collection, fdecl::Child decl) {});
+        realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
           driver_dir().Bind(std::move(exposed_dir));
         });
 
@@ -973,27 +974,27 @@ TEST_F(DriverRunnerTest, StartDriverChain_UnbindSecondNode) {
   fdf::NodePtr second_node;
   std::vector<fidl::ClientEnd<frunner::ComponentController>> drivers;
   for (size_t i = 1; i <= kMaxNodes; i++) {
-    driver_host().SetStartHandler([this, &second_node, &node_controller, i](
-                                      fdf::DriverStartArgs start_args, auto request) {
-      realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
-      realm().SetOpenExposedDirHandler([this](fsys::ChildRef child, auto exposed_dir) {
-        driver_dir().Bind(std::move(exposed_dir));
-      });
+    driver_host().SetStartHandler(
+        [this, &second_node, &node_controller, i](fdf::DriverStartArgs start_args, auto request) {
+          realm().SetCreateChildHandler([](fdecl::CollectionRef collection, fdecl::Child decl) {});
+          realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
+            driver_dir().Bind(std::move(exposed_dir));
+          });
 
-      fdf::NodePtr node;
-      EXPECT_EQ(ZX_OK, node.Bind(std::move(*start_args.mutable_node()), dispatcher()));
-      // Only add a node that a driver will be bound to.
-      if (i != kMaxNodes) {
-        fdf::NodeAddArgs args;
-        args.set_name("node-" + std::to_string(i));
-        node->AddChild(std::move(args), node_controller.NewRequest(dispatcher()), {},
-                       [](auto result) { EXPECT_FALSE(result.is_err()); });
-      }
-      auto& driver = BindDriver(std::move(request), std::move(node));
-      if (!second_node.is_bound()) {
-        second_node = std::move(driver.node());
-      }
-    });
+          fdf::NodePtr node;
+          EXPECT_EQ(ZX_OK, node.Bind(std::move(*start_args.mutable_node()), dispatcher()));
+          // Only add a node that a driver will be bound to.
+          if (i != kMaxNodes) {
+            fdf::NodeAddArgs args;
+            args.set_name("node-" + std::to_string(i));
+            node->AddChild(std::move(args), node_controller.NewRequest(dispatcher()), {},
+                           [](auto result) { EXPECT_FALSE(result.is_err()); });
+          }
+          auto& driver = BindDriver(std::move(request), std::move(node));
+          if (!second_node.is_bound()) {
+            second_node = std::move(driver.node());
+          }
+        });
 
     StartDriverHost("driver-hosts", "driver-host-" + std::to_string(i));
     drivers.emplace_back(StartDriver(driver_runner, {
@@ -1029,8 +1030,8 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
   fdf::NodePtr root_node;
   driver_host().SetStartHandler(
       [this, &node_controller, &root_node](fdf::DriverStartArgs start_args, auto request) {
-        realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
-        realm().SetOpenExposedDirHandler([this](fsys::ChildRef child, auto exposed_dir) {
+        realm().SetCreateChildHandler([](fdecl::CollectionRef collection, fdecl::Child decl) {});
+        realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
           driver_dir().Bind(std::move(exposed_dir));
         });
 
@@ -1082,8 +1083,8 @@ TEST_F(DriverRunnerTest, StartSecondDriver_StopRootDriver) {
   fdf::NodeControllerPtr node_controller;
   driver_host().SetStartHandler(
       [this, &node_controller](fdf::DriverStartArgs start_args, auto request) {
-        realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
-        realm().SetOpenExposedDirHandler([this](fsys::ChildRef child, auto exposed_dir) {
+        realm().SetCreateChildHandler([](fdecl::CollectionRef collection, fdecl::Child decl) {});
+        realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
           driver_dir().Bind(std::move(exposed_dir));
         });
 
@@ -1135,8 +1136,8 @@ TEST_F(DriverRunnerTest, StartSecondDriver_BlockOnSecondDriver) {
   fdf::NodeControllerPtr node_controller;
   driver_host().SetStartHandler(
       [this, &node_controller](fdf::DriverStartArgs start_args, auto request) {
-        realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
-        realm().SetOpenExposedDirHandler([this](fsys::ChildRef child, auto exposed_dir) {
+        realm().SetCreateChildHandler([](fdecl::CollectionRef collection, fdecl::Child decl) {});
+        realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
           driver_dir().Bind(std::move(exposed_dir));
         });
 
@@ -1207,8 +1208,8 @@ TEST_F(DriverRunnerTest, StartCompositeDriver) {
   fdf::NodeControllerPtr node_controller;
   driver_host().SetStartHandler(
       [this, &node_controller](fdf::DriverStartArgs start_args, auto request) {
-        realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
-        realm().SetOpenExposedDirHandler([this](fsys::ChildRef child, auto exposed_dir) {
+        realm().SetCreateChildHandler([](fdecl::CollectionRef collection, fdecl::Child decl) {});
+        realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
           driver_dir().Bind(std::move(exposed_dir));
         });
 
@@ -1263,8 +1264,8 @@ TEST_F(DriverRunnerTest, StartAndInspect) {
   auto defer = fit::defer([this] { Unbind(); });
 
   driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto request) {
-    realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
-    realm().SetOpenExposedDirHandler([this](fsys::ChildRef child, auto exposed_dir) {
+    realm().SetCreateChildHandler([](fdecl::CollectionRef collection, fdecl::Child decl) {});
+    realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
       driver_dir().Bind(std::move(exposed_dir));
     });
 
@@ -1309,8 +1310,8 @@ TEST_F(DriverRunnerTest, StartAndInspect_CompositeDriver) {
   fdf::NodeControllerPtr node_controller;
   driver_host().SetStartHandler(
       [this, &node_controller](fdf::DriverStartArgs start_args, auto request) {
-        realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
-        realm().SetOpenExposedDirHandler([this](fsys::ChildRef child, auto exposed_dir) {
+        realm().SetCreateChildHandler([](fdecl::CollectionRef collection, fdecl::Child decl) {});
+        realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
           driver_dir().Bind(std::move(exposed_dir));
         });
 

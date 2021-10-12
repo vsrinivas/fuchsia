@@ -6,8 +6,8 @@
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_RUNNER_H_
 
 #include <fidl/fuchsia.component.runner/cpp/wire.h>
+#include <fidl/fuchsia.component/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
-#include <fidl/fuchsia.sys2/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fit/function.h>
@@ -129,7 +129,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
 class DriverRunner : public fidl::WireServer<fuchsia_component_runner::ComponentRunner>,
                      public DriverBinder {
  public:
-  DriverRunner(fidl::ClientEnd<fuchsia_sys2::Realm> realm,
+  DriverRunner(fidl::ClientEnd<fuchsia_component::Realm> realm,
                fidl::ClientEnd<fuchsia_driver_framework::DriverIndex> driver_index,
                inspect::Inspector& inspector, async_dispatcher_t* dispatcher);
 
@@ -163,7 +163,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
       std::string name, std::string url, std::string collection, zx::handle token = zx::handle());
 
   uint64_t next_driver_host_id_ = 0;
-  fidl::WireSharedClient<fuchsia_sys2::Realm> realm_;
+  fidl::WireSharedClient<fuchsia_component::Realm> realm_;
   fidl::WireSharedClient<fuchsia_driver_framework::DriverIndex> driver_index_;
   async_dispatcher_t* const dispatcher_;
   std::shared_ptr<Node> root_node_;

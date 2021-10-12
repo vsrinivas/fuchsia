@@ -28,7 +28,8 @@ namespace fdf = fuchsia_driver_framework;
 namespace fio = fuchsia_io;
 namespace fprocess = fuchsia_process;
 namespace frunner = fuchsia_component_runner;
-namespace fsys = fuchsia_sys2;
+namespace fcomponent = fuchsia_component;
+namespace fdecl = fuchsia_component_decl;
 
 using InspectStack = std::stack<std::pair<inspect::Node*, const Node*>>;
 
@@ -501,7 +502,7 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
   completer.ReplySuccess();
 }
 
-DriverRunner::DriverRunner(fidl::ClientEnd<fsys::Realm> realm,
+DriverRunner::DriverRunner(fidl::ClientEnd<fcomponent::Realm> realm,
                            fidl::ClientEnd<fdf::DriverIndex> driver_index,
                            inspect::Inspector& inspector, async_dispatcher_t* dispatcher)
     : realm_(std::move(realm), dispatcher),
@@ -799,7 +800,8 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  auto open_callback = [name, url](fidl::WireUnownedResult<fsys::Realm::OpenExposedDir>& result) {
+  auto open_callback = [name,
+                        url](fidl::WireUnownedResult<fcomponent::Realm::OpenExposedDir>& result) {
     if (!result.ok()) {
       LOGF(ERROR, "Failed to open exposed directory for component '%s' (%s): %s", name.data(),
            url.data(), result.FormatDescription().data());
@@ -810,30 +812,31 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
            url.data(), result->result.err());
     }
   };
-  auto create_callback = [this, name, url, collection, server_end = std::move(endpoints->server),
-                          open_callback = std::move(open_callback)](
-                             fidl::WireUnownedResult<fsys::Realm::CreateChild>& result) mutable {
-    if (!result.ok()) {
-      LOGF(ERROR, "Failed to create component '%s' (%s): %s", name.data(), url.data(),
-           result.error().FormatDescription().data());
-      return;
-    }
-    if (result->result.is_err()) {
-      LOGF(ERROR, "Failed to create component '%s' (%s): %u", name.data(), url.data(),
-           result->result.err());
-      return;
-    }
-    realm_->OpenExposedDir(
-        fsys::wire::ChildRef{.name = fidl::StringView::FromExternal(name),
-                             .collection = fidl::StringView::FromExternal(collection)},
-        std::move(server_end), std::move(open_callback));
-  };
+  auto create_callback =
+      [this, name, url, collection, server_end = std::move(endpoints->server),
+       open_callback = std::move(open_callback)](
+          fidl::WireUnownedResult<fcomponent::Realm::CreateChild>& result) mutable {
+        if (!result.ok()) {
+          LOGF(ERROR, "Failed to create component '%s' (%s): %s", name.data(), url.data(),
+               result.error().FormatDescription().data());
+          return;
+        }
+        if (result->result.is_err()) {
+          LOGF(ERROR, "Failed to create component '%s' (%s): %u", name.data(), url.data(),
+               result->result.err());
+          return;
+        }
+        realm_->OpenExposedDir(
+            fdecl::wire::ChildRef{.name = fidl::StringView::FromExternal(name),
+                                  .collection = fidl::StringView::FromExternal(collection)},
+            std::move(server_end), std::move(open_callback));
+      };
   fidl::Arena allocator;
-  fsys::wire::ChildDecl child_decl(allocator);
+  fdecl::wire::Child child_decl(allocator);
   child_decl.set_name(allocator, fidl::StringView::FromExternal(name))
       .set_url(allocator, fidl::StringView::FromExternal(url))
-      .set_startup(allocator, fsys::wire::StartupMode::kLazy);
-  fsys::wire::CreateChildArgs child_args(allocator);
+      .set_startup(allocator, fdecl::wire::StartupMode::kLazy);
+  fcomponent::wire::CreateChildArgs child_args(allocator);
   fprocess::wire::HandleInfo handle_info;
   if (token) {
     handle_info = {
@@ -843,7 +846,8 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
     child_args.set_numbered_handles(
         allocator, fidl::VectorView<fprocess::wire::HandleInfo>::FromExternal(&handle_info, 1));
   }
-  realm_->CreateChild(fsys::wire::CollectionRef{.name = fidl::StringView::FromExternal(collection)},
-                      child_decl, child_args, std::move(create_callback));
+  realm_->CreateChild(
+      fdecl::wire::CollectionRef{.name = fidl::StringView::FromExternal(collection)}, child_decl,
+      child_args, std::move(create_callback));
   return zx::ok(std::move(endpoints->client));
 }

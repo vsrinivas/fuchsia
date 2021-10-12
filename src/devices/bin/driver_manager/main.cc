@@ -404,7 +404,7 @@ int main(int argc, char** argv) {
     LOGF(INFO, "Starting DriverRunner with root driver URL: %s",
          driver_manager_args.sys_device_driver.data());
 
-    auto realm_result = service::Connect<fuchsia_sys2::Realm>();
+    auto realm_result = service::Connect<fuchsia_component::Realm>();
     if (realm_result.is_error()) {
       return realm_result.error_value();
     }
