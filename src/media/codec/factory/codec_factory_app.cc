@@ -4,6 +4,7 @@
 
 #include "codec_factory_app.h"
 
+#include <dirent.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/hardware/mediacodec/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
@@ -14,7 +15,6 @@
 
 #include <algorithm>
 #include <random>
-#include <dirent.h> 
 
 #include "codec_factory_impl.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -26,7 +26,7 @@ namespace {
 
 constexpr char kDeviceClass[] = "/dev/class/media-codec";
 const char* kLogTag = "CodecFactoryApp";
-const char kRealmSvc[] = "fuchsia.sys2.Realm";
+const char kRealmSvc[] = "fuchsia.component.Realm";
 
 const std::string kAllSwDecoderMimeTypes[] = {
     "video/h264",  // VIDEO_ENCODING_H264
@@ -90,7 +90,8 @@ void CodecFactoryApp::PublishService() {
           [this](fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request) {
             // The CodecFactoryImpl is self-owned and will self-delete when the
             // channel closes or an error occurs.
-            CodecFactoryImpl::CreateSelfOwned(this, startup_context_.get(), std::move(request), this->IsV2());
+            CodecFactoryImpl::CreateSelfOwned(this, startup_context_.get(), std::move(request),
+                                              this->IsV2());
           });
   // else this codec_factory is useless
   ZX_ASSERT(status == ZX_OK);

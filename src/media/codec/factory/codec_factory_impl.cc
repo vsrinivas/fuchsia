@@ -4,8 +4,9 @@
 
 #include "codec_factory_impl.h"
 
+#include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/component/decl/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/sys2/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -127,37 +128,37 @@ void ForwardToIsolate(std::string component_url, bool is_v2,
                       sys::ComponentContext* component_context,
                       fit::function<void(fuchsia::mediacodec::CodecFactoryPtr)> connect_func) {
   if (is_v2) {
-    fuchsia::sys2::ChildDecl isolate;
+    fuchsia::component::decl::Child isolate;
     uint64_t rand_num;
     zx_cprng_draw(&rand_num, sizeof rand_num);
     std::string msg = fxl::StringPrintf("isolate-%" PRIu64 "", rand_num);
     isolate.set_name(msg);
     isolate.set_url(component_url);
-    isolate.set_startup(fuchsia::sys2::StartupMode::LAZY);
-    isolate.set_on_terminate(fuchsia::sys2::OnTerminate::NONE);
+    isolate.set_startup(fuchsia::component::decl::StartupMode::LAZY);
+    isolate.set_on_terminate(fuchsia::component::decl::OnTerminate::NONE);
 
-    fuchsia::sys2::CollectionRef collection{.name = "sw-codecs"};
-    fuchsia::sys2::RealmPtr realm_svc;
+    fuchsia::component::decl::CollectionRef collection{.name = "sw-codecs"};
+    fuchsia::component::RealmPtr realm_svc;
 
-    fuchsia::sys2::CreateChildArgs child_args;
+    fuchsia::component::CreateChildArgs child_args;
     child_args.set_numbered_handles(std::vector<fuchsia::process::HandleInfo>());
 
     component_context->svc()->Connect(realm_svc.NewRequest());
     realm_svc.set_error_handler([](zx_status_t err) {
-      FX_LOGS(WARNING) << "FIDL error using fuchsia.sys2.Realm protocol: " << err;
+      FX_LOGS(WARNING) << "FIDL error using fuchsia.component.Realm protocol: " << err;
     });
 
     realm_svc->CreateChild(
         collection, std::move(isolate), std::move(child_args),
         [realm_svc = std::move(realm_svc), connect_func = std::move(connect_func),
-         msg = std::move(msg)](fuchsia::sys2::Realm_CreateChild_Result res) mutable {
+         msg = std::move(msg)](fuchsia::component::Realm_CreateChild_Result res) mutable {
           if (res.is_err()) {
             FX_LOGS(WARNING) << "Isolate creation request failed for " << msg;
             return;
           }
           fidl::InterfaceHandle<fuchsia::io::Directory> exposed_dir;
 
-          fuchsia::sys2::ChildRef child = fuchsia::sys2::ChildRef{
+          fuchsia::component::decl::ChildRef child = fuchsia::component::decl::ChildRef{
               .name = msg,
               .collection = "sw-codecs",
           };
@@ -165,7 +166,7 @@ void ForwardToIsolate(std::string component_url, bool is_v2,
               child, exposed_dir.NewRequest(),
               [realm_svc = std::move(realm_svc), exposed_dir = std::move(exposed_dir),
                connect_func = std::move(connect_func)](
-                  fuchsia::sys2::Realm_OpenExposedDir_Result res) mutable {
+                  fuchsia::component::Realm_OpenExposedDir_Result res) mutable {
                 if (res.is_err()) {
                   FX_LOGS(WARNING) << "OpenExposedDir on isolate failed";
                   return;
