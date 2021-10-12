@@ -13,7 +13,6 @@
 #include <atomic>
 
 #include <fbl/algorithm.h>
-#include <pretty/hexdump.h>
 #include <test-utils/test-utils.h>
 #include <zxtest/zxtest.h>
 

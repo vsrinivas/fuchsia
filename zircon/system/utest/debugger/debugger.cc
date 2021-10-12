@@ -23,7 +23,6 @@
 
 #include <atomic>
 
-#include <pretty/hexdump.h>
 #include <test-utils/test-utils.h>
 #include <zxtest/zxtest.h>
 
