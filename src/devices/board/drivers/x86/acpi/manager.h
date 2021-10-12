@@ -27,6 +27,8 @@ class Manager {
         loop_(&kAsyncLoopConfigNeverAttachToThread),
         executor_(loop_.dispatcher()) {}
 
+  ~Manager() { loop_.Shutdown(); }
+
   // Walk the ACPI tree, keeping track of each device that's found.
   acpi::status<> DiscoverDevices();
   // Infer information about devices based on their relationships.
