@@ -67,7 +67,6 @@ rustc_library("lib") {
     "src/errors.rs",
     "src/interface.rs",
     "src/lib.rs",
-    "src/matchers.rs",
   ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]

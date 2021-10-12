@@ -17,17 +17,5 @@
     },
     "filter_enabled_interface_types": [
         "wlan"
-    ],
-    "rules": [
-        [
-            [
-                "all",
-                "all"
-            ],
-            [
-                "ip_address",
-                "dhcp"
-            ]
-        ]
     ]
 }

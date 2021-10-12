@@ -15,7 +15,6 @@ mod dhcpv6;
 mod dns;
 mod errors;
 mod interface;
-mod matchers;
 
 use dhcp::protocol::FromFidlExt as _;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
@@ -207,11 +206,11 @@ enum InterfaceType {
     Wlan,
 }
 
+// TODO(https://fxbug.dev/86326): Deny unknown fields after "rules" usage has
+// been deleted OOT.
 #[derive(Debug, Deserialize)]
 struct Config {
     pub dns_config: DnsConfig,
-    #[serde(deserialize_with = "matchers::InterfaceSpec::parse_as_tuples")]
-    pub rules: Vec<matchers::InterfaceSpec>,
     pub filter_config: FilterConfig,
     pub filter_enabled_interface_types: HashSet<InterfaceType>,
 }
@@ -350,7 +349,6 @@ pub struct NetCfg<'a> {
     persisted_interface_config: interface::FileBackedConfig<'a>,
 
     filter_enabled_interface_types: HashSet<InterfaceType>,
-    default_config_rules: Vec<matchers::InterfaceSpec>,
 
     // TODO(fxbug.dev/67407) These two hashmaps are both indexed by interface ID and store
     // per-interface state, and should be merged.
@@ -454,7 +452,6 @@ fn start_dhcpv6_client(
 impl<'a> NetCfg<'a> {
     async fn new(
         allow_virtual_devices: bool,
-        default_config_rules: Vec<matchers::InterfaceSpec>,
         filter_enabled_interface_types: HashSet<InterfaceType>,
     ) -> Result<NetCfg<'a>, anyhow::Error> {
         let svc_dir = clone_namespace_svc().context("error cloning svc directory handle")?;
@@ -495,7 +492,6 @@ impl<'a> NetCfg<'a> {
             allow_virtual_devices,
             persisted_interface_config,
             filter_enabled_interface_types,
-            default_config_rules,
             interface_properties: HashMap::new(),
             interface_states: HashMap::new(),
             dns_servers: Default::default(),
@@ -1098,21 +1094,18 @@ impl<'a> NetCfg<'a> {
             interface_name
         );
 
-        let mut config = matchers::config_for_device(
-            &eth_info,
-            interface_name.clone(),
-            &topological_path,
+        let mut interface_config = fidl_fuchsia_netstack::InterfaceConfig {
+            name: interface_name.clone(),
+            filepath: format!("{:?}", filepath),
             metric,
-            &self.default_config_rules,
-            filepath,
-        );
+        };
 
         let interface_id =
-            D::add_to_stack(self, topological_path.clone(), &mut config.fidl, device_instance)
+            D::add_to_stack(self, topological_path.clone(), &mut interface_config, device_instance)
                 .await
                 .context("error adding to stack")?;
 
-        self.configure_eth_interface(interface_id, &topological_path, &eth_info, &config)
+        self.configure_eth_interface(interface_id, &topological_path, interface_name, &eth_info)
             .await
             .context("error configuring ethernet interface")
             .map_err(devices::AddDeviceError::Other)
@@ -1127,8 +1120,8 @@ impl<'a> NetCfg<'a> {
         &mut self,
         interface_id: u64,
         topological_path: &str,
+        interface_name: String,
         info: &feth_ext::EthernetInfo,
-        config: &matchers::InterfaceConfig,
     ) -> Result<(), errors::Error> {
         let interface_id_u32: u32 = interface_id.try_into().expect("NIC ID should fit in a u32");
 
@@ -1158,7 +1151,7 @@ impl<'a> NetCfg<'a> {
             );
 
             let () = self
-                .configure_wlan_ap_and_dhcp_server(interface_id_u32, config.fidl.name.clone())
+                .configure_wlan_ap_and_dhcp_server(interface_id_u32, interface_name)
                 .await
                 .context("error configuring wlan ap and dhcp server")?;
         } else {
@@ -1174,7 +1167,7 @@ impl<'a> NetCfg<'a> {
             info!("discovered host interface with id={}, configuring interface", interface_id);
 
             let () = self
-                .configure_host(interface_id_u32, info, config)
+                .configure_host(interface_id_u32, info)
                 .await
                 .context("error configuring host")?;
         }
@@ -1190,7 +1183,6 @@ impl<'a> NetCfg<'a> {
         &mut self,
         interface_id: u32,
         info: &feth_ext::EthernetInfo,
-        config: &matchers::InterfaceConfig,
     ) -> Result<(), errors::Error> {
         if should_enable_filter(&self.filter_enabled_interface_types, &info.features) {
             info!("enable filter for nic {}", interface_id);
@@ -1228,52 +1220,27 @@ impl<'a> NetCfg<'a> {
             }
         };
 
-        match config.ip_address_config {
-            matchers::IpAddressConfig::Dhcp => {
-                let (dhcp_client, server_end) =
-                    fidl::endpoints::create_proxy::<fnet_dhcp::ClientMarker>()
-                        .context("dhcp client: failed to create fidl endpoints")
-                        .map_err(errors::Error::Fatal)?;
-                let () = self
-                    .netstack
-                    .get_dhcp_client(interface_id, server_end)
-                    .await
-                    .context("failed to call netstack.get_dhcp_client")
-                    .map_err(errors::Error::Fatal)?
-                    .map_err(zx::Status::from_raw)
-                    .context("failed to get dhcp client")
-                    .map_err(errors::Error::NonFatal)?;
-                let () = dhcp_client
-                    .start()
-                    .await
-                    .context("error sending start DHCP client request")
-                    .map_err(errors::Error::Fatal)?
-                    .map_err(zx::Status::from_raw)
-                    .context("failed to start dhcp client")
-                    .map_err(errors::Error::NonFatal)?;
-            }
-            matchers::IpAddressConfig::StaticIp(subnet) => {
-                let fnet::Subnet { mut addr, prefix_len } = subnet.into();
-                let fnetstack::NetErr { status, message } = self
-                    .netstack
-                    .set_interface_address(interface_id, &mut addr, prefix_len)
-                    .await
-                    .context("error sending set interface address request")
-                    .map_err(errors::Error::Fatal)?;
-                if status != fnetstack::Status::Ok {
-                    // Do not consider this a fatal error because the interface could
-                    // have been removed after it was added, but before we reached
-                    // this point.
-                    return Err(errors::Error::NonFatal(anyhow::anyhow!(
-                        "failed to set interface (id={}) address to {:?} with status = {:?}: {}",
-                        interface_id,
-                        addr,
-                        status,
-                        message
-                    )));
-                }
-            }
-        }
+        // Enable DHCP.
+        let (dhcp_client, server_end) = fidl::endpoints::create_proxy::<fnet_dhcp::ClientMarker>()
+            .context("dhcp client: failed to create fidl endpoints")
+            .map_err(errors::Error::Fatal)?;
+        let () = self
+            .netstack
+            .get_dhcp_client(interface_id, server_end)
+            .await
+            .context("failed to call netstack.get_dhcp_client")
+            .map_err(errors::Error::Fatal)?
+            .map_err(zx::Status::from_raw)
+            .context("failed to get dhcp client")
+            .map_err(errors::Error::NonFatal)?;
+        let () = dhcp_client
+            .start()
+            .await
+            .context("error sending start DHCP client request")
+            .map_err(errors::Error::Fatal)?
+            .map_err(zx::Status::from_raw)
+            .context("failed to start dhcp client")
+            .map_err(errors::Error::NonFatal)?;
 
         Ok(())
     }
@@ -1440,14 +1407,10 @@ pub async fn run<M: Mode>() -> Result<Never, anyhow::Error> {
     info!("starting");
     debug!("starting with options = {:?}", opt);
 
-    let Config {
-        dns_config: DnsConfig { servers },
-        rules,
-        filter_config,
-        filter_enabled_interface_types,
-    } = Config::load(config_data)?;
+    let Config { dns_config: DnsConfig { servers }, filter_config, filter_enabled_interface_types } =
+        Config::load(config_data)?;
 
-    let mut netcfg = NetCfg::new(*allow_virtual_devices, rules, filter_enabled_interface_types)
+    let mut netcfg = NetCfg::new(*allow_virtual_devices, filter_enabled_interface_types)
         .await
         .context("error creating new netcfg instance")?;
 
@@ -1534,7 +1497,6 @@ impl Mode for VirtualizationEnabled {
 mod tests {
     use futures::future::{self, FutureExt as _, TryFutureExt as _};
     use futures::stream::TryStreamExt as _;
-    use matchers::{ConfigOption, InterfaceMatcher, InterfaceSpec};
     use net_declare::{fidl_ip, fidl_ip_v6};
 
     use super::*;
@@ -1597,7 +1559,6 @@ mod tests {
                 persisted_interface_config,
                 allow_virtual_devices: false,
                 filter_enabled_interface_types: Default::default(),
-                default_config_rules: Default::default(),
                 interface_properties: Default::default(),
                 interface_states: Default::default(),
                 dns_servers: Default::default(),
@@ -2101,9 +2062,6 @@ mod tests {
   "dns_config": {
     "servers": ["8.8.8.8"]
   },
-  "rules": [
-    [ ["all", "all"], ["ip_address", "dhcp"] ]
-  ],
   "filter_config": {
     "rules": [],
     "nat_rules": [],
@@ -2115,19 +2073,11 @@ mod tests {
 
         let Config {
             dns_config: DnsConfig { servers },
-            rules: default_config_rules,
             filter_config,
             filter_enabled_interface_types,
         } = Config::load_str(config_str).unwrap();
 
         assert_eq!(vec!["8.8.8.8".parse::<std::net::IpAddr>().unwrap()], servers);
-        assert_eq!(
-            vec![InterfaceSpec {
-                matcher: InterfaceMatcher::All,
-                config: ConfigOption::IpConfig(matchers::IpAddressConfig::Dhcp),
-            }],
-            default_config_rules
-        );
         let FilterConfig { rules, nat_rules, rdr_rules } = filter_config;
         assert_eq!(Vec::<String>::new(), rules);
         assert_eq!(Vec::<String>::new(), nat_rules);

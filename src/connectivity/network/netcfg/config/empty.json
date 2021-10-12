@@ -1,12 +1,11 @@
 {
-  "dns_config": {
-    "servers": []
-  },
-  "rules": [],
-  "filter_config": {
-    "rules": [],
-    "nat_rules": [],
-    "rdr_rules": []
-  },
-  "filter_enabled_interface_types": []
+    "dns_config": {
+        "servers": []
+    },
+    "filter_config": {
+        "rules": [],
+        "nat_rules": [],
+        "rdr_rules": []
+    },
+    "filter_enabled_interface_types": []
 }
