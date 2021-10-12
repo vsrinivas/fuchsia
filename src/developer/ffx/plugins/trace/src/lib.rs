@@ -6,11 +6,29 @@ use {
     anyhow::{anyhow, Result},
     ffx_core::ffx_plugin,
     ffx_trace_args::{TraceCommand, TraceSubCommand},
+    ffx_writer::Writer,
     fidl_fuchsia_developer_bridge::{self as bridge, TracingProxy},
-    fidl_fuchsia_tracing_controller::{ControllerProxy, TraceConfig},
-    std::io::{stdout, Write},
+    fidl_fuchsia_tracing_controller::{ControllerProxy, ProviderInfo, TraceConfig},
+    serde::{Deserialize, Serialize},
     std::path::{Component, PathBuf},
 };
+
+#[derive(Debug, Deserialize, Serialize)]
+struct TraceProviderInfo {
+    id: Option<u32>,
+    pid: Option<u64>,
+    name: String,
+}
+
+impl From<ProviderInfo> for TraceProviderInfo {
+    fn from(info: ProviderInfo) -> Self {
+        Self {
+            id: info.id,
+            pid: info.pid,
+            name: info.name.as_ref().cloned().unwrap_or("unknown".to_string()),
+        }
+    }
+}
 
 // OPTIMIZATION: Only grab a tracing controller proxy only when necessary.
 #[ffx_plugin(
@@ -20,19 +38,9 @@ use {
 pub async fn trace(
     proxy: TracingProxy,
     controller: ControllerProxy,
+    #[ffx(machine = Vec<TraceProviderInfo>)] writer: Writer,
     cmd: TraceCommand,
 ) -> Result<()> {
-    trace_impl(proxy, controller, cmd, Box::new(stdout())).await
-}
-
-async fn trace_impl<W: Write>(
-    proxy: TracingProxy,
-    controller: ControllerProxy,
-    cmd: TraceCommand,
-    mut write: W,
-) -> Result<()> {
-    let default: Option<String> = ffx_config::get("target.default").await.ok();
-    let default = default.as_ref().and_then(|s| Some(s.as_str()));
     match cmd.sub_cmd {
         TraceSubCommand::ListProviders(_) => {
             let providers = match controller.get_providers().await {
@@ -45,12 +53,27 @@ This can happen if tracing is not supported on the product configuration you are
                     errors::ffx_bail!("Accessing the tracing controller failed: {:#?}", e);
                 }
             };
-            writeln!(write, "Trace providers:")?;
-            for provider in &providers {
-                writeln!(write, "- {}", provider.name.as_ref().unwrap_or(&"unknown".to_string()))?;
+
+            if writer.is_machine() {
+                writer.machine(
+                    &providers
+                        .into_iter()
+                        .map(TraceProviderInfo::from)
+                        .collect::<Vec<TraceProviderInfo>>(),
+                )?;
+            } else {
+                writer.line("Trace providers:")?;
+                for provider in &providers {
+                    writer.line(format!(
+                        "- {}",
+                        provider.name.as_ref().unwrap_or(&"unknown".to_string())
+                    ))?;
+                }
             }
         }
         TraceSubCommand::Start(opts) => {
+            let default: Option<String> = ffx_config::get("target.default").await.ok();
+            let default = default.as_ref().and_then(|s| Some(s.as_str()));
             let trace_config = TraceConfig {
                 buffer_size_megabytes_hint: Some(opts.buffer_size),
                 categories: Some(opts.categories),
@@ -118,9 +141,9 @@ mod tests {
         super::*,
         errors::ResultExt as _,
         ffx_trace_args::{ListProviders, Start, Stop},
+        ffx_writer::Format,
         fidl::endpoints::{ControlHandle, Responder},
         fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_tracing_controller as trace,
-        std::io::BufWriter,
         std::matches,
     };
 
@@ -166,23 +189,32 @@ mod tests {
     fn setup_fake_controller_proxy() -> ControllerProxy {
         setup_fake_controller(|req| match req {
             trace::ControllerRequest::GetProviders { responder, .. } => {
-                let mut providers = vec![
-                    trace::ProviderInfo {
-                        id: Some(42),
-                        name: Some("foo".to_string()),
-                        ..trace::ProviderInfo::EMPTY
-                    },
-                    trace::ProviderInfo {
-                        id: Some(99),
-                        name: Some("bar".to_string()),
-                        ..trace::ProviderInfo::EMPTY
-                    },
-                    trace::ProviderInfo { id: Some(2), ..trace::ProviderInfo::EMPTY },
-                ];
+                let mut providers = fake_provider_infos();
                 responder.send(&mut providers.drain(..)).expect("should respond");
             }
             r => panic!("unsupported req: {:?}", r),
         })
+    }
+
+    fn fake_provider_infos() -> Vec<trace::ProviderInfo> {
+        vec![
+            trace::ProviderInfo {
+                id: Some(42),
+                name: Some("foo".to_string()),
+                ..trace::ProviderInfo::EMPTY
+            },
+            trace::ProviderInfo {
+                id: Some(99),
+                pid: Some(1234567),
+                name: Some("bar".to_string()),
+                ..trace::ProviderInfo::EMPTY
+            },
+            trace::ProviderInfo { id: Some(2), ..trace::ProviderInfo::EMPTY },
+        ]
+    }
+
+    fn fake_trace_provider_infos() -> Vec<TraceProviderInfo> {
+        fake_provider_infos().into_iter().map(TraceProviderInfo::from).collect()
     }
 
     fn setup_closed_fake_controller_proxy() -> ControllerProxy {
@@ -194,21 +226,21 @@ mod tests {
         })
     }
 
-    async fn run_trace_test(cmd: TraceCommand) -> String {
-        let mut output = String::new();
-        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+    async fn run_trace_test(cmd: TraceCommand, writer: Writer) {
         let proxy = setup_fake_service();
         let controller = setup_fake_controller_proxy();
-        trace_impl(proxy, controller, cmd, writer).await.unwrap();
-        output
+        trace(proxy, controller, writer, cmd).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_providers() {
-        let output = run_trace_test(TraceCommand {
-            sub_cmd: TraceSubCommand::ListProviders(ListProviders {}),
-        })
+        let writer = Writer::new_test(None);
+        run_trace_test(
+            TraceCommand { sub_cmd: TraceSubCommand::ListProviders(ListProviders {}) },
+            writer.clone(),
+        )
         .await;
+        let output = writer.test_output().unwrap();
         let want = "Trace providers:\n\
                    - foo\n\
                    - bar\n\
@@ -219,35 +251,59 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_providers_peer_closed() {
-        let mut output = String::new();
-        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let writer = Writer::new_test(None);
         let proxy = setup_fake_service();
         let controller = setup_closed_fake_controller_proxy();
         let cmd = TraceCommand { sub_cmd: TraceSubCommand::ListProviders(ListProviders {}) };
-        let res = trace_impl(proxy, controller, cmd, writer).await.unwrap_err();
+        let res = trace(proxy, controller, writer.clone(), cmd).await.unwrap_err();
         assert!(res.ffx_error().is_some());
         assert!(res.to_string().contains("This can happen if tracing is not"));
-        assert!(output.is_empty());
+        assert!(writer.test_output().unwrap().is_empty());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_providers_machine() {
+        let writer = Writer::new_test(Some(Format::Json));
+        run_trace_test(
+            TraceCommand { sub_cmd: TraceSubCommand::ListProviders(ListProviders {}) },
+            writer.clone(),
+        )
+        .await;
+        let output = writer.test_output().unwrap();
+        let want = serde_json::to_string(&fake_trace_provider_infos()).unwrap();
+        assert_eq!(want, output);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_start() {
-        run_trace_test(TraceCommand {
-            sub_cmd: TraceSubCommand::Start(Start {
-                buffer_size: 2,
-                categories: vec![],
-                duration: None,
-                output: "foo.txt".to_string(),
-            }),
-        })
+        let writer = Writer::new_test(None);
+        run_trace_test(
+            TraceCommand {
+                sub_cmd: TraceSubCommand::Start(Start {
+                    buffer_size: 2,
+                    categories: vec![],
+                    duration: None,
+                    output: "foo.txt".to_string(),
+                }),
+            },
+            writer.clone(),
+        )
         .await;
+        let output = writer.test_output().unwrap();
+        let want = String::new();
+        assert_eq!(want, output);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_stop() {
-        run_trace_test(TraceCommand {
-            sub_cmd: TraceSubCommand::Stop(Stop { output: "foo.txt".to_string() }),
-        })
+        let writer = Writer::new_test(None);
+        run_trace_test(
+            TraceCommand { sub_cmd: TraceSubCommand::Stop(Stop { output: "foo.txt".to_string() }) },
+            writer.clone(),
+        )
         .await;
+        let output = writer.test_output().unwrap();
+        let want = String::new();
+        assert_eq!(want, output);
     }
 }

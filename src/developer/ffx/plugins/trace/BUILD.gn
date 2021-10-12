@@ -15,6 +15,10 @@ ffx_plugin("ffx_trace") {
 
   deps = [
     "//sdk/fidl/fuchsia.tracing.controller:fuchsia.tracing.controller-rustc",
+    "//src/developer/ffx/lib/writer:lib",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:serde",
   ]
+
+  test_deps = [ "//third_party/rust_crates:serde_json" ]
 }
