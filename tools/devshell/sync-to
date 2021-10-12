@@ -590,20 +590,24 @@ class SyncToCommand:
         #
         # First we must update all indexes; otherwise `diff-index` might report
         # false positive diffs.
-        self.jiri("runp", "git update-index --refresh")
+        self.jiri("runp", "git update-index -q --refresh")
         output = self.jiri(
             "runp", "git diff-index --quiet HEAD",
             capture_output=True).stdout or ""
         dirty_repos = [
             remove_prefix(line, "FAILED: ").split("=")[0]
             for line in output.strip().splitlines()
+            if line.startswith("FAILED: ")
         ]
         if dirty_repos:
-            repos_list = "\n".join(f"- {repo}" for repo in dirty_repos)
+            repos_list = "\n".join(f" - {repo}" for repo in dirty_repos)
+            discard_cmd = "jiri runp 'git reset HEAD && git checkout .'"
             raise Error(
                 "Cannot sync to a different version as the following projects"
                 f" have uncommitted changes:\n{repos_list}"
-                "\nCommit or discard these changes and try again.")
+                "\nCommit or discard these changes and try again."
+                "\nTo *permanently* discard all staged and unstaged changes, run:"
+                f"\n  {colorize(discard_cmd, Color.RED)}")
 
         print("Dry-run: nothing will be changed on your local repo.")
 
