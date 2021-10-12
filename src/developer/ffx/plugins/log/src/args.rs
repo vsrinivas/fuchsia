@@ -41,6 +41,12 @@ impl std::str::FromStr for TimeFormat {
     subcommand,
     name = "log",
     description = "Display logs from a target device",
+    note = "`ffx` logs are proactively pulled off of target devices and cached on the host.
+
+Symbolization is performed in the background using the symbolizer host tool. You can pass additional
+arguments to the symbolizer tool (for example, to add a remote symbol server) by running:
+
+`ffx config set proactive_log.symbolize.extra_args \"--symbol-server gs://some-url/path --symbol-server gs://some-other-url/path ...\"`",
     example = "\
 Dump the most recent logs and stream new ones as they happen:
   $ ffx log
@@ -90,11 +96,6 @@ pub struct LogCommand {
     /// outputs only kernel logs.
     #[argh(switch)]
     pub kernel: bool,
-
-    /// when --dump is not provided, start printing logs only from the moment
-    /// the command is run
-    #[argh(switch)]
-    pub from_now: bool,
 
     /// show only logs after a certain time
     #[argh(option, from_str_fn(parse_time))]

@@ -420,8 +420,6 @@ pub async fn log_cmd<W: std::io::Write>(
     let sub_command = cmd.sub_command.unwrap_or(LogSubCommand::Watch(WatchCommand {}));
     let stream_mode = if matches!(sub_command, LogSubCommand::Dump(..)) {
         StreamMode::SnapshotAll
-    } else if cmd.from_now {
-        StreamMode::Subscribe
     } else {
         if cmd.since.is_some() {
             StreamMode::SnapshotAllThenSubscribe
@@ -596,7 +594,6 @@ mod test {
             kernel: false,
             severity: Severity::Info,
             show_metadata: false,
-            from_now: false,
             no_symbols: false,
             since: None,
             since_monotonic: None,
@@ -701,11 +698,11 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_watch_no_dump_with_error() {
+    async fn test_watch_with_error() {
         let mut formatter = FakeLogFormatter::new();
-        let cmd = LogCommand { from_now: true, ..empty_log_command() };
+        let cmd = empty_log_command();
         let params = DaemonDiagnosticsStreamParameters {
-            stream_mode: Some(StreamMode::Subscribe),
+            stream_mode: Some(StreamMode::SnapshotRecentThenSubscribe),
             ..DaemonDiagnosticsStreamParameters::EMPTY
         };
         let log1 = make_log_entry(LogData::FfxEvent(EventType::LoggingStarted));

@@ -31,7 +31,9 @@ const NO_STREAM_ERROR: &str = "\
 The proactive logger isn't connected to this target.
 
 Verify that the target is up with `ffx target list` and retry \
-in a few seconds.";
+in a few seconds. If the issue persists, run the following command:
+
+$ ffx doctor --restart-daemon";
 const NANOS_IN_SECOND: i64 = 1_000_000_000;
 const TIMESTAMP_FORMAT: &str = "%Y-%m-%d %H:%M:%S.%3f";
 const RETRY_TIMEOUT_MILLIS: u64 = 1000;
