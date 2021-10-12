@@ -77,8 +77,10 @@ void asan_map_shadow_for(uintptr_t start, size_t size) {
     // MAP (start + i)
     paddr_t paddr;
     zx_status_t status;
-    status = pmm_alloc_page(0, &paddr);
+    vm_page_t* page = nullptr;
+    status = pmm_alloc_page(0, &page, &paddr);
     ZX_ASSERT_MSG(status == ZX_OK, "could not allocate page (%d)", status);
+    page->set_state(vm_page_state::WIRED);
     size_t mapped = 0;
     status = g_kasan_shadow_vmar->aspace()->arch_aspace().Map(
         vaddr, &paddr, 1, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,

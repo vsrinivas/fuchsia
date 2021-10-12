@@ -32,18 +32,21 @@ zx_status_t pv_clock_init(void) {
   }
 
   paddr_t pa;
-  zx_status_t status = pmm_alloc_page(0, &pa);
+  vm_page_t* page = nullptr;
+  zx_status_t status = pmm_alloc_page(0, &page, &pa);
   if (status != ZX_OK) {
     return status;
   }
+  page->set_state(vm_page_state::WIRED);
   arch_zero_page(paddr_to_physmap(pa));
   boot_time = static_cast<pv_clock_boot_time*>(paddr_to_physmap(pa));
   write_msr(kKvmBootTime, pa);
 
-  status = pmm_alloc_page(0, &pa);
+  status = pmm_alloc_page(0, &page, &pa);
   if (status != ZX_OK) {
     return status;
   }
+  page->set_state(vm_page_state::WIRED);
   arch_zero_page(paddr_to_physmap(pa));
   system_time = static_cast<pv_clock_system_time*>(paddr_to_physmap(pa));
 

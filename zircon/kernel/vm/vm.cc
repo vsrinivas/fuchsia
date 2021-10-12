@@ -234,12 +234,17 @@ void vm_init_preheap() {
   size_t page_count = entropy % 16;
   status = pmm_alloc_pages(page_count, 0, &list);
   DEBUG_ASSERT(status == ZX_OK);
+  vm_page_t* page;
+  list_for_every_entry (&list, page, vm_page, queue_node) { page->set_state(vm_page_state::WIRED); }
   LTRACEF("physical mapping padding page count %#" PRIxPTR "\n", page_count);
 #endif
 
   // grab a page and mark it as the zero page
   status = pmm_alloc_page(0, &zero_page, &zero_page_paddr);
   DEBUG_ASSERT(status == ZX_OK);
+
+  // consider the zero page a wired page part of the kernel.
+  zero_page->set_state(vm_page_state::WIRED);
 
   void* ptr = paddr_to_physmap(zero_page_paddr);
   DEBUG_ASSERT(ptr);

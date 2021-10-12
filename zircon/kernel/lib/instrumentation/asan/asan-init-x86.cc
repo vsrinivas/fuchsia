@@ -48,6 +48,7 @@ paddr_t get_or_allocate_page_table(volatile pt_entry_t* table, size_t i,
 
   zx_status_t status = pmm_alloc_page(0, &pd_page, &pd_page_paddr);
   DEBUG_ASSERT(status == ZX_OK);
+  pd_page->set_state(vm_page_state::MMU);
   kcounter_add(asan_allocated_shadow_page_tables, 1);
   __unsanitized_memcpy(paddr_to_physmap(pd_page_paddr), const_cast<pt_entry_t*>(initial_value),
                        PAGE_SIZE);
@@ -104,6 +105,7 @@ void asan_remap_shadow_internal(volatile pt_entry_t* pdp, uintptr_t start, size_
         paddr_t rw_page_paddr;
         zx_status_t status = pmm_alloc_page(0, &rw_page, &rw_page_paddr);
         DEBUG_ASSERT(status == ZX_OK);
+        rw_page->set_state(vm_page_state::WIRED);
         kcounter_add(asan_allocated_shadow_pages, 1);
         arch_zero_page(paddr_to_physmap(rw_page_paddr));
         pt[k] = rw_page_paddr | X86_KERNEL_KASAN_RW_PT_FLAGS | X86_MMU_PG_NX;
