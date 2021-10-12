@@ -517,6 +517,12 @@ multiconst!(zx_stream_seek_origin_t, [
     ZX_STREAM_SEEK_ORIGIN_END          = 2;
 ]);
 
+// Stream constants
+pub const ZX_STREAM_MODE_READ: u32 = 1 << 0;
+pub const ZX_STREAM_MODE_WRITE: u32 = 1 << 1;
+
+pub const ZX_STREAM_APPEND: u32 = 1 << 0;
+
 // Buffer size limits on the cprng syscalls
 pub const ZX_CPRNG_DRAW_MAX_LEN: usize = 256;
 pub const ZX_CPRNG_ADD_ENTROPY_MAX_LEN: usize = 256;

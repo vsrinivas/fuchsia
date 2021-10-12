@@ -32,7 +32,7 @@ pub enum PagerOp {
 }
 
 impl Pager {
-    /// See [zx_pager_create](https://https://fuchsia.dev/fuchsia-src/reference/syscalls/pager_create)
+    /// See [zx_pager_create](https://fuchsia.dev/fuchsia-src/reference/syscalls/pager_create)
     pub fn create(options: PagerOptions) -> Result<Pager, Status> {
         let mut out = 0;
         let status = unsafe { sys::zx_pager_create(options.bits(), &mut out) };
@@ -40,7 +40,7 @@ impl Pager {
         Ok(Pager::from(unsafe { Handle::from_raw(out) }))
     }
 
-    /// See [zx_pager_create_vmo](https://https://fuchsia.dev/fuchsia-src/reference/syscalls/pager_create_vmo)
+    /// See [zx_pager_create_vmo](https://fuchsia.dev/fuchsia-src/reference/syscalls/pager_create_vmo)
     pub fn create_vmo(
         &self,
         options: VmoOptions,
@@ -63,13 +63,13 @@ impl Pager {
         Ok(Vmo::from(unsafe { Handle::from_raw(out) }))
     }
 
-    /// See [zx_pager_detach_vmo](https://https://fuchsia.dev/fuchsia-src/reference/syscalls/pager_detach_vmo)
+    /// See [zx_pager_detach_vmo](https://fuchsia.dev/fuchsia-src/reference/syscalls/pager_detach_vmo)
     pub fn detach_vmo(&self, vmo: &Vmo) -> Result<(), Status> {
         let status = unsafe { sys::zx_pager_detach_vmo(self.raw_handle(), vmo.raw_handle()) };
         ok(status)
     }
 
-    /// See [zx_pager_supply_pages](https://https://fuchsia.dev/fuchsia-src/reference/syscalls/pager_supply_pages)
+    /// See [zx_pager_supply_pages](https://fuchsia.dev/fuchsia-src/reference/syscalls/pager_supply_pages)
     pub fn supply_pages(
         &self,
         vmo: &Vmo,
@@ -90,7 +90,7 @@ impl Pager {
         ok(status)
     }
 
-    /// See [zx_pager_op_range](https://https://fuchsia.dev/fuchsia-src/reference/syscalls/pager_op_range)
+    /// See [zx_pager_op_range](https://fuchsia.dev/fuchsia-src/reference/syscalls/pager_op_range)
     pub fn op_range(
         &self,
         op: PagerOp,
