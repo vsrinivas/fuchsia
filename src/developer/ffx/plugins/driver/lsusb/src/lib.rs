@@ -16,6 +16,10 @@ use {
     std::sync::Mutex,
 };
 
+// This isn't actually unused, but rustc can't seem to tell otherwise.
+#[allow(unused_imports)]
+use zerocopy::{AsBytes, LayoutVerified};
+
 #[ffx_plugin(
     "driver_enabled",
     DeviceWatcherProxy = "bootstrap/driver_manager:expose:fuchsia.hardware.usb.DeviceWatcher"
@@ -58,12 +62,12 @@ async fn list_device(
 ) -> Result<()> {
     let devname = &format!("/dev/class/usb-device/{:03}", devnum);
 
-    let device_desc = device
+    let device_desc_buf = device
         .get_device_descriptor()
         .await
         .context(format!("DeviceGetDeviceDescriptor failed for {}", devname))?;
 
-    let device_desc = DeviceDescriptor::from_array(device_desc);
+    let device_desc = LayoutVerified::<_, DeviceDescriptor>::new(device_desc_buf.as_ref()).unwrap();
 
     if let Some(UsbDevice { vendor_id, product_id }) = cmd.device {
         // Return early if this isn't the device that was asked about.
@@ -401,7 +405,8 @@ mod test {
                         iSerialNumber: 12,
                         bNumConfigurations: 2,
                     };
-                    let mut array = descriptor.to_array();
+                    let mut array = [0; 18];
+                    array.copy_from_slice(descriptor.as_bytes());
                     responder.send(&mut array)?;
                 }
                 fidl_fuchsia_hardware_usb_device::DeviceRequest::GetConfigurationDescriptor {
@@ -446,9 +451,9 @@ mod test {
                     };
 
                     let mut vec = std::vec::Vec::new();
-                    vec.extend_from_slice(&config_descriptor.to_array());
-                    vec.extend_from_slice(&interface_one.to_array());
-                    vec.extend_from_slice(&interface_two.to_array());
+                    vec.extend_from_slice(config_descriptor.as_bytes());
+                    vec.extend_from_slice(interface_one.as_bytes());
+                    vec.extend_from_slice(interface_two.as_bytes());
 
                     responder.send(0, &mut vec)?;
                 }
