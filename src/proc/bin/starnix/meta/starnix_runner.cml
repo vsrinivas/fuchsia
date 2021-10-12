@@ -29,6 +29,8 @@
                 "fuchsia.component.runner.ComponentRunner",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.sys2.Realm",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.ui.composition.Allocator",
             ],
             from: "parent",
         },

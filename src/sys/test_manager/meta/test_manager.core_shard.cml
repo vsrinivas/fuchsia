@@ -67,6 +67,7 @@
             protocol: [
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.scenic.Scenic",
