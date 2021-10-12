@@ -21,8 +21,22 @@ fuchsia_package("network") {
   deps = [ ":component" ]
 }
 
-# TODO(https://fxbug.dev/83959): Remove this target once in-tree
-# integration tests no longer depend upon these packages being in the universe.
+# TODO(https://fxbug.dev/85821): Remove once out-of-tree users no longer
+# reference v1 components.
+fuchsia_package("network-legacy-deprecated-pkg") {
+  deps = [
+    "dns:component-legacy",
+    "netstack:component-legacy",
+  ]
+}
+
+# TODO(https://fxbug.dev/85742): Replace with network-legacy-deprecated-pkg once
+# out-of-tree-product definitions reference this target.
+group("network-legacy-deprecated") {
+}
+
+# TODO(https://fxbug.dev/85742): Remove this target once out-of-tree
+# integration tests inject components from network-legacy-deprecated.
 group("integration-test-deps") {
   deps = [
     "dns:dns-resolver",
