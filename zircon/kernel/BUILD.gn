@@ -332,12 +332,12 @@ if (is_kernel) {
         "WITH_LOCK_DEP=1",
         "LOCK_DEP_ENABLE_VALIDATION=1",
       ]
+      configs =
+          [ "//build/config/zircon/instrumentation:instrumented-stack-size" ]
     }
     if (enable_lock_dep_tests) {
       defines += [ "WITH_LOCK_DEP_TESTS=1" ]
     }
-    configs =
-        [ "//build/config/zircon/instrumentation:instrumented-stack-size" ]
   }
 
   config("scheduler") {
