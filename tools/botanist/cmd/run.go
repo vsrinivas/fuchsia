@@ -102,7 +102,7 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 }
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	opts := target.Options{
@@ -453,9 +453,6 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 	runner := subprocess.Runner{
 		Env: environ,
 	}
-
-	ctx, cancel := context.WithTimeout(ctx, r.timeout)
-	defer cancel()
 
 	if err := runner.RunWithStdin(ctx, args, os.Stdout, os.Stderr, nil); err != nil {
 		return fmt.Errorf("command %s with timeout %s failed: %w", args, r.timeout, err)
