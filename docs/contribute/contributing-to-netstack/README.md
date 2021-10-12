@@ -55,36 +55,6 @@ severed). In most cases `spawn` can be replaced with a future that is later
 included in a [`select`][select] expression ([example commit][spawn_select]) or
 simply `await`ed on directly ([example commit][spawn_await]).
 
-### Avoid Implicit Drops
-
-Do not implicitly discard values. In cases where a return value is unused,
-always be explicit. In *Go*, assign unused values to the [blank
-identifier][blank_identifier]. In *Rust*, prefer destructuring assignment
-whenever possible, including when the return value is unit (`()`). When
-discarding primitive types where destructuring is not possible, use type
-annotations:
-
-```rust
-let _useless_rand: u8 = rand::thread_rng().gen();
-```
-
-When assigning structs, prefer explicit drops to implicitly discarding members
-using the rest pattern:
-
-```rust
-// Bad:
-let FooStruct { foo_field_1, .. } = foo_instance;
-
-// Good:
-let FooStruct { foo_field_1, foo_field_2: _ } = foo_instance;
-```
-
-This way, when struct fields are changed, added, or removed, explicit
-acknowledgement will be required at the site of use.
-
-Apply the same rules to unused closure parameters.
-
-
 ### Compile-time over Run-time
 
 Prefer type safety over runtime invariant checking. In other words, arrange your
@@ -337,7 +307,6 @@ If you're working on changes that affect `fdio` and `third_party/go`, add:
 [spawn_select]: https://fuchsia.googlesource.com/fuchsia/+/0c00fd3%5E%21/#F3
 [spawn_await]: https://fuchsia.googlesource.com/fuchsia/+/038d2b9%5E%21/#F0
 [magic_number]: https://en.wikipedia.org/wiki/Magic_number_(programming)
-[blank_identifier]: https://golang.org/doc/effective_go.html#blank
 [rfc_process]: /docs/contribute/governance/rfcs/0001_rfc_process.md
 [commit_guidelines]: https://www.git-scm.com/book/en/v2/Distributed-Git-Contributing-to-a-Project#_commit_guidelines
 [commit_log-message-integration]: https://chromium.googlesource.com/infra/infra/+/HEAD/appengine/monorail/doc/userguide/power-users.md#commit_log-message-integration

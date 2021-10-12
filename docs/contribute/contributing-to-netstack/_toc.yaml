@@ -10,5 +10,7 @@ toc:
   path: /docs/contribute/contributing-to-netstack
 - title: "Culture"
   path: /docs/contribute/contributing-to-netstack/culture.md
+- title: "Rust Patterns"
+  path: /docs/contribute/contributing-to-netstack/rust-patterns.md
 - title: "Netstack3"
   path: /docs/contribute/contributing-to-netstack/netstack3.md
