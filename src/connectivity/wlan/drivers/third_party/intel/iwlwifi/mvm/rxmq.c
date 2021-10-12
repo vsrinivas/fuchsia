@@ -161,13 +161,11 @@ static void iwl_mvm_pass_packet_to_mac80211(struct iwl_mvm* mvm,
   // Send to MLME
   uint32_t frame_len = desc->mpdu_len;
   if (desc->mac_flags2 & IWL_RX_MPDU_MFLG2_PAD) {
-    // FW indicates it has padded the header for 4-byte alignment. Take out the padding
-    // before passing the frame to the stack.
+    // FW indicates it has padded the header for 4-byte alignment. Indicate the same to SME.
     uint32_t hdrlen = ieee80211_hdrlen(frame);
-    IWL_DEBUG_RX(mvm, "Buf realignment FC: 0x%x framelen: %u hdrlen: %d", frame->frame_ctrl,
+    IWL_DEBUG_RX(mvm, "Frame body padding FC: 0x%x framelen: %u hdrlen: %d", frame->frame_ctrl,
                  frame_len, hdrlen);
-    memmove((uint8_t*)frame + hdrlen, (uint8_t*)frame + hdrlen + 2, frame_len - hdrlen - 2);
-    frame_len -= 2;
+    rx_info->rx_flags |= WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
   }
   IWL_DEBUG_RX(mvm, "Rx desc: chan: 0x%x energy a: 0x%x energy b: 0x%x status: 0x%x rate: 0x%x",
                desc->v1.channel, desc->v1.energy_a, desc->v1.energy_b, desc->status,

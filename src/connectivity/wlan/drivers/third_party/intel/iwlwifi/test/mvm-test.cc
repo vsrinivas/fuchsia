@@ -214,7 +214,7 @@ TEST_F(MvmTest, rxMqMpdu) {
   EXPECT_EQ(static_cast<int8_t>(-40), test_ctx.rx_info.rssi_dbm);
 }
 
-// Test checks to see frame header padding added by FW is removed by the driver for Rx MQ
+// Test checks to see frame header padding added by FW is indicated correctly to SME
 TEST_F(MvmTest, rxMqMpdu_with_header_padding) {
   const int kExpChan = 11;
 
@@ -259,8 +259,11 @@ TEST_F(MvmTest, rxMqMpdu_with_header_padding) {
   MockRecv(&test_ctx);
   iwl_mvm_rx_mpdu_mq(mvm_, nullptr /* napi */, &mpdu_rxcb, 0);
 
-  // Received frame length should be 2 bytes less than the actual receive length
-  EXPECT_EQ(desc->mpdu_len - 2, test_ctx.frame_len);
+  // Expect FRAME_BODY_PADDING_4 is set in rx_flags
+  EXPECT_EQ(WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4,
+            test_ctx.rx_info.rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4);
+  // Received frame length should be the same as actual receive length
+  EXPECT_EQ(desc->mpdu_len, test_ctx.frame_len);
   EXPECT_EQ(TO_HALF_MBPS(1), test_ctx.rx_info.data_rate);
   EXPECT_EQ(kExpChan, test_ctx.rx_info.channel.primary);
   EXPECT_EQ(WLAN_RX_INFO_VALID_RSSI, test_ctx.rx_info.valid_fields & WLAN_RX_INFO_VALID_RSSI);
