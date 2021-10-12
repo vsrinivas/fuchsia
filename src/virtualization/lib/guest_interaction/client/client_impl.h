@@ -21,26 +21,46 @@ template <class T>
 class ClientImpl {
  public:
   // The gRPC channel internals take responsibility for closing the supplied vsock_fd.
-  explicit ClientImpl(int vsock_fd) : should_run_(true) {
-    stub_ = GuestInteractionService::NewStub(grpc::CreateInsecureChannelFromFd("vsock", vsock_fd));
-  }
+  explicit ClientImpl(int vsock_fd)
+      : stub_(GuestInteractionService::NewStub(
+            grpc::CreateInsecureChannelFromFd("vsock", vsock_fd))) {}
 
   void Run() {
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      running_ = true;
+    }
+
     void* tag;
     bool ok;
-    gpr_timespec wait_time = {};
+    constexpr gpr_timespec deadline = {
+        .tv_nsec = 100 * 1000,  // 100ms.
+        .clock_type = GPR_TIMESPAN,
+    };
 
-    should_run_ = true;
+    auto running = [this]() {
+      std::lock_guard<std::mutex> lock(mutex_);
+      return running_;
+    };
 
-    while (should_run_) {
-      grpc::CompletionQueue::NextStatus status = cq_.AsyncNext(&tag, &ok, wait_time);
-      if (status == grpc::CompletionQueue::GOT_EVENT) {
-        static_cast<CallData*>(tag)->Proceed(ok);
-      }
+    while (running()) {
+      switch (cq_.AsyncNext(&tag, &ok, deadline)) {
+        case grpc::CompletionQueue::SHUTDOWN:
+          FX_LOGS(FATAL) << "completion queue shutdown";
+          break;
+        case grpc::CompletionQueue::GOT_EVENT:
+          static_cast<CallData*>(tag)->Proceed(ok);
+          break;
+        case grpc::CompletionQueue::TIMEOUT:
+          break;
+      };
     }
   }
 
-  void Stop() { should_run_ = false; }
+  void Stop() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    running_ = false;
+  }
 
   void Get(const std::string& source, fidl::InterfaceHandle<fuchsia::io::File> local_file,
            TransferCallback callback) {
@@ -109,9 +129,10 @@ class ClientImpl {
 
  private:
   grpc::CompletionQueue cq_;
-  std::unique_ptr<GuestInteractionService::Stub> stub_;
+  const std::unique_ptr<GuestInteractionService::Stub> stub_;
 
-  bool should_run_;
+  std::mutex mutex_;
+  bool running_ __TA_GUARDED(mutex_);
 };
 
 #endif  // SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_CLIENT_CLIENT_IMPL_H_

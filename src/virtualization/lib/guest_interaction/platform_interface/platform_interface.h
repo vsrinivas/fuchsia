@@ -9,8 +9,6 @@
 #include <string>
 #include <vector>
 
-#include <grpc++/grpc++.h>
-
 enum FileOpenMode { READ, WRITE };
 
 class PlatformInterface {
@@ -25,7 +23,7 @@ class PlatformInterface {
   virtual bool CreateDirectory(std::string dir_path) = 0;
   virtual int GetStubFD(uint32_t cid, uint32_t port) = 0;
   virtual int GetServerFD(uint32_t cid, uint32_t port) = 0;
-  virtual void AcceptClient(grpc::Server* server, uint32_t sockfd) = 0;
+  virtual int Accept(uint32_t sockfd) = 0;
   virtual int32_t Exec(char** args, char** env, int32_t* std_in, int32_t* std_out,
                        int32_t* std_err) = 0;
   virtual int32_t WaitPid(int32_t pid, int32_t* status, int32_t flags) = 0;
@@ -46,7 +44,7 @@ class PosixPlatform final : public PlatformInterface {
   bool CreateDirectory(std::string dir_path) override;
   int GetStubFD(uint32_t cid, uint32_t port) override;
   int GetServerFD(uint32_t cid, uint32_t port) override;
-  void AcceptClient(grpc::Server* server, uint32_t sockfd) override;
+  int Accept(uint32_t sockfd) override;
   int32_t Exec(char** args, char** env, int32_t* std_in, int32_t* std_out,
                int32_t* std_err) override;
   int32_t WaitPid(int32_t pid, int32_t* status, int32_t flags) override;
@@ -94,7 +92,7 @@ class FakePlatform final : public PlatformInterface {
 
   int GetServerFD(uint32_t cid, uint32_t port) override { return get_server_fd_return_; }
 
-  void AcceptClient(grpc::Server* server, uint32_t sockfd) override {}
+  int Accept(uint32_t sockfd) override { return -1; }
 
   int32_t Exec(char** args, char** env, int32_t* std_in, int32_t* std_out,
                int32_t* std_err) override {

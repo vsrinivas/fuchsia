@@ -142,15 +142,8 @@ int PosixPlatform::GetServerFD(uint32_t cid, uint32_t port) {
   return sockfd;
 }
 
-void PosixPlatform::AcceptClient(grpc::Server* server, uint32_t sockfd) {
-  sockaddr addr;
-  socklen_t addr_len;
-  int new_fd = accept(sockfd, &addr, &addr_len);
-
-  if (new_fd > 0) {
-    fcntl(new_fd, F_SETFL, fcntl(new_fd, F_GETFL, 0) | O_NONBLOCK);
-    grpc::AddInsecureChannelFromFd(server, new_fd);
-  }
+int PosixPlatform::Accept(uint32_t sockfd) {
+  return accept4(sockfd, nullptr, nullptr, SOCK_NONBLOCK);
 }
 
 int32_t PosixPlatform::Exec(char** args, char** env, int32_t* user_std_in, int32_t* user_std_out,

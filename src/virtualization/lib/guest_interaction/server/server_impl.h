@@ -31,7 +31,7 @@ class ServerImpl {
     server_ = builder.BuildAndStart();
 
     int sockfd = platform_interface_.GetServerFD(VMADDR_CID_ANY, GUEST_INTERACTION_PORT);
-    std::cout << "Listening" << std::endl;
+    std::cout << "Listening on fd=" << sockfd << std::endl;
 
     new ExecCallData<T>(&service_, cq_.get());
     new GetCallData<T>(&service_, cq_.get());
@@ -39,16 +39,32 @@ class ServerImpl {
 
     void* tag;
     bool ok;
-    gpr_timespec wait_time = {};
+    constexpr gpr_timespec deadline = {
+        .tv_nsec = 100 * 1000,  // 100ms.
+        .clock_type = GPR_TIMESPAN,
+    };
 
     while (true) {
-      platform_interface_.AcceptClient(server_.get(), sockfd);
-
-      grpc::CompletionQueue::NextStatus status = cq_->AsyncNext(&tag, &ok, wait_time);
-      GPR_ASSERT(status != grpc::CompletionQueue::SHUTDOWN);
-      if (status == grpc::CompletionQueue::GOT_EVENT) {
-        static_cast<CallData*>(tag)->Proceed(ok);
+      if (int fd = platform_interface_.Accept(sockfd); fd < 0) {
+        if (errno != EAGAIN) {
+          std::cerr << "Accept failed"
+                    << " fd=" << fd << " errno=" << strerror(errno) << std::endl;
+        }
+      } else {
+        std::cout << "Serving on fd=" << fd << std::endl;
+        grpc::AddInsecureChannelFromFd(server_.get(), fd);
       }
+
+      switch (cq_->AsyncNext(&tag, &ok, deadline)) {
+        case grpc::CompletionQueue::SHUTDOWN:
+          std::cerr << "completion queue shutdown" << std::endl;
+          abort();
+        case grpc::CompletionQueue::GOT_EVENT:
+          static_cast<CallData*>(tag)->Proceed(ok);
+          break;
+        case grpc::CompletionQueue::TIMEOUT:
+          break;
+      };
     }
   }
 

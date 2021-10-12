@@ -8,6 +8,7 @@
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netemul/guest/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/file_descriptor.h>
 
 #include <src/virtualization/tests/guest_console.h>
@@ -36,6 +37,15 @@ GuestInteractionTest::GuestInteractionTest() {
   // Allow services required for virtualization.
   services_->AllowParentService(fuchsia::kernel::HypervisorResource::Name_);
   services_->AllowParentService(fuchsia::kernel::VmexResource::Name_);
+}
+
+static fit::closure MakeRecurringTask(async_dispatcher_t* dispatcher, fit::closure cb,
+                                      zx::duration frequency) {
+  return [dispatcher, cb = std::move(cb), frequency]() mutable {
+    cb();
+    async::PostDelayedTask(dispatcher, MakeRecurringTask(dispatcher, std::move(cb), frequency),
+                           frequency);
+  };
 }
 
 void GuestInteractionTest::SetUp() {
@@ -75,6 +85,16 @@ void GuestInteractionTest::SetUp() {
       ASSERT_OK(serial.ExecuteBlocking(
           "journalctl -f --no-tail -u guest_interaction_daemon | grep -m1 Listening", "$",
           zx::time::infinite(), nullptr));
+
+      // Periodically log the guest state.
+      MakeRecurringTask(
+          dispatcher(),
+          [serial = std::move(serial)]() mutable {
+            ASSERT_OK(serial.ExecuteBlocking("journalctl -u guest_interaction_daemon --no-pager",
+                                             "$", zx::time::infinite(), nullptr));
+          },
+          zx::sec(10))();
+
       break;
     }
     case fuchsia::virtualization::Guest_GetConsole_Result::Tag::kErr:
