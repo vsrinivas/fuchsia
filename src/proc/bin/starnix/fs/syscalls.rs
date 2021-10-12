@@ -1002,6 +1002,17 @@ pub fn sys_epoll_pwait(
     Ok(active_events.len().into())
 }
 
+pub fn sys_ppoll(
+    _ctx: &SyscallContext<'_>,
+    _fds: UserAddress,
+    _nfds: u32,
+    _tmo_p: UserAddress,
+    _sigmask: UserAddress,
+) -> Result<SyscallResult, Errno> {
+    std::thread::sleep(std::time::Duration::new(0, 100000000));
+    Ok(1.into())
+}
+
 pub fn sys_flock(
     _ctx: &SyscallContext<'_>,
     _fd: FdNumber,

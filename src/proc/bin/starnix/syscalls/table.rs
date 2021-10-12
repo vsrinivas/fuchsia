@@ -126,6 +126,7 @@ pub fn dispatch_syscall(
         prctl[5],
         pread64[4],
         process_vm_readv[6],
+        ppoll[4],
         pwrite64[4],
         read[3],
         readlink[3],
