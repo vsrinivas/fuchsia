@@ -54,12 +54,6 @@ class DeviceTest : public gtest::TestLoopFixture {
  protected:
   driver::Logger& logger() { return logger_; }
 
-  void Shutdown(TestNode& node, fidl::ServerBindingRef<fdf::Node>& binding) {
-    node.Clear();
-    binding.Unbind();
-    ASSERT_TRUE(RunLoopUntilIdle());
-  }
-
  private:
   zx::status<driver::Namespace> CreateNamespace(fidl::ClientEnd<fio::Directory> client_end) {
     fidl::Arena arena;
@@ -77,7 +71,7 @@ TEST_F(DeviceTest, ConstructDevice) {
 
   // Create a device.
   zx_protocol_device_t ops{};
-  compat::Device device("test-device", nullptr, &ops, logger(), dispatcher());
+  compat::Device device("test-device", nullptr, &ops, {}, logger(), dispatcher());
   device.Bind(std::move(endpoints->client));
 
   // Test basic functions on the device.
@@ -105,7 +99,7 @@ TEST_F(DeviceTest, AddChildDevice) {
 
   // Create a device.
   zx_protocol_device_t ops{};
-  compat::Device parent("parent", nullptr, &ops, logger(), dispatcher());
+  compat::Device parent("parent", nullptr, &ops, {}, logger(), dispatcher());
   parent.Bind(std::move(endpoints->client));
 
   // Add a child device.
@@ -117,8 +111,8 @@ TEST_F(DeviceTest, AddChildDevice) {
   EXPECT_STREQ("child", child->Name());
   EXPECT_TRUE(parent.HasChildren());
 
-  // Shutdown the server.
-  Shutdown(node, binding);
+  // Ensure that AddChild was executed.
+  ASSERT_TRUE(RunLoopUntilIdle());
 }
 
 TEST_F(DeviceTest, AddChildDeviceWithInit) {
@@ -130,7 +124,7 @@ TEST_F(DeviceTest, AddChildDeviceWithInit) {
 
   // Create a device.
   zx_protocol_device_t parent_ops{};
-  compat::Device parent("parent", nullptr, &parent_ops, logger(), dispatcher());
+  compat::Device parent("parent", nullptr, &parent_ops, {}, logger(), dispatcher());
   parent.Bind(std::move(endpoints->client));
 
   // Add a child device.
@@ -154,9 +148,6 @@ TEST_F(DeviceTest, AddChildDeviceWithInit) {
   EXPECT_FALSE(child_ctx);
   ASSERT_TRUE(RunLoopUntilIdle());
   EXPECT_TRUE(child_ctx);
-
-  // Shutdown the server.
-  Shutdown(node, binding);
 }
 
 TEST_F(DeviceTest, AddAndRemoveChildDevice) {
@@ -168,7 +159,7 @@ TEST_F(DeviceTest, AddAndRemoveChildDevice) {
 
   // Create a device.
   zx_protocol_device_t ops{};
-  compat::Device parent("parent", nullptr, &ops, logger(), dispatcher());
+  compat::Device parent("parent", nullptr, &ops, {}, logger(), dispatcher());
   parent.Bind(std::move(endpoints->client));
 
   // Add a child device.
@@ -190,15 +181,12 @@ TEST_F(DeviceTest, AddAndRemoveChildDevice) {
   node.Clear();
   ASSERT_TRUE(RunLoopUntilIdle());
   EXPECT_FALSE(parent.HasChildren());
-
-  // Shutdown the server.
-  Shutdown(node, binding);
 }
 
 TEST_F(DeviceTest, GetProtocolFromDevice) {
   // Create a device without a get_protocol hook.
   zx_protocol_device_t ops{};
-  compat::Device without("without-protocol", nullptr, &ops, logger(), dispatcher());
+  compat::Device without("without-protocol", nullptr, &ops, {}, logger(), dispatcher());
   ASSERT_EQ(ZX_ERR_UNAVAILABLE, without.GetProtocol(ZX_PROTOCOL_BLOCK, nullptr));
 
   // Create a device with a get_protocol hook.
@@ -206,14 +194,14 @@ TEST_F(DeviceTest, GetProtocolFromDevice) {
     EXPECT_EQ(ZX_PROTOCOL_BLOCK, proto_id);
     return ZX_OK;
   };
-  compat::Device with("with-protocol", nullptr, &ops, logger(), dispatcher());
+  compat::Device with("with-protocol", nullptr, &ops, {}, logger(), dispatcher());
   ASSERT_EQ(ZX_OK, with.GetProtocol(ZX_PROTOCOL_BLOCK, nullptr));
 }
 
 TEST_F(DeviceTest, DeviceMetadata) {
   // Create a device.
   zx_protocol_device_t ops{};
-  compat::Device device("test-device", nullptr, &ops, logger(), dispatcher());
+  compat::Device device("test-device", nullptr, &ops, {}, logger(), dispatcher());
 
   // Add metadata to the device.
   const uint64_t metadata = 0xAABBCCDDEEFF0011;
@@ -245,4 +233,24 @@ TEST_F(DeviceTest, DeviceMetadata) {
   // Get the metadata for missing metadata.
   status = device.GetMetadata(DEVICE_METADATA_BOARD_PRIVATE, &found, sizeof(found), &found_size);
   ASSERT_EQ(ZX_ERR_NOT_FOUND, status);
+}
+
+TEST_F(DeviceTest, LinkedDeviceMetadata) {
+  // Create two devices.
+  zx_protocol_device_t ops{};
+  compat::Device parent("test-parent", nullptr, &ops, {}, logger(), dispatcher());
+  compat::Device child("test-device", nullptr, &ops, &parent, logger(), dispatcher());
+
+  // Add metadata to the parent device.
+  const uint64_t metadata = 0xAABBCCDDEEFF0011;
+  zx_status_t status = parent.AddMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+  ASSERT_EQ(ZX_OK, status);
+
+  // Get the metadata from the child device.
+  uint64_t found = 0;
+  size_t found_size = 0;
+  status = child.GetMetadata(DEVICE_METADATA_PRIVATE, &found, sizeof(found), &found_size);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(metadata, found);
+  EXPECT_EQ(sizeof(metadata), found_size);
 }

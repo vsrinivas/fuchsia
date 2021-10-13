@@ -39,17 +39,39 @@ bool HasOp(const zx_protocol_device_t* ops, T member) {
 namespace compat {
 
 Device::Device(const char* name, void* context, const zx_protocol_device_t* ops,
-               driver::Logger& logger, async_dispatcher_t* dispatcher)
+               std::optional<Device*> parent, driver::Logger& logger,
+               async_dispatcher_t* dispatcher)
     : name_(name),
       context_(context),
       ops_(ops),
       logger_(logger),
       dispatcher_(dispatcher),
-      child_node_(&node_) {}
+      parent_(parent ? **parent : *this),
+      child_(this) {
+  // Links two representations of a device across separately instantiated
+  // drivers.
+  //
+  // When a driver creates child devices that are bindable, the driver framework
+  // will start a child driver that will then have its own instance of the child
+  // device. This function is used to linked the two instances together, if they
+  // are in the same driver host, so that operations occur on a single instance
+  // of the device.
+  if (&parent_ != this) {
+    std::lock_guard<std::mutex> lock(parent_.mutex_);
+    parent_.child_ = this;
+  }
+}
+
+Device::~Device() {
+  // If this device is linked to another in a parent driver, invalidate the
+  // `child_` pointer in that device.
+  if (&parent_ != this) {
+    std::lock_guard<std::mutex> lock(parent_.mutex_);
+    parent_.child_ = &parent_;
+  }
+}
 
 zx_device_t* Device::ZxDevice() { return static_cast<zx_device_t*>(this); }
-
-void Device::Link(Device* parent) { parent->child_node_ = &node_; }
 
 void Device::Bind(fidl::ClientEnd<fdf::Node> client_end) {
   node_.Bind(std::move(client_end), dispatcher_);
@@ -66,21 +88,19 @@ void Device::Unbind() {
 
 const char* Device::Name() const { return name_.data(); }
 
+bool Device::HasChildren() const { return child_counter_.use_count() > 1; }
+
 zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
-  if (!*child_node_) {
-    FDF_LOG(ERROR, "Failed to add device '%s' (to parent '%s'), invalid node", zx_args->name,
-            Name());
-    return ZX_ERR_BAD_STATE;
-  }
-  auto child =
-      std::make_unique<Device>(zx_args->name, zx_args->ctx, zx_args->ops, logger_, dispatcher_);
+  auto device = std::make_unique<Device>(zx_args->name, zx_args->ctx, zx_args->ops, std::nullopt,
+                                         logger_, dispatcher_);
+  auto device_ptr = device.get();
 
   // Create NodeAddArgs from `zx_args`.
   fidl::Arena arena;
   std::vector<fdf::wire::NodeSymbol> symbols;
   symbols.emplace_back(arena)
       .set_name(arena, fidl::StringView::FromExternal(kName))
-      .set_address(arena, reinterpret_cast<uint64_t>(child->Name()));
+      .set_address(arena, reinterpret_cast<uint64_t>(device_ptr->Name()));
   symbols.emplace_back(arena)
       .set_name(arena, fidl::StringView::FromExternal(kContext))
       .set_address(arena, reinterpret_cast<uint64_t>(zx_args->ctx));
@@ -89,7 +109,7 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
       .set_address(arena, reinterpret_cast<uint64_t>(zx_args->ops));
   symbols.emplace_back(arena)
       .set_name(arena, fidl::StringView::FromExternal(kParent))
-      .set_address(arena, reinterpret_cast<uint64_t>(child.get()));
+      .set_address(arena, reinterpret_cast<uint64_t>(device_ptr));
   std::vector<fdf::wire::NodeProperty> props;
   props.reserve(zx_args->prop_count);
   for (auto [id, _, value] : cpp20::span(zx_args->props, zx_args->prop_count)) {
@@ -103,14 +123,25 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
       .set_symbols(arena, fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(symbols))
       .set_properties(arena, fidl::VectorView<fdf::wire::NodeProperty>::FromExternal(props));
 
-  // Create NodeController, so we can control the child.
+  // Create NodeController, so we can control the device.
   auto controller_ends = fidl::CreateEndpoints<fdf::NodeController>();
   if (controller_ends.is_error()) {
     return controller_ends.status_value();
   }
-  child->controller_.Bind(
+  device_ptr->controller_.Bind(
       std::move(controller_ends->client), dispatcher_,
-      fidl::ObserveTeardown([this, child = child.get()] { children_.erase(*child); }));
+      fidl::ObserveTeardown([device = std::move(device), counter = child_counter_] {
+        // When we observe teardown, we will destroy both the device and the
+        // shared counter associated with it.
+        //
+        // Because the dispatcher is multi-threaded, we must use a
+        // `fidl::WireSharedClient`. Because we use a `fidl::WireSharedClient`,
+        // a two-phase destruction must occur to safely teardown the client.
+        //
+        // Here, we follow the FIDL recommendation to make the observer be in
+        // charge of deallocation by taking ownership of the unique_ptr. See:
+        // https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/llcpp-threading#custom_teardown_observer
+      }));
 
   // If the node is not bindable, we own the node.
   fidl::ServerEnd<fdf::Node> node_server;
@@ -119,29 +150,38 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
     if (node_ends.is_error()) {
       return node_ends.status_value();
     }
-    child->node_.Bind(std::move(node_ends->client), dispatcher_);
+    device_ptr->node_.Bind(std::move(node_ends->client), dispatcher_);
     node_server = std::move(node_ends->server);
   }
 
-  // Add the child node.
-  auto callback = [child = child.get()](fidl::WireResponse<fdf::Node::AddChild>* response) {
-    if (response->result.is_err()) {
-      FDF_LOGL(ERROR, child->logger_, "Failed to add device '%s': %u", child->Name(),
-               response->result.err());
+  // Add the device node.
+  auto callback = [device_ptr](fidl::WireUnownedResult<fdf::Node::AddChild>& result) {
+    if (!result.ok()) {
+      FDF_LOGL(ERROR, device_ptr->logger_, "Failed to add device '%s': %s", device_ptr->Name(),
+               result.error().FormatDescription().data());
+      return;
+    }
+    if (result->result.is_err()) {
+      FDF_LOGL(ERROR, device_ptr->logger_, "Failed to add device '%s': %u", device_ptr->Name(),
+               result->result.err());
       return;
     }
     // Emulate fuchsia.device.manager.DeviceController behaviour, and run the
     // init task after adding the device.
-    if (HasOp(child->ops_, &zx_protocol_device_t::init)) {
-      child->ops_->init(child->context_);
+    if (HasOp(device_ptr->ops_, &zx_protocol_device_t::init)) {
+      device_ptr->ops_->init(device_ptr->context_);
     }
   };
-  (*child_node_)
-      ->AddChild(std::move(args), std::move(controller_ends->server), std::move(node_server),
-                 std::move(callback));
+  if (std::lock_guard<std::mutex> lock(mutex_); child_->node_) {
+    child_->node_->AddChild(std::move(args), std::move(controller_ends->server),
+                            std::move(node_server), std::move(callback));
+  } else {
+    FDF_LOG(ERROR, "Failed to add device '%s' (to parent '%s'), invalid node", zx_args->name,
+            Name());
+    return ZX_ERR_BAD_STATE;
+  }
 
-  *out = child->ZxDevice();
-  children_.push_back(std::move(child));
+  *out = device_ptr->ZxDevice();
   return ZX_OK;
 }
 
@@ -156,11 +196,9 @@ void Device::Remove() {
   }
 }
 
-bool Device::HasChildren() const { return !children_.is_empty(); }
-
 zx_status_t Device::GetProtocol(uint32_t proto_id, void* out) const {
   if (!HasOp(ops_, &zx_protocol_device_t::get_protocol)) {
-    FDF_LOG(WARNING, "Protocol %#x for device '%s' unavailable", proto_id, Name());
+    FDF_LOG(WARNING, "Protocol %u for device '%s' unavailable", proto_id, Name());
     return ZX_ERR_UNAVAILABLE;
   }
   return ops_->get_protocol(context_, proto_id, out);
@@ -179,8 +217,8 @@ zx_status_t Device::AddMetadata(uint32_t type, const void* data, size_t size) {
 }
 
 zx_status_t Device::GetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) {
-  auto it = metadata_.find(type);
-  if (it == metadata_.end()) {
+  auto it = parent_.metadata_.find(type);
+  if (it == parent_.metadata_.end()) {
     FDF_LOG(WARNING, "Metadata %#x for device '%s' not found", type, Name());
     return ZX_ERR_NOT_FOUND;
   }
@@ -195,8 +233,8 @@ zx_status_t Device::GetMetadata(uint32_t type, void* buf, size_t buflen, size_t*
 }
 
 zx_status_t Device::GetMetadataSize(uint32_t type, size_t* out_size) {
-  auto it = metadata_.find(type);
-  if (it == metadata_.end()) {
+  auto it = parent_.metadata_.find(type);
+  if (it == parent_.metadata_.end()) {
     FDF_LOG(WARNING, "Metadata %#x for device '%s' not found", type, Name());
     return ZX_ERR_NOT_FOUND;
   }
