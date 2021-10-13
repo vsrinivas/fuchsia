@@ -11,7 +11,10 @@ dart_library("ermine_driver") {
 
   source_dir = "lib"
 
-  sources = [ "ermine_driver.dart" ]
+  sources = [
+    "ermine_driver.dart",
+    "simple_browser_driver.dart",
+  ]
 
   deps = [
     "//sdk/fidl/fuchsia.input",
