@@ -180,3 +180,11 @@ package-directory supports `NodeGetFlags()` on directories in addition to files.
 
 pkgfs responds with a `ZX_ERR_NOT_SUPPORTED` status when `NodeGetFlags()` is
 called on a directory.
+
+### creation and modification times unimplemented
+
+When `GetAttrs()` is called, package-directory returns 0 for creation_time and
+modification_time, as packages don't contain that metadata.
+
+pkgfs also doesn't support these times, but returns a placeholder value
+(18446744011573954816) instead.

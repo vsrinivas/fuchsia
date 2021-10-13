@@ -3,24 +3,26 @@
 // found in the LICENSE file.
 
 use {
-    crate::{dirs_to_test, just_pkgfs_for_now, PackageSource},
+    crate::{dirs_to_test, just_pkgfs_for_now, Mode, PackageSource},
     anyhow::{anyhow, Context as _, Error},
     fidl::AsHandleRef,
     fidl_fuchsia_io::{
         DirectoryProxy, FileObject, NodeAttributes, NodeInfo, NodeProxy, Service,
-        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_READABLE,
+        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_EXECUTABLE,
+        OPEN_RIGHT_READABLE,
     },
     fuchsia_zircon as zx,
 };
 
 #[fuchsia::test]
 async fn get_attr() {
-    for source in just_pkgfs_for_now().await {
+    for source in dirs_to_test().await {
         get_attr_per_package_source(source).await
     }
 }
 
-trait U64Verifier {
+trait U64Verifier: std::fmt::Debug {
+    #[track_caller]
     fn verify(&self, num: u64);
 }
 
@@ -30,20 +32,21 @@ impl U64Verifier for u64 {
     }
 }
 
+#[derive(Debug)]
 struct AnyU64;
 impl U64Verifier for AnyU64 {
     fn verify(&self, _num: u64) {}
 }
 
-struct PositiveU64;
-impl U64Verifier for PositiveU64 {
-    fn verify(&self, num: u64) {
-        assert!(num > 0);
-    }
-}
+/// pkgfs uses this timestamp when it doesn't have something else to return.
+/// This value is computed via a comedy of errors in the implementation involving
+/// The golang zero time.Time value, returning seconds instead of nanoseconds, and
+/// integer underflow.
+const PKGFS_PLACEHOLDER_TIME: u64 = 18446744011573954816;
 
 async fn get_attr_per_package_source(source: PackageSource) {
-    let root_dir = source.dir;
+    let root_dir = &source.dir;
+    #[derive(Debug)]
     struct Args {
         open_flags: u32,
         open_mode: u32,
@@ -63,7 +66,7 @@ async fn get_attr_per_package_source(source: PackageSource) {
                 id_verifier: Box::new(1),
                 expected_content_size: 0,
                 expected_storage_size: 0,
-                time_verifier: Box::new(PositiveU64),
+                time_verifier: Box::new(0),
             }
         }
     }
@@ -74,7 +77,7 @@ async fn get_attr_per_package_source(source: PackageSource) {
             .unwrap();
         let (status, attrs) = node.get_attr().await.unwrap();
         zx::Status::ok(status).unwrap();
-        assert_eq!(attrs.mode, args.expected_mode);
+        assert_eq!(Mode(attrs.mode), Mode(args.expected_mode));
         args.id_verifier.verify(attrs.id);
         assert_eq!(attrs.content_size, args.expected_content_size);
         assert_eq!(attrs.storage_size, args.expected_storage_size);
@@ -84,19 +87,50 @@ async fn get_attr_per_package_source(source: PackageSource) {
     }
 
     verify_get_attrs(
-        &root_dir,
+        root_dir,
         ".",
-        Args { expected_mode: MODE_TYPE_DIRECTORY | 0o755, ..Default::default() },
+        Args {
+            open_flags: OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+            expected_mode: MODE_TYPE_DIRECTORY
+                | if source.is_pkgdir() {
+                    // TODO(fxbug.dev/86430): match pkgfs or set to 0
+                    0o400
+                } else {
+                    0o755
+                },
+            time_verifier: if source.is_pkgdir() {
+                // "creation and modification times unimplemented"
+                Box::new(0)
+            } else {
+                Box::new(PKGFS_PLACEHOLDER_TIME)
+            },
+            ..Default::default()
+        },
     )
     .await;
     verify_get_attrs(
-        &root_dir,
+        root_dir,
         "dir",
-        Args { expected_mode: MODE_TYPE_DIRECTORY | 0o755, ..Default::default() },
+        Args {
+            expected_mode: MODE_TYPE_DIRECTORY
+                | if source.is_pkgdir() {
+                    // TODO(fxbug.dev/86430): match pkgfs or set to 0
+                    0o500
+                } else {
+                    0o755
+                },
+            time_verifier: if source.is_pkgdir() {
+                // "creation and modification times unimplemented"
+                Box::new(0)
+            } else {
+                Box::new(PKGFS_PLACEHOLDER_TIME)
+            },
+            ..Default::default()
+        },
     )
     .await;
     verify_get_attrs(
-        &root_dir,
+        root_dir,
         "file",
         Args {
             open_flags: OPEN_RIGHT_READABLE,
@@ -110,47 +144,95 @@ async fn get_attr_per_package_source(source: PackageSource) {
     )
     .await;
     verify_get_attrs(
-        &root_dir,
+        root_dir,
         "meta",
         Args {
             open_mode: MODE_TYPE_FILE,
-            expected_mode: MODE_TYPE_FILE | 0o644,
+            expected_mode: MODE_TYPE_FILE
+                | if source.is_pkgdir() {
+                    // TODO(fxbug.dev/86430): match pkgfs or set to 0
+                    0o400
+                } else {
+                    0o644
+                },
             expected_content_size: 64,
             expected_storage_size: 64,
+            time_verifier: if source.is_pkgdir() {
+                // "creation and modification times unimplemented"
+                Box::new(0)
+            } else {
+                Box::new(PKGFS_PLACEHOLDER_TIME)
+            },
             ..Default::default()
         },
     )
     .await;
     verify_get_attrs(
-        &root_dir,
+        root_dir,
         "meta",
         Args {
             open_mode: MODE_TYPE_DIRECTORY,
-            expected_mode: MODE_TYPE_DIRECTORY | 0o755,
+            expected_mode: MODE_TYPE_DIRECTORY
+                | if source.is_pkgdir() {
+                    // TODO(fxbug.dev/86430): match pkgfs or set to 0
+                    0o400
+                } else {
+                    0o755
+                },
             expected_content_size: 74,
             expected_storage_size: 74,
+            time_verifier: if source.is_pkgdir() {
+                // "creation and modification times unimplemented"
+                Box::new(0)
+            } else {
+                Box::new(PKGFS_PLACEHOLDER_TIME)
+            },
             ..Default::default()
         },
     )
     .await;
     verify_get_attrs(
-        &root_dir,
+        root_dir,
         "meta/dir",
         Args {
-            expected_mode: MODE_TYPE_DIRECTORY | 0o755,
+            expected_mode: MODE_TYPE_DIRECTORY
+                | if source.is_pkgdir() {
+                    // TODO(fxbug.dev/86430): match pkgfs or set to 0
+                    0o400
+                } else {
+                    0o755
+                },
             expected_content_size: 74,
             expected_storage_size: 74,
+            time_verifier: if source.is_pkgdir() {
+                // "creation and modification times unimplemented"
+                Box::new(0)
+            } else {
+                Box::new(PKGFS_PLACEHOLDER_TIME)
+            },
             ..Default::default()
         },
     )
     .await;
     verify_get_attrs(
-        &root_dir,
+        root_dir,
         "meta/file",
         Args {
-            expected_mode: MODE_TYPE_FILE | 0o644,
+            expected_mode: MODE_TYPE_FILE
+                | if source.is_pkgdir() {
+                    // TODO(fxbug.dev/86430): match pkgfs or set to 0
+                    0o400
+                } else {
+                    0o644
+                },
             expected_content_size: 9,
             expected_storage_size: 9,
+            time_verifier: if source.is_pkgdir() {
+                // "creation and modification times unimplemented"
+                Box::new(0)
+            } else {
+                Box::new(PKGFS_PLACEHOLDER_TIME)
+            },
             ..Default::default()
         },
     )
