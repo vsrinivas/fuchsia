@@ -5,13 +5,10 @@
 package main
 
 import (
-	"archive/tar"
-	"compress/bzip2"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -29,7 +26,6 @@ import (
 )
 
 var (
-	debugArchive   string
 	buildIDDirIn   string
 	buildIDDirOut  string
 	outputManifest string
@@ -51,7 +47,6 @@ func init() {
 	colors = color.ColorAuto
 	level = logger.WarningLevel
 
-	flag.StringVar(&debugArchive, "debug-archive", "", "path to archive of debug binaries")
 	flag.StringVar(&buildIDDirIn, "build-id-dir-in", "", "path to an input .build-id directory")
 	flag.StringVar(&buildIDDirOut, "build-id-dir-out", "", "path to an output .build-id directory to populate")
 	flag.StringVar(&outputManifest, "output-manifest", "", "path to output a json manifest of debug binaries to")
@@ -135,67 +130,6 @@ func trimExt(p string) string {
 	return strings.TrimSuffix(p, filepath.Ext(p))
 }
 
-// getStartDir allows us to be flexible in what we accept for debugArchive.
-// This lets us use both a directory and a file for the time being allowing
-// for an easy soft transistion as needed.
-func getStartDir() (string, error) {
-	if debugArchive == "" {
-		return buildIDDirIn, nil
-	}
-	// If the debug archive was passed, just return the first ancestor
-	// directory that exists. This allows flexibility in transitioning away
-	// from specifying the debug archive altogether. The common two cases are
-	// (1) the debug archive still exists and we will unpack the contents in
-	// the parent directory, or
-	// (2) the debug archive and some unnecessary nesting no longer exist, and
-	// some ancestor directory is where the unpacked contents now await
-	// processing.
-	dir := filepath.Dir(debugArchive)
-	for dir != "" && dir != "/" && dir != "." {
-		info, err := os.Stat(dir)
-		if err == nil {
-			if !info.IsDir() {
-				return "", fmt.Errorf("ancestor directory %s of %s is actually a file", dir, debugArchive)
-			}
-			return dir, nil
-		} else if !os.IsNotExist(err) {
-			return "", err
-		}
-		dir = filepath.Dir(dir)
-	}
-	return "", fmt.Errorf("no ancestor directory of %s exists", debugArchive)
-}
-
-// In the case where a debug archive is specified but is nonexistent, as will
-// happen during the transition away from specifying the parameter altogether,
-// this means that a raw .build-id dir is now being supplied. To allow
-// flexibility around the relative path between the debug archive specification
-// and this directory, we telescoped out in getStartDir to degugArchive's
-// first existent ancestor directory; here we now telescope back in and look for
-// the first .build-id subdirectory.
-func findBuildIDDir(ctx context.Context, startDir string) (string, error) {
-	logger.Tracef(ctx, "determining if %s is a .build-id directory", startDir)
-	infos, err := ioutil.ReadDir(startDir)
-	if err != nil {
-		return "", err
-	}
-	if isBuildIDDir(ctx, startDir, infos) {
-		return startDir, nil
-	}
-	for _, info := range infos {
-		if !info.IsDir() {
-			continue
-		}
-		dir, err := findBuildIDDir(ctx, filepath.Join(startDir, info.Name()))
-		if err == nil {
-			return dir, nil
-		} else if err != errNoBuildIDDir {
-			return "", err
-		}
-	}
-	return "", errNoBuildIDDir
-}
-
 // runDumpSyms starts a dump_syms command using `br` that converts an ELF file
 // with debug info into a breakpad syms file. If the breakpad syms file has already
 // been created, dump_syms will not run. This allows many instances of this tool to
@@ -238,69 +172,6 @@ func produceSymbols(ctx context.Context, inputBuildIDDir string, br *BatchRunner
 		outs = append(outs, binaryRef{ref, out})
 	}
 	return outs, nil
-}
-
-// unpack takes debugArchive and unpacks each debug binary. On seeing a debug binary
-// dump_syms is invoked for it using `br` as well.
-func unpack(ctx context.Context, br *BatchRunner) ([]binaryRef, error) {
-	// unpack each debug binary into buildIDDirOut
-	file, err := os.Open(debugArchive)
-	if err != nil {
-		return nil, fmt.Errorf("while unpacking %s: %w", debugArchive, err)
-	}
-	defer file.Close()
-	// The file is bzip2 compressed
-	tr := tar.NewReader(bzip2.NewReader(file))
-	out := []binaryRef{}
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, fmt.Errorf("while reading %s: %w", debugArchive, err)
-		} else if hdr.Typeflag == tar.TypeDir {
-			continue
-		}
-
-		matches := buildIDFileNoExtRE.FindStringSubmatch(trimExt(hdr.Name))
-		if matches == nil {
-			logger.Warningf(ctx, "%s in %s was not a debug binary", hdr.Name, debugArchive)
-			continue
-		}
-		logger.Tracef(ctx, "Reading %s from %s", hdr.Name, debugArchive)
-		if len(matches) != 3 {
-			panic("The list of matches isn't as expected")
-		}
-		buildID := matches[1] + matches[2]
-		unpackFilePath := filepath.Join(buildIDDirOut, hdr.Name)
-
-		ok, err := osmisc.FileExists(unpackFilePath)
-		if err != nil {
-			return nil, err
-		} else if ok {
-			continue
-		}
-		outFile, err := osmisc.CreateFile(unpackFilePath, os.O_WRONLY)
-		if err != nil {
-			return nil, fmt.Errorf("while attempting to write %s from %s to %s: %w", hdr.Name, debugArchive, unpackFilePath, err)
-		}
-		if _, err := io.Copy(outFile, tr); err != nil {
-			outFile.Close()
-			return nil, fmt.Errorf("while attempting to write %s from %s to %s: %w", hdr.Name, debugArchive, unpackFilePath, err)
-		}
-		outFile.Close()
-		bfr := elflib.NewBinaryFileRef(unpackFilePath, buildID)
-		if err := bfr.Verify(); err != nil {
-			return nil, fmt.Errorf("while attempting to verify %s copied from %s: %w", unpackFilePath, debugArchive, err)
-		}
-		symbolFile := filepath.Join(buildIDDirOut, bfr.BuildID[:2], bfr.BuildID[2:]+".sym")
-		logger.Tracef(ctx, "adding dump_syms command for %s -> %s", bfr.Filepath, symbolFile)
-		if err := runDumpSyms(ctx, br, bfr.Filepath, symbolFile); err != nil {
-			return nil, fmt.Errorf("running dumpSyms on %s to produce %s: %w", bfr.Filepath, symbolFile, err)
-		}
-		out = append(out, binaryRef{bfr, symbolFile})
-	}
-	return out, nil
 }
 
 // relIfAbs returns path relative to `base` if input `path` is absolute.
@@ -352,11 +223,11 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ctx = logger.WithLogger(ctx, log)
+	if buildIDDirIn == "" {
+		log.Fatalf("-build-id-dir-in is required.")
+	}
 	if buildIDDirOut == "" {
 		log.Fatalf("-build-id-dir-out is required.")
-	}
-	if buildIDDirIn == "" && debugArchive == "" {
-		log.Fatalf("one of -build-id-dir-in or -debug-archive is required.")
 	}
 	if outputManifest == "" {
 		log.Fatalf("-output-manifest is required.")
@@ -371,24 +242,21 @@ func main() {
 		log.Fatalf("Failed to get current working directory: %v", err)
 	}
 
-	// This action should rerun if the input .build-id directory or debug archive changes.
-	var dep string
-	if buildIDDirIn != "" {
-		empty, err := osmisc.DirIsEmpty(buildIDDirIn)
-		if err != nil {
-			log.Fatalf("while checking if build-id-dir-in existed: %v", err)
-		}
-		if empty {
-			if err := writeManifest(nil, buildDir); err != nil {
-				log.Fatalf("failed to write empty manifest: %v", err)
-			}
-			log.Tracef("%s does not exist, no work needed", buildIDDirIn)
-			return
-		}
-		dep = buildIDDirIn
-	} else {
-		dep = debugArchive
+	// If the input .build-id directory is empty, then there is no real work to do: bail.
+	empty, err := osmisc.DirIsEmpty(buildIDDirIn)
+	if err != nil {
+		log.Fatalf("while checking if build-id-dir-in existed: %v", err)
 	}
+	if empty {
+		if err := writeManifest(nil, buildDir); err != nil {
+			log.Fatalf("failed to write empty manifest: %v", err)
+		}
+		log.Tracef("%s does not exist, no work needed", buildIDDirIn)
+		return
+	}
+
+	// This action should rerun if the input .build-id directory changes.
+	dep := buildIDDirIn
 	relDep, err := filepath.Rel(buildDir, dep)
 	if err != nil {
 		log.Fatalf("failed to relativize %s: %v", dep, err)
@@ -398,50 +266,12 @@ func main() {
 		log.Fatalf("failed to write depfile: %v", err)
 	}
 
-	// If the input .build-id directory is empty and no debug archive is
-	// provided, then there is no real work to do: bail.
-	if debugArchive == "" {
-		empty, err := osmisc.DirIsEmpty(buildIDDirIn)
-		if err != nil {
-			log.Fatalf("error in checking state of build-id dir: %v", err)
-		}
-		if empty {
-			if err := writeManifest(nil, buildDir); err != nil {
-				log.Fatalf("failed to write empty manifest: %v", err)
-			}
-			log.Infof("build-id directory is empty; no work to do")
-			return
-		}
-	}
-
 	br := newBatchRunner(ctx, &subprocess.Runner{}, tasks)
-
-	exists, err := osmisc.FileExists(debugArchive)
-	if err != nil {
-		log.Fatalf("while checking if archive existed: %v", err)
-	}
 
 	bfrs := []binaryRef{}
 
-	log.Tracef("checking!")
-	if exists {
-		log.Tracef("archive existed")
-		bfrs, err = unpack(ctx, br)
-		if err != nil {
-			log.Fatalf("%v", err)
-		}
-	} else {
-		startDir, err := getStartDir()
-		if err != nil {
-			log.Fatalf("could not find the start dir: %v", err)
-		}
-		log.Tracef("found %s as start directory", startDir)
-		dir, err := findBuildIDDir(ctx, startDir)
-		if err != nil {
-			log.Fatalf("while finding .build-id directory: %v", err)
-		}
-		bfrs, err = produceSymbols(ctx, dir, br)
-	}
+	log.Tracef("producing symbols!")
+	bfrs, err = produceSymbols(ctx, buildIDDirIn, br)
 
 	// TODO: write the manifest to a tmp file and rename it into place.
 	log.Tracef("writing manifest now")
@@ -451,7 +281,7 @@ func main() {
 
 	log.Tracef("manifest written")
 
-	// Before we wait on all the dump_syms calls we need to ensure that we time out eventully
+	// Before we wait on all the dump_syms calls we need to ensure that we time out eventually
 	log.Tracef("waiting on all dump_syms calls to finish")
 	if timeout != 0 {
 		time.AfterFunc(timeout, cancel)
