@@ -1044,7 +1044,6 @@ config("Wno-conversion") {
     "//zircon/system/ulib/trace-engine:*",
     "//zircon/system/ulib/trace-reader:*",
     "//zircon/system/ulib/trace-test-utils:*",
-    "//zircon/system/ulib/unittest:*",
     "//zircon/system/ulib/virtio:*",
     "//zircon/system/ulib/zbitl:*",
     "//zircon/system/ulib/zbitl/test:*",

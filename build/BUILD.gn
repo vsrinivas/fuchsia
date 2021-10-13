@@ -321,7 +321,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/trace-vthread/*",
     "//zircon/system/ulib/trace/*",
     "//zircon/system/ulib/uart/*",
-    "//zircon/system/ulib/unittest/*",
     "//zircon/system/ulib/usb-peripheral-utils/*",
     "//zircon/system/ulib/usb-virtual-bus-launcher/*",
     "//zircon/system/ulib/utf_conversion/*",
