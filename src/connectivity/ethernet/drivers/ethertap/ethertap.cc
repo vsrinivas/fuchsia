@@ -39,7 +39,7 @@ TapCtl::TapCtl(zx_device_t* device) : DeviceType(device) {}
 
 zx_status_t TapCtl::Create(void* ctx, zx_device_t* parent) {
   auto dev = std::unique_ptr<TapCtl>(new TapCtl(parent));
-  zx_status_t status = dev->DdkAdd("tapctl");
+  zx_status_t status = dev->DdkAdd(ddk::DeviceAddArgs("tapctl").set_flags(DEVICE_ADD_NON_BINDABLE));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: could not add device: %d", __func__, status);
   } else {
