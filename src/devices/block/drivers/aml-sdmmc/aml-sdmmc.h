@@ -83,6 +83,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   struct TuneWindow {
     uint32_t start = 0;
     uint32_t size = 0;
+    std::string results;
 
     uint32_t middle() const { return start + (size / 2); }
   };
@@ -98,10 +99,9 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
     inspect::Inspector inspector;
     inspect::Node root;
     inspect::UintProperty bus_clock_frequency;
-    inspect::UintProperty tx_clock_phase;
     inspect::UintProperty adj_delay;
     inspect::UintProperty delay_lines;
-    inspect::StringProperty tuning_results;
+    std::vector<inspect::StringProperty> tuning_results;
     inspect::UintProperty delay_window_size;
     inspect::UintProperty max_delay;
 
