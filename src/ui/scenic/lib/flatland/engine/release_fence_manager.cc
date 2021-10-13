@@ -166,7 +166,10 @@ std::unique_ptr<ReleaseFenceManager::FrameRecord> ReleaseFenceManager::NewGpuCom
 
   // Set up a waiter on the |render_finished_fence|.
   record->render_finished_wait = std::make_unique<async::WaitOnce>(
-      render_finished_fence.release(), ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_TIMESTAMP);
+      render_finished_fence.get(), ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_TIMESTAMP);
+  // Keep the fence alive as long as the WaitOnce.
+  record->render_finished_fence = std::move(render_finished_fence);
+
   zx_status_t wait_status = record->render_finished_wait->Begin(
       dispatcher_, [this, frame_number](async_dispatcher_t*, async::WaitOnce*, zx_status_t status,
                                         const zx_packet_signal_t* signal_info) {

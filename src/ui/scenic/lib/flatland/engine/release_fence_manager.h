@@ -107,6 +107,10 @@ class ReleaseFenceManager final {
 
     scheduling::FrameRenderer::FramePresentedCallback frame_presented_callback;
 
+    // Note the relative ordering of these two fields is important because
+    // during destruction we need to destruct the WaitOnce before closing
+    // the handle its waiting on.
+    zx::event render_finished_fence;
     std::unique_ptr<async::WaitOnce> render_finished_wait;
 
     // Four conditions that must be met to erase the record.  See MaybeEraseFrameRecord() comment.
