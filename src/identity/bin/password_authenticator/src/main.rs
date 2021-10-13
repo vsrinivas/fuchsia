@@ -3,14 +3,22 @@
 // found in the LICENSE file.
 
 mod account_manager;
+mod constants;
+mod disk_management;
 
-use anyhow::Error;
+use anyhow::{Context, Error};
+use fidl_fuchsia_identity_account::AccountManagerRequestStream;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::StreamExt;
 use log::info;
 
 use crate::account_manager::AccountManager;
+use crate::disk_management::{DevBlockDevice, DevPartitionManager};
+
+enum Services {
+    AccountManager(AccountManagerRequestStream),
+}
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
@@ -18,21 +26,18 @@ async fn main() -> Result<(), Error> {
     info!("Starting password authenticator");
 
     let mut fs = ServiceFs::new();
+    let partition_manager: DevPartitionManager<DevBlockDevice> =
+        DevPartitionManager::new_from_namespace()?;
+    let account_manager = AccountManager::new(partition_manager);
 
     // Add FIDL services here once we have protocols for them.
-    fs.dir("svc").add_fidl_service(|stream| {
-        // TODO(zarvox): don't detach futures; tear them down deterministically
-        fasync::Task::spawn(AccountManager::handle_requests_for_stream(stream)).detach();
-    });
+    fs.dir("svc").add_fidl_service(Services::AccountManager);
+    fs.take_and_serve_directory_handle().context("serving directory handle")?;
 
-    fs.take_and_serve_directory_handle()?;
-
-    fs.collect::<()>().await;
+    fs.for_each_concurrent(None, |service| match service {
+        Services::AccountManager(stream) => account_manager.handle_requests_for_stream(stream),
+    })
+    .await;
 
     Ok(())
-}
-
-#[cfg(test)]
-mod test {
-    // Add tests once we have behavior to test.
 }

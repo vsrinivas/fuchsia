@@ -351,6 +351,22 @@ pub fn wait_for_device(path: &str, duration: std::time::Duration) -> Result<(), 
     })?)
 }
 
+/// Wait for no longer than |duration| for the device at |path| relative to |dirfd| to appear.
+pub fn wait_for_device_at(
+    dirfd: &fs::File,
+    path: &str,
+    duration: std::time::Duration,
+) -> Result<(), Error> {
+    let c_path = ffi::CString::new(path)?;
+    Ok(zx::Status::ok(unsafe {
+        ramdevice_sys::wait_for_device_at(
+            dirfd.as_raw_fd(),
+            c_path.as_ptr(),
+            duration.as_nanos() as u64,
+        )
+    })?)
+}
+
 #[cfg(test)]
 mod tests {
     use {

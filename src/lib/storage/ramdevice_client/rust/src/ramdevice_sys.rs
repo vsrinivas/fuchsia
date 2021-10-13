@@ -63,4 +63,9 @@ extern "C" {
     pub fn ramdisk_get_block_fd(client: *const ramdisk_client_t) -> raw::c_int;
     pub fn ramdisk_destroy(client: *const ramdisk_client_t) -> zx_status_t;
     pub fn wait_for_device(path: *const raw::c_char, timeout: u64) -> zx_status_t;
+    pub fn wait_for_device_at(
+        dirfd: raw::c_int,
+        path: *const raw::c_char,
+        timeout: u64,
+    ) -> zx_status_t;
 }
