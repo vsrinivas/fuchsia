@@ -40,6 +40,7 @@ class VirtualAudioBus {
     args.name = "virtual_audio";
     args.ctx = control.get();
     args.ops = &device_ops;
+    args.flags = DEVICE_ADD_NON_BINDABLE;
 
     // Add the virtual_audio device node, under parent /dev/test.
     zx_status_t status = device_add(parent_test_bus, &args, &control->dev_node_);

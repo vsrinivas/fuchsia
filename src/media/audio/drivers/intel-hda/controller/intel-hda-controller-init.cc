@@ -591,6 +591,7 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
   args.ctx = this;
   args.ops = &CONTROLLER_DEVICE_THUNKS;
   args.proto_id = ZX_PROTOCOL_IHDA;
+  args.flags = DEVICE_ADD_NON_BINDABLE;
 
   // Manually add a reference to this object.  If we succeeded in publishing,
   // the DDK will be holding an unmanaged reference to us in our device's ctx
