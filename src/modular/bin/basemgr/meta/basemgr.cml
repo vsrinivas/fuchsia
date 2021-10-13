@@ -21,10 +21,6 @@
     ],
     use: [
         {
-            protocol: "fuchsia.sys2.Realm",
-            from: "framework",
-        },
-        {
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.hardware.power.statecontrol.Admin",
