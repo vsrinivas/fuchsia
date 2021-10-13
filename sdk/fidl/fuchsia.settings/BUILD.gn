@@ -15,6 +15,7 @@ fidl("fuchsia.settings") {
     "factory_reset.fidl",
     "input.fidl",
     "intl.fidl",
+    "keyboard.fidl",
     "light.fidl",
     "night_mode.fidl",
     "privacy.fidl",
@@ -23,6 +24,7 @@ fidl("fuchsia.settings") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.input",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.ui.types",

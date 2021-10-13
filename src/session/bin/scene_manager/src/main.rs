@@ -35,7 +35,7 @@ enum ExposedServices {
     AccessibilityViewRegistry(A11yViewRegistryRequestStream),
     SceneManager(SceneManagerRequestStream),
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
-    /// The requests for `fuchsia.input.keymap.Configuration`.
+    /// The requests for `fuchsia.input.keymap.experimental.Configuration`.
     TextSettingsConfig(fkeymap::ConfigurationRequestStream),
 }
 

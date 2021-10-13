@@ -1,0 +1,18 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input;
+
+/// Keymaps that should always be present and selectable.  The fallback keymaps
+/// may be useful on their own but are mainly here to ensure that at least some
+/// keymap is present if no other custom keymaps have been defined or in use.
+type KeymapId = flexible enum {
+    /// The US_QWERTY keymap.  This is also the default if no settings are
+    /// ever applied.
+    US_QWERTY = 0;
+    /// The FR AZERTY keymap.
+    FR_AZERTY = 1;
+    /// The US Dvorak keymap.
+    US_DVORAK = 2;
+};

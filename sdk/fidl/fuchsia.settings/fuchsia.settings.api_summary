@@ -157,6 +157,15 @@ struct fuchsia.settings/Intl_Set_Response
 union/member fuchsia.settings/Intl_Set_Result.err fuchsia.settings/Error
 union/member fuchsia.settings/Intl_Set_Result.response fuchsia.settings/Intl_Set_Response
 strict union fuchsia.settings/Intl_Set_Result
+protocol/member fuchsia.settings/Keyboard.Set(fuchsia.settings/KeyboardSettings settings) -> ()
+protocol/member fuchsia.settings/Keyboard.Watch() -> (fuchsia.settings/KeyboardSettings settings)
+protocol fuchsia.settings/Keyboard
+protocol/member fuchsia.settings/KeyboardSet.Set(fuchsia.settings/KeyboardSettings settings) -> ()
+protocol fuchsia.settings/KeyboardSet
+table/member fuchsia.settings/KeyboardSettings.keymap fuchsia.input/KeymapId
+table fuchsia.settings/KeyboardSettings
+protocol/member fuchsia.settings/KeyboardWatch.Watch() -> (fuchsia.settings/KeyboardSettings settings)
+protocol fuchsia.settings/KeyboardWatch
 protocol/member fuchsia.settings/Light.SetLightGroupValues(string:32 name,vector<fuchsia.settings/LightState> state) -> (fuchsia.settings/Light_SetLightGroupValues_Result result)
 protocol/member fuchsia.settings/Light.WatchLightGroup(string:32 name) -> (fuchsia.settings/LightGroup group)
 protocol/member fuchsia.settings/Light.WatchLightGroups() -> (vector<fuchsia.settings/LightGroup> groups)

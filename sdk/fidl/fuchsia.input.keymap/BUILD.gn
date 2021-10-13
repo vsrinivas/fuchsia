@@ -5,11 +5,9 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.input.keymap") {
-  # This is a temporary API for simplified keyboard settings, built as part of
-  # a proof of concept.  It will be significantly changed for production use.
-  sdk_category = "internal"
+  sdk_category = "experimental"
 
   sources = [ "keymap.fidl" ]
 
-  public_deps = []
+  public_deps = [ "//sdk/fidl/fuchsia.input" ]
 }

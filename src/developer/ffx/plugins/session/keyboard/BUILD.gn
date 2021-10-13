@@ -13,8 +13,14 @@ ffx_plugin("ffx_session_keyboard") {
 
   sources = [ "src/lib.rs" ]
 
-  deps = [ "//sdk/fidl/fuchsia.input.keymap:fuchsia.input.keymap-rustc" ]
-  args_deps = [ "//sdk/fidl/fuchsia.input.keymap:fuchsia.input.keymap-rustc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
+    "//sdk/fidl/fuchsia.input.keymap:fuchsia.input.keymap-rustc",
+  ]
+  args_deps = [
+    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
+    "//sdk/fidl/fuchsia.input.keymap:fuchsia.input.keymap-rustc",
+  ]
 }
 
 fuchsia_unittest_component("ffx_session_keyboard_test") {

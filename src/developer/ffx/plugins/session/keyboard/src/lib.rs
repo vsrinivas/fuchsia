@@ -34,6 +34,8 @@ pub async fn set_keymap(proxy: Option<ConfigurationProxy>, cmd: Command) -> Resu
 mod tests {
     use super::*;
     use fidl::prelude::*;
+    use fidl_fuchsia_input as finput;
+    use fidl_fuchsia_input_keymap as fkeymap;
     use fuchsia_async as fasync;
     use input_pipeline::text_settings_handler;
 
@@ -45,8 +47,8 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fkeymap::ConfigurationMarker>().unwrap();
         handler.get_serving_fn()(server_end);
 
-        set_keymap(Command { keymap: fkeymap::Id::FrAzerty }, client_end).await.unwrap();
-        assert_eq!(fkeymap::Id::FrAzerty, handler.get_keymap_id().await);
+        set_keymap(Command { keymap: finput::KeymapId::FrAzerty }, client_end).await.unwrap();
+        assert_eq!(finput::KeymapId::FrAzerty, handler.get_keymap_id().await);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -58,6 +60,6 @@ mod tests {
         // Server end closes, so client should error out.
         server_end.control_handle().shutdown();
 
-        set_keymap(Command { keymap: fkeymap::Id::FrAzerty }, client_end).await.unwrap();
+        set_keymap(Command { keymap: finput::KeymapId::FrAzerty }, client_end).await.unwrap();
     }
 }

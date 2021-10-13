@@ -6,6 +6,7 @@ use crate::input_device;
 use crate::input_handler::InputHandler;
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
+use fidl_fuchsia_input as finput;
 use fidl_fuchsia_input_keymap as fkeymap;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_debug, fx_log_err};
@@ -21,7 +22,7 @@ pub struct Handler {
     /// Stores the currently active keymap identifier, if present.  Wrapped
     /// in an refcell as it can be changed out of band through
     /// `fuchsia.input.keymap.Configuration/SetLayout`.
-    keymap_id: RefCell<Option<fkeymap::Id>>,
+    keymap_id: RefCell<Option<finput::KeymapId>>,
 }
 
 #[async_trait(?Send)]
@@ -39,9 +40,9 @@ impl InputHandler for Handler {
                 // Maybe instead just pass in the keymap ID directly?
                 let keymap_id = match *self.keymap_id.borrow() {
                     Some(ref id) => match id {
-                        fkeymap::Id::FrAzerty => Some("FR_AZERTY".to_owned()),
-                        fkeymap::Id::UsDvorak => Some("US_DVORAK".to_owned()),
-                        fkeymap::Id::UsQwerty | fkeymap::IdUnknown!() => {
+                        finput::KeymapId::FrAzerty => Some("FR_AZERTY".to_owned()),
+                        finput::KeymapId::UsDvorak => Some("US_DVORAK".to_owned()),
+                        finput::KeymapId::UsQwerty | finput::KeymapIdUnknown!() => {
                             Some("US_QWERTY".to_owned())
                         }
                     },
@@ -68,7 +69,7 @@ impl Handler {
     /// Creates a new text settings handler instance.
     /// `initial` contains the desired initial keymap value to be served.
     /// Usually you want this to be `None`.
-    pub fn new(initial: Option<fkeymap::Id>) -> Rc<Self> {
+    pub fn new(initial: Option<finput::KeymapId>) -> Rc<Self> {
         Rc::new(Handler { keymap_id: RefCell::new(initial) })
     }
 
@@ -91,8 +92,8 @@ impl Handler {
     }
 
     /// Gets the currently active keymap ID.
-    pub async fn get_keymap_id(&self) -> fkeymap::Id {
-        self.keymap_id.borrow().unwrap_or(fkeymap::Id::UsQwerty)
+    pub async fn get_keymap_id(&self) -> finput::KeymapId {
+        self.keymap_id.borrow().unwrap_or(finput::KeymapId::UsQwerty)
     }
 
     /// Returns the function that can be used to serve
@@ -145,14 +146,23 @@ mod tests {
     async fn keymap_id_setting() {
         #[derive(Debug)]
         struct Test {
-            keymap_id: Option<fkeymap::Id>,
+            keymap_id: Option<finput::KeymapId>,
             expected: Option<String>,
         }
         let tests = vec![
             Test { keymap_id: None, expected: Some("US_QWERTY".to_owned()) },
-            Test { keymap_id: Some(fkeymap::Id::UsQwerty), expected: Some("US_QWERTY".to_owned()) },
-            Test { keymap_id: Some(fkeymap::Id::FrAzerty), expected: Some("FR_AZERTY".to_owned()) },
-            Test { keymap_id: Some(fkeymap::Id::UsDvorak), expected: Some("US_DVORAK".to_owned()) },
+            Test {
+                keymap_id: Some(finput::KeymapId::UsQwerty),
+                expected: Some("US_QWERTY".to_owned()),
+            },
+            Test {
+                keymap_id: Some(finput::KeymapId::FrAzerty),
+                expected: Some("FR_AZERTY".to_owned()),
+            },
+            Test {
+                keymap_id: Some(finput::KeymapId::UsDvorak),
+                expected: Some("US_DVORAK".to_owned()),
+            },
         ];
         for test in tests {
             let handler = Handler::new(test.keymap_id.clone());
@@ -180,7 +190,7 @@ mod tests {
 
         // Now change the configuration, send another input event and verify
         // that a modified keymap has been attached to the event.
-        client_end.set_layout(fkeymap::Id::FrAzerty).await.unwrap();
+        client_end.set_layout(finput::KeymapId::FrAzerty).await.unwrap();
         let result = handler.handle_input_event(get_fake_key_event(None)).await;
         let expected = get_fake_key_event(Some("FR_AZERTY".to_owned()));
         assert_eq!(vec![expected], result);

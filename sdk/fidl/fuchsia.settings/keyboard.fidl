@@ -1,0 +1,38 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.settings;
+
+using fuchsia.input;
+
+/// The various keyboard settings.
+type KeyboardSettings = table {
+    1: keymap fuchsia.input.KeymapId;
+};
+
+/// The mutable API for modifying the keyboard settings.
+protocol KeyboardSet {
+    /// Setting protocol: if a field is left unset, it is not modified.
+    /// To clear a field, set it to its type's "zero" value.
+    Set(struct {
+        settings KeyboardSettings;
+    }) -> ();
+};
+
+/// The read-only API for monitoring the changes to the keyboard settings.
+protocol KeyboardWatch {
+    /// The Watch protocol is the same as in the other `fuchsia.settings.*` protocols.
+    ///
+    /// Returns immediately on first call; on subsequent calls it blocks until the settings
+    /// change, and then returns following the "hanging get" pattern.
+    Watch() -> (struct {
+        settings KeyboardSettings;
+    });
+};
+
+/// The SetUI protocol for reading and modifying the keyboard settings.
+@discoverable
+protocol Keyboard {
+    compose KeyboardSet;
+    compose KeyboardWatch;
+};

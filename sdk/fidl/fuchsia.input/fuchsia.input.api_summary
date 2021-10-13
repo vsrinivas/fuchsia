@@ -109,4 +109,8 @@ enum/member fuchsia.input/Key.X 458779
 enum/member fuchsia.input/Key.Y 458780
 enum/member fuchsia.input/Key.Z 458781
 strict enum fuchsia.input/Key uint32
+enum/member fuchsia.input/KeymapId.FR_AZERTY 1
+enum/member fuchsia.input/KeymapId.US_DVORAK 2
+enum/member fuchsia.input/KeymapId.US_QWERTY 0
+flexible enum fuchsia.input/KeymapId uint32
 library fuchsia.input
