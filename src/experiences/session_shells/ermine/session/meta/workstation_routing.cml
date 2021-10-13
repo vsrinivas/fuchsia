@@ -73,6 +73,7 @@
             protocol: [
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.feedback.CrashReporter",
+                "fuchsia.identity.account.AccountManager",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.logger.LogSink",
                 "fuchsia.posix.socket.Provider",

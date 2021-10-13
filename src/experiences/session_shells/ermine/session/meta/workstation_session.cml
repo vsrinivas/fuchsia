@@ -18,6 +18,7 @@
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.element.Manager",
                 "fuchsia.feedback.CrashReporter",
+                "fuchsia.identity.account.AccountManager",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.session.scene.Manager",
