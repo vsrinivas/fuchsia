@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env fuchsia-vendored-python
 #
 # Copyright 2016 Google Inc.
 #
@@ -517,7 +517,7 @@ def WriteTarget(out, target, project):
   out.write('\n')
 
   if target.cmake_type is None:
-    print ('Target %s has unknown target type %s, skipping.' %
+    print('Target %s has unknown target type %s, skipping.' %
           (        target.gn_name,            target.gn_type ) )
     return
 
