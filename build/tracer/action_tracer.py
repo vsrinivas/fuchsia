@@ -787,17 +787,6 @@ def main():
             "--",
         ] + command.tokens)
 
-    # Scripts with known issues
-    # TODO(shayba): file bugs for the suppressions below
-    ignored_scripts = {
-        # When using `/bin/ln -f`, a temporary file may be created in the
-        # target directory. This will register as a write to a non-output file.
-        # TODO(shayba): address this somehow.
-        "ln",
-    }
-    if os.path.basename(script) in ignored_scripts:
-        return retval
-
     # Compute constraints from action properties (from args).
     action = Action(
         inputs=args.inputs, outputs=args.outputs, depfile=args.depfile)
