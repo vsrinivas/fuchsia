@@ -29,9 +29,11 @@ import (
 // This is configured in the BUILD.gn file.
 var testrootFlag = flag.String("testroot", "", "Root directory of the files needed to execute the test.")
 
-const hostaddr = "fe80::c0ff:eeee:fefe:c000%eth1"
-
-const validDir = "/some/package/repo/dir"
+const (
+	resolvedAddr = "fe80::c0ff:eee:fe00:4444%en0"
+	hostaddr     = "fe80::c0ff:eeee:fefe:c000%eth1"
+	validDir     = "/some/package/repo/dir"
+)
 
 type testSDKProperties struct {
 	dataPath              string
@@ -53,9 +55,11 @@ func (testSDK testSDKProperties) GetSDKDataPath() string {
 func (testSDK testSDKProperties) GetAvailableImages(version string, bucket string) ([]sdkcommon.GCSImage, error) {
 	return []sdkcommon.GCSImage{}, nil
 }
+
 func (testSDK testSDKProperties) GetDefaultPackageRepoDir() (string, error) {
 	return filepath.Join(testSDK.dataPath, "default-target-name", "packages", "amber-files"), nil
 }
+
 func (testSDK testSDKProperties) RunFFX(ffxArgs []string, interactive bool) (string, error) {
 	expectedArgs := []string{}
 
@@ -87,6 +91,7 @@ func (testSDK testSDKProperties) RunFFX(ffxArgs []string, interactive bool) (str
 	}
 	return "", nil
 }
+
 func (testSDK testSDKProperties) RunSSHCommand(targetAddress string, sshConfig string,
 	privateKey string, sshPort string, verbose bool, sshArgs []string) (string, error) {
 
@@ -155,15 +160,44 @@ func helperCommandForFServe(command string, s ...string) (cmd *exec.Cmd) {
 	return cmd
 }
 
+func clearTestEnv() {
+	ExecCommand = exec.Command
+	OsStat = os.Stat
+	findProcess = defaultFindProcess
+	syscallWait4 = defaultsyscallWait4
+
+	sdkcommon.ExecCommand = exec.Command
+	sdkcommon.GetUserHomeDir = sdkcommon.DefaultGetUserHomeDir
+	sdkcommon.GetUsername = sdkcommon.DefaultGetUsername
+	sdkcommon.GetHostname = sdkcommon.DefaultGetHostname
+	sdkcommon.ExecLookPath = exec.LookPath
+
+	os.Unsetenv("FSERVE_TEST_NO_SERVERS")
+	os.Unsetenv("FSERVE_TEST_NO_SERVERS_IS_ERROR")
+	os.Unsetenv("FSERVE_TEST_PGREP_ERROR")
+	os.Unsetenv("FSERVE_TEST_PS_EXIT_ERROR")
+	os.Unsetenv("FSERVE_TEST_PS_ERROR")
+
+	os.Unsetenv("TEST_LOGLEVEL")
+
+	os.Unsetenv("_EXPECTED_ADD_SRC_ARGS")
+	os.Unsetenv("_EXPECTED_RULE_REPLACE_ARGS")
+	os.Unsetenv("_EXPECTED_FFX_REPOSITORY_ADD_ARGS")
+	os.Unsetenv("_EXPECTED_FFX_REPOSITORY_REGISTER_ARGS")
+	os.Unsetenv("FSERVE_EXPECTED_ARGS")
+	os.Unsetenv("_FAKE_FFX_DEVICE_CONFIG_DATA")
+	os.Unsetenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE")
+	os.Unsetenv("_FAKE_FFX_TARGET_DEFAULT")
+	os.Unsetenv("_FAKE_FFX_TARGET_LIST")
+}
+
 func TestCleanPmRepo(t *testing.T) {
 	sdkcommon.ExecCommand = helperCommandForFServe
 	ExecCommand = helperCommandForFServe
 	ctx := testingContext()
-	defer func() {
-		ExecCommand = exec.Command
-	}()
+	defer clearTestEnv()
 
-	var tests = []struct {
+	tests := []struct {
 		path          string
 		expectedError string
 		doesPathExist bool
@@ -190,69 +224,90 @@ func TestCleanPmRepo(t *testing.T) {
 			}
 			return nil, os.ErrNotExist
 		}
-		defer func() {
-			OsStat = os.Stat
-		}()
 
 		err := cleanPmRepo(ctx, test.path)
 		if err != nil && err.Error() != test.expectedError {
-			t.Errorf("Expected error '%v', but got '%v'", test.expectedError, err)
+			t.Errorf("cleanPmRepo() error doesn't match; got: '%v', want: '%v'", err, test.expectedError)
 		}
 	}
 }
 
 func TestKillPMServers(t *testing.T) {
 	ctx := testingContext()
-	ExecCommand = helperCommandForFServe
-	findProcess = mockedFindProcess
-	defer func() {
-		ExecCommand = exec.Command
-		findProcess = defaultFindProcess
-	}()
+	defer clearTestEnv()
 
-	// Test no existing servers
-	os.Setenv("FSERVE_TEST_NO_SERVERS", "1")
-	os.Setenv("FSERVE_TEST_NO_SERVERS_IS_ERROR", "0")
-	if err := killPMServers(ctx, ""); err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name               string
+		noServers          string
+		noServersIsError   string
+		pgrepError         string
+		psExitError        string
+		psGenericError     string
+		port               string
+		expectedErrMessage string
+	}{
+		{
+			name:             "No existing servers with no error",
+			noServers:        "1",
+			noServersIsError: "0",
+		},
+		{
+			name:             "No existing servers with error",
+			noServers:        "1",
+			noServersIsError: "1",
+		},
+		{
+			name:             "Existing servers with no error",
+			noServers:        "0",
+			noServersIsError: "0",
+		},
+		{
+			name:             "Existing server on port 8083 with no error",
+			noServers:        "0",
+			noServersIsError: "0",
+			port:             "8083",
+		},
+		{
+			name:               "pgrep exits with error",
+			pgrepError:         "1",
+			expectedErrMessage: "Error running pgrep: Expected error\n",
+		},
+		{
+			name:               "ps exits with exec.ExitError",
+			pgrepError:         "0",
+			psExitError:        "1",
+			psGenericError:     "0",
+			expectedErrMessage: "Error running ps expected exit error: exit status 1",
+		},
+		{
+			name:               "ps exits with exec.Error",
+			pgrepError:         "0",
+			psExitError:        "0",
+			psGenericError:     "1",
+			expectedErrMessage: "Error running ps : exit status 1",
+		},
 	}
 
-	// Test no existing servers
-	os.Setenv("FSERVE_TEST_NO_SERVERS", "1")
-	os.Setenv("FSERVE_TEST_NO_SERVERS_IS_ERROR", "1")
-	if err := killPMServers(ctx, ""); err != nil {
-		t.Fatal(err)
-	}
-	// Test existing servers
-	os.Setenv("FSERVE_TEST_NO_SERVERS", "0")
-	os.Setenv("FSERVE_TEST_NO_SERVERS_IS_ERROR", "0")
-	if err := killPMServers(ctx, ""); err != nil {
-		t.Fatal(err)
-	}
-	if err := killPMServers(ctx, "8083"); err != nil {
-		t.Fatal(err)
-	}
-	os.Setenv("FSERVE_TEST_PGREP_ERROR", "1")
-	err := killPMServers(ctx, "")
-	if err == nil {
-		t.Fatal("Expected error running pgrep, got no error.")
-	}
-	expected := "Error running pgrep: Expected error\n"
-	actual := fmt.Sprintf("%v", err)
-	if expected != actual {
-		t.Fatalf("[%v], got [%v]", expected, actual)
-	}
-
-	os.Setenv("FSERVE_TEST_PGREP_ERROR", "0")
-	os.Setenv("FSERVE_TEST_PS_ERROR", "1")
-	err = killPMServers(ctx, "")
-	if err == nil {
-		t.Fatal("Expected error running ps, got no error.")
-	}
-	expected = "Error running ps: Expected error\n"
-	actual = fmt.Sprintf("%v", err)
-	if expected != actual {
-		t.Fatalf("[%v], got [%v]", expected, actual)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			clearTestEnv()
+			ExecCommand = helperCommandForFServe
+			findProcess = mockedFindProcess
+			os.Setenv("FSERVE_TEST_NO_SERVERS", test.noServers)
+			os.Setenv("FSERVE_TEST_NO_SERVERS_IS_ERROR", test.noServersIsError)
+			os.Setenv("FSERVE_TEST_PGREP_ERROR", test.pgrepError)
+			os.Setenv("FSERVE_TEST_PS_EXIT_ERROR", test.psExitError)
+			os.Setenv("FSERVE_TEST_PS_ERROR", test.psGenericError)
+			err := killPMServers(ctx, test.port)
+			if err != nil {
+				message := fmt.Sprintf("%v", err)
+				if message != test.expectedErrMessage {
+					t.Errorf("killPMServers() got error: '%s', want: '%s'", message, test.expectedErrMessage)
+				}
+			} else if test.expectedErrMessage != "" {
+				t.Errorf("Got no error, want: '%s'", test.expectedErrMessage)
+			}
+		})
 	}
 }
 
@@ -262,11 +317,7 @@ func TestStartPMServer(t *testing.T) {
 	}
 	repoPath := "/fake/repo/path"
 	repoPort := "8083"
-	ExecCommand = helperCommandForFServe
-	defer func() {
-		ExecCommand = exec.Command
-		syscallWait4 = defaultsyscallWait4
-	}()
+	defer clearTestEnv()
 
 	tests := []struct {
 		syscallWait4  func(pid int, wstatus *syscall.WaitStatus, flags int, usage *syscall.Rusage) (int, error)
@@ -274,20 +325,20 @@ func TestStartPMServer(t *testing.T) {
 		logLevel      logger.LogLevel
 		expectedArgs  []string
 	}{
-
-		{syscallWait4: mockWait4NoError,
+		{
+			syscallWait4:  mockWait4NoError,
 			expectedError: "",
 			logLevel:      logger.WarningLevel,
 			expectedArgs:  []string{"serve", "-q", "-repo", "/fake/repo/path", "-c", "2", "-l", ":8083"},
 		},
-
-		{syscallWait4: mockWait4NoError,
+		{
+			syscallWait4:  mockWait4NoError,
 			expectedError: "",
 			logLevel:      logger.DebugLevel,
 			expectedArgs:  []string{"serve", "-repo", "/fake/repo/path", "-c", "2", "-l", ":8083"},
 		},
-
-		{syscallWait4: mockWait4WithError,
+		{
+			syscallWait4:  mockWait4WithError,
 			expectedError: "Server started then exited with code 1",
 			logLevel:      logger.WarningLevel,
 		},
@@ -295,6 +346,8 @@ func TestStartPMServer(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("TestStartServer case %d", i), func(t *testing.T) {
+			clearTestEnv()
+			ExecCommand = helperCommandForFServe
 			syscallWait4 = test.syscallWait4
 			level = test.logLevel
 			os.Setenv("TEST_LOGLEVEL", level.String())
@@ -334,11 +387,8 @@ func TestDownloadImageIfNeeded(t *testing.T) {
 	ExecCommand = helperCommandForFServe
 	sdkcommon.ExecCommand = helperCommandForFServe
 	sdkcommon.ExecLookPath = func(cmd string) (string, error) { return filepath.Join("mocked", cmd), nil }
-	defer func() {
-		ExecCommand = exec.Command
-		sdkcommon.ExecCommand = exec.Command
-		sdkcommon.ExecLookPath = exec.LookPath
-	}()
+	defer clearTestEnv()
+
 	version := "any-version"
 	bucket := "test-bucket"
 	srcPath := "gs://test-bucket/path/on/GCS/theImage.tgz"
@@ -403,8 +453,6 @@ func TestDownloadImageIfNeededCopiedFails(t *testing.T) {
 	}
 }
 
-const resolvedAddr = "fe80::c0ff:eee:fe00:4444%en0"
-
 func TestRegisterPMRepository(t *testing.T) {
 	testSDK := testSDKProperties{
 		dataPath: t.TempDir(),
@@ -419,13 +467,7 @@ func TestRegisterPMRepository(t *testing.T) {
 	sdkcommon.GetUserHomeDir = func() (string, error) { return homeDir, nil }
 	sdkcommon.GetUsername = func() (string, error) { return "testuser", nil }
 	sdkcommon.GetHostname = func() (string, error) { return "testhost", nil }
-	defer func() {
-		ExecCommand = exec.Command
-		sdkcommon.ExecCommand = exec.Command
-		sdkcommon.GetUserHomeDir = sdkcommon.DefaultGetUserHomeDir
-		sdkcommon.GetUsername = sdkcommon.DefaultGetUsername
-		sdkcommon.GetHostname = sdkcommon.DefaultGetHostname
-	}()
+	defer clearTestEnv()
 
 	tests := []struct {
 		repoPort        string
@@ -710,10 +752,7 @@ func TestMain(t *testing.T) {
 	}
 	syscallWait4 = mockWait4NoError
 	defer func() {
-		ExecCommand = exec.Command
-		sdkcommon.ExecCommand = exec.Command
-		sdkcommon.ExecLookPath = exec.LookPath
-		syscallWait4 = defaultsyscallWait4
+		clearTestEnv()
 		os.Args = savedArgs
 		flag.CommandLine = savedCommandLine
 	}()
@@ -1319,8 +1358,12 @@ func fakePgrep(args []string) {
 }
 
 func fakePS(args []string) {
+	if os.Getenv("FSERVE_TEST_PS_EXIT_ERROR") == "1" {
+		fmt.Fprintf(os.Stderr, "expected exit error")
+		os.Exit(1)
+	}
 	if os.Getenv("FSERVE_TEST_PS_ERROR") == "1" {
-		fmt.Fprintf(os.Stderr, "Expected error\n")
+		fmt.Errorf("some ps error")
 		os.Exit(1)
 	}
 	fmt.Println("    PID TTY      STAT   TIME COMMAND")

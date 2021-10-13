@@ -473,9 +473,11 @@ func killPMServers(ctx context.Context, portNum string) error {
 	cmd = ExecCommand("ps", pids...)
 	output, err = cmd.Output()
 	if err != nil {
-		exiterr := err.(*exec.ExitError)
-		err = errors.New(string(exiterr.Stderr))
-		return fmt.Errorf("Error running ps: %v", err)
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
+			return fmt.Errorf("Error running ps %v: %w", string(exitError.Stderr), err)
+		}
+		return err
 	}
 
 	// Split on lines
