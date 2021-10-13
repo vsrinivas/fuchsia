@@ -13,6 +13,7 @@ use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use futures::{io::AsyncReadExt as _, io::AsyncWriteExt as _, FutureExt as _, TryFutureExt as _};
 use net_declare::fidl_subnet;
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _};
+use netfilter::FidlReturn as _;
 use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
 use netstack_testing_common::{
     Result, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
@@ -331,16 +332,16 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
     let Test { proto, client_updates, server_updates, expected_traffic } = test;
 
     // Initial sanity check (no filters set).
-    let status = client_filter
+    let () = client_filter
         .enable_interface(client_ep.id())
         .await
+        .transform_result()
         .context("error enabling filter on client")?;
-    assert_eq!(status, fnetfilter::Status::Ok);
-    let status = server_filter
+    let () = server_filter
         .enable_interface(server_ep.id())
         .await
+        .transform_result()
         .context("error enabling filter on server")?;
-    assert_eq!(status, fnetfilter::Status::Ok);
     let () = run_socket_test(
         proto,
         &server,
@@ -355,27 +356,31 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
     .context("error testing initial connection without filters")?;
 
     // Set the filters and do the test.
-    let (_rules, mut server_generation, status) =
-        server_filter.get_rules().await.context("failed to get server's filter rules")?;
-    assert_eq!(status, fnetfilter::Status::Ok);
-    let (_rules, mut client_generation, status) =
-        client_filter.get_rules().await.context("failed to get client's filter rules")?;
-    assert_eq!(status, fnetfilter::Status::Ok);
+    let (_rules, mut server_generation) = server_filter
+        .get_rules()
+        .await
+        .transform_result()
+        .context("failed to get server's filter rules")?;
+    let (_rules, mut client_generation) = client_filter
+        .get_rules()
+        .await
+        .transform_result()
+        .context("failed to get client's filter rules")?;
     if let Some(mut updates) = client_updates {
-        let status = client_filter
+        let () = client_filter
             .update_rules(&mut updates.iter_mut(), client_generation)
             .await
+            .transform_result()
             .context("failed to update client's filter rules")?;
         client_generation += 1;
-        assert_eq!(status, fnetfilter::Status::Ok);
     }
     if let Some(mut updates) = server_updates {
-        let status = server_filter
+        let () = server_filter
             .update_rules(&mut updates.iter_mut(), server_generation)
             .await
+            .transform_result()
             .context("failed to update server's filter rules")?;
         server_generation += 1;
-        assert_eq!(status, fnetfilter::Status::Ok);
     }
     let () = run_socket_test(
         proto,
@@ -391,16 +396,16 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
     .context("error running socket test after updating filters")?;
 
     // Disable the filters on the interface and expect full connectivity.
-    let status = client_filter
+    let () = client_filter
         .disable_interface(client_ep.id())
         .await
+        .transform_result()
         .context("error disabling filter on client")?;
-    assert_eq!(status, fnetfilter::Status::Ok);
-    let status = server_filter
+    let () = server_filter
         .disable_interface(server_ep.id())
         .await
+        .transform_result()
         .context("error disabling filter on server")?;
-    assert_eq!(status, fnetfilter::Status::Ok);
     let () = run_socket_test(
         proto,
         &server,
@@ -415,26 +420,26 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
     .context("error running socket test after disabling filters")?;
 
     // Reset and enable filters and expect full connectivity.
-    let status = client_filter
+    let () = client_filter
         .enable_interface(client_ep.id())
         .await
+        .transform_result()
         .context("error re-enabling filter on client")?;
-    assert_eq!(status, fnetfilter::Status::Ok);
-    let status = server_filter
+    let () = server_filter
         .enable_interface(server_ep.id())
         .await
+        .transform_result()
         .context("error re-enabling filter on server")?;
-    assert_eq!(status, fnetfilter::Status::Ok);
-    let status = server_filter
+    let () = server_filter
         .update_rules(&mut Vec::new().iter_mut(), server_generation)
         .await
+        .transform_result()
         .context("failed to reset client's filter rules")?;
-    assert_eq!(status, fnetfilter::Status::Ok);
-    let status = client_filter
+    let () = client_filter
         .update_rules(&mut Vec::new().iter_mut(), client_generation)
         .await
+        .transform_result()
         .context("failed to reset client's filter rules")?;
-    assert_eq!(status, fnetfilter::Status::Ok);
     run_socket_test(
         proto,
         &server,

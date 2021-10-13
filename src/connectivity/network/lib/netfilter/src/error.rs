@@ -2,34 +2,47 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Context as _, Error};
+use anyhow::Context as _;
+
 use fidl_fuchsia_net_filter as filter;
 
-/// Helper trait to transform the Result types returned by FIDL methods into
-/// a form that's easier to work with.
 pub trait FidlReturn {
     type Item;
-    fn transform_result(self) -> Result<Self::Item, Error>;
+    fn transform_result(self) -> Result<Self::Item, anyhow::Error>;
 }
 
-impl FidlReturn for Result<filter::Status, fidl::Error> {
-    type Item = ();
-    fn transform_result(self) -> Result<(), Error> {
-        let status = self.context("FIDL error")?;
-        match status {
-            filter::Status::Ok => Ok(()),
-            _ => Err(format_err!("{:?}", status).context("Netstack error").into()),
+macro_rules! impl_trait {
+    ($error:ident) => {
+        pub struct $error(pub filter::$error);
+
+        impl std::fmt::Debug for $error {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                std::fmt::Debug::fmt(&self.0, f)
+            }
         }
-    }
+
+        impl std::fmt::Display for $error {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                std::fmt::Debug::fmt(self, f)
+            }
+        }
+
+        impl std::error::Error for $error {}
+
+        impl<T> FidlReturn for Result<Result<T, filter::$error>, fidl::Error> {
+            type Item = T;
+            fn transform_result(self) -> Result<Self::Item, anyhow::Error> {
+                Ok(self.context("FIDL error")?.map_err($error).context("Filter error")?)
+            }
+        }
+    };
 }
 
-impl<T1, T2> FidlReturn for Result<(T1, T2, filter::Status), fidl::Error> {
-    type Item = (T1, T2);
-    fn transform_result(self) -> Result<(T1, T2), Error> {
-        let (a, b, status) = self.context("FIDL error")?;
-        match status {
-            filter::Status::Ok => Ok((a, b)),
-            _ => Err(format_err!("{:?}", status).context("Netstack error").into()),
-        }
-    }
-}
+impl_trait!(FilterEnableInterfaceError);
+impl_trait!(FilterDisableInterfaceError);
+impl_trait!(FilterGetRulesError);
+impl_trait!(FilterUpdateRulesError);
+impl_trait!(FilterGetNatRulesError);
+impl_trait!(FilterUpdateNatRulesError);
+impl_trait!(FilterGetRdrRulesError);
+impl_trait!(FilterUpdateRdrRulesError);

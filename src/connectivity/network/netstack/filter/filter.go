@@ -58,26 +58,26 @@ func New(s *stack.Stack) *Filter {
 	return f
 }
 
-func (f *Filter) enableInterface(id tcpip.NICID) filter.Status {
+func (f *Filter) enableInterface(id tcpip.NICID) filter.FilterEnableInterfaceResult {
 	name := f.stack.FindNICNameFromID(id)
 	if name == "" {
-		return filter.StatusErrNotFound
+		return filter.FilterEnableInterfaceResultWithErr(filter.FilterEnableInterfaceErrorNotFound)
 	}
 	f.filterDisabledNICMatcher.mu.Lock()
 	defer f.filterDisabledNICMatcher.mu.Unlock()
 	f.filterDisabledNICMatcher.mu.nicNames[name] = id
-	return filter.StatusOk
+	return filter.FilterEnableInterfaceResultWithResponse(filter.FilterEnableInterfaceResponse{})
 }
 
-func (f *Filter) disableInterface(id tcpip.NICID) filter.Status {
+func (f *Filter) disableInterface(id tcpip.NICID) filter.FilterDisableInterfaceResult {
 	name := f.stack.FindNICNameFromID(id)
 	if name == "" {
-		return filter.StatusErrNotFound
+		return filter.FilterDisableInterfaceResultWithErr(filter.FilterDisableInterfaceErrorNotFound)
 	}
 	f.filterDisabledNICMatcher.mu.Lock()
 	defer f.filterDisabledNICMatcher.mu.Unlock()
 	delete(f.filterDisabledNICMatcher.mu.nicNames, name)
-	return filter.StatusOk
+	return filter.FilterDisableInterfaceResultWithResponse(filter.FilterDisableInterfaceResponse{})
 }
 
 func (f *Filter) RemovedNIC(id tcpip.NICID) {
@@ -91,30 +91,33 @@ func (f *Filter) RemovedNIC(id tcpip.NICID) {
 	}
 }
 
-func (f *Filter) lastRules() ([]filter.Rule, uint32) {
+func (f *Filter) getRules() filter.FilterGetRulesResult {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	return f.mu.rules, f.mu.generation
+	return filter.FilterGetRulesResultWithResponse(filter.FilterGetRulesResponse{
+		Rules:      f.mu.rules,
+		Generation: f.mu.generation,
+	})
 }
 
-func (f *Filter) updateRules(rules []filter.Rule, generation uint32) filter.Status {
+func (f *Filter) updateRules(rules []filter.Rule, generation uint32) filter.FilterUpdateRulesResult {
 	f.mu.RLock()
 	g := f.mu.generation
 	f.mu.RUnlock()
 
 	if generation != g {
-		return filter.StatusErrGenerationMismatch
+		return filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorGenerationMismatch)
 	}
 
-	err, v4Table, v6Table := f.parseRules(rules)
-	if err != filter.StatusOk {
-		return err
+	v4Table, v6Table, ok := f.parseRules(rules)
+	if !ok {
+		return filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorBadRule)
 	}
 
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.mu.generation != generation {
-		return filter.StatusErrGenerationMismatch
+		return filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorGenerationMismatch)
 	}
 
 	f.mu.rules = rules
@@ -124,14 +127,14 @@ func (f *Filter) updateRules(rules []filter.Rule, generation uint32) filter.Stat
 	iptables := f.stack.IPTables()
 	if err := iptables.ReplaceTable(stack.FilterID, v4Table, false /* ipv6 */); err != nil {
 		_ = syslog.ErrorTf(tag, "error replacing iptables = %s", err)
-		return filter.StatusErrInternal
+		return filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorInternal)
 	}
 	if err := iptables.ReplaceTable(stack.FilterID, v6Table, true /* ipv6 */); err != nil {
 		_ = syslog.ErrorTf(tag, "error replacing ip6tables = %s", err)
-		return filter.StatusErrInternal
+		return filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorInternal)
 	}
 	f.mu.generation++
-	return filter.StatusOk
+	return filter.FilterUpdateRulesResultWithResponse(filter.FilterUpdateRulesResponse{})
 }
 
 func isPortRangeAny(p filter.PortRange) bool {
@@ -142,7 +145,7 @@ func isPortRangeValid(p filter.PortRange) bool {
 	return isPortRangeAny(p) || (1 <= p.Start && p.Start <= p.End)
 }
 
-func (f *Filter) parseRules(rules []filter.Rule) (status filter.Status, v4Table stack.Table, v6Table stack.Table) {
+func (f *Filter) parseRules(rules []filter.Rule) (v4Table stack.Table, v6Table stack.Table, ok bool) {
 	type ipType int
 	const (
 		generic ipType = iota
@@ -151,7 +154,7 @@ func (f *Filter) parseRules(rules []filter.Rule) (status filter.Status, v4Table 
 	)
 
 	if len(rules) == 0 {
-		return filter.StatusOk, f.defaultV4Table, f.defaultV6Table
+		return f.defaultV4Table, f.defaultV6Table, true
 	}
 
 	allowPacketsForFilterDisbledNICs := stack.Rule{
@@ -179,7 +182,7 @@ func (f *Filter) parseRules(rules []filter.Rule) (status filter.Status, v4Table 
 			case header.IPv6AddressSize:
 				ipTypeValue = ipv6Only
 			default:
-				return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+				return stack.Table{}, stack.Table{}, false
 			}
 		}
 
@@ -196,13 +199,13 @@ func (f *Filter) parseRules(rules []filter.Rule) (status filter.Status, v4Table 
 			case header.IPv6AddressSize:
 				dstIpType = ipv6Only
 			default:
-				return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+				return stack.Table{}, stack.Table{}, false
 			}
 
 			if ipTypeValue == generic {
 				ipTypeValue = dstIpType
 			} else if ipTypeValue != dstIpType {
-				return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+				return stack.Table{}, stack.Table{}, false
 			}
 		}
 
@@ -211,7 +214,7 @@ func (f *Filter) parseRules(rules []filter.Rule) (status filter.Status, v4Table 
 		case filter.SocketProtocolAny:
 		case filter.SocketProtocolIcmp:
 			if ipTypeValue == ipv6Only {
-				return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+				return stack.Table{}, stack.Table{}, false
 			}
 			ipTypeValue = ipv4Only
 
@@ -223,14 +226,14 @@ func (f *Filter) parseRules(rules []filter.Rule) (status filter.Status, v4Table 
 
 			if !isPortRangeAny(r.SrcPortRange) {
 				if !isPortRangeValid(r.SrcPortRange) {
-					return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+					return stack.Table{}, stack.Table{}, false
 				}
 				matchers = append(matchers, NewTCPSourcePortMatcher(r.SrcPortRange.Start, r.SrcPortRange.End))
 			}
 
 			if !isPortRangeAny(r.DstPortRange) {
 				if !isPortRangeValid(r.DstPortRange) {
-					return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+					return stack.Table{}, stack.Table{}, false
 				}
 				matchers = append(matchers, NewTCPDestinationPortMatcher(r.DstPortRange.Start, r.DstPortRange.End))
 			}
@@ -241,27 +244,27 @@ func (f *Filter) parseRules(rules []filter.Rule) (status filter.Status, v4Table 
 
 			if !isPortRangeAny(r.SrcPortRange) {
 				if !isPortRangeValid(r.SrcPortRange) {
-					return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+					return stack.Table{}, stack.Table{}, false
 				}
 				matchers = append(matchers, NewUDPSourcePortMatcher(r.SrcPortRange.Start, r.SrcPortRange.End))
 			}
 
 			if !isPortRangeAny(r.DstPortRange) {
 				if !isPortRangeValid(r.DstPortRange) {
-					return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+					return stack.Table{}, stack.Table{}, false
 				}
 				matchers = append(matchers, NewUDPDestinationPortMatcher(r.DstPortRange.Start, r.DstPortRange.End))
 			}
 		case filter.SocketProtocolIcmpv6:
 			if ipTypeValue == ipv4Only {
-				return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+				return stack.Table{}, stack.Table{}, false
 			}
 			ipTypeValue = ipv6Only
 
 			ipHdrFilter.CheckProtocol = true
 			ipHdrFilter.Protocol = header.ICMPv6ProtocolNumber
 		default:
-			return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+			return stack.Table{}, stack.Table{}, false
 		}
 
 		var target stack.Target
@@ -270,12 +273,12 @@ func (f *Filter) parseRules(rules []filter.Rule) (status filter.Status, v4Table 
 			target = &stack.AcceptTarget{}
 			if r.KeepState {
 				// TODO(https://fxbug.dev/68501): Support keep state.
-				return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+				return stack.Table{}, stack.Table{}, false
 			}
 		case filter.ActionDrop:
 			target = &stack.DropTarget{}
 		default:
-			return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+			return stack.Table{}, stack.Table{}, false
 		}
 
 		rule := stack.Rule{
@@ -310,7 +313,7 @@ func (f *Filter) parseRules(rules []filter.Rule) (status filter.Status, v4Table 
 				panic(fmt.Sprintf("unrecognied ipTypeValue = %d", ipTypeValue))
 			}
 		default:
-			return filter.StatusErrBadRule, stack.Table{}, stack.Table{}
+			return stack.Table{}, stack.Table{}, false
 		}
 	}
 
@@ -339,5 +342,5 @@ func (f *Filter) parseRules(rules []filter.Rule) (status filter.Status, v4Table 
 			stack.Postrouting: 0,
 		},
 	}
-	return filter.StatusOk, v4Table, v6Table
+	return v4Table, v6Table, true
 }

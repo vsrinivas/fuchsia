@@ -57,75 +57,96 @@ func TestGetAndUpdateRules(t *testing.T) {
 		},
 	}
 
-	// 1. Get the current rules (should be empty).
-	nrs1, generation1, status1, err := fi.GetRules(context.Background())
-	if err != nil {
-		t.Errorf("GetRules error: %v", err)
+	validateGetRulesResult := func(t *testing.T, result filter.FilterGetRulesResult, rules []filter.Rule) {
+		t.Helper()
+		switch result.Which() {
+		case filter.FilterGetRulesResultResponse:
+			if diff := cmp.Diff(result.Response.Rules, rules, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+				t.Errorf("result.Response.Rules: (-want +got)\n%s", diff)
+			}
+		case filter.FilterGetRulesResultErr:
+			t.Errorf("result.Err = %s", result.Err)
+		}
 	}
-	if len(nrs1) != 0 {
-		t.Errorf("len(nrs) is not zero: got=%v", nrs1)
+	validateUpdateRulesResult := func(t *testing.T, result filter.FilterUpdateRulesResult) {
+		t.Helper()
+		switch result.Which() {
+		case filter.FilterUpdateRulesResultResponse:
+			if got, want := result, filter.FilterUpdateRulesResultWithResponse(filter.FilterUpdateRulesResponse{}); got != want {
+				t.Errorf("got result = %#v, want = %#v", got, want)
+			}
+		case filter.FilterUpdateRulesResultErr:
+			t.Errorf("result.Err = %s", result.Err)
+		}
 	}
-	if generation1 != 0 {
-		t.Errorf("generation: got=%v, want=%v", generation1, 0)
-	}
-	if status1 != filter.StatusOk {
-		t.Errorf("status: got=%v, want=%v", status1, filter.StatusOk)
-	}
-
-	// 2. Update the current rules with trs1.
-	status2, err := fi.UpdateRules(context.Background(), trs1, generation1)
-	if err != nil {
-		t.Errorf("UpdateRules error: %v", err)
-	}
-	if status2 != filter.StatusOk {
-		t.Errorf("status: got=%v, want=%v", status2, filter.StatusOk)
-	}
-
-	// 3. Get the current rules (should be trs1).
-	nrs3, generation3, status3, err := fi.GetRules(context.Background())
-	if err != nil {
-		t.Errorf("GetRules error: %v", err)
-	}
-	if diff := cmp.Diff(nrs3, trs1, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
-		t.Errorf("nrs: (-want +got)\n%s", diff)
-	}
-	if generation3 != generation1+1 {
-		t.Errorf("generation: got=%v, want=%v", generation3, generation1+1)
-	}
-	if status3 != filter.StatusOk {
-		t.Errorf("status: got=%v, want=%v", status3, filter.StatusOk)
+	validateUpdateRulesResultErr := func(t *testing.T, result filter.FilterUpdateRulesResult, err filter.FilterUpdateRulesError) {
+		t.Helper()
+		switch result.Which() {
+		case filter.FilterUpdateRulesResultResponse:
+			t.Errorf("result.Response = %#v", result.Response)
+		case filter.FilterUpdateRulesResultErr:
+			if got, want := result.Err, err; got != want {
+				t.Errorf("got result.Err = %s, want = %s", result.Err, want)
+			}
+		}
 	}
 
-	// 4. Update the current rules with trs2 using an old generation number.
-	status4, err := fi.UpdateRules(context.Background(), trs2, generation1)
-	if err != nil {
-		t.Errorf("UpdateRules error: %v", err)
-	}
-	if status4 != filter.StatusErrGenerationMismatch {
-		t.Errorf("status: got=%v, want=%v", status4, filter.StatusErrGenerationMismatch)
-	}
+	var lastGeneration uint32
 
-	// 5. Update the current rules with trs2 using the currenct generation number.
-	status5, err := fi.UpdateRules(context.Background(), trs2, generation3)
-	if err != nil {
-		t.Errorf("UpdateRules error: %v", err)
+	// Get the current rules (should be empty).
+	{
+		result, err := fi.GetRules(context.Background())
+		if err != nil {
+			t.Errorf("GetRules error: %s", err)
+		}
+		validateGetRulesResult(t, result, nil)
+		lastGeneration = result.Response.Generation
 	}
-	if status5 != filter.StatusOk {
-		t.Errorf("status: got=%v, want=%v", status5, filter.StatusOk)
+	// Update the current rules with trs1.
+	{
+		result, err := fi.UpdateRules(context.Background(), trs1, lastGeneration)
+		if err != nil {
+			t.Errorf("UpdateRules error: %s", err)
+		}
+		validateUpdateRulesResult(t, result)
 	}
-
-	// 6. Get the current rules (should be trs2).
-	nrs6, generation6, status6, err := fi.GetRules(context.Background())
-	if err != nil {
-		t.Errorf("GetRules error: %v", err)
+	// Get the current rules (should be trs1).
+	{
+		result, err := fi.GetRules(context.Background())
+		if err != nil {
+			t.Errorf("GetRules error: %s", err)
+		}
+		validateGetRulesResult(t, result, trs1)
+		if got, notWant := result.Response.Generation, lastGeneration; got == notWant {
+			t.Errorf("got result.Response.Generation = %d (want = not %d)", got, notWant)
+		}
+		lastGeneration = result.Response.Generation
 	}
-	if diff := cmp.Diff(nrs6, trs2, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
-		t.Errorf("nrs: (-want +got)\n%s", diff)
+	// Try to update the current rules with trs2 using a wrong generation number (should fail).
+	{
+		result, err := fi.UpdateRules(context.Background(), trs2, lastGeneration-1)
+		if err != nil {
+			t.Errorf("UpdateRules error: %s", err)
+		}
+		validateUpdateRulesResultErr(t, result, filter.FilterUpdateRulesErrorGenerationMismatch)
 	}
-	if generation6 != generation3+1 {
-		t.Errorf("generation: got=%v, want=%v", generation6, generation3+1)
+	// Update the current rules with trs2 using a correct generation number.
+	{
+		result, err := fi.UpdateRules(context.Background(), trs2, lastGeneration)
+		if err != nil {
+			t.Errorf("UpdateRules error: %s", err)
+		}
+		validateUpdateRulesResult(t, result)
 	}
-	if status6 != filter.StatusOk {
-		t.Errorf("status: got=%v, want=%v", status6, filter.StatusOk)
+	// Get the current rules (should be trs2).
+	{
+		result, err := fi.GetRules(context.Background())
+		if err != nil {
+			t.Errorf("GetRules error: %s", err)
+		}
+		validateGetRulesResult(t, result, trs2)
+		if got, notWant := result.Response.Generation, lastGeneration; got == notWant {
+			t.Errorf("got result.Response.Generation = %d (want = not %d)", got, notWant)
+		}
 	}
 }

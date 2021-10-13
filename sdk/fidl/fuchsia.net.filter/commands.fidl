@@ -5,16 +5,6 @@ library fuchsia.net.filter;
 
 using fuchsia.net;
 
-/// Status codes for commands.
-type Status = strict enum {
-    OK = 0;
-    ERR_INTERNAL = 1;
-    ERR_GENERATION_MISMATCH = 2;
-    ERR_BAD_RULE = 3;
-    ERR_NOT_SUPPORTED = 4;
-    ERR_NOT_FOUND = 5;
-};
-
 /// The maximum number of rules.
 const MAX_RULES uint32 = 128;
 
@@ -24,90 +14,128 @@ protocol Filter {
     /// Enable the filter on a specific interface.
     ///
     /// The filter is disabled by default. If the filter is already enabled,
-    /// [Status::OK] is returned.
+    /// no error is returned.
+    ///
+    /// + request `id` The id of the network interface.
+    /// * error Reports `NOT_FOUND` if `id` is not a valid interface.
     EnableInterface(struct {
         id fuchsia.net.interface_id;
-    }) -> (struct {
-        status Status;
-    });
+    }) -> (struct {}) error strict enum {
+        NOT_FOUND = 1;
+    };
 
     /// Disable the filter on a specific interface.
     ///
-    /// The filter is disabled by default. if the filter is already disabled,
-    /// [Status::OK] is returned.
+    /// The filter is disabled by default. If the filter is already disabled,
+    /// no error is returned.
+    ///
+    /// + request `id` The id of the network interface.
+    /// * error Reports `NOT_FOUND` if `id` is not a valid interface.
     DisableInterface(struct {
         id fuchsia.net.interface_id;
-    }) -> (struct {
-        status Status;
-    });
+    }) -> (struct {}) error strict enum {
+        NOT_FOUND = 1;
+    };
 
     /// GetRules gets the current rules. They do not include NAT or RDR rules.
     /// (use GetNatRules or GetRdrRules instead).
     ///
-    /// GetRules also returns a generation number associated with the current
-    /// rules.
+    /// - response `rules` The current filter rules.
+    /// - response `generation` The generation number associated with the current
+    ///   rules.
     GetRules() -> (struct {
         rules vector<Rule>:MAX_RULES;
         generation uint32;
-        status Status;
-    });
+    }) error strict enum {
+        // TODO(https://fxbug.dev/85667): This should be an empty enum.
+        RESERVED = 0;
+    };
 
     /// UpdateRules updates the current rules. It does not update NAT or RDR rules
     /// (use UpdateNatRules or UpdateRdrRules instead).
     ///
     /// UpdateRules takes a generation number that is previously returned from
-    /// GetRules. To successfully update the current rules, the generation number
-    /// passed to UpdateRules needs to be up-to-date.
+    /// GetRules. The generation number has to be up-to-date, i.e. it has to
+    /// match with the one associated with the current rules. The service will
+    /// assign a new generation number to the new rules.
     ///
-    /// If somebody else has updated the rules since the previous GetRules, the
-    /// generation number won't match and err_generation_mismatch will be returned.
+    /// + request `rules` The new filter rules to install.
+    /// + request `generation` The generation number previously returned from
+    ///   GetRules.
+    /// * error Reports `INTERNAL` if the service had an internal error.
+    /// * error Reports `GENERATION_MISMATCH` if `generation` is not the
+    ///   generation number for the current rules.
+    /// * error Reports `BAD_RULE` if `rules` are not valid.
     UpdateRules(struct {
         rules vector<Rule>:MAX_RULES;
         generation uint32;
-    }) -> (struct {
-        status Status;
-    });
+    }) -> (struct {}) error strict enum {
+        INTERNAL = 1;
+        GENERATION_MISMATCH = 2;
+        BAD_RULE = 3;
+    };
 
     /// GetNatRules gets the current NAT rules.
     ///
-    /// It also returns a generation number that can be passed to UpdateNatRules.
-    ///
+    /// - response `rules` The current NAT rules.
+    /// - response `generation` The generation number associated with the current
+    ///   NAT rules.
     GetNatRules() -> (struct {
         rules vector<Nat>:MAX_RULES;
         generation uint32;
-        status Status;
-    });
+    }) error strict enum {
+        // TODO(https://fxbug.dev/85667): This should be an empty enum.
+        RESERVED = 0;
+    };
 
     /// UpdateNatRules updates the current NAT rules.
     ///
-    /// It takes a generation number that is returned from GetNatRules. To
-    /// successfully update the current rules, the generation number passed to
-    /// UpdateNatRules needs to be up-to-date.
+    /// UpdateNatRules takes a generation number that is previously returned from
+    /// GetRules. The generation number has to be up-to-date, i.e. it has to
+    /// match with the one associated with the current NAT rules. The service will
+    /// assign a new generation number to the new NAT rules.
+    ///
+    /// + request `rules` The new NAT rules to install.
+    /// + request `generation` The generation number previously returned from
+    ///   GetNATRules.
+    /// * error Reports `NOT_SUPPORTED` if the operation is not supported.
     UpdateNatRules(struct {
         rules vector<Nat>:MAX_RULES;
         generation uint32;
-    }) -> (struct {
-        status Status;
-    });
+    }) -> (struct {}) error strict enum {
+        // TODO(https://fxbug.dev/68280): Implement NAT API using gvisor iptables.
+        NOT_SUPPORTED = 1;
+    };
 
     /// GetRdrRules gets the current RDR rules.
     ///
-    /// It also returns a generation number that can be passed to UpdateRdrRules.
+    /// - response `rules` The current RDR rules.
+    /// - response `generation` The generation number associated with the current
+    ///   RDR rules.
     GetRdrRules() -> (struct {
         rules vector<Rdr>:MAX_RULES;
         generation uint32;
-        status Status;
-    });
+    }) error strict enum {
+        // TODO(https://fxbug.dev/85667): This should be an empty enum.
+        RESERVED = 0;
+    };
 
     /// UpdateRdrRules updates the previous RDR rules with new rules.
     ///
-    /// It takes a generation number that is returned from GetRdrRules. To
-    /// successfully update the current rules, the generation number passed to
-    /// UpdateRdrRules needs to be up-to-date.
+    /// UpdateRdrRules takes a generation number that is previously returned from
+    /// GetRules. The generation number has to be up-to-date, i.e. it has to
+    /// match with the one associated with the current RDR rules. The service will
+    /// assign a new generation number to the new RDR rules.
+    ///
+    /// + request `rules` The new RDR rules to install.
+    /// + request `generation` The generation number previously returned from
+    ///   GetRDRRules.
+    /// * error Reports `NOT_SUPPORTED` if the operation is not supported.
     UpdateRdrRules(struct {
         rules vector<Rdr>:MAX_RULES;
         generation uint32;
-    }) -> (struct {
-        status Status;
-    });
+    }) -> (struct {}) error strict enum {
+        // TODO(https://fxbug.dev/68279): Implement RDR API using gvisor iptables.
+        NOT_SUPPORTED = 1;
+    };
 };

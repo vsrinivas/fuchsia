@@ -89,18 +89,16 @@ func TestFilterUpdates(t *testing.T) {
 	emptyFilterDisabledNICMatcher.init()
 
 	tests := []struct {
-		name string
-
-		rules []filter.Rule
-
-		status  filter.Status
+		name    string
+		rules   []filter.Rule
+		result  filter.FilterUpdateRulesResult
 		v4Table stack.Table
 		v6Table stack.Table
 	}{
 		{
 			name:    "empty",
 			rules:   nil,
-			status:  filter.StatusOk,
+			result:  filter.FilterUpdateRulesResultWithResponse(filter.FilterUpdateRulesResponse{}),
 			v4Table: defaultV4Table,
 			v6Table: defaultV6Table,
 		},
@@ -146,7 +144,7 @@ func TestFilterUpdates(t *testing.T) {
 					// Port ranges are ignored for ICMPv6.
 				},
 			},
-			status: filter.StatusOk,
+			result: filter.FilterUpdateRulesResultWithResponse(filter.FilterUpdateRulesResponse{}),
 			v4Table: stack.Table{
 				Rules: []stack.Rule{
 					// Initial Accept for non input/output hooks.
@@ -342,7 +340,7 @@ func TestFilterUpdates(t *testing.T) {
 					DstSubnetInvertMatch: false,
 				},
 			},
-			status: filter.StatusOk,
+			result: filter.FilterUpdateRulesResultWithResponse(filter.FilterUpdateRulesResponse{}),
 			v4Table: stack.Table{
 				Rules: []stack.Rule{
 					// Initial Accept for non input/output hooks.
@@ -494,7 +492,7 @@ func TestFilterUpdates(t *testing.T) {
 					DstSubnet: &ipv6Subnet1,
 				},
 			},
-			status:  filter.StatusErrBadRule,
+			result:  filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorBadRule),
 			v4Table: defaultV4Table,
 			v6Table: defaultV6Table,
 		},
@@ -507,7 +505,7 @@ func TestFilterUpdates(t *testing.T) {
 					DstSubnet: &ipv4Subnet1,
 				},
 			},
-			status:  filter.StatusErrBadRule,
+			result:  filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorBadRule),
 			v4Table: defaultV4Table,
 			v6Table: defaultV6Table,
 		},
@@ -520,7 +518,7 @@ func TestFilterUpdates(t *testing.T) {
 					SrcSubnet: &ipv4Subnet1,
 				},
 			},
-			status:  filter.StatusErrBadRule,
+			result:  filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorBadRule),
 			v4Table: defaultV4Table,
 			v6Table: defaultV6Table,
 		},
@@ -533,7 +531,7 @@ func TestFilterUpdates(t *testing.T) {
 					DstSubnet: &ipv4Subnet1,
 				},
 			},
-			status:  filter.StatusErrBadRule,
+			result:  filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorBadRule),
 			v4Table: defaultV4Table,
 			v6Table: defaultV6Table,
 		},
@@ -546,7 +544,7 @@ func TestFilterUpdates(t *testing.T) {
 					SrcSubnet: &ipv6Subnet1,
 				},
 			},
-			status:  filter.StatusErrBadRule,
+			result:  filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorBadRule),
 			v4Table: defaultV4Table,
 			v6Table: defaultV6Table,
 		},
@@ -559,7 +557,7 @@ func TestFilterUpdates(t *testing.T) {
 					DstSubnet: &ipv6Subnet1,
 				},
 			},
-			status:  filter.StatusErrBadRule,
+			result:  filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorBadRule),
 			v4Table: defaultV4Table,
 			v6Table: defaultV6Table,
 		},
@@ -571,7 +569,7 @@ func TestFilterUpdates(t *testing.T) {
 					Proto:  255,
 				},
 			},
-			status:  filter.StatusErrBadRule,
+			result:  filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorBadRule),
 			v4Table: defaultV4Table,
 			v6Table: defaultV6Table,
 		},
@@ -583,7 +581,7 @@ func TestFilterUpdates(t *testing.T) {
 					Proto:  filter.SocketProtocolTcp,
 				},
 			},
-			status:  filter.StatusErrBadRule,
+			result:  filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorBadRule),
 			v4Table: defaultV4Table,
 			v6Table: defaultV6Table,
 		},
@@ -596,7 +594,7 @@ func TestFilterUpdates(t *testing.T) {
 					Proto:     filter.SocketProtocolTcp,
 				},
 			},
-			status:  filter.StatusErrBadRule,
+			result:  filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorBadRule),
 			v4Table: defaultV4Table,
 			v6Table: defaultV6Table,
 		},
@@ -617,7 +615,7 @@ func TestFilterUpdates(t *testing.T) {
 					},
 				},
 			},
-			status:  filter.StatusErrBadRule,
+			result:  filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorBadRule),
 			v4Table: defaultV4Table,
 			v6Table: defaultV6Table,
 		},
@@ -638,7 +636,7 @@ func TestFilterUpdates(t *testing.T) {
 					},
 				},
 			},
-			status:  filter.StatusErrBadRule,
+			result:  filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorBadRule),
 			v4Table: defaultV4Table,
 			v6Table: defaultV6Table,
 		},
@@ -657,7 +655,7 @@ func TestFilterUpdates(t *testing.T) {
 					KeepState:            true,
 				},
 			},
-			status:  filter.StatusErrBadRule,
+			result:  filter.FilterUpdateRulesResultWithErr(filter.FilterUpdateRulesErrorBadRule),
 			v4Table: defaultV4Table,
 			v6Table: defaultV6Table,
 		},
@@ -670,8 +668,8 @@ func TestFilterUpdates(t *testing.T) {
 			})
 
 			f := New(s)
-			if status := f.updateRules(test.rules, 0); status != test.status {
-				t.Fatalf("got f.updateRules(_, 0) = %d, want = %d", status, test.status)
+			if got, want := f.updateRules(test.rules, 0), test.result; got != want {
+				t.Fatalf("got f.updateRules(_, 0) = %#v, want = %#v", got, want)
 			}
 
 			iptables := s.IPTables()

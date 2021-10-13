@@ -229,30 +229,53 @@ const FILTER_CAS_RETRY_MAX: i32 = 3;
 const FILTER_CAS_RETRY_INTERVAL_MILLIS: i64 = 500;
 
 macro_rules! cas_filter_rules {
-    ($filter:expr, $get_rules:ident, $update_rules:ident, $rules:expr) => {
+    ($filter:expr, $get_rules:ident, $update_rules:ident, $rules:expr, $error_type:ident) => {
         for retry in 0..FILTER_CAS_RETRY_MAX {
-            let (_, generation, status) = $filter.$get_rules().await?;
-            if status != fnet_filter::Status::Ok {
-                let () = Err(anyhow::anyhow!("{} failed: {:?}", stringify!($get_rules), status))?;
-            }
-            let status =
-                $filter.$update_rules(&mut $rules.iter_mut(), generation).await.with_context(
-                    || format!("error getting response from {}", stringify!($update_rules)),
-                )?;
-            match status {
-                fnet_filter::Status::Ok => {
+            let generation = match $filter.$get_rules().await? {
+                Ok((_rules, generation)) => generation,
+                Err(e) => {
+                    return Err(anyhow::anyhow!("{} failed: {:?}", stringify!($get_rules), e));
+                }
+            };
+            match $filter.$update_rules(&mut $rules.iter_mut(), generation).await.with_context(
+                || format!("error getting response from {}", stringify!($update_rules)),
+            )? {
+                Ok(()) => {
                     break;
                 }
-                fnet_filter::Status::ErrGenerationMismatch if retry < FILTER_CAS_RETRY_MAX - 1 => {
+                Err(fnet_filter::$error_type::GenerationMismatch)
+                    if retry < FILTER_CAS_RETRY_MAX - 1 =>
+                {
                     fuchsia_async::Timer::new(
                         FILTER_CAS_RETRY_INTERVAL_MILLIS.millis().after_now(),
                     )
                     .await;
                 }
-                _ => {
-                    let () =
-                        Err(anyhow::anyhow!("{} failed: {:?}", stringify!($update_rules), status))?;
+                Err(e) => {
+                    let () = Err(anyhow::anyhow!("{} failed: {:?}", stringify!($update_rules), e))?;
                 }
+            }
+        }
+    };
+}
+
+// This is a placeholder macro while some update operations are not supported.
+macro_rules! no_update_filter_rules {
+    ($filter:expr, $get_rules:ident, $update_rules:ident, $rules:expr, $error_type:ident) => {
+        let generation = match $filter.$get_rules().await? {
+            Ok((_rules, generation)) => generation,
+            Err(e) => {
+                return Err(anyhow::anyhow!("{} failed: {:?}", stringify!($get_rules), e));
+            }
+        };
+        match $filter
+            .$update_rules(&mut $rules.iter_mut(), generation)
+            .await
+            .with_context(|| format!("error getting response from {}", stringify!($update_rules)))?
+        {
+            Ok(()) => {}
+            Err(fnet_filter::$error_type::NotSupported) => {
+                error!("{} not supported", stringify!($update_rules));
             }
         }
     };
@@ -493,19 +516,33 @@ impl<'a> NetCfg<'a> {
         if !rules.is_empty() {
             let mut rules = netfilter::parser::parse_str_to_rules(&rules.join(""))
                 .context("error parsing filter rules")?;
-            cas_filter_rules!(self.filter, get_rules, update_rules, rules);
+            cas_filter_rules!(self.filter, get_rules, update_rules, rules, FilterUpdateRulesError);
         }
 
         if !nat_rules.is_empty() {
             let mut nat_rules = netfilter::parser::parse_str_to_nat_rules(&nat_rules.join(""))
                 .context("error parsing NAT rules")?;
-            cas_filter_rules!(self.filter, get_nat_rules, update_nat_rules, nat_rules);
+            // TODO(https://fxbug.dev/68280): Change this to cas_filter_rules once update is supported.
+            no_update_filter_rules!(
+                self.filter,
+                get_nat_rules,
+                update_nat_rules,
+                nat_rules,
+                FilterUpdateNatRulesError
+            );
         }
 
         if !rdr_rules.is_empty() {
             let mut rdr_rules = netfilter::parser::parse_str_to_rdr_rules(&rdr_rules.join(""))
                 .context("error parsing RDR rules")?;
-            cas_filter_rules!(self.filter, get_rdr_rules, update_rdr_rules, rdr_rules);
+            // TODO(https://fxbug.dev/68279): Change this to cas_filter_rules once update is supported.
+            no_update_filter_rules!(
+                self.filter,
+                get_rdr_rules,
+                update_rdr_rules,
+                rdr_rules,
+                FilterUpdateRdrRulesError
+            );
         }
 
         Ok(())
@@ -1183,38 +1220,40 @@ impl<'a> NetCfg<'a> {
     ) -> Result<(), errors::Error> {
         if should_enable_filter(&self.filter_enabled_interface_types, info) {
             info!("enable filter for nic {}", interface_id);
-            let status = self
+            let () = self
                 .filter
                 .enable_interface(interface_id.into())
                 .await
                 .with_context(|| {
                     format!("error sending enable filter request on nic {}", interface_id)
                 })
-                .map_err(errors::Error::Fatal)?;
-            if status != fnet_filter::Status::Ok {
-                return Err(errors::Error::NonFatal(anyhow::anyhow!(
-                    "failed to enable filter on nic {} with status = {:?}",
-                    interface_id,
-                    status
-                )));
-            }
+                .map_err(errors::Error::Fatal)?
+                .map_err(|e| {
+                    anyhow::anyhow!(
+                        "failed to enable filter on nic {} with error = {:?}",
+                        interface_id,
+                        e
+                    )
+                })
+                .map_err(errors::Error::NonFatal)?;
         } else {
             info!("disable filter for nic {}", interface_id);
-            let status = self
+            let () = self
                 .filter
                 .disable_interface(interface_id.into())
                 .await
                 .with_context(|| {
                     format!("error sending disable filter request on nic {}", interface_id)
                 })
-                .map_err(errors::Error::Fatal)?;
-            if status != fnet_filter::Status::Ok {
-                return Err(errors::Error::NonFatal(anyhow::anyhow!(
-                    "failed to disable filter on nic {} with status = {:?}",
-                    interface_id,
-                    status
-                )));
-            }
+                .map_err(errors::Error::Fatal)?
+                .map_err(|e| {
+                    anyhow::anyhow!(
+                        "failed to disable filter on nic {} with error = {:?}",
+                        interface_id,
+                        e
+                    )
+                })
+                .map_err(errors::Error::NonFatal)?;
         };
 
         // Enable DHCP.

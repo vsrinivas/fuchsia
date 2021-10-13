@@ -37,35 +37,34 @@ func AddOutgoingService(ctx *component.Context, f *Filter) {
 	)
 }
 
-func (f *filterImpl) EnableInterface(_ fidl.Context, id uint64) (filter.Status, error) {
-	return f.filter.enableInterface(tcpip.NICID(id)), nil
+func (fi *filterImpl) EnableInterface(_ fidl.Context, id uint64) (filter.FilterEnableInterfaceResult, error) {
+	return fi.filter.enableInterface(tcpip.NICID(id)), nil
 }
 
-func (f *filterImpl) DisableInterface(_ fidl.Context, id uint64) (filter.Status, error) {
-	return f.filter.disableInterface(tcpip.NICID(id)), nil
+func (fi *filterImpl) DisableInterface(_ fidl.Context, id uint64) (filter.FilterDisableInterfaceResult, error) {
+	return fi.filter.disableInterface(tcpip.NICID(id)), nil
 }
 
-func (f *filterImpl) GetRules(fidl.Context) ([]filter.Rule, uint32, filter.Status, error) {
-	rules, generation := f.filter.lastRules()
-	return rules, generation, filter.StatusOk, nil
+func (fi *filterImpl) GetRules(fidl.Context) (filter.FilterGetRulesResult, error) {
+	return fi.filter.getRules(), nil
 }
 
-func (f *filterImpl) UpdateRules(_ fidl.Context, nrs []filter.Rule, generation uint32) (filter.Status, error) {
-	return f.filter.updateRules(nrs, generation), nil
+func (fi *filterImpl) UpdateRules(_ fidl.Context, nrs []filter.Rule, generation uint32) (filter.FilterUpdateRulesResult, error) {
+	return fi.filter.updateRules(nrs, generation), nil
 }
 
-func (*filterImpl) GetNatRules(fidl.Context) ([]filter.Nat, uint32, filter.Status, error) {
-	return nil, 1, filter.StatusOk, nil
+func (*filterImpl) GetNatRules(fidl.Context) (filter.FilterGetNatRulesResult, error) {
+	return filter.FilterGetNatRulesResultWithResponse(filter.FilterGetNatRulesResponse{}), nil
 }
 
-func (*filterImpl) UpdateNatRules(fidl.Context, []filter.Nat, uint32) (filter.Status, error) {
-	return filter.StatusErrNotSupported, nil
+func (*filterImpl) UpdateNatRules(fidl.Context, []filter.Nat, uint32) (filter.FilterUpdateNatRulesResult, error) {
+	return filter.FilterUpdateNatRulesResultWithErr(filter.FilterUpdateNatRulesErrorNotSupported), nil
 }
 
-func (*filterImpl) GetRdrRules(fidl.Context) ([]filter.Rdr, uint32, filter.Status, error) {
-	return nil, 1, filter.StatusOk, nil
+func (*filterImpl) GetRdrRules(fidl.Context) (filter.FilterGetRdrRulesResult, error) {
+	return filter.FilterGetRdrRulesResultWithResponse(filter.FilterGetRdrRulesResponse{}), nil
 }
 
-func (*filterImpl) UpdateRdrRules(fidl.Context, []filter.Rdr, uint32) (filter.Status, error) {
-	return filter.StatusErrNotSupported, nil
+func (*filterImpl) UpdateRdrRules(fidl.Context, []filter.Rdr, uint32) (filter.FilterUpdateRdrRulesResult, error) {
+	return filter.FilterUpdateRdrRulesResultWithErr(filter.FilterUpdateRdrRulesErrorNotSupported), nil
 }
