@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env fuchsia-vendored-python
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -27,8 +27,8 @@ def FxSSH(address, command):
   try:
     result = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
   except subprocess.CalledProcessError as e:
-    print ("command failed: " + ' '.join(cmd) + "\n" +
-           "output: " + e.output)
+    print("command failed: " + ' '.join(cmd) + "\n" +
+          "output: " + e.output)
     return None
   return result
 
@@ -112,8 +112,8 @@ def Main():
 
   vmos = FxSSH(args.address, ['vmos', args.pid])
   sizes = ParseVmos(vmos, CATEGORIES)
-  for k, v in sizes.iteritems():
-    print k + ", " + BytesToHuman(v)
+  for k, v in sizes.items():
+    print(k + ", " + BytesToHuman(v))
 
   return 0
 
