@@ -659,7 +659,7 @@ zx_status_t PlatformBus::Init() {
       {BIND_PLATFORM_DEV_VID, 0, board_info_.vid},
       {BIND_PLATFORM_DEV_PID, 0, board_info_.pid},
   };
-  return DdkAdd(ddk::DeviceAddArgs("platform").set_props(props));
+  return DdkAdd(ddk::DeviceAddArgs("platform").set_props(props).set_flags(DEVICE_ADD_NON_BINDABLE));
 }
 
 void PlatformBus::DdkInit(ddk::InitTxn txn) {

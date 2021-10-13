@@ -183,20 +183,13 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager, zx_device_
     str_props_for_ddkadd.emplace_back(str_prop);
   }
 
-  uint32_t add_flags = 0;
-  if ((state_ & (ACPI_STA_DEVICE_FUNCTIONING | ACPI_STA_DEVICE_PRESENT)) ==
-      ACPI_STA_DEVICE_FUNCTIONING) {
-    // Don't bind drivers to this device if it is functioning but not present.
-    // See ACPI 6.4 section 6.3.7.
-    add_flags |= DEVICE_ADD_NON_BINDABLE;
-  }
   device_add_args_t args = {
       .name = name_.data(),
       .props = dev_props_.data(),
       .prop_count = static_cast<uint32_t>(dev_props_.size()),
       .str_props = str_props_for_ddkadd.data(),
       .str_prop_count = static_cast<uint32_t>(str_props_for_ddkadd.size()),
-      .flags = add_flags,
+      .flags = DEVICE_ADD_NON_BINDABLE,
   };
 
   zx_status_t result = device->DdkAdd(name_.data(), args);
