@@ -241,6 +241,13 @@ void TestFormatThroughDriver(Volume::Version version, bool fvm) {
   auto& key = device.key();
   ASSERT_EQ(zxc_client.Format(key.get(), key.len(), slot), ZX_OK);
   EXPECT_EQ(zxc_client.Unseal(key.get(), key.len(), slot), ZX_OK);
+  EXPECT_OK(zxc_client.Seal());
+
+  // Verify that we can also format the device with a slot other than slot 0
+  slot = 1;
+  ASSERT_EQ(zxc_client.Format(key.get(), key.len(), slot), ZX_OK);
+  EXPECT_EQ(zxc_client.Unseal(key.get(), key.len(), slot), ZX_OK);
+  EXPECT_OK(zxc_client.Seal());
 }
 DEFINE_EACH_DEVICE(VolumeTest, TestFormatThroughDriver)
 

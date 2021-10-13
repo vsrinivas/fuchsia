@@ -79,7 +79,7 @@ void DeviceManager::Format(FormatRequestView request, FormatCompleter::Sync& com
     completer.Reply(ZX_ERR_BAD_STATE);
     return;
   }
-  completer.Reply(FormatLocked(request->key.data(), request->key.count(), 0));
+  completer.Reply(FormatLocked(request->key.data(), request->key.count(), request->slot));
 }
 
 void DeviceManager::Unseal(UnsealRequestView request, UnsealCompleter::Sync& completer) {
