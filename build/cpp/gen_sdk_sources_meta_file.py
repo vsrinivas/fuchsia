@@ -9,6 +9,28 @@ import os
 import sys
 
 
+def resolve_plasa_files(args):
+    """Resolves the plasa fragment file names from a list of files with reference
+       content.
+
+    Args:
+        plasa: list(string): list of file names containing pointers to generated
+        plasa fragment files.
+
+    Returns:
+        A sorted set of resolved plasa fragment files.
+    """
+    plasa = []
+    if not args:
+        return plasa
+    for arg in args:
+        with open(arg, 'r') as plasa_file:
+            data = json.load(plasa_file)
+            for d in data:
+                plasa += [d['path']]
+    return sorted(set(plasa))
+
+
 def main():
     parser = argparse.ArgumentParser('Builds a metadata file')
     parser.add_argument('--out', help='Path to the output file', required=True)
@@ -25,6 +47,8 @@ def main():
     parser.add_argument('--headers', help='List of public headers', nargs='*')
     parser.add_argument(
         '--include-dir', help='Path to the include directory', required=True)
+    parser.add_argument(
+        '--plasa', help='Path to the plasa fragments list', nargs='*')
     args = parser.parse_args()
 
     if len(args.deps) != len(args.dep_names):
@@ -65,6 +89,7 @@ def main():
     metadata['deps'] = sorted(set(deps))
     metadata['banjo_deps'] = sorted(set(banjo_deps))
     metadata['fidl_deps'] = sorted(set(fidl_deps))
+    metadata['plasa'] = resolve_plasa_files(args.plasa)
 
     with open(args.out, 'w') as out_file:
         json.dump(

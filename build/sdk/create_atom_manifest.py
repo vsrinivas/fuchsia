@@ -41,6 +41,7 @@ def main():
         'Whether the atom is a sdk_noop_atom. Sets the atom\'s meta to be empty. Defaults to False.'
     )
     parser.add_argument('--type', help='Type of the atom', required=True)
+    parser.add_argument('--plasa', help='Path to the plasa metadata, optional')
     args = parser.parse_args()
 
     if args.meta is None and not args.noop_atom:
@@ -57,8 +58,17 @@ def main():
                 line.strip().split('=', 1)
                 for line in file_list_file.readlines()
             ]
+
     files = dict(itertools.chain(
         args.file, extra_files)) if args.file else dict(extra_files)
+
+    plasa_fragments = []
+    if args.plasa:
+        with open(args.plasa, 'r') as plasa_file:
+            data = json.load(plasa_file)
+            for d in data:
+                files[d['dest']] = d['path']
+                plasa_fragments += [d['dest']]
 
     atoms.update(
         [
@@ -77,6 +87,7 @@ def main():
                             } for destination, source in files.items()
                         ],
                     'type': args.type,
+                    'plasa': plasa_fragments,
                 })
         ])
 

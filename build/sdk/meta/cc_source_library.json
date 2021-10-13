@@ -44,6 +44,13 @@
                     "$ref": "common.json#/definitions/cc_library_name",
                     "description": "Name of the library"
                 },
+                "plasa": {
+                    "description": "The list of plasa fragment files",
+                    "items": {
+                        "$ref": "common.json#/definitions/file"
+                    },
+                    "type": "array"
+                },
                 "root": {
                     "description": "The root of the element in the SDK",
                     "type": "string"

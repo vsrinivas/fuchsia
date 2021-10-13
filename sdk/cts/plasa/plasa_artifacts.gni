@@ -27,17 +27,22 @@ import("//sdk/cts/plasa/clang_doc.gni")
 #   non_public_headers
 #     Headers that should not be included in the stub generation.
 #
+#   file_base
+#     The base path to which the files should be packaged.
 
 template("plasa_artifacts") {
   forward_variables_from(invoker,
                          [
-                           "source_dir",
-                           "all_headers",
-                           "main_target_name",
                            "all_deps",
+                           "all_headers",
+                           "file_base",
                            "include_base",
+                           "main_target_name",
                            "non_public_headers",
+                           "source_dir",
                          ])
+
+  assert(defined(invoker.file_base), "file_base is required")
 
   _cc_stub_file = "$target_gen_dir/${main_target_name}.api_stub.cc"
 
@@ -83,7 +88,8 @@ template("plasa_artifacts") {
   # This target directory is generated inside clang_doc.
   _clang_doc_api_d =
       "${target_gen_dir}/${main_target_name}_api_filter_compdb.api.d"
-  _plasa_api_output_file = "${target_gen_dir}/${main_target_name}.plasa.json"
+  _plasa_api_output_file =
+      "${target_gen_dir}/${main_target_name}.fragment.plasa.json"
   _plasa_target_name = "${main_target_name}_plasa_api"
   compiled_action(_plasa_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
@@ -102,6 +108,21 @@ template("plasa_artifacts") {
       ":${_clang_doc_target_name}",
       ":${_clang_doc_target_name}_clang_doc_invoke",
     ]
+    metadata = {
+      plasa = [
+        {
+          # TODO(fxbug.dev/82512): I happen to like the annotations
+          # since I can then reason about what the metadata is for.
+          # But it is not minimal, so perhaps should be removed if
+          # we're after being very very strict.
+          type = "plasa_fragment_api_cc"
+          file = _plasa_api_output_file
+          path = rebase_path(_plasa_api_output_file, root_build_dir)
+          dest = "${file_base}/" +
+                 rebase_path(_plasa_api_output_file, target_gen_dir)
+        },
+      ]
+    }
   }
 
   group("${target_name}") {

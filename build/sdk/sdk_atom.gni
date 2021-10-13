@@ -5,6 +5,7 @@
 import("//build/compiled_action.gni")
 import("//build/json/validate_json.gni")
 import("//build/testing/golden_file.gni")
+import("//sdk/cts/plasa/config.gni")
 import("config.gni")
 
 # Defines an SDK element.
@@ -308,6 +309,13 @@ template("sdk_atom") {
              type,
              "--deps",
            ] + rebase_path(dep_manifests, root_build_dir) + file_args
+
+    if (generate_plasa_artifacts && defined(meta.plasa_manifest)) {
+      args += [
+        "--plasa",
+        rebase_path(meta.plasa_manifest, root_build_dir),
+      ]
+    }
 
     if (defined(invoker.file_list)) {
       inputs += [ invoker.file_list ]
