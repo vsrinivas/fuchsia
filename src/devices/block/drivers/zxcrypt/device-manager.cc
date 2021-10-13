@@ -53,7 +53,7 @@ zx_status_t DeviceManager::Bind() {
   zx_status_t rc;
   fbl::AutoLock lock(&mtx_);
 
-  if ((rc = DdkAdd("zxcrypt")) != ZX_OK) {
+  if ((rc = DdkAdd(ddk::DeviceAddArgs("zxcrypt").set_flags(DEVICE_ADD_NON_BINDABLE))) != ZX_OK) {
     zxlogf(ERROR, "failed to add device: %s", zx_status_get_string(rc));
     state_ = kRemoved;
     return rc;

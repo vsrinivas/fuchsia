@@ -140,7 +140,8 @@ zx::status<std::string> RamdiskController::ConfigureDevice(zx::vmo vmo, uint64_t
 zx_status_t RamdiskDriverBind(void* ctx, zx_device_t* parent) {
   auto ramctl = std::make_unique<RamdiskController>(parent);
 
-  zx_status_t status = ramctl->DdkAdd("ramctl");
+  zx_status_t status =
+      ramctl->DdkAdd(ddk::DeviceAddArgs("ramctl").set_flags(DEVICE_ADD_NON_BINDABLE));
   if (status != ZX_OK) {
     return status;
   }
