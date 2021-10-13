@@ -180,6 +180,13 @@ static void free_ap_mvm_sta(struct iwl_mvm_sta* mvm_sta) {
   free(mvm_sta);
 }
 
+static void reset_sta_mapping(struct iwl_mvm_vif* mvmvif) {
+  if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
+    mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id] = NULL;
+    mvmvif->ap_sta_id = IWL_MVM_INVALID_STA;
+  }
+}
+
 /////////////////////////////////////       MAC       //////////////////////////////////////////////
 
 zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
@@ -332,9 +339,39 @@ static zx_status_t mac_ensure_phyctxt_valid(struct iwl_mvm_vif* mvmvif) {
   return ZX_OK;
 }
 
+static zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta);
+
+// This is called right after SSID scan. The MLME tells this function the channel to tune in.
+// This function configures the PHY context and binds the MAC to that PHY context.
 zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* channel) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
   zx_status_t ret;
+
+  IWL_INFO(mvmvif, "mac_set_channel(primary:%d, bandwidth:'%s', secondary:%d)\n", channel->primary,
+           channel->cbw == CHANNEL_BANDWIDTH_CBW20        ? "20"
+           : channel->cbw == CHANNEL_BANDWIDTH_CBW40      ? "40"
+           : channel->cbw == CHANNEL_BANDWIDTH_CBW40BELOW ? "40-"
+           : channel->cbw == CHANNEL_BANDWIDTH_CBW80      ? "80"
+           : channel->cbw == CHANNEL_BANDWIDTH_CBW160     ? "160"
+           : channel->cbw == CHANNEL_BANDWIDTH_CBW80P80   ? "80+80"
+                                                          : "unknown",
+           channel->secondary80);
+
+  if (mvmvif->phy_ctxt && mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
+    // We already have PHY context set. It probably was left from the last association attempt
+    // (which was rejected by the AP). Remove it first.
+    IWL_INFO(mvmvif, "We already have PHY context set (ap_sta_id=%d). Removing it.\n",
+             mvmvif->ap_sta_id);
+
+    auto mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
+    if (mvm_sta) {
+      ret = mac_unconfigure_bss(mvmvif, mvm_sta);
+      if (ret != ZX_OK) {
+        IWL_ERR(mvmvif, "Cannot unconfigure bss: %s\n", zx_status_get_string(ret));
+        return ret;
+      }
+    }
+  }
 
   // Before we do anything, ensure the PHY context had been assigned to the mvmvif.
   ret = mac_ensure_phyctxt_valid(mvmvif);
@@ -343,6 +380,7 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
     return ret;
   }
 
+  // Save the info.
   mvmvif->phy_ctxt->chandef = *channel;
 
   ret = iwl_mvm_change_chanctx(mvmvif->mvm, mvmvif->phy_ctxt->id, channel);
@@ -430,10 +468,7 @@ exit:
   // If it is successful, the ownership has been transferred. If not, free the resource.
   if (ret != ZX_OK) {
     free_ap_mvm_sta(mvm_sta);
-    if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
-      mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id] = NULL;
-      mvmvif->ap_sta_id = IWL_MVM_INVALID_STA;
-    }
+    reset_sta_mapping(mvmvif);
   }
   return ret;
 }
