@@ -5,6 +5,7 @@
 #ifndef MSD_INTEL_CONNECTION_H
 #define MSD_INTEL_CONNECTION_H
 
+#include <list>
 #include <memory>
 
 #include "command_buffer.h"
@@ -37,9 +38,10 @@ class MsdIntelConnection {
     return owner_->SubmitBatch(std::move(batch));
   }
 
-  void DestroyContext(std::shared_ptr<ClientContext> client_context) {
-    return owner_->DestroyContext(std::move(client_context));
-  }
+  static std::shared_ptr<ClientContext> CreateContext(
+      std::shared_ptr<MsdIntelConnection> connection);
+
+  void DestroyContext(std::shared_ptr<ClientContext> context);
 
   void SetNotificationCallback(msd_connection_notification_callback_t callback, void* token) {
     notifications_.Set(callback, token);
@@ -65,8 +67,6 @@ class MsdIntelConnection {
   // Submit pending release mappings on the given context
   bool SubmitPendingReleaseMappings(std::shared_ptr<MsdIntelContext> context);
 
-  std::shared_ptr<MsdIntelContext> GetInternalContext();
-
  private:
   MsdIntelConnection(Owner* owner, std::shared_ptr<PerProcessGtt> ppgtt, msd_client_id_t client_id)
       : owner_(owner), ppgtt_(std::move(ppgtt)), client_id_(client_id) {}
@@ -89,8 +89,7 @@ class MsdIntelConnection {
   msd_client_id_t client_id_;
   std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> mappings_to_release_;
   bool sent_context_killed_ = false;
-  // Internal context is used for handling release buffer stalls.
-  std::shared_ptr<MsdIntelContext> internal_context_;
+  std::list<std::shared_ptr<ClientContext>> context_list_;
 
   class Notifications {
    public:

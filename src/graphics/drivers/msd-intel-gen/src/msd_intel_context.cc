@@ -111,14 +111,17 @@ void ClientContext::Shutdown() {
 
   semaphore_port_.reset();
 
-  // Clear pending command buffers so buffer release doesn't see stuck mappings
-  while (pending_command_buffer_queue_.size()) {
-    pending_command_buffer_queue_.pop();
+  // Clear presubmit command buffers so buffer release doesn't see stuck mappings
+  {
+    std::lock_guard lock(presubmit_mutex_);
+    while (presubmit_queue_.size()) {
+      presubmit_queue_.pop();
+    }
   }
 }
 
 magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer) {
-  TRACE_DURATION("magma", "ReceiveCommandBuffer");
+  TRACE_DURATION("magma", "SubmitCommandBuffer");
   uint64_t ATTRIBUTE_UNUSED buffer_id = command_buffer->GetBatchBufferId();
   TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
 
@@ -137,12 +140,16 @@ magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> 
   if (killed())
     return DRET(MAGMA_STATUS_CONTEXT_KILLED);
 
+  return SubmitBatch(std::move(command_buffer));
+}
+
+magma::Status ClientContext::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
   if (!semaphore_port_) {
     semaphore_port_ = magma::SemaphorePort::Create();
 
     DASSERT(!wait_thread_.joinable());
     wait_thread_ = std::thread([this] {
-      magma::PlatformThreadHelper::SetCurrentThreadName("ConnectionWaitThread");
+      magma::PlatformThreadHelper::SetCurrentThreadName("ContextWaitThread");
       DLOG("context wait thread started");
       while (semaphore_port_->WaitOne()) {
       }
@@ -150,31 +157,34 @@ magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> 
     });
   }
 
-  std::unique_lock<std::mutex> lock(pending_command_buffer_mutex_);
-  pending_command_buffer_queue_.push(std::move(command_buffer));
+  {
+    std::lock_guard lock(presubmit_mutex_);
+    presubmit_queue_.push(std::move(batch));
 
-  if (pending_command_buffer_queue_.size() == 1)
-    return SubmitPendingCommandBuffer(true);
+    if (presubmit_queue_.size() == 1)
+      return SubmitBatchLocked();
+  }
 
   return MAGMA_STATUS_OK;
 }
 
-magma::Status ClientContext::SubmitPendingCommandBuffer(bool have_lock) {
+magma::Status ClientContext::SubmitBatchLocked() {
   auto callback = [this](magma::SemaphorePort::WaitSet* wait_set) {
-    this->SubmitPendingCommandBuffer(false);
+    std::lock_guard lock(presubmit_mutex_);
+    this->SubmitBatchLocked();
   };
 
-  auto lock = have_lock
-                  ? std::unique_lock<std::mutex>(pending_command_buffer_mutex_, std::adopt_lock)
-                  : std::unique_lock<std::mutex>(pending_command_buffer_mutex_);
+  while (presubmit_queue_.size()) {
+    DLOG("presubmit_queue_ size %zu", presubmit_queue_.size());
 
-  while (pending_command_buffer_queue_.size()) {
-    DLOG("pending_command_buffer_queue_ size %zu", pending_command_buffer_queue_.size());
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> semaphores;
 
-    std::unique_ptr<CommandBuffer>& command_buffer = pending_command_buffer_queue_.front();
+    auto& batch = presubmit_queue_.front();
 
-    // Takes ownership
-    auto semaphores = command_buffer->wait_semaphores();
+    if (batch->IsCommandBuffer()) {
+      // Takes ownership
+      semaphores = static_cast<CommandBuffer*>(batch.get())->wait_semaphores();
+    }
 
     if (semaphores.size() == 0) {
       auto connection = connection_.lock();
@@ -184,13 +194,14 @@ magma::Status ClientContext::SubmitPendingCommandBuffer(bool have_lock) {
       if (killed())
         return DRET(MAGMA_STATUS_CONTEXT_KILLED);
 
-      {
-        TRACE_DURATION("magma", "SubmitCommandBuffer");
-        uint64_t ATTRIBUTE_UNUSED buffer_id = command_buffer->GetBatchBufferId();
+      if (batch->IsCommandBuffer()) {
+        TRACE_DURATION("magma", "SubmitBatchLocked");
+        uint64_t ATTRIBUTE_UNUSED buffer_id =
+            static_cast<CommandBuffer*>(batch.get())->GetBatchBufferId();
         TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
       }
-      connection->SubmitBatch(std::move(command_buffer));
-      pending_command_buffer_queue_.pop();
+      connection->SubmitBatch(std::move(batch));
+      presubmit_queue_.pop();
     } else {
       DLOG("adding waitset with %zu semaphores", semaphores.size());
 
@@ -201,7 +212,7 @@ magma::Status ClientContext::SubmitPendingCommandBuffer(bool have_lock) {
       if (result) {
         break;
       } else {
-        MAGMA_LOG(WARNING, "SubmitPendingCommandBuffer: failed to add to waitset");
+        MAGMA_LOG(WARNING, "SubmitBatchLocked: failed to add to waitset");
       }
     }
   }
@@ -224,7 +235,6 @@ void msd_context_destroy(msd_context_t* ctx) {
   auto abi_context = MsdIntelAbiContext::cast(ctx);
   // get a copy of the shared ptr
   auto client_context = abi_context->ptr();
-  client_context->Shutdown();
   // delete the abi container
   delete abi_context;
   // can safely unmap contexts only from the device thread; for that we go through the connection

@@ -106,6 +106,8 @@ class ClientContext : public MsdIntelContext {
   ~ClientContext();
 
   magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf);
+  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch);
+
   void Shutdown();
 
   std::weak_ptr<MsdIntelConnection> connection() override { return connection_; }
@@ -115,13 +117,13 @@ class ClientContext : public MsdIntelContext {
   void Kill() override;
 
  private:
-  magma::Status SubmitPendingCommandBuffer(bool have_lock);
+  magma::Status SubmitBatchLocked() MAGMA_REQUIRES(presubmit_mutex_);
 
   std::weak_ptr<MsdIntelConnection> connection_;
   std::unique_ptr<magma::SemaphorePort> semaphore_port_;
   std::thread wait_thread_;
-  std::mutex pending_command_buffer_mutex_;
-  std::queue<std::unique_ptr<CommandBuffer>> pending_command_buffer_queue_;
+  std::mutex presubmit_mutex_;
+  std::queue<std::unique_ptr<MappedBatch>> presubmit_queue_ MAGMA_GUARDED(presubmit_mutex_);
   bool killed_ = false;
 };
 

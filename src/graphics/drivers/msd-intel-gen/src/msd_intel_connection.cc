@@ -16,9 +16,27 @@ void msd_connection_close(msd_connection_t* connection) {
 msd_context_t* msd_connection_create_context(msd_connection_t* abi_connection) {
   auto connection = MsdIntelAbiConnection::cast(abi_connection)->ptr();
 
-  // Backing store creation deferred until context is used.
-  return new MsdIntelAbiContext(
-      std::make_unique<ClientContext>(connection, connection->per_process_gtt()));
+  return new MsdIntelAbiContext(MsdIntelConnection::CreateContext(connection));
+}
+
+// static
+std::shared_ptr<ClientContext> MsdIntelConnection::CreateContext(
+    std::shared_ptr<MsdIntelConnection> connection) {
+  auto context = std::make_shared<ClientContext>(connection, connection->per_process_gtt());
+
+  connection->context_list_.push_front(context);
+
+  return context;
+}
+
+void MsdIntelConnection::DestroyContext(std::shared_ptr<ClientContext> context) {
+  context->Shutdown();
+
+  auto iter = std::find(context_list_.begin(), context_list_.end(), context);
+  DASSERT(iter != context_list_.end());
+  context_list_.erase(iter);
+
+  return owner_->DestroyContext(std::move(context));
 }
 
 void msd_connection_set_notification_callback(struct msd_connection_t* connection,
@@ -110,6 +128,8 @@ void MsdIntelConnection::ReleaseBuffer(
 
   DLOG("ReleaseBuffer %lu\n", buffer->id());
 
+  bool do_stall = false;
+
   for (const auto& mapping : mappings) {
     size_t use_count = mapping.use_count();
 
@@ -123,33 +143,34 @@ void MsdIntelConnection::ReleaseBuffer(
       // this case, so we do the same.
       DLOG("ReleaseBuffer %lu mapping has use count %zu", mapping->BufferId(), use_count);
 
-      if (!sent_context_killed()) {
-        auto event = std::shared_ptr<magma::PlatformEvent>(magma::PlatformEvent::Create());
+      do_stall = true;
+    }
+  }
 
-        magma::Status status =
-            SubmitBatch(std::make_unique<PipelineFenceBatch>(GetInternalContext(), event));
+  uint64_t stall_ns = 0;
 
-        uint64_t start_ns = 0;
-        if (status.ok()) {
-          start_ns = magma::get_monotonic_ns();
-          {
-            TRACE_DURATION("magma", "stall on release");
-            constexpr uint32_t kStallMaxMs = 100;
-            wait_callback(event.get(), kStallMaxMs);
-          }
-          use_count = mapping.use_count();
-        }
+  if (do_stall) {
+    uint64_t start_ns = magma::get_monotonic_ns();
 
-        if (use_count > 1) {
-          uint64_t stall_ns = start_ns == 0 ? 0 : magma::get_monotonic_ns() - start_ns;
-          MAGMA_LOG(WARNING,
-                    "ReleaseBuffer %lu mapping has use count %zu after stall (%lu us), sending "
-                    "context killed",
-                    mapping->BufferId(), use_count, stall_ns / 1000);
-          SendContextKilled();
-        }
+    // Send pipeline fence batch for each context which may have queued command buffers.
+    for (auto& context : context_list_) {
+      auto event = std::shared_ptr<magma::PlatformEvent>(magma::PlatformEvent::Create());
+
+      magma::Status status =
+          context->SubmitBatch(std::make_unique<PipelineFenceBatch>(context, event));
+
+      if (status.ok()) {
+        TRACE_DURATION("magma", "stall on release");
+        constexpr uint32_t kStallMaxMs = 1000;
+        wait_callback(event.get(), kStallMaxMs);
       }
     }
+
+    stall_ns = magma::get_monotonic_ns() - start_ns;
+  }
+
+  for (const auto& mapping : mappings) {
+    size_t use_count = mapping.use_count();
 
     if (use_count == 1) {
       // Bus mappings are held in the connection and passed through the command stream to
@@ -160,6 +181,12 @@ void MsdIntelConnection::ReleaseBuffer(
       for (uint32_t i = 0; i < bus_mappings.size(); i++) {
         mappings_to_release_.emplace_back(std::move(bus_mappings[i]));
       }
+    } else if (!sent_context_killed()) {
+      MAGMA_LOG(WARNING,
+                "ReleaseBuffer %lu mapping has use count %zu after total stall (%lu us), sending "
+                "context killed",
+                mapping->BufferId(), use_count, stall_ns / 1000);
+      SendContextKilled();
     }
   }
 }
@@ -173,13 +200,6 @@ bool MsdIntelConnection::SubmitPendingReleaseMappings(std::shared_ptr<MsdIntelCo
       return DRETF(false, "Failed to submit mapping release batch: %d", status.get());
   }
   return true;
-}
-
-std::shared_ptr<MsdIntelContext> MsdIntelConnection::GetInternalContext() {
-  if (!internal_context_) {
-    internal_context_ = std::make_shared<MsdIntelContext>(ppgtt_);
-  }
-  return internal_context_;
 }
 
 std::unique_ptr<MsdIntelConnection> MsdIntelConnection::Create(Owner* owner,
