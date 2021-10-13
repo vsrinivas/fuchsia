@@ -30,6 +30,8 @@ const MAX_LOG_SIZE_CONFIG: &str = "proactive_log.max_log_size_bytes";
 const MAX_SESSION_SIZE_CONFIG: &str = "proactive_log.max_session_size_bytes";
 const MAX_SESSIONS_CONFIG: &str = "proactive_log.max_sessions_per_target";
 
+const READ_STREAM_BUFFER_SIZE: usize = 1000;
+
 struct LogFileEntries {
     lines: Lines<BufReader<Box<File>>>,
 }
@@ -596,7 +598,7 @@ impl DiagnosticsStreamerInner<'_> {
             max_file_size_bytes: 0,
             max_session_size_bytes: 0,
             max_num_sessions: 0,
-            read_stream: Arc::new(mpmc::Sender::default()),
+            read_stream: Arc::new(mpmc::Sender::with_buffer_size(READ_STREAM_BUFFER_SIZE)),
         }
     }
 }

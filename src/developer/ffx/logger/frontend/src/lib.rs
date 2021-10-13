@@ -206,6 +206,7 @@ async fn retry_loop<W: std::io::Write>(
     params: LogCommandParameters,
     writer: &mut W,
 ) -> Result<ArchiveIteratorProxy> {
+    let mut fail_count = 0;
     loop {
         let (new_proxy, server) =
             create_proxy::<ArchiveIteratorMarker>().context("failed to create endpoints")?;
@@ -222,7 +223,8 @@ async fn retry_loop<W: std::io::Write>(
             Err(e) => {
                 match e {
                     DiagnosticsStreamError::NoMatchingTargets => {
-                        writeln!(
+                        fail_count += 1;
+                        write!(
                             writer,
                             "{}",
                             format_ffx_event(
@@ -232,7 +234,8 @@ async fn retry_loop<W: std::io::Write>(
                         )?;
                     }
                     DiagnosticsStreamError::NoStreamForTarget => {
-                        writeln!(
+                        fail_count += 1;
+                        write!(
                             writer,
                             "{}",
                             format_ffx_event(
@@ -245,16 +248,20 @@ async fn retry_loop<W: std::io::Write>(
                         )?;
                     }
                     _ => {
-                        writeln!(
+                        fail_count += 1;
+                        write!(
                             writer,
                             "{}",
-                            format_ffx_event(
-                                &format!("Retry failed ({:?}). Trying again...", e),
-                                None
-                            )
+                            format_ffx_event(&format!("Retry failed: ({:?}).", e), None)
                         )?;
                     }
                 }
+                if fail_count > 5 {
+                    writeln!(writer, "If this persists, consider restarting the ffx daemon with `ffx doctor --restart-daemon`.")?;
+                } else {
+                    writeln!(writer, "")?;
+                }
+
                 Timer::new(Duration::from_millis(RETRY_TIMEOUT_MILLIS)).await;
                 continue;
             }
