@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 use {
     crate::fastboot::{
-        continue_boot, erase, flash, get_all_vars, get_var, oem, reboot, reboot_bootloader,
-        set_active, stage, UploadProgressListener, VariableListener,
+        continue_boot, erase, flash, get_all_vars, get_staged, get_var, oem, reboot,
+        reboot_bootloader, set_active, stage, UploadProgressListener, VariableListener,
     },
     crate::target::Target,
     crate::zedboot::reboot_to_bootloader,
@@ -302,6 +302,17 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
                         log::error!("Error sending oem \"{}\": {:?}", command, e);
+                        responder
+                            .send(&mut Err(FastbootError::ProtocolError))
+                            .context("sending error response")?;
+                    }
+                }
+            }
+            FastbootRequest::GetStaged { path, responder } => {
+                match get_staged(self.interface().await?, &path).await {
+                    Ok(_) => responder.send(&mut Ok(()))?,
+                    Err(e) => {
+                        log::error!("Error getting staged file: {:?}", e);
                         responder
                             .send(&mut Err(FastbootError::ProtocolError))
                             .context("sending error response")?;

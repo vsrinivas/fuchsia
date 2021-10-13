@@ -149,6 +149,9 @@ mod test {
                     listener.into_proxy().unwrap().on_finished().unwrap();
                     responder.send(&mut Ok(())).unwrap();
                 }
+                FastbootRequest::GetStaged { responder, .. } => {
+                    responder.send(&mut Ok(())).unwrap();
+                }
                 FastbootRequest::Erase { responder, .. } => {
                     responder.send(&mut Ok(())).unwrap();
                 }

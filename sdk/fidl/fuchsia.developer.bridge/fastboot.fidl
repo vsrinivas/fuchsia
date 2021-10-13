@@ -79,6 +79,9 @@ protocol Fastboot {
         listener client_end:RebootListener;
     }) -> (struct {}) error FastbootError;
     ContinueBoot() -> (struct {}) error FastbootError;
+    GetStaged(resource struct {
+        path string:256;
+    }) -> (struct {}) error FastbootError;
     Stage(resource struct {
         path string:256;
         listener client_end:UploadProgressListener;

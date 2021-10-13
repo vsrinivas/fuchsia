@@ -16,6 +16,7 @@ use {
     chrono::Duration,
     fastboot::{
         command::{ClientVariable, Command},
+        download,
         reply::Reply,
         send, send_with_listener, send_with_timeout, upload, SendError,
     },
@@ -432,5 +433,19 @@ pub async fn oem<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T, cmd: &Str
         }
         Reply::Fail(s) => bail!("Failed to oem \"{}\": {}", cmd, s),
         _ => bail!("Unexpected reply from fastboot device for oem command \"{}\"", cmd),
+    }
+}
+
+pub async fn get_staged<T: AsyncRead + AsyncWrite + Unpin>(
+    interface: &mut T,
+    file: &String,
+) -> Result<()> {
+    match download(file, interface).await.context(format!("downloading to {}", file))? {
+        Reply::Okay(_) => {
+            log::debug!("Successfully downloaded to \"{}\"", file);
+            Ok(())
+        }
+        Reply::Fail(s) => bail!("Failed to download: {}", s),
+        _ => bail!("Unexpected reply from fastboot device for download command"),
     }
 }

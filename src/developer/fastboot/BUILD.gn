@@ -6,35 +6,38 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/testing/test_spec.gni")
 
-rustc_library("lib") {
-  name = "fastboot"
-  edition = "2018"
+if (is_host) {
+  rustc_library("lib") {
+    name = "fastboot"
+    edition = "2018"
 
-  # TODO(fxbug.dev/78438): this library contains unit tests, but they don't build
-  with_unit_tests = false
+    # TODO(fxbug.dev/78438): this library contains unit tests, but they don't build
+    with_unit_tests = false
 
-  deps = [
-    "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:chrono",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:thiserror",
-  ]
-  non_rust_deps = [ "//third_party/boringssl" ]
+    deps = [
+      "//src/lib/fuchsia-async",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:async-fs",
+      "//third_party/rust_crates:byteorder",
+      "//third_party/rust_crates:chrono",
+      "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:lazy_static",
+      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:thiserror",
+    ]
+    non_rust_deps = [ "//third_party/boringssl" ]
 
-  sources = [
-    "src/command.rs",
-    "src/lib.rs",
-    "src/reply.rs",
-  ]
+    sources = [
+      "src/command.rs",
+      "src/lib.rs",
+      "src/reply.rs",
+    ]
+  }
 }
 
 group("fastboot") {
   deps = [
-    ":lib",
+    ":lib($host_toolchain)",
 
     # This target copies the prebuilt fastboot into the build directory - as if
     # it were a normally built tool - and defines metadata depended upon by the

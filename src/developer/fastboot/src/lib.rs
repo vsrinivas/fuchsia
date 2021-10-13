@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{bail, Result},
+    anyhow::{anyhow, bail, Result},
     chrono::{Duration, Utc},
     command::Command,
     fuchsia_async::Timer,
@@ -27,7 +27,7 @@ const READ_INTERVAL_MS: i64 = 100;
 
 lazy_static! {
     static ref SEND_LOCK: Mutex<()> = Mutex::new(());
-    static ref UPLOAD_LOCK: Mutex<()> = Mutex::new(());
+    static ref TRANSFER_LOCK: Mutex<()> = Mutex::new(());
 }
 
 #[derive(Debug, Error)]
@@ -132,7 +132,7 @@ pub async fn upload<T: AsyncRead + AsyncWrite + Unpin>(
     interface: &mut T,
     listener: &impl UploadProgressListener,
 ) -> Result<Reply> {
-    let _lock = UPLOAD_LOCK.lock().await;
+    let _lock = TRANSFER_LOCK.lock().await;
     let size = u32::try_from(data.len())?;
     let reply = send(Command::Download(size), interface).await?;
     match reply {
@@ -169,6 +169,42 @@ pub async fn upload<T: AsyncRead + AsyncWrite + Unpin>(
                     bail!(err);
                 }
             }
+        }
+        _ => bail!("Did not get expected Data reply: {:?}", reply),
+    }
+}
+
+pub async fn download<T: AsyncRead + AsyncWrite + Unpin>(
+    path: &String,
+    interface: &mut T,
+) -> Result<Reply> {
+    let _lock = TRANSFER_LOCK.lock().await;
+    let reply = send(Command::Upload, interface).await?;
+    log::debug!("got reply from upload command: {:?}", reply);
+    match reply {
+        Reply::Data(s) => {
+            let size = usize::try_from(s)?;
+            let mut buffer: [u8; 100] = [0; 100];
+            let mut bytes_read: usize = 0;
+            let mut file = async_fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(path)
+                .await?;
+            while bytes_read != size {
+                match interface.read(&mut buffer[..]).await {
+                    Err(e) => bail!("Could not read to usb interface: {:?}", e),
+                    Ok(len) => {
+                        bytes_read += len;
+                        file.write_all(&buffer[..len]).await?;
+                    }
+                }
+            }
+            file.flush().await?;
+            read_and_log_info(interface)
+                .await
+                .map_err(|e| anyhow!("Could not verify download: {:?}", e))
         }
         _ => bail!("Did not get expected Data reply: {:?}", reply),
     }
