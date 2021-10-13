@@ -118,7 +118,7 @@ impl MessageQueue {
     ///
     /// Returns a vector of read messages, where the sum of the message lengths is guaranteed to be
     /// less than `max_bytes`. The returned `usize` indicates the exact number of bytes read.
-    fn read_bytes(
+    pub fn read_bytes(
         &mut self,
         address: &mut Option<SocketAddress>,
         max_bytes: usize,

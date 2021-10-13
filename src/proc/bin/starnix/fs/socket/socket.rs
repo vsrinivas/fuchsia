@@ -236,6 +236,14 @@ impl Socket {
         self.lock().read(task, user_buffers)
     }
 
+    /// Reads all the available messages out of this socket.
+    ///
+    /// If no data is available, or this socket is not readable, then an empty vector is returned.
+    #[cfg(test)]
+    pub fn read_kernel(&self) -> Vec<Message> {
+        self.lock().read_kernel()
+    }
+
     /// Writes the data in the provided user buffers to this socket.
     ///
     /// # Parameters
@@ -257,6 +265,23 @@ impl Socket {
         };
         let mut peer = peer.lock();
         peer.write(task, user_buffers, local_address, ancillary_data)
+    }
+
+    /// Writes the provided message into this socket. If the write succeeds, all the bytes were
+    /// written.
+    ///
+    /// # Parameters
+    /// - `message`: The message to write.
+    ///
+    /// Returns an error if the socket is not connected.
+    #[cfg(test)]
+    pub fn write_kernel(&self, message: Message) -> Result<(), Errno> {
+        let peer = {
+            let inner = self.lock();
+            inner.peer()?.clone()
+        };
+        let mut peer = peer.lock();
+        peer.write_kernel(message)
     }
 
     pub fn wait_async(&self, waiter: &Arc<Waiter>, events: FdEvents, handler: EventHandler) {
@@ -355,6 +380,24 @@ impl SocketInner {
         Ok((bytes_read, address, ancillary_data))
     }
 
+    /// Reads all the available messages out of this socket.
+    ///
+    /// If no data is available, or this socket is not readable, then an empty vector is returned.
+    #[cfg(test)]
+    pub fn read_kernel(&mut self) -> Vec<Message> {
+        if !self.readable {
+            return vec![];
+        }
+
+        let (messages, bytes_read) = self.messages.read_bytes(&mut None, usize::MAX);
+
+        if bytes_read > 0 {
+            self.waiters.notify_events(FdEvents::POLLOUT);
+        }
+
+        messages
+    }
+
     /// Writes the the contents of `UserBufferIterator` into this socket.
     ///
     /// # Parameters
@@ -372,13 +415,36 @@ impl SocketInner {
         ancillary_data: &mut Option<AncillaryData>,
     ) -> Result<usize, Errno> {
         if !self.writable {
-            return Err(ENOTCONN);
+            return error!(ENOTCONN);
         }
         let bytes_written = self.messages.write(task, user_buffers, address, ancillary_data)?;
         if bytes_written > 0 {
             self.waiters.notify_events(FdEvents::POLLIN);
         }
         Ok(bytes_written)
+    }
+
+    /// Writes the provided message into this socket. If the write succeeds, all the bytes were
+    /// written.
+    ///
+    /// # Parameters
+    /// - `message`: The message to write.
+    ///
+    /// Returns an error if the socket is not connected.
+    #[cfg(test)]
+    fn write_kernel(&mut self, message: Message) -> Result<(), Errno> {
+        if !self.writable {
+            return error!(ENOTCONN);
+        }
+
+        let bytes_written = message.data.len();
+        self.messages.write_message(message);
+
+        if bytes_written > 0 {
+            self.waiters.notify_events(FdEvents::POLLIN);
+        }
+
+        Ok(())
     }
 
     fn shutdown_one_end(&mut self) {
@@ -493,5 +559,25 @@ impl AcceptQueue {
         }
         self.backlog = backlog;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_read_write_kernel() {
+        let socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
+        socket.lock().bind(SocketAddress::Unix(b"\0".to_vec())).expect("Failed to bind socket.");
+        socket.lock().listen(10).expect("Failed to listen.");
+        let connecting_socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
+        connecting_socket.connect(&socket).expect("Failed to connect socket.");
+        let server_socket = socket.accept().unwrap();
+
+        let message = Message::new(vec![1, 2, 3].into(), None, None);
+        server_socket.write_kernel(message.clone()).expect("Failed to write.");
+
+        assert_eq!(connecting_socket.read_kernel(), vec![message]);
     }
 }
