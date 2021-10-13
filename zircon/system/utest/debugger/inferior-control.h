@@ -36,7 +36,7 @@ struct inferior_data_t {
   thread_data_t* threads;
 };
 
-typedef bool(wait_inferior_exception_handler_t)(inferior_data_t* data,
+typedef void(wait_inferior_exception_handler_t)(inferior_data_t* data,
                                                 const zx_port_packet_t* packet, void* handler_arg);
 
 void dump_gregs(zx_handle_t thread_handle, const zx_thread_state_general_regs_t* regs);
@@ -51,7 +51,7 @@ size_t read_inferior_memory(zx_handle_t proc, uintptr_t vaddr, void* buf, size_t
 
 size_t write_inferior_memory(zx_handle_t proc, uintptr_t vaddr, const void* buf, size_t len);
 
-bool setup_inferior(const char* name, springboard_t** out_sb, zx_handle_t* out_inferior,
+void setup_inferior(const char* name, springboard_t** out_sb, zx_handle_t* out_inferior,
                     zx_handle_t* out_channel);
 
 // Attaches to |inferior| process.
@@ -67,7 +67,7 @@ bool setup_inferior(const char* name, springboard_t** out_sb, zx_handle_t* out_i
 // calling detach_inferior(). On failure, exits the process.
 inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t port, size_t max_threads);
 
-bool expect_debugger_attached_eq(zx_handle_t inferior, bool expected, const char* msg);
+void expect_debugger_attached_eq(zx_handle_t inferior, bool expected, const char* msg);
 
 // Detaches and deletes |data|.
 //
@@ -81,9 +81,9 @@ void unbind_inferior(inferior_data_t* data);
 
 bool start_inferior(springboard_t* sb);
 
-bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior);
+void shutdown_inferior(zx_handle_t channel, zx_handle_t inferior);
 
-bool read_packet(zx_handle_t port, zx_port_packet_t* packet);
+void read_packet(zx_handle_t port, zx_port_packet_t* packet);
 
 // Blocks using the given port until the process/thread is in the given state. This function can
 // wait for TERMINATED, RUNNING, or SUSPENDED states. The thread is assumed to be wait-async'd on
@@ -92,13 +92,13 @@ bool read_packet(zx_handle_t port, zx_port_packet_t* packet);
 // For code that transitions between states multiple times, be sure to wait for each transition
 // before doing the next one. Otherwise there can be races in delivering the notifications on the
 // port and the actual thread state.
-bool wait_thread_state(zx_handle_t proc, zx_handle_t thread, zx_handle_t port,
+void wait_thread_state(zx_handle_t proc, zx_handle_t thread, zx_handle_t port,
                        zx_signals_t wait_until);
 
-bool handle_thread_exiting(zx_handle_t inferior, const zx_exception_info_t* info,
+void handle_thread_exiting(zx_handle_t inferior, const zx_exception_info_t* info,
                            zx::exception exception);
 
 thrd_t start_wait_inf_thread(inferior_data_t* inferior_data,
                              wait_inferior_exception_handler_t* handler, void* handler_arg);
 
-bool join_wait_inf_thread(thrd_t wait_inf_thread);
+void join_wait_inf_thread(thrd_t wait_inf_thread);

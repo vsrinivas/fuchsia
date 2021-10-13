@@ -84,10 +84,8 @@ __asm__(
 
 // Helper function to test register access when a thread starts.
 
-bool test_thread_start_register_access(reg_access_test_state_t* test_state, zx_handle_t inferior,
+void test_thread_start_register_access(reg_access_test_state_t* test_state, zx_handle_t inferior,
                                        zx_koid_t tid) {
-  BEGIN_HELPER;
-
   zx::thread thread;
   zx_status_t status =
       zx_object_get_child(inferior, tid, ZX_RIGHT_SAME_RIGHTS, thread.reset_and_get_address());
@@ -175,16 +173,12 @@ bool test_thread_start_register_access(reg_access_test_state_t* test_state, zx_h
   }
 
   write_inferior_gregs(thread.get(), &regs);
-
-  END_HELPER;
 }
 
 // N.B. This runs on the wait-inferior thread.
 
-bool thread_start_test_exception_handler_worker(inferior_data_t* data,
+void thread_start_test_exception_handler_worker(inferior_data_t* data,
                                                 const zx_port_packet_t* packet, void* handler_arg) {
-  BEGIN_HELPER;
-
   auto test_state = reinterpret_cast<reg_access_test_state_t*>(handler_arg);
 
   zx_info_handle_basic_t basic_info;
@@ -214,11 +208,11 @@ bool thread_start_test_exception_handler_worker(inferior_data_t* data,
     switch (info.type) {
       case ZX_EXCP_THREAD_STARTING:
         printf("wait-inf: thread %lu started\n", info.tid);
-        EXPECT_TRUE(test_thread_start_register_access(test_state, data->inferior, info.tid));
+        test_thread_start_register_access(test_state, data->inferior, info.tid);
         break;
 
       case ZX_EXCP_THREAD_EXITING:
-        EXPECT_TRUE(handle_thread_exiting(data->inferior, &info, std::move(exception)));
+        handle_thread_exiting(data->inferior, &info, std::move(exception));
         break;
 
       default: {
@@ -227,23 +221,19 @@ bool thread_start_test_exception_handler_worker(inferior_data_t* data,
       }
     }
   }
-
-  END_HELPER;
 }
 
 // N.B. This runs on the wait-inferior thread.
 
-bool thread_start_test_exception_handler(inferior_data_t* data, const zx_port_packet_t* packet,
+void thread_start_test_exception_handler(inferior_data_t* data, const zx_port_packet_t* packet,
                                          void* handler_arg) {
-  bool pass = thread_start_test_exception_handler_worker(data, packet, handler_arg);
+  thread_start_test_exception_handler_worker(data, packet, handler_arg);
 
   // If a test failed detach now so that a thread isn't left waiting in
   // ZX_EXCP_THREAD_STARTING for a response.
-  if (!pass) {
+  if (CURRENT_TEST_HAS_FATAL_FAILURES()) {
     unbind_inferior(data);
   }
-
-  return pass;
 }
 
 }  // namespace
@@ -258,7 +248,7 @@ int capture_regs_thread_func(void* arg) {
 TEST(ThreadStartTests, StoppedInThreadStartingRegAccessTest) {
   springboard_t* sb;
   zx_handle_t inferior, channel;
-  CHECK_HELPER(setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel));
+  ASSERT_NO_FATAL_FAILURES(setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel));
 
   // Attach to the inferior now because we want to see thread starting
   // exceptions.
@@ -274,17 +264,16 @@ TEST(ThreadStartTests, StoppedInThreadStartingRegAccessTest) {
       start_wait_inf_thread(inferior_data, thread_start_test_exception_handler, &test_state);
   EXPECT_NE(port, ZX_HANDLE_INVALID);
 
-  CHECK_HELPER(start_inferior(sb));
+  ASSERT_NO_FATAL_FAILURES(start_inferior(sb));
 
   // The first test happens here as the main thread starts.
   // This testing is done in |thread_start_test_exception_handler()|.
 
   // Make sure the program successfully started.
-  CHECK_HELPER(verify_inferior_running(channel));
+  ASSERT_NO_FATAL_FAILURES(verify_inferior_running(channel));
 
-  EXPECT_TRUE(get_inferior_load_addrs(channel, &test_state.inferior_libc_load_addr,
-                                      &test_state.inferior_exec_load_addr),
-              "");
+  get_inferior_load_addrs(channel, &test_state.inferior_libc_load_addr,
+                          &test_state.inferior_exec_load_addr);
 
   // Now that we have the inferior's libc load address we can verify the
   // executable's initial PC value (which is libc's entry point).
@@ -300,7 +289,7 @@ TEST(ThreadStartTests, StoppedInThreadStartingRegAccessTest) {
   // The remaining testing happens at this point as threads start.
   // This testing is done in |thread_start_test_exception_handler()|.
 
-  CHECK_HELPER(shutdown_inferior(channel, inferior));
+  ASSERT_NO_FATAL_FAILURES(shutdown_inferior(channel, inferior));
 
   // Stop the waiter thread before closing the port that it's waiting on.
   join_wait_inf_thread(wait_inf_thread);

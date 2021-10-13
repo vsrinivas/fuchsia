@@ -11,6 +11,4 @@ constexpr int kNumExtraThreads = 4;
 // We do the segv recovery test a number of times to stress test the API.
 constexpr int kNumSegvTries = 4;
 
-bool stopped_in_thread_starting_reg_access_test();
-
 int capture_regs_thread_func(void* arg);

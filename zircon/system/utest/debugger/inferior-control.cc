@@ -109,10 +109,8 @@ size_t write_inferior_memory(zx_handle_t proc, uintptr_t vaddr, const void* buf,
   return len;
 }
 
-bool setup_inferior(const char* name, springboard_t** out_sb, zx_handle_t* out_inferior,
+void setup_inferior(const char* name, springboard_t** out_sb, zx_handle_t* out_inferior,
                     zx_handle_t* out_channel) {
-  BEGIN_HELPER;
-
   zx_handle_t channel1, channel2;
   ASSERT_EQ(zx_channel_create(0, &channel1, &channel2), ZX_OK);
 
@@ -144,8 +142,6 @@ bool setup_inferior(const char* name, springboard_t** out_sb, zx_handle_t* out_i
   *out_sb = sb;
   *out_inferior = inferior;
   *out_channel = channel1;
-
-  END_HELPER;
 }
 
 // While this should perhaps take a springboard_t* argument instead of the
@@ -213,14 +209,11 @@ inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t port, size_t 
   return data;
 }
 
-bool expect_debugger_attached_eq(zx_handle_t inferior, bool expected, const char* msg) {
-  BEGIN_HELPER;
-
+void expect_debugger_attached_eq(zx_handle_t inferior, bool expected, const char* msg) {
   zx_info_process_t info;
   // ZX_ASSERT returns false if the check fails.
   ASSERT_EQ(zx_object_get_info(inferior, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), ZX_OK);
   ASSERT_EQ((info.flags & ZX_INFO_PROCESS_FLAG_DEBUGGER_ATTACHED) != 0, expected, "%s", msg);
-  END_HELPER;
 }
 
 void detach_inferior(inferior_data_t* data, bool close_exception_channel) {
@@ -246,24 +239,18 @@ bool start_inferior(springboard_t* sb) {
   return true;
 }
 
-bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior) {
-  BEGIN_HELPER;
-
+void shutdown_inferior(zx_handle_t channel, zx_handle_t inferior) {
   printf("Shutting down inferior\n");
 
   send_simple_request(channel, RQST_DONE);
 
   tu_process_wait_signaled(inferior);
   EXPECT_EQ(tu_process_get_return_code(inferior), kInferiorReturnCode, "");
-
-  END_HELPER;
 }
 
 // Wait for and read a packet on |port|.
 
-bool read_packet(zx_handle_t port, zx_port_packet_t* packet) {
-  BEGIN_HELPER;
-
+void read_packet(zx_handle_t port, zx_port_packet_t* packet) {
   printf("read_packet: waiting for signal on port %d\n", port);
   ASSERT_EQ(zx_port_wait(port, ZX_TIME_INFINITE, packet), ZX_OK, "zx_port_wait failed");
 
@@ -273,14 +260,10 @@ bool read_packet(zx_handle_t port, zx_port_packet_t* packet) {
     // Leave it to the caller to digest these.
     printf("read_packet: got other packet %d\n", packet->type);
   }
-
-  END_HELPER;
 }
 
-bool wait_thread_state(zx_handle_t proc, zx_handle_t thread, zx_handle_t port,
+void wait_thread_state(zx_handle_t proc, zx_handle_t thread, zx_handle_t port,
                        zx_signals_t wait_until) {
-  BEGIN_HELPER;
-
   zx_info_handle_basic_t basic_info;
   zx_status_t status = zx_object_get_info(thread, ZX_INFO_HANDLE_BASIC, &basic_info,
                                           sizeof(basic_info), nullptr, nullptr);
@@ -317,17 +300,12 @@ bool wait_thread_state(zx_handle_t proc, zx_handle_t thread, zx_handle_t port,
   status = zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
   ASSERT_EQ(status, ZX_OK);
   ASSERT_EQ(info.wait_exception_channel_type, ZX_EXCEPTION_CHANNEL_TYPE_NONE);
-
-  END_HELPER;
 }
 
-// This returns a bool as it's a unittest "helper" routine.
 // N.B. This runs on the wait-inferior thread.
 
-bool handle_thread_exiting(zx_handle_t inferior, const zx_exception_info_t* info,
+void handle_thread_exiting(zx_handle_t inferior, const zx_exception_info_t* info,
                            zx::exception exception) {
-  BEGIN_HELPER;
-
   zx::thread thread;
   ASSERT_EQ(exception.get_thread(&thread), ZX_OK);
   zx_info_thread_t thread_info;
@@ -351,20 +329,14 @@ bool handle_thread_exiting(zx_handle_t inferior, const zx_exception_info_t* info
 
   // A thread is gone, but we only care about the process.
   printf("wait-inf: thread %" PRIu64 " exited\n", info->tid);
-
-  END_HELPER;
 }
 
 // A simpler exception handler.
 // All exceptions are passed on to |handler|.
-// Returns false if a test fails.
-// Otherwise waits for the inferior to exit and returns true.
 
-static bool wait_inferior_thread_worker(inferior_data_t* inferior_data,
+static void wait_inferior_thread_worker(inferior_data_t* inferior_data,
                                         wait_inferior_exception_handler_t* handler,
                                         void* handler_arg) {
-  BEGIN_HELPER;
-
   zx_handle_t inferior = inferior_data->inferior;
   zx_info_handle_basic_t basic_info;
   zx_status_t status = zx_object_get_info(inferior, ZX_INFO_HANDLE_BASIC, &basic_info,
@@ -375,7 +347,7 @@ static bool wait_inferior_thread_worker(inferior_data_t* inferior_data,
 
   while (true) {
     zx_port_packet_t packet;
-    CHECK_HELPER(read_packet(port, &packet));
+    ASSERT_NO_FATAL_FAILURES(read_packet(port, &packet));
 
     // Is the inferior gone?
     if (packet.key == pid) {
@@ -408,7 +380,9 @@ static bool wait_inferior_thread_worker(inferior_data_t* inferior_data,
       }
     }
 
-    bool handler_success = handler(inferior_data, &packet, handler_arg);
+    // If this call has zxtest assertion failures, don't return
+    // immediately but allow the wait below to happen first.
+    handler(inferior_data, &packet, handler_arg);
 
     zx_info_handle_basic_t basic_info;
     zx_status_t status = zx_object_get_info(inferior_data->exception_channel, ZX_INFO_HANDLE_BASIC,
@@ -424,10 +398,10 @@ static bool wait_inferior_thread_worker(inferior_data_t* inferior_data,
       tu_object_wait_async(inferior_data->exception_channel, port, ZX_CHANNEL_READABLE);
     }
 
-    ASSERT_TRUE(handler_success);
+    // Check whether the handler() call above had any zxtest assertion
+    // failures.
+    ASSERT_FALSE(CURRENT_TEST_HAS_FATAL_FAILURES());
   }
-
-  END_HELPER;
 }
 
 struct wait_inferior_args_t {
@@ -443,9 +417,9 @@ static int wait_inferior_thread_func(void* arg) {
   void* handler_arg = args->handler_arg;
   free(args);
 
-  bool pass = wait_inferior_thread_worker(inferior_data, handler, handler_arg);
+  wait_inferior_thread_worker(inferior_data, handler, handler_arg);
 
-  return pass ? 0 : -1;
+  return CURRENT_TEST_HAS_FATAL_FAILURES() ? -1 : 0;
 }
 
 thrd_t start_wait_inf_thread(inferior_data_t* inferior_data,
@@ -465,15 +439,11 @@ thrd_t start_wait_inf_thread(inferior_data_t* inferior_data,
   return wait_inferior_thread;
 }
 
-bool join_wait_inf_thread(thrd_t wait_inf_thread) {
-  BEGIN_HELPER;
-
+void join_wait_inf_thread(thrd_t wait_inf_thread) {
   printf("Waiting for wait-inf thread\n");
   int thread_rc;
   int ret = thrd_join(wait_inf_thread, &thread_rc);
   EXPECT_EQ(ret, thrd_success, "thrd_join failed");
   EXPECT_EQ(thread_rc, 0, "unexpected wait-inf return");
   printf("wait-inf thread done\n");
-
-  END_HELPER;
 }

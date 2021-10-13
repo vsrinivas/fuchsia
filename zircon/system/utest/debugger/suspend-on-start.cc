@@ -23,10 +23,9 @@ struct suspend_on_start_test_state_t {
   int started_threads = 0;
 };
 
-bool suspend_on_start_test_handler(inferior_data_t* data, const zx_port_packet_t* packet,
+void suspend_on_start_test_handler(inferior_data_t* data, const zx_port_packet_t* packet,
                                    void* handler_arg) {
   auto* test_state = reinterpret_cast<suspend_on_start_test_state_t*>(handler_arg);
-  BEGIN_HELPER;
 
   // This test is supposed to only get an exception and nothing else.
   zx_info_handle_basic_t basic_info;
@@ -51,15 +50,13 @@ bool suspend_on_start_test_handler(inferior_data_t* data, const zx_port_packet_t
       break;
     case ZX_EXCP_THREAD_EXITING:
       printf("thread %lu exiting\n", info.tid);
-      ASSERT_TRUE(handle_thread_exiting(data->inferior, &info, std::move(exception)));
+      ASSERT_NO_FATAL_FAILURES(handle_thread_exiting(data->inferior, &info, std::move(exception)));
       break;
     default:
       printf("Unexpected exception %s (%u) on thread %lu\n", tu_exception_to_string(info.type),
              info.type, info.tid);
       break;
   }
-
-  END_HELPER;
 }
 
 }  // namespace
@@ -67,7 +64,7 @@ bool suspend_on_start_test_handler(inferior_data_t* data, const zx_port_packet_t
 TEST(SuspendOnStartTests, SuspendOnStartTest) {
   springboard_t* sb;
   zx_handle_t inferior, channel;
-  CHECK_HELPER(setup_inferior(kTestSuspendOnStart, &sb, &inferior, &channel));
+  ASSERT_NO_FATAL_FAILURES(setup_inferior(kTestSuspendOnStart, &sb, &inferior, &channel));
 
   // Attach to the inferior now because we want to see thread starting
   // exceptions.
@@ -81,12 +78,12 @@ TEST(SuspendOnStartTests, SuspendOnStartTest) {
       start_wait_inf_thread(inferior_data, suspend_on_start_test_handler, &test_state);
   EXPECT_NE(port, ZX_HANDLE_INVALID);
 
-  CHECK_HELPER(start_inferior(sb));
+  ASSERT_NO_FATAL_FAILURES(start_inferior(sb));
 
   // The remaining testing happens at this point as threads start.
   // This testing is done in |suspend_on_start_test_handler()|.
 
-  CHECK_HELPER(shutdown_inferior(channel, inferior));
+  ASSERT_NO_FATAL_FAILURES(shutdown_inferior(channel, inferior));
 
   // Stop the waiter thread before closing the port that it's waiting on.
   join_wait_inf_thread(wait_inf_thread);

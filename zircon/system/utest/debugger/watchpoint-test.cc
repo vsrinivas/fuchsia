@@ -97,9 +97,7 @@ zx_status_t unset_watchpoint(zx_handle_t thread_handle) {
 
 }  // namespace
 
-bool test_watchpoint_impl(zx_handle_t excp_channel) {
-  BEGIN_HELPER;
-
+void test_watchpoint_impl(zx_handle_t excp_channel) {
   gWatchpointThreadShouldContinue = true;
 
   thrd_t thread;
@@ -168,8 +166,6 @@ bool test_watchpoint_impl(zx_handle_t excp_channel) {
   int res = -1;
   ASSERT_EQ(thrd_join(thread, &res), thrd_success);
   ASSERT_EQ(res, 0);
-
-  END_HELPER;
 }
 
 TEST(WatchpointStartTests, WatchpointTest) {
@@ -179,7 +175,7 @@ TEST(WatchpointStartTests, WatchpointTest) {
   zx_handle_t excp_channel = ZX_HANDLE_INVALID;
   ASSERT_EQ(zx_task_create_exception_channel(zx_process_self(), 0, &excp_channel), ZX_OK);
 
-  EXPECT_TRUE(test_watchpoint_impl(excp_channel));
+  test_watchpoint_impl(excp_channel);
 
   zx_handle_close(excp_channel);
 }

@@ -153,26 +153,18 @@ bool recv_simple_response(zx_handle_t handle, response_t expected_type) {
   return true;
 }
 
-bool verify_inferior_running(zx_handle_t channel) {
-  BEGIN_HELPER;
-
+void verify_inferior_running(zx_handle_t channel) {
   send_simple_request(channel, RQST_PING);
   EXPECT_TRUE(recv_simple_response(channel, RESP_PONG), "");
-
-  END_HELPER;
 }
 
-bool get_inferior_thread_handle(zx_handle_t channel, zx_handle_t* thread) {
-  BEGIN_HELPER;
-
+void get_inferior_thread_handle(zx_handle_t channel, zx_handle_t* thread) {
   send_simple_request(channel, RQST_GET_THREAD_HANDLE);
   response_message_t response;
   ASSERT_TRUE(recv_response(channel, &response), "");
   ASSERT_EQ(response.type, RESP_THREAD_HANDLE, "");
   ASSERT_NE(response.handle, ZX_HANDLE_INVALID, "");
   *thread = response.handle;
-
-  END_HELPER;
 }
 
 static int phdr_info_callback(dl_phdr_info* info, size_t size, void* argp) {
@@ -186,9 +178,7 @@ static int phdr_info_callback(dl_phdr_info* info, size_t size, void* argp) {
 
 // Fetch the [inclusive] range of the executable segment of the vdso.
 
-bool get_vdso_exec_range(uintptr_t* start, uintptr_t* end) {
-  BEGIN_HELPER;
-
+void get_vdso_exec_range(uintptr_t* start, uintptr_t* end) {
   uintptr_t prop_vdso_base;
   zx_status_t status = zx_object_get_property(zx_process_self(), ZX_PROP_PROCESS_VDSO_BASE_ADDRESS,
                                               &prop_vdso_base, sizeof(prop_vdso_base));
@@ -213,8 +203,6 @@ bool get_vdso_exec_range(uintptr_t* start, uintptr_t* end) {
 
   *start = vdso_code_start;
   *end = vdso_code_start + vdso_code_len - 1;
-
-  END_HELPER;
 }
 
 struct find_so_callback_arg_t {
@@ -262,18 +250,14 @@ zx_vaddr_t get_libc_load_addr() {
   return info.dlpi_addr;
 }
 
-bool get_inferior_load_addrs(zx_handle_t channel, zx_vaddr_t* libc_load_addr,
+void get_inferior_load_addrs(zx_handle_t channel, zx_vaddr_t* libc_load_addr,
                              zx_vaddr_t* exec_load_addr) {
-  BEGIN_HELPER;
-
   send_simple_request(channel, RQST_GET_LOAD_ADDRS);
   response_message_t response;
   ASSERT_TRUE(recv_response(channel, &response), "");
   ASSERT_EQ(response.type, RESP_LOAD_ADDRS, "");
   *libc_load_addr = response.payload.load_addrs.libc_load_addr;
   *exec_load_addr = response.payload.load_addrs.exec_load_addr;
-
-  END_HELPER;
 }
 
 zx_vaddr_t get_libc_entry_point() {

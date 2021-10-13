@@ -42,10 +42,9 @@ struct dyn_break_on_load_state_t {
   int dyn_load_count = 0;
 };
 
-bool dyn_break_on_load_test_handler(inferior_data_t* data, const zx_port_packet_t* packet,
+void dyn_break_on_load_test_handler(inferior_data_t* data, const zx_port_packet_t* packet,
                                     void* handler_arg) {
   auto* test_state = reinterpret_cast<dyn_break_on_load_state_t*>(handler_arg);
-  BEGIN_HELPER;
 
   // This test is supposed to only get an exception and nothing else.
   zx_info_handle_basic_t basic_info;
@@ -113,14 +112,12 @@ bool dyn_break_on_load_test_handler(inferior_data_t* data, const zx_port_packet_
   uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
   status = exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
   ASSERT_EQ(status, ZX_OK);
-
-  END_HELPER;
 }
 
 TEST(DynBreakOnLoadTests, DynBreakOnLoadTest) {
   springboard_t* sb;
   zx_handle_t inferior, channel;
-  CHECK_HELPER(setup_inferior(kTestDynBreakOnLoad, &sb, &inferior, &channel));
+  ASSERT_NO_FATAL_FAILURES(setup_inferior(kTestDynBreakOnLoad, &sb, &inferior, &channel));
 
   dyn_break_on_load_state_t test_state = {};
   test_state.process_handle = inferior;
@@ -144,12 +141,12 @@ TEST(DynBreakOnLoadTests, DynBreakOnLoadTest) {
       start_wait_inf_thread(inferior_data, dyn_break_on_load_test_handler, &test_state);
   EXPECT_NE(port, ZX_HANDLE_INVALID);
 
-  CHECK_HELPER(start_inferior(sb));
+  ASSERT_NO_FATAL_FAILURES(start_inferior(sb));
 
   // The remaining testing happens at this point as threads start.
   // This testing is done in |dyn_break_on_load_test_handler()|.
 
-  CHECK_HELPER(shutdown_inferior(channel, inferior));
+  ASSERT_NO_FATAL_FAILURES(shutdown_inferior(channel, inferior));
 
   // Stop the waiter thread before closing the port that it's waiting on.
   join_wait_inf_thread(wait_inf_thread);

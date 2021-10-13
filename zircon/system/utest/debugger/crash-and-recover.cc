@@ -121,9 +121,7 @@ bool test_prep_and_segv() {
   return true;
 }
 
-bool test_segv_pc(zx_handle_t thread) {
-  BEGIN_HELPER;
-
+void test_segv_pc(zx_handle_t thread) {
   zx_thread_state_general_regs_t regs;
   read_inferior_gregs(thread, &regs);
 
@@ -132,13 +130,9 @@ bool test_segv_pc(zx_handle_t thread) {
 #elif defined(__aarch64__)
   ASSERT_EQ(regs.pc, regs.r[10], "fault PC does not match x10");
 #endif
-
-  END_HELPER;
 }
 
-bool test_memory_ops(zx_handle_t inferior, zx_handle_t thread) {
-  BEGIN_HELPER;
-
+void test_memory_ops(zx_handle_t inferior, zx_handle_t thread) {
   uint64_t test_data_addr = 0;
   uint8_t test_data[kTestMemorySize];
 
@@ -166,7 +160,6 @@ bool test_memory_ops(zx_handle_t inferior, zx_handle_t thread) {
   EXPECT_EQ(size, sizeof(test_data), "write_inferior_memory: short write");
 
   // Note: Verification of the write is done in the inferior.
-  END_HELPER;
 }
 
 void fix_inferior_segv(zx_handle_t thread) {

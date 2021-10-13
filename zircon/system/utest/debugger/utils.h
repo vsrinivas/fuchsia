@@ -99,11 +99,11 @@ bool recv_response(zx_handle_t handle, response_message_t* resp);
 
 bool recv_simple_response(zx_handle_t handle, response_t expected_type);
 
-bool verify_inferior_running(zx_handle_t channel);
+void verify_inferior_running(zx_handle_t channel);
 
-bool get_inferior_thread_handle(zx_handle_t channel, zx_handle_t* thread);
+void get_inferior_thread_handle(zx_handle_t channel, zx_handle_t* thread);
 
-bool get_vdso_exec_range(uintptr_t* start, uintptr_t* end);
+void get_vdso_exec_range(uintptr_t* start, uintptr_t* end);
 
 // Return executable's load address.
 zx_vaddr_t get_exec_load_addr();
@@ -112,25 +112,10 @@ zx_vaddr_t get_exec_load_addr();
 zx_vaddr_t get_libc_load_addr();
 
 // Fetch the inferior's libc and exec load addresses.
-bool get_inferior_load_addrs(zx_handle_t channel, zx_vaddr_t* libc_load_addr,
+void get_inferior_load_addrs(zx_handle_t channel, zx_vaddr_t* libc_load_addr,
                              zx_vaddr_t* exec_load_addr);
 
 // Return libc's entry point as found in its in-process ELF header.
 zx_vaddr_t get_libc_entry_point();
-
-// These macros help adapt test code written for the unittest library
-// to work with the zxtest library.  Using BEGIN_HELPER/END_HELPER in
-// a function allows the function to have a bool return type while
-// containing uses of zxtest's ASSERT_*() macros (which do "return;"
-// and hence assume a void return type).
-//
-// TODO(fxbug.dev/51652): Remove these macros and replace uses of
-// CHECK_HELPER() with uses of ASSERT_NO_FATAL_FAILURE.
-#define BEGIN_HELPER [&] {
-#define END_HELPER \
-  }                \
-  ();              \
-  return !CURRENT_TEST_HAS_FATAL_FAILURES();
-#define CHECK_HELPER(expr) ASSERT_TRUE(expr)
 
 #endif  // ZIRCON_SYSTEM_UTEST_DEBUGGER_UTILS_H_

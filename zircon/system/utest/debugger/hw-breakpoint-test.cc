@@ -65,9 +65,7 @@ zx_status_t unset_hw_breakpoint(zx_handle_t thread_handle) {
                                sizeof(debug_regs));
 }
 
-bool test_hw_breakpoint_impl(zx_handle_t excp_channel) {
-  BEGIN_HELPER;
-
+void test_hw_breakpoint_impl(zx_handle_t excp_channel) {
   gBreakpointThreadShouldContinue = false;
 
   thrd_t thread;
@@ -129,8 +127,6 @@ bool test_hw_breakpoint_impl(zx_handle_t excp_channel) {
   int res = -1;
   ASSERT_EQ(thrd_join(thread, &res), thrd_success);
   ASSERT_EQ(res, 0);
-
-  END_HELPER;
 }
 
 }  // namespace
@@ -147,7 +143,7 @@ TEST(HwBreakpointStartTests, HWBreakpointTest) {
   zx_handle_t excp_channel = ZX_HANDLE_INVALID;
   ASSERT_EQ(zx_task_create_exception_channel(zx_process_self(), 0, &excp_channel), ZX_OK);
 
-  EXPECT_TRUE(test_hw_breakpoint_impl(excp_channel));
+  test_hw_breakpoint_impl(excp_channel);
 
   zx_handle_close(excp_channel);
 }
