@@ -17,7 +17,6 @@ executable("bin") {
    "//sdk/lib/fidl/cpp",
    "//sdk/lib/sys/cpp",
    "//sdk/lib/sys/cpp/testing:realm_builder",
-   "//src/lib/fuchsia-component-test/fidl:fuchsia.realm.builder",
    "//src/lib/fxl/test:gtest_main",
  ]
 }
