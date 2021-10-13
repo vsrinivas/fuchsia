@@ -5,8 +5,8 @@
 use {
     crate::flags::Rights,
     fidl::endpoints::{create_proxy, ClientEnd},
-    fidl_fuchsia_io as io, fidl_fuchsia_io_test as io_test, fidl_fuchsia_sys2 as fsys,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_io as io, fidl_fuchsia_io_test as io_test, fuchsia_zircon as zx,
 };
 
 /// Helper struct for connecting to an io1 test harness and running a conformance test on it.
@@ -75,11 +75,11 @@ impl TestHarness {
 async fn connect_to_harness() -> io_test::Io1HarnessProxy {
     // Connect to the realm to get acccess to the outgoing directory for the harness.
     let (client, server) = zx::Channel::create().expect("Cannot create channel");
-    fuchsia_component::client::connect_channel_to_protocol::<fsys::RealmMarker>(server)
+    fuchsia_component::client::connect_channel_to_protocol::<fcomponent::RealmMarker>(server)
         .expect("Cannot connect to Realm service");
-    let realm = fsys::RealmSynchronousProxy::new(client);
+    let realm = fcomponent::RealmSynchronousProxy::new(client);
     // fs_test is the name of the child component defined in the manifest.
-    let mut child_ref = fsys::ChildRef { name: "fs_test".to_string(), collection: None };
+    let mut child_ref = fdecl::ChildRef { name: "fs_test".to_string(), collection: None };
     let (client, server) = zx::Channel::create().expect("Cannot create channel");
     realm
         .open_exposed_dir(

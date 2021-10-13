@@ -6,7 +6,8 @@
 #define SRC_STORAGE_FSHOST_FSHOST_INTEGRATION_TEST_H_
 
 #include <fidl/fuchsia.fshost/cpp/wire.h>
-#include <fuchsia/sys2/cpp/fidl.h>
+#include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/component/decl/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 
 #include <string_view>
@@ -38,7 +39,7 @@ class FshostIntegrationTest : public testing::Test {
 
  private:
   fidl::SynchronousInterfacePtr<fuchsia::io::Directory> exposed_dir_;
-  fidl::SynchronousInterfacePtr<fuchsia::sys2::Realm> realm_;
+  fidl::SynchronousInterfacePtr<fuchsia::component::Realm> realm_;
   zx::channel watcher_channel_;
 };
 

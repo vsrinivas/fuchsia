@@ -21,10 +21,6 @@
             ],
         },
         {
-            protocol: "fuchsia.sys2.Realm",
-            from: "framework",
-        },
-        {
             directory: "deprecated-tmp",
             rights: [
                 "admin",

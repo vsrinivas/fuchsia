@@ -10,24 +10,24 @@
 namespace fshost {
 
 void FshostIntegrationTest::SetUp() {
-  std::string service_name = std::string("/svc/") + fuchsia::sys2::Realm::Name_;
+  std::string service_name = std::string("/svc/") + fuchsia::component::Realm::Name_;
   auto status = zx::make_status(
       fdio_service_connect(service_name.c_str(), realm_.NewRequest().TakeChannel().get()));
   ASSERT_TRUE(status.is_ok());
 
-  fuchsia::sys2::Realm_CreateChild_Result create_result;
-  fuchsia::sys2::ChildDecl child_decl;
+  fuchsia::component::Realm_CreateChild_Result create_result;
+  fuchsia::component::decl::Child child_decl;
   child_decl.set_name("test-fshost")
       .set_url("fuchsia-pkg://fuchsia.com/fshost-tests#meta/test-fshost.cm")
-      .set_startup(fuchsia::sys2::StartupMode::LAZY);
-  status = zx::make_status(
-      realm_->CreateChild(fuchsia::sys2::CollectionRef{.name = "fshost-collection"},
-                          std::move(child_decl), fuchsia::sys2::CreateChildArgs(), &create_result));
+      .set_startup(fuchsia::component::decl::StartupMode::LAZY);
+  status = zx::make_status(realm_->CreateChild(
+      fuchsia::component::decl::CollectionRef{.name = "fshost-collection"}, std::move(child_decl),
+      fuchsia::component::CreateChildArgs(), &create_result));
   ASSERT_TRUE(status.is_ok() && !create_result.is_err());
 
-  fuchsia::sys2::Realm_OpenExposedDir_Result bind_result;
+  fuchsia::component::Realm_OpenExposedDir_Result bind_result;
   status = zx::make_status(realm_->OpenExposedDir(
-      fuchsia::sys2::ChildRef{.name = "test-fshost", .collection = "fshost-collection"},
+      fuchsia::component::decl::ChildRef{.name = "test-fshost", .collection = "fshost-collection"},
       exposed_dir_.NewRequest(), &bind_result));
   ASSERT_TRUE(status.is_ok() && !bind_result.is_err());
 
@@ -46,9 +46,9 @@ void FshostIntegrationTest::SetUp() {
 }
 
 void FshostIntegrationTest::TearDown() {
-  fuchsia::sys2::Realm_DestroyChild_Result destroy_result;
+  fuchsia::component::Realm_DestroyChild_Result destroy_result;
   auto status = zx::make_status(realm_->DestroyChild(
-      fuchsia::sys2::ChildRef{.name = "test-fshost", .collection = "fshost-collection"},
+      fuchsia::component::decl::ChildRef{.name = "test-fshost", .collection = "fshost-collection"},
       &destroy_result));
   ASSERT_TRUE(status.is_ok() && !destroy_result.is_err());
 }

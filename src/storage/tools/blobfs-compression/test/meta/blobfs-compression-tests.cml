@@ -18,9 +18,5 @@
                 "fuchsia.sys.Launcher",
             ],
         },
-        {
-            protocol: "fuchsia.sys2.Realm",
-            from: "framework",
-        },
     ],
 }

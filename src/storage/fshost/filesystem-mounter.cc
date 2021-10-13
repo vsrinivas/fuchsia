@@ -6,7 +6,6 @@
 
 #include <dirent.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fidl/fuchsia.sys2/cpp/wire.h>
 #include <fidl/fuchsia.update.verify/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/inspect/service/cpp/service.h>
