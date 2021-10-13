@@ -315,16 +315,20 @@ def get_component_payload(content, moniker):
     if component['moniker'] == moniker:
       result = component['payload']
   if not result:
-    raise ProcessError('Could not find payload for appmgr')
+    raise ProcessError('Could not find payload for %s' % moniker)
   return result
 
 
 def get_v1_samples(content):
-  appmgr = get_component_payload(content, 'core/appmgr')
   try:
+    appmgr = get_component_payload(content, 'core/appmgr')
     measurements = appmgr['root']['cpu_stats']['measurements']['root']
   except KeyError as e:
     raise ProcessError(f'Missing key: {e}')
+  except ProcessError:
+    # Appmgr is missing, print a warning and continue.
+    print("Missing appmgr inspect, skipping", file=sys.stderr)
+    return defaultdict(lambda: defaultdict())
 
   # Map from name to timestamp to sample
   samples = defaultdict(lambda: defaultdict())
@@ -347,11 +351,15 @@ def get_v1_samples(content):
   return samples
 
 def get_v2_samples(content):
-  component_manager = get_component_payload(content, '<component_manager>')
   try:
+    component_manager = get_component_payload(content, '<component_manager>')
     components = component_manager['root']['cpu_stats']['measurements']['components']
   except KeyError as e:
     raise ProcessError(f'Missing key: {e}')
+  except ProcessError:
+    # Component manager is missing, print a warning and continue.
+    print("Missing component manager inspect, skipping", file=sys.stderr)
+    return defaultdict(lambda: defaultdict())
 
   # Map from name to timestamp to sample
   samples = defaultdict(lambda: defaultdict())
