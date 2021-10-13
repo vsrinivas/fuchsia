@@ -5,7 +5,8 @@
 use {
     crate::{input_actor::InputActor, session::Session, session_actor::SessionActor, Args},
     async_trait::async_trait,
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fidl_fuchsia_ui_scenic as fscenic,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_io as fio, fidl_fuchsia_ui_scenic as fscenic,
     fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_dir_root},
     futures::lock::Mutex,
     rand::{rngs::SmallRng, Rng, SeedableRng},
@@ -24,9 +25,9 @@ pub struct ScenicEnvironment {
 impl ScenicEnvironment {
     pub async fn new(args: Args) -> Self {
         // Bind to the scenic component, causing it to start
-        let realm_svc =
-            connect_to_protocol::<fsys::RealmMarker>().expect("Could not connect to Realm service");
-        let mut child = fsys::ChildRef { name: "scenic".to_string(), collection: None };
+        let realm_svc = connect_to_protocol::<fcomponent::RealmMarker>()
+            .expect("Could not connect to Realm service");
+        let mut child = fdecl::ChildRef { name: "scenic".to_string(), collection: None };
 
         // Create endpoints for the fuchsia.io.Directory protocol.
         // Component manager will connect us to the exposed directory of the component we bound to.
