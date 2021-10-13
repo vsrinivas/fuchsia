@@ -7,6 +7,7 @@ use {
     std::time::Duration,
 };
 
+mod component;
 mod config;
 mod daemon;
 mod experiment;
@@ -32,6 +33,7 @@ pub async fn selftest(cmd: SelftestCommand) -> Result<()> {
     ];
 
     let mut target_tests = tests![
+        component::include_target::test_list,
         target::include_target::test_list,
         target::include_target::test_get_ssh_address_includes_port
     ];
