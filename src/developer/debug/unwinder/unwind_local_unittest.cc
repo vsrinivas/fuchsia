@@ -23,7 +23,8 @@ constexpr size_t kFunctionSize = 0x80;
 
 }  // namespace
 
-TEST(Unwinder, UnwindLocal) {
+// TODO(fxbug.dev/80656): Fix issues and enable this test.
+TEST(Unwinder, DISABLED_UnwindLocal) {
   auto frames = f3();
 
   for (auto& frame : frames) {
