@@ -11,6 +11,7 @@ use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
     fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
+    fidl_fuchsia_component::{RealmMarker, RealmProxy},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_pkg::{
         ExperimentToggle as Experiment, FontResolverMarker, FontResolverProxy, PackageCacheMarker,
@@ -22,7 +23,6 @@ use {
         EngineMarker as RewriteEngineMarker, EngineProxy as RewriteEngineProxy,
     },
     fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
-    fidl_fuchsia_sys2::{RealmMarker, RealmProxy},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
@@ -526,7 +526,7 @@ where
             // Route the Realm protocol from the pkg_resolver_wrapper so that
             // the test can control starting and stopping pkg-resolver.
             .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.sys2.Realm"),
+                capability: Capability::protocol("fuchsia.component.Realm"),
                 source: RouteEndpoint::component("pkg_resolver_wrapper"),
                 targets: vec![
                     RouteEndpoint::AboveRoot,

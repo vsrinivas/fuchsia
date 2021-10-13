@@ -47,7 +47,7 @@
     expose: [
         {
             // Expose the ability to start and stop components in the pkg-resolver-coll collection.
-            protocol: "fuchsia.sys2.Realm",
+            protocol: "fuchsia.component.Realm",
             from: "framework",
         },
     ],

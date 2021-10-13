@@ -5,7 +5,8 @@
 #ifndef LIB_SYS_CPP_TESTING_SCOPED_CHILD_H_
 #define LIB_SYS_CPP_TESTING_SCOPED_CHILD_H_
 
-#include <fuchsia/sys2/cpp/fidl.h>
+#include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/component/decl/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/status.h>
@@ -19,17 +20,17 @@ namespace sys::testing {
 // will automatically destroy the child component once it goes out of scope.
 class ScopedChild {
  public:
-  // Create a dynamic child component using the fuchsia.sys2.Realm API.
+  // Create a dynamic child component using the fuchsia.component.Realm API.
   // |realm_proxy| must be bound to a connection to the fuchsia.sys2.Realm protocol.
   // |collection| is the name of the collection to create the child under. This
   // field must refer to a name in the current component's manifest file.
   // |name| is the name to assign to the child.
   // |url| is the component component URL of the child component.
-  static ScopedChild New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
+  static ScopedChild New(fuchsia::component::RealmSyncPtr realm_proxy, std::string collection,
                          std::string name, std::string url);
 
   // Same as above with a randomly generated `name`.
-  static ScopedChild New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
+  static ScopedChild New(fuchsia::component::RealmSyncPtr realm_proxy, std::string collection,
                          std::string url);
 
   ~ScopedChild();
@@ -90,11 +91,11 @@ class ScopedChild {
   std::string GetChildName() const;
 
  private:
-  explicit ScopedChild(fuchsia::sys2::RealmSyncPtr, fuchsia::sys2::ChildRef child_ref_,
-                       ServiceDirectory exposed_dir);
+  explicit ScopedChild(fuchsia::component::RealmSyncPtr,
+                       fuchsia::component::decl::ChildRef child_ref_, ServiceDirectory exposed_dir);
 
-  fuchsia::sys2::RealmSyncPtr realm_proxy_;
-  fuchsia::sys2::ChildRef child_ref_;
+  fuchsia::component::RealmSyncPtr realm_proxy_;
+  fuchsia::component::decl::ChildRef child_ref_;
   ServiceDirectory exposed_dir_;
   bool has_moved_;
 };

@@ -6,13 +6,13 @@ use anyhow::{anyhow, format_err, Context, Error};
 use fidl::endpoints::ServerEnd;
 use fidl::HandleBased;
 use fidl_fuchsia_component as fcomponent;
+use fidl_fuchsia_component_decl as fdecl;
 use fidl_fuchsia_component_runner::{
     self as fcrunner, ComponentControllerMarker, ComponentStartInfo,
 };
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_process as fprocess;
 use fidl_fuchsia_starnix_developer as fstardev;
-use fidl_fuchsia_sys2 as fsys;
 use fuchsia_async as fasync;
 use fuchsia_component::client as fclient;
 use fuchsia_runtime::{HandleInfo, HandleType};
@@ -419,22 +419,22 @@ pub async fn start_runner(
     Ok(())
 }
 
-async fn start(url: String, args: fsys::CreateChildArgs) -> Result<(), Error> {
+async fn start(url: String, args: fcomponent::CreateChildArgs) -> Result<(), Error> {
     // TODO(fxbug.dev/74511): The amount of setup required here is a bit lengthy. Ideally,
     // fuchsia-component would provide native bindings for the Realm API that could reduce this
     // logic to a few lines.
 
     const COLLECTION: &str = "playground";
     let realm = fclient::realm().context("failed to connect to Realm service")?;
-    let mut collection_ref = fsys::CollectionRef { name: COLLECTION.into() };
+    let mut collection_ref = fdecl::CollectionRef { name: COLLECTION.into() };
     let id: u64 = rand::thread_rng().gen();
     let child_name = format!("starnix-{}", id);
-    let child_decl = fsys::ChildDecl {
+    let child_decl = fdecl::Child {
         name: Some(child_name.clone()),
         url: Some(url),
-        startup: Some(fsys::StartupMode::Lazy),
+        startup: Some(fdecl::StartupMode::Lazy),
         environment: None,
-        ..fsys::ChildDecl::EMPTY
+        ..fdecl::Child::EMPTY
     };
     let () = realm
         .create_child(&mut collection_ref, child_decl, args)
@@ -469,9 +469,9 @@ pub async fn start_manager(
     while let Some(event) = request_stream.try_next().await? {
         match event {
             fstardev::ManagerRequest::Start { url, responder } => {
-                let args = fsys::CreateChildArgs {
+                let args = fcomponent::CreateChildArgs {
                     numbered_handles: None,
-                    ..fsys::CreateChildArgs::EMPTY
+                    ..fcomponent::CreateChildArgs::EMPTY
                 };
                 if let Err(e) = start(url, args).await {
                     error!("failed to start component: {}", e);
@@ -489,9 +489,9 @@ pub async fn start_manager(
                     handle_info_from_socket(params.standard_err, 2)?,
                     controller_handle_info,
                 ];
-                let args = fsys::CreateChildArgs {
+                let args = fcomponent::CreateChildArgs {
                     numbered_handles: Some(numbered_handles),
-                    ..fsys::CreateChildArgs::EMPTY
+                    ..fcomponent::CreateChildArgs::EMPTY
                 };
                 if let Err(e) = start(
                     "fuchsia-pkg://fuchsia.com/test_android_distro#meta/sh.cm".to_string(),

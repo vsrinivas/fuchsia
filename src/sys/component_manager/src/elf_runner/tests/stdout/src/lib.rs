@@ -7,7 +7,7 @@ use {
     diagnostics_data::{Data, Logs, Severity},
     diagnostics_reader::{ArchiveReader, SubscriptionResultsStream},
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_async::Task,
@@ -146,23 +146,23 @@ async fn launch_embedded_archivist() -> SubscriptionResultsStream<Logs> {
     subscription
 }
 
-async fn start_child_component(realm: &fsys::RealmProxy, component: &Component) {
-    let mut collection_ref = fsys::CollectionRef { name: COLLECTION_NAME.to_owned() };
-    let child_decl = fsys::ChildDecl {
+async fn start_child_component(realm: &fcomponent::RealmProxy, component: &Component) {
+    let mut collection_ref = fdecl::CollectionRef { name: COLLECTION_NAME.to_owned() };
+    let child_decl = fdecl::Child {
         name: Some(component.moniker.to_owned()),
         url: Some(component.url.to_owned()),
-        startup: Some(fsys::StartupMode::Lazy),
+        startup: Some(fdecl::StartupMode::Lazy),
         environment: None,
-        ..fsys::ChildDecl::EMPTY
+        ..fdecl::Child::EMPTY
     };
 
     realm
-        .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
+        .create_child(&mut collection_ref, child_decl, fcomponent::CreateChildArgs::EMPTY)
         .await
         .expect("Failed to make FIDL call")
         .expect("Failed to create child");
 
-    let mut child_ref = fsys::ChildRef {
+    let mut child_ref = fdecl::ChildRef {
         name: component.moniker.to_owned(),
         collection: Some(COLLECTION_NAME.to_owned()),
     };

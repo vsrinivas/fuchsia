@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/component/cpp/fidl.h>
-#include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>

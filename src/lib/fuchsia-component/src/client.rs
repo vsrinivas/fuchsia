@@ -11,13 +11,14 @@ use {
         DiscoverableProtocolMarker, MemberOpener, ProtocolMarker, Proxy, ServerEnd, ServiceMarker,
         ServiceProxy,
     },
+    fidl_fuchsia_component::{RealmMarker, RealmProxy},
+    fidl_fuchsia_component_decl::ChildRef,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys::{
         ComponentControllerEvent, ComponentControllerEventStream, ComponentControllerProxy,
         FileDescriptor, FlatNamespace, LaunchInfo, LauncherMarker, LauncherProxy, ServiceList,
         TerminationReason,
     },
-    fidl_fuchsia_sys2::{ChildRef, RealmMarker, RealmProxy},
     fuchsia_async as fasync,
     fuchsia_runtime::HandleType,
     fuchsia_zircon::{self as zx, Socket, SocketOpts},
@@ -312,7 +313,7 @@ pub fn open_service<S: ServiceMarker>() -> Result<DirectoryProxy, Error> {
 }
 
 /// Opens the exposed directory from a child. Only works in CFv2, and only works if this component
-/// uses `fuchsia.sys2.Realm`.
+/// uses `fuchsia.component.Realm`.
 pub async fn open_childs_exposed_directory(
     child_name: impl Into<String>,
     collection_name: Option<String>,

@@ -5,9 +5,9 @@
 #ifndef LIB_SYS_CPP_TESTING_REALM_BUILDER_H_
 #define LIB_SYS_CPP_TESTING_REALM_BUILDER_H_
 
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/io2/cpp/fidl.h>
 #include <fuchsia/realm/builder/cpp/fidl.h>
-#include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/internal/mock_runner.h>
@@ -124,13 +124,13 @@ class Realm::Builder {
   Realm Build(async_dispatcher* dispatcher = nullptr);
 
  private:
-  Builder(fuchsia::sys2::RealmSyncPtr realm_proxy,
+  Builder(fuchsia::component::RealmSyncPtr realm_proxy,
           fuchsia::realm::builder::FrameworkIntermediarySyncPtr framework_intermediary_proxy,
           ServiceDirectory framework_intermediary_exposed_dir,
           std::unique_ptr<internal::MockRunner> mock_runner);
 
   bool realm_commited_;
-  fuchsia::sys2::RealmSyncPtr realm_proxy_;
+  fuchsia::component::RealmSyncPtr realm_proxy_;
   fuchsia::realm::builder::FrameworkIntermediarySyncPtr framework_intermediary_proxy_;
   ServiceDirectory framework_intermediary_exposed_dir_;
   std::unique_ptr<internal::MockRunner> mock_runner_;

@@ -20,6 +20,7 @@ if (target_cpu == "x64") {
     source_root = "main.rs"
     deps = [
       "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+      "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
       "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
       "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
       "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",

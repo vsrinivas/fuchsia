@@ -1,7 +1,7 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/elf_runner_stdout",
@@ -15,7 +15,7 @@
     use: [
         { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
         {
-            protocol: "fuchsia.sys2.Realm",
+            protocol: "fuchsia.component.Realm",
             from: "framework",
         },
         { protocol: "fuchsia.sys2.EventSource" },

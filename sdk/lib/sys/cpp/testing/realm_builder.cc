@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/component/decl/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/realm/builder/cpp/fidl.h>
-#include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
@@ -124,7 +124,7 @@ zx_status_t Realm::Connect(const std::string& interface_name, zx::channel reques
 std::string Realm::GetChildName() const { return root_.GetChildName(); }
 
 Realm::Builder::Builder(
-    fuchsia::sys2::RealmSyncPtr realm_proxy,
+    fuchsia::component::RealmSyncPtr realm_proxy,
     fuchsia::realm::builder::FrameworkIntermediarySyncPtr framework_intermediary_proxy,
     sys::ServiceDirectory framework_intermediary_exposed_dir,
     std::unique_ptr<internal::MockRunner> mock_runner_server)
@@ -199,7 +199,7 @@ Realm::Builder Realm::Builder::New(const sys::ComponentContext* context) {
   ZX_ASSERT_MSG(context != nullptr, "context passed to RealmBuilder::New() must not be nullptr");
   fuchsia::realm::builder::FrameworkIntermediarySyncPtr framework_intermediary_proxy;
   auto realm_proxy = internal::CreateRealmPtr(context);
-  auto child_ref = fuchsia::sys2::ChildRef{.name = kFrameworkIntermediaryChildName};
+  auto child_ref = fuchsia::component::decl::ChildRef{.name = kFrameworkIntermediaryChildName};
   auto exposed_dir = internal::OpenExposedDir(realm_proxy.get(), child_ref);
   exposed_dir.Connect(framework_intermediary_proxy.NewRequest());
   fuchsia::realm::builder::FrameworkIntermediary_Init_Result result;

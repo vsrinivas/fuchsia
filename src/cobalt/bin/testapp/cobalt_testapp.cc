@@ -24,7 +24,7 @@
 #include <string>
 #include <thread>
 
-#include "fuchsia/sys2/cpp/fidl.h"
+#include "fuchsia/component/cpp/fidl.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/sys/cpp/component_context.h"
@@ -115,9 +115,9 @@ bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days,
 }
 
 sys::testing::ScopedChild CobaltTestApp::Connect(const std::string &variant) {
-  fuchsia::sys2::RealmSyncPtr realm_proxy;
+  fuchsia::component::RealmSyncPtr realm_proxy;
   FX_CHECK(ZX_OK == context_->svc()->Connect(realm_proxy.NewRequest()))
-      << "Failed to connect to fuchsia.sys2.Realm";
+      << "Failed to connect to fuchsia.component.Realm";
 
   auto child = sys::testing::ScopedChild::New(
       std::move(realm_proxy), "fuchsia_component_test_collection",

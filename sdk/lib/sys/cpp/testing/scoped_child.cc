@@ -4,9 +4,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/component/decl/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/realm/builder/cpp/fidl.h>
-#include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
 #include <lib/sys/cpp/component_context.h>
@@ -33,8 +33,8 @@ std::size_t random_unsigned() {
 }
 }  // namespace
 
-ScopedChild::ScopedChild(fuchsia::sys2::RealmSyncPtr realm_proxy, fuchsia::sys2::ChildRef child_ref,
-                         ServiceDirectory exposed_dir)
+ScopedChild::ScopedChild(fuchsia::component::RealmSyncPtr realm_proxy,
+                         fuchsia::component::decl::ChildRef child_ref, ServiceDirectory exposed_dir)
     : realm_proxy_(std::move(realm_proxy)),
       child_ref_(std::move(child_ref)),
       exposed_dir_(std::move(exposed_dir)),
@@ -64,19 +64,20 @@ ScopedChild& ScopedChild::operator=(ScopedChild&& other) noexcept {
   return *this;
 }
 
-ScopedChild ScopedChild::New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
+ScopedChild ScopedChild::New(fuchsia::component::RealmSyncPtr realm_proxy, std::string collection,
                              std::string url) {
   std::string name = "auto-" + std::to_string(random_unsigned());
   return New(std::move(realm_proxy), std::move(collection), std::move(name), std::move(url));
 }
 
-ScopedChild ScopedChild::New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
+ScopedChild ScopedChild::New(fuchsia::component::RealmSyncPtr realm_proxy, std::string collection,
                              std::string name, std::string url) {
   internal::CreateChild(realm_proxy.get(), collection, name, std::move(url));
   auto exposed_dir = internal::OpenExposedDir(
-      realm_proxy.get(), fuchsia::sys2::ChildRef{.name = name, .collection = collection});
+      realm_proxy.get(),
+      fuchsia::component::decl::ChildRef{.name = name, .collection = collection});
   return ScopedChild(std::move(realm_proxy),
-                     fuchsia::sys2::ChildRef{.name = name, .collection = collection},
+                     fuchsia::component::decl::ChildRef{.name = name, .collection = collection},
                      std::move(exposed_dir));
 }
 

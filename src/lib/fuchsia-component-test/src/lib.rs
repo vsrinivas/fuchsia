@@ -11,9 +11,9 @@ use {
         matcher::EventMatcher,
     },
     fidl::endpoints::{self, ClientEnd, DiscoverableProtocolMarker, Proxy, ServerEnd},
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
-    fidl_fuchsia_io2 as fio2, fidl_fuchsia_realm_builder as frealmbuilder,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_realm_builder as frealmbuilder, fuchsia_async as fasync,
     fuchsia_component::client as fclient,
     fuchsia_zircon as zx,
     futures::{FutureExt, TryFutureExt},
@@ -338,13 +338,13 @@ pub struct Realm {
 
 impl Realm {
     pub async fn new() -> Result<Self, Error> {
-        let realm_proxy = fclient::connect_to_protocol::<fsys::RealmMarker>()
+        let realm_proxy = fclient::connect_to_protocol::<fcomponent::RealmMarker>()
             .map_err(RealmError::ConnectToRealmService)?;
         let (exposed_dir_proxy, exposed_dir_server_end) =
             endpoints::create_proxy::<fio::DirectoryMarker>().map_err(RealmError::CreateProxy)?;
         realm_proxy
             .open_exposed_dir(
-                &mut fsys::ChildRef {
+                &mut fdecl::ChildRef {
                     name: FRAMEWORK_INTERMEDIARY_CHILD_NAME.to_string(),
                     collection: None,
                 },
@@ -617,7 +617,7 @@ impl Realm {
 
 /// Manages the creation of new components within a collection.
 pub struct ScopedInstanceFactory {
-    realm_proxy: Option<fsys::RealmProxy>,
+    realm_proxy: Option<fcomponent::RealmProxy>,
     collection_name: String,
 }
 
@@ -630,7 +630,7 @@ impl ScopedInstanceFactory {
     /// Use `realm_proxy` instead of the fuchsia.sys2.Realm protocol in this component's
     /// incoming namespace. This can be used to start component's in a collection belonging
     /// to another component.
-    pub fn with_realm_proxy(mut self, realm_proxy: fsys::RealmProxy) -> Self {
+    pub fn with_realm_proxy(mut self, realm_proxy: fcomponent::RealmProxy) -> Self {
         self.realm_proxy = Some(realm_proxy);
         self
     }
@@ -666,21 +666,23 @@ impl ScopedInstanceFactory {
             fclient::realm().context("Failed to connect to Realm service")?
         };
         let child_name = child_name.into();
-        let mut collection_ref = fsys::CollectionRef { name: self.collection_name.clone() };
-        let child_decl = fsys::ChildDecl {
+        let mut collection_ref = fdecl::CollectionRef { name: self.collection_name.clone() };
+        let child_decl = fdecl::Child {
             name: Some(child_name.clone()),
             url: Some(url.into()),
-            startup: Some(fsys::StartupMode::Lazy),
-            ..fsys::ChildDecl::EMPTY
+            startup: Some(fdecl::StartupMode::Lazy),
+            ..fdecl::Child::EMPTY
         };
-        let child_args =
-            fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
+        let child_args = fcomponent::CreateChildArgs {
+            numbered_handles: None,
+            ..fcomponent::CreateChildArgs::EMPTY
+        };
         let () = realm
             .create_child(&mut collection_ref, child_decl, child_args)
             .await
             .context("CreateChild FIDL failed.")?
             .map_err(|e| format_err!("Failed to create child: {:?}", e))?;
-        let mut child_ref = fsys::ChildRef {
+        let mut child_ref = fdecl::ChildRef {
             name: child_name.clone(),
             collection: Some(self.collection_name.clone()),
         };
@@ -705,7 +707,7 @@ impl ScopedInstanceFactory {
 /// functions for using the instance. Components v2 only.
 #[must_use = "Dropping `ScopedInstance` will cause the component instance to be stopped and destroyed."]
 pub struct ScopedInstance {
-    realm: fsys::RealmProxy,
+    realm: fcomponent::RealmProxy,
     child_name: String,
     collection: String,
     exposed_dir: fio::DirectoryProxy,
@@ -862,7 +864,7 @@ impl Drop for ScopedInstance {
     fn drop(&mut self) {
         let Self { realm, collection, child_name, destroy_channel, exposed_dir: _ } = self;
         let mut child_ref =
-            fsys::ChildRef { name: child_name.clone(), collection: Some(collection.clone()) };
+            fdecl::ChildRef { name: child_name.clone(), collection: Some(collection.clone()) };
         // DestroyChild also stops the component.
         //
         // Calling destroy child within drop guarantees that the message
@@ -1006,7 +1008,7 @@ mod tests {
 
         let realm_proxy = fclient::realm().expect("failed to connect to realm");
         realm_proxy
-            .destroy_child(&mut fsys::ChildRef {
+            .destroy_child(&mut fdecl::ChildRef {
                 name: realm_instance.root.child_name.clone(),
                 collection: Some(DEFAULT_COLLECTION_NAME.to_string()),
             })
@@ -1041,7 +1043,7 @@ mod tests {
 
         let realm_proxy = fclient::realm().expect("failed to connect to realm");
         realm_proxy
-            .destroy_child(&mut fsys::ChildRef {
+            .destroy_child(&mut fdecl::ChildRef {
                 name: realm_instance.root.child_name.clone(),
                 collection: Some(DEFAULT_COLLECTION_NAME.to_string()),
             })
