@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys};
+use {
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_io as fio,
+};
 
 /// Creates a child in the specified `Realm`.
 ///
@@ -18,18 +21,20 @@ pub async fn create_child_component(
     child_name: &str,
     child_url: &str,
     collection_name: &str,
-    realm: &fsys::RealmProxy,
+    realm: &fcomponent::RealmProxy,
 ) -> Result<(), fcomponent::Error> {
-    let mut collection_ref = fsys::CollectionRef { name: collection_name.to_string() };
-    let child_decl = fsys::ChildDecl {
+    let mut collection_ref = fdecl::CollectionRef { name: collection_name.to_string() };
+    let child_decl = fdecl::Child {
         name: Some(child_name.to_string()),
         url: Some(child_url.to_string()),
-        startup: Some(fsys::StartupMode::Lazy), // Dynamic children can only be started lazily.
+        startup: Some(fdecl::StartupMode::Lazy), // Dynamic children can only be started lazily.
         environment: None,
-        ..fsys::ChildDecl::EMPTY
+        ..fdecl::Child::EMPTY
     };
-    let child_args =
-        fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
+    let child_args = fcomponent::CreateChildArgs {
+        numbered_handles: None,
+        ..fcomponent::CreateChildArgs::EMPTY
+    };
     realm
         .create_child(&mut collection_ref, child_decl, child_args)
         .await
@@ -53,9 +58,9 @@ pub async fn create_child_component(
 pub async fn open_child_component_exposed_dir(
     child_name: &str,
     collection_name: &str,
-    realm: &fsys::RealmProxy,
+    realm: &fcomponent::RealmProxy,
 ) -> Result<fio::DirectoryProxy, fcomponent::Error> {
-    let mut child_ref = fsys::ChildRef {
+    let mut child_ref = fdecl::ChildRef {
         name: child_name.to_string(),
         collection: Some(collection_name.to_string()),
     };
@@ -83,9 +88,9 @@ pub async fn open_child_component_exposed_dir(
 pub async fn destroy_child_component(
     child_name: &str,
     collection_name: &str,
-    realm: &fsys::RealmProxy,
+    realm: &fcomponent::RealmProxy,
 ) -> Result<(), fcomponent::Error> {
-    let mut child_ref = fsys::ChildRef {
+    let mut child_ref = fdecl::ChildRef {
         name: child_name.to_string(),
         collection: Some(collection_name.to_string()),
     };
@@ -102,8 +107,7 @@ mod tests {
             create_child_component, destroy_child_component, open_child_component_exposed_dir,
         },
         fidl::endpoints::{spawn_stream_handler, Proxy},
-        fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-        fuchsia_async as fasync,
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fuchsia_async as fasync,
         futures::prelude::*,
         lazy_static::lazy_static,
         test_util::Counter,
@@ -139,7 +143,7 @@ mod tests {
 
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::CreateChild { collection, decl, args: _, responder } => {
+                fcomponent::RealmRequest::CreateChild { collection, decl, args: _, responder } => {
                     assert_eq!(decl.name.unwrap(), child_name);
                     assert_eq!(decl.url.unwrap(), child_url);
                     assert_eq!(&collection.name, child_collection);
@@ -162,7 +166,12 @@ mod tests {
     async fn create_child_success() {
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
+                fcomponent::RealmRequest::CreateChild {
+                    collection: _,
+                    decl: _,
+                    args: _,
+                    responder,
+                } => {
                     let _ = responder.send(&mut Ok(()));
                 }
                 _ => panic!("Realm handler received an unexpected request"),
@@ -179,7 +188,12 @@ mod tests {
     async fn create_child_error() {
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
+                fcomponent::RealmRequest::CreateChild {
+                    collection: _,
+                    decl: _,
+                    args: _,
+                    responder,
+                } => {
                     let _ = responder.send(&mut Err(fcomponent::Error::Internal));
                 }
                 _ => panic!("Realm handler received an unexpected request"),
@@ -198,7 +212,7 @@ mod tests {
 
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::OpenExposedDir { child, exposed_dir: _, responder } => {
+                fcomponent::RealmRequest::OpenExposedDir { child, exposed_dir: _, responder } => {
                     assert_eq!(child.name, child_name);
                     assert_eq!(child.collection, Some(child_collection.to_string()));
 
@@ -220,7 +234,11 @@ mod tests {
     async fn open_child_component_exposed_dir_success() {
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::OpenExposedDir { child: _, exposed_dir: _, responder } => {
+                fcomponent::RealmRequest::OpenExposedDir {
+                    child: _,
+                    exposed_dir: _,
+                    responder,
+                } => {
                     let _ = responder.send(&mut Ok(()));
                 }
                 _ => panic!("Realm handler received an unexpected request"),
@@ -249,7 +267,7 @@ mod tests {
 
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::OpenExposedDir {
+                fcomponent::RealmRequest::OpenExposedDir {
                     child: _,
                     exposed_dir: exposed_dir_server,
                     responder,
@@ -299,7 +317,11 @@ mod tests {
     async fn open_child_component_exposed_dir_error() {
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::OpenExposedDir { child: _, exposed_dir: _, responder } => {
+                fcomponent::RealmRequest::OpenExposedDir {
+                    child: _,
+                    exposed_dir: _,
+                    responder,
+                } => {
                     let _ = responder.send(&mut Err(fcomponent::Error::Internal));
                 }
                 _ => panic!("Realm handler received an unexpected request"),
@@ -318,7 +340,7 @@ mod tests {
 
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::DestroyChild { child, responder } => {
+                fcomponent::RealmRequest::DestroyChild { child, responder } => {
                     assert_eq!(child.name, child_name);
                     assert_eq!(child.collection, Some(child_collection.to_string()));
 

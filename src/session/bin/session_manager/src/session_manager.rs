@@ -16,7 +16,6 @@ use {
         LauncherRequestStream, RestartError, RestarterRequest, RestarterRequestStream,
     },
     fidl_fuchsia_sessionmanager::StartupRequestStream,
-    fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_ui_accessibility_view::{
         RegistryMarker, RegistryProxy, RegistryRequest, RegistryRequestStream,
     },
@@ -54,7 +53,7 @@ struct SessionManagerState {
     session_exposed_dir_channel: Option<zx::Channel>,
 
     /// The realm in which sessions will be launched.
-    realm: fsys::RealmProxy,
+    realm: fcomponent::RealmProxy,
 }
 
 /// Manages the session lifecycle and provides services to control the session.
@@ -68,7 +67,7 @@ impl SessionManager {
     ///
     /// # Parameters
     /// - `realm`: The realm in which sessions will be launched.
-    pub fn new(realm: fsys::RealmProxy) -> Self {
+    pub fn new(realm: fcomponent::RealmProxy) -> Self {
         let state =
             SessionManagerState { session_url: None, session_exposed_dir_channel: None, realm };
         SessionManager { state: Arc::new(Mutex::new(state)) }
@@ -497,13 +496,13 @@ mod tests {
         super::SessionManager,
         fidl::encoding::Decodable,
         fidl::endpoints::{create_endpoints, create_proxy_and_stream, spawn_stream_handler},
+        fidl_fuchsia_component as fcomponent,
         fidl_fuchsia_input_injection::{InputDeviceRegistryMarker, InputDeviceRegistryRequest},
         fidl_fuchsia_input_report::InputDeviceMarker,
         fidl_fuchsia_session::{
             ElementManagerMarker, ElementManagerRequest, ElementSpec, LaunchConfiguration,
             LauncherMarker, LauncherProxy, RestartError, RestarterMarker, RestarterProxy,
         },
-        fidl_fuchsia_sys2 as fsys,
         fidl_fuchsia_ui_accessibility_view::{RegistryMarker, RegistryRequest},
         fuchsia_async as fasync, fuchsia_scenic as scenic,
         futures::prelude::*,
@@ -550,14 +549,19 @@ mod tests {
 
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::DestroyChild { child: _, responder } => {
+                fcomponent::RealmRequest::DestroyChild { child: _, responder } => {
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys::RealmRequest::CreateChild { collection: _, decl, args: _, responder } => {
+                fcomponent::RealmRequest::CreateChild {
+                    collection: _,
+                    decl,
+                    args: _,
+                    responder,
+                } => {
                     assert_eq!(decl.url.unwrap(), session_url);
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys::RealmRequest::OpenExposedDir { child: _, exposed_dir, responder } => {
+                fcomponent::RealmRequest::OpenExposedDir { child: _, exposed_dir, responder } => {
                     spawn_noop_directory_server(exposed_dir);
                     let _ = responder.send(&mut Ok(()));
                 }
@@ -585,14 +589,19 @@ mod tests {
 
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::DestroyChild { child: _, responder } => {
+                fcomponent::RealmRequest::DestroyChild { child: _, responder } => {
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys::RealmRequest::CreateChild { collection: _, decl, args: _, responder } => {
+                fcomponent::RealmRequest::CreateChild {
+                    collection: _,
+                    decl,
+                    args: _,
+                    responder,
+                } => {
                     assert_eq!(decl.url.unwrap(), session_url);
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys::RealmRequest::OpenExposedDir { child: _, exposed_dir, responder } => {
+                fcomponent::RealmRequest::OpenExposedDir { child: _, exposed_dir, responder } => {
                     spawn_noop_directory_server(exposed_dir);
                     let _ = responder.send(&mut Ok(()));
                 }

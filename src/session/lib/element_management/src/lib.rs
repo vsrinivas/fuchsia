@@ -19,7 +19,7 @@ use {
     fidl::endpoints::{create_request_stream, ClientEnd, Proxy, ServerEnd},
     fidl::AsHandleRef,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
-    fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2, fidl_fuchsia_ui_app as fuiapp,
+    fidl_fuchsia_sys as fsys, fidl_fuchsia_ui_app as fuiapp,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_component, fuchsia_scenic as scenic,
     fuchsia_syslog::{fx_log_err, fx_log_info},
@@ -166,7 +166,7 @@ struct AdditionalServices {
 /// Manages the elements associated with a session.
 pub struct ElementManager {
     /// The realm which this element manager uses to create components.
-    realm: fsys2::RealmProxy,
+    realm: fcomponent::RealmProxy,
 
     /// The presenter that will make launched elements visible to the user.
     ///
@@ -191,7 +191,7 @@ pub struct ElementManager {
 
 impl ElementManager {
     pub fn new(
-        realm: fsys2::RealmProxy,
+        realm: fcomponent::RealmProxy,
         graphical_presenter: Option<felement::GraphicalPresenterProxy>,
         collection: &str,
     ) -> ElementManager {
@@ -206,7 +206,7 @@ impl ElementManager {
     /// Initializer used by tests, to override the default fuchsia::sys::Launcher with a mock
     /// launcher.
     pub fn new_with_sys_launcher(
-        realm: fsys2::RealmProxy,
+        realm: fcomponent::RealmProxy,
         graphical_presenter: Option<felement::GraphicalPresenterProxy>,
         collection: &str,
         sys_launcher: fsys::LauncherProxy,
@@ -234,7 +234,7 @@ impl ElementManager {
     /// On success, the [`Element`] is returned back to the session.
     ///
     /// # Errors
-    /// If the child cannot be created or bound in the current [`fidl_fuchsia_sys2::Realm`]. In
+    /// If the child cannot be created or bound in the current [`fidl_fuchsia_component::Realm`]. In
     /// particular, it is an error to call [`launch_element`] twice with the same `child_name`.
     pub async fn launch_element(
         &self,
@@ -691,7 +691,7 @@ mod tests {
         super::{ElementManager, ElementManagerError},
         fidl::endpoints::{spawn_stream_handler, ProtocolMarker, ServerEnd},
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys as fsys,
-        fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync, fuchsia_zircon as zx,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{channel::mpsc::channel, prelude::*},
         lazy_static::lazy_static,
         session_testing::{spawn_directory_server, spawn_noop_directory_server},
@@ -957,14 +957,19 @@ mod tests {
             let directory_request_handler = directory_request_handler.clone();
             async move {
                 match realm_request {
-                    fsys2::RealmRequest::CreateChild { collection, decl, args: _, responder } => {
+                    fcomponent::RealmRequest::CreateChild {
+                        collection,
+                        decl,
+                        args: _,
+                        responder,
+                    } => {
                         assert_eq!(decl.url.unwrap(), component_url);
                         assert_eq!(decl.name.unwrap(), child_name);
                         assert_eq!(&collection.name, child_collection);
 
                         let _ = responder.send(&mut Ok(()));
                     }
-                    fsys2::RealmRequest::OpenExposedDir { child, exposed_dir, responder } => {
+                    fcomponent::RealmRequest::OpenExposedDir { child, exposed_dir, responder } => {
                         assert_eq!(child.collection, Some(child_collection.to_string()));
                         spawn_directory_server(exposed_dir, directory_request_handler);
                         let _ = responder.send(&mut Ok(()));
@@ -1004,14 +1009,14 @@ mod tests {
 
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys2::RealmRequest::CreateChild { collection, decl, args: _, responder } => {
+                fcomponent::RealmRequest::CreateChild { collection, decl, args: _, responder } => {
                     assert_eq!(decl.url.unwrap(), component_url);
                     assert_eq!(decl.name.unwrap(), child_name);
                     assert_eq!(&collection.name, child_collection);
 
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys2::RealmRequest::OpenExposedDir { child, exposed_dir, responder } => {
+                fcomponent::RealmRequest::OpenExposedDir { child, exposed_dir, responder } => {
                     assert_eq!(child.collection, Some(child_collection.to_string()));
                     spawn_noop_directory_server(exposed_dir);
                     let _ = responder.send(&mut Ok(()));
@@ -1120,7 +1125,12 @@ mod tests {
         // successfully the bind should not be called.
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys2::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
+                fcomponent::RealmRequest::CreateChild {
+                    collection: _,
+                    decl: _,
+                    args: _,
+                    responder,
+                } => {
                     let _ = responder.send(&mut Err(fcomponent::Error::Internal));
                 }
                 _ => panic!("Realm handler received an unexpected request"),
@@ -1152,7 +1162,12 @@ mod tests {
         // successfully the bind should not be called.
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys2::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
+                fcomponent::RealmRequest::CreateChild {
+                    collection: _,
+                    decl: _,
+                    args: _,
+                    responder,
+                } => {
                     let _ = responder.send(&mut Err(fcomponent::Error::ResourceUnavailable));
                 }
                 _ => panic!("Realm handler received an unexpected request"),
@@ -1187,10 +1202,19 @@ mod tests {
 
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys2::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
+                fcomponent::RealmRequest::CreateChild {
+                    collection: _,
+                    decl: _,
+                    args: _,
+                    responder,
+                } => {
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys2::RealmRequest::OpenExposedDir { child: _, exposed_dir: _, responder } => {
+                fcomponent::RealmRequest::OpenExposedDir {
+                    child: _,
+                    exposed_dir: _,
+                    responder,
+                } => {
                     let _ = responder.send(&mut Err(fcomponent::Error::InstanceCannotResolve));
                 }
                 _ => panic!("Realm handler received an unexpected request"),
@@ -1224,25 +1248,27 @@ mod tests {
         })
         .unwrap();
 
-        let realm = spawn_stream_handler(move |realm_request| {
-            async move {
-                match realm_request {
-                    fsys2::RealmRequest::CreateChild {
-                        collection: _,
-                        decl: _,
-                        args: _,
-                        responder,
-                    } => {
-                        let _ = responder.send(&mut Ok(()));
-                    }
-                    fsys2::RealmRequest::OpenExposedDir { child: _, exposed_dir: _, responder } => {
-                        // By not binding a server implementation to the provided `exposed_dir`
-                        // field, a PEER_CLOSED signal will be observed. Thus, the library
-                        // can assume that the component did not launch.
-                        let _ = responder.send(&mut Ok(()));
-                    }
-                    _ => panic!("Realm handler received an unexpected request"),
+        let realm = spawn_stream_handler(move |realm_request| async move {
+            match realm_request {
+                fcomponent::RealmRequest::CreateChild {
+                    collection: _,
+                    decl: _,
+                    args: _,
+                    responder,
+                } => {
+                    let _ = responder.send(&mut Ok(()));
                 }
+                fcomponent::RealmRequest::OpenExposedDir {
+                    child: _,
+                    exposed_dir: _,
+                    responder,
+                } => {
+                    // By not binding a server implementation to the provided `exposed_dir`
+                    // field, a PEER_CLOSED signal will be observed. Thus, the library
+                    // can assume that the component did not launch.
+                    let _ = responder.send(&mut Ok(()));
+                }
+                _ => panic!("Realm handler received an unexpected request"),
             }
         })
         .unwrap();

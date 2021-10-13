@@ -16,7 +16,7 @@ rustc_test("test") {
   source_root = "src/main.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

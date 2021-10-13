@@ -29,7 +29,7 @@
     use: [
         {
             // The Realm service allows session_manager to start components.
-            protocol: "fuchsia.sys2.Realm",
+            protocol: "fuchsia.component.Realm",
             from: "framework",
         },
         {

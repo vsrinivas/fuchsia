@@ -6,7 +6,7 @@ use {
     crate::cobalt,
     argh::FromArgs,
     fidl::endpoints::Proxy,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_component as fcomponent, fuchsia_async as fasync,
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon as zx, realm_management,
     serde::{Deserialize, Serialize},
@@ -100,7 +100,7 @@ pub fn get_session_url() -> Option<String> {
 /// If there was a problem creating or binding to the session component instance.
 pub async fn launch_session(
     session_url: &str,
-    realm: &fsys::RealmProxy,
+    realm: &fcomponent::RealmProxy,
 ) -> Result<zx::Channel, StartupError> {
     fx_log_info!("Launching session: {}", session_url);
 
@@ -139,7 +139,7 @@ pub async fn launch_session(
 /// Returns an error if any of the realm operations fail, or the realm is unavailable.
 async fn set_session(
     session_url: &str,
-    realm: &fsys::RealmProxy,
+    realm: &fcomponent::RealmProxy,
 ) -> Result<zx::Channel, StartupError> {
     realm_management::destroy_child_component(SESSION_NAME, SESSION_CHILD_COLLECTION, realm)
         .await
@@ -204,7 +204,7 @@ mod tests {
     use {
         super::{set_session, zx, StartupError, SESSION_CHILD_COLLECTION, SESSION_NAME},
         fidl::endpoints::spawn_stream_handler,
-        fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fuchsia_async as fasync,
         lazy_static::lazy_static,
         session_testing::spawn_directory_server,
         std::sync::mpsc,
@@ -229,14 +229,14 @@ mod tests {
 
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::DestroyChild { child, responder } => {
+                fcomponent::RealmRequest::DestroyChild { child, responder } => {
                     assert_eq!(NUM_REALM_REQUESTS.get(), 0);
                     assert_eq!(child.collection, Some(SESSION_CHILD_COLLECTION.to_string()));
                     assert_eq!(child.name, SESSION_NAME);
 
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys::RealmRequest::CreateChild { collection, decl, args: _, responder } => {
+                fcomponent::RealmRequest::CreateChild { collection, decl, args: _, responder } => {
                     assert_eq!(NUM_REALM_REQUESTS.get(), 1);
                     assert_eq!(decl.url.unwrap(), session_url);
                     assert_eq!(decl.name.unwrap(), SESSION_NAME);
@@ -244,7 +244,7 @@ mod tests {
 
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys::RealmRequest::OpenExposedDir { child, exposed_dir, responder } => {
+                fcomponent::RealmRequest::OpenExposedDir { child, exposed_dir, responder } => {
                     assert_eq!(NUM_REALM_REQUESTS.get(), 2);
                     assert_eq!(child.collection, Some(SESSION_CHILD_COLLECTION.to_string()));
                     assert_eq!(child.name, SESSION_NAME);
@@ -270,13 +270,13 @@ mod tests {
             let exposed_dir_server_end_sender = exposed_dir_server_end_sender.clone();
             async move {
                 match realm_request {
-                    fsys::RealmRequest::DestroyChild { responder, .. } => {
+                    fcomponent::RealmRequest::DestroyChild { responder, .. } => {
                         let _ = responder.send(&mut Ok(()));
                     }
-                    fsys::RealmRequest::CreateChild { responder, .. } => {
+                    fcomponent::RealmRequest::CreateChild { responder, .. } => {
                         let _ = responder.send(&mut Ok(()));
                     }
-                    fsys::RealmRequest::OpenExposedDir { exposed_dir, responder, .. } => {
+                    fcomponent::RealmRequest::OpenExposedDir { exposed_dir, responder, .. } => {
                         exposed_dir_server_end_sender
                             .send(exposed_dir)
                             .expect("Failed to relay `exposed_dir`");
@@ -310,13 +310,13 @@ mod tests {
 
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys::RealmRequest::DestroyChild { responder, .. } => {
+                fcomponent::RealmRequest::DestroyChild { responder, .. } => {
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys::RealmRequest::CreateChild { responder, .. } => {
+                fcomponent::RealmRequest::CreateChild { responder, .. } => {
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys::RealmRequest::OpenExposedDir { responder, .. } => {
+                fcomponent::RealmRequest::OpenExposedDir { responder, .. } => {
                     let _ = responder.send(&mut Ok(()));
                 }
                 _ => panic!("Realm handler received an unexpected request"),

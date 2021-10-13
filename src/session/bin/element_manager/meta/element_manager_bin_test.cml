@@ -1,7 +1,7 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/element_manager_bin_test",
@@ -17,7 +17,7 @@
     ],
     use: [
         {
-            protocol: "fuchsia.sys2.Realm",
+            protocol: "fuchsia.component.Realm",
             from: "framework",
         },
     ],

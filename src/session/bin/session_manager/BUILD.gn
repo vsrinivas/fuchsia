@@ -33,12 +33,12 @@ rustc_library("lib") {
     ":session_framework_metrics_registry_rustlib",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.element:fuchsia.element-rustc",
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.ui.accessibility.view:fuchsia.ui.accessibility.view-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -78,7 +78,7 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

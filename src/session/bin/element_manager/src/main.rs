@@ -15,7 +15,8 @@
 use {
     anyhow::Error,
     element_management::ElementManager,
-    fidl_fuchsia_element as felement, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
+    fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     futures::StreamExt,
     std::rc::Rc,
@@ -37,8 +38,8 @@ const NUM_CONCURRENT_REQUESTS: usize = 5;
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["element_manager"]).expect("Failed to initialize logger");
 
-    let realm =
-        connect_to_protocol::<fsys2::RealmMarker>().expect("Failed to connect to Realm service");
+    let realm = connect_to_protocol::<fcomponent::RealmMarker>()
+        .expect("Failed to connect to Realm service");
     let graphical_presenter = connect_to_protocol::<felement::GraphicalPresenterMarker>()
         .expect("Failed to connect to GraphicalPresenter service");
 
@@ -73,7 +74,7 @@ mod tests {
         fidl::endpoints::ProtocolMarker,
         fidl::endpoints::{create_proxy_and_stream, spawn_stream_handler},
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
-        fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
+        fidl_fuchsia_io as fio, fuchsia_async as fasync,
         lazy_static::lazy_static,
         session_testing::spawn_directory_server,
         test_util::Counter,
@@ -122,12 +123,17 @@ mod tests {
 
         let realm = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
-                fsys2::RealmRequest::CreateChild { collection: _, decl, args: _, responder } => {
+                fcomponent::RealmRequest::CreateChild {
+                    collection: _,
+                    decl,
+                    args: _,
+                    responder,
+                } => {
                     assert_eq!(decl.url.unwrap(), component_url);
                     CREATE_CHILD_CALL_COUNT.inc();
                     let _ = responder.send(&mut Ok(()));
                 }
-                fsys2::RealmRequest::OpenExposedDir { child: _, exposed_dir, responder } => {
+                fcomponent::RealmRequest::OpenExposedDir { child: _, exposed_dir, responder } => {
                     spawn_directory_server(exposed_dir, directory_request_handler);
                     let _ = responder.send(&mut Ok(()));
                 }

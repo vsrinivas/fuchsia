@@ -898,7 +898,6 @@
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.sys.Launcher",
-                "fuchsia.sys2.Realm",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Flatland",

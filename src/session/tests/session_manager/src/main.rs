@@ -5,7 +5,7 @@
 #[cfg(test)]
 mod tests {
     use {
-        fidl_fuchsia_sys2 as fsys, fuchsia_component::client::connect_to_protocol,
+        fidl_fuchsia_component as fcomponent, fuchsia_component::client::connect_to_protocol,
         session_manager_lib,
     };
 
@@ -17,7 +17,8 @@ mod tests {
     ///     - capability routing of the Scenic service to the session collection was successful.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn launch_root_session() {
-        let realm = connect_to_protocol::<fsys::RealmMarker>().expect("could not connect to Realm");
+        let realm =
+            connect_to_protocol::<fcomponent::RealmMarker>().expect("could not connect to Realm");
 
         let session_url = String::from(GRAPHICAL_SESSION_URL);
         println!("Session url: {}", &session_url);
