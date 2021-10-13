@@ -208,9 +208,9 @@ void DevicePort::Bind(fidl::ServerEnd<netdev::Port> req) {
 }
 
 void DevicePort::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
-  netdev::wire::PortInfo::Frame_ frame;
+  fidl::WireTableFrame<netdev::wire::PortInfo> frame;
   netdev::wire::PortInfo port_info(
-      fidl::ObjectView<netdev::wire::PortInfo::Frame_>::FromExternal(&frame));
+      fidl::ObjectView<fidl::WireTableFrame<netdev::wire::PortInfo>>::FromExternal(&frame));
   // NB: Need to copy port identifier out because ObjectView wants a non const pointer.
   uint8_t port_id = port_id_;
   auto tx_support = fidl::VectorView<netdev::wire::FrameTypeSupport>::FromExternal(

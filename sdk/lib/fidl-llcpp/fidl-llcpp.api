@@ -34,5 +34,6 @@
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/traits.h": "2bcfe00e036c8525ec57e16d25d67b13",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/transaction.h": "288a9ee2d46cbdba54b523f483859ac0",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/vector_view.h": "a7d87a7c61184f48a7e74943c0df1ae8",
-  "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/wire_messaging.h": "54c89ab38a42bb541e9691b4816b3536"
+  "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/wire_messaging.h": "54c89ab38a42bb541e9691b4816b3536",
+  "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/wire_types.h": "90fe4a85b00220bdd187b227bccc370f"
 }

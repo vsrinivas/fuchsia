@@ -19,14 +19,16 @@ namespace tun {
 namespace {
 template <typename F>
 void WithWireState(F fn, InternalState& state) {
-  fuchsia_net_tun::wire::InternalState::Frame_ frame;
+  fidl::WireTableFrame<fuchsia_net_tun::wire::InternalState> frame;
   fuchsia_net_tun::wire::InternalState wire_state(
-      fidl::ObjectView<fuchsia_net_tun::wire::InternalState::Frame_>::FromExternal(&frame));
+      fidl::ObjectView<fidl::WireTableFrame<fuchsia_net_tun::wire::InternalState>>::FromExternal(
+          &frame));
   wire_state.set_has_session(state.has_session);
 
-  fuchsia_net_tun::wire::MacState::Frame_ frame_mac;
+  fidl::WireTableFrame<fuchsia_net_tun::wire::MacState> frame_mac;
   fuchsia_net_tun::wire::MacState wire_mac(
-      fidl::ObjectView<fuchsia_net_tun::wire::MacState::Frame_>::FromExternal(&frame_mac));
+      fidl::ObjectView<fidl::WireTableFrame<fuchsia_net_tun::wire::MacState>>::FromExternal(
+          &frame_mac));
   fidl::VectorView<fuchsia_net::wire::MacAddress> multicast_filters;
   if (state.mac.has_value()) {
     MacState& mac = state.mac.value();
@@ -168,9 +170,10 @@ void TunDevice::RunReadFrame() {
         FX_LOG(WARNING, "tun", "Ignoring empty tx buffer");
         return ZX_OK;
       }
-      fuchsia_net_tun::wire::Frame::Frame_ fidl_frame;
+      fidl::WireTableFrame<fuchsia_net_tun::wire::Frame> fidl_frame;
       fuchsia_net_tun::wire::Frame frame(
-          fidl::ObjectView<fuchsia_net_tun::wire::Frame::Frame_>::FromExternal(&fidl_frame));
+          fidl::ObjectView<fidl::WireTableFrame<fuchsia_net_tun::wire::Frame>>::FromExternal(
+              &fidl_frame));
       fidl::VectorView data_view = fidl::VectorView<uint8_t>::FromExternal(data);
       frame.set_data(fidl::ObjectView<fidl::VectorView<uint8_t>>::FromExternal(&data_view));
       frame.set_frame_type(buff.frame_type());

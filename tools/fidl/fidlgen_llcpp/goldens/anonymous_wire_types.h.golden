@@ -10,6 +10,7 @@
 #include <lib/fidl/llcpp/object_view.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/llcpp/wire_types.h>
 #include <lib/stdcompat/optional.h>
 
 #include <cinttypes>
@@ -588,6 +589,31 @@ class SomeProtocolSomeMethodResponse::DecodedMessage final
   void ReleasePrimaryObject() { ResetBytes(); }
 };
 
+}  // namespace wire
+}  // namespace fidl_test_anonymous
+template <>
+struct ::fidl::WireTableFrame<::fidl_test_anonymous::wire::TableMember> final {
+ public:
+  WireTableFrame() = default;
+  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
+  // If the ObjectView is assigned before a move or copy, then it will reference
+  // the old invalid object. Because this is unsafe, copies are disallowed and
+  // moves are only allowed by friend classes that operate safely.
+  WireTableFrame(const WireTableFrame&) = delete;
+  WireTableFrame& operator=(const WireTableFrame&) = delete;
+
+ private:
+  WireTableFrame(WireTableFrame&&) noexcept = default;
+  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+  [[maybe_unused]] ::fidl::UntypedEnvelope reserved_0_;
+  ::fidl::Envelope<::fidl::VectorView<::fidl_test_anonymous::wire::TableData>>
+      table_data_;
+
+  friend class ::fidl_test_anonymous::wire::TableMember;
+};
+
+namespace fidl_test_anonymous {
+namespace wire {
 extern "C" const fidl_type_t fidl_test_anonymous_TableMemberTable;
 
 class TableMember final {
@@ -596,8 +622,6 @@ class TableMember final {
 
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  class Frame_;
 
   const ::fidl::VectorView<::fidl_test_anonymous::wire::TableData>& table_data()
       const {
@@ -645,12 +669,14 @@ class TableMember final {
 
   TableMember() = default;
   explicit TableMember(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
+      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<
+                       ::fidl_test_anonymous::wire::TableMember>>(allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
-  explicit TableMember(::fidl::ObjectView<Frame_>&& frame)
+  explicit TableMember(::fidl::ObjectView<::fidl::WireTableFrame<
+                           ::fidl_test_anonymous::wire::TableMember>>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~TableMember() = default;
   TableMember(const TableMember& other) noexcept = default;
@@ -667,9 +693,12 @@ class TableMember final {
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
+    frame_ptr_ = ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::fidl_test_anonymous::wire::TableMember>>(
+        allocator);
   }
-  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<
+                ::fidl_test_anonymous::wire::TableMember>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -678,33 +707,11 @@ class TableMember final {
   class OwnedEncodedMessage;
   class DecodedMessage;
 
-  // Frame_s are managed automatically by the Arena class.
-  // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a Arena. Once created, a frame can only be used for one
-  // single table.
-  class Frame_ final {
-   public:
-    Frame_() = default;
-    // In its intended usage, Frame_ will be referenced by an ObjectView. If the
-    // ObjectView is assigned before a move or copy, then it will reference the
-    // old invalid object. Because this is unsafe, copies are disallowed and
-    // moves are only allowed by friend classes that operate safely.
-    Frame_(const Frame_&) = delete;
-    Frame_& operator=(const Frame_&) = delete;
-
-   private:
-    Frame_(Frame_&&) noexcept = default;
-    Frame_& operator=(Frame_&&) noexcept = default;
-    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_0_;
-    ::fidl::Envelope<::fidl::VectorView<::fidl_test_anonymous::wire::TableData>>
-        table_data_;
-
-    friend class TableMember;
-  };
-
  private:
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<Frame_> frame_ptr_;
+  ::fidl::ObjectView<
+      ::fidl::WireTableFrame<::fidl_test_anonymous::wire::TableMember>>
+      frame_ptr_;
 };
 
 class TableMember::UnownedEncodedMessage final {
@@ -827,6 +834,34 @@ class TableMember::DecodedMessage final
   void ReleasePrimaryObject() { ResetBytes(); }
 };
 
+}  // namespace wire
+}  // namespace fidl_test_anonymous
+template <>
+struct ::fidl::WireTableFrame<::fidl_test_anonymous::wire::FunctionApplication>
+    final {
+ public:
+  WireTableFrame() = default;
+  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
+  // If the ObjectView is assigned before a move or copy, then it will reference
+  // the old invalid object. Because this is unsafe, copies are disallowed and
+  // moves are only allowed by friend classes that operate safely.
+  WireTableFrame(const WireTableFrame&) = delete;
+  WireTableFrame& operator=(const WireTableFrame&) = delete;
+
+ private:
+  WireTableFrame(WireTableFrame&&) noexcept = default;
+  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+  ::fidl::Envelope<::fidl::StringView> func_;
+  [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
+  ::fidl::Envelope<::fidl::VectorView<::fidl_test_anonymous::wire::Expression>>
+      args_;
+  ::fidl::Envelope<::fidl_test_anonymous::wire::Flags> flags_;
+
+  friend class ::fidl_test_anonymous::wire::FunctionApplication;
+};
+
+namespace fidl_test_anonymous {
+namespace wire {
 extern "C" const fidl_type_t fidl_test_anonymous_FunctionApplicationTable;
 
 class FunctionApplication final {
@@ -835,8 +870,6 @@ class FunctionApplication final {
 
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  class Frame_;
 
   const ::fidl::StringView& func() const {
     ZX_ASSERT(has_func());
@@ -956,12 +989,17 @@ class FunctionApplication final {
 
   FunctionApplication() = default;
   explicit FunctionApplication(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
+      : frame_ptr_(
+            ::fidl::ObjectView<::fidl::WireTableFrame<
+                ::fidl_test_anonymous::wire::FunctionApplication>>(allocator)) {
+  }
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
-  explicit FunctionApplication(::fidl::ObjectView<Frame_>&& frame)
+  explicit FunctionApplication(
+      ::fidl::ObjectView<::fidl::WireTableFrame<
+          ::fidl_test_anonymous::wire::FunctionApplication>>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~FunctionApplication() = default;
   FunctionApplication(const FunctionApplication& other) noexcept = default;
@@ -980,9 +1018,12 @@ class FunctionApplication final {
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
+    frame_ptr_ = ::fidl::ObjectView<::fidl::WireTableFrame<
+        ::fidl_test_anonymous::wire::FunctionApplication>>(allocator);
   }
-  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
+  void Init(
+      ::fidl::ObjectView<::fidl::WireTableFrame<
+          ::fidl_test_anonymous::wire::FunctionApplication>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -991,36 +1032,11 @@ class FunctionApplication final {
   class OwnedEncodedMessage;
   class DecodedMessage;
 
-  // Frame_s are managed automatically by the Arena class.
-  // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a Arena. Once created, a frame can only be used for one
-  // single table.
-  class Frame_ final {
-   public:
-    Frame_() = default;
-    // In its intended usage, Frame_ will be referenced by an ObjectView. If the
-    // ObjectView is assigned before a move or copy, then it will reference the
-    // old invalid object. Because this is unsafe, copies are disallowed and
-    // moves are only allowed by friend classes that operate safely.
-    Frame_(const Frame_&) = delete;
-    Frame_& operator=(const Frame_&) = delete;
-
-   private:
-    Frame_(Frame_&&) noexcept = default;
-    Frame_& operator=(Frame_&&) noexcept = default;
-    ::fidl::Envelope<::fidl::StringView> func_;
-    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
-    ::fidl::Envelope<
-        ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>>
-        args_;
-    ::fidl::Envelope<::fidl_test_anonymous::wire::Flags> flags_;
-
-    friend class FunctionApplication;
-  };
-
  private:
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<Frame_> frame_ptr_;
+  ::fidl::ObjectView<
+      ::fidl::WireTableFrame<::fidl_test_anonymous::wire::FunctionApplication>>
+      frame_ptr_;
 };
 
 class FunctionApplication::UnownedEncodedMessage final {

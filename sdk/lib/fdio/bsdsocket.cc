@@ -349,9 +349,10 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
     return EAI_SYSTEM;
   }
 
-  fnet_name::wire::LookupIpOptions::Frame_ frame;
+  fidl::WireTableFrame<fnet_name::wire::LookupIpOptions> frame;
   fnet_name::wire::LookupIpOptions options(
-      fidl::ObjectView<fnet_name::wire::LookupIpOptions::Frame_>::FromExternal(&frame));
+      fidl::ObjectView<fidl::WireTableFrame<fnet_name::wire::LookupIpOptions>>::FromExternal(
+          &frame));
   // TODO(https://fxbug.dev/76522): Use address sorting from the DNS service.
   switch (family) {
     case AF_UNSPEC:

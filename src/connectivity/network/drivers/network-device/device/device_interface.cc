@@ -328,9 +328,9 @@ void DeviceInterface::NetworkDeviceIfcSnoop(const rx_buffer_t* rx_list, size_t r
 
 void DeviceInterface::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
   LOGF_TRACE("network-device: %s", __FUNCTION__);
-  netdev::wire::DeviceInfo::Frame_ frame;
+  fidl::WireTableFrame<netdev::wire::DeviceInfo> frame;
   netdev::wire::DeviceInfo device_info(
-      fidl::ObjectView<netdev::wire::DeviceInfo::Frame_>::FromExternal(&frame));
+      fidl::ObjectView<fidl::WireTableFrame<netdev::wire::DeviceInfo>>::FromExternal(&frame));
 
   uint8_t min_descriptor_length = sizeof(buffer_descriptor_t) / sizeof(uint64_t);
   uint8_t descriptor_version = NETWORK_DEVICE_DESCRIPTOR_VERSION;

@@ -25,6 +25,7 @@ fidl/{{ .LibraryDots }}/cpp/wire_types.h
   #include <lib/fidl/llcpp/object_view.h>
   #include <lib/fidl/llcpp/string_view.h>
   #include <lib/fidl/llcpp/traits.h>
+  #include <lib/fidl/llcpp/wire_types.h>
   #include <lib/stdcompat/optional.h>
   {{- IfdefFuchsia -}}
     {{ range .HandleTypes -}}

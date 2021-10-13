@@ -150,12 +150,12 @@ func (b *unownedBuilder) visitTable(value gidlir.Record, decl *gidlmixer.TableDe
 	frameVar := b.newVar()
 
 	b.write(
-		"%s::Frame_ %s;\n", declName(decl), frameVar)
+		"fidl::WireTableFrame<%s> %s;\n", declName(decl), frameVar)
 
 	tableVar := b.newVar()
 
 	b.write(
-		"%s %s(::fidl::ObjectView<%s::Frame_>::FromExternal(&%s));\n", declName(decl), tableVar, declName(decl), frameVar)
+		"%s %s(::fidl::ObjectView<::fidl::WireTableFrame<%s>>::FromExternal(&%s));\n", declName(decl), tableVar, declName(decl), frameVar)
 
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {

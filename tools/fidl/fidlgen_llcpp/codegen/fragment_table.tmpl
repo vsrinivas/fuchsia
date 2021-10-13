@@ -12,11 +12,38 @@ class {{ .Name }};
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "Table:TypesHeader" }}
-{{ EnsureNamespace . }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
 {{- end }}
 
+{{ EnsureNamespace "" }}
+template <>
+struct {{ .WireTableFrame }} final {
+ public:
+  {{ .WireTableFrame.Self }}() = default;
+  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
+  // If the ObjectView is assigned before a move or copy, then it will reference
+  // the old invalid object. Because this is unsafe, copies are disallowed and
+  // moves are only allowed by friend classes that operate safely.
+  {{ .WireTableFrame.Self }}(const {{ .WireTableFrame.Self }}&) = delete;
+  {{ .WireTableFrame.Self }}& operator=(const {{ .WireTableFrame.Self }}&) = delete;
+
+ private:
+  {{ .WireTableFrame.Self }}({{ .WireTableFrame.Self }}&&) noexcept = default;
+  {{ .WireTableFrame.Self }}& operator=({{ .WireTableFrame.Self }}&&) noexcept = default;
+
+  {{- range $index, $item := .FrameItems }}
+    {{- if $item }}
+  ::fidl::Envelope<{{ $item.Type }}> {{ $item.Name }}_;
+    {{- else }}
+  [[maybe_unused]] ::fidl::UntypedEnvelope reserved_{{ $index }}_;
+    {{- end }}
+  {{- end }}
+
+  friend class {{ . }};
+};
+
+{{ EnsureNamespace . }}
 extern "C" const fidl_type_t {{ .CodingTableType }};
 {{ .Docs }}
 class {{ .Name }} final {
@@ -27,8 +54,6 @@ public:
 
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  class Frame_;
 
 {{- range .Members }}
 {{ "" }}
@@ -85,11 +110,11 @@ public:
 
   {{ .Name }}() = default;
   explicit {{ .Name }}(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
+      : frame_ptr_(::fidl::ObjectView<{{ .WireTableFrame }}>(allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or for another table.
-  explicit {{ .Name }}(::fidl::ObjectView<Frame_>&& frame)
+  explicit {{ .Name }}(::fidl::ObjectView<{{ .WireTableFrame }}>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~{{ .Name }}() = default;
   {{ .Name }}(const {{ .Name }}& other) noexcept = default;
@@ -106,15 +131,14 @@ public:
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
+    frame_ptr_ = ::fidl::ObjectView<{{ .WireTableFrame }}>(allocator);
   }
-  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
+  void Init(::fidl::ObjectView<{{ .WireTableFrame }}>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
 
   {{- if .IsResourceType }}
-
   void _CloseHandles();
   {{- end }}
 
@@ -122,38 +146,9 @@ public:
   class OwnedEncodedMessage;
   class DecodedMessage;
 
-  // Frame_s are managed automatically by the Arena class.
-  // The only direct usage is when performance is key and a frame needs to be allocated outside a
-  // Arena.
-  // Once created, a frame can only be used for one single table.
-  class Frame_ final {
-  public:
-    Frame_() = default;
-    // In its intended usage, Frame_ will be referenced by an ObjectView. If the ObjectView is
-    // assigned before a move or copy, then it will reference the old invalid object. Because this
-    // is unsafe, copies are disallowed and moves are only allowed by friend classes that operate
-    // safely.
-    Frame_(const Frame_&) = delete;
-    Frame_& operator=(const Frame_&) = delete;
-
-  private:
-    Frame_(Frame_&&) noexcept = default;
-    Frame_& operator=(Frame_&&) noexcept = default;
-
-    {{- range $index, $item := .FrameItems }}
-      {{- if $item }}
-    ::fidl::Envelope<{{ $item.Type }}> {{ $item.Name }}_;
-      {{- else }}
-    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_{{ $index }}_;
-      {{- end }}
-    {{- end }}
-
-    friend class {{ .Name }};
-  };
-
  private:
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<Frame_> frame_ptr_;
+  ::fidl::ObjectView<{{ .WireTableFrame }}> frame_ptr_;
 };
 
 class {{ .Name }}::UnownedEncodedMessage final {

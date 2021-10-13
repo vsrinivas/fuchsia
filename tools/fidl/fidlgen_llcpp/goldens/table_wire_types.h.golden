@@ -10,6 +10,7 @@
 #include <lib/fidl/llcpp/object_view.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/llcpp/wire_types.h>
 #include <lib/stdcompat/optional.h>
 
 #include <cinttypes>
@@ -37,14 +38,36 @@ class SixtyFourOrdinalTable;
 
 class EmptyTable;
 
+}  // namespace wire
+}  // namespace fidl_test_table
+template <>
+struct ::fidl::WireTableFrame<::fidl_test_table::wire::TableWithAttributes>
+    final {
+ public:
+  WireTableFrame() = default;
+  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
+  // If the ObjectView is assigned before a move or copy, then it will reference
+  // the old invalid object. Because this is unsafe, copies are disallowed and
+  // moves are only allowed by friend classes that operate safely.
+  WireTableFrame(const WireTableFrame&) = delete;
+  WireTableFrame& operator=(const WireTableFrame&) = delete;
+
+ private:
+  WireTableFrame(WireTableFrame&&) noexcept = default;
+  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+  ::fidl::Envelope<int64_t> x_;
+
+  friend class ::fidl_test_table::wire::TableWithAttributes;
+};
+
+namespace fidl_test_table {
+namespace wire {
 extern "C" const fidl_type_t fidl_test_table_TableWithAttributesTable;
 
 class TableWithAttributes final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  class Frame_;
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
@@ -84,12 +107,16 @@ class TableWithAttributes final {
 
   TableWithAttributes() = default;
   explicit TableWithAttributes(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
+      : frame_ptr_(
+            ::fidl::ObjectView<::fidl::WireTableFrame<
+                ::fidl_test_table::wire::TableWithAttributes>>(allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
-  explicit TableWithAttributes(::fidl::ObjectView<Frame_>&& frame)
+  explicit TableWithAttributes(
+      ::fidl::ObjectView<::fidl::WireTableFrame<
+          ::fidl_test_table::wire::TableWithAttributes>>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~TableWithAttributes() = default;
   TableWithAttributes(const TableWithAttributes& other) noexcept = default;
@@ -108,9 +135,12 @@ class TableWithAttributes final {
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
+    frame_ptr_ = ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::fidl_test_table::wire::TableWithAttributes>>(
+        allocator);
   }
-  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<
+                ::fidl_test_table::wire::TableWithAttributes>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -119,31 +149,11 @@ class TableWithAttributes final {
   class OwnedEncodedMessage;
   class DecodedMessage;
 
-  // Frame_s are managed automatically by the Arena class.
-  // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a Arena. Once created, a frame can only be used for one
-  // single table.
-  class Frame_ final {
-   public:
-    Frame_() = default;
-    // In its intended usage, Frame_ will be referenced by an ObjectView. If the
-    // ObjectView is assigned before a move or copy, then it will reference the
-    // old invalid object. Because this is unsafe, copies are disallowed and
-    // moves are only allowed by friend classes that operate safely.
-    Frame_(const Frame_&) = delete;
-    Frame_& operator=(const Frame_&) = delete;
-
-   private:
-    Frame_(Frame_&&) noexcept = default;
-    Frame_& operator=(Frame_&&) noexcept = default;
-    ::fidl::Envelope<int64_t> x_;
-
-    friend class TableWithAttributes;
-  };
-
  private:
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<Frame_> frame_ptr_;
+  ::fidl::ObjectView<
+      ::fidl::WireTableFrame<::fidl_test_table::wire::TableWithAttributes>>
+      frame_ptr_;
 };
 
 class TableWithAttributes::UnownedEncodedMessage final {
@@ -268,14 +278,39 @@ class TableWithAttributes::DecodedMessage final
   void ReleasePrimaryObject() { ResetBytes(); }
 };
 
+}  // namespace wire
+}  // namespace fidl_test_table
+template <>
+struct ::fidl::WireTableFrame<::fidl_test_table::wire::SimpleTable> final {
+ public:
+  WireTableFrame() = default;
+  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
+  // If the ObjectView is assigned before a move or copy, then it will reference
+  // the old invalid object. Because this is unsafe, copies are disallowed and
+  // moves are only allowed by friend classes that operate safely.
+  WireTableFrame(const WireTableFrame&) = delete;
+  WireTableFrame& operator=(const WireTableFrame&) = delete;
+
+ private:
+  WireTableFrame(WireTableFrame&&) noexcept = default;
+  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+  ::fidl::Envelope<int64_t> x_;
+  [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
+  [[maybe_unused]] ::fidl::UntypedEnvelope reserved_2_;
+  [[maybe_unused]] ::fidl::UntypedEnvelope reserved_3_;
+  ::fidl::Envelope<int64_t> y_;
+
+  friend class ::fidl_test_table::wire::SimpleTable;
+};
+
+namespace fidl_test_table {
+namespace wire {
 extern "C" const fidl_type_t fidl_test_table_SimpleTableTable;
 
 class SimpleTable final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  class Frame_;
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
@@ -351,12 +386,17 @@ class SimpleTable final {
 
   SimpleTable() = default;
   explicit SimpleTable(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
+      : frame_ptr_(
+            ::fidl::ObjectView<
+                ::fidl::WireTableFrame<::fidl_test_table::wire::SimpleTable>>(
+                allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
-  explicit SimpleTable(::fidl::ObjectView<Frame_>&& frame)
+  explicit SimpleTable(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::fidl_test_table::wire::SimpleTable>>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~SimpleTable() = default;
   SimpleTable(const SimpleTable& other) noexcept = default;
@@ -372,9 +412,12 @@ class SimpleTable final {
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
+    frame_ptr_ = ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::fidl_test_table::wire::SimpleTable>>(
+        allocator);
   }
-  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<
+                ::fidl_test_table::wire::SimpleTable>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -383,35 +426,11 @@ class SimpleTable final {
   class OwnedEncodedMessage;
   class DecodedMessage;
 
-  // Frame_s are managed automatically by the Arena class.
-  // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a Arena. Once created, a frame can only be used for one
-  // single table.
-  class Frame_ final {
-   public:
-    Frame_() = default;
-    // In its intended usage, Frame_ will be referenced by an ObjectView. If the
-    // ObjectView is assigned before a move or copy, then it will reference the
-    // old invalid object. Because this is unsafe, copies are disallowed and
-    // moves are only allowed by friend classes that operate safely.
-    Frame_(const Frame_&) = delete;
-    Frame_& operator=(const Frame_&) = delete;
-
-   private:
-    Frame_(Frame_&&) noexcept = default;
-    Frame_& operator=(Frame_&&) noexcept = default;
-    ::fidl::Envelope<int64_t> x_;
-    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
-    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_2_;
-    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_3_;
-    ::fidl::Envelope<int64_t> y_;
-
-    friend class SimpleTable;
-  };
-
  private:
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<Frame_> frame_ptr_;
+  ::fidl::ObjectView<
+      ::fidl::WireTableFrame<::fidl_test_table::wire::SimpleTable>>
+      frame_ptr_;
 };
 
 class SimpleTable::UnownedEncodedMessage final {
@@ -534,14 +553,38 @@ class SimpleTable::DecodedMessage final
   void ReleasePrimaryObject() { ResetBytes(); }
 };
 
+}  // namespace wire
+}  // namespace fidl_test_table
+template <>
+struct ::fidl::WireTableFrame<::fidl_test_table::wire::ReverseOrdinalTable>
+    final {
+ public:
+  WireTableFrame() = default;
+  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
+  // If the ObjectView is assigned before a move or copy, then it will reference
+  // the old invalid object. Because this is unsafe, copies are disallowed and
+  // moves are only allowed by friend classes that operate safely.
+  WireTableFrame(const WireTableFrame&) = delete;
+  WireTableFrame& operator=(const WireTableFrame&) = delete;
+
+ private:
+  WireTableFrame(WireTableFrame&&) noexcept = default;
+  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+  ::fidl::Envelope<int64_t> z_;
+  ::fidl::Envelope<int64_t> y_;
+  ::fidl::Envelope<int64_t> x_;
+
+  friend class ::fidl_test_table::wire::ReverseOrdinalTable;
+};
+
+namespace fidl_test_table {
+namespace wire {
 extern "C" const fidl_type_t fidl_test_table_ReverseOrdinalTableTable;
 
 class ReverseOrdinalTable final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  class Frame_;
 
   const int64_t& z() const {
     ZX_ASSERT(has_z());
@@ -653,12 +696,16 @@ class ReverseOrdinalTable final {
 
   ReverseOrdinalTable() = default;
   explicit ReverseOrdinalTable(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
+      : frame_ptr_(
+            ::fidl::ObjectView<::fidl::WireTableFrame<
+                ::fidl_test_table::wire::ReverseOrdinalTable>>(allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
-  explicit ReverseOrdinalTable(::fidl::ObjectView<Frame_>&& frame)
+  explicit ReverseOrdinalTable(
+      ::fidl::ObjectView<::fidl::WireTableFrame<
+          ::fidl_test_table::wire::ReverseOrdinalTable>>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~ReverseOrdinalTable() = default;
   ReverseOrdinalTable(const ReverseOrdinalTable& other) noexcept = default;
@@ -677,9 +724,12 @@ class ReverseOrdinalTable final {
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
+    frame_ptr_ = ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::fidl_test_table::wire::ReverseOrdinalTable>>(
+        allocator);
   }
-  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<
+                ::fidl_test_table::wire::ReverseOrdinalTable>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -688,33 +738,11 @@ class ReverseOrdinalTable final {
   class OwnedEncodedMessage;
   class DecodedMessage;
 
-  // Frame_s are managed automatically by the Arena class.
-  // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a Arena. Once created, a frame can only be used for one
-  // single table.
-  class Frame_ final {
-   public:
-    Frame_() = default;
-    // In its intended usage, Frame_ will be referenced by an ObjectView. If the
-    // ObjectView is assigned before a move or copy, then it will reference the
-    // old invalid object. Because this is unsafe, copies are disallowed and
-    // moves are only allowed by friend classes that operate safely.
-    Frame_(const Frame_&) = delete;
-    Frame_& operator=(const Frame_&) = delete;
-
-   private:
-    Frame_(Frame_&&) noexcept = default;
-    Frame_& operator=(Frame_&&) noexcept = default;
-    ::fidl::Envelope<int64_t> z_;
-    ::fidl::Envelope<int64_t> y_;
-    ::fidl::Envelope<int64_t> x_;
-
-    friend class ReverseOrdinalTable;
-  };
-
  private:
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<Frame_> frame_ptr_;
+  ::fidl::ObjectView<
+      ::fidl::WireTableFrame<::fidl_test_table::wire::ReverseOrdinalTable>>
+      frame_ptr_;
 };
 
 class ReverseOrdinalTable::UnownedEncodedMessage final {
@@ -839,14 +867,35 @@ class ReverseOrdinalTable::DecodedMessage final
   void ReleasePrimaryObject() { ResetBytes(); }
 };
 
+}  // namespace wire
+}  // namespace fidl_test_table
+template <>
+struct ::fidl::WireTableFrame<::fidl_test_table::wire::OlderSimpleTable> final {
+ public:
+  WireTableFrame() = default;
+  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
+  // If the ObjectView is assigned before a move or copy, then it will reference
+  // the old invalid object. Because this is unsafe, copies are disallowed and
+  // moves are only allowed by friend classes that operate safely.
+  WireTableFrame(const WireTableFrame&) = delete;
+  WireTableFrame& operator=(const WireTableFrame&) = delete;
+
+ private:
+  WireTableFrame(WireTableFrame&&) noexcept = default;
+  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+  ::fidl::Envelope<int64_t> x_;
+
+  friend class ::fidl_test_table::wire::OlderSimpleTable;
+};
+
+namespace fidl_test_table {
+namespace wire {
 extern "C" const fidl_type_t fidl_test_table_OlderSimpleTableTable;
 
 class OlderSimpleTable final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  class Frame_;
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
@@ -886,12 +935,17 @@ class OlderSimpleTable final {
 
   OlderSimpleTable() = default;
   explicit OlderSimpleTable(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
+      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<
+                       ::fidl_test_table::wire::OlderSimpleTable>>(allocator)) {
+  }
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
-  explicit OlderSimpleTable(::fidl::ObjectView<Frame_>&& frame)
+  explicit OlderSimpleTable(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::fidl_test_table::wire::OlderSimpleTable>>&&
+          frame)
       : frame_ptr_(std::move(frame)) {}
   ~OlderSimpleTable() = default;
   OlderSimpleTable(const OlderSimpleTable& other) noexcept = default;
@@ -908,9 +962,12 @@ class OlderSimpleTable final {
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
+    frame_ptr_ = ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::fidl_test_table::wire::OlderSimpleTable>>(
+        allocator);
   }
-  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<
+                ::fidl_test_table::wire::OlderSimpleTable>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -919,31 +976,11 @@ class OlderSimpleTable final {
   class OwnedEncodedMessage;
   class DecodedMessage;
 
-  // Frame_s are managed automatically by the Arena class.
-  // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a Arena. Once created, a frame can only be used for one
-  // single table.
-  class Frame_ final {
-   public:
-    Frame_() = default;
-    // In its intended usage, Frame_ will be referenced by an ObjectView. If the
-    // ObjectView is assigned before a move or copy, then it will reference the
-    // old invalid object. Because this is unsafe, copies are disallowed and
-    // moves are only allowed by friend classes that operate safely.
-    Frame_(const Frame_&) = delete;
-    Frame_& operator=(const Frame_&) = delete;
-
-   private:
-    Frame_(Frame_&&) noexcept = default;
-    Frame_& operator=(Frame_&&) noexcept = default;
-    ::fidl::Envelope<int64_t> x_;
-
-    friend class OlderSimpleTable;
-  };
-
  private:
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<Frame_> frame_ptr_;
+  ::fidl::ObjectView<
+      ::fidl::WireTableFrame<::fidl_test_table::wire::OlderSimpleTable>>
+      frame_ptr_;
 };
 
 class OlderSimpleTable::UnownedEncodedMessage final {
@@ -1067,14 +1104,40 @@ class OlderSimpleTable::DecodedMessage final
   void ReleasePrimaryObject() { ResetBytes(); }
 };
 
+}  // namespace wire
+}  // namespace fidl_test_table
+template <>
+struct ::fidl::WireTableFrame<::fidl_test_table::wire::NewerSimpleTable> final {
+ public:
+  WireTableFrame() = default;
+  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
+  // If the ObjectView is assigned before a move or copy, then it will reference
+  // the old invalid object. Because this is unsafe, copies are disallowed and
+  // moves are only allowed by friend classes that operate safely.
+  WireTableFrame(const WireTableFrame&) = delete;
+  WireTableFrame& operator=(const WireTableFrame&) = delete;
+
+ private:
+  WireTableFrame(WireTableFrame&&) noexcept = default;
+  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+  ::fidl::Envelope<int64_t> x_;
+  [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
+  [[maybe_unused]] ::fidl::UntypedEnvelope reserved_2_;
+  [[maybe_unused]] ::fidl::UntypedEnvelope reserved_3_;
+  ::fidl::Envelope<int64_t> y_;
+  ::fidl::Envelope<int64_t> z_;
+
+  friend class ::fidl_test_table::wire::NewerSimpleTable;
+};
+
+namespace fidl_test_table {
+namespace wire {
 extern "C" const fidl_type_t fidl_test_table_NewerSimpleTableTable;
 
 class NewerSimpleTable final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  class Frame_;
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
@@ -1186,12 +1249,17 @@ class NewerSimpleTable final {
 
   NewerSimpleTable() = default;
   explicit NewerSimpleTable(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
+      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<
+                       ::fidl_test_table::wire::NewerSimpleTable>>(allocator)) {
+  }
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
-  explicit NewerSimpleTable(::fidl::ObjectView<Frame_>&& frame)
+  explicit NewerSimpleTable(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::fidl_test_table::wire::NewerSimpleTable>>&&
+          frame)
       : frame_ptr_(std::move(frame)) {}
   ~NewerSimpleTable() = default;
   NewerSimpleTable(const NewerSimpleTable& other) noexcept = default;
@@ -1208,9 +1276,12 @@ class NewerSimpleTable final {
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
+    frame_ptr_ = ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::fidl_test_table::wire::NewerSimpleTable>>(
+        allocator);
   }
-  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<
+                ::fidl_test_table::wire::NewerSimpleTable>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -1219,36 +1290,11 @@ class NewerSimpleTable final {
   class OwnedEncodedMessage;
   class DecodedMessage;
 
-  // Frame_s are managed automatically by the Arena class.
-  // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a Arena. Once created, a frame can only be used for one
-  // single table.
-  class Frame_ final {
-   public:
-    Frame_() = default;
-    // In its intended usage, Frame_ will be referenced by an ObjectView. If the
-    // ObjectView is assigned before a move or copy, then it will reference the
-    // old invalid object. Because this is unsafe, copies are disallowed and
-    // moves are only allowed by friend classes that operate safely.
-    Frame_(const Frame_&) = delete;
-    Frame_& operator=(const Frame_&) = delete;
-
-   private:
-    Frame_(Frame_&&) noexcept = default;
-    Frame_& operator=(Frame_&&) noexcept = default;
-    ::fidl::Envelope<int64_t> x_;
-    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
-    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_2_;
-    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_3_;
-    ::fidl::Envelope<int64_t> y_;
-    ::fidl::Envelope<int64_t> z_;
-
-    friend class NewerSimpleTable;
-  };
-
  private:
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<Frame_> frame_ptr_;
+  ::fidl::ObjectView<
+      ::fidl::WireTableFrame<::fidl_test_table::wire::NewerSimpleTable>>
+      frame_ptr_;
 };
 
 class NewerSimpleTable::UnownedEncodedMessage final {
@@ -1372,6 +1418,28 @@ class NewerSimpleTable::DecodedMessage final
   void ReleasePrimaryObject() { ResetBytes(); }
 };
 
+}  // namespace wire
+}  // namespace fidl_test_table
+template <>
+struct ::fidl::WireTableFrame<::fidl_test_table::wire::ExtensionTable> final {
+ public:
+  WireTableFrame() = default;
+  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
+  // If the ObjectView is assigned before a move or copy, then it will reference
+  // the old invalid object. Because this is unsafe, copies are disallowed and
+  // moves are only allowed by friend classes that operate safely.
+  WireTableFrame(const WireTableFrame&) = delete;
+  WireTableFrame& operator=(const WireTableFrame&) = delete;
+
+ private:
+  WireTableFrame(WireTableFrame&&) noexcept = default;
+  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  friend class ::fidl_test_table::wire::ExtensionTable;
+};
+
+namespace fidl_test_table {
+namespace wire {
 extern "C" const fidl_type_t fidl_test_table_ExtensionTableTable;
 
 class ExtensionTable final {
@@ -1379,16 +1447,16 @@ class ExtensionTable final {
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
-  class Frame_;
-
   ExtensionTable() = default;
   explicit ExtensionTable(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
+      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<
+                       ::fidl_test_table::wire::ExtensionTable>>(allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
-  explicit ExtensionTable(::fidl::ObjectView<Frame_>&& frame)
+  explicit ExtensionTable(::fidl::ObjectView<::fidl::WireTableFrame<
+                              ::fidl_test_table::wire::ExtensionTable>>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~ExtensionTable() = default;
   ExtensionTable(const ExtensionTable& other) noexcept = default;
@@ -1405,9 +1473,12 @@ class ExtensionTable final {
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
+    frame_ptr_ = ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::fidl_test_table::wire::ExtensionTable>>(
+        allocator);
   }
-  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<
+                ::fidl_test_table::wire::ExtensionTable>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -1416,30 +1487,11 @@ class ExtensionTable final {
   class OwnedEncodedMessage;
   class DecodedMessage;
 
-  // Frame_s are managed automatically by the Arena class.
-  // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a Arena. Once created, a frame can only be used for one
-  // single table.
-  class Frame_ final {
-   public:
-    Frame_() = default;
-    // In its intended usage, Frame_ will be referenced by an ObjectView. If the
-    // ObjectView is assigned before a move or copy, then it will reference the
-    // old invalid object. Because this is unsafe, copies are disallowed and
-    // moves are only allowed by friend classes that operate safely.
-    Frame_(const Frame_&) = delete;
-    Frame_& operator=(const Frame_&) = delete;
-
-   private:
-    Frame_(Frame_&&) noexcept = default;
-    Frame_& operator=(Frame_&&) noexcept = default;
-
-    friend class ExtensionTable;
-  };
-
  private:
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<Frame_> frame_ptr_;
+  ::fidl::ObjectView<
+      ::fidl::WireTableFrame<::fidl_test_table::wire::ExtensionTable>>
+      frame_ptr_;
 };
 
 class ExtensionTable::UnownedEncodedMessage final {
@@ -1563,14 +1615,99 @@ class ExtensionTable::DecodedMessage final
   void ReleasePrimaryObject() { ResetBytes(); }
 };
 
+}  // namespace wire
+}  // namespace fidl_test_table
+template <>
+struct ::fidl::WireTableFrame<::fidl_test_table::wire::SixtyFourOrdinalTable>
+    final {
+ public:
+  WireTableFrame() = default;
+  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
+  // If the ObjectView is assigned before a move or copy, then it will reference
+  // the old invalid object. Because this is unsafe, copies are disallowed and
+  // moves are only allowed by friend classes that operate safely.
+  WireTableFrame(const WireTableFrame&) = delete;
+  WireTableFrame& operator=(const WireTableFrame&) = delete;
+
+ private:
+  WireTableFrame(WireTableFrame&&) noexcept = default;
+  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+  ::fidl::Envelope<int64_t> v1_;
+  ::fidl::Envelope<int64_t> v2_;
+  ::fidl::Envelope<int64_t> v3_;
+  ::fidl::Envelope<int64_t> v4_;
+  ::fidl::Envelope<int64_t> v5_;
+  ::fidl::Envelope<int64_t> v6_;
+  ::fidl::Envelope<int64_t> v7_;
+  ::fidl::Envelope<int64_t> v8_;
+  ::fidl::Envelope<int64_t> v9_;
+  ::fidl::Envelope<int64_t> v10_;
+  ::fidl::Envelope<int64_t> v11_;
+  ::fidl::Envelope<int64_t> v12_;
+  ::fidl::Envelope<int64_t> v13_;
+  ::fidl::Envelope<int64_t> v14_;
+  ::fidl::Envelope<int64_t> v15_;
+  ::fidl::Envelope<int64_t> v16_;
+  ::fidl::Envelope<int64_t> v17_;
+  ::fidl::Envelope<int64_t> v18_;
+  ::fidl::Envelope<int64_t> v19_;
+  ::fidl::Envelope<int64_t> v20_;
+  ::fidl::Envelope<int64_t> v21_;
+  ::fidl::Envelope<int64_t> v22_;
+  ::fidl::Envelope<int64_t> v23_;
+  ::fidl::Envelope<int64_t> v24_;
+  ::fidl::Envelope<int64_t> v25_;
+  ::fidl::Envelope<int64_t> v26_;
+  ::fidl::Envelope<int64_t> v27_;
+  ::fidl::Envelope<int64_t> v28_;
+  ::fidl::Envelope<int64_t> v29_;
+  ::fidl::Envelope<int64_t> v30_;
+  ::fidl::Envelope<int64_t> v31_;
+  ::fidl::Envelope<int64_t> v32_;
+  ::fidl::Envelope<int64_t> v33_;
+  ::fidl::Envelope<int64_t> v34_;
+  ::fidl::Envelope<int64_t> v35_;
+  ::fidl::Envelope<int64_t> v36_;
+  ::fidl::Envelope<int64_t> v37_;
+  ::fidl::Envelope<int64_t> v38_;
+  ::fidl::Envelope<int64_t> v39_;
+  ::fidl::Envelope<int64_t> v40_;
+  ::fidl::Envelope<int64_t> v41_;
+  ::fidl::Envelope<int64_t> v42_;
+  ::fidl::Envelope<int64_t> v43_;
+  ::fidl::Envelope<int64_t> v44_;
+  ::fidl::Envelope<int64_t> v45_;
+  ::fidl::Envelope<int64_t> v46_;
+  ::fidl::Envelope<int64_t> v47_;
+  ::fidl::Envelope<int64_t> v48_;
+  ::fidl::Envelope<int64_t> v49_;
+  ::fidl::Envelope<int64_t> v50_;
+  ::fidl::Envelope<int64_t> v51_;
+  ::fidl::Envelope<int64_t> v52_;
+  ::fidl::Envelope<int64_t> v53_;
+  ::fidl::Envelope<int64_t> v54_;
+  ::fidl::Envelope<int64_t> v55_;
+  ::fidl::Envelope<int64_t> v56_;
+  ::fidl::Envelope<int64_t> v57_;
+  ::fidl::Envelope<int64_t> v58_;
+  ::fidl::Envelope<int64_t> v59_;
+  ::fidl::Envelope<int64_t> v60_;
+  ::fidl::Envelope<int64_t> v61_;
+  ::fidl::Envelope<int64_t> v62_;
+  ::fidl::Envelope<int64_t> v63_;
+  ::fidl::Envelope<::fidl_test_table::wire::ExtensionTable> v64_;
+
+  friend class ::fidl_test_table::wire::SixtyFourOrdinalTable;
+};
+
+namespace fidl_test_table {
+namespace wire {
 extern "C" const fidl_type_t fidl_test_table_SixtyFourOrdinalTableTable;
 
 class SixtyFourOrdinalTable final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  class Frame_;
 
   const int64_t& v1() const {
     ZX_ASSERT(has_v1());
@@ -4008,12 +4145,16 @@ class SixtyFourOrdinalTable final {
 
   SixtyFourOrdinalTable() = default;
   explicit SixtyFourOrdinalTable(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
+      : frame_ptr_(
+            ::fidl::ObjectView<::fidl::WireTableFrame<
+                ::fidl_test_table::wire::SixtyFourOrdinalTable>>(allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
-  explicit SixtyFourOrdinalTable(::fidl::ObjectView<Frame_>&& frame)
+  explicit SixtyFourOrdinalTable(
+      ::fidl::ObjectView<::fidl::WireTableFrame<
+          ::fidl_test_table::wire::SixtyFourOrdinalTable>>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~SixtyFourOrdinalTable() = default;
   SixtyFourOrdinalTable(const SixtyFourOrdinalTable& other) noexcept = default;
@@ -4032,9 +4173,12 @@ class SixtyFourOrdinalTable final {
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
+    frame_ptr_ = ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::fidl_test_table::wire::SixtyFourOrdinalTable>>(
+        allocator);
   }
-  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<
+                ::fidl_test_table::wire::SixtyFourOrdinalTable>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -4043,94 +4187,11 @@ class SixtyFourOrdinalTable final {
   class OwnedEncodedMessage;
   class DecodedMessage;
 
-  // Frame_s are managed automatically by the Arena class.
-  // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a Arena. Once created, a frame can only be used for one
-  // single table.
-  class Frame_ final {
-   public:
-    Frame_() = default;
-    // In its intended usage, Frame_ will be referenced by an ObjectView. If the
-    // ObjectView is assigned before a move or copy, then it will reference the
-    // old invalid object. Because this is unsafe, copies are disallowed and
-    // moves are only allowed by friend classes that operate safely.
-    Frame_(const Frame_&) = delete;
-    Frame_& operator=(const Frame_&) = delete;
-
-   private:
-    Frame_(Frame_&&) noexcept = default;
-    Frame_& operator=(Frame_&&) noexcept = default;
-    ::fidl::Envelope<int64_t> v1_;
-    ::fidl::Envelope<int64_t> v2_;
-    ::fidl::Envelope<int64_t> v3_;
-    ::fidl::Envelope<int64_t> v4_;
-    ::fidl::Envelope<int64_t> v5_;
-    ::fidl::Envelope<int64_t> v6_;
-    ::fidl::Envelope<int64_t> v7_;
-    ::fidl::Envelope<int64_t> v8_;
-    ::fidl::Envelope<int64_t> v9_;
-    ::fidl::Envelope<int64_t> v10_;
-    ::fidl::Envelope<int64_t> v11_;
-    ::fidl::Envelope<int64_t> v12_;
-    ::fidl::Envelope<int64_t> v13_;
-    ::fidl::Envelope<int64_t> v14_;
-    ::fidl::Envelope<int64_t> v15_;
-    ::fidl::Envelope<int64_t> v16_;
-    ::fidl::Envelope<int64_t> v17_;
-    ::fidl::Envelope<int64_t> v18_;
-    ::fidl::Envelope<int64_t> v19_;
-    ::fidl::Envelope<int64_t> v20_;
-    ::fidl::Envelope<int64_t> v21_;
-    ::fidl::Envelope<int64_t> v22_;
-    ::fidl::Envelope<int64_t> v23_;
-    ::fidl::Envelope<int64_t> v24_;
-    ::fidl::Envelope<int64_t> v25_;
-    ::fidl::Envelope<int64_t> v26_;
-    ::fidl::Envelope<int64_t> v27_;
-    ::fidl::Envelope<int64_t> v28_;
-    ::fidl::Envelope<int64_t> v29_;
-    ::fidl::Envelope<int64_t> v30_;
-    ::fidl::Envelope<int64_t> v31_;
-    ::fidl::Envelope<int64_t> v32_;
-    ::fidl::Envelope<int64_t> v33_;
-    ::fidl::Envelope<int64_t> v34_;
-    ::fidl::Envelope<int64_t> v35_;
-    ::fidl::Envelope<int64_t> v36_;
-    ::fidl::Envelope<int64_t> v37_;
-    ::fidl::Envelope<int64_t> v38_;
-    ::fidl::Envelope<int64_t> v39_;
-    ::fidl::Envelope<int64_t> v40_;
-    ::fidl::Envelope<int64_t> v41_;
-    ::fidl::Envelope<int64_t> v42_;
-    ::fidl::Envelope<int64_t> v43_;
-    ::fidl::Envelope<int64_t> v44_;
-    ::fidl::Envelope<int64_t> v45_;
-    ::fidl::Envelope<int64_t> v46_;
-    ::fidl::Envelope<int64_t> v47_;
-    ::fidl::Envelope<int64_t> v48_;
-    ::fidl::Envelope<int64_t> v49_;
-    ::fidl::Envelope<int64_t> v50_;
-    ::fidl::Envelope<int64_t> v51_;
-    ::fidl::Envelope<int64_t> v52_;
-    ::fidl::Envelope<int64_t> v53_;
-    ::fidl::Envelope<int64_t> v54_;
-    ::fidl::Envelope<int64_t> v55_;
-    ::fidl::Envelope<int64_t> v56_;
-    ::fidl::Envelope<int64_t> v57_;
-    ::fidl::Envelope<int64_t> v58_;
-    ::fidl::Envelope<int64_t> v59_;
-    ::fidl::Envelope<int64_t> v60_;
-    ::fidl::Envelope<int64_t> v61_;
-    ::fidl::Envelope<int64_t> v62_;
-    ::fidl::Envelope<int64_t> v63_;
-    ::fidl::Envelope<::fidl_test_table::wire::ExtensionTable> v64_;
-
-    friend class SixtyFourOrdinalTable;
-  };
-
  private:
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<Frame_> frame_ptr_;
+  ::fidl::ObjectView<
+      ::fidl::WireTableFrame<::fidl_test_table::wire::SixtyFourOrdinalTable>>
+      frame_ptr_;
 };
 
 class SixtyFourOrdinalTable::UnownedEncodedMessage final {
@@ -4255,6 +4316,28 @@ class SixtyFourOrdinalTable::DecodedMessage final
   void ReleasePrimaryObject() { ResetBytes(); }
 };
 
+}  // namespace wire
+}  // namespace fidl_test_table
+template <>
+struct ::fidl::WireTableFrame<::fidl_test_table::wire::EmptyTable> final {
+ public:
+  WireTableFrame() = default;
+  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
+  // If the ObjectView is assigned before a move or copy, then it will reference
+  // the old invalid object. Because this is unsafe, copies are disallowed and
+  // moves are only allowed by friend classes that operate safely.
+  WireTableFrame(const WireTableFrame&) = delete;
+  WireTableFrame& operator=(const WireTableFrame&) = delete;
+
+ private:
+  WireTableFrame(WireTableFrame&&) noexcept = default;
+  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  friend class ::fidl_test_table::wire::EmptyTable;
+};
+
+namespace fidl_test_table {
+namespace wire {
 extern "C" const fidl_type_t fidl_test_table_EmptyTableTable;
 
 class EmptyTable final {
@@ -4262,16 +4345,18 @@ class EmptyTable final {
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
-  class Frame_;
-
   EmptyTable() = default;
   explicit EmptyTable(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
+      : frame_ptr_(::fidl::ObjectView<
+                   ::fidl::WireTableFrame<::fidl_test_table::wire::EmptyTable>>(
+            allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
-  explicit EmptyTable(::fidl::ObjectView<Frame_>&& frame)
+  explicit EmptyTable(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::fidl_test_table::wire::EmptyTable>>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~EmptyTable() = default;
   EmptyTable(const EmptyTable& other) noexcept = default;
@@ -4287,9 +4372,11 @@ class EmptyTable final {
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
+    frame_ptr_ = ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::fidl_test_table::wire::EmptyTable>>(allocator);
   }
-  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<
+                ::fidl_test_table::wire::EmptyTable>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -4298,30 +4385,11 @@ class EmptyTable final {
   class OwnedEncodedMessage;
   class DecodedMessage;
 
-  // Frame_s are managed automatically by the Arena class.
-  // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a Arena. Once created, a frame can only be used for one
-  // single table.
-  class Frame_ final {
-   public:
-    Frame_() = default;
-    // In its intended usage, Frame_ will be referenced by an ObjectView. If the
-    // ObjectView is assigned before a move or copy, then it will reference the
-    // old invalid object. Because this is unsafe, copies are disallowed and
-    // moves are only allowed by friend classes that operate safely.
-    Frame_(const Frame_&) = delete;
-    Frame_& operator=(const Frame_&) = delete;
-
-   private:
-    Frame_(Frame_&&) noexcept = default;
-    Frame_& operator=(Frame_&&) noexcept = default;
-
-    friend class EmptyTable;
-  };
-
  private:
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<Frame_> frame_ptr_;
+  ::fidl::ObjectView<
+      ::fidl::WireTableFrame<::fidl_test_table::wire::EmptyTable>>
+      frame_ptr_;
 };
 
 class EmptyTable::UnownedEncodedMessage final {

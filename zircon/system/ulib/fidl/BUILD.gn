@@ -104,6 +104,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/transaction.h",
                     "lib/fidl/llcpp/vector_view.h",
                     "lib/fidl/llcpp/wire_messaging.h",
+                    "lib/fidl/llcpp/wire_types.h",
                   ] + llcpp_wavl_tree_headers
 
     sources = [
@@ -168,6 +169,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/string_view.h",
                     "lib/fidl/llcpp/traits.h",
                     "lib/fidl/llcpp/vector_view.h",
+                    "lib/fidl/llcpp/wire_types.h",
                   ] + llcpp_wavl_tree_headers
 
     sources = [

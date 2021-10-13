@@ -80,6 +80,17 @@ TEST(Table, NotEmptyTable) {
   ASSERT_FALSE(table.IsEmpty());
 }
 
+TEST(Table, ManualFrame) {
+  namespace test = fidl_llcpp_types_test;
+  fidl::WireTableFrame<test::wire::SampleTable> frame;
+  test::wire::SampleTable table(
+      fidl::ObjectView<fidl::WireTableFrame<test::wire::SampleTable>>::FromExternal(&frame));
+  table.set_x(42);
+  table.set_y(100);
+  EXPECT_EQ(table.x(), 42);
+  EXPECT_EQ(table.y(), 100);
+}
+
 TEST(Table, Getters) {
   namespace test = fidl_llcpp_types_test;
   fidl::Arena allocator;
