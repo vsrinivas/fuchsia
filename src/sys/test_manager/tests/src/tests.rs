@@ -5,8 +5,9 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_manager as ftest_manager,
+    fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::{CaseStatus, RunOptions, SuiteStatus},
     fuchsia_async as fasync,
     fuchsia_component::client,
@@ -16,10 +17,10 @@ use {
 };
 
 async fn connect_test_manager() -> Result<ftest_manager::RunBuilderProxy, Error> {
-    let realm = client::connect_to_protocol::<fsys::RealmMarker>()
+    let realm = client::connect_to_protocol::<fcomponent::RealmMarker>()
         .context("could not connect to Realm service")?;
 
-    let mut child_ref = fsys::ChildRef { name: "test_manager".to_owned(), collection: None };
+    let mut child_ref = fdecl::ChildRef { name: "test_manager".to_owned(), collection: None };
     let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>()?;
     realm
         .open_exposed_dir(&mut child_ref, server_end)
@@ -32,10 +33,10 @@ async fn connect_test_manager() -> Result<ftest_manager::RunBuilderProxy, Error>
 }
 
 async fn connect_query_server() -> Result<ftest_manager::QueryProxy, Error> {
-    let realm = client::connect_to_protocol::<fsys::RealmMarker>()
+    let realm = client::connect_to_protocol::<fcomponent::RealmMarker>()
         .context("could not connect to Realm service")?;
 
-    let mut child_ref = fsys::ChildRef { name: "test_manager".to_owned(), collection: None };
+    let mut child_ref = fdecl::ChildRef { name: "test_manager".to_owned(), collection: None };
     let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>()?;
     realm
         .open_exposed_dir(&mut child_ref, server_end)

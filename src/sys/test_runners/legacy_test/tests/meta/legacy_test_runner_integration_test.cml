@@ -14,7 +14,7 @@
     ],
     use: [
         {
-            protocol: "fuchsia.sys2.Realm",
+            protocol: "fuchsia.component.Realm",
             from: "framework",
         },
     ],

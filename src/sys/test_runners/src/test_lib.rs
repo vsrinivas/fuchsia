@@ -7,9 +7,9 @@ use {
     fidl::endpoints,
     fidl::endpoints::ClientEnd,
     fidl::endpoints::Proxy,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_test::{
         CaseListenerRequest::Finished,
         Invocation, Result_ as TestResult,
@@ -281,10 +281,10 @@ fn line_buffer_std_message(
 
 // Binds to test manager component and returns run builder service.
 pub async fn connect_to_test_manager() -> Result<ftest_manager::RunBuilderProxy, Error> {
-    let realm = client::connect_to_protocol::<fsys::RealmMarker>()
+    let realm = client::connect_to_protocol::<fcomponent::RealmMarker>()
         .context("could not connect to Realm service")?;
 
-    let mut child_ref = fsys::ChildRef { name: "test_manager".to_owned(), collection: None };
+    let mut child_ref = fdecl::ChildRef { name: "test_manager".to_owned(), collection: None };
     let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>()?;
     realm
         .open_exposed_dir(&mut child_ref, server_end)

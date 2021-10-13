@@ -6,13 +6,12 @@ use {
     anyhow::{format_err, Context, Result},
     fidl::endpoints::create_proxy,
     fidl::Error as FidlError,
+    fidl_fuchsia_component::{CreateChildArgs, RealmMarker, RealmProxy},
+    fidl_fuchsia_component_decl::{Child, ChildRef, CollectionRef, StartupMode},
     fidl_fuchsia_component_runner::ComponentNamespaceEntry,
     fidl_fuchsia_data::{DictionaryEntry, DictionaryValue},
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_stresstest::{ActorMarker, ActorProxy, Error},
-    fidl_fuchsia_sys2::{
-        ChildDecl, ChildRef, CollectionRef, CreateChildArgs, RealmMarker, RealmProxy, StartupMode,
-    },
     fuchsia_async::{Task, TimeoutExt},
     fuchsia_component::client::connect_to_protocol_at_dir_root,
     futures::FutureExt,
@@ -40,11 +39,11 @@ pub struct ActorInstance {
 
 impl ActorInstance {
     async fn create(name: String, url: String, realm_proxy: RealmProxy) -> Result<Self> {
-        let decl = ChildDecl {
+        let decl = Child {
             name: Some(name.clone()),
             url: Some(url),
             startup: Some(StartupMode::Lazy),
-            ..ChildDecl::EMPTY
+            ..Child::EMPTY
         };
         let mut collection = CollectionRef { name: ACTOR_COLLECTION_NAME.to_string() };
         realm_proxy

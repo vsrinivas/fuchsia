@@ -10,9 +10,10 @@ rustc_test("test_manager_test_bin") {
   name = "test_manager_test"
   source_root = "src/tests.rs"
   deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

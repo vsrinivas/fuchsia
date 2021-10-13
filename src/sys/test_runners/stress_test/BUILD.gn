@@ -12,11 +12,12 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.stresstest:fuchsia.stresstest-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//sdk/fidl/fuchsia.test:rust_measure_tape_for_case",
     "//src/lib/fidl/rust/fidl",
