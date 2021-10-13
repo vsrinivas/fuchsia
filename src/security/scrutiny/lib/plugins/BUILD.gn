@@ -26,6 +26,7 @@ if (is_host) {
       "//src/sys/lib/component_id_index",
       "//src/sys/lib/moniker",
       "//src/sys/lib/routing",
+      "//src/sys/lib/routing",
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",
       "//src/sys/pkg/lib/fuchsia-hash",
       "//src/sys/pkg/lib/fuchsia-merkle",

@@ -376,10 +376,11 @@ impl ComponentModelWalker for BreadthFirstModelWalker {
     }
 }
 
-/// A ComponentInstanceVisitor which just records an identifier of each component instance visited.
+/// A ComponentInstanceVisitor which just records an identifier and the url of each component instance visited.
 #[derive(Default)]
 pub struct ModelMappingVisitor {
-    visited: Vec<String>,
+    // A vector of (instance id, url) pairs.
+    visited: Vec<(String, String)>,
 }
 
 impl ModelMappingVisitor {
@@ -387,7 +388,7 @@ impl ModelMappingVisitor {
         Self { visited: Vec::new() }
     }
 
-    pub fn map(&self) -> &Vec<String> {
+    pub fn map(&self) -> &Vec<(String, String)> {
         &self.visited
     }
 }
@@ -397,7 +398,7 @@ impl ComponentInstanceVisitor for ModelMappingVisitor {
         &mut self,
         instance: &Arc<ComponentInstanceForAnalyzer>,
     ) -> Result<(), anyhow::Error> {
-        self.visited.push(instance.node_path().to_string());
+        self.visited.push((instance.node_path().to_string(), instance.url().to_string()));
         Ok(())
     }
 }
@@ -441,7 +442,7 @@ impl ComponentModelForAnalyzer {
     pub async fn check_routes_for_instance(
         self: &Arc<Self>,
         target: &Arc<ComponentInstanceForAnalyzer>,
-        capability_types: HashSet<CapabilityTypeName>,
+        capability_types: &HashSet<CapabilityTypeName>,
     ) -> HashMap<CapabilityTypeName, Vec<VerifyRouteResult>> {
         let mut results = HashMap::new();
         for capability_type in capability_types.iter() {
@@ -878,6 +879,8 @@ impl ComponentModelForAnalyzer {
                 self.check_executable(&weak.upgrade()?).await
             }
             CapabilitySourceInterface::Namespace { .. } => Ok(()),
+            CapabilitySourceInterface::Builtin { .. } => Ok(()),
+            CapabilitySourceInterface::Framework { .. } => Ok(()),
             _ => unimplemented![],
         }
     }
@@ -900,6 +903,7 @@ impl ComponentModelForAnalyzer {
                 self.check_protocol_capability_source(&weak.upgrade()?, &source_capability).await
             }
             CapabilitySourceInterface::Builtin { .. } => Ok(()),
+            CapabilitySourceInterface::Framework { .. } => Ok(()),
             _ => unimplemented![],
         }
     }
@@ -1025,7 +1029,7 @@ impl ComponentInstanceForAnalyzer {
         &self.decl
     }
 
-    fn node_path(&self) -> NodePath {
+    pub fn node_path(&self) -> NodePath {
         NodePath::absolute_from_vec(
             self.abs_moniker().to_partial().path().into_iter().map(|m| m.as_str()).collect(),
         )
@@ -1582,11 +1586,15 @@ mod tests {
             ("c", ComponentDeclBuilder::new().add_lazy_child("d").build()),
             ("d", ComponentDeclBuilder::new().build()),
         ];
+        let a_url = make_test_url("a");
+        let b_url = make_test_url("b");
+        let c_url = make_test_url("c");
+        let d_url = make_test_url("d");
 
         let config = Arc::new(RuntimeConfig::default());
         let build_model_result = block_on(async {
             ModelBuilderForAnalyzer::new(
-                cm_types::Url::new(make_test_url("a")).expect("failed to parse root component url"),
+                cm_types::Url::new(a_url.clone()).expect("failed to parse root component url"),
             )
             .build(
                 make_decl_map(components),
@@ -1601,13 +1609,25 @@ mod tests {
         let model = build_model_result.model.unwrap();
         assert_eq!(model.len(), 4);
 
-        //        let walker = BreadthFirstModelWalker::new();
         let mut visitor = ModelMappingVisitor::new();
         BreadthFirstModelWalker::new().walk(&model, &mut visitor)?;
         let map = visitor.map();
 
         // The visitor should visit both "b" and "c" before "d", but may visit "b" and "c" in either order.
-        assert!((map == &vec!["/", "/b", "/c", "/c/d"]) || (map == &vec!["/", "/c", "/b", "/c/d"]));
+        assert!(
+            (map == &vec![
+                ("/".to_string(), a_url.clone()),
+                ("/b".to_string(), b_url.clone()),
+                ("/c".to_string(), c_url.clone()),
+                ("/c/d".to_string(), d_url.clone())
+            ]) || (map
+                == &vec![
+                    ("/".to_string(), a_url.clone()),
+                    ("/c".to_string(), c_url.clone()),
+                    ("/b".to_string(), b_url.clone()),
+                    ("/c/d".to_string(), d_url.clone())
+                ])
+        );
 
         Ok(())
     }

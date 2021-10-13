@@ -1871,7 +1871,7 @@ mod tests {
             .model
             .check_routes_for_instance(
                 &b_component,
-                HashSet::from_iter(
+                &HashSet::from_iter(
                     vec![
                         CapabilityTypeName::Resolver,
                         CapabilityTypeName::Runner,

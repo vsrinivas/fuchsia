@@ -14,7 +14,7 @@ use {
         },
         controller::{
             build::VerifyBuildController,
-            capability_routing::{CapabilityRouteController, TreeMappingController},
+            capability_routing::{CapabilityRouteController, V2ComponentModelMappingController},
             route_sources::RouteSourcesController,
         },
     },
@@ -42,7 +42,7 @@ plugin!(
         },
         controllers! {
             "/verify/build" => VerifyBuildController::default(),
-            "/verify/map_tree" => TreeMappingController::default(),
+            "/verify/v2_component_model" => V2ComponentModelMappingController::default(),
             "/verify/capability_routes" => CapabilityRouteController::default(),
             "/verify/route_sources" => RouteSourcesController::default(),
         }
@@ -111,25 +111,29 @@ mod tests {
                 ManifestData, Manifests, Zbi,
             },
             verify::{
-                collection::{V2ComponentModel, V2ComponentTree},
+                collection::V2ComponentModel,
                 collector::component_tree::{DEFAULT_CONFIG_PATH, DEFAULT_ROOT_URL},
             },
         },
         anyhow::Result,
-        cm_fidl_analyzer::capability_routing::testing::build_two_node_tree,
+        cm_fidl_analyzer::component_model::ModelBuilderForAnalyzer,
         cm_rust::{
             CapabilityDecl, CapabilityName, CapabilityPath, ChildDecl, ComponentDecl,
             DependencyType, DirectoryDecl, NativeIntoFidl, OfferDecl, OfferDirectoryDecl,
-            OfferProtocolDecl, OfferSource, OfferTarget, UseDecl, UseDirectoryDecl,
+            OfferProtocolDecl, OfferSource, OfferTarget, ProgramDecl, UseDecl, UseDirectoryDecl,
             UseProtocolDecl, UseSource,
         },
         fidl::encoding::encode_persistent,
         fidl_fuchsia_component_internal as component_internal,
         fidl_fuchsia_io2::Operations,
         fidl_fuchsia_sys2 as fsys2,
+        futures_executor::block_on,
         maplit::hashset,
         moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
-        routing::component_instance::ComponentInstanceInterface,
+        routing::{
+            component_id_index::ComponentIdIndex, component_instance::ComponentInstanceInterface,
+            config::RuntimeConfig, environment::RunnerRegistry,
+        },
         scrutiny_testing::fake::*,
         serde_json::json,
         std::{collections::HashMap, convert::TryFrom},
@@ -158,6 +162,27 @@ mod tests {
             exposes: vec![],
             offers: vec![],
             capabilities: vec![],
+            children,
+            collections: vec![],
+            facets: None,
+            environments: vec![],
+        }
+    }
+
+    fn new_component_with_capabilities(
+        uses: Vec<UseDecl>,
+        offers: Vec<OfferDecl>,
+        capabilities: Vec<CapabilityDecl>,
+        children: Vec<ChildDecl>,
+    ) -> ComponentDecl {
+        let mut program = ProgramDecl::default();
+        program.runner = Some("elf".into());
+        ComponentDecl {
+            program: Some(program),
+            uses,
+            exposes: vec![],
+            offers,
+            capabilities,
             children,
             collections: vec![],
             facets: None,
@@ -236,6 +261,8 @@ mod tests {
         Ok(Manifest { component_id, manifest: ManifestData::Version2(decl_base64), uses: vec![] })
     }
 
+    // Creates a data model with a ZBI containing one component manifest and the provided component
+    // id index.
     fn single_v2_component_model(
         root_component_url: Option<String>,
         component_id_index_path: Option<String>,
@@ -257,6 +284,15 @@ mod tests {
         Ok(model)
     }
 
+    // Creates a data model with a ZBI containing 4 component manifests and a default component id index.
+    // The structure of the component instance tree is:
+    //
+    //        root
+    //       /    \
+    //     foo    bar
+    //     /
+    //   baz
+    //
     fn multi_v2_component_model() -> Result<Arc<DataModel>> {
         let model = data_model();
         let root_id = 0;
@@ -302,8 +338,12 @@ mod tests {
         Ok(model)
     }
 
-    fn two_node_tree_model() -> Result<Arc<DataModel>> {
+    fn two_instance_component_model() -> Result<Arc<DataModel>> {
         let model = data_model();
+
+        let root_url = DEFAULT_ROOT_URL.to_string();
+        let child_url = "fuchsia-boot:///#meta/child.cm".to_string();
+
         let child_name = "child".to_string();
         let missing_child_name = "missing_child".to_string();
 
@@ -334,26 +374,52 @@ mod tests {
             new_use_directory_decl(UseSource::Parent, bad_dir_name.clone(), offer_rights);
         let child_use_protocol = new_use_protocol_decl(UseSource::Parent, protocol_name.clone());
 
-        let build_tree_result = build_two_node_tree(
-            vec![],
-            vec![
-                OfferDecl::Directory(root_offer_good_dir),
-                OfferDecl::Protocol(root_offer_protocol),
-            ],
-            vec![CapabilityDecl::Directory(root_good_dir_decl)],
-            vec![
-                UseDecl::Directory(child_use_good_dir.clone()),
-                UseDecl::Directory(child_use_bad_dir.clone()),
-                UseDecl::Protocol(child_use_protocol.clone()),
-            ],
-            vec![],
-            vec![],
+        let mut decls = HashMap::new();
+        decls.insert(
+            root_url.clone(),
+            new_component_with_capabilities(
+                vec![],
+                vec![
+                    OfferDecl::Directory(root_offer_good_dir),
+                    OfferDecl::Protocol(root_offer_protocol),
+                ],
+                vec![CapabilityDecl::Directory(root_good_dir_decl)],
+                vec![new_child_decl(child_name, child_url.clone())],
+            ),
         );
-        assert!(build_tree_result.tree.is_some());
-        let tree = build_tree_result.tree.unwrap();
+        decls.insert(
+            child_url,
+            new_component_with_capabilities(
+                vec![
+                    UseDecl::Directory(child_use_good_dir),
+                    UseDecl::Directory(child_use_bad_dir),
+                    UseDecl::Protocol(child_use_protocol),
+                ],
+                vec![],
+                vec![],
+                vec![],
+            ),
+        );
+
+        let build_model_result = block_on(async {
+            ModelBuilderForAnalyzer::new(
+                cm_types::Url::new(root_url).expect("failed to parse root component url"),
+            )
+            .build(
+                decls,
+                Arc::new(RuntimeConfig::default()),
+                Arc::new(ComponentIdIndex::default()),
+                RunnerRegistry::default(),
+            )
+            .await
+        });
+        assert!(build_model_result.errors.is_empty());
+        assert!(build_model_result.model.is_some());
+        let component_model = build_model_result.model.unwrap();
+        assert_eq!(component_model.len(), 2);
         let deps = hashset! { "v2_component_tree_dep".to_string() };
 
-        model.set(V2ComponentTree::new(deps, tree, build_tree_result.errors))?;
+        model.set(V2ComponentModel::new(deps, component_model, build_model_result.errors))?;
         Ok(model)
     }
 
@@ -428,15 +494,14 @@ mod tests {
     #[test]
     fn test_map_tree_single_node_default_url() -> Result<()> {
         let model = single_v2_component_model(None, None, component_id_index::Index::default())?;
-        V2ComponentTreeDataCollector::new().collect(model.clone())?;
+        V2ComponentModelDataCollector::new().collect(model.clone())?;
 
-        let controller = TreeMappingController::default();
+        let controller = V2ComponentModelMappingController::default();
         let response = controller.query(model.clone(), json!("{}"))?;
         assert_eq!(
             response,
-            json!({"route": [{"node": "/", "url": DEFAULT_ROOT_URL.to_string()}]})
+            json!({"instances":  [{ "instance": "/", "url": DEFAULT_ROOT_URL.to_string() }]})
         );
-
         Ok(())
     }
 
@@ -448,33 +513,33 @@ mod tests {
             None,
             component_id_index::Index::default(),
         )?;
-        V2ComponentTreeDataCollector::new().collect(model.clone())?;
+        V2ComponentModelDataCollector::new().collect(model.clone())?;
 
-        let controller = TreeMappingController::default();
+        let controller = V2ComponentModelMappingController::default();
         let response = controller.query(model.clone(), json!("{}"))?;
-        assert_eq!(response, json!({"route": [ {"node": "/", "url": root_url }]}));
+        assert_eq!(response, json!({"instances": [ {"instance": "/", "url": root_url }]}));
 
         Ok(())
     }
 
     #[test]
-    fn test_map_tree_multi_node() -> Result<()> {
+    fn test_map_component_model_multi_instance() -> Result<()> {
         let model = multi_v2_component_model()?;
-        V2ComponentTreeDataCollector::new().collect(model.clone())?;
+        V2ComponentModelDataCollector::new().collect(model.clone())?;
 
-        let controller = TreeMappingController::default();
+        let controller = V2ComponentModelMappingController::default();
         let response = controller.query(model.clone(), json!("{}"))?;
         assert!(
             (response
-                == json!({"route": [{"node": "/", "url": DEFAULT_ROOT_URL.to_string()},
-                                 {"node": "/foo","url": "fuchsia-boot:///#meta/foo.cm"},
-                                 {"node": "/bar", "url": "fuchsia-boot:///#meta/bar.cm"},
-                                 {"node": "/foo/baz", "url": "fuchsia-boot:///#meta/baz.cm"}]}))
+                == json!({"instances": [{"instance": "/", "url": DEFAULT_ROOT_URL.to_string()},
+                                 {"instance": "/foo","url": "fuchsia-boot:///#meta/foo.cm"},
+                                 {"instance": "/bar", "url": "fuchsia-boot:///#meta/bar.cm"},
+                                 {"instance": "/foo/baz", "url": "fuchsia-boot:///#meta/baz.cm"}]}))
                 | (response
-                    == json!({"route": [{"node": "/", "url": DEFAULT_ROOT_URL.to_string()},
-                                 {"node": "/bar","url": "fuchsia-boot:///#meta/bar.cm"},
-                                 {"node": "/foo", "url": "fuchsia-boot:///#meta/foo.cm"},
-                                 {"node": "/foo/baz", "url": "fuchsia-boot:///#meta/baz.cm"}]}))
+                    == json!({"instances": [{"instance": "/", "url": DEFAULT_ROOT_URL.to_string()},
+                                 {"instance": "/bar","url": "fuchsia-boot:///#meta/bar.cm"},
+                                 {"instance": "/foo", "url": "fuchsia-boot:///#meta/foo.cm"},
+                                 {"instance": "/foo/baz", "url": "fuchsia-boot:///#meta/baz.cm"}]}))
         );
 
         Ok(())
@@ -482,7 +547,7 @@ mod tests {
 
     #[test]
     fn test_capability_routing_all_results() -> Result<()> {
-        let model = two_node_tree_model()?;
+        let model = two_instance_component_model()?;
 
         let controller = CapabilityRouteController::default();
         let response = controller.query(
@@ -493,53 +558,77 @@ mod tests {
 
         let expected = json!({
           "deps": ["v2_component_tree_dep"],
-          "results": [
-            {
-              "capability_type": "directory",
-              "results": {
-                "errors": [
-                  {
-                    "capability": "bad_dir",
-                    "error": {
-                      "error": {
-                        "offer_decl_not_found": [
-                          "/",
-                          "bad_dir"
-                        ]
-                      },
-                      "message": "no offer declaration for `/` with name `bad_dir`"
-                    },
-                    "using_node": "/child"
-                  }
-                ],
-                "ok": [
-                  {
-                    "capability": "good_dir",
-                    "using_node": "/child"
-                  }
-                ]
-              }
-            },
-            {
-              "capability_type": "protocol",
-              "results": {
-                "warnings": [
-                  {
-                    "capability": "protocol",
-                    "using_node": "/child",
-                    "warning": {
-                      "error": {
-                        "component_not_found": {
-                          "component_node_not_found": "/missing_child"
-                        }
-                      },
-                      "message": "failed to find component: `no node found with path `/missing_child``"
+            "results": [
+                {
+                    "capability_type": "directory",
+                    "results": {
+                        "errors": [
+                            {
+                                "capability": "bad_dir",
+                                "error": {
+                                    "error": {
+                                        "analyzer_model_error": {
+                                            "routing_error": {
+                                                "use_from_parent_not_found": {
+                                                    "capability_id": "bad_dir",
+                                                    "moniker": {
+                                                        "path": [
+                                                            {
+                                                                "collection": null,
+                                                                "name": "child",
+                                                                "rep": "child"
+                                                            },
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "message": "A `use from parent` declaration was found at `/child` for `bad_dir`, but no matching `offer` declaration was found in the parent"
+                                },
+                                "using_node": "/child",
+                            },
+                        ],
+                        "ok": [
+                            {
+                                "capability": "good_dir",
+                                "using_node": "/child",
+                            },
+                        ],
                     }
-                  }
-                ]
-              }
-            }
-          ]
+                },
+                {
+                    "capability_type": "protocol",
+                    "results": {
+                        "warnings": [
+                            {
+                                "capability": "protocol",
+                                "warning": {
+                                    "error": {
+                                        "analyzer_model_error": {
+                                            "routing_error": {
+                                                "offer_from_child_instance_not_found": {
+                                                    "capability_id": "protocol",
+                                                    "child_moniker": {
+                                                        "collection": null,
+                                                        "name": "missing_child",
+                                                        "rep": "missing_child",
+                                                    },
+                                                    "moniker": {
+                                                        "path": []
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "message": "An `offer from #missing_child` declaration was found at `/` for `protocol`, but no matching child was found"
+                                },
+                                "using_node": "/child",
+                            },
+                        ],
+                    }
+                }
+            ]
         });
 
         assert_eq!(response, expected);
@@ -549,7 +638,7 @@ mod tests {
 
     #[test]
     fn test_capability_routing_verbose_results() -> Result<()> {
-        let model = two_node_tree_model()?;
+        let model = two_instance_component_model()?;
 
         let controller = CapabilityRouteController::default();
         let response = controller.query(
@@ -564,89 +653,113 @@ mod tests {
             {
               "capability_type": "directory",
               "results": {
-                "errors": [
-                  {
-                    "capability": "bad_dir",
-                    "error": {
-                      "error": {
-                        "offer_decl_not_found": [
-                          "/",
-                          "bad_dir"
-                        ]
-                      },
-                      "message": "no offer declaration for `/` with name `bad_dir`"
-                    },
-                    "using_node": "/child"
-                  }
-                ],
-                "ok": [
-                  {
-                    "capability": "good_dir",
-                    "route": [
+                  "errors": [
                       {
-                        "action": "use_by",
-                        "capability": {
-                          "dependency_type": "strong",
-                          "rights": 1,
-                          "source": "parent",
-                          "source_name": "good_dir",
-                          "subdir": null,
-                          "target_path": "/",
-                          "type": "directory"
-                        },
-                        "node_path": "/child"
-                      },
-                      {
-                        "action": "offer_by",
-                        "capability": {
-                          "dependency_type": "strong",
-                          "rights": 1,
-                          "source": "self_",
-                          "source_name": "good_dir",
-                          "subdir": null,
-                          "target": {
-                            "child": {
-                              "name": "child",
-                              "collection": null,
-                            }
+                          "capability": "bad_dir",
+                          "error": {
+                              "error": {
+                                  "analyzer_model_error": {
+                                      "routing_error": {
+                                          "use_from_parent_not_found": {
+                                              "capability_id": "bad_dir",
+                                              "moniker": {
+                                                  "path": [
+                                                      {
+                                                          "collection": null,
+                                                          "name": "child",
+                                                          "rep": "child"
+                                                      },
+                                                  ]
+                                              }
+                                          }
+                                      }
+                                  }
+                              },
+                              "message": "A `use from parent` declaration was found at `/child` for `bad_dir`, but no matching `offer` declaration was found in the parent"
                           },
-                          "target_name": "good_dir",
-                          "type": "directory"
-                        },
-                        "node_path": "/"
+                          "using_node": "/child",
                       },
+                  ],
+                  "ok": [
                       {
-                        "action": "declare_by",
-                        "capability": {
-                          "name": "good_dir",
-                          "rights": 1,
-                          "source_path": null,
-                          "type": "directory"
-                        },
-                        "node_path": "/"
+                          "capability": "good_dir",
+                          "route": [
+                              {
+                                  "action": "use_by",
+                                  "capability": {
+                                      "dependency_type": "strong",
+                                      "rights": 1,
+                                      "source": "parent",
+                                      "source_name": "good_dir",
+                                      "subdir": null,
+                                      "target_path": "/",
+                                      "type": "directory"
+                                  },
+                                  "node_path": "/child"
+                              },
+                              {
+                                  "action": "offer_by",
+                                  "capability": {
+                                      "dependency_type": "strong",
+                                      "rights": 1,
+                                      "source": "self_",
+                                      "source_name": "good_dir",
+                                      "subdir": null,
+                                      "target": {
+                                          "child": {
+                                              "name": "child",
+                                              "collection": null,
+                                          }
+                                      },
+                                      "target_name": "good_dir",
+                                      "type": "directory"
+                                  },
+                                  "node_path": "/"
+                              },
+                              {
+                                  "action": "declare_by",
+                                  "capability": {
+                                      "name": "good_dir",
+                                      "rights": 1,
+                                      "source_path": null,
+                                      "type": "directory"
+                                  },
+                                  "node_path": "/"
+                              }
+                          ],
+                          "using_node": "/child"
                       }
-                    ],
-                    "using_node": "/child"
-                  }
-                ]
+                  ]
               }
             },
             {
               "capability_type": "protocol",
               "results": {
                 "warnings": [
-                  {
-                    "capability": "protocol",
-                    "using_node": "/child",
-                    "warning": {
-                      "error": {
-                        "component_not_found": {
-                          "component_node_not_found": "/missing_child"
-                        }
-                      },
-                      "message": "failed to find component: `no node found with path `/missing_child``"
-                    }
-                  }
+                    {
+                        "capability": "protocol",
+                        "warning": {
+                            "error": {
+                                "analyzer_model_error": {
+                                    "routing_error": {
+                                        "offer_from_child_instance_not_found": {
+                                            "capability_id": "protocol",
+                                            "child_moniker": {
+                                                "collection": null,
+                                                "name": "missing_child",
+                                                "rep": "missing_child",
+                                            },
+                                            "moniker": {
+                                                "path": []
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "message": "An `offer from #missing_child` declaration was found at `/` for `protocol`, but no matching child was found"
+                        },
+                        "using_node": "/child",
+                    },
                 ]
               }
             }
@@ -660,7 +773,7 @@ mod tests {
 
     #[test]
     fn test_capability_routing_warn() -> Result<()> {
-        let model = two_node_tree_model()?;
+        let model = two_instance_component_model()?;
 
         let controller = CapabilityRouteController::default();
         let response = controller.query(
@@ -675,42 +788,66 @@ mod tests {
             {
               "capability_type": "directory",
               "results": {
-                "errors": [
-                  {
-                    "capability": "bad_dir",
-                    "error": {
-                      "error": {
-                        "offer_decl_not_found": [
-                          "/",
-                          "bad_dir"
-                        ]
+                  "errors": [
+                      {
+                          "capability": "bad_dir",
+                          "error": {
+                              "error": {
+                                  "analyzer_model_error": {
+                                      "routing_error": {
+                                          "use_from_parent_not_found": {
+                                              "capability_id": "bad_dir",
+                                              "moniker": {
+                                                  "path": [
+                                                      {
+                                                          "collection": null,
+                                                          "name": "child",
+                                                          "rep": "child"
+                                                      },
+                                                  ]
+                                              }
+                                          }
+                                      }
+                                  }
+                              },
+                              "message": "A `use from parent` declaration was found at `/child` for `bad_dir`, but no matching `offer` declaration was found in the parent"
+                          },
+                          "using_node": "/child",
                       },
-                      "message": "no offer declaration for `/` with name `bad_dir`"
-                    },
-                    "using_node": "/child"
-                  }
-                ]
+                  ]
               }
             },
-            {
-              "capability_type": "protocol",
-              "results": {
-                "warnings": [
-                  {
-                    "capability": "protocol",
-                    "using_node": "/child",
-                    "warning": {
-                      "error": {
-                        "component_not_found": {
-                          "component_node_not_found": "/missing_child"
-                        }
-                      },
-                      "message": "failed to find component: `no node found with path `/missing_child``"
-                    }
+              {
+                  "capability_type": "protocol",
+                  "results": {
+                      "warnings": [
+                          {
+                              "capability": "protocol",
+                              "using_node": "/child",
+                              "warning": {
+                                  "error": {
+                                      "analyzer_model_error": {
+                                          "routing_error": {
+                                              "offer_from_child_instance_not_found": {
+                                                  "capability_id": "protocol",
+                                                  "child_moniker": {
+                                                      "collection": null,
+                                                      "name": "missing_child",
+                                                      "rep": "missing_child",
+                                                  },
+                                                  "moniker": {
+                                                      "path": []
+                                                  }
+                                              }
+                                          }
+                                      }
+                                  },
+                                  "message": "An `offer from #missing_child` declaration was found at `/` for `protocol`, but no matching child was found"
+                              }
+                          }
+                      ]
                   }
-                ]
               }
-            }
           ]
         });
 
@@ -721,7 +858,7 @@ mod tests {
 
     #[test]
     fn test_capability_routing_errors_only() -> Result<()> {
-        let model = two_node_tree_model()?;
+        let model = two_instance_component_model()?;
 
         let controller = CapabilityRouteController::default();
         let response = controller.query(
@@ -736,21 +873,33 @@ mod tests {
             {
               "capability_type": "directory",
               "results": {
-                "errors": [
-                  {
-                    "capability": "bad_dir",
-                    "error": {
-                      "error": {
-                        "offer_decl_not_found": [
-                          "/",
-                          "bad_dir"
-                        ]
-                      },
-                      "message": "no offer declaration for `/` with name `bad_dir`"
-                    },
-                    "using_node": "/child"
-                  }
-                ]
+                  "errors": [
+                      {
+                          "capability": "bad_dir",
+                          "error": {
+                              "error": {
+                                  "analyzer_model_error": {
+                                      "routing_error": {
+                                          "use_from_parent_not_found": {
+                                              "capability_id": "bad_dir",
+                                              "moniker": {
+                                                  "path": [
+                                                      {
+                                                          "collection": null,
+                                                          "name": "child",
+                                                          "rep": "child"
+                                                      },
+                                                  ]
+                                              }
+                                          }
+                                      }
+                                  }
+                              },
+                              "message": "A `use from parent` declaration was found at `/child` for `bad_dir`, but no matching `offer` declaration was found in the parent"
+                          },
+                          "using_node": "/child",
+                      }
+                  ]
               }
             },
             {

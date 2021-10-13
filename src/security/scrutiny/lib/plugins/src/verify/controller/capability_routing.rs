@@ -4,25 +4,28 @@
 
 use {
     crate::verify::{
-        collection::V2ComponentTree, CapabilityRouteResults, ErrorResult, OkResult,
+        collection::V2ComponentModel, CapabilityRouteResults, ErrorResult, OkResult,
         ResultsBySeverity, ResultsForCapabilityType, WarningResult,
     },
     anyhow::{anyhow, Context, Result},
     cm_fidl_analyzer::capability_routing::{
-        directory::DirectoryCapabilityRouteVerifier,
-        error::CapabilityRouteError,
-        protocol::ProtocolCapabilityRouteVerifier,
-        verifier::{CapabilityRouteVerifier, VerifyRouteResult},
+        error::CapabilityRouteError, verifier::VerifyRouteResult,
     },
-    cm_fidl_analyzer::component_tree::{
-        BreadthFirstWalker, ComponentNode, ComponentNodeVisitor, ComponentTree, ComponentTreeWalker,
+    cm_fidl_analyzer::component_model::{
+        AnalyzerModelError, BreadthFirstModelWalker, ComponentInstanceForAnalyzer,
+        ComponentInstanceVisitor, ComponentModelForAnalyzer, ComponentModelWalker,
+        ModelMappingVisitor,
     },
     cm_rust::CapabilityTypeName,
-    log::error,
+    futures_executor::block_on,
+    routing::error::{ComponentInstanceError, RoutingError},
     scrutiny::{model::controller::DataController, model::model::*},
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
-    std::{collections::HashSet, sync::Arc},
+    std::{
+        collections::{HashMap, HashSet},
+        sync::Arc,
+    },
 };
 
 /// Generic verification result type. Variants implement serialization.
@@ -46,7 +49,21 @@ impl From<VerifyRouteResult> for ResultBySeverity {
                     // It is expected that some components in a build may have
                     // children that are not included in the build.
                     CapabilityRouteError::ComponentNotFound(_)
-                    | CapabilityRouteError::ValidationNotImplemented(_) => WarningResult {
+                    | CapabilityRouteError::ValidationNotImplemented(_)
+                    | CapabilityRouteError::AnalyzerModelError(
+                        AnalyzerModelError::ComponentInstanceError(
+                            ComponentInstanceError::InstanceNotFound { .. },
+                        ),
+                    )
+                    | CapabilityRouteError::AnalyzerModelError(AnalyzerModelError::RoutingError(
+                        RoutingError::EnvironmentFromChildInstanceNotFound { .. },
+                    ))
+                    | CapabilityRouteError::AnalyzerModelError(AnalyzerModelError::RoutingError(
+                        RoutingError::ExposeFromChildInstanceNotFound { .. },
+                    ))
+                    | CapabilityRouteError::AnalyzerModelError(AnalyzerModelError::RoutingError(
+                        RoutingError::OfferFromChildInstanceNotFound { .. },
+                    )) => WarningResult {
                         using_node: verify_route_result.using_node,
                         capability: verify_route_result.capability,
                         warning: error.into(),
@@ -82,39 +99,34 @@ impl From<ErrorResult> for ResultBySeverity {
     }
 }
 
-// TreeMappingController
+// V2ComponentModelMappingController
 //
-// A placeholder DataController which builds the tree of v2 components and returns its node
-// identifiers in breadth-first order.
+// A DataController which builds the tree of v2 components and lists all component instance identifiers
+// in breadth-first order.
 #[derive(Default)]
-pub struct TreeMappingController {}
+pub struct V2ComponentModelMappingController {}
 
-// A placeholder ComponentNodeVisitor which just records the node path of each node visited,
-// together with its component URL.
-#[derive(Default)]
-struct TreeMappingVisitor {
-    pub visited: Vec<Value>,
-}
-
-impl ComponentNodeVisitor for TreeMappingVisitor {
-    fn visit_node(&mut self, node: &ComponentNode) -> Result<()> {
-        self.visited.push(json!({"node": node.short_display(), "url": node.url()}));
-        Ok(())
-    }
-}
-
-impl DataController for TreeMappingController {
+impl DataController for V2ComponentModelMappingController {
     fn query(&self, model: Arc<DataModel>, _value: Value) -> Result<Value> {
-        let tree = &model.get::<V2ComponentTree>()?.tree;
-        let mut walker = BreadthFirstWalker::new(&tree)?;
-        let mut visitor = TreeMappingVisitor::default();
-        walker.walk(&tree, &mut visitor)?;
+        let component_model = Arc::clone(
+            &model
+                .get::<V2ComponentModel>()
+                .context("Failed to get V2ComponentModel from CapabilityRouteController model")?
+                .component_model,
+        );
+        let mut walker = BreadthFirstModelWalker::new();
+        let mut visitor = ModelMappingVisitor::default();
+        walker.walk(&component_model, &mut visitor)?;
 
-        return Ok(json!({"route": visitor.visited}));
+        let mut instances = Vec::new();
+        for (instance, url) in visitor.map().iter() {
+            instances.push(json!({ "instance": instance.clone(), "url": url.clone()}));
+        }
+        Ok(json!({ "instances": instances }))
     }
 
     fn description(&self) -> String {
-        "a placeholder analyzer which walks the full v2 component tree and reports its route"
+        "an analyzer that walks the full v2 component tree and reports all instance IDs in breadth-first order"
             .to_string()
     }
 }
@@ -146,135 +158,92 @@ enum ResponseLevel {
     Verbose,
 }
 
-// An umbrella type for the capability-type-specific implementations of the
-// `CapabilityRouteVerifier` trait.
-enum VerifierForCapabilityType {
-    Directory(DirectoryCapabilityRouteVerifier),
-    Protocol(ProtocolCapabilityRouteVerifier),
+// A visitor that checks the route for each capability in `model` whose type appears in `capability_types`.
+struct CapabilityRouteVisitor {
+    model: Arc<ComponentModelForAnalyzer>,
+    capability_types: HashSet<CapabilityTypeName>,
+    results: HashMap<CapabilityTypeName, Vec<VerifyRouteResult>>,
 }
 
-// A `VerifierForCapabilityType` together with its record of verification results.
-struct VerifierWithResults {
-    capability_type: CapabilityTypeName,
-    verifier: VerifierForCapabilityType,
-    results: Vec<VerifyRouteResult>,
-}
-
-// A visitor that invokes each of its `verifiers` at each node of `tree`.
-struct CapabilityRouteVisitor<'a> {
-    tree: &'a ComponentTree,
-    verifiers: Vec<VerifierWithResults>,
-}
-
-impl VerifierForCapabilityType {
-    fn new(capability_type: &CapabilityTypeName) -> Result<Self> {
-        match capability_type {
-            CapabilityTypeName::Directory => {
-                Ok(Self::Directory(DirectoryCapabilityRouteVerifier::new()))
-            }
-            CapabilityTypeName::Protocol => {
-                Ok(Self::Protocol(ProtocolCapabilityRouteVerifier::new()))
-            }
-            _ => Err(anyhow!(
-                "Route verification is not yet implemented for capabilities of type {}",
-                capability_type.to_string()
-            )),
+impl CapabilityRouteVisitor {
+    fn new(
+        model: Arc<ComponentModelForAnalyzer>,
+        capability_types: HashSet<CapabilityTypeName>,
+    ) -> Self {
+        let mut results = HashMap::new();
+        for type_name in capability_types.iter() {
+            results.insert(type_name.clone(), vec![]);
         }
-    }
-}
-
-// Used to forward calls to `CapabilityRouteVerifier` trait methods through to the
-// inner value of a `VerifierForCapabilityType`.
-macro_rules! forward_to_verifier {
-    ($value:expr, $inner:pat => $result:expr) => {
-        match $value {
-            VerifierForCapabilityType::Directory($inner) => $result,
-            VerifierForCapabilityType::Protocol($inner) => $result,
-        }
-    };
-}
-
-impl VerifierWithResults {
-    fn new(capability_type: &CapabilityTypeName) -> Result<Self> {
-        let verifier = VerifierForCapabilityType::new(capability_type)?;
-        Ok(Self {
-            capability_type: capability_type.clone(),
-            verifier,
-            results: Vec::<VerifyRouteResult>::new(),
-        })
+        Self { model, capability_types, results }
     }
 
-    fn verify(&mut self, tree: &ComponentTree, node: &ComponentNode) {
-        let mut results =
-            forward_to_verifier!(&self.verifier, v => v.verify_all_routes(tree, node));
-        self.results.append(&mut results);
-    }
+    fn split_ok_warn_error_results(
+        &self,
+    ) -> HashMap<CapabilityTypeName, (Vec<OkResult>, Vec<WarningResult>, Vec<ErrorResult>)> {
+        let mut split_results = HashMap::new();
+        for (type_name, type_results) in self.results.iter() {
+            let mut ok_results = vec![];
+            let mut warning_results = vec![];
+            let mut error_results = vec![];
 
-    fn split_ok_warn_error_results(&self) -> (Vec<OkResult>, Vec<WarningResult>, Vec<ErrorResult>) {
-        let mut ok_results = vec![];
-        let mut warning_results = vec![];
-        let mut error_results = vec![];
-
-        for result in self.results.iter() {
-            match result.clone().into() {
-                ResultBySeverity::Ok(ok_result) => ok_results.push(ok_result),
-                ResultBySeverity::Warning(warning_result) => warning_results.push(warning_result),
-                ResultBySeverity::Error(error_result) => error_results.push(error_result),
-            }
-        }
-        (ok_results, warning_results, error_results)
-    }
-
-    fn report_results(&self, level: &ResponseLevel) -> ResultsForCapabilityType {
-        let (ok, warnings, errors) = self.split_ok_warn_error_results();
-        let results = match level {
-            ResponseLevel::Error => ResultsBySeverity { errors, ..Default::default() },
-            ResponseLevel::Warn => ResultsBySeverity { errors, warnings, ..Default::default() },
-            ResponseLevel::All => ResultsBySeverity {
-                errors,
-                warnings,
-                ok: ok
-                    .into_iter()
-                    .map(|result| OkResult {
-                        // `All` response level omits route details that depend on an
-                        // unstable route details format.
-                        route: vec![],
-                        ..result
-                    })
-                    .collect(),
-            },
-            ResponseLevel::Verbose => ResultsBySeverity { errors, warnings, ok },
-        };
-        ResultsForCapabilityType { capability_type: self.capability_type.clone(), results }
-    }
-}
-
-impl<'a> CapabilityRouteVisitor<'a> {
-    fn new(tree: &'a ComponentTree, capability_types: &HashSet<CapabilityTypeName>) -> Self {
-        let mut verifiers = Vec::<VerifierWithResults>::new();
-        for cap_type in capability_types.iter() {
-            match VerifierWithResults::new(cap_type) {
-                Ok(verifier) => {
-                    verifiers.push(verifier);
-                }
-                Err(err) => {
-                    error!("{}", err.to_string());
+            for result in type_results.iter() {
+                match result.clone().into() {
+                    ResultBySeverity::Ok(ok_result) => ok_results.push(ok_result),
+                    ResultBySeverity::Warning(warning_result) => {
+                        warning_results.push(warning_result)
+                    }
+                    ResultBySeverity::Error(error_result) => error_results.push(error_result),
                 }
             }
+            split_results.insert(type_name.clone(), (ok_results, warning_results, error_results));
         }
-        verifiers.sort_by(|a, b| a.capability_type.to_string().cmp(&b.capability_type.to_string()));
-        Self { tree, verifiers }
+        split_results
     }
 
     fn report_results(&self, level: &ResponseLevel) -> Vec<ResultsForCapabilityType> {
-        self.verifiers.iter().map(|verifier| verifier.report_results(level)).collect()
+        let mut filtered_results = Vec::new();
+        let split_results = self.split_ok_warn_error_results();
+        for (type_name, (ok, warnings, errors)) in split_results.into_iter() {
+            let filtered_for_type = match level {
+                ResponseLevel::Error => ResultsBySeverity { errors, ..Default::default() },
+                ResponseLevel::Warn => ResultsBySeverity { errors, warnings, ..Default::default() },
+                ResponseLevel::All => ResultsBySeverity {
+                    errors,
+                    warnings,
+                    ok: ok
+                        .into_iter()
+                        .map(|result| OkResult {
+                            // `All` response level omits route details that depend on an
+                            // unstable route details format.
+                            route: vec![],
+                            ..result
+                        })
+                        .collect(),
+                },
+                ResponseLevel::Verbose => ResultsBySeverity { errors, warnings, ok },
+            };
+            filtered_results.push(ResultsForCapabilityType {
+                capability_type: type_name.clone(),
+                results: filtered_for_type,
+            })
+        }
+        filtered_results
+            .sort_by(|r, s| r.capability_type.to_string().cmp(&s.capability_type.to_string()));
+        filtered_results
     }
 }
 
-impl<'a> ComponentNodeVisitor for CapabilityRouteVisitor<'a> {
-    fn visit_node(&mut self, node: &ComponentNode) -> Result<()> {
-        for verifier in &mut self.verifiers {
-            verifier.verify(self.tree, node);
+impl ComponentInstanceVisitor for CapabilityRouteVisitor {
+    fn visit_instance(&mut self, instance: &Arc<ComponentInstanceForAnalyzer>) -> Result<()> {
+        let check_results = block_on(async {
+            self.model.check_routes_for_instance(instance, &self.capability_types).await
+        });
+        for (type_name, results) in check_results.into_iter() {
+            let type_results =
+                self.results.get_mut(&type_name).expect("expected results for capability type");
+            for result in results.into_iter() {
+                type_results.push(result);
+            }
         }
         Ok(())
     }
@@ -322,16 +291,18 @@ impl DataController for CapabilityRouteController {
     fn query(&self, model: Arc<DataModel>, request: Value) -> Result<Value> {
         let (capability_types, response_level) = Self::parse_request(request)
             .context("Failed to parse CapabilityRouteController request")?;
-        let tree_data = model
-            .get::<V2ComponentTree>()
-            .context("Failed to get V2ComponentTree from CapabilityRouteController model")?;
-        let tree = &tree_data.tree;
-        let deps = tree_data.deps.clone();
-        let mut walker = BreadthFirstWalker::new(tree)
-            .context("Failed to initialize BreadthFirstWalker from V2ComponentTree")?;
-        let mut visitor = CapabilityRouteVisitor::new(tree, &capability_types);
-        walker.walk(&tree, &mut visitor).context(
-            "Failed to walk V2ComponentTree with BreadthFirstWalker and CapabilityRouteVisitor",
+        let component_model_data = Arc::clone(
+            &model
+                .get::<V2ComponentModel>()
+                .context("Failed to get V2ComponentModel from CapabilityRouteController model")?,
+        );
+        let deps = component_model_data.deps.clone();
+        let component_model = &component_model_data.component_model;
+        let mut walker = BreadthFirstModelWalker::new();
+        let mut visitor =
+            CapabilityRouteVisitor::new(Arc::clone(component_model), capability_types);
+        walker.walk(&component_model, &mut visitor).context(
+            "Failed to walk V2ComponentModel with BreadthFirstModelWalker and CapabilityRouteVisitor",
         )?;
         let results = visitor.report_results(&response_level);
         Ok(json!(CapabilityRouteResults { deps, results }))
