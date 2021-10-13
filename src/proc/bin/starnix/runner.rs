@@ -353,9 +353,6 @@ fn start_component(
         None,
     )?;
 
-    // Run all the features (e.g., wayland) that were specified in the .cml.
-    features.map(|features| run_features(&features, &task_owner.task));
-
     for mount_spec in mounts_iter {
         let (mount_point, child_fs) =
             create_filesystem_from_spec(&kernel, Some(&task_owner.task), &pkg, mount_spec)?;
@@ -379,6 +376,12 @@ fn start_component(
             let apex_source = task.lookup_path_from_root(&[b"system/apex/", apex].concat())?;
             apex_subdir.mount(WhatToMount::Dir(apex_source.entry))?;
         }
+    }
+
+    // Run all the features (e.g., wayland) that were specified in the .cml.
+    if let Some(features) = features {
+        run_features(&features, &task_owner.task)
+            .map_err(|e| anyhow!("Failed to initialize features: {:?}", e))?;
     }
 
     let mut argv = vec![binary_path];
