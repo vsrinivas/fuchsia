@@ -10,7 +10,6 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
-#include <fbl/algorithm.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_printf.h>
 
@@ -293,7 +292,7 @@ zx_status_t Device::EnableMsix(uint32_t irq_cnt) {
 
   // MSI-X supports non-pow2 counts, but the MSI allocator still allocates in
   // pow2 based blocks.
-  uint32_t irq_cnt_pow2 = fbl::roundup_pow2(irq_cnt);
+  uint32_t irq_cnt_pow2 = cpp20::bit_ceil(irq_cnt);
   auto result = AllocateMsi(irq_cnt_pow2);
   if (result.is_ok()) {
     auto [alloc, info] = std::move(result.value());

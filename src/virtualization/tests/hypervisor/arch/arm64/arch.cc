@@ -5,6 +5,7 @@
 #include "src/virtualization/tests/hypervisor/arch.h"
 
 #include <lib/page-table/builder.h>
+#include <lib/stdcompat/bit.h>
 #include <lib/stdcompat/span.h>
 
 #include <fbl/algorithm.h>
@@ -88,7 +89,7 @@ void SetUpGuestPageTable(cpp20::span<uint8_t> guest_memory) {
 
   // Map virtual memory 1:1 to physical memory.
   zx_status_t status =
-      builder->MapRegion(GuestVaddr{0}, GuestPaddr{0}, fbl::roundup_pow2(guest_memory.size()),
+      builder->MapRegion(GuestVaddr{0}, GuestPaddr{0}, cpp20::bit_ceil(guest_memory.size()),
                          page_table::CacheAttributes::kNormal);
   ZX_ASSERT(status == ZX_OK);
 }

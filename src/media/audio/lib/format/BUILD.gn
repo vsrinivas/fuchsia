@@ -18,6 +18,7 @@ source_set("format") {
     ":constants",
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/cpp",
     "//src/media/audio/lib/timeline",
     "//zircon/system/ulib/fbl",

@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_LIB_FORMAT_AUDIO_BUFFER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/stdcompat/bit.h>
 #include <lib/syslog/cpp/macros.h>
 #include <string.h>
 
@@ -100,7 +101,7 @@ class AudioBuffer {
         (200 - 11) /
         ((format_.channels() * (SampleFormatTraits<SampleFormat>::kCharsPerSample + 1)) + 1);
     // ...rounded _down_ to the closest power-of-2, for quick visual scanning.
-    frames_per_row = fbl::roundup_pow2(frames_per_row + 1) / 2;
+    frames_per_row = cpp20::bit_ceil(frames_per_row + 1) / 2;
 
     for (auto frame = static_cast<int64_t>(
              fbl::round_down(static_cast<size_t>(start_frame), frames_per_row));

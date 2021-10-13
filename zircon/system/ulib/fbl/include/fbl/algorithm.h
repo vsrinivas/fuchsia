@@ -40,35 +40,6 @@ constexpr const L round_down(const T& val_, const U& multiple_) {
                                               : (val / multiple) * multiple;
 }
 
-// Rounds up to the nearest power of 2.
-// - 0 is not considered a power of 2 as there is no X such that 2**X = 0.
-//   fbl::roundup(0) == 1
-// - If val is a power of 2 then val is returned.
-// - An input greater than the most significant bit set for that type is
-//   undefined behavior and will assert.
-template <class T>
-constexpr T roundup_pow2(T val) {
-  static_assert(std::is_same_v<T, uint32_t> || std::is_same_v<T, uint64_t>,
-                "fbl::roundup_pow2() only supports uint32_t & uint64_t");
-
-  if (val <= 1) {
-    return 1;
-  }
-
-  constexpr T limit = 1ULL << (std::numeric_limits<T>::digits - 1);
-  if (val > limit) {
-    // val exceeded the maximum power of 2 supported by the type.
-    __builtin_abort();
-  }
-
-  constexpr T kOne = static_cast<T>(1);
-  if constexpr (std::is_same<T, uint64_t>::value) {
-    return kOne << (std::numeric_limits<T>::digits - __builtin_clzl(val - 1));
-  } else {
-    return kOne << (std::numeric_limits<T>::digits - __builtin_clz(val - 1));
-  }
-}
-
 }  // namespace fbl
 
 #endif  // FBL_ALGORITHM_H_
