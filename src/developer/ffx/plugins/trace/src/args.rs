@@ -16,11 +16,17 @@ pub struct TraceCommand {
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
 pub enum TraceSubCommand {
+    ListCategories(ListCategories),
     ListProviders(ListProviders),
     Start(Start),
     Stop(Stop),
     // More commands including `record` and `convert` to follow.
 }
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// List the target's known trace categories
+#[argh(subcommand, name = "list-categories")]
+pub struct ListCategories {}
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// List the target's trace providers

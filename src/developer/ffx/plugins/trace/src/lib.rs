@@ -8,10 +8,32 @@ use {
     ffx_trace_args::{TraceCommand, TraceSubCommand},
     ffx_writer::Writer,
     fidl_fuchsia_developer_bridge::{self as bridge, TracingProxy},
-    fidl_fuchsia_tracing_controller::{ControllerProxy, ProviderInfo, TraceConfig},
+    fidl_fuchsia_tracing_controller::{ControllerProxy, KnownCategory, ProviderInfo, TraceConfig},
     serde::{Deserialize, Serialize},
     std::path::{Component, PathBuf},
 };
+
+// This is to make the schema make sense as this plugin can output one of these based on the
+// subcommand. An alternative is to break this one plugin into multiple plugins each with their own
+// output type. That is probably preferred but either way works.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+enum TraceOutput {
+    ListCategories(Vec<TraceKnownCategory>),
+    ListProviders(Vec<TraceProviderInfo>),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct TraceKnownCategory {
+    name: String,
+    description: String,
+}
+
+impl From<KnownCategory> for TraceKnownCategory {
+    fn from(category: KnownCategory) -> Self {
+        Self { name: category.name, description: category.description }
+    }
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 struct TraceProviderInfo {
@@ -30,6 +52,22 @@ impl From<ProviderInfo> for TraceProviderInfo {
     }
 }
 
+fn handle_fidl_error<T>(res: Result<T, fidl::Error>) -> Result<T> {
+    res.map_err(|e| anyhow!(handle_peer_closed(e)))
+}
+
+fn handle_peer_closed(err: fidl::Error) -> errors::FfxError {
+    match err {
+        fidl::Error::ClientChannelClosed { status, protocol_name } => {
+            errors::ffx_error!("An attempt to access {} resulted in a bad status: {}.
+This can happen if tracing is not supported on the product configuration you are running or if it is missing from the base image.", protocol_name, status)
+        }
+        _ => {
+            errors::ffx_error!("Accessing the tracing controller failed: {:#?}", err)
+        }
+    }
+}
+
 // OPTIMIZATION: Only grab a tracing controller proxy only when necessary.
 #[ffx_plugin(
     TracingProxy = "daemon::service",
@@ -38,29 +76,33 @@ impl From<ProviderInfo> for TraceProviderInfo {
 pub async fn trace(
     proxy: TracingProxy,
     controller: ControllerProxy,
-    #[ffx(machine = Vec<TraceProviderInfo>)] writer: Writer,
+    #[ffx(machine = TraceOutput)] writer: Writer,
     cmd: TraceCommand,
 ) -> Result<()> {
     match cmd.sub_cmd {
-        TraceSubCommand::ListProviders(_) => {
-            let providers = match controller.get_providers().await {
-                Ok(providers) => providers,
-                Err(fidl::Error::ClientChannelClosed { status, protocol_name }) => {
-                    errors::ffx_bail!("An attempt to access {} resulted in a bad status: {}.
-This can happen if tracing is not supported on the product configuration you are running or if it is missing from the base image.", protocol_name, status);
-                }
-                Err(e) => {
-                    errors::ffx_bail!("Accessing the tracing controller failed: {:#?}", e);
-                }
-            };
-
+        TraceSubCommand::ListCategories(_) => {
+            let categories = handle_fidl_error(controller.get_known_categories().await)?;
             if writer.is_machine() {
-                writer.machine(
-                    &providers
-                        .into_iter()
-                        .map(TraceProviderInfo::from)
-                        .collect::<Vec<TraceProviderInfo>>(),
-                )?;
+                let categories = categories
+                    .into_iter()
+                    .map(TraceKnownCategory::from)
+                    .collect::<Vec<TraceKnownCategory>>();
+                writer.machine(&TraceOutput::ListCategories(categories))?;
+            } else {
+                writer.line("Known Categories:")?;
+                for category in &categories {
+                    writer.line(format!("- {} - {}", category.name, category.description,))?;
+                }
+            }
+        }
+        TraceSubCommand::ListProviders(_) => {
+            let providers = handle_fidl_error(controller.get_providers().await)?;
+            if writer.is_machine() {
+                let providers = providers
+                    .into_iter()
+                    .map(TraceProviderInfo::from)
+                    .collect::<Vec<TraceProviderInfo>>();
+                writer.machine(&TraceOutput::ListProviders(providers))?;
             } else {
                 writer.line("Trace providers:")?;
                 for provider in &providers {
@@ -140,7 +182,7 @@ mod tests {
     use {
         super::*,
         errors::ResultExt as _,
-        ffx_trace_args::{ListProviders, Start, Stop},
+        ffx_trace_args::{ListCategories, ListProviders, Start, Stop},
         ffx_writer::Format,
         fidl::endpoints::{ControlHandle, Responder},
         fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_tracing_controller as trace,
@@ -188,12 +230,41 @@ mod tests {
 
     fn setup_fake_controller_proxy() -> ControllerProxy {
         setup_fake_controller(|req| match req {
+            trace::ControllerRequest::GetKnownCategories { responder, .. } => {
+                let mut categories = fake_known_categories();
+                responder.send(categories.iter_mut().by_ref()).expect("should respond");
+            }
             trace::ControllerRequest::GetProviders { responder, .. } => {
                 let mut providers = fake_provider_infos();
                 responder.send(&mut providers.drain(..)).expect("should respond");
             }
             r => panic!("unsupported req: {:?}", r),
         })
+    }
+
+    fn fake_known_categories() -> Vec<trace::KnownCategory> {
+        vec![
+            trace::KnownCategory {
+                name: String::from("input"),
+                description: String::from("Input system"),
+            },
+            trace::KnownCategory {
+                name: String::from("kernel"),
+                description: String::from("All kernel trace events"),
+            },
+            trace::KnownCategory {
+                name: String::from("kernel:arch"),
+                description: String::from("Kernel arch events"),
+            },
+            trace::KnownCategory {
+                name: String::from("kernel:ipc"),
+                description: String::from("Kernel ipc events"),
+            },
+        ]
+    }
+
+    fn fake_trace_known_categories() -> Vec<TraceKnownCategory> {
+        fake_known_categories().into_iter().map(TraceKnownCategory::from).collect()
     }
 
     fn fake_provider_infos() -> Vec<trace::ProviderInfo> {
@@ -219,6 +290,9 @@ mod tests {
 
     fn setup_closed_fake_controller_proxy() -> ControllerProxy {
         setup_fake_controller(|req| match req {
+            trace::ControllerRequest::GetKnownCategories { responder, .. } => {
+                responder.control_handle().shutdown();
+            }
             trace::ControllerRequest::GetProviders { responder, .. } => {
                 responder.control_handle().shutdown();
             }
@@ -230,6 +304,49 @@ mod tests {
         let proxy = setup_fake_service();
         let controller = setup_fake_controller_proxy();
         trace(proxy, controller, writer, cmd).await.unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_list_categories() {
+        let writer = Writer::new_test(None);
+        run_trace_test(
+            TraceCommand { sub_cmd: TraceSubCommand::ListCategories(ListCategories {}) },
+            writer.clone(),
+        )
+        .await;
+        let output = writer.test_output().unwrap();
+        let want = "Known Categories:\n\
+                   - input - Input system\n\
+                   - kernel - All kernel trace events\n\
+                   - kernel:arch - Kernel arch events\n\
+                   - kernel:ipc - Kernel ipc events\n"
+            .to_string();
+        assert_eq!(want, output);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_list_categories_machine() {
+        let writer = Writer::new_test(Some(Format::Json));
+        run_trace_test(
+            TraceCommand { sub_cmd: TraceSubCommand::ListCategories(ListCategories {}) },
+            writer.clone(),
+        )
+        .await;
+        let output = writer.test_output().unwrap();
+        let want = serde_json::to_string(&fake_trace_known_categories()).unwrap();
+        assert_eq!(want, output);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_list_categories_peer_closed() {
+        let writer = Writer::new_test(None);
+        let proxy = setup_fake_service();
+        let controller = setup_closed_fake_controller_proxy();
+        let cmd = TraceCommand { sub_cmd: TraceSubCommand::ListCategories(ListCategories {}) };
+        let res = trace(proxy, controller, writer.clone(), cmd).await.unwrap_err();
+        assert!(res.ffx_error().is_some());
+        assert!(res.to_string().contains("This can happen if tracing is not"));
+        assert!(writer.test_output().unwrap().is_empty());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
