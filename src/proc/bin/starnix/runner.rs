@@ -31,6 +31,7 @@ use std::mem;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
+use crate::device::run_features;
 use crate::errno;
 use crate::fs::ext4::ExtFilesystem;
 use crate::fs::fuchsia::{create_file_from_handle, RemoteFs};
@@ -288,6 +289,7 @@ fn start_component(
     let credentials = Credentials::from_passwd(user_passwd)?;
     let apex_hack = runner::get_program_strvec(&start_info, "apex_hack").map(|v| v.clone());
     let cmdline = runner::get_program_string(&start_info, "kernel_cmdline").unwrap_or("");
+    let features = runner::get_program_strvec(&start_info, "features").map(|f| f.clone());
 
     info!("start_component environment: {:?}", environ);
 
@@ -350,6 +352,9 @@ fn start_component(
         Arc::clone(&kernel.default_abstract_socket_namespace),
         None,
     )?;
+
+    // Run all the features (e.g., wayland) that were specified in the .cml.
+    features.map(|features| run_features(&features, &task_owner.task));
 
     for mount_spec in mounts_iter {
         let (mount_point, child_fs) =

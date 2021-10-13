@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
+use fuchsia_zircon::{self as zx, AsHandleRef};
 use once_cell::sync::OnceCell;
 use parking_lot::{Mutex, RwLock};
 use std::ffi::CStr;
@@ -10,6 +10,9 @@ use std::sync::Arc;
 
 use crate::fs::FileSystemHandle;
 use crate::task::*;
+
+#[cfg(test)]
+use std::ffi::CString;
 
 pub struct Kernel {
     /// The Zircon job object that holds the processes running in this kernel.
@@ -51,9 +54,12 @@ pub struct Kernel {
 }
 
 impl Kernel {
-    fn new_empty() -> Kernel {
-        Kernel {
-            job: zx::Job::from_handle(zx::Handle::invalid()),
+    pub fn new(name: &CStr) -> Result<Kernel, zx::Status> {
+        let job = fuchsia_runtime::job_default().create_child_job()?;
+        job.set_name(&name)?;
+
+        Ok(Kernel {
+            job,
             pids: RwLock::new(PidTable::new()),
             default_abstract_socket_namespace: AbstractSocketNamespace::new(),
             cmdline: Vec::new(),
@@ -65,18 +71,13 @@ impl Kernel {
             sys_fs: OnceCell::new(),
             selinux_fs: OnceCell::new(),
             outgoing_dir: Mutex::new(None),
-        }
-    }
-
-    pub fn new(name: &CStr) -> Result<Kernel, zx::Status> {
-        let mut kernel = Self::new_empty();
-        kernel.job = fuchsia_runtime::job_default().create_child_job()?;
-        kernel.job.set_name(&name)?;
-        Ok(kernel)
+        })
     }
 
     #[cfg(test)]
     pub fn new_for_testing() -> Arc<Kernel> {
-        Arc::new(Self::new_empty())
+        Arc::new(
+            Self::new(&CString::new("testing").unwrap()).expect("Failed to create test kernel."),
+        )
     }
 }

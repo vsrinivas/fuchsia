@@ -69,6 +69,7 @@ if (target_cpu == "x64") {
       "auth.rs",
       "collections/mod.rs",
       "collections/range_map.rs",
+      "device/features.rs",
       "device/mem.rs",
       "device/mod.rs",
       "device/registry.rs",
