@@ -6,26 +6,64 @@ instead. The DriverFramework team will organize a migration to driver_test_realm
 
 Note: ***DriverTestRealm is for integration testing.***
 
-DriverTestRealm is for integration testing. It runs drivers in a driver host
-process under a hermetic driver manager instance. For a light weight unit
-testing framework, use
+DriverTestRealm is an integration testing framework that runs drivers in a
+hermetic environment. It is useful for driver authors to test their drivers, and
+for system developers to run integration tests that use specific driver stacks.
+DriverTestRealm provides a hermetic version of all of the Driver Frameworks
+APIs, and provides an environment that is nearly identical to a running system.
+
+DriverTestRealm is for integration testing. For a light weight unit testing
+framework, use
 [mock DDK](/docs/development/drivers/testing/mock_ddk.md) instead.
 
 ## Overview of DriverTestRealm
 
-DriverTestRealm is a child component that your test can access. This
-child component contains all of the DriverFramework's components, like DriverManager
+DriverTestRealm is a component that your test can access. This
+component contains all of the DriverFramework's components, like DriverManager
 and DriverIndex. It mocks out all of the capabilities these components need.
 
-DriverTestRealm exposes the the
+![Figure: The non-hermetic setup for DriverTestRealm](images/driver_test_realm.png)
+
+DriverTestRealm exposes the
 [`fuchsia.driver.test/Realm`](/sdk/fidl/fuchsia.driver.test/realm.fidl) protocol
 which is used to start the DriverTestRealm. The Start function takes arguments
-which can be used to configure things like which drivers are loaded, the root driver,
-and how DriverManager shuts down. Start can only be called once per component;
-if a new DriverTestRealm is needed for each test, then RealmBuilder must be used.
+which can be used to configure things like which drivers are loaded, the root
+driver, and how DriverManager shuts down. Start can only be called once per
+component; if a new DriverTestRealm is needed for each test, then RealmBuilder
+must be used.
 
-There are two different ways of using DriverTestRealm. It can be used hermetically
-or non-hermetically.
+## Interacting with drivers
+
+The DriverTestRealm component exposes the `/dev/` directory from DriverManager,
+which is how test code will interact with drivers. The `/dev/` directory works
+identically to the devfs on a running system. For example, if the test adds a
+mock input device, it will show up at `/dev/class/input-report/XXX`.
+
+## Including drivers
+
+By default, the DriverTestRealm component loads drivers from its own package. The test
+author must be sure to include all the drivers in the test package that they
+expect to load.
+
+## Binding drivers
+
+By default, the root driver for DriverTest realm is the
+[test-parent driver](/src/devices/misc/drivers/test-parent). That means that
+in order to bind a driver, you should create a mock driver that binds to
+the test parent. This can be
+accomplished with the following bind rules:
+
+```
+fuchsia.BIND_PROTOCOL == fuchsia.test.BIND_PROTOCOL.PARENT;
+```
+
+Your mock driver can then add a device with the right properties so that
+your driver-under-test will bind to the mock driver.
+
+## Hermetic vs Non-Hermetic
+
+There are two different ways of using DriverTestRealm. It can be used
+hermetically or non-hermetically.
 
 ### Hermetic
 
@@ -34,6 +72,8 @@ own version of the Driver Test Realm component. This means every test is
 hermetic, or isolated, from the other tests. Tests will not share any
 state, as each Driver Test Realm is unique to that test.
 
+![Figure: The hermetic setup for DriverTestRealm](images/driver_test_realm_hermetic.png)
+
 Using a hermetic Driver Test Realm may be slower as each test has to
 spawn and setup new components.
 
@@ -41,6 +81,8 @@ spawn and setup new components.
 
 The non-hermetic way of using Driver Test Realm is to have a single Driver
 Test Realm child component that is shared between every test instance.
+
+![Figure: The non-hermetic setup for DriverTestRealm](images/driver_test_realm_nonhermetic.png)
 
 The test author needs to be extra careful to make sure that their driver's
 state is cleared between each tests so that the individual tests do not
@@ -104,8 +146,6 @@ Here's test code that spawns a new DriverTestRealm per test.
 Here's a basic example of a test that starts a DriverTestRealm component and then connects
 to `/dev` to see a driver that has been loaded.
 
-![Figure: Component Model](images/driver_test_realm.png)
-
 First, it's important that the build rules are set up correctly. The test package
 needs to contain the DriverTestRealm component, as well as any drivers that
 are going to be loaded. Adding drivers to the package will automatically make those
@@ -166,20 +206,6 @@ to call `fuchsia.driver.test/Realm:Start`.
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/drivers/driver_test_realm/non_hermetic/simple/rust/test.rs" region_tag="example" %}
   ```
 
-## Binding your driver
-
-By default, the root driver for DriverTest realm is the
-[test-parent driver](/src/devices/misc/drivers/test-parent). That means that
-in order to bind a driver, you should create a mock driver that binds to
-the test parent. This can be
-accomplished with the following bind rules:
-
-```
-fuchsia.BIND_PROTOCOL == fuchsia.test.BIND_PROTOCOL.PARENT;
-```
-
-Your mock driver can then add a device with the right properties so that
-your driver-under-test will bind to the mock driver.
 
 ## Common Issues:
 
