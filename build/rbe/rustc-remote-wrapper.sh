@@ -287,7 +287,8 @@ EOF
 
     # Detect custom linker, preserve symlinks
     -Clinker=*)
-        linker=("$(realpath -s --relative-to="$project_root" "$optarg")")
+        linker_local="$optarg"
+        linker=("$(realpath -s --relative-to="$project_root" "$linker_local")")
         debug_var "[from -Clinker]" "${linker[@]}"
         ;;
 
@@ -484,9 +485,38 @@ test "$save_analysis" = 0 || {
   extra_outputs+="$build_subdir/$analysis_file"
 }
 
+# When using the linker, also grab the necessary libraries.
+clang_dir=()
+lld=()
+libcxx=()
+rt_libdir=()
+test "${#linker[@]}" = 0 || {
+  # Assuming the linker is found in $clang_dir/bin/
+  clang_dir=("$(dirname "$(dirname "${linker[0]}")")")
+  clang_dir_local=("$(dirname "$(dirname "${linker_local[0]}")")")
+
+  # ld.lld -> lld, but the symlink is required for the clang linker driver
+  # to be able to use lld.
+  lld=( "$(dirname "${linker[0]}")"/ld.lld )
+
+  clang_lib_triple="$target_triple"
+  case "$target_triple" in
+    x86_64-fuchsia) clang_lib_triple="x86_64-unknown-fuchsia" ;;
+  esac
+
+  # Linking with clang++ generally requires libc++.
+  libcxx=( "${clang_dir[0]}"/lib/"$clang_lib_triple"/libc++.a )
+
+  # Location of clang_rt.crt{begin,end}.o and libclang_rt.builtins.a
+  # * is a version number like 14.0.0.
+  # For now, we upload the entire rt lib dir.
+  rt_libdir_local=( "$clang_dir_local"/lib/clang/*/lib/"$clang_lib_triple" )
+  rt_libdir=( "$(realpath --relative-to="$project_root" "${rt_libdir_local[@]}" )" )
+}
+
 # Inputs to upload include (all relative to $project_root):
 #   * rust tool(s) [$rustc_relative]
-#   * rust tool shared libraries [$rustc_shlibs]
+#     * rust tool shared libraries [$rustc_shlibs]
 #   * rust standard libraries [$extra_rust_stdlibs]
 #   * direct source files [$top_source]
 #   * indirect source files [$depfile.nolink]
@@ -495,17 +525,12 @@ test "$save_analysis" = 0 || {
 #   * transitive dependent libraries [$depfile.nolink]
 #   * objects and libraries used as linker arguments [$link_arg_files]
 #   * system rust libraries [$depfile.nolink]
-#   * clang toolchain binaries for codegen and linking
+#   * clang++ linker driver [$linker]
+#     * libc++ [$libcxx]
+#   * linker binary (called by the driver) [$lld]
 #       For example: -Clinker=.../lld
+#   * run-time libraries [$rt_libdir]
 #   * additional data dependencies [$extra_inputs]
-
-# Need more than the bin/ directory, but its parent dir which contains tool
-# libraries, and system libraries needed for linking.
-# This is expected to cover the custom linker referenced by -Clinker=.
-tools_dir=()
-test "${#linker[@]}" = 0 || {
-  tools_dir=("$(dirname "$(dirname "${linker[0]}")")")
-}
 
 remote_inputs=(
   "$rustc_relative"
@@ -516,7 +541,10 @@ remote_inputs=(
   "${depfile_inputs[@]}"
   "${extern_paths[@]}"
   "${envvar_files[@]}"
-  "${tools_dir[@]}"
+  "${linker[@]}"
+  "${lld[@]}"
+  "${libcxx[@]}"
+  "${rt_libdir[@]}"
   "${link_arg_files[@]}"
   "${link_sysroot[@]}"
   "${extra_inputs[@]}"
@@ -533,6 +561,9 @@ outputs_joined="$(IFS=, ; echo "${outputs[*]}")"
 
 dump_vars() {
   debug_var "build subdir" "$build_subdir"
+  debug_var "clang dir" "${clang_dir[@]}"
+  debug_var "target triple" "$target_triple"
+  debug_var "clang lib triple" "$clang_lib_triple"
   debug_var "outputs" "${outputs[@]}"
   debug_var "rustc binary" "$rustc_relative"
   debug_var "rustc shlibs" "${rustc_shlibs[@]}"
@@ -540,6 +571,9 @@ dump_vars() {
   debug_var "rust lld" "${rust_lld[@]}"
   debug_var "source root" "$top_source"
   debug_var "linker" "${linker[@]}"
+  debug_var "lld" "${lld[@]}"
+  debug_var "libc++" "$libcxx"
+  debug_var "rt libdir" "${rt_libdir[@]}"
   debug_var "link args" "${link_arg_files[@]}"
   debug_var "link sysroot" "${link_sysroot[@]}"
   debug_var "env var files" "${envvar_files[@]}"
@@ -547,7 +581,6 @@ dump_vars() {
   debug_var "[$script: dep-info]" "${dep_only_command[@]}"
   debug_var "depfile inputs" "${depfile_inputs[@]}"
   debug_var "extern paths" "${extern_paths[@]}"
-  debug_var "tools dir" "${tools_dir[@]}"
   debug_var "extra inputs" "${extra_inputs[@]}"
   debug_var "extra outputs" "${extra_outputs[@]}"
 }
@@ -598,7 +631,7 @@ then
   do
     case "$f" in
       # With --exec_strategy=local, it is ok to have absolute paths under
-      # $project_root because the remote cache is not by this depfile.
+      # $project_root because the remote cache does not see this depfile.
       # Remotely generated depfiles will not match this case because they
       # operate in a different environment, so there is no need to condition
       # this case further.
