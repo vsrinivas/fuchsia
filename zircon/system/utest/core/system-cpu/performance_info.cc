@@ -40,12 +40,14 @@ constexpr zx_sched_deadline_params_t kTestThreadDeadlineParams = {
 constexpr uint32_t kTestThreadCpu = 1;
 static_assert(kTestThreadCpu < ZX_CPU_SET_MAX_CPUS);
 
+[[maybe_unused]]
 constexpr zx_cpu_set_t CpuNumToCpuSet(size_t cpu_num) {
   zx_cpu_set_t cpu_set{};
   cpu_set.mask[cpu_num / ZX_CPU_SET_BITS_PER_WORD] = 1 << (cpu_num % ZX_CPU_SET_BITS_PER_WORD);
   return cpu_set;
 }
 
+[[maybe_unused]]
 zx::status<zx_info_thread_stats_t> GetThreadStats(const zx::thread& thread) {
   zx_info_thread_stats_t info;
   const zx_status_t status =
@@ -344,6 +346,8 @@ TEST(SystemCpu, GetPerformanceInfo) {
   }
 }
 
+// TODO(fxbug.dev/85846): Re-enable when we can limit the test to HW trybots.
+#if 0
 TEST(SystemCpu, ScaleBandwidth) {
   if (GetCpuCount() < kTestThreadCpu + 1) {
     return;
@@ -410,3 +414,4 @@ TEST(SystemCpu, ScaleBandwidth) {
   });
   EXPECT_OK(run_thread_result);
 }
+#endif
