@@ -17,6 +17,7 @@
 
 #include "nelson-gpios.h"
 #include "nelson.h"
+#include "src/devices/board/drivers/nelson/spi_1_bind.h"
 #include "src/devices/lib/fidl-metadata/spi.h"
 
 #define HHI_SPICC_CLK_CNTL (0xf7 * 4)
@@ -80,27 +81,6 @@ static pbus_dev_t spi_dev = []() {
 
 // composite binding rules
 
-static constexpr zx_bind_inst_t gpio_spicc1_ss0_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SPICC1_SS0),
-};
-static constexpr device_fragment_part_t gpio_spicc1_ss0_fragment[] = {
-    {std::size(gpio_spicc1_ss0_match), gpio_spicc1_ss0_match},
-};
-
-static const zx_bind_inst_t spi1_reset_register_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
-    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_SPICC1_RESET),
-};
-static const device_fragment_part_t spi1_reset_register_fragment[] = {
-    {countof(spi1_reset_register_match), spi1_reset_register_match},
-};
-
-static constexpr device_fragment_t fragments[] = {
-    {"gpio-cs-0", std::size(gpio_spicc1_ss0_fragment), gpio_spicc1_ss0_fragment},
-    {"reset", std::size(spi1_reset_register_fragment), spi1_reset_register_fragment},
-};
-
 zx_status_t Nelson::SpiInit() {
   // setup pinmux for SPICC1 bus arbiter.
   gpio_impl_.SetAltFunction(S905D2_GPIOH(4), 3);  // MOSI
@@ -160,8 +140,8 @@ zx_status_t Nelson::SpiInit() {
     buf->Write32(spicc1_clk_sel_fclk_div2 | spicc1_clk_en | spicc1_clk_div(10), HHI_SPICC_CLK_CNTL);
   }
 
-  zx_status_t status = pbus_.CompositeDeviceAdd(&spi_dev, reinterpret_cast<uint64_t>(fragments),
-                                                std::size(fragments), nullptr);
+  zx_status_t status = pbus_.AddComposite(&spi_dev, reinterpret_cast<uint64_t>(spi_1_fragments),
+                                          std::size(spi_1_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

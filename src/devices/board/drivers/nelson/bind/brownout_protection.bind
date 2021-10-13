@@ -1,0 +1,27 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+composite brownout_protection;
+
+using fuchsia.codec;
+using fuchsia.ti.platform;
+using fuchsia.power;
+using fuchsia.amlogic.platform.s905d3;
+using fuchsia.gpio;
+
+primary node "codec" {
+  fuchsia.BIND_PROTOCOL == fuchsia.codec.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI;
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.TAS58xx;
+}
+
+node "power-sensor" {
+  fuchsia.BIND_PROTOCOL == fuchsia.power.BIND_PROTOCOL.SENSOR;
+  fuchsia.BIND_POWER_SENSOR_DOMAIN == fuchsia.amlogic.platform.s905d3.BIND_POWER_SENSOR_DOMAIN.AUDIO;
+}
+
+node "alert-gpio" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.s905d3.GPIOZ_PIN_ID.PIN_10;  // GPIO_ALERT_PWR
+}

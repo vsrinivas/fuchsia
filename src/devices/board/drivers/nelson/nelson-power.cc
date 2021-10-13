@@ -10,6 +10,9 @@
 
 #include "nelson-gpios.h"
 #include "nelson.h"
+#include "src/devices/board/drivers/nelson/brownout_protection_bind.h"
+#include "src/devices/board/drivers/nelson/ti_ina231_mlb_bind.h"
+#include "src/devices/board/drivers/nelson/ti_ina231_speakers_bind.h"
 #include "src/devices/power/drivers/ti-ina231/ti-ina231-metadata.h"
 
 namespace nelson {
@@ -58,34 +61,6 @@ constexpr device_metadata_t kAudioMetadata[] = {
     },
 };
 
-constexpr zx_bind_inst_t mlb_i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, NELSON_I2C_3),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, I2C_TI_INA231_MLB_ADDR),
-};
-
-constexpr device_fragment_part_t mlb_i2c_fragment[] = {
-    {countof(mlb_i2c_match), mlb_i2c_match},
-};
-
-constexpr device_fragment_t mlb_fragments[] = {
-    {"i2c", countof(mlb_i2c_fragment), mlb_i2c_fragment},
-};
-
-constexpr zx_bind_inst_t speakers_i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, NELSON_I2C_3),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, I2C_TI_INA231_SPEAKERS_ADDR),
-};
-
-constexpr device_fragment_part_t speakers_i2c_fragment[] = {
-    {countof(speakers_i2c_match), speakers_i2c_match},
-};
-
-constexpr device_fragment_t speakers_fragments[] = {
-    {"i2c", countof(speakers_i2c_fragment), speakers_i2c_fragment},
-};
-
 constexpr zx_device_prop_t props[] = {
     {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
     {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_INA231},
@@ -94,8 +69,8 @@ constexpr zx_device_prop_t props[] = {
 constexpr composite_device_desc_t mlb_power_sensor_dev = {
     .props = props,
     .props_count = countof(props),
-    .fragments = mlb_fragments,
-    .fragments_count = countof(mlb_fragments),
+    .fragments = ti_ina231_mlb_fragments,
+    .fragments_count = countof(ti_ina231_mlb_fragments),
     .primary_fragment = "i2c",
     .spawn_colocated = true,
     .metadata_list = kMlbMetadata,
@@ -105,46 +80,12 @@ constexpr composite_device_desc_t mlb_power_sensor_dev = {
 constexpr composite_device_desc_t speakers_power_sensor_dev = {
     .props = props,
     .props_count = countof(props),
-    .fragments = speakers_fragments,
-    .fragments_count = countof(speakers_fragments),
+    .fragments = ti_ina231_speakers_fragments,
+    .fragments_count = countof(ti_ina231_speakers_fragments),
     .primary_fragment = "i2c",
     .spawn_colocated = true,
     .metadata_list = kAudioMetadata,
     .metadata_count = countof(kAudioMetadata),
-};
-
-constexpr zx_bind_inst_t codec_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS58xx),
-};
-
-constexpr device_fragment_part_t codec_fragment[] = {
-    {countof(codec_match), codec_match},
-};
-
-constexpr zx_bind_inst_t power_sensor_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER_SENSOR),
-    BI_MATCH_IF(EQ, BIND_POWER_SENSOR_DOMAIN, kPowerSensorDomainAudio),
-};
-
-constexpr device_fragment_part_t power_sensor_fragment[] = {
-    {countof(power_sensor_match), power_sensor_match},
-};
-
-static const zx_bind_inst_t alert_gpio[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_ALERT_PWR),
-};
-
-constexpr device_fragment_part_t alert_fragment[] = {
-    {countof(alert_gpio), alert_gpio},
-};
-
-constexpr device_fragment_t brownout_protection_fragments[] = {
-    {"codec", countof(codec_fragment), codec_fragment},
-    {"power-sensor", countof(power_sensor_fragment), power_sensor_fragment},
-    {"alert-gpio", countof(alert_fragment), alert_fragment},
 };
 
 constexpr zx_device_prop_t brownout_protection_props[] = {

@@ -16,6 +16,7 @@
 
 #include "nelson-gpios.h"
 #include "nelson.h"
+#include "src/devices/board/drivers/nelson/display_bind.h"
 
 namespace nelson {
 
@@ -101,46 +102,6 @@ static pbus_dev_t display_dev = []() {
 
 // Composite binding rules for display driver.
 
-static const zx_bind_inst_t dsi_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_DSI_IMPL),
-};
-
-static const zx_bind_inst_t lcd_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_LCD_RESET),
-};
-
-static const zx_bind_inst_t sysmem_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
-};
-
-static const zx_bind_inst_t canvas_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
-};
-
-static const device_fragment_part_t dsi_fragment[] = {
-    {countof(dsi_match), dsi_match},
-};
-
-static const device_fragment_part_t lcd_gpio_fragment[] = {
-    {countof(lcd_gpio_match), lcd_gpio_match},
-};
-
-static const device_fragment_part_t sysmem_fragment[] = {
-    {countof(sysmem_match), sysmem_match},
-};
-
-static const device_fragment_part_t canvas_fragment[] = {
-    {countof(canvas_match), canvas_match},
-};
-
-static const device_fragment_t fragments[] = {
-    {"dsi", countof(dsi_fragment), dsi_fragment},
-    {"gpio", countof(lcd_gpio_fragment), lcd_gpio_fragment},
-    {"sysmem", countof(sysmem_fragment), sysmem_fragment},
-    {"canvas", countof(canvas_fragment), canvas_fragment},
-};
-
 zx_status_t Nelson::DisplayInit() {
   display_panel_t display_panel_info[] = {
       {
@@ -170,8 +131,8 @@ zx_status_t Nelson::DisplayInit() {
   display_panel_metadata[0].data_size = sizeof(display_panel_info);
   display_panel_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(&display_panel_info);
 
-  auto status = pbus_.CompositeDeviceAdd(&display_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), "dsi");
+  auto status = pbus_.AddComposite(&display_dev, reinterpret_cast<uint64_t>(display_fragments),
+                                   countof(display_fragments), "dsi");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd display failed: %d", __func__, status);
     return status;

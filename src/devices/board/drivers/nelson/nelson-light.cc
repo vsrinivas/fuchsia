@@ -17,34 +17,12 @@
 
 #include "nelson-gpios.h"
 #include "nelson.h"
+#include "src/devices/board/drivers/nelson/gpio_light_bind.h"
+#include "src/devices/board/drivers/nelson/tcs3400_light_bind.h"
 
 namespace nelson {
 
 // Composite binding rules for focaltech touch driver.
-
-const zx_bind_inst_t i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, NELSON_I2C_A0_0),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, I2C_AMBIENTLIGHT_ADDR),
-};
-
-static const zx_bind_inst_t gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_LIGHT_INTERRUPT),
-};
-
-static const device_fragment_part_t i2c_fragment[] = {
-    {countof(i2c_match), i2c_match},
-};
-
-static const device_fragment_part_t gpio_fragment[] = {
-    {countof(gpio_match), gpio_match},
-};
-
-static const device_fragment_t fragments[] = {
-    {"i2c", countof(i2c_fragment), i2c_fragment},
-    {"gpio", countof(gpio_fragment), gpio_fragment},
-};
 
 using LightName = char[ZX_MAX_NAME_LEN];
 constexpr LightName kLightNames[] = {"AMBER_LED"};
@@ -63,25 +41,6 @@ static const pbus_metadata_t light_metadata[] = {
         .data_buffer = reinterpret_cast<const uint8_t*>(&kConfigs),
         .data_size = sizeof(kConfigs),
     },
-};
-
-constexpr zx_bind_inst_t amber_led_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_AMBER_LED),
-};
-constexpr zx_bind_inst_t amber_led_pwm_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
-    BI_MATCH_IF(EQ, BIND_PWM_ID, S905D3_PWM_AO_A),
-};
-constexpr device_fragment_part_t amber_led_gpio_fragment[] = {
-    {countof(amber_led_gpio_match), amber_led_gpio_match},
-};
-constexpr device_fragment_part_t amber_led_pwm_fragment[] = {
-    {countof(amber_led_pwm_match), amber_led_pwm_match},
-};
-const device_fragment_t light_fragments[] = {
-    {"gpio", countof(amber_led_gpio_fragment), amber_led_gpio_fragment},
-    {"pwm", countof(amber_led_pwm_fragment), amber_led_pwm_fragment},
 };
 
 static const pbus_dev_t light_dev = []() {
@@ -117,8 +76,8 @@ zx_status_t Nelson::LightInit() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .fragments = fragments,
-      .fragments_count = countof(fragments),
+      .fragments = tcs3400_light_fragments,
+      .fragments_count = countof(tcs3400_light_fragments),
       .primary_fragment = "i2c",
       .spawn_colocated = false,
       .metadata_list = metadata,
@@ -144,8 +103,8 @@ zx_status_t Nelson::LightInit() {
     zxlogf(ERROR, "%s: Configure mute LED GPIO on failed %d", __func__, status);
   }
 
-  status = pbus_.CompositeDeviceAdd(&light_dev, reinterpret_cast<uint64_t>(light_fragments),
-                                    countof(light_fragments), nullptr);
+  status = pbus_.AddComposite(&light_dev, reinterpret_cast<uint64_t>(gpio_light_fragments),
+                              countof(gpio_light_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;

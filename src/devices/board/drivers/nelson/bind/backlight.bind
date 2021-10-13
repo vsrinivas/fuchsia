@@ -1,0 +1,23 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+composite backlight;
+
+using fuchsia.platform;
+using fuchsia.ti.platform;
+using fuchsia.i2c;
+
+primary node "pdev" {
+  fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI;
+  fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.ti.platform.BIND_PLATFORM_DEV_PID.LP8556;
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.BACKLIGHT;
+  fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+node "i2c" {
+  fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_I2C_BUS_ID == fuchsia.i2c.BIND_I2C_BUS_ID.NELSON_I2C_3;
+  fuchsia.BIND_I2C_ADDRESS == fuchsia.i2c.BIND_I2C_ADDRESS.BACKLIGHT;
+}

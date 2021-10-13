@@ -18,6 +18,7 @@
 #include <soc/aml-s905d3/s905d3-pwm.h>
 
 #include "nelson.h"
+#include "src/devices/board/drivers/nelson/aml_thermal_pll_bind.h"
 
 namespace nelson {
 
@@ -233,33 +234,6 @@ static const pbus_dev_t thermal_dev = []() {
   return dev;
 }();
 
-const zx_bind_inst_t pwm_ao_d_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
-    BI_MATCH_IF(EQ, BIND_PWM_ID, S905D3_PWM_AO_D),
-};
-static const zx_bind_inst_t clk1_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, sm1_clk::CLK_SYS_PLL_DIV16),
-};
-static const zx_bind_inst_t clk2_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, sm1_clk::CLK_SYS_CPU_CLK_DIV16),
-};
-const device_fragment_part_t pwm_ao_d_fragment[] = {
-    {countof(pwm_ao_d_match), pwm_ao_d_match},
-};
-static const device_fragment_part_t clk1_fragment[] = {
-    {countof(clk1_match), clk1_match},
-};
-static const device_fragment_part_t clk2_fragment[] = {
-    {countof(clk2_match), clk2_match},
-};
-static const device_fragment_t fragments[] = {
-    {"pwm-a", countof(pwm_ao_d_fragment), pwm_ao_d_fragment},
-    {"clock-1", countof(clk1_fragment), clk1_fragment},
-    {"clock-2", countof(clk2_fragment), clk2_fragment},
-};
-
 zx_status_t Nelson::ThermalInit() {
   // Configure the GPIO to be Output & set it to alternate
   // function 3 which puts in PWM_D mode.
@@ -275,8 +249,8 @@ zx_status_t Nelson::ThermalInit() {
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&thermal_dev, reinterpret_cast<uint64_t>(fragments),
-                                    countof(fragments), nullptr);
+  status = pbus_.AddComposite(&thermal_dev, reinterpret_cast<uint64_t>(aml_thermal_pll_fragments),
+                              countof(aml_thermal_pll_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;

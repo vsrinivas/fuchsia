@@ -12,6 +12,7 @@
 #include <soc/aml-s905d3/s905d3-hw.h>
 
 #include "nelson.h"
+#include "src/devices/board/drivers/nelson/aml_nna_bind.h"
 
 namespace nelson {
 
@@ -66,22 +67,9 @@ static pbus_dev_t nna_dev = []() {
   return dev;
 }();
 
-static const zx_bind_inst_t reset_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
-    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_NNA_RESET_LEVEL2),
-};
-
-static const device_fragment_part_t reset_fragment[] = {
-    {countof(reset_match), reset_match},
-};
-
-static const device_fragment_t fragments[] = {
-    {"register-reset", countof(reset_fragment), reset_fragment},
-};
-
 zx_status_t Nelson::NnaInit() {
-  zx_status_t status = pbus_.CompositeDeviceAdd(&nna_dev, reinterpret_cast<uint64_t>(fragments),
-                                                countof(fragments), nullptr);
+  zx_status_t status = pbus_.AddComposite(&nna_dev, reinterpret_cast<uint64_t>(aml_nna_fragments),
+                                          countof(aml_nna_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "Nelson::NnaInit: pbus_device_add() failed for nna: %d", status);
     return status;

@@ -7,4 +7,5 @@ library fuchsia.power;
 extend uint fuchsia.BIND_PROTOCOL {
   DEVICE = 72,
   IMPL = 110,
+  SENSOR = 151,
 };

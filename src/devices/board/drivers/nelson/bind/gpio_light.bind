@@ -1,0 +1,29 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+composite gpio_light;
+
+using fuchsia.platform;
+using fuchsia.amlogic.platform;
+using fuchsia.gpio;
+using fuchsia.amlogic.platform.s905d3;
+using fuchsia.pwm;
+
+primary node "pdev" {
+  fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+  fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC;
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.platform.BIND_PLATFORM_DEV_DID.GPIO_LIGHT;
+  fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+node "gpio" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.s905d3.GPIOAO_PIN_ID.PIN_11;  // GPIO_AMBER_LED
+}
+
+node "pwm" {
+  fuchsia.BIND_PROTOCOL == fuchsia.pwm.BIND_PROTOCOL.PWM;
+  fuchsia.BIND_PWM_ID == fuchsia.amlogic.platform.s905d3.BIND_PWM_ID.PWM_AO_A;
+}

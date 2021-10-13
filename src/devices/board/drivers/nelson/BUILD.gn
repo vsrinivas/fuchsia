@@ -41,6 +41,162 @@ driver_bind_rules("nelson-bind") {
   ]
 }
 
+driver_bind_rules("backlight_bind") {
+  rules = "bind/backlight.bind"
+  header_output = "backlight_bind.h"
+  bind_output = "backlight_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.ti.platform",
+  ]
+}
+
+driver_bind_rules("nelson_buttons_bind") {
+  rules = "bind/nelson_buttons.bind"
+  header_output = "nelson_buttons_bind.h"
+  bind_output = "nelson_buttons_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.gpio",
+  ]
+}
+
+driver_bind_rules("display_bind") {
+  rules = "bind/display.bind"
+  header_output = "display_bind.h"
+  bind_output = "display_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.dsi",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.sysmem",
+  ]
+}
+
+driver_bind_rules("nelson_emmc_bind") {
+  rules = "bind/nelson_emmc.bind"
+  header_output = "nelson_emmc_bind.h"
+  bind_output = "nelson_emmc_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("tcs3400_light_bind") {
+  rules = "bind/tcs3400_light.bind"
+  header_output = "tcs3400_light_bind.h"
+  bind_output = "tcs3400_light_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.i2c",
+  ]
+}
+
+driver_bind_rules("gpio_light_bind") {
+  rules = "bind/gpio_light.bind"
+  header_output = "gpio_light_bind.h"
+  bind_output = "gpio_light_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
+driver_bind_rules("mali_bind") {
+  rules = "bind/mali.bind"
+  header_output = "mali_bind.h"
+  bind_output = "mali_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+  ]
+}
+
+driver_bind_rules("aml_nna_bind") {
+  rules = "bind/aml_nna.bind"
+  header_output = "aml_nna_bind.h"
+  bind_output = "aml_nna_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+  ]
+}
+
+driver_bind_rules("ti_ina231_mlb_bind") {
+  rules = "bind/ti_ina231_mlb.bind"
+  header_output = "ti_ina231_mlb_bind.h"
+  bind_output = "ti_ina231_mlb_bind.bc"
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+}
+
+driver_bind_rules("ti_ina231_speakers_bind") {
+  rules = "bind/ti_ina231_speakers.bind"
+  header_output = "ti_ina231_speakers_bind.h"
+  bind_output = "ti_ina231_speakers_bind.bc"
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+}
+
+driver_bind_rules("brownout_protection_bind") {
+  rules = "bind/brownout_protection.bind"
+  header_output = "brownout_protection_bind.h"
+  bind_output = "brownout_protection_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.codec",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.power",
+    "//src/devices/bind/fuchsia.ti.platform",
+  ]
+}
+
+driver_bind_rules("pwm_init_bind") {
+  rules = "bind/pwm_init.bind"
+  header_output = "pwm_init_bind.h"
+  bind_output = "pwm_init_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
+driver_bind_rules("aml_sdio_bind") {
+  rules = "bind/aml_sdio.bind"
+  header_output = "aml_sdio_bind.h"
+  bind_output = "aml_sdio_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
+driver_bind_rules("wifi_bind") {
+  rules = "bind/wifi.bind"
+  header_output = "wifi_bind.h"
+  bind_output = "wifi_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.broadcom.sdio",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.sdmmc",
+  ]
+}
+
 driver_bind_rules("aml_secure_mem_bind") {
   rules = "bind/aml_secure_mem.bind"
   header_output = "aml_secure_mem_bind.h"
@@ -53,6 +209,31 @@ driver_bind_rules("aml_secure_mem_bind") {
   ]
 }
 
+driver_bind_rules("selina_bind") {
+  rules = "bind/selina.bind"
+  header_output = "selina_bind.h"
+  bind_output = "selina_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.infineon.platform",
+    "//src/devices/bind/fuchsia.spi",
+  ]
+}
+
+driver_bind_rules("spi_1_bind") {
+  rules = "bind/spi_1.bind"
+  header_output = "spi_1_bind.h"
+  bind_output = "spi_1_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+  ]
+}
+
 driver_bind_rules("tee_bind") {
   rules = "bind/tee.bind"
   header_output = "tee_bind.h"
@@ -61,6 +242,53 @@ driver_bind_rules("tee_bind") {
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.rpmb",
     "//src/devices/bind/fuchsia.sysmem",
+  ]
+}
+
+driver_bind_rules("aml_thermal_pll_bind") {
+  rules = "bind/aml_thermal_pll.bind"
+  header_output = "aml_thermal_pll_bind.h"
+  bind_output = "aml_thermal_pll_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.meson",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.clock",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
+driver_bind_rules("gt6853_touch_bind") {
+  rules = "bind/gt6853_touch.bind"
+  header_output = "gt6853_touch_bind.h"
+  bind_output = "gt6853_touch_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.i2c",
+  ]
+}
+
+driver_bind_rules("gtx8x_touch_bind") {
+  rules = "bind/gtx8x_touch.bind"
+  header_output = "gtx8x_touch_bind.h"
+  bind_output = "gtx8x_touch_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.i2c",
+  ]
+}
+
+driver_bind_rules("ft3x27_touch_bind") {
+  rules = "bind/ft3x27_touch.bind"
+  header_output = "ft3x27_touch_bind.h"
+  bind_output = "ft3x27_touch_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.i2c",
   ]
 }
 
@@ -81,6 +309,20 @@ driver_bind_rules("dwc2_bind") {
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.usb.phy",
+  ]
+}
+
+driver_bind_rules("aml_video_bind") {
+  rules = "bind/aml_video.bind"
+  header_output = "aml_video_bind.h"
+  bind_output = "aml_video_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.meson",
+    "//src/devices/bind/fuchsia.clock",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.sysmem",
+    "//src/devices/bind/fuchsia.tee",
   ]
 }
 
@@ -124,10 +366,31 @@ fuchsia_driver("nelson-module-driver") {
     "nelson.cc",
   ]
   deps = [
+    ":aml_nna_bind_header",
+    ":aml_sdio_bind_header",
     ":aml_secure_mem_bind_header",
+    ":aml_thermal_pll_bind_header",
+    ":aml_video_bind_header",
+    ":backlight_bind_header",
+    ":brownout_protection_bind_header",
+    ":display_bind_header",
     ":dwc2_bind_header",
+    ":ft3x27_touch_bind_header",
+    ":gpio_light_bind_header",
+    ":gt6853_touch_bind_header",
+    ":gtx8x_touch_bind_header",
+    ":mali_bind_header",
     ":nelson-bind",
+    ":nelson_buttons_bind_header",
+    ":nelson_emmc_bind_header",
+    ":pwm_init_bind_header",
+    ":selina_bind_header",
+    ":spi_1_bind_header",
+    ":tcs3400_light_bind_header",
     ":tee_bind_header",
+    ":ti_ina231_mlb_bind_header",
+    ":ti_ina231_speakers_bind_header",
+    ":wifi_bind_header",
     ":xhci_bind_header",
     "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",

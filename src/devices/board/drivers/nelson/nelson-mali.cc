@@ -14,6 +14,7 @@
 #include <soc/aml-s905d3/s905d3-hw.h>
 
 #include "nelson.h"
+#include "src/devices/board/drivers/nelson/mali_bind.h"
 
 namespace nelson {
 
@@ -61,16 +62,6 @@ constexpr pbus_smc_t nelson_mali_smcs[] = {
         .exclusive = false,
     },
 };
-static const zx_bind_inst_t reset_register_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
-    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_MALI_RESET),
-};
-static const device_fragment_part_t reset_register_fragment[] = {
-    {countof(reset_register_match), reset_register_match},
-};
-static const device_fragment_t mali_fragments[] = {
-    {"register-reset", countof(reset_register_fragment), reset_register_fragment},
-};
 
 zx_status_t Nelson::MaliInit() {
   pbus_dev_t mali_dev = {};
@@ -111,8 +102,8 @@ zx_status_t Nelson::MaliInit() {
   mali_btis[0].iommu_index = 0;
   mali_btis[0].bti_id = BTI_MALI;
 
-  zx_status_t status = pbus_.CompositeDeviceAdd(
-      &mali_dev, reinterpret_cast<uint64_t>(mali_fragments), countof(mali_fragments), nullptr);
+  zx_status_t status = pbus_.AddComposite(&mali_dev, reinterpret_cast<uint64_t>(mali_fragments),
+                                          countof(mali_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "CompositeDeviceAdd failed: %d", status);
     return status;

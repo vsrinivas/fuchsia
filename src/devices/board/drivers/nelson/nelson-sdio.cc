@@ -20,6 +20,8 @@
 
 #include "nelson-gpios.h"
 #include "nelson.h"
+#include "src/devices/board/drivers/nelson/aml_sdio_bind.h"
+#include "src/devices/board/drivers/nelson/wifi_bind.h"
 
 namespace nelson {
 
@@ -145,53 +147,8 @@ static const pbus_dev_t sd_emmc_dev = []() {
 }();
 
 // Composite binding rules for wifi driver.
-static const zx_bind_inst_t sdio_fn1_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SDIO), BI_ABORT_IF(NE, BIND_SDIO_VID, 0x02d0),
-    BI_ABORT_IF(NE, BIND_SDIO_FUNCTION, 1),           BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4345),
-    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4359),
-};
-static const zx_bind_inst_t sdio_fn2_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SDIO), BI_ABORT_IF(NE, BIND_SDIO_VID, 0x02d0),
-    BI_ABORT_IF(NE, BIND_SDIO_FUNCTION, 2),           BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4345),
-    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4359),
-};
-static const zx_bind_inst_t oob_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, S905D3_WIFI_SDIO_WAKE_HOST),
-};
-static const device_fragment_part_t sdio_fn1_fragment[] = {
-    {countof(sdio_fn1_match), sdio_fn1_match},
-};
-static const device_fragment_part_t sdio_fn2_fragment[] = {
-    {countof(sdio_fn2_match), sdio_fn2_match},
-};
-static const device_fragment_part_t oob_gpio_fragment[] = {
-    {countof(oob_gpio_match), oob_gpio_match},
-};
-static const device_fragment_t wifi_composite[] = {
-    {"sdio-function-1", countof(sdio_fn1_fragment), sdio_fn1_fragment},
-    {"sdio-function-2", countof(sdio_fn2_fragment), sdio_fn2_fragment},
-    {"gpio-oob", countof(oob_gpio_fragment), oob_gpio_fragment},
-};
 
 // Composite binding rules for SDIO.
-static const zx_bind_inst_t wifi_pwren_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_WIFI_REG_ON),
-};
-constexpr zx_bind_inst_t pwm_e_match[] = {
-    BI_MATCH_IF(EQ, BIND_INIT_STEP, BIND_INIT_STEP_PWM),
-};
-static const device_fragment_part_t wifi_pwren_gpio_fragment[] = {
-    {countof(wifi_pwren_gpio_match), wifi_pwren_gpio_match},
-};
-constexpr device_fragment_part_t pwm_e_fragment[] = {
-    {countof(pwm_e_match), pwm_e_match},
-};
-static const device_fragment_t sdio_fragments[] = {
-    {"gpio-wifi-power-on", countof(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
-    {"pwm", countof(pwm_e_fragment), pwm_e_fragment},
-};
 
 zx_status_t Nelson::SdEmmcConfigurePortB() {
   gpio_impl_.SetAltFunction(S905D3_WIFI_SDIO_D0, S905D3_WIFI_SDIO_D0_FN);
@@ -233,8 +190,8 @@ zx_status_t Nelson::SdioInit() {
 
   SdEmmcConfigurePortB();
 
-  status = pbus_.CompositeDeviceAdd(&sd_emmc_dev, reinterpret_cast<uint64_t>(sdio_fragments),
-                                    countof(sdio_fragments), nullptr);
+  status = pbus_.AddComposite(&sd_emmc_dev, reinterpret_cast<uint64_t>(aml_sdio_fragments),
+                              countof(aml_sdio_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd sd_emmc failed: %d", __func__, status);
     return status;
@@ -250,8 +207,8 @@ zx_status_t Nelson::SdioInit() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .fragments = wifi_composite,
-      .fragments_count = countof(wifi_composite),
+      .fragments = wifi_fragments,
+      .fragments_count = countof(wifi_fragments),
       .primary_fragment = "sdio-function-1",  // ???
       .spawn_colocated = true,
       .metadata_list = nullptr,

@@ -17,12 +17,19 @@ extend uint fuchsia.BIND_I2C_BUS_ID {
   ASTRO_A0_0 = 0,
   ASTRO_2 = 1,
   ASTRO_3 = 2,
+  NELSON_I2C_A0_0 = 0,
+  NELSON_I2C_2 = 1,
+  NELSON_I2C_3 = 2,
+
 };
 
 extend uint fuchsia.BIND_I2C_ADDRESS {
   BACKLIGHT = 0x2C,
+  ETH = 0x18,
   FOCALTECH_TOUCH = 0x38,
   AMBIENTLIGHT = 0x39,
   AUDIO_CODEC = 0x48,
   GOODIX_TOUCH = 0x5d,
+  TI_INA231_MLB = 0x49,
+  TI_INA231_SPEAKERS = 0x40,
 };

@@ -1,0 +1,27 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+composite selina;
+
+using fuchsia.gpio;
+using fuchsia.amlogic.platform.s905d3;
+using fuchsia.spi;
+using fuchsia.infineon.platform;
+
+primary node "spi" {
+  fuchsia.BIND_PROTOCOL == fuchsia.spi.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.infineon.platform.BIND_PLATFORM_DEV_VID.INFINEON;
+  fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.infineon.platform.BIND_PLATFORM_DEV_PID.BGT60TR13C;
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.infineon.platform.BIND_PLATFORM_DEV_DID.RADAR_SENSOR;
+}
+
+node "irq-gpio" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.s905d3.GPIOH_PIN_ID.PIN_3;  // GPIO_SELINA_IRQ
+}
+
+node "reset-gpio" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.s905d3.GPIOH_PIN_ID.PIN_2;  // GPIO_SELINA_RESET
+}

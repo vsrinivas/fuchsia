@@ -19,6 +19,7 @@
 
 #include "nelson-gpios.h"
 #include "nelson.h"
+#include "src/devices/board/drivers/nelson/nelson_emmc_bind.h"
 
 namespace nelson {
 
@@ -109,17 +110,6 @@ static pbus_dev_t emmc_dev = []() {
   return dev;
 }();
 
-static const zx_bind_inst_t gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_EMMC_RESET),
-};
-static const device_fragment_part_t gpio_fragment[] = {
-    {countof(gpio_match), gpio_match},
-};
-static const device_fragment_t fragments[] = {
-    {"gpio", countof(gpio_fragment), gpio_fragment},
-};
-
 }  // namespace
 
 zx_status_t Nelson::EmmcInit() {
@@ -137,8 +127,8 @@ zx_status_t Nelson::EmmcInit() {
   gpio_impl_.SetAltFunction(S905D3_EMMC_CMD, S905D3_EMMC_CMD_FN);
   gpio_impl_.SetAltFunction(S905D3_EMMC_DS, S905D3_EMMC_DS_FN);
 
-  auto status = pbus_.CompositeDeviceAdd(&emmc_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), nullptr);
+  auto status = pbus_.AddComposite(&emmc_dev, reinterpret_cast<uint64_t>(nelson_emmc_fragments),
+                                   countof(nelson_emmc_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
     return status;

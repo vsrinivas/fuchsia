@@ -18,6 +18,9 @@
 
 #include "nelson-gpios.h"
 #include "nelson.h"
+#include "src/devices/board/drivers/nelson/ft3x27_touch_bind.h"
+#include "src/devices/board/drivers/nelson/gt6853_touch_bind.h"
+#include "src/devices/board/drivers/nelson/gtx8x_touch_bind.h"
 
 namespace nelson {
 
@@ -30,46 +33,6 @@ static const device_metadata_t ft3x27_touch_metadata[] = {
 };
 
 // Composite binding rules for focaltech touch driver.
-const zx_bind_inst_t ft_i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, NELSON_I2C_2),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, I2C_FOCALTECH_TOUCH_ADDR),
-};
-const zx_bind_inst_t goodix_i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, NELSON_I2C_2),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, I2C_GOODIX_TOUCH_ADDR),
-};
-static const zx_bind_inst_t gpio_int_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_TOUCH_INTERRUPT),
-};
-static const zx_bind_inst_t gpio_reset_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_TOUCH_RESET),
-};
-static const device_fragment_part_t ft_i2c_fragment[] = {
-    {countof(ft_i2c_match), ft_i2c_match},
-};
-static const device_fragment_part_t goodix_i2c_fragment[] = {
-    {countof(goodix_i2c_match), goodix_i2c_match},
-};
-static const device_fragment_part_t gpio_int_fragment[] = {
-    {countof(gpio_int_match), gpio_int_match},
-};
-static const device_fragment_part_t gpio_reset_fragment[] = {
-    {countof(gpio_reset_match), gpio_reset_match},
-};
-static const device_fragment_t ft_fragments[] = {
-    {"i2c", countof(ft_i2c_fragment), ft_i2c_fragment},
-    {"gpio-int", countof(gpio_int_fragment), gpio_int_fragment},
-    {"gpio-reset", countof(gpio_reset_fragment), gpio_reset_fragment},
-};
-static const device_fragment_t goodix_fragments[] = {
-    {"i2c", countof(goodix_i2c_fragment), goodix_i2c_fragment},
-    {"gpio-int", countof(gpio_int_fragment), gpio_int_fragment},
-    {"gpio-reset", countof(gpio_reset_fragment), gpio_reset_fragment},
-};
 
 zx_status_t Nelson::TouchInit() {
   const uint32_t display_id = GetDisplayId();
@@ -97,8 +60,8 @@ zx_status_t Nelson::TouchInit() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .fragments = goodix_fragments,
-      .fragments_count = countof(goodix_fragments),
+      .fragments = gt6853_touch_fragments,
+      .fragments_count = countof(gt6853_touch_fragments),
       .primary_fragment = "i2c",
       .spawn_colocated = false,
       .metadata_list = touch_metadata,
@@ -128,17 +91,17 @@ zx_status_t Nelson::TouchInitP1() {
         {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_GOODIX_GTX8X},
     };
 
-    const composite_device_desc_t comp_desc = {
+    const composite_device_desc_t gt_comp_desc = {
         .props = props,
         .props_count = countof(props),
-        .fragments = goodix_fragments,
-        .fragments_count = countof(goodix_fragments),
+        .fragments = gtx8x_touch_fragments,
+        .fragments_count = countof(gtx8x_touch_fragments),
         .primary_fragment = "i2c",
         .spawn_colocated = false,
         .metadata_list = nullptr,
         .metadata_count = 0,
     };
-    zx_status_t status = DdkAddComposite("gtx8x-touch", &comp_desc);
+    zx_status_t status = DdkAddComposite("gtx8x-touch", &gt_comp_desc);
     if (status != ZX_OK) {
       zxlogf(INFO, "nelson_touch_init(gt92xx): composite_device_add failed: %d", status);
       return status;
@@ -150,18 +113,18 @@ zx_status_t Nelson::TouchInitP1() {
         {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_FOCALTOUCH},
     };
 
-    const composite_device_desc_t comp_desc = {
+    const composite_device_desc_t ft_comp_desc = {
         .props = props,
         .props_count = countof(props),
-        .fragments = ft_fragments,
-        .fragments_count = countof(ft_fragments),
+        .fragments = ft3x27_touch_fragments,
+        .fragments_count = countof(ft3x27_touch_fragments),
         .primary_fragment = "i2c",
         .spawn_colocated = false,
         .metadata_list = ft3x27_touch_metadata,
         .metadata_count = std::size(ft3x27_touch_metadata),
     };
 
-    zx_status_t status = DdkAddComposite("ft3x27-touch", &comp_desc);
+    zx_status_t status = DdkAddComposite("ft3x27-touch", &ft_comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s(ft3x27): CompositeDeviceAdd failed: %d", __func__, status);
       return status;

@@ -37,3 +37,17 @@ uint G12B_CLK_ID {
   CLK_SYS_CPU_BIG_CLK = 1048576,
   CLK_SYS_CPU_LITTLE_CLK = 1048577,
 };
+
+// Values taken from <soc/aml-meson/sm1-clk.h>
+uint SM1_CLK_ID {
+  CLK_SYS_PLL_DIV16 = 0x10000,
+  CLK_SYS_CPU_CLK_DIV16 = 0x10001,
+  CLK_DOS_GCLK_VDEC = 0x10049,
+  CLK_DOS = 0x10003,
+};
+
+// Values taken from <soc/aml-meson/axg-clk.h>
+uint AXG_CLK_ID {
+  CLK_DOS_GCLK_VDEC = 0x1002e,
+  CLK_AXG_DOS = 0x1002f,
+};

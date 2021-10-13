@@ -14,6 +14,7 @@
 
 #include "nelson-gpios.h"
 #include "nelson.h"
+#include "src/devices/board/drivers/nelson/nelson_buttons_bind.h"
 
 namespace nelson {
 
@@ -46,41 +47,6 @@ static const device_metadata_t available_buttons_metadata[] = {
         .length = sizeof(gpios),
     }};
 
-static const zx_bind_inst_t volume_up_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VOLUME_UP),
-};
-static const zx_bind_inst_t volume_down_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VOLUME_DOWN),
-};
-static const zx_bind_inst_t volume_both_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VOLUME_BOTH),
-};
-static const zx_bind_inst_t mic_privacy_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_MIC_PRIVACY),
-};
-static const device_fragment_part_t volume_up_fragment[] = {
-    {countof(volume_up_match), volume_up_match},
-};
-static const device_fragment_part_t volume_down_fragment[] = {
-    {countof(volume_down_match), volume_down_match},
-};
-static const device_fragment_part_t volume_both_fragment[] = {
-    {countof(volume_both_match), volume_both_match},
-};
-static const device_fragment_part_t mic_privacy_fragment[] = {
-    {countof(mic_privacy_match), mic_privacy_match},
-};
-static const device_fragment_t fragments[] = {
-    {"volume-up", countof(volume_up_fragment), volume_up_fragment},
-    {"volume-down", countof(volume_down_fragment), volume_down_fragment},
-    {"volume-both", countof(volume_both_fragment), volume_both_fragment},
-    {"mic-privacy", countof(mic_privacy_fragment), mic_privacy_fragment},
-};
-
 zx_status_t Nelson::ButtonsInit() {
   constexpr zx_device_prop_t props[] = {
       {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
@@ -91,8 +57,8 @@ zx_status_t Nelson::ButtonsInit() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .fragments = fragments,
-      .fragments_count = countof(fragments),
+      .fragments = nelson_buttons_fragments,
+      .fragments_count = countof(nelson_buttons_fragments),
       .primary_fragment = "volume-up",  // ???
       .spawn_colocated = false,
       .metadata_list = available_buttons_metadata,
