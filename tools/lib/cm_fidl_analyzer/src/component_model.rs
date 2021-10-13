@@ -45,7 +45,7 @@ use {
     },
     serde::{Deserialize, Serialize},
     std::{
-        collections::{HashMap, HashSet},
+        collections::{HashMap, HashSet, VecDeque},
         sync::{Arc, RwLock},
     },
     thiserror::Error,
@@ -296,6 +296,112 @@ impl ModelBuilderForAnalyzer {
     }
 }
 
+/// The `ComponentInstanceVisitor` trait defines an interface for operating on a `ComponentInstanceForAnalyzer`.
+/// Should return an error if the operation fails.
+pub trait ComponentInstanceVisitor {
+    fn visit_instance(
+        &mut self,
+        instance: &Arc<ComponentInstanceForAnalyzer>,
+    ) -> Result<(), anyhow::Error>;
+}
+
+/// The `ComponentModelWalker` trait defines an interface for iteratively operating on component instances
+/// in a `ComponentModelForAnalyzer`, given a type implementing a per-instance operation via the
+/// `ComponentInstanceVisitor` trait.
+pub trait ComponentModelWalker {
+    fn walk<V: ComponentInstanceVisitor>(
+        &mut self,
+        model: &Arc<ComponentModelForAnalyzer>,
+        visitor: &mut V,
+    ) -> Result<(), anyhow::Error> {
+        self.initialize(model)?;
+        let mut instance = model.get_root_instance()?;
+        loop {
+            visitor.visit_instance(&instance)?;
+            match self.get_next_instance()? {
+                Some(next) => instance = next,
+                None => {
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    // Set up any initial state before beginning the walk.
+    fn initialize(&mut self, model: &Arc<ComponentModelForAnalyzer>) -> Result<(), anyhow::Error>;
+
+    // Get the next component instance to visit.
+    fn get_next_instance(
+        &mut self,
+    ) -> Result<Option<Arc<ComponentInstanceForAnalyzer>>, anyhow::Error>;
+}
+
+/// A walker implementing breadth-first traversal of a full `ComponentModelForAnalyzer`, starting at
+/// the root instance.
+#[derive(Default)]
+pub struct BreadthFirstModelWalker {
+    discovered: VecDeque<Arc<ComponentInstanceForAnalyzer>>,
+}
+
+impl BreadthFirstModelWalker {
+    pub fn new() -> Self {
+        Self { discovered: VecDeque::new() }
+    }
+
+    fn discover_children(&mut self, instance: &Arc<ComponentInstanceForAnalyzer>) {
+        let children = instance.get_children();
+        self.discovered.reserve(children.len());
+        for child in children.into_iter() {
+            self.discovered.push_back(child);
+        }
+    }
+}
+
+impl ComponentModelWalker for BreadthFirstModelWalker {
+    fn initialize(&mut self, model: &Arc<ComponentModelForAnalyzer>) -> Result<(), anyhow::Error> {
+        self.discover_children(&model.get_root_instance()?);
+        Ok(())
+    }
+
+    fn get_next_instance(
+        &mut self,
+    ) -> Result<Option<Arc<ComponentInstanceForAnalyzer>>, anyhow::Error> {
+        match self.discovered.pop_front() {
+            Some(next) => {
+                self.discover_children(&next);
+                Ok(Some(next))
+            }
+            None => Ok(None),
+        }
+    }
+}
+
+/// A ComponentInstanceVisitor which just records an identifier of each component instance visited.
+#[derive(Default)]
+pub struct ModelMappingVisitor {
+    visited: Vec<String>,
+}
+
+impl ModelMappingVisitor {
+    pub fn new() -> Self {
+        Self { visited: Vec::new() }
+    }
+
+    pub fn map(&self) -> &Vec<String> {
+        &self.visited
+    }
+}
+
+impl ComponentInstanceVisitor for ModelMappingVisitor {
+    fn visit_instance(
+        &mut self,
+        instance: &Arc<ComponentInstanceForAnalyzer>,
+    ) -> Result<(), anyhow::Error> {
+        self.visited.push(instance.node_path().to_string());
+        Ok(())
+    }
+}
+
 /// `ComponentModelForAnalyzer` owns a representation of each v2 component instance and
 /// supports lookup by `NodePath`.
 pub struct ComponentModelForAnalyzer {
@@ -309,6 +415,12 @@ impl ComponentModelForAnalyzer {
     /// Returns the number of component instances in the model, not counting the top instance.
     pub fn len(&self) -> usize {
         self.instances.len()
+    }
+
+    pub fn get_root_instance(
+        self: &Arc<Self>,
+    ) -> Result<Arc<ComponentInstanceForAnalyzer>, ComponentInstanceError> {
+        self.get_instance(&NodePath::absolute_from_vec(vec![]))
     }
 
     /// Returns the component instance corresponding to `id` if it is present in the model, or an
@@ -917,6 +1029,15 @@ impl ComponentInstanceForAnalyzer {
             self.abs_moniker().to_partial().path().into_iter().map(|m| m.as_str()).collect(),
         )
     }
+
+    fn get_children(&self) -> Vec<Arc<ComponentInstanceForAnalyzer>> {
+        self.children
+            .read()
+            .expect("failed to acquire read lock")
+            .values()
+            .map(|c| Arc::clone(c))
+            .collect()
+    }
 }
 
 /// A representation of `ComponentManager`'s instance, providing a set of capabilities to
@@ -1203,57 +1324,60 @@ impl EnvironmentInterface<ComponentInstanceForAnalyzer> for EnvironmentForAnalyz
 mod tests {
     use {
         super::*,
-        crate::capability_routing::testing::*,
         anyhow::Result,
-        cm_rust::{EnvironmentDecl, RegistrationSource, RunnerRegistration},
+        cm_rust::{RegistrationSource, RunnerRegistration},
+        cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
         futures::executor::block_on,
+        std::iter::FromIterator,
     };
 
-    // Builds a model from a 2-node `ComponentTree` with structure `root -- child`, retrieves
-    // each of the 2 resulting component instances, and tests their public methods.
+    const TEST_URL_PREFIX: &str = "test:///";
+
+    fn make_test_url(component_name: &str) -> String {
+        format!("{}{}", TEST_URL_PREFIX, component_name)
+    }
+
+    fn make_decl_map(
+        components: Vec<(&'static str, ComponentDecl)>,
+    ) -> HashMap<String, ComponentDecl> {
+        HashMap::from_iter(components.into_iter().map(|(name, decl)| (make_test_url(name), decl)))
+    }
+
+    // Builds a model with structure `root -- child`, retrieves each of the 2 resulting component
+    // instances, and tests their public methods.
     #[test]
     fn build_model() -> Result<()> {
-        let root_url = "root_url".to_string();
-        let child_url = "child_url".to_string();
-        let child_name = "child".to_string();
-
-        let root_decl = new_component_decl(
-            vec![],
-            vec![],
-            vec![],
-            vec![],
-            vec![new_child_decl(&child_name, &child_url)],
-        );
-        let child_decl = new_component_decl(vec![], vec![], vec![], vec![], vec![]);
-
-        let mut decls = HashMap::new();
-        decls.insert(root_url.clone(), root_decl.clone());
-        decls.insert(child_url, child_decl.clone());
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("child").build()),
+            ("child", ComponentDeclBuilder::new().build()),
+        ];
 
         let config = Arc::new(RuntimeConfig::default());
         let build_model_result = block_on(async {
-            ModelBuilderForAnalyzer::new(root_url.clone())
-                .build(
-                    decls,
-                    config,
-                    Arc::new(ComponentIdIndex::default()),
-                    RunnerRegistry::default(),
-                )
-                .await
+            ModelBuilderForAnalyzer::new(
+                cm_types::Url::new(make_test_url("root"))
+                    .expect("failed to parse root component url"),
+            )
+            .build(
+                make_decl_map(components),
+                config,
+                Arc::new(ComponentIdIndex::default()),
+                RunnerRegistry::default(),
+            )
+            .await
         });
         assert_eq!(build_model_result.errors.len(), 0);
         assert!(build_model_result.model.is_some());
         let model = build_model_result.model.unwrap();
         assert_eq!(model.len(), 2);
 
-        let child_moniker = PartialChildMoniker::new("child".to_string(), None);
-        let root_id = NodePath::new(vec![]);
-        let child_id = root_id.extended(child_moniker.clone());
-        let other_id = root_id.extended(PartialChildMoniker::new("other".to_string(), None));
+        let root_instance =
+            model.get_instance(&NodePath::absolute_from_vec(vec![])).expect("root instance");
+        let child_instance = model
+            .get_instance(&NodePath::absolute_from_vec(vec!["child"]))
+            .expect("child instance");
 
-        let root_instance = model.get_instance(&root_id)?;
-        let child_instance = model.get_instance(&child_id)?;
-
+        let other_id = NodePath::absolute_from_vec(vec!["other"]);
         let get_other_result = model.get_instance(&other_id);
         assert_eq!(
             get_other_result.err().unwrap().to_string(),
@@ -1284,10 +1408,9 @@ mod tests {
         }
 
         let get_child = block_on(async {
-            root_instance
-                .lock_resolved_state()
-                .await
-                .map(|locked| locked.get_live_child(&child_moniker))
+            root_instance.lock_resolved_state().await.map(|locked| {
+                locked.get_live_child(&PartialChildMoniker::new("child".to_string(), None))
+            })
         })?;
         assert!(get_child.is_some());
         assert_eq!(get_child.unwrap().abs_moniker(), child_instance.abs_moniker());
@@ -1323,16 +1446,12 @@ mod tests {
         Ok(())
     }
 
-    // Builds a model from a 2-node `ComponentTree` with structure `root -- child` in which the child
-    // environment extends the root's. Checks that the child has access to the inherited runner and
-    // resolver registrations through its environment.
+    // Builds a model with structure `root -- child` in which the child environment extends the root's.
+    // Checks that the child has access to the inherited runner and resolver registrations through its
+    // environment.
     #[test]
     fn environment_inherits() -> Result<()> {
-        let root_url = "root_url".to_string();
-        let child_url = "child_url".to_string();
-        let child_name = "child".to_string();
-        let child_env_name = "child_env".to_string();
-
+        let child_env_name = "child_env";
         let child_runner_registration = RunnerRegistration {
             source_name: "child_env_runner".into(),
             source: RegistrationSource::Self_,
@@ -1343,23 +1462,26 @@ mod tests {
             source: RegistrationSource::Self_,
             scheme: "child_resolver_scheme".into(),
         };
-        let child_env_decl = EnvironmentDecl {
-            name: child_env_name.clone(),
-            extends: fsys::EnvironmentExtends::Realm,
-            runners: vec![child_runner_registration.clone()],
-            resolvers: vec![child_resolver_registration.clone()],
-            debug_capabilities: vec![],
-            stop_timeout_ms: None,
-        };
 
-        let mut child_decl = new_child_decl(&child_name, &child_url);
-        child_decl.environment = Some(child_env_name.clone());
-        let mut root_decl = new_component_decl(vec![], vec![], vec![], vec![], vec![child_decl]);
-        root_decl.environments.push(child_env_decl);
-
-        let mut decls = HashMap::new();
-        decls.insert(root_url.clone(), root_decl.clone());
-        decls.insert(child_url, new_component_decl(vec![], vec![], vec![], vec![], vec![]));
+        let components = vec![
+            (
+                "root",
+                ComponentDeclBuilder::new()
+                    .add_child(
+                        ChildDeclBuilder::new_lazy_child("child").environment(child_env_name),
+                    )
+                    .add_environment(
+                        EnvironmentDeclBuilder::new()
+                            .name(child_env_name)
+                            .extends(fsys::EnvironmentExtends::Realm)
+                            .add_resolver(child_resolver_registration.clone())
+                            .add_runner(child_runner_registration.clone())
+                            .build(),
+                    )
+                    .build(),
+            ),
+            ("child", ComponentDeclBuilder::new().build()),
+        ];
 
         // Set up the RuntimeConfig to register the `fuchsia-boot` resolver as a built-in,
         // in addition to `builtin_runner`.
@@ -1374,21 +1496,26 @@ mod tests {
         };
 
         let build_model_result = block_on(async {
-            ModelBuilderForAnalyzer::new(root_url.clone())
-                .build(
-                    decls,
-                    Arc::new(config),
-                    Arc::new(ComponentIdIndex::default()),
-                    RunnerRegistry::from_decl(&vec![builtin_runner_registration]),
-                )
-                .await
+            ModelBuilderForAnalyzer::new(
+                cm_types::Url::new(make_test_url("root"))
+                    .expect("failed to parse root component url"),
+            )
+            .build(
+                make_decl_map(components),
+                Arc::new(config),
+                Arc::new(ComponentIdIndex::default()),
+                RunnerRegistry::from_decl(&vec![builtin_runner_registration]),
+            )
+            .await
         });
         assert_eq!(build_model_result.errors.len(), 0);
         assert!(build_model_result.model.is_some());
         let model = build_model_result.model.unwrap();
         assert_eq!(model.len(), 2);
 
-        let child_instance = model.get_instance(&NodePath::absolute_from_vec(vec![&child_name]))?;
+        let child_instance = model
+            .get_instance(&NodePath::absolute_from_vec(vec!["child"]))
+            .expect("child instance");
 
         let get_child_runner_result = child_instance
             .environment
@@ -1442,6 +1569,44 @@ mod tests {
             }
             ExtendedInstanceInterface::AboveRoot(_) => {}
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn breadth_first_walker() -> Result<(), anyhow::Error> {
+        let components = vec![
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").add_lazy_child("c").build()),
+            ("b", ComponentDeclBuilder::new().build()),
+            ("c", ComponentDeclBuilder::new().add_lazy_child("d").build()),
+            ("d", ComponentDeclBuilder::new().build()),
+        ];
+
+        let config = Arc::new(RuntimeConfig::default());
+        let build_model_result = block_on(async {
+            ModelBuilderForAnalyzer::new(
+                cm_types::Url::new(make_test_url("a")).expect("failed to parse root component url"),
+            )
+            .build(
+                make_decl_map(components),
+                config,
+                Arc::new(ComponentIdIndex::default()),
+                RunnerRegistry::default(),
+            )
+            .await
+        });
+        assert_eq!(build_model_result.errors.len(), 0);
+        assert!(build_model_result.model.is_some());
+        let model = build_model_result.model.unwrap();
+        assert_eq!(model.len(), 4);
+
+        //        let walker = BreadthFirstModelWalker::new();
+        let mut visitor = ModelMappingVisitor::new();
+        BreadthFirstModelWalker::new().walk(&model, &mut visitor)?;
+        let map = visitor.map();
+
+        // The visitor should visit both "b" and "c" before "d", but may visit "b" and "c" in either order.
+        assert!((map == &vec!["/", "/b", "/c", "/c/d"]) || (map == &vec!["/", "/c", "/b", "/c/d"]));
 
         Ok(())
     }
