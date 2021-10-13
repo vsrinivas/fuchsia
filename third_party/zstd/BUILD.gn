@@ -76,18 +76,6 @@ zstd_decompress_sources = [
   "src/lib/decompress/zstd_decompress_internal.h",
 ]
 
-# TODO(fxbug.dev/55297): Host tools (specifically blobfs) used during build
-# use zstd to compress blobs.  zstd is slow when compiled with optimize=none
-# or optimize=debug (-O0 currently); enable default optimizations for just
-# this library to speed up builds.
-if (is_host) {
-  remove_opt_configs = [ "//build/config:default_optimize" ]
-  add_opt_configs = [ "//build/config:optimize_speed" ]
-} else {
-  remove_opt_configs = []
-  add_opt_configs = []
-}
-
 static_library("zstd") {
   public_configs = [ ":public.config" ]
 
@@ -101,8 +89,17 @@ static_library("zstd") {
 
   configs += [ ":internal.config" ]
 
-  configs -= remove_opt_configs
-  configs += add_opt_configs
+  # zstd is slow when compiled with optimize=none or optimize=debug (-O0
+  # currently); enable default optimizations for just this library on both host
+  # and target.
+  #
+  # On the host blobfs uses zstd to compress blobs during build, which we want
+  # to be fast (https://fxbug.dev/55297). On the target blobfs uses zstd to
+  # compress blobs during package resolution which is often in the critical
+  # path of engineers running tests, which we also want to be fast
+  # (https://fxbug.dev/65962).
+  configs -= [ "//build/config:default_optimize" ]
+  configs += [ "//build/config:optimize_speed" ]
 }
 
 config("public.config") {
