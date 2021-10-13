@@ -97,10 +97,9 @@ FUNCTION_LABEL(_x86_secondary_cpu_long_mode_entry)
     // Shift index by 2, since the per_cpu member contains two 64-bit values which
     // will be at offsets 8*(2n) and 8*(2n+1) relative to PER_CPU_BASE_OFFSET
     shl $1, %rdi
-    // Retrieve this CPUs initial kernel stack
+    // Retrieve the top of this CPUs initial kernel stack
     // Note: the stack is unusable until we switch cr3 below
     mov BCD_PER_CPU_BASE_OFFSET(%rsi, %rdi, 8), %rsp
-    add $PAGE_SIZE, %rsp
 
     // Retrieve this CPUs initial thread
     // Note: the stack is unusable until we switch cr3 below

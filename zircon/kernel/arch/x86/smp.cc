@@ -97,7 +97,7 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
       goto cleanup_all;
     }
 
-    bootstrap_data->per_cpu[i].kstack_base = thread->stack().base();
+    bootstrap_data->per_cpu[i].kstack_top = thread->stack().top();
     bootstrap_data->per_cpu[i].thread = thread;
   }
 
