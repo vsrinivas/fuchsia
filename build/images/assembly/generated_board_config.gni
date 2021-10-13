@@ -206,8 +206,8 @@ template("generated_board_config") {
 
     contents = {
       if (include_version_and_epoch) {
-        version = rebase_path(files.version, root_build_dir)
-        epoch = rebase_path(files.epoch, root_build_dir)
+        version_file = rebase_path(files.version, root_build_dir)
+        epoch_file = rebase_path(files.epoch, root_build_dir)
       }
 
       update_package_name = update_package_name
