@@ -201,10 +201,15 @@ zx_status_t PipeDevice::Bind() {
 zx_status_t PipeDevice::CreateChildDevice(cpp20::span<const zx_device_prop_t> props,
                                           const char* dev_name) {
   auto child_device = std::make_unique<PipeChildDevice>(this);
-  zx_status_t status = child_device->Bind(props, dev_name);
+  zx_status_t status = child_device->DdkAdd(ddk::DeviceAddArgs(dev_name)
+                                                .set_props(props)
+                                                .set_proto_id(ZX_PROTOCOL_GOLDFISH_PIPE)
+                                                .set_flags(DEVICE_ADD_NON_BINDABLE));
   if (status == ZX_OK) {
     // devmgr now owns device.
     __UNUSED auto* dev = child_device.release();
+  } else {
+    zxlogf(ERROR, "%s: create %s device failed: %d", kTag, dev_name, status);
   }
   return status;
 }

@@ -879,7 +879,7 @@ zx_status_t DsiDw::Bind() {
 
   dsi_mmio_ = ddk::MmioBuffer(mmio);
 
-  status = DdkAdd("dw-dsi");
+  status = DdkAdd(ddk::DeviceAddArgs("dw-dsi").set_flags(DEVICE_ADD_NON_BINDABLE));
   if (status != ZX_OK) {
     DSI_ERROR("could not add device %d\n", status);
   }

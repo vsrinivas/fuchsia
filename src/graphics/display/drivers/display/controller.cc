@@ -874,9 +874,9 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
     return status;
   }
 
-  if ((status = DdkAdd(
-           ddk::DeviceAddArgs("display-controller").set_inspect_vmo(inspector_.DuplicateVmo()))) !=
-      ZX_OK) {
+  if ((status = DdkAdd(ddk::DeviceAddArgs("display-controller")
+                           .set_flags(DEVICE_ADD_NON_BINDABLE)
+                           .set_inspect_vmo(inspector_.DuplicateVmo()))) != ZX_OK) {
     zxlogf(ERROR, "Failed to add display core device %d", status);
     return status;
   }
