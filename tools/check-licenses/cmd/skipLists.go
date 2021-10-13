@@ -82,9 +82,12 @@ var additionalSkipDirs = []string{
 	"tools/check-licenses/golden",
 
 	// None of these binaries end up in Fuchsia images.
+	"prebuilt/audio",
+	"prebuilt/third_party/qemu",
 	"prebuilt/third_party/sysroot/linux",
 	"prebuilt/touch",
-	"prebuilt/audio",
+	"prebuilt/virtualization/packages/termina_guest",
+	"zircon/prebuilt/downloads/firmware/bluetooth",
 
 	// Skip generated protocol buffers. These trip the checker because third_party is in the path.
 	"third_party/grpc/src/core/ext/upb-generated/third_party",
@@ -98,24 +101,15 @@ var additionalSkipDirs = []string{
 	// TODO: Remove once completed
 	"prebuilt/camera",                                    // b/169948153 -
 	"prebuilt/connectivity/bluetooth/firmware/mediatek",  // b/178712290 -
-	"prebuilt/third_party/aemu",                          // b/178682298 -
 	"prebuilt/third_party/chromedriver",                  // b/180047878 -
 	"prebuilt/third_party/chromium_tests",                // b/180047878 -
 	"prebuilt/third_party/chromium",                      // b/180047878 -
-	"prebuilt/third_party/gcc",                           // b/178682300 -
 	"prebuilt/third_party/ovmf",                          // fxb/59350 -
-	"prebuilt/third_party/qemu",                          // b/178682842 -
 	"prebuilt/third_party/rust",                          // b/178714477 -
 	"prebuilt/third_party/skia",                          // b/178714433 -
-	"prebuilt/virtualization/packages/termina_guest",     // b/178857849 -
 	"src/connectivity/wlan/drivers/third_party/mediatek", // b/173236643 -
-	"third_party/catapult",                               // b/171586646 - To be deleted
-	"third_party/cobalt_config",                          // b/178682768 -
-	"third_party/crashpad/third_party/apple_cf",          // b/173233942 - To be deleted
-	"third_party/crashpad/third_party/getopt",            // b/173234393 - To be deleted
 	"third_party/grpc/third_party/cares",                 // b/173238234 -
 	"third_party/libc-tests/third_party/nacl-tests",      // b/178682771
-	"zircon/prebuilt/downloads/firmware/bluetooth",       // b/178734895 -
 }
 
 var additionalSkipFiles = []string{
