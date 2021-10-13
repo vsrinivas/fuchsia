@@ -55,7 +55,7 @@ zx_status_t I2cDevice::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  status = device->DdkAdd("i2c");
+  status = device->DdkAdd(ddk::DeviceAddArgs("i2c").set_flags(DEVICE_ADD_NON_BINDABLE));
   if (status != ZX_OK) {
     return status;
   }

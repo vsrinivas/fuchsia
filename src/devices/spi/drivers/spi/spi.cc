@@ -53,7 +53,7 @@ zx_status_t SpiDevice::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = device->DdkAdd("spi");
+  status = device->DdkAdd(ddk::DeviceAddArgs("spi").set_flags(DEVICE_ADD_NON_BINDABLE));
   if (status != ZX_OK) {
     return status;
   }

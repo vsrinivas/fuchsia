@@ -30,7 +30,9 @@ class RamNandCtl : public RamNandCtlDeviceType {
  public:
   explicit RamNandCtl(zx_device_t* parent) : RamNandCtlDeviceType(parent) {}
 
-  zx_status_t Bind() { return DdkAdd("nand-ctl"); }
+  zx_status_t Bind() {
+    return DdkAdd(ddk::DeviceAddArgs("nand-ctl").set_flags(DEVICE_ADD_NON_BINDABLE));
+  }
   void DdkRelease() { delete this; }
 
   void CreateDevice(CreateDeviceRequestView request, CreateDeviceCompleter::Sync& completer);

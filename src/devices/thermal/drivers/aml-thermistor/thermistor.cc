@@ -29,7 +29,9 @@ zx_status_t AmlThermistor::Create(void* ctx, zx_device_t* parent) {
 
   std::unique_ptr<AmlThermistor> device(new AmlThermistor(parent));
 
-  if ((status = device->DdkAdd("thermistor-device") != ZX_OK)) {
+  if ((status = device->DdkAdd(
+                    ddk::DeviceAddArgs("thermistor-device").set_flags(DEVICE_ADD_NON_BINDABLE)) !=
+                ZX_OK)) {
     zxlogf(ERROR, "%s: DdkAdd failed", __func__);
     return status;
   }
