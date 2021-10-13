@@ -24,6 +24,9 @@ class SystemLogWriter {
 
   void Write();
 
+  // Instructs the class to call `fsync` after each write to ensure data makes it disk.
+  void EnableFsyncOnWrite();
+
  private:
   // Truncates the first file to start anew.
   void StartNewFile();
@@ -34,6 +37,7 @@ class SystemLogWriter {
   const std::string logs_dir_;
   const size_t max_num_files_;
   std::deque<size_t> file_queue_;
+  bool call_fsync_{false};
 
   fbl::unique_fd current_file_descriptor_;
   LogMessageStore* store_;

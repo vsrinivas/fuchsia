@@ -57,6 +57,10 @@ void SystemLogRecorder::Flush(const std::optional<std::string> message) {
   if (message.has_value()) {
     store_.AppendToEnd(message.value());
   }
+
+  // Ensure data is written to disk ASAP when the system log recorder (and maybe the system) is
+  // expected to stop soon.
+  writer_.EnableFsyncOnWrite();
   writer_.Write();
 }
 
