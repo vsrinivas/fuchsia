@@ -787,6 +787,15 @@ def main():
             "--",
         ] + command.tokens)
 
+    # Scripts with known issues
+    ignored_scripts = {
+        # Because the clippy linter is effectively the same as the rust compiler,
+        # and we don't enforce hemeticity on rustc, we also exempt clippy.
+        "clippy_wrapper.sh",
+    }
+    if os.path.basename(script) in ignored_scripts:
+        return retval
+
     # Compute constraints from action properties (from args).
     action = Action(
         inputs=args.inputs, outputs=args.outputs, depfile=args.depfile)
