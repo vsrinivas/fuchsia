@@ -76,42 +76,38 @@ pub const BUFFER_COLLECTION_CONSTRAINTS_DEFAULT: fsysmem::BufferCollectionConstr
 
 #[derive(AsBytes, FromBytes, Default)]
 #[repr(packed)]
-pub struct DmaBufferControlHeader {
-    type_: u32,
-    flags: u32,
+pub struct DmaHeader {
+    pub type_: u32,
+    pub fd: u32,
+    pub flags: u32,
 }
 
 #[derive(AsBytes, FromBytes, Default)]
 #[repr(packed)]
 pub struct DmaBuffer {
-    width: u32,
-    height: u32,
-    format: u32,
-    stride0: u32,
-    stride1: u32,
-    stride2: u32,
-    offset0: u32,
-    offset1: u32,
-    offset2: u32,
+    pub width: u32,
+    pub height: u32,
+    pub format: u32,
+    pub stride0: u32,
+    pub stride1: u32,
+    pub stride2: u32,
+    pub offset0: u32,
+    pub offset1: u32,
+    pub offset2: u32,
 }
 
 #[derive(AsBytes, FromBytes, Default)]
 #[repr(packed)]
 pub struct DmaBufferAllocationArgs {
-    header: DmaBufferControlHeader,
-    fd: u32,
-    flags: u32,
-    pfn: u32,
-    size: u32,
-    buffer: DmaBuffer,
+    pub header: DmaHeader,
+    pub buffer: DmaBuffer,
 }
 
 #[derive(AsBytes, FromBytes, Default)]
 #[repr(packed)]
 pub struct DmaBufferSyncArgs {
-    header: DmaBufferControlHeader,
-    fd: u32,
-    flags: u32,
+    pub header: DmaHeader,
+    pub size: u32,
 }
 
 /// Returns the buffer collection constraints to be set on the buffer collection associated with
