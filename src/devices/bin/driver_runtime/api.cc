@@ -8,8 +8,9 @@
 
 // fdf_arena_t interface
 
-__EXPORT fdf_status_t fdf_arena_create(uint32_t options, const char* tag, fdf_arena_t** out_arena) {
-  return fdf_arena::Create(options, tag, out_arena);
+__EXPORT fdf_status_t fdf_arena_create(uint32_t options, const char* tag, size_t tag_len,
+                                       fdf_arena_t** out_arena) {
+  return fdf_arena::Create(options, tag, tag_len, out_arena);
 }
 
 __EXPORT void* fdf_arena_allocate(fdf_arena_t* arena, size_t bytes) {

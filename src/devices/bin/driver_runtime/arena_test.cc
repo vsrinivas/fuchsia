@@ -8,7 +8,7 @@
 
 TEST(fdf_arena, AllocateMultiple) {
   fdf_arena* arena;
-  ASSERT_EQ(ZX_OK, fdf_arena::Create(0, "arena", &arena));
+  ASSERT_EQ(ZX_OK, fdf_arena::Create(0, "arena", 0, &arena));
 
   void* addr1 = arena->Allocate(64);
   EXPECT_NOT_NULL(addr1);
@@ -23,7 +23,7 @@ TEST(fdf_arena, AllocateMultiple) {
 
 TEST(fdf_arena, AllocateLarge) {
   fdf_arena* arena;
-  ASSERT_EQ(ZX_OK, fdf_arena::Create(0, "arena", &arena));
+  ASSERT_EQ(ZX_OK, fdf_arena::Create(0, "arena", 0, &arena));
 
   void* addr1 = arena->Allocate(0x100000);
   EXPECT_NOT_NULL(addr1);
@@ -42,7 +42,7 @@ static void* increment_ptr(void* ptr, size_t offset) {
 
 TEST(fdf_arena, Contains) {
   fdf_arena* arena;
-  ASSERT_EQ(ZX_OK, fdf_arena::Create(0, "arena", &arena));
+  ASSERT_EQ(ZX_OK, fdf_arena::Create(0, "arena", 0, &arena));
 
   void* addr1 = arena->Allocate(0x1000);
   EXPECT_NOT_NULL(addr1);
@@ -82,7 +82,7 @@ TEST(fdf_arena, Contains) {
 
 TEST(fdf_arena, InitialBufferContains) {
   fdf_arena* arena;
-  ASSERT_EQ(ZX_OK, fdf_arena::Create(0, "arena", &arena));
+  ASSERT_EQ(ZX_OK, fdf_arena::Create(0, "arena", 0, &arena));
 
   EXPECT_FALSE(arena->Contains(reinterpret_cast<void*>(0xFFFFFFFF), 0x10));
 

@@ -24,7 +24,7 @@ __BEGIN_CDECLS
 // // Sends a request to the peer of |channel| and asynchronously waits for a response.
 // void send_request(fdf_handle_t channel, fdf_dispatcher_t* dispatcher dispatcher) {
 //   fdf_arena_t* arena;
-//   fdf_status_t status = fdf_arena_create(&arena);
+//   fdf_status_t status = fdf_arena_create(0, "", 0, &arena);
 //
 //   void* data = fdf_arena_allocate(arena, 0x1000);
 //   // Set the data to transfer
@@ -98,7 +98,8 @@ fdf_status_t fdf_channel_write(fdf_handle_t channel, uint32_t options, fdf_arena
 // Returns |ZX_ERR_BAD_HANDLE| if |channel| is not a valid handle.
 // Returns |ZX_ERR_INVALID_ARGS| if |arena| is NULL.
 // Returns |ZX_ERR_SHOULD_WAIT| if the channel contained no messages to read.
-// Returns |ZX_ERR_PEER_CLOSED| if the other side of the channel is closed.
+// Returns |ZX_ERR_PEER_CLOSED| if there are no available messages and the other
+// side of the channel is closed.
 //
 // This operation is thread-safe.
 fdf_status_t fdf_channel_read(fdf_handle_t channel, uint32_t options, fdf_arena_t** arena,

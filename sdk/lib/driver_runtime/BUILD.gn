@@ -30,3 +30,21 @@ sdk_source_set("driver_runtime") {
     "//zircon/system/ulib/zx",
   ]
 }
+
+sdk_source_set("driver_runtime_cpp") {
+  category = "partner"
+  sdk_name = "driver_runtime_cpp"
+  sources = [
+    "channel_read.cc",
+    "include/lib/fdf/cpp/arena.h",
+    "include/lib/fdf/cpp/channel.h",
+    "include/lib/fdf/cpp/channel_read.h",
+    "include/lib/fdf/cpp/dispatcher.h",
+  ]
+  public_configs = [ ":include" ]
+  public_deps = [
+    ":driver_runtime",
+    "//zircon/system/ulib/zxc",
+  ]
+  deps = [ ":driver_runtime" ]
+}

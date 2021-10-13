@@ -15,7 +15,7 @@ __BEGIN_CDECLS
 //
 // Example:
 //   fdf_arena_t* arena;
-//   fdf_status_t status = fdf_arena_create(&arena);
+//   fdf_status_t status = fdf_arena_create(0, "", 0, &arena);
 //
 //   // Allocate new blocks of memory.
 //   void* addr1 = fdf_arena_allocate(arena, 0x1000);
@@ -27,7 +27,13 @@ __BEGIN_CDECLS
 //
 typedef struct fdf_arena fdf_arena_t;
 
-fdf_status_t fdf_arena_create(uint32_t options, const char* tag, fdf_arena_t** arena);
+// |tag| provides a hint to the runtime so that it may be more efficient.
+// For example, adjusting the size of the buffer backing the arena
+// to the expected total size of allocations.
+// It may also be surfaced in debug information.
+// TODO(fxbug.dev/86449): consider making |tag| fixed size.
+fdf_status_t fdf_arena_create(uint32_t options, const char* tag, size_t tag_len,
+                              fdf_arena_t** arena);
 
 void* fdf_arena_allocate(fdf_arena_t* arena, size_t bytes);
 

@@ -7,7 +7,8 @@
 #include <fbl/ref_ptr.h>
 
 // static
-fdf_status_t fdf_arena::Create(uint32_t options, const char* tag, fdf_arena** out_arena) {
+fdf_status_t fdf_arena::Create(uint32_t options, const char* tag, size_t tag_len,
+                               fdf_arena** out_arena) {
   auto arena = fbl::AdoptRef(new fdf_arena());
   if (!arena) {
     return ZX_ERR_NO_MEMORY;
