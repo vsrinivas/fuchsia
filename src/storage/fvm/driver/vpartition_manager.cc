@@ -81,8 +81,9 @@ zx_status_t VPartitionManager::Bind(void* /*unused*/, zx_device_t* dev) {
 
   auto vpm = std::make_unique<VPartitionManager>(dev, block_info, block_op_size, &bp);
 
-  zx_status_t status =
-      vpm->DdkAdd(ddk::DeviceAddArgs("fvm").set_inspect_vmo(vpm->diagnostics().DuplicateVmo()));
+  zx_status_t status = vpm->DdkAdd(ddk::DeviceAddArgs("fvm")
+                                       .set_flags(DEVICE_ADD_NON_BINDABLE)
+                                       .set_inspect_vmo(vpm->diagnostics().DuplicateVmo()));
   if (status != ZX_OK) {
     zxlogf(ERROR, "block device '%s': failed to DdkAdd: %s", device_get_name(dev),
            zx_status_get_string(status));
