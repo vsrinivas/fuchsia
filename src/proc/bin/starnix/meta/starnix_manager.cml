@@ -28,7 +28,9 @@
             to: "#starnix_runner",
         },
         {
-            protocol: "fuchsia.sys2.Realm",
+            // Note that it's important that the runner gets access to starnix_manger's realm
+            // instance, so it can create components in the "#playground" collection.
+            protocol: "fuchsia.component.Realm",
             from: "framework",
             to: "#starnix_runner",
         },

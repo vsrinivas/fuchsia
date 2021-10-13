@@ -26,9 +26,11 @@
     use: [
         {
             protocol: [
+                // Note that this is the parent's realm. This is used to create children in
+                // starnix_manager's collection.
+                "fuchsia.component.Realm",
                 "fuchsia.component.runner.ComponentRunner",
                 "fuchsia.kernel.VmexResource",
-                "fuchsia.sys2.Realm",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.ui.composition.Allocator",
             ],
