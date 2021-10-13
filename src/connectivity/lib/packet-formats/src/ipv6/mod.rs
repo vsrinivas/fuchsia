@@ -160,7 +160,7 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
     }
 }
 
-#[allow(missing_docs)]
+/// The IPv6 fixed header which precedes any extension headers and the body.
 #[derive(Debug, Default, FromBytes, AsBytes, Unaligned, PartialEq)]
 #[repr(C)]
 pub struct FixedHeader {

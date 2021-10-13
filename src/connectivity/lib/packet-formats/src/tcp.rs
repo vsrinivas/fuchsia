@@ -21,11 +21,13 @@ use crate::error::{ParseError, ParseResult};
 use crate::ip::IpProto;
 use crate::{compute_transport_checksum_parts, compute_transport_checksum_serialize, U16, U32};
 
+use self::data_offset_reserved_flags::DataOffsetReservedFlags;
 use self::options::TcpOptionsImpl;
 
 const HDR_PREFIX_LEN: usize = 20;
 const CHECKSUM_OFFSET: usize = 16;
 const CHECKSUM_RANGE: Range<usize> = CHECKSUM_OFFSET..CHECKSUM_OFFSET + 2;
+const MIN_DATA_OFFSET: u8 = 5;
 pub(crate) const TCP_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
 
 #[derive(Debug, Default, FromBytes, AsBytes, Unaligned, PartialEq)]
@@ -35,15 +37,11 @@ struct HeaderPrefix {
     dst_port: U16,
     seq_num: U32,
     ack: U32,
-    data_offset_reserved_flags: U16,
+    data_offset_reserved_flags: DataOffsetReservedFlags,
     window_size: U16,
     checksum: [u8; 2],
     urg_ptr: U16,
 }
-
-const DATA_OFFSET_OFFSET: u8 = 12;
-const DATA_OFFSET_MAX: u8 = (1 << (16 - DATA_OFFSET_OFFSET)) - 1;
-const FLAGS_MAX: u16 = (1 << 9) - 1;
 
 impl HeaderPrefix {
     #[allow(clippy::too_many_arguments)]
@@ -52,23 +50,17 @@ impl HeaderPrefix {
         dst_port: u16,
         seq_num: u32,
         ack: u32,
-        data_offset: u8,
-        flags: u16,
+        data_offset_reserved_flags: DataOffsetReservedFlags,
         window_size: u16,
         checksum: [u8; 2],
         urg_ptr: u16,
     ) -> HeaderPrefix {
-        debug_assert!(data_offset <= DATA_OFFSET_MAX);
-        debug_assert!(flags <= FLAGS_MAX);
-
         HeaderPrefix {
             src_port: U16::new(src_port),
             dst_port: U16::new(dst_port),
             seq_num: U32::new(seq_num),
             ack: U32::new(ack),
-            data_offset_reserved_flags: U16::new(
-                (u16::from(data_offset) << DATA_OFFSET_OFFSET) | flags,
-            ),
+            data_offset_reserved_flags,
             window_size: U16::new(window_size),
             checksum,
             urg_ptr: U16::new(urg_ptr),
@@ -76,15 +68,114 @@ impl HeaderPrefix {
     }
 
     fn data_offset(&self) -> u8 {
-        (self.data_offset_reserved_flags.get() >> 12) as u8
+        self.data_offset_reserved_flags.data_offset()
     }
 
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    fn set_data_offset(&mut self, offset: u8) {
-        debug_assert!(offset <= 15);
-        let v = self.data_offset_reserved_flags.get();
-        self.data_offset_reserved_flags.set((v & 0x0FFF) | (((offset & 0x0F) as u16) << 12));
+    fn ack_num(&self) -> Option<u32> {
+        if self.data_offset_reserved_flags.ack() {
+            Some(self.ack.get())
+        } else {
+            None
+        }
+    }
+}
+
+mod data_offset_reserved_flags {
+    use super::*;
+
+    /// The Data Offset field, the reserved zero bits, and the flags.
+    ///
+    /// When constructed from a packet, `DataOffsetReservedFlags` ensures that
+    /// all bits are preserved even if they are reserved as of this writing.
+    /// This allows us to be forwards-compatible with future uses of these bits.
+    /// This forwards-compatibility doesn't matter when user code is only
+    /// parsing a segment because we don't provide getters for any of those
+    /// bits. However, it does matter when copying `DataOffsetReservedFlags`
+    /// into new segments - in these cases, if we were to unconditionally set
+    /// the reserved bits to zero, we could be changing the semantics of a TCP
+    /// segment.
+    #[derive(FromBytes, AsBytes, Unaligned, Copy, Clone, Debug, Default, Eq, PartialEq)]
+    #[repr(transparent)]
+    pub(super) struct DataOffsetReservedFlags(U16);
+
+    impl DataOffsetReservedFlags {
+        pub const EMPTY: DataOffsetReservedFlags = DataOffsetReservedFlags(U16::ZERO);
+        pub const ACK_SET: DataOffsetReservedFlags =
+            DataOffsetReservedFlags(U16::from_bytes(Self::ACK_FLAG_MASK.to_be_bytes()));
+
+        const DATA_OFFSET_SHIFT: u8 = 12;
+        const DATA_OFFSET_MAX: u8 = (1 << (16 - Self::DATA_OFFSET_SHIFT)) - 1;
+        const DATA_OFFSET_MASK: u16 = (Self::DATA_OFFSET_MAX as u16) << Self::DATA_OFFSET_SHIFT;
+
+        const ACK_FLAG_MASK: u16 = 0b10000;
+        const PSH_FLAG_MASK: u16 = 0b01000;
+        const RST_FLAG_MASK: u16 = 0b00100;
+        const SYN_FLAG_MASK: u16 = 0b00010;
+        const FIN_FLAG_MASK: u16 = 0b00001;
+
+        #[cfg(test)]
+        pub fn new(data_offset: u8) -> DataOffsetReservedFlags {
+            let mut ret = Self::EMPTY;
+            ret.set_data_offset(data_offset);
+            ret
+        }
+
+        pub fn set_data_offset(&mut self, data_offset: u8) {
+            debug_assert!(data_offset <= Self::DATA_OFFSET_MAX);
+            let v = self.0.get();
+            self.0.set(
+                (v & !Self::DATA_OFFSET_MASK) | (u16::from(data_offset)) << Self::DATA_OFFSET_SHIFT,
+            );
+        }
+
+        pub fn data_offset(&self) -> u8 {
+            (self.0.get() >> 12) as u8
+        }
+
+        fn get_flag(&self, mask: u16) -> bool {
+            self.0.get() & mask > 0
+        }
+
+        pub fn ack(&self) -> bool {
+            self.get_flag(Self::ACK_FLAG_MASK)
+        }
+
+        pub fn psh(&self) -> bool {
+            self.get_flag(Self::PSH_FLAG_MASK)
+        }
+
+        pub fn rst(&self) -> bool {
+            self.get_flag(Self::RST_FLAG_MASK)
+        }
+
+        pub fn syn(&self) -> bool {
+            self.get_flag(Self::SYN_FLAG_MASK)
+        }
+
+        pub fn fin(&self) -> bool {
+            self.get_flag(Self::FIN_FLAG_MASK)
+        }
+
+        fn set_flag(&mut self, mask: u16, set: bool) {
+            let v = self.0.get();
+            self.0.set(if set { v | mask } else { v & !mask });
+        }
+
+        pub fn set_psh(&mut self, psh: bool) {
+            self.set_flag(Self::PSH_FLAG_MASK, psh);
+        }
+
+        pub fn set_rst(&mut self, rst: bool) {
+            self.set_flag(Self::RST_FLAG_MASK, rst)
+        }
+
+        pub fn set_syn(&mut self, syn: bool) {
+            self.set_flag(Self::SYN_FLAG_MASK, syn)
+        }
+
+        pub fn set_fin(&mut self, fin: bool) {
+            self.set_flag(Self::FIN_FLAG_MASK, fin)
+        }
     }
 }
 
@@ -214,30 +305,27 @@ impl<B: ByteSlice> TcpSegment<B> {
     ///
     /// If the ACK flag is not set, `ack_num` returns `None`.
     pub fn ack_num(&self) -> Option<u32> {
-        if self.get_flag(ACK_MASK) {
-            Some(self.hdr_prefix.ack.get())
-        } else {
-            None
-        }
+        self.hdr_prefix.ack_num()
     }
 
-    fn get_flag(&self, mask: u16) -> bool {
-        self.hdr_prefix.data_offset_reserved_flags.get() & mask > 0
+    /// The PSH flag.
+    pub fn psh(&self) -> bool {
+        self.hdr_prefix.data_offset_reserved_flags.psh()
     }
 
     /// The RST flag.
     pub fn rst(&self) -> bool {
-        self.get_flag(RST_MASK)
+        self.hdr_prefix.data_offset_reserved_flags.rst()
     }
 
     /// The SYN flag.
     pub fn syn(&self) -> bool {
-        self.get_flag(SYN_MASK)
+        self.hdr_prefix.data_offset_reserved_flags.syn()
     }
 
     /// The FIN flag.
     pub fn fin(&self) -> bool {
-        self.get_flag(FIN_MASK)
+        self.hdr_prefix.data_offset_reserved_flags.fin()
     }
 
     /// The sender's window size.
@@ -260,20 +348,16 @@ impl<B: ByteSlice> TcpSegment<B> {
 
     /// Construct a builder with the same contents as this packet.
     pub fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> TcpSegmentBuilder<A> {
-        let mut s = TcpSegmentBuilder {
+        TcpSegmentBuilder {
             src_ip,
             dst_ip,
             src_port: self.src_port().get(),
             dst_port: self.dst_port().get(),
             seq_num: self.seq_num(),
             ack_num: self.hdr_prefix.ack.get(),
-            flags: 0,
+            data_offset_reserved_flags: self.hdr_prefix.data_offset_reserved_flags,
             window_size: self.window_size(),
-        };
-        s.rst(self.rst());
-        s.syn(self.syn());
-        s.fin(self.fin());
-        s
+        }
     }
 }
 
@@ -376,12 +460,12 @@ pub struct TcpSegmentBuilder<A: IpAddress> {
     dst_port: u16,
     seq_num: u32,
     ack_num: u32,
-    flags: u16,
+    data_offset_reserved_flags: DataOffsetReservedFlags,
     window_size: u16,
 }
 
 impl<A: IpAddress> TcpSegmentBuilder<A> {
-    /// Construct a new `TcpSegmentBuilder`.
+    /// Constructs a new `TcpSegmentBuilder`.
     ///
     /// If `ack_num` is `Some`, then the ACK flag will be set.
     pub fn new(
@@ -393,40 +477,39 @@ impl<A: IpAddress> TcpSegmentBuilder<A> {
         ack_num: Option<u32>,
         window_size: u16,
     ) -> TcpSegmentBuilder<A> {
-        let flags = if ack_num.is_some() { 1 << 4 } else { 0 };
+        let (data_offset_reserved_flags, ack_num) = ack_num
+            .map(|a| (DataOffsetReservedFlags::ACK_SET, a))
+            .unwrap_or((DataOffsetReservedFlags::EMPTY, 0));
         TcpSegmentBuilder {
             src_ip,
             dst_ip,
             src_port: src_port.get(),
             dst_port: dst_port.get(),
             seq_num,
-            ack_num: ack_num.unwrap_or(0),
-            flags,
+            ack_num,
+            data_offset_reserved_flags,
             window_size,
         }
     }
 
-    fn set_flag(&mut self, mask: u16, set: bool) {
-        if set {
-            self.flags |= mask;
-        } else {
-            self.flags &= !mask;
-        }
+    /// Sets the PSH flag.
+    pub fn psh(&mut self, psh: bool) {
+        self.data_offset_reserved_flags.set_psh(psh);
     }
 
-    /// Set the RST flag.
+    /// Sets the RST flag.
     pub fn rst(&mut self, rst: bool) {
-        self.set_flag(RST_MASK, rst);
+        self.data_offset_reserved_flags.set_rst(rst);
     }
 
-    /// Set the SYN flag.
+    /// Sets the SYN flag.
     pub fn syn(&mut self, syn: bool) {
-        self.set_flag(SYN_MASK, syn);
+        self.data_offset_reserved_flags.set_syn(syn);
     }
 
-    /// Set the FIN flag.
+    /// Sets the FIN flag.
     pub fn fin(&mut self, fin: bool) {
-        self.set_flag(FIN_MASK, fin);
+        self.data_offset_reserved_flags.set_fin(fin);
     }
 }
 
@@ -440,16 +523,16 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
         // implements BufferViewMut, giving us write_obj_front method
         let mut header = &mut header;
 
+        let mut data_offset_reserved_flags = self.data_offset_reserved_flags;
+        // Hard-coded until we support serializing options.
+        data_offset_reserved_flags.set_data_offset(MIN_DATA_OFFSET);
         header
             .write_obj_front(&HeaderPrefix::new(
                 self.src_port,
                 self.dst_port,
                 self.seq_num,
                 self.ack_num,
-                // Data Offset is hard-coded to 5 until we support
-                // serializing options
-                5,
-                self.flags,
+                data_offset_reserved_flags,
                 self.window_size,
                 // Initialize the checksum to 0 so that we will get the
                 // correct value when we compute it below.
@@ -475,11 +558,6 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
         buffer.header()[CHECKSUM_RANGE].copy_from_slice(&checksum[..]);
     }
 }
-
-const ACK_MASK: u16 = 0b10000;
-const RST_MASK: u16 = 0b00100;
-const SYN_MASK: u16 = 0b00010;
-const FIN_MASK: u16 = 0b00001;
 
 /// Parsing and serialization of TCP options.
 pub mod options {
@@ -730,9 +808,7 @@ mod tests {
             2,
             0,
             0,
-            // Data Offset of 5
-            5,
-            0,
+            DataOffsetReservedFlags::new(MIN_DATA_OFFSET),
             0,
             [0x9f, 0xce],
             0,
@@ -783,13 +859,13 @@ mod tests {
         // Set the data offset to 4, implying a header length of 16. This is
         // smaller than the minimum of 20.
         let mut hdr_prefix = new_hdr_prefix();
-        hdr_prefix.data_offset_reserved_flags = U16::new(4u16 << 12);
+        hdr_prefix.data_offset_reserved_flags = DataOffsetReservedFlags::new(4);
         assert_header_err(hdr_prefix, ParseError::Format);
 
         // Set the data offset to 6, implying a header length of 24. This is
         // larger than the actual segment length of 20.
         let mut hdr_prefix = new_hdr_prefix();
-        hdr_prefix.data_offset_reserved_flags = U16::new(6u16 << 12);
+        hdr_prefix.data_offset_reserved_flags = DataOffsetReservedFlags::new(12);
         assert_header_err(hdr_prefix, ParseError::Format);
     }
 
@@ -892,7 +968,7 @@ mod tests {
         // Parse options partially:
         let make_hdr_prefix = || {
             let mut hdr_prefix = new_hdr_prefix();
-            hdr_prefix.set_data_offset(8);
+            hdr_prefix.data_offset_reserved_flags.set_data_offset(8);
             hdr_prefix
         };
         let hdr_prefix = hdr_prefix_to_bytes(make_hdr_prefix());

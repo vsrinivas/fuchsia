@@ -44,7 +44,8 @@ pub enum Ipv4FragmentType {
     NonInitialFragment,
 }
 
-#[allow(missing_docs)]
+/// The prefix of the IPv4 header which precedes any header options and the
+/// body.
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 pub struct HeaderPrefix {
@@ -1077,7 +1078,7 @@ mod tests {
 
     // Return a stock Ipv4PacketBuilder with reasonable default values.
     fn new_builder() -> Ipv4PacketBuilder {
-        Ipv4PacketBuilder::new(DEFAULT_DST_IP, DEFAULT_DST_IP, 64, IpProto::Tcp.into())
+        Ipv4PacketBuilder::new(DEFAULT_SRC_IP, DEFAULT_DST_IP, 64, IpProto::Tcp.into())
     }
 
     #[test]
@@ -1118,9 +1119,9 @@ mod tests {
         assert_eq!(
             buf.as_ref(),
             [
-                69, 75, 0, 30, 4, 5, 102, 7, 64, 6, 248, 103, 5, 6, 7, 8, 5, 6, 7, 8, 0, 1, 2, 3,
-                3, 4, 5, 7, 8, 9
-            ],
+                69, 75, 0, 30, 4, 5, 102, 7, 64, 6, 0, 112, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 3,
+                4, 5, 7, 8, 9
+            ]
         );
         let packet = buf.parse::<Ipv4Packet<_>>().unwrap();
         assert_eq!(packet.dscp(), 0x12);
