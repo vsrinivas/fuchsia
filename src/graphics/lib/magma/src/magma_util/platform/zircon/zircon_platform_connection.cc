@@ -233,11 +233,11 @@ void ZirconPlatformConnection::ExecuteCommandBufferWithResources2(
   std::vector<magma_exec_resource> resources;
   resources.reserve(request->resources.count());
 
-  for (auto& resource : request->resources) {
+  for (auto& buffer_range : request->resources) {
     resources.push_back({
-        resource.buffer,
-        resource.offset,
-        resource.length,
+        buffer_range.buffer_id,
+        buffer_range.offset,
+        buffer_range.size,
     });
   }
 

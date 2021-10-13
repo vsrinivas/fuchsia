@@ -117,12 +117,6 @@ type MapFlags = flexible bits : uint64 {
     VENDOR_FLAG_0 = 0x10000;
 };
 
-type Resource = struct {
-    buffer zx.koid;
-    offset uint64;
-    length uint64;
-};
-
 type CommandBufferFlags = flexible bits : uint64 {
     /// Vendor specific definitions start here
     VENDOR_FLAG_0 = 0x10000;
@@ -149,7 +143,7 @@ type ResultFlags = strict bits {
     DISCONTINUITY = 1;
 };
 
-type BufferOffset = struct {
+type BufferRange = struct {
     buffer_id zx.koid;
     offset uint64;
     size uint64;
@@ -184,7 +178,7 @@ protocol Primary {
     ExecuteCommandBufferWithResources2(struct {
         context_id uint32;
         command_buffer CommandBuffer2;
-        resources vector<Resource>:MAX;
+        resources vector<BufferRange>:MAX;
         wait_semaphores vector<zx.koid>:MAX;
         signal_semaphores vector<zx.koid>:MAX;
     });
@@ -295,7 +289,7 @@ protocol Primary {
     /// before calling this method.
     AddPerformanceCounterBufferOffsetsToPool(struct {
         pool PerfCountPoolId;
-        offsets vector<BufferOffset>:64;
+        offsets vector<BufferRange>:64;
     });
 
     /// Removes every offset of a buffer from the pool. Once this is method is finished being

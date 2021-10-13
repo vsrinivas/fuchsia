@@ -313,8 +313,9 @@ TEST_F(TestMagmaFidl, ExecuteCommandBufferWithResources2) {
   }
 
   {
-    fuchsia_gpu_magma::wire::Resource resource = {.buffer = buffer_id, .offset = 0, .length = 0};
-    std::vector<fuchsia_gpu_magma::wire::Resource> resources{std::move(resource)};
+    fuchsia_gpu_magma::wire::BufferRange resource = {
+        .buffer_id = buffer_id, .offset = 0, .size = 0};
+    std::vector<fuchsia_gpu_magma::wire::BufferRange> resources{std::move(resource)};
     fuchsia_gpu_magma::wire::CommandBuffer2 command_buffer = {
         .batch_buffer_resource_index = 0,
         .batch_start_offset = 0,
@@ -323,7 +324,7 @@ TEST_F(TestMagmaFidl, ExecuteCommandBufferWithResources2) {
     std::vector<uint64_t> signal_semaphores;
     auto wire_result = primary_->ExecuteCommandBufferWithResources2(
         context_id, std::move(command_buffer),
-        fidl::VectorView<fuchsia_gpu_magma::wire::Resource>::FromExternal(resources),
+        fidl::VectorView<fuchsia_gpu_magma::wire::BufferRange>::FromExternal(resources),
         fidl::VectorView<uint64_t>::FromExternal(wait_semaphores),
         fidl::VectorView<uint64_t>::FromExternal(signal_semaphores));
     EXPECT_TRUE(wire_result.ok());

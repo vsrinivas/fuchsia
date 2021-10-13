@@ -27,7 +27,7 @@ class PrimaryWrapper : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Pri
   magma_status_t DestroyContext(uint32_t context_id);
   magma_status_t ExecuteCommandBufferWithResources2(
       uint32_t context_id, fuchsia_gpu_magma::wire::CommandBuffer2 command_buffer,
-      ::fidl::VectorView<fuchsia_gpu_magma::wire::Resource> resources,
+      ::fidl::VectorView<fuchsia_gpu_magma::wire::BufferRange> resources,
       ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores);
   magma_status_t ExecuteImmediateCommands(uint32_t context_id,
                                           ::fidl::VectorView<uint8_t> command_data,
@@ -42,7 +42,7 @@ class PrimaryWrapper : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Pri
   magma_status_t CreatePerformanceCounterBufferPool(uint64_t pool_id, zx::channel event_channel);
   magma_status_t ReleasePerformanceCounterBufferPool(uint64_t pool_id);
   magma_status_t AddPerformanceCounterBufferOffsetsToPool(
-      uint64_t pool_id, fidl::VectorView<fuchsia_gpu_magma::wire::BufferOffset> offsets);
+      uint64_t pool_id, fidl::VectorView<fuchsia_gpu_magma::wire::BufferRange> offsets);
   magma_status_t RemovePerformanceCounterBufferFromPool(uint64_t pool_id, uint64_t buffer_id);
   magma_status_t DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id);
   magma_status_t ClearPerformanceCounters(fidl::VectorView<uint64_t> counters);
