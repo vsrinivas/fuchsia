@@ -21,7 +21,6 @@
             "fuchsia.settings.NightMode",
             "fuchsia.settings.Privacy",
             "fuchsia.settings.Setup",
-            "fuchsia.settings.System",
             "fuchsia.settings.policy.VolumePolicyController",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher"
