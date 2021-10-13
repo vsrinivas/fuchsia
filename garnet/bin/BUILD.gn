@@ -6,10 +6,8 @@ group("bin") {
   testonly = true
   deps = [
     "catapult_converter",
-    "chrealm",
     "cpuperf",
     "cpuperf_provider",
-    "cs",
 
     # TODO(fxbug.dev/49942): temporarily disable while flake is investigated.
     # "fidl_compatibility_test",
@@ -20,9 +18,7 @@ group("bin") {
     "log_listener",
     "network_settings_server",
     "perfcompare",
-    "run",
     "run_test_component",
-    "runmany",
     "sched",
     "setui",
     "setui_client",

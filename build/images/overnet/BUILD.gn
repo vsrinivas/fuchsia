@@ -29,7 +29,7 @@ assemble_system("overnet") {
 
   base_packages = [
     ":core",
-    "//garnet/bin/run",
+    "//src/sys/tools/run",
     "//garnet/bin/trace",
     "//garnet/bin/vsock_service:vsock_service",
     "//src/sys/appmgr",

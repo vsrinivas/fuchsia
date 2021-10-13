@@ -28,7 +28,7 @@ assemble_system("guest") {
   generate_fvm = !bootfs_only
   base_packages = [
     ":core",
-    "//garnet/bin/run",
+    "//src/sys/tools/run",
     "//garnet/bin/sysmgr",
     "//garnet/bin/trace",
     "//garnet/bin/vsock_service:vsock_service",

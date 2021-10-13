@@ -145,7 +145,7 @@ group("broadcom") {
 
 group("chrealm") {
   testonly = true
-  public_deps = [ "//garnet/bin/chrealm" ]
+  public_deps = [ "//src/sys/tools/chrealm" ]
 }
 
 group("cmdutils") {
@@ -247,7 +247,7 @@ group("network-speed-test") {
 
 group("run") {
   testonly = true
-  public_deps = [ "//garnet/bin/run" ]
+  public_deps = [ "//src/sys/tools/run" ]
 }
 
 group("sbase") {
