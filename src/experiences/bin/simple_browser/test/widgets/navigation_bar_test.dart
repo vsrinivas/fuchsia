@@ -149,7 +149,7 @@ Future<void> _setUpNavigationBar(
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
-        body: NavigationBar(
+        body: BrowserNavigationBar(
           bloc: bloc,
           newTab: callback,
           fieldFocus: FocusNode(),

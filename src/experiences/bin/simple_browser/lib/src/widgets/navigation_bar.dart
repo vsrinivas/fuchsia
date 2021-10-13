@@ -13,12 +13,12 @@ const _kIconSize = 14.0;
 
 enum _LayoutId { historyButtons, url, addTabButton }
 
-class NavigationBar extends StatelessWidget {
+class BrowserNavigationBar extends StatelessWidget {
   final WebPageBloc? bloc;
   final VoidCallback newTab;
   final FocusNode _fieldFocus;
 
-  const NavigationBar({
+  const BrowserNavigationBar({
     required this.bloc,
     required this.newTab,
     required FocusNode fieldFocus,
