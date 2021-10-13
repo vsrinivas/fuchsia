@@ -19,6 +19,8 @@
 #include <usb/dwc2/metadata.h>
 
 #include "nelson.h"
+#include "src/devices/board/drivers/nelson/dwc2_bind.h"
+#include "src/devices/board/drivers/nelson/xhci_bind.h"
 
 namespace nelson {
 
@@ -209,31 +211,6 @@ static const pbus_dev_t usb_phy_dev = []() {
   return dev;
 }();
 
-static const zx_bind_inst_t xhci_phy_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_XHCI_COMPOSITE),
-};
-static const device_fragment_part_t xhci_phy_fragment[] = {
-    {countof(xhci_phy_match), xhci_phy_match},
-};
-static const device_fragment_t xhci_fragments[] = {
-    {"xhci-phy", countof(xhci_phy_fragment), xhci_phy_fragment},
-};
-static const zx_bind_inst_t dwc2_phy_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC2),
-};
-static const device_fragment_part_t dwc2_phy_fragment[] = {
-    {countof(dwc2_phy_match), dwc2_phy_match},
-};
-static const device_fragment_t dwc2_fragments[] = {
-    {"dwc2-phy", countof(dwc2_phy_fragment), dwc2_phy_fragment},
-};
-
 zx_status_t Nelson::UsbInit() {
   zx_status_t status = pbus_.DeviceAdd(&usb_phy_dev);
   if (status != ZX_OK) {
@@ -242,8 +219,8 @@ zx_status_t Nelson::UsbInit() {
   }
 
   // Add XHCI and DWC2 to the same devhost as the aml-usb-phy.
-  status = pbus_.CompositeDeviceAdd(&xhci_dev, reinterpret_cast<uint64_t>(xhci_fragments),
-                                    countof(xhci_fragments), "xhci-phy");
+  status = pbus_.AddComposite(&xhci_dev, reinterpret_cast<uint64_t>(xhci_fragments),
+                              countof(xhci_fragments), "xhci-phy");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd(xhci) failed %d", __func__, status);
     return status;
@@ -270,8 +247,8 @@ zx_status_t Nelson::UsbInit() {
   usb_metadata[0].data_size = config_size;
   usb_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(config);
 
-  status = pbus_.CompositeDeviceAdd(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_fragments),
-                                    countof(dwc2_fragments), "dwc2-phy");
+  status = pbus_.AddComposite(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_fragments),
+                              countof(dwc2_fragments), "dwc2-phy");
   free(config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd(dwc2) failed %d", __func__, status);

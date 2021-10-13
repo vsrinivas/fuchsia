@@ -53,6 +53,37 @@ driver_bind_rules("aml_secure_mem_bind") {
   ]
 }
 
+driver_bind_rules("tee_bind") {
+  rules = "bind/tee.bind"
+  header_output = "tee_bind.h"
+  bind_output = "tee_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.rpmb",
+    "//src/devices/bind/fuchsia.sysmem",
+  ]
+}
+
+driver_bind_rules("xhci_bind") {
+  rules = "bind/xhci.bind"
+  header_output = "xhci_bind.h"
+  bind_output = "xhci_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.usb.phy",
+  ]
+}
+
+driver_bind_rules("dwc2_bind") {
+  rules = "bind/dwc2.bind"
+  header_output = "dwc2_bind.h"
+  bind_output = "dwc2_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.usb.phy",
+  ]
+}
+
 fuchsia_driver("nelson-module-driver") {
   output_name = "nelson-module"
   configs += [
@@ -94,7 +125,10 @@ fuchsia_driver("nelson-module-driver") {
   ]
   deps = [
     ":aml_secure_mem_bind_header",
+    ":dwc2_bind_header",
     ":nelson-bind",
+    ":tee_bind_header",
+    ":xhci_bind_header",
     "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",

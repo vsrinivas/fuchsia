@@ -13,6 +13,7 @@
 #include <cstdint>
 
 #include "nelson.h"
+#include "src/devices/board/drivers/nelson/tee_bind.h"
 #include "src/devices/lib/fidl-metadata/tee.h"
 
 namespace nelson {
@@ -61,23 +62,6 @@ static tee_thread_config_t tee_thread_cfg[] = {
          {0xe043cde0, 0x61d0, 0x11e5, {0x9c, 0x26, 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}}  // widevine
      }}};
 
-constexpr zx_bind_inst_t sysmem_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
-};
-constexpr zx_bind_inst_t rpmb_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_RPMB),
-};
-constexpr device_fragment_part_t sysmem_fragment[] = {
-    {countof(sysmem_match), sysmem_match},
-};
-constexpr device_fragment_part_t rpmb_fragment[] = {
-    {countof(rpmb_match), rpmb_match},
-};
-constexpr device_fragment_t fragments[] = {
-    {"sysmem", countof(sysmem_fragment), sysmem_fragment},
-    {"rpmb", countof(rpmb_fragment), rpmb_fragment},
-};
-
 zx_status_t Nelson::TeeInit() {
   std::vector<pbus_metadata_t> metadata;
 
@@ -113,8 +97,8 @@ zx_status_t Nelson::TeeInit() {
   dev.metadata_count = metadata.size();
   dev.metadata_list = metadata.data();
 
-  zx_status_t status = pbus_.CompositeDeviceAdd(&dev, reinterpret_cast<uint64_t>(fragments),
-                                                countof(fragments), nullptr);
+  zx_status_t status = pbus_.AddComposite(&dev, reinterpret_cast<uint64_t>(tee_fragments),
+                                          countof(tee_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
