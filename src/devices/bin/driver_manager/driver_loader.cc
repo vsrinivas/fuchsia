@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/connect_service.h>
+#include <lib/service/llcpp/service.h>
 #include <sched.h>
 #include <unistd.h>
 #include <zircon/threads.h>

@@ -43,13 +43,8 @@ class SystemInstance : public FsProvider {
   void ServiceStarter(Coordinator* coordinator);
   int WaitForSystemAvailable(Coordinator* coordinator);
 
- protected:
-  DevmgrLauncher& launcher() { return launcher_; }
-
  private:
   zx_status_t InitializeDriverHostSvcDir();
-
-  DevmgrLauncher launcher_{this};
 
   // Hosts vfs which filters driver host svc requests to /svc provided by svchost.
   // Lazily initialized.

@@ -9,6 +9,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/job.h>
 #include <lib/zx/process.h>
 
 #include <utility>

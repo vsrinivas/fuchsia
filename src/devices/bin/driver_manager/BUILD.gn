@@ -62,7 +62,6 @@ source_set("lib") {
     "driver_loader.h",
     "driver_test_reporter.cc",
     "driver_test_reporter.h",
-    "fdio.cc",
     "init_task.cc",
     "inspect.cc",
     "package_resolver.cc",
