@@ -794,8 +794,6 @@ def main():
         # target directory. This will register as a write to a non-output file.
         # TODO(shayba): address this somehow.
         "ln",
-        # fxbug.dev/61771
-        # "analysis_options.yaml",
     }
     if os.path.basename(script) in ignored_scripts:
         return retval
