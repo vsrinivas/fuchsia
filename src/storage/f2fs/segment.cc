@@ -309,7 +309,7 @@ block_t SegmentManager::SumBlkAddr(int base, int type) {
 
 SegmentManager::SegmentManager(F2fs *fs) : fs_(fs) { superblock_info_ = &fs->GetSuperblockInfo(); };
 
-int SegmentManager::NeedToFlush() {
+bool SegmentManager::NeedToFlush() {
   uint32_t pages_per_sec =
       (1 << superblock_info_->GetLogBlocksPerSeg()) * superblock_info_->GetSegsPerSec();
   int node_secs = ((superblock_info_->GetPages(CountType::kDirtyNodes) + pages_per_sec - 1) >>
@@ -320,11 +320,9 @@ int SegmentManager::NeedToFlush() {
                   superblock_info_->GetSegsPerSec();
 
   if (superblock_info_->IsOnRecovery())
-    return 0;
+    return false;
 
-  if (FreeSections() <= static_cast<uint32_t>(node_secs + 2 * dent_secs + ReservedSections()))
-    return 1;
-  return 0;
+  return FreeSections() <= static_cast<uint32_t>(node_secs + 2 * dent_secs + ReservedSections());
 }
 
 // This function balances dirty node and dentry pages.
@@ -791,15 +789,6 @@ void SegmentManager::AllocateSegmentByDefault(CursegType type, bool force) {
     }
   }
   superblock_info.IncSegmentCount(curseg->alloc_type);
-
-#ifdef F2FS_BU_DEBUG
-  FX_LOGS(DEBUG) << "SegmentManager::AllocateSegmentByDefault, type=" << static_cast<int>(type)
-                 << ", curseg->segno =" << curseg->segno << ", FreeSections()=" << FreeSections()
-                 << ", PrefreeSegments()=" << PrefreeSegments()
-                 << ", DirtySegments()=" << DirtySegments()
-                 << ", TotalSegs=" << superblock_info.TotalSegs()
-                 << ", Utilization()=" << Utilization();
-#endif
 }
 
 void SegmentManager::AllocateNewSegments() {
@@ -969,18 +958,14 @@ CursegType SegmentManager::GetSegmentType4(Page *page, PageType p_type) {
 
     if (vnode->IsDir()) {
       return CursegType::kCursegHotData;
-    } else {
-      return CursegType::kCursegColdData;
     }
-  } else {
-    if (NodeManager::IS_DNODE(*page) && !NodeManager::IsColdNode(*page)) {
-      return CursegType::kCursegHotNode;
-    } else {
-      return CursegType::kCursegColdNode;
-    }
-    return static_cast<CursegType>(0);
+    return CursegType::kCursegColdData;
   }
-  return static_cast<CursegType>(0);
+
+  if (NodeManager::IS_DNODE(*page) && !NodeManager::IsColdNode(*page)) {
+    return CursegType::kCursegHotNode;
+  }
+  return CursegType::kCursegColdNode;
 }
 
 CursegType SegmentManager::GetSegmentType6(Page *page, PageType p_type) {
@@ -991,18 +976,15 @@ CursegType SegmentManager::GetSegmentType6(Page *page, PageType p_type) {
       return CursegType::kCursegHotData;
     } else if (/*NodeManager::IsColdData(*page) ||*/ NodeManager::IsColdFile(*vnode)) {
       return CursegType::kCursegColdData;
-    } else {
-      return CursegType::kCursegWarmData;
     }
-  } else {
-    if (NodeManager::IS_DNODE(*page)) {
-      return NodeManager::IsColdNode(*page) ? CursegType::kCursegWarmNode
-                                            : CursegType::kCursegHotNode;
-    } else {
-      return CursegType::kCursegColdNode;
-    }
+    return CursegType::kCursegWarmData;
   }
-  return static_cast<CursegType>(0);
+
+  if (NodeManager::IS_DNODE(*page)) {
+    return NodeManager::IsColdNode(*page) ? CursegType::kCursegWarmNode
+                                          : CursegType::kCursegHotNode;
+  }
+  return CursegType::kCursegColdNode;
 }
 
 CursegType SegmentManager::GetSegmentType(Page *page, PageType p_type) {
@@ -1563,27 +1545,19 @@ zx_status_t SegmentManager::BuildSitInfo() {
   uint32_t bitmap_size;
 
   // allocate memory for SIT information
-  if (sit_info_ = std::make_unique<SitInfo>(); !sit_info_) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  sit_info_ = std::make_unique<SitInfo>();
 
   SitInfo *sit_i = sit_info_.get();
-
   if (sit_i->sentries = new SegmentEntry[TotalSegs()]; !sit_i->sentries) {
     return ZX_ERR_NO_MEMORY;
   }
 
   bitmap_size = BitmapSize(TotalSegs());
   sit_i->dirty_sentries_bitmap = std::make_unique<uint8_t[]>(bitmap_size);
-  if (!sit_i->dirty_sentries_bitmap) {
-    return ZX_ERR_NO_MEMORY;
-  }
 
   for (start = 0; start < TotalSegs(); ++start) {
     sit_i->sentries[start].cur_valid_map = std::make_unique<uint8_t[]>(kSitVBlockMapSize);
     sit_i->sentries[start].ckpt_valid_map = std::make_unique<uint8_t[]>(kSitVBlockMapSize);
-    if (!sit_i->sentries[start].cur_valid_map || !sit_i->sentries[start].ckpt_valid_map)
-      return ZX_ERR_NO_MEMORY;
   }
 
   if (superblock_info_->GetSegsPerSec() > 1) {
@@ -1600,9 +1574,7 @@ zx_status_t SegmentManager::BuildSitInfo() {
   bitmap_size = superblock_info_->BitmapSize(MetaBitmap::kSitBitmap);
   src_bitmap = static_cast<uint8_t *>(superblock_info_->BitmapPtr(MetaBitmap::kSitBitmap));
 
-  if (sit_i->sit_bitmap = std::make_unique<uint8_t[]>(bitmap_size); !sit_i->sit_bitmap) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  sit_i->sit_bitmap = std::make_unique<uint8_t[]>(bitmap_size);
   memcpy(sit_i->sit_bitmap.get(), src_bitmap, bitmap_size);
 
 #if 0  // porting needed
@@ -1626,21 +1598,13 @@ zx_status_t SegmentManager::BuildFreeSegmap() {
   uint32_t bitmap_size, sec_bitmap_size;
 
   // allocate memory for free segmap information
-  if (free_info_ = std::make_unique<FreeSegmapInfo>(); !free_info_) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  free_info_ = std::make_unique<FreeSegmapInfo>();
 
   bitmap_size = BitmapSize(TotalSegs());
-  if (free_info_->free_segmap = std::make_unique<uint8_t[]>(bitmap_size);
-      !free_info_->free_segmap) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  free_info_->free_segmap = std::make_unique<uint8_t[]>(bitmap_size);
 
   sec_bitmap_size = BitmapSize(superblock_info_->GetTotalSections());
-  if (free_info_->free_secmap = std::make_unique<uint8_t[]>(sec_bitmap_size);
-      !free_info_->free_secmap) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  free_info_->free_secmap = std::make_unique<uint8_t[]>(sec_bitmap_size);
 
   // set all segments as dirty temporarily
   memset(free_info_->free_segmap.get(), 0xff, bitmap_size);
@@ -1738,11 +1702,6 @@ void SegmentManager::InitDirtySegmap() {
     LocateDirtySegment(segno, DirtyType::kDirty);
     ++dirty_block_cnt;
   }
-
-#ifdef F2FS_BU_DEBUG
-  FX_LOGS(DEBUG) << "SegmentManager::InitDirtySegmap, full_block_cnt=" << full_block_cnt
-                 << ", dirty_block_cnt=" << dirty_block_cnt;
-#endif
 }
 
 zx_status_t SegmentManager::InitVictimSegmap() {
@@ -1752,26 +1711,17 @@ zx_status_t SegmentManager::InitVictimSegmap() {
       std::make_unique<uint8_t[]>(bitmap_size);
   dirty_info_->victim_segmap[static_cast<int>(GcType::kBgGc)] =
       std::make_unique<uint8_t[]>(bitmap_size);
-  if (!dirty_info_->victim_segmap[static_cast<int>(GcType::kFgGc)] ||
-      !dirty_info_->victim_segmap[static_cast<int>(GcType::kBgGc)])
-    return ZX_ERR_NO_MEMORY;
   return ZX_OK;
 }
 
 zx_status_t SegmentManager::BuildDirtySegmap() {
   uint32_t bitmap_size, i;
 
-  if (dirty_info_ = std::make_unique<DirtySeglistInfo>(); !dirty_info_) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
+  dirty_info_ = std::make_unique<DirtySeglistInfo>();
   bitmap_size = BitmapSize(TotalSegs());
 
   for (i = 0; i < static_cast<int>(DirtyType::kNrDirtytype); ++i) {
-    if (dirty_info_->dirty_segmap[i] = std::make_unique<uint8_t[]>(bitmap_size);
-        !dirty_info_->dirty_segmap[i]) {
-      return ZX_ERR_NO_MEMORY;
-    }
+    dirty_info_->dirty_segmap[i] = std::make_unique<uint8_t[]>(bitmap_size);
     dirty_info_->nr_dirty[i] = 0;
   }
 

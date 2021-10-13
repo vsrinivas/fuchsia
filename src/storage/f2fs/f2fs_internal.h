@@ -289,6 +289,7 @@ class SuperblockInfo {
   bool TestOpt(uint64_t option) { return ((mount_opt_ & option) != 0); }
 
   void IncSegmentCount(int type) { ++segment_count_[type]; }
+  uint64_t GetSegmentCount(int type) const { return segment_count_[type]; }
 
   void IncBlockCount(int type) { ++block_count_[type]; }
 

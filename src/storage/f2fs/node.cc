@@ -1886,8 +1886,6 @@ zx_status_t NodeManager::InitNodeManager() {
   nat_prev_bitmap_ = std::make_unique<uint8_t[]>(nat_bitmap_size_);
   memset(nat_prev_bitmap_.get(), 0, nat_bitmap_size_);
 
-  if (!nat_bitmap_)
-    return ZX_ERR_NO_MEMORY;
   version_bitmap = static_cast<uint8_t *>(GetSuperblockInfo().BitmapPtr(MetaBitmap::kNatBitmap));
   if (!version_bitmap)
     return ZX_ERR_INVALID_ARGS;

@@ -205,7 +205,7 @@ class SegmentManager {
   block_t StartSumBlock();
   block_t SumBlkAddr(int base, int type);
 
-  int NeedToFlush();
+  bool NeedToFlush();
   void BalanceFs();
   void LocateDirtySegment(uint32_t segno, enum DirtyType dirty_type);
   void RemoveDirtySegment(uint32_t segno, enum DirtyType dirty_type);

@@ -183,9 +183,7 @@ class NodeManager {
   nid_t GetFreeNidCount() const { return free_nid_count_; }
   zx_status_t AllocNatBitmap(const int size) {
     nat_bitmap_size_ = size;
-    if (nat_bitmap_ = std::make_unique<uint8_t[]>(nat_bitmap_size_); nat_bitmap_ == nullptr) {
-      return ZX_ERR_NO_MEMORY;
-    }
+    nat_bitmap_ = std::make_unique<uint8_t[]>(nat_bitmap_size_);
     memset(nat_bitmap_.get(), 0, nat_bitmap_size_);
     return ZX_OK;
   }
