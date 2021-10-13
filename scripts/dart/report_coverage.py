@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env fuchsia-vendored-python
 
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -16,7 +16,6 @@
 # This is all pretty hacky. Longer term efforts to make this more automatic and
 # less hacky tracked by fxbug.dev/9302.
 
-from __future__ import print_function
 import argparse
 import collections
 import distutils.spawn
