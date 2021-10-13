@@ -88,13 +88,9 @@ impl VmoFileObject {
     pub fn new(vmo: Arc<zx::Vmo>) -> Self {
         VmoFileObject { vmo }
     }
-}
 
-impl FileOps for VmoFileObject {
-    fd_impl_seekable!();
-
-    fn read_at(
-        &self,
+    pub fn read_at(
+        vmo: &Arc<zx::Vmo>,
         file: &FileObject,
         task: &Task,
         offset: usize,
@@ -109,7 +105,7 @@ impl FileOps for VmoFileObject {
         let to_read =
             if file_length < offset + want_read { file_length - offset } else { want_read };
         let mut buf = vec![0u8; to_read];
-        self.vmo.read(&mut buf[..], offset as u64).map_err(|_| errno!(EIO))?;
+        vmo.read(&mut buf[..], offset as u64).map_err(|_| errno!(EIO))?;
         // TODO(steveaustin) - write_each might might be more efficient
         task.mm.write_all(data, &mut buf[..])?;
         // TODO(steveaustin) - omit updating time_access to allow info to be immutable
@@ -118,8 +114,8 @@ impl FileOps for VmoFileObject {
         Ok(to_read)
     }
 
-    fn write_at(
-        &self,
+    pub fn write_at(
+        vmo: &Arc<zx::Vmo>,
         file: &FileObject,
         task: &Task,
         offset: usize,
@@ -135,7 +131,7 @@ impl FileOps for VmoFileObject {
         if write_end > info.size {
             if write_end > info.storage_size {
                 let new_size = round_up_to_system_page_size(write_end);
-                self.vmo.set_size(new_size as u64).map_err(|_| errno!(ENOMEM))?;
+                vmo.set_size(new_size as u64).map_err(|_| errno!(ENOMEM))?;
                 info.storage_size = new_size as usize;
             }
             update_content_size = true;
@@ -143,7 +139,7 @@ impl FileOps for VmoFileObject {
 
         let mut buf = vec![0u8; want_write];
         task.mm.read_all(data, &mut buf[..])?;
-        self.vmo.write(&mut buf[..], offset as u64).map_err(|_| errno!(EIO))?;
+        vmo.write(&mut buf[..], offset as u64).map_err(|_| errno!(EIO))?;
         if update_content_size {
             info.size = write_end;
         }
@@ -151,6 +147,30 @@ impl FileOps for VmoFileObject {
         info.time_access = now;
         info.time_modify = now;
         Ok(want_write)
+    }
+}
+
+impl FileOps for VmoFileObject {
+    fd_impl_seekable!();
+
+    fn read_at(
+        &self,
+        file: &FileObject,
+        task: &Task,
+        offset: usize,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        VmoFileObject::read_at(&self.vmo, file, task, offset, data)
+    }
+
+    fn write_at(
+        &self,
+        file: &FileObject,
+        task: &Task,
+        offset: usize,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        VmoFileObject::write_at(&self.vmo, file, task, offset, data)
     }
 
     fn get_vmo(
