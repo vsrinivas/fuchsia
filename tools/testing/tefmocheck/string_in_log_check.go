@@ -163,14 +163,6 @@ func (c *stringInLogCheck) OutputFiles() []string {
 	return []string{c.outputFile}
 }
 
-func driverHostCrash(hostName, exceptHost string) *stringInLogCheck {
-	c := stringInLogCheck{String: "<== fatal : process driver_host:" + hostName, Type: serialLogType}
-	if exceptHost != "" {
-		c.ExceptString = "<== fatal : process driver_host:" + exceptHost
-	}
-	return &c
-}
-
 // StringInLogsChecks returns checks to detect bad strings in certain logs.
 func StringInLogsChecks() []FailureModeCheck {
 	ret := []FailureModeCheck{
@@ -198,15 +190,6 @@ func StringInLogsChecks() []FailureModeCheck {
 		// output files after the task's command completed but before Swarming finished
 		// uploading outputs.
 		&stringInLogCheck{String: "error: blob size changed while uploading", Type: swarmingOutputType},
-		// For fxbug.dev/53854.
-		driverHostCrash("composite-device", ""),
-		driverHostCrash("pci", ""),
-		// Don't fail if we see PDEV_DID_CRASH_TEST, defined in
-		// zircon/system/ulib/ddk-platform-defs/include/lib/ddk/platform-defs.h.
-		// That's used for a test that intentionally crashes a driver host.
-		driverHostCrash("pdev", "pdev:00:00:24"),
-		// Catch-all for driver host crashes.
-		driverHostCrash("", "pdev:00:00:24"),
 		// For fxbug.dev/55637
 		&stringInLogCheck{String: " in fx_logger::GetSeverity() ", Type: swarmingOutputType},
 		// For fxbug.dev/71784. Do not check for this in swarming output as this does not indicate
