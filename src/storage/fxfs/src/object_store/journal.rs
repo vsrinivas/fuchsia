@@ -31,7 +31,7 @@ use {
             allocator::{Allocator, SimpleAllocator},
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
             directory::Directory,
-            filesystem::{Filesystem, Mutations, SyncOptions},
+            filesystem::{ApplyMode, Filesystem, Mutations, SyncOptions},
             graveyard::Graveyard,
             journal::{
                 checksum_list::ChecksumList,
@@ -275,7 +275,7 @@ impl Journal {
                     (Mutation::extent(item.key, item.value), item.sequence)
                 }
             };
-            root_parent.apply_mutation(mutation, None, sequence, AssocObj::None).await;
+            root_parent.apply_mutation(mutation, ApplyMode::Replay, sequence, AssocObj::None).await;
         }
 
         // TODO(jfsulliv): Upgrade minor revision as needed.

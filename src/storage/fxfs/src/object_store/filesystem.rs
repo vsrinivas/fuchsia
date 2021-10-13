@@ -68,6 +68,23 @@ pub trait Filesystem: TransactionHandler {
     fn crypt(&self) -> &dyn Crypt;
 }
 
+/// A transaction can be applied during replay or on a live running system (in which case a
+/// transaction object will be available).
+pub enum ApplyMode<'a, 'b> {
+    Replay,
+    Live(&'a Transaction<'b>),
+}
+
+impl ApplyMode<'_, '_> {
+    pub fn is_replay(&self) -> bool {
+        matches!(self, ApplyMode::Replay)
+    }
+
+    pub fn is_live(&self) -> bool {
+        matches!(self, ApplyMode::Live(_))
+    }
+}
+
 #[async_trait]
 pub trait Mutations: Send + Sync {
     /// Objects that use the journaling system to track mutations should implement this trait.  This
@@ -77,7 +94,7 @@ pub trait Mutations: Send + Sync {
     async fn apply_mutation(
         &self,
         mutation: Mutation,
-        transaction: Option<&Transaction<'_>>,
+        mode: ApplyMode<'_, '_>,
         log_offset: u64,
         assoc_obj: AssocObj<'_>,
     );

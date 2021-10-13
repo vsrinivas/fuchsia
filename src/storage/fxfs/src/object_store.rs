@@ -42,7 +42,7 @@ use {
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
             data_buffer::{DataBuffer, MemDataBuffer},
-            filesystem::{Filesystem, Mutations},
+            filesystem::{ApplyMode, Filesystem, Mutations},
             journal::checksum_list::ChecksumList,
             object_manager::ReservationUpdate,
             record::{
@@ -695,7 +695,7 @@ impl Mutations for ObjectStore {
     async fn apply_mutation(
         &self,
         mutation: Mutation,
-        transaction: Option<&Transaction<'_>>,
+        mode: ApplyMode<'_, '_>,
         log_offset: u64,
         _assoc_obj: AssocObj<'_>,
     ) {
@@ -705,9 +705,7 @@ impl Mutations for ObjectStore {
         // file: whilst we are replaying we need to be able to track new extents for the
         // journal file so that we can read from it whilst we are replaying.
         assert!(
-            transaction.is_some()
-                || self.store_info_handle.get().is_none()
-                || self.parent_store.is_none()
+            mode.is_live() || self.store_info_handle.get().is_none() || self.parent_store.is_none()
         );
 
         match mutation {
@@ -731,7 +729,7 @@ impl Mutations for ObjectStore {
                 self.extent_tree.seal().await;
             }
             Mutation::EndFlush => {
-                if transaction.is_none() {
+                if mode.is_replay() {
                     self.tree.reset_immutable_layers();
                     self.extent_tree.reset_immutable_layers();
                     // StoreInfo needs to be read from the store-info file.

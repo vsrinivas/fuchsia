@@ -7,7 +7,7 @@ use {
         object_handle::INVALID_OBJECT_ID,
         object_store::{
             allocator::{Allocator, Reservation},
-            filesystem::Mutations,
+            filesystem::{ApplyMode, Mutations},
             graveyard::Graveyard,
             journal::{self, checksum_list::ChecksumList, JournalCheckpoint},
             transaction::{
@@ -262,7 +262,7 @@ impl ObjectManager {
         &self,
         object_id: u64,
         mutation: Mutation,
-        transaction: Option<&Transaction<'_>>,
+        mode: ApplyMode<'_, '_>,
         checkpoint: &JournalCheckpoint,
         associated_object: AssocObj<'_>,
     ) {
@@ -315,14 +315,11 @@ impl ObjectManager {
             }
         }
         .unwrap_or_else(|| {
-            // This should only happen during replay.
-            assert!(transaction.is_none());
+            assert!(mode.is_replay());
             self.lazy_open_store(object_id)
         });
         associated_object.map(|o| o.will_apply_mutation(&mutation, object_id, self));
-        object
-            .apply_mutation(mutation, transaction, checkpoint.file_offset, associated_object)
-            .await;
+        object.apply_mutation(mutation, mode, checkpoint.file_offset, associated_object).await;
     }
 
     /// Called by the journaling system to replay the given mutations.  `checkpoint` indicates the
@@ -354,7 +351,7 @@ impl ObjectManager {
             self.apply_mutation(
                 object_id,
                 mutation,
-                None,
+                ApplyMode::Replay,
                 &journal_file_checkpoint,
                 AssocObj::None,
             )
@@ -380,7 +377,7 @@ impl ObjectManager {
             self.apply_mutation(
                 object_id,
                 mutation,
-                Some(transaction),
+                ApplyMode::Live(transaction),
                 &checkpoint,
                 associated_object,
             )

@@ -19,7 +19,7 @@ use {
         },
         object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::{
-            filesystem::{Filesystem, Mutations, SyncOptions},
+            filesystem::{ApplyMode, Filesystem, Mutations, SyncOptions},
             journal::checksum_list::ChecksumList,
             object_manager::ReservationUpdate,
             store_object_handle::DirectWriter,
@@ -838,7 +838,7 @@ impl Mutations for SimpleAllocator {
     async fn apply_mutation(
         &self,
         mutation: Mutation,
-        transaction: Option<&Transaction<'_>>,
+        mode: ApplyMode<'_, '_>,
         log_offset: u64,
         _assoc_obj: AssocObj<'_>,
     ) {
@@ -850,7 +850,7 @@ impl Mutations for SimpleAllocator {
                 // skip_list_layer's commit_and_wait method, rather than just commit.
                 let len = item.key.device_range.length();
                 if item.value.delta < 0 {
-                    if transaction.is_some() {
+                    if mode.is_live() {
                         let mut item = item.clone();
                         item.value.delta = 1;
                         self.reserved_allocations.insert(item).await;
@@ -859,15 +859,17 @@ impl Mutations for SimpleAllocator {
                     let mut inner = self.inner.lock().unwrap();
                     inner.allocated_bytes = inner.allocated_bytes.saturating_sub(len as i64);
 
-                    if transaction.is_some() {
+                    if mode.is_live() {
                         inner
                             .committed_deallocated
                             .push_back((log_offset, item.key.device_range.clone()));
                         inner.committed_deallocated_bytes += item.key.device_range.length();
                     }
 
-                    if let Some(Transaction { allocator_reservation: Some(reservation), .. }) =
-                        transaction
+                    if let ApplyMode::Live(Transaction {
+                        allocator_reservation: Some(reservation),
+                        ..
+                    }) = mode
                     {
                         inner.reserved_bytes += len;
                         reservation.add(len);
@@ -876,12 +878,12 @@ impl Mutations for SimpleAllocator {
                 let lower_bound = item.key.lower_bound_for_merge_into();
                 self.tree.merge_into(item.clone(), &lower_bound).await;
                 if item.value.delta > 0 {
-                    if transaction.is_some() {
+                    if mode.is_live() {
                         self.reserved_allocations.erase(item.as_item_ref()).await;
                     }
                     let mut inner = self.inner.lock().unwrap();
                     inner.allocated_bytes = inner.allocated_bytes.saturating_add(len as i64);
-                    if let Some(transaction) = transaction {
+                    if let ApplyMode::Live(transaction) = mode {
                         inner.uncommitted_allocated_bytes -= len;
                         if let Some(reservation) = transaction.allocator_reservation {
                             reservation.commit(len);
@@ -909,7 +911,7 @@ impl Mutations for SimpleAllocator {
                 inner.info.allocated_bytes = inner.allocated_bytes as u64;
             }
             Mutation::EndFlush => {
-                if transaction.is_none() {
+                if mode.is_replay() {
                     self.tree.reset_immutable_layers();
                     // AllocatorInfo is written in the same transaction and will contain the count
                     // at the point BeginFlush was applied, so we need to adjust allocated_bytes so
