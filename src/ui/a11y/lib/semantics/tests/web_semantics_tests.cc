@@ -138,7 +138,10 @@ class NavListener : public fuchsia::web::NavigationEventListener {
 // Mock component that will own a web view and route ViewProvider requests through it.
 class WebViewProxy : public fuchsia::ui::app::ViewProvider, public MockComponent {
  public:
-  explicit WebViewProxy(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+  explicit WebViewProxy(async_dispatcher_t* dispatcher)
+      : dispatcher_(dispatcher),
+        navigation_event_listener_(),
+        navigation_event_listener_binding_(&navigation_event_listener_) {}
 
   ~WebViewProxy() override = default;
 
@@ -164,22 +167,9 @@ class WebViewProxy : public fuchsia::ui::app::ViewProvider, public MockComponent
       FX_LOGS(FATAL) << "web_frame_: " << zx_status_get_string(status);
     });
 
-    // Load the web page.
-    FX_LOGS(INFO) << "Loading web page";
-    fuchsia::web::NavigationControllerPtr navigation_controller;
-    NavListener navigation_event_listener;
-    fidl::Binding<fuchsia::web::NavigationEventListener> navigation_event_listener_binding(
-        &navigation_event_listener);
-    bool is_web_page_loaded = false;
-    web_frame_->SetNavigationEventListener(navigation_event_listener_binding.NewBinding());
-    web_frame_->GetNavigationController(navigation_controller.NewRequest());
-    navigation_controller->LoadUrl("about:blank", fuchsia::web::LoadUrlParams(), [](auto result) {
-      if (result.is_err()) {
-        FX_LOGS(FATAL) << "Error while loading URL: " << static_cast<uint32_t>(result.err());
-      } else {
-        FX_LOGS(INFO) << "Loaded web page";
-      }
-    });
+    // Set up navigation affordances.
+    web_frame_->SetNavigationEventListener(navigation_event_listener_binding_.NewBinding());
+    web_frame_->GetNavigationController(navigation_controller_.NewRequest());
 
     // Publish the ViewProvider service.
     FX_CHECK(
@@ -191,6 +181,16 @@ class WebViewProxy : public fuchsia::ui::app::ViewProvider, public MockComponent
   }
 
   void LoadHtml(std::string html) {
+    // Load the web page.
+    FX_LOGS(INFO) << "Loading web page";
+    navigation_controller_->LoadUrl("about:blank", fuchsia::web::LoadUrlParams(), [](auto result) {
+      if (result.is_err()) {
+        FX_LOGS(FATAL) << "Error while loading URL: " << static_cast<uint32_t>(result.err());
+      } else {
+        FX_LOGS(INFO) << "Loaded about:blank";
+      }
+    });
+
     web_frame_->ExecuteJavaScript(
         {"*"}, BufferFromString(fxl::StringPrintf("document.write(`%s`);", html.c_str())),
         [](auto result) {
@@ -198,7 +198,7 @@ class WebViewProxy : public fuchsia::ui::app::ViewProvider, public MockComponent
             FX_LOGS(FATAL) << "Error while executing JavaScript: "
                            << static_cast<uint32_t>(result.err());
           } else {
-            FX_LOGS(INFO) << "Web page is loaded";
+            FX_LOGS(INFO) << "Injected html";
           }
         });
   }
@@ -227,6 +227,9 @@ class WebViewProxy : public fuchsia::ui::app::ViewProvider, public MockComponent
   std::vector<std::unique_ptr<MockHandles>> mock_handles_{};
   std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<fuchsia::ui::app::ViewProvider> bindings_;
+  NavListener navigation_event_listener_;
+  fidl::Binding<fuchsia::web::NavigationEventListener> navigation_event_listener_binding_;
+  fuchsia::web::NavigationControllerPtr navigation_controller_;
   fuchsia::ui::views::ViewToken view_token_;
   fuchsia::web::ContextPtr web_context_;
   fuchsia::web::FramePtr web_frame_;
