@@ -33,7 +33,7 @@ pub struct CapabilityRouteState<'a, T> {
 }
 
 /// A summary of a specific capability route and the outcome of verification.
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct VerifyRouteResult {
     pub using_node: NodePath,
     pub capability: CapabilityName,

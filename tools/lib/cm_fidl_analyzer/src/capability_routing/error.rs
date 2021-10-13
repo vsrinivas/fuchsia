@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::component_tree::ComponentTreeError,
+    crate::{component_model::AnalyzerModelError, component_tree::ComponentTreeError},
+    fuchsia_zircon_status as zx_status,
     serde::{Deserialize, Serialize},
     thiserror::Error,
 };
@@ -33,6 +34,23 @@ pub enum CapabilityRouteError {
     ValidationNotImplemented(String),
     #[error("unexpected verifier state: {0}")]
     Internal(String),
+
+    // Temporarily nest AnalyzerModelError under CapabilityRouteError during the
+    // transistion to the ComponentModelForAnalyzer-based static analyzer.
+    //
+    // TODO(https://fxbug.dev/61861): Replace CapabilityRouteError with AnalyzerModelError
+    // once the transition is complete.
+    #[error(transparent)]
+    AnalyzerModelError(#[from] AnalyzerModelError),
+}
+
+impl CapabilityRouteError {
+    pub fn as_zx_status(&self) -> zx_status::Status {
+        match self {
+            Self::AnalyzerModelError(err) => err.as_zx_status(),
+            _ => zx_status::Status::INTERNAL,
+        }
+    }
 }
 
 impl From<ComponentTreeError> for CapabilityRouteError {

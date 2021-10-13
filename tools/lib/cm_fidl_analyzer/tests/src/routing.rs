@@ -6,21 +6,24 @@ use {
     anyhow::anyhow,
     async_trait::async_trait,
     cm_fidl_analyzer::{
-        capability_routing::route::RouteSegment,
+        capability_routing::{
+            error::CapabilityRouteError, route::RouteSegment, verifier::VerifyRouteResult,
+        },
         component_model::{
             AnalyzerModelError, ComponentInstanceForAnalyzer, ComponentModelForAnalyzer,
-            ModelBuilderForAnalyzer, RouteMap, BOOT_RESOLVER_NAME, BOOT_SCHEME,
+            ModelBuilderForAnalyzer, BOOT_RESOLVER_NAME, BOOT_SCHEME,
         },
         component_tree::NodePath,
     },
     cm_rust::{
-        CapabilityDecl, CapabilityName, CapabilityPath, ChildRef, ComponentDecl, DependencyType,
-        ExposeDecl, ExposeDeclCommon, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeResolverDecl,
-        ExposeServiceDecl, ExposeSource, ExposeTarget, OfferDecl, OfferDirectoryDecl,
-        OfferEventDecl, OfferProtocolDecl, OfferServiceDecl, OfferSource, OfferStorageDecl,
-        OfferTarget, ProtocolDecl, RegistrationSource, ResolverDecl, ResolverRegistration,
-        RunnerDecl, RunnerRegistration, ServiceDecl, StorageDecl, StorageDirectorySource, UseDecl,
-        UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseServiceDecl, UseSource, UseStorageDecl,
+        CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ChildRef,
+        ComponentDecl, DependencyType, ExposeDecl, ExposeDeclCommon, ExposeDirectoryDecl,
+        ExposeProtocolDecl, ExposeResolverDecl, ExposeServiceDecl, ExposeSource, ExposeTarget,
+        OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl, OfferServiceDecl,
+        OfferSource, OfferStorageDecl, OfferTarget, ProtocolDecl, RegistrationSource, ResolverDecl,
+        ResolverRegistration, RunnerDecl, RunnerRegistration, ServiceDecl, StorageDecl,
+        StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl,
+        UseServiceDecl, UseSource, UseStorageDecl,
     },
     cm_rust_testing::{
         ChildDeclBuilder, ComponentDeclBuilder, DirectoryDeclBuilder, EnvironmentDeclBuilder,
@@ -313,19 +316,25 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
                 };
                 return;
             }
-            Ok(use_decl) => match self.model.check_use_capability(use_decl, &target).await {
-                Err(ref err) => match expected {
-                    ExpectedResult::Ok => panic!("routing failed, expected success: {:?}", err),
-                    ExpectedResult::Err(status) => {
-                        assert_eq!(err.as_zx_status(), status);
+            Ok(use_decl) => {
+                for result in self.model.check_use_capability(use_decl, &target).await.iter() {
+                    match result.result {
+                        Err(ref err) => match expected {
+                            ExpectedResult::Ok => {
+                                panic!("routing failed, expected success: {:?}", err)
+                            }
+                            ExpectedResult::Err(status) => {
+                                assert_eq!(err.as_zx_status(), status);
+                            }
+                            ExpectedResult::ErrWithNoEpitaph => {}
+                        },
+                        Ok(_) => match expected {
+                            ExpectedResult::Ok => {}
+                            _ => panic!("capability use succeeded, expected failure"),
+                        },
                     }
-                    ExpectedResult::ErrWithNoEpitaph => {}
-                },
-                Ok(_) => match expected {
-                    ExpectedResult::Ok => {}
-                    _ => panic!("capability use succeeded, expected failure"),
-                },
-            },
+                }
+            }
         }
     }
 
@@ -349,14 +358,21 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
                 return;
             }
             Ok(expose_decl) => {
-                match self.model.check_use_exposed_capability(expose_decl, &target).await {
-                    Err(err) => match expected {
+                match self
+                    .model
+                    .check_use_exposed_capability(expose_decl, &target)
+                    .await
+                    .expect("expected result for exposed directory")
+                    .result
+                {
+                    Err(CapabilityRouteError::AnalyzerModelError(err)) => match expected {
                         ExpectedResult::Ok => panic!("routing failed, expected success"),
                         ExpectedResult::Err(status) => {
                             assert_eq!(err.as_zx_status(), status);
                         }
                         _ => unimplemented![],
                     },
+                    Err(_) => panic!("expected CapabilityRouteError::AnalyzerModelError"),
                     Ok(_) => match expected {
                         ExpectedResult::Ok => {}
                         _ => panic!("capability use succeeded, expected failure"),
@@ -683,6 +699,8 @@ mod tests {
                 &c_component
             )
             .await
+            .expect("expected results of program runner check")
+            .result
             .is_ok());
     }
 
@@ -728,15 +746,18 @@ mod tests {
                 &b_component.decl_for_testing().program.as_ref().expect("missing program decl"),
                 &b_component,
             )
-            .await;
+            .await
+            .expect("expected result of program runner check");
 
         assert_matches!(
-            check_result,
-            Err(AnalyzerModelError::RoutingError(RoutingError::UseFromEnvironmentNotFound {
+            check_result.result,
+            Err(CapabilityRouteError::AnalyzerModelError(
+                AnalyzerModelError::RoutingError(
+                    RoutingError::UseFromEnvironmentNotFound {
                     moniker,
                     capability_type,
                     capability_name,
-            }))
+            })))
                 if moniker == b_component.abs_moniker().to_partial() &&
                 capability_type == "runner" &&
                 capability_name == CapabilityName("hobbit".to_string())
@@ -791,7 +812,7 @@ mod tests {
         // Expect only one result, since both children of "b" have the same URL scheme.
         let results = test.model.check_child_resolvers(&b_component).await;
         assert_eq!(results.len(), 1);
-        assert!(results[0].is_ok());
+        assert!(results[0].result.is_ok());
     }
 
     ///   a
@@ -822,7 +843,7 @@ mod tests {
 
         let route_maps = test.model.check_child_resolvers(&a_component).await;
         assert_eq!(route_maps.len(), 1);
-        assert!(route_maps[0].is_ok(),);
+        assert!(route_maps[0].result.is_ok(),);
     }
 
     ///   a
@@ -850,10 +871,12 @@ mod tests {
         assert_eq!(route_maps.len(), 1);
 
         assert_matches!(
-        &route_maps[0],
-            Err(AnalyzerModelError::RoutingError(RoutingError::UseFromComponentManagerNotFound{
-                capability_id: resolver
-            }))
+        &route_maps[0].result,
+            Err(CapabilityRouteError::AnalyzerModelError(
+                AnalyzerModelError::RoutingError(
+                    RoutingError::UseFromComponentManagerNotFound{
+                        capability_id: resolver
+            })))
                 if resolver == BOOT_RESOLVER_NAME
         );
     }
@@ -893,15 +916,13 @@ mod tests {
         ];
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
-        let route_map = test
-            .model
-            .check_use_capability(&use_decl, &b_component)
-            .await
-            .expect("expected OK route");
+        let route_result = test.model.check_use_capability(&use_decl, &b_component).await;
+        assert_eq!(route_result.len(), 1);
+        let route_map = route_result[0].result.clone().expect("expected OK route");
 
         assert_eq!(
             route_map,
-            vec![RouteMap::from_segments(vec![
+            vec![
                 RouteSegment::UseBy {
                     node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: use_decl
@@ -914,7 +935,7 @@ mod tests {
                     node_path: NodePath::absolute_from_vec(vec![]),
                     capability: CapabilityDecl::Protocol(protocol_decl)
                 }
-            ])]
+            ]
         )
     }
 
@@ -951,15 +972,13 @@ mod tests {
         ];
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
-        let route_map = test
-            .model
-            .check_use_capability(&use_decl, &a_component)
-            .await
-            .expect("expected OK route");
+        let route_results = test.model.check_use_capability(&use_decl, &a_component).await;
+        assert_eq!(route_results.len(), 1);
+        let route_map = route_results[0].result.clone().expect("expected OK route");
 
         assert_eq!(
             route_map,
-            vec![RouteMap::from_segments(vec![
+            vec![
                 RouteSegment::UseBy {
                     node_path: NodePath::absolute_from_vec(vec![]),
                     capability: use_decl
@@ -972,7 +991,7 @@ mod tests {
                     node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: CapabilityDecl::Protocol(protocol_decl)
                 }
-            ])]
+            ]
         )
     }
 
@@ -996,15 +1015,13 @@ mod tests {
 
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
-        let route_map = test
-            .model
-            .check_use_capability(&use_decl, &a_component)
-            .await
-            .expect("expected OK route");
+        let route_results = test.model.check_use_capability(&use_decl, &a_component).await;
+        assert_eq!(route_results.len(), 1);
+        let route_map = route_results[0].result.clone().expect("expected OK route");
 
         assert_eq!(
             route_map,
-            vec![RouteMap::from_segments(vec![
+            vec![
                 RouteSegment::UseBy {
                     node_path: NodePath::absolute_from_vec(vec![]),
                     capability: use_decl
@@ -1013,7 +1030,7 @@ mod tests {
                     node_path: NodePath::absolute_from_vec(vec![]),
                     capability: CapabilityDecl::Protocol(protocol_decl)
                 }
-            ])]
+            ]
         )
     }
 
@@ -1092,15 +1109,13 @@ mod tests {
 
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         let c_component = test.look_up_instance(&vec!["c"].into()).await.expect("c instance");
-        let route_map = test
-            .model
-            .check_use_capability(&use_decl, &c_component)
-            .await
-            .expect("expected OK route");
+        let route_results = test.model.check_use_capability(&use_decl, &c_component).await;
+        assert_eq!(route_results.len(), 1);
+        let route_map = route_results[0].result.clone().expect("expected OK route");
 
         assert_eq!(
             route_map,
-            vec![RouteMap::from_segments(vec![
+            vec![
                 RouteSegment::UseBy {
                     node_path: NodePath::absolute_from_vec(vec!["c"]),
                     capability: use_decl
@@ -1121,7 +1136,7 @@ mod tests {
                     node_path: NodePath::absolute_from_vec(vec!["b", "d"]),
                     capability: CapabilityDecl::Directory(directory_decl),
                 }
-            ])]
+            ]
         )
     }
 
@@ -1174,12 +1189,13 @@ mod tests {
                 &b_component,
             )
             .await
-            .expect("expected OK route")
-            .expect("expected program runner route");
+            .expect("expected result of program runner route")
+            .result
+            .expect("expected OK program runner route");
 
         assert_eq!(
             route_map,
-            RouteMap::from_segments(vec![
+            vec![
                 RouteSegment::RequireRunner {
                     node_path: NodePath::absolute_from_vec(vec!["b"]),
                     runner: "hobbit".into(),
@@ -1192,7 +1208,7 @@ mod tests {
                     node_path: NodePath::absolute_from_vec(vec![]),
                     capability: CapabilityDecl::Runner(runner_decl)
                 },
-            ])
+            ]
         )
     }
 
@@ -1244,41 +1260,45 @@ mod tests {
 
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
-        let route_map = test
-            .model
-            .check_use_capability(&use_storage_decl, &b_component)
-            .await
-            .expect("expected OK route");
+        let route_results = test.model.check_use_capability(&use_storage_decl, &b_component).await;
+        assert_eq!(route_results.len(), 2);
+        let storage_route_map =
+            route_results[0].result.clone().expect("expected OK route for storage capability");
+        let backing_directory_route_map = route_results[1]
+            .result
+            .clone()
+            .expect("expected OK route for storage-backing directory");
 
         assert_eq!(
-            route_map,
+            storage_route_map,
             vec![
-                RouteMap::from_segments(vec![
-                    RouteSegment::UseBy {
-                        node_path: NodePath::absolute_from_vec(vec!["b"]),
-                        capability: use_storage_decl
-                    },
-                    RouteSegment::OfferBy {
-                        node_path: NodePath::absolute_from_vec(vec![]),
-                        capability: offer_storage_decl
-                    },
-                    RouteSegment::DeclareBy {
-                        node_path: NodePath::absolute_from_vec(vec![]),
-                        capability: CapabilityDecl::Storage(storage_decl.clone())
-                    }
-                ]),
-                RouteMap::from_segments(vec![
-                    RouteSegment::RegisterBy {
-                        node_path: NodePath::absolute_from_vec(vec![]),
-                        capability: RegistrationDecl::Storage(storage_decl.into())
-                    },
-                    RouteSegment::DeclareBy {
-                        node_path: NodePath::absolute_from_vec(vec![]),
-                        capability: CapabilityDecl::Directory(directory_decl)
-                    }
-                ])
+                RouteSegment::UseBy {
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
+                    capability: use_storage_decl
+                },
+                RouteSegment::OfferBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: offer_storage_decl
+                },
+                RouteSegment::DeclareBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: CapabilityDecl::Storage(storage_decl.clone())
+                }
             ]
-        )
+        );
+        assert_eq!(
+            backing_directory_route_map,
+            vec![
+                RouteSegment::RegisterBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: RegistrationDecl::Storage(storage_decl.into())
+                },
+                RouteSegment::DeclareBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: CapabilityDecl::Directory(directory_decl)
+                }
+            ]
+        );
     }
 
     ///   a
@@ -1349,15 +1369,14 @@ mod tests {
         let test = builder.build().await;
 
         let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
-        let event_route_map = test
-            .model
-            .check_use_capability(&use_event_decl, &b_component)
-            .await
-            .expect("expected OK route");
+        let event_route_results =
+            test.model.check_use_capability(&use_event_decl, &b_component).await;
+        assert_eq!(event_route_results.len(), 1);
+        let event_route_map = event_route_results[0].result.clone().expect("expected OK route");
 
         assert_eq!(
             event_route_map,
-            vec![RouteMap::from_segments(vec![
+            vec![
                 RouteSegment::UseBy {
                     node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: use_event_decl
@@ -1367,18 +1386,18 @@ mod tests {
                     capability: offer_event_decl
                 },
                 RouteSegment::ProvideFromFramework { capability: "started".into() }
-            ])]
+            ]
         );
 
-        let event_source_route_map = test
-            .model
-            .check_use_capability(&use_event_source_decl, &b_component)
-            .await
-            .expect("expected OK route");
+        let event_source_route_results =
+            test.model.check_use_capability(&use_event_source_decl, &b_component).await;
+        assert_eq!(event_source_route_results.len(), 1);
+        let event_source_route_map =
+            event_source_route_results[0].result.clone().expect("expected OK route");
 
         assert_eq!(
             event_source_route_map,
-            vec![RouteMap::from_segments(vec![
+            vec![
                 RouteSegment::UseBy {
                     node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: use_event_source_decl
@@ -1388,7 +1407,7 @@ mod tests {
                     capability: offer_event_source_decl
                 },
                 RouteSegment::ProvideAsBuiltin { capability: event_source_decl }
-            ])]
+            ]
         )
     }
 
@@ -1433,15 +1452,13 @@ mod tests {
         test.install_namespace_directory("/offer_from_cm_namespace");
 
         let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
-        let route_map = test
-            .model
-            .check_use_capability(&use_decl, &b_component)
-            .await
-            .expect("expected OK route");
+        let route_results = test.model.check_use_capability(&use_decl, &b_component).await;
+        assert_eq!(route_results.len(), 1);
+        let route_map = route_results[0].result.clone().expect("expected OK route");
 
         assert_eq!(
             route_map,
-            vec![RouteMap::from_segments(vec![
+            vec![
                 RouteSegment::UseBy {
                     node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: use_decl
@@ -1451,7 +1468,7 @@ mod tests {
                     capability: offer_decl
                 },
                 RouteSegment::ProvideFromNamespace { capability: capability_decl }
-            ])]
+            ]
         );
     }
 
@@ -1510,8 +1527,8 @@ mod tests {
         assert_eq!(route_maps.len(), 2);
 
         assert_eq!(
-            route_maps[0].clone().expect("expected OK route"),
-            RouteMap::from_segments(vec![
+            route_maps[0].result.clone().expect("expected OK route"),
+            vec![
                 RouteSegment::RequireResolver {
                     node_path: NodePath::absolute_from_vec(vec![]),
                     scheme: "base".to_string(),
@@ -1528,12 +1545,14 @@ mod tests {
                     node_path: NodePath::absolute_from_vec(vec!["c"]),
                     capability: CapabilityDecl::Resolver(resolver_decl)
                 }
-            ])
+            ]
         );
 
         assert_matches!(
-        &route_maps[1],
-            Err(AnalyzerModelError::MissingResolverForScheme(scheme))
+        &route_maps[1].result,
+            Err(CapabilityRouteError::AnalyzerModelError(
+                AnalyzerModelError::MissingResolverForScheme(scheme)
+            ))
                 if scheme == "test"
         );
     }
@@ -1588,8 +1607,8 @@ mod tests {
         assert_eq!(route_maps.len(), 1);
 
         assert_eq!(
-            route_maps[0].clone().expect("expected OK route"),
-            RouteMap::from_segments(vec![
+            route_maps[0].result.clone().expect("expected OK route"),
+            vec![
                 RouteSegment::RequireResolver {
                     node_path: NodePath::absolute_from_vec(vec!["b"]),
                     scheme: "base".to_string(),
@@ -1602,7 +1621,7 @@ mod tests {
                     node_path: NodePath::absolute_from_vec(vec![]),
                     capability: CapabilityDecl::Resolver(resolver_decl)
                 }
-            ])
+            ]
         );
     }
 
@@ -1636,14 +1655,14 @@ mod tests {
         assert_eq!(route_maps.len(), 1);
 
         assert_eq!(
-            route_maps[0].clone().expect("expected OK route"),
-            RouteMap::from_segments(vec![
+            route_maps[0].result.clone().expect("expected OK route"),
+            vec![
                 RouteSegment::RequireResolver {
                     node_path: NodePath::absolute_from_vec(vec![]),
                     scheme: BOOT_SCHEME.to_string(),
                 },
                 RouteSegment::ProvideAsBuiltin { capability: boot_resolver_decl }
-            ])
+            ]
         );
     }
 
@@ -1685,8 +1704,8 @@ mod tests {
 
         assert_eq!(route_maps.len(), 1);
         assert_eq!(
-            route_maps[0].clone().expect("expected OK route"),
-            RouteMap::from_segments(vec![
+            route_maps[0].result.clone().expect("expected OK route"),
+            vec![
                 RouteSegment::RequireResolver {
                     node_path: NodePath::absolute_from_vec(vec![]),
                     scheme: "test".to_string(),
@@ -1699,7 +1718,7 @@ mod tests {
                     node_path: NodePath::absolute_from_vec(vec![]),
                     capability: CapabilityDecl::Resolver(resolver_decl)
                 }
-            ])
+            ]
         );
     }
 
@@ -1728,18 +1747,231 @@ mod tests {
                 &a_component,
             )
             .await
-            .expect("expected OK route")
-            .expect("expected program runner route");
+            .expect("expected program runner route")
+            .result
+            .expect("expected OK route");
 
         assert_eq!(
             route_map,
-            RouteMap::from_segments(vec![
+            vec![
                 RouteSegment::RequireRunner {
                     node_path: NodePath::absolute_from_vec(vec![]),
                     runner: "elf".into(),
                 },
-                RouteSegment::ProvideAsBuiltin { capability: elf_runner_decl }
-            ])
+                RouteSegment::ProvideAsBuiltin { capability: elf_runner_decl },
+            ]
+        );
+    }
+
+    ///   a
+    ///    \
+    ///     b
+    ///      \
+    ///       c
+    ///
+    /// a: Creates environment "env".
+    ///    Registers resolver "base" from self.
+    ///    Registers runner "hobbit" from as "dwarf" from self.
+    ///    Offers directory "foo_data" from self as "bar_data".
+    /// b: Has environment "env".
+    ///    Requires runner "dwarf", routed successfully from "env".
+    ///    Requires resolver "base" to resolve child "c", routed successfully from "env".
+    ///    Uses directory "bar_data", routed successfully from parent.
+    ///    Exposes "bad_protocol" from child, routing should fail.
+    ///    Uses event "started", but routing is not checked because the "event" capability type is not
+    ///    selected.
+    /// c: is resolved by resolver "base" from grandparent.
+    #[fuchsia::test]
+    async fn route_maps_all_routes_for_instance() {
+        let resolver_registration_decl = ResolverRegistration {
+            resolver: "base_resolver".into(),
+            source: RegistrationSource::Self_,
+            scheme: "base".into(),
+        };
+        let runner_registration_decl = RunnerRegistration {
+            source_name: "hobbit".into(),
+            source: RegistrationSource::Self_,
+            target_name: "dwarf".into(),
+        };
+        let resolver_decl = ResolverDecl {
+            name: "base_resolver".into(),
+            source_path: Some("/svc/fuchsia.sys2.ComponentResolver".parse().unwrap()),
+        };
+        let runner_decl = RunnerDecl {
+            name: "hobbit".into(),
+            source_path: Some(CapabilityPath::try_from("/svc/runner").unwrap()),
+        };
+        let use_directory_decl = UseDecl::Directory(UseDirectoryDecl {
+            source: UseSource::Parent,
+            source_name: "bar_data".into(),
+            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+            rights: *READ_RIGHTS,
+            subdir: None,
+            dependency_type: DependencyType::Strong,
+        });
+        let offer_directory_decl = OfferDecl::Directory(OfferDirectoryDecl {
+            source: OfferSource::Self_,
+            source_name: "foo_data".into(),
+            target_name: "bar_data".into(),
+            target: OfferTarget::static_child("b".to_string()),
+            rights: Some(*READ_RIGHTS),
+            subdir: None,
+            dependency_type: DependencyType::Strong,
+        });
+        let directory_decl = DirectoryDeclBuilder::new("foo_data").build();
+        let expose_protocol_decl = ExposeDecl::Protocol(ExposeProtocolDecl {
+            source: ExposeSource::Child("c".to_string()),
+            source_name: "bad_protocol".into(),
+            target_name: "bad_protocol".into(),
+            target: ExposeTarget::Parent,
+        });
+        let use_event_decl = UseDecl::Event(UseEventDecl {
+            source: UseSource::Parent,
+            source_name: "started_on_a".into(),
+            target_name: "started".into(),
+            filter: None,
+            mode: cm_rust::EventMode::Sync,
+            dependency_type: DependencyType::Strong,
+        });
+
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .add_child(ChildDeclBuilder::new_lazy_child("b").environment("env"))
+                    .add_environment(
+                        EnvironmentDeclBuilder::new()
+                            .name("env")
+                            .extends(fsys::EnvironmentExtends::Realm)
+                            .add_resolver(resolver_registration_decl.clone())
+                            .add_runner(runner_registration_decl.clone()),
+                    )
+                    .offer(offer_directory_decl.clone())
+                    .directory(directory_decl.clone())
+                    .resolver(resolver_decl.clone())
+                    .runner(runner_decl.clone())
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new_empty_component()
+                    .add_child(ChildDeclBuilder::new().name("c").url("base://c"))
+                    .add_program("dwarf")
+                    .expose(expose_protocol_decl)
+                    .use_(use_directory_decl.clone())
+                    .use_(use_event_decl)
+                    .build(),
+            ),
+        ];
+
+        let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
+        let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
+
+        let route_maps = test
+            .model
+            .check_routes_for_instance(
+                &b_component,
+                HashSet::from_iter(
+                    vec![
+                        CapabilityTypeName::Resolver,
+                        CapabilityTypeName::Runner,
+                        CapabilityTypeName::Directory,
+                        CapabilityTypeName::Protocol,
+                    ]
+                    .into_iter(),
+                ),
+            )
+            .await;
+        assert_eq!(route_maps.len(), 4);
+
+        let directories =
+            route_maps.get(&CapabilityTypeName::Directory).expect("expected directory results");
+        assert_eq!(
+            directories,
+            &vec![VerifyRouteResult {
+                using_node: NodePath::absolute_from_vec(vec!["b"]),
+                capability: "bar_data".into(),
+                result: Ok(vec![
+                    RouteSegment::UseBy {
+                        node_path: NodePath::absolute_from_vec(vec!["b"]),
+                        capability: use_directory_decl,
+                    },
+                    RouteSegment::OfferBy {
+                        node_path: NodePath::absolute_from_vec(vec![]),
+                        capability: offer_directory_decl,
+                    },
+                    RouteSegment::DeclareBy {
+                        node_path: NodePath::absolute_from_vec(vec![]),
+                        capability: CapabilityDecl::Directory(directory_decl),
+                    }
+                ])
+            }]
+        );
+
+        let runners = route_maps.get(&CapabilityTypeName::Runner).expect("expected runner results");
+        assert_eq!(
+            runners,
+            &vec![VerifyRouteResult {
+                using_node: NodePath::absolute_from_vec(vec!["b"]),
+                capability: "dwarf".into(),
+                result: Ok(vec![
+                    RouteSegment::RequireRunner {
+                        node_path: NodePath::absolute_from_vec(vec!["b"]),
+                        runner: "dwarf".into(),
+                    },
+                    RouteSegment::RegisterBy {
+                        node_path: NodePath::absolute_from_vec(vec![]),
+                        capability: RegistrationDecl::Runner(runner_registration_decl)
+                    },
+                    RouteSegment::DeclareBy {
+                        node_path: NodePath::absolute_from_vec(vec![]),
+                        capability: CapabilityDecl::Runner(runner_decl)
+                    }
+                ])
+            }]
+        );
+
+        let resolvers =
+            route_maps.get(&CapabilityTypeName::Resolver).expect("expected resolver results");
+        assert_eq!(
+            resolvers,
+            &vec![VerifyRouteResult {
+                using_node: NodePath::absolute_from_vec(vec!["b"]),
+                capability: "base_resolver".into(),
+                result: Ok(vec![
+                    RouteSegment::RequireResolver {
+                        node_path: NodePath::absolute_from_vec(vec!["b"]),
+                        scheme: "base".to_string(),
+                    },
+                    RouteSegment::RegisterBy {
+                        node_path: NodePath::absolute_from_vec(vec![]),
+                        capability: RegistrationDecl::Resolver(resolver_registration_decl)
+                    },
+                    RouteSegment::DeclareBy {
+                        node_path: NodePath::absolute_from_vec(vec![]),
+                        capability: CapabilityDecl::Resolver(resolver_decl)
+                    }
+                ])
+            }]
+        );
+
+        let protocols =
+            route_maps.get(&CapabilityTypeName::Protocol).expect("expected protocol results");
+        assert_eq!(
+            protocols,
+            &vec![VerifyRouteResult {
+                using_node: NodePath::absolute_from_vec(vec!["b"]),
+                capability: "bad_protocol".into(),
+                result: Err(CapabilityRouteError::AnalyzerModelError(
+                    AnalyzerModelError::RoutingError(
+                        RoutingError::ExposeFromChildInstanceNotFound {
+                            capability_id: "bad_protocol".to_string(),
+                            child_moniker: "c".into(),
+                            moniker: b_component.abs_moniker().to_partial()
+                        },
+                    )
+                )),
+            }],
         );
     }
 }
