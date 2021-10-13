@@ -970,6 +970,16 @@ class Strings {
         name: 'An error occured while installing the update.',
         desc: 'The alert dialog body for the installation error update state.',
       );
+  static String get mute => Intl.message(
+        'Mute',
+        name: 'mute',
+        desc: 'The label for "Mute" text field.',
+      );
+  static String get unmute => Intl.message(
+        'Unmute',
+        name: 'unmute',
+        desc: 'The label for "Unmute" text field.',
+      );
 
   /// Lookup message given it's name.
   static String? lookup(String name) {

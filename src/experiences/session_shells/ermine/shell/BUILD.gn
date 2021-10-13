@@ -104,6 +104,7 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.element",
     "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.audio",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.net.interfaces",

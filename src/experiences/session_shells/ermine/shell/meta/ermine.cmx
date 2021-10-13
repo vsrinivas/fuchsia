@@ -20,6 +20,7 @@
             "fuchsia.fonts.Provider",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
+            "fuchsia.media",
             "fuchsia.media.Audio",
             "fuchsia.media.AudioCore",
             "fuchsia.memory.Monitor",

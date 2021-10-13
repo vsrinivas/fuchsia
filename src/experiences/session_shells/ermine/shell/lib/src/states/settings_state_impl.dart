@@ -12,6 +12,7 @@ import 'package:ermine/src/services/settings/memory_watcher_service.dart';
 import 'package:ermine/src/services/settings/network_address_service.dart';
 import 'package:ermine/src/services/settings/task_service.dart';
 import 'package:ermine/src/services/settings/timezone_service.dart';
+import 'package:ermine/src/services/settings/volume_service.dart';
 import 'package:ermine/src/services/shortcuts_service.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine_utils/ermine_utils.dart';
@@ -138,6 +139,21 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   set systemUpdateProgress(double value) => _systemUpdateProgress.value = value;
   final _systemUpdateProgress = Observable<double>(0);
 
+  @override
+  IconData get volumeIcon => _volumeIcon.value;
+  set volumeIcon(IconData value) => _volumeIcon.value = value;
+  final Observable<IconData> _volumeIcon = Icons.volume_up.asObservable();
+
+  @override
+  double? get volumeLevel => _volumeLevel.value;
+  set volumeLevel(double? value) => _volumeLevel.value = value;
+  final Observable<double?> _volumeLevel = Observable<double?>(null);
+
+  @override
+  bool? get volumeMuted => _volumeMuted.value;
+  set volumeMuted(bool? value) => _volumeMuted.value = value;
+  final Observable<bool?> _volumeMuted = Observable<bool?>(null);
+
   final List<String> _timezones;
 
   @override
@@ -160,6 +176,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   final BatteryWatcherService batteryWatcherService;
   final BrightnessService brightnessService;
   final ChannelService channelService;
+  final VolumeService volumeService;
 
   SettingsStateImpl({
     required ShortcutsService shortcutsService,
@@ -170,6 +187,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     required this.batteryWatcherService,
     required this.brightnessService,
     required this.channelService,
+    required this.volumeService,
   })  : shortcutBindings = shortcutsService.keyboardBindings,
         _timezones = _loadTimezones(),
         _selectedTimezone = timezoneService.timezone.asObservable() {
@@ -250,6 +268,13 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
         }
       });
     };
+    volumeService.onChanged = () {
+      runInAction(() {
+        volumeLevel = volumeService.volume;
+        volumeIcon = volumeService.icon;
+        volumeMuted = volumeService.muted;
+      });
+    };
   }
 
   @override
@@ -262,6 +287,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       batteryWatcherService.start(),
       brightnessService.start(),
       channelService.start(),
+      volumeService.start(),
     ]);
   }
 
@@ -287,6 +313,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     batteryWatcherService.dispose();
     brightnessService.dispose();
     channelService.dispose();
+    volumeService.dispose();
   }
 
   @override
@@ -349,4 +376,12 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   static List<String> _loadTimezones() {
     return File(kTimezonesFile).readAsLinesSync();
   }
+
+  @override
+  void setVolumeLevel(double value) =>
+      runInAction(() => volumeService.volume = value);
+
+  @override
+  void setVolumeMute({bool muted = false}) =>
+      runInAction(() => volumeService.muted = muted);
 }

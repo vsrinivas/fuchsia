@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:ermine/src/services/settings/task_service.dart';
+import 'package:fidl_fuchsia_media/fidl_async.dart';
 import 'package:fidl_fuchsia_media_audio/fidl_async.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_services/services.dart';
@@ -17,6 +18,7 @@ class VolumeService implements TaskService {
   late final VoidCallback onChanged;
 
   VolumeControlProxy? _control;
+  AudioCoreProxy? _audioCore;
   late StreamSubscription _volumeSubscription;
 
   late bool _muted;
@@ -50,7 +52,7 @@ class VolumeService implements TaskService {
 
   // Decrease volume by 10%.
   void decreaseVolume() {
-    volume = (volume - 0.1).clamp(0.05, 1);
+    volume = (volume - 0.1).clamp(0, 1);
   }
 
   IconData get icon => _muted ? Icons.volume_off : Icons.volume_up;
@@ -69,7 +71,12 @@ class VolumeService implements TaskService {
     }
 
     _control = VolumeControlProxy();
-    Incoming.fromSvcPath().connectToService(_control);
+    _audioCore = AudioCoreProxy();
+    Incoming.fromSvcPath().connectToService(_audioCore);
+
+    await _audioCore!.bindUsageVolumeControl(
+        Usage.withRenderUsage(AudioRenderUsage.media),
+        _control!.ctrl.request());
 
     // Watch for changes in volume.
     _volumeSubscription =

@@ -175,6 +175,37 @@ class _ListSettings extends StatelessWidget {
                           ),
                   );
                 }),
+                // Volume
+                Observer(builder: (_) {
+                  return ListTile(
+                    enabled: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                    leading: Icon(appState.settingsState.volumeIcon),
+                    title: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(Strings.volume),
+                        Expanded(
+                          child: Slider(
+                            value: appState.settingsState.volumeLevel ?? 1,
+                            onChanged: appState.settingsState.setVolumeLevel,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: appState.settingsState.volumeMuted == true
+                        ? OutlinedButton(
+                            onPressed: () => appState.settingsState
+                                .setVolumeMute(muted: false),
+                            child: Text(Strings.unmute.toUpperCase()),
+                          )
+                        : OutlinedButton(
+                            onPressed: () => appState.settingsState
+                                .setVolumeMute(muted: true),
+                            child: Text(Strings.mute.toUpperCase()),
+                          ),
+                  );
+                }),
                 // Channel
                 ListTile(
                   enabled: true,
@@ -229,13 +260,6 @@ class _ListSettings extends StatelessWidget {
                 ),
 
                 // Features not implemented yet.
-                // Volume
-                ListTile(
-                  enabled: false,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.volume_up),
-                  title: Text(Strings.volume),
-                ),
                 // Wi-Fi
                 ListTile(
                   enabled: false,

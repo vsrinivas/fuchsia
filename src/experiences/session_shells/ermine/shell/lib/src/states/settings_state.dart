@@ -10,6 +10,7 @@ import 'package:ermine/src/services/settings/memory_watcher_service.dart';
 import 'package:ermine/src/services/settings/network_address_service.dart';
 import 'package:ermine/src/services/settings/task_service.dart';
 import 'package:ermine/src/services/settings/timezone_service.dart';
+import 'package:ermine/src/services/settings/volume_service.dart';
 import 'package:ermine/src/services/shortcuts_service.dart';
 import 'package:ermine/src/states/settings_state_impl.dart';
 import 'package:ermine/src/widgets/quick_settings.dart';
@@ -73,6 +74,9 @@ abstract class SettingsState implements TaskService {
   String get targetChannel;
   ChannelState get channelState;
   double get systemUpdateProgress;
+  IconData get volumeIcon;
+  double? get volumeLevel;
+  bool? get volumeMuted;
 
   factory SettingsState.from({required ShortcutsService shortcutsService}) {
     return SettingsStateImpl(
@@ -84,6 +88,7 @@ abstract class SettingsState implements TaskService {
       batteryWatcherService: BatteryWatcherService(),
       brightnessService: BrightnessService(),
       channelService: ChannelService(),
+      volumeService: VolumeService(),
     ) as SettingsState;
   }
 
@@ -99,4 +104,6 @@ abstract class SettingsState implements TaskService {
   void showChannelSettings();
   void setTargetChannel(String channel);
   void checkForUpdates();
+  void setVolumeLevel(double value);
+  void setVolumeMute({bool muted});
 }
