@@ -31,10 +31,11 @@ source_set("app") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.decl",
     "//sdk/fidl/fuchsia.component.runner",
     "//sdk/fidl/fuchsia.gpu.magma",
     "//sdk/fidl/fuchsia.hardware.goldfish",
-    "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/json_parser",
     "//src/lib/storage/vfs/cpp",

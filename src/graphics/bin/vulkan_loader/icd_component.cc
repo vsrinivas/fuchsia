@@ -73,7 +73,7 @@ const char* kCollectionName = "icd-loaders";
 IcdComponent::~IcdComponent() {
   RemoveManifestFromFs();
   if (realm_ && !child_instance_name_.empty()) {
-    fuchsia::sys2::ChildRef child_ref;
+    fuchsia::component::decl::ChildRef child_ref;
 
     child_ref.name = child_instance_name_;
     child_ref.collection = kCollectionName;
@@ -99,7 +99,7 @@ void IcdComponent::RemoveManifestFromFs() {
 }
 
 void IcdComponent::Initialize(sys::ComponentContext* context, inspect::Node* parent_node) {
-  realm_ = context->svc()->Connect<fuchsia::sys2::Realm>();
+  realm_ = context->svc()->Connect<fuchsia::component::Realm>();
   static uint64_t name_id;
   auto pending_action_token = app_->GetPendingActionToken();
 
@@ -107,12 +107,12 @@ void IcdComponent::Initialize(sys::ComponentContext* context, inspect::Node* par
   node_ = parent_node->CreateChild(child_instance_name_);
   initialization_status_ = node_.CreateString("status", "uninitialized");
   node_.CreateString("component_url", component_url_, &value_list_);
-  fuchsia::sys2::CollectionRef collection;
+  fuchsia::component::decl::CollectionRef collection;
   collection.name = kCollectionName;
-  fuchsia::sys2::ChildDecl decl;
+  fuchsia::component::decl::Child decl;
   decl.set_name(child_instance_name_);
   decl.set_url(component_url_);
-  decl.set_startup(fuchsia::sys2::StartupMode::LAZY);
+  decl.set_startup(fuchsia::component::decl::StartupMode::LAZY);
   auto failure_callback =
       fit::defer_callback([this, pending_action_token = std::move(pending_action_token)]() {
         std::lock_guard lock(vmo_lock_);
@@ -120,7 +120,7 @@ void IcdComponent::Initialize(sys::ComponentContext* context, inspect::Node* par
         app_->NotifyIcdsChanged();
       });
   realm_->CreateChild(
-      collection, std::move(decl), fuchsia::sys2::CreateChildArgs(),
+      collection, std::move(decl), fuchsia::component::CreateChildArgs(),
       [this, failure_callback = std::move(failure_callback)](
           fpromise::result<void, fuchsia::component::Error> response) mutable {
         if (response.is_error()) {
@@ -133,7 +133,7 @@ void IcdComponent::Initialize(sys::ComponentContext* context, inspect::Node* par
         }
         initialization_status_.Set("created");
 
-        fuchsia::sys2::ChildRef child_ref;
+        fuchsia::component::decl::ChildRef child_ref;
 
         child_ref.name = child_instance_name_;
         child_ref.collection = kCollectionName;

@@ -5,7 +5,8 @@
 #ifndef SRC_GRAPHICS_BIN_VULKAN_LOADER_ICD_COMPONENT_H_
 #define SRC_GRAPHICS_BIN_VULKAN_LOADER_ICD_COMPONENT_H_
 
-#include <fuchsia/sys2/cpp/fidl.h>
+#include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/component/decl/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
@@ -98,7 +99,7 @@ class IcdComponent : public std::enable_shared_from_this<IcdComponent> {
   const std::string component_url_;
   inspect::Node node_;
   inspect::ValueList value_list_;
-  fuchsia::sys2::RealmPtr realm_;
+  fuchsia::component::RealmPtr realm_;
   std::string child_instance_name_;
   inspect::StringProperty initialization_status_;
 

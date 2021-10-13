@@ -6,7 +6,6 @@
 #include <fuchsia/gpu/magma/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/process/lifecycle/cpp/fidl.h>
-#include <fuchsia/sys2/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
