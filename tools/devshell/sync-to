@@ -617,7 +617,7 @@ class SyncToCommand:
                 " No untracked changes will be discarded, but any"
                 " repos not currently on JIRI_HEAD will not be"
                 " automatically restored to their original revisions.")
-            yn = input("Are you sure you want to continue [Y/n]? ")
+            yn = input("Are you sure you want to continue [y/n]? ")
             if yn.startswith(("y", "Y")):
                 return
             elif yn.startswith(("n", "N")):
