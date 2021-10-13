@@ -311,7 +311,7 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
                               guest_->Traps(), packet);
     } else {
       ktrace_vcpu_exit(VCPU_FAILURE, guest_state->system_state.elr_el2);
-      dprintf(INFO, "VCPU enter failed: %d\n", status);
+      dprintf(INFO, "hypervisor: VCPU enter failed: %d\n", status);
     }
   } while (status == ZX_OK);
   return status == ZX_ERR_NEXT ? ZX_OK : status;

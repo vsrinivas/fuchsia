@@ -507,14 +507,15 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
                                          zx_port_packet_t* packet) {
   IoInfo io_info(exit_info.exit_qualification);
   if (io_info.string || io_info.repeat) {
-    dprintf(INFO, "Unsupported IO instruction\n");
+    dprintf(INFO, "hypervisor: Unsupported guest IO instruction\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   hypervisor::Trap* trap;
   zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_IO, io_info.port, &trap);
   if (status != ZX_OK) {
-    dprintf(INFO, "Unhandled IO port %s %#x\n", io_info.input ? "in" : "out", io_info.port);
+    dprintf(INFO, "hypervisor: Unhandled guest IO port %s %#x\n", io_info.input ? "read" : "write",
+            io_info.port);
     return status;
   }
   next_rip(exit_info, vmcs);
@@ -591,7 +592,7 @@ static zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     default:
       // Issue a general protection fault for write only and unimplemented
       // registers.
-      dprintf(INFO, "Unhandled x2APIC rdmsr %#lx\n", guest_state->rcx);
+      dprintf(INFO, "hypervisor: Unhandled guest x2APIC RDMSR %#lx\n", guest_state->rcx);
       local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
   }
@@ -654,7 +655,7 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
     case kX2ApicMsrBase ... kX2ApicMsrMax:
       return handle_apic_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
     default:
-      dprintf(INFO, "Unhandled rdmsr %#lx\n", guest_state->rcx);
+      dprintf(INFO, "hypervisor: Unhandled guest RDMSR %#lx\n", guest_state->rcx);
       local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
   }
@@ -729,7 +730,7 @@ static zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs,
                               const GuestState& guest_state, zx_port_packet* packet) {
   InterruptCommandRegister icr(guest_state.edx(), guest_state.eax());
   if (icr.destination_mode == InterruptDestinationMode::LOGICAL) {
-    dprintf(INFO, "Logical IPI destination mode is not supported\n");
+    dprintf(INFO, "hypervisor: Logical IPI destination mode requested by guest is not supported\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
   switch (icr.delivery_mode) {
@@ -756,7 +757,8 @@ static zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs,
       next_rip(exit_info, vmcs);
       return ZX_ERR_NEXT;
     default:
-      dprintf(INFO, "Unsupported IPI delivery mode %#x\n", static_cast<uint8_t>(icr.delivery_mode));
+      dprintf(INFO, "hypervisor: Unsupported guest IPI delivery mode %#x\n",
+              static_cast<uint8_t>(icr.delivery_mode));
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -823,7 +825,7 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     default:
       // Issue a general protection fault for read only and unimplemented
       // registers.
-      dprintf(INFO, "Unhandled x2APIC write to MSR %#" PRIx32 "\n", guest_state.ecx());
+      dprintf(INFO, "hypervisor: Unhandled guest x2APIC WRMSR %#" PRIx32 "\n", guest_state.ecx());
       local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
   }
@@ -906,7 +908,7 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case kKvmBootTime:
       return handle_kvm_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pv_clock, gpas);
     default:
-      dprintf(INFO, "Unhandled wrmsr %#lx\n", guest_state.rcx);
+      dprintf(INFO, "hypervisor: Unhandled guest WRMSR %#lx\n", guest_state.rcx);
       local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
   }
@@ -1070,7 +1072,8 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
 
   status = gpas->PageFault(guest_paddr);
   if (status != ZX_OK) {
-    dprintf(CRITICAL, "Unhandled EPT violation %#lx\n", exit_info.guest_physical_address);
+    dprintf(CRITICAL, "hypervisor: Unhandled EPT violation %#lx\n",
+            exit_info.guest_physical_address);
   }
   return status;
 }
@@ -1129,13 +1132,14 @@ static zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
   switch (info.type) {
     case VmCallType::CLOCK_PAIRING: {
       if (info.arg[1] != 0) {
-        dprintf(INFO, "CLOCK_PAIRING hypercall doesn't support clock type %lu\n", info.arg[1]);
+        dprintf(INFO, "hypervisor: CLOCK_PAIRING hypercall doesn't support clock type %lu\n",
+                info.arg[1]);
         guest_state->rax = VmCallStatus::NOT_SUPPORTED;
         break;
       }
       zx_status_t status = pv_clock_populate_offset(gpas, info.arg[0]);
       if (status != ZX_OK) {
-        dprintf(INFO, "Populating lock offset failed with %d\n", status);
+        dprintf(INFO, "hypervisor: Failed to populate lock offset with error %d\n", status);
         guest_state->rax = VmCallStatus::FAULT;
         break;
       }
@@ -1143,7 +1147,8 @@ static zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
       break;
     }
     default:
-      dprintf(INFO, "Unknown hypercall %lu (arg0=%#lx, arg1=%#lx, arg2=%#lx, arg3=%#lx)\n",
+      dprintf(INFO,
+              "hypervisor: Unknown hypercall %lu (arg0=%#lx, arg1=%#lx, arg2=%#lx, arg3=%#lx)\n",
               static_cast<uint64_t>(info.type), info.arg[0], info.arg[1], info.arg[2], info.arg[3]);
       guest_state->rax = VmCallStatus::UNKNOWN_HYPERCALL;
       break;
@@ -1251,7 +1256,7 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
     case ZX_ERR_INTERNAL_INTR_KILLED:
       break;
     default:
-      dprintf(CRITICAL, "VM exit handler for %s (%u) returned %d\n",
+      dprintf(CRITICAL, "hypervisor: VM exit handler for %s (%u) returned %d\n",
               exit_reason_name(exit_info.exit_reason), static_cast<uint32_t>(exit_info.exit_reason),
               status);
       dump_guest_state(*guest_state, exit_info);

@@ -151,7 +151,7 @@ static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state,
                                           zx_port_packet_t* packet) {
   const SmcInstruction si(iss);
   if (si.imm != kSmcPsci) {
-    dprintf(CRITICAL, "Unhandled SMC Instruction %#lx\n", guest_state->x[0]);
+    dprintf(CRITICAL, "hypervisor: Unhandled guest SMC instruction %#lx\n", guest_state->x[0]);
     // From ARM DEN 0028B, Section 5.2: The Unknown SMC Function Identifier is a sign-extended
     // value of (-1) that is returned in R0, W0 or X0 register.
     guest_state->x[0] = ~0ul;
@@ -178,7 +178,8 @@ static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state,
     case PSCI64_SYSTEM_OFF:
       return ZX_ERR_UNAVAILABLE;
     default:
-      dprintf(CRITICAL, "Unhandled SMC PSCI Instruction %#lx\n", guest_state->x[0]);
+      dprintf(CRITICAL, "hypervisor: Unhandled guest SMC PSCI instruction %#lx\n",
+              guest_state->x[0]);
       guest_state->x[0] = PSCI_NOT_SUPPORTED;
       return ZX_OK;
   }
@@ -336,7 +337,8 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
       return ZX_OK;
     }
     default:
-      dprintf(CRITICAL, "Unhandled system register %#x\n", static_cast<uint16_t>(si.sysreg));
+      dprintf(CRITICAL, "hypervisor: Unhandled guest system register %#x access\n",
+              static_cast<uint16_t>(si.sysreg));
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -346,7 +348,7 @@ static zx_status_t handle_instruction_abort(GuestState* guest_state,
   const zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
   zx_status_t status = gpas->PageFault(guest_paddr);
   if (status != ZX_OK) {
-    dprintf(CRITICAL, "Unhandled instruction abort %#lx\n", guest_paddr);
+    dprintf(CRITICAL, "hypervisor: Unhandled guest instruction abort %#lx\n", guest_paddr);
   }
   return status;
 }
@@ -361,7 +363,7 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
     case ZX_ERR_NOT_FOUND:
       status = gpas->PageFault(guest_paddr);
       if (status != ZX_OK) {
-        dprintf(CRITICAL, "Unhandled data abort %#lx\n", guest_paddr);
+        dprintf(CRITICAL, "hypervisor: Unhandled guest data abort %#lx\n", guest_paddr);
       }
       return status;
     case ZX_OK:
@@ -492,7 +494,7 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
     case ZX_ERR_INTERNAL_INTR_KILLED:
       break;
     default:
-      dprintf(CRITICAL, "VM exit handler for %u (%s) in EL%u at %#lx returned %d\n",
+      dprintf(CRITICAL, "hypervisor: VM exit handler for %u (%s) in EL%u at %#lx returned %d\n",
               static_cast<uint32_t>(syndrome.ec), exception_class_name(syndrome.ec),
               guest_state->el(), guest_state->system_state.elr_el2, status);
       break;
