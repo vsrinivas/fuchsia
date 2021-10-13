@@ -8,10 +8,9 @@ use {
         channel,
         model::{
             actions::{
-                ActionSet, DestroyChildAction, DiscoverAction, PurgeChildAction, ResolveAction,
-                StopAction,
+                start, ActionSet, DestroyChildAction, DiscoverAction, PurgeChildAction,
+                ResolveAction, StartAction, StopAction,
             },
-            binding,
             component_controller::ComponentController,
             context::{ModelContext, WeakModelContext},
             environment::Environment,
@@ -963,22 +962,59 @@ impl ComponentInstance {
     }
 
     /// Binds to the component instance in this instance, starting it if it's not already running.
-    /// Binds to the parent's component instance if it is not already bound.
-    pub async fn bind(self: &Arc<Self>, reason: &BindReason) -> Result<Arc<Self>, ModelError> {
-        // Push all component instances on the way to the root onto a stack.
-        let mut components = Vec::new();
-        let mut current = Arc::clone(self);
-        components.push(Arc::clone(&current));
-        while let ExtendedInstance::Component(parent) = current.try_get_parent()? {
-            components.push(parent.clone());
-            current = parent;
+    pub async fn bind(self: &Arc<Self>, reason: &BindReason) -> Result<(), ModelError> {
+        // Skip starting a component instance that was already started. It's important to bail out
+        // here so we don't waste time binding to eager children more than once.
+        {
+            let state = self.lock_state().await;
+            let execution = self.lock_execution().await;
+            if let Some(res) =
+                start::should_return_early(&state, &execution, &self.abs_moniker.to_partial())
+            {
+                return res;
+            }
         }
+        ActionSet::register(self.clone(), StartAction::new(reason.clone())).await?;
 
-        // Now bind to each instance starting at the root (last element).
-        for component in components.into_iter().rev() {
-            binding::bind_at(component, reason).await?;
-        }
-        Ok(Arc::clone(self))
+        let eager_children: Vec<_> = {
+            let state = self.lock_state().await;
+            match *state {
+                InstanceState::Resolved(ref s) => s
+                    .live_children()
+                    .filter_map(|(_, r)| match r.startup {
+                        fsys::StartupMode::Eager => Some(r.clone()),
+                        fsys::StartupMode::Lazy => None,
+                    })
+                    .collect(),
+                InstanceState::Purged => {
+                    return Err(ModelError::instance_not_found(self.abs_moniker.to_partial()));
+                }
+                InstanceState::New | InstanceState::Discovered => {
+                    panic!("bind_at: not resoled")
+                }
+            }
+        };
+        Self::bind_eager_children_recursive(eager_children).await.or_else(|e| match e {
+            ModelError::InstanceShutDown { .. } => Ok(()),
+            _ => Err(e),
+        })?;
+        Ok(())
+    }
+
+    /// Binds to a list of instances, and any eager children they may return.
+    // This function recursive calls `bind_at`, so it returns a BoxFutuer,
+    fn bind_eager_children_recursive<'a>(
+        instances_to_bind: Vec<Arc<ComponentInstance>>,
+    ) -> BoxFuture<'a, Result<(), ModelError>> {
+        let f = async move {
+            let futures: Vec<_> = instances_to_bind
+                .iter()
+                .map(|component| async move { component.bind(&BindReason::Eager).await })
+                .collect();
+            join_all(futures).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
+            Ok(())
+        };
+        Box::pin(f)
     }
 
     pub fn instance_id(self: &Arc<Self>) -> Option<ComponentInstanceId> {

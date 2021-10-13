@@ -167,9 +167,8 @@ async fn open_storage_root(
         None => storage_source_info.backing_directory_path.to_path_buf(),
     };
     if let Some(dir_source_component) = storage_source_info.storage_provider.as_ref() {
+        dir_source_component.bind(bind_reason).await?;
         dir_source_component
-            .bind(bind_reason)
-            .await?
             .open_outgoing(
                 FLAGS,
                 open_mode,

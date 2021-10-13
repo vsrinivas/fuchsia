@@ -159,6 +159,7 @@
         {
             name: "network",
             url: "fuchsia-pkg://fuchsia.com/network#meta/network.cm",
+            startup: "eager",
         },
         {
             name: "hwinfo",
@@ -1107,6 +1108,10 @@
             // This is needed for the `ffx component data` command
             protocol: "fuchsia.sys2.StorageAdmin",
             from: "#data",
+        },
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
         },
         {
             protocol: [ "fuchsia.sessionmanager.Startup" ],

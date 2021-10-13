@@ -173,9 +173,8 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
         let capability = Arc::new(Mutex::new(Some(channel::take_channel(server_end))));
         let res = async {
             // Start the source component, if necessary
-            let source = self
-                .source
-                .upgrade()?
+            let source = self.source.upgrade()?;
+            source
                 .bind(&BindReason::AccessCapability {
                     target: ExtendedMoniker::ComponentInstance(self.target.moniker.clone()),
                     path: self.path.clone(),

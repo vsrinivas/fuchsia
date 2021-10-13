@@ -66,15 +66,14 @@ async fn bind_root() {
 }
 
 #[fuchsia::test]
-async fn bind_root_non_existent() {
-    let (model, _builtin_environment, mock_runner) =
+async fn bind_non_existent_root_child() {
+    let (model, _builtin_environment, _mock_runner) =
         new_model(vec![("root", component_decl_with_test_runner())]).await;
     let m: PartialAbsoluteMoniker = vec!["no-such-instance"].into();
     let res = model.bind(&m, &BindReason::Root).await;
     let expected_res: Result<Arc<ComponentInstance>, ModelError> =
         Err(ModelError::instance_not_found(vec!["no-such-instance"].into()));
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-    mock_runner.wait_for_url("test:///root_resolved").await;
 }
 
 #[fuchsia::test]
@@ -108,15 +107,12 @@ async fn bind_concurrent() {
     }
     .remote_handle();
     fasync::Task::spawn(f).detach();
-    let event = event_stream.wait_until(EventType::Started, vec![].into()).await.unwrap();
-    event.resume();
     let event = event_stream.wait_until(EventType::Started, vec!["system:0"].into()).await.unwrap();
     // Verify that the correct BindReason propagates to the event.
     assert_matches!(
         event.event.result,
         Ok(EventPayload::Started { bind_reason: BindReason::Root, .. })
     );
-    mock_runner.wait_for_url("test:///root_resolved").await;
 
     // While the bind() is paused, simulate a second bind by explicitly scheduling a Start
     // action. Allow the original bind to proceed, then check the result of both bindings.
@@ -130,7 +126,7 @@ async fn bind_concurrent() {
     action_handle.await.expect("failed to bind 2");
 
     // Verify that the component was started only once.
-    mock_runner.wait_for_urls(&["test:///root_resolved", "test:///system_resolved"]).await;
+    mock_runner.wait_for_urls(&["test:///system_resolved"]).await;
 }
 
 #[fuchsia::test]
@@ -151,7 +147,7 @@ async fn bind_parent_then_child() {
     // bind to system
     let m: PartialAbsoluteMoniker = vec!["system"].into();
     assert!(model.bind(&m, &BindReason::Root).await.is_ok());
-    mock_runner.wait_for_urls(&["test:///root_resolved", "test:///system_resolved"]).await;
+    mock_runner.wait_for_urls(&["test:///system_resolved"]).await;
 
     // Validate children. system is resolved, but not echo.
     let actual_children = get_live_children(&*model.root()).await;
@@ -171,13 +167,7 @@ async fn bind_parent_then_child() {
     // bind to echo
     let m: PartialAbsoluteMoniker = vec!["echo"].into();
     assert!(model.bind(&m, &BindReason::Root).await.is_ok());
-    mock_runner
-        .wait_for_urls(&[
-            "test:///root_resolved",
-            "test:///system_resolved",
-            "test:///echo_resolved",
-        ])
-        .await;
+    mock_runner.wait_for_urls(&["test:///system_resolved", "test:///echo_resolved"]).await;
 
     // Validate children. Now echo is resolved.
     let echo_component = get_live_child(&*model.root(), "echo").await;
@@ -189,7 +179,7 @@ async fn bind_parent_then_child() {
 }
 
 #[fuchsia::test]
-async fn bind_child_binds_parent() {
+async fn bind_child_doesnt_bind_parent() {
     let hook = Arc::new(TestHook::new());
     let (model, _builtin_environment, mock_runner) = new_model_with(
         vec![
@@ -208,35 +198,21 @@ async fn bind_child_binds_parent() {
     )
     .await;
 
-    // Bind to logger (before ever binding to system). Ancestors are bound first.
+    // Bind to logger (before ever binding to system).
     let m: PartialAbsoluteMoniker = vec!["system", "logger"].into();
     assert!(model.bind(&m, &BindReason::Root).await.is_ok());
-    mock_runner
-        .wait_for_urls(&[
-            "test:///root_resolved",
-            "test:///system_resolved",
-            "test:///logger_resolved",
-        ])
-        .await;
+    mock_runner.wait_for_urls(&["test:///logger_resolved"]).await;
 
     // Bind to netstack.
     let m: PartialAbsoluteMoniker = vec!["system", "netstack"].into();
     assert!(model.bind(&m, &BindReason::Root).await.is_ok());
-    mock_runner
-        .wait_for_urls(&[
-            "test:///root_resolved",
-            "test:///system_resolved",
-            "test:///logger_resolved",
-            "test:///netstack_resolved",
-        ])
-        .await;
+    mock_runner.wait_for_urls(&["test:///logger_resolved", "test:///netstack_resolved"]).await;
 
-    // finally, bind to system. Was already bound, so no new results.
+    // finally, bind to system.
     let m: PartialAbsoluteMoniker = vec!["system"].into();
     assert!(model.bind(&m, &BindReason::Root).await.is_ok());
     mock_runner
         .wait_for_urls(&[
-            "test:///root_resolved",
             "test:///system_resolved",
             "test:///logger_resolved",
             "test:///netstack_resolved",
@@ -257,14 +233,14 @@ async fn bind_child_non_existent() {
     // bind to system
     let m: PartialAbsoluteMoniker = vec!["system"].into();
     assert!(model.bind(&m, &BindReason::Root).await.is_ok());
-    mock_runner.wait_for_urls(&["test:///root_resolved", "test:///system_resolved"]).await;
+    mock_runner.wait_for_urls(&["test:///system_resolved"]).await;
 
     // can't bind to logger: it does not exist
     let m: PartialAbsoluteMoniker = vec!["system", "logger"].into();
     let res = model.bind(&m, &BindReason::Root).await;
     let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(m.to_partial()));
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-    mock_runner.wait_for_urls(&["test:///root_resolved", "test:///system_resolved"]).await;
+    mock_runner.wait_for_urls(&["test:///system_resolved"]).await;
 }
 
 /// Create a hierarchy of children:
@@ -301,7 +277,6 @@ async fn bind_eager_children() {
         assert!(res.is_ok());
         mock_runner
             .wait_for_urls(&[
-                "test:///root_resolved",
                 "test:///a_resolved",
                 "test:///b_resolved",
                 "test:///c_resolved",
@@ -378,7 +353,7 @@ async fn bind_eager_children_reentrant() {
         );
         bind_handle.await.expect("bind to `a` failed");
         // `root` and `a` use the test runner.
-        mock_runner.wait_for_urls(&["test:///root_resolved", "test:///a_resolved"]).await;
+        mock_runner.wait_for_urls(&["test:///a_resolved"]).await;
     }
     // Verify that the component topology matches expectations.
     assert_eq!("(a(b))", hook.print());
@@ -398,7 +373,7 @@ async fn bind_no_execute() {
     // is non-executable so it is not run.
     let m: PartialAbsoluteMoniker = vec!["a"].into();
     assert!(model.bind(&m, &BindReason::Root).await.is_ok());
-    mock_runner.wait_for_urls(&["test:///root_resolved", "test:///b_resolved"]).await;
+    mock_runner.wait_for_urls(&["test:///b_resolved"]).await;
 }
 
 #[fuchsia::test]

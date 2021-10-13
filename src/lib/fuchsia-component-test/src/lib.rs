@@ -531,6 +531,7 @@ impl Realm {
         let root = ScopedInstance::new_with_name(child_name, collection_name, root_url)
             .await
             .map_err(RealmError::FailedToCreateChild)?;
+        root.connect_to_binder().map_err(Error::FailedToBind)?;
         Ok(RealmInstance { root, mocks_runner })
     }
 

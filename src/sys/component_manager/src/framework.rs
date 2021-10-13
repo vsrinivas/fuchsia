@@ -381,7 +381,7 @@ impl RealmCapabilityHost {
         match Self::get_child(component, child.clone()).await? {
             Some(child) => {
                 let mut exposed_dir = exposed_dir.into_channel();
-                let res = child
+                child
                     .bind(&BindReason::BindChild { parent: component.moniker.clone() })
                     .await
                     .map_err(|e| match e {
@@ -397,9 +397,8 @@ impl RealmCapabilityHost {
                             error!("bind() failed: {}", e);
                             fcomponent::Error::Internal
                         }
-                    })?
-                    .open_exposed(&mut exposed_dir)
-                    .await;
+                    })?;
+                let res = child.open_exposed(&mut exposed_dir).await;
                 match res {
                     Ok(()) => (),
                     Err(ModelError::RoutingError {

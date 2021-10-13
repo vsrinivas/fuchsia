@@ -169,8 +169,6 @@ mod tests {
     use {
         super::*,
         crate::model::{
-            binding::Binder,
-            component::BindReason,
             hooks::{EventType, Hook, HooksRegistration},
             testing::test_helpers::{component_decl_with_test_runner, ActionsTest, ComponentInfo},
         },
@@ -178,7 +176,6 @@ mod tests {
         cm_rust_testing::ComponentDeclBuilder,
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
-        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::{boxed::Box, convert::TryFrom, sync::Arc, time::Duration},
     };
 
@@ -200,17 +197,13 @@ mod tests {
             ("d", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let component_a = test.look_up(vec!["a"].into()).await;
-        let component_b = test.look_up(vec!["a", "b"].into()).await;
-        let component_c = test.look_up(vec!["a", "b", "c"].into()).await;
-        let component_d = test.look_up(vec!["a", "b", "d"].into()).await;
-        test.model
-            .bind(
-                &component_a.abs_moniker.to_partial(),
-                &BindReason::BindChild { parent: AbsoluteMoniker::root() },
-            )
-            .await
-            .expect("could not bind to a");
+
+        // Start each component.
+        test.bind(vec![].into()).await;
+        let component_a = test.bind(vec!["a"].into()).await;
+        let component_b = test.bind(vec!["a", "b"].into()).await;
+        let component_c = test.bind(vec!["a", "b", "c"].into()).await;
+        let component_d = test.bind(vec!["a", "b", "d"].into()).await;
 
         // Wire up connections to SystemController
         let sys_controller = Box::new(SystemControllerCapabilityProvider::new(
@@ -292,14 +285,10 @@ mod tests {
             );
 
             let test = ActionsTest::new_with_hooks("root", components, None, vec![hooks_reg]).await;
-            let component_a = test.look_up(vec!["a"].into()).await;
-            test.model
-                .bind(
-                    &component_a.abs_moniker.to_partial(),
-                    &BindReason::BindChild { parent: AbsoluteMoniker::root() },
-                )
-                .await
-                .expect("could not bind to a");
+
+            // Start root and `a`.
+            test.bind(vec![].into()).await;
+            let component_a = test.bind(vec!["a"].into()).await;
 
             // Wire up connections to SystemController
             let sys_controller = Box::new(SystemControllerCapabilityProvider::new(
@@ -326,7 +315,7 @@ mod tests {
             component_a_info.check_not_shut_down(&test.runner).await;
 
             // Ask the SystemController to shut down the system and wait to be
-            // notified that the room component stopped.
+            // notified that the root component stopped.
             let builtin_environment = test.builtin_environment.lock().await;
             let _completion = builtin_environment.wait_for_root_stop();
             controller_proxy.shutdown().await.expect("shutdown request failed");

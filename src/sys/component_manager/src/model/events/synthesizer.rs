@@ -301,7 +301,7 @@ mod tests {
         test.bind_instance(&vec!["c", "f"].into()).await.expect("bind instance success");
 
         let mut result_monikers = HashSet::new();
-        while result_monikers.len() < 5 {
+        while result_monikers.len() < 4 {
             let event = event_stream.next().await.expect("got running event");
             match event.event.result {
                 Ok(EventPayload::Running { .. }) => {
@@ -322,7 +322,7 @@ mod tests {
         }
 
         // Events might be out of order, sort them
-        let expected_monikers = vec!["/", "/b:0", "/c:0", "/c:0/e:0", "/c:0/f:0"];
+        let expected_monikers = vec!["/b:0", "/c:0", "/c:0/e:0", "/c:0/f:0"];
         let mut result_monikers = Vec::from_iter(result_monikers.into_iter());
         result_monikers.sort();
         assert_eq!(expected_monikers, result_monikers);

@@ -32,8 +32,24 @@
  */
 
 namespace {
-void start_appmgr() {
+void start_core() {
   async::Loop loop((async::Loop(&kAsyncLoopConfigAttachToCurrentThread)));
+  zx::channel remote;
+  zx::channel local;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    exit(-1);
+  }
+  auto path = fbl::String("/svc/fuchsia.component.CoreBinder");
+
+  status = fdio_service_connect(path.data(), remote.release());
+  if (status != ZX_OK) {
+    // This failed, presumably because core is not available.
+    return;
+  }
+}
+
+void start_appmgr() {
   zx::channel remote;
   zx::channel local;
   zx_status_t status = zx::channel::create(0, &local, &remote);
@@ -44,7 +60,7 @@ void start_appmgr() {
 
   status = fdio_service_connect(path.data(), remote.release());
   if (status != ZX_OK) {
-    // This failed, presumably appmgr is not available.
+    // This failed, presumably because appmgr is not available.
     return;
   }
 
@@ -63,7 +79,7 @@ void start_session_manager() {
 
   status = fdio_service_connect(path.data(), remote.release());
   if (status != ZX_OK) {
-    // This failed, presumably session_manager is not available.
+    // This failed, presumably because session_manager is not available.
     return;
   }
 
@@ -73,6 +89,7 @@ void start_session_manager() {
 }  // namespace
 
 int main() {
+  start_core();
   start_appmgr();
   start_session_manager();
   // We ignore the result here. A failure probably indicates we're running on a

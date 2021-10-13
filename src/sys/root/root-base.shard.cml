@@ -21,6 +21,12 @@
             to: "#startup",
         },
         {
+            protocol: "fuchsia.component.Binder",
+            from: "#core",
+            as: "fuchsia.component.CoreBinder",
+            to: "#startup",
+        },
+        {
             protocol: "fuchsia.logger.LogSink",
             from: "#bootstrap",
             to: "#startup",
