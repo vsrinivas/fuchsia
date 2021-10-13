@@ -16,7 +16,17 @@
             path: "/dev",
         },
         {
-            protocol: [ "fuchsia.driver.test.Realm" ],
+            protocol: [
+                "fuchsia.device.fs.Exporter",
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.device.manager.DebugDumper",
+                "fuchsia.device.manager.SystemStateTransition",
+                "fuchsia.driver.development.DriverDevelopment",
+                "fuchsia.driver.registrar.DriverRegistrar",
+                "fuchsia.driver.test.Realm",
+                "fuchsia.hardware.pci.DeviceWatcher",
+                "fuchsia.hardware.usb.DeviceWatcher",
+            ],
             from: "#driver_test_realm",
         },
     ],
