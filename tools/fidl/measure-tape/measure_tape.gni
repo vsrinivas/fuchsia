@@ -115,6 +115,7 @@ template("measure_tape") {
       non_rust_deps = [ ":$gen_target_name" ]
       source_root = out_rs
       sources = [ out_rs ]
+      disable_clippy = true
     }
 
     generated_outputs = [ out_rs ]

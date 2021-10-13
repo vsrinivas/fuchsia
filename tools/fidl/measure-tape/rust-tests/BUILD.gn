@@ -8,6 +8,7 @@ import("//tools/fidl/measure-tape/measure_tape.gni")
 rustc_test("rust-tests") {
   output_name = "rust-tests"
   edition = "2018"
+  disable_clippy = true
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon",

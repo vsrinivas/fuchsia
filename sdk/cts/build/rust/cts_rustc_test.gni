@@ -38,6 +38,7 @@ template("cts_rustc_test") {
   }
 
   rustc_test(target_name) {
+    disable_clippy = true  # TODO(fxbug.dev/86506): debug clippy build failure
     forward_variables_from(invoker, "*")
     if (!defined(non_rust_deps)) {
       non_rust_deps = []

@@ -24,6 +24,7 @@ rustc_binary("bin") {
   with_unit_tests = true
   edition = "2018"
   configs += [ ":env" ]
+  disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
 
   deps = [
     "//garnet/lib/rust/io_util",

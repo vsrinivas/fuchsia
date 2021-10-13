@@ -20,30 +20,32 @@ from rust import FUCHSIA_BUILD_DIR, HOST_PLATFORM, PREBUILT_THIRD_PARTY_DIR
 def main():
     args = parse_args()
     build_dir = Path(args.out_dir) if args.out_dir else FUCHSIA_BUILD_DIR
+    generated_file = build_dir / "gen" / "build" / "rust" / "rust_target_mapping.json"
 
-    if args.files or args.files_to_targets:
-        input_files = [os.path.relpath(f, build_dir) for f in args.input]
-        clippy_targets = files_to_targets(input_files, build_dir)
-
-        if args.files_to_targets:
-            print("\n".join(clippy_targets))
-            return 0
-        if args.verbose:
-            print("found the following targets for those source files:")
-            print("\n".join(clippy_targets) + "\n")
+    if args.all:
+        clippy_targets = get_targets(generated_file, set(), build_dir, get_all=True)
+    elif args.files:
+        input_files = {os.path.relpath(f, build_dir) for f in args.input}
+        clippy_targets = get_targets(generated_file, input_files, build_dir)
+        if args.verbose and not args.get_outputs:
+            print("Found the following targets for those source files:")
+            print(*(t.gn_target for t in clippy_targets), sep="\n")
     else:
         clippy_targets = []
         for target in args.input:
             gn_target = rust.GnTarget(target, args.fuchsia_dir)
             if gn_target.toolchain_suffix:
-                print("Clippy doesn't work on non-default toolchains yet")
+                print("Warning: Clippy doesn't work on non-default toolchains yet")
                 continue  # TODO: fxb/591046
             gn_target.label_name += ".clippy"
             clippy_targets.append(gn_target)
 
     output_files = [t.gen_dir(build_dir).joinpath(t.label_name) for t in clippy_targets]
+    if args.get_outputs:
+        print(*output_files, sep="\n")
+        return 0
     if not output_files:
-        print("couldn't find any clippy outputs for those inputs")
+        print("Error: Couldn't find any clippy outputs for those inputs")
         return 1
     if not args.no_build:
         build_targets(output_files, build_dir, args.fuchsia_dir, args.verbose)
@@ -79,15 +81,15 @@ def build_targets(output_files, build_dir, fuchsia_dir, verbose):
     )
 
 
-def files_to_targets(input_files, build_dir):
+def get_targets(source_map, input_files, build_dir, get_all=False):
     targets = set()
-    with open(build_dir / "gen" / "build" / "rust" / "rust_target_mapping.json") as f:
+    with open(source_map) as f:
         raw = json.load(f)
     for target in raw:
         clippy_target = rust.GnTarget(target["clippy"], build_dir)
         if clippy_target.toolchain_suffix:
             continue  # TODO run clippy on non-default toolchains: fxb/591046
-        if any(f in target["src"] for f in input_files):
+        if get_all or any(f in input_files for f in target["src"]):
             targets.add(clippy_target)
     return targets
 
@@ -99,13 +101,15 @@ def parse_args():
     parser.add_argument(
         "--verbose", "-v", help="verbose", action="store_true", default=False
     )
-    parser.add_argument("input", nargs="+", default=[])
     parser.add_argument(
         "--files",
         "-f",
         action="store_true",
         help="treat the inputs as source files rather than gn targets",
     )
+    inputs = parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument("input", nargs="*", default=[])
+    inputs.add_argument("--all", action="store_true", help="run on all clippy targets")
     advanced = parser.add_argument_group("advanced")
     advanced.add_argument("--out-dir", help="path to the Fuchsia build directory")
     advanced.add_argument("--fuchsia-dir", help="path to the Fuchsia root directory")
@@ -115,14 +119,14 @@ def parse_args():
         help="emit full json rather than human readable messages",
     )
     advanced.add_argument(
-        "--files-to-targets",
+        "--get-outputs",
         action="store_true",
-        help="emit the list of clippy targets corresponding to a list of rust source files",
+        help="emit a list of clippy output files rather than lints",
     )
     advanced.add_argument(
         "--no-build",
         action="store_true",
-        help="never build the clippy output, instead expect that it already exists",
+        help="don't build the clippy output, instead expect that it already exists",
     )
     return parser.parse_args()
 

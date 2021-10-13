@@ -40,7 +40,6 @@
 //! exposed through this module.
 
 #![deny(missing_docs)]
-#![deny(warnings)]
 // just in case we forget to add #[forbid(unsafe_code)] on new module
 // definitions
 #![deny(unsafe_code)]

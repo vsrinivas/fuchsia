@@ -323,17 +323,19 @@ template("rustc_binary") {
         string_join(",", rebase_path(_remote_rbe_inputs, root_build_dir)),
       ]
     }
-    metadata = {
-      rust_source_map = [
-        {
-          clippy =
-              get_label_info(":$target_name.clippy", "label_with_toolchain")
-          src = []
-          foreach(s, _sources) {
-            src += [ rebase_path(s, root_build_dir) ]
-          }
-        },
-      ]
+    if (generate_clippy && !disable_clippy) {
+      metadata = {
+        rust_source_map = [
+          {
+            clippy =
+                get_label_info(":$target_name.clippy", "label_with_toolchain")
+            src = []
+            foreach(s, _sources) {
+              src += [ rebase_path(s, root_build_dir) ]
+            }
+          },
+        ]
+      }
     }
   }
 }
