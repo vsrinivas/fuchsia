@@ -40,7 +40,7 @@ enum MatchOption<T> {
 }
 
 macro_rules! assert_match_option {
-    ($expected:expr, $actual:expr, $field:literal) => {
+    ($expected:expr, $actual:expr, $field:expr) => {
         match $expected {
             MatchOption::AnyOrNone => (),
             MatchOption::None => {
@@ -61,22 +61,58 @@ macro_rules! assert_match_option {
     };
 }
 
+/// Container that identifies the entity that is being verified in an assertion.
+#[derive(Clone, Copy)]
+enum EntityContext<'a> {
+    Run,
+    Suite(&'a ExpectedSuite),
+    Case(&'a ExpectedSuite, &'a ExpectedTestCase),
+}
+
+/// Container that identifies the artifact that is being verified in an assertion.
+#[derive(Clone, Copy)]
+struct ArtifactContext<'a, 'b> {
+    entity: &'a EntityContext<'b>,
+    metadata: &'a ArtifactMetadataV0,
+}
+
+impl std::fmt::Display for EntityContext<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Run => write!(f, "TEST RUN"),
+            Self::Suite(suite) => write!(f, "SUITE {}", suite.name),
+            Self::Case(suite, case) => write!(f, "SUITE {}: CASE {}", suite.name, case.name),
+        }
+    }
+}
+
+impl std::fmt::Display for ArtifactContext<'_, '_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Entity: {}, Metadata: {:?}", self.entity, self.metadata)
+    }
+}
+
 /// A mapping from artifact metadata to assertions made on the artifact.
 type ArtifactMetadataToAssertionMap = HashMap<ArtifactMetadataV0, ExpectedArtifact>;
 
 /// Assert that the run results contained in `actual_run` and the directory specified by `root`
 /// contain the results and artifacts in `expected_run`.
 pub fn assert_run_result(root: &Path, actual_run: &TestRunResult, expected_run: &ExpectedTestRun) {
+    let context = EntityContext::Run;
     let &TestRunResult::V0 { artifacts, outcome, suites: _, start_time, duration_milliseconds } =
         &actual_run;
     assert_match_option!(
         expected_run.duration_milliseconds,
         *duration_milliseconds,
-        "run duration"
+        format!("Run duration for {}", context)
     );
-    assert_match_option!(expected_run.start_time, *start_time, "run start time");
-    assert_eq!(outcome, &expected_run.outcome);
-    assert_artifacts(root, &artifacts, &expected_run.artifacts);
+    assert_match_option!(
+        expected_run.start_time,
+        *start_time,
+        format!("Start time for {}", context)
+    );
+    assert_eq!(outcome, &expected_run.outcome, "Outcome for {}", context);
+    assert_artifacts(root, &artifacts, &expected_run.artifacts, EntityContext::Run);
 }
 
 /// Assert that the suite results contained in `actual_suites` and the directory specified by `root`
@@ -111,22 +147,29 @@ pub fn assert_suite_result(
     actual_suite: &SuiteResult,
     expected_suite: &ExpectedSuite,
 ) {
+    let context = EntityContext::Suite(expected_suite);
     let &SuiteResult::V0 { artifacts, outcome, name, cases, duration_milliseconds, start_time } =
         &actual_suite;
-    assert_eq!(outcome, &expected_suite.outcome);
-    assert_eq!(name, &expected_suite.name);
+    assert_eq!(outcome, &expected_suite.outcome, "Outcome for {}", context);
+    assert_eq!(name, &expected_suite.name, "Name for {}", context);
     assert_match_option!(
         expected_suite.duration_milliseconds,
         *duration_milliseconds,
-        "suite duration"
+        format!("Duration for {}", context)
     );
-    assert_match_option!(expected_suite.start_time, *start_time, "suite start time");
+    assert_match_option!(
+        expected_suite.start_time,
+        *start_time,
+        format!("Start time for {}", context)
+    );
 
-    assert_artifacts(root, &artifacts, &expected_suite.artifacts);
+    assert_artifacts(root, &artifacts, &expected_suite.artifacts, context);
 
     assert_eq!(cases.len(), expected_suite.cases.len());
     for case in cases.iter() {
-        assert_case_result(root, case, expected_suite.cases.get(&case.name).unwrap());
+        let expected_case = expected_suite.cases.get(&case.name);
+        assert!(expected_case.is_some(), "Found unexpected case {} in {}", case.name, context);
+        assert_case_result(root, case, expected_case.unwrap(), expected_suite);
     }
 }
 
@@ -134,41 +177,60 @@ fn assert_case_result(
     root: &Path,
     actual_case: &TestCaseResultV0,
     expected_case: &ExpectedTestCase,
+    parent_suite: &ExpectedSuite,
 ) {
-    assert_eq!(actual_case.name, expected_case.name);
-    assert_eq!(actual_case.outcome, expected_case.outcome);
+    let context = EntityContext::Case(parent_suite, expected_case);
+    assert_eq!(actual_case.name, expected_case.name, "Name for {}", context);
+    assert_eq!(actual_case.outcome, expected_case.outcome, "Outcome for {}", context);
     assert_match_option!(
         expected_case.duration_milliseconds,
         actual_case.duration_milliseconds,
-        "case duration"
+        format!("Duration for {}", context)
     );
-    assert_match_option!(expected_case.start_time, actual_case.start_time, "case start time");
-    assert_artifacts(root, &actual_case.artifacts, &expected_case.artifacts);
+    assert_match_option!(
+        expected_case.start_time,
+        actual_case.start_time,
+        format!("Start time for {}", context)
+    );
+    assert_artifacts(root, &actual_case.artifacts, &expected_case.artifacts, context);
 }
 
 fn assert_artifacts(
     root: &Path,
     actual_artifacts: &HashMap<PathBuf, ArtifactMetadataV0>,
     expected_artifacts: &ArtifactMetadataToAssertionMap,
+    entity_context: EntityContext<'_>,
 ) {
     let actual_artifacts_by_metadata: HashMap<ArtifactMetadataV0, PathBuf> =
         actual_artifacts.iter().map(|(key, value)| (value.clone(), key.clone())).collect();
     // For now, artifact metadata should be unique for each artifact.
-    assert_eq!(actual_artifacts_by_metadata.len(), actual_artifacts.len());
+    assert_eq!(
+        actual_artifacts_by_metadata.len(),
+        actual_artifacts.len(),
+        "Artifacts for {} do not have unique metadata. Actual artifacts: {:?}",
+        entity_context,
+        actual_artifacts
+    );
 
-    assert_eq!(actual_artifacts_by_metadata.len(), expected_artifacts.len());
+    let expected_metadata: HashSet<_> = expected_artifacts.keys().collect();
+    let actual_metadata: HashSet<_> = actual_artifacts_by_metadata.keys().collect();
+
+    assert_eq!(
+        expected_metadata, actual_metadata,
+        "Artifacts for {} do not have matching metadata.",
+        entity_context,
+    );
 
     for (expected_metadata, expected_artifact) in expected_artifacts.iter() {
-        let actual_filepath = actual_artifacts_by_metadata.get(expected_metadata);
-        assert!(
-            actual_filepath.is_some(),
-            "Expected artifact matching {:?} to exist",
-            expected_metadata
-        );
-        let actual_filepath = actual_filepath.unwrap();
+        let actual_filepath = actual_artifacts_by_metadata.get(expected_metadata).unwrap();
         match expected_artifact {
             ExpectedArtifact::File { name, assertion_fn } => {
-                assert_file(&root.join(actual_filepath), name, assertion_fn);
+                assert_file(
+                    &root.join(actual_filepath),
+                    name,
+                    assertion_fn,
+                    ArtifactContext { entity: &entity_context, metadata: expected_metadata },
+                );
             }
             ExpectedArtifact::Directory { files, name } => {
                 match name {
@@ -201,22 +263,31 @@ fn assert_artifacts(
                     &expected_entries, &actual_entries
                 );
                 for (name, assertion) in files {
-                    assert_file(&root.join(actual_filepath).join(name), &None, assertion);
+                    assert_file(
+                        &root.join(actual_filepath).join(name),
+                        &None,
+                        assertion,
+                        ArtifactContext { entity: &entity_context, metadata: expected_metadata },
+                    );
                 }
             }
         }
     }
 }
 
-fn assert_file(file_path: &Path, name: &Option<String>, assertion_fn: &Box<dyn Fn(&str)>) {
+fn assert_file(
+    file_path: &Path,
+    name: &Option<String>,
+    assertion_fn: &Box<dyn Fn(&str)>,
+    artifact_context: ArtifactContext<'_, '_>,
+) {
     match name {
         None => (),
         Some(name) => assert_eq!(
             name.as_str(),
             file_path.file_name().unwrap().to_str().unwrap(),
-            "Expected filename {} for artifact but got {}",
-            name,
-            file_path.file_name().unwrap().to_str().unwrap()
+            "Got incorrect filename while checking file for artifact {}",
+            artifact_context
         ),
     }
     let actual_contents = std::fs::read_to_string(&file_path);
@@ -564,7 +635,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Outcome for TEST RUN")]
     fn assert_run_outcome_mismatch() {
         let dir = make_tempdir(|_| ());
         assert_run_result(
@@ -581,7 +652,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Start time for TEST RUN")]
     fn assert_run_start_time_mismatch() {
         let dir = make_tempdir(|_| ());
         assert_run_result(
@@ -598,7 +669,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Run duration for TEST RUN")]
     fn assert_run_duration_mismatch() {
         let dir = make_tempdir(|_| ());
         assert_run_result(
@@ -629,7 +700,7 @@ mod test {
                 start_time: None,
                 duration_milliseconds: None,
             },
-            &ExpectedTestRun::new(Outcome::Passed),
+            &ExpectedTestRun::new(Outcome::Failed),
         );
     }
 
@@ -729,7 +800,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Outcome for SUITE suite")]
     fn assert_suite_outcome_mismatch() {
         let dir = make_tempdir(|_| ());
         assert_suite_result(
@@ -747,7 +818,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Start time for SUITE suite")]
     fn assert_suite_start_time_mismatch() {
         let dir = make_tempdir(|_| ());
         assert_suite_result(
@@ -765,7 +836,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Duration for SUITE suite")]
     fn assert_suite_duration_mismatch() {
         let dir = make_tempdir(|_| ());
         assert_suite_result(
@@ -805,7 +876,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Found unexpected case")]
     fn assert_suite_case_mismatch() {
         let dir = make_tempdir(|_| ());
         assert_suite_result(
@@ -824,7 +895,7 @@ mod test {
                 start_time: None,
                 duration_milliseconds: None,
             },
-            &ExpectedSuite::new("suite", Outcome::Passed)
+            &ExpectedSuite::new("suite", Outcome::Failed)
                 .with_case(ExpectedTestCase::new("wrong name", Outcome::Passed)),
         );
     }
@@ -961,7 +1032,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Artifacts for TEST RUN")]
     fn assert_artifacts_missing() {
         let dir = make_tempdir(|_| ());
         assert_run_result(
@@ -982,7 +1053,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Artifacts for TEST RUN")]
     fn assert_artifacts_extra_artifact() {
         let dir = make_tempdir(|path| {
             std::fs::create_dir(path.join("a")).unwrap();
