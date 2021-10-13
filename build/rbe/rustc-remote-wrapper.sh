@@ -162,6 +162,8 @@ extern_paths=()
 
 save_analysis=0
 
+extra_linker_outputs=()
+
 prev_opt=
 for opt in "$@"
 do
@@ -271,6 +273,7 @@ EOF
           esac
         done
       }
+      depfile="${depfile#./}"
       dep_only_token="--emit=dep-info=$depfile.nolink"
       # Tell rustc to report all transitive *library* dependencies,
       # not just the sources, because these all need to be uploaded.
@@ -305,6 +308,13 @@ EOF
         link_arg="$build_subdir/$optarg"
         debug_var "[from -Clink-arg]" "$link_arg"
         link_arg_files+=("$link_arg")
+        ;;
+
+    # Linker can produce a .map output file.
+    -Clink-args=--Map=* | link-args=--Map=*)
+        map_output="$(expr "X$optarg" : '[^=]*=\(.*\)')"
+        map_output_stripped="${map_output#./}"
+        extra_linker_outputs+=( "$build_subdir/$map_output_stripped" )
         ;;
 
     # This flag informs the linker where to search for libraries.
@@ -421,6 +431,9 @@ function depfile_inputs_by_line() {
   grep ":$" "$1" | cut -d: -f1
 }
 
+# Workaround reclient bug: strip prefix ./ from all outputs.
+output="${output#./}"
+
 # The rustc binary might be linked against shared libraries.
 # Exclude system libraries in /usr/lib and /lib.
 # convert to paths relative to $project_root for rewrapper.
@@ -471,6 +484,8 @@ mapfile -t depfile_inputs < <(depfile_inputs_by_line "$depfile.nolink" | \
 # Done with temporary depfile, remove it.
 rm -f "$depfile.nolink"
 
+extra_outputs+=( "${extra_linker_outputs[@]}" )
+
 log_wrapper=()
 logfile="$output.log"
 if [[ "$log" == 1 ]]
@@ -482,7 +497,8 @@ fi
 
 test "$save_analysis" = 0 || {
   analysis_file=save-analysis-temp/"$(basename "$output" .rlib)".json
-  extra_outputs+="$build_subdir/$analysis_file"
+  analysis_file_stripped="${analysis_file#./}"
+  extra_outputs+=( "$build_subdir/$analysis_file_stripped" )
 }
 
 # When using the linker, also grab the necessary libraries.
