@@ -360,6 +360,9 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
   return ret;
 }
 
+static zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta);
+
+// This is called after mac_set_channel(). The MAC (mvmvif) will be configured as a CLIENT role.
 zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* config) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
   zx_status_t ret = ZX_OK;
@@ -569,6 +572,10 @@ zx_status_t mac_clear_assoc(void* ctx, uint32_t options,
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
   zx_status_t ret = ZX_OK;
 
+  if (mvmvif->ap_sta_id == IWL_MVM_INVALID_STA) {
+    IWL_ERR(mvmif, "sta id has not been set yet");
+    return ZX_ERR_BAD_STATE;
+  }
   // iwl_mvm_rm_sta() will reset the ap_sta_id value so that we have to keep it.
   uint8_t ap_sta_id = mvmvif->ap_sta_id;
 
@@ -613,22 +620,50 @@ zx_status_t mac_clear_assoc(void* ctx, uint32_t options,
     goto out;
   }
 
-  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_NOTEXIST);
+  ret = mac_unconfigure_bss(mvmvif, mvm_sta);
+
+out:
+  return ret;
+}
+
+// This function is to revert what mac_configure_bss() does.
+zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta) {
+  // mvmvif->phy_ctxt will be cleared up in iwl_mvm_unassign_vif_chanctx(). So backup the phy
+  // context ID for removing.
+  auto phy_ctxt_id = mvmvif->phy_ctxt->id;
+
+  // The 'ap_sta_id' will be reset in iwl_mvm_rm_sta() (via NONE --> NOTEXIST), back it up.
+  auto ap_sta_id = mvmvif->ap_sta_id;
+
+  // REMOVE_STA will be issued to remove the station entry in the firmware.
+  zx_status_t ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_NOTEXIST);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot set state from NONE to NOTEXIST: %s\n", zx_status_get_string(ret));
     goto out;
   }
 
-  // Remove the PHY context.
-  ret = iwl_mvm_remove_chanctx(mvmvif->mvm, mvmvif->phy_ctxt->id);
+  // To simulate the behavior that iwl_mvm_bss_info_changed_station() would do for disassocitaion.
+  mtx_lock(&mvmvif->mvm->mutex);
+  memset(mvmvif->bss_conf.bssid, 0, ETH_ALEN);
+  memset(mvmvif->bssid, 0, ETH_ALEN);
+  // This will take the cleared BSSID from bss_conf and update the firmware.
+  ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
+  mtx_unlock(&mvmvif->mvm->mutex);
   if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "Cannot remove channel context: %s\n", zx_status_get_string(ret));
+    IWL_ERR(mvm, "failed to update MAC (clear after unassoc)\n");
     goto out;
   }
 
+  // Unbinding MAC and PHY contexts.
   ret = iwl_mvm_unassign_vif_chanctx(mvmvif);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot unassign VIF channel context: %s\n", zx_status_get_string(ret));
+    goto out;
+  }
+
+  ret = iwl_mvm_remove_chanctx(mvmvif->mvm, phy_ctxt_id);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "Cannot remove channel context: %s\n", zx_status_get_string(ret));
     goto out;
   }
 

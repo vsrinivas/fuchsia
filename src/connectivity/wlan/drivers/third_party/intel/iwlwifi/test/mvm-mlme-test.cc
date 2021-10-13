@@ -713,6 +713,28 @@ TEST_F(MacInterfaceTest, AssociateToOpenNetwork) {
   ASSERT_EQ(kListenInterval, mvmvif_sta_.bss_conf.listen_interval);
 
   ASSERT_EQ(ZX_OK, ClearAssoc());
+  ASSERT_EQ(nullptr, mvmvif_sta_.phy_ctxt);
+  ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_sta_.ap_sta_id);
+}
+
+// Back to back calls of ClearAssoc().
+TEST_F(MacInterfaceTest, ClearAssocAfterClearAssoc) {
+  ASSERT_NE(ZX_OK, ClearAssoc());
+  ASSERT_NE(ZX_OK, ClearAssoc());
+}
+
+// ClearAssoc() should cleanup when called without Assoc
+TEST_F(MacInterfaceTest, ClearAssocAfterNoAssoc) {
+  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  struct iwl_mvm_sta* mvm_sta = mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id];
+  ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
+
+  ASSERT_EQ(ZX_OK, ClearAssoc());
+  ASSERT_EQ(nullptr, mvmvif_sta_.phy_ctxt);
+  ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_sta_.ap_sta_id);
+  // Call ClearAssoc() again to check if it is handled correctly.
+  ASSERT_NE(ZX_OK, ClearAssoc());
 }
 
 TEST_F(MacInterfaceTest, AssociateToOpenNetworkNullStation) {
@@ -730,6 +752,27 @@ TEST_F(MacInterfaceTest, AssociateToOpenNetworkNullStation) {
 
   // We have to recover the pointer so that the MAC stop function can recycle the memory.
   mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id] = org;
+}
+
+TEST_F(MacInterfaceTest, ClearAssocAfterFailedAssoc) {
+  SetChannel(&kChannel);
+  ConfigureBss(&kBssConfig);
+
+  // Replace the STA pointer with NULL and expect the association will fail.
+  auto org = mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id];
+  mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id] = nullptr;
+
+  ASSERT_EQ(ZX_ERR_BAD_STATE, ConfigureAssoc(&kAssocCtx));
+  // Now put back the original STA pointer so ClearAssoc runs and also
+  // to recycle allocated memory
+  mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id] = org;
+
+  // Expect error while disassociating a non-existing association.
+  ASSERT_EQ(ZX_OK, ClearAssoc());
+  ASSERT_EQ(nullptr, mvmvif_sta_.phy_ctxt);
+  ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_sta_.ap_sta_id);
+  // Call ClearAssoc() again to check if it is handled correctly.
+  ASSERT_NE(ZX_OK, ClearAssoc());
 }
 
 TEST_F(MacInterfaceTest, TxPktNotSupportedRole) {
