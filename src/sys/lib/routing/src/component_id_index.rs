@@ -89,7 +89,10 @@ impl ComponentIdIndex {
                 .map_err(|err| ComponentIdIndexError::index_unreadable(index_file_path, err))?;
 
         let index = component_id_index::Index::from_fidl(fidl_index)?;
+        Self::new_from_index(index)
+    }
 
+    pub fn new_from_index(index: component_id_index::Index) -> Result<Self, ComponentIdIndexError> {
         let mut moniker_to_instance_id =
             HashMap::<PartialAbsoluteMoniker, ComponentInstanceId>::new();
         let mut all_instance_ids = HashSet::new();
@@ -189,6 +192,29 @@ pub mod tests {
                 PartialChildMoniker::new("a".to_string(), None),
                 PartialChildMoniker::new("name".to_string(), Some("coll".to_string())),
             ]))
+        );
+    }
+
+    #[fuchsia::test]
+    fn new_from_index() {
+        let iid = "0".repeat(64);
+        let inner_index = component_id_index::Index {
+            instances: vec![component_id_index::InstanceIdEntry {
+                instance_id: Some(iid.clone()),
+                appmgr_moniker: None,
+                moniker: Some(
+                    PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap(),
+                ),
+            }],
+            ..component_id_index::Index::default()
+        };
+        let index = ComponentIdIndex::new_from_index(inner_index)
+            .expect("failed to create component id index from inner index");
+        assert_eq!(
+            Some(&iid),
+            index.look_up_moniker(
+                &PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()
+            )
         );
     }
 

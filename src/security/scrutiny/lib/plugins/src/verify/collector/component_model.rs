@@ -1,0 +1,224 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use {
+    crate::{
+        core::{
+            collection::{Components, CoreDataDeps, ManifestData, Manifests, Zbi},
+            package::collector::ROOT_RESOURCE,
+        },
+        verify::collection::V2ComponentModel,
+    },
+    anyhow::{anyhow, Context, Result},
+    cm_fidl_analyzer::component_model::ModelBuilderForAnalyzer,
+    cm_rust::{ComponentDecl, FidlIntoNative, RegistrationSource, RunnerRegistration},
+    fidl::encoding::decode_persistent,
+    fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys2,
+    fuchsia_url::boot_url::BootUrl,
+    futures_executor::block_on,
+    lazy_static::lazy_static,
+    log::{error, info, warn},
+    routing::{
+        component_id_index::ComponentIdIndex, config::RuntimeConfig, environment::RunnerRegistry,
+    },
+    scrutiny::model::{collector::DataCollector, model::DataModel},
+    std::{collections::HashMap, convert::TryFrom, sync::Arc},
+};
+
+lazy_static! {
+    // The default root component URL used to identify the root instance of the component model
+    // unless the RuntimeConfig specifies a different root URL.
+    pub static ref DEFAULT_ROOT_URL: BootUrl =
+        BootUrl::new_resource("/".to_string(), ROOT_RESOURCE.to_string()).unwrap();
+}
+
+// The path to the runtime config in bootfs.
+pub const DEFAULT_CONFIG_PATH: &str = "config/component_manager";
+
+// The name of the ELF runner.
+pub const ELF_RUNNER_NAME: &str = "elf";
+// The name of the RealmBuilder runner.
+pub const REALM_BUILDER_RUNNER_NAME: &str = "realm_builder";
+
+pub struct V2ComponentModelDataCollector {}
+
+impl V2ComponentModelDataCollector {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    fn get_decls(&self, model: &Arc<DataModel>) -> Result<HashMap<String, ComponentDecl>> {
+        let mut decls = HashMap::<String, ComponentDecl>::new();
+        let mut urls = HashMap::<i32, String>::new();
+
+        let components =
+            model.get::<Components>().context("Unable to retrieve components from the model")?;
+        for component in components.entries.iter().filter(|x| x.version == 2) {
+            urls.insert(component.id, component.url.clone());
+        }
+
+        for manifest in model
+            .get::<Manifests>()
+            .context("Unable to retrieve manifests from the model")?
+            .entries
+            .iter()
+        {
+            if let ManifestData::Version2(decl_base64) = &manifest.manifest {
+                match urls.remove(&manifest.component_id) {
+                    Some(url) => {
+                        let result: Result<fsys2::ComponentDecl, fidl::Error> = decode_persistent(
+                            &base64::decode(&decl_base64)
+                                .context("Unable to decode base64 v2 manifest")?,
+                        );
+                        match result {
+                            Ok(decl) => {
+                                decls.insert(url, decl.fidl_into_native());
+                            }
+                            Err(err) => {
+                                error!(
+                                    "Manifest for component: {} is corrupted. Error: {}",
+                                    url, err
+                                );
+                            }
+                        }
+                    }
+                    None => {
+                        return Err(anyhow!(
+                            "No component URL found for v2 component with id {}",
+                            manifest.component_id
+                        ));
+                    }
+                }
+            }
+        }
+        Ok(decls)
+    }
+
+    fn get_runtime_config(&self, config_path: &str, zbi: &Zbi) -> Result<RuntimeConfig> {
+        match zbi.bootfs.get(config_path) {
+            Some(config_data) => Ok(RuntimeConfig::try_from(
+                decode_persistent::<component_internal::Config>(&config_data)
+                    .context("Unable to decode runtime config")?,
+            )
+            .context("Unable to parse runtime config")?),
+            None => Err(anyhow!("file {} not found in bootfs", config_path.to_string())),
+        }
+    }
+
+    fn get_component_id_index(
+        &self,
+        index_path: Option<&str>,
+        zbi: &Zbi,
+    ) -> Result<ComponentIdIndex> {
+        match index_path {
+            Some(path) => {
+                let split: Vec<&str> = path.split_inclusive("/").collect();
+                if split.as_slice()[..2] == ["/", "boot/"] {
+                    let remainder = split[2..].join("");
+                    match zbi.bootfs.get(&remainder) {
+                        Some(index_data) => {
+                            let fidl_index = decode_persistent::<
+                                component_internal::ComponentIdIndex,
+                            >(index_data)
+                            .context("Unable to decode component ID index from persistent FIDL")?;
+                            let index = component_id_index::Index::from_fidl(fidl_index).context(
+                                "Unable to create internal index for component ID index from FIDL",
+                            )?;
+                            Ok(ComponentIdIndex::new_from_index(index).context(
+                                "Unable to create component ID index from internal index",
+                            )?)
+                        }
+                        None => Err(anyhow!("file {} not found in bootfs", remainder)),
+                    }
+                } else {
+                    Err(anyhow!("Unable to parse component ID index file path {}", path))
+                }
+            }
+            None => Ok(ComponentIdIndex::default()),
+        }
+    }
+
+    fn make_builtin_runner_registry(&self, runtime_config: &RuntimeConfig) -> RunnerRegistry {
+        let mut runners = Vec::new();
+        // Always register the ELF runner.
+        runners.push(RunnerRegistration {
+            source_name: ELF_RUNNER_NAME.into(),
+            target_name: ELF_RUNNER_NAME.into(),
+            source: RegistrationSource::Self_,
+        });
+        // Register the RealmBuilder runner if needed.
+        if runtime_config.realm_builder_resolver_and_runner
+            == component_internal::RealmBuilderResolverAndRunner::Namespace
+        {
+            runners.push(RunnerRegistration {
+                source_name: REALM_BUILDER_RUNNER_NAME.into(),
+                target_name: REALM_BUILDER_RUNNER_NAME.into(),
+                source: RegistrationSource::Self_,
+            });
+        }
+        RunnerRegistry::from_decl(&runners)
+    }
+}
+
+impl DataCollector for V2ComponentModelDataCollector {
+    fn collect(&self, model: Arc<DataModel>) -> Result<()> {
+        let builder = ModelBuilderForAnalyzer::new(DEFAULT_ROOT_URL.to_string());
+
+        let decls_by_url = self.get_decls(&model)?;
+
+        let zbi = &model.get::<Zbi>().context("Unable to find the zbi model.")?;
+        let runtime_config = self.get_runtime_config(DEFAULT_CONFIG_PATH, &zbi).context(
+            format!("Unable to get the runtime config at path {:?}", DEFAULT_CONFIG_PATH),
+        )?;
+        let component_id_index =
+            self.get_component_id_index(runtime_config.component_id_index_path.as_deref(), &zbi)?;
+
+        info!(
+            "V2ComponentModelDataCollector: Found {} v2 component declarations",
+            decls_by_url.len(),
+        );
+
+        let runner_registry = self.make_builtin_runner_registry(&runtime_config);
+        let build_result = block_on(async {
+            builder
+                .build(
+                    decls_by_url,
+                    Arc::new(runtime_config),
+                    Arc::new(component_id_index),
+                    runner_registry,
+                )
+                .await
+        });
+
+        for error in build_result.errors.iter() {
+            warn!("V2ComponentModelDataCollector: {}", error);
+        }
+
+        match build_result.model {
+            Some(component_model) => {
+                info!(
+                    "V2ComponentModelDataCollector: Built v2 component model with {} instances",
+                    component_model.len()
+                );
+                let core_deps_collection: Arc<CoreDataDeps> = model.get().map_err(|err| {
+                    anyhow!(
+                        "Failed to read core data deps for v2 component model data: {}",
+                        err.to_string()
+                    )
+                })?;
+                let deps = core_deps_collection.deps.clone();
+                model
+                    .set(V2ComponentModel::new(deps, component_model, build_result.errors))
+                    .map_err(|err| {
+                        anyhow!(
+                            "Failed to store v2 component model in data model: {}",
+                            err.to_string()
+                        )
+                    })?;
+                Ok(())
+            }
+            None => Err(anyhow!("Failed to build v2 component model")),
+        }
+    }
+}

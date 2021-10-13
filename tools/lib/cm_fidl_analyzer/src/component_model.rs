@@ -404,6 +404,7 @@ impl ComponentInstanceVisitor for ModelMappingVisitor {
 
 /// `ComponentModelForAnalyzer` owns a representation of each v2 component instance and
 /// supports lookup by `NodePath`.
+#[derive(Default)]
 pub struct ComponentModelForAnalyzer {
     top_instance: Arc<TopInstanceForAnalyzer>,
     instances: HashMap<NodePath, Arc<ComponentInstanceForAnalyzer>>,
@@ -1042,7 +1043,7 @@ impl ComponentInstanceForAnalyzer {
 
 /// A representation of `ComponentManager`'s instance, providing a set of capabilities to
 /// the root component instance.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct TopInstanceForAnalyzer {
     namespace_capabilities: NamespaceCapabilities,
     builtin_capabilities: BuiltinCapabilities,

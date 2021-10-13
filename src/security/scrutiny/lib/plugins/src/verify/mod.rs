@@ -8,7 +8,10 @@ mod controller;
 
 use {
     crate::verify::{
-        collector::component_tree::V2ComponentTreeDataCollector,
+        collector::{
+            component_model::V2ComponentModelDataCollector,
+            component_tree::V2ComponentTreeDataCollector,
+        },
         controller::{
             build::VerifyBuildController,
             capability_routing::{CapabilityRouteController, TreeMappingController},
@@ -35,6 +38,7 @@ plugin!(
     PluginHooks::new(
         collectors! {
             "V2ComponentTreeDataCollector" => V2ComponentTreeDataCollector::new(),
+            "V2ComponentModelDataCollector" => V2ComponentModelDataCollector::new(),
         },
         controllers! {
             "/verify/build" => VerifyBuildController::default(),
@@ -107,7 +111,7 @@ mod tests {
                 ManifestData, Manifests, Zbi,
             },
             verify::{
-                collection::V2ComponentTree,
+                collection::{V2ComponentModel, V2ComponentTree},
                 collector::component_tree::{DEFAULT_CONFIG_PATH, DEFAULT_ROOT_URL},
             },
         },
@@ -124,9 +128,11 @@ mod tests {
         fidl_fuchsia_io2::Operations,
         fidl_fuchsia_sys2 as fsys2,
         maplit::hashset,
+        moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
+        routing::component_instance::ComponentInstanceInterface,
         scrutiny_testing::fake::*,
         serde_json::json,
-        std::collections::HashMap,
+        std::{collections::HashMap, convert::TryFrom},
     };
 
     static CORE_DEP_STR: &str = "core_dep";
@@ -230,7 +236,11 @@ mod tests {
         Ok(Manifest { component_id, manifest: ManifestData::Version2(decl_base64), uses: vec![] })
     }
 
-    fn single_v2_component_model(root_component_url: Option<String>) -> Result<Arc<DataModel>> {
+    fn single_v2_component_model(
+        root_component_url: Option<String>,
+        component_id_index_path: Option<String>,
+        component_id_index: component_id_index::Index,
+    ) -> Result<Arc<DataModel>> {
         let model = data_model();
         let root_id = 0;
         let root_component = make_v2_component(
@@ -241,7 +251,8 @@ mod tests {
         let deps = hashset! { CORE_DEP_STR.to_string() };
         model.set(Components::new(vec![root_component]))?;
         model.set(Manifests::new(vec![root_manifest]))?;
-        model.set(Zbi { ..zbi(root_component_url) })?;
+        model
+            .set(Zbi { ..zbi(root_component_url, component_id_index_path, component_id_index) })?;
         model.set(CoreDataDeps { deps })?;
         Ok(model)
     }
@@ -286,7 +297,7 @@ mod tests {
         ]))?;
 
         model.set(Manifests::new(vec![root_manifest, foo_manifest, bar_manifest, baz_manifest]))?;
-        model.set(Zbi { ..zbi(None) })?;
+        model.set(Zbi { ..zbi(None, None, component_id_index::Index::default()) })?;
         model.set(CoreDataDeps { deps })?;
         Ok(model)
     }
@@ -346,10 +357,30 @@ mod tests {
         Ok(model)
     }
 
-    fn zbi(root_component_url: Option<String>) -> Zbi {
+    fn zbi(
+        root_component_url: Option<String>,
+        component_id_index_path: Option<String>,
+        component_id_index: component_id_index::Index,
+    ) -> Zbi {
         let mut bootfs: HashMap<String, Vec<u8>> = HashMap::default();
         let mut runtime_config = component_internal::Config::EMPTY;
         runtime_config.root_component_url = root_component_url;
+        runtime_config.component_id_index_path = component_id_index_path.clone();
+
+        if let Some(path) = component_id_index_path {
+            let split_index_path: Vec<&str> = path.split_inclusive("/").collect();
+            if split_index_path.as_slice()[..2] == ["/", "boot/"] {
+                bootfs.insert(
+                    split_index_path[2..].join(""),
+                    fidl::encoding::encode_persistent(
+                        &mut component_internal::ComponentIdIndex::try_from(component_id_index)
+                            .expect("failed to convert component id index to fidl"),
+                    )
+                    .expect("failed to encode component id index as persistent fidl"),
+                );
+            }
+        }
+
         bootfs.insert(
             DEFAULT_CONFIG_PATH.to_string(),
             fidl::encoding::encode_persistent(&mut runtime_config).unwrap(),
@@ -357,9 +388,46 @@ mod tests {
         return Zbi { sections: Vec::default(), bootfs, cmdline: "".to_string() };
     }
 
+    // Prepares a ZBI with a nonempty component ID index, collects a `V2ComponentModel` with one
+    // component instance, and checks that the component ID index provided by that component instance
+    // contains the expected entry.
+    #[test]
+    fn collect_component_model_with_id_index() -> Result<()> {
+        let iid = "0".repeat(64);
+        let model = single_v2_component_model(
+            None,
+            Some("/boot/index_path".to_string()),
+            component_id_index::Index {
+                instances: vec![component_id_index::InstanceIdEntry {
+                    instance_id: Some(iid.clone()),
+                    appmgr_moniker: None,
+                    moniker: Some(
+                        PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap(),
+                    ),
+                }],
+                ..component_id_index::Index::default()
+            },
+        )?;
+        V2ComponentModelDataCollector::new().collect(model.clone())?;
+
+        let collection =
+            &model.get::<V2ComponentModel>().expect("failed to find the v2 component model");
+        assert!(collection.errors.is_empty());
+
+        let root_instance = collection.component_model.get_root_instance()?;
+
+        assert_eq!(
+            Some(&iid),
+            root_instance.try_get_component_id_index()?.look_up_moniker(
+                &PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()
+            )
+        );
+        Ok(())
+    }
+
     #[test]
     fn test_map_tree_single_node_default_url() -> Result<()> {
-        let model = single_v2_component_model(None)?;
+        let model = single_v2_component_model(None, None, component_id_index::Index::default())?;
         V2ComponentTreeDataCollector::new().collect(model.clone())?;
 
         let controller = TreeMappingController::default();
@@ -375,7 +443,11 @@ mod tests {
     #[test]
     fn test_map_tree_single_node_custom_url() -> Result<()> {
         let root_url = "fuchsia-boot:///#meta/foo.cm".to_string();
-        let model = single_v2_component_model(Some(root_url.clone()))?;
+        let model = single_v2_component_model(
+            Some(root_url.clone()),
+            None,
+            component_id_index::Index::default(),
+        )?;
         V2ComponentTreeDataCollector::new().collect(model.clone())?;
 
         let controller = TreeMappingController::default();
