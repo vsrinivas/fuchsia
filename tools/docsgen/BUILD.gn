@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
 import("//build/config/build_api_module.gni")
 import("//build/dart/dart_packages.gni")
 import("//build/python/python.gni")
@@ -9,9 +10,11 @@ import("//build/python/python_binary.gni")
 import("//build/python/python_host_test.gni")
 
 group("docsgen") {
+  testonly = true
   deps = [
     ":dart_sdk_docs($host_toolchain)",
-    ":invoke_fidldoc",
+    ":invoke_clidoc($host_toolchain)",
+    ":invoke_fidldoc($host_toolchain)",
   ]
 }
 
@@ -107,5 +110,21 @@ action("invoke_fidldoc") {
     ":${_fidldoc_transforms_script_target}",
     "//build/fidl:sdk_fidl",
     "//tools/fidl/fidldoc($host_toolchain)",
+  ]
+}
+
+compiled_action("invoke_clidoc") {
+  tool = "//tools/clidoc:clidoc_bin"
+  tool_output_name = "clidoc"
+  testonly = true
+  deps = [ "//tools:tools" ]
+  outputs = [ "$target_out_dir/clidoc_test_foo_new.tar.gz" ]
+  args = [
+    "-o",
+    rebase_path("docs/reference/tools/sdk-docs", root_build_dir),
+
+    # TODO (https://fxbug.dev/86553) to rename tarball-dir.
+    "--tarball-dir",
+    rebase_path("$target_out_dir/clidoc_out.tar.gz", root_build_dir),
   ]
 }
