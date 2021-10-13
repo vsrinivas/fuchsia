@@ -134,7 +134,7 @@ TEST(BootsvcIntegrationTest, BootfsExecutability) {
   const char* kExecutableFiles[] = {
       "/boot/pkg/bootsvc/bin/bootsvc", "/boot/pkg/dummy_pkg/lib/dummy.so",
       "/boot/driver/fragment.so",      "/boot/lib/dummy.so",
-      "/boot/kernel/vdso/full",
+      "/boot/kernel/vdso/stable",      "/boot/kernel/vdso/next",
   };
   for (const char* file : kExecutableFiles) {
     fbl::unique_fd fd;

@@ -13,6 +13,7 @@
 
 bool CategoryOutput(const SyscallLibrary& library, Writer* writer);
 bool CUlibHeaderOutput(const SyscallLibrary& library, Writer* writer);
+bool NextPublicDeclarationsOutput(const SyscallLibrary& library, Writer* writer);
 bool GoSyscallsAsm(const SyscallLibrary& library, Writer* writer);
 bool GoSyscallsStubs(const SyscallLibrary& library, Writer* writer);
 bool GoVdsoArm64Calls(const SyscallLibrary& library, Writer* writer);

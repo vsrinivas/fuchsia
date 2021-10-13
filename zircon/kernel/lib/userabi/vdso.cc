@@ -270,14 +270,14 @@ const VDso* VDso::instance_ = NULL;
 
 // Private constructor, can only be called by Create (below).
 VDso::VDso(KernelHandle<VmObjectDispatcher>* vmo_kernel_handle)
-    : RoDso("vdso/full", vdso_image, VDSO_CODE_END, VDSO_CODE_START, vmo_kernel_handle) {}
+    : RoDso("vdso/next", vdso_image, VDSO_CODE_END, VDSO_CODE_START, vmo_kernel_handle) {}
 
 // This is called exactly once, at boot time.
 const VDso* VDso::Create(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles) {
   ASSERT(!instance_);
 
   fbl::AllocChecker ac;
-  VDso* vdso = new (&ac) VDso(vmo_kernel_handles);
+  VDso* vdso = new (&ac) VDso(&vmo_kernel_handles[variant_index(Variant::NEXT)]);
   ASSERT(ac.check());
 
   // Sanity-check that it's the exact vDSO image the kernel was compiled for.
@@ -289,7 +289,7 @@ const VDso* VDso::Create(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles) {
   PatchTimeSyscalls(VDsoMutator{vdso->vmo()->vmo()});
 
   DEBUG_ASSERT(!(vdso->vmo_rights() & ZX_RIGHT_WRITE));
-  for (size_t v = static_cast<size_t>(Variant::FULL) + 1; v < static_cast<size_t>(Variant::COUNT);
+  for (size_t v = static_cast<size_t>(Variant::STABLE); v < static_cast<size_t>(Variant::COUNT);
        ++v)
     vdso->CreateVariant(static_cast<Variant>(v), &vmo_kernel_handles[v]);
 
@@ -301,7 +301,7 @@ uintptr_t VDso::base_address(const fbl::RefPtr<VmMapping>& code_mapping) {
   return code_mapping ? code_mapping->base() - VDSO_CODE_START : 0;
 }
 
-// Each vDSO variant VMO is made via a COW clone of the main/default vDSO
+// Each vDSO variant VMO is made via a COW clone of the next vDSO
 // VMO.  A variant can block some system calls, by syscall category.
 // This works by modifying the symbol table entries to make the symbols
 // invisible to dynamic linking (STB_LOCAL) and then clobbering the code
@@ -313,9 +313,15 @@ uintptr_t VDso::base_address(const fbl::RefPtr<VmMapping>& code_mapping) {
 // entry with that PC value and hence can never pass the vDSO enforcement
 // test.
 void VDso::CreateVariant(Variant variant, KernelHandle<VmObjectDispatcher>* vmo_kernel_handle) {
-  DEBUG_ASSERT(variant > Variant::FULL);
+  DEBUG_ASSERT(variant >= Variant::STABLE);
   DEBUG_ASSERT(variant < Variant::COUNT);
   DEBUG_ASSERT(!variant_vmo_[variant_index(variant)]);
+
+  if (variant == Variant::NEXT) {
+    // The next variant already has a VMO.
+    variant_vmo_[variant_index(variant)] = vmo_kernel_handle->dispatcher();
+    return;
+  }
 
   fbl::RefPtr<VmObject> new_vmo;
   zx_status_t status = vmo()->CreateChild(ZX_VMO_CHILD_SNAPSHOT, 0, size(), false, &new_vmo);
@@ -325,6 +331,11 @@ void VDso::CreateVariant(Variant variant, KernelHandle<VmObjectDispatcher>* vmo_
 
   const char* name = nullptr;
   switch (variant) {
+    case Variant::STABLE:
+      name = "vdso/stable";
+      block_next_syscalls(mutator);
+      break;
+
     case Variant::TEST1:
       name = "vdso/test1";
       block_test_category1_syscalls(mutator);
@@ -336,7 +347,7 @@ void VDso::CreateVariant(Variant variant, KernelHandle<VmObjectDispatcher>* vmo_
       break;
 
     // No default case so the compiler will warn about new enum entries.
-    case Variant::FULL:
+    case Variant::NEXT:
     case Variant::COUNT:
       PANIC("VDso::CreateVariant called with bad variant");
   }

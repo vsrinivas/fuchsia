@@ -17,9 +17,9 @@
 namespace userboot {
 
 // This is only here for the count.  No userboot code cares which is which
-// except that the full (default) variant is first and that kLastVdso (below)
+// except that the stable (default) variant is first and that kLastVdso (below)
 // is correct.
-enum class VdsoVariant { FULL, TEST1, TEST2, COUNT };
+enum class VdsoVariant { STABLE, NEXT, TEST1, TEST2, COUNT };
 
 // The data of the bootstrap message is the kernel command line,
 // as a sequence of '\0'-terminated words followed by a final '\0'.

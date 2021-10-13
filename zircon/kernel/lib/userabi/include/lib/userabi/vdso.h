@@ -21,8 +21,8 @@ class VDso : public RoDso {
   // The created VDso will retain RefPtrs to the created VmObjectDispatchers,
   // but ownership of the wrapping handles are given to the caller.
   //
-  // The RoDso VMO is created in vmo_kernel_handles[0], with the VDso variants
-  // following.
+  // The RoDso VMO is created in vmo_kernel_handles[Variant::NEXT]
+  // with the VDso variants in the other slots.
   static const VDso* Create(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles);
 
   static bool vmo_is_vdso(const fbl::RefPtr<VmObject>& vmo) {
@@ -62,11 +62,11 @@ class VDso : public RoDso {
   }
 
   static constexpr size_t variant_index(Variant v) {
-    DEBUG_ASSERT(v > Variant::FULL);
-    return static_cast<size_t>(v) - 1;
+    DEBUG_ASSERT(v >= Variant::STABLE && v < Variant::COUNT);
+    return static_cast<size_t>(v);
   }
 
-  fbl::RefPtr<VmObjectDispatcher> variant_vmo_[static_cast<size_t>(Variant::COUNT) - 1];
+  fbl::RefPtr<VmObjectDispatcher> variant_vmo_[static_cast<size_t>(Variant::COUNT)];
 
   static const VDso* instance_;
 };

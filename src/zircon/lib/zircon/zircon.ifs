@@ -123,6 +123,7 @@ Symbols:
   - { Name: _zx_stream_seek, Type: Func }
   - { Name: _zx_stream_writev, Type: Func }
   - { Name: _zx_stream_writev_at, Type: Func }
+  - { Name: _zx_syscall_next_1, Type: Func }
   - { Name: _zx_syscall_test_0, Type: Func }
   - { Name: _zx_syscall_test_1, Type: Func }
   - { Name: _zx_syscall_test_2, Type: Func }
@@ -310,6 +311,7 @@ Symbols:
   - { Name: zx_stream_seek, Type: Func, Weak: true }
   - { Name: zx_stream_writev, Type: Func, Weak: true }
   - { Name: zx_stream_writev_at, Type: Func, Weak: true }
+  - { Name: zx_syscall_next_1, Type: Func, Weak: true }
   - { Name: zx_syscall_test_0, Type: Func, Weak: true }
   - { Name: zx_syscall_test_1, Type: Func, Weak: true }
   - { Name: zx_syscall_test_2, Type: Func, Weak: true }

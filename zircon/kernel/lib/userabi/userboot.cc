@@ -361,7 +361,7 @@ void userboot_init(uint) {
         Handle::Make(ktl::move(vdso_kernel_handles[i]), vdso->vmo_rights()).release();
     ASSERT(handles[kFirstVdso + i]);
   }
-  DEBUG_ASSERT(handles[kFirstVdso]->dispatcher() == vdso->vmo());
+  DEBUG_ASSERT(handles[kFirstVdso + 1]->dispatcher() == vdso->vmo());
   bootstrap_vmos(handles);
 
   // Make the channel that will hold the message.

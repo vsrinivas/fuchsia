@@ -25,6 +25,7 @@ struct CommandLineOptions {
   std::optional<std::string> json;
   std::optional<std::string> kernel_header;
   std::optional<std::string> kernel_wrappers;
+  std::optional<std::string> next_public_header;
   std::optional<std::string> private_header;
   std::optional<std::string> public_header;
   std::optional<std::string> rust;
@@ -67,6 +68,9 @@ constexpr const char kGoVdsoX86CallsHelp[] = R"(  --go-vdso-x86-calls=FILENAME
 
 constexpr const char kJsonHelp[] = R"(  --json=FILENAME
     The output name for the .json syscall definitions.)";
+
+constexpr const char kNextPublicHeaderHelp[] = R"(  --next-public-header=FILENAME
+    The output name for the .inc file used for the next public vDSO API header.)";
 
 constexpr const char kKernelHeaderHelp[] = R"(  --kernel-header=FILENAME
     The output name for the .inc file used for kernel declarations.)";
@@ -116,6 +120,8 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("json", 0, kJsonHelp, &CommandLineOptions::json);
   parser.AddSwitch("kernel-header", 0, kKernelHeaderHelp, &CommandLineOptions::kernel_header);
   parser.AddSwitch("kernel-wrappers", 0, kKernelWrappersHelp, &CommandLineOptions::kernel_wrappers);
+  parser.AddSwitch("next-public-header", 0, kNextPublicHeaderHelp,
+                   &CommandLineOptions::next_public_header);
   parser.AddSwitch("private-header", 0, kPrivateHeaderHelp, &CommandLineOptions::private_header);
   parser.AddSwitch("public-header", 0, kPublicHeaderHelp, &CommandLineOptions::public_header);
   parser.AddSwitch("rust", 0, kRustHelp, &CommandLineOptions::rust);
@@ -178,6 +184,7 @@ int main(int argc, const char* argv[]) {
   } backends[] = {
       {&options.category, CategoryOutput},
       {&options.c_ulib_header, CUlibHeaderOutput},
+      {&options.next_public_header, NextPublicDeclarationsOutput},
       {&options.go_syscall_arm64_asm, GoSyscallsAsm},
       {&options.go_syscall_stubs, GoSyscallsStubs},
       {&options.go_syscall_x86_asm, GoSyscallsAsm},

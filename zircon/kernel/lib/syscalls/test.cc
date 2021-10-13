@@ -30,6 +30,10 @@ zx_status_t sys_syscall_test_7(int a, int b, int c, int d, int e, int f, int g) 
 zx_status_t sys_syscall_test_8(int a, int b, int c, int d, int e, int f, int g, int h) {
   return a + b + c + d + e + f + g + h;
 }
+
+// zx_syscall_next_1
+zx_status_t sys_syscall_next_1(int arg) { return arg > 50 ? ZX_ERR_INVALID_ARGS : ZX_OK; }
+
 // zx_status_t zx_syscall_test_wrapper
 zx_status_t sys_syscall_test_wrapper(int a, int b, int c) {
   if (a < 0 || b < 0 || c < 0) {

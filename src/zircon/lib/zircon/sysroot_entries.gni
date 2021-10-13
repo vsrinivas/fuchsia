@@ -44,7 +44,7 @@ sysroot_vdso_entries = [
     sdk = {
       include_dir = _rebased_gen_include_dir
       no_export = true  # Never export these to the SDK.
-      headers = []
+      headers = [ "zircon/syscalls/internal/cdecls-next.inc" ]
       if (!exclude_testonly_syscalls) {
         headers += [ "zircon/syscalls/internal/testonly-cdecls.inc" ]
       }

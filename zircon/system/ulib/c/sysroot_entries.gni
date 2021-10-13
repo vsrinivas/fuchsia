@@ -74,6 +74,7 @@ sysroot_uninstrumented_libc_entries = [
         "zircon/boot/sysconfig.h",
         "zircon/compiler.h",
         "zircon/errors.h",
+        "zircon/syscalls-next.h",
         "zircon/features.h",
         "zircon/fidl.h",
         "zircon/hw/debug/arm64.h",

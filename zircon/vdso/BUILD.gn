@@ -107,6 +107,10 @@ public_generated = [
     args = [ "--public-header" ]
     outputs = [ "$public_gen_dir/internal/cdecls.inc" ]
   },
+  {
+    args = [ "--next-public-header" ]
+    outputs = [ "$public_gen_dir/internal/cdecls-next.inc" ]
+  },
 ]
 
 if (!exclude_testonly_syscalls) {

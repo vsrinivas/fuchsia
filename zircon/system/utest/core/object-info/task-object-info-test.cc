@@ -36,10 +36,10 @@ TEST(TaskGetInfoTest, InfoStatsSmokeTest) {
       zx::process::self()->get_info(ZX_INFO_TASK_STATS, &info, sizeof(info), nullptr, nullptr));
 
   EXPECT_GT(info.mem_private_bytes, 0u);
-  EXPECT_GT(info.mem_shared_bytes, 0u);
+  EXPECT_GE(info.mem_shared_bytes, 0u);
   EXPECT_GE(info.mem_mapped_bytes, info.mem_private_bytes + info.mem_shared_bytes);
-  EXPECT_GT(info.mem_scaled_shared_bytes, 0u);
-  EXPECT_GT(info.mem_shared_bytes, info.mem_scaled_shared_bytes);
+  EXPECT_GE(info.mem_scaled_shared_bytes, 0u);
+  EXPECT_GE(info.mem_shared_bytes, info.mem_scaled_shared_bytes);
 }
 
 constexpr auto handle_provider = []() -> const zx::process& {

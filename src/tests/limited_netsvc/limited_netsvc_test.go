@@ -57,7 +57,7 @@ func attemptNetcp(t *testing.T, shouldWork bool) {
 	cmdWithTimeout(
 		t, shouldWork,
 		toolPath(t, "netcp"),
-		defaultNodename+":/boot/kernel/vdso/full",
+		defaultNodename+":/boot/kernel/vdso/stable",
 		"/tmp/vdso")
 }
 

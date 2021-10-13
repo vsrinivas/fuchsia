@@ -128,6 +128,7 @@ def main():
     all_styles = (
         'c-ulib-header',
         'category',
+        'next-public-header',
         'go-syscall-arm64-asm',
         'go-syscall-stubs',
         'go-syscall-x86-asm',

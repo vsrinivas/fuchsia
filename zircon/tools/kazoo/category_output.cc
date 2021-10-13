@@ -9,7 +9,7 @@ bool CategoryOutput(const SyscallLibrary& library, Writer* writer) {
   CopyrightHeaderWithCppComments(writer);
 
   const char* kCategories[] = {
-      "blocking", "const", "noreturn", "test_category1", "test_category2", "vdsocall",
+      "blocking", "const", "next", "noreturn", "test_category1", "test_category2", "vdsocall",
   };
 
   for (const char* category : kCategories) {

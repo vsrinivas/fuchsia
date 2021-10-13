@@ -139,7 +139,7 @@ generated_file("sysroot-entries-json") {
 #     indicate that the set of headers described in the current entry should
 #     not be exported to the SDK sysroot (though they will still be copied
 #     to the platform's sysroot). This is useful for <zircon/device/*.h>
-#     headers, as well as `testonly-cdecls.inc`.
+#     headers, as well as `cdecls-next.inc` and `testonly-cdecls.inc`.
 #
 # Otherwise, if `include_dir` is _not_ present:
 #

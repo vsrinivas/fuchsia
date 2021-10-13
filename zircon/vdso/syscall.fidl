@@ -97,6 +97,13 @@ protocol syscall {
         status status;
     });
 
+    @next
+    next_1(struct {
+        arg int32;
+    }) -> (struct {
+        status status;
+    });
+
     @testonly
     syscall_test_wrapper(struct {
         a int32;

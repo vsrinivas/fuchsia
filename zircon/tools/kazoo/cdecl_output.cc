@@ -162,7 +162,26 @@ bool PublicDeclarationsOutput(const SyscallLibrary& library, Writer* writer) {
 )");
 
   for (const auto& syscall : library.syscalls()) {
-    if (!syscall->HasAttribute("internal") && !syscall->HasAttribute("testonly")) {
+    if (!syscall->HasAttribute("internal") && !syscall->HasAttribute("testonly") &&
+        !syscall->HasAttribute("next")) {
+      CDeclarationMacro(*syscall, "_ZX_SYSCALL_DECL", GetCUserModeName, writer);
+    }
+  }
+
+  return true;
+}
+
+bool NextPublicDeclarationsOutput(const SyscallLibrary& library, Writer* writer) {
+  CopyrightHeaderWithCppComments(writer);
+
+  writer->Puts(R"(#ifndef _ZX_SYSCALL_DECL
+#error "<zircon/syscalls-next.h> is the public API header"
+#endif
+
+)");
+
+  for (const auto& syscall : library.syscalls()) {
+    if (!syscall->HasAttribute("internal") && syscall->HasAttribute("next")) {
       CDeclarationMacro(*syscall, "_ZX_SYSCALL_DECL", GetCUserModeName, writer);
     }
   }
