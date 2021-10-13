@@ -118,7 +118,7 @@ compiled_action("invoke_clidoc") {
   tool_output_name = "clidoc"
   testonly = true
   deps = [ "//tools:tools" ]
-  outputs = [ "$target_out_dir/clidoc_test_foo_new.tar.gz" ]
+  outputs = [ "$target_out_dir/clidoc_out.tar.gz" ]
   args = [
     "-o",
     rebase_path("docs/reference/tools/sdk-docs", root_build_dir),
