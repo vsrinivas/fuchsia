@@ -81,7 +81,7 @@ if $check; then
 
   # ignore stderr in case device-finder is not built yet
   deviceaddr="$(get-fuchsia-device-addr 2>/dev/null)"
-  deviceport="$(get-device-ssh-port 2>/dev/null)"
+  deviceport="$(get-fuchsia-device-port 2>/dev/null)"
   echo "Device address: ${deviceaddr:-"unknown"}"
   echo "Device SSH port: ${deviceport:-"default"}"
   echo "SSH config: ${conffile}"
@@ -99,7 +99,7 @@ if $check; then
 fi
 
 args=()
-device_port="$(get-device-ssh-port)" || exit $?
+device_port="$(get-fuchsia-device-port)" || exit $?
 if [[ -n "${device_port}" ]]; then
   args+=("-p" "${device_port}")
 fi
