@@ -1,14 +1,12 @@
 # Fuchsia
 
-Pink + Purple == Fuchsia (a new operating system)
-
 ## What is Fuchsia?
 
-Fuchsia is a modular, capability-based operating system. Fuchsia runs on modern
+Fuchsia an open source, general purpose operating system supporting modern
 64-bit Intel and ARM processors.
 
-Fuchsia is an open source project with a [code of conduct](CODE_OF_CONDUCT.md)
-that we expect everyone who interacts with the project to respect.
+We expect everyone interacting with our project to respect our
+[code of conduct](CODE_OF_CONDUCT.md).
 
 [Read more about Fuchsia's principles](https://fuchsia.dev/fuchsia-src/concepts.md).
 
