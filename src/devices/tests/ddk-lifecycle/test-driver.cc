@@ -32,7 +32,9 @@ class TestLifecycleDriver : public DeviceType {
   explicit TestLifecycleDriver(zx_device_t* parent) : DeviceType(parent) {}
   ~TestLifecycleDriver() {}
 
-  zx_status_t Bind() { return DdkAdd("ddk-lifecycle-test"); }
+  zx_status_t Bind() {
+    return DdkAdd(ddk::DeviceAddArgs("ddk-lifecycle-test").set_flags(DEVICE_ADD_NON_BINDABLE));
+  }
 
   // Device protocol implementation.
   void DdkChildPreRelease(void* child_ctx);

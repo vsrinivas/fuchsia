@@ -24,8 +24,9 @@ zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent,
                                              zx::channel instance_client) {
   auto device = std::make_unique<TestLifecycleDriverChild>(parent, std::move(lifecycle_client));
 
-  zx_status_t status =
-      device->DdkAdd(ddk::DeviceAddArgs("child").set_client_remote(std::move(instance_client)));
+  zx_status_t status = device->DdkAdd(ddk::DeviceAddArgs("child")
+                                          .set_flags(DEVICE_ADD_NON_BINDABLE)
+                                          .set_client_remote(std::move(instance_client)));
   if (status == ZX_OK) {
     // devmgr is now in charge of the memory for dev
     __UNUSED auto ptr = device.release();

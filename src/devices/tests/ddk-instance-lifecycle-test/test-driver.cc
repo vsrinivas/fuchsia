@@ -50,7 +50,7 @@ void TestLifecycleDriver::CreateDevice(CreateDeviceRequestView request,
 
 zx_status_t TestLifecycleBind(void* ctx, zx_device_t* device) {
   auto dev = std::make_unique<TestLifecycleDriver>(device);
-  auto status = dev->DdkAdd("instance-test");
+  auto status = dev->DdkAdd(ddk::DeviceAddArgs("instance-test").set_flags(DEVICE_ADD_NON_BINDABLE));
   if (status == ZX_OK) {
     // devmgr is now in charge of the memory for dev
     __UNUSED auto ptr = dev.release();

@@ -18,7 +18,7 @@ namespace pci {
 zx_status_t FakeBusDriver::Create(zx_device_t* parent, const char* name, uint8_t start_bus,
                                   uint8_t end_bus) {
   auto bus_driver = std::unique_ptr<FakeBusDriver>(new FakeBusDriver(parent, start_bus, end_bus));
-  zx_status_t st = bus_driver->DdkAdd(name);
+  zx_status_t st = bus_driver->DdkAdd(ddk::DeviceAddArgs(name).set_flags(DEVICE_ADD_NON_BINDABLE));
   if (st != ZX_OK) {
     return st;
   }

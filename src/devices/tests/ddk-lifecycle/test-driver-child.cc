@@ -36,7 +36,8 @@ zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent, bool complete_
 
   *out_device = device;
 
-  zx_status_t status = device->DdkAdd("ddk-lifecycle-test-child");
+  zx_status_t status = device->DdkAdd(
+      ddk::DeviceAddArgs("ddk-lifecycle-test-child").set_flags(DEVICE_ADD_NON_BINDABLE));
   if (status != ZX_OK) {
     out_device->reset();
     return status;

@@ -65,7 +65,9 @@ class TestRootDevice : public TestRootDeviceType {
  public:
   TestRootDevice(zx_device_t* parent) : TestRootDeviceType(parent) {}
 
-  zx_status_t Bind() { return DdkAdd("test"); }
+  zx_status_t Bind() {
+    return DdkAdd(ddk::DeviceAddArgs("test").set_flags(DEVICE_ADD_NON_BINDABLE));
+  }
 
   // Methods required by the ddk mixins
   void DdkRelease() { delete this; }
