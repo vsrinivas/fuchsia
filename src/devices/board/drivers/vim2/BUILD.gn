@@ -15,6 +15,126 @@ driver_bind_rules("vim2-bind") {
   ]
 }
 
+driver_bind_rules("display_bind") {
+  rules = "bind/display.bind"
+  header_output = "display_bind.h"
+  bind_output = "display_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.s912",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.khadas.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.sysmem",
+  ]
+}
+
+driver_bind_rules("aml_emmc_bind") {
+  rules = "bind/aml_emmc.bind"
+  header_output = "aml_emmc_bind.h"
+  bind_output = "aml_emmc_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.s912",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("ethernet_mac_bind") {
+  rules = "bind/ethernet_mac.bind"
+  header_output = "ethernet_mac_bind.h"
+  bind_output = "ethernet_mac_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.s912",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("dwmac_bind") {
+  rules = "bind/dwmac.bind"
+  header_output = "dwmac_bind.h"
+  bind_output = "dwmac_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.designware.platform",
+    "//src/devices/bind/fuchsia.ethernet",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("gpio_light_bind") {
+  rules = "bind/gpio_light.bind"
+  header_output = "gpio_light_bind.h"
+  bind_output = "gpio_light_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.s912",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("mali_bind") {
+  rules = "bind/mali.bind"
+  header_output = "mali_bind.h"
+  bind_output = "mali_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+  ]
+}
+
+driver_bind_rules("aml_sdio_bind") {
+  rules = "bind/aml_sdio.bind"
+  header_output = "aml_sdio_bind.h"
+  bind_output = "aml_sdio_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.s912",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("wifi_bind") {
+  rules = "bind/wifi.bind"
+  header_output = "wifi_bind.h"
+  bind_output = "wifi_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.s912",
+    "//src/devices/bind/fuchsia.broadcom.sdio",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.sdmmc",
+  ]
+}
+
+driver_bind_rules("vim_thermal_bind") {
+  rules = "bind/vim_thermal.bind"
+  header_output = "vim_thermal_bind.h"
+  bind_output = "vim_thermal_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.s912",
+    "//src/devices/bind/fuchsia.gpio",
+  ]
+}
+
+driver_bind_rules("aml_video_bind") {
+  rules = "bind/aml_video.bind"
+  header_output = "aml_video_bind.h"
+  bind_output = "aml_video_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.meson",
+    "//src/devices/bind/fuchsia.clock",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.sysmem",
+  ]
+}
+
 fuchsia_driver("vim2-driver") {
   output_name = "vim2"
   configs += [
@@ -41,7 +161,17 @@ fuchsia_driver("vim2-driver") {
     "vim.cc",
   ]
   deps = [
+    ":aml_emmc_bind_header",
+    ":aml_sdio_bind_header",
+    ":aml_video_bind_header",
+    ":display_bind_header",
+    ":dwmac_bind_header",
+    ":ethernet_mac_bind_header",
+    ":gpio_light_bind_header",
+    ":mali_bind_header",
     ":vim2-bind",
+    ":vim_thermal_bind_header",
+    ":wifi_bind_header",
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",

@@ -1,0 +1,141 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+library fuchsia.amlogic.platform.s912;
+
+// Values taken from <soc/aml-s912/s912-gpio.h>
+
+uint GPIOX_PIN_ID {
+    PIN_0 = 0,
+    PIN_1 = 1,
+    PIN_2 = 2,
+    PIN_3 = 3,
+    PIN_4 = 4,
+    PIN_5 = 5,
+    PIN_6 = 6,
+    PIN_7 = 7,
+    PIN_8 = 8,
+    PIN_9 = 9,
+    PIN_10 = 10,
+    PIN_11 = 11,
+    PIN_12 = 12,
+    PIN_13 = 13,
+    PIN_14 = 14,
+    PIN_15 = 15,
+    PIN_16 = 16,
+    PIN_17 = 17,
+    PIN_18 = 18,
+};
+
+uint GPIODV_PIN_ID {
+    PIN_0 = 32,
+    PIN_1 = 33,
+    PIN_2 = 34,
+    PIN_3 = 35,
+    PIN_4 = 36,
+    PIN_5 = 37,
+    PIN_6 = 38,
+    PIN_7 = 39,
+    PIN_8 = 40,
+    PIN_9 = 41,
+    PIN_10 = 42,
+    PIN_11 = 43,
+    PIN_12 = 44,
+    PIN_13 = 45,
+    PIN_14 = 46,
+    PIN_15 = 47,
+    PIN_16 = 48,
+    PIN_17 = 49,
+    PIN_18 = 50,
+    PIN_19 = 51,
+    PIN_20 = 52,
+    PIN_21 = 53,
+    PIN_22 = 54,
+    PIN_23 = 55,
+    PIN_24 = 56,
+    PIN_25 = 57,
+    PIN_26 = 58,
+    PIN_27 = 59,
+    PIN_28 = 60,
+    PIN_29 = 61,
+};
+
+uint GPIOH_PIN_ID {
+    PIN_0 = 64,
+    PIN_1 = 65,
+    PIN_2 = 66,
+    PIN_3 = 67,
+    PIN_4 = 68,
+    PIN_5 = 69,
+    PIN_6 = 70,
+    PIN_7 = 71,
+    PIN_8 = 72,
+    PIN_9 = 73,
+};
+
+uint GPIOBOOT_PIN_ID {
+    PIN_0 = 96,
+    PIN_1 = 97,
+    PIN_2 = 98,
+    PIN_3 = 99,
+    PIN_4 = 100,
+    PIN_5 = 101,
+    PIN_6 = 102,
+    PIN_7 = 103,
+    PIN_8 = 104,
+    PIN_9 = 105,
+    PIN_10 = 106,
+    PIN_11 = 107,
+    PIN_12 = 108,
+    PIN_13 = 109,
+    PIN_14 = 110,
+    PIN_15 = 111,
+};
+
+uint GPIOCARD_PIN_ID {
+    PIN_0 = 128,
+    PIN_1 = 129,
+    PIN_2 = 130,
+    PIN_3 = 131,
+    PIN_4 = 132,
+    PIN_5 = 133,
+    PIN_6 = 134,
+};
+
+uint GPIOCLK_PIN_ID {
+    PIN_0 = 160,
+    PIN_1 = 161,
+};
+
+uint GPIOZ_PIN_ID {
+    PIN_0 = 192,
+    PIN_1 = 193,
+    PIN_2 = 194,
+    PIN_3 = 195,
+    PIN_4 = 196,
+    PIN_5 = 197,
+    PIN_6 = 198,
+    PIN_7 = 199,
+    PIN_8 = 200,
+    PIN_9 = 201,
+    PIN_10 = 202,
+    PIN_11 = 203,
+    PIN_12 = 204,
+    PIN_13 = 205,
+    PIN_14 = 206,
+    PIN_15 = 207,
+};
+
+uint GPIOAO_PIN_ID {
+    PIN_0 = 224,
+    PIN_1 = 225,
+    PIN_2 = 226,
+    PIN_3 = 227,
+    PIN_4 = 228,
+    PIN_5 = 229,
+    PIN_6 = 230,
+    PIN_7 = 231,
+    PIN_8 = 232,
+    PIN_9 = 233,
+};

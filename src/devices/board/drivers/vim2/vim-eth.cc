@@ -14,6 +14,8 @@
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
 
+#include "src/devices/board/drivers/vim2/dwmac_bind.h"
+#include "src/devices/board/drivers/vim2/ethernet_mac_bind.h"
 #include "vim-gpios.h"
 #include "vim.h"
 
@@ -120,46 +122,8 @@ static pbus_dev_t dwmac_dev = []() {
 }();
 
 // Composite binding rules for ethernet board driver.
-const zx_bind_inst_t i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 1),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x18),
-};
-static const zx_bind_inst_t gpio_reset_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_ETH_MAC_RST),
-};
-static const zx_bind_inst_t gpio_int_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_ETH_MAC_INTR),
-};
-static const device_fragment_part_t i2c_fragment[] = {
-    {countof(i2c_match), i2c_match},
-};
-static const device_fragment_part_t gpio_reset_fragment[] = {
-    {countof(gpio_reset_match), gpio_reset_match},
-};
-static const device_fragment_part_t gpio_int_fragment[] = {
-    {countof(gpio_int_match), gpio_int_match},
-};
-static const device_fragment_t eth_fragments[] = {
-    {"i2c", countof(i2c_fragment), i2c_fragment},
-    {"gpio-int", countof(gpio_int_fragment), gpio_int_fragment},
-    {"gpio-reset", countof(gpio_reset_fragment), gpio_reset_fragment},
-};
 
 // Composite binding rules for dwmac.
-static const zx_bind_inst_t eth_board_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_ETH_BOARD),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_DESIGNWARE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_DESIGNWARE_ETH_MAC),
-};
-static const device_fragment_part_t eth_board_fragment[] = {
-    {std::size(eth_board_match), eth_board_match},
-};
-static const device_fragment_t dwmac_fragments[] = {
-    {"eth-board", std::size(eth_board_fragment), eth_board_fragment},
-};
 
 zx_status_t Vim::EthInit() {
   // setup pinmux for RGMII connections
@@ -180,16 +144,17 @@ zx_status_t Vim::EthInit() {
   gpio_impl_.SetAltFunction(S912_ETH_TXD3, S912_ETH_TXD3_FN);
 
   // Add a composite device for ethernet board in a new devhost.
-  auto status = pbus_.CompositeDeviceAdd(&eth_board_dev, reinterpret_cast<uint64_t>(eth_fragments),
-                                         std::size(eth_fragments), nullptr);
+  auto status =
+      pbus_.AddComposite(&eth_board_dev, reinterpret_cast<uint64_t>(ethernet_mac_fragments),
+                         std::size(ethernet_mac_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
 
   // Add a composite device for dwmac driver in the ethernet board driver's devhost.
-  status = pbus_.CompositeDeviceAdd(&dwmac_dev, reinterpret_cast<uint64_t>(dwmac_fragments),
-                                    std::size(dwmac_fragments), "eth-board");
+  status = pbus_.AddComposite(&dwmac_dev, reinterpret_cast<uint64_t>(dwmac_fragments),
+                              std::size(dwmac_fragments), "eth-board");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;

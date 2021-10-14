@@ -1,0 +1,23 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+composite gpio_light;
+
+using fuchsia.platform;
+using fuchsia.gpio;
+using fuchsia.amlogic.platform.s912;
+
+primary node "pdev" {
+    fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC;
+    fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC;
+    fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.platform.BIND_PLATFORM_DEV_DID.GPIO_LIGHT;
+    fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+node "gpio" {
+    fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.s912.GPIOAO_PIN_ID.PIN_9;  // GPIO_SYS_LED
+}
+

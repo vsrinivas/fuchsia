@@ -16,6 +16,7 @@
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
 
+#include "src/devices/board/drivers/vim2/vim_thermal_bind.h"
 #include "vim-gpios.h"
 #include "vim.h"
 
@@ -160,32 +161,6 @@ static fuchsia_hardware_thermal::wire::ThermalDeviceInfo aml_vim2_config = {
 };
 
 // Composite binding rules for thermal driver.
-static const zx_bind_inst_t scpi_match[] = {
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SCPI),
-};
-static const zx_bind_inst_t fan0_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_THERMAL_FAN_O),
-};
-static const zx_bind_inst_t fan1_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_THERMAL_FAN_1),
-};
-static const device_fragment_part_t scpi_fragment[] = {
-    {std::size(scpi_match), scpi_match},
-};
-static const device_fragment_part_t fan0_gpio_fragment[] = {
-    {std::size(fan0_gpio_match), fan0_gpio_match},
-};
-static const device_fragment_part_t fan1_gpio_fragment[] = {
-    {std::size(fan1_gpio_match), fan1_gpio_match},
-};
-static const device_fragment_t fragments[] = {
-    {"scpi", std::size(scpi_fragment), scpi_fragment},
-    {"gpio-fan-0", std::size(fan0_gpio_fragment), fan0_gpio_fragment},
-    {"gpio-fan-1", std::size(fan1_gpio_fragment), fan1_gpio_fragment},
-};
 
 zx_status_t Vim::ThermalInit() {
   fidl::OwnedEncodedMessage<fuchsia_hardware_thermal::wire::ThermalDeviceInfo> encoded_metadata(
@@ -231,8 +206,8 @@ zx_status_t Vim::ThermalInit() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .fragments = fragments,
-      .fragments_count = countof(fragments),
+      .fragments = vim_thermal_fragments,
+      .fragments_count = countof(vim_thermal_fragments),
       .primary_fragment = "scpi",
       .spawn_colocated = true,
       .metadata_list = nullptr,

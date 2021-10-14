@@ -1,0 +1,38 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+composite aml_video;
+
+using fuchsia.platform;
+using fuchsia.amlogic.platform;
+using fuchsia.sysmem;
+using fuchsia.clock;
+using fuchsia.amlogic.platform.meson;
+
+primary node "pdev" {
+    fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+    fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.S912;
+    fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.VIDEO;
+    fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+node "sysmem" {
+    fuchsia.BIND_PROTOCOL == fuchsia.sysmem.BIND_PROTOCOL.DEVICE;
+}
+
+node "canvas" {
+    fuchsia.BIND_PROTOCOL == fuchsia.amlogic.platform.BIND_PROTOCOL.CANVAS;
+}
+
+node "clock-dos-vdec" {
+    fuchsia.BIND_PROTOCOL == fuchsia.clock.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_CLOCK_ID == fuchsia.amlogic.platform.meson.AXG_CLK_ID.CLK_DOS_GCLK_VDEC;
+}
+
+node "clock-dos" {
+    fuchsia.BIND_PROTOCOL == fuchsia.clock.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_CLOCK_ID == fuchsia.amlogic.platform.meson.AXG_CLK_ID.CLK_AXG_DOS;
+}
+

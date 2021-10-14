@@ -14,6 +14,7 @@
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
 
+#include "src/devices/board/drivers/vim2/aml_emmc_bind.h"
 #include "vim.h"
 
 namespace vim {
@@ -66,17 +67,6 @@ static const pbus_boot_metadata_t emmc_boot_metadata[] = {
     },
 };
 
-static const zx_bind_inst_t gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, S912_EMMC_RST),
-};
-static const device_fragment_part_t gpio_fragment[] = {
-    {countof(gpio_match), gpio_match},
-};
-static const device_fragment_t fragments[] = {
-    {"gpio", countof(gpio_fragment), gpio_fragment},
-};
-
 zx_status_t Vim::EmmcInit() {
   zx_status_t status;
 
@@ -110,8 +100,8 @@ zx_status_t Vim::EmmcInit() {
   gpio_impl_.SetAltFunction(S912_EMMC_CMD, S912_EMMC_CMD_FN);
   gpio_impl_.SetAltFunction(S912_EMMC_DS, S912_EMMC_DS_FN);
 
-  status = pbus_.CompositeDeviceAdd(&emmc_dev, reinterpret_cast<uint64_t>(fragments),
-                                    countof(fragments), nullptr);
+  status = pbus_.AddComposite(&emmc_dev, reinterpret_cast<uint64_t>(aml_emmc_fragments),
+                              countof(aml_emmc_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "SdEmmcInit could not add emmc_dev: %d", status);
     return status;

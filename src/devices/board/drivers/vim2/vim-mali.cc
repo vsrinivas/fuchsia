@@ -10,6 +10,7 @@
 #include <soc/aml-common/aml-registers.h>
 #include <soc/aml-s912/s912-hw.h>
 
+#include "src/devices/board/drivers/vim2/mali_bind.h"
 #include "vim.h"
 
 namespace vim {
@@ -46,17 +47,6 @@ static pbus_bti_t mali_btis[] = {
     },
 };
 
-static const zx_bind_inst_t reset_register_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
-    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_MALI_RESET),
-};
-static const device_fragment_part_t reset_register_fragment[] = {
-    {countof(reset_register_match), reset_register_match},
-};
-static const device_fragment_t mali_fragments[] = {
-    {"register-reset", countof(reset_register_fragment), reset_register_fragment},
-};
-
 zx_status_t Vim::MaliInit() {
   pbus_dev_t mali_dev = {};
   mali_dev.name = "mali";
@@ -74,8 +64,8 @@ zx_status_t Vim::MaliInit() {
   mali_btis[0].iommu_index = 0;
   mali_btis[0].bti_id = BTI_MALI;
 
-  zx_status_t status = pbus_.CompositeDeviceAdd(
-      &mali_dev, reinterpret_cast<uint64_t>(mali_fragments), countof(mali_fragments), nullptr);
+  zx_status_t status = pbus_.AddComposite(&mali_dev, reinterpret_cast<uint64_t>(mali_fragments),
+                                          countof(mali_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "CompositeDeviceAdd failed: %d", status);
     return status;

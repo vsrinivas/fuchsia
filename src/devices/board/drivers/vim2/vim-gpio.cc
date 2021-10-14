@@ -16,6 +16,7 @@
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
 
+#include "src/devices/board/drivers/vim2/gpio_light_bind.h"
 #include "vim-gpios.h"
 #include "vim.h"
 
@@ -146,17 +147,6 @@ zx_status_t Vim::GpioInit() {
       },
   };
 
-  const zx_bind_inst_t gpio_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-      BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SYS_LED),
-  };
-  const device_fragment_part_t gpio_fragment[] = {
-      {std::size(gpio_match), gpio_match},
-  };
-  const device_fragment_t fragments[] = {
-      {"gpio", std::size(gpio_fragment), gpio_fragment},
-  };
-
   pbus_dev_t light_dev = {};
   light_dev.name = "gpio-light";
   light_dev.vid = PDEV_VID_GENERIC;
@@ -165,8 +155,8 @@ zx_status_t Vim::GpioInit() {
   light_dev.metadata_list = light_metadata;
   light_dev.metadata_count = std::size(light_metadata);
 
-  status = pbus_.CompositeDeviceAdd(&light_dev, reinterpret_cast<uint64_t>(fragments),
-                                    std::size(fragments), nullptr);
+  status = pbus_.AddComposite(&light_dev, reinterpret_cast<uint64_t>(gpio_light_fragments),
+                              std::size(gpio_light_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "GpioInit could not add gpio_light_dev: %d", status);
     return status;

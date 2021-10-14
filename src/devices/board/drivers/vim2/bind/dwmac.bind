@@ -1,0 +1,24 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+composite dwmac;
+
+using fuchsia.platform;
+using fuchsia.designware.platform;
+using fuchsia.ethernet;
+
+primary node "pdev" {
+    fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.designware.platform.BIND_PLATFORM_DEV_VID.DESIGNWARE;
+    fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC;
+    fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.designware.platform.BIND_PLATFORM_DEV_DID.ETH_MAC;
+    fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+node "eth-board" {
+    fuchsia.BIND_PROTOCOL == fuchsia.ethernet.BIND_PROTOCOL.IMPL;
+    fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.designware.platform.BIND_PLATFORM_DEV_VID.DESIGNWARE;
+    fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.designware.platform.BIND_PLATFORM_DEV_DID.ETH_MAC;
+}
+

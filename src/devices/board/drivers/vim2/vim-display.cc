@@ -11,6 +11,7 @@
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
 
+#include "src/devices/board/drivers/vim2/display_bind.h"
 #include "vim-gpios.h"
 #include "vim.h"
 
@@ -73,31 +74,6 @@ static const pbus_bti_t vim_display_btis[] = {
     },
 };
 
-static const zx_bind_inst_t hpd_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_DISPLAY_HPD),
-};
-static const zx_bind_inst_t canvas_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
-};
-static const zx_bind_inst_t sysmem_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
-};
-static const device_fragment_part_t hpd_gpio_fragment[] = {
-    {countof(hpd_gpio_match), hpd_gpio_match},
-};
-static const device_fragment_part_t canvas_fragment[] = {
-    {countof(canvas_match), canvas_match},
-};
-static const device_fragment_part_t sysmem_fragment[] = {
-    {countof(sysmem_match), sysmem_match},
-};
-static const device_fragment_t fragments[] = {
-    {"gpio", countof(hpd_gpio_fragment), hpd_gpio_fragment},
-    {"canvas", countof(canvas_fragment), canvas_fragment},
-    {"sysmem", countof(sysmem_fragment), sysmem_fragment},
-};
-
 zx_status_t Vim::DisplayInit() {
   zx_status_t status;
   pbus_dev_t display_dev = {};
@@ -117,8 +93,8 @@ zx_status_t Vim::DisplayInit() {
     gpio_set_alt_function(&bus->gpio, S912_SPDIF_H4, S912_SPDIF_H4_OUT_FN);
 #endif
 
-  if ((status = pbus_.CompositeDeviceAdd(&display_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), nullptr)) != ZX_OK) {
+  if ((status = pbus_.AddComposite(&display_dev, reinterpret_cast<uint64_t>(display_fragments),
+                                   countof(display_fragments), "pdev")) != ZX_OK) {
     zxlogf(ERROR, "DisplayInit: pbus_device_add() failed for display: %d", status);
     return status;
   }

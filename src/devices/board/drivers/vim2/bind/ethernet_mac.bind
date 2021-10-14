@@ -1,0 +1,36 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+composite ethernet_mac;
+
+using fuchsia.platform;
+using fuchsia.amlogic.platform;
+using fuchsia.i2c;
+using fuchsia.gpio;
+using fuchsia.amlogic.platform.s912;
+
+primary node "pdev" {
+    fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+    fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.S912;
+    fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.ETH;
+    fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+node "i2c" {
+    fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_I2C_BUS_ID == 1;
+    fuchsia.BIND_I2C_ADDRESS == 0x18;
+}
+
+node "gpio-int" {
+    fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.s912.GPIOZ_PIN_ID.PIN_15;  // GPIO_ETH_MAC_INTR
+}
+
+node "gpio-reset" {
+    fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.s912.GPIOZ_PIN_ID.PIN_14;  // GPIO_ETH_MAC_RST
+}
+
