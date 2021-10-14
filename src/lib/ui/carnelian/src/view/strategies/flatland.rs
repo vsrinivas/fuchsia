@@ -480,7 +480,7 @@ impl FlatlandViewStrategy {
     }
 
     fn present_allowed(&self) -> bool {
-        self.pending_present_count < self.num_presents_allowed
+        self.pending_present_count <= self.num_presents_allowed
     }
 }
 
