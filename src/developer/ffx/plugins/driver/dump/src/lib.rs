@@ -49,6 +49,9 @@ pub async fn dump(service: fdd::DriverDevelopmentProxy, cmd: DriverDumpCommand) 
     stack.push_front((platform_device, 0));
     if cmd.graph {
         println!("digraph {{");
+        println!("     forcelabels = true; splines=\"ortho\"; ranksep = 1.2; nodesep = 0.5;");
+        println!("     node [ shape = \"box\" color = \"#2a5b4f\" penwidth = 2.25 fontname = \"prompt medium\" fontsize = 10 margin = 0.22 ];");
+        println!("     edge [ color = \"#37474f\" penwidth = 1 style = dashed fontname = \"roboto mono\" fontsize = 10 ];");
         for device in &device_info {
             if let Some(child_ids) = &device.child_ids {
                 for id in child_ids.iter().rev() {
