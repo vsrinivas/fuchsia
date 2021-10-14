@@ -8,7 +8,10 @@ import("//build/rust/rustc_macro.gni")
 import("//build/rust/rustc_test.gni")
 
 group("starnix") {
-  deps = [ ":pkg" ]
+  deps = [
+    ":pkg",
+    "//src/virtualization/bin/wayland/bridge",
+  ]
 }
 
 if (target_cpu == "x64") {
