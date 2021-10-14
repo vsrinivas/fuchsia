@@ -376,7 +376,18 @@ if [[ "$ACCEL" == "kvm" ]]; then
     echo "Log back in to remote host and run the emulator again."
     exit 1
   fi
-  ARGS+=("-enable-kvm" "-cpu" "host,migratable=no,+invtsc")
+  # TODO(fxbug.dev/33174): Work around KVM bug on AMD Zen machines where SMAP
+  # and CPL=3 MMIO accesses trigger a loop in the Linux kernel.
+  # TODO(fxbug.dev/63110): Work around KVM bug on AMD Zen machines where XSAVES
+  # is enumerated but the IA32_XSS MSR is not available. The bug fix is in
+  # 864e2ab2b46db1ac266c46a7c in upstream Linux but has not percolated to
+  # popular distributions yet.
+  if [[ "$(lsmod | grep kvm_amd)" != "" ]]; then
+    # Add topoext to properly report hyperthreading on AMD CPUs
+    ARGS+=("-enable-kvm" "-cpu" "host,migratable=no,+invtsc,-smap,-xsaves,+topoext")
+  else
+    ARGS+=("-enable-kvm" "-cpu" "host,migratable=no,+invtsc")
+  fi
   FEATURES+=",KVM"
 elif [[ "$ACCEL" == "hvf" ]]; then
   ARGS+=("-enable-hvf" "-cpu" "Haswell")
