@@ -194,7 +194,7 @@ void main(List<String> arguments) {
           reason: instance.additionalResult);
 
       await instance.agentResult;
-    });
+    }, skip: 'It\'s too flaky in the CI');  // TODO(fxb/86627): Enable me.
 
     test('Test --extra-name', () async {
       var instance = RunFidlcat();
