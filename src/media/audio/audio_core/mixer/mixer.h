@@ -8,6 +8,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/trace/event.h>
 
+#include <limits>
 #include <memory>
 
 #include "src/media/audio/audio_core/mixer/constants.h"
@@ -198,6 +199,46 @@ class Mixer {
   // limitations. Source_pos_modulo, then, represents fractions of source subframe position.
   struct Bookkeeping {
     explicit Bookkeeping(Gain::Limits gain_limits = Gain::Limits{}) : gain(gain_limits) {}
+
+    // How many steps are needed to meet/exceed the specified delta, using the specified step_size,
+    // rate_modulo, denominator and initial position modulo.
+    static int64_t StepsNeededForDelta(Fixed delta, Fixed step_size, uint64_t rate_modulo,
+                                       uint64_t denominator, uint64_t initial_pos_modulo) {
+      FX_DCHECK(delta >= Fixed(0));
+      FX_DCHECK(step_size >= Fixed::FromRaw(1));
+      FX_DCHECK(denominator > 0);
+      FX_DCHECK(rate_modulo < denominator);
+      FX_DCHECK(initial_pos_modulo < denominator);
+
+      if (rate_modulo == 0) {
+        // Ceiling discards any fractional remainder less than Fixed::FromRaw(1) because it floors
+        // to Fixed::FromRaw(1) precision before rounding up.
+        int64_t steps = delta.raw_value() / step_size.raw_value();
+        if (delta > step_size * steps) {
+          ++steps;
+        }
+        return steps;
+      }
+
+      // Both calculations fit into int128: delta.raw_value and step_size.raw_value are both int64,
+      // and denom|rate_modulo|initial_pos_modulo are each uint64_t.  The largest possible
+      // step_size and denominator still leave more than enough room for the max possible rate_mod,
+      // and the largest possible step_size_rebased exceeds the largest possible delta_rebased.
+      auto delta_rebased =
+          static_cast<__int128_t>(delta.raw_value()) * denominator - initial_pos_modulo;
+      auto step_size_rebased =
+          static_cast<__int128_t>(step_size.raw_value()) * denominator + rate_modulo;
+
+      // We know this DCHECK holds, because if we divide both top and bottom by denominator, then
+      // top is int64_t::max or less, and bottom is 1 or more.
+      FX_DCHECK(delta_rebased / step_size_rebased <= std::numeric_limits<int64_t>::max());
+
+      auto steps = static_cast<int64_t>(delta_rebased / step_size_rebased);
+      if (delta_rebased % step_size_rebased) {
+        ++steps;
+      }
+      return steps;
+    }
 
     // This object maintains gain values in the mix path, including source gain and a snapshot of
     // destination gain (the definitive value for destination gain is owned elsewhere). Gain accepts
