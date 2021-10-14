@@ -17,7 +17,6 @@ group("bin") {
     "ktrace_provider",
     "log_listener",
     "network_settings_server",
-    "perfcompare",
     "run_test_component",
     "sched",
     "setui",

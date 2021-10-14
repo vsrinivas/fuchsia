@@ -64,5 +64,5 @@ In the profiler output, results are preceded by a legend describing the result f
 
 <!-- Reference links -->
 
-[perfcompare]: /garnet/bin/perfcompare/README.md
+[perfcompare]: /src/testing/perfcompare/README.md
 [catapult]: /docs/development/benchmarking/catapult_user_guide.md

@@ -25,7 +25,6 @@ group("all") {
     "//garnet/bin/insntrace/tests",
     "//garnet/bin/ktrace_provider:ktrace_provider_tests",
     "//garnet/bin/log_listener:tests",
-    "//garnet/bin/perfcompare:tests",
     "//garnet/bin/run_test_component:tests",
     "//garnet/bin/sched:tests",
     "//garnet/bin/setui:tests",

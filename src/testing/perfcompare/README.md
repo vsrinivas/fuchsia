@@ -10,7 +10,7 @@ dependencies (currently just the `scipy` Python library):
 * Via `vpython`:
 
   ```sh
-  ./prebuilt/third_party/vpython/vpython garnet/bin/perfcompare/perfcompare.py
+  ./prebuilt/third_party/vpython/vpython src/testing/perfcompare/perfcompare.py
   ```
 
   This will automatically download prebuilt, hermetic versions of
@@ -44,7 +44,7 @@ git checkout BEFORE_VERSION
 fx set terminal.x64  # covers dependencies of rust_inspect_benchmarks_test
 fx build
 fx update
-python garnet/bin/perfcompare/perfcompare.py run_local \
+python src/testing/perfcompare/perfcompare.py run_local \
   --boots=5 \
   --iter_cmd='fx test --e2e rust_inspect_benchmarks_test' \
   --iter_file='out/test_out/*/*.fuchsiaperf.json' \
@@ -58,7 +58,7 @@ results dataset in a different directory, `perf_results_after`:
 git checkout AFTER_VERSION
 fx build
 fx update
-python garnet/bin/perfcompare/perfcompare.py run_local \
+python src/testing/perfcompare/perfcompare.py run_local \
   --boots=5 \
   --iter_cmd='fx test --e2e rust_inspect_benchmarks_test' \
   --iter_file='out/test_out/*/*.fuchsiaperf.json' \
@@ -72,5 +72,5 @@ which prints a table showing the "before" and "after" results side by
 side:
 
 ```sh
-python garnet/bin/perfcompare/perfcompare.py compare_perf perf_results_before perf_results_after
+python src/testing/perfcompare/perfcompare.py compare_perf perf_results_before perf_results_after
 ```

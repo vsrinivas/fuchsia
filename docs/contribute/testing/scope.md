@@ -371,7 +371,7 @@ See also:
 [multi-repo-dev]: https://testing.googleblog.com/2015/05/multi-repository-development.html
 [netstack-benchmarks]: /src/connectivity/network/tests/benchmarks/README.md
 [netstack3-roadmap]: /docs/contribute/roadmap/2021/netstack3.md
-[perfcompare]: /garnet/bin/perfcompare/README.md
+[perfcompare]: /src/testing/perfcompare/README.md
 [practical-test-pyramid]: https://martinfowler.com/articles/practical-test-pyramid.html
 [principles]: /docs/concepts/index.md
 [principles-inclusive]: /docs/concepts/principles/inclusive.md

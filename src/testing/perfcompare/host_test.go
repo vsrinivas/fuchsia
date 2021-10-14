@@ -19,7 +19,7 @@ func TestPerfcompare(t *testing.T) {
 	if !found {
 		t.SkipNow()
 	}
-	pytest := path.Join(fuchsiaDir, "garnet/bin/perfcompare/perfcompare_test.py")
+	pytest := path.Join(fuchsiaDir, "src/testing/perfcompare/perfcompare_test.py")
 	// This assumes that vpython is present in PATH.  That is true
 	// on the bots, where vpython is also used by Fuchsia infra.
 	// vpython is used for downloading Python library dependencies

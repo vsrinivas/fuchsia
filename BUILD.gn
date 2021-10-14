@@ -733,7 +733,7 @@ group("tool_paths.metadata") {
     "$rustc_prefix/cargo",
     "$rustc_prefix/rustc",
     "$rustc_prefix/rustdoc",
-    "//garnet/bin/perfcompare",
+    "//src/testing/perfcompare",
 
     # reclient is using fairly generic names (bootstrap, dumpstats). We may
     # need to move these into their own group() at some point to namespace
