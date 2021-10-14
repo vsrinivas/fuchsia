@@ -76,6 +76,15 @@ if $build; then
   fx-command-run build "${artifacts[@]}"
 fi
 
+if is-remote-workflow-device; then
+  fx-error "It is not possible to flash a device over a remote tunnel, as flashing requires a direct USB connection."
+  fx-error "Use \`fx flash-remote\` from the local side of the link in these secarios."
+  fx-error "A lightweight build on the local side is: \`fx set core.x64 && fx self-build\`"
+  echo >&2
+  fx-error "If you are not using a remote workflow, run \`fx unset-device\` to remove the remote device configuration."
+  exit 1
+fi
+
 flash_manifest="${FUCHSIA_BUILD_DIR}/$(fx-command-run list-build-artifacts --expect-one --name flash-manifest images)"
 cd "${FUCHSIA_BUILD_DIR}"
 fx-flash "${serial}" "${device}" "${flash_manifest}"
