@@ -142,6 +142,13 @@ impl Waiter {
             signal_state.mask = old_mask;
         }
 
+        self.wait_kernel(deadline)
+    }
+
+    /// Waits until the given deadline has passed or the waiter is woken up.
+    ///
+    /// This method allows the kernel to wait without a specific task at hand.
+    pub fn wait_kernel(self: &Arc<Self>, deadline: zx::Time) -> Result<(), Errno> {
         match self.port.wait(deadline) {
             Ok(packet) => match packet.status() {
                 zx::sys::ZX_OK => {
