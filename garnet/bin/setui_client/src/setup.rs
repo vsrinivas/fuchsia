@@ -13,7 +13,7 @@ pub async fn command(
         let mut settings = SetupSettings::EMPTY;
         settings.enabled_configuration_interfaces = Some(configuration_interfaces);
 
-        let set_result = proxy.set(settings, true).await?;
+        let set_result = proxy.set(settings).await?;
 
         Either::Set(match set_result {
             Ok(_) => format!("Successfully set configuration interfaces"),

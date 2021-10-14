@@ -22,13 +22,12 @@ protocol Setup {
     /// the table will not perform any system operation. An error will be
     /// returned if the provided settings is an invalid change (for example, if
     /// it is empty).
-    @transitional("Changes network interfaces configuration with optional reboot")
+    @transitional("Changes network interfaces configuration with reboot")
     Set(struct {
         settings SetupSettings;
-        reboot_device bool;
     }) -> (struct {}) error Error;
 
-    @deprecated("Changes network interfaces configuration with optional reboot")
+    @transitional("Changes network interfaces configuration with optional reboot")
     Set2(struct {
         settings SetupSettings;
         reboot_device bool;

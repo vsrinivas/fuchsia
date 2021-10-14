@@ -227,7 +227,7 @@ enum/member fuchsia.settings/SettingsEpitaph.INTERNAL_SERVICE_ERROR 2
 enum/member fuchsia.settings/SettingsEpitaph.PERSISTENT_STORAGE_ERROR 3
 enum/member fuchsia.settings/SettingsEpitaph.REQUEST_NOT_SUPPORTED 1
 strict enum fuchsia.settings/SettingsEpitaph uint32
-protocol/member fuchsia.settings/Setup.Set(fuchsia.settings/SetupSettings settings,bool reboot_device) -> (fuchsia.settings/Setup_Set_Result result)
+protocol/member fuchsia.settings/Setup.Set(fuchsia.settings/SetupSettings settings) -> (fuchsia.settings/Setup_Set_Result result)
 protocol/member fuchsia.settings/Setup.Set2(fuchsia.settings/SetupSettings settings,bool reboot_device) -> (fuchsia.settings/Setup_Set2_Result result)
 protocol/member fuchsia.settings/Setup.Watch() -> (fuchsia.settings/SetupSettings settings)
 protocol fuchsia.settings/Setup

@@ -60,7 +60,7 @@ impl SetUiFacade {
         }
         // Update network configuration without automatic device reboot.
         // For changes to take effect, either restart basemgr component or reboot device.
-        match setup_service_proxy.set(settings, false).await? {
+        match setup_service_proxy.set2(settings, false).await? {
             Ok(_) => Ok(to_value(SetUiResult::Success)?),
             Err(err) => Err(format_err!("Update network settings failed with err {:?}", err)),
         }

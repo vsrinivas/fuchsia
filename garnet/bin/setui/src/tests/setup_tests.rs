@@ -81,7 +81,7 @@ async fn test_setup_with_reboot() {
     // Ensure setting interface propagates  change correctly
     let mut setup_settings = fidl_fuchsia_settings::SetupSettings::EMPTY;
     setup_settings.enabled_configuration_interfaces = Some(expected_interfaces);
-    setup_service.set(setup_settings, true).await.expect("set completed").expect("set successful");
+    setup_service.set(setup_settings).await.expect("set completed").expect("set successful");
 
     // Ensure retrieved value matches set value
     let settings = setup_service.watch().await.expect("watch completed");
@@ -102,50 +102,7 @@ async fn test_setup_with_reboot() {
 }
 
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_setup_no_reboot_with_set() {
-    let service_registry = ServiceRegistry::create();
-    let hardware_power_statecontrol_service_handle =
-        Arc::new(Mutex::new(HardwarePowerStatecontrolService::new()));
-    service_registry
-        .lock()
-        .await
-        .register_service(hardware_power_statecontrol_service_handle.clone());
-
-    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
-        .fidl_interfaces(&[Interface::Setup])
-        .spawn_and_get_nested_environment(ENV_NAME)
-        .await
-        .unwrap();
-
-    let setup_service = env.connect_to_protocol::<SetupMarker>().unwrap();
-
-    // Ensure retrieved value matches set value
-    let settings = setup_service.watch().await.expect("watch completed");
-    assert_eq!(
-        settings.enabled_configuration_interfaces,
-        Some(fidl_fuchsia_settings::ConfigurationInterfaces::Wifi)
-    );
-
-    let expected_interfaces = fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet;
-
-    // Ensure setting interface propagates  change correctly
-    let mut setup_settings = fidl_fuchsia_settings::SetupSettings::EMPTY;
-    setup_settings.enabled_configuration_interfaces = Some(expected_interfaces);
-    setup_service.set(setup_settings, false).await.expect("set completed").expect("set successful");
-
-    // Ensure retrieved value matches set value
-    let settings = setup_service.watch().await.expect("watch completed");
-    assert_eq!(settings.enabled_configuration_interfaces, Some(expected_interfaces));
-
-    // No reboot is called.
-    assert!(hardware_power_statecontrol_service_handle
-        .lock()
-        .await
-        .verify_action_sequence([].to_vec()));
-}
-
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_setup_no_reboot_with_set2() {
+async fn test_setup_no_reboot() {
     let service_registry = ServiceRegistry::create();
     let hardware_power_statecontrol_service_handle =
         Arc::new(Mutex::new(HardwarePowerStatecontrolService::new()));

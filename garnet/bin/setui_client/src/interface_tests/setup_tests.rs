@@ -25,7 +25,7 @@ async fn validate_setup() -> Result<(), Error> {
     let expected_watch_interfaces =
         ConfigurationInterfaces::Wifi | ConfigurationInterfaces::Ethernet;
     let env = create_service!(
-        Services::Setup, SetupRequest::Set { settings, reboot_device: _, responder, } => {
+        Services::Setup, SetupRequest::Set { settings, responder, } => {
             if let Some(interfaces) = settings.enabled_configuration_interfaces {
                 assert_eq!(interfaces, expected_set_interfaces);
                 responder.send(&mut Ok(()))?;
