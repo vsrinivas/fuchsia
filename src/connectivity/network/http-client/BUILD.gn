@@ -48,10 +48,3 @@ fuchsia_component("component") {
   manifest = "meta/http_client.cml"
   deps = [ ":http_client" ]
 }
-
-fuchsia_package("http-client") {
-  deps = [
-    ":component",
-    ":component-legacy",
-  ]
-}

@@ -48,8 +48,5 @@ fuchsia_component("component") {
 }
 
 fuchsia_package("network-speed-test") {
-  deps = [
-    ":component",
-    "//src/connectivity/network/http-client",
-  ]
+  deps = [ ":component" ]
 }

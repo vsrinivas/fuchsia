@@ -35,7 +35,6 @@ fuchsia_package("network-legacy-deprecated") {
 group("integration-test-deps") {
   deps = [
     "dns:dns-resolver",
-    "http-client",
     "netstack",
   ]
 }
