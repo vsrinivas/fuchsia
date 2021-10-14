@@ -131,7 +131,7 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
       base_resolver_(config_.boot_args),
       driver_loader_(config_.boot_args, std::move(config_.driver_index), &base_resolver_,
                      dispatcher, config_.require_system),
-      suspend_handler_(this, config.suspend_fallback, config.suspend_timeout),
+      suspend_handler_(this, config.suspend_timeout),
       inspect_manager_(inspect_manager),
       package_resolver_(config.boot_args) {
   if (config_.oom_event) {

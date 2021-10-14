@@ -72,7 +72,6 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
       {"devmgr.enable-ephemeral", false},
       {"devmgr.log-to-debuglog", false},
       {"devmgr.require-system", false},
-      // Turn it on by default. See fxbug.dev/34577
       {"devmgr.suspend-timeout-fallback", true},
       {"devmgr.verbose", false},
       {"driver_manager.use_driver_framework_v2", false},
@@ -296,7 +295,6 @@ int main(int argc, char** argv) {
   SystemInstance system_instance;
   config.boot_args = &boot_args;
   config.require_system = driver_manager_params.require_system;
-  config.suspend_fallback = driver_manager_params.suspend_timeout_fallback;
   config.log_to_debuglog =
       driver_manager_params.log_to_debuglog || driver_manager_args.log_to_debuglog;
   config.verbose = driver_manager_params.verbose;
@@ -304,6 +302,12 @@ int main(int argc, char** argv) {
   config.path_prefix = driver_manager_args.path_prefix;
   config.enable_ephemeral = driver_manager_params.enable_ephemeral;
   config.crash_policy = driver_manager_params.crash_policy;
+
+  // Waiting an infinite amount of time before falling back is effectively not
+  // falling back at all.
+  if (!driver_manager_params.suspend_timeout_fallback) {
+    config.suspend_timeout = zx::duration::infinite();
+  }
 
   if (driver_manager_args.use_driver_index) {
     auto driver_index_client = service::Connect<fuchsia_driver_framework::DriverIndex>();

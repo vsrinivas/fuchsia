@@ -25,7 +25,7 @@ class SuspendHandler {
   };
 
   // Create a SuspendHandler. `coordinator` is a weak pointer that must outlive `SuspendHandler`.
-  SuspendHandler(Coordinator* coordinator, bool suspend_fallback, zx::duration suspend_timeout);
+  SuspendHandler(Coordinator* coordinator, zx::duration suspend_timeout);
 
   bool InSuspend() const { return flags_ != SuspendHandler::Flags::kRunning; }
 
@@ -52,7 +52,6 @@ class SuspendHandler {
   void SuspendAfterFilesystemShutdown();
 
   Coordinator* coordinator_;
-  bool suspend_fallback_;
   zx::duration suspend_timeout_;
 
   SuspendCallback suspend_callback_;

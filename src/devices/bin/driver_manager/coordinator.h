@@ -144,8 +144,6 @@ struct CoordinatorConfig {
   fidl::WireSharedClient<fdf::DriverIndex> driver_index;
   // Whether we require /system.
   bool require_system = false;
-  // Whether to reboot the device when suspend does not finish on time.
-  bool suspend_fallback = false;
   // Whether to output logs to debuglog.
   bool log_to_debuglog = false;
   // Whether to enable verbose logging.
@@ -274,7 +272,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   const zx::resource& root_resource() const { return config_.root_resource; }
   fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args() const { return config_.boot_args; }
   bool require_system() const { return config_.require_system; }
-  bool suspend_fallback() const { return config_.suspend_fallback; }
   SystemPowerState shutdown_system_state() const { return shutdown_system_state_; }
   SystemPowerState default_shutdown_system_state() const {
     return config_.default_shutdown_system_state;

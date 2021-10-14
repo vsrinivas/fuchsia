@@ -78,11 +78,8 @@ void DumpSuspendTaskDependencies(const SuspendTask* task, int depth = 0) {
 
 }  // namespace
 
-SuspendHandler::SuspendHandler(Coordinator* coordinator, bool suspend_fallback,
-                               zx::duration suspend_timeout)
-    : coordinator_(coordinator),
-      suspend_fallback_(suspend_fallback),
-      suspend_timeout_(suspend_timeout) {
+SuspendHandler::SuspendHandler(Coordinator* coordinator, zx::duration suspend_timeout)
+    : coordinator_(coordinator), suspend_timeout_(suspend_timeout) {
   fshost_admin_client_ = ConnectToFshostAdminServer(coordinator_->dispatcher());
 }
 
@@ -136,12 +133,11 @@ void SuspendHandler::SuspendAfterFilesystemShutdown() {
     if (suspend_task_.get() != nullptr) {
       DumpSuspendTaskDependencies(suspend_task_.get());
     }
-    if (suspend_fallback_) {
-      SuspendFallback(coordinator_->root_resource(), sflags_);
-      // Unless in test env, we should not reach here.
-      if (suspend_callback_) {
-        suspend_callback_(ZX_ERR_TIMED_OUT);
-      }
+
+    SuspendFallback(coordinator_->root_resource(), sflags_);
+    // Unless in test env, we should not reach here.
+    if (suspend_callback_) {
+      suspend_callback_(ZX_ERR_TIMED_OUT);
     }
   });
   suspend_watchdog_task_ = std::move(watchdog_task);

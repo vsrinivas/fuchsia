@@ -25,7 +25,6 @@ CoordinatorConfig DefaultConfig(async_dispatcher_t* bootargs_dispatcher,
   config.require_system = false;
   config.boot_args = client;
   config.fs_provider = &dummy_fs_provider;
-  config.suspend_fallback = true;
   config.suspend_timeout = zx::sec(2);
   config.resume_timeout = zx::sec(2);
   config.path_prefix = "/pkg/";
