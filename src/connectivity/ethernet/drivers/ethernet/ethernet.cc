@@ -976,9 +976,7 @@ zx_status_t EthDev0::AddDevice() {
   }
   info_.netbuf_size = ZX_ROUNDUP(info_.netbuf_size, 8);
 
-  if ((status = DdkAdd(ddk::DeviceAddArgs("ethernet")
-                           .set_proto_id(ZX_PROTOCOL_ETHERNET)
-                           .set_flags(DEVICE_ADD_NON_BINDABLE))) < 0) {
+  if ((status = DdkAdd(ddk::DeviceAddArgs("ethernet").set_proto_id(ZX_PROTOCOL_ETHERNET))) < 0) {
     return status;
   }
   // Make sure device starts with expected settings.

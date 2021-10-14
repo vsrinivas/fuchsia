@@ -44,7 +44,6 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
 
   if ((status = device->DdkAdd(
            ddk::DeviceAddArgs("brcmfmac-wlanphy")
-               .set_flags(DEVICE_ADD_NON_BINDABLE)
                .set_inspect_vmo(device->inspect_->inspector().DuplicateVmo()))) != ZX_OK) {
     return status;
   }
