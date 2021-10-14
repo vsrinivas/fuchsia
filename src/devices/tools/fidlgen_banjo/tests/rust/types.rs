@@ -375,7 +375,7 @@ pub struct unions {
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct this_is_a_struct {
-    pub s: *mut std::ffi::c_void /* String */,
+    pub s: *const std::os::raw::c_char,
 }
 
 #[repr(C)]
@@ -388,8 +388,8 @@ pub struct structs {
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct strings {
-    pub s: *mut std::ffi::c_void /* String */,
-    pub nullable_s: *mut std::ffi::c_void /* String */,
+    pub s: *const std::os::raw::c_char,
+    pub nullable_s: *const std::os::raw::c_char,
     pub size_0_s: [u8; 4 as usize],
     pub size_1_s: [u8; 32 as usize],
     pub nullable_size_0_s: [u8; 4 as usize],
@@ -432,7 +432,7 @@ pub struct default_values {
     pub u16: u16,
     pub u32: u32,
     pub u64: u64,
-    pub s: *mut std::ffi::c_void /* String */,
+    pub s: *const std::os::raw::c_char,
 }
 
 #[repr(C)]
@@ -853,7 +853,7 @@ impl std::ops::BitXorAssign for default_enum {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union this_is_a_union {
-    pub s: *mut std::ffi::c_void /* String */,
+    pub s: *const std::os::raw::c_char,
 }
 
 // unions can't autoderive debug, but it's useful for their parent types to
@@ -889,7 +889,7 @@ pub union union_types {
     pub f32_0: [f32; 1 as usize],
     pub f64_0: [f64; 1 as usize],
     pub handle_0: [zircon::sys::zx_handle_t; 1 as usize],
-    pub str: *mut std::ffi::c_void /* String */,
+    pub str: *const std::os::raw::c_char,
     pub s: this_is_a_struct,
     pub u: this_is_a_union,
 }

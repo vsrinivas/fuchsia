@@ -111,17 +111,30 @@ fn primitive_type_to_rust_str(ty: &PrimitiveSubtype) -> Result<String, Error> {
     }
 }
 
-fn type_to_rust_str(ty: &Type, ir: &FidlIr) -> Result<String, Error> {
+fn type_to_rust_str(
+    ty: &Type,
+    maybe_attributes: &Option<Vec<Attribute>>,
+    ir: &FidlIr,
+) -> Result<String, Error> {
     match ty {
         Type::Array { element_type, element_count } => Ok(format!(
             "[{ty}; {size} as usize]",
-            ty = type_to_rust_str(element_type, ir)?,
+            ty = type_to_rust_str(element_type, maybe_attributes, ir)?,
             size = element_count.0.to_string().to_uppercase()
         )),
-        Type::Vector { ref element_type, .. } => type_to_rust_str(element_type, ir),
+        Type::Vector { ref element_type, .. } => {
+            type_to_rust_str(element_type, maybe_attributes, ir)
+        }
         Type::Str { maybe_element_count, .. } => match maybe_element_count {
             Some(count) => Ok(format!("[u8; {count} as usize]", count = count.0)),
-            None => Ok(String::from("*mut std::ffi::c_void /* String */")),
+            None => {
+                let mutable = if maybe_attributes.has("InOut") || maybe_attributes.has("Mutable") {
+                    "mut"
+                } else {
+                    "const"
+                };
+                Ok(format!("*{mutable} std::os::raw::c_char", mutable = mutable))
+            }
         },
         Type::Primitive { ref subtype } => primitive_type_to_rust_str(subtype),
         Type::Identifier { identifier, nullable } => {
@@ -131,7 +144,7 @@ fn type_to_rust_str(ty: &Type, ir: &FidlIr) -> Result<String, Error> {
             match ir.get_declaration(identifier)? {
                 Declaration::Const => {
                     let decl = ir.get_const(identifier)?;
-                    type_to_rust_str(&decl._type, ir)
+                    type_to_rust_str(&decl._type, maybe_attributes, ir)
                 }
                 Declaration::Enum => Ok(format!("{}", name = identifier.get_name())),
                 // Protocols are not generated, but this supports some tests.
@@ -163,7 +176,7 @@ fn field_to_rust_str(field: &StructMember, ir: &FidlIr) -> Result<String, Error>
         | Type::Handle { .. } => Ok(format!(
             "    pub {c_name}: {ty},",
             c_name = c_name,
-            ty = type_to_rust_str(&field._type, ir)?
+            ty = type_to_rust_str(&field._type, maybe_attributes, ir)?
         )),
         Type::Vector { ref element_type, .. } => {
             let out_of_line = if maybe_attributes.has("OutOfLineContents") { "*mut " } else { "" };
@@ -177,7 +190,7 @@ fn field_to_rust_str(field: &StructMember, ir: &FidlIr) -> Result<String, Error>
                 mutable = mutable,
                 out_of_line = out_of_line,
                 c_name = c_name,
-                ty = type_to_rust_str(element_type, ir)?
+                ty = type_to_rust_str(element_type, maybe_attributes, ir)?
             ))
         }
         _ => Err(anyhow!("Can't handle type {:?}", field._type)),
@@ -207,7 +220,7 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
             })
             .map(|data| {
                 let mut enum_defines = Vec::new();
-                let ty = type_to_rust_str(&data._type.to_type(), ir)?;
+                let ty = type_to_rust_str(&data._type.to_type(), &data.maybe_attributes, ir)?;
                 for v in &data.members {
                     let c_name = v.name.0.as_str().to_uppercase();
                     let name = if c_name.chars().next().unwrap().is_numeric() {
@@ -258,7 +271,7 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                 Ok(format!(
                     "pub const {name}: {ty} = {val};",
                     name = data.name.get_name().to_uppercase(),
-                    ty = type_to_rust_str(&data._type, ir)?,
+                    ty = type_to_rust_str(&data._type, &data.maybe_attributes, ir)?,
                     val = value,
                 ))
             })
@@ -346,7 +359,11 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                         ) {
                             arg_type
                         } else {
-                            type_to_rust_str(&field._type.as_ref().unwrap(), ir)?
+                            type_to_rust_str(
+                                &field._type.as_ref().unwrap(),
+                                &field.maybe_attributes,
+                                ir,
+                            )?
                         };
                         Ok(format!(
                             "    pub {c_name}: {ty},",

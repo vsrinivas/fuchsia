@@ -14,7 +14,7 @@ pub const STRINGS_SIZE: u32 = 32;
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ThisIsAStruct {
-    pub s: *mut std::ffi::c_void /* String */,
+    pub s: *const std::os::raw::c_char,
 }
 
 #[repr(C)]
@@ -67,7 +67,7 @@ impl std::ops::BitXorAssign for ThisIsAnEnum {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union ThisIsAUnion {
-    pub s: *mut std::ffi::c_void /* String */,
+    pub s: *const std::os::raw::c_char,
 }
 
 // unions can't autoderive debug, but it's useful for their parent types to

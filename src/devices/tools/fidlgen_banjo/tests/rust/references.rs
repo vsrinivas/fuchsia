@@ -35,9 +35,9 @@ pub struct VectorFieldInStruct {
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct MutableField {
-    pub some_string: *mut std::ffi::c_void /* String */,
-    pub some_other_string: *mut std::ffi::c_void /* String */,
-    pub some_default_string: *mut std::ffi::c_void /* String */,
+    pub some_string: *mut std::os::raw::c_char,
+    pub some_other_string: *const std::os::raw::c_char,
+    pub some_default_string: *const std::os::raw::c_char,
 }
 
 

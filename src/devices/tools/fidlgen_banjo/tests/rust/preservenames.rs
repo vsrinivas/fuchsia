@@ -16,7 +16,7 @@ use fuchsia_zircon as zircon;
 pub struct SomeData {
     pub HELLO_WORLD: u32,
     pub kSomeValue: u32,
-    pub one_more_field: *mut std::ffi::c_void /* String */,
+    pub one_more_field: *const std::os::raw::c_char,
 }
 
 
