@@ -13,6 +13,13 @@ fn ask_free_tcp_port() -> Option<Port> {
     bind_tcp(ipv6).or_else(|| bind_tcp(ipv4))
 }
 
+/// Asks the OS if the specified port is free
+pub fn is_free_tcp_port(port: u16) -> Option<Port> {
+    let ipv4 = SocketAddrV4::new(Ipv4Addr::LOCALHOST, port);
+    let ipv6 = SocketAddrV6::new(Ipv6Addr::LOCALHOST, port, 0, 0);
+    bind_tcp(ipv6).or_else(|| bind_tcp(ipv4))
+}
+
 // Try to bind to a socket using TCP
 fn bind_tcp<A: ToSocketAddrs>(addr: A) -> Option<Port> {
     match TcpListener::bind(addr).map(|s| s.local_addr().map(|a| a.port())) {

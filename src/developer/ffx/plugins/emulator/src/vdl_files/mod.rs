@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::device::DeviceSpec;
-use crate::portpicker::{pick_unused_port, Port};
+use crate::portpicker::{is_free_tcp_port, pick_unused_port, Port};
 use crate::target;
 use crate::types::{
     get_sdk_data_dir, read_env_path, HostTools, ImageFiles, InTreePaths, SSHKeys, VDLArgs,
@@ -32,6 +32,7 @@ use tempfile::{Builder, TempDir};
 mod remote;
 
 static ANALYTICS_ENV_VAR: &str = "FVDL_INVOKER";
+static DEFAULT_SSH_PORT: u16 = 8022;
 
 /// Monitors a shared process for the interrupt signal. Only used for --monitor or --emu-only modes.
 ///
@@ -281,24 +282,24 @@ impl VDLFiles {
     // Checks if user has specified a portmap. If portmap is specified, we'll check if ssh port is included.
     // If ssh port is not included, we'll pick a port and forward that together with the rest of portmap.
     pub fn resolve_portmap(&self, start_command: &StartCommand) -> (String, u16) {
-        let mut ssh_port = 0;
+        let ssh_port = match is_free_tcp_port(DEFAULT_SSH_PORT) {
+            Some(port) => port,
+            None => pick_unused_port().unwrap(),
+        };
         match &start_command.port_map {
             Some(port_map) => {
-                let re = Regex::new(r"::(?P<ssh>\d+)-:22(,|$)").unwrap();
+                let mut mapped_port = 0;
+                let re = Regex::new(r":+(?P<ssh>\d+)-?:22(,|$)").unwrap();
                 re.captures(port_map).and_then(|cap| {
-                    cap.name("ssh").map(|ssh| ssh_port = ssh.as_str().parse::<u16>().unwrap())
+                    cap.name("ssh").map(|ssh| mapped_port = ssh.as_str().parse::<u16>().unwrap())
                 });
-                if ssh_port == 0 {
-                    ssh_port = pick_unused_port().unwrap();
+                if mapped_port == 0 {
                     (format!("{},hostfwd=tcp::{}-:22", port_map.clone(), ssh_port), ssh_port)
                 } else {
-                    (port_map.clone(), ssh_port)
+                    (port_map.clone(), mapped_port)
                 }
             }
-            None => {
-                ssh_port = pick_unused_port().unwrap();
-                (format!("hostfwd=tcp::{}-:22", ssh_port), ssh_port)
-            }
+            None => (format!("hostfwd=tcp::{}-:22", ssh_port), ssh_port),
         }
     }
 
@@ -922,6 +923,28 @@ mod tests {
         let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
         assert_eq!(123, ssh);
         assert_eq!("hostfwd=tcp::123-:22,hostfwd=tcp::80-:8022,hostfwd=tcp::456-:222", port_map);
+
+        start_command.port_map = Some("tcp:123:22".to_string());
+        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
+        assert_eq!(123, ssh);
+        assert_eq!("tcp:123:22", port_map);
+
+        start_command.port_map = Some("tcp:123:222".to_string());
+        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
+        assert!(ssh > 0);
+        let re = Regex::new(r"tcp:123:222,hostfwd=tcp::\d+-:22").unwrap();
+        assert!(re.is_match(&port_map));
+
+        start_command.port_map = Some("tcp:234:80,tcp:123:22".to_string());
+        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
+        assert_eq!(123, ssh);
+        assert_eq!("tcp:234:80,tcp:123:22", port_map);
+
+        start_command.port_map = Some("tcp:234:22,tcp:123:80".to_string());
+        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
+        assert_eq!(234, ssh);
+        assert_eq!("tcp:234:22,tcp:123:80", port_map);
+
         Ok(())
     }
 
