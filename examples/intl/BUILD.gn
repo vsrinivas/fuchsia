@@ -5,6 +5,7 @@
 group("intl") {
   testonly = true
   deps = [
+    "manager",
     "tz_version_parrot",
     "wisdom",
   ]
@@ -13,6 +14,7 @@ group("intl") {
 group("tests") {
   testonly = true
   deps = [
+    "manager:tests",
     "tz_version_parrot:tests",
     "wisdom:tests",
   ]

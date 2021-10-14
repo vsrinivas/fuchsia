@@ -101,7 +101,7 @@ product_bootfs_labels += [
 cache_package_labels += [
   # Used for Chromium tests for example:
   #    //src/chromium/web_runner_tests:tests
-  "//garnet/examples/intl/manager:intl_property_manager",
+  "//examples/intl/manager:intl_property_manager",
 
   "//src/tests/end_to_end/bundles:end_to_end_deps",
   "//src/tests/end_to_end/bundles:end_to_end_deps",

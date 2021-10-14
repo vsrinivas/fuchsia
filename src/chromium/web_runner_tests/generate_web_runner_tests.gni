@@ -25,7 +25,7 @@ template("generate_web_runner_tests") {
       "//src/ui/scenic",
 
       # This dependency is used to provide a fake `fuchsia.intl.PropertyProvider`.
-      "//garnet/examples/intl/manager:intl_property_manager",
+      "//examples/intl/manager:intl_property_manager",
     ]
   }
 }

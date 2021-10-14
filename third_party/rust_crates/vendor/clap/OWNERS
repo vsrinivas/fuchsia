@@ -3,7 +3,7 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /build/components/OWNERS
-include /garnet/examples/intl/OWNERS
+include /examples/intl/OWNERS
 include /src/connectivity/lowpan/tools/lowpanctl/OWNERS
 include /src/connectivity/overnet/OWNERS
 include /src/connectivity/wlan/tools/wlantool/OWNERS

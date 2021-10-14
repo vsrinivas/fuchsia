@@ -178,7 +178,7 @@ group("tests") {
     ":touch-input-test-ip",
 
     # The deps below are necessary on minimal product configs.
-    "//garnet/examples/intl/manager:intl_property_manager",
+    "//examples/intl/manager:intl_property_manager",
     "//src/chromium:web_engine",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/flutter",

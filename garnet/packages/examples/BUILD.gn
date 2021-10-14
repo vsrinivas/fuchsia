@@ -29,7 +29,6 @@ group("all") {
     "//garnet/packages/examples:escher",
     "//garnet/packages/examples:fidl",
     "//garnet/packages/examples:http",
-    "//garnet/packages/examples:intl",
     "//garnet/packages/examples:overnet",
     "//garnet/packages/examples:rust",
     "//garnet/packages/examples:scenic",
@@ -80,15 +79,6 @@ group("speech") {
 group("benchmark") {
   testonly = true
   public_deps = [ "//garnet/examples/benchmark" ]
-}
-
-group("intl") {
-  testonly = true
-  public_deps = [
-    "//examples/intl/tz_version_parrot",
-    "//examples/intl/wisdom",
-    "//garnet/examples/intl/manager:intl_property_manager",
-  ]
 }
 
 group("bluetooth") {

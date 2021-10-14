@@ -3,7 +3,7 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /garnet/bin/setui/OWNERS
-include /garnet/examples/intl/OWNERS
+include /examples/intl/OWNERS
 include /src/lib/icu_data/OWNERS
 include /src/tests/intl/OWNERS
 include /third_party/rust_crates/vendor/rust_icu_udat/OWNERS

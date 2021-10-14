@@ -43,7 +43,7 @@ cache_package_labels += [
 cache_package_labels += [
   # Used for Chromium tests for example:
   #    //src/chromium/web_runner_tests:tests
-  "//garnet/examples/intl/manager:intl_property_manager",
+  "//examples/intl/manager:intl_property_manager",
 
   # Used to mock out display hardware.
   "//src/ui/bin/hardware_display_controller_provider",

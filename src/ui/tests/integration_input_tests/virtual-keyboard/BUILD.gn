@@ -82,7 +82,7 @@ group("tests") {
     ":virtual-keyboard-test",
 
     # The deps below are necessary on minimal product configs.
-    "//garnet/examples/intl/manager:intl_property_manager",
+    "//examples/intl/manager:intl_property_manager",
     "//src/chromium:web_engine",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/graphics/bin/vulkan_loader",
@@ -98,7 +98,7 @@ group("tests-product-webengine") {
   testonly = true
   deps = [
     ":virtual-keyboard-test",
-    "//garnet/examples/intl/manager:intl_property_manager",
+    "//examples/intl/manager:intl_property_manager",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/graphics/bin/vulkan_loader",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",

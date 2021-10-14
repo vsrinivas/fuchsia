@@ -30,7 +30,7 @@ In case the above list of flags goes out of date, running `intl_property_manager
 Configure the environment using:
 
 ```
-fx set core.x64 --with=//garnet/packages/tests:intl_examples
+fx set core.x64 --with=//examples/intl
 fx build
 ```
 
@@ -55,4 +55,4 @@ $ fx test intl_property_manager_tests
 
 [1]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.intl/property_provider.fidl
 [2]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.intl/intl.fidl#69
-[3]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/garnet/examples/intl/manager/fidl/manager.test.fidl
+[3]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/examples/intl/manager/fidl/manager.test.fidl

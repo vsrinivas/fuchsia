@@ -7,7 +7,7 @@ include /build/sdk/OWNERS
 include /examples/diagnostics/inspect/OWNERS
 include /garnet/bin/setui_client/OWNERS
 include /garnet/examples/OWNERS
-include /garnet/examples/intl/OWNERS
+include /examples/intl/OWNERS
 include /garnet/examples/tcp/tcp_file_sender/OWNERS
 include /src/connectivity/bluetooth/OWNERS
 include /src/connectivity/network/OWNERS
