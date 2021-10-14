@@ -8,6 +8,7 @@ mod signals;
 mod socket;
 
 use super::stream::{Frame, StreamReaderBinder, StreamWriter};
+use crate::coding;
 use crate::peer::{FramedStreamReader, MessageStats, PeerConnRef};
 use crate::router::Router;
 use anyhow::{bail, format_err, Error};
@@ -80,6 +81,7 @@ pub(crate) trait Serializer: Send {
         stats: &Arc<MessageStats>,
         router: &mut RouterHolder<'_>,
         fut_ctx: &mut Context<'_>,
+        coding_context: coding::Context,
     ) -> Poll<Result<(), Error>>;
 }
 

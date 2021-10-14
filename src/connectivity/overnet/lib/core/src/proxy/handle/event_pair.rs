@@ -5,6 +5,7 @@
 use super::{
     signals::Collector, IntoProxied, Message, Proxyable, ReadValue, RouterHolder, Serializer, IO,
 };
+use crate::coding;
 use crate::peer::{MessageStats, PeerConnRef};
 use anyhow::{format_err, Error};
 use fidl::{AsHandleRef, HandleBased, Peered, Signals};
@@ -112,6 +113,7 @@ impl Serializer for EventPairSerializer {
         _: &Arc<MessageStats>,
         _: &mut RouterHolder<'_>,
         _: &mut Context<'_>,
+        _: coding::Context,
     ) -> Poll<Result<(), Error>> {
         // Reading from the event pair is always pending, therefore we can never serialize a message
         unreachable!()
@@ -134,6 +136,7 @@ impl Serializer for EventPairParser {
         _: &Arc<MessageStats>,
         _: &mut RouterHolder<'_>,
         _: &mut Context<'_>,
+        _: coding::Context,
     ) -> Poll<Result<(), Error>> {
         Poll::Ready(Err(format_err!("Event pairs do not exchange message payloads")))
     }

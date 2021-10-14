@@ -5,6 +5,7 @@
 use super::{
     signals::Collector, IntoProxied, Message, Proxyable, ReadValue, RouterHolder, Serializer, IO,
 };
+use crate::coding;
 use crate::peer::{MessageStats, PeerConnRef};
 use anyhow::Error;
 use fidl::{AsHandleRef, AsyncSocket, HandleBased, Peered, Signals};
@@ -142,6 +143,7 @@ impl Serializer for SocketMessageSerializer {
         _: &Arc<MessageStats>,
         _: &mut RouterHolder<'_>,
         _: &mut Context<'_>,
+        _: coding::Context,
     ) -> Poll<Result<(), Error>> {
         std::mem::swap(bytes, &mut msg.0);
         Poll::Ready(Ok(()))

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use super::handle::{Message, Proxyable, ProxyableHandle, RouterHolder, Serializer};
-use crate::coding::{decode_fidl, encode_fidl};
+use crate::coding::{self, decode_fidl_with_context, encode_fidl_with_context};
 use crate::labels::{NodeId, TransferKey};
 use crate::peer::{
     FrameType, FramedStreamReader, FramedStreamWriter, MessageStats, PeerConnRef, ReadNextFrame,
@@ -42,34 +42,39 @@ impl<Msg: Message> StreamWriter<Msg> {
         let conn = self.stream.conn();
         let mut rh = RouterHolder::Unused(&self.router);
         let stats = &self.stats;
-        poll_fn(|fut_ctx| s.poll_ser(msg, send_buffer, conn, stats, &mut rh, fut_ctx))
-            .await
-            .with_context(|| format_err!("Serializing message {:?}", msg))?;
+        let coding_context = coding::DEFAULT_CONTEXT;
+        poll_fn(|fut_ctx| {
+            s.poll_ser(msg, send_buffer, conn, stats, &mut rh, fut_ctx, coding_context)
+        })
+        .await
+        .with_context(|| format_err!("Serializing message {:?}", msg))?;
         self.stream
-            .send(FrameType::Data, &self.send_buffer, false, &self.stats)
+            .send(FrameType::Data(coding_context), &self.send_buffer, false, &self.stats)
             .await
             .with_context(|| format_err!("sending data {:?} ser={:?}", msg, self.send_buffer))
     }
 
     async fn send_control(&mut self, mut msg: StreamControl, fin: bool) -> Result<(), Error> {
         assert_ne!(self.closed, true);
-        let msg = encode_fidl(&mut msg)
+        let coding_context = coding::DEFAULT_CONTEXT;
+        let msg = encode_fidl_with_context(coding_context, &mut msg)
             .with_context(|| format_err!("encoding control message {:?}", msg))?;
         if fin {
             self.closed = true;
         }
         self.stream
-            .send(FrameType::Control, msg.as_slice(), fin, &self.stats)
+            .send(FrameType::Control(coding_context), msg.as_slice(), fin, &self.stats)
             .await
             .with_context(|| format_err!("sending control message {:?}", msg))
     }
 
     pub async fn send_signal(&mut self, mut msg: SignalUpdate) -> Result<(), Error> {
         assert_ne!(self.closed, true);
-        let msg = encode_fidl(&mut msg)
+        let coding_context = coding::DEFAULT_CONTEXT;
+        let msg = encode_fidl_with_context(coding_context, &mut msg)
             .with_context(|| format_err!("encoding control message {:?}", msg))?;
         self.stream
-            .send(FrameType::Signal, msg.as_slice(), false, &self.stats)
+            .send(FrameType::Signal(coding_context), msg.as_slice(), false, &self.stats)
             .await
             .with_context(|| format_err!("sending control message {:?}", msg))
     }
@@ -197,7 +202,7 @@ impl<'a> ReadNextFrameOrPeerConnRef<'a> {
 #[derive(Debug)]
 enum ReadNextState<Parser> {
     Reading,
-    DeserializingData(Vec<u8>, Parser),
+    DeserializingData(coding::Context, Vec<u8>, Parser),
 }
 
 impl<'a, Msg: Message> ReadNext<'a, Msg> {
@@ -220,56 +225,67 @@ impl<'a, Msg: Message> ReadNext<'a, Msg> {
                             }
                             Frame::Hello
                         }
-                        FrameType::Data => {
+                        FrameType::Data(coding_context) => {
                             if fin {
                                 return Poll::Ready(Err(format_err!("unexpected end of stream")));
                             }
-                            *self.state =
-                                ReadNextState::DeserializingData(bytes, Msg::Parser::new());
+                            *self.state = ReadNextState::DeserializingData(
+                                coding_context,
+                                bytes,
+                                Msg::Parser::new(),
+                            );
                             continue;
                         }
-                        FrameType::Signal => {
+                        FrameType::Signal(coding_context) => {
                             if fin {
                                 return Poll::Ready(Err(format_err!("unexpected end of stream")));
                             }
-                            Frame::SignalUpdate(decode_fidl(&mut bytes)?)
+                            Frame::SignalUpdate(decode_fidl_with_context(
+                                coding_context,
+                                &mut bytes,
+                            )?)
                         }
-                        FrameType::Control => match (fin, decode_fidl(&mut bytes)?) {
-                            (true, StreamControl::AckTransfer(Empty {})) => Frame::AckTransfer,
-                            (true, StreamControl::EndTransfer(Empty {})) => Frame::EndTransfer,
-                            (true, StreamControl::Shutdown(status_code)) => {
-                                Frame::Shutdown(zx_status::Status::ok(status_code))
+                        FrameType::Control(coding_context) => {
+                            match (fin, decode_fidl_with_context(coding_context, &mut bytes)?) {
+                                (true, StreamControl::AckTransfer(Empty {})) => Frame::AckTransfer,
+                                (true, StreamControl::EndTransfer(Empty {})) => Frame::EndTransfer,
+                                (true, StreamControl::Shutdown(status_code)) => {
+                                    Frame::Shutdown(zx_status::Status::ok(status_code))
+                                }
+                                (
+                                    false,
+                                    StreamControl::BeginTransfer(BeginTransfer {
+                                        new_destination_node,
+                                        transfer_key,
+                                    }),
+                                ) => {
+                                    Frame::BeginTransfer(new_destination_node.into(), transfer_key)
+                                }
+                                (true, x) => {
+                                    return Poll::Ready(Err(format_err!(
+                                        "Unexpected end of stream after {:?}",
+                                        x
+                                    )))
+                                }
+                                (false, x) => {
+                                    return Poll::Ready(Err(format_err!(
+                                        "Expected end of stream after {:?}",
+                                        x
+                                    )))
+                                }
                             }
-                            (
-                                false,
-                                StreamControl::BeginTransfer(BeginTransfer {
-                                    new_destination_node,
-                                    transfer_key,
-                                }),
-                            ) => Frame::BeginTransfer(new_destination_node.into(), transfer_key),
-                            (true, x) => {
-                                return Poll::Ready(Err(format_err!(
-                                    "Unexpected end of stream after {:?}",
-                                    x
-                                )))
-                            }
-                            (false, x) => {
-                                return Poll::Ready(Err(format_err!(
-                                    "Expected end of stream after {:?}",
-                                    x
-                                )))
-                            }
-                        },
+                        }
                     }
                 }
-                ReadNextState::DeserializingData(ref mut bytes, ref mut parser) => {
+                ReadNextState::DeserializingData(coding_context, ref mut bytes, ref mut parser) => {
                     ready!(parser.poll_ser(
                         self.incoming_message.as_mut().unwrap(),
                         bytes,
                         self.read_next_frame_or_peer_conn_ref.conn(),
                         self.stats,
                         &mut self.router_holder,
-                        ctx
+                        ctx,
+                        coding_context,
                     ))?;
                     *self.state = ReadNextState::Reading;
                     Frame::Data(self.incoming_message.take().unwrap())
@@ -301,7 +317,7 @@ impl<Msg: Message> StreamReader<Msg> {
                 ReadNextState::Reading => {
                     ReadNextFrameOrPeerConnRef::ReadNextFrame(self.stream.next())
                 }
-                ReadNextState::DeserializingData(_, _) => {
+                ReadNextState::DeserializingData(_, _, _) => {
                     ReadNextFrameOrPeerConnRef::PeerConnRef(self.stream.conn())
                 }
             },

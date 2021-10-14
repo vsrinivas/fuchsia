@@ -18,7 +18,7 @@ mod stat_counter;
 mod test_util;
 
 // Export selected types from modules.
-pub use coding::{decode_fidl, encode_fidl};
+pub use coding::{decode_fidl_with_context, encode_fidl_with_context};
 pub use future_help::log_errors;
 pub use labels::{ConnectionId, Endpoint, NodeId, NodeLinkId};
 pub use link::{

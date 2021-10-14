@@ -12,7 +12,7 @@ use self::{
     ping_tracker::PingTracker,
 };
 use crate::{
-    coding::{decode_fidl, encode_fidl},
+    coding::{self, decode_fidl_with_context, encode_fidl_with_context},
     future_help::{log_errors, Observable, Observer},
     labels::{NodeId, NodeLinkId},
     router::{ConnectingLinkToken, ForwardingTable, Router},
@@ -153,7 +153,10 @@ struct OutputFrame {
 impl Default for OutputFrame {
     fn default() -> OutputFrame {
         OutputFrame {
-            target: RoutingTarget { src: 0.into(), dst: RoutingDestination::Control },
+            target: RoutingTarget {
+                src: 0.into(),
+                dst: RoutingDestination::Control(coding::DEFAULT_CONTEXT),
+            },
             bytes: [0u8; MAX_FRAME_LENGTH],
             length: 0,
         }
@@ -718,7 +721,9 @@ async fn send_state(
                 set_route
                     .routes
                     .push(Route { destination: destination.into(), route_metrics: metrics.into() });
-                if encode_fidl(&mut set_route)?.len() > MAX_SET_ROUTE_LENGTH {
+                if encode_fidl_with_context(coding::DEFAULT_CONTEXT, &mut set_route)?.len()
+                    > MAX_SET_ROUTE_LENGTH
+                {
                     let route = set_route.routes.pop().unwrap();
                     output
                         .send_control_message(LinkControlPayload::SetRoute(std::mem::replace(
@@ -727,7 +732,10 @@ async fn send_state(
                         )))
                         .await?;
                     set_route.routes.push(route);
-                    assert!(encode_fidl(&mut set_route)?.len() <= MAX_SET_ROUTE_LENGTH);
+                    assert!(
+                        encode_fidl_with_context(coding::DEFAULT_CONTEXT, &mut set_route)?.len()
+                            <= MAX_SET_ROUTE_LENGTH
+                    );
                 }
             }
             set_route.is_end = true;
@@ -777,9 +785,13 @@ impl LinkOutput {
         let mut output = self.queue.lock_when_pinned(Pin::new(&READY_TO_SEND_NEW_CONTROL)).await;
         let seq = output.control_sent_seq + 1;
         let mut frame = LinkControlFrame::Message(LinkControlMessage { seq, payload });
-        let message = encode_fidl(&mut frame)?;
+        let coding_context = coding::DEFAULT_CONTEXT;
+        let message = encode_fidl_with_context(coding_context, &mut frame)?;
         output
-            .send(RoutingTarget { src: self.own_node_id, dst: RoutingDestination::Control })?
+            .send(RoutingTarget {
+                src: self.own_node_id,
+                dst: RoutingDestination::Control(coding_context),
+            })?
             .commit_copy(&message)?;
         output.control_sent_seq = seq;
         let mut resend_delay = new_resend_delay(Duration::from_millis(0), &output.ping_tracker);
@@ -809,7 +821,7 @@ impl LinkOutput {
                         output
                             .send(RoutingTarget {
                                 src: self.own_node_id,
-                                dst: RoutingDestination::Control,
+                                dst: RoutingDestination::Control(coding_context),
                             })?
                             .commit_copy(&message)?;
                         resend_delay = new_resend_delay(resend_delay, &output.ping_tracker);
@@ -928,7 +940,12 @@ impl LinkReceiver {
         Ok(Some((routing_label, frame)))
     }
 
-    async fn handle_control(&mut self, src: NodeId, frame: &mut [u8]) -> Result<(), RecvError> {
+    async fn handle_control(
+        &mut self,
+        src: NodeId,
+        frame: &mut [u8],
+        coding_context: coding::Context,
+    ) -> Result<(), RecvError> {
         let output = &self.output;
 
         if let Some(last_seen_src) = self.peer_node_id {
@@ -945,7 +962,7 @@ impl LinkReceiver {
             output.queue.lock().await.peer_node_id = Some(src);
         }
 
-        let frame = decode_fidl(frame)?;
+        let frame = decode_fidl_with_context(coding_context, frame)?;
         match frame {
             LinkControlFrame::Ack(seq) => {
                 let mut frame_output = output.queue.lock().await;
@@ -997,14 +1014,17 @@ impl LinkReceiver {
                     })?;
                 }
                 self.received_seq = Some(seq.try_into().unwrap());
-                let ack = encode_fidl(&mut LinkControlFrame::Ack(seq))?;
+                let ack = encode_fidl_with_context(
+                    coding::DEFAULT_CONTEXT,
+                    &mut LinkControlFrame::Ack(seq),
+                )?;
                 output
                     .queue
                     .lock_when_pinned(Pin::new(&READY_TO_RESEND_CONTROL))
                     .await
                     .send(RoutingTarget {
                         src: output.own_node_id,
-                        dst: RoutingDestination::Control,
+                        dst: RoutingDestination::Control(coding_context),
                     })?
                     .commit_copy(&ack)?;
             }
@@ -1069,7 +1089,9 @@ impl LinkReceiver {
         if let Some((routing_label, frame)) = self.remove_label(frame).await? {
             let src = routing_label.target.src;
             match routing_label.target.dst {
-                RoutingDestination::Control => self.handle_control(src, frame).await?,
+                RoutingDestination::Control(coding_context) => {
+                    self.handle_control(src, frame, coding_context).await?
+                }
                 RoutingDestination::Message(dst) => {
                     let own_node_id = self.output.own_node_id;
                     if src == own_node_id {
@@ -1188,7 +1210,10 @@ impl LinkSender {
                 stats.pings_sent.fetch_add(1, Ordering::Relaxed);
             }
             let label = LinkFrameLabel {
-                target: RoutingTarget { src: output.own_node_id, dst: RoutingDestination::Control },
+                target: RoutingTarget {
+                    src: output.own_node_id,
+                    dst: RoutingDestination::Control(coding::DEFAULT_CONTEXT),
+                },
                 ping,
                 pong,
                 debug_token: LinkFrameLabel::new_debug_token(),

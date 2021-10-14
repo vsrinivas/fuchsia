@@ -5,6 +5,7 @@
 //! Framing and deframing datagrams onto QUIC streams
 
 use super::{PeerConnRef, ReadExact};
+use crate::coding;
 use crate::labels::NodeId;
 use crate::stat_counter::StatCounter;
 use anyhow::{format_err, Error};
@@ -20,9 +21,9 @@ use std::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum FrameType {
     Hello,
-    Data,
-    Control,
-    Signal,
+    Data(coding::Context),
+    Control(coding::Context),
+    Signal(coding::Context),
 }
 
 /// Header for one frame of data on a QUIC stream
@@ -48,9 +49,12 @@ impl FrameHeader {
         let hdr: u64 = (length as u64)
             | (match self.frame_type {
                 FrameType::Hello => 0,
-                FrameType::Data => 1,
-                FrameType::Control => 2,
-                FrameType::Signal => 3,
+                FrameType::Data(coding::Context { use_persistent_header: false }) => 1,
+                FrameType::Control(coding::Context { use_persistent_header: false }) => 2,
+                FrameType::Signal(coding::Context { use_persistent_header: false }) => 3,
+                FrameType::Data(coding::Context { use_persistent_header: true }) => 4,
+                FrameType::Control(coding::Context { use_persistent_header: true }) => 5,
+                FrameType::Signal(coding::Context { use_persistent_header: true }) => 6,
             } << 32);
         Ok(hdr.to_le_bytes())
     }
@@ -61,9 +65,12 @@ impl FrameHeader {
         let length = (hdr & 0xffff_ffff) as usize;
         let frame_type = match hdr >> 32 {
             0 => FrameType::Hello,
-            1 => FrameType::Data,
-            2 => FrameType::Control,
-            3 => FrameType::Signal,
+            1 => FrameType::Data(coding::Context { use_persistent_header: false }),
+            2 => FrameType::Control(coding::Context { use_persistent_header: false }),
+            3 => FrameType::Signal(coding::Context { use_persistent_header: false }),
+            4 => FrameType::Data(coding::Context { use_persistent_header: true }),
+            5 => FrameType::Control(coding::Context { use_persistent_header: true }),
+            6 => FrameType::Signal(coding::Context { use_persistent_header: true }),
             _ => return Err(anyhow::format_err!("Unknown frame type {}", hdr >> 32)),
         };
         Ok(FrameHeader { frame_type, length })
@@ -279,15 +286,32 @@ mod test {
 
     #[fuchsia::test]
     fn roundtrips() {
-        roundtrip(FrameHeader { frame_type: FrameType::Data, length: 0 });
-        roundtrip(FrameHeader { frame_type: FrameType::Data, length: std::u32::MAX as usize });
+        roundtrip(FrameHeader {
+            frame_type: FrameType::Data(coding::Context { use_persistent_header: false }),
+            length: 0,
+        });
+        roundtrip(FrameHeader {
+            frame_type: FrameType::Data(coding::Context { use_persistent_header: false }),
+            length: std::u32::MAX as usize,
+        });
+        roundtrip(FrameHeader {
+            frame_type: FrameType::Data(coding::Context { use_persistent_header: true }),
+            length: 0,
+        });
+        roundtrip(FrameHeader {
+            frame_type: FrameType::Data(coding::Context { use_persistent_header: true }),
+            length: std::u32::MAX as usize,
+        });
     }
 
     #[fuchsia::test]
     fn too_long() {
-        FrameHeader { frame_type: FrameType::Data, length: (std::u32::MAX as usize) + 1 }
-            .to_bytes()
-            .expect_err("Should fail");
+        FrameHeader {
+            frame_type: FrameType::Data(coding::Context { use_persistent_header: false }),
+            length: (std::u32::MAX as usize) + 1,
+        }
+        .to_bytes()
+        .expect_err("Should fail");
     }
 
     #[fuchsia::test]

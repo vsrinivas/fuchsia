@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use super::{IntoProxied, Message, Proxyable, ReadValue, RouterHolder, Serializer, IO};
-use crate::coding::{decode_fidl, encode_fidl};
+use crate::coding::{self, decode_fidl_with_context, encode_fidl_with_context};
 use crate::peer::{MessageStats, PeerConnRef};
 use anyhow::{Context as _, Error};
 use fidl::{AsHandleRef, AsyncChannel, HandleBased, Peered, Signals};
@@ -146,6 +146,7 @@ impl Serializer for ChannelMessageParser {
         stats: &Arc<MessageStats>,
         router: &mut RouterHolder<'_>,
         fut_ctx: &mut Context<'_>,
+        coding_context: coding::Context,
     ) -> Poll<Result<(), Error>> {
         log::trace!(
             "ChannelMessageParser::poll_ser: msg:{:?} serialized:{:?} self:{:?}",
@@ -156,7 +157,7 @@ impl Serializer for ChannelMessageParser {
         match self {
             ChannelMessageParser::New => {
                 let ZirconChannelMessage { mut bytes, handles: unbound_handles } =
-                    decode_fidl(serialized)?;
+                    decode_fidl_with_context(coding_context, serialized)?;
                 // Special case no handles case to avoid allocation dance
                 if unbound_handles.is_empty() {
                     msg.handles.clear();
@@ -183,7 +184,7 @@ impl Serializer for ChannelMessageParser {
                     }
                     .boxed(),
                 };
-                self.poll_ser(msg, serialized, conn, stats, router, fut_ctx)
+                self.poll_ser(msg, serialized, conn, stats, router, fut_ctx, coding_context)
             }
             ChannelMessageParser::Pending { ref mut bytes, handles } => {
                 let mut handles = ready!(handles.as_mut().poll(fut_ctx))?;
@@ -216,6 +217,7 @@ impl Serializer for ChannelMessageSerializer {
         stats: &Arc<MessageStats>,
         router: &mut RouterHolder<'_>,
         fut_ctx: &mut Context<'_>,
+        coding_context: coding::Context,
     ) -> Poll<Result<(), Error>> {
         log::trace!(
             "ChannelMessageSerializer::poll_ser: msg:{:?} serialized:{:?} self:{:?}",
@@ -232,10 +234,13 @@ impl Serializer for ChannelMessageSerializer {
                 let handles = std::mem::replace(&mut msg.handles, Vec::new());
                 // Special case no handles case to avoid allocation dance
                 if handles.is_empty() {
-                    *serialized = encode_fidl(&mut ZirconChannelMessage {
-                        bytes: std::mem::replace(&mut msg.bytes, Vec::new()),
-                        handles: Vec::new(),
-                    })?;
+                    *serialized = encode_fidl_with_context(
+                        coding::DEFAULT_CONTEXT,
+                        &mut ZirconChannelMessage {
+                            bytes: std::mem::replace(&mut msg.bytes, Vec::new()),
+                            handles: Vec::new(),
+                        },
+                    )?;
                     *self = ChannelMessageSerializer::Done;
                     return Poll::Ready(Ok(()));
                 }
@@ -263,14 +268,17 @@ impl Serializer for ChannelMessageSerializer {
                     }
                     .boxed(),
                 );
-                self.poll_ser(msg, serialized, conn, stats, router, fut_ctx)
+                self.poll_ser(msg, serialized, conn, stats, router, fut_ctx, coding_context)
             }
             ChannelMessageSerializer::Pending(handles) => {
                 let handles = ready!(handles.as_mut().poll(fut_ctx))?;
-                *serialized = encode_fidl(&mut ZirconChannelMessage {
-                    bytes: std::mem::replace(&mut msg.bytes, Vec::new()),
-                    handles,
-                })?;
+                *serialized = encode_fidl_with_context(
+                    coding::DEFAULT_CONTEXT,
+                    &mut ZirconChannelMessage {
+                        bytes: std::mem::replace(&mut msg.bytes, Vec::new()),
+                        handles,
+                    },
+                )?;
                 *self = ChannelMessageSerializer::Done;
                 Poll::Ready(Ok(()))
             }

@@ -8,7 +8,7 @@ pub(crate) use self::framed_stream::{
     FrameType, FramedStreamReader, FramedStreamWriter, MessageStats, ReadNextFrame,
 };
 use crate::{
-    coding::{decode_fidl, encode_fidl},
+    coding::{self, decode_fidl_with_context, encode_fidl_with_context},
     future_help::Observer,
     labels::{ConnectionId, Endpoint, NodeId, TransferKey},
     link::{LinkRouting, OutputQueue, RoutingDestination, RoutingTarget},
@@ -649,10 +649,11 @@ async fn client_handshake(
         // Send config request
         let mut conn_stream_writer =
             FramedStreamWriter::from_quic(conn_stream_writer, peer_node_id);
+        let coding_context = coding::DEFAULT_CONTEXT;
         conn_stream_writer
             .send(
-                FrameType::Data,
-                &encode_fidl(&mut ConfigRequest::EMPTY.clone())?,
+                FrameType::Data(coding_context),
+                &encode_fidl_with_context(coding_context, &mut ConfigRequest::EMPTY.clone())?,
                 false,
                 &conn_stats.config,
             )
@@ -666,8 +667,10 @@ async fn client_handshake(
         let mut conn_stream_reader =
             FramedStreamReader::from_quic(conn_stream_reader, peer_node_id);
         let _ = Config::from_response(
-            if let (FrameType::Data, mut bytes, false) = conn_stream_reader.next().await? {
-                decode_fidl(&mut bytes)?
+            if let (FrameType::Data(coding_context), mut bytes, false) =
+                conn_stream_reader.next().await?
+            {
+                decode_fidl_with_context(coding_context, &mut bytes)?
             } else {
                 bail!("Failed to read config response")
             },
@@ -759,15 +762,16 @@ async fn client_conn_stream(
                 let (frame_type, mut bytes, fin) =
                     conn_stream_reader.next().await.map_err(RunnerError::ServiceError)?;
                 match frame_type {
-                    FrameType::Hello | FrameType::Control | FrameType::Signal => {
+                    FrameType::Hello | FrameType::Control(_) | FrameType::Signal(_) => {
                         return Err(RunnerError::BadFrameType(frame_type));
                     }
-                    FrameType::Data => {
+                    FrameType::Data(coding_context) => {
                         client_conn_handle_incoming_frame(
                             my_node_id,
                             peer_node_id,
                             &mut bytes,
                             on_link_status_ack,
+                            coding_context,
                         )
                         .await
                         .map_err(RunnerError::ServiceError)?;
@@ -787,15 +791,19 @@ async fn client_conn_stream(
                     peer_node_id,
                     services
                 );
+                let coding_context = coding::DEFAULT_CONTEXT;
                 conn_stream_writer
                     .lock()
                     .await
                     .send(
-                        FrameType::Data,
-                        &encode_fidl(&mut PeerMessage::UpdateNodeDescription(PeerDescription {
-                            services,
-                            ..PeerDescription::EMPTY
-                        }))?,
+                        FrameType::Data(coding_context),
+                        &encode_fidl_with_context(
+                            coding_context,
+                            &mut PeerMessage::UpdateNodeDescription(PeerDescription {
+                                services,
+                                ..PeerDescription::EMPTY
+                            }),
+                        )?,
                         false,
                         &svc_conn_stats.update_node_description,
                     )
@@ -816,23 +824,31 @@ async fn client_conn_handle_command(
 ) -> Result<(), Error> {
     match command {
         ClientPeerCommand::ConnectToService(conn) => {
+            let coding_context = coding::DEFAULT_CONTEXT;
             conn_stream_writer
                 .send(
-                    FrameType::Data,
-                    &encode_fidl(&mut PeerMessage::ConnectToService(conn))?,
+                    FrameType::Data(coding_context),
+                    &encode_fidl_with_context(
+                        coding_context,
+                        &mut PeerMessage::ConnectToService(conn),
+                    )?,
                     false,
                     &conn_stats.connect_to_service,
                 )
                 .await?;
         }
         ClientPeerCommand::OpenTransfer(stream_id, transfer_key, sent) => {
+            let coding_context = coding::DEFAULT_CONTEXT;
             conn_stream_writer
                 .send(
-                    FrameType::Data,
-                    &encode_fidl(&mut PeerMessage::OpenTransfer(OpenTransfer {
-                        stream_id: StreamId { id: stream_id },
-                        transfer_key,
-                    }))?,
+                    FrameType::Data(coding_context),
+                    &encode_fidl_with_context(
+                        coding_context,
+                        &mut PeerMessage::OpenTransfer(OpenTransfer {
+                            stream_id: StreamId { id: stream_id },
+                            transfer_key,
+                        }),
+                    )?,
                     false,
                     &conn_stats.open_transfer,
                 )
@@ -848,8 +864,9 @@ async fn client_conn_handle_incoming_frame(
     peer_node_id: NodeId,
     bytes: &mut [u8],
     on_link_status_ack: &Mutex<Option<oneshot::Sender<()>>>,
+    coding_context: coding::Context,
 ) -> Result<(), Error> {
-    let msg: PeerReply = decode_fidl(bytes)?;
+    let msg: PeerReply = decode_fidl_with_context(coding_context, bytes)?;
     log::trace!("[{:?} clipeer:{:?}] got reply {:?}", my_node_id, peer_node_id, msg);
     match msg {
         PeerReply::UpdateLinkStatusAck(_) => {
@@ -884,16 +901,24 @@ async fn server_handshake(
     // Await config request
     log::trace!("[{:?} svrpeer:{:?}] read config", my_node_id, node_id);
     let (_, mut response) = Config::negotiate(
-        if let (FrameType::Data, mut bytes, false) = conn_stream_reader.next().await? {
-            decode_fidl(&mut bytes)?
+        if let (FrameType::Data(coding_context), mut bytes, false) =
+            conn_stream_reader.next().await?
+        {
+            decode_fidl_with_context(coding_context, &mut bytes)?
         } else {
             bail!("Failed to read config response")
         },
     );
     // Send config response
     log::trace!("[{:?} svrpeer:{:?}] send config", my_node_id, node_id);
+    let coding_context = coding::Context { use_persistent_header: false };
     conn_stream_writer
-        .send(FrameType::Data, &encode_fidl(&mut response)?, false, &conn_stats.config)
+        .send(
+            FrameType::Data(coding_context),
+            &encode_fidl_with_context(coding_context, &mut response)?,
+            false,
+            &conn_stats.config,
+        )
         .await?;
     Ok((conn_stream_writer, conn_stream_reader))
 }
@@ -919,12 +944,12 @@ async fn server_conn_stream(
 
         let router = Weak::upgrade(&router).ok_or_else(|| RunnerError::RouterGone)?;
         match frame_type {
-            FrameType::Hello | FrameType::Control | FrameType::Signal => {
+            FrameType::Hello | FrameType::Control(_) | FrameType::Signal(_) => {
                 return Err(RunnerError::BadFrameType(frame_type));
             }
-            FrameType::Data => {
-                let msg: PeerMessage =
-                    decode_fidl(&mut bytes).map_err(RunnerError::ServiceError)?;
+            FrameType::Data(coding_context) => {
+                let msg: PeerMessage = decode_fidl_with_context(coding_context, &mut bytes)
+                    .map_err(RunnerError::ServiceError)?;
                 log::trace!("[{:?} svrpeer:{:?}] Got peer request: {:?}", my_node_id, node_id, msg);
                 match msg {
                     PeerMessage::ConnectToService(ConnectToService {

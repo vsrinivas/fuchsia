@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use super::ping_tracker::Pong;
+use crate::coding;
 use crate::labels::NodeId;
 use anyhow::{format_err, Error};
 use byteorder::{ReadBytesExt, WriteBytesExt};
@@ -14,7 +15,7 @@ pub enum RoutingDestination {
     /// Messages can be routed over links - argument is the destination node.
     Message(NodeId),
     /// Link control messages are always peer-to-peer.
-    Control,
+    Control(coding::Context),
 }
 
 /// Labels where a packet is coming from and going to
@@ -40,6 +41,7 @@ pub struct LinkFrameLabel {
 const LINK_FRAME_LABEL_HAS_SRC: u8 = 0x01;
 const LINK_FRAME_LABEL_HAS_DST: u8 = 0x02;
 const LINK_FRAME_LABEL_IS_CONTROL: u8 = 0x04;
+const LINK_FRAME_LABEL_IS_CONTROL_WITH_PERSISTENCE_HEADER: u8 = 0x08;
 const LINK_FRAME_LABEL_HAS_PING: u8 = 0x10;
 const LINK_FRAME_LABEL_HAS_PONG: u8 = 0x20;
 const LINK_FRAME_LABEL_HAS_DEBUG_TOKEN: u8 = 0x80;
@@ -82,8 +84,11 @@ impl LinkFrameLabel {
                     buf.write_u64::<byteorder::LittleEndian>(dst.0)?;
                 }
             }
-            RoutingDestination::Control => {
+            RoutingDestination::Control(coding::Context { use_persistent_header: false }) => {
                 control |= LINK_FRAME_LABEL_IS_CONTROL;
+            }
+            RoutingDestination::Control(coding::Context { use_persistent_header: true }) => {
+                control |= LINK_FRAME_LABEL_IS_CONTROL_WITH_PERSISTENCE_HEADER;
             }
         }
         if force_write_src || link_src != src {
@@ -155,7 +160,9 @@ impl LinkFrameLabel {
                     ))?
                 };
                 let dst = if (control & LINK_FRAME_LABEL_IS_CONTROL) != 0 {
-                    RoutingDestination::Control
+                    RoutingDestination::Control(coding::Context { use_persistent_header: false })
+                } else if (control & LINK_FRAME_LABEL_IS_CONTROL_WITH_PERSISTENCE_HEADER) != 0 {
+                    RoutingDestination::Control(coding::Context { use_persistent_header: true })
                 } else {
                     let dst = if (control & LINK_FRAME_LABEL_HAS_DST) != 0 {
                         r.rd_u64()?.into()
@@ -239,7 +246,27 @@ mod test {
         );
         round_trips(
             LinkFrameLabel {
-                target: RoutingTarget { src: 1.into(), dst: RoutingDestination::Control },
+                target: RoutingTarget {
+                    src: 1.into(),
+                    dst: RoutingDestination::Control(coding::Context {
+                        use_persistent_header: false,
+                    }),
+                },
+                ping: None,
+                pong: None,
+                debug_token: None,
+            },
+            1.into(),
+            2.into(),
+        );
+        round_trips(
+            LinkFrameLabel {
+                target: RoutingTarget {
+                    src: 1.into(),
+                    dst: RoutingDestination::Control(coding::Context {
+                        use_persistent_header: true,
+                    }),
+                },
                 ping: None,
                 pong: None,
                 debug_token: None,
