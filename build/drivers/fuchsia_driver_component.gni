@@ -103,13 +103,16 @@ template("fuchsia_driver_component") {
                              "manifest",
                              "deps",
                            ])
+    if (!defined(deps)) {
+      deps = []
+    }
     if (generate_manifest) {
       deps += [ ":${full_manifest_target}" ]
       manifest = get_target_outputs(":${full_manifest_target}")
       manifest = manifest[0]
     }
     if (is_v1_driver) {
-      deps += [ "//src/devices/misc/drivers/compat:compat_driver" ]
+      deps += [ "//src/devices/misc/drivers/compat:driver" ]
     }
     metadata = {
       # Used by the assert_driver_components template.

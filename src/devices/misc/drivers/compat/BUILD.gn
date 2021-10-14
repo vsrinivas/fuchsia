@@ -6,43 +6,102 @@ import("//build/components.gni")
 import("//build/drivers.gni")
 
 group("compat") {
-  # NOTE(abdulla): Intentionally empty until we have the driver module target.
-}
-
-fuchsia_driver("compat_driver") {
-  output_name = "compat"
-  # NOTE(dgilhooley): This is empty for now. We need to at least have this
-  # empty .so so the Component Manifests are pointing to a valid file.
+  deps = [
+    ":compat_v1_create_test",
+    ":compat_v1_missing_test",
+    ":compat_v1_test",
+  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":compat-test" ]
+  deps = [ ":compat_test" ]
 }
 
 source_set("lib") {
   sources = [
+    "api.cc",
     "device.cc",
     "device.h",
+    "driver.cc",
+    "driver.h",
     "loader.cc",
     "loader.h",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/lib/stdcompat",
+    "//src/devices/lib/driver2",
     "//src/devices/lib/driver2:llcpp",
     "//src/lib/ddk",
+    "//zircon/system/ulib/svc",
   ]
+}
+
+fuchsia_driver("driver") {
+  output_name = "compat"
+  deps = [ ":lib" ]
+}
+
+driver_bind_rules("v1_test_bind") {
+  header_output = "v1_test_bind.h"
+  disable_autobind = true
+}
+
+fuchsia_driver("v1_test") {
+  sources = [
+    "v1_test.cc",
+    "v1_test.h",
+  ]
+  deps = [
+    ":v1_test_bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+  ]
+}
+
+fuchsia_driver_component("compat_v1_test") {
+  deps = [ ":v1_test" ]
+}
+
+fuchsia_driver("v1_create_test") {
+  sources = [
+    "v1_create_test.cc",
+    "v1_test.h",
+  ]
+  deps = [
+    ":v1_test_bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+  ]
+}
+
+fuchsia_driver_component("compat_v1_create_test") {
+  deps = [ ":v1_create_test" ]
+}
+
+fuchsia_driver("v1_missing_test") {
+  sources = [ "v1_missing_test.cc" ]
+  deps = [
+    ":v1_test_bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+  ]
+}
+
+fuchsia_driver_component("compat_v1_missing_test") {
+  deps = [ ":v1_missing_test" ]
 }
 
 executable("unittests") {
   testonly = true
   output_name = "compat_test"
-
   sources = [
     "device_test.cc",
+    "driver_test.cc",
     "loader_test.cc",
+    "v1_test.h",
   ]
-
   deps = [
     ":lib",
     "//src/lib/fxl/test:gtest_main",
@@ -50,7 +109,17 @@ executable("unittests") {
   ]
 }
 
-fuchsia_unittest_package("compat-test") {
-  manifest = "meta/compat-test.cml"
-  deps = [ ":unittests" ]
+fuchsia_unittest_package("compat_test") {
+  manifest = "meta/compat_test.cml"
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  deps = [
+    ":compat_v1_create_test",
+    ":compat_v1_missing_test",
+    ":compat_v1_test",
+    ":unittests",
+  ]
 }

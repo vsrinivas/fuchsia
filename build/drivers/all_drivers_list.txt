@@ -131,7 +131,10 @@
 //src/devices/mcu/drivers/vim3-mcu:vim3-mcu-driver
 //src/devices/misc/drivers/builtin:builtin-driver
 //src/devices/misc/drivers/chromeos-acpi:driver
-//src/devices/misc/drivers/compat:compat_driver
+//src/devices/misc/drivers/compat:driver
+//src/devices/misc/drivers/compat:v1_create_test
+//src/devices/misc/drivers/compat:v1_missing_test
+//src/devices/misc/drivers/compat:v1_test
 //src/devices/misc/drivers/cpu-trace:cpu-trace-driver
 //src/devices/misc/drivers/packaged:lib
 //src/devices/misc/drivers/test-parent:test-parent-sys_driver
