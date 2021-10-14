@@ -38,6 +38,7 @@ ffx_plugin("ffx_flash") {
   sources = [
     "src/file.rs",
     "src/lib.rs",
+    "src/manifest/crypto.rs",
     "src/manifest/mod.rs",
     "src/manifest/sdk.rs",
     "src/manifest/v1.rs",

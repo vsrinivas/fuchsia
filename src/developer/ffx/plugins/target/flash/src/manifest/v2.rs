@@ -6,9 +6,10 @@ use {
     crate::{
         file::FileResolver,
         manifest::{
-            flash_and_reboot, get_unlock_challenge, is_locked,
-            v1::FlashManifest as FlashManifestV1, verify_hardware, Flash, MISSING_PRODUCT,
-            UNLOCK_ERR,
+            crypto::{get_unlock_challenge, UnlockCredentials},
+            flash_and_reboot, is_locked,
+            v1::FlashManifest as FlashManifestV1,
+            verify_hardware, Flash, MISSING_PRODUCT, UNLOCK_ERR,
         },
     },
     anyhow::Result,
@@ -58,8 +59,15 @@ impl Flash for FlashManifest {
                 ffx_bail!("{}", MISSING_CREDENTIALS);
             } else {
                 //TODO: Try unlock the device.
-                //TODO: Match the unlock challenge to the data in self.credentials
-                let _unlock = get_unlock_challenge(&fastboot_proxy).await?;
+                let unlock = get_unlock_challenge(&fastboot_proxy).await?;
+                for cred in &self.credentials {
+                    let cred_file = file_resolver.get_file(writer, cred)?;
+                    let unlock_creds = UnlockCredentials::new(&cred_file).await?;
+                    if &unlock.product_id_hash[..] == unlock_creds.get_atx_certificate_subject() {
+                        log::debug!("Found matching credentials");
+                        // TODO: generate unlock challenge token to give to fastboot device.
+                    }
+                }
                 ffx_bail!("{}", UNLOCK_ERR);
             }
         }

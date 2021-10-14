@@ -11,9 +11,7 @@ use {
         },
     },
     anyhow::{anyhow, bail, Context, Error, Result},
-    async_fs::OpenOptions,
     async_trait::async_trait,
-    byteorder::{ByteOrder, LittleEndian},
     chrono::{DateTime, Duration, Utc},
     errors::{ffx_bail, ffx_error},
     ffx_flash_args::{FlashCommand, OemFile},
@@ -33,10 +31,10 @@ use {
     std::fs::File,
     std::io::{BufReader, Read, Write},
     std::path::PathBuf,
-    tempfile::tempdir,
     termion::{color, style},
 };
 
+pub(crate) mod crypto;
 pub(crate) mod sdk;
 pub(crate) mod v1;
 pub(crate) mod v2;
@@ -595,57 +593,6 @@ pub(crate) async fn is_locked(fastboot_proxy: &FastbootProxy) -> Result<bool> {
     verify_variable_value(LOCKED_VAR, "no", &fastboot_proxy).await.map(|l| !l)
 }
 
-const UNLOCK_CHALLENGE: &str = "vx-get-unlock-challenge";
-
-const CHALLENGE_STRUCT_SIZE: u64 = 52;
-const CHALLENGE_DATA_SIZE: usize = 16;
-const PRODUCT_ID_HASH_SIZE: usize = 32;
-
-#[derive(Debug)]
-pub(crate) struct UnlockChallenge {
-    #[cfg_attr(not(test), allow(unused))]
-    pub(crate) version: u32,
-    pub(crate) product_id_hash: [u8; PRODUCT_ID_HASH_SIZE],
-    pub(crate) challenge: [u8; CHALLENGE_DATA_SIZE],
-}
-
-impl UnlockChallenge {
-    fn new(buffer: &Vec<u8>) -> Self {
-        let mut result = Self {
-            version: LittleEndian::read_u32(&buffer[..4]),
-            product_id_hash: [0; PRODUCT_ID_HASH_SIZE],
-            challenge: [0; CHALLENGE_DATA_SIZE],
-        };
-        result.product_id_hash.clone_from_slice(&buffer[4..PRODUCT_ID_HASH_SIZE + 4]);
-        result.challenge.clone_from_slice(&buffer[PRODUCT_ID_HASH_SIZE + 4..]);
-        result
-    }
-}
-
-pub(crate) async fn get_unlock_challenge(
-    fastboot_proxy: &FastbootProxy,
-) -> Result<UnlockChallenge> {
-    let dir = tempdir()?;
-    let path = dir.path().join("challenge");
-    let filepath = path.to_str().ok_or(anyhow!("error getting tempfile path"))?;
-    fastboot_proxy
-        .oem(UNLOCK_CHALLENGE)
-        .await?
-        .map_err(|_| anyhow!("There was an error sending oem command \"{}\"", UNLOCK_CHALLENGE))?;
-    fastboot_proxy
-        .get_staged(filepath)
-        .await?
-        .map_err(|_| anyhow!("There was an error sending upload command"))?;
-    let mut file = OpenOptions::new().read(true).open(path.clone()).await?;
-    let size = file.metadata().await?.len();
-    if size != CHALLENGE_STRUCT_SIZE {
-        bail!("Device returned a file with invalid unlock challenge length")
-    }
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).await?;
-    Ok(UnlockChallenge::new(&buffer))
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // tests
 
@@ -693,27 +640,5 @@ mod test {
     async fn test_loading_version_1_from_array() -> Result<()> {
         let manifest_contents = ARRAY_MANIFEST.to_string();
         FlashManifestVersion::load(BufReader::new(manifest_contents.as_bytes())).map(|_| ())
-    }
-
-    #[test]
-    fn test_unlock_challenge() -> Result<()> {
-        let mut buffer = Vec::with_capacity(52);
-        let mut i = 0;
-        while i < 4 {
-            buffer.push(i);
-            i += 1;
-        }
-        LittleEndian::write_u32(&mut buffer[..4], 1);
-        let product_id_hash: [u8; PRODUCT_ID_HASH_SIZE] = [1; PRODUCT_ID_HASH_SIZE];
-        let challenge: [u8; CHALLENGE_DATA_SIZE] = [0; CHALLENGE_DATA_SIZE];
-        product_id_hash.iter().for_each(|b| buffer.push(*b));
-        challenge.iter().for_each(|b| buffer.push(*b));
-        println!("{}", buffer.len());
-
-        let unlock_challenge = UnlockChallenge::new(&buffer.to_vec());
-        assert_eq!(unlock_challenge.version, 1);
-        assert_eq!(unlock_challenge.product_id_hash, product_id_hash);
-        assert_eq!(unlock_challenge.challenge, challenge);
-        Ok(())
     }
 }
