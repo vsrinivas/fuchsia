@@ -80,18 +80,12 @@ You'll see a list of devices that `ffx` has discovered. For example, with a
 single emulator running, output looks like:
 
 ```
-NAME                    TYPE       STATE      ADDRS/IP                       AGE     CS
-fuchsia-5254-0063-5e7a  Unknown    Unknown    [fe80::5054:ff:fe63:5e7a%4]    0m0s    N
+NAME                    SERIAL       TYPE       STATE      ADDRS/IP                       RCS
+fuchsia-5254-0063-5e7a  <unknown>    Unknown    Product    [fe80::5054:ff:fe63:5e7a%4]    N
 ```
 
-NOTE: Ignore the `TYPE` and `STATE` columns - they have no values besides
-`UNKNOWN` right now.
-
-A couple of columns are worth explanation:
-
-- `AGE`: This is the time since `ffx` was last able to reach the device.
-- `RCS`: Indicates whether there is a reachable instance of the
-  Remote Control Service (RCS) running on the device.
+`RCS`: Indicates whether there is a reachable instance of the Remote Control
+Service (RCS) running on the device.
 
 In order to get `ffx` to automatically connect to a device, you must either have
 set the target's nodename to be the default target, or attempt to interact with the
@@ -121,8 +115,8 @@ is active.
 
 ```sh
 $ fx ffx target list
-NAME                    TYPE       STATE      ADDRS/IP                       AGE     RCS
-fuchsia-5254-0063-5e7a  Unknown    Unknown    [fe80::5054:ff:fe63:5e7a%4]    0m6s    Y
+NAME                    SERIAL       TYPE       STATE      ADDRS/IP                       RCS
+fuchsia-5254-0063-5e7a  <unknown>    Unknown    Product    [fe80::5054:ff:fe63:5e7a%4]    Y
 ```
 
 If a target has been set as default there will be a `*` next to it.
