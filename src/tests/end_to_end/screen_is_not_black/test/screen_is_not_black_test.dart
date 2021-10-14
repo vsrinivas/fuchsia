@@ -29,16 +29,6 @@ const _delay = Duration(seconds: 10);
 /// The path to the catapult converter binary.  It must exist in the package.
 const _catapultConverterPath = 'runtime_deps/catapult_converter';
 
-/// We don't know if the system's clock is restarted from zero at reboot.  So
-/// we try to estimate.  We assume that if the clock shows more than this long
-/// since power-on, that reboot does not reset the clock.  If it shows less
-/// than this, we assume that reboot resets the clock.
-const _maxElapsedSincePowerOn = Duration(minutes: 3);
-
-/// An estimate of how long it took between reboot and timekeeper.cmx startup.
-/// Used if the device's real time clock is not reset to zero on reboot.
-const _rebootToTimekeeper = Duration(seconds: 15);
-
 /// Wait at most this long for reboot to ensure all programs of interest have
 /// hit their measurement checkpoints.
 const _maxTestRuntime = Duration(seconds: 90);
@@ -82,28 +72,33 @@ void main(List<String> args) {
     ..onRecord.listen((rec) => print('[${rec.level}]: ${rec.message}'));
 
   final parser = ArgParser()
-    ..addFlag('start_basemgr',
-        help: 'If set, attempts to start basemgr, which is required for taking '
-            'a successful screenshot in some system configurations',
-        negatable: true,
-        defaultsTo: true);
+    ..addOption('start',
+        allowed: ['basemgr', 'tiles'],
+        help: 'If set, starts the specified program on device startup');
 
   final argResults = parser.parse(args);
-  final bool startBasemgr = argResults['start_basemgr'];
+  final String start = argResults['start'];
+  final bool startBasemgr = start == 'basemgr';
+  final bool startTiles = start == 'tiles';
 
   sl4f.Sl4f sl4fDriver;
   sl4f.Scenic scenicDriver;
   sl4f.Modular basemgrController;
+  sl4f.Tiles tilesController;
 
   final performance = sl4f.Performance(sl4fDriver);
 
   final log = Logger('screen_is_not_black_test');
+  if (start != null) {
+    log.info('Starting $start');
+  }
 
   setUp(() async {
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
     await sl4fDriver.startServer();
     scenicDriver = sl4f.Scenic(sl4fDriver);
     basemgrController = sl4f.Modular(sl4fDriver);
+    tilesController = sl4f.Tiles(sl4fDriver);
   });
 
   tearDown(() async {
@@ -151,15 +146,7 @@ void main(List<String> args) {
     }
 
     final uptime = Duration(microseconds: uptimeNanos ~/ 1e3);
-    var sinceReboot = uptime;
-    if (sinceReboot > _maxElapsedSincePowerOn) {
-      // If the system monotonic clock measures duration since power-on,
-      // instead of duration since reboot, compute the adjusted uptime.
-      final start = Duration(
-          microseconds: healthRoot['start_time_monotonic_nanos'] ~/ 1e3);
-      sinceReboot = sinceReboot - start + _rebootToTimekeeper;
-    }
-    return Uptime(lowRebootWallClock, sinceReboot, highRebootWallClock, uptime);
+    return Uptime(lowRebootWallClock, uptime, highRebootWallClock, uptime);
   }
 
   List<sl4f.TestCaseResults> record(String programName, String nodeName,
@@ -282,10 +269,8 @@ void main(List<String> args) {
         // This call, and the 'shutdown' below are no-ops in configurations where
         // modular is already running.
         await basemgrController.boot();
-      } else {
-        log.info('The test was started with --no-start_basemgr, '
-            'so the test will not ensure that basemgr.cmx is running; '
-            'screenshotting should be provided through some other means.');
+      } else if (startTiles) {
+        await tilesController.start();
       }
       for (var attempt = 0; attempt < _tries; attempt++) {
         try {
@@ -306,6 +291,8 @@ void main(List<String> args) {
     } finally {
       if (startBasemgr) {
         await basemgrController.shutdown(forceShutdownBasemgr: false);
+      } else if (startTiles) {
+        await tilesController.stop();
       }
     }
   },

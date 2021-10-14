@@ -10,8 +10,9 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":no_basemgr_test",
-    ":test",
+    ":basemgr_test",
+    ":screen_is_not_black",
+    ":tiles_test",
   ]
 }
 
@@ -53,22 +54,33 @@ dart_test("screen_is_not_black_test") {
 
   deps = _DEPS
 
-  args = [ "--start_basemgr" ]
+  args = []
 
   non_dart_deps = _NON_DART_DEPS
 
   environments = _ENVIRONMENTS
 }
 
-# Same as above, except doesn't attempt to start basemgr. For use in
-# environments where basemgr is not available nor required to take a
-# screenshot. For example, workstation, which uses Session Framework.
-dart_test("screen_is_not_black_no_basemgr_test") {
+# Same as above, except that the test starts up "basemgr".
+dart_test("screen_is_not_black_basemgr_test") {
   sources = [ "screen_is_not_black_test.dart" ]
 
   deps = _DEPS
 
-  args = [ "--no-start_basemgr" ]
+  args = [ "--start=basemgr" ]
+
+  non_dart_deps = _NON_DART_DEPS
+
+  environments = _ENVIRONMENTS
+}
+
+# Same as above, except that the test starts up the "tiles".
+dart_test("screen_is_not_black_tiles_test") {
+  sources = [ "screen_is_not_black_test.dart" ]
+
+  deps = _DEPS
+
+  args = [ "--start=tiles" ]
 
   non_dart_deps = _NON_DART_DEPS
 
@@ -85,14 +97,28 @@ if (is_host) {
   }
 }
 
-group("test") {
+group("screen_is_not_black") {
   testonly = true
 
   deps = [ ":screen_is_not_black_test($host_toolchain)" ]
 }
 
-group("no_basemgr_test") {
+group("basemgr_test") {
   testonly = true
 
-  deps = [ ":screen_is_not_black_no_basemgr_test($host_toolchain)" ]
+  deps = [ ":screen_is_not_black_basemgr_test($host_toolchain)" ]
+}
+
+group("tiles_test") {
+  testonly = true
+
+  deps = [ ":screen_is_not_black_tiles_test($host_toolchain)" ]
+}
+
+# Compatibility target for out-of-tree users.
+# These should update to depend on ":basemgr_test" directly.
+group("test") {
+  testonly = true
+
+  deps = [ ":basemgr_test" ]
 }

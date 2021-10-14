@@ -9,7 +9,7 @@ the
 [`screen_is_not_black`](/src/tests/end_to_end/screen_is_not_black/)
 end-to-end test.
 
-The `screen_is_not_black_no_basemgr_test` end-to-end test reboots a device under test
+The `screen_is_not_black` end-to-end test reboots a device under test
 (DUT), waits 100 seconds, and takes a snapshot of the device’s screen. If the
 snapshot image is not a black screen, the test concludes that Fuchsia is
 successfully up and running on the device after reboot.
@@ -32,7 +32,7 @@ This guide requires that you've completed the following guides:
 
 ## 2. Build a Fuchsia image to include the end-to-end test {#build-a-fuchsia-image-to-include-the-end-to-end-test}
 
-Before you can run the `screen_is_not_black_no_basemgr_test` end-to-end test, you first
+Before you can run the `screen_is_not_black` end-to-end test, you first
 need to build your Fuchsia image to include the test in the build artifacts:
 
 Note: The examples in this guide use the `workstation` product. End-to-end tests work with most
@@ -42,14 +42,14 @@ products except `core`.
     `--with` option:
 
     ```posix-terminal
-    fx set workstation.qemu-x64 --with //src/tests/end_to_end/screen_is_not_black:no_basemgr_test
+    fx set workstation.qemu-x64 --with //src/tests/end_to_end/screen_is_not_black
     ```
 
     `//src/tests/end_to_end/screen_is_not_black` is a test directory in the
     Fuchsia source tree. The
     <code>[BUILD.gn](/src/tests/end_to_end/screen_is_not_black/BUILD.gn)</code>
-    file in this directory defines the <code>test</code> target to include the
-    <code>screen_is_not_black_no_basemgr_test</code> end-to-end test in the build
+    file in this directory defines the <code>screen_is_not_black</code> target
+    to include the <code>screen_is_not_black</code> end-to-end test in the build
     artifacts.
 
 1.  Build your Fuchsia image:
@@ -59,7 +59,7 @@ products except `core`.
     ```
 
     When the `fx build` command completes, the build artifacts now include the
-    `screen_is_not_black_no_basemgr_test` end-to-end test, which you can run from your host
+    `screen_is_not_black` end-to-end test, which you can run from your host
     machine.
 
 ## 3. Start the emulator with the Fuchsia image {#start-the-emulator-with-the-fuchsia-image}
@@ -108,10 +108,10 @@ currently running FEMU or the `fx serve` command.
 
 ## 4. Run the end-to-end test {#run-the-end-to-end-test}
 
-Run the `screen_is_not_black_no_basemgr_test` end-to-end test:
+Run the `screen_is_not_black` end-to-end test:
 
 ```posix-terminal
-fx test --e2e screen_is_not_black_no_basemgr_test
+fx test --e2e screen_is_not_black
 ```
 
 When the test passes, this command prints output similar to the
