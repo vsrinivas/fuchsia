@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.posix.socket.packet/cpp/wire_test_base.h>
 #include <fidl/fuchsia.posix.socket.raw/cpp/wire_test_base.h>
 #include <fidl/fuchsia.posix.socket/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -294,5 +295,98 @@ TEST_F(RawSocketTest, CreateWithType) {
 
 TEST_F(RawSocketTest, CreateWithTypeWrapper) {
   ASSERT_OK(zxio::CreateRawSocket(storage(), TakeEventClient(), TakeClientEnd()));
+  ASSERT_OK(zxio_close(&storage()->io));
+}
+
+namespace {
+
+class PacketSocketServer final : public fuchsia_posix_socket_packet::testing::Socket_TestBase {
+ public:
+  PacketSocketServer() = default;
+
+  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
+    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+    completer.Reply(ZX_OK);
+    completer.Close(ZX_OK);
+  }
+};
+
+class PacketSocketTest : public zxtest::Test {
+ public:
+  void SetUp() final {
+    ASSERT_OK(zx::eventpair::create(0u, &event_client_, &event_server_));
+
+    auto server_end = fidl::CreateEndpoints(&client_end_);
+    ASSERT_OK(server_end.status_value());
+
+    fidl::BindServer(control_loop_.dispatcher(), std::move(*server_end), &server_);
+    control_loop_.StartThread("control");
+  }
+
+  void Init() {
+    ASSERT_OK(zxio_packet_socket_init(&storage_, TakeEventClient(), TakeClientEnd()));
+    zxio_ = &storage_.io;
+  }
+
+  void TearDown() final {
+    if (zxio_) {
+      ASSERT_OK(zxio_close(zxio_));
+    }
+    control_loop_.Shutdown();
+  }
+
+  zx::eventpair TakeEventClient() { return std::move(event_client_); }
+  fidl::ClientEnd<fuchsia_posix_socket_packet::Socket> TakeClientEnd() {
+    return std::move(client_end_);
+  }
+  zxio_storage_t* storage() { return &storage_; }
+  zxio_t* zxio() { return zxio_; }
+
+ private:
+  zxio_storage_t storage_;
+  zxio_t* zxio_{nullptr};
+  zx::eventpair event_client_, event_server_;
+  fidl::ClientEnd<fuchsia_posix_socket_packet::Socket> client_end_;
+  PacketSocketServer server_;
+  async::Loop control_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+};
+
+}  // namespace
+
+TEST_F(PacketSocketTest, Basic) { Init(); }
+
+TEST_F(PacketSocketTest, Release) {
+  Init();
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  EXPECT_OK(zxio_release(zxio(), &handle));
+  EXPECT_NE(handle, ZX_HANDLE_INVALID);
+
+  EXPECT_OK(zx_handle_close(handle));
+}
+
+TEST_F(PacketSocketTest, Borrow) {
+  Init();
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  EXPECT_OK(zxio_borrow(zxio(), &handle));
+  EXPECT_NE(handle, ZX_HANDLE_INVALID);
+}
+
+TEST_F(PacketSocketTest, CreateWithType) {
+  ASSERT_OK(zxio_create_with_type(storage(), ZXIO_OBJECT_TYPE_PACKET_SOCKET,
+                                  TakeEventClient().release(),
+                                  TakeClientEnd().TakeChannel().release()));
+  ASSERT_OK(zxio_close(&storage()->io));
+}
+
+TEST_F(PacketSocketTest, CreateWithTypeWrapper) {
+  ASSERT_OK(zxio::CreatePacketSocket(storage(), TakeEventClient(), TakeClientEnd()));
   ASSERT_OK(zxio_close(&storage()->io));
 }

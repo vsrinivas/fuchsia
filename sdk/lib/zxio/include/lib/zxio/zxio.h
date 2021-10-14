@@ -98,6 +98,10 @@ ZXIO_EXPORT zx_status_t zxio_create_with_info(zx_handle_t handle,
 //     |zx_handle_t| eventpair associated with the socket
 //     |zx_handle_t| channel for the client end of the fuchsia.posix.socket.raw.Socket protocol
 //
+//  ZXIO_OBJECT_TYPE_PACKET_SOCKET:
+//     |zx_handle_t| eventpair associated with the socket
+//     |zx_handle_t| channel for the client end of the fuchsia.posix.socket.packet.Socket protocol
+//
 //  ZXIO_OBJECT_TYPE_VMO:
 //     |zx_handle_t| vmo containing the file contents
 //     |zx_handle_t| stream referring to the file contents and offset

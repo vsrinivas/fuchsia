@@ -222,6 +222,7 @@ union/member fuchsia.io/NodeInfo.datagram_socket fuchsia.io/DatagramSocket
 union/member fuchsia.io/NodeInfo.device fuchsia.io/Device
 union/member fuchsia.io/NodeInfo.directory fuchsia.io/DirectoryObject
 union/member fuchsia.io/NodeInfo.file fuchsia.io/FileObject
+union/member fuchsia.io/NodeInfo.packet_socket fuchsia.io/PacketSocket
 union/member fuchsia.io/NodeInfo.pipe fuchsia.io/Pipe
 union/member fuchsia.io/NodeInfo.raw_socket fuchsia.io/RawSocket
 union/member fuchsia.io/NodeInfo.service fuchsia.io/Service
@@ -290,6 +291,8 @@ bits/member fuchsia.io/Operations.TRAVERSE 128
 bits/member fuchsia.io/Operations.UPDATE_ATTRIBUTES 32
 bits/member fuchsia.io/Operations.WRITE_BYTES 4
 strict bits fuchsia.io/Operations uint64
+struct/member fuchsia.io/PacketSocket.event zx/handle:<EVENTPAIR,zx.TRANSFER,zx.WAIT>
+resource struct fuchsia.io/PacketSocket
 struct/member fuchsia.io/Pipe.socket zx/handle:SOCKET
 resource struct fuchsia.io/Pipe
 table/member fuchsia.io/PipeInfo.socket zx/handle:SOCKET

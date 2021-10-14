@@ -105,6 +105,7 @@ pub enum Kind {
     DatagramSocket,
     StreamSocket,
     RawSocket,
+    PacketSocket,
     Unknown,
 }
 
@@ -121,6 +122,7 @@ impl Kind {
             NodeInfo::DatagramSocket(_) => Kind::DatagramSocket,
             NodeInfo::StreamSocket(_) => Kind::StreamSocket,
             NodeInfo::RawSocket(_) => Kind::RawSocket,
+            NodeInfo::PacketSocket(_) => Kind::PacketSocket,
         }
     }
 

@@ -284,6 +284,16 @@ zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t ty
           storage, std::move(event),
           fidl::ClientEnd<fuchsia_posix_socket_raw::Socket>(std::move(client)));
     }
+    case ZXIO_OBJECT_TYPE_PACKET_SOCKET: {
+      zx::eventpair event(va_arg(args, zx_handle_t));
+      zx::channel client(va_arg(args, zx_handle_t));
+      if (!event.is_valid() || !client.is_valid() || storage == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return zxio_packet_socket_init(
+          storage, std::move(event),
+          fidl::ClientEnd<fuchsia_posix_socket_packet::Socket>(std::move(client)));
+    }
     case ZXIO_OBJECT_TYPE_VMO: {
       zx::vmo vmo(va_arg(args, zx_handle_t));
       zx::stream stream(va_arg(args, zx_handle_t));

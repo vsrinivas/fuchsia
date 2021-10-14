@@ -73,6 +73,12 @@ type NodeInfo = strict resource union {
         /// See [`fuchsia.posix.socket.raw.Socket`] for details.
         event zx.handle:<EVENTPAIR, zx.rights.TRANSFER | zx.rights.WAIT>;
     };
+
+    /// The connection composes [`fuchsia.posix.socket.packet/Socket`].
+   12: packet_socket resource struct {
+        /// See [`fuchsia.posix.socket.packet.Socket`] for details.
+        event zx.handle:<EVENTPAIR, zx.rights.TRANSFER | zx.rights.WAIT>;
+    };
 };
 
 /// The fields of 'attributes' which are used to update the Node are indicated

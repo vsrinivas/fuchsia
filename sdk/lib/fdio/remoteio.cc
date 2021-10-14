@@ -16,6 +16,7 @@
 namespace fio = fuchsia_io;
 namespace fsocket = fuchsia_posix_socket;
 namespace frawsocket = fuchsia_posix_socket_raw;
+namespace fpacketsocket = fuchsia_posix_socket_packet;
 
 static_assert(FDIO_CHUNK_SIZE >= PATH_MAX, "FDIO_CHUNK_SIZE must be large enough to contain paths");
 
@@ -129,6 +130,11 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
       auto& socket = info.mutable_raw_socket();
       return fdio_raw_socket_create(std::move(socket.event),
                                     fidl::ClientEnd<frawsocket::Socket>(node.TakeChannel()));
+    }
+    case fio::wire::NodeInfo::Tag::kPacketSocket: {
+      auto& socket = info.mutable_packet_socket();
+      return fdio_packet_socket_create(std::move(socket.event),
+                                       fidl::ClientEnd<fpacketsocket::Socket>(node.TakeChannel()));
     }
     default:
       return zx::error(ZX_ERR_NOT_SUPPORTED);

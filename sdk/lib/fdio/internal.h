@@ -6,6 +6,7 @@
 #define LIB_FDIO_INTERNAL_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/fdio/directory.h>
@@ -78,6 +79,9 @@ zx::status<fdio_ptr> fdio_stream_socket_create(
 
 zx::status<fdio_ptr> fdio_raw_socket_create(
     zx::eventpair event, fidl::ClientEnd<fuchsia_posix_socket_raw::Socket> client);
+
+zx::status<fdio_ptr> fdio_packet_socket_create(
+    zx::eventpair event, fidl::ClientEnd<fuchsia_posix_socket_packet::Socket> client);
 
 // Creates an |fdio_t| referencing the root of the |ns| namespace.
 zx::status<fdio_ptr> fdio_ns_open_root(fdio_ns_t* ns);

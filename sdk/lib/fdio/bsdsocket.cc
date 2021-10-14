@@ -5,11 +5,13 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.net.name/cpp/wire.h>
 #include <fidl/fuchsia.net/cpp/wire.h>
+#include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>
 #include <ifaddrs.h>
 #include <lib/fdio/io.h>
 #include <lib/fit/defer.h>
 #include <netdb.h>
+#include <netinet/if_ether.h>
 #include <poll.h>
 #include <sys/socket.h>
 #include <zircon/device/vfs.h>
@@ -21,6 +23,8 @@
 #include <mutex>
 
 #include <fbl/auto_lock.h>
+#include <fbl/unique_fd.h>
+#include <netpacket/packet.h>
 
 #include "fdio_unistd.h"
 #include "internal.h"
@@ -31,23 +35,110 @@ namespace fnet = fuchsia_net;
 namespace fnet_name = fuchsia_net_name;
 namespace fsocket = fuchsia_posix_socket;
 namespace frawsocket = fuchsia_posix_socket_raw;
+namespace fpacketsocket = fuchsia_posix_socket_packet;
+
+constexpr int kSockTypesMask = ~(SOCK_CLOEXEC | SOCK_NONBLOCK);
+
+namespace {
+
+zx::status<fbl::unique_fd> create_node(int type, fidl::ClientEnd<fio::Node> client_end) {
+  zx::status io = fdio::create_with_describe(std::move(client_end));
+  if (io.is_error()) {
+    return io.take_error();
+  }
+
+  if (type & SOCK_NONBLOCK) {
+    io->ioflag() |= IOFLAG_NONBLOCK;
+  }
+
+  // TODO(https://fxbug.dev/30920): Implement CLOEXEC.
+  // if (type & SOCK_CLOEXEC) {
+  // }
+
+  std::optional fd = bind_to_fd(io.value());
+  if (fd.has_value()) {
+    return zx::ok(fbl::unique_fd(fd.value()));
+  }
+  return zx::error(ZX_ERR_NO_MEMORY);
+}
+
+}  // namespace
 
 __EXPORT
 int socket(int domain, int type, int protocol) {
   fsocket::wire::Domain sock_domain;
   switch (domain) {
+    case AF_PACKET: {
+      if ((protocol > std::numeric_limits<uint16_t>::max()) ||
+          (protocol < std::numeric_limits<uint16_t>::min())) {
+        return ERRNO(EINVAL);
+      }
+      const sockaddr_ll sll = {
+          .sll_family = AF_PACKET,
+          // NB: protocol is in network byte order.
+          .sll_protocol = static_cast<uint16_t>(protocol),
+      };
+
+      fpacketsocket::wire::Kind kind;
+      switch (type & kSockTypesMask) {
+        case SOCK_DGRAM:
+          kind = fpacketsocket::wire::Kind::kNetwork;
+          break;
+        case SOCK_RAW:
+          kind = fpacketsocket::wire::Kind::kLink;
+          break;
+        default:
+          return ERRNO(EINVAL);
+      }
+
+      auto& provider = get_client<fpacketsocket::Provider>();
+      if (provider.is_error()) {
+        return ERROR(provider.error_value());
+      }
+
+      auto socket_result = provider->Socket(kind);
+      zx_status_t status = socket_result.status();
+      if (status != ZX_OK) {
+        if (status == ZX_ERR_PEER_CLOSED) {
+          // If we got a peer closed error, then it usually means that we
+          // do not have the packet socket protocol in our sandbox which
+          // means we do not have access. Note that this is a best guess.
+          return ERRNO(EPERM);
+        }
+        return ERROR(status);
+      }
+      if (socket_result->result.is_err()) {
+        return ERRNO(static_cast<int32_t>(socket_result->result.err()));
+      }
+
+      zx::status create_node_result =
+          create_node(type, fidl::ClientEnd<fio::Node>(
+                                socket_result->result.mutable_response().socket.TakeChannel()));
+      if (create_node_result.is_error()) {
+        return ERROR(create_node_result.error_value());
+      }
+
+      fbl::unique_fd fd = std::move(create_node_result.value());
+      if (sll.sll_protocol != 0) {
+        // We successfully created the packet socket but the caller wants the
+        // socket to be associated with some protocol so we do that now.
+        if (int ret = bind(fd.get(), reinterpret_cast<const sockaddr*>(&sll), sizeof(sll));
+            ret != 0) {
+          return ret;
+        }
+      }
+      return fd.release();
+    }
     case AF_INET:
       sock_domain = fsocket::wire::Domain::kIpv4;
       break;
     case AF_INET6:
       sock_domain = fsocket::wire::Domain::kIpv6;
       break;
-    case AF_PACKET:
-      return ERRNO(EPERM);
     default:
       return ERRNO(EPROTONOSUPPORT);
   }
-  constexpr int kSockTypesMask = ~(SOCK_CLOEXEC | SOCK_NONBLOCK);
+
   fidl::ClientEnd<fio::Node> client_end;
   switch (type & kSockTypesMask) {
     case SOCK_STREAM:
@@ -156,24 +247,12 @@ int socket(int domain, int type, int protocol) {
       return ERRNO(EPROTONOSUPPORT);
   }
 
-  zx::status io = fdio::create_with_describe(std::move(client_end));
-  if (io.is_error()) {
-    return ERROR(io.status_value());
+  zx::status result = create_node(type, std::move(client_end));
+  if (result.is_error()) {
+    return ERROR(result.error_value());
   }
 
-  if (type & SOCK_NONBLOCK) {
-    io->ioflag() |= IOFLAG_NONBLOCK;
-  }
-
-  // TODO(fxbug.dev/30920): Implement CLOEXEC.
-  // if (type & SOCK_CLOEXEC) {
-  // }
-
-  std::optional fd = bind_to_fd(io.value());
-  if (fd.has_value()) {
-    return fd.value();
-  }
-  return ERRNO(EMFILE);
+  return result.value().release();
 }
 
 __EXPORT

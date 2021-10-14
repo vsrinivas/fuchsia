@@ -1,0 +1,212 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.posix.socket.packet;
+
+using fuchsia.net;
+using fuchsia.posix;
+using fuchsia.posix.socket;
+
+type Empty = struct {};
+
+/// A kind of packet socket.
+type Kind = strict enum {
+    /// A packet socket that operates with network-layer packets.
+    NETWORK = 1;
+
+    /// A packet socket that operates with link-layer packets.
+    ///
+    /// Packets are passed unmodified between the wire and client when the
+    /// packet socket is of this kind.
+    LINK = 2;
+};
+
+/// A network-layer protocol (above link-layer).
+///
+/// Values are defined by
+/// https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml.
+// Values of this type are passthrough as the value does not need to be
+// interpreted by the server. This is so that packet sockets may be used to
+// send/receive packets for a network protocol that the server does not
+// implement.
+alias Protocol = uint16;
+
+/// The protocol association for a packet socket.
+type ProtocolAssociation = strict union {
+    /// An association with all protocols.
+    1: all Empty;
+
+    /// An association with a protocol.
+    2: specified Protocol;
+};
+
+/// The type of a hardware.
+// `ARPHDR_*` values from `//zircon/third_party/ulib/musl/include/net/if_arp.h`.
+type HardwareType = strict enum {
+    /// Hardware that operates only at the network layer; a pure L3 interface.
+    ///
+    /// Hardware of this type have no L2 headers/addressing.
+    // Equivalent to ARPHDR_NONE.
+    NETWORK_ONLY = 1;
+
+    /// Hardware that operates on ethernet-based links.
+    // Equivalent to ARPHDR_ETHER.
+    ETHERNET = 2;
+
+    /// Hardware that loops back packets.
+    // Equivalent to ARPHDR_LOOPBACK.
+    LOOPBACK = 3;
+};
+
+/// The type of a packet.
+// `PACKET_*` values from `//zircon/third_party/ulib/musl/include/netpacket/packet.h`.
+type PacketType = strict enum {
+    /// A packet that arrived at its destination.
+    HOST = 1;
+
+    /// A packet that was broadcasted.
+    BROADCAST = 2;
+
+    /// A packet that was multicasted.
+    MULTICAST = 3;
+
+    /// A packet that arrived at a host that isn't its destination.
+    OTHER_HOST = 4;
+
+    /// A packet that is being sent on a local interface, regardless of how
+    /// it is being sent (unicasted, multicasted, broadcasted).
+    OUTGOING = 5;
+
+// Intentionally do not include PACKET_LOOPBACK or PACKET_FASTROUTE as those
+// are not exposed to applications:
+// https://github.com/torvalds/linux/blob/73bfd370/include/uapi/linux/if_packet.h#L29.
+};
+
+/// A hardware address.
+// TODO(https://fxbug.dev/84984): Move this to fuchsia.net.* once we support
+// querying an interface's L2 properties.
+type HardwareAddress = flexible union {
+    /// Indicates that the hardware does not support link-layer addressing.
+    1: none Empty;
+
+    /// An EUI-48 based address.
+    2: eui48 fuchsia.net.MacAddress;
+};
+
+/// An interface's properties.
+// TODO(https://fxbug.dev/84984): Move this to fuchsia.net.* once we support
+// querying an interface's L2 properties.
+type InterfaceProperties = struct {
+    /// The interface's ID.
+    id fuchsia.net.interface_id;
+
+    /// The interface's hardware address.
+    addr HardwareAddress;
+
+    /// The interface's hardware type.
+    type HardwareType;
+};
+
+/// Information about a packet.
+type PacketInfo = struct {
+    protocol Protocol;
+    interface_id fuchsia.net.interface_id;
+    addr HardwareAddress;
+};
+
+/// A packet socket.
+///
+/// This interface is essentially POSIX.
+///
+/// All methods on this type are nonblocking; their exact behaviors match their Linux counterparts.
+///
+/// *Warning:* This protocol is not yet ready for direct use by clients. Instead, clients should
+/// use the BSD sockets API to interact with sockets. We plan to change this protocol substantially
+/// and clients that couple directly to this protocol will make those changes more difficult.
+// TODO(https://fxbug.dev/85597): Implement RFC-0109 for packet sockets.
+protocol Socket {
+    compose fuchsia.posix.socket.BaseSocket;
+
+    /// Bind the socket to a protocol and/or interface.
+    ///
+    /// + request `protocol` the socket's new protocol association.
+    /// + request `bound_interface_id` the socket's new interface binding.
+    Bind(struct {
+        protocol ProtocolAssociation:optional;
+        bound_interface_id strict union {
+            1: all Empty;
+            2: specified fuchsia.net.interface_id;
+        };
+    }) -> (struct {}) error fuchsia.posix.Errno;
+
+    /// Returns the the socket's properties.
+    ///
+    /// - response `kind` the socket's `Kind`.
+    /// - response `protocol` the socket's protocol association, if associated.
+    /// - response `bound_interface` properties of the socket's interface
+    ///   binding.
+    GetInfo() -> (struct {
+        kind Kind;
+        protocol ProtocolAssociation:optional;
+        bound_interface strict union {
+            1: all Empty;
+            2: specified InterfaceProperties;
+        };
+    }) error fuchsia.posix.Errno;
+
+    /// Receives a message from the socket.
+    ///
+    /// + request `want_packet_info` request information about the packet to be
+    ///   returned.
+    /// + request `data_len` the maximum allowed length of the response data
+    ///   buffer.
+    /// + request `want_control` request ancillary data to be returned.
+    /// + request `flags` flags for the receive request.
+    /// - response `packet_info` information about the packet, if requested.
+    /// - response `data` the message.
+    /// - response `control_data` control messages, if requested.
+    /// - response `truncated` indicates whether or not the returned message was
+    ///   truncated.
+    RecvMsg(struct {
+        want_packet_info bool;
+        data_len uint32;
+        want_control bool;
+        flags fuchsia.posix.socket.RecvMsgFlags;
+    }) -> (struct {
+        packet_info @generated_name("RecvPacketInfo") struct {
+            packet_info PacketInfo;
+            packet_type PacketType;
+            interface_type HardwareType;
+        } :optional;
+        data bytes;
+        control_data @generated_name("RecvControlData") table {};
+        truncated uint32;
+    }) error fuchsia.posix.Errno;
+
+    /// Sends a message on the socket.
+    ///
+    /// + request `packet_info` information about the packet.
+    /// + request `data` the message.
+    /// + request `control_data` ancillary data.
+    /// + request `flags` flags for the send request.
+    SendMsg(struct {
+        packet_info PacketInfo:optional;
+        data bytes:MAX;
+        control_data @generated_name("SendControlData") table {};
+        flags fuchsia.posix.socket.SendMsgFlags;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+};
+
+/// A packet socket provider.
+@discoverable
+protocol Provider {
+    /// Requests a packet socket.
+    ///
+    /// + request `kind` the kind of packet socket to create.
+    /// - response `socket` the packet socket.
+    Socket(struct {
+        kind Kind;
+    }) -> (resource struct {
+        socket client_end:Socket;
+    }) error fuchsia.posix.Errno;
+};

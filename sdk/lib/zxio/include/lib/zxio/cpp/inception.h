@@ -6,6 +6,7 @@
 #define LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_INCEPTION_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/zx/debuglog.h>
@@ -61,6 +62,17 @@ using zxio_raw_socket_t = struct zxio_raw_socket {
   zx::eventpair event;
   fidl::WireSyncClient<fuchsia_posix_socket_raw::Socket> client;
 };
+
+// packet socket (channel backed) ----------------------------------------------
+
+// A |zxio_t| backend that uses a fuchsia.posix.socket.packet.Socket object.
+using zxio_packet_socket_t = struct zxio_packet_socket {
+  zxio_t io;
+  zx::eventpair event;
+  fidl::WireSyncClient<fuchsia_posix_socket_packet::Socket> client;
+};
+
+zx_status_t zxio_is_socket(zxio_t* io, bool* out_is_socket);
 
 // Allocates storage for a zxio_t object of a given type.
 //

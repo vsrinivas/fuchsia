@@ -33,6 +33,7 @@ import (
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/posix"
 	"fidl/fuchsia/posix/socket"
+	packetsocket "fidl/fuchsia/posix/socket/packet"
 	rawsocket "fidl/fuchsia/posix/socket/raw"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -1674,8 +1675,12 @@ type datagramSocket struct {
 	cancel context.CancelFunc
 }
 
-type datagramSocketImpl struct {
+type networkDatagramSocket struct {
 	datagramSocket
+}
+
+type datagramSocketImpl struct {
+	networkDatagramSocket
 }
 
 var _ socket.DatagramSocketWithCtx = (*datagramSocketImpl)(nil)
@@ -1763,31 +1768,38 @@ func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio
 	return nil
 }
 
-func (s *datagramSocket) recvMsg(wantAddr bool, dataLen uint32, peek bool) (fidlnet.SocketAddress, []byte, uint32, tcpip.Error) {
+func (s *datagramSocket) recvMsg(opts tcpip.ReadOptions, dataLen uint32) ([]byte, tcpip.ReadResult, tcpip.Error) {
 	var b bytes.Buffer
 	dst := tcpip.LimitedWriter{
 		W: &b,
 		N: int64(dataLen),
 	}
-	res, err := s.ep.Read(&dst, tcpip.ReadOptions{
-		Peek:           peek,
-		NeedRemoteAddr: wantAddr,
-	})
+	res, err := s.ep.Read(&dst, opts)
 	if _, ok := err.(*tcpip.ErrBadBuffer); ok && dataLen == 0 {
 		err = nil
 	}
 	if err := s.pending.update(); err != nil {
 		panic(err)
 	}
+
+	return b.Bytes(), res, err
+}
+
+func (s *networkDatagramSocket) recvMsg(wantAddr bool, dataLen uint32, peek bool) (fidlnet.SocketAddress, []byte, uint32, tcpip.Error) {
+	bytes, res, err := s.datagramSocket.recvMsg(tcpip.ReadOptions{
+		Peek:           peek,
+		NeedRemoteAddr: wantAddr,
+	}, dataLen)
 	if err != nil {
 		return fidlnet.SocketAddress{}, nil, 0, err
 	}
+
 	var addr fidlnet.SocketAddress
 	if wantAddr {
 		sockaddr := toNetSocketAddress(s.netProto, res.RemoteAddr)
 		addr = sockaddr
 	}
-	return addr, b.Bytes(), uint32(res.Total - res.Count), nil
+	return addr, bytes, uint32(res.Total - res.Count), nil
 }
 
 func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (socket.DatagramSocketRecvMsgResult, error) {
@@ -1810,22 +1822,10 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint
 	}), nil
 }
 
-func (s *datagramSocket) sendMsg(addr *fidlnet.SocketAddress, data []uint8) (int64, tcpip.Error) {
-	var writeOpts tcpip.WriteOptions
-	if addr != nil {
-		addr, err := toTCPIPFullAddress(*addr)
-		if err != nil {
-			return 0, &tcpip.ErrBadAddress{}
-		}
-		if s.endpoint.netProto == ipv4.ProtocolNumber && len(addr.Addr) == header.IPv6AddressSize {
-			return 0, &tcpip.ErrAddressFamilyNotSupported{}
-		}
-		writeOpts.To = &addr
-	}
-
+func (s *datagramSocket) sendMsg(to *tcpip.FullAddress, data []uint8) (int64, tcpip.Error) {
 	var r bytes.Reader
 	r.Reset(data)
-	n, err := s.ep.Write(&r, writeOpts)
+	n, err := s.ep.Write(&r, tcpip.WriteOptions{To: to})
 	if err != nil {
 		if err := s.pending.update(); err != nil {
 			panic(err)
@@ -1833,6 +1833,24 @@ func (s *datagramSocket) sendMsg(addr *fidlnet.SocketAddress, data []uint8) (int
 		return 0, err
 	}
 	return n, nil
+}
+
+func (s *networkDatagramSocket) sendMsg(addr *fidlnet.SocketAddress, data []uint8) (int64, tcpip.Error) {
+	var fullAddr tcpip.FullAddress
+	var to *tcpip.FullAddress
+	if addr != nil {
+		var err error
+		fullAddr, err = toTCPIPFullAddress(*addr)
+		if err != nil {
+			return 0, &tcpip.ErrBadAddress{}
+		}
+		if s.endpoint.netProto == ipv4.ProtocolNumber && len(fullAddr.Addr) == header.IPv6AddressSize {
+			return 0, &tcpip.ErrAddressFamilyNotSupported{}
+		}
+		to = &fullAddr
+	}
+
+	return s.datagramSocket.sendMsg(to, data)
 }
 
 func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control socket.SendControlData, _ socket.SendMsgFlags) (socket.DatagramSocketSendMsgResult, error) {
@@ -2498,7 +2516,11 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 		return socket.ProviderDatagramSocketResult{}, err
 	}
 
-	s := datagramSocketImpl{datagramSocket: datagramSocket}
+	s := datagramSocketImpl{
+		networkDatagramSocket: networkDatagramSocket{
+			datagramSocket: datagramSocket,
+		},
+	}
 
 	localC, peerC, err := zx.NewChannel(0)
 	if err != nil {
@@ -2614,8 +2636,10 @@ func (sp *rawProviderImpl) Socket(ctx fidl.Context, domain socket.Domain, proto 
 	}
 
 	s := rawSocketImpl{
-		datagramSocket: datagramSocket,
-		proto:          proto,
+		networkDatagramSocket: networkDatagramSocket{
+			datagramSocket: datagramSocket,
+		},
+		proto: proto,
 	}
 
 	localC, peerC, err := zx.NewChannel(0)
@@ -2634,11 +2658,10 @@ func (sp *rawProviderImpl) Socket(ctx fidl.Context, domain socket.Domain, proto 
 	return rawsocket.ProviderSocketResultWithResponse(rawsocket.ProviderSocketResponse{
 		S: rawsocket.SocketWithCtxInterface{Channel: peerC},
 	}), nil
-
 }
 
 type rawSocketImpl struct {
-	datagramSocket
+	networkDatagramSocket
 
 	proto rawsocket.ProtocolAssociation
 }
@@ -3472,4 +3495,269 @@ func (eps *endpointWithSocket) BaseSocketShutdown2(ctx fidl.Context, mode socket
 	default:
 		panic(fmt.Sprintf("unhandled variant = %d", w))
 	}
+}
+
+var _ packetsocket.SocketWithCtx = (*packetSocketImpl)(nil)
+
+type packetSocketImpl struct {
+	datagramSocket
+
+	kind packetsocket.Kind
+}
+
+func (s *packetSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
+	event, err := s.describe()
+	if err != nil {
+		return fidlio.NodeInfo{}, err
+	}
+	return fidlio.NodeInfoWithPacketSocket(fidlio.PacketSocket{Event: event}), nil
+}
+
+func (s *packetSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.NodeWithCtxInterfaceRequest) error {
+	s.addConnection(ctx, object)
+
+	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithEvent, flags)
+
+	return nil
+}
+
+func (s *packetSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
+	{
+		sCopy := *s
+		s := &sCopy
+
+		// NB: this protocol is not discoverable, so the bindings do not include its name.
+		s.datagramSocket.addConnection("fuchsia.posix.socket.packet.Socket", object, &packetsocket.SocketWithCtxStub{Impl: s})
+	}
+}
+
+func (s *packetSocketImpl) Bind(_ fidl.Context, proto *packetsocket.ProtocolAssociation, interface_id packetsocket.BoundInterfaceId) (packetsocket.SocketBindResult, error) {
+	var addr tcpip.FullAddress
+
+	if proto != nil {
+		switch tag := proto.Which(); tag {
+		case packetsocket.ProtocolAssociationAll:
+			addr.Port = uint16(header.EthernetProtocolAll)
+		case packetsocket.ProtocolAssociationSpecified:
+			addr.Port = proto.Specified
+		default:
+			panic(fmt.Sprintf("unhandled %[1]T variant = %[1]d; %#[2]v", tag, proto))
+		}
+	}
+
+	switch w := interface_id.Which(); w {
+	case packetsocket.BoundInterfaceIdAll:
+	case packetsocket.BoundInterfaceIdSpecified:
+		addr.NIC = tcpip.NICID(interface_id.Specified)
+	default:
+		panic(fmt.Sprintf("unhandled %[1]T variant = %[1]d; %#[2]v", w, interface_id))
+	}
+
+	if err := s.ep.Bind(addr); err != nil {
+		if _, ok := err.(*tcpip.ErrUnknownNICID); ok {
+			return packetsocket.SocketBindResultWithErr(posix.ErrnoEnodev), nil
+		}
+		return packetsocket.SocketBindResultWithErr(tcpipErrorToCode(err)), nil
+	}
+
+	return packetsocket.SocketBindResultWithResponse(packetsocket.SocketBindResponse{}), nil
+}
+
+func (s *packetSocketImpl) GetInfo(fidl.Context) (packetsocket.SocketGetInfoResult, error) {
+	addr, err := s.ep.GetLocalAddress()
+	if err != nil {
+		return packetsocket.SocketGetInfoResultWithErr(tcpipErrorToCode(err)), nil
+	}
+
+	var protoStorage packetsocket.ProtocolAssociation
+	var proto *packetsocket.ProtocolAssociation
+	switch addr.Port {
+	case 0:
+		// The protocol is only specified if the socket is bound to a protocol.
+	case uint16(header.EthernetProtocolAll):
+		protoStorage = packetsocket.ProtocolAssociationWithAll(packetsocket.Empty{})
+		proto = &protoStorage
+	default:
+		protoStorage = packetsocket.ProtocolAssociationWithSpecified(addr.Port)
+		proto = &protoStorage
+	}
+
+	var boundInterface packetsocket.BoundInterface
+	switch addr.NIC {
+	case 0:
+		boundInterface = packetsocket.BoundInterfaceWithAll(packetsocket.Empty{})
+	default:
+		nicsInfo := s.ns.stack.NICInfo()
+		nicInfo, ok := nicsInfo[addr.NIC]
+		if !ok {
+			return packetsocket.SocketGetInfoResultWithErr(posix.ErrnoEnodev), nil
+		}
+
+		var hwType packetsocket.HardwareType
+		switch nicInfo.ARPHardwareType {
+		case header.ARPHardwareNone:
+			hwType = packetsocket.HardwareTypeNetworkOnly
+		case header.ARPHardwareEther:
+			hwType = packetsocket.HardwareTypeEthernet
+		case header.ARPHardwareLoopback:
+			hwType = packetsocket.HardwareTypeLoopback
+		default:
+			panic(fmt.Sprintf("unhandled %[1]T variant = %[1]d", nicInfo.ARPHardwareType))
+		}
+
+		boundInterface = packetsocket.BoundInterfaceWithSpecified(packetsocket.InterfaceProperties{
+			Id:   uint64(addr.NIC),
+			Addr: tcpipLinkAddressToFidlHWAddr(nicInfo.LinkAddress),
+			Type: hwType,
+		})
+	}
+
+	return packetsocket.SocketGetInfoResultWithResponse(packetsocket.SocketGetInfoResponse{
+		Kind:           s.kind,
+		Protocol:       proto,
+		BoundInterface: boundInterface,
+	}), nil
+}
+
+func tcpipPacketTypeToFidl(v tcpip.PacketType) packetsocket.PacketType {
+	switch v {
+	case tcpip.PacketHost:
+		return packetsocket.PacketTypeHost
+	case tcpip.PacketOtherHost:
+		return packetsocket.PacketTypeOtherHost
+	case tcpip.PacketOutgoing:
+		return packetsocket.PacketTypeOutgoing
+	case tcpip.PacketBroadcast:
+		return packetsocket.PacketTypeBroadcast
+	case tcpip.PacketMulticast:
+		return packetsocket.PacketTypeMulticast
+	default:
+		panic(fmt.Sprintf("unhandled %[1]T variant = %[1]d", v))
+	}
+}
+
+func tcpipLinkAddressToFidlHWAddr(v tcpip.LinkAddress) packetsocket.HardwareAddress {
+	switch l := len(v); l {
+	case 0:
+		return packetsocket.HardwareAddressWithNone(packetsocket.Empty{})
+	case header.EthernetAddressSize:
+		return packetsocket.HardwareAddressWithEui48(fidlconv.ToNetMacAddress(v))
+	default:
+		panic(fmt.Sprintf("unhandled link address = %s with length = %d", v, l))
+	}
+}
+
+func (s *packetSocketImpl) RecvMsg(_ fidl.Context, wantPacketInfo bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (packetsocket.SocketRecvMsgResult, error) {
+	// TODO(https://fxbug.dev/21106): do something with control messages.
+	_ = wantControl
+
+	bytes, res, err := s.datagramSocket.recvMsg(tcpip.ReadOptions{
+		Peek:               flags&socket.RecvMsgFlagsPeek != 0,
+		NeedRemoteAddr:     wantPacketInfo,
+		NeedLinkPacketInfo: wantPacketInfo,
+	}, dataLen)
+	if err != nil {
+		return packetsocket.SocketRecvMsgResultWithErr(tcpipErrorToCode(err)), nil
+	}
+
+	resp := packetsocket.SocketRecvMsgResponse{
+		Data:      bytes,
+		Truncated: uint32(res.Total - res.Count),
+	}
+	if wantPacketInfo {
+		resp.PacketInfo = &packetsocket.RecvPacketInfo{
+			PacketInfo: packetsocket.PacketInfo{
+				Protocol:    uint16(res.LinkPacketInfo.Protocol),
+				InterfaceId: uint64(res.RemoteAddr.NIC),
+				Addr:        tcpipLinkAddressToFidlHWAddr(tcpip.LinkAddress(res.RemoteAddr.Addr)),
+			},
+			PacketType:    tcpipPacketTypeToFidl(res.LinkPacketInfo.PktType),
+			InterfaceType: packetsocket.HardwareTypeEthernet,
+		}
+	}
+
+	return packetsocket.SocketRecvMsgResultWithResponse(resp), nil
+}
+
+func (s *packetSocketImpl) SendMsg(_ fidl.Context, addr *packetsocket.PacketInfo, data []uint8, control packetsocket.SendControlData, _ socket.SendMsgFlags) (packetsocket.SocketSendMsgResult, error) {
+	// TODO(https://fxbug.dev/21106): do something with control.
+	_ = control
+
+	var fullAddr tcpip.FullAddress
+	var to *tcpip.FullAddress
+	if addr != nil {
+		fullAddr.NIC = tcpip.NICID(addr.InterfaceId)
+		fullAddr.Port = addr.Protocol
+		switch w := addr.Addr.Which(); w {
+		case packetsocket.HardwareAddressNone:
+		case packetsocket.HardwareAddressEui48:
+			fullAddr.Addr = tcpip.Address(fidlconv.ToTCPIPLinkAddress(addr.Addr.Eui48))
+		default:
+			panic(fmt.Sprintf("unhandled %[1]T variant = %[1]d; %#[2]v", w, addr.Addr))
+		}
+		to = &fullAddr
+	}
+
+	n, err := s.datagramSocket.sendMsg(to, data)
+	if err != nil {
+		return packetsocket.SocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	if want := int64(len(data)); n != want {
+		panic(fmt.Sprintf("got sendMsg(..) = %d, want = %d", n, want))
+	}
+	return packetsocket.SocketSendMsgResultWithResponse(packetsocket.SocketSendMsgResponse{}), nil
+}
+
+var _ packetsocket.ProviderWithCtx = (*packetProviderImpl)(nil)
+
+type packetProviderImpl struct {
+	ns *Netstack
+}
+
+func (sp *packetProviderImpl) Socket(ctx fidl.Context, kind packetsocket.Kind) (packetsocket.ProviderSocketResult, error) {
+	cooked := false
+	switch kind {
+	case packetsocket.KindNetwork:
+		cooked = true
+	case packetsocket.KindLink:
+	default:
+		panic(fmt.Sprintf("unhandled %[1]T variant = %[1]d", kind))
+	}
+
+	wq := new(waiter.Queue)
+	var ep tcpip.Endpoint
+	{
+		var err tcpip.Error
+		ep, err = sp.ns.stack.NewPacketEndpoint(cooked, 0 /* netProto */, wq)
+		if err != nil {
+			return packetsocket.ProviderSocketResultWithErr(tcpipErrorToCode(err)), nil
+		}
+	}
+
+	datagramSocket, err := makeDatagramSocket(ep, 0 /* netProto */, 0 /* transProto */, wq, sp.ns)
+	if err != nil {
+		return packetsocket.ProviderSocketResult{}, err
+	}
+
+	s := packetSocketImpl{
+		datagramSocket: datagramSocket,
+		kind:           kind,
+	}
+
+	localC, peerC, err := zx.NewChannel(0)
+	if err != nil {
+		return packetsocket.ProviderSocketResult{}, err
+	}
+
+	s.addConnection(ctx, fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
+	_ = syslog.DebugTf("NewPacketSocket", "%p", s.endpointWithEvent)
+	sp.ns.onAddEndpoint(&s.endpoint)
+
+	if err := s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalDatagramOutgoing); err != nil {
+		panic(fmt.Sprintf("local.SignalPeer(0, zxsocket.SignalDatagramOutgoing) = %s", err))
+	}
+
+	return packetsocket.ProviderSocketResultWithResponse(packetsocket.ProviderSocketResponse{
+		Socket: packetsocket.SocketWithCtxInterface{Channel: peerC},
+	}), nil
 }

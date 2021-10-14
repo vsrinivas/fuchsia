@@ -40,6 +40,7 @@ import (
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 	"fidl/fuchsia/posix/socket"
+	packetsocket "fidl/fuchsia/posix/socket/packet"
 	rawsocket "fidl/fuchsia/posix/socket/raw"
 	"fidl/fuchsia/stash"
 
@@ -304,7 +305,8 @@ func Main() {
 		HandleLocal: true,
 		NUDDisp:     &nudDisp,
 
-		RawFactory: &raw.EndpointFactory{},
+		RawFactory:               &raw.EndpointFactory{},
+		AllowPacketEndpointWrite: true,
 	})
 
 	delayEnabled := tcpip.TCPDelayEnabled(true)
@@ -487,6 +489,19 @@ func Main() {
 			func(ctx context.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
 					_ = syslog.WarnTf(rawsocket.ProviderName, "%s", err)
+				})
+				return nil
+			},
+		)
+	}
+
+	{
+		stub := packetsocket.ProviderWithCtxStub{Impl: &packetProviderImpl{ns: ns}}
+		appCtx.OutgoingService.AddService(
+			packetsocket.ProviderName,
+			func(ctx context.Context, c zx.Channel) error {
+				go component.ServeExclusive(ctx, &stub, c, func(err error) {
+					_ = syslog.WarnTf(packetsocket.ProviderName, "%s", err)
 				})
 				return nil
 			},

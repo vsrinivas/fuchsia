@@ -6,6 +6,7 @@
 #define LIB_ZXIO_PRIVATE_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/zx/channel.h>
@@ -124,16 +125,21 @@ zx_status_t zxio_debuglog_init(zxio_storage_t* storage, zx::debuglog handle);
 zx_status_t zxio_datagram_socket_init(zxio_storage_t* storage, zx::eventpair event,
                                       fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client);
 
-// stream socket (channel backed) --------------------------------------------
+// stream socket (channel backed) ----------------------------------------------
 
 zx_status_t zxio_stream_socket_init(zxio_storage_t* storage, zx::socket socket,
                                     fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client,
                                     zx_info_socket_t& info);
 
-// raw socket (channel backed) --------------------------------------------
+// raw socket (channel backed) -------------------------------------------------
 
 zx_status_t zxio_raw_socket_init(zxio_storage_t* storage, zx::eventpair event,
                                  fidl::ClientEnd<fuchsia_posix_socket_raw::Socket> client);
+
+// packet socket (channel backed) ----------------------------------------------
+
+zx_status_t zxio_packet_socket_init(zxio_storage_t* storage, zx::eventpair event,
+                                    fidl::ClientEnd<fuchsia_posix_socket_packet::Socket> client);
 
 // remote ----------------------------------------------------------------------
 

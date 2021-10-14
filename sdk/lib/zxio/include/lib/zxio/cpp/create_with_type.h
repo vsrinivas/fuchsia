@@ -6,6 +6,7 @@
 #define LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_CREATE_WITH_TYPE_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/zx/eventpair.h>
@@ -47,6 +48,12 @@ inline zx_status_t CreatePipe(zxio_storage_t* storage, zx::socket socket, zx_inf
 inline zx_status_t CreateRawSocket(zxio_storage_t* storage, zx::eventpair event,
                                    fidl::ClientEnd<fuchsia_posix_socket_raw::Socket> client) {
   return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_RAW_SOCKET, event.release(),
+                               client.TakeChannel().release());
+}
+
+inline zx_status_t CreatePacketSocket(zxio_storage_t* storage, zx::eventpair event,
+                                      fidl::ClientEnd<fuchsia_posix_socket_packet::Socket> client) {
+  return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_PACKET_SOCKET, event.release(),
                                client.TakeChannel().release());
 }
 
