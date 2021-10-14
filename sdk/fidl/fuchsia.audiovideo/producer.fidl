@@ -1,0 +1,155 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.audiovideo;
+
+using fuchsia.media2;
+using fuchsia.mediastreams;
+using zx;
+
+/// Creates a producer that reads from a file.
+@discoverable
+protocol ProducerCreator {
+    /// Creates a producer that reads from a file.
+    ///
+    /// + request `file_channel` the channel representing the file to read.
+    /// + request `producer_server_end` the server end of the `Producer` channel.
+    ///
+    /// If this method fails, `producer_server_end` is closed with an epitaph that indicates the
+    /// nature of the failure.
+    Create(resource struct {
+        file_channel zx.handle:CHANNEL;
+        producer_server_end server_end:Producer;
+    });
+};
+
+alias StreamId = uint32;
+
+const MAX_STREAM_CHANGES uint32 = 16;
+
+/// Represents an audio/video producer.
+protocol Producer {
+    compose fuchsia.media2.PassiveProducer;
+
+    /// Gets producer status using the long get pattern. The first call to this method returns
+    /// when meaningful status is available. Subsequent calls to this method will return when the
+    /// status has changed.
+    WatchStatus() -> (struct {
+        status ProducerStatus;
+    });
+
+    /// Gets stream changes using the long get pattern. The first call to this method returns as
+    /// soon as the producer determines the initial set of streams. Subsequent calls to this method
+    /// will return when there are new changes.
+    WatchStreamChanges() -> (struct {
+        changes vector<ProducerStreamChange>:MAX_STREAM_CHANGES;
+    });
+
+    /// Binds to the specified stream.
+    ///
+    /// + request `stream_id` id of the stream to which to bind. If `stream_id` doesn't specify a
+    ///   valid stream, the `producer_stream_server_end` is closed by the service with epitaph
+    ///   ZX_ERR_INVALID_ARGS.
+    /// + request `producer_stream_server_end` server end of the `ProducerStream` channel used to
+    ///   commnicate with the stream.
+    BindStream(resource struct {
+        stream_id StreamId;
+        producer_stream_server_end server_end:ProducerStream;
+    });
+};
+
+/// Status of a `Producer`.
+type ProducerStatus = struct {
+    /// Duration of the current content.
+    duration zx.duration;
+
+    /// Metadata regarding the current content.
+    metadata Metadata:optional;
+
+    /// Current error, if any.
+    error ProducerError;
+};
+
+type ProducerError = flexible enum {
+    NONE = 0;
+
+    CONTENT_NOT_FOUND = 1;
+
+    FAILED_TO_OPEN_CONTENT = 2;
+
+    OTHER_ERROR = 3;
+};
+
+/// A change returned by `Producer.WatchStreamChanges`.
+type ProducerStreamChange = flexible union {
+    /// Describes a stream of which the client has not been previously informed.
+    1: added ProducerStreamInfo;
+
+    /// Describes a stream of which the client has been previously informed but whose properties
+    /// have changed.
+    2: updated ProducerStreamInfo;
+
+    /// Identifies a stream of which the client has been previously informed but which has been
+    /// removed and is no longer valid.
+    3: removed StreamId;
+};
+
+/// Describes a stream exposed by a `Producer`.
+type ProducerStreamInfo = struct {
+    /// The stream identifier.
+    id StreamId;
+
+    /// The format of the stream.
+    format fuchsia.mediastreams.MediaFormat;
+
+    /// The compression applied to the stream.
+    compression fuchsia.mediastreams.Compression:optional;
+
+    /// The encryption applied to the stream.
+    encryption fuchsia.mediastreams.Encryption:optional;
+
+    /// The timeline of the stream.
+    timestamp_units fuchsia.media2.PacketTimestampUnits;
+
+    /// Metadata regarding this stream.
+    metadata Metadata:optional;
+};
+
+/// A stream exposed by a `Producer`.
+///
+/// When a stream is removed, the `Producer` client can receive a notification to that effect via
+/// `Producer.WatchStreamChanges`. In addition, if the client has called `Producer.BindStream` for
+/// the removed stream, the service will send an `OnDisconnected` event with status
+/// `ZX_ERR_UNAVAILABLE` if a `StreamSink` was connected, then it will close the `ProducerStream`
+/// channel with an epitaph of `ZX_ERR_UNAVAILABLE`.
+protocol ProducerStream {
+    /// Connects a stream sink for the stream with the indicate buffer collection. Multiple stream
+    /// sinks may be used sequentially for a given producer stream. This method responds when the
+    /// connection is ready or the connect attempt fails.
+    /// + request `buffer_collection_token` identifies the logical buffer collection to be used for
+    ///   the new connection.
+    /// + request `compressed` indicates whether the produced stream should be of the original
+    ///   compressed format (true) or decoded (false). If the original format is uncompressed, this
+    ///   parameter is ignored.
+    Connect(resource struct {
+        buffer_collection_token zx.handle:EVENTPAIR;
+        compressed bool;
+        stream_sink client_end:fuchsia.media2.StreamSink;
+    }) -> (struct {}) error fuchsia.media2.ConnectionError;
+
+    // TODO: Another connect call that trans/encodes into another compression type?
+    // TODO: How do we handle decryption?
+
+    /// Disconnects the output stream.
+    Disconnect();
+
+    /// Indicates that the current output stream has been disconnected unexpectedly.
+    -> OnDisconnected(struct {
+        epitaph zx.status;
+    });
+
+    /// Indicates that the stream sink previously created is invalid, and the client should create
+    /// another one if it wishes to continue sending packets.
+    -> OnStreamSinkInvalid();
+};

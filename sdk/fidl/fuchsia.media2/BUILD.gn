@@ -1,0 +1,23 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.media2") {
+  sources = [
+    "buffer_provider.fidl",
+    "connection_error.fidl",
+    "consumer.fidl",
+    "producer.fidl",
+    "stream_sink.fidl",
+    "timelines.fidl",
+    "transport_control.fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.mediastreams",
+    "//sdk/fidl/fuchsia.sysmem",
+    "//zircon/vdso/zx",
+  ]
+}

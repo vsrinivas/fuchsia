@@ -1,0 +1,37 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.audiovideo;
+
+const MAX_METADATA_PROPERTIES uint32 = 256;
+const MAX_METADATA_LABEL_SIZE uint32 = 256;
+const MAX_METADATA_VALUE_SIZE uint32 = 1024;
+
+// Describes media.
+type Metadata = struct {
+    properties vector<Property>:MAX_METADATA_PROPERTIES;
+};
+
+type Property = struct {
+    label string:MAX_METADATA_LABEL_SIZE;
+    value string:MAX_METADATA_VALUE_SIZE;
+};
+
+const METADATA_LABEL_TITLE string = "fuchsia.audiovideo.title";
+const METADATA_LABEL_ARTIST string = "fuchsia.audiovideo.artist";
+const METADATA_LABEL_ALBUM_ARTIST string = "fuchsia.audiovideo.album_artist";
+const METADATA_LABEL_ALBUM string = "fuchsia.audiovideo.album";
+const METADATA_LABEL_TRACK_NUMBER string = "fuchsia.audiovideo.track_number";
+const METADATA_LABEL_PUBLISHER string = "fuchsia.audiovideo.publisher";
+const METADATA_LABEL_GENRE string = "fuchsia.audiovideo.genre";
+const METADATA_LABEL_COMPOSER string = "fuchsia.audiovideo.composer";
+const METADATA_LABEL_SUBTITLE string = "fuchsia.audiovideo.subtitle";
+const METADATA_LABEL_RELEASE_DATE string = "fuchsia.audiovideo.release_date";
+const METADATA_LABEL_EPISODE string = "fuchsia.audiovideo.episode";
+const METADATA_LABEL_SEASON string = "fuchsia.audiovideo.season";
+const METADATA_LABEL_STUDIO string = "fuchsia.audiovideo.studio";
+const METADATA_LABEL_LANGUAGE string = "fuchsia.audiovideo.language";
+const METADATA_LABEL_ENCODER string = "fuchsia.audiovideo.encoder";
+const METADATA_LABEL_CREATION_TIME string = "fuchsia.audiovideo.creation_time";
+const METADATA_LABEL_SOURCE_TITLE string = "fuchsia.audiovideo.source_title";

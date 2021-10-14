@@ -1,0 +1,79 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.audio;
+
+using fuchsia.media2;
+using fuchsia.mediastreams;
+using zx;
+
+/// Creates a decoder.
+@discoverable
+protocol DecoderCreator {
+    /// Creates a decoder.
+    ///
+    /// + request `format` the format of the compressed audio stream to be decoded.
+    /// + request `compression` the compression applied to the compressed audio stream to be decoded.
+    /// + request `decoder_server_end` the server end of the `Decoder` channel.
+    ///
+    /// If this method fails, `decoder_server_end` is closed with an epitaph that indicates the
+    /// nature of the failure.
+    Create(resource struct {
+        format fuchsia.mediastreams.AudioFormat;
+        compression fuchsia.mediastreams.Compression;
+        decoder_server_end server_end:Decoder;
+    });
+};
+
+/// Represents an audio decoder.
+protocol Decoder {
+    /// Connects an input stream in the form of a `StreamSink` through which the decoder consumes
+    /// packets.
+    ///
+    /// + request `buffer_collection_token` a participant token for the buffer collection to be
+    ///   used for this connection.
+    /// + request `timestamp_units` the units used for timestamps on input packets. If this
+    ///   parameter is not supplied, input packets will have no timestamps.
+    /// + request `stream_sink_server_end` the server end of the `StreamSink` channel for this
+    ///   connection.
+    /// * error reason for connection failiure.
+    ///
+    /// This method responds when the connection is ready or the connect attempt fails.
+    ConnectInputStream(resource struct {
+        buffer_collection_token zx.handle:EVENTPAIR;
+        timestamp_units fuchsia.media2.PacketTimestampUnits:optional;
+        stream_sink_server_end server_end:fuchsia.media2.StreamSink;
+    }) -> (struct {}) error fuchsia.media2.ConnectionError;
+
+    /// Indicates that the current input stream has been disconnected unexpectedly.
+    -> OnInputStreamDisconnected();
+
+    /// Indicates that a new output stream is available with the specified format. The client is
+    /// expected to call `ConnectOutputStream` immediately after this event is signaled.
+    -> OnNewOutputStreamAvailable(struct {
+        format fuchsia.mediastreams.AudioFormat;
+        timestamp_units fuchsia.media2.PacketTimestampUnits:optional;
+    });
+
+    /// Connects an output stream in response to a `OnNewOutputStreamAvailable` event.
+    ///
+    /// + request `buffer_collection_token` a participant token for the buffer collection to be
+    ///   used for this connection.
+    /// + request `stream_sink` the client end of the `StreamSink` channel for this connection.
+    /// * error reason for connection failiure.
+    ///
+    /// This method responds when the connection is ready or the connect attempt fails.
+    ConnectOutputStream(resource struct {
+        buffer_collection_token zx.handle:EVENTPAIR;
+        stream_sink client_end:fuchsia.media2.StreamSink;
+    }) -> (struct {}) error fuchsia.media2.ConnectionError;
+
+    /// Disconnects the output stream.
+    DisconnectOutputStream();
+
+    /// Indicates that the current output stream has been disconnected unexpectedly. The
+    /// `status` parameter indicates the epitaph for the connection.
+    -> OnOutputStreamDisconnected(struct {
+        status zx.status;
+    });
+};

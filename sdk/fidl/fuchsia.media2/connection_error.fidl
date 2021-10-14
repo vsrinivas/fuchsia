@@ -1,0 +1,46 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.media2;
+
+/// Errors that may be returned by `ConnectInputStream` or `ConnectOutputStream` methods. This is a
+/// superset of `fuchsia.media.BufferProviderError`.
+type ConnectionError = strict enum {
+    /// Participants have submitted constraints to the buffer provider that cannot be collectively
+    /// satisfied.
+    OVERCONSTRAINED = 1;
+
+    /// Participants have submitted constraints to the buffer provider that don't collectively
+    /// provide enough information to create a buffer collection.
+    UNDERCONSTRAINED = 2;
+
+    /// Insufficient free memory of the required type was available for the buffer collection.
+    INSUFFICIENT_MEMORY = 3;
+
+    /// Not used. Corresponds to `fuchsia.media.BufferProviderError.NO_PARTICIPANTS`, which is not
+    /// relevant to connection methods.
+    NOT_USED = 4;
+
+    /// The buffer provider timed out waiting for a `CreateBufferCollection` call with a matching
+    /// provider token.
+    TIMED_OUT_WAITING_FOR_CREATION = 5;
+
+    /// The buffer provider timed out waiting for one or more participants in the logical connection
+    /// to call `GetBuffers` with a matching participant token.
+    TIMED_OUT_WAITING_FOR_PARTICPANT = 6;
+
+    /// Attempt to allocate from sysmem yielded `ZX_ERR_ACCESS_DENIED`, indicating the client is
+    /// not permitted to obtain the buffers it requested.
+    ACCESS_DENIED = 7;
+
+    /// Attempt to allocate from sysmem yielded `ZX_ERR_INVALID_ARGS`, indicating the request was
+    /// malformed.
+    MALFORMED_REQUEST = 8;
+
+    /// Attempt to allocate from sysmem yielded `ZX_ERR_NOT_SUPPORTED`, indicating the request was
+    /// valid but could not be satisfied.
+    NOT_SUPPORTED = 9;
+
+    /// One or more buffer VMOs could not be mapped.
+    FAILED_TO_MAP_BUFFER = 100;
+};

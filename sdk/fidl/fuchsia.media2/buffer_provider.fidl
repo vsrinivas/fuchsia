@@ -1,0 +1,162 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media2;
+
+using fuchsia.mediastreams;
+using fuchsia.sysmem;
+using zx;
+
+alias BufferId = uint32;
+
+const MAX_BUFFERS uint32 = 64;
+const MAX_VMO_NAME_LENGTH uint32 = 64;
+const MAX_PARTICIPANT_NAME_LENGTH uint32 = 64;
+
+/// Provides buffers (VMOs) to groups of participants.
+@discoverable
+protocol BufferProvider {
+    /// Creates a new logical buffer collection identified by `provider_token`. The reply is sent
+    /// when all participant tokens have been submitted or the operation fails for some reason.
+    ///
+    /// + request `provider_token` the token used to identify the collection. Peers of this eventpair
+    ///   are used by participants to identify the logical collection in `GetBuffers`.
+    /// + request `vmo_name` the name to be applied to VMOs.
+    /// - response `collection_info` a description of the resulting buffer collection.
+    /// * error reason for failure to create the collection. This method will never return
+    ///   `BufferProviderError.TIMED_OUT_WAITING_FOR_CREATION`.
+    CreateBufferCollection(resource struct {
+        provider_token zx.handle:EVENTPAIR;
+        vmo_name string:MAX_VMO_NAME_LENGTH;
+    }) -> (struct {
+        collection_info BufferCollectionInfo;
+    }) error BufferProviderError;
+
+    /// Gets buffers for the logical buffer collection identified by `participant_token`, which must
+    /// be a peer of the provider token used in a `CreateBufferCollection` call. This operation
+    /// completes when all copies of the participant token have been destroyed or passed in a
+    /// `GetBuffers` call.
+    ///
+    /// + request `participant_token` one of the peers of a provider token submitted via
+    ///   `CreateBufferCollection`.
+    /// + request `constraints` constraints that must be satisfied in order for the collection
+    ///   to be fit for the participant's purpose.
+    /// + request `rights` rights that are required with respect to buffers.
+    /// + request `name` the name of the participant for debugging purposes. The process name is
+    ///   typically used here.
+    /// + request `id` the id of the participant for debugging purposes. The process id is typically
+    ///   used here.
+    /// - response `buffers `the VMOs that make up the collection, meeting all constraints from all
+    ///   participants.
+    /// * error reason for failiure to create the collection.
+    GetBuffers(resource struct {
+        participant_token zx.handle:EVENTPAIR;
+        constraints BufferConstraints;
+        rights BufferRights;
+        name string:MAX_PARTICIPANT_NAME_LENGTH;
+        id uint64;
+    }) -> (resource struct {
+        buffers vector<zx.handle:VMO>:MAX_BUFFERS;
+    }) error BufferProviderError;
+
+    /// Binds a participant token to a sysmem `BufferCollectionToken` for the same buffer
+    /// collection.
+    ///
+    /// + request `participant_token` one of the peers of a provider token submitted via
+    ///   `CreateBufferCollection`.
+    /// - response `sysmem_token_client_end` client end of a sysmem `BufferCollectionToken` channel.
+    ///
+    /// This method is useful for participants that need to constrain the buffer collection in
+    /// ways that are not expressible using `BufferConstraints`. When a participant uses this method
+    /// (as opposed to `GetBuffers`), the provider delegates the creation of the buffer collection
+    /// to sysmem. `GetBuffers` continues to work normally for participants that use it.
+    // TODO: Make this feed-forward when sysmem is fixed.
+    BindSysmemToken(resource struct {
+        participant_token zx.handle:EVENTPAIR;
+    }) -> (resource struct {
+        sysmem_token_client_end client_end:fuchsia.sysmem.BufferCollectionToken;
+    });
+};
+
+type BufferCollectionInfo = table {
+    /// The size of the buffers in the collection.
+    1: buffer_size uint32;
+
+    /// The size of the collection.
+    2: buffer_count uint32;
+};
+
+/// Describes constraints applied to a buffer collection by a participant via
+/// `BufferProvider.GetBuffers`.
+// TODO: More specific name? BufferConstraints?
+type BufferConstraints = table {
+    /// Minimum buffer size. The participant requires that each buffer in the collection be at
+    /// least this size (in bytes). The size of the buffers in the buffer collection will be at
+    /// least the maximum of these values across all participants. If this value is not provided,
+    /// a default value of 0 is presumed.
+    1: min_buffer_size uint32;
+
+    /// Buffer count. The participant may, at any given time, maintain possession of this many
+    /// buffers. The number of buffers in the buffer collection will be at least the sum of these
+    /// values across all participants. If this value is not provided, a default value of 0 is
+    /// presumed.
+    2: buffer_count uint32;
+
+    /// Minimum aggregate buffer size. The participant requires that the sum (in bytes) of the sizes
+    /// of all the buffers in the collection be at least this large. The sum of the sizes of all the
+    /// buffers in the buffer collection will be at least the sum of these values across all
+    /// participants. If this value is not provided, a default value of 0 is presumed.
+    3: min_aggregate_buffer_size uint64;
+
+    /// Video format of payloads. This value should be provided by producers of video streams in
+    /// the likely event that the consumer will want to use sysmem to allocate buffers. Consumers
+    /// that can accept a range of formats must use `BufferProvider.BindSysmemToken` rather than
+    /// `BufferProvider.GetBuffers`.
+    4: video_format fuchsia.mediastreams.VideoFormat;
+};
+
+/// Indicates what rights are required with respect to buffers.
+type BufferRights = strict bits {
+    /// Read right is required (for reading or mapping for read).
+    READ = 0x01;
+
+    /// Write right is required (for writing or mapping for write).
+    WRITE = 0x02;
+};
+
+/// Errors that may be returned by `BufferProvider.CreateBufferCollection` or
+/// `BufferProvider.GetBuffers`.
+type BufferProviderError = strict enum {
+    /// Participants have submitted constraints that cannot be collectively satisfied.
+    OVERCONSTRAINED = 1;
+
+    /// Participants have submitted constraints that don't collectively provide enough information
+    /// to create a buffer collection.
+    UNDERCONSTRAINED = 2;
+
+    /// Insufficient free memory of the required type was available.
+    INSUFFICIENT_MEMORY = 3;
+
+    /// All provider tokens were destroyed without `GetBuffers` being called.
+    NO_PARTICIPANTS = 4;
+
+    /// Timed out waiting for a `CreateBufferCollection` call with a matching provider token.
+    TIMED_OUT_WAITING_FOR_CREATION = 5;
+
+    /// Timed out waiting for one or more participants in the logical connection to call
+    /// `GetBuffers` with a matching participant token.
+    TIMED_OUT_WAITING_FOR_PARTICPANT = 6;
+
+    /// Attempt to allocate from sysmem yielded `ZX_ERR_ACCESS_DENIED`, indicating the client is
+    /// not permitted to obtain the buffers it requested.
+    ACCESS_DENIED = 7;
+
+    /// Attempt to allocate from sysmem yielded `ZX_ERR_INVALID_ARGS`, indicating the request was
+    /// malformed.
+    MALFORMED_REQUEST = 8;
+
+    /// Attempt to allocate from sysmem yielded `ZX_ERR_NOT_SUPPORTED`, indicating the request was
+    /// valid but could not be satisfied.
+    NOT_SUPPORTED = 9;
+};
