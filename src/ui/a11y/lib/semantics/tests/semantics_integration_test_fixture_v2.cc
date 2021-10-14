@@ -145,6 +145,7 @@ void SemanticsManagerProxy::RegisterViewForSemantics(
 }
 
 void SemanticsIntegrationTestV2::SetUp() {
+  FX_LOGS(INFO) << "Setting up test fixture";
   view_manager_ = std::make_unique<a11y::ViewManager>(
       std::make_unique<a11y::SemanticTreeServiceFactory>(),
       std::make_unique<MockViewSemanticsFactory>(), std::make_unique<MockAnnotationViewFactory>(),
@@ -155,12 +156,14 @@ void SemanticsIntegrationTestV2::SetUp() {
   BuildRealm(this->GetTestComponents(), this->GetTestRoutes());
 
   // Wait until scenic is initialized to continue.
+  FX_LOGS(INFO) << "Waiting for scenic to be initialized";
   scenic_ = realm()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) { QuitLoop(); });
   RunLoop();
 }
 
 void SemanticsIntegrationTestV2::LaunchClient(std::string debug_name) {
+  FX_LOGS(INFO) << "Launching client: " << debug_name;
   auto tokens_rt = scenic::ViewTokenPair::New();  // Root Presenter -> Test
   auto tokens_tf = scenic::ViewTokenPair::New();  // Test -> Client
 
@@ -219,7 +222,9 @@ void SemanticsIntegrationTestV2::LaunchClient(std::string debug_name) {
   view_provider->CreateViewWithViewRef(std::move(tokens_tf.view_token.value),
                                        std::move(client_control_ref), std::move(client_view_ref));
 
+  FX_LOGS(INFO) << "Waiting for client to begin rendering";
   RunLoopUntil([&is_rendering] { return is_rendering; });
+  FX_LOGS(INFO) << "Client is rendering";
 
   // Reset the event handler without capturing the is_rendering stack variable.
   session_->set_event_handler(
@@ -241,6 +246,7 @@ void SemanticsIntegrationTestV2::LaunchClient(std::string debug_name) {
 void SemanticsIntegrationTestV2::BuildRealm(
     const std::vector<std::pair<Moniker, Component>>& components,
     const std::vector<CapabilityRoute>& routes) {
+  FX_LOGS(INFO) << "Building realm";
   semantics_manager_proxy_ = std::make_unique<SemanticsManagerProxy>(view_manager(), dispatcher());
   builder()->AddComponent(SemanticsIntegrationTestV2::kSemanticsManagerMoniker,
                           Component{.source = Mock{semantics_manager_proxy()}});

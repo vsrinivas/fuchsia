@@ -146,6 +146,7 @@ class WebViewProxy : public fuchsia::ui::app::ViewProvider, public MockComponent
   ~WebViewProxy() override = default;
 
   void Start(std::unique_ptr<MockHandles> mock_handles) override {
+    FX_LOGS(INFO) << "Starting WebViewProxy";
     // Connect to services in the realm.
     auto svc = mock_handles->svc();
     auto web_context_provider = svc.Connect<fuchsia::web::ContextProvider>();
@@ -191,6 +192,7 @@ class WebViewProxy : public fuchsia::ui::app::ViewProvider, public MockComponent
       }
     });
 
+    FX_LOGS(INFO) << "Running javascript to inject html";
     web_frame_->ExecuteJavaScript(
         {"*"}, BufferFromString(fxl::StringPrintf("document.write(`%s`);", html.c_str())),
         [](auto result) {
@@ -344,6 +346,7 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
     web_view_proxy_ = std::make_unique<WebViewProxy>(dispatcher());
     SemanticsIntegrationTestV2::SetUp();
 
+    FX_LOGS(INFO) << "Setting semantics enabled";
     view_manager()->SetSemanticsEnabled(true);
     LaunchClient("web view");
   }
@@ -359,15 +362,21 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
   }
 
   void RunLoopUntilNodeExistsWithLabel(std::string label) {
+    FX_LOGS(INFO) << "Waiting until node exists with label: " << label
+                  << " in tree with koid: " << view_ref_koid();
     RunLoopUntil([this, label] { return NodeExistsWithLabel(label); });
+    FX_LOGS(INFO) << "Found node with label: " << label
+                  << " in tree with koid: " << view_ref_koid();
   }
 
   void LoadHtml(const std::string html) {
+    FX_LOGS(INFO) << "Loading html: " << html;
     web_view_proxy()->LoadHtml(html);
     RunLoopUntil([this] {
       auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
       return node != nullptr;
     });
+    FX_LOGS(INFO) << "Finished loading html";
   }
 
  protected:
