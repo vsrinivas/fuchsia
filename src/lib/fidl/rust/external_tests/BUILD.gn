@@ -26,6 +26,7 @@ rustc_test("fidl_rust_external_tests_bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/testing/fidl:placeholders-rustc",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:test-case",
   ]
   sources = [
     "src/data_types.rs",

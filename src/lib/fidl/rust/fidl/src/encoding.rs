@@ -3689,6 +3689,9 @@ fidl_struct_copy! {
 
 bitflags! {
     /// Bitflags type for transaction header flags.
+    // TODO(fxbug.dev/45252): Refactor to account for the distinction between
+    // at-rest flags and dynamic flags (see RFC-0120 "Standalone use of the FIDL
+    // wire format" and fxrev.dev/534921 "Handling unknown interactions").
     pub struct HeaderFlags: u32 {
         /// Empty placeholder since empty bitflags are not allowed. Should be
         /// removed once any new header flags are defined.
@@ -3831,61 +3834,52 @@ pub fn decode_transaction_header(bytes: &[u8]) -> Result<(TransactionHeader, &[u
     Ok((header, body_bytes))
 }
 
-/// Header for persistently stored FIDL messages
+/// Header for persistently stored FIDL messages.
+// TODO(fxbug.dev/45252): Rename to WireFormatMetadata and complete the
+// implementation of RFC-0120.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct PersistentHeader {
-    /// Flags set for this message. MUST NOT be validated by bindings
-    flags: [u8; 3],
+    /// Must be zero.
+    disambiguator: u8,
     /// Magic number indicating the message's wire format. Two sides with
     /// different magic numbers are incompatible with each other.
     magic_number: u8,
+    /// "At rest" flags set for this message. MUST NOT be validated by bindings.
+    flags: [u8; 2],
+    /// Reserved bytes. Must be zero.
+    reserved: [u8; 4],
 }
 
-fidl_struct! {
+fidl_struct_copy! {
     name: PersistentHeader,
     members: [
-        flags {
-            ty: [u8; 3],
-            offset_v1: 4,
-            offset_v2: 4,
+        disambiguator {
+            ty: u8,
+            offset_v1: 0,
+            offset_v2: 0,
         },
         magic_number {
             ty: u8,
-            offset_v1: 7,
-            offset_v2: 7,
+            offset_v1: 1,
+            offset_v2: 1,
+        },
+        flags {
+            ty: [u8; 2],
+            offset_v1: 2,
+            offset_v2: 2,
+        },
+        reserved {
+            ty: [u8; 4],
+            offset_v1: 4,
+            offset_v2: 4,
         },
     ],
-    padding_v1: [
-        {
-            ty: u32,
-            offset: 0,
-            mask: 0xffffffffu32,
-        },
-        {
-            ty: u64,
-            offset: 8,
-            mask: 0xffffffffffffffffu64,
-        },
-    ],
-    padding_v2: [
-        {
-            ty: u32,
-            offset: 0,
-            mask: 0xffffffffu32,
-        },
-        {
-            ty: u64,
-            offset: 8,
-            mask: 0xffffffffffffffffu64,
-        },
-    ],
-    // TODO(fxbug.dev/78978): This was inadvertently copied from
-    // TransactionHeader, giving PersistentHeader 8 bytes of trailing padding.
-    // A future RFC will specify the size, which may or may not be 16 bytes.
-    size_v1: 16,
-    size_v2: 16,
-    align_v1: 8,
-    align_v2: 8,
+    padding_v1: [],
+    padding_v2: [],
+    size_v1: 8,
+    size_v2: 8,
+    align_v1: 1,
+    align_v2: 1,
 }
 
 impl PersistentHeader {
@@ -3897,7 +3891,10 @@ impl PersistentHeader {
     /// Creates a new `PersistentHeader` with a specific context and magic number.
     #[inline]
     pub fn new_full(context: &Context, magic_number: u8) -> Self {
-        PersistentHeader { flags: context.header_flags().into(), magic_number }
+        // Flags contains 2 at-rest flag bytes and 1 dynamic flag byte.
+        let flags: [u8; 3] = context.header_flags().into();
+        let at_rest_flags = [flags[0], flags[1]];
+        PersistentHeader { disambiguator: 0, magic_number, flags: at_rest_flags, reserved: [0; 4] }
     }
     /// Returns the magic number.
     #[inline]
@@ -3905,9 +3902,12 @@ impl PersistentHeader {
         self.magic_number
     }
     /// Returns the header's flags as a `HeaderFlags` value.
+    // TODO(fxbug.dev/45252): Once HeaderFlags is refactored this should
+    // return a more precise type, named something like AtRestFlags.
     #[inline]
     pub fn flags(&self) -> HeaderFlags {
-        let bytes = [self.flags[0], self.flags[1], self.flags[2], 0];
+        let dynamic_flag_byte = 0;
+        let bytes = [self.flags[0], self.flags[1], dynamic_flag_byte, 0];
         HeaderFlags::from_bits_truncate(u32::from_le_bytes(bytes))
     }
     /// Returns the context to use for decoding the message body associated with
@@ -4012,8 +4012,30 @@ pub fn encode_persistent_body<T: Persistable>(
 
 /// Decode the type expected from the persistent binary form.
 pub fn decode_persistent<T: Persistable>(bytes: &[u8]) -> Result<T> {
-    let context = Context { wire_format_version: WireFormatVersion::V1 };
-    let header_len = <PersistentHeader as Layout>::inline_size(&context);
+    // TODO(fxbug.dev/45252): Only accept the new header format.
+    //
+    // To soft-transition component manager's use of persistent FIDL, we
+    // temporarily need to accept the old 16-byte header.
+    //
+    //       disambiguator
+    //            | magic
+    //            |  | flags
+    //            |  |  / \  ( reserved )
+    //     new:  00 MA FL FL  00 00 00 00
+    //     idx:  0  1  2  3   4  5  6  7
+    //     old:  00 00 00 00  FL FL FL MA  00 00 00 00  00 00 00 00
+    //          ( txid gap )   \ | /   |  (      ordinal gap      )
+    //                         flags  magic
+    //
+    // So bytes[7] is 0 for the new format and 1 for the old format.
+    if bytes.len() < 8 {
+        return Err(Error::InvalidHeader);
+    }
+    let header_len = match bytes[7] {
+        0 => 8,
+        MAGIC_NUMBER_INITIAL => 16,
+        _ => return Err(Error::InvalidHeader),
+    };
     if bytes.len() < header_len {
         return Err(Error::OutOfRange);
     }
@@ -4025,9 +4047,28 @@ pub fn decode_persistent<T: Persistable>(bytes: &[u8]) -> Result<T> {
 /// Decodes the persistently stored header from a message.
 /// Returns the header and a reference to the tail of the message.
 pub fn decode_persistent_header(bytes: &[u8]) -> Result<PersistentHeader> {
-    let mut header = PersistentHeader::new_empty();
-    Decoder::decode_with_context(&header.decoding_context(), bytes, &mut [], &mut header)?;
-    Ok(header)
+    let context = Context { wire_format_version: WireFormatVersion::V1 };
+    match bytes.len() {
+        8 => {
+            // New 8-byte format.
+            let mut header = PersistentHeader::new_empty();
+            Decoder::decode_with_context(&context, bytes, &mut [], &mut header)?;
+            Ok(header)
+        }
+        // TODO(fxbug.dev/45252): Remove this.
+        16 => {
+            // Old 16-byte format that matches TransactionHeader.
+            let mut header = TransactionHeader::new_empty();
+            Decoder::decode_with_context(&context, bytes, &mut [], &mut header)?;
+            Ok(PersistentHeader {
+                disambiguator: 0,
+                magic_number: header.magic_number,
+                flags: [header.flags[0], header.flags[1]],
+                reserved: [0; 4],
+            })
+        }
+        _ => Err(Error::InvalidHeader),
+    }
 }
 
 /// Decodes the persistently stored header from a message.
