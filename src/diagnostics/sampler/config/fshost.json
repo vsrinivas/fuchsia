@@ -40,7 +40,7 @@
             "event_codes": [
                 1
             ],
-            "metric_id": 9000,
+            "metric_id": 9002,
             "metric_type": "Occurrence",
             "selector": "bootstrap/fshost:root/minfs_upgrade:skipped",
             "use_legacy_cobalt": true
@@ -49,7 +49,7 @@
             "event_codes": [
                 2
             ],
-            "metric_id": 9000,
+            "metric_id": 9002,
             "metric_type": "Occurrence",
             "selector": "bootstrap/fshost:root/minfs_upgrade:detected_failed_upgrade",
             "use_legacy_cobalt": true
@@ -58,7 +58,7 @@
             "event_codes": [
                 3
             ],
-            "metric_id": 9000,
+            "metric_id": 9002,
             "metric_type": "Occurrence",
             "selector": "bootstrap/fshost:root/minfs_upgrade:1_read_old",
             "use_legacy_cobalt": true
@@ -67,7 +67,7 @@
             "event_codes": [
                 4
             ],
-            "metric_id": 9000,
+            "metric_id": 9002,
             "metric_type": "Occurrence",
             "selector": "bootstrap/fshost:root/minfs_upgrade:2_write_new",
             "use_legacy_cobalt": true
@@ -76,7 +76,7 @@
             "event_codes": [
                 5
             ],
-            "metric_id": 9000,
+            "metric_id": 9002,
             "metric_type": "Occurrence",
             "selector": "bootstrap/fshost:root/minfs_upgrade:3_done",
             "use_legacy_cobalt": true
