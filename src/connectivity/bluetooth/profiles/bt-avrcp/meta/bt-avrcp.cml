@@ -28,6 +28,10 @@
         {
             protocol: [
                 "fuchsia.bluetooth.avrcp.PeerManager",
+
+                // TODO(fxbug.dev/86390): `PeerManagerExt` is a testonly capability. It should not
+                // be exposed to the system. Remove this once it is only exposed in testing
+                // scenarios.
                 "fuchsia.bluetooth.avrcp.test.PeerManagerExt",
             ],
             from: "self",

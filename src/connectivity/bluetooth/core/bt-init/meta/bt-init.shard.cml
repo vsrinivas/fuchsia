@@ -85,6 +85,8 @@
             from: "#bt-gap",
         },
         {
+            // TODO(fxbug.dev/86390): `RfcommTest` is a testonly capability. It should not be
+            // exposed to the system. Remove this once it is only exposed in testing scenarios.
             protocol: [ "fuchsia.bluetooth.rfcomm.test.RfcommTest" ],
             from: "#bt-rfcomm",
         },
