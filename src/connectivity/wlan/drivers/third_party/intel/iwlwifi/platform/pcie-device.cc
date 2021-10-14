@@ -66,14 +66,22 @@ void PcieDevice::DdkInit(::ddk::InitTxn txn) {
     zx_status_t status = ZX_OK;
 
     task_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-    if ((status = task_loop_->StartThread("iwlwifi-worker", nullptr)) != ZX_OK) {
-      IWL_ERR(iwl_trans, "Failed to create async loop thread: %s\n", zx_status_get_string(status));
+    if ((status = task_loop_->StartThread("iwlwifi-task-worker", nullptr)) != ZX_OK) {
+      IWL_ERR(iwl_trans, "Failed to create task async loop thread: %s\n",
+              zx_status_get_string(status));
+      return status;
+    }
+    irq_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+    if ((status = irq_loop_->StartThread("iwlwifi-irq-worker", nullptr)) != ZX_OK) {
+      IWL_ERR(iwl_trans, "Failed to create irq async loop thread: %s\n",
+              zx_status_get_string(status));
       return status;
     }
 
     // Fill in the relevant Fuchsia-specific fields in our driver interface struct.
     pci_dev_.dev.zxdev = zxdev();
     pci_dev_.dev.task_dispatcher = task_loop_->dispatcher();
+    pci_dev_.dev.irq_dispatcher = irq_loop_->dispatcher();
     pci_dev_.dev.inspector = static_cast<struct driver_inspector*>(driver_inspector_.get());
 
     if ((status = device_get_fragment_protocol(parent(), "pci", ZX_PROTOCOL_PCI,
@@ -126,9 +134,11 @@ void PcieDevice::DdkInit(::ddk::InitTxn txn) {
 
 void PcieDevice::DdkUnbind(::ddk::UnbindTxn txn) {
   iwl_pci_remove(&pci_dev_);
-  task_loop_->Shutdown();
   zx_handle_close(pci_dev_.dev.bti);
   pci_dev_.dev.bti = ZX_HANDLE_INVALID;
+  irq_loop_->Shutdown();
+  task_loop_->Shutdown();
+
   txn.Reply();
 }
 

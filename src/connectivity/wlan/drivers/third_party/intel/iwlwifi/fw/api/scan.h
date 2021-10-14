@@ -83,11 +83,6 @@ struct iwl_ssid_ie {
 #define IWL_MAX_SCHED_SCAN_PLANS 2
 #define IWL_SCAN_MAX_NUM_OF_CHANNELS 52
 
-/* TODO(49686): check if there is a dynamic way to derive this value. Currently
- * this is set to 2x the average time it takes to finish scan.
- */
-#define IWL_SCAN_TIMEOUT_SEC 10
-
 enum scan_framework_client {
   SCAN_CLIENT_SCHED_SCAN = BIT(0),
   SCAN_CLIENT_NETDETECT = BIT(1),

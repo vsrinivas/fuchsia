@@ -46,6 +46,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/irq.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 
 zx_status_t _iwl_pcie_rx_init(struct iwl_trans* trans);
@@ -1096,7 +1097,7 @@ static void iwl_pcie_irq_handle_error(struct iwl_trans* trans) {
     if (!trans_pcie->txq[i]) {
       continue;
     }
-    iwlwifi_timer_stop(&trans_pcie->txq[i]->stuck_timer);
+    iwl_irq_timer_stop(trans_pcie->txq[i]->stuck_timer);
   }
 
   /* The STATUS_FW_ERROR bit is set in this function. This must happen

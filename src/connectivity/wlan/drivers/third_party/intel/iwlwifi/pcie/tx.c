@@ -36,8 +36,6 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/tx.h"
 
-#include <lib/async/dispatcher.h>
-#include <lib/async/time.h>
 #include <lib/backtrace-request/backtrace-request.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -156,21 +154,13 @@ void iwl_pcie_free_dma_ptr(struct iwl_trans* trans, struct iwl_dma_ptr* ptr) {
   ptr->io_buf = NULL;
 }
 
-static void iwl_pcie_txq_stuck_timer(async_dispatcher_t* dispatcher, async_task_t* task,
-                                     zx_status_t status) {
-  if (status != ZX_OK) {
-    // This indicates that the dispatcher was shut down, in which case there's nothing for us to do.
-    return;
-  }
-
-  struct iwlwifi_timer_info* timer = containerof(task, struct iwlwifi_timer_info, task);
-  struct iwl_txq* txq = containerof(timer, struct iwl_txq, stuck_timer);
+static void iwl_pcie_txq_stuck_timer(void* data) {
+  struct iwl_txq* txq = data;
 
   mtx_lock(&txq->lock);
   /* check if triggered erroneously */
   if (txq->read_ptr == txq->write_ptr) {
     mtx_unlock(&txq->lock);
-    sync_completion_signal(&timer->finished);
     return;
   }
   mtx_unlock(&txq->lock);
@@ -182,47 +172,6 @@ static void iwl_pcie_txq_stuck_timer(async_dispatcher_t* dispatcher, async_task_
 
   iwl_force_nmi(trans);
 #endif  // NEEDS_PORTING
-
-  sync_completion_signal(&timer->finished);
-}
-
-void iwlwifi_timer_init(struct iwl_trans* trans, struct iwlwifi_timer_info* timer) {
-  timer->dispatcher = trans->dispatcher;
-
-  // Initialize the completion to signaled so that if the timer is stopped before being set then
-  // waiting on |finished| doesn't block.
-  timer->finished = SYNC_COMPLETION_INIT;
-  sync_completion_signal(&timer->finished);
-
-  timer->task.state = (async_state_t)ASYNC_STATE_INIT;
-  timer->task.handler = iwl_pcie_txq_stuck_timer;
-  mtx_init(&timer->lock, mtx_plain);
-}
-
-void iwlwifi_timer_set(struct iwlwifi_timer_info* timer, zx_duration_t delay) {
-  mtx_lock(&timer->lock);
-  async_cancel_task(timer->dispatcher, &timer->task);
-  timer->task.deadline = zx_time_add_duration(async_now(timer->dispatcher), delay);
-  sync_completion_reset(&timer->finished);
-  async_post_task(timer->dispatcher, &timer->task);
-  mtx_unlock(&timer->lock);
-}
-
-void iwlwifi_timer_stop(struct iwlwifi_timer_info* timer) {
-  mtx_lock(&timer->lock);
-  zx_status_t status = async_cancel_task(timer->dispatcher, &timer->task);
-  if (status == ZX_OK) {
-    // The task had been cancelled successfully. Mark it finished so that if this function is called
-    // again, it can pass the sync_completion_wait() below.
-    sync_completion_signal(&timer->finished);
-  }
-  mtx_unlock(&timer->lock);
-
-  // If we failed to cancel the task then it might already be running, so we wait for it to finish.
-  // If the timer has not been set, or already finished then this will not block.
-  if (status == ZX_ERR_NOT_FOUND) {
-    sync_completion_wait(&timer->finished, ZX_TIME_INFINITE);
-  }
 }
 
 /*
@@ -499,7 +448,7 @@ zx_status_t iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, uin
     tfd_sz = trans_pcie->tfd_size * slots_num;
   }
 
-  iwlwifi_timer_init(trans, &txq->stuck_timer);
+  iwl_irq_timer_create(trans->dev, iwl_pcie_txq_stuck_timer, &txq, &txq->stuck_timer);
   txq->trans_pcie = trans_pcie;
 
   txq->n_window = slots_num;
@@ -704,7 +653,8 @@ static void iwl_pcie_txq_free(struct iwl_trans* trans, int txq_id) {
   free(txq->entries);
   txq->entries = NULL;
 
-  iwlwifi_timer_stop(&txq->stuck_timer);
+  iwl_irq_timer_release_sync(txq->stuck_timer);
+  txq->stuck_timer = NULL;
 
   /* 0-fill queue descriptor structure */
   memset(txq, 0, sizeof(*txq));
@@ -1030,9 +980,9 @@ static inline void iwl_pcie_txq_progress(struct iwl_txq* txq) {
    * since we're making progress on this queue
    */
   if (txq->read_ptr == txq->write_ptr) {
-    iwlwifi_timer_stop(&txq->stuck_timer);
+    iwl_irq_timer_stop(txq->stuck_timer);
   } else {
-    iwlwifi_timer_set(&txq->stuck_timer, txq->wd_timeout);
+    iwl_irq_timer_start(txq->stuck_timer, txq->wd_timeout);
   }
 }
 
@@ -1757,7 +1707,7 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
 
   /* start timer if queue currently empty */
   if (txq->read_ptr == txq->write_ptr && txq->wd_timeout) {
-    iwlwifi_timer_set(&txq->stuck_timer, txq->wd_timeout);
+    iwl_irq_timer_start(txq->stuck_timer, txq->wd_timeout);
   }
 
   mtx_lock(&trans_pcie->reg_lock);

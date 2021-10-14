@@ -41,6 +41,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/task.h"
 
 struct iwl_fw_runtime_ops {
   int (*dump_start)(void* ctx);
@@ -114,7 +115,7 @@ struct iwl_fw_runtime {
   struct {
     const struct iwl_fw_dump_desc* desc;
     bool monitor_only;
-    struct delayed_work wk;
+    struct iwl_task* wk;
 
     uint8_t conf;
 
@@ -140,10 +141,7 @@ void iwl_fw_runtime_init(struct iwl_fw_runtime* fwrt, struct iwl_trans* trans,
                          const struct iwl_fw* fw, const struct iwl_fw_runtime_ops* ops,
                          void* ops_ctx, struct dentry* dbgfs_dir);
 
-static inline void iwl_fw_runtime_free(struct iwl_fw_runtime* fwrt) {
-  kfree(fwrt->dump.d3_debug_data);
-  fwrt->dump.d3_debug_data = NULL;
-}
+void iwl_fw_runtime_free(struct iwl_fw_runtime* fwrt);
 
 void iwl_fw_runtime_suspend(struct iwl_fw_runtime* fwrt);
 

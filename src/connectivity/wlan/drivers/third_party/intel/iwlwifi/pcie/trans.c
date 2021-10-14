@@ -55,6 +55,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-scd.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/time.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dnt-cfg.h"
 #endif
@@ -2219,7 +2220,7 @@ static int iwl_trans_pcie_rxq_dma_data(struct iwl_trans* trans, int queue,
 static zx_status_t iwl_trans_pcie_wait_txq_empty(struct iwl_trans* trans, int txq_idx) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   struct iwl_txq* txq;
-  zx_time_t now = NOW_TIME(trans->dispatcher);
+  zx_time_t now = iwl_time_now(trans->dev);
   uint8_t wr_ptr;
 
   /* Make sure the NIC is still alive in the bus */
@@ -2236,7 +2237,7 @@ static zx_status_t iwl_trans_pcie_wait_txq_empty(struct iwl_trans* trans, int tx
   wr_ptr = READ_ONCE(txq->write_ptr);
 
   while (txq->read_ptr != READ_ONCE(txq->write_ptr) &&
-         zx_time_sub_time(NOW_TIME(trans->dispatcher), now) < ZX_MSEC(IWL_FLUSH_WAIT_MS)) {
+         zx_time_sub_time(iwl_time_now(trans->dev), now) < ZX_MSEC(IWL_FLUSH_WAIT_MS)) {
     uint8_t write_ptr = READ_ONCE(txq->write_ptr);
 
     if (wr_ptr != write_ptr) {

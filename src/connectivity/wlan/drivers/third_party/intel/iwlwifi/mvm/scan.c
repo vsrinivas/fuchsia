@@ -44,6 +44,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/task.h"
 
 #define IWL_DENSE_EBS_SCAN_RATIO 5
 #define IWL_SPARSE_EBS_SCAN_RATIO 1
@@ -381,6 +382,7 @@ void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_
   struct iwl_rx_packet* pkt = rxb_addr(rxb);
   struct iwl_periodic_scan_complete* scan_notif = (void*)pkt->data;
   bool aborted = (scan_notif->status == IWL_SCAN_OFFLOAD_ABORTED);
+  zx_status_t status = ZX_OK;
 
   /* If this happens, the firmware has mistakenly sent an LMAC
    * notification during UMAC scans -- warn and ignore it.
@@ -439,9 +441,11 @@ void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_
      * only a single scan can be pending at any time. This is guaranteed
      * by both SME and iwl_mvm_reg_scan_start().
      */
-    if (async_cancel_task(mvm->dispatcher, &mvm->scan_timeout_task) != ZX_OK) {
+    if ((status = iwl_task_cancel(mvm->scan_timeout_task)) != ZX_OK) {
       mtx_unlock(&mvm->mutex);
-      IWL_WARN(mvm, "Scan timeout occurred prior to getting notified by HW\n");
+      if (status == ZX_ERR_NOT_FOUND) {
+        IWL_WARN(mvm, "Scan timeout occurred prior to getting notified by HW\n");
+      }
       return;
     }
 
@@ -1512,27 +1516,15 @@ static int iwl_mvm_check_running_scans(struct iwl_mvm* mvm, int type) {
 
     return -EIO;
 }
-
-#define SCAN_TIMEOUT (CPTCFG_IWL_TIMEOUT_FACTOR * 20000)
-
-static void iwl_mvm_fill_scan_type(struct iwl_mvm* mvm, struct iwl_mvm_scan_params* params,
-                                   struct ieee80211_vif* vif) {
-    if (iwl_mvm_is_cdb_supported(mvm)) {
-        params->type = iwl_mvm_get_scan_type_band(mvm, vif, NL80211_BAND_2GHZ);
-        params->hb_type = iwl_mvm_get_scan_type_band(mvm, vif, NL80211_BAND_5GHZ);
-    } else {
-        params->type = iwl_mvm_get_scan_type(mvm, vif);
-    }
-}
 #endif  // NEEDS_PORTING
 
-void iwl_mvm_scan_timeout(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status) {
-  if (status != ZX_OK) {
-    IWL_WARN(mvm, "Scan timeout timer terminated - status %d\n", status);
-    return;
-  }
+/* TODO(49686): check if there is a dynamic way to derive this value. Currently
+ * this is set to 2x the average time it takes to finish scan.
+ */
+#define SCAN_TIMEOUT ZX_MSEC(10000)
 
-  struct iwl_mvm* mvm = containerof(task, struct iwl_mvm, scan_timeout_task);
+void iwl_mvm_scan_timeout_wk(void* data) {
+  struct iwl_mvm* mvm = (struct iwl_mvm*)data;
 
   mtx_lock(&mvm->mutex);
   if (!(mvm->scan_status & IWL_MVM_SCAN_REGULAR)) {
@@ -1543,6 +1535,10 @@ void iwl_mvm_scan_timeout(async_dispatcher_t* dispatcher, async_task_t* task, zx
 
   IWL_WARN(mvm, "Regular scan timed out\n");
 
+#if 0   // NEEDS_PORTING
+  iwl_force_nmi(mvm->trans);
+#endif  // NEEDS_PORTING
+
   mvm->scan_status &= ~IWL_MVM_SCAN_REGULAR;
   if (mvm->scan_vif) {
     notify_mlme_scan_completion(mvm->scan_vif, false);
@@ -1552,6 +1548,18 @@ void iwl_mvm_scan_timeout(async_dispatcher_t* dispatcher, async_task_t* task, zx
   iwl_mvm_unref(mvm, IWL_MVM_REF_SCAN);
   mtx_unlock(&mvm->mutex);
 }
+
+#if 0   // NEEDS_PORTING
+static void iwl_mvm_fill_scan_type(struct iwl_mvm* mvm, struct iwl_mvm_scan_params* params,
+                                   struct ieee80211_vif* vif) {
+    if (iwl_mvm_is_cdb_supported(mvm)) {
+        params->type = iwl_mvm_get_scan_type_band(mvm, vif, NL80211_BAND_2GHZ);
+        params->hb_type = iwl_mvm_get_scan_type_band(mvm, vif, NL80211_BAND_5GHZ);
+    } else {
+        params->type = iwl_mvm_get_scan_type(mvm, vif);
+    }
+}
+#endif  // NEEDS_PORTING
 
 zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
                                    const wlan_hw_scan_config_t* scan_config) {
@@ -1683,9 +1691,7 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
   mvm->scan_vif = mvmvif;
   iwl_mvm_ref(mvm, IWL_MVM_REF_SCAN);
 
-  mvm->scan_timeout_task.deadline =
-      zx_time_add_duration(async_now(mvm->dispatcher), mvm->scan_timeout_delay);
-  zx_status_t status = async_post_task(mvm->dispatcher, &mvm->scan_timeout_task);
+  zx_status_t status = iwl_task_post(mvm->scan_timeout_task, SCAN_TIMEOUT);
   if (status != ZX_OK) {
     /* TODO: is there a way to stop scan? */
     IWL_WARN(mvm, "Failed to set scan timeout timer - status %d\n", status);
@@ -1796,14 +1802,17 @@ void iwl_mvm_rx_umac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_
   struct iwl_umac_scan_complete* notif = (void*)pkt->data;
   uint32_t uid = le32_to_cpu(notif->uid);
   bool aborted = (notif->status == IWL_SCAN_OFFLOAD_ABORTED);
+  zx_status_t status = ZX_OK;
   if (WARN_ON(!(mvm->scan_uid_status[uid] & mvm->scan_status))) {
     return;
   }
 
   /* if the scan is already stopping, we don't need to notify mac80211 */
   if (mvm->scan_uid_status[uid] == IWL_MVM_SCAN_REGULAR) {
-    if (async_cancel_task(mvm->dispatcher, &mvm->scan_timeout_task) != ZX_OK) {
-      IWL_WARN(mvm, "Scan timeout occurred prior to getting notified by HW\n");
+    if ((status = iwl_task_cancel(mvm->scan_timeout_task)) != ZX_OK) {
+      if (status == ZX_ERR_NOT_FOUND) {
+        IWL_WARN(mvm, "Scan timeout occurred prior to getting notified by HW\n");
+      }
       return;
     }
 

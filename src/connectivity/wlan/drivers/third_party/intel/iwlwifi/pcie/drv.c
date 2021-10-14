@@ -969,8 +969,6 @@ zx_status_t iwl_pci_probe(struct iwl_pci_dev* pdev, const struct iwl_pci_device_
     return ZX_ERR_NO_MEMORY;
   }
 
-  iwl_trans->dispatcher = pdev->dev.task_dispatcher;
-
   /*
    * special-case 7265D, it has the same PCI IDs.
    *

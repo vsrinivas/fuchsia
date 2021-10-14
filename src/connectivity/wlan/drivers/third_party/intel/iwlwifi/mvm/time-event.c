@@ -45,6 +45,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/time.h"
 
 /*
  * For the high priority TE use a time event type that has similar priority to
@@ -541,15 +542,16 @@ zx_status_t iwl_mvm_protect_session(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvm
 
   iwl_assert_lock_held(&mvm->mutex);
 
-  if (te_data->running && te_data->end_time > TU_TO_EXP_TIME(mvm->dispatcher, min_duration)) {
+  if (te_data->running &&
+      te_data->end_time > iwl_time_now(mvm->dev) + TU_TO_DURATION(min_duration)) {
     IWL_DEBUG_TE(mvm, "We have enough time in the current TE: %lu\n",
-                 zx_time_sub_time(te_data->end_time, NOW_TIME(mvm->dispatcher)));
+                 zx_time_sub_time(te_data->end_time, iwl_time_now(mvm->dev)));
     return ZX_OK;
   }
 
   if (te_data->running) {
     IWL_DEBUG_TE(mvm, "extend 0x%x: only %lu ms left\n", te_data->uid,
-                 zx_time_sub_time(te_data->end_time, NOW_TIME(mvm->dispatcher)));
+                 zx_time_sub_time(te_data->end_time, iwl_time_now(mvm->dev)));
     /*
      * we don't have enough time
      * cancel the current TE and issue a new one

@@ -57,7 +57,6 @@ source_set("core") {
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_c",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
     "//zircon/system/public",
-    "//zircon/system/ulib/async",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

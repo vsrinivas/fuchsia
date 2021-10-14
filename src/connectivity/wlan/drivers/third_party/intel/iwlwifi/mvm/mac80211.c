@@ -1142,19 +1142,18 @@ void iwl_mvm_mac_stop(struct iwl_mvm* mvm) {
    */
   clear_bit(IWL_MVM_STATUS_FIRMWARE_RUNNING, &mvm->status);
 
-#if 0   // NEEDS_PORTING
-    iwl_fw_cancel_dump(&mvm->fwrt);
-#endif  // NEEDS_PORTING
+  iwl_fw_cancel_dump(&mvm->fwrt);
 
 #if 0  // NEEDS_PORTING
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
     cancel_delayed_work_sync(&mvm->tx_latency_watchdog_wk);
 #endif  /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
     cancel_delayed_work_sync(&mvm->cs_tx_unblock_dwork);
-    iwl_fw_free_dump_desc(&mvm->fwrt);
 #endif  // NEEDS_PORTING
 
-  async_cancel_task(mvm->dispatcher, &mvm->scan_timeout_task);
+  iwl_task_release_sync(mvm->scan_timeout_task);
+  mvm->scan_timeout_task = NULL;
+  iwl_fw_free_dump_desc(&mvm->fwrt);
 
   mtx_lock(&mvm->mutex);
   __iwl_mvm_mac_stop(mvm);

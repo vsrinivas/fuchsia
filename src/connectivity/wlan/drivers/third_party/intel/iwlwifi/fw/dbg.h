@@ -84,7 +84,7 @@ static inline void iwl_fw_free_dump_desc(struct iwl_fw_runtime* fwrt) {
 
 void iwl_fw_error_dump(struct iwl_fw_runtime* fwrt);
 int iwl_fw_dbg_collect_desc(struct iwl_fw_runtime* fwrt, const struct iwl_fw_dump_desc* desc,
-                            bool monitor_only, unsigned int delay);
+                            bool monitor_only, zx_duration_t delay);
 int _iwl_fw_dbg_collect(struct iwl_fw_runtime* fwrt, enum iwl_fw_dbg_trigger trig, const char* str,
                         size_t len, struct iwl_fw_dbg_trigger_tlv* trigger);
 int iwl_fw_dbg_collect(struct iwl_fw_runtime* fwrt, uint32_t id, const char* str, size_t len);
@@ -222,7 +222,7 @@ static inline void iwl_fw_dump_conf_clear(struct iwl_fw_runtime* fwrt) {
   fwrt->dump.conf = FW_DBG_INVALID;
 }
 
-void iwl_fw_error_dump_wk(struct work_struct* work);
+void iwl_fw_error_dump_wk(void* data);
 
 static inline bool iwl_fw_dbg_type_on(struct iwl_fw_runtime* fwrt, uint32_t type) {
     return (fwrt->fw->dbg.dump_mask & BIT(type) || fwrt->trans->ini_valid);
@@ -244,15 +244,13 @@ static inline bool iwl_fw_dbg_is_paging_enabled(struct iwl_fw_runtime* fwrt) {
 
 #if 0  // NEEDS_PORTING
 void iwl_fw_dbg_read_d3_debug_data(struct iwl_fw_runtime* fwrt);
+#endif  // NEEDS_PORTING
 
-static inline void iwl_fw_flush_dump(struct iwl_fw_runtime* fwrt) {
-    flush_delayed_work(&fwrt->dump.wk);
-}
+static inline void iwl_fw_flush_dump(struct iwl_fw_runtime* fwrt) { iwl_task_wait(fwrt->dump.wk); }
 
 static inline void iwl_fw_cancel_dump(struct iwl_fw_runtime* fwrt) {
-    cancel_delayed_work_sync(&fwrt->dump.wk);
+  iwl_task_cancel_sync(fwrt->dump.wk);
 }
-#endif  // NEEDS_PORTING
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 static inline void iwl_fw_cancel_timestamp(struct iwl_fw_runtime* fwrt) {

@@ -14,21 +14,30 @@ source_set("platform") {
     "debug.cc",
     "device.cc",
     "ieee80211.cc",
+    "irq.cc",
     "memory.cc",
     "module.cc",
+    "task-internal.cc",
+    "task.cc",
+    "time.cc",
   ]
   public = [
     "compiler.h",
     "debug.h",
     "device.h",
     "ieee80211.h",
+    "irq.h",
     "kernel.h",
     "memory.h",
     "module.h",
     "pci.h",
+    "task-internal.h",
+    "task.h",
+    "time.h",
   ]
   deps = [
     ":driver_inspector",
+    "//sdk/lib/stdcompat",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/system/ulib/sync",
   ]
@@ -39,6 +48,7 @@ source_set("platform") {
     "//sdk/banjo/fuchsia.hardware.wlan.mac:fuchsia.hardware.wlan.mac_banjo_c",
     "//src/lib/ddk",
     "//zircon/system/public",
+    "//zircon/system/ulib/async",
   ]
   public_configs = [
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:fuchsia_config",

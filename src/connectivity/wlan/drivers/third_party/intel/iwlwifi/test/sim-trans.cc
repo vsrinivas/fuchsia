@@ -20,10 +20,10 @@
 
 #include <fuchsia/hardware/wlan/mac/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fake-bti/bti.h>
 #include <zircon/status.h>
-
-#include <memory>
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/alive.h"
@@ -312,7 +312,14 @@ namespace wlan::testing {
 
 SimTransport::SimTransport(::wlan::simulation::Environment* env, zx_device_t* parent)
     : SimMvm(env), device_{}, iwl_trans_(nullptr) {
+  task_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+  task_loop_->StartThread("iwlwifi-test-task-worker", nullptr);
+  irq_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+  irq_loop_->StartThread("iwlwifi-test-irq-worker", nullptr);
+
   device_.zxdev = parent;
+  device_.task_dispatcher = task_loop_->dispatcher();
+  device_.irq_dispatcher = irq_loop_->dispatcher();
   fake_bti_create(&device_.bti);
 }
 

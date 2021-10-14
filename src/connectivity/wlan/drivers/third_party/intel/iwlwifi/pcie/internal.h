@@ -37,10 +37,8 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_
 
 #include <fuchsia/hardware/pci/c/banjo.h>
-#include <lib/async/task.h>
 #include <lib/ddk/mmio-buffer.h>
 #include <lib/sync/completion.h>
-#include <lib/sync/condition.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 
@@ -53,6 +51,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/irq.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 
@@ -296,27 +295,6 @@ struct iwl_pcie_first_tb_buf {
 typedef void(iwlwifi_timer_callback_t)(void* data);
 
 /**
- * struct iwlwifi_timer_info - Timer used for txq stuck timer.
- * @task: async task for scheduling the timer to wake up
- * @dispatcher: async dispatcher to post the task to
- * @finished: notifies the timer that the handler has finished
- * @lock: timer lock
- */
-struct iwlwifi_timer_info {
-  async_task_t task;
-  async_dispatcher_t* dispatcher;
-  sync_completion_t finished;
-  mtx_t lock;
-};
-
-// Initialize the timer.
-void iwlwifi_timer_init(struct iwl_trans* trans, struct iwlwifi_timer_info* timer);
-// Set the timer to run the handler after |delay|. If the timer is already running, this will reset.
-void iwlwifi_timer_set(struct iwlwifi_timer_info* timer, zx_duration_t delay);
-// If the timer is running, stop it. If the handler is currently running, wait for it to finish.
-void iwlwifi_timer_stop(struct iwlwifi_timer_info* timer);
-
-/**
  * struct iwl_txq - Tx Queue for DMA
  * @q: generic Rx/Tx queue descriptor
  * @tfds: transmit frame descriptors (DMA memory)
@@ -363,7 +341,7 @@ struct iwl_txq {
   struct iwl_pcie_txq_entry* entries;
   mtx_t lock;
   unsigned long frozen_expiry_remainder;
-  struct iwlwifi_timer_info stuck_timer;
+  struct iwl_irq_timer* stuck_timer;
   struct iwl_trans_pcie* trans_pcie;
   bool need_update;
   bool frozen;

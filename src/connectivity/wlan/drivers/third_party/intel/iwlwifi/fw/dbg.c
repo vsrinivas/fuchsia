@@ -1173,7 +1173,7 @@ IWL_EXPORT_SYMBOL(iwl_fw_alive_error_dump);
 
 zx_status_t iwl_fw_dbg_collect_desc(struct iwl_fw_runtime* fwrt,
                                     const struct iwl_fw_dump_desc* desc, bool monitor_only,
-                                    unsigned int delay) {
+                                    zx_duration_t delay) {
   /*
    * If the loading of the FW completed successfully, the next step is to
    * get the SMEM config data. Thus, if fwrt->smem_cfg.num_lmacs is non
@@ -1204,9 +1204,7 @@ zx_status_t iwl_fw_dbg_collect_desc(struct iwl_fw_runtime* fwrt,
   fwrt->dump.desc = desc;
   fwrt->dump.monitor_only = monitor_only;
 
-  // TODO(fxbug.dev/83894): move this to a worker thread.
-  // schedule_delayed_work(&fwrt->dump.wk, delay);
-  iwl_fw_error_dump_wk(&fwrt->dump.wk.work);
+  iwl_task_post(fwrt->dump.wk, delay);
 
   return ZX_OK;
 }
@@ -1216,7 +1214,7 @@ zx_status_t _iwl_fw_dbg_collect(struct iwl_fw_runtime* fwrt, enum iwl_fw_dbg_tri
                                 const char* str, size_t len,
                                 struct iwl_fw_dbg_trigger_tlv* trigger) {
   struct iwl_fw_dump_desc* desc;
-  unsigned int delay = 0;
+  zx_duration_t delay = 0;
   bool monitor_only = false;
 
   if (trigger) {
@@ -1233,7 +1231,7 @@ zx_status_t _iwl_fw_dbg_collect(struct iwl_fw_runtime* fwrt, enum iwl_fw_dbg_tri
     }
 
     trigger->occurrences = cpu_to_le16(occurrences);
-    delay = le16_to_cpu(trigger->trig_dis_ms);
+    delay = ZX_MSEC(le16_to_cpu(trigger->trig_dis_ms));
     monitor_only = trigger->mode & IWL_FW_DBG_TRIGGER_MONITOR_ONLY;
   }
 
@@ -1253,7 +1251,8 @@ IWL_EXPORT_SYMBOL(_iwl_fw_dbg_collect);
 zx_status_t iwl_fw_dbg_collect(struct iwl_fw_runtime* fwrt, uint32_t id, const char* str,
                                size_t len) {
   struct iwl_fw_dump_desc* desc;
-  uint32_t occur, delay;
+  uint32_t occur = 0;
+  zx_duration_t delay = 0;
 
   if (!fwrt->trans->ini_valid) {
     return _iwl_fw_dbg_collect(fwrt, id, str, len, NULL);
@@ -1267,7 +1266,7 @@ zx_status_t iwl_fw_dbg_collect(struct iwl_fw_runtime* fwrt, uint32_t id, const c
     return ZX_ERR_INVALID_ARGS;
   }
 
-  delay = le32_to_cpu(fwrt->dump.active_trigs[id].conf->ignore_consec);
+  delay = ZX_USEC(le32_to_cpu(fwrt->dump.active_trigs[id].conf->ignore_consec));
   occur = le32_to_cpu(fwrt->dump.active_trigs[id].conf->occurrences);
   if (!occur) {
     return ZX_OK;
@@ -1501,8 +1500,8 @@ void iwl_fw_dbg_collect_sync(struct iwl_fw_runtime* fwrt) {
 }
 IWL_EXPORT_SYMBOL(iwl_fw_dbg_collect_sync);
 
-void iwl_fw_error_dump_wk(struct work_struct* work) {
-  struct iwl_fw_runtime* fwrt = container_of(work, struct iwl_fw_runtime, dump.wk.work);
+void iwl_fw_error_dump_wk(void* data) {
+  struct iwl_fw_runtime* fwrt = (struct iwl_fw_runtime*)data;
 
   if (fwrt->ops && fwrt->ops->dump_start && fwrt->ops->dump_start(fwrt->ops_ctx)) {
     return;

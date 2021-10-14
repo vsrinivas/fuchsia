@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
@@ -370,22 +368,11 @@ class ScanTest : public MvmTest {
     // This can be moved out or overridden when we add other scan types.
     scan_config.scan_type = WLAN_HW_SCAN_TYPE_PASSIVE;
 
-    // Create scan timeout async loop.
-    loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-    ASSERT_OK(loop_->StartThread("iwlwifi-mvm-test-worker", nullptr));
-
     trans_ = sim_trans_.iwl_trans();
-    trans_->dispatcher = loop_->dispatcher();
-
-    mvm_->dispatcher = trans_->dispatcher;
-    mvm_->scan_timeout_task.handler = iwl_mvm_scan_timeout;
-    mvm_->scan_timeout_task.state = (async_state_t)ASYNC_STATE_INIT;
-    mvm_->scan_timeout_delay = ZX_SEC(10);
   }
 
   ~ScanTest() {}
 
-  std::unique_ptr<::async::Loop> loop_;
   struct iwl_trans* trans_;
   wlanmac_ifc_protocol_ops_t ops;
   struct iwl_mvm_vif mvmvif_sta;
@@ -428,17 +415,7 @@ class UmacScanTest : public FakeUcodeCapaTest {
     // This can be moved out or overridden when we add other scan types.
     scan_config_.scan_type = WLAN_HW_SCAN_TYPE_PASSIVE;
 
-    // Create scan timeout async loop.
-    loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-    ASSERT_OK(loop_->StartThread("iwlwifi-mvm-test-worker", nullptr));
-
     trans_ = sim_trans_.iwl_trans();
-    trans_->dispatcher = loop_->dispatcher();
-
-    mvm_->dispatcher = trans_->dispatcher;
-    mvm_->scan_timeout_task.handler = iwl_mvm_scan_timeout;
-    mvm_->scan_timeout_task.state = (async_state_t)ASYNC_STATE_INIT;
-    mvm_->scan_timeout_delay = ZX_SEC(10);
   }
 
   ~UmacScanTest() TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -447,7 +424,6 @@ class UmacScanTest : public FakeUcodeCapaTest {
     mtx_unlock(&mvm_->mutex);
   }
 
-  std::unique_ptr<::async::Loop> loop_;
   struct iwl_trans* trans_;
   wlanmac_ifc_protocol_ops_t ops_;
   struct iwl_mvm_vif mvmvif_sta_;
@@ -584,10 +560,9 @@ TEST_F(ScanTest, RegPassiveScanTimeout) TA_NO_THREAD_SAFETY_ANALYSIS {
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
 
-  // Do not call notify complete, instead invoke the timeout callback
-  // to simulate a timeout event.
+  // Do not call notify complete; instead invoke the timeout callback to simulate a timeout event.
   mtx_unlock(&mvm_->mutex);
-  iwl_mvm_scan_timeout(mvm_->dispatcher, &mvm_->scan_timeout_task, ZX_OK);
+  iwl_mvm_scan_timeout_wk(mvm_);
   mtx_lock(&mvm_->mutex);
 
   EXPECT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
@@ -606,11 +581,8 @@ TEST_F(ScanTest, RegPassiveScanTimerShutdown) TA_NO_THREAD_SAFETY_ANALYSIS {
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
 
-  // Do not call notify complete, and invoke the timeout callback with
-  // status CANCELED. This simulates a timer shutdown while it is pending.
-  mtx_unlock(&mvm_->mutex);
-  iwl_mvm_scan_timeout(mvm_->dispatcher, &mvm_->scan_timeout_task, ZX_ERR_CANCELED);
-  mtx_lock(&mvm_->mutex);
+  // Do not call notify complete, and do not invoke the timeout callback.  This simulates a timer
+  // shutdown while it is pending.
 
   // Ensure the state is such that no FW response or timeout has happened.
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
@@ -630,10 +602,6 @@ TEST_F(ScanTest, RegPassiveScanTimerMvmStop) TA_NO_THREAD_SAFETY_ANALYSIS {
   mtx_unlock(&mvm_->mutex);
   iwl_mvm_mac_stop(mvm_);
   mtx_lock(&mvm_->mutex);
-
-  // The expectation is that iwl_mvm_mac_stop() would have cancelled the timer and it should
-  // not be found now.
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, async_cancel_task(mvm_->dispatcher, &mvm_->scan_timeout_task));
 }
 
 // Tests condition where multiple calls to the scan API returns appropriate error.

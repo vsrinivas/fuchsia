@@ -12,6 +12,7 @@
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/error-dump.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/runtime.h"
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/driver-inspector.h"
@@ -23,6 +24,7 @@ namespace {
 class FwDbgTest : public SingleApTest {
  public:
   FwDbgTest();
+  ~FwDbgTest() override;
 
  protected:
   std::unique_ptr<::wlan::iwlwifi::DriverInspector> inspector_;
@@ -34,14 +36,16 @@ FwDbgTest::FwDbgTest() {
   inspector_ = std::make_unique<::wlan::iwlwifi::DriverInspector>(
       wlan::iwlwifi::DriverInspectorOptions{.root_name = "fw_dbg_test" });
   sim_trans_.iwl_trans()->dev->inspector = static_cast<struct driver_inspector*>(inspector_.get());
-  fwrt_.trans = sim_trans_.iwl_trans();
-  fwrt_.fw = &fw_;
+  iwl_fw_runtime_init(&fwrt_, sim_trans_.iwl_trans(), &fw_, nullptr, nullptr, nullptr);
 }
+
+FwDbgTest::~FwDbgTest() { iwl_fw_runtime_free(&fwrt_); }
 
 // Test a user-triggered firmware debug dump.
 TEST_F(FwDbgTest, TestUserTrigger) {
   static const char kFwErrorDumpName[] = "fw_dbg_test_dump";
   iwl_fw_dbg_collect(&fwrt_, FW_DBG_TRIGGER_USER, kFwErrorDumpName, sizeof(kFwErrorDumpName));
+  iwl_fw_flush_dump(&fwrt_);
 
   // Check that the dump exists.
   auto root_hierarchy = ::inspect::ReadFromVmo(inspector_->DuplicateVmo()).take_value();

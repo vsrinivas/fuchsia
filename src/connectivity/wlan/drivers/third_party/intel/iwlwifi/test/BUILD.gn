@@ -44,6 +44,8 @@ source_set("sim_library") {
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_device",
     "//src/devices/testing/fake-bti",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
   ]
   public_deps = [
@@ -201,8 +203,6 @@ executable("mvm_test") {
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//src/devices/testing/fake-bti",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxtest",
@@ -308,6 +308,20 @@ executable("sta_test") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
+executable("task_test") {
+  output_name = "task_test"
+  testonly = true
+  sources = [ "task-test.cc" ]
+  deps = [
+    ":stub_mvm",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
+    "//src/devices/testing/no_ddk",
+    "//zircon/system/public",
+    "//zircon/system/ulib/async-testing",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
 executable("utils_test") {
   output_name = "utils_test"
   testonly = true
@@ -338,6 +352,7 @@ _tests = [
   "phy_ctxt_test",
   "platform_test",
   "sta_test",
+  "task_test",
   "utils_test",
 ]
 

@@ -43,6 +43,7 @@ class PcieDevice : public WlanphyImplDevice {
 
   std::unique_ptr<DriverInspector> driver_inspector_;
   std::unique_ptr<::async::Loop> task_loop_;
+  std::unique_ptr<::async::Loop> irq_loop_;
   iwl_pci_dev pci_dev_;
 };
 

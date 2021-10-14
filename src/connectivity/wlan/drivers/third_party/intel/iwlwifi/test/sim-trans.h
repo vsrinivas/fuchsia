@@ -13,9 +13,17 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_SIM_TRANS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_SIM_TRANS_H_
 
+#include <memory>
+
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-mvm.h"
+
+namespace async {
+
+class Loop;
+
+}  // namespace async
 
 namespace wlan {
 namespace iwlwifi {
@@ -54,6 +62,8 @@ class SimTransport : public SimMvm {
   const wlan::iwlwifi::WlanphyImplDevice* sim_device() const;
 
  private:
+  std::unique_ptr<::async::Loop> task_loop_;
+  std::unique_ptr<::async::Loop> irq_loop_;
   struct device device_;
   struct iwl_trans* iwl_trans_;
   wlan::iwlwifi::WlanphyImplDevice* sim_device_;

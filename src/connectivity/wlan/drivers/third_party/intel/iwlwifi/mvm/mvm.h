@@ -37,8 +37,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 
-#include <lib/async/dispatcher.h>
-#include <lib/async/task.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/time.h>
@@ -65,6 +63,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/task.h"
 
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/lte-coex.h"
@@ -862,7 +861,6 @@ struct iwl_mvm {
   const struct iwl_fw* fw;
   const struct iwl_cfg* cfg;
   struct iwl_phy_db* phy_db;
-  async_dispatcher_t* dispatcher;
 
   /* for protecting access to iwl_mvm */
   mtx_t mutex;
@@ -951,8 +949,7 @@ struct iwl_mvm {
   enum iwl_mvm_scan_type hb_scan_type;
 
   enum iwl_mvm_sched_scan_pass_all_states sched_scan_pass_all;
-  async_task_t scan_timeout_task;
-  zx_duration_t scan_timeout_delay;
+  struct iwl_task* scan_timeout_task;
 
   /* max number of simultaneous scans the FW supports */
   unsigned int max_scans;
@@ -1768,14 +1765,13 @@ ssize_t iwl_dbgfs_quota_status_read(struct file* file, char __user* user_buf, si
 #endif
 
 /* Scanning */
-void iwl_mvm_scan_timeout(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status);
 zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
                                    const wlan_hw_scan_config_t* scan_config);
 int iwl_mvm_scan_size(struct iwl_mvm* mvm);
 int iwl_mvm_scan_stop(struct iwl_mvm* mvm, int type, bool notify);
 int iwl_mvm_max_scan_ie_len(struct iwl_mvm* mvm);
 void iwl_mvm_report_scan_aborted(struct iwl_mvm* mvm);
-void iwl_mvm_scan_timeout_wk(struct work_struct* work);
+void iwl_mvm_scan_timeout_wk(void* data);
 
 /* Scheduled scan */
 void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);

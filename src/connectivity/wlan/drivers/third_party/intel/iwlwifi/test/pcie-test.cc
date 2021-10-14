@@ -38,6 +38,7 @@ extern "C" {
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/irq.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/pcie-device.h"
@@ -151,9 +152,12 @@ static void FakeEchoWrite32(struct iwl_trans* trans, uint32_t ofs, uint32_t val)
 class PcieTest : public zxtest::Test {
  public:
   PcieTest() {
-    loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-    ASSERT_OK(loop_->StartThread("iwlwifi-pcie-test-worker", nullptr));
-    pci_dev_.dev.task_dispatcher = loop_->dispatcher();
+    task_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ASSERT_OK(task_loop_->StartThread("iwlwifi-test-task-worker", nullptr));
+    irq_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ASSERT_OK(irq_loop_->StartThread("iwlwifi-test-irq-worker", nullptr));
+    pci_dev_.dev.task_dispatcher = task_loop_->dispatcher();
+    pci_dev_.dev.irq_dispatcher = irq_loop_->dispatcher();
     fake_bti_create(&pci_dev_.dev.bti);
 
     trans_ops_.write8 = write8_wrapper;
@@ -172,7 +176,6 @@ class PcieTest : public zxtest::Test {
     trans_ =
         iwl_trans_alloc(sizeof(struct iwl_trans_pcie_wrapper), &pci_dev_.dev, &cfg_, &trans_ops_);
     ASSERT_NE(trans_, nullptr);
-    trans_->dispatcher = loop_->dispatcher();
     auto wrapper = reinterpret_cast<iwl_trans_pcie_wrapper*>(IWL_TRANS_GET_PCIE_TRANS(trans_));
     wrapper->test = this;
     trans_pcie_ = &wrapper->trans_pcie;
@@ -342,7 +345,8 @@ class PcieTest : public zxtest::Test {
   }
 
  protected:
-  std::unique_ptr<::async::Loop> loop_;
+  std::unique_ptr<::async::Loop> task_loop_;
+  std::unique_ptr<::async::Loop> irq_loop_;
   struct iwl_pci_dev pci_dev_ = {};
   struct iwl_trans* trans_ = {};
   struct iwl_trans_pcie* trans_pcie_ = {};
@@ -1059,96 +1063,6 @@ TEST_F(TxTest, TxSoManyPackets) {
   iwl_trans_pcie_reclaim(trans_, txq_id_, /*ssn*/ TFD_QUEUE_SIZE_MAX - TX_RESERVED_SPACE);
   // We don't have much to check. But at least we can ensure the call doesn't crash.
   op_mode_queue_not_full_.VerifyAndClear();
-}
-
-class StuckTimerTest : public PcieTest {
- public:
-  StuckTimerTest() {
-    mtx_init(&txq_.lock, mtx_plain);
-    iwlwifi_timer_init(trans_, &txq_.stuck_timer);
-
-    // Set read and write pointers such that firing the stuck timer is valid.
-    txq_.write_ptr = 0;
-    txq_.read_ptr = 1;
-  }
-
-  ~StuckTimerTest() {}
-
- protected:
-  struct iwl_txq txq_;
-};
-
-TEST_F(StuckTimerTest, SetTimer) {
-  iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE_PAST);
-  sync_completion_wait(&txq_.stuck_timer.finished, ZX_TIME_INFINITE);
-}
-
-TEST_F(StuckTimerTest, SetSpuriousTimer) {
-  // Set read and write pointers such that firing the stuck timer is spurious.
-  txq_.write_ptr = 0;
-  txq_.read_ptr = 0;
-  iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE_PAST);
-  sync_completion_wait(&txq_.stuck_timer.finished, ZX_TIME_INFINITE);
-}
-
-TEST_F(StuckTimerTest, SetTimerOverride) {
-  iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE);
-  iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE_PAST);
-  sync_completion_wait(&txq_.stuck_timer.finished, ZX_TIME_INFINITE);
-}
-
-TEST_F(StuckTimerTest, StopPendingTimer) {
-  iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE);
-  // Test that stop doesn't deadlock.
-  iwlwifi_timer_stop(&txq_.stuck_timer);
-}
-
-TEST_F(StuckTimerTest, StopUnsetTimer) {
-  // Test that stop doesn't deadlock.
-  iwlwifi_timer_stop(&txq_.stuck_timer);
-}
-
-// This test is a best-effort attempt to test that a race condition is correctly handled. The test
-// should pass both when the race condition is and isn't triggered.
-TEST_F(StuckTimerTest, StopRunningTimer) {
-  // Hold the txq lock so that the timer handler blocks.
-  mtx_lock(&txq_.lock);
-
-  iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE_PAST);
-
-  // Sleep to give the timer thread a chance to schedule.
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-
-  // Call stop on a new thread, it will block until the handler completes.
-  std::thread stop_thread(iwlwifi_timer_stop, &txq_.stuck_timer);
-
-  // Sleep to give the stop thread a chance to schedule.
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-
-  // Unblock the timer thread.
-  mtx_unlock(&txq_.lock);
-
-  // Wait for all the threads to finish. This tests that the timer doesn't deadlock. We can't check
-  // the value of finished, since there's a chance that the race condition we're trying to trigger
-  // didn't happen (i.e. the handler didn't fire before we called stop, or stop didn't block before
-  // the handler was unblocked.)
-  loop_->Quit();
-  stop_thread.join();
-}
-
-TEST_F(StuckTimerTest, StopStoppedTimer) {
-  // Schedule a timer that will not fire.
-  iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE);
-  // timer->finished should be unset.
-  ASSERT_FALSE(sync_completion_signaled(&txq_.stuck_timer.finished));
-
-  iwlwifi_timer_stop(&txq_.stuck_timer);
-  // After the timer has been cancelled, the timer should be marked as finished so that the next
-  // stop call will not block.
-  ASSERT_TRUE(sync_completion_signaled(&txq_.stuck_timer.finished));
-
-  // Test that stop doesn't deadlock.
-  iwlwifi_timer_stop(&txq_.stuck_timer);
 }
 
 }  // namespace

@@ -779,9 +779,15 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
 #ifdef CONFIG_PM
     INIT_WORK(&mvm->d0i3_exit_work, iwl_mvm_d0i3_exit_work);
 #endif
+#endif  // NEEDS_PORTING
+
+  iwl_task_create(mvm->dev, iwl_mvm_scan_timeout_wk, mvm, &mvm->scan_timeout_task);
+
+#if 0   // NEEDS_PORTING
     INIT_DELAYED_WORK(&mvm->tdls_cs.dwork, iwl_mvm_tdls_ch_switch_work);
     INIT_WORK(&mvm->add_stream_wk, iwl_mvm_add_new_dqa_stream_wk);
 #endif  // NEEDS_PORTING
+
   list_initialize(&mvm->add_stream_txqs);
 
   mtx_init(&mvm->d0i3_tx_lock, mtx_plain);
@@ -825,11 +831,6 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
   trans_cfg.op_mode = op_mode;
   trans_cfg.no_reclaim_cmds = no_reclaim_cmds;
   trans_cfg.n_no_reclaim_cmds = ARRAY_SIZE(no_reclaim_cmds);
-
-  mvm->dispatcher = mvm->trans->dispatcher;
-  mvm->scan_timeout_task.state = (async_state_t)ASYNC_STATE_INIT;
-  mvm->scan_timeout_task.handler = iwl_mvm_scan_timeout;
-  mvm->scan_timeout_delay = ZX_SEC(IWL_SCAN_TIMEOUT_SEC);
 
   if (mvm->trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560) {
     rb_size_default = IWL_AMSDU_2K;
@@ -1014,9 +1015,7 @@ out_unregister:
   iwl_mvm_leds_exit(mvm);
   iwl_mvm_thermal_exit(mvm);
 out_free:
-#if 0   // NEEDS_PORTING
-    iwl_fw_flush_dump(&mvm->fwrt);
-#endif  // NEEDS_PORTING
+  iwl_fw_flush_dump(&mvm->fwrt);
   iwl_fw_runtime_free(&mvm->fwrt);
 
   if (iwlmvm_mod_params.init_dbg) {
@@ -1087,6 +1086,8 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode* op_mode) {
   for (i = 0; i < NVM_MAX_NUM_SECTIONS; i++) {
     kfree((void*)mvm->nvm_sections[i].data);
   }
+
+  iwl_task_release_sync(mvm->scan_timeout_task);
 
 #if 0   // NEEDS_PORTING
     cancel_delayed_work_sync(&mvm->tcm.work);

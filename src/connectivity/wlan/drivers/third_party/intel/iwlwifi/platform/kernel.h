@@ -59,28 +59,6 @@ typedef char* acpi_string;
 //
 #define TU_TO_DURATION(time_unit) (ZX_USEC(1024) * time_unit)
 
-// Returns the current time.
-//
-// Args:
-//   dispatcher: dispatcher in async. Usually the mvm->dispatcher.
-//
-// Returns:
-//   zx_time_t
-//
-#define NOW_TIME(dispatcher) (async_now(dispatcher))
-
-// Returns the expiring time.
-//
-// Args:
-//   dispatcher: dispatcher in async. Usually the mvm->dispatcher.
-//   time_unit: in TU (time unit)
-//
-// Returns:
-//   zx_time_t
-//
-#define TU_TO_EXP_TIME(dispatcher, time_unit) \
-  zx_time_add_duration(NOW_TIME(dispatcher), TU_TO_DURATION(time_unit))
-
 struct zx_device;
 struct async_dispatcher;
 struct driver_inspector;
@@ -99,6 +77,11 @@ struct device {
   // context.  Fuchsia drivers have no separate interrupt context, but to maintain similar
   // performance characteristics we will maintain a dedicated work queue dispatcher here.
   struct async_dispatcher* task_dispatcher;
+
+  // The dispatcher used to dispatch IRQ tasks.  On Linux, these are run in interrupt context.
+  // Fuchsia has no separate interrupt context, but to maintain similar performance characteristics
+  // we will maintain a dedicated IRQ dispatcher here.
+  struct async_dispatcher* irq_dispatcher;
 
   // The inspector used to publish the component inspection tree from the driver.
   struct driver_inspector* inspector;

@@ -36,8 +36,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TRANS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TRANS_H_
 
-#include <lib/async/dispatcher.h>
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
@@ -719,7 +717,6 @@ struct iwl_trans {
   unsigned long status;
 
   zx_device_t* zxdev;
-  async_dispatcher_t* dispatcher;
   struct device* dev;
   uint32_t max_skb_frags;
   uint32_t hw_rev;
