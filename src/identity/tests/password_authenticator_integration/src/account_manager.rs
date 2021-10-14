@@ -17,6 +17,7 @@ use {
         builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
         RealmInstance,
     },
+    fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     fuchsia_zircon::{sys::zx_status_t, Status},
     ramdevice_client::{RamdiskClient, RamdiskClientBuilder},
     rand::{rngs::SmallRng, FromEntropy, Rng},
@@ -55,31 +56,14 @@ struct TestEnv {
 impl TestEnv {
     async fn build() -> TestEnv {
         let mut builder = RealmBuilder::new().await.unwrap();
+        builder.driver_test_realm_setup().await.unwrap();
         builder
             .add_component("password_authenticator", ComponentSource::url("fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator.cm")).await.unwrap()
-            .add_component("isolated_devmgr", ComponentSource::url("fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/isolated-devmgr.cm")).await.unwrap()
             .add_route(CapabilityRoute {
                 capability: Capability::protocol("fuchsia.logger.LogSink"),
                 source: RouteEndpoint::AboveRoot,
                 targets: vec![
                     RouteEndpoint::component("password_authenticator"),
-                    RouteEndpoint::component("isolated_devmgr"),
-                ],
-            }).unwrap()
-
-            // isolated-devmgr requires fuchsia.process.Launcher and fuchsia.sys.Launcher
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.process.Launcher"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![
-                    RouteEndpoint::component("isolated_devmgr"),
-                ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.sys.Launcher"),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![
-                    RouteEndpoint::component("isolated_devmgr"),
                 ],
             }).unwrap()
 
@@ -92,18 +76,21 @@ impl TestEnv {
                 ],
             }).unwrap()
 
-            // Expose the isolated devmgr /dev to AboveRoot so we can set up ramdisks on it from
-            // tests.  Also expose it to password_authenticator, which makes use of it.
+            // Expose /dev from DriverTestrealm to password_authenticator, which makes use of it.
             .add_route(CapabilityRoute {
                 capability: Capability::directory("dev", "/dev", fidl_fuchsia_io2::RW_STAR_DIR),
-                source: RouteEndpoint::component("isolated_devmgr"),
+                source: RouteEndpoint::component("driver_test_realm"),
                 targets: vec![
-                    RouteEndpoint::AboveRoot,
                     RouteEndpoint::component("password_authenticator"),
                 ],
             }).unwrap();
 
         let realm_instance = builder.build().create().await.unwrap();
+        let args = fidl_fuchsia_driver_test::RealmArgs {
+            root_driver: Some("fuchsia-boot:///#driver/platform-bus.so".to_string()),
+            ..fidl_fuchsia_driver_test::RealmArgs::EMPTY
+        };
+        realm_instance.driver_test_realm_start(args).await.unwrap();
 
         TestEnv { realm_instance }
     }
