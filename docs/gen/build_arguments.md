@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1396
+From //build/config/BUILDCONFIG.gn:1397
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -68,14 +68,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/a0b484ee2edeb4ea0758f3947ee48d2d24e902ef/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/50d9166031fc0b580595884bb4725adf26b4f7ba/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/a0b484ee2edeb4ea0758f3947ee48d2d24e902ef/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/50d9166031fc0b580595884bb4725adf26b4f7ba/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -154,7 +154,7 @@ of an OTA. These packages are updated as an atomic unit during an OTA
 process and are immutable and are a superset of the TCB (Trusted Computing
 Base) for a product. These packages are never evicted by the system.
 
-**Current value for `target_cpu = "arm64"`:** `["//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "arm64"`:** `[]`
 
 From //out/not-default/args.gn:9
 
@@ -162,7 +162,7 @@ From //out/not-default/args.gn:9
 
 From //BUILD.gn:32
 
-**Current value for `target_cpu = "x64"`:** `["//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "x64"`:** `[]`
 
 From //out/not-default/args.gn:9
 
@@ -867,19 +867,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/84678804ff263e3af2791d6bb9c28f3615dc4fe8/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/fa7ddbc6e24b01ad0a4f043cd936f1634461ed25/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/84678804ff263e3af2791d6bb9c28f3615dc4fe8/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/fa7ddbc6e24b01ad0a4f043cd936f1634461ed25/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/84678804ff263e3af2791d6bb9c28f3615dc4fe8/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/fa7ddbc6e24b01ad0a4f043cd936f1634461ed25/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -1239,7 +1239,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1153
+From //build/config/BUILDCONFIG.gn:1154
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -2160,7 +2160,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:993
+From //build/config/BUILDCONFIG.gn:994
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3563,7 +3563,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1386
+From //build/config/BUILDCONFIG.gn:1387
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3572,7 +3572,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1391
+From //build/config/BUILDCONFIG.gn:1392
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3616,7 +3616,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1199
+From //build/config/BUILDCONFIG.gn:1200
 
 ### size_checker_input
 The input to the size checker.
@@ -3890,7 +3890,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1183
+From //build/config/BUILDCONFIG.gn:1184
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3900,7 +3900,7 @@ the build. The build system ensures that the universe package set includes
 the base and cache package sets, which means you do not need to redundantly
 include those labels in this variable.
 
-**Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot"]`
+**Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot", "//bundles:kitchen_sink"]`
 
 From //out/not-default/args.gn:12
 
@@ -3908,7 +3908,7 @@ From //out/not-default/args.gn:12
 
 From //BUILD.gn:54
 
-**Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot"]`
+**Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot", "//bundles:kitchen_sink"]`
 
 From //out/not-default/args.gn:12
 
