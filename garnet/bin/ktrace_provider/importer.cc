@@ -136,6 +136,14 @@ bool Importer::Import(Reader& reader) {
 
   while (true) {
     if (auto record = reader.ReadNextRecord()) {
+      // A record with a group bitfield of 0 is a padding record.  It contains
+      // no info, and is just used to pad the kernel's ring buffer to maintain
+      // continuity when need.  Skip it.
+      if (KTRACE_GROUP(record->tag) == 0) {
+        FX_VLOGS(5) << "Skipped ktrace padding record, tag=0x" << std::hex << record->tag;
+        continue;
+      }
+
       if (!ImportRecord(record, KTRACE_LEN(record->tag))) {
         FX_VLOGS(5) << "Skipped ktrace record, tag=0x" << std::hex << record->tag;
       }
