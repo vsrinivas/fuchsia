@@ -1,0 +1,22 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+group("f2fs-compatibility-tests") {
+  testonly = true
+  deps = [ ":f2fs-compatibility-test($host_toolchain)" ]
+}
+
+if (is_linux) {
+  test("f2fs-compatibility-test") {
+    sources = [ "mkfs_fsck_test.cc" ]
+    deps = [
+      "//src/lib/fxl/test:gtest_main",
+      "//src/storage/f2fs",
+      "//third_party/googletest:gtest",
+      "//zircon/system/ulib/zxc",
+    ]
+  }
+}

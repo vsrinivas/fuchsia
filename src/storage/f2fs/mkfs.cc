@@ -644,7 +644,7 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
     return ret;
   }
 
-  // 9. cp page 1 of check point pack 2
+  // 9. cp pages of check point pack 2
   // Initiatialize other checkpoint pack with version zero
   checkpoint->checkpoint_ver = 0;
 
@@ -653,6 +653,12 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
                                  LeToCpu(checkpoint->checksum_offset))) = crc;
 
   cp_segment_block_num = (LeToCpu(super_block_.segment0_blkaddr) + params_.blks_per_seg);
+  if (zx_status_t ret = WriteToDisk(checkpoint_block, cp_segment_block_num); ret != ZX_OK) {
+    FX_LOGS(ERROR) << "Error: While writing the checkpoint to disk!!!";
+    return ret;
+  }
+
+  cp_segment_block_num += checkpoint->cp_pack_total_block_count - 1;
   if (zx_status_t ret = WriteToDisk(checkpoint_block, cp_segment_block_num); ret != ZX_OK) {
     FX_LOGS(ERROR) << "Error: While writing the checkpoint to disk!!!";
     return ret;
