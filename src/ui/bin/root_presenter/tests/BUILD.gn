@@ -100,7 +100,6 @@ executable("focus_dispatcher_unittests_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.ui.input.accessibility",
-    "//sdk/fidl/fuchsia.ui.policy.accessibility",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
