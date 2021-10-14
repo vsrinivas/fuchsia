@@ -1087,3 +1087,8 @@ EXPORT_NO_DDK void trace_context_snapshot_buffer_header_internal(
   ctx->UpdateBufferHeaderAfterStopped();
   memcpy(header, ctx->buffer_header(), sizeof(*header));
 }
+
+EXPORT_NO_DDK trace_buffering_mode_t
+trace_context_get_buffering_mode(const trace_context_t* context) {
+  return context->buffering_mode();
+}

@@ -76,10 +76,12 @@ int LogFidlError(zx_status_t status) {
 }
 
 int DoStart(uint32_t group_mask) {
+  using BufferingMode = ::fuchsia::tracing::provider::BufferingMode;
+
   fuchsia::tracing::kernel::ControllerSyncPtr controller;
   controller.Bind(OpenKtraceController());
   zx_status_t start_status;
-  zx_status_t status = controller->Start(group_mask, &start_status);
+  zx_status_t status = controller->Start(group_mask, BufferingMode::ONESHOT, &start_status);
   if (status != ZX_OK) {
     return LogFidlError(status);
   }

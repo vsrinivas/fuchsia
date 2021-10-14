@@ -4,6 +4,7 @@
 library fuchsia.tracing.kernel;
 
 using zx;
+using fuchsia.tracing.provider;
 
 // TODO(fxbug.dev/30408): Allow providing a vmo of the buffer to use.
 @discoverable
@@ -11,6 +12,7 @@ protocol Controller {
     /// Start tracing.
     Start(struct {
         group_mask uint32;
+        buffering_mode fuchsia.tracing.provider.BufferingMode;
     }) -> (struct {
         status zx.status;
     });

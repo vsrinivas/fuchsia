@@ -23,11 +23,13 @@ namespace ktrace {
 class KTrace : public fuchsia::tracing::kernel::Controller,
                public fuchsia::tracing::kernel::Reader {
  public:
+  using BufferingMode = ::fuchsia::tracing::provider::BufferingMode;
+
   explicit KTrace(zx::resource root_resource)
       : controller_(this), reader_(this), root_resource_(std::move(root_resource)) {}
 
   // fuchsia.tracing.kernel.Controller methods
-  void Start(uint32_t group_mask, StartCallback callback) override;
+  void Start(uint32_t group_mask, BufferingMode buffering_mode, StartCallback callback) override;
   void Stop(StopCallback callback) override;
   void Rewind(RewindCallback callback) override;
 
@@ -49,9 +51,27 @@ class KTrace : public fuchsia::tracing::kernel::Controller,
   internal::KTraceSysCalls sys_calls_ = kKTraceSysCalls;
 };
 
-void KTrace::Start(uint32_t group_mask, StartCallback callback) {
-  auto status =
-      sys_calls_.ktrace_control(root_resource_.get(), KTRACE_ACTION_START, group_mask, nullptr);
+void KTrace::Start(uint32_t group_mask, BufferingMode buffering_mode, StartCallback callback) {
+  zx_status_t status;
+  switch (buffering_mode) {
+    // ktrace does not currently support streaming, so for now we preserve the
+    // legacy behavior of falling back on one-shot mode.
+    case BufferingMode::STREAMING:
+    case BufferingMode::ONESHOT:
+      status =
+          sys_calls_.ktrace_control(root_resource_.get(), KTRACE_ACTION_START, group_mask, nullptr);
+      break;
+
+    case BufferingMode::CIRCULAR:
+      status = sys_calls_.ktrace_control(root_resource_.get(), KTRACE_ACTION_START_CIRCULAR,
+                                         group_mask, nullptr);
+      break;
+
+    default:
+      status = ZX_ERR_INVALID_ARGS;
+      break;
+  };
+
   callback(status);
 }
 

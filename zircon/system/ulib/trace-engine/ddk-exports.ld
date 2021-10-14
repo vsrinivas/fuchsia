@@ -47,6 +47,7 @@ EXTERN(trace_context_register_string_literal)
 EXTERN(trace_context_register_vthread)
 EXTERN(trace_context_send_alert)
 EXTERN(trace_engine_flush_category_cache)
+EXTERN(trace_context_get_buffering_mode)
 
 /* The observer API. */
 EXTERN(trace_register_observer)

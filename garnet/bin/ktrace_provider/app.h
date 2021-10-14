@@ -23,7 +23,8 @@ class App {
  private:
   void UpdateState();
 
-  void StartKTrace(uint32_t group_mask, bool retain_current_data);
+  void StartKTrace(uint32_t group_mask, trace_buffering_mode_t buffering_mode,
+                   bool retain_current_data);
   void StopKTrace();
 
   std::unique_ptr<sys::ComponentContext> component_context_;

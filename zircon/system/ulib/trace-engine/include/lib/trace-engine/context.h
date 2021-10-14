@@ -21,19 +21,17 @@
 // See <trace/event.h> for instrumentation macros.
 //
 
-#ifndef ZIRCON_SYSTEM_ULIB_LIB_TRACE_ENGINE_CONTEXT_H_
-#define ZIRCON_SYSTEM_ULIB_LIB_TRACE_ENGINE_CONTEXT_H_
+#ifndef LIB_TRACE_ENGINE_CONTEXT_H_
+#define LIB_TRACE_ENGINE_CONTEXT_H_
 
+#include <lib/trace-engine/types.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
-
-#include <lib/trace-engine/types.h>
 
 __BEGIN_CDECLS
 
@@ -586,6 +584,8 @@ void trace_context_write_thread_record(trace_context_t* context, trace_thread_in
 // This function is thread-safe, fail-fast, and lock-free.
 void* trace_context_alloc_record(trace_context_t* context, size_t num_bytes);
 
+trace_buffering_mode_t trace_context_get_buffering_mode(const trace_context_t* context);
+
 __END_CDECLS
 
-#endif  // ZIRCON_SYSTEM_ULIB_LIB_TRACE_ENGINE_CONTEXT_H_
+#endif  // LIB_TRACE_ENGINE_CONTEXT_H_

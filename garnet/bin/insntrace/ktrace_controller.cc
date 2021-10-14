@@ -47,8 +47,9 @@ zx_status_t OpenKtraceReaderChannel(fuchsia::tracing::kernel::ReaderSyncPtr* out
 
 bool RequestKtraceStart(const fuchsia::tracing::kernel::ControllerSyncPtr& ktrace,
                         uint32_t group_mask) {
+  using BufferingMode = ::fuchsia::tracing::provider::BufferingMode;
   zx_status_t start_status;
-  zx_status_t status = ktrace->Start(group_mask, &start_status);
+  zx_status_t status = ktrace->Start(group_mask, BufferingMode::ONESHOT, &start_status);
   LogFidlFailure("Ktrace start", status, start_status);
   return status == ZX_OK && start_status == ZX_OK;
 }

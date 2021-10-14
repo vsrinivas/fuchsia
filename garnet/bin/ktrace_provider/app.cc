@@ -86,9 +86,30 @@ void RequestKtraceRewind(Controller_SyncProxy& controller) {
   LogFidlFailure("rewind", status, rewind_status);
 }
 
-void RequestKtraceStart(Controller_SyncProxy& controller, uint32_t group_mask) {
+void RequestKtraceStart(Controller_SyncProxy& controller, trace_buffering_mode_t buffering_mode,
+                        uint32_t group_mask) {
+  using BufferingMode = ::fuchsia::tracing::provider::BufferingMode;
   zx_status_t start_status;
-  zx_status_t status = controller.Start(group_mask, &start_status);
+  zx_status_t status;
+
+  switch (buffering_mode) {
+    // ktrace does not currently support streaming, so for now we preserve the
+    // legacy behavior of falling back on one-shot mode.
+    case TRACE_BUFFERING_MODE_STREAMING:
+    case TRACE_BUFFERING_MODE_ONESHOT:
+      status = controller.Start(group_mask, BufferingMode::ONESHOT, &start_status);
+      break;
+
+    case TRACE_BUFFERING_MODE_CIRCULAR:
+      status = controller.Start(group_mask, BufferingMode::CIRCULAR, &start_status);
+      break;
+
+    default:
+      start_status = ZX_ERR_INVALID_ARGS;
+      status = ZX_ERR_INVALID_ARGS;
+      break;
+  }
+
   LogFidlFailure("start", status, start_status);
 }
 
@@ -127,8 +148,14 @@ void App::UpdateState() {
   }
 
   if (current_group_mask_ != group_mask) {
+    trace_context_t* ctx = trace_acquire_context();
+
     StopKTrace();
-    StartKTrace(group_mask, retain_current_data);
+    StartKTrace(group_mask, trace_context_get_buffering_mode(ctx), retain_current_data);
+
+    if (ctx != nullptr) {
+      trace_release_context(ctx);
+    }
   }
 
   if (capture_log) {
@@ -138,7 +165,8 @@ void App::UpdateState() {
   }
 }
 
-void App::StartKTrace(uint32_t group_mask, bool retain_current_data) {
+void App::StartKTrace(uint32_t group_mask, trace_buffering_mode_t buffering_mode,
+                      bool retain_current_data) {
   FX_DCHECK(!context_);
   if (!group_mask) {
     return;  // nothing to trace
@@ -163,7 +191,7 @@ void App::StartKTrace(uint32_t group_mask, bool retain_current_data) {
   if (!retain_current_data) {
     RequestKtraceRewind(ktrace_controller);
   }
-  RequestKtraceStart(ktrace_controller, group_mask);
+  RequestKtraceStart(ktrace_controller, buffering_mode, group_mask);
 
   FX_VLOGS(1) << "Ktrace started";
 }

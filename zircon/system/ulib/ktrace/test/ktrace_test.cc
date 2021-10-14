@@ -119,9 +119,20 @@ TEST_F(KTraceTest, Start) {
   fuchsia::tracing::kernel::Controller_SyncProxy controller(std::move(controller_service));
   zx_status_t call_status;
 
-  EXPECT_OK(controller.Start(0, &call_status));
+  using BufferingMode = ::fuchsia::tracing::provider::BufferingMode;
+  EXPECT_OK(controller.Start(0, BufferingMode::ONESHOT, &call_status));
   EXPECT_OK(call_status);
   syscall().CheckControlCall(KTRACE_ACTION_START);
+}
+
+TEST_F(KTraceTest, StartCircular) {
+  fuchsia::tracing::kernel::Controller_SyncProxy controller(std::move(controller_service));
+  zx_status_t call_status;
+
+  using BufferingMode = ::fuchsia::tracing::provider::BufferingMode;
+  EXPECT_OK(controller.Start(0, BufferingMode::CIRCULAR, &call_status));
+  EXPECT_OK(call_status);
+  syscall().CheckControlCall(KTRACE_ACTION_START_CIRCULAR);
 }
 
 TEST_F(KTraceTest, Stop) {
