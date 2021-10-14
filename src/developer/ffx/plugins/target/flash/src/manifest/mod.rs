@@ -603,6 +603,7 @@ const PRODUCT_ID_HASH_SIZE: usize = 32;
 
 #[derive(Debug)]
 pub(crate) struct UnlockChallenge {
+    #[cfg_attr(not(test), allow(unused))]
     pub(crate) version: u32,
     pub(crate) product_id_hash: [u8; PRODUCT_ID_HASH_SIZE],
     pub(crate) challenge: [u8; CHALLENGE_DATA_SIZE],
