@@ -5,6 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.adc") {
+  sdk_category = "partner"
   sources = [ "adc.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }
