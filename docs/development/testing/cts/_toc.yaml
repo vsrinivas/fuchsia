@@ -14,3 +14,5 @@ toc:
     path: /docs/development/testing/cts/contributing_tests.md
   - title: "Testing Guidelines"
     path: /docs/development/testing/cts/testing_guidelines.md
+  - title: "Diagnosing Test Failures"
+    path: /docs/development/testing/cts/diagnosing_test_failures.md
