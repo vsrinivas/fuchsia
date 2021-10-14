@@ -100,8 +100,8 @@ fuchsia_component("wayland_bridge") {
 fuchsia_component("wayland_bridge_v2") {
   manifest = "meta/wayland_bridge.cml"
   deps = [
-    ":bin",
     ":keymap",
+    ":legacy_bin",
   ]
 }
 

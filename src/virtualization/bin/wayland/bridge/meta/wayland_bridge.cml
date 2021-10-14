@@ -2,7 +2,7 @@
     include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/wayland_bridge",
+        binary: "bin/legacy_wayland_bridge",
     },
     capabilities: [
         {
