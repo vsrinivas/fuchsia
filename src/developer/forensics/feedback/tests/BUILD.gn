@@ -387,7 +387,7 @@ group("tests") {
     "//src/graphics/bin/vulkan_loader",
     "//src/hwinfo:fake_legacy_hwinfo",
     "//src/hwinfo:hwinfo_tests_factory_config",
-    "//src/sys/pkg/tests/system-update-checker:system-update-checker-integration-tests",
+    "//src/sys/pkg/bin/fake-channel-control",
     "//src/sys/time/timekeeper",
   ]
 }

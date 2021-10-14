@@ -21,7 +21,7 @@
                 "fuchsia.time.Utc": "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx",
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                 "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
-                "fuchsia.update.channelcontrol.ChannelControl": "fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-checker-for-integration-test.cmx"
+                "fuchsia.update.channelcontrol.ChannelControl": "fuchsia-pkg://fuchsia.com/fake-channel-control#meta/fake-channel-control.cmx"
             },
             "system-services": [
                 "fuchsia.boot.ReadOnlyLog",
