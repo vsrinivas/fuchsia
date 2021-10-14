@@ -12,7 +12,7 @@ use {
         stream::{StreamExt, TryStreamExt},
         TryFutureExt,
     },
-    rand::thread_rng,
+    rand::RngCore,
 };
 
 enum Services {
@@ -31,7 +31,7 @@ async fn handle_request(stream: Services) -> Result<(), Error> {
                             wrapping_key_id, 0,
                             "Support for multiple key IDs not implemented yet. Key ID must be 0."
                         );
-                        let mut rng = thread_rng();
+                        let mut rng = rand::thread_rng();
                         let mut key = [0; 32];
                         rng.fill_bytes(&mut key);
                         let mut wrapped = [0; 32];
