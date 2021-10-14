@@ -183,13 +183,22 @@ fn field_to_c_str(
                 );
             }
         }
-        Type::Vector { .. } => {
+        Type::Vector { ref element_type, .. } => {
             let ptr = if maybe_attributes.has("OutOfLineContents") { "*" } else { "" };
+            let nullable = match **element_type {
+                Type::Vector { nullable, .. } if nullable => "*",
+                Type::Str { nullable, .. } if nullable => "*",
+                Type::Handle { nullable, .. } if nullable => "*",
+                Type::Request { nullable, .. } if nullable => "*",
+                Type::Identifier { nullable, .. } if nullable => "*",
+                _ => "",
+            };
             accum.push_str(
                 format!(
-                    "{indent}{prefix}{ty}{ptr}* {c_name}_{buffer};\n\
+                    "{indent}{prefix}{ty}{ptr}*{nullable} {c_name}_{buffer};\n\
                      {indent}size_t {c_name}_{size};",
                     indent = indent,
+                    nullable = nullable,
                     buffer = name_buffer(&maybe_attributes),
                     size = name_size(&maybe_attributes),
                     c_name = c_name,

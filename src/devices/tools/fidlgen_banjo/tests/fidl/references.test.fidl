@@ -11,6 +11,10 @@ type VectorFieldInStruct = struct {
     @out_of_line_contents
     the_vector vector<SomeType>;
     the_other_vector vector<box<SomeType>>;
+    @mutable
+    the_mutable_vector vector<SomeType>;
+    @mutable
+    the_mutable_vector_of_boxes vector<box<SomeType>>;
     the_default_vector vector<SomeType>;
 };
 

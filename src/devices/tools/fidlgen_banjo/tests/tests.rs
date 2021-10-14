@@ -96,6 +96,7 @@ mod rust {
 
     rust_test!(alignment);
     rust_test!(attributes);
+    rust_test!(buffer);
     rust_test!(empty);
     rust_test!(enums);
     rust_test!(example0);
@@ -108,6 +109,7 @@ mod rust {
     rust_test!(example8);
     rust_test!(example9);
     rust_test!(point);
+    rust_test!(references);
     rust_test!(rustderive);
     rust_test!(simple);
     rust_test!(tables);

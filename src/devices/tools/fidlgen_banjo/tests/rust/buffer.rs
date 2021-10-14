@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.alias banjo file
+// Generated from the banjo.examples.buffer banjo file
 
 #![allow(unused_imports, non_camel_case_types)]
 
@@ -13,14 +13,9 @@ use fuchsia_zircon as zircon;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct SomeStruct {
-    pub one: u16,
-    pub two: u32,
-    pub primitive: u32,
-    pub vector_alias_list: *const u8,
-    pub vector_alias_count: usize,
-    pub array_alias: [u8; 32 as usize],
-    pub nested_alias: [[u8; 32 as usize]; 32 as usize],
+pub struct SomeData {
+    pub one_buffer: *const u8,
+    pub one_size: usize,
 }
 
 

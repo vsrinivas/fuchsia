@@ -43,6 +43,7 @@ _simple_libraries = [
     backends = [
       "c",
       "cpp",
+      "rust",
     ]
   },
   {
@@ -302,6 +303,7 @@ _simple_libraries = [
     backends = [
       "c",
       "cpp",
+      "rust",
     ]
   },
   {

@@ -28,8 +28,12 @@ struct some_type {
 struct vector_field_in_struct {
     const some_type_t** the_vector_list;
     size_t the_vector_count;
-    const some_type_t* the_other_vector_list;
+    const some_type_t** the_other_vector_list;
     size_t the_other_vector_count;
+    some_type_t* the_mutable_vector_list;
+    size_t the_mutable_vector_count;
+    some_type_t** the_mutable_vector_of_boxes_list;
+    size_t the_mutable_vector_of_boxes_count;
     const some_type_t* the_default_vector_list;
     size_t the_default_vector_count;
 };

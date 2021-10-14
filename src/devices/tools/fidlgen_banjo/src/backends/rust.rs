@@ -4,7 +4,7 @@
 
 use {
     super::{
-        util::{get_declarations, is_table_or_bits, to_c_name, Decl},
+        util::{get_declarations, is_table_or_bits, name_buffer, name_size, to_c_name, Decl},
         Backend,
     },
     crate::fidl::*,
@@ -151,6 +151,39 @@ fn type_to_rust_str(ty: &Type, ir: &FidlIr) -> Result<String, Error> {
     }
 }
 
+fn field_to_rust_str(field: &StructMember, ir: &FidlIr) -> Result<String, Error> {
+    let c_name = &field.name.0;
+    let maybe_attributes = &field.maybe_attributes;
+
+    match field._type {
+        Type::Array { .. }
+        | Type::Str { .. }
+        | Type::Primitive { .. }
+        | Type::Identifier { .. }
+        | Type::Handle { .. } => Ok(format!(
+            "    pub {c_name}: {ty},",
+            c_name = c_name,
+            ty = type_to_rust_str(&field._type, ir)?
+        )),
+        Type::Vector { ref element_type, .. } => {
+            let out_of_line = if maybe_attributes.has("OutOfLineContents") { "*mut " } else { "" };
+            let mutable = if maybe_attributes.has("Mutable") { "mut" } else { "const" };
+            Ok(format!(
+                "{indent}pub {c_name}_{buffer}: *{mutable} {out_of_line}{ty},\
+                 \n{indent}pub {c_name}_{size}: usize,",
+                indent = "    ",
+                buffer = name_buffer(&maybe_attributes),
+                size = name_size(&maybe_attributes),
+                mutable = mutable,
+                out_of_line = out_of_line,
+                c_name = c_name,
+                ty = type_to_rust_str(element_type, ir)?
+            ))
+        }
+        _ => Err(anyhow!("Can't handle type {:?}", field._type)),
+    }
+}
+
 fn get_base_type_from_alias(alias: &Option<&String>) -> Option<String> {
     if let Some(name) = alias {
         if name.starts_with("zx/") {
@@ -264,18 +297,17 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                     if !can_derive_partialeq(&field._type, &mut parents, ir)? {
                         partial_eq = false;
                     }
-                    let ty = if let Some(arg_type) = get_base_type_from_alias(
+                    if let Some(arg_type) = get_base_type_from_alias(
                         &field.experimental_maybe_from_type_alias.as_ref().map(|a| &a.name),
                     ) {
-                        arg_type
+                        field_str.push(format!(
+                            "    pub {c_name}: {ty},",
+                            c_name = field.name.0,
+                            ty = arg_type
+                        ));
                     } else {
-                        type_to_rust_str(&field._type, ir)?
+                        field_str.push(field_to_rust_str(&field, ir)?);
                     };
-                    field_str.push(format!(
-                        "    pub {c_name}: {ty},",
-                        c_name = field.name.0,
-                        ty = ty
-                    ));
                 }
                 Ok(format!(
                     include_str!("templates/rust/struct.rs"),

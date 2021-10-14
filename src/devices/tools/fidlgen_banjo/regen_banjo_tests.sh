@@ -98,7 +98,7 @@ do
     with_cpp=false
   fi
 
-  if [ "$filename" = "references" ] || [ "$filename" = "buffer" ] || [ "$filename" = "handles" ]; then
+  if [ "$filename" = "handles" ]; then
     with_rust=false
   fi
 
