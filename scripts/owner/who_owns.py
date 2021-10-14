@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env fuchsia-vendored-python
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -63,7 +63,7 @@ def main():
                     if filename in abspaths:
                         owners.add(match.group(2))
 
-    print ','.join(sorted(owners))
+    print(','.join(sorted(owners)))
 
     return 0
 
