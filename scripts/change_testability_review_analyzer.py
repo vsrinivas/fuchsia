@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env fuchsia-vendored-python
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -23,7 +23,7 @@ import datetime
 import json
 import os
 import sys
-import requests
+import urllib
 
 FUCHSIA_DIR = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir))
 
@@ -50,13 +50,13 @@ def cache_change_data(c):
     filename = cache_filename(c)
     if os.path.exists(filename):
         return
-    print 'Data for %s not found in cache, fetching from gerrit' % c
+    print('Data for %s not found in cache, fetching from gerrit' % c)
     url = 'https://fuchsia-review.googlesource.com/changes/%s/detail' % c
-    r = requests.get(url)
-    if r.status_code != 200:
-        print 'Gerrit returned error for %s: %d' % (c, r.status_code)
+    r = urllib.request.urlopen(url)
+    if r.status != 200:
+        print('Gerrit returned error for %s: %d' % (c, r.status_code))
         return
-    response_json = r.text[5:]  # skip preamble
+    response_json = r.read().decode('utf-8')[5:]  # skip preamble
     data = json.loads(response_json)
     with open(cache_filename(c), 'w') as f:
         json.dump(data, f, indent=2)
