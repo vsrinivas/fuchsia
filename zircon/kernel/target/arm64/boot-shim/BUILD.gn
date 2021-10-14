@@ -136,7 +136,7 @@ template("boot_shim") {
   }
 }
 
-shims = []
+shims = [ "motmot" ]
 
 foreach(shim, shims) {
   boot_shim(shim) {
