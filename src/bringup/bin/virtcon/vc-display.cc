@@ -655,8 +655,7 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
   }
 
   dc_device = device_client.release();
-  dc_client =
-      std::make_unique<fidl::WireSyncClient<fhd::Controller>>(std::move(dc_endpoints->client));
+  dc_client = fidl::WireSyncClient<fhd::Controller>(std::move(dc_endpoints->client));
 
   zx_handle_close(dc_wait.object());
 
@@ -669,7 +668,7 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
   }
 
   ZX_DEBUG_ASSERT(!dc_wait.is_pending());
-  dc_wait.set_object(dc_client->channel().get());
+  dc_wait.set_object(dc_client.channel().get());
   dc_wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
   dc_wait.set_handler([](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                          const zx_packet_signal_t* signal) {
