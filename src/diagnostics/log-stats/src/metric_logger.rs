@@ -62,21 +62,25 @@ pub const PING_FILE_PATH: &str = "<Ping>";
 /// What line number to use for the ping message or when the source is not known.
 pub const EMPTY_LINE_NUMBER: u64 = 0;
 
+// Establishes a channel to Cobalt.
+async fn connect_to_cobalt(specs: &MetricSpecs) -> Result<MetricEventLoggerProxy, anyhow::Error> {
+    let mut project_spec = ProjectSpec::EMPTY;
+    project_spec.customer_id = Some(specs.customer_id);
+    project_spec.project_id = Some(specs.project_id);
+
+    let metric_logger_factory = connect_to_protocol::<MetricEventLoggerFactoryMarker>()?;
+    let (proxy, request) = create_proxy().unwrap();
+    metric_logger_factory.create_metric_event_logger(project_spec, request).await?;
+    Ok(proxy)
+}
+
 impl MetricLogger {
     /// Create a MetricLogger that logs the given MetricSpecs.
     pub async fn new(
         specs: MetricSpecs,
         component_map: ComponentEventCodeMap,
     ) -> Result<MetricLogger, anyhow::Error> {
-        let metric_logger_factory = connect_to_protocol::<MetricEventLoggerFactoryMarker>()?;
-        let mut project_spec = ProjectSpec::EMPTY;
-        project_spec.customer_id = Some(specs.customer_id);
-        project_spec.project_id = Some(specs.project_id);
-
-        let (proxy, request) = create_proxy().unwrap();
-
-        metric_logger_factory.create_metric_event_logger(project_spec, request).await?;
-
+        let proxy = connect_to_cobalt(&specs).await?;
         Ok(Self {
             specs,
             proxy,
@@ -104,17 +108,10 @@ impl MetricLogger {
             line_no: EMPTY_LINE_NUMBER,
         });
         let event_code = self.component_map.get(url).unwrap_or(&OTHER_EVENT_CODE);
-        let status = self
-            .proxy
-            .log_string(
-                self.specs.granular_error_count_metric_id,
-                &log_identifier.file_path,
-                &[log_identifier.line_no as u32, *event_code],
-            )
+        let identifier_and_component =
+            LogIdentifierAndComponent { log_identifier, component_event_code: *event_code };
+        self.log_metric(self.specs.granular_error_count_metric_id, &identifier_and_component)
             .await?;
-        if status != Status::Ok {
-            return Err(anyhow::format_err!("Cobalt returned error: {}", status as u8));
-        }
         if self.current_interval_errors.len() >= MAX_ERRORS_PER_INTERVAL {
             // Only print this warning once per interval: the first time that we reached capacity.
             if !self.reached_capacity {
@@ -123,16 +120,12 @@ impl MetricLogger {
             }
             return Ok(());
         }
-        let identifier_and_component =
-            LogIdentifierAndComponent { log_identifier, component_event_code: *event_code };
         if !self.current_interval_errors.contains(&identifier_and_component) {
-            self.proxy
-                .log_string(
-                    self.specs.granular_error_interval_count_metric_id,
-                    &identifier_and_component.log_identifier.file_path,
-                    &[identifier_and_component.log_identifier.line_no as u32, *event_code],
-                )
-                .await?;
+            self.log_metric(
+                self.specs.granular_error_interval_count_metric_id,
+                &identifier_and_component,
+            )
+            .await?;
             self.current_interval_errors.insert(identifier_and_component);
         }
         Ok(())
@@ -145,14 +138,46 @@ impl MetricLogger {
             self.current_interval_errors.clear();
             self.reached_capacity = false;
             self.next_interval_index = interval_index + 1;
-            self.proxy
-                .log_string(
-                    self.specs.granular_error_interval_count_metric_id,
-                    &PING_FILE_PATH,
-                    &[EMPTY_LINE_NUMBER as u32, OTHER_EVENT_CODE],
-                )
-                .await?;
+            let identifier_and_component = LogIdentifierAndComponent {
+                log_identifier: LogIdentifier {
+                    file_path: PING_FILE_PATH.to_string(),
+                    line_no: EMPTY_LINE_NUMBER,
+                },
+                component_event_code: OTHER_EVENT_CODE,
+            };
+            self.log_metric(
+                self.specs.granular_error_interval_count_metric_id,
+                &identifier_and_component,
+            )
+            .await?;
         }
         Ok(())
+    }
+
+    async fn log_metric(
+        self: &mut Self,
+        metric_id: u32,
+        log_identifier_and_component: &LogIdentifierAndComponent,
+    ) -> Result<(), anyhow::Error> {
+        let status_result = self
+            .proxy
+            .log_string(
+                metric_id,
+                &log_identifier_and_component.log_identifier.file_path,
+                &[
+                    log_identifier_and_component.log_identifier.line_no as u32,
+                    log_identifier_and_component.component_event_code,
+                ],
+            )
+            .await;
+        // Re-establish connection to Cobalt if channel is closed.
+        if let Err(fidl::Error::ClientChannelClosed { .. }) = status_result {
+            self.proxy = connect_to_cobalt(&self.specs).await?;
+        }
+        let status = status_result?;
+        match status {
+            Status::Ok => Ok(()),
+            _ => Err(anyhow::format_err!("Cobalt returned error: {}", status as u8)),
+        }
     }
 }
