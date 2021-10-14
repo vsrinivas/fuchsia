@@ -22,18 +22,18 @@ go_library("main") {
   ]
 }
 
-go_binary("unpack_debug_symbols") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/debug/unpack_debug_symbols/cmd"
+go_binary("generate_breakpad") {
+  gopackage = "go.fuchsia.dev/fuchsia/tools/debug/generate_breakpad/cmd"
 
   deps = [ ":main" ]
 }
 
-go_test("unpack_debug_symbols_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/unpack_debug_symbols/cmd" ]
+go_test("generate_breakpad_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/generate_breakpad/cmd" ]
   deps = [ ":main" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":unpack_debug_symbols_tests" ]
+  deps = [ ":generate_breakpad_tests" ]
 }

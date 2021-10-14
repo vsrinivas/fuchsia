@@ -8,9 +8,9 @@ group("tools") {
   public_deps = [
     "//tools/debug/bloatalyzer",
     "//tools/debug/covargs",
+    "//tools/debug/generate_breakpad",
     "//tools/debug/sourcerer",
     "//tools/debug/symbolize",
-    "//tools/debug/unpack_debug_symbols",
   ]
 }
 
@@ -22,7 +22,7 @@ group("tests") {
     "//tools/debug/breakpad:breakpad_tests",
     "//tools/debug/covargs:tests",
     "//tools/debug/elflib:elflib_tests($host_toolchain)",
+    "//tools/debug/generate_breakpad:tests($host_toolchain)",
     "//tools/debug/symbolize:symbolize_tests($host_toolchain)",
-    "//tools/debug/unpack_debug_symbols:tests($host_toolchain)",
   ]
 }

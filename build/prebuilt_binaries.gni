@@ -19,7 +19,7 @@ template("prebuilt_binaries") {
     testonly = true
     hermetic_deps = false
 
-    tool = "//tools/debug/unpack_debug_symbols"
+    tool = "//tools/debug/generate_breakpad"
     outputs = [ binary_manifest ]
 
     depfile = "$target_gen_dir/$target_name.d"
