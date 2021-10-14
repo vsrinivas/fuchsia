@@ -16,8 +16,8 @@ source_set("async_holder") {
   ]
 
   deps = [
-    "//garnet/public/lib/fostr",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fostr",
     "//src/lib/fsl",
   ]
 }

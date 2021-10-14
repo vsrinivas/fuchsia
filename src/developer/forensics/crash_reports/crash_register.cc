@@ -7,12 +7,12 @@
 #include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
 #include "src/developer/forensics/utils/fidl/channel_provider_ptr.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fostr/fidl/fuchsia/feedback/formatting.h"
 #include "third_party/rapidjson/include/rapidjson/error/en.h"
 #include "third_party/rapidjson/include/rapidjson/prettywriter.h"
 #include "third_party/rapidjson/include/rapidjson/stringbuffer.h"

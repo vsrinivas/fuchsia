@@ -30,10 +30,10 @@ source_set("scenic") {
   ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
+    "//src/lib/fostr/fidl/fuchsia.ui.scenic",
     "//src/lib/fsl",
     "//src/ui/lib/escher",
     "//src/ui/scenic/lib/focus",
@@ -50,9 +50,9 @@ source_set("event_reporter") {
     "event_reporter.h",
   ]
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
+    "//src/lib/fostr/fidl/fuchsia.ui.scenic",
     "//src/lib/fxl",
     "//src/ui/scenic/lib/scenic/util:util",
   ]

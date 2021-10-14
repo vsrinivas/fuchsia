@@ -28,14 +28,14 @@ source_set("intl_property_provider_impl") {
 
   deps = [
     ":locale_util",
-    "//garnet/public/lib/fostr/fidl/fuchsia.intl",
-    "//garnet/public/lib/fostr/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/service/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fostr/fidl/fuchsia.intl",
+    "//src/lib/fostr/fidl/fuchsia.settings",
     "//src/lib/fxl",
     "//src/lib/icu_data/cpp",
     "//third_party/icu",
@@ -58,12 +58,12 @@ executable("intl_property_provider_impl_test_bin") {
   deps = [
     ":intl_property_provider_impl",
     "//garnet/bin/trace/tests:component_context",
-    "//garnet/public/lib/fostr/fidl/fuchsia.intl",
-    "//garnet/public/lib/fostr/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fidl_fuchsia_intl_ext/cpp",
+    "//src/lib/fostr/fidl/fuchsia.intl",
+    "//src/lib/fostr/fidl/fuchsia.settings",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/testing/loop_fixture",
     "//src/modular/lib/fidl:clone",
@@ -79,8 +79,8 @@ source_set("locale_util") {
   ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.intl",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fostr/fidl/fuchsia.intl",
     "//src/lib/fxl",
   ]
 
@@ -99,9 +99,9 @@ executable("locale_util_unit_test_bin") {
 
   deps = [
     ":locale_util",
-    "//garnet/public/lib/fostr/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.intl",
     "//src/lib/fidl_fuchsia_intl_ext/cpp",
+    "//src/lib/fostr/fidl/fuchsia.intl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/icu_data/cpp",
     "//third_party/icu",

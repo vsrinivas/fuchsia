@@ -18,14 +18,14 @@ source_set("base_view") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fostr/fidl/fuchsia.ui.gfx",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

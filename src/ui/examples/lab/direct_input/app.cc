@@ -7,7 +7,6 @@
 #include <fuchsia/math/cpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/fit/function.h>
-#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -18,6 +17,8 @@
 #include <limits>
 #include <string>
 #include <utility>
+
+#include <src/lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 
 namespace direct_input {
 

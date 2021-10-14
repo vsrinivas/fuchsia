@@ -5,7 +5,6 @@
 #include "src/ui/scenic/lib/input/tests/util.h"
 
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
@@ -14,6 +13,7 @@
 #include <unordered_set>
 
 #include <hid/hid.h>
+#include <src/lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 
 #include "src/ui/scenic/lib/scheduling/constant_frame_predictor.h"
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"

@@ -6,8 +6,6 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
-#include <lib/fostr/fidl/fuchsia/ui/scenic/formatting.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/commands.h>
@@ -21,6 +19,8 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include <src/lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
+#include <src/lib/fostr/fidl/fuchsia/ui/scenic/formatting.h>
 
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"

@@ -97,7 +97,6 @@ executable("data_provider_unittest_exe") {
   sources = [ "data_provider_unittest.cc" ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.sys",
@@ -115,6 +114,7 @@ executable("data_provider_unittest_exe") {
     "//src/developer/forensics/testing/stubs:cobalt",
     "//src/developer/forensics/testing/stubs:scenic",
     "//src/developer/forensics/utils:archive",
+    "//src/lib/fostr/fidl/fuchsia.math",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/timekeeper:testing",

@@ -6,12 +6,13 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/zx/eventpair.h>
 
 #include <cmath>
+
+#include <src/lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 
 #include "rapidjson/document.h"
 #include "src/lib/files/file.h"

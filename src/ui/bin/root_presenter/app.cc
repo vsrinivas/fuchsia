@@ -7,7 +7,6 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/keyboard/focus/cpp/fidl.h>
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
@@ -18,6 +17,8 @@
 #include <algorithm>
 #include <cstdlib>
 #include <string>
+
+#include <src/lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 
 #include "src/lib/files/file.h"
 

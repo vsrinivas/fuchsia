@@ -1,0 +1,10 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# [START contents]
+import("//src/lib/fostr/build/fostr_fidl.gni")
+fostr_fidl("fuchsia.examples") {
+  fidl_target = "//examples/fidl/fuchsia.examples"
+}
+# [END contents]

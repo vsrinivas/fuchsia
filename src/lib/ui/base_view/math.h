@@ -7,7 +7,7 @@
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 
-#include "lib/fostr/fidl/fuchsia.ui.gfx/amendments.h"
+#include "src/lib/fostr/fidl/fuchsia.ui.gfx/amendments.h"
 
 namespace scenic {
 

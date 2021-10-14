@@ -4,13 +4,14 @@
 
 #include "src/developer/forensics/feedback_data/archive_accessor_ptr.h"
 
-#include <lib/fostr/fidl/fuchsia/diagnostics/formatting.h>
 #include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <vector>
+
+#include <src/lib/fostr/fidl/fuchsia/diagnostics/formatting.h>
 
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/fit/promise.h"

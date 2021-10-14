@@ -6,8 +6,9 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/fostr/zx_types.h>
 #include <lib/syslog/cpp/macros.h>
+
+#include "src/lib/fostr/zx_types.h"
 
 namespace modular {
 

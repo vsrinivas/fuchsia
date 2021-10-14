@@ -1,0 +1,16 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/lib/fostr/build/fostr_fidl.gni")
+
+fostr_fidl("fuchsia.modular.session") {
+  fidl_target = "//sdk/fidl/fuchsia.modular.session"
+
+  deps = [
+    "//src/lib/fostr/fidl/fuchsia.io",
+    "//src/lib/fostr/fidl/fuchsia.mem",
+    "//src/lib/fostr/fidl/fuchsia.sys",
+    "//src/lib/fostr/fidl/fuchsia.ui.policy",
+  ]
+}

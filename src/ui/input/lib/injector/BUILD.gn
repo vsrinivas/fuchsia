@@ -28,10 +28,10 @@ source_set("lib") {
 
   deps = [
     ":injector_config_setup",
-    "//garnet/public/lib/fostr/fidl/fuchsia.input.report",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fostr/fidl/fuchsia.input.report",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/fxl",
     "//src/lib/ui/input",
     "//zircon/system/ulib/trace",

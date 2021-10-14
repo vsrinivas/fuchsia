@@ -17,11 +17,11 @@ group("tests") {
 test("intl_services_test") {
   sources = [ "intl_services_test.cc" ]
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.intl",
-    "//garnet/public/lib/fostr/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//src/lib/fostr/fidl/fuchsia.intl",
+    "//src/lib/fostr/fidl/fuchsia.settings",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

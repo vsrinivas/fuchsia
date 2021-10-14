@@ -16,7 +16,7 @@
 #include <gtest/gtest.h>
 
 #include "garnet/bin/trace/tests/component_context.h"
-#include "lib/fostr/fidl/fuchsia/intl/formatting.h"
+#include "src/lib/fostr/fidl/fuchsia/intl/formatting.h"
 
 namespace intl {
 namespace testing {

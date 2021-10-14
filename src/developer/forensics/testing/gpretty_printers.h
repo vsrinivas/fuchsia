@@ -7,12 +7,13 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/fostr/fidl/fuchsia/mem/formatting.h>
-#include <lib/fostr/indent.h>
 #include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <ostream>
+
+#include <src/lib/fostr/fidl/fuchsia/mem/formatting.h>
+#include <src/lib/fostr/indent.h>
 
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"

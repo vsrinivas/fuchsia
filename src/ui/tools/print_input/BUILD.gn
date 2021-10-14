@@ -6,7 +6,7 @@ executable("print_input") {
   sources = [ "main.cc" ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/fxl",
     "//src/lib/ui/input",
     "//src/ui/lib/input_report_reader",

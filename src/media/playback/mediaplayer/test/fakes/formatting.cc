@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/test/fakes/formatting.h"
 
-#include "lib/fostr/indent.h"
+#include "src/lib/fostr/indent.h"
 
 namespace media_player {
 namespace test {

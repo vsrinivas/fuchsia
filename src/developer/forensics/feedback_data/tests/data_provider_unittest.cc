@@ -22,7 +22,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "garnet/public/lib/fostr/fidl/fuchsia/math/formatting.h"
 #include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
@@ -34,6 +33,7 @@
 #include "src/developer/forensics/testing/stubs/scenic.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/archive.h"
+#include "src/lib/fostr/fidl/fuchsia/math/formatting.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/vector.h"

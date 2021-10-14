@@ -28,8 +28,8 @@ source_set("archive_accessor") {
   ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.diagnostics",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fostr/fidl/fuchsia.diagnostics",
   ]
 }
 
@@ -87,7 +87,6 @@ source_set("data_provider") {
   deps = [
     ":constants",
     ":datastore",
-    "//garnet/public/lib/fostr/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -98,6 +97,7 @@ source_set("data_provider") {
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/utils:archive",
     "//src/developer/forensics/utils/fit",
+    "//src/lib/fostr/fidl/fuchsia.images",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/uuid",

@@ -14,11 +14,11 @@ source_set("annotations_matchers") {
   sources = [ "annotations_matchers.h" ]
 
   public_deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.element",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.session",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fostr/fidl/fuchsia.modular",
     "//src/lib/fsl",
     "//third_party/googletest:gmock",
   ]

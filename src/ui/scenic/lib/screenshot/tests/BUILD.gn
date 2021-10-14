@@ -34,7 +34,7 @@ executable("unittests") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
+    "//src/lib/fostr/fidl/fuchsia.ui.scenic",
     "//src/lib/fsl",
     "//src/ui/examples/bouncing_ball",
     "//src/ui/lib/escher",

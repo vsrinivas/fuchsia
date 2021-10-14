@@ -1,0 +1,21 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/lib/fostr/build/fostr_fidl.gni")
+
+fostr_fidl("fuchsia.ui.scenic") {
+  fidl_target = "//sdk/fidl/fuchsia.ui.scenic"
+
+  deps = [
+    "//src/lib/fostr/fidl/fuchsia.images",
+    "//src/lib/fostr/fidl/fuchsia.mem",
+    "//src/lib/fostr/fidl/fuchsia.scenic.scheduling",
+    "//src/lib/fostr/fidl/fuchsia.sysmem",
+    "//src/lib/fostr/fidl/fuchsia.ui.gfx",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
+    "//src/lib/fostr/fidl/fuchsia.ui.input.accessibility",
+    "//src/lib/fostr/fidl/fuchsia.ui.pointer",
+    "//src/lib/fostr/fidl/fuchsia.ui.views",
+  ]
+}

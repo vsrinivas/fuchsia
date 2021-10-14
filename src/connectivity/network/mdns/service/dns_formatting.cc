@@ -7,8 +7,8 @@
 #include <iomanip>
 #include <iostream>
 
-#include "lib/fostr/hex_dump.h"
 #include "src/connectivity/network/mdns/service/dns_message.h"
+#include "src/lib/fostr/hex_dump.h"
 
 namespace mdns {
 

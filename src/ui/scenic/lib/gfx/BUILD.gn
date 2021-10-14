@@ -222,10 +222,9 @@ source_set("gfx") {
     ":gfx_always_optimized",
     ":snapshot_fbs",
     ":util",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
+    "//src/lib/fostr/fidl/fuchsia.ui.gfx",
 
     # TODO(fxbug.dev/44143): Gfx should not depend on Input.
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.annotation",
     "//sdk/fidl/fuchsia.ui.focus",
@@ -236,6 +235,7 @@ source_set("gfx") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/vulkan",

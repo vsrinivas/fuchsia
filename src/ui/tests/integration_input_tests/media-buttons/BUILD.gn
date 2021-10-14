@@ -19,13 +19,13 @@ executable("mediabuttons_listener_test") {
   sources = [ "mediabuttons_listener_test.cc" ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.hardware.display",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/ui/base_view",

@@ -4,9 +4,10 @@
 
 #include "src/ui/scenic/lib/input/injector.h"
 
-#include <lib/fostr/fidl/fuchsia/ui/pointerinjector/formatting.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
+
+#include <src/lib/fostr/fidl/fuchsia/ui/pointerinjector/formatting.h>
 
 #include "lib/async/cpp/time.h"
 #include "lib/async/default.h"

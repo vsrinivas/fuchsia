@@ -11,19 +11,19 @@ source_set("input_report_reader") {
   ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.input.report",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fdio",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/trace",
   ]
 
   public_deps = [
     ":fdio",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/lib/fdio",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/fxl",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",

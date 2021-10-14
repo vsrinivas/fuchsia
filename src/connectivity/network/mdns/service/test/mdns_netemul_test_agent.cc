@@ -13,9 +13,9 @@
 #include <iostream>
 #include <string>
 
-#include "garnet/public/lib/fostr/fidl/fuchsia/net/formatting.h"
-#include "garnet/public/lib/fostr/fidl/fuchsia/net/mdns/formatting.h"
 #include "lib/fidl/cpp/type_converter.h"
+#include "src/lib/fostr/fidl/fuchsia/net/formatting.h"
+#include "src/lib/fostr/fidl/fuchsia/net/mdns/formatting.h"
 #include "src/lib/fsl/types/type_converters.h"
 
 const std::string kLocalArgument = "--local";

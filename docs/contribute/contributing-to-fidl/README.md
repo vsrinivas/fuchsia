@@ -97,8 +97,8 @@ Path | Contents
 [/tools/fidl/fidlmerge] | Tool for generating code from FIDL JSON.
 [/tools/fidl/measure-tape] | Tool to [max out pagination][pagination].
 [/tools/fidl/scripts] | Mostly one-off scripts for e.g. performing migrations that are kept for future reference.
-[/garnet/public/lib/fostr] | `fidlmerge` based tool to generate formatting code in C++.
-[/garnet/public/build/fostr] | Build templates for the `fostr` formatting library.
+[/src/lib/fostr] | `fidlmerge` based tool to generate formatting code in C++.
+[/src/lib/fostr/build] | Build templates for the `fostr` formatting library.
 [/src/lib/fidl_codec] | Library for encoding/decoding FIDL messages (used by `fidlcat`).
 
 Note: The FIDL team does not necessarily
@@ -789,6 +789,6 @@ fidl fmt --library my_library.fidl -i
 [/tools/fidl/fidlmerge]: /tools/fidl/fidlmerge
 [/tools/fidl/measure-tape]: /tools/fidl/measure-tape
 [/tools/fidl/scripts]: /tools/fidl/scripts
-[/garnet/public/lib/fostr]: /garnet/public/lib/fostr
-[/garnet/public/build/fostr]: /garnet/public/build/fostr
+[/src/lib/fostr]: /src/lib/fostr
+[/src/lib/fostr/build]: /src/lib/fostr/build
 [/src/lib/fidl_codec]: /src/lib/fidl_codec

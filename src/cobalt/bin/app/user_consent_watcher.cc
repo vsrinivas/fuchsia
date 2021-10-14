@@ -4,12 +4,13 @@
 
 #include "src/cobalt/bin/app/user_consent_watcher.h"
 
-#include <lib/fostr/fidl/fuchsia/settings/formatting.h>
 #include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
 
 #include <optional>
+
+#include <src/lib/fostr/fidl/fuchsia/settings/formatting.h>
 
 #include "lib/async/cpp/task.h"
 

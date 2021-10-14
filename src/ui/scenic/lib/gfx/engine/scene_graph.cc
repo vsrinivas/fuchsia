@@ -4,12 +4,13 @@
 
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 
-#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <zircon/status.h>
 
 #include <sstream>
+
+#include <src/lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/util/time.h"

@@ -17,9 +17,9 @@ source_set("test_lib") {
   ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.exception",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fostr/fidl/fuchsia.exception",
     "//src/lib/fsl",
     "//zircon/system/ulib/zx",
   ]
@@ -83,7 +83,6 @@ executable("exception_broker_unittest_exe") {
 
   deps = [
     ":test_lib",
-    "//garnet/public/lib/fostr/fidl/fuchsia.exception",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/forensics/exceptions:lib",
     "//src/developer/forensics/exceptions/handler:lib",
@@ -92,6 +91,7 @@ executable("exception_broker_unittest_exe") {
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/utils/fit",
+    "//src/lib/fostr/fidl/fuchsia.exception",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
@@ -109,12 +109,12 @@ executable("process_launch_failure_unittest_exe") {
 
   deps = [
     ":test_lib",
-    "//garnet/public/lib/fostr/fidl/fuchsia.exception",
     "//src/developer/forensics/exceptions:lib",
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/lib/fostr/fidl/fuchsia.exception",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/zx",
   ]

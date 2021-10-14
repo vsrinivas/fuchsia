@@ -26,7 +26,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
 #include "src/developer/forensics/feedback/tests/zx_object_util.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/testing/fakes/cobalt.h"
@@ -35,6 +34,7 @@
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/cobalt/metrics_registry.cb.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fostr/fidl/fuchsia/feedback/formatting.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"

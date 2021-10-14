@@ -4,8 +4,9 @@
 
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer.h"
 
-#include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/trace/event.h>
+
+#include <src/lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 
 #include "src/ui/lib/escher/hmd/pose_buffer_latching_shader.h"
 #include "src/ui/lib/escher/impl/image_cache.h"
@@ -109,8 +110,8 @@ void EngineRenderer::RenderLayer(const escher::FramePtr& frame, zx::time target_
     case escher::PaperRendererShadowType::kShadowVolume:
       break;
     default:
-      FX_LOGS(WARNING) << "EngineRenderer does not support "
-                       << layer.renderer()->shadow_technique() << "; using UNSHADOWED.";
+      FX_LOGS(WARNING) << "EngineRenderer does not support " << layer.renderer()->shadow_technique()
+                       << "; using UNSHADOWED.";
       shadow_type = escher::PaperRendererShadowType::kNone;
   }
 
@@ -149,7 +150,8 @@ std::vector<escher::Camera> EngineRenderer::GenerateEscherCamerasForPaperRendere
 }
 
 void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
-                                                zx::time target_presentation_time, const Layer& layer,
+                                                zx::time target_presentation_time,
+                                                const Layer& layer,
                                                 const escher::PaperRendererShadowType shadow_type,
                                                 const RenderTarget& render_target) {
   TRACE_DURATION("gfx", "EngineRenderer::DrawLayerWithPaperRenderer");

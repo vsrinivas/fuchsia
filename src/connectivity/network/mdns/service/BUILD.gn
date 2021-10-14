@@ -90,7 +90,6 @@ source_set("source_set") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fostr",
     "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.interfaces",
@@ -100,6 +99,7 @@ source_set("source_set") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/connectivity/network/lib/net_interfaces/cpp",
+    "//src/lib/fostr",
     "//src/lib/fsl",
     "//src/lib/inet",
     "//src/lib/json_parser",
@@ -211,11 +211,11 @@ executable("mdns_netemul_test_agent") {
   sources = [ "test/mdns_netemul_test_agent.cc" ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.net",
-    "//garnet/public/lib/fostr/fidl/fuchsia.net.mdns",
     "//sdk/fidl/fuchsia.net.mdns",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fostr/fidl/fuchsia.net",
+    "//src/lib/fostr/fidl/fuchsia.net.mdns",
     "//src/lib/fsl",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

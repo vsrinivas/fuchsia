@@ -6,9 +6,9 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <zircon/types.h>
 
+#include <src/lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <src/ui/bin/root_presenter/constants.h>
 
 using fuchsia::ui::policy::MediaButtonsListenerPtr;

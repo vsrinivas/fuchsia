@@ -9,10 +9,10 @@
 #include <lib/zx/clock.h>
 
 #include "lib/async/default.h"
-#include "lib/fostr/indent.h"
 #include "lib/media/cpp/timeline_rate.h"
 #include "lib/trace-engine/types.h"
 #include "lib/trace/internal/event_common.h"
+#include "src/lib/fostr/indent.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 

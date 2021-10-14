@@ -31,7 +31,7 @@ source_set("common_deps") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
-  deps = [ "//garnet/public/lib/fostr/fidl/fuchsia.ui.input:fuchsia.ui.input" ]
+  deps = [ "//src/lib/fostr/fidl/fuchsia.ui.input:fuchsia.ui.input" ]
 }
 
 executable("gfx_focus_integration_test_bin") {

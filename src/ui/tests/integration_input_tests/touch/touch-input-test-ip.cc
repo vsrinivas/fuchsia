@@ -18,7 +18,6 @@
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <fuchsia/web/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
@@ -37,6 +36,7 @@
 #include <type_traits>
 
 #include <gtest/gtest.h>
+#include <src/lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <test/touch/cpp/fidl.h>
 
 #include "src/ui/input/testing/fake_input_report_device/fake.h"

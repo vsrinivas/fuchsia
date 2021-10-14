@@ -4,11 +4,12 @@
 
 #include "src/ui/scenic/integration_tests/utils.h"
 
-#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/id.h>
 
 #include <cmath>
+
+#include <src/lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 
 namespace integration_tests {
 

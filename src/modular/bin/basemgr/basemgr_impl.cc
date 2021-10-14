@@ -5,12 +5,13 @@
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 
 #include <lib/async/default.h>
-#include <lib/fostr/fidl/fuchsia/modular/session/formatting.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/time.h>
+
+#include <src/lib/fostr/fidl/fuchsia/modular/session/formatting.h>
 
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/lib/common/async_holder.h"

@@ -183,7 +183,7 @@ executable("bin") {
   # links against the C++ standard library and prevents dependencies on some
   # shared library targets that are easy to pull in unintentionally.
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  assert_no_deps = [ "//garnet/public/lib/fostr/*" ]
+  assert_no_deps = [ "//src/lib/fostr/*" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

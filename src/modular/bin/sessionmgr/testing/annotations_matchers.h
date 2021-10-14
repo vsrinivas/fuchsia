@@ -12,7 +12,7 @@
 
 #include <gmock/gmock.h>
 
-#include "lib/fostr/fidl/fuchsia/modular/formatting.h"
+#include "src/lib/fostr/fidl/fuchsia/modular/formatting.h"
 #include "src/lib/fsl/vmo/strings.h"
 
 namespace modular::annotations {

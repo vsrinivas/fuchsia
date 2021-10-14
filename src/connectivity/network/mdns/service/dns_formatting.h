@@ -9,8 +9,8 @@
 #include <iostream>
 #include <memory>
 
-#include "lib/fostr/indent.h"
 #include "src/connectivity/network/mdns/service/dns_message.h"
+#include "src/lib/fostr/indent.h"
 
 namespace mdns {
 

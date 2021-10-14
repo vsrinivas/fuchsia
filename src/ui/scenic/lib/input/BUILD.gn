@@ -45,13 +45,13 @@ source_set("input") {
   ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input.accessibility",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.pointerinjector",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
     "//src/lib/files",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
+    "//src/lib/fostr/fidl/fuchsia.ui.input.accessibility",
+    "//src/lib/fostr/fidl/fuchsia.ui.pointerinjector",
     "//src/lib/fxl",
     "//src/ui/lib/escher/geometry:escher_geometry",
     "//src/ui/scenic/lib/gfx",

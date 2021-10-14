@@ -1,0 +1,36 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/lib/fostr/build/fostr_fidl.gni")
+
+fostr_fidl("fuchsia.feedback") {
+  fidl_target = "//sdk/fidl/fuchsia.feedback"
+
+  # TODO(fxbug.dev/47480): remove these amendments once fostr supports reserved C++ keywords.
+  additional_include = "src/lib/fostr/fidl/fuchsia.feedback/amendments.h"
+
+  amendments_path = "//src/lib/fostr/fidl/fuchsia.feedback/amendments.json"
+
+  public_deps = [ ":amendments" ]
+
+  deps = [
+    "//src/lib/fostr/fidl/fuchsia.math",
+    "//src/lib/fostr/fidl/fuchsia.mem",
+    "//src/lib/fostr/fidl/fuchsia.sys",
+  ]
+}
+
+source_set("amendments") {
+  sources = [
+    "amendments.cc",
+    "amendments.h",
+  ]
+
+  public_configs = [ "//garnet/public:config" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//src/lib/fostr",
+  ]
+}

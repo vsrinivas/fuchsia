@@ -50,7 +50,6 @@ executable("feedback_integration_test_exe") {
 
   deps = [
     ":zx_object_util",
-    "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.hwinfo",
     "//sdk/fidl/fuchsia.logger",
@@ -67,6 +66,7 @@ executable("feedback_integration_test_exe") {
     "//src/developer/forensics/testing/fakes:cobalt",
     "//src/developer/forensics/utils:archive",
     "//src/developer/forensics/utils/cobalt",
+    "//src/lib/fostr/fidl/fuchsia.feedback",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/uuid:uuid",

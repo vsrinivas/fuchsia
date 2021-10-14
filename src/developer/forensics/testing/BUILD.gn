@@ -47,8 +47,6 @@ source_set("gpretty_printers") {
   sources = [ "gpretty_printers.h" ]
 
   public_deps = [
-    "//garnet/public/lib/fostr",
-    "//garnet/public/lib/fostr/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/fit-promise",
@@ -57,6 +55,8 @@ source_set("gpretty_printers") {
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/cobalt",
+    "//src/lib/fostr",
+    "//src/lib/fostr/fidl/fuchsia.mem",
     "//src/lib/fsl",
     "//zircon/system/ulib/zx",
   ]

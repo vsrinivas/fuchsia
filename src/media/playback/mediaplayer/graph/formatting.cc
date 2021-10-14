@@ -7,7 +7,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include "lib/fostr/zx_types.h"
+#include "src/lib/fostr/zx_types.h"
 
 namespace media_player {
 

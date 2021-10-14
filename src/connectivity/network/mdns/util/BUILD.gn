@@ -28,10 +28,10 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/fostr",
     "//sdk/fidl/fuchsia.net.mdns",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fostr",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

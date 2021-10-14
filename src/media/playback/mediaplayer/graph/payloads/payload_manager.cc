@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/graph/payloads/payload_manager.h"
 
-#include "lib/fostr/fidl_types.h"
+#include "src/lib/fostr/fidl_types.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
 namespace media_player {

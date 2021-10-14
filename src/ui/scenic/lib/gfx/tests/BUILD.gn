@@ -44,7 +44,6 @@ source_set("testing_deps") {
     "vk_util.h",
   ]
   public_deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.scenic.internal",
@@ -52,6 +51,7 @@ source_set("testing_deps") {
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fostr/fidl/fuchsia.ui.scenic",
     "//src/lib/testing/loop_fixture",
     "//src/ui/bin/root_presenter:safe_presenter",
     "//src/ui/lib/escher",

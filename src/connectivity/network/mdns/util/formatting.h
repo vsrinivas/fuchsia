@@ -11,7 +11,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include "lib/fostr/indent.h"
+#include "src/lib/fostr/indent.h"
 
 namespace mdns {
 

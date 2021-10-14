@@ -117,8 +117,6 @@ source_set("lib") {
     ":media_buttons_handler",
     ":safe_presenter",
     ":virtual_keyboard",
-    "//garnet/public/lib/fostr/fidl/fuchsia.input.report",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
@@ -127,6 +125,8 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fostr/fidl/fuchsia.input.report",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/fxl",
     "//src/lib/ui/input",
     "//src/ui/lib/glm_workaround",
@@ -168,9 +168,9 @@ source_set("media_buttons_handler") {
   ]
   deps = [
     ":constants",
-    "//garnet/public/lib/fostr/fidl/fuchsia.input.report",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fostr/fidl/fuchsia.input.report",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/ui/input",
   ]
 }
@@ -209,13 +209,13 @@ source_set("factory_reset_manager") {
 
   deps = [
     ":constants",
-    "//garnet/public/lib/fostr/fidl/fuchsia.input.report",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/fdio",
     "//src/lib/files",
+    "//src/lib/fostr/fidl/fuchsia.input.report",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
   ]
 }
 

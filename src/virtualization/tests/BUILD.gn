@@ -131,8 +131,8 @@ source_set("fake_scenic") {
   ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
+    "//src/lib/fostr/fidl/fuchsia.ui.gfx",
+    "//src/lib/fostr/fidl/fuchsia.ui.scenic",
     "//src/lib/fxl",
   ]
   public_deps = [ "//sdk/fidl/fuchsia.ui.scenic" ]

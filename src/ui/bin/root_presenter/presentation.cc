@@ -4,12 +4,13 @@
 
 #include "src/ui/bin/root_presenter/presentation.h"
 
-#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
+
+#include <src/lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 
 #include "src/ui/bin/root_presenter/inspect.h"
 #include "src/ui/bin/root_presenter/safe_presenter.h"

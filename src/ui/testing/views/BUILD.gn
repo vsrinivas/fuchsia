@@ -30,7 +30,7 @@ source_set("views") {
   ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
+    "//src/lib/fostr/fidl/fuchsia.ui.gfx",
     "//src/lib/fsl",
     "//src/lib/fxl",
   ]

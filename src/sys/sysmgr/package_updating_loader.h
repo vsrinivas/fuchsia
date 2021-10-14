@@ -9,10 +9,11 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-#include <lib/fostr/fidl/fuchsia/pkg/formatting.h>
 
 #include <string>
 #include <unordered_set>
+
+#include <src/lib/fostr/fidl/fuchsia/pkg/formatting.h>
 
 #include "garnet/lib/loader/package_loader.h"
 #include "src/lib/fxl/macros.h"

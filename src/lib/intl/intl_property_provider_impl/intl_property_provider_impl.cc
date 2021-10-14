@@ -15,10 +15,10 @@
 #include <src/lib/icu_data/cpp/icu_data.h>
 
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fostr/fidl/fuchsia/intl/formatting.h"
-#include "lib/fostr/fidl/fuchsia/settings/formatting.h"
 #include "lib/zx/time.h"
 #include "locale_util.h"
+#include "src/lib/fostr/fidl/fuchsia/intl/formatting.h"
+#include "src/lib/fostr/fidl/fuchsia/settings/formatting.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/icu/source/common/unicode/locid.h"
 #include "third_party/icu/source/common/unicode/unistr.h"

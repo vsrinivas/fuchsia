@@ -16,13 +16,13 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/ui/base_view",

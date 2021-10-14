@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // [START includes]
-#include <lib/fostr/fidl/fuchsia/examples/formatting.h>
+#include <src/lib/fostr/fidl/fuchsia/examples/formatting.h>
 // [END includes]
 
 #include <fuchsia/examples/cpp/fidl.h>

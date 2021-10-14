@@ -1,0 +1,16 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/lib/fostr/build/fostr_fidl.gni")
+
+fostr_fidl("fuchsia.media") {
+  fidl_target = "//sdk/fidl/fuchsia.media"
+
+  deps = [
+    "//src/lib/fostr/fidl/fuchsia.hardware.audio",
+    "//src/lib/fostr/fidl/fuchsia.images",
+    "//src/lib/fostr/fidl/fuchsia.media.audio",
+    "//src/lib/fostr/fidl/fuchsia.sysmem",
+  ]
+}

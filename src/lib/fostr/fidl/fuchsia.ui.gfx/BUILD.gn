@@ -1,0 +1,34 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/lib/fostr/build/fostr_fidl.gni")
+
+fostr_fidl("fuchsia.ui.gfx") {
+  fidl_target = "//sdk/fidl/fuchsia.ui.gfx"
+
+  additional_include = "src/lib/fostr/fidl/fuchsia.ui.gfx/amendments.h"
+
+  amendments_path = "//src/lib/fostr/fidl/fuchsia.ui.gfx/amendments.json"
+
+  public_deps = [ ":amendments" ]
+
+  deps = [
+    "//src/lib/fostr/fidl/fuchsia.images",
+    "//src/lib/fostr/fidl/fuchsia.math",
+    "//src/lib/fostr/fidl/fuchsia.mem",
+    "//src/lib/fostr/fidl/fuchsia.ui.composition",
+    "//src/lib/fostr/fidl/fuchsia.ui.views",
+  ]
+}
+
+source_set("amendments") {
+  sources = [
+    "amendments.cc",
+    "amendments.h",
+  ]
+
+  public_configs = [ "//garnet/public:config" ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.ui.gfx" ]
+}

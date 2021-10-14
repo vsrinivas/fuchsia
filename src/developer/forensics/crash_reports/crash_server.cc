@@ -5,11 +5,12 @@
 #include "src/developer/forensics/crash_reports/crash_server.h"
 
 #include <fuchsia/net/http/cpp/fidl.h>
-#include <lib/fostr/fidl/fuchsia/net/http/formatting.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <memory>
+
+#include <src/lib/fostr/fidl/fuchsia/net/http/formatting.h>
 
 #include "src/developer/forensics/crash_reports/sized_data_reader.h"
 #include "src/developer/forensics/utils/sized_data.h"

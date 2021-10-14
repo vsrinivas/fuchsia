@@ -25,22 +25,22 @@ This tutorial contains the following steps:
 
 ## Define fostr_fidl target
 
-1. Create a directory for the BUILD file inside [`//garnet/public/lib/fostr/fidl`][fostr-dir]:
+1. Create a directory for the BUILD file inside [`//src/lib/fostr/fidl`][fostr-dir]:
 
    ```
-   mkdir -p garnet/public/lib/fostr/fidl/fuchsia.examples
+   mkdir -p src/lib/fostr/fidl/fuchsia.examples
    ```
 
 2. Create the BUILD file:
 
    ```
-   touch garnet/public/lib/fostr/fidl/fuchsia.examples/BUILD.gn
+   touch src/lib/fostr/fidl/fuchsia.examples/BUILD.gn
    ```
 
 3. Add the following definition to the build file:
 
    ```gn
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="garnet/public/lib/fostr/fidl/fuchsia.examples/BUILD.gn" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/lib/fostr/fidl/fuchsia.examples/BUILD.gn" %}
    ```
 
 This defines a `fostr` target for the `fuchsia.examples` library. Any
@@ -91,5 +91,5 @@ To run the example:
 
 <!-- xrefs -->
 [compiling]: /docs/development/languages/fidl/tutorials/fidl.md
-[fostr-dir]: /garnet/public/lib/fostr/fidl
+[fostr-dir]: /src/lib/fostr/fidl
 [overview]: /docs/development/languages/fidl/tutorials/overview.md

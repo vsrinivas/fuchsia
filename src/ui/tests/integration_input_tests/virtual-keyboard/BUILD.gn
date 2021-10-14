@@ -17,8 +17,6 @@ executable("virtual-keyboard-test-bin") {
   output_name = "virtual-keyboard-test"
   deps = [
     ":test.virtualkeyboard",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.fonts",
     "//sdk/fidl/fuchsia.hardware.display",
@@ -41,6 +39,8 @@ executable("virtual-keyboard-test-bin") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fostr/fidl/fuchsia.ui.gfx",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

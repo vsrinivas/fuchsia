@@ -1,0 +1,10 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/lib/fostr/build/fostr_fidl.gni")
+
+fostr_fidl("fuchsia.ui.pointer.augment") {
+  fidl_target = "//sdk/fidl/fuchsia.ui.pointer.augment"
+  deps = [ "//src/lib/fostr/fidl/fuchsia.ui.pointer" ]
+}

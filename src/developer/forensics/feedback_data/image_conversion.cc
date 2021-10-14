@@ -5,8 +5,9 @@
 #include "src/developer/forensics/feedback_data/image_conversion.h"
 
 #include <fuchsia/images/cpp/fidl.h>
-#include <lib/fostr/fidl/fuchsia/images/formatting.h>
 #include <lib/syslog/cpp/macros.h>
+
+#include <src/lib/fostr/fidl/fuchsia/images/formatting.h>
 
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/vector.h"

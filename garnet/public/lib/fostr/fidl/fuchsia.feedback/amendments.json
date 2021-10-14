@@ -1,6 +1,0 @@
-{
-  "exclusions": [
-    "fuchsia.feedback/Annotation",
-    "fuchsia.feedback/ComponentData"
-  ]
-}

@@ -8,9 +8,10 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/async/time.h>
-#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
+
+#include <src/lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"

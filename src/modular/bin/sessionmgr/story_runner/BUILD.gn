@@ -23,7 +23,6 @@ source_set("story_runner") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.element",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
@@ -32,6 +31,7 @@ source_set("story_runner") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
+    "//src/lib/fostr/fidl/fuchsia.modular",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/bin/sessionmgr:component_context",
     "//src/modular/bin/sessionmgr/agent_runner",

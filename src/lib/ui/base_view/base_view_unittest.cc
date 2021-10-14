@@ -8,13 +8,13 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <gmock/gmock.h>
+#include <src/lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 
 using ::testing::_;
 

@@ -12,8 +12,6 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
-#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/global.h>
@@ -25,6 +23,8 @@
 #include <array>
 #include <memory>
 
+#include <src/lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
+#include <src/lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <test/touch/cpp/fidl.h>
 
 namespace touch_gfx_client {
