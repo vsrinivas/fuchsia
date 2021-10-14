@@ -180,7 +180,11 @@ fuchsia_component("echo_test_realm") {
 }
 
 fuchsia_test_package("example-tests") {
-  test_components = [ ":echo_test_realm" ]
+  test_components = [
+    ":echo_test_realm",
+    ":passing-test-example",
+  ]
+
   deps = [
     ":disabled-test-example",
     ":echo_test_client",
@@ -192,7 +196,6 @@ fuchsia_test_package("example-tests") {
     ":invalid-test-example",
     ":no-onfinished-after-test-example",
     ":no-test-example",
-    ":passing-test-example",
     ":run-closes-channel-example",
     ":run-hangs-example",
     ":test-with-stderr",
