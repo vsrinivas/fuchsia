@@ -911,12 +911,12 @@ func TestPortModeDetection(t *testing.T) {
 
 			if testCase.fails {
 				// Expect error.
-				var got *invalidPortOperatingModeError
+				var got *InvalidPortOperatingModeError
 				if !errors.As(err, &got) {
 					t.Fatalf("client.NewPort(_, %d) = %s, expected %T", portId, err, got)
 				}
 				if diff := cmp.Diff(got,
-					&invalidPortOperatingModeError{
+					&InvalidPortOperatingModeError{
 						rxTypes: testCase.frameTypes,
 					}, cmp.AllowUnexported(*got)); diff != "" {
 					t.Fatalf("client.NewPort(_, %d) error diff (-want +got):\n%s", portId, diff)

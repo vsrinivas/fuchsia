@@ -664,7 +664,7 @@ func (c *Client) NewPort(ctx context.Context, portId PortId) (*Port, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if _, ok := c.mu.ports[portId]; ok {
-		return nil, fmt.Errorf("port %d already bound", portId)
+		return nil, &PortAlreadyBoundError{id: portId}
 	}
 	c.mu.ports[portId] = portEndpoint
 
@@ -830,12 +830,20 @@ func (p *Port) Class() network.DeviceClass {
 	return p.portInfo.Class
 }
 
-type invalidPortOperatingModeError struct {
+type InvalidPortOperatingModeError struct {
 	rxTypes []network.FrameType
 }
 
-func (e *invalidPortOperatingModeError) Error() string {
+func (e *InvalidPortOperatingModeError) Error() string {
 	return fmt.Sprintf("can't determine port operating mode for types '%v'", e.rxTypes)
+}
+
+type PortAlreadyBoundError struct {
+	id PortId
+}
+
+func (e *PortAlreadyBoundError) Error() string {
+	return fmt.Sprintf("port %d is already bound", e.id)
 }
 
 func selectPortOperatingMode(rxTypes []network.FrameType) (PortMode, error) {
@@ -857,5 +865,5 @@ func selectPortOperatingMode(rxTypes []network.FrameType) (PortMode, error) {
 	if seenIpv4 && seenIpv6 {
 		return PortModeIp, nil
 	}
-	return 0, &invalidPortOperatingModeError{rxTypes: rxTypes}
+	return 0, &InvalidPortOperatingModeError{rxTypes: rxTypes}
 }

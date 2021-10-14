@@ -15,6 +15,7 @@ use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
 use netstack_testing_macros::variants_test;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto as _;
+use test_case::test_case;
 
 async fn add_address(
     control: &fidl_fuchsia_net_interfaces_admin::ControlProxy,
@@ -76,6 +77,26 @@ async fn add_subnet_route(
             .expect("add route"),
     )
     .expect("add route returned error");
+}
+
+fn create_tun_device() -> (
+    fidl_fuchsia_net_tun::DeviceProxy,
+    fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_network::DeviceMarker>,
+) {
+    let tun_ctl =
+        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
+            .expect("connect to protocol");
+    let (tun_dev, tun_dev_server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
+            .expect("create proxy");
+    let () = tun_ctl
+        .create_device(fidl_fuchsia_net_tun::DeviceConfig::EMPTY, tun_dev_server_end)
+        .expect("create tun device");
+    let (netdevice_client_end, netdevice_server_end) =
+        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
+            .expect("create endpoints");
+    let () = tun_dev.get_device(netdevice_server_end).expect("get device");
+    (tun_dev, netdevice_client_end)
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -689,23 +710,11 @@ async fn device_control_owns_interfaces_lifetimes() {
     let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
 
     // Create tun interfaces directly to attach ports to different interfaces.
-    let tun_ctl =
-        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
-            .expect("connect to protocol");
-    let (tun_dev, tun_dev_server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
-            .expect("create proxy");
-    let () = tun_ctl
-        .create_device(fidl_fuchsia_net_tun::DeviceConfig::EMPTY, tun_dev_server_end)
-        .expect("create tun device");
+    let (tun_dev, netdevice_client_end) = create_tun_device();
 
-    let (netdevice_client_end, netdevice_server_end) =
-        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
-            .expect("create endpoints");
     let (device_control, device_control_server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::DeviceControlMarker>()
             .expect("create proxy");
-    let () = tun_dev.get_device(netdevice_server_end).expect("get device");
     let installer = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
         .expect("connect to protocol");
@@ -845,57 +854,172 @@ async fn device_control_owns_interfaces_lifetimes() {
             .await;
 }
 
-// Test that the same device port can't be instantiated twice.
+#[test_case(
+fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::DuplicateName;
+"DuplicateName"
+)]
+#[test_case(
+fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortAlreadyBound;
+"PortAlreadyBound"
+)]
+#[test_case(fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::BadPort; "BadPort")]
+#[test_case(fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortClosed; "PortClosed")]
 #[fuchsia_async::run_singlethreaded(test)]
-async fn device_control_enforces_single_port_instance() {
-    let name = "device_control_enforces_single_port_instance";
+async fn control_terminal_events(
+    reason: fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason,
+) {
+    let name = format!("control_terminal_event_{:?}", reason);
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
-    let endpoint =
-        sandbox.create_endpoint::<netemul::NetworkDevice, _>(name).await.expect("create endpoint");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(&name).expect("create realm");
+
     let installer = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
         .expect("connect to protocol");
 
-    let (device, _mac) = endpoint.get_netdevice().await.expect("get netdevice");
+    let (tun_dev, device) = create_tun_device();
+
+    const BASE_PORT_ID: u8 = 13;
+    let base_port_config = fidl_fuchsia_net_tun::BasePortConfig {
+        id: Some(BASE_PORT_ID),
+        rx_types: Some(vec![fidl_fuchsia_hardware_network::FrameType::Ethernet]),
+        tx_types: Some(vec![fidl_fuchsia_hardware_network::FrameTypeSupport {
+            type_: fidl_fuchsia_hardware_network::FrameType::Ethernet,
+            features: fidl_fuchsia_hardware_network::FRAME_FEATURES_RAW,
+            supported_flags: fidl_fuchsia_hardware_network::TxFlags::empty(),
+        }]),
+        mtu: Some(netemul::DEFAULT_MTU.into()),
+        ..fidl_fuchsia_net_tun::BasePortConfig::EMPTY
+    };
+
+    let create_port = |config: fidl_fuchsia_net_tun::BasePortConfig| {
+        let (port, port_server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::PortMarker>()
+                .expect("create proxy");
+        let () = tun_dev
+            .add_port(
+                fidl_fuchsia_net_tun::DevicePortConfig {
+                    base: Some(config),
+                    ..fidl_fuchsia_net_tun::DevicePortConfig::EMPTY
+                },
+                port_server_end,
+            )
+            .expect("add port");
+        async move {
+            // Interact with port to make sure it's installed.
+            let () = port.set_online(false).await.expect("calling set_online");
+            port
+        }
+    };
+
     let (device_control, device_control_server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::DeviceControlMarker>()
             .expect("create proxy");
     let () = installer.install_device(device, device_control_server_end).expect("install device");
 
-    {
+    let create_interface = |port_id, options| {
         let (control, control_server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
                 .expect("create proxy");
         let () = device_control
-            .create_interface(
-                netemul::PORT_ID,
-                control_server_end,
-                fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
-            )
+            .create_interface(port_id, control_server_end, options)
             .expect("create interface");
-        // Verify that interface was created.
-        let _: u64 = control.get_id().await.expect("get id");
+        control
+    };
+
+    enum KeepResource {
+        Control(fidl_fuchsia_net_interfaces_admin::ControlProxy),
+        Port(fidl_fuchsia_net_tun::PortProxy),
     }
 
-    {
-        // Attempt to create a new interface with the same port identifier.
-        let (control, control_server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
-                .expect("create proxy");
-        let () = device_control
-            .create_interface(
-                netemul::PORT_ID,
-                control_server_end,
-                fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
-            )
-            .expect("create interface");
+    let (control, _keep_alive): (_, Vec<KeepResource>) = match reason {
+        fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortAlreadyBound => {
+            let port = create_port(base_port_config).await;
+            let control1 = {
+                let control = create_interface(
+                    BASE_PORT_ID,
+                    fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
+                );
+                // Verify that interface was created.
+                let _: u64 = control.get_id().await.expect("get id");
+                control
+            };
 
-        // Observe the control channel closing because of duplicate port
-        // identifier.
-        matches::assert_matches!(control.take_event_stream().next().await, None);
-    }
+            // Create a new interface with the same port identifier.
+            let control2 =
+                create_interface(BASE_PORT_ID, fidl_fuchsia_net_interfaces_admin::Options::EMPTY);
+            (control2, vec![KeepResource::Control(control1), KeepResource::Port(port)])
+        }
+        fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::DuplicateName => {
+            let port1 = create_port(base_port_config.clone()).await;
+            let if_name = "test_same_name";
+            let control1 = {
+                let control = create_interface(
+                    BASE_PORT_ID,
+                    fidl_fuchsia_net_interfaces_admin::Options {
+                        name: Some(if_name.to_string()),
+                        ..fidl_fuchsia_net_interfaces_admin::Options::EMPTY
+                    },
+                );
+                // Verify that interface was created.
+                let _: u64 = control.get_id().await.expect("get id");
+                control
+            };
+
+            // Create a new interface with the same name.
+            const OTHER_PORT_ID: u8 = BASE_PORT_ID + 1;
+            let port2 = create_port(fidl_fuchsia_net_tun::BasePortConfig {
+                id: Some(OTHER_PORT_ID),
+                ..base_port_config
+            })
+            .await;
+
+            let control2 = create_interface(
+                OTHER_PORT_ID,
+                fidl_fuchsia_net_interfaces_admin::Options {
+                    name: Some(if_name.to_string()),
+                    ..fidl_fuchsia_net_interfaces_admin::Options::EMPTY
+                },
+            );
+            (
+                control2,
+                vec![
+                    KeepResource::Control(control1),
+                    KeepResource::Port(port1),
+                    KeepResource::Port(port2),
+                ],
+            )
+        }
+        fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::BadPort => {
+            let port = create_port(fidl_fuchsia_net_tun::BasePortConfig {
+                // netdevice/client.go only accepts IP devices that support both
+                // IPv4 and IPv6.
+                rx_types: Some(vec![fidl_fuchsia_hardware_network::FrameType::Ipv4]),
+                ..base_port_config
+            })
+            .await;
+            let control =
+                create_interface(BASE_PORT_ID, fidl_fuchsia_net_interfaces_admin::Options::EMPTY);
+            (control, vec![KeepResource::Port(port)])
+        }
+        fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortClosed => {
+            // Port closed is equivalent to port doesn't exist.
+            let control =
+                create_interface(BASE_PORT_ID, fidl_fuchsia_net_interfaces_admin::Options::EMPTY);
+            (control, vec![])
+        }
+        unknown_reason => panic!("unknown reason {:?}", unknown_reason),
+    };
+
+    // Observe terminal event.
+    let fidl_fuchsia_net_interfaces_admin::ControlEvent::OnInterfaceRemoved { reason: got_reason } =
+        control
+            .take_event_stream()
+            .try_next()
+            .await
+            .expect("waiting for terminal event")
+            .expect("closed without terminal event");
+    assert_eq!(got_reason, reason);
 }
 
 // Test that destroying a device causes device control instance to close.

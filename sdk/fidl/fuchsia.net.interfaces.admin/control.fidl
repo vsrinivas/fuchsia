@@ -81,6 +81,30 @@ protocol Control {
         // TODO(https://fxbug.dev/85667): This should be an empty enum.
         RESERVED = 0;
     };
+
+    /// Terminal event. Immediately precedes the closure of the server end of
+    /// the protocol.
+    ///
+    /// - response `reason` the removal reason.
+    -> OnInterfaceRemoved(struct {
+        reason InterfaceRemovedReason;
+    });
+};
+
+/// Possible errors observed by [`Control.OnInterfaceRemoved`].
+// TODO(https://fxbug.dev/84104): Inline on method once generated name can be
+// controlled.
+type InterfaceRemovedReason = flexible enum {
+    /// Interface failed to be instantiated because the requested name
+    /// is in use.
+    DUPLICATE_NAME = 1;
+    /// The requested port is already bound to an interface.
+    PORT_ALREADY_BOUND = 2;
+    /// The provided device port can't be made into an interface because
+    /// of incompatible configuration.
+    BAD_PORT = 3;
+    /// The device port backing this interface has been closed.
+    PORT_CLOSED = 4;
 };
 
 /// Installs devices on the network stack.

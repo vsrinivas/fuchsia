@@ -535,45 +535,80 @@ type interfacesAdminDeviceControlImpl struct {
 }
 
 func (d *interfacesAdminDeviceControlImpl) CreateInterface(_ fidl.Context, portId uint8, control admin.ControlWithCtxInterfaceRequest, options admin.Options) error {
-	closeControl := true
-	defer func() {
-		if closeControl {
-			_ = control.Close()
+
+	ifs, closeReason := func() (*ifState, admin.InterfaceRemovedReason) {
+		port, err := d.deviceClient.NewPort(context.Background(), portId)
+		if err != nil {
+			_ = syslog.WarnTf(deviceControlName, "NewPort(_, %d) failed: %s", portId, err)
+			{
+				var unsupported *netdevice.InvalidPortOperatingModeError
+				if errors.As(err, &unsupported) {
+					return nil, admin.InterfaceRemovedReasonBadPort
+				}
+			}
+			{
+				var alreadyBound *netdevice.PortAlreadyBoundError
+				if errors.As(err, &alreadyBound) {
+					return nil, admin.InterfaceRemovedReasonPortAlreadyBound
+				}
+			}
+
+			// Assume all other errors are due to problems communicating with the
+			// port.
+			return nil, admin.InterfaceRemovedReasonPortClosed
 		}
-	}()
-	port, err := d.deviceClient.NewPort(context.Background(), portId)
-	if err != nil {
-		_ = syslog.WarnTf(deviceControlName, "NewPort(_, %d) failed: %s", portId, err)
-		return nil
-	}
-	defer func() {
-		if port != nil {
-			_ = port.Close()
+		defer func() {
+			if port != nil {
+				_ = port.Close()
+			}
+		}()
+
+		var namePrefix string
+		var linkEndpoint stack.LinkEndpoint
+		switch mode := port.Mode(); mode {
+		case netdevice.PortModeEthernet:
+			namePrefix = "eth"
+			linkEndpoint = ethernet.New(port)
+		case netdevice.PortModeIp:
+			namePrefix = "ip"
+			linkEndpoint = port
+		default:
+			panic(fmt.Sprintf("unknown port mode %d", mode))
 		}
+
+		ifs, err := d.ns.addEndpoint(
+			makeEndpointName(namePrefix, options.GetNameWithDefault("")),
+			linkEndpoint,
+			port,
+			port,
+			routes.Metric(options.GetMetricWithDefault(0)),
+		)
+		if err != nil {
+			_ = syslog.WarnTf(deviceControlName, "addEndpoint failed: %s", err)
+			var tcpipError *TcpIpError
+			if errors.As(err, &tcpipError) {
+				switch tcpipError.Err.(type) {
+				case *tcpip.ErrDuplicateNICID:
+					return nil, admin.InterfaceRemovedReasonDuplicateName
+				}
+			}
+			panic(fmt.Sprintf("unexpected error ns.AddEndpoint(..) = %s", err))
+		}
+
+		// Prevent deferred cleanup from running.
+		port = nil
+
+		return ifs, 0
 	}()
 
-	var namePrefix string
-	var linkEndpoint stack.LinkEndpoint
-	switch mode := port.Mode(); mode {
-	case netdevice.PortModeEthernet:
-		namePrefix = "eth"
-		linkEndpoint = ethernet.New(port)
-	case netdevice.PortModeIp:
-		namePrefix = "ip"
-		linkEndpoint = port
-	default:
-		panic(fmt.Sprintf("unknown port mode %d", mode))
-	}
-
-	ifs, err := d.ns.addEndpoint(
-		makeEndpointName(namePrefix, options.GetNameWithDefault("")),
-		linkEndpoint,
-		port,
-		port,
-		routes.Metric(options.GetMetricWithDefault(0)),
-	)
-	if err != nil {
-		_ = syslog.WarnTf(deviceControlName, "addEndpoint failed: %s", err)
+	if closeReason != 0 {
+		proxy := admin.ControlEventProxy{
+			Channel: control.Channel,
+		}
+		if err := proxy.OnInterfaceRemoved(closeReason); err != nil {
+			_ = syslog.WarnTf(deviceControlName, "failed to write terminal event %s: %s", closeReason, err)
+		}
+		_ = control.Close()
 		return nil
 	}
 
@@ -585,10 +620,6 @@ func (d *interfacesAdminDeviceControlImpl) CreateInterface(_ fidl.Context, portI
 	}
 
 	ifs.adminControls.addImpl(ctx, &impl, control)
-
-	// Prevent deferred cleanup from running.
-	closeControl = false
-	port = nil
 
 	return nil
 }
