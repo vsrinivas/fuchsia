@@ -21,6 +21,7 @@
 
 #include "src/camera/bin/camera-gym/buffer_collage.h"
 #include "src/camera/bin/camera-gym/controller_receiver.h"
+#include "src/camera/bin/camera-gym/frame_capture.h"
 #include "src/camera/bin/camera-gym/lifecycle_impl.h"
 #include "src/camera/bin/camera-gym/stream_cycler.h"
 #include "src/lib/fxl/command_line.h"
@@ -67,6 +68,24 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
   auto collage = collage_result.take_value();
+
+  // Support frame capture.
+  async::Loop capture_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  async::Loop archive_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  auto frame_capture = std::make_unique<camera::FrameCapture>();
+  frame_capture->set_capture_dispatcher(capture_loop.dispatcher());
+  frame_capture->set_archive_dispatcher(archive_loop.dispatcher());
+  status = capture_loop.StartThread("Capture Thread");
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to create Capture Thread";
+    return EXIT_FAILURE;
+  }
+  status = archive_loop.StartThread("Archive Thread");
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to create Archive Thread";
+    return EXIT_FAILURE;
+  }
+  collage->SetFrameCapture(std::move(frame_capture));
 
   // Connect to required services for the cycler.
   fuchsia::camera3::DeviceWatcherHandle watcher;
@@ -160,10 +179,14 @@ int main(int argc, char* argv[]) {
     camera::ControllerReceiver::CommandHandler command_handler =
         [&cycler, &collage](fuchsia::camera::gym::Command command,
                             camera::ControllerReceiver::SendCommandCallback callback) {
-          if (command.Which() == Command::Tag::kSetDescription) {
-            collage->ExecuteCommand(std::move(command), std::move(callback));
-          } else {
-            cycler->ExecuteCommand(std::move(command), std::move(callback));
+          switch (command.Which()) {
+            case Command::Tag::kSetDescription:
+            case Command::Tag::kCaptureFrame:
+              collage->ExecuteCommand(std::move(command), std::move(callback));
+              break;
+            default:
+              cycler->ExecuteCommand(std::move(command), std::move(callback));
+              break;
           }
         };
     controller_receiver->SetHandlers(std::move(command_handler));
