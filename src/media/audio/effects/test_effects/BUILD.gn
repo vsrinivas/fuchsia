@@ -2,11 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-loadable_module("test_effects") {
+loadable_module("test_effects_v1") {
   sources = [
     "test_effects_v1.cc",
     "test_effects_v1.h",
   ]
 
   deps = [ "//sdk/lib/media/audio/effects" ]
+}
+
+source_set("test_effects_v2") {
+  sources = [
+    "test_effects_v2.cc",
+    "test_effects_v2.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects_llcpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
 }

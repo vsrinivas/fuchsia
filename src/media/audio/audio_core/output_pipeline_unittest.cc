@@ -273,7 +273,7 @@ TEST_F(OutputPipelineTest, Loopback) {
       .effects_v1 =
           {
               {
-                  .lib_name = "test_effects.so",
+                  .lib_name = "test_effects_v1.so",
                   .effect_name = "add_1.0",
                   .instance_name = "",
                   .effect_config = "",
@@ -291,7 +291,7 @@ TEST_F(OutputPipelineTest, Loopback) {
           .effects_v1 =
               {
                   {
-                      .lib_name = "test_effects.so",
+                      .lib_name = "test_effects_v1.so",
                       .effect_name = "add_1.0",
                       .instance_name = "",
                       .effect_config = "",
@@ -366,7 +366,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
       .effects_v1 =
           {
               {
-                  .lib_name = "test_effects.so",
+                  .lib_name = "test_effects_v1.so",
                   .effect_name = "add_1.0",
                   .instance_name = "",
                   .effect_config = "",
@@ -384,7 +384,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
           .effects_v1 =
               {
                   {
-                      .lib_name = "test_effects.so",
+                      .lib_name = "test_effects_v1.so",
                       .effect_name = "add_1.0",
                       .instance_name = "",
                       .effect_config = "",
@@ -461,7 +461,7 @@ TEST_F(OutputPipelineTest, UpdateEffect) {
       .effects_v1 =
           {
               {
-                  .lib_name = "test_effects.so",
+                  .lib_name = "test_effects_v1.so",
                   .effect_name = "assign_config_size",
                   .instance_name = kInstanceName,
                   .effect_config = "",
@@ -532,7 +532,7 @@ TEST_F(OutputPipelineTest, ReportPresentationDelay) {
                      .effects_v1 =
                          {
                              {
-                                 .lib_name = "test_effects.so",
+                                 .lib_name = "test_effects_v1.so",
                                  .effect_name = "effect_with_delay_300",
                                  .effect_config = "",
                              },
@@ -549,7 +549,7 @@ TEST_F(OutputPipelineTest, ReportPresentationDelay) {
                      .effects_v1 =
                          {
                              {
-                                 .lib_name = "test_effects.so",
+                                 .lib_name = "test_effects_v1.so",
                                  .effect_name = "effect_with_delay_900",
                                  .effect_config = "",
                              },
@@ -745,7 +745,7 @@ TEST_F(OutputPipelineTest, PipelineWithRechannelEffects) {
       .effects_v1 =
           {
               {
-                  .lib_name = "test_effects.so",
+                  .lib_name = "test_effects_v1.so",
                   .effect_name = "add_1.0",
                   .instance_name = "",
                   .effect_config = "",
@@ -764,7 +764,7 @@ TEST_F(OutputPipelineTest, PipelineWithRechannelEffects) {
           .effects_v1 =
               {
                   {
-                      .lib_name = "test_effects.so",
+                      .lib_name = "test_effects_v1.so",
                       .effect_name = "add_1.0",
                       .instance_name = "",
                       .effect_config = "",
@@ -801,7 +801,7 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
       .effects_v1 =
           {
               {
-                  .lib_name = "test_effects.so",
+                  .lib_name = "test_effects_v1.so",
                   .effect_name = "add_1.0",
                   .instance_name = "",
                   .effect_config = "",
@@ -819,7 +819,7 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
           .effects_v1 =
               {
                   {
-                      .lib_name = "test_effects.so",
+                      .lib_name = "test_effects_v1.so",
                       .effect_name = "add_1.0",
                       .instance_name = "",
                       .effect_config = "",

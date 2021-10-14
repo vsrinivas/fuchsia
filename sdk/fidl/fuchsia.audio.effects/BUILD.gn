@@ -5,7 +5,10 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.audio.effects") {
-  sources = [ "processor.fidl" ]
+  sources = [
+    "creator.fidl",
+    "processor.fidl",
+  ]
 
   sdk_category = "partner"
 

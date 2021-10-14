@@ -421,7 +421,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
       .effects_v1 =
           {
               {
-                  .lib_name = "test_effects.so",
+                  .lib_name = "test_effects_v1.so",
                   .effect_name = "add_1.0",
                   .instance_name = "",
                   .effect_config = "",
@@ -439,7 +439,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
           .effects_v1 =
               {
                   {
-                      .lib_name = "test_effects.so",
+                      .lib_name = "test_effects_v1.so",
                       .effect_name = "add_1.0",
                       .instance_name = "",
                       .effect_config = "",

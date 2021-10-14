@@ -168,12 +168,12 @@ fuchsia_audio_effects::wire::ProcessorConfiguration MakeProcessorConfig(Arena& a
   }
 
   fidl::VectorView<fuchsia_audio_effects::wire::InputConfiguration> inputs(arena, 1);
-  inputs[0] = fuchsia_audio_effects::wire::InputConfiguration(arena);
+  inputs[0].Allocate(arena);
   inputs[0].set_buffer(arena, std::move(options.input_buffer));
   inputs[0].set_format(arena, std::move(options.input_format));
 
   fidl::VectorView<fuchsia_audio_effects::wire::OutputConfiguration> outputs(arena, 1);
-  outputs[0] = fuchsia_audio_effects::wire::OutputConfiguration(arena);
+  outputs[0].Allocate(arena);
   outputs[0].set_buffer(arena, std::move(options.output_buffer));
   outputs[0].set_format(arena, std::move(options.output_format));
   if (options.latency_frames) {

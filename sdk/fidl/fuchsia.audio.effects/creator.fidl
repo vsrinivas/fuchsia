@@ -1,0 +1,22 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.audio.effects;
+
+using zx;
+
+/// A factory for creating processors.
+@discoverable
+protocol ProcessorCreator {
+    /// Create a new Processor and return it's ProcessorConfiguration.
+    ///
+    /// + request `name` A string naming the processor to create. The meaning of this
+    ///   name is up to the implementor.
+    /// - response `processor_configuration` Description of the new processor.
+    /// * error A zx.status value indicating success or failure.
+    Create(struct {
+        name string:1024;
+    }) -> (resource struct {
+        processor_configuration ProcessorConfiguration;
+    }) error zx.status;
+};

@@ -13,7 +13,7 @@
 
 namespace media::audio::testing {
 
-// The |EffectsLoaderTestBase| is a test fixture that enables tests using the 'test_effects.so'
+// The |EffectsLoaderTestBase| is a test fixture that enables tests using the 'test_effects_v1.so'
 // module. This module provides 2 exports; the standard Fuchsia Audio Effect ABI that allows the
 // plugin to function with the Fuchsia Audio stack, and an additional 'test effects extension'
 // ABI which is an ABI defined by the test_effects module to allow tests to control the behavior

@@ -36,11 +36,9 @@ protocol Processor {
     /// For each output k, input frame 0 has the same presentation time as the frame at
     /// output[k].buffer[output[k].latency_frames].
     ///
-    /// ## Args
-    ///
-    /// * `num_frames` the number of frames to process
-    /// * `options` extra options
-    /// * error a zx.status value indicating success or failure
+    /// + request `num_frames` The number of frames to process.
+    /// + request `options` Extra options.
+    /// * error A zx.status value indicating success or failure.
     Process(struct {
         num_frames uint64;
         options ProcessOptions;

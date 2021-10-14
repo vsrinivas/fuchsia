@@ -19,6 +19,13 @@ table/member fuchsia.audio.effects/ProcessorConfiguration.max_frames_per_call ui
 table/member fuchsia.audio.effects/ProcessorConfiguration.outputs vector<fuchsia.audio.effects/OutputConfiguration>:8
 table/member fuchsia.audio.effects/ProcessorConfiguration.processor client_end:fuchsia.audio.effects/Processor
 resource table fuchsia.audio.effects/ProcessorConfiguration
+protocol/member fuchsia.audio.effects/ProcessorCreator.Create(string:1024 name) -> (fuchsia.audio.effects/ProcessorCreator_Create_Result result)
+protocol fuchsia.audio.effects/ProcessorCreator
+struct/member fuchsia.audio.effects/ProcessorCreator_Create_Response.processor_configuration fuchsia.audio.effects/ProcessorConfiguration
+resource struct fuchsia.audio.effects/ProcessorCreator_Create_Response
+union/member fuchsia.audio.effects/ProcessorCreator_Create_Result.err int32
+union/member fuchsia.audio.effects/ProcessorCreator_Create_Result.response fuchsia.audio.effects/ProcessorCreator_Create_Response
+resource strict union fuchsia.audio.effects/ProcessorCreator_Create_Result
 struct fuchsia.audio.effects/Processor_Process_Response
 union/member fuchsia.audio.effects/Processor_Process_Result.err int32
 union/member fuchsia.audio.effects/Processor_Process_Result.response fuchsia.audio.effects/Processor_Process_Response

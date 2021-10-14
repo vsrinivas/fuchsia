@@ -14,7 +14,7 @@
 
 namespace media::audio::testing {
 
-static constexpr char kTestEffectsModuleName[] = "test_effects.so";
+static constexpr char kTestEffectsModuleName[] = "test_effects_v1.so";
 
 // Opens the 'extension' interface to the test_effects module. This is an auxiliary ABI in addition
 // to the Fuchsia Effects ABI that allows the behavior of the test_effects module to be controlled
