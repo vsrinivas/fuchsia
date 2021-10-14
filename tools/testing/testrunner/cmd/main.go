@@ -46,8 +46,7 @@ const (
 	testOutDirEnvKey = "FUCHSIA_TEST_OUTDIR"
 )
 
-// Command-line flags
-var (
+type testrunnerFlags struct {
 	// Whether to show Usage and exit.
 	help bool
 
@@ -68,11 +67,11 @@ var (
 	perTestTimeout time.Duration
 
 	// Logger level.
-	level = logger.InfoLevel
+	logLevel logger.LogLevel
 
 	// The path to the ffx tool.
 	ffxPath string
-)
+}
 
 func usage() {
 	fmt.Printf(`testrunner [flags] tests-file
@@ -85,19 +84,23 @@ SSH key corresponding to a authorized key to be set in the environment under
 }
 
 func main() {
-	flag.BoolVar(&help, "help", false, "Whether to show Usage and exit.")
-	flag.StringVar(&outDir, "out-dir", "", "Optional path where a directory containing test results should be created.")
-	flag.StringVar(&localWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
-	flag.BoolVar(&useRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
-	flag.StringVar(&snapshotFile, "snapshot-output", "", "The output filename for the snapshot. This will be created in the output directory.")
+	var flags testrunnerFlags
+	flags.logLevel = logger.InfoLevel // Default that may be overridden.
+
+	flag.BoolVar(&flags.help, "help", false, "Whether to show Usage and exit.")
+	flag.StringVar(&flags.outDir, "out-dir", "", "Optional path where a directory containing test results should be created.")
+	flag.StringVar(&flags.localWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
+	flag.BoolVar(&flags.useRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
+	flag.StringVar(&flags.snapshotFile, "snapshot-output", "", "The output filename for the snapshot. This will be created in the output directory.")
 	// TODO(fxbug.dev/36480): Support different timeouts for different tests.
-	flag.DurationVar(&perTestTimeout, "per-test-timeout", 0, "Per-test timeout, applied to all tests. Ignored if <= 0.")
-	flag.Var(&level, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
-	flag.StringVar(&ffxPath, "ffx", "", "Path to the ffx tool.")
+	flag.DurationVar(&flags.perTestTimeout, "per-test-timeout", 0, "Per-test timeout, applied to all tests. Ignored if <= 0.")
+	flag.Var(&flags.logLevel, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
+	flag.StringVar(&flags.ffxPath, "ffx", "", "Path to the ffx tool.")
+
 	flag.Usage = usage
 	flag.Parse()
 
-	if help || flag.NArg() != 1 {
+	if flags.help || flag.NArg() != 1 {
 		flag.Usage()
 		flag.PrintDefaults()
 		return
@@ -108,18 +111,18 @@ func main() {
 	// Our mDNS library doesn't use the logger library.
 	log.SetFlags(logFlags)
 
-	log := logger.NewLogger(level, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "testrunner ")
+	log := logger.NewLogger(flags.logLevel, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "testrunner ")
 	log.SetFlags(logFlags)
 	ctx := logger.WithLogger(context.Background(), log)
 	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
-	if err := setupAndExecute(ctx); err != nil {
+	if err := setupAndExecute(ctx, flags); err != nil {
 		logger.Fatalf(ctx, err.Error())
 	}
 }
 
-func setupAndExecute(ctx context.Context) error {
+func setupAndExecute(ctx context.Context, flags testrunnerFlags) error {
 	testsPath := flag.Arg(0)
 	tests, err := loadTests(testsPath)
 	if err != nil {
@@ -128,7 +131,7 @@ func setupAndExecute(ctx context.Context) error {
 
 	// Configure a test outputs object, responsible for producing TAP output,
 	// recording data sinks, and archiving other test outputs.
-	testOutDir := filepath.Join(os.Getenv(testOutDirEnvKey), outDir)
+	testOutDir := filepath.Join(os.Getenv(testOutDirEnvKey), flags.outDir)
 	if testOutDir == "" {
 		var err error
 		testOutDir, err = ioutil.TempDir("", "testrunner")
@@ -163,7 +166,7 @@ func setupAndExecute(ctx context.Context) error {
 	defer cleanUp()
 
 	serialSocketPath := os.Getenv(constants.SerialSocketEnvKey)
-	return execute(ctx, tests, outputs, addr, sshKeyFile, serialSocketPath, testOutDir)
+	return execute(ctx, tests, outputs, addr, sshKeyFile, serialSocketPath, testOutDir, flags)
 }
 
 func validateTest(test testsharder.Test) error {
@@ -235,7 +238,16 @@ var ffxInstance = func(ffxPath string, dir string, env []string, target, sshKey 
 	return ffx, err
 }
 
-func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs, addr net.IPAddr, sshKeyFile, serialSocketPath, outDir string) error {
+func execute(
+	ctx context.Context,
+	tests []testsharder.Test,
+	outputs *testOutputs,
+	addr net.IPAddr,
+	sshKeyFile,
+	serialSocketPath,
+	outDir string,
+	flags testrunnerFlags,
+) error {
 	var fuchsiaSinks, localSinks []runtests.DataSinkReference
 	var fuchsiaTester, localTester tester
 	var finalError error
@@ -254,7 +266,9 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 				var err error
 				if sshKeyFile != "" {
 					var ffx ffxTester
-					ffx, err = ffxInstance(ffxPath, localWD, localEnv, os.Getenv(constants.NodenameEnvKey), os.Getenv(constants.SSHKeyEnvKey), outputs.outDir)
+					ffx, err = ffxInstance(
+						flags.ffxPath, flags.localWD, localEnv, os.Getenv(constants.NodenameEnvKey),
+						os.Getenv(constants.SSHKeyEnvKey), outputs.outDir)
 					if err != nil {
 						finalError = err
 						break
@@ -262,13 +276,15 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 					if ffx != nil {
 						defer ffx.Stop()
 					}
-					fuchsiaTester, err = sshTester(ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, useRuntests, perTestTimeout, ffx)
+					fuchsiaTester, err = sshTester(
+						ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, flags.useRuntests,
+						flags.perTestTimeout, ffx)
 				} else {
 					if serialSocketPath == "" {
 						finalError = fmt.Errorf("%q must be set if %q is not set", constants.SerialSocketEnvKey, constants.SSHKeyEnvKey)
 						break
 					}
-					fuchsiaTester, err = serialTester(ctx, serialSocketPath, perTestTimeout)
+					fuchsiaTester, err = serialTester(ctx, serialSocketPath, flags.perTestTimeout)
 				}
 				if err != nil {
 					finalError = fmt.Errorf("failed to initialize fuchsia tester: %w", err)
@@ -289,20 +305,24 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			// Initialize the fuchsia SSH tester to run the snapshot at the end in case
 			// we ran any host-target interaction tests.
 			if fuchsiaTester == nil && sshKeyFile != "" {
-				ffx, err := ffxInstance(ffxPath, localWD, localEnv, os.Getenv(constants.NodenameEnvKey), os.Getenv(constants.SSHKeyEnvKey), outputs.outDir)
+				ffx, err := ffxInstance(
+					flags.ffxPath, flags.localWD, localEnv, os.Getenv(constants.NodenameEnvKey),
+					os.Getenv(constants.SSHKeyEnvKey), outputs.outDir)
 				if err != nil {
 					logger.Errorf(ctx, "failed to initialize fuchsia tester: %s", err)
 				}
 				if ffx != nil {
 					defer ffx.Stop()
 				}
-				fuchsiaTester, err = sshTester(ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, useRuntests, perTestTimeout, ffx)
+				fuchsiaTester, err = sshTester(
+					ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, flags.useRuntests,
+					flags.perTestTimeout, ffx)
 				if err != nil {
 					logger.Errorf(ctx, "failed to initialize fuchsia tester: %s", err)
 				}
 			}
 			if localTester == nil {
-				localTester = newSubprocessTester(localWD, localEnv, outputs.outDir, perTestTimeout)
+				localTester = newSubprocessTester(flags.localWD, localEnv, outputs.outDir, flags.perTestTimeout)
 			}
 			t = localTester
 			sinks = &localSinks
@@ -315,7 +335,7 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			break
 		}
 
-		results, err := runAndOutputTest(ctx, test, t, outputs, os.Stdout, os.Stderr, outDir, perTestTimeout)
+		results, err := runAndOutputTest(ctx, test, t, outputs, os.Stdout, os.Stderr, outDir, flags.perTestTimeout)
 		if err != nil {
 			finalError = err
 			break
@@ -333,7 +353,7 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 	}
 	finalize := func(t tester, sinks []runtests.DataSinkReference) error {
 		if t != nil {
-			if err := t.RunSnapshot(ctx, snapshotFile); err != nil {
+			if err := t.RunSnapshot(ctx, flags.snapshotFile); err != nil {
 				// This error usually has a different root cause that gets masked when we
 				// return this error. Log it so we can keep track of it, but don't fail.
 				logger.Errorf(ctx, err.Error())

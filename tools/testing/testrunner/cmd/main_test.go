@@ -670,7 +670,7 @@ func TestExecute(t *testing.T) {
 				t.Fatalf("failed to create a test outputs object: %s", err)
 			}
 			defer o.Close()
-			err = execute(context.Background(), tests, o, net.IPAddr{}, c.sshKeyFile, c.serialSocketPath, "out-dir")
+			err = execute(context.Background(), tests, o, net.IPAddr{}, c.sshKeyFile, c.serialSocketPath, "out-dir", testrunnerFlags{})
 			if c.wantErr {
 				if err == nil {
 					t.Errorf("got nil error, want an error for failing to initialize a tester")
