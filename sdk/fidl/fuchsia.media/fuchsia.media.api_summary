@@ -123,6 +123,8 @@ protocol/member fuchsia.media/AudioCore.CreateAudioCapturer(bool loopback,server
 protocol/member fuchsia.media/AudioCore.CreateAudioCapturerWithConfiguration(fuchsia.media/AudioStreamType stream_type,fuchsia.media/AudioCapturerConfiguration configuration,server_end:fuchsia.media/AudioCapturer audio_capturer_request)
 protocol/member fuchsia.media/AudioCore.CreateAudioRenderer(server_end:fuchsia.media/AudioRenderer audio_out_request)
 protocol/member fuchsia.media/AudioCore.EnableDeviceSettings(bool enabled)
+protocol/member fuchsia.media/AudioCore.GetDbFromVolume(fuchsia.media/Usage usage,float32 volume) -> (float32 gain_db)
+protocol/member fuchsia.media/AudioCore.GetVolumeFromDb(fuchsia.media/Usage usage,float32 gain_db) -> (float32 volume)
 protocol/member fuchsia.media/AudioCore.LoadDefaults()
 protocol/member fuchsia.media/AudioCore.ResetInteractions()
 protocol/member fuchsia.media/AudioCore.SetCaptureUsageGain(fuchsia.media/AudioCaptureUsage usage,float32 gain_db)

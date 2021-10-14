@@ -197,6 +197,26 @@ protocol AudioCore {
         volume_control server_end:fuchsia.media.audio.VolumeControl;
     });
 
+    /// Query the volume percentage [0, 1] that maps to a `gain_db` value for a particular `usage`.
+    /// This is the same mapping as used by the VolumeControl from `BindUsageVolumeControl`.
+    @transitional
+    GetVolumeFromDb(struct {
+        usage Usage;
+        gain_db float32;
+    }) -> (struct {
+        volume float32;
+    });
+
+    /// Query the decibal value that maps to a volume percentage [0, 1] for a particular `usage`.
+    /// This is the same mapping as used by the VolumeControl from `BindUsageVolumeControl`.
+    @transitional
+    GetDbFromVolume(struct {
+        usage Usage;
+        volume float32;
+    }) -> (struct {
+        gain_db float32;
+    });
+
     /// SetInteraction allows changing how audio_core handles interactions of multiple active
     /// streams simultaneously.  If streams of Usage `active` are processing audio, and streams of
     /// Usage `affected` are as well, the Behavior specified will be applied to the streams of Usage
