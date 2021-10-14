@@ -260,3 +260,866 @@ decode_failure("TableCountExceedsRemainingMessageSize") {
     },
     err = TOO_FEW_BYTES,
 }
+
+success("EmptyTable") {
+    value = StructOfEmptyTable {
+        table: EmptyTable {},
+    },
+    bytes = {
+        v1, v2 = [
+            0, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+        ],
+    },
+}
+
+success("SimpleTableEmpty") {
+    value = StructOfSimpleTable {
+        table: SimpleTable {},
+    },
+    bytes = {
+        v1, v2 = [
+            0, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+        ],
+    },
+}
+
+success("SimpleTableXAndY") {
+    value = StructOfSimpleTable {
+        table: SimpleTable {
+            x: 42,
+            y: 67,
+        },
+    },
+    bytes = {
+        v1 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+        v2 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num_bytes / num handles / not inlined
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: zero envelope
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: zero envelope
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: zero envelope
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles / not inlined
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+    },
+}
+
+success("SimpleTableJustX") {
+    value = StructOfSimpleTable {
+        table: SimpleTable {
+            x: 42,
+        },
+    },
+    bytes = {
+        v1 = [
+            1, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+        ],
+        v2 = [
+             1, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+             8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: value / num handles / not inlined
+             42, 0, 0, 0, 0, 0, 0, 0, // field X
+        ],
+    },
+}
+
+success("SimpleTableJustY") {
+    value = StructOfSimpleTable {
+        table: SimpleTable {
+            y: 67,
+        },
+    },
+    bytes = {
+        v1 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+        v2 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: value / num handles / not inlined
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+    },
+}
+
+success("TableWithStringAndVectorNoVectorContent") {
+    value = StructOfTableWithStringAndVector {
+        table: TableWithStringAndVector {
+            foo: "hello",
+            bar: 27,
+        },
+    },
+    bytes = {
+        v1 = [
+            2, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            24, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // envelope 1: alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // envelope 2: alloc present
+            5, 0, 0, 0, 0, 0, 0, 0, // element 1: length
+            255, 255, 255, 255, 255, 255, 255, 255, // element 1: alloc present
+            104, 101, 108, 108, 111, 0, 0, 0, // element 1: hello
+            27, 0, 0, 0, 0, 0, 0, 0, // element 2: value
+        ],
+        v2 = [
+            2, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            24, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            27, 0, 0, 0, 0, 0, 1, 0, // envelope 2: num bytes / num handles / inlined
+            5, 0, 0, 0, 0, 0, 0, 0, // element 1: length
+            255, 255, 255, 255, 255, 255, 255, 255, // element 1: alloc present
+            104, 101, 108, 108, 111, 0, 0, 0, // element 1: hello
+        ],
+    },
+}
+
+// TODO(fxbug.dev/7948): Create test with TableWithStringAndVectorHasVectorContent.
+
+success("SimpleTableThenUint64") {
+    value = SimpleTableThenUint64 {
+        table: SimpleTable {
+            x: 42,
+            y: 67,
+        },
+        number: 0xdeadbeefdeadbeef,
+    },
+    bytes = {
+        v1 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0xef, 0xbe, 0xad, 0xde, 0xef, 0xbe, 0xad, 0xde, // uint64 number
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+        v2 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0xef, 0xbe, 0xad, 0xde, 0xef, 0xbe, 0xad, 0xde, // uint64 number
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles / not inlined
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: zero envelope
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: zero envelope
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: zero envelope
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles / not inlined
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+    },
+}
+
+success("ReverseOrdinalTable") {
+    value = StructOfReverseOrdinalTable {
+        table: ReverseOrdinalTable {
+            x: 0xaa,
+            y: 0xbb,
+            z: 0xcc,
+        },
+    },
+    bytes = {
+        v1 = [
+            // table
+            0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // max ordinal 4
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
+            // z envelope (ordinal 1)
+            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
+            // y envelope (ordinal 2)
+            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
+            // empty envelope (reserved ordinal 3)
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0 bytes, 0 handles
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // null
+            // x envelope (ordinal 4)
+            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
+
+            0xcc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // z
+            0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // y
+            0xaa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // x
+        ],
+        v2 = [
+            // table
+            0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // max ordinal 4
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
+            // z envelope (ordinal 1)
+            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles, not inlined
+            // y envelope (ordinal 2)
+            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles, not inlined
+            // empty envelope (reserved ordinal 3)
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // zero envelope
+            // x envelope (ordinal 4)
+            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles, not inlined
+
+            0xcc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // z
+            0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // y
+            0xaa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // x
+        ],
+    },
+}
+
+success("TableWithGaps") {
+    value = StructOfTableWithGaps {
+        table: TableWithGaps {
+            second: 1,
+            fourth: 2,
+        },
+    },
+    bytes = {
+        v1 = [
+            num(4):8, repeat(0xff):8, // max ordinal, present
+            num(0):4, num(0):4, repeat(0x00):8, // envelope #1: empty
+            num(8):4, num(0):4, repeat(0xff):8, // envelope #2: second
+            num(0):4, num(0):4, repeat(0x00):8, // envelope #3: empty
+            num(8):4, num(0):4, repeat(0xff):8, // envelope #2: fourth
+            num(1):4, padding:4, // second
+            num(2):4, padding:4, // fourth
+        ],
+        v2 = [
+            num(4):8, repeat(0xff):8, // max ordinal, present
+            num(0):4, num(0):2, num(0):2, // envelope #1: empty
+            num(1):4, num(0):2, num(1):2, // envelope #2: second (inlined)
+            num(0):4, num(0):2, num(0):2, // envelope #3: empty
+            num(2):4, num(0):2, num(1):2, // envelope #2: fourth (inlined)
+        ],
+    },
+}
+
+decode_success("ValueTableUnknownReservedDropped") {
+    // LLCPP is the only binding that does not store unknowns.
+    bindings_allowlist = [llcpp],
+    bytes = {
+        v1 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+        v2 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+    },
+    value = StructOfSimpleTable {
+        table: SimpleTable {
+            x: 42,
+            y: 67,
+        },
+    },
+}
+
+decode_success("ResourceTableUnknownReservedDropped") {
+    // LLCPP is the only binding that does not store unknowns.
+    bindings_allowlist = [llcpp],
+    bytes = {
+        v1 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+        v2 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+    },
+    value = StructOfSimpleResourceTable {
+        table: SimpleResourceTable {
+            x: 42,
+            y: 67,
+        },
+    },
+}
+
+success("ValueTableUnknownReservedStored") {
+    // LLCPP is tested in the ValueTableUnknownReservedDropped test
+    bindings_denylist = [llcpp],
+    bytes = {
+        v1 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+        v2 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+    },
+    value = StructOfSimpleTable {
+        table: SimpleTable {
+            x: 42,
+            y: 67,
+            3: {
+                bytes = [1, 2, 3, 4, 5, 6, 7, 8]
+            },
+        },
+    },
+}
+
+success("ResourceTableUnknownReservedStored") {
+    // LLCPP is tested in the ResourceTableUnknownReservedDropped test
+    bindings_denylist = [llcpp],
+    bytes = {
+        v1 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+        v2 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+    },
+    value = StructOfSimpleResourceTable {
+        table: SimpleResourceTable {
+            x: 42,
+            y: 67,
+            3: {
+                bytes = [1, 2, 3, 4, 5, 6, 7, 8]
+            },
+        },
+    },
+}
+
+decode_success("ValueTableUnknownTrailingDropped") {
+    // LLCPP is the only binding that does not store unknowns.
+    bindings_allowlist = [llcpp],
+    bytes = {
+        v1 = [
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1, 2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ],
+        v2 = [
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1, 2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ],
+    },
+    value = StructOfSimpleTable {
+        table: SimpleTable {
+            x: 42,
+            y: 67,
+        },
+    },
+}
+
+decode_success("ResourceTableUnknownTrailingDropped") {
+    // LLCPP is the only binding that does not store unknowns.
+    bindings_allowlist = [llcpp],
+    bytes = {
+        v1 = [
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1, 2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ],
+        v2 = [
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1, 2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ],
+    },
+    value = StructOfSimpleResourceTable {
+        table: SimpleResourceTable {
+            x: 42,
+            y: 67,
+        },
+    },
+}
+
+success("ValueTableUnknownTrailingStored") {
+    // LLCPP is tested in the ValueTableUnknownTrailingDropped test
+    bindings_denylist = [llcpp],
+    bytes = {
+        v1 = [
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ],
+        v2 = [
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ],
+    },
+    value = StructOfSimpleTable {
+        table: SimpleTable {
+            x: 42,
+            y: 67,
+            6: {
+                bytes = [1, 2, 3, 4, 5, 6, 7, 8]
+            },
+        },
+    },
+}
+
+success("ResourceTableUnknownTrailingStored") {
+    // LLCPP is tested in the ResourceTableUnknownTrailingDropped test
+    bindings_denylist = [llcpp],
+    bytes = {
+        v1 = [
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ],
+        v2 = [
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ],
+    },
+    value = StructOfSimpleResourceTable {
+        table: SimpleResourceTable {
+            x: 42,
+            y: 67,
+            6: {
+                bytes = [1, 2, 3, 4, 5, 6, 7, 8]
+            },
+        },
+    },
+}
+
+decode_success("ValueTableUnknownTrailingHandlesDropped") {
+    // LLCPP is the only binding that does not store unknowns.
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    value = StructOfSimpleTable {
+        table: SimpleTable {
+            y: 67,
+        },
+    },
+    bytes = {
+        v1 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 1
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 2
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 3
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 4
+            num(8):4, num(0):4, repeat(0xff):8, // envelope 5 (field Y)
+            num(24):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
+            num(67):8, // field Y
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, // absent envelope 1
+            num(0):4, num(0):4, // absent envelope 2
+            num(0):4, num(0):4, // absent envelope 3
+            num(0):4, num(0):4, // absent envelope 4
+            num(8):4, num(0):4, // envelope 5 (field Y)
+            num(24):4, num(3):4, // envelope 6 (unknown)
+            num(67):8, // field Y
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2,
+        ]
+    }
+}
+
+decode_success("ResourceTableUnknownTrailingHandlesDropped") {
+    // LLCPP is the only binding that does not store unknowns.
+    bindings_allowlist = [llcpp],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    value = StructOfSimpleResourceTable {
+        table: SimpleResourceTable {
+            y: 67,
+        },
+    },
+    bytes = {
+        v1 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 1
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 2
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 3
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 4
+            num(8):4, num(0):4, repeat(0xff):8, // envelope 5 (field Y)
+            num(24):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
+            num(67):8, // field Y
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, // absent envelope 1
+            num(0):4, num(0):4, // absent envelope 2
+            num(0):4, num(0):4, // absent envelope 3
+            num(0):4, num(0):4, // absent envelope 4
+            num(8):4, num(0):4, // envelope 5 (field Y)
+            num(24):4, num(3):4, // envelope 6 (unknown)
+            num(67):8, // field Y
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2,
+        ]
+    }
+}
+
+decode_failure("ValueTableUnknownTrailingHandlesRejected") {
+    // LLCPP is tested in the ValueTableUnknownTrailingHandlesDropped test
+    bindings_denylist = [c, llcpp],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    type = StructOfSimpleTable,
+    bytes = {
+        v1 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 1
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 2
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 3
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 4
+            num(8):4, num(0):4, repeat(0xff):8, // envelope 5 (field Y)
+            num(24):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
+            num(67):8, // field Y
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, // absent envelope 1
+            num(0):4, num(0):4, // absent envelope 2
+            num(0):4, num(0):4, // absent envelope 3
+            num(0):4, num(0):4, // absent envelope 4
+            num(8):4, num(0):4, // envelope 5 (field Y)
+            num(24):4, num(3):4, // envelope 6 (unknown)
+            num(67):8, // field Y
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2,
+        ]
+    },
+    err = NON_RESOURCE_UNKNOWN_HANDLES,
+}
+
+success("ResourceTableUnknownTrailingHandlesStored") {
+    // LLCPP is tested in the ResourceTableUnknownTrailingHandlesDropped test
+    bindings_denylist = [llcpp],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = event(),
+    },
+    value = StructOfSimpleResourceTable {
+        table: SimpleResourceTable {
+            y: 67,
+            6: {
+                bytes = [repeat(0xab):20, padding:4],
+                handles = [#0, #1, #2],
+            },
+        },
+    },
+    bytes = {
+        v1 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 1
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 2
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 3
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 4
+            num(8):4, num(0):4, repeat(0xff):8, // envelope 5 (field Y)
+            num(24):4, num(3):4, repeat(0xff):8, // envelope 6 (unknown)
+            num(67):8, // field Y
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, // absent envelope 1
+            num(0):4, num(0):4, // absent envelope 2
+            num(0):4, num(0):4, // absent envelope 3
+            num(0):4, num(0):4, // absent envelope 4
+            num(8):4, num(0):4, // envelope 5 (field Y)
+            num(24):4, num(3):4, // envelope 6 (unknown)
+            num(67):8, // field Y
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2,
+        ]
+    }
+}
+
+decode_failure("ValueTableUnknownBytesNonMultipleOf8") {
+    // TODO(fxbug.dev/80162): Check num_bytes%8==0 in Go.
+    bindings_denylist = [go],
+    type = StructOfSimpleTable,
+    bytes = {
+        v1 = [
+            num(2):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 1
+            num(20):4, num(0):4, repeat(0xff):8, // envelope 2 (unknown)
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(2):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, // absent envelope 1
+            num(20):4, num(0):4, // envelope 2 (unknown)
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+}
+
+decode_failure("ResourceTableUnknownBytesNonMultipleOf8") {
+    // TODO(fxbug.dev/80162): Check num_bytes%8==0 in Go.
+    bindings_denylist = [go],
+    type = StructOfSimpleResourceTable,
+    bytes = {
+        v1 = [
+            num(2):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, repeat(0):8, // absent envelope 1
+            num(20):4, num(0):4, repeat(0xff):8, // envelope 2 (unknown)
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(2):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, // absent envelope 1
+            num(20):4, num(0):4, // envelope 2 (unknown)
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+}
