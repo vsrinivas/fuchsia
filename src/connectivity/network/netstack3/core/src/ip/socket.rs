@@ -315,26 +315,26 @@ impl<I: IpExt, D> IpSocket<I> for IpSock<I, D> {
 
 /// Apply an update to all IPv4 sockets.
 ///
-/// `apply_ipv4_socket_update` applies the given socket update to all IPv4
+/// `update_all_ipv4_sockets` applies the given socket update to all IPv4
 /// sockets in existence. It does this by delegating to every module that is
 /// responsible for storing IPv4 sockets.
-pub(crate) fn apply_ipv4_socket_update<D: EventDispatcher>(
+pub(crate) fn update_all_ipv4_sockets<D: EventDispatcher>(
     ctx: &mut Ctx<D>,
     update: IpSockUpdate<Ipv4>,
 ) {
-    crate::ip::icmp::apply_ipv4_socket_update(ctx, update);
+    crate::ip::icmp::update_all_ipv4_sockets(ctx, update);
 }
 
 /// Apply an update to all IPv6 sockets.
 ///
-/// `apply_ipv6_socket_update` applies the given socket update to all IPv6
+/// `update_all_ipv6_sockets` applies the given socket update to all IPv6
 /// sockets in existence. It does this by delegating to every module that is
 /// responsible for storing IPv6 sockets.
-pub(crate) fn apply_ipv6_socket_update<D: EventDispatcher>(
+pub(crate) fn update_all_ipv6_sockets<D: EventDispatcher>(
     ctx: &mut Ctx<D>,
     update: IpSockUpdate<Ipv6>,
 ) {
-    crate::ip::icmp::apply_ipv6_socket_update(ctx, update);
+    crate::ip::icmp::update_all_ipv6_sockets(ctx, update);
 }
 
 // TODO(joshlf): Once we support configuring transport-layer protocols using

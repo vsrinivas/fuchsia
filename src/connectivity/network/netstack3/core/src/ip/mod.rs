@@ -1517,9 +1517,9 @@ pub(crate) fn add_route<D: EventDispatcher, A: IpAddress>(
 
     if res.is_ok() {
         #[ipv4addr]
-        crate::ip::socket::apply_ipv4_socket_update(ctx, IpSockUpdate::new());
+        crate::ip::socket::update_all_ipv4_sockets(ctx, IpSockUpdate::new());
         #[ipv6addr]
-        crate::ip::socket::apply_ipv6_socket_update(ctx, IpSockUpdate::new());
+        crate::ip::socket::update_all_ipv6_sockets(ctx, IpSockUpdate::new());
     }
 
     res
@@ -1539,9 +1539,9 @@ pub(crate) fn add_device_route<D: EventDispatcher, A: IpAddress>(
 
     if res.is_ok() {
         #[ipv4addr]
-        crate::ip::socket::apply_ipv4_socket_update(ctx, IpSockUpdate::new());
+        crate::ip::socket::update_all_ipv4_sockets(ctx, IpSockUpdate::new());
         #[ipv6addr]
-        crate::ip::socket::apply_ipv6_socket_update(ctx, IpSockUpdate::new());
+        crate::ip::socket::update_all_ipv6_sockets(ctx, IpSockUpdate::new());
     }
 
     res
@@ -1558,9 +1558,9 @@ pub(crate) fn del_device_route<D: EventDispatcher, A: IpAddress>(
 
     if res.is_ok() {
         #[ipv4addr]
-        crate::ip::socket::apply_ipv4_socket_update(ctx, IpSockUpdate::new());
+        crate::ip::socket::update_all_ipv4_sockets(ctx, IpSockUpdate::new());
         #[ipv6addr]
-        crate::ip::socket::apply_ipv6_socket_update(ctx, IpSockUpdate::new());
+        crate::ip::socket::update_all_ipv6_sockets(ctx, IpSockUpdate::new());
     }
 
     res

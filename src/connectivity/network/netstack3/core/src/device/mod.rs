@@ -1034,9 +1034,9 @@ pub fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 
     if res.is_ok() {
         #[ipv4addr]
-        crate::ip::socket::apply_ipv4_socket_update(ctx, IpSockUpdate::new());
+        crate::ip::socket::update_all_ipv4_sockets(ctx, IpSockUpdate::new());
         #[ipv6addr]
-        crate::ip::socket::apply_ipv6_socket_update(ctx, IpSockUpdate::new());
+        crate::ip::socket::update_all_ipv6_sockets(ctx, IpSockUpdate::new());
     }
 
     res
@@ -1064,9 +1064,9 @@ pub fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
 
     if res.is_ok() {
         #[ipv4addr]
-        crate::ip::socket::apply_ipv4_socket_update(ctx, IpSockUpdate::new());
+        crate::ip::socket::update_all_ipv4_sockets(ctx, IpSockUpdate::new());
         #[ipv6addr]
-        crate::ip::socket::apply_ipv6_socket_update(ctx, IpSockUpdate::new());
+        crate::ip::socket::update_all_ipv6_sockets(ctx, IpSockUpdate::new());
     }
 
     res

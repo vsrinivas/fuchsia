@@ -270,7 +270,7 @@ impl<I: Ip> From<IcmpConnId<I>> for usize {
 
 /// Apply an update to all IPv4 sockets that this module is responsible for
 /// - namely, those contained in ICMPv4 sockets.
-pub(super) fn apply_ipv4_socket_update<C: InnerIcmpv4Context>(
+pub(super) fn update_all_ipv4_sockets<C: InnerIcmpv4Context>(
     ctx: &mut C,
     update: <C::IpSocket as Socket>::Update,
 ) {
@@ -286,7 +286,7 @@ pub(super) fn apply_ipv4_socket_update<C: InnerIcmpv4Context>(
 
 /// Apply an update to all IPv6 sockets that this module is responsible for
 /// - namely, those contained in ICMPv6 sockets.
-pub(super) fn apply_ipv6_socket_update<C: InnerIcmpv6Context>(
+pub(super) fn update_all_ipv6_sockets<C: InnerIcmpv6Context>(
     ctx: &mut C,
     update: <C::IpSocket as Socket>::Update,
 ) {
