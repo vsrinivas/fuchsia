@@ -294,7 +294,7 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
     }
 
     Dirent* de = &dirent_buffer.dirent;
-    uint32_t rlen = static_cast<uint32_t>(MinfsReclen(de, off));
+    uint32_t rlen = static_cast<uint32_t>(DirentReservedSize(de, off));
     uint32_t dlen = DirentSize(de->namelen);
     bool is_last = de->reclen & kMinfsReclenLast;
     if (!is_last && ((rlen < kMinfsDirentSize) || (dlen > rlen) || (dlen > kMinfsMaxDirentSize) ||

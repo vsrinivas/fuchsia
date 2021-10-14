@@ -58,7 +58,7 @@ zx_status_t ValidateDirent(Dirent* de, size_t bytes_read, size_t off) {
     FX_LOGS(ERROR) << "vn_dir: Short read (" << bytes_read << " bytes) at offset " << off;
     return ZX_ERR_IO;
   }
-  uint32_t reclen = static_cast<uint32_t>(MinfsReclen(de, off));
+  uint32_t reclen = static_cast<uint32_t>(DirentReservedSize(de, off));
   if (reclen < kMinfsDirentSize) {
     FX_LOGS(ERROR) << "vn_dir: Could not read dirent at offset: " << off;
     return ZX_ERR_IO;
@@ -79,7 +79,7 @@ zx_status_t ValidateDirent(Dirent* de, size_t bytes_read, size_t off) {
 // Updates offset information to move to the next direntry in the directory.
 zx_status_t NextDirent(Dirent* de, DirectoryOffset* offs) {
   offs->off_prev = offs->off;
-  offs->off += MinfsReclen(de, offs->off);
+  offs->off += DirentReservedSize(de, offs->off);
   return kDirIteratorNext;
 }
 
@@ -161,12 +161,12 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
   // (1) exist and (2) are free.
   size_t off_prev = offs->off_prev;
   size_t off = offs->off;
-  size_t off_next = off + MinfsReclen(de, off);
+  size_t off_next = off + DirentReservedSize(de, off);
   zx_status_t status;
 
   // Read the direntries we're considering merging with.
   // Verify they are free and small enough to merge.
-  size_t coalesced_size = MinfsReclen(de, off);
+  size_t coalesced_size = DirentReservedSize(de, off);
   // Coalesce with "next" first, so the kMinfsReclenLast bit can easily flow
   // back to "de" and "de_prev".
   if (!(de->reclen & kMinfsReclenLast)) {
@@ -181,7 +181,7 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
       return status;
     }
     if (de_next.ino == 0) {
-      coalesced_size += MinfsReclen(&de_next, off_next);
+      coalesced_size += DirentReservedSize(&de_next, off_next);
       // If the next entry *was* last, then 'de' is now last.
       de->reclen |= (de_next.reclen & kMinfsReclenLast);
     }
@@ -198,7 +198,7 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
       return status;
     }
     if (de_prev.ino == 0) {
-      coalesced_size += MinfsReclen(&de_prev, off_prev);
+      coalesced_size += DirentReservedSize(&de_prev, off_prev);
       off = off_prev;
     }
   }
@@ -350,25 +350,31 @@ zx_status_t Directory::DirentCallbackUpdateInode(fbl::RefPtr<Directory> vndir, D
 
 zx_status_t Directory::DirentCallbackFindSpace(fbl::RefPtr<Directory> vndir, Dirent* de,
                                                DirArgs* args) {
-  uint32_t reclen = static_cast<uint32_t>(MinfsReclen(de, args->offs.off));
+  // Reserved space for this record (possibly going to the max directory size if it's the last
+  // one).
+  uint32_t reserved_size = static_cast<uint32_t>(DirentReservedSize(de, args->offs.off));
   if (de->ino == 0) {
-    // empty entry, do we fit?
-    if (args->reclen > reclen) {
-      return NextDirent(de, &args->offs);
+    // Empty entry, do we fit?
+    if (args->reclen > reserved_size) {
+      return NextDirent(de, &args->offs);  // Don't fit.
     }
     return kDirIteratorDone;
   }
 
-  // filled entry, can we sub-divide?
-  uint32_t size = static_cast<uint32_t>(DirentSize(de->namelen));
-  if (size > reclen) {
-    FX_LOGS(ERROR) << "bad reclen (smaller than dirent) " << reclen << " < " << size;
+  // Filled entry, can we sub-divide? The entry might not use the full amount of space reserved for
+  // it if a larger entry was later filled with a smaller one. We might be able to fit in the
+  // extra.
+  uint32_t used_size = static_cast<uint32_t>(DirentSize(de->namelen));
+  if (used_size > reserved_size) {
+    FX_LOGS(ERROR) << "bad reclen (smaller than dirent) " << reserved_size << " < " << used_size;
     return ZX_ERR_IO;
   }
-  uint32_t extra = reclen - size;
-  if (extra < args->reclen) {
-    return NextDirent(de, &args->offs);
+  uint32_t available_size = reserved_size - used_size;
+  if (available_size < args->reclen) {
+    return NextDirent(de, &args->offs);  // Don't fit in the extra space.
   }
+
+  // Could subdivide this one.
   return kDirIteratorDone;
 }
 
@@ -387,7 +393,7 @@ zx_status_t Directory::AppendDirent(DirArgs* args) {
     return status;
   }
 
-  uint32_t reclen = static_cast<uint32_t>(MinfsReclen(de, args->offs.off));
+  uint32_t reclen = static_cast<uint32_t>(DirentReservedSize(de, args->offs.off));
   if (de->ino == 0) {
     // empty entry, do we fit?
     if (args->reclen > reclen) {
@@ -579,7 +585,7 @@ zx_status_t Directory::Readdir(fs::VdirCookie* cookie, void* dirents, size_t len
         FX_LOGS(ERROR) << "Readdir: Corrupt dirent unreadable/failed validation";
         goto fail;
       }
-      off_recovered += MinfsReclen(de, off_recovered);
+      off_recovered += DirentReservedSize(de, off_recovered);
     }
     off = off_recovered;
   }
@@ -604,7 +610,7 @@ zx_status_t Directory::Readdir(fs::VdirCookie* cookie, void* dirents, size_t len
       }
     }
 
-    off += MinfsReclen(de, off);
+    off += DirentReservedSize(de, off);
   }
 
 done:

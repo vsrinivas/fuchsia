@@ -263,7 +263,8 @@ static_assert(kMinfsDirentAlignment == alignof(Dirent), "Dirent alignment change
 
 constexpr uint32_t kMinfsDirentSize = sizeof(Dirent);
 
-// Returns the length of the Dirent structure required to hold a name of the given length.
+// Returns the length of the Dirent structure required to hold a name of the given length. See
+// also DirentReservedSize().
 constexpr uint32_t DirentSize(uint8_t namelen) {
   return kMinfsDirentSize + fbl::round_up<uint32_t>(namelen, kMinfsDirentAlignment);
 }
@@ -291,7 +292,10 @@ static_assert(kMinfsMaxNameSize >= NAME_MAX,
 constexpr uint32_t kMinfsReclenMask = 0x0FFFFFFF;
 constexpr uint32_t kMinfsReclenLast = 0x80000000;
 
-constexpr uint32_t MinfsReclen(Dirent* de, size_t off) {
+// Returns the data size reserved to this Dirent. For the last one, this will be the size from the
+// beginning of it to the max space available for all records in a directory. For others, only
+// part of this data may be used, see DirentSize().
+constexpr uint32_t DirentReservedSize(Dirent* de, size_t off) {
   return (de->reclen & kMinfsReclenLast) ? kMinfsMaxDirectorySize - static_cast<uint32_t>(off)
                                          : de->reclen & kMinfsReclenMask;
 }
