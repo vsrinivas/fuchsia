@@ -46,6 +46,7 @@ enum/member fuchsia.bluetooth.le/CentralError.FAILED 4
 enum/member fuchsia.bluetooth.le/CentralError.INVALID_PARAMETERS 3
 enum/member fuchsia.bluetooth.le/CentralError.IN_PROGRESS 2
 strict enum fuchsia.bluetooth.le/CentralError uint32
+protocol/member fuchsia.bluetooth.le/Connection.RequestGattClient(server_end:fuchsia.bluetooth.gatt2/Client client)
 protocol fuchsia.bluetooth.le/Connection
 table/member fuchsia.bluetooth.le/ConnectionOptions.bondable_mode bool
 table/member fuchsia.bluetooth.le/ConnectionOptions.service_filter fuchsia.bluetooth/Uuid

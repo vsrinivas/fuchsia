@@ -4,6 +4,7 @@
 library fuchsia.bluetooth.le;
 
 using fuchsia.bluetooth as bt;
+using fuchsia.bluetooth.gatt2 as gatt2;
 using zx;
 
 /// Information obtained from advertising and scan response data broadcast by a peer.
@@ -89,5 +90,12 @@ type Peer = table {
 /// This lifetime of this capability is tied to that of the LE connection it represents. Closing the
 /// channel results in a disconnection if no other clients hold a Connection to the same peer.
 protocol Connection {
-        // TODO(fxbug.dev/1432): Support requesting a fuchsia.bluetooth.gatt/Client handle.
-        };
+    // Bind the server end of a `fuchsia.bluetooth.gatt2/Client` corresponding to the connected
+    // peer.
+    /// The following epitaphs may be sent by the server on error:
+    /// + `ZX_ERR_ALREADY_BOUND`: A Client server has already been bound in this Connection
+    ///                           protocol. The existing Client should be used.
+    RequestGattClient(resource struct {
+        client server_end:gatt2.Client;
+    });
+};
