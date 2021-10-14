@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fdio/fdio.h>
 #include <lib/zx/socket.h>
 #include <lib/zxio/cpp/create_with_type.h>
 #include <lib/zxio/cpp/inception.h>
@@ -24,7 +23,6 @@
 #include "fdio_unistd.h"
 #include "zxio.h"
 
-namespace fio = fuchsia_io;
 namespace fsocket = fuchsia_posix_socket;
 namespace frawsocket = fuchsia_posix_socket_raw;
 namespace fpacketsocket = fuchsia_posix_socket_packet;
@@ -66,9 +64,8 @@ bool use_legacy_base_socket_methods() {
   [&]() {                                                                               \
     if (use_legacy_base_socket_methods()) {                                             \
       return handler((client).BaseSocket##method args);                                 \
-    } else {                                                                            \
-      return handler((client).method args);                                             \
     }                                                                                   \
+    return handler((client).method args);                                               \
   }()
 
 // A helper structure to keep a socket address and the variants allocations in stack.
@@ -649,9 +646,9 @@ int16_t SetSockOptProcessor::Get(fsocket::wire::IpMulticastMembership* out) {
     local = &r.reqn.imr_address;
     mcast = &r.reqn.imr_multiaddr;
   }
-  std::copy_n(reinterpret_cast<const uint8_t*>(local), out->local_addr.addr.size(),
+  std::copy_n(reinterpret_cast<const uint8_t*>(local), decltype(out->local_addr.addr)::size(),
               out->local_addr.addr.begin());
-  std::copy_n(reinterpret_cast<const uint8_t*>(mcast), out->mcast_addr.addr.size(),
+  std::copy_n(reinterpret_cast<const uint8_t*>(mcast), decltype(out->mcast_addr.addr)::size(),
               out->mcast_addr.addr.begin());
   return 0;
 }
