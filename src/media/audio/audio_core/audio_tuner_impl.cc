@@ -9,7 +9,7 @@
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/stream_usage.h"
-#include "src/media/audio/lib/effects_loader/effects_loader.h"
+#include "src/media/audio/lib/effects_loader/effects_loader_v1.h"
 
 namespace media::audio {
 
@@ -26,8 +26,8 @@ void AudioTunerImpl::GetAvailableAudioEffects(GetAvailableAudioEffectsCallback c
     }
 
     auto lib_name = file.path().filename();
-    std::unique_ptr<EffectsLoader> loader;
-    zx_status_t status = EffectsLoader::CreateWithModule(lib_name.c_str(), &loader);
+    std::unique_ptr<EffectsLoaderV1> loader;
+    zx_status_t status = EffectsLoaderV1::CreateWithModule(lib_name.c_str(), &loader);
     if (status != ZX_OK) {
       continue;
     }
@@ -165,7 +165,7 @@ bool AudioTunerImpl::UpdateTunedDeviceSpecification(
 bool AudioTunerImpl::UpdateTunedEffectConfig(PipelineConfig::MixGroup& root,
                                              const std::string& instance_name,
                                              const std::string& config) {
-  for (PipelineConfig::Effect& effect : root.effects) {
+  for (PipelineConfig::EffectV1& effect : root.effects_v1) {
     if (instance_name == effect.instance_name) {
       effect.effect_config = config;
       return true;

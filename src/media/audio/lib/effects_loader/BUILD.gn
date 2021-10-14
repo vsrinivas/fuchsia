@@ -6,17 +6,19 @@ import("//build/components.gni")
 
 source_set("effects_loader") {
   sources = [
-    "effect.cc",
-    "effect.h",
-    "effects_loader.cc",
+    "effect_v1.cc",
+    "effect_v1.h",
     "effects_loader.h",
+    "effects_loader_v1.cc",
+    "effects_loader_v1.h",
     "effects_module.cc",
     "effects_module.h",
-    "effects_processor.cc",
-    "effects_processor.h",
+    "effects_processor_v1.cc",
+    "effects_processor_v1.h",
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.audio.effects",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/media/audio/effects",
     "//sdk/lib/syslog/cpp",
@@ -34,16 +36,18 @@ executable("test") {
   output_name = "audio_effects_loader_unittests"
 
   sources = [
-    "effect_unittest.cc",
-    "effects_loader_unittest.cc",
+    "effect_v1_unittest.cc",
+    "effects_loader_v1_unittest.cc",
     "effects_module_unittest.cc",
-    "effects_processor_unittest.cc",
+    "effects_processor_v1_unittest.cc",
   ]
 
   deps = [
     ":effects_loader",
     "testing",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/fzl",
   ]
 }
 

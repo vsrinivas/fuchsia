@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/media/audio/lib/effects_loader/testing/effects_loader_test_base.h"
+#include "src/media/audio/lib/effects_loader/testing/effects_loader_v1_test_base.h"
 
 namespace media::audio {
 namespace {

@@ -9,16 +9,16 @@
 namespace media::audio {
 namespace {
 
-const PipelineConfig::Effect* FindEffectInMixGroup(const std::string& instance_name,
-                                                   const PipelineConfig::MixGroup& mix_group) {
-  for (auto& effect : mix_group.effects) {
+const PipelineConfig::EffectV1* FindEffectV1InMixGroup(const std::string& instance_name,
+                                                       const PipelineConfig::MixGroup& mix_group) {
+  for (auto& effect : mix_group.effects_v1) {
     if (effect.instance_name == instance_name) {
       return &effect;
     }
   }
 
   for (auto& input : mix_group.inputs) {
-    auto effect = FindEffectInMixGroup(instance_name, input);
+    auto effect = FindEffectV1InMixGroup(instance_name, input);
     if (effect) {
       return effect;
     }
@@ -45,15 +45,15 @@ const std::shared_ptr<LoudnessTransform>& DeviceConfig::OutputDeviceProfile::lou
   return loudness_transform_;
 }
 
-const PipelineConfig::Effect* DeviceConfig::FindEffect(const std::string& instance_name) const {
-  auto effect =
-      FindEffectInMixGroup(instance_name, default_output_device_profile_.pipeline_config().root());
+const PipelineConfig::EffectV1* DeviceConfig::FindEffectV1(const std::string& instance_name) const {
+  auto effect = FindEffectV1InMixGroup(instance_name,
+                                       default_output_device_profile_.pipeline_config().root());
   if (effect) {
     return effect;
   }
 
   for (auto& [unused_stream_id, device_profile] : output_device_profiles_) {
-    auto effect = FindEffectInMixGroup(instance_name, device_profile.pipeline_config().root());
+    auto effect = FindEffectV1InMixGroup(instance_name, device_profile.pipeline_config().root());
     if (effect) {
       return effect;
     }

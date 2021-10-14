@@ -17,7 +17,7 @@ class PipelineConfig {
   static constexpr int32_t kDefaultMixGroupRate = 48000;
   static constexpr int16_t kDefaultMixGroupChannels = 2;
 
-  struct Effect {
+  struct EffectV1 {
     // The name of the shared object to load the effect from.
     std::string lib_name;
 
@@ -39,7 +39,7 @@ class PipelineConfig {
   struct MixGroup {
     std::string name;
     std::vector<RenderUsage> input_streams;
-    std::vector<Effect> effects;
+    std::vector<EffectV1> effects_v1;
     std::vector<MixGroup> inputs;
     std::optional<float> min_gain_db;
     std::optional<float> max_gain_db;

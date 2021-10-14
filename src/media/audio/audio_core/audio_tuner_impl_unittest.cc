@@ -11,7 +11,7 @@
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/audio_clock_factory.h"
-#include "src/media/audio/lib/effects_loader/testing/test_effects.h"
+#include "src/media/audio/lib/effects_loader/testing/test_effects_v1.h"
 
 using ::testing::AllOf;
 using ::testing::Field;
@@ -42,7 +42,7 @@ void ExpectEq(const VolumeCurve& expected,
   }
 }
 
-void ExpectEq(const PipelineConfig::Effect& expected,
+void ExpectEq(const PipelineConfig::EffectV1& expected,
               const fuchsia::media::tuning::AudioEffectConfig& result) {
   EXPECT_EQ(expected.lib_name, result.type().module_name());
   EXPECT_EQ(expected.effect_name, result.type().effect_name());
@@ -61,9 +61,9 @@ void ExpectEq(const PipelineConfig::MixGroup& expected,
     auto result_usage = result.streams[i];
     EXPECT_EQ(StreamTypeFromRenderUsage(expected_usage), result_usage);
   }
-  EXPECT_EQ(expected.effects.size(), result.effects.size());
-  for (size_t i = 0; i < expected.effects.size(); ++i) {
-    ExpectEq(expected.effects[i], result.effects[i]);
+  EXPECT_EQ(expected.effects_v1.size(), result.effects.size());
+  for (size_t i = 0; i < expected.effects_v1.size(); ++i) {
+    ExpectEq(expected.effects_v1[i], result.effects[i]);
   }
   EXPECT_EQ(expected.inputs.size(), result.inputs.size());
   for (size_t i = 0; i < expected.inputs.size(); ++i) {
@@ -163,7 +163,7 @@ class AudioTunerTest : public gtest::TestLoopFixture {
 
   std::unique_ptr<Context> CreateContext() { return CreateContext(kDefaultProcessConfig); }
 
-  testing::TestEffectsModule test_effects_ = testing::TestEffectsModule::Open();
+  testing::TestEffectsV1Module test_effects_ = testing::TestEffectsV1Module::Open();
   ProcessConfig::Handle handle_;
 };
 
@@ -295,18 +295,18 @@ TEST_F(AudioTunerTest, InitialGetAudioDeviceProfile) {
                    PipelineConfig(PipelineConfig::MixGroup{
                        .name = "linearize",
                        .input_streams = {RenderUsage::BACKGROUND, RenderUsage::MEDIA},
-                       .effects = {PipelineConfig::Effect{.lib_name = "my_effects.so",
-                                                          .effect_name = "equalizer",
-                                                          .instance_name = "eq1",
-                                                          .effect_config = "",
-                                                          .output_channels = 2}},
+                       .effects_v1 = {PipelineConfig::EffectV1{.lib_name = "my_effects.so",
+                                                               .effect_name = "equalizer",
+                                                               .instance_name = "eq1",
+                                                               .effect_config = "",
+                                                               .output_channels = 2}},
                        .inputs = {PipelineConfig::MixGroup{
                            .name = "mix",
                            .input_streams = {},
-                           .effects = {},
+                           .effects_v1 = {},
                            .inputs = {PipelineConfig::MixGroup{.name = "output_streams",
                                                                .input_streams = {},
-                                                               .effects = {},
+                                                               .effects_v1 = {},
                                                                .inputs = {},
                                                                .loopback = false,
                                                                .output_rate = 48000,
@@ -397,14 +397,14 @@ TEST_F(AudioTunerTest, SetGetDeleteAudioDeviceProfile) {
   auto new_pipeline_config = PipelineConfig(
       PipelineConfig::MixGroup{.name = "linearize",
                                .input_streams = {RenderUsage::BACKGROUND, RenderUsage::MEDIA},
-                               .effects = {},
+                               .effects_v1 = {},
                                .inputs = {PipelineConfig::MixGroup{
                                    .name = "mix",
                                    .input_streams = {},
-                                   .effects = {},
+                                   .effects_v1 = {},
                                    .inputs = {PipelineConfig::MixGroup{.name = "output_streams",
                                                                        .input_streams = {},
-                                                                       .effects = {},
+                                                                       .effects_v1 = {},
                                                                        .inputs = {},
                                                                        .loopback = false,
                                                                        .output_rate = 48000,
@@ -474,18 +474,19 @@ TEST_F(AudioTunerTest, SetAudioEffectConfig) {
                    PipelineConfig(PipelineConfig::MixGroup{
                        .name = "linearize",
                        .input_streams = {RenderUsage::BACKGROUND, RenderUsage::MEDIA},
-                       .effects = {PipelineConfig::Effect{.lib_name = "my_effects.so",
-                                                          .effect_name = "equalizer",
-                                                          .instance_name = instance_name,
-                                                          .effect_config = initial_effect_config,
-                                                          .output_channels = 2}},
+                       .effects_v1 = {PipelineConfig::EffectV1{
+                           .lib_name = "my_effects.so",
+                           .effect_name = "equalizer",
+                           .instance_name = instance_name,
+                           .effect_config = initial_effect_config,
+                           .output_channels = 2}},
                        .inputs = {PipelineConfig::MixGroup{
                            .name = "mix",
                            .input_streams = {},
-                           .effects = {},
+                           .effects_v1 = {},
                            .inputs = {PipelineConfig::MixGroup{.name = "output_streams",
                                                                .input_streams = {},
-                                                               .effects = {},
+                                                               .effects_v1 = {},
                                                                .inputs = {},
                                                                .loopback = false,
                                                                .output_rate = 48000,
@@ -526,18 +527,18 @@ TEST_F(AudioTunerTest, SetAudioEffectConfig) {
   auto expected_pipeline_config = PipelineConfig(PipelineConfig::MixGroup{
       .name = "linearize",
       .input_streams = {RenderUsage::BACKGROUND, RenderUsage::MEDIA},
-      .effects = {PipelineConfig::Effect{.lib_name = "my_effects.so",
-                                         .effect_name = "equalizer",
-                                         .instance_name = instance_name,
-                                         .effect_config = updated_effect_config,
-                                         .output_channels = 2}},
+      .effects_v1 = {PipelineConfig::EffectV1{.lib_name = "my_effects.so",
+                                              .effect_name = "equalizer",
+                                              .instance_name = instance_name,
+                                              .effect_config = updated_effect_config,
+                                              .output_channels = 2}},
       .inputs = {PipelineConfig::MixGroup{
           .name = "mix",
           .input_streams = {},
-          .effects = {},
+          .effects_v1 = {},
           .inputs = {PipelineConfig::MixGroup{.name = "output_streams",
                                               .input_streams = {},
-                                              .effects = {},
+                                              .effects_v1 = {},
                                               .inputs = {},
                                               .loopback = false,
                                               .output_rate = 48000,

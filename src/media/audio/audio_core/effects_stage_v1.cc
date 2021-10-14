@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/effects_stage.h"
+#include "src/media/audio/audio_core/effects_stage_v1.h"
 
 #include <fbl/algorithm.h>
 
 #include "src/media/audio/audio_core/threading_model.h"
-#include "src/media/audio/lib/effects_loader/effects_loader.h"
-#include "src/media/audio/lib/effects_loader/effects_processor.h"
+#include "src/media/audio/lib/effects_loader/effects_loader_v1.h"
+#include "src/media/audio/lib/effects_loader/effects_processor_v1.h"
 
 namespace media::audio {
 namespace {
@@ -35,15 +35,17 @@ static constexpr uint32_t kSupportedUsageMask =
 
 class MultiLibEffectsLoader {
  public:
-  Effect CreateEffectByName(std::string_view lib_name, std::string_view effect_name,
-                            std::string_view instance_name, uint32_t frame_rate,
-                            uint16_t channels_in, uint16_t channels_out, std::string_view config) {
+  EffectV1 CreateEffectByName(std::string_view lib_name, std::string_view effect_name,
+                              std::string_view instance_name, uint32_t frame_rate,
+                              uint16_t channels_in, uint16_t channels_out,
+                              std::string_view config) {
     auto it = std::find_if(holders_.begin(), holders_.end(),
                            [lib_name](auto& holder) { return holder.lib_name == lib_name; });
     if (it == holders_.end()) {
       Holder holder;
       holder.lib_name = lib_name;
-      zx_status_t status = EffectsLoader::CreateWithModule(holder.lib_name.c_str(), &holder.loader);
+      zx_status_t status =
+          EffectsLoaderV1::CreateWithModule(holder.lib_name.c_str(), &holder.loader);
       if (status != ZX_OK) {
         FX_PLOGS(ERROR, status) << "Effect " << effect_name << " from " << lib_name
                                 << " unable to be created";
@@ -60,7 +62,7 @@ class MultiLibEffectsLoader {
  private:
   struct Holder {
     std::string lib_name;
-    std::unique_ptr<EffectsLoader> loader;
+    std::unique_ptr<EffectsLoaderV1> loader;
   };
   std::vector<Holder> holders_;
 };
@@ -85,16 +87,16 @@ std::pair<int64_t, uint32_t> AlignBufferRequest(Fixed frame, uint32_t length, ui
 
 }  // namespace
 
-EffectsStage::RingoutBuffer EffectsStage::RingoutBuffer::Create(const Format& format,
-                                                                const EffectsProcessor& processor) {
+EffectsStageV1::RingoutBuffer EffectsStageV1::RingoutBuffer::Create(
+    const Format& format, const EffectsProcessorV1& processor) {
   return RingoutBuffer::Create(format, processor.ring_out_frames(), processor.max_batch_size(),
                                processor.block_size());
 }
 
-EffectsStage::RingoutBuffer EffectsStage::RingoutBuffer::Create(const Format& format,
-                                                                uint32_t ringout_frames,
-                                                                uint32_t max_batch_size,
-                                                                uint32_t block_size) {
+EffectsStageV1::RingoutBuffer EffectsStageV1::RingoutBuffer::Create(const Format& format,
+                                                                    uint32_t ringout_frames,
+                                                                    uint32_t max_batch_size,
+                                                                    uint32_t block_size) {
   uint32_t buffer_frames = 0;
   std::vector<float> buffer;
   if (ringout_frames) {
@@ -123,16 +125,16 @@ EffectsStage::RingoutBuffer EffectsStage::RingoutBuffer::Create(const Format& fo
 }
 
 // static
-std::shared_ptr<EffectsStage> EffectsStage::Create(
-    const std::vector<PipelineConfig::Effect>& effects, std::shared_ptr<ReadableStream> source,
+std::shared_ptr<EffectsStageV1> EffectsStageV1::Create(
+    const std::vector<PipelineConfig::EffectV1>& effects, std::shared_ptr<ReadableStream> source,
     VolumeCurve volume_curve) {
-  TRACE_DURATION("audio", "EffectsStage::Create");
+  TRACE_DURATION("audio", "EffectsStageV1::Create");
   if (source->format().sample_format() != fuchsia::media::AudioSampleFormat::FLOAT) {
-    FX_LOGS(ERROR) << "EffectsStage can only be added to streams with FLOAT samples";
+    FX_LOGS(ERROR) << "EffectsStageV1 can only be added to streams with FLOAT samples";
     return nullptr;
   }
 
-  auto processor = std::make_unique<EffectsProcessor>();
+  auto processor = std::make_unique<EffectsProcessorV1>();
 
   MultiLibEffectsLoader loader;
   uint32_t frame_rate = source->format().frames_per_second();
@@ -156,11 +158,11 @@ std::shared_ptr<EffectsStage> EffectsStage::Create(
     channels_in = channels_out;
   }
 
-  return std::make_shared<EffectsStage>(std::move(source), std::move(processor),
-                                        std::move(volume_curve));
+  return std::make_shared<EffectsStageV1>(std::move(source), std::move(processor),
+                                          std::move(volume_curve));
 }
 
-Format ComputeFormat(const Format& source_format, const EffectsProcessor& processor) {
+Format ComputeFormat(const Format& source_format, const EffectsProcessorV1& processor) {
   return Format::Create(
              fuchsia::media::AudioStreamType{
                  .sample_format = source_format.sample_format(),
@@ -170,9 +172,9 @@ Format ComputeFormat(const Format& source_format, const EffectsProcessor& proces
       .take_value();
 }
 
-EffectsStage::EffectsStage(std::shared_ptr<ReadableStream> source,
-                           std::unique_ptr<EffectsProcessor> effects_processor,
-                           VolumeCurve volume_curve)
+EffectsStageV1::EffectsStageV1(std::shared_ptr<ReadableStream> source,
+                               std::unique_ptr<EffectsProcessorV1> effects_processor,
+                               VolumeCurve volume_curve)
     : ReadableStream(ComputeFormat(source->format(), *effects_processor)),
       source_(std::move(source)),
       effects_processor_(std::move(effects_processor)),
@@ -183,9 +185,9 @@ EffectsStage::EffectsStage(std::shared_ptr<ReadableStream> source,
   SetPresentationDelay(zx::duration(0));
 }
 
-std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(Fixed dest_frame,
-                                                             int64_t frame_count) {
-  TRACE_DURATION("audio", "EffectsStage::ReadLock", "frame", dest_frame.Floor(), "length",
+std::optional<ReadableStream::Buffer> EffectsStageV1::ReadLock(Fixed dest_frame,
+                                                               int64_t frame_count) {
+  TRACE_DURATION("audio", "EffectsStageV1::ReadLock", "frame", dest_frame.Floor(), "length",
                  frame_count);
 
   // If we have a partially consumed block, return that here.
@@ -264,7 +266,7 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(Fixed dest_frame,
   return std::nullopt;
 }
 
-BaseStream::TimelineFunctionSnapshot EffectsStage::ref_time_to_frac_presentation_frame() const {
+BaseStream::TimelineFunctionSnapshot EffectsStageV1::ref_time_to_frac_presentation_frame() const {
   auto snapshot = source_->ref_time_to_frac_presentation_frame();
 
   // Update our timeline function to include the latency introduced by these effects.
@@ -281,7 +283,7 @@ BaseStream::TimelineFunctionSnapshot EffectsStage::ref_time_to_frac_presentation
   return snapshot;
 }
 
-void EffectsStage::SetPresentationDelay(zx::duration external_delay) {
+void EffectsStageV1::SetPresentationDelay(zx::duration external_delay) {
   // Add in any additional lead time required by our effects.
   zx::duration intrinsic_lead_time = ComputeIntrinsicMinLeadTime();
   zx::duration total_delay = external_delay + intrinsic_lead_time;
@@ -298,7 +300,7 @@ void EffectsStage::SetPresentationDelay(zx::duration external_delay) {
   source_->SetPresentationDelay(total_delay);
 }
 
-fpromise::result<void, fuchsia::media::audio::UpdateEffectError> EffectsStage::UpdateEffect(
+fpromise::result<void, fuchsia::media::audio::UpdateEffectError> EffectsStageV1::UpdateEffect(
     const std::string& instance_name, const std::string& config) {
   for (auto& effect : *effects_processor_) {
     if (effect.instance_name() == instance_name) {
@@ -312,7 +314,7 @@ fpromise::result<void, fuchsia::media::audio::UpdateEffectError> EffectsStage::U
   return fpromise::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
 }
 
-zx::duration EffectsStage::ComputeIntrinsicMinLeadTime() const {
+zx::duration EffectsStageV1::ComputeIntrinsicMinLeadTime() const {
   TimelineRate ticks_per_frame = format().frames_per_ns().Inverse();
   uint32_t lead_frames = effects_processor_->delay_frames();
   uint32_t block_frames = effects_processor_->block_size();

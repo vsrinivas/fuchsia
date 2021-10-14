@@ -18,7 +18,7 @@
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
-#include "src/media/audio/lib/effects_loader/testing/test_effects.h"
+#include "src/media/audio/lib/effects_loader/testing/test_effects_v1.h"
 #include "src/media/audio/lib/format/driver_format.h"
 
 using testing::Each;
@@ -49,7 +49,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
     config.mutable_root().output_rate = kRequestedDeviceRate;
     config.mutable_root().output_channels = kRequestedDeviceChannels / 2;
     config.mutable_root().loopback = true;
-    config.mutable_root().effects = {{
+    config.mutable_root().effects_v1 = {{
         .lib_name = testing::kTestEffectsModuleName,
         .effect_name = "rechannel",
         .instance_name = "1:2 upchannel",
@@ -144,7 +144,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
   std::shared_ptr<DriverOutput> output_;
   fzl::VmoMapper ring_buffer_mapper_;
   zx::vmo ring_buffer_;
-  testing::TestEffectsModule test_effects_ = testing::TestEffectsModule::Open();
+  testing::TestEffectsV1Module test_effects_ = testing::TestEffectsV1Module::Open();
 };
 
 // Simple sanity test that the DriverOutput properly initializes the driver.
@@ -423,7 +423,7 @@ TEST_F(DriverOutputTest, SelectRateAndChannelizationFromDeviceConfig) {
   EXPECT_TRUE(driver_->is_running());
 
   // Expect the pipeline to include the 1:2 upchannel effect.
-  EXPECT_EQ(1u, output_->pipeline_config()->root().effects.size());
+  EXPECT_EQ(1u, output_->pipeline_config()->root().effects_v1.size());
   EXPECT_EQ(output_->pipeline_config()->root().output_channels, kRequestedDeviceChannels / 2);
   EXPECT_EQ(output_->pipeline_config()->root().output_rate, kRequestedDeviceRate);
   EXPECT_EQ(output_->pipeline_config()->channels(), kRequestedDeviceChannels);
@@ -451,7 +451,7 @@ TEST_F(DriverOutputTest, UseBestAvailableSampleRateAndChannelization) {
 
   // If the device does not meet our requirements, then we don't attempt to use the rechannel effect
   // and just rely on our root mix stage to meet the channelization required.
-  EXPECT_TRUE(output_->pipeline_config()->root().effects.empty());
+  EXPECT_TRUE(output_->pipeline_config()->root().effects_v1.empty());
   EXPECT_EQ(output_->pipeline_config()->root().output_channels, kSupportedChannels);
   EXPECT_EQ(output_->pipeline_config()->root().output_rate, kSupportedFrameRate);
   EXPECT_EQ(output_->pipeline_config()->channels(), kSupportedChannels);

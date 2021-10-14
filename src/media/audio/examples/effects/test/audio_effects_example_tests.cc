@@ -14,23 +14,23 @@
 #include "src/media/audio/examples/effects/effect_base.h"
 #include "src/media/audio/examples/effects/rechannel_effect.h"
 #include "src/media/audio/examples/effects/swap_effect.h"
-#include "src/media/audio/lib/effects_loader/effects_loader.h"
-#include "src/media/audio/lib/effects_loader/effects_processor.h"
+#include "src/media/audio/lib/effects_loader/effects_loader_v1.h"
+#include "src/media/audio/lib/effects_loader/effects_processor_v1.h"
 
 namespace media::audio_effects_example {
 
 static constexpr const char* kDelayEffectConfig = "{\"delay_frames\": 0}";
 
 //
-// Tests EffectsLoader, which directly calls the shared library interface.
+// Tests EffectsLoaderV1, which directly calls the shared library interface.
 //
-class EffectsLoaderTest : public testing::Test {
+class EffectsLoaderV1Test : public testing::Test {
  protected:
-  std::unique_ptr<audio::EffectsLoader> effects_loader_;
+  std::unique_ptr<audio::EffectsLoaderV1> effects_loader_;
 
   void SetUp() override {
-    ASSERT_EQ(ZX_OK,
-              audio::EffectsLoader::CreateWithModule("audio_effects_example.so", &effects_loader_));
+    ASSERT_EQ(ZX_OK, audio::EffectsLoaderV1::CreateWithModule("audio_effects_example.so",
+                                                              &effects_loader_));
     ASSERT_TRUE(effects_loader_);
   }
 };
@@ -39,12 +39,12 @@ class EffectsLoaderTest : public testing::Test {
 // These child classes may not differentiate, but we use different classes for
 // Delay/Rechannel/Swap in order to group related test results accordingly.
 //
-class DelayEffectTest : public EffectsLoaderTest {
+class DelayEffectTest : public EffectsLoaderV1Test {
  protected:
   void TestDelayBounds(uint32_t frame_rate, uint32_t channels, uint32_t delay_frames);
 };
-class RechannelEffectTest : public EffectsLoaderTest {};
-class SwapEffectTest : public EffectsLoaderTest {};
+class RechannelEffectTest : public EffectsLoaderV1Test {};
+class SwapEffectTest : public EffectsLoaderV1Test {};
 
 // We test the delay effect with certain configuration values, making assumptions
 // about how those values relate to the allowed range for this effect.
@@ -87,7 +87,7 @@ TEST_F(DelayEffectTest, GetParameters) {
   fuchsia_audio_effects_parameters effect_params;
 
   uint32_t frame_rate = 48000;
-  media::audio::Effect effect = effects_loader_->CreateEffect(
+  media::audio::EffectV1 effect = effects_loader_->CreateEffect(
       Effect::Delay, "", frame_rate, kTestChans, kTestChans, kDelayEffectConfig);
   ASSERT_TRUE(effect);
 
@@ -107,9 +107,9 @@ TEST_F(RechannelEffectTest, GetParameters) {
   fuchsia_audio_effects_parameters effect_params;
 
   uint32_t frame_rate = 48000;
-  media::audio::Effect effect = effects_loader_->CreateEffect(Effect::Rechannel, "", frame_rate,
-                                                              RechannelEffect::kNumChannelsIn,
-                                                              RechannelEffect::kNumChannelsOut, {});
+  media::audio::EffectV1 effect = effects_loader_->CreateEffect(
+      Effect::Rechannel, "", frame_rate, RechannelEffect::kNumChannelsIn,
+      RechannelEffect::kNumChannelsOut, {});
   ASSERT_TRUE(effect);
 
   effect_params.frame_rate = 44100;  // should be overwritten
@@ -126,7 +126,7 @@ TEST_F(SwapEffectTest, GetParameters) {
   fuchsia_audio_effects_parameters effect_params;
 
   uint32_t frame_rate = 44100;
-  media::audio::Effect effect =
+  media::audio::EffectV1 effect =
       effects_loader_->CreateEffect(Effect::Swap, "", frame_rate, kTestChans, kTestChans, {});
   ASSERT_TRUE(effect);
 
@@ -140,7 +140,7 @@ TEST_F(SwapEffectTest, GetParameters) {
 }
 
 TEST_F(SwapEffectTest, UpdateConfiguration) {
-  media::audio::Effect effect =
+  media::audio::EffectV1 effect =
       effects_loader_->CreateEffect(Effect::Swap, "", 48000, kTestChans, kTestChans, {});
   ASSERT_TRUE(effect);
 
@@ -148,7 +148,7 @@ TEST_F(SwapEffectTest, UpdateConfiguration) {
 }
 
 TEST_F(RechannelEffectTest, UpdateConfiguration) {
-  media::audio::Effect effect =
+  media::audio::EffectV1 effect =
       effects_loader_->CreateEffect(Effect::Rechannel, "", 48000, RechannelEffect::kNumChannelsIn,
                                     RechannelEffect::kNumChannelsOut, {});
   ASSERT_TRUE(effect);
@@ -156,8 +156,8 @@ TEST_F(RechannelEffectTest, UpdateConfiguration) {
 }
 
 TEST_F(DelayEffectTest, UpdateConfiguration) {
-  media::audio::Effect effect = effects_loader_->CreateEffect(Effect::Delay, "", 48000, kTestChans,
-                                                              kTestChans, kDelayEffectConfig);
+  media::audio::EffectV1 effect = effects_loader_->CreateEffect(
+      Effect::Delay, "", 48000, kTestChans, kTestChans, kDelayEffectConfig);
   ASSERT_TRUE(effect);
 
   // Validate min/max values are accepted.
@@ -199,8 +199,8 @@ TEST_F(DelayEffectTest, ProcessInPlace) {
     expect[i] = delay_buff_in_out[i - delay_samples];
   }
 
-  media::audio::Effect effect = effects_loader_->CreateEffect(Effect::Delay, "", 48000, kTestChans,
-                                                              kTestChans, kDelayEffectConfig);
+  media::audio::EffectV1 effect = effects_loader_->CreateEffect(
+      Effect::Delay, "", 48000, kTestChans, kTestChans, kDelayEffectConfig);
   ASSERT_TRUE(effect);
 
   ASSERT_EQ(effect.UpdateConfiguration("{\"delay_frames\": 6}"), ZX_OK);
@@ -220,7 +220,7 @@ TEST_F(RechannelEffectTest, ProcessInPlace) {
   float buff_in_out[kNumFrames * RechannelEffect::kNumChannelsIn] = {0};
 
   // Effects that change the channelization should not process in-place.
-  media::audio::Effect effect =
+  media::audio::EffectV1 effect =
       effects_loader_->CreateEffect(Effect::Rechannel, "", 48000, RechannelEffect::kNumChannelsIn,
                                     RechannelEffect::kNumChannelsOut, {});
   ASSERT_TRUE(effect);
@@ -234,7 +234,7 @@ TEST_F(SwapEffectTest, ProcessInPlace) {
   float swap_buff_in_out[kNumFrames * kTestChans] = {1.0f, -1.0f, 1.0f, -1.0f,
                                                      1.0f, -1.0f, 1.0f, -1.0f};
 
-  media::audio::Effect effect =
+  media::audio::EffectV1 effect =
       effects_loader_->CreateEffect(Effect::Swap, "", 48000, kTestChans, kTestChans, {});
   ASSERT_TRUE(effect);
 
@@ -257,8 +257,8 @@ TEST_F(DelayEffectTest, Process) {
   float* audio_buff_out = nullptr;
 
   // These stereo-to-stereo effects should ONLY process in-place
-  media::audio::Effect effect = effects_loader_->CreateEffect(Effect::Delay, "", 48000, kTestChans,
-                                                              kTestChans, kDelayEffectConfig);
+  media::audio::EffectV1 effect = effects_loader_->CreateEffect(
+      Effect::Delay, "", 48000, kTestChans, kTestChans, kDelayEffectConfig);
   ASSERT_TRUE(effect);
   EXPECT_NE(effect.Process(kNumFrames, audio_buff_in, &audio_buff_out), ZX_OK);
 }
@@ -271,7 +271,7 @@ TEST_F(RechannelEffectTest, Process) {
   float* audio_buff_out = nullptr;
   float expected[kNumFrames * RechannelEffect::kNumChannelsOut] = {0.799536645f, -0.340580851f};
 
-  media::audio::Effect effect =
+  media::audio::EffectV1 effect =
       effects_loader_->CreateEffect(Effect::Rechannel, "", 48000, RechannelEffect::kNumChannelsIn,
                                     RechannelEffect::kNumChannelsOut, {});
   ASSERT_TRUE(effect);
@@ -296,7 +296,7 @@ TEST_F(SwapEffectTest, Process) {
   float* audio_buff_out = nullptr;
 
   // These stereo-to-stereo effects should ONLY process in-place
-  media::audio::Effect effect =
+  media::audio::EffectV1 effect =
       effects_loader_->CreateEffect(Effect::Swap, "", 48000, kTestChans, kTestChans, {});
   ASSERT_TRUE(effect);
   EXPECT_NE(effect.Process(kNumFrames, audio_buff_in, &audio_buff_out), ZX_OK);
@@ -311,12 +311,12 @@ TEST_F(DelayEffectTest, ProcessInPlace_Chain) {
   std::vector<float> expected = {0.0f,  0.0f, 0.0f, 0.0f,  0.0f,  0.0f,
                                  -0.1f, 1.0f, 2.0f, -0.2f, -3.0f, 0.3f};
 
-  media::audio::Effect delay1 = effects_loader_->CreateEffect(Effect::Delay, "", 44100, kTestChans,
-                                                              kTestChans, kDelayEffectConfig);
-  media::audio::Effect swap =
+  media::audio::EffectV1 delay1 = effects_loader_->CreateEffect(
+      Effect::Delay, "", 44100, kTestChans, kTestChans, kDelayEffectConfig);
+  media::audio::EffectV1 swap =
       effects_loader_->CreateEffect(Effect::Swap, "", 44100, kTestChans, kTestChans, {});
-  media::audio::Effect delay2 = effects_loader_->CreateEffect(Effect::Delay, "", 44100, kTestChans,
-                                                              kTestChans, kDelayEffectConfig);
+  media::audio::EffectV1 delay2 = effects_loader_->CreateEffect(
+      Effect::Delay, "", 44100, kTestChans, kTestChans, kDelayEffectConfig);
 
   ASSERT_TRUE(delay1);
   ASSERT_TRUE(swap);
@@ -343,7 +343,7 @@ TEST_F(DelayEffectTest, Flush) {
   constexpr uint32_t kNumFrames = 1;
   float buff_in_out[kTestChans] = {1.0f, -1.0f};
 
-  media::audio::Effect effect =
+  media::audio::EffectV1 effect =
       effects_loader_->CreateEffect(Effect::Delay, "", 44100, kTestChans, kTestChans,
                                     fxl::StringPrintf("{\"delay_frames\": %u}", kTestDelay1));
 
@@ -368,7 +368,7 @@ void DelayEffectTest::TestDelayBounds(uint32_t frame_rate, uint32_t channels,
   std::vector<float> delay_buff_in_out(num_samples);
   std::vector<float> expect(num_samples);
 
-  media::audio::Effect effect = effects_loader_->CreateEffect(
+  media::audio::EffectV1 effect = effects_loader_->CreateEffect(
       Effect::Delay, "", frame_rate, channels, channels, kDelayEffectConfig);
   ASSERT_TRUE(effect);
 

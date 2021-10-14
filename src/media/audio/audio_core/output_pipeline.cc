@@ -4,7 +4,7 @@
 
 #include "src/media/audio/audio_core/output_pipeline.h"
 
-#include "src/media/audio/audio_core/effects_stage.h"
+#include "src/media/audio/audio_core/effects_stage_v1.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
 #include "src/media/audio/audio_core/tap_stage.h"
 #include "src/media/audio/audio_core/thermal_agent.h"
@@ -106,8 +106,8 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
 
   // If we have effects, we should add that stage in now.
   std::shared_ptr<ReadableStream> root = stage;
-  if (!spec.effects.empty()) {
-    auto effects_stage = EffectsStage::Create(spec.effects, root, volume_curve);
+  if (!spec.effects_v1.empty()) {
+    auto effects_stage = EffectsStageV1::Create(spec.effects_v1, root, volume_curve);
     if (effects_stage) {
       effects_stages.push_back(effects_stage);
       root = std::move(effects_stage);

@@ -12,7 +12,7 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "src/media/audio/audio_core/effects_stage.h"
+#include "src/media/audio/audio_core/effects_stage_v1.h"
 #include "src/media/audio/audio_core/mix_stage.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/stream.h"
@@ -115,7 +115,7 @@ class OutputPipelineImpl : public OutputPipeline {
         uint32_t* usage_mask, Mixer::Resampler sampler);
 
     std::vector<std::pair<std::shared_ptr<MixStage>, std::vector<StreamUsage>>> mix_stages;
-    std::vector<std::shared_ptr<EffectsStage>> effects_stages;
+    std::vector<std::shared_ptr<EffectsStageV1>> effects_stages;
     std::vector<std::pair<std::shared_ptr<ReadableStream>, StreamUsage>> streams;
 
     // This is the root of the mix graph. The other mix stages must be reachable from this node

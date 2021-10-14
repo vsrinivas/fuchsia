@@ -23,7 +23,7 @@ std::optional<std::string> FindNominalConfigForTarget(const std::string& target_
   // For 'special' target names (not effect names), this method must return a string. An empty
   // string is fine. The remainder of this method assumes the |target_name| references an effect.
 
-  const PipelineConfig::Effect* effect = device_config.FindEffect(target_name);
+  const PipelineConfig::EffectV1* effect = device_config.FindEffectV1(target_name);
   return effect ? std::optional(effect->effect_config) : std::nullopt;
 }
 

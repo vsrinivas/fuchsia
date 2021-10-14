@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/effects/test_effects/test_effects.h"
+#include "src/media/audio/effects/test_effects/test_effects_v1.h"
 
 #include <string>
 #include <string_view>
@@ -14,7 +14,7 @@ namespace {
 static constexpr uint32_t TEST_EFFECTS_MAX = 255;
 static constexpr uint32_t TEST_EFFECTS_DEFAULT_MAX_FRAMES_PER_BATCH = 512;
 
-test_effect_spec g_effects[TEST_EFFECTS_MAX] = {};
+test_effect_v1_spec g_effects[TEST_EFFECTS_MAX] = {};
 
 uint32_t g_instance_count = 0;
 
@@ -130,7 +130,7 @@ class TestEffect {
     stream_info_ = *stream_info;
   }
 
-  zx_status_t Inspect(test_effects_inspect_state* state) {
+  zx_status_t Inspect(test_effects_v1_inspect_state* state) {
     state->config = config_.data();
     state->config_length = config_.size();
     state->effect_id = effect_id();
@@ -234,7 +234,7 @@ void set_stream_info(fuchsia_audio_effects_handle_t effects_handle,
   return reinterpret_cast<TestEffect*>(effects_handle)->SetStreamInfo(stream_info);
 }
 
-zx_status_t ext_add_effect(test_effect_spec effect) {
+zx_status_t ext_add_effect(test_effect_v1_spec effect) {
   if (g_instance_count > 0) {
     return ZX_ERR_BAD_STATE;
   }
@@ -256,7 +256,7 @@ zx_status_t ext_clear_effects() {
 }
 
 zx_status_t ext_inspect_instance(fuchsia_audio_effects_handle_t effects_handle,
-                                 test_effects_inspect_state* state) {
+                                 test_effects_v1_inspect_state* state) {
   if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -280,7 +280,7 @@ DECLARE_FUCHSIA_AUDIO_EFFECTS_MODULE_V1{
     &set_stream_info,
 };
 
-DECLARE_TEST_EFFECTS_EXT{
+DECLARE_TEST_EFFECTS_V1_EXT{
     &ext_add_effect,
     &ext_clear_effects,
     &ext_num_instances,

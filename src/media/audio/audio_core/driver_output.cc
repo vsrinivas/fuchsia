@@ -401,10 +401,10 @@ void DriverOutput::OnDriverInfoFetched() {
     // Some effects may perform rechannelization. If the hardware does not support the
     // channelization with rechannelization effects we clear all effects on the final stage. This
     // is a compromise in being robust and gracefully handling misconfiguration.
-    for (const auto& effect : pipeline_config.root().effects) {
+    for (const auto& effect : pipeline_config.root().effects_v1) {
       if (effect.output_channels && effect.output_channels != num_chans) {
         FX_LOGS(ERROR) << "Removing effects on the root stage due to unsupported channelization";
-        pipeline_config.mutable_root().effects.clear();
+        pipeline_config.mutable_root().effects_v1.clear();
         break;
       }
     }

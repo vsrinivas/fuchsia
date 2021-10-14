@@ -12,7 +12,7 @@
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
-#include "src/media/audio/lib/effects_loader/testing/test_effects.h"
+#include "src/media/audio/lib/effects_loader/testing/test_effects_v1.h"
 
 namespace media::audio {
 namespace {
@@ -378,7 +378,7 @@ TEST_F(AudioOutputTest, HonorIndpendentVolumeControlLoudnessTransform) {
 
 TEST_F(AudioOutputTest, UpdateOutputPipeline) {
   // Setup test.
-  auto test_effects = testing::TestEffectsModule::Open();
+  auto test_effects = testing::TestEffectsV1Module::Open();
   test_effects.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
 
   // Create OutputPipeline with no effects and verify output.
@@ -418,7 +418,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
           {
               RenderUsage::BACKGROUND,
           },
-      .effects =
+      .effects_v1 =
           {
               {
                   .lib_name = "test_effects.so",
@@ -436,7 +436,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
                   RenderUsage::INTERRUPTION,
                   RenderUsage::COMMUNICATION,
               },
-          .effects =
+          .effects_v1 =
               {
                   {
                       .lib_name = "test_effects.so",

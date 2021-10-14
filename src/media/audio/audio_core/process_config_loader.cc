@@ -162,9 +162,9 @@ RenderUsageVolumes ParseDefaultRenderUsageVolumesFromJsonObject(const rapidjson:
   return default_volumes;
 }
 
-PipelineConfig::Effect ParseEffectFromJsonObject(const rapidjson::Value& value) {
+PipelineConfig::EffectV1 ParseEffectFromJsonObject(const rapidjson::Value& value) {
   FX_CHECK(value.IsObject());
-  PipelineConfig::Effect effect;
+  PipelineConfig::EffectV1 effect;
 
   auto it = value.FindMember(kJsonKeyLib);
   FX_CHECK(it != value.MemberEnd() && it->value.IsString());
@@ -223,7 +223,7 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
   if (it != value.MemberEnd()) {
     FX_CHECK(it->value.IsArray());
     for (const auto& effect : it->value.GetArray()) {
-      mix_group.effects.push_back(ParseEffectFromJsonObject(effect));
+      mix_group.effects_v1.push_back(ParseEffectFromJsonObject(effect));
     }
   }
 

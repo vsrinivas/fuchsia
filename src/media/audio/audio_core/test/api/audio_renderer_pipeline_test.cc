@@ -958,7 +958,7 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
                                         RenderUsage::INTERRUPTION,
                                         RenderUsage::COMMUNICATION,
                                     },
-                                .effects = {
+                                .effects_v1 = {
                                     {
                                         .lib_name = "inversion_filter.so",
                                         .effect_name = "inversion_filter",

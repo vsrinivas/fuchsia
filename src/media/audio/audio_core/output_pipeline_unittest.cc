@@ -15,7 +15,7 @@
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/lib/clock/utils.h"
-#include "src/media/audio/lib/effects_loader/testing/test_effects.h"
+#include "src/media/audio/lib/effects_loader/testing/test_effects_v1.h"
 
 using testing::Each;
 using testing::Eq;
@@ -50,14 +50,14 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
             {
                 RenderUsage::BACKGROUND,
             },
-        .effects = {},
+        .effects_v1 = {},
         .inputs = {{
             .name = "mix",
             .input_streams =
                 {
                     RenderUsage::INTERRUPTION,
                 },
-            .effects = {},
+            .effects_v1 = {},
             .inputs =
                 {
                     {
@@ -67,7 +67,7 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
                                 RenderUsage::MEDIA,
                                 RenderUsage::SYSTEM_AGENT,
                             },
-                        .effects = {},
+                        .effects_v1 = {},
                         .loopback = false,
                         .output_rate = 48000,
                         .output_channels = 2,
@@ -78,7 +78,7 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
                             {
                                 RenderUsage::COMMUNICATION,
                             },
-                        .effects = {},
+                        .effects_v1 = {},
                         .loopback = false,
                         .output_rate = 48000,
                         .output_channels = 2,
@@ -262,7 +262,7 @@ TEST_F(OutputPipelineTest, Trim) { TestOutputPipelineTrim(ClockMode::SAME); }
 TEST_F(OutputPipelineTest, Trim_ClockOffset) { TestOutputPipelineTrim(ClockMode::WITH_OFFSET); }
 
 TEST_F(OutputPipelineTest, Loopback) {
-  auto test_effects = testing::TestEffectsModule::Open();
+  auto test_effects = testing::TestEffectsV1Module::Open();
   test_effects.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
   PipelineConfig::MixGroup root{
       .name = "linearize",
@@ -270,7 +270,7 @@ TEST_F(OutputPipelineTest, Loopback) {
           {
               RenderUsage::BACKGROUND,
           },
-      .effects =
+      .effects_v1 =
           {
               {
                   .lib_name = "test_effects.so",
@@ -288,7 +288,7 @@ TEST_F(OutputPipelineTest, Loopback) {
                   RenderUsage::INTERRUPTION,
                   RenderUsage::COMMUNICATION,
               },
-          .effects =
+          .effects_v1 =
               {
                   {
                       .lib_name = "test_effects.so",
@@ -355,7 +355,7 @@ TEST_F(OutputPipelineTest, Loopback) {
 
 // Identical to |Loopback|, except we run mix and linearize stages at different rates.
 TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
-  auto test_effects = testing::TestEffectsModule::Open();
+  auto test_effects = testing::TestEffectsV1Module::Open();
   test_effects.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
   PipelineConfig::MixGroup root{
       .name = "linearize",
@@ -363,7 +363,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
           {
               RenderUsage::BACKGROUND,
           },
-      .effects =
+      .effects_v1 =
           {
               {
                   .lib_name = "test_effects.so",
@@ -381,7 +381,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
                   RenderUsage::INTERRUPTION,
                   RenderUsage::COMMUNICATION,
               },
-          .effects =
+          .effects_v1 =
               {
                   {
                       .lib_name = "test_effects.so",
@@ -449,7 +449,7 @@ static const std::string kInstanceName = "instance name";
 static const std::string kConfig = "config";
 
 TEST_F(OutputPipelineTest, UpdateEffect) {
-  auto test_effects = testing::TestEffectsModule::Open();
+  auto test_effects = testing::TestEffectsV1Module::Open();
   test_effects.AddEffect("assign_config_size")
       .WithAction(TEST_EFFECTS_ACTION_ASSIGN_CONFIG_SIZE, 0.0);
   PipelineConfig::MixGroup root{
@@ -458,7 +458,7 @@ TEST_F(OutputPipelineTest, UpdateEffect) {
           {
               RenderUsage::BACKGROUND,
           },
-      .effects =
+      .effects_v1 =
           {
               {
                   .lib_name = "test_effects.so",
@@ -476,7 +476,7 @@ TEST_F(OutputPipelineTest, UpdateEffect) {
                   RenderUsage::INTERRUPTION,
                   RenderUsage::COMMUNICATION,
               },
-          .effects = {},
+          .effects_v1 = {},
           .output_rate = 48000,
           .output_channels = 2,
       }},
@@ -511,7 +511,7 @@ TEST_F(OutputPipelineTest, ReportPresentationDelay) {
   constexpr int64_t kEffects1LeadTimeFrames = 300;
   constexpr int64_t kEffects2LeadTimeFrames = 900;
 
-  auto test_effects = testing::TestEffectsModule::Open();
+  auto test_effects = testing::TestEffectsV1Module::Open();
   test_effects.AddEffect("effect_with_delay_300").WithSignalLatencyFrames(kEffects1LeadTimeFrames);
   test_effects.AddEffect("effect_with_delay_900").WithSignalLatencyFrames(kEffects2LeadTimeFrames);
   PipelineConfig::MixGroup root{
@@ -520,7 +520,7 @@ TEST_F(OutputPipelineTest, ReportPresentationDelay) {
           {
               RenderUsage::BACKGROUND,
           },
-      .effects = {},
+      .effects_v1 = {},
       .inputs = {{
                      .name = "default",
                      .input_streams =
@@ -529,7 +529,7 @@ TEST_F(OutputPipelineTest, ReportPresentationDelay) {
                              RenderUsage::SYSTEM_AGENT,
                              RenderUsage::INTERRUPTION,
                          },
-                     .effects =
+                     .effects_v1 =
                          {
                              {
                                  .lib_name = "test_effects.so",
@@ -546,7 +546,7 @@ TEST_F(OutputPipelineTest, ReportPresentationDelay) {
                          {
                              RenderUsage::COMMUNICATION,
                          },
-                     .effects =
+                     .effects_v1 =
                          {
                              {
                                  .lib_name = "test_effects.so",
@@ -626,7 +626,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
                   RenderUsage::INTERRUPTION,
                   RenderUsage::COMMUNICATION,
               },
-          .effects = {},
+          .effects_v1 = {},
           .loopback = true,
           .output_rate = 24000,
           .output_channels = kChannelCount,
@@ -734,7 +734,7 @@ TEST_F(OutputPipelineTest, DifferentMixRates_ClockOffset) {
 }
 
 TEST_F(OutputPipelineTest, PipelineWithRechannelEffects) {
-  auto test_effects = testing::TestEffectsModule::Open();
+  auto test_effects = testing::TestEffectsV1Module::Open();
   test_effects.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
   PipelineConfig::MixGroup root{
       .name = "linearize",
@@ -742,7 +742,7 @@ TEST_F(OutputPipelineTest, PipelineWithRechannelEffects) {
           {
               RenderUsage::BACKGROUND,
           },
-      .effects =
+      .effects_v1 =
           {
               {
                   .lib_name = "test_effects.so",
@@ -761,7 +761,7 @@ TEST_F(OutputPipelineTest, PipelineWithRechannelEffects) {
                   RenderUsage::INTERRUPTION,
                   RenderUsage::COMMUNICATION,
               },
-          .effects =
+          .effects_v1 =
               {
                   {
                       .lib_name = "test_effects.so",
@@ -790,7 +790,7 @@ TEST_F(OutputPipelineTest, PipelineWithRechannelEffects) {
 }
 
 TEST_F(OutputPipelineTest, LoopbackClock) {
-  auto test_effects = testing::TestEffectsModule::Open();
+  auto test_effects = testing::TestEffectsV1Module::Open();
   test_effects.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
   PipelineConfig::MixGroup root{
       .name = "linearize",
@@ -798,7 +798,7 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
           {
               RenderUsage::BACKGROUND,
           },
-      .effects =
+      .effects_v1 =
           {
               {
                   .lib_name = "test_effects.so",
@@ -816,7 +816,7 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
                   RenderUsage::INTERRUPTION,
                   RenderUsage::COMMUNICATION,
               },
-          .effects =
+          .effects_v1 =
               {
                   {
                       .lib_name = "test_effects.so",

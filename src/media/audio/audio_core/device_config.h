@@ -164,7 +164,7 @@ class DeviceConfig {
 
   // Searches device profiles for an effect with the specified instance name. Returns a pointer
   // to the effect or nullptr if not found.
-  const PipelineConfig::Effect* FindEffect(const std::string& instance_name) const;
+  const PipelineConfig::EffectV1* FindEffectV1(const std::string& instance_name) const;
 
  private:
   friend class ProcessConfigBuilder;

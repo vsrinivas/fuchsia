@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/lib/effects_loader/effects_loader.h"
+#include "src/media/audio/lib/effects_loader/effects_loader_v1.h"
 
 #include <gtest/gtest.h>
 
-#include "src/media/audio/lib/effects_loader/testing/effects_loader_test_base.h"
+#include "src/media/audio/lib/effects_loader/testing/effects_loader_v1_test_base.h"
 
 namespace media::audio {
 namespace {
 
-class EffectsLoaderTest : public testing::EffectsLoaderTestBase {};
+class EffectsLoaderV1Test : public testing::EffectsLoaderV1TestBase {};
 
 static constexpr uint32_t kInvalidEffectId = 1;
 static constexpr int32_t kFrameRate = 48000;
@@ -19,18 +19,18 @@ static constexpr int32_t kTwoChannels = 2;
 
 static const std::string kInstanceName = "instance name";
 
-// The |EffectsLoaderModuleNotLoadedTest| suite holds tests that exercise the `EffectsLoader` in a
-// state before a valid module has been loaded. This is done by the test fixture for
-// |EffectsLoaderTest| so don't use the fixture for these test cases.
-TEST(EffectsLoaderModuleNotLoadedTest, CreateWithInvalidModule) {
-  std::unique_ptr<EffectsLoader> loader;
-  EXPECT_EQ(ZX_ERR_UNAVAILABLE, EffectsLoader::CreateWithModule("does_not_exist.so", &loader));
+// The |EffectsLoaderV1ModuleNotLoadedTest| suite holds tests that exercise the `EffectsLoaderV1` in
+// a state before a valid module has been loaded. This is done by the test fixture for
+// |EffectsLoaderV1Test| so don't use the fixture for these test cases.
+TEST(EffectsLoaderV1ModuleNotLoadedTest, CreateWithInvalidModule) {
+  std::unique_ptr<EffectsLoaderV1> loader;
+  EXPECT_EQ(ZX_ERR_UNAVAILABLE, EffectsLoaderV1::CreateWithModule("does_not_exist.so", &loader));
   EXPECT_FALSE(loader);
 }
 
-TEST(EffectsLoaderModuleNotLoadedTest, CreateWithNullModule) {
+TEST(EffectsLoaderV1ModuleNotLoadedTest, CreateWithNullModule) {
   // Sanity test the null module behaves as expected.
-  std::unique_ptr<EffectsLoader> loader = EffectsLoader::CreateWithNullModule();
+  std::unique_ptr<EffectsLoaderV1> loader = EffectsLoaderV1::CreateWithNullModule();
   ASSERT_TRUE(loader);
 
   EXPECT_EQ(0u, loader->GetNumEffects());
@@ -44,7 +44,7 @@ TEST(EffectsLoaderModuleNotLoadedTest, CreateWithNullModule) {
   EXPECT_FALSE(effect);
 }
 
-TEST_F(EffectsLoaderTest, GetNumEffects) {
+TEST_F(EffectsLoaderV1Test, GetNumEffects) {
   // Add effect 1
   test_effects().AddEffect("assign_to_1.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
   EXPECT_EQ(1u, effects_loader()->GetNumEffects());
@@ -54,24 +54,24 @@ TEST_F(EffectsLoaderTest, GetNumEffects) {
   EXPECT_EQ(2u, effects_loader()->GetNumEffects());
 }
 
-TEST_F(EffectsLoaderTest, GetEffectInfoNullInfoPointer) {
+TEST_F(EffectsLoaderV1Test, GetEffectInfoNullInfoPointer) {
   test_effects().AddEffect("assign_to_1.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
 
   EXPECT_EQ(effects_loader()->GetEffectInfo(0, nullptr), ZX_ERR_INVALID_ARGS);
 }
 
-TEST_F(EffectsLoaderTest, GetEffectInfoInvalidEffectId) {
+TEST_F(EffectsLoaderV1Test, GetEffectInfoInvalidEffectId) {
   fuchsia_audio_effects_description dfx_desc;
 
   EXPECT_EQ(effects_loader()->GetEffectInfo(kInvalidEffectId, &dfx_desc), ZX_ERR_OUT_OF_RANGE);
 }
 
-TEST_F(EffectsLoaderTest, CreateEffectByEffectId) {
+TEST_F(EffectsLoaderV1Test, CreateEffectByEffectId) {
   test_effects().AddEffect("assign_to_1.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
   {
     ASSERT_EQ(0u, test_effects().InstanceCount());
-    Effect e = effects_loader()->CreateEffect(0, kInstanceName, kFrameRate, kTwoChannels,
-                                              kTwoChannels, {});
+    EffectV1 e = effects_loader()->CreateEffect(0, kInstanceName, kFrameRate, kTwoChannels,
+                                                kTwoChannels, {});
     EXPECT_TRUE(e);
     EXPECT_EQ(kInstanceName, e.instance_name());
     ASSERT_EQ(1u, test_effects().InstanceCount());
@@ -81,15 +81,15 @@ TEST_F(EffectsLoaderTest, CreateEffectByEffectId) {
   ASSERT_EQ(0u, test_effects().InstanceCount());
 }
 
-TEST_F(EffectsLoaderTest, CreateEffectInvalidEffectId) {
+TEST_F(EffectsLoaderV1Test, CreateEffectInvalidEffectId) {
   // Since we didn't call 'AddEffect' there are no valid effect_id's that can be used for
   // CreateEffect.
-  Effect e = effects_loader()->CreateEffect(0, "", kFrameRate, kTwoChannels, kTwoChannels, {});
+  EffectV1 e = effects_loader()->CreateEffect(0, "", kFrameRate, kTwoChannels, kTwoChannels, {});
   EXPECT_FALSE(e);
   ASSERT_EQ(0u, test_effects().InstanceCount());
 }
 
-TEST_F(EffectsLoaderTest, CreateEffectByName) {
+TEST_F(EffectsLoaderV1Test, CreateEffectByName) {
   test_effects().AddEffect("assign_to_1.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
 
   // The fixture creates the loader by default. Since the loader caches the set of effects at
@@ -97,8 +97,8 @@ TEST_F(EffectsLoaderTest, CreateEffectByName) {
   RecreateLoader();
   {
     ASSERT_EQ(0u, test_effects().InstanceCount());
-    Effect e = effects_loader()->CreateEffectByName("assign_to_1.0", kInstanceName, kFrameRate,
-                                                    kTwoChannels, kTwoChannels, {});
+    EffectV1 e = effects_loader()->CreateEffectByName("assign_to_1.0", kInstanceName, kFrameRate,
+                                                      kTwoChannels, kTwoChannels, {});
     EXPECT_TRUE(e);
     EXPECT_EQ(kInstanceName, e.instance_name());
     ASSERT_EQ(1u, test_effects().InstanceCount());
@@ -108,7 +108,7 @@ TEST_F(EffectsLoaderTest, CreateEffectByName) {
   ASSERT_EQ(0u, test_effects().InstanceCount());
 }
 
-TEST_F(EffectsLoaderTest, CreateEffectByNameInvalidName) {
+TEST_F(EffectsLoaderV1Test, CreateEffectByNameInvalidName) {
   test_effects().AddEffect("assign_to_1.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
 
   // The fixture creates the loader by default. Since the loader caches the set of effects at
@@ -116,23 +116,24 @@ TEST_F(EffectsLoaderTest, CreateEffectByNameInvalidName) {
   RecreateLoader();
   {
     ASSERT_EQ(0u, test_effects().InstanceCount());
-    Effect e = effects_loader()->CreateEffectByName("invalid_name", "", kFrameRate, kTwoChannels,
-                                                    kTwoChannels, {});
+    EffectV1 e = effects_loader()->CreateEffectByName("invalid_name", "", kFrameRate, kTwoChannels,
+                                                      kTwoChannels, {});
     EXPECT_FALSE(e);
     ASSERT_EQ(0u, test_effects().InstanceCount());
   }
 }
 
-TEST_F(EffectsLoaderTest, CreateEffectInvalidChannelConfiguration) {
+TEST_F(EffectsLoaderV1Test, CreateEffectInvalidChannelConfiguration) {
   // The passthrough effect requires in_chans == out_chans.
-  Effect e = effects_loader()->CreateEffect(0, "", kFrameRate, kTwoChannels, kTwoChannels - 1, {});
+  EffectV1 e =
+      effects_loader()->CreateEffect(0, "", kFrameRate, kTwoChannels, kTwoChannels - 1, {});
   EXPECT_FALSE(e);
   ASSERT_EQ(0u, test_effects().InstanceCount());
 }
 
-TEST_F(EffectsLoaderTest, CreateEffectTooManyChannels) {
+TEST_F(EffectsLoaderV1Test, CreateEffectTooManyChannels) {
   static constexpr int32_t kTooManyChannels = FUCHSIA_AUDIO_EFFECTS_CHANNELS_MAX + 1;
-  Effect e =
+  EffectV1 e =
       effects_loader()->CreateEffect(0, "", kFrameRate, kTooManyChannels, kTooManyChannels, {});
   EXPECT_FALSE(e);
   ASSERT_EQ(0u, test_effects().InstanceCount());

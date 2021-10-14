@@ -3,7 +3,10 @@
 # found in the LICENSE file.
 
 loadable_module("test_effects") {
-  sources = [ "test_effects.cc" ]
+  sources = [
+    "test_effects_v1.cc",
+    "test_effects_v1.h",
+  ]
 
   deps = [ "//sdk/lib/media/audio/effects" ]
 }

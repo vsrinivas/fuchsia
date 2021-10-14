@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/effects_stage.h"
+#include "src/media/audio/audio_core/effects_stage_v1.h"
 
 #include <gmock/gmock.h>
 
@@ -13,7 +13,7 @@
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
-#include "src/media/audio/lib/effects_loader/testing/test_effects.h"
+#include "src/media/audio/lib/effects_loader/testing/test_effects_v1.h"
 
 using testing::Each;
 using testing::FloatEq;
@@ -29,7 +29,7 @@ const Format k48k2ChanFloatFormat =
                    })
         .take_value();
 
-class EffectsStageTest : public testing::ThreadingModelFixture {
+class EffectsStageV1Test : public testing::ThreadingModelFixture {
  protected:
   // Views the memory at |ptr| as a std::array of |N| elements of |T|. If |offset| is provided, it
   // is the number of |T| sized elements to skip at the beginning of |ptr|.
@@ -41,11 +41,11 @@ class EffectsStageTest : public testing::ThreadingModelFixture {
     return reinterpret_cast<std::array<T, N>&>(static_cast<T*>(ptr)[offset]);
   }
 
-  testing::TestEffectsModule test_effects_ = testing::TestEffectsModule::Open();
+  testing::TestEffectsV1Module test_effects_ = testing::TestEffectsV1Module::Open();
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
 };
 
-TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
+TEST_F(EffectsStageV1Test, ApplyEffectsToSourceStream) {
   testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat,
                                         zx_system_get_page_size());
 
@@ -62,13 +62,13 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
   test_effects_.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
 
   // Create the effects stage.
-  std::vector<PipelineConfig::Effect> effects;
-  effects.push_back(PipelineConfig::Effect{
+  std::vector<PipelineConfig::EffectV1> effects;
+  effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
       .effect_name = "add_1.0",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
 
   // Enqueue 10ms of frames in the packet queue.
   stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10)));
@@ -92,7 +92,7 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
   }
 }
 
-TEST_F(EffectsStageTest, BlockAlignRequests) {
+TEST_F(EffectsStageV1Test, BlockAlignRequests) {
   // Create a source stream.
   auto stream =
       std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_factory());
@@ -104,13 +104,13 @@ TEST_F(EffectsStageTest, BlockAlignRequests) {
       .WithBlockSize(kBlockSize);
 
   // Create the effects stage.
-  std::vector<PipelineConfig::Effect> effects;
-  effects.push_back(PipelineConfig::Effect{
+  std::vector<PipelineConfig::EffectV1> effects;
+  effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
       .effect_name = "add_1.0",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
 
   EXPECT_EQ(effects_stage->block_size(), kBlockSize);
 
@@ -150,7 +150,7 @@ TEST_F(EffectsStageTest, BlockAlignRequests) {
   }
 }
 
-TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
+TEST_F(EffectsStageV1Test, TruncateToMaxBufferSize) {
   // Create a source stream.
   auto stream =
       std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_factory());
@@ -162,13 +162,13 @@ TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
       .WithMaxFramesPerBuffer(kMaxBufferSize);
 
   // Create the effects stage.
-  std::vector<PipelineConfig::Effect> effects;
-  effects.push_back(PipelineConfig::Effect{
+  std::vector<PipelineConfig::EffectV1> effects;
+  effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
       .effect_name = "test_effect",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
 
   EXPECT_EQ(effects_stage->block_size(), kBlockSize);
 
@@ -180,7 +180,7 @@ TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
   }
 }
 
-TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
+TEST_F(EffectsStageV1Test, CompensateForEffectDelayInStreamTimeline) {
   auto stream =
       std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_factory());
 
@@ -193,18 +193,18 @@ TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
   test_effects_.AddEffect("effect_with_delay_10").WithSignalLatencyFrames(10);
 
   // Create the effects stage. We expect 13 total frames of latency (summed across the 2 effects).
-  std::vector<PipelineConfig::Effect> effects;
-  effects.push_back(PipelineConfig::Effect{
+  std::vector<PipelineConfig::EffectV1> effects;
+  effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
       .effect_name = "effect_with_delay_10",
       .effect_config = "",
   });
-  effects.push_back(PipelineConfig::Effect{
+  effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
       .effect_name = "effect_with_delay_3",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
 
   // Since our effect introduces 13 frames of latency, the incoming source frame at time 0 can only
   // emerge from the effect in output frame 13.
@@ -221,7 +221,7 @@ TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
   EXPECT_LE(frame_13_frac_frames.raw_value(), 1);
 }
 
-TEST_F(EffectsStageTest, AddDelayFramesIntoMinLeadTime) {
+TEST_F(EffectsStageV1Test, AddDelayFramesIntoMinLeadTime) {
   auto stream =
       std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_factory());
 
@@ -234,18 +234,18 @@ TEST_F(EffectsStageTest, AddDelayFramesIntoMinLeadTime) {
   test_effects_.AddEffect("effect_with_delay_10").WithSignalLatencyFrames(10);
 
   // Create the effects stage. We expect 13 total frames of latency (summed across the 2 effects).
-  std::vector<PipelineConfig::Effect> effects;
-  effects.push_back(PipelineConfig::Effect{
+  std::vector<PipelineConfig::EffectV1> effects;
+  effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
       .effect_name = "effect_with_delay_10",
       .effect_config = "",
   });
-  effects.push_back(PipelineConfig::Effect{
+  effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
       .effect_name = "effect_with_delay_3",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
 
   // Check our initial lead time is only the effect delay.
   auto effect_lead_time =
@@ -262,7 +262,7 @@ static const std::string kInstanceName = "instance_name";
 static const std::string kInitialConfig = "different size than kConfig";
 static const std::string kConfig = "config";
 
-TEST_F(EffectsStageTest, UpdateEffect) {
+TEST_F(EffectsStageV1Test, UpdateEffect) {
   testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat,
                                         zx_system_get_page_size());
 
@@ -280,14 +280,14 @@ TEST_F(EffectsStageTest, UpdateEffect) {
       .WithAction(TEST_EFFECTS_ACTION_ASSIGN_CONFIG_SIZE, 0.0);
 
   // Create the effects stage.
-  std::vector<PipelineConfig::Effect> effects;
-  effects.push_back(PipelineConfig::Effect{
+  std::vector<PipelineConfig::EffectV1> effects;
+  effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
       .effect_name = "assign_config_size",
       .instance_name = kInstanceName,
       .effect_config = kInitialConfig,
   });
-  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
 
   effects_stage->UpdateEffect(kInstanceName, kConfig);
 
@@ -306,7 +306,7 @@ TEST_F(EffectsStageTest, UpdateEffect) {
   EXPECT_THAT(arr, Each(FloatEq(expected_sample)));
 }
 
-TEST_F(EffectsStageTest, CreateStageWithRechannelization) {
+TEST_F(EffectsStageV1Test, CreateStageWithRechannelization) {
   test_effects_.AddEffect("increment")
       .WithChannelization(FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY, FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY)
       .WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
@@ -328,21 +328,21 @@ TEST_F(EffectsStageTest, CreateStageWithRechannelization) {
   // will perform a 2 -> 4 channel upsample. For the existing channels it will increment each sample
   // and for the 'new' channels, it will populate 0's. The second effect will be a simple increment
   // on all 4 channels.
-  std::vector<PipelineConfig::Effect> effects;
-  effects.push_back(PipelineConfig::Effect{
+  std::vector<PipelineConfig::EffectV1> effects;
+  effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
       .effect_name = "increment",
       .instance_name = "incremement_with_upchannel",
       .effect_config = "",
       .output_channels = 4,
   });
-  effects.push_back(PipelineConfig::Effect{
+  effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
       .effect_name = "increment",
       .instance_name = "incremement_without_upchannel",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
   stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10)));
@@ -371,7 +371,7 @@ TEST_F(EffectsStageTest, CreateStageWithRechannelization) {
   }
 }
 
-TEST_F(EffectsStageTest, ReleasePacketWhenFullyConsumed) {
+TEST_F(EffectsStageV1Test, ReleasePacketWhenFullyConsumed) {
   test_effects_.AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
   testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat,
                                         zx_system_get_page_size());
@@ -385,14 +385,14 @@ TEST_F(EffectsStageTest, ReleasePacketWhenFullyConsumed) {
       context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   // Create a simple effects stage.
-  std::vector<PipelineConfig::Effect> effects;
-  effects.push_back(PipelineConfig::Effect{
+  std::vector<PipelineConfig::EffectV1> effects;
+  effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
       .effect_name = "increment",
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
   bool packet_released = false;
@@ -414,7 +414,7 @@ TEST_F(EffectsStageTest, ReleasePacketWhenFullyConsumed) {
   EXPECT_TRUE(packet_released);
 }
 
-TEST_F(EffectsStageTest, ReleasePacketWhenNoLongerReferenced) {
+TEST_F(EffectsStageV1Test, ReleasePacketWhenNoLongerReferenced) {
   test_effects_.AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
   testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat,
                                         zx_system_get_page_size());
@@ -428,14 +428,14 @@ TEST_F(EffectsStageTest, ReleasePacketWhenNoLongerReferenced) {
       context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   // Create a simple effects stage.
-  std::vector<PipelineConfig::Effect> effects;
-  effects.push_back(PipelineConfig::Effect{
+  std::vector<PipelineConfig::EffectV1> effects;
+  effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
       .effect_name = "increment",
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
   bool packet_released = false;
@@ -464,7 +464,7 @@ TEST_F(EffectsStageTest, ReleasePacketWhenNoLongerReferenced) {
   EXPECT_TRUE(packet_released);
 }
 
-TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
+TEST_F(EffectsStageV1Test, SendStreamInfoToEffects) {
   test_effects_.AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
 
   // Set timeline rate to match our format.
@@ -476,14 +476,14 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
   input->timeline_function()->Update(timeline_function);
 
   // Create a simple effects stage.
-  std::vector<PipelineConfig::Effect> effects;
-  effects.push_back(PipelineConfig::Effect{
+  std::vector<PipelineConfig::EffectV1> effects;
+  effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
       .effect_name = "increment",
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, input, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, input, volume_curve_);
 
   constexpr uint32_t kRequestedFrames = 48;
 
@@ -494,7 +494,7 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
     ASSERT_TRUE(buf);
     EXPECT_TRUE(buf->usage_mask().is_empty());
     EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), Gain::kUnityGainDb);
-    test_effects_inspect_state effect_state;
+    test_effects_v1_inspect_state effect_state;
     EXPECT_EQ(ZX_OK, test_effects_.InspectInstance(
                          effects_stage->effects_processor().GetEffectAt(0).get(), &effect_state));
     EXPECT_EQ(0u, effect_state.stream_info.usage_mask);
@@ -512,7 +512,7 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
     EXPECT_EQ(buf->usage_mask(),
               StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}));
     EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), -20.0);
-    test_effects_inspect_state effect_state;
+    test_effects_v1_inspect_state effect_state;
     EXPECT_EQ(ZX_OK, test_effects_.InspectInstance(
                          effects_stage->effects_processor().GetEffectAt(0).get(), &effect_state));
     EXPECT_EQ(FUCHSIA_AUDIO_EFFECTS_USAGE_COMMUNICATION, effect_state.stream_info.usage_mask);
@@ -531,7 +531,7 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
               StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
                                StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION)}));
     EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), -4.0);
-    test_effects_inspect_state effect_state;
+    test_effects_v1_inspect_state effect_state;
     EXPECT_EQ(ZX_OK, test_effects_.InspectInstance(
                          effects_stage->effects_processor().GetEffectAt(0).get(), &effect_state));
     EXPECT_EQ(FUCHSIA_AUDIO_EFFECTS_USAGE_MEDIA | FUCHSIA_AUDIO_EFFECTS_USAGE_INTERRUPTION,
@@ -541,7 +541,7 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
   }
 }
 
-TEST_F(EffectsStageTest, SkipRingoutIfDiscontinuous) {
+TEST_F(EffectsStageV1Test, SkipRingoutIfDiscontinuous) {
   testing::PacketFactory packet_factory{dispatcher(), k48k2ChanFloatFormat,
                                         zx_system_get_page_size()};
   auto timeline_function =
@@ -559,14 +559,14 @@ TEST_F(EffectsStageTest, SkipRingoutIfDiscontinuous) {
       .WithBlockSize(kBlockSize)
       .WithMaxFramesPerBuffer(kBlockSize);
 
-  std::vector<PipelineConfig::Effect> effects;
-  effects.push_back(PipelineConfig::Effect{
+  std::vector<PipelineConfig::EffectV1> effects;
+  effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
       .effect_name = "effect",
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
   EXPECT_EQ(2, effects_stage->format().channels());
 
   // Add 48 frames to our source.
@@ -613,8 +613,8 @@ struct RingOutTestParameters {
   uint32_t ring_out_block_frames;
 };
 
-class EffectsStageRingoutTest : public EffectsStageTest,
-                                public ::testing::WithParamInterface<RingOutTestParameters> {
+class EffectsStageV1RingoutTest : public EffectsStageV1Test,
+                                  public ::testing::WithParamInterface<RingOutTestParameters> {
  protected:
   void SetUp() override {
     auto timeline_function =
@@ -630,8 +630,8 @@ class EffectsStageRingoutTest : public EffectsStageTest,
   std::shared_ptr<PacketQueue> stream_;
 };
 
-TEST_P(EffectsStageRingoutTest, RingoutBuffer) {
-  auto ringout_buffer = EffectsStage::RingoutBuffer::Create(
+TEST_P(EffectsStageV1RingoutTest, RingoutBuffer) {
+  auto ringout_buffer = EffectsStageV1::RingoutBuffer::Create(
       GetParam().format, GetParam().effect_ring_out_frames, GetParam().effect_max_frames_per_buffer,
       GetParam().effect_block_size);
 
@@ -650,20 +650,20 @@ TEST_P(EffectsStageRingoutTest, RingoutBuffer) {
   }
 }
 
-TEST_P(EffectsStageRingoutTest, RingoutFrames) {
+TEST_P(EffectsStageV1RingoutTest, RingoutFrames) {
   test_effects_.AddEffect("effect")
       .WithRingOutFrames(GetParam().effect_ring_out_frames)
       .WithBlockSize(GetParam().effect_block_size)
       .WithMaxFramesPerBuffer(GetParam().effect_max_frames_per_buffer);
 
-  std::vector<PipelineConfig::Effect> effects;
-  effects.push_back(PipelineConfig::Effect{
+  std::vector<PipelineConfig::EffectV1> effects;
+  effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
       .effect_name = "effect",
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream_, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream_, volume_curve_);
   EXPECT_EQ(2, effects_stage->format().channels());
 
   // Add 48 frames to our source.
@@ -762,7 +762,7 @@ const RingOutTestParameters kMaxFramesPerBufferLowerThanRingOutFrames{
     .ring_out_block_frames = 128,
 };
 
-INSTANTIATE_TEST_SUITE_P(EffectsStageRingoutTestInstance, EffectsStageRingoutTest,
+INSTANTIATE_TEST_SUITE_P(EffectsStageV1RingoutTestInstance, EffectsStageV1RingoutTest,
                          ::testing::Values(kNoRingout, kSmallRingOutNoBlockSize,
                                            kLargeRingOutNoBlockSize,
                                            kMaxFramesPerBufferLowerThanRingOutFrames));

@@ -653,9 +653,9 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     EXPECT_EQ(RenderUsage::SYSTEM_AGENT, mix_group.input_streams[1]);
     EXPECT_EQ(RenderUsage::MEDIA, mix_group.input_streams[2]);
     EXPECT_EQ(RenderUsage::INTERRUPTION, mix_group.input_streams[3]);
-    ASSERT_EQ(1u, mix_group.effects.size());
+    ASSERT_EQ(1u, mix_group.effects_v1.size());
     {
-      const auto& effect = mix_group.effects[0];
+      const auto& effect = mix_group.effects_v1[0];
       EXPECT_EQ("libbar2.so", effect.lib_name);
       EXPECT_EQ("linearize_effect", effect.effect_name);
       EXPECT_EQ("instance_name", effect.instance_name);
@@ -675,9 +675,9 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     const auto& mix_group = mix;
     EXPECT_EQ("", mix_group.name);
     EXPECT_EQ(0u, mix_group.input_streams.size());
-    ASSERT_EQ(1u, mix_group.effects.size());
+    ASSERT_EQ(1u, mix_group.effects_v1.size());
     {
-      const auto& effect = mix_group.effects[0];
+      const auto& effect = mix_group.effects_v1[0];
       EXPECT_EQ("libfoo2.so", effect.lib_name);
       EXPECT_EQ("effect3", effect.effect_name);
       EXPECT_EQ("ef3", effect.instance_name);
@@ -697,9 +697,9 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     EXPECT_EQ("media", mix_group.name);
     EXPECT_EQ(1u, mix_group.input_streams.size());
     EXPECT_EQ(RenderUsage::MEDIA, mix_group.input_streams[0]);
-    ASSERT_EQ(2u, mix_group.effects.size());
+    ASSERT_EQ(2u, mix_group.effects_v1.size());
     {
-      const auto& effect = mix_group.effects[0];
+      const auto& effect = mix_group.effects_v1[0];
       EXPECT_EQ("libfoo.so", effect.lib_name);
       EXPECT_EQ("effect1", effect.effect_name);
       EXPECT_EQ("ef1", effect.instance_name);
@@ -707,7 +707,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_FALSE(effect.output_channels);
     }
     {
-      const auto& effect = mix_group.effects[1];
+      const auto& effect = mix_group.effects_v1[1];
       EXPECT_EQ("libbar.so", effect.lib_name);
       EXPECT_EQ("effect2", effect.effect_name);
       EXPECT_EQ("ef2", effect.instance_name);
@@ -727,9 +727,9 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     EXPECT_EQ("communications", mix_group.name);
     EXPECT_EQ(1u, mix_group.input_streams.size());
     EXPECT_EQ(RenderUsage::COMMUNICATION, mix_group.input_streams[0]);
-    ASSERT_EQ(1u, mix_group.effects.size());
+    ASSERT_EQ(1u, mix_group.effects_v1.size());
     {
-      const auto& effect = mix_group.effects[0];
+      const auto& effect = mix_group.effects_v1[0];
       EXPECT_EQ("libbaz.so", effect.lib_name);
       EXPECT_EQ("baz", effect.effect_name);
       EXPECT_EQ("baz", effect.instance_name);
@@ -1130,7 +1130,7 @@ TEST(ProcessConfigLoaderTest, LoadOutputDevicePolicyWithDefaultPipeline) {
 
   auto& config = result.value().device_config().output_device_profile(expected_id);
   EXPECT_TRUE(config.pipeline_config().root().loopback);
-  EXPECT_TRUE(config.pipeline_config().root().effects.empty());
+  EXPECT_TRUE(config.pipeline_config().root().effects_v1.empty());
   EXPECT_TRUE(config.pipeline_config().root().inputs.empty());
   EXPECT_EQ(PipelineConfig::kDefaultMixGroupRate, config.pipeline_config().root().output_rate);
   EXPECT_EQ(PipelineConfig::kDefaultMixGroupChannels,
@@ -1185,7 +1185,7 @@ TEST(ProcessConfigLoaderTest, LoadOutputDevicePolicyWithNoSupportedStreamTypes) 
   }
   EXPECT_FALSE(config.pipeline_config().root().loopback);
   EXPECT_TRUE(config.pipeline_config().root().input_streams.empty());
-  EXPECT_TRUE(config.pipeline_config().root().effects.empty());
+  EXPECT_TRUE(config.pipeline_config().root().effects_v1.empty());
   EXPECT_TRUE(config.pipeline_config().root().inputs.empty());
   EXPECT_EQ(PipelineConfig::kDefaultMixGroupRate, config.pipeline_config().root().output_rate);
   EXPECT_EQ(PipelineConfig::kDefaultMixGroupChannels,

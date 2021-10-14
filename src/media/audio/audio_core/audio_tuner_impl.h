@@ -57,7 +57,7 @@ inline std::optional<RenderUsage> RenderUsageFromStreamType(StreamType usage) {
 }
 
 inline fuchsia::media::tuning::AudioEffectConfig ToAudioEffectConfig(
-    const PipelineConfig::Effect effect) {
+    const PipelineConfig::EffectV1 effect) {
   auto result = fuchsia::media::tuning::AudioEffectConfig();
   result.set_instance_name(effect.instance_name);
 
@@ -78,7 +78,7 @@ inline fuchsia::media::tuning::AudioMixGroup ToAudioMixGroup(
   std::string name = mix_group.name;
   bool loopback = mix_group.loopback;
   std::vector<fuchsia::media::tuning::AudioEffectConfig> effects;
-  for (auto effect : mix_group.effects) {
+  for (auto effect : mix_group.effects_v1) {
     effects.push_back(ToAudioEffectConfig(effect));
   }
   std::vector<std::unique_ptr<fuchsia::media::tuning::AudioMixGroup>> inputs;
@@ -124,9 +124,9 @@ inline PipelineConfig::MixGroup ToPipelineConfigMixGroup(
       input_streams.push_back(stream.value());
     }
   }
-  std::vector<PipelineConfig::Effect> effects;
+  std::vector<PipelineConfig::EffectV1> effects;
   for (size_t i = 0; i < mix_group.effects.size(); ++i) {
-    effects.push_back(PipelineConfig::Effect{
+    effects.push_back(PipelineConfig::EffectV1{
         mix_group.effects[i].type().module_name(), mix_group.effects[i].type().effect_name(),
         mix_group.effects[i].instance_name(), mix_group.effects[i].configuration(), std::nullopt});
     if (mix_group.effects[i].has_output_channels()) {
@@ -146,7 +146,7 @@ inline PipelineConfig::MixGroup ToPipelineConfigMixGroup(
   return PipelineConfig::MixGroup{
       .name = name,
       .input_streams = input_streams,
-      .effects = effects,
+      .effects_v1 = effects,
       .inputs = inputs,
       .loopback = loopback,
       .output_rate = output_rate,

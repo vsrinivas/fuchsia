@@ -2,28 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/lib/effects_loader/effects_processor.h"
+#include "src/media/audio/lib/effects_loader/effects_processor_v1.h"
 
 #include <gtest/gtest.h>
 
-#include "src/media/audio/effects/test_effects/test_effects.h"
-#include "src/media/audio/lib/effects_loader/testing/effects_loader_test_base.h"
+#include "src/media/audio/effects/test_effects/test_effects_v1.h"
+#include "src/media/audio/lib/effects_loader/testing/effects_loader_v1_test_base.h"
 
 namespace media::audio {
 namespace {
 
-class EffectsProcessorTest : public testing::EffectsLoaderTestBase {};
+class EffectsProcessorV1Test : public testing::EffectsLoaderV1TestBase {};
 
-// The following tests validates the EffectsProcessor class itself.
+// The following tests validates the EffectsProcessorV1 class itself.
 //
 // Verify the creation, uniqueness, quantity and deletion of effect instances.
-TEST_F(EffectsProcessorTest, CreateDelete) {
+TEST_F(EffectsProcessorV1Test, CreateDelete) {
   test_effects().AddEffect("assign_to_1.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
 
-  Effect effect3 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
-  Effect effect1 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
-  Effect effect2 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
-  Effect effect4 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+  EffectV1 effect3 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+  EffectV1 effect1 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+  EffectV1 effect2 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+  EffectV1 effect4 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
 
   ASSERT_TRUE(effect1);
   ASSERT_TRUE(effect2);
@@ -41,7 +41,7 @@ TEST_F(EffectsProcessorTest, CreateDelete) {
 
   // Create processor
   {
-    EffectsProcessor processor;
+    EffectsProcessorV1 processor;
     EXPECT_EQ(processor.AddEffect(std::move(effect3)), ZX_OK);
     EXPECT_EQ(processor.AddEffect(std::move(effect1)), ZX_OK);
     EXPECT_EQ(processor.AddEffect(std::move(effect2)), ZX_OK);
@@ -60,13 +60,13 @@ TEST_F(EffectsProcessorTest, CreateDelete) {
   EXPECT_EQ(0u, test_effects().InstanceCount());
 }
 
-TEST_F(EffectsProcessorTest, AddEffectWithMismatchedChannelConfig) {
+TEST_F(EffectsProcessorV1Test, AddEffectWithMismatchedChannelConfig) {
   test_effects().AddEffect("assign_to_1.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
-  Effect single_channel_effect1 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
-  Effect single_channel_effect2 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
-  Effect two_channel_effect = effects_loader()->CreateEffect(0, "", 1, 2, 2, {});
+  EffectV1 single_channel_effect1 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+  EffectV1 single_channel_effect2 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+  EffectV1 two_channel_effect = effects_loader()->CreateEffect(0, "", 1, 2, 2, {});
 
-  EffectsProcessor processor;
+  EffectsProcessorV1 processor;
   EXPECT_EQ(processor.channels_in(), 0);
   EXPECT_EQ(processor.channels_out(), 0);
 
@@ -86,7 +86,7 @@ TEST_F(EffectsProcessorTest, AddEffectWithMismatchedChannelConfig) {
 }
 
 // Verify (at a VERY Basic level) the methods that handle data flow.
-TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
+TEST_F(EffectsProcessorV1Test, ProcessInPlaceFlush) {
   test_effects().AddEffect("increment_by_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
   test_effects().AddEffect("increment_by_2.0").WithAction(TEST_EFFECTS_ACTION_ADD, 2.0);
   test_effects().AddEffect("assign_to_12.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 12.0);
@@ -95,7 +95,7 @@ TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
   float buff[4] = {0, 1.0, 2.0, 3.0};
 
   // Before instances added, ProcessInPlace and Flush should succeed.
-  EffectsProcessor processor;
+  EffectsProcessorV1 processor;
   EXPECT_EQ(processor.ProcessInPlace(4, buff), ZX_OK);
   EXPECT_EQ(processor.Flush(), ZX_OK);
   EXPECT_EQ(0.0, buff[0]);
@@ -104,10 +104,10 @@ TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
   EXPECT_EQ(3.0, buff[3]);
 
   // Chaining four instances together, ProcessInPlace and flush should succeed.
-  Effect effect1 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
-  Effect effect2 = effects_loader()->CreateEffect(1, "", 1, 1, 1, {});
-  Effect effect3 = effects_loader()->CreateEffect(2, "", 1, 1, 1, {});
-  Effect effect4 = effects_loader()->CreateEffect(3, "", 1, 1, 1, {});
+  EffectV1 effect1 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+  EffectV1 effect2 = effects_loader()->CreateEffect(1, "", 1, 1, 1, {});
+  EffectV1 effect3 = effects_loader()->CreateEffect(2, "", 1, 1, 1, {});
+  EffectV1 effect4 = effects_loader()->CreateEffect(3, "", 1, 1, 1, {});
   ASSERT_TRUE(effect1 && effect2 && effect3 && effect4);
 
   EXPECT_EQ(processor.AddEffect(std::move(effect1)), ZX_OK);
@@ -126,10 +126,10 @@ TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
   EXPECT_EQ(buff[3], 16.0);
 
   // All effects should have initial flush count 0.
-  test_effects_inspect_state inspect1 = {};
-  test_effects_inspect_state inspect2 = {};
-  test_effects_inspect_state inspect3 = {};
-  test_effects_inspect_state inspect4 = {};
+  test_effects_v1_inspect_state inspect1 = {};
+  test_effects_v1_inspect_state inspect2 = {};
+  test_effects_v1_inspect_state inspect3 = {};
+  test_effects_v1_inspect_state inspect4 = {};
   EXPECT_EQ(ZX_OK, test_effects().InspectInstance(processor.GetEffectAt(0).get(), &inspect1));
   EXPECT_EQ(ZX_OK, test_effects().InspectInstance(processor.GetEffectAt(1).get(), &inspect2));
   EXPECT_EQ(ZX_OK, test_effects().InspectInstance(processor.GetEffectAt(2).get(), &inspect3));
@@ -166,7 +166,7 @@ TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
   EXPECT_NE(processor.ProcessInPlace(0, nullptr), ZX_OK);
 }
 
-TEST_F(EffectsProcessorTest, ReportBlockSize) {
+TEST_F(EffectsProcessorV1Test, ReportBlockSize) {
   test_effects().AddEffect("block_size_3").WithBlockSize(3);
   test_effects().AddEffect("block_size_5").WithBlockSize(5);
   test_effects().AddEffect("block_size_any").WithBlockSize(FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY);
@@ -176,34 +176,34 @@ TEST_F(EffectsProcessorTest, ReportBlockSize) {
   RecreateLoader();
 
   // Create processor and verify default block_size.
-  EffectsProcessor processor;
+  EffectsProcessorV1 processor;
   EXPECT_EQ(1, processor.block_size());
 
   // Add an effect and observe a change in block_size.
-  Effect effect1 = effects_loader()->CreateEffectByName("block_size_3", "", 1, 1, 1, {});
+  EffectV1 effect1 = effects_loader()->CreateEffectByName("block_size_3", "", 1, 1, 1, {});
   ASSERT_TRUE(effect1);
   processor.AddEffect(std::move(effect1));
   EXPECT_EQ(3, processor.block_size());
 
   // Add another effect and observe a change in block_size (lcm(3,5)
-  Effect effect2 = effects_loader()->CreateEffectByName("block_size_5", "", 1, 1, 1, {});
+  EffectV1 effect2 = effects_loader()->CreateEffectByName("block_size_5", "", 1, 1, 1, {});
   ASSERT_TRUE(effect2);
   processor.AddEffect(std::move(effect2));
   EXPECT_EQ(15, processor.block_size());
 
   // Add some final effects that should not change block_size.
-  Effect effect3 = effects_loader()->CreateEffectByName("block_size_any", "", 1, 1, 1, {});
+  EffectV1 effect3 = effects_loader()->CreateEffectByName("block_size_any", "", 1, 1, 1, {});
   ASSERT_TRUE(effect3);
   processor.AddEffect(std::move(effect3));
   EXPECT_EQ(15, processor.block_size());
 
-  Effect effect4 = effects_loader()->CreateEffectByName("block_size_1", "", 1, 1, 1, {});
+  EffectV1 effect4 = effects_loader()->CreateEffectByName("block_size_1", "", 1, 1, 1, {});
   ASSERT_TRUE(effect4);
   processor.AddEffect(std::move(effect4));
   EXPECT_EQ(15, processor.block_size());
 }
 
-TEST_F(EffectsProcessorTest, ReportMaxBufferSize) {
+TEST_F(EffectsProcessorV1Test, ReportMaxBufferSize) {
   test_effects().AddEffect("max_buffer_1024").WithMaxFramesPerBuffer(1024);
   test_effects().AddEffect("max_buffer_512").WithMaxFramesPerBuffer(512);
   test_effects().AddEffect("max_buffer_256").WithMaxFramesPerBuffer(256);
@@ -213,30 +213,30 @@ TEST_F(EffectsProcessorTest, ReportMaxBufferSize) {
   RecreateLoader();
 
   // Create processor and verify default block_size.
-  EffectsProcessor processor;
+  EffectsProcessorV1 processor;
   EXPECT_EQ(0, processor.max_batch_size());
 
   // Add an effect and observe a change in buffer size.
   {
-    Effect effect = effects_loader()->CreateEffectByName("max_buffer_1024", "", 1, 1, 1, {});
+    EffectV1 effect = effects_loader()->CreateEffectByName("max_buffer_1024", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
     EXPECT_EQ(1024, processor.max_batch_size());
   }
   {
-    Effect effect = effects_loader()->CreateEffectByName("max_buffer_512", "", 1, 1, 1, {});
+    EffectV1 effect = effects_loader()->CreateEffectByName("max_buffer_512", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
     EXPECT_EQ(512, processor.max_batch_size());
   }
   {
-    Effect effect = effects_loader()->CreateEffectByName("max_buffer_256", "", 1, 1, 1, {});
+    EffectV1 effect = effects_loader()->CreateEffectByName("max_buffer_256", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
     EXPECT_EQ(256, processor.max_batch_size());
   }
   {
-    Effect effect = effects_loader()->CreateEffectByName("max_buffer_128", "", 1, 1, 1, {});
+    EffectV1 effect = effects_loader()->CreateEffectByName("max_buffer_128", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
     EXPECT_EQ(128, processor.max_batch_size());
@@ -245,14 +245,14 @@ TEST_F(EffectsProcessorTest, ReportMaxBufferSize) {
   // Add a final effect with an increasing max block size to verify we don't increase the reported
   // buffer size.
   {
-    Effect effect = effects_loader()->CreateEffectByName("max_buffer_1024", "", 1, 1, 1, {});
+    EffectV1 effect = effects_loader()->CreateEffectByName("max_buffer_1024", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
     EXPECT_EQ(128, processor.max_batch_size());
   }
 }
 
-TEST_F(EffectsProcessorTest, AlignBufferWithBlockSize) {
+TEST_F(EffectsProcessorV1Test, AlignBufferWithBlockSize) {
   test_effects()
       .AddEffect("max_buffer_1024_any_align")
       .WithMaxFramesPerBuffer(1024)
@@ -272,12 +272,12 @@ TEST_F(EffectsProcessorTest, AlignBufferWithBlockSize) {
   RecreateLoader();
 
   // Create processor and verify default block_size.
-  EffectsProcessor processor;
+  EffectsProcessorV1 processor;
   EXPECT_EQ(0, processor.max_batch_size());
   EXPECT_EQ(1, processor.block_size());
 
   {
-    Effect effect =
+    EffectV1 effect =
         effects_loader()->CreateEffectByName("max_buffer_1024_any_align", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
@@ -287,7 +287,7 @@ TEST_F(EffectsProcessorTest, AlignBufferWithBlockSize) {
 
   // Adding an effect with 300 alignment should drop our max buffer size from 1024 -> 900.
   {
-    Effect effect = effects_loader()->CreateEffectByName("any_buffer_300_align", "", 1, 1, 1, {});
+    EffectV1 effect = effects_loader()->CreateEffectByName("any_buffer_300_align", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
     EXPECT_EQ(900, processor.max_batch_size());
@@ -295,7 +295,7 @@ TEST_F(EffectsProcessorTest, AlignBufferWithBlockSize) {
   }
   // Adding an effect with max buffer of 800 should drop aggregate max buffer to 600.
   {
-    Effect effect =
+    EffectV1 effect =
         effects_loader()->CreateEffectByName("max_buffer_800_any_align", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
@@ -304,22 +304,22 @@ TEST_F(EffectsProcessorTest, AlignBufferWithBlockSize) {
   }
 }
 
-TEST_F(EffectsProcessorTest, ProcessOutOfPlace) {
+TEST_F(EffectsProcessorV1Test, ProcessOutOfPlace) {
   test_effects()
       .AddEffect("increment")
       .WithChannelization(FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY, FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY)
       .WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
 
-  Effect effect1 = effects_loader()->CreateEffect(0, "", 1, 1, 2, {});
-  Effect effect2 = effects_loader()->CreateEffect(0, "", 1, 2, 2, {});
-  Effect effect3 = effects_loader()->CreateEffect(0, "", 1, 2, 4, {});
+  EffectV1 effect1 = effects_loader()->CreateEffect(0, "", 1, 1, 2, {});
+  EffectV1 effect2 = effects_loader()->CreateEffect(0, "", 1, 2, 2, {});
+  EffectV1 effect3 = effects_loader()->CreateEffect(0, "", 1, 2, 4, {});
 
   ASSERT_TRUE(effect1);
   ASSERT_TRUE(effect2);
   ASSERT_TRUE(effect3);
 
   // Create processor
-  EffectsProcessor processor;
+  EffectsProcessorV1 processor;
   EXPECT_EQ(processor.AddEffect(std::move(effect1)), ZX_OK);
   EXPECT_EQ(processor.size(), 1u);
   EXPECT_EQ(processor.channels_in(), 1);
@@ -361,14 +361,14 @@ TEST_F(EffectsProcessorTest, ProcessOutOfPlace) {
   CheckFrame(3);
 }
 
-TEST_F(EffectsProcessorTest, AddEffectFailsWithInvalidChannelization) {
+TEST_F(EffectsProcessorV1Test, AddEffectFailsWithInvalidChannelization) {
   test_effects()
       .AddEffect("effect")
       .WithChannelization(FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY, FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY)
       .WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
-  EffectsProcessor processor;
+  EffectsProcessorV1 processor;
 
-  Effect effect1 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+  EffectV1 effect1 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
   ASSERT_TRUE(effect1);
   EXPECT_EQ(processor.AddEffect(std::move(effect1)), ZX_OK);
   EXPECT_EQ(processor.size(), 1u);
@@ -377,7 +377,7 @@ TEST_F(EffectsProcessorTest, AddEffectFailsWithInvalidChannelization) {
 
   // Create an effect with 2 chans in. This should be rejected by the processor since it's currently
   // producing 1 channel audio.
-  Effect effect2 = effects_loader()->CreateEffect(0, "", 1, 2, 2, {});
+  EffectV1 effect2 = effects_loader()->CreateEffect(0, "", 1, 2, 2, {});
   ASSERT_TRUE(effect2);
   EXPECT_EQ(processor.AddEffect(std::move(effect2)), ZX_ERR_INVALID_ARGS);
   EXPECT_EQ(processor.size(), 1u);
@@ -385,13 +385,13 @@ TEST_F(EffectsProcessorTest, AddEffectFailsWithInvalidChannelization) {
   EXPECT_EQ(processor.channels_out(), 1);
 }
 
-TEST_F(EffectsProcessorTest, SetStreamInfo) {
+TEST_F(EffectsProcessorV1Test, SetStreamInfo) {
   test_effects().AddEffect("effect.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
-  EffectsProcessor processor;
+  EffectsProcessorV1 processor;
 
   constexpr int kNumEffects = 5;
   for (int i = 0; i < kNumEffects; ++i) {
-    Effect effect = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+    EffectV1 effect = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     EXPECT_EQ(processor.AddEffect(std::move(effect)), ZX_OK);
   }
@@ -409,7 +409,7 @@ TEST_F(EffectsProcessorTest, SetStreamInfo) {
 
   // Now verify the effects received the stream info.
   for (int i = 0; i < kNumEffects; ++i) {
-    test_effects_inspect_state inspect = {};
+    test_effects_v1_inspect_state inspect = {};
     EXPECT_EQ(ZX_OK, test_effects().InspectInstance(processor.GetEffectAt(i).get(), &inspect));
 
     EXPECT_EQ(kExpectedUsageMask, inspect.stream_info.usage_mask);
@@ -418,7 +418,7 @@ TEST_F(EffectsProcessorTest, SetStreamInfo) {
   }
 }
 
-TEST_F(EffectsProcessorTest, FilterWidth) {
+TEST_F(EffectsProcessorV1Test, FilterWidth) {
   test_effects()
       .AddEffect("effect1")
       .WithChannelization(FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY, FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY)
@@ -431,7 +431,7 @@ TEST_F(EffectsProcessorTest, FilterWidth) {
       .WithRingOutFrames(19);
   RecreateLoader();
 
-  EffectsProcessor processor;
+  EffectsProcessorV1 processor;
   processor.AddEffect(effects_loader()->CreateEffectByName("effect1", "", 1, 1, 1, {}));
   processor.AddEffect(effects_loader()->CreateEffectByName("effect2", "", 1, 1, 1, {}));
 

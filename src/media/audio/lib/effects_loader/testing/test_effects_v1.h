@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_TESTING_TEST_EFFECTS_H_
-#define SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_TESTING_TEST_EFFECTS_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_TESTING_TEST_EFFECTS_V1_H_
+#define SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_TESTING_TEST_EFFECTS_V1_H_
 
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 #include <string_view>
 
-#include "src/media/audio/effects/test_effects/test_effects.h"
+#include "src/media/audio/effects/test_effects/test_effects_v1.h"
 
 namespace media::audio::testing {
 
@@ -24,18 +24,18 @@ static constexpr char kTestEffectsModuleName[] = "test_effects.so";
 // loadable_module in the test_package that is linking against this library.
 //
 // See //src/media/audio/lib/effects_loader:audio_effects_loader_unittests as an example.
-std::shared_ptr<test_effects_module_ext> OpenTestEffectsExt();
+std::shared_ptr<test_effects_v1_module_ext> OpenTestEffectsExt();
 
-class TestEffectBuilder {
+class TestEffectV1Builder {
  public:
-  TestEffectBuilder(std::shared_ptr<test_effects_module_ext> module, std::string_view name)
+  TestEffectV1Builder(std::shared_ptr<test_effects_v1_module_ext> module, std::string_view name)
       : module_(std::move(module)) {
     auto length = std::min(name.length(), FUCHSIA_AUDIO_EFFECTS_MAX_NAME_LENGTH - 1);
     memcpy(spec_.description.name, name.data(), length);
     spec_.description.name[length] = 0;
   }
 
-  ~TestEffectBuilder() {
+  ~TestEffectV1Builder() {
     if (module_) {
       zx_status_t status = Build();
       if (status != ZX_OK) {
@@ -44,33 +44,33 @@ class TestEffectBuilder {
     }
   }
 
-  TestEffectBuilder& WithAction(EffectAction action, float value) {
+  TestEffectV1Builder& WithAction(EffectAction action, float value) {
     spec_.action = action;
     spec_.value = value;
     return *this;
   }
 
-  TestEffectBuilder& WithBlockSize(int64_t block_size) {
+  TestEffectV1Builder& WithBlockSize(int64_t block_size) {
     spec_.block_size_frames = static_cast<uint32_t>(block_size);
     return *this;
   }
 
-  TestEffectBuilder& WithMaxFramesPerBuffer(int64_t max_frames_per_buffer) {
+  TestEffectV1Builder& WithMaxFramesPerBuffer(int64_t max_frames_per_buffer) {
     spec_.max_batch_size = static_cast<uint32_t>(max_frames_per_buffer);
     return *this;
   }
 
-  TestEffectBuilder& WithSignalLatencyFrames(int64_t latency) {
+  TestEffectV1Builder& WithSignalLatencyFrames(int64_t latency) {
     spec_.signal_latency_frames = static_cast<uint32_t>(latency);
     return *this;
   }
 
-  TestEffectBuilder& WithRingOutFrames(int64_t ring_out_frames) {
+  TestEffectV1Builder& WithRingOutFrames(int64_t ring_out_frames) {
     spec_.ring_out_frames = static_cast<uint32_t>(ring_out_frames);
     return *this;
   }
 
-  TestEffectBuilder& WithChannelization(int32_t channels_in, int32_t channels_out) {
+  TestEffectV1Builder& WithChannelization(int32_t channels_in, int32_t channels_out) {
     spec_.description.incoming_channels = static_cast<uint16_t>(channels_in);
     spec_.description.outgoing_channels = static_cast<uint16_t>(channels_out);
     return *this;
@@ -86,7 +86,7 @@ class TestEffectBuilder {
   }
 
  private:
-  test_effect_spec spec_ = {
+  test_effect_v1_spec spec_ = {
       .description =
           {
               .name = "",
@@ -100,27 +100,28 @@ class TestEffectBuilder {
       .action = TEST_EFFECTS_ACTION_ADD,
       .value = 0.0f,
   };
-  std::shared_ptr<test_effects_module_ext> module_;
+  std::shared_ptr<test_effects_v1_module_ext> module_;
 };
 
-class TestEffectsModule {
+class TestEffectsV1Module {
  public:
-  static TestEffectsModule Open() { return TestEffectsModule(OpenTestEffectsExt()); }
+  static TestEffectsV1Module Open() { return TestEffectsV1Module(OpenTestEffectsExt()); }
 
-  TestEffectsModule(std::shared_ptr<test_effects_module_ext> module) : module_(std::move(module)) {}
+  TestEffectsV1Module(std::shared_ptr<test_effects_v1_module_ext> module)
+      : module_(std::move(module)) {}
 
   // Disallow copy/move.
-  TestEffectsModule(const TestEffectsModule&) = delete;
-  TestEffectsModule& operator=(const TestEffectsModule&) = delete;
-  TestEffectsModule(TestEffectsModule&& o) = delete;
-  TestEffectsModule& operator=(TestEffectsModule&& o) = delete;
+  TestEffectsV1Module(const TestEffectsV1Module&) = delete;
+  TestEffectsV1Module& operator=(const TestEffectsV1Module&) = delete;
+  TestEffectsV1Module(TestEffectsV1Module&& o) = delete;
+  TestEffectsV1Module& operator=(TestEffectsV1Module&& o) = delete;
 
-  ~TestEffectsModule() { ClearEffects(); }
+  ~TestEffectsV1Module() { ClearEffects(); }
 
   // Creates a new effect for the library. Must be called while the number of active effect
   // instances is zero.
-  TestEffectBuilder AddEffect(std::string_view name) const {
-    return TestEffectBuilder(module_, name);
+  TestEffectV1Builder AddEffect(std::string_view name) const {
+    return TestEffectV1Builder(module_, name);
   }
 
   // Removes all effects. Must be called while the number of active effect instances is zero.
@@ -131,14 +132,14 @@ class TestEffectsModule {
 
   // Provides detailed information about a single effect instance.
   zx_status_t InspectInstance(fuchsia_audio_effects_handle_t effects_handle,
-                              test_effects_inspect_state* out) const {
+                              test_effects_v1_inspect_state* out) const {
     return module_->inspect_instance(effects_handle, out);
   }
 
  private:
-  std::shared_ptr<test_effects_module_ext> module_;
+  std::shared_ptr<test_effects_v1_module_ext> module_;
 };
 
 }  // namespace media::audio::testing
 
-#endif  // SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_TESTING_TEST_EFFECTS_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_EFFECTS_LOADER_TESTING_TEST_EFFECTS_V1_H_

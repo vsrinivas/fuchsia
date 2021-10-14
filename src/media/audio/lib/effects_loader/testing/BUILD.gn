@@ -5,10 +5,10 @@
 source_set("testing") {
   testonly = true
   sources = [
-    "effects_loader_test_base.cc",
-    "effects_loader_test_base.h",
-    "test_effects.cc",
-    "test_effects.h",
+    "effects_loader_v1_test_base.cc",
+    "effects_loader_v1_test_base.h",
+    "test_effects_v1.cc",
+    "test_effects_v1.h",
   ]
 
   deps = [

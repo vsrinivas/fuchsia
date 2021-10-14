@@ -16,9 +16,9 @@ TEST(PipelineConfigTest, CalculateChannels) {
   EXPECT_EQ(config.root().output_channels, config.channels());
 
   // With rechannelization effects, the last effect defines the channelization.
-  config.mutable_root().effects.push_back(
+  config.mutable_root().effects_v1.push_back(
       {"lib.so", "effect", "e1", "", {config.root().output_channels + 1}});
-  config.mutable_root().effects.push_back(
+  config.mutable_root().effects_v1.push_back(
       {"lib.so", "effect", "e2", "", {config.root().output_channels + 2}});
   EXPECT_EQ(config.root().output_channels + 2, config.channels());
 }

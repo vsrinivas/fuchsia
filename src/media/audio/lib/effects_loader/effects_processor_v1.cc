@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/lib/effects_loader/effects_processor.h"
+#include "src/media/audio/lib/effects_loader/effects_processor_v1.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
@@ -22,8 +22,8 @@ int64_t ComputeMaxFramesPerBuffer(int64_t max_frames_per_buffer, int64_t block_s
 }  // namespace
 
 // Insert an effect instance at the end of the chain.
-zx_status_t EffectsProcessor::AddEffect(Effect e) {
-  TRACE_DURATION("audio", "EffectsProcessor::AddEffect");
+zx_status_t EffectsProcessorV1::AddEffect(EffectV1 e) {
+  TRACE_DURATION("audio", "EffectsProcessorV1::AddEffect");
   FX_DCHECK(e);
 
   fuchsia_audio_effects_parameters params;
@@ -66,8 +66,8 @@ zx_status_t EffectsProcessor::AddEffect(Effect e) {
 }
 
 // Aborts if position is out-of-range.
-const Effect& EffectsProcessor::GetEffectAt(int64_t position) const {
-  TRACE_DURATION("audio", "EffectsProcessor::GetEffectAt", "position", position);
+const EffectV1& EffectsProcessorV1::GetEffectAt(int64_t position) const {
+  TRACE_DURATION("audio", "EffectsProcessorV1::GetEffectAt", "position", position);
   FX_CHECK(static_cast<uint64_t>(position) < effects_chain_.size());
   return effects_chain_[position];
 }
@@ -76,8 +76,8 @@ const Effect& EffectsProcessor::GetEffectAt(int64_t position) const {
 // Per spec, fail if audio_buff_in_out is nullptr (even if num_frames is 0).
 // Also, if any instance fails Process, exit without calling the others.
 // TODO(mpuryear): Should we still call the other instances, if one fails?
-zx_status_t EffectsProcessor::ProcessInPlace(int64_t num_frames, float* audio_buff_in_out) const {
-  TRACE_DURATION("audio", "EffectsProcessor::ProcessInPlace", "num_frames", num_frames,
+zx_status_t EffectsProcessorV1::ProcessInPlace(int64_t num_frames, float* audio_buff_in_out) const {
+  TRACE_DURATION("audio", "EffectsProcessorV1::ProcessInPlace", "num_frames", num_frames,
                  "num_effects", effects_chain_.size());
   if (audio_buff_in_out == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -100,9 +100,9 @@ zx_status_t EffectsProcessor::ProcessInPlace(int64_t num_frames, float* audio_bu
   return ZX_OK;
 }
 
-zx_status_t EffectsProcessor::Process(int64_t num_frames, float* audio_buff_in,
-                                      float** audio_buff_out) const {
-  TRACE_DURATION("audio", "EffectsProcessor::Process", "num_frames", num_frames, "num_effects",
+zx_status_t EffectsProcessorV1::Process(int64_t num_frames, float* audio_buff_in,
+                                        float** audio_buff_out) const {
+  TRACE_DURATION("audio", "EffectsProcessorV1::Process", "num_frames", num_frames, "num_effects",
                  effects_chain_.size());
   if (audio_buff_in == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -137,12 +137,12 @@ zx_status_t EffectsProcessor::Process(int64_t num_frames, float* audio_buff_in,
   return ZX_OK;
 }
 
-// For this Effect chain, call each instance's Flush() in sequence. If any instance fails, continue
-// Flushing the remaining Effects but only the first error will be reported.
+// For this EffectV1 chain, call each instance's Flush() in sequence. If any instance fails,
+// continue Flushing the remaining Effects but only the first error will be reported.
 //
 // Return ZX_OK iff all Effects are successfully flushed.
-zx_status_t EffectsProcessor::Flush() const {
-  TRACE_DURATION("audio", "EffectsProcessor::Flush");
+zx_status_t EffectsProcessorV1::Flush() const {
+  TRACE_DURATION("audio", "EffectsProcessorV1::Flush");
   zx_status_t result = ZX_OK;
   for (const auto& effect : effects_chain_) {
     if (!effect) {
@@ -158,8 +158,8 @@ zx_status_t EffectsProcessor::Flush() const {
   return result;
 }
 
-void EffectsProcessor::SetStreamInfo(const fuchsia_audio_effects_stream_info& stream_info) const {
-  TRACE_DURATION("audio", "EffectsProcessor::SetStreamInfo");
+void EffectsProcessorV1::SetStreamInfo(const fuchsia_audio_effects_stream_info& stream_info) const {
+  TRACE_DURATION("audio", "EffectsProcessorV1::SetStreamInfo");
   for (const auto& effect : effects_chain_) {
     if (!effect) {
       continue;

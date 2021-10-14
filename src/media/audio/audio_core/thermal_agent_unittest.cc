@@ -149,7 +149,7 @@ const char kThrottledConfig[] = "config";
 TEST_F(ThermalAgentTest, OneConfigEntry) {
   PipelineConfig pipeline_config({
       .name = "mixgroup",
-      .effects = {{
+      .effects_v1 = {{
           .lib_name = "lib",
           .effect_name = "effect",
           .instance_name = kTargetName,
@@ -237,7 +237,7 @@ const char kTripPoint2Config2[] = "config2_2";
 TEST_F(ThermalAgentTest, MultipleConfigEntries) {
   PipelineConfig pipeline_config({
       .name = "mixgroup",
-      .effects =
+      .effects_v1 =
           {
               {
                   .lib_name = "lib",
