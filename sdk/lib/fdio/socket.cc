@@ -483,20 +483,8 @@ int16_t SetSockOptProcessor::Get(uint32_t* out) {
   return 0;
 }
 
-template <typename T, typename V>
-struct OptionalStorage {
-  T opt;
-
-  void set_unset() { opt.set_unset({}); }
-
-  void set_value(V value) { opt.set_value(std::move(value)); }
-};
-
-using OptionalUint8 = OptionalStorage<fsocket::wire::OptionalUint8, uint8_t>;
-using OptionalUint32 = OptionalStorage<fsocket::wire::OptionalUint32, uint32_t>;
-
 template <>
-int16_t SetSockOptProcessor::Get(OptionalUint8* out) {
+int16_t SetSockOptProcessor::Get(fsocket::wire::OptionalUint8* out) {
   int32_t i;
   if (int16_t r = Get(&i); r) {
     return r;
@@ -505,7 +493,7 @@ int16_t SetSockOptProcessor::Get(OptionalUint8* out) {
     return EINVAL;
   }
   if (i == -1) {
-    out->set_unset();
+    out->set_unset({});
   } else {
     out->set_value(static_cast<uint8_t>(i));
   }
@@ -514,7 +502,7 @@ int16_t SetSockOptProcessor::Get(OptionalUint8* out) {
 
 // Like OptionalUint8, but permits truncation to a single byte.
 struct OptionalUint8CharAllowed {
-  OptionalUint8 inner;
+  fsocket::wire::OptionalUint8 inner;
 };
 
 template <>
@@ -1094,8 +1082,7 @@ struct BaseNetworkSocket : public BaseSocket<T> {
             return proc.ProcessAndExpectSockOptResult<OptionalUint8CharAllowed>(
                 [this](OptionalUint8CharAllowed value) {
                   return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
-                      client(), SetIpMulticastTtl, (value.inner.opt),
-                      SockOptResult::FromFidlResponse);
+                      client(), SetIpMulticastTtl, (value.inner), SockOptResult::FromFidlResponse);
                 });
           case IP_ADD_MEMBERSHIP: {
             return proc.ProcessAndExpectSockOptResult<fsocket::wire::IpMulticastMembership>(
@@ -1135,10 +1122,11 @@ struct BaseNetworkSocket : public BaseSocket<T> {
                   SockOptResult::FromFidlResponse);
             });
           case IP_TTL:
-            return proc.ProcessAndExpectSockOptResult<OptionalUint8>([this](OptionalUint8 value) {
-              return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
-                  client(), SetIpTtl, (value.opt), SockOptResult::FromFidlResponse);
-            });
+            return proc.ProcessAndExpectSockOptResult<fsocket::wire::OptionalUint8>(
+                [this](fsocket::wire::OptionalUint8 value) {
+                  return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                      client(), SetIpTtl, (value), SockOptResult::FromFidlResponse);
+                });
           case IP_TOS:
             if (optlen == 0) {
               return SockOptResult::Ok();
@@ -1190,20 +1178,22 @@ struct BaseNetworkSocket : public BaseSocket<T> {
                   SockOptResult::FromFidlResponse);
             });
           case IPV6_MULTICAST_HOPS:
-            return proc.ProcessAndExpectSockOptResult<OptionalUint8>([this](OptionalUint8 value) {
-              return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
-                  client(), SetIpv6MulticastHops, (value.opt), SockOptResult::FromFidlResponse);
-            });
+            return proc.ProcessAndExpectSockOptResult<fsocket::wire::OptionalUint8>(
+                [this](fsocket::wire::OptionalUint8 value) {
+                  return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                      client(), SetIpv6MulticastHops, (value), SockOptResult::FromFidlResponse);
+                });
           case IPV6_MULTICAST_LOOP:
             return proc.ProcessAndExpectSockOptResult<bool>([this](bool value) {
               return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
                   client(), SetIpv6MulticastLoopback, (value), SockOptResult::FromFidlResponse);
             });
           case IPV6_TCLASS:
-            return proc.ProcessAndExpectSockOptResult<OptionalUint8>([this](OptionalUint8 value) {
-              return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
-                  client(), SetIpv6TrafficClass, (value.opt), SockOptResult::FromFidlResponse);
-            });
+            return proc.ProcessAndExpectSockOptResult<fsocket::wire::OptionalUint8>(
+                [this](fsocket::wire::OptionalUint8 value) {
+                  return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
+                      client(), SetIpv6TrafficClass, (value), SockOptResult::FromFidlResponse);
+                });
           case IPV6_RECVTCLASS:
             return proc.ProcessAndExpectSockOptResult<bool>([this](bool value) {
               return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
@@ -1258,13 +1248,13 @@ struct BaseNetworkSocket : public BaseSocket<T> {
                   [this](uint32_t value) { return client().SetTcpWindowClamp(value); });
             case TCP_LINGER2:
               return proc.Process<int32_t>([this](int32_t value) {
-                OptionalUint32 opt;
+                fsocket::wire::OptionalUint32 opt;
                 if (value < 0) {
-                  opt.set_unset();
+                  opt.set_unset({});
                 } else {
                   opt.set_value(static_cast<uint32_t>(value));
                 }
-                return client().SetTcpLinger(opt.opt);
+                return client().SetTcpLinger(opt);
               });
             default:
               return SockOptResult::Errno(ENOPROTOOPT);
