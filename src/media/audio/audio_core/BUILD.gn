@@ -91,6 +91,8 @@ source_set("audio_core_lib") {
     "effects_controller_impl.h",
     "effects_stage.cc",
     "effects_stage.h",
+    "effects_stage_v2.cc",
+    "effects_stage_v2.h",
     "idle_policy.cc",
     "idle_policy.h",
     "link_matrix.cc",
@@ -164,10 +166,12 @@ source_set("audio_core_lib") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.audio.effects:fuchsia.audio.effects_llcpp",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.tuning",
+    "//sdk/fidl/fuchsia.mediastreams",
     "//sdk/fidl/fuchsia.thermal",
     "//sdk/fidl/fuchsia.ultrasound",
     "//sdk/lib/fit-promise",
@@ -180,6 +184,7 @@ source_set("audio_core_lib") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/ffl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/trace",
   ]
 
@@ -262,6 +267,7 @@ executable("unittest_bin") {
     "device_config_unittest.cc",
     "driver_output_unittest.cc",
     "effects_stage_unittest.cc",
+    "effects_stage_v2_unittest.cc",
     "link_matrix_unittest.cc",
     "loudness_transform_unittest.cc",
     "mix_stage_clock_unittest.cc",
@@ -299,6 +305,7 @@ executable("unittest_bin") {
   deps = [
     ":audio_core_lib",
     "testing",
+    "//sdk/fidl/fuchsia.audio.effects",
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/lib/fit-promise",

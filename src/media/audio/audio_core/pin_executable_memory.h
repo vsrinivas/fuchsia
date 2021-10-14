@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_PIN_EXECUTABLE_MEMORY_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_PIN_EXECUTABLE_MEMORY_H_
 
+#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <zircon/syscalls/object.h>
 

@@ -13,6 +13,8 @@ source_set("testing") {
     "fake_audio_driver.h",
     "fake_audio_renderer.cc",
     "fake_audio_renderer.h",
+    "fake_packet_queue.cc",
+    "fake_packet_queue.h",
     "fake_plug_detector.h",
     "fake_profile_provider.h",
     "fake_stream.cc",

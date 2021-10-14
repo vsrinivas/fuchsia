@@ -58,6 +58,15 @@ type ProcessOptions = table {
     ///
     /// If not specified, the applied gain is 0 dB for each input.
     1: total_applied_gain_db_per_input vector<float32>:MAX_INPUT_STREAMS;
+
+    /// All fuchsia.media.AudioRenderUsages that contribute to each input
+    /// stream. This is a bitmask of (1 << r), for each AudioRenderUsage that
+    /// contributes. For example, if an input stream contains BACKGROUND (== 0)
+    /// and INTERRUPTION (== 2), the bitmask is ((1<<0)|(1<<2)) = 0x5.
+    ///
+    /// Note: this field may be removed once we have transitions to the new
+    /// Fuchsia media APIs.
+    2: usage_mask_per_input vector<uint32>:MAX_INPUT_STREAMS;
 };
 
 /// Configures a Processor.
@@ -114,8 +123,10 @@ type OutputConfiguration = resource table {
     /// Required.
     1: format fuchsia.mediastreams.AudioFormat;
 
-    /// Buffer for this input stream. Must provide read access and must have
+    /// Buffer for this output stream. Must provide write access and must have
     /// enough space for `ProcessorConfiguration.max_frames_per_call`.
+    /// Write access is needed so the audio system can write to the output
+    /// buffer in error cases, such as when the Processor disconnects.
     ///
     /// If the effect supports in-place updates, this may refer to the same memory
     /// range as an input buffer.

@@ -9,6 +9,7 @@ table/member fuchsia.audio.effects/OutputConfiguration.latency_frames uint64
 table/member fuchsia.audio.effects/OutputConfiguration.ring_out_frames uint64
 resource table fuchsia.audio.effects/OutputConfiguration
 table/member fuchsia.audio.effects/ProcessOptions.total_applied_gain_db_per_input vector<float32>:8
+table/member fuchsia.audio.effects/ProcessOptions.usage_mask_per_input vector<uint32>:8
 table fuchsia.audio.effects/ProcessOptions
 protocol/member fuchsia.audio.effects/Processor.Process(uint64 num_frames,fuchsia.audio.effects/ProcessOptions options) -> (fuchsia.audio.effects/Processor_Process_Result result)
 protocol fuchsia.audio.effects/Processor

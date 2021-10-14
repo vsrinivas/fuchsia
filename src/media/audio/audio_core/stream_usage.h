@@ -226,6 +226,12 @@ class StreamUsageMask final {
 
   constexpr StreamUsageMask& operator=(const StreamUsageMask& other) = default;
 
+  static constexpr StreamUsageMask FromMask(uint32_t mask) {
+    StreamUsageMask s;
+    s.mask_ = mask;
+    return s;
+  }
+
   // Insert `usage` into the bitmask.
   constexpr void insert(const StreamUsage& usage) {
     if (!usage.is_empty()) {
