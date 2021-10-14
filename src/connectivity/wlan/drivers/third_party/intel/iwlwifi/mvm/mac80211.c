@@ -2985,7 +2985,7 @@ void iwl_mvm_mac_mgd_prepare_tx(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
   iwl_mvm_unref(mvm, IWL_MVM_REF_PREPARE_TX);
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static int iwl_mvm_mac_sched_scan_start(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
                                         struct cfg80211_sched_scan_request* req,
                                         struct ieee80211_scan_ies* ies) {
@@ -3652,11 +3652,7 @@ static zx_status_t __iwl_mvm_unassign_vif_chanctx(struct iwl_mvm_vif* mvmvif,
 
   iwl_assert_lock_held(&mvmvif->mvm->mutex);
 
-  zx_status_t ret = iwl_mvm_remove_time_event(mvmvif, &mvmvif->time_event_data);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot remove time event: %s\n", zx_status_get_string(ret));
-    return ret;
-  }
+  zx_status_t ret;
 
   switch (mvmvif->mac_role) {
 #if 0   // NEEDS_PORTING

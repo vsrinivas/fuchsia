@@ -363,6 +363,17 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
     IWL_INFO(mvmvif, "We already have PHY context set (ap_sta_id=%d). Removing it.\n",
              mvmvif->ap_sta_id);
 
+    // In the normal case, the time event is added in the mac_configure_bss() and removed in the
+    // mac_configure_assoc(). So in the abnormal cases (assoc failed), we need to remove it before
+    // configure_bss().
+    mtx_lock(&mvmvif->mvm->mutex);
+    ret = iwl_mvm_remove_time_event(mvmvif, &mvmvif->time_event_data);
+    mtx_unlock(&mvmvif->mvm->mutex);
+    if (ret != ZX_OK) {
+      IWL_ERR(mvmvif, "cannot remove time event: %s\n", zx_status_get_string(ret));
+      return ret;
+    }
+
     auto mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
     if (mvm_sta) {
       ret = mac_unconfigure_bss(mvmvif, mvm_sta);
@@ -397,8 +408,6 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
 
   return ret;
 }
-
-static zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta);
 
 // This is called after mac_set_channel(). The MAC (mvmvif) will be configured as a CLIENT role.
 zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* config) {
@@ -452,6 +461,7 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* c
   mtx_unlock(&mvmvif->mvm->mutex);
 
   // Ask the firmware to pay attention for beacon.
+  // Note that this would add TIME_EVENT as well.
   iwl_mvm_mac_mgd_prepare_tx(mvmvif->mvm, mvmvif, IWL_MVM_TE_SESSION_PROTECTION_MAX_TIME_MS);
 
   // Allocate a Tx queue for this station.
@@ -560,7 +570,8 @@ zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ct
     goto out;
   }
 
-  // Below are to simulate the behavior of iwl_mvm_bss_info_changed_station().
+  // Change the station states step by step.
+
   ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_AUTH);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot set state from NONE to AUTH: %s\n", zx_status_get_string(ret));
@@ -588,6 +599,12 @@ zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ct
   ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot update MAC context in the firmware: %s\n", zx_status_get_string(ret));
+    goto unlock;
+  }
+
+  ret = iwl_mvm_remove_time_event(mvmvif, &mvmvif->time_event_data);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot remove time event: %s\n", zx_status_get_string(ret));
     goto unlock;
   }
 
@@ -644,6 +661,11 @@ zx_status_t mac_clear_assoc(void* ctx, uint32_t options,
   // (in the NONE->NOTEXIST transition).
   // TODO(79799): understand why we need this.
   mtx_lock(&mvmvif->mvm->mutex);
+  // Remove Time event (in case assoc failed)
+  ret = iwl_mvm_remove_time_event(mvmvif, &mvmvif->time_event_data);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot remove time event: %s\n", zx_status_get_string(ret));
+  }
   iwl_mvm_flush_sta(mvmvif->mvm, mvm_sta, false, 0);
 
   // Update the MAC context in the firmware.
