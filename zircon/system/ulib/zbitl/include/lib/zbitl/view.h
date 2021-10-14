@@ -1285,15 +1285,17 @@ explicit View(Storage) -> View<Storage>;
 // constructed with arguments the arguments (const std::byte*, size_t),
 // representing the start and length of the in-memory ZBI.
 template <typename Storage = ByteView>
-Storage StorageFromRawHeader(const zbi_header_t* zbi) {
+Storage StorageFromRawHeader(std::conditional_t<std::is_const_v<typename Storage::element_type>,
+                                                const zbi_header_t, zbi_header_t>* zbi) {
   if (zbi->magic != ZBI_ITEM_MAGIC || zbi->type != ZBI_TYPE_CONTAINER ||
       zbi->extra != ZBI_CONTAINER_MAGIC) {
     // Invalid header. Don't trust the `length` field.
-    return Storage(reinterpret_cast<const std::byte*>(zbi), sizeof(zbi_header_t));
+    return Storage(reinterpret_cast<typename Storage::pointer>(zbi), sizeof(zbi_header_t));
   }
 
   // Return Storage covering the entire header and payload.
-  return Storage(reinterpret_cast<const std::byte*>(zbi), sizeof(zbi_header_t) + zbi->length);
+  return Storage(reinterpret_cast<typename Storage::pointer>(zbi),
+                 sizeof(zbi_header_t) + zbi->length);
 }
 
 }  // namespace zbitl

@@ -153,11 +153,24 @@ if (toolchain_environment == "kernel.phys" ||
 
   source_set("kernel-package") {
     public = [ "include/phys/kernel-package.h" ]
+    public_deps = [
+      ":allocation",
+      ":handoff",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/system/ulib/zbitl",
+    ]
 
     public_configs = [ ":includes" ]
 
-    sources = []
-    deps = []
+    sources = [ "kernel-package.cc" ]
+    deps = [
+      ":stdio",
+      ":symbolize",
+      ":zbitl-allocation",
+      "//zircon/kernel/lib/boot-options",
+      "//zircon/kernel/lib/libc",
+      "//zircon/system/ulib/pretty",
+    ]
   }
 
   # Transitive dependencies for the <phys/main.h> header.
@@ -174,7 +187,8 @@ if (toolchain_environment == "kernel.phys" ||
       "//zircon/kernel/lib/arch",
     ]
 
-    # If the toolchain is compiling a PIE executable, include required libraries.
+    # If the toolchain is compiling a PIE executable, include required
+    # libraries.
     if (toolchain_variant.tags + [ "static-pie" ] - [ "static-pie" ] !=
         toolchain_variant.tags) {
       public_deps += [
@@ -345,14 +359,12 @@ zbi_executable("physboot") {
     ":main",
     ":stdio",
     ":symbolize",
-    ":zbitl-allocation",
     "//zircon/kernel/arch/$zircon_cpu/code-patches",
     "//zircon/kernel/lib/arch",
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/code-patching",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/libc",
-    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zbitl",
   ]
   if (current_cpu == "x64") {
