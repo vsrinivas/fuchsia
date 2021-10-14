@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability_source::{CapabilitySourceInterface, CollectionCapabilityProvider},
+        capability_source::{AggregateCapabilityProvider, CapabilitySourceInterface},
         component_instance::{
             ComponentInstanceInterface, ResolvedInstanceInterface, WeakComponentInstanceInterface,
         },
@@ -53,7 +53,7 @@ pub(super) struct CollectionServiceProvider<C: ComponentInstanceInterface, U, O,
 }
 
 #[async_trait]
-impl<C, U, O, E, D, S, V, M> CollectionCapabilityProvider<C>
+impl<C, U, O, E, D, S, V, M> AggregateCapabilityProvider<C>
     for CollectionServiceProvider<C, U, O, E, D, S, V, M>
 where
     C: ComponentInstanceInterface + 'static,
@@ -136,7 +136,7 @@ where
             .await
     }
 
-    fn clone_boxed(&self) -> Box<dyn CollectionCapabilityProvider<C>> {
+    fn clone_boxed(&self) -> Box<dyn AggregateCapabilityProvider<C>> {
         Box::new(self.clone())
     }
 }

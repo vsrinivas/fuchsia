@@ -63,9 +63,9 @@ pub enum CapabilitySourceInterface<C: ComponentInstanceInterface> {
     },
     /// This capability is an aggregate of capabilities provided by components in a collection.
     Collection {
+        capability: AggregateCapability,
+        capability_provider: Box<dyn AggregateCapabilityProvider<C>>,
         collection_name: String,
-        source_name: CapabilityName,
-        capability_provider: Box<dyn CollectionCapabilityProvider<C>>,
         component: WeakComponentInstanceInterface<C>,
     },
 }
@@ -80,7 +80,7 @@ impl<C: ComponentInstanceInterface> CapabilitySourceInterface<C> {
             Self::Builtin { capability, .. } => capability.can_be_in_namespace(),
             Self::Namespace { capability, .. } => capability.can_be_in_namespace(),
             Self::Capability { .. } => true,
-            Self::Collection { .. } => false,
+            Self::Collection { capability, .. } => capability.can_be_in_namespace(),
         }
     }
 
@@ -91,7 +91,7 @@ impl<C: ComponentInstanceInterface> CapabilitySourceInterface<C> {
             Self::Builtin { capability, .. } => Some(capability.source_name()),
             Self::Namespace { capability, .. } => capability.source_name(),
             Self::Capability { .. } => None,
-            Self::Collection { source_name, .. } => Some(source_name),
+            Self::Collection { capability, .. } => Some(capability.source_name()),
         }
     }
 
@@ -102,7 +102,7 @@ impl<C: ComponentInstanceInterface> CapabilitySourceInterface<C> {
             Self::Builtin { capability, .. } => capability.type_name(),
             Self::Namespace { capability, .. } => capability.type_name(),
             Self::Capability { source_capability, .. } => source_capability.type_name(),
-            Self::Collection { .. } => CapabilityTypeName::Service,
+            Self::Collection { capability, .. } => capability.type_name(),
         }
     }
 
@@ -136,17 +136,14 @@ impl<C: ComponentInstanceInterface> fmt::Display for CapabilitySourceInterface<C
                 CapabilitySourceInterface::Capability { source_capability, .. } =>
                     format!("{}", source_capability),
                 CapabilitySourceInterface::Collection {
+                    capability,
                     collection_name,
-                    source_name,
                     component,
                     ..
                 } => {
                     format!(
-                        "{} '{}' from collection '#{}' of component '{}'",
-                        self.type_name(),
-                        source_name,
-                        collection_name,
-                        &component.moniker
+                        "{} from collection '#{}' of component '{}'",
+                        capability, collection_name, &component.moniker
                     )
                 }
             }
@@ -188,33 +185,36 @@ impl<C: ComponentInstanceInterface> PartialEq for StorageCapabilitySource<C> {
     }
 }
 
-/// A provider of a capability whose source originates from zero or more components
-/// of a collection. This trait type-erases the capability type, so it can be handled
-/// and hosted generically.
+/// A provider of a capability from an aggregation of zero or more instances of a capability.
+///
+/// This trait type-erases the capability type, so it can be handled and hosted generically.
 #[async_trait]
-pub trait CollectionCapabilityProvider<C: ComponentInstanceInterface>: Send + Sync {
-    /// Lists the instances of the capability within the collection.
+pub trait AggregateCapabilityProvider<C: ComponentInstanceInterface>: Send + Sync {
+    /// Lists the instances of the capability.
+    ///
+    /// This is an opaque identifier that is only meaningful for a subsequent
+    /// call to `route_instance`.
     async fn list_instances(&self) -> Result<Vec<String>, RoutingError>;
 
-    /// Route the capability to its source within the component `instance` of the collection.
+    /// Route the given `instance` of the capability to its source.
     async fn route_instance(
         &self,
         instance: &str,
     ) -> Result<CapabilitySourceInterface<C>, RoutingError>;
 
     /// Trait-object compatible clone.
-    fn clone_boxed(&self) -> Box<dyn CollectionCapabilityProvider<C>>;
+    fn clone_boxed(&self) -> Box<dyn AggregateCapabilityProvider<C>>;
 }
 
-impl<C: ComponentInstanceInterface> Clone for Box<dyn CollectionCapabilityProvider<C>> {
+impl<C: ComponentInstanceInterface> Clone for Box<dyn AggregateCapabilityProvider<C>> {
     fn clone(&self) -> Self {
         self.clone_boxed()
     }
 }
 
-impl<C> fmt::Debug for Box<dyn CollectionCapabilityProvider<C>> {
+impl<C> fmt::Debug for Box<dyn AggregateCapabilityProvider<C>> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Box<dyn CollectionCapabilityProvider>").finish()
+        f.debug_struct("Box<dyn AggregateCapabilityProvider>").finish()
     }
 }
 
@@ -508,6 +508,45 @@ impl EnvironmentCapability {
             | Self::Resolver { source, .. }
             | Self::Debug { source, .. } => &source,
         }
+    }
+}
+
+/// Describes a capability provided by component manager that is an aggregation
+/// of multiple instances of a capability.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum AggregateCapability {
+    Service(CapabilityName),
+}
+
+impl AggregateCapability {
+    /// Returns true if the AggregateCapability can be available in a component's namespace.
+    pub fn can_be_in_namespace(&self) -> bool {
+        matches!(self, AggregateCapability::Service(_))
+    }
+
+    /// Returns a name for the capability type.
+    pub fn type_name(&self) -> CapabilityTypeName {
+        match self {
+            AggregateCapability::Service(_) => CapabilityTypeName::Service,
+        }
+    }
+
+    pub fn source_name(&self) -> &CapabilityName {
+        match self {
+            AggregateCapability::Service(name) => &name,
+        }
+    }
+}
+
+impl fmt::Display for AggregateCapability {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "aggregate {} '{}'", self.type_name(), self.source_name())
+    }
+}
+
+impl From<ServiceDecl> for AggregateCapability {
+    fn from(service: ServiceDecl) -> Self {
+        Self::Service(service.name)
     }
 }
 

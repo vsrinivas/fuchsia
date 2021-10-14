@@ -33,6 +33,7 @@ use {
             time::{create_utc_clock, UtcTimeMaintainer},
             vmex_resource::VmexResource,
         },
+        collection::CollectionCapabilityHost,
         config::RuntimeConfig,
         diagnostics::ComponentTreeStats,
         directory_ready_notifier::DirectoryReadyNotifier,
@@ -336,6 +337,7 @@ pub struct BuiltinEnvironment {
     pub work_scheduler: Arc<WorkScheduler>,
     pub binder_capability_host: Arc<BinderCapabilityHost>,
     pub realm_capability_host: Arc<RealmCapabilityHost>,
+    pub collection_capability_host: Arc<CollectionCapabilityHost>,
     pub storage_admin_capability_host: Arc<StorageAdmin>,
     pub hub: Option<Arc<Hub>>,
     pub builtin_runners: Vec<Arc<BuiltinRunner>>,
@@ -646,6 +648,11 @@ impl BuiltinEnvironment {
         let binder_capability_host = Arc::new(BinderCapabilityHost::new(Arc::downgrade(&model)));
         model.root().hooks.install(binder_capability_host.hooks()).await;
 
+        // Set up the provider of capabilities that originate from collections.
+        let collection_capability_host =
+            Arc::new(CollectionCapabilityHost::new(Arc::downgrade(&model)));
+        model.root().hooks.install(collection_capability_host.hooks()).await;
+
         // Set up the storage admin protocol
         let storage_admin_capability_host = Arc::new(StorageAdmin::new(Arc::downgrade(&model)));
         model.root().hooks.install(storage_admin_capability_host.hooks()).await;
@@ -746,6 +753,7 @@ impl BuiltinEnvironment {
             work_scheduler,
             binder_capability_host,
             realm_capability_host,
+            collection_capability_host,
             storage_admin_capability_host,
             hub,
             builtin_runners,

@@ -4,7 +4,9 @@
 
 use {
     crate::{
-        capability_source::{CapabilitySourceInterface, ComponentCapability, InternalCapability},
+        capability_source::{
+            AggregateCapability, CapabilitySourceInterface, ComponentCapability, InternalCapability,
+        },
         collection::CollectionServiceProvider,
         component_instance::{
             ComponentInstanceInterface, ExtendedInstanceInterface, ResolvedInstanceInterface,
@@ -387,7 +389,7 @@ where
             OfferResult::OfferFromCollection(offer_decl, collection_component, collection_name) => {
                 Ok(CapabilitySourceInterface::<C>::Collection {
                     collection_name: collection_name.clone(),
-                    source_name: offer_decl.source_name().clone(),
+                    capability: AggregateCapability::Service(offer_decl.source_name().clone()),
                     capability_provider: Box::new(CollectionServiceProvider {
                         router: self,
                         collection_name,
@@ -446,7 +448,7 @@ where
                 collection_name,
             ) => Ok(CapabilitySourceInterface::<C>::Collection {
                 collection_name: collection_name.clone(),
-                source_name: expose_decl.source_name().clone(),
+                capability: AggregateCapability::Service(expose_decl.source_name().clone()),
                 capability_provider: Box::new(CollectionServiceProvider {
                     router: self,
                     collection_name,

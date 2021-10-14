@@ -126,6 +126,7 @@ template("component_manager") {
     "src/builtin_environment.rs",
     "src/capability.rs",
     "src/channel.rs",
+    "src/collection.rs",
     "src/config.rs",
     "src/constants.rs",
     "src/convert.rs",

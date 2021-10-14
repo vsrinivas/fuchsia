@@ -4,11 +4,10 @@
 
 pub mod error;
 pub mod open;
+pub mod service;
 pub use error::OpenResourceError;
 pub use error::RoutingError;
 pub use open::*;
-
-mod service;
 
 use {
     crate::{
@@ -18,7 +17,6 @@ use {
             component::{BindReason, ComponentInstance, ExtendedInstance, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload},
-            routing::service::serve_collection,
             storage,
         },
     },
@@ -250,25 +248,6 @@ fn get_default_provider(
 /// and `server_chan` parameters are used in the open call.
 async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), ModelError> {
     let OpenRequest { flags, open_mode, relative_path, source, target, server_chan } = open_request;
-    // When serving a collection, routing hasn't reached the source. The CapabilityRouted event
-    // should not fire, nor should hooks be able to modify the provider (which is hosted by
-    // component_manager). Once a component is routed to from the collection, CapabilityRouted will
-    // fire as usual.
-    match source {
-        CapabilitySource::Collection { capability_provider, component, .. } => {
-            return serve_collection(
-                target.as_weak(),
-                &component.upgrade()?,
-                capability_provider,
-                flags,
-                open_mode,
-                relative_path,
-                server_chan,
-            )
-            .await;
-        }
-        _ => {}
-    }
 
     let capability_provider = Arc::new(Mutex::new(get_default_provider(target.as_weak(), &source)));
 

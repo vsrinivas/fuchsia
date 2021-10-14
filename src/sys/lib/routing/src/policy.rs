@@ -194,12 +194,12 @@ impl GlobalPolicyChecker {
                     capability: source_capability.type_name(),
                 }
             }
-            CapabilitySourceInterface::Collection { source_name, component, .. } => {
+            CapabilitySourceInterface::Collection { capability, component, .. } => {
                 CapabilityAllowlistKey {
                     source_moniker: ExtendedMoniker::ComponentInstance(component.moniker.clone()),
-                    source_name: source_name.clone(),
+                    source_name: capability.source_name().clone(),
                     source: CapabilityAllowlistSource::Self_,
-                    capability: cm_rust::CapabilityTypeName::Service,
+                    capability: capability.type_name(),
                 }
             }
         })

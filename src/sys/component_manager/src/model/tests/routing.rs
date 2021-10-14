@@ -15,8 +15,8 @@
 use {
     crate::{
         capability::{
-            CapabilityProvider, CapabilitySource, ComponentCapability, InternalCapability,
-            OptionalTask,
+            AggregateCapability, CapabilityProvider, CapabilitySource, ComponentCapability,
+            InternalCapability, OptionalTask,
         },
         channel,
         framework::INTERNAL_REALM_SERVICE,
@@ -2344,12 +2344,13 @@ async fn route_service_from_parent_collection() {
     match source {
         RouteSource::Service(CapabilitySource::Collection {
             collection_name,
-            source_name,
+            capability,
             component,
             ..
         }) => {
             assert_eq!(collection_name, "coll");
-            assert_eq!(source_name, CapabilityName("foo".into()));
+            assert_matches!(capability, AggregateCapability::Service(_));
+            assert_eq!(*capability.source_name(), CapabilityName("foo".into()));
             assert!(Arc::ptr_eq(&component.upgrade().unwrap(), &a_component));
         }
         _ => panic!("bad capability source"),

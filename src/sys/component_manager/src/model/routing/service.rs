@@ -4,18 +4,18 @@
 
 use {
     crate::{
+        capability::CapabilityProvider,
         channel,
         model::{
             component::{ComponentInstance, WeakComponentInstance},
             error::ModelError,
-            routing::{open_capability_at_source, OpenRequest},
+            routing::{open_capability_at_source, OpenRequest, OptionalTask},
         },
     },
-    ::routing::capability_source::CollectionCapabilityProvider,
+    ::routing::capability_source::AggregateCapabilityProvider,
     async_trait::async_trait,
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
-    fidl_fuchsia_io as fio,
-    fuchsia_zircon::{Channel, Status},
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     log::*,
     moniker::AbsoluteMoniker,
     std::{path::PathBuf, sync::Arc},
@@ -30,41 +30,65 @@ use {
     },
 };
 
-/// Serve a Service directory that allows clients to list instances in a collection and to open
-/// instances, triggering capability routing.
+/// Serves a Service directory that allows clients to list instances in a collection
+/// and to open instances.
+///
 /// TODO(fxbug.dev/73153): Cache this collection directory and re-use it for requests from the
 /// same target.
-pub async fn serve_collection<'a>(
-    target: WeakComponentInstance,
-    collection_component: &'a Arc<ComponentInstance>,
-    provider: Box<dyn CollectionCapabilityProvider<ComponentInstance>>,
-    flags: u32,
-    open_mode: u32,
-    path: PathBuf,
-    server_chan: &'a mut Channel,
-) -> Result<(), ModelError> {
-    let path_utf8 = path.to_str().ok_or_else(|| ModelError::path_is_not_utf8(path.clone()))?;
-    let path = if path_utf8.is_empty() {
-        vfs::path::Path::dot()
-    } else {
-        vfs::path::Path::validate_and_split(path_utf8)
-            .map_err(|_| ModelError::path_invalid(path_utf8))?
-    };
-    let execution_scope =
-        collection_component.lock_resolved_state().await?.execution_scope().clone();
-    let dir = lazy::lazy(ServiceCollectionDirectory {
-        target,
-        collection_component: collection_component.abs_moniker.clone(),
-        provider,
-    });
-    dir.open(
-        execution_scope,
-        flags,
-        open_mode,
-        path,
-        ServerEnd::new(channel::take_channel(server_chan)),
-    );
-    Ok(())
+pub struct CollectionServiceDirectoryProvider {
+    /// Execution scope for requests to `dir`. This is the same scope
+    /// as the one in `collection_component`'s resolved state.
+    execution_scope: ExecutionScope,
+
+    /// The directory that contains entries for all service instances
+    /// in the collection.
+    dir: Arc<lazy::Lazy<CollectionServiceDirectory>>,
+}
+
+impl CollectionServiceDirectoryProvider {
+    pub async fn create(
+        target: WeakComponentInstance,
+        collection_component: &Arc<ComponentInstance>,
+        provider: Box<dyn AggregateCapabilityProvider<ComponentInstance>>,
+    ) -> Result<CollectionServiceDirectoryProvider, ModelError> {
+        let execution_scope =
+            collection_component.lock_resolved_state().await?.execution_scope().clone();
+        let dir = lazy::lazy(CollectionServiceDirectory {
+            target,
+            collection_component: collection_component.abs_moniker.clone(),
+            provider,
+        });
+        Ok(CollectionServiceDirectoryProvider { execution_scope, dir })
+    }
+}
+
+#[async_trait]
+impl CapabilityProvider for CollectionServiceDirectoryProvider {
+    async fn open(
+        self: Box<Self>,
+        flags: u32,
+        open_mode: u32,
+        relative_path: PathBuf,
+        server_end: &mut zx::Channel,
+    ) -> Result<OptionalTask, ModelError> {
+        let relative_path_utf8 = relative_path
+            .to_str()
+            .ok_or_else(|| ModelError::path_is_not_utf8(relative_path.clone()))?;
+        let relative_path = if relative_path_utf8.is_empty() {
+            vfs::path::Path::dot()
+        } else {
+            vfs::path::Path::validate_and_split(relative_path_utf8)
+                .map_err(|_| ModelError::path_invalid(relative_path_utf8))?
+        };
+        self.dir.open(
+            self.execution_scope.clone(),
+            flags,
+            open_mode,
+            relative_path,
+            ServerEnd::new(channel::take_channel(server_end)),
+        );
+        Ok(None.into())
+    }
 }
 
 /// A directory entry representing an instance of a service.
@@ -79,7 +103,7 @@ struct ServiceInstanceDirectoryEntry {
     /// The moniker of the component at which the instance was aggregated.
     intermediate_component: AbsoluteMoniker,
     /// The provider that lists collection instances and performs routing to an instance.
-    provider: Box<dyn CollectionCapabilityProvider<ComponentInstance>>,
+    provider: Box<dyn AggregateCapabilityProvider<ComponentInstance>>,
 }
 
 impl DirectoryEntry for ServiceInstanceDirectoryEntry {
@@ -166,20 +190,20 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
 /// This directory can be accessed by components by opening `/svc/my.service/` in their
 /// incoming namespace when they have a `use my.service` declaration in their manifest, and the
 /// source of `my.service` is a collection.
-struct ServiceCollectionDirectory {
+struct CollectionServiceDirectory {
     /// The original target of the capability route (the component that opened this directory).
     target: WeakComponentInstance,
     /// The moniker of the component hosting the collection.
     collection_component: AbsoluteMoniker,
     /// The provider that lists collection instances and performs routing to an instance.
-    provider: Box<dyn CollectionCapabilityProvider<ComponentInstance>>,
+    provider: Box<dyn AggregateCapabilityProvider<ComponentInstance>>,
 }
 
 #[async_trait]
-impl lazy::LazyDirectory for ServiceCollectionDirectory {
-    async fn get_entry(&self, name: &str) -> Result<Arc<dyn DirectoryEntry>, Status> {
+impl lazy::LazyDirectory for CollectionServiceDirectory {
+    async fn get_entry(&self, name: &str) -> Result<Arc<dyn DirectoryEntry>, zx::Status> {
         // Parse the entry name into its (component,instance) parts.
-        let (component, instance) = name.split_once(',').ok_or(Status::NOT_FOUND)?;
+        let (component, instance) = name.split_once(',').ok_or(zx::Status::NOT_FOUND)?;
         Ok(Arc::new(ServiceInstanceDirectoryEntry {
             component: component.to_string(),
             instance: instance.to_string(),
@@ -193,7 +217,7 @@ impl lazy::LazyDirectory for ServiceCollectionDirectory {
         &'a self,
         pos: &'a TraversalPosition,
         mut sink: Box<dyn dirents_sink::Sink>,
-    ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), Status> {
+    ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), zx::Status> {
         let next_entry = match pos {
             TraversalPosition::End => {
                 // Bail out early when there is no work to do.
@@ -209,7 +233,8 @@ impl lazy::LazyDirectory for ServiceCollectionDirectory {
         };
 
         let target = self.target.upgrade().map_err(|e| e.as_zx_status())?;
-        let mut instances = self.provider.list_instances().await.map_err(|_| Status::INTERNAL)?;
+        let mut instances =
+            self.provider.list_instances().await.map_err(|_| zx::Status::INTERNAL)?;
         if instances.is_empty() {
             return Ok((TraversalPosition::End, sink.seal()));
         }
@@ -233,7 +258,7 @@ impl lazy::LazyDirectory for ServiceCollectionDirectory {
         for instance in instances {
             if let Ok(source) = self.provider.route_instance(&instance).await {
                 let (proxy, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-                    .map_err(|_| Status::INTERNAL)?;
+                    .map_err(|_| zx::Status::INTERNAL)?;
                 if let Ok(()) = open_capability_at_source(OpenRequest {
                     flags: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                     open_mode: fio::MODE_TYPE_DIRECTORY,
@@ -302,12 +327,12 @@ mod tests {
     };
 
     #[derive(Clone)]
-    struct MockCollectionCapabilityProvider {
+    struct MockAggregateCapabilityProvider {
         instances: HashMap<String, WeakComponentInstance>,
     }
 
     #[async_trait]
-    impl CollectionCapabilityProvider<ComponentInstance> for MockCollectionCapabilityProvider {
+    impl AggregateCapabilityProvider<ComponentInstance> for MockAggregateCapabilityProvider {
         async fn route_instance(&self, instance: &str) -> Result<CapabilitySource, RoutingError> {
             Ok(CapabilitySource::Component {
                 capability: ComponentCapability::Service(ServiceDecl {
@@ -330,7 +355,7 @@ mod tests {
             Ok(self.instances.keys().cloned().collect())
         }
 
-        fn clone_boxed(&self) -> Box<dyn CollectionCapabilityProvider<ComponentInstance>> {
+        fn clone_boxed(&self) -> Box<dyn AggregateCapabilityProvider<ComponentInstance>> {
             Box::new(self.clone())
         }
     }
@@ -392,7 +417,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn serve_collection_test() {
+    async fn service_collection_host_test() {
         let components = create_test_component_decls();
 
         let mock_instance = pseudo_directory! {
@@ -434,7 +459,7 @@ mod tests {
             .await
             .expect("failed to find bar instance");
 
-        let provider = MockCollectionCapabilityProvider {
+        let provider = MockAggregateCapabilityProvider {
             instances: {
                 let mut instances = HashMap::new();
                 instances.insert("foo".to_string(), foo_component.as_weak());
@@ -446,30 +471,36 @@ mod tests {
         let (service_proxy, server_end) =
             fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let mut server_end = server_end.into_channel();
-        serve_collection(
-            test.model.root().as_weak(),
-            &test.model.root(),
-            Box::new(provider),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
-            fio::MODE_TYPE_DIRECTORY,
-            PathBuf::new(),
-            &mut server_end,
-        )
-        .await
-        .expect("failed to serve");
 
-        // List the entries of the directory served by `serve_collection`.
+        let host = Box::new(
+            CollectionServiceDirectoryProvider::create(
+                test.model.root().as_weak(),
+                &test.model.root(),
+                Box::new(provider),
+            )
+            .await
+            .expect("failed to create CollectionServiceDirectoryProvider"),
+        );
+        let _task = host
+            .open(
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_DIRECTORY,
+                PathBuf::new(),
+                &mut server_end,
+            )
+            .await
+            .expect("failed to serve");
+
+        // List the entries of the directory served by `open`.
         let entries =
             files_async::readdir(&service_proxy).await.expect("failed to read directory entries");
         let instance_names: HashSet<String> = entries.into_iter().map(|d| d.name).collect();
         assert_eq!(instance_names.len(), 2);
-        assert!(instance_names.contains("foo,default"));
-        assert!(instance_names.contains("bar,default"));
 
         // Open one of the entries.
         let collection_dir = io_util::directory::open_directory(
             &service_proxy,
-            "foo,default",
+            instance_names.iter().next().expect("failed to get instance name"),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .await
@@ -532,7 +563,7 @@ mod tests {
             .await
             .expect("failed to find bar instance");
 
-        let provider = MockCollectionCapabilityProvider {
+        let provider = MockAggregateCapabilityProvider {
             instances: {
                 let mut instances = HashMap::new();
                 instances.insert("foo".to_string(), foo_component.as_weak());
@@ -544,35 +575,43 @@ mod tests {
         let (service_proxy, server_end) =
             fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let mut server_end = server_end.into_channel();
-        serve_collection(
-            test.model.root().as_weak(),
-            test.model.root(),
-            Box::new(provider),
-            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
-            fio::MODE_TYPE_DIRECTORY,
-            PathBuf::new(),
-            &mut server_end,
-        )
-        .await
-        .expect("failed to serve");
+
+        let host = Box::new(
+            CollectionServiceDirectoryProvider::create(
+                test.model.root().as_weak(),
+                &test.model.root(),
+                Box::new(provider),
+            )
+            .await
+            .expect("failed to create CollectionServiceDirectoryProvider"),
+        );
+        let _task = host
+            .open(
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                fio::MODE_TYPE_DIRECTORY,
+                PathBuf::new(),
+                &mut server_end,
+            )
+            .await
+            .expect("failed to serve");
 
         // Choose a value such that there is only room for a single entry.
         const MAX_BYTES: u64 = 30;
 
         let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         let entries = files_async::parse_dir_entries(&buf);
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].as_ref().expect("complete entry").name, "bar,default");
 
         let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         let entries = files_async::parse_dir_entries(&buf);
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].as_ref().expect("complete entry").name, "bar,one");
 
         let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         let entries = files_async::parse_dir_entries(&buf);
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].as_ref().expect("complete entry").name, "foo,default");

@@ -14,6 +14,7 @@ use {
 pub type CapabilitySource = CapabilitySourceInterface<ComponentInstance>;
 pub type InternalCapability = ::routing::capability_source::InternalCapability;
 pub type ComponentCapability = ::routing::capability_source::ComponentCapability;
+pub type AggregateCapability = ::routing::capability_source::AggregateCapability;
 pub type NamespaceCapabilities = ::routing::capability_source::NamespaceCapabilities;
 
 /// Wrapper that might hold an `fasync::Task`. `#[must_use]` to make sure the client grabs the
