@@ -31,7 +31,6 @@ class Device {
  public:
   Device(const char* name, void* context, const zx_protocol_device_t* ops,
          std::optional<Device*> parent, driver::Logger& logger, async_dispatcher_t* dispatcher);
-  ~Device();
 
   zx_device_t* ZxDevice();
 
@@ -65,13 +64,7 @@ class Device {
 
   // Used to link two instances of the same device together, or otherwise to
   // operate on the owned node.
-  //
-  // The devices pointed to are not owned by this device. On destruction, a
-  // child device will invalidate the parent device's pointer to prevent
-  // use-after-free.
   Device& parent_;
-  std::mutex mutex_;
-  Device* child_ __TA_GUARDED(mutex_);  // not-null
 
   fidl::WireSharedClient<fuchsia_driver_framework::Node> node_;
   fidl::WireSharedClient<fuchsia_driver_framework::NodeController> controller_;

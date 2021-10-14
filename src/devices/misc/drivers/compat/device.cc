@@ -46,30 +46,7 @@ Device::Device(const char* name, void* context, const zx_protocol_device_t* ops,
       ops_(ops),
       logger_(logger),
       dispatcher_(dispatcher),
-      parent_(parent ? **parent : *this),
-      child_(this) {
-  // Links two representations of a device across separately instantiated
-  // drivers.
-  //
-  // When a driver creates child devices that are bindable, the driver framework
-  // will start a child driver that will then have its own instance of the child
-  // device. This function is used to linked the two instances together, if they
-  // are in the same driver host, so that operations occur on a single instance
-  // of the device.
-  if (&parent_ != this) {
-    std::lock_guard<std::mutex> lock(parent_.mutex_);
-    parent_.child_ = this;
-  }
-}
-
-Device::~Device() {
-  // If this device is linked to another in a parent driver, invalidate the
-  // `child_` pointer in that device.
-  if (&parent_ != this) {
-    std::lock_guard<std::mutex> lock(parent_.mutex_);
-    parent_.child_ = &parent_;
-  }
-}
+      parent_(parent ? **parent : *this) {}
 
 zx_device_t* Device::ZxDevice() { return static_cast<zx_device_t*>(this); }
 
@@ -172,14 +149,8 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
       device_ptr->ops_->init(device_ptr->context_);
     }
   };
-  if (std::lock_guard<std::mutex> lock(mutex_); child_->node_) {
-    child_->node_->AddChild(std::move(args), std::move(controller_ends->server),
-                            std::move(node_server), std::move(callback));
-  } else {
-    FDF_LOG(ERROR, "Failed to add device '%s' (to parent '%s'), invalid node", zx_args->name,
-            Name());
-    return ZX_ERR_BAD_STATE;
-  }
+  node_->AddChild(std::move(args), std::move(controller_ends->server), std::move(node_server),
+                  std::move(callback));
 
   *out = device_ptr->ZxDevice();
   return ZX_OK;
