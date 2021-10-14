@@ -79,7 +79,7 @@ async fn test_stop_timeouts() {
                 EventMatcher::ok().r#type(Purged::TYPE).monikers(&target_monikers),
                 EventMatcher::ok().r#type(Purged::TYPE).monikers(&target_monikers),
             ],
-            Ordering::Ordered,
+            Ordering::Unordered,
         )
         .expect(event_stream)
         .await
