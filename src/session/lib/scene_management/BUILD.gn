@@ -38,7 +38,7 @@ rustc_library("scene_management") {
 
   sources = [
     "src/display_metrics.rs",
-    "src/flat_scene_manager.rs",
+    "src/gfx_scene_manager.rs",
     "src/graphics_utils.rs",
     "src/lib.rs",
     "src/scene_manager.rs",

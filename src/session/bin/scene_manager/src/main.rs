@@ -71,7 +71,7 @@ async fn main() -> Result<(), Error> {
         let scenic = connect_to_protocol::<ScenicMarker>()?;
         let view_ref_installed = connect_to_protocol::<ui_views::ViewRefInstalledMarker>()?;
         Arc::new(Mutex::new(Box::new(
-            scene_management::FlatSceneManager::new(scenic, view_ref_installed, None, None).await?,
+            scene_management::GfxSceneManager::new(scenic, view_ref_installed, None, None).await?,
         )))
     };
 

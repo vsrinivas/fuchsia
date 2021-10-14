@@ -23,16 +23,16 @@ use {
 pub type FocuserPtr = Arc<ui_views::FocuserProxy>;
 pub type ViewRefInstalledPtr = Arc<ui_views::ViewRefInstalledProxy>;
 
-/// The [`FlatSceneManager`] constructs an empty scene with a single white ambient light.
+/// The [`GfxSceneManager`] constructs an empty scene with a single white ambient light.
 ///
 /// Each added view is positioned at (x, y, z) = 0, and sized to match the size of the display.
-/// The display dimensions are computed at the time the [`FlatSceneManager`] is constructed.
-pub struct FlatSceneManager {
+/// The display dimensions are computed at the time the [`GfxSceneManager`] is constructed.
+pub struct GfxSceneManager {
     /// The ViewRefInstalled handle used to ensure that the root view is reattached to the scene
     /// after a11y view insertion.
     pub view_ref_installed: ViewRefInstalledPtr,
 
-    /// The Scenic session associated with this [`FlatSceneManager`].
+    /// The Scenic session associated with this [`GfxSceneManager`].
     pub session: scenic::SessionPtr,
 
     /// The view focuser associated with the [`session`].
@@ -41,7 +41,7 @@ pub struct FlatSceneManager {
     /// The id of the compositor used for the scene's layer stack.
     pub compositor_id: u32,
 
-    /// The size of the display, as determined when [`FlatSceneManager::new()`] was called.
+    /// The size of the display, as determined when [`GfxSceneManager::new()`] was called.
     pub display_size: ScreenSize,
 
     /// The root node of the scene. Views are added as children of this node.
@@ -81,7 +81,7 @@ pub struct FlatSceneManager {
     a11y_proxy_presentation_sender: PresentationSender,
 
     /// The resources used to construct the scene. If these are dropped, they will be removed
-    /// from Scenic, so they must be kept alive for the lifetime of `FlatSceneManager`.
+    /// from Scenic, so they must be kept alive for the lifetime of `GfxSceneManager`.
     _resources: ScenicResources,
 }
 
@@ -98,7 +98,7 @@ struct ScenicResources {
 }
 
 #[async_trait]
-impl SceneManager for FlatSceneManager {
+impl SceneManager for GfxSceneManager {
     async fn add_view_to_scene(
         &mut self,
         view_provider: ui_app::ViewProviderProxy,
@@ -113,7 +113,7 @@ impl SceneManager for FlatSceneManager {
             &mut viewref_pair.view_ref,
         )?;
         self.add_view(token_pair.view_holder_token, name);
-        FlatSceneManager::request_present(&self.a11y_proxy_presentation_sender);
+        GfxSceneManager::request_present(&self.a11y_proxy_presentation_sender);
 
         Ok(viewref_dup)
     }
@@ -139,7 +139,7 @@ impl SceneManager for FlatSceneManager {
             &mut viewref_pair.view_ref,
         )?;
         self.add_view(token_pair.view_holder_token, Some("root".to_string()));
-        FlatSceneManager::request_present(&self.a11y_proxy_presentation_sender);
+        GfxSceneManager::request_present(&self.a11y_proxy_presentation_sender);
 
         Ok(viewref_dup)
     }
@@ -164,7 +164,7 @@ impl SceneManager for FlatSceneManager {
         a11y_view_holder_token: ui_views::ViewHolderToken,
     ) -> Result<ui_views::ViewHolderToken, Error> {
         // Create the new a11y view holder, and attach it as a child of the root node.
-        let a11y_view_holder = FlatSceneManager::create_view_holder(
+        let a11y_view_holder = GfxSceneManager::create_view_holder(
             &self.session,
             a11y_view_holder_token,
             self.display_metrics,
@@ -197,8 +197,8 @@ impl SceneManager for FlatSceneManager {
             self.a11y_proxy_view.add_child(&*view_holder_node);
         }
 
-        FlatSceneManager::request_present(&self.presentation_sender);
-        FlatSceneManager::request_present(&self.a11y_proxy_presentation_sender);
+        GfxSceneManager::request_present(&self.presentation_sender);
+        GfxSceneManager::request_present(&self.a11y_proxy_presentation_sender);
 
         // If the root view was already set, inserting the a11y view will have broken the focus
         // chain. In this case, we need to re-focus the root view.
@@ -207,7 +207,7 @@ impl SceneManager for FlatSceneManager {
         if let Some(ref root_view_ref) = self.root_view_ref {
             let root_view_ref_dup = fuchsia_scenic::duplicate_view_ref(&root_view_ref)?;
             fasync::Task::local(async move {
-                FlatSceneManager::focus_root_view(
+                GfxSceneManager::focus_root_view(
                     view_ref_installed,
                     focuser,
                     root_view_ref_dup,
@@ -239,8 +239,8 @@ impl SceneManager for FlatSceneManager {
         }
 
         let (x, y) = location.pips();
-        self.cursor_node().set_translation(x, y, FlatSceneManager::CURSOR_DEPTH);
-        FlatSceneManager::request_present(&self.presentation_sender);
+        self.cursor_node().set_translation(x, y, GfxSceneManager::CURSOR_DEPTH);
+        GfxSceneManager::request_present(&self.presentation_sender);
     }
 
     async fn add_touch_handler(
@@ -277,12 +277,12 @@ impl SceneManager for FlatSceneManager {
     }
 }
 
-impl FlatSceneManager {
+impl GfxSceneManager {
     /// The depth of the bounds of any added views. This can be used to compute where a view
     /// should be placed to render "in front of" another view.
     const VIEW_BOUNDS_DEPTH: f32 = -800.0;
     /// The depth at which to draw the cursor in order to ensure it's on top of everything else
-    const CURSOR_DEPTH: f32 = FlatSceneManager::VIEW_BOUNDS_DEPTH - 1.0;
+    const CURSOR_DEPTH: f32 = GfxSceneManager::VIEW_BOUNDS_DEPTH - 1.0;
 
     /// Creates a new SceneManager.
     ///
@@ -296,14 +296,14 @@ impl FlatSceneManager {
     ) -> Result<Self, Error> {
         let view_ref_installed = Arc::new(view_ref_installed_proxy);
 
-        let (session, focuser) = FlatSceneManager::create_session(&scenic)?;
-        let (a11y_proxy_session, _a11y_proxy_focuser) = FlatSceneManager::create_session(&scenic)?;
+        let (session, focuser) = GfxSceneManager::create_session(&scenic)?;
+        let (a11y_proxy_session, _a11y_proxy_focuser) = GfxSceneManager::create_session(&scenic)?;
 
-        let ambient_light = FlatSceneManager::create_ambient_light(&session);
-        let scene = FlatSceneManager::create_ambiently_lit_scene(&session, &ambient_light);
+        let ambient_light = GfxSceneManager::create_ambient_light(&session);
+        let scene = GfxSceneManager::create_ambiently_lit_scene(&session, &ambient_light);
 
         let camera = scenic::Camera::new(session.clone(), &scene);
-        let renderer = FlatSceneManager::create_renderer(&session, &camera);
+        let renderer = GfxSceneManager::create_renderer(&session, &camera);
 
         // Size the layer to fit the size of the display.
         let display_info = scenic.get_display_info().await?;
@@ -318,9 +318,9 @@ impl FlatSceneManager {
 
         scene.set_scale(display_metrics.pixels_per_pip(), display_metrics.pixels_per_pip(), 1.0);
 
-        let layer = FlatSceneManager::create_layer(&session, &renderer, size_in_pixels);
-        let layer_stack = FlatSceneManager::create_layer_stack(&session, &layer);
-        let compositor = FlatSceneManager::create_compositor(&session, &layer_stack);
+        let layer = GfxSceneManager::create_layer(&session, &renderer, size_in_pixels);
+        let layer_stack = GfxSceneManager::create_layer_stack(&session, &layer);
+        let compositor = GfxSceneManager::create_compositor(&session, &layer_stack);
 
         // Add the root node to the scene immediately.
         let root_node = scenic::EntityNode::new(session.clone());
@@ -329,7 +329,7 @@ impl FlatSceneManager {
         // Create proxy view/viewholder and add to the scene.
         let proxy_token_pair = scenic::ViewTokenPair::new()?;
         let a11y_proxy_viewref_pair = scenic::ViewRefPair::new()?;
-        let a11y_proxy_view_holder = FlatSceneManager::create_view_holder(
+        let a11y_proxy_view_holder = GfxSceneManager::create_view_holder(
             &session,
             proxy_token_pair.view_holder_token,
             display_metrics,
@@ -358,7 +358,7 @@ impl FlatSceneManager {
 
         let (sender, receiver) = unbounded();
         scene_manager::start_presentation_loop(sender.clone(), receiver, Arc::downgrade(&session));
-        FlatSceneManager::request_present(&sender);
+        GfxSceneManager::request_present(&sender);
 
         let (a11y_proxy_sender, a11y_proxy_receiver) = unbounded();
         scene_manager::start_presentation_loop(
@@ -366,9 +366,9 @@ impl FlatSceneManager {
             a11y_proxy_receiver,
             Arc::downgrade(&a11y_proxy_session),
         );
-        FlatSceneManager::request_present(&a11y_proxy_sender);
+        GfxSceneManager::request_present(&a11y_proxy_sender);
 
-        Ok(FlatSceneManager {
+        Ok(GfxSceneManager {
             view_ref_installed,
             session,
             focuser,
@@ -421,7 +421,7 @@ impl FlatSceneManager {
         scene
     }
 
-    /// Creates a new ambient light for the [`FlatSceneManager`]'s scene.
+    /// Creates a new ambient light for the [`GfxSceneManager`]'s scene.
     ///
     /// # Parameters
     /// - `session`: The Scenic session to create the light in.
@@ -509,7 +509,7 @@ impl FlatSceneManager {
 
         let view_properties = ui_gfx::ViewProperties {
             bounding_box: ui_gfx::BoundingBox {
-                min: ui_gfx::Vec3 { x: 0.0, y: 0.0, z: FlatSceneManager::VIEW_BOUNDS_DEPTH },
+                min: ui_gfx::Vec3 { x: 0.0, y: 0.0, z: GfxSceneManager::VIEW_BOUNDS_DEPTH },
                 max: ui_gfx::Vec3 {
                     x: display_metrics.width_in_pips(),
                     y: display_metrics.height_in_pips(),
@@ -532,7 +532,7 @@ impl FlatSceneManager {
     /// - `view_holder_token`: The view holder token used to create the view holder.
     /// - `name`: The debugging name for the created view.
     fn add_view(&mut self, view_holder_token: ui_views::ViewHolderToken, name: Option<String>) {
-        let view_holder = FlatSceneManager::create_view_holder(
+        let view_holder = GfxSceneManager::create_view_holder(
             &self.a11y_proxy_session,
             view_holder_token,
             self.display_metrics,
@@ -634,7 +634,7 @@ impl FlatSceneManager {
 
         self.cursor_node().add_child(&shape);
         self.cursor_shape = Some(shape);
-        FlatSceneManager::request_present(&self.presentation_sender);
+        GfxSceneManager::request_present(&self.presentation_sender);
     }
 
     /// Creates a default cursor shape for use with the client hasn't created a custom cursor
