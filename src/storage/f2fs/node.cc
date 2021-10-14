@@ -26,7 +26,9 @@ bool NodeManager::IncValidNodeCount(VnodeF2fs *vnode, uint32_t count) {
   block_t valid_block_count;
   uint32_t ValidNodeCount;
 
+#ifdef __Fuchsia__
   fbl::AutoLock stat_lock(&GetSuperblockInfo().GetStatLock());
+#endif  // __Fuchsia__
 
   valid_block_count = GetSuperblockInfo().GetTotalValidBlockCount() + static_cast<block_t>(count);
   GetSuperblockInfo().SetAllocValidBlockCount(GetSuperblockInfo().GetAllocValidBlockCount() +
@@ -53,7 +55,9 @@ zx_status_t NodeManager::NextFreeNid(nid_t *nid) {
   if (free_nid_count_ <= 0)
     return ZX_ERR_OUT_OF_RANGE;
 
+#ifdef __Fuchsia__
   std::lock_guard free_nid_lock(free_nid_list_lock_);
+#endif  // __Fuchsia__
   FreeNid *fnid = containerof(free_nid_list_.next, FreeNid, list);
   *nid = fnid->nid;
   return ZX_OK;
@@ -292,7 +296,9 @@ void NodeManager::SetDentryMark(Page &page, int mark) {
 }
 
 void NodeManager::DecValidNodeCount(VnodeF2fs *vnode, uint32_t count) {
+#ifdef __Fuchsia__
   fbl::AutoLock stat_lock(&GetSuperblockInfo().GetStatLock());
+#endif  // __Fuchsia__
 
   ZX_ASSERT(!(GetSuperblockInfo().GetTotalValidBlockCount() < count));
   ZX_ASSERT(!(GetSuperblockInfo().GetTotalValidNodeCount() < count));
@@ -447,7 +453,9 @@ NatEntry *NodeManager::GrabNatEntry(nid_t nid) {
 
 void NodeManager::CacheNatEntry(nid_t nid, RawNatEntry &raw_entry) {
   while (true) {
+#ifdef __Fuchsia__
     std::lock_guard lock(nat_tree_lock_);
+#endif  // __Fuchsia__
     NatEntry *entry = LookupNatCache(nid);
     if (!entry) {
       if (entry = GrabNatEntry(nid); !entry) {
@@ -464,7 +472,9 @@ void NodeManager::CacheNatEntry(nid_t nid, RawNatEntry &raw_entry) {
 
 void NodeManager::SetNodeAddr(NodeInfo &ni, block_t new_blkaddr) {
   while (true) {
+#ifdef __Fuchsia__
     std::lock_guard nat_lock(nat_tree_lock_);
+#endif  // __Fuchsia__
     NatEntry *entry = LookupNatCache(ni.nid);
     if (!entry) {
       entry = GrabNatEntry(ni.nid);
@@ -510,7 +520,9 @@ int NodeManager::TryToFreeNats(int nr_shrink) {
   if (nat_entries_count_ < 2 * kNmWoutThreshold)
     return 0;
 
+#ifdef __Fuchsia__
   std::lock_guard nat_lock(nat_tree_lock_);
+#endif  // __Fuchsia__
   while (nr_shrink && !clean_nat_list_.is_empty()) {
     NatEntry *cache_entry = &clean_nat_list_.front();
     DelFromNatCache(*cache_entry);
@@ -545,7 +557,9 @@ void NodeManager::GetNodeInfo(nid_t nid, NodeInfo &out) {
 
   {
     // Check current segment summary
+#ifdef __Fuchsia__
     fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
+#endif  // __Fuchsia__
     i = LookupJournalInCursum(sum, JournalType::kNatJournal, nid, 0);
     if (i >= 0) {
       ne = NatInJournal(sum, i);
@@ -1359,7 +1373,9 @@ zx_status_t NodeManager::F2fsWriteNodePage(Page &page, WritebackControl *wbc) {
   }
 
   {
+#ifdef __Fuchsia__
     fs::SharedLock rlock(GetSuperblockInfo().GetFsLock(LockType::kNodeOp));
+#endif  // __Fuchsia__
     SetPageWriteback(&page);
 
     // insert node offset
@@ -1466,7 +1482,9 @@ int NodeManager::AddFreeNid(nid_t nid) {
   i->nid = nid;
   i->state = static_cast<int>(NidState::kNidNew);
 
+#ifdef __Fuchsia__
   std::lock_guard free_nid_lock(free_nid_list_lock_);
+#endif  // __Fuchsia__
   if (LookupFreeNidList(nid)) {
 #if 0  // porting needed
     // kmem_cache_free(free_nid_slab, i);
@@ -1481,7 +1499,9 @@ int NodeManager::AddFreeNid(nid_t nid) {
 
 void NodeManager::RemoveFreeNid(nid_t nid) {
   FreeNid *i;
+#ifdef __Fuchsia__
   std::lock_guard free_nid_lock(free_nid_list_lock_);
+#endif  // __Fuchsia__
   i = LookupFreeNidList(nid);
   if (i && i->state == static_cast<int>(NidState::kNidNew)) {
     DelFromFreeNidList(i);
@@ -1546,7 +1566,9 @@ void NodeManager::BuildFreeNids() {
 
   {
     // find free nids from current sum_pages
+#ifdef __Fuchsia__
     fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
+#endif  // __Fuchsia__
     for (i = 0; i < NatsInCursum(sum); i++) {
       block_t addr = LeToCpu(NatInJournal(sum, i).block_addr);
       nid = LeToCpu(NidInJournal(sum, i));
@@ -1576,7 +1598,9 @@ bool NodeManager::AllocNid(nid_t *out) {
   list_node_t *this_list;
   do {
     {
+#ifdef __Fuchsia__
       fbl::AutoLock lock(&build_lock_);
+#endif  // __Fuchsia__
       if (!free_nid_count_) {
         // scan NAT in order to build free nid list
         BuildFreeNids();
@@ -1590,7 +1614,9 @@ bool NodeManager::AllocNid(nid_t *out) {
     // could consume all of free nids.
   } while (!free_nid_count_);
 
+#ifdef __Fuchsia__
   std::lock_guard lock(free_nid_list_lock_);
+#endif  // __Fuchsia__
   ZX_ASSERT(!list_is_empty(&free_nid_list_));
 
   list_for_every(&free_nid_list_, this_list) {
@@ -1610,7 +1636,9 @@ bool NodeManager::AllocNid(nid_t *out) {
 void NodeManager::AllocNidDone(nid_t nid) {
   FreeNid *i;
 
+#ifdef __Fuchsia__
   std::lock_guard free_nid_lock(free_nid_list_lock_);
+#endif  // __Fuchsia__
   i = LookupFreeNidList(nid);
   if (i) {
     ZX_ASSERT(i->state == static_cast<int>(NidState::kNidAlloc));
@@ -1724,7 +1752,9 @@ bool NodeManager::FlushNatsInJournal() {
   SummaryBlock *sum = curseg->sum_blk;
   int i;
 
+#ifdef __Fuchsia__
   fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
+#endif  // __Fuchsia__
 
   {
     fs::SharedLock nat_lock(nat_tree_lock_);
@@ -1740,7 +1770,9 @@ bool NodeManager::FlushNatsInJournal() {
     nid_t nid = LeToCpu(NidInJournal(sum, i));
 
     while (!cache_entry) {
+#ifdef __Fuchsia__
       std::lock_guard nat_lock(nat_tree_lock_);
+#endif  // __Fuchsia__
       cache_entry = LookupNatCache(nid);
       if (cache_entry) {
         SetNatCacheDirty(*cache_entry);
@@ -1774,11 +1806,15 @@ void NodeManager::FlushNatEntries() {
 #if 0  // porting needed
   //	if (!flushed)
 #endif
+#ifdef __Fuchsia__
   fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
+#endif  // __Fuchsia__
 
   // 1) flush dirty nat caches
   {
+#ifdef __Fuchsia__
     std::lock_guard nat_lock(nat_tree_lock_);
+#endif  // __Fuchsia__
     for (auto iter = dirty_nat_list_.begin(); iter != dirty_nat_list_.end();) {
       nid_t nid;
       RawNatEntry raw_ne;
@@ -1912,7 +1948,9 @@ void NodeManager::DestroyNodeManager() {
 
   {
     // destroy free nid list
+#ifdef __Fuchsia__
     std::lock_guard free_nid_lock(free_nid_list_lock_);
+#endif  // __Fuchsia__
     list_for_every_entry_safe (&free_nid_list_, i, next_i, FreeNid, list) {
       ZX_ASSERT(i->state != static_cast<int>(NidState::kNidAlloc));
       DelFromFreeNidList(i);
@@ -1923,7 +1961,9 @@ void NodeManager::DestroyNodeManager() {
 
   {
     // destroy nat cache
+#ifdef __Fuchsia__
     std::lock_guard nat_lock(nat_tree_lock_);
+#endif  // __Fuchsia__
     while ((found = GangLookupNatCache(kNatvecSize, natvec))) {
       uint32_t idx;
       for (idx = 0; idx < found; idx++) {

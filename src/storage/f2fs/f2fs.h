@@ -6,35 +6,49 @@
 #define SRC_STORAGE_F2FS_F2FS_H_
 
 // clang-format off
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/assert.h>
+#ifdef __Fuchsia__
 #include <zircon/device/vfs.h>
+
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fidl-async/cpp/bind.h>
+#include <lib/zircon-internal/thread_annotations.h>
+
+// TODO: consider using std::mutex when multi-threaded compatibility test is needed
+#include <fbl/auto_lock.h>
+#include <fbl/condition_variable.h>
+#include <fbl/mutex.h>
+
+#include <fidl/fuchsia.fs/cpp/wire.h>
+#endif  // __Fuchsia__
+
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
+
 #include <lib/syslog/cpp/macros.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl-async/cpp/bind.h>
-#include <fidl/fuchsia.fs/cpp/wire.h>
-#include <lib/async-loop/default.h>
+#include <lib/fit/defer.h>
+#include <lib/zx/status.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_lock.h>
-#include <fbl/condition_variable.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
-#include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
+
 #include <condition_variable>
 
+#ifdef __Fuchsia__
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
-#include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/lib/storage/vfs/cpp/watcher.h"
 #include "src/lib/storage/vfs/cpp/shared_mutex.h"
 #include "src/lib/storage/vfs/cpp/service.h"
+#endif  // __Fuchsia__
+
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
 
 #include "src/storage/f2fs/f2fs_types.h"
 #include "src/storage/f2fs/f2fs_lib.h"
@@ -69,6 +83,7 @@ enum class ServeLayout {
 zx_status_t LoadSuperblock(f2fs::Bcache *bc, SuperBlock *out_info);
 zx_status_t LoadSuperblock(f2fs::Bcache *bc, SuperBlock *out_info, block_t bno);
 
+#ifdef __Fuchsia__
 zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions &mount_options,
                                                   async_dispatcher_t *dispatcher,
                                                   std::unique_ptr<f2fs::Bcache> bcache,
@@ -77,8 +92,16 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions &mount_opti
                                                   ServeLayout serve_layout);
 
 using SyncCallback = fs::Vnode::SyncCallback;
+#else   // __Fuchsia__
+zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions &mount_options,
+                                                  std::unique_ptr<f2fs::Bcache> bcache);
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 class F2fs : public fs::ManagedVfs {
+#else   // __Fuchsia__
+class F2fs : public fs::Vfs {
+#endif  // __Fuchsia__
  public:
   // Not copyable or moveable
   F2fs(const F2fs &) = delete;
@@ -86,11 +109,17 @@ class F2fs : public fs::ManagedVfs {
   F2fs(F2fs &&) = delete;
   F2fs &operator=(F2fs &&) = delete;
 
+#ifdef __Fuchsia__
   explicit F2fs(async_dispatcher_t *dispatcher, std::unique_ptr<f2fs::Bcache> bc, SuperBlock *sb,
                 const MountOptions &mount_options);
+#else   // __Fuchsia__
+  explicit F2fs(std::unique_ptr<f2fs::Bcache> bc, SuperBlock *sb,
+                const MountOptions &mount_options);
+#endif  // __Fuchsia__
 
   ~F2fs() override;
 
+#ifdef __Fuchsia__
   [[nodiscard]] static zx_status_t Create(async_dispatcher_t *dispatcher,
                                           std::unique_ptr<f2fs::Bcache> bc,
                                           const MountOptions &options, std::unique_ptr<F2fs> *out);
@@ -102,6 +131,11 @@ class F2fs : public fs::ManagedVfs {
   void SetAdminService(fbl::RefPtr<AdminService> svc) { admin_svc_ = std::move(svc); }
 
   zx_status_t GetFsId(zx::event *out_fs_id) const;
+#else   // __Fuchsia__
+  [[nodiscard]] static zx_status_t Create(std::unique_ptr<f2fs::Bcache> bc,
+                                          const MountOptions &options, std::unique_ptr<F2fs> *out);
+#endif  // __Fuchsia__
+
   uint64_t GetFsIdLegacy() const { return fs_id_legacy_; }
 
   VnodeCache &GetVCache() { return vnode_cache_; }
@@ -216,10 +250,12 @@ class F2fs : public fs::ManagedVfs {
 
   VnodeCache vnode_cache_{};
 
+#ifdef __Fuchsia__
   fbl::RefPtr<QueryService> query_svc_;
   fbl::RefPtr<AdminService> admin_svc_;
 
   zx::event fs_id_{};
+#endif  // __Fuchsia__
   uint64_t fs_id_legacy_ = 0;
 };
 

@@ -35,11 +35,15 @@ class VnodeF2fs : public fs::Vnode,
 
   ino_t GetKey() const { return ino_; }
 
+#ifdef __Fuchsia__
   void Sync(SyncCallback closure) final;
+#endif  // __Fuchsia__
   zx_status_t SyncFile(loff_t start, loff_t end, int datasync);
   int NeedToSyncDir();
 
+#ifdef __Fuchsia__
   zx_status_t QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo *info) final;
+#endif  // __Fuchsia__
 
   void fbl_recycle() { RecycleNode(); };
 
@@ -52,9 +56,11 @@ class VnodeF2fs : public fs::Vnode,
   zx_status_t GetAttributes(fs::VnodeAttributes *a) final __TA_EXCLUDES(mutex_);
   zx_status_t SetAttributes(fs::VnodeAttributesUpdate attr) final __TA_EXCLUDES(mutex_);
 
+#ifdef __Fuchsia__
   zx_status_t GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
                                      [[maybe_unused]] fs::Rights rights,
                                      fs::VnodeRepresentation *info) final;
+#endif  // __Fuchsia__
 
   fs::VnodeProtocolSet GetProtocols() const final;
 
@@ -105,34 +111,52 @@ class VnodeF2fs : public fs::Vnode,
   zx_status_t WriteDataPageReq(Page *page, WritebackControl *wbc);
   zx_status_t WriteBegin(size_t pos, size_t len, Page **page);
 
+#ifdef __Fuchsia__
   void Notify(std::string_view name, unsigned event) final;
   zx_status_t WatchDir(fs::Vfs *vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
+#endif  // __Fuchsia__
 
   void MarkInodeDirty() __TA_EXCLUDES(mutex_);
 
   void GetExtentInfo(const Extent &i_ext);
   void SetRawExtent(Extent &i_ext);
 
+#ifdef __Fuchsia__
   void IncNlink() __TA_EXCLUDES(mutex_) {
     std::lock_guard lock(mutex_);
-    nlink_++;
+    ++nlink_;
   }
+
   void DropNlink() __TA_EXCLUDES(mutex_) {
     std::lock_guard lock(mutex_);
-    nlink_--;
+    --nlink_;
   }
+
   void ClearNlink() __TA_EXCLUDES(mutex_) {
     std::lock_guard lock(mutex_);
     nlink_ = 0;
   }
+
   void SetNlink(const uint32_t &nlink) __TA_EXCLUDES(mutex_) {
     std::lock_guard lock(mutex_);
     nlink_ = nlink;
   }
+
   uint32_t GetNlink() const __TA_EXCLUDES(mutex_) {
     fs::SharedLock lock(mutex_);
     return nlink_;
   }
+#else   // __Fuchsia__
+  void IncNlink() { ++nlink_; }
+
+  void DropNlink() { --nlink_; }
+
+  void ClearNlink() { nlink_ = 0; }
+
+  void SetNlink(const uint32_t &nlink) { nlink_ = nlink; }
+
+  uint32_t GetNlink() const { return nlink_; }
+#endif  // __Fuchsia__
 
   void SetMode(const umode_t &mode);
   umode_t GetMode() const;
@@ -168,18 +192,28 @@ class VnodeF2fs : public fs::Vnode,
     return (GetBlocks() > kDefaultAllocatedBlocks);
   }
 
+#ifdef __Fuchsia__
   void SetSize(const uint64_t &nbytes) __TA_EXCLUDES(mutex_) {
     std::lock_guard lock(mutex_);
     size_ = nbytes;
   }
+
   void InitSize() __TA_EXCLUDES(mutex_) {
     std::lock_guard lock(mutex_);
     size_ = 0;
   }
+
   uint64_t GetSize() const __TA_EXCLUDES(mutex_) {
     fs::SharedLock lock(mutex_);
     return size_;
   }
+#else   // __Fuchsia__
+  void SetSize(const uint64_t &nbytes) { size_ = nbytes; }
+
+  void InitSize() { size_ = 0; }
+
+  uint64_t GetSize() const { return size_; }
+#endif  // __Fuchsia__
 
   void SetParentNid(const ino_t &pino) { parent_ino_ = pino; };
   ino_t GetParentNid() const { return parent_ino_; };
@@ -217,6 +251,7 @@ class VnodeF2fs : public fs::Vnode,
   void SetInodeFlags(const uint32_t &flags) { fi_.i_flags = flags; }
   uint32_t GetInodeFlags() const { return fi_.i_flags; }
 
+#ifdef __Fuchsia__
   bool SetFlag(const InodeInfoFlag &flag) __TA_EXCLUDES(mutex_) {
     std::lock_guard lock(mutex_);
     return TestAndSetBit(static_cast<int>(flag), &fi_.flags);
@@ -229,14 +264,21 @@ class VnodeF2fs : public fs::Vnode,
     fs::SharedLock lock(mutex_);
     return TestBit(static_cast<int>(flag), &fi_.flags);
   }
+#else   // __Fuchsia__
+  bool SetFlag(const InodeInfoFlag &flag) {
+    return TestAndSetBit(static_cast<int>(flag), &fi_.flags);
+  }
+  bool ClearFlag(const InodeInfoFlag &flag) {
+    return TestAndClearBit(static_cast<int>(flag), &fi_.flags);
+  }
+  bool TestFlag(const InodeInfoFlag &flag) { return TestBit(static_cast<int>(flag), &fi_.flags); }
+#endif  // __Fuchsia__
 
   void ClearAdvise(const FAdvise &bit) { ClearBit(static_cast<int>(bit), &fi_.i_advise); }
   void SetAdvise(const FAdvise &bit) { SetBit(static_cast<int>(bit), &fi_.i_advise); }
   uint8_t GetAdvise() const { return fi_.i_advise; }
   void SetAdvise(const uint8_t &bits) { fi_.i_advise = bits; }
-  int IsAdviseSet(const FAdvise &bit) {
-    return TestBit(static_cast<int>(bit), &fi_.i_advise);
-  }
+  int IsAdviseSet(const FAdvise &bit) { return TestBit(static_cast<int>(bit), &fi_.i_advise); }
 
   uint64_t GetDirHashLevel() const { return fi_.clevel; }
   bool IsSameDirHash(const f2fs_hash_t &hash) const { return (fi_.chash == hash); }
@@ -328,7 +370,9 @@ class VnodeF2fs : public fs::Vnode,
   timespec mtime_ = {0, 0};
   timespec ctime_ = {0, 0};
   ino_t ino_ = 0;
+#ifdef __Fuchsia__
   fs::WatcherContainer watcher_{};
+#endif  // __Fuchsia__
 };
 
 }  // namespace f2fs

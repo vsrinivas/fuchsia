@@ -6,11 +6,14 @@
 #define SRC_STORAGE_F2FS_F2FS_TYPES_H_
 
 #include <sys/types.h>
-#include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
 #include <atomic>
+
+#ifdef __Fuchsia__
+#include <threads.h>
+#endif  // __Fuchsia__
 
 namespace f2fs {
 

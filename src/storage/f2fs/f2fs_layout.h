@@ -55,7 +55,11 @@ class FsBlock {
     memcpy(data_, block, kBlockSize);
     return *this;
   }
+#ifdef __Fuchsia__
   cpp20::span<uint8_t> GetData() { return cpp20::span<uint8_t>(data_); }
+#else   // __Fuchsia__
+  uint8_t *GetData() { return data_; }
+#endif  // __Fuchsia__
 
  private:
   uint8_t data_[kBlockSize];

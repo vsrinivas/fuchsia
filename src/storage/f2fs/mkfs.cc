@@ -72,6 +72,7 @@ void MkfsWorker::InitGlobalParameters() {
 }
 
 zx_status_t MkfsWorker::GetDeviceInfo() {
+#ifdef __Fuchsia__
   fuchsia_hardware_block_BlockInfo info;
 
   bc_->device()->BlockGetInfo(&info);
@@ -85,6 +86,12 @@ zx_status_t MkfsWorker::GetDeviceInfo() {
     std::cerr << "Error: Block size " << info.block_size << " is not supported" << std::endl;
     return ZX_ERR_INVALID_ARGS;
   }
+#else   // __Fuchsia__
+  params_.sector_size = kDefaultSectorSize;
+  params_.sectors_per_blk = kBlockSize / kDefaultSectorSize;
+  params_.total_sectors = bc_->Maxblk() * kDefaultSectorSize / kBlockSize;
+  params_.start_sector = kSuperblockStart;
+#endif  // __Fuchsia__
 
   return ZX_OK;
 }
@@ -119,7 +126,11 @@ void MkfsWorker::ConfigureExtensionList() {
 }
 
 zx_status_t MkfsWorker::WriteToDisk(FsBlock &buf, block_t bno) {
+#ifdef __Fuchsia__
   return bc_->Writeblk(bno, buf.GetData().data());
+#else   // __Fuchsia__
+  return bc_->Writeblk(bno, buf.GetData());
+#endif  // __Fuchsia__
 }
 
 zx::status<uint32_t> MkfsWorker::GetCalculatedOp(uint32_t user_op) {
@@ -443,7 +454,11 @@ zx_status_t MkfsWorker::InitNatArea() {
 
 zx_status_t MkfsWorker::WriteCheckPointPack() {
   FsBlock checkpoint_block;
+#ifdef __Fuchsia__
   Checkpoint *checkpoint = reinterpret_cast<Checkpoint *>(checkpoint_block.GetData().data());
+#else   // __Fuchsia__
+  Checkpoint *checkpoint = reinterpret_cast<Checkpoint *>(checkpoint_block.GetData());
+#endif  // __Fuchsia__
 
   if (!checkpoint) {
     FX_LOGS(ERROR) << "Error: Alloc Failed for Checkpoint!!!";
@@ -451,7 +466,11 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
   }
 
   FsBlock summary_block;
+#ifdef __Fuchsia__
   SummaryBlock *summary = reinterpret_cast<SummaryBlock *>(summary_block.GetData().data());
+#else   // __Fuchsia__
+  SummaryBlock *summary = reinterpret_cast<SummaryBlock *>(summary_block.GetData());
+#endif  // __Fuchsia__
 
   if (!summary) {
     FX_LOGS(ERROR) << "Error: Alloc Failed for summay_node!!!";
@@ -644,7 +663,11 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
 
 zx_status_t MkfsWorker::WriteSuperBlock() {
   FsBlock super_block;
+#ifdef __Fuchsia__
   uint8_t *super_block_buff = reinterpret_cast<uint8_t *>(super_block.GetData().data());
+#else   // __Fuchsia__
+  uint8_t *super_block_buff = reinterpret_cast<uint8_t *>(super_block.GetData());
+#endif  // __Fuchsia__
 
   memcpy(super_block_buff + kSuperOffset, &super_block_, sizeof(super_block_));
 
@@ -660,7 +683,11 @@ zx_status_t MkfsWorker::WriteSuperBlock() {
 
 zx_status_t MkfsWorker::WriteRootInode() {
   FsBlock raw_block;
+#ifdef __Fuchsia__
   Node *raw_node = reinterpret_cast<Node *>(raw_block.GetData().data());
+#else   // __Fuchsia__
+  Node *raw_node = reinterpret_cast<Node *>(raw_block.GetData());
+#endif  // __Fuchsia__
   if (raw_node == nullptr) {
     FX_LOGS(ERROR) << "Error: Alloc Failed for raw_node!!!";
     return ZX_ERR_NO_MEMORY;
@@ -725,7 +752,11 @@ zx_status_t MkfsWorker::WriteRootInode() {
 
 zx_status_t MkfsWorker::UpdateNatRoot() {
   FsBlock raw_nat_block;
+#ifdef __Fuchsia__
   NatBlock *nat_block = reinterpret_cast<NatBlock *>(raw_nat_block.GetData().data());
+#else   // __Fuchsia__
+  NatBlock *nat_block = reinterpret_cast<NatBlock *>(raw_nat_block.GetData());
+#endif  // __Fuchsia__
   if (nat_block == nullptr) {
     FX_LOGS(ERROR) << "Error: Alloc Failed for nat_blk!!!";
     return ZX_ERR_NO_MEMORY;
@@ -757,7 +788,11 @@ zx_status_t MkfsWorker::UpdateNatRoot() {
 
 zx_status_t MkfsWorker::AddDefaultDentryRoot() {
   FsBlock raw_dent_block;
+#ifdef __Fuchsia__
   DentryBlock *dent_block = reinterpret_cast<DentryBlock *>(raw_dent_block.GetData().data());
+#else   // __Fuchsia__
+  DentryBlock *dent_block = reinterpret_cast<DentryBlock *>(raw_dent_block.GetData());
+#endif  // __Fuchsia__
   if (dent_block == nullptr) {
     FX_LOGS(ERROR) << "Error: Alloc Failed for dent_blk!!!";
     return ZX_ERR_NO_MEMORY;
@@ -885,7 +920,9 @@ zx_status_t ParseOptions(int argc, char **argv, MkfsOptions &options) {
   int opt_index = -1;
   int c = -1;
 
+#ifdef __Fuchsia__
   optreset = 1;
+#endif  // __Fuchsia__
   optind = 1;
 
   while ((c = getopt_long(argc, argv, "l:a:o:s:z:e:", opts, &opt_index)) >= 0) {

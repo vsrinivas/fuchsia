@@ -240,8 +240,10 @@ ino_t Dir::InodeByName(std::string_view name) {
 }
 
 void Dir::SetLink(DirEntry *de, Page *page, VnodeF2fs *vnode) {
+#ifdef __Fuchsia__
   std::lock_guard write_lock(io_lock_);
-#if 0  // porting needed
+#endif  // __Fuchsia__
+#if 0   // porting needed
   // lock_page(page);
 #endif
   WaitOnPageWriteback(page);
@@ -403,7 +405,9 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
 
   if (TestFlag(InodeInfoFlag::kInlineDentry)) {
     bool is_converted = false;
+#ifdef __Fuchsia__
     std::lock_guard write_lock(io_lock_);
+#endif  // __Fuchsia__
     if (err = AddInlineEntry(name, vnode, &is_converted); err != ZX_OK)
       return err;
 
@@ -433,7 +437,9 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
     bidx = DirBlockIndex(level, GetDirLevel(), (dentry_hash % nbucket));
 
     for (block = bidx; block <= (bidx + nblock - 1); block++) {
+#ifdef __Fuchsia__
       std::lock_guard write_lock(io_lock_);
+#endif  // __Fuchsia__
       if (err = GetNewDataPage(block, true, &dentry_page); err != ZX_OK) {
         return err;
       }
@@ -499,7 +505,9 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
   void *kaddr = PageAddress(page);
   int i;
 
+#ifdef __Fuchsia__
   std::lock_guard write_lock(io_lock_);
+#endif  // __Fuchsia__
 
   if (TestFlag(InodeInfoFlag::kInlineDentry)) {
     DeleteInlineEntry(dentry, page, vnode);

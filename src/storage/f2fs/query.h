@@ -7,6 +7,7 @@
 
 namespace f2fs {
 
+#ifdef __Fuchsia__
 class QueryService final : public fidl::WireServer<fuchsia_fs::Query>, public fs::Service {
  public:
   QueryService(async_dispatcher_t* dispatcher, F2fs* f2fs);
@@ -19,6 +20,7 @@ class QueryService final : public fidl::WireServer<fuchsia_fs::Query>, public fs
  private:
   F2fs* const f2fs_;
 };
+#endif  // __Fuchsia__
 
 }  // namespace f2fs
 

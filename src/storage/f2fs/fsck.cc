@@ -236,7 +236,11 @@ zx_status_t FsckWorker::ChkNodeBlk(Inode *inode, uint32_t nid, FileType ftype, N
 
   Block *blk = new Block();
   ZX_ASSERT(blk != nullptr);
+#ifdef __Fuchsia__
   node_blk = reinterpret_cast<Node *>(blk->GetData().data());
+#else   // __Fuchsia__
+  node_blk = reinterpret_cast<Node *>(blk->GetData());
+#endif  // __Fuchsia__
   ret = ReadBlock(node_blk, ni.blk_addr);
   ZX_ASSERT(ret == ZX_OK);
   ZX_ASSERT_MSG(nid == LeToCpu(node_blk->footer.nid), "nid[0x%x] blk_addr[0x%x] footer.nid[0x%x]\n",
@@ -563,7 +567,11 @@ void FsckWorker::ChkDentryBlk(uint32_t block_address, uint32_t *child_cnt, uint3
 
   Block *blk = new Block();
   ZX_ASSERT(blk != nullptr);
+#ifdef __Fuchsia__
   de_blk = reinterpret_cast<DentryBlock *>(blk->GetData().data());
+#else   // __Fuchsia__
+  de_blk = reinterpret_cast<DentryBlock *>(blk->GetData());
+#endif  // __Fuchsia__
 
   ret = ReadBlock(de_blk, block_address);
   ZX_ASSERT(ret == ZX_OK);
@@ -1246,13 +1254,25 @@ zx_status_t FsckWorker::ReadCompactedSummaries() {
 
   start = StartSumBlock();
 
+#ifdef __Fuchsia__
   ReadBlock(blk->GetData().data(), start++);
+#else   // __Fuchsia__
+  ReadBlock(blk->GetData(), start++);
+#endif  // __Fuchsia__
 
   curseg = segment_manager_->CURSEG_I(CursegType::kCursegHotData);
+#ifdef __Fuchsia__
   memcpy(&curseg->sum_blk->n_nats, blk->GetData().data(), kSumJournalSize);
+#else   // __Fuchsia__
+  memcpy(&curseg->sum_blk->n_nats, blk->GetData(), kSumJournalSize);
+#endif  // __Fuchsia__
 
   curseg = segment_manager_->CURSEG_I(CursegType::kCursegColdData);
+#ifdef __Fuchsia__
   memcpy(&curseg->sum_blk->n_sits, blk->GetData().data() + kSumJournalSize, kSumJournalSize);
+#else   // __Fuchsia__
+  memcpy(&curseg->sum_blk->n_sits, blk->GetData() + kSumJournalSize, kSumJournalSize);
+#endif  // __Fuchsia__
 
   offset = 2 * kSumJournalSize;
   for (int32_t i = static_cast<int32_t>(CursegType::kCursegHotData);
@@ -1273,13 +1293,22 @@ zx_status_t FsckWorker::ReadCompactedSummaries() {
 
     for (j = 0; j < blk_off; j++) {
       Summary *s;
+#ifdef __Fuchsia__
       s = (Summary *)(blk->GetData().data() + offset);
+#else   // __Fuchsia__
+      s = (Summary *)(blk->GetData() + offset);
+#endif  // __Fuchsia__
       curseg->sum_blk->entries[j] = *s;
       offset += kSummarySize;
       if (offset + kSummarySize <= kPageCacheSize - kSumFooterSize)
         continue;
+#ifdef __Fuchsia__
       memset(blk->GetData().data(), 0, kPageSize);
       ReadBlock(blk->GetData().data(), start++);
+#else   // __Fuchsia__
+      memset(blk->GetData(), 0, kPageSize);
+      ReadBlock(blk->GetData(), start++);
+#endif  // __Fuchsia__
       offset = 0;
     }
   }
@@ -1302,9 +1331,15 @@ zx_status_t FsckWorker::RestoreNodeSummary(unsigned int segno, SummaryBlock *sum
   addr = segment_manager_->StartBlock(segno);
   sum_entry = &sum_blk->entries[0];
   for (i = 0; i < superblock_info_.GetBlocksPerSeg(); i++, sum_entry++) {
+#ifdef __Fuchsia__
     if (ReadBlock(blk->GetData().data(), addr))
       break;
     node_blk = reinterpret_cast<Node *>(blk->GetData().data());
+#else   // __Fuchsia__
+    if (ReadBlock(blk->GetData(), addr))
+      break;
+    node_blk = reinterpret_cast<Node *>(blk->GetData());
+#endif  // __Fuchsia__
     sum_entry->nid = node_blk->footer.nid;
     addr++;
   }
@@ -1497,7 +1532,11 @@ SegType FsckWorker::GetSumEntry(uint32_t block_address, Summary *sum_entry) {
   segno = GetSegNo(block_address);
   offset = OffsetInSeg(superblock_info_, *segment_manager_, block_address);
 
+#ifdef __Fuchsia__
   SummaryBlock *sum_blk = reinterpret_cast<SummaryBlock *>(blk->GetData().data());
+#else   // __Fuchsia__
+  SummaryBlock *sum_blk = reinterpret_cast<SummaryBlock *>(blk->GetData());
+#endif  // __Fuchsia__
   SegType type = GetSumBlockInfo(segno, sum_blk);
   memcpy(sum_entry, &(sum_blk->entries[offset]), sizeof(Summary));
   delete blk;

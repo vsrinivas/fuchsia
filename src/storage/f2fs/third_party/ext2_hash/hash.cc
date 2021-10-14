@@ -31,6 +31,10 @@
 
 namespace f2fs {
 
+#ifndef __Fuchsia__
+using uint32_t = unsigned int;
+#endif
+
 void TEATransform(unsigned int buf[4], unsigned int const in[]) {
   uint32_t tea_delta = 0x9E3779B9;
   uint32_t sum;

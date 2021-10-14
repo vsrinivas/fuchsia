@@ -269,9 +269,13 @@ class NodeManager {
   NatList clean_nat_list_ __TA_GUARDED(nat_tree_lock_);  // a list for cached clean nats
   NatList dirty_nat_list_ __TA_GUARDED(nat_tree_lock_);  // a list for cached dirty nats
 
+#ifdef __Fuchsia__
   fs::SharedMutex free_nid_list_lock_;                           // protect free nid list
   list_node_t free_nid_list_ __TA_GUARDED(free_nid_list_lock_);  // a list for free nids
   fbl::Mutex build_lock_;                                        // lock for building free nids
+#else                                                            // __Fuchsia__
+  list_node_t free_nid_list_;
+#endif                                                           // __Fuchsia__
 
   std::unique_ptr<uint8_t[]> nat_bitmap_ = nullptr;       // NAT bitmap pointer
   std::unique_ptr<uint8_t[]> nat_prev_bitmap_ = nullptr;  // NAT previous checkpoint bitmap pointer

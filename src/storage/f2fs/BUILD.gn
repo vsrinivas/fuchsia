@@ -66,43 +66,16 @@ static_library("f2fs") {
   ]
 
   public_deps = [
-    "//zircon/system/ulib/fbl",
-
-    # bcache.h includes fs/transaction/device_transaction_handler.h & storage/buffer/...
-    "//src/lib/storage/vfs/cpp/transaction",
-    "//zircon/system/ulib/storage/buffer",
-
-    # bcache.h includes fuchsia/hardware/block/c/fidl.h.
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-
-    # fsck.h includes block-client/cpp/block-device.h
     "//src/lib/storage/vfs/cpp",
+    "//src/lib/storage/vfs/cpp/transaction",
     "//src/lib/uuid",
-    "//zircon/system/ulib/block-client",
-    "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/storage/buffer",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
-    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
-    "//zircon/system/ulib/async",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/async-default",
-    "//zircon/system/ulib/async-loop",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fidl",
-    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/fidl-utils",
-    "//zircon/system/ulib/storage-metrics",
-    "//zircon/system/ulib/trace",
-    "//zircon/system/ulib/trace-engine",
-    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
-    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxc",
     "//zircon/third_party/ulib/safemath",
   ]
 
@@ -118,6 +91,36 @@ static_library("f2fs") {
 
   if (f2fs_roll_fwd) {
     defines += [ "F2FS_ROLL_FORWARD" ]
+  }
+
+  if (is_fuchsia) {
+    public_deps += [
+      "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+      "//zircon/system/ulib/block-client",
+      "//zircon/system/ulib/zircon-internal",
+    ]
+
+    deps += [
+      "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
+      "//sdk/fidl/fuchsia.io",
+      "//sdk/lib/fdio",
+      "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
+      "//zircon/system/ulib/async",
+      "//zircon/system/ulib/async:async-cpp",
+      "//zircon/system/ulib/async-default",
+      "//zircon/system/ulib/async-loop",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/fdio-caller",
+      "//zircon/system/ulib/fidl",
+      "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+      "//zircon/system/ulib/fidl-utils",
+      "//zircon/system/ulib/storage-metrics",
+      "//zircon/system/ulib/trace",
+      "//zircon/system/ulib/trace-engine",
+      "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+      "//zircon/system/ulib/zx",
+    ]
   }
 }
 

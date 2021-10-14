@@ -4,9 +4,13 @@
 
 #include "src/storage/f2fs/f2fs.h"
 
+#ifdef __Fuchsia__
 using fuchsia_fs::wire::FilesystemInfoQuery;
+#endif  // __Fuchsia__
 
 namespace f2fs {
+
+#ifdef __Fuchsia__
 
 constexpr char kFsName[] = "f2fs";
 
@@ -84,5 +88,6 @@ void QueryService::IsNodeInFilesystem(IsNodeInFilesystemRequestView request,
                                       IsNodeInFilesystemCompleter::Sync& completer) {
   completer.Reply(f2fs_->IsTokenAssociatedWithVnode(std::move(request->token)));
 }
+#endif  // __Fuchsia__
 
 }  // namespace f2fs

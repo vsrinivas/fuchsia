@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifdef __Fuchsia__
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
+#endif  // __Fuchsia__
 
 #include "src/storage/f2fs/f2fs.h"
 
@@ -33,6 +35,7 @@ const MountOpt default_option[] = {
 };
 
 zx_status_t Mount(const MountOptions &options, std::unique_ptr<f2fs::Bcache> bc) {
+#ifdef __Fuchsia__
   zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
   zx::channel root_server = zx::channel(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
 
@@ -73,6 +76,14 @@ zx_status_t Mount(const MountOptions &options, std::unique_ptr<f2fs::Bcache> bc)
   FX_LOGS(INFO) << "Mounted successfully";
 
   ZX_ASSERT(loop.Run() == ZX_ERR_CANCELED);
+
+#else   // __Fuchsia__
+  auto fs_or = CreateFsAndRoot(options, std::move(bc));
+  if (fs_or.is_error()) {
+    FX_LOGS(ERROR) << "failed to create filesystem object";
+    return EXIT_FAILURE;
+  }
+#endif  // __Fuchsia__
 
   return ZX_OK;
 }

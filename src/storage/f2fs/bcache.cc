@@ -2,12 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
+#ifdef __Fuchsia__
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
+
+#include <block-client/cpp/remote-block-device.h>
+#include <storage/buffer/vmo_buffer.h>
+#include <storage/operation/operation.h>
+#endif  // __Fuchsia__
+
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,17 +22,15 @@
 
 #include <utility>
 
-#include <block-client/cpp/remote-block-device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <storage/buffer/block_buffer.h>
-#include <storage/buffer/vmo_buffer.h>
-#include <storage/operation/operation.h>
 
 #include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
 
+#ifdef __Fuchsia__
 zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool* out_readonly,
                          std::unique_ptr<f2fs::Bcache>* out) {
   fuchsia_hardware_block_BlockInfo info;
@@ -59,7 +64,9 @@ std::unique_ptr<block_client::BlockDevice> Bcache::Destroy(std::unique_ptr<Bcach
   }
   return std::move(bcache->owned_device_);
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 zx_status_t Bcache::Readblk(block_t bno, void* data) {
   TRACE_DURATION("f2fs", "Bcache::Readblk", "blk", bno);
   storage::Operation operation = {};
@@ -74,7 +81,23 @@ zx_status_t Bcache::Readblk(block_t bno, void* data) {
   memcpy(data, buffer_.Data(0), BlockSize());
   return ZX_OK;
 }
+#else   // __Fuchsia__
+zx_status_t Bcache::Readblk(block_t bno, void* data) {
+  off_t off = static_cast<off_t>(bno) * kBlockSize;
+  assert(off / kBlockSize == bno);  // Overflow
+  if (lseek(fd_.get(), off, SEEK_SET) < 0) {
+    FX_LOGS(ERROR) << "cannot seek to block " << bno;
+    return ZX_ERR_IO;
+  }
+  if (read(fd_.get(), data, kBlockSize) != kBlockSize) {
+    FX_LOGS(ERROR) << "cannot read block " << bno;
+    return ZX_ERR_IO;
+  }
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 zx_status_t Bcache::Writeblk(block_t bno, const void* data) {
   TRACE_DURATION("f2fs", "Bcache::Writeblk", "blk", bno);
   storage::Operation operation = {};
@@ -85,8 +108,25 @@ zx_status_t Bcache::Writeblk(block_t bno, const void* data) {
   memcpy(buffer_.Data(0), data, BlockSize());
   return RunOperation(operation, &buffer_);
 }
+#else   // __Fuchsia__
+zx_status_t Bcache::Writeblk(block_t bno, const void* data) {
+  off_t off = static_cast<off_t>(bno) * kBlockSize;
+  assert(off / kBlockSize == bno);  // Overflow
+  if (lseek(fd_.get(), off, SEEK_SET) < 0) {
+    FX_LOGS(ERROR) << "cannot seek to block " << bno << ". " << errno;
+    return ZX_ERR_IO;
+  }
+  ssize_t ret = write(fd_.get(), data, kBlockSize);
+  if (ret != kBlockSize) {
+    FX_LOGS(ERROR) << "cannot write block " << bno << " (" << ret << ")";
+    return ZX_ERR_IO;
+  }
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
 
 zx_status_t Bcache::Trim(block_t start, block_t num) {
+#ifdef __Fuchsia__
   if (!(info_.flags & fuchsia_hardware_block_FLAG_TRIM_SUPPORT)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -100,8 +140,12 @@ zx_status_t Bcache::Trim(block_t start, block_t num) {
   };
 
   return device()->FifoTransaction(&request, 1);
+#else   // __Fuchsia__
+  return ZX_OK;
+#endif  // __Fuchsia__
 }
 
+#ifdef __Fuchsia__
 zx_status_t Bcache::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) {
   return device()->BlockAttachVmo(vmo, out);
 }
@@ -137,12 +181,32 @@ zx_status_t Bcache::Create(block_client::BlockDevice* device, uint64_t max_block
   return ZX_OK;
 }
 
-uint64_t Bcache::DeviceBlockSize() const { return info_.block_size; }
+#else   // __Fuchsia__
+zx_status_t Bcache::Create(fbl::unique_fd fd, uint64_t max_blocks, std::unique_ptr<Bcache>* out) {
+  uint64_t max_blocks_converted = max_blocks * kBlockSize / kDefaultSectorSize;
+  out->reset(new Bcache(std::move(fd), max_blocks_converted));
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
 
+uint64_t Bcache::DeviceBlockSize() const {
+#ifdef __Fuchsia__
+  return info_.block_size;
+#else   // __Fuchsia__
+  return kDefaultSectorSize;
+#endif  // __Fuchsia__
+}
+
+#ifdef __Fuchsia__
 Bcache::Bcache(block_client::BlockDevice* device, uint64_t max_blocks, block_t block_size)
     : max_blocks_(max_blocks), block_size_(block_size), device_(device) {}
+#else   // __Fuchsia__
+Bcache::Bcache(fbl::unique_fd fd, uint64_t max_blocks)
+    : max_blocks_(max_blocks), fd_(std::move(fd)) {}
+#endif  // __Fuchsia__
 
 zx_status_t Bcache::VerifyDeviceInfo() {
+#ifdef __Fuchsia__
   zx_status_t status = device_->BlockGetInfo(&info_);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "cannot get block device information: " << status;
@@ -154,11 +218,20 @@ zx_status_t Bcache::VerifyDeviceInfo() {
                      << info_.block_size;
     return ZX_ERR_BAD_STATE;
   }
+#endif  // __Fuchsia__
   return ZX_OK;
 }
 
-void Bcache::Pause() { mutex_.lock(); }
+void Bcache::Pause() {
+#ifdef __Fuchsia__
+  mutex_.lock();
+#endif  // __Fuchsia__
+}
 
-void Bcache::Resume() { mutex_.unlock(); }
+void Bcache::Resume() {
+#ifdef __Fuchsia__
+  mutex_.unlock();
+#endif  // __Fuchsia__
+}
 
 }  // namespace f2fs

@@ -6,11 +6,13 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
+#ifdef __Fuchsia__
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/event.h>
+#endif  // __Fuchsia__
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,11 +23,14 @@
 
 #include <memory>
 
+#ifdef __Fuchsia__
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#endif  // __Fuchsia__
 #include "src/lib/storage/vfs/cpp/trace.h"
 
 namespace f2fs {
 
+#ifdef __Fuchsia__
 F2fs::F2fs(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc, SuperBlock* sb,
            const MountOptions& mount_options)
     : fs::ManagedVfs(dispatcher), bc_(std::move(bc)), mount_options_(mount_options) {
@@ -41,11 +46,22 @@ F2fs::F2fs(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc, Sup
     }
   }
 }
+#else   // __Fuchsia__
+F2fs::F2fs(std::unique_ptr<f2fs::Bcache> bc, SuperBlock* sb, const MountOptions& mount_options)
+    : bc_(std::move(bc)), mount_options_(mount_options) {
+  raw_sb_.reset(sb);
+}
+#endif  // __Fuchsia__
 
 F2fs::~F2fs() {}
 
+#ifdef __Fuchsia__
 zx_status_t F2fs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc,
                          const MountOptions& options, std::unique_ptr<F2fs>* out) {
+#else   // __Fuchsia__
+zx_status_t F2fs::Create(std::unique_ptr<f2fs::Bcache> bc, const MountOptions& options,
+                         std::unique_ptr<F2fs>* out) {
+#endif  // __Fuchsia__
   SuperBlock* info;
 
   info = new SuperBlock();
@@ -53,7 +69,11 @@ zx_status_t F2fs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::B
     return status;
   }
 
+#ifdef __Fuchsia__
   *out = std::unique_ptr<F2fs>(new F2fs(dispatcher, std::move(bc), info, options));
+#else   // __Fuchsia__
+  *out = std::unique_ptr<F2fs>(new F2fs(std::move(bc), info, options));
+#endif  // __Fuchsia__
 
   if (zx_status_t status = (*out)->FillSuper(); status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to initialize fs." << status;
@@ -88,20 +108,32 @@ zx_status_t LoadSuperblock(f2fs::Bcache* bc, SuperBlock* out_info) {
   return ZX_OK;
 }
 
+#ifdef __Fuchsia__
 zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_options,
                                                   async_dispatcher_t* dispatcher,
                                                   std::unique_ptr<f2fs::Bcache> bcache,
                                                   fidl::ServerEnd<fuchsia_io::Directory> root,
                                                   fbl::Closure on_unmount,
                                                   ServeLayout serve_layout) {
+#else   // __Fuchsia__
+zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_options,
+                                                  std::unique_ptr<f2fs::Bcache> bcache) {
+#endif  // __Fuchsia__
   TRACE_DURATION("f2fs", "CreateFsAndRoot");
 
   std::unique_ptr<F2fs> fs;
+#ifdef __Fuchsia__
   if (zx_status_t status = F2fs::Create(dispatcher, std::move(bcache), mount_options, &fs);
       status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to create filesystem object " << status;
     return zx::error(status);
   }
+#else   // __Fuchsia__
+  if (zx_status_t status = F2fs::Create(std::move(bcache), mount_options, &fs); status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to create filesystem object " << status;
+    return zx::error(status);
+  }
+#endif  // __Fuchsia__
 
   fbl::RefPtr<VnodeF2fs> data_root;
   if (zx_status_t status = VnodeF2fs::Vget(fs.get(), fs->RawSb().root_ino, &data_root);
@@ -110,6 +142,7 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_opti
     return zx::error(status);
   }
 
+#ifdef __Fuchsia__
   fs->SetUnmountCallback(std::move(on_unmount));
 
   fbl::RefPtr<fs::Vnode> export_root;
@@ -143,10 +176,12 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_opti
     FX_LOGS(ERROR) << "failed to establish mount_channel" << status;
     return zx::error(status);
   }
+#endif  // __Fuchsia__
 
   return zx::ok(std::move(fs));
 }
 
+#ifdef __Fuchsia__
 void Sync(SyncCallback closure) {
   if (closure)
     closure(ZX_OK);
@@ -168,9 +203,12 @@ void F2fs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
     });
   });
 }
+#endif  // __Fuchsia__
 
 void F2fs::DecValidBlockCount(VnodeF2fs* vnode, block_t count) {
+#ifdef __Fuchsia__
   fbl::AutoLock lock(&superblock_info_->GetStatLock());
+#endif  // __Fuchsia__
   ZX_ASSERT(superblock_info_->GetTotalValidBlockCount() >= count);
   vnode->DecBlocks(count);
   superblock_info_->SetTotalValidBlockCount(superblock_info_->GetTotalValidBlockCount() - count);
@@ -178,7 +216,9 @@ void F2fs::DecValidBlockCount(VnodeF2fs* vnode, block_t count) {
 
 zx_status_t F2fs::IncValidBlockCount(VnodeF2fs* vnode, block_t count) {
   block_t valid_block_count;
+#ifdef __Fuchsia__
   fbl::AutoLock lock(&superblock_info_->GetStatLock());
+#endif  // __Fuchsia__
   valid_block_count = superblock_info_->GetTotalValidBlockCount() + count;
   if (valid_block_count > superblock_info_->GetUserBlockCount()) {
     return ZX_ERR_NO_SPACE;
@@ -190,29 +230,39 @@ zx_status_t F2fs::IncValidBlockCount(VnodeF2fs* vnode, block_t count) {
 }
 
 block_t F2fs::ValidUserBlocks() {
+#ifdef __Fuchsia__
   fbl::AutoLock lock(&superblock_info_->GetStatLock());
+#endif  // __Fuchsia__
   return superblock_info_->GetTotalValidBlockCount();
 }
 
 uint32_t F2fs::ValidNodeCount() {
+#ifdef __Fuchsia__
   fbl::AutoLock lock(&superblock_info_->GetStatLock());
+#endif  // __Fuchsia__
   return superblock_info_->GetTotalValidNodeCount();
 }
 
 void F2fs::IncValidInodeCount() {
+#ifdef __Fuchsia__
   fbl::AutoLock lock(&superblock_info_->GetStatLock());
+#endif  // __Fuchsia__
   ZX_ASSERT(superblock_info_->GetTotalValidInodeCount() != superblock_info_->GetTotalNodeCount());
   superblock_info_->SetTotalValidInodeCount(superblock_info_->GetTotalValidInodeCount() + 1);
 }
 
 void F2fs::DecValidInodeCount() {
+#ifdef __Fuchsia__
   fbl::AutoLock lock(&superblock_info_->GetStatLock());
+#endif  // __Fuchsia__
   ZX_ASSERT(superblock_info_->GetTotalValidInodeCount());
   superblock_info_->SetTotalValidInodeCount(superblock_info_->GetTotalValidInodeCount() - 1);
 }
 
 uint32_t F2fs::ValidInodeCount() {
+#ifdef __Fuchsia__
   fbl::AutoLock lock(&superblock_info_->GetStatLock());
+#endif  // __Fuchsia__
   return superblock_info_->GetTotalValidInodeCount();
 }
 
@@ -231,10 +281,12 @@ zx_status_t FlushDirtyNodePage(F2fs* fs, Page* page) {
   return ZX_OK;
 }
 
+#ifdef __Fuchsia__
 zx_status_t F2fs::GetFsId(zx::event* out_fs_id) const {
   ZX_DEBUG_ASSERT(fs_id_.is_valid());
   return fs_id_.duplicate(ZX_RIGHTS_BASIC, out_fs_id);
 }
+#endif  // __Fuchsia__
 
 zx_status_t FlushDirtyMetaPage(F2fs* fs, Page* page) {
   if (!page)

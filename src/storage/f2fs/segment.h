@@ -81,7 +81,9 @@ struct SitInfo {
   uint64_t mounted_time = 0;  // mount time
   uint64_t min_mtime = 0;     // min. modification time
   uint64_t max_mtime = 0;     // max. modification time
-  fbl::Mutex sentry_lock;     // to protect SIT cache
+#ifdef __Fuchsia__
+  fbl::Mutex sentry_lock;  // to protect SIT cache
+#endif                     // __Fuchsia__
 };
 
 struct FreeSegmapInfo {
@@ -108,7 +110,9 @@ enum class DirtyType {
 
 struct DirtySeglistInfo {
   std::unique_ptr<uint8_t[]> dirty_segmap[static_cast<int>(DirtyType::kNrDirtytype)];
+#ifdef __Fuchsia__
   fbl::Mutex seglist_lock;                                       // lock for segment bitmaps
+#endif                                                           // __Fuchsia__
   int nr_dirty[static_cast<int>(DirtyType::kNrDirtytype)] = {};  // # of dirty segments
   std::unique_ptr<uint8_t[]> victim_segmap[2];                   // kBgGc, kFgGc
 };
@@ -119,10 +123,12 @@ struct CursegInfo {
     SummaryBlock *sum_blk = nullptr;  // cached summary block
     FsBlock *raw_blk;
   };
-  uint32_t segno = 0;        // current segment number
-  uint32_t zone = 0;         // current zone number
-  uint32_t next_segno = 0;   // preallocated segment
+  uint32_t segno = 0;       // current segment number
+  uint32_t zone = 0;        // current zone number
+  uint32_t next_segno = 0;  // preallocated segment
+#ifdef __Fuchsia__
   fbl::Mutex curseg_mutex;   // lock for consistency
+#endif                       // __Fuchsia__
   uint16_t next_blkoff = 0;  // next block offset to write
   uint8_t alloc_type = 0;    // current allocation type
 };

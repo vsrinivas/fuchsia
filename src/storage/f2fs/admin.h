@@ -7,6 +7,7 @@
 
 namespace f2fs {
 
+#ifdef __Fuchsia__
 class AdminService final : public fidl::WireServer<fuchsia_fs::Admin>, public fs::Service {
  public:
   AdminService(async_dispatcher_t* dispatcher, F2fs* f2fs);
@@ -17,6 +18,7 @@ class AdminService final : public fidl::WireServer<fuchsia_fs::Admin>, public fs
  private:
   F2fs* const f2fs_;
 };
+#endif  // __Fuchsia__
 
 }  // namespace f2fs
 

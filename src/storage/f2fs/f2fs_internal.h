@@ -163,6 +163,7 @@ class SuperblockInfo {
 
   Checkpoint &GetCheckpoint() { return checkpoint_block_.checkpoint_; }
 
+#ifdef __Fuchsia__
   fbl::Mutex &GetCheckpointMutex() { return checkpoint_mutex_; };
 
   fs::SharedMutex &GetFsLock(LockType type) { return fs_lock_[static_cast<int>(type)]; }
@@ -174,6 +175,7 @@ class SuperblockInfo {
   void mutex_unlock_op(LockType t) __TA_RELEASE(&fs_lock_[static_cast<int>(t)]) {
     fs_lock_[static_cast<int>(t)].unlock();
   }
+#endif  // __Fuchsia__
 
   bool IsOnRecovery() const { return on_recovery_; }
 
@@ -193,7 +195,9 @@ class SuperblockInfo {
 
   list_node_t &GetDirInodeList() { return dir_inode_list_; }
 
+#ifdef __Fuchsia__
   fbl::Mutex &GetDirInodeLock() { return dir_inode_lock_; };
+#endif  // __Fuchsia__
 
   block_t GetLogSectorsPerBlock() const { return log_sectors_per_block_; }
 
@@ -297,7 +301,9 @@ class SuperblockInfo {
 
   void SetLastVictim(int mode, uint32_t last_victim) { last_victim_[mode] = last_victim; }
 
+#ifdef __Fuchsia__
   fbl::Mutex &GetStatLock() { return stat_lock_; };
+#endif  // __Fuchsia__
 
   void IncPageCount(int count_type) {
     // TODO: IMPL
@@ -371,7 +377,10 @@ class SuperblockInfo {
     FsBlock fsblock_;
     CheckpointBlock() {}
   } checkpoint_block_;
+
+#ifdef __Fuchsia__
   fbl::Mutex checkpoint_mutex_;                                       // for checkpoint procedure
+#endif                                                                // __Fuchsia__
   fs::SharedMutex fs_lock_[static_cast<int>(LockType::kNrLockType)];  // for blocking FS operations
 
 #if 0  // porting needed
@@ -386,8 +395,10 @@ class SuperblockInfo {
 
   // for directory inode management
   list_node_t dir_inode_list_;  // dir inode list
-  fbl::Mutex dir_inode_lock_;   // for dir inode list lock
-#if 0                           // porting needed
+#ifdef __Fuchsia__
+  fbl::Mutex dir_inode_lock_;  // for dir inode list lock
+#endif                         // __Fuchsia__
+#if 0                          // porting needed
   // uint64_t n_dirty_dirs = 0;   // # of dir inodes
 #endif
 
@@ -435,7 +446,9 @@ class SuperblockInfo {
   // int total_hit_ext = 0, read_hit_ext = 0;     // extent cache hit ratio
   // int bg_gc = 0;                               // background gc calls
 #endif
+#ifdef __Fuchsia__
   fbl::Mutex stat_lock_;  // lock for stat operations
+#endif                    // __Fuchsia__
 };
 
 constexpr uint32_t kDefaultAllocatedBlocks = 1;

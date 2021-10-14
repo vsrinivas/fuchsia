@@ -43,6 +43,7 @@ bool VnodeF2fs::IsFifo() const { return S_ISFIFO(mode_); }
 
 bool VnodeF2fs::HasGid() const { return mode_ & S_ISGID; }
 
+#ifdef __Fuchsia__
 zx_status_t VnodeF2fs::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
                                               [[maybe_unused]] fs::Rights rights,
                                               fs::VnodeRepresentation *info) {
@@ -53,6 +54,7 @@ zx_status_t VnodeF2fs::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol
   }
   return ZX_OK;
 }
+#endif  // __Fuchsia__
 
 void VnodeF2fs::Allocate(F2fs *fs, ino_t ino, uint32_t mode, fbl::RefPtr<VnodeF2fs> *out) {
   // Check if ino is within scope
@@ -144,7 +146,9 @@ zx_status_t VnodeF2fs::CloseNode() { return ZX_OK; }
 
 void VnodeF2fs::RecycleNode() {
   {
+#ifdef __Fuchsia__
     std::lock_guard lock(mutex_);
+#endif  // __Fuchsia__
     ZX_ASSERT_MSG(open_count() == 0, "RecycleNode[%s:%u]: open_count must be zero (%lu)", GetName(),
                   GetKey(), open_count());
   }
@@ -163,7 +167,9 @@ zx_status_t VnodeF2fs::GetAttributes(fs::VnodeAttributes *a) {
 #endif
   *a = fs::VnodeAttributes();
 
+#ifdef __Fuchsia__
   fs::SharedLock rlock(mutex_);
+#endif  // __Fuchsia__
   a->mode = mode_;
   a->inode = ino_;
   a->content_size = size_;
@@ -179,7 +185,9 @@ zx_status_t VnodeF2fs::SetAttributes(fs::VnodeAttributesUpdate attr) {
   bool need_inode_sync = false;
 
   {
+#ifdef __Fuchsia__
     std::lock_guard wlock(mutex_);
+#endif  // __Fuchsia__
     if (attr.has_creation_time()) {
       SetCTime(zx_timespec_from_duration(attr.take_creation_time()));
       need_inode_sync = true;
@@ -354,7 +362,9 @@ int VnodeF2fs::WriteInode(WritebackControl *wbc) {
   }
 
   {
+#ifdef __Fuchsia__
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kNodeOp));
+#endif  // __Fuchsia__
     if (ret = Vfs()->GetNodeManager().GetNodePage(ino_, &node_page); ret != ZX_OK)
       return ret;
     UpdateInode(node_page);
@@ -450,8 +460,10 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
       static_cast<pgoff_t>((from + blocksize - 1) >> (superblock_info.GetLogBlocksize()));
 
   {
+#ifdef __Fuchsia__
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
     std::lock_guard write_lock(io_lock_);
+#endif  // __Fuchsia__
 
     do {
       NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
@@ -540,7 +552,9 @@ void VnodeF2fs::EvictVnode() {
     TruncateToSize();
 
   {
+#ifdef __Fuchsia__
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
+#endif  // __Fuchsia__
     Vfs()->GetNodeManager().RemoveInodePage(this);
   }
   Vfs()->EvictVnode(this);
@@ -566,11 +580,14 @@ void VnodeF2fs::MarkInodeDirty() {
   ZX_ASSERT(Vfs()->GetVCache().AddDirty(this) == ZX_OK);
 }
 
+#ifdef __Fuchsia__
 void VnodeF2fs::Sync(SyncCallback closure) {
   SyncFile(0, GetSize(), 0);
   closure(ZX_OK);
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 zx_status_t VnodeF2fs::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo *info) {
   SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
   *info = {};
@@ -593,6 +610,7 @@ zx_status_t VnodeF2fs::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo *i
 
   return ZX_OK;
 }
+#endif  // __Fuchsia__
 
 zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
   SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
@@ -620,7 +638,9 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
 #endif
 
   {
+#ifdef __Fuchsia__
     fbl::AutoLock cplock(&superblock_info.GetCheckpointMutex());
+#endif  // __Fuchsia__
     cur_version = LeToCpu(superblock_info.GetCheckpoint().checkpoint_ver);
   }
 
@@ -694,15 +714,19 @@ int VnodeF2fs::NeedToSyncDir() {
   return !Vfs()->GetNodeManager().IsCheckpointedNode(GetParentNid());
 }
 
+#ifdef __Fuchsia__
 void VnodeF2fs::Notify(std::string_view name, unsigned event) { watcher_.Notify(name, event); }
 
 zx_status_t VnodeF2fs::WatchDir(fs::Vfs *vfs, uint32_t mask, uint32_t options,
                                 zx::channel watcher) {
   return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
 }
+#endif  // __Fuchsia__
 
 inline void VnodeF2fs::GetExtentInfo(const Extent &i_ext) {
+#ifdef __Fuchsia__
   std::lock_guard lock(fi_.ext.ext_lock);
+#endif  // __Fuchsia__
   fi_.ext.fofs = LeToCpu(i_ext.fofs);
   fi_.ext.blk_addr = LeToCpu(i_ext.blk_addr);
   fi_.ext.len = LeToCpu(i_ext.len);

@@ -431,7 +431,9 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
     off_in_buf += cur_len;
     left -= cur_len;
 
+#ifdef __Fuchsia__
     std::lock_guard write_lock(io_lock_);
+#endif  // __Fuchsia__
     SetSize(std::max(static_cast<size_t>(GetSize()), offset + off_in_buf));
 #if 0  // porting needed
     // set_page_dirty(data_page, Vfs());
