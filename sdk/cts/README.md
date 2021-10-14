@@ -7,94 +7,30 @@ FIDL files) made available to developers via a Fuchsia SDK. It was originally
 proposed as [RFC
 0015](https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0015_cts).
 
-## Background, Motivation, and Goals
-
-The CTS exists to determine whether a build of the Fuchsia platform, running on
-a particular device, correctly implements (or *is compatible with*) the API and
-ABI exposed by a particular Fuchsia SDK.  To put it another way, it demonstrates
-that the build correctly implements Fuchsia.
-
-If a system running Fuchsia passes the CTS tests for a particular ABI revision,
-then its developers can have confidence that components built for that revision
-will work on the system, and that the system is backwards compatible with that
-revision.
-
-Each release of the Fuchsia platform is bundled with a set of Software
-Development Kits (SDKs), which contain tools, libraries, and headers that allow
-developers to target Fuchsia's APIs and ABIs.  We refer to the API and ABI as
-Platform Surface Area (or PlaSA).  Each SDK will be paired with a set of CTS
-tests that exercise the surface area it exposes.  The tests will be available in
-both source and binary form.
-
-CTS tests are not comprehensive.  They cannot guarantee that any component that
-is built against one SDK will run against any particular build of Fuchsia.  CTS
-must, therefore, be complemented with product-specific testing.
-
-With that in mind, the CTS can then be used to enforce compatibility in the
-following ways:
-
-### For platform developers, including those working in fuchsia.git, system integrators, product developers, and device developers
-
-The CTS binary tests can be run against a device running Fuchsia to ensure that
-the build on that device is ABI compatible with the CTS's associated SDK.  This
-can provide enforcement of backwards compatibility guarantees: if the CTS from a
-given SDK passes, that is a strong indicator (although not a conclusive one)
-that programs built against that SDK will continue to work.  It can also provide
-confidence that software running on the device that is not exercised by in-tree
-tests, such as out-of-tree device drivers, does not change the behavior of the
-platform.
-
-As a table:
+To learn more, see our documentation on
+[fuchsia.dev](https://fuchsia.dev/fuchsia-src/development/testing/cts/overview).
+See [//sdk/cts/examples] for some examples, or peruse the complete set
+of tests under [//sdk/cts/tests].
 
 
-| Run → Against ↓                       | CTS N  | CTS N + 1   |
-|---------------------------------------|--------|-------------|
-| SDK / Product Build at version N      | A      | B           |
-| SDK / Product Build at version N + 1  | C      | A           |
+## //sdk/cts Directory structure
 
-Where:
+A brief rundown of the //sdk/cts directory layout:
 
-A = Someone who wants to make sure a product build correctly implements the ABI
-revision they claim it does.
+* **build/**: CTS-specific build rules and scripts.
+* **canary/**: Files that allow us to modify the CTS tests running in the
+canary release.
+* **data/**: Location of static metadata that will be packaged alongside
+the tests in each CTS release.
+* **examples/**: Example test cases running in the CTS.
+* **plasa/**: Build rules, scripts and config files for generating the
+Platform Surface Area (PlaSA) definition files.
+* **release/**: Files that allow us to modify the CTS tests running in
+main CTS releases. Also includes scripts for validating any given CTS release.
+* **tests/**: Location of the tests in this Compatibility Test Suite.
+* **util/**: Binaries and utilities needed to run individual end-to-end CTS
+tests.
 
-B = Someone who wants to make sure that a product build is forward compatible
-with a newer ABI revision.  The Fuchsia organization doesn't provide this kind
-of guarantee.
-
-C = Someone who wants to make sure that a product build is backwards compatible
-with an older ABI revision.  The Fuchsia organization provides this kind of
-guarantee to customers whose code targets older SDKs.
-
-### For SDK vendors
-
-The CTS source tests can be built against an SDK to ensure that the SDK is API
-compatible with the CTS's associated SDK.  Additionally, CTS contains a suite of
-tests for SDK host tools.  These tests can provide confidence that changes to
-the SDK do not break developer code and workflows.  For example, we can build
-the CTS for API version N against an SDK that contains support for API version
-N+1 to see if the SDK has broken API compatibility.  Currently, the only SDK
-vendor supported by the CTS project is the Fuchsia organization itself.
-
-As a table:
-
-| Build → Against ↓                     | CTS N  | CTS N + 1   |
-|---------------------------------------|--------|-------------|
-| SDK at version N                      | A      | B           |
-| SDK at version N + 1                  | C      | A           |
-
-Where:
-
-A = Someone who wants to make sure an SDK correctly implements the API level
-they claim it does.  This includes the Fuchsia organization, testing at tip of
-tree.
-
-B = Someone who wants to make sure that an SDK is forward compatible with the a
-newer API level.  The Fuchsia organization doesn't provide this kind of
-guarantee.
-
-C = Someone who wants to make sure that an SDK is backwards compatible with an
-older API level.  The Fuchsia organization provides this kind of guarantee to
-customers whose code targets older SDKs.
 
 ## Contributing tests
 
@@ -173,69 +109,6 @@ out to the team to discuss it.
 
 Code that runs on the host does not have this restriction.
 
-## FAQ
-
-Are there any examples of CTS tests?
-
-  * Yes!  See [//sdk/cts/examples] for some examples, or peruse the complete set
-    of tests under [//sdk/cts/tests].
-
-Is CTS appropriate for unit tests of my service?
-
-  * CTS is used to test ABI and API exposed through Fuchsia SDKs, including (but
-    not limited to) FIDL and C/C++ APIs.  Unit tests that exercise FIDL API
-    exposed from your service are exactly what we want.  Unit tests that
-    exercise functionality that isn't directly exposed to SDK users are out of
-    scope.
-
-What is meant by compatibility in the C of CTS?
-
-  * CTS tests are intended to exercise all documented features of API and ABI
-    exposed by Fuchsia SDKs.  If we take an older set of tests, and run it
-    against a newer platform release, we say that the newer platform release is
-    compatible with the older one if it exhibits the same behavior.
-
-What is the compatibility window that CTS attempts to uphold?
-
-  * The goal is to uphold the compatibility window required by the platform,
-    which is currently 6 weeks.  We also intend to enforce the requirement for
-    soft transitions for API - we will not accept hard breaking changes.
-
-Are CTS tests those that reach into the service or do they access the FIDL or API?
-
-  * CTS tests only target API/ABI exposed through Fuchsia SDKs.
-
-One responsibility Fuchsia.settings.display has is to change the brightness of
-the screen. Should the test change the brightness and then assert a response
-given that the brightness changed? Or should the test use an emulator to
-identify if the brightness actually changed?
-
-  * Tests should generally not assume that they are run on any particular
-    device.  However, CTS tests will be run on emulators, and if you would like
-    to provide additional useful compatibility testing by leveraging that fact
-    (e.g., by instrumenting device drivers), we encourage you to reach out to us
-    to discuss further.
-
-How will we know if a test fails?
-
-  * These tests will be run in CQ and will indicate status as part of their
-    builder pipeline.
-
-Where will CTS tests run? Emulator? Devices?
-
-  * Initially, CTS tests will be automatically run on Emulators in CQ.
-    Developers will also be able to run the tests locally as part of their
-    traditional workflows.  Over time, tests are likely to be run on all devices
-    as part of qualification.
-
-I added a CTS test. How long until it is running in CQ?
-
-  * CTS tests will begin running in CQ the day after they are rolled into GI.
-
-### Additional questions
-
-For questions and clarification on this document, please reach out to this
-directory's owners or file a bug in the [CTS bug component].
 
 [CTS Contributing Guide]: /docs/development/testing/cts/contributing_tests.md
 [Fuchsia language policy]: https://fuchsia.dev/fuchsia-src/contribute/governance/policy/programming_languages

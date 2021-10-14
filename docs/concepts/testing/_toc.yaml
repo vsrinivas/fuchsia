@@ -14,6 +14,8 @@ toc:
   path: /docs/concepts/testing/logs.md
 - title: "Fuzz testing"
   path: /docs/concepts/testing/fuzz_testing.md
+- title: "Compatibility testing"
+  path:  /docs/concepts/testing/compatibility_testing.md
 - title: "Entropy quality tests"
   path:  /docs/concepts/testing/entropy_quality_tests.md
 - title: "Test coverage"

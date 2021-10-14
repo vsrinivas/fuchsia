@@ -169,8 +169,8 @@ Some common causes of test failure at this stage include:
   * **Solution**: Make sure your test's GN target explicitly lists all of its
   direct dependencies as `deps`.
 
-If you need additional help debugging at this step, please reach out to
-fuchsia-cts-team@google.com.
+If you need additional help debugging at this step, please reach out to the CTS
+team by filing a bug in the [CTS bug component].
 
 ### Step 7. Make the test run on presubmit
 
@@ -245,3 +245,4 @@ Note: See fxbug.dev/83948; Tools tests are not yet supported in CTS.
 [Test Components]: /docs/concepts/testing/v2/test_component.md
 [file a bug]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component%3ADeveloperExperience%3ECTS
 [relative component URL]: /docs/concepts/components/component_urls.md
+[CTS bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
