@@ -78,7 +78,7 @@ class LLCPPStyleUnion {
 
   void set_Primitive(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kPrimitive;
-    reset_ptr(fidl::ObjectView<void>::FromExternal(reinterpret_cast<void*>(elem.get())));
+    reset_ptr(fidl::ObjectView<int32_t>::FromExternal(reinterpret_cast<int32_t*>(elem.get())));
   }
 
  private:
@@ -87,10 +87,9 @@ class LLCPPStyleUnion {
     kPrimitive = 1,  // 0x1
   };
 
-  void reset_ptr(::fidl::ObjectView<void> new_ptr) {
-    reinterpret_cast<::fidl::Envelope<uint64_t>*>(&envelope_)
-        ->set_data(
-            ::fidl::ObjectView<uint64_t>::FromExternal(static_cast<uint64_t*>(new_ptr.get())));
+  void reset_ptr(::fidl::ObjectView<int32_t> new_ptr) {
+    reinterpret_cast<::fidl::Envelope<int32_t>*>(&envelope_)
+        ->set_data(::fidl::ObjectView<int32_t>::FromExternal(static_cast<int32_t*>(new_ptr.get())));
   }
 
   static void SizeAndOffsetAssertionHelper();

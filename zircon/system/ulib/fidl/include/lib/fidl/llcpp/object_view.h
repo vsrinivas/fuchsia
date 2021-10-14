@@ -13,19 +13,39 @@ template <typename T>
 class ObjectView final {
  public:
   ObjectView() = default;
+
   // Allocates an object using an arena.
+  // This constructor creates the object using T(args...).
   template <typename... Args>
   explicit ObjectView(AnyArena& allocator, Args&&... args)
       : object_(allocator.Allocate<T>(std::forward<Args>(args)...)) {}
+
+  // These constructors are redundant with the above constructor, but are provided
+  // anyway to help the compiler infer types in common cases. For example, one would
+  // be able to write:
+  //
+  //    fidl::ObjectView(allocator, 42.0);
+  //    fidl::ObjectView(allocator, v);
+  //
+  // instead of
+  //
+  //    fidl::ObjectView<double>(allocator, 42.0);
+  //    fidl::ObjectView<fidl::VectorView<double>>(allocator, v);
+  //
+  // which is more verbose.
+  ObjectView(AnyArena& allocator, T&& obj) : object_(allocator.Allocate<T>(std::move(obj))) {}
+  ObjectView(AnyArena& allocator, const T& obj) : object_(allocator.Allocate<T>(obj)) {}
+
+  // Initialize an ObjectView that contains null.
   ObjectView(std::nullptr_t) {}  // NOLINT
 
   // These methods are the only way to reference data which is not managed by a Arena.
-  // Their usage is discouraged. The lifetime of the referenced string must be longer than the
-  // lifetime of the created StringView.
+  // Their usage is discouraged. The lifetime of the referenced object must be longer than the
+  // lifetime of the created ObjectView.
   //
   // For example:
-  //   std::string my_string = "Hello";
-  //   auto my_view = fidl::StringView::FromExternal>(my_string);
+  //   Foo foo;
+  //   auto foo_view = fidl::ObjectView<Foo>::FromExternal(&foo);
   static ObjectView<T> FromExternal(T* from) { return ObjectView<T>(from); }
 
   template <typename U = T, typename = std::enable_if_t<!std::is_void<U>::value>>
