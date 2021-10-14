@@ -869,7 +869,6 @@
                 "blob",
                 "build-info",
                 "config-data",
-                "deprecated-misc-storage",
                 "durable",
                 "factory",
                 "minfs",

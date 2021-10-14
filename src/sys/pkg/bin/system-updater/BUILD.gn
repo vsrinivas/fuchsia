@@ -83,7 +83,6 @@ rustc_binary("bin") {
     "src/install_manager.rs",
     "src/main.rs",
     "src/update.rs",
-    "src/update/channel.rs",
     "src/update/config.rs",
     "src/update/environment.rs",
     "src/update/genutil.rs",

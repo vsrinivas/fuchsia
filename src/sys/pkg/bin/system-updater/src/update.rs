@@ -26,7 +26,6 @@ use {
     update_package::{Image, ImageType, UpdateMode, UpdatePackage},
 };
 
-mod channel;
 mod config;
 mod environment;
 mod genutil;
@@ -248,10 +247,6 @@ async fn update(
             config.start_time_mono.elapsed(),
         );
         drop(cobalt);
-
-        if attempt_res.is_ok() {
-            channel::update_current_channel().await;
-        }
 
         // wait for all cobalt events to be flushed to the service.
         fx_log_info!("flushing cobalt events");

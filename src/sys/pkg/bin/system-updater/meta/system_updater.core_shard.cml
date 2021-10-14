@@ -56,11 +56,6 @@
             to: "#system-updater",
         },
         {
-            directory: "deprecated-misc-storage",
-            from: "parent",
-            to: "#system-updater",
-        },
-        {
             storage: "data",
             from: "self",
             to: "#system-updater",

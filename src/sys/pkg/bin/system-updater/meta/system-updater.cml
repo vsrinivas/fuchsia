@@ -38,12 +38,6 @@
             rights: [ "r*" ],
             path: "/config/build-info",
         },
-        {
-            directory: "deprecated-misc-storage",
-            from: "parent",
-            rights: [ "rw*" ],
-            path: "/misc",
-        },
     ],
     expose: [
         {

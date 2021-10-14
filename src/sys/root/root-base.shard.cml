@@ -92,7 +92,6 @@
                 "blob",
                 "build-info",
                 "config-data",
-                "deprecated-misc-storage",
                 "dev",
                 "durable",
                 "factory",

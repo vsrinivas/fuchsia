@@ -30,7 +30,7 @@ use {
     serde_json::json,
     std::{
         collections::HashSet,
-        fs::{self, create_dir, File},
+        fs::{create_dir, File},
         io::Write,
         path::PathBuf,
         sync::Arc,
@@ -39,7 +39,6 @@ use {
 };
 
 mod board;
-mod channel;
 mod cobalt_metrics;
 mod epoch;
 mod fetch_packages;
@@ -131,9 +130,6 @@ impl TestEnvBuilder {
         let build_info_path = test_dir.path().join("build-info");
         create_dir(&build_info_path).expect("create build-info dir");
 
-        let misc_path = test_dir.path().join("misc");
-        create_dir(&misc_path).expect("create misc dir");
-
         // Optionally write the pre-configured update history.
         if let Some(history) = history {
             serde_json::to_writer(
@@ -154,15 +150,9 @@ impl TestEnvBuilder {
             io_util::OPEN_RIGHT_READABLE,
         )
         .unwrap();
-        let misc = io_util::directory::open_in_namespace(
-            misc_path.to_str().unwrap(),
-            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
-        )
-        .unwrap();
 
         fs.add_remote("data", data);
         fs.dir("config").add_remote("build-info", build_info);
-        fs.add_remote("misc", misc);
 
         // A buffer to store all the interactions the system-updater has with external services.
         let interactions = Arc::new(Mutex::new(vec![]));
@@ -343,11 +333,6 @@ impl TestEnvBuilder {
                 targets: vec![ RouteEndpoint::component("system_updater") ],
             }).unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::directory("deprecated-misc-storage", "/misc", fio2::RW_STAR_DIR),
-                source: RouteEndpoint::component("fake_capabilities"),
-                targets: vec! [ RouteEndpoint::component("system_updater") ],
-            }).unwrap()
-            .add_route(CapabilityRoute {
                 capability: Capability::directory("build-info", "/config/build-info", fio2::R_STAR_DIR),
                 source: RouteEndpoint::component("fake_capabilities"),
                 targets: vec! [ RouteEndpoint::component("system_updater") ],
@@ -376,7 +361,6 @@ impl TestEnvBuilder {
             _test_dir: test_dir,
             data_path,
             build_info_path,
-            misc_path,
             interactions,
         }
     }
@@ -393,7 +377,6 @@ struct TestEnv {
     _test_dir: TempDir,
     data_path: PathBuf,
     build_info_path: PathBuf,
-    misc_path: PathBuf,
     interactions: SystemUpdaterInteractions,
 }
 
@@ -423,21 +406,6 @@ impl TestEnv {
         let mut file =
             File::create(self.build_info_path.join("version")).expect("create version file");
         file.write_all(version.as_ref().as_bytes()).expect("write version file");
-    }
-
-    fn set_target_channel(&self, contents: impl AsRef<[u8]>) {
-        let misc_ota_dir = self.misc_path.join("ota");
-        fs::create_dir_all(&misc_ota_dir).unwrap();
-
-        fs::write(misc_ota_dir.join("target_channel.json"), contents.as_ref()).unwrap();
-    }
-
-    fn verify_current_channel(&self, expected: Option<&[u8]>) {
-        match fs::read(self.misc_path.join("ota/current_channel.json")) {
-            Ok(bytes) => assert_eq!(bytes, expected.unwrap()),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => assert_eq!(expected, None),
-            Err(e) => panic!("{}", e),
-        }
     }
 
     fn read_history(&self) -> Option<serde_json::Value> {

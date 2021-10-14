@@ -53,7 +53,6 @@ rustc_test("driver") {
 
   sources = [
     "src/board.rs",
-    "src/channel.rs",
     "src/cobalt_metrics.rs",
     "src/epoch.rs",
     "src/fetch_packages.rs",
