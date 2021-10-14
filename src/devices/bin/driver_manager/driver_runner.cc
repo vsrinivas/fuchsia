@@ -645,9 +645,9 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
 
   // Create a DriverComponent to manage the driver.
   auto driver = std::make_unique<DriverComponent>(std::move(*start));
-  auto bind_driver = fidl::BindServer<DriverComponent>(
-      dispatcher_, std::move(request->controller), driver.get(),
-      [this](DriverComponent* driver, auto, auto) { drivers_.erase(*driver); });
+  auto bind_driver =
+      fidl::BindServer(dispatcher_, std::move(request->controller), driver.get(),
+                       [this](DriverComponent* driver, auto, auto) { drivers_.erase(*driver); });
   node.set_driver_ref(bind_driver);
   driver->set_driver_ref(std::move(bind_driver));
   auto watch = driver->Watch(dispatcher_);

@@ -240,8 +240,8 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
         };
         async::PostTask(driver_dispatcher_, std::move(stop_task));
       };
-      auto bind = fidl::BindServer<Driver>(loop_.dispatcher(), std::move(request), driver.get(),
-                                           std::move(unbind_callback));
+      auto bind = fidl::BindServer(loop_.dispatcher(), std::move(request), driver.get(),
+                                   std::move(unbind_callback));
       driver->set_binding(std::move(bind));
 
       std::lock_guard<std::mutex> lock(mutex_);
