@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 //! Type-safe bindings for the Zircon kernel's CPRNG.
+//!
+//! This is intended to be a minimal dependency for out-of-tree callers. In-tree
+//! callers should use `fuchsia_zircon` instead.
 
 #![no_std]
 
