@@ -6,9 +6,8 @@ use {
     crate::{
         accessor::PerformanceConfig,
         constants,
-        container::{ReadSnapshot, SnapshotData},
         diagnostics::BatchIteratorConnectionStats,
-        inspect::container::UnpopulatedInspectDataContainer,
+        inspect::container::{ReadSnapshot, SnapshotData, UnpopulatedInspectDataContainer},
         moniker_rewriter::OutputRewriter,
         ImmutableString,
     },
@@ -116,115 +115,46 @@ impl ReaderServer {
         output_rewriter: Option<OutputRewriter>,
         stats: Arc<BatchIteratorConnectionStats>,
     ) -> impl Stream<Item = Data<Inspect>> + Send + 'static {
-        let server = Self { selectors, output_rewriter };
+        let server = Arc::new(Self { selectors, output_rewriter });
 
         let batch_timeout = performance_configuration.batch_timeout_sec;
 
         futures::stream::iter(unpopulated_diagnostics_sources.into_iter())
-            // make a stream of futures of populated Vec's
             .map(move |unpopulated| {
                 let global_stats = stats.global_stats().clone();
-
-                // this returns a future, which means the closure capture must be 'static
-                async move {
-                    let start_time = zx::Time::get_monotonic();
-                    let global_stats_2 = global_stats.clone();
-                    let result = unpopulated
-                        .populate(batch_timeout, move || global_stats.add_timeout())
-                        .await;
-                    global_stats_2.record_component_duration(
-                        &result.identity.relative_moniker.join("/"),
-                        zx::Time::get_monotonic() - start_time,
-                    );
-                    result
-                }
+                unpopulated.populate(batch_timeout, global_stats)
             })
+            .flatten()
+            .map(|populated| future::ready(populated))
             // buffer a small number in memory in case later components time out
             .buffer_unordered(constants::MAXIMUM_SIMULTANEOUS_SNAPSHOTS_PER_READER)
             // filter each component's inspect
-            .map(move |populated| server.filter_snapshot(populated))
-            // turn each of the vecs of filtered snapshots into their own streams
-            .map(futures::stream::iter)
-            // and merge them all into a single stream
-            .flatten()
+            .filter_map(move |populated| {
+                let server_clone = server.clone();
+                async move { server_clone.filter_snapshot(populated) }
+            })
     }
 
-    fn filter_single_components_snapshots(
-        snapshots: Vec<SnapshotData>,
+    fn filter_single_components_snapshot(
+        snapshot_data: SnapshotData,
         static_matcher: Option<InspectHierarchyMatcher>,
         client_matcher: Option<InspectHierarchyMatcher>,
-    ) -> Vec<NodeHierarchyData> {
-        let statically_filtered_hierarchies: Vec<NodeHierarchyData> = match static_matcher {
-            Some(static_matcher) => snapshots
-                .into_iter()
-                .map(|snapshot_data| {
-                    let node_hierarchy_data: NodeHierarchyData = snapshot_data.into();
-
-                    match node_hierarchy_data.hierarchy {
-                        Some(node_hierarchy) => {
-                            match diagnostics_hierarchy::filter_hierarchy(
-                                node_hierarchy,
-                                &static_matcher,
-                            ) {
-                                Ok(Some(filtered_hierarchy)) => NodeHierarchyData {
-                                    filename: node_hierarchy_data.filename,
-                                    timestamp: node_hierarchy_data.timestamp,
-                                    errors: node_hierarchy_data.errors,
-                                    hierarchy: Some(filtered_hierarchy),
-                                },
-                                Ok(None) => NodeHierarchyData {
-                                    filename: node_hierarchy_data.filename,
-                                    timestamp: node_hierarchy_data.timestamp,
-                                    errors: vec![schema::Error {
-                                        message: concat!(
-                                            "Inspect hierarchy was fully filtered",
-                                            " by static selectors. No data remaining."
-                                        )
-                                        .to_string(),
-                                    }],
-                                    hierarchy: None,
-                                },
-                                Err(e) => {
-                                    error!(?e, "Failed to filter a node hierarchy");
-                                    NodeHierarchyData {
-                                        filename: node_hierarchy_data.filename,
-                                        timestamp: node_hierarchy_data.timestamp,
-                                        errors: vec![schema::Error { message: format!("{:?}", e) }],
-                                        hierarchy: None,
-                                    }
-                                }
-                            }
-                        }
-                        None => NodeHierarchyData {
-                            filename: node_hierarchy_data.filename,
-                            timestamp: node_hierarchy_data.timestamp,
-                            errors: node_hierarchy_data.errors,
-                            hierarchy: None,
-                        },
-                    }
-                })
-                .collect(),
-
+    ) -> NodeHierarchyData {
+        let node_hierarchy_data = match static_matcher {
             // The only way we have a None value for the PopulatedDataContainer is
             // if there were no provided static selectors, which is only valid in
             // the AllAccess pipeline. For all other pipelines, if no static selectors
             // matched, the data wouldn't have ended up in the repository to begin
             // with.
-            None => snapshots.into_iter().map(|snapshot_data| snapshot_data.into()).collect(),
-        };
+            None => snapshot_data.into(),
+            Some(static_matcher) => {
+                let node_hierarchy_data: NodeHierarchyData = snapshot_data.into();
 
-        match client_matcher {
-            // If matcher is present, and there was an InspectHierarchyMatcher,
-            // then this means the client provided their own selectors, and a subset of
-            // them matched this component. So we need to filter each of the snapshots from
-            // this component with the dynamically provided components.
-            Some(dynamic_matcher) => statically_filtered_hierarchies
-                .into_iter()
-                .map(|node_hierarchy_data| match node_hierarchy_data.hierarchy {
+                match node_hierarchy_data.hierarchy {
                     Some(node_hierarchy) => {
                         match diagnostics_hierarchy::filter_hierarchy(
                             node_hierarchy,
-                            &dynamic_matcher,
+                            &static_matcher,
                         ) {
                             Ok(Some(filtered_hierarchy)) => NodeHierarchyData {
                                 filename: node_hierarchy_data.filename,
@@ -238,18 +168,21 @@ impl ReaderServer {
                                 errors: vec![schema::Error {
                                     message: concat!(
                                         "Inspect hierarchy was fully filtered",
-                                        " by client provided selectors. No data remaining."
+                                        " by static selectors. No data remaining."
                                     )
                                     .to_string(),
                                 }],
                                 hierarchy: None,
                             },
-                            Err(e) => NodeHierarchyData {
-                                filename: node_hierarchy_data.filename,
-                                timestamp: node_hierarchy_data.timestamp,
-                                errors: vec![schema::Error { message: format!("{:?}", e) }],
-                                hierarchy: None,
-                            },
+                            Err(e) => {
+                                error!(?e, "Failed to filter a node hierarchy");
+                                NodeHierarchyData {
+                                    filename: node_hierarchy_data.filename,
+                                    timestamp: node_hierarchy_data.timestamp,
+                                    errors: vec![schema::Error { message: format!("{:?}", e) }],
+                                    hierarchy: None,
+                                }
+                            }
                         }
                     }
                     None => NodeHierarchyData {
@@ -258,9 +191,53 @@ impl ReaderServer {
                         errors: node_hierarchy_data.errors,
                         hierarchy: None,
                     },
-                })
-                .collect(),
-            None => statically_filtered_hierarchies,
+                }
+            }
+        };
+
+        match client_matcher {
+            // If matcher is present, and there was an InspectHierarchyMatcher,
+            // then this means the client provided their own selectors, and a subset of
+            // them matched this component. So we need to filter each of the snapshots from
+            // this component with the dynamically provided components.
+            Some(dynamic_matcher) => match node_hierarchy_data.hierarchy {
+                None => NodeHierarchyData {
+                    filename: node_hierarchy_data.filename,
+                    timestamp: node_hierarchy_data.timestamp,
+                    errors: node_hierarchy_data.errors,
+                    hierarchy: None,
+                },
+                Some(node_hierarchy) => {
+                    match diagnostics_hierarchy::filter_hierarchy(node_hierarchy, &dynamic_matcher)
+                    {
+                        Ok(Some(filtered_hierarchy)) => NodeHierarchyData {
+                            filename: node_hierarchy_data.filename,
+                            timestamp: node_hierarchy_data.timestamp,
+                            errors: node_hierarchy_data.errors,
+                            hierarchy: Some(filtered_hierarchy),
+                        },
+                        Ok(None) => NodeHierarchyData {
+                            filename: node_hierarchy_data.filename,
+                            timestamp: node_hierarchy_data.timestamp,
+                            errors: vec![schema::Error {
+                                message: concat!(
+                                    "Inspect hierarchy was fully filtered",
+                                    " by client provided selectors. No data remaining."
+                                )
+                                .to_string(),
+                            }],
+                            hierarchy: None,
+                        },
+                        Err(e) => NodeHierarchyData {
+                            filename: node_hierarchy_data.filename,
+                            timestamp: node_hierarchy_data.timestamp,
+                            errors: vec![schema::Error { message: format!("{:?}", e) }],
+                            hierarchy: None,
+                        },
+                    }
+                }
+            },
+            None => node_hierarchy_data,
         }
     }
 
@@ -274,7 +251,7 @@ impl ReaderServer {
     fn filter_snapshot(
         &self,
         pumped_inspect_data: PopulatedInspectDataContainer,
-    ) -> Vec<Data<Inspect>> {
+    ) -> Option<Data<Inspect>> {
         // Since a single PopulatedInspectDataContainer shares a moniker for all pieces of data it
         // contains, we can store the result of component selector filtering to avoid reapplying
         // the selectors.
@@ -327,36 +304,32 @@ impl ReaderServer {
             // this component, then we should return early since there is no data to
             // extract.
             if client_selectors.is_none() {
-                return vec![];
+                return None;
             }
         }
 
         let identity = pumped_inspect_data.identity.clone();
 
-        ReaderServer::filter_single_components_snapshots(
-            pumped_inspect_data.snapshots,
+        let hierarchy_data = ReaderServer::filter_single_components_snapshot(
+            pumped_inspect_data.snapshot,
             pumped_inspect_data.inspect_matcher,
             client_selectors,
-        )
-        .into_iter()
-        .map(|hierarchy_data| {
-            Data::for_inspect(
-                sanitized_moniker.clone(),
-                hierarchy_data.hierarchy,
-                hierarchy_data.timestamp.into_nanos(),
-                identity.url.clone(),
-                hierarchy_data.filename,
-                hierarchy_data.errors,
-            )
-        })
-        .collect()
+        );
+        Some(Data::for_inspect(
+            sanitized_moniker.clone(),
+            hierarchy_data.hierarchy,
+            hierarchy_data.timestamp.into_nanos(),
+            identity.url.clone(),
+            hierarchy_data.filename,
+            hierarchy_data.errors,
+        ))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        super::collector::{InspectData, InspectDataCollector},
+        super::collector::InspectData,
         super::*,
         crate::{
             accessor::BatchIterator, container::ComponentIdentity, diagnostics::AccessorStats,
@@ -425,13 +398,7 @@ mod tests {
             let mut executor = fasync::LocalExecutor::new().unwrap();
 
             executor.run_singlethreaded(async {
-                let collector = InspectDataCollector::new();
-                // Trigger collection on a clone of the inspect collector so
-                // we can use collector to take the collected data.
-                Box::new(collector.clone()).collect(path).await.unwrap();
-                let collector: Box<InspectDataCollector> = Box::new(collector);
-
-                let extra_data = collector.take_data().expect("collector missing data");
+                let extra_data = collector::collect(path).await.expect("collector missing data");
                 assert_eq!(3, extra_data.len());
 
                 let assert_extra_data = |path: &str, content: &[u8]| {
@@ -500,14 +467,7 @@ mod tests {
             let mut executor = fasync::LocalExecutor::new().unwrap();
 
             executor.run_singlethreaded(async {
-                let collector = InspectDataCollector::new();
-
-                //// Trigger collection on a clone of the inspect collector so
-                //// we can use collector to take the collected data.
-                Box::new(collector.clone()).collect(path).await.unwrap();
-                let collector: Box<InspectDataCollector> = Box::new(collector);
-
-                let extra_data = collector.take_data().expect("collector missing data");
+                let extra_data = collector::collect(path).await.expect("collector missing data");
                 assert_eq!(1, extra_data.len());
 
                 let extra = extra_data.get(TreeMarker::PROTOCOL_NAME);
@@ -776,9 +736,7 @@ mod tests {
                         let new_async_clone = cloned_path.clone();
                         async move {
                             let full_path = new_async_clone.join(dir);
-                            let proxy = InspectDataCollector::find_directory_proxy(&full_path)
-                                .await
-                                .unwrap();
+                            let proxy = collector::find_directory_proxy(&full_path).await.unwrap();
                             let unique_cid = ComponentIdentifier::Legacy {
                                 instance_id: "1234".into(),
                                 moniker: vec![format!("component_{}.cmx", dir)].into(),
@@ -864,7 +822,7 @@ mod tests {
         let pipeline_wrapper =
             Arc::new(RwLock::new(Pipeline::for_test(static_selectors_opt, inspect_repo.clone())));
 
-        let out_dir_proxy = InspectDataCollector::find_directory_proxy(&path).await.unwrap();
+        let out_dir_proxy = collector::find_directory_proxy(&path).await.unwrap();
 
         // The absolute moniker here is made up since the selector is a glob
         // selector, so any path would match.

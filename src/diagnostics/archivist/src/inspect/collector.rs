@@ -4,23 +4,23 @@
 
 use {
     crate::ImmutableString,
-    anyhow::{format_err, Error},
+    anyhow::Error,
     fidl::endpoints::{DiscoverableProtocolMarker, Proxy},
     fidl_fuchsia_inspect::{TreeMarker, TreeProxy},
     fidl_fuchsia_inspect_deprecated::{InspectMarker, InspectProxy},
     fidl_fuchsia_io::{DirectoryProxy, NodeInfo},
     files_async, fuchsia_zircon as zx,
-    futures::future::BoxFuture,
     futures::stream::StreamExt,
-    futures::{FutureExt, TryFutureExt},
+    futures::TryFutureExt,
     io_util,
-    parking_lot::Mutex,
     pin_utils::pin_mut,
     std::collections::HashMap,
-    std::path::{Path, PathBuf},
-    std::sync::Arc,
+    std::path::Path,
     tracing::error,
 };
+
+#[cfg(test)]
+use futures::FutureExt;
 
 /// Mapping from a diagnostics filename to the underlying encoding of that
 /// diagnostics data.
@@ -32,9 +32,6 @@ pub type Moniker = String;
 /// This data is stored by data collectors and passed by the collectors to processors.
 #[derive(Debug)]
 pub enum InspectData {
-    /// Empty data, for testing.
-    Empty,
-
     /// A VMO containing data associated with the event.
     Vmo(zx::Vmo),
 
@@ -51,151 +48,119 @@ pub enum InspectData {
     DeprecatedFidl(InspectProxy),
 }
 
-/// InspectDataCollector holds the information needed to retrieve the Inspect
-/// VMOs associated with a particular component
-#[derive(Clone, Debug)]
-pub struct InspectDataCollector {
-    /// The inspect data associated with a particular event.
-    ///
-    /// This is wrapped in an Arc Mutex so it can be shared between multiple data sources.
-    ///
-    /// Note: The Arc is needed so that we can both add the data map to a data collector
-    ///       and trigger async collection of the data in the same method. This can only
-    ///       be done by allowing the async method to populate the same data that is being
-    ///       passed into the component event.
-    inspect_data_map: Arc<Mutex<Option<DataMap>>>,
+/// Convert a fully-qualified path to a directory-proxy in the executing namespace.
+/// NOTE: Currently does a synchronous directory-open, since there are no available
+///       async apis.
+pub async fn find_directory_proxy(path: &Path) -> Result<DirectoryProxy, Error> {
+    // TODO(fxbug.dev/36762): When available, use the async directory-open api.
+    io_util::open_directory_in_namespace(
+        &path.to_string_lossy(),
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+    )
 }
 
-impl InspectDataCollector {
-    /// Construct a new InspectDataCollector, wrapped by an Arc<Mutex>.
-    pub fn new() -> Self {
-        InspectDataCollector { inspect_data_map: Arc::new(Mutex::new(Some(DataMap::new()))) }
+fn maybe_load_service<P: DiscoverableProtocolMarker>(
+    dir_proxy: &DirectoryProxy,
+    entry: &files_async::DirEntry,
+) -> Result<Option<P::Proxy>, Error> {
+    if entry.name.ends_with(P::PROTOCOL_NAME) {
+        let (proxy, server) = fidl::endpoints::create_proxy::<P>()?;
+        fdio::service_connect_at(
+            dir_proxy.as_channel().as_ref(),
+            &entry.name,
+            server.into_channel(),
+        )?;
+        return Ok(Some(proxy));
     }
+    Ok(None)
+}
 
-    /// Convert a fully-qualified path to a directory-proxy in the executing namespace.
-    /// NOTE: Currently does a synchronous directory-open, since there are no available
-    ///       async apis.
-    pub async fn find_directory_proxy(path: &Path) -> Result<DirectoryProxy, Error> {
-        // TODO(fxbug.dev/36762): When available, use the async directory-open api.
-        return io_util::open_directory_in_namespace(
-            &path.to_string_lossy(),
-            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
-        );
-    }
-
-    /// Searches the directory specified by inspect_directory_proxy for
-    /// .inspect files and populates the `inspect_data_map` with the found VMOs.
-    pub async fn populate_data_map(&mut self, inspect_proxy: &DirectoryProxy) -> Result<(), Error> {
-        // TODO(fxbug.dev/36762): Use a streaming and bounded readdir API when available to avoid
-        // being hung.
-        let entries = files_async::readdir_recursive(inspect_proxy, /* timeout= */ None)
-            .filter_map(|result| {
-                async move {
-                    // TODO(fxbug.dev/49157): decide how to show directories that we failed to read.
-                    result.ok()
-                }
-            });
-        pin_mut!(entries);
-        // TODO(fxbug.dev/60250) convert this async loop to a stream so we can carry backpressure
-        while let Some(entry) = entries.next().await {
-            // We are only currently interested in inspect VMO files (root.inspect) and
-            // inspect services.
-            if let Ok(Some(proxy)) = self.maybe_load_service::<TreeMarker>(inspect_proxy, &entry) {
-                self.maybe_add(&entry.name, InspectData::Tree(proxy));
-                continue;
+/// Searches the directory specified by inspect_directory_proxy for
+/// .inspect files and populates the `inspect_data_map` with the found VMOs.
+pub async fn populate_data_map(inspect_proxy: &DirectoryProxy) -> Result<DataMap, Error> {
+    // TODO(fxbug.dev/36762): Use a streaming and bounded readdir API when available to avoid
+    // being hung.
+    let entries =
+        files_async::readdir_recursive(inspect_proxy, /* timeout= */ None).filter_map(|result| {
+            async move {
+                // TODO(fxbug.dev/49157): decide how to show directories that we failed to read.
+                result.ok()
             }
-
-            if let Ok(Some(proxy)) = self.maybe_load_service::<InspectMarker>(inspect_proxy, &entry)
-            {
-                self.maybe_add(&entry.name, InspectData::DeprecatedFidl(proxy));
-                continue;
-            }
-
-            if !entry.name.ends_with(".inspect") || entry.kind != files_async::DirentKind::File {
-                continue;
-            }
-
-            let file_proxy = match io_util::open_file(
-                inspect_proxy,
-                Path::new(&entry.name),
-                io_util::OPEN_RIGHT_READABLE,
-            ) {
-                Ok(proxy) => proxy,
-                Err(_) => {
-                    continue;
-                }
-            };
-
-            // Obtain the vmo backing any VmoFiles.
-            match file_proxy.describe().err_into::<anyhow::Error>().await {
-                Ok(nodeinfo) => match nodeinfo {
-                    NodeInfo::Vmofile(vmofile) => {
-                        self.maybe_add(&entry.name, InspectData::Vmo(vmofile.vmo));
-                    }
-                    NodeInfo::File(_) => {
-                        let contents = io_util::read_file_bytes(&file_proxy).await?;
-                        self.maybe_add(&entry.name, InspectData::File(contents));
-                    }
-                    ty @ _ => {
-                        error!(
-                            file = %entry.name, ?ty,
-                            "found an inspect file of unexpected type",
-                        );
-                    }
-                },
-                Err(_) => {}
-            }
+        });
+    let mut data_map = DataMap::new();
+    pin_mut!(entries);
+    // TODO(fxbug.dev/60250) convert this async loop to a stream so we can carry backpressure
+    while let Some(entry) = entries.next().await {
+        // We are only currently interested in inspect VMO files (root.inspect) and
+        // inspect services.
+        if let Ok(Some(proxy)) = maybe_load_service::<TreeMarker>(inspect_proxy, &entry) {
+            data_map.insert(entry.name.into_boxed_str(), InspectData::Tree(proxy));
+            continue;
         }
 
-        Ok(())
-    }
+        if let Ok(Some(proxy)) = maybe_load_service::<InspectMarker>(inspect_proxy, &entry) {
+            data_map.insert(entry.name.into_boxed_str(), InspectData::DeprecatedFidl(proxy));
+            continue;
+        }
 
-    /// Adds a key value to the contained vector if it hasn't been taken yet. Otherwise, does
-    /// nothing.
-    fn maybe_add(&mut self, key: impl Into<String>, value: InspectData) {
-        if let Some(map) = self.inspect_data_map.lock().as_mut() {
-            map.insert(key.into().into_boxed_str(), value);
+        if !entry.name.ends_with(".inspect") || entry.kind != files_async::DirentKind::File {
+            continue;
+        }
+
+        let file_proxy = match io_util::open_file(
+            inspect_proxy,
+            Path::new(&entry.name),
+            io_util::OPEN_RIGHT_READABLE,
+        ) {
+            Ok(proxy) => proxy,
+            Err(_) => {
+                continue;
+            }
         };
-    }
 
-    fn maybe_load_service<P: DiscoverableProtocolMarker>(
-        &self,
-        dir_proxy: &DirectoryProxy,
-        entry: &files_async::DirEntry,
-    ) -> Result<Option<P::Proxy>, Error> {
-        if entry.name.ends_with(P::PROTOCOL_NAME) {
-            let (proxy, server) = fidl::endpoints::create_proxy::<P>()?;
-            fdio::service_connect_at(
-                dir_proxy.as_channel().as_ref(),
-                &entry.name,
-                server.into_channel(),
-            )?;
-            return Ok(Some(proxy));
-        }
-        Ok(None)
-    }
-
-    /// Takes the contained extra data. Additions following this have no effect.
-    pub fn take_data(self: Box<Self>) -> Option<DataMap> {
-        self.inspect_data_map.lock().take()
-    }
-
-    /// Collect extra data stored under the given path.
-    ///
-    /// This currently only does a single pass over the directory to find information.
-    pub fn collect(mut self: Box<Self>, path: PathBuf) -> BoxFuture<'static, Result<(), Error>> {
-        async move {
-            let inspect_proxy = match InspectDataCollector::find_directory_proxy(&path).await {
-                Ok(proxy) => proxy,
-                Err(e) => {
-                    return Err(format_err!("Failed to open out directory at {:?}: {}", path, e));
+        // Obtain the vmo backing any VmoFiles.
+        match file_proxy.describe().err_into::<anyhow::Error>().await {
+            Ok(nodeinfo) => match nodeinfo {
+                NodeInfo::Vmofile(vmofile) => {
+                    data_map.insert(entry.name.into_boxed_str(), InspectData::Vmo(vmofile.vmo));
                 }
-            };
-
-            self.populate_data_map(&inspect_proxy).await
+                NodeInfo::File(_) => {
+                    let contents = io_util::read_file_bytes(&file_proxy).await?;
+                    data_map.insert(entry.name.into_boxed_str(), InspectData::File(contents));
+                }
+                ty @ _ => {
+                    error!(
+                        file = %entry.name, ?ty,
+                        "found an inspect file of unexpected type",
+                    );
+                }
+            },
+            Err(_) => {}
         }
-        .boxed()
     }
+
+    Ok(data_map)
+}
+
+#[cfg(test)]
+pub fn collect(
+    path: std::path::PathBuf,
+) -> futures::future::BoxFuture<'static, Result<DataMap, anyhow::Error>> {
+    async move {
+        let inspect_proxy = match find_directory_proxy(&path).await {
+            Ok(proxy) => proxy,
+            Err(e) => {
+                return Err(anyhow::format_err!(
+                    "Failed to open out directory at {:?}: {}",
+                    path,
+                    e
+                ));
+            }
+        };
+
+        populate_data_map(&inspect_proxy).await
+    }
+    .boxed()
 }
 
 #[cfg(test)]
@@ -255,13 +220,7 @@ mod tests {
             let mut executor = fasync::LocalExecutor::new().unwrap();
 
             executor.run_singlethreaded(async {
-                let collector = InspectDataCollector::new();
-                // Trigger collection on a clone of the inspect collector so
-                // we can use collector to take the collected data.
-                Box::new(collector.clone()).collect(path).await.unwrap();
-                let collector: Box<InspectDataCollector> = Box::new(collector);
-
-                let extra_data = collector.take_data().expect("collector missing data");
+                let extra_data = collect(path).await.expect("collector missing data");
                 assert_eq!(3, extra_data.len());
 
                 let assert_extra_data = |path: &str, content: &[u8]| {
@@ -330,14 +289,7 @@ mod tests {
             let mut executor = fasync::LocalExecutor::new().unwrap();
 
             executor.run_singlethreaded(async {
-                let collector = InspectDataCollector::new();
-
-                //// Trigger collection on a clone of the inspect collector so
-                //// we can use collector to take the collected data.
-                Box::new(collector.clone()).collect(path).await.unwrap();
-                let collector: Box<InspectDataCollector> = Box::new(collector);
-
-                let extra_data = collector.take_data().expect("collector missing data");
+                let extra_data = collect(path).await.expect("collector missing data");
                 assert_eq!(1, extra_data.len());
 
                 let extra = extra_data.get(TreeMarker::PROTOCOL_NAME);

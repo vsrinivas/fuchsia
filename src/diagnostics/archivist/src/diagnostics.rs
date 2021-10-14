@@ -183,7 +183,7 @@ pub struct GlobalConnectionStats {
 }
 
 impl GlobalConnectionStats {
-    fn new(node: Node) -> Self {
+    pub fn new(node: Node) -> Self {
         let reader_servers_constructed = node.create_uint(&*READER_SERVERS_CONSTRUCTED, 0);
         let reader_servers_destroyed = node.create_uint(&*READER_SERVERS_DESTROYED, 0);
 
@@ -247,7 +247,7 @@ impl GlobalConnectionStats {
     }
 
     /// Record the duration of obtaining data from a single component.
-    pub fn record_component_duration(&self, moniker: &str, duration: Duration) {
+    pub fn record_component_duration(&self, moniker: impl AsRef<str>, duration: Duration) {
         let nanos = duration.into_nanos();
         if nanos >= 0 {
             // Lazily initialize stats that may not be needed for all diagnostics types.
@@ -268,7 +268,7 @@ impl GlobalConnectionStats {
             }
 
             component_time_usec.as_ref().unwrap().insert(nanos as u64 / 1000);
-            processing_time_tracker.as_mut().unwrap().track(moniker, nanos as u64);
+            processing_time_tracker.as_mut().unwrap().track(moniker.as_ref(), nanos as u64);
         }
     }
 }

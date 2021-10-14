@@ -14,18 +14,13 @@ use {
             stats::LogStreamStats,
         },
         repository::MultiplexerBroker,
-        ImmutableString,
     },
     diagnostics_data::{self, LogsData},
-    diagnostics_hierarchy::DiagnosticsHierarchy,
     diagnostics_message::MonikerWithUrl,
     fidl_fuchsia_diagnostics::StreamMode,
     fidl_fuchsia_logger::LogInterestSelector,
     fidl_fuchsia_sys_internal::SourceIdentity,
-    fuchsia_async as fasync,
-    fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree},
     fuchsia_inspect_derive::WithInspect,
-    fuchsia_zircon as zx,
     lazy_static::lazy_static,
     std::{convert::TryFrom, sync::Arc},
     tracing::debug,
@@ -33,12 +28,6 @@ use {
 
 lazy_static! {
     pub static ref EMPTY_IDENTITY: ComponentIdentity = ComponentIdentity::unknown();
-}
-
-pub enum ReadSnapshot {
-    Single(Snapshot),
-    Tree(SnapshotTree),
-    Finished(DiagnosticsHierarchy),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -257,42 +246,6 @@ impl ComponentDiagnostics {
     pub fn terminate_logs(&self) {
         if let Some(logs) = &self.logs {
             logs.terminate();
-        }
-    }
-}
-
-/// Packet containing a snapshot and all the metadata needed to
-/// populate a diagnostics schema for that snapshot.
-pub struct SnapshotData {
-    // Name of the file that created this snapshot.
-    pub filename: ImmutableString,
-    // Timestamp at which this snapshot resolved or failed.
-    pub timestamp: zx::Time,
-    // Errors encountered when processing this snapshot.
-    pub errors: Vec<diagnostics_data::Error>,
-    // Optional snapshot of the inspect hierarchy, in case reading fails
-    // and we have errors to share with client.
-    pub snapshot: Option<ReadSnapshot>,
-}
-
-impl SnapshotData {
-    // Constructs packet that timestamps and packages inspect snapshot for exfiltration.
-    pub fn successful(snapshot: ReadSnapshot, filename: ImmutableString) -> SnapshotData {
-        SnapshotData {
-            filename,
-            timestamp: fasync::Time::now().into_zx(),
-            errors: Vec::new(),
-            snapshot: Some(snapshot),
-        }
-    }
-
-    // Constructs packet that timestamps and packages inspect snapshot failure for exfiltration.
-    pub fn failed(error: diagnostics_data::Error, filename: ImmutableString) -> SnapshotData {
-        SnapshotData {
-            filename,
-            timestamp: fasync::Time::now().into_zx(),
-            errors: vec![error],
-            snapshot: None,
         }
     }
 }

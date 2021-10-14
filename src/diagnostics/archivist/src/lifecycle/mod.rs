@@ -74,7 +74,7 @@ mod tests {
             container::ComponentIdentity,
             diagnostics::{self, BatchIteratorConnectionStats},
             events::types::ComponentIdentifier,
-            inspect::collector::InspectDataCollector,
+            inspect::collector,
             repository::DataRepo,
         },
         fdio,
@@ -152,7 +152,7 @@ mod tests {
         let diagnostics_repo = DataRepo::default();
         let pipeline_wrapper =
             Arc::new(RwLock::new(Pipeline::for_test(None, diagnostics_repo.clone())));
-        let out_dir_proxy = InspectDataCollector::find_directory_proxy(&path).await.unwrap();
+        let out_dir_proxy = collector::find_directory_proxy(&path).await.unwrap();
 
         // The absolute moniker here is made up since the selector is a glob
         // selector, so any path would match.
