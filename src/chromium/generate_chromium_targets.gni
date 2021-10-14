@@ -167,6 +167,7 @@ template("generate_chromium_targets") {
 
     generate_package_flavors("chrome_browser") {
       prebuilt_archive_base_path = "${prebuilt_archive_root_path}/chrome"
+      package_name = "chrome"
       custom_package_path =
           "${build_output_gen_base_path}/chrome/app/chrome/chrome.far"
       selections = package_flavor_selections

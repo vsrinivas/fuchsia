@@ -6,40 +6,67 @@ import("//build/config.gni")
 import("//build/packages/prebuilt_package_with_flavors.gni")
 import("//src/chromium/build_args.gni")
 
-# Generates a prebuilt_package_with_flavors target which allows
-# choosing which flavor to use for Chromium packages.
+# Generates a prebuilt_package_with_flavors target which allows choosing which flavor to use for
+# Chromium packages.
 #
-# Parameters:
-#   prebuilt_archive_base_path: Base path for the prebuilt archive.
-#   custom_package_path: The path to the package inside a custom chromium
-#       build output directory.
-#   selections (optional): Flavor choice. This allows flavor to be changed based
-#       on other build args.
-
+# Parameters
+#
+#   prebuilt_archive_base_path (required)
+#     [path]: Base path for the prebuilt archive.
+#
+#   custom_package_path (required)
+#     [path]: The path to the package inside a custom chromium build output directory.
+#
+#   package_name (optional)
+#     Name of the prebuilt package, defaults to template's target name
+#
+#   selections (optional)
+#     [list] Flavor choice. This allows flavor to be changed based on other build args. See
+#     //build/packages/prebuilt_package_with_flavors.gni
+#
+#  deps (optional)
+#  testonly (optional)
+#  visibility (optional)
+#    Usual GN meanings.
+#
 template("generate_package_flavors") {
+  assert(defined(invoker.prebuilt_archive_base_path),
+         "A prebuilt archive base path must be specified")
+  assert(defined(invoker.custom_package_path),
+         "A custom package path must be specified")
+
   prebuilt_package_with_flavors("${target_name}_pkg") {
     forward_variables_from(invoker,
                            [
+                             "deps",
                              "selections",
                              "testonly",
+                             "visibility",
+                             "package_name",
                            ])
-    package_name = invoker.target_name
+
+    if (defined(invoker.package_name)) {
+      package_name = invoker.package_name
+    } else {
+      package_name = invoker.target_name
+    }
+
     visibility = [ ":${invoker.target_name}" ]
     default = "release"
     flavors = [
       {
         name = "release"
-        archive = "${invoker.prebuilt_archive_base_path}/arch/$target_cpu/${invoker.target_name}.far"
+        archive = "${invoker.prebuilt_archive_base_path}/arch/$target_cpu/${package_name}.far"
         production_safe = true
       },
       {
         name = "canary"
-        archive = "${invoker.prebuilt_archive_base_path}_latest/arch/$target_cpu/${invoker.target_name}.far"
+        archive = "${invoker.prebuilt_archive_base_path}_latest/arch/$target_cpu/${package_name}.far"
         production_safe = true
       },
       {
         name = "custom"
-        archive = "$chromium_build_dir${invoker.custom_package_path}"
+        archive = "${chromium_build_dir}${invoker.custom_package_path}"
       },
     ]
   }
