@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env fuchsia-vendored-python
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -15,7 +15,7 @@ GEN_FIDL_RESPONSE_FILEPATH = os.path.join(
     SCRIPT_DIR, '..', 'third_party', 'fuchsia-sdk', 'build',
     'gen_fidl_response_file.py')
 if not os.path.exists(GEN_FIDL_RESPONSE_FILEPATH):
-    print(("CWCW not found", GEN_FIDL_RESPONSE_FILEPATH))
+    print("CWCW not found", GEN_FIDL_RESPONSE_FILEPATH)
 gen_fidl_response_file = imp.load_source(
     'gen_fidl_response_file', GEN_FIDL_RESPONSE_FILEPATH)
 
