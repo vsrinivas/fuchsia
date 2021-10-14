@@ -21,11 +21,7 @@ use {
     fuchsia_zircon::{sys::zx_status_t, Status},
     ramdevice_client::{RamdiskClient, RamdiskClientBuilder},
     rand::{rngs::SmallRng, FromEntropy, Rng},
-    std::{
-        fs,
-        os::{raw::c_int, unix::io::AsRawFd},
-        time::Duration,
-    },
+    std::{fs, os::raw::c_int, time::Duration},
     storage_isolated_driver_manager::bind_fvm,
 };
 
@@ -111,9 +107,8 @@ impl TestEnv {
         // Open ramdisk device and initialize FVM
         {
             let ramdisk_handle = ramdisk.open().expect("Could not re-open ramdisk").into_handle();
-            let ramdisk_file =
-                fs::File::from(fdio::create_fd(ramdisk_handle).expect("create fd of dev root"));
-            let status = unsafe { fvm_init(ramdisk_file.as_raw_fd(), FVM_SLICE_SIZE) };
+            let ramdisk_fd = fdio::create_fd(ramdisk_handle).expect("create fd of dev root");
+            let status = unsafe { fvm_init(ramdisk_fd, FVM_SLICE_SIZE) };
             Status::ok(status).expect("could not initialize FVM structures in ramdisk");
             // ramdisk_file drops, closing the fd we created
         }
@@ -234,16 +229,14 @@ impl TestEnv {
 
     pub fn dev_root_fd(&self) -> fs::File {
         let dev_root_proxy = self.dev_root();
-        fs::File::from(
-            fdio::create_fd(
-                dev_root_proxy
-                    .into_channel()
-                    .expect("Could not convert dev root DirectoryProxy into channel")
-                    .into_zx_channel()
-                    .into_handle(),
-            )
-            .expect("create fd of dev root"),
+        fdio::create_fd(
+            dev_root_proxy
+                .into_channel()
+                .expect("Could not convert dev root DirectoryProxy into channel")
+                .into_zx_channel()
+                .into_handle(),
         )
+        .expect("create fd of dev root")
     }
 
     pub fn account_manager(&self) -> AccountManagerProxy {
