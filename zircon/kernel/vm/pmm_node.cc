@@ -239,6 +239,7 @@ void PmmNode::AllocPageHelperLocked(vm_page_t* page) {
 }
 
 zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* pa_out) {
+  DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
   AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
 
@@ -272,6 +273,7 @@ zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* 
 zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list) {
   LTRACEF("count %zu\n", count);
 
+  DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
   // list must be initialized prior to calling this
   DEBUG_ASSERT(list);
 
@@ -324,6 +326,7 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
 zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) {
   LTRACEF("address %#" PRIxPTR ", count %zu\n", address, count);
 
+  DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
   // list must be initialized prior to calling this
   DEBUG_ASSERT(list);
 
@@ -376,6 +379,7 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
 
 zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8_t alignment_log2,
                                      paddr_t* pa, list_node* list) {
+  DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
   LTRACEF("count %zu, align %u\n", count, alignment_log2);
 
   if (count == 0) {
@@ -494,6 +498,7 @@ void PmmNode::FreeList(list_node* list) {
 
 void PmmNode::AllocPages(uint alloc_flags, page_request_t* req) {
   kcounter_add(pmm_alloc_async, 1);
+  DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
 
   AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
