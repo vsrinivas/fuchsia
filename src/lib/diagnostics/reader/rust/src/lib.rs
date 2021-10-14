@@ -503,16 +503,18 @@ mod tests {
             // looking for the moniker we are interested on, that one might not be available.
             // Metadata selectors would solve this as the archivist response would be empty and we
             // wouldn't need to filter and retry here.
-            if results.is_empty() {
-                fasync::Timer::new(fasync::Time::after(RETRY_DELAY_MS.millis())).await;
-                continue;
+            // Additionally the response could include LogSinkConnect events until we have metadata
+            // selectors to filter directly in the request.
+            if let Some(started) = results
+                .into_iter()
+                .find(|result| result.metadata.lifecycle_event_type == LifecycleType::Started)
+            {
+                assert_eq!(started.metadata.component_url, Some(TEST_COMPONENT_URL.to_string()));
+                assert_eq!(started.moniker, moniker);
+                assert_eq!(started.payload, None);
+                break;
             }
-            let started = &results[0];
-            assert_eq!(started.metadata.lifecycle_event_type, LifecycleType::Started);
-            assert_eq!(started.metadata.component_url, Some(TEST_COMPONENT_URL.to_string()));
-            assert_eq!(started.moniker, moniker);
-            assert_eq!(started.payload, None);
-            break;
+            fasync::Timer::new(fasync::Time::after(RETRY_DELAY_MS.millis())).await;
         }
     }
 
