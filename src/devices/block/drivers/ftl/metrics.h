@@ -89,6 +89,9 @@ class Metrics {
 
   inspect::UintProperty& max_wear() { return max_wear_; }
 
+  inspect::UintProperty& initial_bad_blocks() { return initial_bad_blocks_; }
+  inspect::UintProperty& running_bad_blocks() { return running_bad_blocks_; }
+
   BlockOperationProperties& read() { return read_; }
   BlockOperationProperties& write() { return write_; }
   BlockOperationProperties& trim() { return trim_; }
@@ -106,6 +109,10 @@ class Metrics {
 
   // Current maximum wear over all nand blocks.
   inspect::UintProperty max_wear_;
+
+  // Bad block information.
+  inspect::UintProperty initial_bad_blocks_;
+  inspect::UintProperty running_bad_blocks_;
 
   // Properties for each block operation type.
   BlockOperationProperties read_;

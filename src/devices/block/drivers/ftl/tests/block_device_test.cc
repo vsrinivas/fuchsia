@@ -28,6 +28,8 @@ constexpr uint32_t kNumPages = 20;
 constexpr char kMagic = 'f';
 constexpr uint8_t kGuid[ZBI_PARTITION_GUID_LEN] = {'g', 'u', 'i', 'd'};
 constexpr uint32_t kWearCount = 1337;
+constexpr uint32_t kInitialBadBlocks = 3;
+constexpr uint32_t kRunningBadBlocks = 4;
 
 bool CheckPattern(const void* buffer, size_t size, char pattern = kMagic) {
   const char* data = reinterpret_cast<const char*>(buffer);
@@ -128,15 +130,26 @@ class FakeVolume final : public ftl::Volume {
   zx_status_t GetStats(Stats* stats) final {
     *stats = {};
     stats->wear_count = wear_count_;
+    stats->initial_bad_blocks = initial_bad_blocks_;
+    stats->running_bad_blocks = running_bad_blocks_;
     return ZX_OK;
   }
 
   zx_status_t GetCounters(Counters* counters) final {
     counters->wear_count = wear_count_;
+    counters->initial_bad_blocks = initial_bad_blocks_;
+    counters->running_bad_blocks = running_bad_blocks_;
     return ZX_OK;
   }
 
   void UpdateWearCount(uint32_t wear_count) { wear_count_ = wear_count; }
+
+  void UpdateInitialBadBlockCount(uint32_t initial_bad_blocks) {
+    initial_bad_blocks_ = initial_bad_blocks;
+  }
+  void UpdateRunningBadBlockCount(uint32_t running_bad_blocks) {
+    running_bad_blocks_ = running_bad_blocks;
+  }
 
   void SetOnOperation(fit::function<void()> callback) { on_operation_ = std::move(callback); }
 
@@ -151,6 +164,8 @@ class FakeVolume final : public ftl::Volume {
   uint32_t first_page_ = 0;
   int num_pages_ = 0;
   uint32_t wear_count_ = kWearCount;
+  uint32_t initial_bad_blocks_ = kInitialBadBlocks;
+  uint32_t running_bad_blocks_ = kRunningBadBlocks;
   fit::function<void()> on_operation_;
   bool written_ = false;
   bool flushed_ = false;
@@ -618,6 +633,8 @@ void VerifyInspectMetrics(BlockDeviceTest* fixture, const std::string& block_met
   std::map<std::string, double> expected_rates;
 
   volume->UpdateWearCount(0);
+  volume->UpdateInitialBadBlockCount(0);
+  volume->UpdateRunningBadBlockCount(0);
   // Random operation to trigger a metric update.
   expected_counters[clear_op()]++;
 
@@ -713,6 +730,28 @@ TEST_F(BlockDeviceTest, InspectFlushMetricsUpdatedCorrectly) {
         return "block.trim.count";
       },
       [&]() { Flush(); });
+}
+
+TEST_F(BlockDeviceTest, InspectBadBlockMetricsPopulation) {
+  ftl::BlockDevice* device = GetDevice();
+  ASSERT_TRUE(device);
+
+  std::map<std::string, uint64_t> counters;
+  std::map<std::string, double> rates;
+
+  ReadProperties(device, counters, rates);
+  ASSERT_EQ(counters["nand.initial_bad_blocks"], kInitialBadBlocks);
+  ASSERT_EQ(counters["nand.running_bad_blocks"], kRunningBadBlocks);
+
+  GetVolume()->UpdateInitialBadBlockCount(7);
+  GetVolume()->UpdateRunningBadBlockCount(8);
+
+  // Force a stats update.
+  Read();
+
+  ReadProperties(device, counters, rates);
+  ASSERT_EQ(counters["nand.initial_bad_blocks"], 7);
+  ASSERT_EQ(counters["nand.running_bad_blocks"], 8);
 }
 
 TEST_F(BlockDeviceTest, Suspend) {

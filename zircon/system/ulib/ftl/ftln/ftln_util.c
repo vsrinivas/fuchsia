@@ -368,6 +368,10 @@ int FtlnReport(void* vol, ui32 msg, ...) {
       // Save running count of number of flash pages written.
       ftl->fl_pg_writes += ftl->stats.write_page;
 
+      // Get bad block data.
+      buf->initial_bad_blocks = ndmInitialBadBlocks(ftl->ndm);
+      buf->running_bad_blocks = ndmRunningBadBlocks(ftl->ndm);
+
       // Get TargetFTL-NDM RAM usage.
       ftl->stats.ram_used = sizeof(struct ftln) + ftl->num_map_pgs * sizeof(ui32) + ftl->page_size +
                             ftl->eb_size * ftl->pgs_per_blk + ftlmcRAM(ftl->map_cache) +
@@ -403,6 +407,8 @@ int FtlnReport(void* vol, ui32 msg, ...) {
       FtlCounters* counters = (FtlCounters*)va_arg(ap, void*);
       va_end(ap);
       counters->wear_count = ftl->high_wc;
+      counters->initial_bad_blocks = ndmInitialBadBlocks(ftl->ndm);
+      counters->running_bad_blocks = ndmRunningBadBlocks(ftl->ndm);
       return 0;
     }
 
