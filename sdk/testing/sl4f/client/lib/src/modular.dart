@@ -55,13 +55,18 @@ class Modular {
   ///
   /// Takes a custom [config] as JSON serialized string, or launches basemgr
   /// with system default config if not provided.
-  Future<String> startBasemgr([String config]) async {
+  ///
+  /// If [sessionUrl] provided, the given session component will be launched
+  /// instead of the legacy basemgr.cmx component.
+  Future<String> startBasemgr([String config, String sessionUrl]) async {
+    final args = {};
     if (config != null && config.isNotEmpty) {
-      return await _request(
-          'modular_facade.StartBasemgr', {'config': json.decode(config)});
-    } else {
-      return await _request('modular_facade.StartBasemgr', {});
+      args['config'] = json.decode(config);
     }
+    if (sessionUrl != null) {
+      args['session_url'] = sessionUrl;
+    }
+    return await _request('modular_facade.StartBasemgr', args);
   }
 
   /// Launches a module in an existing modular session.
@@ -86,15 +91,28 @@ class Modular {
   ///
   /// If [assumeControl] is true (the default) and basemgr wasn't running, then
   /// this object will stop basemgr when [shutdown] is called with no arguments.
-  Future<void> boot({String config, bool assumeControl = true}) async {
+  ///
+  /// If [sessionUrl] provided, the given session component will be launched
+  /// instead of the legacy basemgr.cmx component.
+  Future<void> boot(
+      {String config, bool assumeControl = true, String sessionUrl}) async {
     if (await isRunning) {
       _log.info('Not taking control of basemgr, it was already running.');
       return;
     }
 
-    _log.info('Booting basemgr with ${(config != null) ? 'custom' : 'default'} '
+    _log.info(
+        'Booting ${(sessionUrl != null) ? sessionUrl : 'legacy basemgr.cmx'} '
+        'with ${(config != null) ? 'custom' : 'default'} '
         'configuration.');
-    await startBasemgr(config);
+
+    if (sessionUrl == null) {
+      _log.warning(
+          'The legacy basemgr.cmx component is deprecated. Please update this '
+          'client to call boot() with a sessionUrl (https://fxbug.dev/82391)');
+    }
+
+    await startBasemgr(config, sessionUrl);
 
     // basemgr and all the agents can take some time to fully boot.
     var retry = 0;

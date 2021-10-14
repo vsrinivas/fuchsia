@@ -45,6 +45,8 @@ void main(List<String> args) {
   });
 
   test('call startBasemgr facade with params', () {
+    const sessionUrl =
+        'fuchsia-pkg://fuchsia.com/fake_session#meta/fake_session.cm';
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
@@ -56,6 +58,7 @@ void main(List<String> args) {
               'config',
               allOf(containsPair('basemgr', contains('base_shell')),
                   containsPair('sessionmgr', contains('session_agents')))));
+      expect(body['params'], containsPair('session_url', sessionUrl));
       req.response.write(
           jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
       await req.response.close();
@@ -73,7 +76,7 @@ void main(List<String> args) {
       "sessionmgr": {
         "session_agents": ["baz"]
       }
-    }'''), completion(equals('Success')));
+    }''', sessionUrl), completion(equals('Success')));
   });
 
   test('call startBasemgr facade with no params', () {
@@ -139,6 +142,36 @@ void main(List<String> args) {
     expect(called, isTrue, reason: 'StartBasemgr facade not called');
   });
 
+  test('call boot with sessionUrl', () async {
+    const sessionUrl =
+        'fuchsia-pkg://fuchsia.com/fake_session#meta/fake_session.cm';
+    bool called = false;
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      if (body['method'] == 'modular_facade.IsBasemgrRunning') {
+        req.response.write(jsonEncode({
+          'id': body['id'],
+          'result': called,
+          'error': null,
+        }));
+      } else {
+        expect(body['method'], 'modular_facade.StartBasemgr');
+        expect(body['params'], isNotNull);
+        expect(body['params'], containsPair('session_url', sessionUrl));
+        called = true;
+        req.response.write(
+            jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
+      }
+      await req.response.close();
+    }
+
+    fakeServer.listen(handler);
+
+    await Modular(sl4f).boot(sessionUrl: sessionUrl);
+    expect(called, isTrue, reason: 'StartBasemgr facade not called');
+  });
+
   test('call boot with custom config', () async {
     bool called = false;
     void handler(HttpRequest req) async {
@@ -179,6 +212,53 @@ void main(List<String> args) {
         "session_agents": ["baz"]
       }
     }''');
+
+    expect(called, isTrue, reason: 'StartBasemgr facade not called');
+  });
+
+  test('call boot with custom config and sessionUrl', () async {
+    const sessionUrl =
+        'fuchsia-pkg://fuchsia.com/fake_session#meta/fake_session.cm';
+    bool called = false;
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      if (body['method'] == 'modular_facade.IsBasemgrRunning') {
+        req.response.write(jsonEncode({
+          'id': body['id'],
+          'result': called,
+          'error': null,
+        }));
+      } else {
+        expect(body['method'], 'modular_facade.StartBasemgr');
+        expect(body['params'], isNotNull);
+        expect(
+            body['params'],
+            containsPair(
+                'config',
+                allOf(containsPair('basemgr', contains('base_shell')),
+                    containsPair('sessionmgr', contains('session_agents')))));
+        expect(body['params'], containsPair('session_url', sessionUrl));
+        called = true;
+        req.response.write(
+            jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
+      }
+      await req.response.close();
+    }
+
+    fakeServer.listen(handler);
+
+    await Modular(sl4f).boot(config: '''{
+      "basemgr": {
+        "base_shell": {
+          "url": "foo",
+          "args": ["--bar"]
+        }
+      },
+      "sessionmgr": {
+        "session_agents": ["baz"]
+      }
+    }''', sessionUrl: sessionUrl);
 
     expect(called, isTrue, reason: 'StartBasemgr facade not called');
   });
