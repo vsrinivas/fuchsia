@@ -148,6 +148,19 @@ impl VmoFileObject {
         info.time_modify = now;
         Ok(want_write)
     }
+
+    pub fn get_vmo(
+        vmo: &Arc<zx::Vmo>,
+        _file: &FileObject,
+        _task: &Task,
+        prot: zx::VmarFlags,
+    ) -> Result<zx::Vmo, Errno> {
+        let mut vmo = vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(impossible_error)?;
+        if prot.contains(zx::VmarFlags::PERM_EXECUTE) {
+            vmo = vmo.replace_as_executable(&VMEX_RESOURCE).map_err(impossible_error)?;
+        }
+        Ok(vmo)
+    }
 }
 
 impl FileOps for VmoFileObject {
@@ -175,15 +188,10 @@ impl FileOps for VmoFileObject {
 
     fn get_vmo(
         &self,
-        _file: &FileObject,
-        _task: &Task,
+        file: &FileObject,
+        task: &Task,
         prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
-        let mut vmo =
-            self.vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(impossible_error)?;
-        if prot.contains(zx::VmarFlags::PERM_EXECUTE) {
-            vmo = vmo.replace_as_executable(&VMEX_RESOURCE).map_err(impossible_error)?;
-        }
-        Ok(vmo)
+        VmoFileObject::get_vmo(&self.vmo, file, task, prot)
     }
 }

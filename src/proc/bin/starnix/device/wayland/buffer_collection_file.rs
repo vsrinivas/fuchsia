@@ -62,4 +62,13 @@ impl FileOps for BufferCollectionFile {
     ) -> Result<usize, Errno> {
         VmoFileObject::write_at(&self.vmo, file, task, offset, data)
     }
+
+    fn get_vmo(
+        &self,
+        file: &FileObject,
+        task: &Task,
+        prot: zx::VmarFlags,
+    ) -> Result<zx::Vmo, Errno> {
+        VmoFileObject::get_vmo(&self.vmo, file, task, prot)
+    }
 }
