@@ -653,15 +653,17 @@ TEST_F(MacInterfaceTest, TestConfigureBss) {
   ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
 
   ExpectSendCmd(expected_cmd_id_list({
+      MockCommand(WIDE_ID(LONG_GROUP, MAC_CONTEXT_CMD)),
       MockCommand(WIDE_ID(LONG_GROUP, ADD_STA)),
-      MockCommand(WIDE_ID(LONG_GROUP, MAC_CONTEXT_CMD)),
-      MockCommand(WIDE_ID(LONG_GROUP, MAC_CONTEXT_CMD)),
       MockCommand(WIDE_ID(LONG_GROUP, TIME_EVENT_CMD)),
       MockCommand(WIDE_ID(LONG_GROUP, SCD_QUEUE_CFG)),
       MockCommand(WIDE_ID(LONG_GROUP, ADD_STA)),
   }));
 
   ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  // Ensure the BSSID was copied into mvmvif
+  ASSERT_EQ(memcmp(mvmvif_sta_.bss_conf.bssid, kBssConfig.bssid, ETH_ALEN), 0);
+  ASSERT_EQ(memcmp(mvmvif_sta_.bssid, kBssConfig.bssid, ETH_ALEN), 0);
 }
 
 // Test duplicate BSS config.
@@ -689,7 +691,7 @@ TEST_F(MacInterfaceTest, TestFailedAddSta) {
   ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
 
   ExpectSendCmd(expected_cmd_id_list({
-      MockCommand(WIDE_ID(LONG_GROUP, ADD_STA), kSimMvmReturnWithStatus,
+      MockCommand(WIDE_ID(LONG_GROUP, MAC_CONTEXT_CMD), kSimMvmReturnWithStatus,
                   ZX_ERR_BUFFER_TOO_SMALL /* an arbitrary error */),
   }));
 

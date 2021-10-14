@@ -429,6 +429,19 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* c
   }
   // Note that 'ap_sta_id' is unset and later will be set in iwl_mvm_add_sta().
 
+  // Copy the BSSID info.
+  mtx_lock(&mvmvif->mvm->mutex);
+  memcpy(mvmvif->bss_conf.bssid, config->bssid, ETH_ALEN);
+  memcpy(mvmvif->bssid, config->bssid, ETH_ALEN);
+
+  // Simulates the behavior of iwl_mvm_bss_info_changed_station().
+  ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, mvmvif->bssid);
+  mtx_unlock(&mvmvif->mvm->mutex);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot set BSSID: %s\n", zx_status_get_string(ret));
+    return ret;
+  }
+
   // Add AP into the STA table in the firmware.
   struct iwl_mvm_sta* mvm_sta = alloc_ap_mvm_sta(config->bssid);
   if (!mvm_sta) {
@@ -438,27 +451,12 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* c
 
   // mvm_sta ownership will be transfered to mvm->fw_id_to_mac_id[] in iwl_mvm_add_sta(). It will be
   // freed at mac_clear_assoc().
+  // Below is to how the iwl_mvm_mac_sta_state() is called.
   ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NOTEXIST, IWL_STA_NONE);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot set MVM STA state: %s\n", zx_status_get_string(ret));
     goto exit;
   }
-
-  // Simulates the behavior of iwl_mvm_bss_info_changed_station().
-  mtx_lock(&mvmvif->mvm->mutex);
-  memcpy(mvmvif->bss_conf.bssid, config->bssid, ETH_ALEN);
-  memcpy(mvmvif->bssid, config->bssid, ETH_ALEN);
-  ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, mvmvif->bssid);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot set BSSID: %s\n", zx_status_get_string(ret));
-    goto unlock;
-  }
-  ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, nullptr);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot clear BSSID: %s\n", zx_status_get_string(ret));
-    goto unlock;
-  }
-  mtx_unlock(&mvmvif->mvm->mutex);
 
   // Ask the firmware to pay attention for beacon.
   // Note that this would add TIME_EVENT as well.
@@ -467,12 +465,11 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* c
   // Allocate a Tx queue for this station.
   mtx_lock(&mvmvif->mvm->mutex);
   ret = iwl_mvm_sta_alloc_queue(mvmvif->mvm, mvm_sta, IEEE80211_AC_BE, IWL_MAX_TID_COUNT);
+  mtx_unlock(&mvmvif->mvm->mutex);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot allocate queue for STA: %s\n", zx_status_get_string(ret));
+    goto exit;
   }
-
-unlock:
-  mtx_unlock(&mvmvif->mvm->mutex);
 
 exit:
   // If it is successful, the ownership has been transferred. If not, free the resource.
@@ -577,6 +574,7 @@ zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ct
     IWL_ERR(mvmvif, "cannot set state from NONE to AUTH: %s\n", zx_status_get_string(ret));
     goto out;
   }
+
   ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_AUTH, IWL_STA_ASSOC);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot set state from AUTH to ASSOC: %s\n", zx_status_get_string(ret));
