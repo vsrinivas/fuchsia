@@ -39,8 +39,11 @@ sdk_static_library("ddk") {
     "include/lib/ddk/trace/event.h",
   ]
 
-  # This header errors out if included directly.
-  non_public_headers = [ "include/lib/ddk/protodefs.h" ]
+  # These headers will error out if included directly from user code.
+  non_public_headers = [
+    "include/lib/ddk/protodefs.h",
+    "include/lib/ddk/fidl-protodefs.h",
+  ]
 
   sources = [
     "io-buffer.c",
