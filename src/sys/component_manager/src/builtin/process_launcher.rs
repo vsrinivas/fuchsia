@@ -589,7 +589,7 @@ mod tests {
         let (mut launch_info, proxy) = setup_test_util(&launcher).await?;
 
         let mut randbuf = [0; 8];
-        zx::cprng_draw(&mut randbuf)?;
+        zx::cprng_draw(&mut randbuf);
         let test_content = format!("test content {}", u64::from_le_bytes(randbuf));
 
         let test_content_bytes = test_content.clone().into_bytes();

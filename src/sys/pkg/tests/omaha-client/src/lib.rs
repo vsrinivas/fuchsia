@@ -314,7 +314,7 @@ impl TestEnvBuilder {
 
     fn make_nested_environment_label() -> String {
         let mut salt = [0; 4];
-        zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
+        zx::cprng_draw(&mut salt[..]);
         // omaha_client_integration_test_env_xxxxxxxx is too long and gets truncated.
         format!("omaha_client_test_env_{}", hex::encode(&salt))
     }

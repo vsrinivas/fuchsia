@@ -130,7 +130,7 @@ mod tests {
     #[test]
     fn write_and_read_back() {
         let mut bytes = [0; 8];
-        cprng_draw(&mut bytes).unwrap();
+        cprng_draw(&mut bytes);
         let rand = u64::from_ne_bytes(bytes);
         let message = format!("log message {}", rand);
 

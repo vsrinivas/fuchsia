@@ -989,10 +989,8 @@ async fn try_restore_bonds(
 
 fn generate_irk() -> Result<sys::Key, zx::Status> {
     let mut buf: [u8; 16] = [0; 16];
-    // Do not allow us to generate an insecure IRK.
-    if buf.len() != zx::cprng_draw(&mut buf)? {
-        return Err(zx::Status::UNAVAILABLE);
-    }
+    // Generate a secure IRK.
+    zx::cprng_draw(&mut buf);
     Ok(sys::Key { value: buf })
 }
 

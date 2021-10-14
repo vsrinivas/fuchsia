@@ -9,7 +9,7 @@ fn main() -> Result<(), zx::Status> {
     let mut set = HashSet::new();
     for _ in 0..8 {
         let mut buf = vec![0; 16];
-        zx::cprng_draw(&mut buf)?;
+        zx::cprng_draw(&mut buf);
         if !set.insert(buf) {
             return Err(zx::Status::INTERNAL);
         }

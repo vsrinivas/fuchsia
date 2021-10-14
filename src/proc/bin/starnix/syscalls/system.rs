@@ -9,7 +9,6 @@ use log::warn;
 use crate::errno;
 use crate::error;
 use crate::from_status_like_fdio;
-use crate::logging::*;
 use crate::not_implemented;
 use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::*;
@@ -49,7 +48,7 @@ pub fn sys_getrandom(
     _flags: i32,
 ) -> Result<SyscallResult, Errno> {
     let mut buf = vec![0; size];
-    let size = zx::cprng_draw(&mut buf).map_err(impossible_error)?;
+    zx::cprng_draw(&mut buf);
     ctx.task.mm.write_memory(buf_addr, &buf[0..size])?;
     Ok(size.into())
 }

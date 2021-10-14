@@ -1386,9 +1386,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn start_util_with_namespace_entries() -> Result<(), Error> {
         let mut randbuf = [0; 8];
-        zx::cprng_draw(&mut randbuf)?;
+        zx::cprng_draw(&mut randbuf);
         let test_content1 = format!("test content 1 {}", u64::from_le_bytes(randbuf));
-        zx::cprng_draw(&mut randbuf)?;
+        zx::cprng_draw(&mut randbuf);
         let test_content2 = format!("test content 2 {}", u64::from_le_bytes(randbuf));
 
         let test_content1_bytes = test_content1.clone().into_bytes();
@@ -1639,7 +1639,7 @@ mod tests {
         }])?;
 
         let mut randbuf = [0; 8];
-        zx::cprng_draw(&mut randbuf)?;
+        zx::cprng_draw(&mut randbuf);
         let test_message = format!("test content 1 {}", u64::from_le_bytes(randbuf)).into_bytes();
         local.write(&test_message, &mut vec![])?;
 

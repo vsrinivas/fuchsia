@@ -699,7 +699,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         ServiceObjTy: ServiceObjTrait<Output = O>,
     {
         let mut salt = [0; 4];
-        fuchsia_zircon::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
+        zx::cprng_draw(&mut salt[..]);
         let environment_label = format!("{}_{}", environment_label_prefix, hex::encode(&salt));
         self.create_nested_environment(&environment_label)
     }
@@ -722,7 +722,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         ServiceObjTy: ServiceObjTrait<Output = O>,
     {
         let mut salt = [0; 4];
-        fuchsia_zircon::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
+        zx::cprng_draw(&mut salt[..]);
         let environment_label = format!("{}_{}", environment_label_prefix, hex::encode(&salt));
         self.create_nested_environment_with_options(&environment_label, options)
     }

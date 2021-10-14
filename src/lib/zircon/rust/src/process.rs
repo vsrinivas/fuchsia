@@ -290,7 +290,7 @@ mod tests {
     #[test]
     fn exit_and_info() {
         let mut randbuf = [0; 8];
-        cprng_draw(&mut randbuf).unwrap();
+        cprng_draw(&mut randbuf);
         let expected_code = i64::from_le_bytes(randbuf);
         let arg = CString::new(format!("{}", expected_code)).unwrap();
 

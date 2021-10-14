@@ -106,7 +106,7 @@ impl TestEnvBuilder {
         });
 
         let mut salt = [0; 4];
-        zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
+        zx::cprng_draw(&mut salt[..]);
         let nested_environment_label = format!("committer-env_{}", hex::encode(&salt));
 
         let env = fs

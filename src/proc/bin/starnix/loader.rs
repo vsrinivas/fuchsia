@@ -42,7 +42,7 @@ fn populate_initial_stack(
     write_stack(string_data.as_slice(), strings_addr)?;
 
     let mut random_seed = [0; 16];
-    zx::cprng_draw(&mut random_seed).unwrap();
+    zx::cprng_draw(&mut random_seed);
     stack_pointer -= random_seed.len();
     let random_seed_addr = stack_pointer;
     write_stack(&random_seed, random_seed_addr)?;
