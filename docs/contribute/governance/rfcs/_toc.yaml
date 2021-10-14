@@ -281,3 +281,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0132_fidl_table_size_limit.md
 - title: "RFC-0134: Software updates time dependency"
   path: /docs/contribute/governance/rfcs/0134_software_updates_time_dependency.md
+- title: "RFC-0136: Fxfs"
+  path: /docs/contribute/governance/rfcs/0136_fxfs.md

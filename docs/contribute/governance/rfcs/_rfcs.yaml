@@ -1746,3 +1746,16 @@
   reviewers: ['ampearce@google.com', 'cpu@google.com', 'jsankey@google.com', 'abarth@google.com', 'wittrock@google.com', 'computerdruid@google.com', 'dhobsd@google.com']
   submitted: '2021-07-24'
   reviewed: '2021-10-06'
+
+- name: 'RFC-0136'
+  title: 'Fxfs'
+  short_description: 'High level overview of a new Fuchsia filesystem.'
+  authors: ['csuter@google.com', 'jfsulliv@google.com']
+  file: '0136_fxfs.md'
+  area: ['Storage']
+  issue: ['']
+  gerrit_change_id: ['588001']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'brettw@google.com', 'palmer@google.com']
+  submitted: '2021-09-30'
+  reviewed: '2021-10-13'
