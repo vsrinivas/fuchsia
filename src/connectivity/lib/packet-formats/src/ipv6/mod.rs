@@ -7,13 +7,14 @@
 pub mod ext_hdrs;
 
 use alloc::vec::Vec;
+use core::borrow::Borrow;
 use core::convert::TryFrom;
 use core::fmt::{self, Debug, Formatter};
 use core::ops::Range;
 
 use log::debug;
 use net_types::ip::{Ipv6, Ipv6Addr, Ipv6SourceAddr};
-use packet::records::{AlignedRecordsSerializer, Records, RecordsRaw};
+use packet::records::{AlignedRecordSequenceBuilder, Records, RecordsRaw};
 use packet::{
     BufferView, BufferViewMut, FromRaw, MaybeParsed, PacketBuilder, PacketConstraints,
     ParsablePacket, ParseMetadata, SerializeBuffer,
@@ -23,7 +24,7 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 use crate::error::{IpParseError, IpParseErrorAction, IpParseResult, ParseError};
 use crate::icmp::Icmpv6ParameterProblemCode;
 use crate::ip::{Ipv6ExtHdrType, Ipv6Proto};
-use crate::ipv6::ext_hdrs::{HopByHopOption, HopByHopOptionData, HopByHopOptionsImpl};
+use crate::ipv6::ext_hdrs::{HopByHopOption, HopByHopOptionData};
 use crate::U16;
 
 use ext_hdrs::{
@@ -781,18 +782,17 @@ impl Ipv6PacketBuilder {
     }
 }
 
-type OptionsSerializer<'a, I> =
-    AlignedRecordsSerializer<'a, HopByHopOptionsImpl, HopByHopOption<'a>, I>;
-
 /// A builder for Ipv6 packets with HBH Options.
 #[derive(Debug)]
-pub struct Ipv6PacketBuilderWithHbhOptions<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>> {
+pub struct Ipv6PacketBuilderWithHbhOptions<'a, I> {
     prefix_builder: Ipv6PacketBuilder,
-    hbh_options: OptionsSerializer<'a, I>,
+    hbh_options: AlignedRecordSequenceBuilder<HopByHopOption<'a>, I>,
 }
 
-impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>>
-    Ipv6PacketBuilderWithHbhOptions<'a, I>
+impl<'a, I> Ipv6PacketBuilderWithHbhOptions<'a, I>
+where
+    I: Iterator + Clone,
+    I::Item: Borrow<HopByHopOption<'a>>,
 {
     /// Creates a IPv6 packet builder with a Hop By Hop Options extension header.
     pub fn new<T: IntoIterator<Item = I::Item, IntoIter = I>>(
@@ -802,21 +802,24 @@ impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>>
         let iter = options.into_iter();
         // https://tools.ietf.org/html/rfc2711#section-2.1 specifies that
         // an RouterAlert option can only appear once.
-        if iter.clone().filter(|r| matches!(r.data, HopByHopOptionData::RouterAlert { .. })).count()
+        if iter
+            .clone()
+            .filter(|r| matches!(r.borrow().data, HopByHopOptionData::RouterAlert { .. }))
+            .count()
             > 1
         {
             return None;
         }
-        let hbh_options = OptionsSerializer::new(2, iter);
+        let hbh_options = AlignedRecordSequenceBuilder::new(2, iter);
         // And we don't want our options to become too long.
-        if next_multiple_of_eight(2 + hbh_options.records_bytes_len()) > IPV6_HBH_OPTIONS_MAX_LEN {
+        if next_multiple_of_eight(2 + hbh_options.serialized_len()) > IPV6_HBH_OPTIONS_MAX_LEN {
             return None;
         }
         Some(Ipv6PacketBuilderWithHbhOptions { prefix_builder, hbh_options })
     }
 
     fn aligned_hbh_len(&self) -> usize {
-        let opt_len = self.hbh_options.records_bytes_len();
+        let opt_len = self.hbh_options.serialized_len();
         let hbh_len = opt_len + 2;
         next_multiple_of_eight(hbh_len)
     }
@@ -869,8 +872,10 @@ impl PacketBuilder for Ipv6PacketBuilder {
     }
 }
 
-impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>> PacketBuilder
-    for Ipv6PacketBuilderWithHbhOptions<'a, I>
+impl<'a, I> PacketBuilder for Ipv6PacketBuilderWithHbhOptions<'a, I>
+where
+    I: Iterator + Clone,
+    I::Item: Borrow<HopByHopOption<'a>>,
 {
     fn constraints(&self) -> PacketConstraints {
         let header_len = IPV6_FIXED_HDR_LEN + self.aligned_hbh_len();
@@ -895,7 +900,7 @@ impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>> PacketBuilder
             u8::try_from((aligned_hbh_len - 8) / 8).expect("extension header too big");
         // After the first two bytes, we can serialize our real options.
         let options = hbh_pointer.take_rest_front_zero();
-        self.hbh_options.serialize_records(options);
+        self.hbh_options.serialize_into(options);
     }
 }
 

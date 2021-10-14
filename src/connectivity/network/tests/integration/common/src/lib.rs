@@ -98,7 +98,7 @@ pub async fn write_ndp_message<
     options: &[NdpOptionBuilder<'_>],
     ep: &netemul::TestFakeEndpoint<'_>,
 ) -> Result {
-    let ser = ndp::OptionsSerializer::<_>::new(options.iter())
+    let ser = ndp::OptionSequenceBuilder::<_>::new(options.iter())
         .into_serializer()
         .encapsulate(IcmpPacketBuilder::<_, B, _>::new(src_ip, dst_ip, IcmpUnusedCode, message))
         .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, NDP_MESSAGE_TTL, Ipv6Proto::Icmpv6))

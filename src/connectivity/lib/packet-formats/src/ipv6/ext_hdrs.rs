@@ -8,7 +8,7 @@ use core::convert::TryFrom;
 use core::marker::PhantomData;
 
 use packet::records::options::{
-    self, AlignedOptionsSerializerImpl, LengthEncoding, OptionsImplLayout, OptionsSerializerImpl,
+    AlignedOptionBuilder, LengthEncoding, OptionBuilder, OptionLayout, OptionParseLayout,
 };
 use packet::records::{
     ParsedRecord, RecordParseResult, Records, RecordsContext, RecordsImpl, RecordsImplLayout,
@@ -535,36 +535,51 @@ impl<'a> ExtensionHeaderOptionDataImpl<'a> for HopByHopOptionDataImpl {
     }
 }
 
-impl OptionsImplLayout for HopByHopOptionsImpl {
-    type Error = ();
+impl OptionLayout for HopByHopOptionsImpl {
     type KindLenField = u8;
-    const END_OF_OPTIONS: Option<u8> = Some(options::END_OF_OPTIONS);
-    const NOP: Option<u8> = Some(options::NOP);
     const LENGTH_ENCODING: LengthEncoding = LengthEncoding::ValueOnly;
 }
 
-impl<'a> OptionsSerializerImpl<'a> for HopByHopOptionsImpl {
-    type Option = HopByHopOption<'a>;
+impl OptionParseLayout for HopByHopOptionsImpl {
+    type Error = ();
+    const END_OF_OPTIONS: Option<u8> = Some(0);
+    const NOP: Option<u8> = Some(1);
+}
 
-    fn option_length(option: &Self::Option) -> usize {
-        match option.data {
+/// Provides an implementation of `OptionLayout` for Hop-by-Hop options.
+///
+/// Use this instead of `HopByHopOptionsImpl` for `<HopByHopOption as
+/// OptionBuilder>::Layout` in order to avoid having to make a ton of other
+/// things `pub` which are reachable from `HopByHopOptionsImpl`.
+#[doc(hidden)]
+pub enum HopByHopOptionLayout {}
+
+impl OptionLayout for HopByHopOptionLayout {
+    type KindLenField = u8;
+    const LENGTH_ENCODING: LengthEncoding = LengthEncoding::ValueOnly;
+}
+
+impl<'a> OptionBuilder for HopByHopOption<'a> {
+    type Layout = HopByHopOptionLayout;
+    fn serialized_len(&self) -> usize {
+        match self.data {
             HopByHopOptionData::RouterAlert { .. } => HBH_OPTION_RTRALRT_LEN,
             HopByHopOptionData::Unrecognized { len, .. } => len as usize,
         }
     }
 
-    fn option_kind(option: &Self::Option) -> u8 {
-        let action: u8 = option.action.into();
-        let mutable = option.mutable as u8;
-        let type_number = match option.data {
+    fn option_kind(&self) -> u8 {
+        let action: u8 = self.action.into();
+        let mutable = self.mutable as u8;
+        let type_number = match self.data {
             HopByHopOptionData::Unrecognized { kind, .. } => kind,
             HopByHopOptionData::RouterAlert { .. } => HBH_OPTION_KIND_RTRALRT,
         };
         (action << 6) | (mutable << 5) | type_number
     }
 
-    fn serialize(mut buffer: &mut [u8], option: &Self::Option) {
-        match option.data {
+    fn serialize_into(&self, mut buffer: &mut [u8]) {
+        match self.data {
             HopByHopOptionData::Unrecognized { data, .. } => buffer.copy_from_slice(data),
             HopByHopOptionData::RouterAlert { data } => {
                 // If the buffer doesn't contain enough space, it is a
@@ -575,9 +590,9 @@ impl<'a> OptionsSerializerImpl<'a> for HopByHopOptionsImpl {
     }
 }
 
-impl<'a> AlignedOptionsSerializerImpl<'a> for HopByHopOptionsImpl {
-    fn alignment_requirement(option: &HopByHopOption<'a>) -> (usize, usize) {
-        match option.data {
+impl<'a> AlignedOptionBuilder for HopByHopOption<'a> {
+    fn alignment_requirement(&self) -> (usize, usize) {
+        match self.data {
             // RouterAlert must be aligned at 2 * n + 0 bytes.
             // See: https://tools.ietf.org/html/rfc2711#section-2.1
             HopByHopOptionData::RouterAlert { .. } => (2, 0),
@@ -1127,7 +1142,7 @@ fn ext_hdr_opt_err_to_ext_hdr_err(
 
 #[cfg(test)]
 mod tests {
-    use packet::records::{AlignedRecordsSerializer, Records, RecordsSerializerImpl};
+    use packet::records::{AlignedRecordSequenceBuilder, RecordBuilder, Records};
 
     use crate::ip::{IpProto, Ipv4Proto};
 
@@ -2147,7 +2162,7 @@ mod tests {
             mutable: false,
             data: HopByHopOptionData::RouterAlert { data: 0 },
         };
-        <HopByHopOptionsImpl as RecordsSerializerImpl>::serialize(&mut buffer, &option);
+        <HopByHopOption<'_> as RecordBuilder>::serialize_into(&option, &mut buffer);
         assert_eq!(&buffer[..], &[5, 2, 0, 0]);
     }
 
@@ -2213,13 +2228,12 @@ mod tests {
         // Test whether we can serialize our RouterAlert at 2-byte boundary
         for i in 2..12 {
             let options = trivial_hbh_options(&[Some(i), None]);
-            let ser =
-                AlignedRecordsSerializer::<'_, HopByHopOptionsImpl, HopByHopOption<'_>, _>::new(
-                    2,
-                    options.iter(),
-                );
+            let ser = AlignedRecordSequenceBuilder::<
+                ExtensionHeaderOption<HopByHopOptionData<'_>>,
+                _,
+            >::new(2, options.iter());
             let mut buf = [0u8; 16];
-            ser.serialize_records(&mut buf[0..16]);
+            ser.serialize_into(&mut buf[0..16]);
             let base = (i + 1) & !1;
             // we want to make sure that our RouterAlert is aligned at 2-byte boundary.
             assert_eq!(&buf[base..base + 4], &[5, 2, 0, 0]);

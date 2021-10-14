@@ -5,13 +5,14 @@
 //! Parsing and serialization of IPv4 packets.
 
 use alloc::vec::Vec;
+use core::borrow::Borrow;
 use core::convert::TryFrom;
 use core::fmt::{self, Debug, Formatter};
 use core::ops::Range;
 
 use internet_checksum::Checksum;
 use net_types::ip::{Ipv4, Ipv4Addr};
-use packet::records::options::OptionsRaw;
+use packet::records::options::{OptionSequenceBuilder, OptionsRaw};
 use packet::{
     BufferView, BufferViewMut, FromRaw, MaybeParsed, PacketBuilder, PacketConstraints,
     ParsablePacket, ParseMetadata, SerializeBuffer,
@@ -472,38 +473,34 @@ impl<B: ByteSlice> Ipv4PacketRaw<B> {
 /// [`Options`]: packet::records::options::Options
 type Options<B> = packet::records::options::Options<B, Ipv4OptionsImpl>;
 
-/// A records serializer for IPv4 options.
-///
-/// See [`OptionsSerializer`] for more details.
-///
-/// [`OptionsSerializer`]: packet::records::options::OptionsSerializer
-type OptionsSerializer<'a, I> =
-    packet::records::options::OptionsSerializer<'a, Ipv4OptionsImpl, Ipv4Option<'a>, I>;
-
 /// A PacketBuilder for Ipv4 Packets but with options.
 #[derive(Debug)]
-pub struct Ipv4PacketBuilderWithOptions<'a, I: Clone + Iterator<Item = &'a Ipv4Option<'a>>> {
+pub struct Ipv4PacketBuilderWithOptions<'a, I> {
     prefix_builder: Ipv4PacketBuilder,
-    options: OptionsSerializer<'a, I>,
+    options: OptionSequenceBuilder<Ipv4Option<'a>, I>,
 }
 
-impl<'a, I: Clone + Iterator<Item = &'a Ipv4Option<'a>>> Ipv4PacketBuilderWithOptions<'a, I> {
+impl<'a, I> Ipv4PacketBuilderWithOptions<'a, I>
+where
+    I: Iterator + Clone,
+    I::Item: Borrow<Ipv4Option<'a>>,
+{
     /// Creates a new IPv4 packet builder without options.
-    pub fn new<T: IntoIterator<Item = &'a Ipv4Option<'a>, IntoIter = I>>(
+    pub fn new<T: IntoIterator<Item = I::Item, IntoIter = I>>(
         prefix_builder: Ipv4PacketBuilder,
         options: T,
     ) -> Option<Ipv4PacketBuilderWithOptions<'a, I>> {
-        let options = OptionsSerializer::new(options.into_iter());
+        let options = OptionSequenceBuilder::new(options.into_iter());
         // The maximum header length for IPv4 packet is 60 bytes, minus the fixed 40 bytes,
         // we only have 40 bytes for options.
-        if options.records_bytes_len() > MAX_OPTIONS_LEN {
+        if options.serialized_len() > MAX_OPTIONS_LEN {
             return None;
         }
         Some(Ipv4PacketBuilderWithOptions { prefix_builder, options })
     }
 
     fn aligned_options_len(&self) -> usize {
-        let raw_len = self.options.records_bytes_len();
+        let raw_len = self.options.serialized_len();
         // align to the next 4-byte boundary.
         next_multiple_of_four(raw_len)
     }
@@ -513,8 +510,10 @@ fn next_multiple_of_four(x: usize) -> usize {
     (x + 3) & !3
 }
 
-impl<'a, I: Clone + Iterator<Item = &'a Ipv4Option<'a>>> PacketBuilder
-    for Ipv4PacketBuilderWithOptions<'a, I>
+impl<'a, I> PacketBuilder for Ipv4PacketBuilderWithOptions<'a, I>
+where
+    I: Iterator + Clone,
+    I::Item: Borrow<Ipv4Option<'a>>,
 {
     fn constraints(&self) -> PacketConstraints {
         let header_len = IPV4_MIN_HDR_LEN + self.aligned_options_len();
@@ -528,7 +527,7 @@ impl<'a, I: Clone + Iterator<Item = &'a Ipv4Option<'a>>> PacketBuilder
         let mut header = &mut header;
         let opt_len = self.aligned_options_len();
         let options = header.take_back_zero(opt_len).expect("too few bytes for Ipv4 options");
-        self.options.serialize_records(options);
+        self.options.serialize_into(options);
         self.prefix_builder.write_header_prefix(header, options, body.len());
     }
 }
@@ -732,7 +731,7 @@ pub(crate) fn reassemble_fragmented_packet<
 
 /// Parsing and serialization of IPv4 options.
 pub mod options {
-    use packet::records::options::{self, OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
+    use packet::records::options::{OptionBuilder, OptionLayout, OptionParseLayout, OptionsImpl};
     use packet::BufferViewMut;
     use zerocopy::byteorder::{ByteOrder, NetworkEndian};
 
@@ -793,13 +792,16 @@ pub mod options {
 
     /// An implementation of [`OptionsImpl`] for IPv4 options.
     #[derive(Debug)]
-    pub(super) struct Ipv4OptionsImpl;
+    pub struct Ipv4OptionsImpl;
 
-    impl OptionsImplLayout for Ipv4OptionsImpl {
-        type Error = ();
+    impl OptionLayout for Ipv4OptionsImpl {
         type KindLenField = u8;
-        const END_OF_OPTIONS: Option<u8> = Some(options::END_OF_OPTIONS);
-        const NOP: Option<u8> = Some(options::NOP);
+    }
+
+    impl OptionParseLayout for Ipv4OptionsImpl {
+        type Error = ();
+        const END_OF_OPTIONS: Option<u8> = Some(0);
+        const NOP: Option<u8> = Some(1);
     }
 
     impl<'a> OptionsImpl<'a> for Ipv4OptionsImpl {
@@ -841,26 +843,26 @@ pub mod options {
         }
     }
 
-    impl<'a> OptionsSerializerImpl<'a> for Ipv4OptionsImpl {
-        type Option = Ipv4Option<'a>;
+    impl<'a> OptionBuilder for Ipv4Option<'a> {
+        type Layout = Ipv4OptionsImpl;
 
-        fn option_length(option: &Self::Option) -> usize {
-            match option.data {
+        fn serialized_len(&self) -> usize {
+            match self.data {
                 Ipv4OptionData::RouterAlert { .. } => OPTION_RTRALRT_LEN,
                 Ipv4OptionData::Unrecognized { len, .. } => len as usize,
             }
         }
 
-        fn option_kind(option: &Self::Option) -> u8 {
-            let number = match option.data {
+        fn option_kind(&self) -> u8 {
+            let number = match self.data {
                 Ipv4OptionData::RouterAlert { .. } => OPTION_KIND_RTRALRT,
                 Ipv4OptionData::Unrecognized { kind, .. } => kind,
             };
-            number | ((option.copied as u8) << 7)
+            number | ((self.copied as u8) << 7)
         }
 
-        fn serialize(mut buffer: &mut [u8], option: &Self::Option) {
-            match option.data {
+        fn serialize_into(&self, mut buffer: &mut [u8]) {
+            match self.data {
                 Ipv4OptionData::Unrecognized { data, .. } => buffer.copy_from_slice(data),
                 Ipv4OptionData::RouterAlert { data } => {
                     (&mut buffer).write_obj_front(&U16::new(data)).unwrap()
@@ -872,7 +874,7 @@ pub mod options {
     #[cfg(test)]
     mod test {
         use packet::records::options::Options;
-        use packet::records::RecordsSerializerImpl;
+        use packet::records::RecordBuilder;
 
         use super::*;
 
@@ -880,7 +882,7 @@ pub mod options {
         fn test_serialize_router_alert() {
             let mut buffer = [0u8; 4];
             let option = Ipv4Option { copied: true, data: Ipv4OptionData::RouterAlert { data: 0 } };
-            <Ipv4OptionsImpl as RecordsSerializerImpl>::serialize(&mut buffer, &option);
+            <Ipv4Option<'_> as RecordBuilder>::serialize_into(&option, &mut buffer);
             assert_eq!(buffer[0], 148);
             assert_eq!(buffer[1], 4);
             assert_eq!(buffer[2], 0);

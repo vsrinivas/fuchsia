@@ -561,7 +561,7 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
 
 /// Parsing and serialization of TCP options.
 pub mod options {
-    use packet::records::options::{self, OptionsImpl, OptionsImplLayout};
+    use packet::records::options::{OptionLayout, OptionParseLayout, OptionsImpl};
     use zerocopy::byteorder::{ByteOrder, NetworkEndian};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
@@ -638,11 +638,14 @@ pub mod options {
     #[derive(Debug)]
     pub struct TcpOptionsImpl;
 
-    impl OptionsImplLayout for TcpOptionsImpl {
-        type Error = ();
+    impl OptionLayout for TcpOptionsImpl {
         type KindLenField = u8;
-        const END_OF_OPTIONS: Option<u8> = Some(options::END_OF_OPTIONS);
-        const NOP: Option<u8> = Some(options::NOP);
+    }
+
+    impl OptionParseLayout for TcpOptionsImpl {
+        type Error = ();
+        const END_OF_OPTIONS: Option<u8> = Some(0);
+        const NOP: Option<u8> = Some(1);
     }
 
     impl<'a> OptionsImpl<'a> for TcpOptionsImpl {

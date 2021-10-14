@@ -32,17 +32,13 @@ pub enum NdpPacket<B: ByteSlice> {
 /// [`Options`]: packet::records::options::Options
 pub type Options<B> = packet::records::options::Options<B, options::NdpOptionsImpl>;
 
-/// A records serializer for NDP options.
+/// A builder for a sequence of NDP options.
 ///
-/// See [`OptionsSerializer`] for more details.
+/// See [`OptionSequenceBuilder`] for more details.
 ///
-/// [`OptionsSerializer`]: packet::records::options::OptionsSerializer
-pub type OptionsSerializer<'a, I> = packet::records::options::OptionsSerializer<
-    'a,
-    options::NdpOptionsImpl,
-    options::NdpOptionBuilder<'a>,
-    I,
->;
+/// [`OptionSequenceBuilder`]: packet::records::options::OptionSequenceBuilder
+pub type OptionSequenceBuilder<'a, I> =
+    packet::records::options::OptionSequenceBuilder<options::NdpOptionBuilder<'a>, I>;
 
 /// An NDP Router Solicitation.
 #[derive(Copy, Clone, Default, Debug, FromBytes, AsBytes, Unaligned, PartialEq, Eq)]
@@ -375,7 +371,7 @@ pub mod options {
     use net_types::{UnicastAddr, UnicastAddress};
     use nonzero_ext::nonzero;
     use packet::records::options::{
-        LengthEncoding, OptionsImpl, OptionsImplLayout, OptionsSerializerImpl,
+        LengthEncoding, OptionBuilder, OptionLayout, OptionParseLayout, OptionsImpl,
     };
     use zerocopy::byteorder::{ByteOrder, NetworkEndian};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
@@ -566,7 +562,7 @@ pub mod options {
             }
         }
 
-        fn serialized_length(&self) -> usize {
+        fn serialized_len(&self) -> usize {
             core::mem::size_of::<RouteInformationHeader>() + self.prefix_bytes_len()
         }
 
@@ -742,14 +738,17 @@ pub mod options {
     #[derive(Debug)]
     pub struct NdpOptionsImpl;
 
-    impl OptionsImplLayout for NdpOptionsImpl {
-        // TODO(fxbug.dev/52288): Return more verbose logs on parsing errors.
-        type Error = ();
+    impl<'a> OptionLayout for NdpOptionsImpl {
         type KindLenField = u8;
 
         // For NDP options the length should be multiplied by 8.
         const LENGTH_ENCODING: LengthEncoding =
             LengthEncoding::TypeLengthValue { option_len_multiplier: nonzero!(8usize) };
+    }
+
+    impl OptionParseLayout for NdpOptionsImpl {
+        // TODO(fxbug.dev/52288): Return more verbose logs on parsing errors.
+        type Error = ();
 
         // NDP options don't have END_OF_OPTIONS or NOP.
         const END_OF_OPTIONS: Option<u8> = None;
@@ -854,11 +853,11 @@ pub mod options {
         }
     }
 
-    impl<'a> OptionsSerializerImpl<'a> for NdpOptionsImpl {
-        type Option = NdpOptionBuilder<'a>;
+    impl<'a> OptionBuilder for NdpOptionBuilder<'a> {
+        type Layout = NdpOptionsImpl;
 
-        fn option_length(option: &Self::Option) -> usize {
-            match option {
+        fn serialized_len(&self) -> usize {
+            match self {
                 NdpOptionBuilder::SourceLinkLayerAddress(data)
                 | NdpOptionBuilder::TargetLinkLayerAddress(data) => data.len(),
                 NdpOptionBuilder::PrefixInformation(_) => PREFIX_INFORMATION_OPTION_LENGTH,
@@ -866,7 +865,7 @@ pub mod options {
                     REDIRECTED_HEADER_OPTION_RESERVED_BYTES_LENGTH + original_packet.len()
                 }
                 NdpOptionBuilder::Mtu(_) => MTU_OPTION_LENGTH,
-                NdpOptionBuilder::RouteInformation(o) => o.serialized_length(),
+                NdpOptionBuilder::RouteInformation(o) => o.serialized_len(),
                 NdpOptionBuilder::RecursiveDnsServer(RecursiveDnsServer {
                     lifetime,
                     addresses,
@@ -878,12 +877,12 @@ pub mod options {
             }
         }
 
-        fn option_kind(option: &Self::Option) -> u8 {
-            NdpOptionType::from(option).into()
+        fn option_kind(&self) -> u8 {
+            NdpOptionType::from(self).into()
         }
 
-        fn serialize(buffer: &mut [u8], option: &Self::Option) {
-            match option {
+        fn serialize_into(&self, buffer: &mut [u8]) {
+            match self {
                 NdpOptionBuilder::SourceLinkLayerAddress(data)
                 | NdpOptionBuilder::TargetLinkLayerAddress(data) => buffer.copy_from_slice(data),
                 NdpOptionBuilder::PrefixInformation(pfx_info) => {
@@ -952,7 +951,7 @@ mod tests {
         let expected_packet = [1, 2, 3, 4, 5, 6, 7, 8];
         let options =
             &[options::NdpOptionBuilder::RedirectedHeader { original_packet: &expected_packet }];
-        let serialized = OptionsSerializer::<_>::new(options.iter())
+        let serialized = OptionSequenceBuilder::new(options.iter())
             .into_serializer()
             .serialize_vec_outer()
             .unwrap();
@@ -979,7 +978,7 @@ mod tests {
     fn parse_serialize_mtu_option() {
         let expected_mtu = 5781;
         let options = &[options::NdpOptionBuilder::Mtu(expected_mtu)];
-        let serialized = OptionsSerializer::<_>::new(options.iter())
+        let serialized = OptionSequenceBuilder::new(options.iter())
             .into_serializer()
             .serialize_vec_outer()
             .unwrap();
@@ -1008,7 +1007,7 @@ mod tests {
             Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]),
         );
         let options = &[options::NdpOptionBuilder::PrefixInformation(expected_prefix_info.clone())];
-        let serialized = OptionsSerializer::<_>::new(options.iter())
+        let serialized = OptionSequenceBuilder::new(options.iter())
             .into_serializer()
             .serialize_vec_outer()
             .unwrap();
@@ -1034,7 +1033,7 @@ mod tests {
             let lifetime = 120;
             let expected_rdnss = options::RecursiveDnsServer::new(lifetime, addrs);
             let options = &[options::NdpOptionBuilder::RecursiveDnsServer(expected_rdnss.clone())];
-            let serialized = OptionsSerializer::<_>::new(options.iter())
+            let serialized = OptionSequenceBuilder::new(options.iter())
                 .into_serializer()
                 .serialize_vec_outer()
                 .unwrap();
@@ -1143,7 +1142,7 @@ mod tests {
         }
         let option_builders =
             [options::NdpOptionBuilder::SourceLinkLayerAddress(&SOURCE_LINK_LAYER_ADDRESS)];
-        let serialized = OptionsSerializer::<_>::new(option_builders.iter())
+        let serialized = OptionSequenceBuilder::new(option_builders.iter())
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,
@@ -1251,7 +1250,7 @@ mod tests {
                 PREFIX_INFO_PREFIX.network(),
             )),
         ];
-        let serialized = OptionsSerializer::<_>::new(option_builders.iter())
+        let serialized = OptionSequenceBuilder::new(option_builders.iter())
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,
@@ -1455,7 +1454,7 @@ mod tests {
                 preference,
             ))];
 
-        let serialized = OptionsSerializer::<_>::new(option_builders.iter())
+        let serialized = OptionSequenceBuilder::new(option_builders.iter())
             .into_serializer()
             .serialize_vec_outer()
             .unwrap();

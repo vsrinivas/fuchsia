@@ -19,6 +19,7 @@
 //! [`options`]: crate::records::options
 //! [type-length-value]: https://en.wikipedia.org/wiki/Type-length-value
 
+use core::borrow::Borrow;
 use core::marker::PhantomData;
 use core::ops::Deref;
 
@@ -154,15 +155,18 @@ where
             None => MaybeParsed::Complete(RecordsRaw { bytes: taken, context: c }),
         }
     }
+}
 
+impl<B, R> RecordsRaw<B, R>
+where
+    R: for<'a> RecordsRawImpl<'a> + RecordsImplLayout<Context = ()>,
+    B: ByteSlice,
+{
     /// Raw parses a sequence of records.
     ///
     /// Equivalent to calling [`RecordsRaw::parse_raw_with_context`] with
     /// `context = ()`.
-    pub fn parse_raw<BV: BufferView<B>>(bytes: &mut BV) -> MaybeParsed<Self, (B, R::Error)>
-    where
-        R: RecordsImplLayout<Context = ()>,
-    {
+    pub fn parse_raw<BV: BufferView<B>>(bytes: &mut BV) -> MaybeParsed<Self, (B, R::Error)> {
         Self::parse_raw_with_context(bytes, ())
     }
 }
@@ -438,163 +442,177 @@ pub trait LimitedRecordsImpl<'a>: LimitedRecordsImplLayout {
     ) -> RecordParseResult<Self::Record, Self::Error>;
 }
 
-/// An implementation of a records serializer.
+/// A builder capable of serializing a record.
 ///
-/// `RecordsSerializerImpl` provides functions to serialize sequential records.
-/// It is required in order to construct a [`RecordsSerializer`].
-pub trait RecordsSerializerImpl<'a> {
-    /// The input type to this serializer.
-    ///
-    /// This is the serialization analogue of [`RecordsImpl::Record`]. Records
-    /// serialization expects an [`Iterator`] of `Record`s.
-    type Record;
-
+/// Given `R: RecordBuilder`, an iterator of `R` can be used with a
+/// [`RecordSequenceBuilder`] to serialize a sequence of records.
+pub trait RecordBuilder {
     /// Provides the serialized length of a record.
     ///
     /// Returns the total length, in bytes, of the serialized encoding of
-    /// `record`.
-    fn record_length(record: &Self::Record) -> usize;
+    /// `self`.
+    fn serialized_len(&self) -> usize;
 
-    /// Serializes `record` into a buffer.
+    /// Serializes `self` into a buffer.
     ///
-    /// `data` will be exactly `Self::record_length(record)` bytes long.
+    /// `data` will be exactly `self.serialized_len()` bytes long.
     ///
     /// # Panics
     ///
-    /// If `data` is not exactly `Self::record_length(record)` bytes long,
-    /// `serialize` may panic.
-    fn serialize(data: &mut [u8], record: &Self::Record);
+    /// If `data` is not exactly `self.serialized_len()` bytes long,
+    /// `serialize_into` may panic.
+    fn serialize_into(&self, data: &mut [u8]);
 }
 
-/// An implementation of a serializer for records with alignment requirements.
-pub trait AlignedRecordsSerializerImpl<'a>: RecordsSerializerImpl<'a> {
-    /// Returns the alignment requirement of `record`.
+/// A builder capable of serializing a record with an alignment requirement.
+///
+/// Given `R: AlignedRecordBuilder`, an iterator of `R` can be used with an
+/// [`AlignedRecordSequenceBuilder`] to serialize a sequence of aligned records.
+pub trait AlignedRecordBuilder: RecordBuilder {
+    /// Returns the alignment requirement of `self`.
     ///
-    /// `alignment_requirement(record)` returns `(x, y)`, which means that the
-    /// serialized encoding of `record` must be aligned at `x * n + y` bytes
-    /// from the beginning of the records sequence for some non-negative `n`.
+    /// The alignment requirement is returned as (x, y), which means that the
+    /// record must be aligned at  `x * n + y` bytes from the beginning of the
+    /// records sequence for some non-negative `n`.
     ///
     /// `x` must be non-zero and `y` must be smaller than `x`.
-    fn alignment_requirement(record: &Self::Record) -> (usize, usize);
+    fn alignment_requirement(&self) -> (usize, usize);
 
-    /// Serialize the padding between subsequent aligned records.
+    /// Serializes the padding between subsequent aligned records.
     ///
     /// Some formats require that padding bytes have particular content. This
     /// function serializes padding bytes as required by the format.
     fn serialize_padding(buf: &mut [u8], length: usize);
 }
 
-/// An instance of records serialization.
+/// A builder capable of serializing a sequence of records.
 ///
-/// `RecordsSerializer` is instantiated with an [`Iterator`] that provides
-/// items to be serialized by a [`RecordsSerializerImpl`].
+/// A `RecordSequenceBuilder` is instantiated with an [`Iterator`] that provides
+/// [`RecordBuilder`]s to be serialized. The item produced by the iterator can
+/// be any type which implements `Borrow<R>` for the `RecordBuilder` type `R`.
 ///
-/// `RecordsSerializer` implements [`InnerPacketBuilder`].
+/// `RecordSequenceBuilder` implements [`InnerPacketBuilder`].
 #[derive(Debug)]
-pub struct RecordsSerializer<'a, S, R: 'a, I>
-where
-    S: RecordsSerializerImpl<'a, Record = R>,
-    I: Iterator<Item = &'a R> + Clone,
-{
+pub struct RecordSequenceBuilder<R, I> {
     records: I,
-    _marker: PhantomData<S>,
+    _marker: PhantomData<R>,
 }
 
-impl<'a, S, R: 'a, I> RecordsSerializer<'a, S, R, I>
-where
-    S: RecordsSerializerImpl<'a, Record = R>,
-    I: Iterator<Item = &'a R> + Clone,
-{
-    /// Creates a new `RecordsSerializer` with given `records`.
+impl<R, I> RecordSequenceBuilder<R, I> {
+    /// Creates a new `RecordSequenceBuilder` with the given `records`.
     ///
     /// `records` must produce the same sequence of values from every iterator,
     /// even if cloned. Serialization is typically performed with two passes on
-    /// `records`: one to calculate the total length in bytes
-    /// (`records_bytes_len`) and another one to serialize to a buffer
-    /// (`serialize_records`). Violating this rule may cause panics or malformed
-    /// packets.
+    /// `records`: one to calculate the total length in bytes (`serialized_len`)
+    /// and another one to serialize to a buffer (`serialize_into`). Violating
+    /// this rule may result in panics or malformed packets.
     pub fn new(records: I) -> Self {
         Self { records, _marker: PhantomData }
     }
+}
 
+impl<R, I> RecordSequenceBuilder<R, I>
+where
+    R: RecordBuilder,
+    I: Iterator + Clone,
+    I::Item: Borrow<R>,
+{
     /// Returns the total length, in bytes, of the serialized encoding of the
-    /// records contained within the `RecordsSerializer`.
-    pub fn records_bytes_len(&self) -> usize {
-        self.records.clone().map(|r| S::record_length(r)).sum()
+    /// records contained within the `RecordSequenceBuilder`.
+    pub fn serialized_len(&self) -> usize {
+        self.records.clone().map(|r| r.borrow().serialized_len()).sum()
     }
 
-    /// `serialize_records` serializes all the records contained within the
-    /// `RecordsSerializer`.
+    /// `serialize_into` serializes all the records contained within the
+    /// `RecordSequenceBuilder` into the given buffer.
     ///
     /// # Panics
     ///
-    /// `serialize_records` expects that `buffer` has enough bytes to serialize
-    /// the contained records (as obtained from `records_bytes_len`), otherwise
-    /// it's considered a violation of the API contract and the call may panic.
-    pub fn serialize_records(&self, buffer: &mut [u8]) {
+    /// `serialize_into` expects that `buffer` has enough bytes to serialize the
+    /// contained records (as obtained from `serialized_len`), otherwise it's
+    /// considered a violation of the API contract and the call may panic.
+    pub fn serialize_into(&self, buffer: &mut [u8]) {
         let mut b = &mut &mut buffer[..];
         for r in self.records.clone() {
             // SECURITY: Take a zeroed buffer from b to prevent leaking
             // information from packets previously stored in this buffer.
-            S::serialize(b.take_front_zero(S::record_length(r)).unwrap(), r);
+            r.borrow().serialize_into(b.take_front_zero(r.borrow().serialized_len()).unwrap());
         }
     }
 }
 
-/// An instance of aligned records serialization.
-///
-/// `AlignedRecordsSerializer` is instantiated with an [`Iterator`] that
-/// provides items to be serialized by a [`AlignedRecordsSerializerImpl`].
-#[derive(Debug)]
-pub struct AlignedRecordsSerializer<'a, S, R: 'a, I>
+impl<R, I> InnerPacketBuilder for RecordSequenceBuilder<R, I>
 where
-    S: AlignedRecordsSerializerImpl<'a, Record = R>,
-    I: Iterator<Item = &'a R> + Clone,
+    R: RecordBuilder,
+    I: Iterator + Clone,
+    I::Item: Borrow<R>,
 {
-    start_pos: usize,
-    records: I,
-    _marker: PhantomData<S>,
+    fn bytes_len(&self) -> usize {
+        self.serialized_len()
+    }
+
+    fn serialize(&self, buffer: &mut [u8]) {
+        self.serialize_into(buffer)
+    }
 }
 
-impl<'a, S, R: 'a, I> AlignedRecordsSerializer<'a, S, R, I>
-where
-    S: AlignedRecordsSerializerImpl<'a, Record = R>,
-    I: Iterator<Item = &'a R> + Clone,
-{
-    /// Creates a new `AlignedRecordsSerializer` with given `records` and
+/// A builder capable of serializing a sequence of aligned records.
+///
+/// An `AlignedRecordSequenceBuilder` is instantiated with an [`Iterator`] that
+/// provides [`AlignedRecordBuilder`]s to be serialized. The item produced by
+/// the iterator can be any type which implements `Borrow<R>` for the
+/// `AlignedRecordBuilder` type `R`.
+///
+/// `AlignedRecordSequenceBuilder` implements [`InnerPacketBuilder`].
+#[derive(Debug)]
+pub struct AlignedRecordSequenceBuilder<R, I> {
+    start_pos: usize,
+    records: I,
+    _marker: PhantomData<R>,
+}
+
+impl<R, I> AlignedRecordSequenceBuilder<R, I> {
+    /// Creates a new `AlignedRecordSequenceBuilder` with given `records` and
     /// `start_pos`.
     ///
     /// `records` must produce the same sequence of values from every iterator,
-    /// even if cloned. See `RecordsSerializer` for more details.
+    /// even if cloned. See `RecordSequenceBuilder` for more details.
     ///
     /// Alignment is calculated relative to the beginning of a virtual space of
     /// bytes. If non-zero, `start_pos` instructs the serializer to consider the
-    /// buffer passed to [`serialize_records`] to start at the byte `start_pos`
+    /// buffer passed to [`serialize_into`] to start at the byte `start_pos`
     /// within this virtual space, and to calculate alignment and padding
     /// accordingly. For example, in the IPv6 Hop-by-Hop extension header, a
     /// fixed header of two bytes precedes that extension header's options, but
     /// alignment is calculated relative to the beginning of the extension
     /// header, not relative to the beginning of the options. Thus, when
-    /// constructing an `AlignedRecordsSerializer` to serialize those options,
-    /// `start_pos` would be 2.
+    /// constructing an `AlignedRecordSequenceBuilder` to serialize those
+    /// options, `start_pos` would be 2.
     ///
-    /// [`serialize_records`]: AlignedRecordsSerializer::serialize_records
+    /// [`serialize_into`]: AlignedRecordSequenceBuilder::serialize_into
     pub fn new(start_pos: usize, records: I) -> Self {
         Self { start_pos, records, _marker: PhantomData }
     }
+}
 
+impl<R, I> AlignedRecordSequenceBuilder<R, I>
+where
+    R: AlignedRecordBuilder,
+    I: Iterator + Clone,
+    I::Item: Borrow<R>,
+{
     /// Returns the total length, in bytes, of the serialized records contained
-    /// within the `AlignedRecordsSerializer`.
+    /// within the `AlignedRecordSequenceBuilder`.
     ///
     /// Note that this length includes all padding required to ensure that all
     /// records satisfy their alignment requirements.
-    pub fn records_bytes_len(&self) -> usize {
+    pub fn serialized_len(&self) -> usize {
         let mut pos = self.start_pos;
         self.records
             .clone()
             .map(|r| {
-                let (x, y) = S::alignment_requirement(r);
-                let new_pos = align_up_to(pos, x, y) + S::record_length(r);
+                let (x, y) = r.borrow().alignment_requirement();
+                let new_pos = align_up_to(pos, x, y) + r.borrow().serialized_len();
                 let result = new_pos - pos;
                 pos = new_pos;
                 result
@@ -602,32 +620,32 @@ where
             .sum()
     }
 
-    /// `serialize_records` serializes all the records contained within the
-    /// `AlignedRecordsSerializer`.
+    /// `serialize_into` serializes all the records contained within the
+    /// `AlignedRecordSequenceBuilder` into the given buffer.
     ///
     /// # Panics
     ///
-    /// `serialize_records` expects that `buffer` has enough bytes to serialize
-    /// the contained records (as obtained from `records_bytes_len`), otherwise
-    /// it's considered a violation of the API contract and the call may panic.
-    pub fn serialize_records(&self, buffer: &mut [u8]) {
+    /// `serialize_into` expects that `buffer` has enough bytes to serialize the
+    /// contained records (as obtained from `serialized_len`), otherwise it's
+    /// considered a violation of the API contract and the call may panic.
+    pub fn serialize_into(&self, buffer: &mut [u8]) {
         let mut b = &mut &mut buffer[..];
         let mut pos = self.start_pos;
         for r in self.records.clone() {
-            let (x, y) = S::alignment_requirement(r);
+            let (x, y) = r.borrow().alignment_requirement();
             let aligned = align_up_to(pos, x, y);
             let pad_len = aligned - pos;
             let pad = b.take_front_zero(pad_len).unwrap();
-            S::serialize_padding(pad, pad_len);
+            R::serialize_padding(pad, pad_len);
             pos = aligned;
             // SECURITY: Take a zeroed buffer from b to prevent leaking
             // information from packets previously stored in this buffer.
-            S::serialize(b.take_front_zero(S::record_length(r)).unwrap(), r);
-            pos += S::record_length(r);
+            r.borrow().serialize_into(b.take_front_zero(r.borrow().serialized_len()).unwrap());
+            pos += r.borrow().serialized_len();
         }
         // we have to pad the containing header to 8-octet boundary.
         let padding = b.take_rest_front_zero();
-        S::serialize_padding(padding, padding.len());
+        R::serialize_padding(padding, padding.len());
     }
 }
 
@@ -640,20 +658,6 @@ fn align_up_to(offset: usize, x: usize, y: usize) -> usize {
     assert!(x != 0 && y < x);
     // first add `x` to prevent overflow.
     (offset + x - 1 - y) / x * x + y
-}
-
-impl<'a, S, R: 'a, I> InnerPacketBuilder for RecordsSerializer<'a, S, R, I>
-where
-    S: RecordsSerializerImpl<'a, Record = R>,
-    I: Iterator<Item = &'a R> + Clone,
-{
-    fn bytes_len(&self) -> usize {
-        self.records_bytes_len()
-    }
-
-    fn serialize(&self, buffer: &mut [u8]) {
-        self.serialize_records(buffer)
-    }
 }
 
 impl<B, R> Records<B, R>
@@ -882,7 +886,7 @@ impl<'a> BufferView<&'a [u8]> for LongLivedBuff<'a> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
     use super::*;
@@ -1438,11 +1442,25 @@ pub mod options {
     /// [`RecordsRaw`]: crate::records::RecordsRaw
     pub type OptionsRaw<B, O> = RecordsRaw<B, OptionsImplBridge<O>>;
 
-    /// An instance of options serialization.
+    /// A builder capable of serializing a sequence of options.
     ///
-    /// `OptionsSerializer` is instantiated with an [`Iterator`] that provides
-    /// items to be serialized by an [`OptionsSerializerImpl`].
-    pub type OptionsSerializer<'a, S, O, I> = RecordsSerializer<'a, S, O, I>;
+    /// An `OptionSequenceBuilder` is instantiated with an [`Iterator`] that
+    /// provides [`OptionBuilder`]s to be serialized. The item produced by the
+    /// iterator can be any type which implements `Borrow<O>` for the
+    /// `OptionBuilder` type `O`.
+    ///
+    /// `OptionSequenceBuilder` implements [`InnerPacketBuilder`].
+    pub type OptionSequenceBuilder<R, I> = RecordSequenceBuilder<R, I>;
+
+    /// A builder capable of serializing a sequence of aligned options.
+    ///
+    /// An `AlignedOptionSequenceBuilder` is instantiated with an [`Iterator`]
+    /// that provides [`AlignedOptionBuilder`]s to be serialized. The item
+    /// produced by the iterator can be any type which implements `Borrow<O>`
+    /// for the `AlignedOptionBuilder` type `R`.
+    ///
+    /// `AlignedOptionSequenceBuilder` implements [`InnerPacketBuilder`].
+    pub type AlignedOptionSequenceBuilder<R, I> = AlignedRecordSequenceBuilder<R, I>;
 
     /// Create a bridge to `RecordsImplLayout` and `RecordsImpl` from an `O`
     /// that implements `OptionsImpl`.
@@ -1481,9 +1499,9 @@ pub mod options {
     #[doc(hidden)]
     pub struct OptionsImplBridge<O>(PhantomData<O>);
 
-    impl<O> RecordsImplLayout for OptionsImplBridge<O>
+    impl<'a, O> RecordsImplLayout for OptionsImplBridge<O>
     where
-        O: OptionsImplLayout,
+        O: OptionsImpl<'a>,
     {
         type Context = ();
         type Error = OptionParseErr<O::Error>;
@@ -1503,20 +1521,17 @@ pub mod options {
         }
     }
 
-    impl<'a, O> RecordsSerializerImpl<'a> for O
-    where
-        O: OptionsSerializerImpl<'a>,
-    {
-        type Record = O::Option;
-
-        fn record_length(option: &O::Option) -> usize {
+    impl<O: OptionBuilder> RecordBuilder for O {
+        fn serialized_len(&self) -> usize {
             // TODO(https://fxbug.dev/77981): Remove this `.expect`
-            O::LENGTH_ENCODING
-                .record_length::<O::KindLenField>(O::option_length(option))
+            <O::Layout as OptionLayout>::LENGTH_ENCODING
+                .record_length::<<O::Layout as OptionLayout>::KindLenField>(
+                    OptionBuilder::serialized_len(self),
+                )
                 .expect("integer overflow while computing record length")
         }
 
-        fn serialize(mut data: &mut [u8], option: &O::Option) {
+        fn serialize_into(&self, mut data: &mut [u8]) {
             // NOTE(brunodalbo) we don't currently support serializing the two
             //  single-byte options used in TCP and IP: NOP and END_OF_OPTIONS.
             //  If it is necessary to support those as part of TLV options
@@ -1527,38 +1542,35 @@ pub mod options {
 
             // Data not having enough space is a contract violation, so we panic
             // in that case.
-            *BufferView::<&mut [u8]>::take_obj_front::<O::KindLenField>(&mut data)
-                .expect("buffer too short") = O::option_kind(option);
-            let body_len = O::option_length(option);
+            *BufferView::<&mut [u8]>::take_obj_front::<<O::Layout as OptionLayout>::KindLenField>(&mut data)
+                .expect("buffer too short") = self.option_kind();
+            let body_len = OptionBuilder::serialized_len(self);
             // TODO(https://fxbug.dev/77981): Remove this `.expect`
-            let length = O::LENGTH_ENCODING
-                .encode_length::<O::KindLenField>(body_len)
+            let length = <O::Layout as OptionLayout>::LENGTH_ENCODING
+                .encode_length::<<O::Layout as OptionLayout>::KindLenField>(body_len)
                 .expect("integer overflow while encoding length");
-            // Length overflowing `O::KindLenField` is a contract violation, so
-            // we panic in that case.
-            *BufferView::<&mut [u8]>::take_obj_front::<O::KindLenField>(&mut data)
+            // Length overflowing `O::Layout::KindLenField` is a contract
+            // violation, so we panic in that case.
+            *BufferView::<&mut [u8]>::take_obj_front::<<O::Layout as OptionLayout>::KindLenField>(&mut data)
                 .expect("buffer too short") = length;
             // SECURITY: Because padding may have occurred, we zero-fill data
             // before passing it along in order to prevent leaking information
             // from packets previously stored in the buffer.
             let data = data.into_rest_zero();
             // Pass exactly `body_len` bytes even if there is padding.
-            O::serialize(&mut data[..body_len], option);
+            OptionBuilder::serialize_into(self, &mut data[..body_len]);
         }
     }
 
-    impl<'a, O> AlignedRecordsSerializerImpl<'a> for O
-    where
-        O: AlignedOptionsSerializerImpl<'a>,
-    {
-        fn alignment_requirement(record: &Self::Record) -> (usize, usize) {
+    impl<O: AlignedOptionBuilder> AlignedRecordBuilder for O {
+        fn alignment_requirement(&self) -> (usize, usize) {
             // Use the underlying option's alignment requirement as the
             // alignment requirement for the record.
-            O::alignment_requirement(record)
+            AlignedOptionBuilder::alignment_requirement(self)
         }
 
         fn serialize_padding(buf: &mut [u8], length: usize) {
-            O::serialize_padding(buf, length);
+            <O as AlignedOptionBuilder>::serialize_padding(buf, length);
         }
     }
 
@@ -1574,12 +1586,6 @@ pub mod options {
         Internal,
         External(E),
     }
-
-    // End of Options List in both IPv4 and TCP.
-    pub const END_OF_OPTIONS: u8 = 0;
-
-    // NOP in both IPv4 and TCP.
-    pub const NOP: u8 = 1;
 
     /// Whether the length field of an option encodes the length of the entire
     /// option (including kind and length fields) or only of the value field.
@@ -1674,8 +1680,7 @@ pub mod options {
 
     /// The type of the "kind" and "length" fields in an option.
     ///
-    /// See the docs for [`OptionsImplLayout::KindLenField`] for more
-    /// information.
+    /// See the docs for [`OptionLayout::KindLenField`] for more information.
     pub trait KindLenField:
         FromBytes
         + AsBytes
@@ -1693,16 +1698,25 @@ pub mod options {
     impl<O: ByteOrder> crate::sealed::Sealed for zerocopy::U16<O> {}
     impl<O: ByteOrder> KindLenField for zerocopy::U16<O> {}
 
-    /// Basic associated type and constants used by an [`OptionsImpl`].
+    /// Information about an option's layout.
     ///
-    /// This trait is kept separate from `OptionsImpl` so that the associated
-    /// type and constants do not depend on the lifetime parameter to
-    /// `OptionsImpl`.
-    pub trait OptionsImplLayout {
-        /// The type of errors that may be returned by a call to
-        /// [`OptionsImpl::parse`].
-        type Error;
-
+    /// It is recommended that this trait be implemented for an uninhabited type
+    /// since it never needs to be instantiated:
+    ///
+    /// ```rust
+    /// # use packet::records::options::{OptionLayout, LengthEncoding};
+    /// /// A carrier for information about the layout of the IPv4 option
+    /// /// format.
+    /// ///
+    /// /// This type exists only at the type level, and does not need to be
+    /// /// constructed.
+    /// pub enum Ipv4OptionLayout {}
+    ///
+    /// impl OptionLayout for Ipv4OptionLayout {
+    ///     type KindLenField = u8;
+    /// }
+    /// ```
+    pub trait OptionLayout {
         /// The type of the "kind" and "length" fields in an option.
         ///
         /// For most protocols, this is simply `u8`, as the "kind" and "length"
@@ -1711,12 +1725,6 @@ pub mod options {
         // TODO(https://github.com/rust-lang/rust/issues/29661): Have
         // `KindLenField` default to `u8`.
         type KindLenField: KindLenField;
-
-        /// The End of options type (if one exists).
-        const END_OF_OPTIONS: Option<Self::KindLenField>;
-
-        /// The No-op type (if one exists).
-        const NOP: Option<Self::KindLenField>;
 
         /// The encoding of the length byte.
         ///
@@ -1737,11 +1745,24 @@ pub mod options {
             LengthEncoding::TypeLengthValue { option_len_multiplier: nonzero!(1usize) };
     }
 
+    /// Information about an option's layout required in order to parse it.
+    pub trait OptionParseLayout: OptionLayout {
+        /// The type of errors that may be returned by a call to
+        /// [`OptionsImpl::parse`].
+        type Error;
+
+        /// The End of options type (if one exists).
+        const END_OF_OPTIONS: Option<Self::KindLenField>;
+
+        /// The No-op type (if one exists).
+        const NOP: Option<Self::KindLenField>;
+    }
+
     /// An implementation of an options parser.
     ///
     /// `OptionsImpl` provides functions to parse fixed- and variable-length
     /// options. It is required in order to construct an [`Options`].
-    pub trait OptionsImpl<'a>: OptionsImplLayout {
+    pub trait OptionsImpl<'a>: OptionParseLayout {
         /// The type of an option; the output from the [`parse`] function.
         ///
         /// For long or variable-length data, implementers advised to make
@@ -1778,19 +1799,15 @@ pub mod options {
         ) -> Result<Option<Self::Option>, Self::Error>;
     }
 
-    /// An implementation of an options serializer.
+    /// A builder capable of serializing an option.
     ///
-    /// `OptionsSerializerImpl` provides to functions to serialize fixed- and
-    /// variable-length options. It is required in order to construct an
-    /// `OptionsSerializer`.
-    pub trait OptionsSerializerImpl<'a>: OptionsImplLayout {
-        /// The input type to this serializer.
-        ///
-        /// This is the serialization analogue of [`OptionsImpl::Option`].
-        /// Options serialization expects an [`Iterator`] of `Option`s.
-        type Option;
+    /// Given `O: OptionBuilder`, an iterator of `O` can be used with a
+    /// [`OptionSequenceBuilder`] to serialize a sequence of options.
+    pub trait OptionBuilder {
+        /// Information about the option's layout.
+        type Layout: OptionLayout;
 
-        /// Returns the serialized length, in bytes, of the given `option`.
+        /// Returns the serialized length, in bytes, of `self`.
         ///
         /// Implementers must return the length, in bytes, of the **data***
         /// portion of the option field (not counting the kind and length
@@ -1799,28 +1816,34 @@ pub mod options {
         /// adding padding bytes if necessary.
         ///
         /// [`option_len_multiplier`]: LengthEncoding::TypeLengthValue::option_len_multiplier
-        fn option_length(option: &Self::Option) -> usize;
+        fn serialized_len(&self) -> usize;
 
         /// Returns the wire value for this option kind.
-        fn option_kind(option: &Self::Option) -> Self::KindLenField;
+        fn option_kind(&self) -> <Self::Layout as OptionLayout>::KindLenField;
 
-        /// Serializes `option` into `data`.
+        /// Serializes `self` into `data`.
         ///
-        /// `data` will be exactly `Self::option_length(option)` bytes long.
-        /// Implementers must write the **data** portion of `option` into `data`
+        /// `data` will be exactly `self.serialized_len()` bytes long.
+        /// Implementers must write the **data** portion of `self` into `data`
         /// (not the kind or length fields).
         ///
         /// # Panics
         ///
-        /// If `data` is not exactly `Self::option_length(option)` bytes long,
+        /// If `data` is not exactly `self.serialized_len()` bytes long,
         /// `serialize` may panic.
-        fn serialize(data: &mut [u8], option: &Self::Option);
+        fn serialize_into(&self, data: &mut [u8]);
     }
 
-    pub trait AlignedOptionsSerializerImpl<'a>: OptionsSerializerImpl<'a> {
-        /// Returns the alignment requirement of `option`.
+    /// A builder capable of serializing an option with an alignment
+    /// requirement.
+    ///
+    /// Given `O: AlignedOptionBuilder`, an iterator of `O` can be used with an
+    /// [`AlignedOptionSequenceBuilder`] to serialize a sequence of aligned
+    /// options.
+    pub trait AlignedOptionBuilder: OptionBuilder {
+        /// Returns the alignment requirement of `self`.
         ///
-        /// `alignment_requirement(option)` returns `(x, y)`, which means that
+        /// `option.alignment_requirement()` returns `(x, y)`, which means that
         /// the serialized encoding of `option` must be aligned at `x * n + y`
         /// bytes from the beginning of the options sequence for some
         /// non-negative `n`. For example, the IPv6 Router Alert Hop-by-Hop
@@ -1828,7 +1851,7 @@ pub mod options {
         /// alignment (4, 2). (1, 0) means there is no alignment requirement.
         ///
         /// `x` must be non-zero and `y` must be smaller than `x`.
-        fn alignment_requirement(option: &Self::Option) -> (usize, usize);
+        fn alignment_requirement(&self) -> (usize, usize);
 
         /// Serialize the padding between subsequent aligned options.
         ///
@@ -1876,7 +1899,8 @@ pub mod options {
 
     #[cfg(test)]
     mod tests {
-        use core::convert::TryInto;
+        use core::convert::{Infallible as Never, TryInto};
+        use core::fmt::Debug;
 
         use nonzero_ext::nonzero;
 
@@ -1888,45 +1912,54 @@ pub mod options {
         #[derive(Debug)]
         struct DummyOptionsImpl;
 
-        impl OptionsImplLayout for DummyOptionsImpl {
-            type Error = ();
+        #[derive(Debug)]
+        struct DummyOption {
+            kind: u8,
+            data: Vec<u8>,
+        }
+
+        impl OptionLayout for DummyOptionsImpl {
             type KindLenField = u8;
-            const END_OF_OPTIONS: Option<u8> = Some(END_OF_OPTIONS);
-            const NOP: Option<u8> = Some(NOP);
+        }
+
+        impl OptionParseLayout for DummyOptionsImpl {
+            type Error = Never;
+            const END_OF_OPTIONS: Option<u8> = Some(0);
+            const NOP: Option<u8> = Some(1);
         }
 
         impl<'a> OptionsImpl<'a> for DummyOptionsImpl {
-            type Option = (u8, Vec<u8>);
+            type Option = DummyOption;
 
-            fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Option>, Self::Error> {
+            fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Option>, Never> {
                 let mut v = Vec::new();
                 v.extend_from_slice(data);
-                Ok(Some((kind, v)))
+                Ok(Some(DummyOption { kind, data: v }))
             }
         }
 
-        impl<'a> OptionsSerializerImpl<'a> for DummyOptionsImpl {
-            type Option = (u8, Vec<u8>);
+        impl OptionBuilder for DummyOption {
+            type Layout = DummyOptionsImpl;
 
-            fn option_length(option: &Self::Option) -> usize {
-                option.1.len()
+            fn serialized_len(&self) -> usize {
+                self.data.len()
             }
 
-            fn option_kind(option: &Self::Option) -> u8 {
-                option.0
+            fn option_kind(&self) -> u8 {
+                self.kind
             }
 
-            fn serialize(data: &mut [u8], option: &Self::Option) {
-                assert_eq!(data.len(), Self::option_length(option));
-                data.copy_from_slice(&option.1);
+            fn serialize_into(&self, data: &mut [u8]) {
+                assert_eq!(data.len(), OptionBuilder::serialized_len(self));
+                data.copy_from_slice(&self.data);
             }
         }
 
-        impl<'a> AlignedOptionsSerializerImpl<'a> for DummyOptionsImpl {
+        impl AlignedOptionBuilder for DummyOption {
             // For our `DummyOption`, we simply regard (length, kind) as their
             // alignment requirement.
-            fn alignment_requirement(option: &Self::Option) -> (usize, usize) {
-                (option.1.len(), option.0 as usize)
+            fn alignment_requirement(&self) -> (usize, usize) {
+                (self.data.len(), self.kind as usize)
             }
 
             fn serialize_padding(buf: &mut [u8], length: usize) {
@@ -1950,11 +1983,14 @@ pub mod options {
         #[derive(Debug)]
         struct AlwaysErrOptionsImpl;
 
-        impl OptionsImplLayout for AlwaysErrOptionsImpl {
-            type Error = ();
+        impl OptionLayout for AlwaysErrOptionsImpl {
             type KindLenField = u8;
-            const END_OF_OPTIONS: Option<u8> = Some(END_OF_OPTIONS);
-            const NOP: Option<u8> = Some(NOP);
+        }
+
+        impl OptionParseLayout for AlwaysErrOptionsImpl {
+            type Error = ();
+            const END_OF_OPTIONS: Option<u8> = Some(0);
+            const NOP: Option<u8> = Some(1);
         }
 
         impl<'a> OptionsImpl<'a> for AlwaysErrOptionsImpl {
@@ -1968,12 +2004,28 @@ pub mod options {
         #[derive(Debug)]
         struct DummyNdpOptionsImpl;
 
-        impl OptionsImplLayout for DummyNdpOptionsImpl {
-            type Error = ();
+        #[derive(Debug)]
+        struct NdpOption {
+            kind: u8,
+            data: Vec<u8>,
+        }
+
+        impl OptionLayout for NdpOption {
             type KindLenField = u8;
 
             const LENGTH_ENCODING: LengthEncoding =
                 LengthEncoding::TypeLengthValue { option_len_multiplier: nonzero!(8usize) };
+        }
+
+        impl OptionLayout for DummyNdpOptionsImpl {
+            type KindLenField = u8;
+
+            const LENGTH_ENCODING: LengthEncoding =
+                LengthEncoding::TypeLengthValue { option_len_multiplier: nonzero!(8usize) };
+        }
+
+        impl OptionParseLayout for DummyNdpOptionsImpl {
+            type Error = Never;
 
             const END_OF_OPTIONS: Option<u8> = None;
 
@@ -1981,38 +2033,51 @@ pub mod options {
         }
 
         impl<'a> OptionsImpl<'a> for DummyNdpOptionsImpl {
-            type Option = (u8, Vec<u8>);
+            type Option = NdpOption;
 
-            fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Option>, Self::Error> {
+            fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Option>, Never> {
                 let mut v = Vec::with_capacity(data.len());
                 v.extend_from_slice(data);
-                Ok(Some((kind, v)))
+                Ok(Some(NdpOption { kind, data: v }))
             }
         }
 
-        impl<'a> OptionsSerializerImpl<'a> for DummyNdpOptionsImpl {
-            type Option = (u8, Vec<u8>);
+        impl OptionBuilder for NdpOption {
+            type Layout = DummyNdpOptionsImpl;
 
-            fn option_length(option: &Self::Option) -> usize {
-                option.1.len()
+            fn serialized_len(&self) -> usize {
+                self.data.len()
             }
 
-            fn option_kind(option: &Self::Option) -> u8 {
-                option.0
+            fn option_kind(&self) -> u8 {
+                self.kind
             }
 
-            fn serialize(data: &mut [u8], option: &Self::Option) {
-                assert_eq!(data.len(), Self::option_length(option));
-                data.copy_from_slice(&option.1)
+            fn serialize_into(&self, data: &mut [u8]) {
+                assert_eq!(data.len(), OptionBuilder::serialized_len(self));
+                data.copy_from_slice(&self.data)
             }
         }
 
         #[derive(Debug)]
         struct DummyMultiByteKindOptionsImpl;
 
-        impl OptionsImplLayout for DummyMultiByteKindOptionsImpl {
-            type Error = ();
+        #[derive(Debug)]
+        struct MultiByteOption {
+            kind: U16,
+            data: Vec<u8>,
+        }
+
+        impl OptionLayout for MultiByteOption {
             type KindLenField = U16;
+        }
+
+        impl OptionLayout for DummyMultiByteKindOptionsImpl {
+            type KindLenField = U16;
+        }
+
+        impl OptionParseLayout for DummyMultiByteKindOptionsImpl {
+            type Error = Never;
 
             const END_OF_OPTIONS: Option<U16> = None;
 
@@ -2020,28 +2085,28 @@ pub mod options {
         }
 
         impl<'a> OptionsImpl<'a> for DummyMultiByteKindOptionsImpl {
-            type Option = (U16, Vec<u8>);
+            type Option = MultiByteOption;
 
-            fn parse(kind: U16, data: &'a [u8]) -> Result<Option<Self::Option>, Self::Error> {
+            fn parse(kind: U16, data: &'a [u8]) -> Result<Option<Self::Option>, Never> {
                 let mut v = Vec::with_capacity(data.len());
                 v.extend_from_slice(data);
-                Ok(Some((kind, v)))
+                Ok(Some(MultiByteOption { kind, data: v }))
             }
         }
 
-        impl<'a> OptionsSerializerImpl<'a> for DummyMultiByteKindOptionsImpl {
-            type Option = (U16, Vec<u8>);
+        impl OptionBuilder for MultiByteOption {
+            type Layout = DummyMultiByteKindOptionsImpl;
 
-            fn option_length(option: &Self::Option) -> usize {
-                option.1.len()
+            fn serialized_len(&self) -> usize {
+                self.data.len()
             }
 
-            fn option_kind(option: &Self::Option) -> U16 {
-                option.0
+            fn option_kind(&self) -> U16 {
+                self.kind
             }
 
-            fn serialize(data: &mut [u8], option: &Self::Option) {
-                data.copy_from_slice(&option.1)
+            fn serialize_into(&self, data: &mut [u8]) {
+                data.copy_from_slice(&self.data)
             }
         }
 
@@ -2194,53 +2259,74 @@ pub mod options {
 
             /// Declare a new options impl type with a custom `LENGTH_ENCODING`.
             macro_rules! declare_options_impl {
-                ($name:ident, $encoding:expr) => {
+                ($opt:ident, $impl:ident, $encoding:expr) => {
                     #[derive(Debug)]
-                    struct $name;
+                    enum $impl {}
 
-                    impl OptionsImplLayout for $name {
-                        type Error = ();
+                    #[derive(Debug, PartialEq)]
+                    struct $opt {
+                        kind: u8,
+                        data: Vec<u8>,
+                    }
+
+                    impl<'a> From<&'a (u8, Vec<u8>)> for $opt {
+                        fn from((kind, data): &'a (u8, Vec<u8>)) -> $opt {
+                            $opt { kind: *kind, data: data.clone() }
+                        }
+                    }
+
+                    impl OptionLayout for $opt {
                         const LENGTH_ENCODING: LengthEncoding = $encoding;
                         type KindLenField = u8;
-                        const END_OF_OPTIONS: Option<u8> = Some(END_OF_OPTIONS);
-                        const NOP: Option<u8> = Some(NOP);
                     }
 
-                    impl<'a> OptionsImpl<'a> for $name {
-                        type Option = (u8, Vec<u8>);
+                    impl OptionLayout for $impl {
+                        const LENGTH_ENCODING: LengthEncoding = $encoding;
+                        type KindLenField = u8;
+                    }
 
-                        fn parse(
-                            kind: u8,
-                            data: &'a [u8],
-                        ) -> Result<Option<Self::Option>, Self::Error> {
+                    impl OptionParseLayout for $impl {
+                        type Error = Never;
+                        const END_OF_OPTIONS: Option<u8> = Some(0);
+                        const NOP: Option<u8> = Some(1);
+                    }
+
+                    impl<'a> OptionsImpl<'a> for $impl {
+                        type Option = $opt;
+
+                        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Option>, Never> {
                             let mut v = Vec::new();
                             v.extend_from_slice(data);
-                            Ok(Some((kind, v)))
+                            Ok(Some($opt { kind, data: v }))
                         }
                     }
 
-                    impl<'a> OptionsSerializerImpl<'a> for $name {
-                        type Option = (u8, Vec<u8>);
+                    impl OptionBuilder for $opt {
+                        type Layout = $impl;
 
-                        fn option_length(option: &Self::Option) -> usize {
-                            option.1.len()
+                        fn serialized_len(&self) -> usize {
+                            self.data.len()
                         }
 
-                        fn option_kind(option: &Self::Option) -> u8 {
-                            option.0
+                        fn option_kind(&self) -> u8 {
+                            self.kind
                         }
 
-                        fn serialize(data: &mut [u8], option: &Self::Option) {
-                            assert_eq!(data.len(), Self::option_length(option));
-                            data.copy_from_slice(&option.1);
+                        fn serialize_into(&self, data: &mut [u8]) {
+                            assert_eq!(data.len(), OptionBuilder::serialized_len(self));
+                            data.copy_from_slice(&self.data);
                         }
                     }
                 };
             }
 
-            declare_options_impl!(DummyImplValueOnly, LengthEncoding::ValueOnly);
-            declare_options_impl!(DummyImplTlv1, TLV_1);
-            declare_options_impl!(DummyImplTlv2, TLV_2);
+            declare_options_impl!(
+                DummyImplValueOnly,
+                DummyImplValueOnlyImpl,
+                LengthEncoding::ValueOnly
+            );
+            declare_options_impl!(DummyImplTlv1, DummyImplTlv1Impl, TLV_1);
+            declare_options_impl!(DummyImplTlv2, DummyImplTlv2Impl, TLV_2);
 
             /// Tests that a given option is parsed from different byte
             /// sequences for different options layouts.
@@ -2249,28 +2335,31 @@ pub mod options {
             /// the `DummyImplTlv2` layout (namely, those whose lengths are not
             /// a multiple of 2), `tlv_2` may be `None`.
             fn test_parse(
-                expect: (u8, Vec<u8>),
+                (expect_kind, expect_data): (u8, Vec<u8>),
                 value_only: &[u8],
                 tlv_1: &[u8],
                 tlv_2: Option<&[u8]>,
             ) {
-                let expect = [expect];
-                let options = Options::<_, DummyImplValueOnly>::parse(value_only)
+                let options = Options::<_, DummyImplValueOnlyImpl>::parse(value_only)
                     .unwrap()
                     .iter()
                     .collect::<Vec<_>>();
-                assert_eq!(options, expect);
+                let data = expect_data.clone();
+                assert_eq!(options, [DummyImplValueOnly { kind: expect_kind, data }]);
 
-                let options =
-                    Options::<_, DummyImplTlv1>::parse(tlv_1).unwrap().iter().collect::<Vec<_>>();
-                assert_eq!(options, expect);
+                let options = Options::<_, DummyImplTlv1Impl>::parse(tlv_1)
+                    .unwrap()
+                    .iter()
+                    .collect::<Vec<_>>();
+                let data = expect_data.clone();
+                assert_eq!(options, [DummyImplTlv1 { kind: expect_kind, data }]);
 
                 if let Some(tlv_2) = tlv_2 {
-                    let options = Options::<_, DummyImplTlv2>::parse(tlv_2)
+                    let options = Options::<_, DummyImplTlv2Impl>::parse(tlv_2)
                         .unwrap()
                         .iter()
                         .collect::<Vec<_>>();
-                    assert_eq!(options, expect);
+                    assert_eq!(options, [DummyImplTlv2 { kind: expect_kind, data: expect_data }]);
                 }
             }
 
@@ -2306,27 +2395,31 @@ pub mod options {
                 let opts = [opt.clone()];
 
                 fn test_serialize_parse_inner<
-                    O: for<'a> OptionsImpl<'a, Error = (), Option = (u8, Vec<u8>)>
-                        + for<'a> OptionsSerializerImpl<'a, Option = (u8, Vec<u8>)>
-                        + std::fmt::Debug,
+                    O: OptionBuilder + Debug + PartialEq + for<'a> From<&'a (u8, Vec<u8>)>,
+                    I: for<'a> OptionsImpl<'a, Error = Never, Option = O> + std::fmt::Debug,
                 >(
                     opts: &[(u8, Vec<u8>)],
                     expect: &[(u8, Vec<u8>)],
                 ) {
-                    let ser = OptionsSerializer::<O, _, _>::new(opts.iter());
+                    let opts = opts.iter().map(Into::into).collect::<Vec<_>>();
+                    let expect = expect.iter().map(Into::into).collect::<Vec<_>>();
+
+                    let ser = OptionSequenceBuilder::<O, _>::new(opts.iter());
                     let serialized =
                         ser.into_serializer().serialize_vec_outer().unwrap().as_ref().to_vec();
-                    let options = Options::<_, O>::parse(serialized.as_slice())
+                    let options = Options::<_, I>::parse(serialized.as_slice())
                         .unwrap()
                         .iter()
                         .collect::<Vec<_>>();
                     assert_eq!(options, expect);
                 }
 
-                test_serialize_parse_inner::<DummyImplValueOnly>(&opts, &opts);
-                test_serialize_parse_inner::<DummyImplTlv1>(&opts, &opts);
+                test_serialize_parse_inner::<DummyImplValueOnly, DummyImplValueOnlyImpl>(
+                    &opts, &opts,
+                );
+                test_serialize_parse_inner::<DummyImplTlv1, DummyImplTlv1Impl>(&opts, &opts);
                 let expect = if let Some(expect) = expect_tlv_2 { expect } else { opt };
-                test_serialize_parse_inner::<DummyImplTlv2>(&opts, &[expect]);
+                test_serialize_parse_inner::<DummyImplTlv2, DummyImplTlv2Impl>(&opts, &[expect]);
             }
 
             // 0-byte body
@@ -2344,12 +2437,12 @@ pub mod options {
         #[test]
         fn test_empty_options() {
             // all END_OF_OPTIONS
-            let bytes = [END_OF_OPTIONS; 64];
+            let bytes = [0; 64];
             let options = Options::<_, DummyOptionsImpl>::parse(&bytes[..]).unwrap();
             assert_eq!(options.iter().count(), 0);
 
             // all NOP
-            let bytes = [NOP; 64];
+            let bytes = [1; 64];
             let options = Options::<_, DummyOptionsImpl>::parse(&bytes[..]).unwrap();
             assert_eq!(options.iter().count(), 0);
         }
@@ -2362,16 +2455,16 @@ pub mod options {
             let mut bytes = Vec::new();
             for i in 4..16 {
                 // from the user's perspective, these NOPs should be transparent
-                bytes.push(NOP);
+                bytes.push(1);
                 for j in (2..i).rev() {
                     bytes.push(j);
                 }
                 // from the user's perspective, these NOPs should be transparent
-                bytes.push(NOP);
+                bytes.push(1);
             }
 
             let options = Options::<_, DummyOptionsImpl>::parse(bytes.as_slice()).unwrap();
-            for (idx, (kind, data)) in options.iter().enumerate() {
+            for (idx, DummyOption { kind, data }) in options.iter().enumerate() {
                 assert_eq!(kind as usize, idx + 3);
                 assert_eq!(data.len(), idx);
                 let mut bytes = Vec::new();
@@ -2383,7 +2476,9 @@ pub mod options {
 
             // Test that we get no parse errors so long as
             // AlwaysErrOptionsImpl::parse is never called.
-            let bytes = [NOP; 64];
+            //
+            // `bytes` is a sequence of NOPs.
+            let bytes = [1; 64];
             let options = Options::<_, AlwaysErrOptionsImpl>::parse(&bytes[..]).unwrap();
             assert_eq!(options.iter().count(), 0);
         }
@@ -2402,7 +2497,7 @@ pub mod options {
             }
 
             let options = Options::<_, DummyNdpOptionsImpl>::parse(bytes.as_slice()).unwrap();
-            for (idx, (kind, data)) in options.iter().enumerate() {
+            for (idx, NdpOption { kind, data }) in options.iter().enumerate() {
                 assert_eq!(kind as usize, idx);
                 assert_eq!(data.len(), ((idx + 1) * 8) - 2);
                 let mut bytes = Vec::new();
@@ -2481,13 +2576,11 @@ pub mod options {
 
             let options = Options::<_, DummyOptionsImpl>::parse(bytes.as_slice()).unwrap();
 
-            let collected = options
-                .iter()
-                .collect::<Vec<<DummyOptionsImpl as OptionsSerializerImpl<'_>>::Option>>();
+            let collected = options.iter().collect::<Vec<_>>();
             // Pass `collected.iter()` instead of `options.iter()` since we need
             // an iterator over references, and `options.iter()` produces an
             // iterator over values.
-            let ser = OptionsSerializer::<DummyOptionsImpl, _, _>::new(collected.iter());
+            let ser = OptionSequenceBuilder::<DummyOption, _>::new(collected.iter());
 
             let serialized = ser.into_serializer().serialize_vec_outer().unwrap().as_ref().to_vec();
 
@@ -2507,13 +2600,11 @@ pub mod options {
                 }
             }
             let options = Options::<_, DummyNdpOptionsImpl>::parse(bytes.as_slice()).unwrap();
-            let collected = options
-                .iter()
-                .collect::<Vec<<DummyNdpOptionsImpl as OptionsSerializerImpl<'_>>::Option>>();
+            let collected = options.iter().collect::<Vec<_>>();
             // Pass `collected.iter()` instead of `options.iter()` since we need
             // an iterator over references, and `options.iter()` produces an
             // iterator over values.
-            let ser = OptionsSerializer::<DummyNdpOptionsImpl, _, _>::new(collected.iter());
+            let ser = OptionSequenceBuilder::<NdpOption, _>::new(collected.iter());
 
             let serialized = ser.into_serializer().serialize_vec_outer().unwrap().as_ref().to_vec();
 
@@ -2538,7 +2629,7 @@ pub mod options {
 
             let options =
                 Options::<_, DummyMultiByteKindOptionsImpl>::parse(bytes.as_slice()).unwrap();
-            for (idx, (kind, data)) in options.iter().enumerate() {
+            for (idx, MultiByteOption { kind, data }) in options.iter().enumerate() {
                 assert_eq!(usize::from(kind), idx + 4);
                 let idx: u8 = idx.try_into().unwrap();
                 let bytes: Vec<_> = (4..(idx + 4)).collect();
@@ -2549,10 +2640,9 @@ pub mod options {
             // Pass `collected.iter()` instead of `options.iter()` since we need
             // an iterator over references, and `options.iter()` produces an
             // iterator over values.
-            let ser =
-                OptionsSerializer::<DummyMultiByteKindOptionsImpl, _, _>::new(collected.iter());
-            let mut output = vec![0u8; ser.records_bytes_len()];
-            ser.serialize_records(output.as_mut_slice());
+            let ser = OptionSequenceBuilder::<MultiByteOption, _>::new(collected.iter());
+            let mut output = vec![0u8; ser.serialized_len()];
+            ser.serialize_into(output.as_mut_slice());
             assert_eq!(output, bytes);
         }
 
@@ -2587,20 +2677,20 @@ pub mod options {
             let dummy_options = [
                 // alignment requirement: 2 * n + 1,
                 //
-                (1, vec![42, 42]),
-                (0, vec![42, 42]),
-                (1, vec![1, 2, 3]),
-                (2, vec![3, 2, 1]),
-                (0, vec![42]),
-                (2, vec![9, 9, 9, 9]),
+                DummyOption { kind: 1, data: vec![42, 42] },
+                DummyOption { kind: 0, data: vec![42, 42] },
+                DummyOption { kind: 1, data: vec![1, 2, 3] },
+                DummyOption { kind: 2, data: vec![3, 2, 1] },
+                DummyOption { kind: 0, data: vec![42] },
+                DummyOption { kind: 2, data: vec![9, 9, 9, 9] },
             ];
-            let ser = AlignedRecordsSerializer::<'_, DummyOptionsImpl, (u8, Vec<u8>), _>::new(
+            let ser = AlignedRecordSequenceBuilder::<DummyOption, _>::new(
                 0,
                 dummy_options.iter(),
             );
-            assert_eq!(ser.records_bytes_len(), 32);
+            assert_eq!(ser.serialized_len(), 32);
             let mut buf = [0u8; 32];
-            ser.serialize_records(&mut buf[..]);
+            ser.serialize_into(&mut buf[..]);
             assert_eq!(
                 &buf[..],
                 &[

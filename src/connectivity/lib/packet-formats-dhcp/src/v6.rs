@@ -10,8 +10,8 @@ use {
     num_derive::FromPrimitive,
     packet::{
         records::{
-            ParsedRecord, RecordParseResult, Records, RecordsImpl, RecordsImplLayout,
-            RecordsSerializer, RecordsSerializerImpl,
+            ParsedRecord, RecordBuilder, RecordParseResult, RecordSequenceBuilder, Records,
+            RecordsImpl, RecordsImplLayout,
         },
         BufferView, BufferViewMut, InnerPacketBuilder, ParsablePacket, ParseMetadata,
     },
@@ -550,13 +550,13 @@ pub struct IanaSerializer<'a> {
     iaid: u32,
     t1: u32,
     t2: u32,
-    options: RecordsSerializer<'a, DhcpOptionImpl, DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
+    options: RecordSequenceBuilder<DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
 }
 
 impl<'a> IanaSerializer<'a> {
     /// Constructs a new `IanaSerializer`.
     pub fn new(iaid: u32, t1: u32, t2: u32, options: &'a [DhcpOption<'a>]) -> IanaSerializer<'a> {
-        IanaSerializer { iaid, t1, t2, options: RecordsSerializer::new(options.iter()) }
+        IanaSerializer { iaid, t1, t2, options: RecordSequenceBuilder::new(options.iter()) }
     }
 }
 
@@ -566,7 +566,7 @@ pub struct IaAddrSerializer<'a> {
     addr: Ipv6Addr,
     preferred_lifetime: u32,
     valid_lifetime: u32,
-    options: RecordsSerializer<'a, DhcpOptionImpl, DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
+    options: RecordSequenceBuilder<DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
 }
 
 impl<'a> IaAddrSerializer<'a> {
@@ -581,7 +581,7 @@ impl<'a> IaAddrSerializer<'a> {
             addr,
             preferred_lifetime,
             valid_lifetime,
-            options: RecordsSerializer::new(options.iter()),
+            options: RecordSequenceBuilder::new(options.iter()),
         }
     }
 }
@@ -607,37 +607,26 @@ impl DhcpOption<'_> {
     }
 }
 
-/// An implementation of `RecordsSerializerImpl` for `DhcpOption`.
-///
-/// Options in DHCPv6 messages are sequential, so they are serialized through
-/// the APIs provided in [packet::records].
-///
-/// [packet::records]: https://fuchsia-docs.firebaseapp.com/rust/packet/records/index.html
-#[derive(Debug)]
-enum DhcpOptionImpl {}
-
-impl<'a> RecordsSerializerImpl<'a> for DhcpOptionImpl {
-    type Record = DhcpOption<'a>;
-
-    /// Calculates the serialized length of the option based on option format defined in
-    /// [RFC 8415, Section 21.1].
+impl<'a> RecordBuilder for DhcpOption<'a> {
+    /// Calculates the serialized length of the option based on option format
+    /// defined in [RFC 8415, Section 21.1].
     ///
-    /// For variable length options that exceeds the size limit (`u16::MAX`), fallback to a
-    /// default value.
+    /// For variable length options that exceeds the size limit (`u16::MAX`),
+    /// fallback to a default value.
     ///
     /// [RFC 8415, Section 21.1]: https://tools.ietf.org/html/rfc8415#section-21.1
-    fn record_length(opt: &Self::Record) -> usize {
-        4 + match opt {
+    fn serialized_len(&self) -> usize {
+        4 + match self {
             DhcpOption::ClientId(duid) | DhcpOption::ServerId(duid) => {
                 u16::try_from(duid.len()).unwrap_or(18).into()
             }
             DhcpOption::Iana(iana_data) => {
-                u16::try_from(IANA_HEADER_LEN + iana_data.options.records_bytes_len())
+                u16::try_from(IANA_HEADER_LEN + iana_data.options.serialized_len())
                     .expect("overflows")
                     .into()
             }
             DhcpOption::IaAddr(iaaddr_data) => {
-                u16::try_from(IAADDR_HEADER_LEN + iaaddr_data.options.records_bytes_len())
+                u16::try_from(IAADDR_HEADER_LEN + iaaddr_data.options.serialized_len())
                     .expect("overflows")
                     .into()
             }
@@ -658,24 +647,26 @@ impl<'a> RecordsSerializerImpl<'a> for DhcpOptionImpl {
         }
     }
 
-    /// Serializes an option and appends to input buffer based on option format defined in
-    /// [RFC 8415, Section 21.1].
+    /// Serializes an option and appends to input buffer based on option format
+    /// defined in [RFC 8415, Section 21.1].
     ///
-    /// For variable length options that exceeds the size limit (`u16::MAX`), fallback to
-    /// use a default value instead, so it is impossible for future changes to introduce
-    /// DoS vulnerabilities even if they accidentally allow such options to be injected.
+    /// For variable length options that exceeds the size limit (`u16::MAX`),
+    /// fallback to use a default value instead, so it is impossible for future
+    /// changes to introduce DoS vulnerabilities even if they accidentally allow
+    /// such options to be injected.
     ///
     /// # Panics
     ///
-    /// If buffer is too small. This means `record_length` is not correctly implemented.
+    /// `serialize_into` panics if `buf` is too small to hold the serialized
+    /// form of `self`.
     ///
     /// [RFC 8415, Section 21.1]: https://tools.ietf.org/html/rfc8415#section-21.1
-    fn serialize(mut buf: &mut [u8], opt: &Self::Record) {
+    fn serialize_into(&self, mut buf: &mut [u8]) {
         // Implements BufferViewMut, giving us write_obj_front.
         let mut buf = &mut buf;
-        let () = buf.write_obj_front(&U16::new(opt.code().into())).expect("buffer is too small");
+        let () = buf.write_obj_front(&U16::new(self.code().into())).expect("buffer is too small");
 
-        match opt {
+        match self {
             DhcpOption::ClientId(duid) | DhcpOption::ServerId(duid) => {
                 match u16::try_from(duid.len()) {
                     Ok(len) => {
@@ -693,13 +684,13 @@ impl<'a> RecordsSerializerImpl<'a> for DhcpOptionImpl {
                 }
             }
             DhcpOption::Iana(IanaSerializer { iaid, t1, t2, options }) => {
-                let len = u16::try_from(IANA_HEADER_LEN + options.records_bytes_len())
-                    .expect("overflows");
+                let len =
+                    u16::try_from(IANA_HEADER_LEN + options.serialized_len()).expect("overflows");
                 let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
                 let () = buf.write_obj_front(&U32::new(*iaid)).expect("buffer is too small");
                 let () = buf.write_obj_front(&U32::new(*t1)).expect("buffer is too small");
                 let () = buf.write_obj_front(&U32::new(*t2)).expect("buffer is too small");
-                let () = options.serialize_records(buf);
+                let () = options.serialize_into(buf);
             }
             DhcpOption::IaAddr(IaAddrSerializer {
                 addr,
@@ -707,8 +698,8 @@ impl<'a> RecordsSerializerImpl<'a> for DhcpOptionImpl {
                 valid_lifetime,
                 options,
             }) => {
-                let len = u16::try_from(IAADDR_HEADER_LEN + options.records_bytes_len())
-                    .expect("overflows");
+                let len =
+                    u16::try_from(IAADDR_HEADER_LEN + options.serialized_len()).expect("overflows");
                 let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
                 let () = buf.write_obj_front(&addr.octets()).expect("buffer is too small");
                 let () = buf
@@ -716,7 +707,7 @@ impl<'a> RecordsSerializerImpl<'a> for DhcpOptionImpl {
                     .expect("buffer is too small");
                 let () =
                     buf.write_obj_front(&U32::new(*valid_lifetime)).expect("buffer is too small");
-                let () = options.serialize_records(buf);
+                let () = options.serialize_into(buf);
             }
             DhcpOption::Oro(requested_opts) => {
                 let (requested_opts, len) = u16::try_from(2 * requested_opts.len()).map_or_else(
@@ -870,7 +861,7 @@ impl<'a, B: 'a + ByteSlice> ParsablePacket<B, ()> for Message<'a, B> {
 pub struct MessageBuilder<'a> {
     msg_type: MessageType,
     transaction_id: TransactionId,
-    options: RecordsSerializer<'a, DhcpOptionImpl, DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
+    options: RecordSequenceBuilder<DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
 }
 
 impl<'a> MessageBuilder<'a> {
@@ -880,7 +871,11 @@ impl<'a> MessageBuilder<'a> {
         transaction_id: TransactionId,
         options: &'a [DhcpOption<'a>],
     ) -> MessageBuilder<'a> {
-        MessageBuilder { msg_type, transaction_id, options: RecordsSerializer::new(options.iter()) }
+        MessageBuilder {
+            msg_type,
+            transaction_id,
+            options: RecordSequenceBuilder::new(options.iter()),
+        }
     }
 }
 
@@ -891,7 +886,7 @@ impl InnerPacketBuilder for MessageBuilder<'_> {
     /// [RFC 8415, Section 8]: https://tools.ietf.org/html/rfc8415#section-8
     fn bytes_len(&self) -> usize {
         let Self { msg_type, transaction_id, options } = self;
-        mem::size_of_val(msg_type) + mem::size_of_val(transaction_id) + options.records_bytes_len()
+        mem::size_of_val(msg_type) + mem::size_of_val(transaction_id) + options.serialized_len()
     }
 
     /// Serializes DHCPv6 message based on format defined in [RFC 8415, Section 8].
@@ -907,7 +902,7 @@ impl InnerPacketBuilder for MessageBuilder<'_> {
         let mut buffer = &mut buffer;
         let () = buffer.write_obj_front(msg_type).expect("buffer is too small");
         let () = buffer.write_obj_front(transaction_id).expect("buffer is too small");
-        let () = options.serialize_records(buffer);
+        let () = options.serialize_into(buffer);
     }
 }
 
@@ -1106,7 +1101,7 @@ mod tests {
         let mut buf = [0u8; 6];
         let option = DhcpOption::ElapsedTime(42);
 
-        let () = <DhcpOptionImpl as RecordsSerializerImpl>::serialize(&mut buf, &option);
+        option.serialize_into(&mut buf);
         assert_eq!(buf, [0, 8, 0, 2, 0, 42]);
 
         let options = Records::<_, ParsedDhcpOptionImpl>::parse_with_context(&buf[..], ())
@@ -1180,7 +1175,7 @@ mod tests {
         let mut buf = [0u8; 16];
         let option = DhcpOption::Iana(IanaSerializer::new(3456, 1024, 54321, &[]));
 
-        let () = <DhcpOptionImpl as RecordsSerializerImpl>::serialize(&mut buf, &option);
+        option.serialize_into(&mut buf);
         assert_eq!(buf, [0, 3, 0, 12, 0, 0, 13, 128, 0, 0, 4, 0, 0, 0, 212, 49]);
 
         let options = Records::<_, ParsedDhcpOptionImpl>::parse_with_context(&buf[..], ())
@@ -1220,7 +1215,7 @@ mod tests {
             &[],
         ));
 
-        let () = <DhcpOptionImpl as RecordsSerializerImpl>::serialize(&mut buf, &option);
+        option.serialize_into(&mut buf);
         assert_eq!(
             buf,
             [

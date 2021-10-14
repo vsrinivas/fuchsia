@@ -2594,7 +2594,7 @@ where
     ctx.send_ipv6_frame(
         device_id,
         dst_ip,
-        ndp::OptionsSerializer::<_>::new(options.iter())
+        ndp::OptionSequenceBuilder::<_>::new(options.iter())
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, B, M>::new(
                 src_ip,
@@ -3658,7 +3658,7 @@ mod tests {
     use net_types::ip::AddrSubnet;
     use packet::{Buf, GrowBuffer, ParseBuffer};
     use packet_formats::icmp::ndp::{
-        options::PrefixInformation, OptionsSerializer, RouterAdvertisement, RouterSolicitation,
+        options::PrefixInformation, OptionSequenceBuilder, RouterAdvertisement, RouterSolicitation,
     };
     use packet_formats::icmp::{IcmpEchoRequest, Icmpv6Packet};
     use packet_formats::ip::IpProto;
@@ -3749,7 +3749,7 @@ mod tests {
             options.push(NdpOptionBuilder::TargetLinkLayerAddress(mac));
         }
 
-        OptionsSerializer::new(options.iter())
+        OptionSequenceBuilder::new(options.iter())
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,
@@ -4934,7 +4934,7 @@ mod tests {
             .build::<DummyEventDispatcher>();
         let device_id = DeviceId::new_ethernet(0);
 
-        let mut icmpv6_packet_buf = OptionsSerializer::new(options.iter())
+        let mut icmpv6_packet_buf = OptionSequenceBuilder::new(options.iter())
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,
@@ -4979,7 +4979,7 @@ mod tests {
         // source link layer option is included (should not receive).
 
         let unspecified_source = Ipv6Addr::default();
-        let mut icmpv6_packet_buf = OptionsSerializer::new(options.iter())
+        let mut icmpv6_packet_buf = OptionSequenceBuilder::new(options.iter())
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 unspecified_source,
@@ -5490,7 +5490,7 @@ mod tests {
 
         // Receive a new RA but with the source link layer option
 
-        let mut icmpv6_packet_buf = OptionsSerializer::new(options.iter())
+        let mut icmpv6_packet_buf = OptionSequenceBuilder::new(options.iter())
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,
@@ -5546,7 +5546,7 @@ mod tests {
     fn test_receiving_router_advertisement_mtu_option() {
         fn packet_buf(src_ip: Ipv6Addr, dst_ip: Ipv6Addr, mtu: u32) -> Buf<Vec<u8>> {
             let options = &[NdpOptionBuilder::Mtu(mtu)];
-            OptionsSerializer::new(options.iter())
+            OptionSequenceBuilder::new(options.iter())
                 .into_serializer()
                 .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                     src_ip,
@@ -5656,7 +5656,7 @@ mod tests {
                 prefix,
             );
             let options = &[NdpOptionBuilder::PrefixInformation(p)];
-            OptionsSerializer::new(options.iter())
+            OptionSequenceBuilder::new(options.iter())
                 .into_serializer()
                 .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                     src_ip,
@@ -6975,7 +6975,7 @@ mod tests {
         fn rs_msg(src_ip: Ipv6Addr, src_mac: Mac, dst_ip: Ipv6Addr) -> Buf<Vec<u8>> {
             let mac_bytes = src_mac.bytes();
             let options = &[NdpOptionBuilder::SourceLinkLayerAddress(&mac_bytes)];
-            OptionsSerializer::<_>::new(options.iter())
+            OptionSequenceBuilder::<_>::new(options.iter())
                 .into_serializer()
                 .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                     src_ip,
@@ -7564,7 +7564,7 @@ mod tests {
             prefix,
         );
         let options = &[NdpOptionBuilder::PrefixInformation(p)];
-        OptionsSerializer::new(options.iter())
+        OptionSequenceBuilder::new(options.iter())
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,
