@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env fuchsia-vendored-python
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -42,7 +42,7 @@ def main():
 
     # Parse all OWNERS files
     owned = set()
-    for path, owners in path_to_owners.iteritems():
+    for path, owners in path_to_owners.items():
         with open(owners) as f:
             for line in f.readlines():
                 if line.strip().startswith(owner):
@@ -57,7 +57,7 @@ def main():
 
     # Print owned files
     for owned_path in sorted(owned):
-        print os.path.relpath(owned_path)
+        print(os.path.relpath(owned_path))
 
     return 0
 
