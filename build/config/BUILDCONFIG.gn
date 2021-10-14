@@ -371,6 +371,7 @@ if (zircon_toolchain == false) {
     "//build/config/rust:edition_2018",
     "//build/config/rust:incremental",
     "//build/config/rust:no_features",
+    "//build/config/rust:no_new_pass_manager",
     "//build/config/rust:target",
     "//build/config/rust:2018_idioms",
     "//build/config:werror",

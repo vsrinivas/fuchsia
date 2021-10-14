@@ -56,6 +56,11 @@ config("no_features") {
   rustflags = [ "-Zallow-features=" ]
 }
 
+# TODO(fxbug.dev/86602): Disable once this is properly supported by coverage.
+config("no_new_pass_manager") {
+  rustflags = [ "-Znew-llvm-pass-manager=no" ]
+}
+
 config("incremental") {
   if (rust_incremental != "") {
     rustflags = [ "-Cincremental=" + rust_incremental ]
