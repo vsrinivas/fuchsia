@@ -29,7 +29,10 @@ class Handle {
 };
 constexpr Handle kInvalidHandle = Handle(0);
 
+enum class TransportType { Channel };
+
 struct TransportVTable {
+  TransportType type;
   // Close the handle.
   void (*close)(Handle);
 };
@@ -48,7 +51,7 @@ class AnyUnownedTransport {
 
   template <typename Transport>
   typename Transport::UnownedType get() const {
-    ZX_ASSERT(vtable_ == &Transport::VTable);
+    ZX_ASSERT(vtable_->type == Transport::VTable.type);
     return typename Transport::UnownedType(handle_.value());
   }
 
@@ -92,13 +95,13 @@ class AnyTransport {
 
   template <typename Transport>
   typename Transport::UnownedType get() const {
-    ZX_ASSERT(vtable_ == &Transport::VTable);
+    ZX_ASSERT(vtable_->type == Transport::VTable.type);
     return typename Transport::UnownedType(handle_.value());
   }
 
   template <typename Transport>
   typename Transport::OwnedType release() {
-    ZX_ASSERT(vtable_ == &Transport::VTable);
+    ZX_ASSERT(vtable_->type == Transport::VTable.type);
     Handle temp = handle_;
     handle_ = kInvalidHandle;
     return typename Transport::OwnedType(temp.value());

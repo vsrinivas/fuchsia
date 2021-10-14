@@ -12,6 +12,7 @@ void handle_close(Handle handle) { zx_handle_close(handle.value()); }
 }  // namespace
 
 const TransportVTable ChannelTransport::VTable = {
+    .type = TransportType::Channel,
     .close = handle_close,
 };
 
