@@ -310,13 +310,13 @@ impl TestCodeBuilder for CppTestCode {
         self
     }
 
-    fn add_test_case<'a>(&'a mut self, marker: &str) -> &'a dyn TestCodeBuilder {
-        let fields: Vec<&str> = marker.rsplit("::").collect();
+    fn add_test_case<'a>(&'a mut self, protocol: &str) -> &'a dyn TestCodeBuilder {
+        let fields: Vec<&str> = protocol.rsplit("::").collect();
         self.test_case.push(
             TEST_FUNC_TEMPLATE
                 .replace("TEST_CLASS_NAME", format!("{}Test", self.component_camel_name).as_str())
                 .replace("TEST_NAME", fields[0])
-                .replace("PROTOCOL_TYPE", &marker),
+                .replace("PROTOCOL_TYPE", &protocol),
         );
         self
     }

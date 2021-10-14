@@ -248,11 +248,13 @@ impl TestCodeBuilder for RustTestCode {
         self
     }
 
-    fn add_test_case<'a>(&'a mut self, marker: &str) -> &'a dyn TestCodeBuilder {
+    fn add_test_case<'a>(&'a mut self, protocol: &str) -> &'a dyn TestCodeBuilder {
+        let protocol_marker = format!("{}Marker", &protocol);
         self.test_case.push(
             TEST_FUNC_TEMPLATE
-                .replace("MARKER_VAR_NAME", &marker.to_ascii_lowercase())
-                .replace("MARKER", &marker),
+                .replace("MARKER_VAR_NAME", &protocol_marker.to_ascii_lowercase())
+                .replace("MARKER", &protocol_marker)
+                .replace("PROTOCOL", &protocol),
         );
         self
     }

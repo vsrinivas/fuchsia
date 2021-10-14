@@ -378,7 +378,7 @@ impl Protocols {
             .or_insert_with_key(|_| HashMap::new())
             .entry(fidl_lib)
             .or_insert(Vec::new());
-        marker.push(format!("{}Marker", capture.name("protocol").unwrap().as_str()));
+        marker.push(format!("{}", capture.name("protocol").unwrap().as_str()));
         marker.dedup();
         Ok(())
     }
@@ -436,8 +436,8 @@ mod test {
 
         let d_markers = d.get("fidl_fuchsia_diagnostics_internal").unwrap();
         assert_eq!(d_markers.len(), 2);
-        assert_eq!(d_markers[0], "FooControllerMarker");
-        assert_eq!(d_markers[1], "BarControllerMarker");
+        assert_eq!(d_markers[0], "FooController");
+        assert_eq!(d_markers[1], "BarController");
 
         let c = p.protocols.get("cobalt").unwrap();
         assert_eq!(c.len(), 2);
@@ -446,8 +446,8 @@ mod test {
 
         let c_markers = c.get("fidl_fuchsia_metrics").unwrap();
         assert_eq!(c_markers.len(), 2);
-        assert_eq!(c_markers[0], "FooControllerMarker");
-        assert_eq!(c_markers[1], "BarControllerMarker");
+        assert_eq!(c_markers[0], "FooController");
+        assert_eq!(c_markers[1], "BarController");
 
         Ok(())
     }

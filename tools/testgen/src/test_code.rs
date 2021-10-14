@@ -39,7 +39,7 @@ pub trait TestCodeBuilder {
         storage_path: &str,
         targets: Vec<String>,
     ) -> &'a dyn TestCodeBuilder;
-    fn add_test_case<'a>(&'a mut self, marker: &str) -> &'a dyn TestCodeBuilder;
+    fn add_test_case<'a>(&'a mut self, protocol: &str) -> &'a dyn TestCodeBuilder;
     fn add_mock_impl<'a>(
         &'a mut self,
         component_name: &str,

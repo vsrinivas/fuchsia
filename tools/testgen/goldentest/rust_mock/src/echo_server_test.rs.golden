@@ -28,9 +28,11 @@ pub async fn create_realm() -> Result<RealmInstance, Error> {
 }
 
 #[fuchsia::test]
-async fn test_echomarker() -> Result<(), Error> {
+async fn test_echomarker() {
     let instance = create_realm().await.expect("created testing realm");
-    let echomarker = instance.root.connect_to_protocol_at_exposed_dir::<EchoMarker>()?;
+    let echomarker = instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<EchoMarker>()
+        .expect("connecting to Echo");
     // Add test for the protocol
-    Ok(())
 }
