@@ -6,6 +6,7 @@ package clock
 
 import (
 	"context"
+	"sync"
 	"time"
 )
 
@@ -60,6 +61,7 @@ func (t *timer) advanceTo(newTime time.Time) {
 
 // FakeClock provides support for mocking the current time in tests.
 type FakeClock struct {
+	mu          sync.Mutex
 	now         time.Time
 	timer       *timer
 	afterCalled chan struct{}
@@ -70,10 +72,14 @@ func NewFakeClock() *FakeClock {
 }
 
 func (c *FakeClock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	return c.now
 }
 
 func (c *FakeClock) After(d time.Duration) <-chan time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	t := &timer{c.now.Add(d), make(chan time.Time, 1)}
 	c.timer = t
 	if len(c.afterCalled) == 0 {
@@ -83,6 +89,8 @@ func (c *FakeClock) After(d time.Duration) <-chan time.Time {
 }
 
 func (c *FakeClock) Advance(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.now = c.now.Add(d)
 	// Notify timer that the time has changed
 	if c.timer != nil {
