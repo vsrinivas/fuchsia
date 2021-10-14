@@ -76,6 +76,62 @@ func extractPythonScript(tokens []string) string {
 	return ""
 }
 
+func isWrapperPythonScript(script string) bool {
+	for _, s := range []string{"action_tracer.py", "output_cacher.py"} {
+		if strings.HasSuffix(script, s) {
+			return true
+		}
+	}
+	return false
+}
+
+// extractCommand extracts the actual script/binary being run from a full
+// command. This function includes logic to handle special wrapper scripts used
+// in Fuchsia's build.
+//
+// This function is best-effort, if nothing can be successfully extracted, an
+// empty string is returned.
+func extractCommand(cmd []string) string {
+	for i, token := range cmd {
+		c := baseCmd(token)
+		if c == "env" {
+			continue
+		}
+
+		// gn_run_binary.sh is a script to run an arbitrary binary produced by the
+		// current build.
+		//
+		// First argument to gn_run_binary.sh is the bin directory of the toolchain,
+		// skip it to take the second argument, which is the binary to run.
+		if c == "gn_run_binary.sh" {
+			if i+2 < len(cmd) {
+				return baseCmd(cmd[i+2])
+			}
+			break
+		}
+
+		if pythonRE.MatchString(c) {
+			if script := extractPythonScript(cmd); script != "" {
+				if !isWrapperPythonScript(script) {
+					return script
+				}
+				// The top level command we extracted is one of the wrapper python
+				// scripts, the actual command is after --, so abandon everything before
+				// that.
+				for j := i + 1; j < len(cmd); j++ {
+					if cmd[j] == "--" && j+1 < len(cmd) {
+						return extractCommand(cmd[j+1:])
+					}
+				}
+			}
+			break
+		}
+
+		return c
+	}
+	return ""
+}
+
 func baseCmd(cmd string) string {
 	return strings.Trim(path.Base(cmd), "()")
 }
@@ -104,33 +160,8 @@ func (s Step) Category() string {
 
 	var categories []string
 	for _, command := range commands {
-		for i, token := range command {
-			c := baseCmd(token)
-			if c == "env" {
-				continue
-			}
-
-			// gn_run_binary.sh is a script to run an arbitrary binary produced by the
-			// current build.
-			//
-			// First argument to gn_run_binary.sh is the bin directory of the toolchain,
-			// skip it to take the second argument, which is the binary to run.
-			if c == "gn_run_binary.sh" {
-				if i+2 < len(command) {
-					categories = append(categories, baseCmd(command[i+2]))
-				}
-				break
-			}
-
-			if pythonRE.MatchString(c) {
-				if script := extractPythonScript(command); script != "" {
-					categories = append(categories, script)
-				}
-				break
-			}
-
+		if c := extractCommand(command); c != "" {
 			categories = append(categories, c)
-			break
 		}
 	}
 	return strings.Join(categories, ",")

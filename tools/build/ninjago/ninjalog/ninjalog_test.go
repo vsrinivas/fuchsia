@@ -655,6 +655,22 @@ func TestCategory(t *testing.T) {
 			},
 			want: "compute_atom_api.py",
 		},
+		{
+			step: Step{
+				Command: &compdb.Command{
+					Command: "../../prebuilt/third_party/python3/linux-x64/bin/python3.8 action_tracer.py --some test args to ignore -- real_command && touch",
+				},
+			},
+			want: "real_command,touch",
+		},
+		{
+			step: Step{
+				Command: &compdb.Command{
+					Command: "../../prebuilt/third_party/python3/linux-x64/bin/python3.8 output_cacher.py --some args --to ignore -- ../../prebuilt/third_party/python3/linux-x64/bin/python3.8 action_tracer.py --yet more -args to ignore -- ../../prebuilt/third_party/python3/linux-x64/bin/python3.8 build_everything.py",
+				},
+			},
+			want: "build_everything.py",
+		},
 	} {
 		if got := tc.step.Category(); got != tc.want {
 			t.Errorf("Category() = %s, want: %s, step: %#v", got, tc.want, tc.step)
