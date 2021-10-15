@@ -71,7 +71,12 @@ def main():
     if args.boot_args is not None:
         config["boot_args"] = json.load(args.boot_args)
 
-    config["bootfs_files"] = json.load(args.bootfs_entries)
+    config["bootfs_files"] = [
+        {
+            "source": entry["source"],
+            "destination": entry["destination"],
+        } for entry in json.load(args.bootfs_entries)
+    ]
 
     json.dump(config, args.output, indent=2)
 

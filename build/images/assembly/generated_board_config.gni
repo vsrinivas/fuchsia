@@ -213,7 +213,6 @@ template("generated_board_config") {
       update_package_name = update_package_name
       base_package_name = base_package_name
       board_name = invoker.board_name
-      arch = target_cpu
       zbi = {
         name = invoker.zbi_name
         partition = zircon_a_partition
@@ -294,12 +293,13 @@ template("generated_board_config") {
           ]
 
           if (assembly_include_account_in_fvm) {
-            account_volume_parameters = {
-              MinFS = {
-                name = "account"
-              }
-            }
-            filesystems += [ account_volume_parameters ]
+            filesystems += [
+              {
+                MinFS = {
+                  name = "account"
+                }
+              },
+            ]
           }
         }
       }

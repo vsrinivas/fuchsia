@@ -10,6 +10,7 @@ use std::path::PathBuf;
 
 /// The set of information that defines a fuchsia product.
 #[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct ProductConfig {
     /// The packages whose files get added to the base package. The
     /// packages themselves are not added, but their individual files are
@@ -44,6 +45,7 @@ pub struct ProductConfig {
 
 /// The information required to specify a kernel and its arguments.
 #[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct KernelConfig {
     /// The path to the prebuilt kernel.
     pub path: PathBuf,
@@ -59,6 +61,7 @@ pub struct KernelConfig {
 
 /// The set of information that defines a fuchsia board.
 #[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct BoardConfig {
     /// The path to a file indicating the version of the product.
     pub version_file: Option<PathBuf>,
@@ -110,6 +113,7 @@ fn default_base_package_name() -> String {
 
 /// A mapping between a file source and destination.
 #[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct FileEntry {
     /// The path of the source file.
     pub source: PathBuf,
@@ -120,6 +124,7 @@ pub struct FileEntry {
 
 /// The information required to sign a VBMeta image.
 #[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct VBMetaConfig {
     /// The partition name to flash the VBMeta.
     pub partition: String,
@@ -140,6 +145,7 @@ pub struct VBMetaConfig {
 
 /// A bootloader to add to the update package and flash-files.
 #[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct BootloaderEntry {
     /// The partition name to flash the bootloader.
     pub partition: Option<String>,
@@ -157,6 +163,7 @@ pub struct BootloaderEntry {
 
 /// The information required to construct a ZBI.
 #[derive(Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct ZbiConfig {
     /// The partition name to flash the ZBI.
     pub partition: String,
@@ -191,6 +198,7 @@ pub struct ZbiConfig {
 ///  -o <output path to write to>
 ///  -B <build dir, relative to tool's pwd>
 #[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct ZbiSigningScript {
     /// The path to the tool to use
     pub tool: PathBuf,
@@ -215,6 +223,7 @@ fn default_zbi_compression() -> String {
 
 /// The information required to construct a BlobFS.
 #[derive(Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct BlobFSConfig {
     /// The layout format of the blobs.
     /// Typically "padded" or "compact"
@@ -235,6 +244,7 @@ fn default_true() -> bool {
 
 /// The information required to construct a FVM.
 #[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct FvmConfig {
     /// The partition name to flash the FVM.
     pub partition: String,
@@ -319,6 +329,7 @@ pub enum FvmFilesystemEntry {
 
 /// The information required to update and flash recovery.
 #[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct RecoveryConfig {
     /// The name of the recovery image in the update package
     pub name: String,
@@ -537,7 +548,6 @@ mod tests {
               },
               "zbi": {
                 "partition": "name",
-                "backstop_file": "backstop.txt"
               },
               "recovery": {
                 "name": "recovery",
