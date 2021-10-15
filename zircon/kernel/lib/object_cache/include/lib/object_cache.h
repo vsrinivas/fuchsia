@@ -228,6 +228,7 @@ class ObjectCache<T, Option::Single, Allocator> {
   template <typename... Args>
   EnableIfConstructible<zx::status<PtrType>, Args...> Allocate(Args&&... args) TA_EXCL(lock_) {
     LocalTraceDuration<Basic> trace{"ObjectCache::Allocate"_stringref};
+    DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
     AutoPreemptDisabler preempt_disable;
 
     while (true) {
@@ -625,6 +626,7 @@ class ObjectCache<T, Option::PerCpu, Allocator> {
   template <typename... Args>
   EnableIfConstructible<zx::status<PtrType>, Args...> Allocate(Args&&... args) {
     DEBUG_ASSERT(cpu_caches_ != nullptr);
+    DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
 
     AutoPreemptDisabler preempt_disable;
     const cpu_num_t current_cpu = arch_curr_cpu_num();
