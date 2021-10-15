@@ -20,13 +20,13 @@ class RegisterTracer : public magma::RegisterIo::Hook {
 
   std::vector<Operation>& trace() { return trace_; }
 
-  void Write32(uint32_t offset, uint32_t val) override {
+  void Write32Flipped(uint32_t offset, uint32_t val) override {
     trace_.emplace_back(Operation{Operation::WRITE32, offset, val});
   }
-  void Read32(uint32_t offset, uint32_t val) override {
+  void Read32Flipped(uint32_t offset, uint32_t val) override {
     trace_.emplace_back(Operation{Operation::READ32, offset, val});
   }
-  void Read64(uint32_t offset, uint64_t val) override {
+  void Read64Flipped(uint32_t offset, uint64_t val) override {
     trace_.emplace_back(Operation{Operation::READ64, offset, val});
   }
 

@@ -12,14 +12,14 @@ class Hook : public magma::RegisterIo::Hook {
  public:
   Hook(magma::RegisterIo* register_io) : register_io_(register_io) {}
 
-  void Write32(uint32_t offset, uint32_t val) override {}
-  void Read64(uint32_t offset, uint64_t val) override {}
+  void Write32Flipped(uint32_t offset, uint32_t val) override {}
+  void Read64Flipped(uint32_t offset, uint64_t val) override {}
 
-  void Read32(uint32_t offset, uint32_t val) override {
+  void Read32Flipped(uint32_t offset, uint32_t val) override {
     // Increment the bottom 8 bits - this may rollover the upper timestamp bits
     uint8_t bits = val & 0xff;
     bits += 1;
-    register_io_->Write32(offset, (val & 0xFFFFFF00) | bits);
+    register_io_->Write32Flipped(offset, (val & 0xFFFFFF00) | bits);
   }
 
   // Raw pointer to avoid circular reference. This class is owned by this
@@ -40,8 +40,8 @@ constexpr uint64_t kTimestampBits = 0xff1234abcd;
 
 TEST_F(TestTimestamp, Rollover) {
   uint32_t offset = registers::Timestamp::Get().addr();
-  register_io_->Write32(offset + 4, kTimestampBits >> 32);
-  register_io_->Write32(offset, static_cast<uint32_t>(kTimestampBits));
+  register_io_->Write32Flipped(offset + 4, kTimestampBits >> 32);
+  register_io_->Write32Flipped(offset, static_cast<uint32_t>(kTimestampBits));
 
   // Hook will increment the timestamp register
   register_io_->InstallHook(std::make_unique<Hook>(register_io_.get()));
@@ -54,8 +54,8 @@ TEST_F(TestTimestamp, Rollover) {
 TEST_F(TestTimestamp, NoRollover) {
   uint32_t offset = registers::Timestamp::Get().addr();
   constexpr uint64_t kTimestampBits = 0xff1234abcd;
-  register_io_->Write32(offset + 4, kTimestampBits >> 32);
-  register_io_->Write32(offset, static_cast<uint32_t>(kTimestampBits));
+  register_io_->Write32Flipped(offset + 4, kTimestampBits >> 32);
+  register_io_->Write32Flipped(offset, static_cast<uint32_t>(kTimestampBits));
 
   EXPECT_EQ(
       0xff1234abcdul,

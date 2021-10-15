@@ -12,22 +12,22 @@ static void test_mock_mmio(magma::PlatformMmio* mmio) {
   // Verify we can write to and read from the mmio space.
   {
     uint32_t expected = 0xdeadbeef;
-    mmio->Write32(0, expected);
+    mmio->Write32Flipped(0, expected);
     uint32_t val = mmio->Read32(0);
     EXPECT_EQ(val, expected);
 
-    mmio->Write32(mmio->size() - sizeof(uint32_t), expected);
+    mmio->Write32Flipped(mmio->size() - sizeof(uint32_t), expected);
     val = mmio->Read32(mmio->size() - sizeof(uint32_t));
     EXPECT_EQ(val, expected);
   }
 
   {
     uint64_t expected = 0xabcddeadbeef1234;
-    mmio->Write64(0, expected);
+    mmio->Write64Flipped(0, expected);
     uint64_t val = mmio->Read64(0);
     EXPECT_EQ(val, expected);
 
-    mmio->Write64(mmio->size() - sizeof(uint64_t), expected);
+    mmio->Write64Flipped(mmio->size() - sizeof(uint64_t), expected);
     val = mmio->Read64(mmio->size() - sizeof(uint64_t));
     EXPECT_EQ(val, expected);
   }

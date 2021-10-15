@@ -127,8 +127,8 @@ bool PerformanceCounters::TriggerRead() {
   }
   last_perf_base_ =
       registers::PerformanceCounterBase::Get().ReadFrom(owner_->register_io()).reg_value();
-  owner_->register_io()->Write32(registers::GpuCommand::kOffset,
-                                 registers::GpuCommand::kCmdSamplePerformanceCounters);
+  owner_->register_io()->Write32Flipped(registers::GpuCommand::kOffset,
+                                        registers::GpuCommand::kCmdSamplePerformanceCounters);
   counter_state_ = PerformanceCounterState::kTriggered;
   return true;
 }

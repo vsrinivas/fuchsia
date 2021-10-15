@@ -288,9 +288,9 @@ class CoreReadyState {
     uint32_t value_low = value & 0xffffffff;
     uint32_t value_high = (value >> 32) & 0xffffffff;
     if (value_low)
-      register_io->Write32(offset, value_low);
+      register_io->Write32Flipped(offset, value_low);
     if (value_high)
-      register_io->Write32(offset + 4, value_high);
+      register_io->Write32Flipped(offset + 4, value_high);
   }
 };
 
