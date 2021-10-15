@@ -454,7 +454,13 @@ impl FileObject {
         self.ops().as_any().downcast_ref::<T>()
     }
 
-    pub fn blocking_op<T, Op>(&self, task: &Task, mut op: Op, events: FdEvents) -> Result<T, Errno>
+    pub fn blocking_op<T, Op>(
+        &self,
+        task: &Task,
+        mut op: Op,
+        events: FdEvents,
+        timeout: Option<zx::Duration>,
+    ) -> Result<T, Errno>
     where
         Op: FnMut() -> Result<T, Errno>,
     {
@@ -467,7 +473,10 @@ impl FileObject {
         loop {
             self.ops().wait_async(self, &waiter, events, WaitCallback::none());
             match op() {
-                Err(errno) if errno == EAGAIN => waiter.wait(task)?,
+                Err(errno) if errno == EAGAIN => waiter.wait_until(
+                    task,
+                    timeout.map(|duration| zx::Time::after(duration)).unwrap_or(zx::Time::INFINITE),
+                )?,
                 result => return result,
             }
         }
@@ -481,6 +490,7 @@ impl FileObject {
             task,
             || self.ops().read(self, task, data),
             FdEvents::POLLIN | FdEvents::POLLHUP,
+            None,
         )
     }
 
@@ -492,6 +502,7 @@ impl FileObject {
             task,
             || self.ops().read_at(self, task, offset, data),
             FdEvents::POLLIN | FdEvents::POLLHUP,
+            None,
         )
     }
 
@@ -511,6 +522,7 @@ impl FileObject {
                 }
             },
             FdEvents::POLLOUT | FdEvents::POLLHUP,
+            None,
         )
     }
 
@@ -530,6 +542,7 @@ impl FileObject {
                 self.ops().write_at(self, task, offset, data)
             },
             FdEvents::POLLOUT | FdEvents::POLLHUP,
+            None,
         )
     }
 

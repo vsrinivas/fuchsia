@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use fuchsia_cprng::cprng_draw;
+use fuchsia_zircon as zx;
 use std::convert::TryInto;
 use zerocopy::AsBytes;
 
@@ -195,6 +196,7 @@ pub fn sys_accept4(
         &ctx.task,
         || socket.accept(&ctx.task),
         FdEvents::POLLIN | FdEvents::POLLHUP,
+        None,
     )?;
 
     if !user_socket_address.is_null() {
@@ -487,6 +489,14 @@ pub fn sys_getsockopt(
                 .as_bytes()
                 .to_owned(),
             SO_PEERSEC => "unconfined".as_bytes().to_vec(),
+            SO_RCVTIMEO => {
+                let duration = socket.get_receive_timeout().unwrap_or(zx::Duration::default());
+                timeval_from_duration(duration).as_bytes().to_owned()
+            }
+            SO_SNDTIMEO => {
+                let duration = socket.get_send_timeout().unwrap_or(zx::Duration::default());
+                timeval_from_duration(duration).as_bytes().to_owned()
+            }
             _ => return error!(ENOPROTOOPT),
         },
         _ => return error!(ENOPROTOOPT),
@@ -503,14 +513,40 @@ pub fn sys_getsockopt(
 }
 
 pub fn sys_setsockopt(
-    _ctx: &SyscallContext<'_>,
-    _fd: FdNumber,
-    _level: u32,
-    _optname: u32,
-    _optval: UserAddress,
-    _optlen: socklen_t,
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    level: u32,
+    optname: u32,
+    user_optval: UserAddress,
+    optlen: socklen_t,
 ) -> Result<SyscallResult, Errno> {
-    error!(ENOSYS)
+    let file = ctx.task.files.get(fd)?;
+    let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
+
+    let read_timeval = || {
+        let user_duration = UserRef::<timeval>::new(user_optval);
+        if optlen != user_duration.len() as socklen_t {
+            return error!(EINVAL);
+        }
+        let mut duration = timeval::default();
+        ctx.task.mm.read_object(user_duration, &mut duration)?;
+        let duration = duration_from_timeval(duration)?;
+        Ok(if duration == zx::Duration::default() { None } else { Some(duration) })
+    };
+
+    match level {
+        SOL_SOCKET => match optname {
+            SO_RCVTIMEO => {
+                socket.set_receive_timeout(read_timeval()?);
+            }
+            SO_SNDTIMEO => {
+                socket.set_send_timeout(read_timeval()?);
+            }
+            _ => return error!(ENOPROTOOPT),
+        },
+        _ => return error!(ENOPROTOOPT),
+    }
+    Ok(SUCCESS)
 }
 
 pub fn sys_shutdown(

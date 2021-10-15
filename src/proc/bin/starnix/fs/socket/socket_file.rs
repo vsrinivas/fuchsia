@@ -90,6 +90,7 @@ impl SocketFile {
                 Ok(actual)
             },
             FdEvents::POLLOUT | FdEvents::POLLHUP,
+            self.socket.get_send_timeout(),
         )
     }
 
@@ -114,6 +115,7 @@ impl SocketFile {
                 self.socket.read(task, &mut user_buffers)
             },
             FdEvents::POLLIN | FdEvents::POLLHUP,
+            self.socket.get_receive_timeout(),
         )
     }
 }

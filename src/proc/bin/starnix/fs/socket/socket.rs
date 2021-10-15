@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_zircon as zx;
 use std::collections::VecDeque;
 
 use super::*;
@@ -41,6 +42,12 @@ pub struct SocketInner {
     /// Whether this socket is writable.
     writable: bool,
 
+    /// See SO_RCVTIMEO.
+    receive_timeout: Option<zx::Duration>,
+
+    /// See SO_SNDTIMEO.
+    send_timeout: Option<zx::Duration>,
+
     /// Unix credentials of the owner of this socket, for SO_PEERCRED.
     cred: Option<ucred>,
 
@@ -79,6 +86,8 @@ impl Socket {
             address: None,
             readable: true,
             writable: true,
+            receive_timeout: None,
+            send_timeout: None,
             cred: None,
             state: SocketState::Disconnected,
         })))
@@ -149,6 +158,22 @@ impl Socket {
         let peer = self.lock().peer()?.clone();
         let peer = peer.lock();
         peer.cred.clone()
+    }
+
+    pub fn get_receive_timeout(&self) -> Option<zx::Duration> {
+        self.lock().receive_timeout
+    }
+
+    pub fn set_receive_timeout(&self, value: Option<zx::Duration>) {
+        self.lock().receive_timeout = value;
+    }
+
+    pub fn get_send_timeout(&self) -> Option<zx::Duration> {
+        self.lock().send_timeout
+    }
+
+    pub fn set_send_timeout(&self, value: Option<zx::Duration>) {
+        self.lock().send_timeout = value;
     }
 
     /// Initiate a connection from this socket to the given server socket.

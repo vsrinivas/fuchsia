@@ -7,10 +7,16 @@ use fuchsia_zircon as zx;
 use crate::error;
 use crate::types::*;
 
+const MICROS_PER_SECOND: i64 = 1000 * 1000;
 pub const NANOS_PER_SECOND: i64 = 1000 * 1000 * 1000;
 
 pub fn timeval_from_time(time: zx::Time) -> timeval {
     let nanos = time.into_nanos();
+    timeval { tv_sec: nanos / NANOS_PER_SECOND, tv_usec: (nanos % NANOS_PER_SECOND) / 1000 }
+}
+
+pub fn timeval_from_duration(duration: zx::Duration) -> timeval {
+    let nanos = duration.into_nanos();
     timeval { tv_sec: nanos / NANOS_PER_SECOND, tv_usec: (nanos % NANOS_PER_SECOND) / 1000 }
 }
 
@@ -29,6 +35,13 @@ pub fn duration_from_timespec(ts: timespec) -> Result<zx::Duration, Errno> {
         return error!(EINVAL);
     }
     return Ok(zx::Duration::from_seconds(ts.tv_sec) + zx::Duration::from_nanos(ts.tv_nsec));
+}
+
+pub fn duration_from_timeval(tv: timeval) -> Result<zx::Duration, Errno> {
+    if tv.tv_usec >= MICROS_PER_SECOND {
+        return error!(EINVAL);
+    }
+    return Ok(zx::Duration::from_seconds(tv.tv_sec) + zx::Duration::from_micros(tv.tv_usec));
 }
 
 /// Returns a `zx::Time` for the given `timespec`, treating the `timespec` as an absolute point in

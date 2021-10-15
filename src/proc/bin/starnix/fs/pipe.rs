@@ -278,6 +278,7 @@ impl FileOps for PipeFileObject {
                 Ok(actual)
             },
             FdEvents::POLLOUT,
+            None,
         )
     }
 
