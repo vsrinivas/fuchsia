@@ -59,9 +59,9 @@ void Image::InitializeInspect(inspect::Node* parent_node) {
 mtx_t* Image::mtx() { return controller_->mtx(); }
 
 void Image::PrepareFences(fbl::RefPtr<FenceReference>&& wait,
-                          fbl::RefPtr<FenceReference>&& signal) {
+                          fbl::RefPtr<FenceReference>&& retire) {
   wait_fence_ = std::move(wait);
-  signal_fence_ = std::move(signal);
+  retire_fence_ = std::move(retire);
 
   if (wait_fence_) {
     zx_status_t status = wait_fence_->StartReadyWait();
@@ -91,14 +91,14 @@ void Image::StartPresent() {
 }
 
 void Image::EarlyRetire() {
-  // A client may re-use an image as soon as signal_fence_ fires. Set in_use_ first.
+  // A client may re-use an image as soon as retire_fence_ fires. Set in_use_ first.
   std::atomic_store(&in_use_, false);
   if (wait_fence_) {
-    wait_fence_->SetImmediateRelease(std::move(signal_fence_));
+    wait_fence_->SetImmediateRelease(std::move(retire_fence_));
     wait_fence_ = nullptr;
-  } else if (signal_fence_) {
-    signal_fence_->Signal();
-    signal_fence_ = nullptr;
+  } else if (retire_fence_) {
+    retire_fence_->Signal();
+    retire_fence_ = nullptr;
   }
 }
 
@@ -118,11 +118,11 @@ void Image::StartRetire() {
   ZX_DEBUG_ASSERT(mtx_trylock(mtx()) == thrd_busy);
 
   if (!presenting_) {
-    RetireWithFence(std::move(signal_fence_));
+    RetireWithFence(std::move(retire_fence_));
   } else {
     retiring_ = true;
     retiring_property_.Set(true);
-    armed_signal_fence_ = std::move(signal_fence_);
+    armed_retire_fence_ = std::move(retire_fence_);
   }
 }
 
@@ -133,7 +133,7 @@ void Image::OnRetire() {
   presenting_property_.Set(false);
 
   if (retiring_) {
-    RetireWithFence(std::move(armed_signal_fence_));
+    RetireWithFence(std::move(armed_retire_fence_));
     retiring_ = false;
     retiring_property_.Set(false);
   }
@@ -153,8 +153,8 @@ void Image::ResetFences() {
   }
 
   wait_fence_ = nullptr;
-  armed_signal_fence_ = nullptr;
-  signal_fence_ = nullptr;
+  armed_retire_fence_ = nullptr;
+  retire_fence_ = nullptr;
 }
 
 }  // namespace display

@@ -34,6 +34,23 @@ typedef struct image_node {
   fbl::RefPtr<class Image> self;
 } image_node_t;
 
+// An Image is both a reference to an imported pixel buffer (hereafter ImageRef)
+// and the state machine (hereafter ImageUse) for tracking its use as part of a config.
+//
+// ImageUse can be NOT_READY, READY, ACQUIRED, or PRESENTED.
+//   NOT_READY: initial state, transitions to READY when wait_event is null or signaled.
+//              When returning to NOT_READY via EarlyRetire, the signal_fence will fire.
+//   READY: the related ImageRef is ready for use. Controller::ApplyConfig may request a
+//          move to ACQUIRED (Acquire) or NOT_READY (EarlyRetire) because another ImageUse
+//          was ACQUIRED instead.
+//   ACQUIRED: this image will be used on the next display flip. Transitions to PRESENTED
+//             when the display hardware reports it in OnVsync.
+//   PRESENTED: this image has been observed in OnVsync. Transitions to NOT_READY when
+//              the Controller determines that a new ImageUse has been PRESENTED and
+//              this one can be retired.
+//
+// One special transition exists: upon the owning Client's death/disconnection, the
+// ImageUse will move from ACQUIRED to NOT_READY.
 class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image>> {
  public:
   Image(Controller* controller, const image_t& info, zx::vmo vmo, uint32_t stride_px,
@@ -50,8 +67,9 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   bool Acquire();
   // Marks the image as not in use. Should only be called before PrepareFences.
   void DiscardAcquire();
-  // Called to set this image's fences and prepare the image to be displayed.
-  void PrepareFences(fbl::RefPtr<FenceReference>&& wait, fbl::RefPtr<FenceReference>&& signal);
+  // Prepare the image for display. It will not be READY until `wait` is
+  // signaled, and once the image is no longer displayed `retire` will be signaled.
+  void PrepareFences(fbl::RefPtr<FenceReference>&& wait, fbl::RefPtr<FenceReference>&& retire);
   // Called to immediately retire the image if StartPresent hasn't been called yet.
   void EarlyRetire();
   // Called when the image is passed to the display hardware.
@@ -109,12 +127,16 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   // |id_| of the client that created the image.
   const uint32_t client_id_;
 
+  // Indicates that the image contents are ready for display.
   // Only ever accessed on loop thread, so no synchronization
   fbl::RefPtr<FenceReference> wait_fence_ = nullptr;
-  // signal_fence_ is only accessed on the loop. armed_signal_fence_ is accessed
+
+  // retire_fence_ is signaled when an image is no longer used on a display.
+  // retire_fence_ is only accessed on the loop. armed_retire_fence_ is accessed
   // under the controller mutex. See comment in ::OnRetire for more details.
-  fbl::RefPtr<FenceReference> signal_fence_ = nullptr;
-  fbl::RefPtr<FenceReference> armed_signal_fence_ __TA_GUARDED(mtx()) = nullptr;
+  // All retires are performed by the Controller's ApplyConfig/OnDisplayVsync loop.
+  fbl::RefPtr<FenceReference> retire_fence_ = nullptr;
+  fbl::RefPtr<FenceReference> armed_retire_fence_ __TA_GUARDED(mtx()) = nullptr;
 
   // Flag which indicates that the image is currently in some display configuration.
   std::atomic_bool in_use_ = {};
