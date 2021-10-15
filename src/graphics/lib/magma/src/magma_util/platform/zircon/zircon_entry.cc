@@ -157,8 +157,9 @@ class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::Device>,
       return;
     }
 
-    _completer.Reply(zx::channel(connection->GetClientEndpoint()),
-                     zx::channel(connection->GetClientNotificationEndpoint()));
+    _completer.Reply(
+        fidl::ClientEnd<fuchsia_gpu_magma::Primary>(zx::channel(connection->GetClientEndpoint())),
+        zx::channel(connection->GetClientNotificationEndpoint()));
 
     this->magma_system_device_->StartConnectionThread(std::move(connection));
   }

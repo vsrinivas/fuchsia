@@ -223,8 +223,8 @@ void ZirconPlatformConnection::ExecuteCommandBufferWithResources2(
 
   *command_buffer = {
       .resource_count = static_cast<uint32_t>(request->resources.count()),
-      .batch_buffer_resource_index = request->command_buffer.batch_buffer_resource_index,
-      .batch_start_offset = request->command_buffer.batch_start_offset,
+      .batch_buffer_resource_index = request->command_buffer.resource_index,
+      .batch_start_offset = request->command_buffer.start_offset,
       .wait_semaphore_count = static_cast<uint32_t>(request->wait_semaphores.count()),
       .signal_semaphore_count = static_cast<uint32_t>(request->signal_semaphores.count()),
       .flags = static_cast<uint64_t>(request->command_buffer.flags),
@@ -315,8 +315,8 @@ void ZirconPlatformConnection::BufferRangeOp(BufferRangeOpRequestView request,
       SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
       return;
   }
-  magma::Status status = delegate_->BufferRangeOp(request->buffer_id, buffer_op,
-                                                  request->start_bytes, request->length);
+  magma::Status status =
+      delegate_->BufferRangeOp(request->buffer_id, buffer_op, request->offset, request->length);
 
   if (!status) {
     SetError(&completer, status.get());

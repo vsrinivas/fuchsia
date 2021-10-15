@@ -1,20 +1,32 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 library fuchsia.gpu.magma;
 
 using fuchsia.url;
 using zx;
 using fuchsia.memorypressure;
 
+/// Magma is the GPU driver design for Fuchsia.
+///
+/// Magma has two driver components: a hardware-specific library loaded into each application’s
+/// address space ("client driver", sometimes known as "Installable client driver" or "ICD");
+/// and the Magma system driver that interfaces with the hardware.
+/// The communication protocols between the two driver pieces are defined here.
+///
+/// Some names have a numeric suffix (eg, Query2); the number is a detail of how the protocols
+/// have evolved, and can be ignored.
+///
 type QueryId = strict enum {
     VENDOR_ID = 0;
     DEVICE_ID = 1;
     IS_TEST_RESTART_SUPPORTED = 2;
     IS_TOTAL_TIME_SUPPORTED = 3;
-    // 4 was MINIMUM_MAPPABLE_ADDRESS
+
     /// Upper 32bits: max inflight messages, lower 32bits: max inflight memory (MB)
     MAXIMUM_INFLIGHT_PARAMS = 5;
+
     /// Vendor specific query IDs start here
     VENDOR_QUERY_0 = 10000;
 };
@@ -28,32 +40,17 @@ type Status = strict enum {
     CONNECTION_LOST = 6;
     TIMED_OUT = 7;
     UNIMPLEMENTED = 8;
-    /// An object was not in the right state for an operation on it.
     BAD_STATE = 9;
 };
 
-type ObjectType = strict enum {
-    SEMAPHORE = 10;
-    BUFFER = 11;
-};
-
-type BufferOp = strict enum {
-    /// Eagerly populate GPU page tables with the pages mapping in this range, committing pages as
-    /// needed. This is not needed for MAGMA_GPU_MAP_FLAG_GROWABLE allocations, since the page
-    /// tables will be populated on demand.
-    POPULATE_TABLES = 1;
-    /// Depopulate GPU page table mappings for this range. This prevents the GPU from accessing
-    /// pages in that range, but the pages retain their contents.
-    DEPOPULATE_TABLES = 2;
-};
-
+/// The maximum number of ICDs supported by a Magma system driver.
 const MAX_ICD_COUNT uint64 = 8;
 
 type IcdFlags = flexible bits : uint32 {
     SUPPORTS_VULKAN = 1;
 };
 
-/// Information about an ICD implementation that can be used with a magma device.
+/// Information about an ICD implementation that can be used with a Magma device.
 type IcdInfo = table {
     /// URL of the component implementation that provides the ICD.
     1: component_url fuchsia.url.Url;
@@ -62,26 +59,34 @@ type IcdInfo = table {
     2: flags IcdFlags;
 };
 
+/// The Magma Device protocol allow clients to learn about the hardware by making queries, such as
+/// device and vendor IDs, and which client drivers are supported by the device's system driver.  
+/// To engage further with the device, clients may establish connections formed of channel pairs:
+/// a primary channel for making requests (see Primary protocol below), and a secondary channel
+/// for receiving notification messages.
 protocol Device {
-    /// Returns a parameter, or an error.
+    /// On success, returns a value given a QueryId; otherwise returns an error.
     Query2(struct {
         query_id uint64;
     }) -> (struct {
         result uint64;
     }) error Status;
 
-    /// Returns a buffer, or an error.
+    /// On success, returns a buffer given a QueryId; otherwise returns an error.
     QueryReturnsBuffer(struct {
         query_id uint64;
     }) -> (resource struct {
         buffer zx.handle:VMO;
     }) error Status;
 
-    /// Get the magma ipc channels.
+    /// Creates a connection to the device comprised of two IPC channels.
+    /// The primary channel is for the Primary protocol (see below).  The notification channel is
+    /// used for vendor-specific messages which are sent only in the reverse (server-client)
+    /// direction, typically in response to client command completion.
     Connect(struct {
         client_id uint64;
     }) -> (resource struct {
-        primary_channel zx.handle:CHANNEL;
+        primary_channel client_end:Primary;
         notification_channel zx.handle:CHANNEL;
     });
 
@@ -90,8 +95,8 @@ protocol Device {
         dump_type uint32;
     });
 
-    /// Gets a list of ICDs that can be used with this magma device. The list is sorted in descending
-    /// order of preference.
+    /// Returns a list of ICDs that can be used with this Magma device. The list is sorted in
+    /// descending order of preference.
     GetIcdList() -> (struct {
         icd_list vector<IcdInfo>:MAX_ICD_COUNT;
     });
@@ -105,6 +110,22 @@ protocol Device {
     });
 };
 
+type ObjectType = strict enum {
+    SEMAPHORE = 10;
+    BUFFER = 11;
+};
+
+type BufferOp = strict enum {
+    /// Populate the GPU page tables with the pages mapping in this range, committing pages as
+    /// needed. This is not needed for allocations mapped GROWABLE, since the page tables will
+    /// be populated on demand.
+    POPULATE_TABLES = 1;
+
+    /// Depopulate GPU page table mappings for this range. This prevents the GPU from accessing
+    /// pages in that range, but the pages retain their contents.
+    DEPOPULATE_TABLES = 2;
+};
+
 /// The batch size used to send multiple immediate commands in a single message.
 const MAX_IMMEDIATE_COMMANDS_DATA_SIZE uint32 = 2048;
 
@@ -113,6 +134,7 @@ type MapFlags = flexible bits : uint64 {
     WRITE = 0x2;
     EXECUTE = 0x4;
     GROWABLE = 0x8;
+
     /// Vendor specific definitions start here
     VENDOR_FLAG_0 = 0x10000;
 };
@@ -122,11 +144,14 @@ type CommandBufferFlags = flexible bits : uint64 {
     VENDOR_FLAG_0 = 0x10000;
 };
 
+/// A command buffer may be used to pass GPU instructions in a shared buffer (VMO).
 type CommandBuffer2 = struct {
     /// Index of the resource containing instructions to start the command buffer.
-    batch_buffer_resource_index uint32;
+    resource_index uint32;
+
     /// Starting offset within the resource.
-    batch_start_offset uint64;
+    start_offset uint64;
+
     /// Flags.
     flags CommandBufferFlags;
 };
@@ -164,7 +189,8 @@ protocol Primary {
         object_type ObjectType;
     });
 
-    /// Creates context `context_id`.
+    /// Creates context `context_id` for use in command execution.  A context may be associated
+    /// with hardware state.
     CreateContext(struct {
         context_id uint32;
     });
@@ -174,7 +200,9 @@ protocol Primary {
         context_id uint32;
     });
 
-    /// Submits a command buffer for execution on the GPU, with associated resources.
+    /// Submits a command buffer for execution on the GPU, with associated `resources`.
+    /// `wait_semaphores` must all be signaled before execution begins, and `signal_semaphores`
+    /// will be signaled after the command buffer is completed.
     ExecuteCommandBufferWithResources2(struct {
         context_id uint32;
         command_buffer CommandBuffer2;
@@ -184,6 +212,7 @@ protocol Primary {
     });
 
     /// Submits a series of commands for execution on the GPU without using a command buffer.
+    /// `semaphores` will be signaled after the commands are completed.
     ExecuteImmediateCommands(struct {
         context_id uint32;
         command_data bytes:MAX_IMMEDIATE_COMMANDS_DATA_SIZE;
@@ -194,8 +223,8 @@ protocol Primary {
     Sync() -> ();
 
     /// Maps `page_count` pages of `buffer` from `page_offset` onto the GPU in the connection's
-    /// address space at `gpu_va`.  `flags` is a set of flags from `MAGMA_GPU_MAP_FLAGS` that
-    /// specify how the GPU can access the buffer.
+    /// address space at `gpu_va`.  `flags` is a set of flags from MapFlags that specify how the
+    /// GPU can access the buffer.
     MapBufferGpu(struct {
         buffer_id zx.koid;
         gpu_va uint64;
@@ -204,19 +233,19 @@ protocol Primary {
         flags MapFlags;
     });
 
-    /// Releases the mapping at `gpu_va` from the GPU.
+    /// Releases the mapping at `gpu_va` from the GPU for the given `buffer_id`.
     /// Buffers will also be implicitly unmapped when released.
     UnmapBufferGpu(struct {
         buffer_id zx.koid;
         gpu_va uint64;
     });
 
-    /// Perform an operation on a range of the buffer, starting at `start_bytes` and `length` bytes
+    /// Perform an operation on a range of the buffer, starting at `offset` and `length` bytes
     /// long.
     BufferRangeOp(struct {
         buffer_id zx.koid;
         op BufferOp;
-        start_bytes uint64;
+        offset uint64;
         length uint64;
     });
 
@@ -237,7 +266,7 @@ protocol Primary {
 
     /// Indicates the given number of messages were consumed by the server.
     /// The caller should limit the number of inflight messages:
-    /// (messages sent - server consumed) <= Max (see QueryId::MAXIMUM_INFLIGHT_PARAMS).
+    /// (messages sent - server consumed) <= MaxMessages (see QueryId::MAXIMUM_INFLIGHT_PARAMS).
     /// Messages are actually consumed by the server as quickly as possible, however this event
     /// is sent by the server only when the consumed count reaches half the maximum.
     -> OnNotifyMessagesConsumed(struct {
@@ -246,7 +275,7 @@ protocol Primary {
 
     /// Indicates the given number of buffer memory bytes were imported by the server.
     /// The caller should limit the amount of memory from inflight ImportBuffer messages:
-    /// (bytes sent - server imported) <= Max (see QueryId::MAXIMUM_INFLIGHT_PARAMS).
+    /// (bytes sent - server imported) <= MaxBytes (see QueryId::MAXIMUM_INFLIGHT_PARAMS).
     /// This is a soft limit designed to prevent excessive memory consumption, but for large
     /// messages the client may exceed the limit.
     /// Memory is imported by the server as quickly as possible, however this event

@@ -27,7 +27,7 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
     if (result.status() != ZX_OK)
       return DRETP(nullptr, "magma_DeviceConnect failed: %d", result.status());
 
-    device_handle = result->primary_channel.release();
+    device_handle = result->primary_channel.TakeChannel().release();
     device_notification_handle = result->notification_channel.release();
 
     uint64_t max_inflight_messages = magma::upper_32_bits(inflight_params);

@@ -537,8 +537,8 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
                                                    magma_exec_resource* resources,
                                                    uint64_t* semaphores) override {
     fuchsia_gpu_magma::wire::CommandBuffer2 fidl_command_buffer = {
-        .batch_buffer_resource_index = command_buffer->batch_buffer_resource_index,
-        .batch_start_offset = command_buffer->batch_start_offset,
+        .resource_index = command_buffer->batch_buffer_resource_index,
+        .start_offset = command_buffer->batch_start_offset,
         .flags = static_cast<fuchsia_gpu_magma::wire::CommandBufferFlags>(command_buffer->flags)};
 
     std::vector<fuchsia_gpu_magma::wire::BufferRange> fidl_resources;

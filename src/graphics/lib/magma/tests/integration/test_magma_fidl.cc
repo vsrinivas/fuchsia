@@ -317,8 +317,8 @@ TEST_F(TestMagmaFidl, ExecuteCommandBufferWithResources2) {
         .buffer_id = buffer_id, .offset = 0, .size = 0};
     std::vector<fuchsia_gpu_magma::wire::BufferRange> resources{std::move(resource)};
     fuchsia_gpu_magma::wire::CommandBuffer2 command_buffer = {
-        .batch_buffer_resource_index = 0,
-        .batch_start_offset = 0,
+        .resource_index = 0,
+        .start_offset = 0,
         .flags = static_cast<fuchsia_gpu_magma::wire::CommandBufferFlags>(0)};
     std::vector<uint64_t> wait_semaphores;
     std::vector<uint64_t> signal_semaphores;
