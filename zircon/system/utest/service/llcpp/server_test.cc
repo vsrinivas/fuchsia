@@ -94,13 +94,16 @@ class ServerTest : public zxtest::Test {
   void SetUp() override {
     loop_.StartThread("server-test-loop");
 
-    outgoing_.AddService<EchoService>(SetUpInstance(&default_foo_, &default_bar_));
-    outgoing_.AddService<EchoService>(SetUpInstance(&other_foo_, &other_bar_), "other");
+    auto result = outgoing_.AddService<EchoService>(SetUpInstance(&default_foo_, &default_bar_));
+    ASSERT_OK(result.status_value());
+    result = outgoing_.AddService<EchoService>(SetUpInstance(&other_foo_, &other_bar_), "other");
+    ASSERT_OK(result.status_value());
 
     zx::channel remote;
     ASSERT_OK(zx::channel::create(0, &local_root_, &remote));
 
-    outgoing_.Serve(std::move(remote));
+    result = outgoing_.Serve(std::move(remote));
+    ASSERT_OK(result.status_value());
   }
 
   void TearDown() override { loop_.Shutdown(); }

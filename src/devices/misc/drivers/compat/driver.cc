@@ -91,9 +91,9 @@ zx::status<> Driver::Start(fdf::wire::DriverStartArgs* start_args) {
   auto serve_outgoing =
       [this,
        outgoing = std::move(start_args->outgoing_dir())]() mutable -> result<void, zx_status_t> {
-    zx_status_t status = outgoing_.Serve(outgoing.TakeChannel());
-    if (status != ZX_OK) {
-      return error(status);
+    auto serve = outgoing_.Serve(std::move(outgoing));
+    if (serve.is_error()) {
+      return error(serve.status_value());
     }
     return ok();
   };

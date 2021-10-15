@@ -86,8 +86,14 @@ int main(int argc, const char** argv) {
   ZX_ASSERT(add_reversed_result.is_ok());
 
   // Example of serving an instance of "EchoService".
-  outgoing.AddService<fuchsia_examples::EchoService>(std::move(handler));
-  outgoing.ServeFromStartupInfo();
+  auto result = outgoing.AddService<fuchsia_examples::EchoService>(std::move(handler));
+  if (result.is_error()) {
+    return result.status_value();
+  }
+  result = outgoing.ServeFromStartupInfo();
+  if (result.is_error()) {
+    return result.status_value();
+  }
 
   std::cout << "Running echo server" << std::endl;
   loop.Run();

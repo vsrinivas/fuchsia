@@ -48,26 +48,31 @@ OutgoingDirectory::OutgoingDirectory(async_dispatcher_t* dispatcher)
   root_->AddEntry("debug", debug_);
 }
 
-zx_status_t OutgoingDirectory::Serve(::zx::channel request_directory) {
-  return vfs_.ServeDirectory(root_, std::move(request_directory));
+zx::status<> OutgoingDirectory::Serve(fidl::ServerEnd<fuchsia_io::Directory> directory_request) {
+  zx_status_t status = vfs_.ServeDirectory(root_, std::move(directory_request));
+  return zx::make_status(status);
 }
 
-zx_status_t OutgoingDirectory::ServeFromStartupInfo() {
-  return Serve(::zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)));
+zx::status<> OutgoingDirectory::ServeFromStartupInfo() {
+  fidl::ServerEnd<fuchsia_io::Directory> directory_request(
+      zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)));
+  return Serve(std::move(directory_request));
 }
 
-zx_status_t OutgoingDirectory::AddNamedService(ServiceHandler handler, cpp17::string_view service,
-                                               cpp17::string_view instance) const {
-  return FindOrCreateDir(svc_, service)->AddEntry(instance, handler.TakeDirectory());
+zx::status<> OutgoingDirectory::AddNamedService(ServiceHandler handler, cpp17::string_view service,
+                                                cpp17::string_view instance) const {
+  zx_status_t status = FindOrCreateDir(svc_, service)->AddEntry(instance, handler.TakeDirectory());
+  return zx::make_status(status);
 }
 
-zx_status_t OutgoingDirectory::RemoveNamedService(cpp17::string_view service,
-                                                  cpp17::string_view instance) const {
+zx::status<> OutgoingDirectory::RemoveNamedService(cpp17::string_view service,
+                                                   cpp17::string_view instance) const {
   fbl::RefPtr<fs::PseudoDir> service_dir = FindDir(svc_, service);
   if (service_dir == nullptr) {
-    return ZX_ERR_IO_INVALID;
+    return zx::error(ZX_ERR_IO_INVALID);
   }
-  return service_dir->RemoveEntry(instance);
+  zx_status_t status = service_dir->RemoveEntry(instance);
+  return zx::make_status(status);
 }
 
 }  // namespace service

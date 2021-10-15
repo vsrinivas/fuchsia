@@ -85,7 +85,7 @@ class OutgoingDirectory final {
   // ZX_ERR_BAD_HANDLE: |directory_request| is not a valid handle.
   //
   // ZX_ERR_ACCESS_DENIED: |directory_request| has insufficient rights.
-  zx_status_t Serve(::zx::channel directory_request);
+  zx::status<> Serve(fidl::ServerEnd<fuchsia_io::Directory> directory_request);
 
   // Starts serving the outgoing directory on the channel provided to this
   // process at startup as |PA_DIRECTORY_REQUEST|.
@@ -102,7 +102,7 @@ class OutgoingDirectory final {
   // startup handle or it was already taken.
   //
   // ZX_ERR_ACCESS_DENIED: |directory_request| has insufficient rights.
-  zx_status_t ServeFromStartupInfo();
+  zx::status<> ServeFromStartupInfo();
 
   // Adds an instance of a service.
   //
@@ -126,8 +126,8 @@ class OutgoingDirectory final {
   // outgoing.AddService<::lib_example::MyService>(std::move(handler), "my-instance");
   // ```
   template <typename Service>
-  zx_status_t AddService(ServiceHandler handler,
-                         cpp17::string_view instance = kDefaultInstance) const {
+  zx::status<> AddService(ServiceHandler handler,
+                          cpp17::string_view instance = kDefaultInstance) const {
     return AddNamedService(std::move(handler), Service::Name, std::move(instance));
   }
 
@@ -146,8 +146,8 @@ class OutgoingDirectory final {
   // handler.AddMember("my-member", ...);
   // outgoing.AddNamedService(std::move(handler), "lib.example.MyService", "my-instance");
   // ```
-  zx_status_t AddNamedService(ServiceHandler handler, cpp17::string_view service,
-                              cpp17::string_view instance = kDefaultInstance) const;
+  zx::status<> AddNamedService(ServiceHandler handler, cpp17::string_view service,
+                               cpp17::string_view instance = kDefaultInstance) const;
 
   // Removes an instance of a service.
   //
@@ -161,7 +161,7 @@ class OutgoingDirectory final {
   // outgoing.RemoveService<::lib_example::MyService>("my-instance");
   // ```
   template <typename Service>
-  zx_status_t RemoveService(cpp17::string_view instance) const {
+  zx::status<> RemoveService(cpp17::string_view instance) const {
     return RemoveNamedService(Service::Name, instance);
   }
 
@@ -170,7 +170,7 @@ class OutgoingDirectory final {
   // # Errors
   //
   // ZX_ERR_NOT_FOUND: The instance was not found.
-  zx_status_t RemoveNamedService(cpp17::string_view service, cpp17::string_view instance) const;
+  zx::status<> RemoveNamedService(cpp17::string_view service, cpp17::string_view instance) const;
 
   // Gets the root directory.
   fbl::RefPtr<fs::PseudoDir> root_dir() const { return root_; }
