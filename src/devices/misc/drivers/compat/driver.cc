@@ -4,13 +4,16 @@
 
 #include "src/devices/misc/drivers/compat/driver.h"
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/binding_priv.h>
 #include <lib/fpromise/bridge.h>
+#include <lib/service/llcpp/service.h>
 #include <zircon/dlfcn.h>
 
 #include "src/devices/lib/driver2/promise.h"
 #include "src/devices/lib/driver2/record.h"
 #include "src/devices/lib/driver2/start_args.h"
+#include "src/devices/misc/drivers/compat/loader.h"
 
 namespace fboot = fuchsia_boot;
 namespace fdf = fuchsia_driver_framework;
@@ -45,12 +48,10 @@ T GetSymbol(const fidl::VectorView<fdf::wire::NodeSymbol>& symbols, std::string_
 namespace compat {
 
 Driver::Driver(const char* name, void* context, const zx_protocol_device_t* ops,
-               std::optional<Device*> parent, async_dispatcher_t* dispatcher,
-               async_dispatcher_t* loader_dispatcher)
+               std::optional<Device*> parent, async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       outgoing_(dispatcher),
-      loader_(loader_dispatcher),
       device_(name, context, ops, parent, inner_logger_, dispatcher) {}
 
 Driver::~Driver() {
@@ -90,7 +91,7 @@ zx::status<> Driver::Start(fdf::wire::DriverStartArgs* start_args) {
   auto serve_outgoing =
       [this,
        outgoing = std::move(start_args->outgoing_dir())]() mutable -> result<void, zx_status_t> {
-    zx_status_t status = outgoing_.Serve(std::move(outgoing));
+    zx_status_t status = outgoing_.Serve(outgoing.TakeChannel());
     if (status != ZX_OK) {
       return error(status);
     }
@@ -174,18 +175,35 @@ result<std::tuple<zx::vmo, zx::vmo>, zx_status_t> Driver::Join(
 result<void, zx_status_t> Driver::LoadDriver(std::tuple<zx::vmo, zx::vmo>& vmos) {
   auto& [loader_vmo, driver_vmo] = vmos;
 
-  // Bind loader.
+  // Replace loader service.
   auto endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
   if (endpoints.is_error()) {
     return error(endpoints.status_value());
   }
-  zx::channel client_end(dl_set_loader_service(endpoints->client.channel().release()));
+  zx::channel loader_channel(dl_set_loader_service(endpoints->client.channel().release()));
+  fidl::ClientEnd<fldsvc::Loader> loader_client(std::move(loader_channel));
+  auto clone = service::Clone(loader_client, service::AssumeProtocolComposesNode);
+  if (clone.is_error()) {
+    FDF_LOG(ERROR, "Failed to load driver '%s', could not clone loader client: %s", url_.data(),
+            clone.status_string());
+    return error(clone.status_value());
+  }
+
+  // Start loader.
+  async::Loop loader_loop(&kAsyncLoopConfigNeverAttachToThread);
+  zx_status_t status = loader_loop.StartThread("loader-loop");
+  if (status != ZX_OK) {
+    FDF_LOG(ERROR, "Failed to load driver '%s', could not start thread for loader loop: %s",
+            url_.data(), zx_status_get_string(status));
+    return error(status);
+  }
+  Loader loader(loader_loop.dispatcher());
   auto bind =
-      loader_.Bind(fidl::ClientEnd<fldsvc::Loader>(std::move(client_end)), std::move(loader_vmo));
+      loader.Bind(fidl::ClientEnd<fldsvc::Loader>(std::move(loader_client)), std::move(loader_vmo));
   if (bind.is_error()) {
     return error(bind.status_value());
   }
-  fidl::BindServer(loader_.dispatcher(), std::move(endpoints->server), &loader_);
+  fidl::BindServer(loader_loop.dispatcher(), std::move(endpoints->server), &loader);
 
   // Open driver.
   library_ = dlopen_vmo(driver_vmo.get(), RTLD_NOW);
@@ -194,6 +212,9 @@ result<void, zx_status_t> Driver::LoadDriver(std::tuple<zx::vmo, zx::vmo>& vmos)
             dlerror());
     return error(ZX_ERR_INTERNAL);
   }
+
+  // Return original loader service.
+  loader_channel.reset(dl_set_loader_service(clone->channel().release()));
 
   // Load and verify symbols.
   auto note = static_cast<const zircon_driver_note_t*>(dlsym(library_, "__zircon_driver_note__"));
@@ -307,8 +328,7 @@ zx_status_t DriverStart(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher
     parent_opt = *parent;
   }
 
-  auto compat_driver =
-      std::make_unique<compat::Driver>(name, context, ops, parent_opt, dispatcher, dispatcher);
+  auto compat_driver = std::make_unique<compat::Driver>(name, context, ops, parent_opt, dispatcher);
   auto start = compat_driver->Start(start_args);
   if (start.is_error()) {
     return start.error_value();

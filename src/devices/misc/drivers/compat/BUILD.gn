@@ -34,7 +34,8 @@ source_set("lib") {
     "//src/devices/lib/driver2",
     "//src/devices/lib/driver2:llcpp",
     "//src/lib/ddk",
-    "//zircon/system/ulib/svc",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 

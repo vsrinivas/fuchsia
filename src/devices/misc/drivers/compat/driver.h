@@ -8,24 +8,19 @@
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fpromise/scope.h>
-#include <lib/svc/outgoing.h>
+#include <lib/service/llcpp/outgoing_directory.h>
 
 #include "src/devices/lib/driver2/logger.h"
 #include "src/devices/lib/driver2/namespace.h"
 #include "src/devices/misc/drivers/compat/device.h"
-#include "src/devices/misc/drivers/compat/loader.h"
 
 namespace compat {
 
 // Driver is the compatibility driver that loads DFv1 drivers.
 class Driver {
  public:
-  // `loader_dispatcher` is the dispatcher to use for the `Loader`. Under normal
-  // operation, this is the same value `dispatcher`, but when under testing, we
-  // need to distinguish the two due to the synchronous nature of `dlopen_vmo`.
   Driver(const char* name, void* context, const zx_protocol_device_t* ops,
-         std::optional<Device*> parent, async_dispatcher_t* dispatcher,
-         async_dispatcher_t* loader_dispatcher);
+         std::optional<Device*> parent, async_dispatcher_t* dispatcher);
   ~Driver();
 
   zx_driver_t* ZxDriver();
@@ -61,12 +56,11 @@ class Driver {
 
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;
-  svc::Outgoing outgoing_;
+  llcpp::sys::OutgoingDirectory outgoing_;
 
   driver::Namespace ns_;
   driver::Logger logger_;
 
-  Loader loader_;
   Device device_;
 
   std::string url_;

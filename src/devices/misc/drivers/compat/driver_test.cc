@@ -118,14 +118,7 @@ class TestDirectory : public fio::testing::Directory_TestBase {
 };
 
 class DriverTest : public gtest::TestLoopFixture {
- public:
-  void SetUp() override {
-    zx_status_t status = loader_loop_.StartThread();
-    ASSERT_EQ(ZX_OK, status);
-  }
-
  protected:
-  async_dispatcher_t* loader_dispatcher() { return loader_loop_.dispatcher(); }
   TestNode& node() { return node_; }
   TestFile& compat_file() { return compat_file_; }
 
@@ -204,7 +197,6 @@ class DriverTest : public gtest::TestLoopFixture {
   }
 
  private:
-  async::Loop loader_loop_{&kAsyncLoopConfigNeverAttachToThread};
   TestNode node_;
   TestRootResource root_resource_;
   TestItems items_;
@@ -218,8 +210,8 @@ TEST_F(DriverTest, Start) {
   zx_protocol_device_t ops{
       .get_protocol = [](void*, uint32_t, void*) { return ZX_OK; },
   };
-  auto driver = std::make_unique<compat::Driver>("test-driver", nullptr, &ops, std::nullopt,
-                                                 dispatcher(), loader_dispatcher());
+  auto driver =
+      std::make_unique<compat::Driver>("test-driver", nullptr, &ops, std::nullopt, dispatcher());
   StartDriver(*driver, "/pkg/driver/v1_test.so");
 
   // Verify that v1_test.so has added a child device.
@@ -245,8 +237,8 @@ TEST_F(DriverTest, Start) {
 
 TEST_F(DriverTest, Start_WithCreate) {
   zx_protocol_device_t ops{};
-  auto driver = std::make_unique<compat::Driver>("test-driver", nullptr, &ops, std::nullopt,
-                                                 dispatcher(), loader_dispatcher());
+  auto driver =
+      std::make_unique<compat::Driver>("test-driver", nullptr, &ops, std::nullopt, dispatcher());
   StartDriver(*driver, "/pkg/driver/v1_create_test.so");
 
   // Verify that v1_test.so has added a child device.
@@ -272,8 +264,8 @@ TEST_F(DriverTest, Start_WithCreate) {
 
 TEST_F(DriverTest, Start_MissingBindAndCreate) {
   zx_protocol_device_t ops{};
-  auto driver = std::make_unique<compat::Driver>("test-driver", nullptr, &ops, std::nullopt,
-                                                 dispatcher(), loader_dispatcher());
+  auto driver =
+      std::make_unique<compat::Driver>("test-driver", nullptr, &ops, std::nullopt, dispatcher());
   StartDriver(*driver, "/pkg/driver/v1_missing_test.so");
 
   // Verify that v1_test.so has not added a child device.
@@ -287,8 +279,8 @@ TEST_F(DriverTest, Start_MissingBindAndCreate) {
 
 TEST_F(DriverTest, Start_GetBufferFailed) {
   zx_protocol_device_t ops{};
-  auto driver = std::make_unique<compat::Driver>("test-driver", nullptr, &ops, std::nullopt,
-                                                 dispatcher(), loader_dispatcher());
+  auto driver =
+      std::make_unique<compat::Driver>("test-driver", nullptr, &ops, std::nullopt, dispatcher());
   compat_file().SetStatus(ZX_ERR_UNAVAILABLE);
   StartDriver(*driver, "/pkg/driver/v1_test.so");
 
@@ -303,8 +295,8 @@ TEST_F(DriverTest, Start_GetBufferFailed) {
 
 TEST_F(DriverTest, Start_BindFailed) {
   zx_protocol_device_t ops{};
-  auto driver = std::make_unique<compat::Driver>("test-driver", nullptr, &ops, std::nullopt,
-                                                 dispatcher(), loader_dispatcher());
+  auto driver =
+      std::make_unique<compat::Driver>("test-driver", nullptr, &ops, std::nullopt, dispatcher());
   StartDriver(*driver, "/pkg/driver/v1_test.so");
 
   // Verify that v1_test.so has added a child device.
