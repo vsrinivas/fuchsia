@@ -108,7 +108,7 @@ void InputNode::OnFrameAvailable(const frame_available_info_t* info) {
 
 void InputNode::OnReleaseFrame(uint32_t buffer_index) {
   TRACE_DURATION("camera", "InputNode::OnReleaseFrame", "buffer_index", buffer_index);
-  fbl::AutoLock al(&in_use_buffer_lock_);
+  std::lock_guard al(in_use_buffer_lock_);
   ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
   in_use_buffer_count_[buffer_index]--;
   if (in_use_buffer_count_[buffer_index] != 0) {

@@ -207,7 +207,7 @@ void Ge2dNode::OnFrameAvailable(const frame_available_info_t* info) {
 
 void Ge2dNode::OnReleaseFrame(uint32_t buffer_index) {
   TRACE_DURATION("camera", "Ge2dNode::OnReleaseFrame", "buffer_index", buffer_index);
-  fbl::AutoLock guard(&in_use_buffer_lock_);
+  std::lock_guard guard(in_use_buffer_lock_);
   ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
   in_use_buffer_count_[buffer_index]--;
   if (in_use_buffer_count_[buffer_index] != 0 || shutdown_requested_) {

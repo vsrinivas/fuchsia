@@ -36,7 +36,7 @@ void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
     if (node->enabled() && node->current_frame_count() >= output_fps()) {
       node->SubtractFromCurrentFrameCount(output_fps());
       {
-        fbl::AutoLock al(&in_use_buffer_lock_);
+        std::lock_guard al(in_use_buffer_lock_);
         ZX_ASSERT(info->buffer_id < in_use_buffer_count_.size());
         in_use_buffer_count_[info->buffer_id]++;
       }

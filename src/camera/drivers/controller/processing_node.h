@@ -12,10 +12,10 @@
 #include <lib/fit/thread_checker.h>
 #include <zircon/assert.h>
 
+#include <mutex>
 #include <queue>
 #include <vector>
 
-#include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 
 #include "src/camera/drivers/controller/configs/internal_config.h"
@@ -126,7 +126,7 @@ class ProcessNode {
   // For tests.
   uint32_t get_in_use_buffer_count(uint32_t buffer_index) {
     {
-      fbl::AutoLock al(&in_use_buffer_lock_);
+      std::lock_guard al(in_use_buffer_lock_);
       ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
       return in_use_buffer_count_[buffer_index];
     }
@@ -192,7 +192,7 @@ class ProcessNode {
   // Dispatcher for the frame processng loop.
   async_dispatcher_t* dispatcher_;
   // Lock to guard |in_use_buffer_count_|
-  fbl::Mutex in_use_buffer_lock_;
+  std::mutex in_use_buffer_lock_;
   // The output frame rate for this node.
   fuchsia::camera2::FrameRate output_frame_rate_;
   // Current frame counter. This is in terms of no. of output frames
