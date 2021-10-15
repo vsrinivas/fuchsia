@@ -14,7 +14,7 @@ basic_toolchain("fidling") {
 # A generated file that lists fidl sdk files
 generated_file("sdk_fidl") {
   deps = [ "//sdk:fidl" ]
-  outputs = [ "$root_build_dir/sdk_fidl_json.txt" ]
+  outputs = [ "$root_build_dir/sdk_fidl_json.json" ]
   data_keys = [ "sdk_fidl_json_data" ]
   output_conversion = "json"
 }

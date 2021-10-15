@@ -36,3 +36,11 @@ caution.
 The API surface described by the IDK is governed by the [Fuchsia API
 Council](/docs/contribute/governance/api_council.md) and should conform to the
 appropriate [API rubrics](/docs/concepts/api/README.md).
+
+## Listing of FIDL libraries
+
+Within the Fuchsia build, all FIDL libraries which are included in the SDK
+are listed in the `sdk_fidl_json.json` file.
+
+See [`//build/fidl:sdk_fidl`](/build/fidl/BUILD.gn) and
+[fidl.gni](/build/fidl/fidl.gni) for further details.

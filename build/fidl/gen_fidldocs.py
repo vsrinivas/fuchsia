@@ -38,7 +38,7 @@ def walk_rmtree(directory):
 
 
 def read_fidl_packages(build_dir):
-    fidldoc = os.path.join(build_dir, 'sdk_fidl_json.txt')
+    fidldoc = os.path.join(build_dir, 'sdk_fidl_json.json')
     with open(fidldoc, 'r') as fdl_json:
         fidl_pkgs = json.load(fdl_json)
     return [pkg["ir"] for pkg in fidl_pkgs]
