@@ -966,7 +966,7 @@ pub fn sys_epoll_ctl(
 }
 
 pub fn sys_epoll_wait(
-    ctx: &SyscallContext<'_>,
+    ctx: &mut SyscallContext<'_>,
     epfd: FdNumber,
     events: UserRef<EpollEvent>,
     max_events: i32,
@@ -976,23 +976,31 @@ pub fn sys_epoll_wait(
 }
 
 pub fn sys_epoll_pwait(
-    ctx: &SyscallContext<'_>,
+    ctx: &mut SyscallContext<'_>,
     epfd: FdNumber,
     events: UserRef<EpollEvent>,
     max_events: i32,
     timeout: i32,
-    sigmask: UserRef<sigset_t>,
+    user_sigmask: UserRef<sigset_t>,
 ) -> Result<SyscallResult, Errno> {
-    if sigmask != UserRef::new(UserAddress::default()) {
-        not_implemented!("sigmask is ignored in epoll_pwait");
-    }
     if max_events < 1 {
         return error!(EINVAL);
     }
+
     let file = ctx.task.files.get(epfd)?;
     let epoll_file = file.downcast_file::<EpollFileObject>().ok_or(errno!(EINVAL))?;
 
-    let active_events = epoll_file.wait(&ctx.task, max_events, timeout)?;
+    let active_events = if !user_sigmask.is_null() {
+        let task = ctx.task.clone();
+        let mut signal_mask = sigset_t::default();
+        task.mm.read_object(user_sigmask, &mut signal_mask)?;
+        task.wait_with_temporary_mask(ctx, signal_mask, || {
+            epoll_file.wait(&task, max_events, timeout)
+        })?
+    } else {
+        epoll_file.wait(&ctx.task, max_events, timeout)?
+    };
+
     let mut event_ref = events;
     for event in active_events.iter() {
         ctx.task.mm.write_object(UserRef::new(event_ref.addr()), event)?;
