@@ -31,7 +31,6 @@ group("bin") {
     "trace_stress",
     "traceutil",
     "ui",
-    "uname",
     "vsock_service",
   ]
 }

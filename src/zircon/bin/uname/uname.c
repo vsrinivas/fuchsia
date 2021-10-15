@@ -7,7 +7,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
-
 #include <zircon/syscalls.h>
 
 enum {
@@ -67,8 +66,8 @@ int main(int argc, char *const argv[]) {
     switch (getopt_long(argc, argv, "asnrvmpioh", long_options, NULL)) {
       case 'a':
         /* -a is equivalent to -mnrsv */
-        selected_options |= DUMP_MACHINE | DUMP_NODENAME | DUMP_KERNEL_RELEASE |
-                            DUMP_KERNEL_NAME | DUMP_KERNEL_VERSION;
+        selected_options |= DUMP_MACHINE | DUMP_NODENAME | DUMP_KERNEL_RELEASE | DUMP_KERNEL_NAME |
+                            DUMP_KERNEL_VERSION;
         break;
       case 's':
         selected_options |= DUMP_KERNEL_NAME;
@@ -92,9 +91,7 @@ int main(int argc, char *const argv[]) {
         opts_done = true;
         break;
       case '?':
-        fprintf(stderr,
-                "Unrecognized option '%c'. Use --help for list of options\n",
-                optopt);
+        fprintf(stderr, "Unrecognized option '%c'. Use --help for list of options\n", optopt);
         return 1;
       case 'h':
         usage(argv[0]);
