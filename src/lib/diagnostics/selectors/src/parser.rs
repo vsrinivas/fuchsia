@@ -9,14 +9,15 @@ use nom::{
     branch::alt,
     bytes::complete::{is_not, tag},
     character::complete::{char, digit1, hex_digit1, multispace0, multispace1},
-    combinator::{map, recognize},
-    error::{make_error, ErrorKind, ParseError},
+    combinator::{map, map_opt, map_res, recognize, verify},
+    error::ParseError,
     multi::{many0, separated_nonempty_list},
     sequence::{delimited, preceded, tuple},
     IResult,
 };
 
-#[derive(Debug, Eq, PartialEq)]
+/// Supported comparison operators.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ComparisonOperator {
     Equal,
     GreaterEq,
@@ -44,13 +45,16 @@ fn comparison(input: &str) -> IResult<&str, ComparisonOperator> {
     ))(input)
 }
 
-#[derive(Debug, Eq, PartialEq)]
+/// Supported inclusion operators.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum InclusionOperator {
     HasAny,
     HasAll,
     In,
 }
 
+/// Parses the `has any` operator in the two flavors we support: all characters uppercase or all
+/// of them lowercase.
 fn has_any(input: &str) -> IResult<&str, (&str, &str)> {
     let (rest, (has, _, any)) = alt((
         tuple((tag("has"), multispace1, tag("any"))),
@@ -59,6 +63,8 @@ fn has_any(input: &str) -> IResult<&str, (&str, &str)> {
     Ok((rest, (has, any)))
 }
 
+/// Parses the `has all` operator in the two flavors we support: all characters uppercase or all
+/// of them lowercase.
 fn has_all(input: &str) -> IResult<&str, (&str, &str)> {
     let (rest, (has, _, all)) = alt((
         tuple((tag("has"), multispace1, tag("all"))),
@@ -67,7 +73,8 @@ fn has_all(input: &str) -> IResult<&str, (&str, &str)> {
     Ok((rest, (has, all)))
 }
 
-/// Parses inclusion operators.
+/// Parses any inclusion operator (`has any`, `has all`, `in`) in the two flavors we support: all
+/// characters uppercase or all of them lowercase.
 fn inclusion(input: &str) -> IResult<&str, InclusionOperator> {
     alt((
         map(has_any, move |_| InclusionOperator::HasAny),
@@ -76,13 +83,14 @@ fn inclusion(input: &str) -> IResult<&str, InclusionOperator> {
     ))(input)
 }
 
-#[derive(Debug, Eq, PartialEq)]
+/// Supported operators.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum Operator {
     Inclusion(InclusionOperator),
     Comparison(ComparisonOperator),
 }
 
-/// Parses any operator.
+/// Parses any operator (inclusion and comparison).
 fn operator(input: &str) -> IResult<&str, Operator> {
     alt((
         map(inclusion, move |o| Operator::Inclusion(o)),
@@ -90,12 +98,12 @@ fn operator(input: &str) -> IResult<&str, Operator> {
     ))(input)
 }
 
-/// This macro generates:
-/// - The `enum $ty` containing the given `$variant_name`s as the variants.
-/// - A general parser function `$parser` for all the given `tags`.
-/// - Parser functions `$tag_parser` that parses inputs that match the given accepted `$tag`s into
-///   `Severity`.
-/// - A function `severity_sym` that parses an input into a `Severity`.
+// This macro generates:
+// - The `enum $ty` containing the given `$variant_name`s as the variants.
+// - A general parser function `$parser` for all the given `tags`.
+// - Parser functions `$tag_parser` that parses inputs that match the given accepted `$tag`s into
+//   `Severity`.
+// - A function `severity_sym` that parses an input into a `Severity`.
 macro_rules! reserved {
     (
         parser: $parser:ident,
@@ -209,6 +217,8 @@ reserved!(
     ]
 );
 
+// This macro is purely a utility fo validating that all the values in the given `$one_or_many` are
+// of a given type.
 macro_rules! match_one_or_many_value {
     ($one_or_many:ident, $variant:pat) => {
         match $one_or_many {
@@ -220,7 +230,9 @@ macro_rules! match_one_or_many_value {
 }
 
 impl Identifier {
-    fn can_be_used_with_value(&self, value: &OneOrMany<Value<'_>>) -> bool {
+    /// Validates that all the values are of a type that can be used in an operation with this
+    /// identifier.
+    fn can_be_used_with_value_type(&self, value: &OneOrMany<Value<'_>>) -> bool {
         match (self, value) {
             (Identifier::Filename | Identifier::LifecycleEventType | Identifier::Tags, value) => {
                 match_one_or_many_value!(value, Value::StringLiteral(_))
@@ -242,9 +254,32 @@ impl Identifier {
             }
         }
     }
+
+    /// Validates that this identifier can be used in an operation defined by the given `operator`.
+    fn can_be_used_with_operator(&self, operator: &Operator) -> bool {
+        match (self, &operator) {
+            (
+                Identifier::Filename
+                | Identifier::LifecycleEventType
+                | Identifier::Pid
+                | Identifier::Tid
+                | Identifier::LineNumber
+                | Identifier::Severity,
+                Operator::Comparison(ComparisonOperator::Equal)
+                | Operator::Comparison(ComparisonOperator::NotEq)
+                | Operator::Inclusion(InclusionOperator::In),
+            ) => true,
+            (Identifier::Severity | Identifier::Timestamp, Operator::Comparison(_)) => true,
+            (
+                Identifier::Tags,
+                Operator::Inclusion(InclusionOperator::HasAny | InclusionOperator::HasAll),
+            ) => true,
+            _ => false,
+        }
+    }
 }
 
-/// Parses an input containing whitespace at the front.
+/// Parses an input containing any number and type of whitespace at the front.
 fn spaced<'a, E, F, O>(parser: F) -> impl Fn(&'a str) -> IResult<&'a str, O, E>
 where
     F: Fn(&'a str) -> IResult<&'a str, O, E>,
@@ -264,19 +299,12 @@ fn string_literal(input: &str) -> IResult<&str, &str> {
 
 /// Parses a 64 bit unsigned integer.
 fn integer(input: &str) -> IResult<&str, u64> {
-    let (rest, value) = digit1(input)?;
-    let number = value
-        .parse::<u64>()
-        .map_err(|_err| nom::Err::Failure(make_error(input, ErrorKind::TooLarge)))?;
-    Ok((rest, number))
+    map_res(digit1, |s: &str| s.parse::<u64>())(input)
 }
 
 /// Parses a hexadecimal number as 64 bit integer.
 fn hex_integer(input: &str) -> IResult<&str, u64> {
-    let (rest, value) = preceded(tag("0x"), hex_digit1)(input)?;
-    let number = u64::from_str_radix(&value, 16)
-        .map_err(|_err| nom::Err::Failure(make_error(input, ErrorKind::TooLarge)))?;
-    Ok((rest, number))
+    map_res(preceded(tag("0x"), hex_digit1), |s: &str| u64::from_str_radix(&s, 16))(input)
 }
 
 /// Parses a unsigned decimal and hexadecimal numbers of 64 bits.
@@ -286,6 +314,7 @@ fn number(input: &str) -> IResult<&str, u64> {
     alt((hex_integer, integer))(input)
 }
 
+/// Accepted right-hand-side values that can be used in an operation.
 #[derive(Debug, Eq, PartialEq)]
 pub enum Value<'a> {
     Severity(Severity),
@@ -293,6 +322,8 @@ pub enum Value<'a> {
     Number(u64),
 }
 
+// This macro parses a list of expressions accepted by the given `$parser` comma separated with any
+// number of spaces in between.
 macro_rules! comma_separated_value {
     ($parser:ident, $value:expr) => {
         map(separated_nonempty_list(spaced(char(',')), spaced($parser)), move |ns| {
@@ -317,88 +348,69 @@ fn list_of_values(input: &str) -> IResult<&str, Vec<Value<'_>>> {
     )(input)
 }
 
+/// Holds a single value or a vector of values of type `T`.
+enum OneOrMany<T> {
+    One(T),
+    Many(Vec<T>),
+}
+
+/// A valid operation and the right hand side of it.
 #[derive(Debug, Eq, PartialEq)]
 pub enum Operation<'a> {
     Comparison(ComparisonOperator, Value<'a>),
     Inclusion(InclusionOperator, Vec<Value<'a>>),
 }
 
+impl<'a> Operation<'a> {
+    fn maybe_new(op: Operator, value: OneOrMany<Value<'a>>) -> Option<Self> {
+        // Validate the operation can be used with the type of value.
+        match (op, value) {
+            (Operator::Inclusion(op), OneOrMany::Many(values)) => {
+                Some(Operation::Inclusion(op, values))
+            }
+            (Operator::Inclusion(o @ InclusionOperator::HasAny), OneOrMany::One(value)) => {
+                Some(Operation::Inclusion(o, vec![value]))
+            }
+            (Operator::Inclusion(o @ InclusionOperator::HasAll), OneOrMany::One(value)) => {
+                Some(Operation::Inclusion(o, vec![value]))
+            }
+            (Operator::Comparison(op), OneOrMany::One(value)) => {
+                Some(Operation::Comparison(op, value))
+            }
+            (Operator::Inclusion(InclusionOperator::In), OneOrMany::One(_))
+            | (Operator::Comparison(_), OneOrMany::Many(_)) => None,
+        }
+    }
+}
+
+/// A single filter expression in a metadata selector.
 #[derive(Debug, Eq, PartialEq)]
 pub struct FilterExpression<'a> {
     pub identifier: Identifier,
     pub op: Operation<'a>,
 }
 
-enum OneOrMany<T> {
-    One(T),
-    Many(Vec<T>),
-}
-
+/// Parses a single filter expression in a metadata selector.
 fn filter_expression(input: &str) -> IResult<&str, FilterExpression<'_>> {
     let (rest, identifier) = spaced(identifier)(input)?;
-    let (rest_after_op, op) = spaced(operator)(rest)?;
-
-    // Validate the identifier can be used with the parse operation.
-    match (&identifier, &op) {
-        (
-            Identifier::Filename
-            | Identifier::LifecycleEventType
-            | Identifier::Pid
-            | Identifier::Tid
-            | Identifier::LineNumber
-            | Identifier::Severity,
-            Operator::Comparison(ComparisonOperator::Equal)
-            | Operator::Comparison(ComparisonOperator::NotEq)
-            | Operator::Inclusion(InclusionOperator::In),
-        ) => {}
-        (Identifier::Severity | Identifier::Timestamp, Operator::Comparison(_)) => {}
-        (
-            Identifier::Tags,
-            Operator::Inclusion(InclusionOperator::HasAny | InclusionOperator::HasAll),
-        ) => {}
-        _ => {
-            // TODO(fxbug.dev/55118): better custom errors. This error should be explicit that a
-            // comparison operator can't be used together with a list.
-            return Err(nom::Err::Failure(make_error(input, ErrorKind::Not)));
-        }
-    }
-
-    let (rest, value) = spaced(alt((
-        map(number, move |n| OneOrMany::One(Value::Number(n))),
-        map(severity_sym, move |s| OneOrMany::One(Value::Severity(s))),
-        map(string_literal, move |s| OneOrMany::One(Value::StringLiteral(s))),
-        map(list_of_values, OneOrMany::Many),
-    )))(rest_after_op)?;
-
-    if !identifier.can_be_used_with_value(&value) {
-        // TODO(fxbug.dev/55118): better custom errors. This error should be explicit that the
-        // given identifier can't be used with a value of the given type.
-        return Err(nom::Err::Failure(make_error(rest_after_op, ErrorKind::Not)));
-    }
-
-    // Validate the operation can be used with the type of value.
-    match (op, value) {
-        (Operator::Inclusion(op), OneOrMany::Many(values)) => {
-            Ok((rest, FilterExpression { identifier, op: Operation::Inclusion(op, values) }))
-        }
-        (Operator::Inclusion(o @ InclusionOperator::HasAny), OneOrMany::One(value)) => {
-            Ok((rest, FilterExpression { identifier, op: Operation::Inclusion(o, vec![value]) }))
-        }
-        (Operator::Inclusion(o @ InclusionOperator::HasAll), OneOrMany::One(value)) => {
-            Ok((rest, FilterExpression { identifier, op: Operation::Inclusion(o, vec![value]) }))
-        }
-        (Operator::Comparison(op), OneOrMany::One(value)) => {
-            Ok((rest, FilterExpression { identifier, op: Operation::Comparison(op, value) }))
-        }
-        (Operator::Inclusion(InclusionOperator::In), OneOrMany::One(_))
-        | (Operator::Comparison(_), OneOrMany::Many(_)) => {
-            // TODO(fxbug.dev/55118): better custom errors. This error should be explicit that a
-            // comparison operator can't be used together with a list.
-            Err(nom::Err::Failure(make_error(rest_after_op, ErrorKind::Not)))
-        }
-    }
+    let (rest, op) =
+        verify(spaced(operator), |op| identifier.can_be_used_with_operator(&op))(rest)?;
+    let (rest, op) = map_opt(
+        verify(
+            spaced(alt((
+                map(number, move |n| OneOrMany::One(Value::Number(n))),
+                map(severity_sym, move |s| OneOrMany::One(Value::Severity(s))),
+                map(string_literal, move |s| OneOrMany::One(Value::StringLiteral(s))),
+                map(list_of_values, OneOrMany::Many),
+            ))),
+            |value| identifier.can_be_used_with_value_type(value),
+        ),
+        move |one_or_many| Operation::maybe_new(op, one_or_many),
+    )(rest)?;
+    Ok((rest, FilterExpression { identifier, op }))
 }
 
+/// Represents a  metadata selector, which consists of a list of filters.
 #[derive(Debug, Eq, PartialEq)]
 pub struct MetadataSelector<'a>(Vec<FilterExpression<'a>>);
 
@@ -408,7 +420,7 @@ impl<'a> MetadataSelector<'a> {
     }
 }
 
-/// Parses a metadata selector
+/// Parses a metadata selector.
 fn metadata_selector(input: &str) -> IResult<&str, MetadataSelector<'_>> {
     let (rest, _) = spaced(alt((tag("WHERE"), tag("where"))))(input)?;
     let (rest, filters) = spaced(separated_nonempty_list(char(','), filter_expression))(rest)?;
@@ -427,6 +439,7 @@ fn metadata_selector(input: &str) -> IResult<&str, MetadataSelector<'_>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nom::combinator::all_consuming;
     use rand::distributions::Distribution;
 
     macro_rules! test_sym_parser {
@@ -545,7 +558,7 @@ mod tests {
     }
 
     #[test]
-    fn prase_number() {
+    fn parse_number() {
         // Unsigned 64 bit integers are accepted.
         assert_eq!(Ok(("", 0)), number("0"));
         assert_eq!(Ok(("", 1234567890)), number("1234567890"));
@@ -565,7 +578,7 @@ mod tests {
 
         // Numbers that don't fit in 64 bits are rejected.
         assert!(number("18446744073709551616").is_err()); //2^64
-        assert!(number("0xffffffffffffffffff").is_err());
+        assert!(all_consuming(number)("0xffffffffffffffffff").is_err());
     }
 
     #[test]
