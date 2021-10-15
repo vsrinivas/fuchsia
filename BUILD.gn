@@ -561,11 +561,6 @@ build_api_module("platforms") {
 #     for its schema.
 #     Type: string
 #
-#   debug_archive
-#     Optional: The path of the archive of debug binaries from which
-#     `path` was generated.
-#     Type: string
-#
 build_api_module("prebuilt_binaries") {
   testonly = true
   data_keys = [ "prebuilt_binaries" ]

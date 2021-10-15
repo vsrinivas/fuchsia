@@ -19,10 +19,6 @@ type PrebuiltBinarySet struct {
 	// Name is the name of the set of prebuilt binaries.
 	Name string `json:"package_name"`
 
-	// DebugArchive is an optional pointer to an archive of debug binaries
-	// relating to the prebuilt package.
-	DebugArchive string `json:"debug_archive,omitempty"`
-
 	// Manifest is the path to a manifest of the associated debug binaries produced
 	// by the build and in the format of binaries.json.
 	Manifest string `json:"manifest"`
