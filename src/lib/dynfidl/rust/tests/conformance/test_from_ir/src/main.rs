@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![allow(dead_code)] // TODO(https://fxbug.dev/77068) remove after toolchain rolls again
+
 use argh::FromArgs;
 use heck::SnakeCase;
 use proc_macro2::TokenStream;
