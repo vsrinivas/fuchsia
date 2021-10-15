@@ -15,6 +15,7 @@ struct ChannelTransport {
   using OwnedType = zx::channel;
   using UnownedType = zx::unowned_channel;
   static const TransportVTable VTable;
+  static const EncodingConfiguration EncodingConfiguration;
 };
 
 AnyTransport MakeAnyTransport(zx::channel channel);
