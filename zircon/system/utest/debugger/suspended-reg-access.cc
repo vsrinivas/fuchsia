@@ -137,7 +137,7 @@ TEST(SuspendedTests, SuspendedRegAccessTest) {
 
   // KISS: Don't attach until the thread is up and running so we don't see
   // ZX_EXCP_THREAD_STARTING.
-  ASSERT_TRUE(recv_simple_response(channel, RESP_PONG), "");
+  recv_simple_response(channel, RESP_PONG);
 
   zx_handle_t port = ZX_HANDLE_INVALID;
   EXPECT_EQ(zx_port_create(0, &port), ZX_OK);
@@ -552,7 +552,7 @@ TEST(SuspendedTests, SuspendedInExceptionRegAccessTest) {
 
   send_simple_request(channel, RQST_CRASH_AND_RECOVER_TEST);
   // wait_inf_thread will process the crash and resume the inferior.
-  EXPECT_TRUE(recv_simple_response(channel, RESP_RECOVERED_FROM_CRASH), "");
+  recv_simple_response(channel, RESP_RECOVERED_FROM_CRASH);
 
   ASSERT_NO_FATAL_FAILURES(shutdown_inferior(channel, inferior));
 

@@ -82,22 +82,22 @@ void set_uint64(char* buf, uint64_t value);
 
 uint32_t get_uint32_property(zx_handle_t handle, uint32_t prop);
 
-bool send_request(zx_handle_t handle, const request_message_t& rqst);
+void send_request(zx_handle_t handle, const request_message_t& rqst);
 
-bool send_simple_request(zx_handle_t handle, request_t rqst);
+void send_simple_request(zx_handle_t handle, request_t rqst);
 
-bool send_response(zx_handle_t handle, const response_message_t& resp);
+void send_response(zx_handle_t handle, const response_message_t& resp);
 
-bool send_response_with_handle(zx_handle_t handle, const response_message_t& resp,
+void send_response_with_handle(zx_handle_t handle, const response_message_t& resp,
                                zx_handle_t resp_handle);
 
-bool send_simple_response(zx_handle_t handle, response_t resp);
+void send_simple_response(zx_handle_t handle, response_t resp);
 
-bool recv_request(zx_handle_t handle, request_message_t* rqst);
+void recv_request(zx_handle_t handle, request_message_t* rqst);
 
-bool recv_response(zx_handle_t handle, response_message_t* resp);
+void recv_response(zx_handle_t handle, response_message_t* resp);
 
-bool recv_simple_response(zx_handle_t handle, response_t expected_type);
+void recv_simple_response(zx_handle_t handle, response_t expected_type);
 
 void verify_inferior_running(zx_handle_t channel);
 

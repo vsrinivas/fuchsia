@@ -74,43 +74,38 @@ uint32_t get_uint32_property(zx_handle_t handle, uint32_t prop) {
   return value;
 }
 
-bool send_request(zx_handle_t handle, const request_message_t& rqst) {
+void send_request(zx_handle_t handle, const request_message_t& rqst) {
   printf("sending request %d on handle %u\n", rqst.type, handle);
   zx_status_t status = zx_channel_write(handle, 0, &rqst, sizeof(rqst), NULL, 0);
   ZX_ASSERT(status == ZX_OK);
-  return true;
 }
 
-bool send_simple_request(zx_handle_t handle, request_t type) {
+void send_simple_request(zx_handle_t handle, request_t type) {
   printf("sending request %d on handle %u\n", type, handle);
   zx_status_t status = zx_channel_write(handle, 0, &type, sizeof(type), NULL, 0);
   ZX_ASSERT(status == ZX_OK);
-  return true;
 }
 
-bool send_response(zx_handle_t handle, const response_message_t& resp) {
+void send_response(zx_handle_t handle, const response_message_t& resp) {
   printf("sending response %d on handle %u\n", resp.type, handle);
   zx_status_t status = zx_channel_write(handle, 0, &resp, sizeof(resp), NULL, 0);
   ZX_ASSERT(status == ZX_OK);
-  return true;
 }
 
-bool send_response_with_handle(zx_handle_t handle, const response_message_t& resp,
+void send_response_with_handle(zx_handle_t handle, const response_message_t& resp,
                                zx_handle_t resp_handle) {
   printf("sending response %d on handle %u\n", resp.type, handle);
   zx_status_t status = zx_channel_write(handle, 0, &resp, sizeof(resp), &resp_handle, 1);
   ZX_ASSERT(status == ZX_OK);
-  return true;
 }
 
-bool send_simple_response(zx_handle_t handle, response_t type) {
+void send_simple_response(zx_handle_t handle, response_t type) {
   printf("sending response %d on handle %u\n", type, handle);
   zx_status_t status = zx_channel_write(handle, 0, &type, sizeof(type), NULL, 0);
   ZX_ASSERT(status == ZX_OK);
-  return true;
 }
 
-bool recv_request(zx_handle_t handle, request_message_t* rqst) {
+void recv_request(zx_handle_t handle, request_message_t* rqst) {
   printf("waiting for request on handle %u\n", handle);
 
   ZX_ASSERT_MSG(tu_channel_wait_readable(handle), "peer closed while trying to read message");
@@ -119,11 +114,9 @@ bool recv_request(zx_handle_t handle, request_message_t* rqst) {
   zx_status_t status = zx_channel_read(handle, 0, rqst, nullptr, num_bytes, 0, &num_bytes, nullptr);
   ZX_ASSERT(status == ZX_OK);
   ZX_ASSERT_MSG(num_bytes <= sizeof(*rqst), "unexpected request size");
-
-  return true;
 }
 
-bool recv_response(zx_handle_t handle, response_message_t* resp) {
+void recv_response(zx_handle_t handle, response_message_t* resp) {
   printf("waiting for response on handle %u\n", handle);
 
   ZX_ASSERT_MSG(tu_channel_wait_readable(handle), "peer closed while trying to read message");
@@ -140,28 +133,24 @@ bool recv_response(zx_handle_t handle, response_message_t* resp) {
     ZX_ASSERT(resp_handle != ZX_HANDLE_INVALID);
     resp->handle = resp_handle;
   }
-
-  return true;
 }
 
-bool recv_simple_response(zx_handle_t handle, response_t expected_type) {
+void recv_simple_response(zx_handle_t handle, response_t expected_type) {
   response_message_t response;
-  ZX_ASSERT(recv_response(handle, &response));
+  recv_response(handle, &response);
   printf("received message %d\n", response.type);
   ZX_ASSERT(response.type == expected_type);
-
-  return true;
 }
 
 void verify_inferior_running(zx_handle_t channel) {
   send_simple_request(channel, RQST_PING);
-  EXPECT_TRUE(recv_simple_response(channel, RESP_PONG), "");
+  recv_simple_response(channel, RESP_PONG);
 }
 
 void get_inferior_thread_handle(zx_handle_t channel, zx_handle_t* thread) {
   send_simple_request(channel, RQST_GET_THREAD_HANDLE);
   response_message_t response;
-  ASSERT_TRUE(recv_response(channel, &response), "");
+  recv_response(channel, &response);
   ASSERT_EQ(response.type, RESP_THREAD_HANDLE, "");
   ASSERT_NE(response.handle, ZX_HANDLE_INVALID, "");
   *thread = response.handle;
@@ -254,7 +243,7 @@ void get_inferior_load_addrs(zx_handle_t channel, zx_vaddr_t* libc_load_addr,
                              zx_vaddr_t* exec_load_addr) {
   send_simple_request(channel, RQST_GET_LOAD_ADDRS);
   response_message_t response;
-  ASSERT_TRUE(recv_response(channel, &response), "");
+  recv_response(channel, &response);
   ASSERT_EQ(response.type, RESP_LOAD_ADDRS, "");
   *libc_load_addr = response.payload.load_addrs.libc_load_addr;
   *exec_load_addr = response.payload.load_addrs.exec_load_addr;

@@ -83,7 +83,7 @@ void msg_loop(zx_handle_t channel) {
 
   while (!my_done_tests) {
     request_message_t rqst;
-    ZX_ASSERT(recv_request(channel, &rqst));
+    recv_request(channel, &rqst);
     switch (rqst.type) {
       case RQST_DONE:
         my_done_tests = true;

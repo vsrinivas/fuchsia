@@ -284,7 +284,7 @@ TEST(ThreadStartTests, StoppedInThreadStartingRegAccessTest) {
   EXPECT_EQ(test_state.inferior_libc_entry_point, expected_entry_point, "");
 
   send_simple_request(channel, RQST_START_LOOPING_THREADS);
-  EXPECT_TRUE(recv_simple_response(channel, RESP_THREADS_STARTED), "");
+  recv_simple_response(channel, RESP_THREADS_STARTED);
 
   // The remaining testing happens at this point as threads start.
   // This testing is done in |thread_start_test_exception_handler()|.

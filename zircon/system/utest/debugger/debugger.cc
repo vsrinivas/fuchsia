@@ -148,7 +148,7 @@ TEST(DebuggerTests, DebuggerTest) {
 
   segv_count.store(0);
   send_simple_request(channel, RQST_CRASH_AND_RECOVER_TEST);
-  EXPECT_TRUE(recv_simple_response(channel, RESP_RECOVERED_FROM_CRASH), "");
+  recv_simple_response(channel, RESP_RECOVERED_FROM_CRASH);
   EXPECT_EQ(segv_count.load(), kNumSegvTries, "segv tests terminated prematurely");
 
   expect_debugger_attached_eq(inferior, true, "debugger should still appear attached");
@@ -185,7 +185,7 @@ TEST(DebuggerTests, DebuggerThreadListTest) {
   ASSERT_NO_FATAL_FAILURES(verify_inferior_running(channel));
 
   send_simple_request(channel, RQST_START_LOOPING_THREADS);
-  EXPECT_TRUE(recv_simple_response(channel, RESP_THREADS_STARTED), "");
+  recv_simple_response(channel, RESP_THREADS_STARTED);
 
   uint32_t buf_size = 100 * sizeof(zx_koid_t);
   size_t num_threads;
