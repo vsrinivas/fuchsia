@@ -19,7 +19,6 @@ use {
         disconnect::LocallyInitiated,
         error::Error,
         logger,
-        timer::*,
     },
     anyhow::{self, format_err},
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, banjo_fuchsia_wlan_common as banjo_common,
@@ -45,6 +44,7 @@ use {
         mgmt_writer,
         sequence::SequenceManager,
         time::TimeUnit,
+        timer::{EventId, Timer},
         wmm,
     },
     wlan_frame_writer::{write_frame, write_frame_with_dynamic_buf, write_frame_with_fixed_buf},
@@ -94,18 +94,57 @@ pub struct ClientMlme {
     channel_state: ChannelListenerState,
 }
 
+impl crate::MlmeImpl for ClientMlme {
+    type Config = ClientConfig;
+    type TimerEvent = TimedEvent;
+    fn new(
+        config: ClientConfig,
+        device: Device,
+        buf_provider: BufferProvider,
+        timer: Timer<TimedEvent>,
+    ) -> Self {
+        Self::new(config, device, buf_provider, timer)
+    }
+    fn handle_mlme_message(&mut self, msg: fidl_mlme::MlmeRequest) -> Result<(), anyhow::Error> {
+        Self::handle_mlme_msg(self, msg).map_err(|e| e.into())
+    }
+    fn handle_mac_frame_rx(
+        &mut self,
+        bytes: &[u8],
+        rx_info: Option<banjo_fuchsia_hardware_wlan_mac::WlanRxInfo>,
+    ) {
+        Self::on_mac_frame_rx(self, bytes, rx_info)
+    }
+    fn handle_eth_frame_tx(&mut self, bytes: &[u8]) -> Result<(), anyhow::Error> {
+        Self::on_eth_frame_tx(self, bytes).map_err(|e| e.into())
+    }
+    fn handle_hw_indication(&mut self, ind: banjo_wlan_mac::WlanIndication) {
+        let hw_scan_status = match ind {
+            banjo_wlan_mac::WlanIndication::HW_SCAN_COMPLETE => banjo_wlan_mac::WlanHwScan::SUCCESS,
+            banjo_wlan_mac::WlanIndication::HW_SCAN_ABORTED => banjo_wlan_mac::WlanHwScan::ABORTED,
+            _ => return,
+        };
+        Self::handle_hw_scan_complete(self, hw_scan_status);
+    }
+    fn handle_timeout(&mut self, event_id: EventId, event: TimedEvent) {
+        Self::handle_timed_event(self, event_id, event)
+    }
+    fn access_device(&mut self) -> &mut Device {
+        &mut self.ctx.device
+    }
+}
+
 impl ClientMlme {
     pub fn new(
         config: ClientConfig,
         device: Device,
         buf_provider: BufferProvider,
-        scheduler: Scheduler,
+        timer: Timer<TimedEvent>,
     ) -> Self {
         // TODO(fxbug.dev/41417): Remove this once devmgr installs a Rust logger.
         logger::install();
 
         let iface_mac = device.wlanmac_info().sta_addr;
-        let timer = Timer::<TimedEvent>::new(scheduler);
         Self {
             sta: None,
             ctx: Context { config, device, buf_provider, timer, seq_mgr: SequenceManager::new() },
@@ -133,7 +172,7 @@ impl ClientMlme {
         self.channel_state.main_channel.map(|c| c == channel).unwrap_or(false)
     }
 
-    pub fn on_mac_frame(&mut self, frame: &[u8], rx_info: Option<banjo_wlan_mac::WlanRxInfo>) {
+    pub fn on_mac_frame_rx(&mut self, frame: &[u8], rx_info: Option<banjo_wlan_mac::WlanRxInfo>) {
         // TODO(fxbug.dev/44487): Send the entire frame to scanner.
         match mac::MacFrame::parse(frame, false) {
             Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
@@ -175,19 +214,18 @@ impl ClientMlme {
         }
     }
 
-    #[allow(deprecated)] // Allow until main message loop is in Rust.
-    pub fn handle_mlme_msg(&mut self, msg: fidl_mlme::MlmeRequestMessage) -> Result<(), Error> {
-        use fidl_mlme::MlmeRequestMessage as MlmeMsg;
+    pub fn handle_mlme_msg(&mut self, msg: fidl_mlme::MlmeRequest) -> Result<(), Error> {
+        use fidl_mlme::MlmeRequest as MlmeMsg;
 
         match msg {
             // Handle non station specific MLME messages first (Join, Scan, etc.)
-            MlmeMsg::StartScan { req } => Ok(self.on_sme_scan(req)),
-            MlmeMsg::JoinReq { req } => self.on_sme_join(req),
-            MlmeMsg::StatsQueryReq {} => self.on_sme_stats_query(),
-            MlmeMsg::QueryDeviceInfo { tx_id } => self.on_sme_query_device_info(tx_id),
-            MlmeMsg::ListMinstrelPeers { tx_id } => self.on_sme_list_minstrel_peers(tx_id),
-            MlmeMsg::GetMinstrelStats { tx_id, req } => {
-                self.on_sme_get_minstrel_stats(tx_id, &req.peer_addr)
+            MlmeMsg::StartScan { req, .. } => Ok(self.on_sme_scan(req)),
+            MlmeMsg::JoinReq { req, .. } => self.on_sme_join(req),
+            MlmeMsg::StatsQueryReq { .. } => self.on_sme_stats_query(),
+            MlmeMsg::QueryDeviceInfo { responder } => self.on_sme_query_device_info(responder),
+            MlmeMsg::ListMinstrelPeers { responder } => self.on_sme_list_minstrel_peers(responder),
+            MlmeMsg::GetMinstrelStats { responder, req } => {
+                self.on_sme_get_minstrel_stats(responder, &req.peer_addr)
             }
             other_message => match &mut self.sta {
                 None => Err(Error::Status(format!("No client sta."), zx::Status::BAD_STATE)),
@@ -236,19 +274,23 @@ impl ClientMlme {
                     // on this half of the OR statement.
                         || bss.find_wpa_ie().is_some(),
                 ));
-                self.ctx.device.access_sme_sender(|sender| {
-                    sender.send_join_conf(&mut fidl_mlme::JoinConfirm {
+                self.ctx
+                    .device
+                    .mlme_control_handle()
+                    .send_join_conf(&mut fidl_mlme::JoinConfirm {
                         result_code: fidl_ieee80211::StatusCode::Success,
                     })
-                })
+                    .map_err(|e| e.into())
             }
             Err(e) => {
                 error!("Error setting up device for join: {}", e);
-                self.ctx.device.access_sme_sender(|sender| {
-                    sender.send_join_conf(&mut fidl_mlme::JoinConfirm {
+                // TODO(fxbug.dev/44317): Only one failure code defined in IEEE 802.11-2016 6.3.4.3
+                // Can we do better?
+                self.ctx.device.mlme_control_handle().send_join_conf(
+                    &mut fidl_mlme::JoinConfirm {
                         result_code: fidl_ieee80211::StatusCode::JoinFailure,
-                    })
-                })?;
+                    },
+                )?;
                 Err(e)
             }
         }
@@ -275,41 +317,41 @@ impl ClientMlme {
     fn on_sme_stats_query(&self) -> Result<(), Error> {
         // TODO(fxbug.dev/43456): Implement stats
         let mut resp = stats::empty_stats_query_response();
-        self.ctx.device.access_sme_sender(|sender| sender.send_stats_query_resp(&mut resp))
+        self.ctx.device.mlme_control_handle().send_stats_query_resp(&mut resp).map_err(|e| e.into())
     }
 
-    fn on_sme_query_device_info(&self, txid: fidl::client::Txid) -> Result<(), Error> {
+    fn on_sme_query_device_info(
+        &self,
+        responder: fidl_mlme::MlmeQueryDeviceInfoResponder,
+    ) -> Result<(), Error> {
         let wlanmac_info = self.ctx.device.wlanmac_info();
         let mut info = crate::ddk_converter::device_info_from_wlanmac_info(wlanmac_info)?;
-        self.ctx
-            .device
-            .access_sme_sender(|sender| sender.send_query_device_info_response(txid, &mut info))
+        responder.send(&mut info).map_err(|e| e.into())
     }
 
-    fn on_sme_list_minstrel_peers(&self, txid: fidl::client::Txid) -> Result<(), Error> {
+    fn on_sme_list_minstrel_peers(
+        &self,
+        responder: fidl_mlme::MlmeListMinstrelPeersResponder,
+    ) -> Result<(), Error> {
         // TODO(fxbug.dev/79543): Implement once Minstrel is in Rust.
         error!("ListMinstrelPeers is not supported.");
         let peers = fidl_minstrel::Peers { addrs: vec![] };
         let mut resp = fidl_mlme::MinstrelListResponse { peers };
-        self.ctx
-            .device
-            .access_sme_sender(|sender| sender.send_list_minstrel_peers_response(txid, &mut resp))
+        responder.send(&mut resp).map_err(|e| e.into())
     }
 
     fn on_sme_get_minstrel_stats(
         &self,
-        txid: fidl::client::Txid,
+        responder: fidl_mlme::MlmeGetMinstrelStatsResponder,
         _addr: &[u8; 6],
     ) -> Result<(), Error> {
         // TODO(fxbug.dev/79543): Implement once Minstrel is in Rust.
         error!("GetMinstrelStats is not supported.");
         let mut resp = fidl_mlme::MinstrelStatsResponse { peer: None };
-        self.ctx
-            .device
-            .access_sme_sender(|sender| sender.send_get_minstrel_stats_response(txid, &mut resp))
+        responder.send(&mut resp).map_err(|e| e.into())
     }
 
-    pub fn on_eth_frame<B: ByteSlice>(&mut self, bytes: B) -> Result<(), Error> {
+    pub fn on_eth_frame_tx<B: ByteSlice>(&mut self, bytes: B) -> Result<(), Error> {
         match self.sta.as_mut() {
             None => Err(Error::Status(
                 format!("Ethernet frame dropped (Client does not exist)."),
@@ -322,25 +364,13 @@ impl ClientMlme {
                     &mut self.chan_sched,
                     &mut self.channel_state,
                 )
-                .on_eth_frame(bytes),
+                .on_eth_frame_tx(bytes),
         }
     }
 
     /// Called when a previously scheduled `TimedEvent` fired.
     /// Return true if auto-deauth has triggered. Return false otherwise.
-    pub fn handle_timed_event(&mut self, event_id: EventId) {
-        let event = match self.ctx.timer.triggered(&event_id) {
-            Some(event) => event,
-            None => {
-                error!(
-                    "event for given ID {:?} already consumed;\
-                     this should NOT happen - ignoring event",
-                    event_id
-                );
-                return;
-            }
-        };
-
+    pub fn handle_timed_event(&mut self, event_id: EventId, event: TimedEvent) {
         match event {
             TimedEvent::ChannelScheduler => {
                 let mut listener =
@@ -519,12 +549,7 @@ impl<'a> akm_algorithm::AkmAction for BoundClient<'a> {
     }
 
     fn schedule_auth_timeout(&mut self, duration: TimeUnit) -> EventId {
-        let deadline = self.ctx.timer.now() + duration.into();
-        self.ctx.timer.schedule_event(deadline, TimedEvent::Authenticating)
-    }
-
-    fn cancel_auth_timeout(&mut self, id: EventId) {
-        self.ctx.timer.cancel_event(id)
+        self.ctx.timer.schedule_after(duration.into(), TimedEvent::Authenticating)
     }
 }
 
@@ -755,13 +780,15 @@ impl<'a> BoundClient<'a> {
                 eapol_frame.len()
             )));
         }
-        self.ctx.device.access_sme_sender(|sender| {
-            sender.send_eapol_ind(&mut fidl_mlme::EapolIndication {
+        self.ctx
+            .device
+            .mlme_control_handle()
+            .send_eapol_ind(&mut fidl_mlme::EapolIndication {
                 src_addr,
                 dst_addr,
                 data: eapol_frame.to_vec(),
             })
-        })
+            .map_err(|e| e.into())
     }
 
     /// Sends an EAPoL frame over the air and reports transmission status to SME via an
@@ -792,9 +819,11 @@ impl<'a> BoundClient<'a> {
         };
 
         // Report transmission result to SME.
-        let result = self.ctx.device.access_sme_sender(|sender| {
-            sender.send_eapol_conf(&mut fidl_mlme::EapolConfirm { result_code, dst_addr: dst })
-        });
+        let result = self
+            .ctx
+            .device
+            .mlme_control_handle()
+            .send_eapol_conf(&mut fidl_mlme::EapolConfirm { result_code, dst_addr: dst });
         if let Err(e) = result {
             error!("error sending MLME-EAPOL.confirm message: {}", e);
         }
@@ -837,7 +866,7 @@ impl<'a> BoundClient<'a> {
         self.sta.state = Some(self.sta.state.take().unwrap().on_mac_frame(self, bytes, rx_info));
     }
 
-    pub fn on_eth_frame<B: ByteSlice>(&mut self, frame: B) -> Result<(), Error> {
+    pub fn on_eth_frame_tx<B: ByteSlice>(&mut self, frame: B) -> Result<(), Error> {
         // Safe: |state| is never None and always replaced with Some(..).
         let state = self.sta.state.take().unwrap();
         let result = state.on_eth_frame(self, frame);
@@ -845,8 +874,7 @@ impl<'a> BoundClient<'a> {
         result
     }
 
-    #[allow(deprecated)] // Allow until main message loop is in Rust.
-    pub fn handle_mlme_msg(&mut self, msg: fidl_mlme::MlmeRequestMessage) {
+    pub fn handle_mlme_msg(&mut self, msg: fidl_mlme::MlmeRequest) {
         // Safe: |state| is never None and always replaced with Some(..).
         let next_state = self.sta.state.take().unwrap().handle_mlme_msg(self, msg);
         self.sta.state.replace(next_state);
@@ -859,13 +887,13 @@ impl<'a> BoundClient<'a> {
         auth_type: fidl_mlme::AuthenticationTypes,
         result_code: fidl_ieee80211::StatusCode,
     ) {
-        let result = self.ctx.device.access_sme_sender(|sender| {
-            sender.send_authenticate_conf(&mut fidl_mlme::AuthenticateConfirm {
+        let result = self.ctx.device.mlme_control_handle().send_authenticate_conf(
+            &mut fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: self.sta.bssid.0,
                 auth_type,
                 result_code,
-            })
-        });
+            },
+        );
         if let Err(e) = result {
             error!("error sending MLME-AUTHENTICATE.confirm: {}", e);
         }
@@ -886,8 +914,7 @@ impl<'a> BoundClient<'a> {
             vht_cap: None,
         };
 
-        let result =
-            self.ctx.device.access_sme_sender(|sender| sender.send_associate_conf(&mut assoc_conf));
+        let result = self.ctx.device.mlme_control_handle().send_associate_conf(&mut assoc_conf);
         if let Err(e) = result {
             error!("error sending MLME-AUTHENTICATE.confirm: {}", e);
         }
@@ -950,8 +977,7 @@ impl<'a> BoundClient<'a> {
             }
         }
 
-        let result =
-            self.ctx.device.access_sme_sender(|sender| sender.send_associate_conf(&mut assoc_conf));
+        let result = self.ctx.device.mlme_control_handle().send_associate_conf(&mut assoc_conf);
         if let Err(e) = result {
             error!("error sending MLME-AUTHENTICATE.confirm: {}", e);
         }
@@ -966,13 +992,13 @@ impl<'a> BoundClient<'a> {
         // Clear main_channel since there is no "main channel" after deauthenticating
         self.channel_state.main_channel = None;
 
-        let result = self.ctx.device.access_sme_sender(|sender| {
-            sender.send_deauthenticate_ind(&mut fidl_mlme::DeauthenticateIndication {
+        let result = self.ctx.device.mlme_control_handle().send_deauthenticate_ind(
+            &mut fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: self.sta.bssid.0,
                 reason_code,
                 locally_initiated: locally_initiated.0,
-            })
-        });
+            },
+        );
         if let Err(e) = result {
             error!("error sending MLME-DEAUTHENTICATE.indication: {}", e);
         }
@@ -984,13 +1010,13 @@ impl<'a> BoundClient<'a> {
         reason_code: fidl_ieee80211::ReasonCode,
         locally_initiated: LocallyInitiated,
     ) {
-        let result = self.ctx.device.access_sme_sender(|sender| {
-            sender.send_disassociate_ind(&mut fidl_mlme::DisassociateIndication {
+        let result = self.ctx.device.mlme_control_handle().send_disassociate_ind(
+            &mut fidl_mlme::DisassociateIndication {
                 peer_sta_address: self.sta.bssid.0,
                 reason_code: reason_code,
                 locally_initiated: locally_initiated.0,
-            })
-        });
+            },
+        );
         if let Err(e) = result {
             error!("error sending MLME-DEAUTHENTICATE.indication: {}", e);
         }
@@ -1003,25 +1029,22 @@ impl<'a> BoundClient<'a> {
         status_code: fidl_ieee80211::StatusCode,
         sae_fields: Vec<u8>,
     ) {
-        let result = self.ctx.device.access_sme_sender(|sender| {
-            sender.send_on_sae_frame_rx(&mut fidl_mlme::SaeFrame {
+        let result =
+            self.ctx.device.mlme_control_handle().send_on_sae_frame_rx(&mut fidl_mlme::SaeFrame {
                 peer_sta_address: self.sta.bssid.0,
                 seq_num,
                 status_code,
                 sae_fields,
-            })
-        });
+            });
         if let Err(e) = result {
             error!("error sending OnSaeFrameRx: {}", e);
         }
     }
 
     fn forward_sae_handshake_ind(&mut self) {
-        let result = self.ctx.device.access_sme_sender(|sender| {
-            sender.send_on_sae_handshake_ind(&mut fidl_mlme::SaeHandshakeIndication {
-                peer_sta_address: self.sta.bssid.0,
-            })
-        });
+        let result = self.ctx.device.mlme_control_handle().send_on_sae_handshake_ind(
+            &mut fidl_mlme::SaeHandshakeIndication { peer_sta_address: self.sta.bssid.0 },
+        );
         if let Err(e) = result {
             error!("error sending OnSaeHandshakeInd: {}", e);
         }
@@ -1108,12 +1131,16 @@ mod tests {
             buffer::FakeBufferProvider,
             client::lost_bss::LostBssCounter,
             device::FakeDevice,
+            test_utils::fake_control_handle,
         },
-        fidl_fuchsia_wlan_common as fidl_common,
+        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
         std::convert::TryFrom,
         wlan_common::{
-            assert_variant, fake_fidl_bss_description, ie, stats::SignalStrengthAverage,
-            test_utils::fake_frames::*, TimeUnit,
+            assert_variant, fake_fidl_bss_description, ie,
+            stats::SignalStrengthAverage,
+            test_utils::fake_frames::*,
+            timer::{create_timer, TimeStream},
+            TimeUnit,
         },
         wlan_statemachine::*,
     };
@@ -1158,12 +1185,14 @@ mod tests {
 
     struct MockObjects {
         fake_device: FakeDevice,
-        fake_scheduler: FakeScheduler,
+        timer: Option<Timer<super::TimedEvent>>,
+        time_stream: TimeStream<super::TimedEvent>,
     }
 
     impl MockObjects {
-        fn new() -> Self {
-            Self { fake_device: FakeDevice::new(), fake_scheduler: FakeScheduler::new() }
+        fn new(executor: &fasync::TestExecutor) -> Self {
+            let (timer, time_stream) = create_timer();
+            Self { fake_device: FakeDevice::new(executor), timer: Some(timer), time_stream }
         }
 
         fn make_mlme(&mut self) -> ClientMlme {
@@ -1177,7 +1206,7 @@ mod tests {
                 config,
                 device,
                 FakeBufferProvider::new(),
-                self.fake_scheduler.as_scheduler(),
+                self.timer.take().unwrap(),
             );
             mlme.set_main_channel(MAIN_CHANNEL).expect("unable to set main channel");
             mlme
@@ -1244,21 +1273,23 @@ mod tests {
             self.sta.state.replace(state);
         }
 
-        #[allow(deprecated)] // MlmeRequestMessage is deprecated
-        fn close_controlled_port(&mut self) {
+        fn close_controlled_port(&mut self, exec: &fasync::TestExecutor) {
             self.sta.eapol_required = true;
-            self.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::SetControlledPort {
+            let (control_handle, _) = fake_control_handle(exec);
+            self.handle_mlme_msg(fidl_mlme::MlmeRequest::SetControlledPort {
                 req: fidl_mlme::SetControlledPortRequest {
                     peer_sta_address: BSSID.0,
                     state: fidl_mlme::ControlledPortState::Closed,
                 },
+                control_handle,
             });
         }
     }
 
     #[test]
     fn spawns_new_sta_on_join_request_from_sme() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
@@ -1275,7 +1306,8 @@ mod tests {
 
     #[test]
     fn rsn_ie_implies_sta_eapol_required() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
@@ -1293,7 +1325,8 @@ mod tests {
 
     #[test]
     fn wpa1_implies_sta_eapol_required() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
@@ -1311,7 +1344,8 @@ mod tests {
 
     #[test]
     fn no_wpa_or_rsn_ie_implies_sta_eapol_not_required() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
@@ -1329,7 +1363,8 @@ mod tests {
 
     #[test]
     fn test_ensure_on_channel_followed_by_scheduled_scan() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -1342,14 +1377,16 @@ mod tests {
         assert_eq!(me.ctx.device.channel(), MAIN_CHANNEL);
 
         // Verify that triggering scheduled timeout by channel scheduler would switch channel
-        assert_eq!(m.fake_scheduler.deadlines.len(), 1);
-        me.handle_timed_event(m.fake_scheduler.next_id.into());
+        let (_, timed_event) =
+            m.time_stream.try_next().unwrap().expect("Should have scheduled a timed event");
+        me.handle_timed_event(timed_event.id, timed_event.event);
         assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
     }
 
     #[test]
     fn test_active_scan_scheduling() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
 
@@ -1364,9 +1401,14 @@ mod tests {
 
         // There should be two scheduled events, one by channel scheduler for scanned channel,
         // another by scanner for delayed sending of probe request
-        assert_eq!(m.fake_scheduler.deadlines.len(), 2);
-        let (id, _deadline) = m.fake_scheduler.next_event().expect("expect scheduled event [1]");
-        me.handle_timed_event(id);
+        let (_, channel_event) =
+            m.time_stream.try_next().unwrap().expect("Should have scheduled a timed event");
+        assert_variant!(channel_event.event, super::TimedEvent::ChannelScheduler);
+        let (_, probe_delay_event) =
+            m.time_stream.try_next().unwrap().expect("Should have scheduled a timed event");
+        assert_variant!(probe_delay_event.event, super::TimedEvent::ScannerProbeDelay(_));
+
+        me.handle_timed_event(probe_delay_event.id, probe_delay_event.event);
 
         // Verify that probe delay is sent.
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
@@ -1389,8 +1431,7 @@ mod tests {
         assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
 
         // Trigger timeout by channel scheduler, indicating end of scan request
-        let (id, _deadline) = m.fake_scheduler.next_event().expect("expect scheduled event [2]");
-        me.handle_timed_event(id);
+        me.handle_timed_event(channel_event.id, channel_event.event);
         assert_eq!(me.ctx.device.channel(), MAIN_CHANNEL);
         let msg =
             m.fake_device.next_mlme_msg::<fidl_mlme::ScanEnd>().expect("error reading SCAN.end");
@@ -1400,7 +1441,8 @@ mod tests {
 
     #[test]
     fn test_no_power_state_frame_when_client_is_not_connected() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
 
@@ -1410,9 +1452,9 @@ mod tests {
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
 
         // There should be one scheduled event for end of channel period
-        assert_eq!(m.fake_scheduler.deadlines.len(), 1);
-        let (id, _deadline) = m.fake_scheduler.next_event().expect("expect scheduled event");
-        me.handle_timed_event(id);
+        let (_, channel_event) =
+            m.time_stream.try_next().unwrap().expect("Should have scheduled a timed event");
+        me.handle_timed_event(channel_event.id, channel_event.event);
         assert_eq!(me.ctx.device.channel(), MAIN_CHANNEL);
 
         // Verify no power state frame is sent
@@ -1421,7 +1463,8 @@ mod tests {
 
     #[test]
     fn test_send_power_state_frame_when_switching_channel_while_connected() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -1429,7 +1472,7 @@ mod tests {
         // Pretend that client is associated by starting LostBssCounter
         client.move_to_associated_state();
         // clear the LostBssCounter timeout.
-        m.fake_scheduler.deadlines.clear();
+        m.time_stream.try_next().unwrap();
 
         // Send scan request to trigger channel switch
         me.on_sme_scan(scan_req());
@@ -1450,9 +1493,9 @@ mod tests {
         m.fake_device.wlan_queue.clear();
 
         // There should be one scheduled event for end of channel period
-        assert_eq!(m.fake_scheduler.deadlines.len(), 1);
-        let (id, _deadline) = m.fake_scheduler.next_event().expect("expect scheduled event");
-        me.handle_timed_event(id);
+        let (_, channel_event) =
+            m.time_stream.try_next().unwrap().expect("Should have scheduled a timed event");
+        me.handle_timed_event(channel_event.id, channel_event.event);
         assert_eq!(me.ctx.device.channel(), MAIN_CHANNEL);
 
         // Verify that power state frame is sent
@@ -1472,9 +1515,9 @@ mod tests {
     // Auto-deauth is tied to singal report by AssociationStatusCheck timeout
     fn advance_auto_deauth(m: &mut MockObjects, me: &mut ClientMlme, beacon_count: u32) {
         for _ in 0..beacon_count / super::state::ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT {
-            let (id, deadline) = assert_variant!(m.fake_scheduler.next_event(), Some(ev) => ev);
-            m.fake_scheduler.set_time(deadline);
-            me.handle_timed_event(id);
+            let (_, timed_event) =
+                m.time_stream.try_next().unwrap().expect("Should have scheduled a timed event");
+            me.handle_timed_event(timed_event.id, timed_event.event);
             assert_eq!(m.fake_device.wlan_queue.len(), 0);
             m.fake_device
                 .next_mlme_msg::<fidl_internal::SignalReportIndication>()
@@ -1484,7 +1527,8 @@ mod tests {
 
     #[test]
     fn test_auto_deauth_uninterrupted_interval() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -1495,11 +1539,11 @@ mod tests {
         advance_auto_deauth(&mut m, &mut me, DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT);
 
         // One more timeout to trigger the auto deauth
-        let (id, deadline) = assert_variant!(m.fake_scheduler.next_event(), Some(ev) => ev);
+        let (_, timed_event) =
+            m.time_stream.try_next().unwrap().expect("Should have scheduled a timed event");
 
         // Verify that triggering event at deadline causes deauth
-        m.fake_scheduler.set_time(deadline);
-        me.handle_timed_event(id);
+        me.handle_timed_event(timed_event.id, timed_event.event);
         m.fake_device
             .next_mlme_msg::<fidl_internal::SignalReportIndication>()
             .expect("error reading SignalReport.indication");
@@ -1531,7 +1575,8 @@ mod tests {
 
     #[test]
     fn test_auto_deauth_received_beacon() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -1543,17 +1588,17 @@ mod tests {
 
         // Receive beacon midway, so lost bss countdown is reset.
         // If this beacon is not received, the next timeout will trigger auto deauth.
-        me.on_mac_frame(BEACON_FRAME, None);
+        me.on_mac_frame_rx(BEACON_FRAME, None);
 
         // Verify auto deauth is not triggered for the entire duration.
         advance_auto_deauth(&mut m, &mut me, DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT);
 
         // Verify more timer is scheduled
-        let (id2, deadline2) = assert_variant!(m.fake_scheduler.next_event(), Some(ev) => ev);
+        let (_, timed_event2) =
+            m.time_stream.try_next().unwrap().expect("Should have scheduled a timed event");
 
         // Verify that triggering event at new deadline causes deauth
-        m.fake_scheduler.set_time(deadline2);
-        me.handle_timed_event(id2);
+        me.handle_timed_event(timed_event2.id, timed_event2.event);
         m.fake_device
             .next_mlme_msg::<fidl_internal::SignalReportIndication>()
             .expect("error reading SignalReport.indication");
@@ -1585,7 +1630,8 @@ mod tests {
 
     #[test]
     fn client_send_open_auth_frame() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -1614,7 +1660,8 @@ mod tests {
 
     #[test]
     fn client_send_assoc_req_frame() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -1676,7 +1723,8 @@ mod tests {
 
     #[test]
     fn client_send_keep_alive_resp_frame() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -1702,7 +1750,8 @@ mod tests {
     #[test]
     fn client_send_data_frame() {
         let payload = vec![5; 8];
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -1735,7 +1784,8 @@ mod tests {
 
     #[test]
     fn client_send_data_frame_ipv4_qos() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         let mut client = make_client_station();
         client
@@ -1776,7 +1826,8 @@ mod tests {
 
     #[test]
     fn client_send_data_frame_ipv6_qos() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         let mut client = make_client_station();
         client
@@ -1817,7 +1868,8 @@ mod tests {
 
     #[test]
     fn client_send_deauthentication_notification() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -1856,7 +1908,8 @@ mod tests {
             42, 42, 42, 42, 42, 42, // addr3
             0x10, 0, // Sequence Control
         ];
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -1889,7 +1942,8 @@ mod tests {
         data_frame[4..10].copy_from_slice(&IFACE_MAC); // addr1 - receiver - client (us)
         data_frame[10..16].copy_from_slice(&BSSID.0); // addr2 - bssid
 
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -1914,7 +1968,8 @@ mod tests {
         data_frame[4..10].copy_from_slice(&IFACE_MAC); // addr1 - receiver - client (us)
         data_frame[10..16].copy_from_slice(&BSSID.0); // addr2 - bssid
 
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -1949,7 +2004,8 @@ mod tests {
         data_frame[4..10].copy_from_slice(&IFACE_MAC); // addr1 - receiver - client (us)
         data_frame[10..16].copy_from_slice(&BSSID.0); // addr2 - bssid
 
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -1976,12 +2032,13 @@ mod tests {
         data_frame[4..10].copy_from_slice(&IFACE_MAC); // addr1 - receiver - client (us)
         data_frame[10..16].copy_from_slice(&BSSID.0); // addr2 - bssid
 
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
         client.move_to_associated_state();
-        client.close_controlled_port();
+        client.close_controlled_port(&exec);
 
         client.on_mac_frame(&data_frame[..], None);
 
@@ -1996,12 +2053,13 @@ mod tests {
         eapol_frame[4..10].copy_from_slice(&IFACE_MAC); // addr1 - receiver - client (us)
         eapol_frame[10..16].copy_from_slice(&BSSID.0); // addr2 - bssid
 
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
         client.move_to_associated_state();
-        client.close_controlled_port();
+        client.close_controlled_port(&exec);
 
         client.on_mac_frame(&eapol_frame[..], None);
 
@@ -2026,7 +2084,8 @@ mod tests {
         eapol_frame[4..10].copy_from_slice(&IFACE_MAC); // addr1 - receiver - client (us)
         eapol_frame[10..16].copy_from_slice(&BSSID.0); // addr2 - bssid
 
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -2050,7 +2109,8 @@ mod tests {
 
     #[test]
     fn send_eapol_ind_too_large() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -2064,7 +2124,8 @@ mod tests {
 
     #[test]
     fn send_eapol_ind_success() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -2083,7 +2144,8 @@ mod tests {
 
     #[test]
     fn send_eapol_frame_success() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -2123,7 +2185,8 @@ mod tests {
 
     #[test]
     fn send_eapol_frame_failure() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let device = m.fake_device.as_device_fail_wlan_tx();
         let mut me = m.make_mlme_with_device(device);
         me.make_client_station();
@@ -2149,7 +2212,8 @@ mod tests {
 
     #[test]
     fn send_ps_poll_frame() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -2163,7 +2227,8 @@ mod tests {
 
     #[test]
     fn send_power_state_doze_frame_success() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         let mut client = make_client_station();
         client
@@ -2181,7 +2246,8 @@ mod tests {
 
     #[test]
     fn send_addba_req_frame() {
-        let mut mock = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut mock = MockObjects::new(&exec);
         let mut mlme = mock.make_mlme();
         mlme.make_client_station();
         let mut client = mlme.get_bound_client().expect("client should be present");
@@ -2214,7 +2280,8 @@ mod tests {
 
     #[test]
     fn send_addba_resp_frame() {
-        let mut mock = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut mock = MockObjects::new(&exec);
         let mut mlme = mock.make_mlme();
         mlme.make_client_station();
         let mut client = mlme.get_bound_client().expect("client should be present");
@@ -2247,7 +2314,8 @@ mod tests {
 
     #[test]
     fn client_send_successful_associate_conf() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -2286,7 +2354,8 @@ mod tests {
 
     #[test]
     fn client_send_failed_associate_conf() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
@@ -2310,11 +2379,12 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)] // Needed for raw MLME message until main loop lives in Rust
     fn mlme_respond_to_stats_query_with_empty_response() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
-        let stats_query_req = fidl_mlme::MlmeRequestMessage::StatsQueryReq {};
+        let (control_handle, _) = fake_control_handle(&exec);
+        let stats_query_req = fidl_mlme::MlmeRequest::StatsQueryReq { control_handle };
         let result = me.handle_mlme_msg(stats_query_req);
         assert_variant!(result, Ok(()));
         let stats_query_resp = m

@@ -9,7 +9,6 @@ use {
         device::Device,
         disconnect::LocallyInitiated,
         error::Error,
-        timer::{EventId, Timer},
     },
     anyhow::format_err,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
@@ -22,6 +21,7 @@ use {
         mac::{self, Aid, AuthAlgorithmNumber, StatusCode},
         mgmt_writer,
         sequence::SequenceManager,
+        timer::{EventId, Timer},
         wmm, TimeUnit,
     },
     wlan_frame_writer::{write_frame, write_frame_with_fixed_buf},
@@ -52,11 +52,7 @@ impl Context {
     }
 
     pub fn schedule_after(&mut self, duration: zx::Duration, event: TimedEvent) -> EventId {
-        self.timer.schedule_event(self.timer.now() + duration, event)
-    }
-
-    pub fn cancel_event(&mut self, event_id: EventId) {
-        self.timer.cancel_event(event_id)
+        self.timer.schedule_after(duration, event)
     }
 
     // MLME sender functions.
@@ -66,16 +62,18 @@ impl Context {
         &self,
         result_code: fidl_mlme::StartResultCode,
     ) -> Result<(), Error> {
-        self.device.access_sme_sender(|sender| {
-            sender.send_start_conf(&mut fidl_mlme::StartConfirm { result_code })
-        })
+        self.device
+            .mlme_control_handle()
+            .send_start_conf(&mut fidl_mlme::StartConfirm { result_code })
+            .map_err(|e| e.into())
     }
 
     /// Sends MLME-STOP.confirm to the SME.
     pub fn send_mlme_stop_conf(&self, result_code: fidl_mlme::StopResultCode) -> Result<(), Error> {
-        self.device.access_sme_sender(|sender| {
-            sender.send_stop_conf(&mut fidl_mlme::StopConfirm { result_code })
-        })
+        self.device
+            .mlme_control_handle()
+            .send_stop_conf(&mut fidl_mlme::StopConfirm { result_code })
+            .map_err(|e| e.into())
     }
 
     /// Sends EAPOL.conf (fuchsia.wlan.mlme.EapolConfirm) to the SME.
@@ -84,9 +82,10 @@ impl Context {
         result_code: fidl_mlme::EapolResultCode,
         dst_addr: MacAddr,
     ) -> Result<(), Error> {
-        self.device.access_sme_sender(|sender| {
-            sender.send_eapol_conf(&mut fidl_mlme::EapolConfirm { result_code, dst_addr })
-        })
+        self.device
+            .mlme_control_handle()
+            .send_eapol_conf(&mut fidl_mlme::EapolConfirm { result_code, dst_addr })
+            .map_err(|e| e.into())
     }
 
     /// Sends MLME-AUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.5.4) to the SME.
@@ -95,12 +94,13 @@ impl Context {
         peer_sta_address: MacAddr,
         auth_type: fidl_mlme::AuthenticationTypes,
     ) -> Result<(), Error> {
-        self.device.access_sme_sender(|sender| {
-            sender.send_authenticate_ind(&mut fidl_mlme::AuthenticateIndication {
+        self.device
+            .mlme_control_handle()
+            .send_authenticate_ind(&mut fidl_mlme::AuthenticateIndication {
                 peer_sta_address,
                 auth_type,
             })
-        })
+            .map_err(|e| e.into())
     }
 
     /// Sends MLME-DEAUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.6.4) to the SME.
@@ -110,13 +110,14 @@ impl Context {
         reason_code: fidl_ieee80211::ReasonCode,
         locally_initiated: LocallyInitiated,
     ) -> Result<(), Error> {
-        self.device.access_sme_sender(|sender| {
-            sender.send_deauthenticate_ind(&mut fidl_mlme::DeauthenticateIndication {
+        self.device
+            .mlme_control_handle()
+            .send_deauthenticate_ind(&mut fidl_mlme::DeauthenticateIndication {
                 peer_sta_address,
                 reason_code,
                 locally_initiated: locally_initiated.0,
             })
-        })
+            .map_err(|e| e.into())
     }
 
     /// Sends MLME-ASSOCIATE.indication (IEEE Std 802.11-2016, 6.3.7.4) to the SME.
@@ -129,8 +130,9 @@ impl Context {
         rates: Vec<ie::SupportedRate>,
         rsne: Option<Vec<u8>>,
     ) -> Result<(), Error> {
-        self.device.access_sme_sender(|sender| {
-            sender.send_associate_ind(&mut fidl_mlme::AssociateIndication {
+        self.device
+            .mlme_control_handle()
+            .send_associate_ind(&mut fidl_mlme::AssociateIndication {
                 peer_sta_address,
                 listen_interval,
                 ssid: ssid.map(|s| s.into()),
@@ -139,7 +141,7 @@ impl Context {
                 rsne,
                 // TODO(fxbug.dev/37891): Send everything else (e.g. HT capabilities).
             })
-        })
+            .map_err(|e| e.into())
     }
 
     /// Sends MLME-DISASSOCIATE.indication (IEEE Std 802.11-2016, 6.3.9.3) to the SME.
@@ -149,13 +151,14 @@ impl Context {
         reason_code: fidl_ieee80211::ReasonCode,
         locally_initiated: LocallyInitiated,
     ) -> Result<(), Error> {
-        self.device.access_sme_sender(|sender| {
-            sender.send_disassociate_ind(&mut fidl_mlme::DisassociateIndication {
+        self.device
+            .mlme_control_handle()
+            .send_disassociate_ind(&mut fidl_mlme::DisassociateIndication {
                 peer_sta_address,
                 reason_code,
                 locally_initiated: locally_initiated.0,
             })
-        })
+            .map_err(|e| e.into())
     }
 
     /// Sends EAPOL.indication (fuchsia.wlan.mlme.EapolIndication) to the SME.
@@ -165,13 +168,14 @@ impl Context {
         src_addr: MacAddr,
         data: &[u8],
     ) -> Result<(), Error> {
-        self.device.access_sme_sender(|sender| {
-            sender.send_eapol_ind(&mut fidl_mlme::EapolIndication {
+        self.device
+            .mlme_control_handle()
+            .send_eapol_ind(&mut fidl_mlme::EapolIndication {
                 dst_addr,
                 src_addr,
                 data: data.to_vec(),
             })
-        })
+            .map_err(|e| e.into())
     }
 
     // WLAN frame sender functions.
@@ -507,29 +511,29 @@ impl Context {
 mod test {
     use {
         super::*,
-        crate::{
-            ap::ClientEvent,
-            buffer::FakeBufferProvider,
-            device::FakeDevice,
-            timer::{FakeScheduler, Scheduler},
-        },
+        crate::{ap::ClientEvent, buffer::FakeBufferProvider, device::FakeDevice},
+        fuchsia_async as fasync,
         std::convert::TryFrom,
-        wlan_common::{assert_variant, mac},
+        wlan_common::{
+            assert_variant, mac,
+            timer::{create_timer, TimeStream},
+        },
     };
 
     const CLIENT_ADDR: MacAddr = [1u8; 6];
     const BSSID: Bssid = Bssid([2u8; 6]);
     const CLIENT_ADDR2: MacAddr = [3u8; 6];
 
-    fn make_context(device: Device, scheduler: Scheduler) -> Context {
-        Context::new(device, FakeBufferProvider::new(), Timer::<TimedEvent>::new(scheduler), BSSID)
+    fn make_context(device: Device) -> (Context, TimeStream<TimedEvent>) {
+        let (timer, time_stream) = create_timer();
+        (Context::new(device, FakeBufferProvider::new(), timer, BSSID), time_stream)
     }
 
     #[test]
     fn send_mlme_auth_ind() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (ctx, _) = make_context(fake_device.as_device());
         ctx.send_mlme_auth_ind(CLIENT_ADDR, fidl_mlme::AuthenticationTypes::OpenSystem)
             .expect("expected OK");
         let msg = fake_device
@@ -546,9 +550,9 @@ mod test {
 
     #[test]
     fn send_mlme_deauth_ind() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (ctx, _) = make_context(fake_device.as_device());
         ctx.send_mlme_deauth_ind(
             CLIENT_ADDR,
             fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
@@ -570,9 +574,9 @@ mod test {
 
     #[test]
     fn send_mlme_assoc_ind() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (ctx, _) = make_context(fake_device.as_device());
         ctx.send_mlme_assoc_ind(
             CLIENT_ADDR,
             1,
@@ -600,9 +604,9 @@ mod test {
 
     #[test]
     fn send_mlme_disassoc_ind() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (ctx, _) = make_context(fake_device.as_device());
         ctx.send_mlme_disassoc_ind(
             CLIENT_ADDR,
             fidl_ieee80211::ReasonCode::LeavingNetworkDisassoc,
@@ -624,9 +628,9 @@ mod test {
 
     #[test]
     fn send_mlme_eapol_ind() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (ctx, _) = make_context(fake_device.as_device());
         ctx.send_mlme_eapol_ind(CLIENT_ADDR2, CLIENT_ADDR, &[1, 2, 3, 4, 5][..])
             .expect("expected OK");
         let msg = fake_device
@@ -644,38 +648,29 @@ mod test {
 
     #[test]
     fn schedule_after() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, mut time_stream) = make_context(fake_device.as_device());
         let event_id = ctx.schedule_after(
             zx::Duration::from_seconds(5),
             TimedEvent::ClientEvent([1, 1, 1, 1, 1, 1], ClientEvent::BssIdleTimeout),
         );
-        assert_variant!(
-            ctx.timer.triggered(&event_id),
-            Some(TimedEvent::ClientEvent([1, 1, 1, 1, 1, 1], ClientEvent::BssIdleTimeout))
-        );
-        assert_variant!(ctx.timer.triggered(&event_id), None);
-    }
+        let (_, timed_event) =
+            time_stream.try_next().unwrap().expect("Should have scheduled an event");
+        assert_eq!(timed_event.id, event_id);
 
-    #[test]
-    fn cancel_event() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let event_id = ctx.schedule_after(
-            zx::Duration::from_seconds(5),
-            TimedEvent::ClientEvent([1, 1, 1, 1, 1, 1], ClientEvent::BssIdleTimeout),
+        assert_variant!(
+            timed_event.event,
+            TimedEvent::ClientEvent([1, 1, 1, 1, 1, 1], ClientEvent::BssIdleTimeout)
         );
-        ctx.cancel_event(event_id);
-        assert_variant!(ctx.timer.triggered(&event_id), None);
+        assert!(time_stream.try_next().is_err());
     }
 
     #[test]
     fn make_auth_frame() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let (in_buf, bytes_written) = ctx
             .make_auth_frame(
                 CLIENT_ADDR,
@@ -704,9 +699,9 @@ mod test {
 
     #[test]
     fn make_assoc_resp_frame() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let (in_buf, bytes_written) = ctx
             .make_assoc_resp_frame(
                 CLIENT_ADDR,
@@ -740,9 +735,9 @@ mod test {
 
     #[test]
     fn make_assoc_resp_frame_error() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let (in_buf, bytes_written) = ctx
             .make_assoc_resp_frame_error(
                 CLIENT_ADDR,
@@ -770,9 +765,9 @@ mod test {
 
     #[test]
     fn make_assoc_resp_frame_no_bss_max_idle_period() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let (in_buf, bytes_written) = ctx
             .make_assoc_resp_frame(
                 CLIENT_ADDR,
@@ -805,9 +800,9 @@ mod test {
 
     #[test]
     fn make_disassoc_frame() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let (in_buf, bytes_written) = ctx
             .make_disassoc_frame(CLIENT_ADDR, mac::ReasonCode::LEAVING_NETWORK_DISASSOC)
             .expect("error making disassoc frame");
@@ -829,9 +824,9 @@ mod test {
 
     #[test]
     fn make_probe_resp_frame() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let (in_buf, bytes_written) = ctx
             .make_probe_resp_frame(
                 CLIENT_ADDR,
@@ -869,9 +864,9 @@ mod test {
 
     #[test]
     fn make_beacon_frame() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (ctx, _) = make_context(fake_device.as_device());
 
         let (in_buf, bytes_written, params) = ctx
             .make_beacon_frame(
@@ -913,9 +908,9 @@ mod test {
 
     #[test]
     fn make_data_frame() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let (in_buf, bytes_written) = ctx
             .make_data_frame(CLIENT_ADDR2, CLIENT_ADDR, false, false, 0x1234, &[1, 2, 3, 4, 5])
             .expect("error making data frame");
@@ -940,9 +935,9 @@ mod test {
 
     #[test]
     fn make_data_frame_ipv4_qos() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let (in_buf, bytes_written) = ctx
             .make_data_frame(
                 CLIENT_ADDR2,
@@ -977,9 +972,9 @@ mod test {
 
     #[test]
     fn make_data_frame_ipv6_qos() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let (in_buf, bytes_written) = ctx
             .make_data_frame(
                 CLIENT_ADDR2,
@@ -1014,9 +1009,9 @@ mod test {
 
     #[test]
     fn make_eapol_frame() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let (in_buf, bytes_written) = ctx
             .make_eapol_frame(CLIENT_ADDR2, CLIENT_ADDR, false, &[1, 2, 3, 4, 5])
             .expect("error making eapol frame");
@@ -1041,9 +1036,9 @@ mod test {
 
     #[test]
     fn deliver_eth_frame() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         ctx.deliver_eth_frame(CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..])
             .expect("expected OK");
         assert_eq!(fake_device.eth_queue.len(), 1);

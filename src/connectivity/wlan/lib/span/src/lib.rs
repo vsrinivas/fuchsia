@@ -22,6 +22,16 @@ impl<'a> From<CSpan<'a>> for &'a [u8] {
     }
 }
 
+impl From<CSpan<'_>> for Vec<u8> {
+    fn from(span: CSpan<'_>) -> Vec<u8> {
+        if span.data.is_null() {
+            vec![]
+        } else {
+            <&[u8]>::from(span).to_vec()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -13,7 +13,6 @@ use {
         device::{Device, TxFlags},
         error::Error,
         logger,
-        timer::{EventId, Scheduler, Timer},
     },
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_minstrel as fidl_minstrel, fidl_fuchsia_wlan_mlme as fidl_mlme,
@@ -23,6 +22,7 @@ use {
     std::fmt,
     wlan_common::{
         mac::{self, CapabilityInfo},
+        timer::{EventId, Timer},
         TimeUnit,
     },
     zerocopy::ByteSlice,
@@ -116,36 +116,61 @@ impl<T: std::borrow::Borrow<InfraBss>> BssOptionExt<T> for Option<T> {
     }
 }
 
+impl crate::MlmeImpl for Ap {
+    type Config = Bssid;
+    type TimerEvent = TimedEvent;
+    fn new(
+        config: Bssid,
+        device: Device,
+        buf_provider: BufferProvider,
+        timer: Timer<TimedEvent>,
+    ) -> Self {
+        Self::new(device, buf_provider, timer, config)
+    }
+    fn handle_mlme_message(&mut self, msg: fidl_mlme::MlmeRequest) -> Result<(), anyhow::Error> {
+        Self::handle_mlme_msg(self, msg).map_err(|e| e.into())
+    }
+    fn handle_mac_frame_rx(
+        &mut self,
+        frame: &[u8],
+        rx_info: Option<banjo_fuchsia_hardware_wlan_mac::WlanRxInfo>,
+    ) {
+        Self::handle_mac_frame_rx(self, frame, rx_info)
+    }
+    fn handle_eth_frame_tx(&mut self, bytes: &[u8]) -> Result<(), anyhow::Error> {
+        Self::handle_eth_frame_tx(self, bytes);
+        Ok(())
+    }
+    fn handle_hw_indication(&mut self, ind: banjo_wlan_mac::WlanIndication) {
+        Self::handle_hw_indication(self, ind);
+    }
+    fn handle_timeout(&mut self, event_id: EventId, event: TimedEvent) {
+        Self::handle_timed_event(self, event_id, event)
+    }
+    fn access_device(&mut self) -> &mut Device {
+        &mut self.ctx.device
+    }
+}
+
 impl Ap {
     pub fn new(
         device: Device,
         buf_provider: BufferProvider,
-        scheduler: Scheduler,
+        timer: Timer<TimedEvent>,
         bssid: Bssid,
     ) -> Self {
         // TODO(fxbug.dev/41417): Remove this once devmgr installs a Rust logger.
         logger::install();
 
-        Self {
-            ctx: Context::new(device, buf_provider, Timer::<TimedEvent>::new(scheduler), bssid),
-            bss: None,
-        }
+        Self { ctx: Context::new(device, buf_provider, timer, bssid), bss: None }
     }
 
     // Timer handler functions.
-    pub fn handle_timed_event(&mut self, event_id: EventId) {
+    pub fn handle_timed_event(&mut self, event_id: EventId, event: TimedEvent) {
         let bss = match self.bss.as_mut() {
             Some(bss) => bss,
             None => {
                 error!("received timed event but BSS was not started yet");
-                return;
-            }
-        };
-
-        let event = match self.ctx.timer.triggered(&event_id) {
-            Some(event) => event,
-            None => {
-                error!("received unknown timed event");
                 return;
             }
         };
@@ -218,68 +243,67 @@ impl Ap {
         }
     }
 
-    pub fn handle_mlme_query_device_info(&self, txid: fidl::client::Txid) -> Result<(), Error> {
+    pub fn handle_mlme_query_device_info(
+        &self,
+        responder: fidl_mlme::MlmeQueryDeviceInfoResponder,
+    ) -> Result<(), Error> {
         let wlanmac_info = self.ctx.device.wlanmac_info();
         let mut info = crate::ddk_converter::device_info_from_wlanmac_info(wlanmac_info)?;
-        self.ctx
-            .device
-            .access_sme_sender(|sender| sender.send_query_device_info_response(txid, &mut info))
+        responder.send(&mut info).map_err(|e| e.into())
     }
 
-    fn handle_sme_list_minstrel_peers(&self, txid: fidl::client::Txid) -> Result<(), Error> {
+    fn handle_sme_list_minstrel_peers(
+        &self,
+        responder: fidl_mlme::MlmeListMinstrelPeersResponder,
+    ) -> Result<(), Error> {
         // TODO(fxbug.dev/79543): Implement once Minstrel is in Rust.
         error!("ListMinstrelPeers is not supported.");
         let peers = fidl_minstrel::Peers { addrs: vec![] };
         let mut resp = fidl_mlme::MinstrelListResponse { peers };
-        self.ctx
-            .device
-            .access_sme_sender(|sender| sender.send_list_minstrel_peers_response(txid, &mut resp))
+        responder.send(&mut resp).map_err(|e| e.into())
     }
 
     fn handle_sme_get_minstrel_stats(
         &self,
-        txid: fidl::client::Txid,
+        responder: fidl_mlme::MlmeGetMinstrelStatsResponder,
         _addr: &[u8; 6],
     ) -> Result<(), Error> {
         // TODO(fxbug.dev/79543): Implement once Minstrel is in Rust.
         error!("GetMinstrelStats is not supported.");
         let mut resp = fidl_mlme::MinstrelStatsResponse { peer: None };
-        self.ctx
-            .device
-            .access_sme_sender(|sender| sender.send_get_minstrel_stats_response(txid, &mut resp))
+        responder.send(&mut resp).map_err(|e| e.into())
     }
 
-    #[allow(deprecated)] // Allow until main message loop is in Rust.
-    pub fn handle_mlme_msg(&mut self, msg: fidl_mlme::MlmeRequestMessage) -> Result<(), Error> {
+    pub fn handle_mlme_msg(&mut self, msg: fidl_mlme::MlmeRequest) -> Result<(), Error> {
         match msg {
-            fidl_mlme::MlmeRequestMessage::StartReq { req } => self.handle_mlme_start_req(req),
-            fidl_mlme::MlmeRequestMessage::StopReq { req } => self.handle_mlme_stop_req(req),
-            fidl_mlme::MlmeRequestMessage::SetKeysReq { req } => self.handle_mlme_setkeys_req(req),
-            fidl_mlme::MlmeRequestMessage::QueryDeviceInfo { tx_id } => {
-                self.handle_mlme_query_device_info(tx_id)
+            fidl_mlme::MlmeRequest::StartReq { req, .. } => self.handle_mlme_start_req(req),
+            fidl_mlme::MlmeRequest::StopReq { req, .. } => self.handle_mlme_stop_req(req),
+            fidl_mlme::MlmeRequest::SetKeysReq { req, .. } => self.handle_mlme_setkeys_req(req),
+            fidl_mlme::MlmeRequest::QueryDeviceInfo { responder } => {
+                self.handle_mlme_query_device_info(responder)
             }
-            fidl_mlme::MlmeRequestMessage::ListMinstrelPeers { tx_id } => {
-                self.handle_sme_list_minstrel_peers(tx_id)
+            fidl_mlme::MlmeRequest::ListMinstrelPeers { responder } => {
+                self.handle_sme_list_minstrel_peers(responder)
             }
-            fidl_mlme::MlmeRequestMessage::GetMinstrelStats { tx_id, req } => {
-                self.handle_sme_get_minstrel_stats(tx_id, &req.peer_addr)
+            fidl_mlme::MlmeRequest::GetMinstrelStats { responder, req } => {
+                self.handle_sme_get_minstrel_stats(responder, &req.peer_addr)
             }
-            fidl_mlme::MlmeRequestMessage::AuthenticateResp { resp } => {
+            fidl_mlme::MlmeRequest::AuthenticateResp { resp, .. } => {
                 self.bss.as_mut().ok_or_bss_err()?.handle_mlme_auth_resp(&mut self.ctx, resp)
             }
-            fidl_mlme::MlmeRequestMessage::DeauthenticateReq { req } => {
+            fidl_mlme::MlmeRequest::DeauthenticateReq { req, .. } => {
                 self.bss.as_mut().ok_or_bss_err()?.handle_mlme_deauth_req(&mut self.ctx, req)
             }
-            fidl_mlme::MlmeRequestMessage::AssociateResp { resp } => {
+            fidl_mlme::MlmeRequest::AssociateResp { resp, .. } => {
                 self.bss.as_mut().ok_or_bss_err()?.handle_mlme_assoc_resp(&mut self.ctx, resp)
             }
-            fidl_mlme::MlmeRequestMessage::DisassociateReq { req } => {
+            fidl_mlme::MlmeRequest::DisassociateReq { req, .. } => {
                 self.bss.as_mut().ok_or_bss_err()?.handle_mlme_disassoc_req(&mut self.ctx, req)
             }
-            fidl_mlme::MlmeRequestMessage::SetControlledPort { req } => {
+            fidl_mlme::MlmeRequest::SetControlledPort { req, .. } => {
                 self.bss.as_mut().ok_or_bss_err()?.handle_mlme_set_controlled_port_req(req)
             }
-            fidl_mlme::MlmeRequestMessage::EapolReq { req } => {
+            fidl_mlme::MlmeRequest::EapolReq { req, .. } => {
                 self.bss.as_mut().ok_or_bss_err()?.handle_mlme_eapol_req(&mut self.ctx, req)
             }
             _ => Err(Error::Status(format!("not supported"), zx::Status::NOT_SUPPORTED)),
@@ -290,7 +314,7 @@ impl Ap {
         })
     }
 
-    pub fn handle_eth_frame(&mut self, frame: &[u8]) {
+    pub fn handle_eth_frame_tx(&mut self, frame: &[u8]) {
         let bss = match self.bss.as_mut() {
             Some(bss) => bss,
             None => {
@@ -313,7 +337,7 @@ impl Ap {
         }
     }
 
-    pub fn handle_mac_frame<B: ByteSlice>(
+    pub fn handle_mac_frame_rx<B: ByteSlice>(
         &mut self,
         bytes: B,
         rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
@@ -392,13 +416,14 @@ mod tests {
             buffer::FakeBufferProvider,
             device::FakeDevice,
             key::{KeyConfig, KeyType, Protection},
-            timer::FakeScheduler,
+            test_utils::fake_control_handle,
         },
         banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_common as fidl_common,
-        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_async as fasync,
         std::convert::TryFrom,
         wlan_common::{
             assert_variant, big_endian::BigEndianU16, test_utils::fake_frames::fake_wpa2_rsne,
+            timer,
         },
         wlan_frame_writer::write_frame_with_dynamic_buf,
     };
@@ -427,16 +452,16 @@ mod tests {
         buf
     }
 
+    fn make_ap(fake_device: Device) -> (Ap, timer::TimeStream<TimedEvent>) {
+        let (timer, time_stream) = timer::create_timer();
+        (Ap::new(fake_device, FakeBufferProvider::new(), timer, BSSID), time_stream)
+    }
+
     #[test]
     fn ap_handle_eth_frame() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -469,7 +494,7 @@ mod tests {
             .expect("expected OK");
         fake_device.wlan_queue.clear();
 
-        ap.handle_eth_frame(&make_eth_frame(
+        ap.handle_eth_frame_tx(&make_eth_frame(
             CLIENT_ADDR,
             CLIENT_ADDR2,
             0x1234,
@@ -498,14 +523,9 @@ mod tests {
 
     #[test]
     fn ap_handle_eth_frame_no_such_client() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -519,7 +539,7 @@ mod tests {
             )
             .expect("expected InfraBss::new ok"),
         );
-        ap.handle_eth_frame(&make_eth_frame(
+        ap.handle_eth_frame_tx(&make_eth_frame(
             CLIENT_ADDR2,
             CLIENT_ADDR,
             0x1234,
@@ -529,14 +549,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mac_frame() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -550,7 +565,7 @@ mod tests {
             )
             .expect("expected InfraBss::new ok"),
         );
-        ap.handle_mac_frame(
+        ap.handle_mac_frame_rx(
             &[
                 // Mgmt header
                 0b10110000, 0b00000000, // Frame Control
@@ -583,14 +598,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mac_frame_ps_poll() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -624,7 +634,7 @@ mod tests {
         fake_device.wlan_queue.clear();
 
         // Put the client into dozing.
-        ap.handle_mac_frame(
+        ap.handle_mac_frame_rx(
             &[
                 0b01001000, 0b00010001, // Frame control.
                 0, 0, // Duration.
@@ -636,7 +646,7 @@ mod tests {
             None,
         );
 
-        ap.handle_eth_frame(&make_eth_frame(
+        ap.handle_eth_frame_tx(&make_eth_frame(
             CLIENT_ADDR,
             CLIENT_ADDR2,
             0x1234,
@@ -645,7 +655,7 @@ mod tests {
         assert_eq!(fake_device.wlan_queue.len(), 0);
 
         // Send a PS-Poll.
-        ap.handle_mac_frame(
+        ap.handle_mac_frame_rx(
             &[
                 // Ctrl header
                 0b10100100, 0b00000000, // Frame Control
@@ -678,14 +688,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mac_frame_no_such_client() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -699,7 +704,7 @@ mod tests {
             )
             .expect("expected InfraBss::new ok"),
         );
-        ap.handle_mac_frame(
+        ap.handle_mac_frame_rx(
             &[
                 // Mgmt header
                 0b10100000, 0b00000001, // Frame Control
@@ -719,14 +724,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mac_frame_bogus() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -740,19 +740,14 @@ mod tests {
             )
             .expect("expected InfraBss::new ok"),
         );
-        ap.handle_mac_frame(&[0][..], None);
+        ap.handle_mac_frame_rx(&[0][..], None);
     }
 
     #[test]
     fn ap_handle_mac_frame_wrong_channel_drop() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -791,13 +786,13 @@ mod tests {
             rssi_dbm: 0,
             snr_dbh: 0,
         };
-        ap.handle_mac_frame(&probe_req[..], Some(rx_info_wrong_channel.clone()));
+        ap.handle_mac_frame_rx(&probe_req[..], Some(rx_info_wrong_channel.clone()));
 
         // Probe Request from the wrong channel should be dropped and no probe response sent.
         assert_eq!(fake_device.wlan_queue.len(), 0);
 
         // Frame from unknown channel should be processed and a probe response sent.
-        ap.handle_mac_frame(&probe_req[..], None);
+        ap.handle_mac_frame_rx(&probe_req[..], None);
         assert_eq!(fake_device.wlan_queue.len(), 1);
 
         // Frame from the same channel must be processed and a probe response sent.
@@ -810,20 +805,15 @@ mod tests {
             ..rx_info_wrong_channel
         };
         fake_device.wlan_queue.clear();
-        ap.handle_mac_frame(&probe_req[..], Some(rx_info_same_channel));
+        ap.handle_mac_frame_rx(&probe_req[..], Some(rx_info_same_channel));
         assert_eq!(fake_device.wlan_queue.len(), 1);
     }
 
     #[test]
     fn ap_handle_mlme_start_req() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.handle_mlme_start_req(fidl_mlme::StartRequest {
             ssid: Ssid::try_from("coolnet").unwrap().into(),
             bss_type: fidl_internal::BssType::Infrastructure,
@@ -861,14 +851,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mlme_start_req_already_started() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -911,14 +896,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mlme_stop_req() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -946,14 +926,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mlme_stop_req_already_stopped() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
 
         ap.handle_mlme_stop_req(fidl_mlme::StopRequest {
             ssid: Ssid::try_from("coolnet").unwrap().into(),
@@ -971,14 +946,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mlme_setkeys_req() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -1028,14 +998,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mlme_setkeys_req_no_bss() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         assert_variant!(
             ap.handle_mlme_setkeys_req(fidl_mlme::SetKeysRequest {
                 keylist: vec![fidl_mlme::SetKeyDescriptor {
@@ -1055,14 +1020,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mlme_setkeys_req_bss_no_rsne() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -1096,14 +1056,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mlme_msg_handle_mlme_auth_resp() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -1119,14 +1074,15 @@ mod tests {
         );
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
-        #[allow(deprecated)]
-        ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp {
+        let (control_handle, _) = fake_control_handle(&exec);
+        ap.handle_mlme_msg(fidl_mlme::MlmeRequest::AuthenticateResp {
             resp: fidl_mlme::AuthenticateResponse {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired,
             },
+            control_handle,
         })
-        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp) ok");
+        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequest::AuthenticateResp) ok");
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
             &fake_device.wlan_queue[0].0[..],
@@ -1148,25 +1104,23 @@ mod tests {
 
     #[test]
     fn ap_handle_mlme_msg_handle_mlme_auth_resp_no_bss() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
 
+        let (control_handle, _) = fake_control_handle(&exec);
         assert_eq!(
             zx::Status::from(
-                #[allow(deprecated)]
-                ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp {
+                ap.handle_mlme_msg(fidl_mlme::MlmeRequest::AuthenticateResp {
                     resp: fidl_mlme::AuthenticateResponse {
                         peer_sta_address: CLIENT_ADDR,
                         result_code: fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired,
                     },
+                    control_handle,
                 })
-                .expect_err("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp) error")
+                .expect_err(
+                    "expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequest::AuthenticateResp) error"
+                )
             ),
             zx::Status::BAD_STATE
         );
@@ -1174,14 +1128,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mlme_msg_handle_mlme_auth_resp_no_such_client() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -1196,16 +1145,19 @@ mod tests {
             .expect("expected InfraBss::new ok"),
         );
 
+        let (control_handle, _) = fake_control_handle(&exec);
         assert_eq!(
             zx::Status::from(
-                #[allow(deprecated)]
-                ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp {
+                ap.handle_mlme_msg(fidl_mlme::MlmeRequest::AuthenticateResp {
                     resp: fidl_mlme::AuthenticateResponse {
                         peer_sta_address: CLIENT_ADDR,
                         result_code: fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired,
                     },
+                    control_handle,
                 })
-                .expect_err("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp) error")
+                .expect_err(
+                    "expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequest::AuthenticateResp) error"
+                )
             ),
             zx::Status::NOT_FOUND
         );
@@ -1213,14 +1165,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mlme_msg_handle_mlme_deauth_req() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -1236,16 +1183,15 @@ mod tests {
         );
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
-        #[allow(deprecated)]
-        ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::DeauthenticateReq {
+        let (control_handle, _) = fake_control_handle(&exec);
+        ap.handle_mlme_msg(fidl_mlme::MlmeRequest::DeauthenticateReq {
             req: fidl_mlme::DeauthenticateRequest {
                 peer_sta_address: CLIENT_ADDR,
                 reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
             },
+            control_handle,
         })
-        .expect(
-            "expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::DeauthenticateReq) ok",
-        );
+        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequest::DeauthenticateReq) ok");
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
             &fake_device.wlan_queue[0].0[..],
@@ -1265,14 +1211,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mlme_msg_handle_mlme_assoc_resp() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -1288,8 +1229,8 @@ mod tests {
         );
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
-        #[allow(deprecated)]
-        ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp {
+        let (control_handle, _) = fake_control_handle(&exec);
+        ap.handle_mlme_msg(fidl_mlme::MlmeRequest::AssociateResp {
             resp: fidl_mlme::AssociateResponse {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCode::Success,
@@ -1297,8 +1238,9 @@ mod tests {
                 capability_info: CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             },
+            control_handle,
         })
-        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp) ok");
+        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequest::AssociateResp) ok");
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
             &fake_device.wlan_queue[0].0[..],
@@ -1324,14 +1266,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mlme_msg_handle_mlme_disassoc_req() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -1347,14 +1284,15 @@ mod tests {
         );
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
-        #[allow(deprecated)]
-        ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::DisassociateReq {
+        let (control_handle, _) = fake_control_handle(&exec);
+        ap.handle_mlme_msg(fidl_mlme::MlmeRequest::DisassociateReq {
             req: fidl_mlme::DisassociateRequest {
                 peer_sta_address: CLIENT_ADDR,
                 reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDisassoc,
             },
+            control_handle,
         })
-        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::DisassociateReq) ok");
+        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequest::DisassociateReq) ok");
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
             &fake_device.wlan_queue[0].0[..],
@@ -1374,14 +1312,9 @@ mod tests {
 
     #[test]
     fn ap_handle_mlme_msg_handle_mlme_set_controlled_port_req() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -1397,8 +1330,8 @@ mod tests {
         );
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
-        #[allow(deprecated)]
-        ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp {
+        let (control_handle, _) = fake_control_handle(&exec);
+        ap.handle_mlme_msg(fidl_mlme::MlmeRequest::AssociateResp {
             resp: fidl_mlme::AssociateResponse {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCode::Success,
@@ -1406,31 +1339,26 @@ mod tests {
                 capability_info: CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3],
             },
+            control_handle,
         })
-        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp) ok");
+        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequest::AssociateResp) ok");
 
-        #[allow(deprecated)]
-        ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::SetControlledPort {
+        let (control_handle, _) = fake_control_handle(&exec);
+        ap.handle_mlme_msg(fidl_mlme::MlmeRequest::SetControlledPort {
             req: fidl_mlme::SetControlledPortRequest {
                 peer_sta_address: CLIENT_ADDR,
                 state: fidl_mlme::ControlledPortState::Open,
             },
+            control_handle,
         })
-        .expect(
-            "expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::SetControlledPort) ok",
-        );
+        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequest::SetControlledPort) ok");
     }
 
     #[test]
     fn ap_handle_mlme_msg_handle_mlme_eapol_req() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ap = Ap::new(
-            fake_device.as_device(),
-            FakeBufferProvider::new(),
-            fake_scheduler.as_scheduler(),
-            BSSID,
-        );
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ap, _) = make_ap(fake_device.as_device());
         ap.bss.replace(
             InfraBss::new(
                 &mut ap.ctx,
@@ -1446,15 +1374,16 @@ mod tests {
         );
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
-        #[allow(deprecated)]
-        ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::EapolReq {
+        let (control_handle, _) = fake_control_handle(&exec);
+        ap.handle_mlme_msg(fidl_mlme::MlmeRequest::EapolReq {
             req: fidl_mlme::EapolRequest {
                 dst_addr: CLIENT_ADDR,
                 src_addr: BSSID.0,
                 data: vec![1, 2, 3],
             },
+            control_handle,
         })
-        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::EapolReq) ok");
+        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequest::EapolReq) ok");
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
             &fake_device.wlan_queue[0].0[..],

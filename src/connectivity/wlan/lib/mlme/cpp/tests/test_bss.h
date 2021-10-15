@@ -17,8 +17,6 @@
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/service.h>
-#include <wlan/mlme/timer.h>
 
 #include "mock_device.h"
 #include "src/lib/timekeeper/clock.h"
@@ -153,27 +151,27 @@ FV TypeCheckWlanFrame(Packet* pkt) {
 
 ::fuchsia::wlan::internal::BssDescription CreateBssDescription(
     bool rsn, wlan_channel_t channel = kBssChannel);
-MlmeMsg<::fuchsia::wlan::mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time);
-MlmeMsg<::fuchsia::wlan::mlme::StartRequest> CreateStartRequest(bool protected_ap);
-MlmeMsg<::fuchsia::wlan::mlme::StopRequest> CreateStopRequest();
-MlmeMsg<::fuchsia::wlan::mlme::JoinRequest> CreateJoinRequest(bool rsn);
-MlmeMsg<::fuchsia::wlan::mlme::AuthenticateRequest> CreateAuthRequest();
-MlmeMsg<::fuchsia::wlan::mlme::AuthenticateResponse> CreateAuthResponse(
+::fuchsia::wlan::mlme::ScanRequest CreateScanRequest(uint32_t max_channel_time);
+::fuchsia::wlan::mlme::StartRequest CreateStartRequest(bool protected_ap);
+::fuchsia::wlan::mlme::StopRequest CreateStopRequest();
+::fuchsia::wlan::mlme::JoinRequest CreateJoinRequest(bool rsn);
+::fuchsia::wlan::mlme::AuthenticateRequest CreateAuthRequest();
+::fuchsia::wlan::mlme::AuthenticateResponse CreateAuthResponse(
     common::MacAddr client_addr, ::fuchsia::wlan::mlme::AuthenticateResultCode result_code);
-MlmeMsg<::fuchsia::wlan::mlme::DeauthenticateRequest> CreateDeauthRequest(
+::fuchsia::wlan::mlme::DeauthenticateRequest CreateDeauthRequest(
     common::MacAddr, ::fuchsia::wlan::ieee80211::ReasonCode reason_code);
-MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest> CreateAssocRequest(bool rsn);
-MlmeMsg<::fuchsia::wlan::mlme::AssociateResponse> CreateAssocResponse(
+::fuchsia::wlan::mlme::AssociateRequest CreateAssocRequest(bool rsn);
+::fuchsia::wlan::mlme::AssociateResponse CreateAssocResponse(
     common::MacAddr client_addr, ::fuchsia::wlan::mlme::AssociateResultCode result_code,
     uint16_t aid);
-MlmeMsg<::fuchsia::wlan::mlme::NegotiatedCapabilities> CreateFinalizeAssociationRequest(
+::fuchsia::wlan::mlme::NegotiatedCapabilities CreateFinalizeAssociationRequest(
     const wlan_assoc_ctx& ac, wlan_channel_t channel);
-MlmeMsg<::fuchsia::wlan::mlme::EapolRequest> CreateEapolRequest(common::MacAddr src_addr,
-                                                                common::MacAddr dst_addr);
-MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr addr,
-                                                                    std::vector<uint8_t> key_data,
-                                                                    ::fuchsia::wlan::mlme::KeyType);
-MlmeMsg<::fuchsia::wlan::mlme::SetControlledPortRequest> CreateSetCtrlPortRequest(
+::fuchsia::wlan::mlme::EapolRequest CreateEapolRequest(common::MacAddr src_addr,
+                                                       common::MacAddr dst_addr);
+::fuchsia::wlan::mlme::SetKeysRequest CreateSetKeysRequest(common::MacAddr addr,
+                                                           std::vector<uint8_t> key_data,
+                                                           ::fuchsia::wlan::mlme::KeyType);
+::fuchsia::wlan::mlme::SetControlledPortRequest CreateSetCtrlPortRequest(
     common::MacAddr peer_addr, ::fuchsia::wlan::mlme::ControlledPortState);
 std::unique_ptr<Packet> CreateAuthReqFrame(common::MacAddr client_addr);
 std::unique_ptr<Packet> CreateAuthRespFrame(AuthAlgorithm auth_algo);

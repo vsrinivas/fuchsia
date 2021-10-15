@@ -31,9 +31,36 @@ typedef struct wlan_client_sta_t wlan_client_sta_t;
 typedef struct wlan_client_mlme_t wlan_client_mlme_t;
 
 /**
+ * MlmeHandle is the only access we have to our MLME after spinning it off into its own
+ * event loop thread.
+ */
+typedef struct wlan_mlme_handle_t wlan_mlme_handle_t;
+
+/**
  * Manages all SNS for a STA.
  */
 typedef struct mlme_sequence_manager_t mlme_sequence_manager_t;
+
+typedef struct {
+  void (*status)(void *ctx, uint32_t status);
+  void (*recv)(void *ctx, uint32_t flags, const uint8_t *data_buffer, uintptr_t data_size,
+               const wlan_rx_info_t *info);
+  void (*complete_tx)(void *ctx, wlan_tx_packet_t *packet, int32_t status);
+  void (*indication)(void *ctx, uint32_t ind);
+  void (*report_tx_status)(void *ctx, const wlan_tx_status_t *tx_status);
+  void (*hw_scan_complete)(void *ctx, const wlan_hw_scan_result_t *result);
+} rust_wlanmac_ifc_protocol_ops_copy_t;
+
+/**
+ * Hand-rolled Rust version of the banjo wlanmac_ifc_protocol for communication from the driver up.
+ * Note that we copy the individual fns out of this struct into the equivalent generated struct
+ * in C++. Thanks to cbindgen, this gives us a compile-time confirmation that our function
+ * signatures are correct.
+ */
+typedef struct {
+  const rust_wlanmac_ifc_protocol_ops_copy_t *ops;
+  void *ctx;
+} rust_wlanmac_ifc_protocol_copy_t;
 
 /**
  * An output buffer requires its owner to manage the underlying buffer's memory themselves.
@@ -57,18 +84,22 @@ typedef struct {
 typedef struct {
   void *device;
   /**
+   * Start operations on the underlying device and return the SME channel.
+   */
+  int32_t (*start)(void *device, const rust_wlanmac_ifc_protocol_copy_t *ifc,
+                   zx_handle_t *out_sme_channel);
+  /**
    * Request to deliver an Ethernet II frame to Fuchsia's Netstack.
    */
   int32_t (*deliver_eth_frame)(void *device, const uint8_t *data, uintptr_t len);
   /**
-   * Request to deliver a WLAN frame over the air.
+   * Deliver a WLAN frame directly through the firmware.
    */
-  int32_t (*send_wlan_frame)(void *device, mlme_out_buf_t buf, uint32_t flags);
+  int32_t (*queue_tx)(void *device, uint32_t options, mlme_out_buf_t buf, wlan_tx_info_t tx_info);
   /**
-   * Returns an unowned channel handle to MLME's SME peer, or ZX_HANDLE_INVALID
-   * if no SME channel is available.
+   * Reports the current status to the ethernet driver.
    */
-  uint32_t (*get_sme_channel)(void *device);
+  void (*set_eth_status)(void *device, uint32_t status);
   /**
    * Returns the currently set WLAN channel.
    */
@@ -122,7 +153,7 @@ typedef struct {
    * Clear the association context.
    */
   int32_t (*clear_assoc)(void *device, const uint8_t (*addr)[6]);
-} mlme_device_ops_t;
+} rust_device_interface_t;
 
 /**
  * An input buffer will always be returned to its original owner when no longer being used.
@@ -153,29 +184,6 @@ typedef struct {
   mlme_in_buf_t (*get_buffer)(uintptr_t min_len);
 } mlme_buffer_provider_ops_t;
 
-typedef struct {
-  uint64_t _0;
-} wlan_scheduler_event_id_t;
-
-/**
- * A scheduler to schedule and cancel timeouts.
- */
-typedef struct {
-  void *cookie;
-  /**
-   * Returns the current system time in nano seconds.
-   */
-  int64_t (*now)(void *cookie);
-  /**
-   * Requests to schedule an event. Returns a a unique ID used to cancel the scheduled event.
-   */
-  wlan_scheduler_event_id_t (*schedule)(void *cookie, int64_t deadline);
-  /**
-   * Cancels a previously scheduled event.
-   */
-  void (*cancel)(void *cookie, wlan_scheduler_event_id_t id);
-} wlan_scheduler_ops_t;
-
 /**
  * A convenient C-wrapper for read-only memory that is neither owned or managed by Rust
  */
@@ -192,6 +200,8 @@ typedef struct {
   zx_duration_t ensure_on_channel_time;
 } wlan_client_mlme_config_t;
 
+typedef uint64_t wlan_scheduler_event_id_t;
+
 /**
  * The power management state of a station.
  *
@@ -201,46 +211,37 @@ typedef struct {
   bool _0;
 } wlan_power_state_t;
 
-extern "C" wlan_ap_sta_t *ap_sta_new(mlme_device_ops_t device,
-                                     mlme_buffer_provider_ops_t buf_provider,
-                                     wlan_scheduler_ops_t scheduler, const uint8_t (*bssid)[6]);
+extern "C" wlan_mlme_handle_t *start_ap_sta(rust_device_interface_t device,
+                                            mlme_buffer_provider_ops_t buf_provider,
+                                            const uint8_t (*bssid)[6]);
 
-extern "C" void ap_sta_delete(wlan_ap_sta_t *sta);
+extern "C" wlan_mlme_handle_t *start_ap_sta_for_test(rust_device_interface_t device,
+                                                     mlme_buffer_provider_ops_t buf_provider,
+                                                     const uint8_t (*bssid)[6]);
 
-extern "C" void ap_sta_timeout_fired(wlan_ap_sta_t *sta, wlan_scheduler_event_id_t event_id);
+extern "C" void stop_and_delete_ap_sta(wlan_mlme_handle_t *sta);
 
-extern "C" int32_t ap_sta_handle_mlme_msg(wlan_ap_sta_t *sta, wlan_span_t bytes);
+extern "C" void ap_sta_queue_eth_frame_tx(wlan_mlme_handle_t *sta, wlan_span_t frame);
 
-extern "C" int32_t ap_sta_handle_mac_frame(wlan_ap_sta_t *sta, wlan_span_t frame,
-                                           const wlan_rx_info_t *rx_info);
+extern "C" void ap_mlme_advance_fake_time(wlan_mlme_handle_t *ap, int64_t nanos);
 
-extern "C" int32_t ap_sta_handle_eth_frame(wlan_ap_sta_t *sta, wlan_span_t frame);
+extern "C" void ap_mlme_run_until_stalled(wlan_mlme_handle_t *sta);
 
-extern "C" int32_t ap_sta_handle_hw_indication(wlan_ap_sta_t *sta, wlan_indication_t ind);
+extern "C" wlan_mlme_handle_t *start_client_mlme(wlan_client_mlme_config_t config,
+                                                 rust_device_interface_t device,
+                                                 mlme_buffer_provider_ops_t buf_provider);
 
-extern "C" wlan_client_mlme_t *client_mlme_new(wlan_client_mlme_config_t config,
-                                               mlme_device_ops_t device,
-                                               mlme_buffer_provider_ops_t buf_provider,
-                                               wlan_scheduler_ops_t scheduler);
+extern "C" wlan_mlme_handle_t *start_client_mlme_for_test(wlan_client_mlme_config_t config,
+                                                          rust_device_interface_t device,
+                                                          mlme_buffer_provider_ops_t buf_provider);
 
-extern "C" void client_mlme_delete(wlan_client_mlme_t *mlme);
+extern "C" void stop_and_delete_client_mlme(wlan_mlme_handle_t *mlme);
 
-/**
- * Return true if auto-deauth triggers. Return false otherwise
- */
-extern "C" void client_mlme_timeout_fired(wlan_client_mlme_t *mlme,
-                                          wlan_scheduler_event_id_t event_id);
+extern "C" void client_mlme_queue_eth_frame_tx(wlan_mlme_handle_t *mlme, wlan_span_t frame);
 
-extern "C" int32_t client_mlme_handle_mlme_msg(wlan_client_mlme_t *mlme, wlan_span_t bytes);
+extern "C" void client_mlme_advance_fake_time(wlan_mlme_handle_t *mlme, int64_t nanos);
 
-extern "C" bool client_mlme_on_channel(wlan_client_mlme_t *mlme);
-
-extern "C" void client_mlme_on_mac_frame(wlan_client_mlme_t *mlme, wlan_span_t bytes,
-                                         const wlan_rx_info_t *rx_info);
-
-extern "C" void client_mlme_hw_scan_complete(wlan_client_mlme_t *mlme, uint8_t status);
-
-extern "C" int32_t client_mlme_handle_eth_frame(wlan_client_mlme_t *mlme, wlan_span_t frame);
+extern "C" void client_mlme_run_until_stalled(wlan_mlme_handle_t *mlme);
 
 extern "C" mlme_sequence_manager_t *mlme_sequence_manager_new(void);
 

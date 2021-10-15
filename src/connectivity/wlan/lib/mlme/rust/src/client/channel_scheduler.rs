@@ -3,16 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        client::{
-            channel_listener::{ChannelListener, ChannelListenerSource},
-            TimedEvent,
-        },
-        timer::EventId,
+    crate::client::{
+        channel_listener::{ChannelListener, ChannelListenerSource},
+        TimedEvent,
     },
     banjo_fuchsia_wlan_common as banjo_common, fuchsia_zircon as zx,
     log::{debug, error},
     std::collections::VecDeque,
+    wlan_common::timer::EventId,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -161,16 +159,14 @@ impl<'a, CL: ChannelListener> BoundChannelScheduler<'a, CL> {
                 existing_channel, channel
             );
         }
-        let deadline = self.listener.timer().now() + meta.dwell_time;
-        self.chan_sched.timeout_id =
-            Some(self.listener.timer().schedule_event(deadline, TimedEvent::ChannelScheduler));
+        self.chan_sched.timeout_id = Some(
+            self.listener.timer().schedule_after(meta.dwell_time, TimedEvent::ChannelScheduler),
+        );
         self.listener.on_post_switch_channel(existing_channel, channel, meta.request_id);
     }
 
     fn cancel_existing_timeout(&mut self) {
-        if let Some(timeout_id) = self.chan_sched.timeout_id.take() {
-            self.listener.timer().cancel_event(timeout_id);
-        }
+        self.chan_sched.timeout_id.take();
     }
 
     fn busy(&self) -> bool {
@@ -264,11 +260,11 @@ mod tests {
         crate::{
             client::channel_listener::{LEvent, MockListenerState},
             device::{Device, FakeDevice},
-            timer::{FakeScheduler, Timer},
         },
-        banjo_fuchsia_wlan_common as banjo_common,
+        banjo_fuchsia_wlan_common as banjo_common, fuchsia_async as fasync,
         fuchsia_zircon::prelude::DurationNum,
         std::{cell::RefCell, rc::Rc},
+        wlan_common::timer::{create_timer, TimeStream, Timer},
     };
 
     const IMMEDIATE_CHANNEL: banjo_common::WlanChannel = banjo_common::WlanChannel {
@@ -291,7 +287,8 @@ mod tests {
 
     #[test]
     fn test_schedule_immediate_on_empty_queue() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut chan_sched = ChannelScheduler::new();
         let mut listener = m.listener_state.bind(&mut m.device, &mut m.timer);
         let mut chan_sched = chan_sched.bind(&mut listener, ChannelListenerSource::Others);
@@ -318,7 +315,8 @@ mod tests {
 
     #[test]
     fn test_queue_channels_on_empty_queue() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut chan_sched = ChannelScheduler::new();
         let mut listener = m.listener_state.bind(&mut m.device, &mut m.timer);
         let mut chan_sched = chan_sched.bind(&mut listener, ChannelListenerSource::Others);
@@ -345,7 +343,8 @@ mod tests {
 
     #[test]
     fn test_schedule_immediate_interrupting_queued_request() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut chan_sched = ChannelScheduler::new();
         let mut listener = m.listener_state.bind(&mut m.device, &mut m.timer);
         let mut chan_sched = chan_sched.bind(&mut listener, ChannelListenerSource::Others);
@@ -389,7 +388,8 @@ mod tests {
 
     #[test]
     fn test_queuing_channels() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut chan_sched = ChannelScheduler::new();
         let mut listener = m.listener_state.bind(&mut m.device, &mut m.timer);
         let mut chan_sched = chan_sched.bind(&mut listener, ChannelListenerSource::Others);
@@ -437,7 +437,8 @@ mod tests {
 
     #[test]
     fn test_transitioning_to_same_channel_still_trigger_events() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut chan_sched = ChannelScheduler::new();
         let mut listener = m.listener_state.bind(&mut m.device, &mut m.timer);
         let mut chan_sched = chan_sched.bind(&mut listener, ChannelListenerSource::Others);
@@ -480,7 +481,8 @@ mod tests {
         //
         // In practice, scheduled request is only used on the same main channel, so either
         // behavior works.
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut chan_sched = ChannelScheduler::new();
         let mut listener = m.listener_state.bind(&mut m.device, &mut m.timer);
         let mut chan_sched = chan_sched.bind(&mut listener, ChannelListenerSource::Others);
@@ -512,21 +514,20 @@ mod tests {
 
     struct MockObjects {
         fake_device: Box<FakeDevice>,
-        _fake_scheduler: Box<FakeScheduler>,
+        _time_stream: TimeStream<TimedEvent>,
         device: Device,
         timer: Timer<TimedEvent>,
         listener_state: MockListenerState,
     }
 
     impl MockObjects {
-        fn new() -> Self {
-            let mut fake_device = Box::new(FakeDevice::new());
-            let mut fake_scheduler = Box::new(FakeScheduler::new());
+        fn new(exec: &fasync::TestExecutor) -> Self {
+            let mut fake_device = Box::new(FakeDevice::new(exec));
             let device = fake_device.as_device();
-            let timer = Timer::<TimedEvent>::new(fake_scheduler.as_scheduler());
+            let (timer, time_stream) = create_timer();
             Self {
                 fake_device,
-                _fake_scheduler: fake_scheduler,
+                _time_stream: time_stream,
                 device,
                 timer,
                 listener_state: MockListenerState { events: Rc::new(RefCell::new(vec![])) },

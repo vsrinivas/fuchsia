@@ -3,79 +3,59 @@
 // found in the LICENSE file.
 
 use {
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon as zx,
     log::error,
     wlan_mlme::{
         buffer::BufferProvider,
         client::{ClientConfig, ClientMlme},
-        device::Device,
-        error::ResultExt,
-        timer::*,
+        device::DeviceInterface,
+        Mlme, MlmeHandle,
     },
     wlan_span::CSpan,
 };
 
 #[no_mangle]
-pub extern "C" fn client_mlme_new(
+pub extern "C" fn start_client_mlme(
     config: ClientConfig,
-    device: Device,
+    device: DeviceInterface,
     buf_provider: BufferProvider,
-    scheduler: Scheduler,
-) -> *mut ClientMlme {
-    Box::into_raw(Box::new(ClientMlme::new(config, device, buf_provider, scheduler)))
-}
-
-#[no_mangle]
-pub extern "C" fn client_mlme_delete(mlme: *mut ClientMlme) {
-    if !mlme.is_null() {
-        unsafe { Box::from_raw(mlme) };
-    }
-}
-
-/// Return true if auto-deauth triggers. Return false otherwise
-#[no_mangle]
-pub extern "C" fn client_mlme_timeout_fired(mlme: &mut ClientMlme, event_id: EventId) {
-    mlme.handle_timed_event(event_id)
-}
-
-#[no_mangle]
-pub extern "C" fn client_mlme_handle_mlme_msg(mlme: &mut ClientMlme, bytes: CSpan<'_>) -> i32 {
-    #[allow(deprecated)] // Allow until main message loop is in Rust.
-    match fidl_mlme::MlmeRequestMessage::decode(bytes.into(), &mut []) {
-        Ok(msg) => mlme.handle_mlme_msg(msg).into_raw_zx_status(),
+) -> *mut MlmeHandle {
+    match Mlme::<ClientMlme>::start(config, device, buf_provider) {
+        Ok(client_mlme) => Box::into_raw(Box::new(client_mlme)),
         Err(e) => {
-            error!("error decoding MLME message: {}", e);
-            zx::Status::IO.into_raw()
+            error!("Failed to start Client MLME: {}", e);
+            std::ptr::null_mut()
         }
     }
 }
 
 #[no_mangle]
-pub extern "C" fn client_mlme_on_channel(mlme: &mut ClientMlme) -> bool {
-    mlme.on_channel()
+pub extern "C" fn start_client_mlme_for_test(
+    config: ClientConfig,
+    device: DeviceInterface,
+    buf_provider: BufferProvider,
+) -> *mut MlmeHandle {
+    Box::into_raw(Box::new(Mlme::<ClientMlme>::start_test(config, device, buf_provider)))
 }
 
 #[no_mangle]
-pub extern "C" fn client_mlme_on_mac_frame(
-    mlme: &mut ClientMlme,
-    bytes: CSpan<'_>,
-    rx_info: *const banjo_wlan_mac::WlanRxInfo,
-) {
-    // unsafe is ok because we checked rx_info is not a nullptr.
-    let rx_info = if !rx_info.is_null() { Some(unsafe { *rx_info }) } else { None };
-    mlme.on_mac_frame(bytes.into(), rx_info);
+pub extern "C" fn stop_and_delete_client_mlme(mlme: *mut MlmeHandle) {
+    if !mlme.is_null() {
+        let mlme = unsafe { Box::from_raw(mlme) };
+        mlme.stop();
+    }
 }
 
 #[no_mangle]
-pub extern "C" fn client_mlme_hw_scan_complete(mlme: &mut ClientMlme, status: u8) {
-    mlme.handle_hw_scan_complete(banjo_wlan_mac::WlanHwScan(status));
+pub unsafe extern "C" fn client_mlme_queue_eth_frame_tx(mlme: &mut MlmeHandle, frame: CSpan<'_>) {
+    let _ = mlme.queue_eth_frame_tx(frame);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn client_mlme_handle_eth_frame(
-    mlme: &mut ClientMlme,
-    frame: CSpan<'_>,
-) -> i32 {
-    mlme.on_eth_frame::<&[u8]>(frame.into()).into_raw_zx_status()
+pub unsafe extern "C" fn client_mlme_advance_fake_time(mlme: &mut MlmeHandle, nanos: i64) {
+    mlme.advance_fake_time(nanos);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn client_mlme_run_until_stalled(mlme: &mut MlmeHandle) {
+    mlme.run_until_stalled();
 }

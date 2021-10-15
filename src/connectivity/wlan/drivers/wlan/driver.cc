@@ -24,12 +24,13 @@ zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
   auto status = wlandev->Bind();
   if (status != ZX_OK) {
     std::printf("wlan: could not bind: %d\n", status);
-  } else {
-    // devhost is now responsible for the memory used by wlandev. It will be
-    // cleaned up in the Device::Release() method.
-    wlandev.release();
+    return status;
   }
-  return status;
+
+  // devhost is now responsible for the memory used by wlandev. It will be
+  // cleaned up in the Device::EthRelease() method.
+  wlandev.release();
+  return ZX_OK;
 }
 
 static constexpr zx_driver_ops_t wlan_driver_ops = []() {

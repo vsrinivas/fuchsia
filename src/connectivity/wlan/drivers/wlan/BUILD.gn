@@ -24,8 +24,6 @@ fuchsia_driver("wlan_driver-driver") {
     "device.cc",
     "device.h",
     "driver.cc",
-    "minstrel.cc",
-    "minstrel.h",
     "probe_sequence.cc",
     "probe_sequence.h",
   ]
@@ -55,37 +53,6 @@ fuchsia_driver_component("wlan_driver") {
   deps = [ ":wlan_driver-driver" ]
 }
 
-test("wlan_minstrel_unittest") {
-  sources = [
-    "minstrel.cc",
-    "minstrel.h",
-    "probe_sequence.cc",
-    "probe_sequence.h",
-    "tests/minstrel_unittest.cc",
-    "tests/probe_sequence_unittest.cc",
-  ]
-
-  deps = [
-    "//garnet/lib/wlan/protocol",
-    "//src/connectivity/wlan/lib/common/cpp:common",
-    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
-    "//src/connectivity/wlan/lib/mlme/cpp/tests:test_main",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/fbl",
-  ]
-
-  configs +=
-      [ "//src/connectivity/wlan/lib/mlme/cpp/tests:wlan_mlme_tests_config" ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
-
-fuchsia_unittest_package("wlan_drivers_tests") {
-  deps = [ ":wlan_minstrel_unittest" ]
-}
-
 fuchsia_system_package("wlan") {
   package_name = "wlan-system"
 
@@ -96,8 +63,5 @@ fuchsia_system_package("wlan") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":wlan_bind_test",
-    ":wlan_drivers_tests",
-  ]
+  deps = [ ":wlan_bind_test" ]
 }

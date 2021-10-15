@@ -16,7 +16,6 @@ use {
         disconnect::LocallyInitiated,
         error::Error,
         key::KeyConfig,
-        timer::*,
     },
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
@@ -33,6 +32,7 @@ use {
         stats::SignalStrengthAverage,
         tim,
         time::TimeUnit,
+        timer::{EventId, Timer},
     },
     wlan_statemachine::*,
     zerocopy::{AsBytes, ByteSlice},
@@ -195,9 +195,9 @@ impl Authenticating {
     /// considered to be expired and invalid - the authentication failed. As a consequence,
     /// an MLME-AUTHENTICATION.confirm message is reported to MLME's SME peer indicating the
     /// timeout.
-    fn on_timeout(&mut self, sta: &mut BoundClient<'_>, event: EventId) {
+    fn on_timeout(&mut self, sta: &mut BoundClient<'_>, event_id: EventId) {
         // Timeout may result in a failure, and otherwise has no effect on state.
-        match self.algorithm.handle_timeout(sta, event) {
+        match self.algorithm.handle_timeout(sta, event_id) {
             Ok(akm::AkmState::Failed) => {
                 sta.send_authenticate_conf(
                     self.algorithm.auth_type(),
@@ -234,9 +234,8 @@ impl Authenticated {
         match sta.send_assoc_req_frame(capability_info, &req.rates[..], rsne, ht_cap, vht_cap) {
             Ok(()) => {
                 let duration_tus = TimeUnit(sta.sta.beacon_period) * ASSOC_TIMEOUT_BCN_PERIODS;
-                let deadline = sta.ctx.timer.now() + duration_tus.into();
                 let event = TimedEvent::Associating;
-                let event_id = sta.ctx.timer.schedule_event(deadline, event);
+                let event_id = sta.ctx.timer.schedule_after(duration_tus.into(), event);
                 Ok(event_id)
             }
             Err(e) => {
@@ -263,11 +262,9 @@ impl Authenticated {
             error!("Error sending deauthentication frame to BSS: {}", e);
         }
 
-        if let Err(e) = sta.ctx.device.access_sme_sender(|sender| {
-            sender.send_deauthenticate_conf(&mut fidl_mlme::DeauthenticateConfirm {
-                peer_sta_address: sta.sta.bssid.0,
-            })
-        }) {
+        if let Err(e) = sta.ctx.device.mlme_control_handle().send_deauthenticate_conf(
+            &mut fidl_mlme::DeauthenticateConfirm { peer_sta_address: sta.sta.bssid.0 },
+        ) {
             error!("Error sending MLME-DEAUTHENTICATE.confirm: {}", e)
         }
     }
@@ -275,7 +272,7 @@ impl Authenticated {
 
 /// Client received an MLME-ASSOCIATE.request message from SME.
 pub struct Associating {
-    timeout: EventId,
+    timeout: Option<EventId>,
 }
 
 impl Associating {
@@ -285,12 +282,12 @@ impl Associating {
     /// Returns Ok(()) if the association was successful, otherwise Err(()).
     /// Note: The pending authentication timeout will be canceled in any case.
     fn on_assoc_resp_frame<B: ByteSlice>(
-        &self,
+        &mut self,
         sta: &mut BoundClient<'_>,
         assoc_resp_hdr: &mac::AssocRespHdr,
         elements: B,
     ) -> Result<Association, ()> {
-        sta.ctx.timer.cancel_event(self.timeout);
+        self.timeout.take();
 
         match assoc_resp_hdr.status_code {
             mac::StatusCode::SUCCESS => {
@@ -342,8 +339,8 @@ impl Associating {
     /// association with the Client. However, to maximize interoperability disassociation frames
     /// are handled in this state as well and treated similar to unsuccessful association responses.
     /// This always results in an MLME-ASSOCIATE.confirm message to MLME's SME peer.
-    fn on_disassoc_frame(&self, sta: &mut BoundClient<'_>, _disassoc_hdr: &mac::DisassocHdr) {
-        sta.ctx.timer.cancel_event(self.timeout);
+    fn on_disassoc_frame(&mut self, sta: &mut BoundClient<'_>, _disassoc_hdr: &mac::DisassocHdr) {
+        self.timeout.take();
 
         warn!("received unexpected disassociation frame while associating");
         sta.send_associate_conf_failure(fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc);
@@ -352,8 +349,8 @@ impl Associating {
     /// Processes an inbound deauthentication frame.
     /// This always results in an MLME-ASSOCIATE.confirm message to MLME's SME peer.
     /// The pending association timeout will be canceled in this process.
-    fn on_deauth_frame(&self, sta: &mut BoundClient<'_>, deauth_hdr: &mac::DeauthHdr) {
-        sta.ctx.timer.cancel_event(self.timeout);
+    fn on_deauth_frame(&mut self, sta: &mut BoundClient<'_>, deauth_hdr: &mac::DeauthHdr) {
+        self.timeout.take();
 
         info!(
             "received spurious deauthentication frame while associating with BSS (unusual); \
@@ -367,16 +364,16 @@ impl Associating {
     /// considered to be expired and invalid - the association failed. As a consequence,
     /// an MLME-ASSOCIATE.confirm message is reported to MLME's SME peer indicating the
     /// timeout.
-    fn on_timeout(&self, sta: &mut BoundClient<'_>) {
-        // At this point, the event should already be canceled by the state's owner. However,
-        // ensure the timeout is canceled in any case.
-        sta.ctx.timer.cancel_event(self.timeout);
-
+    fn on_timeout(&mut self, sta: &mut BoundClient<'_>, event_id: EventId) {
+        if self.timeout != Some(event_id) {
+            return;
+        }
+        self.timeout.take();
         sta.send_associate_conf_failure(fidl_ieee80211::StatusCode::RefusedTemporarily);
     }
 
-    fn on_sme_deauthenticate(&self, sta: &mut BoundClient<'_>) {
-        sta.ctx.timer.cancel_event(self.timeout);
+    fn on_sme_deauthenticate(&mut self, _sta: &mut BoundClient<'_>) {
+        self.timeout.take();
     }
 }
 
@@ -419,11 +416,11 @@ pub fn schedule_association_status_timeout(
     timer: &mut Timer<TimedEvent>,
 ) -> StatusCheckTimeout {
     let last_fired = timer.now();
-    let deadline = last_fired
-        + zx::Duration::from(TimeUnit(beacon_period)) * ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT;
+    let duration =
+        zx::Duration::from(TimeUnit(beacon_period)) * ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT;
     StatusCheckTimeout {
         last_fired,
-        next_id: timer.schedule_event(deadline, TimedEvent::AssociationStatusCheck),
+        next_id: Some(timer.schedule_after(duration, TimedEvent::AssociationStatusCheck)),
     }
 }
 
@@ -455,7 +452,7 @@ impl Qos {
 #[derive(Debug)]
 pub struct StatusCheckTimeout {
     last_fired: zx::Time,
-    next_id: EventId,
+    next_id: Option<EventId>,
 }
 
 #[derive(Debug)]
@@ -742,17 +739,15 @@ impl Associated {
 
         self.pre_leaving_associated_state(sta);
 
-        if let Err(e) = sta.ctx.device.access_sme_sender(|sender| {
-            sender.send_deauthenticate_conf(&mut fidl_mlme::DeauthenticateConfirm {
-                peer_sta_address: sta.sta.bssid.0,
-            })
-        }) {
+        if let Err(e) = sta.ctx.device.mlme_control_handle().send_deauthenticate_conf(
+            &mut fidl_mlme::DeauthenticateConfirm { peer_sta_address: sta.sta.bssid.0 },
+        ) {
             error!("Error sending MLME-DEAUTHENTICATE.confirm: {}", e)
         }
     }
 
     fn pre_leaving_associated_state(&mut self, sta: &mut BoundClient<'_>) {
-        sta.ctx.timer.cancel_event(self.0.status_check_timeout.next_id);
+        self.0.status_check_timeout.next_id.take();
         self.0.controlled_port_open = false;
         if let Err(e) = sta.ctx.device.set_eth_link_down() {
             error!("Error disabling ethernet device offline: {}", e);
@@ -765,15 +760,18 @@ impl Associated {
     #[must_use]
     /// Reports average signal strength to SME and check if auto deauthentication is due.
     /// Returns true if there auto deauthentication is triggered by lack of beacon frames.
-    fn on_timeout(&mut self, sta: &mut BoundClient<'_>) -> bool {
-        // timeout should have been cancelled at this point, this is almost always a no-op.
-        sta.ctx.timer.cancel_event(self.0.status_check_timeout.next_id);
-        if let Err(e) = sta.ctx.device.access_sme_sender(|sender| {
-            sender.send_signal_report(&mut fidl_internal::SignalReportIndication {
+    fn on_timeout(&mut self, sta: &mut BoundClient<'_>, event_id: EventId) -> bool {
+        if self.0.status_check_timeout.next_id != Some(event_id) {
+            // Do nothing if we've canceled the timeout (e.g. by going off-channel).
+            return false;
+        }
+        self.0.status_check_timeout.next_id.take();
+        if let Err(e) = sta.ctx.device.mlme_control_handle().send_signal_report(
+            &mut fidl_internal::SignalReportIndication {
                 rssi_dbm: self.0.signal_strength_average.avg_dbm().0,
                 snr_db: 0,
-            })
-        }) {
+            },
+        ) {
             error!("Error sending MLME-SignalReport: {}", e)
         }
 
@@ -802,7 +800,7 @@ impl Associated {
             warn!("unable to send doze frame: {:?}", e);
         }
         self.0.lost_bss_counter.add_time(ctx.timer.now() - self.0.status_check_timeout.last_fired);
-        ctx.timer.cancel_event(self.0.status_check_timeout.next_id);
+        self.0.status_check_timeout.next_id.take();
     }
 
     fn on_channel(&mut self, sta: &mut Client, ctx: &mut Context) {
@@ -949,7 +947,7 @@ impl States {
                 }
                 _ => state.into(),
             },
-            States::Associating(state) => match mgmt_body {
+            States::Associating(mut state) => match mgmt_body {
                 mac::MgmtBody::AssociationResp { assoc_resp_hdr, elements } => {
                     match state.on_assoc_resp_frame(sta, &assoc_resp_hdr, elements) {
                         Ok(association) => state.transition_to(Associated(association)).into(),
@@ -1040,36 +1038,25 @@ impl States {
                     state.on_timeout(sta, event_id);
                     state.transition_to(Joined).into()
                 }
-                _ => {
-                    error!("received Authenticating timeout in unexpected state; ignoring timeout");
-                    self
-                }
+                _ => self,
             },
             TimedEvent::Associating => match self {
-                States::Associating(state) => {
-                    state.on_timeout(sta);
+                States::Associating(mut state) => {
+                    state.on_timeout(sta, event_id);
                     state.transition_to(Authenticated).into()
                 }
-                _ => {
-                    error!("received Associating timeout in unexpected state; ignoring timeout");
-                    self
-                }
+                _ => self,
             },
-            TimedEvent::AssociationStatusCheck => {
-                match self {
-                    States::Associated(mut state) => {
-                        let should_auto_deauth = state.on_timeout(sta);
-                        match should_auto_deauth {
-                            true => state.transition_to(Joined).into(),
-                            false => state.into(),
-                        }
-                    }
-                    _ => {
-                        error!("received association status update timeout in unexpected state; ignoring");
-                        self
+            TimedEvent::AssociationStatusCheck => match self {
+                States::Associated(mut state) => {
+                    let should_auto_deauth = state.on_timeout(sta, event_id);
+                    match should_auto_deauth {
+                        true => state.transition_to(Joined).into(),
+                        false => state.into(),
                     }
                 }
-            }
+                _ => self,
+            },
             event => {
                 error!("unsupported event, {:?}, this should NOT happen", event);
                 self
@@ -1077,17 +1064,12 @@ impl States {
         }
     }
 
-    #[allow(deprecated)] // Allow until main message loop is in Rust.
-    pub fn handle_mlme_msg(
-        self,
-        sta: &mut BoundClient<'_>,
-        msg: fidl_mlme::MlmeRequestMessage,
-    ) -> States {
-        use fidl_mlme::MlmeRequestMessage as MlmeMsg;
+    pub fn handle_mlme_msg(self, sta: &mut BoundClient<'_>, msg: fidl_mlme::MlmeRequest) -> States {
+        use fidl_mlme::MlmeRequest as MlmeMsg;
 
         match self {
             States::Joined(state) => match msg {
-                MlmeMsg::AuthenticateReq { req } => {
+                MlmeMsg::AuthenticateReq { req, .. } => {
                     match state.on_sme_authenticate(
                         sta,
                         req.auth_failure_timeout as u16,
@@ -1100,58 +1082,60 @@ impl States {
                 _ => state.into(),
             },
             States::Authenticating(mut state) => match msg {
-                MlmeMsg::SaeHandshakeResp { resp } => match state.on_sme_sae_resp(sta, resp) {
+                MlmeMsg::SaeHandshakeResp { resp, .. } => match state.on_sme_sae_resp(sta, resp) {
                     akm::AkmState::InProgress => state.into(),
                     akm::AkmState::Failed => state.transition_to(Joined).into(),
                     akm::AkmState::AuthComplete => state.transition_to(Authenticated).into(),
                 },
-                MlmeMsg::SaeFrameTx { frame } => match state.on_sme_sae_tx(sta, frame) {
+                MlmeMsg::SaeFrameTx { frame, .. } => match state.on_sme_sae_tx(sta, frame) {
                     akm::AkmState::InProgress => state.into(),
                     akm::AkmState::Failed => state.transition_to(Joined).into(),
                     akm::AkmState::AuthComplete => state.transition_to(Authenticated).into(),
                 },
-                MlmeMsg::DeauthenticateReq { req: _ } => {
+                MlmeMsg::DeauthenticateReq { .. } => {
                     state.on_sme_deauthenticate(sta);
                     state.transition_to(Joined).into()
                 }
                 _ => state.into(),
             },
             States::Authenticated(state) => match msg {
-                MlmeMsg::AssociateReq { req } => match state.on_sme_associate(sta, req) {
-                    Ok(timeout) => state.transition_to(Associating { timeout }).into(),
+                MlmeMsg::AssociateReq { req, .. } => match state.on_sme_associate(sta, req) {
+                    Ok(timeout) => {
+                        state.transition_to(Associating { timeout: Some(timeout) }).into()
+                    }
                     Err(()) => state.into(),
                 },
-                MlmeMsg::DeauthenticateReq { req } => {
+                MlmeMsg::DeauthenticateReq { req, .. } => {
                     state.on_sme_deauthenticate(sta, req);
                     state.transition_to(Joined).into()
                 }
                 _ => state.into(),
             },
-            States::Associating(state) => match msg {
-                MlmeMsg::DeauthenticateReq { req: _ } => {
+            States::Associating(mut state) => match msg {
+                MlmeMsg::DeauthenticateReq { .. } => {
                     state.on_sme_deauthenticate(sta);
                     state.transition_to(Joined).into()
                 }
                 _ => state.into(),
             },
             States::Associated(mut state) => match msg {
-                MlmeMsg::FinalizeAssociationReq { negotiated_capabilities } => {
+                MlmeMsg::FinalizeAssociationReq { negotiated_capabilities, .. } => {
                     state.on_sme_finalize_association(sta, negotiated_capabilities);
                     state.into()
                 }
-                MlmeMsg::EapolReq { req } => {
+                MlmeMsg::EapolReq { req, .. } => {
                     state.on_sme_eapol(sta, req);
                     state.into()
                 }
-                MlmeMsg::SetKeysReq { req } => {
+                MlmeMsg::SetKeysReq { req, .. } => {
                     state.on_sme_set_keys(sta, req);
                     state.into()
                 }
-                MlmeMsg::SetControlledPort { req } => {
+                MlmeMsg::SetControlledPort { req, .. } => {
                     state.on_sme_set_controlled_port(sta, req);
                     state.into()
                 }
-                MlmeMsg::DeauthenticateReq { req } => {
+                MlmeMsg::DeauthenticateReq { req, .. } => {
                     state.on_sme_deauthenticate(sta, req);
                     state.transition_to(Joined).into()
                 }
@@ -1240,15 +1224,21 @@ mod tests {
                 scanner::Scanner, Client, ClientConfig, Context,
             },
             device::{Device, FakeDevice},
+            test_utils::fake_control_handle,
         },
         akm::AkmAlgorithm,
         banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
         banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_common as fidl_common,
+        fuchsia_async as fasync,
         fuchsia_zircon::{self as zx, DurationNum},
         ieee80211::{Bssid, Ssid},
         wlan_common::{
-            assert_variant, buffer_writer::BufferWriter, mgmt_writer, sequence::SequenceManager,
+            assert_variant,
+            buffer_writer::BufferWriter,
+            mgmt_writer,
+            sequence::SequenceManager,
             test_utils::fake_frames::*,
+            timer::{create_timer, TimeStream, Timer},
         },
         wlan_frame_writer::write_frame_with_dynamic_buf,
         wlan_statemachine as statemachine,
@@ -1259,17 +1249,20 @@ mod tests {
 
     struct MockObjects {
         fake_device: FakeDevice,
-        fake_scheduler: FakeScheduler,
+        timer: Option<Timer<TimedEvent>>,
+        time_stream: TimeStream<TimedEvent>,
         scanner: Scanner,
         chan_sched: ChannelScheduler,
         channel_state: ChannelListenerState,
     }
 
     impl MockObjects {
-        fn new() -> Self {
+        fn new(exec: &fasync::TestExecutor) -> Self {
+            let (timer, time_stream) = create_timer();
             Self {
-                fake_device: FakeDevice::new(),
-                fake_scheduler: FakeScheduler::new(),
+                fake_device: FakeDevice::new(exec),
+                timer: Some(timer),
+                time_stream,
                 scanner: Scanner::new(IFACE_MAC),
                 chan_sched: ChannelScheduler::new(),
                 channel_state: Default::default(),
@@ -1284,12 +1277,11 @@ mod tests {
         }
 
         fn make_ctx_with_device(&mut self, device: Device) -> Context {
-            let timer = Timer::<TimedEvent>::new(self.fake_scheduler.as_scheduler());
             Context {
                 config: ClientConfig { ensure_on_channel_time: 0 },
                 device,
                 buf_provider: FakeBufferProvider::new(),
-                timer,
+                timer: self.timer.take().unwrap(),
                 seq_mgr: SequenceManager::new(),
             }
         }
@@ -1369,13 +1361,14 @@ mod tests {
         )
     }
 
-    #[allow(deprecated)] // Raw MLME messages are deprecated.
-    fn fake_mlme_deauth_req() -> fidl_mlme::MlmeRequestMessage {
-        fidl_mlme::MlmeRequestMessage::DeauthenticateReq {
+    fn fake_mlme_deauth_req(exec: &fasync::TestExecutor) -> fidl_mlme::MlmeRequest {
+        let (control_handle, _) = fake_control_handle(exec);
+        fidl_mlme::MlmeRequest::DeauthenticateReq {
             req: fidl_mlme::DeauthenticateRequest {
                 peer_sta_address: BSSID.0,
                 reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
             },
+            control_handle,
         }
     }
 
@@ -1410,9 +1403,27 @@ mod tests {
         auth
     }
 
+    fn authenticating_timeouts(time_stream: &mut TimeStream<TimedEvent>) -> Vec<EventId> {
+        let mut timeouts = vec![];
+        loop {
+            let next = match time_stream.try_next() {
+                Ok(next) => next,
+                Err(_) => return timeouts,
+            };
+            let timed_event = match next {
+                Some((_, timed_event)) => timed_event,
+                None => return timeouts,
+            };
+            if timed_event.event == TimedEvent::Authenticating {
+                timeouts.push(timed_event.id);
+            }
+        }
+    }
+
     #[test]
     fn join_state_authenticate_success() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -1422,7 +1433,7 @@ mod tests {
             .expect("failed authenticating");
 
         // Verify an event was queued up in the timer.
-        assert_eq!(sta.ctx.timer.scheduled_events(TimedEvent::Authenticating).len(), 1);
+        assert_eq!(authenticating_timeouts(&mut m.time_stream).len(), 1);
 
         // Verify authentication frame was sent to AP.
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
@@ -1451,7 +1462,8 @@ mod tests {
 
     #[test]
     fn join_state_authenticate_tx_failure() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let device = m.fake_device.as_device_fail_wlan_tx();
         let mut ctx = m.make_ctx_with_device(device);
         let mut sta = make_client_station();
@@ -1463,7 +1475,7 @@ mod tests {
             .expect_err("should fail authenticating");
 
         // Verify no event was queued up in the timer.
-        assert_eq!(sta.ctx.timer.scheduled_event_count(), 0);
+        assert!(m.time_stream.try_next().is_err());
 
         // Verify MLME-AUTHENTICATE.confirm message was sent.
         let msg =
@@ -1480,7 +1492,8 @@ mod tests {
 
     #[test]
     fn authenticating_state_auth_success() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -1500,9 +1513,6 @@ mod tests {
             akm::AkmState::AuthComplete
         );
 
-        // Verify timeout was canceled.
-        assert_eq!(sta.ctx.timer.scheduled_events(TimedEvent::Authenticating).len(), 0);
-
         // Verify MLME-AUTHENTICATE.confirm message was sent.
         let msg =
             m.fake_device.next_mlme_msg::<fidl_mlme::AuthenticateConfirm>().expect("no message");
@@ -1518,7 +1528,8 @@ mod tests {
 
     #[test]
     fn authenticating_state_auth_rejected() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -1538,9 +1549,6 @@ mod tests {
             akm::AkmState::Failed
         );
 
-        // Verify timeout was canceled.
-        assert_eq!(sta.ctx.timer.scheduled_events(TimedEvent::Authenticating).len(), 0);
-
         // Verify MLME-AUTHENTICATE.confirm message was sent.
         let msg =
             m.fake_device.next_mlme_msg::<fidl_mlme::AuthenticateConfirm>().expect("no message");
@@ -1556,17 +1564,15 @@ mod tests {
 
     #[test]
     fn authenticating_state_timeout() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = open_authenticating(&mut sta);
 
-        let timeout = sta.ctx.timer.scheduled_events(TimedEvent::Authenticating)[0];
+        let timeout = authenticating_timeouts(&mut m.time_stream)[0];
         state.on_timeout(&mut sta, timeout);
-
-        // Verify timeout was canceled.
-        assert_variant!(sta.ctx.timer.triggered(&timeout), None);
 
         // Verify MLME-AUTHENTICATE.confirm message was sent.
         let msg =
@@ -1583,7 +1589,8 @@ mod tests {
 
     #[test]
     fn authenticating_state_deauth_frame() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -1593,9 +1600,6 @@ mod tests {
             &mut sta,
             &mac::DeauthHdr { reason_code: mac::ReasonCode::NO_MORE_STAS },
         );
-
-        // Verify timeout was canceled.
-        assert_eq!(sta.ctx.timer.scheduled_events(TimedEvent::Authenticating).len(), 0);
 
         // Verify MLME-AUTHENTICATE.confirm message was sent.
         let msg =
@@ -1612,7 +1616,8 @@ mod tests {
 
     #[test]
     fn authenticated_state_deauth_frame() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -1640,16 +1645,14 @@ mod tests {
 
     #[test]
     fn associating_success_unprotected() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
-        let timeout = sta
-            .ctx
-            .timer
-            .schedule_event(sta.ctx.timer.now() + 1.seconds(), TimedEvent::Associating);
-        let state = Associating { timeout };
+        let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
+        let mut state = Associating { timeout: Some(timeout) };
 
         let Association { aid, controlled_port_open, .. } = state
             .on_assoc_resp_frame(
@@ -1664,9 +1667,6 @@ mod tests {
             .expect("failed processing association response frame");
         assert_eq!(aid, 42);
         assert_eq!(true, controlled_port_open);
-
-        // Verify timeout was canceled.
-        assert_variant!(sta.ctx.timer.triggered(&timeout), None);
 
         // Verify MLME-ASSOCIATE.confirm message was sent.
         let msg = m.fake_device.next_mlme_msg::<fidl_mlme::AssociateConfirm>().expect("no message");
@@ -1683,13 +1683,13 @@ mod tests {
 
     #[test]
     fn associating_success_protected() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let timeout =
-            sta.ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Associating);
-        let state = Associating { timeout };
+        let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
+        let mut state = Associating { timeout: Some(timeout) };
 
         let Association { aid, controlled_port_open, .. } = state
             .on_assoc_resp_frame(
@@ -1704,9 +1704,6 @@ mod tests {
             .expect("failed processing association response frame");
         assert_eq!(aid, 42);
         assert_eq!(false, controlled_port_open);
-
-        // Verify timeout was canceled.
-        assert_variant!(sta.ctx.timer.triggered(&timeout), None);
 
         // Verify MLME-ASSOCIATE.confirm message was sent.
         let msg = m.fake_device.next_mlme_msg::<fidl_mlme::AssociateConfirm>().expect("no message");
@@ -1723,14 +1720,14 @@ mod tests {
 
     #[test]
     fn associating_failure() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
-        let timeout =
-            sta.ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Associating);
-        let state = Associating { timeout };
+        let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
+        let mut state = Associating { timeout: Some(timeout) };
 
         // Verify authentication was considered successful.
         state
@@ -1744,9 +1741,6 @@ mod tests {
                 &[][..],
             )
             .expect_err("expected failure processing association response frame");
-
-        // Verify timeout was canceled.
-        assert_variant!(sta.ctx.timer.triggered(&timeout), None);
 
         // Verify MLME-ASSOCIATE.confirm message was sent.
         let msg = m.fake_device.next_mlme_msg::<fidl_mlme::AssociateConfirm>().expect("no message");
@@ -1762,20 +1756,17 @@ mod tests {
 
     #[test]
     fn associating_timeout() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
-        let timeout =
-            sta.ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Associating);
-        let state = Associating { timeout };
+        let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
+        let mut state = Associating { timeout: Some(timeout) };
 
         // Trigger timeout.
-        state.on_timeout(&mut sta);
-
-        // Verify timeout was canceled.
-        assert_variant!(sta.ctx.timer.triggered(&timeout), None);
+        state.on_timeout(&mut sta, timeout);
 
         // Verify MLME-ASSOCIATE.confirm message was sent.
         let msg = m.fake_device.next_mlme_msg::<fidl_mlme::AssociateConfirm>().expect("no message");
@@ -1791,22 +1782,19 @@ mod tests {
 
     #[test]
     fn associating_deauth_frame() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
-        let timeout =
-            sta.ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Associating);
-        let state = Associating { timeout };
+        let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
+        let mut state = Associating { timeout: Some(timeout) };
 
         state.on_deauth_frame(
             &mut sta,
             &mac::DeauthHdr { reason_code: mac::ReasonCode::AP_INITIATED },
         );
-
-        // Verify timeout was canceled.
-        assert_variant!(sta.ctx.timer.triggered(&timeout), None);
 
         // Verify MLME-ASSOCIATE.confirm message was sent.
         let msg = m.fake_device.next_mlme_msg::<fidl_mlme::AssociateConfirm>().expect("no message");
@@ -1822,22 +1810,19 @@ mod tests {
 
     #[test]
     fn associating_disassociation() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
-        let timeout =
-            sta.ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Associating);
-        let state = Associating { timeout };
+        let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
+        let mut state = Associating { timeout: Some(timeout) };
 
         state.on_disassoc_frame(
             &mut sta,
             &mac::DisassocHdr { reason_code: mac::ReasonCode::AP_INITIATED },
         );
-
-        // Verify timeout was canceled.
-        assert_variant!(sta.ctx.timer.triggered(&timeout), None);
 
         // Verify MLME-ASSOCIATE.confirm message was sent.
         let msg = m.fake_device.next_mlme_msg::<fidl_mlme::AssociateConfirm>().expect("no message");
@@ -1853,7 +1838,8 @@ mod tests {
 
     #[test]
     fn associated_block_ack_frame() {
-        let mut mock = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut mock = MockObjects::new(&exec);
         let mut ctx = mock.make_ctx();
         let mut station = make_client_station();
         let mut client = station.bind(
@@ -1904,7 +1890,8 @@ mod tests {
 
     #[test]
     fn associated_deauth_frame() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -1945,7 +1932,8 @@ mod tests {
 
     #[test]
     fn associated_disassociation() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -1980,7 +1968,6 @@ mod tests {
         );
 
         // Verify association everything is properly cleared.
-        assert_eq!(0, sta.ctx.timer.scheduled_event_count());
         assert_eq!(false, state.0.controlled_port_open);
         assert_eq!(0, m.fake_device.assocs.len());
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
@@ -1988,7 +1975,8 @@ mod tests {
 
     #[test]
     fn associated_move_data_closed_controlled_port() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2004,7 +1992,8 @@ mod tests {
 
     #[test]
     fn associated_move_data_opened_controlled_port() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2028,7 +2017,8 @@ mod tests {
 
     #[test]
     fn associated_handle_eapol_closed_controlled_port() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2054,7 +2044,8 @@ mod tests {
 
     #[test]
     fn associated_handle_eapol_open_controlled_port() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2080,7 +2071,8 @@ mod tests {
 
     #[test]
     fn associated_handle_amsdus_open_controlled_port() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2113,7 +2105,8 @@ mod tests {
 
     #[test]
     fn associated_request_bu_data_frame() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2142,7 +2135,8 @@ mod tests {
 
     #[test]
     fn associated_request_bu_mgmt_frame() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2181,7 +2175,8 @@ mod tests {
 
     #[test]
     fn associated_no_bu_request() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2216,7 +2211,8 @@ mod tests {
 
     #[test]
     fn associated_drop_foreign_data_frames() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2255,7 +2251,8 @@ mod tests {
     #[test]
     #[allow(deprecated)] // for raw MlmeRequestMessage
     fn state_transitions_joined_authing() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2263,13 +2260,15 @@ mod tests {
         assert_variant!(state, States::Joined(_), "not in joined state");
 
         // Successful: Joined > Authenticating
+        let (control_handle, _) = fake_control_handle(&exec);
         state = state.handle_mlme_msg(
             &mut sta,
-            fidl_mlme::MlmeRequestMessage::AuthenticateReq {
+            fidl_mlme::MlmeRequest::AuthenticateReq {
                 req: fidl_mlme::AuthenticateRequest {
                     auth_failure_timeout: 10,
                     ..empty_authenticate_request()
                 },
+                control_handle,
             },
         );
         assert_variant!(state, States::Authenticating(_), "not in auth'ing state");
@@ -2277,7 +2276,8 @@ mod tests {
 
     #[test]
     fn state_transitions_authing_success() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2305,7 +2305,8 @@ mod tests {
 
     #[test]
     fn state_transitions_authing_failure() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2334,7 +2335,8 @@ mod tests {
     #[test]
     #[allow(deprecated)] // for raw MlmeRequestMessage
     fn state_transitions_authing_timeout() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2342,26 +2344,27 @@ mod tests {
         assert_variant!(state, States::Joined(_), "not in joined state");
 
         // Timeout: Joined > Authenticating > Joined
+        let (control_handle, _) = fake_control_handle(&exec);
         state = state.handle_mlme_msg(
             &mut sta,
-            fidl_mlme::MlmeRequestMessage::AuthenticateReq {
+            fidl_mlme::MlmeRequest::AuthenticateReq {
                 req: fidl_mlme::AuthenticateRequest {
                     auth_failure_timeout: 10,
                     ..empty_authenticate_request()
                 },
+                control_handle,
             },
         );
         assert_variant!(state, States::Authenticating(_), "not in auth'ing state");
-        let timeout_id = sta.ctx.timer.scheduled_events(TimedEvent::Authenticating)[0];
-        let event = sta.ctx.timer.triggered(&timeout_id);
-        assert_variant!(event, Some(TimedEvent::Authenticating));
-        state = state.on_timed_event(&mut sta, event.unwrap(), timeout_id);
+        let event_id = authenticating_timeouts(&mut m.time_stream)[0];
+        state = state.on_timed_event(&mut sta, TimedEvent::Authenticating, event_id);
         assert_variant!(state, States::Joined(_), "not in joined state");
     }
 
     #[test]
     fn state_transitions_authing_deauth() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2387,7 +2390,8 @@ mod tests {
 
     #[test]
     fn state_transitions_authed() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2412,7 +2416,8 @@ mod tests {
 
     #[test]
     fn state_transitions_foreign_auth_resp() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2459,13 +2464,13 @@ mod tests {
 
     #[test]
     fn state_transitions_associng_success() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let mut state = States::from(statemachine::testing::new_state(Associating {
-            timeout: EventId::default(),
-        }));
+        let mut state =
+            States::from(statemachine::testing::new_state(Associating { timeout: None }));
 
         // Successful: Associating > Associated
         #[rustfmt::skip]
@@ -2488,13 +2493,13 @@ mod tests {
 
     #[test]
     fn state_transitions_associng_failure() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let mut state = States::from(statemachine::testing::new_state(Associating {
-            timeout: EventId::default(),
-        }));
+        let mut state =
+            States::from(statemachine::testing::new_state(Associating { timeout: None }));
 
         // Failure: Associating > Authenticated
         #[rustfmt::skip]
@@ -2516,36 +2521,35 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)] // for raw MlmeRequestMessage
     fn state_transitions_associng_timeout() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Authenticated));
 
+        let (control_handle, _) = fake_control_handle(&exec);
         state = state.handle_mlme_msg(
             &mut sta,
-            fidl_mlme::MlmeRequestMessage::AssociateReq { req: empty_associate_request() },
+            fidl_mlme::MlmeRequest::AssociateReq { req: empty_associate_request(), control_handle },
         );
         let timeout_id = assert_variant!(state, States::Associating(ref state) => {
-                state.timeout.clone()
+                state.timeout.unwrap().clone()
             }, "not in assoc'ing state");
-        let event = sta.ctx.timer.triggered(&timeout_id);
-        assert_variant!(event, Some(TimedEvent::Associating));
-        state = state.on_timed_event(&mut sta, event.unwrap(), timeout_id);
+        state = state.on_timed_event(&mut sta, TimedEvent::Associating, timeout_id);
         assert_variant!(state, States::Authenticated(_), "not in authenticated state");
     }
 
     #[test]
     fn state_transitions_associng_deauthing() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let mut state = States::from(statemachine::testing::new_state(Associating {
-            timeout: EventId::default(),
-        }));
+        let mut state =
+            States::from(statemachine::testing::new_state(Associating { timeout: None }));
 
         // Deauthentication: Associating > Joined
         #[rustfmt::skip]
@@ -2566,7 +2570,8 @@ mod tests {
 
     #[test]
     fn state_transitions_assoced_disassoc() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2592,7 +2597,8 @@ mod tests {
 
     #[test]
     fn state_transitions_assoced_deauthing() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2630,7 +2636,8 @@ mod tests {
 
     #[test]
     fn assoc_send_eth_frame_becomes_data_frame() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2673,7 +2680,8 @@ mod tests {
 
     #[test]
     fn eth_frame_dropped_when_off_channel() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2697,7 +2705,8 @@ mod tests {
 
     #[test]
     fn assoc_eth_frame_too_short_dropped() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2716,7 +2725,8 @@ mod tests {
 
     #[test]
     fn assoc_controlled_port_closed_eth_frame_dropped() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2736,7 +2746,8 @@ mod tests {
 
     #[test]
     fn not_assoc_eth_frame_dropped() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2756,7 +2767,8 @@ mod tests {
     #[test]
     #[allow(deprecated)] // For constructing MLME message
     fn finalize_assoc_success() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2782,9 +2794,13 @@ mod tests {
                 bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap(),
             })),
         };
+        let (control_handle, _) = fake_control_handle(&exec);
         let state = state.handle_mlme_msg(
             &mut sta,
-            fidl_mlme::MlmeRequestMessage::FinalizeAssociationReq { negotiated_capabilities },
+            fidl_mlme::MlmeRequest::FinalizeAssociationReq {
+                negotiated_capabilities,
+                control_handle,
+            },
         );
         assert_variant!(state, States::Associated(_), "should stay in associated");
 
@@ -2808,12 +2824,13 @@ mod tests {
     #[test]
     #[allow(deprecated)] // Raw MLME messages are deprecated.
     fn joined_sme_deauth() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Joined));
-        let state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req());
+        let state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req(&exec));
         assert_variant!(state, States::Joined(_), "Joined should stay in Joined");
         // No MLME message was sent because MLME already deauthenticated.
         m.fake_device
@@ -2823,16 +2840,15 @@ mod tests {
 
     #[test]
     fn authenticating_sme_deauth() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
 
-        let state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req());
+        let state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req(&exec));
 
-        // Verify timeout was canceled.
-        assert_eq!(sta.ctx.timer.scheduled_events(TimedEvent::Authenticating).len(), 0);
         assert_variant!(state, States::Joined(_), "should transition to Joined");
 
         // No need to notify SME since it already deauthenticated
@@ -2843,13 +2859,14 @@ mod tests {
 
     #[test]
     fn authenticated_sme_deauth() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Authenticated));
 
-        let state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req());
+        let state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req(&exec));
 
         assert_variant!(state, States::Joined(_), "should transition to Joined");
 
@@ -2866,18 +2883,17 @@ mod tests {
 
     #[test]
     fn associating_sme_deauth() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let timeout =
-            sta.ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Associating);
-        let state = States::from(statemachine::testing::new_state(Associating { timeout }));
+        let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
+        let state =
+            States::from(statemachine::testing::new_state(Associating { timeout: Some(timeout) }));
 
-        let state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req());
+        let state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req(&exec));
 
-        // Verify timeout was canceled.
-        assert_variant!(sta.ctx.timer.triggered(&timeout), None);
         assert_variant!(state, States::Joined(_), "should transition to Joined");
 
         // No need to notify SME since it already deauthenticated
@@ -2888,7 +2904,8 @@ mod tests {
 
     #[test]
     fn associated_sme_deauth() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -2905,7 +2922,7 @@ mod tests {
         sta.ctx.device.set_eth_link_up().expect("should succeed");
         assert_eq!(crate::device::LinkStatus::UP, m.fake_device.link_status);
 
-        let state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req());
+        let state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req(&exec));
         assert_variant!(state, States::Joined(_), "should transition to Joined");
 
         // Should accept the deauthentication request and send back confirm.
@@ -2923,70 +2940,72 @@ mod tests {
         assert_eq!(crate::device::LinkStatus::DOWN, m.fake_device.link_status);
     }
 
-    #[allow(deprecated)]
-    fn fake_mlme_eapol_req() -> fidl_mlme::MlmeRequestMessage {
-        fidl_mlme::MlmeRequestMessage::EapolReq {
+    fn fake_mlme_eapol_req(exec: &fasync::TestExecutor) -> fidl_mlme::MlmeRequest {
+        let (control_handle, _) = fake_control_handle(exec);
+        fidl_mlme::MlmeRequest::EapolReq {
             req: fidl_mlme::EapolRequest {
                 dst_addr: BSSID.0,
                 src_addr: IFACE_MAC,
                 data: vec![1, 2, 3, 4],
             },
+            control_handle,
         }
     }
 
     #[test]
     #[allow(deprecated)]
     fn mlme_eapol_not_associated() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let state = States::from(statemachine::testing::new_state(Joined));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req());
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req(&exec));
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
 
         let state = States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
         m.fake_device.wlan_queue.clear();
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req());
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req(&exec));
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
 
         let state = States::from(statemachine::testing::new_state(Authenticated));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req());
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req(&exec));
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
 
-        let state = States::from(statemachine::testing::new_state(Associating {
-            timeout: EventId::default(),
-        }));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req());
+        let state = States::from(statemachine::testing::new_state(Associating { timeout: None }));
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req(&exec));
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
     }
 
     #[test]
     #[allow(deprecated)]
     fn mlme_eapol_associated_not_protected() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req());
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req(&exec));
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
     }
 
     #[test]
     #[allow(deprecated)]
     fn mlme_eapol_associated() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req());
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req(&exec));
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         assert_eq!(
             &m.fake_device.wlan_queue[0].0[..],
@@ -3007,9 +3026,9 @@ mod tests {
         );
     }
 
-    #[allow(deprecated)]
-    fn fake_mlme_set_keys_req() -> fidl_mlme::MlmeRequestMessage {
-        fidl_mlme::MlmeRequestMessage::SetKeysReq {
+    fn fake_mlme_set_keys_req(exec: &fasync::TestExecutor) -> fidl_mlme::MlmeRequest {
+        let (control_handle, _) = fake_control_handle(&exec);
+        fidl_mlme::MlmeRequest::SetKeysReq {
             req: fidl_mlme::SetKeysRequest {
                 keylist: vec![fidl_mlme::SetKeyDescriptor {
                     cipher_suite_oui: [1, 2, 3],
@@ -3021,47 +3040,48 @@ mod tests {
                     rsc: 8,
                 }],
             },
+            control_handle,
         }
     }
 
     #[test]
     #[allow(deprecated)]
     fn mlme_set_keys_not_associated() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let state = States::from(statemachine::testing::new_state(Joined));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req());
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
         assert_eq!(m.fake_device.keys.len(), 0);
 
         let state = States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req());
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
         assert_eq!(m.fake_device.keys.len(), 0);
 
         let state = States::from(statemachine::testing::new_state(Authenticated));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req());
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
         assert_eq!(m.fake_device.keys.len(), 0);
 
-        let state = States::from(statemachine::testing::new_state(Associating {
-            timeout: EventId::default(),
-        }));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req());
+        let state = States::from(statemachine::testing::new_state(Associating { timeout: None }));
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
         assert_eq!(m.fake_device.keys.len(), 0);
     }
 
     #[test]
     #[allow(deprecated)]
     fn mlme_set_keys_associated_not_protected() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req());
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
         assert_eq!(m.fake_device.keys.len(), 0);
     }
 
@@ -3069,14 +3089,15 @@ mod tests {
     #[allow(deprecated)]
     fn mlme_set_keys_associated() {
         use crate::key::*;
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req());
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
         assert_eq!(m.fake_device.keys.len(), 1);
 
         assert_eq!(
@@ -3099,9 +3120,12 @@ mod tests {
         );
     }
 
-    #[allow(deprecated)]
-    fn fake_mlme_set_ctrl_port_open(open: bool) -> fidl_mlme::MlmeRequestMessage {
-        fidl_mlme::MlmeRequestMessage::SetControlledPort {
+    fn fake_mlme_set_ctrl_port_open(
+        open: bool,
+        exec: &fasync::TestExecutor,
+    ) -> fidl_mlme::MlmeRequest {
+        let (control_handle, _) = fake_control_handle(&exec);
+        fidl_mlme::MlmeRequest::SetControlledPort {
             req: fidl_mlme::SetControlledPortRequest {
                 peer_sta_address: BSSID.0,
                 state: match open {
@@ -3109,54 +3133,56 @@ mod tests {
                     false => fidl_mlme::ControlledPortState::Closed,
                 },
             },
+            control_handle,
         }
     }
 
     #[test]
     #[allow(deprecated)]
     fn mlme_set_controlled_port_not_associated() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let state = States::from(statemachine::testing::new_state(Joined));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true));
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true, &exec));
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
 
         let state = States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true));
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true, &exec));
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
 
         let state = States::from(statemachine::testing::new_state(Authenticated));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true));
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true, &exec));
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
 
-        let state = States::from(statemachine::testing::new_state(Associating {
-            timeout: EventId::default(),
-        }));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true));
+        let state = States::from(statemachine::testing::new_state(Associating { timeout: None }));
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true, &exec));
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
     }
 
     #[test]
     #[allow(deprecated)]
     fn mlme_set_controlled_port_associated_not_protected() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true));
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true, &exec));
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
     }
 
     #[test]
     #[allow(deprecated)]
     fn mlme_set_controlled_port_associated() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -3164,15 +3190,16 @@ mod tests {
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
-        let state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true));
+        let state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true, &exec));
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::UP);
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(false));
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(false, &exec));
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
     }
 
     #[test]
     fn associated_request_bu_if_tim_indicates_buffered_frame() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -3212,7 +3239,8 @@ mod tests {
 
     #[test]
     fn associated_does_not_request_bu_if_tim_indicates_no_buffered_frame() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -3259,7 +3287,8 @@ mod tests {
 
     #[test]
     fn signal_report() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
@@ -3268,10 +3297,9 @@ mod tests {
             empty_association(&mut sta),
         ))));
 
-        let (id, _dealine) =
-            m.fake_scheduler.next_event().expect("should see a signal report timeout");
-        let event = sta.ctx.timer.triggered(&id).expect("event id should exist");
-        let state = state.on_timed_event(&mut sta, event, id);
+        let (_, timed_event) =
+            m.time_stream.try_next().unwrap().expect("Should have scheduled signal report timeout");
+        let state = state.on_timed_event(&mut sta, timed_event.event, timed_event.id);
 
         let signal_ind = m
             .fake_device
@@ -3298,10 +3326,9 @@ mod tests {
         const EXPECTED_DBM: i8 = -32;
         let state = state.on_mac_frame(&mut sta, &beacon[..], Some(rx_info_with_dbm(EXPECTED_DBM)));
 
-        let (id, _dealine) =
-            m.fake_scheduler.next_event().expect("should see a signal report timeout");
-        let event = sta.ctx.timer.triggered(&id).expect("event id should exist");
-        let _state = state.on_timed_event(&mut sta, event, id);
+        let (_, timed_event) =
+            m.time_stream.try_next().unwrap().expect("Should have scheduled signal report timeout");
+        let _state = state.on_timed_event(&mut sta, timed_event.event, timed_event.id);
 
         let signal_ind = m
             .fake_device

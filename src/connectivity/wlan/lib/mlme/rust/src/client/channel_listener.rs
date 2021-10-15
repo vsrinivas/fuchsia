@@ -6,10 +6,10 @@ use {
     crate::{
         client::{channel_scheduler, scanner::Scanner, Client, Context, TimedEvent},
         device::Device,
-        timer::Timer,
     },
     banjo_fuchsia_wlan_common as banjo_common,
     log::{debug, error, warn},
+    wlan_common::timer::Timer,
 };
 
 #[cfg(test)]

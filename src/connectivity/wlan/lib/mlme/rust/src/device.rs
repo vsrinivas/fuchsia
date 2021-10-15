@@ -3,16 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    crate::{buffer::OutBuf, error::Error, key},
-    anyhow::format_err,
+    crate::{buffer::OutBuf, key},
     banjo_fuchsia_hardware_wlan_info::*,
-    banjo_fuchsia_hardware_wlan_mac::{WlanHwScanConfig, WlanmacInfo},
+    banjo_fuchsia_hardware_wlan_mac::{
+        self as banjo_wlan_mac, WlanHwScanConfig, WlanHwScanResult, WlanRxInfo, WlanTxPacket,
+        WlanTxStatus, WlanmacInfo,
+    },
     banjo_fuchsia_wlan_common as banjo_common,
     banjo_fuchsia_wlan_internal::BssConfig,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     ieee80211::MacAddr,
     std::ffi::c_void,
-    wlan_common::TimeUnit,
+    wlan_common::{mac::FrameControl, tx_vector, TimeUnit},
 };
 
 #[cfg(test)]
@@ -34,27 +36,302 @@ impl From<fidl_mlme::ControlledPortState> for LinkStatus {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct TxFlags(pub u32);
 impl TxFlags {
     pub const NONE: Self = Self(0);
+
     pub const PROTECTED: Self = Self(1);
     pub const FAVOR_RELIABILITY: Self = Self(1 << 1);
     // TODO(fxbug.dev/29622): remove once MLME supports QoS tag.
     pub const QOS: Self = Self(1 << 2);
 }
 
+pub struct Device {
+    raw_device: DeviceInterface,
+    minstrel: Option<crate::MinstrelWrapper>,
+    control_handle: fidl_mlme::MlmeControlHandle,
+}
+
+const REQUIRED_WLAN_HEADER_LEN: usize = 10;
+const PEER_ADDR_OFFSET: usize = 4;
+
+impl Device {
+    pub fn new(
+        raw_device: DeviceInterface,
+        minstrel: Option<crate::MinstrelWrapper>,
+        control_handle: fidl_mlme::MlmeControlHandle,
+    ) -> Self {
+        Self { raw_device, minstrel, control_handle }
+    }
+    pub fn mlme_control_handle(&self) -> &fidl_mlme::MlmeControlHandle {
+        &self.control_handle
+    }
+
+    pub fn deliver_eth_frame(&self, slice: &[u8]) -> Result<(), zx::Status> {
+        self.raw_device.deliver_eth_frame(slice)
+    }
+
+    pub fn send_wlan_frame(&self, buf: OutBuf, mut flags: TxFlags) -> Result<(), zx::Status> {
+        if buf.as_slice().len() < REQUIRED_WLAN_HEADER_LEN {
+            return Err(zx::Status::BUFFER_TOO_SMALL);
+        }
+        // Unwrap is safe since the byte slice is always the same size.
+        let frame_control =
+            zerocopy::LayoutVerified::<&[u8], FrameControl>::new(&buf.as_slice()[0..=1])
+                .unwrap()
+                .into_ref();
+        if frame_control.protected() {
+            flags.0 |= banjo_wlan_mac::WlanTxInfoFlags::PROTECTED.0 as u32;
+        }
+        let mut peer_addr = [0u8; 6];
+        peer_addr.copy_from_slice(&buf.as_slice()[PEER_ADDR_OFFSET..PEER_ADDR_OFFSET + 6]);
+        let tx_vector_idx = self
+            .minstrel
+            .as_ref()
+            .and_then(|minstrel| {
+                let mut banjo_flags = banjo_wlan_mac::WlanTxInfoFlags(0);
+                if flags.0 & TxFlags::FAVOR_RELIABILITY.0 != 0 {
+                    banjo_flags |= banjo_wlan_mac::WlanTxInfoFlags::FAVOR_RELIABILITY;
+                }
+                if flags.0 & TxFlags::PROTECTED.0 != 0 {
+                    banjo_flags |= banjo_wlan_mac::WlanTxInfoFlags::PROTECTED;
+                }
+                if flags.0 & TxFlags::QOS.0 != 0 {
+                    banjo_flags |= banjo_wlan_mac::WlanTxInfoFlags::QOS;
+                }
+                minstrel.lock().get_tx_vector_idx(frame_control, &peer_addr, banjo_flags)
+            })
+            .unwrap_or_else(|| {
+                // We either don't have minstrel, or minstrel failed to generate a tx vector.
+                // Use a reasonable default value instead.
+                // Note: This section has no practical effect on ath10k. It is
+                // only effective if the underlying device meets both criteria below:
+                // 1. Does not support tx status report.
+                // 2. Honors our instruction on tx_vector to use.
+                // TODO(fxbug.dev/28893): Choose an optimal MCS for management frames
+                // TODO(fxbug.dev/43456): Log stats about minstrel usage vs default tx vector.
+                let mcs_idx = if frame_control.is_data() { 7 } else { 3 };
+                tx_vector::TxVector::new(
+                    WlanPhyType::ERP,
+                    WlanGi::G_800NS,
+                    banjo_common::ChannelBandwidth::CBW20,
+                    mcs_idx,
+                )
+                .unwrap()
+                .to_idx()
+            });
+
+        let tx_info = wlan_common::tx_vector::TxVector::from_idx(tx_vector_idx)
+            .to_banjo_tx_info(flags.0, self.minstrel.is_some());
+        self.raw_device.queue_tx(0, buf, tx_info)
+    }
+
+    pub fn set_eth_status(&self, status: u32) {
+        self.raw_device.set_eth_status(status);
+    }
+
+    pub fn set_channel(&self, channel: banjo_common::WlanChannel) -> Result<(), zx::Status> {
+        self.raw_device.set_channel(channel)
+    }
+
+    pub fn set_key(&self, key: key::KeyConfig) -> Result<(), zx::Status> {
+        self.raw_device.set_key(key)
+    }
+
+    pub fn start_hw_scan(&self, config: &WlanHwScanConfig) -> Result<(), zx::Status> {
+        self.raw_device.start_hw_scan(config)
+    }
+
+    pub fn channel(&self) -> banjo_common::WlanChannel {
+        self.raw_device.channel()
+    }
+
+    pub fn wlanmac_info(&self) -> WlanmacInfo {
+        self.raw_device.wlanmac_info()
+    }
+
+    pub fn configure_bss(&self, cfg: BssConfig) -> Result<(), zx::Status> {
+        self.raw_device.configure_bss(cfg)
+    }
+
+    pub fn enable_beaconing(
+        &self,
+        buf: OutBuf,
+        tim_ele_offset: usize,
+        beacon_interval: TimeUnit,
+    ) -> Result<(), zx::Status> {
+        self.raw_device.enable_beaconing(buf, tim_ele_offset, beacon_interval)
+    }
+
+    pub fn disable_beaconing(&self) -> Result<(), zx::Status> {
+        self.raw_device.disable_beaconing()
+    }
+
+    pub fn configure_beacon(&self, buf: OutBuf) -> Result<(), zx::Status> {
+        self.raw_device.configure_beacon(buf)
+    }
+
+    pub fn set_eth_link(&self, status: LinkStatus) -> Result<(), zx::Status> {
+        self.raw_device.set_eth_link(status)
+    }
+
+    pub fn set_eth_link_up(&self) -> Result<(), zx::Status> {
+        self.raw_device.set_eth_link(LinkStatus::UP)
+    }
+
+    pub fn set_eth_link_down(&self) -> Result<(), zx::Status> {
+        self.raw_device.set_eth_link(LinkStatus::DOWN)
+    }
+
+    pub fn configure_assoc(&self, assoc_ctx: WlanAssocCtx) -> Result<(), zx::Status> {
+        if let Some(minstrel) = &self.minstrel {
+            minstrel.lock().add_peer(&assoc_ctx);
+        }
+        self.raw_device.configure_assoc(assoc_ctx)
+    }
+
+    pub fn clear_assoc(&self, addr: &MacAddr) -> Result<(), zx::Status> {
+        if let Some(minstrel) = &self.minstrel {
+            minstrel.lock().remove_peer(addr);
+        }
+        self.raw_device.clear_assoc(addr)
+    }
+}
+
+/// Hand-rolled Rust version of the banjo wlanmac_ifc_protocol for communication from the driver up.
+/// Note that we copy the individual fns out of this struct into the equivalent generated struct
+/// in C++. Thanks to cbindgen, this gives us a compile-time confirmation that our function
+/// signatures are correct.
+#[repr(C)]
+pub struct WlanmacIfcProtocol<'a> {
+    ops: *const WlanmacIfcProtocolOps,
+    ctx: &'a mut crate::DriverEventSink,
+}
+
+#[repr(C)]
+pub struct WlanmacIfcProtocolOps {
+    status: extern "C" fn(ctx: &mut crate::DriverEventSink, status: u32),
+    recv: extern "C" fn(
+        ctx: &mut crate::DriverEventSink,
+        flags: u32,
+        data_buffer: *const u8,
+        data_size: usize,
+        info: *const WlanRxInfo,
+    ),
+    complete_tx: extern "C" fn(
+        ctx: &'static mut crate::DriverEventSink,
+        packet: *mut WlanTxPacket,
+        status: i32,
+    ),
+    indication: extern "C" fn(ctx: &mut crate::DriverEventSink, ind: u32),
+    report_tx_status:
+        extern "C" fn(ctx: &mut crate::DriverEventSink, tx_status: *const WlanTxStatus),
+    hw_scan_complete:
+        extern "C" fn(ctx: &mut crate::DriverEventSink, result: *const WlanHwScanResult),
+}
+
+#[no_mangle]
+extern "C" fn handle_status(ctx: &mut crate::DriverEventSink, status: u32) {
+    let _ = ctx.0.unbounded_send(crate::DriverEvent::Status { status });
+}
+#[no_mangle]
+extern "C" fn handle_recv(
+    ctx: &mut crate::DriverEventSink,
+    _flags: u32,
+    data_buffer: *const u8,
+    data_size: usize,
+    info: *const WlanRxInfo,
+) {
+    // TODO(fxbug.dev/29063): C++ uses a buffer allocator for this, determine if we need one.
+    let bytes = unsafe { std::slice::from_raw_parts(data_buffer, data_size) }.into();
+    let rx_info = if !info.is_null() { Some(unsafe { *info }) } else { None };
+    let _ = ctx.0.unbounded_send(crate::DriverEvent::MacFrameRx { bytes, rx_info });
+}
+#[no_mangle]
+extern "C" fn handle_complete_tx(
+    _ctx: &mut crate::DriverEventSink,
+    _packet: *mut WlanTxPacket,
+    _status: i32,
+) {
+    // TODO(fxbug.dev/85924): Implement this to support asynchronous packet delivery.
+}
+#[no_mangle]
+extern "C" fn handle_indication(ctx: &mut crate::DriverEventSink, ind: u32) {
+    // TODO(fxbug.dev/86141): Determine if we should support this.
+    let _ = ctx.0.unbounded_send(crate::DriverEvent::HwIndication {
+        ind: banjo_wlan_mac::WlanIndication(ind as u8),
+    });
+}
+#[no_mangle]
+extern "C" fn handle_report_tx_status(
+    ctx: &mut crate::DriverEventSink,
+    tx_status: *const WlanTxStatus,
+) {
+    if tx_status.is_null() {
+        return;
+    }
+    let tx_status = unsafe { *tx_status };
+    let _ = ctx.0.unbounded_send(crate::DriverEvent::TxStatusReport { tx_status });
+}
+#[no_mangle]
+extern "C" fn handle_hw_scan_complete(
+    ctx: &mut crate::DriverEventSink,
+    result: *const WlanHwScanResult,
+) {
+    if result.is_null() {
+        return;
+    }
+    let result = unsafe { *result };
+    let ind = match result.code {
+        banjo_wlan_mac::WlanHwScan::SUCCESS => banjo_wlan_mac::WlanIndication::HW_SCAN_COMPLETE,
+        banjo_wlan_mac::WlanHwScan::ABORTED => banjo_wlan_mac::WlanIndication::HW_SCAN_ABORTED,
+        _ => return,
+    };
+    let _ = ctx.0.unbounded_send(crate::DriverEvent::HwIndication { ind });
+}
+
+const PROTOCOL_OPS: WlanmacIfcProtocolOps = WlanmacIfcProtocolOps {
+    status: handle_status,
+    recv: handle_recv,
+    complete_tx: handle_complete_tx,
+    indication: handle_indication,
+    report_tx_status: handle_report_tx_status,
+    hw_scan_complete: handle_hw_scan_complete,
+};
+
+impl<'a> WlanmacIfcProtocol<'a> {
+    pub(crate) fn new(sink: &'a mut crate::DriverEventSink) -> Self {
+        // Const reference has 'static lifetime, so it's safe to pass down to the driver.
+        let ops = &PROTOCOL_OPS;
+        Self { ops, ctx: sink }
+    }
+}
+
+// Our device is used inside a separate worker thread, so we force Rust to allow this.
+unsafe impl Send for DeviceInterface {}
+
 /// A `Device` allows transmitting frames and MLME messages.
 #[repr(C)]
-pub struct Device {
+pub struct DeviceInterface {
     device: *mut c_void,
+    /// Start operations on the underlying device and return the SME channel.
+    start: extern "C" fn(
+        device: *mut c_void,
+        ifc: *const WlanmacIfcProtocol<'_>,
+        out_sme_channel: *mut zx::sys::zx_handle_t,
+    ) -> i32,
     /// Request to deliver an Ethernet II frame to Fuchsia's Netstack.
     deliver_eth_frame: extern "C" fn(device: *mut c_void, data: *const u8, len: usize) -> i32,
-    /// Request to deliver a WLAN frame over the air.
-    send_wlan_frame: extern "C" fn(device: *mut c_void, buf: OutBuf, flags: u32) -> i32,
-    /// Returns an unowned channel handle to MLME's SME peer, or ZX_HANDLE_INVALID
-    /// if no SME channel is available.
-    get_sme_channel: unsafe extern "C" fn(device: *mut c_void) -> u32,
+    /// Deliver a WLAN frame directly through the firmware.
+    queue_tx: extern "C" fn(
+        device: *mut c_void,
+        options: u32,
+        buf: OutBuf,
+        tx_info: banjo_wlan_mac::WlanTxInfo,
+    ) -> i32,
+    /// Reports the current status to the ethernet driver.
+    set_eth_status: extern "C" fn(device: *mut c_void, status: u32),
     /// Returns the currently set WLAN channel.
     get_wlan_channel: extern "C" fn(device: *mut c_void) -> banjo_common::WlanChannel,
     /// Request the PHY to change its channel. If successful, get_wlan_channel will return the
@@ -90,55 +367,49 @@ pub struct Device {
     clear_assoc: extern "C" fn(device: *mut c_void, addr: &[u8; 6]) -> i32,
 }
 
-impl Device {
-    pub fn deliver_eth_frame(&self, slice: &[u8]) -> Result<(), zx::Status> {
+impl DeviceInterface {
+    pub fn start(&self, ifc: *const WlanmacIfcProtocol<'_>) -> Result<zx::Handle, zx::Status> {
+        let mut out_channel = 0;
+        let status = (self.start)(self.device, ifc, &mut out_channel as *mut u32);
+        // Unsafe block required because we cannot pass a Rust handle over FFI. An invalid
+        // handle violates the banjo API, and may be detected by the caller of this fn.
+        zx::ok(status).map(|_| unsafe { zx::Handle::from_raw(out_channel) })
+    }
+    fn deliver_eth_frame(&self, slice: &[u8]) -> Result<(), zx::Status> {
         let status = (self.deliver_eth_frame)(self.device, slice.as_ptr(), slice.len());
         zx::ok(status)
     }
 
-    pub fn send_wlan_frame(&self, buf: OutBuf, flags: TxFlags) -> Result<(), zx::Status> {
-        let status = (self.send_wlan_frame)(self.device, buf, flags.0);
+    fn queue_tx(
+        &self,
+        options: u32,
+        buf: OutBuf,
+        tx_info: banjo_wlan_mac::WlanTxInfo,
+    ) -> Result<(), zx::Status> {
+        let status = (self.queue_tx)(self.device, options, buf, tx_info);
         zx::ok(status)
     }
 
-    #[allow(deprecated)] // Until Rust MLME is powered by a Rust-written message loop.
-    pub fn access_sme_sender<
-        F: FnOnce(&fidl_mlme::MlmeServerSender<'_>) -> Result<(), fidl::Error>,
-    >(
-        &self,
-        fun: F,
-    ) -> Result<(), Error> {
-        // MLME and channel are both owned by the underlying interface.
-        // A single lock protects access to both components, thus granting MLME exclusive
-        // access to the channel as it's already holding the necessary lock when processing
-        // service messages and frames.
-        // The callback guarantees that MLME never outlives or leaks the channel.
-        let handle = unsafe { (self.get_sme_channel)(self.device) };
-        if handle == zx::sys::ZX_HANDLE_INVALID {
-            Err(Error::Status(format!("SME channel not available"), zx::Status::BAD_HANDLE))
-        } else {
-            let channel = unsafe { zx::Unowned::<zx::Channel>::from_raw_handle(handle) };
-            fun(&fidl_mlme::MlmeServerSender::new(&channel))
-                .map_err(|e| format_err!("error sending MLME message: {}", e).into())
-        }
+    fn set_eth_status(&self, status: u32) {
+        (self.set_eth_status)(self.device, status);
     }
 
-    pub fn set_channel(&self, channel: banjo_common::WlanChannel) -> Result<(), zx::Status> {
+    fn set_channel(&self, channel: banjo_common::WlanChannel) -> Result<(), zx::Status> {
         let status = (self.set_wlan_channel)(self.device, channel);
         zx::ok(status)
     }
 
-    pub fn set_key(&self, mut key: key::KeyConfig) -> Result<(), zx::Status> {
+    fn set_key(&self, mut key: key::KeyConfig) -> Result<(), zx::Status> {
         let status = (self.set_key)(self.device, &mut key as *mut key::KeyConfig);
         zx::ok(status)
     }
 
-    pub fn start_hw_scan(&self, config: &WlanHwScanConfig) -> Result<(), zx::Status> {
+    fn start_hw_scan(&self, config: &WlanHwScanConfig) -> Result<(), zx::Status> {
         let status = (self.start_hw_scan)(self.device, config as *const WlanHwScanConfig);
         zx::ok(status)
     }
 
-    pub fn channel(&self) -> banjo_common::WlanChannel {
+    fn channel(&self) -> banjo_common::WlanChannel {
         (self.get_wlan_channel)(self.device)
     }
 
@@ -146,12 +417,12 @@ impl Device {
         (self.get_wlanmac_info)(self.device)
     }
 
-    pub fn configure_bss(&self, mut cfg: BssConfig) -> Result<(), zx::Status> {
+    fn configure_bss(&self, mut cfg: BssConfig) -> Result<(), zx::Status> {
         let status = (self.configure_bss)(self.device, &mut cfg as *mut BssConfig);
         zx::ok(status)
     }
 
-    pub fn enable_beaconing(
+    fn enable_beaconing(
         &self,
         buf: OutBuf,
         tim_ele_offset: usize,
@@ -162,37 +433,27 @@ impl Device {
         zx::ok(status)
     }
 
-    pub fn disable_beaconing(&self) -> Result<(), zx::Status> {
+    fn disable_beaconing(&self) -> Result<(), zx::Status> {
         let status = (self.disable_beaconing)(self.device);
         zx::ok(status)
     }
 
-    pub fn configure_beacon(&self, buf: OutBuf) -> Result<(), zx::Status> {
+    fn configure_beacon(&self, buf: OutBuf) -> Result<(), zx::Status> {
         let status = (self.configure_beacon)(self.device, buf);
         zx::ok(status)
     }
 
-    pub fn set_eth_link(&self, status: LinkStatus) -> Result<(), zx::Status> {
+    fn set_eth_link(&self, status: LinkStatus) -> Result<(), zx::Status> {
         let status = (self.set_link_status)(self.device, status.0);
         zx::ok(status)
     }
 
-    pub fn set_eth_link_up(&self) -> Result<(), zx::Status> {
-        let status = (self.set_link_status)(self.device, LinkStatus::UP.0);
-        zx::ok(status)
-    }
-
-    pub fn set_eth_link_down(&self) -> Result<(), zx::Status> {
-        let status = (self.set_link_status)(self.device, LinkStatus::DOWN.0);
-        zx::ok(status)
-    }
-
-    pub fn configure_assoc(&self, mut assoc_ctx: WlanAssocCtx) -> Result<(), zx::Status> {
+    fn configure_assoc(&self, mut assoc_ctx: WlanAssocCtx) -> Result<(), zx::Status> {
         let status = (self.configure_assoc)(self.device, &mut assoc_ctx as *mut WlanAssocCtx);
         zx::ok(status)
     }
 
-    pub fn clear_assoc(&self, addr: &MacAddr) -> Result<(), zx::Status> {
+    fn clear_assoc(&self, addr: &MacAddr) -> Result<(), zx::Status> {
         let status = (self.clear_assoc)(self.device, addr);
         zx::ok(status)
     }
@@ -212,15 +473,20 @@ macro_rules! arr {
 mod test_utils {
     use {
         super::*,
-        crate::buffer::{BufferProvider, FakeBufferProvider},
+        crate::{
+            buffer::{BufferProvider, FakeBufferProvider},
+            error::Error,
+            test_utils::fake_control_handle,
+        },
         banjo_ddk_hw_wlan_ieee80211::*,
         banjo_ddk_hw_wlan_wlaninfo::*,
+        fuchsia_async as fasync,
     };
 
     pub struct FakeDevice {
         pub eth_queue: Vec<Vec<u8>>,
         pub wlan_queue: Vec<(Vec<u8>, u32)>,
-        pub sme_sap: (zx::Channel, zx::Channel),
+        pub sme_sap: (fidl_mlme::MlmeControlHandle, zx::Channel),
         pub wlan_channel: banjo_common::WlanChannel,
         pub keys: Vec<key::KeyConfig>,
         pub hw_scan_req: Option<WlanHwScanConfig>,
@@ -233,8 +499,8 @@ mod test_utils {
     }
 
     impl FakeDevice {
-        pub fn new() -> Self {
-            let sme_sap = zx::Channel::create().expect("error creating channel");
+        pub fn new(executor: &fasync::TestExecutor) -> Self {
+            let sme_sap = fake_control_handle(&executor);
             Self {
                 eth_queue: vec![],
                 wlan_queue: vec![],
@@ -255,6 +521,15 @@ mod test_utils {
             }
         }
 
+        pub extern "C" fn start(
+            _device: *mut c_void,
+            _ifc: *const WlanmacIfcProtocol<'_>,
+            _out_sme_channel: *mut zx::sys::zx_handle_t,
+        ) -> i32 {
+            // TODO(fxbug.dev/45464): Implement when AP tests are ported to Rust.
+            zx::sys::ZX_OK
+        }
+
         pub extern "C" fn deliver_eth_frame(
             device: *mut c_void,
             data: *const u8,
@@ -272,15 +547,21 @@ mod test_utils {
             zx::sys::ZX_OK
         }
 
-        pub extern "C" fn send_wlan_frame(device: *mut c_void, buf: OutBuf, flags: u32) -> i32 {
+        pub extern "C" fn queue_tx(
+            device: *mut c_void,
+            _options: u32,
+            buf: OutBuf,
+            _tx_info: banjo_wlan_mac::WlanTxInfo,
+        ) -> i32 {
             assert!(!device.is_null());
-            // safe here because device_ptr always points to Self
             unsafe {
-                (*(device as *mut Self)).wlan_queue.push((buf.as_slice().to_vec(), flags));
+                (*(device as *mut Self)).wlan_queue.push((buf.as_slice().to_vec(), 0));
             }
             buf.free();
             zx::sys::ZX_OK
         }
+
+        pub extern "C" fn set_eth_status(_device: *mut c_void, _status: u32) {}
 
         pub extern "C" fn set_link_status(device: *mut c_void, status: u8) -> i32 {
             assert!(!device.is_null());
@@ -291,15 +572,14 @@ mod test_utils {
             zx::sys::ZX_OK
         }
 
-        pub extern "C" fn send_wlan_frame_with_failure(_: *mut c_void, buf: OutBuf, _: u32) -> i32 {
+        pub extern "C" fn queue_tx_with_failure(
+            _: *mut c_void,
+            _: u32,
+            buf: OutBuf,
+            _: banjo_wlan_mac::WlanTxInfo,
+        ) -> i32 {
             buf.free();
             zx::sys::ZX_ERR_IO
-        }
-
-        pub extern "C" fn get_sme_channel(device: *mut c_void) -> u32 {
-            use fuchsia_zircon::AsHandleRef;
-
-            unsafe { (*(device as *mut Self)).sme_sap.0.as_handle_ref().raw_handle() }
         }
 
         pub extern "C" fn get_wlan_channel(device: *mut c_void) -> banjo_common::WlanChannel {
@@ -421,11 +701,12 @@ mod test_utils {
         }
 
         pub fn as_device(&mut self) -> Device {
-            Device {
+            let raw_device = DeviceInterface {
                 device: self as *mut Self as *mut c_void,
+                start: Self::start,
                 deliver_eth_frame: Self::deliver_eth_frame,
-                send_wlan_frame: Self::send_wlan_frame,
-                get_sme_channel: Self::get_sme_channel,
+                queue_tx: Self::queue_tx,
+                set_eth_status: Self::set_eth_status,
                 get_wlan_channel: Self::get_wlan_channel,
                 set_wlan_channel: Self::set_wlan_channel,
                 set_key: Self::set_key,
@@ -438,17 +719,20 @@ mod test_utils {
                 set_link_status: Self::set_link_status,
                 configure_assoc: Self::configure_assoc,
                 clear_assoc: Self::clear_assoc,
-            }
+            };
+            Device { raw_device, minstrel: None, control_handle: self.sme_sap.0.clone() }
         }
 
         pub fn as_device_fail_wlan_tx(&mut self) -> Device {
             let mut dev = self.as_device();
-            dev.send_wlan_frame = Self::send_wlan_frame_with_failure;
+            dev.raw_device.queue_tx = Self::queue_tx_with_failure;
             dev
         }
 
         pub fn as_device_fail_start_hw_scan(&mut self) -> Device {
-            Device { start_hw_scan: Self::start_hw_scan_fails, ..self.as_device() }
+            let mut dev = self.as_device();
+            dev.raw_device.start_hw_scan = Self::start_hw_scan_fails;
+            dev
         }
     }
 
@@ -556,7 +840,8 @@ mod tests {
         banjo_ddk_hw_wlan_wlaninfo::*, banjo_fuchsia_hardware_wlan_mac::WlanHwScanType,
         banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
         banjo_fuchsia_wlan_internal as banjo_internal,
-        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, wlan_common::assert_variant,
+        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_async as fasync,
+        wlan_common::assert_variant,
     };
 
     fn make_auth_confirm_msg() -> fidl_mlme::AuthenticateConfirm {
@@ -569,9 +854,11 @@ mod tests {
 
     #[test]
     fn send_mlme_message() {
-        let mut fake_device = FakeDevice::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
-        dev.access_sme_sender(|sender| sender.send_authenticate_conf(&mut make_auth_confirm_msg()))
+        dev.mlme_control_handle()
+            .send_authenticate_conf(&mut make_auth_confirm_msg())
             .expect("error sending MLME message");
 
         // Read message from channel.
@@ -582,36 +869,21 @@ mod tests {
     }
 
     #[test]
-    fn send_mlme_message_invalid_handle() {
-        unsafe extern "C" fn get_sme_channel(_device: *mut c_void) -> u32 {
-            return zx::sys::ZX_HANDLE_INVALID;
-        }
-
-        let mut fake_device = FakeDevice::new();
-        let mut dev = fake_device.as_device();
-        dev.get_sme_channel = get_sme_channel;
-        let result = dev.access_sme_sender(|sender| {
-            sender.send_authenticate_conf(&mut make_auth_confirm_msg())
-        });
-        assert_variant!(result, Err(Error::Status(_, zx::Status::BAD_HANDLE)));
-    }
-
-    #[test]
     fn send_mlme_message_peer_already_closed() {
-        let mut fake_device = FakeDevice::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
 
         drop(fake_device.sme_sap.1);
 
-        let result = dev.access_sme_sender(|sender| {
-            sender.send_authenticate_conf(&mut make_auth_confirm_msg())
-        });
-        assert_variant!(result, Err(Error::Internal(_)));
+        let result = dev.mlme_control_handle().send_authenticate_conf(&mut make_auth_confirm_msg());
+        assert!(result.unwrap_err().is_closed());
     }
 
     #[test]
     fn fake_device_deliver_eth_frame() {
-        let mut fake_device = FakeDevice::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
         assert_eq!(fake_device.eth_queue.len(), 0);
         let first_frame = [5; 32];
@@ -625,7 +897,8 @@ mod tests {
 
     #[test]
     fn get_set_channel() {
-        let mut fake_device = FakeDevice::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
         dev.set_channel(banjo_common::WlanChannel {
             primary: 2,
@@ -655,7 +928,8 @@ mod tests {
 
     #[test]
     fn set_key() {
-        let mut fake_device = FakeDevice::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
         dev.set_key(key::KeyConfig {
             bssid: 1,
@@ -675,7 +949,8 @@ mod tests {
 
     #[test]
     fn start_hw_scan() {
-        let mut fake_device = FakeDevice::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
 
         let result = dev.start_hw_scan(&WlanHwScanConfig {
@@ -698,7 +973,8 @@ mod tests {
 
     #[test]
     fn get_wlanmac_info() {
-        let mut fake_device = FakeDevice::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
         let info = dev.wlanmac_info();
         assert_eq!(info.sta_addr, [7u8; 6]);
@@ -710,7 +986,8 @@ mod tests {
 
     #[test]
     fn configure_bss() {
-        let mut fake_device = FakeDevice::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
         dev.configure_bss(BssConfig {
             bssid: [1, 2, 3, 4, 5, 6],
@@ -723,7 +1000,8 @@ mod tests {
 
     #[test]
     fn enable_disable_beaconing() {
-        let mut fake_device = FakeDevice::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
 
         let mut in_buf = fake_device.buffer_provider.get_buffer(4).expect("error getting buffer");
@@ -744,7 +1022,8 @@ mod tests {
 
     #[test]
     fn configure_beacon() {
-        let mut fake_device = FakeDevice::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
 
         {
@@ -771,7 +1050,8 @@ mod tests {
 
     #[test]
     fn set_link_status() {
-        let mut fake_device = FakeDevice::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
 
         dev.set_eth_link_up().expect("failed setting status");
@@ -783,7 +1063,8 @@ mod tests {
 
     #[test]
     fn configure_assoc() {
-        let mut fake_device = FakeDevice::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
         dev.configure_assoc(WlanAssocCtx {
             bssid: [1, 2, 3, 4, 5, 6],

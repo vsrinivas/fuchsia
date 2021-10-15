@@ -13,7 +13,6 @@
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/rust_utils.h>
-#include <wlan/mlme/timer_manager.h>
 #include <wlan/protocol/mac.h>
 
 namespace wlan {
@@ -21,22 +20,24 @@ namespace wlan {
 class BaseMlmeMsg;
 
 // ApMlme is an MLME which operates in AP role. It is not thread-safe.
+// TODO(fxbug.dev/29063): Merge client and ap MLME into a single C++ representation.
 class ApMlme : public Mlme {
  public:
-  explicit ApMlme(DeviceInterface* device);
+  explicit ApMlme(DeviceInterface* device, bool run_as_test = false);
 
   // Mlme interface methods.
   zx_status_t Init() override;
-  zx_status_t HandleEncodedMlmeMsg(cpp20::span<const uint8_t> msg) override;
-  zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
-  zx_status_t HandleFramePacket(std::unique_ptr<Packet> pkt) override;
-  zx_status_t HandleTimeout(const ObjectId id) override;
-  void HwIndication(uint32_t ind) override;
+  zx_status_t StopMainLoop() override;
+  zx_status_t QueueEthFrameTx(std::unique_ptr<Packet> pkt) override;
+
+  // Testing methods. Use only if run_as_test is true.
+  void AdvanceFakeTime(int64_t nanos);
+  void RunUntilStalled();
 
  private:
   DeviceInterface* const device_;
   ApStation rust_ap_;
-  std::unique_ptr<TimerManager<std::tuple<>>> timer_mgr_;
+  bool run_as_test_;
 };
 
 }  // namespace wlan

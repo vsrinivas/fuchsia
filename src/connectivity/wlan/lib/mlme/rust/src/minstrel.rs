@@ -454,8 +454,8 @@ fn tx_unlikely(tx_stats: &TxStats) -> bool {
 }
 
 pub trait TimerManager {
-    fn schedule(&self, from_now: Duration);
-    fn cancel(&self);
+    fn schedule(&mut self, from_now: Duration);
+    fn cancel(&mut self);
 }
 
 /// MinstrelRateSelector is responsible for handling data rate selection on frame transmission for
@@ -697,11 +697,11 @@ mod tests {
     }
 
     impl TimerManager for MockTimerManager {
-        fn schedule(&self, from_now: Duration) {
+        fn schedule(&mut self, from_now: Duration) {
             let mut scheduled = self.scheduled.lock().unwrap();
             scheduled.replace(from_now);
         }
-        fn cancel(&self) {
+        fn cancel(&mut self) {
             let mut scheduled = self.scheduled.lock().unwrap();
             scheduled.take();
         }

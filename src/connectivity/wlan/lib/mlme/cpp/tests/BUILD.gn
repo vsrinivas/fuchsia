@@ -13,13 +13,13 @@ source_set("test_main") {
   testonly = true
 
   sources = [
+    "mlme_msg.h",
     "mock_device.h",
     "test_bss.cc",
     "test_bss.h",
     "test_data.cc",
     "test_data.h",
     "test_main.cc",
-    "test_timer.h",
     "test_utils.cc",
     "test_utils.h",
   ]
@@ -127,72 +127,6 @@ test("mac_tests") {
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
-test("mesh_tests") {
-  output_name = "wlan_mesh_unittest"
-
-  sources = [
-    "hwmp_unittest.cc",
-    "mesh_deduplicator_unittest.cc",
-    "mesh_mlme_unittest.cc",
-    "parse_mp_action_unittest.cc",
-    "write_mp_action_unittest.cc",
-  ]
-
-  deps = [
-    ":test_main",
-    "//src/connectivity/wlan/lib/common/cpp:common",
-    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
-    "//third_party/googletest:gtest",
-  ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-
-  configs += [
-    "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config",
-    "//build/config/fuchsia:enable_zircon_asserts",
-  ]
-}
-
-test("service_tests") {
-  output_name = "wlan_service_unittest"
-
-  sources = [ "service_unittest.cc" ]
-
-  deps = [
-    ":test_main",
-    "//sdk/fidl/fuchsia.wlan.ieee80211",
-    "//sdk/fidl/fuchsia.wlan.mlme",
-    "//sdk/lib/fit",
-    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
-    "//third_party/googletest:gtest",
-  ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-
-  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
-}
-
-test("timer_manager_tests") {
-  output_name = "wlan_timer_manager_unittest"
-
-  sources = [ "timer_manager_unittest.cc" ]
-
-  deps = [
-    ":test_main",
-    "//sdk/lib/fit",
-    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-
-  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
-}
-
 test("buffer_utils_tests") {
   output_name = "wlan_buffer_utils_unittest"
 
@@ -248,9 +182,6 @@ tests = [
   "client_mlme",
   "common",
   "mac",
-  "mesh",
-  "service",
-  "timer_manager",
 ]
 
 foreach(test, tests) {

@@ -16,12 +16,10 @@ namespace wlan {
 
 using SequenceManager =
     std::unique_ptr<mlme_sequence_manager_t, void (*)(mlme_sequence_manager_t*)>;
-using RustClientMlme = std::unique_ptr<wlan_client_mlme_t, void (*)(wlan_client_mlme_t*)>;
-using ApStation = std::unique_ptr<wlan_ap_sta_t, void (*)(wlan_ap_sta_t*)>;
+using RustClientMlme = std::unique_ptr<wlan_mlme_handle_t, void (*)(wlan_mlme_handle_t*)>;
+using ApStation = std::unique_ptr<wlan_mlme_handle_t, void (*)(wlan_mlme_handle_t*)>;
 
 SequenceManager NewSequenceManager();
-ApStation NewApStation(mlme_device_ops_t device, mlme_buffer_provider_ops_t buf_provider,
-                       wlan_scheduler_ops_t scheduler, common::MacAddr bssid);
 
 static inline constexpr wlan_span_t AsWlanSpan(cpp20::span<const uint8_t> span) {
   return wlan_span_t{.data = span.data(), .size = span.size_bytes()};

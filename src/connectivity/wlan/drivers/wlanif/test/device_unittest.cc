@@ -17,7 +17,6 @@
 
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <gtest/gtest.h>
-#include <wlan/mlme/dispatcher.h>
 
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
@@ -175,7 +174,8 @@ TEST(SmeChannel, Bound) {
 
   // Verify scan request.
   ASSERT_TRUE(ctx.scan_req.has_value());
-  ASSERT_EQ(ctx.scan_req->bss_type_selector, fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE);
+  ASSERT_EQ(ctx.scan_req->bss_type_selector,
+            fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE);
   ASSERT_EQ(ctx.scan_req->scan_type, WLAN_SCAN_TYPE_PASSIVE);
 
   device->Unbind();

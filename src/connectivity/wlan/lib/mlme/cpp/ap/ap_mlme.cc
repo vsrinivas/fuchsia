@@ -4,14 +4,15 @@
 
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <memory>
 
 #include <wlan/common/logging.h>
 #include <wlan/mlme/ap/ap_mlme.h>
+#include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/rust_utils.h>
-#include <wlan/mlme/service.h>
 #include <wlan/protocol/mac.h>
 
 namespace wlan {
@@ -19,18 +20,40 @@ namespace wlan {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 #define MLME(m) static_cast<ApMlme*>(m)
-ApMlme::ApMlme(DeviceInterface* device) : device_(device), rust_ap_(nullptr, ap_sta_delete) {
-  auto rust_device = mlme_device_ops_t{
+ApMlme::ApMlme(DeviceInterface* device, bool run_as_test)
+    : device_(device), rust_ap_(nullptr, stop_and_delete_ap_sta), run_as_test_(run_as_test) {}
+
+zx_status_t ApMlme::StopMainLoop() {
+  rust_ap_.reset(nullptr);
+  return ZX_OK;
+}
+
+zx_status_t ApMlme::Init() {
+  debugfn();
+
+  // Repeated calls to Init are a no-op.
+  if (rust_ap_ != nullptr) {
+    return ZX_OK;
+  }
+
+  auto rust_device = rust_device_interface_t{
       .device = static_cast<void*>(this),
+      .start = [](void* mlme, const rust_wlanmac_ifc_protocol_copy_t* ifc,
+                  zx_handle_t* out_sme_channel) -> zx_status_t {
+        zx::channel channel;
+        zx_status_t result = MLME(mlme)->device_->Start(ifc, &channel);
+        *out_sme_channel = channel.release();
+        return result;
+      },
       .deliver_eth_frame = [](void* mlme, const uint8_t* data, size_t len) -> zx_status_t {
         return MLME(mlme)->device_->DeliverEthernet({data, len});
       },
-      .send_wlan_frame = [](void* mlme, mlme_out_buf_t buf, uint32_t flags) -> zx_status_t {
-        return MLME(mlme)->device_->SendWlan(FromRustOutBuf(buf), flags);
+      .queue_tx = [](void* mlme, uint32_t options, mlme_out_buf_t buf,
+                     wlan_tx_info_t tx_info) -> zx_status_t {
+        auto pkt = FromRustOutBuf(buf);
+        return MLME(mlme)->device_->QueueTx(options, std::move(pkt), tx_info);
       },
-      .get_sme_channel = [](void* mlme) -> zx_handle_t {
-        return MLME(mlme)->device_->GetSmeChannelRef();
-      },
+      .set_eth_status = [](void* mlme, uint32_t status) { MLME(mlme)->device_->SetStatus(status); },
       .get_wlan_channel = [](void* mlme) -> wlan_channel_t {
         return MLME(mlme)->device_->GetState()->channel();
       },
@@ -81,90 +104,29 @@ ApMlme::ApMlme(DeviceInterface* device) : device_(device), rust_ap_(nullptr, ap_
         return MLME(mlme)->device_->ClearAssoc(common::MacAddr(*addr));
       },
   };
-  wlan_scheduler_ops_t scheduler = {
-      .cookie = this,
-      .now = [](void* cookie) -> zx_time_t { return MLME(cookie)->timer_mgr_->Now().get(); },
-      .schedule = [](void* cookie, int64_t deadline) -> wlan_scheduler_event_id_t {
-        TimeoutId id = {};
-        MLME(cookie)->timer_mgr_->Schedule(zx::time(deadline), {}, &id);
-        return {._0 = id.raw()};
-      },
-      .cancel =
-          [](void* cookie, wlan_scheduler_event_id_t id) {
-            MLME(cookie)->timer_mgr_->Cancel(TimeoutId(id._0));
-          },
-  };
-  rust_ap_ =
-      NewApStation(rust_device, rust_buffer_provider, scheduler, device_->GetState()->address());
-}
-
-zx_status_t ApMlme::Init() {
-  debugfn();
-
-  ObjectId timer_id;
-  timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
-  timer_id.set_target(to_enum_type(ObjectTarget::kApMlme));
-  std::unique_ptr<Timer> timer;
-  if (zx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
-      status != ZX_OK) {
-    errorf("Could not create ap timer: %s\n", zx_status_get_string(status));
-    return status;
-  }
-  timer_mgr_ = std::make_unique<TimerManager<std::tuple<>>>(std::move(timer));
-
-  return ZX_OK;
-}
-
-zx_status_t ApMlme::HandleTimeout(const ObjectId id) {
-  debugfn();
-  if (id.target() != to_enum_type(ObjectTarget::kApMlme)) {
-    ZX_DEBUG_ASSERT(false);
-    return ZX_ERR_NOT_SUPPORTED;
+  auto bssid = device_->GetState()->address();
+  if (run_as_test_) {
+    rust_ap_ = ApStation(start_ap_sta_for_test(rust_device, rust_buffer_provider, &bssid.byte),
+                         stop_and_delete_ap_sta);
+  } else {
+    rust_ap_ = ApStation(start_ap_sta(rust_device, rust_buffer_provider, &bssid.byte),
+                         stop_and_delete_ap_sta);
   }
 
-  return timer_mgr_->HandleTimeout([&](auto now, auto target, auto timeout_id) {
-    ap_sta_timeout_fired(rust_ap_.get(), wlan_scheduler_event_id_t{._0 = timeout_id.raw()});
-  });
-}
-
-zx_status_t ApMlme::HandleEncodedMlmeMsg(cpp20::span<const uint8_t> msg) {
-  debugfn();
-  return ap_sta_handle_mlme_msg(rust_ap_.get(), AsWlanSpan(msg));
-}
-
-zx_status_t ApMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
-  debugfn();
-
-  // We don't handle MLME messages at this level.
-  (void)msg;
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t ApMlme::HandleFramePacket(std::unique_ptr<Packet> pkt) {
-  switch (pkt->peer()) {
-    case Packet::Peer::kEthernet: {
-      if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
-        return ap_sta_handle_eth_frame(rust_ap_.get(), AsWlanSpan({pkt->data(), pkt->len()}));
-      }
-      break;
-    }
-    case Packet::Peer::kWlan: {
-      const wlan_rx_info_t* rx_info = nullptr;
-      if (pkt->has_ctrl_data<wlan_rx_info_t>()) {
-        rx_info = pkt->ctrl_data<wlan_rx_info_t>();
-      }
-      return ap_sta_handle_mac_frame(rust_ap_.get(),
-                                     wlan_span_t{.data = pkt->data(), .size = pkt->len()}, rx_info);
-    }
-    default:
-      errorf("unknown Packet peer: %u\n", pkt->peer());
-      break;
+  if (rust_ap_ == nullptr) {
+    return ZX_ERR_BAD_STATE;
   }
   return ZX_OK;
 }
 
-void ApMlme::HwIndication(uint32_t ind) {
-  ap_sta_handle_hw_indication(rust_ap_.get(), static_cast<wlan_indication_t>(ind));
+zx_status_t ApMlme::QueueEthFrameTx(std::unique_ptr<Packet> pkt) {
+  if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
+    ap_sta_queue_eth_frame_tx(rust_ap_.get(), AsWlanSpan({pkt->data(), pkt->len()}));
+  }
+  return ZX_OK;
 }
 
+void ApMlme::AdvanceFakeTime(int64_t nanos) { ap_mlme_advance_fake_time(rust_ap_.get(), nanos); }
+
+void ApMlme::RunUntilStalled() { ap_mlme_run_until_stalled(rust_ap_.get()); }
 }  // namespace wlan

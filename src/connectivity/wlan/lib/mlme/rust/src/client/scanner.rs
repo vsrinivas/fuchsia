@@ -13,7 +13,6 @@ use {
         },
         device::{Device, TxFlags},
         error::Error,
-        timer::EventId,
     },
     anyhow::format_err,
     banjo_ddk_hw_wlan_wlaninfo as banjo_hw_wlaninfo,
@@ -28,6 +27,7 @@ use {
         mac::{self, CapabilityInfo},
         mgmt_writer,
         time::TimeUnit,
+        timer::EventId,
     },
     wlan_frame_writer::write_frame,
 };
@@ -287,12 +287,11 @@ impl<'a> BoundScanner<'a> {
                     error!("{}", e);
                 }
             } else {
-                let deadline = self.ctx.timer.now() + TimeUnit(req.probe_delay as u16).into();
-                let timeout_id =
-                    self.ctx.timer.schedule_event(deadline, TimedEvent::ScannerProbeDelay(channel));
-                if let Some(old_id) = probe_delay_timeout_id.replace(timeout_id) {
-                    self.ctx.timer.cancel_event(old_id);
-                }
+                let timeout_id = self.ctx.timer.schedule_after(
+                    TimeUnit(req.probe_delay as u16).into(),
+                    TimedEvent::ScannerProbeDelay(channel),
+                );
+                probe_delay_timeout_id.replace(timeout_id);
             }
         }
     }
@@ -357,12 +356,10 @@ fn get_band_info(
 }
 
 fn send_scan_result(txn_id: u64, bss: fidl_internal::BssDescription, device: &mut Device) {
-    let result = device.access_sme_sender(|sender| {
-        sender.send_on_scan_result(&mut fidl_mlme::ScanResult {
-            txn_id,
-            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-            bss,
-        })
+    let result = device.mlme_control_handle().send_on_scan_result(&mut fidl_mlme::ScanResult {
+        txn_id,
+        timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+        bss,
     });
     if let Err(e) = result {
         error!("error sending MLME ScanResult: {}", e);
@@ -370,9 +367,8 @@ fn send_scan_result(txn_id: u64, bss: fidl_internal::BssDescription, device: &mu
 }
 
 fn send_scan_end(txn_id: u64, code: fidl_mlme::ScanResultCode, device: &mut Device) {
-    let result = device.access_sme_sender(|sender| {
-        sender.send_on_scan_end(&mut fidl_mlme::ScanEnd { txn_id, code })
-    });
+    let result =
+        device.mlme_control_handle().send_on_scan_end(&mut fidl_mlme::ScanEnd { txn_id, code });
     if let Err(e) = result {
         error!("error sending MLME ScanEnd: {}", e);
     }
@@ -388,11 +384,14 @@ mod tests {
                 channel_scheduler, ClientConfig,
             },
             device::FakeDevice,
-            timer::{FakeScheduler, Timer},
         },
-        fidl_fuchsia_wlan_common as fidl_common,
+        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
         std::{cell::RefCell, rc::Rc},
-        wlan_common::{assert_variant, sequence::SequenceManager},
+        wlan_common::{
+            assert_variant,
+            sequence::SequenceManager,
+            timer::{create_timer, TimeStream, Timer},
+        },
     };
 
     const BSSID: Bssid = Bssid([6u8; 6]);
@@ -437,7 +436,8 @@ mod tests {
 
     #[test]
     fn test_handle_scan_req_queues_channels() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
@@ -461,7 +461,8 @@ mod tests {
 
     #[test]
     fn test_active_scan_probe_req_sent_with_no_delay() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
@@ -503,9 +504,19 @@ mod tests {
         ][..]);
     }
 
+    fn get_timed_event(id: EventId, time_stream: &mut TimeStream<TimedEvent>) -> TimedEvent {
+        loop {
+            let (_, event) = time_stream.try_next().unwrap().unwrap();
+            if event.id == id {
+                return event.event;
+            }
+        }
+    }
+
     #[test]
     fn test_active_scan_probe_req_sent_with_delay() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
@@ -524,9 +535,11 @@ mod tests {
         assert!(m.fake_device.wlan_queue.is_empty());
         assert!(scanner.probe_delay_timeout_id().is_some());
         let timeout_id = scanner.probe_delay_timeout_id().unwrap();
-        assert_variant!(ctx.timer.triggered(&timeout_id), Some(event) => {
-            assert_eq!(event, TimedEvent::ScannerProbeDelay(channel(6)));
-        });
+
+        assert_eq!(
+            get_timed_event(timeout_id, &mut m.time_stream),
+            TimedEvent::ScannerProbeDelay(channel(6))
+        );
 
         // Check that telling scanner to handle timeout would send probe request frame
         scanner.bind(&mut ctx).handle_probe_delay_timeout(channel(6));
@@ -550,7 +563,8 @@ mod tests {
 
     #[test]
     fn test_handle_scan_req_reject_if_busy() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
@@ -581,7 +595,8 @@ mod tests {
 
     #[test]
     fn test_handle_scan_req_reject_if_bad_bss_type_selector() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
@@ -615,7 +630,8 @@ mod tests {
 
     #[test]
     fn test_handle_scan_req_empty_channel_list() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
@@ -638,7 +654,8 @@ mod tests {
 
     #[test]
     fn test_handle_scan_req_long_channel_list() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
@@ -665,7 +682,8 @@ mod tests {
 
     #[test]
     fn test_handle_scan_req_invalid_channel_time() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
@@ -689,7 +707,8 @@ mod tests {
 
     #[test]
     fn test_start_hw_scan_success() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         m.fake_device.info.driver_features |=
             banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
@@ -736,7 +755,8 @@ mod tests {
 
     #[test]
     fn test_start_hw_scan_fails() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let device = m.fake_device.as_device_fail_start_hw_scan();
         let mut ctx = m.make_ctx_with_device(device);
         m.fake_device.info.driver_features |=
@@ -761,7 +781,8 @@ mod tests {
 
     #[test]
     fn test_start_hw_scan_aborted() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         m.fake_device.info.driver_features |=
             banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
@@ -797,7 +818,8 @@ mod tests {
 
     #[test]
     fn test_handle_beacon_or_probe_response() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
         let test_start_timestamp_nanos = zx::Time::get_monotonic().into_nanos();
@@ -849,7 +871,8 @@ mod tests {
 
     #[test]
     fn test_handle_beacon_or_probe_response_multiple() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
@@ -891,7 +914,8 @@ mod tests {
 
     #[test]
     fn not_scanning_vs_scanning() {
-        let mut m = MockObjects::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
         assert_eq!(false, scanner.is_scanning());
@@ -953,16 +977,19 @@ mod tests {
 
     struct MockObjects {
         fake_device: FakeDevice,
-        fake_scheduler: FakeScheduler,
+        time_stream: TimeStream<TimedEvent>,
+        timer: Option<Timer<TimedEvent>>,
         listener_state: MockListenerState,
         chan_sched: ChannelScheduler,
     }
 
     impl MockObjects {
-        fn new() -> Self {
+        fn new(exec: &fasync::TestExecutor) -> Self {
+            let (timer, time_stream) = create_timer();
             Self {
-                fake_device: FakeDevice::new(),
-                fake_scheduler: FakeScheduler::new(),
+                fake_device: FakeDevice::new(exec),
+                time_stream,
+                timer: Some(timer),
                 listener_state: MockListenerState { events: Rc::new(RefCell::new(vec![])) },
                 chan_sched: ChannelScheduler::new(),
             }
@@ -974,12 +1001,11 @@ mod tests {
         }
 
         fn make_ctx_with_device(&mut self, device: Device) -> Context {
-            let timer = Timer::<TimedEvent>::new(self.fake_scheduler.as_scheduler());
             Context {
                 config: ClientConfig { ensure_on_channel_time: 0 },
                 device,
                 buf_provider: FakeBufferProvider::new(),
-                timer,
+                timer: self.timer.take().unwrap(),
                 seq_mgr: SequenceManager::new(),
             }
         }

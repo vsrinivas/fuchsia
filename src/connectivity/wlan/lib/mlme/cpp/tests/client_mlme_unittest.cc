@@ -13,9 +13,9 @@
 #include <wlan/mlme/client/client_mlme.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/service.h>
 #include <wlan/mlme/validate_frame.h>
 
+#include "mlme_msg.h"
 #include "mock_device.h"
 #include "test_bss.h"
 #include "test_utils.h"
@@ -41,12 +41,34 @@ wlan_client_mlme_config_t ClientTestConfig() {
 }
 
 struct ClientTest : public ::testing::Test {
-  ClientTest() : device(), client(&device, ClientTestConfig()) {}
+  ClientTest() : device(), client(&device, ClientTestConfig(), true) {}
 
   void SetUp() override {
-    device.SetTime(zx::time(0));
     client.Init();
-    TriggerTimeout();
+    client.RunUntilStalled();
+  }
+
+  void SendWlanPacket(std::unique_ptr<Packet> packet) {
+    device.SendWlanPacket(std::move(packet));
+    client.RunUntilStalled();
+  }
+
+  template <typename T>
+  MlmeMsg<T> AssertNextMsgFromSmeChannel() {
+    client.RunUntilStalled();
+    return device.AssertNextMsgFromSmeChannel<T>();
+  }
+
+  template <typename T>
+  std::optional<MlmeMsg<T>> GetNextMsgFromSmeChannel() {
+    client.RunUntilStalled();
+    return device.GetNextMsgFromSmeChannel<T>();
+  }
+
+  zx_status_t QueueEthPacket(std::unique_ptr<Packet> pkt) {
+    auto status = client.QueueEthFrameTx(std::move(pkt));
+    client.RunUntilStalled();
+    return status;
   }
 
   zx_status_t SendNullDataFrame() {
@@ -54,61 +76,47 @@ struct ClientTest : public ::testing::Test {
     if (frame.IsEmpty()) {
       return ZX_ERR_NO_RESOURCES;
     }
-    client.HandleFramePacket(frame.Take());
+    SendWlanPacket(frame.Take());
     return ZX_OK;
   }
 
   void SendBeaconFrame(const common::MacAddr& bssid = common::MacAddr(kBssid1)) {
-    client.HandleFramePacket(CreateBeaconFrame(bssid));
-  }
-
-  void TriggerTimeout() {
-    ObjectId timer_id;
-    timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
-    timer_id.set_target(to_enum_type(ObjectTarget::kClientMlme));
-    client.HandleTimeout(timer_id);
-  }
-
-  template <typename M>
-  zx_status_t EncodeAndHandleMlmeMsg(const MlmeMsg<M>&& msg) {
-    fidl::Encoder enc(msg.ordinal());
-    auto body = msg.cloned_body();
-    ZX_ASSERT(SerializeServiceMsg(&enc, &body) == ZX_OK);
-    return client.HandleEncodedMlmeMsg(
-        cpp20::span{reinterpret_cast<const uint8_t*>(enc.GetMessage().bytes().data()),
-                    enc.GetMessage().bytes().size()});
+    SendWlanPacket(CreateBeaconFrame(bssid));
   }
 
   void Join(bool rsne = true) {
-    ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateJoinRequest(rsne)));
-    device.AssertNextMsgFromSmeChannel<wlan_mlme::JoinConfirm>();
+    device.sme_->JoinReq(CreateJoinRequest(rsne));
+    client.RunUntilStalled();
+    AssertNextMsgFromSmeChannel<wlan_mlme::JoinConfirm>();
   }
 
   void Authenticate() {
-    EncodeAndHandleMlmeMsg(CreateAuthRequest());
-    client.HandleFramePacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem));
-    device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
+    device.sme_->AuthenticateReq(CreateAuthRequest());
+    client.RunUntilStalled();
+    SendWlanPacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem));
+    AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
     device.wlan_queue.clear();
-    TriggerTimeout();
   }
 
   void Associate(bool rsne = true) {
-    EncodeAndHandleMlmeMsg(CreateAssocRequest(rsne));
-    client.HandleFramePacket(CreateAssocRespFrame());
-    device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
+    device.sme_->AssociateReq(CreateAssocRequest(rsne));
+    client.RunUntilStalled();
+    SendWlanPacket(CreateAssocRespFrame());
+    AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
     device.wlan_queue.clear();
-    TriggerTimeout();
   }
 
   void SetKey() {
     auto key_data = std::vector(std::cbegin(kKeyData), std::cend(kKeyData));
-    EncodeAndHandleMlmeMsg(
+    device.sme_->SetKeysReq(
         CreateSetKeysRequest(common::MacAddr(kBssid1), key_data, wlan_mlme::KeyType::PAIRWISE));
+    client.RunUntilStalled();
   }
 
   void EstablishRsna() {
-    EncodeAndHandleMlmeMsg(
+    device.sme_->SetControlledPort(
         CreateSetCtrlPortRequest(common::MacAddr(kBssid1), wlan_mlme::ControlledPortState::OPEN));
+    client.RunUntilStalled();
   }
 
   void Connect(bool rsne = true) {
@@ -118,20 +126,14 @@ struct ClientTest : public ::testing::Test {
     if (rsne) {
       EstablishRsna();
     }
-    // Clear any existing ensure-on-channel flag.
-    TriggerTimeout();
   }
 
   zx::duration BeaconPeriodsToDuration(size_t periods) {
     return zx::usec(1024) * (periods * kBeaconPeriodTu);
   }
 
-  void SetTimeInBeaconPeriods(size_t periods) {
-    device.SetTime(zx::time(0) + BeaconPeriodsToDuration(periods));
-  }
-
   void IncreaseTimeByBeaconPeriods(size_t periods) {
-    device.SetTime(device.GetTime() + BeaconPeriodsToDuration(periods));
+    client.AdvanceFakeTime(BeaconPeriodsToDuration(periods).to_nsecs());
   }
 
   // Auto deauthentication is checked when association status check timeout fires so this is to
@@ -139,34 +141,25 @@ struct ClientTest : public ::testing::Test {
   void AdvanceAutoDeauthenticationTimerByBeaconPeriods(size_t periods) {
     for (size_t i = 0; i < periods / kAssociationStatusBeaconCount; i++) {
       IncreaseTimeByBeaconPeriods(kAssociationStatusBeaconCount);
-      // TriggerTimeout() will cause MLME to go off channel if
-      // deauthentication occurs. In this case, we still need to check
-      // for a SignalReportIndication in the SME channel.
-      bool was_on_channel = client.OnChannel();
-      TriggerTimeout();
-      if (was_on_channel) {
-        device.AssertNextMsgFromSmeChannel<::fuchsia::wlan::internal::SignalReportIndication>();
-      }
+      // MLME may go off channel if deauthentication occurs. In this case, our next SME message
+      // should be a SignalReportIndication.
+      GetNextMsgFromSmeChannel<::fuchsia::wlan::internal::SignalReportIndication>();
     }
   }
 
   // Go off channel. This assumes that any existing ensure-on-channel flag is already cleared
   void GoOffChannel(uint16_t beacon_periods) {
-    // For our test, scan duration doesn't matter for now since we explicit
-    // force station to go back on channel by calling `HandleTimeout`
-    ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateScanRequest(beacon_periods * kBeaconPeriodTu)));
-    ASSERT_FALSE(client.OnChannel());                    // sanity check
+    device.sme_->StartScan(CreateScanRequest(beacon_periods * kBeaconPeriodTu));
+    client.RunUntilStalled();
     device.wlan_queue.erase(device.wlan_queue.begin());  // dequeue power-saving frame
   }
 
-  // Trigger timeout to go on channel. This assumes that current off-channel time is
-  // exhausted.
-  void TriggerTimeoutToGoOnChannel() {
-    TriggerTimeout();
-    ASSERT_TRUE(client.OnChannel());  // sanity check
+  void AssertGoingOnChannel() {
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
-    device.AssertNextMsgFromSmeChannel<wlan_mlme::ScanEnd>();  // clear out scan end msg
-    device.wlan_queue.erase(device.wlan_queue.begin());        // dequeue power-saving frame
+    // We always use scanning in these tests to force off-channel, and scanning is invoked
+    // once at a time, so wlan_mlme::ScanEnd is an indicator of returning to an on-channel state.
+    AssertNextMsgFromSmeChannel<wlan_mlme::ScanEnd>();   // Find scan end message.
+    device.wlan_queue.erase(device.wlan_queue.begin());  // dequeue power-saving frame
   }
 
   void AssertAuthConfirm(MlmeMsg<wlan_mlme::AuthenticateConfirm> msg,
@@ -262,8 +255,8 @@ struct ClientTest : public ::testing::Test {
 TEST_F(ClientTest, Join) {
   // (sme->mlme) Send JOIN.request. Verify a JOIN.confirm message was then sent
   // to SME.
-  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateJoinRequest(true)));
-  auto join_confirm = device.AssertNextMsgFromSmeChannel<wlan_mlme::JoinConfirm>();
+  device.sme_->JoinReq(CreateJoinRequest(true));
+  auto join_confirm = AssertNextMsgFromSmeChannel<wlan_mlme::JoinConfirm>();
   ASSERT_EQ(join_confirm.body()->result_code, wlan_ieee80211::StatusCode::SUCCESS);
 }
 
@@ -271,7 +264,8 @@ TEST_F(ClientTest, Authenticate) {
   Join();
   // (sme->mlme) Send AUTHENTICATION.request. Verify that no confirmation was
   // sent yet.
-  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAuthRequest()));
+  device.sme_->AuthenticateReq(CreateAuthRequest());
+  client.RunUntilStalled();
 
   // Verify wlan frame sent to AP is correct.
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
@@ -279,13 +273,12 @@ TEST_F(ClientTest, Authenticate) {
   // (ap->mlme) Respond with a Authentication frame. Verify a
   // AUTHENTICATION.confirm message was
   //            then sent to SME
-  ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem)));
-  auto auth_confirm = device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
+  SendWlanPacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem));
+  auto auth_confirm = AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
   AssertAuthConfirm(std::move(auth_confirm), wlan_ieee80211::StatusCode::SUCCESS);
 
   // Verify a delayed timeout won't cause another confirmation.
-  SetTimeInBeaconPeriods(100);
-  TriggerTimeout();
+  IncreaseTimeByBeaconPeriods(100);
   ASSERT_TRUE(device.svc_queue.empty());
 }
 
@@ -295,9 +288,9 @@ TEST_F(ClientTest, Associate_Protected) {
 
   // (sme->mlme) Send ASSOCIATE.request. Verify that no confirmation was sent
   // yet.
-  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAssocRequest(true)));
+  device.sme_->AssociateReq(CreateAssocRequest(true));
   // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
-  ASSERT_FALSE(device.GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
+  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
 
   // Verify wlan frame sent to AP is correct.
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
@@ -306,29 +299,26 @@ TEST_F(ClientTest, Associate_Protected) {
   // (ap->mlme) Respond with a Association Response frame. Verify a
   // ASSOCIATE.confirm message was
   //            then sent to SME.
-  ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAssocRespFrame()));
-  auto assoc_confirm = device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
+  SendWlanPacket(CreateAssocRespFrame());
+  auto assoc_confirm = AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
   AssertAssocConfirm(std::move(assoc_confirm), kAid, wlan_ieee80211::StatusCode::SUCCESS);
 
   // Verify a delayed timeout won't cause another confirmation.
-  SetTimeInBeaconPeriods(100);
-  TriggerTimeout();
+  IncreaseTimeByBeaconPeriods(100);
   // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
-  ASSERT_FALSE(device.GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
+  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
 }
 
 TEST_F(ClientTest, Associate_Unprotected) {
   // (sme->mlme) Send JOIN.request. Verify a JOIN.confirm message was then sent
   // to SME.
-  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateJoinRequest(false)));
-  auto join_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::JoinConfirm>();
-  ASSERT_EQ(join_conf.body()->result_code, wlan_ieee80211::StatusCode::SUCCESS);
+  Join(false);
 
   // (sme->mlme) Send AUTHENTICATION.request. Verify that no confirmation was
   // sent yet.
-  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAuthRequest()));
+  device.sme_->AuthenticateReq(CreateAuthRequest());
   // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
-  ASSERT_FALSE(device.GetNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>().has_value());
+  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>().has_value());
 
   // Verify wlan frame sent to AP is correct.
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
@@ -338,16 +328,16 @@ TEST_F(ClientTest, Associate_Unprotected) {
   // (ap->mlme) Respond with a Authentication frame. Verify a
   // AUTHENTICATION.confirm message was
   //            then sent to SME
-  ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem)));
+  SendWlanPacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem));
 
-  auto auth_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
+  auto auth_conf = AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
   AssertAuthConfirm(std::move(auth_conf), wlan_ieee80211::StatusCode::SUCCESS);
 
   // (sme->mlme) Send ASSOCIATE.request. Verify that no confirmation was sent
   // yet.
-  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAssocRequest(false)));
+  device.sme_->AssociateReq(CreateAssocRequest(false));
   // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
-  ASSERT_FALSE(device.GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
+  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
 
   // Verify wlan frame sent to AP is correct.
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
@@ -356,8 +346,8 @@ TEST_F(ClientTest, Associate_Unprotected) {
   // (ap->mlme) Respond with a Association Response frame and verify a
   // ASSOCIATE.confirm message
   //            was then sent SME.
-  ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAssocRespFrame()));
-  auto assoc_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
+  SendWlanPacket(CreateAssocRespFrame());
+  auto assoc_conf = AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
   AssertAssocConfirm(std::move(assoc_conf), kAid, wlan_ieee80211::StatusCode::SUCCESS);
 }
 
@@ -367,8 +357,9 @@ TEST_F(ClientTest, ExchangeEapolFrames) {
   Associate();
 
   // (sme->mlme) Send EAPOL.request
-  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateEapolRequest(common::MacAddr(kClientAddress),
-                                                             common::MacAddr(kBssid1))));
+  device.sme_->EapolReq(
+      CreateEapolRequest(common::MacAddr(kClientAddress), common::MacAddr(kBssid1)));
+  client.RunUntilStalled();
 
   // Verify EAPOL frame was sent to AP
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
@@ -385,7 +376,7 @@ TEST_F(ClientTest, ExchangeEapolFrames) {
   ASSERT_TRUE(llc_eapol_frame);
   EXPECT_EQ(llc_eapol_frame.body_len(), static_cast<size_t>(5));
   EXPECT_RANGES_EQ(llc_eapol_frame.body_data(), kEapolPdu);
-  EXPECT_EQ(pkt.flags, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
+  EXPECT_EQ(pkt.tx_info.tx_flags, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
   device.wlan_queue.clear();
 
   // Verify EAPOL.confirm message was sent to SME
@@ -398,8 +389,9 @@ TEST_F(ClientTest, ExchangeEapolFrames) {
 
   // After controlled port opens, EAPOL frame has protected flag enabled
   EstablishRsna();
-  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateEapolRequest(common::MacAddr(kClientAddress),
-                                                             common::MacAddr(kBssid1))));
+  device.sme_->EapolReq(
+      CreateEapolRequest(common::MacAddr(kClientAddress), common::MacAddr(kBssid1)));
+  client.RunUntilStalled();
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   pkt = std::move(*device.wlan_queue.begin());
   frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
@@ -414,7 +406,8 @@ TEST_F(ClientTest, SetKeys) {
   // (sme->mlme) Send SETKEYS.request
   auto key_data = std::vector(std::cbegin(kKeyData), std::cend(kKeyData));
   common::MacAddr bssid(kBssid1);
-  EncodeAndHandleMlmeMsg(CreateSetKeysRequest(bssid, key_data, wlan_mlme::KeyType::PAIRWISE));
+  device.sme_->SetKeysReq(CreateSetKeysRequest(bssid, key_data, wlan_mlme::KeyType::PAIRWISE));
+  client.RunUntilStalled();
 
   ASSERT_EQ(device.GetKeys().size(), static_cast<size_t>(1));
   auto key_config = device.GetKeys()[0];
@@ -431,15 +424,16 @@ TEST_F(ClientTest, ConstructAssociateContext) {
   Authenticate();
 
   // Send ASSOCIATE.request. Verify that no confirmation was sent yet.
-  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAssocRequest(false)));
+  device.sme_->AssociateReq(CreateAssocRequest(false));
+  client.RunUntilStalled();
   // Respond with a Association Response frame and verify a ASSOCIATE.confirm
   // message was sent.
   auto ap_assoc_ctx = wlan::test_utils::FakeDdkAssocCtx();
   ap_assoc_ctx.has_vht_cap = false;
   ap_assoc_ctx.has_vht_op = false;
-  ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAssocRespFrame(ap_assoc_ctx)));
-  ASSERT_EQ(ZX_OK,
-            EncodeAndHandleMlmeMsg(CreateFinalizeAssociationRequest(ap_assoc_ctx, kBssChannel)));
+  SendWlanPacket(CreateAssocRespFrame(ap_assoc_ctx));
+  device.sme_->FinalizeAssociationReq(CreateFinalizeAssociationRequest(ap_assoc_ctx, kBssChannel));
+  client.RunUntilStalled();
   auto sta_assoc_ctx = device.GetStationAssocContext();
 
   ASSERT_TRUE(sta_assoc_ctx != nullptr);
@@ -459,19 +453,17 @@ TEST_F(ClientTest, AuthTimeout) {
 
   // (sme->mlme) Send AUTHENTICATE.request. Verify that no confirmation was sent
   // yet.
-  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAuthRequest()));
+  device.sme_->AuthenticateReq(CreateAuthRequest());
   // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
-  ASSERT_FALSE(device.GetNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>().has_value());
+  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>().has_value());
 
   // Timeout not yet hit.
-  SetTimeInBeaconPeriods(kAuthTimeout - 1);
-  TriggerTimeout();
+  IncreaseTimeByBeaconPeriods(kAuthTimeout - 1);
   ASSERT_TRUE(device.svc_queue.empty());
 
   // Timeout hit, verify a AUTHENTICATION.confirm message was sent to SME.
-  SetTimeInBeaconPeriods(kAuthTimeout);
-  TriggerTimeout();
-  auto auth_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
+  IncreaseTimeByBeaconPeriods(kAuthTimeout);
+  auto auth_conf = AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
   AssertAuthConfirm(std::move(auth_conf), wlan_ieee80211::StatusCode::REJECTED_SEQUENCE_TIMEOUT);
 }
 
@@ -481,43 +473,41 @@ TEST_F(ClientTest, AssocTimeout) {
 
   // (sme->mlme) Send ASSOCIATE.request. Verify that no confirmation was sent
   // yet.
-  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAssocRequest(false)));
-  ASSERT_FALSE(device.GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
+  device.sme_->AssociateReq(CreateAssocRequest(false));
+  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
 
   // Timeout not yet hit.
-  SetTimeInBeaconPeriods(10);
-  TriggerTimeout();
+  IncreaseTimeByBeaconPeriods(10);
   ASSERT_TRUE(device.svc_queue.empty());
 
   // Timeout hit, verify a ASSOCIATE.confirm message was sent to SME.
-  SetTimeInBeaconPeriods(40);
-  TriggerTimeout();
-  auto assoc_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
+  IncreaseTimeByBeaconPeriods(40);
+  auto assoc_conf = AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
   AssertAssocConfirm(std::move(assoc_conf), 0, wlan_ieee80211::StatusCode::REFUSED_TEMPORARILY);
 }
 
 TEST_F(ClientTest, ReceiveDataAfterAssociation_Protected) {
   // Verify no data frame can be received before RSNA is established.
   Join();
-  client.HandleFramePacket(CreateDataFrame(kTestPayload));
+  SendWlanPacket(CreateDataFrame(kTestPayload));
   ASSERT_TRUE(device.AreQueuesEmpty());
 
   Authenticate();
-  client.HandleFramePacket(CreateDataFrame(kTestPayload));
+  SendWlanPacket(CreateDataFrame(kTestPayload));
   ASSERT_TRUE(device.AreQueuesEmpty());
 
   Associate();
-  client.HandleFramePacket(CreateDataFrame(kTestPayload));
+  SendWlanPacket(CreateDataFrame(kTestPayload));
   ASSERT_TRUE(device.AreQueuesEmpty());
 
   // Setting key does not open controlled port
   SetKey();
-  client.HandleFramePacket(CreateDataFrame(kTestPayload));
+  SendWlanPacket(CreateDataFrame(kTestPayload));
   ASSERT_TRUE(device.AreQueuesEmpty());
 
   // Establish RSNA and verify data frame can be received
   EstablishRsna();
-  client.HandleFramePacket(CreateDataFrame(kTestPayload));
+  SendWlanPacket(CreateDataFrame(kTestPayload));
   auto eth_frames = device.GetEthPackets();
   ASSERT_EQ(eth_frames.size(), static_cast<size_t>(1));
   ASSERT_TRUE(device.wlan_queue.empty());
@@ -527,27 +517,27 @@ TEST_F(ClientTest, ReceiveDataAfterAssociation_Protected) {
 TEST_F(ClientTest, SendDataAfterAssociation_Protected) {
   // Verify no data frame can be sent before association
   Join();
-  client.HandleFramePacket(CreateEthFrame(kTestPayload));
+  QueueEthPacket(CreateEthFrame(kTestPayload));
   ASSERT_TRUE(device.AreQueuesEmpty());
 
   Authenticate();
-  client.HandleFramePacket(CreateEthFrame(kTestPayload));
+  QueueEthPacket(CreateEthFrame(kTestPayload));
   ASSERT_TRUE(device.AreQueuesEmpty());
 
   // After association but before RSNA is established, data frame is dropped.
   Associate();
-  client.HandleFramePacket(CreateEthFrame(kTestPayload));
+  QueueEthPacket(CreateEthFrame(kTestPayload));
   EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(0));
 
   // Setting key does not open controlled port, so data frame is dropped.
   SetKey();
-  client.HandleFramePacket(CreateEthFrame(kTestPayload));
+  QueueEthPacket(CreateEthFrame(kTestPayload));
   EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(0));
 
   // After RSNA is established, outbound data frames have `protected_frame` flag
   // enabled
   EstablishRsna();
-  client.HandleFramePacket(CreateEthFrame(kTestPayload));
+  QueueEthPacket(CreateEthFrame(kTestPayload));
   EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDataFrameSentToAp(std::move(*device.wlan_queue.begin()), kTestPayload,
                           {.protected_frame = 1});
@@ -582,16 +572,16 @@ TEST_F(ClientTest, SendKeepAliveFrameAfterAssociation_Protected) {
 TEST_F(ClientTest, ReceiveDataAfterAssociation_Unprotected) {
   // Verify no data frame can be received before association.
   Join(false);
-  client.HandleFramePacket(CreateDataFrame(kTestPayload));
+  SendWlanPacket(CreateDataFrame(kTestPayload));
   ASSERT_TRUE(device.AreQueuesEmpty());
 
   Authenticate();
-  client.HandleFramePacket(CreateDataFrame(kTestPayload));
+  SendWlanPacket(CreateDataFrame(kTestPayload));
   ASSERT_TRUE(device.AreQueuesEmpty());
 
   // Associate and verify data frame can be received.
   Associate(false);
-  client.HandleFramePacket(CreateDataFrame(kTestPayload));
+  SendWlanPacket(CreateDataFrame(kTestPayload));
   auto eth_frames = device.GetEthPackets();
   ASSERT_EQ(eth_frames.size(), static_cast<size_t>(1));
   ASSERT_TRUE(device.wlan_queue.empty());
@@ -601,16 +591,16 @@ TEST_F(ClientTest, ReceiveDataAfterAssociation_Unprotected) {
 TEST_F(ClientTest, SendDataAfterAssociation_Unprotected) {
   // Verify no data frame can be sent before association.
   Join(false);
-  client.HandleFramePacket(CreateEthFrame(kTestPayload));
+  QueueEthPacket(CreateEthFrame(kTestPayload));
   ASSERT_TRUE(device.AreQueuesEmpty());
 
   Authenticate();
-  client.HandleFramePacket(CreateEthFrame(kTestPayload));
+  QueueEthPacket(CreateEthFrame(kTestPayload));
   ASSERT_TRUE(device.AreQueuesEmpty());
 
   // Associate and verify that data frame can be sent out.
   Associate(false);
-  client.HandleFramePacket(CreateEthFrame(kTestPayload));
+  QueueEthPacket(CreateEthFrame(kTestPayload));
   EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDataFrameSentToAp(std::move(*device.wlan_queue.begin()), kTestPayload);
 }
@@ -639,7 +629,7 @@ TEST_F(ClientTest, ProcessEmptyDataFrames) {
 
   // Send a data frame which carries an LLC frame with no payload.
   // Verify no ethernet frame was queued.
-  client.HandleFramePacket(CreateDataFrame({}));
+  SendWlanPacket(CreateDataFrame({}));
   ASSERT_TRUE(device.eth_queue.empty());
 }
 
@@ -652,7 +642,7 @@ TEST_F(ClientTest, ProcessAmsduDataFrame) {
   }
 
   Connect();
-  client.HandleFramePacket(CreateAmsduDataFramePacket(payloads));
+  SendWlanPacket(CreateAmsduDataFramePacket(payloads));
   ASSERT_EQ(device.eth_queue.size(), payloads.size());
   for (size_t i = 0; i < payloads.size(); ++i) {
     auto eth_payload = cpp20::span<const uint8_t>(device.eth_queue[i]).subspan(sizeof(EthernetII));
@@ -676,7 +666,7 @@ TEST_F(ClientTest, DropManagementFrames) {
   mgmt_hdr->addr2 = common::MacAddr(kClientAddress);
   mgmt_hdr->addr3 = common::MacAddr(kBssid2);
   w.Write<Deauthentication>()->reason_code = 42;
-  client.HandleFramePacket(std::move(packet));
+  SendWlanPacket(std::move(packet));
 
   // Verify neither a management frame nor service message were sent.
   ASSERT_TRUE(device.svc_queue.empty());
@@ -685,7 +675,7 @@ TEST_F(ClientTest, DropManagementFrames) {
 
   // Verify data frames can still be send and the clientis presumably
   // associated.
-  client.HandleFramePacket(CreateDataFrame(kTestPayload));
+  SendWlanPacket(CreateDataFrame(kTestPayload));
   ASSERT_EQ(device.eth_queue.size(), static_cast<size_t>(1));
 }
 
@@ -701,7 +691,7 @@ TEST_F(ClientTest, AutoDeauth_NoBeaconReceived) {
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                     wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
-  device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
+  AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
 TEST_F(ClientTest, AutoDeauth_NoBeaconsShortlyAfterConnecting) {
@@ -724,7 +714,7 @@ TEST_F(ClientTest, AutoDeauth_NoBeaconsShortlyAfterConnecting) {
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                     wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
-  device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
+  AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
 // Generally comment of auto-deauth tests below that combine with switching channel:
@@ -738,32 +728,30 @@ TEST_F(ClientTest, AutoDeauth_DoNotDeauthWhileSwitchingChannel) {
   // Very close to getting auto deauthenticated.
   AdvanceAutoDeauthenticationTimerByBeaconPeriods(kAutoDeauthTimeout);
   // Off channel time is arbitrary, but should match the total time we advance before
-  // the `TriggerTimeoutToGoOnChannel` call.
+  // the `AssertGoingOnChannel` call.
   GoOffChannel(2 * kAutoDeauthTimeout + kAssociationStatusBeaconCount);
 
   // For next two timeouts, still off channel, so should not deauth.
   AdvanceAutoDeauthenticationTimerByBeaconPeriods(kAssociationStatusBeaconCount);
-  ASSERT_FALSE(client.OnChannel());
   ASSERT_TRUE(device.wlan_queue.empty());
 
   // Any timeout fired when off-channel does not count against auto-deauth
   AdvanceAutoDeauthenticationTimerByBeaconPeriods(kAutoDeauthTimeout -
                                                   kAssociationStatusBeaconCount);
-  ASSERT_FALSE(client.OnChannel());
   ASSERT_TRUE(device.wlan_queue.empty());
 
   // Ensure enough time has passed so that we can go back to main channel
   IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout + kAssociationStatusBeaconCount);
-  TriggerTimeoutToGoOnChannel();
+  AssertGoingOnChannel();
 
-  // Before going off channel, we did not receive beacon for `kAutoDeauthTimeout` period. Now one
-  // more association status check interval has passed after going back on channel, so should auto
-  // deauth.
+  // Before going off channel, we did not receive beacon for `kAutoDeauthTimeout` periods. Now
+  // one more association status check interval has passed after going back on channel, so should
+  // auto deauth.
   AdvanceAutoDeauthenticationTimerByBeaconPeriods(kAssociationStatusBeaconCount);
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                     wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
-  device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
+  AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
 TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
@@ -773,16 +761,15 @@ TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
   AdvanceAutoDeauthenticationTimerByBeaconPeriods(kAutoDeauthTimeout -
                                                   5 * kAssociationStatusBeaconCount);
   // Off channel time is arbitrary, but should match the total time we advance before
-  // the `TriggerTimeoutToGoOnChannel` call.
+  // the `AssertGoingOnChannel` call.
   GoOffChannel(6 * kAssociationStatusBeaconCount);
 
   // No deauth since off channel.
   AdvanceAutoDeauthenticationTimerByBeaconPeriods(5 * kAssociationStatusBeaconCount);
-  ASSERT_FALSE(client.OnChannel());
   ASSERT_TRUE(device.wlan_queue.empty());
 
   IncreaseTimeByBeaconPeriods(kAssociationStatusBeaconCount);
-  TriggerTimeoutToGoOnChannel();
+  AssertGoingOnChannel();
 
   // Got beacon frame, which should reset the timeout.
   AdvanceAutoDeauthenticationTimerByBeaconPeriods(
@@ -798,7 +785,7 @@ TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
   // Total on-channel time without beacons so far: 2 signal report intervals
   GoOffChannel(kAutoDeauthTimeout);
   IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout);
-  TriggerTimeoutToGoOnChannel();
+  AssertGoingOnChannel();
 
   AdvanceAutoDeauthenticationTimerByBeaconPeriods(
       kAutoDeauthTimeout -
@@ -813,7 +800,7 @@ TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
   // Not using AdvanceAutoDeauthenticationTimerByBeaconPeriods because TiggerTimeout() will switch
   // the client back on to main channel.
   IncreaseTimeByBeaconPeriods(kAutoDeauthTimeout);
-  TriggerTimeoutToGoOnChannel();
+  AssertGoingOnChannel();
   ASSERT_TRUE(device.wlan_queue.empty());
 
   // One more signal report beacon period and auto-deauth triggers
@@ -822,7 +809,7 @@ TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                     wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
-  device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
+  AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
 // This test explores what happens if the whole auto-deauth timeout duration is
@@ -837,19 +824,17 @@ TEST_F(ClientTest, AutoDeauth_SwitchingChannelBeforeDeauthTimeoutCouldTrigger) {
   // No deauth since off channel.
   AdvanceAutoDeauthenticationTimerByBeaconPeriods(kAutoDeauthTimeout);
   // Off channel time is arbitrary, but should match the total time we advance before
-  // the `TriggerTimeoutToGoOnChannel` call.
+  // the `AssertGoingOnChannel` call.
   GoOffChannel(1);
-  TriggerTimeout();
-  ASSERT_FALSE(client.OnChannel());
   ASSERT_TRUE(device.wlan_queue.empty());
 
   IncreaseTimeByBeaconPeriods(1);
-  TriggerTimeoutToGoOnChannel();
+  AssertGoingOnChannel();
 
   // Auto-deauth timeout shouldn't trigger yet. This is because after going back
   // on channel, the client should always schedule timeout sufficiently far
   // enough in the future (at least one beacon interval)
-  TriggerTimeout();
+  IncreaseTimeByBeaconPeriods(1);
   ASSERT_TRUE(device.wlan_queue.empty());
 
   // Auto-deauth now
@@ -857,7 +842,7 @@ TEST_F(ClientTest, AutoDeauth_SwitchingChannelBeforeDeauthTimeoutCouldTrigger) {
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                     wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
-  device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
+  AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
 TEST_F(ClientTest, AutoDeauth_ForeignBeaconShouldNotPreventDeauth) {
@@ -870,18 +855,22 @@ TEST_F(ClientTest, AutoDeauth_ForeignBeaconShouldNotPreventDeauth) {
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                     wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH);
-  device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
+  AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
 TEST_F(ClientTest, DropFramesWhileOffChannel) {
   Connect();
 
+  // Advance time to ensure we're on-channel.
+  AdvanceAutoDeauthenticationTimerByBeaconPeriods(kAssociationStatusBeaconCount);
+  SendBeaconFrame();
+
   GoOffChannel(1);
-  client.HandleFramePacket(CreateEthFrame(kTestPayload));
+  QueueEthPacket(CreateEthFrame(kTestPayload));
   ASSERT_TRUE(device.wlan_queue.empty());
 
   IncreaseTimeByBeaconPeriods(1);
-  TriggerTimeoutToGoOnChannel();
+  AssertGoingOnChannel();
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(0));
 }
 
@@ -889,34 +878,32 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
   Join();
 
   // Send AUTHENTICATION.request. Verify that no confirmation was sent yet.
-  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAuthRequest()));
+  device.sme_->AuthenticateReq(CreateAuthRequest());
   // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
-  ASSERT_FALSE(device.GetNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>().has_value());
+  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>().has_value());
 
   // Send authentication frame with wrong algorithm.
-  ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAuthRespFrame(AuthAlgorithm::kSae)));
+  SendWlanPacket(CreateAuthRespFrame(AuthAlgorithm::kSae));
 
   // Verify that AUTHENTICATION.confirm was received.
-  auto auth_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
+  auto auth_conf = AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
   AssertAuthConfirm(std::move(auth_conf), wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
 
   // Fast forward in time would have caused a timeout.
   // The timeout however should have been canceled and we should not receive
   // and additional confirmation.
-  SetTimeInBeaconPeriods(kAuthTimeout);
-  TriggerTimeout();
+  IncreaseTimeByBeaconPeriods(kAuthTimeout);
   ASSERT_TRUE(device.svc_queue.empty());
 
   // Send a second, now valid authentication frame.
   // This frame should be ignored as the client reset.
-  ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem)));
+  SendWlanPacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem));
 
   // Fast forward in time far beyond an authentication timeout.
   // There should not be any AUTHENTICATION.confirm sent as the client
   // is expected to have been reset into |idle| state after failing
   // to authenticate.
-  SetTimeInBeaconPeriods(1000);
-  TriggerTimeout();
+  IncreaseTimeByBeaconPeriods(1000);
   ASSERT_TRUE(device.svc_queue.empty());
 }
 
@@ -938,11 +925,11 @@ TEST_F(ClientTest, DISABLED_ProcessZeroRssiFrame) {
   ASSERT_EQ(client.GetMlmeStats().client_mlme_stats().assoc_data_rssi.hist[0], 0u);
 
   // Send a data frame with no rssi and verify that we don't increment stats.
-  ASSERT_EQ(ZX_OK, client.HandleFramePacket(std::move(no_rssi_pkt)));
+  SendWlanPacket(std::move(no_rssi_pkt));
   ASSERT_EQ(client.GetMlmeStats().client_mlme_stats().assoc_data_rssi.hist[0], 0u);
 
   // Send a data frame with 0 rssi and verify that we *do* increment stats.
-  ASSERT_EQ(ZX_OK, client.HandleFramePacket(std::move(rssi_pkt)));
+  SendWlanPacket(std::move(rssi_pkt));
   ASSERT_EQ(client.GetMlmeStats().client_mlme_stats().assoc_data_rssi.hist[0], 1u);
 }
 
@@ -953,7 +940,7 @@ TEST_F(ClientTest, PsPollWithMoreData) {
   more_data_pkt->mut_field<DataFrameHeader>(0)->fc.set_more_data(true);
   more_data_pkt->mut_field<DataFrameHeader>(0)->addr1 = common::MacAddr(kClientAddress);
 
-  ASSERT_EQ(ZX_OK, client.HandleFramePacket(std::move(more_data_pkt)));
+  SendWlanPacket(std::move(more_data_pkt));
 
   ASSERT_EQ(device.wlan_queue.size(), 1ULL);
   auto frame = TypeCheckWlanFrame<CtrlFrameView<PsPollFrame>>(device.wlan_queue[0].pkt.get());
@@ -997,7 +984,7 @@ TEST_F(ClientTest, PsPollWithBeacon) {
   wlan_rx_info_t rx_info{.rx_flags = 0};
   beacon_pkt->CopyCtrlFrom(rx_info);
 
-  client.HandleFramePacket(std::move(beacon_pkt));
+  SendWlanPacket(std::move(beacon_pkt));
 
   ASSERT_EQ(device.wlan_queue.size(), 1ULL);
   auto frame = TypeCheckWlanFrame<CtrlFrameView<PsPollFrame>>(device.wlan_queue[0].pkt.get());

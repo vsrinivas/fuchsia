@@ -56,7 +56,8 @@ impl<E> Timer<E> {
     }
 
     pub fn now(&self) -> zx::Time {
-        zx::Time::get_monotonic()
+        // We use fasync to support time manipulation in tests.
+        fasync::Time::now().into_zx()
     }
 
     pub fn schedule_at(&mut self, deadline: zx::Time, event: E) -> EventId {
@@ -67,14 +68,14 @@ impl<E> Timer<E> {
     }
 
     pub fn schedule_after(&mut self, duration: zx::Duration, event: E) -> EventId {
-        self.schedule_at(zx::Time::after(duration), event)
+        self.schedule_at(fasync::Time::after(duration).into_zx(), event)
     }
 
     pub fn schedule<EV>(&mut self, event: EV) -> EventId
     where
         EV: TimeoutDuration + Into<E>,
     {
-        self.schedule_at(zx::Time::after(event.timeout_duration()), event.into())
+        self.schedule_after(event.timeout_duration(), event.into())
     }
 }
 
@@ -87,6 +88,7 @@ mod tests {
     use {
         super::*,
         crate::assert_variant,
+        fuchsia_async as fasync,
         fuchsia_zircon::{self as zx, DurationNum},
         futures::channel::mpsc::{self, UnboundedSender},
         pin_utils::pin_mut,
@@ -102,6 +104,7 @@ mod tests {
 
     #[test]
     fn test_timer_schedule_at() {
+        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (mut timer, mut time_stream) = create_timer::<Event>();
         let timeout1 = zx::Time::after(5.seconds());
         let timeout2 = zx::Time::after(10.seconds());
@@ -125,6 +128,7 @@ mod tests {
 
     #[test]
     fn test_timer_schedule_after() {
+        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (mut timer, mut time_stream) = create_timer::<Event>();
         let timeout1 = 1000.seconds();
         let timeout2 = 5.seconds();
@@ -150,6 +154,7 @@ mod tests {
 
     #[test]
     fn test_timer_schedule() {
+        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (mut timer, mut time_stream) = create_timer::<Event>();
         let start = zx::Time::after(0.millis());
 

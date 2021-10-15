@@ -13,7 +13,6 @@ use {
         device::TxFlags,
         error::Error,
         key::KeyConfig,
-        timer::EventId,
     },
     anyhow::format_err,
     banjo_ddk_hw_wlan_wlaninfo::WlanInfoDriverFeature,
@@ -25,7 +24,9 @@ use {
     wlan_common::{
         ie,
         mac::{self, is_multicast, CapabilityInfo, EthernetIIHdr},
-        tim, TimeUnit,
+        tim,
+        timer::EventId,
+        TimeUnit,
     },
     zerocopy::ByteSlice,
 };
@@ -615,14 +616,16 @@ mod tests {
             buffer::FakeBufferProvider,
             device::{Device, FakeDevice},
             key::{KeyType, Protection},
-            timer::{FakeScheduler, Scheduler, Timer},
         },
-        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_async as fasync,
         ieee80211::Bssid,
         std::convert::TryFrom,
         wlan_common::{
-            assert_variant, big_endian::BigEndianU16, mac::CapabilityInfo,
+            assert_variant,
+            big_endian::BigEndianU16,
+            mac::CapabilityInfo,
             test_utils::fake_frames::fake_wpa2_rsne,
+            timer::{create_timer, TimeStream},
         },
     };
 
@@ -630,15 +633,16 @@ mod tests {
     const BSSID: Bssid = Bssid([2u8; 6]);
     const CLIENT_ADDR2: MacAddr = [6u8; 6];
 
-    fn make_context(device: Device, scheduler: Scheduler) -> Context {
-        Context::new(device, FakeBufferProvider::new(), Timer::<TimedEvent>::new(scheduler), BSSID)
+    fn make_context(device: Device) -> (Context, TimeStream<TimedEvent>) {
+        let (timer, time_stream) = create_timer();
+        (Context::new(device, FakeBufferProvider::new(), timer, BSSID), time_stream)
     }
 
     #[test]
     fn new() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         InfraBss::new(
             &mut ctx,
             Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
@@ -687,9 +691,9 @@ mod tests {
 
     #[test]
     fn stop() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
@@ -707,9 +711,9 @@ mod tests {
 
     #[test]
     fn handle_mlme_auth_resp() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -753,9 +757,9 @@ mod tests {
 
     #[test]
     fn handle_mlme_auth_resp_no_such_client() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -785,9 +789,9 @@ mod tests {
 
     #[test]
     fn handle_mlme_deauth_req() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -831,9 +835,9 @@ mod tests {
 
     #[test]
     fn handle_mlme_assoc_resp() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -885,9 +889,9 @@ mod tests {
 
     #[test]
     fn handle_mlme_assoc_resp_with_caps() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -939,9 +943,9 @@ mod tests {
 
     #[test]
     fn handle_mlme_disassoc_req() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -983,9 +987,9 @@ mod tests {
 
     #[test]
     fn handle_mlme_set_controlled_port_req() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1021,9 +1025,9 @@ mod tests {
 
     #[test]
     fn handle_mlme_eapol_req() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1075,9 +1079,9 @@ mod tests {
 
     #[test]
     fn handle_mgmt_frame_auth() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1127,9 +1131,9 @@ mod tests {
 
     #[test]
     fn handle_mgmt_frame_assoc_req() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1192,9 +1196,9 @@ mod tests {
 
     #[test]
     fn handle_mgmt_frame_bad_ds_bits_to_ds() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1237,9 +1241,9 @@ mod tests {
 
     #[test]
     fn handle_mgmt_frame_bad_ds_bits_from_ds() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1282,9 +1286,9 @@ mod tests {
 
     #[test]
     fn handle_mgmt_frame_no_such_client() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1324,9 +1328,9 @@ mod tests {
 
     #[test]
     fn handle_mgmt_frame_bogus() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1365,9 +1369,9 @@ mod tests {
 
     #[test]
     fn handle_data_frame() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1438,9 +1442,9 @@ mod tests {
 
     #[test]
     fn handle_data_frame_bad_ds_bits() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1485,9 +1489,9 @@ mod tests {
 
     #[test]
     fn handle_client_event() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, mut time_stream) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1521,9 +1525,11 @@ mod tests {
 
         fake_device.wlan_queue.clear();
 
+        let (_, timed_event) =
+            time_stream.try_next().unwrap().expect("Should have scheduled a timeout");
         bss.handle_timed_event(
             &mut ctx,
-            fake_scheduler.next_id.into(),
+            timed_event.id,
             TimedEvent::ClientEvent(CLIENT_ADDR, ClientEvent::BssIdleTimeout),
         )
         .expect("expected OK");
@@ -1558,9 +1564,9 @@ mod tests {
 
     #[test]
     fn handle_data_frame_no_such_client() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1621,9 +1627,9 @@ mod tests {
 
     #[test]
     fn handle_data_frame_client_not_associated() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1695,9 +1701,9 @@ mod tests {
 
     #[test]
     fn handle_eth_frame_no_rsn() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1761,9 +1767,9 @@ mod tests {
 
     #[test]
     fn handle_eth_frame_no_client() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1795,9 +1801,9 @@ mod tests {
 
     #[test]
     fn handle_eth_frame_is_rsn_eapol_controlled_port_closed() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1845,9 +1851,9 @@ mod tests {
 
     #[test]
     fn handle_eth_frame_is_rsn_eapol_controlled_port_open() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1915,9 +1921,9 @@ mod tests {
 
     #[test]
     fn handle_ps_poll() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -1995,9 +2001,9 @@ mod tests {
 
     #[test]
     fn handle_mlme_setkeys_req() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -2045,9 +2051,9 @@ mod tests {
 
     #[test]
     fn handle_mlme_setkeys_req_no_rsne() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -2079,9 +2085,9 @@ mod tests {
 
     #[test]
     fn handle_probe_req() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
@@ -2122,10 +2128,11 @@ mod tests {
 
     #[test]
     fn handle_probe_req_has_offload() {
-        let mut fake_device = FakeDevice::new();
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
         fake_device.info.driver_features |= WlanInfoDriverFeature::PROBE_RESP_OFFLOAD;
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
@@ -2157,9 +2164,9 @@ mod tests {
 
     #[test]
     fn handle_probe_req_wildcard_ssid() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
@@ -2216,9 +2223,9 @@ mod tests {
 
     #[test]
     fn handle_probe_req_matching_ssid() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
@@ -2273,9 +2280,9 @@ mod tests {
 
     #[test]
     fn handle_probe_req_mismatching_ssid() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
@@ -2310,9 +2317,9 @@ mod tests {
 
     #[test]
     fn make_tim() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -2362,9 +2369,9 @@ mod tests {
 
     #[test]
     fn make_tim_empty() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -2385,9 +2392,9 @@ mod tests {
 
     #[test]
     fn handle_pre_tbtt_hw_indication() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),
@@ -2540,9 +2547,9 @@ mod tests {
 
     #[test]
     fn handle_pre_tbtt_hw_indication_has_group_traffic() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(
             &mut ctx,
             Ssid::try_from("coolnet").unwrap(),

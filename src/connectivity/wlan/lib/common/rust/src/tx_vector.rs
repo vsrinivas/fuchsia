@@ -203,6 +203,25 @@ impl TxVector {
             _ => unreachable!(),
         }
     }
+
+    pub fn to_banjo_tx_info(
+        &self,
+        tx_flags: u32,
+        minstrel_enabled: bool,
+    ) -> hw_wlan_mac::WlanTxInfo {
+        let valid_fields = hw_wlan_mac::WLAN_TX_INFO_VALID_CHAN_WIDTH
+            | hw_wlan_mac::WlanTxInfoValid::PHY.0
+            | hw_wlan_mac::WlanTxInfoValid::MCS.0
+            | if minstrel_enabled { hw_wlan_mac::WlanTxInfoValid::TX_VECTOR_IDX.0 } else { 0 };
+        hw_wlan_mac::WlanTxInfo {
+            tx_flags,
+            valid_fields: valid_fields as u32,
+            tx_vector_idx: self.to_idx().0,
+            phy: self.phy.0 as u16,
+            channel_bandwidth: self.cbw,
+            mcs: self.mcs_idx,
+        }
+    }
 }
 
 #[derive(Hash, PartialEq, Eq, Debug, Copy, Clone, Ord, PartialOrd)]

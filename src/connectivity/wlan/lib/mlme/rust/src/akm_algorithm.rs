@@ -46,7 +46,6 @@ pub trait AkmAction {
     /// Schedule a new timeout that will fire after the given duration has elapsed. The returned
     /// ID should be unique from any other timeout that has been scheduled but not cancelled.
     fn schedule_auth_timeout(&mut self, duration: TimeUnit) -> Self::EventId;
-    fn cancel_auth_timeout(&mut self, id: Self::EventId);
 }
 
 /// An algorithm used to perform authentication and optionally generate a PMK.
@@ -157,7 +156,7 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
         match self {
             AkmAlgorithm::_OpenAp => bail!("OpenAp akm not yet implemented"),
             AkmAlgorithm::OpenSupplicant { timeout, .. } => {
-                timeout.take().map(|timeout| actions.cancel_auth_timeout(timeout));
+                timeout.take(); // Invalidate the timeout.
                 match auth::validate_ap_resp(hdr) {
                     Ok(auth::ValidFrame::Open) => Ok(AkmState::AuthComplete),
                     Ok(frame_type) => {
@@ -184,7 +183,7 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
 
     pub fn handle_sae_resp<A: AkmAction<EventId = T>>(
         &mut self,
-        actions: &mut A,
+        _actions: &mut A,
         status_code: fidl_ieee80211::StatusCode,
     ) -> Result<AkmState, Error> {
         match self {
@@ -193,7 +192,7 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
                 bail!("Open supplicant doesn't expect an SaeResp")
             }
             AkmAlgorithm::Sae { timeout, .. } => {
-                timeout.take().map(|timeout| actions.cancel_auth_timeout(timeout));
+                timeout.take();
                 match status_code {
                     fidl_ieee80211::StatusCode::Success => Ok(AkmState::AuthComplete),
                     _ => Ok(AkmState::Failed),
@@ -229,8 +228,7 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
 
     pub fn handle_timeout<A: AkmAction<EventId = T>>(
         &mut self,
-        actions: &mut A,
-
+        _actions: &mut A,
         event: T,
     ) -> Result<AkmState, Error> {
         match self {
@@ -238,7 +236,7 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
             AkmAlgorithm::OpenSupplicant { timeout, .. } | AkmAlgorithm::Sae { timeout, .. } => {
                 if timeout == &Some(event) {
                     // In the SAE case, this timeout is just a failsafe -- individual frame timeouts are handled by SME.
-                    actions.cancel_auth_timeout(timeout.take().unwrap());
+                    timeout.take();
                     Ok(AkmState::Failed)
                 } else {
                     Ok(AkmState::InProgress)
@@ -247,11 +245,11 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
         }
     }
 
-    pub fn cancel<A: AkmAction<EventId = T>>(&mut self, actions: &mut A) {
+    pub fn cancel<A: AkmAction<EventId = T>>(&mut self, _actions: &mut A) {
         match self {
             AkmAlgorithm::_OpenAp => (),
             AkmAlgorithm::OpenSupplicant { timeout, .. } | AkmAlgorithm::Sae { timeout, .. } => {
-                timeout.take().map(|timeout| actions.cancel_auth_timeout(timeout));
+                timeout.take();
             }
         }
     }
@@ -320,11 +318,6 @@ mod tests {
             self.scheduled_timers.push(self.timer_counter);
             self.timer_counter
         }
-
-        fn cancel_auth_timeout(&mut self, id: Self::EventId) {
-            self.scheduled_timers =
-                self.scheduled_timers.iter().cloned().filter(|e| e != &id).collect();
-        }
     }
 
     fn test_open_supplicant() -> AkmAlgorithm<u16> {
@@ -363,7 +356,6 @@ mod tests {
         // Everything is cleaned up.
         assert_eq!(actions.sent_frames.len(), 0);
         assert_eq!(actions.published_pmks.len(), 0);
-        assert_eq!(actions.scheduled_timers.len(), 0); // Timer cancelled.
     }
 
     #[test]
@@ -378,7 +370,6 @@ mod tests {
         actions.sent_frames.clear();
 
         supplicant.cancel(&mut actions);
-        assert_eq!(actions.scheduled_timers.len(), 0);
         assert_eq!(actions.sent_frames.len(), 0);
         assert_eq!(actions.published_pmks.len(), 0);
     }
@@ -393,7 +384,6 @@ mod tests {
         let timeout = actions.scheduled_timers[0];
 
         assert_variant!(supplicant.handle_timeout(&mut actions, timeout), Ok(AkmState::Failed));
-        assert_eq!(actions.scheduled_timers.len(), 0);
     }
 
     #[test]
@@ -434,7 +424,6 @@ mod tests {
         // Everything is cleaned up.
         assert_eq!(actions.sent_frames.len(), 0);
         assert_eq!(actions.published_pmks.len(), 0);
-        assert_eq!(actions.scheduled_timers.len(), 0); // Timer cancelled.
     }
 
     #[test]
@@ -497,7 +486,6 @@ mod tests {
         let timeout = actions.scheduled_timers[0];
 
         assert_variant!(supplicant.handle_timeout(&mut actions, timeout), Ok(AkmState::Failed));
-        assert_eq!(actions.scheduled_timers.len(), 0);
     }
 
     #[test]
