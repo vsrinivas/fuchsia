@@ -109,8 +109,8 @@ bool PerformanceCounters::Enable() {
       .WriteTo(owner_->register_io());
 
   auto config = registers::PerformanceCounterConfig::Get().FromValue(0);
-  config.address_space().set(address_mapping_->slot_number());
-  config.mode().set(registers::PerformanceCounterConfig::kModeManual);
+  config.set_address_space(address_mapping_->slot_number());
+  config.set_mode(registers::PerformanceCounterConfig::kModeManual);
   config.WriteTo(owner_->register_io());
   counter_state_ = PerformanceCounterState::kEnabled;
   enable_time_ = std::chrono::steady_clock::now();
@@ -138,8 +138,8 @@ void PerformanceCounters::ReadCompleted() {
   std::vector<uint32_t> output;
   if (counter_state_ == PerformanceCounterState::kTriggeredWillBeDisabled) {
     auto config = registers::PerformanceCounterConfig::Get().FromValue(0);
-    config.address_space().set(address_mapping_->slot_number());
-    config.mode().set(registers::PerformanceCounterConfig::kModeDisabled);
+    config.set_address_space(address_mapping_->slot_number());
+    config.set_mode(registers::PerformanceCounterConfig::kModeDisabled);
     config.WriteTo(owner_->register_io());
     TriggerCanceledClients();
     counter_state_ = PerformanceCounterState::kDisabled;
@@ -173,8 +173,8 @@ void PerformanceCounters::ReadCompleted() {
 
   buffer_->platform_buffer()->UnmapCpu();
   auto config = registers::PerformanceCounterConfig::Get().FromValue(0);
-  config.address_space().set(address_mapping_->slot_number());
-  config.mode().set(registers::PerformanceCounterConfig::kModeDisabled);
+  config.set_address_space(address_mapping_->slot_number());
+  config.set_mode(registers::PerformanceCounterConfig::kModeDisabled);
   config.WriteTo(owner_->register_io());
   counter_state_ = PerformanceCounterState::kDisabled;
 
@@ -198,8 +198,8 @@ bool PerformanceCounters::Disable() {
       return true;
     case PerformanceCounterState::kEnabled: {
       auto config = registers::PerformanceCounterConfig::Get().FromValue(0);
-      config.address_space().set(address_mapping_->slot_number());
-      config.mode().set(registers::PerformanceCounterConfig::kModeDisabled);
+      config.set_address_space(address_mapping_->slot_number());
+      config.set_mode(registers::PerformanceCounterConfig::kModeDisabled);
       config.WriteTo(owner_->register_io());
       counter_state_ = PerformanceCounterState::kDisabled;
       return true;

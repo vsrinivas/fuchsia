@@ -144,7 +144,7 @@ class PerformanceCounterTest {
     perf_counters.ReadCompleted();
     EXPECT_EQ(1024u / 4u, client.dump_.size());
     EXPECT_EQ(0u, client.dump_[0]);
-    EXPECT_EQ(1u, registers::PerformanceCounterConfig::Get().ReadFrom(mmio.get()).mode().get());
+    EXPECT_EQ(1u, registers::PerformanceCounterConfig::Get().ReadFrom(mmio.get()).mode());
     EXPECT_EQ(4096u, registers::PerformanceCounterBase::Get().ReadFrom(mmio.get()).reg_value());
   }
 

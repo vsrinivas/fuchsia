@@ -338,15 +338,15 @@ class TestNonHardwareMsdArmDevice {
 
     // connection should get address slot 0, and connection1 should get
     // slot 1.
-    EXPECT_EQ(1u, config_next.address_space().get());
-    EXPECT_EQ(1u, config_next.start_flush_clean().get());
-    EXPECT_EQ(1u, config_next.start_flush_invalidate().get());
-    EXPECT_EQ(0u, config_next.job_chain_flag().get());
-    EXPECT_EQ(1u, config_next.end_flush_clean().get());
-    EXPECT_EQ(1u, config_next.end_flush_invalidate().get());
-    EXPECT_EQ(0u, config_next.enable_flush_reduction().get());
-    EXPECT_EQ(0u, config_next.disable_descriptor_write_back().get());
-    EXPECT_EQ(8u, config_next.thread_priority().get());
+    EXPECT_EQ(1u, config_next.address_space());
+    EXPECT_EQ(1u, config_next.start_flush_clean());
+    EXPECT_EQ(1u, config_next.start_flush_invalidate());
+    EXPECT_EQ(0u, config_next.job_chain_flag());
+    EXPECT_EQ(1u, config_next.end_flush_clean());
+    EXPECT_EQ(1u, config_next.end_flush_invalidate());
+    EXPECT_EQ(0u, config_next.enable_flush_reduction());
+    EXPECT_EQ(0u, config_next.disable_descriptor_write_back());
+    EXPECT_EQ(8u, config_next.thread_priority());
 
     EXPECT_EQ(registers::GpuCommand::kCmdCycleCountStart,
               reg_io->Read32(registers::GpuCommand::kOffset));

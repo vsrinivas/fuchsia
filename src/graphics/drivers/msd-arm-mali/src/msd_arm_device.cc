@@ -225,7 +225,7 @@ bool MsdArmDevice::Init(std::unique_ptr<magma::PlatformDevice> platform_device,
   MAGMA_LOG(INFO, "ARM mali ID %x", gpu_features_.gpu_id.reg_value());
 
 #if defined(MSD_ARM_ENABLE_CACHE_COHERENCY)
-  if (gpu_features_.coherency_features.ace().get()) {
+  if (gpu_features_.coherency_features.ace()) {
     cache_coherency_status_ = kArmMaliCacheCoherencyAce;
   } else {
     MAGMA_LOG(INFO, "Cache coherency unsupported");
@@ -290,7 +290,7 @@ void MsdArmDevice::UpdateProtectedModeSupported() {
 
 bool MsdArmDevice::InitializeHardware() {
   cycle_counter_refcount_ = 0;
-  DASSERT(registers::GpuStatus::Get().ReadFrom(register_io_.get()).cycle_count_active().get() == 0);
+  DASSERT(registers::GpuStatus::Get().ReadFrom(register_io_.get()).cycle_count_active() == 0);
   EnableInterrupts();
   InitializeHardwareQuirks(&gpu_features_, register_io_.get());
   EnableAllCores();
@@ -576,24 +576,24 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
     auto clear_flags = registers::GpuIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
     // Handle interrupts on the interrupt thread so the device thread can wait for them to
     // complete.
-    if (irq_status.reset_completed().get()) {
+    if (irq_status.reset_completed()) {
       HandleResetInterrupt();
-      irq_status.reset_completed().set(0);
+      irq_status.set_reset_completed(0);
     }
-    if (irq_status.power_changed_single().get() || irq_status.power_changed_all().get()) {
-      irq_status.power_changed_single().set(0);
-      irq_status.power_changed_all().set(0);
+    if (irq_status.power_changed_single() || irq_status.power_changed_all()) {
+      irq_status.set_power_changed_single(0);
+      irq_status.set_power_changed_all(0);
       power_manager_->ReceivedPowerInterrupt(register_io_.get());
       if (power_manager_->l2_ready_status() &&
           (cache_coherency_status_ == kArmMaliCacheCoherencyAce)) {
         auto enable_reg = registers::CoherencyFeatures::GetEnable().FromValue(0);
-        enable_reg.ace().set(true);
+        enable_reg.set_ace(true);
         enable_reg.WriteTo(register_io_.get());
       }
     }
 
-    if (irq_status.performance_counter_sample_completed().get()) {
-      irq_status.performance_counter_sample_completed().set(0);
+    if (irq_status.performance_counter_sample_completed()) {
+      irq_status.set_performance_counter_sample_completed(0);
       EnqueueDeviceRequest(std::make_unique<PerfCounterSampleCompletedRequest>(), true);
       // Don't wait for a reply, to ensure there's no deadlock. Clearing the interrupt flag
       // before the interrupt is actually processed shouldn't matter, because perf_counters_
@@ -735,7 +735,7 @@ magma::Status MsdArmDevice::ProcessJobInterrupt(uint64_t time) {
     DLOG("Processing job interrupt status %x", irq_status.reg_value());
 
     bool dumped_on_failure = false;
-    uint32_t failed = irq_status.failed_slots().get();
+    uint32_t failed = irq_status.failed_slots();
     while (failed) {
       uint32_t slot = __builtin_ffs(failed) - 1;
       registers::JobSlotRegisters regs(slot);
@@ -745,7 +745,7 @@ magma::Status MsdArmDevice::ProcessJobInterrupt(uint64_t time) {
       // Soft stopping isn't counted as an actual failure.
       if (result != kArmMaliResultSoftStopped && !dumped_on_failure) {
         MAGMA_LOG(WARNING, "Got failed slot bitmask %x with result code %x",
-                  irq_status.failed_slots().get(), raw_result);
+                  static_cast<uint32_t>(irq_status.failed_slots()), raw_result);
         ProcessDumpStatusToLog();
         dumped_on_failure = true;
       }
@@ -756,7 +756,7 @@ magma::Status MsdArmDevice::ProcessJobInterrupt(uint64_t time) {
       failed &= ~(1 << slot);
     }
 
-    uint32_t finished = irq_status.finished_slots().get();
+    uint32_t finished = irq_status.finished_slots();
     while (finished) {
       uint32_t slot = __builtin_ffs(finished) - 1;
       scheduler_->JobCompleted(slot, kArmMaliResultSuccess, 0u);
@@ -771,15 +771,15 @@ magma::Status MsdArmDevice::ProcessMmuInterrupt() {
   auto irq_status = registers::MmuIrqFlags::GetStatus().ReadFrom(register_io_.get());
   DLOG("Received MMU IRQ status 0x%x", irq_status.reg_value());
 
-  uint32_t faulted_slots = irq_status.pf_flags().get() | irq_status.bf_flags().get();
+  uint32_t faulted_slots = irq_status.pf_flags() | irq_status.bf_flags();
   while (faulted_slots) {
     uint32_t slot = ffs(faulted_slots) - 1;
 
     // Clear all flags before attempting to page in memory, as otherwise
     // if the atom continues executing the next interrupt may be lost.
     auto clear_flags = registers::MmuIrqFlags::GetIrqClear().FromValue(0);
-    clear_flags.pf_flags().set(1 << slot);
-    clear_flags.bf_flags().set(1 << slot);
+    clear_flags.set_pf_flags(1 << slot);
+    clear_flags.set_bf_flags(1 << slot);
     clear_flags.WriteTo(register_io_.get());
 
     std::shared_ptr<MsdArmConnection> connection;
@@ -795,7 +795,7 @@ magma::Status MsdArmDevice::ProcessMmuInterrupt() {
       uint64_t address =
           registers::AsRegisters(slot).FaultAddress().ReadFrom(register_io_.get()).reg_value();
       bool kill_context = true;
-      if (irq_status.bf_flags().get() & (1 << slot)) {
+      if (irq_status.bf_flags() & (1 << slot)) {
         MAGMA_LOG(WARNING,
                   "Bus fault at address 0x%lx on slot %d, client id: %ld, context count: %ld",
                   address, slot, connection->client_id(), connection->context_count());
@@ -1265,13 +1265,13 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
   registers::JobSlotRegisters slot(atom->slot());
   slot.HeadNext().FromValue(atom->gpu_address()).WriteTo(register_io);
   auto config = slot.ConfigNext().FromValue(0);
-  config.address_space().set(atom->address_slot_mapping()->slot_number());
-  config.start_flush_clean().set(true);
-  config.start_flush_invalidate().set(true);
+  config.set_address_space(atom->address_slot_mapping()->slot_number());
+  config.set_start_flush_clean(true);
+  config.set_start_flush_invalidate(true);
   // TODO(fxbug.dev/12981): Enable flush reduction optimization.
-  config.thread_priority().set(8);
-  config.end_flush_clean().set(true);
-  config.end_flush_invalidate().set(true);
+  config.set_thread_priority(8);
+  config.set_end_flush_clean(true);
+  config.set_end_flush_invalidate(true);
   // Atoms are in unprotected memory, so don't attempt to write to them when
   // executing in protected mode.
   bool disable_descriptor_write_back = atom->is_protected();
@@ -1279,7 +1279,7 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
   // In this case, nonprotected-mode atoms also need to abide by protected mode restrictions.
   disable_descriptor_write_back = true;
 #endif
-  config.disable_descriptor_write_back().set(disable_descriptor_write_back);
+  config.set_disable_descriptor_write_back(disable_descriptor_write_back);
   config.WriteTo(register_io);
 
   // Execute on every powered-on core.
@@ -1451,17 +1451,17 @@ magma_status_t MsdArmDevice::QueryReturnsBuffer(uint64_t id, uint32_t* buffer_ou
 void MsdArmDevice::InitializeHardwareQuirks(GpuFeatures* features, magma::RegisterIo* reg) {
   auto shader_config = registers::ShaderConfig::Get().FromValue(0);
   const uint32_t kGpuIdTGOX = 0x7212;
-  uint32_t gpu_product_id = features->gpu_id.product_id().get();
+  uint32_t gpu_product_id = features->gpu_id.product_id();
   if (gpu_product_id == kGpuIdTGOX) {
     DLOG("Enabling TLS hashing");
-    shader_config.tls_hashing_enable().set(1);
+    shader_config.set_tls_hashing_enable(1);
   }
 
   if (0x750 <= gpu_product_id && gpu_product_id <= 0x880) {
     DLOG("Enabling LS attr types");
     // This seems necessary for geometry shaders to work with non-indexed draws with point and
     // line lists on T8xx and T7xx.
-    shader_config.ls_allow_attr_types().set(1);
+    shader_config.set_ls_allow_attr_types(1);
   }
 
   shader_config.WriteTo(reg);
@@ -1470,7 +1470,7 @@ void MsdArmDevice::InitializeHardwareQuirks(GpuFeatures* features, magma::Regist
 bool MsdArmDevice::IsProtectedModeSupported() {
   if (!mali_properties_.supports_protected_mode)
     return false;
-  uint32_t gpu_product_id = gpu_features_.gpu_id.product_id().get();
+  uint32_t gpu_product_id = gpu_features_.gpu_id.product_id();
   // TODO(fxbug.dev/13130): Support protected mode when using ACE cache coherency. Apparently
   // the L2 needs to be powered down then switched to ACE Lite in that mode.
   if (cache_coherency_status_ == kArmMaliCacheCoherencyAce)
@@ -1592,7 +1592,7 @@ bool MsdArmDevice::PowerDownShaders() {
 }
 
 bool MsdArmDevice::IsInProtectedMode() {
-  return registers::GpuStatus::Get().ReadFrom(register_io_.get()).protected_mode_active().get();
+  return registers::GpuStatus::Get().ReadFrom(register_io_.get()).protected_mode_active();
 }
 
 std::shared_ptr<DeviceRequest::Reply> MsdArmDevice::RunTaskOnDeviceThread(FitCallbackTask task) {
