@@ -11,6 +11,7 @@
 #include "src/media/audio/audio_core/audio_capturer.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_renderer.h"
+#include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/throttle_output.h"
@@ -107,6 +108,32 @@ void AudioCoreImpl::BindUsageVolumeControl(
   } else {
     volume_control.Close(ZX_ERR_NOT_SUPPORTED);
   }
+}
+
+void AudioCoreImpl::GetDbFromVolume(fuchsia::media::Usage usage, float volume,
+                                    GetDbFromVolumeCallback callback) {
+  float db = 0.0f;
+  auto loudness_transform =
+      context_.route_graph().LoudnessTransformForUsage(StreamUsageFromFidlUsage(usage));
+  if (loudness_transform) {
+    db = loudness_transform->Evaluate<1>({VolumeValue{volume}});
+  } else {
+    db = context_.process_config().default_volume_curve().VolumeToDb(volume);
+  }
+  callback(db);
+}
+
+void AudioCoreImpl::GetVolumeFromDb(fuchsia::media::Usage usage, float db,
+                                    GetVolumeFromDbCallback callback) {
+  float volume = 1.0f;
+  auto loudness_transform =
+      context_.route_graph().LoudnessTransformForUsage(StreamUsageFromFidlUsage(usage));
+  if (loudness_transform) {
+    volume = loudness_transform->Evaluate<1>({GainToVolumeValue{db}});
+  } else {
+    volume = context_.process_config().default_volume_curve().DbToVolume(db);
+  }
+  callback(volume);
 }
 
 void AudioCoreImpl::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,

@@ -91,6 +91,8 @@ class RouteGraph : public DeviceRouter {
 
   std::unordered_set<AudioDevice*> TargetsForRenderUsage(const RenderUsage& usage);
 
+  std::shared_ptr<LoudnessTransform> LoudnessTransformForUsage(const StreamUsage& usage);
+
  private:
   struct RoutableOwnedObject {
     std::shared_ptr<AudioObject> ref;

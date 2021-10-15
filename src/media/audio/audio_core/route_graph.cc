@@ -310,4 +310,8 @@ std::unordered_set<AudioDevice*> RouteGraph::TargetsForRenderUsage(const RenderU
   return {target.device};
 }
 
+std::shared_ptr<LoudnessTransform> RouteGraph::LoudnessTransformForUsage(const StreamUsage& usage) {
+  return TargetForUsage(usage).transform;
+}
+
 }  // namespace media::audio

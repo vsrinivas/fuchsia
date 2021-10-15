@@ -13,6 +13,8 @@ float MappedLoudnessTransform::EvaluateStageGain(const LoudnessTransform::Stage&
     return volume_curve_.VolumeToDb(volume->value);
   } else if (auto gain = std::get_if<GainDbFsValue>(&stage)) {
     return gain->value;
+  } else if (auto gain = std::get_if<GainToVolumeValue>(&stage)) {
+    return volume_curve_.DbToVolume(gain->value);
   } else {
     FX_LOGS_FIRST_N(ERROR, 10) << "A loudness variant was uninitialized.";
     return Gain::kUnityGainDb;

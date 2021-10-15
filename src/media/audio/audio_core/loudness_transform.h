@@ -24,13 +24,17 @@ struct GainDbFsValue {
   float value;
 };
 
+struct GainToVolumeValue {
+  float value;
+};
+
 // A loudness transform considers many stages of loudness that apply to a stream,
 // including volume settings and gain adjustments, and applies them sequentially.
 class LoudnessTransform {
  public:
   virtual ~LoudnessTransform() = default;
 
-  using Stage = std::variant<VolumeValue, GainDbFsValue>;
+  using Stage = std::variant<VolumeValue, GainDbFsValue, GainToVolumeValue>;
 
   // Sequentially evaluates each loudness stage and returns the gain to use for
   // the stream.

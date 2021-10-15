@@ -44,6 +44,11 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
   void BindUsageVolumeControl(
       fuchsia::media::Usage usage,
       fidl::InterfaceRequest<fuchsia::media::audio::VolumeControl> volume_control) final;
+  void GetDbFromVolume(fuchsia::media::Usage usage, float volume,
+                       GetDbFromVolumeCallback callback) final;
+  void GetVolumeFromDb(fuchsia::media::Usage usage, float db,
+                       GetVolumeFromDbCallback callback) final;
+
   void SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
                       fuchsia::media::Behavior behavior) final;
   void ResetInteractions() final;

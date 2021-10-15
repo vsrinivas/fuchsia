@@ -96,4 +96,33 @@ TEST_F(VolumeControlTest, FailToConnectToCaptureUsageVolume) {
   ExpectError(client, ZX_ERR_NOT_SUPPORTED);
 }
 
+TEST_F(VolumeControlTest, VolumeCurveLookups) {
+  // Test audio_core instance will have default volume curve, just check the ends.
+  float db_lookup = 0.0f;
+  float volume_lookup = 0.0f;
+  audio_core_->GetDbFromVolume(
+      fuchsia::media::Usage::WithRenderUsage(AudioRenderUsage::MEDIA), 0.0f,
+      AddCallback("GetDbFromVolume", [&db_lookup](float db) { db_lookup = db; }));
+  ExpectCallbacks();
+  EXPECT_EQ(db_lookup, -160.0f);
+
+  audio_core_->GetDbFromVolume(
+      fuchsia::media::Usage::WithRenderUsage(AudioRenderUsage::MEDIA), 1.0f,
+      AddCallback("GetDbFromVolume", [&db_lookup](float db) { db_lookup = db; }));
+  ExpectCallbacks();
+  EXPECT_EQ(db_lookup, 0.0f);
+
+  audio_core_->GetVolumeFromDb(
+      fuchsia::media::Usage::WithRenderUsage(AudioRenderUsage::MEDIA), -160.0f,
+      AddCallback("GetVolumeFromDb", [&volume_lookup](float volume) { volume_lookup = volume; }));
+  ExpectCallbacks();
+  EXPECT_EQ(volume_lookup, 0.0f);
+
+  audio_core_->GetVolumeFromDb(
+      fuchsia::media::Usage::WithRenderUsage(AudioRenderUsage::MEDIA), 0.0f,
+      AddCallback("GetVolumeFromDb", [&volume_lookup](float volume) { volume_lookup = volume; }));
+  ExpectCallbacks();
+  EXPECT_EQ(volume_lookup, 1.0f);
+}
+
 }  // namespace media::audio::test
