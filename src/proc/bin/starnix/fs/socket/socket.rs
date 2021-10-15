@@ -140,13 +140,13 @@ impl Socket {
     ///
     /// Returns an error if the socket is not connected.
     pub fn getpeername(&self) -> Result<Vec<u8>, Errno> {
-        let peer = self.lock().peer()?.clone();
+        let peer = self.lock().peer().ok_or_else(|| errno!(ENOTCONN))?.clone();
         let name = peer.lock().name();
         Ok(name)
     }
 
     pub fn peer_cred(&self) -> Option<ucred> {
-        let peer = self.lock().peer().ok()?.clone();
+        let peer = self.lock().peer()?.clone();
         let peer = peer.lock();
         peer.cred.clone()
     }
@@ -281,7 +281,7 @@ impl Socket {
     ) -> Result<usize, Errno> {
         let (peer, local_address) = {
             let inner = self.lock();
-            (inner.peer()?.clone(), inner.address.clone())
+            (inner.peer().ok_or_else(|| errno!(EPIPE))?.clone(), inner.address.clone())
         };
         let mut peer = peer.lock();
         peer.write(task, user_buffers, local_address, ancillary_data)
@@ -298,7 +298,7 @@ impl Socket {
     pub fn write_kernel(&self, message: Message) -> Result<(), Errno> {
         let peer = {
             let inner = self.lock();
-            inner.peer()?.clone()
+            inner.peer().ok_or_else(|| errno!(EPIPE))?.clone()
         };
         let mut peer = peer.lock();
         peer.write_kernel(message)
@@ -313,7 +313,7 @@ impl Socket {
     ///
     /// TODO: This should take a "how" parameter to indicate which operations should be prevented.
     pub fn shutdown(&self) -> Result<(), Errno> {
-        let peer = self.lock().peer()?.clone();
+        let peer = self.lock().peer().ok_or_else(|| errno!(ENOTCONN))?.clone();
         self.lock().shutdown_one_end();
         peer.lock().shutdown_one_end();
         Ok(())
@@ -364,10 +364,10 @@ impl SocketInner {
 
     /// Returns the socket that is connected to this socket, if such a peer exists. Returns
     /// ENOTCONN otherwise.
-    pub fn peer(&self) -> Result<&SocketHandle, Errno> {
+    fn peer(&self) -> Option<&SocketHandle> {
         match &self.state {
-            SocketState::Connected(peer) => Ok(peer),
-            _ => error!(ENOTCONN),
+            SocketState::Connected(peer) => Some(peer),
+            _ => None,
         }
     }
 
@@ -435,7 +435,7 @@ impl SocketInner {
         ancillary_data: &mut Option<AncillaryData>,
     ) -> Result<usize, Errno> {
         if !self.writable {
-            return error!(ENOTCONN);
+            return error!(EPIPE);
         }
         let bytes_written = self.messages.write(task, user_buffers, address, ancillary_data)?;
         if bytes_written > 0 {
@@ -454,7 +454,7 @@ impl SocketInner {
     #[cfg(test)]
     fn write_kernel(&mut self, message: Message) -> Result<(), Errno> {
         if !self.writable {
-            return error!(ENOTCONN);
+            return error!(EPIPE);
         }
 
         let bytes_written = message.data.len();
