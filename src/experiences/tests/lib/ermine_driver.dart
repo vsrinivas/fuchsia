@@ -338,6 +338,14 @@ class ErmineDriver {
     }, timeout: timeout);
   }
 
+  Future<bool> waitForViewAbsent(String viewUrl,
+      [Duration timeout = waitForTimeout]) async {
+    return waitFor(() async {
+      final views = await launchedViews(filterByUrl: viewUrl);
+      return views.isEmpty;
+    });
+  }
+
   Future<Map<String, dynamic>> inspectSnapshot(String componentSelector,
       {Duration timeout = waitForTimeout}) {
     return waitFor(() async {
