@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/dist/packaged_shared_library.gni")
 import("//src/graphics/examples/vkproto/common/common.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
-import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
 
 resource("shaders") {
