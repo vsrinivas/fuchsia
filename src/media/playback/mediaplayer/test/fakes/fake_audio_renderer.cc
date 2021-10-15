@@ -201,7 +201,7 @@ void FakeAudioRenderer::PauseNoReply() {
 
 void FakeAudioRenderer::BindGainControl(
     fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) {
-  FX_NOTIMPLEMENTED();
+  gain_control_bindings_.AddBinding(this, std::move(request), dispatcher_);
 }
 
 void FakeAudioRenderer::EnableMinLeadTimeEvents(bool enabled) {

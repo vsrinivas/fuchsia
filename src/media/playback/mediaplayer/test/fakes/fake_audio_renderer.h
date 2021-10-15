@@ -47,6 +47,11 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
 
   uint64_t received() const { return packets_received_; }
 
+  float gain() const { return gain_; }
+  bool mute() const { return mute_; }
+
+  bool is_bound() const { return binding_.is_bound(); }
+
   // Sets a flag indicating whether this fake renderer should retain packets
   // (true) or retire them in a timeline manner (false).
   void SetRetainPackets(bool retain_packets) {

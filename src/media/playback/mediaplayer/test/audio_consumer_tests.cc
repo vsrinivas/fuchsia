@@ -94,7 +94,7 @@ class AudioConsumerTests : public gtest::TestWithEnvironmentFixture {
   bool got_status_ = false;
   fuchsia::media::AudioConsumerStatus last_status_;
 
-  FakeAudio fake_audio_;
+  FakeAudioCore fake_audio_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
 };
 
@@ -776,6 +776,34 @@ TEST_F(AudioConsumerTests, SetRateBeforeStart) {
   RunLoopUntil([this]() { return fake_audio_.renderer().expected(); });
 
   EXPECT_FALSE(sink_connection_closed);
+}
+
+TEST_F(AudioConsumerTests, VolumeControl) {
+  fuchsia::media::StreamSinkPtr sink;
+  fuchsia::media::audio::VolumeControlPtr volume_control;
+  fuchsia::media::AudioStreamType stream_type;
+  stream_type.frames_per_second = kFramesPerSecond;
+  stream_type.channels = kSamplesPerFrame;
+  stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
+
+  std::vector<zx::vmo> vmos(kNumVmos);
+  for (uint32_t i = 0; i < kNumVmos; i++) {
+    std::array<char, 1> test_data = {static_cast<char>(i)};
+    zx_status_t status = zx::vmo::create(kVmoSize, 0, &vmos[i]);
+    EXPECT_EQ(status, ZX_OK);
+    vmos[i].write(test_data.data(), 0, test_data.size());
+  }
+
+  audio_consumer_->CreateStreamSink(std::move(vmos), stream_type, nullptr, sink.NewRequest());
+
+  audio_consumer_->BindVolumeControl(volume_control.NewRequest());
+  volume_control->SetVolume(0.5f);
+  volume_control->SetMute(true);
+
+  RunLoopUntil([this]() { return fake_audio_.renderer().gain() == -20.0f; });
+
+  EXPECT_EQ(fake_audio_.renderer().gain(), -20.0f);
+  EXPECT_EQ(fake_audio_.renderer().mute(), true);
 }
 
 }  // namespace test

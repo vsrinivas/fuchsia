@@ -94,6 +94,7 @@ AudioConsumerImpl::AudioConsumerImpl(uint64_t session_id,
                                      fidl::InterfaceRequest<fuchsia::media::AudioConsumer> request,
                                      sys::ComponentContext* component_context)
     : binding_(this, std::move(request)),
+      volume_binding_(this),
       dispatcher_(async_get_default_dispatcher()),
       component_context_(component_context),
       core_(dispatcher_),
@@ -118,6 +119,8 @@ AudioConsumerImpl::AudioConsumerImpl(uint64_t session_id,
 
   decoder_factory_ = DecoderFactory::Create(this);
   FX_DCHECK(decoder_factory_);
+
+  CreateRenderer();
 
   component_context_->outgoing()->debug_dir()->AddEntry(
       kDumpEntry,
@@ -212,7 +215,8 @@ void AudioConsumerImpl::MaybeSetNewSource() {
   auto audio_consumer_source = AudioConsumerSourceImpl::Create(core_.graph(), []() {});
   audio_consumer_source->AddStream(simple_stream_sink, simple_stream_sink->output_stream_type());
 
-  EnsureRenderer();
+  core_.SetUpdateCallback(
+      [shared_this = shared_from_this(), this]() { HandlePlayerStatusUpdate(); });
 
   core_.SetSourceSegment(
       audio_consumer_source->TakeSourceSegment(),
@@ -226,25 +230,19 @@ void AudioConsumerImpl::MaybeSetNewSource() {
       });
 }
 
-void AudioConsumerImpl::EnsureRenderer() {
-  if (core_.has_sink_segment(StreamType::Medium::kAudio)) {
-    // Renderer already exists.
-    return;
-  }
+void AudioConsumerImpl::CreateRenderer() {
+  FX_DCHECK(!core_.has_sink_segment(StreamType::Medium::kAudio));
+  FX_DCHECK(!audio_renderer_);
 
-  if (!audio_renderer_) {
-    auto audio = ServiceProvider::ConnectToService<fuchsia::media::Audio>();
-    fuchsia::media::AudioRendererPtr audio_renderer;
-    audio->CreateAudioRenderer(audio_renderer.NewRequest());
-    audio_renderer_ = FidlAudioRenderer::Create(std::move(audio_renderer));
-    audio_renderer_->SetStarted(false);
-    core_.SetSinkSegment(RendererSinkSegment::Create(audio_renderer_, decoder_factory_.get()),
-                         StreamType::Medium::kAudio);
-    core_.SetProgramRange(0, 0, Packet::kMaxPts);
-
-    core_.SetUpdateCallback(
-        [shared_this = shared_from_this(), this]() { HandlePlayerStatusUpdate(); });
-  }
+  audio_core_ = ServiceProvider::ConnectToService<fuchsia::media::AudioCore>();
+  fuchsia::media::AudioRendererPtr audio_renderer;
+  audio_core_->CreateAudioRenderer(audio_renderer.NewRequest());
+  audio_renderer_ = FidlAudioRenderer::Create(std::move(audio_renderer));
+  audio_renderer_->BindGainControl(gain_control_.NewRequest(dispatcher_));
+  audio_renderer_->SetStarted(false);
+  core_.SetSinkSegment(RendererSinkSegment::Create(audio_renderer_, decoder_factory_.get()),
+                       StreamType::Medium::kAudio);
+  core_.SetProgramRange(0, 0, Packet::kMaxPts);
 }
 
 void AudioConsumerImpl::OnTimelineUpdated(float rate) {
@@ -309,7 +307,7 @@ void AudioConsumerImpl::SetRate(float rate) {
 
 void AudioConsumerImpl::BindVolumeControl(
     fidl::InterfaceRequest<fuchsia::media::audio::VolumeControl> request) {
-  // TODO(afoxley) setup volume control
+  volume_binding_.Bind(std::move(request), dispatcher_);
 }
 
 void AudioConsumerImpl::Stop() {
@@ -359,6 +357,26 @@ void AudioConsumerImpl::SendStatusUpdate() {
 
 int64_t AudioConsumerImpl::CurrentReferenceTime() const {
   return zx::clock::get_monotonic().get() - reference_time_offset_;
+}
+
+void AudioConsumerImpl::SetVolume(float volume) {
+  if (!gain_control_) {
+    FX_LOGS(WARNING) << "No gain control bound";
+    return;
+  }
+
+  audio_core_->GetDbFromVolume(
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA), volume,
+      [this](float db) { gain_control_->SetGain(db); });
+}
+
+void AudioConsumerImpl::SetMute(bool mute) {
+  if (!gain_control_) {
+    FX_LOGS(WARNING) << "No gain control bound";
+    return;
+  }
+
+  gain_control_->SetMute(mute);
 }
 
 }  // namespace media_player

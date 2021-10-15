@@ -59,6 +59,7 @@ class SessionAudioConsumerFactoryImpl : public fuchsia::media::SessionAudioConsu
 
 // Fidl service that gives out StreamSinks.
 class AudioConsumerImpl : public fuchsia::media::AudioConsumer,
+                          public fuchsia::media::audio::VolumeControl,
                           public ServiceProvider,
                           public std::enable_shared_from_this<AudioConsumerImpl> {
  public:
@@ -90,6 +91,10 @@ class AudioConsumerImpl : public fuchsia::media::AudioConsumer,
   void BindVolumeControl(
       fidl::InterfaceRequest<fuchsia::media::audio::VolumeControl> request) override;
 
+  // |fuchsia::media::audio::VolumeControl| implementation
+  void SetVolume(float volume) override;
+  void SetMute(bool mute) override;
+
   // ServiceProvider implementation.
   void ConnectToService(std::string service_path, zx::channel channel) override;
 
@@ -101,8 +106,7 @@ class AudioConsumerImpl : public fuchsia::media::AudioConsumer,
   static constexpr int64_t kMaximumLeadTime = ZX_MSEC(500);
   static constexpr float kDefaultRate = 1.0f;
 
-  // Ensures renderer is created
-  void EnsureRenderer();
+  void CreateRenderer();
 
   // Clears out any existing source segment in the player, and sets up any pending new one
   void MaybeSetNewSource();
@@ -123,6 +127,7 @@ class AudioConsumerImpl : public fuchsia::media::AudioConsumer,
   int64_t CurrentReferenceTime() const;
 
   fidl::Binding<fuchsia::media::AudioConsumer> binding_;
+  fidl::Binding<fuchsia::media::audio::VolumeControl> volume_binding_;
   fit::closure quit_callback_;
 
   async_dispatcher_t* dispatcher_;
@@ -136,7 +141,9 @@ class AudioConsumerImpl : public fuchsia::media::AudioConsumer,
 
   fuchsia::media::AudioConsumer::WatchStatusCallback watch_status_callback_;
 
+  fuchsia::media::AudioCorePtr audio_core_;
   std::shared_ptr<FidlAudioRenderer> audio_renderer_;
+  fuchsia::media::audio::GainControlPtr gain_control_;
   bool renderer_primed_;
 
   std::shared_ptr<SimpleStreamSinkImpl> simple_stream_sink_;
