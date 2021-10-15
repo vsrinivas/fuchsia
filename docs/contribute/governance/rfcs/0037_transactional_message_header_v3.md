@@ -25,7 +25,7 @@ Having a magic number in headers:
   note), and symmetrically provide a mechanisn for writers to indicate the
   format of messages sent.
 * Ordering of magic numbers is a non-goal, magic numbers should simply checked,
-  and if not compatible (i.e. the same), rejected. Specifically, we shy away
+  and if not compatible (i.e. not supported), rejected. Specifically, we shy away
   from the term "version" since we want pairwise compatibility checks, and not
   range based compatibility as in "supports v5 through v8".
 
