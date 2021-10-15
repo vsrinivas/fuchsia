@@ -30,6 +30,7 @@ rustc_library("selectors") {
     "src/parser.rs",
     "src/selector_evaluator.rs",
     "src/selectors.rs",
+    "src/types.rs",
   ]
 }
 

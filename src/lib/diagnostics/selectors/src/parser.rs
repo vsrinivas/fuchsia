@@ -5,6 +5,7 @@
 // TODO(fxbug.dev/55118): remove.
 #![allow(dead_code)]
 
+use crate::types::*;
 use nom::{
     branch::alt,
     bytes::complete::{is_not, tag},
@@ -15,17 +16,6 @@ use nom::{
     sequence::{delimited, preceded, tuple},
     IResult,
 };
-
-/// Supported comparison operators.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ComparisonOperator {
-    Equal,
-    GreaterEq,
-    Greater,
-    LessEq,
-    Less,
-    NotEq,
-}
 
 macro_rules! comparison {
     ($tag:literal, $variant:ident) => {
@@ -43,14 +33,6 @@ fn comparison(input: &str) -> IResult<&str, ComparisonOperator> {
         comparison!("<", Less),
         comparison!("!=", NotEq),
     ))(input)
-}
-
-/// Supported inclusion operators.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum InclusionOperator {
-    HasAny,
-    HasAll,
-    In,
 }
 
 /// Parses the `has any` operator in the two flavors we support: all characters uppercase or all
@@ -83,13 +65,6 @@ fn inclusion(input: &str) -> IResult<&str, InclusionOperator> {
     ))(input)
 }
 
-/// Supported operators.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-enum Operator {
-    Inclusion(InclusionOperator),
-    Comparison(ComparisonOperator),
-}
-
 /// Parses any operator (inclusion and comparison).
 fn operator(input: &str) -> IResult<&str, Operator> {
     alt((
@@ -99,7 +74,6 @@ fn operator(input: &str) -> IResult<&str, Operator> {
 }
 
 // This macro generates:
-// - The `enum $ty` containing the given `$variant_name`s as the variants.
 // - A general parser function `$parser` for all the given `tags`.
 // - Parser functions `$tag_parser` that parses inputs that match the given accepted `$tag`s into
 //   `Severity`.
@@ -116,11 +90,6 @@ macro_rules! reserved {
             }),+
         ]
     ) => {
-        #[derive(Clone, Debug, Eq, PartialEq)]
-        pub enum $type {
-            $($variant_name),+
-        }
-
         $(
             fn $tag_parser(input: &str) -> IResult<&str, $type> {
                 map(alt(($(tag(stringify!($tag))),+)), move |_| $type::$variant_name)(input)
@@ -314,14 +283,6 @@ fn number(input: &str) -> IResult<&str, u64> {
     alt((hex_integer, integer))(input)
 }
 
-/// Accepted right-hand-side values that can be used in an operation.
-#[derive(Debug, Eq, PartialEq)]
-pub enum Value<'a> {
-    Severity(Severity),
-    StringLiteral(&'a str),
-    Number(u64),
-}
-
 // This macro parses a list of expressions accepted by the given `$parser` comma separated with any
 // number of spaces in between.
 macro_rules! comma_separated_value {
@@ -348,48 +309,6 @@ fn list_of_values(input: &str) -> IResult<&str, Vec<Value<'_>>> {
     )(input)
 }
 
-/// Holds a single value or a vector of values of type `T`.
-enum OneOrMany<T> {
-    One(T),
-    Many(Vec<T>),
-}
-
-/// A valid operation and the right hand side of it.
-#[derive(Debug, Eq, PartialEq)]
-pub enum Operation<'a> {
-    Comparison(ComparisonOperator, Value<'a>),
-    Inclusion(InclusionOperator, Vec<Value<'a>>),
-}
-
-impl<'a> Operation<'a> {
-    fn maybe_new(op: Operator, value: OneOrMany<Value<'a>>) -> Option<Self> {
-        // Validate the operation can be used with the type of value.
-        match (op, value) {
-            (Operator::Inclusion(op), OneOrMany::Many(values)) => {
-                Some(Operation::Inclusion(op, values))
-            }
-            (Operator::Inclusion(o @ InclusionOperator::HasAny), OneOrMany::One(value)) => {
-                Some(Operation::Inclusion(o, vec![value]))
-            }
-            (Operator::Inclusion(o @ InclusionOperator::HasAll), OneOrMany::One(value)) => {
-                Some(Operation::Inclusion(o, vec![value]))
-            }
-            (Operator::Comparison(op), OneOrMany::One(value)) => {
-                Some(Operation::Comparison(op, value))
-            }
-            (Operator::Inclusion(InclusionOperator::In), OneOrMany::One(_))
-            | (Operator::Comparison(_), OneOrMany::Many(_)) => None,
-        }
-    }
-}
-
-/// A single filter expression in a metadata selector.
-#[derive(Debug, Eq, PartialEq)]
-pub struct FilterExpression<'a> {
-    pub identifier: Identifier,
-    pub op: Operation<'a>,
-}
-
 /// Parses a single filter expression in a metadata selector.
 fn filter_expression(input: &str) -> IResult<&str, FilterExpression<'_>> {
     let (rest, identifier) = spaced(identifier)(input)?;
@@ -410,21 +329,11 @@ fn filter_expression(input: &str) -> IResult<&str, FilterExpression<'_>> {
     Ok((rest, FilterExpression { identifier, op }))
 }
 
-/// Represents a  metadata selector, which consists of a list of filters.
-#[derive(Debug, Eq, PartialEq)]
-pub struct MetadataSelector<'a>(Vec<FilterExpression<'a>>);
-
-impl<'a> MetadataSelector<'a> {
-    fn filters(&self) -> &Vec<FilterExpression<'a>> {
-        &self.0
-    }
-}
-
 /// Parses a metadata selector.
 fn metadata_selector(input: &str) -> IResult<&str, MetadataSelector<'_>> {
     let (rest, _) = spaced(alt((tag("WHERE"), tag("where"))))(input)?;
     let (rest, filters) = spaced(separated_nonempty_list(char(','), filter_expression))(rest)?;
-    Ok((rest, MetadataSelector(filters)))
+    Ok((rest, MetadataSelector::new(filters)))
 }
 
 // TODO(fxbug.dev/55118): implement parsing of component and tree selectors using nom.
@@ -902,7 +811,7 @@ mod tests {
 
     #[test]
     fn parse_metadata_selector() {
-        let expected = MetadataSelector(vec![
+        let expected = MetadataSelector::new(vec![
             FilterExpression {
                 identifier: Identifier::LineNumber,
                 op: Operation::Comparison(ComparisonOperator::Equal, Value::Number(10)),
@@ -938,7 +847,7 @@ mod tests {
         );
 
         // Requires >= 1 filters.
-        let expected = MetadataSelector(vec![FilterExpression {
+        let expected = MetadataSelector::new(vec![FilterExpression {
             identifier: Identifier::Timestamp,
             op: Operation::Comparison(ComparisonOperator::Greater, Value::Number(123)),
         }]);

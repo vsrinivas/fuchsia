@@ -5,5 +5,6 @@
 mod parser;
 mod selector_evaluator;
 mod selectors;
+mod types;
 
 pub use selectors::*;
