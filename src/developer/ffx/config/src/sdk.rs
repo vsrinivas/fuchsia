@@ -197,7 +197,7 @@ impl Sdk {
                 if tool_path.exists() {
                     Ok(tool_path)
                 } else {
-                    bail!("Host tool '{}' not found after checking in `ffx` directory.");
+                    bail!("Host tool '{}' not found after checking in `ffx` directory.", name);
                 }
             }
         }
