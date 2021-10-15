@@ -7,9 +7,9 @@
 #include <zircon/syscalls.h>
 
 #include <fbl/string_printf.h>
+#include <ffl/string.h>
 #include <gmock/gmock.h>
 
-#include "ffl/string.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
@@ -94,6 +94,8 @@ class MixStageTest : public testing::ThreadingModelFixture {
         << "Mixer pos_filter_width " << should_be_sinc->pos_filter_width().raw_value()
         << " too small, should be greater than " << Fixed(1).raw_value();
   }
+  zx::duration GetDurationErrorForFracFrameError(Fixed error, uint64_t source_pos_modulo = 0,
+                                                 uint64_t denominator = 1);
 
   std::shared_ptr<MixStage> mix_stage_;
 
@@ -962,6 +964,128 @@ TEST_F(MixStageTest, SourceDestPositionRelationship) {
 
   source_pos_for_read_lock += Fixed(dest_frames_per_mix);
   EXPECT_EQ(info.next_dest_frame, source_pos_for_read_lock.Floor());
+}
+
+zx::duration MixStageTest::GetDurationErrorForFracFrameError(Fixed frac_source_error,
+                                                             uint64_t source_pos_modulo,
+                                                             uint64_t denominator) {
+  auto clock = clock::testing::CreateCustomClock({.synthetic_offset_from_mono = zx::duration(0)})
+                   .take_value();
+  auto packet_queue =
+      std::make_shared<PacketQueue>(kDefaultFormat, timeline_function_,
+                                    context().clock_factory()->CreateClientFixed(std::move(clock)));
+  auto mixer = mix_stage_->AddInput(packet_queue, 0.0f, Mixer::Resampler::WindowedSinc);
+
+  auto& info = mixer->source_info();
+  constexpr int32_t dest_frames_per_mix = 96;
+  auto source_pos_for_read_lock = Fixed(0);
+  auto expected_running_dest_frames = 0;
+
+  // Initial mix
+  //
+  mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+  RunLoopUntilIdle();
+  expected_running_dest_frames += dest_frames_per_mix;
+
+  EXPECT_TRUE(info.initial_position_is_set);
+  EXPECT_EQ(info.next_dest_frame, expected_running_dest_frames);
+  EXPECT_EQ(info.source_pos_error, zx::duration(0));
+
+  // Inject error, mix
+  //
+  source_pos_for_read_lock += Fixed(dest_frames_per_mix);
+  info.next_source_frame += frac_source_error;
+
+  auto& bookkeeping = mixer->bookkeeping();
+  FX_CHECK(source_pos_modulo < denominator);
+  if (denominator > 1) {
+    bookkeeping.SetRateModuloAndDenominator(1, denominator);
+    bookkeeping.source_pos_modulo = source_pos_modulo;
+  }
+  mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+  RunLoopUntilIdle();
+  expected_running_dest_frames += dest_frames_per_mix;
+
+  EXPECT_EQ(info.next_dest_frame, expected_running_dest_frames);
+  return info.source_pos_error;
+}
+
+// Verify that SourceInfo.source_pos_error is set to zero if less than one fractional frame.
+TEST_F(MixStageTest, PosError_IgnoreOneFracFrame) {
+  {
+    SCOPED_TRACE("position_error 0 frac frames");
+    EXPECT_EQ(GetDurationErrorForFracFrameError(Fixed(0)).to_nsecs(), 0);
+  }
+  {
+    // Source position error 1 frac frame should be ignored.
+    SCOPED_TRACE("position_error 1 frac frame");
+    EXPECT_EQ(GetDurationErrorForFracFrameError(Fixed::FromRaw(1)).to_nsecs(), 0);
+  }
+  {
+    // Source position error -1 frac frame should be ignored.
+    SCOPED_TRACE("position_error -1 frac frame");
+    EXPECT_EQ(GetDurationErrorForFracFrameError(Fixed::FromRaw(-1)).to_nsecs(), 0);
+  }
+  {
+    // Source position error 2 frac frames is not ignored.
+    SCOPED_TRACE("position_error 2 frac frames");
+    EXPECT_GT(GetDurationErrorForFracFrameError(Fixed::FromRaw(2)).to_nsecs(), 0);
+  }
+  {
+    // Source position error -2 frac frames is not ignored.
+    SCOPED_TRACE("position_error -2 frac frames");
+    EXPECT_LT(GetDurationErrorForFracFrameError(Fixed::FromRaw(-2)).to_nsecs(), 0);
+  }
+}
+
+// Verify that SourceInfo.source_pos_error correctly rounds to a ns-based equivalent.
+TEST_F(MixStageTest, PosError_RoundToNs) {
+  // Validate floor behavior without pos_modulo/denominator present
+  {
+    // Source position error 3 frac frames is 7.6 ns, rounds out to 8ns.
+    SCOPED_TRACE("position_error 3 frac frames");
+    EXPECT_EQ(GetDurationErrorForFracFrameError(Fixed::FromRaw(3)).to_nsecs(), 8);
+  }
+  {
+    // Source position error -3 frac frames is -7.6 ns, rounds out to -8ns.
+    SCOPED_TRACE("position_error -3 frac frames");
+    EXPECT_EQ(GetDurationErrorForFracFrameError(Fixed::FromRaw(-3)).to_nsecs(), -8);
+  }
+  {
+    // Source position error 8 frac frames is 20.4 ns, rounds in to 20ns.
+    SCOPED_TRACE("position_error 8 frac frames");
+    EXPECT_EQ(GetDurationErrorForFracFrameError(Fixed::FromRaw(8)).to_nsecs(), 20);
+  }
+  {
+    // Source position error -8 frac frames is -20.4 ns, rounds in to -20ns.
+    SCOPED_TRACE("position_error -8 frac frames");
+    EXPECT_EQ(GetDurationErrorForFracFrameError(Fixed::FromRaw(-8)).to_nsecs(), -20);
+  }
+}
+
+// Verify that SourceInfo.source_pos_error correctly incorporates source_pos_modulo.
+TEST_F(MixStageTest, PosError_IncludePosModulo) {
+  // Validate floor behavior plus pos_modulo/denominator contribution
+  {
+    // Source position error 2 +56/100 frac frames is 6.51ns, rounds out to 7ns.
+    SCOPED_TRACE("position_error 2 frac frames plus 56/100");
+    EXPECT_EQ(GetDurationErrorForFracFrameError(Fixed::FromRaw(2), 56, 100).to_nsecs(), 7);
+  }
+  {
+    // Source position error -2 +23/100 (1.77) frac frames is -4.5ns, rounds out to -5ns.
+    SCOPED_TRACE("position_error -2 frac frames plus 23/100");
+    EXPECT_EQ(GetDurationErrorForFracFrameError(Fixed::FromRaw(-2), 23, 100).to_nsecs(), -5);
+  }
+  {
+    // Source position error 1 +37/100 frac frames is 3.48ns, rounds in to 3ns, which is ignored.
+    SCOPED_TRACE("position_error 1 frac frame plus 37/100");
+    EXPECT_EQ(GetDurationErrorForFracFrameError(Fixed::FromRaw(1), 37, 100).to_nsecs(), 0);
+  }
+  {
+    // Source position error -2 +24/100 (1.76) frac frames is -4.48ns, rounds in to -4ns.
+    SCOPED_TRACE("position_error -2 frac frames plus 24/100");
+    EXPECT_EQ(GetDurationErrorForFracFrameError(Fixed::FromRaw(-2), 24, 100).to_nsecs(), -4);
+  }
 }
 
 }  // namespace media::audio

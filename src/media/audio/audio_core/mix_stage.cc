@@ -16,7 +16,8 @@
 #include <limits>
 #include <memory>
 
-#include "ffl/string.h"
+#include <ffl/string.h>
+
 #include "src/media/audio/audio_core/base_renderer.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
@@ -489,13 +490,13 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     // the forward-nearest dest frame, it is now entirely in the past. This occurs when downsampling
     // using very high rate conversion ratios. Just complete this packet and move on to the next.
     // Note: the alignment may also have caused us to exceed our dest mix buffer. On exit we signal
-    // these conditions independently, with retval 'source_consumed' and inout param 'dest_offset'.
+    // these conditions independently with retval 'source_consumed' and in-out param 'dest_offset'.
   } else if (dest_offset >= dest_frames_left) {
     // We initially needed to source frames from this packet in order to finish this mix. After
     // aligning our sampling point to the forward-nearest dest frame, that dest frame is now at or
     // beyond the end of this mix job. We have no need to mix any source material now, so just exit.
     // Note: the alignment may also have caused us to exceed our source packet. On exit we signal
-    // these conditions independently, with retval 'source_consumed' and inout param 'dest_offset'.
+    // these conditions independently with retval 'source_consumed' and in-out param 'dest_offset'.
   } else {
     // Yes, we really do have some frames that we can mix now.
     auto prev_dest_offset = dest_offset;
@@ -594,7 +595,6 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     bookkeeping.step_size = Fixed(0);
     bookkeeping.SetRateModuloAndDenominator(0, 1, &info);
     info.initial_position_is_set = false;
-
     return;
   }
 
@@ -619,7 +619,6 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     bookkeeping.step_size = Fixed(0);
     bookkeeping.SetRateModuloAndDenominator(0, 1, &info);
     info.initial_position_is_set = false;
-
     return;
   }
 
@@ -647,6 +646,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   FX_LOGS(TRACE) << clock::TimelineRateToString(frac_source_frames_per_dest_frame,
                                                 "dest-to-frac-source rate (no clock effects)");
 
+  // Project dest position cur_mix_job_.dest_start_frame into monotonic time as mono_now_from_dest.
   auto dest_frame = cur_mix_job_.dest_start_frame;
   auto mono_now_from_dest = zx::time{dest_frames_to_clock_mono.Apply(dest_frame)};
 
@@ -684,22 +684,22 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   // discontinuity bit); use it to log (or report to inspect) only unexpected discontinuities.
   // Add a test to validate that we log discontinuities only when we should.
 
-  // Project dest and source positions (cur_mix_job_.dest_start_frame, info.next_source_frame)
-  // into monotonic time (mono_now_from_dest, mono_now_from_source). Record the difference between
-  // them (in ns) as source position error.
-  auto mono_now_from_source = zx::time{
-      info.clock_mono_to_frac_source_frames.ApplyInverse(info.next_source_frame.raw_value())};
+  // Project the source position info.next_source_frame (including pos_modulo effects) into
+  // system MONOTONIC time as mono_now_from_source. Record the difference (in ns) between
+  // mono_now_source and mono_now_from_dest as source position error.
+  auto mono_now_from_source = Mixer::SourceInfo::MonotonicNsecFromRunningSource(
+      info, bookkeeping.source_pos_modulo, bookkeeping.denominator());
 
-  // Convert both positions to monotonic time and get the delta -- this is source position error
+  // Having converted both to monotonic time, now get the delta -- this is source position error
   info.source_pos_error = mono_now_from_source - mono_now_from_dest;
 
-  // If error is less than the resolution of a fractional-frame unit, treat it as 0. This way we
-  // don't overreact to precision-limit-related errors measured between streams that are essentially
-  // synchronized. Beyond this limit, we rate-adjust clocks with the highest precision available.
-  zx::duration min_source_pos_error_worth_tuning =
+  // If source position error is less than 1 fractional source frame, disregard it. This keeps
+  // us from overreacting to precision-limit-related errors, translated to higher-res nanosecs.
+  // Beyond 1 frac-frame though, we rate-adjust clocks using nanosecond precision.
+  zx::duration max_source_pos_error_to_not_tune =
       zx::nsec(info.clock_mono_to_frac_source_frames.rate().Inverse().Scale(
           1, TimelineRate::RoundingMode::Ceiling));
-  if (abs(info.source_pos_error.to_nsecs()) < min_source_pos_error_worth_tuning.to_nsecs()) {
+  if (abs(info.source_pos_error.to_nsecs()) <= max_source_pos_error_to_not_tune.to_nsecs()) {
     info.source_pos_error = zx::nsec(0);
   }
 

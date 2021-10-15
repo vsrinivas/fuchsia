@@ -38,6 +38,7 @@ void VerifyIsNotSystemMonotonic(const AudioClock& audio_clock);
 struct ClockProperties {
   std::optional<zx::time> start_val = std::nullopt;
   std::optional<int32_t> rate_adjust_ppm = std::nullopt;
+  std::optional<zx::duration> synthetic_offset_from_mono = std::nullopt;
 };
 
 fpromise::result<zx::clock, zx_status_t> CreateCustomClock(ClockProperties props);

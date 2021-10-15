@@ -16,7 +16,20 @@ fpromise::result<zx::clock, zx_status_t> CreateCustomClock(ClockProperties props
   zx::clock clock;
   zx_status_t status;
 
-  if (props.start_val.has_value()) {
+  if (props.synthetic_offset_from_mono.has_value()) {
+    status = zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr, &clock);
+    if (status != ZX_OK) {
+      return fpromise::error(status);
+    }
+    auto now = zx::clock::get_monotonic();
+    zx::clock::update_args args;
+    args.reset().set_both_values(now, now + props.synthetic_offset_from_mono.value());
+
+    status = clock.update(args);
+    if (status != ZX_OK) {
+      return fpromise::error(status);
+    }
+  } else if (props.start_val.has_value()) {
     status = zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr, &clock);
     if (status != ZX_OK) {
       return fpromise::error(status);

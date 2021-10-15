@@ -6,10 +6,14 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_MIXER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
+#include <cmath>
 #include <limits>
 #include <memory>
+
+#include <ffl/string.h>
 
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
@@ -140,16 +144,111 @@ class Mixer {
       AdvancePositionsBy(dest_frames, bookkeeping, true);
     }
 
-    // This translates a source reference_clock value into a source subframe value.
-    // The output values of this function are in source subframes (raw_value of the Fixed type).
+    // Translate a running source position (Fixed plus source position modulo | denominator) into
+    // MONOTONIC nanoseconds, using the nanosec-to-Fixed TimelineFunction.
+    //
+    // To scale from reference units to subject units, TimelineFunction::Apply does this:
+    //    (in_param - reference_offset) * subject_delta / reference_delta + subject_offset
+    //
+    // TimelineFunction clock_mono_to_frac_source_frames contains the correspondence we need (but in
+    // inverse: subject is frac_source; reference is MONOTONIC nsecs). To more accurately calculate
+    // MONOTONIC nsecs from frac_source (including modulo), we scale the function by denominator;
+    // then we can include source_pos_modulo at full resolution and round when reducing to nsec.
+    // So in the TimelineFunction::Apply equation above, we will use:
+    //    in_param:         (next_source_frame.raw_value * denom + source_pos_modulo)
+    //    reference_offset: (clock_mono_to_frac_source_frames.subject_time * denom)
+    //    subject_delta and reference_delta: used as-is (factor denom out of both)
+    //                      while remembering that the rate is inverted
+    //    subject_offset:   (clock_mono_to_frac_source_frames.reference_time * denom)
+    //
+    // Because all the initial factors are 64-bit, our denom-scaled version must use int128.
+    // Even then, we might overflow depending on parameters, so we scale back denom if needed.
+    //
+    // TODO(fxbug.dev/86743): Generalize this (remove the scale-down denominator optimization) and
+    // extract the functionality into a 128-bit template specialization of audio/lib/timeline
+    // TimelineRate and TimelineFunction.
+    static zx::time MonotonicNsecFromRunningSource(const SourceInfo& info,
+                                                   uint64_t initial_source_pos_modulo,
+                                                   uint64_t denominator) {
+      FX_DCHECK(initial_source_pos_modulo < denominator);
+
+      __int128_t frac_src_from_offset =
+          static_cast<__int128_t>(info.next_source_frame.raw_value()) -
+          info.clock_mono_to_frac_source_frames.subject_time();
+
+      // The calculation that would first overflow a int128 is the partial calculation:
+      //    frac_src_offset * denominator * reference_delta
+      // For our passed-in params, the maximal denominator that will NOT overflow is:
+      //    int128::max() / abs(frac_src_from_offset) / reference_delta
+      //
+      // __int128_t doesn't have an abs() right now so we do it manually.
+      //  We add one fractional frame to accommodate any pos_modulo contribution.
+      __int128_t abs_frac_src_from_offset =
+          (frac_src_from_offset < 0 ? -frac_src_from_offset : frac_src_from_offset) + 1;
+      __int128_t max_denominator = std::numeric_limits<__int128_t>::max() /
+                                   abs_frac_src_from_offset /
+                                   info.clock_mono_to_frac_source_frames.reference_delta();
+
+      __int128_t src_pos_mod_128 = static_cast<__int128_t>(initial_source_pos_modulo);
+      __int128_t denom_128 = static_cast<__int128_t>(denominator);
+
+      // A min denominator of 2 allows us to round to the nearest nsec, rather than floor.
+      if (denom_128 == 1) {
+        denom_128 = 2;
+        // If denom is 1 then src_pos_mod_128 is 0: no point in doubling it
+      } else {
+        // If denominator is large enough to cause overflow, scale it down for this calculation
+        // In the worst-case we may scale this down by more than 32 bits, but that's OK.
+        while (denom_128 > max_denominator) {
+          denom_128 >>= 1;
+          src_pos_mod_128 >>= 1;
+        }
+        // While scaling down, don't let source_pos_modulo become equal to denominator.
+        // Don't let 28|31 reduce to 7|7 -- make it 6|7 instead.
+        src_pos_mod_128 = std::min(src_pos_mod_128, denom_128 - 1);
+      }
+
+      // First portion of our TimelineFunction::Apply
+      __int128_t frac_src_modulo = frac_src_from_offset * denom_128 + src_pos_mod_128;
+
+      // Middle portion, including rate factors
+      __int128_t monotonic_modulo =
+          frac_src_modulo * info.clock_mono_to_frac_source_frames.reference_delta();
+      monotonic_modulo /= info.clock_mono_to_frac_source_frames.subject_delta();
+
+      // Final portion, including adding in the monotonic offset
+      __int128_t monotonic_offset_modulo =
+          static_cast<__int128_t>(info.clock_mono_to_frac_source_frames.reference_time()) *
+          denom_128;
+      monotonic_modulo += monotonic_offset_modulo;
+
+      // While reducing from nsec_modulo to nsec, we add denom_128/2 in order to round.
+      __int128_t final_monotonic = (monotonic_modulo + denom_128 / 2) / denom_128;
+      // final_monotonic is 128-bit so we can double-check that we haven't overflowed.
+      // But we reduced denom_128 as needed to avoid all overflows.
+      FX_DCHECK(final_monotonic <= std::numeric_limits<int64_t>::max() &&
+                final_monotonic >= std::numeric_limits<int64_t>::min())
+          << "0x" << std::hex << static_cast<uint64_t>(final_monotonic >> 64) << "'"
+          << static_cast<uint64_t>(final_monotonic & std::numeric_limits<uint64_t>::max());
+
+      return zx::time(static_cast<zx_time_t>(final_monotonic));
+    }
+
+    // This translates source reference_clock value (ns) into a source subframe value.
+    // Output values of this function are source subframes (raw_value of the Fixed type).
     TimelineFunction source_ref_clock_to_frac_source_frames;
 
-    // This translates CLOCK_MONOTONIC time to source subframe, accounting for the source reference
-    // clock. The output values of this function are source subframes (raw_value of the Fixed type).
+    // This translates CLOCK_MONOTONIC time to source subframe. Output values of this function are
+    // source subframes (raw_value of the Fixed type).
+    // This TLF entails the source rate as well as the source reference clock.
     TimelineFunction clock_mono_to_frac_source_frames;
 
-    // This translates destination frame to source subframe, accounting for both source and dest
-    // reference clocks. This function outputs source subframes (raw_value of the Fixed type).
+    // This translates destination frame to source subframe. Output values of this function are
+    // source subframes (raw_value of the Fixed type).
+    // It represents the INTENDED dest-to-source relationship based on latest clock info.
+    // The actual source position chases this timeline, via clock synchronization.
+    // Thus, the TLF entails both source and dest rates and both source and dest reference clocks,
+    // but NOT any additional micro-SRC being applied.
     TimelineFunction dest_frames_to_frac_source_frames;
 
     // Per-job state, used by the MixStage around a loop of potentially multiple calls to Mix().
@@ -172,15 +271,15 @@ class Mixer {
     // This field represents the difference between next_frac_souce_frame (maintained on a relative
     // basis after each Mix() call), and the clock-derived absolute source position (calculated from
     // the dest_frames_to_frac_source_frames TimelineFunction). Upon a dest frame discontinuity,
-    // next_source_frame is reset to that clock-derived value, and this field is set to zero.
-    // This field sets the direction and magnitude of any steps taken for clock reconciliation.
+    // next_source_frame is reset to that clock-derived value, and this field is set to zero. This
+    // field sets the direction and magnitude of any steps taken for clock reconciliation.
     zx::duration source_pos_error{0};
 
-    // This field is used to ensure that when a stream first starts, we establish the offset
-    // between destination frame and source fractional frame using clock calculations. We want to
-    // only do this _once_, because thereafter we use ongoing step_size to track whether we are
-    // drifting out of sync, rather than use a clock calculation each time (which would essentially
-    // "jam-sync" each mix buffer, possibly creating gaps or overlaps in the process).
+    // This field is used to ensure that when a stream first starts, we establish the offset between
+    // destination frame and source fractional frame using clock calculations. We want to only do
+    // this _once_, because thereafter we use ongoing step_size to track whether we are drifting out
+    // of sync, rather than use a clock calculation each time (which would essentially "jam-sync"
+    // each mix buffer, possibly creating gaps or overlaps in the process).
     bool initial_position_is_set = false;
   };
 
@@ -221,9 +320,9 @@ class Mixer {
       }
 
       // Both calculations fit into int128: delta.raw_value and step_size.raw_value are both int64,
-      // and denom|rate_modulo|initial_pos_modulo are each uint64_t.  The largest possible
-      // step_size and denominator still leave more than enough room for the max possible rate_mod,
-      // and the largest possible step_size_rebased exceeds the largest possible delta_rebased.
+      // and denom|rate_modulo|initial_pos_modulo are each uint64_t.  The largest possible step_size
+      // and denominator still leave more than enough room for the max possible rate_mod, and the
+      // largest possible step_size_rebased exceeds the largest possible delta_rebased.
       auto delta_rebased =
           static_cast<__int128_t>(delta.raw_value()) * denominator - initial_pos_modulo;
       auto step_size_rebased =
@@ -424,8 +523,8 @@ class Mixer {
   Bookkeeping& bookkeeping() { return bookkeeping_; }
   const Bookkeeping& bookkeeping() const { return bookkeeping_; }
 
-  // Eagerly precompute any needed data. If not called, that data should be lazily computed
-  // on the first call to Mix().
+  // Eagerly precompute any needed data. If not called, that data should be lazily computed on the
+  // first call to Mix().
   // TODO(fxbug.dev/45074): This is for tests only and can be removed once filter creation is eager.
   virtual void EagerlyPrepare() {}
 

@@ -5,6 +5,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <ffl/string.h>
+
 #include "src/media/audio/audio_core/mixer/mixer.h"
 
 namespace media::audio::mixer {
