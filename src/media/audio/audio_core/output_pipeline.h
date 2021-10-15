@@ -66,7 +66,7 @@ class OutputPipelineImpl : public OutputPipeline {
   // The |sampler| is optionally used to select the type of sampler to be used when joining
   // mix stages together.
   OutputPipelineImpl(const PipelineConfig& config, const VolumeCurve& volume_curve,
-                     uint32_t max_block_size_frames,
+                     EffectsLoaderV2* effects_loader_v2, uint32_t max_block_size_frames,
                      TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& audio_clock,
                      Mixer::Resampler sampler = Mixer::Resampler::Default);
   ~OutputPipelineImpl() override = default;
@@ -105,17 +105,19 @@ class OutputPipelineImpl : public OutputPipeline {
 
  private:
   struct State {
-    State(const PipelineConfig& config, const VolumeCurve& curve, uint32_t max_block_size_frames,
+    State(const PipelineConfig& config, const VolumeCurve& curve,
+          EffectsLoaderV2* effects_loader_v2, uint32_t max_block_size_frames,
           TimelineFunction ref_clock_to_fractional_frame, AudioClock& clock,
           Mixer::Resampler sampler);
 
     std::shared_ptr<ReadableStream> CreateMixStage(
-        const PipelineConfig::MixGroup& spec, const VolumeCurve& volume_curve, uint32_t block_size,
+        const PipelineConfig::MixGroup& spec, const VolumeCurve& volume_curve,
+        EffectsLoaderV2* effects_loader_v2, uint32_t block_size,
         fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_output_frame, AudioClock& clock,
         uint32_t* usage_mask, Mixer::Resampler sampler);
 
     std::vector<std::pair<std::shared_ptr<MixStage>, std::vector<StreamUsage>>> mix_stages;
-    std::vector<std::shared_ptr<EffectsStageV1>> effects_stages;
+    std::vector<std::shared_ptr<EffectsStageV1>> effects_stages_v1;
     std::vector<std::pair<std::shared_ptr<ReadableStream>, StreamUsage>> streams;
 
     // This is the root of the mix graph. The other mix stages must be reachable from this node

@@ -19,6 +19,8 @@ namespace media::audio {
 
 constexpr bool kEnableFinalMixWavWriter = false;
 
+class EffectsLoaderV2;
+
 class DriverOutput : public AudioOutput {
  public:
   // AudioCore supplies data to audio output devices periodically; when doing so it must stay
@@ -38,7 +40,7 @@ class DriverOutput : public AudioOutput {
   DriverOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
                fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
                LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory,
-               VolumeCurve volume_curve);
+               VolumeCurve volume_curve, EffectsLoaderV2* effects_loader_v2);
 
   ~DriverOutput();
 

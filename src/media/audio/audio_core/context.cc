@@ -19,9 +19,22 @@
 #include "src/media/audio/audio_core/throttle_output.h"
 #include "src/media/audio/audio_core/usage_gain_reporter_impl.h"
 #include "src/media/audio/audio_core/usage_reporter_impl.h"
+#include "src/media/audio/lib/effects_loader/effects_loader_v2.h"
 
 namespace media::audio {
 namespace {
+
+std::unique_ptr<EffectsLoaderV2> CreateEffectsLoaderV2(
+    const sys::ComponentContext& component_context) {
+  auto result = EffectsLoaderV2::CreateFromContext(component_context);
+  if (result.is_ok()) {
+    return std::move(result.value());
+  }
+
+  FX_PLOGS(WARNING, result.error())
+      << "Failed to connect to V2 effects factory: V2 effects are not available";
+  return nullptr;
+}
 
 // All audio renderer buffers will need to fit within this VMAR. We want to choose a size here large
 // enough that will accommodate all the mappings required by all clients while also being small
@@ -40,10 +53,11 @@ class ContextImpl : public Context {
         component_context_(std::move(component_context)),
         process_config_(std::move(process_config)),
         route_graph_(&link_matrix_),
+        effects_loader_v2_(CreateEffectsLoaderV2(*component_context_)),
         clock_factory_(clock_factory),
         idle_policy_(this),
         device_manager_(*threading_model_, std::move(plug_detector), link_matrix_, process_config_,
-                        clock_factory_, idle_policy_),
+                        clock_factory_, idle_policy_, effects_loader_v2_.get()),
         stream_volume_manager_(threading_model_->FidlDomain().dispatcher(),
                                process_config_.default_render_usage_volumes()),
         audio_admin_(&stream_volume_manager_, &usage_reporter_, &activity_dispatcher_,
@@ -104,6 +118,7 @@ class ContextImpl : public Context {
   fuchsia::media::audio::EffectsControllerPtr& effects_controller() override {
     return effects_controller_client_;
   }
+  EffectsLoaderV2& effects_loader_v2() override { return *effects_loader_v2_; }
 
  private:
   std::unique_ptr<ThreadingModel> threading_model_;
@@ -114,6 +129,7 @@ class ContextImpl : public Context {
 
   LinkMatrix link_matrix_;
   RouteGraph route_graph_;
+  std::unique_ptr<EffectsLoaderV2> effects_loader_v2_;
 
   // Manages clock creation.
   std::shared_ptr<AudioClockFactory> clock_factory_;

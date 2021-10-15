@@ -94,7 +94,7 @@ class TestAudioOutput : public AudioOutput {
   TestAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
       : AudioOutput("", threading_model, registry, link_matrix, clock_factory,
-                    std::make_unique<StubDriver>(this)) {
+                    nullptr /* EffectsLoaderV2 */, std::make_unique<StubDriver>(this)) {
     SetPresentationDelay(StubDriver::kSafeWriteDelayDuration);
   }
 

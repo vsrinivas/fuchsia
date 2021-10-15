@@ -22,6 +22,7 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/media/audio/effects/test_effects/test_effects_v2.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 
 namespace media::audio::test {
@@ -39,6 +40,7 @@ class HermeticAudioEnvironment {
     // clang-format on
     std::vector<std::string> audio_core_arguments;
     std::vector<std::string> extra_allowed_parent_services;
+    std::vector<TestEffectsV2::Effect> test_effects_v2;
   };
   HermeticAudioEnvironment(Options options);
   ~HermeticAudioEnvironment();
@@ -77,16 +79,17 @@ class HermeticAudioEnvironment {
   std::mutex mutex_;
   std::condition_variable cv_;
 
-  // This field must be locked during the constructor and StartEnvThread, but after the constructor
-  // is complete, the field is read only and can be accessed without locking.
+  // These fields must be locked during the constructor and StartEnvThread, but after the
+  // constructor is complete, the fields are read only and can be accessed without locking.
   std::unique_ptr<sys::testing::EnclosingEnvironment> hermetic_environment_;
-  fuchsia::sys::ComponentControllerPtr controller_;
   std::shared_ptr<sys::ServiceDirectory> devmgr_services_;
 
   // Locking not needed to access these fields: they are initialized during single-threaded
   // setup code within the constructor.
   async::Loop* loop_ = nullptr;
   std::unordered_map<ComponentType, std::string> component_urls_;
+  fuchsia::sys::ComponentControllerPtr controller_;
+  TestEffectsV2 test_effects_v2_;
 };
 
 }  // namespace media::audio::test

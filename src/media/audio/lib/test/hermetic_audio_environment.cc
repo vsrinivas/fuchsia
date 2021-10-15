@@ -161,9 +161,8 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
     audio_core_url += "#meta/audio_core_nodevfs.cmx";
   }
 
-  std::string virtual_audio_url = options_.virtual_audio_url;
-
-  std::string thermal_test_control_url =
+  const std::string virtual_audio_url = options_.virtual_audio_url;
+  const std::string thermal_test_control_url =
       "fuchsia-pkg://fuchsia.com/thermal-test-control#meta/thermal-test-control.cmx";
 
   // Add in the services that will be available in our hermetic environment.
@@ -223,6 +222,17 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
     for (auto n : c.service_names) {
       services->AddServiceWithLaunchInfo(c.url, c.launch_info, n);
     }
+  }
+  if (!options_.test_effects_v2.empty()) {
+    for (auto& effect : options_.test_effects_v2) {
+      test_effects_v2_.AddEffect(effect);
+    }
+    services->AddService(
+        std::make_unique<vfs::Service>([this](zx::channel channel, async_dispatcher_t* dispatcher) {
+          test_effects_v2_.HandleRequest(
+              fidl::ServerEnd<fuchsia_audio_effects::ProcessorCreator>(std::move(channel)));
+        }),
+        "fuchsia.audio.effects.ProcessorCreator");
   }
   services->AllowParentService("fuchsia.logger.LogSink");
   services->AllowParentService("fuchsia.tracing.provider.Registry");

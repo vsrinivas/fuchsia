@@ -529,7 +529,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputDevices) {
                    .supports_usage(StreamUsage::WithCaptureUsage(CaptureUsage::ULTRASOUND)));
 }
 
-TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffectsV1) {
   static const std::string kConfigWithEffects =
       R"JSON({
     "volume_curve": [
@@ -735,6 +735,161 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_EQ("baz", effect.instance_name);
       EXPECT_EQ("{\"string_param\":\"some string value\"}", effect.effect_config);
       EXPECT_FALSE(effect.output_channels);
+    }
+    ASSERT_FALSE(mix_group.loopback);
+    EXPECT_EQ(48000, mix_group.output_rate);
+    EXPECT_EQ(2, mix_group.output_channels);
+    ASSERT_EQ(PipelineConfig::kDefaultMixGroupRate, mix_group.output_rate);
+    ASSERT_TRUE(mix_group.min_gain_db.has_value());
+    ASSERT_TRUE(mix_group.max_gain_db.has_value());
+    EXPECT_EQ(-30.0f, *mix_group.min_gain_db);
+    EXPECT_EQ(-20.0f, *mix_group.max_gain_db);
+  }
+}
+
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffectsV2) {
+  static const std::string kConfigWithEffects =
+      R"JSON({
+    "volume_curve": [
+      { "level": 0.0, "db": -160.0 },
+      { "level": 1.0, "db": 0.0 }
+    ],
+    "output_devices": [
+      {
+        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "supported_stream_types": [
+          "render:media",
+          "render:interruption",
+          "render:background",
+          "render:communications",
+          "render:system_agent",
+          "capture:loopback"
+        ],
+        "pipeline": {
+          "streams": [
+            "render:background",
+            "render:system_agent",
+            "render:media",
+            "render:interruption"
+          ],
+          "output_rate": 96000,
+          "output_channels": 4,
+          "effect_over_fidl": {
+            "name": "effect1"
+          },
+          "inputs": [
+            {
+              "streams": [],
+              "loopback": true,
+              "output_rate": 48000,
+              "effect_over_fidl": {
+                "name": "effect2"
+              },
+              "inputs": [
+                {
+                  "streams": [
+                    "render:media"
+                  ],
+                  "name": "media",
+                  "effect_over_fidl": {
+                    "name": "effect3"
+                  }
+                },
+                {
+                  "streams": [
+                    "render:communications"
+                  ],
+                  "name": "communications",
+                  "min_gain_db": -30,
+                  "max_gain_db": -20,
+                  "effect_over_fidl": {
+                    "name": "effect4"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithEffects.data(),
+                               kConfigWithEffects.size()));
+
+  auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(result.is_ok()) << result.error();
+
+  const audio_stream_unique_id_t device_id = {.data = {0x34, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                       0x80, 0x62, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                       0x05, 0x3a}};
+  const auto& config = result.value();
+  const auto& root =
+      config.device_config().output_device_profile(device_id).pipeline_config().root();
+  {  // 'effect1' mix_group
+    const auto& mix_group = root;
+    EXPECT_EQ("", mix_group.name);
+    EXPECT_EQ(4u, mix_group.input_streams.size());
+    EXPECT_EQ(RenderUsage::BACKGROUND, mix_group.input_streams[0]);
+    EXPECT_EQ(RenderUsage::SYSTEM_AGENT, mix_group.input_streams[1]);
+    EXPECT_EQ(RenderUsage::MEDIA, mix_group.input_streams[2]);
+    EXPECT_EQ(RenderUsage::INTERRUPTION, mix_group.input_streams[3]);
+    ASSERT_TRUE(mix_group.effects_v2.has_value());
+    {
+      const auto& effect = mix_group.effects_v2.value();
+      EXPECT_EQ("effect1", effect.instance_name);
+    }
+    ASSERT_EQ(1u, mix_group.inputs.size());
+    ASSERT_FALSE(mix_group.loopback);
+    ASSERT_EQ(96000, mix_group.output_rate);
+    EXPECT_EQ(4, mix_group.output_channels);
+    ASSERT_FALSE(mix_group.min_gain_db.has_value());
+    ASSERT_FALSE(mix_group.max_gain_db.has_value());
+  }
+
+  const auto& mix = root.inputs[0];
+  {  // 'effect2' mix_group
+    const auto& mix_group = mix;
+    EXPECT_EQ("", mix_group.name);
+    EXPECT_EQ(0u, mix_group.input_streams.size());
+    ASSERT_TRUE(mix_group.effects_v2.has_value());
+    {
+      const auto& effect = mix_group.effects_v2.value();
+      EXPECT_EQ("effect2", effect.instance_name);
+    }
+    ASSERT_EQ(2u, mix_group.inputs.size());
+    ASSERT_TRUE(mix_group.loopback);
+    ASSERT_EQ(48000, mix_group.output_rate);
+    ASSERT_FALSE(mix_group.min_gain_db.has_value());
+    ASSERT_FALSE(mix_group.max_gain_db.has_value());
+  }
+
+  {  // 'effect3' mix group
+    const auto& mix_group = mix.inputs[0];
+    EXPECT_EQ("media", mix_group.name);
+    EXPECT_EQ(1u, mix_group.input_streams.size());
+    EXPECT_EQ(RenderUsage::MEDIA, mix_group.input_streams[0]);
+    ASSERT_TRUE(mix_group.effects_v2.has_value());
+    {
+      const auto& effect = mix_group.effects_v2.value();
+      EXPECT_EQ("effect3", effect.instance_name);
+    }
+    ASSERT_FALSE(mix_group.loopback);
+    EXPECT_EQ(48000, mix_group.output_rate);
+    EXPECT_EQ(2, mix_group.output_channels);
+    ASSERT_EQ(PipelineConfig::kDefaultMixGroupRate, mix_group.output_rate);
+    ASSERT_FALSE(mix_group.min_gain_db.has_value());
+    ASSERT_FALSE(mix_group.max_gain_db.has_value());
+  }
+
+  {  // 'effect4' mix_group 2
+    const auto& mix_group = mix.inputs[1];
+    EXPECT_EQ("communications", mix_group.name);
+    EXPECT_EQ(1u, mix_group.input_streams.size());
+    EXPECT_EQ(RenderUsage::COMMUNICATION, mix_group.input_streams[0]);
+    ASSERT_TRUE(mix_group.effects_v2.has_value());
+    {
+      const auto& effect = mix_group.effects_v2.value();
+      EXPECT_EQ("effect4", effect.instance_name);
     }
     ASSERT_FALSE(mix_group.loopback);
     EXPECT_EQ(48000, mix_group.output_rate);

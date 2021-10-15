@@ -29,12 +29,14 @@
 namespace media::audio {
 
 class BaseCapturer;
+class EffectsLoaderV2;
 
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public DeviceRegistry {
  public:
   AudioDeviceManager(ThreadingModel& threading_model, std::unique_ptr<PlugDetector> plug_detector,
                      LinkMatrix& link_matrix, ProcessConfig& process_config,
-                     std::shared_ptr<AudioClockFactory> clock_factory, DeviceRouter& device_router);
+                     std::shared_ptr<AudioClockFactory> clock_factory, DeviceRouter& device_router,
+                     EffectsLoaderV2* effects_loader_v2);
   ~AudioDeviceManager();
 
   fidl::InterfaceRequestHandler<fuchsia::media::AudioDeviceEnumerator> GetFidlRequestHandler() {
@@ -134,6 +136,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   ProcessConfig& process_config_;
   std::shared_ptr<AudioClockFactory> clock_factory_;
   DeviceRouter& device_router_;
+  EffectsLoaderV2* effects_loader_v2_;
 
   // The set of AudioDeviceEnumerator clients we are currently tending to.
   fidl::BindingSet<fuchsia::media::AudioDeviceEnumerator> bindings_;

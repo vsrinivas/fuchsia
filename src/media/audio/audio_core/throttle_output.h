@@ -38,7 +38,7 @@ class ThrottleOutput : public AudioOutput {
   ThrottleOutput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
                  std::shared_ptr<AudioClockFactory> clock_factory)
       : AudioOutput("throttle", threading_model, registry, link_matrix, clock_factory,
-                    std::make_unique<AudioDriver>(this)),
+                    nullptr /* EffectsLoaderV2 */, std::make_unique<AudioDriver>(this)),
         audio_clock_(clock_factory->CreateDeviceFixed(audio::clock::CloneOfMonotonic(),
                                                       AudioClock::kMonotonicDomain)) {
     const auto ref_now = reference_clock().Read();

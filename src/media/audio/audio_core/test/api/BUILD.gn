@@ -37,6 +37,13 @@ resource("audio-core-config-with-inversion-filter") {
       [ "data/audio-core-config-with-inversion-filter/audio_core_config.json" ]
 }
 
+resource("audio-core-config-with-inversion-filter-v2") {
+  sources = [ "testdata/audio_core_config_with_inversion_filter_v2.json" ]
+  outputs = [
+    "data/audio-core-config-with-inversion-filter-v2/audio_core_config.json",
+  ]
+}
+
 resource("audio-core-config-with-sleeper-filter") {
   sources = [ "testdata/audio_core_config_with_sleeper_filter.json" ]
   outputs =
@@ -104,6 +111,7 @@ audio_core_api_test_component("audio-renderer-pipeline-test") {
   component_deps = [
     ":audio-core-config-with-gain-limits",
     ":audio-core-config-with-inversion-filter",
+    ":audio-core-config-with-inversion-filter-v2",
     ":audio-core-config-with-sleeper-filter",
     ":audio-core-with-test-effects",
   ]

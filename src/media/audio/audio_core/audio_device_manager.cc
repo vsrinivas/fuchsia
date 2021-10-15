@@ -24,13 +24,15 @@ AudioDeviceManager::AudioDeviceManager(ThreadingModel& threading_model,
                                        std::unique_ptr<PlugDetector> plug_detector,
                                        LinkMatrix& link_matrix, ProcessConfig& process_config,
                                        std::shared_ptr<AudioClockFactory> clock_factory,
-                                       DeviceRouter& device_router)
+                                       DeviceRouter& device_router,
+                                       EffectsLoaderV2* effects_loader_v2)
     : threading_model_(threading_model),
       plug_detector_(std::move(plug_detector)),
       link_matrix_(link_matrix),
       process_config_(process_config),
       clock_factory_(clock_factory),
-      device_router_(device_router) {}
+      device_router_(device_router),
+      effects_loader_v2_(effects_loader_v2) {}
 
 AudioDeviceManager::~AudioDeviceManager() {
   Shutdown();
@@ -460,7 +462,7 @@ void AudioDeviceManager::AddDeviceByChannel(
   } else {
     new_device = std::make_shared<DriverOutput>(
         device_name, &threading_model(), this, std::move(stream_config), &link_matrix_,
-        clock_factory_, process_config_.default_volume_curve());
+        clock_factory_, process_config_.default_volume_curve(), effects_loader_v2_);
   }
 
   if (new_device == nullptr) {

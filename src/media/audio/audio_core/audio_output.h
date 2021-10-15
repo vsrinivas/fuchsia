@@ -22,6 +22,7 @@
 namespace media::audio {
 
 class Packet;
+class EffectsLoaderV2;
 
 class AudioOutput : public AudioDevice {
  public:
@@ -43,10 +44,11 @@ class AudioOutput : public AudioDevice {
  protected:
   AudioOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
               LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory,
-              std::unique_ptr<AudioDriver>);
+              EffectsLoaderV2* effects_loader_v2, std::unique_ptr<AudioDriver>);
 
   void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   Reporter::OutputDevice& reporter() { return *reporter_; }
+  EffectsLoaderV2* effects_loader_v2() const { return effects_loader_v2_; }
 
   // |media::audio::AudioObject|
   //
@@ -136,6 +138,7 @@ class AudioOutput : public AudioDevice {
   std::unique_ptr<OutputPipeline> pipeline_;
   Reporter::Container<Reporter::OutputDevice, Reporter::kObjectsToCache>::Ptr reporter_;
   ThreadCpuTimer cpu_timer_;
+  EffectsLoaderV2* effects_loader_v2_;
 };
 
 }  // namespace media::audio

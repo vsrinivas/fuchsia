@@ -775,7 +775,7 @@ TEST_F(AudioRendererPipelineUnderflowTest, HasUnderflow) {
                                 });
 }
 
-class AudioRendererPipelineEffectsTest : public AudioRendererPipelineTestInt16 {
+class AudioRendererEffectsV1Test : public AudioRendererPipelineTestInt16 {
  protected:
   // Matches the value in audio_core_config_with_inversion_filter.json
   static constexpr const char* kInverterEffectName = "inverter";
@@ -803,7 +803,7 @@ class AudioRendererPipelineEffectsTest : public AudioRendererPipelineTestInt16 {
 };
 
 // Validate that the effects package is loaded and that it processes the input.
-TEST_F(AudioRendererPipelineEffectsTest, RenderWithEffects) {
+TEST_F(AudioRendererEffectsV1Test, RenderWithEffects) {
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
   const auto frames_per_packet = num_frames / num_packets;
@@ -833,7 +833,7 @@ TEST_F(AudioRendererPipelineEffectsTest, RenderWithEffects) {
                       AudioBufferSlice<ASF::SIGNED_16>(), opts);
 }
 
-TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerEffectDoesNotExist) {
+TEST_F(AudioRendererEffectsV1Test, EffectsControllerEffectDoesNotExist) {
   fuchsia::media::audio::EffectsController_UpdateEffect_Result result;
   zx_status_t status = effects_controller_->UpdateEffect("invalid_effect_name", "disable", &result);
   EXPECT_EQ(status, ZX_OK);
@@ -841,7 +841,7 @@ TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerEffectDoesNotExist) {
   EXPECT_EQ(result.err(), fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
 }
 
-TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerInvalidConfig) {
+TEST_F(AudioRendererEffectsV1Test, EffectsControllerInvalidConfig) {
   fuchsia::media::audio::EffectsController_UpdateEffect_Result result;
   zx_status_t status =
       effects_controller_->UpdateEffect(kInverterEffectName, "invalid config string", &result);
@@ -851,7 +851,7 @@ TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerInvalidConfig) {
 }
 
 // Similar to RenderWithEffects, except we send a message to the effect to disable processing.
-TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerUpdateEffect) {
+TEST_F(AudioRendererEffectsV1Test, EffectsControllerUpdateEffect) {
   // Disable the inverter; frames should be unmodified.
   fuchsia::media::audio::EffectsController_UpdateEffect_Result result;
   zx_status_t status = effects_controller_->UpdateEffect(kInverterEffectName, "disable", &result);
@@ -882,6 +882,65 @@ TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerUpdateEffect) {
   opts.test_label = "check silence";
   CompareAudioBuffers(AudioBufferSlice(&ring_buffer, num_frames, output_->frame_count()),
                       AudioBufferSlice<ASF::SIGNED_16>(), opts);
+}
+
+class AudioRendererEffectsV2Test : public AudioRendererPipelineTestFloat {
+ protected:
+  static void SetUpTestSuite() {
+    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
+        .audio_core_config_data_path = "/pkg/data/audio-core-config-with-inversion-filter-v2",
+        .test_effects_v2 = {{
+            .name = "inverter",
+            .process = &Invert,
+            .process_in_place = true,
+            .max_frames_per_call = 1024,
+            .frames_per_second = kOutputFrameRate,
+            .input_channels = kNumChannels,
+            .output_channels = kNumChannels,
+        }},
+    });
+  }
+
+  static zx_status_t Invert(uint64_t num_frames, float* input, float* output,
+                            float total_applied_gain_for_input) {
+    for (uint64_t k = 0; k < num_frames; k++) {
+      for (int c = 0; c < kNumChannels; c++) {
+        output[k * kNumChannels + c] = -input[k * kNumChannels + c];
+      }
+    }
+    return ZX_OK;
+  }
+};
+
+// Validate that the effects package is loaded and that it processes the input.
+TEST_F(AudioRendererEffectsV2Test, RenderWithEffects) {
+  auto [renderer, format] = CreateRenderer(kOutputFrameRate);
+  auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
+  const auto frames_per_packet = num_frames / num_packets;
+  const auto kNumInitialSilentFrames = frames_per_packet;
+
+  auto input_buffer = GenerateSilentAudio(format, kNumInitialSilentFrames);
+  auto signal = GenerateSequentialAudio(format, num_frames - kNumInitialSilentFrames);
+  input_buffer.Append(&signal);
+
+  auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
+  renderer->PlaySynchronized(this, output_, 0);
+  renderer->WaitForPackets(this, packets);
+  auto ring_buffer = output_->SnapshotRingBuffer();
+
+  // Simulate running the effect on the input buffer.
+  Invert(input_buffer.NumFrames(), &input_buffer.samples()[0], &input_buffer.samples()[0], 0);
+
+  // The ring buffer should match the transformed input buffer for the first num_packets.
+  // The remaining bytes should be zeros.
+  CompareAudioBufferOptions opts;
+  opts.num_frames_per_packet = kDebugFramesPerPacket;
+  opts.test_label = "check data";
+  CompareAudioBuffers(AudioBufferSlice(&ring_buffer, 0, num_frames),
+                      AudioBufferSlice(&input_buffer, 0, num_frames), opts);
+  opts.test_label = "check silence";
+  CompareAudioBuffers(AudioBufferSlice(&ring_buffer, num_frames, output_->frame_count()),
+                      AudioBufferSlice<ASF::FLOAT>(), opts);
 }
 
 class AudioRendererPipelineTuningTest : public AudioRendererPipelineTestInt16 {

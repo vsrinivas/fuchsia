@@ -97,7 +97,8 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
     output_ = std::make_shared<DriverOutput>("", &threading_model(), &context().device_manager(),
                                              std::move(stream_config), &context().link_matrix(),
                                              context().clock_factory(),
-                                             context().process_config().default_volume_curve());
+                                             context().process_config().default_volume_curve(),
+                                             nullptr);  // not using V2 effects
     ASSERT_NE(output_, nullptr);
 
     ring_buffer_mapper_ = driver_->CreateRingBuffer(RingBufferSizeBytes());
@@ -426,8 +427,9 @@ TEST_F(DriverOutputTest, SelectRateAndChannelizationFromDeviceConfig) {
   EXPECT_EQ(1u, output_->pipeline_config()->root().effects_v1.size());
   EXPECT_EQ(output_->pipeline_config()->root().output_channels, kRequestedDeviceChannels / 2);
   EXPECT_EQ(output_->pipeline_config()->root().output_rate, kRequestedDeviceRate);
-  EXPECT_EQ(output_->pipeline_config()->channels(), kRequestedDeviceChannels);
-  EXPECT_EQ(output_->pipeline_config()->frames_per_second(), kRequestedDeviceRate);
+  auto format = output_->pipeline_config()->OutputFormat(nullptr);
+  EXPECT_EQ(format.channels(), kRequestedDeviceChannels);
+  EXPECT_EQ(format.frames_per_second(), kRequestedDeviceRate);
 }
 
 TEST_F(DriverOutputTest, UseBestAvailableSampleRateAndChannelization) {
@@ -454,8 +456,9 @@ TEST_F(DriverOutputTest, UseBestAvailableSampleRateAndChannelization) {
   EXPECT_TRUE(output_->pipeline_config()->root().effects_v1.empty());
   EXPECT_EQ(output_->pipeline_config()->root().output_channels, kSupportedChannels);
   EXPECT_EQ(output_->pipeline_config()->root().output_rate, kSupportedFrameRate);
-  EXPECT_EQ(output_->pipeline_config()->channels(), kSupportedChannels);
-  EXPECT_EQ(output_->pipeline_config()->frames_per_second(), kSupportedFrameRate);
+  auto format = output_->pipeline_config()->OutputFormat(nullptr);
+  EXPECT_EQ(format.channels(), kSupportedChannels);
+  EXPECT_EQ(format.frames_per_second(), kSupportedFrameRate);
 }
 
 }  // namespace media::audio

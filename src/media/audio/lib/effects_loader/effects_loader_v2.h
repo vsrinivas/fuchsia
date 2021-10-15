@@ -17,7 +17,8 @@ namespace media::audio {
 class EffectsLoaderV2 {
  public:
   // Creates a effects loader from the global namespace.
-  static fpromise::result<std::unique_ptr<EffectsLoaderV2>, zx_status_t> CreateFromContext();
+  static fpromise::result<std::unique_ptr<EffectsLoaderV2>, zx_status_t> CreateFromContext(
+      const sys::ComponentContext& component_context);
 
   // Creates an effects loader from the given FIDL channel.
   static fpromise::result<std::unique_ptr<EffectsLoaderV2>, zx_status_t> CreateFromChannel(

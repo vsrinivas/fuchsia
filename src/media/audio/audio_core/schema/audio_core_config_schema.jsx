@@ -50,7 +50,7 @@
         "capture:loopback"
       ]
     },
-    "effect": {
+    "effect_v1": {
       "type": "object",
       "properties": {
         "lib": "string",
@@ -66,6 +66,15 @@
       "required": [ "lib", "effect", "name" ],
       "additionalProperties": false
     },
+    "effect_v2": {
+      "type": "object",
+      "properties": {
+        "name": "string",
+        "_comment": "string"
+      },
+      "required": [ "name" ],
+      "additionalProperties": false
+    },
     "mix_group": {
       "type": "object",
       "properties": {
@@ -77,8 +86,9 @@
         },
         "effects": {
           "type": "array",
-          "items": { "$ref": "#/definitions/effect" }
+          "items": { "$ref": "#/definitions/effect_v1" }
         },
+        "effect_over_fidl": { "$ref": "#/definitions/effect_v2" },
         "inputs": {
           "type": "array",
           "items": { "$ref": "#/definitions/mix_group" }

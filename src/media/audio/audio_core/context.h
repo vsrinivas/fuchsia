@@ -28,6 +28,7 @@ class RouteGraph;
 class StreamVolumeManager;
 class ThreadingModel;
 class UsageReporterImpl;
+class EffectsLoaderV2;
 
 class Context {
  public:
@@ -61,6 +62,7 @@ class Context {
   virtual DeviceRouter& device_router() = 0;
   virtual ActiveStreamCountReporter& active_stream_count_reporter() = 0;
   virtual fuchsia::media::audio::EffectsControllerPtr& effects_controller() = 0;
+  virtual EffectsLoaderV2& effects_loader_v2() = 0;
 
  protected:
   Context() = default;

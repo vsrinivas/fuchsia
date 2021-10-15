@@ -48,7 +48,7 @@ AudioBuffer<SampleFormat> GenerateSequentialAudio(
   typename AudioBuffer<SampleFormat>::SampleT increment = 1;
   if constexpr (SampleFormat == fuchsia::media::AudioSampleFormat::FLOAT) {
     first_val = std::clamp<float>(first_val, -1.0f, 1.0f);
-    increment = pow(2.0, -16);
+    increment = powf(2.0f, -16);
   } else if constexpr (SampleFormat == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32) {
     first_val = lround(static_cast<double>(first_val) / 256.0) * 256;
     increment *= 256;

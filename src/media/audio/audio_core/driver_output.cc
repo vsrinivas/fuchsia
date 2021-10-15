@@ -42,8 +42,8 @@ DriverOutput::DriverOutput(const std::string& name, ThreadingModel* threading_mo
                            fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
                            LinkMatrix* link_matrix,
                            std::shared_ptr<AudioClockFactory> clock_factory,
-                           VolumeCurve volume_curve)
-    : AudioOutput(name, threading_model, registry, link_matrix, clock_factory,
+                           VolumeCurve volume_curve, EffectsLoaderV2* effects_loader_v2)
+    : AudioOutput(name, threading_model, registry, link_matrix, clock_factory, effects_loader_v2,
                   std::make_unique<AudioDriver>(this)),
       initial_stream_channel_(channel.TakeChannel()),
       volume_curve_(volume_curve) {}
@@ -357,9 +357,10 @@ void DriverOutput::OnDriverInfoFetched() {
   driver()->SetGain(gain_state, AUDIO_SGF_GAIN_VALID | AUDIO_SGF_MUTE_VALID);
 
   PipelineConfig pipeline_config = profile.pipeline_config();
+  const Format pipeline_format = pipeline_config.OutputFormat(effects_loader_v2());
 
-  uint32_t pref_fps = pipeline_config.frames_per_second();
-  uint32_t pref_chan = pipeline_config.channels();
+  uint32_t pref_fps = static_cast<uint32_t>(pipeline_format.frames_per_second());
+  uint32_t pref_chan = static_cast<uint32_t>(pipeline_format.channels());
   fuchsia::media::AudioSampleFormat pref_fmt = kDefaultAudioFmt;
   zx::duration min_rb_duration =
       kDefaultHighWaterNsec + kDefaultMaxRetentionNsec + kDefaultRetentionGapNsec;
@@ -387,15 +388,15 @@ void DriverOutput::OnDriverInfoFetched() {
   int16_t num_chans = static_cast<int16_t>(pref_chan);
 
   // Update our pipeline to produce audio in the compatible format.
-  if (pipeline_config.frames_per_second() != frame_rate) {
+  if (pipeline_format.frames_per_second() != frame_rate) {
     FX_LOGS(WARNING) << "Hardware does not support the requested rate of "
-                     << pipeline_config.root().output_rate << " fps; hardware will run at "
+                     << pipeline_format.frames_per_second() << " fps; hardware will run at "
                      << frame_rate << " fps";
     pipeline_config.mutable_root().output_rate = frame_rate;
   }
-  if (pipeline_config.channels() != num_chans) {
+  if (pipeline_format.channels() != num_chans) {
     FX_LOGS(WARNING) << "Hardware does not support the requested channelization of "
-                     << pipeline_config.channels() << " channels; hardware will run at "
+                     << pipeline_format.channels() << " channels; hardware will run at "
                      << num_chans << " channels";
     pipeline_config.mutable_root().output_channels = num_chans;
     // Some effects may perform rechannelization. If the hardware does not support the
@@ -408,9 +409,16 @@ void DriverOutput::OnDriverInfoFetched() {
         break;
       }
     }
+    pipeline_config.mutable_root().effects_v2 = std::nullopt;
   }
-  FX_CHECK(pipeline_config.frames_per_second() == frame_rate);
-  FX_CHECK(pipeline_config.channels() == num_chans);
+
+  // Sanity check: ensure the new format matches.
+  if (pipeline_format.frames_per_second() != frame_rate ||
+      pipeline_format.channels() != num_chans) {
+    const Format new_pipeline_format = pipeline_config.OutputFormat(effects_loader_v2());
+    FX_CHECK(new_pipeline_format.frames_per_second() == frame_rate);
+    FX_CHECK(new_pipeline_format.channels() == num_chans);
+  }
 
   // Update the AudioDevice |config_| with the updated |pipeline_config|.
   // Only |frames_per_second| and |channels| were potentially updated in |pipeline_config|, so it is

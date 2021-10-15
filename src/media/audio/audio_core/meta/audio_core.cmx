@@ -16,6 +16,7 @@
             "isolated-temp"
         ],
         "services": [
+            "fuchsia.audio.effects.ProcessorCreator",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.media.audio.EffectsController",
             "fuchsia.scheduler.ProfileProvider",

@@ -34,6 +34,7 @@ static constexpr char kJsonKeyConfig[] = "config";
 static constexpr char kJsonKeyStreams[] = "streams";
 static constexpr char kJsonKeyInputs[] = "inputs";
 static constexpr char kJsonKeyEffects[] = "effects";
+static constexpr char kJsonKeyEffectOverFidl[] = "effect_over_fidl";
 static constexpr char kJsonKeyLoopback[] = "loopback";
 static constexpr char kJsonKeyDeviceId[] = "device_id";
 static constexpr char kJsonKeyOutputRate[] = "output_rate";
@@ -162,7 +163,7 @@ RenderUsageVolumes ParseDefaultRenderUsageVolumesFromJsonObject(const rapidjson:
   return default_volumes;
 }
 
-PipelineConfig::EffectV1 ParseEffectFromJsonObject(const rapidjson::Value& value) {
+PipelineConfig::EffectV1 ParseEffectV1FromJsonObject(const rapidjson::Value& value) {
   FX_CHECK(value.IsObject());
   PipelineConfig::EffectV1 effect;
 
@@ -198,6 +199,17 @@ PipelineConfig::EffectV1 ParseEffectFromJsonObject(const rapidjson::Value& value
   return effect;
 }
 
+PipelineConfig::EffectV2 ParseEffectV2FromJsonObject(const rapidjson::Value& value) {
+  FX_CHECK(value.IsObject());
+  PipelineConfig::EffectV2 effect;
+
+  auto it = value.FindMember(kJsonKeyName);
+  FX_CHECK(it != value.MemberEnd() && it->value.IsString());
+  effect.instance_name = it->value.GetString();
+
+  return effect;
+}
+
 PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& value) {
   FX_CHECK(value.IsObject());
   PipelineConfig::MixGroup mix_group;
@@ -223,8 +235,13 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
   if (it != value.MemberEnd()) {
     FX_CHECK(it->value.IsArray());
     for (const auto& effect : it->value.GetArray()) {
-      mix_group.effects_v1.push_back(ParseEffectFromJsonObject(effect));
+      mix_group.effects_v1.push_back(ParseEffectV1FromJsonObject(effect));
     }
+  }
+
+  it = value.FindMember(kJsonKeyEffectOverFidl);
+  if (it != value.MemberEnd()) {
+    mix_group.effects_v2 = ParseEffectV2FromJsonObject(it->value);
   }
 
   it = value.FindMember(kJsonKeyInputs);

@@ -9,6 +9,7 @@ audio_core_config_test("tests") {
   config_sources = [
     "audio_core_config_with_gain_limits.json",
     "audio_core_config_with_inversion_filter.json",
+    "audio_core_config_with_inversion_filter_v2.json",
     "audio_core_config_with_sleeper_filter.json",
     "ultrasound_audio_core_config.json",
   ]

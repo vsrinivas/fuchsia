@@ -121,6 +121,12 @@ fidl::ClientEnd<fuchsia_audio_effects::ProcessorCreator> TestEffectsV2::NewClien
   auto server_end = fidl::ServerEnd<fuchsia_audio_effects::ProcessorCreator>{std::move(local)};
   auto client_end = fidl::ClientEnd<fuchsia_audio_effects::ProcessorCreator>{std::move(remote)};
 
+  HandleRequest(std::move(server_end));
+  return client_end;
+}
+
+void TestEffectsV2::HandleRequest(
+    fidl::ServerEnd<fuchsia_audio_effects::ProcessorCreator> server_end) {
   bindings_.emplace_back(fidl::BindServer(
       loop_.dispatcher(), std::move(server_end), this,
       [](TestEffectsV2* impl, fidl::UnbindInfo info,
@@ -130,8 +136,6 @@ fidl::ClientEnd<fuchsia_audio_effects::ProcessorCreator> TestEffectsV2::NewClien
           FX_PLOGS(ERROR, info.status()) << "Client disconnected unexpectedly: ";
         }
       }));
-
-  return client_end;
 }
 
 void TestEffectsV2::Create(CreateRequestView request, CreateCompleter::Sync& completer) {

@@ -26,10 +26,11 @@ static constexpr zx::duration kMaxTrimPeriod = zx::msec(10);
 AudioOutput::AudioOutput(const std::string& name, ThreadingModel* threading_model,
                          DeviceRegistry* registry, LinkMatrix* link_matrix,
                          std::shared_ptr<AudioClockFactory> clock_factory,
-                         std::unique_ptr<AudioDriver> driver)
+                         EffectsLoaderV2* effects_loader_v2, std::unique_ptr<AudioDriver> driver)
     : AudioDevice(Type::Output, name, threading_model, registry, link_matrix, clock_factory,
                   std::move(driver)),
-      reporter_(Reporter::Singleton().CreateOutputDevice(name, mix_domain().name())) {
+      reporter_(Reporter::Singleton().CreateOutputDevice(name, mix_domain().name())),
+      effects_loader_v2_(effects_loader_v2) {
   SetNextSchedTimeMono(async::Now(mix_domain().dispatcher()));
 }
 
@@ -246,9 +247,9 @@ fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> AudioOutput::Init
 std::unique_ptr<OutputPipeline> AudioOutput::CreateOutputPipeline(
     const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
     TimelineFunction device_reference_clock_to_fractional_frame, AudioClock& ref_clock) {
-  auto pipeline =
-      std::make_unique<OutputPipelineImpl>(config, volume_curve, max_block_size_frames,
-                                           device_reference_clock_to_fractional_frame, ref_clock);
+  auto pipeline = std::make_unique<OutputPipelineImpl>(
+      config, volume_curve, effects_loader_v2_, max_block_size_frames,
+      device_reference_clock_to_fractional_frame, ref_clock);
   pipeline->SetPresentationDelay(presentation_delay());
   return pipeline;
 }

@@ -76,7 +76,7 @@ class FakeAudioOutput : public AudioOutput {
   FakeAudioOutput(ThreadingModel* threading_model, DeviceRegistry* device_registry,
                   LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
       : AudioOutput("", threading_model, device_registry, link_matrix, clock_factory,
-                    std::make_unique<AudioDriver>(this)) {}
+                    nullptr /* EffectsLoaderV2 */, std::make_unique<AudioDriver>(this)) {}
 
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
                        fuchsia::media::AudioGainValidFlags set_flags) override {}

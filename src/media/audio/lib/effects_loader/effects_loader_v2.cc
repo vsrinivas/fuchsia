@@ -13,15 +13,12 @@
 
 namespace media::audio {
 
-fpromise::result<std::unique_ptr<EffectsLoaderV2>, zx_status_t>
-EffectsLoaderV2::CreateFromContext() {
+fpromise::result<std::unique_ptr<EffectsLoaderV2>, zx_status_t> EffectsLoaderV2::CreateFromContext(
+    const sys::ComponentContext& component_context) {
   TRACE_DURATION("audio", "EffectsLoaderV2::CreateFromContext");
-  auto svc = service::OpenServiceRoot();
-  if (!svc.is_ok()) {
-    return fpromise::error(svc.status_value());
-  }
-
-  auto client_end = service::ConnectAt<fuchsia_audio_effects::ProcessorCreator>(*svc);
+  auto svc =
+      fidl::ClientEnd<fuchsia_io::Directory>(component_context.svc()->CloneChannel().TakeChannel());
+  auto client_end = service::ConnectAt<fuchsia_audio_effects::ProcessorCreator>(svc);
   if (!client_end.is_ok()) {
     return fpromise::error(client_end.status_value());
   }

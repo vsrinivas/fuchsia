@@ -53,6 +53,9 @@ class TestEffectsV2 : public fidl::WireServer<fuchsia_audio_effects::ProcessorCr
   // Create a client connection to the ProcessorCreator server held by this class.
   fidl::ClientEnd<fuchsia_audio_effects::ProcessorCreator> NewClient();
 
+  // Handle an incoming client request.
+  void HandleRequest(fidl::ServerEnd<fuchsia_audio_effects::ProcessorCreator> server_end);
+
  private:
   class TestProcessor;
 

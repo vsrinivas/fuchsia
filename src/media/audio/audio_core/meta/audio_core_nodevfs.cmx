@@ -14,6 +14,7 @@
         ],
         "services": [
             "fuchsia.media.audio.EffectsController",
+            "fuchsia.audio.effects.ProcessorCreator",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.thermal.Controller",
             "fuchsia.tracing.provider.Registry"
