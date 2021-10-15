@@ -20,16 +20,16 @@ msd_context_t* msd_connection_create_context(msd_connection_t* abi_connection) {
 }
 
 // static
-std::shared_ptr<ClientContext> MsdIntelConnection::CreateContext(
+std::shared_ptr<MsdIntelContext> MsdIntelConnection::CreateContext(
     std::shared_ptr<MsdIntelConnection> connection) {
-  auto context = std::make_shared<ClientContext>(connection, connection->per_process_gtt());
+  auto context = std::make_shared<MsdIntelContext>(connection->per_process_gtt(), connection);
 
   connection->context_list_.push_front(context);
 
   return context;
 }
 
-void MsdIntelConnection::DestroyContext(std::shared_ptr<ClientContext> context) {
+void MsdIntelConnection::DestroyContext(std::shared_ptr<MsdIntelContext> context) {
   context->Shutdown();
 
   auto iter = std::find(context_list_.begin(), context_list_.end(), context);

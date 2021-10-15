@@ -14,7 +14,7 @@
 #include "msd.h"
 #include "msd_intel_pci_device.h"
 
-class ClientContext;
+class MsdIntelContext;
 
 class MsdIntelConnection {
  public:
@@ -23,7 +23,7 @@ class MsdIntelConnection {
     virtual ~Owner() = default;
 
     virtual magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) = 0;
-    virtual void DestroyContext(std::shared_ptr<ClientContext> client_context) = 0;
+    virtual void DestroyContext(std::shared_ptr<MsdIntelContext> client_context) = 0;
   };
 
   static std::unique_ptr<MsdIntelConnection> Create(Owner* owner, msd_client_id_t client_id);
@@ -38,10 +38,10 @@ class MsdIntelConnection {
     return owner_->SubmitBatch(std::move(batch));
   }
 
-  static std::shared_ptr<ClientContext> CreateContext(
+  static std::shared_ptr<MsdIntelContext> CreateContext(
       std::shared_ptr<MsdIntelConnection> connection);
 
-  void DestroyContext(std::shared_ptr<ClientContext> context);
+  void DestroyContext(std::shared_ptr<MsdIntelContext> context);
 
   void SetNotificationCallback(msd_connection_notification_callback_t callback, void* token) {
     notifications_.Set(callback, token);
@@ -89,7 +89,7 @@ class MsdIntelConnection {
   msd_client_id_t client_id_;
   std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> mappings_to_release_;
   bool sent_context_killed_ = false;
-  std::list<std::shared_ptr<ClientContext>> context_list_;
+  std::list<std::shared_ptr<MsdIntelContext>> context_list_;
 
   class Notifications {
    public:

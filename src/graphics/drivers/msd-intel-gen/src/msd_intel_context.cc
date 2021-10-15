@@ -97,9 +97,9 @@ bool MsdIntelContext::GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_ad
   return true;
 }
 
-ClientContext::~ClientContext() { DASSERT(!wait_thread_.joinable()); }
+MsdIntelContext::~MsdIntelContext() { DASSERT(!wait_thread_.joinable()); }
 
-void ClientContext::Shutdown() {
+void MsdIntelContext::Shutdown() {
   if (semaphore_port_)
     semaphore_port_->Close();
 
@@ -120,7 +120,7 @@ void ClientContext::Shutdown() {
   }
 }
 
-magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer) {
+magma::Status MsdIntelContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer) {
   TRACE_DURATION("magma", "SubmitCommandBuffer");
   uint64_t ATTRIBUTE_UNUSED buffer_id = command_buffer->GetBatchBufferId();
   TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
@@ -143,7 +143,7 @@ magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> 
   return SubmitBatch(std::move(command_buffer));
 }
 
-magma::Status ClientContext::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
+magma::Status MsdIntelContext::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
   if (!semaphore_port_) {
     semaphore_port_ = magma::SemaphorePort::Create();
 
@@ -168,7 +168,7 @@ magma::Status ClientContext::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
   return MAGMA_STATUS_OK;
 }
 
-magma::Status ClientContext::SubmitBatchLocked() {
+magma::Status MsdIntelContext::SubmitBatchLocked() {
   auto callback = [this](magma::SemaphorePort::WaitSet* wait_set) {
     std::lock_guard lock(presubmit_mutex_);
     this->SubmitBatchLocked();
@@ -220,7 +220,7 @@ magma::Status ClientContext::SubmitBatchLocked() {
   return MAGMA_STATUS_OK;
 }
 
-void ClientContext::Kill() {
+void MsdIntelContext::Kill() {
   if (killed_)
     return;
   killed_ = true;

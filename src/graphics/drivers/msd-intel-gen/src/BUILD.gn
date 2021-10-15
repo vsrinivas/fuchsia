@@ -24,8 +24,6 @@ source_set("src") {
     "command_buffer.h",
     "engine_command_streamer.cc",
     "engine_command_streamer.h",
-    "global_context.cc",
-    "global_context.h",
     "gpu_mapping.h",
     "gpu_progress.cc",
     "gpu_progress.h",

@@ -55,7 +55,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     std::weak_ptr<MsdIntelConnection> connection;
 
     context_ =
-        std::shared_ptr<MsdIntelContext>(new ClientContext(connection, Gtt::CreateShim(this)));
+        std::shared_ptr<MsdIntelContext>(new MsdIntelContext(Gtt::CreateShim(this), connection));
 
     address_space_owner_ = std::make_unique<AddressSpaceOwner>();
     address_space_ =

@@ -17,7 +17,7 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     return MAGMA_STATUS_OK;
   }
 
-  void DestroyContext(std::shared_ptr<ClientContext> client_context) override {}
+  void DestroyContext(std::shared_ptr<MsdIntelContext> client_context) override {}
 
   magma::PlatformBusMapper* GetBusMapper() override { return &mock_bus_mapper_; }
 
@@ -126,7 +126,7 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
 
     connection->SetNotificationCallback(KillCallbackStatic, this);
 
-    std::vector<std::shared_ptr<ClientContext>> contexts;
+    std::vector<std::shared_ptr<MsdIntelContext>> contexts;
     contexts.push_back(MsdIntelConnection::CreateContext(connection));
     contexts.push_back(MsdIntelConnection::CreateContext(connection));
 

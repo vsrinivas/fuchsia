@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "device_request.h"
-#include "global_context.h"
 #include "gtt.h"
 #include "interrupt_manager.h"
 #include "magma_util/macros.h"
@@ -19,6 +18,7 @@
 #include "magma_util/thread.h"
 #include "msd.h"
 #include "msd_intel_connection.h"
+#include "msd_intel_context.h"
 #include "msd_intel_pci_device.h"
 #include "platform_semaphore.h"
 #include "platform_trace.h"
@@ -124,7 +124,7 @@ class MsdIntelDevice : public msd_device_t,
 
   // MsdIntelConnection::Owner
   magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override;
-  void DestroyContext(std::shared_ptr<ClientContext> client_context) override;
+  void DestroyContext(std::shared_ptr<MsdIntelContext> client_context) override;
   magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
 
   bool StartDeviceThread();
@@ -142,7 +142,7 @@ class MsdIntelDevice : public msd_device_t,
   void HangCheckTimeout(uint64_t timeout_ms, EngineCommandStreamerId id);
 
   magma::Status ProcessBatch(std::unique_ptr<MappedBatch> batch);
-  magma::Status ProcessDestroyContext(std::shared_ptr<ClientContext> client_context);
+  magma::Status ProcessDestroyContext(std::shared_ptr<MsdIntelContext> client_context);
   magma::Status ProcessReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
                                      std::shared_ptr<MsdIntelBuffer> buffer);
   magma::Status ProcessInterrupts(uint64_t interrupt_time_ns, uint32_t master_interrupt_control,
@@ -173,7 +173,7 @@ class MsdIntelDevice : public msd_device_t,
 
   void QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_total_out);
 
-  std::shared_ptr<GlobalContext> global_context() { return global_context_; }
+  std::shared_ptr<MsdIntelContext> global_context() { return global_context_; }
 
   RenderEngineCommandStreamer* render_engine_cs() { return render_engine_cs_.get(); }
 
@@ -203,7 +203,7 @@ class MsdIntelDevice : public msd_device_t,
   std::shared_ptr<Gtt> gtt_;
   std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;
   std::unique_ptr<VideoCommandStreamer> video_command_streamer_;
-  std::shared_ptr<GlobalContext> global_context_;
+  std::shared_ptr<MsdIntelContext> global_context_;
   std::unique_ptr<Sequencer> sequencer_;
   std::shared_ptr<magma::PlatformBuffer> scratch_buffer_;
   std::unique_ptr<InterruptManager> interrupt_manager_;

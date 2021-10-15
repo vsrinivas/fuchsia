@@ -14,7 +14,7 @@
 #include "platform_semaphore.h"
 
 class AddressSpace;
-class ClientContext;
+class MsdIntelContext;
 class EngineCommandStreamer;
 class MsdIntelContext;
 
@@ -23,7 +23,7 @@ class CommandBuffer : public MappedBatch {
   // Takes a weak reference on the context which it locks for the duration of its execution
   // holds a shared reference to the buffers backing |abi_cmd_buf| and |exec_buffers| for the
   // lifetime of this object
-  static std::unique_ptr<CommandBuffer> Create(std::weak_ptr<ClientContext> context,
+  static std::unique_ptr<CommandBuffer> Create(std::weak_ptr<MsdIntelContext> context,
                                                magma_command_buffer* cmd_buf,
                                                magma_exec_resource* exec_resources,
                                                msd_buffer_t** msd_buffers,
@@ -67,7 +67,7 @@ class CommandBuffer : public MappedBatch {
   uint64_t GetFlags() const { return command_buffer_->flags; }
 
  private:
-  CommandBuffer(std::weak_ptr<ClientContext> context,
+  CommandBuffer(std::weak_ptr<MsdIntelContext> context,
                 std::unique_ptr<magma_command_buffer> command_buffer);
 
   bool IsCommandBuffer() override { return true; }
@@ -107,7 +107,7 @@ class CommandBuffer : public MappedBatch {
       std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
       std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores);
 
-  const std::weak_ptr<ClientContext> context_;
+  const std::weak_ptr<MsdIntelContext> context_;
   const std::unique_ptr<magma_command_buffer> command_buffer_;
   const uint64_t nonce_;
 
@@ -117,7 +117,7 @@ class CommandBuffer : public MappedBatch {
   std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores_;
   std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_;
   std::vector<std::shared_ptr<GpuMapping>> exec_resource_mappings_;
-  std::shared_ptr<ClientContext> locked_context_;
+  std::shared_ptr<MsdIntelContext> locked_context_;
   uint32_t batch_buffer_index_;
   uint32_t batch_start_offset_;
   // ---------------------------- //

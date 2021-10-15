@@ -30,7 +30,7 @@ class TestScheduler {
     auto owner = std::make_unique<AddressSpaceOwner>();
     auto address_space = std::make_shared<AllocatingAddressSpace>(owner.get(), 0, PAGE_SIZE);
     for (uint32_t i = 0; i < kNumContext; i++) {
-      context_[i] = std::make_shared<ClientContext>(connection_, address_space);
+      context_[i] = std::make_shared<MsdIntelContext>(address_space, connection_);
     }
   }
 

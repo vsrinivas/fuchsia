@@ -7,7 +7,6 @@
 #include <mock/mock_bus_mapper.h>
 
 #include "address_space.h"
-#include "global_context.h"
 #include "msd_intel_connection.h"
 #include "msd_intel_context.h"
 #include "ringbuffer.h"
@@ -31,7 +30,7 @@ class TestContext {
         std::make_shared<AllocatingAddressSpace>(address_space_owner.get(), 0, PAGE_SIZE);
 
     std::weak_ptr<MsdIntelConnection> connection;
-    std::unique_ptr<MsdIntelContext> context(new ClientContext(connection, address_space));
+    std::unique_ptr<MsdIntelContext> context(new MsdIntelContext(address_space, connection));
 
     EXPECT_EQ(nullptr, get_buffer(context.get(), RENDER_COMMAND_STREAMER));
     EXPECT_EQ(nullptr, get_ringbuffer(context.get(), RENDER_COMMAND_STREAMER));
@@ -65,9 +64,9 @@ class TestContext {
         address_space_owner.get(), base, buffer->platform_buffer()->size() + ringbuffer->size());
 
     if (global)
-      context = std::unique_ptr<MsdIntelContext>(new GlobalContext(address_space));
+      context = std::unique_ptr<MsdIntelContext>(new MsdIntelContext(address_space));
     else
-      context = std::unique_ptr<MsdIntelContext>(new ClientContext(connection, address_space));
+      context = std::unique_ptr<MsdIntelContext>(new MsdIntelContext(address_space, connection));
 
     context->SetEngineState(RENDER_COMMAND_STREAMER, std::move(buffer), std::move(ringbuffer));
 
@@ -104,7 +103,7 @@ class TestContext {
         address_space_owner.get(), base, buffer->platform_buffer()->size() + ringbuffer->size());
 
     auto context =
-        std::make_unique<ClientContext>(std::weak_ptr<MsdIntelConnection>(), address_space);
+        std::make_unique<MsdIntelContext>(address_space, std::weak_ptr<MsdIntelConnection>());
 
     void* cpu_addr = context->GetCachedContextBufferCpuAddr(RENDER_COMMAND_STREAMER);
     EXPECT_EQ(nullptr, cpu_addr);
@@ -135,7 +134,7 @@ class TestContext {
         return MAGMA_STATUS_OK;
       }
 
-      void DestroyContext(std::shared_ptr<ClientContext> client_context) override {}
+      void DestroyContext(std::shared_ptr<MsdIntelContext> client_context) override {}
 
       magma::PlatformBusMapper* GetBusMapper() override {
         return address_space_owner_->GetBusMapper();
@@ -162,7 +161,7 @@ class TestContext {
         std::shared_ptr<MsdIntelConnection>(MsdIntelConnection::Create(owner.get(), 0u));
     auto address_space = std::make_shared<AllocatingAddressSpace>(owner.get(), 0, PAGE_SIZE);
 
-    auto context = std::make_shared<ClientContext>(connection, address_space);
+    auto context = std::make_shared<MsdIntelContext>(address_space, connection);
 
     std::vector<std::unique_ptr<CommandBuffer>> command_buffers;
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> semaphores;
@@ -234,12 +233,12 @@ TEST(MsdIntelContext, ClientMap) {
 
 TEST(MsdIntelContext, CachedMapping) { TestContext().CachedMapping(); }
 
-TEST(GlobalContext, GlobalMap) {
+TEST(MsdIntelContext, GlobalMap) {
   TestContext test;
   test.Map(true);
 }
 
-TEST(ClientContext, SubmitCommandBuffer) {
+TEST(MsdIntelContext, SubmitCommandBuffer) {
   TestContext::SubmitCommandBuffer(1, 0);
   TestContext::SubmitCommandBuffer(1, 1);
   TestContext::SubmitCommandBuffer(2, 1);

@@ -25,25 +25,28 @@ class MsdIntelConnection;
 // Base context, not tied to a connection.
 class MsdIntelContext {
  public:
-  MsdIntelContext(std::shared_ptr<AddressSpace> address_space) : address_space_(address_space) {
+  explicit MsdIntelContext(std::shared_ptr<AddressSpace> address_space)
+      : address_space_(std::move(address_space)) {
     DASSERT(address_space_);
   }
 
-  virtual ~MsdIntelContext() {}
+  MsdIntelContext(std::shared_ptr<AddressSpace> address_space,
+                  std::weak_ptr<MsdIntelConnection> connection)
+      : address_space_(std::move(address_space)), connection_(std::move(connection)) {}
+
+  ~MsdIntelContext();
 
   void SetEngineState(EngineCommandStreamerId id, std::unique_ptr<MsdIntelBuffer> context_buffer,
                       std::unique_ptr<Ringbuffer> ringbuffer);
 
-  virtual bool Map(std::shared_ptr<AddressSpace> address_space, EngineCommandStreamerId id);
-  virtual bool Unmap(EngineCommandStreamerId id);
+  bool Map(std::shared_ptr<AddressSpace> address_space, EngineCommandStreamerId id);
+  bool Unmap(EngineCommandStreamerId id);
 
-  virtual std::weak_ptr<MsdIntelConnection> connection() {
-    return std::weak_ptr<MsdIntelConnection>();
-  }
+  std::weak_ptr<MsdIntelConnection> connection() { return connection_; }
 
-  virtual bool killed() { return false; }
+  bool killed() const { return killed_; }
 
-  virtual void Kill() { MAGMA_LOG(WARNING, "Attempted to kill a base context"); }
+  void Kill();
 
   // Gets the gpu address of the context buffer if mapped.
   bool GetGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
@@ -81,7 +84,14 @@ class MsdIntelContext {
 
   std::shared_ptr<AddressSpace> exec_address_space() { return address_space_; }
 
+  magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf);
+  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch);
+
+  void Shutdown();
+
  private:
+  magma::Status SubmitBatchLocked() MAGMA_REQUIRES(presubmit_mutex_);
+
   struct PerEngineState {
     std::shared_ptr<MsdIntelBuffer> context_buffer;
     std::unique_ptr<GpuMapping> context_mapping;
@@ -94,52 +104,31 @@ class MsdIntelContext {
   std::queue<std::unique_ptr<MappedBatch>> pending_batch_queue_;
   std::shared_ptr<AddressSpace> address_space_;
 
-  friend class TestContext;
-};
-
-class ClientContext : public MsdIntelContext {
- public:
-  ClientContext(std::weak_ptr<MsdIntelConnection> connection,
-                std::shared_ptr<AddressSpace> address_space)
-      : MsdIntelContext(std::move(address_space)), connection_(connection) {}
-
-  ~ClientContext();
-
-  magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf);
-  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch);
-
-  void Shutdown();
-
-  std::weak_ptr<MsdIntelConnection> connection() override { return connection_; }
-
-  bool killed() override { return killed_; }
-
-  void Kill() override;
-
- private:
-  magma::Status SubmitBatchLocked() MAGMA_REQUIRES(presubmit_mutex_);
-
   std::weak_ptr<MsdIntelConnection> connection_;
   std::unique_ptr<magma::SemaphorePort> semaphore_port_;
   std::thread wait_thread_;
   std::mutex presubmit_mutex_;
   std::queue<std::unique_ptr<MappedBatch>> presubmit_queue_ MAGMA_GUARDED(presubmit_mutex_);
   bool killed_ = false;
+
+  friend class TestContext;
 };
 
 class MsdIntelAbiContext : public msd_context_t {
  public:
-  MsdIntelAbiContext(std::shared_ptr<ClientContext> ptr) : ptr_(std::move(ptr)) { magic_ = kMagic; }
+  explicit MsdIntelAbiContext(std::shared_ptr<MsdIntelContext> ptr) : ptr_(std::move(ptr)) {
+    magic_ = kMagic;
+  }
 
   static MsdIntelAbiContext* cast(msd_context_t* context) {
     DASSERT(context);
     DASSERT(context->magic_ == kMagic);
     return static_cast<MsdIntelAbiContext*>(context);
   }
-  std::shared_ptr<ClientContext> ptr() { return ptr_; }
+  std::shared_ptr<MsdIntelContext> ptr() { return ptr_; }
 
  private:
-  std::shared_ptr<ClientContext> ptr_;
+  std::shared_ptr<MsdIntelContext> ptr_;
   static const uint32_t kMagic = 0x63747874;  // "ctxt"
 };
 

@@ -11,12 +11,12 @@
 
 class ContextRelease {
  public:
-  ContextRelease(std::shared_ptr<ClientContext> context) : context_(context) {}
+  ContextRelease(std::shared_ptr<MsdIntelContext> context) : context_(context) {}
 
   ~ContextRelease() { context_->Shutdown(); }
 
  private:
-  std::shared_ptr<ClientContext> context_;
+  std::shared_ptr<MsdIntelContext> context_;
 };
 
 using CommandBufferFlags = uint64_t;
@@ -45,7 +45,7 @@ class TestExec : public testing::TestWithParam<CommandBufferFlags> {
 
     auto address_space = kUseGlobalGtt ? device->gtt() : connection->per_process_gtt();
 
-    auto context = std::make_shared<ClientContext>(connection, address_space);
+    auto context = std::make_shared<MsdIntelContext>(address_space, connection);
     ASSERT_NE(context, nullptr);
     ContextRelease context_release(context);
 

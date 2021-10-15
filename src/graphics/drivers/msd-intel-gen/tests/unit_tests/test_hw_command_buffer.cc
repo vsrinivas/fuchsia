@@ -108,7 +108,7 @@ class TestHwCommandBuffer : public ::testing::Test {
 
     auto context = cmd_buf_->GetContext().lock();
     ASSERT_NE(context, nullptr);
-    ClientContext* ctx = static_cast<ClientContext*>(context.get());
+    MsdIntelContext* ctx = static_cast<MsdIntelContext*>(context.get());
     ASSERT_NE(ctx, nullptr);
 
     switch (id) {

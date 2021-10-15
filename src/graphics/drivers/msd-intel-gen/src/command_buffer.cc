@@ -12,7 +12,7 @@
 #include "msd_intel_semaphore.h"
 #include "platform_trace.h"
 
-std::unique_ptr<CommandBuffer> CommandBuffer::Create(std::weak_ptr<ClientContext> context,
+std::unique_ptr<CommandBuffer> CommandBuffer::Create(std::weak_ptr<MsdIntelContext> context,
                                                      magma_command_buffer* cmd_buf,
                                                      magma_exec_resource* exec_resources,
                                                      msd_buffer_t** msd_buffers,
@@ -61,7 +61,7 @@ std::unique_ptr<CommandBuffer> CommandBuffer::Create(std::weak_ptr<ClientContext
   return command_buffer;
 }
 
-CommandBuffer::CommandBuffer(std::weak_ptr<ClientContext> context,
+CommandBuffer::CommandBuffer(std::weak_ptr<MsdIntelContext> context,
                              std::unique_ptr<magma_command_buffer> cmd_buf)
     : context_(context), command_buffer_(std::move(cmd_buf)), nonce_(TRACE_NONCE()) {}
 

@@ -12,7 +12,7 @@ class TestCommandBuffer {
  public:
   static std::unique_ptr<CommandBuffer> Create(
       std::shared_ptr<MsdIntelBuffer> command_buffer_descriptor,
-      std::weak_ptr<ClientContext> context, std::vector<std::shared_ptr<MsdIntelBuffer>> buffers,
+      std::weak_ptr<MsdIntelContext> context, std::vector<std::shared_ptr<MsdIntelBuffer>> buffers,
       std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
       std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores) {
     void* ptr;

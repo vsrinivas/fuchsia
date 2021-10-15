@@ -12,7 +12,6 @@
 
 #include "device_id.h"
 #include "forcewake.h"
-#include "global_context.h"
 #include "magma_intel_gen_defs.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
@@ -41,7 +40,7 @@ class MsdIntelDevice::BatchRequest : public DeviceRequest {
 
 class MsdIntelDevice::DestroyContextRequest : public DeviceRequest {
  public:
-  DestroyContextRequest(std::shared_ptr<ClientContext> client_context)
+  DestroyContextRequest(std::shared_ptr<MsdIntelContext> client_context)
       : client_context_(std::move(client_context)) {}
 
  protected:
@@ -50,7 +49,7 @@ class MsdIntelDevice::DestroyContextRequest : public DeviceRequest {
   }
 
  private:
-  std::shared_ptr<ClientContext> client_context_;
+  std::shared_ptr<MsdIntelContext> client_context_;
 };
 
 class MsdIntelDevice::InterruptRequest : public DeviceRequest {
@@ -238,7 +237,7 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
     video_command_streamer_ = std::make_unique<VideoCommandStreamer>(this, std::move(mapping));
   }
 
-  global_context_ = std::shared_ptr<GlobalContext>(new GlobalContext(gtt_));
+  global_context_ = std::shared_ptr<MsdIntelContext>(new MsdIntelContext(gtt_));
 
   // Creates the context backing store.
   // Global context used to execute the render init batch.
@@ -388,7 +387,7 @@ magma::Status MsdIntelDevice::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
   return MAGMA_STATUS_OK;
 }
 
-void MsdIntelDevice::DestroyContext(std::shared_ptr<ClientContext> client_context) {
+void MsdIntelDevice::DestroyContext(std::shared_ptr<MsdIntelContext> client_context) {
   DLOG("DestroyContext");
   CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
@@ -730,7 +729,8 @@ magma::Status MsdIntelDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch) {
   return MAGMA_STATUS_OK;
 }
 
-magma::Status MsdIntelDevice::ProcessDestroyContext(std::shared_ptr<ClientContext> client_context) {
+magma::Status MsdIntelDevice::ProcessDestroyContext(
+    std::shared_ptr<MsdIntelContext> client_context) {
   DLOG("ProcessDestroyContext");
   TRACE_DURATION("magma", "ProcessDestroyContext");
 
