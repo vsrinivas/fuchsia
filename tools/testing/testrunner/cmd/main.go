@@ -461,8 +461,13 @@ func runTestOnce(
 		err       error
 	}
 	ch := make(chan testResult, 1)
+	// We don't use context.WithTimeout() because it uses the real time.Now()
+	// instead of clock.Now(), which makes it much harder to simulate timeouts
+	// in this function's unit tests.
+	testCtx, cancelTest := context.WithCancel(ctx)
+	defer cancelTest()
 	go func() {
-		dataSinks, err := t.Test(ctx, test, multistdout, multistderr, outDir)
+		dataSinks, err := t.Test(testCtx, test, multistdout, multistderr, outDir)
 		ch <- testResult{dataSinks, err}
 	}()
 
@@ -472,26 +477,23 @@ func runTestOnce(
 	// exceed the perTestTimeout, so we give enough time for the tester to complete
 	// those steps as well.
 	outerTestTimeout := timeout + 30*time.Second
+	var timeoutCh <-chan time.Time
+	if timeout > 0 {
+		timeoutCh = clock.After(ctx, outerTestTimeout)
+	}
+	// Else, timeoutCh will be nil. Receiving from a nil channel blocks forever,
+	// so no timeout will be enforced, which is what we want.
+
 	var dataSinks runtests.DataSinkReference
 	var err error
-	for {
-		select {
-		case res := <-ch:
-			dataSinks = res.dataSinks
-			err = res.err
-			break
-		case <-clock.After(ctx, outerTestTimeout):
-			if timeout > 0 {
-				err = &timeoutError{outerTestTimeout}
-			} else {
-				// If the timeout is not set, keep looping until
-				// we get a result from t.Test().
-				continue
-			}
-		}
-		// Break out of the loop for any other case other than the one
-		// above where we continue looping.
+	select {
+	case res := <-ch:
+		dataSinks = res.dataSinks
+		err = res.err
 		break
+	case <-timeoutCh:
+		err = &timeoutError{outerTestTimeout}
+		cancelTest()
 	}
 	if err != nil {
 		if ctx.Err() != nil {
