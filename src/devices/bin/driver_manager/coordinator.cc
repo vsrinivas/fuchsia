@@ -58,7 +58,6 @@
 #include "src/devices/bin/driver_manager/composite_device.h"
 #include "src/devices/bin/driver_manager/devfs.h"
 #include "src/devices/bin/driver_manager/driver_host_loader_service.h"
-#include "src/devices/bin/driver_manager/fidl_txn.h"
 #include "src/devices/bin/driver_manager/manifest_parser.h"
 #include "src/devices/bin/driver_manager/package_resolver.h"
 #include "src/devices/bin/driver_manager/unbind_task.h"

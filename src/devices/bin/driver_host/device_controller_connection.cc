@@ -14,7 +14,6 @@
 
 #include "driver_host.h"
 #include "env.h"
-#include "fidl_txn.h"
 #include "log.h"
 #include "proxy_iostate.h"
 #include "zx_device.h"

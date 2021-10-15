@@ -47,7 +47,6 @@
 #include "composite_device.h"
 #include "device_controller_connection.h"
 #include "env.h"
-#include "fidl_txn.h"
 #include "log.h"
 #include "main.h"
 #include "proxy_device.h"

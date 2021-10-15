@@ -18,7 +18,6 @@
 
 #include "coordinator.h"
 #include "devfs.h"
-#include "fidl_txn.h"
 #include "init_task.h"
 #include "resume_task.h"
 #include "src/devices/lib/log/log.h"
