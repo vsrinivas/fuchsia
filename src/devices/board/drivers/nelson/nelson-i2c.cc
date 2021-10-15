@@ -128,15 +128,19 @@ zx_status_t Nelson::I2cInit() {
 
   // i2c_ao_0
   gpio_impl_.SetAltFunction(S905D2_GPIOAO(2), 1);
-  gpio_impl_.SetAltFunction(S905D2_GPIOAO(3), 1);
   gpio_impl_.SetDriveStrength(S905D2_GPIOAO(2), 2500, nullptr);
+  gpio_impl_.SetAltFunction(S905D2_GPIOAO(3), 1);
   gpio_impl_.SetDriveStrength(S905D2_GPIOAO(3), 2500, nullptr);
   // i2c2
   gpio_impl_.SetAltFunction(S905D2_GPIOZ(14), 3);
+  gpio_impl_.SetDriveStrength(S905D2_GPIOZ(14), 3000, nullptr);
   gpio_impl_.SetAltFunction(S905D2_GPIOZ(15), 3);
+  gpio_impl_.SetDriveStrength(S905D2_GPIOZ(15), 3000, nullptr);
   // i2c3
   gpio_impl_.SetAltFunction(S905D2_GPIOA(14), 2);
+  gpio_impl_.SetDriveStrength(S905D2_GPIOA(14), 3000, nullptr);
   gpio_impl_.SetAltFunction(S905D2_GPIOA(15), 2);
+  gpio_impl_.SetDriveStrength(S905D2_GPIOA(15), 3000, nullptr);
 
   auto i2c_status = fidl_metadata::i2c::I2CChannelsToFidl(i2c_channels);
   if (i2c_status.is_error()) {
