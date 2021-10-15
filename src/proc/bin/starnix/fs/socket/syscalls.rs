@@ -486,6 +486,7 @@ pub fn sys_getsockopt(
                 .unwrap_or(ucred { pid: 0, uid: uid_t::MAX, gid: gid_t::MAX })
                 .as_bytes()
                 .to_owned(),
+            SO_PEERSEC => "unconfined".as_bytes().to_vec(),
             _ => return error!(ENOPROTOOPT),
         },
         _ => return error!(ENOPROTOOPT),
