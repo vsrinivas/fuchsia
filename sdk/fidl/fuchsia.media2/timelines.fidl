@@ -32,47 +32,21 @@ type PresentationTimeline = struct {
     progressing bool = false;
 };
 
-/// Expresses the relationship between the timeline represented by
-/// the timestamps in a stream and the presentation timeline.
-///
-/// `initial_timestamp` and `initial_presentation_time` specify the
-/// start of the desired segment of the stream. In most cases, the
-/// initial stream time is just the first timestamp in the stream,
-/// often zero. A packet with timestamp `initial_timestamp` should
-/// be presented the presentation time given by `initial_presentation_time`.
-///
-/// There are cases in which a stream will start before the initial
-/// stream time given in a `StreamTimeline`. When seeking into a
-/// compressed video stream, the decoder needs to start processing
-/// the stream at an I-framee. Based on the initial stream time given
-/// to the decoder, it knows what output frames to discard.
-// TODO(dalesat): This is possibly not needed.
-type StreamTimeline = struct {
-    /// Timestamp of the start of the desired segment of the stream.
-    initial_stream_time int64 = 0;
-
-    /// Presentation time of the start of the desired segment of the
-    /// stream.
-    initial_presentation_time zx.duration = 0;
-};
-
 /// Describes units used in packet timestamps.
 ///
-/// The `timestamp_interval` and `presentation_interval` establish the
+/// The `packet_timestamp_interval` and `presentation_interval` establish the
 /// units of the `Timestamp` values in packets in a stream. For
 /// example, if the timestamps are in nanosecond units, the two
 /// intervals are equal. If the timestamps are frame indices in a
-/// 44.1k frames/second audio stream, `timestamp_interval` would be
+/// 44.1k frames/second audio stream, `packet_timestamp_interval` would be
 /// 44,100, and `presentation_interval` would be 1,000,000,000.
 /// The intervals constitute a ratio, so the values 441 and
 /// 10,000,000 would do just as well for the second example.
-// TODO(dalesat): Consider PacketTimestampUnits for clarity.
 type PacketTimestampUnits = struct {
-    /// Duration in the stream timeline corresponding to
-    /// `presentation_interval`.
+    /// Timestamp interval corresponding to `presentation_interval`.
     packet_timestamp_interval int64 = 1000000000;
 
     /// Duration in the presentation timeline corresponding to
-    /// `timestamp_interval`.
+    /// `packet_timestamp_interval`.
     presentation_interval zx.duration = 1000000000;
 };

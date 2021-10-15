@@ -87,5 +87,6 @@ struct/member fuchsia.mediastreams/VideoFormat.coded_size fuchsia.math/Size
 struct/member fuchsia.mediastreams/VideoFormat.color_space fuchsia.mediastreams/ColorSpace
 struct/member fuchsia.mediastreams/VideoFormat.display_size fuchsia.math/Size
 struct/member fuchsia.mediastreams/VideoFormat.pixel_format fuchsia.mediastreams/PixelFormat
+struct/member fuchsia.mediastreams/VideoFormat.pixel_format_modifier uint64
 struct fuchsia.mediastreams/VideoFormat
 library fuchsia.mediastreams

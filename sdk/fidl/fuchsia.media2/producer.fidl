@@ -46,7 +46,7 @@ protocol ActiveProducer {
     /// Stops packet production.
     ///
     /// + request `when` time when the production of packets should
-    ///   stop as a system time, reference time or stream time. If
+    ///   stop as a system time, reference time or presentation time. If
     ///   this parameter is not supplied or specifies a time in the
     ///   past, packet production stops as soon as possible.
     /// - response `reference_time` the reference time at which packet
@@ -69,7 +69,7 @@ protocol ActiveProducer {
     /// is already pending (requested but not completed), the pending
     /// operation fails with a `CANCELLED` error.
     Stop(struct {
-        when RealOrStreamTime:optional;
+        when RealOrPresentationTime:optional;
     }) -> (struct {
         reference_time zx.time;
     }) error StopError;

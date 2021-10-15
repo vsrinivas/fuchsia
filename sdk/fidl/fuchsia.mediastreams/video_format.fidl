@@ -12,6 +12,9 @@ type VideoFormat = struct {
     /// Describes the manner in which pixels are encoded.
     pixel_format PixelFormat;
 
+    /// Vendor-specific pixel format modifier.
+    pixel_format_modifier uint64;
+
     /// Indicates the color space used to interpret pixel values.
     color_space ColorSpace;
 
@@ -34,7 +37,6 @@ type VideoFormat = struct {
 };
 
 /// Expresses the manner in which video pixels are encoded.
-// TODO: Do we need a pixel format modifier?
 type PixelFormat = strict enum {
     INVALID = 0;
     R8G8B8A8 = 1;

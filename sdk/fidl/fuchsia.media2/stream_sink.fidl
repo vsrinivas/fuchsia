@@ -69,8 +69,7 @@ type Packet = struct {
     payload vector<PayloadRange>:MAX_PAYLOAD_RANGES;
 
     /// Timestamp indicating when this packet should be presented as a
-    /// stream timeline value. Mapping this value to presentation time
-    /// requires knowledge of the stream timeline parameters.
+    /// presentation timeline value.
     timestamp Timestamp;
 
     /// Capture time for this packet as a system monotonic time value.
@@ -104,9 +103,9 @@ type PayloadRange = struct {
     size uint64;
 };
 
-/// Indicates the time of the packet in the stream timeline.
+/// Indicates the time of the packet in the presentation timeline.
 type Timestamp = flexible union {
-    /// Specific timestamp in the stream timeline.
+    /// Specific timestamp in the presentation timeline.
     1: specified int64;
 
     /// Indicates the packet should be presented immediately

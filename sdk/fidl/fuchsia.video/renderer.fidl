@@ -37,9 +37,6 @@ protocol Renderer {
     ///   `OnInputStreamDisconnected` event is signaled.
     /// + request `timestamp_units` the units used for timestamps on packets in this stream. If
     ///   this parameter is not supplied, packets may not have `specified` timestamps.
-    /// + request `stream_timeline` the relationship between the timeline represented by the
-    ///   timestamps on packets in this stream. If omitted, a timestamp of zero corresponds to
-    ///   a presentation time of zero.
     /// + request `stream_sink_server_end` the server end of the `StreamSink` channel for this
     ///   connection.
     /// * error reason for connection failiure.
@@ -54,7 +51,6 @@ protocol Renderer {
         format fuchsia.mediastreams.VideoFormat;
         compression fuchsia.mediastreams.Compression:optional;
         timestamp_units fuchsia.media2.PacketTimestampUnits:optional; // TODO: required?
-        stream_timeline fuchsia.media2.StreamTimeline:optional;
         stream_sink_server_end server_end:fuchsia.media2.StreamSink;
     }) -> (struct {}) error fuchsia.media2.ConnectionError;
 
