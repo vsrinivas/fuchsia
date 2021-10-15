@@ -774,17 +774,17 @@ static bool pq_move_queues() {
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&test_page));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 0, 0, 0}));
 
-  pq.MoveToPagerBackedInactive(&test_page);
+  pq.MoveToPagerBackedDontNeed(&test_page);
   EXPECT_FALSE(pq.DebugPageIsPagerBacked(&test_page));
-  EXPECT_TRUE(pq.DebugPageIsPagerBackedInactive(&test_page));
+  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&test_page));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 1, 0, 0, 0}));
 
-  // Verify that the inactive page is first in line for eviction.
+  // Verify that the DontNeed page is first in line for eviction.
   auto backlink = pq.PeekPagerBacked(PageQueues::kNumPagerBacked - 1);
   EXPECT_TRUE(backlink != ktl::nullopt && backlink->page == &test_page);
 
   pq.MoveToWired(&test_page);
-  EXPECT_FALSE(pq.DebugPageIsPagerBackedInactive(&test_page));
+  EXPECT_FALSE(pq.DebugPageIsPagerBackedDontNeed(&test_page));
   EXPECT_FALSE(pq.DebugPageIsPagerBacked(&test_page));
   EXPECT_TRUE(pq.DebugPageIsWired(&test_page));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 0, 0, 1, 0}));

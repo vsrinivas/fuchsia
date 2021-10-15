@@ -76,8 +76,8 @@ void scanner_print_stats() {
     printf("[SCAN]: Found %lu user-pager backed pages in queue %zu\n", queue_counts.pager_backed[i],
            i);
   }
-  printf("[SCAN]: Found %lu user-pager backed pages in inactive queue\n",
-         queue_counts.pager_backed_inactive);
+  printf("[SCAN]: Found %lu user-pager backed pages in DontNeed queue\n",
+         queue_counts.pager_backed_dont_need);
   printf("[SCAN]: Found %lu zero forked pages\n", queue_counts.unswappable_zero_fork);
 
   VmCowPages::DiscardablePageCounts counts = VmCowPages::DebugDiscardablePageCounts();

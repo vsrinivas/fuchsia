@@ -201,7 +201,7 @@ void PageQueues::Dump() {
     mru_gen = mru_gen_.load(ktl::memory_order_relaxed);
     lru_gen = lru_gen_.load(ktl::memory_order_relaxed);
     inactive_count =
-        page_queue_counts_[PageQueuePagerBackedInactive].load(ktl::memory_order_relaxed);
+        page_queue_counts_[PageQueuePagerBackedDontNeed].load(ktl::memory_order_relaxed);
     for (uint32_t i = 0; i < kNumPagerBacked; i++) {
       counts[i] = page_queue_counts_[PageQueuePagerBackedBase + i].load(ktl::memory_order_relaxed);
     }
@@ -528,14 +528,14 @@ void PageQueues::MarkAccessed(vm_page_t* page) {
   // this and updating the queue it could change, however it would only change as a result of
   // MarkAccessedDeferredCount, which would only move it to another pager backed queue. No other
   // change is possible as we are holding lock_.
-  if (queue_ref.load(ktl::memory_order_relaxed) < PageQueuePagerBackedInactive) {
+  if (queue_ref.load(ktl::memory_order_relaxed) < PageQueuePagerBackedDontNeed) {
     return;
   }
 
   PageQueue queue = mru_gen_to_queue();
   PageQueue old_queue = (PageQueue)queue_ref.exchange(queue, ktl::memory_order_relaxed);
   // Double check again that this was previously pager backed
-  DEBUG_ASSERT(old_queue != PageQueueNone && old_queue >= PageQueuePagerBackedInactive);
+  DEBUG_ASSERT(old_queue != PageQueueNone && old_queue >= PageQueuePagerBackedDontNeed);
   if (old_queue != queue) {
     page_queue_counts_[old_queue].fetch_sub(1, ktl::memory_order_relaxed);
     page_queue_counts_[queue].fetch_add(1, ktl::memory_order_relaxed);
@@ -615,10 +615,10 @@ void PageQueues::MoveToPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t
   MoveToQueueBacklinkLocked(page, object, page_offset, mru_gen_to_queue());
 }
 
-void PageQueues::MoveToPagerBackedInactive(vm_page_t* page) {
+void PageQueues::MoveToPagerBackedDontNeed(vm_page_t* page) {
   Guard<CriticalMutex> guard{&lock_};
   MoveToQueueBacklinkLocked(page, page->object.get_object(), page->object.get_page_offset(),
-                            PageQueuePagerBackedInactive);
+                            PageQueuePagerBackedDontNeed);
 }
 
 void PageQueues::SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
@@ -684,7 +684,7 @@ void PageQueues::RecalculateActiveInactiveLocked() {
       inactive += count;
     }
   }
-  inactive += page_queue_counts_[PageQueuePagerBackedInactive].load(ktl::memory_order_relaxed);
+  inactive += page_queue_counts_[PageQueuePagerBackedDontNeed].load(ktl::memory_order_relaxed);
 
   // Update the counts.
   active_queue_count_ = active;
@@ -732,10 +732,10 @@ PageQueues::PagerCounts PageQueues::GetPagerQueueCounts() const {
     }
     counts.total += count;
   }
-  // Account the inactive queue length under |oldest|, since (inactive + oldest LRU) pages are
+  // Account the DontNeed queue length under |oldest|, since (DontNeed + oldest LRU) pages are
   // eligible for reclamation first. |oldest| is meant to track pages eligible for eviction first.
   uint64_t inactive_count =
-      page_queue_counts_[PageQueuePagerBackedInactive].load(ktl::memory_order_relaxed);
+      page_queue_counts_[PageQueuePagerBackedDontNeed].load(ktl::memory_order_relaxed);
   counts.oldest += inactive_count;
   counts.total += inactive_count;
   return counts;
@@ -754,8 +754,8 @@ PageQueues::Counts PageQueues::QueueCounts() const {
     counts.pager_backed[mru - index] =
         page_queue_counts_[gen_to_queue(index)].load(ktl::memory_order_relaxed);
   }
-  counts.pager_backed_inactive =
-      page_queue_counts_[PageQueuePagerBackedInactive].load(ktl::memory_order_relaxed);
+  counts.pager_backed_dont_need =
+      page_queue_counts_[PageQueuePagerBackedDontNeed].load(ktl::memory_order_relaxed);
   counts.unswappable = page_queue_counts_[PageQueueUnswappable].load(ktl::memory_order_relaxed);
   counts.wired = page_queue_counts_[PageQueueWired].load(ktl::memory_order_relaxed);
   counts.unswappable_zero_fork =
@@ -774,9 +774,9 @@ bool PageQueues::DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue) co
   return false;
 }
 
-bool PageQueues::DebugPageIsPagerBackedInactive(const vm_page_t* page) const {
+bool PageQueues::DebugPageIsPagerBackedDontNeed(const vm_page_t* page) const {
   return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) ==
-         PageQueuePagerBackedInactive;
+         PageQueuePagerBackedDontNeed;
 }
 
 bool PageQueues::DebugPageIsUnswappable(const vm_page_t* page) const {
@@ -819,24 +819,24 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::PopUnswappableZeroFork() {
 }
 
 ktl::optional<PageQueues::VmoBacklink> PageQueues::PeekPagerBacked(size_t lowest_queue) {
-  // Peek the tail of the inactive queue first.
+  // Peek the tail of the DontNeed queue first.
   while (true) {
     // Process a single page each time to keep the critical section for the lock small.
     Guard<CriticalMutex> guard{&lock_};
-    if (list_is_empty(&page_queues_[PageQueuePagerBackedInactive])) {
+    if (list_is_empty(&page_queues_[PageQueuePagerBackedDontNeed])) {
       break;
     }
     vm_page_t* page =
-        list_peek_tail_type(&page_queues_[PageQueuePagerBackedInactive], vm_page_t, queue_node);
+        list_peek_tail_type(&page_queues_[PageQueuePagerBackedDontNeed], vm_page_t, queue_node);
 
     // Might need to fix up the queue for this page.
     PageQueue page_queue =
         (PageQueue)page->object.get_page_queue_ref().load(ktl::memory_order_relaxed);
 
-    // The page is no longer inactive, we need to move this page out of the inactive queue.
+    // The page is no longer inactive, we need to move this page out of the DontNeed queue.
     // It's possible for MarkAccessed to race and change the queue again from under us, but the
-    // queue can't become PageQueuePagerBackedInactive since we need the lock for that.
-    if (page_queue != PageQueuePagerBackedInactive) {
+    // queue can't become PageQueuePagerBackedDontNeed since we need the lock for that.
+    if (page_queue != PageQueuePagerBackedDontNeed) {
       // If page_queue is still valid, move it to that queue. Otherwise, this page is very old
       // and should be moved to the lru queue and page counts should be updated accordingly. It's
       // possible that the page is so old that the queues have wrapped again and its page_queue

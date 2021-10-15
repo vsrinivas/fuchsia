@@ -2356,11 +2356,11 @@ void VmCowPages::PromoteRangeForReclamationLocked(uint64_t offset, uint64_t len)
       DEBUG_ASSERT(lookup.num_pages == 1);
       vm_page_t* page = paddr_to_vm_page(lookup.paddrs[0]);
       // Check to see if the page is owned by the root VMO. Hints only apply to the root.
-      // Don't move a pinned page to the inactive queue.
+      // Don't move a pinned page to the DontNeed queue.
       // Note that this does not unset the always_need bit if it has been previously set. The
       // always_need hint is sticky.
       if (page->object.get_object() == root && page->object.pin_count == 0) {
-        pmm_page_queues()->MoveToPagerBackedInactive(page);
+        pmm_page_queues()->MoveToPagerBackedDontNeed(page);
       }
     }
     // Can't really do anything in case an error is encountered while looking up the page. Simply

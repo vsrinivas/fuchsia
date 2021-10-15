@@ -120,11 +120,11 @@ class PageQueues {
   // Moves page from whichever queue it is currently in, to the pager backed queue. Same rules on
   // keeping the back reference up to date as given in SetPagerBacked apply.
   void MoveToPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
-  // Moves page from whichever queue it is currently in, to the inactive pager backed queue. The
+  // Moves page from whichever queue it is currently in, to the DontNeed pager backed queue. The
   // object back reference information must have already been set by a previous call to
   // SetPagerBacked or MoveToPagerBacked. Same rules on keeping the back reference up to date as
   // given in SetPagerBacked apply.
-  void MoveToPagerBackedInactive(vm_page_t* page);
+  void MoveToPagerBackedDontNeed(vm_page_t* page);
   // Place page in the unswappable zero forked queue. Must not already be in a page queue. Same
   // rules for back pointers apply as for SetPagerBacked.
   void SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
@@ -214,14 +214,14 @@ class PageQueues {
   // Helper struct to group queue length counts returned by QueueCounts.
   struct Counts {
     ktl::array<size_t, kNumPagerBacked> pager_backed = {0};
-    size_t pager_backed_inactive = 0;
+    size_t pager_backed_dont_need = 0;
     size_t unswappable = 0;
     size_t wired = 0;
     size_t unswappable_zero_fork = 0;
 
     bool operator==(const Counts& other) const {
       return pager_backed == other.pager_backed &&
-             pager_backed_inactive == other.pager_backed_inactive &&
+             pager_backed_dont_need == other.pager_backed_dont_need &&
              unswappable == other.unswappable && wired == other.wired &&
              unswappable_zero_fork == other.unswappable_zero_fork;
     }
@@ -263,7 +263,7 @@ class PageQueues {
   // This takes an optional output parameter that, if the function returns true, will contain the
   // index of the queue that the page was in.
   bool DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue = nullptr) const;
-  bool DebugPageIsPagerBackedInactive(const vm_page_t* page) const;
+  bool DebugPageIsPagerBackedDontNeed(const vm_page_t* page) const;
   bool DebugPageIsUnswappable(const vm_page_t* page) const;
   bool DebugPageIsUnswappableZeroFork(const vm_page_t* page) const;
   bool DebugPageIsAnyUnswappable(const vm_page_t* page) const;
@@ -302,7 +302,7 @@ class PageQueues {
     PageQueueUnswappable,
     PageQueueWired,
     PageQueueUnswappableZeroFork,
-    PageQueuePagerBackedInactive,
+    PageQueuePagerBackedDontNeed,
     PageQueuePagerBackedBase,
     PageQueuePagerBackedLast = PageQueuePagerBackedBase + kNumPagerBacked - 1,
     PageQueueNumQueues,
@@ -335,11 +335,11 @@ class PageQueues {
   // returns false then it is guaranteed that both |queue_is_active| and |queue_is_inactive| would
   // return false.
   static constexpr bool queue_is_pager_backed(PageQueue page_queue) {
-    // We check against the the Inactive queue and not the base queue so that accessing a page can
-    // move it from the inactive list into the LRU queues. To keep this case efficient we require
-    // that the inactive queue be directly before the LRU queues.
-    static_assert(PageQueuePagerBackedInactive + 1 == PageQueuePagerBackedBase);
-    return page_queue >= PageQueuePagerBackedInactive;
+    // We check against the the DontNeed queue and not the base queue so that accessing a page can
+    // move it from the DontNeed list into the LRU queues. To keep this case efficient we require
+    // that the DontNeed queue be directly before the LRU queues.
+    static_assert(PageQueuePagerBackedDontNeed + 1 == PageQueuePagerBackedBase);
+    return page_queue >= PageQueuePagerBackedDontNeed;
   }
 
   // Calculates the age of a queue against a given mru, with 0 meaning page_queue==mru
@@ -367,9 +367,9 @@ class PageQueues {
   // This is valid to call on any page queue, not just pager backed ones, and as such this returning
   // false does not imply the queue is active.
   static constexpr bool queue_is_inactive(PageQueue page_queue, PageQueue mru) {
-    // The inactive queue does not have an age, and so we cannot call queue_age on it, but it should
+    // The DontNeed queue does not have an age, and so we cannot call queue_age on it, but it should
     // definitely be considered part of the inactive set.
-    if (page_queue == PageQueuePagerBackedInactive) {
+    if (page_queue == PageQueuePagerBackedDontNeed) {
       return true;
     }
     if (page_queue < PageQueuePagerBackedBase) {
