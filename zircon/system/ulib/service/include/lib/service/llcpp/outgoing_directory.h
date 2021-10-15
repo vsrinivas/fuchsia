@@ -175,6 +175,9 @@ class OutgoingDirectory final {
   // Gets the root directory.
   fbl::RefPtr<fs::PseudoDir> root_dir() const { return root_; }
 
+  // Gets the svc directory.
+  fbl::RefPtr<fs::PseudoDir> svc_dir() const { return svc_; }
+
   // Gets the directory to publish debug data.
   fbl::RefPtr<fs::PseudoDir> debug_dir() const { return debug_; }
 
