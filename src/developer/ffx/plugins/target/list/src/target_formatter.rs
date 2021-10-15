@@ -83,7 +83,7 @@ impl TryFrom<bridge::Target> for AddressesTarget {
 
     fn try_from(t: bridge::Target) -> Result<Self> {
         let addrs = t.addresses.ok_or(anyhow!("must contain an address"))?;
-        let addrs = addrs.iter().map(|a| TargetAddr::from(a)).collect::<Vec<_>>();
+        let addrs = addrs.iter().map(TargetAddr::from).collect::<Vec<_>>();
 
         Ok(Self((&addrs).to_ssh_addr().ok_or(anyhow!("could not convert to ssh addr"))?))
     }
@@ -96,20 +96,15 @@ pub struct AddressesTargetFormatter {
 impl TryFrom<Vec<bridge::Target>> for AddressesTargetFormatter {
     type Error = Error;
 
-    fn try_from(mut targets: Vec<bridge::Target>) -> Result<Self> {
-        let mut t = Vec::with_capacity(targets.len());
-        for target in targets.drain(..) {
-            if let Ok(addr_target) = AddressesTarget::try_from(target) {
-                t.push(addr_target)
-            }
-        }
-        Ok(Self { targets: t })
+    fn try_from(targets: Vec<bridge::Target>) -> Result<Self> {
+        let targets = targets.into_iter().flat_map(AddressesTarget::try_from).collect::<Vec<_>>();
+        Ok(Self { targets })
     }
 }
 
 impl TargetFormatter for AddressesTargetFormatter {
     fn lines(&self, _default_nodename: Option<&str>) -> Vec<String> {
-        self.targets.iter().map(|t| format!("{}", t.0)).collect()
+        self.targets.iter().map(|t| t.0.to_string()).collect()
     }
 }
 
@@ -119,8 +114,8 @@ impl TryFrom<bridge::Target> for NameOnlyTarget {
     type Error = Error;
 
     fn try_from(t: bridge::Target) -> Result<Self> {
-        let names = t.nodename.unwrap_or("<unknown>".to_string());
-        Ok(Self(names))
+        let name = t.nodename.unwrap_or("<unknown>".to_string());
+        Ok(Self(name))
     }
 }
 
@@ -131,20 +126,15 @@ pub struct NameOnlyTargetFormatter {
 impl TryFrom<Vec<bridge::Target>> for NameOnlyTargetFormatter {
     type Error = Error;
 
-    fn try_from(mut targets: Vec<bridge::Target>) -> Result<Self> {
-        let mut t = Vec::with_capacity(targets.len());
-        for target in targets.drain(..) {
-            if let Ok(name_target) = NameOnlyTarget::try_from(target) {
-                t.push(name_target)
-            }
-        }
-        Ok(Self { targets: t })
+    fn try_from(targets: Vec<bridge::Target>) -> Result<Self> {
+        let targets = targets.into_iter().flat_map(NameOnlyTarget::try_from).collect::<Vec<_>>();
+        Ok(Self { targets })
     }
 }
 
 impl TargetFormatter for NameOnlyTargetFormatter {
     fn lines(&self, _default_nodename: Option<&str>) -> Vec<String> {
-        self.targets.iter().map(|t| format!("{}", t.0)).collect()
+        self.targets.iter().map(|t| t.0.clone()).collect()
     }
 }
 
@@ -157,14 +147,9 @@ pub struct SimpleTargetFormatter {
 impl TryFrom<Vec<bridge::Target>> for SimpleTargetFormatter {
     type Error = Error;
 
-    fn try_from(mut targets: Vec<bridge::Target>) -> Result<Self> {
-        let mut t = Vec::with_capacity(targets.len());
-        for target in targets.drain(..) {
-            if let Ok(simple_target) = SimpleTarget::try_from(target) {
-                t.push(simple_target)
-            }
-        }
-        Ok(Self { targets: t })
+    fn try_from(targets: Vec<bridge::Target>) -> Result<Self> {
+        let targets = targets.into_iter().flat_map(SimpleTarget::try_from).collect::<Vec<_>>();
+        Ok(Self { targets })
     }
 }
 
@@ -180,7 +165,7 @@ impl TryFrom<bridge::Target> for SimpleTarget {
     fn try_from(t: bridge::Target) -> Result<Self> {
         let nodename = t.nodename.unwrap_or("".to_string());
         let addrs = t.addresses.ok_or(anyhow!("must contain an address"))?;
-        let addrs = addrs.iter().map(|a| TargetAddr::from(a)).collect::<Vec<_>>();
+        let addrs = addrs.iter().map(TargetAddr::from).collect::<Vec<_>>();
 
         Ok(Self(nodename, (&addrs).to_ssh_addr().ok_or(anyhow!("could not convert to ssh addr"))?))
     }
@@ -193,14 +178,9 @@ pub struct JsonTargetFormatter {
 impl TryFrom<Vec<bridge::Target>> for JsonTargetFormatter {
     type Error = Error;
 
-    fn try_from(mut targets: Vec<bridge::Target>) -> Result<Self> {
-        let mut t = Vec::with_capacity(targets.len());
-        for target in targets.drain(..) {
-            if let Ok(string_target) = JsonTarget::try_from(target) {
-                t.push(string_target)
-            }
-        }
-        Ok(Self { targets: t })
+    fn try_from(targets: Vec<bridge::Target>) -> Result<Self> {
+        let targets = targets.into_iter().flat_map(JsonTarget::try_from).collect::<Vec<_>>();
+        Ok(Self { targets })
     }
 }
 
@@ -361,7 +341,7 @@ impl std::error::Error for StringifyError {}
 
 impl StringifiedTarget {
     fn from_target_addr_info(a: bridge::TargetAddrInfo) -> String {
-        format!("{}", TargetAddr::from(a))
+        TargetAddr::from(a).to_string()
     }
 
     fn from_addresses(mut v: Vec<bridge::TargetAddrInfo>) -> String {
@@ -448,7 +428,7 @@ impl TryFrom<bridge::Target> for JsonTarget {
                 .addresses
                 .unwrap_or(vec![])
                 .drain(..)
-                .map(|a| StringifiedTarget::from_target_addr_info(a))
+                .map(StringifiedTarget::from_target_addr_info)
                 .collect::<Vec<_>>()),
             rcs_state: json!(StringifiedTarget::from_rcs_state(
                 target.rcs_state.ok_or(StringifyError::MissingRcsState)?,
@@ -656,6 +636,27 @@ mod test {
         assert_eq!(lines.join("\n"), SIMPLE_FORMATTER_WITH_DEFAULT_GOLDEN.to_string());
     }
 
+    #[test]
+    fn test_simple_formatter_with_invalid() {
+        let names =
+            vec!["nodename0", "nodename1", "nodename2", "nodename3", "nodename4", "nodename5"];
+        let mut targets = names
+            .into_iter()
+            .map(|name| {
+                let mut t = make_valid_target();
+                t.nodename = Some(name.to_string());
+                t
+            })
+            .collect::<Vec<_>>();
+
+        targets[1].addresses = None;
+        targets[3].rcs_state = None;
+        targets[4].target_type = None;
+
+        let formatter = SimpleTargetFormatter::try_from(targets).unwrap();
+        assert_eq!(formatter.targets.len(), 5);
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_name_only_formatter() {
         let formatter = NameOnlyTargetFormatter::try_from(vec![
@@ -682,6 +683,28 @@ mod test {
         let lines = formatter.lines(None);
         assert_eq!(lines.len(), 2);
         assert_eq!(lines.join("\n"), NAME_ONLY_FORMATTER_WITH_DEFAULT_GOLDEN.to_string());
+    }
+
+    #[test]
+    fn test_name_only_formatter_with_invalid() {
+        let names =
+            vec!["nodename0", "nodename1", "nodename2", "nodename3", "nodename4", "nodename5"];
+        let mut targets = names
+            .into_iter()
+            .map(|name| {
+                let mut t = make_valid_target();
+                t.nodename = Some(name.to_string());
+                t
+            })
+            .collect::<Vec<_>>();
+
+        targets[1].addresses = None;
+        targets[3].rcs_state = None;
+        targets[4].target_type = None;
+
+        let formatter = NameOnlyTargetFormatter::try_from(targets).unwrap();
+        // NameOnlyTargetFormatter is infalliable
+        assert_eq!(formatter.targets.len(), 6);
     }
 
     #[test]
@@ -824,5 +847,63 @@ mod test {
         let mut t = make_valid_target();
         t.target_state = Some(bridge::TargetState::Disconnected);
         assert!(StringifiedTarget::try_from(t).is_ok());
+    }
+
+    #[test]
+    fn test_addresses_target_formatter_some_invalid() {
+        let names =
+            vec!["nodename0", "nodename1", "nodename2", "nodename3", "nodename4", "nodename5"];
+        let mut targets = names
+            .into_iter()
+            .map(|name| {
+                let mut t = make_valid_target();
+                t.nodename = Some(name.to_string());
+                t
+            })
+            .collect::<Vec<_>>();
+
+        targets[1].addresses = None;
+        targets[3].rcs_state = None;
+        targets[4].addresses = None;
+
+        let formatter = AddressesTargetFormatter::try_from(targets).unwrap();
+        assert_eq!(formatter.targets.len(), 4);
+    }
+    #[test]
+    fn test_json_target_formatter_valid() {
+        let names =
+            vec!["nodename0", "nodename1", "nodename2", "nodename3", "nodename4", "nodename5"];
+        let targets = names
+            .into_iter()
+            .map(|name| {
+                let mut t = make_valid_target();
+                t.nodename = Some(name.to_string());
+                t
+            })
+            .collect::<Vec<_>>();
+
+        let formatter = JsonTargetFormatter::try_from(targets).unwrap();
+        assert_eq!(formatter.targets.len(), 6);
+    }
+
+    #[test]
+    fn test_json_target_formatter_some_invalid() {
+        let names =
+            vec!["nodename0", "nodename1", "nodename2", "nodename3", "nodename4", "nodename5"];
+        let mut targets = names
+            .into_iter()
+            .map(|name| {
+                let mut t = make_valid_target();
+                t.nodename = Some(name.to_string());
+                t
+            })
+            .collect::<Vec<_>>();
+
+        targets[1].target_state = None;
+        targets[3].rcs_state = None;
+        targets[4].target_type = None;
+
+        let formatter = JsonTargetFormatter::try_from(targets).unwrap();
+        assert_eq!(formatter.targets.len(), 3);
     }
 }
