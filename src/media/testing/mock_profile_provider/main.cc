@@ -25,6 +25,11 @@ class ProfileProvider : public fuchsia::media::ProfileProvider {
     // Does not actually set a thread profile, but provides a successful response to the request.
     callback(period, static_cast<int64_t>(static_cast<float>(period) * capacity));
   }
+  void UnregisterHandler(zx::thread thread_handle, std::string name,
+                         UnregisterHandlerCallback callback) override {
+    // Does not actually set a thread profile, but provides a successful response to the request.
+    callback();
+  }
 
  private:
   fidl::BindingSet<fuchsia::media::ProfileProvider> bindings_;

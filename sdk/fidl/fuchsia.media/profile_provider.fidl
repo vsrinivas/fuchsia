@@ -29,4 +29,10 @@ protocol ProfileProvider {
         period zx.duration;
         capacity zx.duration;
     });
+
+    /// Reset a thread's scheduling profile to the default.
+    UnregisterHandler(resource struct {
+        thread_handle zx.handle:THREAD;
+        name string:64;
+    }) -> ();
 };

@@ -11,6 +11,8 @@
 
 namespace media::audio {
 
+constexpr int kPriorityDefault = 16;
+
 fidl::InterfaceRequestHandler<fuchsia::media::ProfileProvider>
 ProfileProvider::GetFidlRequestHandler() {
   return bindings_.GetHandler(this);
@@ -38,6 +40,29 @@ void ProfileProvider::RegisterHandlerWithCapacity(zx::thread thread_handle, std:
           FX_PLOGS(WARNING, status) << "Failed to set thread profile";
         }
         callback(interval.get(), capacity.get());
+      });
+}
+
+void ProfileProvider::UnregisterHandler(zx::thread thread_handle, std::string name,
+                                        UnregisterHandlerCallback callback) {
+  if (!profile_provider_) {
+    profile_provider_ = context_.svc()->Connect<fuchsia::scheduler::ProfileProvider>();
+  }
+
+  profile_provider_->GetProfile(
+      kPriorityDefault, name,
+      [thread_handle = std::move(thread_handle), callback = std::move(callback)](
+          zx_status_t status, zx::profile profile) {
+        if (status != ZX_OK) {
+          FX_PLOGS(WARNING, status) << "Failed to acquire default profile";
+          callback();
+          return;
+        }
+        status = thread_handle.set_profile(profile, 0);
+        if (status != ZX_OK) {
+          FX_PLOGS(WARNING, status) << "Failed to set thread profile";
+        }
+        callback();
       });
 }
 

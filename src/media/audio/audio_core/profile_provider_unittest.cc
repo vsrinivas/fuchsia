@@ -61,4 +61,13 @@ TEST_F(ProfileProviderTest, CallRegisterHandlerWithCapacityDefaultPeriod) {
   ASSERT_TRUE(called);
 }
 
+TEST_F(ProfileProviderTest, CallUnregisterHandler) {
+  bool called = false;
+  zx::thread self;
+  ASSERT_EQ(zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &self), ZX_OK);
+  profile_provider_->UnregisterHandler(std::move(self), "test", [&called]() { called = true; });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+}
+
 }  // namespace media::audio
