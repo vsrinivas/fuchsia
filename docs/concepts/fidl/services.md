@@ -1,5 +1,9 @@
 # Services
 
+Caution: This feature is incomplete, and remains unimplemented in most bindings.
+It was introduced in [RFC-0041: Support for unifying services and devices][rfc-0041].
+See <https://fxrev.dev/544164> for the latest iteration on its design.
+
 A service provides a set of [FIDL protocols][glossary.protocol] over a
 [channel][glossary.channel].
 Logically-related protocols can be aggregated into a service and routed as a
@@ -80,4 +84,5 @@ Services are routed to components through
 [glossary.channel]: /docs/glossary/README.md#channel
 [glossary.namespace]: /docs/glossary/README.md#namespace
 [glossary.protocol]: /docs/glossary/README.md#protocol
+[rfc-0041]: /docs/contribute/governance/rfcs/0041_unifying_services_devices.md
 [service-capability]: /docs/concepts/components/v2/capabilities/service.md
