@@ -60,6 +60,9 @@ rustc_library("bt-a2dp") {
 
 fuchsia_unittest_package("bt-a2dp-lib-tests") {
   deps = [ ":bt-a2dp_test" ]
+
+  # TODO(86726): Temporarily disable lsan for this target. Reenable once all leaks are fixed.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 group("tests") {

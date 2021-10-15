@@ -89,6 +89,7 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//sdk/lib/fit-promise/*",
     "//sdk/lib/fit/test/*",
     "//src/cobalt/bin/system-metrics/*",
+    "//src/connectivity/bluetooth/lib/bt-a2dp/*",
     "//src/connectivity/bluetooth/profiles/bt-a2dp-sink/*",
     "//src/connectivity/bluetooth/profiles/bt-a2dp/*",
     "//src/connectivity/weave/*",
