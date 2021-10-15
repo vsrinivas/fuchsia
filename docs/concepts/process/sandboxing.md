@@ -34,15 +34,12 @@ access these resources at runtime, a process can use the `/pkg` namespace. For
 example, the `root_presenter` can access `cursor32.png` using the absolute path
 `/pkg/data/cursor32.png`.
 
-## Services
-
+## Component capabilities
 
 Processes that are [components][glossary.component] receive an `/svc`
-directory in their namespace. The services available through `/svc` are a
-subset of the services provided by the component's
-[environment][glossary.environment]. This subset is determined by the
-[`sandbox.services`](/docs/concepts/components/v1/component_manifests.md#sandbox) allowlist in the
-component's [manifest file](/docs/concepts/components/v1/component_manifests.md).
+directory in their [namespace][glossary.namespace] containing
+[protocols](/docs/concepts/components/v2/capabilities/protocol.md) and
+[services](/docs/concepts/components/v2/capabilities/service.md).
 
 A typical component will interact with a number of services from `/svc` in order
 to play some useful role in the system. For example, the service
@@ -51,31 +48,19 @@ to play some useful role in the system. For example, the service
 Processes that are not components may or may not have `/svc`. These processes
 receive whatever `/svc` their creator provided to them.
 
-### Components v1 {#services-components-v1}
+### Legacy components {#services-components-v1}
 
-In Components v1, the services available through `/svc` are a subset of the
-services provided by the component's
-[environment](/docs/glossary/README.md#environment). This subset is determined by the
+Services available through `/svc` are a subset of the services provided by the
+component's [environment](/docs/glossary/README.md#environment).
+This subset is determined by the
 [`sandbox.services`](/docs/concepts/components/v1/component_manifests.md#sandbox)
 allowlist in the component's
 [manifest file](/docs/concepts/components/v1/component_manifests.md).
 
-### Components v2 {#services-components-v2}
-
-In Components v2, the services available through `/svc` are determined by a
-component manifest's
-[`use`](/docs/concepts/components/v2/component_manifests.md#use) declarations,
-typically [`protocol`](/docs/concepts/components/v2/capabilities/protocol.md)
-declarations.
-
-## Configuring additional namespaces
-
 If a component requires access to additional resources (for example, device
 drivers), the package can request access to additional names by including the
-`sandbox` property in its
-[Component Manifest](/docs/concepts/components/v1/component_manifests.md) for
-the package. For example, to request direct access to the input drive, include
-the following `dev` array in your `sandbox`:
+`sandbox` property in its component manifest. For example, to request direct
+access to the input drive, include the following `dev` array in your `sandbox`:
 
 ```
 {
@@ -85,3 +70,4 @@ the following `dev` array in your `sandbox`:
 
 [glossary.component]: /docs/glossary/README.md#component
 [glossary.environment]: /docs/glossary/README.md#environment
+[glossary.namespace]: /docs/glossary/README.md#namespace

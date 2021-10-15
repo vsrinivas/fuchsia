@@ -8,89 +8,113 @@ image. The correct driver will be built and loaded based on the
 [board](/docs/concepts/build_system/boards_and_products.md) that is selected
 when building.
 
-### Components V2
+### Add Vulkan driver support
 
-For applications that are using [Components v2][cfv2], include the following in
-your [.cml][cml] file:
+Include the following to enable access to the Vulkan driver:
 
-```json
-{
-  include: [
-    "vulkan/client.shard.cml"
-  ],
-  ...
-}
-```
+- {CML}
 
+  For components declared using a [.cml][cml] manifest:
 
-### Components V1
+  ```json5
+  {
+    include: [
+      "vulkan/client.shard.cml"
+    ],
+    ...
+  }
+  ```
 
-For applications that are using [Components v1][cfv1], include the following in
-your [.cmx][cmx] file to enable access to the Vulkan driver:
+- {CMX}
 
-```json
-{
-   "include": [
-      "//src/lib/vulkan/application.shard.cmx"
-   ],
-   ...
-}
-```
+  For components declared using a [.cmx][cmx] manifest:
 
-A [test component](/docs/concepts/testing/v1_test_component.md) should instead have
-these lines in its .cmx:
+  ```json
+  {
+    "include": [
+        "//src/lib/vulkan/application.shard.cmx"
+    ],
+    ...
+  }
+  ```
 
-```json
-{
-   "include": [
-      "//src/lib/vulkan/test-application.shard.cmx"
-   ],
-   ...
-}
-```
+  A [test component](/docs/concepts/testing/v1_test_component.md) should instead
+  have these lines in its `.cmx` file:
 
-#### Out of tree runtime dependencies
-A [Components V1][cfv1] application that is not in the Fuchsia tree or which otherwise can't
-include the file above must include these features and services in its [.cmx][cmx]
-file:
+  ```json
+  {
+    "include": [
+        "//src/lib/vulkan/test-application.shard.cmx"
+    ],
+    ...
+  }
+  ```
 
-```json
-{
-   "sandbox": {
-      "features": [
-         "vulkan"
-      ],
-      "services": [
-         "fuchsia.sysmem.Allocator",
-         "fuchsia.vulkan.loader.Loader"
-      ]
-   },
-   ...
-}
-```
+### Out of tree runtime dependencies
 
-The `fuchsia.tracing.provider.Registry` service may optionally be included to
-allow the client driver to report [trace events](/docs/concepts/kernel/tracing-system.md).
-`fuchsia.logger.LogSink` is also
-recommended to allow logs from the client driver to appear in the [system
-log](/docs/development/diagnostics/logs/viewing.md).
+For components built outside the Fuchsia tree or otherwise can't include the
+above shards, include the following:
 
-A [test component](/docs/concepts/testing/v1_test_component.md) must also have
-these lines in its .cmx:
+- {CML}
 
-```json
-{
-   "facets": {
-      "fuchsia.test": {
-         "system-services": [
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.vulkan.loader.Loader"
-         ]
-      }
+  For components declared using a [.cml][cml] manifest:
+
+  ```json5
+  {
+    ...
+    use: [
+        {
+            protocol: [
+              "fuchsia.tracing.provider.Registry",
+              "fuchsia.sysmem.Allocator",
+              "fuchsia.vulkan.loader.Loader",
+            ],
+        },
+    ],
+  }
+  ```
+
+- {CMX}
+
+  For components declared using a [.cmx][cmx] manifest:
+
+  ```json
+  {
+    "sandbox": {
+        "features": [
+          "vulkan"
+        ],
+        "services": [
+          "fuchsia.sysmem.Allocator",
+          "fuchsia.vulkan.loader.Loader"
+        ]
     },
     ...
-}
-```
+  }
+  ```
+
+  The `fuchsia.tracing.provider.Registry` service may optionally be included to
+  allow the client driver to report [trace events](/docs/concepts/kernel/tracing-system.md).
+  `fuchsia.logger.LogSink` is also
+  recommended to allow logs from the client driver to appear in the [system
+  log](/docs/development/diagnostics/logs/viewing.md).
+
+  A [test component](/docs/concepts/testing/v1_test_component.md) must also have
+  these lines in its `.cmx` file:
+
+  ```json
+  {
+    "facets": {
+        "fuchsia.test": {
+          "system-services": [
+              "fuchsia.sysmem.Allocator",
+              "fuchsia.vulkan.loader.Loader"
+          ]
+        }
+      },
+      ...
+  }
+  ```
 
 ## Buildtime dependencies
 
@@ -179,5 +203,3 @@ The magma build includes a spinning cube demo 'vkcube', which you can copy over 
 
 [cml]: /docs/concepts/components/v2/component_manifests.md
 [cmx]: /docs/concepts/components/v1/component_manifests.md
-[cfv2]: /docs/concepts/components/v2/README.md
-[cfv1]: /docs/concepts/components/v1/README.md

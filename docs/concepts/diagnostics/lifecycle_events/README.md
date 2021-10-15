@@ -4,20 +4,17 @@ The [Archivist][archivist] consumes lifecycle events to ingest diagnostics data.
 interface to read those lifecycle events for diagnostics purposes. This document explains what
 these events are and through which interface they can be accessed for diagnostics.
 
-{#archivist-consumption}
-## Archivist consumption of lifecycle events
+## Archivist consumption of lifecycle events {#archivist-consumption}
 
-The archivist ingests events from both the v1 and v2 component framework. The
-main difference between them is the protocol it uses to consume the events.
+The archivist ingests events from the component framework.
+The following diagram shows a very high level overview of the three lifecycle events
+(started, directory_ready and stopped) the archivist is interested in:
 
-The following diagram shows a very high level overview of the three lifecycle events (started,
-directory_ready and stopped) the archivist is interested on:
-
-- {Components v1}
+- {appmgr}
 
   ![Figure: Flow of lifecycle events under appmgr](appmgr_lifecycle_flow.png)
 
-  The archivist consumes the following lifecycle events in components v1 through
+  The archivist consumes the following lifecycle events under appmgr through
   [`fuchsia.sys.internal.ComponentEventProvider`][component_event_provider]:
 
   - **Started**: Sent by appmgr when a component starts, the [runner][runner] might still need to
@@ -29,11 +26,11 @@ directory_ready and stopped) the archivist is interested on:
     served by the component.
 
 
-- {Components v2}
+- {component manager}
 
   ![Figure: Flow of lifecycle events under component manager](component_manager_lifecycle_flow.png)
 
-  The archivist consumes the following lifecycle events in components v2 through
+  The archivist consumes the following lifecycle events under component manager through
   [`fuchsia.sys2.EventSource`][event_source]:
 
   - **Started**: Sent by component manager when a component starts, the [runner][runner] might still
@@ -85,9 +82,10 @@ from other sources. The following is an example of a JSON object entry:
 Monikers identify the component related to the triggered event.
 
 As explained in [Archivist consumption of lifecycle events](#archivist-consumption), there are two
-systems that provide the archivist with events, appmgr and component manager. The monikers reflect
-this. One simple way to distinguish between them is if the moniker has a `.cmx` extension then it's
-a v1 component, otherwise it's a v2 component.
+systems that provide the archivist with events, appmgr and component manager:
+
+-   Components running under appmgr have a `.cmx` extension
+-   Components running under component manager have a `.cm` extension
 
 #### Timestamp
 

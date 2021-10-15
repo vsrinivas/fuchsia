@@ -309,7 +309,7 @@ You may add one of ianloic@, yifeit@ if need specific review from the FIDL team.
   `fidl::ClientEnd<::my_thing::Protocol>` and
   `fidl::InterfaceHandle<my::thing::Protocol>` to easily convert into one
   another, and same for servers.
-* HLCPP and V1 component framework APIs (`sys::ServiceDirectory`,
+* HLCPP and legacy component framework APIs (`sys::ServiceDirectory`,
   `sys::OutgoingDirectory`) use HLCPP `InterfaceHandle` and `InterfaceRequest`
   types, hence need additional conversion into LLCPP typed channels.
 

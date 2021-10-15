@@ -170,11 +170,11 @@ in [component selector documentation](/docs/development/tools/ffx/commands/compo
 
 You can use the `component select` command to
 * inspect services in the
-[component topology](/docs/concepts/components/v2/topology.md)
+  [component topology](/docs/concepts/components/v2/topology.md)
 * search for components that expose a service.
 
 For example, the following command will display all services offered by
-[components v1](/docs/glossary/README.md#components-v1):
+[legacy components](/docs/glossary/README.md#components-v1):
 
 ```sh
 $ fx ffx component select moniker 'core/appmgr:out:*'`

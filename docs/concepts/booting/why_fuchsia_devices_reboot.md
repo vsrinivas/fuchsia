@@ -99,7 +99,7 @@ determines it has failed in an unrecoverable manner, the device reboots.
 
 ### Sysmgr failure
 
-If the system manager for v1 components (sysmgr) crashes, the device reboots.
+If the system manager for legacy components (sysmgr) crashes, the device reboots.
 
 ### Critical component failure
 

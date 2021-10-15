@@ -35,25 +35,40 @@ system][build].
 ### Permissions
 
 Any application that accesses Settings must declare usage through its component
-[manifest][manifestv1]. The application is granted access to the protocols
-listed under `services` in the `sandbox` section. For example, the following
-manifest declares access to the [fuchsia.settings.accessibility][accessibility]:
+manifest. For example, the following manifest declares access to the
+[fuchsia.settings.accessibility][accessibility] protocol:
 
-```cml
-{
-    "program": {
-        "binary": "bin/example"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.settings.Accessibility",
-        ]
-    }
-}
-```
+- {cml}
 
-For more information about Fuchsia components, see [Component manifests
-(Components v1)][manifestv1].
+  ```json5
+  {
+      program: {
+          runner: "elf",
+          binary: "bin/example",
+      },
+      use: [
+          { protocol: "fuchsia.settings.Accessibility" },
+      ],
+  }
+  ```
+
+- {cmx}
+
+  ```json
+  {
+      "program": {
+          "binary": "bin/example"
+      },
+      "sandbox": {
+          "services": [
+              "fuchsia.settings.Accessibility",
+          ]
+      }
+  }
+  ```
+
+For more information about Fuchsia components, see
+[Component manifests][manifest].
 
 ## Connecting
 
@@ -201,7 +216,7 @@ fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx access
 [build]: /docs/concepts/build_system/fuchsia_build_system_overview.md
 [sysmgr]: /src/sys/sysmgr/README.md
 [accessibility]: /sdk/fidl/fuchsia.settings/accessibility.fidl
-[manifestv1]: /docs/concepts/components/v1/component_manifests.md
+[manifest]: /docs/concepts/components/v2/component_manifests.md
 [hanging-get]: /docs/concepts/api/fidl.md#hanging-get
 [fidl_table]: /docs/reference/fidl/language/language.md#tables
 [epitaph]: /docs/contribute/governance/rfcs/0053_epitaphs.md

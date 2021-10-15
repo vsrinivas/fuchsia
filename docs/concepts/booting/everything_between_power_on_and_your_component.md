@@ -1,15 +1,15 @@
 # Everything between power on and your component
 
 This document aims to detail, at a high-level, everything that happens between
-machine power on and a component (v1 or v2) running on the system.
+machine power on and software components running on the system.
 
 Outline:
 
 - [Kernel](#kernel)
 - [Initial processes](#initial-processes)
 - [Component manager](#component-manager)
-- [Initial v2 components](#v2-components)
-- [Initial v1 components](#v1-components)
+- [Initial system components](#v2-components)
+- [Legacy component framework](#v1-components)
 
 ## Kernel {#kernel}
 
@@ -71,7 +71,7 @@ manager](images/userboot-bootsvc-cm.png)
 
 ## Component manager {#component-manager}
 
-[Component manager][component-manager] is the program that drives the v2
+[Component manager][component-manager] is the program that drives the
 component framework. This framework controls how and when programs are run and
 which capabilities these programs can access from other programs. A program run
 by this framework is referred to as a [component][glossary.component].
@@ -89,7 +89,7 @@ They exists solely for organizational purposes.
 bootstrap component, appmgr is a child of the core component, and core and
 bootstrap are children of the root component](images/v2-topology.png)
 
-## Initial v2 components {#v2-components}
+## Initial system components {#v2-components}
 
 ### Background
 
@@ -116,7 +116,7 @@ and once this open call succeeds it loads the drivers in the system package.
 
 #### fshost
 
-Fshost is a v2 component responsible for finding block devices, starting
+Fshost is a component responsible for finding block devices, starting
 filesystem processes to service these block devices, and
 [providing handles][fshost-exposes] for these filesystems to the rest of
 Fuchsia. To accomplish this, fshost attempts to access the /dev handle in its
@@ -149,18 +149,17 @@ load components that are stored in packages.
 
 #### appmgr
 
-[Appmgr][glossary.appmgr] runs the v1 component framework, which coexists with the v2
-component framework. Appmgr is [stored in a package][appmgr-pkg], unlike fshost
-and driver manager, which are stored in bootfs, so component manager uses the
-/pkgfs-delayed handle from fshost to load appmgr.
+[Appmgr][glossary.appmgr] runs the legacy component framework.
+Appmgr is [stored in a package][appmgr-pkg], unlike fshost and driver manager,
+which are stored in bootfs, so component manager uses the `/pkgfs-delayed`
+handle from fshost to load appmgr.
 
-Capabilities from the v2 framework can be
-[forwarded to the `sys` realm][appmgr-uses] in appmgr, and services managed by
-[sysmgr][sysmgr] can be [exposed to the v2 framework][appmgr-exposes]. By this
-mechanism, the two frameworks can access capabilities from each other and
-cooperate to run the system.
+Appmgr coordinates with component manager to share capabilities between legacy
+components and the rest of the system. Component manager forwards external
+capabilities [to the `sys` realm][appmgr-uses] in appmgr, and services managed by
+[sysmgr][sysmgr] can be [exposed outside the `sys` realm][appmgr-exposes].
 
-### Drivers, filesystems, and v1 components come online
+### Startup sequence
 
 Component manager generally starts components lazily on-demand in response to
 something accessing a capability provided by the component. Components may also
@@ -172,10 +171,10 @@ component][appmgr-is-eager]. Since appmgr is stored in a package this causes
 component manager to attempt to load appmgr, and thus access the /pkgfs-delayed
 handle from fshost, causing fshost to be started.
 
-Once running, fshost attempts to access the /dev handle from driver manager,
+Once running, fshost attempts to access the `/dev` handle from driver manager,
 which causes driver manager to start. Together they bring up drivers and
 filesystems, eventually culminating in pkgfs running. At this point fshost
-starts responding to requests on the /pkgfs-delayed handle, and component
+starts responding to requests on the `/pkgfs-delayed` handle, and component
 manager finishes loading appmgr and starts it.
 
 ![A sequence diagram showing that appmgr loading begins due to it being an eager
@@ -183,13 +182,12 @@ component, fshost starting due to the /pkgfs-delayed handle, driver manager
 starting due to the /dev handle, block devices appearing, filesystems appearing,
 and then appmgr successfully starting.](images/boot-sequence-diagram.png)
 
-## Initial v1 components {#v1-components}
+## Legacy component framework {#v1-components}
 
-When appmgr is started it creates a top-level realm called the "app"
-[realm][glossary.realm]. Into this realm
-it launches the first v1 component,
-[sysmgr][sysmgr]. Sysmgr’s job is to manage the "sys" realm, which is created
-under the "app" realm.
+When appmgr starts it creates a top-level realm called the "app"
+[realm][glossary.realm], where it launches [sysmgr][sysmgr].
+Sysmgr’s job is to manage the "sys" realm, which is created under the "app"
+realm.
 
 The sys realm holds a large number of FIDL services, the exact set of which is
 determined by [sysmgr configuration files][sysmgr-config]. Components running in
@@ -204,12 +202,11 @@ may or may not also provide FIDL services for the sys realm.
 realm, and the sys realm holding other
 components.](images/appmgr-realm-layout.png)
 
-## The rest of the v1 components
+## Boot complete
 
-With the initial set of v1 components launched, they will cause other components
-to be launched through accessing FIDL services and by directly launching them
-with services provided by appmgr. It is at this point that the remaining set of
-components on the system can be run.
+At this point, the system is ready to launch additional components through FIDL
+protocols and services, or by directly launching them with services provided by
+appmgr.
 
 [glossary.bootfs]: /docs/glossary#README.md#bootfs
 [glossary.virtual memory object]: /docs/glossary#README.md#virtual-memory-object
