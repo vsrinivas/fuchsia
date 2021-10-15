@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 use log::info;
+use std::sync::Arc;
 
 use crate::errno;
 use crate::error;
+use crate::fd_impl_nonblocking;
 use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::syscalls::SyscallResult;
@@ -23,6 +25,7 @@ impl SyslogFile {
 
 impl FileOps for SyslogFile {
     fd_impl_nonseekable!();
+    fd_impl_nonblocking!();
 
     fn write(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let mut size = 0;

@@ -15,11 +15,12 @@ use super::sysmem::*;
 use super::BufferCollectionFile;
 use crate::errno;
 use crate::error;
+use crate::fd_impl_nonblocking;
 use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::mm::vmo::round_up_to_increment;
 use crate::syscalls::*;
-use crate::task::Task;
+use crate::task::{EventHandler, Task, Waiter};
 use crate::types::*;
 
 pub struct DmaNode {}
@@ -207,6 +208,7 @@ impl DmaFile {
 
 impl FileOps for DmaFile {
     fd_impl_nonseekable!();
+    fd_impl_nonblocking!();
 
     fn ioctl(
         &self,

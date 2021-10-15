@@ -102,8 +102,7 @@ pub trait FileOps: Send + Sync + AsAny {
         _waiter: &Arc<Waiter>,
         _events: FdEvents,
         _handler: EventHandler,
-    ) {
-    }
+    );
 
     fn ioctl(
         &self,
@@ -263,6 +262,20 @@ macro_rules! fd_impl_directory {
     };
 }
 
+#[macro_export]
+macro_rules! fd_impl_nonblocking {
+    () => {
+        fn wait_async(
+            &self,
+            _file: &FileObject,
+            _waiter: &Arc<Waiter>,
+            _events: FdEvents,
+            _handler: EventHandler,
+        ) {
+        }
+    };
+}
+
 pub fn default_ioctl(request: u32) -> Result<SyscallResult, Errno> {
     not_implemented!("ioctl: request=0x{:x}", request);
     error!(ENOTTY)
@@ -277,6 +290,8 @@ impl OPathOps {
 }
 
 impl FileOps for OPathOps {
+    fd_impl_nonblocking!();
+
     fn read(&self, _file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
         error!(EBADF)
     }

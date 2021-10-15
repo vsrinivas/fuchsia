@@ -9,8 +9,10 @@ use super::*;
 use crate::errno;
 use crate::error;
 use crate::fd_impl_directory;
+use crate::fd_impl_nonblocking;
 use crate::task::*;
 use crate::types::*;
+use std::sync::Arc;
 
 // TODO: It should be possible to replace all uses of ROMemoryDirectory with TmpfsDirectory +
 // MS_RDONLY (at which point MemoryDirectory would be a better name for it).
@@ -80,6 +82,7 @@ pub fn emit_dotdot(
 
 impl FileOps for MemoryDirectoryFile {
     fd_impl_directory!();
+    fd_impl_nonblocking!();
 
     fn seek(
         &self,

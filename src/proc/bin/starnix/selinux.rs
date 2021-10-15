@@ -5,7 +5,8 @@
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
-use crate::{errno, error, fd_impl_seekable, mode};
+use crate::{errno, error, fd_impl_nonblocking, fd_impl_seekable, mode};
+use std::sync::Arc;
 
 struct SeLinuxFs;
 impl FileSystemOps for SeLinuxFs {}
@@ -28,6 +29,8 @@ impl SeLinuxFs {
 struct SeLoad;
 impl FileOps for SeLoad {
     fd_impl_seekable!();
+    fd_impl_nonblocking!();
+
     fn write_at(
         &self,
         _file: &FileObject,
@@ -59,6 +62,8 @@ impl FileOps for SeLoad {
 struct SeEnforce;
 impl FileOps for SeEnforce {
     fd_impl_seekable!();
+    fd_impl_nonblocking!();
+
     fn write_at(
         &self,
         _file: &FileObject,
@@ -90,6 +95,8 @@ impl FileOps for SeEnforce {
 struct SeCheckReqProt;
 impl FileOps for SeCheckReqProt {
     fd_impl_seekable!();
+    fd_impl_nonblocking!();
+
     fn write_at(
         &self,
         _file: &FileObject,

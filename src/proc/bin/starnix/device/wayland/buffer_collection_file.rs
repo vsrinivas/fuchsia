@@ -9,9 +9,10 @@ use std::sync::Arc;
 
 use crate::errno;
 use crate::error;
+use crate::fd_impl_nonblocking;
 use crate::fd_impl_seekable;
 use crate::fs::*;
-use crate::task::{Kernel, Task};
+use crate::task::{EventHandler, Kernel, Task, Waiter};
 use crate::types::*;
 
 pub struct BufferCollectionFile {
@@ -42,6 +43,7 @@ impl BufferCollectionFile {
 
 impl FileOps for BufferCollectionFile {
     fd_impl_seekable!();
+    fd_impl_nonblocking!();
 
     fn read_at(
         &self,

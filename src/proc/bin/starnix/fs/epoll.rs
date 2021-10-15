@@ -104,6 +104,7 @@ impl EpollFileObject {
                     events: FdEvents::from(epoll_event.events),
                     data: epoll_event.data,
                 });
+                // if not waiting, put this on the rearm_queue?
                 self.wait_on_file(key, wait_object)
             }
         }
@@ -217,6 +218,17 @@ impl FileOps for EpollFileObject {
 
     fn read(&self, _file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
         error!(EINVAL)
+    }
+
+    // TODO implement blocking for epoll
+    fn wait_async(
+        &self,
+        _file: &FileObject,
+        _waiter: &Arc<Waiter>,
+        _events: FdEvents,
+        _handler: EventHandler,
+    ) {
+        panic!("waiting on epoll unimplemnted")
     }
 }
 

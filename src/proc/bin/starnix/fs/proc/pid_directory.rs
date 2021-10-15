@@ -7,9 +7,9 @@ use std::sync::Arc;
 use crate::fs::*;
 use crate::mm::ProcMapsFile;
 use crate::mode;
-use crate::task::Task;
+use crate::task::{EventHandler, Task, Waiter};
 use crate::types::*;
-use crate::{errno, error, fd_impl_directory, fs_node_impl_symlink};
+use crate::{errno, error, fd_impl_directory, fd_impl_nonblocking, fs_node_impl_symlink};
 
 use maplit::hashmap;
 use std::collections::HashMap;
@@ -58,6 +58,7 @@ impl PidDirectoryFileOps {
 
 impl FileOps for PidDirectoryFileOps {
     fd_impl_directory!();
+    fd_impl_nonblocking!();
 
     fn seek(
         &self,
@@ -196,6 +197,7 @@ impl FdDirectoryFileOps {
 
 impl FileOps for FdDirectoryFileOps {
     fd_impl_directory!();
+    fd_impl_nonblocking!();
 
     fn seek(
         &self,

@@ -17,10 +17,10 @@ use crate::collections::*;
 use crate::fs::*;
 use crate::logging::*;
 use crate::mm::FutexTable;
-use crate::task::Task;
+use crate::task::{EventHandler, Task, Waiter};
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
-use crate::{errno, error, fd_impl_seekable, mode};
+use crate::{errno, error, fd_impl_nonblocking, fd_impl_seekable, mode};
 
 lazy_static! {
     pub static ref PAGE_SIZE: u64 = zx::system_get_page_size() as u64;
@@ -663,6 +663,8 @@ impl ProcMapsFile {
 }
 impl FileOps for ProcMapsFile {
     fd_impl_seekable!();
+    fd_impl_nonblocking!();
+
     fn read_at(
         &self,
         _file: &FileObject,

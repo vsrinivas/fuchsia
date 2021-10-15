@@ -5,9 +5,11 @@
 use fuchsia_cprng::cprng_draw;
 
 use crate::error;
+use crate::fd_impl_nonblocking;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
+use std::sync::Arc;
 
 pub fn open_mem_device(minor: u32) -> Result<Box<dyn FileOps>, Errno> {
     match minor {
@@ -59,6 +61,7 @@ impl DevNull {
 
 impl FileOps for DevNull {
     fd_impl_seekless!();
+    fd_impl_nonblocking!();
 
     fn write_at(
         &self,
@@ -89,6 +92,7 @@ impl DevZero {
 
 impl FileOps for DevZero {
     fd_impl_seekless!();
+    fd_impl_nonblocking!();
 
     fn write_at(
         &self,
@@ -124,6 +128,7 @@ impl DevFull {
 
 impl FileOps for DevFull {
     fd_impl_seekless!();
+    fd_impl_nonblocking!();
 
     fn write_at(
         &self,
@@ -160,6 +165,7 @@ impl DevRandom {
 
 impl FileOps for DevRandom {
     fd_impl_seekless!();
+    fd_impl_nonblocking!();
 
     fn write_at(
         &self,
@@ -196,6 +202,7 @@ impl DevKmsg {
 
 impl FileOps for DevKmsg {
     fd_impl_seekless!();
+    fd_impl_nonblocking!();
 
     fn read_at(
         &self,

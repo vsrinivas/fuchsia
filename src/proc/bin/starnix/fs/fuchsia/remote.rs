@@ -13,6 +13,7 @@ use syncio::{
 use crate::errno;
 use crate::error;
 use crate::fd_impl_directory;
+use crate::fd_impl_nonblocking;
 use crate::fd_impl_nonseekable;
 use crate::fd_impl_seekable;
 use crate::from_status_like_fdio;
@@ -94,7 +95,12 @@ fn get_zxio_signals_from_events(events: FdEvents) -> zxio::zxio_signals_t {
 fn get_events_from_zxio_signals(signals: zxio::zxio_signals_t) -> FdEvents {
     let mut events = FdEvents::empty();
 
-    if signals & (zxio::ZXIO_SIGNAL_READABLE | zxio::ZXIO_SIGNAL_PEER_CLOSED | zxio::ZXIO_SIGNAL_READ_DISABLED) != 0 {
+    if signals
+        & (zxio::ZXIO_SIGNAL_READABLE
+            | zxio::ZXIO_SIGNAL_PEER_CLOSED
+            | zxio::ZXIO_SIGNAL_READ_DISABLED)
+        != 0
+    {
         events |= FdEvents::POLLIN;
     }
     if signals & (zxio::ZXIO_SIGNAL_WRITABLE | zxio::ZXIO_SIGNAL_WRITE_DISABLED) != 0 {
@@ -212,7 +218,9 @@ fn zxio_wait_async(
     };
 
     let (handle, signals) = zxio.wait_begin(get_zxio_signals_from_events(events));
-    waiter.wake_on_signals(&handle, signals, Box::new(signal_handler)).unwrap(); // TODO return error
+
+    // unwrap OK here as errors are only generated from misuse
+    waiter.wake_on_signals(&handle, signals, Box::new(signal_handler)).unwrap();
 }
 
 /// Helper struct to track the context necessary to iterate over dir entries.
@@ -277,6 +285,7 @@ impl RemoteDirectoryObject {
 
 impl FileOps for RemoteDirectoryObject {
     fd_impl_directory!();
+    fd_impl_nonblocking!();
 
     fn seek(
         &self,

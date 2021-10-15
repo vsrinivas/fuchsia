@@ -147,7 +147,8 @@ mod test {
     use crate::syscalls::*;
     use crate::task::*;
     use crate::testing::*;
-    use crate::{errno, error, fd_impl_seekable};
+    use crate::{errno, error, fd_impl_nonblocking, fd_impl_seekable};
+    use std::sync::Arc;
 
     use parking_lot::Mutex;
 
@@ -165,6 +166,7 @@ mod test {
 
     impl FileOps for TestSeqFile {
         fd_impl_seekable!();
+        fd_impl_nonblocking!();
 
         fn read_at(
             &self,
