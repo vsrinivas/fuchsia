@@ -521,8 +521,10 @@ struct StorageTraits<cpp20::span<T, Extent>> {
 
   template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>
   static fitx::result<error_type> Write(Storage& zbi, uint32_t offset, ByteView data) {
-    memcpy(Write(zbi, offset, static_cast<uint32_t>(data.size())).value(), data.data(),
-           data.size());
+    if (!data.empty()) {
+      memcpy(Write(zbi, offset, static_cast<uint32_t>(data.size())).value(), data.data(),
+             data.size());
+    }
     return fitx::ok();
   }
 
@@ -531,7 +533,7 @@ struct StorageTraits<cpp20::span<T, Extent>> {
     // The caller is supposed to maintain these invariants.
     ZX_DEBUG_ASSERT(offset <= zbi.size_bytes());
     ZX_DEBUG_ASSERT(length <= zbi.size_bytes() - offset);
-    return fitx::ok(&cpp20::as_writable_bytes(zbi)[offset]);
+    return fitx::ok(cpp20::as_writable_bytes(zbi).data() + offset);
   }
 };
 
