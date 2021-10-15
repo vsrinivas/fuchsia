@@ -119,6 +119,18 @@
 
 #define _ZXTEST_TEST_HAS_ERRORS zxtest::Runner::GetInstance()->CurrentTestHasFailures()
 
+#define _ADD_INSTANTIATION_DEFAULT_NAME(arg1) \
+  [](const auto info) -> std::string { return std::to_string(info.index); }
+
+#define _ADD_INSTANTIATION_CUSTOM_NAME(arg1, generator) generator
+
+#define _GET_3RD_ARG(arg1, arg2, arg3, ...) arg3
+
+#define _NAME_GENERATOR_CHOOSER(...) \
+  _GET_3RD_ARG(__VA_ARGS__, _ADD_INSTANTIATION_CUSTOM_NAME, _ADD_INSTANTIATION_DEFAULT_NAME)
+
+#define _INSTANTIATION_NAME_FN(...) _NAME_GENERATOR_CHOOSER(__VA_ARGS__)(__VA_ARGS__)
+
 #define INSTANTIATE_TEST_SUITE_P(Prefix, TestSuite, ...)                                        \
   static void _ZXTEST_REGISTER_FN(Prefix, TestSuite)(void) __attribute__((constructor));        \
   void _ZXTEST_REGISTER_FN(Prefix, TestSuite)(void) {                                           \
@@ -127,7 +139,8 @@
     zxtest::Runner::GetInstance()->AddInstantiation<TestSuite, TestSuite::ParamType>(           \
         std::make_unique<                                                                       \
             zxtest::internal::AddInstantiationDelegateImpl<TestSuite, TestSuite::ParamType>>(), \
-        #Prefix, {.filename = __FILE__, .line_number = __LINE__}, provider);                    \
+        #Prefix, {.filename = __FILE__, .line_number = __LINE__}, provider,                     \
+        _INSTANTIATION_NAME_FN(__VA_ARGS__));                                                   \
   }
 
 // Definition of operations used to evaluate assertion conditions.

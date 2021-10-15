@@ -188,11 +188,15 @@ void TestAddParameterizedInstaniations() {
       internal::ParameterizedTestCaseInfoImplTestPeer::GetInstantiationsSize(suite_impl) == 0,
       "There should be no instantiation entries yet.");
 
+  auto default_name_generator = [](const auto info) -> std::string {
+    return std::to_string(info.index);
+  };
   auto provider1 = ::zxtest::testing::Values(1, 2, 3);
   runner->AddInstantiation<ParameterizedTestSuite1, ParameterizedTestSuite1::ParamType>(
       std::make_unique<zxtest::internal::AddInstantiationDelegateImpl<
           ParameterizedTestSuite1, ParameterizedTestSuite1::ParamType>>(),
-      fbl::String("prefix_name"), {.filename = __FILE__, .line_number = __LINE__}, provider1);
+      fbl::String("prefix_name"), {.filename = __FILE__, .line_number = __LINE__}, provider1,
+      default_name_generator);
   ZX_ASSERT_MSG(
       internal::ParameterizedTestCaseInfoImplTestPeer::GetInstantiationsSize(suite_impl) == 1,
       "There should be one instantiation entry.");
@@ -201,7 +205,8 @@ void TestAddParameterizedInstaniations() {
   runner->AddInstantiation<ParameterizedTestSuite1, ParameterizedTestSuite1::ParamType>(
       std::make_unique<zxtest::internal::AddInstantiationDelegateImpl<
           ParameterizedTestSuite1, ParameterizedTestSuite1::ParamType>>(),
-      fbl::String("prefix_name"), {.filename = __FILE__, .line_number = __LINE__}, provider2);
+      fbl::String("prefix_name"), {.filename = __FILE__, .line_number = __LINE__}, provider2,
+      default_name_generator);
   ZX_ASSERT_MSG(
       internal::ParameterizedTestCaseInfoImplTestPeer::GetInstantiationsSize(suite_impl) == 2,
       "There should be two instantiation entries.");

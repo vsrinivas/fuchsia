@@ -54,7 +54,8 @@ TEST_P(ParamTestChild, BasicTest) {
 }
 TEST_P(ParamTestChild, SameName) {}
 
-INSTANTIATE_TEST_SUITE_P(SomePrefix, ParamTestChild, ::zxtest::testing::Values(1, 3, 5, 7, 8))
+INSTANTIATE_TEST_SUITE_P(SomePrefix, ParamTestChild, ::zxtest::testing::Values(1, 3, 5, 7, 8),
+                         [](const auto info) { return "prefix" + std::to_string(info.index); })
 
 enum __enum_type {
   VALUE_1 = 1,

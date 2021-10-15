@@ -18,6 +18,13 @@
 
 namespace zxtest {
 
+template <class ParamType>
+struct TestParamInfo {
+  TestParamInfo(const ParamType& a_param, size_t an_index) : param(a_param), index(an_index) {}
+  ParamType param;
+  size_t index;
+};
+
 template <typename T>
 class WithParamInterface {
  public:
@@ -118,10 +125,10 @@ template <typename ParamType>
 class AddInstantiationDelegate {
  public:
   virtual ~AddInstantiationDelegate<ParamType>() = default;
-  virtual bool AddInstantiation(ParameterizedTestCaseInfo* base,
-                                const fbl::String& instantiation_name,
-                                const SourceLocation& location,
-                                zxtest::internal::ValueProvider<ParamType>& provider) = 0;
+  virtual bool AddInstantiation(
+      ParameterizedTestCaseInfo* base, const fbl::String& instantiation_name,
+      const SourceLocation& location, zxtest::internal::ValueProvider<ParamType>& provider,
+      std::function<std::string(zxtest::TestParamInfo<ParamType>)> name_fn) = 0;
 };
 
 }  // namespace internal

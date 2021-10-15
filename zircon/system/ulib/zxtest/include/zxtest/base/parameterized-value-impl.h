@@ -39,10 +39,11 @@ class ParameterizedTestCaseInfoImpl : public ParameterizedTestCaseInfo {
 
   void AddInstantiation(const fbl::String& instantiation_name,
                         zxtest::internal::ValueProvider<ParamType>& provider,
-                        const SourceLocation& location) {
-    instantiation_fns_.push_back([this, provider = std::move(provider), location,
+                        const SourceLocation& location,
+                        std::function<std::string(zxtest::TestParamInfo<ParamType>)> name_fn) {
+    instantiation_fns_.push_back([this, provider = std::move(provider), name_fn, location,
                                   instantiation_name](Runner* runner) mutable {
-      Instantiate<FixtureType, ParamType>(instantiation_name, location, provider, runner);
+      Instantiate<FixtureType, ParamType>(instantiation_name, location, provider, name_fn, runner);
     });
   }
 
@@ -76,15 +77,18 @@ class ParameterizedTestCaseInfoImpl : public ParameterizedTestCaseInfo {
 
   template <typename TestImpl, typename ValueType>
   void Instantiate(const fbl::String& instantiation_name, const SourceLocation& location,
-                   zxtest::internal::ValueProvider<ValueType>& provider, Runner* runner) {
+                   zxtest::internal::ValueProvider<ValueType>& provider,
+                   std::function<std::string(zxtest::TestParamInfo<ValueType>)> name_fn,
+                   Runner* runner) {
     for (size_t i = 0; i < provider.size(); ++i) {
+      zxtest::TestParamInfo<ValueType> info(provider[i], i);
       for (auto& test_entry : test_entries_) {
         // Add method for instantiation name as a param, and let the reporter decide how to
         // print this.
         std::initializer_list<fbl::String> prefix_name = {instantiation_name, fbl::String("/"),
                                                           name()};
         std::initializer_list<fbl::String> test_name = {test_entry.name, fbl::String("/"),
-                                                        std::to_string(i)};
+                                                        name_fn(info)};
         runner->RegisterTest<FixtureType, TestImpl>(
             fbl::String::Concat(prefix_name), fbl::String::Concat(test_name),
             test_entry.location.filename, static_cast<int>(test_entry.location.line_number),
@@ -123,12 +127,11 @@ class AddInstantiationDelegateImpl : public AddInstantiationDelegate<Type> {
  public:
   bool AddInstantiation(ParameterizedTestCaseInfo* base, const fbl::String& instantiation_name,
                         const SourceLocation& location,
-                        zxtest::internal::ValueProvider<Type>& provider) final {
+                        zxtest::internal::ValueProvider<Type>& provider,
+                        std::function<std::string(zxtest::TestParamInfo<Type>)> name_fn) final {
     ParameterizedTestCaseInfoImpl<SuiteClass, Type>* suite_impl =
         reinterpret_cast<ParameterizedTestCaseInfoImpl<SuiteClass, Type>*>(base);
-    // ValueProvider<Type>& provider =
-    // reinterpret_cast<ValueProvider<Type>&>(provider_base);
-    suite_impl->AddInstantiation(instantiation_name, provider, location);
+    suite_impl->AddInstantiation(instantiation_name, provider, location, name_fn);
     return true;
   }
 };

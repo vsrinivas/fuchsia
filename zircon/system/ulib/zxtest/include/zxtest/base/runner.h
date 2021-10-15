@@ -212,7 +212,8 @@ class Runner {
   template <typename SuiteClass, typename ParamType>
   bool AddInstantiation(std::unique_ptr<internal::AddInstantiationDelegate<ParamType>> delegate,
                         const fbl::String& instantiation_name, const SourceLocation& location,
-                        zxtest::internal::ValueProvider<ParamType>& provider) {
+                        zxtest::internal::ValueProvider<ParamType>& provider,
+                        std::function<std::string(zxtest::TestParamInfo<ParamType>)> name_fn) {
     auto fixture_id = internal::TypeIdProvider<SuiteClass>::Get();
     bool found_match = false;
     for (auto& test_info : parameterized_test_info_) {
@@ -220,8 +221,9 @@ class Runner {
         // found existing entry
         auto* suite = test_info.get();
         found_match = true;
-        ZX_ASSERT_MSG(delegate->AddInstantiation(suite, instantiation_name, location, provider),
-                      "Failed to add instantiation.");
+        ZX_ASSERT_MSG(
+            delegate->AddInstantiation(suite, instantiation_name, location, provider, name_fn),
+            "Failed to add instantiation.");
       }
     }
     ZX_ASSERT_MSG(found_match, "Failed to find a test suite to add an instantiation.");
