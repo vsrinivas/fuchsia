@@ -86,7 +86,7 @@ const char* InspectManager::MinfsUpgradeStateString(MinfsUpgradeState state) {
 }
 
 void InspectManager::LogMinfsUpgradeProgress(MinfsUpgradeState state) {
-  minfs_upgrade_progress_.CreateBool(MinfsUpgradeStateString(state), true, &inspector_);
+  minfs_upgrade_progress_.CreateUint(MinfsUpgradeStateString(state), 1u, &inspector_);
 }
 
 void InspectManager::FillStats(zx::unowned_channel dir_chan, inspect::Inspector* inspector) {

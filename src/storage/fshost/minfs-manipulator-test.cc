@@ -48,11 +48,11 @@ namespace devmgr {
 namespace {
 
 using MinfsUpgradeState = InspectManager::MinfsUpgradeState;
-using ::inspect::testing::BoolIs;
 using ::inspect::testing::ChildrenMatch;
 using ::inspect::testing::NameMatches;
 using ::inspect::testing::NodeMatches;
 using ::inspect::testing::PropertyList;
+using ::inspect::testing::UintIs;
 using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
@@ -172,7 +172,7 @@ class MinfsManipulatorTest : public testing::Test {
     std::vector<Matcher<const inspect::PropertyValue&>> state_matchers;
     state_matchers.reserve(states.size());
     for (const auto& state : states) {
-      state_matchers.push_back(BoolIs(InspectManager::MinfsUpgradeStateString(state), true));
+      state_matchers.push_back(UintIs(InspectManager::MinfsUpgradeStateString(state), 1u));
     }
     auto hierarchy_result =
         inspect::ReadFromVmo(manager_.inspect_manager().inspector().DuplicateVmo());
