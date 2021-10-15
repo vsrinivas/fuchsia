@@ -1098,4 +1098,109 @@ TEST(ZxTestAssertionStreamTest, AssertSkip) {
   TEST_CHECKPOINT();
 }
 
+TEST(ZxTestAssertionStreamTest, AssertEvaluationIsFirstStatement) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "EXPECT_EQ should not have evaluated.");
+  bool touched = false;
+  auto eval = [&touched]() {
+    touched = true;
+    return 1;
+  };
+  // Intentionally lacking {} around the if block to expose whether EXPECT_EQ is expanding into
+  // multiple statements.
+  if (false)
+    EXPECT_EQ(eval(), 1);
+
+  EXPECT_FALSE(touched) << "Expression should not have been evaluated.";
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionStreamTest, AssertStatusEvaluationIsFirstStatement) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "EXPECT_STATUS should not have evaluated.");
+  bool touched = false;
+  auto eval = [&touched]() {
+    touched = true;
+    return ZX_OK;
+  };
+
+  // Intentionally lacking {} around the if block to expose whether EXPECT_EQ is expanding into
+  // multiple statements.
+  if (false)
+    EXPECT_STATUS(eval(), ZX_OK);
+
+  EXPECT_FALSE(touched) << "Expression should not have been evaluated.";
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionStreamTest, AssertCoerceEvaluationIsFirstStatement) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "EXPECT_NULL should not have evaluated.");
+  bool touched = false;
+  auto eval = [&touched]() -> int* {
+    touched = true;
+    return nullptr;
+  };
+
+  // Intentionally lacking {} around the if block to expose whether EXPECT_NULL is expanding into
+  // multiple statements.
+  if (false)
+    EXPECT_NULL(eval());
+
+  EXPECT_FALSE(touched) << "Expression should not have been evaluated.";
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionStreamTest, AssertBytesEvaluationIsFirstStatement) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "EXPECT_BYTES_EQ should not have evaluated.");
+  bool touched = false;
+  int value = 0;
+  int expected = 0;
+  auto eval = [&touched, &value]() {
+    touched = true;
+    return &value;
+  };
+
+  // Intentionally lacking {} around the if block to expose whether EXPECT_BYTES_EQ is expanding
+  // into multiple statements.
+  if (false)
+    EXPECT_BYTES_EQ(eval(), &expected, sizeof(int));
+
+  EXPECT_FALSE(touched) << "Expression should not have been evaluated.";
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionStreamTest, AssertHasErrorEvaluationIsFirstStatement) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
+                   "_ZXTEST_ASSERT_ERROR should not have evaluated.");
+  bool touched = false;
+  auto eval = [&touched]() {
+    touched = true;
+    return false;
+  };
+
+  // Intentionally lacking {} around the if block to expose whether _ZXTEST_ASSERT_ERROR is
+  // expanding into multiple statements.
+  if (false)
+    _ZXTEST_ASSERT_ERROR(eval(), false, "desc");
+
+  EXPECT_FALSE(touched) << "Expression should not have been evaluated.";
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionStreamTest, AssertFailIsFirstStatement) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "FAIL() should not have triggered.");
+  // Intentionally lacking {} around the if block to expose whether FAIL is expanding into
+  // multiple statements.
+  if (false)
+    FAIL();
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionStreamTest, AssertSkipIsFirstStatement) {
+  TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "ZXTEST_SKIP() should not have triggered.");
+  // Intentionally lacking {} around the if block to expose whether ZXTEST_SKIP is expanding into
+  // multiple statements.
+  if (false)
+    ZXTEST_SKIP();
+  FAIL();
+  TEST_CHECKPOINT();
+}
 }  // namespace
