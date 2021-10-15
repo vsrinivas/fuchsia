@@ -18,8 +18,8 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
-#include "garnet/bin/sshd-host/service.h"
 #include "lib/gtest/real_loop_fixture.h"
+#include "src/developer/sshd-host/service.h"
 
 namespace sshd_host {
 

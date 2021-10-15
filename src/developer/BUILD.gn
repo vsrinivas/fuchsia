@@ -28,6 +28,7 @@ group("tests") {
     "//src/developer/memory:tests",
     "//src/developer/remote-control:tests",
     "//src/developer/shell:tests",
+    "//src/developer/sshd-host:tests",
     "//src/developer/system_monitor:tests",
     "//src/developer/tracing:tests",
   ]

@@ -13,7 +13,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include "garnet/bin/sshd-host/service.h"
+#include "src/developer/sshd-host/service.h"
 
 const uint16_t kPort = 22;
 const char* kKeyGenArgs[] = {"/pkg/bin/hostkeygen", nullptr};

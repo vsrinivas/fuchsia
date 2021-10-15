@@ -1,86 +1,19 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
-import("//build/config.gni")
-
-source_set("lib") {
-  sources = [ "service.cc" ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.boot",
-    "//sdk/lib/fdio",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-    "//src/sys/lib/chrealm",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/zx",
-  ]
+# Do not use this target directly, instead depend on //src/developer/sshd-host:sshd-host.
+group("sshd-host") {
+  public_deps = [ "//src/developer/sshd-host:sshd-host" ]
 }
 
-executable("bin") {
-  output_name = "sshd-host"
-
-  sources = [ "sshd-host.cc" ]
-
-  deps = [
-    ":lib",
-    "//sdk/lib/fdio",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
+# Do not use this target directly, instead depend on //src/developer/sshd-host:config.
+group("config") {
+  public_deps = [ "//src/developer/sshd-host:config" ]
 }
 
-fuchsia_package_with_single_component("sshd-host") {
-  manifest = "meta/sshd-host.cmx"
-  deps = [
-    ":bin",
-
-    # Used by programs that need to load ICU locale data, such as tz-util.
-    "//build/validate:non_production_tag",
-    "//src/intl:icudtl",
-    "//third_party/openssh-portable:hostkeygen",
-    "//third_party/openssh-portable:scp",
-    "//third_party/openssh-portable:sftp-server",
-    "//third_party/openssh-portable:sshd",
-  ]
-}
-
-config_data("config") {
-  for_pkg = "sshd-host"
-  sources = [ "//third_party/openssh-portable/fuchsia/sshd_config" ]
-  outputs = [ "sshd_config" ]
-}
-
-executable("test") {
+# Do not use this target directly, instead depend on //src/developer/sshd-host:sshd-host-tests.
+group("sshd-host-tests") {
+  public_deps = [ "//src/developer/sshd-host:sshd-host-tests" ]
   testonly = true
-
-  output_name = "sshd-host-test"
-
-  sources = [ "test.cc" ]
-
-  deps = [
-    ":lib",
-    "//sdk/fidl/fuchsia.boot",
-    "//sdk/lib/fdio",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
-fuchsia_unittest_package("sshd-host-tests") {
-  manifest = "meta/sshd-host-test.cmx"
-  deps = [ ":test" ]
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
 }

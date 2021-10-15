@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SSHD_HOST_SERVICE_H_
-#define GARNET_BIN_SSHD_HOST_SERVICE_H_
+#ifndef SRC_DEVELOPER_SSHD_HOST_SERVICE_H_
+#define SRC_DEVELOPER_SSHD_HOST_SERVICE_H_
 
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/job.h>
@@ -49,4 +49,4 @@ class Service {
 
 }  // namespace sshd_host
 
-#endif  // GARNET_BIN_SSHD_HOST_SERVICE_H_
+#endif  // SRC_DEVELOPER_SSHD_HOST_SERVICE_H_

@@ -29,7 +29,6 @@ group("all") {
     "//garnet/bin/sched:tests",
     "//garnet/bin/setui:tests",
     "//garnet/bin/setui_client:tests",
-    "//garnet/bin/sshd-host:sshd-host-tests",
     "//garnet/bin/sysmgr",
     "//garnet/bin/sysmgr/integration_tests",
     "//garnet/bin/sysmgr/test:sysmgr_tests",
