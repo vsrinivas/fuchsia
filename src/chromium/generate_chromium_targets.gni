@@ -98,12 +98,13 @@ template("generate_chromium_targets") {
   }
 
   generate_package_flavors_and_config("web_engine") {
-    # TODO(crbug.com/1148608): Move the prebuilt to a web_engine* directory and
-    # replace `chromium` with `${target_name}`.
-    # Once that is done, consider making this the default value in
-    # generate_package_flavors*().
-    prebuilt_archive_base_path =
-        "${prebuilt_archive_root_path}/chromium${invoker.archive_path_suffix}"
+    # TODO(crbug.com/1148608): Remove else condition when m97 becomes release.
+    if (use_chromium_canary) {
+      prebuilt_archive_base_path = "${prebuilt_archive_root_path}/${target_name}${invoker.archive_path_suffix}"
+    } else {
+      prebuilt_archive_base_path =
+          "${prebuilt_archive_root_path}/chromium${invoker.archive_path_suffix}"
+    }
     custom_package_path =
         "${build_output_gen_base_path}/engine/${target_name}/${target_name}.far"
     selections = package_flavor_selections
@@ -139,10 +140,13 @@ template("generate_chromium_targets") {
   }
 
   generate_package_flavors_and_config("web_runner") {
-    # TODO(crbug.com/1148608): Move the prebuilt to a web_runner* directory and
-    # replace `chromium` with `${target_name}`.
-    prebuilt_archive_base_path =
-        "${prebuilt_archive_root_path}/chromium${invoker.archive_path_suffix}"
+    # TODO(crbug.com/1148608): Remove else condition when m97 becomes release.
+    if (use_chromium_canary) {
+      prebuilt_archive_base_path = "${prebuilt_archive_root_path}/${target_name}${invoker.archive_path_suffix}"
+    } else {
+      prebuilt_archive_base_path =
+          "${prebuilt_archive_root_path}/chromium${invoker.archive_path_suffix}"
+    }
     custom_package_path =
         "${build_output_gen_base_path}/runners/web_runner/web_runner.far"
     selections = package_flavor_selections
@@ -196,8 +200,9 @@ template("generate_chromium_targets") {
       nuc_env,
     ]
 
+    # TODO(crbug.com/1148608): Change directory path when m97 becomes release.
     if (use_chromium_canary) {
-      archive_dir = "${prebuilt_archive_root_path}/chromium_tests${invoker.archive_path_suffix}${canary_suffix}/arch/x64"
+      archive_dir = "${prebuilt_archive_root_path}/web_engine_tests${invoker.archive_path_suffix}${canary_suffix}/arch/x64"
     } else {
       archive_dir = "${prebuilt_archive_root_path}/chromium_tests${invoker.archive_path_suffix}/arch/x64"
     }
