@@ -61,9 +61,6 @@ fuchsia_test_package("bt-a2dp-source-integration-tests") {
     # Mock Piconet Server
     "//src/connectivity/bluetooth/testing/mock-piconet-server",
 
-    # Fuchsia Component Test library component
-    "//src/lib/fuchsia-component-test/framework_intermediary:fuchsia_component_test_framework_intermediary_component",
-
     # Mock cobalt component that provides Cobalt services to A2DP.
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
   ]

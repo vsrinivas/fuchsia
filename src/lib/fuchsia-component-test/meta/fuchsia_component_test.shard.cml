@@ -5,7 +5,7 @@
     children: [
         {
             name: "fuchsia_component_test_framework_intermediary",
-            url: "fuchsia-pkg://fuchsia.com/fuchsia-component-test#meta/framework-intermediary.cm",
+            url: "#meta/framework-intermediary.cm",
         },
     ],
     collections: [

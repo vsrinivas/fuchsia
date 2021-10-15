@@ -2,7 +2,7 @@
     {
         "data_source": "Logs",
         "metadata": {
-            "component_url": "fuchsia-pkg://fuchsia.com/fuchsia-component-test#meta/framework-intermediary.cm",
+            "component_url": "#meta/framework-intermediary.cm",
             "dropped": 0,
             "errors": null,
             "file": null,

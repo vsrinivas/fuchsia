@@ -11,11 +11,10 @@ group("fuchsia-component-test") {
   deps = [
     ":fuchsia-component-test-lib",
     ":includes",
+    "framework_intermediary:fuchsia_component_test_framework_intermediary_component",
   ]
 }
 
-# TODO(fxbug.dev/74645): Merge with "fuchsia-component-test" once out of tree
-# targets are migrated to //src/lib/fuchsia-component-test.
 rustc_library("fuchsia-component-test-lib") {
   testonly = true
   name = "fuchsia_component_test"
@@ -60,6 +59,7 @@ rustc_library("fuchsia-component-test-lib") {
   ]
 
   test_deps = [
+    "framework_intermediary:fuchsia_component_test_framework_intermediary_component",
     "//examples/components/routing/fidl:echo-rustc",
     "//third_party/rust_crates:matches",
   ]

@@ -94,7 +94,7 @@ source_set("enclosing_environment") {
 # Temporarily house RealmBuiler in its own source_set until it's ready to
 # be published in SDK. When the library is ready for public consumption, it'll
 # be moved to the "unit" package above.
-source_set("realm_builder") {
+source_set("realm_builder_library") {
   testonly = true
 
   sources = [
@@ -125,5 +125,14 @@ source_set("realm_builder") {
     "//src/lib/testing/loop_fixture",
     "//zircon/system/public:public",
     "//zircon/system/ulib/async-loop",
+  ]
+}
+
+group("realm_builder") {
+  testonly = true
+
+  public_deps = [
+    ":realm_builder_library",
+    "//src/lib/fuchsia-component-test/framework_intermediary:fuchsia_component_test_framework_intermediary_component",
   ]
 }

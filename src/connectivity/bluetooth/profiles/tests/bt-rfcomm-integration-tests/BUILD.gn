@@ -48,9 +48,6 @@ fuchsia_test_package("bt-rfcomm-integration-tests") {
 
     # Mock Piconet Server component.
     "//src/connectivity/bluetooth/testing/mock-piconet-server",
-
-    # Fuchsia Component Test library component
-    "//src/lib/fuchsia-component-test/framework_intermediary:fuchsia_component_test_framework_intermediary_component",
   ]
 }
 
