@@ -10,7 +10,6 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":basemgr_test",
     ":screen_is_not_black",
     ":tiles_test",
   ]
@@ -61,19 +60,6 @@ dart_test("screen_is_not_black_test") {
   environments = _ENVIRONMENTS
 }
 
-# Same as above, except that the test starts up "basemgr".
-dart_test("screen_is_not_black_basemgr_test") {
-  sources = [ "screen_is_not_black_test.dart" ]
-
-  deps = _DEPS
-
-  args = [ "--start=basemgr" ]
-
-  non_dart_deps = _NON_DART_DEPS
-
-  environments = _ENVIRONMENTS
-}
-
 # Same as above, except that the test starts up the "tiles".
 dart_test("screen_is_not_black_tiles_test") {
   sources = [ "screen_is_not_black_test.dart" ]
@@ -103,22 +89,8 @@ group("screen_is_not_black") {
   deps = [ ":screen_is_not_black_test($host_toolchain)" ]
 }
 
-group("basemgr_test") {
-  testonly = true
-
-  deps = [ ":screen_is_not_black_basemgr_test($host_toolchain)" ]
-}
-
 group("tiles_test") {
   testonly = true
 
   deps = [ ":screen_is_not_black_tiles_test($host_toolchain)" ]
-}
-
-# Compatibility target for out-of-tree users.
-# These should update to depend on ":basemgr_test" directly.
-group("test") {
-  testonly = true
-
-  deps = [ ":basemgr_test" ]
 }

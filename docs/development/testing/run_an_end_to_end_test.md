@@ -198,7 +198,7 @@ cache_package_labels += [
 ...
 
 universe_package_labels += [
-  "//src/tests/end_to_end/screen_is_not_black:no_basemgr_test",
+  "//src/tests/end_to_end/screen_is_not_black",
   "//src/tests/end_to_end/sl4f:test",
   "//src/tests/end_to_end/perf:test",
   ...

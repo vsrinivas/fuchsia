@@ -73,17 +73,15 @@ void main(List<String> args) {
 
   final parser = ArgParser()
     ..addOption('start',
-        allowed: ['basemgr', 'tiles'],
+        allowed: ['tiles'],
         help: 'If set, starts the specified program on device startup');
 
   final argResults = parser.parse(args);
   final String start = argResults['start'];
-  final bool startBasemgr = start == 'basemgr';
   final bool startTiles = start == 'tiles';
 
   sl4f.Sl4f sl4fDriver;
   sl4f.Scenic scenicDriver;
-  sl4f.Modular basemgrController;
   sl4f.Tiles tilesController;
 
   final performance = sl4f.Performance(sl4fDriver);
@@ -97,7 +95,6 @@ void main(List<String> args) {
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
     await sl4fDriver.startServer();
     scenicDriver = sl4f.Scenic(sl4fDriver);
-    basemgrController = sl4f.Modular(sl4fDriver);
     tilesController = sl4f.Tiles(sl4fDriver);
   });
 
@@ -265,11 +262,7 @@ void main(List<String> args) {
     // to reboot as a performance test result.
     var rebootDuration = await sl4fDriver.reboot();
     try {
-      if (startBasemgr) {
-        // This call, and the 'shutdown' below are no-ops in configurations where
-        // modular is already running.
-        await basemgrController.boot();
-      } else if (startTiles) {
+      if (startTiles) {
         await tilesController.start();
       }
       for (var attempt = 0; attempt < _tries; attempt++) {
@@ -289,9 +282,7 @@ void main(List<String> args) {
       }
       fail('Screen was all black.');
     } finally {
-      if (startBasemgr) {
-        await basemgrController.shutdown(forceShutdownBasemgr: false);
-      } else if (startTiles) {
+      if (startTiles) {
         await tilesController.stop();
       }
     }
