@@ -905,6 +905,84 @@ static bool pq_rotate_queue() {
   END_TEST;
 }
 
+static bool pq_toggle_dont_need_queue() {
+  BEGIN_TEST;
+
+  PageQueues pq(0, ZX_TIME_INFINITE, 0);
+  pq.StartThreads();
+
+  // Pretend we have a couple of allocated pager-backed pages.
+  vm_page_t page1 = {};
+  vm_page_t page2 = {};
+  page1.set_state(vm_page_state::OBJECT);
+  page2.set_state(vm_page_state::OBJECT);
+
+  // Need a VMO to claim our pager backed pages are in.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status = VmObjectPaged::Create(0, 0, 2 * PAGE_SIZE, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Put the pages in and validate initial state.
+  pq.SetPagerBacked(&page1, vmo->DebugGetCowPages().get(), 0);
+  size_t queue;
+  EXPECT_TRUE(pq.DebugPageIsPagerBacked(&page1, &queue));
+  EXPECT_EQ(queue, 0u);
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0, 0, 0, 0, 0}, 0, 0, 0, 0}));
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 1, 0}));
+  pq.SetPagerBacked(&page2, vmo->DebugGetCowPages().get(), 0);
+  EXPECT_TRUE(pq.DebugPageIsPagerBacked(&page2, &queue));
+  EXPECT_EQ(queue, 0u);
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{2, 0, 0, 0, 0, 0, 0, 0}, 0, 0, 0, 0}));
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 2, 0}));
+
+  // Move the pages to the DontNeed queue.
+  pq.MoveToPagerBackedDontNeed(&page1);
+  pq.MoveToPagerBackedDontNeed(&page2);
+  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page1, &queue));
+  EXPECT_EQ(queue, 0u);
+  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page2, &queue));
+  EXPECT_EQ(queue, 0u);
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 0, 0, 0, 0, 0, 0}, 2, 0, 0, 0}));
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 2}));
+
+  // Rotate the queues. This should also process the DontNeed queue.
+  pq.RotatePagerBackedQueues();
+  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page1, &queue));
+  EXPECT_EQ(queue, 1u);
+  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page2, &queue));
+  EXPECT_EQ(queue, 1u);
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 0, 0, 0, 0, 0, 0}, 2, 0, 0, 0}));
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 2}));
+
+  // Simulate access for one of the pages. Then rotate the queues again. This should move the
+  // accessed page1 out of the DontNeed queue to MRU+1 (as we've rotated the queues after access).
+  pq.MarkAccessed(&page1);
+  pq.RotatePagerBackedQueues();
+  EXPECT_TRUE(pq.DebugPageIsPagerBacked(&page1, &queue));
+  EXPECT_EQ(queue, 1u);
+  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page2, &queue));
+  EXPECT_EQ(queue, 0u);
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 1, 0, 0, 0, 0, 0, 0}, 1, 0, 0, 0}));
+  // Two active queues by default, so page1 is still considered active.
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 1, 1}));
+
+  // Rotate the queues again. The DontNeed page should be toggled to the other queue. The page
+  // accessed above should move to the next pager-backed queue.
+  pq.RotatePagerBackedQueues();
+  EXPECT_TRUE(pq.DebugPageIsPagerBacked(&page1, &queue));
+  EXPECT_EQ(queue, 2u);
+  EXPECT_TRUE(pq.DebugPageIsPagerBackedDontNeed(&page2, &queue));
+  EXPECT_EQ(queue, 1u);
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 1, 0, 0, 0, 0, 0}, 1, 0, 0, 0}));
+  // page1 has now moved on past the two active queues, so it now counts as inactive.
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 2}));
+
+  pq.Remove(&page1);
+  pq.Remove(&page2);
+
+  END_TEST;
+}
+
 static bool physmap_for_each_gap_test() {
   BEGIN_TEST;
 
@@ -1062,6 +1140,7 @@ VM_UNITTEST(pq_add_remove)
 VM_UNITTEST(pq_move_queues)
 VM_UNITTEST(pq_move_self_queue)
 VM_UNITTEST(pq_rotate_queue)
+VM_UNITTEST(pq_toggle_dont_need_queue)
 UNITTEST_END_TESTCASE(page_queues_tests, "pq", "PageQueues tests")
 
 UNITTEST_START_TESTCASE(physmap_tests)
