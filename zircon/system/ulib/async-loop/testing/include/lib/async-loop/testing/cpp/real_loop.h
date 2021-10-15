@@ -70,6 +70,8 @@ class RealLoop {
   // Creates a closure that quits the test message loop when executed.
   fit::closure QuitLoopClosure();
 
+  async::Loop& loop() { return loop_; }
+
  private:
   // The message loop for the test.
   async::Loop loop_;
