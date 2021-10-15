@@ -174,14 +174,19 @@ Another is that the test is explicitly opted out in coverage variants. For
 instance a `BUILD.gn` file referencing your test might look as follows:
 
 ```gn
-group("tests") {
-  deps = [
-    ":foo_test",
-    ":bar_test",
-  ]
+fuchsia_test_package("foo_test") {
+  test_components = [ ":test" ]
+  deps = [ ":foo" ]
+
   # TODO(fxbug.dev/12345): This test is intentionally disabled on coverage.
-  if (!is_coverage) {
-    deps += [ ":qux_test" ]
+  if (is_coverage) {
+    test_specs = {
+      environments = [
+        {
+          tags = [ "disabled" ]
+        },
+      ]
+    }
   }
 }
 ```
