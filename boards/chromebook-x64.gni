@@ -53,6 +53,7 @@ board_bootfs_labels += [ "//src/power/power-manager:chromebook_config" ]
 board_package_labels += [
   "//src/ui/scenic/config:chromebook",
   "//src/chromium/web_engine/config:chromebook",
+  "//src/media/audio/config:chromebook",
 ]
 
 # Partitions for fx flash to flash.
