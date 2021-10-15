@@ -18,9 +18,6 @@ use {
     futures::{stream::StreamExt, TryFutureExt},
 };
 
-#[path = "lib_v2.rs"]
-pub mod v2;
-
 /// The component URL of the Mock Piconet Server - used in integration tests.
 static MOCK_PICONET_SERVER_URL: &str =
     "fuchsia-pkg://fuchsia.com/mock-piconet-server#meta/mock-piconet-server.cmx";

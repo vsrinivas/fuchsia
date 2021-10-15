@@ -11,7 +11,7 @@ use {
     fuchsia_component_test::{builder::Capability, RealmInstance},
     fuchsia_zircon::Duration,
     futures::{pin_mut, stream::StreamExt},
-    mock_piconet_client::v2::{BtProfileComponent, PiconetHarness, PiconetMember},
+    mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember},
     profile_client::{ProfileClient, ProfileEvent},
     std::convert::TryInto,
 };

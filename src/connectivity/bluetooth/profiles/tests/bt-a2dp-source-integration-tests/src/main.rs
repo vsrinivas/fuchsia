@@ -13,7 +13,7 @@ use fixture::fixture;
 use fuchsia_bluetooth::types::Uuid;
 use fuchsia_component_test::{builder::Capability, RealmInstance};
 use futures::stream::StreamExt;
-use mock_piconet_client::v2::{BtProfileComponent, PiconetHarness, PiconetMember};
+use mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember};
 
 /// A2DP Source component V2 URL.
 const A2DP_URL_V2: &str =

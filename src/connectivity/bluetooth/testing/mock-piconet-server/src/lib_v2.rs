@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::peer_observer_timeout,
     anyhow::{format_err, Context, Error},
     cm_rust::{ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget},
     fidl::{
@@ -20,9 +19,23 @@ use {
         mock, Moniker, Realm, RealmInstance,
     },
     fuchsia_zircon as zx,
+    fuchsia_zircon::{Duration, DurationNum},
     futures::{stream::StreamExt, TryFutureExt},
     tracing::info,
 };
+
+/// Timeout for updates over the PeerObserver of a MockPeer.
+///
+/// This time is expected to be:
+///   a) sufficient to avoid flakes due to infra or resource contention
+///   b) short enough to still provide useful feedback in those cases where asynchronous operations
+///      fail
+///   c) short enough to fail before the overall infra-imposed test timeout (currently 5 minutes)
+const TIMEOUT_SECONDS: i64 = 2 * 60;
+
+pub fn peer_observer_timeout() -> Duration {
+    TIMEOUT_SECONDS.seconds()
+}
 
 static MOCK_PICONET_SERVER_URL_V2: &str =
     "fuchsia-pkg://fuchsia.com/mock-piconet-server#meta/mock-piconet-server-v2.cm";

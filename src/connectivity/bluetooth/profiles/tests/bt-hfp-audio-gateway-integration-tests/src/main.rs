@@ -22,7 +22,7 @@ use {
     },
     fuchsia_zircon::Duration,
     futures::{channel::mpsc, stream::StreamExt, TryFutureExt},
-    mock_piconet_client::v2::{BtProfileComponent, PiconetHarness, PiconetMember},
+    mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember},
     realmbuilder_mock_helpers::{mock_component, mock_dev},
     std::convert::TryInto,
     test_call_manager::TestCallManager,

@@ -17,7 +17,7 @@ rustc_test("tests_bin") {
     "//src/connectivity/bluetooth/lib/bt-rfcomm",
     "//src/connectivity/bluetooth/lib/fuchsia-audio-dai",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//src/connectivity/bluetooth/testing/mock-piconet-server:lib",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server:lib_v2",
     "//src/connectivity/bluetooth/testing/realmbuilder-mock-helpers",
     "//src/connectivity/bluetooth/testing/test-call-manager",
     "//src/connectivity/lib/at-commands",

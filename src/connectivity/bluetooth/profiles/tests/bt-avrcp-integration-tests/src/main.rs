@@ -21,7 +21,7 @@ use {
     fuchsia_component_test::builder::Capability,
     fuchsia_zircon as zx,
     futures::{join, stream::StreamExt, TryFutureExt},
-    mock_piconet_client::v2::{PiconetHarness, PiconetMember},
+    mock_piconet_client_v2::{PiconetHarness, PiconetMember},
     std::convert::TryInto,
 };
 
