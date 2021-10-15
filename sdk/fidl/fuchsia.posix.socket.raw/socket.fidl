@@ -102,16 +102,12 @@ protocol Socket {
     /// + request `data` the message.
     /// + request `control` ancillary data.
     /// + request `flags` flags for the send request.
-    /// - response `len` the number of bytes sent.
-    // TODO(https://fxbug.dev/82346): Drop `len`.
     SendMsg(struct {
         addr fuchsia.net.SocketAddress:optional;
         data bytes:MAX;
         control SendControlData;
         flags fuchsia.posix.socket.SendMsgFlags;
-    }) -> (struct {
-        len int64;
-    }) error fuchsia.posix.Errno;
+    }) -> (struct {}) error fuchsia.posix.Errno;
 
     /// Retrieves creation information from the socket.
     ///

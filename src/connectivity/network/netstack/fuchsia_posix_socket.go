@@ -2722,7 +2722,10 @@ func (s *rawSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, dat
 	if err != nil {
 		return rawsocket.SocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return rawsocket.SocketSendMsgResultWithResponse(rawsocket.SocketSendMsgResponse{Len: n}), nil
+	if want := int64(len(data)); n != want {
+		panic(fmt.Sprintf("got sendMsg(..) = %d, want = %d", n, want))
+	}
+	return rawsocket.SocketSendMsgResultWithResponse(rawsocket.SocketSendMsgResponse{}), nil
 }
 
 func (s *rawSocketImpl) GetInfo(fidl.Context) (rawsocket.SocketGetInfoResult, error) {

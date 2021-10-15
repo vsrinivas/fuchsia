@@ -1691,10 +1691,8 @@ struct RawSocket {
 
   static void handle_sendmsg_response(const frawsocket::wire::SocketSendMsgResponse& response,
                                       ssize_t expected_len) {
-    // TODO(https://fxbug.dev/82346): Drop len from the response as SendMsg does
-    // does not perform partial writes.
-    ZX_DEBUG_ASSERT_MSG(response.len == expected_len, "got SendMsg(...) = %ld, want = %ld",
-                        response.len, expected_len);
+    // TODO(https://fxbug.dev/82346): Drop this method once DatagramSocket.SendMsg
+    // no longer returns a length field.
   }
 };
 
@@ -1730,8 +1728,8 @@ struct PacketSocket {
 
   static void handle_sendmsg_response(const fpacketsocket::wire::SocketSendMsgResponse& response,
                                       ssize_t expected_len) {
-    // TODO(https://fxbug.dev/82346): Drop this method once other sockets' SendMsg
-    // methods do not return the length field.
+    // TODO(https://fxbug.dev/82346): Drop this method once DatagramSocket.SendMsg
+    // no longer returns a length field.
   }
 };
 
