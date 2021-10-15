@@ -122,7 +122,7 @@ void F2fs::ParseOptions() {
     if (mount_options_.GetValue(i, &value) == ZX_OK) {
       switch (i) {
         case kOptActiveLogs:
-          superblock_info_->SetActiveLogs(value);
+          superblock_info_->SetActiveLogs(safemath::checked_cast<int>(value));
           break;
         case kOptDiscard:
           if (value)
@@ -195,7 +195,7 @@ zx_status_t F2fs::SanityCheckRawSuper() {
   unsigned int blocksize;
 
   if (kF2fsSuperMagic != LeToCpu(raw_sb_->magic))
-    return 1;
+    return ZX_ERR_INVALID_ARGS;
 
   // Currently, support 512/1024/2048/4096 block size
   blocksize = 1 << LeToCpu(raw_sb_->log_blocksize);
@@ -283,9 +283,7 @@ zx_status_t F2fs::FillSuper() {
   auto reset = fit::defer([&] { Reset(); });
 
   // allocate memory for f2fs-specific super block info
-  if (superblock_info_ = std::make_unique<SuperblockInfo>(); superblock_info_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  superblock_info_ = std::make_unique<SuperblockInfo>();
 
   ParseOptions();
 
@@ -323,24 +321,18 @@ zx_status_t F2fs::FillSuper() {
       static_cast<block_t>(LeToCpu(superblock_info_->GetCheckpoint().valid_block_count)));
   superblock_info_->SetLastValidBlockCount(superblock_info_->GetTotalValidBlockCount());
   superblock_info_->SetAllocValidBlockCount(0);
+#if 0  // porting needed
   list_initialize(&superblock_info_->GetDirInodeList());
+#endif
 
   InitOrphanInfo();
 
-  if (segment_manager_ = std::make_unique<SegmentManager>(this); segment_manager_ == nullptr) {
-    err = ZX_ERR_NO_MEMORY;
-    return err;
-  }
-
+  segment_manager_ = std::make_unique<SegmentManager>(this);
   if (err = segment_manager_->BuildSegmentManager(); err != ZX_OK) {
     return err;
   }
 
-  if (node_manager_ = std::make_unique<NodeManager>(this); node_manager_ == nullptr) {
-    err = ZX_ERR_NO_MEMORY;
-    return err;
-  }
-
+  node_manager_ = std::make_unique<NodeManager>(this);
   if (err = node_manager_->BuildNodeManager(); err != ZX_OK) {
     return err;
   }

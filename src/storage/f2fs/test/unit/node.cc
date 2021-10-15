@@ -54,9 +54,6 @@ TEST_F(NodeManagerTest, NatCache) {
   ASSERT_EQ(num_tree, 1UL);
   ASSERT_EQ(num_clean, 1UL);  // root inode
   ASSERT_EQ(num_dirty, 0UL);
-  // NatEntry *entry = nullptr;
-  // entry = &node_manager->clean_nat_list_.front();
-  // ASSERT_EQ(entry->GetNid(), static_cast<nid_t>(superblock_info.GetRootIno()));
 
   // 2. Check NAT entry is cached in dirty NAT entries list
   std::vector<fbl::RefPtr<VnodeF2fs>> vnodes;
@@ -106,6 +103,7 @@ TEST_F(NodeManagerTest, NatCache) {
   CursegInfo *curseg =
       fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotData);  // NAT Journal
   SummaryBlock *sum = curseg->sum_blk;
+  ASSERT_EQ(GetSumType(&sum->footer), kSumTypeData);
 
   MapTester::GetNatCacheEntryCount(node_manager, num_tree, num_clean, num_dirty);
   ASSERT_EQ(num_tree, static_cast<size_t>(0));
@@ -410,6 +408,12 @@ TEST_F(NodeManagerTest, NodePageExceptionCase) {
   F2fsPutPage(page, 0);
 
   vnode->SetBlocks(1);
+
+  // Check MaxNid
+  const Superblock &sb_raw = superblock_info.GetRawSuperblock();
+  uint32_t nat_segs = LeToCpu(sb_raw.segment_count_nat) >> 1;
+  uint32_t nat_blocks = nat_segs << LeToCpu(sb_raw.log_blocks_per_seg);
+  ASSERT_EQ(fs_->GetNodeManager().GetMaxNid(), kNatEntryPerBlock * nat_blocks);
 
   ASSERT_EQ(vnode->Close(), ZX_OK);
   vnode.reset();

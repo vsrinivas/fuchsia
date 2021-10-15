@@ -87,15 +87,15 @@ void DoMkfs(std::unique_ptr<Bcache> bcache, std::vector<const char *> &argv, boo
   }
 }
 
-void ReadSuperblock(Bcache *bc, SuperBlock *sb) { ASSERT_EQ(LoadSuperblock(bc, sb), ZX_OK); }
+void ReadSuperblock(Bcache *bc, Superblock *sb) { ASSERT_EQ(LoadSuperblock(bc, sb), ZX_OK); }
 
-void ReadCheckpoint(Bcache *bc, SuperBlock &sb, Checkpoint *ckp) {
+void ReadCheckpoint(Bcache *bc, Superblock &sb, Checkpoint *ckp) {
   char buf[4096];
   ASSERT_EQ(bc->Readblk(sb.segment0_blkaddr, buf), ZX_OK);
   memcpy(ckp, buf, sizeof(Checkpoint));
 }
 
-void VerifyLabel(SuperBlock &sb, const char *label) {
+void VerifyLabel(Superblock &sb, const char *label) {
   std::string vol_label(label);
   std::u16string volume_name;
   AsciiToUnicode(vol_label, &volume_name);
@@ -106,15 +106,15 @@ void VerifyLabel(SuperBlock &sb, const char *label) {
   ASSERT_EQ(memcmp(sb.volume_name, volume_name_arr, vol_label.size() + 1), 0);
 }
 
-void VerifySegsPerSec(SuperBlock &sb, uint32_t segs_per_sec) {
+void VerifySegsPerSec(Superblock &sb, uint32_t segs_per_sec) {
   ASSERT_EQ(sb.segs_per_sec, segs_per_sec);
 }
 
-void VerifySecsPerZone(SuperBlock &sb, uint32_t secs_per_zone) {
+void VerifySecsPerZone(Superblock &sb, uint32_t secs_per_zone) {
   ASSERT_EQ(sb.secs_per_zone, secs_per_zone);
 }
 
-void VerifyExtensionList(SuperBlock &sb, const char *extensions) {
+void VerifyExtensionList(Superblock &sb, const char *extensions) {
   ASSERT_LE(sb.extension_count, static_cast<uint32_t>(kMaxExtension));
   uint32_t extension_iter = 0;
   for (const char *ext_item : kMediaExtList) {
@@ -138,7 +138,7 @@ void VerifyExtensionList(SuperBlock &sb, const char *extensions) {
   ASSERT_EQ(extension_iter, sb.extension_count);
 }
 
-void VerifyHeapBasedAllocation(SuperBlock &sb, Checkpoint &ckp, bool is_heap_based) {
+void VerifyHeapBasedAllocation(Superblock &sb, Checkpoint &ckp, bool is_heap_based) {
   uint32_t total_zones =
       ((LeToCpu(sb.segment_count_main) - 1) / sb.segs_per_sec) / sb.secs_per_zone;
   ASSERT_GT(total_zones, static_cast<uint32_t>(6));
@@ -179,7 +179,7 @@ void VerifyHeapBasedAllocation(SuperBlock &sb, Checkpoint &ckp, bool is_heap_bas
   ASSERT_EQ(ckp.cur_data_segno[2], cur_seg[static_cast<int>(CursegType::kCursegColdData)]);
 }
 
-void VerifyOP(SuperBlock &sb, Checkpoint &ckp, uint32_t op_ratio) {
+void VerifyOP(Superblock &sb, Checkpoint &ckp, uint32_t op_ratio) {
   uint32_t overprov_segment_count =
       CpuToLe((LeToCpu(sb.segment_count_main) - LeToCpu(ckp.rsvd_segment_count)) * op_ratio / 100 +
               LeToCpu(ckp.rsvd_segment_count));
@@ -199,7 +199,7 @@ TEST(FormatFilesystemTest, MkfsOptionsLabel) {
   std::vector<const char *> argv = {"mkfs"};
   DoMkfs(std::move(bc), argv, true, &bc);
 
-  SuperBlock sb = {};
+  Superblock sb = {};
   ReadSuperblock(bc.get(), &sb);
   VerifyLabel(sb, default_label);
 
@@ -229,7 +229,7 @@ TEST(FormatFilesystemTest, MkfsOptionsSegsPerSec) {
   // Check default value
   std::vector<const char *> argv = {"mkfs"};
   DoMkfs(std::move(bc), argv, true, &bc);
-  SuperBlock sb = {};
+  Superblock sb = {};
   ReadSuperblock(bc.get(), &sb);
   VerifySegsPerSec(sb, default_option.segs_per_sec);
 
@@ -263,7 +263,7 @@ TEST(FormatFilesystemTest, MkfsOptionsSecsPerZone) {
   // Check default value
   std::vector<const char *> argv = {"mkfs"};
   DoMkfs(std::move(bc), argv, true, &bc);
-  SuperBlock sb = {};
+  Superblock sb = {};
   ReadSuperblock(bc.get(), &sb);
   VerifySecsPerZone(sb, default_option.secs_per_zone);
 
@@ -298,7 +298,7 @@ TEST(FormatFilesystemTest, MkfsOptionsExtensions) {
   // Check default
   std::vector<const char *> argv = {"mkfs"};
   DoMkfs(std::move(bc), argv, true, &bc);
-  SuperBlock sb = {};
+  Superblock sb = {};
   ReadSuperblock(bc.get(), &sb);
   VerifyExtensionList(sb, "");
 
@@ -340,7 +340,7 @@ TEST(FormatFilesystemTest, MkfsOptionsHeapBasedAlloc) {
   // Check default
   std::vector<const char *> argv = {"mkfs"};
   DoMkfs(std::move(bc), argv, true, &bc);
-  SuperBlock sb = {};
+  Superblock sb = {};
   ReadSuperblock(bc.get(), &sb);
   Checkpoint ckp = {};
   ReadCheckpoint(bc.get(), sb, &ckp);
@@ -376,7 +376,7 @@ TEST(FormatFilesystemTest, MkfsOptionsOverprovision) {
   // Check default
   std::vector<const char *> argv = {"mkfs"};
   DoMkfs(std::move(bc), argv, true, &bc);
-  SuperBlock sb = {};
+  Superblock sb = {};
   ReadSuperblock(bc.get(), &sb);
   Checkpoint ckp = {};
   ReadCheckpoint(bc.get(), sb, &ckp);
@@ -441,7 +441,7 @@ TEST(FormatFilesystemTest, MkfsOptionsMixed) {
               PrintArg(argv);
               DoMkfs(bc.get(), argv, true);
 
-              SuperBlock sb = {};
+              Superblock sb = {};
               ReadSuperblock(bc.get(), &sb);
 
               Checkpoint ckp = {};
@@ -502,7 +502,7 @@ TEST(FormatFilesystemTest, BlockSize) {
       FileTester::CreateRoot(fs.get(), &root);
       fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
 
-      SuperBlock &fsb = fs->RawSb();
+      Superblock &fsb = fs->RawSb();
       ASSERT_EQ(1 << fsb.log_sectorsize, static_cast<const int32_t>(block_size));
       ASSERT_EQ(1 << fs->GetSuperblockInfo().GetLogSectorsPerBlock(),
                 static_cast<const int32_t>((1 << kMaxLogSectorSize) / block_size));
@@ -541,7 +541,7 @@ TEST(FormatFilesystemTest, MkfsSmallVolume) {
       async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
       FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
-      SuperBlock &fsb = fs->RawSb();
+      Superblock &fsb = fs->RawSb();
       ASSERT_EQ(fsb.segment_count_main, static_cast<uint32_t>(volume_size / 2 - 8));
 
       FileTester::Unmount(std::move(fs), &bc);
@@ -576,7 +576,7 @@ TEST(FormatFilesystemTest, MkfsPrintOptions) {
   DoMkfs(std::move(bc), argv, false, &bc);
 }
 
-TEST(FormatFilesystemTest, PrepareSuperBlockExceptionCase) {
+TEST(FormatFilesystemTest, PrepareSuperblockExceptionCase) {
   std::unique_ptr<Bcache> bc;
   MkfsOptions mkfs_options;
 

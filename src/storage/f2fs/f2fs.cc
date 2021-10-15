@@ -31,11 +31,12 @@
 namespace f2fs {
 
 #ifdef __Fuchsia__
-F2fs::F2fs(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc, SuperBlock* sb,
-           const MountOptions& mount_options)
-    : fs::ManagedVfs(dispatcher), bc_(std::move(bc)), mount_options_(mount_options) {
-  raw_sb_.reset(sb);
-
+F2fs::F2fs(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc,
+           std::unique_ptr<Superblock> sb, const MountOptions& mount_options)
+    : fs::ManagedVfs(dispatcher),
+      bc_(std::move(bc)),
+      mount_options_(mount_options),
+      raw_sb_(std::move(sb)) {
   zx::event event;
   if (zx_status_t status = zx::event::create(0, &event); status == ZX_OK) {
     zx_info_handle_basic_t info;
@@ -47,7 +48,7 @@ F2fs::F2fs(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc, Sup
   }
 }
 #else   // __Fuchsia__
-F2fs::F2fs(std::unique_ptr<f2fs::Bcache> bc, SuperBlock* sb, const MountOptions& mount_options)
+F2fs::F2fs(std::unique_ptr<f2fs::Bcache> bc, Superblock* sb, const MountOptions& mount_options)
     : bc_(std::move(bc)), mount_options_(mount_options) {
   raw_sb_.reset(sb);
 }
@@ -62,15 +63,13 @@ zx_status_t F2fs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::B
 zx_status_t F2fs::Create(std::unique_ptr<f2fs::Bcache> bc, const MountOptions& options,
                          std::unique_ptr<F2fs>* out) {
 #endif  // __Fuchsia__
-  SuperBlock* info;
-
-  info = new SuperBlock();
-  if (zx_status_t status = LoadSuperblock(bc.get(), info); status != ZX_OK) {
+  auto info = std::make_unique<Superblock>();
+  if (zx_status_t status = LoadSuperblock(bc.get(), info.get()); status != ZX_OK) {
     return status;
   }
 
 #ifdef __Fuchsia__
-  *out = std::unique_ptr<F2fs>(new F2fs(dispatcher, std::move(bc), info, options));
+  *out = std::make_unique<F2fs>(dispatcher, std::move(bc), std::move(info), options);
 #else   // __Fuchsia__
   *out = std::unique_ptr<F2fs>(new F2fs(std::move(bc), info, options));
 #endif  // __Fuchsia__
@@ -83,7 +82,7 @@ zx_status_t F2fs::Create(std::unique_ptr<f2fs::Bcache> bc, const MountOptions& o
   return ZX_OK;
 }
 
-zx_status_t LoadSuperblock(f2fs::Bcache* bc, SuperBlock* out_info, block_t bno) {
+zx_status_t LoadSuperblock(f2fs::Bcache* bc, Superblock* out_info, block_t bno) {
   // TODO: define ino for superblock after cache impl.
   // the 1st and the 2nd blocks each have a identical Superblock.
   ZX_ASSERT(bno <= 1);
@@ -92,12 +91,12 @@ zx_status_t LoadSuperblock(f2fs::Bcache* bc, SuperBlock* out_info, block_t bno) 
     F2fsPutPage(page, 1);
     return status;
   }
-  memcpy(out_info, static_cast<uint8_t*>(PageAddress(page)) + kSuperOffset, sizeof(SuperBlock));
+  memcpy(out_info, static_cast<uint8_t*>(PageAddress(page)) + kSuperOffset, sizeof(Superblock));
   F2fsPutPage(page, 1);
   return ZX_OK;
 }
 
-zx_status_t LoadSuperblock(f2fs::Bcache* bc, SuperBlock* out_info) {
+zx_status_t LoadSuperblock(f2fs::Bcache* bc, Superblock* out_info) {
   // TODO: define ino for superblock after cache impl.
   if (zx_status_t status = LoadSuperblock(bc, out_info, kSuperblockStart); status != ZX_OK) {
     if (zx_status_t status = LoadSuperblock(bc, out_info, kSuperblockStart + 1); status != ZX_OK) {
@@ -287,6 +286,25 @@ zx_status_t F2fs::GetFsId(zx::event* out_fs_id) const {
   return fs_id_.duplicate(ZX_RIGHTS_BASIC, out_fs_id);
 }
 #endif  // __Fuchsia__
+
+bool F2fs::IsValid() const {
+  if (bc_ == nullptr) {
+    return false;
+  }
+  if (root_vnode_ == nullptr) {
+    return false;
+  }
+  if (superblock_info_ == nullptr) {
+    return false;
+  }
+  if (segment_manager_ == nullptr) {
+    return false;
+  }
+  if (node_manager_ == nullptr) {
+    return false;
+  }
+  return true;
+}
 
 zx_status_t FlushDirtyMetaPage(F2fs* fs, Page* page) {
   if (!page)

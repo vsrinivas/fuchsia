@@ -153,9 +153,9 @@ class SuperblockInfo {
 
   SuperblockInfo() = default;
 
-  SuperBlock &GetRawSuperblock() { return *raw_superblock_; }
-  void SetRawSuperblock(std::shared_ptr<SuperBlock> &raw_sb) { raw_superblock_ = raw_sb; }
-  void SetRawSuperblock(SuperBlock *raw_sb_ptr) { raw_superblock_.reset(raw_sb_ptr); }
+  Superblock &GetRawSuperblock() { return *raw_superblock_; }
+  void SetRawSuperblock(std::shared_ptr<Superblock> &raw_sb) { raw_superblock_ = raw_sb; }
+  void SetRawSuperblock(Superblock *raw_sb_ptr) { raw_superblock_.reset(raw_sb_ptr); }
 
   bool IsDirty() const { return is_dirty_; }
   void SetDirty() { is_dirty_ = true; }
@@ -193,11 +193,12 @@ class SuperblockInfo {
   void DecNrOrphans();
   void ResetNrOrphans() { n_orphans_ = 0; }
 
+#if 0  // porting needed
   list_node_t &GetDirInodeList() { return dir_inode_list_; }
-
 #ifdef __Fuchsia__
   fbl::Mutex &GetDirInodeLock() { return dir_inode_lock_; };
 #endif  // __Fuchsia__
+#endif
 
   block_t GetLogSectorsPerBlock() const { return log_sectors_per_block_; }
 
@@ -305,7 +306,7 @@ class SuperblockInfo {
   fbl::Mutex &GetStatLock() { return stat_lock_; };
 #endif  // __Fuchsia__
 
-  void IncPageCount(int count_type) {
+  void IncPageCount(CountType count_type) {
     // TODO: IMPL
     // AtomicInc(&nr_pages_[count_type]);
     SetDirty();
@@ -326,10 +327,8 @@ class SuperblockInfo {
     // return NAT or SIT bitmap
     if (flag == MetaBitmap::kNatBitmap)
       return LeToCpu(checkpoint_block_.checkpoint_.nat_ver_bitmap_bytesize);
-    else if (flag == MetaBitmap::kSitBitmap)
+    else  // MetaBitmap::kSitBitmap
       return LeToCpu(checkpoint_block_.checkpoint_.sit_ver_bitmap_bytesize);
-
-    return 0;
   }
 
   void *BitmapPtr(MetaBitmap flag) {
@@ -357,7 +356,7 @@ class SuperblockInfo {
   block_t StartSumAddr() { return LeToCpu(checkpoint_block_.checkpoint_.cp_pack_start_sum); }
 
  private:
-  std::shared_ptr<SuperBlock> raw_superblock_;  // raw super block pointer
+  std::shared_ptr<Superblock> raw_superblock_;  // raw super block pointer
   bool is_dirty_ = false;                       // dirty flag for checkpoint
 #if 0                                           // porting needed
   // fbl::RefPtr<VnodeF2fs> node_vnode;
@@ -394,11 +393,11 @@ class SuperblockInfo {
   uint64_t n_orphans_ = 0;              // # of orphan inodes
 
   // for directory inode management
+#if 0  // porting needed
   list_node_t dir_inode_list_;  // dir inode list
 #ifdef __Fuchsia__
   fbl::Mutex dir_inode_lock_;  // for dir inode list lock
-#endif                         // __Fuchsia__
-#if 0                          // porting needed
+#endif  // __Fuchsia__
   // uint64_t n_dirty_dirs = 0;   // # of dir inodes
 #endif
 
@@ -453,14 +452,16 @@ class SuperblockInfo {
 
 constexpr uint32_t kDefaultAllocatedBlocks = 1;
 
+#if 0  // porting needed
 static inline void InodeIncDirtyDents(VnodeF2fs *vnode) {
-  //   //TODO: IMPL
-  // 	//AtomicInc(&F2FS_I(inode)->dirty_dents);
+  // TODO: IMPL
+  // AtomicInc(&F2FS_I(inode)->dirty_dents);
 }
+#endif
 
 static inline void InodeDecDirtyDents(void *vnode) {
-  //   //TODO: IMPL
-  // 	//AtomicDec(&F2FS_I(inode)->dirty_dents);
+  // TODO: IMPL
+  // AtomicDec(&F2FS_I(inode)->dirty_dents);
 }
 
 static inline bool IsSetCkptFlags(Checkpoint *cp, uint32_t f) {
@@ -483,10 +484,12 @@ static inline void F2fsPutDnode(DnodeOfData *dn) {
   F2fsPutPage(dn->inode_page, 0);
 }
 
-[[maybe_unused]] static inline struct kmem_cache *KmemCacheCreate(const char *name, size_t size,
+#if 0  // porting needed
+static inline struct kmem_cache *KmemCacheCreate(const char *name, size_t size,
                                                                   void (*ctor)(void *)) {
   return nullptr;
 }
+#endif
 
 inline bool RawIsInode(Node *p) { return p->footer.nid == p->footer.ino; }
 

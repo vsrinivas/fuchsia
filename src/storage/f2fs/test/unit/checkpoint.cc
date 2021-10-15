@@ -78,7 +78,7 @@ void ReadCheckpoint(F2fs *fs, block_t cp_addr, Page **cp_out) {
 }
 
 void GetLastCheckpoint(F2fs *fs, uint32_t expect_cp_position, bool after_mkfs, Page **cp_out) {
-  SuperBlock &fsb = fs->RawSb();
+  Superblock &fsb = fs->RawSb();
   Checkpoint *cp_block1 = nullptr, *cp_block2 = nullptr;
   Page *cp_page1 = nullptr, *cp_page2 = nullptr, *cur_cp_page = nullptr;
   block_t cp_addr;

@@ -166,7 +166,7 @@ zx::status<uint32_t> MkfsWorker::GetCalculatedOp(uint32_t user_op) {
   return zx::ok(max_op);
 }
 
-zx_status_t MkfsWorker::PrepareSuperBlock() {
+zx_status_t MkfsWorker::PrepareSuperblock() {
   super_block_.magic = CpuToLe(uint32_t{kF2fsSuperMagic});
   super_block_.major_ver = CpuToLe(kMajorVersion);
   super_block_.minor_ver = CpuToLe(kMinorVersion);
@@ -667,7 +667,7 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
   return ZX_OK;
 }
 
-zx_status_t MkfsWorker::WriteSuperBlock() {
+zx_status_t MkfsWorker::WriteSuperblock() {
   FsBlock super_block;
 #ifdef __Fuchsia__
   uint8_t *super_block_buff = reinterpret_cast<uint8_t *>(super_block.GetData().data());
@@ -855,7 +855,7 @@ zx_status_t MkfsWorker::TrimDevice() {
 zx_status_t MkfsWorker::FormatDevice() {
   zx_status_t err = ZX_OK;
   const char err_msg[] = "Error formatting the device: ";
-  if (err = PrepareSuperBlock(); err != ZX_OK) {
+  if (err = PrepareSuperblock(); err != ZX_OK) {
     FX_LOGS(ERROR) << err_msg << "Failed to prepare superblock information";
     return err;
   }
@@ -889,7 +889,7 @@ zx_status_t MkfsWorker::FormatDevice() {
     return err;
   }
 
-  if (err = WriteSuperBlock(); err != ZX_OK) {
+  if (err = WriteSuperblock(); err != ZX_OK) {
     FX_LOGS(ERROR) << err_msg << "Failed to write the Super Block" << err;
     return err;
   }

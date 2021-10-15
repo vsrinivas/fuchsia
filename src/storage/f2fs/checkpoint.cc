@@ -401,7 +401,7 @@ invalid_cp1:
 
 zx_status_t F2fs::GetValidCheckpoint() {
   Checkpoint *cp_block;
-  SuperBlock &fsb = RawSb();
+  Superblock &fsb = RawSb();
   Page *cp1 = nullptr, *cp2 = nullptr, *cur_page = nullptr;
   uint64_t blk_size = superblock_info_->GetBlocksize();
   uint64_t cp1_version = 0, cp2_version = 0;

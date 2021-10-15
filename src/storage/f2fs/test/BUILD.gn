@@ -21,6 +21,7 @@ test("f2fs_unit") {
     "unit/bcache.cc",
     "unit/checkpoint.cc",
     "unit/dir.cc",
+    "unit/f2fs.cc",
     "unit/file.cc",
     "unit/inline.cc",
     "unit/mkfs.cc",

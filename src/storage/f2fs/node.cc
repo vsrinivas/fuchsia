@@ -1899,7 +1899,7 @@ void NodeManager::FlushNatEntries() {
 }
 
 zx_status_t NodeManager::InitNodeManager() {
-  const SuperBlock &sb_raw = GetSuperblockInfo().GetRawSuperblock();
+  const Superblock &sb_raw = GetSuperblockInfo().GetRawSuperblock();
   uint8_t *version_bitmap;
   uint32_t nat_segs, nat_blocks;
 

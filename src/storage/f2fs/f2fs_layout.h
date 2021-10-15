@@ -85,12 +85,7 @@ struct GlobalParameters {
   std::string extension_list;
 } __attribute__((packed));
 
-constexpr uint32_t kBitsPerLong = 64;
-
-inline uint32_t BitMask(uint32_t nr) { return 1 << (nr % kBitsPerLong); };
-inline uint32_t BitWord(uint32_t nr) { return nr / kBitsPerLong; };
-
-struct SuperBlock {
+struct Superblock {
   uint32_t magic = 0;                  // Magic Number
   uint16_t major_ver = 0;              // Major Version
   uint16_t minor_ver = 0;              // Minor Version

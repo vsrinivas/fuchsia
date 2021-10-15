@@ -19,11 +19,15 @@ inline Page *GrabCachePage(void *vnode, uint32_t nid, pgoff_t index) {
 
 inline void *PageAddress(Page *page) { return (void *)page->data; }
 inline void *PageAddress(Page &page) { return (void *)page.data; }
-inline Page *FindGetPage(/* TODO pgoff_t*/ uint32_t index) { return nullptr; }
 inline int PageUptodate(struct Page *page) { return 0; }
 inline void SetPageUptodate(struct Page *page) {}
 inline void ClearPageUptodate(struct Page *page) {}
+
+#if 0  // porting needed
+inline Page *FindGetPage(/* TODO pgoff_t*/ uint32_t index) { return nullptr; }
 inline void ClearPagePrivate(struct Page *) {}
+#endif
+
 inline int PageDirty(struct Page *) { /*TODO: IMPL: does Page has dirty bit?*/
   return 0;
 }
@@ -181,6 +185,7 @@ static inline void AtomicSet(atomic_t *t, int value) {
   atomic_store_explicit(t, value, std::memory_order_relaxed);
 }
 
+#if 0  // porting needed
 static inline atomic_t AtomicRead(atomic_t *t) {
   uint32_t ret = atomic_load_explicit(t, std::memory_order_relaxed);
   return ret;
@@ -193,13 +198,9 @@ static inline void AtomicInc(atomic_t *t) {
 static inline void AtomicDec(atomic_t *t) {
   atomic_fetch_sub_explicit(t, 1, std::memory_order_relaxed);
 }
+#endif
 
 // List operations
-inline void list_move_tail(list_node_t *list, list_node_t *item) {
-  list_delete(item);
-  list_add_tail(list, item);
-}
-
 static inline void list_add(list_node_t *list, list_node_t *item) {
   list->next->prev = item;
   item->next = list->next;
@@ -229,12 +230,13 @@ static inline void zero_user(Page *page, unsigned start, unsigned size) {
   ZeroUserSegments(page, start, start + size, 0, 0);
 }
 
+#if 0  // porting needed
 // Inode
 static inline void *Igrab(void *vnode) {
   // TODO: need to add ref. count if vnode is valid
   return vnode;
 }
-
+#endif
 static inline void *Iput(void *vnode) {
   // TODO: need to decrement ref.
   // TODO  handle vnode according to its vaility when ref = 0

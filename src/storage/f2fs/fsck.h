@@ -143,7 +143,7 @@ class FsckWorker {
 
   void InitSuperblockInfo();
   void *ValidateCheckpoint(block_t cp_addr, uint64_t *version);
-  zx_status_t SanityCheckRawSuper(const SuperBlock *raw_super);
+  zx_status_t SanityCheckRawSuper(const Superblock *raw_super);
   zx_status_t ValidateSuperblock(block_t block);
   zx_status_t GetValidCheckpoint();
   zx_status_t SanityCheckCkpt();

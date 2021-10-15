@@ -38,10 +38,10 @@ class FileTester {
  public:
   static void MkfsOnFakeDev(std::unique_ptr<Bcache> *bc, uint64_t block_count = 819200,
                             uint32_t block_size = kDefaultSectorSize, bool btrim = true);
-  static void MkfsOnFakeDevWithOptions(std::unique_ptr<Bcache> *bc, MkfsOptions &options,
+  static void MkfsOnFakeDevWithOptions(std::unique_ptr<Bcache> *bc, const MkfsOptions &options,
                                        uint64_t block_count = 819200,
                                        uint32_t block_size = kDefaultSectorSize, bool btrim = true);
-  static void MountWithOptions(async_dispatcher_t *dispatcher, MountOptions &options,
+  static void MountWithOptions(async_dispatcher_t *dispatcher, const MountOptions &options,
                                std::unique_ptr<Bcache> *bc, std::unique_ptr<F2fs> *fs);
   static void Unmount(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc);
   static void SuddenPowerOff(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc);

@@ -49,7 +49,7 @@ void FileTester::MkfsOnFakeDev(std::unique_ptr<Bcache> *bc, uint64_t block_count
   *bc = std::move(*ret);
 }
 
-void FileTester::MkfsOnFakeDevWithOptions(std::unique_ptr<Bcache> *bc, MkfsOptions &options,
+void FileTester::MkfsOnFakeDevWithOptions(std::unique_ptr<Bcache> *bc, const MkfsOptions &options,
                                           uint64_t blockCount, uint32_t blockSize, bool btrim) {
   auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
       .block_count = blockCount, .block_size = blockSize, .supports_trim = btrim});
@@ -62,7 +62,7 @@ void FileTester::MkfsOnFakeDevWithOptions(std::unique_ptr<Bcache> *bc, MkfsOptio
   *bc = std::move(*ret);
 }
 
-void FileTester::MountWithOptions(async_dispatcher_t *dispatcher, MountOptions &options,
+void FileTester::MountWithOptions(async_dispatcher_t *dispatcher, const MountOptions &options,
                                   std::unique_ptr<Bcache> *bc, std::unique_ptr<F2fs> *fs) {
   ASSERT_EQ(F2fs::Create(dispatcher, std::move(*bc), options, fs), ZX_OK);
 }
@@ -414,6 +414,7 @@ void MapTester::GetCachedNatEntryBlockAddress(NodeManager &manager, nid_t nid, b
   fs::SharedLock nat_lock(manager.nat_tree_lock_);
   auto entry = manager.nat_cache_.find(nid);
   ASSERT_TRUE(entry != manager.nat_cache_.end());
+  ASSERT_EQ(entry->GetNodeInfo().nid, nid);
   out = entry->GetBlockAddress();
 }
 
@@ -421,6 +422,7 @@ void MapTester::SetCachedNatEntryBlockAddress(NodeManager &manager, nid_t nid, b
   std::lock_guard nat_lock(manager.nat_tree_lock_);
   auto entry = manager.nat_cache_.find(nid);
   ASSERT_TRUE(entry != manager.nat_cache_.end());
+  ASSERT_EQ(entry->GetNodeInfo().nid, nid);
   entry->SetBlockAddress(address);
 }
 
@@ -428,7 +430,9 @@ void MapTester::SetCachedNatEntryCheckpointed(NodeManager &manager, nid_t nid) {
   std::lock_guard nat_lock(manager.nat_tree_lock_);
   auto entry = manager.nat_cache_.find(nid);
   ASSERT_TRUE(entry != manager.nat_cache_.end());
+  ASSERT_EQ(entry->GetNodeInfo().nid, nid);
   entry->SetCheckpointed();
+  ASSERT_TRUE(entry->IsCheckpointed());
 }
 
 zx_status_t MkfsTester::InitAndGetDeviceInfo(MkfsWorker &mkfs) {

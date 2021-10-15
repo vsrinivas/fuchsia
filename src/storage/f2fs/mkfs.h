@@ -46,7 +46,7 @@ class MkfsWorker {
 
   // F2FS Parameter
   GlobalParameters params_;
-  SuperBlock super_block_;
+  Superblock super_block_;
 
   void InitGlobalParameters();
   zx_status_t GetDeviceInfo();
@@ -58,12 +58,12 @@ class MkfsWorker {
 
   zx::status<uint32_t> GetCalculatedOp(uint32_t op);
 
-  zx_status_t PrepareSuperBlock();
+  zx_status_t PrepareSuperblock();
   zx_status_t InitSitArea();
   zx_status_t InitNatArea();
 
   zx_status_t WriteCheckPointPack();
-  zx_status_t WriteSuperBlock();
+  zx_status_t WriteSuperblock();
   zx_status_t WriteRootInode();
   zx_status_t UpdateNatRoot();
   zx_status_t AddDefaultDentryRoot();

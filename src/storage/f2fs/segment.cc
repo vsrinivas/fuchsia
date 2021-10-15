@@ -1571,7 +1571,7 @@ void SegmentManager::FlushSitEntries() {
 }
 
 zx_status_t SegmentManager::BuildSitInfo() {
-  const SuperBlock &raw_super = superblock_info_->GetRawSuperblock();
+  const Superblock &raw_super = superblock_info_->GetRawSuperblock();
   Checkpoint &ckpt = superblock_info_->GetCheckpoint();
   uint32_t sit_segs, start;
   uint8_t *src_bitmap;
@@ -1653,7 +1653,7 @@ zx_status_t SegmentManager::BuildFreeSegmap() {
 
 zx_status_t SegmentManager::BuildCurseg() {
   for (int i = 0; i < kNrCursegType; ++i) {
-    if (curseg_array_[i].raw_blk = new FsBlock(); !curseg_array_[i].sum_blk) {
+    if (curseg_array_[i].raw_blk = new FsBlock(); !curseg_array_[i].raw_blk) {
       return ZX_ERR_NO_MEMORY;
     }
     curseg_array_[i].segno = kNullSegNo;
@@ -1793,7 +1793,7 @@ void SegmentManager::InitMinMaxMtime() {
 }
 
 zx_status_t SegmentManager::BuildSegmentManager() {
-  const SuperBlock &raw_super = superblock_info_->GetRawSuperblock();
+  const Superblock &raw_super = superblock_info_->GetRawSuperblock();
   Checkpoint &ckpt = superblock_info_->GetCheckpoint();
   zx_status_t err = 0;
 

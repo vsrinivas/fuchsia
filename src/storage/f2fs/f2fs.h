@@ -80,8 +80,8 @@ enum class ServeLayout {
   kExportDirectory
 };
 
-zx_status_t LoadSuperblock(f2fs::Bcache *bc, SuperBlock *out_info);
-zx_status_t LoadSuperblock(f2fs::Bcache *bc, SuperBlock *out_info, block_t bno);
+zx_status_t LoadSuperblock(f2fs::Bcache *bc, Superblock *out_info);
+zx_status_t LoadSuperblock(f2fs::Bcache *bc, Superblock *out_info, block_t bno);
 
 #ifdef __Fuchsia__
 zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions &mount_options,
@@ -110,10 +110,10 @@ class F2fs : public fs::Vfs {
   F2fs &operator=(F2fs &&) = delete;
 
 #ifdef __Fuchsia__
-  explicit F2fs(async_dispatcher_t *dispatcher, std::unique_ptr<f2fs::Bcache> bc, SuperBlock *sb,
-                const MountOptions &mount_options);
+  explicit F2fs(async_dispatcher_t *dispatcher, std::unique_ptr<f2fs::Bcache> bc,
+                std::unique_ptr<Superblock> sb, const MountOptions &mount_options);
 #else   // __Fuchsia__
-  explicit F2fs(std::unique_ptr<f2fs::Bcache> bc, SuperBlock *sb,
+  explicit F2fs(std::unique_ptr<f2fs::Bcache> bc, Superblock *sb,
                 const MountOptions &mount_options);
 #endif  // __Fuchsia__
 
@@ -153,10 +153,23 @@ class F2fs : public fs::Vfs {
     *out = std::move(bc_);
   };
   Bcache &GetBc() { return *bc_; }
-  SuperBlock &RawSb() { return *raw_sb_; }
+  Superblock &RawSb() { return *raw_sb_; }
   SuperblockInfo &GetSuperblockInfo() { return *superblock_info_; }
   SegmentManager &GetSegmentManager() { return *segment_manager_; }
   NodeManager &GetNodeManager() { return *node_manager_; }
+
+  // For testing Reset() and ResetBc()
+  bool IsValid() const;
+  void ResetRootVnode() { root_vnode_.reset(); }
+  void ResetSuperblockInfo() { superblock_info_.reset(); }
+  void ResetSegmentManager() {
+    segment_manager_->DestroySegmentManager();
+    segment_manager_.reset();
+  }
+  void ResetNodeManager() {
+    node_manager_->DestroyNodeManager();
+    node_manager_.reset();
+  }
 
   // super.cc
   void PutSuper();
@@ -243,7 +256,7 @@ class F2fs : public fs::Vfs {
   fbl::Closure on_unmount_{};
   MountOptions mount_options_{};
 
-  std::shared_ptr<SuperBlock> raw_sb_;
+  std::shared_ptr<Superblock> raw_sb_;
   std::unique_ptr<SuperblockInfo> superblock_info_;
   std::unique_ptr<SegmentManager> segment_manager_;
   std::unique_ptr<NodeManager> node_manager_;

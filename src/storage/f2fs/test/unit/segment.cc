@@ -434,10 +434,10 @@ TEST(SegmentManagerOptionTest, DestroySegmentManagerExceptionCase) {
   MountOptions mount_options;
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  SuperBlock *superblock_info = new SuperBlock();
-  ASSERT_EQ(LoadSuperblock(bc.get(), superblock_info), ZX_OK);
-  std::unique_ptr<F2fs> fs =
-      std::make_unique<F2fs>(loop.dispatcher(), std::move(bc), superblock_info, mount_options);
+  auto superblock = std::make_unique<Superblock>();
+  ASSERT_EQ(LoadSuperblock(bc.get(), superblock.get()), ZX_OK);
+  std::unique_ptr<F2fs> fs = std::make_unique<F2fs>(loop.dispatcher(), std::move(bc),
+                                                    std::move(superblock), mount_options);
 
   ASSERT_EQ(fs->FillSuper(), ZX_OK);
 
