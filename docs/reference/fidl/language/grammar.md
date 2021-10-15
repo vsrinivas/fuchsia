@@ -138,7 +138,7 @@ service-member = ( attribute-list ) , member-field ; [NOTE 9]
 
 member-field = IDENTIFIER , type-constructor ;
 
-attribute-list = attribute | attribute , "," , attribute-list ;
+attribute-list = ( attribute )* ;
 
 attribute = "@", IDENTIFIER , ( "(" , constant | attribute-args, ")" ) ;
 
