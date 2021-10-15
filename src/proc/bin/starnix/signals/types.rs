@@ -246,6 +246,15 @@ pub struct SignalState {
     pub waiter: Option<Arc<Waiter>>,
 }
 
+impl SignalState {
+    /// Sets the signal mask of the state, and returns the old signal mask.
+    pub fn set_signal_mask(&mut self, signal_mask: u64) -> u64 {
+        let old_mask = self.mask;
+        self.mask = signal_mask & !(Signal::SIGSTOP.mask() | Signal::SIGKILL.mask());
+        old_mask
+    }
+}
+
 pub const CLD_EXITED: i32 = 1;
 pub const CLD_KILLED: i32 = 2;
 pub const CLD_DUMPED: i32 = 3;

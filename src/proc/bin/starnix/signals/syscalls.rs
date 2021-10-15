@@ -163,7 +163,8 @@ pub fn sys_rt_sigsuspend(
     ctx.task.mm.read_object(user_mask, &mut mask)?;
 
     let waiter = Waiter::new();
-    waiter.wait_with_mask(ctx, mask)?;
+    let task = ctx.task.clone();
+    task.wait_with_temporary_mask(ctx, mask, || waiter.wait(&task))?;
 
     Ok(SUCCESS)
 }

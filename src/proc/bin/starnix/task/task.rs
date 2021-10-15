@@ -21,7 +21,9 @@ use crate::loader::*;
 use crate::logging::*;
 use crate::mm::MemoryManager;
 use crate::not_implemented;
+use crate::signals::signal_handling::dequeue_signal;
 use crate::signals::types::*;
+use crate::syscalls::SyscallContext;
 use crate::task::*;
 use crate::types::*;
 
@@ -757,6 +759,27 @@ impl Task {
 
     fn remove_child(&self, pid: pid_t) {
         self.children.write().remove(&pid);
+    }
+
+    /// Sets the task's signal mask to `signal_mask` and runs `wait_function`.
+    ///
+    /// Signals are dequeued prior to the original signal mask being restored.
+    ///
+    /// The returned result is the result returned from the wait function.
+    pub fn wait_with_temporary_mask<F, T>(
+        &self,
+        ctx: &mut SyscallContext<'_>,
+        signal_mask: u64,
+        wait_function: F,
+    ) -> Result<T, Errno>
+    where
+        F: FnOnce() -> Result<T, Errno>,
+    {
+        let old_mask = self.signals.write().set_signal_mask(signal_mask);
+        let wait_result = wait_function();
+        dequeue_signal(ctx);
+        self.signals.write().set_signal_mask(old_mask);
+        wait_result
     }
 }
 
