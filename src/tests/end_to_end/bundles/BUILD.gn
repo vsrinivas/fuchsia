@@ -38,10 +38,6 @@ group("end_to_end_deps") {
     # Needed for VP9 decode conformance testing.
     "//src/media/codec/examples:vp9_decoder_conformance_http",
 
-    # Needed for bt-a2dp test
-    "//src/connectivity/bluetooth/profiles/tests/bt-a2dp-loopback",
-    "//src/connectivity/bluetooth/testing/mock-piconet-server",
-
     # Service that tests use to log cpu usage into traces
     "//src/testing/system-metrics-logger",
   ]
