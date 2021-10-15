@@ -6,7 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.netemul") {
   name = "fuchsia.netemul"
-  sources = [ "realm.fidl" ]
+  sources = [ "netemul.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.component",
