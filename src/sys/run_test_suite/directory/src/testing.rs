@@ -128,6 +128,12 @@ pub fn assert_suite_results(
     for suite in expected_suites.iter() {
         expected_suites_map.insert(suite.name.clone(), suite);
     }
+    assert_eq!(
+        actual_suites.len(),
+        expected_suites_map.len(),
+        "Run contains multiple suites with the same name. \
+        This is currently unsupported by assert_suite_results"
+    );
     for suite in actual_suites.iter() {
         let suite_name = match suite {
             SuiteResult::V0 { name, .. } => name,

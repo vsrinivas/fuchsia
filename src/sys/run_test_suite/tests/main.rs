@@ -328,7 +328,9 @@ stderr msg2 for Example.Test3
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_passing_v2_test_multiple_times() {
     let mut output: Vec<u8> = vec![];
-    let mut reporter = output::RunReporter::new_noop();
+    let output_dir = tempfile::tempdir().expect("Create temp directory");
+    let mut reporter =
+        output::RunReporter::new(output_dir.path().to_path_buf()).expect("Create reporter");
     let streams = run_test_suite_lib::run_test(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
@@ -338,6 +340,8 @@ async fn launch_and_test_passing_v2_test_multiple_times() {
         )
     .await.expect("run test");
     let run_results = streams.collect::<Vec<_>>().await;
+    reporter.stopped(&output::ReportedOutcome::Passed, output::Timestamp::Unknown).unwrap();
+    reporter.finished().unwrap();
 
     assert_eq!(run_results.len(), 10);
     for run_result in run_results {
@@ -349,6 +353,41 @@ async fn launch_and_test_passing_v2_test_multiple_times() {
 
         assert_eq!(run_result.executed, expected);
         assert!(run_result.successful_completion);
+    }
+
+    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed);
+    let expected_test_suite = ExpectedSuite::new(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
+        directory::Outcome::Passed,
+    )
+    .with_case(
+        ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed)
+            .with_matching_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), |_| ())
+            .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), ""),
+    )
+    .with_case(
+        ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed)
+            .with_matching_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), |_| ())
+            .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), ""),
+    )
+    .with_case(
+        ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)
+            .with_matching_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), |_| ())
+            .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), ""),
+    )
+    .with_matching_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), |_| ());
+
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_run_result(output_dir.path(), &run_result, &expected_test_run);
+
+    assert_eq!(suite_results.len(), 10);
+    for suite_result in suite_results {
+        directory::testing::assert_suite_result(
+            output_dir.path(),
+            &suite_result,
+            &expected_test_suite,
+        );
     }
 }
 
