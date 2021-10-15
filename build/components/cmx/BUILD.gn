@@ -42,7 +42,7 @@ group("cmx_allowlist") {
     "//build/dart/tests/*",
     "//examples/dart/*",
     "//examples/diagnostics/inspect/codelab/dart/*",
-    "//examples/dotmatrix_display/*",
+    "//examples/drivers/dotmatrix_display/*",
     "//examples/fidl/dart/*",
     "//examples/fidl/test/*",
     "//examples/fuzzers/*",

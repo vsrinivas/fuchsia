@@ -16,7 +16,7 @@ config("fidl-llcpp-deprecated-raw-channels") {
   #
   # and replace the contents of `visibility` with the script output.
   visibility = [
-    "//examples/dotmatrix_display:bin2",
+    "//examples/drivers/dotmatrix_display:bin2",
     "//garnet/public/lib/svc/cpp:cpp",
     "//garnet/public/lib/test_runner/cpp:cpp",
     "//src/bringup/bin/bootsvc:bootfs_loader_service_test",
