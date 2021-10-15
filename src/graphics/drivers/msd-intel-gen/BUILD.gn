@@ -124,3 +124,28 @@ config("msd_tests_include_config") {
 config("msd_src_include_config") {
   include_dirs = [ "src" ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":msd_intel_bind_test",
+    "tests",
+  ]
+}
+
+fuchsia_system_package("msd-intel-gen") {
+  deps = [ ":msd_intel" ]
+}
+
+fuchsia_system_package("msd-intel-gen-test") {
+  testonly = true
+  deps = [ ":msd_intel_test" ]
+}
+
+group("test-driver") {
+  testonly = true
+  deps = [
+    ":msd-intel-gen-test",
+    "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file",
+  ]
+}

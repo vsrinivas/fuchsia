@@ -84,3 +84,9 @@ group("tests") {
   testonly = true
   deps = [ ":msd_vsi_bind_test" ]
 }
+
+group("test-driver") {
+  testonly = true
+  public_deps = [ ":msd-vsi-vip-test" ]
+  deps = [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
+}

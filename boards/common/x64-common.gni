@@ -66,7 +66,7 @@ board_zedboot_bootfs_labels += _bootfs_deps
 
 board_system_image_deps += [
   "//garnet/packages/prod:drivers-system",
-  "//src/graphics/lib/magma/gnbuild/magma-intel-gen:msd-intel-gen",
+  "//src/graphics/drivers/msd-intel-gen",
   "//src/media/audio/bundles:virtual_audio_driver",
 ]
 
@@ -76,7 +76,7 @@ board_package_labels += [
   "//src/media/audio/drivers/configurator",
   "//garnet/packages/prod:drivers-support",
   "//src/hwinfo:default_board_config",
-  "//src/graphics/lib/magma/gnbuild/magma-intel-gen:libvulkan_intel_gen",
+  "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen",
   "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan",
 ]
 

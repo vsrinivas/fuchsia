@@ -28,7 +28,7 @@ fuchsia_driver("msd_arm_test-driver") {
   deps = [
     ":msd_arm_test_entry",
     "src",
-    "tests:gtest",
+    "tests/unit_tests:tests_requiring_hardware",
     "//src/graphics/lib/magma/src/magma_util/platform:logger_for_system_drivers",
     "//src/graphics/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
     "//src/graphics/lib/magma/tests/unit_tests:msd_conformance_tests",
@@ -74,7 +74,7 @@ group("tests") {
   testonly = true
   public_deps = [
     ":msd_arm_bind_test",
-    "tests/unit_tests:msd_arm_mali_nonhardware_tests",
+    "tests",
   ]
 }
 
@@ -84,4 +84,29 @@ config("msd_tests_include_config") {
 
 config("msd_src_include_config") {
   include_dirs = [ "src" ]
+}
+
+group("msd-system") {
+  deps = [ ":msd-arm-mali" ]
+}
+
+group("msd-config") {
+  deps = [ "//src/diagnostics/config/triage:mali-detect" ]
+}
+
+fuchsia_system_package("msd-arm-mali") {
+  deps = [ ":msd_arm" ]
+}
+
+fuchsia_system_package("msd-arm-mali-test") {
+  testonly = true
+  deps = [ ":msd_arm_test" ]
+}
+
+group("test-driver") {
+  testonly = true
+  deps = [
+    ":msd-arm-mali-test",
+    "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file",
+  ]
 }

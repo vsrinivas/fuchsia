@@ -2,57 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
-import("//build/config.gni")
-import("//build/dist/resource.gni")
-import("//src/graphics/lib/magma/gnbuild/magma.gni")
-
 group("msd-system") {
-  deps = [ ":msd-arm-mali" ]
+  deps = [ "//src/graphics/drivers/msd-arm-mali:msd-system" ]
 }
 
 group("msd-config") {
-  deps = [ "//src/diagnostics/config/triage:mali-detect" ]
-}
-
-group("test-driver") {
-  testonly = true
-  deps = [
-    ":msd-arm-mali-test",
-    "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file",
-  ]
-}
-
-fuchsia_system_package("msd-arm-mali-test") {
-  testonly = true
-  deps = [ "//src/graphics/drivers/msd-arm-mali:msd_arm_test" ]
-}
-
-fuchsia_system_package("msd-arm-mali") {
-  deps = [ "//src/graphics/drivers/msd-arm-mali:msd_arm" ]
-
-  # This package is reachable from //garnet/packages:all
-  allowed_in_extra_deps = true
-}
-
-fuchsia_unittest_package("msd_arm_mali_nonhardware_tests") {
-  deps = [ "//src/graphics/drivers/msd-arm-mali:tests" ]
-  manifest = "meta/msd_arm_mali_nonhardware_tests.cmx"
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
-}
-
-# Run with autorun or "run_test_component msd_arm_mali_integration_tests"
-fuchsia_unittest_package("msd-arm-mali-integration-tests") {
-  deps = [ "//src/graphics/drivers/msd-arm-mali/tests/integration" ]
-  manifest = "meta/msd_arm_mali_integration_tests.cmx"
-  test_specs = {
-    environments = arm_gpu_envs
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
+  deps = [ "//src/graphics/drivers/msd-arm-mali:msd-config" ]
 }

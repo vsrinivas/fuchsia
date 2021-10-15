@@ -7,23 +7,6 @@ import("//build/components/fuchsia_package_with_single_component.gni")
 import("//build/config.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
-fuchsia_system_package("msd-intel-gen") {
-  deps = [ "//src/graphics/drivers/msd-intel-gen:msd_intel" ]
-}
-
-fuchsia_system_package("msd-intel-gen-test") {
-  testonly = true
-  deps = [ "//src/graphics/drivers/msd-intel-gen:msd_intel_test" ]
-}
-
-group("test-driver") {
-  testonly = true
-  deps = [
-    ":msd-intel-gen-test",
-    "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file",
-  ]
-}
-
 # Mesa Intel Vulkan driver requires x64 build
 if (target_cpu == "x64") {
   resource("vulkan_metadata") {

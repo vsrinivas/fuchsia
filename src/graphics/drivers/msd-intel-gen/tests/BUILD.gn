@@ -10,7 +10,6 @@ group("tests") {
   deps = [
     ":integration",
     ":nonhardware_tests",
-    "..:msd_intel_bind_test",
   ]
 }
 
