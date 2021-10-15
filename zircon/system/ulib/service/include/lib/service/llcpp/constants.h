@@ -5,7 +5,7 @@
 #ifndef LIB_SERVICE_LLCPP_CONSTANTS_H_
 #define LIB_SERVICE_LLCPP_CONSTANTS_H_
 
-namespace llcpp::sys {
+namespace service {
 
 // The name of the default FIDL Service instance.
 constexpr const char kDefaultInstance[] = "default";
@@ -17,6 +17,6 @@ constexpr const char kServiceDirectory[] = "/svc";
 // with a trailing slash.
 constexpr const char kServiceDirectoryTrailingSlash[] = "/svc/";
 
-}  // namespace llcpp::sys
+}  // namespace service
 
 #endif  // LIB_SERVICE_LLCPP_CONSTANTS_H_

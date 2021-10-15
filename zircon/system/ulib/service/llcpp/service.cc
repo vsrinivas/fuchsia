@@ -60,7 +60,7 @@ namespace internal {
 
 }  // namespace service
 
-namespace llcpp::sys {
+namespace service {
 
 namespace {
 
@@ -123,4 +123,4 @@ namespace internal {
                                      std::move(remote));
 }
 
-}  // namespace llcpp::sys
+}  // namespace service

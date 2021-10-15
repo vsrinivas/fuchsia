@@ -69,9 +69,9 @@ class ServerTest : public zxtest::Test {
  protected:
   ServerTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), outgoing_(loop_.dispatcher()) {}
 
-  llcpp::sys::ServiceHandler SetUpInstance(fidl::WireServer<Echo>* foo_impl,
-                                           fidl::WireServer<Echo>* bar_impl) {
-    llcpp::sys::ServiceHandler handler;
+  service::ServiceHandler SetUpInstance(fidl::WireServer<Echo>* foo_impl,
+                                        fidl::WireServer<Echo>* bar_impl) {
+    service::ServiceHandler handler;
     EchoService::Handler my_service(&handler);
 
     auto add_foo_result =
@@ -112,7 +112,7 @@ class ServerTest : public zxtest::Test {
 
   async::Loop loop_;
   zx::channel local_root_;
-  llcpp::sys::OutgoingDirectory outgoing_;
+  service::OutgoingDirectory outgoing_;
 };
 
 TEST_F(ServerTest, ConnectsToDefaultMember) {
@@ -126,7 +126,7 @@ TEST_F(ServerTest, ConnectsToDefaultMember) {
 
   // Connect to the `EchoService` at the 'default' instance.
   zx::status<EchoService::ServiceClient> open_result =
-      llcpp::sys::OpenServiceAt<EchoService>(zx::unowned_channel(svc_local));
+      service::OpenServiceAt<EchoService>(zx::unowned_channel(svc_local));
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());
@@ -156,7 +156,7 @@ TEST_F(ServerTest, ConnectsToOtherMember) {
 
   // Connect to the `EchoService` at the 'default' instance.
   zx::status<EchoService::ServiceClient> open_result =
-      llcpp::sys::OpenServiceAt<EchoService>(zx::unowned_channel(svc_local), "other");
+      service::OpenServiceAt<EchoService>(zx::unowned_channel(svc_local), "other");
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());

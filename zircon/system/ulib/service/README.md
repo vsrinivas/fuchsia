@@ -68,7 +68,7 @@ See `<lib/service/llcpp/outgoing_directory.h>` for details.
 The server API is closely modelled (read "copied") after the High Level C++ FIDL `sys` library
 in the SDK (`//sdk/lib/sys/service`).
 
-Once the LLCPP FIDL library is promoted to the SDK, `llcpp::sys::OutgoingDirectory` and
+Once the LLCPP FIDL library is promoted to the SDK, `service::OutgoingDirectory` and
 `sys::OutgoingDirectory` can be merged.
 
 [FTP-041]: https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/ftp/ftp-041.md

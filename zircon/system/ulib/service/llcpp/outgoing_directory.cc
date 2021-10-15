@@ -14,7 +14,7 @@
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
-namespace llcpp::sys {
+namespace service {
 
 namespace {
 
@@ -70,4 +70,4 @@ zx_status_t OutgoingDirectory::RemoveNamedService(cpp17::string_view service,
   return service_dir->RemoveEntry(instance);
 }
 
-}  // namespace llcpp::sys
+}  // namespace service

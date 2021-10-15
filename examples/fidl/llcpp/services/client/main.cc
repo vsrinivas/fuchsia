@@ -16,7 +16,7 @@ using fuchsia_examples::EchoService;
 
 zx::status<> llcpp_example(fidl::UnownedClientEnd<fuchsia_io::Directory> svc) {
   zx::status<EchoService::ServiceClient> open_result =
-      llcpp::sys::OpenServiceAt<EchoService>(std::move(svc));
+      service::OpenServiceAt<EchoService>(std::move(svc));
   if (open_result.is_error()) {
     std::cerr << "failed to open default instance of EchoService: " << open_result.status_string()
               << std::endl;

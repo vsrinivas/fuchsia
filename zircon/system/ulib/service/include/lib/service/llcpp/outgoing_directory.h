@@ -14,7 +14,7 @@
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
-namespace llcpp::sys {
+namespace service {
 
 // The directory provided by this component to the component manager.
 //
@@ -118,7 +118,7 @@ class OutgoingDirectory final {
   // # Example
   //
   // ```
-  // llcpp::sys::ServiceHandler handler;
+  // service::ServiceHandler handler;
   // ::lib_example::MyService::Handler my_handler(&handler);
   // my_handler.add_my_member([dispatcher](fidl::ServerEnd<FooProtocol> server_end) {
   //   fidl::BindServer(dispatcher, std::move(server_end), std::make_unique<FooProtocolImpl>());
@@ -142,7 +142,7 @@ class OutgoingDirectory final {
   // # Example
   //
   // ```
-  // llcpp::sys::ServiceHandler handler;
+  // service::ServiceHandler handler;
   // handler.AddMember("my-member", ...);
   // outgoing.AddNamedService(std::move(handler), "lib.example.MyService", "my-instance");
   // ```
@@ -192,6 +192,6 @@ class OutgoingDirectory final {
   fbl::RefPtr<fs::PseudoDir> debug_;
 };
 
-}  // namespace llcpp::sys
+}  // namespace service
 
 #endif  // LIB_SERVICE_LLCPP_OUTGOING_DIRECTORY_H_

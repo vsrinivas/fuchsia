@@ -56,7 +56,7 @@ class Driver {
 
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;
-  llcpp::sys::OutgoingDirectory outgoing_;
+  service::OutgoingDirectory outgoing_;
 
   driver::Namespace ns_;
   driver::Logger logger_;

@@ -21,7 +21,7 @@ namespace service {
 // Opens the directory containing incoming services in the application's default
 // incoming namespace. By default the path is "/svc". Users may specify a custom path.
 ::zx::status<::fidl::ClientEnd<fuchsia_io::Directory>> OpenServiceRoot(
-    const char* path = llcpp::sys::kServiceDirectory);
+    const char* path = service::kServiceDirectory);
 
 namespace internal {
 
@@ -204,7 +204,7 @@ template <typename Protocol, typename Tag = std::nullptr_t>
 
 }  // namespace service
 
-namespace llcpp::sys {
+namespace service {
 
 // Opens a connection to the default instance of a FIDL service of type `FidlService`, rooted at
 // `dir`. The default instance is called 'default'. See
@@ -292,6 +292,6 @@ template <typename FidlService>
   return OpenServiceAt<FidlService>(dir, kDefaultInstance);
 }
 
-}  // namespace llcpp::sys
+}  // namespace service
 
 #endif  // LIB_SERVICE_LLCPP_SERVICE_H_

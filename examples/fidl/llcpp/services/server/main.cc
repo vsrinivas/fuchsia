@@ -62,9 +62,9 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  llcpp::sys::OutgoingDirectory outgoing(loop.dispatcher());
+  service::OutgoingDirectory outgoing(loop.dispatcher());
 
-  llcpp::sys::ServiceHandler handler;
+  service::ServiceHandler handler;
   fuchsia_examples::EchoService::Handler my_service(&handler);
 
   // Example of serving members of a service instance.

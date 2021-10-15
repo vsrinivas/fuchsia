@@ -12,7 +12,7 @@
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 
-namespace llcpp::sys {
+namespace service {
 
 // A handler for an instance of a FIDL Service.
 class ServiceHandler final : public ::fidl::ServiceHandlerInterface {
@@ -50,6 +50,6 @@ class ServiceHandler final : public ::fidl::ServiceHandlerInterface {
   fbl::RefPtr<fs::PseudoDir> dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
 };
 
-}  // namespace llcpp::sys
+}  // namespace service
 
 #endif  // LIB_SERVICE_LLCPP_SERVICE_HANDLER_H_

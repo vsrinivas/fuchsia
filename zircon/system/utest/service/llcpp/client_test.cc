@@ -118,7 +118,7 @@ class ClientTest : public zxtest::Test {
 };
 
 TEST_F(ClientTest, ConnectsToDefault) {
-  zx::status<EchoService::ServiceClient> open_result = llcpp::sys::OpenServiceAt<EchoService>(svc_);
+  zx::status<EchoService::ServiceClient> open_result = service::OpenServiceAt<EchoService>(svc_);
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());
@@ -139,7 +139,7 @@ TEST_F(ClientTest, ConnectsToDefault) {
 
 TEST_F(ClientTest, ConnectsToOther) {
   zx::status<EchoService::ServiceClient> open_result =
-      llcpp::sys::OpenServiceAt<EchoService>(svc_, "other");
+      service::OpenServiceAt<EchoService>(svc_, "other");
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());
@@ -164,16 +164,16 @@ TEST_F(ClientTest, FilePathTooLong) {
 
   // Use an instance name that is too long.
   zx::status<EchoService::ServiceClient> open_result =
-      llcpp::sys::OpenServiceAt<EchoService>(svc_, illegal_path);
+      service::OpenServiceAt<EchoService>(svc_, illegal_path);
   ASSERT_TRUE(open_result.is_error());
   ASSERT_EQ(open_result.status_value(), ZX_ERR_INVALID_ARGS);
 
   // Use a service name that is too long.
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_EQ(llcpp::sys::OpenNamedServiceAt(svc_, illegal_path, "default", std::move(remote))
-                .status_value(),
-            ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(
+      service::OpenNamedServiceAt(svc_, illegal_path, "default", std::move(remote)).status_value(),
+      ZX_ERR_INVALID_ARGS);
 }
 
 //
