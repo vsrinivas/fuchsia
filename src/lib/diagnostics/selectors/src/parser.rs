@@ -209,6 +209,41 @@ reserved!(
     ]
 );
 
+macro_rules! match_one_or_many_value {
+    ($one_or_many:ident, $variant:pat) => {
+        match $one_or_many {
+            OneOrMany::One($variant) => true,
+            OneOrMany::Many(values) => values.iter().all(|value| matches!(value, $variant)),
+            _ => false,
+        }
+    };
+}
+
+impl Identifier {
+    fn can_be_used_with_value(&self, value: &OneOrMany<Value<'_>>) -> bool {
+        match (self, value) {
+            (Identifier::Filename | Identifier::LifecycleEventType | Identifier::Tags, value) => {
+                match_one_or_many_value!(value, Value::StringLiteral(_))
+            }
+            // TODO(fxbug.dev/55118): similar to severities, we can probably have reserved values
+            // for lifecycle event types.
+            // TODO(fxbug.dev/55118): support time diferences (1h30m, 30s, etc) instead of only
+            // timestamp comparison.
+            (
+                Identifier::Pid | Identifier::Tid | Identifier::LineNumber | Identifier::Timestamp,
+                value,
+            ) => {
+                match_one_or_many_value!(value, Value::Number(_))
+            }
+            // TODO(fxbug.dev/55118): it should also be possible to compare severities with a fixed
+            // set of numbers.
+            (Identifier::Severity, value) => {
+                match_one_or_many_value!(value, Value::Severity(_))
+            }
+        }
+    }
+}
+
 /// Parses an input containing whitespace at the front.
 fn spaced<'a, E, F, O>(parser: F) -> impl Fn(&'a str) -> IResult<&'a str, O, E>
 where
@@ -300,8 +335,6 @@ enum OneOrMany<T> {
 }
 
 fn filter_expression(input: &str) -> IResult<&str, FilterExpression<'_>> {
-    // TODO(fxbug.dev/55118): validate that the RHS values are a valid type for operating with the
-    // LHS.
     let (rest, identifier) = spaced(identifier)(input)?;
     let (rest_after_op, op) = spaced(operator)(rest)?;
 
@@ -336,6 +369,12 @@ fn filter_expression(input: &str) -> IResult<&str, FilterExpression<'_>> {
         map(string_literal, move |s| OneOrMany::One(Value::StringLiteral(s))),
         map(list_of_values, OneOrMany::Many),
     )))(rest_after_op)?;
+
+    if !identifier.can_be_used_with_value(&value) {
+        // TODO(fxbug.dev/55118): better custom errors. This error should be explicit that the
+        // given identifier can't be used with a value of the given type.
+        return Err(nom::Err::Failure(make_error(rest_after_op, ErrorKind::Not)));
+    }
 
     // Validate the operation can be used with the type of value.
     match (op, value) {
@@ -635,8 +674,6 @@ mod tests {
 
     #[test]
     fn lifecycle_event_type_operations() {
-        // TODO(fxbug.dev/55118): similar to severities, we can probably have reserved values for
-        // lifecycle event types.
         let expected = FilterExpression {
             identifier: Identifier::LifecycleEventType,
             op: Operation::Inclusion(InclusionOperator::In, vec![Value::StringLiteral("stopped")]),
@@ -739,8 +776,6 @@ mod tests {
 
     #[test]
     fn timestamp_operations() {
-        // TODO(fxbug.dev/55118): support time diferences (1h30m, 30s, etc) instead of only
-        // timestamp comparison.
         for (operator, operator_str) in vec![
             (ComparisonOperator::Equal, "="),
             (ComparisonOperator::GreaterEq, ">="),
@@ -794,6 +829,62 @@ mod tests {
 
         assert!(filter_expression("severity has any [info, error]").is_err());
         assert!(filter_expression("severity has all [warn]").is_err());
+    }
+
+    #[test]
+    fn allowed_severity_types() {
+        let expected = FilterExpression {
+            identifier: Identifier::Severity,
+            op: Operation::Comparison(ComparisonOperator::Equal, Value::Severity(Severity::Info)),
+        };
+        assert_eq!(Ok(("", expected)), filter_expression("severity = info"));
+        assert!(filter_expression("severity = 2").is_err());
+        assert!(filter_expression("severity = \"info\"").is_err());
+    }
+
+    #[test]
+    fn allowed_numeric_identifiers() {
+        for (identifier, name) in vec![
+            (Identifier::Pid, "pid"),
+            (Identifier::Tid, "tid"),
+            (Identifier::LineNumber, "line_number"),
+            (Identifier::Timestamp, "timestamp"),
+        ] {
+            let expected = FilterExpression {
+                identifier,
+                op: Operation::Comparison(ComparisonOperator::Equal, Value::Number(42)),
+            };
+            assert_eq!(Ok(("", expected)), filter_expression(&format!("{} = 42", name)));
+            assert!(filter_expression(&format!("{} = info", name)).is_err());
+            assert!(filter_expression(&format!("{} = \"42\"", name)).is_err());
+        }
+    }
+
+    #[test]
+    fn allowed_string_identifiers() {
+        for (identifier, name) in vec![
+            (Identifier::Filename, "filename"),
+            (Identifier::LifecycleEventType, "lifecycle_event_type"),
+        ] {
+            let expected = FilterExpression {
+                identifier,
+                op: Operation::Comparison(ComparisonOperator::Equal, Value::StringLiteral("foo")),
+            };
+            assert_eq!(Ok(("", expected)), filter_expression(&format!("{} = \"foo\"", name)));
+            assert!(filter_expression(&format!("{} = info", name)).is_err());
+            assert!(filter_expression(&format!("{} = 42", name)).is_err());
+        }
+
+        let expected = FilterExpression {
+            identifier: Identifier::Tags,
+            op: Operation::Inclusion(
+                InclusionOperator::HasAny,
+                vec![Value::StringLiteral("a"), Value::StringLiteral("b")],
+            ),
+        };
+        assert_eq!(Ok(("", expected)), filter_expression("tags has any [\"a\", \"b\"]"));
+        assert!(filter_expression("tags has any [info, error]").is_err());
+        assert!(filter_expression("tags has any [2, 3]").is_err());
     }
 
     #[test]
