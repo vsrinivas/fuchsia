@@ -46,9 +46,7 @@ impl Inspector {
     /// the VMO should have.
     pub fn new_with_size(max_size: usize) -> Self {
         match Inspector::new_root(max_size) {
-            Ok((vmo, root_node)) => {
-                Inspector { vmo: Some(Arc::new(vmo)), root_node: Arc::new(root_node) }
-            }
+            Ok((vmo, root_node)) => Inspector { vmo: Some(vmo), root_node: Arc::new(root_node) },
             Err(e) => {
                 error!("Failed to create root node. Error: {:?}", e);
                 Inspector::new_no_op()
@@ -66,6 +64,17 @@ impl Inspector {
                 vmo.duplicate_handle(zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP).ok()
             })
             .unwrap_or(None)
+    }
+
+    /// This produces a copy-on-write VMO with a generation count marked as
+    /// VMO_FROZEN. The resulting VMO is read-only.
+    ///
+    /// Note: the generation count for the original VMO is updated immediately. Since
+    /// the new VMO is page-by-page copy-on-write, at least the first page of the
+    /// VMO will immediately do a true copy. The practical implications of this
+    /// depend on implementation details like how large a VMO is versus page size.
+    pub fn frozen_vmo_copy(&self) -> Option<zx::Vmo> {
+        self.state()?.try_lock().ok().and_then(|mut state| state.frozen_vmo_copy().ok()).flatten()
     }
 
     /// Returns a VMO holding a copy of the data in this inspector.
@@ -109,7 +118,7 @@ impl Inspector {
     }
 
     /// Allocates a new VMO and initializes it.
-    fn new_root(max_size: usize) -> Result<(zx::Vmo, Node), Error> {
+    fn new_root(max_size: usize) -> Result<(Arc<zx::Vmo>, Node), Error> {
         let mut size = max(constants::MINIMUM_VMO_SIZE_BYTES, max_size);
         // If the size is not a multiple of 4096, round up.
         if size % constants::MINIMUM_VMO_SIZE_BYTES != 0 {
@@ -118,8 +127,10 @@ impl Inspector {
         }
         let (mapping, vmo) = Mapping::allocate_with_name(size, "InspectHeap")
             .map_err(|status| Error::AllocateVmo(status))?;
+        let vmo = Arc::new(vmo);
         let heap = Heap::new(Arc::new(mapping)).map_err(|e| Error::CreateHeap(Box::new(e)))?;
-        let state = State::create(heap).map_err(|e| Error::CreateState(Box::new(e)))?;
+        let state =
+            State::create(heap, vmo.clone()).map_err(|e| Error::CreateState(Box::new(e)))?;
         Ok((vmo, Node::new_root(state)))
     }
 
@@ -130,6 +141,22 @@ impl Inspector {
 
     pub(crate) fn state(&self) -> Option<State> {
         self.root().inner.inner_ref().map(|inner_ref| inner_ref.state.clone())
+    }
+
+    /// Returns Ok(()) if VMO is frozen, and the generation count if it is not.
+    /// Very unsafe. Propagates unrelated errors by panicking.
+    #[cfg(test)]
+    pub fn is_frozen(&self) -> Result<(), u64> {
+        use inspect_format::Block;
+        let vmo = self.vmo.as_ref().unwrap();
+        let mut buffer: [u8; 16] = [0; 16];
+        vmo.read(&mut buffer, 0).unwrap();
+        let block = Block::new(&buffer[..16], 0);
+        if block.header_generation_count().unwrap() == constants::VMO_FROZEN {
+            Ok(())
+        } else {
+            Err(block.header_generation_count().unwrap())
+        }
     }
 }
 
@@ -210,5 +237,21 @@ mod tests {
         let inner = root_node.inner.inner_ref().unwrap();
         assert_eq!(inner.block_index, 0);
         assert_eq!(CString::new("InspectHeap").unwrap(), vmo.get_name().expect("Has name"));
+    }
+
+    #[fuchsia::test]
+    fn freeze_vmo_works() {
+        let inspector = Inspector::new();
+        let initial = inspector.state().unwrap().header.header_generation_count().unwrap();
+        let vmo = inspector.frozen_vmo_copy();
+
+        let is_frozen_result = inspector.is_frozen();
+        assert!(is_frozen_result.is_err());
+
+        assert_eq!(initial + 2, is_frozen_result.err().unwrap());
+        assert!(is_frozen_result.err().unwrap() % 2 == 0);
+
+        let frozen_insp = Inspector::no_op_from_vmo(Arc::new(vmo.unwrap()));
+        assert!(frozen_insp.is_frozen().is_ok());
     }
 }

@@ -9,7 +9,7 @@ use mapped_vmo::Mapping;
 use std::sync::Arc;
 
 pub fn get_state(size: usize) -> State {
-    let (mapping, _) = Mapping::allocate(size).unwrap();
+    let (mapping, vmo) = Mapping::allocate(size).unwrap();
     let heap = Heap::new(Arc::new(mapping)).unwrap();
-    State::create(heap).unwrap()
+    State::create(heap, Arc::new(vmo)).unwrap()
 }

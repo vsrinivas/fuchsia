@@ -15,6 +15,9 @@ pub enum Error {
     #[error("Failed to allocate vmo")]
     AllocateVmo(#[source] zx::Status),
 
+    #[error("Failed to get vmo size")]
+    VmoSize(#[source] zx::Status),
+
     #[error("Failed to free {value_type} index={index}")]
     Free {
         value_type: &'static str,

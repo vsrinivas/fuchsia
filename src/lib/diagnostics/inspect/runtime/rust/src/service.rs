@@ -17,13 +17,51 @@ use fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES;
 use futures::{TryFutureExt, TryStreamExt};
 use tracing::error;
 
+#[derive(Clone)]
+pub enum TreeServerSendPreference {
+    /// Frozen denotes sending a copy-on-write VMO.
+    /// The payload refers to failure behavior, as not all VMOs
+    /// can be frozen. Failure behavior should be one of Live or
+    /// DeepCopy.
+    ///
+    /// Frozen(Live) is the default value of TreeServerSendPreference.
+    Frozen(Box<TreeServerSendPreference>),
+
+    /// Live denotes sending a live handle to the VMO.
+    ///
+    /// A client might want this behavior if they have time sensitive writes
+    /// to the VMO, because copy-on-write behavior causes the initial write
+    /// to a page to be somewhat slower (~1%).
+    Live,
+
+    /// DeepCopy will send a private copy of the VMO. This should probably
+    /// not be a client's first choice, as Frozen(DeepCopy) will provide the
+    /// same semantic behavior while possibly avoiding an expensive copy.
+    ///
+    /// A client might want this behavior if they have time sensitive writes
+    /// to the VMO, because copy-on-write behavior causes the initial write
+    /// to a page to be somewhat slower (~1%).
+    DeepCopy,
+}
+
+impl TreeServerSendPreference {
+    fn frozen_fails_with(failure: TreeServerSendPreference) -> Self {
+        TreeServerSendPreference::Frozen(Box::new(failure))
+    }
+}
+
+impl Default for TreeServerSendPreference {
+    fn default() -> Self {
+        TreeServerSendPreference::frozen_fails_with(TreeServerSendPreference::Live)
+    }
+}
+
 /// Optional settings for serving `fuchsia.inspect.Tree`
 #[derive(Default, Clone)]
 pub struct TreeServerSettings {
-    /// If true, snapshots of trees returned by the handler must be private
-    /// copies. Setting this option disables VMO sharing between a reader
-    /// and the writer.
-    force_private_snapshot: bool,
+    /// This specifies how the VMO should be sent over the tree server.
+    /// Default behavior is TreeServerSendPreference::Frozen(TreeServerSendPreference::Live).
+    send_vmo_preference: TreeServerSendPreference,
 }
 
 /// Runs a server for the `fuchsia.inspect.Tree` protocol. This protocol returns the VMO
@@ -36,11 +74,19 @@ pub async fn handle_request_stream(
     while let Some(request) = stream.try_next().await.context("Error running tree server")? {
         match request {
             TreeRequest::GetContent { responder } => {
-                let vmo = if settings.force_private_snapshot {
-                    inspector.copy_vmo()
-                } else {
-                    inspector.duplicate_vmo()
+                // If freezing fails, full snapshot algo needed on live duplicate
+                let vmo = match settings.send_vmo_preference {
+                    TreeServerSendPreference::DeepCopy => inspector.copy_vmo(),
+                    TreeServerSendPreference::Live => inspector.duplicate_vmo(),
+                    TreeServerSendPreference::Frozen(ref failure) => {
+                        inspector.frozen_vmo_copy().or_else(|| match **failure {
+                            TreeServerSendPreference::DeepCopy => inspector.copy_vmo(),
+                            TreeServerSendPreference::Live => inspector.duplicate_vmo(),
+                            _ => None,
+                        })
+                    }
                 };
+
                 let buffer_data = vmo.and_then(|vmo| vmo.get_size().ok().map(|size| (vmo, size)));
                 let content = TreeContent {
                     buffer: buffer_data.map(|data| Buffer { vmo: data.0, size: data.1 }),
@@ -185,13 +231,10 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn force_private_snapshot() -> Result<(), Error> {
+    async fn default_snapshots_are_private_on_success() -> Result<(), Error> {
         let inspector = test_inspector();
-        let tree_dup = spawn_server(inspector.clone(), TreeServerSettings::default())?;
-        let tree_copy =
-            spawn_server(inspector.clone(), TreeServerSettings { force_private_snapshot: true })?;
+        let tree_copy = spawn_server(inspector.clone(), TreeServerSettings::default())?;
         let tree_content_copy = tree_copy.get_content().await?;
-        let tree_content_dup = tree_dup.get_content().await?;
 
         inspector.root().record_int("new", 6);
 
@@ -200,9 +243,30 @@ mod tests {
         assert_data_tree!(hierarchy, root: {
             a: 1i64,
         });
+        Ok(())
+    }
 
-        // A tree that duplicates the vmo sees the new int
-        let hierarchy = parse_content(tree_content_dup)?;
+    #[fuchsia::test]
+    async fn force_live_snapshot() -> Result<(), Error> {
+        let inspector = test_inspector();
+        let tree_cow = spawn_server(inspector.clone(), TreeServerSettings::default())?;
+        let tree_live = spawn_server(
+            inspector.clone(),
+            TreeServerSettings { send_vmo_preference: TreeServerSendPreference::Live },
+        )?;
+        let tree_content_live = tree_live.get_content().await?;
+        let tree_content_cow = tree_cow.get_content().await?;
+
+        inspector.root().record_int("new", 6);
+
+        // A tree that cow's the vmo doesn't see the new int
+        let hierarchy = parse_content(tree_content_cow)?;
+        assert_data_tree!(hierarchy, root: {
+            a: 1i64,
+        });
+
+        // A tree that live-duplicates the vmo sees the new int
+        let hierarchy = parse_content(tree_content_live)?;
         assert_data_tree!(hierarchy, root: {
             a: 1i64,
             new: 6i64,

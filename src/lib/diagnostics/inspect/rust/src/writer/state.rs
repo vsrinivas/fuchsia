@@ -6,6 +6,7 @@ use {
     crate::writer::{error::Error, heap::Heap, Inspector, StringReference},
     anyhow,
     derivative::Derivative,
+    fuchsia_zircon as zx,
     futures::future::BoxFuture,
     inspect_format::{
         constants, utils, BlockType, {ArrayFormat, Block, LinkNodeDisposition, PropertyFormat},
@@ -234,7 +235,7 @@ macro_rules! array_fns {
 #[derive(Clone, Debug)]
 pub struct State {
     /// A reference to the header block in the VMO.
-    header: Block<Arc<Mapping>>,
+    pub(crate) header: Block<Arc<Mapping>>,
 
     /// The inner state that actually performs the operations.
     /// This should always be accessed by locking the mutex and then locking the header.
@@ -245,10 +246,10 @@ pub struct State {
 impl State {
     /// Create a |State| object wrapping the given Heap. This will cause the
     /// heap to be initialized with a header.
-    pub fn create(mut heap: Heap) -> Result<Self, Error> {
+    pub fn create(mut heap: Heap, vmo: Arc<zx::Vmo>) -> Result<Self, Error> {
         let mut block = heap.allocate_block(16)?;
         block.become_header()?;
-        let inner = Arc::new(Mutex::new(InnerState::new(heap)));
+        let inner = Arc::new(Mutex::new(InnerState::new(heap, vmo)));
         Ok(Self { inner, header: block })
     }
 
@@ -327,6 +328,11 @@ impl<'a> LockedStateGuard<'a> {
             header.lock_header()?;
         }
         Ok(Self { header, inner_lock })
+    }
+
+    /// Freezes the VMO, does a CoW duplication, thaws the parent, and returns the child.
+    pub fn frozen_vmo_copy(&mut self) -> Result<Option<zx::Vmo>, Error> {
+        self.inner_lock.frozen_vmo_copy(self.header)
     }
 
     /// Returns statistics about the current inspect state.
@@ -486,6 +492,7 @@ impl Drop for LockedStateGuard<'_> {
 #[derivative(Debug)]
 struct InnerState {
     heap: Heap,
+    vmo: Arc<zx::Vmo>,
     next_unique_link_id: AtomicU64,
     transaction_count: usize,
 
@@ -498,14 +505,29 @@ struct InnerState {
 
 impl InnerState {
     /// Creates a new inner state that performs all operations on the heap.
-    pub fn new(heap: Heap) -> Self {
+    pub fn new(heap: Heap, vmo: Arc<zx::Vmo>) -> Self {
         Self {
             heap,
+            vmo,
             next_unique_link_id: AtomicU64::new(0),
             callbacks: HashMap::new(),
             transaction_count: 0,
             string_reference_ids: HashMap::new(),
         }
+    }
+
+    fn frozen_vmo_copy(&self, header: &Block<Arc<Mapping>>) -> Result<Option<zx::Vmo>, Error> {
+        let old = header.freeze_header()?;
+        let ret = self
+            .vmo
+            .create_child(
+                zx::VmoChildOptions::SNAPSHOT | zx::VmoChildOptions::NO_WRITE,
+                0,
+                self.vmo.get_size().map_err(|status| Error::VmoSize(status))?,
+            )
+            .ok();
+        header.thaw_header(old)?;
+        Ok(ret)
     }
 
     /// Allocate a NODE block with the given |name| and |parent_index|.

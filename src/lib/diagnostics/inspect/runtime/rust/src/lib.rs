@@ -23,10 +23,11 @@ pub mod service;
 /// added.
 pub const DIAGNOSTICS_DIR: &str = "diagnostics";
 
-/// Spawns a server for handling `fuchsia.inspect.Tree` requests in the outgoing diagnostics
-/// directory.
-pub fn serve<'a, ServiceObjTy: ServiceObjTrait>(
+/// Spawns a server with options for handling `fuchsia.inspect.Tree` requests in
+/// the outgoing diagnostics directory.
+pub fn serve_with_options<'a, ServiceObjTy: ServiceObjTrait>(
     inspector: &Inspector,
+    options: service::TreeServerSettings,
     service_fs: &mut ServiceFs<ServiceObjTy>,
 ) -> Result<(), Error> {
     let (proxy, server) =
@@ -35,9 +36,10 @@ pub fn serve<'a, ServiceObjTy: ServiceObjTrait>(
     let dir = pseudo_directory! {
         TreeMarker::PROTOCOL_NAME => pseudo_fs_service::host(move |stream| {
             let inspector = inspector_for_fs.clone();
+            let options = options.clone();
             async move {
                 service::handle_request_stream(
-                    inspector, service::TreeServerSettings::default(), stream
+                    inspector, options, stream
                     )
                     .await
                     .unwrap_or_else(|e| error!("failed to run server: {:?}", e));
@@ -52,6 +54,15 @@ pub fn serve<'a, ServiceObjTy: ServiceObjTrait>(
     service_fs.add_remote(DIAGNOSTICS_DIR, proxy);
 
     Ok(())
+}
+
+/// Spawns a server for handling `fuchsia.inspect.Tree` requests in the outgoing diagnostics
+/// directory.
+pub fn serve<'a, ServiceObjTy: ServiceObjTrait>(
+    inspector: &Inspector,
+    service_fs: &mut ServiceFs<ServiceObjTy>,
+) -> Result<(), Error> {
+    serve_with_options(inspector, service::TreeServerSettings::default(), service_fs)
 }
 
 #[cfg(test)]

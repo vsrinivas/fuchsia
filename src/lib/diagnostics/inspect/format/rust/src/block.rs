@@ -447,6 +447,25 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         Ok(())
     }
 
+    /// Freeze the HEADER, indicating a VMO is frozen.
+    pub fn freeze_header(&self) -> Result<u64, Error> {
+        self.check_type(BlockType::Header)?;
+        let mut payload = self.read_payload();
+        let value = payload.header_generation_count();
+        payload.set_header_generation_count(constants::VMO_FROZEN);
+        self.write_payload(payload);
+        Ok(value)
+    }
+
+    /// Thaw the HEADER, indicating a VMO is Live again.
+    pub fn thaw_header(&self, gen: u64) -> Result<(), Error> {
+        self.check_type(BlockType::Header)?;
+        let mut payload = Payload(0);
+        payload.set_header_generation_count(gen);
+        self.write_payload(payload);
+        Ok(())
+    }
+
     /// Lock a HEADER block
     pub fn lock_header(&self) -> Result<(), Error> {
         self.check_type(BlockType::Header)?;
@@ -1104,6 +1123,25 @@ mod tests {
         test_ok_types(move |b| b.become_header(), &BTreeSet::from_iter(vec![BlockType::Reserved]));
         test_ok_types(move |b| b.header_magic(), &BTreeSet::from_iter(vec![BlockType::Header]));
         test_ok_types(move |b| b.header_version(), &BTreeSet::from_iter(vec![BlockType::Header]));
+    }
+
+    #[test]
+    fn test_freeze_thaw_header() {
+        let container = [0u8; constants::MIN_ORDER_SIZE];
+        let mut block = get_reserved(&container);
+        assert!(block.become_header().is_ok());
+        assert_eq!(block.block_type(), BlockType::Header);
+        assert_eq!(block.index(), 0);
+        assert_eq!(block.order(), 0);
+        assert_eq!(block.header_magic().unwrap(), constants::HEADER_MAGIC_NUMBER);
+        assert_eq!(block.header_version().unwrap(), constants::HEADER_VERSION_NUMBER);
+        assert_eq!(container[..8], [0x00, 0x02, 0x02, 0x00, 0x49, 0x4e, 0x53, 0x50]);
+        assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+
+        let old = block.freeze_header().unwrap();
+        assert_eq!(container[8..], [0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+        assert!(block.thaw_header(old).is_ok());
+        assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
 
     #[test]
