@@ -145,15 +145,15 @@ func (f *FFXInstance) SetStdoutStderr(stdout, stderr io.Writer) {
 }
 
 // Run runs ffx with the associated config and provided args.
-func (f *FFXInstance) run(ctx context.Context, args ...string) error {
+func (f *FFXInstance) Run(ctx context.Context, args ...string) error {
 	args = append([]string{f.ffxPath, "--config", f.configPath}, args...)
 	return runCommand(ctx, f.runner, f.stdout, f.stderr, args...)
 }
 
 // RunWithTarget runs ffx with the associated target.
-func (f *FFXInstance) runWithTarget(ctx context.Context, args ...string) error {
+func (f *FFXInstance) RunWithTarget(ctx context.Context, args ...string) error {
 	args = append([]string{"--target", f.target}, args...)
-	return f.run(ctx, args...)
+	return f.Run(ctx, args...)
 }
 
 // Stop stops the daemon.
@@ -161,7 +161,7 @@ func (f *FFXInstance) Stop() error {
 	// Use a new context for Stop() to give it time to complete.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	err := f.run(ctx, "daemon", "stop")
+	err := f.Run(ctx, "daemon", "stop")
 	if configErr := f.config.Close(); err == nil {
 		err = configErr
 	}
@@ -169,23 +169,23 @@ func (f *FFXInstance) Stop() error {
 }
 
 // List lists all available targets.
-func (f *FFXInstance) List(ctx context.Context) error {
-	return f.run(ctx, "target", "list")
+func (f *FFXInstance) List(ctx context.Context, args ...string) error {
+	return f.Run(ctx, append([]string{"target", "list"}, args...)...)
 }
 
 // TargetWait waits until the target becomes available.
 func (f *FFXInstance) TargetWait(ctx context.Context) error {
-	return f.runWithTarget(ctx, "target", "wait")
+	return f.RunWithTarget(ctx, "target", "wait")
 }
 
 // Test runs a test suite.
 func (f *FFXInstance) Test(ctx context.Context, test string, args ...string) error {
-	return f.runWithTarget(ctx, append([]string{"test", "run", test, "--output-directory", f.testOutputDir}, args...)...)
+	return f.RunWithTarget(ctx, append([]string{"test", "run", test, "--output-directory", f.testOutputDir}, args...)...)
 }
 
 // Snapshot takes a snapshot of the target's state and saves it to outDir/snapshotFilename.
 func (f *FFXInstance) Snapshot(ctx context.Context, outDir string, snapshotFilename string) error {
-	err := f.runWithTarget(ctx, "target", "snapshot", "--dir", outDir)
+	err := f.RunWithTarget(ctx, "target", "snapshot", "--dir", outDir)
 	if err != nil {
 		return err
 	}
@@ -197,5 +197,5 @@ func (f *FFXInstance) Snapshot(ctx context.Context, outDir string, snapshotFilen
 
 // GetConfig shows the ffx config.
 func (f *FFXInstance) GetConfig(ctx context.Context) error {
-	return f.run(ctx, "config", "get")
+	return f.Run(ctx, "config", "get")
 }

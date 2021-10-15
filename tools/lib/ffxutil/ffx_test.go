@@ -64,9 +64,9 @@ func TestFFXInstance(t *testing.T) {
 
 	assertRunsExpectedCmd(ffx.GetConfig(ctx), "config get")
 
-	assertRunsExpectedCmd(ffx.run(ctx, "random", "cmd", "with", "args"), "random cmd with args")
+	assertRunsExpectedCmd(ffx.Run(ctx, "random", "cmd", "with", "args"), "random cmd with args")
 
-	assertRunsExpectedCmd(ffx.runWithTarget(ctx, "random", "cmd", "with", "args"), "--target target random cmd with args")
+	assertRunsExpectedCmd(ffx.RunWithTarget(ctx, "random", "cmd", "with", "args"), "--target target random cmd with args")
 
 	assertRunsExpectedCmd(ffx.Stop(), "daemon stop")
 	if _, err := os.Stat(ffx.config.socket); !os.IsNotExist(err) {

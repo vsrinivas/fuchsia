@@ -229,7 +229,7 @@ func (f *fakeFFXTester) run(cmd string) error {
 	return nil
 }
 
-func (f *fakeFFXTester) List(_ context.Context) error {
+func (f *fakeFFXTester) List(_ context.Context, _ ...string) error {
 	return f.run("list")
 }
 

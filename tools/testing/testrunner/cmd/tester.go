@@ -277,7 +277,7 @@ func (s *serialSocket) runDiagnostics(ctx context.Context) error {
 // for testability
 type ffxTester interface {
 	SetStdoutStderr(stdout, stderr io.Writer)
-	List(ctx context.Context) error
+	List(ctx context.Context, args ...string) error
 	TargetWait(ctx context.Context) error
 	GetConfig(ctx context.Context) error
 	Test(ctx context.Context, test string, args ...string) error
