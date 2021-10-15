@@ -1,0 +1,26 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("dynfidl_conformance") {
+  sources = [ "src/lib.rs" ]
+
+  deps = [
+    "//src/lib/dynfidl/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/tests/fidl/conformance_suite:conformance_fidl-rustc",
+  ]
+}
+
+fuchsia_test_component("dynfidl_conformance_test") {
+  manifest = "meta/conformance.cml"
+  deps = [ ":dynfidl_conformance" ]
+}
+
+fuchsia_test_package("conformance") {
+  package_name = "dynfidl_conformance_test"
+  test_components = [ ":dynfidl_conformance_test" ]
+}

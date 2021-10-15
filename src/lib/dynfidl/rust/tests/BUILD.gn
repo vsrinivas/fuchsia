@@ -1,0 +1,13 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+  deps = [
+    "conformance",
+
+    # also build the generator tool so it doesn't bitrot too much
+    "conformance/test_from_ir:test_from_ir($host_toolchain)",
+  ]
+}
