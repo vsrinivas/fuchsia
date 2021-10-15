@@ -2,13 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Used because we use `futures::select!`.
-//
-// From https://docs.rs/futures/0.3.1/futures/macro.select.html:
-//   Note that select! relies on proc-macro-hack, and may require to set the compiler's
-//   recursion limit very high, e.g. #![recursion_limit="1024"].
-#![recursion_limit = "512"]
-
 use {
     async_trait::async_trait,
     fidl::Peered,
