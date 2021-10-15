@@ -1,0 +1,5 @@
+{
+    program: {
+        runner: "flutter_jit_product_runner",
+    },
+}

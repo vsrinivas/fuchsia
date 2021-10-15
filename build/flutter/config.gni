@@ -5,7 +5,7 @@
 import("//build/flutter/flutter_build_config.gni")
 
 declare_args() {
-  # If set to true, will force the runenrs to be built in
+  # If set to true, will force the runners to be built in
   # product mode which means they will not have an exposed vm service
   flutter_force_product = false
 }

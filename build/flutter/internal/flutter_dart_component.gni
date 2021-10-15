@@ -170,44 +170,31 @@ template("flutter_dart_component") {
   # the component was compiled. For example, a JIT component must run in the JIT
   # runner. This is done by merging the component's manifest with the
   # build_cfg.runtime_meta manifest.
-  #
-  # There is no V2 Flutter runner, so we don't merge the component manifest with
-  # the runtime_meta manifest for V2 Flutter components. Instead, we leave the
-  # component's manifest as-is to avoid breaking the component's build.
-  #
-  # TODO(fxb/50694): Do the merge for all component types once a V2 Flutter
-  # runner exists.
   _manifest_extension = get_path_info(invoker.manifest, "extension")
+  _merged_target_name = "${target_name}_merged.${_manifest_extension}"
 
-  if (_manifest_extension == "cmx" ||
-      build_cfg.platform_name == "dart_runner") {
-    _merged_target_name = "${target_name}_merged.${_manifest_extension}"
-
-    if (_manifest_extension == "cml") {
-      _runtime_meta = build_cfg.runtime_meta_v2
-    } else {
-      _runtime_meta = build_cfg.runtime_meta
-    }
-
-    cmc_merge(_merged_target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
-      sources = [
-        invoker.manifest,
-        rebase_path(_runtime_meta, "."),
-      ]
-    }
-
-    _merged_outputs = get_target_outputs(":$_merged_target_name")
-    _manifest = _merged_outputs[0]
-
-    _component_deps += [ ":$_merged_target_name" ]
+  if (_manifest_extension == "cml") {
+    _runtime_meta = build_cfg.runtime_meta_v2
   } else {
-    _manifest = invoker.manifest
+    _runtime_meta = build_cfg.runtime_meta
   }
+
+  cmc_merge(_merged_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    sources = [
+      invoker.manifest,
+      rebase_path(_runtime_meta, "."),
+    ]
+  }
+
+  _merged_outputs = get_target_outputs(":$_merged_target_name")
+  _manifest = _merged_outputs[0]
+
+  _component_deps += [ ":$_merged_target_name" ]
 
   _dart_package_config_target_name = "${target_name}_dart_package"
   dart_package_config(_dart_package_config_target_name) {
