@@ -6,9 +6,12 @@
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_H_
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <fidl/fuchsia.driver.development/cpp/wire.h>
+#include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.driver.registrar/cpp/wire.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
+#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <fidl/fuchsia.power.manager/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/binding.h>
@@ -29,30 +32,27 @@
 #include <string_view>
 #include <utility>
 
+#include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
 
-#include "composite_device.h"
-#include "devfs.h"
-#include "device.h"
-#include "driver.h"
-#include "driver_host.h"
-#include "driver_loader.h"
-#include "fbl/auto_lock.h"
-#include "fidl/fuchsia.device.manager/cpp/wire.h"
-#include "fidl/fuchsia.driver.framework/cpp/wire.h"
-#include "fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h"
-#include "init_task.h"
-#include "inspect.h"
-#include "metadata.h"
-#include "package_resolver.h"
-#include "resume_task.h"
-#include "suspend_handler.h"
-#include "suspend_task.h"
-#include "system_state_manager.h"
-#include "unbind_task.h"
-#include "vmo_writer.h"
+#include "src/devices/bin/driver_manager/composite_device.h"
+#include "src/devices/bin/driver_manager/devfs.h"
+#include "src/devices/bin/driver_manager/device.h"
+#include "src/devices/bin/driver_manager/driver.h"
+#include "src/devices/bin/driver_manager/driver_host.h"
+#include "src/devices/bin/driver_manager/driver_loader.h"
+#include "src/devices/bin/driver_manager/inspect.h"
+#include "src/devices/bin/driver_manager/metadata.h"
+#include "src/devices/bin/driver_manager/package_resolver.h"
+#include "src/devices/bin/driver_manager/suspend_handler.h"
+#include "src/devices/bin/driver_manager/system_state_manager.h"
+#include "src/devices/bin/driver_manager/v1/init_task.h"
+#include "src/devices/bin/driver_manager/v1/resume_task.h"
+#include "src/devices/bin/driver_manager/v1/suspend_task.h"
+#include "src/devices/bin/driver_manager/v1/unbind_task.h"
+#include "src/devices/bin/driver_manager/vmo_writer.h"
 
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 using statecontrol_fidl::wire::SystemPowerState;

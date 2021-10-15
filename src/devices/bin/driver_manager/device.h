@@ -22,10 +22,10 @@
 #include <fbl/ref_counted.h>
 #include <fbl/string.h>
 
-#include "composite_device.h"
-#include "driver_test_reporter.h"
-#include "inspect.h"
-#include "metadata.h"
+#include "src/devices/bin/driver_manager/composite_device.h"
+#include "src/devices/bin/driver_manager/driver_test_reporter.h"
+#include "src/devices/bin/driver_manager/inspect.h"
+#include "src/devices/bin/driver_manager/metadata.h"
 #include "src/lib/storage/vfs/cpp/vmo_file.h"
 
 namespace fio = fuchsia_io;

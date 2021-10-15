@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "device.h"
+#include "src/devices/bin/driver_manager/device.h"
 
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <fidl/fuchsia.driver.test.logger/cpp/wire.h>
@@ -16,13 +16,13 @@
 #include <memory>
 #include <string_view>
 
-#include "coordinator.h"
-#include "devfs.h"
-#include "init_task.h"
-#include "resume_task.h"
+#include "src/devices/bin/driver_manager/coordinator.h"
+#include "src/devices/bin/driver_manager/devfs.h"
+#include "src/devices/bin/driver_manager/v1/init_task.h"
+#include "src/devices/bin/driver_manager/v1/resume_task.h"
+#include "src/devices/bin/driver_manager/v1/suspend_task.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/fxl/strings/utf_codecs.h"
-#include "suspend_task.h"
 
 // TODO(fxbug.dev/43370): remove this once init tasks can be enabled for all devices.
 static constexpr bool kEnableAlwaysInit = false;

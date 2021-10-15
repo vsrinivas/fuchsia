@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_INIT_TASK_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_INIT_TASK_H_
 
-#include "device.h"
-#include "task.h"
+#include "src/devices/bin/driver_manager/device.h"
+#include "src/devices/bin/driver_manager/v1/task.h"
 
 // This is used for sending |Init| requests.
 class InitTask final : public Task {

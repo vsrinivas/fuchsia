@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "init_task.h"
+#include "src/devices/bin/driver_manager/v1/init_task.h"
 
 #include <zircon/status.h>
 
-#include "coordinator.h"
+#include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/devices/lib/log/log.h"
 
 InitTask::InitTask(fbl::RefPtr<Device> device, Completion completion)

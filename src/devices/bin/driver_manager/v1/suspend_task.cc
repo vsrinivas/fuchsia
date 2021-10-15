@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "suspend_task.h"
+#include "src/devices/bin/driver_manager/v1/suspend_task.h"
 
-#include "coordinator.h"
+#include "src/devices/bin/driver_manager/coordinator.h"
 
 namespace {
 

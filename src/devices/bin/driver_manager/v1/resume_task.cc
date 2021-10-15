@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "resume_task.h"
+#include "src/devices/bin/driver_manager/v1/resume_task.h"
 
 #include <zircon/errors.h>
 
-#include "coordinator.h"
+#include "src/devices/bin/driver_manager/coordinator.h"
 
 ResumeTask::ResumeTask(fbl::RefPtr<Device> device, uint32_t target_system_state,
                        Completion completion)

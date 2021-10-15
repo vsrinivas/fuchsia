@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_SUSPEND_MATCHING_TASK_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_SUSPEND_MATCHING_TASK_H_
 
-#include "device.h"
-#include "task.h"
+#include "src/devices/bin/driver_manager/device.h"
+#include "src/devices/bin/driver_manager/v1/task.h"
 
 // This task walks a given `device` and its children and will suspend any devices
 // that match the given function. Remember that suspending a device will also suspend

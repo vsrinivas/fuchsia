@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "unbind_task.h"
+#include "src/devices/bin/driver_manager/v1/unbind_task.h"
 
 #include <zircon/status.h>
 
-#include "coordinator.h"
+#include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/devices/lib/log/log.h"
 
 UnbindTask::UnbindTask(fbl::RefPtr<Device> device, UnbindTaskOpts opts, Completion completion)

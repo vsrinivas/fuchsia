@@ -24,6 +24,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/coding.h>
 #include <lib/fidl/llcpp/arena.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/service/llcpp/service.h>
@@ -53,14 +54,12 @@
 #include <fbl/string_printf.h>
 #include <inspector/inspector.h>
 
-#include "driver_host_loader_service.h"
-#include "lib/fidl/llcpp/wire_messaging.h"
 #include "src/devices/bin/driver_manager/composite_device.h"
 #include "src/devices/bin/driver_manager/devfs.h"
 #include "src/devices/bin/driver_manager/driver_host_loader_service.h"
 #include "src/devices/bin/driver_manager/manifest_parser.h"
 #include "src/devices/bin/driver_manager/package_resolver.h"
-#include "src/devices/bin/driver_manager/unbind_task.h"
+#include "src/devices/bin/driver_manager/v1/unbind_task.h"
 #include "src/devices/bin/driver_manager/vmo_writer.h"
 #include "src/devices/lib/log/log.h"
 

@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_UNBIND_TASK_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_UNBIND_TASK_H_
 
-#include "device.h"
-#include "task.h"
+#include "src/devices/bin/driver_manager/device.h"
+#include "src/devices/bin/driver_manager/v1/task.h"
 
 // This is not nested so we can forward declare it in device.h.
 struct UnbindTaskOpts {

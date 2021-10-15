@@ -10,10 +10,10 @@
 #include <zxtest/zxtest.h>
 
 #include "fbl/ref_ptr.h"
-#include "src/devices/bin/driver_manager/init_task.h"
-#include "src/devices/bin/driver_manager/resume_task.h"
-#include "src/devices/bin/driver_manager/suspend_task.h"
-#include "src/devices/bin/driver_manager/unbind_task.h"
+#include "src/devices/bin/driver_manager/v1/init_task.h"
+#include "src/devices/bin/driver_manager/v1/resume_task.h"
+#include "src/devices/bin/driver_manager/v1/suspend_task.h"
+#include "src/devices/bin/driver_manager/v1/unbind_task.h"
 
 class FakeResolver : public internal::PackageResolverInterface {
  public:

@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "inspect.h"
+#include "src/devices/bin/driver_manager/inspect.h"
 
 #include <lib/ddk/driver.h>
 #include <lib/inspect/service/cpp/service.h>
 
 #include <driver-info/driver-info.h>
 
-#include "device.h"
-#include "init_task.h"
-#include "resume_task.h"
+#include "src/devices/bin/driver_manager/device.h"
+#include "src/devices/bin/driver_manager/v1/init_task.h"
+#include "src/devices/bin/driver_manager/v1/resume_task.h"
+#include "src/devices/bin/driver_manager/v1/suspend_task.h"
+#include "src/devices/bin/driver_manager/v1/unbind_task.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
-#include "suspend_task.h"
-#include "unbind_task.h"
 
 zx::status<> InspectDevfs::InitInspectFile(const fbl::RefPtr<Device>& dev) {
   if (dev->inspect_file() != nullptr) {

@@ -7,8 +7,8 @@
 
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 
-#include "suspend_matching_task.h"
-#include "suspend_task.h"
+#include "src/devices/bin/driver_manager/v1/suspend_matching_task.h"
+#include "src/devices/bin/driver_manager/v1/suspend_task.h"
 
 using SuspendCallback = fit::callback<void(zx_status_t)>;
 

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "suspend_matching_task.h"
+#include "src/devices/bin/driver_manager/v1/suspend_matching_task.h"
 
-#include "coordinator.h"
+#include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/devices/lib/log/log.h"
 
 SuspendMatchingTask::SuspendMatchingTask(fbl::RefPtr<Device> device, uint32_t flags, Match match,
