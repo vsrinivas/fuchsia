@@ -108,7 +108,7 @@ macro_rules! reserved {
             }),+
         ]
     ) => {
-        #[derive(Debug, Eq, PartialEq)]
+        #[derive(Clone, Debug, Eq, PartialEq)]
         pub enum $type {
             $($variant_name),+
         }
@@ -300,16 +300,44 @@ enum OneOrMany<T> {
 }
 
 fn filter_expression(input: &str) -> IResult<&str, FilterExpression<'_>> {
-    // TODO(fxbug.dev/55118): validate that identifiers are used with valid operators. Consider if
-    // this has to be done at parse time or we can defer it for a follow-up validation step.
+    // TODO(fxbug.dev/55118): validate that the RHS values are a valid type for operating with the
+    // LHS.
     let (rest, identifier) = spaced(identifier)(input)?;
     let (rest_after_op, op) = spaced(operator)(rest)?;
+
+    // Validate the identifier can be used with the parse operation.
+    match (&identifier, &op) {
+        (
+            Identifier::Filename
+            | Identifier::LifecycleEventType
+            | Identifier::Pid
+            | Identifier::Tid
+            | Identifier::LineNumber
+            | Identifier::Severity,
+            Operator::Comparison(ComparisonOperator::Equal)
+            | Operator::Comparison(ComparisonOperator::NotEq)
+            | Operator::Inclusion(InclusionOperator::In),
+        ) => {}
+        (Identifier::Severity | Identifier::Timestamp, Operator::Comparison(_)) => {}
+        (
+            Identifier::Tags,
+            Operator::Inclusion(InclusionOperator::HasAny | InclusionOperator::HasAll),
+        ) => {}
+        _ => {
+            // TODO(fxbug.dev/55118): better custom errors. This error should be explicit that a
+            // comparison operator can't be used together with a list.
+            return Err(nom::Err::Failure(make_error(input, ErrorKind::Not)));
+        }
+    }
+
     let (rest, value) = spaced(alt((
         map(number, move |n| OneOrMany::One(Value::Number(n))),
         map(severity_sym, move |s| OneOrMany::One(Value::Severity(s))),
         map(string_literal, move |s| OneOrMany::One(Value::StringLiteral(s))),
         map(list_of_values, OneOrMany::Many),
     )))(rest_after_op)?;
+
+    // Validate the operation can be used with the type of value.
     match (op, value) {
         (Operator::Inclusion(op), OneOrMany::Many(values)) => {
             Ok((rest, FilterExpression { identifier, op: Operation::Inclusion(op, values) }))
@@ -348,7 +376,6 @@ fn metadata_selector(input: &str) -> IResult<&str, MetadataSelector<'_>> {
     Ok((rest, MetadataSelector(filters)))
 }
 
-// TODO(fxbug.dev/55118): support time diferences (1h30m, 30s, etc)
 // TODO(fxbug.dev/55118): implement parsing of component and tree selectors using nom.
 ///// Parses the input into a `Selector`.
 //pub fn selector(input: &str) -> nom::IResult<&str, Selector> {
@@ -576,6 +603,197 @@ mod tests {
             filter_expression("lifecycle_event_type in [\"started\", \"stopped\"]")
         );
         assert!(filter_expression("pid in 123").is_err());
+    }
+
+    #[test]
+    fn filename_operations() {
+        let expected = FilterExpression {
+            identifier: Identifier::Filename,
+            op: Operation::Inclusion(InclusionOperator::In, vec![Value::StringLiteral("foo.rs")]),
+        };
+        assert_eq!(Ok(("", expected)), filter_expression("filename in [\"foo.rs\"]"));
+
+        let expected = FilterExpression {
+            identifier: Identifier::Filename,
+            op: Operation::Comparison(ComparisonOperator::Equal, Value::StringLiteral("foo.rs")),
+        };
+        assert_eq!(Ok(("", expected)), filter_expression("filename = \"foo.rs\""));
+
+        let expected = FilterExpression {
+            identifier: Identifier::Filename,
+            op: Operation::Comparison(ComparisonOperator::NotEq, Value::StringLiteral("foo.rs")),
+        };
+        assert_eq!(Ok(("", expected)), filter_expression("filename != \"foo.rs\""));
+
+        assert!(filter_expression("filename > \"foo.rs\"").is_err());
+        assert!(filter_expression("filename < \"foo.rs\"").is_err());
+        assert!(filter_expression("filename >= \"foo.rs\"").is_err());
+        assert!(filter_expression("filename <= \"foo.rs\"").is_err());
+        assert!(filter_expression("filename has any [\"foo.rs\"]").is_err());
+        assert!(filter_expression("filename has all [\"foo.rs\"]").is_err());
+    }
+
+    #[test]
+    fn lifecycle_event_type_operations() {
+        // TODO(fxbug.dev/55118): similar to severities, we can probably have reserved values for
+        // lifecycle event types.
+        let expected = FilterExpression {
+            identifier: Identifier::LifecycleEventType,
+            op: Operation::Inclusion(InclusionOperator::In, vec![Value::StringLiteral("stopped")]),
+        };
+        assert_eq!(Ok(("", expected)), filter_expression("lifecycle_event_type in [\"stopped\"]"));
+
+        let expected = FilterExpression {
+            identifier: Identifier::LifecycleEventType,
+            op: Operation::Comparison(ComparisonOperator::Equal, Value::StringLiteral("stopped")),
+        };
+        assert_eq!(Ok(("", expected)), filter_expression("lifecycle_event_type = \"stopped\""));
+
+        let expected = FilterExpression {
+            identifier: Identifier::LifecycleEventType,
+            op: Operation::Comparison(ComparisonOperator::NotEq, Value::StringLiteral("stopped")),
+        };
+        assert_eq!(Ok(("", expected)), filter_expression("lifecycle_event_type != \"stopped\""));
+
+        assert!(filter_expression("lifecycle_event_type > \"stopped\"").is_err());
+        assert!(filter_expression("lifecycle_event_type < \"started\"").is_err());
+        assert!(filter_expression("lifecycle_event_type >= \"diagnostics_ready\"").is_err());
+        assert!(filter_expression("lifecycle_event_type <= \"log_sink_connected\"").is_err());
+        assert!(
+            filter_expression("lifecycle_event_type has all [\"started\", \"stopped\"]").is_err()
+        );
+        assert!(
+            filter_expression("lifecycle_event_type has any [\"started\", \"stopped\"]").is_err()
+        );
+    }
+
+    #[test]
+    fn line_number_pid_tid_operations() {
+        for (identifier, identifier_str) in vec![
+            (Identifier::Pid, "pid"),
+            (Identifier::Tid, "tid"),
+            (Identifier::LineNumber, "line_number"),
+        ] {
+            let expected = FilterExpression {
+                identifier: identifier.clone(),
+                op: Operation::Inclusion(
+                    InclusionOperator::In,
+                    vec![Value::Number(100), Value::Number(200)],
+                ),
+            };
+            assert_eq!(
+                Ok(("", expected)),
+                filter_expression(&format!("{} in [100, 200]", identifier_str))
+            );
+
+            let expected = FilterExpression {
+                identifier: identifier.clone(),
+                op: Operation::Comparison(ComparisonOperator::Equal, Value::Number(123)),
+            };
+            assert_eq!(Ok(("", expected)), filter_expression(&format!("{} = 123", identifier_str)));
+
+            let expected = FilterExpression {
+                identifier: identifier.clone(),
+                op: Operation::Comparison(ComparisonOperator::NotEq, Value::Number(123)),
+            };
+            assert_eq!(
+                Ok(("", expected)),
+                filter_expression(&format!("{} != 123", identifier_str))
+            );
+
+            assert!(filter_expression(&format!("{} > 1", identifier_str)).is_err());
+            assert!(filter_expression(&format!("{} < 2", identifier_str)).is_err());
+            assert!(filter_expression(&format!("{} >= 3", identifier_str)).is_err());
+            assert!(filter_expression(&format!("{} <= 4", identifier_str)).is_err());
+            assert!(filter_expression(&format!("{} has any [5, 6]", identifier_str)).is_err());
+            assert!(filter_expression(&format!("{} has all [5, 6]", identifier_str)).is_err());
+        }
+    }
+
+    #[test]
+    fn tags_operations() {
+        for (operator, operator_str) in
+            vec![(InclusionOperator::HasAny, "has any"), (InclusionOperator::HasAll, "has all")]
+        {
+            let expected = FilterExpression {
+                identifier: Identifier::Tags,
+                op: Operation::Inclusion(
+                    operator,
+                    vec![Value::StringLiteral("a"), Value::StringLiteral("b")],
+                ),
+            };
+            assert_eq!(
+                Ok(("", expected)),
+                filter_expression(&format!("tags {} [\"a\", \"b\"]", operator_str))
+            );
+        }
+
+        assert!(filter_expression("tags > \"a\"").is_err());
+        assert!(filter_expression("tags < \"b\"").is_err());
+        assert!(filter_expression("tags >= \"c\"").is_err());
+        assert!(filter_expression("tags <= \"d\"").is_err());
+        assert!(filter_expression("tags = \"e\"").is_err());
+        assert!(filter_expression("tags != \"f\"").is_err());
+        assert!(filter_expression("tags in [\"g\", \"h\"]").is_err());
+    }
+
+    #[test]
+    fn timestamp_operations() {
+        // TODO(fxbug.dev/55118): support time diferences (1h30m, 30s, etc) instead of only
+        // timestamp comparison.
+        for (operator, operator_str) in vec![
+            (ComparisonOperator::Equal, "="),
+            (ComparisonOperator::GreaterEq, ">="),
+            (ComparisonOperator::Greater, ">"),
+            (ComparisonOperator::LessEq, "<="),
+            (ComparisonOperator::Less, "<"),
+            (ComparisonOperator::NotEq, "!="),
+        ] {
+            let expected = FilterExpression {
+                identifier: Identifier::Timestamp,
+                op: Operation::Comparison(operator, Value::Number(123)),
+            };
+            assert_eq!(
+                Ok(("", expected)),
+                filter_expression(&format!("timestamp {} 123", operator_str))
+            );
+        }
+        assert!(filter_expression("timestamp in [1, 2]").is_err());
+        assert!(filter_expression("timestamp has any [3, 4]").is_err());
+        assert!(filter_expression("timestamp has all [5, 6]").is_err());
+    }
+
+    #[test]
+    fn severity_operations() {
+        for (operator, operator_str) in vec![
+            (ComparisonOperator::Equal, "="),
+            (ComparisonOperator::GreaterEq, ">="),
+            (ComparisonOperator::Greater, ">"),
+            (ComparisonOperator::LessEq, "<="),
+            (ComparisonOperator::Less, "<"),
+            (ComparisonOperator::NotEq, "!="),
+        ] {
+            let expected = FilterExpression {
+                identifier: Identifier::Severity,
+                op: Operation::Comparison(operator, Value::Severity(Severity::Info)),
+            };
+            assert_eq!(
+                Ok(("", expected)),
+                filter_expression(&format!("severity {} info", operator_str))
+            );
+        }
+
+        let expected = FilterExpression {
+            identifier: Identifier::Severity,
+            op: Operation::Inclusion(
+                InclusionOperator::In,
+                vec![Value::Severity(Severity::Info), Value::Severity(Severity::Error)],
+            ),
+        };
+        assert_eq!(Ok(("", expected)), filter_expression("severity in [info, error]"));
+
+        assert!(filter_expression("severity has any [info, error]").is_err());
+        assert!(filter_expression("severity has all [warn]").is_err());
     }
 
     #[test]
