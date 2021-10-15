@@ -4,6 +4,7 @@
 
 #include "src/media/audio/lib/clock/audio_clock.h"
 
+#include <lib/zx/time.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/clock.h>
 
@@ -50,19 +51,35 @@ bool AudioClock::NoSynchronizationRequired(AudioClock& source_clock, AudioClock&
   return AudioClock::SyncModeForClocks(source_clock, dest_clock) == AudioClock::SyncMode::None;
 }
 
+// We know we need a high-quality resampler if the clocks indicate AudioClock::SyncMode::MicroSrc.
+// Even for AudioClock::SyncMode::None, we might still need micro-SRC in the future if either clock
+// is client-rate-adjustable and the two clocks are not in fact the SAME entity.
 bool AudioClock::SynchronizationNeedsHighQualityResampler(AudioClock& source_clock,
                                                           AudioClock& dest_clock) {
-  return AudioClock::SyncModeForClocks(source_clock, dest_clock) == AudioClock::SyncMode::MicroSrc;
+  auto sync_mode = SyncModeForClocks(source_clock, dest_clock);
+  if (sync_mode == SyncMode::MicroSrc) {
+    return true;
+  }
+  if (sync_mode != SyncMode::None || source_clock == dest_clock) {
+    return false;
+  }
+  return ((source_clock.is_client_clock() && !source_clock.is_adjustable()) ||
+          (dest_clock.is_client_clock() && !dest_clock.is_adjustable()));
 }
 
 AudioClock::SyncMode AudioClock::SyncModeForClocks(AudioClock& source_clock,
                                                    AudioClock& dest_clock) {
+  // Compare koids of the underlying zx::clocks
   if (source_clock == dest_clock) {
     return SyncMode::None;
   }
 
   if (source_clock.is_device_clock() && dest_clock.is_device_clock() &&
       source_clock.domain() == dest_clock.domain()) {
+    return SyncMode::None;
+  }
+
+  if (source_clock.is_clock_monotonic() && dest_clock.is_clock_monotonic()) {
     return SyncMode::None;
   }
 
@@ -79,11 +96,11 @@ AudioClock::SyncMode AudioClock::SyncModeForClocks(AudioClock& source_clock,
   }
 
   // Otherwise, a client adjustable clock should be adjusted
-  if (source_clock.is_adjustable() && source_clock.is_client_clock()) {
+  if (source_clock.is_client_clock() && source_clock.is_adjustable()) {
     return SyncMode::AdjustSourceClock;
   }
 
-  if (dest_clock.is_adjustable() && dest_clock.is_client_clock()) {
+  if (dest_clock.is_client_clock() && dest_clock.is_adjustable()) {
     return SyncMode::AdjustDestClock;
   }
 
@@ -232,19 +249,48 @@ AudioClock::AudioClock(zx::clock clock, Source source, bool adjustable, uint32_t
   FX_CHECK(clock_.read(&now_unused) == ZX_OK) << "Submitted zx::clock could not be read";
 
   // Set feedback controls (including PID coefficients) for synchronizing this clock.
-  if (is_adjustable()) {
-    switch (source_) {
-      case Source::Client:
-        feedback_control_ = audio::clock::PidControl(kPidFactorsAdjustClientClock);
-        break;
-      case Source::Device:
-        feedback_control_ = audio::clock::PidControl(kPidFactorsAdjustDeviceClock);
-        break;
-    }  // no default, to catch logic errors if an enum is added
-  } else {
-    feedback_control_ = audio::clock::PidControl(kPidFactorsMicroSrc);
-  }
+  zx_clock_details_v1_t details;
+  switch (source_) {
+    case Source::Client:
+      // A client clock is always adjustable by its owner, so we make the following judgment call:
+      // ** Once a clock is rate-adjusted, we will never subsequently query whether it is identical
+      // to CLOCK_MONOTONIC. **  I.e. at that point we will no longer bother to check the details.
+      // For an Adjustable clock, we own it and thus can deterministically toggle is_monotonic_
+      // (one-way, from TRUE to FALSE) when we rate-adjust it for the first time. For a Fixed clock,
+      // the client (or some other party) owns it, so initially we check its rate and offset and
+      // generation_counter, so that subsequently we only need check its generation_counter.
+      status = clock_.get_details(&details);
+      is_clock_monotonic_ = (status == ZX_OK) && (details.generation_counter == 0) &&
+                            (details.mono_to_synthetic.reference_offset ==
+                             details.mono_to_synthetic.synthetic_offset) &&
+                            (details.mono_to_synthetic.rate.reference_ticks ==
+                             details.mono_to_synthetic.rate.synthetic_ticks);
+
+      feedback_control_ = is_adjustable() ? audio::clock::PidControl(kPidFactorsAdjustClientClock)
+                                          : audio::clock::PidControl(kPidFactorsMicroSrc);
+      break;
+    case Source::Device:
+      // For a device clock, the clock domain tells us with certainty and finality whether it is
+      // permanently locked to CLOCK_MONOTONIC
+      is_clock_monotonic_ = (domain_ == kMonotonicDomain);
+
+      feedback_control_ = is_adjustable() ? audio::clock::PidControl(kPidFactorsAdjustDeviceClock)
+                                          : audio::clock::PidControl(kPidFactorsMicroSrc);
+      break;
+  }  // no default, to catch logic errors if an enum is added
 }
+
+bool AudioClock::is_clock_monotonic() {
+  // If this is a client's custom clock and was clock_monotonic up until now, then double-check it,
+  // but once we detect it is non-monotonic then the answer will be no forever.
+  if (is_client_clock() && !is_adjustable_ && is_clock_monotonic_) {
+    zx_clock_details_v1_t details;
+    auto status = clock_.get_details(&details);
+    is_clock_monotonic_ = (status == ZX_OK) && (details.generation_counter == 0);
+  }
+
+  return is_clock_monotonic_;
+};
 
 // We pre-qualify the clock, so the following methods should never fail.
 TimelineFunction AudioClock::ref_clock_to_clock_mono() const {
@@ -293,8 +339,11 @@ int32_t AudioClock::ClampPpm(int32_t parts_per_million) {
 void AudioClock::ResetRateAdjustment(zx::time reset_time) { feedback_control_.Start(reset_time); }
 
 int32_t AudioClock::TuneForError(zx::time monotonic_time, zx::duration source_pos_error) {
+  zx::duration src_pos_err_for_tune = source_pos_error;
+
   // Tune the PID and retrieve the current correction (a zero-centric, rate-relative adjustment).
-  feedback_control_.TuneForError(monotonic_time, static_cast<double>(source_pos_error.to_nsecs()));
+  feedback_control_.TuneForError(monotonic_time,
+                                 static_cast<double>(src_pos_err_for_tune.to_nsecs()));
   double rate_adjustment = feedback_control_.Read();
   int32_t rate_adjust_ppm = ClampPpm(
       static_cast<int32_t>(std::round(static_cast<double>(rate_adjustment) * 1'000'000.0)));
@@ -306,13 +355,18 @@ int32_t AudioClock::TuneForError(zx::time monotonic_time, zx::duration source_po
   return rate_adjust_ppm;
 }
 
-// If kLogClockTuning is enabled, then we log once every kClockTuneLoggingStride times, or when
-// source position error is kPositionErrorLoggingThresholdNs or more.
+// If kLogClockTuning is enabled, then log if:
+//    source position error is kPositionErrorLoggingThresholdNs or more, or
+//    it's been kClockTuneLoggingStride times since we last logged.
 void AudioClock::LogClockAdjustments(zx::duration source_pos_error, int32_t rate_adjust_ppm) {
   if constexpr (kLogClockTuning) {
     static int64_t log_count = 0;
-    if (log_count == 0 ||
-        std::abs(source_pos_error.to_nsecs()) >= kPositionErrorLoggingThresholdNs) {
+
+    // If absolute error is large enough, then log now but reset our stride.
+    if (std::abs(source_pos_error.to_nsecs()) >= kPositionErrorLoggingThresholdNs) {
+      log_count = 0;
+    }
+    if (log_count == 0) {
       if (rate_adjust_ppm != current_adjustment_ppm_) {
         FX_LOGS(INFO) << static_cast<void*>(this) << (is_client_clock() ? " Client" : " Device")
                       << (is_adjustable() ? "Adjustable" : "Fixed     ") << " change from (ppm) "
@@ -345,6 +399,10 @@ int32_t AudioClock::AdjustClock(int32_t rate_adjust_ppm) {
 }
 
 void AudioClock::UpdateClockRate(int32_t rate_adjust_ppm) {
+  if (rate_adjust_ppm) {
+    is_clock_monotonic_ = false;
+  }
+
   zx::clock::update_args args;
   args.reset().set_rate_adjust(rate_adjust_ppm);
   FX_CHECK(clock_.update(args) == ZX_OK) << "Adjustable clock could not be rate-adjusted";

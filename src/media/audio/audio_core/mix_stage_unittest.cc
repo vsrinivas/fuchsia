@@ -192,8 +192,7 @@ TEST_F(MixStageTest, AddInput_MixerSelection) {
                                                           Mixer::Resampler::SampleAndHold));
 }
 
-// TODO(fxbug.dev/50004): Add tests to verify we can read from other mix stages with unaligned
-// frames.
+// TODO(fxbug.dev/50004): Add tests to verify we can read from mix stages with unaligned frames.
 
 std::unique_ptr<AudioClock> MixStageTest::SetPacketFactoryWithOffsetAudioClock(
     zx::duration clock_offset, testing::PacketFactory& factory) {
@@ -920,6 +919,49 @@ TEST_F(MixStageTest, PositionSkip) {
   while (!packet_released) {
     RunLoopUntilIdle();
   }
+}
+
+// SourceInfo.initial_position_is_set represents whether a position relationship between source and
+// dest streams has been established. When the stream first starts, JamSyncPositions is called and
+// sets the flag. It is cleared on Pause (surfaced to MixStage via a source's ref-clock-to-frac-
+// frames timeline), so that when Playback resumes the new position relationship is reestablished.
+//
+// Verify that SourceInfo.initial_position_is_set is initialized to false, is set to true upon first
+// mix, and is set to false upon Pause.
+TEST_F(MixStageTest, SourceDestPositionRelationship) {
+  // Before the first mix: position relationship should not be set
+  auto packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function_,
+                                                    std::move(clone_of_device_clock_));
+  auto& info =
+      mix_stage_->AddInput(packet_queue, 0.0f, Mixer::Resampler::WindowedSinc)->source_info();
+  EXPECT_FALSE(info.initial_position_is_set);
+
+  // Request the initial mix: position relationship should be set
+  auto source_pos_for_read_lock = Fixed(0);
+  constexpr int32_t dest_frames_per_mix = 96;
+  mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+  EXPECT_TRUE(info.initial_position_is_set);
+
+  source_pos_for_read_lock += Fixed(dest_frames_per_mix);
+  auto long_running_source_pos = info.next_source_frame;
+  // Pause the timeline and request another mix: position relationship should be cleared
+  timeline_function_->Update(TimelineFunction(source_pos_for_read_lock.raw_value(),
+                                              zx::clock::get_monotonic().get(), {0, 1}));
+  mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+  EXPECT_FALSE(info.initial_position_is_set);
+
+  // Restart the timeline and request another mix: position relationship should be set
+  source_pos_for_read_lock += Fixed(dest_frames_per_mix);
+  timeline_function_->Update(TimelineFunction(
+      source_pos_for_read_lock.raw_value(), zx::clock::get_monotonic().get(),
+      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
+  mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+  EXPECT_TRUE(info.initial_position_is_set);
+  EXPECT_EQ(info.next_source_frame, long_running_source_pos + Fixed(dest_frames_per_mix * 2))
+      << ffl::String::DecRational << info.next_source_frame;
+
+  source_pos_for_read_lock += Fixed(dest_frames_per_mix);
+  EXPECT_EQ(info.next_dest_frame, source_pos_for_read_lock.Floor());
 }
 
 }  // namespace media::audio

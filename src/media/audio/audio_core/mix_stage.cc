@@ -593,6 +593,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     info.dest_frames_to_frac_source_frames = TimelineFunction();
     bookkeeping.step_size = Fixed(0);
     bookkeeping.SetRateModuloAndDenominator(0, 1, &info);
+    info.initial_position_is_set = false;
 
     return;
   }
@@ -617,6 +618,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     info.dest_frames_to_frac_source_frames = TimelineFunction();
     bookkeeping.step_size = Fixed(0);
     bookkeeping.SetRateModuloAndDenominator(0, 1, &info);
+    info.initial_position_is_set = false;
 
     return;
   }
