@@ -5,6 +5,7 @@
 #include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/inspect/cpp/inspector.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/cpp/vmo/types.h>
 
@@ -255,6 +256,100 @@ TEST(Inspect, CreateGetStats) {
   EXPECT_EQ(2 * kPageSize, stats.size);
   EXPECT_EQ(2 * kPageSize, stats.maximum_size);
   EXPECT_EQ(0, stats.dynamic_child_count);
+}
+
+namespace {
+const char* FUCHSIA_INSPECT_STATS = "fuchsia.inspect.Stats-0";
+}
+
+void ReadChildHierarchy(Inspector* inspector, inspect::Hierarchy* hierarchy, std::string name) {
+  fpromise::result<Inspector> res1;
+  fpromise::single_threaded_executor exec;
+  exec.schedule_task(inspector->OpenChild(name).then(
+      [&](fpromise::result<Inspector>& res) { res1 = std::move(res); }));
+  exec.run();
+  ASSERT_TRUE(res1.is_ok());
+
+  auto res2 = inspect::ReadFromVmo(res1.value().DuplicateVmo());
+  ASSERT_TRUE(res2.is_ok());
+  *hierarchy = res2.take_value();
+}
+
+void CheckStats(const inspect::Hierarchy* hierarchy, const inspect::InspectStats* expected) {
+  auto current_size_value =
+      hierarchy->node().get_property<inspect::UintPropertyValue>("current_size");
+  ASSERT_TRUE(current_size_value != nullptr);
+  ASSERT_EQ(expected->size, current_size_value->value());
+  auto maximum_size_value =
+      hierarchy->node().get_property<inspect::UintPropertyValue>("maximum_size");
+  ASSERT_TRUE(maximum_size_value != nullptr);
+  ASSERT_EQ(expected->maximum_size, maximum_size_value->value());
+  auto total_dynamic_children_value =
+      hierarchy->node().get_property<inspect::UintPropertyValue>("total_dynamic_children");
+  ASSERT_TRUE(total_dynamic_children_value != nullptr);
+  ASSERT_EQ(expected->dynamic_child_count, total_dynamic_children_value->value());
+  auto allocated_blocks_value =
+      hierarchy->node().get_property<inspect::UintPropertyValue>("allocated_blocks");
+  ASSERT_TRUE(allocated_blocks_value != nullptr);
+  ASSERT_EQ(expected->allocated_blocks, allocated_blocks_value->value());
+  auto deallocated_blocks_value =
+      hierarchy->node().get_property<inspect::UintPropertyValue>("deallocated_blocks");
+  ASSERT_TRUE(deallocated_blocks_value != nullptr);
+  ASSERT_EQ(expected->deallocated_blocks, deallocated_blocks_value->value());
+  auto failed_allocations_value =
+      hierarchy->node().get_property<inspect::UintPropertyValue>("failed_allocations");
+  ASSERT_TRUE(failed_allocations_value != nullptr);
+  ASSERT_EQ(expected->failed_allocations, failed_allocations_value->value());
+}
+
+TEST(Inspect, CreateStatsNode) {
+  // Limit to 2 pages.
+  Inspector inspector(inspect::InspectSettings{.maximum_size = 2 * kPageSize});
+  inspector.CreateStatsNode();
+
+  auto children = inspector.GetChildNames();
+  ASSERT_EQ(1u, children.size());
+  EXPECT_EQ(FUCHSIA_INSPECT_STATS, children[0]);
+
+  inspect::Hierarchy hierarchy;
+  ReadChildHierarchy(&inspector, &hierarchy, FUCHSIA_INSPECT_STATS);
+
+  inspect::InspectStats expected = {};
+  expected.size = 1 * kPageSize;
+  expected.maximum_size = 2 * kPageSize;
+  expected.dynamic_child_count = 1u;
+  expected.allocated_blocks = 4u;
+  expected.deallocated_blocks = 0u;
+  expected.failed_allocations = 0u;
+  CheckStats(&hierarchy, &expected);
+
+  for (int i = 0; i < 100; i++) {
+    inspector.GetRoot().CreateString(std::to_string(i), "This is a test", &inspector);
+  }
+
+  ReadChildHierarchy(&inspector, &hierarchy, FUCHSIA_INSPECT_STATS);
+
+  expected.size = 2 * kPageSize;
+  expected.maximum_size = 2 * kPageSize;
+  expected.dynamic_child_count = 1u;
+  expected.allocated_blocks = 304u;
+  expected.deallocated_blocks = 0u;
+  expected.failed_allocations = 0u;
+  CheckStats(&hierarchy, &expected);
+
+  for (int i = 101; i < 128; i++) {
+    inspector.GetRoot().CreateString(std::to_string(i), "This is a test", &inspector);
+  }
+
+  ReadChildHierarchy(&inspector, &hierarchy, FUCHSIA_INSPECT_STATS);
+
+  expected.size = 2 * kPageSize;
+  expected.maximum_size = 2 * kPageSize;
+  expected.dynamic_child_count = 1u;
+  expected.allocated_blocks = 383u;
+  expected.deallocated_blocks = 4u;
+  expected.failed_allocations = 2u;
+  CheckStats(&hierarchy, &expected);
 }
 
 TEST(Inspect, GetLinks) {

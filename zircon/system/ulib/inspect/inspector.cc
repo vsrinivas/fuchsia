@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fpromise/promise.h>
 #include <lib/fpromise/result.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/vmo/heap.h>
@@ -101,6 +102,34 @@ std::vector<std::string> Inspector::GetChildNames() const { return state_->GetLi
 
 fpromise::promise<Inspector> Inspector::OpenChild(const std::string& child_name) const {
   return state_->CallLinkCallback(child_name);
+}
+
+namespace {
+// The metric node name, as exposed by the stats node.
+const char* FUCHSIA_INSPECT_STATS = "fuchsia.inspect.Stats";
+const char* CURRENT_SIZE_KEY = "current_size";
+const char* MAXIMUM_SIZE_KEY = "maximum_size";
+const char* TOTAL_DYNAMIC_CHILDREN_KEY = "total_dynamic_children";
+const char* ALLOCATED_BLOCKS_KEY = "allocated_blocks";
+const char* DEALLOCATED_BLOCKS_KEY = "deallocated_blocks";
+const char* FAILED_ALLOCATIONS_KEY = "failed_allocations";
+}  // namespace
+
+void Inspector::CreateStatsNode() {
+  GetRoot().CreateLazyNode(
+      FUCHSIA_INSPECT_STATS,
+      [&] {
+        auto stats = this->GetStats();
+        Inspector insp;
+        insp.GetRoot().CreateUint(CURRENT_SIZE_KEY, stats.size, &insp);
+        insp.GetRoot().CreateUint(MAXIMUM_SIZE_KEY, stats.maximum_size, &insp);
+        insp.GetRoot().CreateUint(TOTAL_DYNAMIC_CHILDREN_KEY, stats.dynamic_child_count, &insp);
+        insp.GetRoot().CreateUint(ALLOCATED_BLOCKS_KEY, stats.allocated_blocks, &insp);
+        insp.GetRoot().CreateUint(DEALLOCATED_BLOCKS_KEY, stats.deallocated_blocks, &insp);
+        insp.GetRoot().CreateUint(FAILED_ALLOCATIONS_KEY, stats.failed_allocations, &insp);
+        return fpromise::make_ok_promise(insp);
+      },
+      this);
 }
 
 namespace internal {

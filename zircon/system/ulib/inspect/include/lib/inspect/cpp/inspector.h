@@ -98,6 +98,10 @@ class Inspector final {
   // Returns a reference to the root node owned by this inspector.
   Node& GetRoot() const;
 
+  // Adds a lazy node to this Inspector that will collect stats data about this
+  // Inspector when accessed.
+  void CreateStatsNode();
+
   // Boolean value of an Inspector is whether it is actually backed by a VMO.
   //
   // This method returns false if and only if Node operations on the Inspector are no-ops.
