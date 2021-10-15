@@ -71,8 +71,7 @@ pub struct Start {
     )]
     pub categories: TraceCategories,
 
-    /// duration of trace capture in seconds. If not set, interactive
-    /// mode is used.
+    /// duration of trace capture in seconds.
     #[argh(option)]
     pub duration: Option<f64>,
 

@@ -15,13 +15,22 @@ type RecordingError = strict enum {
     /// This is a general error when starting a trace.
     RECORDING_START = 1;
 
-    /// An error encountered if a trace recording has already been started.
+    /// An error encountered if a trace recording has already been started
+    /// for a given Fuchsia target.
     RECORDING_ALREADY_STARTED = 2;
 
     /// An error encountered when attempting to stop a trace. This causes an
     /// immediate termination of the client channel, so the user should not
     /// attempt to run `StopRecording` again.
     RECORDING_STOP = 3;
+
+    /// Error for when a trace file is already being written to by the tracing
+    /// service.
+    DUPLICATE_TRACE_FILE = 4;
+
+    /// When attempting to stop a trace, there were no active traces found for
+    /// the given file.
+    NO_SUCH_TRACE_FILE = 5;
 };
 
 /// Covers how a trace will be run when invoking `StartRecording`.
@@ -41,6 +50,8 @@ protocol Tracing {
     /// Starts a trace recording. If the target behind the query is already
     /// running a trace, or some trace is actively writing to the output file,
     /// this will
+    // TODO(fxbug.dev/85098): Should return some information about what trace is actually
+    // running: the resolved target, the resolved output file being used, etc.
     StartRecording(struct {
         target_query string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
         output_file string:255;

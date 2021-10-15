@@ -4,10 +4,11 @@
 
 use {
     anyhow::{anyhow, Result},
+    errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_trace_args::{TraceCommand, TraceSubCommand},
     ffx_writer::Writer,
-    fidl_fuchsia_developer_bridge::{self as bridge, TracingProxy},
+    fidl_fuchsia_developer_bridge::{self as bridge, RecordingError, TracingProxy},
     fidl_fuchsia_tracing_controller::{ControllerProxy, KnownCategory, ProviderInfo, TraceConfig},
     serde::{Deserialize, Serialize},
     std::path::{Component, PathBuf},
@@ -122,25 +123,72 @@ pub async fn trace(
                 ..TraceConfig::EMPTY
             };
             let output = canonical_path(opts.output)?;
-            proxy
+            let res = proxy
                 .start_recording(
                     default,
                     &output,
                     bridge::TraceOptions { duration: opts.duration, ..bridge::TraceOptions::EMPTY },
                     trace_config,
                 )
-                .await?
-                .map_err(|e| anyhow!("recording start error {:?}", e))?;
+                .await?;
+            handle_recording_result(res, &output).await?;
+            writer.line(format!("Tracing started successfully. Writing to {}", output))?;
         }
         TraceSubCommand::Stop(opts) => {
             let output = canonical_path(opts.output)?;
-            proxy
-                .stop_recording(&output)
-                .await?
-                .map_err(|e| anyhow!("recording stop error {:?}", e))?;
+            let res = proxy.stop_recording(&output).await?;
+            handle_recording_result(res, &output).await?;
+            // TODO(awdavies): Make a clickable link that auto-uploads the trace file if possible.
+            writer.line(format!("Tracing stopped successfully. Results written to {}", output))?;
+            writer.line("Upload to https://ui.perfetto.dev/#!/ to view.")?;
         }
     }
     Ok(())
+}
+
+async fn handle_recording_result(res: Result<(), RecordingError>, output: &String) -> Result<()> {
+    let default: Option<String> = ffx_config::get("target.default").await.ok();
+    match res {
+        Ok(_) => Ok(()),
+        Err(e) => match e {
+            RecordingError::TargetProxyOpen => {
+                ffx_bail!("Trace unable to open target proxy.");
+            }
+            RecordingError::RecordingAlreadyStarted => {
+                // TODO(85098): Also return file info (which output file is being written to).
+                ffx_bail!("Trace already started for target {}", default.unwrap_or("".to_owned()));
+            }
+            RecordingError::DuplicateTraceFile => {
+                // TODO(85098): Also return target info.
+                ffx_bail!("Trace already running for file {}", output);
+            }
+            RecordingError::RecordingStart => {
+                let log_file: String = ffx_config::get("log.dir").await?;
+                ffx_bail!(
+                    "Error starting Fuchsia trace. See {}/ffx.daemon.log\n
+Search for lines tagged with `ffx_daemon_service_tracing`. A common issue is a
+peer closed error from `fuchsia.tracing.controller.Controller`. If this is the
+case either tracing is not supported in the product configuration or the tracing
+package is missing from the device's system image.",
+                    log_file
+                );
+            }
+            RecordingError::RecordingStop => {
+                let log_file: String = ffx_config::get("log.dir").await?;
+                ffx_bail!(
+                    "Error stopping Fuchsia trace. See {}/ffx.daemon.log\n
+Search for lines tagged with `ffx_daemon_service_tracing`. A common issue is a
+peer closed error from `fuchsia.tracing.controller.Controller`. If this is the
+case either tracing is not supported in the product configuration or the tracing
+package is missing from the device's system image.",
+                    log_file
+                );
+            }
+            RecordingError::NoSuchTraceFile => {
+                ffx_bail!("Could not stop trace. No active traces for {}.", output);
+            }
+        },
+    }
 }
 
 fn canonical_path(output_path: String) -> Result<String> {
@@ -186,6 +234,7 @@ mod tests {
         ffx_writer::Format,
         fidl::endpoints::{ControlHandle, Responder},
         fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_tracing_controller as trace,
+        regex::Regex,
         std::matches,
     };
 
@@ -407,8 +456,9 @@ mod tests {
         )
         .await;
         let output = writer.test_output().unwrap();
-        let want = String::new();
-        assert_eq!(want, output);
+        let regex_str = "Tracing started successfully. Writing to /([^/]+/)+?foo.txt";
+        let want = Regex::new(regex_str).unwrap();
+        assert!(want.is_match(&output), "\"{}\" didn't match regex /{}/", output, regex_str);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -420,7 +470,8 @@ mod tests {
         )
         .await;
         let output = writer.test_output().unwrap();
-        let want = String::new();
-        assert_eq!(want, output);
+        let regex_str = "Tracing stopped successfully. Results written to /([^/]+/)+?foo.txt\nUpload to https://ui.perfetto.dev/#!/ to view.";
+        let want = Regex::new(regex_str).unwrap();
+        assert!(want.is_match(&output), "\"{}\" didn't match regex /{}/", output, regex_str);
     }
 }

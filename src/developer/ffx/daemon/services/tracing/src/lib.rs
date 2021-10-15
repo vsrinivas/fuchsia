@@ -207,7 +207,7 @@ impl FidlService for TracingService {
                 match tasks.entry(output_file.clone()) {
                     Entry::Occupied(_) => {
                         return responder
-                            .send(&mut Err(bridge::RecordingError::RecordingAlreadyStarted))
+                            .send(&mut Err(bridge::RecordingError::DuplicateTraceFile))
                             .map_err(Into::into);
                     }
                     Entry::Vacant(e) => {
@@ -229,9 +229,15 @@ impl FidlService for TracingService {
                                         trace::StartErrorCode::AlreadyStarted => {
                                             Err(bridge::RecordingError::RecordingAlreadyStarted)
                                         }
-                                        _ => Err(bridge::RecordingError::RecordingStart),
+                                        e => {
+                                            log::warn!("Start error: {:?}", e);
+                                            Err(bridge::RecordingError::RecordingStart)
+                                        }
                                     },
-                                    _ => Err(bridge::RecordingError::RecordingStart),
+                                    e => {
+                                        log::warn!("Start error: {:?}", e);
+                                        Err(bridge::RecordingError::RecordingStart)
+                                    }
                                 };
                                 return responder.send(&mut res).map_err(Into::into);
                             }
@@ -248,7 +254,9 @@ impl FidlService for TracingService {
                         task
                     } else {
                         log::warn!("no task associated with trace file '{}'", output_file);
-                        return responder.send(&mut Ok(())).map_err(Into::into);
+                        return responder
+                            .send(&mut Err(bridge::RecordingError::NoSuchTraceFile))
+                            .map_err(Into::into);
                     }
                 };
                 responder.send(&mut task.shutdown().await).map_err(Into::into)
@@ -348,7 +356,7 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(
-            Err(bridge::RecordingError::RecordingAlreadyStarted),
+            Err(bridge::RecordingError::DuplicateTraceFile),
             proxy
                 .start_recording(
                     None,
@@ -425,7 +433,10 @@ mod tests {
         let proxy = daemon.open_proxy::<bridge::TracingMarker>().await;
         let temp_dir = tempfile::TempDir::new().unwrap();
         let output = temp_dir.path().join("trace-test.fxt").into_os_string().into_string().unwrap();
-        proxy.stop_recording(&output).await.unwrap().unwrap();
+        assert_eq!(
+            bridge::RecordingError::NoSuchTraceFile,
+            proxy.stop_recording(&output).await.unwrap().unwrap_err()
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
