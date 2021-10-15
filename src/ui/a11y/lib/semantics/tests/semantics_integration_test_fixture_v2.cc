@@ -185,14 +185,21 @@ void SemanticsIntegrationTestV2::LaunchClient(std::string debug_name) {
             continue;  // skip non-gfx events
 
           if (event.gfx().is_view_properties_changed()) {
+            FX_LOGS(INFO) << "View properties changed";
             const auto properties = event.gfx().view_properties_changed().properties;
             FX_CHECK(view_holder_) << "Expect that view holder is already set up.";
             view_holder_->SetViewProperties(properties);
             session_->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {});
 
           } else if (event.gfx().is_view_state_changed()) {
+            FX_LOGS(INFO) << "View state changed to is_rendering: "
+                          << event.gfx().view_state_changed().state.is_rendering;
             is_rendering = event.gfx().view_state_changed().state.is_rendering;
             FX_VLOGS(1) << "Child's view content is rendering: " << std::boolalpha << is_rendering;
+          } else if (event.gfx().is_view_connected()) {
+            FX_LOGS(INFO) << "Client view connected";
+          } else if (event.gfx().is_view_disconnected()) {
+            FX_LOGS(INFO) << "Client view disconnected";
           }
         }
       });
