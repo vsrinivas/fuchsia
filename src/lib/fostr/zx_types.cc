@@ -99,7 +99,37 @@ std::ostream& operator<<(std::ostream& os, const zx::duration& value) {
     return os << "<infinite>";
   }
 
+  if (value == zx::duration::infinite_past()) {
+    return os << "<infinite_past>";
+  }
+
   uint64_t s = value.to_nsecs();
+
+  if (s == 0) {
+    return os << "0";
+  }
+
+  int64_t ns = s % 1000;
+  s /= 1000;
+  int64_t us = s % 1000;
+  s /= 1000;
+  int64_t ms = s % 1000;
+  s /= 1000;
+
+  return os << s << "." << std::setw(3) << std::setfill('0') << ms << "," << std::setw(3)
+            << std::setfill('0') << us << "," << std::setw(3) << std::setfill('0') << ns;
+}
+
+std::ostream& operator<<(std::ostream& os, const zx::time& value) {
+  if (value == zx::time::infinite()) {
+    return os << "<infinite>";
+  }
+
+  if (value == zx::time::infinite_past()) {
+    return os << "<infinite_past>";
+  }
+
+  uint64_t s = value.get();
 
   if (s == 0) {
     return os << "0";

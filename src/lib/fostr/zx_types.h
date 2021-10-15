@@ -28,6 +28,7 @@ std::ostream& operator<<(std::ostream& os, const zx::process& value);
 std::ostream& operator<<(std::ostream& os, const zx::socket& value);
 std::ostream& operator<<(std::ostream& os, const zx::thread& value);
 std::ostream& operator<<(std::ostream& os, const zx::duration& value);
+std::ostream& operator<<(std::ostream& os, const zx::time& value);
 std::ostream& operator<<(std::ostream& os, const zx::vmo& value);
 
 }  // namespace zx

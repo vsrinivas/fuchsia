@@ -358,12 +358,55 @@ TEST(ZxTypes, InfiniteDuration) {
   EXPECT_EQ("<infinite>", os.str());
 }
 
+// Tests infinite past zx::duration formatting.
+TEST(ZxTypes, InfinitePastDuration) {
+  std::ostringstream os;
+
+  os << zx::duration::infinite_past();
+  EXPECT_EQ("<infinite_past>", os.str());
+}
+
 // Tests zx::duration formatting.
 TEST(ZxTypes, Duration) {
   std::ostringstream os;
   zx::duration duration(static_cast<zx_duration_t>(1234567890));
 
   os << duration;
+
+  EXPECT_EQ("1.234,567,890", os.str());
+}
+
+// Tests zero zx::time formatting.
+TEST(ZxTypes, ZeroTime) {
+  std::ostringstream os;
+  zx::time time;
+
+  os << time;
+  EXPECT_EQ("0", os.str());
+}
+
+// Tests infinite zx::time formatting.
+TEST(ZxTypes, InfiniteTime) {
+  std::ostringstream os;
+
+  os << zx::time::infinite();
+  EXPECT_EQ("<infinite>", os.str());
+}
+
+// Tests infinite past zx::time formatting.
+TEST(ZxTypes, InfinitePastTime) {
+  std::ostringstream os;
+
+  os << zx::time::infinite_past();
+  EXPECT_EQ("<infinite_past>", os.str());
+}
+
+// Tests zx::time formatting.
+TEST(ZxTypes, Time) {
+  std::ostringstream os;
+  zx::time time(static_cast<zx_time_t>(1234567890));
+
+  os << time;
 
   EXPECT_EQ("1.234,567,890", os.str());
 }
