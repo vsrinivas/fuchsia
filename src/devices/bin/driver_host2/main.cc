@@ -18,7 +18,7 @@ namespace fdf = fuchsia_driver_framework;
 namespace fi = fuchsia::inspect;
 
 constexpr char kDiagnosticsDir[] = "diagnostics";
-constexpr size_t kNumDriverLoopThreads = 2;
+constexpr size_t kNumDriverLoopThreads = 1;
 
 int main(int argc, char** argv) {
   // TODO(fxbug.dev/33183): Lock down job.
