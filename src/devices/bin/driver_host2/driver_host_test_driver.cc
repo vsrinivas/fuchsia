@@ -5,8 +5,8 @@
 #include <fidl/fuchsia.driverhost.test/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/epitaph.h>
+#include <lib/service/llcpp/outgoing_directory.h>
 #include <lib/service/llcpp/service.h>
-#include <lib/svc/outgoing.h>
 
 #include "src/devices/lib/driver2/record.h"
 #include "src/devices/lib/driver2/start_args.h"
@@ -57,13 +57,12 @@ class TestDriver {
     if (status != ZX_OK) {
       return zx::error(status);
     }
-    status = outgoing_.Serve(std::move(start_args->outgoing_dir()));
-    return zx::make_status(status);
+    return outgoing_.Serve(std::move(start_args->outgoing_dir()));
   }
 
  private:
   async_dispatcher_t* dispatcher_;
-  svc::Outgoing outgoing_;
+  service::OutgoingDirectory outgoing_;
 };
 
 zx_status_t test_driver_start(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher,

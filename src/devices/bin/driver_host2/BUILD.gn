@@ -58,7 +58,6 @@ fuchsia_driver("test_driver_driver") {
     "//src/devices/lib/driver2",
     "//src/devices/lib/driver2:llcpp",
     "//zircon/system/ulib/service:service-llcpp",
-    "//zircon/system/ulib/svc",
   ]
 }
 
@@ -121,7 +120,7 @@ executable("bin") {
     "//sdk/lib/inspect/service/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/svc",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/syslog",
   ]
 }

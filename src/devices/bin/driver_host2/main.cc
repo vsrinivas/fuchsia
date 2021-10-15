@@ -6,7 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/inspect/service/cpp/service.h>
-#include <lib/svc/outgoing.h>
+#include <lib/service/llcpp/outgoing_directory.h>
 #include <lib/syslog/global.h>
 #include <zircon/status.h>
 
@@ -29,11 +29,11 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
 
-  svc::Outgoing outgoing(loop.dispatcher());
-  status = outgoing.ServeFromStartupInfo();
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to serve outgoing directory: %s", zx_status_get_string(status));
-    return status;
+  service::OutgoingDirectory outgoing(loop.dispatcher());
+  auto serve = outgoing.ServeFromStartupInfo();
+  if (serve.is_error()) {
+    LOGF(ERROR, "Failed to serve outgoing directory: %s", serve.status_string());
+    return serve.status_value();
   }
 
   // Setup inspect.
