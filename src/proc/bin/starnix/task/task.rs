@@ -703,6 +703,11 @@ impl Task {
         1
     }
 
+    pub fn as_ucred(&self) -> ucred {
+        let creds = self.creds.read();
+        ucred { pid: self.get_pid(), uid: creds.uid, gid: creds.gid }
+    }
+
     /// Returns whether or not the task has the given `capability`.
     ///
     // TODO(lindkvist): This should do a proper check for the capability in the namespace.

@@ -164,9 +164,9 @@ pub type socklen_t = u32;
 #[derive(Clone, Debug, Default, PartialEq, AsBytes, FromBytes)]
 #[repr(C)]
 pub struct ucred {
-    pid: pid_t,
-    uid: uid_t,
-    gid: gid_t,
+    pub pid: pid_t,
+    pub uid: uid_t,
+    pub gid: gid_t,
 }
 
 #[derive(Debug, Default, Clone, AsBytes, FromBytes)]

@@ -13,6 +13,7 @@ use crate::fs::buffers::*;
 use crate::fs::*;
 use crate::mode;
 use crate::not_implemented;
+use crate::strace;
 use crate::syscalls::*;
 use crate::task::*;
 use crate::types::*;
@@ -190,8 +191,11 @@ pub fn sys_accept4(
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
-    let accepted_socket =
-        file.blocking_op(&ctx.task, || socket.accept(), FdEvents::POLLIN | FdEvents::POLLHUP)?;
+    let accepted_socket = file.blocking_op(
+        &ctx.task,
+        || socket.accept(&ctx.task),
+        FdEvents::POLLIN | FdEvents::POLLHUP,
+    )?;
 
     if !user_socket_address.is_null() {
         let address_bytes = accepted_socket.getpeername()?;
@@ -218,6 +222,7 @@ pub fn sys_connect(
     let listening_socket = match address {
         SocketAddress::Unspecified => return error!(EAFNOSUPPORT),
         SocketAddress::Unix(name) => {
+            strace!(&ctx.task, "connect to unix socket named {:?}", String::from_utf8_lossy(&name));
             if name.is_empty() {
                 return error!(ECONNREFUSED);
             }
@@ -236,7 +241,7 @@ pub fn sys_connect(
     // TODO(tbodt): Support blocking when the UNIX domain socket queue fills up. This one's weird
     // because as far as I can tell, removing a socket from the queue does not actually trigger
     // FdEvents on anything.
-    client_socket.connect(&listening_socket)?;
+    client_socket.connect(&ctx.task, &listening_socket)?;
     Ok(SUCCESS)
 }
 
@@ -300,7 +305,7 @@ pub fn sys_socketpair(
     let socket_type = parse_socket_type(socket_type)?;
     let open_flags = socket_flags_to_open_flags(flags);
 
-    let (left, right) = Socket::new_pair(ctx.kernel(), domain, socket_type, open_flags);
+    let (left, right) = Socket::new_pair(&ctx.task, domain, socket_type, open_flags);
 
     let fd_flags = socket_flags_to_fd_flags(flags);
     // TODO: Eventually this will need to allocate two fd numbers (each of which could
@@ -473,24 +478,27 @@ pub fn sys_getsockopt(
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
-    match level {
+    let opt_value = match level {
         SOL_SOCKET => match optname {
-            SO_TYPE => {
-                let mut optlen = 0;
-                ctx.task.mm.read_object(user_optlen, &mut optlen)?;
-                let raw = socket.lock().socket_type().as_raw();
-                let actual_optlen = std::mem::size_of_val(&raw) as socklen_t;
-                if optlen < actual_optlen {
-                    return error!(EINVAL);
-                }
-                ctx.task.mm.write_memory(user_optval, &raw.to_ne_bytes())?;
-                ctx.task.mm.write_object(user_optlen, &actual_optlen)?;
-                Ok(SUCCESS)
-            }
-            _ => error!(ENOPROTOOPT),
+            SO_TYPE => socket.lock().socket_type().as_raw().to_ne_bytes().to_vec(),
+            SO_PEERCRED => socket
+                .peer_cred()
+                .unwrap_or(ucred { pid: 0, uid: uid_t::MAX, gid: gid_t::MAX })
+                .as_bytes()
+                .to_owned(),
+            _ => return error!(ENOPROTOOPT),
         },
-        _ => error!(ENOPROTOOPT),
+        _ => return error!(ENOPROTOOPT),
+    };
+    let mut optlen = 0;
+    ctx.task.mm.read_object(user_optlen, &mut optlen)?;
+    let actual_optlen = opt_value.len() as socklen_t;
+    if optlen < actual_optlen {
+        return error!(EINVAL);
     }
+    ctx.task.mm.write_memory(user_optval, &opt_value)?;
+    ctx.task.mm.write_object(user_optlen, &actual_optlen)?;
+    Ok(SUCCESS)
 }
 
 pub fn sys_setsockopt(

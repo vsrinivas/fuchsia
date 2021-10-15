@@ -41,6 +41,9 @@ pub struct SocketInner {
     /// Whether this socket is writable.
     writable: bool,
 
+    /// Unix credentials of the owner of this socket, for SO_PEERCRED.
+    cred: Option<ucred>,
+
     /// Socket state: a queue if this is a listening socket, or a peer if this is a connected
     /// socket.
     state: SocketState,
@@ -76,6 +79,7 @@ impl Socket {
             address: None,
             readable: true,
             writable: true,
+            cred: None,
             state: SocketState::Disconnected,
         })))
     }
@@ -86,7 +90,7 @@ impl Socket {
     /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
     /// - `socket_type`: The type of the socket (e.g., `SOCK_STREAM`).
     pub fn new_pair(
-        kernel: &Kernel,
+        current: &Task,
         domain: SocketDomain,
         socket_type: SocketType,
         open_flags: OpenFlags,
@@ -94,7 +98,10 @@ impl Socket {
         let left = Socket::new(domain, socket_type);
         let right = Socket::new(domain, socket_type);
         left.lock().state = SocketState::Connected(right.clone());
+        left.lock().cred = Some(current.as_ucred());
         right.lock().state = SocketState::Connected(left.clone());
+        right.lock().cred = Some(current.as_ucred());
+        let kernel = &current.thread_group.kernel;
         let left = Socket::new_file(kernel, left, open_flags);
         let right = Socket::new_file(kernel, right, open_flags);
         (left, right)
@@ -138,6 +145,12 @@ impl Socket {
         Ok(name)
     }
 
+    pub fn peer_cred(&self) -> Option<ucred> {
+        let peer = self.lock().peer().ok()?.clone();
+        let peer = peer.lock();
+        peer.cred.clone()
+    }
+
     /// Initiate a connection from this socket to the given server socket.
     ///
     /// The given `socket` must be in a listening state.
@@ -148,7 +161,11 @@ impl Socket {
     ///
     /// Returns an error if the connection cannot be established (e.g., if one of the sockets is
     /// already connected).
-    pub fn connect(self: &SocketHandle, listener: &SocketHandle) -> Result<(), Errno> {
+    pub fn connect(
+        self: &SocketHandle,
+        current: &Task,
+        listener: &SocketHandle,
+    ) -> Result<(), Errno> {
         // Only hold one lock at a time until we make sure the lock ordering is right: client
         // before listener
         match listener.lock().state {
@@ -187,6 +204,7 @@ impl Socket {
 
         let server = Socket::new(listener.domain, listener.socket_type);
         client.state = SocketState::Connected(server.clone());
+        client.cred = Some(current.as_ucred());
         {
             let mut server = server.lock();
             server.state = SocketState::Connected(self.clone());
@@ -210,13 +228,15 @@ impl Socket {
     /// the queue (if any) and creates and returns the server end of the connection.
     ///
     /// Returns an error if the socket is not listening or if the queue is empty.
-    pub fn accept(&self) -> Result<SocketHandle, Errno> {
+    pub fn accept(&self, current: &Task) -> Result<SocketHandle, Errno> {
         let mut inner = self.lock();
         let queue = match &mut inner.state {
             SocketState::Listening(queue) => queue,
             _ => return error!(EINVAL),
         };
-        queue.sockets.pop_front().ok_or(errno!(EAGAIN))
+        let socket = queue.sockets.pop_front().ok_or(errno!(EAGAIN))?;
+        socket.lock().cred = Some(current.as_ucred());
+        Ok(socket)
     }
 
     /// Reads the specified number of bytes from the socket, if possible.
@@ -565,15 +585,17 @@ impl AcceptQueue {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::*;
 
     #[test]
     fn test_read_write_kernel() {
+        let (_kernel, task_owner) = create_kernel_and_task();
         let socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
         socket.lock().bind(SocketAddress::Unix(b"\0".to_vec())).expect("Failed to bind socket.");
         socket.lock().listen(10).expect("Failed to listen.");
         let connecting_socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
-        connecting_socket.connect(&socket).expect("Failed to connect socket.");
-        let server_socket = socket.accept().unwrap();
+        connecting_socket.connect(&task_owner.task, &socket).expect("Failed to connect socket.");
+        let server_socket = socket.accept(&task_owner.task).unwrap();
 
         let message = Message::new(vec![1, 2, 3].into(), None, None);
         server_socket.write_kernel(message.clone()).expect("Failed to write.");
