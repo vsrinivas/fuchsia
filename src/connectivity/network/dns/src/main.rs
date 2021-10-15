@@ -330,9 +330,11 @@ fn handle_err(source: &str, err: ResolveError) -> fname::LookupError {
                 (fname::LookupError::Transient, None)
             }
             ProtoErrorKind::Io(inner) => (fname::LookupError::Transient, Some(inner)),
-            ProtoErrorKind::CharacterDataTooLong { max: _, len: _ }
+            ProtoErrorKind::BadQueryCount(_)
+            | ProtoErrorKind::CharacterDataTooLong { max: _, len: _ }
             | ProtoErrorKind::LabelOverlapsWithOther { label: _, other: _ }
             | ProtoErrorKind::DnsKeyProtocolNot3(_)
+            | ProtoErrorKind::FormError { header: _, error: _ }
             | ProtoErrorKind::HmacInvalid()
             | ProtoErrorKind::IncorrectRDataLengthRead { read: _, len: _ }
             | ProtoErrorKind::LabelBytesTooLong(_)

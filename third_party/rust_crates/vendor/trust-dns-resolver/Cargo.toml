@@ -12,7 +12,7 @@
 [package]
 edition = "2018"
 name = "trust-dns-resolver"
-version = "0.21.0-alpha.3"
+version = "0.21.0-alpha.4"
 authors = ["Benjamin Fry <benjaminfry@me.com>"]
 description = "Trust-DNS is a safe and secure DNS library. This Resolver library  uses the Client library to perform all DNS queries. The Resolver is intended to be a high-level library for any DNS record resolution see Resolver and AsyncResolver for supported resolution types. The Client can be used for other queries.\n"
 homepage = "http://www.trust-dns.org/index.html"
@@ -88,7 +88,7 @@ version = "0.22"
 optional = true
 
 [dependencies.trust-dns-proto]
-version = "0.21.0-alpha.3"
+version = "0.21.0-alpha.4"
 default-features = false
 
 [dependencies.webpki-roots]
