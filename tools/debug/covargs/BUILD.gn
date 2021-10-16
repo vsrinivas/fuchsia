@@ -23,8 +23,6 @@ go_library("llvm_api") {
 
 go_library("covargs_lib") {
   sources = [
-    "profile.go",
-    "profile_test.go",
     "report.go",
     "report_test.go",
   ]

@@ -170,11 +170,6 @@ type indexedInfo struct {
 	summary runtests.DataSinkMap
 }
 
-type ProfileEntry struct {
-	ProfileData string   `json:"profile"`
-	ModuleFiles []string `json:"modules"`
-}
-
 func readInfo(dumpFiles, summaryFiles []string) (*indexedInfo, error) {
 	summary, err := readSummary(summaryFiles)
 	if err != nil {
@@ -260,34 +255,145 @@ func isInstrumented(filepath string) bool {
 	return false
 }
 
-func process(ctx context.Context, repo symbolize.Repository) error {
-	// Read in all the data
-	info, err := readInfo(symbolizeDumpFile, summaryFile)
+type malformedProfileError struct {
+	profile string
+}
+
+func (e *malformedProfileError) Error() string {
+	return fmt.Sprintf("cannot read embedded build id from profile %q", e.profile)
+}
+
+// Returns the embedded build id read from a profile by invoking llvm-profdata tool.
+// llvm-profdata show --binary-ids
+// TODO(gulfem): Try using goroutines to run `llvm-profdata show` in parallel.
+func readEmbeddedBuildId(ctx context.Context, tool string, profile string) (string, error) {
+	args := []string{
+		"show",
+		"--binary-ids",
+	}
+	args = append(args, profile)
+	readCmd := Action{Path: tool, Args: args}
+	output, err := readCmd.Run(ctx)
 	if err != nil {
-		return fmt.Errorf("parsing info: %w", err)
+		return "", &malformedProfileError{profile}
 	}
 
-	// Merge all the information
-	entries, err := covargs.MergeEntries(ctx, info.dumps, info.summary)
-	if err != nil {
-		return fmt.Errorf("merging info: %w", err)
+	// Split the lines in llvm-profdata output, which should have the following lines for build ids.
+	// Binary IDs:
+	// 1696251c (This is an example for build id)
+	splittedOutput := strings.Split((string(output)), "\n")
+	if len(splittedOutput) < 2 {
+		return "", fmt.Errorf("invalid llvm-profdata output in profile %q: %w", profile, err)
 	}
 
-	tempDir := saveTemps
-	if saveTemps == "" {
-		tempDir, err = ioutil.TempDir(saveTemps, "covargs")
-		if err != nil {
-			return fmt.Errorf("cannot create temporary dir: %w", err)
+	embeddedBuildId := splittedOutput[len(splittedOutput)-2]
+	// Check if embedded build id consists of hex characters.
+	_, err = hex.DecodeString(embeddedBuildId)
+	if err != nil {
+		return "", fmt.Errorf("invalid build id in profile %q: %w", profile, err)
+	}
+
+	return embeddedBuildId, nil
+}
+
+// Partition raw profiles by version
+type partition struct {
+	tool     string
+	profiles []string
+}
+
+type profileEntry struct {
+	Profile string   `json:"profile"`
+	Modules []string `json:"modules"`
+}
+
+// mergeEntries combines data from runtests and build ids embedded in profiles
+// or symbolizer, returning a sequence of entries, where each entry contains
+// a raw profile and all modules (specified by build ID) present in that profile.
+func mergeEntries(ctx context.Context, dumps map[string]symbolize.DumpEntry, summary runtests.DataSinkMap, partitions map[uint64]*partition) ([]profileEntry, error) {
+	sinkToModules := make(map[string]map[string]struct{})
+	for _, sink := range summary[llvmProfileSinkType] {
+		moduleSet, ok := sinkToModules[sink.File]
+		if !ok {
+			moduleSet = make(map[string]struct{})
 		}
-		defer os.RemoveAll(tempDir)
+
+		// If a sink has a list of build ids attached to it, use that list of builds ids.
+		// This happens for the profiles collected for host tests.
+		// TODO(gulfem): Switch to using embedded build ids in host tests.
+		if len(sink.BuildIDs) > 0 {
+			for _, buildID := range sink.BuildIDs {
+				moduleSet[buildID] = struct{}{}
+			}
+		} else {
+			version, err := getVersion(sink.File)
+			if err != nil {
+				// TODO(fxbug.dev/83504): Known issue causes occasional failures on host tests.
+				// Once resolved, return an error.
+				logger.Warningf(ctx, "cannot read version from profile %q: %w", sink.Name, err)
+				continue
+			}
+
+			// If embedded build ids are enabled, read embedded build id from profiles.
+			// Otherwise, read build ids from the symbolizer output.
+			// Embedded build ids are enabled for profile versions 7 and above.
+			if useEmbeddedBuildId && version >= 7 {
+				// If we read the embedded build id for this sink before, do not read it again.
+				if ok {
+					continue
+				}
+
+				// Find the associated llvm-profdata tool.
+				partition, ok := partitions[version]
+				if !ok {
+					partition = partitions[0]
+				}
+
+				embeddedBuildId, err := readEmbeddedBuildId(ctx, partition.tool, sink.File)
+				if err != nil {
+					switch err.(type) {
+					// TODO(fxbug.dev/83504): Known issue causes occasional malformed profiles on host tests.
+					// Only log the warning for such cases now. Once resolved, return an error.
+					case *malformedProfileError:
+						logger.Warningf(ctx, err.Error())
+					default:
+						return nil, err
+					}
+				}
+				moduleSet[embeddedBuildId] = struct{}{}
+			} else {
+				dump, ok := dumps[sink.Name]
+				if !ok {
+					logger.Warningf(ctx, "%s not found in summary file; unable to determine module build IDs\n", sink.Name)
+					continue
+				}
+				for _, mod := range dump.Modules {
+					moduleSet[mod.Build] = struct{}{}
+				}
+			}
+		}
+		sinkToModules[sink.File] = moduleSet
 	}
 
-	// Partition raw profiles by version
-	type partition struct {
-		tool     string
-		profiles []string
+	entries := []profileEntry{}
+	for sink, moduleSet := range sinkToModules {
+		var modules []string
+		for module := range moduleSet {
+			modules = append(modules, module)
+		}
+		entries = append(entries, profileEntry{
+			Modules: modules,
+			Profile: sink,
+		})
 	}
+
+	return entries, nil
+}
+
+func process(ctx context.Context, repo symbolize.Repository) error {
 	partitions := make(map[uint64]*partition)
+	var err error
+
 	for _, profdata := range llvmProfdata {
 		var version uint64
 		s := strings.SplitN(profdata, "=", 2)
@@ -299,65 +405,31 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		}
 		partitions[version] = &partition{tool: s[0]}
 	}
+
 	if _, ok := partitions[0]; !ok {
 		return fmt.Errorf("missing default llvm-profdata tool path")
 	}
 
-	// When embedded build ids are enabled, read embedded build ids from raw profiles.
-	// TODO(gulfem): Assign build ids when we merge entries.
-	// Currently, we generate the entries by merging summary & symbolizer output.
-	// Then we update entries with embedded build ids.
-	// When we completely remove using symbolizer output, we can directly assign build ids.
-	// TODO(gulfem): Try using goroutines that run `llvm-profdata show` in parallel.
-	if useEmbeddedBuildId {
-		for index, entry := range entries {
-			version, err := getVersion(entry.Profile)
-			if err != nil {
-				// TODO(fxbug.dev/83504): Known issue causes occasional failures on host tests.
-				// Once resolved, return an error.
-				logger.Warningf(ctx, "cannot read version from profile %q: %w", entry.Profile, err)
-				continue
-			}
-			// Embedded build ids are only enabled after raw profile version 7
-			if version < 7 {
-				continue
-			}
+	// Read in all the data
+	info, err := readInfo(symbolizeDumpFile, summaryFile)
+	if err != nil {
+		return fmt.Errorf("parsing info: %w", err)
+	}
 
-			// Find the associated llvm-profdata tool
-			partition, ok := partitions[version]
-			if !ok {
-				partition = partitions[0]
-			}
+	// Merge all the information
+	entries, err := mergeEntries(ctx, info.dumps, info.summary, partitions)
 
-			args := []string{
-				"show",
-				"--binary-ids",
-			}
-			args = append(args, entry.Profile)
-			// Use llvm-profdata show --binary-ids command to read embedded build ids
-			readCmd := Action{Path: partition.tool, Args: args}
-			output, err := readCmd.Run(ctx)
-			if err != nil {
-				// TODO(fxbug.dev/83504): Known issue causes occasional malformed profiles on host tests.
-				// Once resolved, return an error.
-				logger.Warningf(ctx, "Cannot read embedded build id in this profile %q: %w", entry.Profile, err)
-				continue
-			}
+	if err != nil {
+		return fmt.Errorf("merging info: %w", err)
+	}
 
-			// Split each line in llvm-profdata output
-			splittedOutput := strings.Split((string(output)), "\n")
-			if len(splittedOutput) < 2 {
-				return fmt.Errorf("invalid llvm-profdata output %q: %w", splittedOutput, err)
-			}
-
-			embeddedBuildId := splittedOutput[len(splittedOutput)-2]
-			// Check if embedded build id consists of hex characters
-			_, err = hex.DecodeString(embeddedBuildId)
-			if err != nil {
-				return fmt.Errorf("invalid build id %q: %w", embeddedBuildId, err)
-			}
-			entries[index].Modules = []string{embeddedBuildId}
+	tempDir := saveTemps
+	if saveTemps == "" {
+		tempDir, err = ioutil.TempDir(saveTemps, "covargs")
+		if err != nil {
+			return fmt.Errorf("cannot create temporary dir: %w", err)
 		}
+		defer os.RemoveAll(tempDir)
 	}
 
 	if jsonOutput != "" {
