@@ -173,9 +173,9 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
   }
 
   void InitHardware() {
-    register_io()->Write32Flipped(
-        engine_cs_->mmio_base() + registers::HardwareStatusPageAddress::kOffset, 0);
-    register_io()->Write32Flipped(engine_cs_->mmio_base() + registers::GraphicsMode::kOffset, 0);
+    register_io()->Write32(0,
+                           engine_cs_->mmio_base() + registers::HardwareStatusPageAddress::kOffset);
+    register_io()->Write32(0, engine_cs_->mmio_base() + registers::GraphicsMode::kOffset);
 
     engine_cs_->InitHardware();
 
@@ -351,28 +351,28 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
         return 0;
       }
 
-      void Write32Flipped(uint32_t offset, uint32_t val) override {
+      void Write32(uint32_t val, uint32_t offset) override {
         switch (offset) {
           case EngineCommandStreamer::kRenderEngineMmioBase + registers::ResetControl::kOffset:
           case EngineCommandStreamer::kVideoEngineMmioBase + registers::ResetControl::kOffset:
             // set ready for reset bit
             if (val & 0x00010001) {
               val = register_io_->mmio()->Read32(offset) | 0x2;
-              register_io_->mmio()->Write32Flipped(offset, val);
+              register_io_->mmio()->Write32(val, offset);
             }
             break;
           case registers::GraphicsDeviceResetControl::kOffset:
             // clear the reset bit
             if (val & mask(id_)) {
               val = register_io_->mmio()->Read32(offset) & ~mask(id_);
-              register_io_->mmio()->Write32Flipped(offset, val);
+              register_io_->mmio()->Write32(val, offset);
             }
             break;
         }
       }
 
-      void Read32Flipped(uint32_t offset, uint32_t val) override {}
-      void Read64Flipped(uint32_t offset, uint64_t val) override {}
+      void Read32(uint32_t val, uint32_t offset) override {}
+      void Read64(uint64_t val, uint32_t offset) override {}
 
      private:
       magma::RegisterIo* register_io_;

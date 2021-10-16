@@ -88,10 +88,10 @@ class RegisterBase {
   void set_reg_value(uint32_t value) { reg_value_ = value; }
 
   void ReadFrom(RegisterIo* reg_io) { reg_value_ = reg_io->Read32(reg_addr_); }
-  void WriteTo(RegisterIo* reg_io) { reg_io->Write32Flipped(reg_addr_, reg_value_); }
+  void WriteTo(RegisterIo* reg_io) { reg_io->Write32(reg_value_, reg_addr_); }
 
   void ReadFrom(magma::PlatformMmio* reg_io) { reg_value_ = reg_io->Read32(reg_addr_); }
-  void WriteTo(magma::PlatformMmio* reg_io) { reg_io->Write32Flipped(reg_addr_, reg_value_); }
+  void WriteTo(magma::PlatformMmio* reg_io) { reg_io->Write32(reg_value_, reg_addr_); }
 
  private:
   uint32_t reg_addr_ = 0;
@@ -117,8 +117,8 @@ class RegisterPairBase {
     reg_value_ = (value_high << 32) | value_low;
   }
   void WriteTo(RegisterIo* reg_io) {
-    reg_io->Write32Flipped(reg_addr_, reg_value_ & 0xffffffff);
-    reg_io->Write32Flipped(reg_addr_ + 4, reg_value_ >> 32);
+    reg_io->Write32(reg_value_ & 0xffffffff, reg_addr_);
+    reg_io->Write32(reg_value_ >> 32, reg_addr_ + 4);
   }
 
   void ReadFrom(magma::PlatformMmio* reg_io) {
@@ -127,8 +127,8 @@ class RegisterPairBase {
     reg_value_ = (value_high << 32) | value_low;
   }
   void WriteTo(magma::PlatformMmio* reg_io) {
-    reg_io->Write32Flipped(reg_addr_, reg_value_ & 0xffffffff);
-    reg_io->Write32Flipped(reg_addr_ + 4, reg_value_ >> 32);
+    reg_io->Write32(reg_value_ & 0xffffffff, reg_addr_);
+    reg_io->Write32(reg_value_ >> 32, reg_addr_ + 4);
   }
 
  private:

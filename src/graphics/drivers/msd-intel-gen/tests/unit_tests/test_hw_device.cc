@@ -49,7 +49,7 @@ class TestMsdIntelDevice : public testing::Test {
 
       // test register access
       uint32_t expected = 0xabcd1234;
-      device->register_io()->Write32Flipped(0x4f100, expected);
+      device->register_io()->Write32(expected, 0x4f100);
       uint32_t value = device->register_io()->Read32(0x4f100);
       EXPECT_EQ(expected, value);
     }
@@ -148,15 +148,15 @@ class TestMsdIntelDevice : public testing::Test {
   void MockDump() {
     auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(2 * 1024 * 1024));
 
-    reg_io->Write32Flipped(registers::FaultTlbReadData::kOffset0, 0xabcd1234);
-    reg_io->Write32Flipped(registers::FaultTlbReadData::kOffset1, 0x1f);
+    reg_io->Write32(0xabcd1234, registers::FaultTlbReadData::kOffset0);
+    reg_io->Write32(0x1f, registers::FaultTlbReadData::kOffset1);
 
     MsdIntelDevice::DumpState dump_state;
     MsdIntelDevice::DumpFaultAddress(&dump_state, reg_io.get());
     EXPECT_EQ(0xfabcd1234000ull, dump_state.fault_gpu_address);
     EXPECT_TRUE(dump_state.global);
 
-    reg_io->Write32Flipped(registers::FaultTlbReadData::kOffset1, 0xf);
+    reg_io->Write32(0xf, registers::FaultTlbReadData::kOffset1);
     MsdIntelDevice::DumpFaultAddress(&dump_state, reg_io.get());
     EXPECT_EQ(0xfabcd1234000ull, dump_state.fault_gpu_address);
     EXPECT_FALSE(dump_state.global);
@@ -261,7 +261,7 @@ class TestMsdIntelDevice : public testing::Test {
 
       // Initialize the target
       reinterpret_cast<uint32_t*>(dst_cpu_addr)[offset / sizeof(uint32_t)] = 0xdeadbeef;
-      device->register_io()->Write32Flipped(kScratchRegOffset, 0xdeadbeef);
+      device->register_io()->Write32(0xdeadbeef, kScratchRegOffset);
 
       EXPECT_TRUE(TestEngineCommandStreamer::ExecBatch(
           command_streamer, std::unique_ptr<SimpleMappedBatch>(new SimpleMappedBatch(
@@ -314,7 +314,7 @@ class TestMsdIntelDevice : public testing::Test {
 
     // General purpose register 0
     const uint32_t kScratchRegOffset = command_streamer->mmio_base() + 0x600;
-    device->register_io()->Write32Flipped(kScratchRegOffset, 0xdeadbeef);
+    device->register_io()->Write32(0xdeadbeef, kScratchRegOffset);
 
     static constexpr uint32_t expected_val = 0x8000000;
     constexpr uint32_t kCommandType = 0x22;     // store to mmio

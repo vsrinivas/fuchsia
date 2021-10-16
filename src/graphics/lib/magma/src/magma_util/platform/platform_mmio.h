@@ -31,8 +31,7 @@ class PlatformMmio {
   // Gets the physical address of the MMIO. Not implemented for MMIOs from PCI devices.
   virtual uint64_t physical_address() = 0;
 
-  // TODO(fxbug.dev/86716): Swap argument order and remove "Flipped" from name.
-  void Write32Flipped(uint64_t offset, uint32_t val) {
+  void Write32(uint32_t val, uint64_t offset) {
     DASSERT(offset < size());
     DASSERT((offset & 0x3) == 0);
     *reinterpret_cast<volatile uint32_t*>(addr(offset)) = val;
@@ -44,8 +43,7 @@ class PlatformMmio {
     return *reinterpret_cast<volatile uint32_t*>(addr(offset));
   }
 
-  // TODO(fxbug.dev/86716): Swap argument order and remove "Flipped" from name.
-  void Write64Flipped(uint64_t offset, uint64_t val) {
+  void Write64(uint64_t val, uint64_t offset) {
     DASSERT(offset < size());
     DASSERT((offset & 0x7) == 0);
     *reinterpret_cast<volatile uint64_t*>(addr(offset)) = val;

@@ -34,7 +34,7 @@ class HardwareStatusPageAddress {
 
   static void write(magma::RegisterIo* reg_io, uint32_t mmio_base, uint32_t gtt_addr) {
     DASSERT(magma::is_page_aligned(gtt_addr));
-    reg_io->Write32Flipped(mmio_base + kOffset, gtt_addr);
+    reg_io->Write32(gtt_addr, mmio_base + kOffset);
     reg_io->mmio()->PostingRead32(mmio_base + kOffset);
   }
 };
@@ -63,8 +63,8 @@ class PatIndex {
   static constexpr uint8_t kLruAgeMask = 0x3;
 
   static void write(magma::RegisterIo* reg_io, uint64_t val) {
-    reg_io->Write32Flipped(kOffsetLow, static_cast<uint32_t>(val));
-    reg_io->Write32Flipped(kOffsetHigh, static_cast<uint32_t>(val >> 32));
+    reg_io->Write32(static_cast<uint32_t>(val), kOffsetLow);
+    reg_io->Write32(static_cast<uint32_t>(val >> 32), kOffsetHigh);
   }
 
   static uint64_t ppat(unsigned int index, uint8_t lru_age, uint8_t target_cache,
@@ -105,10 +105,10 @@ class ExeclistSubmitPort {
                      magma::upper_32_bits(descriptor0), magma::lower_32_bits(descriptor0)};
 
     // The last write triggers the context load.
-    reg_io->Write32Flipped(mmio_base + kSubmitOffset, desc[0]);
-    reg_io->Write32Flipped(mmio_base + kSubmitOffset, desc[1]);
-    reg_io->Write32Flipped(mmio_base + kSubmitOffset, desc[2]);
-    reg_io->Write32Flipped(mmio_base + kSubmitOffset, desc[3]);
+    reg_io->Write32(desc[0], mmio_base + kSubmitOffset);
+    reg_io->Write32(desc[1], mmio_base + kSubmitOffset);
+    reg_io->Write32(desc[2], mmio_base + kSubmitOffset);
+    reg_io->Write32(desc[3], mmio_base + kSubmitOffset);
 
     reg_io->mmio()->PostingRead32(mmio_base + kStatusOffset);
   }
@@ -193,7 +193,7 @@ class AllEngineFault {
   };
 
   static uint32_t read(magma::RegisterIo* reg_io) { return reg_io->Read32(kOffset); }
-  static void clear(magma::RegisterIo* reg_io) { reg_io->Write32Flipped(kOffset, 0); }
+  static void clear(magma::RegisterIo* reg_io) { reg_io->Write32(0, kOffset); }
 
   static bool valid(uint32_t val) { return val & kValid; }
   static Engine engine(uint32_t val) {
@@ -237,7 +237,7 @@ class ForceWake {
     val32 = (val32 << 16) | val;
     switch (domain) {
       case GEN9_RENDER:
-        reg_io->Write32Flipped(kRenderOffset, val32);
+        reg_io->Write32(val32, kRenderOffset);
         break;
     }
   }
@@ -259,7 +259,7 @@ class GraphicsMode {
   static void write(magma::RegisterIo* reg_io, uint32_t mmio_base, uint16_t mask, uint16_t val) {
     uint32_t val32 = mask;
     val32 = (val32 << 16) | val;
-    reg_io->Write32Flipped(mmio_base + kOffset, val32);
+    reg_io->Write32(val32, mmio_base + kOffset);
     reg_io->mmio()->PostingRead32(mmio_base + kOffset);
   }
 };
@@ -273,7 +273,7 @@ class RenderPerformanceNormalFrequencyRequest {
     // Register in units of 16.66Mhz on skylake
     uint32_t val = mhz * 3 / 50;
     DASSERT(val <= 0x1ff);
-    reg_io->Write32Flipped(kOffset, val << 23);
+    reg_io->Write32(val << 23, kOffset);
   }
 
   static uint32_t read(magma::RegisterIo* reg_io) {
@@ -312,8 +312,8 @@ class ResetControl {
   static constexpr uint32_t kReadyForResetBit = 1;
 
   static void request(magma::RegisterIo* register_io, uint32_t mmio_base) {
-    register_io->Write32Flipped(mmio_base + kOffset,
-                                ((1 << kRequestResetBit) << 16) | (1 << kRequestResetBit));
+    register_io->Write32(((1 << kRequestResetBit) << 16) | (1 << kRequestResetBit),
+                         mmio_base + kOffset);
   }
 
   static bool ready_for_reset(magma::RegisterIo* register_io, uint32_t mmio_base) {
@@ -333,10 +333,10 @@ class GraphicsDeviceResetControl {
   static void initiate_reset(magma::RegisterIo* register_io, Engine engine) {
     switch (engine) {
       case RCS:
-        register_io->Write32Flipped(kOffset, (1 << kRcsResetBit));
+        register_io->Write32((1 << kRcsResetBit), kOffset);
         break;
       case VCS:
-        register_io->Write32Flipped(kOffset, (1 << kVcsResetBit));
+        register_io->Write32((1 << kVcsResetBit), kOffset);
         break;
     }
   }
@@ -361,7 +361,7 @@ class MasterInterruptControl {
   static constexpr uint32_t kEnableBitMask = 1 << 31;
 
   static void write(magma::RegisterIo* register_io, bool enable) {
-    register_io->Write32Flipped(kOffset, enable ? kEnableBitMask : 0);
+    register_io->Write32(enable ? kEnableBitMask : 0, kOffset);
   }
   static uint32_t read(magma::RegisterIo* register_io) { return register_io->Read32(kOffset); }
 };
@@ -391,7 +391,7 @@ class InterruptRegisterBase {
     uint32_t bit = source_bit(source);
     uint32_t val = register_io->Read32(offset);
     val = set ? (val | bit) : (val & ~bit);
-    register_io->Write32Flipped(offset, val);
+    register_io->Write32(val, offset);
     register_io->mmio()->PostingRead32(offset);
   }
 };
@@ -423,7 +423,7 @@ class GtInterruptIdentity0 : public InterruptRegisterBase {
 
   static uint32_t read(magma::RegisterIo* register_io) { return register_io->Read32(kOffset); }
   static void clear(magma::RegisterIo* register_io, Source source) {
-    register_io->Write32Flipped(kOffset, source_bit(source));
+    register_io->Write32(source_bit(source), kOffset);
   }
 };
 
@@ -454,7 +454,7 @@ class GtInterruptIdentity1 : public InterruptRegisterBase {
 
   static uint32_t read(magma::RegisterIo* register_io) { return register_io->Read32(kOffset); }
   static void clear(magma::RegisterIo* register_io, Source source) {
-    register_io->Write32Flipped(kOffset, source_bit(source));
+    register_io->Write32(source_bit(source), kOffset);
   }
 };
 
@@ -577,7 +577,7 @@ class ArbiterControl {
 
   static void workaround(magma::RegisterIo* register_io) {
     uint32_t value = register_io->Read32(kOffset) | kGapsTsvCreditFixEnable;
-    register_io->Write32Flipped(kOffset, value);
+    register_io->Write32(value, kOffset);
   }
 };
 

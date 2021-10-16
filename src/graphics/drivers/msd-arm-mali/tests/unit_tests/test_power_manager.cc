@@ -25,7 +25,7 @@ class TestPowerManager {
         static_cast<uint32_t>(registers::CoreReadyState::ActionType::kActionPowerOn);
     constexpr uint32_t kShaderOnHighOffset = kShaderOnOffset + 4;
     constexpr uint32_t kDummyHighValue = 1500;
-    reg_io->Write32Flipped(kShaderOnHighOffset, kDummyHighValue);
+    reg_io->Write32(kDummyHighValue, kShaderOnHighOffset);
     power_manager->EnableCores(reg_io.get(), 0xf);
     // Higher word shouldn't be written to because none of them are being
     // enabled.
@@ -54,7 +54,7 @@ class TestPowerManager {
     constexpr uint32_t kShaderReadyOffset =
         static_cast<uint32_t>(registers::CoreReadyState::CoreType::kShader) +
         static_cast<uint32_t>(registers::CoreReadyState::StatusType::kReady);
-    reg_io->Write32Flipped(kShaderReadyOffset, kCoresEnabled);
+    reg_io->Write32(kCoresEnabled, kShaderReadyOffset);
 
     power_manager->DisableShaders(reg_io.get());
 

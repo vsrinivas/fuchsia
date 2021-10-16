@@ -79,7 +79,7 @@ class FakePlatformDevice : public magma::PlatformDevice {
     // Initialize with the S905D3 GPU ID so protected memory can be enabled.
     registers::GpuId::Get().FromValue(1888681984).WriteTo(mmio.get());
     // Initialize MMIO with enough correct values that the driver can load.
-    mmio->Write32Flipped(GpuFeatures::kAsPresentOffset, 0xff);
+    mmio->Write32(0xff, GpuFeatures::kAsPresentOffset);
     return mmio;
   }
 
@@ -139,8 +139,8 @@ class TestNonHardwareMsdArmDevice {
 
     uint32_t offset = static_cast<uint32_t>(registers::CoreReadyState::CoreType::kShader) +
                       static_cast<uint32_t>(registers::CoreReadyState::StatusType::kReady);
-    reg_io->Write32Flipped(offset, 2);
-    reg_io->Write32Flipped(offset + 4, 5);
+    reg_io->Write32(2, offset);
+    reg_io->Write32(5, offset + 4);
 
     static constexpr uint64_t kFaultAddress = 0xffffffff88888888lu;
     registers::GpuFaultAddress::Get().FromValue(kFaultAddress).WriteTo(reg_io.get());

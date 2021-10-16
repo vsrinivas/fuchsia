@@ -1343,16 +1343,16 @@ void MsdArmDevice::ReleaseMappingsForAtom(MsdArmAtom* atom) {
 
 void MsdArmDevice::RefCycleCounter() {
   if (++cycle_counter_refcount_ == 1) {
-    register_io_->Write32Flipped(registers::GpuCommand::kOffset,
-                                 registers::GpuCommand::kCmdCycleCountStart);
+    register_io_->Write32(registers::GpuCommand::kCmdCycleCountStart,
+                          registers::GpuCommand::kOffset);
   }
 }
 
 void MsdArmDevice::DerefCycleCounter() {
   DASSERT(cycle_counter_refcount_ != 0);
   if (--cycle_counter_refcount_ == 0) {
-    register_io_->Write32Flipped(registers::GpuCommand::kOffset,
-                                 registers::GpuCommand::kCmdCycleCountStop);
+    register_io_->Write32(registers::GpuCommand::kCmdCycleCountStop,
+                          registers::GpuCommand::kOffset);
   }
 }
 
@@ -1487,8 +1487,8 @@ void MsdArmDevice::EnterProtectedMode() {
   if (!mali_properties_.use_protected_mode_callbacks) {
     // TODO(fxbug.dev/13130): If cache-coherency is enabled, power down L2 and wait for the
     // completion of that.
-    register_io_->Write32Flipped(registers::GpuCommand::kOffset,
-                                 registers::GpuCommand::kCmdSetProtectedMode);
+    register_io_->Write32(registers::GpuCommand::kCmdSetProtectedMode,
+                          registers::GpuCommand::kOffset);
     return;
   }
   // |force_expire| is false because nothing should have been using an address
@@ -1548,8 +1548,7 @@ bool MsdArmDevice::ResetDevice() {
       .WriteTo(register_io_.get());
 
   if (!mali_properties_.use_protected_mode_callbacks) {
-    register_io_->Write32Flipped(registers::GpuCommand::kOffset,
-                                 registers::GpuCommand::kCmdSoftReset);
+    register_io_->Write32(registers::GpuCommand::kCmdSoftReset, registers::GpuCommand::kOffset);
   } else {
     exiting_protected_mode_flag_ = true;
     zx_status_t status = mali_protocol_client_.StartExitProtectedMode();

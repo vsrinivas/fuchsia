@@ -17,24 +17,23 @@ class RegisterIo {
  public:
   RegisterIo(std::unique_ptr<magma::PlatformMmio> mmio);
 
-  // TODO(fxbug.dev/86716): Swap argument order and remove "Flipped" from name.
-  void Write32Flipped(uint32_t offset, uint32_t val) {
-    mmio_->Write32Flipped(offset, val);
+  void Write32(uint32_t val, uint32_t offset) {
+    mmio_->Write32(val, offset);
     if (hook_)
-      hook_->Write32Flipped(offset, val);
+      hook_->Write32(val, offset);
   }
 
   uint32_t Read32(uint32_t offset) {
     uint32_t val = mmio_->Read32(offset);
     if (hook_)
-      hook_->Read32Flipped(offset, val);
+      hook_->Read32(val, offset);
     return val;
   }
 
   uint64_t Read64(uint32_t offset) {
     uint64_t val = mmio_->Read64(offset);
     if (hook_)
-      hook_->Read64Flipped(offset, val);
+      hook_->Read64(val, offset);
     return val;
   }
 
@@ -43,10 +42,9 @@ class RegisterIo {
   class Hook {
    public:
     virtual ~Hook() = 0;
-    // TODO(fxbug.dev/86716): Swap argument order and remove "Flipped" from name.
-    virtual void Write32Flipped(uint32_t offset, uint32_t val) = 0;
-    virtual void Read32Flipped(uint32_t offset, uint32_t val) = 0;
-    virtual void Read64Flipped(uint32_t offset, uint64_t val) = 0;
+    virtual void Write32(uint32_t val, uint32_t offset) = 0;
+    virtual void Read32(uint32_t val, uint32_t offset) = 0;
+    virtual void Read64(uint64_t val, uint32_t offset) = 0;
   };
 
   void InstallHook(std::unique_ptr<Hook> hook) {

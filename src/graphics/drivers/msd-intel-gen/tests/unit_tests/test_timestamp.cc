@@ -12,14 +12,14 @@ class Hook : public magma::RegisterIo::Hook {
  public:
   Hook(std::shared_ptr<magma::RegisterIo> register_io) : register_io_(std::move(register_io)) {}
 
-  void Write32Flipped(uint32_t offset, uint32_t val) override {}
-  void Read64Flipped(uint32_t offset, uint64_t val) override {}
+  void Write32(uint32_t val, uint32_t offset) override {}
+  void Read64(uint64_t val, uint32_t offset) override {}
 
-  void Read32Flipped(uint32_t offset, uint32_t val) override {
+  void Read32(uint32_t val, uint32_t offset) override {
     // Increment the bottom 8 bits - this may rollover the upper timestamp bits
     uint8_t bits = val & 0xff;
     bits += 1;
-    register_io_->Write32Flipped(offset, (val & 0xFFFFFF00) | bits);
+    register_io_->Write32((val & 0xFFFFFF00) | bits, offset);
   }
 
   std::shared_ptr<magma::RegisterIo> register_io_;
@@ -38,10 +38,9 @@ constexpr uint32_t kMmioOffset = 0x2000;
 constexpr uint64_t kTimestampBits = 0xff1234abcd;
 
 TEST_F(TestTimestamp, Rollover) {
-  register_io_->Write32Flipped(kMmioOffset + registers::Timestamp::kOffset + 4,
-                               kTimestampBits >> 32);
-  register_io_->Write32Flipped(kMmioOffset + registers::Timestamp::kOffset,
-                               static_cast<uint32_t>(kTimestampBits));
+  register_io_->Write32(kTimestampBits >> 32, kMmioOffset + registers::Timestamp::kOffset + 4);
+  register_io_->Write32(static_cast<uint32_t>(kTimestampBits),
+                        kMmioOffset + registers::Timestamp::kOffset);
 
   // Hook will increment the timestamp register
   register_io_->InstallHook(std::make_unique<Hook>(register_io_));
@@ -51,10 +50,9 @@ TEST_F(TestTimestamp, Rollover) {
 
 TEST_F(TestTimestamp, NoRollover) {
   constexpr uint64_t kTimestampBits = 0xff1234abcd;
-  register_io_->Write32Flipped(kMmioOffset + registers::Timestamp::kOffset + 4,
-                               kTimestampBits >> 32);
-  register_io_->Write32Flipped(kMmioOffset + registers::Timestamp::kOffset,
-                               static_cast<uint32_t>(kTimestampBits));
+  register_io_->Write32(kTimestampBits >> 32, kMmioOffset + registers::Timestamp::kOffset + 4);
+  register_io_->Write32(static_cast<uint32_t>(kTimestampBits),
+                        kMmioOffset + registers::Timestamp::kOffset);
 
   EXPECT_EQ(0xff1234abcdul, registers::Timestamp::read(register_io_.get(), kMmioOffset));
 }

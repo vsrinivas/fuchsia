@@ -26,13 +26,13 @@ class TestForceWake {
   }
 
   void Reset() {
-    register_io_->mmio()->Write32Flipped(offset_, 0);
+    register_io_->mmio()->Write32(0, offset_);
     ForceWake::reset(register_io_.get(), domain_);
     EXPECT_EQ(0xFFFF0000, register_io_->mmio()->Read32(offset_));
   }
 
   void Request() {
-    register_io_->mmio()->Write32Flipped(status_offset_, 0);
+    register_io_->mmio()->Write32(0, status_offset_);
 
     // Verify timeout waiting for status
     auto start = std::chrono::high_resolution_clock::now();
@@ -45,7 +45,7 @@ class TestForceWake {
   }
 
   void Release() {
-    register_io_->mmio()->Write32Flipped(status_offset_, 0xFFFFFFFF);
+    register_io_->mmio()->Write32(0xFFFFFFFF, status_offset_);
 
     // Verify timeout waiting for status
     auto start = std::chrono::high_resolution_clock::now();
