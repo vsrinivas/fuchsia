@@ -107,6 +107,7 @@ class PageCache {
   // PMM if the cache is insufficient to fulfill the request.
   zx::status<AllocateResult> Allocate(size_t page_count) {
     LocalTraceDuration trace{"PageCache::Allocate"_stringref};
+    DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
     DEBUG_ASSERT(per_cpu_caches_ != nullptr);
 
     AutoPreemptDisabler preempt_disable;
