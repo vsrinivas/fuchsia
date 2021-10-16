@@ -183,10 +183,18 @@ foreach(test_name, gvisor_tests) {
 wayland_tests = [
   "array-test",
 
-  # "client-test",
+  "client-test",
+
+  # Fails with INVALID_ARGS (doesn't even run).
   # "compositor-introspection-test",
+
+  # This test uses a hard-coded /tmp/ path which fails.
   # "connection-test",
+
+  # This fails by timing out, looks like it uses futex and ends up stuck in a recvmsg.
   # "display-test",
+
+  # This test might be failing due to epoll.
   # "event-loop-test",
   "fixed-test",
   "headers-protocol-core-test",
@@ -198,14 +206,21 @@ wayland_tests = [
   "newsignal-test",
   "os-wrappers-test",
 
-  # Disabled because it spawns a subprocess that page faults, which should have been a failure but wasn't when the test was added
+  # This test gets stuck on epoll_pwait.
   # "protocol-logger-test",
-  # "queue-test",
-  # "resources-test",
+  "queue-test",
+  "resources-test",
+
+  # This test fails because it tries to kill SIGTERM itself. There are also two leak check tests,
+  # one is a malloc leak check that should be deleted (since the leak check code is deleted in the
+  # version that we use anyway), and another is an FD leak check.
   # "sanity-test",
   "signal-test",
 
+  # This test seems to require some flock functionality that we do not have (it uses this to, for
+  # figure out whether or not to unlink the socket file).
   # "socket-test",
+
   # "wayland_demo",
 ]
 
