@@ -445,8 +445,10 @@ mapfile -t rustc_shlibs < <(nonsystem_shlibs "$rustc")
 # Rust standard libraries.
 rust_stdlib_dir="prebuilt/third_party/rust/linux-x64/lib/rustlib/$target_triple/lib"
 # The majority of stdlibs already appear in dep-info and are uploaded as needed.
-# If there are other files needed from the Rust stdlib dir, add them here.
-extra_rust_stdlibs=()
+# However, libunwind.a is not listed, but is directly needed by code
+# emitted by rustc.  Listing this here works around a missing upload issue,
+# and adheres to the guidance of listing files instead of whole directories.
+extra_rust_stdlibs=("$rust_stdlib_dir"/libunwind.a)
 
 # At this time, the linker we pass is known to be statically linked itself
 # and doesn't need to be accompanied by any shlibs.
