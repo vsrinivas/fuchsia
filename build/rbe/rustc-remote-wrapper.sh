@@ -408,6 +408,9 @@ fi
 rustc_relative="$(realpath --relative-to="$project_root" "$rustc")"
 
 # Collect extra inputs to upload for remote execution.
+# Note: these paths are relative to the current working dir ($build_subdir),
+# so they need to be adjusted relative to $project_root below, before passing
+# them to rewrapper.
 extra_inputs=()
 IFS=, read -ra extra_inputs <<< "$comma_remote_inputs"
 
@@ -528,6 +531,12 @@ test "${#linker[@]}" = 0 || {
   rt_libdir=( "$(realpath --relative-to="$project_root" "${rt_libdir_local[@]}" )" )
 }
 
+extra_inputs_rel_project_root=()
+for f in "${extra_inputs[@]}"
+do
+  extra_inputs_rel_project_root+=( "$(realpath --relative-to="$project_root" "$f" )" )
+done
+
 # Inputs to upload include (all relative to $project_root):
 #   * rust tool(s) [$rustc_relative]
 #     * rust tool shared libraries [$rustc_shlibs]
@@ -544,7 +553,7 @@ test "${#linker[@]}" = 0 || {
 #   * linker binary (called by the driver) [$lld]
 #       For example: -Clinker=.../lld
 #   * run-time libraries [$rt_libdir]
-#   * additional data dependencies [$extra_inputs]
+#   * additional data dependencies [$extra_inputs_rel_project_root]
 
 remote_inputs=(
   "$rustc_relative"
@@ -561,7 +570,7 @@ remote_inputs=(
   "${rt_libdir[@]}"
   "${link_arg_files[@]}"
   "${link_sysroot[@]}"
-  "${extra_inputs[@]}"
+  "${extra_inputs_rel_project_root[@]}"
 )
 remote_inputs_joined="$(IFS=, ; echo "${remote_inputs[*]}")"
 
@@ -595,7 +604,7 @@ dump_vars() {
   debug_var "[$script: dep-info]" "${dep_only_command[@]}"
   debug_var "depfile inputs" "${depfile_inputs[@]}"
   debug_var "extern paths" "${extern_paths[@]}"
-  debug_var "extra inputs" "${extra_inputs[@]}"
+  debug_var "extra inputs" "${extra_inputs_rel_project_root[@]}"
   debug_var "extra outputs" "${extra_outputs[@]}"
 }
 
