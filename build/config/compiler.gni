@@ -6,7 +6,7 @@ if (is_debug) {
   default_optimize = "debug"
 } else {
   # TODO(phosek): consider using "size" in release mode to reduce size.
-  default_optimize = "speed"
+  default_optimize = "size"
 }
 
 # NOTE: Keep in sync with //build/config/zircon/levels.gni
@@ -38,13 +38,20 @@ assert(_optimize_valid + [ optimize ] - [ optimize ] != _optimize_valid,
        "`optimize=\"...\"` must be one of $_optimize_valid")
 
 declare_args() {
+  # Controls whether to use -Oz when `optimize` is set to `"size"`.
+  clang_use_oz = false
+
   # Controls whether to use the ML inliner in Clang to reduce size. Note that
-  # the option only takes effect when `optimize` is set to `"size"`.
+  # the option only takes effect when `clang_use_oz` is set to `true`.
   clang_ml_inliner = false
 }
 
+if (clang_use_oz) {
+  assert(optimize == "size", "clang_use_oz requires `optimize = \"size\"`")
+}
+
 if (clang_ml_inliner) {
-  assert(optimize == "size", "clang_ml_inliner requires `optimize = \"size\"`")
+  assert(clang_use_oz, "clang_ml_inliner requires `clang_use_oz = true`")
 }
 
 # NOTE: Keep in sync with //build/config/zircon/levels.gni

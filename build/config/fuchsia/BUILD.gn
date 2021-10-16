@@ -89,7 +89,9 @@ config("compiler_target") {
 
 config("compiler_cpu") {
   cflags = []
-  if (current_cpu == "x64") {
+  if (current_cpu == "arm64") {
+    cflags += [ "-mcpu=cortex-a53" ]
+  } else if (current_cpu == "x64") {
     if (!is_gcc) {
       # TODO(fxrev.dev/485257): Enable for GCC when it supports march=x86-64-v2
       cflags += [ "-march=x86-64-v2" ]
