@@ -5,9 +5,9 @@
 use crate::device::DeviceSpec;
 use crate::portpicker::{is_free_tcp_port, pick_unused_port, Port};
 use crate::target;
-use crate::types::{
-    get_sdk_data_dir, read_env_path, HostTools, ImageFiles, InTreePaths, SSHKeys, VDLArgs,
-};
+use crate::tools::HostTools;
+use crate::types::{get_sdk_data_dir, read_env_path, ImageFiles, InTreePaths, SSHKeys, VDLArgs};
+
 use crate::vdl_proto_parser::{get_emu_pid, get_ssh_port};
 use ansi_term::Colour::*;
 use anyhow::Result;
