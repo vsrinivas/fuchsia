@@ -54,6 +54,7 @@ int main(int argc, const char** argv) {
       << SincFilterCoefficientTable::kFracSideLength << ");\n";
   out << "\n";
 
+  // TODO(fxbug.dev/86662): Move these to a shared header, to eliminate duplication with filter.cc.
   std::vector<Key> keys = {
       // clang-format off
       {48000, 48000},
@@ -62,6 +63,7 @@ int main(int argc, const char** argv) {
       {96000, 16000},
       {48000, 16000},
       {44100, 48000},
+      {16000, 48000},
       // clang-format on
   };
 

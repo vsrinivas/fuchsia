@@ -148,6 +148,9 @@ SincFilter::CacheT* CreateSincFilterCoefficientTableCache() {
 
   // Now make sure we have all the coefficient tables we need.
   // In practice, this should be a superset of the prebuilt tables.
+  // TODO(fxbug.dev/86662): Move these to a shared header, to eliminate duplication with
+  // gen_coefficient_tables.cc. Any "superset" items here that are NOT in gen_coefficient_tables
+  // would be in a separate list also in that shared header.
   SincFilter::persistent_cache_->push_back(
       cache->Get(SincFilterCoefficientTable::MakeInputs(48000, 48000)));
   SincFilter::persistent_cache_->push_back(
@@ -160,6 +163,8 @@ SincFilter::CacheT* CreateSincFilterCoefficientTableCache() {
       cache->Get(SincFilterCoefficientTable::MakeInputs(48000, 16000)));
   SincFilter::persistent_cache_->push_back(
       cache->Get(SincFilterCoefficientTable::MakeInputs(44100, 48000)));
+  SincFilter::persistent_cache_->push_back(
+      cache->Get(SincFilterCoefficientTable::MakeInputs(16000, 48000)));
 
   return cache;
 }
