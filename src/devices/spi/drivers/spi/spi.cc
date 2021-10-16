@@ -84,7 +84,8 @@ void SpiDevice::AddChildren(const ddk::SpiImplProtocolClient& spi) {
     return;
   }
 
-  fidl::DecodedMessage<fuchsia_hardware_spi::wire::SpiBusMetadata> decoded(buffer, metadata_size);
+  fidl::DecodedMessage<fuchsia_hardware_spi::wire::SpiBusMetadata> decoded(
+      fidl::internal::kLLCPPEncodedWireFormatVersion, buffer, metadata_size);
   if (!decoded.ok()) {
     zxlogf(ERROR, "Failed to deserialize metadata.");
     return;

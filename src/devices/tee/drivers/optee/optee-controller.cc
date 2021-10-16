@@ -439,8 +439,8 @@ zx_status_t OpteeController::InitThreadPools() {
     return ZX_ERR_INTERNAL;
   }
 
-  fidl::DecodedMessage<fuchsia_hardware_tee::wire::TeeMetadata> decoded(buffer.get(),
-                                                                        metadata_size);
+  fidl::DecodedMessage<fuchsia_hardware_tee::wire::TeeMetadata> decoded(
+      fidl::internal::kLLCPPEncodedWireFormatVersion, buffer.get(), metadata_size);
   if (!decoded.ok()) {
     LOG(ERROR, "Failed to deserialize metadata.");
     return ZX_ERR_INTERNAL;
