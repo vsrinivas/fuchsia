@@ -411,7 +411,7 @@ From //boards/arm64.gni:31
 
 From //build/board.gni:18
 
-**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//src/media/audio/drivers/configurator", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config", "//src/graphics/lib/magma/gnbuild/magma-intel-gen:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan"]`
+**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//src/media/audio/drivers/configurator", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config", "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan"]`
 
 From //boards/common/x64-common.gni:73
 
@@ -457,7 +457,7 @@ From //boards/arm64.gni:25
 
 From //build/board.gni:39
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers-system", "//src/graphics/lib/magma/gnbuild/magma-intel-gen:msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
+**Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers-system", "//src/graphics/drivers/msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
 
 From //boards/common/x64-common.gni:67
 
@@ -768,11 +768,11 @@ From //build/config/clang/clang.gni:17
 
 ### clang_ml_inliner
 Controls whether to use the ML inliner in Clang to reduce size. Note that
-the option only takes effect when `optimize` is set to `"size"`.
+the option only takes effect when `clang_use_oz` is set to `true`.
 
 **Current value (from the default):** `false`
 
-From //build/config/compiler.gni:43
+From //build/config/compiler.gni:46
 
 ### clang_prefix
 The default clang toolchain provided by the prebuilt. This variable is
@@ -790,6 +790,13 @@ This toolchain is expected to support both Fuchsia targets and the host.
 **Current value (from the default):** `""`
 
 From //build/toolchain/zircon/clang.gni:11
+
+### clang_use_oz
+Controls whether to use -Oz when `optimize` is set to `"size"`.
+
+**Current value (from the default):** `false`
+
+From //build/config/compiler.gni:42
 
 ### clippy_warn
 By default clippy is set to allow all lints, this flag will change it to
@@ -984,7 +991,7 @@ From //src/virtualization/packages/debian_guest/BUILD.gn:9
 
 **Current value (from the default):** `"debug"`
 
-From //build/config/compiler.gni:55
+From //build/config/compiler.gni:62
 
 ### dev_bootfs_labels
 List of labels for objects to include in the ZBI.
@@ -1050,7 +1057,7 @@ Explicitly specify DWARF version used.
 
 **Current value (from the default):** `5`
 
-From //build/config/compiler.gni:69
+From //build/config/compiler.gni:76
 
 ### enable_api_diff
 Detect dart API changes
@@ -1339,7 +1346,8 @@ Non-product AOT
   is_product = false
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_runner"
-  runtime_meta = "//build/flutter/meta/aot_runtime"
+  runtime_meta = "//build/flutter/meta/aot_runtime.cmx"
+  runtime_meta_v2 = "//build/flutter/meta/aot_runtime.cml"
 }
 ```
 
@@ -1355,7 +1363,7 @@ This is effective only on debug builds.
 From //build/testing/flutter_driver.gni:9
 
 ### flutter_force_product
-If set to true, will force the runenrs to be built in
+If set to true, will force the runners to be built in
 product mode which means they will not have an exposed vm service
 
 **Current value (from the default):** `false`
@@ -3017,7 +3025,7 @@ From [//third_party/openthread/etc/gn/openthread.gni:196](https://fuchsia.google
 * `profile`: optimized for coverage/profile data collection
 * `coverage`: optimized for coverage data collection
 
-**Current value (from the default):** `"speed"`
+**Current value (from the default):** `"size"`
 
 From //build/config/compiler.gni:23
 
@@ -3411,7 +3419,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"lI21GVTfJHyGu0lXrlaRRqdAghE5TJO-Wwf0uo5OqakC"`
+**Current value (from the default):** `"0xnMHEXW6SWp9cI3IFICm1g9AMPXoKUN6hDTLfp0eEEC"`
 
 From //build/rust/config.gni:30
 
@@ -4336,7 +4344,7 @@ From //build/images/args.gni:91
 
 **Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:170
+From //build/config/fuchsia/BUILD.gn:172
 
 ### zircon_b_partition
 
