@@ -10,6 +10,9 @@ toc:
   path: /docs/concepts/index.md
 - title: "Software model"
   path: /docs/concepts/software_model.md
+- title: "Accessibility"
+  section:
+  - include: /docs/concepts/accessibility/_toc.yaml
 - title: "API"
   section:
   - include: /docs/concepts/api/_toc.yaml
