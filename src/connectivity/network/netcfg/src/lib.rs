@@ -64,9 +64,43 @@ use self::errors::ContextExt as _;
 ///
 /// Interface metrics are used to sort the route table. An interface with a
 /// lower metric is favored over one with a higher metric.
-/// For now favor WLAN over Ethernet.
-const INTF_METRIC_WLAN: u32 = 90;
-const INTF_METRIC_ETH: u32 = 100;
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+pub struct Metric(u32);
+
+impl Metric {
+    // TODO(https://fxbug.dev/81921): Currently, we default wireless interfaces to be higher
+    // priority routes than wired interfaces. Once product configurations are changed to specify
+    // their priorities in their configurations, these functions (and their use) can be removed.
+    fn wlan_default() -> Self {
+        Self(90)
+    }
+
+    fn eth_default() -> Self {
+        Self(100)
+    }
+}
+
+impl Default for Metric {
+    // A default value of 600 is chosen for Metric: this provides plenty of space for routing
+    // policy on devices with many interfaces (physical or logical) while remaining in the same
+    // magnitude as our current default ethernet metric.
+    fn default() -> Self {
+        Self(600)
+    }
+}
+
+impl std::fmt::Display for Metric {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Metric(u) = self;
+        write!(f, "{}", u)
+    }
+}
+
+impl From<Metric> for u32 {
+    fn from(Metric(u): Metric) -> u32 {
+        u
+    }
+}
 
 /// Path to devfs.
 const DEV_PATH: &str = "/dev";
@@ -201,12 +235,29 @@ enum InterfaceType {
     Wlan,
 }
 
+#[cfg_attr(test, derive(PartialEq))]
+#[derive(Debug, Deserialize)]
+pub struct InterfaceMetrics {
+    #[serde(default = "Metric::wlan_default")]
+    pub wlan_metric: Metric,
+    #[serde(default = "Metric::eth_default")]
+    pub eth_metric: Metric,
+}
+
+impl Default for InterfaceMetrics {
+    fn default() -> Self {
+        Self { wlan_metric: Metric::wlan_default(), eth_metric: Metric::eth_default() }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Config {
     pub dns_config: DnsConfig,
     pub filter_config: FilterConfig,
     pub filter_enabled_interface_types: HashSet<InterfaceType>,
+    #[serde(default)]
+    pub interface_metrics: InterfaceMetrics,
 }
 
 impl Config {
@@ -365,6 +416,7 @@ pub struct NetCfg<'a> {
     // per-interface state, and should be merged.
     interface_states: HashMap<u64, InterfaceState>,
     interface_properties: HashMap<u64, fnet_interfaces_ext::Properties>,
+    interface_metrics: InterfaceMetrics,
 
     dns_servers: DnsServers,
 }
@@ -464,6 +516,7 @@ impl<'a> NetCfg<'a> {
     async fn new(
         allow_virtual_devices: bool,
         filter_enabled_interface_types: HashSet<InterfaceType>,
+        interface_metrics: InterfaceMetrics,
     ) -> Result<NetCfg<'a>, anyhow::Error> {
         let svc_dir = clone_namespace_svc().context("error cloning svc directory handle")?;
         let stack = svc_connect::<fnet_stack::StackMarker>(&svc_dir)
@@ -505,6 +558,7 @@ impl<'a> NetCfg<'a> {
             filter_enabled_interface_types,
             interface_properties: HashMap::new(),
             interface_states: HashMap::new(),
+            interface_metrics,
             dns_servers: Default::default(),
         })
     }
@@ -1098,7 +1152,11 @@ impl<'a> NetCfg<'a> {
         })?;
 
         let interface_type = info.interface_type();
-        let metric = crate::get_metric(interface_type);
+        let metric = match interface_type {
+            InterfaceType::Wlan => self.interface_metrics.wlan_metric,
+            InterfaceType::Ethernet => self.interface_metrics.eth_metric,
+        }
+        .into();
         let interface_name = if stable_name {
             match self.persisted_interface_config.generate_stable_name(
                 &topological_path, /* TODO(tamird): we can probably do
@@ -1404,16 +1462,6 @@ impl<'a> NetCfg<'a> {
     }
 }
 
-/// Return the metric.
-fn get_metric(interface_type: InterfaceType) -> u32 {
-    // Hardcode the interface metric. Eventually this should
-    // be part of the config file.
-    match interface_type {
-        InterfaceType::Wlan => INTF_METRIC_WLAN,
-        InterfaceType::Ethernet => INTF_METRIC_ETH,
-    }
-}
-
 pub async fn handle_virtualization_control(
     mut stream: fnet_virtualization::ControlRequestStream,
 ) -> Result<(), anyhow::Error> {
@@ -1442,12 +1490,17 @@ pub async fn run<M: Mode>() -> Result<Never, anyhow::Error> {
     info!("starting");
     debug!("starting with options = {:?}", opt);
 
-    let Config { dns_config: DnsConfig { servers }, filter_config, filter_enabled_interface_types } =
-        Config::load(config_data)?;
+    let Config {
+        dns_config: DnsConfig { servers },
+        filter_config,
+        filter_enabled_interface_types,
+        interface_metrics,
+    } = Config::load(config_data)?;
 
-    let mut netcfg = NetCfg::new(*allow_virtual_devices, filter_enabled_interface_types)
-        .await
-        .context("error creating new netcfg instance")?;
+    let mut netcfg =
+        NetCfg::new(*allow_virtual_devices, filter_enabled_interface_types, interface_metrics)
+            .await
+            .context("error creating new netcfg instance")?;
 
     let () =
         netcfg.update_filters(filter_config).await.context("update filters based on config")?;
@@ -1533,6 +1586,7 @@ mod tests {
     use futures::future::{self, FutureExt as _, TryFutureExt as _};
     use futures::stream::TryStreamExt as _;
     use net_declare::{fidl_ip, fidl_ip_v6};
+    use test_case::test_case;
 
     use super::*;
 
@@ -1596,6 +1650,7 @@ mod tests {
                 filter_enabled_interface_types: Default::default(),
                 interface_properties: Default::default(),
                 interface_states: Default::default(),
+                interface_metrics: Default::default(),
                 dns_servers: Default::default(),
             },
             ServerEnds {
@@ -2102,7 +2157,11 @@ mod tests {
     "nat_rules": [],
     "rdr_rules": []
   },
-  "filter_enabled_interface_types": ["wlan"]
+  "filter_enabled_interface_types": ["wlan"],
+  "interface_metrics": {
+    "wlan_metric": 100,
+    "eth_metric": 10
+  }
 }
 "#;
 
@@ -2110,6 +2169,7 @@ mod tests {
             dns_config: DnsConfig { servers },
             filter_config,
             filter_enabled_interface_types,
+            interface_metrics,
         } = Config::load_str(config_str).unwrap();
 
         assert_eq!(vec!["8.8.8.8".parse::<std::net::IpAddr>().unwrap()], servers);
@@ -2122,6 +2182,72 @@ mod tests {
             IntoIterator::into_iter([InterfaceType::Wlan]).collect::<HashSet<_>>(),
             filter_enabled_interface_types
         );
+
+        let expected_metrics =
+            InterfaceMetrics { wlan_metric: Metric(100), eth_metric: Metric(10) };
+        assert_eq!(interface_metrics, expected_metrics);
+    }
+
+    #[test]
+    fn test_config_metric_defaults() {
+        let config_str = r#"
+{
+  "dns_config": { "servers": [] },
+  "filter_config": {
+    "rules": [],
+    "nat_rules": [],
+    "rdr_rules": []
+  },
+  "filter_enabled_interface_types": []
+}
+"#;
+
+        let Config {
+            dns_config: _,
+            filter_config: _,
+            filter_enabled_interface_types: _,
+            interface_metrics,
+        } = Config::load_str(config_str).unwrap();
+
+        assert_eq!(interface_metrics, Default::default());
+    }
+
+    #[test_case(
+        "eth_metric", Metric::wlan_default(), Metric(1), Metric(1);
+        "wlan assumes default metric when unspecified")]
+    #[test_case("wlan_metric", Metric(1), Metric::eth_default(), Metric(1);
+        "eth assumes default metric when unspecified")]
+    fn test_config_metric_individual_defaults(
+        metric_name: &'static str,
+        wlan_metric: Metric,
+        eth_metric: Metric,
+        expect_metric: Metric,
+    ) {
+        let config_str = format!(
+            r#"
+{{
+  "dns_config": {{ "servers": [] }},
+  "filter_config": {{
+    "rules": [],
+    "nat_rules": [],
+    "rdr_rules": []
+  }},
+  "filter_enabled_interface_types": [],
+  "interface_metrics": {{ "{}": {} }}
+}}
+"#,
+            metric_name, expect_metric
+        );
+
+        let Config {
+            dns_config: _,
+            filter_config: _,
+            filter_enabled_interface_types: _,
+            interface_metrics,
+        } = Config::load_str(&config_str).unwrap();
+
+        let expected_metrics = InterfaceMetrics { wlan_metric, eth_metric };
+        assert_eq!(interface_metrics, expected_metrics);
     }
 
     #[test]

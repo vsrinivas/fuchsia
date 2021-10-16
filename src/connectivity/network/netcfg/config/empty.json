@@ -7,5 +7,6 @@
         "nat_rules": [],
         "rdr_rules": []
     },
-    "filter_enabled_interface_types": []
+    "filter_enabled_interface_types": [],
+    "interface_metrics": {}
 }

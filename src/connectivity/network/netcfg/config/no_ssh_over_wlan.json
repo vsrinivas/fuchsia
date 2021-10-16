@@ -17,5 +17,9 @@
     },
     "filter_enabled_interface_types": [
         "wlan"
-    ]
+    ],
+    "interface_metrics": {
+        "wlan_metric": 90,
+        "eth_metric": 100
+    }
 }

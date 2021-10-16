@@ -56,6 +56,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:test-case",
     "//third_party/rust_crates:thiserror",
   ]
 
@@ -135,6 +136,12 @@ config_data("config-default") {
 config_data("config-no-ssh-over-wlan") {
   for_pkg = "netcfg"
   sources = [ "config/no_ssh_over_wlan.json" ]
+  outputs = [ "default.json" ]
+}
+
+config_data("config-prefer-wired") {
+  for_pkg = "netcfg"
+  sources = [ "config/prefer_wired.json" ]
   outputs = [ "default.json" ]
 }
 
