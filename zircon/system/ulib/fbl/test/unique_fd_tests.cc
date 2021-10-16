@@ -22,6 +22,8 @@ TEST(UniqueFdTest, InvalidFd) {
   EXPECT_EQ(static_cast<bool>(fd), false);
   EXPECT_EQ(false, static_cast<bool>(fd));
 
+  EXPECT_EQ(fd.reset(), -1);
+
   EXPECT_FALSE(fd);
 }
 
@@ -153,8 +155,8 @@ TEST(UniqueFdTest, Reset) {
     ASSERT_NO_FAILURES(VerifyPipesOpen(other_pipes[1], other_pipes[0]));
     ASSERT_NO_FAILURES(VerifyPipesOpen(third_pipes[1], third_pipes[0]));
 
-    in.reset(other_pipes[1]);
-    out.reset(other_pipes[0]);
+    EXPECT_EQ(in.reset(other_pipes[1]), 0);
+    EXPECT_EQ(out.reset(other_pipes[0]), 0);
 
     ASSERT_NO_FAILURES(VerifyPipesOpen(in.get(), out.get()));
     ASSERT_NO_FAILURES(VerifyPipesClosed(pipes[1], pipes[0]));
@@ -169,8 +171,8 @@ TEST(UniqueFdTest, Reset) {
     ASSERT_NO_FAILURES(VerifyPipesClosed(other_pipes[1], other_pipes[0]));
     ASSERT_NO_FAILURES(VerifyPipesOpen(third_pipes[1], third_pipes[0]));
 
-    in.reset();
-    out.reset();
+    EXPECT_EQ(in.reset(), 0);
+    EXPECT_EQ(out.reset(), 0);
 
     ASSERT_NO_FAILURES(VerifyPipesClosed(in.get(), out.get()));
     ASSERT_NO_FAILURES(VerifyPipesClosed(pipes[1], pipes[0]));

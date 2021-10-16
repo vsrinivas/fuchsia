@@ -48,11 +48,22 @@ class unique_fd {
     return t;
   }
 
-  void reset(int t = InvalidValue()) {
-    if (fd_ != InvalidValue()) {
-      close(fd_);
+  // Reset the underlying fd.
+  //
+  // Optionally takes a value to reset the underlying fd to. If no
+  // value is passed, underlying fd will be set to an invalid value.
+  //
+  // If the fd_ is not set to InvalidValue(), calls close(2) on the fd and
+  // returns any error value.  Otherwise, returns -1.
+  int reset(int t = InvalidValue()) {
+    int error;
+    if (fd_ == InvalidValue()) {
+      error = -1;
+    } else {
+      error = close(fd_);
     }
     fd_ = t;
+    return error;
   }
 
   // Reset the underlying fd, and then get the address of the underlying internal fd storage.
