@@ -93,7 +93,7 @@ fn parse_socket_address(
                 SocketAddress::Unix(vec![])
             } else {
                 let null_index =
-                    sun_path.iter().position(|&r| r == b'\0').ok_or_else(|| errno!(EINVAL))?;
+                    sun_path.iter().position(|&r| r == b'\0').unwrap_or(sun_path.len());
                 if null_index == 0 {
                     // If there is a null byte at the start of the sun_path, then the
                     // address is abstract.
