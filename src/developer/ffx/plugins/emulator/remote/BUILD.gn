@@ -4,14 +4,10 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_emulator") {
+ffx_plugin("ffx_emulator_remote") {
   version = "0.1.0"
   edition = "2018"
-  with_unit_tests = true
+  deps = [ "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common" ]
   args_sources = [ "src/args.rs" ]
-  plugin_deps = [
-    "kill:ffx_emulator_kill",
-    "remote:ffx_emulator_remote",
-    "start:ffx_emulator_start",
-  ]
+  sources = [ "src/lib.rs" ]
 }

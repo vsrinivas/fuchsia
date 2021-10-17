@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use ffx_emulator_args::StartCommand;
+use ffx_emulator_start_args::StartCommand;
 use serde::Deserialize;
 use std::fs::File;
 use std::io::BufReader;

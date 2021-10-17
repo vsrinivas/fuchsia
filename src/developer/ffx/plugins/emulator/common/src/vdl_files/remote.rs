@@ -6,7 +6,7 @@ use super::VDLFiles;
 use crate::types::{FuchsiaPaths, InTreePaths};
 use anyhow::{format_err, Result};
 use errors::ffx_bail;
-use ffx_emulator_args::RemoteCommand;
+use ffx_emulator_remote_args::RemoteCommand;
 use fuchsia_async::{Duration, LocalExecutor};
 use fuchsia_hyper::new_https_client;
 use home::home_dir;

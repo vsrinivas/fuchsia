@@ -12,7 +12,8 @@ use crate::vdl_proto_parser::{get_emu_pid, get_ssh_port};
 use ansi_term::Colour::*;
 use anyhow::Result;
 use errors::ffx_bail;
-use ffx_emulator_args::{KillCommand, StartCommand};
+use ffx_emulator_kill_args::KillCommand;
+use ffx_emulator_start_args::StartCommand;
 use fidl_fuchsia_developer_bridge as bridge;
 use regex::Regex;
 use shared_child::SharedChild;
@@ -535,6 +536,7 @@ impl VDLFiles {
                         &KillCommand {
                             launched_proto: Some(self.output_proto.display().to_string()),
                             vdl_path: Some(vdl.display().to_string()),
+                            sdk: self.is_sdk,
                         },
                         daemon_proxy,
                     )
@@ -546,6 +548,7 @@ impl VDLFiles {
                         &KillCommand {
                             launched_proto: Some(self.output_proto.display().to_string()),
                             vdl_path: Some(vdl.display().to_string()),
+                            sdk: self.is_sdk,
                         },
                         daemon_proxy,
                     )
@@ -663,6 +666,7 @@ impl VDLFiles {
                 &KillCommand {
                     launched_proto: Some(self.output_proto.display().to_string()),
                     vdl_path: Some(vdl.display().to_string()),
+                    sdk: self.is_sdk,
                 },
                 daemon_proxy,
             )

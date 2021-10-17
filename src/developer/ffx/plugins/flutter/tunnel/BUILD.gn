@@ -14,7 +14,7 @@ ffx_plugin("ffx_flutter_tunnel") {
     "//src/developer/ffx:ffx_lib_args",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/netext:lib",
-    "//src/developer/ffx/plugins/emulator:ffx_emulator",
+    "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
     "//src/developer/ffx/plugins/flutter/tunnel/ctrl-c:ffx_flutter_tunnel_ctrlc",
     "//src/developer/ffx/plugins/inspect/common:ffx_inspect_common",
     "//src/diagnostics/iquery:lib",

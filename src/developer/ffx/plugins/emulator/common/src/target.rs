@@ -58,8 +58,25 @@ pub async fn remove_target(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::setup_fake_daemon_proxy;
-    use fidl_fuchsia_developer_bridge::{DaemonError, DaemonRequest};
+    use fidl_fuchsia_developer_bridge::{DaemonError, DaemonProxy, DaemonRequest};
+
+    fn setup_fake_daemon_proxy<R: 'static>(mut handle_request: R) -> DaemonProxy
+    where
+        R: FnMut(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Protocol>),
+    {
+        use futures::TryStreamExt;
+        let (proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<
+            <DaemonProxy as fidl::endpoints::Proxy>::Protocol,
+        >()
+        .unwrap();
+        fuchsia_async::Task::local(async move {
+            while let Ok(Some(req)) = stream.try_next().await {
+                handle_request(req);
+            }
+        })
+        .detach();
+        proxy
+    }
 
     fn setup_fake_daemon_server_add<T: 'static + Fn(bridge::TargetAddrInfo) + Send>(
         test: T,

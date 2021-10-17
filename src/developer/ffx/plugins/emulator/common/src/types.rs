@@ -8,7 +8,7 @@ use crate::tools::Tools;
 use anyhow::{anyhow, Result};
 use errors::ffx_bail;
 use ffx_config::sdk::{Sdk, SdkVersion};
-use ffx_emulator_args::StartCommand;
+use ffx_emulator_start_args::StartCommand;
 use home::home_dir;
 use mockall::automock;
 use std::convert::From;

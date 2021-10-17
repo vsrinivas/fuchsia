@@ -1,10 +1,10 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use anyhow::Result;
-use ffx_emulator::vdl_files::VDLFiles;
-use ffx_emulator_args::{Args, VDLCommand};
+use ffx_emulator_common::args::{Args, VDLCommand};
+use ffx_emulator_common::vdl_files::VDLFiles;
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<()> {
