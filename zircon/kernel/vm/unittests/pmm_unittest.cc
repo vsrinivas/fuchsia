@@ -822,9 +822,10 @@ static bool pq_move_self_queue() {
 static bool pq_rotate_queue() {
   BEGIN_TEST;
 
-  PageQueues pq(0, ZX_TIME_INFINITE, 0);
+  PageQueues pq;
 
-  pq.StartThreads();
+  pq.SetActiveRatioMultiplier(0);
+  pq.StartThreads(0, ZX_TIME_INFINITE);
 
   // Pretend we have a couple of allocated pages.
   vm_page_t wired_page = {};
@@ -908,8 +909,10 @@ static bool pq_rotate_queue() {
 static bool pq_toggle_dont_need_queue() {
   BEGIN_TEST;
 
-  PageQueues pq(0, ZX_TIME_INFINITE, 0);
-  pq.StartThreads();
+  PageQueues pq;
+
+  pq.SetActiveRatioMultiplier(0);
+  pq.StartThreads(0, ZX_TIME_INFINITE);
 
   // Pretend we have a couple of allocated pager-backed pages.
   vm_page_t page1 = {};

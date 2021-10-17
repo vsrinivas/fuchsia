@@ -57,21 +57,15 @@ class PageQueues {
   static constexpr size_t kNumOldestQueues = 2;
   static_assert(kNumOldestQueues + kNumActiveQueues <= kNumPagerBacked);
 
-  static constexpr zx_time_t kDefaultMinMruRotateTime = ZX_SEC(5);
-  static constexpr zx_time_t kDefaultMaxMruRotateTime = ZX_SEC(5);
+  static constexpr zx_duration_t kDefaultMinMruRotateTime = ZX_SEC(5);
+  static constexpr zx_duration_t kDefaultMaxMruRotateTime = ZX_SEC(5);
 
   // This is presently an arbitrary constant, since the min and max mru rotate time are currently
   // fixed at the same value, meaning that the active ratio can not presently trigger, or prevent,
   // aging.
-  static constexpr uint64_t kDefaultActiveRatioMultiplier = 2;
+  static constexpr uint64_t kDefaultActiveRatioMultiplier = 0;
 
-  // Initializes the page queues with custom values for the options. This is intended for testing to
-  // construct a PageQueues that has infinite rotation time outs.
-  PageQueues(zx_duration_t min_mru_rotate_time, zx_duration_t max_mru_rotate_time,
-             uint64_t active_ratio_multiplier);
-  PageQueues()
-      : PageQueues(kDefaultMinMruRotateTime, kDefaultMaxMruRotateTime,
-                   kDefaultActiveRatioMultiplier) {}
+  PageQueues();
   ~PageQueues();
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(PageQueues);
@@ -283,7 +277,10 @@ class PageQueues {
   // indefinitely as they might attempt to offload work to a nonexistent thread. This issue is only
   // relevant for unittests that may wish to avoid starting the threads for some tests.
   // It is the responsibility of the caller to only call this once, otherwise it will panic.
-  void StartThreads();
+  void StartThreads(zx_duration_t min_mru_rotate_time, zx_duration_t max_mru_rotate_time);
+
+  // Sets the active ratio multiplier.
+  void SetActiveRatioMultiplier(uint32_t multiplier);
 
   // Controls to enable and disable the active aging system. These must be called alternately and
   // not in parallel. That is, it is an error to call DisableAging twice without calling EnableAging
@@ -619,10 +616,13 @@ class PageQueues {
   Thread* mru_thread_ TA_GUARDED(lock_) = nullptr;
   Thread* lru_thread_ TA_GUARDED(lock_) = nullptr;
 
-  // Queue rotation parameters set at construction.
-  const zx_duration_t min_mru_rotate_time_;
-  const zx_duration_t max_mru_rotate_time_;
-  const uint64_t active_ratio_multiplier_;
+  // Queue rotation parameters. These are not locked as they are only read by the mru thread, and
+  // are set before the mru thread is started.
+  zx_duration_t min_mru_rotate_time_;
+  zx_duration_t max_mru_rotate_time_;
+
+  // Current active ratio multiplier.
+  uint64_t active_ratio_multiplier_ TA_GUARDED(lock_);
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_QUEUES_H_

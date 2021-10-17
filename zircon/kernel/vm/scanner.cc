@@ -32,8 +32,9 @@ constexpr uint32_t kScannerOpUpdateHarvestTime = 1u << 6;
 constexpr uint32_t kScannerOpEnablePTReclaim = 1u << 8;
 constexpr uint32_t kScannerOpDisablePTReclaim = 1u << 9;
 
-// Amount of time between page table evictions.
-constexpr zx_duration_t kPageTableEvictTime = ZX_SEC(10);
+// Amount of time between page table evictions. This is not atomic as it is only set during init
+// before the scanner thread starts up, at which point it becomes read only.
+zx_duration_t page_table_evict_time = ZX_SEC(10);
 
 // Number of pages to attempt to de-dupe back to zero every second. This not atomic as it is only
 // set during init before the scanner thread starts up, at which point it becomes read only.
@@ -93,7 +94,7 @@ zx_time_t calc_next_zero_scan_deadline(zx_time_t current) {
 
 zx_time_t calc_next_pt_evict_deadline(zx_time_t current, bool pt_enable_override) {
   if (page_table_reclaim_policy == PageTableEvictionPolicy::kAlways || pt_enable_override) {
-    return zx_time_add_duration(current, kPageTableEvictTime);
+    return zx_time_add_duration(current, page_table_evict_time);
   } else {
     return ZX_TIME_INFINITE;
   }
@@ -350,6 +351,8 @@ static void scanner_init_func(uint level) {
     VmObject::EnableEvictionPromoteNoClones();
   }
   page_table_reclaim_policy = gBootOptions->page_scanner_page_table_eviction_policy;
+  page_table_evict_time =
+      ZX_SEC(ktl::max(gBootOptions->page_scanner_page_table_eviction_period, 1u));
 
   if (gBootOptions->page_scanner_enable_eviction) {
     pmm_evictor()->EnableEviction();
@@ -359,7 +362,11 @@ static void scanner_init_func(uint level) {
   zx_time_t eviction_interval = ZX_SEC(gBootOptions->page_scanner_eviction_interval_seconds);
   pmm_evictor()->SetContinuousEvictionInterval(eviction_interval);
 
-  pmm_page_queues()->StartThreads();
+  pmm_page_queues()->SetActiveRatioMultiplier(gBootOptions->page_scanner_active_ratio_multiplier);
+  pmm_page_queues()->StartThreads(ZX_SEC(gBootOptions->page_scanner_min_aging_interval),
+                                  ZX_SEC(gBootOptions->page_scanner_max_aging_interval));
+  // Ensure at least 1 second between access scans.
+  accessed_scan_period = ZX_SEC(ktl::max(gBootOptions->page_scanner_min_aging_interval, 1u));
 
   thread->Resume();
 }

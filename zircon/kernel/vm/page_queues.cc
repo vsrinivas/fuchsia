@@ -26,11 +26,10 @@ KCOUNTER(pq_lru_spurious_wakeup, "pq.lru.spurious_wakeup")
 
 }  // namespace
 
-PageQueues::PageQueues(zx_duration_t min_mru_rotate_time, zx_duration_t max_mru_rotate_time,
-                       uint64_t active_ratio_multiplier)
-    : min_mru_rotate_time_(min_mru_rotate_time),
-      max_mru_rotate_time_(max_mru_rotate_time),
-      active_ratio_multiplier_(active_ratio_multiplier) {
+PageQueues::PageQueues()
+    : min_mru_rotate_time_(kDefaultMinMruRotateTime),
+      max_mru_rotate_time_(kDefaultMaxMruRotateTime),
+      active_ratio_multiplier_(kDefaultActiveRatioMultiplier) {
   for (uint32_t i = 0; i < PageQueueNumQueues; i++) {
     list_initialize(&page_queues_[i]);
   }
@@ -47,7 +46,16 @@ PageQueues::~PageQueues() {
   }
 }
 
-void PageQueues::StartThreads() {
+void PageQueues::StartThreads(zx_duration_t min_mru_rotate_time,
+                              zx_duration_t max_mru_rotate_time) {
+  // Clamp the max rotate to the minimum.
+  max_mru_rotate_time = ktl::max(min_mru_rotate_time, max_mru_rotate_time);
+  // Prevent a rotation rate that is too small.
+  max_mru_rotate_time = ktl::max(max_mru_rotate_time, ZX_SEC(1));
+
+  min_mru_rotate_time_ = min_mru_rotate_time;
+  max_mru_rotate_time_ = max_mru_rotate_time;
+
   // Cannot perform all of thread creation under the lock as thread creation requires
   // allocations so we create in temporaries first and then stash.
   Thread* mru_thread = Thread::Create(
@@ -103,6 +111,13 @@ void PageQueues::StopThreads() {
     zx_status_t status = lru_thread->Join(&retcode, ZX_TIME_INFINITE);
     ASSERT(status == ZX_OK);
   }
+}
+
+void PageQueues::SetActiveRatioMultiplier(uint32_t multiplier) {
+  Guard<CriticalMutex> guard{&lock_};
+  active_ratio_multiplier_ = multiplier;
+  // The change in multiplier might have caused us to need to age.
+  MaybeTriggerAgingLocked();
 }
 
 void PageQueues::MaybeTriggerAging() {
