@@ -84,6 +84,7 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
 
         case ADD_STA:  // fall-thru
         case REMOVE_STA:
+        case ADD_STA_KEY:
           build_response_with_status(&resp, ADD_STA_SUCCESS);
           ret = ZX_OK;
           break;

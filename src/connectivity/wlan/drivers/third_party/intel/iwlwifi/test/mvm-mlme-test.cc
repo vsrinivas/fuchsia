@@ -503,6 +503,11 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
     return wlanmac_ops.clear_assoc(&mvmvif_sta_, option, peer_addr);
   }
 
+  zx_status_t SetKey(const wlan_key_config_t* key_config) {
+    uint32_t option = 0;
+    IWL_INFO(nullptr, "Calling set_key");
+    return wlanmac_ops.set_key(&mvmvif_sta_, option, key_config);
+  }
   // The following functions are for mocking up the firmware commands.
   //
   // The mock function will return the special error ZX_ERR_INTERNAL when the expectation
@@ -813,6 +818,47 @@ TEST_F(MacInterfaceTest, ClearAssocAfterFailedAssoc) {
   ASSERT_EQ(list_length(&mvm->time_event_list), 0);
   // Call ClearAssoc() again to check if it is handled correctly.
   ASSERT_NE(ZX_OK, ClearAssoc());
+}
+
+// Check to ensure keys are set during assoc and deleted after disassoc
+// for now use open network
+TEST_F(MacInterfaceTest, SetKeysTest) {
+  constexpr uint8_t kIeeeOui[] = {0x00, 0x0F, 0xAC};
+  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  struct iwl_mvm_sta* mvm_sta = mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id];
+  ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
+  struct iwl_mvm* mvm = mvmvif_sta_.mvm;
+  ASSERT_GT(list_length(&mvm->time_event_list), 0);
+
+  ASSERT_EQ(ZX_OK, ConfigureAssoc(&kAssocCtx));
+  ASSERT_EQ(IWL_STA_AUTHORIZED, mvm_sta->sta_state);
+  ASSERT_EQ(true, mvmvif_sta_.bss_conf.assoc);
+  ASSERT_EQ(kListenInterval, mvmvif_sta_.bss_conf.listen_interval);
+
+  char keybuf[sizeof(wlan_key_config_t) + 16];
+  wlan_key_config_t* key_config = (wlan_key_config_t*)keybuf;
+  // PAIRWISE KEY
+  key_config->cipher_type = 4;
+  key_config->key_type = 1;
+  key_config->key_idx = 0;
+  key_config->key_len = 16;
+  memcpy(key_config->cipher_oui, kIeeeOui, 3);
+  ASSERT_EQ(ZX_OK, SetKey((const wlan_key_config_t*)key_config));
+  // Expect bit 0 to be set.
+  ASSERT_EQ(*mvm->fw_key_table, 0x1);
+  // GROUP KEY
+  key_config->key_type = 2;
+  key_config->key_idx = 1;
+  ASSERT_EQ(ZX_OK, SetKey((const wlan_key_config_t*)key_config));
+  // Expect bit 1 to be set as well.
+  ASSERT_EQ(*mvm->fw_key_table, 0x3);
+  ASSERT_EQ(ZX_OK, ClearAssoc());
+  ASSERT_EQ(nullptr, mvmvif_sta_.phy_ctxt);
+  ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_sta_.ap_sta_id);
+  ASSERT_EQ(list_length(&mvm->time_event_list), 0);
+  // Both the keys should have been deleted.
+  ASSERT_EQ(*mvm->fw_key_table, 0x0);
 }
 
 TEST_F(MacInterfaceTest, TxPktNotSupportedRole) {

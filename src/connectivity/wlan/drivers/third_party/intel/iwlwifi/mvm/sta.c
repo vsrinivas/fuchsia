@@ -3291,6 +3291,15 @@ zx_status_t iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
     ret = iwl_mvm_send_sta_igtk(mvm, keyconf, sta_id, false);
     goto end;
   }
+  // TODO(fxbug.dev/86728): remove the WPA2 key workaround
+  key_offset = keyconf->keyidx;
+  if (mvm->active_key_list[key_offset].keylen) {
+    // delete the last key if present
+    if (iwl_mvm_remove_sta_key(mvmvif, mvmsta, &mvm->active_key_list[key_offset]) != ZX_OK) {
+      IWL_WARN(mvm, "Unable to delete key at offset %d", key_offset);
+    }
+    memset(&mvm->active_key_list[key_offset], 0, sizeof(struct iwl_mvm_sta_key_conf));
+  }
 
   /* If the key_offset is not pre-assigned, we need to find a
    * new offset to use.  In normal cases, the offset is not
@@ -3332,6 +3341,9 @@ zx_status_t iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
   }
 
   __set_bit(key_offset, mvm->fw_key_table);
+  // TODO(fxbug.dev/86728): remove the WPA2 key workaround
+  // Save the keyconf in the driver key table for easier deleteion
+  mvm->active_key_list[key_offset] = *keyconf;
 
 end:
   IWL_DEBUG_WEP(mvm, "key: cipher=%x len=%zu idx=%d mvmsta=%pM ret=%d\n", keyconf->cipher_type,
@@ -3339,35 +3351,33 @@ end:
   return ret;
 }
 
-#if 0   // NEEDS_PORTING
-int iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                           struct ieee80211_sta* sta, struct ieee80211_key_conf* keyconf) {
-  bool mcast = !(keyconf->flags & IEEE80211_KEY_FLAG_PAIRWISE);
-  struct iwl_mvm_sta* mvm_sta;
+zx_status_t iwl_mvm_remove_sta_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta,
+                                   struct iwl_mvm_sta_key_conf* keyconf) {
+  struct iwl_mvm* mvm = mvmvif->mvm;
+  bool mcast = keyconf->key_type != WLAN_KEY_TYPE_PAIRWISE;
   uint8_t sta_id = IWL_MVM_INVALID_STA;
-  int ret, i;
+  // TODO(fxbug.dev/86728): remove the WPA2 key workaround
+  int hw_key_idx = keyconf->keyidx;
+  int i;
+  zx_status_t ret;
 
   iwl_assert_lock_held(&mvm->mutex);
 
-  /* Get the station from the mvm local station table */
-  mvm_sta = iwl_mvm_get_key_sta(mvm, vif, sta);
-  if (mvm_sta) {
-    sta_id = mvm_sta->sta_id;
-  } else if (!sta && vif->type == NL80211_IFTYPE_AP && mcast) {
-    sta_id = iwl_mvm_vif_from_mac80211(vif)->mcast_sta.sta_id;
-  }
+  sta_id = mvm_sta->sta_id;
 
-  IWL_DEBUG_WEP(mvm, "mvm remove dynamic key: idx=%d sta=%d\n", keyconf->keyidx, sta_id);
+  IWL_INFO(mvm, "mvm remove dynamic key: idx=%d sta=%d\n", keyconf->keyidx, sta_id);
 
+#if 0   // NEEDS_PORTING
   if (mvm_sta && (keyconf->cipher == WLAN_CIPHER_SUITE_AES_CMAC ||
                   keyconf->cipher == WLAN_CIPHER_SUITE_BIP_GMAC_128 ||
                   keyconf->cipher == WLAN_CIPHER_SUITE_BIP_GMAC_256)) {
     return iwl_mvm_send_sta_igtk(mvm, keyconf, sta_id, true);
   }
+#endif  // NEEDS_PORTING
 
-  if (!__test_and_clear_bit(keyconf->hw_key_idx, mvm->fw_key_table)) {
-    IWL_ERR(mvm, "offset %d not used in fw key table.\n", keyconf->hw_key_idx);
-    return -ENOENT;
+  if (!test_and_clear_bit(hw_key_idx, mvm->fw_key_table)) {
+    IWL_ERR(mvm, "offset %d not used in fw key table.\n", hw_key_idx);
+    return ZX_ERR_BAD_HANDLE;
   }
 
   /* track which key was deleted last */
@@ -3376,26 +3386,28 @@ int iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
       mvm->fw_key_deleted[i]++;
     }
   }
-  mvm->fw_key_deleted[keyconf->hw_key_idx] = 0;
+  mvm->fw_key_deleted[hw_key_idx] = 0;
 
-  if (sta && !mvm_sta) {
+  if (!mvm_sta) {
     IWL_DEBUG_WEP(mvm, "station non-existent, early return.\n");
-    return 0;
+    return ZX_OK;
   }
 
-  ret = __iwl_mvm_remove_sta_key(mvm, sta_id, keyconf, mcast);
-  if (ret) {
+  ret = __iwl_mvm_remove_sta_key(mvm, sta_id, keyconf, hw_key_idx, mcast);
+  if (ret != ZX_OK) {
     return ret;
   }
 
   /* delete WEP key twice to get rid of (now useless) offset */
-  if (keyconf->cipher == WLAN_CIPHER_SUITE_WEP40 || keyconf->cipher == WLAN_CIPHER_SUITE_WEP104) {
-    ret = __iwl_mvm_remove_sta_key(mvm, sta_id, keyconf, !mcast);
+  if (keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_WEP_40 ||
+      keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_WEP_104) {
+    ret = __iwl_mvm_remove_sta_key(mvm, sta_id, keyconf, hw_key_idx, !mcast);
   }
 
   return ret;
 }
 
+#if 0   // NEEDS_PORTING
 void iwl_mvm_update_tkip_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                              struct ieee80211_key_conf* keyconf, struct ieee80211_sta* sta,
                              uint32_t iv32, uint16_t* phase1key) {

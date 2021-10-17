@@ -1026,6 +1026,8 @@ struct iwl_mvm {
    */
   unsigned long fw_key_table[BITS_TO_LONGS(STA_KEY_MAX_NUM)];
   uint8_t fw_key_deleted[STA_KEY_MAX_NUM];
+  // TODO(fxbug.dev/86728): remove the WPA2 key workaround
+  struct iwl_mvm_sta_key_conf active_key_list[STA_KEY_MAX_NUM];
 
   /* references taken by the driver and spinlock protecting them */
   mtx_t refs_lock;

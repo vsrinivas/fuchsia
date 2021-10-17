@@ -2887,6 +2887,17 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
   } else if (old_state == IWL_STA_AUTH && new_state == IWL_STA_NONE) {
     ret = ZX_OK;
   } else if (old_state == IWL_STA_NONE && new_state == IWL_STA_NOTEXIST) {
+    // Delete all set keys
+    // TODO(fxbug.dev/86728): remove the WPA2 key workaround
+    for (int i = 0; i < STA_KEY_MAX_NUM; i++) {
+      if (mvm->active_key_list[i].keylen) {
+        // delete the key if present
+        if (iwl_mvm_remove_sta_key(mvmvif, mvm_sta, &mvm->active_key_list[i]) != ZX_OK) {
+          IWL_ERR(mvm, "Unable to delete key at offset %d", i);
+        }
+        memset(&mvm->active_key_list[i], 0, sizeof(struct iwl_mvm_sta_key_conf));
+      }
+    }
     ret = iwl_mvm_rm_sta(mvmvif, mvm_sta);
 #if 0   // NEEDS_PORTING
         if (sta->tdls) {
@@ -3047,7 +3058,7 @@ zx_status_t iwl_mvm_mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
 
   switch (key->cipher_type) {
     case fuchsia_wlan_ieee80211_CipherSuiteType_CCMP_128:
-      if (iwl_mvm_has_new_tx_api(mvm) || iwl_mvm_has_new_rx_api(mvm)) {
+      if (iwl_mvm_has_new_tx_api(mvm)) {
         return ZX_ERR_NOT_SUPPORTED;
       }
       break;

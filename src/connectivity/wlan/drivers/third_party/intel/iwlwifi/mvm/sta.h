@@ -510,8 +510,8 @@ int iwl_mvm_rm_sta_id(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint8_t st
 int iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvm_vif,
                         struct iwl_mvm_sta* mvm_sta, const struct iwl_mvm_sta_key_conf* key_conf,
                         uint8_t key_offset);
-int iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                           struct ieee80211_sta* sta, struct ieee80211_key_conf* keyconf);
+zx_status_t iwl_mvm_remove_sta_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta,
+                                   struct iwl_mvm_sta_key_conf* keyconf);
 
 void iwl_mvm_update_tkip_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                              struct ieee80211_key_conf* keyconf, struct ieee80211_sta* sta,
