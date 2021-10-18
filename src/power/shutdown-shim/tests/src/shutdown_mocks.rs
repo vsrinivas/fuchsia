@@ -107,7 +107,7 @@ async fn run_statecontrol_admin(
                 send_signals.unbounded_send(Signal::Statecontrol(Admin::Poweroff))?;
                 responder.send(&mut Ok(()))?;
             }
-            Some(fstatecontrol::AdminRequest::Mexec { responder }) => {
+            Some(fstatecontrol::AdminRequest::Mexec { responder, .. }) => {
                 fx_log_info!("Mexec called");
                 send_signals.unbounded_send(Signal::Statecontrol(Admin::Mexec))?;
                 responder.send(&mut Ok(()))?;
@@ -142,6 +142,12 @@ async fn run_device_manager_system_state_transition(
             }) => {
                 fx_log_info!("SetTerminationState called");
                 send_signals.unbounded_send(Signal::DeviceManager(state))?;
+                responder.send(&mut Ok(()))?;
+            }
+            Some(fdevicemanager::SystemStateTransitionRequest::SetMexecZbis {
+                responder, ..
+            }) => {
+                fx_log_info!("SetMexecZbis called");
                 responder.send(&mut Ok(()))?;
             }
             _ => (),

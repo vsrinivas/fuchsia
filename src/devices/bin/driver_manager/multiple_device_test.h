@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/zx/time.h>
 #include <zircon/status.h>
 
 #include <mock-boot-arguments/server.h>

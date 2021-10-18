@@ -53,6 +53,7 @@
 #include <driver-info/driver-info.h>
 #include <fbl/string_printf.h>
 #include <inspector/inspector.h>
+#include <src/bringup/lib/mexec/mexec.h>
 
 #include "src/devices/bin/driver_manager/composite_device.h"
 #include "src/devices/bin/driver_manager/devfs.h"
@@ -1254,13 +1255,29 @@ void Coordinator::HandleNewDevice(const fbl::RefPtr<Device>& dev) {
   BindDevice(dev, {} /* libdrvname */, true /* new device */);
 }
 
+zx_status_t Coordinator::SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi) {
+  if (!kernel_zbi.is_valid() || !data_zbi.is_valid()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (zx_status_t status = mexec::PrepareDataZbi(root_resource().borrow(), data_zbi.borrow());
+      status != ZX_OK) {
+    LOGF(ERROR, "Failed to prepare mexec data ZBI: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  mexec_kernel_zbi_ = std::move(kernel_zbi);
+  mexec_data_zbi_ = std::move(data_zbi);
+  return ZX_OK;
+}
+
 void Coordinator::Suspend(uint32_t flags, SuspendCallback callback) {
   // TODO(ravoorir) : Change later to queue the suspend when resume is in progress.
   // Similarly, when Suspend is in progress, resume should be queued. When a resume is
   // in queue, and another suspend request comes in, we should nullify the resume that
   // is in queue.
   if (InResume()) {
-    LOGF(ERROR, "Aborting system-suspend, a system resume is in progresss");
+    LOGF(ERROR, "Aborting system-suspend, a system resume is in progress");
     if (callback) {
       callback(ZX_ERR_UNAVAILABLE);
     }

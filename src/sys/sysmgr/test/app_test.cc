@@ -52,7 +52,7 @@ class TestSysmgr : public ::testing::Test, fuchsia::hardware::power::statecontro
   // |fuchsia::hardware::power::statecontrol::Admin|
   void Poweroff(PoweroffCallback callback) override {}
   // |fuchsia::hardware::power::statecontrol::Admin|
-  void Mexec(MexecCallback callback) override {}
+  void Mexec(zx::vmo kernel_zbi, zx::vmo data_zbi, MexecCallback callback) override {}
   // |fuchsia::hardware::power::statecontrol::Admin|
   void SuspendToRam(SuspendToRamCallback callback) override {}
 

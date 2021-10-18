@@ -23,8 +23,10 @@ class SystemStateManager : public fidl::WireServer<device_manager_fidl::SystemSt
 
   // SystemStateTransition interface
   void SetTerminationSystemState(SetTerminationSystemStateRequestView request,
-                                 fidl::WireServer<device_manager_fidl::SystemStateTransition>::
-                                     SetTerminationSystemStateCompleter::Sync& completer) override;
+                                 SetTerminationSystemStateCompleter::Sync& completer) override;
+
+  void SetMexecZbis(SetMexecZbisRequestView request,
+                    SetMexecZbisCompleter::Sync& completer) override;
 
  private:
   Coordinator* dev_coord_;

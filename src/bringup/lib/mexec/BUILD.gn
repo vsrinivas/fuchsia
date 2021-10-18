@@ -6,7 +6,6 @@ source_set("mexec") {
   sources = [ "mexec.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/explicit-memory",
     "//zircon/system/ulib/fbl",
@@ -15,9 +14,6 @@ source_set("mexec") {
   ]
 
   public_deps = [ "//zircon/system/ulib/zx" ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {

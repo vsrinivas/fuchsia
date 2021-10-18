@@ -257,7 +257,12 @@ impl SystemShutdownHandler {
                             let result = self.handle_shutdown(ShutdownRequest::PowerOff).await;
                             let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
                         }
-                        fpowercontrol::AdminRequest::Mexec { responder } => {
+                        fpowercontrol::AdminRequest::Mexec { responder, .. } => {
+                            // TODO(fxbug.dev/86681): Currently implemented and
+                            // relied upon in the shutdown-shim. Were the
+                            // shutdown-shim to be deprecated, the mexec
+                            // preparation logic would need to be migrated
+                            // here.
                             let _ = responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()));
                         }
                         fpowercontrol::AdminRequest::SuspendToRam { responder } => {
@@ -735,7 +740,12 @@ pub mod tests {
 
         node.handle_new_service_connection(stream);
 
-        assert_eq!(proxy.mexec().await.unwrap(), Err(zx::Status::NOT_SUPPORTED.into_raw()));
+        let kernel_zbi = zx::Vmo::create(0).unwrap();
+        let data_zbi = zx::Vmo::create(0).unwrap();
+        assert_eq!(
+            proxy.mexec(kernel_zbi, data_zbi).await.unwrap(),
+            Err(zx::Status::NOT_SUPPORTED.into_raw())
+        );
         assert_eq!(
             proxy.power_fully_on().await.unwrap(),
             Err(zx::Status::NOT_SUPPORTED.into_raw())

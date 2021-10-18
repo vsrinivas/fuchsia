@@ -170,8 +170,13 @@ const fuchsia.device.manager/SUSPEND_FLAG_REBOOT_RECOVERY uint32 3705405698
 const fuchsia.device.manager/SUSPEND_FLAG_SUSPEND_RAM uint32 3705406464
 struct/member fuchsia.device.manager/StubDevice.protocol_id uint32
 struct fuchsia.device.manager/StubDevice
+protocol/member fuchsia.device.manager/SystemStateTransition.SetMexecZbis(zx/handle:VMO kernel_zbi,zx/handle:VMO data_zbi) -> (fuchsia.device.manager/SystemStateTransition_SetMexecZbis_Result result)
 protocol/member fuchsia.device.manager/SystemStateTransition.SetTerminationSystemState(fuchsia.hardware.power.statecontrol/SystemPowerState state) -> (fuchsia.device.manager/SystemStateTransition_SetTerminationSystemState_Result result)
 protocol fuchsia.device.manager/SystemStateTransition
+struct fuchsia.device.manager/SystemStateTransition_SetMexecZbis_Response
+union/member fuchsia.device.manager/SystemStateTransition_SetMexecZbis_Result.err int32
+union/member fuchsia.device.manager/SystemStateTransition_SetMexecZbis_Result.response fuchsia.device.manager/SystemStateTransition_SetMexecZbis_Response
+strict union fuchsia.device.manager/SystemStateTransition_SetMexecZbis_Result
 struct fuchsia.device.manager/SystemStateTransition_SetTerminationSystemState_Response
 union/member fuchsia.device.manager/SystemStateTransition_SetTerminationSystemState_Result.err int32
 union/member fuchsia.device.manager/SystemStateTransition_SetTerminationSystemState_Result.response fuchsia.device.manager/SystemStateTransition_SetTerminationSystemState_Response

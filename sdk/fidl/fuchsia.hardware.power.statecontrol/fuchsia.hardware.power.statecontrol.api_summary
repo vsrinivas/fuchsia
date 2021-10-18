@@ -1,4 +1,4 @@
-protocol/member fuchsia.hardware.power.statecontrol/Admin.Mexec() -> (fuchsia.hardware.power.statecontrol/Admin_Mexec_Result result)
+protocol/member fuchsia.hardware.power.statecontrol/Admin.Mexec(zx/handle:VMO kernel_zbi,zx/handle:VMO data_zbi) -> (fuchsia.hardware.power.statecontrol/Admin_Mexec_Result result)
 protocol/member fuchsia.hardware.power.statecontrol/Admin.PowerFullyOn() -> (fuchsia.hardware.power.statecontrol/Admin_PowerFullyOn_Result result)
 protocol/member fuchsia.hardware.power.statecontrol/Admin.Poweroff() -> (fuchsia.hardware.power.statecontrol/Admin_Poweroff_Result result)
 protocol/member fuchsia.hardware.power.statecontrol/Admin.Reboot(fuchsia.hardware.power.statecontrol/RebootReason reason) -> (fuchsia.hardware.power.statecontrol/Admin_Reboot_Result result)

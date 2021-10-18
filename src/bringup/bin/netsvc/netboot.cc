@@ -8,7 +8,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.boot/cpp/wire.h>
-#include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/vmo.h>
@@ -25,7 +24,6 @@
 #include "netcp.h"
 #include "netsvc.h"
 #include "paver.h"
-#include "src/bringup/lib/mexec/mexec.h"
 #include "zbi.h"
 
 static uint32_t last_cookie = 0;
@@ -51,22 +49,7 @@ static nbfile* active;
 
 namespace {
 
-bool GetMexecResource(zx::resource* resource) {
-  using Resource = fuchsia_boot::RootResource;
-
-  zx::status client_end = service::Connect<Resource>();
-  if (client_end.is_error()) {
-    return false;
-  }
-  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end.value()));
-  if (auto result = client.Get(); !result.ok()) {
-    printf("failed to get root resource %s\n", result.status_string());
-    return false;
-  } else {
-    resource->swap(result.Unwrap()->resource);
-  }
-  return true;
-}
+namespace statecontrol = fuchsia_hardware_power_statecontrol;
 
 }  // namespace
 
@@ -272,29 +255,24 @@ static zx_status_t do_dmctl_mexec() {
     return status;
   }
 
-  zx::resource resource;
-  if (!GetMexecResource(&resource)) {
-    return ZX_ERR_INTERNAL;
-  }
-  zx::status client_end = service::Connect<fuchsia_device_manager::Administrator>();
+  zx::status client_end = service::Connect<statecontrol::Admin>();
   if (client_end.is_error()) {
     return client_end.status_value();
   }
-
-  status = mexec::Boot(std::move(resource), std::move(client_end.value()), std::move(kernel_zbi),
-                       std::move(data_zbi));
-  if (status != ZX_OK) {
-    return ZX_ERR_INTERNAL;
+  fidl::WireResult response =
+      fidl::WireCall(client_end.value())->Mexec(std::move(kernel_zbi), std::move(data_zbi));
+  if (response.status() != ZX_OK) {
+    return response.status();
   }
-
+  if (response->result.is_err()) {
+    return response->result.err();
+  }
   // Wait for the world to end.
   zx_nanosleep(ZX_TIME_INFINITE);
   return ZX_ERR_INTERNAL;
 }
 
 static zx_status_t reboot() {
-  namespace statecontrol = fuchsia_hardware_power_statecontrol;
-
   zx::status client_end = service::Connect<statecontrol::Admin>();
   if (client_end.is_error()) {
     return client_end.status_value();

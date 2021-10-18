@@ -4,7 +4,6 @@
 
 #include "mexec.h"
 
-#include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/image.h>
 #include <lib/zbitl/memory.h>
@@ -38,13 +37,10 @@ zx_status_t GetMexecDataZbi(zx::unowned_resource resource, fbl::Array<std::byte>
 
 }  // namespace
 
-zx_status_t Boot(zx::resource resource,
-                 fidl::ClientEnd<fuchsia_device_manager::Administrator> devmgr, zx::vmo kernel_zbi,
-                 zx::vmo data_zbi) {
+zx_status_t PrepareDataZbi(zx::unowned_resource resource, zx::unowned_vmo data_zbi) {
   fbl::Array<std::byte> mexec_data_zbi;
-  if (auto status = GetMexecDataZbi(resource.borrow(), mexec_data_zbi); status != ZX_OK) {
-    printf("mexec::Boot: failed to get the mexec data ZBI: %s\n", zx_status_get_string(status));
-    return ZX_ERR_INTERNAL;
+  if (auto status = GetMexecDataZbi(std::move(resource), mexec_data_zbi); status != ZX_OK) {
+    return status;
   }
   zbitl::View mexec_data_view(zbitl::AsBytes(mexec_data_zbi.data(), mexec_data_zbi.size()));
 
@@ -53,11 +49,11 @@ zx_status_t Boot(zx::resource resource,
       result.is_error()) {
     zbitl::PrintViewCopyError(result.error_value());
     mexec_data_view.ignore_error();
-    return ZX_ERR_INTERNAL;
+    return ZX_ERR_IO_DATA_INTEGRITY;
   }
   if (auto result = mexec_data_view.take_error(); result.is_error()) {
     zbitl::PrintViewError(result.error_value());
-    return ZX_ERR_INTERNAL;
+    return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
   std::array<uint8_t, 64> entropy;
@@ -66,25 +62,9 @@ zx_status_t Boot(zx::resource resource,
                                       zbitl::AsBytes(entropy.data(), entropy.size()));
       result.is_error()) {
     zbitl::PrintViewError(result.error_value());
-    return ZX_ERR_INTERNAL;
+    return ZX_ERR_IO_DATA_INTEGRITY;
   }
   mandatory_memset(entropy.data(), 0, entropy.size());
-  {
-    fidl::WireSyncClient client = fidl::BindSyncClient(std::move(devmgr));
-    if (zx_status_t status =
-            client.Suspend(fuchsia_device_manager::wire::kSuspendFlagMexec).status();
-        status != ZX_OK) {
-      printf("mexec::Boot: failed to suspend devices: %s\n", zx_status_get_string(status));
-      return ZX_ERR_INTERNAL;
-    }
-  }
-
-  if (zx_status_t status =
-          zx_system_mexec(resource.release(), kernel_zbi.release(), data_image.storage().release());
-      status != ZX_OK) {
-    printf("mexec::Boot: failed to mexec: %s\n", zx_status_get_string(status));
-    return ZX_ERR_INTERNAL;
-  }
   return ZX_OK;
 }
 

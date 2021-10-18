@@ -257,8 +257,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   zx_status_t AddCompositeDevice(const fbl::RefPtr<Device>& dev, std::string_view name,
                                  fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc);
 
-  void DmMexec(zx::vmo kernel, zx::vmo bootdata);
-
   void HandleNewDevice(const fbl::RefPtr<Device>& dev);
 
   zx_status_t PrepareProxy(const fbl::RefPtr<Device>& dev,
@@ -303,6 +301,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   const fbl::RefPtr<Device>& root_device() { return root_device_; }
   const fbl::RefPtr<Device>& sys_device() { return sys_device_; }
 
+  zx_status_t SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi);
+
   void Suspend(
       uint32_t flags, SuspendCallback = [](zx_status_t status) {});
 
@@ -319,6 +319,9 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   InspectManager& inspect_manager() { return *inspect_manager_; }
   DriverLoader& driver_loader() { return driver_loader_; }
+
+  const zx::vmo& mexec_kernel_zbi() const { return mexec_kernel_zbi_; }
+  const zx::vmo& mexec_data_zbi() const { return mexec_data_zbi_; }
 
   // This method is public only for the test suite.
   zx_status_t BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind);
@@ -381,6 +384,9 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   InspectManager* const inspect_manager_;
   std::unique_ptr<SystemStateManager> system_state_manager_;
   SystemPowerState shutdown_system_state_;
+
+  // Stashed mexec inputs.
+  zx::vmo mexec_kernel_zbi_, mexec_data_zbi_;
 
   void BindAllDevicesDriverIndex(const DriverLoader::MatchDeviceConfig& config);
   zx_status_t MatchAndBindDeviceDriverIndex(const fbl::RefPtr<Device>& dev,

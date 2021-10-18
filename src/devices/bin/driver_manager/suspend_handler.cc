@@ -26,17 +26,28 @@ fidl::WireSharedClient<fuchsia_fshost::Admin> ConnectToFshostAdminServer(
   return fidl::WireSharedClient(std::move(*result), dispatcher);
 }
 
-void SuspendFallback(const zx::resource& root_resource, uint32_t flags) {
+void SuspendFallback(const zx::resource& root_resource, uint32_t flags,
+                     const zx::vmo& mexec_kernel_zbi, const zx::vmo& mexec_data_zbi) {
   LOGF(INFO, "Suspend fallback with flags %#08x", flags);
+
+  const char* what = "zx_system_powerctl";
+  zx_status_t status = ZX_OK;
   if (flags == DEVICE_SUSPEND_FLAG_REBOOT) {
-    zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT, nullptr);
+    status = zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT, nullptr);
   } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER) {
-    zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER, nullptr);
+    status = zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER, nullptr);
   } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY) {
-    zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY, nullptr);
+    status = zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY, nullptr);
   } else if (flags == DEVICE_SUSPEND_FLAG_POWEROFF) {
-    zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN, nullptr);
+    status = zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN, nullptr);
+  } else if (flags == DEVICE_SUSPEND_FLAG_MEXEC) {
+    LOGF(INFO, "About to mexec...");
+    status = zx_system_mexec(root_resource.get(), mexec_kernel_zbi.get(), mexec_data_zbi.get());
+    what = "zx_system_mexec";
   }
+  // Warning - and not an error - as a large number of tests unfortunately rely
+  // on this syscall actually failing.
+  LOGF(WARNING, "%s: %s", what, zx_status_get_string(status));
 }
 
 void DumpSuspendTaskDependencies(const SuspendTask* task, int depth = 0) {
@@ -134,7 +145,8 @@ void SuspendHandler::SuspendAfterFilesystemShutdown() {
       DumpSuspendTaskDependencies(suspend_task_.get());
     }
 
-    SuspendFallback(coordinator_->root_resource(), sflags_);
+    SuspendFallback(coordinator_->root_resource(), sflags_, coordinator_->mexec_kernel_zbi(),
+                    coordinator_->mexec_data_zbi());
     // Unless in test env, we should not reach here.
     if (suspend_callback_) {
       suspend_callback_(ZX_ERR_TIMED_OUT);
@@ -161,14 +173,14 @@ void SuspendHandler::SuspendAfterFilesystemShutdown() {
       }
       return;
     }
-    if (sflags_ != DEVICE_SUSPEND_FLAG_MEXEC) {
-      // should never get here on x86
-      // on arm, if the platform driver does not implement
-      // suspend go to the kernel fallback
-      SuspendFallback(coordinator_->root_resource(), sflags_);
-      // if we get here the system did not suspend successfully
-      flags_ = SuspendHandler::Flags::kRunning;
-    }
+
+    // should never get here on x86
+    // on arm, if the platform driver does not implement
+    // suspend go to the kernel fallback
+    SuspendFallback(coordinator_->root_resource(), sflags_, coordinator_->mexec_kernel_zbi(),
+                    coordinator_->mexec_data_zbi());
+    // if we get here the system did not suspend successfully
+    flags_ = SuspendHandler::Flags::kRunning;
 
     if (suspend_callback_) {
       suspend_callback_(ZX_OK);

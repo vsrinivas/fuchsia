@@ -49,3 +49,15 @@ void SystemStateManager::SetTerminationSystemState(
   dev_coord_->set_shutdown_system_state(request->state);
   completer.ReplySuccess();
 }
+
+void SystemStateManager::SetMexecZbis(SetMexecZbisRequestView request,
+                                      SetMexecZbisCompleter::Sync& completer) {
+  zx_status_t status =
+      dev_coord_->SetMexecZbis(std::move(request->kernel_zbi), std::move(request->data_zbi));
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to prepare to mexec on shutdown: %s", zx_status_get_string(status));
+    completer.ReplyError(status);
+  }
+  LOGF(INFO, "Prepared to mexec on shutdown");
+  completer.ReplySuccess();
+}

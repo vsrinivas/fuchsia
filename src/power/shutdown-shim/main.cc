@@ -207,6 +207,30 @@ zx_status_t set_system_state_transition_behavior(statecontrol_fidl::wire::System
   return ZX_OK;
 }
 
+// Connect to fuchsia.device.manager.SystemStateTransition and prepare driver
+// manager to mexec on shutdown.
+zx_status_t SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi) {
+  zx::channel local;
+  zx_status_t status = connect_to_protocol(
+      fidl::DiscoverableProtocolName<device_manager_fidl::SystemStateTransition>, &local);
+  if (status != ZX_OK) {
+    fprintf(stderr, "[shutdown-shim]: error connecting to driver_manager\n");
+    return status;
+  }
+  auto client = fidl::WireSyncClient<device_manager_fidl::SystemStateTransition>(std::move(local));
+
+  auto resp = client.SetMexecZbis(std::move(kernel_zbi), std::move(data_zbi));
+  if (resp.status() != ZX_OK) {
+    fprintf(stderr, "[shutdown-shim]: transport error sending message to driver_manager: %s\n",
+            resp.FormatDescription().c_str());
+    return resp.status();
+  }
+  if (resp->result.is_err()) {
+    return resp->result.err();
+  }
+  return ZX_OK;
+}
+
 // Connect to fuchsia.sys2.SystemController and initiate a system shutdown. If
 // everything goes well, this function shouldn't return until shutdown is
 // complete.
@@ -274,7 +298,8 @@ void drive_shutdown_manually(statecontrol_fidl::wire::SystemPowerState state) {
 
 zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecontrol_client,
                          statecontrol_fidl::wire::SystemPowerState fallback_state,
-                         statecontrol_fidl::wire::RebootReason* reboot_reason) {
+                         const statecontrol_fidl::wire::RebootReason* reboot_reason = nullptr,
+                         StateControlAdminServer::MexecRequestView* mexec_request = nullptr) {
   switch (fallback_state) {
     case statecontrol_fidl::wire::SystemPowerState::kReboot: {
       if (reboot_reason == nullptr) {
@@ -321,7 +346,12 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
       }
     } break;
     case statecontrol_fidl::wire::SystemPowerState::kMexec: {
-      auto resp = statecontrol_client.Mexec();
+      if (mexec_request == nullptr) {
+        fprintf(stderr, "[shutdown-shim]: internal error, bad pointer to reason for mexec\n");
+        return ZX_ERR_INTERNAL;
+      }
+      auto resp = statecontrol_client.Mexec(std::move((*mexec_request)->kernel_zbi),
+                                            std::move((*mexec_request)->data_zbi));
       if (resp.status() != ZX_OK) {
         return ZX_ERR_UNAVAILABLE;
       } else if (resp->result.is_err()) {
@@ -350,7 +380,7 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
 // issue talking to power_manager, in which case this program will talk to
 // driver_manager and component_manager to drive shutdown manually.
 zx_status_t forward_command(statecontrol_fidl::wire::SystemPowerState fallback_state,
-                            statecontrol_fidl::wire::RebootReason* reboot_reason) {
+                            const statecontrol_fidl::wire::RebootReason* reboot_reason = nullptr) {
   printf("[shutdown-shim]: checking power_manager liveness\n");
   zx::channel local;
   zx_status_t status = connect_to_protocol_with_timeout(
@@ -373,10 +403,6 @@ zx_status_t forward_command(statecontrol_fidl::wire::SystemPowerState fallback_s
   // it returns something has gone wrong.
   fprintf(stderr, "[shutdown-shim]: we shouldn't still be running, crashing the system\n");
   exit(1);
-}
-
-zx_status_t forward_command(statecontrol_fidl::wire::SystemPowerState fallback_state) {
-  return forward_command(fallback_state, nullptr);
 }
 
 void StateControlAdminServer::PowerFullyOn(PowerFullyOnRequestView request,
@@ -426,12 +452,28 @@ void StateControlAdminServer::Poweroff(PoweroffRequestView request,
 }
 
 void StateControlAdminServer::Mexec(MexecRequestView request, MexecCompleter::Sync& completer) {
+  // Duplicate the VMOs now, as forwarding the mexec request to power-manager
+  // will consume them.
+  zx::vmo kernel_zbi, data_zbi;
+  zx_status_t status = request->kernel_zbi.duplicate(ZX_RIGHT_SAME_RIGHTS, &kernel_zbi);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  status = request->data_zbi.duplicate(ZX_RIGHT_SAME_RIGHTS, &data_zbi);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+
+  printf("[shutdown-shim]: checking power_manager liveness\n");
   zx::channel local;
-  zx_status_t status = connect_to_protocol_with_timeout(
+  status = connect_to_protocol_with_timeout(
       fidl::DiscoverableProtocolName<statecontrol_fidl::Admin>, &local);
   if (status == ZX_OK) {
+    printf("[shutdown-shim]: trying to forward command\n");
     status = send_command(fidl::WireSyncClient<statecontrol_fidl::Admin>(std::move(local)),
-                          statecontrol_fidl::wire::SystemPowerState::kMexec, nullptr);
+                          statecontrol_fidl::wire::SystemPowerState::kMexec, nullptr, &request);
     if (status == ZX_OK) {
       completer.ReplySuccess();
       return;
@@ -440,35 +482,29 @@ void StateControlAdminServer::Mexec(MexecRequestView request, MexecCompleter::Sy
       completer.ReplyError(status);
       return;
     }
+    // Else, fallback logic.
   }
 
-  printf("[shutdown-shim]: failed to forward mexec command to power_manager: %s\n",
+  printf("[shutdown-shim]: failed to forward command to power_manager: %s\n",
          zx_status_get_string(status));
 
-  // The mexec command will cause driver_manager to safely terminate, and _not_
-  // turn the system off. This will result in shutdown progressing to the
-  // shutdown shim. Once it reaches us we know that all drivers and filesystems
-  // are parked, so we can return the mexec call, at which point the client will
-  // make the mexec syscall.
+  // In this fallback codepath, we first configure driver_manager to perform
+  // the actual mexec syscall on shutdown and then begin an orderly shutdown of
+  // all components to indirectly trigger that. Since driver_manager is
+  // downstream of the shutdown-shim, this component - and other
+  // main_process_critical ones - will not actually be shut down before the
+  // mexec is performed (unless of course something goes wrong, in which case a
+  // full system shutdown is indeed the right outcome).
   //
-  // Start a new lifecycle server with the completer so that it can respond to
-  // the client once we're told to terminate. Do this on a separate thread
-  // because this one will be blocked on the fuchsia.sys2.SystemController call.
-  zx::channel lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
-  if (!lifecycle_request.is_valid()) {
-    printf("[shutdown-shim]: missing lifecycle handle, mexec must have already been called\n");
-    completer.ReplyError(ZX_ERR_INTERNAL);
+  // driver_manager's termination state will be updated as kMexec in
+  // drive_shutdown_manually() below.
+  status = SetMexecZbis(std::move(kernel_zbi), std::move(data_zbi));
+  if (status != ZX_OK) {
+    fprintf(stderr, "[shutdown-shim]: failed to prepare driver manager to mexec: %s\n",
+            zx_status_get_string(status));
+    completer.ReplyError(status);
     return;
   }
-
-  status = LifecycleServer::Create(lifecycle_loop_.dispatcher(), completer.ToAsync(),
-                                   std::move(lifecycle_request));
-  if (status != ZX_OK) {
-    fprintf(stderr, "[shutdown-shim]: failed to start lifecycle server: %d\n", status);
-    exit(status);
-  }
-
-  lifecycle_loop_.StartThread("lifecycle");
 
   drive_shutdown_manually(statecontrol_fidl::wire::SystemPowerState::kMexec);
 

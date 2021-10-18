@@ -69,12 +69,9 @@ struct DriverManagerParams {
 
 DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Arguments>& client) {
   fuchsia_boot::wire::BoolPair bool_req[]{
-      {"devmgr.enable-ephemeral", false},
-      {"devmgr.log-to-debuglog", false},
-      {"devmgr.require-system", false},
-      {"devmgr.suspend-timeout-fallback", true},
-      {"devmgr.verbose", false},
-      {"driver_manager.use_driver_framework_v2", false},
+      {"devmgr.enable-ephemeral", false}, {"devmgr.log-to-debuglog", false},
+      {"devmgr.require-system", false},   {"devmgr.suspend-timeout-fallback", true},
+      {"devmgr.verbose", false},          {"driver_manager.use_driver_framework_v2", false},
   };
   auto bool_resp =
       client.GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_req));

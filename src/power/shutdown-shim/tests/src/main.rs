@@ -4,9 +4,10 @@
 
 use {
     crate::shutdown_mocks::{new_mocks_provider, Admin, Signal},
-    anyhow::{format_err, Context as _, Error},
+    anyhow::Error,
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fuchsia_async as fasync,
     fuchsia_component_test::{builder::*, mock},
+    fuchsia_zircon as zx,
     futures::{channel::mpsc, future, StreamExt},
     matches::assert_matches,
 };
@@ -194,6 +195,21 @@ async fn power_manager_present_poweroff() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn power_manager_present_mexec() -> Result<(), Error> {
+    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
+    let realm_instance = realm.create().await?;
+    let shim_statecontrol =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
+
+    let kernel_zbi = zx::Vmo::create(0).unwrap();
+    let data_zbi = zx::Vmo::create(0).unwrap();
+    shim_statecontrol.mexec(kernel_zbi, data_zbi).await?.unwrap();
+    let res = recv_signals.next().await;
+    assert_matches!(res, Some(Signal::Statecontrol(Admin::Mexec)));
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn power_manager_present_suspend_to_ram() -> Result<(), Error> {
     let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
     let realm_instance = realm.create().await?;
@@ -258,28 +274,21 @@ async fn power_manager_missing_mexec() -> Result<(), Error> {
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
-    let mexec_fut = shim_statecontrol.mexec();
+    // We don't expect this task to ever complete, as the shutdown shim isn't actually killed (the
+    // shutdown methods it calls are mocks after all).
+    let _task = fasync::Task::spawn(async move {
+        let kernel_zbi = zx::Vmo::create(0).unwrap();
+        let data_zbi = zx::Vmo::create(0).unwrap();
+        shim_statecontrol.mexec(kernel_zbi, data_zbi).await.expect_err(
+            "the shutdown shim should close the channel when manual shutdown driving is complete",
+        );
+    });
+
     assert_matches!(
         recv_signals.next().await,
         Some(Signal::DeviceManager(fstatecontrol::SystemPowerState::Mexec))
     );
-
-    // Shutdown responder must be kept alive for us to observe mexec to completion.
-    let _shutdown_responder = match recv_signals.next().await {
-        Some(Signal::Sys2Shutdown(responder)) => responder,
-        o => panic!("unexpected signal {:?}", o),
-    };
-
-    // Dropping the shutdown_shim will cause the shim to be destroyed, which will trigger its
-    // stop event, which the shim watches for to know when to return for an mexec
-    drop(realm_instance);
-
-    // Mexec should actually return the call when it's done
-    mexec_fut
-        .await
-        .context("FIDL error")?
-        .map_err(|e| format_err!("mexec call failed: {:?}", e))?;
-
+    assert_matches!(recv_signals.next().await, Some(Signal::Sys2Shutdown(_)));
     Ok(())
 }
 
@@ -334,27 +343,19 @@ async fn power_manager_not_present_mexec() -> Result<(), Error> {
     let shim_statecontrol =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
-    let mexec_fut = shim_statecontrol.mexec();
+    fasync::Task::spawn(async move {
+        let kernel_zbi = zx::Vmo::create(0).unwrap();
+        let data_zbi = zx::Vmo::create(0).unwrap();
+        shim_statecontrol.mexec(kernel_zbi, data_zbi).await.expect_err(
+            "the shutdown shim should close the channel when manual shutdown driving is complete",
+        );
+    })
+    .detach();
 
     assert_matches!(
         recv_signals.next().await,
         Some(Signal::DeviceManager(fstatecontrol::SystemPowerState::Mexec))
     );
-    // Shutdown responder must be kept alive for us to observe mexec to completion.
-    let _shutdown_responder = match recv_signals.next().await {
-        Some(Signal::Sys2Shutdown(responder)) => responder,
-        o => panic!("unexpected signal {:?}", o),
-    };
-
-    // Dropping the shutdown_shim will cause the shim to be destroyed, which will trigger its
-    // stop event, which the shim watches for to know when to return for an mexec
-    drop(realm_instance);
-
-    // Mexec should actually return the call when it's done
-    mexec_fut
-        .await
-        .context("FIDL error")?
-        .map_err(|e| format_err!("error returned on mexec call: {:?}", e))?;
-
+    assert_matches!(recv_signals.next().await, Some(Signal::Sys2Shutdown(_)));
     Ok(())
 }

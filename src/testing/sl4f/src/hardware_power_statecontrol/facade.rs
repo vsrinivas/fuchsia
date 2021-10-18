@@ -88,15 +88,8 @@ impl HardwarePowerStatecontrolFacade {
     /// Suspend MEXEC the Fuchsia device
     pub async fn suspend_mexec(&self) -> Result<(), Error> {
         let tag = "HardwarePowerStatecontrolFacade::suspend_mexec";
-        fx_log_info!("Executing Suspend: MEXEC");
-
-        if let Err(err) = self.get_admin_proxy()?.mexec().await? {
-            fx_err_and_bail!(
-                &with_line!(tag),
-                format_err!("Failed to change power control state: {:?}", err)
-            )
-        }
-        Ok(())
+        // We limit mexec access here, as its near-term future is in question.
+        fx_err_and_bail!(&with_line!(tag), format!("Unsupported"))
     }
 
     /// RSuspend RAM on the Fuchsia device

@@ -68,7 +68,14 @@ protocol Admin {
     Poweroff() -> (struct {}) error zx.status;
 
     /// Performs a kernel mexec.
-    Mexec() -> (struct {}) error zx.status;
+    ///
+    /// It is expected that the ZBI items specified by
+    /// `zx_system_mexec_payload_get()` have not yet been appended to the
+    /// provided data ZBI.
+    Mexec(resource struct {
+        kernel_zbi zx.handle:VMO;
+        data_zbi zx.handle:VMO;
+    }) -> (struct {}) error zx.status;
 
     SuspendToRam() -> (struct {}) error zx.status;
 };

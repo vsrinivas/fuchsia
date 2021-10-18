@@ -5,21 +5,23 @@
 #ifndef SRC_BRINGUP_LIB_MEXEC_MEXEC_H_
 #define SRC_BRINGUP_LIB_MEXEC_MEXEC_H_
 
-#include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
 namespace mexec {
 
-// Boot performs an mexec (see
-// https://fuchsia.dev/fuchsia-src/reference/syscalls/system_mexec), given a
-// resource conferring that privilege, a channel connected to an service
-// implementing fuchsia.device.manager.Administrator (to ensure an orderly
-// shutdown of devices), and kernel and data ZBIs (as described by the
-// protocol's documentation).
-zx_status_t Boot(zx::resource resource,
-                 fidl::ClientEnd<fuchsia_device_manager::Administrator> devmgr, zx::vmo kernel_zbi,
-                 zx::vmo data_zbi);
+// Given an mexec-privileged resource, this method prepares the desired data
+// ZBI to be passed to `zx_system_mexec()`: it is extended with the
+// system-specified items given by `zx_system_mexec_payload_get()`, as well as
+// a SECURE_ENTROPY item for good measure.
+//
+// Returns
+// * ZX_ERR_IO_DATA_INTEGRITY: if any ZBI format or storage access errors are
+//   encountered;
+// * any status returned by `zx_system_mexec_payload_get()`.
+//
+zx_status_t PrepareDataZbi(zx::unowned_resource resource, zx::unowned_vmo data_zbi);
 
 }  // namespace mexec
 
