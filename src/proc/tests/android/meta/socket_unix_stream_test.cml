@@ -2,6 +2,5 @@
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
         binary: "/data/tests/socket_unix_stream_test",
-        args: [ "--gunit_filter=-*.SetAndGetSocketLinger/*" ],
     },
 }

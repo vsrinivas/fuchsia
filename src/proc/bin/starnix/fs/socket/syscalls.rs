@@ -519,6 +519,7 @@ pub fn sys_getsockopt(
             SO_ACCEPTCONN => if socket.is_listening() { 1u32 } else { 0u32 }.to_ne_bytes().to_vec(),
             SO_SNDBUF => (socket.get_send_capacity() as socklen_t).to_ne_bytes().to_vec(),
             SO_RCVBUF => (socket.get_receive_capacity() as socklen_t).to_ne_bytes().to_vec(),
+            SO_LINGER => socket.lock().linger.as_bytes().to_vec(),
             _ => return error!(ENOPROTOOPT),
         },
         _ => return error!(ENOPROTOOPT),
@@ -580,6 +581,13 @@ pub fn sys_setsockopt(
             SO_RCVBUF => {
                 let requested_capacity = read::<socklen_t>(ctx, user_optval, optlen)? as usize;
                 socket.set_receive_capacity(requested_capacity);
+            }
+            SO_LINGER => {
+                let mut linger = read::<uapi::linger>(ctx, user_optval, optlen)?;
+                if linger.l_onoff != 0 {
+                    linger.l_onoff = 1;
+                }
+                socket.lock().linger = linger;
             }
             _ => return error!(ENOPROTOOPT),
         },

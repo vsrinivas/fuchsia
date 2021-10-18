@@ -212,6 +212,13 @@ impl Default for cmsghdr {
     }
 }
 
+#[derive(Debug, Default, Clone, AsBytes, FromBytes)]
+#[repr(C)]
+pub struct linger {
+    pub l_onoff: i32,
+    pub l_linger: i32,
+}
+
 pub const EFD_CLOEXEC: u32 = O_CLOEXEC;
 pub const EFD_NONBLOCK: u32 = O_NONBLOCK;
 pub const EFD_SEMAPHORE: u32 = 1;

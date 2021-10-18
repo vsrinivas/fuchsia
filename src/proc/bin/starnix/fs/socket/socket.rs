@@ -48,6 +48,9 @@ pub struct SocketInner {
     /// See SO_SNDTIMEO.
     send_timeout: Option<zx::Duration>,
 
+    /// See SO_LINGER.
+    pub linger: uapi::linger,
+
     /// Unix credentials of the owner of this socket, for SO_PEERCRED.
     credentials: Option<ucred>,
 
@@ -86,6 +89,7 @@ impl Socket {
             address: None,
             receive_timeout: None,
             send_timeout: None,
+            linger: uapi::linger::default(),
             credentials: None,
             state: SocketState::Disconnected,
         })))
