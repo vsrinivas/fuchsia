@@ -503,6 +503,7 @@ pub fn sys_getsockopt(
                 let duration = socket.get_send_timeout().unwrap_or(zx::Duration::default());
                 timeval_from_duration(duration).as_bytes().to_owned()
             }
+            SO_ACCEPTCONN => if socket.is_listening() { 1u32 } else { 0u32 }.to_ne_bytes().to_vec(),
             _ => return error!(ENOPROTOOPT),
         },
         _ => return error!(ENOPROTOOPT),

@@ -169,6 +169,13 @@ impl Socket {
         self.lock().send_timeout = value;
     }
 
+    pub fn is_listening(&self) -> bool {
+        match self.lock().state {
+            SocketState::Listening(_) => true,
+            _ => false,
+        }
+    }
+
     /// Initiate a connection from this socket to the given server socket.
     ///
     /// The given `socket` must be in a listening state.
