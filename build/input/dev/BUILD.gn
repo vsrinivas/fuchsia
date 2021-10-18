@@ -4,10 +4,11 @@
 
 import("//build/dev.gni")
 import("//build/security.gni")
+import("//build/zbi/kernel_cmdline.gni")
 
 group("bootfs_labels") {
   testonly = fuchsia_zbi_testonly
-  deps = dev_bootfs_labels
+  deps = [ ":kernel_cmdline_args" ] + dev_bootfs_labels
 }
 
 group("build_only_deps") {
@@ -16,7 +17,7 @@ group("build_only_deps") {
 }
 
 group("recovery_bootfs_labels") {
-  deps = dev_recovery_bootfs_labels
+  deps = [ ":recovery_kernel_cmdline_args" ] + dev_recovery_bootfs_labels
 }
 
 group("system_image_deps") {
@@ -26,5 +27,34 @@ group("system_image_deps") {
 
 group("zedboot_bootfs_labels") {
   testonly = true
-  deps = dev_zedboot_bootfs_labels
+  deps = [ ":zedboot_kernel_cmdline_args" ] + dev_zedboot_bootfs_labels
+}
+
+# Kernel command line targets for local development.
+#
+# The following targets create bootfs targets that convert the GN argument
+# `dev_kernel_cmdline` into a `kernel_cmdline` bootfs target (and similarly
+# for the zedboot and recovery kernels), allowing developers to easily modify
+# kernel command line arguments in their local `args.gn` file.
+#
+# For example, by adding the argument `dev_kernel_cmdline` as follows:
+#
+#   fx set ... '--args=dev_kernel_cmdline=["kernel.serial=none"]'
+#
+# the kernel command line parameter "kernel.serial=none" will be appended to
+# the Zircon kernel's command line.
+
+kernel_cmdline("kernel_cmdline_args") {
+  visibility = [ ":*" ]
+  args = dev_kernel_cmdline
+}
+
+kernel_cmdline("zedboot_kernel_cmdline_args") {
+  visibility = [ ":*" ]
+  args = dev_zedboot_kernel_cmdline
+}
+
+kernel_cmdline("recovery_kernel_cmdline_args") {
+  visibility = [ ":*" ]
+  args = dev_recovery_kernel_cmdline
 }

@@ -21,4 +21,13 @@ declare_args() {
 
   # List of binary labels to include in the recovery ZBI.
   dev_recovery_bootfs_labels = []
+
+  # List of strings to append to the kernel command line.
+  dev_kernel_cmdline = []
+
+  # List of strings to append to the zedboot kernel command line.
+  dev_zedboot_kernel_cmdline = []
+
+  # List of strings to append to the recovery kernel command line.
+  dev_recovery_kernel_cmdline = []
 }

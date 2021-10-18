@@ -42,18 +42,23 @@ respectively to [`board_zedboot_bootfs_labels`](/build/board.gni) and
 
 ### Specifying options locally
 
-Create a `BUILD.gn` file somewhere under `//local` to host the options targets.
-Note that this folder is not tracked by git and therefore might not exist yet in
-your checkout.
-Use [`dev_bootfs_labels`](/build/dev.gni) to inject the options into the build
-graph via `fx set`:
+For local development, a list of strings that should be appended to the kernel
+command line can be specified in the `dev_kernel_cmdline` GN variable, as
+follows:
 
 ```posix-terminal
-fx set ... --args='dev_bootfs_labels=["//local/path/to/my:options"]'
+fx set ... --args='dev_kernel_cmdline=["my_option=value"]'
 ```
 
-To locally alter kernel options for the zedboot or recovery build, follow the
-same procedure but use respectively
-[`dev_zedboot_bootfs_labels`](/build/dev.gni) and
-[`dev_recovery_bootfs_labels`](/build/dev.gni) to introduce the options into the
-build.
+Alternatively, an existing `args.gn` file can be modified by running `fx args`
+and adding or modifying a line as follows:
+
+```gn
+dev_kernel_cmdline = [
+  "my_option=value"
+]
+```
+
+To locally alter kernel options for the zedboot or recovery build, the
+variables `dev_zedboot_kernel_cmdline` and `dev_recovery_kernel_cmdline` can
+be used, respectively.

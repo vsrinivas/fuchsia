@@ -24,6 +24,7 @@ template("kernel_cmdline") {
                            [
                              "deps",
                              "testonly",
+                             "visibility",
                            ])
 
     type = "cmdline"
