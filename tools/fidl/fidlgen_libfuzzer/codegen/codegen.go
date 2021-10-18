@@ -30,11 +30,11 @@ func NewGenerator(flags *cpp.CmdlineFlags) *cpp.Generator {
 	})
 }
 
-func protocols(decls []cpp.Kinded) []cpp.Protocol {
-	protocols := make([]cpp.Protocol, 0, len(decls))
+func protocols(decls []cpp.Kinded) []*cpp.Protocol {
+	protocols := make([]*cpp.Protocol, 0, len(decls))
 	for _, decl := range decls {
 		if decl.Kind() == cpp.Kinds.Protocol {
-			protocols = append(protocols, decl.(cpp.Protocol))
+			protocols = append(protocols, decl.(*cpp.Protocol))
 		}
 	}
 	return protocols
@@ -45,7 +45,7 @@ func protocols(decls []cpp.Kinded) []cpp.Protocol {
 func countDecoderEncoders(decls []cpp.Kinded) int {
 	count := 0
 	for _, decl := range decls {
-		if p, ok := decl.(cpp.Protocol); ok {
+		if p, ok := decl.(*cpp.Protocol); ok {
 			for _, method := range p.Methods {
 				if method.HasRequest {
 					count++
@@ -54,9 +54,9 @@ func countDecoderEncoders(decls []cpp.Kinded) int {
 					count++
 				}
 			}
-		} else if _, ok := decl.(cpp.Struct); ok {
+		} else if _, ok := decl.(*cpp.Struct); ok {
 			count++
-		} else if _, ok := decl.(cpp.Table); ok {
+		} else if _, ok := decl.(*cpp.Table); ok {
 			count++
 		}
 	}

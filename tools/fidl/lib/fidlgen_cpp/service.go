@@ -20,7 +20,7 @@ type Service struct {
 	Members     []ServiceMember
 }
 
-func (Service) Kind() declKind {
+func (*Service) Kind() declKind {
 	return Kinds.Service
 }
 
@@ -33,7 +33,7 @@ type ServiceMember struct {
 	ProtocolType nameVariants
 }
 
-func (c *compiler) compileService(val fidlgen.Service) Service {
+func (c *compiler) compileService(val fidlgen.Service) *Service {
 	s := Service{
 		Attributes:   Attributes{val.Attributes},
 		nameVariants: c.compileNameVariants(val.Name),
@@ -43,7 +43,7 @@ func (c *compiler) compileService(val fidlgen.Service) Service {
 	for _, v := range val.Members {
 		s.Members = append(s.Members, c.compileServiceMember(v))
 	}
-	return s
+	return &s
 }
 
 func (c *compiler) compileServiceMember(val fidlgen.ServiceMember) ServiceMember {

@@ -20,7 +20,6 @@ type Struct struct {
 	Members             []StructMember
 	BackingBufferTypeV1 string
 	BackingBufferTypeV2 string
-	IsResultValue       bool
 	Result              *Result
 	// Full decls needed to check if a type is memcpy compatible.
 	// Only set if it may be possible for a type to be memcpy compatible,
@@ -30,9 +29,11 @@ type Struct struct {
 
 	TypeShapeV1 TypeShape
 	TypeShapeV2 TypeShape
+
+	isEmptyStruct bool
 }
 
-func (Struct) Kind() declKind {
+func (*Struct) Kind() declKind {
 	return Kinds.Struct
 }
 
@@ -82,7 +83,7 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 	}
 }
 
-func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
+func (c *compiler) compileStruct(val fidlgen.Struct) *Struct {
 	n := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	r := Struct{
@@ -106,28 +107,8 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 		r.Members = append(r.Members, c.compileStructMember(v))
 	}
 
-	result := c.resultForStruct[val.Name]
-	if result != nil {
-		memberTypeNames := []name{}
-		for _, m := range r.Members {
-			memberTypeNames = append(memberTypeNames, m.Type.Natural)
-			result.ValueMembers = append(result.ValueMembers, m.AsParameter())
-		}
-		result.ValueTupleDecl = makeTupleName(memberTypeNames)
-
-		if len(r.Members) == 0 {
-			result.ValueDecl = makeName("void")
-		} else if len(r.Members) == 1 {
-			result.ValueDecl = r.Members[0].Type.Natural
-		} else {
-			result.ValueDecl = result.ValueTupleDecl
-		}
-
-		r.IsResultValue = true
-		r.Result = result
-	}
-
 	if len(r.Members) == 0 {
+		r.isEmptyStruct = true
 		r.Members = []StructMember{
 			c.compileStructMember(fidlgen.EmptyStructMember("__reserved")),
 		}
@@ -151,5 +132,5 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	}
 	sort.Strings(r.FullDeclMemcpyCompatibleDeps)
 
-	return r
+	return &r
 }

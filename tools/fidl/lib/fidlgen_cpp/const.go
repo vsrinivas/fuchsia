@@ -68,14 +68,14 @@ type Const struct {
 	Value     ConstantValue
 }
 
-func (Const) Kind() declKind {
+func (*Const) Kind() declKind {
 	return Kinds.Const
 }
 
 var _ Kinded = (*Const)(nil)
 var _ namespaced = (*Const)(nil)
 
-func (c *compiler) compileConst(val fidlgen.Const) Const {
+func (c *compiler) compileConst(val fidlgen.Const) *Const {
 	n := c.compileNameVariants(val.Name)
 	v := Const{
 		Attributes:   Attributes{val.Attributes},
@@ -96,7 +96,7 @@ func (c *compiler) compileConst(val fidlgen.Const) Const {
 		v.Value = c.compileConstant(val.Value, &t, val.Type)
 	}
 
-	return v
+	return &v
 }
 
 func (c *compiler) compileLiteral(val fidlgen.Literal, typ fidlgen.Type) string {

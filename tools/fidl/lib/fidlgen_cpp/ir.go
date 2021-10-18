@@ -253,11 +253,11 @@ func (r Root) Unions() []Kinded {
 	return r.declsOfKind(Kinds.Union)
 }
 
-func (r Root) ProtocolsForTransport() func(string) []Protocol {
-	return func(t string) []Protocol {
-		ps := []Protocol{}
+func (r Root) ProtocolsForTransport() func(string) []*Protocol {
+	return func(t string) []*Protocol {
+		var ps []*Protocol
 		for _, k := range r.Protocols() {
-			p := k.(Protocol)
+			p := k.(*Protocol)
 			_, ok := p.Transports()[t]
 			if ok {
 				ps = append(ps, p)
@@ -384,7 +384,6 @@ type compiler struct {
 	decls                  fidlgen.DeclInfoMap
 	library                fidlgen.LibraryIdentifier
 	handleTypes            map[fidlgen.HandleSubtype]struct{}
-	resultForStruct        map[fidlgen.EncodedCompoundIdentifier]*Result
 	resultForUnion         map[fidlgen.EncodedCompoundIdentifier]*Result
 	requestResponsePayload map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
 	// anonymousChildren maps a layout (defined by its naming context key) to
@@ -586,7 +585,6 @@ func compile(r fidlgen.Root) Root {
 		decls:                  r.DeclsWithDependencies(),
 		library:                fidlgen.ParseLibraryName(r.Name),
 		handleTypes:            make(map[fidlgen.HandleSubtype]struct{}),
-		resultForStruct:        make(map[fidlgen.EncodedCompoundIdentifier]*Result),
 		resultForUnion:         make(map[fidlgen.EncodedCompoundIdentifier]*Result),
 		requestResponsePayload: make(map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct),
 		anonymousChildren:      make(map[namingContextKey][]ScopedLayout),
@@ -646,6 +644,21 @@ func compile(r fidlgen.Root) Root {
 			c.requestResponsePayload[v.Name] = v
 		} else {
 			decls[v.Name] = c.compileStruct(v)
+		}
+	}
+
+	for _, v := range r.Protocols {
+		for _, m := range v.Methods {
+			if m.MethodResult != nil {
+				var (
+					mr = m.MethodResult
+					u  = decls[mr.ResultType.Identifier].(*Union)
+					s  = decls[mr.ValueType.Identifier].(*Struct)
+				)
+				result := c.compileResult(u, s, m.MethodResult)
+				u.Result = result
+				s.Result = result
+			}
 		}
 	}
 

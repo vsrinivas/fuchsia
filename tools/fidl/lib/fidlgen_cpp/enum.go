@@ -17,7 +17,7 @@ type Enum struct {
 	Members []EnumMember
 }
 
-func (Enum) Kind() declKind {
+func (*Enum) Kind() declKind {
 	return Kinds.Enum
 }
 
@@ -39,7 +39,7 @@ func (m EnumMember) IsUnknown() bool {
 	return m.EnumMember.IsUnknown()
 }
 
-func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
+func (c *compiler) compileEnum(val fidlgen.Enum) *Enum {
 	name := c.compileNameVariants(val.Name)
 	r := Enum{
 		Attributes:   Attributes{val.Attributes},
@@ -61,5 +61,5 @@ func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
 			EnumMember: v,
 		})
 	}
-	return r
+	return &r
 }

@@ -214,7 +214,7 @@ type Protocol struct {
 	ProtocolDetails name
 }
 
-func (Protocol) Kind() declKind {
+func (*Protocol) Kind() declKind {
 	return Kinds.Protocol
 }
 
@@ -540,7 +540,7 @@ func anyEventHasFlexibleEnvelope(methods []Method) bool {
 	return false
 }
 
-func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
+func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 	protocolName := c.compileNameVariants(p.Name)
 	codingTableName := codingTableName(p.Name)
 	hlMessaging := compileHlMessagingDetails(protocolName)
@@ -628,7 +628,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 	for i := 0; i < len(methods); i++ {
 		methods[i].Protocol = &r
 	}
-	return r
+	return &r
 }
 
 func (c *compiler) compileParameterArray(val []fidlgen.Parameter) []Parameter {

@@ -26,7 +26,7 @@ type Union struct {
 	TypeShapeV2        TypeShape
 }
 
-func (Union) Kind() declKind {
+func (*Union) Kind() declKind {
 	return Kinds.Union
 }
 
@@ -52,7 +52,8 @@ func (um UnionMember) UpperCamelCaseName() string {
 func (um UnionMember) NameAndType() (string, Type) {
 	return um.Name(), um.Type
 }
-func (c *compiler) compileUnion(val fidlgen.Union) Union {
+
+func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 	name := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	tagEnum := name.nest("Tag")
@@ -92,18 +93,36 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 		})
 	}
 
-	if val.MethodResult != nil {
-		result := Result{
-			ResultDecl:      u.nameVariants,
-			ValueStructDecl: u.Members[0].Type.nameVariants,
-			Value:           u.Members[0].Type,
-			ErrorDecl:       u.Members[1].Type.nameVariants,
-			Error:           u.Members[1].Type,
-		}
-		c.resultForStruct[val.MethodResult.ValueType.Identifier] = &result
-		c.resultForUnion[val.Name] = &result
-		u.Result = &result
+	return &u
+}
+
+func (c *compiler) compileResult(u *Union, s *Struct, mr *fidlgen.MethodResult) *Result {
+	result := Result{
+		ResultDecl:      u.nameVariants,
+		ValueStructDecl: u.Members[0].Type.nameVariants,
+		Value:           u.Members[0].Type,
+		ErrorDecl:       u.Members[1].Type.nameVariants,
+		Error:           u.Members[1].Type,
 	}
 
-	return u
+	var memberTypeNames []name
+	if !s.isEmptyStruct {
+		for _, m := range s.Members {
+			memberTypeNames = append(memberTypeNames, m.Type.Natural)
+			result.ValueMembers = append(result.ValueMembers, m.AsParameter())
+		}
+	}
+	result.ValueTupleDecl = makeTupleName(memberTypeNames)
+
+	if len(memberTypeNames) == 0 {
+		result.ValueDecl = makeName("void")
+	} else if len(memberTypeNames) == 1 {
+		result.ValueDecl = s.Members[0].Type.Natural
+	} else {
+		result.ValueDecl = result.ValueTupleDecl
+	}
+
+	c.resultForUnion[mr.ResultType.Identifier] = &result
+
+	return &result
 }

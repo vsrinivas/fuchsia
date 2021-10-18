@@ -38,7 +38,7 @@ type Table struct {
 	FrameItems []TableFrameItem
 }
 
-func (Table) Kind() declKind {
+func (*Table) Kind() declKind {
 	return Kinds.Table
 }
 
@@ -90,7 +90,7 @@ func (c *compiler) compileTableMember(val fidlgen.TableMember, index int) TableM
 	}
 }
 
-func (c *compiler) compileTable(val fidlgen.Table) Table {
+func (c *compiler) compileTable(val fidlgen.Table) *Table {
 	name := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	r := Table{
@@ -125,5 +125,5 @@ func (c *compiler) compileTable(val fidlgen.Table) Table {
 		r.FrameItems[member.Ordinal-1] = &r.Members[index]
 	}
 
-	return r
+	return &r
 }

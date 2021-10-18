@@ -18,7 +18,7 @@ type Bits struct {
 	Members  []BitsMember
 }
 
-func (Bits) Kind() declKind {
+func (*Bits) Kind() declKind {
 	return Kinds.Bits
 }
 
@@ -31,7 +31,7 @@ type BitsMember struct {
 	Value ConstantValue
 }
 
-func (c *compiler) compileBits(val fidlgen.Bits) Bits {
+func (c *compiler) compileBits(val fidlgen.Bits) *Bits {
 	name := c.compileNameVariants(val.Name)
 	r := Bits{
 		Attributes:   Attributes{val.Attributes},
@@ -48,5 +48,5 @@ func (c *compiler) compileBits(val fidlgen.Bits) Bits {
 			Value:        c.compileConstant(v.Value, nil, val.Type),
 		})
 	}
-	return r
+	return &r
 }

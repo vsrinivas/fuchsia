@@ -148,19 +148,19 @@ func TestAnonymousLayoutAliases(t *testing.T) {
 			layoutToChildren := make(map[namingContextKey][]ScopedLayout)
 			for _, decl := range root.Decls {
 				switch d := decl.(type) {
-				case Struct:
+				case *Struct:
 					if len(d.AnonymousChildren) > 0 {
 						layoutToChildren[d.Name()] = d.AnonymousChildren
 					}
-				case Union:
+				case *Union:
 					if len(d.AnonymousChildren) > 0 {
 						layoutToChildren[d.Name()] = d.AnonymousChildren
 					}
-				case Table:
+				case *Table:
 					if len(d.AnonymousChildren) > 0 {
 						layoutToChildren[d.Name()] = d.AnonymousChildren
 					}
-				case Protocol:
+				case *Protocol:
 					for _, m := range d.Methods {
 						if len(m.RequestAnonymousChildren) > 0 {
 							layoutToChildren[m.Name()+"Request"] = m.RequestAnonymousChildren

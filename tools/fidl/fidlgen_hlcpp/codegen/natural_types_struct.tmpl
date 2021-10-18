@@ -21,7 +21,7 @@ class {{ .Name }} final {
  public:
   static const fidl_type_t* FidlType;
 
-  {{- if .IsResultValue }}
+  {{- if .Result }}
   {{ .Name }}() = default;
 
   {{- if eq 1 (len .Members) }}

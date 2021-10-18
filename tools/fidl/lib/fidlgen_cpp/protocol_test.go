@@ -13,10 +13,10 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 )
 
-func onlyProtocol(t *testing.T, root Root) Protocol {
-	var protocols []Protocol
+func onlyProtocol(t *testing.T, root Root) *Protocol {
+	var protocols []*Protocol
 	for _, decl := range root.Decls {
-		if p, ok := decl.(Protocol); ok {
+		if p, ok := decl.(*Protocol); ok {
 			protocols = append(protocols, p)
 		}
 	}
@@ -26,10 +26,10 @@ func onlyProtocol(t *testing.T, root Root) Protocol {
 	return protocols[0]
 }
 
-var exampleProtocol = func() func(t *testing.T) Protocol {
+var exampleProtocol = func() func(t *testing.T) *Protocol {
 	var once sync.Once
-	var p Protocol
-	return func(t *testing.T) Protocol {
+	var p *Protocol
+	return func(t *testing.T) *Protocol {
 		once.Do(func() {
 			root := compile(fidlgentest.EndToEndTest{T: t}.Single(`
 library example;
@@ -82,14 +82,14 @@ func TestWireBindingsAllocation(t *testing.T) {
 	cases := []struct {
 		desc          string
 		fidl          string
-		actualChooser func(p Protocol) allocation
+		actualChooser func(p *Protocol) allocation
 		expected      allocation
 		expectedType  string
 	}{
 		{
 			desc:          "client request inlined",
 			fidl:          "protocol P { Method(struct { a array<uint8, 496>; }); };",
-			actualChooser: func(p Protocol) allocation { return p.Methods[0].Request.ClientAllocationV1 },
+			actualChooser: func(p *Protocol) allocation { return p.Methods[0].Request.ClientAllocationV1 },
 			expected: allocation{
 				IsStack: true,
 				Size:    512,
@@ -99,7 +99,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 		{
 			desc:          "client request boxed due to message size",
 			fidl:          "protocol P { Method(struct { a array<uint8, 497>; }); };",
-			actualChooser: func(p Protocol) allocation { return p.Methods[0].Request.ClientAllocationV1 },
+			actualChooser: func(p *Protocol) allocation { return p.Methods[0].Request.ClientAllocationV1 },
 			expected: allocation{
 				IsStack: false,
 				Size:    0,
@@ -110,7 +110,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 			desc: "client request inlined despite message flexibility",
 			fidl: "type Flexible = flexible union { 1: a int32; };" +
 				"protocol P { Method(struct { a Flexible; }); };",
-			actualChooser: func(p Protocol) allocation { return p.Methods[0].Request.ClientAllocationV1 },
+			actualChooser: func(p *Protocol) allocation { return p.Methods[0].Request.ClientAllocationV1 },
 			expected: allocation{
 				IsStack: true,
 				Size:    48,
@@ -121,7 +121,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 			desc: "client response boxed due to message flexibility",
 			fidl: "type Flexible = flexible union { 1: a int32; };" +
 				"protocol P { Method() -> (struct { a Flexible; }); };",
-			actualChooser: func(p Protocol) allocation { return p.Methods[0].Response.ClientAllocationV1 },
+			actualChooser: func(p *Protocol) allocation { return p.Methods[0].Response.ClientAllocationV1 },
 			expected: allocation{
 				IsStack: false,
 				Size:    0,
@@ -131,7 +131,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 		{
 			desc:          "server response inlined",
 			fidl:          "protocol P { Method() -> (struct { a array<uint8, 496>; }); };",
-			actualChooser: func(p Protocol) allocation { return p.Methods[0].Response.ServerAllocationV1 },
+			actualChooser: func(p *Protocol) allocation { return p.Methods[0].Response.ServerAllocationV1 },
 			expected: allocation{
 				IsStack: true,
 				Size:    512,
@@ -141,7 +141,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 		{
 			desc:          "server response boxed due to message size",
 			fidl:          "protocol P { Method() -> (struct { a array<uint8, 497>; }); };",
-			actualChooser: func(p Protocol) allocation { return p.Methods[0].Response.ServerAllocationV1 },
+			actualChooser: func(p *Protocol) allocation { return p.Methods[0].Response.ServerAllocationV1 },
 			expected: allocation{
 				IsStack: false,
 				Size:    0,
@@ -152,7 +152,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 			desc: "server response inlined despite message flexibility",
 			fidl: "type Flexible = flexible union { 1: a int32; };" +
 				"protocol P { Method() -> (struct { a Flexible; }); };",
-			actualChooser: func(p Protocol) allocation { return p.Methods[0].Response.ServerAllocationV1 },
+			actualChooser: func(p *Protocol) allocation { return p.Methods[0].Response.ServerAllocationV1 },
 			expected: allocation{
 				IsStack: true,
 				Size:    48,
@@ -165,7 +165,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 				"    -> Event1(struct { a int32; });" +
 				"    -> Event2(struct { a int32; b int32; });" +
 				"};",
-			actualChooser: func(p Protocol) allocation { return p.SyncEventAllocationV1 },
+			actualChooser: func(p *Protocol) allocation { return p.SyncEventAllocationV1 },
 			expected: allocation{
 				IsStack: true,
 				Size:    24,
@@ -178,7 +178,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 				"    -> Event1(struct { a array<uint8, 497>; });" +
 				"    -> Event2(struct { a int32; b int32; });" +
 				"};",
-			actualChooser: func(p Protocol) allocation { return p.SyncEventAllocationV1 },
+			actualChooser: func(p *Protocol) allocation { return p.SyncEventAllocationV1 },
 			expected: allocation{
 				IsStack: false,
 				Size:    0,
@@ -192,7 +192,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 				"    -> Event1(struct { f Flexible; });" +
 				"    -> Event2(struct { a int32; b int32; });" +
 				"};",
-			actualChooser: func(p Protocol) allocation { return p.SyncEventAllocationV1 },
+			actualChooser: func(p *Protocol) allocation { return p.SyncEventAllocationV1 },
 			expected: allocation{
 				IsStack: false,
 				Size:    0,
@@ -206,7 +206,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 				"    Method() -> (struct { f Flexible; });" +
 				"    -> Event2(struct { a int32; b int32; });" +
 				"};",
-			actualChooser: func(p Protocol) allocation { return p.SyncEventAllocationV1 },
+			actualChooser: func(p *Protocol) allocation { return p.SyncEventAllocationV1 },
 			expected: allocation{
 				IsStack: true,
 				Size:    32,
@@ -217,9 +217,9 @@ func TestWireBindingsAllocation(t *testing.T) {
 	for _, ex := range cases {
 		t.Run(ex.desc, func(t *testing.T) {
 			root := compile(fidlgentest.EndToEndTest{T: t}.Single("library example; " + ex.fidl))
-			var protocols []Protocol
+			var protocols []*Protocol
 			for _, decl := range root.Decls {
-				if p, ok := decl.(Protocol); ok {
+				if p, ok := decl.(*Protocol); ok {
 					protocols = append(protocols, p)
 				}
 			}
@@ -248,7 +248,7 @@ protocol P {};
 `
 	root := compile(fidlgentest.EndToEndTest{T: t}.Single(fidl))
 
-	messaging := root.Decls[0].(Protocol).hlMessaging
+	messaging := root.Decls[0].(*Protocol).hlMessaging
 	assertEqual(t, messaging.ProtocolMarker.String(), "::fuchsia::foobar::P")
 	assertEqual(t, messaging.InterfaceAliasForStub.String(), "::fuchsia::foobar::P_Stub::P_clazz")
 	assertEqual(t, messaging.Proxy.String(), "::fuchsia::foobar::P_Proxy")
@@ -271,7 +271,7 @@ protocol P {};
 `
 	root := compile(fidlgentest.EndToEndTest{T: t}.Single(fidl))
 
-	messaging := root.Decls[0].(Protocol).wireTypeNames
+	messaging := root.Decls[0].(*Protocol).wireTypeNames
 	assertEqual(t, messaging.WireProtocolMarker.String(), "::fuchsia_foobar::P")
 	assertEqual(t, messaging.WireSyncClient.String(), "::fidl::WireSyncClient<::fuchsia_foobar::P>")
 	assertEqual(t, messaging.WireClient.String(), "::fidl::WireClient<::fuchsia_foobar::P>")
