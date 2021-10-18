@@ -23,6 +23,7 @@ group("tests") {
 
   deps = [
     "guest_manager:tests",
+    "linux_runner:tests",
     "vmm:tests",
     "wayland:tests",
   ]

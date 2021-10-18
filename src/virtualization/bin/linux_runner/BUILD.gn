@@ -218,3 +218,8 @@ executable("linux_runner_unittests") {
 fuchsia_unittest_package("linux_runner_tests") {
   deps = [ ":linux_runner_unittests" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ ":linux_runner_tests" ]
+}

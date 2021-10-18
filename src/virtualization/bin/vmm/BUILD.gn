@@ -7,20 +7,9 @@ import("//build/fuzzing/fuzzer.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":vmm_tests" ]
-}
-
-group("vmm_tests") {
-  testonly = true
   deps = [
-    ":device_tests_package",
     ":vmm_unittests_package",
-
-    # Mock cobalt component that is injected into device_tests_package.
-    "//src/cobalt/bin/testing/mock_cobalt",
-
-    # Needed by tests that invoke scenic
-    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
+    "device:tests",
   ]
   if (current_cpu == "x64") {
     deps += [ ":decode-fuzzer" ]
@@ -214,36 +203,13 @@ executable("vmm_unittests") {
   ]
 }
 
-fuchsia_unittest_component("device_unittests_component") {
-  component_name = "device_unittests"
-  manifest = "meta/device_unittests.cmx"
-  deps = [ "device:device_unittests" ]
-}
-
-fuchsia_unittest_component("vmm_unittests_component") {
-  component_name = "vmm_unittests"
-  deps = [ ":vmm_unittests" ]
-}
-
-fuchsia_test_package("vmm_unittests_package") {
+fuchsia_unittest_package("vmm_unittests_package") {
   package_name = "vmm_unittests"
-  test_components = [
-    ":device_unittests_component",
-    ":vmm_unittests_component",
-  ]
+  deps = [ ":vmm_unittests" ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
     }
-  }
-}
-
-fuchsia_unittest_package("device_tests_package") {
-  package_name = "device_tests"
-  manifest = "meta/device_tests.cmx"
-  deps = [ "device:device_tests" ]
-  test_specs = {
-    environments = guest_envs
   }
 }
 
