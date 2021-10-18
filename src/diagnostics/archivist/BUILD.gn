@@ -272,19 +272,6 @@ fuchsia_unittest_component("archivist-unittests") {
 
 fuchsia_test_package("archivist-tests") {
   test_components = [ ":archivist-unittests" ]
-
-  # TODO(fxbug.dev/86603): Flaky test disabled on coverage.
-  # Please fix the flake and remove the condition below.
-  if (is_coverage) {
-    test_specs = {
-      environments = [
-        {
-          dimensions = emu_env.dimensions
-          tags = [ "disabled" ]
-        },
-      ]
-    }
-  }
 }
 
 group("archivist") {

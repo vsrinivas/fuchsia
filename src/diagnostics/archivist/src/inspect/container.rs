@@ -301,13 +301,24 @@ impl<'a> UnpopulatedInspectDataContainer {
 mod test {
     use super::*;
     use crate::{container::EMPTY_IDENTITY, diagnostics::GlobalConnectionStats};
+    use fidl_fuchsia_io::DirectoryMarker;
     use fuchsia_inspect::Node;
+    use fuchsia_zircon::DurationNum;
     use futures::StreamExt;
 
     #[fuchsia::test]
     async fn population_times_out() {
-        let directory =
-            io_util::open_directory_in_namespace("/tmp", io_util::OPEN_RIGHT_READABLE).unwrap();
+        // Simulate a directory that hangs indefinitely in any request so that we consistently
+        // trigger the 0 timeout.
+        let (directory, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+        fasync::Task::spawn(async move {
+            while let Some(_) = stream.next().await {
+                fasync::Timer::new(fasync::Time::after(100000.second())).await;
+            }
+        })
+        .detach();
+
         let container = UnpopulatedInspectDataContainer {
             identity: Arc::new(EMPTY_IDENTITY.clone()),
             component_diagnostics_proxy: directory,
