@@ -83,11 +83,14 @@ zx_status_t TaskInternal::Wait() {
       if (status != ZX_ERR_BAD_STATE) {
         return status;
       }
+
+      // ZX_ERR_BAD_STATE means that `state_` has already changed to be different than `value`,
+      // which is not an error condition here.
     }
     value = state_ref.load(std::memory_order_acquire);
   }
 
-  return status;
+  return ZX_OK;
 }
 
 zx_status_t TaskInternal::Cancel() {
