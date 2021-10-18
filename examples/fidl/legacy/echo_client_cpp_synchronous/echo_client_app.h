@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_FIDL_ECHO_CLIENT_CPP_SYNCHRONOUS_ECHO_CLIENT_APP_H_
-#define GARNET_EXAMPLES_FIDL_ECHO_CLIENT_CPP_SYNCHRONOUS_ECHO_CLIENT_APP_H_
+#ifndef EXAMPLES_FIDL_LEGACY_ECHO_CLIENT_CPP_SYNCHRONOUS_ECHO_CLIENT_APP_H_
+#define EXAMPLES_FIDL_LEGACY_ECHO_CLIENT_CPP_SYNCHRONOUS_ECHO_CLIENT_APP_H_
 
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -30,4 +30,4 @@ class EchoClientApp {
 
 }  // namespace echo
 
-#endif  // GARNET_EXAMPLES_FIDL_ECHO_CLIENT_CPP_SYNCHRONOUS_ECHO_CLIENT_APP_H_
+#endif  // EXAMPLES_FIDL_LEGACY_ECHO_CLIENT_CPP_SYNCHRONOUS_ECHO_CLIENT_APP_H_

@@ -38,7 +38,7 @@ rustc_test("v2_test_runs_v1_component_bin") {
   source_root = "v2_test_runs_v1_component.rs"
 
   deps = [
-    "//garnet/examples/fidl/services:echo-rustc",
+    "//examples/fidl/legacy/services:echo-rustc",
     "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -123,8 +123,8 @@ group("test_data") {
     ":hanging_test",
     ":no_suite_service",
     ":v2_test_runs_v1_component",
+    "//examples/fidl/legacy/echo_server_rust:echo-server-rust-cmp",
     "//examples/tests/rust:custom_artifact_user_cmp",
-    "//garnet/examples/fidl/echo_server_rust:echo-server-rust-cmp",
     "//src/diagnostics/archivist/tests/logging-component:logging-component",
   ]
 }

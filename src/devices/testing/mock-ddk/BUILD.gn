@@ -43,7 +43,7 @@ test("mock-ddk-test-bin") {
   sources = [ "mock-ddk-test.cc" ]
   deps = [
     ":mock-ddk",
-    "//garnet/examples/fidl/services:echo_llcpp",
+    "//examples/fidl/legacy/services:echo_llcpp",
     "//src/lib/ddktl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",

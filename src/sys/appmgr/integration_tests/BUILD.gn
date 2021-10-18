@@ -63,7 +63,7 @@ executable("realm_tests") {
     "fidl/fuchsia.testing.appmgr",
     "util:data_file_reader_writer",
     "util:data_file_reader_writer_util",
-    "//garnet//examples/fidl/services:echo",
+    "//examples/fidl/legacy/services:echo",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/lib/sys/cpp",
@@ -87,8 +87,8 @@ executable("hub_tests") {
   sources = [ "hub_integration_test.cc" ]
 
   deps = [
+    "//examples/fidl/legacy/services:echo",
     "//garnet/bin/sysmgr:lib",
-    "//garnet/examples/fidl/services:echo",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/inspect/cpp",
@@ -110,7 +110,7 @@ executable("echo_server_bin") {
   ]
 
   deps = [
-    "//garnet/examples/fidl/services:echo",
+    "//examples/fidl/legacy/services:echo",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

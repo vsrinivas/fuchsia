@@ -15,7 +15,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/examples/fidl/services:echo-rustc",
+    "//examples/fidl/legacy/services:echo-rustc",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
@@ -40,7 +40,7 @@ fuchsia_unittest_package("appmgr_out_dir_integration_test") {
   manifest = "meta/appmgr_out_dir_integration_test.cmx"
   deps = [
     ":bin",
-    "//garnet/examples/fidl/echo_server_rust:echo-server-rust-cmp",
+    "//examples/fidl/legacy/echo_server_rust:echo-server-rust-cmp",
     "//src/sys/appmgr:bin",
     "//src/sys/sysmgr:sysmgr_component",
   ]

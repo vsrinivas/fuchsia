@@ -19,7 +19,7 @@ go_library("echo_server_go_lib") {
   sources = [ "echo_server.go" ]
 
   deps = [
-    "//garnet/examples/fidl/services:echo($go_toolchain)",
+    "//examples/fidl/legacy/services:echo($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//src/lib/component",
   ]

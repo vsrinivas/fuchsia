@@ -1,4 +1,4 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -11,20 +11,20 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/examples/fidl/services:echo",
+    "//examples/fidl/legacy/services:echo",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
   ]
 }
 
 executable("bin") {
-  output_name = "echo_client_cpp"
+  output_name = "echo_client_cpp_synchronous"
 
   sources = [ "echo_client.cc" ]
 
   deps = [
     ":lib",
-    "//garnet/examples/fidl/services:echo",
+    "//examples/fidl/legacy/services:echo",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-default",
@@ -34,7 +34,7 @@ executable("bin") {
 }
 
 resource("echo_client_file") {
-  sources = [ "${root_build_dir}/echo_client_cpp" ]
+  sources = [ "${root_build_dir}/echo_client_cpp_synchronous" ]
   outputs = [ "bin/echo_client" ]
   deps = [ ":bin" ]
 
@@ -42,7 +42,7 @@ resource("echo_client_file") {
   data_deps = [ ":bin" ]
 }
 
-fuchsia_package_with_single_component("echo_client_cpp") {
+fuchsia_package_with_single_component("echo_client_cpp_synchronous") {
   manifest = "../meta/echo_client.cmx"
   deps = [ ":echo_client_file" ]
 }

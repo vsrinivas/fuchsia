@@ -17,7 +17,7 @@ exceptions = {
         ['//src/connectivity/network/testing/netemul/lib/',],
     '//src/connectivity/network/testing/netemul':
         ['//garnet/lib/process:process',],
-    '//src/connectivity/overnet': ['//garnet/examples/fidl/services:echo',],
+    '//src/connectivity/overnet': ['//examples/fidl/legacy/services:echo',],
     '//src/connectivity/wlan':
         [
             '//garnet/lib/wlan/',
@@ -34,7 +34,7 @@ exceptions = {
     '//src/developer/debug': ['//garnet/lib/process:process',],
     '//src/developer/feedback_agent': ['//src/ui/lib/escher/test',],
     '//src/lib/process_builder': [
-        '//garnet/examples/fidl/services:echo-rustc',
+        '//examples/fidl/legacy/services:echo-rustc',
     ],
     '//src/modular':
         [
@@ -46,7 +46,7 @@ exceptions = {
     '//src/stories/bin/discovermgr': ['//src/sys/component_index/fidl',],
     '//src/sys': [
         '//examples/components/',
-        '//garnet/examples/fidl',
+        '//examples/fidl/legacy',
     ],
     '//src/testing/host-target-testing': ['//garnet/go/src',],
     '//src/ui': ['//garnet/bin/ui',],

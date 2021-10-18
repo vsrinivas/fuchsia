@@ -49,17 +49,17 @@ group("http") {
 group("fidl") {
   testonly = true
   public_deps = [
-    "//garnet/examples/fidl/echo_client_cpp",
-    "//garnet/examples/fidl/echo_client_cpp_synchronous",
-    "//garnet/examples/fidl/echo_client_go",
-    "//garnet/examples/fidl/echo_client_llcpp",
-    "//garnet/examples/fidl/echo_client_rust",
-    "//garnet/examples/fidl/echo_client_rust_synchronous",
-    "//garnet/examples/fidl/echo_server_c",
-    "//garnet/examples/fidl/echo_server_cpp",
-    "//garnet/examples/fidl/echo_server_go",
-    "//garnet/examples/fidl/echo_server_llcpp",
-    "//garnet/examples/fidl/echo_server_rust",
+    "//examples/fidl/legacy/echo_client_cpp",
+    "//examples/fidl/legacy/echo_client_cpp_synchronous",
+    "//examples/fidl/legacy/echo_client_go",
+    "//examples/fidl/legacy/echo_client_llcpp",
+    "//examples/fidl/legacy/echo_client_rust",
+    "//examples/fidl/legacy/echo_client_rust_synchronous",
+    "//examples/fidl/legacy/echo_server_c",
+    "//examples/fidl/legacy/echo_server_cpp",
+    "//examples/fidl/legacy/echo_server_go",
+    "//examples/fidl/legacy/echo_server_llcpp",
+    "//examples/fidl/legacy/echo_server_rust",
   ]
 }
 

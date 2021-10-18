@@ -71,7 +71,7 @@ executable("service_startup_test_bin") {
 
   deps = [
     ":interface",
-    "//garnet/examples/fidl/services:echo",
+    "//examples/fidl/legacy/services:echo",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
@@ -98,7 +98,7 @@ executable("package_updating_loader_test_bin") {
 
   deps = [
     ":interface",
-    "//garnet/examples/fidl/services:echo",
+    "//examples/fidl/legacy/services:echo",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
@@ -128,10 +128,10 @@ resource("echo_server_bin") {
 
 fuchsia_component("echo_server_rust") {
   testonly = true
-  manifest = rebase_path("//garnet/examples/fidl/meta/echo_server.cmx")
+  manifest = rebase_path("//examples/fidl/legacy/meta/echo_server.cmx")
   deps = [
     ":echo_server_bin",
-    "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin",
+    "//examples/fidl/legacy/echo_server_rust:echo_server_rust_bin",
   ]
 }
 

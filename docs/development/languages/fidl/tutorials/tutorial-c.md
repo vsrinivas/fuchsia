@@ -20,7 +20,7 @@ The [reference](#reference) section documents the bindings.
 
 We'll use the `echo.test.fidl` sample that we discussed in the
 [FIDL concepts][concepts] doc, by opening
-[//garnet/examples/fidl/services/echo.test.fidl](/garnet/examples/fidl/services/echo.test.fidl).
+[//examples/fidl/legacy/services/echo.test.fidl](/examples/fidl/legacy/services/echo.test.fidl).
 
 <!-- NOTE: the code snippets here need to be kept up to date manually by
      copy-pasting from the actual source code. Please update a snippet
@@ -48,7 +48,7 @@ Use the following steps to build:
 
 ## `Echo` server
 
-The example server code is in [//garnet/examples/fidl/echo_server_c/echo_server.c][server]:
+The example server code is in [//examples/fidl/legacy/echo_server_c/echo_server.c][server]:
 
 ```c
 [01] // Copyright 2018 The Fuchsia Authors. All rights reserved.
@@ -738,7 +738,7 @@ arrive.
 
 <!-- xrefs -->
 [concepts]: /docs/concepts/fidl/overview.md
-[server]: /garnet/examples/fidl/echo_server_c/echo_server.c
+[server]: /examples/fidl/legacy/echo_server_c/echo_server.c
 [c-family-comparison]: /docs/development/languages/fidl/guides/c-family-comparison.md
 [wire-format]: /docs/reference/fidl/language/wire-format
 [llcpp-tutorial]: /docs/development/languages/fidl/tutorials/llcpp

@@ -12,7 +12,7 @@
 
 #include <memory>
 
-#include "garnet/examples/fidl/echo_client_cpp/echo_client_app.h"
+#include "examples/fidl/legacy/echo_client_cpp/echo_client_app.h"
 
 // This test file demonstrates how to use |ComponentContextProvider|.
 

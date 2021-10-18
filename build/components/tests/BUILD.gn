@@ -79,7 +79,7 @@ fuchsia_unittest_package("readfile-unittest") {
 
 fuchsia_component("echo-server") {
   manifest = "meta/echo_server_go.cmx"
-  deps = [ "//garnet/examples/fidl/echo_server_go:echo_server_go_bin" ]
+  deps = [ "//examples/fidl/legacy/echo_server_go:echo_server_go_bin" ]
 }
 
 rustc_test("echo_client_test") {

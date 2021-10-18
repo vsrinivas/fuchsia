@@ -53,7 +53,7 @@ dart_test_component("unittests-component") {
 
   deps = [
     ":fuchsia_vfs",
-    "//garnet/examples/fidl/services:echo",
+    "//examples/fidl/legacy/services:echo",
     "//sdk/dart/fidl",
     "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.io",
