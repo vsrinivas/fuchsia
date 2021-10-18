@@ -54,6 +54,8 @@ protocol PointerEventRegistry {
     /// now, only one listener is allowed and the first to register is honored.
     Register(resource struct {
         pointer_event_listener client_end:PointerEventListener;
+    }) -> (struct {
+        success bool;
     });
 };
 
