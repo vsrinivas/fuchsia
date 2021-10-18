@@ -15,19 +15,22 @@ driver_bind_rules("nand-bind") {
 
 source_set("common") {
   configs += [ "//build/config:all_source" ]
+  public = [ "nand.h" ]
   sources = [ "nand.cc" ]
   deps = [
     ":nand-bind",
-    "//sdk/banjo/fuchsia.hardware.nand:fuchsia.hardware.nand_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+  ]
+  public_deps = [
+    "//sdk/banjo/fuchsia.hardware.nand:fuchsia.hardware.nand_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.rawnand:fuchsia.hardware.rawnand_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+    "//sdk/lib/sys/inspect/cpp",
     "//src/devices/lib/dev-operation",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]

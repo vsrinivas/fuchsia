@@ -6,6 +6,7 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/io-buffer.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
@@ -27,13 +28,6 @@
 // cheaper than mapping and unmapping (which will cause TLB flushes) ?
 
 namespace nand {
-namespace {
-
-// If we're going to experience device level failures that result in data loss
-// or curruption, let's be very sure.
-constexpr size_t kNandReadRetries = 8;
-
-}  // namespace
 
 zx_status_t NandDevice::ReadPage(uint8_t* data, uint8_t* oob, uint32_t nand_page,
                                  uint32_t* corrected_bits, size_t retries) {
@@ -44,18 +38,28 @@ zx_status_t NandDevice::ReadPage(uint8_t* data, uint8_t* oob, uint32_t nand_page
   for (; status != ZX_OK && retry < retries; retry++) {
     status = raw_nand_.ReadPageHwecc(nand_page, data, nand_info_.page_size, nullptr, oob,
                                      nand_info_.oob_size, nullptr, corrected_bits);
-    if (status == ZX_ERR_IO_DATA_INTEGRITY) {
-      ecc_failure = true;
-    }
-    if (status != ZX_OK) {
+    if (status == ZX_OK) {
+      // Only record the returned corrected bits number on success, otherwise it is undefined.
+      read_ecc_bit_flips_.Insert(*corrected_bits);
+    } else {
+      read_internal_failure_.Add(1);
       zxlogf(WARNING, "%s: Retrying Read@%u", __func__, nand_page);
+      if (status == ZX_ERR_IO_DATA_INTEGRITY) {
+        ecc_failure = true;
+        read_ecc_bit_flips_.Insert(nand_info_.ecc_bits + 1);
+      }
     }
   }
 
   if (status != ZX_OK) {
+    read_failure_.Add(1);
+    read_attempts_.Insert(ULONG_MAX);
     zxlogf(WARNING, "%s: Read error %d, exhausted all retries", __func__, status);
-  } else if (retry > 1) {
-    zxlogf(INFO, "%s: Successfully read@%u on retry %zd", __func__, nand_page, retry - 1);
+  } else {
+    read_attempts_.Insert(retry);
+    if (retry > 1) {
+      zxlogf(INFO, "%s: Successfully read@%u on retry %zd", __func__, nand_page, retry - 1);
+    }
   }
   // If we get a failed ECC from the nand device, report up the stack that
   // things are going badly, in case the repeated read goes inexplicably better.
@@ -323,6 +327,8 @@ zx_status_t NandDevice::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
+zx::vmo NandDevice::GetDuplicateInspectVmoForTest() const { return inspect_.DuplicateVmo(); }
+
 zx_status_t NandDevice::Init() {
   if (!raw_nand_.is_valid()) {
     zxlogf(ERROR, "nand: failed to get raw_nand protocol");
@@ -344,6 +350,15 @@ zx_status_t NandDevice::Init() {
   if (rc != thrd_success) {
     return thrd_status_to_zx_status(rc);
   }
+
+  root_ = inspect_.GetRoot().CreateChild("nand");
+  // 32 buckets: 0-31. Current devices only use up to BCH30.
+  // Will populate read failures as ecc bits + 1.
+  read_ecc_bit_flips_ = root_.CreateLinearUintHistogram("read_ecc_bit_flips", 0, 1, 32);
+  // Buckets 0, 1, 2, 4...128. Failures will be maxint and dump in the overflow bucket.
+  read_attempts_ = root_.CreateExponentialUintHistogram("read_attempts", 0, 1, 2, 9);
+  read_internal_failure_ = root_.CreateUint("read_internal_failure", 0);
+  read_failure_ = root_.CreateUint("read_failure", 0);
 
   // Set a scheduling deadline profile for the nand-worker thread.
   // This is required in order to service the blobfs-pager-thread, which is on a deadline profile.
@@ -380,7 +395,8 @@ zx_status_t NandDevice::Bind() {
       {BIND_NAND_CLASS, 0, NAND_CLASS_PARTMAP},
   };
 
-  return DdkAdd(ddk::DeviceAddArgs("nand").set_props(props));
+  return DdkAdd(
+      ddk::DeviceAddArgs("nand").set_props(props).set_inspect_vmo(inspect_.DuplicateVmo()));
 }
 
 static constexpr zx_driver_ops_t nand_driver_ops = []() {

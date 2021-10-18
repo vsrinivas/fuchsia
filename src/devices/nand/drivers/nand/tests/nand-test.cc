@@ -8,14 +8,21 @@
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <zircon/errors.h>
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <utility>
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <zxtest/zxtest.h>
+
+#include "lib/inspect/cpp/hierarchy.h"
+#include "lib/inspect/cpp/inspector.h"
+#include "lib/inspect/cpp/reader.h"
+#include "lib/inspect/cpp/vmo/types.h"
 
 namespace {
 
@@ -51,6 +58,9 @@ class FakeRawNand : public ddk::RawNandProtocol<FakeRawNand> {
 
   void set_result(zx_status_t result) { result_ = result; }
   void set_ecc_bits(uint32_t ecc_bits) { ecc_bits_ = ecc_bits; }
+  void set_read_callback(std::function<void(FakeRawNand*)> read_callback) {
+    read_callback_ = std::move(read_callback);
+  }
 
   // Raw nand protocol:
   zx_status_t RawNandGetNandInfo(nand_info_t* out_info) {
@@ -62,11 +72,13 @@ class FakeRawNand : public ddk::RawNandProtocol<FakeRawNand> {
                                    size_t* out_data_actual, uint8_t* out_oob_buffer,
                                    size_t oob_size, size_t* out_oob_actual,
                                    uint32_t* out_ecc_correct) {
+    if (read_callback_)
+      read_callback_(this);
     if (nandpage > info_.pages_per_block * info_.num_blocks) {
       result_ = ZX_ERR_IO;
     }
-    static_cast<uint8_t*>(out_data_buffer)[0] = 'd';
-    static_cast<uint8_t*>(out_oob_buffer)[0] = 'o';
+    static_cast<uint8_t*>(out_data_buffer)[0] = kMagic;
+    static_cast<uint8_t*>(out_oob_buffer)[0] = kOobMagic;
     *out_ecc_correct = ecc_bits_;
 
     fbl::AutoLock al(&lock_);
@@ -83,12 +95,12 @@ class FakeRawNand : public ddk::RawNandProtocol<FakeRawNand> {
     }
 
     uint8_t byte = static_cast<const uint8_t*>(data_buffer)[0];
-    if (byte != 'd') {
+    if (byte != kMagic) {
       result_ = ZX_ERR_IO;
     }
 
     byte = static_cast<const uint8_t*>(oob_buffer)[0];
-    if (byte != 'o') {
+    if (byte != kOobMagic) {
       result_ = ZX_ERR_IO;
     }
 
@@ -116,6 +128,8 @@ class FakeRawNand : public ddk::RawNandProtocol<FakeRawNand> {
   nand_info_t info_ = kInfo;
   zx_status_t result_ = ZX_OK;
   uint32_t ecc_bits_ = 0;
+  // Calls a specified callback passing "this" at the beginning of the RawNandReadPageHwecc.
+  std::function<void(FakeRawNand*)> read_callback_ = {};
 
   fbl::Mutex lock_;
   LastOperation last_op_ TA_GUARDED(lock_) = {};
@@ -306,9 +320,7 @@ NandDeviceTest::NandDeviceTest() {
   nand_info_t info;
   device_->NandQuery(&info, &op_size_);
 
-  if (device_->Init() != ZX_OK) {
-    device_.reset();
-  }
+  ASSERT_EQ(device_->Init(), ZX_OK);
 }
 
 // Tests trivial attempts to queue one operation.
@@ -456,6 +468,142 @@ TEST_F(NandDeviceTest, QueryMultiple) {
     ASSERT_OK(operation->status());
     ASSERT_TRUE(operation->completed());
   }
+}
+
+struct ReadMetrics {
+  uint64_t ecc_bit_flips[32];
+  uint64_t ecc_bit_flips_overflow;
+  uint64_t attempts[9];
+  uint64_t attempts_overflow;
+  uint64_t internal_failure;
+  uint64_t failure;
+};
+
+void ExpectUintPropertyMatches(const inspect::Hierarchy* hierarchy,
+                               const std::string& property_name, uint64_t value) {
+  auto* property = hierarchy->node().get_property<inspect::UintPropertyValue>(property_name);
+  EXPECT_NOT_NULL(property, "Missing property: %s", property_name.c_str());
+  EXPECT_EQ(property->value(), value, "Values do not match for %s", property_name.c_str());
+}
+
+void ExpectUintHistogramMatches(const inspect::Hierarchy* hierarchy,
+                                const std::string& property_name, uint64_t histogram_size,
+                                const uint64_t* values, uint64_t overflow) {
+  auto* property = hierarchy->node().get_property<inspect::UintArrayValue>(property_name);
+  ASSERT_NOT_NULL(property, "Missing property: %s", property_name.c_str());
+  auto histogram = property->GetBuckets();
+  // Verify the overflow count.
+  EXPECT_EQ(overflow, histogram.back().count, "Failed overflow check for %s",
+            property_name.c_str());
+  // Remove the underflow and overflow buckets to simplify indexing.
+  histogram.pop_back();
+  histogram.erase(histogram.begin());
+  ASSERT_EQ(histogram.size(), histogram_size, "Histogram %s was not expecte size.",
+            property_name.c_str());
+  for (uint64_t i = 0; i < histogram_size; i++) {
+    EXPECT_EQ(values[i], histogram[i].count, "Failed at histogram index %lu for %s", i,
+              property_name.c_str());
+  }
+}
+
+void ExpectMetricsMatch(const ReadMetrics& expected, const zx::vmo& inspect_vmo) {
+  auto base_hierarchy = inspect::ReadFromVmo(inspect_vmo).take_value();
+  auto* hierarchy = base_hierarchy.GetByPath({"nand"});
+  ASSERT_NOT_NULL(hierarchy);
+  ExpectUintPropertyMatches(hierarchy, "read_internal_failure", expected.internal_failure);
+  ExpectUintPropertyMatches(hierarchy, "read_failure", expected.failure);
+  ExpectUintHistogramMatches(hierarchy, "read_ecc_bit_flips", 32, expected.ecc_bit_flips,
+                             expected.ecc_bit_flips_overflow);
+  ExpectUintHistogramMatches(hierarchy, "read_attempts", 9, expected.attempts,
+                             expected.attempts_overflow);
+}
+
+TEST_F(NandDeviceTest, ReadMetrics) {
+  Operation operation(op_size(), this);
+  ASSERT_TRUE(operation.SetVmo());
+
+  nand_operation_t* op = operation.GetOperation();
+  ASSERT_NOT_NULL(op);
+
+  // Check that everything is zeroes.
+  ReadMetrics expected;
+  memset(&expected, 0, sizeof(expected));
+  zx::vmo inspect_vmo = device()->GetDuplicateInspectVmoForTest();
+  ASSERT_NO_FAILURES(ExpectMetricsMatch(expected, inspect_vmo));
+
+  // Normal read.
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 1;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+
+  expected.attempts[1] += 1;
+  expected.ecc_bit_flips[0] += 1;
+  ASSERT_NO_FAILURES(ExpectMetricsMatch(expected, inspect_vmo));
+
+  FakeRawNand& nand = raw_nand();
+  nand_info_t info;
+  ASSERT_OK(nand.RawNandGetNandInfo(&info));
+  size_t ecc_limit = info.ecc_bits;
+  int retries = 3;
+  nand.set_read_callback([&retries](FakeRawNand* n) {
+    if (--retries == 0) {
+      n->set_result(ZX_OK);
+    }
+  });
+
+  // Fails ECC a few times before succeeding with bit flips.
+  nand.set_ecc_bits(4);
+  nand.set_result(ZX_ERR_IO_DATA_INTEGRITY);
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 1;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+
+  expected.attempts[2] += 1;
+  expected.internal_failure += 2;
+  expected.ecc_bit_flips[ecc_limit + 1] += 2;
+  expected.ecc_bit_flips[4] += 1;
+  ASSERT_NO_FAILURES(ExpectMetricsMatch(expected, inspect_vmo));
+
+  // Fails with unexpected reason before succeeding. Should not record bit flips for failures.
+  nand.set_result(ZX_ERR_BAD_STATE);
+  retries = 3;
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 1;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+
+  expected.attempts[2] += 1;
+  expected.internal_failure += 2;
+  expected.ecc_bit_flips[4] += 1;
+  ASSERT_NO_FAILURES(ExpectMetricsMatch(expected, inspect_vmo));
+
+  // Totally fails out on retries.
+  nand.set_result(ZX_ERR_IO_DATA_INTEGRITY);
+  retries = 1000000;
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 1;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_NOT_OK(operation.status());
+
+  expected.attempts_overflow += 1;
+  expected.failure += 1;
+  expected.internal_failure += nand::NandDevice::kNandReadRetries;
+  expected.ecc_bit_flips[ecc_limit + 1] += nand::NandDevice::kNandReadRetries;
+  ASSERT_NO_FAILURES(ExpectMetricsMatch(expected, inspect_vmo));
 }
 
 }  // namespace

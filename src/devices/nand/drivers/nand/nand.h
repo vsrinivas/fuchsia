@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/rawnand/cpp/banjo.h>
 #include <lib/ddk/driver.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/operation/nand.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
@@ -19,6 +20,8 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 
+#include "lib/inspect/cpp/vmo/types.h"
+
 namespace nand {
 
 using Transaction = nand::BorrowedOperation<>;
@@ -28,6 +31,10 @@ using DeviceType = ddk::Device<NandDevice, ddk::GetSizable>;
 
 class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::base_protocol> {
  public:
+  // If we're going to experience device level failures that result in data loss
+  // or corruption, let's be very sure.
+  static constexpr size_t kNandReadRetries = 8;
+
   explicit NandDevice(zx_device_t* parent) : DeviceType(parent), raw_nand_(parent) {}
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
@@ -47,6 +54,8 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
   void NandQueue(nand_operation_t* op, nand_queue_callback completion_cb, void* cookie);
   zx_status_t NandGetFactoryBadBlockList(uint32_t* bad_blocks, size_t bad_block_len,
                                          size_t* num_bad_blocks);
+
+  zx::vmo GetDuplicateInspectVmoForTest() const;
 
  private:
   // Maps the data and oob vmos from the specified |nand_op| into memory.
@@ -73,6 +82,22 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
 
   nand_info_t nand_info_;
   uint32_t num_nand_pages_;
+
+  inspect::Inspector inspect_;
+  inspect::Node root_;
+
+  // Track number of bit flips in each read attempt, ECC failures records max ECC plus one.
+  inspect::LinearUintHistogram read_ecc_bit_flips_;
+
+  // Number of read attempts until success. Failures will populate as maxint to go in the overflow
+  // bucket.
+  inspect::ExponentialUintHistogram read_attempts_;
+
+  // Count internal read failures
+  inspect::UintProperty read_internal_failure_;
+
+  // Count read failures where all retries are exhausted.
+  inspect::UintProperty read_failure_;
 
   thrd_t worker_thread_;
 
