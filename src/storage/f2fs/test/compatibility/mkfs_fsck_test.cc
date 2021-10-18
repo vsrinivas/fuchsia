@@ -50,7 +50,7 @@ TEST(CompatibilityTest, SimpleMkfsFsckTest) {
   auto ret = mkfs.DoMkfs();
   ASSERT_EQ(ret.is_error(), false);
 
-  // mkfs on Fuchsia
+  // fsck on host
   command = "fsck.f2fs ";
   command.append(test_path2);
   ASSERT_EQ(system(command.c_str()), 0);

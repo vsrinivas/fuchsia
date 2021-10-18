@@ -48,10 +48,9 @@ F2fs::F2fs(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc,
   }
 }
 #else   // __Fuchsia__
-F2fs::F2fs(std::unique_ptr<f2fs::Bcache> bc, Superblock* sb, const MountOptions& mount_options)
-    : bc_(std::move(bc)), mount_options_(mount_options) {
-  raw_sb_.reset(sb);
-}
+F2fs::F2fs(std::unique_ptr<f2fs::Bcache> bc, std::unique_ptr<Superblock> sb,
+           const MountOptions& mount_options)
+    : bc_(std::move(bc)), mount_options_(mount_options), raw_sb_(std::move(sb)) {}
 #endif  // __Fuchsia__
 
 F2fs::~F2fs() {}
@@ -71,7 +70,7 @@ zx_status_t F2fs::Create(std::unique_ptr<f2fs::Bcache> bc, const MountOptions& o
 #ifdef __Fuchsia__
   *out = std::make_unique<F2fs>(dispatcher, std::move(bc), std::move(info), options);
 #else   // __Fuchsia__
-  *out = std::unique_ptr<F2fs>(new F2fs(std::move(bc), info, options));
+  *out = std::unique_ptr<F2fs>(new F2fs(std::move(bc), std::move(info), options));
 #endif  // __Fuchsia__
 
   if (zx_status_t status = (*out)->FillSuper(); status != ZX_OK) {

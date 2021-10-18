@@ -113,7 +113,7 @@ class F2fs : public fs::Vfs {
   explicit F2fs(async_dispatcher_t *dispatcher, std::unique_ptr<f2fs::Bcache> bc,
                 std::unique_ptr<Superblock> sb, const MountOptions &mount_options);
 #else   // __Fuchsia__
-  explicit F2fs(std::unique_ptr<f2fs::Bcache> bc, Superblock *sb,
+  explicit F2fs(std::unique_ptr<f2fs::Bcache> bc, std::unique_ptr<Superblock> sb,
                 const MountOptions &mount_options);
 #endif  // __Fuchsia__
 
