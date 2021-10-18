@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     if (f2fs::Mkfs(mkfs_options, std::move(bc)).is_error())
       return EXIT_FAILURE;
   } else if (!strcmp(argv[1], "fsck")) {
-    f2fs::Fsck(bc.get());
+    f2fs::Fsck(std::move(bc));
   } else if (!strcmp(argv[1], "mount")) {
     f2fs::MountOptions mount_options;
     f2fs::Mount(mount_options, std::move(bc));

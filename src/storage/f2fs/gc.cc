@@ -8,7 +8,7 @@ namespace f2fs {
 
 uint32_t SegmentManager::GetGcCost(uint32_t segno, VictimSelPolicy *p) {
   if (p->alloc_mode == AllocMode::kSSR)
-    return SegmentManager::GetSegmentEntry(segno)->ckpt_valid_blocks;
+    return SegmentManager::GetSegmentEntry(segno).ckpt_valid_blocks;
 
   ZX_ASSERT(0);
 #if 0  // porting needed

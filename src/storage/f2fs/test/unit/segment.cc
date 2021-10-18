@@ -79,9 +79,9 @@ TEST_F(SegmentManagerTest, DirtyToFree) {
     block_t old_addr = alloc_addr;
     fs_->GetSegmentManager().WriteNodePage(root_node_page, superblock_info.GetRootIno(), old_addr,
                                            &alloc_addr);
-    if (fs_->GetSegmentManager().GetValidBlocks(fs_->GetSegmentManager().GetSegNo(old_addr), 0) ==
-        0) {
-      prefree_array.push_back(fs_->GetSegmentManager().GetSegNo(old_addr));
+    if (fs_->GetSegmentManager().GetValidBlocks(fs_->GetSegmentManager().GetSegmentNumber(old_addr),
+                                                0) == 0) {
+      prefree_array.push_back(fs_->GetSegmentManager().GetSegmentNumber(old_addr));
       ASSERT_EQ(fs_->GetSegmentManager().PrefreeSegments(), ++nprefree);
     }
   }

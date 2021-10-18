@@ -35,7 +35,7 @@ TEST(CompatibilityTest, SimpleMkfsFsckTest) {
   // fsck on Fuchsia
   std::unique_ptr<Bcache> bcache;
   ASSERT_EQ(Bcache::Create(std::move(fd), kBlockCount, &bcache), ZX_OK);
-  ASSERT_EQ(Fsck(bcache.get()), ZX_OK);
+  ASSERT_EQ(Fsck(std::move(bcache)), ZX_OK);
 
   // Get test file
   std::string test_path2 = GenerateTestPath(test_file_format);

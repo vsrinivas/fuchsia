@@ -305,9 +305,9 @@ void MapTester::CheckBlkaddrsFree(F2fs *fs, std::unordered_set<block_t> &blkaddr
   SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
   for (auto blkaddr : blkaddrs) {
     SegmentManager &manager = fs->GetSegmentManager();
-    SegmentEntry *se = manager.GetSegmentEntry(manager.GetSegNo(blkaddr));
+    SegmentEntry &se = manager.GetSegmentEntry(manager.GetSegmentNumber(blkaddr));
     uint32_t offset = manager.GetSegOffFromSeg0(blkaddr) & (superblock_info.GetBlocksPerSeg() - 1);
-    ASSERT_EQ(TestValidBitmap(offset, se->ckpt_valid_map.get()), 0);
+    ASSERT_EQ(TestValidBitmap(offset, se.ckpt_valid_map.get()), 0);
   }
 }
 
@@ -315,9 +315,9 @@ void MapTester::CheckBlkaddrsInuse(F2fs *fs, std::unordered_set<block_t> &blkadd
   SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
   for (auto blkaddr : blkaddrs) {
     SegmentManager &manager = fs->GetSegmentManager();
-    SegmentEntry *se = manager.GetSegmentEntry(manager.GetSegNo(blkaddr));
+    SegmentEntry &se = manager.GetSegmentEntry(manager.GetSegmentNumber(blkaddr));
     uint32_t offset = manager.GetSegOffFromSeg0(blkaddr) & (superblock_info.GetBlocksPerSeg() - 1);
-    ASSERT_NE(TestValidBitmap(offset, se->ckpt_valid_map.get()), 0);
+    ASSERT_NE(TestValidBitmap(offset, se.ckpt_valid_map.get()), 0);
   }
 }
 

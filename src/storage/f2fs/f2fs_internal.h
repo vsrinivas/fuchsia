@@ -43,7 +43,7 @@ inline void SetNidInJournal(SummaryBlock *sum, int i, nid_t nid) {
   sum->nat_j.entries[i].nid = nid;
 }
 
-inline SitEntry *SitInJournal(SummaryBlock *sum, int i) { return &sum->sit_j.entries[i].se; }
+inline SitEntry &SitInJournal(SummaryBlock *sum, int i) { return sum->sit_j.entries[i].se; }
 inline uint32_t SegnoInJournal(SummaryBlock *sum, int i) { return sum->sit_j.entries[i].segno; }
 inline void SetSegnoInJournal(SummaryBlock *sum, int i, uint32_t segno) {
   sum->sit_j.entries[i].segno = segno;
@@ -516,7 +516,7 @@ static inline block_t DatablockAddr(Page *node_page, uint64_t offset) {
   return LeToCpu(addr_array[offset]);
 }
 
-static inline int TestValidBitmap(uint64_t nr, uint8_t *addr) {
+static inline int TestValidBitmap(uint64_t nr, const uint8_t *addr) {
   int mask;
 
   addr += (nr >> 3);

@@ -293,11 +293,11 @@ struct SitEntry {
 
 constexpr uint32_t kSitEntryPerBlock = kPageCacheSize / sizeof(SitEntry);
 
-inline uint16_t GetSitVblocks(SitEntry *raw_sit) {
-  return LeToCpu(raw_sit->vblocks) & kSitVblocksMask;
+inline uint16_t GetSitVblocks(const SitEntry &raw_sit) {
+  return LeToCpu(raw_sit.vblocks) & kSitVblocksMask;
 }
-inline uint8_t GetSitType(SitEntry *raw_sit) {
-  return (LeToCpu(raw_sit->vblocks) & ~kSitVblocksMask) >> kSitVblocksShift;
+inline uint8_t GetSitType(const SitEntry &raw_sit) {
+  return (LeToCpu(raw_sit.vblocks) & ~kSitVblocksMask) >> kSitVblocksShift;
 }
 
 struct SitBlock {

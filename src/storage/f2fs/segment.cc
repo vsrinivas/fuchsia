@@ -8,21 +8,19 @@
 
 namespace f2fs {
 
-int UpdateNatsInCursum(SummaryBlock *rs, int i) {
-  int n_nats = NatsInCursum(rs);
-  rs->n_nats = CpuToLe(safemath::checked_cast<uint16_t>(n_nats + i));
+int UpdateNatsInCursum(SummaryBlock *raw_summary, int i) {
+  int n_nats = NatsInCursum(raw_summary);
+  raw_summary->n_nats = CpuToLe(safemath::checked_cast<uint16_t>(n_nats + i));
   return n_nats;
 }
 
-static int UpdateSitsInCursum(SummaryBlock *rs, int i) {
-  int n_sits = SitsInCursum(rs);
-  rs->n_sits = CpuToLe(safemath::checked_cast<uint16_t>(n_sits + i));
+static int UpdateSitsInCursum(SummaryBlock *raw_summary, int i) {
+  int n_sits = SitsInCursum(raw_summary);
+  raw_summary->n_sits = CpuToLe(safemath::checked_cast<uint16_t>(n_sits + i));
   return n_sits;
 }
 
-SegmentEntry *SegmentManager::GetSegmentEntry(uint32_t segno) {
-  return &sit_info_->sentries[segno];
-}
+SegmentEntry &SegmentManager::GetSegmentEntry(uint32_t segno) { return sit_info_->sentries[segno]; }
 
 SectionEntry *SegmentManager::GetSectionEntry(uint32_t segno) {
   return &sit_info_->sec_entries[GetSecNo(segno)];
@@ -34,25 +32,26 @@ uint32_t SegmentManager::GetValidBlocks(uint32_t segno, int section) {
   if (section > 1) {
     return GetSectionEntry(segno)->valid_blocks;
   }
-  return GetSegmentEntry(segno)->valid_blocks;
+  return GetSegmentEntry(segno).valid_blocks;
 }
 
-void SegmentManager::SegInfoFromRawSit(SegmentEntry *se, SitEntry *rs) {
-  se->valid_blocks = GetSitVblocks(rs);
-  se->ckpt_valid_blocks = GetSitVblocks(rs);
-  memcpy(se->cur_valid_map.get(), rs->valid_map, kSitVBlockMapSize);
-  memcpy(se->ckpt_valid_map.get(), rs->valid_map, kSitVBlockMapSize);
-  se->type = GetSitType(rs);
-  se->mtime = LeToCpu(uint64_t{rs->mtime});
+void SegmentManager::SegInfoFromRawSit(SegmentEntry &segment_entry, SitEntry &raw_sit) {
+  segment_entry.valid_blocks = GetSitVblocks(raw_sit);
+  segment_entry.ckpt_valid_blocks = GetSitVblocks(raw_sit);
+  memcpy(segment_entry.cur_valid_map.get(), raw_sit.valid_map, kSitVBlockMapSize);
+  memcpy(segment_entry.ckpt_valid_map.get(), raw_sit.valid_map, kSitVBlockMapSize);
+  segment_entry.type = GetSitType(raw_sit);
+  segment_entry.mtime = LeToCpu(uint64_t{raw_sit.mtime});
 }
 
-void SegmentManager::SegInfoToRawSit(SegmentEntry *se, SitEntry *rs) {
-  uint16_t raw_vblocks = static_cast<uint16_t>(se->type << kSitVblocksShift) | se->valid_blocks;
-  rs->vblocks = CpuToLe(raw_vblocks);
-  memcpy(rs->valid_map, se->cur_valid_map.get(), kSitVBlockMapSize);
-  memcpy(se->ckpt_valid_map.get(), rs->valid_map, kSitVBlockMapSize);
-  se->ckpt_valid_blocks = se->valid_blocks;
-  rs->mtime = CpuToLe(static_cast<uint64_t>(se->mtime));
+void SegmentManager::SegInfoToRawSit(SegmentEntry &segment_entry, SitEntry &raw_sit) {
+  uint16_t raw_vblocks =
+      static_cast<uint16_t>(segment_entry.type << kSitVblocksShift) | segment_entry.valid_blocks;
+  raw_sit.vblocks = CpuToLe(raw_vblocks);
+  memcpy(raw_sit.valid_map, segment_entry.cur_valid_map.get(), kSitVBlockMapSize);
+  memcpy(segment_entry.ckpt_valid_map.get(), raw_sit.valid_map, kSitVBlockMapSize);
+  segment_entry.ckpt_valid_blocks = segment_entry.valid_blocks;
+  raw_sit.mtime = CpuToLe(static_cast<uint64_t>(segment_entry.mtime));
 }
 
 uint32_t SegmentManager::FindNextInuse(uint32_t max, uint32_t segno) {
@@ -240,7 +239,7 @@ void SegmentManager::VerifyBlockAddr(block_t blk_addr) {
 #endif
 
 // Summary block is always treated as invalid block
-void SegmentManager::CheckBlockCount(int segno, SitEntry *raw_sit) {
+void SegmentManager::CheckBlockCount(int segno, SitEntry &raw_sit) {
   uint32_t end_segno = segment_count_ - 1;
   int valid_blocks = 0;
   uint32_t i;
@@ -253,7 +252,7 @@ void SegmentManager::CheckBlockCount(int segno, SitEntry *raw_sit) {
 
   // check bitmap with valid block count
   for (i = 0; i < superblock_info_->GetBlocksPerSeg(); ++i) {
-    if (TestValidBitmap(i, raw_sit->valid_map))
+    if (TestValidBitmap(i, raw_sit.valid_map))
       ++valid_blocks;
   }
   ZX_ASSERT(GetSitVblocks(raw_sit) == valid_blocks);
@@ -373,8 +372,8 @@ void SegmentManager::LocateDirtySegment(uint32_t segno, DirtyType dirty_type) {
     ++dirty_info_->nr_dirty[static_cast<int>(dirty_type)];
 
   if (dirty_type == DirtyType::kDirty) {
-    SegmentEntry *sentry = GetSegmentEntry(segno);
-    dirty_type = static_cast<DirtyType>(sentry->type);
+    SegmentEntry &sentry = GetSegmentEntry(segno);
+    dirty_type = static_cast<DirtyType>(sentry.type);
     if (!TestAndSetBit(segno, dirty_info_->dirty_segmap[static_cast<int>(dirty_type)].get()))
       ++dirty_info_->nr_dirty[static_cast<int>(dirty_type)];
   }
@@ -386,8 +385,8 @@ void SegmentManager::RemoveDirtySegment(uint32_t segno, DirtyType dirty_type) {
   }
 
   if (dirty_type == DirtyType::kDirty) {
-    SegmentEntry *sentry = GetSegmentEntry(segno);
-    dirty_type = static_cast<DirtyType>(sentry->type);
+    SegmentEntry &sentry = GetSegmentEntry(segno);
+    dirty_type = static_cast<DirtyType>(sentry.type);
     if (TestAndClearBit(segno, dirty_info_->dirty_segmap[static_cast<int>(dirty_type)].get())) {
       --dirty_info_->nr_dirty[static_cast<int>(dirty_type)];
     }
@@ -471,40 +470,38 @@ void SegmentManager::MarkSitEntryDirty(uint32_t segno) {
 }
 
 void SegmentManager::SetSitEntryType(CursegType type, uint32_t segno, int modified) {
-  SegmentEntry *se = GetSegmentEntry(segno);
-  se->type = static_cast<uint8_t>(type);
+  SegmentEntry &segment_entry = GetSegmentEntry(segno);
+  segment_entry.type = static_cast<uint8_t>(type);
   if (modified)
     MarkSitEntryDirty(segno);
 }
 
 void SegmentManager::UpdateSitEntry(block_t blkaddr, int del) {
-  SegmentEntry *se;
-  uint32_t segno, offset;
+  uint32_t offset;
   uint64_t new_vblocks;
+  uint32_t segno = GetSegmentNumber(blkaddr);
+  SegmentEntry &segment_entry = GetSegmentEntry(segno);
 
-  segno = GetSegNo(blkaddr);
-
-  se = GetSegmentEntry(segno);
-  new_vblocks = se->valid_blocks + del;
+  new_vblocks = segment_entry.valid_blocks + del;
   offset = GetSegOffFromSeg0(blkaddr) & (superblock_info_->GetBlocksPerSeg() - 1);
 
   ZX_ASSERT(!((new_vblocks >> (sizeof(uint16_t) << 3) ||
                (new_vblocks > superblock_info_->GetBlocksPerSeg()))));
 
-  se->valid_blocks = static_cast<uint16_t>(new_vblocks);
-  se->mtime = GetMtime();
-  sit_info_->max_mtime = se->mtime;
+  segment_entry.valid_blocks = static_cast<uint16_t>(new_vblocks);
+  segment_entry.mtime = GetMtime();
+  sit_info_->max_mtime = segment_entry.mtime;
 
   // Update valid block bitmap
   if (del > 0) {
-    if (SetValidBitmap(offset, se->cur_valid_map.get()))
+    if (SetValidBitmap(offset, segment_entry.cur_valid_map.get()))
       ZX_ASSERT(0);
   } else {
-    if (!ClearValidBitmap(offset, se->cur_valid_map.get()))
+    if (!ClearValidBitmap(offset, segment_entry.cur_valid_map.get()))
       ZX_ASSERT(0);
   }
-  if (!TestValidBitmap(offset, se->ckpt_valid_map.get()))
-    se->ckpt_valid_blocks += del;
+  if (!TestValidBitmap(offset, segment_entry.ckpt_valid_map.get()))
+    segment_entry.ckpt_valid_blocks += del;
 
   MarkSitEntryDirty(segno);
 
@@ -517,12 +514,12 @@ void SegmentManager::UpdateSitEntry(block_t blkaddr, int del) {
 
 void SegmentManager::RefreshSitEntry(block_t old_blkaddr, block_t new_blkaddr) {
   UpdateSitEntry(new_blkaddr, 1);
-  if (GetSegNo(old_blkaddr) != kNullSegNo)
+  if (GetSegmentNumber(old_blkaddr) != kNullSegNo)
     UpdateSitEntry(old_blkaddr, -1);
 }
 
 void SegmentManager::InvalidateBlocks(block_t addr) {
-  uint32_t segno = GetSegNo(addr);
+  uint32_t segno = GetSegmentNumber(addr);
 
   ZX_ASSERT(addr != kNullAddr);
   if (addr == kNewAddr)
@@ -733,11 +730,11 @@ void SegmentManager::NewCurseg(CursegType type, bool new_sec) {
 
 void SegmentManager::NextFreeBlkoff(CursegInfo *seg, block_t start) {
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
-  SegmentEntry *se = GetSegmentEntry(seg->segno);
+  SegmentEntry &segment_entry = GetSegmentEntry(seg->segno);
   block_t ofs;
   for (ofs = start; ofs < superblock_info.GetBlocksPerSeg(); ++ofs) {
-    if (!TestValidBitmap(ofs, se->ckpt_valid_map.get()) &&
-        !TestValidBitmap(ofs, se->cur_valid_map.get()))
+    if (!TestValidBitmap(ofs, segment_entry.ckpt_valid_map.get()) &&
+        !TestValidBitmap(ofs, segment_entry.cur_valid_map.get()))
       break;
   }
   seg->next_blkoff = static_cast<uint16_t>(ofs);
@@ -1054,8 +1051,8 @@ void SegmentManager::DoWritePage(Page *page, block_t old_blkaddr, block_t *new_b
         AllocateSegmentByDefault(type, false);
       }
 
-      LocateDirtySegment(GetSegNo(old_blkaddr));
-      LocateDirtySegment(GetSegNo(*new_blkaddr));
+      LocateDirtySegment(GetSegmentNumber(old_blkaddr));
+      LocateDirtySegment(GetSegmentNumber(*new_blkaddr));
     }
 
     if (p_type == PageType::kNode)
@@ -1102,15 +1099,14 @@ void SegmentManager::RewriteDataPage(Page *page, block_t old_blk_addr) {
 void SegmentManager::RecoverDataPage(Page *page, Summary *sum, block_t old_blkaddr,
                                      block_t new_blkaddr) {
   CursegInfo *curseg;
-  uint32_t segno, old_cursegno;
-  SegmentEntry *se;
+  uint32_t old_cursegno;
   CursegType type;
+  uint32_t segno = GetSegmentNumber(new_blkaddr);
+  SegmentEntry &segment_entry = GetSegmentEntry(segno);
 
-  segno = GetSegNo(new_blkaddr);
-  se = GetSegmentEntry(segno);
-  type = static_cast<CursegType>(se->type);
+  type = static_cast<CursegType>(segment_entry.type);
 
-  if (se->valid_blocks == 0 && !IsCurSeg(segno)) {
+  if (segment_entry.valid_blocks == 0 && !IsCurSeg(segno)) {
     if (old_blkaddr == kNullAddr) {
       type = CursegType::kCursegColdData;
     } else {
@@ -1139,8 +1135,8 @@ void SegmentManager::RecoverDataPage(Page *page, Summary *sum, block_t old_blkad
   RefreshSitEntry(old_blkaddr, new_blkaddr);
 
   LocateDirtySegment(old_cursegno);
-  LocateDirtySegment(GetSegNo(old_blkaddr));
-  LocateDirtySegment(GetSegNo(new_blkaddr));
+  LocateDirtySegment(GetSegmentNumber(old_blkaddr));
+  LocateDirtySegment(GetSegmentNumber(new_blkaddr));
 }
 
 void SegmentManager::RewriteNodePage(Page *page, Summary *sum, block_t old_blkaddr,
@@ -1149,7 +1145,7 @@ void SegmentManager::RewriteNodePage(Page *page, Summary *sum, block_t old_blkad
   CursegInfo *curseg;
   uint32_t segno, old_cursegno;
   block_t next_blkaddr = NodeManager::NextBlkaddrOfNode(*page);
-  uint32_t next_segno = GetSegNo(next_blkaddr);
+  uint32_t next_segno = GetSegmentNumber(next_blkaddr);
 
   curseg = CURSEG_I(type);
 
@@ -1158,7 +1154,7 @@ void SegmentManager::RewriteNodePage(Page *page, Summary *sum, block_t old_blkad
   fbl::AutoLock sentry_lock(&sit_info_->sentry_lock);
 #endif  // __Fuchsia__
 
-  segno = GetSegNo(new_blkaddr);
+  segno = GetSegmentNumber(new_blkaddr);
   old_cursegno = curseg->segno;
 
   /* change the current segment */
@@ -1187,8 +1183,8 @@ void SegmentManager::RewriteNodePage(Page *page, Summary *sum, block_t old_blkad
   RefreshSitEntry(old_blkaddr, new_blkaddr);
 
   LocateDirtySegment(old_cursegno);
-  LocateDirtySegment(GetSegNo(old_blkaddr));
-  LocateDirtySegment(GetSegNo(new_blkaddr));
+  LocateDirtySegment(GetSegmentNumber(old_blkaddr));
+  LocateDirtySegment(GetSegmentNumber(new_blkaddr));
 }
 
 int SegmentManager::ReadCompactedSummaries() {
@@ -1524,7 +1520,7 @@ void SegmentManager::FlushSitEntries() {
     flushed = FlushSitsInJournal();
 
     while ((segno = FindNextBit(bitmap, nsegs, segno + 1)) < nsegs) {
-      SegmentEntry *se = GetSegmentEntry(segno);
+      SegmentEntry &segment_entry = GetSegmentEntry(segno);
       int sit_offset, offset = -1;
 
       sit_offset = SitEntryOffset(segno);
@@ -1535,7 +1531,7 @@ void SegmentManager::FlushSitEntries() {
 
       if (offset >= 0) {
         SetSegnoInJournal(sum, offset, CpuToLe(segno));
-        SegInfoToRawSit(se, SitInJournal(sum, offset));
+        SegInfoToRawSit(segment_entry, SitInJournal(sum, offset));
       } else {
         if (!page || (start > segno) || (segno > end)) {
           if (page) {
@@ -1554,7 +1550,7 @@ void SegmentManager::FlushSitEntries() {
         }
 
         // udpate entry in SIT block
-        SegInfoToRawSit(se, &raw_sit->entries[sit_offset]);
+        SegInfoToRawSit(segment_entry, raw_sit->entries[sit_offset]);
       }
       ClearBit(segno, bitmap);
       --sit_info_->dirty_sentries;
@@ -1667,7 +1663,7 @@ void SegmentManager::BuildSitEntries() {
   SummaryBlock *sum = curseg->sum_blk;
 
   for (uint32_t start = 0; start < TotalSegs(); ++start) {
-    SegmentEntry *se = &sit_info_->sentries[start];
+    SegmentEntry &segment_entry = sit_info_->sentries[start];
     SitBlock *sit_blk;
     SitEntry sit;
     Page *page = nullptr;
@@ -1678,7 +1674,7 @@ void SegmentManager::BuildSitEntries() {
 #endif  // __Fuchsia__
       for (int i = 0; i < SitsInCursum(sum); ++i) {
         if (LeToCpu(SegnoInJournal(sum, i)) == start) {
-          sit = *SitInJournal(sum, i);
+          sit = SitInJournal(sum, i);
           got_it = true;
           break;
         }
@@ -1690,11 +1686,11 @@ void SegmentManager::BuildSitEntries() {
       sit = sit_blk->entries[SitEntryOffset(start)];
       F2fsPutPage(page, 1);
     }
-    CheckBlockCount(start, &sit);
-    SegInfoFromRawSit(se, &sit);
+    CheckBlockCount(start, sit);
+    SegInfoFromRawSit(segment_entry, sit);
     if (superblock_info_->GetSegsPerSec() > 1) {
       SectionEntry *e = GetSectionEntry(start);
-      e->valid_blocks += se->valid_blocks;
+      e->valid_blocks += segment_entry.valid_blocks;
     }
   }
 }
@@ -1704,8 +1700,8 @@ void SegmentManager::InitFreeSegmap() {
   int type;
 
   for (start = 0; start < TotalSegs(); ++start) {
-    SegmentEntry *sentry = GetSegmentEntry(start);
-    if (!sentry->valid_blocks)
+    SegmentEntry &sentry = GetSegmentEntry(start);
+    if (!sentry.valid_blocks)
       SetFree(start);
   }
 
@@ -1781,7 +1777,7 @@ void SegmentManager::InitMinMaxMtime() {
     uint64_t mtime = 0;
 
     for (i = 0; i < superblock_info_->GetSegsPerSec(); ++i)
-      mtime += GetSegmentEntry(segno + i)->mtime;
+      mtime += GetSegmentEntry(segno + i).mtime;
 
     mtime = DivU64(mtime, superblock_info_->GetSegsPerSec());
 

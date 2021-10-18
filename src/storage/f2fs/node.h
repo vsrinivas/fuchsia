@@ -174,7 +174,7 @@ class NodeManager {
   void SetMaxNid(const nid_t value) { max_nid_ = value; }
   nid_t GetMaxNid() const { return max_nid_; }
   void SetNatAddress(const block_t value) { nat_blkaddr_ = value; }
-  nid_t GetNatAddress() { return nat_blkaddr_; }
+  block_t GetNatAddress() { return nat_blkaddr_; }
   void SetFirstScanNid(const nid_t value) { init_scan_nid_ = value; }
   nid_t GetFirstScanNid() const { return init_scan_nid_; }
   void SetNextScanNid(const nid_t value) { next_scan_nid_ = value; }

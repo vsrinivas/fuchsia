@@ -192,8 +192,7 @@ void F2fs::DestroyFsyncDnodes(list_node_t *head) {
 
 void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
-  SegmentEntry *sentry;
-  uint32_t segno = segment_manager_->GetSegNo(blkaddr);
+  uint32_t segno = segment_manager_->GetSegmentNumber(blkaddr);
   uint16_t blkoff = static_cast<uint16_t>(segment_manager_->GetSegOffFromSeg0(blkaddr) &
                                           (superblock_info.GetBlocksPerSeg() - 1));
   Summary sum;
@@ -206,9 +205,10 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
   int i;
   __UNUSED zx_status_t err = 0;
 
-  sentry = GetSegmentManager().GetSegmentEntry(segno);
-  if (!TestValidBitmap(blkoff, sentry->cur_valid_map.get()))
+  SegmentEntry &sentry = GetSegmentManager().GetSegmentEntry(segno);
+  if (!TestValidBitmap(blkoff, sentry.cur_valid_map.get())) {
     return;
+  }
 
   /* Get the previous summary */
   for (i = static_cast<int>(CursegType::kCursegWarmData);

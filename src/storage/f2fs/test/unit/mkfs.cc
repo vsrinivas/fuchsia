@@ -511,7 +511,7 @@ TEST(FormatFilesystemTest, BlockSize) {
       root_dir.reset();
 
       FileTester::Unmount(std::move(fs), &bc);
-      EXPECT_EQ(Fsck(bc.get()), ZX_OK);
+      EXPECT_EQ(Fsck(std::move(bc), &bc), ZX_OK);
     }
   }
 }
