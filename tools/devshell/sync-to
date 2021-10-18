@@ -1,7 +1,18 @@
-#!/usr/bin/env python3
+#!/bin/bash
 # Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
+# In Python this is a triple-quoted string, but when this script is run by Bash,
+# it ignores the four quotes (interpreting them as two single-quoted empty
+# strings) and re-execs the script using the prebuilt Python interpreter,
+# ensuring that the script won't fail if run on a machine that has an outdated
+# version of Python.
+#
+# TODO(fxbug.dev/79905): Remove this workaround once `fx` itself uses
+# hermetic-env to exec subcommands.
+# pylint: disable=pointless-string-statement
+''''exec "$FUCHSIA_DIR/scripts/hermetic-env" python3 -u -- "$0" ${1+"$@"} # '''
 
 # TODO(olivernewman): Delete the old version of `fx sync-to` and replace it with
 # this one once feature parity is reached.
@@ -103,7 +114,7 @@ RELEASE_TAG_REGEX = r"^releases\/[0-9.A-Z]+$"
 TIMESTAMP_REGEX = r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]+[-+][0-9:]+$"
 # Matches a git revision, with an optional "git:" prefix to distinguish an
 # all-digit revision from a LUCI build ID.
-GIT_REVISION_REGEX = r"^(git:)?[0-9a-z]{3,40}$"
+GIT_REVISION_REGEX = r"^(git:)?[0-9a-f]{3,40}$"
 # Matches a LUCI build ID, with an optional leading "b" like is included in LUCI
 # build URLs.
 BUILD_ID_REGEX = r"^b?[0-9]+$"
@@ -252,7 +263,7 @@ class SyncToCommand:
         if not self.is_valid_integration_rev(revision):
             raise Error(
                 f"Commit not found, is {self.state!r} a commit from a repo other"
-                "than your local integration repo?"
+                " than your local integration repo?"
                 "See valid commits by running:\n"
                 "  git -C ${FUCHSIA_DIR}/integration log --oneline")
         self.sync_to_integration_ref(revision)
