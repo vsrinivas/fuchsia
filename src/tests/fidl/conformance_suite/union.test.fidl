@@ -19,6 +19,15 @@ type SingleVariantUnionStruct = struct {
     u SingleVariantUnion;
 };
 
+type Uint8Union = strict union {
+    1: uint8_value uint8;
+    2: empty_struct EmptyStruct;
+};
+
+type Uint8UnionStruct = struct {
+    u Uint8Union;
+};
+
 // Union tags follow the explicit ordinal order, not source order.
 type ReverseOrdinalUnion = strict union {
     4: x int64; // tag 2

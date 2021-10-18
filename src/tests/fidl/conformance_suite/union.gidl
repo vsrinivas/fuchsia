@@ -46,7 +46,7 @@ encode_failure("UnionWithBoundString_ExceedsBounds") {
 }
 
 success("UnionMigration_SingleVariant") {
-        value = SingleVariantUnionStruct {
+    value = SingleVariantUnionStruct {
         u: SingleVariantUnion {
             x: 42,
         },
@@ -66,6 +66,53 @@ success("UnionMigration_SingleVariant") {
             num(42):4, num(0):2, num(1):2, // envelope
         ],
     },
+}
+
+success("UnionMigration_Uint8Union_1") {
+    value = Uint8UnionStruct {
+        u: Uint8Union {
+            uint8_value: 42,
+        },
+    },
+    bytes = {
+        v1 = [
+            // primary object
+            num(1):8, // ordinal
+            num(8):4, num(0):4, repeat(0xff):8, // envelope
+
+            // secondary object 1: uint8_value
+            num(42):1, padding:7,
+        ],
+        v2 = [
+            // primary object
+            num(1):8, // ordinal
+            num(42):4, num(0):2, num(1):2, // envelope
+        ],
+    }
+}
+
+success("UnionMigration_Uint8Union_2") {
+    value = Uint8UnionStruct {
+        u: Uint8Union {
+            empty_struct: EmptyStruct{
+            },
+        },
+    },
+    bytes = {
+        v1 = [
+            // primary object
+            num(2):8, // ordinal
+            num(8):4, num(0):4, repeat(0xff):8, // envelope
+
+            // secondary object 1: uint8_value
+            num(0):1, padding:7,
+        ],
+        v2 = [
+            // primary object
+            num(2):8, // ordinal
+            num(0):4, num(0):2, num(1):2, // envelope
+        ],
+    }
 }
 
 success("ReverseOrdinalUnion") {
