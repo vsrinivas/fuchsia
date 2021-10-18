@@ -1120,11 +1120,11 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
 }
 
 void AttributeArgSchema::ValidateValue(Reporter* reporter, const MaybeAttributeArg maybe_arg,
-                                       const std::unique_ptr<Attribute>& attribute) const {
+                                       const Attribute* attribute) const {
   // This argument was not specified - is that allowed?
   if (!maybe_arg.has_value()) {
     if (!IsOptional()) {
-      reporter->Report(ErrMissingRequiredAttributeArg, attribute->span(), attribute.get(), name_);
+      reporter->Report(ErrMissingRequiredAttributeArg, attribute->span(), attribute, name_);
     }
   }
 }
@@ -1140,15 +1140,14 @@ AttributeSchema AttributeSchema::Deprecated() {
   return AttributeSchema({AttributePlacement::kDeprecated});
 }
 
-bool AttributeSchema::ValidatePlacement(Reporter* reporter,
-                                        const std::unique_ptr<Attribute>& attribute,
+bool AttributeSchema::ValidatePlacement(Reporter* reporter, const Attribute* attribute,
                                         const Attributable* attributable) const {
   if (allowed_placements_.empty()) {
     return true;
   }
 
   if (IsDeprecated()) {
-    reporter->Report(ErrDeprecatedAttribute, attribute->span(), attribute.get());
+    reporter->Report(ErrDeprecatedAttribute, attribute->span(), attribute);
     return false;
   }
 
@@ -1162,13 +1161,13 @@ bool AttributeSchema::ValidatePlacement(Reporter* reporter,
       case AttributePlacement::kUnionDecl: {
         const auto* decl = static_cast<const Decl*>(attributable);
         if (decl->name.as_anonymous() == nullptr) {
-          reporter->Report(ErrInvalidAttributePlacement, attribute->span(), attribute.get());
+          reporter->Report(ErrInvalidAttributePlacement, attribute->span(), attribute);
           return false;
         }
         return true;
       }
       default:
-        reporter->Report(ErrInvalidAttributePlacement, attribute->span(), attribute.get());
+        reporter->Report(ErrInvalidAttributePlacement, attribute->span(), attribute);
         return false;
     }
   }
@@ -1176,12 +1175,11 @@ bool AttributeSchema::ValidatePlacement(Reporter* reporter,
   auto iter = allowed_placements_.find(attributable->placement);
   if (iter != allowed_placements_.end())
     return true;
-  reporter->Report(ErrInvalidAttributePlacement, attribute->span(), attribute.get());
+  reporter->Report(ErrInvalidAttributePlacement, attribute->span(), attribute);
   return false;
 }
 
-bool AttributeSchema::ValidateArgs(Reporter* reporter,
-                                   const std::unique_ptr<Attribute>& attribute) const {
+bool AttributeSchema::ValidateArgs(Reporter* reporter, const Attribute* attribute) const {
   // An attribute that has already been resolved (for example, on a composed method that is
   // referenced via pointer by its compositor) is assumed to be valid, since that prior resolution
   // would have needed to have successfully called ValidateArgs already.
@@ -1203,7 +1201,7 @@ bool AttributeSchema::ValidateArgs(Reporter* reporter,
     // Error if the user supplied an anonymous argument, like `@foo("abc")` for an attribute whose
     // schema specifies multiple arguments (and therefore requires that they always be named).
     if (arg_schemas_.size() == 0) {
-      reporter->Report(ErrAttributeDisallowsArgs, attribute->span(), attribute.get());
+      reporter->Report(ErrAttributeDisallowsArgs, attribute->span(), attribute);
       ok = false;
     } else if (arg_schemas_.size() > 1) {
       reporter->Report(ErrAttributeArgNotNamed, attribute->span(), &anon_arg.value().get());
@@ -1238,8 +1236,7 @@ bool AttributeSchema::ValidateArgs(Reporter* reporter,
       assert(arg->name.has_value() && "anonymous arguments should not be seen here");
       auto schema = arg_schemas_.find(arg->name.value());
       if (schema == arg_schemas_.end()) {
-        reporter->Report(ErrUnknownAttributeArg, attribute->span(), attribute.get(),
-                         arg->name.value());
+        reporter->Report(ErrUnknownAttributeArg, attribute->span(), attribute, arg->name.value());
         ok = false;
       }
     }
@@ -1247,8 +1244,7 @@ bool AttributeSchema::ValidateArgs(Reporter* reporter,
   return ok;
 }
 
-bool AttributeSchema::ValidateConstraint(Reporter* reporter,
-                                         const std::unique_ptr<Attribute>& attribute,
+bool AttributeSchema::ValidateConstraint(Reporter* reporter, const Attribute* attribute,
                                          const Attributable* attributable) const {
   assert(attributable);
   auto check = reporter->Checkpoint();
@@ -1258,12 +1254,12 @@ bool AttributeSchema::ValidateConstraint(Reporter* reporter,
     return true;
   }
   if (check.NoNewErrors()) {
-    reporter->Report(ErrAttributeConstraintNotSatisfied, attribute->span(), attribute.get());
+    reporter->Report(ErrAttributeConstraintNotSatisfied, attribute->span(), attribute);
   }
   return false;
 }
 
-bool AttributeSchema::ResolveArgs(Library* library, std::unique_ptr<Attribute>& attribute) const {
+bool AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const {
   if (attribute->resolved) {
     return true;
   }
@@ -1330,7 +1326,7 @@ bool AttributeSchema::ResolveArgs(Library* library, std::unique_ptr<Attribute>& 
   return ok;
 }
 
-bool SimpleLayoutConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attr,
+bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
                             const Attributable* attributable) {
   assert(attributable);
   bool ok = true;
@@ -1373,15 +1369,15 @@ bool SimpleLayoutConstraint(Reporter* reporter, const std::unique_ptr<Attribute>
   return ok;
 }
 
-bool ParseBound(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
-                const std::string& input, uint32_t* out_value) {
+bool ParseBound(Reporter* reporter, const Attribute* attribute, const std::string& input,
+                uint32_t* out_value) {
   auto result = utils::ParseNumeric(input, out_value, 10);
   switch (result) {
     case utils::ParseNumericResult::kOutOfBounds:
-      reporter->Report(ErrBoundIsTooBig, attribute->span(), attribute.get(), input);
+      reporter->Report(ErrBoundIsTooBig, attribute->span(), attribute, input);
       return false;
     case utils::ParseNumericResult::kMalformed: {
-      reporter->Report(ErrUnableToParseBound, attribute->span(), attribute.get(), input);
+      reporter->Report(ErrUnableToParseBound, attribute->span(), attribute, input);
       return false;
     }
     case utils::ParseNumericResult::kSuccess:
@@ -1396,11 +1392,11 @@ bool Library::VerifyInlineSize(const Struct* struct_decl) {
   return true;
 }
 
-bool OverrideNameConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+bool OverrideNameConstraint(Reporter* reporter, const Attribute* attribute,
                             const Attributable* attributable) {
   auto arg = attribute->GetArg("value");
   if (!arg.has_value()) {
-    reporter->Report(ErrMissingRequiredAnonymousAttributeArg, attribute->span(), attribute.get());
+    reporter->Report(ErrMissingRequiredAnonymousAttributeArg, attribute->span(), attribute);
     return false;
   }
   auto arg_value = static_cast<const flat::StringConstantValue&>(arg.value().get().value->Value());
@@ -1412,7 +1408,7 @@ bool OverrideNameConstraint(Reporter* reporter, const std::unique_ptr<Attribute>
   return true;
 }
 
-bool MaxBytesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
                         const Attributable* attributable) {
   assert(attributable);
   auto arg = attribute->GetArg("value");
@@ -1480,13 +1476,13 @@ bool MaxBytesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& at
   return true;
 }
 
-bool MaxHandlesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
                           const Attributable* attributable) {
   assert(attributable);
   auto arg = attribute->GetArg("value");
   if (!arg.has_value() ||
       arg.value().get().value->Value().kind != flat::ConstantValue::Kind::kString) {
-    reporter->Report(ErrInvalidAttributeType, attribute->span(), attribute.get());
+    reporter->Report(ErrInvalidAttributeType, attribute->span(), attribute);
     assert(false && "non-string attribute arguments not yet supported");
   }
   auto arg_value = static_cast<const flat::StringConstantValue&>(arg.value().get().value->Value());
@@ -1546,7 +1542,7 @@ bool MaxHandlesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& 
   return true;
 }
 
-bool ResultShapeConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+bool ResultShapeConstraint(Reporter* reporter, const Attribute* attribute,
                            const Attributable* attributable) {
   assert(attributable);
   assert(attributable->placement == AttributePlacement::kUnionDecl);
@@ -1588,7 +1584,7 @@ static std::string Trim(std::string s) {
   return s;
 }
 
-bool TransportConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+bool TransportConstraint(Reporter* reporter, const Attribute* attribute,
                          const Attributable* attributable) {
   assert(attributable);
   assert(attributable->placement == AttributePlacement::kProtocolDecl);
@@ -1750,10 +1746,10 @@ size_t EditDistance(const std::string& sequence1, const std::string& sequence2) 
   return last_row[s1_length];
 }
 
-const AttributeSchema* Libraries::RetrieveAttributeSchema(
-    Reporter* reporter, const std::unique_ptr<Attribute>& attribute, bool warn_on_typo) const {
+const AttributeSchema* Libraries::RetrieveAttributeSchema(Reporter* reporter,
+                                                          const Attribute* attribute,
+                                                          bool warn_on_typo) const {
   auto attribute_name = attribute->name;
-
   auto iter = attribute_schemas_.find(attribute_name);
   if (iter != attribute_schemas_.end()) {
     const auto& schema = iter->second;
@@ -1879,13 +1875,13 @@ bool Library::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>
 bool Library::ValidateAttributes(const Attributable* attributable) {
   bool ok = true;
   for (const auto& attribute : attributable->attributes->attributes) {
-    auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute);
+    auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute.get());
     if (schema == nullptr) {
       // This is a user-defined attribute, not an official attribute.
       continue;
     }
-    if (!(schema->ValidatePlacement(reporter_, attribute, attributable) &&
-          schema->ValidateConstraint(reporter_, attribute, attributable))) {
+    if (!(schema->ValidatePlacement(reporter_, attribute.get(), attributable) &&
+          schema->ValidateConstraint(reporter_, attribute.get(), attributable))) {
       ok = false;
     }
   }
@@ -3335,7 +3331,7 @@ bool Library::CompileAttributeList(AttributeList* attributes) {
   bool ok = true;
   if (!attributes->Empty()) {
     for (auto& attribute : attributes->attributes) {
-      auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute, true);
+      auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute.get(), true);
 
       // Check for duplicate args, and return early if we find them.
       std::set<std::string> seen;
@@ -3349,8 +3345,9 @@ bool Library::CompileAttributeList(AttributeList* attributes) {
 
       // If we have a schema, resolve each argument based on its expected schema-derived type.
       if (schema != nullptr && !schema->IsDeprecated()) {
-        ok = schema->ValidateArgs(reporter_, attribute) ? schema->ResolveArgs(this, attribute)
-                                                        : false;
+        ok = schema->ValidateArgs(reporter_, attribute.get())
+                 ? schema->ResolveArgs(this, attribute.get())
+                 : false;
         continue;
       }
 

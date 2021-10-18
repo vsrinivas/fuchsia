@@ -1004,7 +1004,7 @@ class AttributeArgSchema {
   ConstantValue::Kind Type() const { return type_; }
 
   void ValidateValue(Reporter* reporter, MaybeAttributeArg maybe_arg,
-                     const std::unique_ptr<Attribute>& attribute) const;
+                     const Attribute* attribute) const;
 
  private:
   static bool NoOpConstraint(Reporter* reporter, const std::unique_ptr<AttributeArg>& attribute_arg,
@@ -1026,9 +1026,8 @@ class AttributeArgSchema {
 // - A constraint which must be met by the declaration.
 class AttributeSchema {
  public:
-  using Constraint =
-      fit::function<bool(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
-                         const Attributable* attributable)>;
+  using Constraint = fit::function<bool(Reporter* reporter, const Attribute* attribute,
+                                        const Attributable* attributable)>;
 
   // This constructor is used to build a schema for an attribute that takes multiple arguments.
   explicit AttributeSchema(const std::set<AttributePlacement>& allowed_placements,
@@ -1060,12 +1059,12 @@ class AttributeSchema {
 
   size_t Size() const { return arg_schemas_.size(); }
 
-  bool ValidatePlacement(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+  bool ValidatePlacement(Reporter* reporter, const Attribute* attribute,
                          const Attributable* attributable) const;
 
-  bool ValidateArgs(Reporter* reporter, const std::unique_ptr<Attribute>& attribute) const;
+  bool ValidateArgs(Reporter* reporter, const Attribute* attribute) const;
 
-  bool ValidateConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+  bool ValidateConstraint(Reporter* reporter, const Attribute* attribute,
                           const Attributable* attributable) const;
 
   // Certain properties of an attribute may be inferred from the AttributeSchema onto the attribute
@@ -1075,10 +1074,10 @@ class AttributeSchema {
   //
   // This method should only be run after AttributeSchema::ValidateArgs() has been successfully
   // completed.
-  bool ResolveArgs(Library* target_library, std::unique_ptr<Attribute>& attribute) const;
+  bool ResolveArgs(Library* target_library, Attribute* attribute) const;
 
  private:
-  static bool NoOpConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+  static bool NoOpConstraint(Reporter* reporter, const Attribute* attribute,
                              const Attributable* attributable) {
     return true;
   }
@@ -1103,8 +1102,7 @@ class Libraries {
     assert(iter.second && "do not add schemas twice");
   }
 
-  const AttributeSchema* RetrieveAttributeSchema(Reporter* reporter,
-                                                 const std::unique_ptr<Attribute>& attribute,
+  const AttributeSchema* RetrieveAttributeSchema(Reporter* reporter, const Attribute* attribute,
                                                  bool warn_on_typo = false) const;
 
   std::set<std::vector<std::string_view>> Unused(const Library* target_library) const;

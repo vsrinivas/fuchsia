@@ -639,8 +639,7 @@ protocol MyProtocol {
   }
 }
 
-bool MustHaveThreeMembers(fidl::Reporter* reporter,
-                          const std::unique_ptr<fidl::flat::Attribute>& attribute,
+bool MustHaveThreeMembers(fidl::Reporter* reporter, const fidl::flat::Attribute* attribute,
                           const fidl::flat::Attributable* attributable) {
   switch (attributable->placement) {
     case fidl::flat::AttributePlacement::kStructDecl: {

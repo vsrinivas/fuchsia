@@ -278,9 +278,9 @@ constexpr ErrorDef<> ErrOnlyClientEndsInServices("service members must be client
 // ---------------------------------------------------------------------------
 // Attribute Validation: Placement, Values, Constraints
 // ---------------------------------------------------------------------------
-constexpr ErrorDef<flat::Attribute *> ErrInvalidAttributePlacement(
+constexpr ErrorDef<const flat::Attribute *> ErrInvalidAttributePlacement(
     "placement of attribute '{}' disallowed here");
-constexpr ErrorDef<flat::Attribute *> ErrDeprecatedAttribute("attribute '{}' is deprecated");
+constexpr ErrorDef<const flat::Attribute *> ErrDeprecatedAttribute("attribute '{}' is deprecated");
 constexpr ErrorDef<flat::AttributeArg *, flat::Attribute *>
     ErrCannotUseNumericArgsOnCustomAttributes(
         "argument '{}' on user-defined attribute '{}' cannot be a numeric value; use a 'bool' or "
@@ -289,17 +289,17 @@ constexpr ErrorDef ErrAttributeArgMustNotBeNamed(
     "attributes that take a single argument must not name that argument");
 constexpr ErrorDef<const flat::AttributeArg *> ErrAttributeArgNotNamed(
     "attributes that take multiple arguments must name all of them explicitly, but '{}' was not");
-constexpr ErrorDef<flat::Attribute *, std::string> ErrMissingRequiredAttributeArg(
+constexpr ErrorDef<const flat::Attribute *, std::string> ErrMissingRequiredAttributeArg(
     "attribute '{}' is missing the required '{}' argument");
-constexpr ErrorDef<flat::Attribute *> ErrMissingRequiredAnonymousAttributeArg(
+constexpr ErrorDef<const flat::Attribute *> ErrMissingRequiredAnonymousAttributeArg(
     "attribute '{}' is missing its required argument");
-constexpr ErrorDef<flat::Attribute *, std::string> ErrUnknownAttributeArg(
+constexpr ErrorDef<const flat::Attribute *, std::string> ErrUnknownAttributeArg(
     "attribute '{}' does not support the '{}' argument");
 constexpr ErrorDef<flat::Attribute *, std::string> ErrDuplicateAttributeArg(
     "attribute '{}' declares the '{}' argument multiple times");
-constexpr ErrorDef<flat::Attribute *> ErrAttributeDisallowsArgs(
+constexpr ErrorDef<const flat::Attribute *> ErrAttributeDisallowsArgs(
     "attribute '{}' does not support arguments");
-constexpr ErrorDef<flat::Attribute *> ErrAttributeConstraintNotSatisfied(
+constexpr ErrorDef<const flat::Attribute *> ErrAttributeConstraintNotSatisfied(
     "declaration did not satisfy constraint of attribute '{}'");
 constexpr ErrorDef<flat::Name> ErrUnionCannotBeSimple("union '{}' is not allowed to be simple");
 constexpr ErrorDef<std::string_view> ErrMemberMustBeSimple("member '{}' is not simple");
@@ -311,10 +311,11 @@ constexpr ErrorDef ErrInvalidErrorType(
     "invalid error type: must be int32, uint32 or an enum therof");
 constexpr ErrorDef<std::string, std::set<std::string>> ErrInvalidTransportType(
     "invalid transport type: got {} expected one of {}");
-constexpr ErrorDef<flat::Attribute *> ErrInvalidAttributeType("attribute '{}' has an invalid type");
-constexpr ErrorDef<flat::Attribute *, std::string> ErrBoundIsTooBig(
+constexpr ErrorDef<const flat::Attribute *> ErrInvalidAttributeType(
+    "attribute '{}' has an invalid type");
+constexpr ErrorDef<const flat::Attribute *, std::string> ErrBoundIsTooBig(
     "'{}' bound of '{}' is too big");
-constexpr ErrorDef<flat::Attribute *, std::string> ErrUnableToParseBound(
+constexpr ErrorDef<const flat::Attribute *, std::string> ErrUnableToParseBound(
     "unable to parse '{}' bound of '{}'");
 constexpr WarningDef<std::string, std::string> WarnAttributeTypo(
     "suspect attribute with name '{}'; did you mean '{}'?");
