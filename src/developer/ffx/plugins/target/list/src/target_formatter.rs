@@ -22,6 +22,8 @@ const STATE: &'static str = "STATE";
 const ADDRS: &'static str = "ADDRS/IP";
 const RCS: &'static str = "RCS";
 
+const UNKNOWN: &'static str = "<unknown>";
+
 const PADDING_SPACES: usize = 4;
 /// A trait for returning a consistent SSH address.
 ///
@@ -114,7 +116,7 @@ impl TryFrom<bridge::Target> for NameOnlyTarget {
     type Error = Error;
 
     fn try_from(t: bridge::Target) -> Result<Self> {
-        let name = t.nodename.unwrap_or("<unknown>".to_string());
+        let name = t.nodename.unwrap_or(UNKNOWN.to_string());
         Ok(Self(name))
     }
 }
@@ -376,7 +378,7 @@ impl StringifiedTarget {
         match (board_config, product_config) {
             (None, None) => format!("{:?}", t),
             (board, product) => {
-                format!("{}.{}", product.unwrap_or("<unknown>"), board.unwrap_or("<unknown>"))
+                format!("{}.{}", product.unwrap_or(UNKNOWN), board.unwrap_or(UNKNOWN))
             }
         }
     }
@@ -402,10 +404,8 @@ impl TryFrom<bridge::Target> for StringifiedTarget {
             target.target_type.ok_or(StringifyError::MissingTargetType)?,
         );
         Ok(Self {
-            nodename: StringifiedField::String(target.nodename.unwrap_or("<unknown>".to_string())),
-            serial: StringifiedField::String(
-                target.serial_number.unwrap_or("<unknown>".to_string()),
-            ),
+            nodename: StringifiedField::String(target.nodename.unwrap_or(UNKNOWN.to_string())),
+            serial: StringifiedField::String(target.serial_number.unwrap_or(UNKNOWN.to_string())),
             addresses: StringifiedTarget::field_from_addresses(
                 target.addresses.ok_or(StringifyError::MissingAddresses)?,
             ),
@@ -426,8 +426,8 @@ impl TryFrom<bridge::Target> for JsonTarget {
 
     fn try_from(target: bridge::Target) -> Result<Self, Self::Error> {
         Ok(Self {
-            nodename: json!(target.nodename.unwrap_or("<unknown>".to_string())),
-            serial: json!(target.serial_number.unwrap_or("<unknown>".to_string())),
+            nodename: json!(target.nodename.unwrap_or(UNKNOWN.to_string())),
+            serial: json!(target.serial_number.unwrap_or(UNKNOWN.to_string())),
             addresses: json!(target
                 .addresses
                 .unwrap_or(vec![])
