@@ -81,8 +81,6 @@ struct AttributeArg final {
   SourceSpan span_;
 };
 
-using MaybeAttributeArg = std::optional<std::reference_wrapper<const AttributeArg>>;
-
 struct Attribute final {
   // A constructor for synthetic attributes like "Result."
   explicit Attribute(std::string name) : name(std::move(name)) {}
@@ -93,13 +91,13 @@ struct Attribute final {
       : name(std::move(name)), args(std::move(args)), span_(span) {}
 
   bool HasArg(std::string_view arg_name) const;
-  MaybeAttributeArg GetArg(std::string_view arg_name) const;
+  const AttributeArg* GetArg(std::string_view arg_name) const;
   SourceSpan span() const { return span_; }
 
   // This pair of methods return affirmatively if the attribute in question has a single anonymous
   // argument.  A single non-anonymous argument (ex: `@foo(bar="abc")`) will return false.
   bool HasStandaloneAnonymousArg() const;
-  MaybeAttributeArg GetStandaloneAnonymousArg() const;
+  const AttributeArg* GetStandaloneAnonymousArg() const;
 
   const std::string name;
   std::vector<std::unique_ptr<AttributeArg>> args;
@@ -111,8 +109,6 @@ struct Attribute final {
   bool resolved = false;
 };
 
-using MaybeAttribute = std::optional<std::reference_wrapper<const Attribute>>;
-
 // In the flat AST, "no attributes" is represented by an AttributeList
 // containing an empty vector. (In the raw AST, null is used instead.)
 struct AttributeList final {
@@ -121,10 +117,10 @@ struct AttributeList final {
 
   bool Empty() const { return attributes.empty(); }
   bool HasAttribute(std::string_view attribute_name) const;
-  MaybeAttribute GetAttribute(std::string_view attribute_name) const;
+  const Attribute* GetAttribute(std::string_view attribute_name) const;
   bool HasAttributeArg(std::string_view attribute_name, std::string_view arg_name) const;
-  MaybeAttributeArg GetAttributeArg(std::string_view attribute_name,
-                                    std::string_view arg_name) const;
+  const AttributeArg* GetAttributeArg(std::string_view attribute_name,
+                                      std::string_view arg_name) const;
 
   std::vector<std::unique_ptr<Attribute>> attributes;
 };
@@ -223,10 +219,10 @@ struct Decl : public Attributable {
   const Name name;
 
   bool HasAttribute(std::string_view attribute_name) const;
-  MaybeAttribute GetAttribute(std::string_view attribute_name) const;
+  const Attribute* GetAttribute(std::string_view attribute_name) const;
   bool HasAttributeArg(std::string_view attribute_name, std::string_view arg_name) const;
-  MaybeAttributeArg GetAttributeArg(std::string_view attribute_name,
-                                    std::string_view arg_name) const;
+  const AttributeArg* GetAttributeArg(std::string_view attribute_name,
+                                      std::string_view arg_name) const;
   std::string GetName() const;
 
   bool compiling = false;
@@ -1003,7 +999,7 @@ class AttributeArgSchema {
 
   ConstantValue::Kind Type() const { return type_; }
 
-  void ValidateValue(Reporter* reporter, MaybeAttributeArg maybe_arg,
+  void ValidateValue(Reporter* reporter, const AttributeArg* maybe_arg,
                      const Attribute* attribute) const;
 
  private:

@@ -15,13 +15,13 @@ namespace fidl {
 namespace ordinals {
 
 std::string GetSelector(const flat::AttributeList* attributes, SourceSpan name) {
-  flat::MaybeAttribute maybe_selector_attr = attributes->GetAttribute("selector");
-  if (maybe_selector_attr.has_value()) {
-    auto selector_constant = maybe_selector_attr.value().get().GetArg("value");
-    if (selector_constant.has_value() &&
-        selector_constant.value().get().value->Value().kind == flat::ConstantValue::Kind::kString) {
-      auto selector_string_constant = static_cast<const flat::StringConstantValue&>(
-          selector_constant.value().get().value->Value());
+  const flat::Attribute* maybe_selector_attr = attributes->GetAttribute("selector");
+  if (maybe_selector_attr != nullptr) {
+    auto selector_constant = maybe_selector_attr->GetArg("value");
+    if (selector_constant != nullptr &&
+        selector_constant->value->Value().kind == flat::ConstantValue::Kind::kString) {
+      auto selector_string_constant =
+          static_cast<const flat::StringConstantValue&>(selector_constant->value->Value());
       return selector_string_constant.MakeContents();
     }
   }

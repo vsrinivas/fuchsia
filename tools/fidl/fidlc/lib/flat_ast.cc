@@ -164,78 +164,69 @@ uint32_t PrimitiveType::SubtypeSize(types::PrimitiveSubtype subtype) {
   }
 }
 
-bool Attribute::HasArg(std::string_view arg_name) const { return GetArg(arg_name).has_value(); }
+bool Attribute::HasArg(std::string_view arg_name) const { return GetArg(arg_name) != nullptr; }
 
-MaybeAttributeArg Attribute::GetArg(std::string_view arg_name) const {
+const AttributeArg* Attribute::GetArg(std::string_view arg_name) const {
   std::string name = utils::canonicalize(arg_name);
   for (const auto& arg : args) {
     if (arg->name == name) {
-      return *arg;
+      return arg.get();
     }
   }
-  return std::nullopt;
+  return nullptr;
 }
 
-bool Attribute::HasStandaloneAnonymousArg() const {
-  return GetStandaloneAnonymousArg().has_value();
-}
+bool Attribute::HasStandaloneAnonymousArg() const { return GetStandaloneAnonymousArg() != nullptr; }
 
-MaybeAttributeArg Attribute::GetStandaloneAnonymousArg() const {
+const AttributeArg* Attribute::GetStandaloneAnonymousArg() const {
   assert(!resolved &&
          "if calling after attribute compilation, use GetArg(...) with the resolved name instead");
-  MaybeAttributeArg anon_arg;
+  const AttributeArg* anon_arg = nullptr;
   [[maybe_unused]] size_t named_args = 0;
   for (const auto& arg : args) {
     if (!arg->name.has_value()) {
-      assert(!anon_arg.has_value() && "multiple anonymous arguments is a parser error");
-      anon_arg = *arg;
+      assert(anon_arg == nullptr && "multiple anonymous arguments is a parser error");
+      anon_arg = arg.get();
     } else {
       named_args += 1;
     }
   }
 
-  assert(!(anon_arg.has_value() && named_args > 0) &&
+  assert(!(anon_arg != nullptr && named_args > 0) &&
          "an attribute with both anonymous and named arguments is a parser error");
   return anon_arg;
 };
 
 bool AttributeList::HasAttribute(std::string_view attribute_name) const {
-  for (const auto& attribute : attributes) {
-    if (attribute->name == attribute_name)
-      return true;
-  }
-  return false;
+  return GetAttribute(attribute_name) != nullptr;
 }
 
-MaybeAttribute AttributeList::GetAttribute(std::string_view attribute_name) const {
+const Attribute* AttributeList::GetAttribute(std::string_view attribute_name) const {
   for (const auto& attribute : attributes) {
     if (attribute->name == attribute_name)
-      return *attribute;
+      return attribute.get();
   }
-  return std::nullopt;
+  return nullptr;
 }
 
 bool AttributeList::HasAttributeArg(std::string_view attribute_name,
                                     std::string_view arg_name) const {
-  auto attribute = GetAttribute(attribute_name);
-  if (!attribute)
-    return false;
-  return attribute.value().get().HasArg(arg_name);
+  return GetAttributeArg(attribute_name, arg_name) != nullptr;
 }
 
-MaybeAttributeArg AttributeList::GetAttributeArg(std::string_view attribute_name,
-                                                 std::string_view arg_name) const {
+const AttributeArg* AttributeList::GetAttributeArg(std::string_view attribute_name,
+                                                   std::string_view arg_name) const {
   auto attribute = GetAttribute(attribute_name);
   if (!attribute)
-    return std::nullopt;
-  return attribute.value().get().GetArg(arg_name);
+    return nullptr;
+  return attribute->GetArg(arg_name);
 }
 
 bool Decl::HasAttribute(std::string_view attribute_name) const {
   return attributes->HasAttribute(attribute_name);
 }
 
-MaybeAttribute Decl::GetAttribute(std::string_view attribute_name) const {
+const Attribute* Decl::GetAttribute(std::string_view attribute_name) const {
   return attributes->GetAttribute(attribute_name);
 }
 
@@ -243,8 +234,8 @@ bool Decl::HasAttributeArg(std::string_view attribute_name, std::string_view arg
   return attributes->HasAttributeArg(attribute_name, arg_name);
 }
 
-MaybeAttributeArg Decl::GetAttributeArg(std::string_view attribute_name,
-                                        std::string_view arg_name) const {
+const AttributeArg* Decl::GetAttributeArg(std::string_view attribute_name,
+                                          std::string_view arg_name) const {
   return attributes->GetAttributeArg(attribute_name, arg_name);
 }
 
@@ -1119,10 +1110,10 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
   return root_typespace;
 }
 
-void AttributeArgSchema::ValidateValue(Reporter* reporter, const MaybeAttributeArg maybe_arg,
+void AttributeArgSchema::ValidateValue(Reporter* reporter, const AttributeArg* maybe_arg,
                                        const Attribute* attribute) const {
   // This argument was not specified - is that allowed?
-  if (!maybe_arg.has_value()) {
+  if (maybe_arg == nullptr) {
     if (!IsOptional()) {
       reporter->Report(ErrMissingRequiredAttributeArg, attribute->span(), attribute, name_);
     }
@@ -1196,15 +1187,15 @@ bool AttributeSchema::ValidateArgs(Reporter* reporter, const Attribute* attribut
 
   // There are two distinct cases to handle here: a single, unnamed argument (`@foo("abc")`), and
   // zero or more named arguments (`@foo`, `@foo(bar="abc")` or `@foo(bar="abc",baz="def")`).
-  MaybeAttributeArg anon_arg = attribute->GetStandaloneAnonymousArg();
-  if (anon_arg.has_value()) {
+  const AttributeArg* anon_arg = attribute->GetStandaloneAnonymousArg();
+  if (anon_arg != nullptr) {
     // Error if the user supplied an anonymous argument, like `@foo("abc")` for an attribute whose
     // schema specifies multiple arguments (and therefore requires that they always be named).
     if (arg_schemas_.size() == 0) {
       reporter->Report(ErrAttributeDisallowsArgs, attribute->span(), attribute);
       ok = false;
     } else if (arg_schemas_.size() > 1) {
-      reporter->Report(ErrAttributeArgNotNamed, attribute->span(), &anon_arg.value().get());
+      reporter->Report(ErrAttributeArgNotNamed, attribute->span(), anon_arg);
       ok = false;
     }
 
@@ -1227,7 +1218,7 @@ bool AttributeSchema::ValidateArgs(Reporter* reporter, const Attribute* attribut
     for (const auto& arg_schema : arg_schemas_) {
       const auto& name = arg_schema.first;
       const auto& schema = arg_schema.second;
-      MaybeAttributeArg arg = attribute->GetArg(name);
+      const AttributeArg* arg = attribute->GetArg(name);
       schema.ValidateValue(reporter, arg, attribute);
     }
 
@@ -1395,11 +1386,11 @@ bool Library::VerifyInlineSize(const Struct* struct_decl) {
 bool OverrideNameConstraint(Reporter* reporter, const Attribute* attribute,
                             const Attributable* attributable) {
   auto arg = attribute->GetArg("value");
-  if (!arg.has_value()) {
+  if (arg == nullptr) {
     reporter->Report(ErrMissingRequiredAnonymousAttributeArg, attribute->span(), attribute);
     return false;
   }
-  auto arg_value = static_cast<const flat::StringConstantValue&>(arg.value().get().value->Value());
+  auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   if (!utils::IsValidIdentifierComponent(arg_value.MakeContents())) {
     reporter->Report(ErrInvalidNameOverride, attribute->span());
@@ -1412,11 +1403,10 @@ bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
                         const Attributable* attributable) {
   assert(attributable);
   auto arg = attribute->GetArg("value");
-  if (!arg.has_value() ||
-      arg.value().get().value->Value().kind != flat::ConstantValue::Kind::kString) {
+  if (arg == nullptr || arg->value->Value().kind != flat::ConstantValue::Kind::kString) {
     assert(false && "non-string attribute arguments not yet supported");
   }
-  auto arg_value = static_cast<const flat::StringConstantValue&>(arg.value().get().value->Value());
+  auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   uint32_t bound;
   if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
@@ -1480,12 +1470,11 @@ bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
                           const Attributable* attributable) {
   assert(attributable);
   auto arg = attribute->GetArg("value");
-  if (!arg.has_value() ||
-      arg.value().get().value->Value().kind != flat::ConstantValue::Kind::kString) {
+  if (arg == nullptr || arg->value->Value().kind != flat::ConstantValue::Kind::kString) {
     reporter->Report(ErrInvalidAttributeType, attribute->span(), attribute);
     assert(false && "non-string attribute arguments not yet supported");
   }
-  auto arg_value = static_cast<const flat::StringConstantValue&>(arg.value().get().value->Value());
+  auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   uint32_t bound;
   if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
@@ -1599,14 +1588,14 @@ bool TransportConstraint(Reporter* reporter, const Attribute* attribute,
   };
 
   auto arg = attribute->GetArg("value");
-  if (!arg.has_value()) {
+  if (arg == nullptr) {
     reporter->Report(ErrInvalidTransportType, attribute->span(), std::string("''"),
                      *kValidTransports);
     return false;
   }
-  if (arg.value().get().value->Value().kind != flat::ConstantValue::Kind::kString)
+  if (arg->value->Value().kind != flat::ConstantValue::Kind::kString)
     assert(false && "non-string attribute arguments not yet supported");
-  auto arg_value = static_cast<const flat::StringConstantValue&>(arg.value().get().value->Value());
+  auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   // Parse comma separated transports
   const std::string& value = arg_value.MakeContents();
@@ -2533,13 +2522,13 @@ namespace {
 // is present in the input attribute list, or does nothing otherwise.
 void MaybeOverrideName(const AttributeList& attributes, NamingContext* context) {
   auto override_attr = attributes.GetAttribute("generated_name");
-  if (!override_attr.has_value())
+  if (override_attr == nullptr)
     return;
-  auto override_name_arg = override_attr.value().get().GetStandaloneAnonymousArg();
-  if (!override_name_arg.has_value())
+  auto override_name_arg = override_attr->GetStandaloneAnonymousArg();
+  if (override_name_arg == nullptr)
     return;
 
-  const auto& attr_span = override_name_arg.value().get().value->span;
+  const auto& attr_span = override_name_arg->value->span;
   assert(attr_span.data().size() > 2 && "expected attribute arg to at least have quotes");
   // remove the quotes from string literal
   context->set_name_override(std::string(attr_span.data().substr(1, attr_span.data().size() - 2)));
