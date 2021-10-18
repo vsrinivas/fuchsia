@@ -518,6 +518,14 @@ mod test {
             include_str!("../test_data/target_formatter_build_config_product_missing_golden");
         static ref BUILD_CONFIG_BOARD_MISSING_GOLDEN: &'static str =
             include_str!("../test_data/target_formatter_build_config_board_missing_golden");
+        static ref JSON_BUILD_CONFIG_FULL_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_json_build_config_full_golden");
+        static ref JSON_BUILD_CONFIG_PRODUCT_MISSING_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_json_build_config_product_missing_golden");
+        static ref JSON_BUILD_CONFIG_BOARD_MISSING_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_json_build_config_board_missing_golden");
+        static ref JSON_BUILD_CONFIG_BOTH_MISSING_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_json_build_config_both_missing_golden");
     }
 
     fn make_valid_target() -> bridge::Target {
@@ -905,5 +913,49 @@ mod test {
 
         let formatter = JsonTargetFormatter::try_from(targets).unwrap();
         assert_eq!(formatter.targets.len(), 3);
+    }
+
+    #[test]
+    fn test_json_formatter_build_config_full() {
+        let b = String::from("board");
+        let p = String::from("default");
+        let mut t = make_valid_target();
+        t.board_config = Some(b);
+        t.product_config = Some(p);
+        let formatter = JsonTargetFormatter::try_from(vec![t]).unwrap();
+        let lines = formatter.lines(None);
+        assert_eq!(lines.join("\n"), JSON_BUILD_CONFIG_FULL_GOLDEN.to_string());
+    }
+
+    #[test]
+    fn test_json_formatter_build_config_product_missing() {
+        let b = String::from("x64");
+        let mut t = make_valid_target();
+        t.board_config = Some(b);
+        t.product_config = None;
+        let formatter = JsonTargetFormatter::try_from(vec![t]).unwrap();
+        let lines = formatter.lines(None);
+        assert_eq!(lines.join("\n"), JSON_BUILD_CONFIG_PRODUCT_MISSING_GOLDEN.to_string());
+    }
+
+    #[test]
+    fn test_json_formatter_build_config_board_missing() {
+        let p = String::from("foo");
+        let mut t = make_valid_target();
+        t.board_config = None;
+        t.product_config = Some(p);
+        let formatter = JsonTargetFormatter::try_from(vec![t]).unwrap();
+        let lines = formatter.lines(None);
+        assert_eq!(lines.join("\n"), JSON_BUILD_CONFIG_BOARD_MISSING_GOLDEN.to_string());
+    }
+
+    #[test]
+    fn test_json_formatter_build_config_both_missing() {
+        let mut t = make_valid_target();
+        t.board_config = None;
+        t.product_config = None;
+        let formatter = JsonTargetFormatter::try_from(vec![t]).unwrap();
+        let lines = formatter.lines(None);
+        assert_eq!(lines.join("\n"), JSON_BUILD_CONFIG_BOTH_MISSING_GOLDEN.to_string());
     }
 }
