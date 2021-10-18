@@ -128,10 +128,7 @@ fuchsia_package("dhcpd") {
 }
 
 group("dhcp") {
-  deps = [
-    ":dhcpd",
-    "sysmgr:config",
-  ]
+  deps = [ ":dhcpd" ]
 }
 
 group("tests") {
