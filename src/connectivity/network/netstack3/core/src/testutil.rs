@@ -83,6 +83,7 @@ pub(crate) mod benchmarks {
 /// # Security
 ///
 /// This is obviously insecure. Don't use it except in testing!
+#[derive(Clone)]
 pub(crate) struct FakeCryptoRng<R>(R);
 
 impl Default for FakeCryptoRng<XorShiftRng> {
@@ -690,6 +691,12 @@ impl Default for DummyEventDispatcher {
             icmpv4_replies: Default::default(),
             icmpv6_replies: Default::default(),
         }
+    }
+}
+
+impl DummyEventDispatcher {
+    pub(crate) fn rng(&self) -> &FakeCryptoRng<XorShiftRng> {
+        &self.rng
     }
 }
 

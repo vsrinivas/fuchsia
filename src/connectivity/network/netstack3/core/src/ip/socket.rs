@@ -11,12 +11,13 @@ use core::num::NonZeroU8;
 use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{SpecifiedAddr, UnicastAddr};
 use packet::{BufferMut, Serializer};
-use packet_formats::ip::{IpExt, Ipv4Proto, Ipv6Proto};
+use packet_formats::ip::{Ipv4Proto, Ipv6Proto};
 use packet_formats::{ipv4::Ipv4PacketBuilder, ipv6::Ipv6PacketBuilder};
+use rand::Rng;
 use thiserror::Error;
 
 use crate::device::{AddressEntry, DeviceId};
-use crate::ip::forwarding::ForwardingTable;
+use crate::ip::{forwarding::ForwardingTable, IpExt, Ipv6SocketData};
 use crate::socket::Socket;
 use crate::{BufferDispatcher, Ctx, EventDispatcher};
 
@@ -249,6 +250,7 @@ struct IpSockDefinition<I: IpExt> {
     proto: I::Proto,
     #[cfg_attr(not(test), allow(unused))]
     unroutable_behavior: UnroutableBehavior,
+    per_proto_data: I::SocketData,
 }
 
 /// Information which is cached inside an [`IpSock`].
@@ -393,16 +395,11 @@ fn compute_ipv6_cached_info<D: EventDispatcher>(
                 return Err(IpSockUnroutableError::LocalAddrNotAssigned);
             }
 
-            Ok(CachedInfo {
-                builder: Ipv6PacketBuilder::new(
-                    defn.local_ip,
-                    defn.remote_ip,
-                    defn.hop_limit,
-                    defn.proto,
-                ),
-                device: dst.device,
-                next_hop: dst.next_hop,
-            })
+            let mut builder =
+                Ipv6PacketBuilder::new(defn.local_ip, defn.remote_ip, defn.hop_limit, defn.proto);
+            builder.flowlabel(defn.per_proto_data.flow_label);
+
+            Ok(CachedInfo { builder, device: dst.device, next_hop: dst.next_hop })
         })
 }
 
@@ -453,6 +450,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv4> for Ctx<D> {
             hop_limit: builder.ttl.unwrap_or(super::DEFAULT_TTL).get(),
             proto,
             unroutable_behavior,
+            per_proto_data: (),
         };
         let cached = compute_ipv4_cached_info(self, &defn)?;
         Ok(IpSock { defn, cached: Ok(cached) })
@@ -533,10 +531,23 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Ctx<D> {
             hop_limit: builder.hop_limit.unwrap_or(super::DEFAULT_TTL.get()),
             proto,
             unroutable_behavior,
+            per_proto_data: Ipv6SocketData {
+                flow_label: gen_ipv6_flowlabel(self.dispatcher_mut().rng_mut()),
+            },
         };
         let cached = compute_ipv6_cached_info(self, &defn)?;
         Ok(IpSock { defn, cached: Ok(cached) })
     }
+}
+
+/// Generates a new IPv6 flow label using the provided random number generator.
+///
+/// As specified by [RFC 6437 Section 2], flow labels should be non-zero,
+/// 20 bits in length, and generated from a discrete uniform distribution.
+///
+/// [RFC 6437 Section 2]: https://tools.ietf.org/html/rfc6437#section-2
+fn gen_ipv6_flowlabel<R: Rng>(rng: &mut R) -> u32 {
+    rng.gen_range(1, 1 << Ipv6::FLOW_LABEL_BITS)
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv4, B> for Ctx<D> {
@@ -1008,8 +1019,24 @@ pub(crate) mod testutil {
         hop_limit: Option<u8>,
     }
 
-    impl<I: IpExt, S: AsRef<DummyIpSocketCtx<I>> + AsMut<DummyIpSocketCtx<I>>, Id, Meta>
-        IpSocketContext<I> for DummyCtx<S, Id, Meta>
+    pub(crate) trait SocketTestIpExt: IpExt {
+        const DUMMY_SOCKET_DATA: Self::SocketData;
+    }
+
+    impl SocketTestIpExt for Ipv4 {
+        const DUMMY_SOCKET_DATA: Self::SocketData = ();
+    }
+
+    impl SocketTestIpExt for Ipv6 {
+        const DUMMY_SOCKET_DATA: Self::SocketData = Ipv6SocketData { flow_label: 0 };
+    }
+
+    impl<
+            I: IpExt + SocketTestIpExt,
+            S: AsRef<DummyIpSocketCtx<I>> + AsMut<DummyIpSocketCtx<I>>,
+            Id,
+            Meta,
+        > IpSocketContext<I> for DummyCtx<S, Id, Meta>
     {
         type IpSocket = DummyIpSock<I>;
 
@@ -1045,6 +1072,7 @@ pub(crate) mod testutil {
                     proto,
                     hop_limit: builder.hop_limit.unwrap_or(crate::ip::DEFAULT_TTL.get()),
                     unroutable_behavior,
+                    per_proto_data: I::DUMMY_SOCKET_DATA,
                 },
                 routable: true,
             })
@@ -1052,7 +1080,7 @@ pub(crate) mod testutil {
     }
 
     impl<
-            I: IpExt,
+            I: IpExt + SocketTestIpExt,
             B: BufferMut,
             S: AsRef<DummyIpSocketCtx<I>> + AsMut<DummyIpSocketCtx<I>>,
             Id,
@@ -1109,6 +1137,7 @@ mod tests {
                 proto: Ipv4Proto::Icmp,
                 hop_limit: crate::ip::DEFAULT_TTL.get(),
                 unroutable_behavior: UnroutableBehavior::Close,
+                per_proto_data: (),
             },
             cached: Ok(CachedInfo {
                 builder: Ipv4PacketBuilder::new(
@@ -1205,6 +1234,10 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
             .build::<DummyEventDispatcher>();
 
+        // Since the dispatcher's random number generator is deterministic, we can
+        // use a clone to assert on the sequence of flow labels it will produce.
+        let mut rng = ctx.dispatcher().rng().clone();
+
         // A template socket that we can use to more concisely define sockets in
         // various test cases.
         let template = IpSock {
@@ -1214,6 +1247,7 @@ mod tests {
                 proto: Ipv6Proto::Icmpv6,
                 hop_limit: crate::ip::DEFAULT_TTL.get(),
                 unroutable_behavior: UnroutableBehavior::Close,
+                per_proto_data: Ipv6SocketData { flow_label: 0 },
             },
             cached: Ok(CachedInfo {
                 builder: Ipv6PacketBuilder::new(
@@ -1227,6 +1261,13 @@ mod tests {
             }),
         };
 
+        let with_flow_label =
+            |mut template: IpSock<Ipv6, DeviceId>, flow_label| -> IpSock<Ipv6, DeviceId> {
+                template.defn.per_proto_data = Ipv6SocketData { flow_label };
+                template.cached.as_mut().unwrap().builder.flowlabel(flow_label);
+                template
+            };
+
         // All optional fields are `None`.
         assert_eq!(
             IpSocketContext::<Ipv6>::new_ip_socket(
@@ -1237,12 +1278,13 @@ mod tests {
                 UnroutableBehavior::Close,
                 None,
             ),
-            Ok(template.clone())
+            Ok(with_flow_label(template.clone(), gen_ipv6_flowlabel(&mut rng)))
         );
 
         // Hop Limit is specified.
+        const SPECIFIED_HOP_LIMIT: u8 = 1;
         let mut builder = Ipv6SocketBuilder::default();
-        let _: &mut Ipv6SocketBuilder = builder.hop_limit(1);
+        let _: &mut Ipv6SocketBuilder = builder.hop_limit(SPECIFIED_HOP_LIMIT);
         assert_eq!(
             IpSocketContext::<Ipv6>::new_ip_socket(
                 &mut ctx,
@@ -1253,16 +1295,16 @@ mod tests {
                 Some(builder),
             ),
             {
-                // The template socket, but with the Hop Limit set to 1.
-                let mut x = template.clone();
-                x.defn.hop_limit = 1;
-                x.cached.as_mut().unwrap().builder = Ipv6PacketBuilder::new(
+                let mut template_with_hop_limit = template.clone();
+                template_with_hop_limit.defn.hop_limit = SPECIFIED_HOP_LIMIT;
+                let builder = Ipv6PacketBuilder::new(
                     DUMMY_CONFIG_V6.local_ip,
                     DUMMY_CONFIG_V6.remote_ip,
-                    1,
+                    SPECIFIED_HOP_LIMIT,
                     Ipv6Proto::Icmpv6,
                 );
-                Ok(x)
+                template_with_hop_limit.cached.as_mut().unwrap().builder = builder;
+                Ok(with_flow_label(template_with_hop_limit, gen_ipv6_flowlabel(&mut rng)))
             }
         );
 
@@ -1276,7 +1318,7 @@ mod tests {
                 UnroutableBehavior::Close,
                 None,
             ),
-            Ok(template.clone())
+            Ok(with_flow_label(template, gen_ipv6_flowlabel(&mut rng)))
         );
 
         // Local address is specified, and is an invalid local address.

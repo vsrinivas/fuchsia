@@ -112,6 +112,12 @@ enum TransportReceiveErrorInner {
     PortUnreachable,
 }
 
+/// Socket data used by the IPv6 protocol.
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct Ipv6SocketData {
+    flow_label: u32,
+}
+
 /// An [`Ip`] extension trait adding functionality specific to the IP layer.
 pub trait IpExt: packet_formats::ip::IpExt + IcmpIpExt {
     /// The type used to specify an IP packet's source address in a call to
@@ -119,14 +125,18 @@ pub trait IpExt: packet_formats::ip::IpExt + IcmpIpExt {
     ///
     /// For IPv4, this is `Ipv4Addr`. For IPv6, this is [`Ipv6SourceAddr`].
     type RecvSrcAddr: Into<Self::Addr>;
+    /// The type containing socket data specific to the IP protocol.
+    type SocketData: Clone + Debug + PartialEq;
 }
 
 impl IpExt for Ipv4 {
     type RecvSrcAddr = Ipv4Addr;
+    type SocketData = ();
 }
 
 impl IpExt for Ipv6 {
     type RecvSrcAddr = Ipv6SourceAddr;
+    type SocketData = Ipv6SocketData;
 }
 
 /// The execution context provided by a transport layer protocol to the IP

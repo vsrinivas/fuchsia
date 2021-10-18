@@ -23,7 +23,7 @@ use packet_formats::icmp::{
     Icmpv6PacketTooBig, Icmpv6ParameterProblem, Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode,
     MessageBody, OriginalPacket,
 };
-use packet_formats::ip::{IpExt, Ipv4Proto, Ipv6Proto};
+use packet_formats::ip::{Ipv4Proto, Ipv6Proto};
 use packet_formats::ipv4::{Ipv4FragmentType, Ipv4Header};
 use packet_formats::ipv6::{ExtHdrParseError, Ipv6Header};
 use thiserror::Error;
@@ -33,13 +33,16 @@ use crate::context::{CounterContext, InstantContext, StateContext};
 use crate::data_structures::token_bucket::TokenBucket;
 use crate::device::ndp::NdpPacketHandler;
 use crate::device::FrameDestination;
-use crate::ip::socket::{
-    BufferIpSocketContext, IpSockCreationError, IpSockSendError, IpSocket, IpSocketContext,
-    UnroutableBehavior,
-};
 use crate::ip::{
     gmp::mld::MldPacketHandler, path_mtu::PmtuHandler, BufferIpTransportContext, IpDeviceIdContext,
     IpTransportContext, TransportReceiveError,
+};
+use crate::ip::{
+    socket::{
+        BufferIpSocketContext, IpSockCreationError, IpSockSendError, IpSocket, IpSocketContext,
+        UnroutableBehavior,
+    },
+    IpExt,
 };
 use crate::socket::{ConnSocketMap, Socket};
 use crate::{BufferDispatcher, Ctx, EventDispatcher};
@@ -301,7 +304,7 @@ pub(super) fn update_all_ipv6_sockets<C: InnerIcmpv6Context>(
 }
 
 /// An extension trait adding extra ICMP-related functionality to IP versions.
-pub trait IcmpIpExt: packet_formats::icmp::IcmpIpExt {
+pub trait IcmpIpExt: packet_formats::ip::IpExt + packet_formats::icmp::IcmpIpExt {
     /// The type of error code for this version of ICMP - [`Icmpv4ErrorCode`] or
     /// [`Icmpv6ErrorCode`].
     type ErrorCode: Debug;
@@ -372,7 +375,7 @@ impl<I: IcmpIpExt, B: BufferMut, D: EventDispatcher + BufferIcmpContext<I, B>>
 ///
 /// Unlike [`IcmpContext`], `InnerIcmpContext` is not exposed outside of this
 /// crate.
-pub(crate) trait InnerIcmpContext<I: IcmpIpExt>:
+pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt>:
     IcmpContext<I>
     + IpSocketContext<I>
     + IpDeviceIdContext
@@ -435,7 +438,7 @@ pub(crate) trait InnerIcmpContext<I: IcmpIpExt>:
 
 /// The execution context shared by ICMP(v4) and ICMPv6 for the internal
 /// operations of the IP stack when a buffer is required.
-pub(crate) trait InnerBufferIcmpContext<I: IcmpIpExt, B: BufferMut>:
+pub(crate) trait InnerBufferIcmpContext<I: IcmpIpExt + IpExt, B: BufferMut>:
     InnerIcmpContext<I> + BufferIcmpContext<I, B> + BufferIpSocketContext<I, B>
 {
     /// Sends an ICMP reply to a remote host.
@@ -685,7 +688,8 @@ macro_rules! try_send_error {
 /// An implementation of [`IpTransportContext`] for ICMP.
 pub(crate) enum IcmpIpTransportContext {}
 
-impl<I: IcmpIpExt, C: InnerIcmpContext<I>> IpTransportContext<I, C> for IcmpIpTransportContext
+impl<I: IcmpIpExt + IpExt, C: InnerIcmpContext<I>> IpTransportContext<I, C>
+    for IcmpIpTransportContext
 where
     IcmpEchoRequest: for<'a> IcmpMessage<I, &'a [u8]>,
 {
@@ -1820,7 +1824,7 @@ fn is_icmp_error_message<I: IcmpIpExt>(proto: I::Proto, buf: &[u8]) -> bool {
 }
 
 /// Common logic for receiving an ICMP echo reply.
-fn receive_icmp_echo_reply<I: IcmpIpExt, B: BufferMut, C: InnerBufferIcmpContext<I, B>>(
+fn receive_icmp_echo_reply<I: IcmpIpExt + IpExt, B: BufferMut, C: InnerBufferIcmpContext<I, B>>(
     ctx: &mut C,
     src_ip: I::Addr,
     dst_ip: SpecifiedAddr<I::Addr>,
@@ -1890,7 +1894,11 @@ pub fn send_icmpv6_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
     send_icmp_echo_request_inner(ctx, conn, seq_num, body)
 }
 
-fn send_icmp_echo_request_inner<I: IcmpIpExt, B: BufferMut, C: InnerBufferIcmpContext<I, B>>(
+fn send_icmp_echo_request_inner<
+    I: IcmpIpExt + IpExt,
+    B: BufferMut,
+    C: InnerBufferIcmpContext<I, B>,
+>(
     ctx: &mut C,
     conn: IcmpConnId<I>,
     seq_num: u16,
@@ -2134,7 +2142,7 @@ mod tests {
         I: TestIpExt + IcmpIpExt,
         C: PartialEq + Debug,
         M: for<'a> IcmpMessage<I, &'a [u8], Code = C> + PartialEq + Debug,
-        PBF: FnOnce(&mut <I as IpExt>::PacketBuilder),
+        PBF: FnOnce(&mut <I as packet_formats::ip::IpExt>::PacketBuilder),
         SSBF: FnOnce(&mut StackStateBuilder),
         F: for<'a> FnOnce(&IcmpPacket<I, &'a [u8], M>),
     >(
@@ -2149,8 +2157,12 @@ mod tests {
         f: F,
     ) {
         crate::testutil::set_logger_for_test();
-        let mut pb =
-            <I as IpExt>::PacketBuilder::new(*I::DUMMY_CONFIG.remote_ip, dst_ip.get(), ttl, proto);
+        let mut pb = <I as packet_formats::ip::IpExt>::PacketBuilder::new(
+            *I::DUMMY_CONFIG.remote_ip,
+            dst_ip.get(),
+            ttl,
+            proto,
+        );
         modify_packet_builder(&mut pb);
         let buffer = Buf::new(body, ..).encapsulate(pb).serialize_vec_outer().unwrap();
 
@@ -3201,7 +3213,7 @@ mod tests {
                 IcmpUnusedCode,
                 IcmpEchoRequest::new(ICMP_ID, SEQ_NUM),
             ))
-            .encapsulate(<Ipv4 as IpExt>::PacketBuilder::new(
+            .encapsulate(<Ipv4 as packet_formats::ip::IpExt>::PacketBuilder::new(
                 DUMMY_CONFIG_V4.local_ip,
                 DUMMY_CONFIG_V4.remote_ip,
                 64,
@@ -3291,7 +3303,7 @@ mod tests {
         // `IcmpContext::receive_icmp_error`.
 
         let mut buffer = Buf::new(&mut [], ..)
-            .encapsulate(<Ipv4 as IpExt>::PacketBuilder::new(
+            .encapsulate(<Ipv4 as packet_formats::ip::IpExt>::PacketBuilder::new(
                 DUMMY_CONFIG_V4.local_ip,
                 DUMMY_CONFIG_V4.remote_ip,
                 64,
@@ -3358,7 +3370,7 @@ mod tests {
         // called.
 
         let mut buffer = Buf::new(&mut [], ..)
-            .encapsulate(<Ipv4 as IpExt>::PacketBuilder::new(
+            .encapsulate(<Ipv4 as packet_formats::ip::IpExt>::PacketBuilder::new(
                 DUMMY_CONFIG_V4.local_ip,
                 DUMMY_CONFIG_V4.remote_ip,
                 64,
@@ -3512,7 +3524,7 @@ mod tests {
                 IcmpUnusedCode,
                 IcmpEchoRequest::new(ICMP_ID, SEQ_NUM),
             ))
-            .encapsulate(<Ipv6 as IpExt>::PacketBuilder::new(
+            .encapsulate(<Ipv6 as packet_formats::ip::IpExt>::PacketBuilder::new(
                 DUMMY_CONFIG_V6.local_ip,
                 DUMMY_CONFIG_V6.remote_ip,
                 64,
@@ -3600,7 +3612,7 @@ mod tests {
         // `IcmpContext::receive_icmp_error`.
 
         let mut buffer = Buf::new(&mut [], ..)
-            .encapsulate(<Ipv6 as IpExt>::PacketBuilder::new(
+            .encapsulate(<Ipv6 as packet_formats::ip::IpExt>::PacketBuilder::new(
                 DUMMY_CONFIG_V6.local_ip,
                 DUMMY_CONFIG_V6.remote_ip,
                 64,
@@ -3665,7 +3677,7 @@ mod tests {
         // called.
 
         let mut buffer = Buf::new(&mut [], ..)
-            .encapsulate(<Ipv6 as IpExt>::PacketBuilder::new(
+            .encapsulate(<Ipv6 as packet_formats::ip::IpExt>::PacketBuilder::new(
                 DUMMY_CONFIG_V6.local_ip,
                 DUMMY_CONFIG_V6.remote_ip,
                 64,

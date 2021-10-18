@@ -538,6 +538,11 @@ impl Ipv6 {
     /// [RFC 4291 Section 2.5.1]: https://tools.ietf.org/html/rfc4291#section-2.5.1
     /// [RFC 4862 Section 5.5.3]: https://tools.ietf.org/html/rfc4862#section-5.5.3
     pub const UNICAST_INTERFACE_IDENTIFIER_BITS: u8 = 64;
+
+    /// The length, in bits, of an IPv6 flow label, defined in [RFC 6437 Section 2].
+    ///
+    /// [RFC 6437 Section 2]: https://tools.ietf.org/html/rfc6437#section-2
+    pub const FLOW_LABEL_BITS: u8 = 20;
 }
 
 /// An IPv4 or IPv6 address.
