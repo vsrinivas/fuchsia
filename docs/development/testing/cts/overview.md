@@ -8,12 +8,12 @@ CTS tests for your area, please see the links below.
 ## Fuchsia CTS Definition
 * [CTS Overview][overview]: Background, motivation and goals for building the
 Fuchsia CTS.
-* [CTS RFC][rfc2]: Requirements, design and implementation strategy.
+* [CTS RFC][rfc15]: Requirements, design and implementation strategy.
 * [FAQ][faq]: Frequently asked questions.
 
 ## Contributing to the CTS
 * [Contributing Guide][contributing]: One-stop shop with everything you need
-to know about contributing to the Fuchsia CTS. Start here! Below are a few
+to know about contributing to the Fuchsia CTS.  Start here!  Below are a few
 examples of CTS tests in action.
 * Code Examples
   * [Hello World \[c++\]][hello c++]: A barebones example CTS test written in
@@ -28,7 +28,7 @@ production, protecting the fuchsia.diagnostics FIDL from compatibility issues.
 Note: TODO: Dashboards are currently internal-only
 
 [overview]: /docs/concepts/testing/compatibility_testing.md
-[rfc2]: /docs/contribute/governance/rfcs/0002_platform_versioning.md
+[rfc15]: /docs/contribute/governance/rfcs/0015_cts.md
 [faq]: /docs/development/testing/cts/faq.md
 [contributing]: /docs/development/testing/cts/contributing_tests.md
 [hello c++]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/cts/examples/hello_world/

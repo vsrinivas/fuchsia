@@ -6,7 +6,7 @@ between subsequent releases of the Fuchsia Platform in order to ensure existing
 products and applications continue to operate correctly.
 
 The Fuchsia Compatibility Test Suite (CTS) is one method of enforcing this
-compatibility.  To learn more about how it works, please see the [CTS RFC][rfc2]
+compatibility.  To learn more about how it works, please see the [CTS RFC][rfc15]
 and the other pages on CTS in fuchsia.dev. This doc aims to help you understand
 what to do if a CTS test fails in Fuchsia CQ.
 
@@ -97,5 +97,6 @@ Note: TODO(fxbug.dev/86421): Needs design
 Please reach out to the [CTS team][cts team] if this is required.
 
 [rfc2]: /docs/contribute/governance/rfcs/0002_platform_versioning.md
+[rfc15]: /docs/contribute/governance/rfcs/0015_cts.md
 [api council]: /docs/contribute/governance/api_council.md
 [cts team]: https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=Fuchsia+Compatibility+Test+Suite+%28CTS%29
