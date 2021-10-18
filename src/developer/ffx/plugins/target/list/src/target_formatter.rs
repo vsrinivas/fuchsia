@@ -368,8 +368,17 @@ impl StringifiedTarget {
         }
     }
 
-    fn from_target_type(t: bridge::TargetType) -> String {
-        format!("{:?}", t)
+    fn from_target_type(
+        board_config: Option<&str>,
+        product_config: Option<&str>,
+        t: bridge::TargetType,
+    ) -> String {
+        match (board_config, product_config) {
+            (None, None) => format!("{:?}", t),
+            (board, product) => {
+                format!("{}.{}", product.unwrap_or("<unknown>"), board.unwrap_or("<unknown>"))
+            }
+        }
     }
 
     fn from_target_state(t: bridge::TargetState) -> String {
@@ -387,16 +396,11 @@ impl TryFrom<bridge::Target> for StringifiedTarget {
     type Error = StringifyError;
 
     fn try_from(target: bridge::Target) -> Result<Self, Self::Error> {
-        let target_type = match (target.board_config.as_ref(), target.product_config.as_ref()) {
-            (None, None) => StringifiedTarget::from_target_type(
-                target.target_type.ok_or(StringifyError::MissingTargetType)?,
-            ),
-            (board, product) => format!(
-                "{}.{}",
-                product.unwrap_or(&"<unknown>".to_string()),
-                board.unwrap_or(&"<unknown>".to_string())
-            ),
-        };
+        let target_type = StringifiedTarget::from_target_type(
+            target.board_config.as_deref(),
+            target.product_config.as_deref(),
+            target.target_type.ok_or(StringifyError::MissingTargetType)?,
+        );
         Ok(Self {
             nodename: StringifiedField::String(target.nodename.unwrap_or("<unknown>".to_string())),
             serial: StringifiedField::String(
@@ -434,6 +438,8 @@ impl TryFrom<bridge::Target> for JsonTarget {
                 target.rcs_state.ok_or(StringifyError::MissingRcsState)?,
             )),
             target_type: json!(StringifiedTarget::from_target_type(
+                target.board_config.as_deref(),
+                target.product_config.as_deref(),
                 target.target_type.ok_or(StringifyError::MissingTargetType)?,
             )),
             target_state: json!(StringifiedTarget::from_target_state(
