@@ -1,8 +1,3 @@
-casbor@google.com
-lindkvist@google.com
-nolivia@google.com
-richkadel@google.com
-thatguy@google.com
-ypomortsev@google.com
+include /src/sys/component_manager/OWNERS
 
 # COMPONENT: ComponentFramework>Sessions
