@@ -177,21 +177,11 @@ const AttributeArg* Attribute::GetArg(std::string_view arg_name) const {
 const AttributeArg* Attribute::GetStandaloneAnonymousArg() const {
   assert(!resolved &&
          "if calling after attribute compilation, use GetArg(...) with the resolved name instead");
-  const AttributeArg* anon_arg = nullptr;
-  [[maybe_unused]] size_t named_args = 0;
-  for (const auto& arg : args) {
-    if (!arg->name.has_value()) {
-      assert(anon_arg == nullptr && "multiple anonymous arguments is a parser error");
-      anon_arg = arg.get();
-    } else {
-      named_args += 1;
-    }
+  if (args.size() == 1 && !args[0]->name.has_value()) {
+    return args[0].get();
   }
-
-  assert(!(anon_arg != nullptr && named_args > 0) &&
-         "an attribute with both anonymous and named arguments is a parser error");
-  return anon_arg;
-};
+  return nullptr;
+}
 
 const Attribute* AttributeList::Get(std::string_view attribute_name) const {
   for (const auto& attribute : attributes) {
@@ -1348,10 +1338,6 @@ bool Library::VerifyInlineSize(const Struct* struct_decl) {
 bool OverrideNameConstraint(Reporter* reporter, const Attribute* attribute,
                             const Attributable* attributable) {
   auto arg = attribute->GetArg("value");
-  if (arg == nullptr) {
-    reporter->Report(ErrMissingRequiredAnonymousAttributeArg, attribute->span, attribute);
-    return false;
-  }
   auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   if (!utils::IsValidIdentifierComponent(arg_value.MakeContents())) {
@@ -1365,9 +1351,6 @@ bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
                         const Attributable* attributable) {
   assert(attributable);
   auto arg = attribute->GetArg("value");
-  if (arg == nullptr || arg->value->Value().kind != flat::ConstantValue::Kind::kString) {
-    assert(false && "non-string attribute arguments not yet supported");
-  }
   auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   uint32_t bound;
@@ -1432,10 +1415,6 @@ bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
                           const Attributable* attributable) {
   assert(attributable);
   auto arg = attribute->GetArg("value");
-  if (arg == nullptr || arg->value->Value().kind != flat::ConstantValue::Kind::kString) {
-    reporter->Report(ErrInvalidAttributeType, attribute->span, attribute);
-    assert(false && "non-string attribute arguments not yet supported");
-  }
   auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   uint32_t bound;
@@ -1550,13 +1529,6 @@ bool TransportConstraint(Reporter* reporter, const Attribute* attribute,
   };
 
   auto arg = attribute->GetArg("value");
-  if (arg == nullptr) {
-    reporter->Report(ErrInvalidTransportType, attribute->span, std::string("''"),
-                     *kValidTransports);
-    return false;
-  }
-  if (arg->value->Value().kind != flat::ConstantValue::Kind::kString)
-    assert(false && "non-string attribute arguments not yet supported");
   auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   // Parse comma separated transports
@@ -1708,7 +1680,7 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(Reporter* reporter,
   }
 
   // Skip typo check?
-  if (reporter == nullptr || !warn_on_typo) {
+  if (!warn_on_typo) {
     return nullptr;
   }
 
@@ -2025,6 +1997,7 @@ bool Library::ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attri
   AttributesBuilder<Attribute> attributes_builder(reporter_);
   if (raw_attribute_list != nullptr) {
     for (auto& raw_attribute : raw_attribute_list->attributes) {
+      [[maybe_unused]] bool all_named = true;
       std::vector<std::unique_ptr<AttributeArg>> args;
       for (auto& raw_arg : raw_attribute->args) {
         std::unique_ptr<Constant> constant;
@@ -2032,9 +2005,12 @@ bool Library::ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attri
           return false;
         }
 
+        all_named = all_named && raw_arg->name.has_value();
         args.emplace_back(
             std::make_unique<AttributeArg>(raw_arg->name, std::move(constant), raw_arg->span()));
       }
+      assert(all_named ||
+             args.size() == 1 && "parser should not allow an anonymous arg with other args");
       auto attribute =
           std::make_unique<Attribute>(raw_attribute->name, raw_attribute->span(), std::move(args));
       attributes_builder.Insert(std::move(attribute));
@@ -3282,7 +3258,8 @@ bool Library::CompileAttributeList(AttributeList* attributes) {
   bool ok = true;
   if (!attributes->Empty()) {
     for (auto& attribute : attributes->attributes) {
-      auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute.get(), true);
+      auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute.get(),
+                                                            /* warn_on_typo = */ true);
 
       // Check for duplicate args, and return early if we find them.
       std::set<std::string> seen;
