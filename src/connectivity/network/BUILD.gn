@@ -39,12 +39,6 @@ group("integration-test-deps") {
   ]
 }
 
-# TODO(https://fxbug.dev/84248): Remove once ready to transition out of tree
-# dependents.
-group("config") {
-  deps = [ ":network" ]
-}
-
 group("drivers") {
   deps = [ "drivers/network-device" ]
 }

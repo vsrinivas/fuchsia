@@ -10,29 +10,16 @@ group("management") {
   ]
 }
 
-group("netcfg") {
-  deps = [ "//src/connectivity/network/netcfg" ]
-}
-
 group("network_config_default") {
-  deps = [
-    ":netcfg",
-    "//src/connectivity/network/netcfg:config-default",
-  ]
+  deps = [ "//src/connectivity/network/netcfg:config-default" ]
 }
 
 group("network_config_no_ssh_over_wlan") {
-  deps = [
-    ":netcfg",
-    "//src/connectivity/network/netcfg:config-no-ssh-over-wlan",
-  ]
+  deps = [ "//src/connectivity/network/netcfg:config-no-ssh-over-wlan" ]
 }
 
 group("network_config_prefer_wired") {
-  deps = [
-    ":netcfg",
-    "//src/connectivity/network/netcfg:config-prefer-wired",
-  ]
+  deps = [ "//src/connectivity/network/netcfg:config-prefer-wired" ]
 }
 
 group("tests") {
