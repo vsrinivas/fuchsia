@@ -121,6 +121,18 @@
 // pointer, which may help the compiler optimize the program.
 #define __MALLOC __attribute__((__malloc__))
 
+// The given function allocates memory of size argument |x| or |x| * |y| and returns
+// a pointer to that memory. Argument indexes are one-based. The compiler can use this
+// information to support compile-time __builtin_object_size checks.
+#if defined(__clang__)
+#define __ALLOC_SIZE(x, ...) __attribute__((__alloc_size__(x, ## __VA_ARGS__)))
+#else
+// TODO(fxrev.dev/571541): GCC warns incorrectly on constructs that could result in
+// large allocations for type reasons but cannot for other (checked) reasons. Disable
+// the attribute there.
+#define __ALLOC_SIZE(x, ...)
+#endif
+
 // Indicate that the given function takes a printf/scanf-style format string.
 //
 // "__fmt" is the argument number of the format string, indexed from 1.

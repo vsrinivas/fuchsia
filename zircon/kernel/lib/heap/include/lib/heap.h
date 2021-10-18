@@ -21,9 +21,9 @@ __BEGIN_CDECLS
 #define HEAP_DEFAULT_ALIGNMENT 8
 
 // standard heap definitions
-void* malloc(size_t size) __MALLOC;
-void* memalign(size_t alignment, size_t size) __MALLOC;
-void* calloc(size_t count, size_t size) __MALLOC;
+void* malloc(size_t size) __MALLOC __ALLOC_SIZE(1);
+void* memalign(size_t alignment, size_t size) __MALLOC __ALLOC_SIZE(2);
+void* calloc(size_t count, size_t size) __MALLOC __ALLOC_SIZE(1, 2);
 void free(void* ptr);
 void sized_free(void* ptr, size_t s);
 
