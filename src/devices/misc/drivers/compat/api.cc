@@ -107,7 +107,8 @@ __EXPORT bool driver_log_severity_enabled_internal(const zx_driver_t* drv,
 __EXPORT void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t severity,
                                     const char* tag, const char* file, int line, const char* msg,
                                     va_list args) {
-  const_cast<zx_driver_t*>(drv)->Log(severity, tag, file, line, msg, args);
+  const_cast<zx_driver_t*>(drv)->Log(static_cast<FuchsiaLogSeverity>(severity), tag, file, line,
+                                     msg, args);
 }
 
 __EXPORT void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t severity,
@@ -115,7 +116,8 @@ __EXPORT void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t sev
                                    ...) {
   va_list args;
   va_start(args, msg);
-  const_cast<zx_driver_t*>(drv)->Log(severity, tag, file, line, msg, args);
+  const_cast<zx_driver_t*>(drv)->Log(static_cast<FuchsiaLogSeverity>(severity), tag, file, line,
+                                     msg, args);
   va_end(args);
 }
 

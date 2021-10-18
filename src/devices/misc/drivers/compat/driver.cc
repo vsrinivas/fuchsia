@@ -302,7 +302,7 @@ result<> Driver::StopDriver(const zx_status_t& status) {
 
 void* Driver::Context() const { return context_; }
 
-void Driver::Log(fx_log_severity_t severity, const char* tag, const char* file, int line,
+void Driver::Log(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
                  const char* msg, va_list args) {
   inner_logger_.logvf(severity, tag, file, line, msg, args);
 }

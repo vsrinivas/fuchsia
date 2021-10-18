@@ -41,9 +41,9 @@ source_set("llcpp") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
+    "//sdk/lib/syslog/structured_backend",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/inspect",
-    "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/zxc",
   ]
 }
@@ -65,8 +65,12 @@ executable("llcpp_test") {
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/fidl/cpp",
+    "//src/diagnostics/lib/cpp-log-decoder:lib",
+    "//src/lib/diagnostics/accessor2logger",
+    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
+    "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/svc",

@@ -13,8 +13,13 @@
 #include <lib/syslog/wire_format.h>
 
 #include <gtest/gtest.h>
+#include <rapidjson/document.h>
 
 #include "src/devices/lib/driver2/test_base.h"
+#include "src/diagnostics/lib/cpp-log-decoder/log_decoder.h"
+#include "src/lib/diagnostics/accessor2logger/log_message.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/strings.h"
 
 namespace fio = fuchsia::io;
 namespace flogger = fuchsia::logger;
@@ -32,7 +37,7 @@ class TestLogSink : public flogger::testing::LogSink_TestBase {
   }
 
  private:
-  void Connect(zx::socket socket) override { connect_handler_(std::move(socket)); }
+  void ConnectStructured(::zx::socket socket) override { connect_handler_(std::move(socket)); }
 
   void NotImplemented_(const std::string& name) override {
     printf("Not implemented: LogSink::%s\n", name.data());
@@ -48,6 +53,36 @@ void CheckLogUnreadable(zx::socket& log_socket) {
   EXPECT_EQ(ZX_SOCKET_WRITABLE, pending);
 }
 
+std::string rust_decode_message_to_string(uint8_t* data, size_t len) {
+  auto raw_message = fuchsia_decode_log_message_to_json(data, len);
+  std::string ret = raw_message;
+  fuchsia_free_decoded_log_message(raw_message);
+  return ret;
+}
+
+struct DecodedLogMessage {
+  fuchsia::logger::LogMessage message;
+  rapidjson::Document document;
+};
+
+DecodedLogMessage decode_log_message_to_struct(uint8_t* data, size_t len) {
+  fsl::SizedVmo vmo;
+  auto msg = rust_decode_message_to_string(data, len);
+  fsl::VmoFromString(msg, &vmo);
+  fuchsia::diagnostics::FormattedContent content;
+  fuchsia::mem::Buffer buffer;
+  buffer.vmo = std::move(vmo.vmo());
+  buffer.size = msg.size();
+  content.set_json(std::move(buffer));
+  DecodedLogMessage ret;
+  ret.message =
+      diagnostics::accessor2logger::ConvertFormattedContentToHostLogMessages(std::move(content))
+          .take_value()[0]
+          .take_value();
+  ret.document.Parse(msg);
+  return ret;
+}
+
 void CheckLogReadable(zx::socket& log_socket, fx_log_severity_t severity) {
   // Check state of logger after writing info log.
   zx_signals_t pending = ZX_SIGNAL_NONE;
@@ -55,13 +90,15 @@ void CheckLogReadable(zx::socket& log_socket, fx_log_severity_t severity) {
   EXPECT_EQ(ZX_SOCKET_READABLE | ZX_SOCKET_WRITABLE, pending);
 
   // Read from the log socket.
-  fx_log_packet_t packet = {};
+  uint8_t packet[ZX_CHANNEL_MAX_MSG_BYTES];
   size_t actual = 0;
   ASSERT_EQ(ZX_OK, log_socket.read(0, &packet, sizeof(packet), &actual));
-  EXPECT_LT(sizeof(fx_log_metadata_t), actual);
-  EXPECT_EQ(severity, packet.metadata.severity);
-  EXPECT_NE(nullptr, memmem(packet.data, sizeof(packet.data), kName, sizeof(kName)));
-  EXPECT_NE(nullptr, memmem(packet.data, sizeof(packet.data), kMessage, sizeof(kMessage)));
+  EXPECT_LT(actual, sizeof(packet));
+  auto msg = decode_log_message_to_struct(packet, actual);
+  EXPECT_EQ(severity, msg.message.severity);
+  EXPECT_EQ(msg.message.tags[0], kName);
+  EXPECT_EQ(std::string(msg.document[0]["payload"]["root"]["message"]["value"].GetString()),
+            kMessage);
 }
 
 TEST(LoggerTest, CreateAndLog) {

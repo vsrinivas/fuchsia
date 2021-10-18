@@ -8,6 +8,8 @@ use {
         events::{self, Event},
         matcher::EventMatcher,
     },
+    diagnostics_reader::{ArchiveReader, Logs},
+    fasync::futures::StreamExt,
     fidl_fuchsia_driver_test as fdt, fuchsia_async as fasync,
     fuchsia_component_test::builder::RealmBuilder,
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
@@ -76,6 +78,24 @@ async fn driver_runner_test() -> Result<(), anyhow::Error> {
             .moniker(r".*/driver-hosts:driver-host-0:\d+"),
     ];
     check_events(events, &mut started_stream).await?;
-
+    let reader = ArchiveReader::new();
+    let mut results = reader.snapshot_then_subscribe::<Logs>().unwrap();
+    let mut found = false;
+    while let Some(result) = results.next().await {
+        match result {
+            Err(e) => {
+                panic!("error in subscription: {}", e);
+            }
+            Ok(log) => {
+                if log.msg().unwrap().contains("Hello world") {
+                    found = true;
+                    break;
+                }
+            }
+        }
+    }
+    if !found {
+        panic!("hello world not found");
+    }
     Ok(())
 }

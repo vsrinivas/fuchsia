@@ -31,8 +31,8 @@ class Driver {
   // Returns the context that DFv1 driver provided.
   void* Context() const;
   // Logs a message for the DFv1 driver.
-  void Log(fx_log_severity_t severity, const char* tag, const char* file, int line, const char* msg,
-           va_list args);
+  void Log(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
+           const char* msg, va_list args);
 
  private:
   // Gets the root resource for the DFv1 driver.
