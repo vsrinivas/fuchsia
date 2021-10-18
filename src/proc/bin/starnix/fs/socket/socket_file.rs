@@ -39,7 +39,7 @@ impl FileOps for SocketFile {
     }
 
     fn close(&self, _file: &FileObject) {
-        let _ = self.socket.shutdown();
+        self.socket.close();
     }
 }
 

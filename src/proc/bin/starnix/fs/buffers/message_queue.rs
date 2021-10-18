@@ -22,11 +22,29 @@ pub struct MessageQueue {
 
     /// The maximum number of bytes that can be stored inside this pipe.
     capacity: usize,
+
+    /// Whether the queue is closed.
+    ///
+    /// When the queue is closed, writes generate errors and reads return
+    /// zero bytes unless peer_closed_with_unread_data is true, in which case
+    /// reads generate ECONNRESET errors.
+    closed: bool,
+
+    /// Whether the peer to this queue, if any, was closed with unread data.
+    ///
+    /// Controls whether read() returns ECONNRESET when the queue is closed.
+    peer_closed_with_unread_data: bool,
 }
 
 impl MessageQueue {
     pub fn new(capacity: usize) -> MessageQueue {
-        MessageQueue { messages: VecDeque::default(), length: 0, capacity }
+        MessageQueue {
+            messages: VecDeque::default(),
+            length: 0,
+            capacity,
+            closed: false,
+            peer_closed_with_unread_data: false,
+        }
     }
 
     /// Returns the number of bytes that can be written to the message queue before the buffer is
@@ -63,6 +81,18 @@ impl MessageQueue {
         self.length
     }
 
+    pub fn close(&mut self) {
+        self.closed = true;
+    }
+
+    pub fn is_closed(&self) -> bool {
+        self.closed
+    }
+
+    pub fn mark_peer_closed_with_unread_data(&mut self) {
+        self.peer_closed_with_unread_data = true;
+    }
+
     /// Reads messages until there are no more messages, a message with ancillary data is
     /// encountered, or `user_buffers` are full.
     ///
@@ -77,6 +107,13 @@ impl MessageQueue {
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
     ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
+        if self.closed {
+            if self.peer_closed_with_unread_data {
+                return error!(ECONNRESET);
+            }
+            return Ok((0, None, None));
+        }
+
         let mut total_bytes_read = 0;
         let mut address = None;
 
@@ -173,6 +210,9 @@ impl MessageQueue {
 
     /// Reads the next message in the buffer, if such a message exists.
     fn read_message(&mut self) -> Option<Message> {
+        if self.closed {
+            return None;
+        }
         self.messages.pop_front().map(|message| {
             self.length -= message.len();
             message
@@ -193,6 +233,9 @@ impl MessageQueue {
         address: Option<SocketAddress>,
         ancillary_data: &mut Option<AncillaryData>,
     ) -> Result<usize, Errno> {
+        if self.closed {
+            return error!(EPIPE);
+        }
         let actual = std::cmp::min(self.available_capacity(), user_buffers.remaining());
         let mut bytes = vec![0u8; actual];
         let mut offset = 0;

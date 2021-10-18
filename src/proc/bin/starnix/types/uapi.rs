@@ -117,6 +117,10 @@ pub const SOCK_DGRAM: u32 = 2;
 pub const SOCK_RAW: u32 = 3;
 pub const SOCK_SEQPACKET: u32 = 5;
 
+pub const SHUT_RD: u32 = 0;
+pub const SHUT_WR: u32 = 1;
+pub const SHUT_RDWR: u32 = 2;
+
 pub const SCM_RIGHTS: u32 = 1;
 pub const SCM_CREDENTIALS: u32 = 2;
 pub const SCM_SECURITY: u32 = 3;

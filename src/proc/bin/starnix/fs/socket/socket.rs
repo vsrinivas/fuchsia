@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use bitflags::bitflags;
 use fuchsia_zircon as zx;
 use std::collections::VecDeque;
 
@@ -36,12 +37,6 @@ pub struct SocketInner {
     /// The address that this socket has been bound to, if it has been bound.
     address: Option<SocketAddress>,
 
-    /// Whether this socket is readable.
-    readable: bool,
-
-    /// Whether this socket is writable.
-    writable: bool,
-
     /// See SO_RCVTIMEO.
     receive_timeout: Option<zx::Duration>,
 
@@ -66,8 +61,8 @@ enum SocketState {
     /// The socket is connected to a peer.
     Connected(SocketHandle),
 
-    /// The socket has been disconnected, and can't be reconnected.
-    Shutdown,
+    /// The socket is closed.
+    Closed,
 }
 
 pub type SocketHandle = Arc<Socket>;
@@ -84,8 +79,6 @@ impl Socket {
             domain,
             socket_type,
             address: None,
-            readable: true,
-            writable: true,
             receive_timeout: None,
             send_timeout: None,
             credentials: None,
@@ -332,14 +325,50 @@ impl Socket {
         inner.waiters.wait_async_mask(waiter, events.mask(), handler)
     }
 
-    /// Shuts down this socket, preventing any future reads and/or writes.
+    /// Shuts down this socket according to how, preventing any future reads and/or writes.
     ///
-    /// TODO: This should take a "how" parameter to indicate which operations should be prevented.
-    pub fn shutdown(&self) -> Result<(), Errno> {
-        let peer = self.lock().peer().ok_or_else(|| errno!(ENOTCONN))?.clone();
-        self.lock().shutdown_one_end();
-        peer.lock().shutdown_one_end();
+    /// Used by the shutdown syscalls.
+    pub fn shutdown(&self, how: SocketShutdownFlags) -> Result<(), Errno> {
+        let peer = {
+            let mut inner = self.lock();
+            let peer = inner.peer().ok_or_else(|| errno!(ENOTCONN))?.clone();
+            if how.contains(SocketShutdownFlags::READ) {
+                inner.shutdown_read();
+            }
+            peer
+        };
+        if how.contains(SocketShutdownFlags::WRITE) {
+            let mut peer_inner = peer.lock();
+            peer_inner.shutdown_write();
+        }
         Ok(())
+    }
+
+    /// Close this socket.
+    ///
+    /// Called by SocketFile when the file descriptor that is holding this
+    /// socket is closed.
+    ///
+    /// Close differs from shutdown in two ways. First, close will call
+    /// mark_peer_closed_with_unread_data if this socket has unread data,
+    /// which changes how read() behaves on that socket. Second, close
+    /// transitions the internal state of this socket to Closed, which breaks
+    /// the reference cycle that exists in the connected state.
+    pub fn close(&self) {
+        let (maybe_peer, has_unread) = {
+            let mut inner = self.lock();
+            let maybe_peer = inner.peer().map(Arc::clone);
+            inner.shutdown_read();
+            (maybe_peer, !inner.messages.is_empty())
+        };
+        if let Some(peer) = maybe_peer {
+            let mut peer_inner = peer.lock();
+            if has_unread {
+                peer_inner.messages.mark_peer_closed_with_unread_data();
+            }
+            peer_inner.shutdown_write();
+        }
+        self.lock().state = SocketState::Closed;
     }
 }
 
@@ -410,11 +439,8 @@ impl SocketInner {
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
     ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
-        if !self.readable {
-            return Ok((0, None, None));
-        }
         let (bytes_read, address, ancillary_data) = self.messages.read(task, user_buffers)?;
-        if bytes_read == 0 && ancillary_data.is_none() && user_buffers.remaining() > 0 {
+        if bytes_read == 0 && user_buffers.remaining() > 0 && !self.messages.is_closed() {
             return error!(EAGAIN);
         }
         if bytes_read > 0 {
@@ -427,10 +453,6 @@ impl SocketInner {
     ///
     /// If no data is available, or this socket is not readable, then an empty vector is returned.
     pub fn read_kernel(&mut self) -> Vec<Message> {
-        if !self.readable {
-            return vec![];
-        }
-
         let (messages, bytes_read) = self.messages.read_bytes(&mut None, usize::MAX);
 
         if bytes_read > 0 {
@@ -456,9 +478,6 @@ impl SocketInner {
         address: Option<SocketAddress>,
         ancillary_data: &mut Option<AncillaryData>,
     ) -> Result<usize, Errno> {
-        if !self.writable {
-            return error!(EPIPE);
-        }
         let bytes_written = self.messages.write(task, user_buffers, address, ancillary_data)?;
         if bytes_written > 0 {
             self.waiters.notify_events(FdEvents::POLLIN);
@@ -474,10 +493,6 @@ impl SocketInner {
     ///
     /// Returns an error if the socket is not connected.
     fn write_kernel(&mut self, message: Message) -> Result<(), Errno> {
-        if !self.writable {
-            return error!(EPIPE);
-        }
-
         let bytes_written = message.data.len();
         self.messages.write_message(message);
 
@@ -488,11 +503,25 @@ impl SocketInner {
         Ok(())
     }
 
-    fn shutdown_one_end(&mut self) {
-        self.readable = false;
-        self.writable = false;
-        self.state = SocketState::Shutdown;
+    fn shutdown_read(&mut self) {
+        self.messages.close();
+        self.waiters.notify_events(FdEvents::POLLIN | FdEvents::POLLOUT |FdEvents::POLLHUP);
+    }
+
+    fn shutdown_write(&mut self) {
+        self.messages.close();
         self.waiters.notify_events(FdEvents::POLLIN | FdEvents::POLLOUT | FdEvents::POLLHUP);
+    }
+}
+
+bitflags! {
+    /// The flags for shutting down sockets.
+    pub struct SocketShutdownFlags: u32 {
+        /// Further receptions will be disallowed.
+        const READ = 1 << 0;
+
+        /// Durther transmissions will be disallowed.
+        const WRITE = 1 << 2;
     }
 }
 

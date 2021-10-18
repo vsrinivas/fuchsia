@@ -558,15 +558,17 @@ pub fn sys_setsockopt(
 pub fn sys_shutdown(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
-    _how: i32,
+    how: u32,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-
-    // TODO: Respect the `how` argument.
-
     let socket = file.node().socket().ok_or(errno!(ENOTSOCK))?;
-    socket.shutdown()?;
-
+    let how = match how {
+        SHUT_RD => SocketShutdownFlags::READ,
+        SHUT_WR => SocketShutdownFlags::WRITE,
+        SHUT_RDWR => SocketShutdownFlags::READ | SocketShutdownFlags::WRITE,
+        _ => return error!(EINVAL),
+    };
+    socket.shutdown(how)?;
     Ok(SUCCESS)
 }
 
