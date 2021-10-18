@@ -204,10 +204,10 @@ class GNBuilder(Frontend):
         with open(self.dest(metafile), 'r') as input:
             metadata = json.load(input)
 
-            # Documentation and host_tool metadata descriptions are named
+            # Documentation, data and host_tool metadata descriptions are named
             # inconsistently, so read the manifest and copy them explicitly.
             for atom in metadata['parts']:
-                if atom['type'] in ['documentation', 'host_tool']:
+                if atom['type'] in ['data', 'documentation', 'host_tool']:
                     self.copy_file(atom['meta'])
 
             # There are dart components in the Core SDK which are not part
@@ -455,8 +455,9 @@ class GNBuilder(Frontend):
         self.write_atom_metadata(os.path.join(base, 'meta.json'), atom)
 
     def install_data_atom(self, atom):
-        self.write_atom_metadata(
-            self.dest('data', 'config', atom['name'], 'meta.json'), atom)
+        # Don't copy the metadata as that is handled by update_metadata since
+        # the metadata is named inconsistently across all data types:
+        # config, license, and component_manifest.
         self.copy_files(atom['data'])
 
     def install_product_bundle_atom(self, atom):
