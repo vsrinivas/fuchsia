@@ -64,7 +64,7 @@ executable("aml-g12-tdm-dai-test-bin") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake-mmio-reg",
-    "//src/devices/testing/mock-ddk",
+    "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",

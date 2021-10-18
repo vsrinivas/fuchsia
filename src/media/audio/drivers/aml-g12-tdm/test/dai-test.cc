@@ -8,6 +8,7 @@
 #include <lib/async/default.h>
 #include <lib/ddk/metadata.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sync/completion.h>
 
 #include <thread>
@@ -18,7 +19,6 @@
 #include <zxtest/zxtest.h>
 
 #include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
-#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace audio::aml_g12 {
 
@@ -58,8 +58,7 @@ class FakeMmio {
 
 class TestAmlG12TdmDai : public AmlG12TdmDai {
  public:
-  explicit TestAmlG12TdmDai(zx_device_t* parent, ddk::PDev pdev)
-      : AmlG12TdmDai(parent, std::move(pdev)) {}
+  explicit TestAmlG12TdmDai() : AmlG12TdmDai(fake_ddk::kFakeParent) {}
   dai_protocol_t GetProto() { return {&this->dai_protocol_ops_, this}; }
   bool AllowNonContiguousRingBuffer() override { return true; }
 };
@@ -69,15 +68,17 @@ class AmlG12TdmDaiTest : public zxtest::Test {
   void SetUp() override {
     pdev_.set_mmio(0, mmio_.mmio_info());
     pdev_.UseFakeBti();
+
+    tester_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
   }
 
  protected:
   FakeMmio mmio_;
   fake_pdev::FakePDev pdev_;
+  fake_ddk::Bind tester_;
 };
 
 TEST_F(AmlG12TdmDaiTest, InitializeI2sOut) {
-  auto fake_parent = MockDevice::FakeRootParent();
   metadata::AmlConfig metadata = {};
   metadata.is_input = false;
   metadata.mClockDivFactor = 10;
@@ -90,13 +91,13 @@ TEST_F(AmlG12TdmDaiTest, InitializeI2sOut) {
   metadata.dai.number_of_channels = 2;
   metadata.dai.bits_per_sample = 16;
   metadata.dai.bits_per_slot = 32;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+  tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
-  auto dai = std::make_unique<TestAmlG12TdmDai>(fake_parent.get(), pdev_.proto());
+  auto dai = std::make_unique<TestAmlG12TdmDai>();
   auto dai_proto = dai->GetProto();
   ASSERT_OK(dai->InitPDev());
   ASSERT_OK(dai->DdkAdd("test"));
-  dai.release();  // Managed by the DDK.
+
   // step helps track of the expected sequence of reads and writes.
   int step = 0;
 
@@ -177,14 +178,13 @@ TEST_F(AmlG12TdmDaiTest, InitializeI2sOut) {
 
   DaiClient client(&dai_proto);
   client.dai_->Reset();
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  child_dev->ReleaseOp();
+  dai->DdkAsyncRemove();
+  dai.release()->DdkRelease();
+  EXPECT_TRUE(tester_.Ok());
   EXPECT_EQ(step, 11);
 }
 
 TEST_F(AmlG12TdmDaiTest, InitializePcmOut) {
-  auto fake_parent = MockDevice::FakeRootParent();
   metadata::AmlConfig metadata = {};
   metadata.is_input = false;
   metadata.mClockDivFactor = 10;
@@ -198,13 +198,12 @@ TEST_F(AmlG12TdmDaiTest, InitializePcmOut) {
   metadata.dai.bits_per_sample = 16;
   metadata.dai.bits_per_slot = 16;
   metadata.dai.sclk_on_raising = true;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+  tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
-  auto dai = std::make_unique<TestAmlG12TdmDai>(fake_parent.get(), pdev_.proto());
+  auto dai = std::make_unique<TestAmlG12TdmDai>();
   auto dai_proto = dai->GetProto();
   ASSERT_OK(dai->InitPDev());
   ASSERT_OK(dai->DdkAdd("test"));
-  dai.release();  // Managed by the DDK.
 
   // step helps track of the expected sequence of reads and writes.
   int step = 0;
@@ -286,14 +285,13 @@ TEST_F(AmlG12TdmDaiTest, InitializePcmOut) {
 
   DaiClient client(&dai_proto);
   client.dai_->Reset();
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  child_dev->ReleaseOp();
+  dai->DdkAsyncRemove();
+  dai.release()->DdkRelease();
+  EXPECT_TRUE(tester_.Ok());
   EXPECT_EQ(step, 11);
 }
 
 TEST_F(AmlG12TdmDaiTest, GetPropertiesOutputDai) {
-  auto fake_parent = MockDevice::FakeRootParent();
   metadata::AmlConfig metadata = {};
   metadata.is_input = false;
   const std::string kTestString("test");
@@ -308,13 +306,12 @@ TEST_F(AmlG12TdmDaiTest, GetPropertiesOutputDai) {
   metadata.dai.number_of_channels = 2;
   metadata.dai.bits_per_sample = 16;
   metadata.dai.bits_per_slot = 32;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+  tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
-  auto dai = std::make_unique<TestAmlG12TdmDai>(fake_parent.get(), pdev_.proto());
+  auto dai = std::make_unique<TestAmlG12TdmDai>();
   auto dai_proto = dai->GetProto();
   ASSERT_OK(dai->InitPDev());
   ASSERT_OK(dai->DdkAdd("test"));
-  dai.release();  // Managed by the DDK.
 
   DaiClient client(&dai_proto);
 
@@ -326,7 +323,6 @@ TEST_F(AmlG12TdmDaiTest, GetPropertiesOutputDai) {
 }
 
 TEST_F(AmlG12TdmDaiTest, GetPropertiesInputDai) {
-  auto fake_parent = MockDevice::FakeRootParent();
   metadata::AmlConfig metadata = {};
   metadata.is_input = true;
   const std::string kTestString("test product");
@@ -341,13 +337,12 @@ TEST_F(AmlG12TdmDaiTest, GetPropertiesInputDai) {
   metadata.dai.number_of_channels = 2;
   metadata.dai.bits_per_sample = 16;
   metadata.dai.bits_per_slot = 32;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+  tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
-  auto dai = std::make_unique<TestAmlG12TdmDai>(fake_parent.get(), pdev_.proto());
+  auto dai = std::make_unique<TestAmlG12TdmDai>();
   auto dai_proto = dai->GetProto();
   ASSERT_OK(dai->InitPDev());
   ASSERT_OK(dai->DdkAdd("test"));
-  dai.release();  // Managed by the DDK.
 
   DaiClient client(&dai_proto);
 
@@ -359,7 +354,6 @@ TEST_F(AmlG12TdmDaiTest, GetPropertiesInputDai) {
 }
 
 TEST_F(AmlG12TdmDaiTest, RingBufferOperations) {
-  auto fake_parent = MockDevice::FakeRootParent();
   metadata::AmlConfig metadata = {};
   metadata.is_input = false;
   metadata.mClockDivFactor = 10;
@@ -372,13 +366,12 @@ TEST_F(AmlG12TdmDaiTest, RingBufferOperations) {
   metadata.dai.number_of_channels = 2;
   metadata.dai.bits_per_sample = 16;
   metadata.dai.bits_per_slot = 32;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+  tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
-  auto dai = std::make_unique<TestAmlG12TdmDai>(fake_parent.get(), pdev_.proto());
+  auto dai = std::make_unique<TestAmlG12TdmDai>();
   auto dai_proto = dai->GetProto();
   ASSERT_OK(dai->InitPDev());
   ASSERT_OK(dai->DdkAdd("test"));
-  dai.release();  // Managed by the DDK.
 
   DaiClient client(&dai_proto);
 
@@ -515,6 +508,10 @@ TEST_F(AmlG12TdmDaiTest, RingBufferOperations) {
     ZX_ASSERT(out_result.response().num_frames == 2);
     ZX_ASSERT(out_result.response().ring_buffer.is_valid());
   }
+
+  dai->DdkAsyncRemove();
+  dai.release()->DdkRelease();
+  EXPECT_TRUE(tester_.Ok());
 }
 
 }  // namespace audio::aml_g12

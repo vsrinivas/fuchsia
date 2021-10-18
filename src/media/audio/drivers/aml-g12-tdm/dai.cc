@@ -6,6 +6,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/fpromise/result.h>
 #include <lib/zx/clock.h>
 #include <math.h>
@@ -26,10 +27,8 @@ enum {
   FRAGMENT_COUNT,
 };
 
-AmlG12TdmDai::AmlG12TdmDai(zx_device_t* parent, ddk::PDev  pdev)
-    : AmlG12TdmDaiDeviceType(parent),
-      loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-      pdev_(std::move(pdev)) {
+AmlG12TdmDai::AmlG12TdmDai(zx_device_t* parent)
+    : AmlG12TdmDaiDeviceType(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   ddk_proto_id_ = ZX_PROTOCOL_DAI;
   loop_.StartThread();
 }
@@ -93,13 +92,20 @@ zx_status_t AmlG12TdmDai::InitPDev() {
   }
   InitDaiFormats();
 
-  status = pdev_.GetBti(0, &bti_);
+  pdev_protocol_t pdev;
+  status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "could not get pdev %d", status);
+    return status;
+  }
+  auto pdev2 = ddk::PDev(&pdev);
+  status = pdev2.GetBti(0, &bti_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "could not obtain bti %d", status);
     return status;
   }
   std::optional<ddk::MmioBuffer> mmio;
-  status = pdev_.MapMmio(0, &mmio);
+  status = pdev2.MapMmio(0, &mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "could not get mmio %d", status);
     return status;
@@ -367,13 +373,7 @@ static zx_status_t dai_bind(void* ctx, zx_device_t* device) {
     zxlogf(ERROR, "device_get_metadata failed %d", status);
     return status;
   }
-  pdev_protocol_t pdev;
-  status = device_get_protocol(device, ZX_PROTOCOL_PDEV, &pdev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "could not get pdev %d", status);
-    return status;
-  }
-  auto dai = std::make_unique<audio::aml_g12::AmlG12TdmDai>(device, ddk::PDev(&pdev));
+  auto dai = std::make_unique<audio::aml_g12::AmlG12TdmDai>(device);
   if (dai == nullptr) {
     zxlogf(ERROR, "Could not create DAI driver");
     return ZX_ERR_NO_MEMORY;

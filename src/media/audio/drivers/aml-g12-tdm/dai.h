@@ -12,7 +12,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
@@ -40,7 +39,7 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
                      public ::fuchsia::hardware::audio::RingBuffer,
                      public ::fuchsia::hardware::audio::Dai {
  public:
-  AmlG12TdmDai(zx_device_t* parent, ddk::PDev pdev);
+  explicit AmlG12TdmDai(zx_device_t* parent);
 
   void DdkRelease();
   zx_status_t DaiConnect(zx::channel channel);
@@ -96,7 +95,6 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
   uint32_t frame_size_ = 0;
   std::atomic<uint32_t> expected_notifications_per_ring_{0};
   std::optional<WatchClockRecoveryPositionInfoCallback> position_callback_;
-  ddk::PDev pdev_;
 };
 
 }  // namespace audio::aml_g12
