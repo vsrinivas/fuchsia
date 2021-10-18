@@ -10,7 +10,6 @@
 
 #include <limits>
 
-#include <fbl/alloc_checker.h>
 #include <fbl/vector.h>
 
 namespace vmo_store {
@@ -48,27 +47,19 @@ class GrowableSlab {
   // Grows the slab by a fixed factor if there are no more free slots.
   //
   // Note that the worst-case complexity for `Grow` is O(new_capacity).
-  //
-  // Returns `ZX_ERR_NO_MEMORY` if the extra capacity could not be allocated.
-  [[nodiscard]] zx_status_t Grow() {
+  void Grow() {
     if (free() == 0) {
-      return GrowTo(capacity() == 0 ? 1 : capacity() * 2);
+      GrowTo(capacity() == 0 ? 1 : capacity() * 2);
     }
-    return ZX_OK;
   }
 
-  // Grows the slab to `capacity`.
-  //
-  // Note that the worst-case complexity for `GrowTo` is O(capacity).
-  //
-  // Returns `ZX_ERR_NO_MEMORY` if the extra capacity could not be allocated.
-  [[nodiscard]] zx_status_t GrowTo(KeyType capacity) {
-    fbl::AllocChecker ac;
-    GrowTo(capacity, &ac);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
+  void GrowTo(KeyType capacity) {
+    slots_.reserve(capacity);
+    while (slots_.size() != slots_.capacity()) {
+      auto key = static_cast<KeyType>(slots_.size());
+      slots_.push_back(Slot());
+      ListInsert(&free_list_, key);
     }
-    return ZX_OK;
   }
 
   // Inserts `value` on the slab, using a key from the available pool.
@@ -249,21 +240,6 @@ class GrowableSlab {
     list->tail = key;
     if (slot->prev == kSentinel) {
       list->head = key;
-    }
-  }
-
-  void GrowTo(KeyType capacity, fbl::AllocChecker* ac) {
-    auto before = static_cast<KeyType>(slots_.size());
-    if (capacity <= before) {
-      ac->arm(0, true);
-      return;
-    }
-    slots_.reserve(capacity, ac);
-    while (slots_.size() != slots_.capacity()) {
-      Slot slot;
-      auto key = static_cast<KeyType>(slots_.size());
-      slots_.push_back(std::move(slot));
-      ListInsert(&free_list_, key);
     }
   }
 

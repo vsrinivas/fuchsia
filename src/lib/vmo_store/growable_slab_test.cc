@@ -85,11 +85,11 @@ TYPED_TEST(GrowableSlabTest, Capacity) {
   GrowableSlab<typename TypeParam::Value, typename TypeParam::Key> slab;
   ASSERT_EQ(slab.capacity(), 0u);
   ASSERT_EQ(slab.count(), 0u);
-  ASSERT_OK(slab.GrowTo(50));
+  slab.GrowTo(50);
   ASSERT_EQ(slab.capacity(), 50u);
   ASSERT_EQ(slab.free(), 50u);
   ASSERT_EQ(slab.count(), 0u);
-  ASSERT_OK(slab.GrowTo(20));
+  slab.GrowTo(20);
   ASSERT_EQ(slab.capacity(), 50u);
 }
 
@@ -97,7 +97,7 @@ TYPED_TEST(GrowableSlabTest, PushGet) {
   GrowableSlab<typename TypeParam::Value, typename TypeParam::Key> slab;
   using Key = typename TypeParam::Key;
   constexpr Key kCapacity = 3;
-  ASSERT_OK(slab.GrowTo(kCapacity));
+  slab.GrowTo(kCapacity);
   for (Key i = 0; i < kCapacity; i++) {
     auto key = slab.Push(i + 10);
     ASSERT_TRUE(key.has_value());
@@ -115,7 +115,7 @@ TYPED_TEST(GrowableSlabTest, PushNoSpace) {
   GrowableSlab<typename TypeParam::Value, typename TypeParam::Key> slab;
   using Key = typename TypeParam::Key;
   constexpr Key kCapacity = 3;
-  ASSERT_OK(slab.GrowTo(kCapacity));
+  slab.GrowTo(kCapacity);
   for (Key i = 0; i < kCapacity; i++) {
     auto key = slab.Push(i + 10);
     ASSERT_TRUE(key.has_value());
@@ -128,7 +128,7 @@ TYPED_TEST(GrowableSlabTest, Free) {
   GrowableSlab<typename TypeParam::Value, typename TypeParam::Key> slab;
   using Key = typename TypeParam::Key;
   constexpr Key kCapacity = 3;
-  ASSERT_OK(slab.GrowTo(kCapacity));
+  slab.GrowTo(kCapacity);
   std::vector<std::tuple<Key, uint32_t>> keys;
   for (Key i = 0; i < kCapacity; i++) {
     uint32_t value = i + 10;
@@ -160,7 +160,7 @@ TYPED_TEST(GrowableSlabTest, PushFreeGet) {
   GrowableSlab<typename TypeParam::Value, typename TypeParam::Key> slab;
   using Key = typename TypeParam::Key;
   constexpr Key kCapacity = 15;
-  ASSERT_OK(slab.GrowTo(kCapacity));
+  slab.GrowTo(kCapacity);
   std::vector<std::tuple<Key, uint32_t>> keys;
   for (Key i = 0; i < kCapacity; i++) {
     uint32_t value = i + 10;
@@ -216,7 +216,7 @@ TYPED_TEST(GrowableSlabTest, Insert) {
   using Key = typename TypeParam::Key;
   constexpr Key kCapacity = 7;
   constexpr Key kReservedKey = 4;
-  ASSERT_OK(slab.GrowTo(kCapacity));
+  slab.GrowTo(kCapacity);
   // All the keys up to capacity should be available, we'll use all of them but one and push at the
   // end.
   for (Key i = 0; i < kCapacity; i++) {
@@ -243,18 +243,18 @@ TYPED_TEST(GrowableSlabTest, Insert) {
 TYPED_TEST(GrowableSlabTest, Grow) {
   GrowableSlab<typename TypeParam::Value, typename TypeParam::Key> slab;
   ASSERT_EQ(slab.capacity(), 0u);
-  ASSERT_OK(slab.Grow());
+  slab.Grow();
   ASSERT_EQ(slab.capacity(), 1u);
-  ASSERT_OK(slab.Grow());
+  slab.Grow();
   // Doesn't grow if we still have free slots.
   ASSERT_EQ(slab.capacity(), 1u);
   ASSERT_TRUE(slab.Push(1).has_value());
-  ASSERT_OK(slab.Grow());
+  slab.Grow();
   ASSERT_EQ(slab.capacity(), 2u);
   while (slab.free() != 0) {
     ASSERT_TRUE(slab.Push(1).has_value());
   }
-  ASSERT_OK(slab.Grow());
+  slab.Grow();
   ASSERT_EQ(slab.capacity(), 4u);
 }
 
@@ -262,7 +262,7 @@ TYPED_TEST(GrowableSlabTest, Iterator) {
   GrowableSlab<typename TypeParam::Value, typename TypeParam::Key> slab;
   using Key = typename TypeParam::Key;
   constexpr Key kCapacity = 15;
-  ASSERT_OK(slab.GrowTo(kCapacity));
+  slab.GrowTo(kCapacity);
   std::vector<std::pair<Key, uint32_t>> inserted;
   ASSERT_EQ(slab.begin(), slab.end());
   for (Key i = 0; i < kCapacity; i++) {
@@ -310,7 +310,7 @@ TYPED_TEST(GrowableSlabTest, Iterator) {
 TYPED_TEST(GrowableSlabTest, NoFastReuse) {
   // Tests that the free list in the slab is a queue and not a stack, delaying reuse of old keys.
   GrowableSlab<typename TypeParam::Value, typename TypeParam::Key> slab;
-  ASSERT_OK(slab.GrowTo(3));
+  slab.GrowTo(3);
   auto key1 = slab.Push(1);
   ASSERT_TRUE(key1.has_value());
   auto key2 = slab.Push(2);
@@ -328,7 +328,7 @@ TYPED_TEST(GrowableSlabTest, Clear) {
   GrowableSlab<typename TypeParam::Value, typename TypeParam::Key> slab;
   using Key = typename TypeParam::Key;
   constexpr Key kCapacity = 15;
-  ASSERT_OK(slab.GrowTo(kCapacity));
+  slab.GrowTo(kCapacity);
   while (slab.free() != 0) {
     ASSERT_TRUE(slab.Push(1).has_value());
   }
@@ -361,7 +361,7 @@ TEST(MiscTest, DestructorIsCalled) {
   GrowableSlab<Value> slab;
   constexpr size_t kCapacity = 6;
   size_t counter = 0;
-  ASSERT_OK(slab.GrowTo(kCapacity));
+  slab.GrowTo(kCapacity);
   std::vector<size_t> keys;
   while (slab.free() != 0) {
     auto key = slab.Push(Value(&counter));

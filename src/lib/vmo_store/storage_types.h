@@ -62,7 +62,8 @@ class SlabStorage : public AbstractStorage<_Key, _Meta> {
   SlabStorage() = default;
 
   inline zx_status_t Reserve(size_t capacity) override {
-    return slab_.GrowTo(static_cast<Key>(capacity));
+    slab_.GrowTo(static_cast<Key>(capacity));
+    return ZX_OK;
   }
 
   inline zx_status_t Insert(Key key, Item&& vmo) override {
