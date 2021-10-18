@@ -78,6 +78,10 @@ struct AttributeArg final {
   std::unique_ptr<Type> type = nullptr;
 
   const SourceSpan span;
+
+  // Default name to use for arguments like `@foo("abc")` when there is no
+  // schema for `@foo` we can use to infer the name.
+  static constexpr std::string_view kDefaultAnonymousName = "value";
 };
 
 struct Attribute final {
@@ -970,30 +974,21 @@ class AttributeArgSchema {
       fit::function<bool(Reporter* reporter, const std::unique_ptr<AttributeArg>& attribute_arg,
                          const Attributable* attributable)>;
 
-  explicit AttributeArgSchema(std::string name, ConstantValue::Kind type,
-                              Optionality optionality = Optionality::kRequired)
-      : name_(std::move(name)), type_(type), optionality_(optionality) {
-    assert(type != ConstantValue::Kind::kDocComment);
-  };
-
   explicit AttributeArgSchema(ConstantValue::Kind type,
                               Optionality optionality = Optionality::kRequired)
-      : AttributeArgSchema("value", type, optionality) {}
+      : type_(type), optionality_(optionality) {
+    assert(type != ConstantValue::Kind::kDocComment);
+  };
 
   bool IsOptional() const { return optionality_ == Optionality::kOptional; }
 
   ConstantValue::Kind Type() const { return type_; }
 
-  void ValidateValue(Reporter* reporter, const AttributeArg* maybe_arg,
-                     const Attribute* attribute) const;
+  void ValidateValue(Reporter* reporter, const Attribute* attribute,
+                     std::optional<std::string_view> desired_name,
+                     const AttributeArg* maybe_arg) const;
 
  private:
-  static bool NoOpConstraint(Reporter* reporter, const std::unique_ptr<AttributeArg>& attribute_arg,
-                             const Attributable* attributable) {
-    return true;
-  }
-
-  const std::string name_;
   const ConstantValue::Kind type_;
   const Optionality optionality_ = Optionality::kRequired;
 };
@@ -1011,20 +1006,24 @@ class AttributeSchema {
                                         const Attributable* attributable)>;
 
   // This constructor is used to build a schema for an attribute that takes multiple arguments.
-  explicit AttributeSchema(const std::set<AttributePlacement>& allowed_placements,
-                           const std::map<std::string, AttributeArgSchema>& arg_schemas,
-                           Constraint constraint = NoOpConstraint);
+  explicit AttributeSchema(std::set<AttributePlacement> allowed_placements,
+                           std::map<std::string, AttributeArgSchema> arg_schemas,
+                           Constraint constraint = NoOpConstraint)
+      : allowed_placements_(std::move(allowed_placements)),
+        arg_schemas_(std::move(arg_schemas)),
+        constraint_(std::move(constraint)) {}
 
   // This constructor is used to build a schema for an attribute that takes no arguments.
-  explicit AttributeSchema(const std::set<AttributePlacement>& allowed_placements,
+  explicit AttributeSchema(std::set<AttributePlacement> allowed_placements,
                            Constraint constraint = NoOpConstraint)
-      : AttributeSchema(allowed_placements, {}, std::move(constraint)) {}
+      : AttributeSchema(std::move(allowed_placements), {}, std::move(constraint)) {}
 
   // This constructor is used to build a schema for an attribute that takes a single argument.
-  explicit AttributeSchema(const std::set<AttributePlacement>& allowed_placements,
+  explicit AttributeSchema(std::set<AttributePlacement> allowed_placements,
                            AttributeArgSchema arg_schema, Constraint constraint = NoOpConstraint)
-      : AttributeSchema(allowed_placements,
-                        std::map<std::string, AttributeArgSchema>{{"value", arg_schema}},
+      : AttributeSchema(std::move(allowed_placements),
+                        std::map<std::string, AttributeArgSchema>{
+                            {std::string(AttributeArg::kDefaultAnonymousName), arg_schema}},
                         std::move(constraint)) {}
 
   AttributeSchema(AttributeSchema&& schema) = default;

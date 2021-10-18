@@ -289,7 +289,7 @@ constexpr ErrorDef ErrAttributeArgMustNotBeNamed(
     "attributes that take a single argument must not name that argument");
 constexpr ErrorDef<const flat::AttributeArg *> ErrAttributeArgNotNamed(
     "attributes that take multiple arguments must name all of them explicitly, but '{}' was not");
-constexpr ErrorDef<const flat::Attribute *, std::string> ErrMissingRequiredAttributeArg(
+constexpr ErrorDef<const flat::Attribute *, std::string_view> ErrMissingRequiredAttributeArg(
     "attribute '{}' is missing the required '{}' argument");
 constexpr ErrorDef<const flat::Attribute *> ErrMissingRequiredAnonymousAttributeArg(
     "attribute '{}' is missing its required argument");

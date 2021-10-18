@@ -9,7 +9,7 @@
 
 namespace {
 
-TEST(AttributesTests, BadOverrideAttributePlacements) {
+TEST(GeneratedNameTests, BadOverrideAttributePlacements) {
   {
     TestLibrary library(R"FIDL(
 library fidl.test;
@@ -60,7 +60,7 @@ service Bar {
   }
 }
 
-TEST(AttributesTests, BadMissingOverrideArg) {
+TEST(GeneratedNameTests, BadMissingOverrideArg) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -69,10 +69,10 @@ type Foo = struct {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingRequiredAttributeArg);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingRequiredAnonymousAttributeArg);
 }
 
-TEST(AttributesTests, BadOverrideValue) {
+TEST(GeneratedNameTests, BadOverrideValue) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -84,7 +84,7 @@ type Foo = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidNameOverride);
 }
 
-TEST(AttributesTests, BadOverrideCausesNameConflict) {
+TEST(GeneratedNameTests, BadOverrideCausesNameConflict) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 

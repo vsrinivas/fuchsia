@@ -1062,22 +1062,19 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
   return root_typespace;
 }
 
-void AttributeArgSchema::ValidateValue(Reporter* reporter, const AttributeArg* maybe_arg,
-                                       const Attribute* attribute) const {
-  // This argument was not specified - is that allowed?
-  if (maybe_arg == nullptr) {
-    if (!IsOptional()) {
-      reporter->Report(ErrMissingRequiredAttributeArg, attribute->span, attribute, name_);
-    }
+void AttributeArgSchema::ValidateValue(Reporter* reporter, const Attribute* attribute,
+                                       std::optional<std::string_view> desired_name,
+                                       const AttributeArg* maybe_arg) const {
+  if (IsOptional() || maybe_arg != nullptr) {
+    return;
+  }
+  if (desired_name.has_value()) {
+    reporter->Report(ErrMissingRequiredAttributeArg, attribute->span, attribute,
+                     desired_name.value());
+  } else {
+    reporter->Report(ErrMissingRequiredAnonymousAttributeArg, attribute->span, attribute);
   }
 }
-
-AttributeSchema::AttributeSchema(const std::set<AttributePlacement>& allowed_placements,
-                                 const std::map<std::string, AttributeArgSchema>& arg_schemas,
-                                 Constraint constraint)
-    : allowed_placements_(allowed_placements),
-      arg_schemas_(arg_schemas),
-      constraint_(std::move(constraint)) {}
 
 AttributeSchema AttributeSchema::Deprecated() {
   return AttributeSchema({AttributePlacement::kDeprecated});
@@ -1153,9 +1150,8 @@ bool AttributeSchema::ValidateArgs(Reporter* reporter, const Attribute* attribut
 
     // We've verified that we are expecting a single argument, and that we have a single anonymous
     // argument that we can validate as an instance of it.
-    for (const auto& arg_schema : arg_schemas_) {
-      const auto& schema = arg_schema.second;
-      schema.ValidateValue(reporter, anon_arg, attribute);
+    for (const auto& [name, schema] : arg_schemas_) {
+      schema.ValidateValue(reporter, attribute, std::nullopt, anon_arg);
     }
   } else {
     // If we have a single-arg official attribute its argument must always be anonymous, like
@@ -1167,11 +1163,10 @@ bool AttributeSchema::ValidateArgs(Reporter* reporter, const Attribute* attribut
 
     // All of the arguments should be named - compare each argument schema against its (possible)
     // value.
-    for (const auto& arg_schema : arg_schemas_) {
-      const auto& name = arg_schema.first;
-      const auto& schema = arg_schema.second;
+    for (const auto& [name, schema] : arg_schemas_) {
+      auto desired_name = arg_schemas_.size() == 1 ? std::nullopt : std::make_optional(name);
       const AttributeArg* arg = attribute->GetArg(name);
-      schema.ValidateValue(reporter, arg, attribute);
+      schema.ValidateValue(reporter, attribute, desired_name, arg);
     }
 
     // Make sure that no arguments not specified by the schema sneak through.
@@ -1337,7 +1332,7 @@ bool Library::VerifyInlineSize(const Struct* struct_decl) {
 
 bool OverrideNameConstraint(Reporter* reporter, const Attribute* attribute,
                             const Attributable* attributable) {
-  auto arg = attribute->GetArg("value");
+  auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   if (!utils::IsValidIdentifierComponent(arg_value.MakeContents())) {
@@ -1350,7 +1345,7 @@ bool OverrideNameConstraint(Reporter* reporter, const Attribute* attribute,
 bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
                         const Attributable* attributable) {
   assert(attributable);
-  auto arg = attribute->GetArg("value");
+  auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   uint32_t bound;
@@ -1414,7 +1409,7 @@ bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
 bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
                           const Attributable* attributable) {
   assert(attributable);
-  auto arg = attribute->GetArg("value");
+  auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   uint32_t bound;
@@ -1528,7 +1523,7 @@ bool TransportConstraint(Reporter* reporter, const Attribute* attribute,
       "Syscall",
   };
 
-  auto arg = attribute->GetArg("value");
+  auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   // Parse comma separated transports
@@ -1568,7 +1563,7 @@ Libraries::Libraries() {
   }));
   AddAttributeSchema("doc", AttributeSchema({
     /* any placement */
-  }, AttributeArgSchema("text", ConstantValue::Kind::kString)));
+  }, AttributeArgSchema(ConstantValue::Kind::kString)));
   AddAttributeSchema("layout", AttributeSchema::Deprecated()),
   AddAttributeSchema("for_deprecated_c_bindings", AttributeSchema({
     AttributePlacement::kProtocolDecl,
@@ -1602,10 +1597,10 @@ Libraries::Libraries() {
   }, AttributeArgSchema(ConstantValue::Kind::kString)));
   AddAttributeSchema("transitional", AttributeSchema({
     AttributePlacement::kMethod,
-  }, AttributeArgSchema("reason", ConstantValue::Kind::kString, AttributeArgSchema::Optionality::kOptional)));
+  }, AttributeArgSchema(ConstantValue::Kind::kString, AttributeArgSchema::Optionality::kOptional)));
   AddAttributeSchema("transport", AttributeSchema({
     AttributePlacement::kProtocolDecl,
-  }, AttributeArgSchema("types", ConstantValue::Kind::kString), TransportConstraint));
+  }, AttributeArgSchema(ConstantValue::Kind::kString), TransportConstraint));
   AddAttributeSchema("unknown", AttributeSchema({
     AttributePlacement::kEnumMember,
   }));
@@ -3310,7 +3305,7 @@ bool Library::CompileAttributeList(AttributeList* attributes) {
       }
 
       if (attribute->args.size() == 1) {
-        attribute->args[0]->name = "value";
+        attribute->args[0]->name = AttributeArg::kDefaultAnonymousName;
       }
       attribute->resolved = true;
     }

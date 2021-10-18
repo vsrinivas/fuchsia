@@ -412,7 +412,7 @@ protocol A {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingRequiredAttributeArg);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingRequiredAnonymousAttributeArg);
 }
 
 TEST(AttributesTests, BadBogusTransport) {
