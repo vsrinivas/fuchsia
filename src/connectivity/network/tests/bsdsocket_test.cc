@@ -4540,12 +4540,21 @@ TEST(NetDatagramTest, DatagramPartialRecv) {
       .iov_base = recv_buf,
       .iov_len = kPartialReadSize,
   };
+  // TODO(https://github.com/google/sanitizers/issues/1455): The size of this
+  // array should be 0 or 1, but ASAN's recvmsg interceptor incorrectly encodes
+  // that recvmsg writes [msg_name:][:msg_namelen'] (prime indicates value
+  // after recvmsg returns), while the actual behavior is that
+  // [msg_name:][:min(msg_namelen, msg_namelen'] is written.
+  uint8_t from[sizeof(addr) + 1];
   struct msghdr msg = {
+      .msg_name = from,
+      .msg_namelen = sizeof(from),
       .msg_iov = &iov,
       .msg_iovlen = 1,
   };
 
   ASSERT_EQ(recvmsg(recvfd.get(), &msg, 0), kPartialReadSize);
+  ASSERT_EQ(msg.msg_namelen, sizeof(addr));
   ASSERT_EQ(std::string(kTestMsg, kPartialReadSize), std::string(recv_buf, kPartialReadSize));
   EXPECT_EQ(MSG_TRUNC, msg.msg_flags);
 

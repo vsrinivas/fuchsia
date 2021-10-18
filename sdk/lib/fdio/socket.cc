@@ -1643,7 +1643,7 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
 namespace fdio_internal {
 
 void recvmsg_populate_socketaddress(const fnet::wire::SocketAddress& fidl, void* addr,
-                                    socklen_t addr_len) {
+                                    socklen_t& addr_len) {
   // Result address has invalid tag when it's not provided by the server (when the address
   // is not requested).
   // TODO(https://fxbug.dev/58503): Use better representation of nullable union when available.
