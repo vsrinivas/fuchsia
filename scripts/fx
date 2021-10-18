@@ -213,7 +213,6 @@ if [[ "$_this_script" != "${fuchsia_dir}/.jiri_root/bin/fx" &&
        echo >&2 "source tree, and it is a different version."
        echo >&2 "This can cause inconsistencies. Please update your PATH."
        echo >&2 "    'fx' was executed from: ${_this_script}"
-       exit 1
      fi
    fi
 fi
