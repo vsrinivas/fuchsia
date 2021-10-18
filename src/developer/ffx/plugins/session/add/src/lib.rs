@@ -8,23 +8,14 @@ use {
     ffx_core::ffx_plugin,
     ffx_session_add_args::SessionAddCommand,
     fidl_fuchsia_element::{ManagerProxy, Spec},
-    fidl_fuchsia_session::{ElementManagerProxy, ElementSpec},
 };
 
-#[ffx_plugin(
-    ElementManagerProxy = "core/session-manager:expose:fuchsia.session.ElementManager",
-    ManagerProxy = "core/session-manager:expose:fuchsia.element.Manager"
-)]
-pub async fn add(
-    element_manager_proxy: Option<ElementManagerProxy>,
-    manager_proxy: Option<ManagerProxy>,
-    cmd: SessionAddCommand,
-) -> Result<()> {
-    add_impl(element_manager_proxy, manager_proxy, cmd, &mut std::io::stdout()).await
+#[ffx_plugin(ManagerProxy = "core/session-manager:expose:fuchsia.element.Manager")]
+pub async fn add(manager_proxy: Option<ManagerProxy>, cmd: SessionAddCommand) -> Result<()> {
+    add_impl(manager_proxy, cmd, &mut std::io::stdout()).await
 }
 
 pub async fn add_impl<W: std::io::Write>(
-    element_manager_proxy: Option<ElementManagerProxy>,
     manager_proxy: Option<ManagerProxy>,
     cmd: SessionAddCommand,
     writer: &mut W,
@@ -35,40 +26,14 @@ pub async fn add_impl<W: std::io::Write>(
             .propose_element(Spec { component_url: Some(cmd.url.to_string()), ..Spec::EMPTY }, None)
             .await?
             .map_err(|err| format_err!("{:?}", err))
-    } else if let Some(element_manager_proxy) = element_manager_proxy {
-        element_manager_proxy
-            .propose_element(
-                ElementSpec { component_url: Some(cmd.url.to_string()), ..ElementSpec::EMPTY },
-                None,
-            )
-            .await?
-            .map_err(|err| format_err!("{:?}", err))
     } else {
-        ffx_bail!("Session does not expose an element manager");
+        ffx_bail!("Could not discover the element manager protocol");
     }
 }
 
 #[cfg(test)]
 mod test {
-    use {
-        super::*, fidl_fuchsia_element::ManagerRequest, fidl_fuchsia_session::ElementManagerRequest,
-    };
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_add_element_legacy() {
-        const TEST_ELEMENT_URL: &str = "Test Element Url";
-
-        let proxy = setup_fake_element_manager_proxy(|req| match req {
-            ElementManagerRequest::ProposeElement { spec, responder, .. } => {
-                assert_eq!(spec.component_url.unwrap(), TEST_ELEMENT_URL.to_string());
-                let _ = responder.send(&mut Ok(()));
-            }
-        });
-
-        let add_cmd = SessionAddCommand { url: TEST_ELEMENT_URL.to_string() };
-        let response = add(Some(proxy), None, add_cmd).await;
-        assert!(response.is_ok());
-    }
+    use {super::*, fidl_fuchsia_element::ManagerRequest};
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_element() {
@@ -82,7 +47,7 @@ mod test {
         });
 
         let add_cmd = SessionAddCommand { url: TEST_ELEMENT_URL.to_string() };
-        let response = add(None, Some(proxy), add_cmd).await;
+        let response = add(Some(proxy), add_cmd).await;
         assert!(response.is_ok());
     }
 }

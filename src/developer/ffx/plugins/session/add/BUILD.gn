@@ -11,7 +11,6 @@ ffx_plugin("ffx_session_add") {
 
   deps = [
     "//sdk/fidl/fuchsia.element:fuchsia.element-rustc",
-    "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//src/lib/fidl/rust/fidl",
   ]
 
