@@ -268,8 +268,7 @@ void JSONGenerator::Generate(const flat::Bits& value) {
   GenerateObject([&]() {
     GenerateDeclName(value.name);
     GenerateObjectMember("location", NameSpan(value.name));
-    // TODO(fxbug.dev/79094): refactor this to only have a single null state.
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateTypeAndFromTypeAlias(value.subtype_ctor.get());
     // TODO(fxbug.dev/7660): When all numbers are wrapped as string, we can simply
@@ -287,7 +286,7 @@ void JSONGenerator::Generate(const flat::Bits::Member& value) {
     GenerateObjectMember("name", value.name, Position::kFirst);
     GenerateObjectMember("location", NameSpan(value.name));
     GenerateObjectMember("value", value.value);
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
   });
 }
@@ -296,7 +295,7 @@ void JSONGenerator::Generate(const flat::Const& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
     GenerateObjectMember("location", NameSpan(value.name));
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateTypeAndFromTypeAlias(value.type_ctor.get());
     GenerateObjectMember("value", value.value);
@@ -307,7 +306,7 @@ void JSONGenerator::Generate(const flat::Enum& value) {
   GenerateObject([&]() {
     GenerateDeclName(value.name);
     GenerateObjectMember("location", NameSpan(value.name));
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     // TODO(fxbug.dev/7660): Due to legacy reasons, the 'type' of enums is actually
     // the primitive subtype, and therefore cannot use
@@ -331,7 +330,7 @@ void JSONGenerator::Generate(const flat::Enum::Member& value) {
     GenerateObjectMember("name", value.name, Position::kFirst);
     GenerateObjectMember("location", NameSpan(value.name));
     GenerateObjectMember("value", value.value);
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
   });
 }
@@ -340,7 +339,7 @@ void JSONGenerator::Generate(const flat::Protocol& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
     GenerateObjectMember("location", NameSpan(value.name));
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("composed_protocols", value.composed_protocols);
     GenerateObjectMember("methods", value.all_methods);
@@ -350,7 +349,7 @@ void JSONGenerator::Generate(const flat::Protocol& value) {
 void JSONGenerator::Generate(const flat::Protocol::ComposedProtocol& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("location", NameSpan(value.name));
   });
@@ -364,7 +363,7 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
     GenerateObjectMember("name", value.name);
     GenerateObjectMember("location", NameSpan(value.name));
     GenerateObjectMember("has_request", value.has_request);
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     if (value.has_request) {
       GenerateRequest("maybe_request", value.maybe_request_payload);
@@ -520,7 +519,7 @@ void JSONGenerator::Generate(const flat::Resource::Property& value) {
     GenerateObjectMember("name", value.name, Position::kFirst);
     GenerateObjectMember("location", NameSpan(value.name));
     GenerateTypeAndFromTypeAlias(value.type_ctor.get());
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
   });
 }
@@ -529,7 +528,7 @@ void JSONGenerator::Generate(const flat::Resource& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
     GenerateObjectMember("location", NameSpan(value.name));
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateTypeAndFromTypeAlias(value.subtype_ctor.get());
     GenerateObjectMember("properties", value.properties);
@@ -540,7 +539,7 @@ void JSONGenerator::Generate(const flat::Service& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
     GenerateObjectMember("location", NameSpan(value.name));
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
   });
@@ -551,7 +550,7 @@ void JSONGenerator::Generate(const flat::Service::Member& value) {
     GenerateTypeAndFromTypeAlias(value.type_ctor.get(), Position::kFirst);
     GenerateObjectMember("name", value.name);
     GenerateObjectMember("location", NameSpan(value.name));
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
   });
 }
@@ -561,7 +560,7 @@ void JSONGenerator::Generate(const flat::Struct& value) {
     GenerateDeclName(value.name);
     GenerateObjectMember("location", NameSpan(value.name));
     GenerateObjectMember("is_request_or_response", value.is_request_or_response);
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
     GenerateObjectMember("resource", value.resourceness == types::Resourceness::kResource);
@@ -576,7 +575,7 @@ void JSONGenerator::Generate(const flat::Struct::Member& value, bool is_request_
     GenerateTypeAndFromTypeAlias(value.type_ctor.get(), Position::kFirst);
     GenerateObjectMember("name", value.name);
     GenerateObjectMember("location", NameSpan(value.name));
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     if (value.maybe_default_value)
       GenerateObjectMember("maybe_default_value", value.maybe_default_value);
@@ -588,7 +587,7 @@ void JSONGenerator::Generate(const flat::Table& value) {
   GenerateObject([&]() {
     GenerateDeclName(value.name);
     GenerateObjectMember("location", NameSpan(value.name));
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
@@ -613,7 +612,7 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
       GenerateObjectMember("location", NameSpan(value.span.value()));
     }
 
-    if (value.attributes && !value.attributes->attributes.empty()) {
+    if (!value.attributes->Empty()) {
       GenerateObjectMember("maybe_attributes", value.attributes);
     }
   });
@@ -642,7 +641,7 @@ void JSONGenerator::Generate(const flat::Union& value) {
   GenerateObject([&]() {
     GenerateDeclName(value.name);
     GenerateObjectMember("location", NameSpan(value.name));
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
@@ -665,7 +664,7 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
       GenerateObjectMember("location", NameSpan(value.span.value()));
     }
 
-    if (value.attributes && !value.attributes->attributes.empty()) {
+    if (!value.attributes->Empty()) {
       GenerateObjectMember("maybe_attributes", value.attributes);
     }
   });
@@ -773,7 +772,7 @@ void JSONGenerator::Generate(const flat::TypeAlias& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
     GenerateObjectMember("location", NameSpan(value.name));
-    if (value.attributes && !value.attributes->attributes.empty())
+    if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("partial_type_ctor", value.partial_type_ctor);
   });
@@ -963,7 +962,7 @@ std::ostringstream JSONGenerator::Produce() {
 
     GenerateObjectMember("name", LibraryName(library_, "."));
 
-    if (auto attributes = library_->GetAttributes(); attributes) {
+    if (auto attributes = library_->GetAttributes(); !attributes->Empty()) {
       GenerateObjectMember("maybe_attributes", *attributes);
     }
 

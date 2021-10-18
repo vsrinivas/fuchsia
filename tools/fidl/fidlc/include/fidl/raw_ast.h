@@ -294,6 +294,9 @@ class Attribute final : public SourceElement {
   std::vector<std::unique_ptr<AttributeArg>> args;
 };
 
+// In the raw AST, "no attributes" is represented by a null AttributeList*,
+// because every SourceElement must have a valid span. (In the flat AST, it is
+// the opposite: never null, but the vector can be empty.)
 class AttributeList final : public SourceElement {
  public:
   AttributeList(SourceElement const& element, std::vector<std::unique_ptr<Attribute>> attributes)

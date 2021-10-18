@@ -568,46 +568,50 @@ type E = strict enum : uint32 {
 
 TEST(AttributesTests, BadIncorrectPlacementLayout) {
   TestLibrary library(R"FIDL(
-@for_deprecated_c_bindings
+@for_deprecated_c_bindings // 1
 library fidl.test;
 
-@for_deprecated_c_bindings
+@for_deprecated_c_bindings // 2
 const MyConst int32 = 0;
 
-@for_deprecated_c_bindings
+@for_deprecated_c_bindings // 3
 type MyEnum = enum {
-    @for_deprecated_c_bindings
+    @for_deprecated_c_bindings // 4
     MyMember = 5;
 };
 
+@for_deprecated_c_bindings // no error, this placement is allowed
 type MyStruct = struct {
-    @for_deprecated_c_bindings
+    @for_deprecated_c_bindings // 5
     MyMember int32;
 };
 
-@for_deprecated_c_bindings
+@for_deprecated_c_bindings // 6
 type MyUnion = union {
-    @for_deprecated_c_bindings
+    @for_deprecated_c_bindings // 7
     1: MyMember int32;
 };
 
-@for_deprecated_c_bindings
+@for_deprecated_c_bindings // 8
 type MyTable = table {
-    @for_deprecated_c_bindings
+    @for_deprecated_c_bindings // 9
     1: MyMember int32;
 };
 
+@for_deprecated_c_bindings // no error, this placement is allowed
 protocol MyProtocol {
-    @for_deprecated_c_bindings
+    @for_deprecated_c_bindings // 10
     MyMethod();
 };
 
 )FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 9);
-  ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "for_deprecated_c_bindings");
+  ASSERT_EQ(errors.size(), 10);
+  for (const auto& error : errors) {
+    ASSERT_ERR(error, fidl::ErrInvalidAttributePlacement);
+    ASSERT_SUBSTR(error->msg.c_str(), "for_deprecated_c_bindings");
+  }
 }
 
 TEST(AttributesTests, BadDeprecatedAttributes) {

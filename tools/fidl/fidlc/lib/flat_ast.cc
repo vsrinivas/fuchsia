@@ -232,27 +232,19 @@ MaybeAttributeArg AttributeList::GetAttributeArg(std::string_view attribute_name
 }
 
 bool Decl::HasAttribute(std::string_view attribute_name) const {
-  if (!attributes)
-    return false;
   return attributes->HasAttribute(attribute_name);
 }
 
 MaybeAttribute Decl::GetAttribute(std::string_view attribute_name) const {
-  if (!attributes)
-    return std::nullopt;
   return attributes->GetAttribute(attribute_name);
 }
 
 bool Decl::HasAttributeArg(std::string_view attribute_name, std::string_view arg_name) const {
-  if (!attributes)
-    return false;
   return attributes->HasAttributeArg(attribute_name, arg_name);
 }
 
 MaybeAttributeArg Decl::GetAttributeArg(std::string_view attribute_name,
                                         std::string_view arg_name) const {
-  if (!attributes)
-    return std::nullopt;
   return attributes->GetAttributeArg(attribute_name, arg_name);
 }
 
@@ -1829,8 +1821,6 @@ bool Library::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>
 
 bool Library::ValidateAttributesPlacement(const Attributable* attributable) {
   bool ok = true;
-  if (attributable == nullptr || attributable->attributes == nullptr)
-    return ok;
   for (const auto& attribute : attributable->attributes->attributes) {
     auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute);
     if (schema != nullptr && !schema->ValidatePlacement(reporter_, attribute, attributable)) {
@@ -1841,16 +1831,12 @@ bool Library::ValidateAttributesPlacement(const Attributable* attributable) {
 }
 
 bool Library::ValidateAttributesConstraints(const Attributable* attributable) {
-  if (attributable == nullptr || attributable->attributes == nullptr)
-    return true;
   return ValidateAttributesConstraints(attributable, attributable->attributes.get());
 }
 
 bool Library::ValidateAttributesConstraints(const Attributable* attributable,
                                             const AttributeList* attributes) {
   bool ok = true;
-  if (attributable == nullptr || attributes == nullptr)
-    return ok;
   for (const auto& attribute : attributes->attributes) {
     auto schema = all_libraries_->RetrieveAttributeSchema(nullptr, attribute);
     if (schema != nullptr && !schema->ValidateConstraint(reporter_, attribute, attributable)) {
@@ -2116,7 +2102,7 @@ void Library::ConsumeLiteralConstant(raw::LiteralConstant* raw_constant,
 }
 
 void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
-  if (using_directive->attributes != nullptr && !using_directive->attributes->attributes.empty()) {
+  if (using_directive->attributes != nullptr) {
     Fail(ErrAttributesNotAllowedOnLibraryImport, using_directive->span(),
          using_directive->attributes.get());
     return;
@@ -2225,10 +2211,12 @@ bool Library::CreateMethodResult(const std::shared_ptr<NamingContext>& err_varia
   Union::Member success_member{
       std::make_unique<raw::Ordinal64>(sourceElement,
                                        1),  // success case explicitly has ordinal 1
-      IdentifierTypeForDecl(success_variant), success_variant_context->name(), nullptr};
+      IdentifierTypeForDecl(success_variant), success_variant_context->name(),
+      std::make_unique<AttributeList>(std::vector<std::unique_ptr<Attribute>>{})};
   Union::Member error_member{
       std::make_unique<raw::Ordinal64>(sourceElement, 2),  // error case explicitly has ordinal 2
-      std::move(error_type_ctor), err_variant_context->name(), nullptr};
+      std::move(error_type_ctor), err_variant_context->name(),
+      std::make_unique<AttributeList>(std::vector<std::unique_ptr<Attribute>>{})};
   std::vector<Union::Member> result_members;
   result_members.push_back(std::move(success_member));
   result_members.push_back(std::move(error_member));
@@ -2249,13 +2237,14 @@ bool Library::CreateMethodResult(const std::shared_ptr<NamingContext>& err_varia
   // result union.
   std::vector<Struct::Member> response_members;
   response_members.push_back(
-      Struct::Member(IdentifierTypeForDecl(result_decl), result_context->name(), nullptr, nullptr));
+      Struct::Member(IdentifierTypeForDecl(result_decl), result_context->name(), nullptr,
+                     std::make_unique<AttributeList>(std::vector<std::unique_ptr<Attribute>>{})));
 
   const auto& response_context = result_context->parent();
   auto struct_decl = std::make_unique<Struct>(
-      nullptr /* attributes */, Name::CreateAnonymous(this, response_span, response_context),
-      std::move(response_members), std::nullopt /* resourceness */,
-      true /* is_request_or_response */);
+      /* attributes = */ std::make_unique<AttributeList>(std::vector<std::unique_ptr<Attribute>>{}),
+      Name::CreateAnonymous(this, response_span, response_context), std::move(response_members),
+      /* resourceness = */ std::nullopt, /* is_request_or_response = */ true);
   auto struct_decl_ptr = struct_decl.get();
   if (!RegisterDecl(std::move(struct_decl)))
     return false;
@@ -2808,23 +2797,22 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
-  if (file->library_decl->attributes != nullptr) {
-    std::unique_ptr<AttributeList> consumed_attributes;
-    if (!ConsumeAttributeList(std::move(file->library_decl->attributes), &consumed_attributes)) {
-      return false;
-    }
+  // Multiple files can have attributes on the library declaration, so we
+  // consume them into a separate list and merge with this->attributes below.
+  std::unique_ptr<AttributeList> consumed_attributes;
+  if (!ConsumeAttributeList(std::move(file->library_decl->attributes), &consumed_attributes)) {
+    return false;
+  }
 
-    ValidateAttributesPlacement(this);
-    if (!attributes) {
-      attributes = std::move(consumed_attributes);
-    } else {
-      AttributesBuilder attributes_builder(reporter_, std::move(attributes->attributes));
-      for (auto& attribute : consumed_attributes->attributes) {
-        if (!attributes_builder.Insert(std::move(attribute)))
-          return false;
-      }
-      attributes = std::make_unique<AttributeList>(attributes_builder.Done());
+  if (!attributes) {
+    attributes = std::move(consumed_attributes);
+  } else {
+    AttributesBuilder attributes_builder(reporter_, std::move(attributes->attributes));
+    for (auto& attribute : consumed_attributes->attributes) {
+      if (!attributes_builder.Insert(std::move(attribute)))
+        return false;
     }
+    attributes = std::make_unique<AttributeList>(attributes_builder.Done());
   }
 
   // All fidl files in a library should agree on the library name.
@@ -3299,7 +3287,7 @@ bool Library::ResolveAsOptional(Constant* constant) const {
 
 bool Library::CompileAttributeList(AttributeList* attributes) {
   bool ok = true;
-  if (attributes && !attributes->attributes.empty()) {
+  if (!attributes->Empty()) {
     for (auto& attribute : attributes->attributes) {
       auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute, true);
 
@@ -4720,6 +4708,7 @@ bool Library::Compile() {
     return false;
 
   auto verify_attributes_step = StartVerifyAttributesStep();
+  ValidateAttributesPlacement(this);
   for (const Decl* decl : declaration_order_) {
     verify_attributes_step.ForDecl(decl);
   }
@@ -5007,8 +4996,6 @@ bool Library::ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl,
 }
 
 bool Library::HasAttribute(std::string_view name) const {
-  if (!attributes)
-    return false;
   return attributes->HasAttribute(std::string(name));
 }
 

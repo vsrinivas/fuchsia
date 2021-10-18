@@ -113,10 +113,13 @@ struct Attribute final {
 
 using MaybeAttribute = std::optional<std::reference_wrapper<const Attribute>>;
 
+// In the flat AST, "no attributes" is represented by an AttributeList
+// containing an empty vector. (In the raw AST, null is used instead.)
 struct AttributeList final {
   explicit AttributeList(std::vector<std::unique_ptr<Attribute>> attributes)
       : attributes(std::move(attributes)) {}
 
+  bool Empty() const { return attributes.empty(); }
   bool HasAttribute(std::string_view attribute_name) const;
   MaybeAttribute GetAttribute(std::string_view attribute_name) const;
   bool HasAttributeArg(std::string_view attribute_name, std::string_view arg_name) const;

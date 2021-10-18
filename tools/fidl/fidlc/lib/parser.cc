@@ -371,7 +371,6 @@ std::unique_ptr<raw::Attribute> Parser::ParseAttribute() {
 std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList(
     std::unique_ptr<raw::Attribute> doc_comment, ASTScope& scope) {
   std::vector<std::unique_ptr<raw::Attribute>> attributes;
-  ;
   if (doc_comment)
     attributes.emplace_back(std::move(doc_comment));
 
@@ -448,9 +447,7 @@ std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList(bool for_par
   // no generic attributes, start the attribute list
   if (doc_comment) {
     std::vector<std::unique_ptr<raw::Attribute>> attributes;
-    if (doc_comment)
-      attributes.emplace_back(std::move(doc_comment));
-
+    attributes.emplace_back(std::move(doc_comment));
     return std::make_unique<raw::AttributeList>(scope.GetSourceElement(), std::move(attributes));
   }
   return nullptr;
