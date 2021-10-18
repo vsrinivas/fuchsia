@@ -7,7 +7,7 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 ffx_plugin("ffx_emulator_start") {
   version = "0.1.0"
   edition = "2018"
-  deps = [ "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common" ]
+  deps = [ "//src/developer/ffx/plugins/emulator/common:lib" ]
   args_sources = [ "src/args.rs" ]
   sources = [ "src/lib.rs" ]
 }

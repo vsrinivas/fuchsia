@@ -15,7 +15,7 @@ if (is_host) {
     test_environments = [ host_env ]
 
     deps = [
-      "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
+      "//src/developer/ffx/plugins/emulator/common:lib",
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",

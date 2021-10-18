@@ -14,4 +14,5 @@ ffx_plugin("ffx_emulator") {
     "remote:ffx_emulator_remote",
     "start:ffx_emulator_start",
   ]
+  test_deps = [ "common:lib_test" ]
 }
