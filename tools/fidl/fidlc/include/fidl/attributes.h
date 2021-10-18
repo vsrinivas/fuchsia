@@ -31,7 +31,7 @@ class AttributesBuilder {
 
   bool Insert(std::unique_ptr<T> attribute) {
     auto attribute_name = utils::canonicalize(attribute->name);
-    auto attribute_span = attribute->span();
+    auto attribute_span = attribute->span;
     auto result = InsertHelper(std::move(attribute));
     switch (result.kind) {
       case InsertResult::Kind::kDuplicate: {

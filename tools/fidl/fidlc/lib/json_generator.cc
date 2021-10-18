@@ -223,7 +223,7 @@ void JSONGenerator::Generate(const flat::AttributeArg& value) {
     GenerateObjectMember("value", value.value);
 
     // TODO(fxbug.dev/7660): Be consistent in emitting location fields.
-    const SourceSpan& span = value.span();
+    const SourceSpan& span = value.span;
     if (span.valid())
       GenerateObjectMember("location", NameSpan(span));
   });
@@ -236,7 +236,7 @@ void JSONGenerator::Generate(const flat::Attribute& value) {
     GenerateObjectMember("arguments", value.args);
 
     // TODO(fxbug.dev/7660): Be consistent in emitting location fields.
-    const SourceSpan& span = value.span();
+    const SourceSpan& span = value.span;
     if (span.valid())
       GenerateObjectMember("location", NameSpan(span));
   });

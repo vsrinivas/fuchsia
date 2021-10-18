@@ -95,62 +95,61 @@ type ExampleUnion = union {
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
   ASSERT_COMPILED(library);
 
-  EXPECT_TRUE(library.library()->HasAttribute("on_library"));
+  EXPECT_TRUE(library.library()->GetAttributes()->Get("on_library"));
 
   auto example_bits = library.LookupBits("ExampleBits");
   ASSERT_NOT_NULL(example_bits);
-  EXPECT_TRUE(example_bits->HasAttribute("on_bits"));
-  EXPECT_TRUE(example_bits->members.front().attributes->HasAttribute("on_bits_member"));
+  EXPECT_TRUE(example_bits->attributes->Get("on_bits"));
+  EXPECT_TRUE(example_bits->members.front().attributes->Get("on_bits_member"));
 
   auto example_const = library.LookupConstant("EXAMPLE_CONST");
   ASSERT_NOT_NULL(example_const);
-  EXPECT_TRUE(example_const->HasAttribute("on_const"));
+  EXPECT_TRUE(example_const->attributes->Get("on_const"));
 
   auto example_enum = library.LookupEnum("ExampleEnum");
   ASSERT_NOT_NULL(example_enum);
-  EXPECT_TRUE(example_enum->HasAttribute("on_enum"));
-  EXPECT_TRUE(example_enum->members.front().attributes->HasAttribute("on_enum_member"));
+  EXPECT_TRUE(example_enum->attributes->Get("on_enum"));
+  EXPECT_TRUE(example_enum->members.front().attributes->Get("on_enum_member"));
 
   auto example_child_protocol = library.LookupProtocol("ExampleChildProtocol");
   ASSERT_NOT_NULL(example_child_protocol);
-  EXPECT_TRUE(example_child_protocol->HasAttribute("on_protocol"));
-  EXPECT_TRUE(example_child_protocol->methods.front().attributes->HasAttribute("on_method"));
+  EXPECT_TRUE(example_child_protocol->attributes->Get("on_protocol"));
+  EXPECT_TRUE(example_child_protocol->methods.front().attributes->Get("on_method"));
   ASSERT_NOT_NULL(example_child_protocol->methods.front().maybe_request_payload);
   EXPECT_TRUE(example_child_protocol->methods.front()
                   .maybe_request_payload->members.front()
-                  .attributes->HasAttribute("on_parameter"));
+                  .attributes->Get("on_parameter"));
 
   auto example_parent_protocol = library.LookupProtocol("ExampleParentProtocol");
   ASSERT_NOT_NULL(example_parent_protocol);
-  EXPECT_TRUE(example_parent_protocol->HasAttribute("on_protocol"));
-  EXPECT_TRUE(
-      example_parent_protocol->composed_protocols.front().attributes->HasAttribute("on_compose"));
+  EXPECT_TRUE(example_parent_protocol->attributes->Get("on_protocol"));
+  EXPECT_TRUE(example_parent_protocol->composed_protocols.front().attributes->Get("on_compose"));
 
   auto example_service = library.LookupService("ExampleService");
   ASSERT_NOT_NULL(example_service);
-  EXPECT_TRUE(example_service->HasAttribute("on_service"));
-  EXPECT_TRUE(example_service->members.front().attributes->HasAttribute("on_service_member"));
+  EXPECT_TRUE(example_service->attributes->Get("on_service"));
+  EXPECT_TRUE(example_service->members.front().attributes->Get("on_service_member"));
 
   auto example_struct = library.LookupStruct("ExampleStruct");
   ASSERT_NOT_NULL(example_struct);
-  EXPECT_TRUE(example_struct->HasAttribute("on_struct"));
-  EXPECT_TRUE(example_struct->members.front().attributes->HasAttribute("on_struct_member"));
+  EXPECT_TRUE(example_struct->attributes->Get("on_struct"));
+  EXPECT_TRUE(example_struct->members.front().attributes->Get("on_struct_member"));
 
   auto example_table = library.LookupTable("ExampleTable");
   ASSERT_NOT_NULL(example_table);
-  EXPECT_TRUE(example_table->HasAttribute("on_table"));
-  EXPECT_TRUE(example_table->members.front().attributes->HasAttribute("on_table_member"));
-  EXPECT_TRUE(example_table->members.back().attributes->HasAttribute("on_reserved_member"));
+  EXPECT_TRUE(example_table->attributes->Get("on_table"));
+  EXPECT_TRUE(example_table->members.front().attributes->Get("on_table_member"));
+  EXPECT_TRUE(example_table->members.back().attributes->Get("on_reserved_member"));
 
   auto example_type_alias = library.LookupTypeAlias("ExampleTypeAlias");
   ASSERT_NOT_NULL(example_type_alias);
-  EXPECT_TRUE(example_type_alias->HasAttribute("on_type_alias"));
+  EXPECT_TRUE(example_type_alias->attributes->Get("on_type_alias"));
 
   auto example_union = library.LookupUnion("ExampleUnion");
   ASSERT_NOT_NULL(example_union);
-  EXPECT_TRUE(example_union->HasAttribute("on_union"));
-  EXPECT_TRUE(example_union->members.front().attributes->HasAttribute("on_union_member"));
-  EXPECT_TRUE(example_union->members.back().attributes->HasAttribute("on_reserved_member"));
+  EXPECT_TRUE(example_union->attributes->Get("on_union"));
+  EXPECT_TRUE(example_union->members.front().attributes->Get("on_union_member"));
+  EXPECT_TRUE(example_union->members.back().attributes->Get("on_reserved_member"));
 }
 
 TEST(AttributesTests, GoodOfficialAttributes) {
@@ -204,101 +203,101 @@ service ExampleService {
 )FIDL");
   ASSERT_COMPILED(library);
 
-  EXPECT_TRUE(library.library()->HasAttribute("no_doc"));
+  EXPECT_TRUE(library.library()->GetAttributes()->Get("no_doc"));
 
   auto example_const = library.LookupConstant("EXAMPLE_CONSTANT");
   ASSERT_NOT_NULL(example_const);
-  EXPECT_TRUE(example_const->HasAttribute("no_doc"));
-  EXPECT_TRUE(example_const->HasAttributeArg("doc", "value"));
+  EXPECT_TRUE(example_const->attributes->Get("no_doc"));
+  EXPECT_TRUE(example_const->attributes->Get("doc")->GetArg("value"));
   auto const_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_const->GetAttributeArg("doc", "value")->value->Value());
+      example_const->attributes->Get("doc")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(const_doc_value.MakeContents(), " For EXAMPLE_CONSTANT\n");
-  EXPECT_TRUE(example_const->HasAttributeArg("deprecated", "value"));
+  EXPECT_TRUE(example_const->attributes->Get("deprecated")->GetArg("value"));
   auto const_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_const->GetAttributeArg("deprecated", "value")->value->Value());
+      example_const->attributes->Get("deprecated")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(const_str_value.MakeContents(), "Note");
 
   auto example_enum = library.LookupEnum("ExampleEnum");
   ASSERT_NOT_NULL(example_enum);
-  EXPECT_TRUE(example_enum->HasAttributeArg("doc", "value"));
+  EXPECT_TRUE(example_enum->attributes->Get("doc")->GetArg("value"));
   auto enum_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_enum->GetAttributeArg("doc", "value")->value->Value());
+      example_enum->attributes->Get("doc")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(enum_doc_value.MakeContents(), " For ExampleEnum\n");
-  EXPECT_TRUE(example_enum->HasAttributeArg("deprecated", "value"));
+  EXPECT_TRUE(example_enum->attributes->Get("deprecated")->GetArg("value"));
   auto enum_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_enum->GetAttributeArg("deprecated", "value")->value->Value());
+      example_enum->attributes->Get("deprecated")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(enum_str_value.MakeContents(), "Reason");
-  EXPECT_TRUE(example_enum->members.back().attributes->HasAttribute("unknown"));
+  EXPECT_TRUE(example_enum->members.back().attributes->Get("unknown"));
 
   auto example_struct = library.LookupStruct("ExampleStruct");
   ASSERT_NOT_NULL(example_struct);
-  EXPECT_TRUE(example_struct->HasAttributeArg("doc", "value"));
+  EXPECT_TRUE(example_struct->attributes->Get("doc")->GetArg("value"));
   auto struct_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_struct->GetAttributeArg("doc", "value")->value->Value());
+      example_struct->attributes->Get("doc")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(struct_doc_value.MakeContents(), " For ExampleStruct\n");
-  EXPECT_TRUE(example_struct->HasAttributeArg("max_bytes", "value"));
+  EXPECT_TRUE(example_struct->attributes->Get("max_bytes")->GetArg("value"));
   auto struct_str_value1 = static_cast<const fidl::flat::StringConstantValue&>(
-      example_struct->GetAttributeArg("max_bytes", "value")->value->Value());
+      example_struct->attributes->Get("max_bytes")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(struct_str_value1.MakeContents(), "1234");
-  EXPECT_TRUE(example_struct->HasAttributeArg("max_handles", "value"));
+  EXPECT_TRUE(example_struct->attributes->Get("max_handles")->GetArg("value"));
   auto struct_str_value2 = static_cast<const fidl::flat::StringConstantValue&>(
-      example_struct->GetAttributeArg("max_handles", "value")->value->Value());
+      example_struct->attributes->Get("max_handles")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(struct_str_value2.MakeContents(), "5678");
 
   auto example_anon = library.LookupTable("CustomName");
   ASSERT_NOT_NULL(example_anon);
-  EXPECT_TRUE(example_anon->HasAttribute("generated_name"));
+  EXPECT_TRUE(example_anon->attributes->Get("generated_name"));
 
   auto generated_name_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_anon->GetAttributeArg("generated_name", "value")->value->Value());
+      example_anon->attributes->Get("generated_name")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(generated_name_value.MakeContents(), "CustomName");
 
   auto example_protocol = library.LookupProtocol("ExampleProtocol");
   ASSERT_NOT_NULL(example_protocol);
-  EXPECT_TRUE(example_protocol->HasAttribute("discoverable"));
-  EXPECT_TRUE(example_protocol->HasAttribute("for_deprecated_c_bindings"));
-  EXPECT_TRUE(example_protocol->HasAttributeArg("doc", "value"));
+  EXPECT_TRUE(example_protocol->attributes->Get("discoverable"));
+  EXPECT_TRUE(example_protocol->attributes->Get("for_deprecated_c_bindings"));
+  EXPECT_TRUE(example_protocol->attributes->Get("doc")->GetArg("value"));
   auto protocol_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_protocol->GetAttributeArg("doc", "value")->value->Value());
+      example_protocol->attributes->Get("doc")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(protocol_doc_value.MakeContents(), " For ExampleProtocol\n");
-  EXPECT_TRUE(example_protocol->HasAttributeArg("transport", "value"));
+  EXPECT_TRUE(example_protocol->attributes->Get("transport")->GetArg("value"));
   auto protocol_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_protocol->GetAttributeArg("transport", "value")->value->Value());
+      example_protocol->attributes->Get("transport")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(protocol_str_value.MakeContents(), "Syscall");
 
   auto& example_method = example_protocol->methods.front();
-  EXPECT_TRUE(example_method.attributes->HasAttribute("internal"));
-  EXPECT_TRUE(example_method.attributes->HasAttribute("transitional"));
-  EXPECT_TRUE(example_method.attributes->HasAttributeArg("doc", "value"));
+  EXPECT_TRUE(example_method.attributes->Get("internal"));
+  EXPECT_TRUE(example_method.attributes->Get("transitional"));
+  EXPECT_TRUE(example_method.attributes->Get("doc")->GetArg("value"));
   auto method_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_method.attributes->GetAttributeArg("doc", "value")->value->Value());
+      example_method.attributes->Get("doc")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(method_doc_value.MakeContents(), " For ExampleMethod\n");
-  EXPECT_TRUE(example_method.attributes->HasAttributeArg("selector", "value"));
+  EXPECT_TRUE(example_method.attributes->Get("selector")->GetArg("value"));
   auto method_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_method.attributes->GetAttributeArg("selector", "value")->value->Value());
+      example_method.attributes->Get("selector")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(method_str_value.MakeContents(), "Bar");
 
   auto example_service = library.LookupService("ExampleService");
   ASSERT_NOT_NULL(example_service);
-  EXPECT_TRUE(example_service->HasAttribute("no_doc"));
-  EXPECT_TRUE(example_service->HasAttributeArg("doc", "value"));
+  EXPECT_TRUE(example_service->attributes->Get("no_doc"));
+  EXPECT_TRUE(example_service->attributes->Get("doc")->GetArg("value"));
   auto service_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_service->GetAttributeArg("doc", "value")->value->Value());
+      example_service->attributes->Get("doc")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(service_doc_value.MakeContents(), " For ExampleService\n");
-  EXPECT_TRUE(example_service->HasAttributeArg("foo", "value"));
+  EXPECT_TRUE(example_service->attributes->Get("foo")->GetArg("value"));
   auto service_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_service->GetAttributeArg("foo", "value")->value->Value());
+      example_service->attributes->Get("foo")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(service_str_value.MakeContents(), "ExampleService");
 
   auto& example_service_member = example_service->members.front();
-  EXPECT_TRUE(example_service_member.attributes->HasAttribute("no_doc"));
-  EXPECT_TRUE(example_service_member.attributes->HasAttributeArg("doc", "value"));
+  EXPECT_TRUE(example_service_member.attributes->Get("no_doc"));
+  EXPECT_TRUE(example_service_member.attributes->Get("doc")->GetArg("value"));
   auto service_member_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
-      example_service_member.attributes->GetAttributeArg("doc", "value")->value->Value());
+      example_service_member.attributes->Get("doc")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(service_member_doc_value.MakeContents(), " For ExampleProtocol\n");
-  EXPECT_TRUE(example_service_member.attributes->HasAttributeArg("foo", "value"));
+  EXPECT_TRUE(example_service_member.attributes->Get("foo")->GetArg("value"));
   auto service_member_str_value = static_cast<const fidl::flat::StringConstantValue&>(
-      example_service_member.attributes->GetAttributeArg("foo", "value")->value->Value());
+      example_service_member.attributes->Get("foo")->GetArg("value")->value->Value());
   EXPECT_STR_EQ(service_member_str_value.MakeContents(), "ExampleProtocol");
 }
 
@@ -834,19 +833,19 @@ protocol MyProtocol {
 
   auto foo = library.LookupStruct("Foo");
   ASSERT_NOT_NULL(foo);
-  EXPECT_TRUE(foo->HasAttribute("foo"));
+  EXPECT_TRUE(foo->attributes->Get("foo"));
 
   auto bar = library.LookupStruct("Bar");
   ASSERT_NOT_NULL(bar);
-  EXPECT_TRUE(bar->HasAttribute("bar"));
+  EXPECT_TRUE(bar->attributes->Get("bar"));
 
   auto req = library.LookupStruct("MyProtocolMyMethodRequest");
   ASSERT_NOT_NULL(req);
-  EXPECT_TRUE(req->HasAttribute("baz"));
+  EXPECT_TRUE(req->attributes->Get("baz"));
 
   auto inner = library.LookupStruct("InnerLayout");
   ASSERT_NOT_NULL(inner);
-  EXPECT_TRUE(inner->HasAttribute("qux"));
+  EXPECT_TRUE(inner->attributes->Get("qux"));
 }
 
 TEST(AttributesTests, BadNoArgumentsEmptyParens) {
@@ -878,11 +877,13 @@ type MyStruct = struct {};
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);
-  EXPECT_TRUE(example_struct->HasAttribute("foo"));
-  EXPECT_TRUE(example_struct->HasAttributeArg("foo", "bar"));
-  EXPECT_STR_EQ(example_struct->GetAttributeArg("foo", "bar")->value->span.data(), "\"abc\"");
-  EXPECT_TRUE(example_struct->HasAttributeArg("foo", "baz"));
-  EXPECT_STR_EQ(example_struct->GetAttributeArg("foo", "baz")->value->span.data(), "\"def\"");
+  EXPECT_TRUE(example_struct->attributes->Get("foo"));
+  EXPECT_TRUE(example_struct->attributes->Get("foo")->GetArg("bar"));
+  EXPECT_STR_EQ(example_struct->attributes->Get("foo")->GetArg("bar")->value->span.data(),
+                "\"abc\"");
+  EXPECT_TRUE(example_struct->attributes->Get("foo")->GetArg("baz"));
+  EXPECT_STR_EQ(example_struct->attributes->Get("foo")->GetArg("baz")->value->span.data(),
+                "\"def\"");
 }
 
 TEST(AttributesTests, BadMultipleArgumentsWithNoNames) {
@@ -1004,8 +1005,8 @@ type MyStruct = struct {};
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);
-  EXPECT_TRUE(example_struct->HasAttribute("foo"));
-  EXPECT_TRUE(example_struct->HasAttributeArg("foo", "inferrable"));
+  EXPECT_TRUE(example_struct->attributes->Get("foo"));
+  EXPECT_TRUE(example_struct->attributes->Get("foo")->GetArg("inferrable"));
 }
 
 // If a schema is provided (ie, this is an "official" FIDL attribute), and it specifies that only
@@ -1246,11 +1247,11 @@ type MyStruct = struct {};
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);
-  EXPECT_TRUE(example_struct->HasAttribute("attr"));
+  EXPECT_TRUE(example_struct->attributes->Get("attr"));
 
   // Check `foo` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "foo"));
-  const auto& foo = example_struct->GetAttributeArg("attr", "foo")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("foo"));
+  const auto& foo = example_struct->attributes->Get("attr")->GetArg("foo")->value;
   EXPECT_STR_EQ(foo->span.data(), "\"abc\"");
   ASSERT_EQ(foo->kind, fidl::flat::Constant::Kind::kLiteral);
 
@@ -1258,8 +1259,8 @@ type MyStruct = struct {};
   EXPECT_TRUE(foo->Value().Convert(fidl::flat::ConstantValue::Kind::kString, &resolved_foo));
 
   // Check `baz` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "baz"));
-  const auto& baz = example_struct->GetAttributeArg("attr", "baz")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("baz"));
+  const auto& baz = example_struct->attributes->Get("attr")->GetArg("baz")->value;
   EXPECT_STR_EQ(baz->span.data(), "false");
   ASSERT_EQ(baz->kind, fidl::flat::Constant::Kind::kLiteral);
 
@@ -1301,11 +1302,11 @@ type MyStruct = struct {};
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);
-  EXPECT_TRUE(example_struct->HasAttribute("attr"));
+  EXPECT_TRUE(example_struct->attributes->Get("attr"));
 
   // Check `foo` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "foo"));
-  const auto& foo = example_struct->GetAttributeArg("attr", "foo")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("foo"));
+  const auto& foo = example_struct->attributes->Get("attr")->GetArg("foo")->value;
   EXPECT_STR_EQ(foo->span.data(), "foo");
   ASSERT_EQ(foo->kind, fidl::flat::Constant::Kind::kIdentifier);
 
@@ -1315,8 +1316,8 @@ type MyStruct = struct {};
                 "abc");
 
   // Check `bar` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "bar"));
-  const auto& bar = example_struct->GetAttributeArg("attr", "bar")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("bar"));
+  const auto& bar = example_struct->attributes->Get("attr")->GetArg("bar")->value;
   EXPECT_STR_EQ(bar->span.data(), "bar");
   ASSERT_EQ(bar->kind, fidl::flat::Constant::Kind::kIdentifier);
 
@@ -1325,8 +1326,8 @@ type MyStruct = struct {};
   EXPECT_TRUE(static_cast<fidl::flat::BoolConstantValue*>(resolved_bar.get())->value);
 
   // Check `baz` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "baz"));
-  const auto& baz = example_struct->GetAttributeArg("attr", "baz")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("baz"));
+  const auto& baz = example_struct->attributes->Get("attr")->GetArg("baz")->value;
   EXPECT_STR_EQ(baz->span.data(), "baz");
   ASSERT_EQ(baz->kind, fidl::flat::Constant::Kind::kIdentifier);
 
@@ -1402,11 +1403,11 @@ type MyStruct = struct {};
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);
-  EXPECT_TRUE(example_struct->HasAttribute("attr"));
+  EXPECT_TRUE(example_struct->attributes->Get("attr"));
 
   // Check `string` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "string"));
-  const auto& string_val = example_struct->GetAttributeArg("attr", "string")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("string"));
+  const auto& string_val = example_struct->attributes->Get("attr")->GetArg("string")->value;
   EXPECT_STR_EQ(string_val->span.data(), "\"foo\"");
   ASSERT_EQ(string_val->kind, fidl::flat::Constant::Kind::kLiteral);
 
@@ -1417,8 +1418,8 @@ type MyStruct = struct {};
       static_cast<fidl::flat::StringConstantValue*>(resolved_string.get())->MakeContents(), "foo");
 
   // Check `bool` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "bool"));
-  const auto& bool_val = example_struct->GetAttributeArg("attr", "bool")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("bool"));
+  const auto& bool_val = example_struct->attributes->Get("attr")->GetArg("bool")->value;
   EXPECT_STR_EQ(bool_val->span.data(), "true");
   ASSERT_EQ(bool_val->kind, fidl::flat::Constant::Kind::kLiteral);
 
@@ -1427,8 +1428,8 @@ type MyStruct = struct {};
   EXPECT_EQ(static_cast<fidl::flat::BoolConstantValue*>(resolved_bool.get())->value, true);
 
   // Check `int8` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int8"));
-  const auto& int8_val = example_struct->GetAttributeArg("attr", "int8")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("int8"));
+  const auto& int8_val = example_struct->attributes->Get("attr")->GetArg("int8")->value;
   EXPECT_STR_EQ(int8_val->span.data(), "-1");
   ASSERT_EQ(int8_val->kind, fidl::flat::Constant::Kind::kLiteral);
 
@@ -1437,8 +1438,8 @@ type MyStruct = struct {};
   EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<int8_t>*>(resolved_int8.get())->value, -1);
 
   // Check `int16` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int16"));
-  const auto& int16_val = example_struct->GetAttributeArg("attr", "int16")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("int16"));
+  const auto& int16_val = example_struct->attributes->Get("attr")->GetArg("int16")->value;
   EXPECT_STR_EQ(int16_val->span.data(), "-2");
   ASSERT_EQ(int16_val->kind, fidl::flat::Constant::Kind::kLiteral);
 
@@ -1448,8 +1449,8 @@ type MyStruct = struct {};
             -2);
 
   // Check `int32` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int32"));
-  const auto& int32_val = example_struct->GetAttributeArg("attr", "int32")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("int32"));
+  const auto& int32_val = example_struct->attributes->Get("attr")->GetArg("int32")->value;
   EXPECT_STR_EQ(int32_val->span.data(), "-3");
   ASSERT_EQ(int32_val->kind, fidl::flat::Constant::Kind::kLiteral);
 
@@ -1459,8 +1460,8 @@ type MyStruct = struct {};
             -3);
 
   // Check `int64` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int64"));
-  const auto& int64_val = example_struct->GetAttributeArg("attr", "int64")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("int64"));
+  const auto& int64_val = example_struct->attributes->Get("attr")->GetArg("int64")->value;
   EXPECT_STR_EQ(int64_val->span.data(), "-4");
   ASSERT_EQ(int64_val->kind, fidl::flat::Constant::Kind::kLiteral);
 
@@ -1470,8 +1471,8 @@ type MyStruct = struct {};
             -4);
 
   // Check `uint8` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint8"));
-  const auto& uint8_val = example_struct->GetAttributeArg("attr", "uint8")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("uint8"));
+  const auto& uint8_val = example_struct->attributes->Get("attr")->GetArg("uint8")->value;
   EXPECT_STR_EQ(uint8_val->span.data(), "1");
   ASSERT_EQ(uint8_val->kind, fidl::flat::Constant::Kind::kLiteral);
 
@@ -1481,8 +1482,8 @@ type MyStruct = struct {};
             1);
 
   // Check `uint16` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint16"));
-  const auto& uint16_val = example_struct->GetAttributeArg("attr", "uint16")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("uint16"));
+  const auto& uint16_val = example_struct->attributes->Get("attr")->GetArg("uint16")->value;
   EXPECT_STR_EQ(uint16_val->span.data(), "2");
   ASSERT_EQ(uint16_val->kind, fidl::flat::Constant::Kind::kLiteral);
 
@@ -1493,8 +1494,8 @@ type MyStruct = struct {};
             2);
 
   // Check `uint32` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint32"));
-  const auto& uint32_val = example_struct->GetAttributeArg("attr", "uint32")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("uint32"));
+  const auto& uint32_val = example_struct->attributes->Get("attr")->GetArg("uint32")->value;
   EXPECT_STR_EQ(uint32_val->span.data(), "3");
   ASSERT_EQ(uint32_val->kind, fidl::flat::Constant::Kind::kLiteral);
 
@@ -1505,8 +1506,8 @@ type MyStruct = struct {};
             3);
 
   // Check `uint64` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint64"));
-  const auto& uint64_val = example_struct->GetAttributeArg("attr", "uint64")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("uint64"));
+  const auto& uint64_val = example_struct->attributes->Get("attr")->GetArg("uint64")->value;
   EXPECT_STR_EQ(uint64_val->span.data(), "4");
   ASSERT_EQ(uint64_val->kind, fidl::flat::Constant::Kind::kLiteral);
 
@@ -1517,8 +1518,8 @@ type MyStruct = struct {};
             4);
 
   // Check `float32` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "float32"));
-  const auto& float32_val = example_struct->GetAttributeArg("attr", "float32")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("float32"));
+  const auto& float32_val = example_struct->attributes->Get("attr")->GetArg("float32")->value;
   EXPECT_STR_EQ(float32_val->span.data(), "1.2");
   ASSERT_EQ(float32_val->kind, fidl::flat::Constant::Kind::kLiteral);
 
@@ -1531,8 +1532,8 @@ type MyStruct = struct {};
               1.3);
 
   // Check `float64` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "float64"));
-  const auto& float64_val = example_struct->GetAttributeArg("attr", "float64")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("float64"));
+  const auto& float64_val = example_struct->attributes->Get("attr")->GetArg("float64")->value;
   EXPECT_STR_EQ(float64_val->span.data(), "-3.4");
   ASSERT_EQ(float64_val->kind, fidl::flat::Constant::Kind::kLiteral);
 
@@ -1680,11 +1681,11 @@ type MyStruct = struct {};
 
   auto example_struct = library.LookupStruct("MyStruct");
   ASSERT_NOT_NULL(example_struct);
-  EXPECT_TRUE(example_struct->HasAttribute("attr"));
+  EXPECT_TRUE(example_struct->attributes->Get("attr"));
 
   // Check `string` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "string"));
-  const auto& string_val = example_struct->GetAttributeArg("attr", "string")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("string"));
+  const auto& string_val = example_struct->attributes->Get("attr")->GetArg("string")->value;
   EXPECT_STR_EQ(string_val->span.data(), "string");
   ASSERT_EQ(string_val->kind, fidl::flat::Constant::Kind::kIdentifier);
 
@@ -1695,8 +1696,8 @@ type MyStruct = struct {};
       static_cast<fidl::flat::StringConstantValue*>(resolved_string.get())->MakeContents(), "foo");
 
   // Check `bool` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "bool"));
-  const auto& bool_val = example_struct->GetAttributeArg("attr", "bool")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("bool"));
+  const auto& bool_val = example_struct->attributes->Get("attr")->GetArg("bool")->value;
   EXPECT_STR_EQ(bool_val->span.data(), "bool");
   ASSERT_EQ(bool_val->kind, fidl::flat::Constant::Kind::kIdentifier);
 
@@ -1705,8 +1706,8 @@ type MyStruct = struct {};
   EXPECT_EQ(static_cast<fidl::flat::BoolConstantValue*>(resolved_bool.get())->value, true);
 
   // Check `int8` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int8"));
-  const auto& int8_val = example_struct->GetAttributeArg("attr", "int8")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("int8"));
+  const auto& int8_val = example_struct->attributes->Get("attr")->GetArg("int8")->value;
   EXPECT_STR_EQ(int8_val->span.data(), "int8");
   ASSERT_EQ(int8_val->kind, fidl::flat::Constant::Kind::kIdentifier);
 
@@ -1715,8 +1716,8 @@ type MyStruct = struct {};
   EXPECT_EQ(static_cast<fidl::flat::NumericConstantValue<int8_t>*>(resolved_int8.get())->value, -1);
 
   // Check `int16` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int16"));
-  const auto& int16_val = example_struct->GetAttributeArg("attr", "int16")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("int16"));
+  const auto& int16_val = example_struct->attributes->Get("attr")->GetArg("int16")->value;
   EXPECT_STR_EQ(int16_val->span.data(), "int16");
   ASSERT_EQ(int16_val->kind, fidl::flat::Constant::Kind::kIdentifier);
 
@@ -1726,8 +1727,8 @@ type MyStruct = struct {};
             -2);
 
   // Check `int32` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int32"));
-  const auto& int32_val = example_struct->GetAttributeArg("attr", "int32")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("int32"));
+  const auto& int32_val = example_struct->attributes->Get("attr")->GetArg("int32")->value;
   EXPECT_STR_EQ(int32_val->span.data(), "int32");
   ASSERT_EQ(int32_val->kind, fidl::flat::Constant::Kind::kIdentifier);
 
@@ -1737,8 +1738,8 @@ type MyStruct = struct {};
             -3);
 
   // Check `int64` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "int64"));
-  const auto& int64_val = example_struct->GetAttributeArg("attr", "int64")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("int64"));
+  const auto& int64_val = example_struct->attributes->Get("attr")->GetArg("int64")->value;
   EXPECT_STR_EQ(int64_val->span.data(), "int64.MEMBER");
   ASSERT_EQ(int64_val->kind, fidl::flat::Constant::Kind::kIdentifier);
 
@@ -1748,8 +1749,8 @@ type MyStruct = struct {};
             -4);
 
   // Check `uint8` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint8"));
-  const auto& uint8_val = example_struct->GetAttributeArg("attr", "uint8")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("uint8"));
+  const auto& uint8_val = example_struct->attributes->Get("attr")->GetArg("uint8")->value;
   EXPECT_STR_EQ(uint8_val->span.data(), "uint8");
   ASSERT_EQ(uint8_val->kind, fidl::flat::Constant::Kind::kIdentifier);
 
@@ -1759,8 +1760,8 @@ type MyStruct = struct {};
             1);
 
   // Check `uint16` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint16"));
-  const auto& uint16_val = example_struct->GetAttributeArg("attr", "uint16")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("uint16"));
+  const auto& uint16_val = example_struct->attributes->Get("attr")->GetArg("uint16")->value;
   EXPECT_STR_EQ(uint16_val->span.data(), "uint16");
   ASSERT_EQ(uint16_val->kind, fidl::flat::Constant::Kind::kIdentifier);
 
@@ -1771,8 +1772,8 @@ type MyStruct = struct {};
             2);
 
   // Check `uint32` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint32"));
-  const auto& uint32_val = example_struct->GetAttributeArg("attr", "uint32")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("uint32"));
+  const auto& uint32_val = example_struct->attributes->Get("attr")->GetArg("uint32")->value;
   EXPECT_STR_EQ(uint32_val->span.data(), "uint32");
   ASSERT_EQ(uint32_val->kind, fidl::flat::Constant::Kind::kIdentifier);
 
@@ -1783,8 +1784,8 @@ type MyStruct = struct {};
             3);
 
   // Check `uint64` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "uint64"));
-  const auto& uint64_val = example_struct->GetAttributeArg("attr", "uint64")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("uint64"));
+  const auto& uint64_val = example_struct->attributes->Get("attr")->GetArg("uint64")->value;
   EXPECT_STR_EQ(uint64_val->span.data(), "uint64.MEMBER");
   ASSERT_EQ(uint64_val->kind, fidl::flat::Constant::Kind::kIdentifier);
 
@@ -1795,8 +1796,8 @@ type MyStruct = struct {};
             4);
 
   // Check `float32` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "float32"));
-  const auto& float32_val = example_struct->GetAttributeArg("attr", "float32")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("float32"));
+  const auto& float32_val = example_struct->attributes->Get("attr")->GetArg("float32")->value;
   EXPECT_STR_EQ(float32_val->span.data(), "float32");
   ASSERT_EQ(float32_val->kind, fidl::flat::Constant::Kind::kIdentifier);
 
@@ -1809,8 +1810,8 @@ type MyStruct = struct {};
               1.3);
 
   // Check `float64` arg.
-  EXPECT_TRUE(example_struct->HasAttributeArg("attr", "float64"));
-  const auto& float64_val = example_struct->GetAttributeArg("attr", "float64")->value;
+  EXPECT_TRUE(example_struct->attributes->Get("attr")->GetArg("float64"));
+  const auto& float64_val = example_struct->attributes->Get("attr")->GetArg("float64")->value;
   EXPECT_STR_EQ(float64_val->span.data(), "float64");
   ASSERT_EQ(float64_val->kind, fidl::flat::Constant::Kind::kIdentifier);
 

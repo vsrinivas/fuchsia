@@ -34,7 +34,7 @@ protocol Example {
       library.LookupUnion(std::string(result_identifier->name.decl_name()));
   ASSERT_NOT_NULL(result_union);
   ASSERT_NOT_NULL(result_union->attributes);
-  ASSERT_TRUE(result_union->attributes->HasAttribute("result"));
+  ASSERT_TRUE(result_union->attributes->Get("result") != nullptr);
   ASSERT_EQ(result_union->members.size(), 2);
 
   const auto& success = result_union->members.at(0);

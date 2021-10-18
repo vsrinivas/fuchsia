@@ -68,9 +68,7 @@ std::string LibraryName(const Library* library, std::string_view separator);
 
 struct AttributeArg final {
   AttributeArg(std::optional<std::string> name, std::unique_ptr<Constant> value, SourceSpan span)
-      : name(std::move(name)), value(std::move(value)), span_(span) {}
-
-  SourceSpan span() const { return span_; }
+      : name(std::move(name)), value(std::move(value)), span(span) {}
 
   std::optional<std::string> name;
   std::unique_ptr<Constant> value;
@@ -78,30 +76,26 @@ struct AttributeArg final {
   // Set during compilation - type is derived during attribute resolution, and thus must represent
   // either an intrinsic primitive or string type.
   std::unique_ptr<Type> type = nullptr;
-  SourceSpan span_;
+
+  const SourceSpan span;
 };
 
 struct Attribute final {
-  // A constructor for synthetic attributes like "Result."
+  // A constructor for synthetic attributes like @result.
   explicit Attribute(std::string name) : name(std::move(name)) {}
 
-  Attribute(std::string name, SourceSpan span) : name(std::move(name)), span_(span) {}
-
   Attribute(std::string name, SourceSpan span, std::vector<std::unique_ptr<AttributeArg>> args)
-      : name(std::move(name)), args(std::move(args)), span_(span) {}
+      : name(std::move(name)), args(std::move(args)), span(span) {}
 
-  bool HasArg(std::string_view arg_name) const;
   const AttributeArg* GetArg(std::string_view arg_name) const;
-  SourceSpan span() const { return span_; }
 
-  // This pair of methods return affirmatively if the attribute in question has a single anonymous
-  // argument.  A single non-anonymous argument (ex: `@foo(bar="abc")`) will return false.
-  bool HasStandaloneAnonymousArg() const;
+  // Returns the lone argument if there is exactly 1 and it is not named. For
+  // example it returns non-null for `@foo("x")` but not for `@foo(bar="x")`.
   const AttributeArg* GetStandaloneAnonymousArg() const;
 
   const std::string name;
-  std::vector<std::unique_ptr<AttributeArg>> args;
-  SourceSpan span_;
+  const std::vector<std::unique_ptr<AttributeArg>> args;
+  const SourceSpan span;
 
   // This member should be set to "true" when the AttributeSchema::ResolveArgs() method has been run
   // on this attribute.  Every attribute should, by the end of compilation, have this boolean
@@ -116,11 +110,7 @@ struct AttributeList final {
       : attributes(std::move(attributes)) {}
 
   bool Empty() const { return attributes.empty(); }
-  bool HasAttribute(std::string_view attribute_name) const;
-  const Attribute* GetAttribute(std::string_view attribute_name) const;
-  bool HasAttributeArg(std::string_view attribute_name, std::string_view arg_name) const;
-  const AttributeArg* GetAttributeArg(std::string_view attribute_name,
-                                      std::string_view arg_name) const;
+  const Attribute* Get(std::string_view attribute_name) const;
 
   std::vector<std::unique_ptr<Attribute>> attributes;
 };
@@ -218,11 +208,6 @@ struct Decl : public Attributable {
   const Kind kind;
   const Name name;
 
-  bool HasAttribute(std::string_view attribute_name) const;
-  const Attribute* GetAttribute(std::string_view attribute_name) const;
-  bool HasAttributeArg(std::string_view attribute_name, std::string_view arg_name) const;
-  const AttributeArg* GetAttributeArg(std::string_view attribute_name,
-                                      std::string_view arg_name) const;
   std::string GetName() const;
 
   bool compiling = false;
@@ -1371,8 +1356,6 @@ class Library : Attributable {
 
   template <typename NumericType>
   bool ParseNumericLiteral(const raw::NumericLiteral* literal, NumericType* out_value) const;
-
-  bool HasAttribute(std::string_view name) const;
 
   const std::set<Library*>& dependencies() const;
 

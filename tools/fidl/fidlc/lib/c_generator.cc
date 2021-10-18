@@ -954,7 +954,7 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
   for (const auto& protocol_info : protocol_infos) {
     NamedProtocol named_protocol;
     named_protocol.c_name = NameCodedName(protocol_info->name);
-    if (protocol_info->HasAttribute("discoverable")) {
+    if (protocol_info->attributes->Get("discoverable") != nullptr) {
       named_protocol.discoverable_name = NameDiscoverable(*protocol_info);
     }
     named_protocol.transport = CGenerator::Transport::Channel;

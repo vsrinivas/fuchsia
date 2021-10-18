@@ -15,7 +15,7 @@ namespace fidl {
 namespace ordinals {
 
 std::string GetSelector(const flat::AttributeList* attributes, SourceSpan name) {
-  const flat::Attribute* maybe_selector_attr = attributes->GetAttribute("selector");
+  const flat::Attribute* maybe_selector_attr = attributes->Get("selector");
   if (maybe_selector_attr != nullptr) {
     auto selector_constant = maybe_selector_attr->GetArg("value");
     if (selector_constant != nullptr &&

@@ -6,6 +6,7 @@
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
+
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
@@ -153,7 +154,7 @@ protocol Child {
             "this_is_allowed");
   EXPECT_EQ(child_protocol->composed_protocols.back().attributes->attributes.size(), 1);
   EXPECT_EQ(child_protocol->composed_protocols.back().attributes->attributes.front()->name, "doc");
-  EXPECT_EQ(child_protocol->composed_protocols.back().attributes->attributes.front()->span().data(),
+  EXPECT_EQ(child_protocol->composed_protocols.back().attributes->attributes.front()->span.data(),
             "/// This is also allowed.");
   ASSERT_EQ(child_protocol->composed_protocols.back().attributes->attributes.front()->args.size(),
             1);
