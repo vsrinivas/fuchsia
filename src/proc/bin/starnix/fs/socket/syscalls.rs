@@ -194,7 +194,7 @@ pub fn sys_accept4(
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let accepted_socket = file.blocking_op(
         &ctx.task,
-        || socket.accept(&ctx.task),
+        || socket.accept(ctx.task.as_ucred()),
         FdEvents::POLLIN | FdEvents::POLLHUP,
         None,
     )?;
@@ -243,7 +243,7 @@ pub fn sys_connect(
     // TODO(tbodt): Support blocking when the UNIX domain socket queue fills up. This one's weird
     // because as far as I can tell, removing a socket from the queue does not actually trigger
     // FdEvents on anything.
-    client_socket.connect(&ctx.task, &listening_socket)?;
+    client_socket.connect(&listening_socket, ctx.task.as_ucred())?;
     Ok(SUCCESS)
 }
 
@@ -307,7 +307,13 @@ pub fn sys_socketpair(
     let socket_type = parse_socket_type(socket_type)?;
     let open_flags = socket_flags_to_open_flags(flags);
 
-    let (left, right) = Socket::new_pair(&ctx.task, domain, socket_type, open_flags);
+    let (left, right) = Socket::new_pair(
+        &ctx.task.thread_group.kernel,
+        domain,
+        socket_type,
+        ctx.task.as_ucred(),
+        open_flags,
+    );
 
     let fd_flags = socket_flags_to_fd_flags(flags);
     // TODO: Eventually this will need to allocate two fd numbers (each of which could
