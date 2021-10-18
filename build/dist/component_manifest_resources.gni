@@ -12,6 +12,13 @@ import("resource.gni")
 #   sources
 #     Required: List of paths to .cml meta files
 #
+#   restricted_features (optional)
+#     The set of restricted CML features to allow. Only applicable to v2 components.
+#     The set of features is allowlisted here: //tools/cmc/build/restricted_features/BUILD.gn
+#     where each feature name is represented by a group of the same name.
+#     Type: list of strings
+#     Default: []
+#
 #    deps
 #    testonly
 #    visibility
@@ -33,6 +40,7 @@ template("component_manifest_resources") {
                              [
                                "deps",
                                "public_deps",
+                               "restricted_features",
                                "data_deps",
                                "testonly",
                              ])
