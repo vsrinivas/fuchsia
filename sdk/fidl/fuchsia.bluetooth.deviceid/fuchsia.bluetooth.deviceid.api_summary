@@ -1,0 +1,23 @@
+protocol/member fuchsia.bluetooth.deviceid/DeviceIdentification.SetDeviceIdentification(vector<fuchsia.bluetooth.deviceid/DeviceIdentificationRecord>:3 records,server_end:fuchsia.bluetooth.deviceid/DeviceIdentificationHandle token) -> (fuchsia.bluetooth.deviceid/DeviceIdentification_SetDeviceIdentification_Result result)
+protocol fuchsia.bluetooth.deviceid/DeviceIdentification
+protocol fuchsia.bluetooth.deviceid/DeviceIdentificationHandle
+table/member fuchsia.bluetooth.deviceid/DeviceIdentificationRecord.primary bool
+table/member fuchsia.bluetooth.deviceid/DeviceIdentificationRecord.product_id uint16
+table/member fuchsia.bluetooth.deviceid/DeviceIdentificationRecord.service_description string:128
+table/member fuchsia.bluetooth.deviceid/DeviceIdentificationRecord.vendor_id fuchsia.bluetooth.deviceid/VendorId
+table/member fuchsia.bluetooth.deviceid/DeviceIdentificationRecord.version fuchsia.bluetooth.deviceid/DeviceReleaseNumber
+table fuchsia.bluetooth.deviceid/DeviceIdentificationRecord
+struct fuchsia.bluetooth.deviceid/DeviceIdentification_SetDeviceIdentification_Response
+union/member fuchsia.bluetooth.deviceid/DeviceIdentification_SetDeviceIdentification_Result.err int32
+union/member fuchsia.bluetooth.deviceid/DeviceIdentification_SetDeviceIdentification_Result.response fuchsia.bluetooth.deviceid/DeviceIdentification_SetDeviceIdentification_Response
+strict union fuchsia.bluetooth.deviceid/DeviceIdentification_SetDeviceIdentification_Result
+table/member fuchsia.bluetooth.deviceid/DeviceReleaseNumber.major uint8
+table/member fuchsia.bluetooth.deviceid/DeviceReleaseNumber.minor uint8
+table/member fuchsia.bluetooth.deviceid/DeviceReleaseNumber.subminor uint8
+table fuchsia.bluetooth.deviceid/DeviceReleaseNumber
+const fuchsia.bluetooth.deviceid/MAX_RECORDS uint8 3
+const fuchsia.bluetooth.deviceid/MAX_SERVICE_DESCRIPTION_LENGTH uint8 128
+union/member fuchsia.bluetooth.deviceid/VendorId.bluetooth_sig_id uint16
+union/member fuchsia.bluetooth.deviceid/VendorId.usb_if_id uint16
+flexible union fuchsia.bluetooth.deviceid/VendorId
+library fuchsia.bluetooth.deviceid

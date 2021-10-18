@@ -1,0 +1,97 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.deviceid;
+
+using zx;
+
+/// Maximum device identification records that a client can request to advertise at once.
+const MAX_RECORDS uint8 = 3;
+
+/// Maximum length of a service description.
+const MAX_SERVICE_DESCRIPTION_LENGTH uint8 = 128;
+
+/// The vendor id of the device.
+/// Defined in DI 1.3 Section 5.6.
+type VendorId = flexible union {
+    /// An ID assigned by the Bluetooth SIG.
+    /// From Bluetooth Assigned Numbers (https://www.bluetooth.com/specifications/assigned-numbers/)
+    1: bluetooth_sig_id uint16;
+
+    /// An ID assigned by the USB Implementors Forum
+    /// (https://www.usb.org/sites/default/files/vendor_ids072121_0.pdf).
+    2: usb_if_id uint16;
+};
+
+/// The device release number.
+/// This will be represented as Binary-Coded Decimal - JJ.M.N where JJ = major, M = minor, and
+/// N = sub-minor versions (e.g 2.0.1).
+type DeviceReleaseNumber = table {
+    /// Mandatory - major vesion number.
+    1: major uint8;
+
+    /// Mandatory - minor version number. Must be below 16.
+    2: minor uint8;
+
+    /// Mandatory - sub-minor version number. Must be below 16.
+    3: subminor uint8;
+};
+
+/// A table of attributes providing information about the device.
+// TODO(fxbug.dev/85943): Expand this table to include attributes defined in the Device Information
+// GATT service when supported.
+type DeviceIdentificationRecord = table {
+    /// Mandatory - the vendor of the device.
+    1: vendor_id VendorId;
+
+    /// Mandatory - the product identifier of the device.
+    2: product_id uint16;
+
+    /// Mandatory - the device release number.
+    3: version DeviceReleaseNumber;
+
+    /// Optional - specifies if this record is the primary record.
+    /// Default: false
+    4: primary bool;
+
+    /// Optional - a brief name describing the service.
+    /// Default: Empty string
+    5: service_description string:MAX_SERVICE_DESCRIPTION_LENGTH;
+};
+
+/// Represents an active device identification advertisement. Close the handle with any epitaph to
+/// unregister the device identification request.
+protocol DeviceIdentificationHandle {};
+
+/// An interface for setting the identification of a Fuchsia device.
+@discoverable
+protocol DeviceIdentification {
+    /// Request to set the device information to be advertised over Bluetooth.
+    ///
+    /// The device information can only be set once per provided `token`. To cancel the request,
+    /// close the `token` with any epitaph.
+    ///
+    /// At most one record in `records` may be denoted as the `primary` record. If multiple records
+    /// have `primary` set, `ZX_ERR_INVALID_ARGS` will be returned.
+    /// If the server is already advertising a `primary` record, a subsequent request with `primary`
+    /// may be rejected with `ZX_ERR_ALREADY_EXISTS`.
+    ///
+    /// + request `records` is the set of device information records that identify the device.
+    /// + request `token` is used to manage the lifetime of the advertised device information.
+    ///           The `records` will remain advertised as long as the channel is open.
+    ///           The device identification advertisement will be removed when `token` is closed
+    ///           with any epitaph.
+    /// - response An empty response will be sent when the `token` has been closed and the server
+    ///            has processed the closure.
+    /// * error Returns `ZX_ERR_INVALID_ARGS` if any of the provided `records` are invalidly
+    ///         formatted.
+    /// * error Returns `ZX_ERR_NO_RESOURCES` if the server has reached the maximum number of
+    ///         device information advertisements.
+    /// * error Returns `ZX_ERR_CANCELLED` if the request was cancelled by the server for all other
+    ///         errors.
+    SetDeviceIdentification(resource struct {
+        records vector<DeviceIdentificationRecord>:MAX_RECORDS;
+        token server_end:DeviceIdentificationHandle;
+    }) -> (struct {}) error zx.status;
+};
