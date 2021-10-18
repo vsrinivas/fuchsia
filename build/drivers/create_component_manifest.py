@@ -25,7 +25,9 @@ def main():
         action='store_const',
         const=True,
         default=False,
-        help='Generates a DFv1 component manifest. (If this is not included a DFv2 manifest is generated)')
+        help=
+        'Generates a DFv1 component manifest. (If this is not included a DFv2 manifest is generated)'
+    )
     args = parser.parse_args()
 
     distribution_manifest = json.load(args.distribution_manifest_file)

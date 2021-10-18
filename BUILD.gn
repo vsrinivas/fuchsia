@@ -6,6 +6,7 @@ import("//build/board.gni")
 import("//build/config/build_api_module.gni")
 import("//build/config/compiler.gni")
 import("//build/drivers/check_included_drivers.gni")
+import("//build/drivers/create_all_drivers_doc.gni")
 import("//build/fidl/args.gni")
 import("//build/images/args.gni")
 import("//build/info/info.gni")
@@ -943,12 +944,22 @@ check_included_drivers("drivers-check") {
   ]
 }
 
+# Generates a global documentation file from driver provided documentation.
+create_all_drivers_doc("create-all-drivers-doc") {
+  testonly = true
+  deps = [
+    "//build/images:default-images",
+    "//build/images:packages",
+  ]
+}
+
 ###
 ### Top-level targets.
 ###
 group("default") {
   testonly = true
   deps = [
+    "//:create-all-drivers-doc",
     "//:drivers-check",
     "//:host",
     "//build:tests",

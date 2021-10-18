@@ -1,0 +1,55 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Creates JSON with documentation from all drivers.
+# Every driver can optionally provide a ${target_name}-driver-info.json in its folder.
+# Documentation from this JSON file is aggregated into a global documentation file.
+# If a driver does not supply this file, an entry in the global documentation file is still
+# generated.
+#
+# Parameters
+#   fuchsia_driver_doc_file
+#     File containing a generated driver documentation entry.
+#
+#   testonly
+#   visibility
+template("create_all_drivers_doc") {
+  all_doc_target = "${target_name}_all_doc"
+  all_doc_output = "${target_gen_dir}/${target_name}_all_doc"
+  generated_file(all_doc_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    visibility = [
+      ":$target_name",
+      ":create-all-drivers-doc",
+      "//bundles:create_all_drivers_doc",
+    ]
+    outputs = [ all_doc_output ]
+    deps = invoker.deps
+    rebase = root_out_dir
+
+    # File containing driver documentation.
+    data_keys = [ "fuchsia_driver_doc_file" ]
+  }
+
+  action(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [ ":${all_doc_target}" ]
+    script = "//build/drivers/create_all_drivers_doc.py"
+    inputs = [ all_doc_output ]
+    outputs = [ "${target_gen_dir}/all_drivers_doc.json" ]
+    depfile = "${target_gen_dir}/${target_name}.d"
+    args = [
+      "--doc_list",
+      rebase_path(all_doc_output, root_build_dir),
+      "--output",
+      rebase_path(outputs[0], root_build_dir),
+      "--dep_file",
+      rebase_path(depfile, root_build_dir),
+    ]
+  }
+}
