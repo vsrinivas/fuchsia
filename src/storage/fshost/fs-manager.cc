@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #include <threads.h>
 #include <zircon/device/vfs.h>
+#include <zircon/errors.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -70,7 +71,7 @@ FsManager::FsManager(std::shared_ptr<FshostBootArgs> boot_args,
     : global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread)),
       outgoing_vfs_(fs::ManagedVfs(global_loop_->dispatcher())),
       metrics_(std::move(metrics)),
-      boot_args_(boot_args) {
+      boot_args_(std::move(boot_args)) {
   ZX_ASSERT(global_root_ == nullptr);
 }
 
@@ -224,6 +225,13 @@ zx_status_t FsManager::Initialize(
 void FsManager::FlushMetrics() { mutable_metrics()->Flush(); }
 
 zx_status_t FsManager::InstallFs(MountPoint point, zx::channel root_directory) {
+  // Hold the shutdown lock for the entire duration of the install to avoid racing with shutdown on
+  // adding/removing the remote mount.
+  std::lock_guard guard(lock_);
+  if (shutdown_called_) {
+    FX_LOGS(INFO) << "Not installing " << MountPointPath(point) << " after shutdown";
+    return ZX_ERR_BAD_STATE;
+  }
   if (mount_nodes_.find(point) == mount_nodes_.end()) {
     // The map should have been fully initialized.
     return ZX_ERR_BAD_STATE;

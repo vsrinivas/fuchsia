@@ -231,5 +231,34 @@ TEST(FshostFsProviderTestCase, CloneBlobExec) {
   ASSERT_OK(fdio_ns_unbind(ns, "/fs"));
 }
 
+TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
+
+  FakeDriverManagerAdmin driver_admin;
+  auto admin_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Administrator>();
+  ASSERT_TRUE(admin_endpoints.is_ok());
+  fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin);
+
+  zx::channel dir_request, lifecycle_request;
+  FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
+  Config config;
+  BlockWatcher watcher(manager, &config);
+  ASSERT_OK(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
+                               std::move(admin_endpoints->client), nullptr, watcher));
+
+  manager.Shutdown([](zx_status_t status) { EXPECT_OK(status); });
+  manager.WaitForShutdown();
+
+  auto admin = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  ASSERT_OK(admin.status_value());
+
+  auto server = std::make_shared<MockDirectoryAdminOpener>();
+  fidl::BindServer(loop.dispatcher(), std::move(admin->server), server);
+
+  EXPECT_STATUS(manager.InstallFs(FsManager::MountPoint::kData, admin->client.TakeChannel()),
+                ZX_ERR_BAD_STATE);
+}
+
 }  // namespace
 }  // namespace fshost
