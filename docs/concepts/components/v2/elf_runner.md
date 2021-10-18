@@ -155,9 +155,6 @@ and `red`.
 }
 ```
 
-Note: The value of the field can't be empty, therefor the string "foo=" is
-invalid.
-
 [glossary.component]: /docs/glossary/README.md#component
 [capability-routing]: component_manifests.md#capability-routing
 [cml-shards]: component_manifests.md#include
