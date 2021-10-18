@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart'
     show FuchsiaViewConnection;
 import '../models/webpage_action.dart';
@@ -94,7 +95,11 @@ class WebPageBloc {
         await webService.refresh();
         break;
       case WebPageActionType.setFocus:
-        await fuchsiaViewConnection.requestFocus();
+        try {
+          await fuchsiaViewConnection.requestFocus();
+        } on Exception catch (e) {
+          log.warning('Failed to set focus on the current web view: $e');
+        }
         break;
     }
   }
