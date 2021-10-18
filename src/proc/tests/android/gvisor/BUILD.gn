@@ -1,0 +1,131 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/proc/tests/android/build/starnix_test_component.gni")
+
+group("gvisor") {
+  testonly = true
+  deps = [ ":starnix_gvisor_tests" ]
+}
+
+template("gvisor_test_component") {
+  # Without this gn gives an error: `You set the variable "invoker" here and it was unused before it
+  # went out of scope.`
+  not_needed([ "invoker" ])
+
+  test_dir = "linux"
+  meta_dir = "//src/proc/tests/android/gvisor/meta"
+  starnix_test_component(target_name) {
+  }
+}
+
+# Commented out tests exist as binaries in the tree but are not run (yet!).
+gvisor_tests = [
+  "accept_bind_stream_test",
+  "accept_bind_test",
+  "access_test",
+  "bind_test",
+  "brk_test",
+  "chdir_test",
+  "chmod_test",
+
+  # "chown_test",
+  # "chroot_test",
+  "clock_getres_test",
+  "clock_gettime_test",
+  "creat_test",
+  "dev_test",
+  "dup_test",
+  "epoll_test",
+  "eventfd_test",
+
+  # "exec_binary_test",
+  # "exec_test",
+  "exit_test",
+  "fchdir_test",
+
+  # "flock_test",
+  "fork_test",
+  "getdents_test",
+  "getrandom_test",
+
+  # "getrusage_test",
+  # "ioctl_test",
+  "kill_test",
+  "link_test",
+  "lseek_test",
+
+  # "memfd_test",
+  "mkdir_test",
+  "mknod_test",
+  "mmap_test",
+
+  # "mremap_test",
+  "munmap_test",
+  "open_create_test",
+  "open_test",
+  "pipe_test",
+
+  # "poll_test",
+  # "ppoll_test",
+  # "prctl_test",
+  "pread64_test",
+
+  # "proc_test",
+  # "pselect_test",
+  # "pty_root_test",
+  # "pty_test",
+  "pwrite64_test",
+  "read_test",
+  "readv_socket_test",
+  "readv_test",
+  "rename_test",
+
+  # "rtsignal_test",
+  # "sched_test",
+  # "select_test",
+  "sigaction_test",
+  "sigprocmask_test",
+  "sigaltstack_test",
+
+  # "sigstop_test",
+  "socket_abstract_test",
+  "socket_test",
+
+  "socket_unix_stream_test",
+  "stat_test",
+
+  # "statfs_test",
+  "symlink_test",
+
+  # "tgkill_test",
+  # "time_test",
+  "timerfd_test",
+  "uidgid_test",
+  "unlink_test",
+  "wait_test",
+]
+
+foreach(test_name, gvisor_tests) {
+  gvisor_test_component(test_name) {
+  }
+}
+
+fuchsia_test_package("starnix_gvisor_tests") {
+  deps = [
+    "//src/proc/tests/android:android_system_image",
+    "//src/proc/tests/android:starnix_data_tmp_placeholder",
+  ]
+
+  test_components = []
+
+  foreach(test_name, gvisor_tests) {
+    test_components += [ ":${test_name}" ]
+  }
+
+  # This package intentionally contains many non-Fuchia ELF binaries that
+  # are not under /data/, and some of them are even unstripped, so disable
+  # theses checks to build successfully.
+  disable_elf_binaries_checks = true
+}

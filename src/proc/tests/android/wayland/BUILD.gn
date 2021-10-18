@@ -1,0 +1,87 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/proc/tests/android/build/starnix_test_component.gni")
+
+group("wayland") {
+  testonly = true
+  deps = [ ":starnix_wayland_tests" ]
+}
+
+template("wayland_test_component") {
+  # Without this gn gives an error: `You set the variable "invoker" here and it was unused before it
+  # went out of scope.`
+  not_needed([ "invoker" ])
+
+  test_dir = "wayland"
+  meta_dir = "//src/proc/tests/android/wayland/meta"
+  starnix_test_component(target_name) {
+  }
+}
+
+wayland_tests = [
+  "array-test",
+
+  "client-test",
+
+  # Fails with INVALID_ARGS (doesn't even run).
+  # "compositor-introspection-test",
+
+  # This test uses a hard-coded /tmp/ path which fails.
+  # "connection-test",
+
+  # This fails by timing out, looks like it uses futex and ends up stuck in a recvmsg.
+  # "display-test",
+
+  # This test might be failing due to epoll.
+  # "event-loop-test",
+  "fixed-test",
+  "headers-protocol-core-test",
+  "headers-protocol-test",
+  "interface-test",
+  "list-test",
+  "map-test",
+  "message-test",
+  "newsignal-test",
+  "os-wrappers-test",
+
+  # This test gets stuck on epoll_pwait.
+  # "protocol-logger-test",
+  "queue-test",
+  "resources-test",
+
+  # This test fails because it tries to kill SIGTERM itself. There are also two leak check tests,
+  # one is a malloc leak check that should be deleted (since the leak check code is deleted in the
+  # version that we use anyway), and another is an FD leak check.
+  # "sanity-test",
+  "signal-test",
+
+  # This test seems to require some flock functionality that we do not have (it uses this to, for
+  # figure out whether or not to unlink the socket file).
+  # "socket-test",
+  # "wayland_demo",
+]
+
+foreach(test_name, wayland_tests) {
+  wayland_test_component(test_name) {
+  }
+}
+
+fuchsia_test_package("starnix_wayland_tests") {
+  deps = [
+    "//src/proc/tests/android:android_system_image",
+    "//src/proc/tests/android:starnix_data_tmp_placeholder",
+  ]
+
+  test_components = []
+
+  foreach(test_name, wayland_tests) {
+    test_components += [ ":${test_name}" ]
+  }
+
+  # This package intentionally contains many non-Fuchia ELF binaries that
+  # are not under /data/, and some of them are even unstripped, so disable
+  # theses checks to build successfully.
+  disable_elf_binaries_checks = true
+}

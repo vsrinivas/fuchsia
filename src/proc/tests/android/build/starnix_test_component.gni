@@ -1,0 +1,26 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+template("starnix_test_component") {
+  test_name = target_name
+
+  resource("${test_name}_bin") {
+    sources = [ "//prebuilt/starnix/tests/syscalls/linux-amd64/${invoker.test_dir}/${test_name}" ]
+    outputs = [ "data/tests/${test_name}" ]
+  }
+
+  fuchsia_component(test_name) {
+    forward_variables_from(invoker, "*")
+
+    testonly = true
+    check_references = false
+    manifest = "${invoker.meta_dir}/${test_name}.cml"
+    deps = [
+      ":${test_name}_bin",
+      "//src/proc/tests/android:android_system_image",
+    ]
+  }
+}

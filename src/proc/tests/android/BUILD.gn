@@ -11,7 +11,11 @@ group("android") {
 group("tests") {
   testonly = true
   if (target_cpu == "x64") {
-    deps = [ ":test_android_distro" ]
+    deps = [
+      ":test_android_distro",
+      "//src/proc/tests/android/gvisor",
+      "//src/proc/tests/android/wayland",
+    ]
   }
 }
 
@@ -47,187 +51,6 @@ resource("starnix_data_tmp_placeholder") {
   outputs = [ "data/tmp/.placeholder" ]
 }
 
-template("starnix_test_component") {
-  test_name = target_name
-
-  resource("${test_name}_bin") {
-    sources = [ "//prebuilt/starnix/tests/syscalls/linux-amd64/${invoker.test_dir}/${test_name}" ]
-    outputs = [ "data/tests/${test_name}" ]
-  }
-
-  fuchsia_component(test_name) {
-    forward_variables_from(invoker, "*")
-
-    testonly = true
-    check_references = false
-    manifest = "meta/${test_name}.cml"
-    deps = [
-      ":${test_name}_bin",
-      ":android_system_image",
-    ]
-  }
-}
-
-template("gvisor_test_component") {
-  # Without this gn gives an error: `You set the variable "invoker" here and it was unused before it
-  # went out of scope.`
-  not_needed([ "invoker" ])
-
-  test_dir = "linux"
-  starnix_test_component(target_name) {
-  }
-}
-
-template("wayland_test_component") {
-  # Without this gn gives an error: `You set the variable "invoker" here and it was unused before it
-  # went out of scope.`
-  not_needed([ "invoker" ])
-
-  test_dir = "wayland"
-  starnix_test_component(target_name) {
-  }
-}
-
-# Commented out tests exist as binaries in the tree but are not run (yet!).
-gvisor_tests = [
-  "accept_bind_stream_test",
-  "accept_bind_test",
-  "access_test",
-  "bind_test",
-  "brk_test",
-  "chdir_test",
-  "chmod_test",
-
-  # "chown_test",
-  # "chroot_test",
-  "clock_getres_test",
-  "clock_gettime_test",
-  "creat_test",
-  "dev_test",
-  "dup_test",
-  "epoll_test",
-  "eventfd_test",
-
-  # "exec_binary_test",
-  # "exec_test",
-  "exit_test",
-  "fchdir_test",
-
-  # "flock_test",
-  "fork_test",
-  "getdents_test",
-  "getrandom_test",
-
-  # "getrusage_test",
-  # "ioctl_test",
-  "kill_test",
-  "link_test",
-  "lseek_test",
-
-  # "memfd_test",
-  "mkdir_test",
-  "mknod_test",
-  "mmap_test",
-
-  # "mremap_test",
-  "munmap_test",
-  "open_create_test",
-  "open_test",
-  "pipe_test",
-
-  # "poll_test",
-  # "ppoll_test",
-  # "prctl_test",
-  "pread64_test",
-
-  # "proc_test",
-  # "pselect_test",
-  # "pty_root_test",
-  # "pty_test",
-  "pwrite64_test",
-  "read_test",
-  "readv_socket_test",
-  "readv_test",
-  "rename_test",
-
-  # "rtsignal_test",
-  # "sched_test",
-  # "select_test",
-  "sigaction_test",
-  "sigprocmask_test",
-  "sigaltstack_test",
-
-  # "sigstop_test",
-  "socket_abstract_test",
-  "socket_test",
-
-  "socket_unix_stream_test",
-  "stat_test",
-
-  # "statfs_test",
-  "symlink_test",
-
-  # "tgkill_test",
-  # "time_test",
-  "timerfd_test",
-  "uidgid_test",
-  "unlink_test",
-  "wait_test",
-]
-
-foreach(test_name, gvisor_tests) {
-  gvisor_test_component(test_name) {
-  }
-}
-
-wayland_tests = [
-  "array-test",
-
-  "client-test",
-
-  # Fails with INVALID_ARGS (doesn't even run).
-  # "compositor-introspection-test",
-
-  # This test uses a hard-coded /tmp/ path which fails.
-  # "connection-test",
-
-  # This fails by timing out, looks like it uses futex and ends up stuck in a recvmsg.
-  # "display-test",
-
-  # This test might be failing due to epoll.
-  # "event-loop-test",
-  "fixed-test",
-  "headers-protocol-core-test",
-  "headers-protocol-test",
-  "interface-test",
-  "list-test",
-  "map-test",
-  "message-test",
-  "newsignal-test",
-  "os-wrappers-test",
-
-  # This test gets stuck on epoll_pwait.
-  # "protocol-logger-test",
-  "queue-test",
-  "resources-test",
-
-  # This test fails because it tries to kill SIGTERM itself. There are also two leak check tests,
-  # one is a malloc leak check that should be deleted (since the leak check code is deleted in the
-  # version that we use anyway), and another is an FD leak check.
-  # "sanity-test",
-  "signal-test",
-
-  # This test seems to require some flock functionality that we do not have (it uses this to, for
-  # figure out whether or not to unlink the socket file).
-  # "socket-test",
-  # "wayland_demo",
-]
-
-foreach(test_name, wayland_tests) {
-  wayland_test_component(test_name) {
-  }
-}
-
 fuchsia_test_package("test_android_distro") {
   deps = [
     ":android_system_image",
@@ -240,12 +63,6 @@ fuchsia_test_package("test_android_distro") {
     ":boringssl_self_test64",
     ":sh_test",
   ]
-  foreach(test_name, gvisor_tests) {
-    test_components += [ ":${test_name}" ]
-  }
-  foreach(test_name, wayland_tests) {
-    test_components += [ ":${test_name}" ]
-  }
 
   # This package intentionally contains many non-Fuchia ELF binaries that
   # are not under /data/, and some of them are even unstripped, so disable
