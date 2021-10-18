@@ -4,12 +4,15 @@
 
 use {
     anyhow::{format_err, Error},
+    cm_rust, cm_types,
     fidl::endpoints::ProtocolMarker,
     fidl_fidl_examples_routing_echo::{self as fecho, EchoMarker as EchoClientStatsMarker},
-    fidl_fuchsia_data as fdata, fuchsia_async as fasync,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fcdecl,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_component_test::{builder::*, mock, Moniker, RouteBuilder},
     futures::{channel::mpsc, SinkExt, StreamExt, TryStreamExt},
+    std::convert::TryInto,
 };
 
 const V1_ECHO_CLIENT_URL: &'static str =
@@ -288,6 +291,98 @@ async fn mock_component_with_a_child() -> Result<(), Error> {
     let _instance = builder.build().create().await?;
 
     assert!(receive_echo_server_called.next().await.is_some());
+    Ok(())
+}
+
+// This test confirms that dynamic components in the built realm can use URLs that are relative to
+// the test package (this is a special case the realm builder resolver needs to handle).
+#[fasync::run_singlethreaded(test)]
+async fn mock_component_with_a_relative_dynamic_child() -> Result<(), Error> {
+    let (send_echo_client_results, mut receive_echo_client_results) = mpsc::channel(1);
+
+    let collection_name = "dynamic-children".to_string();
+    let collection_name_for_mock = collection_name.clone();
+
+    let mut builder = RealmBuilder::new().await?;
+    builder
+        .add_eager_component(
+            "echo-client",
+            ComponentSource::mock(move |mock_handles: mock::MockHandles| {
+                let collection_name_for_mock = collection_name_for_mock.clone();
+                let mut send_echo_client_results = send_echo_client_results.clone();
+                Box::pin(async move {
+                    let realm_proxy =
+                        mock_handles.connect_to_service::<fcomponent::RealmMarker>()?;
+                    realm_proxy
+                        .create_child(
+                            &mut fcdecl::CollectionRef { name: collection_name_for_mock.clone() },
+                            fcdecl::Child {
+                                name: Some("echo-server".to_string()),
+                                url: Some(V2_ECHO_SERVER_RELATIVE_URL.to_string()),
+                                startup: Some(fcdecl::StartupMode::Lazy),
+                                environment: None,
+                                on_terminate: None,
+                                ..fcdecl::Child::EMPTY
+                            },
+                            fcomponent::CreateChildArgs::EMPTY,
+                        )
+                        .await?
+                        .expect("failed to create child");
+                    let (exposed_dir_proxy, exposed_dir_server_end) =
+                        fidl::endpoints::create_proxy()?;
+                    realm_proxy
+                        .open_exposed_dir(
+                            &mut fcdecl::ChildRef {
+                                name: "echo-server".to_string(),
+                                collection: Some(collection_name_for_mock.clone()),
+                            },
+                            exposed_dir_server_end,
+                        )
+                        .await?
+                        .expect("failed to open exposed dir");
+                    let echo_proxy = fuchsia_component::client::connect_to_protocol_at_dir_root::<
+                        fecho::EchoMarker,
+                    >(&exposed_dir_proxy)?;
+                    let out = echo_proxy.echo_string(Some(DEFAULT_ECHO_STR)).await?;
+                    if Some(DEFAULT_ECHO_STR.to_string()) != out {
+                        return Err(format_err!("unexpected echo result: {:?}", out));
+                    }
+                    send_echo_client_results.send(()).await.expect("failed to send results");
+                    Ok(())
+                })
+            }),
+        )
+        .await?;
+    let mut realm = builder.build();
+    let mut echo_client_decl = realm.get_decl(&"echo-client".into()).await?;
+    echo_client_decl.collections.push(cm_rust::CollectionDecl {
+        name: collection_name.clone(),
+        durability: fsys::Durability::Transient,
+        allowed_offers: cm_types::AllowedOffers::StaticOnly,
+        environment: None,
+    });
+    echo_client_decl.capabilities.push(cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
+        name: "fidl.examples.routing.echo.Echo".into(),
+        source_path: Some("/svc/fidl.examples.routing.echo.Echo".try_into().unwrap()),
+    }));
+    echo_client_decl.offers.push(cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+        source: cm_rust::OfferSource::Self_,
+        source_name: "fidl.examples.routing.echo.Echo".into(),
+        target: cm_rust::OfferTarget::Collection(collection_name.clone()),
+        target_name: "fidl.examples.routing.echo.Echo".into(),
+        dependency_type: cm_rust::DependencyType::Strong,
+    }));
+    echo_client_decl.uses.push(cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+        source: cm_rust::UseSource::Framework,
+        source_name: "fuchsia.component.Realm".into(),
+        target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
+        dependency_type: cm_rust::DependencyType::Strong,
+    }));
+    realm.set_component(&"echo-client".into(), echo_client_decl).await?;
+
+    let _instance = realm.create().await?;
+
+    assert!(receive_echo_client_results.next().await.is_some());
     Ok(())
 }
 

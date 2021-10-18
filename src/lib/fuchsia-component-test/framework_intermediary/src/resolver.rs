@@ -8,13 +8,18 @@ use {
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync,
-    futures::{lock::Mutex, TryStreamExt},
+    futures::{
+        lock::{Mutex, MutexGuard},
+        TryStreamExt,
+    },
     log::*,
-    std::{collections::HashMap, sync::Arc},
+    std::{collections::HashMap, path::Path, sync::Arc},
+    url::Url,
 };
 
 const RESOLVER_SCHEME: &'static str = "realm-builder";
 
+#[derive(Clone)]
 struct ResolveableComponent {
     decl: fsys::ComponentDecl,
     package_dir: Option<fio::DirectoryProxy>,
@@ -22,7 +27,7 @@ struct ResolveableComponent {
 
 pub struct Registry {
     next_unique_component_id: Mutex<u64>,
-    component_decls: Mutex<HashMap<String, ResolveableComponent>>,
+    component_decls: Mutex<HashMap<Url, ResolveableComponent>>,
 }
 
 impl Registry {
@@ -47,7 +52,10 @@ impl Registry {
 
         let url = format!("{}://{}-{}", RESOLVER_SCHEME, *next_unique_component_id_guard, name);
         *next_unique_component_id_guard += 1;
-        component_decls_guard.insert(url.clone(), ResolveableComponent { decl, package_dir });
+        component_decls_guard.insert(
+            Url::parse(&url).expect("generated invalid URL"),
+            ResolveableComponent { decl, package_dir },
+        );
         Ok(url)
     }
 
@@ -68,8 +76,16 @@ impl Registry {
         while let Some(req) = stream.try_next().await? {
             match req {
                 fsys::ComponentResolverRequest::Resolve { component_url, responder } => {
+                    let parsed_url = match Url::parse(&component_url) {
+                        Ok(url) => url,
+                        Err(_) => {
+                            responder.send(&mut Err(fsys::ResolverError::InvalidArgs))?;
+                            continue;
+                        }
+                    };
+                    let component_decls_guard = self.component_decls.lock().await;
                     if let Some(ResolveableComponent { decl, package_dir }) =
-                        self.component_decls.lock().await.get(&component_url)
+                        component_decls_guard.get(&parsed_url).cloned()
                     {
                         let package = if let Some(p) = package_dir {
                             let (client_end, server_end) =
@@ -88,17 +104,69 @@ impl Registry {
                         };
                         responder.send(&mut Ok(fsys::Component {
                             resolved_url: Some(component_url),
-                            decl: Some(encode(decl.clone())?),
+                            decl: Some(encode(decl)?),
                             package,
                             ..fsys::Component::EMPTY
                         }))?;
                     } else {
-                        responder.send(&mut Err(fsys::ResolverError::ManifestNotFound))?;
+                        let mut res =
+                            Self::load_relative_url(parsed_url, component_decls_guard).await;
+                        responder.send(&mut res)?;
                     }
                 }
             }
         }
         Ok(())
+    }
+
+    // Realm builder never generates URLs with fragments. If we're asked to resolve a URL with
+    // one, then this must be from component manager attempting to make sense of a relative URL
+    // where the parent of the component is an absolute realm builder URL. We rewrite relative
+    // URLs to be absolute realm builder URLs at build time, but if a component is added at
+    // runtime (as in, to a collection) then realm builder doesn't have a chance to do this
+    // rewrite.
+    //
+    // To handle this: let's use the fragment to look for a component in the test package.
+    async fn load_relative_url<'a>(
+        mut parsed_url: Url,
+        component_decls_guard: MutexGuard<'a, HashMap<Url, ResolveableComponent>>,
+    ) -> Result<fsys::Component, fsys::ResolverError> {
+        let component_url = parsed_url.as_str().to_string();
+        let fragment = match parsed_url.fragment() {
+            Some(fragment) => fragment.to_string(),
+            None => return Err(fsys::ResolverError::ManifestNotFound),
+        };
+
+        parsed_url.set_fragment(None);
+        let package_dir = component_decls_guard
+            .get(&parsed_url)
+            .ok_or(fsys::ResolverError::ManifestNotFound)?
+            .package_dir
+            .clone();
+        let package_dir = package_dir.ok_or(fsys::ResolverError::PackageNotFound)?;
+        let manifest_file =
+            io_util::open_file(&package_dir, Path::new(&fragment), fio::OPEN_RIGHT_READABLE)
+                .map_err(|_| fsys::ResolverError::ManifestNotFound)?;
+        let component_decl: fsys::ComponentDecl = io_util::read_file_fidl(&manifest_file)
+            .await
+            .map_err(|_| fsys::ResolverError::ManifestNotFound)?;
+        cm_fidl_validator::validate(&component_decl)
+            .map_err(|_| fsys::ResolverError::ManifestNotFound)?;
+        let (client_end, server_end) = create_endpoints::<fio::DirectoryMarker>()
+            .map_err(|_| fsys::ResolverError::Internal)?;
+        package_dir
+            .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_end.into_channel()))
+            .map_err(|_| fsys::ResolverError::Io)?;
+        Ok(fsys::Component {
+            resolved_url: Some(component_url.clone()),
+            decl: Some(encode(component_decl).map_err(|_| fsys::ResolverError::Internal)?),
+            package: Some(fsys::Package {
+                package_url: Some(component_url),
+                package_dir: Some(client_end),
+                ..fsys::Package::EMPTY
+            }),
+            ..fsys::Component::EMPTY
+        })
     }
 }
 
