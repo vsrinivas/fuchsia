@@ -1,0 +1,125 @@
+<link rel="stylesheet" href="../style.css" />
+
+[TOC]
+
+# fidl.test.errorsyntax
+
+
+
+## **PROTOCOLS**
+
+## ExampleUseOfErrorSyntax {#ExampleUseOfErrorSyntax}
+*Defined in [fidl.test.errorsyntax/child.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error_syntax/child.test.fidl;l=9)*
+
+
+
+### CallWhichMayFail {#ExampleUseOfErrorSyntax.CallWhichMayFail}
+
+
+
+#### Request {#ExampleUseOfErrorSyntax.CallWhichMayFail_Request}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>s</code></td>
+            <td>
+                <code>string</code>
+            </td>
+        </tr></table>
+
+
+#### Response {#ExampleUseOfErrorSyntax.CallWhichMayFail_Response}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>result</code></td>
+            <td>
+                <code><a class='link' href='#ExampleUseOfErrorSyntax_CallWhichMayFail_Result'>ExampleUseOfErrorSyntax_CallWhichMayFail_Result</a></code>
+            </td>
+        </tr></table>
+
+### ComposedCallWhichMayFail {#ExampleUseOfErrorSyntax.ComposedCallWhichMayFail}
+
+
+
+#### Request {#ExampleUseOfErrorSyntax.ComposedCallWhichMayFail_Request}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>s</code></td>
+            <td>
+                <code>string</code>
+            </td>
+        </tr></table>
+
+
+#### Response {#ExampleUseOfErrorSyntax.ComposedCallWhichMayFail_Response}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>result</code></td>
+            <td>
+                <code><a class='link' href='../fidl.test.errorsyntax.parent/'>fidl.test.errorsyntax.parent</a>/<a class='link' href='../fidl.test.errorsyntax.parent/#ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result'>ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result</a></code>
+            </td>
+        </tr></table>
+
+
+
+## **STRUCTS**
+
+### ExampleUseOfErrorSyntax_CallWhichMayFail_Response  {#ExampleUseOfErrorSyntax_CallWhichMayFail_Response data-text="ExampleUseOfErrorSyntax_CallWhichMayFail_Response"}
+*Defined in [fidl.test.errorsyntax/child.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error_syntax/child.test.fidl;l=13)*
+
+
+
+
+<table>
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ExampleUseOfErrorSyntax_CallWhichMayFail_Response.value">
+            <td><code>value</code></td>
+            <td>
+                <code>int64</code>
+            </td>
+            <td>
+</td>
+            <td>No default</td>
+        </tr>
+</table>
+
+
+
+
+
+
+
+## **UNIONS**
+
+### ExampleUseOfErrorSyntax_CallWhichMayFail_Result [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#ExampleUseOfErrorSyntax_CallWhichMayFail_Result data-text="ExampleUseOfErrorSyntax_CallWhichMayFail_Result"}
+*Defined in [fidl.test.errorsyntax/child.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error_syntax/child.test.fidl;l=13)*
+
+
+
+<table>
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExampleUseOfErrorSyntax_CallWhichMayFail_Result.response">
+            <td>1</td>
+            <td><code>response</code></td>
+            <td>
+                <code><a class='link' href='#ExampleUseOfErrorSyntax_CallWhichMayFail_Response'>ExampleUseOfErrorSyntax_CallWhichMayFail_Response</a></code>
+            </td>
+            <td>
+</td>
+        </tr><tr id="ExampleUseOfErrorSyntax_CallWhichMayFail_Result.err">
+            <td>2</td>
+            <td><code>err</code></td>
+            <td>
+                <code>uint32</code>
+            </td>
+            <td>
+</td>
+        </tr></table>
+
+
+
+
+
+
+

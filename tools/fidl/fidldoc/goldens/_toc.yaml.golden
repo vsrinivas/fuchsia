@@ -29,6 +29,8 @@ toc:
     path: /fidl.test.enum
   - title: fidl.test.error
     path: /fidl.test.error
+  - title: fidl.test.errorsyntax
+    path: /fidl.test.errorsyntax
   - title: fidl.test.escaping
     path: /fidl.test.escaping
   - title: fidl.test.experimentalmaybefromtypealias

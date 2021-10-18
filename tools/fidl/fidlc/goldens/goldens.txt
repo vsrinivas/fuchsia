@@ -24,6 +24,8 @@ enum.json.golden
 enum.tables.c.golden
 error.json.golden
 error.tables.c.golden
+error_syntax.json.golden
+error_syntax.tables.c.golden
 escaping.json.golden
 escaping.tables.c.golden
 experimental_maybe_from_type_alias.json.golden

@@ -13,6 +13,7 @@ empty_struct.md.golden
 encapsulated_structs.md.golden
 enum.md.golden
 error.md.golden
+error_syntax.md.golden
 escaping.md.golden
 experimental_maybe_from_type_alias.md.golden
 foreign_type_in_response_used_through_compose.md.golden

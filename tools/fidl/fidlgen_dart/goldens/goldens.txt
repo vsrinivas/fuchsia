@@ -21,6 +21,8 @@ encapsulated_structs_test.dart.golden
 enum_async.dart.golden
 enum_test.dart.golden
 error_async.dart.golden
+error_syntax_async.dart.golden
+error_syntax_test.dart.golden
 error_test.dart.golden
 escaping_async.dart.golden
 escaping_test.dart.golden

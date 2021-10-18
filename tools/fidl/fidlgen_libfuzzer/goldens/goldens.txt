@@ -22,6 +22,10 @@ error.cc.golden
 error.h.golden
 error_decode_encode.cc.golden
 error_decode_encode.h.golden
+error_syntax.cc.golden
+error_syntax.h.golden
+error_syntax_decode_encode.cc.golden
+error_syntax_decode_encode.h.golden
 foreign_type_in_response_used_through_compose.cc.golden
 foreign_type_in_response_used_through_compose.h.golden
 foreign_type_in_response_used_through_compose_decode_encode.cc.golden

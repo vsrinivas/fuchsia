@@ -62,6 +62,10 @@
     <td></td>
 </tr>
 <tr>
+    <td><a href="fidl.test.errorsyntax/index">fidl.test.errorsyntax</a></td>
+    <td></td>
+</tr>
+<tr>
     <td><a href="fidl.test.escaping/index">fidl.test.escaping</a></td>
     <td></td>
 </tr>

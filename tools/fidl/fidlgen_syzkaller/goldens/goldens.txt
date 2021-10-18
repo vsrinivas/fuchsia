@@ -11,6 +11,7 @@ empty_struct.syz.txt.golden
 encapsulated_structs.syz.txt.golden
 enum.syz.txt.golden
 error.syz.txt.golden
+error_syntax.syz.txt.golden
 escaping.syz.txt.golden
 experimental_maybe_from_type_alias.syz.txt.golden
 foreign_type_in_response_used_through_compose.syz.txt.golden

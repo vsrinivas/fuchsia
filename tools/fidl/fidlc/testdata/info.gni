@@ -192,6 +192,8 @@ fidl_testdata_info = [
       "fidlgen_libfuzzer",
     ]
   },
+
+  # TODO(fxbug.dev/64992): Remove, use only error_syntax example.
   {
     name = "error"
     target = "//tools/fidl/fidlc/testdata:fidl.test.error"
@@ -205,6 +207,10 @@ fidl_testdata_info = [
       # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
       "fidlgen_cpp",
     ]
+  },
+  {
+    name = "error_syntax"
+    target = "//tools/fidl/fidlc/testdata/error_syntax:fidl.test.errorsyntax"
   },
   {
     name = "escaping"

@@ -33,6 +33,9 @@ enum.h.golden
 enum_test_base.h.golden
 error.cc.golden
 error.h.golden
+error_syntax.cc.golden
+error_syntax.h.golden
+error_syntax_test_base.h.golden
 error_test_base.h.golden
 escaping.cc.golden
 escaping.h.golden
