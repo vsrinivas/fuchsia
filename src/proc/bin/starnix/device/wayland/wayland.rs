@@ -195,7 +195,22 @@ fn serve_display_socket(
 
         wait_async(&socket, &wayland_bridge, &waiter);
 
-        waiter.wait_kernel(zx::Time::INFINITE).expect("");
+        // Drain all the packets from the port, since we just read/write in both directions on each
+        // wake we don't care about the exact event that triggered the wake.
+        // TODO: This should be fixed to either use a callback per direction of communication (so
+        // that we only queue one packet per event), or waiter needs to be refactored to return an
+        // array of events (and dequeue more than one port packet at a time).
+        let mut deadline = zx::Time::INFINITE;
+        loop {
+            match waiter.wait_kernel(deadline) {
+                Ok(_) => {}
+                Err(e) if e == ETIMEDOUT => {
+                    break;
+                }
+                err => return err,
+            }
+            deadline = zx::Time::ZERO;
+        }
     }
 }
 
