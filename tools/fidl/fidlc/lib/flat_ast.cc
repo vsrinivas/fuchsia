@@ -1333,35 +1333,44 @@ bool AttributeSchema::ResolveArgs(Library* library, std::unique_ptr<Attribute>& 
 bool SimpleLayoutConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attr,
                             const Attributable* attributable) {
   assert(attributable);
+  bool ok = true;
   switch (attributable->placement) {
+    case AttributePlacement::kProtocolDecl: {
+      auto protocol = static_cast<const Protocol*>(attributable);
+      for (const auto& method_with_info : protocol->all_methods) {
+        auto* method = method_with_info.method;
+        if (!SimpleLayoutConstraint(reporter, attr, method)) {
+          ok = false;
+        }
+      }
+      break;
+    }
+    case AttributePlacement::kMethod: {
+      auto method = static_cast<const Protocol::Method*>(attributable);
+      if (method->maybe_request_payload &&
+          !SimpleLayoutConstraint(reporter, attr, method->maybe_request_payload)) {
+        ok = false;
+      }
+      if (method->maybe_response_payload &&
+          !SimpleLayoutConstraint(reporter, attr, method->maybe_response_payload)) {
+        ok = false;
+      }
+      break;
+    }
     case AttributePlacement::kStructDecl: {
       auto struct_decl = static_cast<const Struct*>(attributable);
-      bool ok = true;
       for (const auto& member : struct_decl->members) {
         if (!IsSimple(member.type_ctor->type, reporter)) {
           reporter->Report(ErrMemberMustBeSimple, member.name, member.name.data());
           ok = false;
         }
       }
-      return ok;
-    }
-    case AttributePlacement::kMethod: {
-      auto method = static_cast<const Protocol::Method*>(attributable);
-      if (method->maybe_request_payload &&
-          !SimpleLayoutConstraint(reporter, attr, method->maybe_request_payload)) {
-        return false;
-      }
-      if (method->maybe_response_payload &&
-          !SimpleLayoutConstraint(reporter, attr, method->maybe_response_payload)) {
-        return false;
-      }
-      return true;
+      break;
     }
     default:
       assert(false && "unexpected kind");
   }
-
-  __builtin_unreachable();
+  return ok;
 }
 
 bool ParseBound(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
@@ -1418,6 +1427,30 @@ bool MaxBytesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& at
     return false;
   uint32_t max_bytes = std::numeric_limits<uint32_t>::max();
   switch (attributable->placement) {
+    case AttributePlacement::kProtocolDecl: {
+      auto protocol = static_cast<const Protocol*>(attributable);
+      bool ok = true;
+      for (const auto& method_with_info : protocol->all_methods) {
+        auto* method = method_with_info.method;
+        if (!MaxBytesConstraint(reporter, attribute, method)) {
+          ok = false;
+        }
+      }
+      return ok;
+    }
+    case AttributePlacement::kMethod: {
+      auto method = static_cast<const Protocol::Method*>(attributable);
+      bool ok = true;
+      if (method->maybe_request_payload &&
+          !MaxBytesConstraint(reporter, attribute, method->maybe_request_payload)) {
+        ok = false;
+      }
+      if (method->maybe_response_payload &&
+          !MaxBytesConstraint(reporter, attribute, method->maybe_response_payload)) {
+        ok = false;
+      }
+      return ok;
+    }
     case AttributePlacement::kStructDecl: {
       auto struct_decl = static_cast<const Struct*>(attributable);
       max_bytes = struct_decl->typeshape(WireFormat::kV1NoEe).InlineSize() +
@@ -1463,6 +1496,30 @@ bool MaxHandlesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& 
     return false;
   uint32_t max_handles = std::numeric_limits<uint32_t>::max();
   switch (attributable->placement) {
+    case AttributePlacement::kProtocolDecl: {
+      auto protocol = static_cast<const Protocol*>(attributable);
+      bool ok = true;
+      for (const auto& method_with_info : protocol->all_methods) {
+        auto* method = method_with_info.method;
+        if (!MaxHandlesConstraint(reporter, attribute, method)) {
+          ok = false;
+        }
+      }
+      return ok;
+    }
+    case AttributePlacement::kMethod: {
+      auto method = static_cast<const Protocol::Method*>(attributable);
+      bool ok = true;
+      if (method->maybe_request_payload &&
+          !MaxHandlesConstraint(reporter, attribute, method->maybe_request_payload)) {
+        ok = false;
+      }
+      if (method->maybe_response_payload &&
+          !MaxHandlesConstraint(reporter, attribute, method->maybe_response_payload)) {
+        ok = false;
+      }
+      return ok;
+    }
     case AttributePlacement::kStructDecl: {
       auto struct_decl = static_cast<const Struct*>(attributable);
       max_handles = struct_decl->typeshape(WireFormat::kV1NoEe).MaxHandles();
@@ -1534,8 +1591,7 @@ static std::string Trim(std::string s) {
 bool TransportConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
                          const Attributable* attributable) {
   assert(attributable);
-  assert(attributable->placement == AttributePlacement::kMethod);
-  auto method = static_cast<const Protocol::Method*>(attributable);
+  assert(attributable->placement == AttributePlacement::kProtocolDecl);
 
   // function-local static pointer to non-trivially-destructible type
   // is allowed by styleguide
@@ -1548,7 +1604,8 @@ bool TransportConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& a
 
   auto arg = attribute->GetArg("value");
   if (!arg.has_value()) {
-    reporter->Report(ErrInvalidTransportType, method->name, std::string("''"), *kValidTransports);
+    reporter->Report(ErrInvalidTransportType, attribute->span(), std::string("''"),
+                     *kValidTransports);
     return false;
   }
   if (arg.value().get().value->Value().kind != flat::ConstantValue::Kind::kString)
@@ -1567,9 +1624,9 @@ bool TransportConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& a
   transports.emplace_back(Trim(value.substr(prev_pos)));
 
   // Validate that they're ok
-  for (auto transport : transports) {
+  for (const auto& transport : transports) {
     if (kValidTransports->count(transport) == 0) {
-      reporter->Report(ErrInvalidTransportType, method->name, transport, *kValidTransports);
+      reporter->Report(ErrInvalidTransportType, attribute->span(), transport, *kValidTransports);
       return false;
     }
   }
@@ -1831,13 +1888,8 @@ bool Library::ValidateAttributesPlacement(const Attributable* attributable) {
 }
 
 bool Library::ValidateAttributesConstraints(const Attributable* attributable) {
-  return ValidateAttributesConstraints(attributable, attributable->attributes.get());
-}
-
-bool Library::ValidateAttributesConstraints(const Attributable* attributable,
-                                            const AttributeList* attributes) {
   bool ok = true;
-  for (const auto& attribute : attributes->attributes) {
+  for (const auto& attribute : attributable->attributes->attributes) {
     auto schema = all_libraries_->RetrieveAttributeSchema(nullptr, attribute);
     if (schema != nullptr && !schema->ValidateConstraint(reporter_, attribute, attributable)) {
       ok = false;
@@ -3850,11 +3902,9 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
         // Attributes: check constraints.
         for (const auto method_with_info : protocol_declaration->all_methods) {
           const auto& method = *method_with_info.method;
-          // All of the attributes on the protocol get checked against each of
-          // its methods as well.
-          ValidateAttributesConstraints(&method, protocol_declaration->attributes.get());
           ValidateAttributesConstraints(&method);
         }
+        ValidateAttributesConstraints(protocol_declaration);
       }
       break;
     }

@@ -1228,12 +1228,6 @@ class Library : Attributable {
   bool ValidateAttributesPlacement(const Attributable* attributable);
   bool ValidateAttributesConstraints(const Attributable* attributable);
 
-  // Allow validation of an attribute list against an attributable element that is not the one which
-  // it is attached to.  Useful for validating that all of a protocols attributes are valid for each
-  // of its constituent methods.
-  bool ValidateAttributesConstraints(const Attributable* attributable,
-                                     const AttributeList* attributes);
-
   // TODO(fxbug.dev/7920): Rationalize the use of names. Here, a simple name is
   // one that is not scoped, it is just text. An anonymous name is one that
   // is guaranteed to be unique within the library, and a derived name is one

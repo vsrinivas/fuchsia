@@ -711,9 +711,7 @@ protocol MyProtocol {
                                      fidl::flat::AttributePlacement::kProtocolDecl,
                                  },
                                  MustHaveThreeMembers));
-  // Twice because there are two methods.
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrAttributeConstraintNotSatisfied,
-                                      fidl::ErrAttributeConstraintNotSatisfied);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeConstraintNotSatisfied);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "must_have_three_members");
 }
 
