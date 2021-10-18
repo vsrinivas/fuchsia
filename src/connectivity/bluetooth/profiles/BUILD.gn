@@ -11,6 +11,8 @@ group("profiles") {
     "bt-avrcp:tests",
     "bt-avrcp-target",
     "bt-avrcp-target:tests",
+    "bt-device-id",
+    "bt-device-id:tests",
     "bt-hfp-audio-gateway",
     "bt-hfp-audio-gateway:tests",
     "bt-rfcomm",
