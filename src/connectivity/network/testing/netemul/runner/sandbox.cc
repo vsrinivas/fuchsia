@@ -12,9 +12,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
 #include <lib/fdio/vfs.h>
-#include <lib/fdio/watcher.h>
 #include <lib/fpromise/promise.h>
 #include <lib/fpromise/sequencer.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -24,14 +22,10 @@
 #include <zircon/status.h>
 
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
-#include <src/virtualization/lib/guest_config/guest_config.h>
 #include <src/virtualization/tests/guest_console.h>
 
 #include "src/lib/cmx/cmx.h"
-#include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/strings/concatenate.h"
-
-using namespace fuchsia::netemul;
 
 namespace netemul {
 
@@ -93,7 +87,8 @@ void Sandbox::Start(async_dispatcher_t* dispatcher) {
   if (!parent_env_ || !loader_) {
     Terminate(SandboxResult::Status::INTERNAL_ERROR, "Missing parent environment or loader");
     return;
-  } else if (env_config_.disabled()) {
+  }
+  if (env_config_.disabled()) {
     Terminate(SandboxResult::Status::SUCCESS, "Test is disabled");
     return;
   }
@@ -268,7 +263,7 @@ bool Sandbox::ConfigureNetworks() {
     return true;
   }
 
-  network::NetworkContextSyncPtr net_ctx;
+  fuchsia::netemul::network::NetworkContextSyncPtr net_ctx;
 
   auto req = net_ctx.NewRequest();
 
@@ -277,16 +272,16 @@ bool Sandbox::ConfigureNetworks() {
     sandbox_env_->network_context().GetHandler()(std::move(req));
   });
 
-  network::NetworkManagerSyncPtr net_manager;
-  network::EndpointManagerSyncPtr endp_manager;
+  fuchsia::netemul::network::NetworkManagerSyncPtr net_manager;
+  fuchsia::netemul::network::EndpointManagerSyncPtr endp_manager;
   net_ctx->GetNetworkManager(net_manager.NewRequest());
   net_ctx->GetEndpointManager(endp_manager.NewRequest());
 
   for (const auto& net_cfg : env_config_.networks()) {
     zx_status_t status;
-    fidl::InterfaceHandle<network::Network> network_h;
-    if (net_manager->CreateNetwork(net_cfg.name(), network::NetworkConfig(), &status, &network_h) !=
-            ZX_OK ||
+    fidl::InterfaceHandle<fuchsia::netemul::network::Network> network_h;
+    if (net_manager->CreateNetwork(net_cfg.name(), fuchsia::netemul::network::NetworkConfig(),
+                                   &status, &network_h) != ZX_OK ||
         status != ZX_OK) {
       FX_LOGS(ERROR) << "Create network failed";
       return false;
@@ -298,14 +293,14 @@ bool Sandbox::ConfigureNetworks() {
       if (!net_dumps_) {
         net_dumps_ = std::make_unique<NetWatcher<InMemoryDump>>();
       }
-      fidl::InterfacePtr<network::FakeEndpoint> fake_endpoint;
+      fidl::InterfacePtr<fuchsia::netemul::network::FakeEndpoint> fake_endpoint;
       network->CreateFakeEndpoint(fake_endpoint.NewRequest());
       net_dumps_->Watch(net_cfg.name(), std::move(fake_endpoint));
     }
 
     for (const auto& endp_cfg : net_cfg.endpoints()) {
-      network::EndpointConfig fidl_config;
-      fidl::InterfaceHandle<network::Endpoint> endp_h;
+      fuchsia::netemul::network::EndpointConfig fidl_config;
+      fidl::InterfaceHandle<fuchsia::netemul::network::Endpoint> endp_h;
 
       fidl_config.backing = endp_cfg.backing();
       fidl_config.mtu = endp_cfg.mtu();
@@ -356,16 +351,16 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
   options->set_name(config.name());
   options->set_inherit_parent_launch_services(config.inherit_services());
 
-  std::vector<environment::VirtualDevice>* devices = options->mutable_devices();
+  std::vector<fuchsia::netemul::environment::VirtualDevice>* devices = options->mutable_devices();
   if (!config.devices().empty()) {
-    network::EndpointManagerSyncPtr epm;
+    fuchsia::netemul::network::EndpointManagerSyncPtr epm;
     async::PostTask(main_dispatcher_, [req = epm.NewRequest(), this]() mutable {
       sandbox_env_->network_context().endpoint_manager().Bind(std::move(req));
     });
     for (const auto& device : config.devices()) {
       auto& nd = devices->emplace_back();
 
-      fidl::InterfaceHandle<network::Endpoint> endp_h;
+      fidl::InterfaceHandle<fuchsia::netemul::network::Endpoint> endp_h;
       auto status = epm->GetEndpoint(device, &endp_h);
       if (status != ZX_OK || !endp_h.is_valid()) {
         FX_LOGS(ERROR) << "Can't find endpoint " << device << " on endpoint manager";
@@ -377,18 +372,19 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
         FX_LOGS(ERROR) << "Can't get proxy on endpoint " << device;
         return false;
       }
-      network::EndpointConfig ep_config;
+      fuchsia::netemul::network::EndpointConfig ep_config;
       if (endp->GetConfig(&ep_config) != ZX_OK) {
         FX_LOGS(ERROR) << "Can't get endpoint configuration " << device;
       }
-      std::string_view base_path(ep_config.backing == network::EndpointBacking::ETHERTAP
+      std::string_view base_path(ep_config.backing ==
+                                         fuchsia::netemul::network::EndpointBacking::ETHERTAP
                                      ? kEthertapEndpointMountPath
                                      : kNetworkDeviceEndpointMountPath);
       nd.path = fxl::Concatenate({base_path, device});
     }
   }
 
-  std::vector<environment::LaunchService>* services = options->mutable_services();
+  std::vector<fuchsia::netemul::environment::LaunchService>* services = options->mutable_services();
   for (const auto& svc : config.services()) {
     auto& ns = services->emplace_back();
     ns.name = svc.name();
@@ -416,11 +412,11 @@ bool Sandbox::CreateGuestOptions(const std::vector<config::Guest>& guests,
     return true;
   }
 
-  environment::LoggerOptions* logger = options->mutable_logger_options();
+  fuchsia::netemul::environment::LoggerOptions* logger = options->mutable_logger_options();
   logger->set_enabled(true);
   logger->set_syslog_output(true);
 
-  std::vector<environment::LaunchService>* services = options->mutable_services();
+  std::vector<fuchsia::netemul::environment::LaunchService>* services = options->mutable_services();
   {
     auto& ls = services->emplace_back();
     ls.name = fuchsia::virtualization::Manager::Name_;
@@ -435,7 +431,7 @@ bool Sandbox::CreateGuestOptions(const std::vector<config::Guest>& guests,
   std::vector<std::string> netstack_args;
   for (const config::Guest& guest : guests) {
     for (const auto& [mac, network] : guest.macs()) {
-      netstack_args.push_back("--interface=" + mac + "=" + network);
+      netstack_args.push_back(fxl::Concatenate({"--interface=", mac, "=", network}));
     }
   }
 
@@ -452,27 +448,27 @@ bool Sandbox::CreateGuestOptions(const std::vector<config::Guest>& guests,
 Sandbox::Promise Sandbox::ConfigureRootEnvironment() {
   ASSERT_HELPER_DISPATCHER;
   // connect to environment:
-  auto svc = std::make_shared<environment::ManagedEnvironmentSyncPtr>();
+  auto svc = std::make_shared<fuchsia::netemul::environment::ManagedEnvironmentSyncPtr>();
   auto req = svc->NewRequest();
 
   async::PostTask(main_dispatcher_,
                   [this, req = std::move(req)]() mutable { root_->Bind(std::move(req)); });
 
-  return ConfigureEnvironment(std::move(svc), &env_config_.environment(), true);
+  return ConfigureEnvironment(svc, &env_config_.environment(), true);
 }
 
 Sandbox::Promise Sandbox::ConfigureGuestEnvironment() {
   ASSERT_HELPER_DISPATCHER;
-  auto svc = std::make_shared<environment::ManagedEnvironmentSyncPtr>();
+  auto svc = std::make_shared<fuchsia::netemul::environment::ManagedEnvironmentSyncPtr>();
   auto req = svc->NewRequest();
 
   async::PostTask(main_dispatcher_,
                   [this, req = std::move(req)]() mutable { guest_->Bind(std::move(req)); });
 
-  return StartGuests(std::move(svc), &env_config_);
+  return StartGuests(svc, &env_config_);
 }
 
-Sandbox::Promise Sandbox::StartChildEnvironment(ConfiguringEnvironmentPtr parent,
+Sandbox::Promise Sandbox::StartChildEnvironment(const ConfiguringEnvironmentPtr& parent,
                                                 const config::Environment* config) {
   ASSERT_HELPER_DISPATCHER;
 
@@ -484,7 +480,8 @@ Sandbox::Promise Sandbox::StartChildEnvironment(ConfiguringEnvironmentPtr parent
                  return fpromise::error(
                      SandboxResult(SandboxResult::Status::ENVIRONMENT_CONFIG_FAILED));
                }
-               auto child_env = std::make_shared<environment::ManagedEnvironmentSyncPtr>();
+               auto child_env =
+                   std::make_shared<fuchsia::netemul::environment::ManagedEnvironmentSyncPtr>();
                if ((*parent)->CreateChildEnvironment(child_env->NewRequest(), std::move(options)) !=
                    ZX_OK) {
                  return fpromise::error(
@@ -494,7 +491,7 @@ Sandbox::Promise Sandbox::StartChildEnvironment(ConfiguringEnvironmentPtr parent
                return fpromise::ok(std::move(child_env));
              })
       .and_then([this, config](ConfiguringEnvironmentPtr& child_env) {
-        return ConfigureEnvironment(std::move(child_env), config);
+        return ConfigureEnvironment(child_env, config);
       });
 }
 
@@ -503,7 +500,7 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
   ASSERT_HELPER_DISPATCHER;
 
   return fpromise::make_promise(
-             [this, env,
+             [this, env = std::move(env),
               &guest]() -> fpromise::promise<fuchsia::virtualization::GuestPtr, SandboxResult> {
                // Launch the guest
                fuchsia::virtualization::GuestConfig cfg;
@@ -567,11 +564,12 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
         // Wait until the guest's serial console becomes usable to ensure that the guest has
         // finished booting.
         GuestConsole serial(std::make_unique<ZxSocket>(std::move(socket)));
-        zx_status_t status = serial.Start(zx::time::infinite());
-
-        if (status != ZX_OK) {
-          return fpromise::error(SandboxResult(SandboxResult::Status::SETUP_FAILED,
-                                               "Could not start guest serial connection"));
+        {
+          zx_status_t status = serial.Start(zx::time::infinite());
+          if (status != ZX_OK) {
+            return fpromise::error(SandboxResult(SandboxResult::Status::SETUP_FAILED,
+                                                 "Could not start guest serial connection"));
+          }
         }
 
         if (guest.guest_image_url() == kDebianGuestUrl) {
@@ -590,7 +588,7 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
       });
 }
 
-Sandbox::Promise Sandbox::SendGuestFiles(ConfiguringEnvironmentPtr env,
+Sandbox::Promise Sandbox::SendGuestFiles(const ConfiguringEnvironmentPtr& env,
                                          const config::Guest& guest) {
   ASSERT_HELPER_DISPATCHER;
 
@@ -646,7 +644,8 @@ Sandbox::Promise Sandbox::SendGuestFiles(ConfiguringEnvironmentPtr env,
   });
 }
 
-Sandbox::Promise Sandbox::StartGuests(ConfiguringEnvironmentPtr env, const config::Config* config) {
+Sandbox::Promise Sandbox::StartGuests(const ConfiguringEnvironmentPtr& env,
+                                      const config::Config* config) {
   ASSERT_HELPER_DISPATCHER;
   if (!realm_) {
     fuchsia::virtualization::ManagerPtr guest_environment_manager;
@@ -717,7 +716,7 @@ Sandbox::Promise Sandbox::StartEnvironmentAppsAndTests(
   });
 }
 
-Sandbox::Promise Sandbox::StartEnvironmentInner(ConfiguringEnvironmentPtr env,
+Sandbox::Promise Sandbox::StartEnvironmentInner(const ConfiguringEnvironmentPtr& env,
                                                 const config::Environment* config) {
   ASSERT_HELPER_DISPATCHER;
   auto launcher = std::make_shared<fuchsia::sys::LauncherSyncPtr>();
@@ -733,7 +732,7 @@ Sandbox::Promise Sandbox::StartEnvironmentInner(ConfiguringEnvironmentPtr env,
       .and_then(StartEnvironmentAppsAndTests(config, launcher));
 }
 
-Sandbox::Promise Sandbox::ConfigureEnvironment(ConfiguringEnvironmentPtr env,
+Sandbox::Promise Sandbox::ConfigureEnvironment(const ConfiguringEnvironmentPtr& env,
                                                const config::Environment* config, bool root) {
   ASSERT_HELPER_DISPATCHER;
 
@@ -917,9 +916,9 @@ bool SandboxArgs::ParseFromJSON(const rapidjson::Value& facet, json::JSONParser*
   return true;
 }
 
-bool SandboxArgs::ParseFromString(const std::string& config) {
+bool SandboxArgs::ParseFromString(const std::string& str) {
   json::JSONParser json_parser;
-  auto facet = json_parser.ParseFromString(config, "fuchsia.netemul facet");
+  auto facet = json_parser.ParseFromString(str, "fuchsia.netemul facet");
   if (json_parser.HasError()) {
     FX_LOGS(ERROR) << "netemul facet failed to parse: " << json_parser.error_str();
     return false;

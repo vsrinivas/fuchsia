@@ -26,7 +26,7 @@ namespace netemul {
 class SandboxArgs {
  public:
   bool ParseFromCmxFileAt(int dir, const std::string& path);
-  bool ParseFromString(const std::string& config);
+  bool ParseFromString(const std::string& str);
   bool ParseFromJSON(const rapidjson::Value& facet, json::JSONParser* json_parser);
 
   config::Config config;
@@ -48,8 +48,8 @@ class SandboxResult {
     UNSPECIFIED
   };
 
-  SandboxResult() : status_(SUCCESS) {}
   explicit SandboxResult(Status status) : status_(status) {}
+  SandboxResult() : SandboxResult(SUCCESS) {}
 
   SandboxResult(Status status, std::string description)
       : status_(status), description_(std::move(description)) {}
@@ -117,13 +117,13 @@ class Sandbox {
   Promise LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher, const std::string& url,
                       const std::vector<std::string>& arguments);
 
-  Promise StartChildEnvironment(ConfiguringEnvironmentPtr parent,
+  Promise StartChildEnvironment(const ConfiguringEnvironmentPtr& parent,
                                 const config::Environment* config);
-  Promise StartEnvironmentInner(ConfiguringEnvironmentPtr environment,
+  Promise StartEnvironmentInner(const ConfiguringEnvironmentPtr& environment,
                                 const config::Environment* config);
   Promise LaunchGuestEnvironment(ConfiguringEnvironmentPtr env, const config::Guest& config);
-  Promise SendGuestFiles(ConfiguringEnvironmentPtr env, const config::Guest& guest);
-  Promise StartGuests(ConfiguringEnvironmentPtr env, const config::Config* config);
+  Promise SendGuestFiles(const ConfiguringEnvironmentPtr& env, const config::Guest& guest);
+  Promise StartGuests(const ConfiguringEnvironmentPtr& env, const config::Config* config);
   Promise StartEnvironmentSetup(const config::Environment* config,
                                 ConfiguringEnvironmentLauncher launcher);
   Promise StartEnvironmentAppsAndTests(const config::Environment* config,
@@ -131,14 +131,14 @@ class Sandbox {
 
   bool CreateEnvironmentOptions(const config::Environment& config,
                                 ManagedEnvironment::Options* options);
-  bool CreateGuestOptions(const std::vector<config::Guest>& guests,
-                          ManagedEnvironment::Options* options);
+  static bool CreateGuestOptions(const std::vector<config::Guest>& guests,
+                                 ManagedEnvironment::Options* options);
   Promise ConfigureRootEnvironment();
   Promise ConfigureGuestEnvironment();
   Promise RunRootConfiguration(ManagedEnvironment::Options root_options);
   Promise RunGuestConfiguration(ManagedEnvironment::Options guest_options);
-  Promise ConfigureEnvironment(ConfiguringEnvironmentPtr env, const config::Environment* config,
-                               bool root = false);
+  Promise ConfigureEnvironment(const ConfiguringEnvironmentPtr& env,
+                               const config::Environment* config, bool root = false);
   bool ConfigureNetworks();
 
   async_dispatcher_t* main_dispatcher_;
