@@ -22,46 +22,6 @@
 
 namespace audio::aml_g12 {
 
-fuchsia_hardware_audio::wire::PcmFormat GetDefaultPcmFormat() {
-  fuchsia_hardware_audio::wire::PcmFormat format;
-  format.number_of_channels = 2;
-  format.channels_to_use_bitmask = 0x03;
-  format.sample_format = fuchsia_hardware_audio::wire::SampleFormat::kPcmSigned;
-  format.frame_rate = 48'000;
-  format.bytes_per_sample = 2;
-  format.valid_bits_per_sample = 16;
-  return format;
-}
-
-fuchsia_hardware_audio::wire::DaiFormat GetDefaultDaiFormat() {
-  fuchsia_hardware_audio::wire::DaiFormat format;
-  format.number_of_channels = 2;
-  format.channels_to_use_bitmask = 0x03;
-  format.sample_format = fuchsia_hardware_audio::wire::DaiSampleFormat::kPcmSigned;
-  format.frame_format.set_frame_format_standard(
-      fuchsia_hardware_audio::wire::DaiFrameFormatStandard::kI2S);
-  format.frame_rate = 48'000;
-  format.bits_per_slot = 16;
-  format.bits_per_sample = 32;
-  return format;
-}
-
-metadata::AmlConfig GetDefaultMetadata() {
-  metadata::AmlConfig metadata = {};
-  metadata.is_input = false;
-  metadata.mClockDivFactor = 10;
-  metadata.sClockDivFactor = 25;
-  metadata.ring_buffer.number_of_channels = 2;
-  metadata.lanes_enable_mask[0] = 3;
-  metadata.bus = metadata::AmlBus::TDM_C;
-  metadata.version = metadata::AmlVersion::kS905D2G;
-  metadata.dai.type = metadata::DaiType::I2s;
-  metadata.dai.number_of_channels = 2;
-  metadata.dai.bits_per_sample = 16;
-  metadata.dai.bits_per_slot = 32;
-  return metadata;
-}
-
 struct DaiClient {
   DaiClient(ddk::DaiProtocolClient proto_client) {
     proto_client_ = proto_client;
@@ -102,14 +62,6 @@ class TestAmlG12TdmDai : public AmlG12TdmDai {
       : AmlG12TdmDai(parent, std::move(pdev)) {}
   dai_protocol_t GetProto() { return {&this->dai_protocol_ops_, this}; }
   bool AllowNonContiguousRingBuffer() override { return true; }
-  void Stop(StopCallback callback) override {
-    AmlG12TdmDai::Stop(std::move(callback));
-    sync_completion_signal(&stopped_);
-  }
-  void WaitUntilStopped() { sync_completion_wait(&stopped_, ZX_TIME_INFINITE); }
-
- private:
-  sync_completion_t stopped_ = {};
 };
 
 class AmlG12TdmDaiTest : public zxtest::Test {
@@ -233,7 +185,12 @@ TEST_F(AmlG12TdmDaiTest, InitializeI2sOut) {
 
 TEST_F(AmlG12TdmDaiTest, InitializePcmOut) {
   auto fake_parent = MockDevice::FakeRootParent();
-  metadata::AmlConfig metadata = GetDefaultMetadata();
+  metadata::AmlConfig metadata = {};
+  metadata.is_input = false;
+  metadata.mClockDivFactor = 10;
+  metadata.sClockDivFactor = 25;
+  metadata.bus = metadata::AmlBus::TDM_C;
+  metadata.version = metadata::AmlVersion::kS905D2G;
   metadata.ring_buffer.number_of_channels = 1;
   metadata.lanes_enable_mask[0] = 1;
   metadata.dai.type = metadata::DaiType::Tdm1;
@@ -337,9 +294,20 @@ TEST_F(AmlG12TdmDaiTest, InitializePcmOut) {
 
 TEST_F(AmlG12TdmDaiTest, GetPropertiesOutputDai) {
   auto fake_parent = MockDevice::FakeRootParent();
-  metadata::AmlConfig metadata = GetDefaultMetadata();
+  metadata::AmlConfig metadata = {};
+  metadata.is_input = false;
   const std::string kTestString("test");
   strncpy(metadata.manufacturer, kTestString.c_str(), sizeof(metadata.manufacturer));
+  metadata.mClockDivFactor = 10;
+  metadata.sClockDivFactor = 25;
+  metadata.ring_buffer.number_of_channels = 2;
+  metadata.lanes_enable_mask[0] = 3;
+  metadata.bus = metadata::AmlBus::TDM_C;
+  metadata.version = metadata::AmlVersion::kS905D2G;
+  metadata.dai.type = metadata::DaiType::I2s;
+  metadata.dai.number_of_channels = 2;
+  metadata.dai.bits_per_sample = 16;
+  metadata.dai.bits_per_slot = 32;
   fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
   auto dai = std::make_unique<TestAmlG12TdmDai>(fake_parent.get(), pdev_.proto());
@@ -392,7 +360,18 @@ TEST_F(AmlG12TdmDaiTest, GetPropertiesInputDai) {
 
 TEST_F(AmlG12TdmDaiTest, RingBufferOperations) {
   auto fake_parent = MockDevice::FakeRootParent();
-  metadata::AmlConfig metadata = GetDefaultMetadata();
+  metadata::AmlConfig metadata = {};
+  metadata.is_input = false;
+  metadata.mClockDivFactor = 10;
+  metadata.sClockDivFactor = 25;
+  metadata.ring_buffer.number_of_channels = 2;
+  metadata.lanes_enable_mask[0] = 3;
+  metadata.bus = metadata::AmlBus::TDM_C;
+  metadata.version = metadata::AmlVersion::kS905D2G;
+  metadata.dai.type = metadata::DaiType::I2s;
+  metadata.dai.number_of_channels = 2;
+  metadata.dai.bits_per_sample = 16;
+  metadata.dai.bits_per_slot = 32;
   fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
   auto dai = std::make_unique<TestAmlG12TdmDai>(fake_parent.get(), pdev_.proto());
@@ -536,106 +515,6 @@ TEST_F(AmlG12TdmDaiTest, RingBufferOperations) {
     ZX_ASSERT(out_result.response().num_frames == 2);
     ZX_ASSERT(out_result.response().ring_buffer.is_valid());
   }
-}
-
-TEST_F(AmlG12TdmDaiTest, ClientCloseDaiChannel) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  metadata::AmlConfig metadata = GetDefaultMetadata();
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-
-  auto dai = std::make_unique<TestAmlG12TdmDai>(fake_parent.get(), pdev_.proto());
-  ASSERT_OK(dai->InitPDev());
-  ASSERT_OK(dai->DdkAdd("test"));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  TestAmlG12TdmDai* test_dev = child_dev->GetDeviceContext<TestAmlG12TdmDai>();
-
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::DaiConnect>();
-  std::optional<fidl::ServerBindingRef<fuchsia_hardware_audio::DaiConnect>> binding;
-  binding = fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::DaiConnect>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev);
-  loop.StartThread("test-server");
-
-  auto endpoints2 = fidl::CreateEndpoints<fuchsia_hardware_audio::Dai>();
-  auto client_wrap = fidl::BindSyncClient(std::move(endpoints->client));
-  ASSERT_OK(client_wrap.Connect(std::move(endpoints2->server)));
-  auto client = fidl::BindSyncClient(std::move(endpoints2->client));
-
-  auto supported_formats_ring_buffer = client.GetRingBufferFormats();
-  ASSERT_OK(supported_formats_ring_buffer.status());
-  auto supported_formats_dai = client.GetDaiFormats();
-  ASSERT_OK(supported_formats_dai.status());
-  auto endpoints3 = fidl::CreateEndpoints<fuchsia_hardware_audio::RingBuffer>();
-  ASSERT_OK(endpoints3.status_value());
-  fidl::Arena allocator;
-  fuchsia_hardware_audio::wire::Format ring_buffer_format(allocator);
-  ring_buffer_format.set_pcm_format(allocator, GetDefaultPcmFormat());
-  fuchsia_hardware_audio::wire::DaiFormat dai_format = GetDefaultDaiFormat();
-  ASSERT_OK(client.CreateRingBuffer(dai_format, ring_buffer_format, std::move(endpoints3->server)));
-
-  auto vmo =
-      fidl::WireCall<fuchsia_hardware_audio::RingBuffer>(endpoints3->client)->GetVmo(8192, 0);
-  ASSERT_OK(vmo.status());
-
-  auto start_time = fidl::WireCall<fuchsia_hardware_audio::RingBuffer>(endpoints3->client)->Start();
-  ASSERT_OK(start_time.status());
-
-  // Close DAI channel.
-  client.client_end().reset();
-
-  dai->WaitUntilStopped();
-  dai.release();  // Managed by the DDK.
-}
-
-TEST_F(AmlG12TdmDaiTest, ClientCloseRingBufferChannel) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  metadata::AmlConfig metadata = GetDefaultMetadata();
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-
-  auto dai = std::make_unique<TestAmlG12TdmDai>(fake_parent.get(), pdev_.proto());
-  ASSERT_OK(dai->InitPDev());
-  ASSERT_OK(dai->DdkAdd("test"));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  TestAmlG12TdmDai* test_dev = child_dev->GetDeviceContext<TestAmlG12TdmDai>();
-
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::DaiConnect>();
-  std::optional<fidl::ServerBindingRef<fuchsia_hardware_audio::DaiConnect>> binding;
-  binding = fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::DaiConnect>>(
-      loop.dispatcher(), std::move(endpoints->server), test_dev);
-  loop.StartThread("test-server");
-
-  auto endpoints2 = fidl::CreateEndpoints<fuchsia_hardware_audio::Dai>();
-  auto client_wrap = fidl::BindSyncClient(std::move(endpoints->client));
-  ASSERT_OK(client_wrap.Connect(std::move(endpoints2->server)));
-  auto client = fidl::BindSyncClient(std::move(endpoints2->client));
-
-  auto supported_formats_ring_buffer = client.GetRingBufferFormats();
-  ASSERT_OK(supported_formats_ring_buffer.status());
-  auto supported_formats_dai = client.GetDaiFormats();
-  ASSERT_OK(supported_formats_dai.status());
-  auto endpoints3 = fidl::CreateEndpoints<fuchsia_hardware_audio::RingBuffer>();
-  ASSERT_OK(endpoints3.status_value());
-  fidl::Arena allocator;
-  fuchsia_hardware_audio::wire::Format ring_buffer_format(allocator);
-  ring_buffer_format.set_pcm_format(allocator, GetDefaultPcmFormat());
-  fuchsia_hardware_audio::wire::DaiFormat dai_format = GetDefaultDaiFormat();
-  ASSERT_OK(client.CreateRingBuffer(dai_format, ring_buffer_format, std::move(endpoints3->server)));
-
-  auto vmo =
-      fidl::WireCall<fuchsia_hardware_audio::RingBuffer>(endpoints3->client)->GetVmo(8192, 0);
-  ASSERT_OK(vmo.status());
-
-  auto start_time = fidl::WireCall<fuchsia_hardware_audio::RingBuffer>(endpoints3->client)->Start();
-  ASSERT_OK(start_time.status());
-
-  // Close RingBuffer channel.
-  endpoints3->client.reset();
-
-  dai->WaitUntilStopped();
-  dai.release();  // Managed by the DDK.
 }
 
 }  // namespace audio::aml_g12

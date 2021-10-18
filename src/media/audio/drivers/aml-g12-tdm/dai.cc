@@ -26,12 +26,12 @@ enum {
   FRAGMENT_COUNT,
 };
 
-AmlG12TdmDai::AmlG12TdmDai(zx_device_t* parent, ddk::PDev pdev)
+AmlG12TdmDai::AmlG12TdmDai(zx_device_t* parent, ddk::PDev  pdev)
     : AmlG12TdmDaiDeviceType(parent),
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       pdev_(std::move(pdev)) {
   ddk_proto_id_ = ZX_PROTOCOL_DAI;
-  loop_.StartThread("aml-g12-tdm-dai");
+  loop_.StartThread();
 }
 
 void AmlG12TdmDai::InitDaiFormats() {
@@ -59,15 +59,10 @@ void AmlG12TdmDai::InitDaiFormats() {
       ZX_ASSERT(0);  // Not supported.
   }
 }
-
 void AmlG12TdmDai::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
   ::fidl::InterfaceRequest<::fuchsia::hardware::audio::Dai> dai;
   dai.set_channel(request->dai_protocol.TakeChannel());
   dai_binding_.emplace(this, std::move(dai), loop_.dispatcher());
-  dai_binding_->set_error_handler([this](zx_status_t status) -> void {
-    zxlogf(INFO, "DAI protocol %s", zx_status_get_string(status));
-    Stop([]() {});
-  });
 }
 
 zx_status_t AmlG12TdmDai::DaiConnect(zx::channel channel) {
@@ -327,10 +322,6 @@ void AmlG12TdmDai::CreateRingBuffer(
   }
 
   ringbuffer_binding_.emplace(this, std::move(ring_buffer), loop_.dispatcher());
-  ringbuffer_binding_->set_error_handler([this](zx_status_t status) -> void {
-    zxlogf(INFO, "RingBuffer protocol %s", zx_status_get_string(status));
-    Stop([]() {});
-  });
   dai_format_ = std::move(dai_format);
   Reset([]() {});
 }
