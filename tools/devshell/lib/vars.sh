@@ -329,6 +329,14 @@ function _get-ssh-key {
   return 0
 }
 
+# Invoke the ffx tool. This function invokes ffx via the tools/devshell/ffx
+# wrapper that passes configuration information such as default target and build
+# directory locations to the ffx tool as needed to provide a seamless fx/ffx
+# integration.
+function ffx {
+  fx-command-run ffx "$@"
+}
+
 # Prints path to the default SSH key. These credentials are created by a
 # jiri hook.
 #
@@ -348,7 +356,7 @@ function fx-target-finder-resolve {
     return 1
   fi
   if is_feature_enabled "ffx_discovery"; then
-    fx-command-run host-tool --check-firewall ffx target list --format a "$1"
+    ffx target list --format a "$1"
   else
     fx-command-run host-tool --check-firewall device-finder resolve -ipv4="$FX_ENABLE_IPV4" "$1"
   fi
@@ -356,7 +364,7 @@ function fx-target-finder-resolve {
 
 function fx-target-finder-list {
   if is_feature_enabled "ffx_discovery"; then
-    fx-command-run host-tool --check-firewall ffx target list --format a
+    ffx target list --format a
   else
     fx-command-run host-tool --check-firewall device-finder list -ipv4="$FX_ENABLE_IPV4"
   fi
@@ -364,10 +372,31 @@ function fx-target-finder-list {
 
 function fx-target-finder-info {
   if is_feature_enabled "ffx_discovery"; then
-    fx-command-run host-tool --check-firewall ffx target list --format s
+    ffx target list --format s
   else
     fx-command-run host-tool --check-firewall device-finder list -ipv4="$FX_ENABLE_IPV4" --full
   fi
+}
+
+function fx-target-ssh-address {
+  if is_feature_enabled "ffx_discovery"; then
+    ffx target get-ssh-address
+  fi
+}
+
+function multi-device-fail {
+  local output devices
+  fx-error "Multiple devices found."
+  fx-error "Please specify one of the following devices using either \`fx -d <device-name>\` or \`fx set-device <device-name>\`."
+  devices="$(fx-target-finder-info)" || {
+    code=$?
+    fx-error "Device discovery failed with status: $code"
+    exit $code
+  }
+  while IFS="" read -r line; do
+    fx-error "\t${line}"
+  done < <(printf '%s\n' "${devices}")
+  exit 1
 }
 
 function get-fuchsia-device-addr {
