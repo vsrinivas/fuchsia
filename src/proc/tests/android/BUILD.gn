@@ -220,7 +220,6 @@ wayland_tests = [
   # This test seems to require some flock functionality that we do not have (it uses this to, for
   # figure out whether or not to unlink the socket file).
   # "socket-test",
-
   # "wayland_demo",
 ]
 

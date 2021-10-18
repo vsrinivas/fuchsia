@@ -284,7 +284,6 @@ impl Socket {
     /// Reads all the available messages out of this socket.
     ///
     /// If no data is available, or this socket is not readable, then an empty vector is returned.
-    #[cfg(test)]
     pub fn read_kernel(&self) -> Vec<Message> {
         self.lock().read_kernel()
     }
@@ -319,7 +318,6 @@ impl Socket {
     /// - `message`: The message to write.
     ///
     /// Returns an error if the socket is not connected.
-    #[cfg(test)]
     pub fn write_kernel(&self, message: Message) -> Result<(), Errno> {
         let peer = {
             let inner = self.lock();
@@ -428,7 +426,6 @@ impl SocketInner {
     /// Reads all the available messages out of this socket.
     ///
     /// If no data is available, or this socket is not readable, then an empty vector is returned.
-    #[cfg(test)]
     pub fn read_kernel(&mut self) -> Vec<Message> {
         if !self.readable {
             return vec![];
@@ -476,7 +473,6 @@ impl SocketInner {
     /// - `message`: The message to write.
     ///
     /// Returns an error if the socket is not connected.
-    #[cfg(test)]
     fn write_kernel(&mut self, message: Message) -> Result<(), Errno> {
         if !self.writable {
             return error!(EPIPE);

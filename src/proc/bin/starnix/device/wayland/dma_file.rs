@@ -214,21 +214,17 @@ impl FileOps for DmaFile {
         &self,
         _file: &FileObject,
         task: &Task,
-        request: u32,
+        _request: u32,
         in_addr: UserAddress,
         _out_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
-        const NEW_DMA_BUF: u32 = 0;
-
-        match request {
-            NEW_DMA_BUF => {
-                let mut allocation_args = DmaBufferAllocationArgs::default();
-                task.mm.read_object(UserRef::new(in_addr), &mut allocation_args)?;
-                let mut result = self.allocate_dma_buffer(task, &allocation_args)?;
-                task.mm.write_object(UserRef::new(in_addr), &mut result)?;
-            }
-            _ => return error!(EINVAL),
-        };
+        // TODO: Don't assume that this is a NEW_DMA_BUF request.
+        // There are some macros for parsing request in the wayland demo that will need to be
+        // matched here.
+        let mut allocation_args = DmaBufferAllocationArgs::default();
+        task.mm.read_object(UserRef::new(in_addr), &mut allocation_args)?;
+        let mut result = self.allocate_dma_buffer(task, &allocation_args)?;
+        task.mm.write_object(UserRef::new(in_addr), &mut result)?;
 
         Ok(SUCCESS)
     }
