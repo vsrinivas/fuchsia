@@ -102,18 +102,19 @@ impl TestHelper {
         // Connecting to the service to start wlancfg so that it can create new interfaces.
         let _wlan_proxy =
             connect_to_protocol::<fidl_policy::ClientProviderMarker>().expect("starting wlancfg");
+
         // The IsolatedDevMgr in CFv2 does not allow a configuration to block until a device is
-        // ready.  Manually wait here until the device becomes available.
+        // ready. Wait indefinitely here until the device becomes available.
         let raw_dir = wlan_dev::RealDeviceEnv::open_dir("/dev").expect("failed to open /dev");
         let zircon_channel =
             fdio::clone_channel(&raw_dir).expect("failed to clone directory channel");
         let async_channel = fuchsia_async::Channel::from_channel(zircon_channel)
             .expect("failed to create async channel from zircon channel");
         let dir = DirectoryProxy::from_channel(async_channel);
-        assert!(device_watcher::recursive_wait_and_open_node(&dir, "sys/test/wlantapctl")
-            .expect_within(5.seconds(), "wlantapctl did not appear in time")
-            .await
-            .is_ok());
+        info!("Waiting for /dev/sys/test/wlantapctl to appear.");
+        device_watcher::recursive_wait_and_open_node(&dir, "sys/test/wlantapctl").await.unwrap();
+
+        // Trigger creation of wlantap serviced phy and iface for testing.
         let wlantap = Wlantap::open().expect("Failed to open wlantapctl");
         let proxy = wlantap.create_phy(config).expect("Failed to create wlantap PHY");
         let event_stream = Some(proxy.take_event_stream());
