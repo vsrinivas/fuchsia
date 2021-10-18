@@ -864,6 +864,13 @@ void Blob::OnNoPagedVmoClones() {
   if (!HasReferences()) {
     // Mark the name to help identify the VMO is unused.
     SetPagedVmoName(false);
+    // Hint that the VMO's pages are no longer needed, and can be evicted under memory pressure. If
+    // a page is accessed again, it will lose the hint.
+    zx_status_t status = paged_vmo().op_range(ZX_VMO_OP_DONT_NEED, 0, blob_size_, nullptr, 0);
+    if (status != ZX_OK) {
+      FX_LOGS(WARNING) << "Hinting DONT_NEED on blob " << digest()
+                       << " failed: " << zx_status_get_string(status);
+    }
 
     // This might have been the last reference to a deleted blob, so try purging it.
     if (zx_status_t status = TryPurge(); status != ZX_OK) {
@@ -1173,8 +1180,17 @@ zx_status_t Blob::CloseNode() {
 
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kClose);
 
-  if (paged_vmo() && !HasReferences())
+  if (paged_vmo() && !HasReferences()) {
+    // Mark the name to help identify the VMO is unused.
     SetPagedVmoName(false);
+    // Hint that the VMO's pages are no longer needed, and can be evicted under memory pressure. If
+    // a page is accessed again, it will lose the hint.
+    zx_status_t status = paged_vmo().op_range(ZX_VMO_OP_DONT_NEED, 0, blob_size_, nullptr, 0);
+    if (status != ZX_OK) {
+      FX_LOGS(WARNING) << "Hinting DONT_NEED on blob " << digest()
+                       << " failed: " << zx_status_get_string(status);
+    }
+  }
 
   // Attempt purge in case blob was unlinked prior to close.
   return TryPurge();
