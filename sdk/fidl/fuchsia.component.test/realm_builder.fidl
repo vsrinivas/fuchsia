@@ -1,8 +1,8 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.realm.builder;
+library fuchsia.component.test;
 
 using fuchsia.component;
 using fuchsia.component.decl;
@@ -168,9 +168,9 @@ type Debug = struct {};
 /// Once the realm details are successfully processed, `Commit` should be called
 /// to produce a URL which can be used to create the component.
 @discoverable
-protocol FrameworkIntermediary {
+protocol RealmBuilder {
     /// Initializes this connection to the framework intermediary. This function
-    /// should be called at the stat of every new FrameworkIntermediary
+    /// should be called at the stat of every new RealmBuilder
     /// connection, with the `pkg_dir_handle` argument providing a connection
     /// to the test's package with rx* permissions. Components that are added
     /// with a relative URL are loaded from this directory handle. If this call

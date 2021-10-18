@@ -6,7 +6,6 @@
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/component/decl/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
-#include <fuchsia/realm/builder/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
 #include <lib/sys/cpp/component_context.h>

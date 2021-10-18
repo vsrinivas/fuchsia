@@ -5,7 +5,7 @@
 #ifndef LIB_SYS_CPP_TESTING_INTERNAL_MOCK_RUNNER_H_
 #define LIB_SYS_CPP_TESTING_INTERNAL_MOCK_RUNNER_H_
 
-#include <fuchsia/realm/builder/cpp/fidl.h>
+#include <fuchsia/component/test/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -25,14 +25,14 @@ class MockRunner {
 
   void Register(std::string mock_id, MockComponent* mock);
 
-  void Bind(fidl::InterfaceHandle<fuchsia::realm::builder::FrameworkIntermediary> handle,
+  void Bind(fidl::InterfaceHandle<fuchsia::component::test::RealmBuilder> handle,
             async_dispatcher_t* dispatcher);
 
  private:
   bool Contains(std::string mock_id) const;
 
   std::map<std::string, MockComponent*> mocks_;
-  fuchsia::realm::builder::FrameworkIntermediaryPtr framework_intermediary_proxy_;
+  fuchsia::component::test::RealmBuilderPtr realm_builder_proxy_;
 };
 
 }  // namespace sys::testing::internal

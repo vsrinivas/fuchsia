@@ -4,8 +4,8 @@
 
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/component/decl/cpp/fidl.h>
+#include <fuchsia/component/test/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
-#include <fuchsia/realm/builder/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
@@ -41,58 +41,58 @@ void PanicIfMonikerBad(Moniker& moniker) {
   }
 }
 
-fuchsia::realm::builder::RouteEndpoint ConvertToFidl(Endpoint endpoint) {
+fuchsia::component::test::RouteEndpoint ConvertToFidl(Endpoint endpoint) {
   if (auto moniker = std::get_if<Moniker>(&endpoint)) {
-    return fuchsia::realm::builder::RouteEndpoint::WithComponent(std::string(moniker->path));
+    return fuchsia::component::test::RouteEndpoint::WithComponent(std::string(moniker->path));
   }
   if (auto _ = std::get_if<AboveRoot>(&endpoint)) {
-    return fuchsia::realm::builder::RouteEndpoint::WithAboveRoot(
-        fuchsia::realm::builder::AboveRoot());
+    return fuchsia::component::test::RouteEndpoint::WithAboveRoot(
+        fuchsia::component::test::AboveRoot());
   }
 
   ZX_PANIC("ConvertToFidl(Endpoint) reached unreachable block!");
 }
 
-fuchsia::realm::builder::Capability ConvertToFidl(Capability capability) {
+fuchsia::component::test::Capability ConvertToFidl(Capability capability) {
   if (auto protocol = std::get_if<Protocol>(&capability)) {
-    fuchsia::realm::builder::ProtocolCapability fidl_capability;
+    fuchsia::component::test::ProtocolCapability fidl_capability;
     fidl_capability.set_name(std::string(protocol->name));
-    return fuchsia::realm::builder::Capability::WithProtocol(std::move(fidl_capability));
+    return fuchsia::component::test::Capability::WithProtocol(std::move(fidl_capability));
   }
   if (auto directory = std::get_if<Directory>(&capability)) {
-    fuchsia::realm::builder::DirectoryCapability fidl_capability;
+    fuchsia::component::test::DirectoryCapability fidl_capability;
     fidl_capability.set_name(std::string(directory->name));
     fidl_capability.set_path(std::string(directory->path));
     fidl_capability.set_rights(std::move(directory->rights));
-    return fuchsia::realm::builder::Capability::WithDirectory(std::move(fidl_capability));
+    return fuchsia::component::test::Capability::WithDirectory(std::move(fidl_capability));
   }
   if (auto storage = std::get_if<Storage>(&capability)) {
-    fuchsia::realm::builder::StorageCapability fidl_capability;
+    fuchsia::component::test::StorageCapability fidl_capability;
     fidl_capability.set_name(std::string(storage->name));
     fidl_capability.set_path(std::string(storage->path));
-    return fuchsia::realm::builder::Capability::WithStorage(std::move(fidl_capability));
+    return fuchsia::component::test::Capability::WithStorage(std::move(fidl_capability));
   }
 
   ZX_PANIC("ConvertToFidl(Capability) reached unreachable block!");
 }
 
-fuchsia::realm::builder::Component ConvertToFidl(Source source) {
-  fuchsia::realm::builder::Component result;
+fuchsia::component::test::Component ConvertToFidl(Source source) {
+  fuchsia::component::test::Component result;
   if (auto url = std::get_if<ComponentUrl>(&source)) {
-    return fuchsia::realm::builder::Component::WithUrl(std::string(url->url));
+    return fuchsia::component::test::Component::WithUrl(std::string(url->url));
   }
   if (auto url = std::get_if<LegacyComponentUrl>(&source)) {
-    return fuchsia::realm::builder::Component::WithLegacyUrl(std::string(url->url));
+    return fuchsia::component::test::Component::WithLegacyUrl(std::string(url->url));
   }
 
   ZX_PANIC("ConvertToFidl(Source) reached unreachable block!");
 }
 
-fuchsia::realm::builder::CapabilityRoute ConvertToFidl(CapabilityRoute route) {
-  fuchsia::realm::builder::CapabilityRoute result;
+fuchsia::component::test::CapabilityRoute ConvertToFidl(CapabilityRoute route) {
+  fuchsia::component::test::CapabilityRoute result;
   result.set_capability(ConvertToFidl(route.capability));
   result.set_source(ConvertToFidl(route.source));
-  std::vector<fuchsia::realm::builder::RouteEndpoint> targets;
+  std::vector<fuchsia::component::test::RouteEndpoint> targets;
   for (const Endpoint& target : route.targets) {
     targets.push_back(ConvertToFidl(target));
   }
@@ -123,15 +123,14 @@ zx_status_t Realm::Connect(const std::string& interface_name, zx::channel reques
 
 std::string Realm::GetChildName() const { return root_.GetChildName(); }
 
-Realm::Builder::Builder(
-    fuchsia::component::RealmSyncPtr realm_proxy,
-    fuchsia::realm::builder::FrameworkIntermediarySyncPtr framework_intermediary_proxy,
-    sys::ServiceDirectory framework_intermediary_exposed_dir,
-    std::unique_ptr<internal::MockRunner> mock_runner_server)
+Realm::Builder::Builder(fuchsia::component::RealmSyncPtr realm_proxy,
+                        fuchsia::component::test::RealmBuilderSyncPtr realm_builder_proxy,
+                        sys::ServiceDirectory realm_builder_exposed_dir,
+                        std::unique_ptr<internal::MockRunner> mock_runner_server)
     : realm_commited_(false),
       realm_proxy_(std::move(realm_proxy)),
-      framework_intermediary_proxy_(std::move(framework_intermediary_proxy)),
-      framework_intermediary_exposed_dir_(std::move(framework_intermediary_exposed_dir)),
+      realm_builder_proxy_(std::move(realm_builder_proxy)),
+      realm_builder_exposed_dir_(std::move(realm_builder_exposed_dir)),
       mock_runner_(std::move(mock_runner_server)) {}
 
 Realm::Builder& Realm::Builder::AddComponent(Moniker moniker, Component component) {
@@ -139,42 +138,41 @@ Realm::Builder& Realm::Builder::AddComponent(Moniker moniker, Component componen
   {
     bool exists;
     ASSERT_STATUS_OK("FrameworkIntemediary/Contains",
-                     framework_intermediary_proxy_->Contains(std::string(moniker.path), &exists));
+                     realm_builder_proxy_->Contains(std::string(moniker.path), &exists));
     if (exists) {
       ZX_PANIC("Attempted to add a moniker that already exists in Realm: '%s'",
                moniker.path.data());
     }
   }
   if (auto mock = std::get_if<Mock>(&component.source)) {
-    fuchsia::realm::builder::FrameworkIntermediary_SetMockComponent_Result result;
+    fuchsia::component::test::RealmBuilder_SetMockComponent_Result result;
     ASSERT_STATUS_AND_RESULT_OK(
         "FrameworkIntemediary/SetMockComponent",
-        framework_intermediary_proxy_->SetMockComponent(std::string(moniker.path), &result),
-        result);
+        realm_builder_proxy_->SetMockComponent(std::string(moniker.path), &result), result);
     mock_runner_->Register(result.response().mock_id, mock->impl);
   } else {
-    fuchsia::realm::builder::FrameworkIntermediary_SetComponent_Result result;
+    fuchsia::component::test::RealmBuilder_SetComponent_Result result;
     ASSERT_STATUS_AND_RESULT_OK(
         "FrameworkIntemediary/SetComponent",
-        framework_intermediary_proxy_->SetComponent(std::string(moniker.path),
-                                                    ConvertToFidl(component.source), &result),
+        realm_builder_proxy_->SetComponent(std::string(moniker.path),
+                                           ConvertToFidl(component.source), &result),
         result);
   }
   if (component.eager) {
-    fuchsia::realm::builder::FrameworkIntermediary_MarkAsEager_Result result;
+    fuchsia::component::test::RealmBuilder_MarkAsEager_Result result;
     ASSERT_STATUS_AND_RESULT_OK(
-        "FrameworkIntermediary/MarkAsEager",
-        framework_intermediary_proxy_->MarkAsEager(std::string(moniker.path), &result), result);
+        "RealmBuilder/MarkAsEager",
+        realm_builder_proxy_->MarkAsEager(std::string(moniker.path), &result), result);
   }
   return *this;
 }
 
 Realm::Builder& Realm::Builder::AddRoute(CapabilityRoute route) {
-  fuchsia::realm::builder::FrameworkIntermediary_RouteCapability_Result result;
+  fuchsia::component::test::RealmBuilder_RouteCapability_Result result;
   auto fidl_route = ConvertToFidl(route);
-  ASSERT_STATUS_AND_RESULT_OK(
-      "FrameworkIntermediary/RouteCapability",
-      framework_intermediary_proxy_->RouteCapability(std::move(fidl_route), &result), result);
+  ASSERT_STATUS_AND_RESULT_OK("RealmBuilder/RouteCapability",
+                              realm_builder_proxy_->RouteCapability(std::move(fidl_route), &result),
+                              result);
   return *this;
 }
 
@@ -184,12 +182,12 @@ Realm Realm::Builder::Build(async_dispatcher_t* dispatcher) {
   }
   ASSERT_NOT_NULL(dispatcher);
   ZX_ASSERT_MSG(!realm_commited_, "RealmBuilder::Build() called after Realm already created");
-  fuchsia::realm::builder::FrameworkIntermediary_Commit_Result result;
-  ASSERT_STATUS_AND_RESULT_OK("FrameworkIntemediary/Commit",
-                              framework_intermediary_proxy_->Commit(&result), result);
+  fuchsia::component::test::RealmBuilder_Commit_Result result;
+  ASSERT_STATUS_AND_RESULT_OK("FrameworkIntemediary/Commit", realm_builder_proxy_->Commit(&result),
+                              result);
   realm_commited_ = true;
   // Hand channel to async client so that MockRunner can listen to events.
-  mock_runner_->Bind(framework_intermediary_proxy_.Unbind(), dispatcher);
+  mock_runner_->Bind(realm_builder_proxy_.Unbind(), dispatcher);
   return Realm(ScopedChild::New(std::move(realm_proxy_), kCollectionName,
                                 result.response().root_component_url),
                std::move(mock_runner_));
@@ -197,17 +195,16 @@ Realm Realm::Builder::Build(async_dispatcher_t* dispatcher) {
 
 Realm::Builder Realm::Builder::New(const sys::ComponentContext* context) {
   ZX_ASSERT_MSG(context != nullptr, "context passed to RealmBuilder::New() must not be nullptr");
-  fuchsia::realm::builder::FrameworkIntermediarySyncPtr framework_intermediary_proxy;
+  fuchsia::component::test::RealmBuilderSyncPtr realm_builder_proxy;
   auto realm_proxy = internal::CreateRealmPtr(context);
   auto child_ref = fuchsia::component::decl::ChildRef{.name = kFrameworkIntermediaryChildName};
   auto exposed_dir = internal::OpenExposedDir(realm_proxy.get(), child_ref);
-  exposed_dir.Connect(framework_intermediary_proxy.NewRequest());
-  fuchsia::realm::builder::FrameworkIntermediary_Init_Result result;
-  ASSERT_STATUS_AND_RESULT_OK("FrameworkIntermediary/Init",
-                              framework_intermediary_proxy->Init(CreatePkgDirHandle(), &result),
-                              result);
-  return Builder(std::move(realm_proxy), std::move(framework_intermediary_proxy),
-                 std::move(exposed_dir), std::make_unique<internal::MockRunner>());
+  exposed_dir.Connect(realm_builder_proxy.NewRequest());
+  fuchsia::component::test::RealmBuilder_Init_Result result;
+  ASSERT_STATUS_AND_RESULT_OK("RealmBuilder/Init",
+                              realm_builder_proxy->Init(CreatePkgDirHandle(), &result), result);
+  return Builder(std::move(realm_proxy), std::move(realm_builder_proxy), std::move(exposed_dir),
+                 std::make_unique<internal::MockRunner>());
 }
 
 }  // namespace sys::testing

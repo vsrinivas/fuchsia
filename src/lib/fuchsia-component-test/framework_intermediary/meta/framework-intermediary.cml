@@ -16,7 +16,7 @@
         {
             protocol: [
                 "fuchsia.component.runner.ComponentRunner",
-                "fuchsia.realm.builder.FrameworkIntermediary",
+                "fuchsia.component.test.RealmBuilder",
                 "fuchsia.sys2.ComponentResolver",
             ],
         },
@@ -41,7 +41,7 @@
         {
             protocol: [
                 "fuchsia.component.runner.ComponentRunner",
-                "fuchsia.realm.builder.FrameworkIntermediary",
+                "fuchsia.component.test.RealmBuilder",
                 "fuchsia.sys2.ComponentResolver",
             ],
             from: "self",

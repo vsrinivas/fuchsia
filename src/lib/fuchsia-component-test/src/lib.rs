@@ -12,8 +12,8 @@ use {
     },
     fidl::endpoints::{self, ClientEnd, DiscoverableProtocolMarker, Proxy, ServerEnd},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
-    fidl_fuchsia_realm_builder as frealmbuilder, fuchsia_async as fasync,
+    fidl_fuchsia_component_test as ftest, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
+    fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
     fuchsia_component::client as fclient,
     fuchsia_zircon as zx,
     futures::{FutureExt, TryFutureExt},
@@ -141,26 +141,22 @@ pub enum RouteEndpoint {
     Debug,
 }
 
-impl Into<frealmbuilder::RouteEndpoint> for RouteEndpoint {
-    fn into(self) -> frealmbuilder::RouteEndpoint {
+impl Into<ftest::RouteEndpoint> for RouteEndpoint {
+    fn into(self) -> ftest::RouteEndpoint {
         match self {
-            RouteEndpoint::AboveRoot => {
-                frealmbuilder::RouteEndpoint::AboveRoot(frealmbuilder::AboveRoot {})
-            }
-            RouteEndpoint::Debug => frealmbuilder::RouteEndpoint::Debug(frealmbuilder::Debug {}),
-            RouteEndpoint::Component(moniker) => frealmbuilder::RouteEndpoint::Component(moniker),
+            RouteEndpoint::AboveRoot => ftest::RouteEndpoint::AboveRoot(ftest::AboveRoot {}),
+            RouteEndpoint::Debug => ftest::RouteEndpoint::Debug(ftest::Debug {}),
+            RouteEndpoint::Component(moniker) => ftest::RouteEndpoint::Component(moniker),
         }
     }
 }
 
-impl From<frealmbuilder::RouteEndpoint> for RouteEndpoint {
-    fn from(input: frealmbuilder::RouteEndpoint) -> Self {
+impl From<ftest::RouteEndpoint> for RouteEndpoint {
+    fn from(input: ftest::RouteEndpoint) -> Self {
         match input {
-            frealmbuilder::RouteEndpoint::AboveRoot(frealmbuilder::AboveRoot {}) => {
-                RouteEndpoint::AboveRoot
-            }
-            frealmbuilder::RouteEndpoint::Debug(frealmbuilder::Debug {}) => RouteEndpoint::Debug,
-            frealmbuilder::RouteEndpoint::Component(moniker) => RouteEndpoint::Component(moniker),
+            ftest::RouteEndpoint::AboveRoot(ftest::AboveRoot {}) => RouteEndpoint::AboveRoot,
+            ftest::RouteEndpoint::Debug(ftest::Debug {}) => RouteEndpoint::Debug,
+            ftest::RouteEndpoint::Component(moniker) => RouteEndpoint::Component(moniker),
             _ => panic!("unexpected input"),
         }
     }
@@ -189,20 +185,18 @@ impl RouteEndpoint {
 
 /// `RouteBuilder` can be used to construct a new route, for use with [`Realm::add_route`].
 pub struct RouteBuilder {
-    capability: frealmbuilder::Capability,
-    source: Option<frealmbuilder::RouteEndpoint>,
-    targets: Vec<frealmbuilder::RouteEndpoint>,
+    capability: ftest::Capability,
+    source: Option<ftest::RouteEndpoint>,
+    targets: Vec<ftest::RouteEndpoint>,
     force_route: bool,
 }
 
 impl RouteBuilder {
     pub fn protocol(name: impl Into<String>) -> Self {
-        RouteBuilder::from_capability(frealmbuilder::Capability::Protocol(
-            frealmbuilder::ProtocolCapability {
-                name: Some(name.into()),
-                ..frealmbuilder::ProtocolCapability::EMPTY
-            },
-        ))
+        RouteBuilder::from_capability(ftest::Capability::Protocol(ftest::ProtocolCapability {
+            name: Some(name.into()),
+            ..ftest::ProtocolCapability::EMPTY
+        }))
     }
 
     pub fn directory(
@@ -210,27 +204,23 @@ impl RouteBuilder {
         path: impl Into<String>,
         rights: fio2::Operations,
     ) -> Self {
-        RouteBuilder::from_capability(frealmbuilder::Capability::Directory(
-            frealmbuilder::DirectoryCapability {
-                name: Some(name.into()),
-                path: Some(path.into()),
-                rights: Some(rights),
-                ..frealmbuilder::DirectoryCapability::EMPTY
-            },
-        ))
+        RouteBuilder::from_capability(ftest::Capability::Directory(ftest::DirectoryCapability {
+            name: Some(name.into()),
+            path: Some(path.into()),
+            rights: Some(rights),
+            ..ftest::DirectoryCapability::EMPTY
+        }))
     }
 
     pub fn storage(name: impl Into<String>, path: impl Into<String>) -> Self {
-        RouteBuilder::from_capability(frealmbuilder::Capability::Storage(
-            frealmbuilder::StorageCapability {
-                name: Some(name.into()),
-                path: Some(path.into()),
-                ..frealmbuilder::StorageCapability::EMPTY
-            },
-        ))
+        RouteBuilder::from_capability(ftest::Capability::Storage(ftest::StorageCapability {
+            name: Some(name.into()),
+            path: Some(path.into()),
+            ..ftest::StorageCapability::EMPTY
+        }))
     }
 
-    fn from_capability(capability: impl Into<frealmbuilder::Capability>) -> Self {
+    fn from_capability(capability: impl Into<ftest::Capability>) -> Self {
         RouteBuilder {
             capability: capability.into(),
             source: None,
@@ -239,12 +229,12 @@ impl RouteBuilder {
         }
     }
 
-    pub fn source(mut self, source: impl Into<frealmbuilder::RouteEndpoint>) -> Self {
+    pub fn source(mut self, source: impl Into<ftest::RouteEndpoint>) -> Self {
         self.source = Some(source.into());
         self
     }
 
-    pub fn targets(mut self, targets: Vec<impl Into<frealmbuilder::RouteEndpoint>>) -> Self {
+    pub fn targets(mut self, targets: Vec<impl Into<ftest::RouteEndpoint>>) -> Self {
         self.targets = targets.into_iter().map(Into::into).collect();
         self
     }
@@ -255,17 +245,17 @@ impl RouteBuilder {
     }
 }
 
-impl Into<frealmbuilder::CapabilityRoute> for RouteBuilder {
-    fn into(self) -> frealmbuilder::CapabilityRoute {
+impl Into<ftest::CapabilityRoute> for RouteBuilder {
+    fn into(self) -> ftest::CapabilityRoute {
         if self.targets.is_empty() {
             panic!("targets was not specified for route");
         }
-        frealmbuilder::CapabilityRoute {
+        ftest::CapabilityRoute {
             capability: Some(self.capability),
             source: Some(self.source.expect("source wsa not specified for route")),
             targets: Some(self.targets),
             force_route: Some(self.force_route),
-            ..frealmbuilder::CapabilityRoute::EMPTY
+            ..ftest::CapabilityRoute::EMPTY
         }
     }
 }
@@ -324,7 +314,7 @@ impl RealmInstance {
 
 /// A custom built realm, which can be created at runtime in a component collection
 pub struct Realm {
-    framework_intermediary_proxy: frealmbuilder::FrameworkIntermediaryProxy,
+    realm_builder_proxy: ftest::RealmBuilderProxy,
     mocks_runner: mock::MocksRunner,
     collection_name: String,
 
@@ -352,31 +342,31 @@ impl Realm {
             )
             .await
             .map_err(RealmError::FailedToUseRealm)?
-            .map_err(RealmError::FailedBindToFrameworkIntermediary)?;
-        let framework_intermediary_proxy = fclient::connect_to_protocol_at_dir_root::<
-            frealmbuilder::FrameworkIntermediaryMarker,
+            .map_err(RealmError::FailedBindToRealmBuilder)?;
+        let realm_builder_proxy = fclient::connect_to_protocol_at_dir_root::<
+            ftest::RealmBuilderMarker,
         >(&exposed_dir_proxy)
-        .map_err(RealmError::ConnectToFrameworkIntermediaryService)?;
+        .map_err(RealmError::ConnectToRealmBuilderService)?;
 
         let pkg_dir_proxy = io_util::open_directory_in_namespace(
             "/pkg",
             io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
         )
         .map_err(Error::FailedToOpenPkgDir)?;
-        framework_intermediary_proxy
+        realm_builder_proxy
             .init(ClientEnd::from(pkg_dir_proxy.into_channel().unwrap().into_zx_channel()))
             .await?
             .map_err(Error::FailedToSetPkgDir)?;
 
-        Realm::new_with_framework_intermediary_proxy(framework_intermediary_proxy)
+        Realm::new_with_realm_builder_proxy(realm_builder_proxy)
     }
 
-    fn new_with_framework_intermediary_proxy(
-        framework_intermediary_proxy: frealmbuilder::FrameworkIntermediaryProxy,
+    fn new_with_realm_builder_proxy(
+        realm_builder_proxy: ftest::RealmBuilderProxy,
     ) -> Result<Self, Error> {
-        let mocks_runner = mock::MocksRunner::new(framework_intermediary_proxy.take_event_stream());
+        let mocks_runner = mock::MocksRunner::new(realm_builder_proxy.take_event_stream());
         Ok(Self {
-            framework_intermediary_proxy,
+            realm_builder_proxy,
             mocks_runner,
             collection_name: DEFAULT_COLLECTION_NAME.to_string(),
             routes_to_add: vec![],
@@ -391,10 +381,10 @@ impl Realm {
         mock: mock::Mock,
     ) -> Result<(), Error> {
         let mock_id = self
-            .framework_intermediary_proxy
+            .realm_builder_proxy
             .set_mock_component(&moniker.to_string())
             .await
-            .map_err(RealmError::FailedToUseFrameworkIntermediary)?
+            .map_err(RealmError::FailedToUseRealmBuilder)?
             .map_err(|s| RealmError::FailedToSetMock(moniker.clone(), s))?;
         self.mocks_runner.register_mock(mock_id, mock).await;
         Ok(())
@@ -410,15 +400,15 @@ impl Realm {
         decl: cm_rust::ComponentDecl,
     ) -> Result<(), Error> {
         let decl = decl.native_into_fidl();
-        self.framework_intermediary_proxy
-            .set_component(&moniker.to_string(), &mut frealmbuilder::Component::Decl(decl))
+        self.realm_builder_proxy
+            .set_component(&moniker.to_string(), &mut ftest::Component::Decl(decl))
             .await?
             .map_err(|s| Error::FailedToSetDecl(moniker.clone(), s))
     }
 
     pub async fn set_component_url(&self, moniker: &Moniker, url: String) -> Result<(), Error> {
-        self.framework_intermediary_proxy
-            .set_component(&moniker.to_string(), &mut frealmbuilder::Component::Url(url))
+        self.realm_builder_proxy
+            .set_component(&moniker.to_string(), &mut ftest::Component::Url(url))
             .await?
             .map_err(|s| Error::FailedToSetDecl(moniker.clone(), s))
     }
@@ -428,8 +418,8 @@ impl Realm {
         moniker: &Moniker,
         url: String,
     ) -> Result<(), Error> {
-        self.framework_intermediary_proxy
-            .set_component(&moniker.to_string(), &mut frealmbuilder::Component::LegacyUrl(url))
+        self.realm_builder_proxy
+            .set_component(&moniker.to_string(), &mut ftest::Component::LegacyUrl(url))
             .await?
             .map_err(|s| Error::FailedToSetDecl(moniker.clone(), s))
     }
@@ -438,17 +428,14 @@ impl Realm {
     /// the component exists in the realm tree itself, or if the parent contains a child
     /// declaration for the moniker.
     pub async fn contains(&self, moniker: &Moniker) -> Result<bool, Error> {
-        self.framework_intermediary_proxy
-            .contains(&moniker.to_string())
-            .await
-            .map_err(Error::FidlError)
+        self.realm_builder_proxy.contains(&moniker.to_string()).await.map_err(Error::FidlError)
     }
 
     /// Returns a copy of a component decl in the realm.
     pub async fn get_decl(&mut self, moniker: &Moniker) -> Result<cm_rust::ComponentDecl, Error> {
         self.flush_routes().await?;
         let decl = self
-            .framework_intermediary_proxy
+            .realm_builder_proxy
             .get_component_decl(&moniker.to_string())
             .await?
             .map_err(|s| Error::FailedToGetDecl(moniker.clone(), s))?;
@@ -475,7 +462,7 @@ impl Realm {
     /// internal structure. If the target component is a component referenced in an added
     /// component's [`cm_rust::ComponentDecl`], then the `ChildDecl` for the component is modified.
     pub async fn mark_as_eager(&self, moniker: &Moniker) -> Result<(), Error> {
-        self.framework_intermediary_proxy
+        self.realm_builder_proxy
             .mark_as_eager(&moniker.to_string())
             .await?
             .map_err(|s| Error::FailedToMarkAsEager(moniker.clone(), s))
@@ -488,9 +475,9 @@ impl Realm {
 
     pub async fn add_route(
         &mut self,
-        route: impl Into<frealmbuilder::CapabilityRoute>,
+        route: impl Into<ftest::CapabilityRoute>,
     ) -> Result<(), Error> {
-        self.framework_intermediary_proxy
+        self.realm_builder_proxy
             .route_capability(route.into())
             .await?
             .map_err(|s| Error::FailedToRoute(s))
@@ -502,11 +489,8 @@ impl Realm {
     /// `fuchsia.sys2.Realm#DestroyChild` has been called.
     pub async fn initialize(mut self) -> Result<(String, String, mock::MocksRunner), Error> {
         self.flush_routes().await?;
-        let root_url = self
-            .framework_intermediary_proxy
-            .commit()
-            .await?
-            .map_err(|s| Error::FailedToCommit(s))?;
+        let root_url =
+            self.realm_builder_proxy.commit().await?.map_err(|s| Error::FailedToCommit(s))?;
         Ok((root_url, self.collection_name, self.mocks_runner))
     }
 

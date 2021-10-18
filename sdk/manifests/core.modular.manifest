@@ -32,6 +32,8 @@ sdk://fidl/fuchsia.cobalt
 sdk://fidl/fuchsia.component
 sdk://fidl/fuchsia.component.decl
 sdk://fidl/fuchsia.component.runner
+sdk://fidl/fuchsia.component.test
+sdk://fidl/fuchsia.component.types
 sdk://fidl/fuchsia.data
 sdk://fidl/fuchsia.deprecatedtimezone
 sdk://fidl/fuchsia.developer.tiles

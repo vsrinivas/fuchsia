@@ -5,14 +5,14 @@
 use {
     anyhow::{anyhow, Context as _},
     fidl::endpoints::{DiscoverableProtocolMarker, ServerEnd},
-    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
-    fidl_fuchsia_logger as flogger, fidl_fuchsia_net_tun as fnet_tun,
+    fidl_fuchsia_component_test as ftest, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
+    fidl_fuchsia_io2 as fio2, fidl_fuchsia_logger as flogger, fidl_fuchsia_net_tun as fnet_tun,
     fidl_fuchsia_netemul::{
         self as fnetemul, ChildDef, ChildUses, ManagedRealmMarker, ManagedRealmRequest,
         RealmOptions, SandboxRequest, SandboxRequestStream,
     },
-    fidl_fuchsia_netemul_network as fnetemul_network, fidl_fuchsia_realm_builder as frealmbuilder,
-    fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
+    fidl_fuchsia_netemul_network as fnetemul_network, fidl_fuchsia_sys2 as fsys2,
+    fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_component_test::{
         self as fcomponent,
@@ -101,7 +101,7 @@ impl Into<zx::Status> for CreateRealmError {
                 | fcomponent::error::Error::FailedToMarkAsEager(fcomponent::Moniker { .. }, e)
                 | fcomponent::error::Error::FailedToCommit(e)
                 | fcomponent::error::Error::FailedToRoute(e) => {
-                    let _: frealmbuilder::RealmBuilderError = e;
+                    let _: ftest::RealmBuilderError = e;
                     zx::Status::INVALID_ARGS
                 }
                 // The following types of realm builder errors are unlikely to be attributable to
@@ -116,7 +116,7 @@ impl Into<zx::Status> for CreateRealmError {
                     zx::Status::INTERNAL
                 }
                 fcomponent::error::Error::FailedToSetPkgDir(e) => {
-                    let _: frealmbuilder::RealmBuilderError = e;
+                    let _: ftest::RealmBuilderError = e;
                     zx::Status::INTERNAL
                 }
                 fcomponent::error::Error::FailedToOpenPkgDir(anyhow::Error { .. })

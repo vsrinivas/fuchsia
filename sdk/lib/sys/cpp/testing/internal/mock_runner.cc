@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/component/test/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
-#include <fuchsia/realm/builder/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/include/lib/fdio/namespace.h>
 #include <lib/fidl/cpp/interface_request.h>
@@ -20,7 +20,7 @@ namespace sys::testing::internal {
 namespace {
 
 std::unique_ptr<MockHandles> CreateFromStartInfo(
-    fuchsia::realm::builder::MockComponentStartInfo start_info, async_dispatcher_t* dispatcher) {
+    fuchsia::component::test::MockComponentStartInfo start_info, async_dispatcher_t* dispatcher) {
   fdio_ns_t* ns;
   ZX_ASSERT(fdio_ns_create(&ns) == ZX_OK);
   for (auto& entry : *start_info.mutable_ns()) {
@@ -41,11 +41,11 @@ void MockRunner::Register(std::string mock_id, MockComponent* mock) {
   mocks_[std::move(mock_id)] = mock;
 }
 
-void MockRunner::Bind(fidl::InterfaceHandle<fuchsia::realm::builder::FrameworkIntermediary> handle,
+void MockRunner::Bind(fidl::InterfaceHandle<fuchsia::component::test::RealmBuilder> handle,
                       async_dispatcher_t* dispatcher) {
-  framework_intermediary_proxy_.Bind(std::move(handle), dispatcher);
-  framework_intermediary_proxy_.events().OnMockRunRequest =
-      [=](std::string mock_id, fuchsia::realm::builder::MockComponentStartInfo start_info) {
+  realm_builder_proxy_.Bind(std::move(handle), dispatcher);
+  realm_builder_proxy_.events().OnMockRunRequest =
+      [=](std::string mock_id, fuchsia::component::test::MockComponentStartInfo start_info) {
         ZX_ASSERT_MSG(Contains(mock_id), "FrameworkIntemediary sent invalid mock id: %s",
                       mock_id.c_str());
         auto* mock = mocks_[mock_id];
@@ -53,7 +53,7 @@ void MockRunner::Bind(fidl::InterfaceHandle<fuchsia::realm::builder::FrameworkIn
         mock->Start(std::move(mock_handles));
       };
 
-  framework_intermediary_proxy_.events().OnMockStopRequest = [=](std::string mock_id) {
+  realm_builder_proxy_.events().OnMockStopRequest = [=](std::string mock_id) {
     ZX_ASSERT_MSG(Contains(mock_id), "FrameworkIntemediary sent invalid mock id: %s",
                   mock_id.c_str());
     mocks_.erase(mock_id);

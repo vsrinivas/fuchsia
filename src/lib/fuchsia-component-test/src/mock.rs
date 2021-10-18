@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Error},
     fidl::endpoints::{DiscoverableProtocolMarker, Proxy, ServerEnd},
-    fidl_fuchsia_io as fio, fidl_fuchsia_realm_builder as ftrb, fuchsia_async as fasync,
+    fidl_fuchsia_component_test as ftest, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     futures::lock::Mutex,
     futures::{future::BoxFuture, TryStreamExt},
     io_util,
@@ -95,8 +95,8 @@ impl MockHandles {
     }
 }
 
-impl From<ftrb::MockComponentStartInfo> for MockHandles {
-    fn from(fidl_mock_handles: ftrb::MockComponentStartInfo) -> Self {
+impl From<ftest::MockComponentStartInfo> for MockHandles {
+    fn from(fidl_mock_handles: ftest::MockComponentStartInfo) -> Self {
         let namespace = fidl_mock_handles
             .ns
             .unwrap()
@@ -124,14 +124,10 @@ pub struct MocksRunner {
 }
 
 impl MocksRunner {
-    pub fn new(
-        framework_intermediary_event_stream: ftrb::FrameworkIntermediaryEventStream,
-    ) -> Self {
+    pub fn new(realm_builder_event_stream: ftest::RealmBuilderEventStream) -> Self {
         let mocks = Arc::new(Mutex::new(HashMap::new()));
-        let event_stream_handling_task = Some(Self::run_event_stream_handling_task(
-            mocks.clone(),
-            framework_intermediary_event_stream,
-        ));
+        let event_stream_handling_task =
+            Some(Self::run_event_stream_handling_task(mocks.clone(), realm_builder_event_stream));
         Self { mocks, event_stream_handling_task }
     }
 
@@ -149,7 +145,7 @@ impl MocksRunner {
 
     fn run_event_stream_handling_task(
         mocks: Arc<Mutex<HashMap<String, Mock>>>,
-        event_stream: ftrb::FrameworkIntermediaryEventStream,
+        event_stream: ftest::RealmBuilderEventStream,
     ) -> fasync::Task<()> {
         fasync::Task::local(async move {
             if let Err(e) = Self::handle_event_stream(mocks, event_stream).await {
@@ -163,12 +159,12 @@ impl MocksRunner {
 
     async fn handle_event_stream(
         mocks: Arc<Mutex<HashMap<String, Mock>>>,
-        mut event_stream: ftrb::FrameworkIntermediaryEventStream,
+        mut event_stream: ftest::RealmBuilderEventStream,
     ) -> Result<(), Error> {
         let running_mocks = Arc::new(Mutex::new(HashMap::new()));
         while let Some(req) = event_stream.try_next().await? {
             match req {
-                ftrb::FrameworkIntermediaryEvent::OnMockRunRequest { mock_id, start_info } => {
+                ftest::RealmBuilderEvent::OnMockRunRequest { mock_id, start_info } => {
                     let mock = {
                         let mut mocks_guard = mocks.lock().await;
                         let mock = mocks_guard
@@ -193,7 +189,7 @@ impl MocksRunner {
                         }),
                     );
                 }
-                ftrb::FrameworkIntermediaryEvent::OnMockStopRequest { mock_id } => {
+                ftest::RealmBuilderEvent::OnMockStopRequest { mock_id } => {
                     if running_mocks.lock().await.remove(&mock_id).is_none() {
                         return Err(format_err!(
                             "failed to stop mock {:?} because it wasn't running"
@@ -263,13 +259,13 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn mocks_are_run() {
-        let (framework_intermediary_proxy, framework_intermediary_server_end) =
-            create_proxy::<ftrb::FrameworkIntermediaryMarker>().unwrap();
+        let (realm_builder_proxy, realm_builder_server_end) =
+            create_proxy::<ftest::RealmBuilderMarker>().unwrap();
 
-        let (_framework_intermediary_request_stream, framework_intermediary_server_control_handle) =
-            framework_intermediary_server_end.into_stream_and_control_handle().unwrap();
+        let (_realm_builder_request_stream, realm_builder_server_control_handle) =
+            realm_builder_server_end.into_stream_and_control_handle().unwrap();
 
-        let mocks_runner = MocksRunner::new(framework_intermediary_proxy.take_event_stream());
+        let mocks_runner = MocksRunner::new(realm_builder_proxy.take_event_stream());
 
         // Register a mock
 
@@ -327,13 +323,13 @@ mod tests {
 
         let (_ignored, outgoing_dir) = create_proxy::<fio::DirectoryMarker>().unwrap();
 
-        framework_intermediary_server_control_handle
+        realm_builder_server_control_handle
             .send_on_mock_run_request(
                 &mock_id_2,
-                ftrb::MockComponentStartInfo {
+                ftest::MockComponentStartInfo {
                     ns: Some(vec![]),
                     outgoing_dir: Some(outgoing_dir),
-                    ..ftrb::MockComponentStartInfo::EMPTY
+                    ..ftest::MockComponentStartInfo::EMPTY
                 },
             )
             .unwrap();
@@ -344,13 +340,13 @@ mod tests {
 
         let (_ignored, outgoing_dir) = create_proxy::<fio::DirectoryMarker>().unwrap();
 
-        framework_intermediary_server_control_handle
+        realm_builder_server_control_handle
             .send_on_mock_run_request(
                 &mock_id_1,
-                ftrb::MockComponentStartInfo {
+                ftest::MockComponentStartInfo {
                     ns: Some(vec![]),
                     outgoing_dir: Some(outgoing_dir),
-                    ..ftrb::MockComponentStartInfo::EMPTY
+                    ..ftest::MockComponentStartInfo::EMPTY
                 },
             )
             .unwrap();
@@ -363,14 +359,14 @@ mod tests {
         let (svc_client_end, svc_server_end) = create_endpoints::<fio::DirectoryMarker>().unwrap();
         let (_ignored, outgoing_dir) = create_endpoints::<fio::DirectoryMarker>().unwrap();
 
-        let fidl_mock_handles = ftrb::MockComponentStartInfo {
+        let fidl_mock_handles = ftest::MockComponentStartInfo {
             ns: Some(vec![fcrunner::ComponentNamespaceEntry {
                 path: Some("/svc".to_string()),
                 directory: Some(svc_client_end),
                 ..fcrunner::ComponentNamespaceEntry::EMPTY
             }]),
             outgoing_dir: Some(outgoing_dir),
-            ..ftrb::MockComponentStartInfo::EMPTY
+            ..ftest::MockComponentStartInfo::EMPTY
         };
 
         let mock_handles = MockHandles::from(fidl_mock_handles);

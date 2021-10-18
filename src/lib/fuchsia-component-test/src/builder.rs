@@ -8,7 +8,7 @@ use {
     crate::{error::*, mock, Moniker, Realm},
     anyhow, cm_rust,
     fidl::endpoints::DiscoverableProtocolMarker,
-    fidl_fuchsia_io2 as fio2, fidl_fuchsia_realm_builder as frealmbuilder,
+    fidl_fuchsia_component_test as ftest, fidl_fuchsia_io2 as fio2,
     futures::{future::BoxFuture, FutureExt},
     maplit::hashmap,
     std::{collections::HashMap, fmt},
@@ -27,28 +27,26 @@ pub enum Capability {
     Storage(String, String),
 }
 
-impl Into<frealmbuilder::Capability> for Capability {
-    fn into(self) -> frealmbuilder::Capability {
+impl Into<ftest::Capability> for Capability {
+    fn into(self) -> ftest::Capability {
         match self {
-            Capability::Protocol(name) => {
-                frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability {
-                    name: Some(name),
-                    ..frealmbuilder::ProtocolCapability::EMPTY
-                })
-            }
+            Capability::Protocol(name) => ftest::Capability::Protocol(ftest::ProtocolCapability {
+                name: Some(name),
+                ..ftest::ProtocolCapability::EMPTY
+            }),
             Capability::Directory(name, path, rights) => {
-                frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
+                ftest::Capability::Directory(ftest::DirectoryCapability {
                     name: Some(name),
                     path: Some(path),
                     rights: Some(rights),
-                    ..frealmbuilder::DirectoryCapability::EMPTY
+                    ..ftest::DirectoryCapability::EMPTY
                 })
             }
             Capability::Storage(name, path) => {
-                frealmbuilder::Capability::Storage(frealmbuilder::StorageCapability {
+                ftest::Capability::Storage(ftest::StorageCapability {
                     name: Some(name),
                     path: Some(path),
-                    ..frealmbuilder::StorageCapability::EMPTY
+                    ..ftest::StorageCapability::EMPTY
                 })
             }
             Capability::Event(_, _) => {
@@ -58,23 +56,18 @@ impl Into<frealmbuilder::Capability> for Capability {
     }
 }
 
-impl From<frealmbuilder::Capability> for Capability {
-    fn from(input: frealmbuilder::Capability) -> Self {
+impl From<ftest::Capability> for Capability {
+    fn from(input: ftest::Capability) -> Self {
         match input {
-            frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability {
-                name, ..
-            }) => Capability::Protocol(name.unwrap()),
-            frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
-                name,
-                path,
-                rights,
-                ..
+            ftest::Capability::Protocol(ftest::ProtocolCapability { name, .. }) => {
+                Capability::Protocol(name.unwrap())
+            }
+            ftest::Capability::Directory(ftest::DirectoryCapability {
+                name, path, rights, ..
             }) => Capability::Directory(name.unwrap(), path.unwrap(), rights.unwrap()),
-            frealmbuilder::Capability::Storage(frealmbuilder::StorageCapability {
-                name,
-                path,
-                ..
-            }) => Capability::Storage(name.unwrap(), path.unwrap()),
+            ftest::Capability::Storage(ftest::StorageCapability { name, path, .. }) => {
+                Capability::Storage(name.unwrap(), path.unwrap())
+            }
             _ => panic!("unexpected input"),
         }
     }
@@ -163,28 +156,28 @@ pub struct CapabilityRoute {
     pub targets: Vec<RouteEndpoint>,
 }
 
-impl Into<frealmbuilder::CapabilityRoute> for CapabilityRoute {
-    fn into(self) -> frealmbuilder::CapabilityRoute {
-        frealmbuilder::CapabilityRoute {
+impl Into<ftest::CapabilityRoute> for CapabilityRoute {
+    fn into(self) -> ftest::CapabilityRoute {
+        ftest::CapabilityRoute {
             capability: Some(self.capability.into()),
             source: Some(self.source.into()),
             targets: Some(self.targets.into_iter().map(Into::into).collect()),
             force_route: Some(false),
-            ..frealmbuilder::CapabilityRoute::EMPTY
+            ..ftest::CapabilityRoute::EMPTY
         }
     }
 }
 
 impl From<crate::RouteBuilder> for CapabilityRoute {
     fn from(input: crate::RouteBuilder) -> Self {
-        let frealmbuilder_route: frealmbuilder::CapabilityRoute = input.into();
-        if frealmbuilder_route.force_route.unwrap() {
+        let ftest_route: ftest::CapabilityRoute = input.into();
+        if ftest_route.force_route.unwrap() {
             panic!("please provide routes with the `force` flag to `Realm::add_route`");
         }
         Self {
-            capability: frealmbuilder_route.capability.unwrap().into(),
-            source: frealmbuilder_route.source.unwrap().into(),
-            targets: frealmbuilder_route.targets.unwrap().into_iter().map(Into::into).collect(),
+            capability: ftest_route.capability.unwrap().into(),
+            source: ftest_route.source.unwrap().into(),
+            targets: ftest_route.targets.unwrap().into_iter().map(Into::into).collect(),
         }
     }
 }
@@ -452,7 +445,7 @@ impl RealmBuilder {
         //
         // This function returns a BoxFuture to break this cycle
         let mut realm = crate::Realm {
-            framework_intermediary_proxy: realm.framework_intermediary_proxy.clone(),
+            realm_builder_proxy: realm.realm_builder_proxy.clone(),
             mocks_runner: crate::mock::MocksRunner {
                 mocks: realm.mocks_runner.mocks.clone(),
                 event_stream_handling_task: None,
@@ -758,7 +751,7 @@ mod tests {
                 Ok(_) => panic!("builder commands should have errored"),
                 Err(error::Error::FailedToSetDecl(
                     _,
-                    frealmbuilder::RealmBuilderError::NodeBehindChildDecl,
+                    ftest::RealmBuilderError::NodeBehindChildDecl,
                 )) => (),
                 Err(e) => panic!("unexpected error: {:?}", e),
             }
@@ -831,9 +824,7 @@ mod tests {
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::FailedToRoute(
-                frealmbuilder::RealmBuilderError::MissingRouteSource,
-            )) => (),
+            Err(error::Error::FailedToRoute(ftest::RealmBuilderError::MissingRouteSource)) => (),
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }
@@ -859,7 +850,7 @@ mod tests {
             Ok(_) => panic!("builder commands should have errored"),
             Err(e) => assert_matches!(
                 e,
-                error::Error::FailedToRoute(frealmbuilder::RealmBuilderError::RouteTargetsEmpty)
+                error::Error::FailedToRoute(ftest::RealmBuilderError::RouteTargetsEmpty)
             ),
         }
     }
@@ -923,9 +914,7 @@ mod tests {
             let res = builder.build().initialize().await;
 
             match res {
-                Err(error::Error::FailedToCommit(
-                    frealmbuilder::RealmBuilderError::ValidationError,
-                )) => (),
+                Err(error::Error::FailedToCommit(ftest::RealmBuilderError::ValidationError)) => (),
                 Err(e) => panic!("unexpected error: {:?}", e),
                 Ok(_) => panic!("builder commands should have errored"),
             }
@@ -983,9 +972,7 @@ mod tests {
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::FailedToRoute(
-                frealmbuilder::RealmBuilderError::MissingRouteTarget,
-            )) => (),
+            Err(error::Error::FailedToRoute(ftest::RealmBuilderError::MissingRouteTarget)) => (),
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }
@@ -1008,9 +995,7 @@ mod tests {
             Ok(_) => panic!("builder commands should have errored"),
             Err(e) => assert_matches!(
                 e,
-                error::Error::FailedToRoute(
-                    frealmbuilder::RealmBuilderError::RouteSourceAndTargetMatch
-                )
+                error::Error::FailedToRoute(ftest::RealmBuilderError::RouteSourceAndTargetMatch)
             ),
         }
     }
@@ -1085,9 +1070,7 @@ mod tests {
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::FailedToRoute(frealmbuilder::RealmBuilderError::UnableToExpose)) => {
-                ()
-            }
+            Err(error::Error::FailedToRoute(ftest::RealmBuilderError::UnableToExpose)) => (),
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }
@@ -1114,9 +1097,7 @@ mod tests {
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::FailedToRoute(frealmbuilder::RealmBuilderError::UnableToExpose)) => {
-                ()
-            }
+            Err(error::Error::FailedToRoute(ftest::RealmBuilderError::UnableToExpose)) => (),
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }

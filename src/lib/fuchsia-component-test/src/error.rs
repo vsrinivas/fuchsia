@@ -4,8 +4,7 @@
 
 use {
     crate::{builder, Moniker},
-    anyhow, cm_rust, fidl_fuchsia_component as fcomponent,
-    fidl_fuchsia_realm_builder as frealmbuilder,
+    anyhow, cm_rust, fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_test as ftest,
     thiserror::{self, Error},
 };
 
@@ -24,25 +23,25 @@ pub enum Error {
     FidlError(#[from] fidl::Error),
 
     #[error("failed to set component decl for {0}: {1:?}")]
-    FailedToSetDecl(Moniker, frealmbuilder::RealmBuilderError),
+    FailedToSetDecl(Moniker, ftest::RealmBuilderError),
 
     #[error("failed to retrieve component decl for {0}: {1:?}")]
-    FailedToGetDecl(Moniker, frealmbuilder::RealmBuilderError),
+    FailedToGetDecl(Moniker, ftest::RealmBuilderError),
 
     #[error("failed to mark component {0} as eager: {1:?}")]
-    FailedToMarkAsEager(Moniker, frealmbuilder::RealmBuilderError),
+    FailedToMarkAsEager(Moniker, ftest::RealmBuilderError),
 
     #[error("failed to commit realm: {0:?}")]
-    FailedToCommit(frealmbuilder::RealmBuilderError),
+    FailedToCommit(ftest::RealmBuilderError),
 
     #[error("failed to route capability: {0:?}")]
-    FailedToRoute(frealmbuilder::RealmBuilderError),
+    FailedToRoute(ftest::RealmBuilderError),
 
     #[error("failed to open \"/pkg\": {0:?}")]
     FailedToOpenPkgDir(anyhow::Error),
 
     #[error("failed to set package directory: {0:?}")]
-    FailedToSetPkgDir(frealmbuilder::RealmBuilderError),
+    FailedToSetPkgDir(ftest::RealmBuilderError),
 
     #[error("unable to destroy realm, the destroy waiter for root has already been taken")]
     DestroyWaiterTaken,
@@ -66,7 +65,7 @@ pub enum BuilderError {
 #[derive(Debug, Error)]
 pub enum RealmError {
     #[error("failed to bind to the framework intermediary: {:?}", _0)]
-    FailedBindToFrameworkIntermediary(fcomponent::Error),
+    FailedBindToRealmBuilder(fcomponent::Error),
 
     #[error("failed to use fuchsia.sys2.Realm: {:?}", _0)]
     FailedToUseRealm(fidl::Error),
@@ -78,10 +77,10 @@ pub enum RealmError {
     ConnectToRealmService(anyhow::Error),
 
     #[error("failed to connect to the framework intermediary: {:?}", _0)]
-    ConnectToFrameworkIntermediaryService(anyhow::Error),
+    ConnectToRealmBuilderService(anyhow::Error),
 
     #[error("failed to use the framework intermediary: {:?}", _0)]
-    FailedToUseFrameworkIntermediary(fidl::Error),
+    FailedToUseRealmBuilder(fidl::Error),
 
     #[error("failed to create child component: {:?}", _0)]
     FailedToCreateChild(anyhow::Error),
@@ -90,7 +89,7 @@ pub enum RealmError {
     FailedToDestroyChild(anyhow::Error),
 
     #[error("failed to set mock component for {0}: {1:?}")]
-    FailedToSetMock(Moniker, frealmbuilder::RealmBuilderError),
+    FailedToSetMock(Moniker, ftest::RealmBuilderError),
 }
 
 #[derive(Debug, Error)]

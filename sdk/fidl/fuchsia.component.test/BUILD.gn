@@ -1,17 +1,19 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.realm.builder") {
+fidl("fuchsia.component.test") {
+  sdk_category = "partner"
+
   public_deps = [
+    "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.component.decl",
     "//sdk/fidl/fuchsia.component.runner",
     "//sdk/fidl/fuchsia.component.types",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.io2",
-    "//zircon/vdso/zx",
   ]
 
   sources = [ "realm_builder.fidl" ]

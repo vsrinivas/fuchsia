@@ -115,12 +115,12 @@ source_set("realm_builder_library") {
   public_deps = [
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.component.decl",
+    "//sdk/fidl/fuchsia.component.test",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fuchsia-component-test/fidl:fuchsia.realm.builder",
     "//src/lib/fxl",
     "//src/lib/testing/loop_fixture",
     "//zircon/system/public:public",

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/component/cpp/fidl.h>
-#include <fuchsia/realm/builder/cpp/fidl.h>
+#include <fuchsia/component/test/cpp/fidl.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
@@ -12,11 +12,11 @@
 
 namespace sys::testing::internal {
 
-const char* ConvertToString(fuchsia::realm::builder::RealmBuilderError& error);
+const char* ConvertToString(fuchsia::component::test::RealmBuilderError& error);
 const char* ConvertToString(fuchsia::component::Error& error);
 void PanicWithMessage(const char* stacktrace, const char* context, zx_status_t status);
 void PanicWithMessage(const char* stacktrace, const char* context,
-                      fuchsia::realm::builder::RealmBuilderError& error);
+                      fuchsia::component::test::RealmBuilderError& error);
 void PanicWithMessage(const char* stacktrace, const char* context,
                       fuchsia::component::Error& error);
 

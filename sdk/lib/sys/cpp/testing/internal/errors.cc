@@ -3,41 +3,41 @@
 // found in the LICENSE file.
 
 #include <fuchsia/component/cpp/fidl.h>
-#include <fuchsia/realm/builder/cpp/fidl.h>
+#include <fuchsia/component/test/cpp/fidl.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
 namespace sys::testing::internal {
 
-const char* ConvertToString(fuchsia::realm::builder::RealmBuilderError& error) {
+const char* ConvertToString(fuchsia::component::test::RealmBuilderError& error) {
   switch (error) {
-    case fuchsia::realm::builder::RealmBuilderError::NODE_BEHIND_CHILD_DECL:
+    case fuchsia::component::test::RealmBuilderError::NODE_BEHIND_CHILD_DECL:
       return "NODE_BEHIND_CHILD_DECL";
-    case fuchsia::realm::builder::RealmBuilderError::NO_SUCH_CHILD:
+    case fuchsia::component::test::RealmBuilderError::NO_SUCH_CHILD:
       return "NO_SUCH_CHILD";
-    case fuchsia::realm::builder::RealmBuilderError::ROOT_CANNOT_BE_SET_TO_URL:
+    case fuchsia::component::test::RealmBuilderError::ROOT_CANNOT_BE_SET_TO_URL:
       return "ROOT_CANNOT_BE_SET_TO_URL";
-    case fuchsia::realm::builder::RealmBuilderError::ROOT_CANNOT_BE_EAGER:
+    case fuchsia::component::test::RealmBuilderError::ROOT_CANNOT_BE_EAGER:
       return "ROOT_CANNOT_BE_EAGER";
-    case fuchsia::realm::builder::RealmBuilderError::BAD_FIDL:
+    case fuchsia::component::test::RealmBuilderError::BAD_FIDL:
       return "BAD_FIDL";
-    case fuchsia::realm::builder::RealmBuilderError::MISSING_FIELD:
+    case fuchsia::component::test::RealmBuilderError::MISSING_FIELD:
       return "MISSING_FIELD";
-    case fuchsia::realm::builder::RealmBuilderError::ROUTE_TARGETS_EMPTY:
+    case fuchsia::component::test::RealmBuilderError::ROUTE_TARGETS_EMPTY:
       return "ROUTE_TARGETS_EMPTY";
-    case fuchsia::realm::builder::RealmBuilderError::MISSING_ROUTE_SOURCE:
+    case fuchsia::component::test::RealmBuilderError::MISSING_ROUTE_SOURCE:
       return "MISSING_ROUTE_SOURCE";
-    case fuchsia::realm::builder::RealmBuilderError::MISSING_ROUTE_TARGET:
+    case fuchsia::component::test::RealmBuilderError::MISSING_ROUTE_TARGET:
       return "MISSING_ROUTE_TARGET";
-    case fuchsia::realm::builder::RealmBuilderError::ROUTE_SOURCE_AND_TARGET_MATCH:
+    case fuchsia::component::test::RealmBuilderError::ROUTE_SOURCE_AND_TARGET_MATCH:
       return "ROUTE_SOURCE_AND_TARGET_MATCH";
-    case fuchsia::realm::builder::RealmBuilderError::VALIDATION_ERROR:
+    case fuchsia::component::test::RealmBuilderError::VALIDATION_ERROR:
       return "VALIDATION_ERROR";
-    case fuchsia::realm::builder::RealmBuilderError::UNABLE_TO_EXPOSE:
+    case fuchsia::component::test::RealmBuilderError::UNABLE_TO_EXPOSE:
       return "UNABLE_TO_EXPOSE";
-    case fuchsia::realm::builder::RealmBuilderError::STORAGE_SOURCE_INVALID:
+    case fuchsia::component::test::RealmBuilderError::STORAGE_SOURCE_INVALID:
       return "STORAGE_SOURCE_INVALID";
-    case fuchsia::realm::builder::RealmBuilderError::MONIKER_NOT_FOUND:
+    case fuchsia::component::test::RealmBuilderError::MONIKER_NOT_FOUND:
       return "MONIKER_NOT_FOUND";
     default:
       return "UNKNOWN";
@@ -79,7 +79,7 @@ void PanicWithMessage(const char* stacktrace, const char* context, zx_status_t s
 }
 
 void PanicWithMessage(const char* stacktrace, const char* context,
-                      fuchsia::realm::builder::RealmBuilderError& error) {
+                      fuchsia::component::test::RealmBuilderError& error) {
   ZX_PANIC("[%s] FIDL method %s failed with error: %s\n", stacktrace, context,
            ConvertToString(error));
 }

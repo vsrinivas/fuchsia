@@ -5,8 +5,8 @@
 use {
     anyhow::{format_err, Error},
     fidl::endpoints::{create_endpoints, create_proxy, ProtocolMarker, ServerEnd},
-    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
-    fidl_fuchsia_realm_builder as ftrb, fidl_fuchsia_sys as fsysv1, files_async,
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_component_test as ftest,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_sys as fsysv1, files_async,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     futures::lock::Mutex,
@@ -36,7 +36,7 @@ impl From<MockId> for String {
 
 pub struct Runner {
     next_mock_id: Mutex<u64>,
-    mocks: Mutex<HashMap<String, ftrb::FrameworkIntermediaryControlHandle>>,
+    mocks: Mutex<HashMap<String, ftest::RealmBuilderControlHandle>>,
 }
 
 impl Runner {
@@ -46,7 +46,7 @@ impl Runner {
 
     pub async fn register_mock(
         self: &Arc<Self>,
-        control_handle: ftrb::FrameworkIntermediaryControlHandle,
+        control_handle: ftest::RealmBuilderControlHandle,
     ) -> MockId {
         let mut next_mock_id_guard = self.next_mock_id.lock().await;
         let mut mocks_guard = self.mocks.lock().await;
@@ -114,10 +114,10 @@ impl Runner {
 
         mock_control_handle.send_on_mock_run_request(
             &mock_id,
-            ftrb::MockComponentStartInfo {
+            ftest::MockComponentStartInfo {
                 ns: start_info.ns,
                 outgoing_dir: start_info.outgoing_dir,
-                ..ftrb::MockComponentStartInfo::EMPTY
+                ..ftest::MockComponentStartInfo::EMPTY
             },
         )?;
 
@@ -370,7 +370,7 @@ async fn run_mock_controller(
     mut stream: fcrunner::ComponentControllerRequestStream,
     mock_id: String,
     runtime_dir_server_end: ServerEnd<fio::DirectoryMarker>,
-    control_handle: ftrb::FrameworkIntermediaryControlHandle,
+    control_handle: ftest::RealmBuilderControlHandle,
 ) {
     let execution_scope = ExecutionScope::new();
     let runtime_dir = pseudo_directory!(
