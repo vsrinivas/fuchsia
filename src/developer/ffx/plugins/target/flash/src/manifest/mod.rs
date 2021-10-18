@@ -50,6 +50,7 @@ const LARGE_FILE: &str = "large file, please wait... ";
 const REVISION_VAR: &str = "hw-revision";
 
 const LOCKED_VAR: &str = "vx-locked";
+const LOCK_COMMAND: &str = "vx-lock";
 
 pub(crate) const UNLOCK_ERR: &str = "The product requires the target is unlocked. \
                                      Please unlock target and try again.";
@@ -262,7 +263,7 @@ pub(crate) fn done_time<W: Write>(writer: &mut W, duration: Duration) -> std::io
     writer.flush()
 }
 
-async fn handle_upload_progress_for_staging<W: Write>(
+pub(crate) async fn handle_upload_progress_for_staging<W: Write>(
     writer: &mut W,
     prog_server: ServerEnd<UploadProgressListenerMarker>,
 ) -> Result<Option<DateTime<Utc>>> {
@@ -553,7 +554,7 @@ pub(crate) async fn flash_partitions<W: Write, F: FileResolver + Sync, P: Partit
     Ok(())
 }
 
-pub(crate) async fn flash_and_reboot<W, F, Part, P>(
+pub(crate) async fn flash<W, F, Part, P>(
     writer: &mut W,
     file_resolver: &mut F,
     product: &P,
@@ -575,7 +576,23 @@ where
     }
     stage_oem_files(writer, file_resolver, false, &cmd.oem_stage, fastboot_proxy).await?;
     flash_partitions(writer, file_resolver, product.partitions(), fastboot_proxy).await?;
-    stage_oem_files(writer, file_resolver, true, product.oem_files(), fastboot_proxy).await?;
+    stage_oem_files(writer, file_resolver, true, product.oem_files(), fastboot_proxy).await
+}
+
+pub(crate) async fn flash_and_reboot<W, F, Part, P>(
+    writer: &mut W,
+    file_resolver: &mut F,
+    product: &P,
+    fastboot_proxy: &FastbootProxy,
+    cmd: FlashCommand,
+) -> Result<()>
+where
+    W: Write,
+    F: FileResolver + Sync,
+    Part: Partition,
+    P: Product<Part>,
+{
+    flash(writer, file_resolver, product, fastboot_proxy, cmd).await?;
     finish(writer, fastboot_proxy).await
 }
 
@@ -591,6 +608,10 @@ pub(crate) async fn finish<W: Write>(writer: &mut W, fastboot_proxy: &FastbootPr
 
 pub(crate) async fn is_locked(fastboot_proxy: &FastbootProxy) -> Result<bool> {
     verify_variable_value(LOCKED_VAR, "no", &fastboot_proxy).await.map(|l| !l)
+}
+
+pub(crate) async fn lock_device(fastboot_proxy: &FastbootProxy) -> Result<()> {
+    fastboot_proxy.oem(LOCK_COMMAND).await?.map_err(|_| anyhow!("Could not lock device"))
 }
 
 ////////////////////////////////////////////////////////////////////////////////

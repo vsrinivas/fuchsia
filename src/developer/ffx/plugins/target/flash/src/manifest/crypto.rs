@@ -3,14 +3,27 @@
 // found in the LICENSE file.
 
 use {
+    crate::{
+        file::FileResolver,
+        manifest::{
+            done_time, handle_upload_progress_for_staging, is_locked, map_fidl_error, UNLOCK_ERR,
+        },
+    },
     anyhow::{anyhow, bail, Result},
     async_fs::OpenOptions,
     byteorder::{ByteOrder, LittleEndian},
-    errors::ffx_error,
-    fidl_fuchsia_developer_bridge::FastbootProxy,
-    futures::prelude::*,
+    chrono::Utc,
+    errors::{ffx_bail, ffx_error},
+    fidl::endpoints::create_endpoints,
+    fidl_fuchsia_developer_bridge::{FastbootProxy, UploadProgressListenerMarker},
+    futures::{prelude::*, try_join},
+    ring::{
+        rand,
+        signature::{RsaKeyPair, RSA_PKCS1_SHA512},
+    },
     std::fs::File,
     std::io::copy,
+    std::io::Write,
     std::path::{Path, PathBuf},
     tempfile::tempdir,
     zip::read::ZipArchive,
@@ -23,11 +36,11 @@ const CHALLENGE_DATA_SIZE: usize = 16;
 const PRODUCT_ID_HASH_SIZE: usize = 32;
 
 #[derive(Debug)]
-pub(crate) struct UnlockChallenge {
+struct UnlockChallenge {
     #[cfg_attr(not(test), allow(unused))]
-    pub(crate) version: u32,
-    pub(crate) product_id_hash: [u8; PRODUCT_ID_HASH_SIZE],
-    pub(crate) challenge: [u8; CHALLENGE_DATA_SIZE],
+    version: u32,
+    product_id_hash: [u8; PRODUCT_ID_HASH_SIZE],
+    challenge_data: [u8; CHALLENGE_DATA_SIZE],
 }
 
 impl UnlockChallenge {
@@ -35,17 +48,15 @@ impl UnlockChallenge {
         let mut result = Self {
             version: LittleEndian::read_u32(&buffer[..4]),
             product_id_hash: [0; PRODUCT_ID_HASH_SIZE],
-            challenge: [0; CHALLENGE_DATA_SIZE],
+            challenge_data: [0; CHALLENGE_DATA_SIZE],
         };
         result.product_id_hash.clone_from_slice(&buffer[4..PRODUCT_ID_HASH_SIZE + 4]);
-        result.challenge.clone_from_slice(&buffer[PRODUCT_ID_HASH_SIZE + 4..]);
+        result.challenge_data.clone_from_slice(&buffer[PRODUCT_ID_HASH_SIZE + 4..]);
         result
     }
 }
 
-pub(crate) async fn get_unlock_challenge(
-    fastboot_proxy: &FastbootProxy,
-) -> Result<UnlockChallenge> {
+async fn get_unlock_challenge(fastboot_proxy: &FastbootProxy) -> Result<UnlockChallenge> {
     let dir = tempdir()?;
     let path = dir.path().join("challenge");
     let filepath = path.to_str().ok_or(anyhow!("error getting tempfile path"))?;
@@ -73,16 +84,18 @@ pub(crate) async fn get_unlock_challenge(
 const EXPECTED_CERTIFICATE_SIZE: usize = 1620;
 const PIK_CERT: &str = "pik_certificate.bin";
 const PUK_CERT: &str = "puk_certificate.bin";
-const _PUK: &str = "puk.pem";
+const PUK: &str = "puk.pem";
 
 const CERT_SUBJECT_OFFSET: usize = 4 + 1032;
 const CERT_SUBJECT_LENGTH: usize = 32;
 
-pub(crate) struct UnlockCredentials {
-    pub(crate) intermediate_cert: [u8; EXPECTED_CERTIFICATE_SIZE],
-    pub(crate) unlock_cert: [u8; EXPECTED_CERTIFICATE_SIZE],
-    //TODO: figure out how to import the rsa key puk.pem
-    //pub(crate) unlock_key: RsaKey?
+const PRIVATE_KEY_BEGIN: &str = "-----BEGIN PRIVATE KEY-----";
+const PRIVATE_KEY_END: &str = "-----END PRIVATE KEY-----";
+
+struct UnlockCredentials {
+    intermediate_cert: [u8; EXPECTED_CERTIFICATE_SIZE],
+    unlock_cert: [u8; EXPECTED_CERTIFICATE_SIZE],
+    unlock_key: RsaKeyPair,
 }
 
 impl UnlockCredentials {
@@ -104,9 +117,23 @@ impl UnlockCredentials {
             copy(&mut archive_file, &mut outfile)?;
         }
 
+        // Decrypt the base64 key from the pem file.
+        let puk_file = temp_dir.path().join(PUK);
+        let contents = async_fs::read_to_string(puk_file).await?;
+
+        let private_key_pem = contents
+            .replace(PRIVATE_KEY_BEGIN, "")
+            .replace("\r\n", "")
+            .replace("\n", "")
+            .replace(PRIVATE_KEY_END, "");
+
+        let private_key_pem_bytes = base64::decode(&private_key_pem)?;
+
         let mut result = Self {
             intermediate_cert: [0; EXPECTED_CERTIFICATE_SIZE],
             unlock_cert: [0; EXPECTED_CERTIFICATE_SIZE],
+            unlock_key: RsaKeyPair::from_pkcs8(&private_key_pem_bytes[..])
+                .map_err(|e| ffx_error!("Could not decode RSA private key: {}", e))?,
         };
 
         let pik_cert_file = temp_dir.path().join(PIK_CERT);
@@ -129,12 +156,95 @@ impl UnlockCredentials {
         puk_file.read_to_end(&mut puk_buffer).await?;
         result.unlock_cert.clone_from_slice(&puk_buffer[..]);
 
-        //TODO: how to import the RSA key from puk.pem
         Ok(result)
     }
 
-    pub(crate) fn get_atx_certificate_subject(&self) -> &[u8] {
+    fn get_atx_certificate_subject(&self) -> &[u8] {
         &self.unlock_cert[CERT_SUBJECT_OFFSET..CERT_SUBJECT_OFFSET + CERT_SUBJECT_LENGTH]
+    }
+}
+
+pub(crate) async fn unlock_device<W: Write, F: FileResolver + Sync>(
+    writer: &mut W,
+    file_resolver: &mut F,
+    creds: &Vec<String>,
+    fastboot_proxy: &FastbootProxy,
+) -> Result<()> {
+    let search = Utc::now();
+    write!(writer, "Looking for unlock credentials...")?;
+    writer.flush()?;
+    let challenge = get_unlock_challenge(&fastboot_proxy).await?;
+    for cred in creds {
+        let cred_file = file_resolver.get_file(writer, cred)?;
+        let unlock_creds = UnlockCredentials::new(&cred_file).await?;
+        if challenge.product_id_hash[..] == *unlock_creds.get_atx_certificate_subject() {
+            let d = Utc::now().signed_duration_since(search);
+            done_time(writer, d)?;
+            return unlock_device_with_creds(writer, unlock_creds, challenge, fastboot_proxy).await;
+        }
+    }
+    ffx_bail!("{}", UNLOCK_ERR);
+}
+
+async fn unlock_device_with_creds<W: Write>(
+    writer: &mut W,
+    unlock_creds: UnlockCredentials,
+    challenge: UnlockChallenge,
+    fastboot_proxy: &FastbootProxy,
+) -> Result<()> {
+    let gen = Utc::now();
+    write!(writer, "Generating unlock token...")?;
+    writer.flush()?;
+
+    let rng = rand::SystemRandom::new();
+    let mut signature = vec![0; unlock_creds.unlock_key.public_modulus_len()];
+    unlock_creds
+        .unlock_key
+        .sign(&RSA_PKCS1_SHA512, &rng, &challenge.challenge_data, &mut signature)
+        .map_err(|_| ffx_error!("Could not sign unlocking keys"))?;
+
+    let dir = tempdir()?;
+    let path = dir.path().join("token");
+
+    let mut file = async_fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(path.clone())
+        .await?;
+
+    let mut buf = [0; 4];
+    LittleEndian::write_u32(&mut buf, 1);
+    file.write_all(&buf).await?;
+    file.write_all(&unlock_creds.intermediate_cert).await?;
+    file.write_all(&unlock_creds.unlock_cert).await?;
+    file.write_all(&signature).await?;
+    file.flush().await?;
+
+    let d_gen = Utc::now().signed_duration_since(gen);
+    done_time(writer, d_gen)?;
+
+    writeln!(writer, "Preparing to upload unlock token")?;
+
+    let file_path = path.to_str().ok_or(anyhow!("Could not get path for temporary token file"))?;
+    let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
+    try_join!(
+        fastboot_proxy.stage(&file_path.to_string(), prog_client).map_err(map_fidl_error),
+        handle_upload_progress_for_staging(writer, prog_server),
+    )
+    .and_then(|(stage, _)| {
+        stage.map_err(|e| anyhow!("There was an error staging {}: {:?}", file_path, e))
+    })?;
+
+    fastboot_proxy
+        .oem("vx-unlock")
+        .await?
+        .map_err(|_| anyhow!("There was an error sending vx-unlock command"))?;
+
+    match is_locked(fastboot_proxy).await {
+        Ok(true) => bail!("Could not unlock device."),
+        Ok(false) => Ok(()),
+        Err(e) => bail!("Could not verify unlocking worked: {}", e),
     }
 }
 
@@ -162,7 +272,7 @@ mod test {
         let unlock_challenge = UnlockChallenge::new(&buffer.to_vec());
         assert_eq!(unlock_challenge.version, 1);
         assert_eq!(unlock_challenge.product_id_hash, product_id_hash);
-        assert_eq!(unlock_challenge.challenge, challenge);
+        assert_eq!(unlock_challenge.challenge_data, challenge);
         Ok(())
     }
 }
