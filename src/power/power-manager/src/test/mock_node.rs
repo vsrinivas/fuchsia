@@ -266,19 +266,10 @@ mod tests {
     #[test]
     #[should_panic(expected = "Mock node(s) were leaked: MockNode")]
     fn test_leaked_node_panic() {
-        use std::cell::Cell;
-        let mut mock_maker = MockNodeMaker::new();
-
-        struct CycleMaker {
-            reference: Cell<Option<Rc<CycleMaker>>>,
-            _node: Option<Rc<dyn Node>>,
-        }
-
-        let cycle = Rc::new(CycleMaker {
-            reference: Cell::new(None),
-            _node: Some(mock_maker.make("MockNode", vec![])),
-        });
-        cycle.reference.set(Some(cycle.clone()));
+        let _node = {
+            let mut mock_maker = MockNodeMaker::new();
+            mock_maker.make("MockNode", Vec::new())
+        };
     }
 
     /// Tests that the `msg_<comparison>` family of macros expands to the expected values.
