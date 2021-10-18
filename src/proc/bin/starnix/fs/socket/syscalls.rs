@@ -5,7 +5,7 @@
 use fuchsia_cprng::cprng_draw;
 use fuchsia_zircon as zx;
 use std::convert::TryInto;
-use zerocopy::AsBytes;
+use zerocopy::{AsBytes, FromBytes};
 
 use super::*;
 use crate::errno;
@@ -504,6 +504,8 @@ pub fn sys_getsockopt(
                 timeval_from_duration(duration).as_bytes().to_owned()
             }
             SO_ACCEPTCONN => if socket.is_listening() { 1u32 } else { 0u32 }.to_ne_bytes().to_vec(),
+            SO_SNDBUF => (socket.get_send_capacity() as socklen_t).to_ne_bytes().to_vec(),
+            SO_RCVBUF => (socket.get_receive_capacity() as socklen_t).to_ne_bytes().to_vec(),
             _ => return error!(ENOPROTOOPT),
         },
         _ => return error!(ENOPROTOOPT),
@@ -530,14 +532,22 @@ pub fn sys_setsockopt(
     let file = ctx.task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
 
-    let read_timeval = || {
-        let user_duration = UserRef::<timeval>::new(user_optval);
-        if optlen != user_duration.len() as socklen_t {
+    fn read<T: Default + AsBytes + FromBytes>(
+        ctx: &SyscallContext<'_>,
+        user_optval: UserAddress,
+        optlen: socklen_t,
+    ) -> Result<T, Errno> {
+        let user_ref = UserRef::<T>::new(user_optval);
+        if optlen < user_ref.len() as socklen_t {
             return error!(EINVAL);
         }
-        let mut duration = timeval::default();
-        ctx.task.mm.read_object(user_duration, &mut duration)?;
-        let duration = duration_from_timeval(duration)?;
+        let mut value = T::default();
+        ctx.task.mm.read_object(user_ref, &mut value)?;
+        Ok(value)
+    }
+
+    let read_timeval = || {
+        let duration = duration_from_timeval(read::<timeval>(ctx, user_optval, optlen)?)?;
         Ok(if duration == zx::Duration::default() { None } else { Some(duration) })
     };
 
@@ -548,6 +558,15 @@ pub fn sys_setsockopt(
             }
             SO_SNDTIMEO => {
                 socket.set_send_timeout(read_timeval()?);
+            }
+            SO_SNDBUF => {
+                let requested_capacity = read::<socklen_t>(ctx, user_optval, optlen)? as usize;
+                // See StreamUnixSocketPairTest.SetSocketSendBuf for why we multiply by 2 here.
+                socket.set_send_capacity(requested_capacity * 2);
+            }
+            SO_RCVBUF => {
+                let requested_capacity = read::<socklen_t>(ctx, user_optval, optlen)? as usize;
+                socket.set_receive_capacity(requested_capacity);
             }
             _ => return error!(ENOPROTOOPT),
         },

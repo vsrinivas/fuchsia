@@ -18,6 +18,11 @@ use crate::{errno, error};
 use parking_lot::Mutex;
 use std::sync::Arc;
 
+// From unix.go in gVisor.
+const SOCKET_MIN_SIZE: usize = 4 << 10;
+const SOCKET_DEFAULT_SIZE: usize = 208 << 10;
+const SOCKET_MAX_SIZE: usize = 4 << 20;
+
 /// A `Socket` represents one endpoint of a bidirectional communication channel.
 pub struct Socket(Mutex<SocketInner>);
 
@@ -74,7 +79,7 @@ impl Socket {
     /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
     pub fn new(domain: SocketDomain, socket_type: SocketType) -> SocketHandle {
         Arc::new(Socket(Mutex::new(SocketInner {
-            messages: MessageQueue::new(usize::MAX),
+            messages: MessageQueue::new(SOCKET_DEFAULT_SIZE),
             waiters: WaitQueue::default(),
             domain,
             socket_type,
@@ -169,6 +174,28 @@ impl Socket {
         self.lock().send_timeout = value;
     }
 
+    pub fn get_receive_capacity(&self) -> usize {
+        self.lock().messages.capacity()
+    }
+
+    pub fn set_receive_capacity(&self, requested_capacity: usize) {
+        self.lock().set_capacity(requested_capacity);
+    }
+
+    pub fn get_send_capacity(&self) -> usize {
+        if let Some(peer) = self.lock().peer() {
+            peer.lock().messages.capacity()
+        } else {
+            0
+        }
+    }
+
+    pub fn set_send_capacity(&self, requested_capacity: usize) {
+        if let Some(peer) = self.lock().peer() {
+            peer.lock().set_capacity(requested_capacity);
+        }
+    }
+
     pub fn is_listening(&self) -> bool {
         match self.lock().state {
             SocketState::Listening(_) => true,
@@ -228,6 +255,8 @@ impl Socket {
         }
 
         let server = Socket::new(listener.domain, listener.socket_type);
+        server.lock().messages.set_capacity(listener.messages.capacity())?;
+
         client.state = SocketState::Connected(server.clone());
         client.credentials = Some(credentials);
         {
@@ -390,6 +419,13 @@ impl SocketInner {
 
     pub fn socket_type(&self) -> SocketType {
         self.socket_type
+    }
+
+    fn set_capacity(&mut self, requested_capacity: usize) {
+        let capacity = requested_capacity.clamp(SOCKET_MIN_SIZE, SOCKET_MAX_SIZE);
+        let capacity = std::cmp::max(capacity, self.messages.len());
+        // We have validated capacity sufficiently that set_capacity should always succeed.
+        self.messages.set_capacity(capacity).unwrap();
     }
 
     /// Binds this socket to a `socket_address`.
