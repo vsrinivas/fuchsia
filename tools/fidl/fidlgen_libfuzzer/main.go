@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	flags := cpp.NewCmdlineFlags("libfuzzer", nil, false)
+	flags := cpp.NewCmdlineFlags("libfuzzer", nil)
 	fidl := flags.ParseAndLoadIR()
 	generator := codegen.NewGenerator(flags)
 	generator.GenerateFiles(fidl, []string{"Header", "Source",

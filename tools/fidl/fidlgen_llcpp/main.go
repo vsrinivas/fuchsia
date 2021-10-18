@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	flags := cpp.NewCmdlineFlags("llcpp", nil, false)
+	flags := cpp.NewCmdlineFlags("llcpp", nil)
 	fidl := flags.ParseAndLoadIR()
 	generator := codegen.NewGenerator(flags)
 	generator.GenerateFiles(fidl, []string{
