@@ -425,14 +425,12 @@ pub fn sys_sendmsg(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
     user_message_header: UserRef<msghdr>,
-    _flags: u32,
+    flags: u32,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
     if !file.node().is_sock() {
         return error!(ENOTSOCK);
     }
-
-    // TODO: Respect the `flags` argument.
 
     let mut message_header = msghdr::default();
     ctx.task.mm.read_object(user_message_header, &mut message_header)?;
@@ -449,7 +447,7 @@ pub fn sys_sendmsg(
 
     let iovec = ctx.task.mm.read_iovec(message_header.msg_iov, message_header.msg_iovlen as i32)?;
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    let bytes_sent = socket_ops.sendmsg(ctx.task, &file, &iovec, ancillary_data)?;
+    let bytes_sent = socket_ops.sendmsg(ctx.task, &file, &iovec, ancillary_data, flags)?;
     Ok(bytes_sent.into())
 }
 
@@ -458,7 +456,7 @@ pub fn sys_sendto(
     fd: FdNumber,
     user_buffer: UserAddress,
     buffer_length: usize,
-    _flags: u32,
+    flags: u32,
     user_dest_address: UserAddress,
     _user_address_length: socklen_t,
 ) -> Result<SyscallResult, Errno> {
@@ -467,13 +465,14 @@ pub fn sys_sendto(
         return error!(ENOTSOCK);
     }
 
-    // TODO: Respect the `flags` argument.
-
     if !user_dest_address.is_null() {
         not_implemented!("sendto: non-null destination address");
         return error!(ENOSYS);
     }
-    Ok(file.write(&ctx.task, &[UserBuffer { address: user_buffer, length: buffer_length }])?.into())
+
+    let socket_ops = file.downcast_file::<SocketFile>().unwrap();
+    let data = &[UserBuffer { address: user_buffer, length: buffer_length }];
+    Ok(socket_ops.sendmsg(&ctx.task, &file, data, None, flags)?.into())
 }
 
 pub fn sys_getsockopt(

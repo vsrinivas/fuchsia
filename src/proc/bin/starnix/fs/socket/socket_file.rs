@@ -25,7 +25,7 @@ impl FileOps for SocketFile {
     }
 
     fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        self.sendmsg(task, file, data, None)
+        self.sendmsg(task, file, data, None, 0)
     }
 
     fn wait_async(
@@ -63,35 +63,45 @@ impl SocketFile {
         file: &FileObject,
         data: &[UserBuffer],
         mut ancillary_data: Option<AncillaryData>,
+        flags: u32,
     ) -> Result<usize, Errno> {
+        // TODO: Implement more `flags`.
+
         let requested = UserBuffer::get_total_length(data);
         let mut actual = 0;
         let mut user_buffers = UserBufferIterator::new(data);
-        file.blocking_op(
-            task,
-            || {
-                let bytes_written =
-                    match self.socket.write(task, &mut user_buffers, &mut ancillary_data) {
-                        Err(e) if e == ENOTCONN && actual > 0 => {
-                            // If the error is ENOTCONN (that is, the write failed because the socket was
-                            // disconnected), then return the amount of bytes that were written before
-                            // the disconnect.
-                            return Ok(actual);
-                        }
-                        result => result,
-                    }?;
 
-                actual += bytes_written;
+        let mut op = || {
+            let bytes_written =
+                match self.socket.write(task, &mut user_buffers, &mut ancillary_data) {
+                    Err(e) if e == ENOTCONN && actual > 0 => {
+                        // If the error is ENOTCONN (that is, the write failed because the socket was
+                        // disconnected), then return the amount of bytes that were written before
+                        // the disconnect.
+                        return Ok(actual);
+                    }
+                    result => result,
+                }?;
 
-                if actual < requested {
-                    return error!(EAGAIN);
-                }
+            actual += bytes_written;
 
-                Ok(actual)
-            },
-            FdEvents::POLLOUT | FdEvents::POLLHUP,
-            self.socket.get_send_timeout(),
-        )
+            if actual < requested {
+                return error!(EAGAIN);
+            }
+
+            Ok(actual)
+        };
+
+        if flags & MSG_DONTWAIT != 0 {
+            op()
+        } else {
+            file.blocking_op(
+                task,
+                op,
+                FdEvents::POLLOUT | FdEvents::POLLHUP,
+                self.socket.get_send_timeout(),
+            )
+        }
     }
 
     /// Reads data from the socket in this file into `data`.
