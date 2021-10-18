@@ -25,7 +25,7 @@ impl FileOps for SocketFile {
     }
 
     fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        self.sendmsg(task, file, data, None, 0)
+        self.sendmsg(task, file, data, None, None, 0)
     }
 
     fn wait_async(
@@ -62,6 +62,7 @@ impl SocketFile {
         task: &Task,
         file: &FileObject,
         data: &[UserBuffer],
+        mut dest_address: Option<SocketAddress>,
         mut ancillary_data: Option<AncillaryData>,
         flags: u32,
     ) -> Result<usize, Errno> {
@@ -72,16 +73,20 @@ impl SocketFile {
         let mut user_buffers = UserBufferIterator::new(data);
 
         let mut op = || {
-            let bytes_written =
-                match self.socket.write(task, &mut user_buffers, &mut ancillary_data) {
-                    Err(e) if e == ENOTCONN && actual > 0 => {
-                        // If the error is ENOTCONN (that is, the write failed because the socket was
-                        // disconnected), then return the amount of bytes that were written before
-                        // the disconnect.
-                        return Ok(actual);
-                    }
-                    result => result,
-                }?;
+            let bytes_written = match self.socket.write(
+                task,
+                &mut user_buffers,
+                &mut dest_address,
+                &mut ancillary_data,
+            ) {
+                Err(e) if e == ENOTCONN && actual > 0 => {
+                    // If the error is ENOTCONN (that is, the write failed because the socket was
+                    // disconnected), then return the amount of bytes that were written before
+                    // the disconnect.
+                    return Ok(actual);
+                }
+                result => result,
+            }?;
 
             actual += bytes_written;
 

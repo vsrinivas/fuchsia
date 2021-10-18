@@ -330,12 +330,16 @@ impl Socket {
         &self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
+        dest_address: &mut Option<SocketAddress>,
         ancillary_data: &mut Option<AncillaryData>,
     ) -> Result<usize, Errno> {
         let (peer, local_address) = {
             let inner = self.lock();
             (inner.peer().ok_or_else(|| errno!(EPIPE))?.clone(), inner.address.clone())
         };
+        if dest_address.is_some() {
+            return error!(EISCONN);
+        }
         let mut peer = peer.lock();
         peer.write(task, user_buffers, local_address, ancillary_data)
     }

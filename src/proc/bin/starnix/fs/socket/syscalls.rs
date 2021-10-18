@@ -109,6 +109,18 @@ fn parse_socket_address(
     Ok(address)
 }
 
+fn maybe_parse_socket_address(
+    task: &Task,
+    user_socket_address: UserAddress,
+    address_length: usize,
+) -> Result<Option<SocketAddress>, Errno> {
+    Ok(if user_socket_address.is_null() {
+        None
+    } else {
+        Some(parse_socket_address(task, user_socket_address, address_length)?)
+    })
+}
+
 // See "Autobind feature" section of https://man7.org/linux/man-pages/man7/unix.7.html
 fn generate_autobind_address() -> Vec<u8> {
     let mut bytes = [0u8; 4];
@@ -435,6 +447,12 @@ pub fn sys_sendmsg(
     let mut message_header = msghdr::default();
     ctx.task.mm.read_object(user_message_header, &mut message_header)?;
 
+    let dest_address = maybe_parse_socket_address(
+        &ctx.task,
+        message_header.msg_name,
+        message_header.msg_namelen as usize,
+    )?;
+    let iovec = ctx.task.mm.read_iovec(message_header.msg_iov, message_header.msg_iovlen as i32)?;
     let ancillary_data = if message_header.msg_controllen > 0 {
         let mut control_message_header = cmsghdr::default();
         ctx.task
@@ -445,10 +463,8 @@ pub fn sys_sendmsg(
         None
     };
 
-    let iovec = ctx.task.mm.read_iovec(message_header.msg_iov, message_header.msg_iovlen as i32)?;
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    let bytes_sent = socket_ops.sendmsg(ctx.task, &file, &iovec, ancillary_data, flags)?;
-    Ok(bytes_sent.into())
+    Ok(socket_ops.sendmsg(ctx.task, &file, &iovec, dest_address, ancillary_data, flags)?.into())
 }
 
 pub fn sys_sendto(
@@ -458,21 +474,19 @@ pub fn sys_sendto(
     buffer_length: usize,
     flags: u32,
     user_dest_address: UserAddress,
-    _user_address_length: socklen_t,
+    dest_address_length: socklen_t,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
     if !file.node().is_sock() {
         return error!(ENOTSOCK);
     }
 
-    if !user_dest_address.is_null() {
-        not_implemented!("sendto: non-null destination address");
-        return error!(ENOSYS);
-    }
+    let dest_address =
+        maybe_parse_socket_address(&ctx.task, user_dest_address, dest_address_length as usize)?;
+    let data = &[UserBuffer { address: user_buffer, length: buffer_length }];
 
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    let data = &[UserBuffer { address: user_buffer, length: buffer_length }];
-    Ok(socket_ops.sendmsg(&ctx.task, &file, data, None, flags)?.into())
+    Ok(socket_ops.sendmsg(&ctx.task, &file, data, dest_address, None, flags)?.into())
 }
 
 pub fn sys_getsockopt(
