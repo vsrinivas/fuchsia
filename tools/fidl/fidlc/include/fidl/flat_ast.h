@@ -1225,8 +1225,7 @@ class Library : Attributable {
     return Fail(err, decl.name, args...);
   }
 
-  bool ValidateAttributesPlacement(const Attributable* attributable);
-  bool ValidateAttributesConstraints(const Attributable* attributable);
+  bool ValidateAttributes(const Attributable* attributable);
 
   // TODO(fxbug.dev/7920): Rationalize the use of names. Here, a simple name is
   // one that is not scoped, it is just text. An anonymous name is one that

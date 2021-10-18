@@ -1876,22 +1876,16 @@ bool Library::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>
   return false;
 }
 
-bool Library::ValidateAttributesPlacement(const Attributable* attributable) {
+bool Library::ValidateAttributes(const Attributable* attributable) {
   bool ok = true;
   for (const auto& attribute : attributable->attributes->attributes) {
     auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute);
-    if (schema != nullptr && !schema->ValidatePlacement(reporter_, attribute, attributable)) {
-      ok = false;
+    if (schema == nullptr) {
+      // This is a user-defined attribute, not an official attribute.
+      continue;
     }
-  }
-  return ok;
-}
-
-bool Library::ValidateAttributesConstraints(const Attributable* attributable) {
-  bool ok = true;
-  for (const auto& attribute : attributable->attributes->attributes) {
-    auto schema = all_libraries_->RetrieveAttributeSchema(nullptr, attribute);
-    if (schema != nullptr && !schema->ValidateConstraint(reporter_, attribute, attributable)) {
+    if (!(schema->ValidatePlacement(reporter_, attribute, attributable) &&
+          schema->ValidateConstraint(reporter_, attribute, attributable))) {
       ok = false;
     }
   }
@@ -3850,146 +3844,82 @@ bool Library::CompileDecl(Decl* decl) {
 
 void Library::VerifyDeclAttributes(const Decl* decl) {
   assert(decl->compiled && "verification must happen after compilation of decls");
-  auto placement_ok = reporter_->Checkpoint();
   switch (decl->kind) {
     case Decl::Kind::kBits: {
       auto bits_declaration = static_cast<const Bits*>(decl);
-      // Attributes: check placement.
-      ValidateAttributesPlacement(bits_declaration);
+      ValidateAttributes(bits_declaration);
       for (const auto& member : bits_declaration->members) {
-        ValidateAttributesPlacement(&member);
-      }
-      if (placement_ok.NoNewErrors()) {
-        // Attributes: check constraints.
-        ValidateAttributesConstraints(bits_declaration);
+        ValidateAttributes(&member);
       }
       break;
     }
     case Decl::Kind::kConst: {
       auto const_decl = static_cast<const Const*>(decl);
-      // Attributes: for const declarations, we only check placement.
-      ValidateAttributesPlacement(const_decl);
-      if (placement_ok.NoNewErrors()) {
-        // Attributes: check constraints.
-        ValidateAttributesConstraints(const_decl);
-      }
+      ValidateAttributes(const_decl);
       break;
     }
     case Decl::Kind::kEnum: {
       auto enum_declaration = static_cast<const Enum*>(decl);
-      // Attributes: check placement.
-      ValidateAttributesPlacement(enum_declaration);
+      ValidateAttributes(enum_declaration);
       for (const auto& member : enum_declaration->members) {
-        ValidateAttributesPlacement(&member);
-      }
-      if (placement_ok.NoNewErrors()) {
-        // Attributes: check constraints.
-        ValidateAttributesConstraints(enum_declaration);
+        ValidateAttributes(&member);
       }
       break;
     }
     case Decl::Kind::kProtocol: {
       auto protocol_declaration = static_cast<const Protocol*>(decl);
-      // Attributes: check placement.
-      ValidateAttributesPlacement(protocol_declaration);
+      ValidateAttributes(protocol_declaration);
       for (const auto& composed_protocol : protocol_declaration->composed_protocols) {
-        ValidateAttributesPlacement(&composed_protocol);
+        ValidateAttributes(&composed_protocol);
       }
       for (const auto& method_with_info : protocol_declaration->all_methods) {
-        ValidateAttributesPlacement(method_with_info.method);
-      }
-      if (placement_ok.NoNewErrors()) {
-        // Attributes: check constraints.
-        for (const auto method_with_info : protocol_declaration->all_methods) {
-          const auto& method = *method_with_info.method;
-          ValidateAttributesConstraints(&method);
-        }
-        ValidateAttributesConstraints(protocol_declaration);
+        ValidateAttributes(method_with_info.method);
       }
       break;
     }
     case Decl::Kind::kResource: {
       auto resource_declaration = static_cast<const Resource*>(decl);
-      // Attributes: check placement.
-      ValidateAttributesPlacement(resource_declaration);
+      ValidateAttributes(resource_declaration);
       for (const auto& property : resource_declaration->properties) {
-        ValidateAttributesPlacement(&property);
-      }
-      if (placement_ok.NoNewErrors()) {
-        // Attributes: check constraints.
-        ValidateAttributesConstraints(resource_declaration);
+        ValidateAttributes(&property);
       }
       break;
     }
     case Decl::Kind::kService: {
       auto service_decl = static_cast<const Service*>(decl);
-      // Attributes: check placement.
-      ValidateAttributesPlacement(service_decl);
+      ValidateAttributes(service_decl);
       for (const auto& member : service_decl->members) {
-        ValidateAttributesPlacement(&member);
-      }
-      if (placement_ok.NoNewErrors()) {
-        // Attributes: check constraint.
-        ValidateAttributesConstraints(service_decl);
+        ValidateAttributes(&member);
       }
       break;
     }
     case Decl::Kind::kStruct: {
       auto struct_declaration = static_cast<const Struct*>(decl);
-      // Attributes: check placement.
-      ValidateAttributesPlacement(struct_declaration);
+      ValidateAttributes(struct_declaration);
       for (const auto& member : struct_declaration->members) {
-        ValidateAttributesPlacement(&member);
-      }
-      if (placement_ok.NoNewErrors()) {
-        for (const auto& member : struct_declaration->members) {
-          ValidateAttributesConstraints(&member);
-        }
-        // Attributes: check constraint.
-        ValidateAttributesConstraints(struct_declaration);
+        ValidateAttributes(&member);
       }
       break;
     }
     case Decl::Kind::kTable: {
       auto table_declaration = static_cast<const Table*>(decl);
-      // Attributes: check placement.
-      ValidateAttributesPlacement(table_declaration);
+      ValidateAttributes(table_declaration);
       for (const auto& member : table_declaration->members) {
-        ValidateAttributesPlacement(&member);
-      }
-      if (placement_ok.NoNewErrors()) {
-        for (const auto& member : table_declaration->members) {
-          ValidateAttributesPlacement(&member);
-        }
-        // Attributes: check constraint.
-        ValidateAttributesConstraints(table_declaration);
+        ValidateAttributes(&member);
       }
       break;
     }
     case Decl::Kind::kUnion: {
       auto union_declaration = static_cast<const Union*>(decl);
-      // Attributes: check placement.
-      ValidateAttributesPlacement(union_declaration);
+      ValidateAttributes(union_declaration);
       for (const auto& member : union_declaration->members) {
-        ValidateAttributesPlacement(&member);
-      }
-      if (placement_ok.NoNewErrors()) {
-        for (const auto& member : union_declaration->members) {
-          ValidateAttributesConstraints(&member);
-        }
-        // Attributes: check constraint.
-        ValidateAttributesConstraints(union_declaration);
+        ValidateAttributes(&member);
       }
       break;
     }
     case Decl::Kind::kTypeAlias: {
       auto type_alias_declaration = static_cast<const TypeAlias*>(decl);
-      // Attributes: check placement.
-      ValidateAttributesPlacement(type_alias_declaration);
-      if (placement_ok.NoNewErrors()) {
-        // Attributes: check constraints.
-        ValidateAttributesConstraints(type_alias_declaration);
-      }
+      ValidateAttributes(type_alias_declaration);
       break;
     }
   }  // switch
@@ -4758,7 +4688,7 @@ bool Library::Compile() {
     return false;
 
   auto verify_attributes_step = StartVerifyAttributesStep();
-  ValidateAttributesPlacement(this);
+  ValidateAttributes(this);
   for (const Decl* decl : declaration_order_) {
     verify_attributes_step.ForDecl(decl);
   }
