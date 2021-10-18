@@ -153,18 +153,13 @@ void VnodeF2fs::UpdateExtentCache(block_t blk_addr, DnodeOfData *dn) {
 }
 
 zx_status_t VnodeF2fs::FindDataPage(pgoff_t index, Page **out) {
-#if 0  // porting needed
-  // address_space *mapping = inode->i_mapping;
-#endif
   DnodeOfData dn;
   Page *page = nullptr;
 
-#if 0  // porting needed
-  // page = FindGetPage(mapping, index);
-  // if (page && PageUptodate(page))
-  //   return page;
-  // F2fsPutPage(page, 0);
-#endif
+  if (page = FindGetPage(this, index); page && PageUptodate(page)) {
+    *out = page;
+    return ZX_OK;
+  }
 
   NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
   if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, index, kRdOnlyNode);
@@ -482,10 +477,8 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
     offset = GetSize() & (kPageCacheSize - 1);
     if ((page->index >= end_index + 1) || !offset) {
       if (IsDir()) {
-        superblock_info.DecPageCount(CountType::kDirtyDents);
-#if 0  // porting needed
-       // inode_dec_dirty_dents(inode);
-#endif
+        superblock_info.SubtractPageCount(CountType::kDirtyDents);
+        RemoveDirtyDentry();
       }
 
 #if 0  // porting needed
@@ -517,10 +510,8 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
 #endif  // __Fuchsia__
     if (IsDir()) {
-      superblock_info.DecPageCount(CountType::kDirtyDents);
-#if 0  // porting needed
-      // inode_dec_dirty_dents(inode);
-#endif
+      superblock_info.SubtractPageCount(CountType::kDirtyDents);
+      RemoveDirtyDentry();
     }
 
     if (err = DoWriteDataPage(page); (err != ZX_OK && err != ZX_ERR_NOT_FOUND)) {
@@ -657,7 +648,7 @@ zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, Page **pagep) {
 //   inode *inode = new inode();
 //   SuperblockInfo *superblock_info = F2FS_SB(inode->i_sb);
 //   if (inode->IsDir() && PageDirty(page)) {
-//     superblock_info->DecPageCount(CountType::kDirtyDents);
+//     superblock_info->SubtractPageCount(CountType::kDirtyDents);
 //     InodeDecDirtyDents(inode);
 //   }
 //   ClearPagePrivate(page);

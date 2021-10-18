@@ -7,9 +7,6 @@
 # moves out-of-tree.
 
 declare_args() {
-  # F2FS debug message
-  f2fs_bu_debug = false
-
   # Enforce every allocation in a ssr manner [for test]
   f2fs_force_ssr = true
 
@@ -80,10 +77,6 @@ static_library("f2fs") {
   ]
 
   defines = []
-
-  if (f2fs_bu_debug) {
-    defines += [ "F2FS_BU_DEBUG" ]
-  }
 
   if (f2fs_force_ssr) {
     defines += [ "F2FS_FORCE_SSR" ]

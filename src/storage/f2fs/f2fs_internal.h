@@ -62,36 +62,6 @@ constexpr int kRdOnlyNode = 1;
 // used by GetDnodeOfData().
 constexpr int kLinkMax = 32000;  // maximum link count per file
 
-// for in-memory extent cache entry
-struct ExtentInfo {
-  fs::SharedMutex ext_lock;  // rwlock for consistency
-  uint64_t fofs = 0;         // start offset in a file
-  uint32_t blk_addr = 0;     // start block address of the extent
-  uint32_t len = 0;          // lenth of the extent
-};
-
-// i_advise uses Fadvise:xxx bit. We can add additional hints later.
-enum class FAdvise {
-  kCold = 1,
-};
-
-struct InodeInfo {
-  uint32_t i_flags = 0;          // keep an inode flags for ioctl
-  uint8_t i_advise = 0;          // use to give file attribute hints
-  uint8_t i_dir_level = 0;       // use for dentry level for large dir
-  uint16_t i_extra_isize = 0;    // size of extra space located in i_addr
-  uint64_t i_current_depth = 0;  // use only in directory structure
-  umode_t i_acl_mode = 0;        // keep file acl mode temporarily
-
-  uint32_t flags = 0;         // use to pass per-file flags
-  uint64_t data_version = 0;  // lastest version of data for fsync
-  atomic_t dirty_dents;       // # of dirty dentry pages
-  f2fs_hash_t chash;          // hash value of given file name
-  uint64_t clevel = 0;        // maximum level of given file name
-  nid_t i_xattr_nid = 0;      // node id that contains xattrs
-  ExtentInfo ext;             // in-memory extent cache entry
-};
-
 // this structure is used as one of function parameters.
 // all the information are dedicated to a given direct node block determined
 // by the data offset in a file.
@@ -151,7 +121,7 @@ class SuperblockInfo {
   SuperblockInfo(SuperblockInfo &&) = delete;
   SuperblockInfo &operator=(SuperblockInfo &&) = delete;
 
-  SuperblockInfo() = default;
+  SuperblockInfo() : nr_pages_{} {}
 
   Superblock &GetRawSuperblock() { return *raw_superblock_; }
   void SetRawSuperblock(std::shared_ptr<Superblock> &raw_sb) { raw_superblock_ = raw_sb; }
@@ -192,13 +162,6 @@ class SuperblockInfo {
   void IncNrOrphans();
   void DecNrOrphans();
   void ResetNrOrphans() { n_orphans_ = 0; }
-
-#if 0  // porting needed
-  list_node_t &GetDirInodeList() { return dir_inode_list_; }
-#ifdef __Fuchsia__
-  fbl::Mutex &GetDirInodeLock() { return dir_inode_lock_; };
-#endif  // __Fuchsia__
-#endif
 
   block_t GetLogSectorsPerBlock() const { return log_sectors_per_block_; }
 
@@ -306,25 +269,25 @@ class SuperblockInfo {
   fbl::Mutex &GetStatLock() { return stat_lock_; };
 #endif  // __Fuchsia__
 
-  void IncPageCount(CountType count_type) {
-    // TODO: IMPL
-    // AtomicInc(&nr_pages_[count_type]);
+  void AddPageCount(CountType count_type) {
+    atomic_fetch_add_explicit(&nr_pages_[static_cast<int>(count_type)], 1,
+                              std::memory_order_relaxed);
     SetDirty();
   }
 
-  void DecPageCount(CountType count_type) {
-    // TODO: IMPL
-    // AtomicDec(&nr_pages_[count_type]);
+  void SubtractPageCount(CountType count_type) {
+    atomic_fetch_sub_explicit(&nr_pages_[static_cast<int>(count_type)], 1,
+                              std::memory_order_relaxed);
   }
 
-  int GetPages(CountType count_type) const {
-    // TODO: IMPL
-    // return AtomicRead(&nr_pages_[count_type]);
+  int GetPageCount(CountType count_type) const {
+    // TODO: Add tracking page counts when impl page cache
     return 0;
+    // return atomic_load_explicit(&nr_pages_[static_cast<int>(count_type)],
+    //                             std::memory_order_relaxed);
   }
 
   uint32_t BitmapSize(MetaBitmap flag) {
-    // return NAT or SIT bitmap
     if (flag == MetaBitmap::kNatBitmap)
       return LeToCpu(checkpoint_block_.checkpoint_.nat_ver_bitmap_bytesize);
     else  // MetaBitmap::kSitBitmap
@@ -358,15 +321,13 @@ class SuperblockInfo {
  private:
   std::shared_ptr<Superblock> raw_superblock_;  // raw super block pointer
   bool is_dirty_ = false;                       // dirty flag for checkpoint
-#if 0                                           // porting needed
-  // fbl::RefPtr<VnodeF2fs> node_vnode;
-#endif
 
 #if 0  // porting needed
   // struct bio *bio[static_cast<int>(PageType::kNrPageType)];             // bios to merge
   // sector_t last_block_in_bio[static_cast<int>(PageType::kNrPageType)];  // last block number
   // rw_semaphore bio_sem;		// IO semaphore
 
+  // fbl::RefPtr<VnodeF2fs> node_vnode;
   // inode *meta_inode;		// cache meta blocks
   // fbl::RefPtr<VnodeF2fs> meta_vnode;
 #endif
@@ -392,16 +353,19 @@ class SuperblockInfo {
   fs::SharedMutex orphan_inode_mutex_;  // for orphan inode list
   uint64_t n_orphans_ = 0;              // # of orphan inodes
 
-  // for directory inode management
 #if 0  // porting needed
+  // for directory management
   list_node_t dir_inode_list_;  // dir inode list
 #ifdef __Fuchsia__
   fbl::Mutex dir_inode_lock_;  // for dir inode list lock
 #endif  // __Fuchsia__
   // uint64_t n_dirty_dirs = 0;   // # of dir inodes
+  list_node_t &GetDirInodeList() { return dir_inode_list_; }
+#ifdef __Fuchsia__
+  fbl::Mutex &GetDirInodeLock() { return dir_inode_lock_; };
+#endif  // __Fuchsia__
 #endif
 
-  // basic file system units
   block_t log_sectors_per_block_ = 0;  // log2 sectors per block
   block_t log_blocksize_ = 0;          // log2 block size
   block_t blocksize_ = 0;              // block size
@@ -424,27 +388,20 @@ class SuperblockInfo {
   block_t last_valid_block_count_ = 0;                            // for recovery
   uint32_t s_next_generation_ = 0;                                // for NFS support
   atomic_t nr_pages_[static_cast<int>(CountType::kNrCountType)];  // # of pages, see count_type
-
   uint64_t mount_opt_ = 0;  // set with kMountOptxxxx bits according to F2fs::mount_options_
 
-  // for cleaning operations
 #if 0  // porting needed
   // fs::SharedMutex gc_mutex;                    // mutex for GC
   // struct F2fsGc_kthread *gc_thread = nullptr;  // GC thread
-#endif
-
   // for stat information.
   // one is for the LFS mode, and the other is for the SSR mode.
-#if 0  // porting needed
   // struct f2fs_stat_info *stat_info = nullptr;  // FS status information
+  // int total_hit_ext = 0, read_hit_ext = 0;     // extent cache hit ratio
+  // int bg_gc = 0;                               // background gc calls
 #endif
   uint64_t segment_count_[2] = {0};  // # of allocated segments
   uint64_t block_count_[2] = {0};    // # of allocated blocks
   uint32_t last_victim_[2] = {0};    // last victim segment #
-#if 0                                // porting needed
-  // int total_hit_ext = 0, read_hit_ext = 0;     // extent cache hit ratio
-  // int bg_gc = 0;                               // background gc calls
-#endif
 #ifdef __Fuchsia__
   fbl::Mutex stat_lock_;  // lock for stat operations
 #endif                    // __Fuchsia__
@@ -452,19 +409,7 @@ class SuperblockInfo {
 
 constexpr uint32_t kDefaultAllocatedBlocks = 1;
 
-#if 0  // porting needed
-static inline void InodeIncDirtyDents(VnodeF2fs *vnode) {
-  // TODO: IMPL
-  // AtomicInc(&F2FS_I(inode)->dirty_dents);
-}
-#endif
-
-static inline void InodeDecDirtyDents(void *vnode) {
-  // TODO: IMPL
-  // AtomicDec(&F2FS_I(inode)->dirty_dents);
-}
-
-static inline bool IsSetCkptFlags(Checkpoint *cp, uint32_t f) {
+inline bool IsSetCkptFlags(Checkpoint *cp, uint32_t f) {
   uint32_t ckpt_flags = LeToCpu(cp->ckpt_flags);
   return ckpt_flags & f;
 }
@@ -476,7 +421,7 @@ inline void F2fsPutPage(Page *&page, int unlock) {
   }
 }
 
-static inline void F2fsPutDnode(DnodeOfData *dn) {
+inline void F2fsPutDnode(DnodeOfData *dn) {
   if (dn->inode_page == dn->node_page) {
     dn->inode_page = nullptr;
   }
@@ -484,21 +429,14 @@ static inline void F2fsPutDnode(DnodeOfData *dn) {
   F2fsPutPage(dn->inode_page, 0);
 }
 
-#if 0  // porting needed
-static inline struct kmem_cache *KmemCacheCreate(const char *name, size_t size,
-                                                                  void (*ctor)(void *)) {
-  return nullptr;
-}
-#endif
-
 inline bool RawIsInode(Node *p) { return p->footer.nid == p->footer.ino; }
 
-static inline bool IsInode(Page *page) {
+inline bool IsInode(Page *page) {
   Node *p = static_cast<Node *>(PageAddress(page));
   return RawIsInode(p);
 }
 
-static inline uint32_t *BlkaddrInNode(Node *node) {
+inline uint32_t *BlkaddrInNode(Node *node) {
   if (RawIsInode(node)) {
     if (node->i.i_inline & kExtraAttr) {
       return node->i.i_addr + (node->i.i_extra_isize / sizeof(uint32_t));
@@ -508,7 +446,7 @@ static inline uint32_t *BlkaddrInNode(Node *node) {
   return node->dn.addr;
 }
 
-static inline block_t DatablockAddr(Page *node_page, uint64_t offset) {
+inline block_t DatablockAddr(Page *node_page, uint64_t offset) {
   Node *raw_node;
   uint32_t *addr_array;
   raw_node = static_cast<Node *>(PageAddress(node_page));
@@ -516,7 +454,7 @@ static inline block_t DatablockAddr(Page *node_page, uint64_t offset) {
   return LeToCpu(addr_array[offset]);
 }
 
-static inline int TestValidBitmap(uint64_t nr, const uint8_t *addr) {
+inline int TestValidBitmap(uint64_t nr, const uint8_t *addr) {
   int mask;
 
   addr += (nr >> 3);
@@ -524,7 +462,7 @@ static inline int TestValidBitmap(uint64_t nr, const uint8_t *addr) {
   return mask & *addr;
 }
 
-static inline int SetValidBitmap(uint64_t nr, uint8_t *addr) {
+inline int SetValidBitmap(uint64_t nr, uint8_t *addr) {
   int mask;
   int ret;
 
@@ -535,7 +473,7 @@ static inline int SetValidBitmap(uint64_t nr, uint8_t *addr) {
   return ret;
 }
 
-static inline int ClearValidBitmap(uint64_t nr, uint8_t *addr) {
+inline int ClearValidBitmap(uint64_t nr, uint8_t *addr) {
   int mask;
   int ret;
 

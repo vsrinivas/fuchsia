@@ -11,8 +11,6 @@
 
 namespace f2fs {
 
-VnodeF2fs::VnodeF2fs(F2fs *fs) : Vnode(fs) {}
-
 VnodeF2fs::VnodeF2fs(F2fs *fs, ino_t ino) : Vnode(fs), ino_(ino) {}
 
 fs::VnodeProtocolSet VnodeF2fs::GetProtocols() const {
@@ -162,9 +160,6 @@ void VnodeF2fs::RecycleNode() {
 }
 
 zx_status_t VnodeF2fs::GetAttributes(fs::VnodeAttributes *a) {
-#ifdef F2FS_BU_DEBUG
-  FX_LOGS(DEBUG) << "f2fs_getattr() vn=" << this << "(#" << ino_ << ")";
-#endif
   *a = fs::VnodeAttributes();
 
 #ifdef __Fuchsia__
@@ -437,7 +432,7 @@ void VnodeF2fs::TruncatePartialDataPage(uint64_t from) {
   // lock_page(page);
 #endif
   WaitOnPageWriteback(page);
-  zero_user(page, static_cast<uint32_t>(offset), static_cast<uint32_t>(kPageCacheSize - offset));
+  ZeroUserSegment(page, static_cast<uint32_t>(offset), kPageCacheSize);
 #if 0  // porting needed
   // set_page_dirty(page);
 #else
@@ -539,7 +534,7 @@ void VnodeF2fs::EvictVnode() {
   if (ino_ == superblock_info.GetNodeIno() || ino_ == superblock_info.GetMetaIno())
     return;
 
-  // BUG_ON(AtomicRead(&fi.->dirty_dents));
+  ZX_ASSERT(atomic_load_explicit(&fi_.dirty_dents, std::memory_order_relaxed) == 0);
   // RemoveDirtyDirInode(this);
 
   if (GetNlink() || IsBad())
@@ -558,16 +553,9 @@ void VnodeF2fs::EvictVnode() {
     Vfs()->GetNodeManager().RemoveInodePage(this);
   }
   Vfs()->EvictVnode(this);
-  //  no_delete:
-  //  ClearInode(this);
 }
 
 void VnodeF2fs::Init() {
-  memset(&fi_, 0, sizeof(InodeInfo));
-#if 0  // porting needed
-  // AtomicSet(&vnode->fi.vfs_inode.i_version, 1);
-#endif
-  AtomicSet(&fi_.dirty_dents, 0);
   SetCurDirDepth(1);
   SetFlag(InodeInfoFlag::kInit);
   Activate();

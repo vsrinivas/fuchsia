@@ -346,8 +346,7 @@ zx_status_t FsckWorker::CheckInodeBlock(nid_t nid, FileType ftype, Node &node_bl
       }
     }
   } while (0);
-
-#ifdef F2FS_BU_DEBUG
+#if 0  // TODO: implement debug level
   if (ftype == FileType::kFtDir)  // TODO: DBG(1)
     printf("Directory Inode: ino: %x name: %s depth: %d child files: %d\n\n",
            LeToCpu(node_blk->footer.ino), node_blk->i.i_name, LeToCpu(node_blk->i.i_current_depth),
@@ -360,7 +359,7 @@ zx_status_t FsckWorker::CheckInodeBlock(nid_t nid, FileType ftype, Node &node_bl
   if ((ftype == FileType::kFtDir && i_links != child_count) || (i_blocks != block_count)) {
     PrintNodeInfo(node_block);
   }
-#ifdef F2FS_BU_DEBUG
+#if 0  // TODO: implement debug level
   // TODO: DBG (1)
   printf("blk   cnt [0x%x]\n", *blk_cnt);
   // TODO: DBG (1)
@@ -487,7 +486,7 @@ void FsckWorker::CheckDentries(uint32_t &child_count, uint32_t &child_files, con
 
     // TODO: Should we check '.' and '..' entries?
     ZX_ASSERT(LeToCpu(dentries[i].hash_code) == hash_code);
-#ifdef F2FS_BU_DEBUG
+#if 0  // TODO: implement debug level
     // TODO: DBG (2)
     printf("[%3u] - no[0x%x] name[%s] len[0x%x] ino[0x%x] type[0x%x]\n", fsck->dentry_depth, i,
            name.data(), LeToCpu(dentries[i].name_len), LeToCpu(dentries[i].ino),
@@ -504,7 +503,7 @@ void FsckWorker::CheckDentries(uint32_t &child_count, uint32_t &child_files, con
     ++num_entries;
     ++child_files;
   }
-#ifdef F2FS_BU_DEBUG
+#if 0  // TODO: implement debug level
   // TODO: DBG (1)
   printf("[%3d] Dentry Block [0x%x] Done : dentries:%d in %d slots (len:%d)\n\n",
          fsck->dentry_depth, blk_addr, num_entries, kNrDentryInBlock, kMaxNameLen);
@@ -585,7 +584,7 @@ void FsckWorker::CheckOrphanNode() {
 
     for (block_t j = 0; j < LeToCpu(orphan_block->entry_count); j++) {
       nid_t ino = LeToCpu(orphan_block->ino[j]);
-#ifdef F2FS_BU_DEBUG
+#if 0  // TODO: implement debug level
       // TODO: DBG (1)
       printf("[%3d] ino [0x%x]\n", i, ino);
 #endif
@@ -625,7 +624,7 @@ int FsckWorker::FsckChkXattrBlk(uint32_t ino, uint32_t x_nid, uint32_t *block_co
                   x_nid, ni.blk_addr);
   }
   SetValidBitmap(BlkoffFromMain(superblock_info, ni.blk_addr), fsck->main_area_bitmap);
-#ifdef F2FS_BU_DEBUG
+#if 0  // TODO: implement debug level
   // TODO: DBG (2)
   printf("ino[0x%x] x_nid[0x%x]\n", ino, x_nid);
 #endif
@@ -1420,7 +1419,7 @@ std::pair<std::unique_ptr<FsBlock>, SegType> FsckWorker::GetSumBlockInfo(uint32_
       memcpy(summary_block->GetData(), curseg->sum_blk, kBlockSize);
 #endif  // __Fuchsia__
       ZX_ASSERT(!IsSumNodeSeg((reinterpret_cast<SummaryBlock *>(summary_block.get()))->footer));
-#ifdef F2FS_BU_DEBUG
+#if 0  // TODO: implement debug level
       // TODO: DBG (2)
       printf("segno [0x%x] is current data seg[0x%x]\n", segno, type);
 #endif
@@ -1609,7 +1608,7 @@ void FsckWorker::BuildSitAreaBitmap() {
     }
   }
 
-#ifdef F2FS_BU_DEBUG
+#if 0  // TODO: implement debug level
   // TODO: DBG (1)
   printf("Blocks [0x%x : %d] Free Segs [0x%x : %d]\n\n", sum_vblocks, sum_vblocks, free_segs,
          free_segs);
@@ -1627,7 +1626,7 @@ zx::status<RawNatEntry> FsckWorker::LookupNatInJournal(nid_t nid) {
   for (int i = 0; i < NatsInCursum(sum); i++) {
     if (LeToCpu(NidInJournal(sum, i)) == nid) {
       RawNatEntry ret = NatInJournal(sum, i);
-#ifdef F2FS_BU_DEBUG
+#if 0  // TODO: implement debug level
       // TODO: DBG (3)
       printf("==> Found nid [0x%x] in nat cache\n", nid);
 #endif
@@ -1689,8 +1688,8 @@ void FsckWorker::BuildNatAreaBitmap() {
         if (node_info.blk_addr != kNullAddr) {
           SetValidBitmap(nid + i, fsck_.nat_area_bitmap.get());
           ++fsck_.result.valid_nat_entry_count;
-#ifdef F2FS_BU_DEBUG
-          // TODO: DBG (3)
+#if 0  // TODO: implement debug level
+       // TODO: DBG (3)
           printf("nid[0x%x] in nat cache\n", nid + i);
 #endif
         }
@@ -1698,8 +1697,8 @@ void FsckWorker::BuildNatAreaBitmap() {
         NodeInfoFromRawNat(node_info, nat_block->entries[i]);
         if (node_info.blk_addr != kNullAddr) {
           ZX_ASSERT(nid + i != 0x0);
-#ifdef F2FS_BU_DEBUG
-          // TODO: DBG (3)
+#if 0  // TODO: implement debug level
+       // TODO: DBG (3)
           printf("nid[0x%8x] in nat entry [0x%16x] [0x%8x]\n", nid + i, ni.blk_addr, ni.ino);
 #endif
           SetValidBitmap(nid + i, fsck_.nat_area_bitmap.get());
@@ -1708,7 +1707,7 @@ void FsckWorker::BuildNatAreaBitmap() {
       }
     }
   }
-#ifdef F2FS_BU_DEBUG
+#if 0  // TODO: implement debug level
   // TODO: DBG (1)
   printf("valid nat entries (block_addr != 0x0) [0x%8x : %u]\n", fsck->chk.valid_nat_entry_cnt,
          fsck->chk.valid_nat_entry_cnt);

@@ -486,7 +486,6 @@ void CheckpointTestRecoverOrphanInode(F2fs *fs, uint32_t expect_cp_position, uin
 
     ASSERT_EQ(fs->RecoverOrphanInodes(), 0);
 
-    // TODO(jaeyoon): Add vnode null check when Iput() is enabled.
     for (auto &vnode_refptr : vnodes) {
       ASSERT_EQ(vnode_refptr.get()->GetNlink(), (uint32_t)0);
       fs->RemoveOrphanInode(vnode_refptr->GetKey());

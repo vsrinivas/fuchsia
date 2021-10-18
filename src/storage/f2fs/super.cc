@@ -19,12 +19,7 @@ void F2fs::PutSuper() {
   WriteCheckpoint(false, true);
   GetVCache().Reset();
 
-#if 0  // porting needed
-  // Iput(superblock_info_->node_inode);
-  // Iput(superblock_info_->meta_inode);
-#endif
-
-  /* destroy f2fs internal modules */
+  // destroy f2fs internal modules
   node_manager_->DestroyNodeManager();
   segment_manager_->DestroySegmentManager();
 
@@ -35,12 +30,8 @@ void F2fs::PutSuper() {
 }
 
 zx_status_t F2fs::SyncFs(int sync) {
-#ifdef F2FS_BU_DEBUG
-  FX_LOGS(DEBUG) << "F2fs::SyncFs, superblock_info_.IsDirty()=" << superblock_info_.IsDirty();
-#endif
-
 #if 0  // porting needed
-  //if (!superblock_info_.IsDirty() && !superblock_info_->GetPages(CountType::kDirtyNodes))
+  //if (!superblock_info_.IsDirty() && !superblock_info_->GetPageCount(CountType::kDirtyNodes))
   //  return 0;
 #endif
 
@@ -97,7 +88,6 @@ zx_status_t F2fs::SyncFs(int sync) {
 //   vnode = vnode_refptr.get();
 //   if (generation && vnode->i_generation != generation) {
 //     /* we didn't find the right inode.. */
-//     Iput(vnode);
 //     return (VnodeF2fs *)ErrPtr(-ESTALE);
 //   }
 //   return vnode;
@@ -241,8 +231,6 @@ zx_status_t F2fs::SanityCheckCkpt() {
 }
 
 void F2fs::InitSuperblockInfo() {
-  int i;
-
   superblock_info_->SetLogSectorsPerBlock(LeToCpu(RawSb().log_sectors_per_block));
   superblock_info_->SetLogBlocksize(LeToCpu(RawSb().log_blocksize));
   superblock_info_->SetBlocksize(1 << superblock_info_->GetLogBlocksize());
@@ -256,9 +244,6 @@ void F2fs::InitSuperblockInfo() {
   superblock_info_->SetRootIno(LeToCpu(RawSb().root_ino));
   superblock_info_->SetNodeIno(LeToCpu(RawSb().node_ino));
   superblock_info_->SetMetaIno(LeToCpu(RawSb().meta_ino));
-
-  for (i = 0; i < static_cast<int>(CountType::kNrCountType); i++)
-    AtomicSet(&superblock_info_->GetNrPages(i), 0);
 }
 
 void F2fs::Reset() {

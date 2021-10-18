@@ -10,12 +10,6 @@ class NameString final {
  public:
   NameString() : len_(0){};
   NameString(const NameString &) = default;
-  NameString(std::string_view name) {
-    ZX_ASSERT(name.length() <= kMaxNameLen);
-    len_ = static_cast<uint16_t>(name.length());
-    memcpy(name_, name.data(), len_);
-  }
-  ~NameString() = default;
 
   std::string_view GetStringView() const { return std::string_view(name_, len_); };
   char *GetData() { return name_; };

@@ -8,8 +8,6 @@
 
 namespace f2fs {
 
-File::File(F2fs *fs) : VnodeF2fs(fs) {}
-
 File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 
 #if 0  // porting needed

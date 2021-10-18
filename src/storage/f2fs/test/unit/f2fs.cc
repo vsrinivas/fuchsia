@@ -194,7 +194,7 @@ TEST(F2fsTest, FlushDirtyMetaPage) {
 
   FileTester::MountWithOptions(loop.dispatcher(), MountOptions{}, &bc, &fs);
 
-  fs->GetSuperblockInfo().IncPageCount(CountType::kDirtyMeta);
+  fs->GetSuperblockInfo().AddPageCount(CountType::kDirtyMeta);
 
   Checkpoint &checkpoint = fs->GetSuperblockInfo().GetCheckpoint();
   block_t checkpoint_block = fs->GetSuperblockInfo().StartCpAddr();
@@ -205,8 +205,7 @@ TEST(F2fsTest, FlushDirtyMetaPage) {
   ASSERT_EQ(FlushDirtyMetaPage(fs.get(), checkpoint_page), ZX_OK);
   ASSERT_EQ(FlushDirtyMetaPage(fs.get(), nullptr), ZX_OK);
 
-  // TODO: Impl GetPages()
-  ASSERT_EQ(fs->GetSuperblockInfo().GetPages(CountType::kDirtyMeta), 0);
+  ASSERT_EQ(fs->GetSuperblockInfo().GetPageCount(CountType::kDirtyMeta), 0);
 
   F2fsPutPage(checkpoint_page, 1);
 
@@ -229,10 +228,8 @@ TEST(F2fsTest, FlushDirtyNodePage) {
   ASSERT_NE(root_node_page, nullptr);
 
   ASSERT_EQ(FlushDirtyNodePage(fs.get(), root_node_page), ZX_OK);
-  ASSERT_EQ(FlushDirtyNodePage(fs.get(), nullptr), ZX_OK);
 
-  // TODO: Impl GetPages()
-  ASSERT_EQ(fs->GetSuperblockInfo().GetPages(CountType::kDirtyNodes), 0);
+  ASSERT_EQ(fs->GetSuperblockInfo().GetPageCount(CountType::kDirtyNodes), 0);
 
   F2fsPutPage(root_node_page, 0);
   FileTester::Unmount(std::move(fs), &bc);
@@ -257,7 +254,6 @@ TEST(F2fsTest, FlushDirtyDataPage) {
   Page *data_page = GrabCachePage(vn, vn->Ino(), 100);
 
   ASSERT_EQ(FlushDirtyDataPage(fs.get(), data_page), ZX_OK);
-  ASSERT_EQ(FlushDirtyDataPage(fs.get(), nullptr), ZX_OK);
 
   F2fsPutPage(data_page, 0);
 

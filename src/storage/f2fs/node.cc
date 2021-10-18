@@ -6,6 +6,10 @@
 
 namespace f2fs {
 
+NodeManager::NodeManager(F2fs *fs) : fs_(fs), superblock_info_(&fs_->GetSuperblockInfo()) {}
+
+NodeManager::NodeManager(SuperblockInfo *sbi) : superblock_info_(sbi) {}
+
 void NodeManager::SetNatCacheDirty(NatEntry &ne) {
   ZX_ASSERT(clean_nat_list_.erase(ne) != nullptr);
   dirty_nat_list_.push_back(&ne);
@@ -309,10 +313,6 @@ void NodeManager::DecValidNodeCount(VnodeF2fs *vnode, uint32_t count) {
                                               count);
 }
 
-NodeManager::NodeManager(F2fs *fs) : fs_(fs) {}
-
-NodeManager::NodeManager(SuperblockInfo *sbi) : superblock_info_(sbi) {}
-
 void NodeManager::ClearNodePageDirty(Page *page) {
 #if 0  // porting needed
   // address_space *mapping = page->mapping;
@@ -329,7 +329,7 @@ void NodeManager::ClearNodePageDirty(Page *page) {
     // SpinUnlock_irqrestore(&mapping->tree_lock, flags);
 #endif
     ClearPageDirtyForIo(page);
-    GetSuperblockInfo().DecPageCount(CountType::kDirtyNodes);
+    GetSuperblockInfo().SubtractPageCount(CountType::kDirtyNodes);
   }
   ClearPageUptodate(page);
 }
@@ -753,12 +753,6 @@ zx_status_t NodeManager::GetDnodeOfData(DnodeOfData &dn, pgoff_t index, int ro) 
   dn.node_page = npage[level];
   dn.data_blkaddr = DatablockAddr(dn.node_page, dn.ofs_in_node);
 
-#ifdef F2FS_BU_DEBUG
-  FX_LOGS(DEBUG) << "NodeManager::GetDnodeOfData"
-                 << ", dn.nid=" << dn.nid << ", dn.node_page=" << dn.node_page
-                 << ", dn.ofs_in_node=" << dn.ofs_in_node
-                 << ", dn.data_blkaddr=" << dn.data_blkaddr;
-#endif
   return ZX_OK;
 }
 
@@ -1147,9 +1141,6 @@ zx_status_t NodeManager::ReadNodePage(Page &page, nid_t nid, int type) {
     return ZX_ERR_NOT_FOUND;
 
   if (ni.blk_addr == kNewAddr) {
-#ifdef F2FS_BU_DEBUG
-    FX_LOGS(DEBUG) << "NodeManager::ReadNodePage, Read New address...";
-#endif
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -1351,7 +1342,7 @@ zx_status_t NodeManager::F2fsWriteNodePage(Page &page, WritebackControl *wbc) {
 
 #if 0  // porting needed
   // 	if (wbc->for_reclaim) {
-  // 		superblock_info.DecPageCount(CountType::kDirtyNodes);
+  // 		superblock_info.SubtractPageCount(CountType::kDirtyNodes);
   // 		wbc->pages_skipped++;
   //		// set_page_dirty(page);
   //		FlushDirtyNodePage(fs_, page);
@@ -1381,7 +1372,7 @@ zx_status_t NodeManager::F2fsWriteNodePage(Page &page, WritebackControl *wbc) {
     // insert node offset
     fs_->GetSegmentManager().WriteNodePage(&page, nid, ni.blk_addr, &new_addr);
     SetNodeAddr(ni, new_addr);
-    GetSuperblockInfo().DecPageCount(CountType::kDirtyNodes);
+    GetSuperblockInfo().SubtractPageCount(CountType::kDirtyNodes);
   }
 
   // TODO: IMPL
@@ -1398,7 +1389,7 @@ int NodeManager::F2fsWriteNodePages(struct address_space *mapping, WritebackCont
   // if (wbc->for_kupdate)
   // 	return 0;
 
-  // if (superblock_info->GetPages(CountType::kDirtyNodes) == 0)
+  // if (superblock_info->GetPageCount(CountType::kDirtyNodes) == 0)
   // 	return 0;
 
   // if (try_to_free_nats(superblock_info, kNatEntryPerBlock)) {
@@ -1422,7 +1413,7 @@ int NodeManager::F2fsSetNodePageDirty(Page *page) {
   if (!PageDirty(page)) {
     // __set_page_dirty_nobuffers(page);
     FlushDirtyNodePage(fs_, page);
-    GetSuperblockInfo().IncPageCount(CountType::kDirtyNodes);
+    GetSuperblockInfo().AddPageCount(CountType::kDirtyNodes);
     // SetPagePrivate(page);
     return 1;
   }
@@ -1433,7 +1424,7 @@ int NodeManager::F2fsSetNodePageDirty(Page *page) {
 #if 0  // porting needed
 void NodeManager::F2fsInvalidateNodePage(Page *page, uint64_t offset) {
   if (PageDirty(page))
-    GetSuperblockInfo().DecPageCount(CountType::kDirtyNodes);
+    GetSuperblockInfo().SubtractPageCount(CountType::kDirtyNodes);
   ClearPagePrivate(page);
 }
 #endif
@@ -1459,9 +1450,6 @@ FreeNid *NodeManager::LookupFreeNidList(nid_t n) {
 
 void NodeManager::DelFromFreeNidList(FreeNid *i) {
   list_delete(&i->list);
-#if 0  // porting needed
-  // kmem_cache_free(free_nid_slab, i);
-#endif
   delete i;
 }
 
@@ -1471,14 +1459,9 @@ int NodeManager::AddFreeNid(nid_t nid) {
   if (free_nid_count_ > 2 * kMaxFreeNids)
     return 0;
   do {
-#if 0  // porting needed (kmem_cache_alloc)
-  // i = kmem_cache_alloc(free_nid_slab, GFP_NOFS);
-#endif
     i = new FreeNid;
+    sleep(0);
   } while (!i);
-#if 0  // porting needed
-    // cond_resched();
-#endif
   i->nid = nid;
   i->state = static_cast<int>(NidState::kNidNew);
 
@@ -1486,9 +1469,6 @@ int NodeManager::AddFreeNid(nid_t nid) {
   std::lock_guard free_nid_lock(free_nid_list_lock_);
 #endif  // __Fuchsia__
   if (LookupFreeNidList(nid)) {
-#if 0  // porting needed
-    // kmem_cache_free(free_nid_slab, i);
-#endif
     delete i;
     return 0;
   }
@@ -1979,7 +1959,6 @@ void NodeManager::DestroyNodeManager() {
 
   nat_bitmap_.reset();
   nat_prev_bitmap_.reset();
-  ;
 }
 
 block_t NodeManager::StartBidxOfNode(Page &node_page) {
@@ -2008,11 +1987,6 @@ block_t NodeManager::StartBidxOfNode(Page &node_page) {
   return start_bidx;
 }
 
-SuperblockInfo &NodeManager::GetSuperblockInfo() {
-  if (fs_ != nullptr) {
-    return fs_->GetSuperblockInfo();
-  }
-  return *superblock_info_;
-}
+SuperblockInfo &NodeManager::GetSuperblockInfo() { return *superblock_info_; }
 
 }  // namespace f2fs

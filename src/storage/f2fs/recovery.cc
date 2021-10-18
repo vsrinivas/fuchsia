@@ -61,7 +61,6 @@ zx_status_t F2fs::RecoverDentry(Page *ipage, VnodeF2fs *vnode) {
   } else {
     dir->AddLink(vnode->GetNameView(), vnode);
   }
-  Iput(dir);
 out:
 #if 0  // porting needed
   // kunmap(ipage);
@@ -140,7 +139,6 @@ zx_status_t F2fs::FindFsyncDnodes(list_node_t *head) {
       }
 
       // add this fsync inode to the list */
-      // entry = kmem_cache_alloc(fsync_entry_slab, GFP_NOFS);
       entry = new FsyncInodeEntry;
       if (!entry) {
         err = ZX_ERR_NO_MEMORY;
@@ -180,12 +178,8 @@ void F2fs::DestroyFsyncDnodes(list_node_t *head) {
   FsyncInodeEntry *entry;
   list_for_every(head, this_node) {
     entry = containerof(this_node, FsyncInodeEntry, list);
-    Iput(entry->vnode.get());
     entry->vnode.reset();
     list_delete(&entry->list);
-#if 0  // porting needed
-    // kmem_cache_free(fsync_entry_slab, entry);
-#endif
     delete entry;
   }
 }
@@ -203,14 +197,13 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
   Page *node_page = nullptr;
   block_t bidx;
   int i;
-  __UNUSED zx_status_t err = 0;
 
   SegmentEntry &sentry = GetSegmentManager().GetSegmentEntry(segno);
   if (!TestValidBitmap(blkoff, sentry.cur_valid_map.get())) {
     return;
   }
 
-  /* Get the previous summary */
+  // Get the previous summary
   for (i = static_cast<int>(CursegType::kCursegWarmData);
        i <= static_cast<int>(CursegType::kCursegColdData); i++) {
     CursegInfo *curseg = segment_manager_->CURSEG_I(static_cast<CursegType>(i));
@@ -228,27 +221,19 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
     F2fsPutPage(sum_page, 1);
   }
 
-  /* Get the node page */
-  err = GetNodeManager().GetNodePage(LeToCpu(sum.nid), &node_page);
-#ifdef F2FS_BU_DEBUG
-  if (err) {
+  // Get the node page
+  if (zx_status_t err = GetNodeManager().GetNodePage(LeToCpu(sum.nid), &node_page); err != ZX_OK) {
     FX_LOGS(ERROR) << "F2fs::CheckIndexInPrevNodes, GetNodePage Error!!!";
     return;
   }
-#endif
   bidx = NodeManager::StartBidxOfNode(*node_page) + LeToCpu(sum.ofs_in_node);
   ino = NodeManager::InoOfNode(*node_page);
   F2fsPutPage(node_page, 1);
 
-  /* Deallocate previous index in the node page */
-#if 0  // porting needed
-  // vnode = F2fsIgetNowait(ino);
-#else
+  // Deallocate previous index in the node page
   VnodeF2fs::Vget(this, ino, &vnode_refptr);
   vnode = vnode_refptr.get();
-#endif
   vnode->TruncateHole(bidx, bidx + 1);
-  Iput(vnode);
 }
 
 void F2fs::DoRecoverData(VnodeF2fs *vnode, Page *page, block_t blkaddr) {
@@ -348,12 +333,7 @@ void F2fs::RecoverData(list_node_t *head, CursegType type) {
 
     if (entry->blkaddr == blkaddr) {
       list_delete(&entry->list);
-      Iput(entry->vnode.get());
       entry->vnode.reset();
-
-#if 0  // porting needed
-      // kmem_cache_free(fsync_entry_slab, entry);
-#endif
       delete entry;
     }
   next:
@@ -375,16 +355,9 @@ void F2fs::RecoverFsyncData() {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
   list_node_t inode_list;
 
-#if 0  // porting needed
-  // fsync_entry_slab = KmemCacheCreate("f2fs_FsyncInodeEntry",
-  // 		sizeof(FsyncInodeEntry), nullptr);
-  // if (unlikely(!fsync_entry_slab))
-  // 	return;
-#endif
-
   list_initialize(&inode_list);
 
-  /* step #1: find fsynced inode numbers */
+  // step #1: find fsynced inode numbers
   if (FindFsyncDnodes(&inode_list)) {
     goto out;
   }
@@ -393,16 +366,13 @@ void F2fs::RecoverFsyncData() {
     goto out;
   }
 
-  /* step #2: recover data */
+  // step #2: recover data
   superblock_info.SetOnRecovery();
   RecoverData(&inode_list, CursegType::kCursegWarmNode);
   superblock_info.ClearOnRecovery();
   ZX_ASSERT(list_is_empty(&inode_list));
 out:
   DestroyFsyncDnodes(&inode_list);
-#if 0  // porting needed
-  // kmem_cache_destroy(fsync_entry_slab);
-#endif
   WriteCheckpoint(false, false);
 }
 

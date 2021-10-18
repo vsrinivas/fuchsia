@@ -19,30 +19,18 @@ inline Page *GrabCachePage(void *vnode, uint32_t nid, pgoff_t index) {
 
 inline void *PageAddress(Page *page) { return (void *)page->data; }
 inline void *PageAddress(Page &page) { return (void *)page.data; }
+// TODO: impl
+inline Page *FindGetPage(void *vnode, pgoff_t index) { return nullptr; }
 inline int PageUptodate(struct Page *page) { return 0; }
 inline void SetPageUptodate(struct Page *page) {}
 inline void ClearPageUptodate(struct Page *page) {}
-
-#if 0  // porting needed
-inline Page *FindGetPage(/* TODO pgoff_t*/ uint32_t index) { return nullptr; }
 inline void ClearPagePrivate(struct Page *) {}
-#endif
-
-inline int PageDirty(struct Page *) { /*TODO: IMPL: does Page has dirty bit?*/
-  return 0;
-}
-
-static inline int ClearPageDirtyForIo(Page *page) { return 0; }
-
 struct WritebackControl {};
-
-static inline void SetPageWriteback(Page *page) {
-  // TODO: Once Pager is available, it could be used before VMO writeback
-}
-
-static inline void WaitOnPageWriteback(Page *page) {
-  // TODO: Once Pager is availabe, it could be used for wb synchronization
-}
+inline int PageDirty(struct Page *) { return 0; }
+// TODO: impl
+inline int ClearPageDirtyForIo(Page *page) { return 0; }
+inline void SetPageWriteback(Page *page) {}
+inline void WaitOnPageWriteback(Page *page) {}
 
 // Checkpoint
 inline bool VerAfter(uint64_t a, uint64_t b) { return a > b; }
@@ -71,7 +59,7 @@ inline bool F2fsCrcValid(uint32_t blk_crc, void *buff, uint32_t buff_size) {
 inline size_t DivRoundUp(size_t n, size_t d) { return (((n) + (d)-1) / (d)); }
 inline size_t BitsToLongs(size_t nr) { return DivRoundUp(nr, kBitsPerByte * sizeof(long)); }
 
-static inline void SetBit(uint32_t nr, void *addr) {
+inline void SetBit(uint32_t nr, void *addr) {
   uint8_t *bitmap = static_cast<uint8_t *>(addr);
   uint32_t size_per_iter = kBitsPerByte;
 
@@ -81,7 +69,7 @@ static inline void SetBit(uint32_t nr, void *addr) {
   bitmap[iter] |= static_cast<uint8_t>(1U << offset_in_iter);
 }
 
-static inline void ClearBit(uint32_t nr, void *addr) {
+inline void ClearBit(uint32_t nr, void *addr) {
   uint8_t *bitmap = static_cast<uint8_t *>(addr);
   uint32_t size_per_iter = kBitsPerByte;
 
@@ -91,7 +79,7 @@ static inline void ClearBit(uint32_t nr, void *addr) {
   bitmap[iter] &= ~static_cast<uint8_t>(1U << offset_in_iter);
 }
 
-static inline bool TestBit(uint32_t nr, const void *addr) {
+inline bool TestBit(uint32_t nr, const void *addr) {
   const uint8_t *bitmap = static_cast<const uint8_t *>(addr);
   uint32_t size_per_iter = kBitsPerByte;
 
@@ -103,7 +91,7 @@ static inline bool TestBit(uint32_t nr, const void *addr) {
   return ret;
 }
 
-static inline uint32_t FindNextZeroBit(const void *addr, uint32_t size, uint32_t offset) {
+inline uint32_t FindNextZeroBit(const void *addr, uint32_t size, uint32_t offset) {
   const uint8_t *bitmap = static_cast<const uint8_t *>(addr);
   uint32_t size_per_iter = kBitsPerByte;
 
@@ -127,7 +115,7 @@ static inline uint32_t FindNextZeroBit(const void *addr, uint32_t size, uint32_t
   return size;
 }
 
-static inline uint32_t FindNextBit(const void *addr, uint32_t size, uint32_t offset) {
+inline uint32_t FindNextBit(const void *addr, uint32_t size, uint32_t offset) {
   const uint8_t *bitmap = static_cast<const uint8_t *>(addr);
   uint32_t size_per_iter = kBitsPerByte;
 
@@ -151,7 +139,7 @@ static inline uint32_t FindNextBit(const void *addr, uint32_t size, uint32_t off
   return size;
 }
 
-static inline bool TestAndSetBit(uint32_t nr, void *addr) {
+inline bool TestAndSetBit(uint32_t nr, void *addr) {
   uint8_t *bitmap = static_cast<uint8_t *>(addr);
   uint32_t size_per_iter = kBitsPerByte;
   uint32_t iter = nr / size_per_iter;
@@ -164,7 +152,7 @@ static inline bool TestAndSetBit(uint32_t nr, void *addr) {
   return ret;
 }
 
-static inline bool TestAndClearBit(uint32_t nr, void *addr) {
+inline bool TestAndClearBit(uint32_t nr, void *addr) {
   uint8_t *bitmap = static_cast<uint8_t *>(addr);
   uint32_t size_per_iter = kBitsPerByte;
 
@@ -178,77 +166,21 @@ static inline bool TestAndClearBit(uint32_t nr, void *addr) {
   return ret;
 }
 
-/*
- * Atomic wrapper
- */
-static inline void AtomicSet(atomic_t *t, int value) {
-  atomic_store_explicit(t, value, std::memory_order_relaxed);
-}
-
-#if 0  // porting needed
-static inline atomic_t AtomicRead(atomic_t *t) {
-  uint32_t ret = atomic_load_explicit(t, std::memory_order_relaxed);
-  return ret;
-}
-
-static inline void AtomicInc(atomic_t *t) {
-  atomic_fetch_add_explicit(t, 1, std::memory_order_relaxed);
-}
-
-static inline void AtomicDec(atomic_t *t) {
-  atomic_fetch_sub_explicit(t, 1, std::memory_order_relaxed);
-}
-#endif
-
-// List operations
-static inline void list_add(list_node_t *list, list_node_t *item) {
+inline void list_add(list_node_t *list, list_node_t *item) {
   list->next->prev = item;
   item->next = list->next;
   item->prev = list;
   list->next = item;
 }
 
-// Zero segment
-static inline void ZeroUserSegments(Page *page, unsigned start1, unsigned end1, unsigned start2,
-                                    unsigned end2) {
-  char *data = (char *)PageAddress(page);
+inline void ZeroUserSegment(Page *page, uint32_t start, uint32_t end) {
+  uint8_t *data = static_cast<uint8_t *>(PageAddress(page));
 
-  ZX_ASSERT(end1 <= kPageSize && end2 <= kPageSize);
+  ZX_ASSERT(end <= kPageSize && start <= kPageSize);
 
-  if (end1 > start1)
-    memset(data + start1, 0, end1 - start1);
-
-  if (end2 > start2)
-    memset(data + start2, 0, end2 - start2);
-}
-
-static inline void ZeroUserSegment(Page *page, unsigned start, unsigned end) {
-  ZeroUserSegments(page, start, end, 0, 0);
-}
-
-static inline void zero_user(Page *page, unsigned start, unsigned size) {
-  ZeroUserSegments(page, start, start + size, 0, 0);
-}
-
-#if 0  // porting needed
-// Inode
-static inline void *Igrab(void *vnode) {
-  // TODO: need to add ref. count if vnode is valid
-  return vnode;
-}
-#endif
-static inline void *Iput(void *vnode) {
-  // TODO: need to decrement ref.
-  // TODO  handle vnode according to its vaility when ref = 0
-  return vnode;
-}
-
-static inline void ClearInode(void *vnode) {
-  // TODO: IMPL according to Fuchsia vnode flags and state transition (e.g., I_FREEING | I_CLEAR)
-}
-
-static inline uint64_t DivU64(uint64_t dividend, uint32_t divisor) {
-  return dividend / ((uint64_t)divisor);
+  if (end > start) {
+    memset(data + start, 0, end - start);
+  }
 }
 
 }  // namespace f2fs

@@ -6,19 +6,45 @@
 #define SRC_STORAGE_F2FS_VNODE_H_
 
 namespace f2fs {
-
 constexpr uint32_t kNullIno = std::numeric_limits<uint32_t>::max();
 
 class F2fs;
+// for in-memory extent cache entry
+struct ExtentInfo {
+  fs::SharedMutex ext_lock;  // rwlock for consistency
+  uint64_t fofs = 0;         // start offset in a file
+  uint32_t blk_addr = 0;     // start block address of the extent
+  uint32_t len = 0;          // lenth of the extent
+};
+
+// i_advise uses Fadvise:xxx bit. We can add additional hints later.
+enum class FAdvise {
+  kCold = 1,
+};
+
+struct InodeInfo {
+  uint32_t i_flags = 0;          // keep an inode flags for ioctl
+  uint8_t i_advise = 0;          // use to give file attribute hints
+  uint8_t i_dir_level = 0;       // use for dentry level for large dir
+  uint16_t i_extra_isize = 0;    // size of extra space located in i_addr
+  uint64_t i_current_depth = 0;  // use only in directory structure
+  umode_t i_acl_mode = 0;        // keep file acl mode temporarily
+
+  uint32_t flags = 0;         // use to pass per-file flags
+  uint64_t data_version = 0;  // lastest version of data for fsync
+  atomic_t dirty_dents = 0;   // # of dirty dentry pages
+  f2fs_hash_t chash;          // hash value of given file name
+  uint64_t clevel = 0;        // maximum level of given file name
+  nid_t i_xattr_nid = 0;      // node id that contains xattrs
+  ExtentInfo ext;             // in-memory extent cache entry
+};
 
 class VnodeF2fs : public fs::Vnode,
                   public fbl::Recyclable<VnodeF2fs>,
                   public fbl::WAVLTreeContainable<VnodeF2fs *>,
                   public fbl::DoublyLinkedListable<fbl::RefPtr<VnodeF2fs>> {
  public:
-  explicit VnodeF2fs(F2fs *fs);
   explicit VnodeF2fs(F2fs *fs, ino_t ino);
-  ~VnodeF2fs() = default;
 
   uint32_t InlineDataOffset() const {
     return kPageCacheSize - sizeof(NodeFooter) -
@@ -286,6 +312,16 @@ class VnodeF2fs : public fs::Vnode,
   void SetDirHash(const f2fs_hash_t &hash, const uint64_t &level) {
     fi_.chash = hash;
     fi_.clevel = level;
+  }
+
+  void AddDirtyDentry() {
+    // TODO: enable it when impl page cache
+    // atomic_fetch_add_explicit(&fi_.dirty_dents, 1, std::memory_order_relaxed);
+  }
+
+  void RemoveDirtyDentry() {
+    // TODO: enable it when impl page cache
+    // atomic_fetch_sub_explicit(&fi_.dirty_dents, 1, std::memory_order_relaxed);
   }
 
   uint8_t GetDirLevel() const { return fi_.i_dir_level; }

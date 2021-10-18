@@ -11,9 +11,7 @@ extern const unsigned char kFiletypeTable[];
 
 class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
  public:
-  explicit Dir(F2fs *fs);
   explicit Dir(F2fs *fs, ino_t ino);
-  ~Dir() = default;
 
   // Required for memory management, see the class comment above Vnode for more.
   void fbl_recycle() { RecycleNode(); }

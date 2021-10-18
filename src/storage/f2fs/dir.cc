@@ -37,8 +37,6 @@ const unsigned char kTypeByMode[S_IFMT >> kStatShift] = {
 };
 #pragma GCC diagnostic pop
 
-Dir::Dir(F2fs *fs) : VnodeF2fs(fs) {}
-
 Dir::Dir(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 
 block_t Dir::DirBlocks() { return safemath::checked_cast<block_t>(GetBlockCount()); }
@@ -565,11 +563,9 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
     __UNUSED loff_t page_offset;
     TruncateHole(page->index, page->index + 1);
     ClearPageDirtyForIo(page);
-#if 0  // porting needed
-    // ClearPageUptodate(page);
-#endif
-    Vfs()->GetSuperblockInfo().DecPageCount(CountType::kDirtyDents);
-    InodeDecDirtyDents(this);
+    ClearPageUptodate(page);
+    Vfs()->GetSuperblockInfo().SubtractPageCount(CountType::kDirtyDents);
+    RemoveDirtyDentry();
     page_offset = page->index << kPageCacheShift;
   }
 }
@@ -750,13 +746,5 @@ zx_status_t Dir::Readdir(fs::VdirCookie *cookie, void *dirents, size_t len, size
 
   return ret;
 }
-
-#if 0  // porting needed
-// const file_operations f2fs_dir_operations = {
-//   .llseek    = generic_file_llseek,
-//   .read    = generic_read_dir,
-//   .readdir  = f2fs_readdir,
-// };
-#endif
 
 }  // namespace f2fs

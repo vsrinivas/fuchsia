@@ -265,9 +265,7 @@ uint32_t F2fs::ValidInodeCount() {
 }
 
 zx_status_t FlushDirtyNodePage(F2fs* fs, Page* page) {
-  if (!page)
-    return ZX_OK;
-
+  ZX_ASSERT(page != nullptr);
   ZX_ASSERT(page->host == nullptr);
   ZX_ASSERT(page->host_nid == fs->GetSuperblockInfo().GetNodeIno());
 
@@ -306,8 +304,9 @@ bool F2fs::IsValid() const {
 }
 
 zx_status_t FlushDirtyMetaPage(F2fs* fs, Page* page) {
-  if (!page)
+  if (page == nullptr) {
     return ZX_OK;
+  }
 
   ZX_ASSERT(page->host == nullptr);
   ZX_ASSERT(page->host_nid == fs->GetSuperblockInfo().GetMetaIno());
@@ -321,9 +320,7 @@ zx_status_t FlushDirtyMetaPage(F2fs* fs, Page* page) {
 }
 
 zx_status_t FlushDirtyDataPage(F2fs* fs, Page* page) {
-  if (!page)
-    return ZX_OK;
-
+  ZX_ASSERT(page != nullptr);
   ZX_ASSERT(page->host != nullptr);
 
   VnodeF2fs* vnode = static_cast<VnodeF2fs*>(page->host);

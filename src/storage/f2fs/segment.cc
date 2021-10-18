@@ -317,10 +317,10 @@ SegmentManager::SegmentManager(F2fs *fs) : fs_(fs) { superblock_info_ = &fs->Get
 bool SegmentManager::NeedToFlush() {
   uint32_t pages_per_sec =
       (1 << superblock_info_->GetLogBlocksPerSeg()) * superblock_info_->GetSegsPerSec();
-  int node_secs = ((superblock_info_->GetPages(CountType::kDirtyNodes) + pages_per_sec - 1) >>
+  int node_secs = ((superblock_info_->GetPageCount(CountType::kDirtyNodes) + pages_per_sec - 1) >>
                    superblock_info_->GetLogBlocksPerSeg()) /
                   superblock_info_->GetSegsPerSec();
-  int dent_secs = ((superblock_info_->GetPages(CountType::kDirtyDents) + pages_per_sec - 1) >>
+  int dent_secs = ((superblock_info_->GetPageCount(CountType::kDirtyDents) + pages_per_sec - 1) >>
                    superblock_info_->GetLogBlocksPerSeg()) /
                   superblock_info_->GetSegsPerSec();
 
@@ -929,7 +929,7 @@ void SegmentManager::SubmitWritePage(Page *page, block_t blk_addr, PageType type
 
   // 	down_write(&superblock_info->bio_sem);
 
-  // 	superblock_info->IncPageCount(CountType::kWriteback);
+  // 	superblock_info->AddPageCount(CountType::kWriteback);
 
   // 	if (superblock_info->bio[type] && superblock_info->last_block_in_bio[type] != blk_addr - 1)
   // 		do_submit_bio(superblock_info, type, false);
@@ -1776,10 +1776,11 @@ void SegmentManager::InitMinMaxMtime() {
     uint32_t i;
     uint64_t mtime = 0;
 
-    for (i = 0; i < superblock_info_->GetSegsPerSec(); ++i)
+    for (i = 0; i < superblock_info_->GetSegsPerSec(); ++i) {
       mtime += GetSegmentEntry(segno + i).mtime;
+    }
 
-    mtime = DivU64(mtime, superblock_info_->GetSegsPerSec());
+    mtime /= static_cast<uint64_t>(superblock_info_->GetSegsPerSec());
 
     if (sit_info_->min_mtime > mtime) {
       sit_info_->min_mtime = mtime;

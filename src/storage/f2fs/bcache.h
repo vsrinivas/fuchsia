@@ -49,8 +49,6 @@ class Bcache : public fs::TransactionHandler {
   Bcache(Bcache&&) = delete;
   Bcache& operator=(Bcache&&) = delete;
 
-  ~Bcache() = default;
-
   // Destroys a "bcache" object, but take back ownership of the underlying block device.
 #ifdef __Fuchsia__
   static std::unique_ptr<block_client::BlockDevice> Destroy(std::unique_ptr<Bcache> bcache);

@@ -8,9 +8,7 @@
 namespace f2fs {
 class File : public VnodeF2fs, public fbl::Recyclable<File> {
  public:
-  explicit File(F2fs* fs);
   explicit File(F2fs* fs, ino_t ino);
-  ~File() = default;
 
   // Required for memory management, see the class comment above Vnode for more.
   void fbl_recycle() { RecycleNode(); }

@@ -61,13 +61,6 @@ constexpr size_t kReadSync = (kRead | kSync);
 constexpr size_t kWriteSync = (kWrite | kSync);
 constexpr size_t kWriteFlushFua = (kWrite | kSync | kFlush | kFua);
 
-//#define MS_POSIXACL (1 << 16) /* VFS does not apply the umask */
-//#define BUG_ON(a)
-/*#define I_DIRTY_SYNC          (1 << 0)
-#define I_DIRTY_DATASYNC        (1 << 1)
-#define I_DIRTY_PAGES           (1 << 2)
-#define I_DIRTY (I_DIRTY_SYNC | I_DIRTY_DATASYNC | I_DIRTY_PAGES)*/
-
 struct Page {
   uint8_t data[kPageSize];
   pgoff_t index = -1;      // meta = lba, node = node id, file = fileofs;
