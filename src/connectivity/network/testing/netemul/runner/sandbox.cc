@@ -495,6 +495,15 @@ Sandbox::Promise Sandbox::StartChildEnvironment(const ConfiguringEnvironmentPtr&
       });
 }
 
+static fit::closure MakeRecurringTask(async_dispatcher_t* dispatcher, fit::closure cb,
+                                      zx::duration frequency) {
+  return [dispatcher, cb = std::move(cb), frequency]() mutable {
+    cb();
+    async::PostDelayedTask(dispatcher, MakeRecurringTask(dispatcher, std::move(cb), frequency),
+                           frequency);
+  };
+}
+
 Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
                                                  const config::Guest& guest) {
   ASSERT_HELPER_DISPATCHER;
@@ -560,7 +569,7 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
 
         return bridge.consumer.promise();
       })
-      .and_then([&guest](zx::socket& socket) -> PromiseResult {
+      .and_then([this, &guest](zx::socket& socket) -> PromiseResult {
         // Wait until the guest's serial console becomes usable to ensure that the guest has
         // finished booting.
         GuestConsole serial(std::make_unique<ZxSocket>(std::move(socket)));
@@ -582,6 +591,18 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
                 SandboxResult(SandboxResult::Status::SETUP_FAILED,
                               "Could not communicate with guest over serial connection"));
           }
+          // Periodically log the guest state.
+          MakeRecurringTask(
+              main_dispatcher_,
+              [serial = std::move(serial)]() mutable {
+                zx_status_t status =
+                    serial.ExecuteBlocking("journalctl -u guest_interaction_daemon --no-pager", "$",
+                                           zx::time::infinite(), nullptr);
+                if (status != ZX_OK) {
+                  FX_LOGS(ERROR) << "periodic serial task failed: " << zx_status_get_string(status);
+                }
+              },
+              zx::sec(10))();
         }
 
         return fpromise::ok();
