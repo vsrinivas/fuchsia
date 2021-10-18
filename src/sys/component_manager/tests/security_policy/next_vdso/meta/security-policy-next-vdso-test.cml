@@ -1,0 +1,17 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/security-policy-next-vdso-test",
+        use_next_vdso: "true",
+    },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

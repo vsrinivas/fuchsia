@@ -1,0 +1,21 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":security-policy-next-vdso-test" ]
+}
+
+executable("bin") {
+  output_name = "security-policy-next-vdso-test"
+  sources = [ "main.cc" ]
+  deps = [ "//examples/tests:test_suite_lib" ]
+}
+
+fuchsia_unittest_package("security-policy-next-vdso-test") {
+  manifest = "meta/security-policy-next-vdso-test.cml"
+  deps = [ ":bin" ]
+}

@@ -12,5 +12,6 @@ group("tests") {
     "ambient_mark_vmo_exec:tests",
     "capability_allowlist:tests",
     "main_process_critical:tests",
+    "next_vdso:tests",
   ]
 }

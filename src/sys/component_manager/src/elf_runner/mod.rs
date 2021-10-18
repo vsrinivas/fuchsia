@@ -32,7 +32,7 @@ use {
     fidl_fuchsia_diagnostics_types::{
         ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
     },
-    fidl_fuchsia_process as fproc,
+    fidl_fuchsia_io as fio, fidl_fuchsia_process as fproc,
     fidl_fuchsia_process_lifecycle::LifecycleMarker,
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_runtime::{duplicate_utc_clock_handle, job_default, HandleInfo, HandleType},
@@ -41,6 +41,7 @@ use {
         Time,
     },
     futures::channel::oneshot,
+    io_util,
     log::warn,
     moniker::AbsoluteMoniker,
     runner::component::ChannelEpitaph,
@@ -113,6 +114,25 @@ impl TransformClock for zx::ClockTransformation {
     }
 }
 
+const NEXT_VDSO_PATH: &str = "/boot/kernel/vdso/next";
+
+async fn get_next_vdso_vmo() -> Result<zx::Vmo, zx::Status> {
+    let (vdso_file, server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().map_err(|_| zx::Status::NO_MEMORY)?;
+    io_util::node::connect_in_namespace(
+        NEXT_VDSO_PATH,
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
+        server_end.into_channel(),
+    )?;
+    let (status, buffer) = vdso_file
+        .get_buffer(fio::VMO_FLAG_EXACT | fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC)
+        .await
+        .map_err(|_| zx::Status::IO)?;
+    zx::ok(status)?;
+    let vmo = buffer.ok_or(zx::Status::UNAVAILABLE)?.vmo;
+    vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)
+}
+
 // Builds and serves the runtime directory
 /// Runs components with ELF binaries.
 pub struct ElfRunner {
@@ -156,6 +176,7 @@ impl ElfRunner {
         job: zx::Job,
         launcher: &fidl_fuchsia_process::LauncherProxy,
         lifecycle_server: Option<zx::Channel>,
+        custom_vdso: Option<zx::Vmo>,
     ) -> Result<Option<ConfigureLauncherResult>, ElfRunnerError> {
         let bin_path = runner::get_program_binary(&start_info)
             .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
@@ -238,6 +259,13 @@ impl ElfRunner {
             handle: utc_clock.into_handle(),
             id: HandleInfo::new(HandleType::ClockUtc, 0).as_raw(),
         });
+
+        if let Some(custom_vdso) = custom_vdso {
+            handle_infos.push(fproc::HandleInfo {
+                handle: custom_vdso.into_handle(),
+                id: HandleInfo::new(HandleType::VdsoVmo, 0).as_raw(),
+            });
+        }
 
         // Load the component
         let launch_info =
@@ -364,6 +392,16 @@ impl ElfRunner {
                 .map_err(|e| ElfRunnerError::component_job_policy_error(resolved_url.clone(), e))?;
         }
 
+        let mut custom_vdso = None;
+        // If the component uses the "next" VDSO, we need to grab that vDSO from
+        // /boot/kernel/vdso/next and pass it along to the launcher.
+        if program_config.should_use_next_vdso() {
+            let next_vdso = get_next_vdso_vmo()
+                .await
+                .map_err(|e| ElfRunnerError::component_next_vdso_error(resolved_url.clone(), e))?;
+            custom_vdso = Some(next_vdso);
+        }
+
         let (lifecycle_client, lifecycle_server) = match program_config.notify_when_stopped() {
             true => {
                 fidl::endpoints::create_proxy::<LifecycleMarker>().map(|(c, s)| (Some(c), Some(s)))
@@ -385,6 +423,7 @@ impl ElfRunner {
                 job_dup,
                 &launcher,
                 lifecycle_server,
+                custom_vdso,
             )
             .await?
         {
