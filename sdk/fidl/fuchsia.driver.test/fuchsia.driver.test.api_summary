@@ -1,10 +1,11 @@
-const fuchsia.driver.test/LOG_MESSAGE_MAX uint32 1024
-protocol/member fuchsia.driver.test/Logger.LogMessage(string:1024 msg)
-protocol/member fuchsia.driver.test/Logger.LogTestCase(string:256 name,fuchsia.driver.test/TestCaseResult result)
-protocol fuchsia.driver.test/Logger
-const fuchsia.driver.test/TEST_CASE_NAME_MAX uint32 256
-struct/member fuchsia.driver.test/TestCaseResult.failed uint64
-struct/member fuchsia.driver.test/TestCaseResult.passed uint64
-struct/member fuchsia.driver.test/TestCaseResult.skipped uint64
-struct fuchsia.driver.test/TestCaseResult
+protocol/member fuchsia.driver.test/Realm.Start(fuchsia.driver.test/RealmArgs args) -> (fuchsia.driver.test/Realm_Start_Result result)
+protocol fuchsia.driver.test/Realm
+table/member fuchsia.driver.test/RealmArgs.boot fuchsia.io/Directory
+table/member fuchsia.driver.test/RealmArgs.root_driver string
+table/member fuchsia.driver.test/RealmArgs.use_driver_framework_v2 bool
+resource table fuchsia.driver.test/RealmArgs
+struct fuchsia.driver.test/Realm_Start_Response
+union/member fuchsia.driver.test/Realm_Start_Result.err int32
+union/member fuchsia.driver.test/Realm_Start_Result.response fuchsia.driver.test/Realm_Start_Response
+strict union fuchsia.driver.test/Realm_Start_Result
 library fuchsia.driver.test

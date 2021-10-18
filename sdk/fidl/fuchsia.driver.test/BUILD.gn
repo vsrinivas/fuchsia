@@ -5,6 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.driver.test") {
+  sdk_category = "partner"
   sources = [ "realm.fidl" ]
 
   public_deps = [
