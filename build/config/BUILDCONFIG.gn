@@ -567,9 +567,6 @@ set_defaults("executable") {
 default_rust_configs = [
   "//build/config/rust:deny_unused_results",
   "//build/config/rust:allow_unused_results",
-
-  # TODO remove: fxbug.dev/86245
-  "//build/config/rust:allow_unknown_lints",
 ]
 
 set_defaults("rustc_binary") {
