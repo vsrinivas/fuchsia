@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1397
+From //build/config/BUILDCONFIG.gn:1394
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -137,7 +137,7 @@ From //products/bringup.gni:45
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:25
+From //BUILD.gn:26
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -145,7 +145,7 @@ From //products/bringup.gni:45
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:25
+From //BUILD.gn:26
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -160,7 +160,7 @@ From //out/not-default/args.gn:9
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:32
+From //BUILD.gn:33
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -168,7 +168,7 @@ From //out/not-default/args.gn:9
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:32
+From //BUILD.gn:33
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -664,7 +664,7 @@ From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:40
+From //BUILD.gn:41
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -672,7 +672,7 @@ From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:40
+From //BUILD.gn:41
 
 ### camera_debug
 
@@ -1246,7 +1246,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1154
+From //build/config/BUILDCONFIG.gn:1151
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1757,7 +1757,7 @@ From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:59
+From //BUILD.gn:60
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
@@ -1765,7 +1765,7 @@ From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:59
+From //BUILD.gn:60
 
 ### host_os
 
@@ -2168,7 +2168,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:994
+From //build/config/BUILDCONFIG.gn:991
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3571,7 +3571,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1387
+From //build/config/BUILDCONFIG.gn:1384
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3580,7 +3580,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1392
+From //build/config/BUILDCONFIG.gn:1389
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3624,7 +3624,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1200
+From //build/config/BUILDCONFIG.gn:1197
 
 ### size_checker_input
 The input to the size checker.
@@ -3813,7 +3813,7 @@ afterwards.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:46
+From //BUILD.gn:47
 
 ### testonly_in_containers
 Whether to allow testonly=true targets in fuchsia ZBI or base/cache packages.
@@ -3898,7 +3898,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1184
+From //build/config/BUILDCONFIG.gn:1181
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3914,7 +3914,7 @@ From //out/not-default/args.gn:12
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:54
+From //BUILD.gn:55
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot", "//bundles:kitchen_sink"]`
 
@@ -3922,7 +3922,7 @@ From //out/not-default/args.gn:12
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:54
+From //BUILD.gn:55
 
 ### unstable_feature_use_f2fs
 
