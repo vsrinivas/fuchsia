@@ -182,8 +182,8 @@ static bool evictor_pager_backed_test() {
   static constexpr size_t kNumPages = 22;
   ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo));
 
-  // Promote the pages for eviction i.e. mark them inactive (first in line for eviction).
-  vmo->PromoteForReclamation();
+  // Promote the pages for eviction.
+  vmo->HintRange(0, kNumPages * PAGE_SIZE, VmObject::EvictionHint::DontNeed);
 
   TestPmmNode node;
   // Only evict from pager backed vmos.
@@ -217,8 +217,8 @@ static bool evictor_pager_backed_test() {
   // Re-initialize the vmo and try again with a different target.
   vmo.reset();
   ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo));
-  // Promote the pages for eviction i.e. mark them inactive (first in line for eviction).
-  vmo->PromoteForReclamation();
+  // Promote the pages for eviction.
+  vmo->HintRange(0, kNumPages * PAGE_SIZE, VmObject::EvictionHint::DontNeed);
 
   target = Evictor::EvictionTarget{
       .pending = true,
@@ -361,8 +361,8 @@ static bool evictor_pager_backed_and_discardable_test() {
   ASSERT_EQ(ZX_OK,
             create_committed_unlocked_discardable_vmo(kNumPages * PAGE_SIZE, &vmo_discardable));
 
-  // Promote the pages for eviction i.e. mark them inactive (first in line for eviction).
-  vmo_pager->PromoteForReclamation();
+  // Promote the pages for eviction.
+  vmo_pager->HintRange(0, kNumPages * PAGE_SIZE, VmObject::EvictionHint::DontNeed);
 
   TestPmmNode node;
   // Half the pages will be evicted from pager backed and the other half from discardable vmos.
@@ -403,8 +403,8 @@ static bool evictor_pager_backed_and_discardable_test() {
   ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo_pager));
   ASSERT_EQ(ZX_OK,
             create_committed_unlocked_discardable_vmo(kNumPages * PAGE_SIZE, &vmo_discardable));
-  // Promote the pages for eviction i.e. mark them inactive (first in line for eviction).
-  vmo_pager->PromoteForReclamation();
+  // Promote the pages for eviction.
+  vmo_pager->HintRange(0, kNumPages * PAGE_SIZE, VmObject::EvictionHint::DontNeed);
 
   target = Evictor::EvictionTarget{
       .pending = true,
@@ -441,8 +441,8 @@ static bool evictor_free_target_test() {
   static constexpr size_t kNumPages = 111;
   ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo));
 
-  // Promote the pages for eviction i.e. mark them inactive (first in line for eviction).
-  vmo->PromoteForReclamation();
+  // Promote the pages for eviction.
+  vmo->HintRange(0, kNumPages * PAGE_SIZE, VmObject::EvictionHint::DontNeed);
 
   TestPmmNode node;
   // Only evict from pager backed vmos.
@@ -538,8 +538,8 @@ static bool evictor_continuous_test() {
   static constexpr size_t kNumPages = 44;
   ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo));
 
-  // Promote the pages for eviction i.e. mark them inactive (first in line for eviction).
-  vmo->PromoteForReclamation();
+  // Promote the pages for eviction.
+  vmo->HintRange(0, kNumPages * PAGE_SIZE, VmObject::EvictionHint::DontNeed);
 
   TestPmmNode node;
 
@@ -593,8 +593,8 @@ static bool evictor_continuous_combine_targets_test() {
   static constexpr size_t kNumPages = 22;
   ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo));
 
-  // Promote the pages for eviction i.e. mark them inactive (first in line for eviction).
-  vmo->PromoteForReclamation();
+  // Promote the pages for eviction.
+  vmo->HintRange(0, kNumPages * PAGE_SIZE, VmObject::EvictionHint::DontNeed);
 
   TestPmmNode node;
 
@@ -670,8 +670,8 @@ static bool evictor_continuous_repeated_test() {
   static constexpr size_t kNumPages = 44;
   ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo));
 
-  // Promote the pages for eviction i.e. mark them inactive (first in line for eviction).
-  vmo->PromoteForReclamation();
+  // Promote the pages for eviction.
+  vmo->HintRange(0, kNumPages * PAGE_SIZE, VmObject::EvictionHint::DontNeed);
 
   TestPmmNode node;
 
@@ -775,8 +775,8 @@ static bool evictor_continuous_repeated_test() {
   END_TEST;
 }
 
-// Test that the evictor can evict inactive pager backed pages as expected.
-static bool evictor_inactive_pager_backed_test() {
+// Test that the evictor can evict DontNeed hinted pager backed pages as expected.
+static bool evictor_dont_need_pager_backed_test() {
   BEGIN_TEST;
   AutoVmScannerDisable scanner_disable;
 
@@ -785,11 +785,10 @@ static bool evictor_inactive_pager_backed_test() {
   static constexpr size_t kNumPages = 5;
   ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo1));
 
-  // Promote the pages for eviction i.e. mark them inactive (first in line for eviction). This will
-  // put these pages in the inactive queue.
-  vmo1->PromoteForReclamation();
+  // Promote the pages for eviction. This will put these pages in the DontNeed queue.
+  vmo1->HintRange(0, kNumPages * PAGE_SIZE, VmObject::EvictionHint::DontNeed);
   // Now touch these pages, changing the queue stashed in their vm_page_t without actually moving
-  // them from the inactive queue. The expectation is that the next eviction attempt will fix up the
+  // them from the DontNeed queue. The expectation is that the next eviction attempt will fix up the
   // queue for these pages.
   for (size_t i = 0; i < kNumPages; i++) {
     uint8_t data;
@@ -801,9 +800,9 @@ static bool evictor_inactive_pager_backed_test() {
   fbl::RefPtr<VmObjectPaged> vmo2;
   ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo2));
 
-  // Promote the pages for eviction i.e. mark them inactive. This will put these pages in the
-  // inactive queue in LRU order, i.e. they will be considered for eviction only after vmo1's pages.
-  vmo2->PromoteForReclamation();
+  // Promote the pages for eviction. This will put these pages in the DontNeed queue in LRU order,
+  // i.e. they will be considered for eviction only after vmo1's pages.
+  vmo2->HintRange(0, kNumPages * PAGE_SIZE, VmObject::EvictionHint::DontNeed);
 
   TestPmmNode node;
   // Only evict from pager backed vmos.
@@ -850,7 +849,7 @@ VM_UNITTEST(evictor_free_target_test)
 VM_UNITTEST(evictor_continuous_test)
 VM_UNITTEST(evictor_continuous_combine_targets_test)
 VM_UNITTEST(evictor_continuous_repeated_test)
-VM_UNITTEST(evictor_inactive_pager_backed_test)
+VM_UNITTEST(evictor_dont_need_pager_backed_test)
 UNITTEST_END_TESTCASE(evictor_tests, "evictor", "Evictor tests")
 
 }  // namespace vm_unittest

@@ -106,13 +106,6 @@ VmObjectPaged::~VmObjectPaged() {
   }
 }
 
-void VmObjectPaged::PromoteForReclamation() {
-  canary_.Assert();
-
-  Guard<Mutex> guard{lock()};
-  cow_pages_locked()->PromoteRangeForReclamationLocked(0, size_locked());
-}
-
 zx_status_t VmObjectPaged::HintRange(uint64_t offset, uint64_t len, EvictionHint hint) {
   canary_.Assert();
 

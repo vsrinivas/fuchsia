@@ -237,11 +237,6 @@ class VmObjectPaged final : public VmObject {
     return ret;
   }
 
-  // Promote this VMO's pages for reclamation under memory pressure.
-  // Currently used only for pager-backed VMOs to move their pages to the end of the
-  // pager-backed queue, so that they can be evicted first.
-  void PromoteForReclamation();
-
   // Hint how the specified range is intended to be used, so that the hint can be taken into
   // consideration when reclaiming pages under memory pressure (if applicable).
   zx_status_t HintRange(uint64_t offset, uint64_t len, EvictionHint hint) override;

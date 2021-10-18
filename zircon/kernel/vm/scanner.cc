@@ -347,9 +347,6 @@ static void scanner_init_func(uint level) {
     scanner_operation.fetch_or(kScannerOpDisable);
     scanner_request_event.Signal();
   }
-  if (gBootOptions->page_scanner_promote_no_clones) {
-    VmObject::EnableEvictionPromoteNoClones();
-  }
   page_table_reclaim_policy = gBootOptions->page_scanner_page_table_eviction_policy;
   page_table_evict_time =
       ZX_SEC(ktl::max(gBootOptions->page_scanner_page_table_eviction_period, 1u));
