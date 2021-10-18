@@ -43,8 +43,8 @@ board_zedboot_bootfs_labels += _common_bootfs_deps
 board_recovery_bootfs_labels += _common_bootfs_deps
 
 board_system_image_deps += [
-  "//garnet/packages/prod:magma-vsi-vip",
   "//src/graphics/drivers/msd-arm-mali:msd-system",
+  "//src/graphics/drivers/msd-vsi-vip",
   "//src/media/drivers/amlogic_decoder",
 ]
 
