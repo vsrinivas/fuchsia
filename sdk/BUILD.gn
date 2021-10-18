@@ -13,7 +13,6 @@ import("//sdk/cts/build/cts_sdk.gni")
 import("config.gni")
 
 _sdk_public_deps = [
-  ":bootstrap",
   ":core",
   ":e2e_testing",
   ":modular_testing",
@@ -53,7 +52,6 @@ group("sdk.modular") {
   testonly = true
 
   public_deps = [
-    ":bootstrap",
     ":core.modular",
     ":ddk",
     ":host_tools.all",
@@ -474,29 +472,6 @@ if (is_host) {
       "//zircon/tools/zbi:zbi_sdk",
     ]
   }
-}
-
-# This SDK is much smaller than the "core" SDK and is useful for bringing up new
-# libc implementations.
-sdk("bootstrap") {
-  id = sdk_id
-
-  category = "partner"
-
-  api = "manifests/bootstrap.manifest"
-
-  testonly = true
-
-  deps = [
-    ":license",
-    "docs",
-    "//sdk/lib/fdio:fdio_sdk",
-    "//zircon/public/sysroot/sdk:sysroot_sdk",
-    "//zircon/system/ulib/async:async-cpp_sdk",
-    "//zircon/system/ulib/async:async_sdk",
-    "//zircon/system/ulib/sync:sync_sdk",
-    "//zircon/system/ulib/zx:zx_sdk",
-  ]
 }
 
 # The `modular_testing` SDK provides FIDL protocols and C++ libraries for writing hermetic

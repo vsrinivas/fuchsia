@@ -53,7 +53,6 @@ ALLOWED_CTS_DIRS = [
 
 # This list should be kept up to date with the public and partner SDKs in //sdk:sdk.
 ALLOWED_CTS_SDKS = [
-  "//sdk:bootstrap",
   "//sdk:core",
   "//sdk:e2e_testing",
   "//sdk:modular_testing",
