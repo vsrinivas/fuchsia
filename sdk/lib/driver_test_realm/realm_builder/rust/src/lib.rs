@@ -12,31 +12,19 @@ use {
 };
 
 pub const COMPONENT_NAME: &str = "driver_test_realm";
+pub const DRIVER_TEST_REALM_URL: &str = "#meta/driver_test_realm.cm";
 
 #[async_trait::async_trait]
 pub trait DriverTestRealmBuilder {
     /// Set up the DriverTestRealm component in the RealmBuilder realm.
     /// This configures proper input/output routing of capabilities.
     async fn driver_test_realm_setup(&mut self) -> Result<()>;
-
-    /// Set up the DriverTestrealm component from a specific URL.
-    async fn driver_test_realm_setup_with_url(&mut self, driver_test_realm_url: &str)
-        -> Result<()>;
 }
 
 #[async_trait::async_trait]
 impl DriverTestRealmBuilder for RealmBuilder {
     async fn driver_test_realm_setup(&mut self) -> Result<()> {
-        self.driver_test_realm_setup_with_url("#meta/driver_test_realm.cm").await
-    }
-
-    // TODO(fxbug.dev/85884): This function only exists because relative URLs in collections in
-    // RealmBuilder aren't working at the moment.
-    async fn driver_test_realm_setup_with_url(
-        &mut self,
-        driver_test_realm_url: &str,
-    ) -> Result<()> {
-        self.add_component(COMPONENT_NAME, ComponentSource::url(driver_test_realm_url)).await?;
+        self.add_component(COMPONENT_NAME, ComponentSource::url(DRIVER_TEST_REALM_URL)).await?;
 
         let driver_realm = RouteEndpoint::component(COMPONENT_NAME);
         self.add_route(CapabilityRoute {

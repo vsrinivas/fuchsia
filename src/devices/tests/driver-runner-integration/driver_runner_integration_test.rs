@@ -42,11 +42,7 @@ async fn driver_runner_test() -> Result<(), anyhow::Error> {
 
     let mut realm = RealmBuilder::new().await?;
     // TODO(fxbug.dev/85884): This should be a relative URL but then driver_host2.cm doesn't resolve correctly.
-    realm
-        .driver_test_realm_setup_with_url(
-            "fuchsia-pkg://fuchsia.com/driver_runner_integration_test#meta/driver_test_realm.cm",
-        )
-        .await?;
+    realm.driver_test_realm_setup().await?;
 
     let instance = realm.build().create().await?;
 
