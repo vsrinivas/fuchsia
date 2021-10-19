@@ -166,6 +166,11 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   // calls device_get_metadata
   void SetMetadata(uint32_t type, const void* data, size_t data_length);
 
+  // Variables are often set for the parent of a device, to be available when the device
+  // calls device_get_variable.
+  // Passing in nullptr for |data| will unset the variable.
+  void SetVariable(const char* name, const char* data);
+
   // device_get_protocol is usually called by child devices to get their parent protocols.
   // You can add protocols here to your device or your parent device.
   // if you want to add a protocol to a fragment, add the fragment's name as 'name'.
@@ -267,6 +272,11 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   zx_status_t GetMetadataSize(uint32_t type, size_t* out_size);
   friend zx_status_t device_get_metadata_size(zx_device_t* device, uint32_t type, size_t* out_size);
 
+  // device_get_varaible calls GetVariable:
+  zx_status_t GetVariable(const char* name, char* out, size_t size, size_t* size_actual);
+  friend zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out,
+                                         size_t size, size_t* size_actual);
+
   // Default constructor for making root parent:
   explicit MockDevice() {}
 
@@ -285,6 +295,8 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
 
   // Map of metadata set by SetMetadata.
   std::unordered_map<uint32_t, std::vector<uint8_t>> metadata_;
+  // Map of variables set by SetVariable.
+  std::unordered_map<const char*, std::string> variables_;
 
   // parent in the device tree
   MockDevice* parent_ = nullptr;  // This will default to a nullptr, for the root parent.

@@ -149,6 +149,18 @@ void MockDevice::SetMetadata(uint32_t type, const void* data, size_t data_length
   PropagateMetadata();
 }
 
+void MockDevice::SetVariable(const char* name, const char* data) {
+  if (data) {
+    std::string owned(data);
+    variables_[name] = std::move(owned);
+  } else {
+    auto itr = variables_.find(name);
+    if (itr != variables_.end()) {
+      variables_.erase(itr);
+    }
+  }
+}
+
 zx_status_t MockDevice::GetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) {
   auto itr = metadata_.find(type);
   if (itr != metadata_.end()) {
@@ -172,6 +184,24 @@ zx_status_t MockDevice::GetMetadataSize(uint32_t type, size_t* out_size) {
     return ZX_OK;
   }
   return ZX_ERR_BAD_STATE;
+}
+
+zx_status_t MockDevice::GetVariable(const char* name, char* out, size_t size, size_t* actual) {
+  auto itr = variables_.find(name);
+  if (itr == variables_.end()) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  auto& variable = itr->second;
+  if (actual) {
+    *actual = variable.size();
+  }
+  if (size < variable.size()) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+
+  strncpy(out, variable.data(), size);
+  return ZX_OK;
 }
 
 void MockDevice::PropagateMetadata() {

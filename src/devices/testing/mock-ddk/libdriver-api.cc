@@ -231,7 +231,8 @@ __EXPORT __WEAK zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_devic
 
 __EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out,
                                          size_t out_size, size_t* size_actual) {
-  return ZX_ERR_NOT_FOUND;
+
+  return device->GetVariable(name, out, out_size, size_actual);
 }
 
 __EXPORT
