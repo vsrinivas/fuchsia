@@ -33,7 +33,7 @@
         { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
         // Use the Realm protocol to bind to child components
         {
-            protocol: "fuchsia.sys2.Realm",
+            protocol: "fuchsia.component.Realm",
             from: "framework",
         },
     ],
