@@ -205,6 +205,61 @@ tcp6_result tcp6_open(tcp6_socket* socket, efi_boot_services* boot_services,
   return TCP6_RESULT_SUCCESS;
 }
 
+tcp6_result tcp6_accept(tcp6_socket* socket) {
+  // Currently for simplicity we only support a single TCP client at a time.
+  if (socket->client_protocol != NULL) {
+    ELOG("A TCP client is already connected");
+    return TCP6_RESULT_ERROR;
+  }
+
+  // If we don't have a server_event yet, start listening on this socket.
+  if (socket->server_accept_token.CompletionToken.Event == NULL) {
+    DLOG("Creating TCP6 listen event");
+    efi_status status = socket->boot_services->CreateEvent(
+        0, 0, NULL, NULL, &socket->server_accept_token.CompletionToken.Event);
+    if (status != EFI_SUCCESS) {
+      ELOG_S(status, "Failed to create TCP6 listen event");
+      return TCP6_RESULT_ERROR;
+    }
+
+    DLOG("Accepting incoming TCP6 connections");
+    status = socket->server_protocol->Accept(socket->server_protocol, &socket->server_accept_token);
+    if (status != EFI_SUCCESS) {
+      ELOG_S(status, "TCP accept failed");
+      reset_token(socket->boot_services, &socket->server_accept_token.CompletionToken);
+      return TCP6_RESULT_ERROR;
+    }
+  }
+
+  tcp6_result result =
+      check_token(socket->boot_services, &socket->server_accept_token.CompletionToken);
+  if (result == TCP6_RESULT_SUCCESS) {
+    DLOG("TCP6 client is ready");
+    socket->client_handle = socket->server_accept_token.NewChildHandle;
+    efi_status status = socket->boot_services->OpenProtocol(
+        socket->client_handle, &kTcp6ProtocolGuid, (void**)&socket->client_protocol, gImg, NULL,
+        EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
+    if (status != EFI_SUCCESS) {
+      ELOG_S(status, "Failed to open TCP client protocol");
+      return TCP6_RESULT_ERROR;
+    }
+
+    // Lookup and print the client IP if we're debug logging.
+    if (DEBUG_LOGGING) {
+      efi_tcp6_config_data config_data = {};
+      status = socket->client_protocol->GetModeData(socket->client_protocol, NULL, &config_data,
+                                                    NULL, NULL, NULL);
+      if (status != EFI_SUCCESS) {
+        WLOG_S(status, "Failed to fetch new client IP");
+      } else {
+        char ip_buffer[IP6TOAMAX];
+        LOG("New TCP client: %s", ip6toa(ip_buffer, &config_data.AccessPoint.RemoteAddress));
+      }
+    }
+  }
+  return result;
+}
+
 static tcp6_result close_protocol(efi_boot_services* boot_services, efi_tcp6_protocol* protocol,
                                   efi_handle handle, efi_tcp6_close_token* close_token) {
   // No-op if we don't currently have a connected protocol.
@@ -243,10 +298,34 @@ static tcp6_result close_protocol(efi_boot_services* boot_services, efi_tcp6_pro
   return result;
 }
 
+tcp6_result tcp6_disconnect(tcp6_socket* socket) {
+  DLOG("Closing TCP6 client protocol");
+  tcp6_result result = close_protocol(socket->boot_services, socket->client_protocol,
+                                      socket->client_handle, &socket->client_close_token);
+  if (result == TCP6_RESULT_SUCCESS) {
+    DLOG("TCP6 client disconnect complete");
+    // We shouldn't need to do anything else to close the client_handle, once an
+    // EFI handle has no open protocols it closes automatically.
+    socket->client_handle = NULL;
+    socket->client_protocol = NULL;
+  }
+  return result;
+}
+
 tcp6_result tcp6_close(tcp6_socket* socket) {
+  // Close any connected client first, and wait until it's fully closed before
+  // continuing on to tearing down the rest of the socket.
+  //
+  // We could probably close the server socket concurrently, but it's simpler
+  // this way and works just as well for our purposes.
+  tcp6_result result = tcp6_disconnect(socket);
+  if (result != TCP6_RESULT_SUCCESS) {
+    return result;
+  }
+
   DLOG("Closing TCP6 server protocol");
-  tcp6_result result = close_protocol(socket->boot_services, socket->server_protocol,
-                                      socket->server_handle, &socket->server_close_token);
+  result = close_protocol(socket->boot_services, socket->server_protocol, socket->server_handle,
+                          &socket->server_close_token);
   if (result != TCP6_RESULT_SUCCESS) {
     return result;
   }

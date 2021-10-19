@@ -28,14 +28,18 @@ using ::testing::Unused;
 
 const efi_handle kTcpBindingHandle = reinterpret_cast<efi_handle>(0x10);
 const efi_handle kTcpServerHandle = reinterpret_cast<efi_handle>(0x20);
+const efi_handle kTcpClientHandle = reinterpret_cast<efi_handle>(0x30);
 const efi_handle kTestEvent = reinterpret_cast<efi_event>(0x100);
 const efi_ipv6_addr kTestAddress = {.addr = {0x01, 0x23, 0x45, 0x67}};
 const uint16_t kTestPort = 12345;
 
 // Test fixture to handle common setup/teardown.
 //
-// Configures mocks such that opening and closing a tcp6_socket will succeed.
+// Configures mocks such that tcp6_*() functions will succeed by default.
 // Tests can use EXPECT_CALL() to override default behavior if needed.
+//
+// Additionally tracks event create/close calls to make sure every created
+// event is also closed.
 class TcpTest : public Test {
  public:
   void SetUp() override {
@@ -66,23 +70,44 @@ class TcpTest : public Test {
           return EFI_SUCCESS;
         });
 
-    // It's important to create non-null events, since the TCP code checks
-    // against null to determine if the event is pending or not.
-    ON_CALL(mock_boot_services_, CreateEvent)
-        .WillByDefault([](Unused, Unused, Unused, Unused, efi_event* event) {
-          *event = kTestEvent;
+    // Accepting a client.
+    ON_CALL(mock_server_protocol_, Accept).WillByDefault([](efi_tcp6_listen_token* listen_token) {
+      listen_token->NewChildHandle = kTcpClientHandle;
+      return EFI_SUCCESS;
+    });
+    ON_CALL(mock_boot_services_,
+            OpenProtocol(kTcpClientHandle, MatchGuid(EFI_TCP6_PROTOCOL_GUID), _, _, _, _))
+        .WillByDefault([this](Unused, Unused, void** intf, Unused, Unused, Unused) {
+          *intf = mock_client_protocol_.protocol();
           return EFI_SUCCESS;
         });
 
     // For tcp6_close(), the default behavior of returning 0 (EFI_SUCCESS)
     // works without any explicit mocking.
     static_assert(EFI_SUCCESS == 0, "Fix tcp6_close() mocking");
+
+    // It's important to create non-null events, since the TCP code checks
+    // against null to determine if the event is pending or not.
+    ON_CALL(mock_boot_services_, CreateEvent)
+        .WillByDefault([this](Unused, Unused, Unused, Unused, efi_event* event) {
+          open_events_++;
+          *event = kTestEvent;
+          return EFI_SUCCESS;
+        });
+    ON_CALL(mock_boot_services_, CloseEvent(kTestEvent)).WillByDefault([this](Unused) {
+      EXPECT_GT(open_events_, 0);
+      open_events_--;
+      return EFI_SUCCESS;
+    });
   }
 
-  // Adds expectations that all the socket members will be closed.
+  void TearDown() override { EXPECT_EQ(open_events_, 0); }
+
+  // Adds expectations that the socket server and binding protocols are closed.
+  //
   // This isn't necessary for proper functionality, it only adds checks that all
   // the members are closed out if a test wants to specifically look for that.
-  void ExpectSocketClose() {
+  void ExpectServerClose() {
     InSequence sequence;
     // Closing the server.
     EXPECT_CALL(mock_server_protocol_, Close);
@@ -96,6 +121,21 @@ class TcpTest : public Test {
     EXPECT_CALL(
         mock_boot_services_,
         CloseProtocol(kTcpBindingHandle, MatchGuid(EFI_TCP6_SERVICE_BINDING_PROTOCOL_GUID), _, _));
+  }
+
+  // Adds expectations that the socket client is disconnected.
+  //
+  // This isn't necessary for proper functionality, it only adds checks that all
+  // the members are closed out if a test wants to specifically look for that.
+  void ExpectDisconnect() {
+    InSequence sequence;
+    // Closing the client.
+    EXPECT_CALL(mock_client_protocol_, Close);
+
+    // Closing the client protocol. We don't need to close the client handle,
+    // once the last protocol is closed EFI automatically frees the handle.
+    EXPECT_CALL(mock_boot_services_,
+                CloseProtocol(kTcpClientHandle, MatchGuid(EFI_TCP6_PROTOCOL_GUID), _, _));
   }
 
   // Allocates a handle buffer and sets it to the given contents.
@@ -121,6 +161,11 @@ class TcpTest : public Test {
   NiceMock<MockBootServices> mock_boot_services_;
   NiceMock<MockServiceBindingProtocol> mock_binding_protocol_;
   NiceMock<MockTcp6Protocol> mock_server_protocol_;
+  NiceMock<MockTcp6Protocol> mock_client_protocol_;
+
+  // Track the number of created events so we can always make sure we close
+  // every event we create.
+  int open_events_ = 0;
 };
 
 TEST_F(TcpTest, Open) {
@@ -232,16 +277,152 @@ TEST_F(TcpTest, OpenFailConfig) {
 
   EXPECT_CALL(mock_server_protocol_, Configure).WillOnce(Return(EFI_INVALID_PARAMETER));
   // We should close everything out.
-  ExpectSocketClose();
+  ExpectServerClose();
 
   EXPECT_EQ(TCP6_RESULT_ERROR,
             tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
 }
 
+TEST_F(TcpTest, Accept) {
+  tcp6_socket socket = {};
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  // No client should be set until tcp6_accept().
+  EXPECT_EQ(socket.client_handle, nullptr);
+  EXPECT_EQ(socket.client_protocol, nullptr);
+
+  EXPECT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+  EXPECT_EQ(socket.client_handle, kTcpClientHandle);
+  EXPECT_EQ(socket.client_protocol, mock_client_protocol_.protocol());
+}
+
+TEST_F(TcpTest, AcceptPending) {
+  tcp6_socket socket = {};
+
+  EXPECT_CALL(mock_boot_services_, CheckEvent(kTestEvent))
+      .WillOnce(Return(EFI_NOT_READY))  // Accept() #1
+      .WillOnce(Return(EFI_SUCCESS));   // Accept() #2
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+
+  EXPECT_EQ(TCP6_RESULT_PENDING, tcp6_accept(&socket));
+  EXPECT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+  EXPECT_EQ(socket.client_handle, kTcpClientHandle);
+  EXPECT_EQ(socket.client_protocol, mock_client_protocol_.protocol());
+}
+
+TEST_F(TcpTest, AcceptFailCreateEvent) {
+  tcp6_socket socket = {};
+
+  EXPECT_CALL(mock_boot_services_, CreateEvent).WillOnce(Return(EFI_OUT_OF_RESOURCES));
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+
+  EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_accept(&socket));
+}
+
+TEST_F(TcpTest, AcceptFailAccept) {
+  tcp6_socket socket = {};
+
+  EXPECT_CALL(mock_server_protocol_, Accept).WillOnce(Return(EFI_OUT_OF_RESOURCES));
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+
+  EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_accept(&socket));
+}
+
+TEST_F(TcpTest, AcceptFailCheckEvent) {
+  tcp6_socket socket = {};
+
+  EXPECT_CALL(mock_boot_services_, CheckEvent).WillOnce(Return(EFI_OUT_OF_RESOURCES));
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+
+  EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_accept(&socket));
+}
+
+TEST_F(TcpTest, AcceptFailStatusError) {
+  tcp6_socket socket = {};
+
+  // The accept event completes, but with an error status.
+  EXPECT_CALL(mock_server_protocol_, Accept).WillOnce([](efi_tcp6_listen_token* listen_token) {
+    listen_token->CompletionToken.Status = EFI_OUT_OF_RESOURCES;
+    return EFI_SUCCESS;
+  });
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+
+  EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_accept(&socket));
+}
+
+TEST_F(TcpTest, AcceptFailOpenClientProtocol) {
+  tcp6_socket socket = {};
+
+  EXPECT_CALL(mock_boot_services_, OpenProtocol(kTcpBindingHandle, _, _, _, _, _));
+  EXPECT_CALL(mock_boot_services_, OpenProtocol(kTcpServerHandle, _, _, _, _, _));
+  EXPECT_CALL(mock_boot_services_, OpenProtocol(kTcpClientHandle, _, _, _, _, _))
+      .WillOnce(Return(EFI_UNSUPPORTED));
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+
+  EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_accept(&socket));
+}
+
+TEST_F(TcpTest, Disconnect) {
+  tcp6_socket socket = {};
+
+  ExpectDisconnect();
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_SUCCESS, tcp6_disconnect(&socket));
+}
+
+TEST_F(TcpTest, DisconnectTwice) {
+  tcp6_socket socket = {};
+
+  // We should only try to disconnect once, the second should be a no-op.
+  ExpectDisconnect();
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_SUCCESS, tcp6_disconnect(&socket));
+  EXPECT_EQ(TCP6_RESULT_SUCCESS, tcp6_disconnect(&socket));
+}
+
+TEST_F(TcpTest, DisconnectPending) {
+  tcp6_socket socket = {};
+
+  // Accept is ready the first time, but disconnect isn't.
+  EXPECT_CALL(mock_boot_services_, CheckEvent(kTestEvent))
+      .WillOnce(Return(EFI_SUCCESS))    // Accept()
+      .WillOnce(Return(EFI_NOT_READY))  // Close() #1
+      .WillOnce(Return(EFI_SUCCESS));   // Close() #2
+  ExpectDisconnect();
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_PENDING, tcp6_disconnect(&socket));
+  EXPECT_EQ(TCP6_RESULT_SUCCESS, tcp6_disconnect(&socket));
+}
+
 TEST_F(TcpTest, Close) {
   tcp6_socket socket = {};
 
-  ExpectSocketClose();
+  ExpectServerClose();
 
   EXPECT_EQ(TCP6_RESULT_SUCCESS,
             tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
@@ -249,6 +430,20 @@ TEST_F(TcpTest, Close) {
 
   EXPECT_EQ(socket.binding_protocol, nullptr);
   EXPECT_EQ(socket.server_protocol, nullptr);
+  EXPECT_EQ(socket.client_protocol, nullptr);
+}
+
+TEST_F(TcpTest, CloseWithClient) {
+  tcp6_socket socket = {};
+
+  InSequence sequence;
+  ExpectDisconnect();
+  ExpectServerClose();
+
+  EXPECT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  EXPECT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+  EXPECT_EQ(TCP6_RESULT_SUCCESS, tcp6_close(&socket));
 }
 
 TEST_F(TcpTest, CloseTwice) {
@@ -256,7 +451,7 @@ TEST_F(TcpTest, CloseTwice) {
 
   // All these functions should still only be called once, closing the socket
   // a second time should be a no-op.
-  ExpectSocketClose();
+  ExpectServerClose();
 
   EXPECT_EQ(TCP6_RESULT_SUCCESS,
             tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
@@ -269,11 +464,11 @@ TEST_F(TcpTest, ClosePending) {
 
   // Have the close event not be ready on the first check.
   EXPECT_CALL(mock_boot_services_, CheckEvent(kTestEvent))
-      .WillOnce(Return(EFI_NOT_READY))
-      .WillOnce(Return(EFI_SUCCESS));
+      .WillOnce(Return(EFI_NOT_READY))  // Close() #1
+      .WillOnce(Return(EFI_SUCCESS));   // Close() #2
 
   // All the members should still be closed exactly once each.
-  ExpectSocketClose();
+  ExpectServerClose();
 
   EXPECT_EQ(TCP6_RESULT_SUCCESS,
             tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));

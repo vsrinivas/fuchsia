@@ -55,7 +55,13 @@ typedef struct {
   // The server protocol for accepting new client connections.
   efi_handle server_handle;
   efi_tcp6_protocol* server_protocol;
+  efi_tcp6_listen_token server_accept_token;
   efi_tcp6_close_token server_close_token;
+
+  // The client protocol for talking to a client.
+  efi_handle client_handle;
+  efi_tcp6_protocol* client_protocol;
+  efi_tcp6_close_token client_close_token;
 } tcp6_socket;
 
 typedef enum {
@@ -84,7 +90,33 @@ typedef enum {
 tcp6_result tcp6_open(tcp6_socket* socket, efi_boot_services* boot_services,
                       const efi_ipv6_addr* address, uint16_t port);
 
+// Accepts an incoming TCP client connection.
+//
+// Only one TCP client is currently supported at a time. Once a client is
+// connected, this cannot be called again until tcp6_disconnect() completes.
+//
+// Returns:
+//   TCP6_RESULT_SUCCESS
+//   TCP6_RESULT_PENDING
+//   TCP6_RESULT_ERROR
+tcp6_result tcp6_accept(tcp6_socket* socket);
+
+// Disconnects the currently connected TCP client.
+//
+// This performs a graceful shutdown; any pending TX data is flushed and the
+// TCP close handshake is performed before returning TCP6_RESULT_SUCCESS.
+//
+// No-op if there is no connected TCP client.
+//
+// Returns:
+//   TCP6_RESULT_SUCCESS
+//   TCP6_RESULT_PENDING
+//   TCP6_RESULT_ERROR
+tcp6_result tcp6_disconnect(tcp6_socket* socket);
+
 // Closes a TCP socket.
+//
+// Automatically calls tcp6_disconnect().
 //
 // The given |socket| cannot be reused until this function returns
 // TCP6_RESULT_SUCCESS.
