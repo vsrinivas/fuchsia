@@ -4,9 +4,9 @@
 
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
+#include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/termination_reason.h>
-#include <lib/sys/cpp/testing/realm_builder.h>
-#include <lib/sys/cpp/testing/realm_builder_types.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>

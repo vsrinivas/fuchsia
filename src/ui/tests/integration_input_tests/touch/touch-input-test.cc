@@ -15,7 +15,6 @@
 #include <fuchsia/posix/socket/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/sys2/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
@@ -27,9 +26,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
+#include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/realm_builder.h>
-#include <lib/sys/cpp/testing/realm_builder_types.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>

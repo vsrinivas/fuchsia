@@ -7,8 +7,8 @@
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
-#ifndef LIB_SYS_CPP_TESTING_INTERNAL_ERRORS_H_
-#define LIB_SYS_CPP_TESTING_INTERNAL_ERRORS_H_
+#ifndef LIB_SYS_COMPONENT_CPP_TESTING_INTERNAL_ERRORS_H_
+#define LIB_SYS_COMPONENT_CPP_TESTING_INTERNAL_ERRORS_H_
 
 namespace sys::testing::internal {
 
@@ -22,29 +22,29 @@ void PanicWithMessage(const char* stacktrace, const char* context,
 
 }  // namespace sys::testing::internal
 
-#define ASSERT_STATUS_OK(method, status)                                                   \
+#define ZX_SYS_ASSERT_STATUS_OK(method, status)                                            \
   do {                                                                                     \
     if ((status) != ZX_OK) {                                                               \
       ::sys::testing::internal::PanicWithMessage(__PRETTY_FUNCTION__, (method), (status)); \
     }                                                                                      \
   } while (0)
 
-#define ASSERT_RESULT_OK(method, result)                                                         \
+#define ZX_SYS_ASSERT_RESULT_OK(method, result)                                                  \
   do {                                                                                           \
     if ((result).is_err()) {                                                                     \
       ::sys::testing::internal::PanicWithMessage(__PRETTY_FUNCTION__, (method), (result).err()); \
     }                                                                                            \
   } while (0)
 
-#define ASSERT_STATUS_AND_RESULT_OK(method, status, result) \
-  do {                                                      \
-    ASSERT_STATUS_OK((method), (status));                   \
-    ASSERT_RESULT_OK((method), (result));                   \
+#define ZX_SYS_ASSERT_STATUS_AND_RESULT_OK(method, status, result) \
+  do {                                                             \
+    ZX_SYS_ASSERT_STATUS_OK((method), (status));                   \
+    ZX_SYS_ASSERT_RESULT_OK((method), (result));                   \
   } while (0)
 
-#define ASSERT_NOT_NULL(value)                                                                  \
+#define ZX_SYS_ASSERT_NOT_NULL(value)                                                           \
   do {                                                                                          \
     ZX_ASSERT_MSG((value) != nullptr, "[%s] %s must not be null", __PRETTY_FUNCTION__, #value); \
   } while (0)
 
-#endif  // LIB_SYS_CPP_TESTING_INTERNAL_ERRORS_H_
+#endif  // LIB_SYS_COMPONENT_CPP_TESTING_INTERNAL_ERRORS_H_

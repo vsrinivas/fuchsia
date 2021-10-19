@@ -59,7 +59,6 @@ source_set("integration_fixture") {
 
   public_deps = [
     ":enclosing_environment",
-    ":realm_builder",
     "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/async-loop/testing:async-loop-testing",
   ]
@@ -89,50 +88,4 @@ source_set("enclosing_environment") {
   ]
 
   public_configs = [ "//sdk/config" ]
-}
-
-# Temporarily house RealmBuiler in its own source_set until it's ready to
-# be published in SDK. When the library is ready for public consumption, it'll
-# be moved to the "unit" package above.
-source_set("realm_builder_library") {
-  testonly = true
-
-  sources = [
-    "internal/errors.cc",
-    "internal/errors.h",
-    "internal/mock_runner.cc",
-    "internal/mock_runner.h",
-    "internal/realm.cc",
-    "internal/realm.h",
-    "realm_builder.cc",
-    "realm_builder.h",
-    "realm_builder_types.cc",
-    "realm_builder_types.h",
-    "scoped_child.cc",
-    "scoped_child.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
-    "//sdk/fidl/fuchsia.component.test",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.sys2",
-    "//sdk/lib/fdio",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
-    "//src/lib/testing/loop_fixture",
-    "//zircon/system/public:public",
-    "//zircon/system/ulib/async-loop",
-  ]
-}
-
-group("realm_builder") {
-  testonly = true
-
-  public_deps = [
-    ":realm_builder_library",
-    "//src/lib/fuchsia-component-test/framework_intermediary:fuchsia_component_test_framework_intermediary_component",
-  ]
 }

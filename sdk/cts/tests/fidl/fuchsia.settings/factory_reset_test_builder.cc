@@ -7,10 +7,10 @@
 #include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
+#include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/realm_builder.h>
-#include <lib/sys/cpp/testing/realm_builder_types.h>
 
 #include <zxtest/zxtest.h>
 

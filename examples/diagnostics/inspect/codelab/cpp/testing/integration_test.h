@@ -7,7 +7,9 @@
 
 #include <fuchsia/examples/inspect/cpp/fidl.h>
 #include <lib/gtest/real_loop_fixture.h>
-#include <lib/sys/cpp/testing/realm_builder.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
+
+#include <memory>
 
 namespace codelab::testing {
 
@@ -29,7 +31,7 @@ class IntegrationTest : public gtest::RealLoopFixture {
   std::string ReverserMonikerForSelectors() const;
 
  private:
-  std::optional<sys::testing::Realm> realm_;
+  std::unique_ptr<sys::testing::Realm> realm_ = nullptr;
 };
 
 };  // namespace codelab::testing

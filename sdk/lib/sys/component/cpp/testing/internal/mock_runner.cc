@@ -7,8 +7,8 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/include/lib/fdio/namespace.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/sys/cpp/testing/internal/mock_runner.h>
-#include <lib/sys/cpp/testing/realm_builder_types.h>
+#include <lib/sys/component/cpp/testing/internal/mock_runner.h>
+#include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 

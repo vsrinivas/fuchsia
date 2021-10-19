@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_SYS_CPP_TESTING_INTERNAL_REALM_H_
-#define LIB_SYS_CPP_TESTING_INTERNAL_REALM_H_
+#ifndef LIB_SYS_COMPONENT_CPP_TESTING_INTERNAL_REALM_H_
+#define LIB_SYS_COMPONENT_CPP_TESTING_INTERNAL_REALM_H_
 
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/component/decl/cpp/fidl.h>
@@ -26,4 +26,4 @@ void DestroyChild(fuchsia::component::Realm_Sync* realm,
 
 }  // namespace sys::testing::internal
 
-#endif  // LIB_SYS_CPP_TESTING_INTERNAL_REALM_H_
+#endif  // LIB_SYS_COMPONENT_CPP_TESTING_INTERNAL_REALM_H_

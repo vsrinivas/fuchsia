@@ -11,6 +11,8 @@ source_set("cpp") {
 
   public_deps = [
     "//sdk/lib/driver_test_realm:realm_builder_version",
-    "//sdk/lib/sys/cpp/testing:realm_builder",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }

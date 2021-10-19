@@ -24,7 +24,7 @@ namespace echo = test::placeholders;
 
 namespace sys::testing::test {
 
-constexpr char kHelperProc[] = "fuchsia-pkg://fuchsia.com/component_cpp_tests#meta/helper_proc.cmx";
+constexpr char kHelperProc[] = "fuchsia-pkg://fuchsia.com/sys_cpp_tests#meta/helper_proc.cmx";
 
 // helper class that creates and listens on
 // a socket while appending to a std::stringstream

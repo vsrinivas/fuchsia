@@ -5,7 +5,7 @@
 #ifndef LIB_DRIVER_TEST_REALM_REALM_BUILDER_CPP_LIB_H_
 #define LIB_DRIVER_TEST_REALM_REALM_BUILDER_CPP_LIB_H_
 
-#include <lib/sys/cpp/testing/realm_builder.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 
 namespace driver_test_realm {
 

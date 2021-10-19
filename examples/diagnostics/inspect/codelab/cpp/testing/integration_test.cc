@@ -4,7 +4,9 @@
 
 #include "examples/diagnostics/inspect/codelab/cpp/testing/integration_test.h"
 
-#include <lib/sys/cpp/testing/realm_builder.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
+
+#include <memory>
 
 namespace codelab::testing {
 
@@ -48,7 +50,7 @@ fuchsia::examples::inspect::ReverserPtr IntegrationTest::ConnectToReverser(TestO
           .capability = sys::testing::Protocol{"fuchsia.logger.LogSink"},
           .source = sys::testing::AboveRoot(),
           .targets = {sys::testing::Moniker{"reverser"}}});
-  realm_.emplace(realm_builder.Build());
+  realm_ = std::make_unique<sys::testing::Realm>(realm_builder.Build());
   fuchsia::examples::inspect::ReverserPtr proxy;
   realm_->Connect(proxy.NewRequest());
   return proxy;

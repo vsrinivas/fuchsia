@@ -8,13 +8,11 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
+#include <lib/sys/component/cpp/testing/internal/errors.h>
+#include <lib/sys/component/cpp/testing/internal/realm.h>
+#include <lib/sys/component/cpp/testing/scoped_child.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/internal/errors.h>
-#include <lib/sys/cpp/testing/internal/realm.h>
-#include <lib/sys/cpp/testing/scoped_child.h>
-#include <lib/syslog/cpp/log_level.h>
-#include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 

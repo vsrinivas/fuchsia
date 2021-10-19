@@ -19,7 +19,7 @@ cts_executable("settings_test_bin") {
 
   non_cts_deps = [
     "//sdk/fidl/fuchsia.sys2",
-    "//sdk/lib/sys/cpp/testing:realm_builder",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
   ]
 }
 

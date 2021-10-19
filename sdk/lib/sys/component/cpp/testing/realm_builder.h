@@ -2,25 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_SYS_CPP_TESTING_REALM_BUILDER_H_
-#define LIB_SYS_CPP_TESTING_REALM_BUILDER_H_
+#ifndef LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_H_
+#define LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_H_
 
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/component/test/cpp/fidl.h>
 #include <fuchsia/io2/cpp/fidl.h>
+#include <lib/sys/component/cpp/testing/internal/mock_runner.h>
+#include <lib/sys/component/cpp/testing/realm_builder_types.h>
+#include <lib/sys/component/cpp/testing/scoped_child.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/internal/mock_runner.h>
-#include <lib/sys/cpp/testing/realm_builder_types.h>
-#include <lib/sys/cpp/testing/scoped_child.h>
 
 #include <memory>
 #include <string>
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include <src/lib/fxl/macros.h>
 
 #include "lib/async/dispatcher.h"
 
@@ -34,12 +32,13 @@ namespace sys::testing {
 // https://fuchsia.dev/fuchsia-src/development/components/v2/realm_builder
 // For examples on how to use this library, see the integration tests
 // found at //sdk/cpp/tests/realm_builder_test.cc
-class Realm {
+class Realm final {
  public:
   Realm(Realm&& other) = default;
   Realm& operator=(Realm&& other) = default;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(Realm);
+  Realm(Realm& other) = delete;
+  Realm& operator=(Realm& other) = delete;
 
   // Connect to an interface in the exposed directory of the root component.
   //
@@ -93,7 +92,7 @@ class Realm {
 };
 
 // A builder class for a Realm object. Use this class to construct a Realm.
-class Realm::Builder {
+class Realm::Builder final {
  public:
   // Factory method to create a new RealmBuilder object.
   // |context| must not be NULL and must outlive the RealmBuilder object and
@@ -103,7 +102,8 @@ class Realm::Builder {
   Builder(Builder&&) = default;
   Builder& operator=(Builder&&) = default;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(Builder);
+  Builder(Builder&) = delete;
+  Builder& operator=(Builder&) = delete;
 
   // Insert a component at the specified moniker. If a component already exists
   // at the provided moniker, this method will panic. Furthermore, this
@@ -138,4 +138,4 @@ class Realm::Builder {
 
 }  // namespace sys::testing
 
-#endif  // LIB_SYS_CPP_TESTING_REALM_BUILDER_H_
+#endif  // LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_H_

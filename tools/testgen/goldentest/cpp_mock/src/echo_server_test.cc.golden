@@ -1,7 +1,7 @@
 #include </fidl/examples/routing/echo/cpp/fidl.h>;
 #include <gtest/gtest.h>;
 #include <lib/gtest/real_loop_fixture.h>;
-#include <lib/sys/cpp/testing/realm_builder.h>;
+#include <lib/sys/component/cpp/testing/realm_builder.h>;
 
 constexpr char COMPONENT_URL[] = "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cm";
 

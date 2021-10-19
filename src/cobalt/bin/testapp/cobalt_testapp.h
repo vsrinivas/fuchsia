@@ -19,7 +19,7 @@
 #include <string>
 #include <thread>
 
-#include "lib/sys/cpp/testing/scoped_child.h"
+#include "lib/sys/component/cpp/testing/scoped_child.h"
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
@@ -71,7 +71,7 @@ class CobaltTestApp {
   // ==================================================================================
   // TODO(fxbug.dev/83362): Hack to deal with slow destructor.
   std::vector<std::thread> scoped_child_destructors_;
-  void DropChild(sys::testing::ScopedChild child) {
+  void DropChild(std::unique_ptr<sys::testing::ScopedChild> child) {
     scoped_child_destructors_.emplace_back(std::thread([child = std::move(child)] {}));
   }
 

@@ -16,7 +16,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/sys/cpp/testing/realm_builder.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -27,6 +27,7 @@
 #include "fuchsia/component/cpp/fidl.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
+#include "lib/sys/component/cpp/testing/scoped_child.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 #include "src/cobalt/bin/testapp/prober_metrics_registry.cb.h"
@@ -50,21 +51,23 @@ constexpr char kCobaltNoEventAggregatorWorker[] = "#meta/cobalt_no_event_aggrega
     return false;      \
   }
 
-#define CONNECT_AND_TRY_TEST_TWICE(test, variant)       \
-  {                                                     \
-    sys::testing::ScopedChild child = Connect(variant); \
-    if (!(test)) {                                      \
-      DropChild(std::move(child));                      \
-      child = Connect(variant);                         \
-      if (!(test)) {                                    \
-        return false;                                   \
-      }                                                 \
-    }                                                   \
-    DropChild(std::move(child));                        \
+#define CONNECT_AND_TRY_TEST_TWICE(test, variant)                            \
+  {                                                                          \
+    std::unique_ptr<sys::testing::ScopedChild> child =                       \
+        std::make_unique<sys::testing::ScopedChild>(Connect(variant));       \
+    if (!(test)) {                                                           \
+      DropChild(std::move(child));                                           \
+      child = std::make_unique<sys::testing::ScopedChild>(Connect(variant)); \
+      if (!(test)) {                                                         \
+        return false;                                                        \
+      }                                                                      \
+    }                                                                        \
+    DropChild(std::move(child));                                             \
   }
 
 bool CobaltTestApp::RunTests() {
-  sys::testing::ScopedChild child = Connect(kCobaltWithEventAggregatorWorker);
+  std::unique_ptr<sys::testing::ScopedChild> child =
+      std::make_unique<sys::testing::ScopedChild>(Connect(kCobaltWithEventAggregatorWorker));
 
   // TODO(zmbush): Create tests for all logger methods.
   TRY_TEST(TestLogEvent(&logger_));

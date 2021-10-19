@@ -8,9 +8,9 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
+#include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/realm_builder.h>
-#include <lib/sys/cpp/testing/realm_builder_types.h>
 #include <zircon/status.h>
 
 #include <memory>

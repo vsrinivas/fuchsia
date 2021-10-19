@@ -24,7 +24,7 @@ cts_executable("diagnostics-test-bin") {
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
 
     # TODO(81398): Include this in the SDK.
-    "//sdk/lib/sys/cpp/testing:realm_builder",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
     "//third_party/rapidjson",
   ]
 }

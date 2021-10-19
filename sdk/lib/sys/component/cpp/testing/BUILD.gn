@@ -1,0 +1,55 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_source_set.gni")
+
+group("cpp") {
+  testonly = true
+
+  public_deps = [
+    ":cpp_library",
+    "//src/lib/fuchsia-component-test/framework_intermediary:fuchsia_component_test_framework_intermediary_component",
+  ]
+}
+
+sdk_source_set("cpp_library") {
+  testonly = true
+
+  category = "partner"
+
+  sdk_name = "component_cpp_testing"
+
+  include_base = "//sdk"
+
+  sources = [
+    "internal/errors.cc",
+    "internal/errors.h",
+    "internal/mock_runner.cc",
+    "internal/mock_runner.h",
+    "internal/realm.cc",
+    "internal/realm.h",
+    "realm_builder.cc",
+    "realm_builder.h",
+    "realm_builder_types.cc",
+    "realm_builder_types.h",
+    "scoped_child.cc",
+    "scoped_child.h",
+  ]
+
+  non_public_headers = [
+    "internal/errors.h",
+    "internal/mock_runner.h",
+    "internal/realm.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.decl",
+    "//sdk/fidl/fuchsia.component.test",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+  ]
+}

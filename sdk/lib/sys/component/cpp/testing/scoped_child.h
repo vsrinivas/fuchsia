@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_SYS_CPP_TESTING_SCOPED_CHILD_H_
-#define LIB_SYS_CPP_TESTING_SCOPED_CHILD_H_
+#ifndef LIB_SYS_COMPONENT_CPP_TESTING_SCOPED_CHILD_H_
+#define LIB_SYS_COMPONENT_CPP_TESTING_SCOPED_CHILD_H_
 
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/component/decl/cpp/fidl.h>
@@ -12,13 +12,11 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include <src/lib/fxl/macros.h>
-
 namespace sys::testing {
 
 // A scoped instance of a dynamically created child component. This class
 // will automatically destroy the child component once it goes out of scope.
-class ScopedChild {
+class ScopedChild final {
  public:
   // Create a dynamic child component using the fuchsia.component.Realm API.
   // |realm_proxy| must be bound to a connection to the fuchsia.sys2.Realm protocol.
@@ -38,7 +36,8 @@ class ScopedChild {
   ScopedChild(ScopedChild&&) noexcept;
   ScopedChild& operator=(ScopedChild&&) noexcept;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(ScopedChild);
+  ScopedChild(ScopedChild&) = delete;
+  ScopedChild& operator=(ScopedChild&) = delete;
 
   // Connect to an interface in the exposed directory of the child component.
   //
@@ -102,4 +101,4 @@ class ScopedChild {
 
 }  // namespace sys::testing
 
-#endif  // LIB_SYS_CPP_TESTING_SCOPED_CHILD_H_
+#endif  // LIB_SYS_COMPONENT_CPP_TESTING_SCOPED_CHILD_H_

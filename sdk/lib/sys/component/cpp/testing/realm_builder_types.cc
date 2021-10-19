@@ -4,9 +4,9 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/namespace.h>
+#include <lib/sys/component/cpp/testing/internal/errors.h>
+#include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/outgoing_directory.h>
-#include <lib/sys/cpp/testing/internal/errors.h>
-#include <lib/sys/cpp/testing/realm_builder_types.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
 
@@ -18,6 +18,8 @@ namespace {
 
 constexpr char kSvcDirectoryPath[] = "/svc";
 }
+
+void MockComponent::Start(std::unique_ptr<MockHandles> mock_handles) {}
 
 MockHandles::MockHandles(fdio_ns_t* ns, OutgoingDirectory outgoing_dir)
     : namespace_(ns), outgoing_dir_(std::move(outgoing_dir)) {}

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_SYS_CPP_TESTING_REALM_BUILDER_TYPES_H_
-#define LIB_SYS_CPP_TESTING_REALM_BUILDER_TYPES_H_
+#ifndef LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_TYPES_H_
+#define LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_TYPES_H_
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -34,13 +34,13 @@ namespace sys::testing {
 // 'a/c' to refer to component "c".
 //
 // There is no leading slash.
-struct Moniker {
+struct Moniker final {
   std::string_view path;
 };
 
 // Endpoint to root above the created Realm. This endpoint is used to route
 // capabilities from/to client of RealmBuilder.
-struct AboveRoot {};
+struct AboveRoot final {};
 
 // An endpoint refers to either a source or target when routing a capability.
 using Endpoint = std::variant<AboveRoot, Moniker>;
@@ -48,13 +48,13 @@ using Endpoint = std::variant<AboveRoot, Moniker>;
 // A protocol capability. The name refers to the name of the FIDL protocol,
 // e.g. `fuchsia.logger.LogSink`.
 // See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities/protocol.
-struct Protocol {
+struct Protocol final {
   std::string_view name;
 };
 
 // A directory capability.
 // See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities/directory.
-struct Directory {
+struct Directory final {
   std::string_view name;
   std::string_view path;
   fuchsia::io2::Operations rights;
@@ -62,7 +62,7 @@ struct Directory {
 
 // A storage capability.
 // See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities/storage.
-struct Storage {
+struct Storage final {
   std::string_view name;
   std::string_view path;
 };
@@ -72,7 +72,7 @@ struct Storage {
 using Capability = std::variant<Protocol, Directory, Storage>;
 
 // A routing of a capability from source to multiple targets.
-struct CapabilityRoute {
+struct CapabilityRoute final {
   Capability capability;
   Endpoint source;
   std::vector<Endpoint> targets;
@@ -80,18 +80,18 @@ struct CapabilityRoute {
 
 // A reference to a component via its component URL.
 // For example, `fuchsia-pkg://fuchsia.com/foo#meta/bar.cm`.
-struct ComponentUrl {
+struct ComponentUrl final {
   std::string_view url;
 };
 
 // A reference to a component via its legacy component URL.
 // For example, `fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx`.
-struct LegacyComponentUrl {
+struct LegacyComponentUrl final {
   std::string_view url;
 };
 
 // Handles provided to mock component.
-class MockHandles {
+class MockHandles final {
  public:
   MockHandles(fdio_ns_t* ns, OutgoingDirectory outgoing_dir);
   ~MockHandles();
@@ -126,11 +126,11 @@ class MockComponent {
   // Invoked when the Component Manager issues a Start request to the component.
   // |mock_handles| contains the outgoing directory and namespace of
   // the component.
-  virtual void Start(std::unique_ptr<MockHandles> mock_handles) = 0;
+  virtual void Start(std::unique_ptr<MockHandles> mock_handles);
 };
 
 // A reference to a mock component.
-struct Mock {
+struct Mock final {
   MockComponent* impl;
 };
 
@@ -139,7 +139,7 @@ struct Mock {
 using Source = std::variant<ComponentUrl, LegacyComponentUrl, Mock>;
 
 // A component as referred to by its source.
-struct Component {
+struct Component final {
   Source source;
   // Flag used to determine if component should be started eagerly or not.
   // If started eagerly, then it will start as soon as it's resolved.
@@ -150,4 +150,4 @@ struct Component {
 
 }  // namespace sys::testing
 
-#endif  // LIB_SYS_CPP_TESTING_REALM_BUILDER_TYPES_H_
+#endif  // LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_TYPES_H_

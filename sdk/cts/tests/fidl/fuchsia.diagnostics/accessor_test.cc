@@ -11,9 +11,9 @@
 #include <lib/fpromise/result.h>
 #include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
+#include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/realm_builder.h>
-#include <lib/sys/cpp/testing/realm_builder_types.h>
 
 #include <regex>
 

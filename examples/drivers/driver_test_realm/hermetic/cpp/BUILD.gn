@@ -19,6 +19,9 @@ test("driver_test_realm_example_hermetic_cpp") {
     "//sdk/lib/driver_test_realm/realm_builder/cpp",
     "//src/devices/lib/device-watcher/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/service:service-llcpp",
   ]

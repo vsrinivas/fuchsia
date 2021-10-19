@@ -104,19 +104,6 @@ fuchsia_component("helper_proc") {
   testonly = true
 }
 
-fuchsia_component("echo_server") {
-  deps = [ ":helper_proc_bin" ]
-  manifest = "meta/echo_server.cml"
-  testonly = true
-}
-
-fuchsia_component("echo_server_legacy") {
-  component_name = "echo_server"
-  deps = [ ":helper_proc_bin" ]
-  manifest = "meta/echo_server.cmx"
-  testonly = true
-}
-
 executable("constructor_helper_proc") {
   testonly = true
 
@@ -134,40 +121,14 @@ executable("constructor_helper_proc") {
   ]
 }
 
-executable("realm_builder_test_bin") {
-  testonly = true
-
-  sources = [ "realm_builder_test.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:realm_builder",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//src/testing/fidl:placeholders",
-  ]
-}
-
-fuchsia_component("realm_builder_test") {
-  testonly = true
-  deps = [ ":realm_builder_test_bin" ]
-  manifest = "meta/realm_builder_test.cml"
-}
-
-fuchsia_test_package("component_cpp_tests") {
+fuchsia_test_package("sys_cpp_tests") {
   test_components = [
     ":component_cpp_testing_tests",
     ":component_cpp_testing_unittests",
     ":component_cpp_unittests",
-    ":realm_builder_test",
   ]
   deps = [
     ":constructor_helper_proc",
-    ":echo_server",
-    ":echo_server_legacy",
     ":helper_proc",
   ]
 }
