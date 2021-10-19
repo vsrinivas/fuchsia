@@ -490,21 +490,23 @@ class TestConnection {
 
     constexpr int64_t kTimeoutNs = ms_to_ns(100);
     auto start = std::chrono::steady_clock::now();
-    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), items.size(), kTimeoutNs));
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT,
+              magma_poll(items.data(), static_cast<uint32_t>(items.size()), kTimeoutNs));
     EXPECT_LE(kTimeoutNs, std::chrono::duration_cast<std::chrono::nanoseconds>(
                               std::chrono::steady_clock::now() - start)
                               .count());
 
     magma_signal_semaphore(semaphore);
 
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), items.size(), 0));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), static_cast<uint32_t>(items.size()), 0));
     EXPECT_EQ(items[0].result, items[0].condition);
     EXPECT_EQ(items[1].result, 0u);
 
     magma_reset_semaphore(semaphore);
 
     start = std::chrono::steady_clock::now();
-    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), items.size(), kTimeoutNs));
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT,
+              magma_poll(items.data(), static_cast<uint32_t>(items.size()), kTimeoutNs));
     EXPECT_LE(kTimeoutNs, std::chrono::duration_cast<std::chrono::nanoseconds>(
                               std::chrono::steady_clock::now() - start)
                               .count());
@@ -513,13 +515,13 @@ class TestConnection {
     EXPECT_EQ(ZX_OK, remote.write(0 /* flags */, &dummy, sizeof(dummy), nullptr /* handles */,
                                   0 /* num_handles*/));
 
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), items.size(), 0));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), static_cast<uint32_t>(items.size()), 0));
     EXPECT_EQ(items[0].result, 0u);
     EXPECT_EQ(items[1].result, items[1].condition);
 
     magma_signal_semaphore(semaphore);
 
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), items.size(), 0));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), static_cast<uint32_t>(items.size()), 0));
     EXPECT_EQ(items[0].result, items[0].condition);
     EXPECT_EQ(items[1].result, items[1].condition);
 
@@ -543,10 +545,12 @@ class TestConnection {
         .condition = MAGMA_POLL_CONDITION_READABLE,
     });
 
-    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), items.size(), 0));
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT,
+              magma_poll(items.data(), static_cast<uint32_t>(items.size()), 0));
 
     remote.reset();
-    EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_poll(items.data(), items.size(), 0));
+    EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST,
+              magma_poll(items.data(), static_cast<uint32_t>(items.size()), 0));
 #else
     GTEST_SKIP();
 #endif

@@ -676,7 +676,7 @@ class TestConnection {
       auto connection = MsdArmConnection::Create(0, &owner);
       EXPECT_TRUE(connection);
 
-      bad_atom.alloc_info.version_number = 1000;
+      bad_atom.alloc_info.version_number = static_cast<uint8_t>(1000);
       size_t size = sizeof(good_atom);
       EXPECT_FALSE(connection->ExecuteAtom(&size, &bad_atom.atom, &semaphores));
     }
@@ -723,7 +723,7 @@ class TestConnection {
     good_atom.trailer.jit_memory_info_count = 2;
     for (uint32_t i = 0; i < std::size(good_atom.info); i++) {
       auto& info = good_atom.info[i];
-      info.id = i;
+      info.id = static_cast<uint8_t>(i);
       info.extend_page_count = 1;
       info.committed_page_count = 1;
       info.address = magma::page_size();
@@ -813,7 +813,7 @@ class TestConnection {
     good_atom.trailer.jit_memory_info_count = 2;
     for (uint32_t i = 0; i < std::size(good_atom.info); i++) {
       auto& info = good_atom.info[i];
-      info.id = i;
+      info.id = static_cast<uint8_t>(i);
       info.version_number = 0;
     }
     good_atom.atom.atom_number = 1;
@@ -942,7 +942,7 @@ class TestConnection {
       for (uint32_t i = 0; i < std::size(infos); i++) {
         auto& info = infos[i];
         // ID 0 isn't valid, so use 1 and 2.
-        info.id = i + 1;
+        info.id = static_cast<uint8_t>(i) + 1;
         info.extend_page_count = 1;
         info.committed_page_count = 1;
         info.address = kAddressPageAddress + (i * 8);
@@ -1028,7 +1028,7 @@ class TestConnection {
                                     std::vector<uint64_t> ids) {
     std::vector<magma_arm_jit_memory_free_info> free_infos(ids.size());
     for (size_t i = 0; i < ids.size(); i++) {
-      free_infos[i].id = ids[i];
+      free_infos[i].id = static_cast<uint8_t>(ids[i]);
     }
     auto msd_free_atom = std::make_shared<MsdArmSoftAtom>(
         connection, static_cast<AtomFlags>(kAtomFlagJitMemoryAllocate), 1,
@@ -1053,8 +1053,8 @@ class TestConnection {
       for (uint32_t i = 0; i < std::size(infos); i++) {
         auto& info = infos[i];
         // ID 0 isn't valid, so use 1 and 2.
-        info.id = i + 1;
-        info.usage_id = i + 1;
+        info.id = static_cast<uint8_t>(i) + 1;
+        info.usage_id = static_cast<uint8_t>(i) + 1;
         info.extend_page_count = 1;
         info.address = kAddressPageAddress + (i * 8);
         info.va_page_count = 5;
@@ -1189,7 +1189,7 @@ class TestConnection {
       for (uint32_t i = 0; i < std::size(infos); i++) {
         auto& info = infos[i];
         // ID 0 isn't valid, so use 1 and 2.
-        info.id = i + 1;
+        info.id = static_cast<uint8_t>(i) + 1;
         info.extend_page_count = 1;
         info.committed_page_count = 1;
         info.address = kAddressPageAddress + (i * 8);

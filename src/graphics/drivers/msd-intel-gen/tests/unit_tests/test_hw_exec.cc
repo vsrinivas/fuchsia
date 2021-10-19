@@ -30,7 +30,7 @@ class TestExec : public testing::TestWithParam<CommandBufferFlags> {
   // Submits a few command buffers through the full connection-context flow.
   // Uses per process gtt unless |kUseGlobalGtt| is specified.
   void ExecReuseGpuAddress(const bool kUseGlobalGtt) {
-    const uint32_t flags = GetParam();
+    const uint64_t flags = GetParam();
 
     magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
     ASSERT_NE(platform_device, nullptr);

@@ -47,9 +47,6 @@ source_set("nonhardware_tests") {
   ]
 
   deps = [ ":test_deps" ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # These tests do require Intel graphics hardware to run.  They can be
@@ -65,9 +62,6 @@ source_set("hardware_tests") {
   ]
 
   deps = [ ":test_deps" ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("test_deps") {

@@ -137,8 +137,8 @@ class TestConnection : public magma::TestDeviceBase {
     constexpr uint32_t kStoreDwordCount = 4 - 2;  // always -2
     reinterpret_cast<uint32_t*>(vaddr)[0] =
         kStoreDwordOp | kStoreDwordCount | (kUseGlobalGtt ? 1 << 22 : 0);
-    reinterpret_cast<uint32_t*>(vaddr)[1] = gpu_addr;
-    reinterpret_cast<uint32_t*>(vaddr)[2] = 0;
+    reinterpret_cast<uint32_t*>(vaddr)[1] = gpu_addr & 0xffffffff;
+    reinterpret_cast<uint32_t*>(vaddr)[2] = gpu_addr >> 32;
     reinterpret_cast<uint32_t*>(vaddr)[3] = kValue;
 
     constexpr uint32_t kWaitForSemaphoreOp = 0x1C << 23;
@@ -147,8 +147,8 @@ class TestConnection : public magma::TestDeviceBase {
     reinterpret_cast<uint32_t*>(vaddr)[4] =
         kWaitForSemaphoreOp | kWaitForSemaphoreCount | (kUseGlobalGtt ? 1 << 22 : 0);
     reinterpret_cast<uint32_t*>(vaddr)[5] = hang ? ~0 : 0;
-    reinterpret_cast<uint32_t*>(vaddr)[6] = gpu_addr;
-    reinterpret_cast<uint32_t*>(vaddr)[7] = 0;
+    reinterpret_cast<uint32_t*>(vaddr)[6] = gpu_addr & 0xffffffff;
+    reinterpret_cast<uint32_t*>(vaddr)[7] = gpu_addr >> 32;
 
     constexpr uint32_t kEndBatchOp = 0xA << 23;
     reinterpret_cast<uint32_t*>(vaddr)[8] = kEndBatchOp;

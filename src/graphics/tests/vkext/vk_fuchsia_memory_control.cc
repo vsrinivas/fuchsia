@@ -219,9 +219,9 @@ TEST_P(MemoryControl, Partial) {
   auto vk_device_memory = AllocateAndInitializeDeviceMemory(
       control_properties_.endMemoryOperations | control_properties_.startMemoryOperations);
 
-  uint32_t end_of_committed_region =
+  uint64_t end_of_committed_region =
       fbl::round_up(expected_memory_size_ / 2, control_properties_.memoryOperationGranularity);
-  uint32_t end_of_committed_region2 =
+  uint64_t end_of_committed_region2 =
       end_of_committed_region + control_properties_.memoryOperationGranularity;
 
   vk::MemoryRangeFUCHSIA range;

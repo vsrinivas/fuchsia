@@ -99,10 +99,10 @@ static void test_simple_allocator(magma::SimpleAllocator* allocator, uint8_t ali
 
 static void stress_test_allocator(magma::AddressSpaceAllocator* allocator, uint8_t align_pow2,
                                   unsigned int num_iterations, size_t max_alloc_size) {
-  unsigned int num_init = allocator->size() / max_alloc_size * 3 / 2;
+  size_t num_init = allocator->size() / max_alloc_size * 3 / 2;
 
-  DLOG("test_allocator align_pow2 0x%x num_iterations %d num_init %u\n", align_pow2, num_iterations,
-       num_init);
+  DLOG("test_allocator align_pow2 0x%x num_iterations %d num_init %zd\n", align_pow2,
+       num_iterations, num_init);
 
   std::vector<std::unique_ptr<Region>> allocs;
   uint64_t addr;

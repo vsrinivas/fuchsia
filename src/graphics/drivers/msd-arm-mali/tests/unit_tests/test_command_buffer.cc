@@ -75,7 +75,7 @@ class Test {
     ASSERT_TRUE(ctx);
 
     magma_arm_mali_atom atom[3];
-    for (uint32_t i = 0; i < 3; i++) {
+    for (uint8_t i = 0; i < 3; i++) {
       atom[i].size = sizeof(atom[i]);
       atom[i].atom_number = i + 1;
       atom[i].flags = 1;

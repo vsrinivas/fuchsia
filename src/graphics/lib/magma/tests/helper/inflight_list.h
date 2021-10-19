@@ -31,7 +31,7 @@ class InflightList {
     buffers_.erase(iter);
   }
 
-  uint32_t size() { return buffers_.size(); }
+  size_t size() { return buffers_.size(); }
 
   bool is_inflight(uint64_t buffer_id) {
     return std::find(buffers_.begin(), buffers_.end(), buffer_id) != buffers_.end();

@@ -246,7 +246,7 @@ TEST_F(TestMagmaFidl, CreateDestroyContext) {
   }
 
   {
-    uint64_t kBadId = context_id + 1;
+    uint32_t kBadId = context_id + 1;
     auto wire_result = primary_->DestroyContext(kBadId);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_TRUE(CheckForUnbind());

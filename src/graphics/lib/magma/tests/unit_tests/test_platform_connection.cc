@@ -29,7 +29,7 @@ constexpr uint32_t kImmediateCommandSize = 2048 * 3 / 2 / kImmediateCommandCount
 constexpr uint32_t kNotificationCount = 2;
 constexpr uint32_t kNotificationData = 5;
 
-static inline int page_size() { return sysconf(_SC_PAGESIZE); }
+static inline int64_t page_size() { return sysconf(_SC_PAGESIZE); }
 
 }  // namespace
 

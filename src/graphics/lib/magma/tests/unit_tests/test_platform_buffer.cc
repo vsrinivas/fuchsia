@@ -287,7 +287,7 @@ class TestPlatformBuffer {
     EXPECT_TRUE(buf1->MapCpu(&virt_addr[0]));
     EXPECT_TRUE(buf->MapCpu(&virt_addr[1]));
 
-    unsigned int some_offset = buf->size() / 2;
+    size_t some_offset = buf->size() / 2;
     int old_value =
         *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(virt_addr[0]) + some_offset);
     int check =

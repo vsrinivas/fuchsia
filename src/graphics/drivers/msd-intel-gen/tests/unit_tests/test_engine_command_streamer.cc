@@ -246,8 +246,8 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
 
     EXPECT_TRUE(context_->GetGpuAddress(engine_cs_->id(), &gpu_addr));
 
-    uint32_t upper_32_bits = gpu_addr >> 12;
-    uint32_t lower_32_bits = gpu_addr | 0x19;
+    uint32_t upper_32_bits = static_cast<uint32_t>(gpu_addr >> 12);
+    uint32_t lower_32_bits = static_cast<uint32_t>(gpu_addr | 0x19);
     std::vector<uint32_t> submitport_writes{0, 0, upper_32_bits, lower_32_bits};
     uint32_t write = 0;
 

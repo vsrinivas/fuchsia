@@ -473,7 +473,7 @@ class TestMsdIntelDevice : public testing::Test {
     std::unique_ptr<magma::PlatformSemaphore> sem_ = magma::PlatformSemaphore::Create();
     std::unique_ptr<magma::PlatformSemaphore> signal_sem_ = magma::PlatformSemaphore::Create();
     std::unique_ptr<magma::PlatformSemaphore> wait_sem_ = magma::PlatformSemaphore::Create();
-    std::atomic<uint64_t> wait_return_ = MAGMA_STATUS_OK;
+    std::atomic<int32_t> wait_return_ = MAGMA_STATUS_OK;
     bool pass_thru_ = false;
   };
 

@@ -38,7 +38,7 @@ TEST(VulkanExtension, GetMemoryZirconHandlePropertiesFUCHSIA) {
   builder.set_validation_layers_enabled(false);
 
   vk::DeviceCreateInfo device_info = builder.DeviceInfo();
-  device_info.enabledExtensionCount = enabled_extension_names.size();
+  device_info.enabledExtensionCount = static_cast<uint32_t>(enabled_extension_names.size());
   device_info.ppEnabledExtensionNames = enabled_extension_names.data();
 
   auto vulkan_context =

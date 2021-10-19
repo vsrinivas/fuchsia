@@ -471,7 +471,7 @@ bool VulkanExtensionTestX::Exec(
     // which should be compatible with what the vulkan driver can use.
     constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
     // Try multiple format modifiers.
-    constraints.image_format_constraints_count = format_constraints.size();
+    constraints.image_format_constraints_count = static_cast<uint32_t>(format_constraints.size());
     for (uint32_t i = 0; i < constraints.image_format_constraints_count; i++) {
       constraints.image_format_constraints[i] = format_constraints[i];
     }
@@ -1337,7 +1337,7 @@ TEST_P(VulkanImageExtensionTestX, ManyIdenticalFormats) {
   vk::ImageConstraintsInfoFUCHSIAX constraints_info;
   constraints_info.pCreateInfos = create_infos.data();
   constraints_info.pFormatConstraints = nullptr;
-  constraints_info.createInfoCount = create_infos.size();
+  constraints_info.createInfoCount = static_cast<uint32_t>(create_infos.size());
   constraints_info.minBufferCount = 1;
 
   ASSERT_EQ(vk::Result::eSuccess, ctx_->device()->setBufferCollectionImageConstraintsFUCHSIAX(
