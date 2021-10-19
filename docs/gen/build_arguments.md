@@ -196,7 +196,7 @@ reserve few blocks required for its operations.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:76
+From //build/images/fvm.gni:74
 
 ### blobfs_board_minimum_data_bytes
 Number of bytes to reserve for data in the fs. This is in addition
@@ -207,7 +207,7 @@ required for the filesystem.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:63
+From //build/images/fvm.gni:61
 
 ### blobfs_board_minimum_inodes
 minimum_inodes is the number of inodes to reserve for the fs
@@ -261,13 +261,13 @@ From //src/storage/blobfs/BUILD.gn:13
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:77
+From //build/images/fvm.gni:75
 
 ### blobfs_product_minimum_data_bytes
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:64
+From //build/images/fvm.gni:62
 
 ### blobfs_product_minimum_inodes
 
@@ -1547,19 +1547,19 @@ Possible values:
 
 **Current value (from the default):** `"default"`
 
-From //build/images/fvm.gni:102
+From //build/images/fvm.gni:100
 
 ### fvm_ftl_nand_block_count
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:95
+From //build/images/fvm.gni:93
 
 ### fvm_ftl_nand_oob_size
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:93
+From //build/images/fvm.gni:91
 
 ### fvm_ftl_nand_page_size
 Specifying these variables will generate a NAND FVM image suitable for
@@ -1570,13 +1570,13 @@ room to initialize on boot.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:92
+From //build/images/fvm.gni:90
 
 ### fvm_ftl_nand_pages_per_block
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:94
+From //build/images/fvm.gni:92
 
 ### fvm_max_disk_size
 The max size of the disk where the FVM is written. This is used for
@@ -2433,7 +2433,7 @@ From //zircon/kernel/lib/crashlog/params.gni:14
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:78
+From //build/images/fvm.gni:76
 
 ### minfs_board_maximum_data_bytes
 TODO(fxbug.dev/83978): Remove this arg which is used as part of a temporary
@@ -2441,19 +2441,13 @@ workaround.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:83
+From //build/images/fvm.gni:81
 
 ### minfs_board_minimum_data_bytes
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:65
-
-### minfs_board_minimum_inodes
-
-**Current value (from the default):** `false`
-
-From //build/images/fvm.gni:55
+From //build/images/fvm.gni:63
 
 ### minfs_enable_dirty_cache
 Set this to true when configuring gn args to enable minfs dirty cache.
@@ -2482,19 +2476,13 @@ From //src/storage/fshost/BUILD.gn:24
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:79
+From //build/images/fvm.gni:77
 
 ### minfs_product_minimum_data_bytes
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:66
-
-### minfs_product_minimum_inodes
-
-**Current value (from the default):** `false`
-
-From //build/images/fvm.gni:56
+From //build/images/fvm.gni:64
 
 ### minfs_resize_excluded_paths
 List of files and directories that don't need to be preserved when resizing minfs.
