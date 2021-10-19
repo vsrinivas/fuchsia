@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/component_manager_panic_test",
@@ -34,7 +34,7 @@
             ],
         },
         {
-            protocol: "fuchsia.sys2.Realm",
+            protocol: "fuchsia.component.Realm",
             from: "framework",
         },
         { protocol: "fuchsia.sys2.EventSource" },

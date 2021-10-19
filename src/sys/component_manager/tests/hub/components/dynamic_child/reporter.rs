@@ -5,9 +5,9 @@
 use {
     component_events::{events::*, matcher::EventMatcher},
     fidl::endpoints,
-    fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog as syslog,
     hub_report::*,
@@ -23,18 +23,18 @@ async fn main() {
         event_source.take_static_event_stream("DynamicChildEventStream").await.unwrap();
 
     // Create a dynamic child component
-    let realm = connect_to_protocol::<fsys::RealmMarker>().unwrap();
-    let mut collection_ref = fsys::CollectionRef { name: String::from("coll") };
-    let child_decl = fsys::ChildDecl {
+    let realm = connect_to_protocol::<fcomponent::RealmMarker>().unwrap();
+    let mut collection_ref = fdecl::CollectionRef { name: String::from("coll") };
+    let child_decl = fdecl::Child {
         name: Some(String::from("simple_instance")),
         url: Some(String::from("fuchsia-pkg://fuchsia.com/hub_integration_test#meta/simple.cm")),
-        startup: Some(fsys::StartupMode::Lazy),
+        startup: Some(fdecl::StartupMode::Lazy),
         environment: None,
-        ..fsys::ChildDecl::EMPTY
+        ..fdecl::Child::EMPTY
     };
 
     realm
-        .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
+        .create_child(&mut collection_ref, child_decl, fcomponent::CreateChildArgs::EMPTY)
         .await
         .unwrap()
         .unwrap();
@@ -49,7 +49,7 @@ async fn main() {
     expect_file_content("/hub/children/coll:simple_instance/id", "1").await;
 
     // Bind to the dynamic child
-    let mut child_ref = fsys::ChildRef {
+    let mut child_ref = fdecl::ChildRef {
         name: "simple_instance".to_string(),
         collection: Some("coll".to_string()),
     };
@@ -75,7 +75,7 @@ async fn main() {
     expect_file_content("/hub/children/coll:simple_instance/children/child/id", "0").await;
 
     // Delete the dynamic child
-    let mut child_ref = fsys::ChildRef {
+    let mut child_ref = fdecl::ChildRef {
         name: "simple_instance".to_string(),
         collection: Some("coll".to_string()),
     };

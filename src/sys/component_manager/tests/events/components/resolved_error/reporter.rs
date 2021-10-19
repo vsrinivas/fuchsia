@@ -7,8 +7,8 @@ use {
         events::{Event, EventMode, EventSource, EventSubscription, Resolved, Started},
         matcher::EventMatcher,
     },
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_dir_root},
     fuchsia_syslog as syslog,
 };
@@ -30,8 +30,8 @@ async fn main() {
     event_source.start_component_tree().await;
 
     // This will trigger the resolution of the child.
-    let realm = connect_to_protocol::<fsys::RealmMarker>().unwrap();
-    let mut child_ref = fsys::ChildRef { name: "child_a".to_string(), collection: None };
+    let realm = connect_to_protocol::<fcomponent::RealmMarker>().unwrap();
+    let mut child_ref = fdecl::ChildRef { name: "child_a".to_string(), collection: None };
 
     let (exposed_dir, server_end) =
         fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();

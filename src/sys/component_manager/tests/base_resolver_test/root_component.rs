@@ -5,9 +5,9 @@
 use {
     anyhow::Error,
     fidl::endpoints::*,
-    fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryRequest, NodeMarker},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_component::client::*,
     fuchsia_runtime,
     fuchsia_zircon::{self as zx},
@@ -28,9 +28,9 @@ async fn main() -> Result<(), Error> {
     // Bind to the echo_server. Note, we deliberately ignore errors below because
     // we don't want panic the component_manager under test before all events
     // of interest are observed.
-    let mut child_ref = fsys::ChildRef { name: "echo_server".to_string(), collection: None };
+    let mut child_ref = fdecl::ChildRef { name: "echo_server".to_string(), collection: None };
     let (exposed_dir, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
-    let realm_proxy = connect_to_protocol::<fsys::RealmMarker>()?;
+    let realm_proxy = connect_to_protocol::<fcomponent::RealmMarker>()?;
     let _ = realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
     let _ = connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir);
 

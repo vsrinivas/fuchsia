@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     fidl_fidl_test_components as ftest, fidl_fuchsia_component as fcomponent,
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::{
         client::{connect_to_protocol, connect_to_protocol_at_dir_root},
         server::ServiceFs,
@@ -23,9 +23,9 @@ async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) {
         // deadlock as component manager would be waiting for the reporter to call resume().
         responder.send("").expect("respond");
 
-        let realm = connect_to_protocol::<fsys::RealmMarker>().expect("connect to realm");
+        let realm = connect_to_protocol::<fcomponent::RealmMarker>().expect("connect to realm");
         for id in &["a", "b", "c"] {
-            let mut child_ref = fsys::ChildRef { name: format!("child_{}", id), collection: None };
+            let mut child_ref = fdecl::ChildRef { name: format!("child_{}", id), collection: None };
 
             let (exposed_dir, server_end) =
                 fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();

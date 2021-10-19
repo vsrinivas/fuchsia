@@ -4,8 +4,9 @@
 
 use {
     fidl_fidl_examples_routing_echo as fecho, fidl_fidl_test_components as ftest,
-    fidl_fuchsia_sys2 as fsys, fuchsia_component::client, fuchsia_zircon as zx, futures::StreamExt,
-    log::*, matches::assert_matches,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fuchsia_component::client, fuchsia_zircon as zx, futures::StreamExt, log::*,
+    matches::assert_matches,
 };
 
 #[fuchsia::component]
@@ -13,12 +14,15 @@ async fn main() {
     info!("start");
 
     // Expect an ACCESS_DENIED epitaph due to failed policy check.
-    let realm_proxy = client::connect_to_protocol::<fsys::RealmMarker>().unwrap();
+    let realm_proxy = client::connect_to_protocol::<fcomponent::RealmMarker>().unwrap();
     let (exposed_dir, server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
     realm_proxy
         .open_exposed_dir(
-            &mut fsys::ChildRef { name: "critical_child_not_allowlisted".into(), collection: None },
+            &mut fdecl::ChildRef {
+                name: "critical_child_not_allowlisted".into(),
+                collection: None,
+            },
             server_end,
         )
         .await

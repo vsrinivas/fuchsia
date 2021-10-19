@@ -91,8 +91,8 @@ rustc_binary("resolved_error_reporter_bin") {
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -189,8 +189,8 @@ rustc_binary("realm_offered_nested") {
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

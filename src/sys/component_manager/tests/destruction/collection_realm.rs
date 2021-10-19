@@ -5,9 +5,10 @@
 use {
     anyhow::{Context as _, Error},
     fidl::endpoints::{self, Proxy},
-    fidl_fidl_test_components as ftest,
+    fidl_fidl_test_components as ftest, fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MODE_TYPE_SERVICE},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
     io_util::{self, OPEN_RIGHT_READABLE},
@@ -19,25 +20,25 @@ use {
 async fn main() {
     syslog::init().expect("could not initialize logging");
     info!("Started collection realm");
-    let realm = client::connect_to_protocol::<fsys::RealmMarker>()
+    let realm = client::connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("could not connect to Realm service");
 
     // Create a "trigger realm" child component.
     info!("Creating child");
     {
-        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-        let child_decl = fsys::ChildDecl {
+        let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
+        let child_decl = fdecl::Child {
             name: Some("parent".to_string()),
             url: Some(
                 "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/trigger_realm.cm"
                     .to_string(),
             ),
-            startup: Some(fsys::StartupMode::Lazy),
+            startup: Some(fdecl::StartupMode::Lazy),
             environment: None,
-            ..fsys::ChildDecl::EMPTY
+            ..fdecl::Child::EMPTY
         };
         realm
-            .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
+            .create_child(&mut collection_ref, child_decl, fcomponent::CreateChildArgs::EMPTY)
             .await
             .expect(&format!("create_child failed"))
             .expect(&format!("failed to create child"));
@@ -47,7 +48,7 @@ async fn main() {
     info!("Binding to child");
     {
         let mut child_ref =
-            fsys::ChildRef { name: "parent".to_string(), collection: Some("coll".to_string()) };
+            fdecl::ChildRef { name: "parent".to_string(), collection: Some("coll".to_string()) };
         let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
         realm
             .open_exposed_dir(&mut child_ref, server_end)
@@ -62,7 +63,7 @@ async fn main() {
     info!("Destroying child");
     {
         let mut child_ref =
-            fsys::ChildRef { name: "parent".to_string(), collection: Some("coll".to_string()) };
+            fdecl::ChildRef { name: "parent".to_string(), collection: Some("coll".to_string()) };
         realm
             .destroy_child(&mut child_ref)
             .await

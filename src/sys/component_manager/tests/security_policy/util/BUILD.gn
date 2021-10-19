@@ -11,8 +11,8 @@ rustc_library("security_policy_test_util") {
   testonly = true
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
     "//src/sys/component_manager/testing:test_utils_lib",

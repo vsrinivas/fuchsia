@@ -19,10 +19,6 @@
     ],
     use: [
         {
-            protocol: [ "fuchsia.sys2.Realm" ],
-            from: "framework",
-        },
-        {
             event: [
                 "purged",
                 "started",

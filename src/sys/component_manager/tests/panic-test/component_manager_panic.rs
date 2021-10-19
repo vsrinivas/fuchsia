@@ -4,16 +4,16 @@
 
 use {
     component_events::events::*, component_events::matcher::*,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync, fuchsia_component::client,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_component::client,
 };
 
 #[fasync::run_singlethreaded(test)]
 async fn test() {
     // Bind to the component manager component, causing it to start
-    let realm_svc = client::connect_to_protocol::<fsys::RealmMarker>()
+    let realm_svc = client::connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("Could not connect to Realm service");
-    let mut child = fsys::ChildRef { name: "component_manager".to_string(), collection: None };
+    let mut child = fdecl::ChildRef { name: "component_manager".to_string(), collection: None };
 
     // Create endpoints for the fuchsia.io.Directory protocol.
     // Component manager will connect us to the exposed directory of the component we bound to.

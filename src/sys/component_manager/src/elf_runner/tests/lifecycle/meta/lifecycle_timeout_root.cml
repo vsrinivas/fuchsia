@@ -16,10 +16,6 @@
         {
             protocol: [ "fuchsia.process.Launcher" ],
         },
-        {
-            protocol: [ "fuchsia.sys2.Realm" ],
-            from: "framework",
-        },
     ],
     offer: [
         {

@@ -1,7 +1,7 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         runner: "elf",
@@ -15,12 +15,6 @@
     ],
     capabilities: [
         { protocol: "test.componentmanager.stresstests.ChildRealm" },
-    ],
-    use: [
-        {
-            protocol: "fuchsia.sys2.Realm",
-            from: "framework",
-        },
     ],
     offer: [
         {

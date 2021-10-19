@@ -5,7 +5,8 @@
 use {
     anyhow::{bail, Context, Result},
     fidl::endpoints::{create_proxy, DiscoverableProtocolMarker},
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_io as fio,
     fuchsia_component::client::connect_to_protocol_at_dir_root,
     fuchsia_zircon::Status,
     futures::future::BoxFuture,
@@ -77,21 +78,22 @@ impl Hub {
     /// component.
     pub async fn add_child(&self, rng: &mut SmallRng) -> Result<()> {
         let name = format!("C{}", rng.gen::<u64>());
-        let parent_realm_svc = self.connect_to_exposed_protocol::<fsys::RealmMarker>().await?;
+        let parent_realm_svc =
+            self.connect_to_exposed_protocol::<fcomponent::RealmMarker>().await?;
 
         let url = if rng.gen_bool(0.5) { ECHO_CLIENT_URL } else { NO_BINARY_URL };
 
-        let decl = fsys::ChildDecl {
+        let decl = fdecl::Child {
             name: Some(name.clone()),
             url: Some(url.to_string()),
-            startup: Some(fsys::StartupMode::Lazy),
-            ..fsys::ChildDecl::EMPTY
+            startup: Some(fdecl::StartupMode::Lazy),
+            ..fdecl::Child::EMPTY
         };
 
-        let mut coll_ref = fsys::CollectionRef { name: COLLECTION_NAME.to_string() };
+        let mut coll_ref = fdecl::CollectionRef { name: COLLECTION_NAME.to_string() };
 
         let result = parent_realm_svc
-            .create_child(&mut coll_ref, decl, fsys::CreateChildArgs::EMPTY)
+            .create_child(&mut coll_ref, decl, fcomponent::CreateChildArgs::EMPTY)
             .await
             .context("Could not send FIDL request to create child component")?;
 
@@ -100,7 +102,7 @@ impl Hub {
         }
 
         let mut child_ref =
-            fsys::ChildRef { name: name.clone(), collection: Some(COLLECTION_NAME.to_string()) };
+            fdecl::ChildRef { name: name.clone(), collection: Some(COLLECTION_NAME.to_string()) };
 
         let (exposed_dir, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
 
@@ -125,13 +127,13 @@ impl Hub {
 
     /// Delete the given child component.
     pub async fn delete_child(&self, child_name: impl ToString) -> Result<()> {
-        let mut child_ref = fsys::ChildRef {
+        let mut child_ref = fdecl::ChildRef {
             name: child_name.to_string(),
             collection: Some(COLLECTION_NAME.to_string()),
         };
 
         let realm_svc = self
-            .connect_to_exposed_protocol::<fsys::RealmMarker>()
+            .connect_to_exposed_protocol::<fcomponent::RealmMarker>()
             .await
             .context("Could not connect to Realm protocol")?;
         let result = realm_svc

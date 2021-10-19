@@ -222,7 +222,7 @@ mod tests {
         {
             from: "framework",
             to: "#elements",
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "/svc/fuchsia.component.Realm",
         },
         {
             to: "#elements",
@@ -241,7 +241,7 @@ mod tests {
     ],
     use: [
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "/svc/fuchsia.component.Realm",
             from: "framework",
         },
         {
@@ -281,7 +281,7 @@ mod tests {
     ],
     use: [
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "/svc/fuchsia.component.Realm",
             from: "framework",
         },
         {
@@ -296,7 +296,7 @@ mod tests {
     offer: [
         { runner: "elf" },
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "/svc/fuchsia.component.Realm",
             from: "framework",
             to: "#elements",
         },

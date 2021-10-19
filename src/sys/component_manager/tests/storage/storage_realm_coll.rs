@@ -5,8 +5,8 @@
 use {
     component_events::{events::*, matcher::*},
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     std::fs::{read_dir, DirEntry},
 };
@@ -16,27 +16,27 @@ async fn main() {
     fuchsia_syslog::init().unwrap();
 
     // Create the dynamic child
-    let realm = connect_to_protocol::<fsys::RealmMarker>().unwrap();
-    let mut collection_ref = fsys::CollectionRef { name: String::from("coll") };
-    let child_decl = fsys::ChildDecl {
+    let realm = connect_to_protocol::<fcomponent::RealmMarker>().unwrap();
+    let mut collection_ref = fdecl::CollectionRef { name: String::from("coll") };
+    let child_decl = fdecl::Child {
         name: Some(String::from("storage_user")),
         url: Some(String::from(
             "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_user.cm",
         )),
-        startup: Some(fsys::StartupMode::Lazy),
+        startup: Some(fdecl::StartupMode::Lazy),
         environment: None,
-        ..fsys::ChildDecl::EMPTY
+        ..fdecl::Child::EMPTY
     };
 
     realm
-        .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
+        .create_child(&mut collection_ref, child_decl, fcomponent::CreateChildArgs::EMPTY)
         .await
         .unwrap()
         .unwrap();
 
     // Bind to child
     let mut child_ref =
-        fsys::ChildRef { name: "storage_user".to_string(), collection: Some("coll".to_string()) };
+        fdecl::ChildRef { name: "storage_user".to_string(), collection: Some("coll".to_string()) };
     let (exposed_dir, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
 
     realm.open_exposed_dir(&mut child_ref, server_end).await.unwrap().unwrap();

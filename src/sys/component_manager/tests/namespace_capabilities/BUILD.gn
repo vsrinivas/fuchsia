@@ -62,8 +62,8 @@ rustc_binary("integration_test_root_bin") {
   source_root = "integration_test_root.rs"
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

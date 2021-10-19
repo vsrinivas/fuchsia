@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    fidl::endpoints, fidl_fidl_test_components as ftest, fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_component::client,
-    fuchsia_syslog as syslog, log::*,
+    fidl::endpoints, fidl_fidl_test_components as ftest, fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io::DirectoryMarker,
+    fuchsia_async as fasync, fuchsia_component::client, fuchsia_syslog as syslog, log::*,
 };
 
 // `echo_client` is a child of this component and uses the `Echo` protocol from component
@@ -14,11 +14,11 @@ use {
 async fn main() {
     syslog::init_with_tags(&[]).expect("could not initialize logging");
     info!("Started");
-    let realm = client::connect_to_protocol::<fsys::RealmMarker>()
+    let realm = client::connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("could not connect to Realm service");
 
     // Bind to `trigger`, causing it to execute.
-    let mut child_ref = fsys::ChildRef { name: "trigger".to_string(), collection: None };
+    let mut child_ref = fdecl::ChildRef { name: "trigger".to_string(), collection: None };
     let (exposed_dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
     realm
         .open_exposed_dir(&mut child_ref, server_end)

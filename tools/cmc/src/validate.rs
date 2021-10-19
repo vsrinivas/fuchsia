@@ -1691,11 +1691,11 @@ mod tests {
         test_cml_use_bad_duplicate_target_names(
             json!({
                 "use": [
-                  { "protocol": "fuchsia.sys2.Realm" },
-                  { "protocol": "fuchsia.sys2.Realm" },
+                  { "protocol": "fuchsia.component.Realm" },
+                  { "protocol": "fuchsia.component.Realm" },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/svc/fuchsia.sys2.Realm\" is a duplicate \"use\" target protocol"
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/svc/fuchsia.component.Realm\" is a duplicate \"use\" target protocol"
         ),
         test_cml_use_empty_protocols(
             json!({
@@ -4786,7 +4786,7 @@ mod tests {
             json!({
                 "use": [
                     { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
-                    { "service": "fuchsia.sys2.Realm", "from": "framework" },
+                    { "service": "fuchsia.component.Realm", "from": "framework" },
                 ],
             }),
             Ok(())

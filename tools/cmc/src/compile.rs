@@ -1296,7 +1296,7 @@ mod tests {
             input = json!({
                 "use": [
                     { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
-                    { "service": "fuchsia.sys2.Realm", "from": "framework" },
+                    { "service": "fuchsia.component.Realm", "from": "framework" },
                     { "service": [ "myservice", "myservice2" ] },
                 ]
             }),
@@ -1315,8 +1315,8 @@ mod tests {
                         fsys::UseServiceDecl {
                             dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                            source_name: Some("fuchsia.sys2.Realm".to_string()),
-                            target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
+                            source_name: Some("fuchsia.component.Realm".to_string()),
+                            target_path: Some("/svc/fuchsia.component.Realm".to_string()),
                             ..fsys::UseServiceDecl::EMPTY
                         }
                     ),

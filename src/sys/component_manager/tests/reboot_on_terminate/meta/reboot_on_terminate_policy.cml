@@ -26,7 +26,7 @@
             protocol: [ "fidl.test.components.Trigger" ],
         },
         {
-            protocol: "fuchsia.sys2.Realm",
+            protocol: "fuchsia.component.Realm",
             from: "framework",
         },
     ],

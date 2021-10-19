@@ -37,7 +37,7 @@ struct MessageAssertion {
 // through argv once ArchiveAccesor is exposed from Test Runner.
 #[fuchsia::test]
 async fn test_components_logs_to_stdout() {
-    let realm = client::realm().expect("failed to connect to fuchsia.sys2.Realm");
+    let realm = client::realm().expect("failed to connect to fuchsia.component.Realm");
 
     let event_source = EventSource::from_proxy(
         client::connect_to_protocol::<fsys::EventSourceMarker>()

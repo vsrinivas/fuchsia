@@ -6,9 +6,9 @@ use {
     anyhow::{Context, Error},
     component_events::{events::*, matcher::EventMatcher},
     fidl::endpoints::{create_proxy, DiscoverableProtocolMarker},
-    fidl_fuchsia_component as fcomp,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_sys2 as fsys, fuchsia_component,
+    fuchsia_component,
     test_utils_lib::opaque_test::{OpaqueTest, OpaqueTestBuilder},
 };
 
@@ -24,7 +24,7 @@ pub async fn start_policy_test(
     component_manager_url: &str,
     root_component_url: &str,
     config_path: &str,
-) -> Result<(OpaqueTest, fsys::RealmProxy, EventStream), Error> {
+) -> Result<(OpaqueTest, fcomponent::RealmProxy, EventStream), Error> {
     let test = OpaqueTestBuilder::new(root_component_url)
         .component_manager_url(component_manager_url)
         .config(config_path)
@@ -43,16 +43,16 @@ pub async fn start_policy_test(
     // hub.
     EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
 
-    let realm = connect_to_root_service::<fsys::RealmMarker>(&test)
+    let realm = connect_to_root_service::<fcomponent::RealmMarker>(&test)
         .context("failed to connect to root sys2.Realm")?;
     Ok((test, realm, event_stream))
 }
 
 pub async fn open_exposed_dir(
-    realm: &fsys::RealmProxy,
+    realm: &fcomponent::RealmProxy,
     name: &str,
-) -> Result<DirectoryProxy, fcomp::Error> {
-    let mut child_ref = fsys::ChildRef { name: name.to_string(), collection: None };
+) -> Result<DirectoryProxy, fcomponent::Error> {
+    let mut child_ref = fdecl::ChildRef { name: name.to_string(), collection: None };
     let (exposed_dir, server_end) = create_proxy().unwrap();
     realm
         .open_exposed_dir(&mut child_ref, server_end)
