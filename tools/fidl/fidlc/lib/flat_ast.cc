@@ -175,7 +175,16 @@ const AttributeArg* Attribute::GetArg(std::string_view arg_name) const {
 }
 
 const AttributeArg* Attribute::GetStandaloneAnonymousArg() const {
-  assert(!resolved &&
+  assert(!compiled &&
+         "if calling after attribute compilation, use GetArg(...) with the resolved name instead");
+  if (args.size() == 1 && !args[0]->name.has_value()) {
+    return args[0].get();
+  }
+  return nullptr;
+}
+
+AttributeArg* Attribute::GetStandaloneAnonymousArg() {
+  assert(!compiled &&
          "if calling after attribute compilation, use GetArg(...) with the resolved name instead");
   if (args.size() == 1 && !args[0]->name.has_value()) {
     return args[0].get();
@@ -1062,11 +1071,11 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
   return root_typespace;
 }
 
-void AttributeArgSchema::ValidateValue(Reporter* reporter, const Attribute* attribute,
-                                       std::optional<std::string_view> desired_name,
-                                       const AttributeArg* maybe_arg) const {
+bool AttributeArgSchema::ValidateArg(Reporter* reporter, const Attribute* attribute,
+                                     std::optional<std::string_view> desired_name,
+                                     const AttributeArg* maybe_arg) const {
   if (IsOptional() || maybe_arg != nullptr) {
-    return;
+    return true;
   }
   if (desired_name.has_value()) {
     reporter->Report(ErrMissingRequiredAttributeArg, attribute->span, attribute,
@@ -1074,6 +1083,7 @@ void AttributeArgSchema::ValidateValue(Reporter* reporter, const Attribute* attr
   } else {
     reporter->Report(ErrMissingRequiredAnonymousAttributeArg, attribute->span, attribute);
   }
+  return false;
 }
 
 AttributeSchema AttributeSchema::Deprecated() {
@@ -1120,19 +1130,7 @@ bool AttributeSchema::ValidatePlacement(Reporter* reporter, const Attribute* att
 }
 
 bool AttributeSchema::ValidateArgs(Reporter* reporter, const Attribute* attribute) const {
-  // An attribute that has already been resolved (for example, on a composed method that is
-  // referenced via pointer by its compositor) is assumed to be valid, since that prior resolution
-  // would have needed to have successfully called ValidateArgs already.
-  if (attribute->resolved) {
-    return true;
-  }
-
   bool ok = true;
-  // If this attribute is deprecated, this fact would have already been caught and reported when
-  // its placement was validated, so we can just return silently.
-  if (IsDeprecated()) {
-    return true;
-  }
 
   // There are two distinct cases to handle here: a single, unnamed argument (`@foo("abc")`), and
   // zero or more named arguments (`@foo`, `@foo(bar="abc")` or `@foo(bar="abc",baz="def")`).
@@ -1140,18 +1138,19 @@ bool AttributeSchema::ValidateArgs(Reporter* reporter, const Attribute* attribut
   if (anon_arg != nullptr) {
     // Error if the user supplied an anonymous argument, like `@foo("abc")` for an attribute whose
     // schema specifies multiple arguments (and therefore requires that they always be named).
-    if (arg_schemas_.size() == 0) {
+    if (arg_schemas_.empty()) {
       reporter->Report(ErrAttributeDisallowsArgs, attribute->span, attribute);
       ok = false;
     } else if (arg_schemas_.size() > 1) {
       reporter->Report(ErrAttributeArgNotNamed, attribute->span, anon_arg);
       ok = false;
-    }
-
-    // We've verified that we are expecting a single argument, and that we have a single anonymous
-    // argument that we can validate as an instance of it.
-    for (const auto& [name, schema] : arg_schemas_) {
-      schema.ValidateValue(reporter, attribute, std::nullopt, anon_arg);
+    } else {
+      // We've verified that we are expecting a single argument, and that we have a single anonymous
+      // argument that we can validate as an instance of it.
+      const auto& [name, schema] = *arg_schemas_.begin();
+      if (!schema.ValidateArg(reporter, attribute, std::nullopt, anon_arg)) {
+        ok = false;
+      }
     }
   } else {
     // If we have a single-arg official attribute its argument must always be anonymous, like
@@ -1166,7 +1165,9 @@ bool AttributeSchema::ValidateArgs(Reporter* reporter, const Attribute* attribut
     for (const auto& [name, schema] : arg_schemas_) {
       auto desired_name = arg_schemas_.size() == 1 ? std::nullopt : std::make_optional(name);
       const AttributeArg* arg = attribute->GetArg(name);
-      schema.ValidateValue(reporter, attribute, desired_name, arg);
+      if (!schema.ValidateArg(reporter, attribute, desired_name, arg)) {
+        ok = false;
+      }
     }
 
     // Make sure that no arguments not specified by the schema sneak through.
@@ -1198,69 +1199,103 @@ bool AttributeSchema::ValidateConstraint(Reporter* reporter, const Attribute* at
 }
 
 bool AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const {
-  if (attribute->resolved) {
-    return true;
-  }
-
   // For attributes with a single, anonymous argument like `@foo("bar")`, use the schema to assign
   // that argument a name.
-  if (attribute->GetStandaloneAnonymousArg() != nullptr) {
+  if (auto anon_arg = attribute->GetStandaloneAnonymousArg()) {
     assert(arg_schemas_.size() == 1 && "expected a schema with only one value");
-    for (const auto& arg_schema : arg_schemas_) {
-      attribute->args[0]->name = arg_schema.first;
-    }
+    anon_arg->name = arg_schemas_.begin()->first;
   }
 
   // Resolve each constant as its schema-specified type.
   bool ok = true;
   for (auto& arg : attribute->args) {
-    auto found = arg_schemas_.find(arg->name.value());
-    assert(found != arg_schemas_.end() && "did we call ValidateArgs before ResolveArgs?");
+    const auto& schema = arg_schemas_.at(arg->name.value());
+    if (!schema.ResolveArg(library, attribute, arg.get())) {
+      ok = false;
+    }
+  }
+  return ok;
+}
 
-    const auto arg_schema = found->second;
-    const auto want_type = arg_schema.Type();
-    switch (want_type) {
-      case ConstantValue::Kind::kDocComment:
-      case ConstantValue::Kind::kString: {
-        const auto max_size = Size::Max();
-        auto unbounded_string_type = std::make_unique<StringType>(
-            Name::CreateIntrinsic("string"), &max_size, types::Nullability::kNonnullable);
-        if (library->ResolveConstant(arg->value.get(), unbounded_string_type.get())) {
-          arg->type = std::move(unbounded_string_type);
-        } else {
-          ok = false;
-        }
-        break;
+bool AttributeArgSchema::ResolveArg(Library* library, Attribute* attribute,
+                                    AttributeArg* arg) const {
+  switch (type_) {
+    case ConstantValue::Kind::kDocComment:
+    case ConstantValue::Kind::kString: {
+      const auto max_size = Size::Max();
+      auto unbounded_string_type = std::make_unique<StringType>(
+          Name::CreateIntrinsic("string"), &max_size, types::Nullability::kNonnullable);
+      if (!library->ResolveConstant(arg->value.get(), unbounded_string_type.get())) {
+        return false;
       }
-      case ConstantValue::Kind::kBool:
-      case ConstantValue::Kind::kInt8:
-      case ConstantValue::Kind::kInt16:
-      case ConstantValue::Kind::kInt32:
-      case ConstantValue::Kind::kInt64:
-      case ConstantValue::Kind::kUint8:
-      case ConstantValue::Kind::kUint16:
-      case ConstantValue::Kind::kUint32:
-      case ConstantValue::Kind::kUint64:
-      case ConstantValue::Kind::kFloat32:
-      case ConstantValue::Kind::kFloat64: {
-        const std::string primitive_name = ConstantValue::KindToIntrinsicName(want_type);
-        const std::optional<types::PrimitiveSubtype> primitive_subtype =
-            ConstantValue::KindToPrimitiveSubtype(want_type);
-        assert(primitive_subtype.has_value());
-
-        auto primitive_type = std::make_unique<PrimitiveType>(Name::CreateIntrinsic(primitive_name),
-                                                              primitive_subtype.value());
-        if (library->ResolveConstant(arg->value.get(), primitive_type.get())) {
-          arg->type = std::move(primitive_type);
-        } else {
-          ok = false;
-        }
-        break;
+      arg->type = std::move(unbounded_string_type);
+      break;
+    }
+    case ConstantValue::Kind::kBool:
+    case ConstantValue::Kind::kInt8:
+    case ConstantValue::Kind::kInt16:
+    case ConstantValue::Kind::kInt32:
+    case ConstantValue::Kind::kInt64:
+    case ConstantValue::Kind::kUint8:
+    case ConstantValue::Kind::kUint16:
+    case ConstantValue::Kind::kUint32:
+    case ConstantValue::Kind::kUint64:
+    case ConstantValue::Kind::kFloat32:
+    case ConstantValue::Kind::kFloat64: {
+      const std::string primitive_name = ConstantValue::KindToIntrinsicName(type_);
+      const std::optional<types::PrimitiveSubtype> primitive_subtype =
+          ConstantValue::KindToPrimitiveSubtype(type_);
+      assert(primitive_subtype.has_value());
+      auto primitive_type = std::make_unique<PrimitiveType>(Name::CreateIntrinsic(primitive_name),
+                                                            primitive_subtype.value());
+      if (!library->ResolveConstant(arg->value.get(), primitive_type.get())) {
+        return false;
       }
+      arg->type = std::move(primitive_type);
+      break;
     }
   }
 
-  attribute->resolved = ok;
+  return true;
+}
+
+// static
+bool AttributeSchema::ResolveArgsWithoutSchema(Library* library, Attribute* attribute) {
+  // For attributes with a single, anonymous argument like `@foo("bar")`, assign
+  // a default name so that arguments are always named after compilation.
+  if (auto anon_arg = attribute->GetStandaloneAnonymousArg()) {
+    anon_arg->name = AttributeArg::kDefaultAnonymousName;
+  }
+
+  // Schemaless (ie, user defined) attributes must not have numeric arguments.  Resolve all of
+  // their arguments, making sure to error on numerics (since those cannot be resolved to the
+  // appropriate fidelity).
+  bool ok = true;
+  for (const auto& arg : attribute->args) {
+    assert(arg->value->kind != Constant::Kind::kBinaryOperator &&
+           "attribute arg starting with a binary operator is a parse error");
+
+    // Try first as a string...
+    const auto max_size = Size::Max();
+    auto unbounded_string_type = std::make_unique<StringType>(
+        Name::CreateIntrinsic("string"), &max_size, types::Nullability::kNonnullable);
+    if (library->TryResolveConstant(arg->value.get(), unbounded_string_type.get())) {
+      arg->type = std::move(unbounded_string_type);
+    } else {
+      // ...then as a bool if that doesn't work.
+      auto bool_type = std::make_unique<PrimitiveType>(Name::CreateIntrinsic("bool"),
+                                                       types::PrimitiveSubtype::kBool);
+      if (library->TryResolveConstant(arg->value.get(), bool_type.get())) {
+        arg->type = std::move(bool_type);
+      } else {
+        // Since we cannot have an IdentifierConstant resolving to a kDocComment-kinded value,
+        // we know that it must resolve to a numeric instead.
+        library->Fail(ErrCannotUseNumericArgsOnCustomAttributes, attribute->span, arg.get(),
+                      attribute);
+        ok = false;
+      }
+    }
+  }
   return ok;
 }
 
@@ -3251,66 +3286,49 @@ bool Library::ResolveAsOptional(Constant* constant) const {
 
 bool Library::CompileAttributeList(AttributeList* attributes) {
   bool ok = true;
-  if (!attributes->Empty()) {
-    for (auto& attribute : attributes->attributes) {
-      auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute.get(),
-                                                            /* warn_on_typo = */ true);
-
-      // Check for duplicate args, and return early if we find them.
-      std::set<std::string> seen;
-      for (auto& arg : attribute->args) {
-        if (arg->name.has_value() && !seen.insert(utils::canonicalize(arg->name.value())).second) {
-          ok = Fail(ErrDuplicateAttributeArg, attribute->span, attribute.get(), arg->name.value());
-          continue;
-        }
-      }
-
-      // If we have a schema, resolve each argument based on its expected schema-derived type.
-      if (schema != nullptr && !schema->IsDeprecated()) {
-        ok = schema->ValidateArgs(reporter_, attribute.get())
-                 ? schema->ResolveArgs(this, attribute.get())
-                 : false;
-        continue;
-      }
-
-      // Schemaless (ie, user defined) attributes must not have numeric arguments.  Resolve all of
-      // their arguments, making sure to error on numerics (since those cannot be resolved to the
-      // appropriate fidelity).
-      for (const auto& arg : attribute->args) {
-        assert(arg->value->kind != Constant::Kind::kBinaryOperator &&
-               "attribute arg starting with a binary operator is a parse error");
-
-        // Try first as a string...
-        const auto max_size = Size::Max();
-        auto unbounded_string_type = std::make_unique<StringType>(
-            Name::CreateIntrinsic("string"), &max_size, types::Nullability::kNonnullable);
-        if (TryResolveConstant(arg->value.get(), unbounded_string_type.get())) {
-          arg->type = std::move(unbounded_string_type);
-        } else {
-          // ...then as a bool if that doesn't work.
-          auto bool_type = std::make_unique<PrimitiveType>(Name::CreateIntrinsic("bool"),
-                                                           types::PrimitiveSubtype::kBool);
-          if (TryResolveConstant(arg->value.get(), bool_type.get())) {
-            arg->type = std::move(bool_type);
-          } else {
-            // Since we cannot have an IdentifierConstant resolving to a kDocComment-kinded value,
-            // we know that it must resolve to a numeric instead.
-            ok = Fail(ErrCannotUseNumericArgsOnCustomAttributes, attribute->span, arg.get(),
-                      attribute.get());
-          }
-        }
-      }
-      if (!ok) {
-        continue;
-      }
-
-      if (attribute->args.size() == 1) {
-        attribute->args[0]->name = AttributeArg::kDefaultAnonymousName;
-      }
-      attribute->resolved = true;
+  for (auto& attribute : attributes->attributes) {
+    if (!CompileAttribute(attribute.get())) {
+      ok = false;
     }
   }
   return ok;
+}
+
+bool Library::CompileAttribute(Attribute* attribute) {
+  if (attribute->compiled) {
+    return true;
+  }
+
+  auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute,
+                                                        /* warn_on_typo = */ true);
+
+  // Check for duplicate args, and return early if we find them.
+  std::set<std::string> seen;
+  for (auto& arg : attribute->args) {
+    if (arg->name.has_value() && !seen.insert(utils::canonicalize(arg->name.value())).second) {
+      return Fail(ErrDuplicateAttributeArg, attribute->span, attribute, arg->name.value());
+    }
+  }
+
+  // Don't resolve with the schema if it's deprecated, since placement
+  // validation will already report an error. We don't keep around argument
+  // schemas for deprecated attributes, so continuing would lead to spurious
+  // errors about unknown arguments.
+  if (schema == nullptr || schema->IsDeprecated()) {
+    if (!AttributeSchema::ResolveArgsWithoutSchema(this, attribute)) {
+      return false;
+    }
+  } else {
+    if (!schema->ValidateArgs(reporter_, attribute)) {
+      return false;
+    }
+    if (!schema->ResolveArgs(this, attribute)) {
+      return false;
+    }
+  }
+
+  attribute->compiled = true;
+  return true;
 }
 
 const Type* Library::TypeResolve(const Type* type) {

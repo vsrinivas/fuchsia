@@ -1899,4 +1899,44 @@ type MyStruct = struct {};
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType);
 }
 
+TEST(AttributesTests, GoodAnonymousArgumentGetsNamedValue) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@attr("abc")
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_TRUE(library.Compile());
+
+  auto example_struct = library.LookupStruct("MyStruct");
+  ASSERT_NOT_NULL(example_struct);
+  ASSERT_EQ(example_struct->attributes->attributes.size(), 1);
+  ASSERT_EQ(example_struct->attributes->attributes[0]->args.size(), 1);
+  EXPECT_EQ(example_struct->attributes->attributes[0]->args[0]->name, "value");
+}
+
+TEST(AttributesTests, GoodSingleNamedArgumentKeepsName) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+  TestLibrary library(R"FIDL(
+library example;
+
+@attr(foo="abc")
+type MyStruct = struct {};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_TRUE(library.Compile());
+
+  auto example_struct = library.LookupStruct("MyStruct");
+  ASSERT_NOT_NULL(example_struct);
+  ASSERT_EQ(example_struct->attributes->attributes.size(), 1);
+  ASSERT_EQ(example_struct->attributes->attributes[0]->args.size(), 1);
+  EXPECT_EQ(example_struct->attributes->attributes[0]->args[0]->name, "foo");
+}
+
 }  // namespace

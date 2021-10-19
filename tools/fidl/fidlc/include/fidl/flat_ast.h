@@ -70,11 +70,10 @@ struct AttributeArg final {
   AttributeArg(std::optional<std::string> name, std::unique_ptr<Constant> value, SourceSpan span)
       : name(std::move(name)), value(std::move(value)), span(span) {}
 
+  // Set during compilation (if it wasn't already set in the constructor).
   std::optional<std::string> name;
   std::unique_ptr<Constant> value;
-
-  // Set during compilation - type is derived during attribute resolution, and thus must represent
-  // either an intrinsic primitive or string type.
+  // Set during compilation. Must be a primitive or string type.
   std::unique_ptr<Type> type = nullptr;
 
   const SourceSpan span;
@@ -96,15 +95,14 @@ struct Attribute final {
   // Returns the lone argument if there is exactly 1 and it is not named. For
   // example it returns non-null for `@foo("x")` but not for `@foo(bar="x")`.
   const AttributeArg* GetStandaloneAnonymousArg() const;
+  AttributeArg* GetStandaloneAnonymousArg();
 
   const std::string name;
   const std::vector<std::unique_ptr<AttributeArg>> args;
   const SourceSpan span;
 
-  // This member should be set to "true" when the AttributeSchema::ResolveArgs() method has been run
-  // on this attribute.  Every attribute should, by the end of compilation, have this boolean
-  // flipped to true.
-  bool resolved = false;
+  // Set to true by Library::CompileAttribute.
+  bool compiled = false;
 };
 
 // In the flat AST, "no attributes" is represented by an AttributeList
@@ -982,11 +980,10 @@ class AttributeArgSchema {
 
   bool IsOptional() const { return optionality_ == Optionality::kOptional; }
 
-  ConstantValue::Kind Type() const { return type_; }
-
-  void ValidateValue(Reporter* reporter, const Attribute* attribute,
-                     std::optional<std::string_view> desired_name,
-                     const AttributeArg* maybe_arg) const;
+  bool ValidateArg(Reporter* reporter, const Attribute* attribute,
+                   std::optional<std::string_view> desired_name,
+                   const AttributeArg* maybe_arg) const;
+  bool ResolveArg(Library* target_library, Attribute* attribute, AttributeArg* arg) const;
 
  private:
   const ConstantValue::Kind type_;
@@ -1055,6 +1052,9 @@ class AttributeSchema {
   // This method should only be run after AttributeSchema::ValidateArgs() has been successfully
   // completed.
   bool ResolveArgs(Library* target_library, Attribute* attribute) const;
+
+  // Like `ResolveArgs`, but for a user-defined attribute (has no schema).
+  static bool ResolveArgsWithoutSchema(Library* target_library, Attribute* attribute);
 
  private:
   static bool NoOpConstraint(Reporter* reporter, const Attribute* attribute,
@@ -1164,6 +1164,7 @@ struct LibraryComparator;
 
 class Library : Attributable {
   friend AttributeSchema;
+  friend AttributeArgSchema;
   friend StepBase;
   friend ConsumeStep;
   friend CompileStep;
@@ -1313,6 +1314,7 @@ class Library : Attributable {
                           AllowedCategories category);
 
   bool CompileAttributeList(AttributeList* attributes);
+  bool CompileAttribute(Attribute* attribute);
 
   ConstantValue::Kind ConstantValuePrimitiveKind(const types::PrimitiveSubtype primitive_subtype);
   bool ResolveHandleRightsConstant(Resource* resource, Constant* constant,
