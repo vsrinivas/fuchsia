@@ -7,6 +7,11 @@
 #![deny(missing_docs)]
 
 use {
+    anyhow::Error,
+    fidl_fuchsia_device::ControllerMarker,
+    files_async::readdir,
+    fuchsia_component::client::connect_to_protocol_at_path,
+    fuchsia_zircon as zx, io_util,
     rand::{distributions, rngs::StdRng, Rng, SeedableRng},
     structopt::StructOpt,
 };
@@ -45,4 +50,23 @@ pub fn generate_content(seed: u64) -> Vec<u8> {
 
     let size = rng.gen_range(1, 1 << 16);
     rng.sample_iter(&distributions::Standard).take(size).collect()
+}
+
+/// Find the device in /dev/class/block that represents a given topological path. Returns the full
+/// path of the device in /dev/class/block.
+pub async fn find_dev(dev: &str) -> Result<String, Error> {
+    let dev_class_block = io_util::open_directory_in_namespace(
+        "/dev/class/block",
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+    )?;
+    for entry in readdir(&dev_class_block).await? {
+        let path = format!("/dev/class/block/{}", entry.name);
+        let proxy = connect_to_protocol_at_path::<ControllerMarker>(&path)?;
+        let topo_path = proxy.get_topological_path().await?.map_err(|s| zx::Status::from_raw(s))?;
+        println!("{} => {}", path, topo_path);
+        if dev == topo_path {
+            return Ok(path);
+        }
+    }
+    Err(anyhow::anyhow!("Couldn't find {} in /dev/class/block", dev))
 }

@@ -211,7 +211,7 @@ impl SshAuth {
 
 /// Unconfigured test. Knows how to configure itself based on the set of common options.
 pub struct UnconfiguredTest {
-    package: &'static str,
+    bin: String,
 }
 
 /// Test definition. This contains all the information to make a test reproducible in a particular
@@ -265,7 +265,7 @@ impl UnconfiguredTest {
     pub fn add_options(self, opts: CommonOpts) -> Test {
         Test {
             target: opts.target,
-            bin: format!("run {}", self.package),
+            bin: self.bin,
             seed: Seed::new(opts.seed),
             block_device: opts.block_device,
             reboot_type: match opts.relay {
@@ -300,8 +300,10 @@ impl Test {
     /// Create a new test with the provided name. The name needs to match the associated package that
     /// will be present on the target device. The package should be callable with `run` from the
     /// command line.
-    pub fn new(package: &'static str) -> UnconfiguredTest {
-        UnconfiguredTest { package }
+    pub fn new_component(package: &'static str, component: &'static str) -> UnconfiguredTest {
+        UnconfiguredTest {
+            bin: format!("run fuchsia-pkg://fuchsia.com/{}#meta/{}.cmx", package, component),
+        }
     }
 
     /// Add a test step for setting up the filesystem in the way we want it for the test. This
@@ -508,7 +510,7 @@ mod tests {
     }
 
     fn fake_test(iterations: Option<u64>, run_until_failure: bool) -> Test {
-        let test = Test::new("fake package");
+        let test = Test::new_component("fake_package", "fake_component");
         let opts = CommonOpts {
             block_device: "/fake/block/device".into(),
             target: "fake target".into(),

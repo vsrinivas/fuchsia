@@ -5,7 +5,7 @@
 use {anyhow::Error, blackout_host::Test, std::time::Duration};
 
 fn main() -> Result<(), Error> {
-    Test::new("minfs-fsck-target")
+    Test::new_component("minfs-fsck-target", "minfs_fsck_target")
         .collect_options()
         .setup_step()
         .load_step(Duration::from_secs(10))

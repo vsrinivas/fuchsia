@@ -10,6 +10,11 @@ import("//src/storage/testing/isolated_devmgr.gni")
 rustc_library("blackout-target") {
   edition = "2018"
   deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:structopt",
@@ -24,8 +29,13 @@ rustc_library("blackout-target") {
 rustc_test("blackout-target-lib-test") {
   edition = "2018"
   deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
+    "//src/lib/fuchsia-component",
     "//src/lib/storage/fs_management/rust:fs_management",
     "//src/lib/storage/ramdevice_client",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/storage/bin/minfs",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:rand",

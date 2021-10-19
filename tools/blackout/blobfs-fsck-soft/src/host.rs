@@ -5,7 +5,7 @@
 use {anyhow::Error, blackout_host::Test, std::time::Duration};
 
 fn main() -> Result<(), Error> {
-    Test::new("blobfs_fsck_soft_target.cmx")
+    Test::new_component("blobfs-fsck-soft-target", "blobfs-fsck-soft-target-component")
         .collect_options()
         .setup_step()
         .load_step(Duration::from_secs(5))
@@ -24,7 +24,7 @@ mod tests {
 
     #[test]
     fn test() {
-        Test::new("blobfs_fsck_soft_target.cmx")
+        Test::new_component("blobfs-fsck-soft-target", "blobfs-fsck-soft-target-component")
             .add_options(integration::options())
             .setup_step()
             .load_step(Duration::from_secs(5))

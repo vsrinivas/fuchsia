@@ -9,6 +9,7 @@ use {
         CommonCommand, CommonOpts,
     },
     fs_management::{Filesystem, Minfs},
+    fuchsia_async as fasync,
     rand::{rngs::StdRng, Rng, SeedableRng},
     structopt::StructOpt,
 };
@@ -65,11 +66,14 @@ fn verify(mut minfs: Filesystem<Minfs>) -> Result<(), Error> {
     Ok(())
 }
 
-fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     let opts = Opts::from_args();
 
-    println!("minfs block device: {}", opts.common.block_device);
-    let minfs = Minfs::new(&opts.common.block_device)?;
+    println!("provided block device: {}", opts.common.block_device);
+    let dev = blackout_target::find_dev(&opts.common.block_device).await?;
+    println!("using equivalent block device: {}", dev);
+    let minfs = Minfs::new(&dev)?;
 
     match opts.commands {
         CommonCommand::Setup => setup(minfs),

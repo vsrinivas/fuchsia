@@ -19,6 +19,7 @@ use {
     cstr::cstr,
     fdio,
     fs_management::{Blobfs, Filesystem},
+    fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef},
     scoped_task::{self, Scoped},
     std::ffi::CString,
@@ -78,11 +79,14 @@ fn verify(blobfs: &mut Filesystem<Blobfs>) -> Result<(), Error> {
     Ok(())
 }
 
-fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     let opts = Opts::from_args();
 
-    println!("blobfs block device: {}", opts.common.block_device);
-    let mut blobfs = Blobfs::new(&opts.common.block_device)?;
+    println!("provided block device: {}", opts.common.block_device);
+    let dev = blackout_target::find_dev(&opts.common.block_device).await?;
+    println!("using equivalent block device: {}", dev);
+    let mut blobfs = Blobfs::new(&dev)?;
 
     match opts.commands {
         CommonCommand::Setup => setup(&mut blobfs),
