@@ -219,9 +219,9 @@ impl Identifier {
             (Identifier::Filename | Identifier::LifecycleEventType | Identifier::Tags, value) => {
                 match_one_or_many_value!(value, Value::StringLiteral(_))
             }
-            // TODO(fxbug.dev/55118): similar to severities, we can probably have reserved values
+            // TODO(fxbug.dev/86960): similar to severities, we can probably have reserved values
             // for lifecycle event types.
-            // TODO(fxbug.dev/55118): support time diferences (1h30m, 30s, etc) instead of only
+            // TODO(fxbug.dev/86961): support time diferences (1h30m, 30s, etc) instead of only
             // timestamp comparison.
             (
                 Identifier::Pid | Identifier::Tid | Identifier::LineNumber | Identifier::Timestamp,
@@ -229,7 +229,7 @@ impl Identifier {
             ) => {
                 match_one_or_many_value!(value, Value::Number(_))
             }
-            // TODO(fxbug.dev/55118): it should also be possible to compare severities with a fixed
+            // TODO(fxbug.dev/86962): it should also be possible to compare severities with a fixed
             // set of numbers.
             (Identifier::Severity, value) => {
                 match_one_or_many_value!(value, Value::Severity(_))
@@ -273,7 +273,7 @@ where
 /// Parses the input as a string literal wrapped in double quotes. Returns the value
 /// inside the quotes.
 fn string_literal(input: &str) -> IResult<&str, &str> {
-    // TODO(fxbug.dev/55118): this doesn't handle escape sequences.
+    // TODO(fxbug.dev/86963): this doesn't handle escape sequences.
     // Consider accepting escaped `"`: `\"` too.
     let (rest, value) = recognize(delimited(char('"'), many0(is_not("\"")), char('"')))(input)?;
     Ok((rest, &value[1..value.len() - 1]))
@@ -291,7 +291,7 @@ fn hex_integer(input: &str) -> IResult<&str, u64> {
 
 /// Parses a unsigned decimal and hexadecimal numbers of 64 bits.
 /// For example: 123, 0x7b will be accepted as
-// TODO(fxbug.dev/55118): consider also accepting signed numbers.
+// TODO(fxbug.dev/86964): consider also accepting signed numbers.
 fn number(input: &str) -> IResult<&str, u64> {
     alt((hex_integer, integer))(input)
 }
