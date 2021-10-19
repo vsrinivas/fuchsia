@@ -18,7 +18,7 @@ use std::convert::TryInto as _;
 use test_case::test_case;
 
 async fn add_address(
-    control: &fidl_fuchsia_net_interfaces_admin::ControlProxy,
+    control: &mut fidl_fuchsia_net_interfaces_ext::admin::Control,
     mut address: fidl_fuchsia_net::InterfaceAddress,
     address_parameters: fidl_fuchsia_net_interfaces_admin::AddressParameters,
 ) -> std::result::Result<
@@ -139,9 +139,8 @@ async fn add_address_errors() {
         .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
         .expect(<fidl_fuchsia_net_debug::InterfacesMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME);
 
-    let (control, server) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
-            .expect("create Control proxy");
+    let (mut control, server) = fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+        .expect("create Control proxy");
     let () = debug_control.get_admin(*id, server).expect("get admin");
 
     const VALID_ADDRESS_PARAMETERS: fidl_fuchsia_net_interfaces_admin::AddressParameters =
@@ -159,36 +158,39 @@ async fn add_address_errors() {
         assert!(!did_remove);
     }
 
-    let (v4_count, v6_count) = futures::stream::iter(addresses).fold((0, 0), |(v4, v6), &fidl_fuchsia_net_interfaces_ext::Address {
+    let (mut control, v4_addr, v6_addr) = futures::stream::iter(addresses).fold((control, None, None), |(mut control, v4, v6), fidl_fuchsia_net_interfaces_ext::Address {
         addr: fidl_fuchsia_net::Subnet { addr, prefix_len },
         valid_until: _,
     }| {
         let (addr, v4, v6) = match addr {
             fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
-                assert!(net_types::ip::Ipv4Addr::new(addr.addr).is_loopback());
-                (fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_fuchsia_net::Ipv4AddressWithPrefix {
-                    addr,
-                    prefix_len,
-                }), v4 + 1, v6)
+                let nt_addr = net_types::ip::Ipv4Addr::new(addr.addr);
+                assert!(nt_addr.is_loopback(), "{} is not a loopback address", nt_addr);
+                let addr = fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                    addr: *addr,
+                    prefix_len: *prefix_len,
+                };
+                assert_eq!(v4, None, "v4 address already present, found {:?}", addr);
+                (fidl_fuchsia_net::InterfaceAddress::Ipv4(addr), Some(addr), v6)
             }
             fidl_fuchsia_net::IpAddress::Ipv6(addr) => {
-                assert!(net_types::ip::Ipv6Addr::from_bytes(addr.addr).is_loopback());
-                (fidl_fuchsia_net::InterfaceAddress::Ipv6(addr), v4, v6 + 1)
+                let nt_addr = net_types::ip::Ipv6Addr::from_bytes(addr.addr);
+                assert!(nt_addr.is_loopback(), "{} is not a loopback address", nt_addr);
+                assert_eq!(v6, None, "v6 address already present, found {:?}", addr);
+                (fidl_fuchsia_net::InterfaceAddress::Ipv6(*addr), v4, Some(*addr))
             }
         };
-        let control = &control;
         async move {
             matches::assert_matches!(
-                add_address(control, addr, VALID_ADDRESS_PARAMETERS).await,
+                add_address(&mut control, addr.clone(), VALID_ADDRESS_PARAMETERS).await,
                 Err(fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
                     fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::AlreadyAssigned
-                ))
-            );
-            (v4, v6)
+                )));
+            (control, v4, v6)
         }
     }).await;
-    assert_eq!(v6_count, 1);
-    assert_eq!(v4_count, 1);
+    let _: fidl_fuchsia_net::Ipv4AddressWithPrefix = v4_addr.expect("expected v4 address");
+    let _: fidl_fuchsia_net::Ipv6Address = v6_addr.expect("expected v6 address");
 
     // Adding an invalid address returns error.
     {
@@ -199,7 +201,7 @@ async fn add_address_errors() {
                 prefix_len: 33,
             });
         matches::assert_matches!(
-            add_address(&control, invalid_address, VALID_ADDRESS_PARAMETERS).await,
+            add_address(&mut control, invalid_address, VALID_ADDRESS_PARAMETERS).await,
             Err(fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
                 fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::Invalid
             ))
@@ -226,7 +228,7 @@ async fn add_address_errors() {
         };
         matches::assert_matches!(
             add_address(
-                &control,
+                &mut control,
                 fidl_fuchsia_net::InterfaceAddress::Ipv6(fidl_ip_v6!("fe80::1")),
                 parameters,
             )
@@ -243,7 +245,7 @@ async fn add_address_errors() {
     // once properly supported.
     {
         let address_state_provider = add_address(
-            &control,
+            &mut control,
             fidl_fuchsia_net::InterfaceAddress::Ipv6(fidl_ip_v6!("fe80::1")),
             VALID_ADDRESS_PARAMETERS,
         )
@@ -282,9 +284,8 @@ async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
         .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
         .expect(<fidl_fuchsia_net_debug::InterfacesMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME);
 
-    let (control, server) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
-            .expect("create Control proxy");
+    let (mut control, server) = fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+        .expect("create Control proxy");
     let () = debug_control.get_admin(id, server).expect("get admin");
 
     const VALID_ADDRESS_PARAMETERS: fidl_fuchsia_net_interfaces_admin::AddressParameters =
@@ -295,7 +296,7 @@ async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
         let mut address =
             fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_ip_v4_with_prefix!("3.3.3.3/32"));
 
-        let address_state_provider = add_address(&control, address, VALID_ADDRESS_PARAMETERS)
+        let address_state_provider = add_address(&mut control, address, VALID_ADDRESS_PARAMETERS)
             .await
             .expect("add address failed unexpectedly");
 
@@ -322,7 +323,7 @@ async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
         let address =
             fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_ip_v4_with_prefix!("4.4.4.4/32"));
 
-        let address_state_provider = add_address(&control, address, VALID_ADDRESS_PARAMETERS)
+        let address_state_provider = add_address(&mut control, address, VALID_ADDRESS_PARAMETERS)
             .await
             .expect("add address failed unexpectedly");
 
@@ -346,9 +347,13 @@ async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
         );
 
         matches::assert_matches!(
-            control.take_event_stream().try_collect::<Vec<_>>().await.as_ref().map(Vec::as_slice),
-            // TODO(https://fxbug.dev/76695): Sending epitaphs not supported in Go.
-            Ok([])
+            control.wait_termination().await,
+            // TODO(https://fxbug.dev/81579): Should provide a proper terminal
+            // event once interface lifetimes are properly encoded in the
+            // channel.
+            fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Fidl(fidl::Error::ClientRead(
+                fuchsia_zircon::Status::PEER_CLOSED
+            ))
         );
     }
 }
@@ -441,9 +446,8 @@ async fn add_address_success() {
         .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
         .expect("connect to protocol");
 
-    let (control, server) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
-            .expect("create Control proxy");
+    let (mut control, server) = fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+        .expect("create Control proxy");
     let () = debug_control.get_admin(*id, server).expect("get admin");
 
     const VALID_ADDRESS_PARAMETERS: fidl_fuchsia_net_interfaces_admin::AddressParameters =
@@ -458,7 +462,7 @@ async fn add_address_success() {
         };
         let address = fidl_fuchsia_net::InterfaceAddress::Ipv4(v4_with_prefix);
 
-        let address_state_provider = add_address(&control, address, VALID_ADDRESS_PARAMETERS)
+        let address_state_provider = add_address(&mut control, address, VALID_ADDRESS_PARAMETERS)
             .await
             .expect("add address failed unexpectedly");
 
@@ -542,7 +546,7 @@ async fn add_address_success() {
         // Must hold onto AddressStateProvider since dropping the channel
         // removes the address.
         let _address_state_provider =
-            add_address(&control, interface_addr, VALID_ADDRESS_PARAMETERS)
+            add_address(&mut control, interface_addr, VALID_ADDRESS_PARAMETERS)
                 .await
                 .expect("add address failed unexpectedly");
 
@@ -581,7 +585,7 @@ async fn add_address_success() {
             prefix_len: addr.prefix_len,
         };
 
-        let address_state_provider = add_address(&control, address, VALID_ADDRESS_PARAMETERS)
+        let address_state_provider = add_address(&mut control, address, VALID_ADDRESS_PARAMETERS)
             .await
             .expect("add address failed unexpectedly");
 
@@ -645,9 +649,8 @@ async fn device_control_create_interface() {
             .expect("create proxy");
     let () = installer.install_device(device, device_control_server_end).expect("install device");
 
-    let (control, control_server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
-            .expect("create proxy");
+    let (mut control, control_server_end) =
+        fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints().expect("create proxy");
     let () = device_control
         .create_interface(
             netemul::PORT_ID,
@@ -779,8 +782,8 @@ async fn device_control_owns_interfaces_lifetimes() {
                 )
                 .expect("add port");
 
-            let (control, control_server_end) =
-                fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
+            let (mut control, control_server_end) =
+                fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
                     .expect("create proxy");
 
             let () = device_control
@@ -847,7 +850,7 @@ async fn device_control_owns_interfaces_lifetimes() {
     // TODO(https://fxbug.dev/81579): Once the lifetime is tied to the
     // interfaces, check that control is closed here as well.
     let control_closed_fut = futures::stream::iter(control_proxies.into_iter())
-        .for_each(|_: fidl_fuchsia_net_interfaces_admin::ControlProxy| futures::future::ready(()));
+        .for_each(|_: fidl_fuchsia_net_interfaces_ext::admin::Control| futures::future::ready(()));
 
     let ((), (), ()) =
         futures::future::join3(interfaces_removed_fut, ports_are_detached_fut, control_closed_fut)
@@ -928,7 +931,7 @@ async fn control_terminal_events(
     };
 
     enum KeepResource {
-        Control(fidl_fuchsia_net_interfaces_admin::ControlProxy),
+        Control(fidl_fuchsia_net_interfaces_ext::admin::Control),
         Port(fidl_fuchsia_net_tun::PortProxy),
     }
 
@@ -936,10 +939,11 @@ async fn control_terminal_events(
         fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortAlreadyBound => {
             let port = create_port(base_port_config).await;
             let control1 = {
-                let control = create_interface(
-                    BASE_PORT_ID,
-                    fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
-                );
+                let mut control =
+                    fidl_fuchsia_net_interfaces_ext::admin::Control::new(create_interface(
+                        BASE_PORT_ID,
+                        fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
+                    ));
                 // Verify that interface was created.
                 let _: u64 = control.get_id().await.expect("get id");
                 control
@@ -954,13 +958,14 @@ async fn control_terminal_events(
             let port1 = create_port(base_port_config.clone()).await;
             let if_name = "test_same_name";
             let control1 = {
-                let control = create_interface(
-                    BASE_PORT_ID,
-                    fidl_fuchsia_net_interfaces_admin::Options {
-                        name: Some(if_name.to_string()),
-                        ..fidl_fuchsia_net_interfaces_admin::Options::EMPTY
-                    },
-                );
+                let mut control =
+                    fidl_fuchsia_net_interfaces_ext::admin::Control::new(create_interface(
+                        BASE_PORT_ID,
+                        fidl_fuchsia_net_interfaces_admin::Options {
+                            name: Some(if_name.to_string()),
+                            ..fidl_fuchsia_net_interfaces_admin::Options::EMPTY
+                        },
+                    ));
                 // Verify that interface was created.
                 let _: u64 = control.get_id().await.expect("get id");
                 control
@@ -1052,9 +1057,8 @@ async fn device_control_closes_on_device_close() {
 
     // Create an interface and get its identifier to ensure the device is
     // installed.
-    let (control, control_server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
-            .expect("create proxy");
+    let (mut control, control_server_end) =
+        fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints().expect("create proxy");
     let () = device_control
         .create_interface(
             netemul::PORT_ID,
@@ -1093,7 +1097,7 @@ async fn installer_creates_datapath() {
         realm: netemul::TestRealm<'a>,
         endpoint: netemul::TestEndpoint<'a>,
         device_control: fidl_fuchsia_net_interfaces_admin::DeviceControlProxy,
-        control: fidl_fuchsia_net_interfaces_admin::ControlProxy,
+        control: fidl_fuchsia_net_interfaces_ext::admin::Control,
         address_state_provider: fidl_fuchsia_net_interfaces_admin::AddressStateProviderProxy,
     }
 
@@ -1125,10 +1129,9 @@ async fn installer_creates_datapath() {
                     .install_device(device, device_control_server_end)
                     .expect("install device");
 
-                let (control, control_server_end) = fidl::endpoints::create_proxy::<
-                    fidl_fuchsia_net_interfaces_admin::ControlMarker,
-                >()
-                .expect("create proxy");
+                let (mut control, control_server_end) =
+                    fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+                        .expect("create proxy");
                 let () = device_control
                     .create_interface(
                         netemul::PORT_ID,
@@ -1157,7 +1160,7 @@ async fn installer_creates_datapath() {
                 }
 
                 let address_state_provider = add_address(
-                    &control,
+                    &mut control,
                     fidl_fuchsia_net::InterfaceAddress::Ipv4(ip),
                     fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
                 )
@@ -1234,9 +1237,8 @@ async fn control_enable_disable() {
             .expect("create proxy");
     let () = installer.install_device(device, device_control_server_end).expect("install device");
 
-    let (control, control_server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
-            .expect("create proxy");
+    let (mut control, control_server_end) =
+        fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints().expect("create proxy");
 
     let interfaces_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
