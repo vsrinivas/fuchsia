@@ -549,14 +549,6 @@ rotation / aging interval (10s by default), it will be ignored and the eviction
 interval will instead be set equal to the page queue rotation interval.
 )""")
 
-DEFINE_OPTION("kernel.page-scanner.promote-no-clones", bool, page_scanner_promote_no_clones,
-              {false}, R"""(
-This option, allows the scanner to evict first the pages owned by pager backed VMOs
-with no clones. VMOs with no clones are meant to approximate inactive VMOs. Evicting
-inactive pages first is expected to free up memory that remains free for longer,
-and can be more effective at relieving memory pressure.
-)""")
-
 DEFINE_OPTION("kernel.page-scanner.start-at-boot", bool, page_scanner_start_at_boot, {true},
               R"""(
 This option causes the kernels active memory scanner to be initially
