@@ -51,6 +51,9 @@ cache_package_labels += [
   # General end to end dependencies.
   "//src/tests/end_to_end/bundles:end_to_end_deps",
   "//src/tests/end_to_end/bundles:terminal_end_to_end_deps",
+
+  # CFv2 test framework.
+  "//src/sys/run_test_suite",
 ]
 
 # Add SDK tools set to "cache" so these tools are automatically available in
