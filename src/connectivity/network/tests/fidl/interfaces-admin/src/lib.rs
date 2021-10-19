@@ -1016,15 +1016,16 @@ async fn control_terminal_events(
         unknown_reason => panic!("unknown reason {:?}", unknown_reason),
     };
 
-    // Observe terminal event.
-    let fidl_fuchsia_net_interfaces_admin::ControlEvent::OnInterfaceRemoved { reason: got_reason } =
-        control
-            .take_event_stream()
-            .try_next()
-            .await
-            .expect("waiting for terminal event")
-            .expect("closed without terminal event");
-    assert_eq!(got_reason, reason);
+    // Observe a terminal event and channel closure.
+    let got_reason = control
+        .take_event_stream()
+        .map_ok(|fidl_fuchsia_net_interfaces_admin::ControlEvent::OnInterfaceRemoved { reason }| {
+            reason
+        })
+        .try_collect::<Vec<_>>()
+        .await
+        .expect("waiting for terminal event");
+    assert_eq!(got_reason, [reason]);
 }
 
 // Test that destroying a device causes device control instance to close.
