@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::server::directory::FxDirectory,
+    crate::server::{directory::FxDirectory, file::FxFile},
     futures::future::poll_fn,
     std::{
         any::TypeId,
-        collections::{hash_map::Entry, HashMap},
+        collections::{btree_map::Entry, BTreeMap},
+        iter::Iterator,
         sync::{Arc, Mutex, Weak},
         task::{Poll, Waker},
         vec::Vec,
@@ -89,16 +90,41 @@ pub enum GetResult<'a> {
 }
 
 struct NodeCacheInner {
-    map: HashMap<u64, Weak<dyn FxNode>>,
+    map: BTreeMap<u64, Weak<dyn FxNode>>,
     next_waker_sequence: u64,
 }
 
 /// NodeCache is an in-memory cache of weak node references.
 pub struct NodeCache(Mutex<NodeCacheInner>);
 
+/// Iterates over all files in the cache (skipping directories).
+pub struct FileIter<'a> {
+    cache: &'a NodeCache,
+    object_id: Option<u64>,
+}
+
+impl<'a> Iterator for FileIter<'a> {
+    type Item = Arc<FxFile>;
+    fn next(&mut self) -> Option<Self::Item> {
+        let cache = self.cache.0.lock().unwrap();
+        let range = match self.object_id {
+            None => cache.map.range(0..),
+            Some(oid) => cache.map.range(oid + 1..),
+        };
+        for (object_id, file) in range {
+            if let Some(file) = file.upgrade().and_then(|f| f.into_any().downcast::<FxFile>().ok())
+            {
+                self.object_id = Some(*object_id);
+                return Some(file);
+            }
+        }
+        None
+    }
+}
+
 impl NodeCache {
     pub fn new() -> Self {
-        Self(Mutex::new(NodeCacheInner { map: HashMap::new(), next_waker_sequence: 0 }))
+        Self(Mutex::new(NodeCacheInner { map: BTreeMap::new(), next_waker_sequence: 0 }))
     }
 
     /// Gets a node in the cache, or reserves a placeholder in the cache to fill.
@@ -162,6 +188,11 @@ impl NodeCache {
     /// Returns the given node if present in the cache.
     pub fn get(&self, object_id: u64) -> Option<Arc<dyn FxNode>> {
         self.0.lock().unwrap().map.get(&object_id).and_then(Weak::upgrade)
+    }
+
+    /// Returns an iterator over all files in the cache.
+    pub fn files(&self) -> FileIter<'_> {
+        FileIter { cache: self, object_id: None }
     }
 }
 
