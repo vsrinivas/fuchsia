@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 import("//build/testing/environments.gni")
+import("../libc.gni")
 
 # We want to run these tests on every kind of hardware as well as emulators.
 libc_test_specs = {
@@ -168,6 +169,7 @@ group("test") {
   testonly = true
   deps = [
     ":atexit-test-pkg",
+    ":gwp-asan-test-pkg",
     ":libc-unittests-pkg",
     ":posix-clocks-test-pkg",
     ":pthread-detach-idempotent-test-pkg",
@@ -205,5 +207,41 @@ test("libc-unittests") {
 
 fuchsia_unittest_package("libc-unittests-pkg") {
   deps = [ ":libc-unittests" ]
+  test_specs = libc_test_specs
+}
+
+test("gwp-asan-test") {
+  # Whether GWP-ASan is enabled.
+  has_gwp_asan = !variant_replaces_allocator
+
+  sources = [ "gwp-asan-test.cc" ]
+  defines = [ "HAS_GWP_ASAN=$has_gwp_asan" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//sdk/lib/fit",
+    "//zircon/system/ulib/c/scudo:gwp-asan-common",
+    "//zircon/system/ulib/elf-search",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
+  ]
+  data_deps = [ ":gwp-asan-test-helper" ]
+}
+
+executable("gwp-asan-test-helper") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [ "gwp-asan-test-helper.cc" ]
+
+  # Enable frame pointer for backtrace.
+  configs += [
+    "//build/config:frame_pointers",
+    "//build/config:default_frame_pointers",
+  ]
+  configs -= [ "//build/config:default_frame_pointers" ]
+}
+
+fuchsia_unittest_package("gwp-asan-test-pkg") {
+  manifest = "gwp-asan-test.cml"
+  deps = [ ":gwp-asan-test" ]
   test_specs = libc_test_specs
 }

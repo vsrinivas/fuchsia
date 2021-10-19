@@ -231,3 +231,6 @@ template("libc_test") {
     deps += [ "//zircon/system/ulib/zxtest" ]
   }
 }
+
+variant_replaces_allocator = toolchain_variant.tags + [ "replaces-allocator" ] -
+                             [ "replaces-allocator" ] != toolchain_variant.tags

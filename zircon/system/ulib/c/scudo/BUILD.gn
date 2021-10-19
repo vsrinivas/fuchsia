@@ -4,9 +4,6 @@
 
 import("../libc.gni")
 
-variant_replaces_allocator = toolchain_variant.tags + [ "replaces-allocator" ] -
-                             [ "replaces-allocator" ] != toolchain_variant.tags
-
 scudo_common_vars = {
   dir = "//third_party/scudo/src"
   include_dirs = [
@@ -152,11 +149,6 @@ libc_source_set("gwp_asan") {
   forward_variables_from(gwp_asan_common_vars, "*")
 
   sources = [
-    "common.cpp",
-    "common.h",
-    "crash_handler.cpp",
-    "crash_handler.h",
-    "definitions.h",
     "guarded_pool_allocator.cpp",
     "guarded_pool_allocator.h",
     "mutex.h",
@@ -165,20 +157,54 @@ libc_source_set("gwp_asan") {
     "optional/printf.h",
     "optional/segv_handler.h",
     "optional/segv_handler_fuchsia.cpp",
-    "options.h",
-    "platform_specific/common_fuchsia.cpp",
     "platform_specific/guarded_pool_allocator_fuchsia.cpp",
     "platform_specific/guarded_pool_allocator_fuchsia.h",
     "platform_specific/guarded_pool_allocator_tls.h",
     "platform_specific/mutex_fuchsia.cpp",
     "platform_specific/mutex_fuchsia.h",
     "platform_specific/utilities_fuchsia.cpp",
-    "stack_trace_compressor.cpp",
-    "stack_trace_compressor.h",
   ]
+  public_deps = [ ":gwp-asan-common" ]
 
-  non_test_deps = [ ":libc" ]
+  non_test_deps = [
+    ":gwp-asan-info",
+    ":libc",
+  ]
   testonly_deps = [ ":testonly" ]
+}
+
+libc_source_set("gwp-asan-info") {
+  forward_variables_from(gwp_asan_common_vars, "*", [ "dir" ])
+
+  deps += [
+    ":gwp-asan-common",
+    ":libc",
+  ]
+  sources = [
+    "gwp_asan_info.cc",
+    "gwp_asan_note.S",
+  ]
+}
+
+# Crash handlers should depend on this target.
+source_set("gwp-asan-common") {
+  public_configs = [ ":gwp-asan-common-config" ]
+  sources = [
+    "//third_party/scudo/gwp_asan/common.cpp",
+    "//third_party/scudo/gwp_asan/common.h",
+    "//third_party/scudo/gwp_asan/crash_handler.cpp",
+    "//third_party/scudo/gwp_asan/crash_handler.h",
+    "//third_party/scudo/gwp_asan/definitions.h",
+    "//third_party/scudo/gwp_asan/options.h",
+    "//third_party/scudo/gwp_asan/platform_specific/common_fuchsia.cpp",
+    "//third_party/scudo/gwp_asan/stack_trace_compressor.cpp",
+    "//third_party/scudo/gwp_asan/stack_trace_compressor.h",
+    "gwp_asan_info.h",
+  ]
+}
+
+config("gwp-asan-common-config") {
+  include_dirs = [ "//third_party/scudo" ]
 }
 
 # This is included in libc-unittests and standalone core-tests.

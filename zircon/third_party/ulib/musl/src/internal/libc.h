@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ZIRCON_THIRD_PARTY_ULIB_MUSL_SRC_INTERNAL_LIBC_H_
+#define ZIRCON_THIRD_PARTY_ULIB_MUSL_SRC_INTERNAL_LIBC_H_
 
 #include <limits.h>
 #include <stdbool.h>
@@ -56,6 +57,7 @@ extern size_t __hwcap ATTR_LIBC_VISIBILITY;
 extern char* __progname ATTR_LIBC_VISIBILITY;
 extern char* __progname_full ATTR_LIBC_VISIBILITY;
 
+void __libc_init_gwp_asan(void) ATTR_LIBC_VISIBILITY;
 void __libc_start_init(void) ATTR_LIBC_VISIBILITY;
 
 void __funcs_on_exit(void) ATTR_LIBC_VISIBILITY;
@@ -115,3 +117,5 @@ extern char** __environ;
 #endif
 
 __END_CDECLS
+
+#endif  // ZIRCON_THIRD_PARTY_ULIB_MUSL_SRC_INTERNAL_LIBC_H_

@@ -133,6 +133,7 @@ static void start_main(const struct start_params* p) {
   __libc_startup_handles_init(p->nhandles, p->handles, p->handle_info);
 
   // Run static constructors et al.
+  __libc_init_gwp_asan();
   __libc_start_init();
 
   // Pass control to the application.
