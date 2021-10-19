@@ -50,16 +50,6 @@ declare_args() {
   # ignore warnings.
   rust_cap_lints = "deny"
 
-  # Overrides the optimization level for all Rust builds, regardless of
-  # debug/release flags or the `force_opt` arg to the rustc_ templates.
-  # Valid values are 0-3, o, and z.
-  rust_override_opt = ""
-
-  # Overrides the LTO setting for all Rust builds, regardless of
-  # debug/release flags.
-  # Valid values are "none", "thin", and "fat".
-  rust_override_lto = ""
-
   # Enables generation of corresponding clippy targets for all `rustc_binary`,
   # `rustc_library`, and `rustc_test` targets.
   generate_clippy = true

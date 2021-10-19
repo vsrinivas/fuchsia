@@ -19,7 +19,6 @@ template("rustc_test_internal") {
              [
                "version",
                "edition",
-               "force_opt",
                "testonly",
              ])
 

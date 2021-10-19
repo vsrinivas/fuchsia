@@ -97,11 +97,6 @@ import("//build/toolchain/rbe.gni")
 #     and should only be changed when absolutely necessary
 #     (such as in the case of generated code).
 #
-#   force_opt (optional)
-#     Force a particular optimization level for this target (even when building in debug mode).
-#     Values include 0-3, s, or z. This does not change the optimization level of dependencies,
-#     so consider combining with LTO for best results.
-#
 #   features (optional)
 #     A list of conditional compilation flags to enable. This can be used to set features for crates
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
@@ -295,13 +290,6 @@ template("rustc_binary") {
     if (defined(invoker.edition) && invoker.edition == "2015") {
       configs -= [ "//build/config/rust:edition_2018" ]
       configs += [ "//build/config/rust:edition_2015" ]
-    }
-
-    # some binary targets override the optimization level
-    if (defined(invoker.force_opt)) {
-      if (invoker.force_opt == "z") {
-        configs += [ "//build/config/rust:opt_level_z" ]
-      }
     }
 
     # pass through these variables unmodified

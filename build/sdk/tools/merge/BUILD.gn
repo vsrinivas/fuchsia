@@ -9,7 +9,6 @@ rustc_binary("merge_sdk") {
   with_unit_tests = true
   edition = "2018"
   source_root = "src/main.rs"
-  force_opt = "3"
 
   deps = [
     "//build/sdk/meta:rust",

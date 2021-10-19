@@ -47,7 +47,6 @@ if (current_toolchain == unknown_wasm32_toolchain) {
     configs += [
       ":env",
       "//build/config/lto:thinlto",
-      "//build/config/rust:opt_level_z",
     ]
 
     deps = lib_deps
