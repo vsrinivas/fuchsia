@@ -68,7 +68,7 @@ zx_library("fake_ddk") {
   #    \|_________|
   # This is an allowlist of targets that use the fake ddk test framework.
   # There is a migration in progress to mock-ddk. See:
-  # https://fuchsia.dev/fuchsia-src/development/drivers/testing/fake_ddk_migration.md
+  #  https://fuchsia.dev/fuchsia-src/contribute/open_projects/testing/mock_ddk_migration
   #
   # The policy at this time is:
   # 1. Pre-existing use of fake_ddk is allowlisted.
