@@ -191,11 +191,12 @@ Its arguments are:
 
 `ZX_ERR_BAD_HANDLE`
 
-- `resource` does not refer to a handle.
+- `resource` is not a valid handle.
 
-`ZX_ERR_ACCESS_DENIED`
+`ZX_ERR_WRONG_TYPE`
 
-- `resource` refers to a handle that is not `ZX_RSRC_SYSTEM_CPU_BASE`.
+- `resource` is not a valid resource handle or is not of kind
+  `ZX_RSRC_KIND_SYSTEM`.
 
 `ZX_ERR_INVALID_ARGS`
 
@@ -205,6 +206,8 @@ Its arguments are:
 
 `ZX_ERR_OUT_OF_RANGE`
 
+- `resource` is of kind `ZX_RSRC_KIND_SYSTEM` but is not equal to
+  `ZX_RSRC_SYSTEM_CPU_BASE`.
 - `info_count` is `0` or exceeds the number of CPUs.
 - A `logical_cpu_number` was invalid.
 - An input `performance_scale` was `{.integral_part = 0, .fractional_part = 0}`.
@@ -288,19 +291,19 @@ Its arguments are:
 - `info_count`: Length of the `info` array; must equal the number of CPUs in the
   system.
 
-- `output_count`: Number of elements written to `info`. If the call fails, this
-  is set to `0`. If the call succeeds, it is set to the number of CPUs in the
-  system.
+- `output_count`: If the call succeeds, this will contain the number of elements
+  written to `info`. If the call fails, its value is unspecified.
 
 #### Error conditions
 
 `ZX_ERR_BAD_HANDLE`
 
-- `resource` does not refer to a handle.
+- `resource` is not a valid handle.
 
-`ZX_ERR_ACCESS_DENIED`
+`ZX_ERR_WRONG_TYPE`
 
-- `resource` refers to a handle that is not `ZX_RSRC_SYSTEM_CPU_BASE`.
+- `resource` is not a valid resource handle or is not of kind
+  `ZX_RSRC_KIND_SYSTEM`.
 
 `ZX_ERR_INVALID_ARGS`
 
@@ -309,6 +312,8 @@ Its arguments are:
 
 `ZX_ERR_OUT_OF_RANGE`
 
+- `resource` is of kind `ZX_RSRC_KIND_SYSTEM` but is not equal to
+  `ZX_RSRC_SYSTEM_CPU_BASE`.
 - `info_count` does not equal the total number of CPUs in the system.
 
 #### Intended usage
@@ -456,12 +461,12 @@ pitfall.
 
 ### Allowed values for `performance_scale`
 
-Careful consideration was given to what values
-`zx_system_get_set_performance_info` should allow as inputs for
-`performance_scale`. A value representing 0.0 was determined to be too easily
-confused for an instruction to offline a CPU &mdash; an action that Zircon does
-not currently support but is expected to in the future using a different API. As
-such, a value representing 0.0 was determined to be an error.
+Careful consideration was given to what values `zx_system_set_performance_info`
+should allow as inputs for `performance_scale`. A value representing 0.0 was
+determined to be too easily confused for an instruction to offline a CPU &mdash;
+an action that Zircon does not currently support but is expected to in the
+future using a different API. As such, a value representing 0.0 was determined
+to be an error.
 
 Very small values warranted special attention as well. For example, an input of
 `{.integral_part = 0, .fractional_part = 1}` would represent 2<sup>-32</sup>,
