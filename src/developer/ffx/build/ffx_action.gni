@@ -80,7 +80,6 @@ template("ffx_action") {
                              "hermetic_deps",
                              "data_deps",
                              "depfile",
-                             "deps",
                              "repeatable",
                              "inputs",
                              "metadata",
@@ -98,7 +97,11 @@ template("ffx_action") {
              rebase_path(ffx_env_config, root_build_dir),
            ] + invoker.args
 
-    deps += [ ffx_env_for_build_label ]
+    deps = [ ffx_env_for_build_label ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+
     inputs += [
       ffx_env_config,
       ffx_env_build_config,
