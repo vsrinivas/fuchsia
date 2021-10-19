@@ -18,7 +18,7 @@ use {
 /// Initial Information-request timeout `INF_TIMEOUT` from [RFC 8415, Section 7.6].
 ///
 /// [RFC 8415, Section 7.6]: https://tools.ietf.org/html/rfc8415#section-7.6
-const INFO_REQ_TIMEOUT: Duration = Duration::from_secs(1);
+const INITIAL_INFO_REQ_TIMEOUT: Duration = Duration::from_secs(1);
 /// Max Information-request timeout `INF_MAX_RT` from [RFC 8415, Section 7.6].
 ///
 /// [RFC 8415, Section 7.6]: https://tools.ietf.org/html/rfc8415#section-7.6
@@ -37,7 +37,7 @@ const MAX_DURATION: Duration = Duration::from_secs(std::u64::MAX);
 /// Initial Solicit timeout `SOL_TIMEOUT` from [RFC 8415, Section 7.6].
 ///
 /// [RFC 8415, Section 7.6]: https://tools.ietf.org/html/rfc8415#section-7.6
-const SOLICIT_TIMEOUT: Duration = Duration::from_secs(1);
+const INITIAL_SOLICIT_TIMEOUT: Duration = Duration::from_secs(1);
 
 /// Max Solicit timeout `SOL_MAX_RT` from [RFC 8415, Section 7.6].
 ///
@@ -162,7 +162,7 @@ impl InformationRequesting {
     ///
     /// [RFC 8415, Section 18.2.6]: https://tools.ietf.org/html/rfc8415#section-18.2.6
     fn retransmission_timeout<R: Rng>(&self, rng: &mut R) -> Duration {
-        retransmission_timeout(self.retrans_timeout, INFO_REQ_TIMEOUT, INFO_REQ_MAX_RT, rng)
+        retransmission_timeout(self.retrans_timeout, INITIAL_INFO_REQ_TIMEOUT, INFO_REQ_MAX_RT, rng)
     }
 
     /// A helper function that returns a transition back to `InformationRequesting`, with actions
@@ -302,7 +302,7 @@ impl ServerDiscovery {
     /// [RFC 8415, Section 18.2.1]: https://datatracker.ietf.org/doc/html/rfc8415#section-18.2.1
     fn retransmission_timeout<R: Rng>(&self, rng: &mut R) -> Duration {
         // TODO(fxbug.dev/69696): implement server selection.
-        retransmission_timeout(self.retrans_timeout, SOLICIT_TIMEOUT, SOLICIT_MAX_RT, rng)
+        retransmission_timeout(self.retrans_timeout, INITIAL_SOLICIT_TIMEOUT, SOLICIT_MAX_RT, rng)
     }
 
     /// Returns a transition back to `ServerDiscovery`, with actions to send a
@@ -605,7 +605,7 @@ mod tests {
             assert_matches!(
                 client.state,
                 Some(ClientState::InformationRequesting(InformationRequesting {
-                    retrans_timeout: INFO_REQ_TIMEOUT,
+                    retrans_timeout: INITIAL_INFO_REQ_TIMEOUT,
                 }))
             );
 
@@ -624,7 +624,10 @@ mod tests {
                 actions[..],
                 [
                     Action::SendMessage(want_buf),
-                    Action::ScheduleTimer(ClientTimerType::Retransmission, INFO_REQ_TIMEOUT)
+                    Action::ScheduleTimer(
+                        ClientTimerType::Retransmission,
+                        INITIAL_INFO_REQ_TIMEOUT
+                    )
                 ]
             );
 
@@ -706,7 +709,7 @@ mod tests {
                 Some(ClientState::ServerDiscovery(ServerDiscovery {
                     client_id: ref state_client_id,
                     first_solicit_time: Some(_),
-                    retrans_timeout: SOLICIT_TIMEOUT,
+                    retrans_timeout: INITIAL_SOLICIT_TIMEOUT,
                     ..
                 })) if *state_client_id == client_id
             );
@@ -714,7 +717,7 @@ mod tests {
             // Start of server discovery should send a solicit and schedule a
             // retransmission timer.
             let buf = match &actions[..] {
-                [Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, SOLICIT_TIMEOUT)] => {
+                [Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_SOLICIT_TIMEOUT)] => {
                     buf
                 }
                 actions => panic!("unexpected actions {:?}", actions),
@@ -830,7 +833,7 @@ mod tests {
         assert_matches!(
             client.state,
             Some(ClientState::InformationRequesting(InformationRequesting {
-                retrans_timeout: INFO_REQ_TIMEOUT
+                retrans_timeout: INITIAL_INFO_REQ_TIMEOUT
             }))
         );
 
@@ -880,14 +883,14 @@ mod tests {
         );
         assert_matches!(
             actions[..],
-            [_, Action::ScheduleTimer(ClientTimerType::Retransmission, INFO_REQ_TIMEOUT)]
+            [_, Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_INFO_REQ_TIMEOUT)]
         );
 
         let actions = client.handle_timeout(ClientTimerType::Retransmission);
         // Following exponential backoff defined in https://tools.ietf.org/html/rfc8415#section-15.
         assert_matches!(
             actions[..],
-            [_, Action::ScheduleTimer(ClientTimerType::Retransmission, timeout)] if timeout == 2 * INFO_REQ_TIMEOUT
+            [_, Action::ScheduleTimer(ClientTimerType::Retransmission, timeout)] if timeout == 2 * INITIAL_INFO_REQ_TIMEOUT
         );
     }
 
@@ -927,7 +930,7 @@ mod tests {
             actions[..],
             [
                 Action::SendMessage(want_buf),
-                Action::ScheduleTimer(ClientTimerType::Retransmission, INFO_REQ_TIMEOUT)
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_INFO_REQ_TIMEOUT)
             ]
         );
     }
