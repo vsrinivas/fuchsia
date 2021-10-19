@@ -97,7 +97,13 @@ impl RepositoryServerBuilder {
 
     /// Construct a web server future, and return a [RepositoryServer] to manage the server.
     /// [RepositoryServer], and return a handle to manaserver and the web server task.
-    pub async fn start(self) -> Result<(impl Future<Output = ()>, RepositoryServer)> {
+    pub async fn start(
+        self,
+    ) -> Result<(
+        impl Future<Output = ()>,
+        futures::channel::mpsc::UnboundedSender<Result<ConnectionStream>>,
+        RepositoryServer,
+    )> {
         let listener = TcpListener::bind(&self.addr).await?;
         let local_addr = listener.local_addr()?;
         let sse_response_creators = Arc::new(RwLock::new(HashMap::new()));
@@ -137,11 +143,26 @@ impl RepositoryServerBuilder {
         });
 
         let (stop, rx_stop) = futures::channel::oneshot::channel();
+        let (sender, receiver) = futures::channel::mpsc::unbounded();
+        let mut sender_server = sender.clone();
 
         // `listener.incoming()` borrows the listener, so we need to create a unique future that
         // owns the listener, and run the server in it.
         let server_fut = async move {
-            let server = Server::builder(from_stream(listener.incoming().map_ok(HyperStream)))
+            // Shut down the incoming stream when the server future is dropped.
+            let _incoming_fut = fuchsia_async::Task::spawn(async move {
+                sender_server
+                    .send_all(
+                        &mut listener
+                            .incoming()
+                            .map_ok(ConnectionStream::Tcp)
+                            .map_err(Into::into)
+                            .map(Ok),
+                    )
+                    .await
+            });
+
+            let server = Server::builder(from_stream(receiver))
                 .executor(fuchsia_hyper::LocalExecutor)
                 .serve(make_svc)
                 .with_graceful_shutdown(
@@ -152,7 +173,7 @@ impl RepositoryServerBuilder {
             server.await
         };
 
-        Ok((server_fut, RepositoryServer { local_addr, stop }))
+        Ok((server_fut, sender, RepositoryServer { local_addr, stop }))
     }
 }
 
@@ -373,33 +394,48 @@ fn status_response(status_code: StatusCode) -> Response<Body> {
 }
 
 /// Adapt [async-net::TcpStream] to work with hyper.
-struct HyperStream(TcpStream);
+pub enum ConnectionStream {
+    Tcp(TcpStream),
+    Socket(fasync::Socket),
+}
 
-impl tokio::io::AsyncRead for HyperStream {
+impl tokio::io::AsyncRead for ConnectionStream {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &mut [u8],
     ) -> Poll<io::Result<usize>> {
-        Pin::new(&mut self.0).poll_read(cx, buf)
+        match &mut *self {
+            ConnectionStream::Tcp(t) => Pin::new(t).poll_read(cx, buf),
+            ConnectionStream::Socket(t) => Pin::new(t).poll_read(cx, buf),
+        }
     }
 }
 
-impl tokio::io::AsyncWrite for HyperStream {
+impl tokio::io::AsyncWrite for ConnectionStream {
     fn poll_write(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
-        Pin::new(&mut self.0).poll_write(cx, buf)
+        match &mut *self {
+            ConnectionStream::Tcp(t) => Pin::new(t).poll_write(cx, buf),
+            ConnectionStream::Socket(t) => Pin::new(t).poll_write(cx, buf),
+        }
     }
 
     fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Pin::new(&mut self.0).poll_flush(cx)
+        match &mut *self {
+            ConnectionStream::Tcp(t) => Pin::new(t).poll_flush(cx),
+            ConnectionStream::Socket(t) => Pin::new(t).poll_flush(cx),
+        }
     }
 
     fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Pin::new(&mut self.0).poll_close(cx)
+        match &mut *self {
+            ConnectionStream::Tcp(t) => Pin::new(t).poll_close(cx),
+            ConnectionStream::Socket(t) => Pin::new(t).poll_close(cx),
+        }
     }
 }
 
@@ -442,7 +478,7 @@ mod tests {
         R: Future<Output = ()>,
     {
         let addr = (Ipv4Addr::LOCALHOST, 0).into();
-        let (server_fut, server) =
+        let (server_fut, _, server) =
             RepositoryServer::builder(addr, Arc::clone(&manager)).start().await.unwrap();
 
         // Run the server in the background.
@@ -461,7 +497,7 @@ mod tests {
     async fn test_start_stop() {
         let manager = RepositoryManager::new();
         let addr = (Ipv4Addr::LOCALHOST, 0).into();
-        let (server_fut, server) =
+        let (server_fut, _, server) =
             RepositoryServer::builder(addr, Arc::clone(&manager)).start().await.unwrap();
 
         // Run the server in the background.

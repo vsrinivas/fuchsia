@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 use {
     anyhow::{anyhow, Result},
-    pkg::repository::listen_addr,
     std::net::SocketAddr,
     std::process::Command,
 };
@@ -44,21 +43,8 @@ async fn apply_auth_sock(cmd: &mut Command) {
     }
 }
 
-pub async fn build_ssh_command(addr: SocketAddr, command: Vec<&str>) -> Result<Command> {
-    build_ssh_command_base(addr, command, true).await
-}
-
-#[cfg(test)]
-async fn build_ssh_command_no_tunnel(addr: SocketAddr, command: Vec<&str>) -> Result<Command> {
-    build_ssh_command_base(addr, command, false).await
-}
-
 // Setting up the tunnel requires config to be available, so we disable this step in tests.
-pub async fn build_ssh_command_base(
-    addr: SocketAddr,
-    command: Vec<&str>,
-    setup_repository_tunnel: bool,
-) -> Result<Command> {
+pub async fn build_ssh_command(addr: SocketAddr, command: Vec<&str>) -> Result<Command> {
     if command.is_empty() {
         return Err(anyhow!("missing SSH command"));
     }
@@ -68,22 +54,6 @@ pub async fn build_ssh_command_base(
     let mut c = Command::new("ssh");
     apply_auth_sock(&mut c).await;
     c.args(DEFAULT_SSH_OPTIONS);
-    if setup_repository_tunnel {
-        match listen_addr().await {
-            Ok(Some(addr)) => {
-                c.arg("-R").arg(format!("{}:localhost:{}", addr.port(), addr.port()));
-            }
-            Ok(None) => {
-                log::info!("repository server not configured to run, so not creating tunnel");
-            }
-            Err(e) => {
-                log::error!(
-                    "getting listen addr failed. No reverse tunnel will be set up. Error was: {:?}",
-                    e
-                );
-            }
-        }
-    }
     c.arg("-i").arg(key);
 
     let mut addr_str = format!("{}", addr);
@@ -111,7 +81,7 @@ mod test {
     async fn test_build_ssh_command_ipv4() {
         let addr = "192.168.0.1:22".parse().unwrap();
 
-        let result = build_ssh_command_no_tunnel(addr, vec!["ls"]).await.unwrap();
+        let result = build_ssh_command(addr, vec!["ls"]).await.unwrap();
         let dbgstr = format!("{:?}", result);
 
         let expected = format!(
@@ -126,7 +96,7 @@ mod test {
     async fn test_build_ssh_command_ipv6() {
         let addr = "[fe80::12%5]:8022".parse().unwrap();
 
-        let result = build_ssh_command_no_tunnel(addr, vec!["ls"]).await.unwrap();
+        let result = build_ssh_command(addr, vec!["ls"]).await.unwrap();
         let dbgstr = format!("{:?}", result);
 
         let expected = format!(

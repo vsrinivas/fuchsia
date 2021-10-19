@@ -243,7 +243,7 @@ mod test {
         manager.add(Arc::new(repo));
 
         let addr = (Ipv4Addr::LOCALHOST, 0).into();
-        let (server_fut, server) =
+        let (server_fut, _, server) =
             RepositoryServer::builder(addr, Arc::clone(&manager)).start().await.unwrap();
 
         // Run the server in the background.

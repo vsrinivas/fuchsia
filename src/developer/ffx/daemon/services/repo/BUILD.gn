@@ -26,6 +26,7 @@ if (is_host) {
 
     deps = [
       "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
+      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
       "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
       "//src/developer/ffx/config:lib",
@@ -38,6 +39,7 @@ if (is_host) {
       "//src/developer/ffx/lib/services:lib",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
+      "//src/lib/network/fidl_fuchsia_net_ext",
       "//src/lib/zircon/rust:fuchsia-zircon-status",
       "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
       "//third_party/rust_crates:anyhow",

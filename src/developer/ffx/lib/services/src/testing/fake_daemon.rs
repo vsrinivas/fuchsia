@@ -12,7 +12,8 @@ use {
     ffx_daemon_target::target_collection::TargetCollection,
     fidl::endpoints::{DiscoverableProtocolMarker, ProtocolMarker, Proxy, Request, RequestStream},
     fidl::server::ServeInner,
-    fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_diagnostics as diagnostics,
+    fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_developer_remotecontrol as rcs,
+    fidl_fuchsia_diagnostics as diagnostics,
     futures::future::LocalBoxFuture,
     futures::prelude::*,
     std::cell::{Cell, RefCell},
@@ -112,6 +113,7 @@ pub struct FakeDaemon {
     nodename: Option<String>,
     register: Option<ServiceRegister>,
     target_collection: Rc<TargetCollection>,
+    rcs_handler: Option<Arc<dyn Fn(rcs::RemoteControlRequest, Option<String>)>>,
 }
 
 impl FakeDaemon {
@@ -147,6 +149,27 @@ impl DaemonServiceProvider for FakeDaemon {
             )
             .await?;
         Ok(client)
+    }
+
+    async fn open_remote_control(
+        &self,
+        target_identifier: Option<String>,
+    ) -> Result<rcs::RemoteControlProxy> {
+        if let Some(rcs_handler) = self.rcs_handler.clone() {
+            let (client, server) = fidl::endpoints::create_endpoints::<rcs::RemoteControlMarker>()
+                .context("creating endpoints")?;
+            fuchsia_async::Task::local(async move {
+                let mut server = server.into_stream().unwrap();
+
+                while let Some(Ok(e)) = server.next().await {
+                    rcs_handler(e, target_identifier.clone());
+                }
+            })
+            .detach();
+            Ok(client.into_proxy()?)
+        } else {
+            Err(anyhow!("FakeDaemon was not provided with an RCS implementation"))
+        }
     }
 
     async fn open_target_proxy(
@@ -190,6 +213,7 @@ impl DaemonServiceProvider for FakeDaemon {
 pub struct FakeDaemonBuilder {
     map: NameToStreamHandlerMap,
     nodename: Option<String>,
+    rcs_handler: Option<Arc<dyn Fn(rcs::RemoteControlRequest, Option<String>)>>,
 }
 
 impl FakeDaemonBuilder {
@@ -199,6 +223,16 @@ impl FakeDaemonBuilder {
 
     pub fn nodename(mut self, nodename: String) -> Self {
         self.nodename = Some(nodename);
+        self
+    }
+
+    pub fn rcs_handler<F: Fn(rcs::RemoteControlRequest, Option<String>) + 'static>(
+        mut self,
+        f: F,
+    ) -> Self {
+        if self.rcs_handler.replace(Arc::new(f)).is_some() {
+            panic!("Multiple RCS handlers registered");
+        }
         self
     }
 
@@ -250,6 +284,7 @@ impl FakeDaemonBuilder {
         FakeDaemon {
             register: Some(ServiceRegister::new(self.map)),
             nodename: self.nodename,
+            rcs_handler: self.rcs_handler,
             ..Default::default()
         }
     }
