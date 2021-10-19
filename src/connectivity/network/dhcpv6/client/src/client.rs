@@ -146,6 +146,8 @@ fn to_configured_addresses(
         .into_iter()
         .chain(std::iter::repeat(None))
         .take(address_count.get().into());
+    // TODO(https://fxbug.dev/77790): make IAID consistent across
+    // configurations.
     for (iaid, addr) in (0..).zip(addresses) {
         let entry = configured_addresses.insert(iaid, addr);
         assert_matches!(entry, None);
@@ -162,24 +164,11 @@ fn create_state_machine(
     (dhcpv6_core::client::ClientStateMachine<StdRng>, dhcpv6_core::client::Actions),
     ClientError,
 > {
-    match config {
-        ClientConfig {
-            address_assignment_config: None,
-            information_config: Some(information_config),
-            ..
-        } => Ok(dhcpv6_core::client::ClientStateMachine::start_stateless(
-            transaction_id,
-            to_dhcpv6_option_codes(information_config),
-            StdRng::from_entropy(),
-        )),
-        ClientConfig {
-            address_assignment_config:
-                Some(AddressAssignmentConfig {
-                    non_temporary_address_config: Some(address_config), ..
-                }),
-            information_config,
-            ..
-        } => {
+    let ClientConfig { address_assignment_config, information_config, .. } = config;
+    match address_assignment_config {
+        Some(AddressAssignmentConfig { non_temporary_address_config, .. }) => {
+            let address_config =
+                non_temporary_address_config.ok_or(ClientError::UnsupportedConfigs)?;
             let configured_addresses = to_configured_addresses(address_config)?;
             Ok(dhcpv6_core::client::ClientStateMachine::start_stateful(
                 transaction_id,
@@ -189,7 +178,14 @@ fn create_state_machine(
                 StdRng::from_entropy(),
             ))
         }
-        _ => Err(ClientError::UnsupportedConfigs),
+        None => {
+            let information_config = information_config.ok_or(ClientError::UnsupportedConfigs)?;
+            Ok(dhcpv6_core::client::ClientStateMachine::start_stateless(
+                transaction_id,
+                to_dhcpv6_option_codes(information_config),
+                StdRng::from_entropy(),
+            ))
+        }
     }
 }
 
@@ -221,7 +217,7 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
             request_stream,
             timer_abort_handles: HashMap::new(),
             timer_futs: FuturesUnordered::new(),
-            // Server watcher's API requires blocking if the first call would return an empty list,
+            // Server watcher's API requires blocking iff the first call would return an empty list,
             // so initialize this field with a hash of an empty list.
             last_observed_dns_hash: hash(&Vec::<Ipv6Addr>::new()),
             dns_responder: None,
@@ -548,7 +544,9 @@ pub(crate) async fn serve_client(
 mod tests {
     use {
         super::*,
-        fidl::endpoints::{create_endpoints, ClientEnd},
+        fidl::endpoints::{
+            create_proxy, create_proxy_and_stream, create_request_stream, ClientEnd,
+        },
         fidl_fuchsia_net_dhcpv6::{ClientMarker, DEFAULT_CLIENT_PORT},
         fuchsia_async as fasync,
         futures::{channel::mpsc, join},
@@ -567,7 +565,7 @@ mod tests {
         (fasync::net::UdpSocket::from_socket(socket).expect("failed to create test socket"), addr)
     }
 
-    /// Asserts `socket` receives a message of `message_type` from
+    /// Asserts `socket` receives a message of `msg_type` from
     /// `want_from_addr`.
     async fn assert_received_message(
         socket: &fasync::net::UdpSocket,
@@ -649,9 +647,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_client_stops_on_channel_close() {
-        let (client_end, server_end) =
-            create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
-        let client_proxy = client_end.into_proxy().expect("failed to create test client proxy");
+        let (client_proxy, server_end) =
+            create_proxy::<ClientMarker>().expect("failed to create test client proxy");
 
         let ((), client_res) = join!(
             async { drop(client_proxy) },
@@ -673,9 +670,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_client_should_return_error_on_double_watch() {
-        let (client_end, server_end) =
-            create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
-        let client_proxy = client_end.into_proxy().expect("failed to create test client proxy");
+        let (client_proxy, server_end) =
+            create_proxy::<ClientMarker>().expect("failed to create test client proxy");
 
         let (caller1_res, caller2_res, client_res) = join!(
             client_proxy.watch_servers(),
@@ -744,9 +740,8 @@ mod tests {
         ] {
             let mut exec = fasync::TestExecutor::new().expect("failed to create test executor");
 
-            let (client_end, server_end) =
-                create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
-            let client_proxy = client_end.into_proxy().expect("failed to create test client proxy");
+            let (client_proxy, server_end) =
+                create_proxy::<ClientMarker>().expect("failed to create test client proxy");
 
             let test_fut = async {
                 join!(
@@ -813,10 +808,9 @@ mod tests {
                 v6::MessageType::Solicit,
             ),
         ] {
-            let (_, server_end): (ClientEnd<ClientMarker>, _) =
-                create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
-            let client_stream =
-                server_end.into_stream().expect("failed to create test request stream");
+            let (_, client_stream): (ClientEnd<ClientMarker>, _) =
+                create_request_stream::<ClientMarker>()
+                    .expect("failed to create test fidl channel");
 
             let (client_socket, client_addr) = create_test_socket();
             let (server_socket, server_addr) = create_test_socket();
@@ -877,14 +871,14 @@ mod tests {
                 ..NewClientParams::EMPTY
             },
         ] {
-            let (client_end, server_end) =
-                create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
+            let (client_proxy, server_end) =
+                create_proxy::<ClientMarker>().expect("failed to create test client proxy");
             let () =
                 serve_client(params, server_end).await.expect("start server failed unexpectedly");
             // Calling any function on the client proxy should fail due to channel closed with
             // `INVALID_ARGS`.
             assert_matches!(
-                client_end.into_proxy().expect("failed to create test proxy").watch_servers().await,
+                client_proxy.watch_servers().await,
                 Err(fidl::Error::ClientChannelClosed { status: zx::Status::INVALID_ARGS, .. })
             );
         }
@@ -933,13 +927,11 @@ mod tests {
 
     #[test]
     fn test_client_should_respond_to_dns_watch_requests() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create test ecexutor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create test executor");
         let transaction_id = [1, 2, 3];
 
-        let (client_end, server_end) =
-            create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
-        let client_proxy = client_end.into_proxy().expect("failed to create test client proxy");
-        let client_stream = server_end.into_stream().expect("failed to create test request stream");
+        let (client_proxy, client_stream) = create_proxy_and_stream::<ClientMarker>()
+            .expect("failed to create test proxy and stream");
 
         let (client_socket, client_addr) = create_test_socket();
         let (server_socket, server_addr) = create_test_socket();
@@ -1118,10 +1110,8 @@ mod tests {
     async fn test_client_should_respond_with_dns_servers_on_first_watch_if_non_empty() {
         let transaction_id = [1, 2, 3];
 
-        let (client_end, server_end) =
-            create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
-        let client_proxy = client_end.into_proxy().expect("failed to create test client proxy");
-        let client_stream = server_end.into_stream().expect("failed to create test request stream");
+        let (client_proxy, client_stream) = create_proxy_and_stream::<ClientMarker>()
+            .expect("failed to create test proxy and stream");
 
         let (client_socket, client_addr) = create_test_socket();
         let (server_socket, server_addr) = create_test_socket();
@@ -1175,9 +1165,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_client_schedule_and_cancel_timers() {
-        let (_client_end, server_end) =
-            create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
-        let client_stream = server_end.into_stream().expect("failed to create test request stream");
+        let (_client_end, client_stream) =
+            create_request_stream::<ClientMarker>().expect("failed to create test request stream");
 
         let (client_socket, _client_addr) = create_test_socket();
         let (_server_socket, server_addr) = create_test_socket();
@@ -1277,10 +1266,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_handle_next_event_on_stateless_client() {
-        let (client_end, server_end) =
-            create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
-        let client_proxy = client_end.into_proxy().expect("failed to create test client proxy");
-        let client_stream = server_end.into_stream().expect("failed to create test request stream");
+        let (client_proxy, client_stream) = create_proxy_and_stream::<ClientMarker>()
+            .expect("failed to create test proxy and stream");
 
         let (client_socket, client_addr) = create_test_socket();
         let (server_socket, server_addr) = create_test_socket();
@@ -1405,10 +1392,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_handle_next_event_on_stateful_client() {
-        let (client_end, server_end) =
-            create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
-        let client_proxy = client_end.into_proxy().expect("failed to create test client proxy");
-        let client_stream = server_end.into_stream().expect("failed to create test request stream");
+        let (client_proxy, client_stream) =
+            create_proxy_and_stream::<ClientMarker>().expect("failed to create test fidl channel");
 
         let (client_socket, client_addr) = create_test_socket();
         let (server_socket, server_addr) = create_test_socket();
@@ -1448,9 +1433,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_handle_next_event_respects_timer_order() {
-        let (_client_end, server_end) =
-            create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
-        let client_stream = server_end.into_stream().expect("failed to create test request stream");
+        let (_client_end, client_stream) =
+            create_request_stream::<ClientMarker>().expect("failed to create test request stream");
 
         let (client_socket, client_addr) = create_test_socket();
         let (server_socket, server_addr) = create_test_socket();
@@ -1544,9 +1528,8 @@ mod tests {
             }
         }
 
-        let (_client_end, server_end) =
-            create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
-        let client_stream = server_end.into_stream().expect("failed to create test request stream");
+        let (_client_end, client_stream) =
+            create_request_stream::<ClientMarker>().expect("failed to create test request stream");
 
         let mut client = Client::<StubSocket>::start(
             [1, 2, 3], /* transaction ID */

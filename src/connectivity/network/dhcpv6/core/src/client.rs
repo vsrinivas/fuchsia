@@ -328,16 +328,15 @@ impl ServerDiscovery {
         };
         options.push(v6::DhcpOption::ElapsedTime(elapsed_time));
 
+        // TODO(https://fxbug.dev/86945): remove `address_hint` construction
+        // once `IanaSerializer::new()` takes options by value.
         let mut address_hint = HashMap::new();
         for (iaid, addr_opt) in &self.configured_addresses {
             let entry = address_hint.insert(
                 *iaid,
-                match addr_opt {
-                    None => vec![],
-                    Some(addr) => {
-                        vec![v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(*addr, 0, 0, &[]))]
-                    }
-                },
+                addr_opt.map(|addr| {
+                    [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
+                }),
             );
             assert_matches!(entry, None);
         }
@@ -346,7 +345,12 @@ impl ServerDiscovery {
         // without hints, up to the configured `address_count`, as described in
         // https://datatracker.ietf.org/doc/html/rfc8415#section-6.6.
         for (iaid, addr_hint) in &address_hint {
-            options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(*iaid, 0, 0, addr_hint)));
+            options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                *iaid,
+                0,
+                0,
+                addr_hint.as_ref().map_or(&[], AsRef::as_ref),
+            )));
         }
 
         let mut oro = vec![v6::OptionCode::SolMaxRt];
@@ -664,10 +668,10 @@ mod tests {
         // Try to start the client in stateful mode with different address
         // configurations.
         for (address_count, preferred_addresses) in vec![
-            (1u32, Vec::new()),
-            (2u32, vec![Ipv6Addr::new(0, 0, 0, 0, 0, 0xffff, 0xc00a, 0x2ff)]),
+            (1, Vec::new()),
+            (2, vec![Ipv6Addr::new(0, 0, 0, 0, 0, 0xffff, 0xc00a, 0x2ff)]),
             (
-                2u32,
+                2,
                 vec![
                     Ipv6Addr::new(0, 0, 0, 0, 0, 0xffff, 0xc00a, 0x2ff),
                     Ipv6Addr::new(0, 0, 0, 0, 0, 0xffff, 0xc00a, 0x3ff),
@@ -678,10 +682,8 @@ mod tests {
             let mut configured_addresses: HashMap<u32, Option<Ipv6Addr>> = HashMap::new();
             let addresses: Vec<Option<Ipv6Addr>> =
                 preferred_addresses.iter().map(|&addr| Some(addr)).collect();
-            let addresses = addresses
-                .into_iter()
-                .chain(std::iter::repeat(None))
-                .take(usize::try_from(address_count).unwrap());
+            let addresses =
+                addresses.into_iter().chain(std::iter::repeat(None)).take(address_count);
             for (iaid, addr) in (0..).zip(addresses) {
                 let entry = configured_addresses.insert(iaid, addr);
                 assert_matches!(entry, None);
@@ -707,68 +709,60 @@ mod tests {
 
             // Start of server discovery should send a solicit and schedule a
             // retransmission timer.
-            assert_matches!(
-                &actions[..],
-                [
-                    Action::SendMessage(buf),
-                    Action::ScheduleTimer(ClientTimerType::Retransmission, SOLICIT_TIMEOUT)
-                ]
-                if {
-                    let mut buf = &buf[..];
-                    let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-                    assert_eq!(msg.msg_type(), v6::MessageType::Solicit);
-
-                    // The solicit should contain the expected options.
-                    let mut got_options = msg
-                        .options()
-                        .filter(|opt| {
-                            vec![
-                                v6::OptionCode::ClientId,
-                                v6::OptionCode::ElapsedTime,
-                                v6::OptionCode::Oro,
-                            ]
-                            .contains(&opt.code())
-                        })
-                        .collect::<Vec<_>>();
-                    let option_sorter: fn(
-                        &v6::ParsedDhcpOption<'_>,
-                        &v6::ParsedDhcpOption<'_>,
-                    ) -> std::cmp::Ordering =
-                        |opt1, opt2| (u16::from(opt1.code())).cmp(&(u16::from(opt2.code())));
-
-                    got_options.sort_by(option_sorter);
-                    let mut expected_options = vec![
-                        v6::ParsedDhcpOption::ClientId(&client_id),
-                        v6::ParsedDhcpOption::ElapsedTime(0),
-                        v6::ParsedDhcpOption::Oro(vec![v6::OptionCode::SolMaxRt]),
-                    ];
-                    expected_options.sort_by(option_sorter);
-                    assert_eq!(got_options, expected_options);
-
-                    let iana_options = msg.options().filter(|opt| {
-                        opt.code() == v6::OptionCode::Iana
-                    }).collect::<Vec<_>>();
-                    assert_eq!(usize::try_from(address_count).unwrap(), iana_options.len());
-                    let mut got_preferred_addresses = Vec::new();
-                    for option in iana_options {
-                        let iana_data = if let v6::ParsedDhcpOption::Iana(iana_data) = option {
-                            iana_data
-                        } else {
-                            continue;
-                        };
-                        // Each IANA option should at most one IA Address option.
-                        assert!(iana_data.iter_options().count() <= 1);
-                        for iana_option in iana_data.iter_options() {
-                            if let v6::ParsedDhcpOption::IaAddr(iaaddr_data) = iana_option {
-                                got_preferred_addresses.push(iaaddr_data.addr());
-                            }
-                        }
-                    }
-                    got_preferred_addresses.sort();
-                    assert_eq!(got_preferred_addresses, preferred_addresses);
-                    true
+            let buf = match &actions[..] {
+                [Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, SOLICIT_TIMEOUT)] => {
+                    buf
                 }
-            );
+                actions => panic!("unexpected actions {:?}", actions),
+            };
+
+            let mut buf = &buf[..];
+            let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+            assert_eq!(msg.msg_type(), v6::MessageType::Solicit);
+
+            // The solicit should contain the expected options.
+            let mut got_options = msg
+                .options()
+                .filter(|opt| {
+                    vec![v6::OptionCode::ClientId, v6::OptionCode::ElapsedTime, v6::OptionCode::Oro]
+                        .contains(&opt.code())
+                })
+                .collect::<Vec<_>>();
+            let option_sorter: fn(
+                &v6::ParsedDhcpOption<'_>,
+                &v6::ParsedDhcpOption<'_>,
+            ) -> std::cmp::Ordering =
+                |opt1, opt2| (u16::from(opt1.code())).cmp(&(u16::from(opt2.code())));
+
+            got_options.sort_by(option_sorter);
+            let mut expected_options = vec![
+                v6::ParsedDhcpOption::ClientId(&client_id),
+                v6::ParsedDhcpOption::ElapsedTime(0),
+                v6::ParsedDhcpOption::Oro(vec![v6::OptionCode::SolMaxRt]),
+            ];
+            expected_options.sort_by(option_sorter);
+            assert_eq!(got_options, expected_options);
+
+            let iana_options =
+                msg.options().filter(|opt| opt.code() == v6::OptionCode::Iana).collect::<Vec<_>>();
+            assert_eq!(address_count, iana_options.len());
+            let mut got_preferred_addresses = Vec::new();
+            for option in iana_options {
+                let iana_data = if let v6::ParsedDhcpOption::Iana(iana_data) = option {
+                    iana_data
+                } else {
+                    continue;
+                };
+                // Each IANA option should at most one IA Address option.
+                assert!(iana_data.iter_options().count() <= 1);
+                for iana_option in iana_data.iter_options() {
+                    if let v6::ParsedDhcpOption::IaAddr(iaaddr_data) = iana_option {
+                        got_preferred_addresses.push(iaaddr_data.addr());
+                    }
+                }
+            }
+            got_preferred_addresses.sort();
+            assert_eq!(got_preferred_addresses, preferred_addresses);
         }
     }
 
