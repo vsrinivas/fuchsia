@@ -350,29 +350,36 @@ fn metadata_selector(input: &str) -> IResult<&str, MetadataSelector<'_>> {
 }
 
 /// Parses a tree selector, which is a node selector and an optional property selector.
-fn tree_selector(input: &str) -> IResult<&str, TreeSelector<'_>> {
-    // TODO(fxbug.dev/55118): handle whitespace in tree selectors.
-    let esc = escaped(none_of(":/\"\\ \t\n"), '\\', alt((tag("/"), tag(":"), tag(r#"\"#))));
-    let (rest, node_segments) =
-        verify(separated_nonempty_list(tag("/"), &esc), |segments: &Vec<&str>| {
-            !segments.iter().any(|s| s.contains("**"))
-        })(input)?;
-    let (rest, property_segment) = if peek::<&str, _, (&str, ErrorKind), _>(tag(":"))(rest).is_ok()
-    {
-        let (rest, _) = tag(":")(rest)?;
-        let (rest, property) =
-            verify(esc, |value: &str| !value.is_empty() && !value.contains("**"))(rest)?;
-        (rest, Some(property))
-    } else {
-        (rest, None)
-    };
-    Ok((
-        rest,
-        TreeSelector {
-            node: node_segments.into_iter().map(|value| value.into()).collect(),
-            property: property_segment.map(|value| value.into()),
-        },
-    ))
+fn tree_selector<'a>(
+    accept_spaces: bool,
+) -> impl Fn(&'a str) -> IResult<&'a str, TreeSelector<'a>> {
+    move |input: &str| {
+        let esc = if accept_spaces {
+            escaped(none_of(":/\"\\\n"), '\\', one_of(r#"/:\""#))
+        } else {
+            escaped(none_of(":/\\ \t\n"), '\\', one_of(r#"/:\"#))
+        };
+        let (rest, node_segments) =
+            verify(separated_nonempty_list(tag("/"), &esc), |segments: &Vec<&str>| {
+                !segments.iter().any(|s| s.contains("**"))
+            })(input)?;
+        let (rest, property_segment) =
+            if peek::<&str, _, (&str, ErrorKind), _>(tag(":"))(rest).is_ok() {
+                let (rest, _) = tag(":")(rest)?;
+                let (rest, property) =
+                    verify(esc, |value: &str| !value.is_empty() && !value.contains("**"))(rest)?;
+                (rest, Some(property))
+            } else {
+                (rest, None)
+            };
+        Ok((
+            rest,
+            TreeSelector {
+                node: node_segments.into_iter().map(|value| value.into()).collect(),
+                property: property_segment.map(|value| value.into()),
+            },
+        ))
+    }
 }
 
 impl<'a> Into<Segment<'a>> for &'a str {
@@ -418,20 +425,38 @@ fn comment(input: &str) -> IResult<&str, &str> {
     Ok((rest, comment))
 }
 
+/// Parses a core selector (component + tree + property). It accepts both raw selectors or
+/// selectors wrapped in double quotes. Selectors wrapped in quotes accept spaces in the tree and
+/// property names and require internal quotes to be escaped.
+fn core_selector(input: &str) -> IResult<&str, (ComponentSelector<'_>, TreeSelector<'_>)> {
+    if peek::<&str, _, (&str, ErrorKind), _>(tag("\""))(input).is_ok() {
+        let (rest, (_, component, _, tree, _)) = tuple((
+            tag("\""),
+            component_selector,
+            tag(":"),
+            tree_selector(/*accept_spaces=*/ true),
+            tag("\""),
+        ))(input)?;
+        Ok((rest, (component, tree)))
+    } else {
+        let (rest, (component, _, tree)) =
+            tuple((component_selector, tag(":"), tree_selector(/*accept_spaces=*/ false)))(input)?;
+        Ok((rest, (component, tree)))
+    }
+}
+
 /// Recognizes selectors, with comments allowed or disallowed.
 fn do_parse_selector<'a>(
     allow_inline_comment: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Selector<'a>, (&'a str, ErrorKind)> {
     map(
         tuple((
-            spaced(component_selector),
-            tag(":"),
-            tree_selector,
+            spaced(core_selector),
             opt(metadata_selector),
             cond(allow_inline_comment, opt(comment)),
             multispace0,
         )),
-        move |(component, _, tree, metadata, _, _)| Selector { component, tree, metadata },
+        move |((component, tree), metadata, _, _)| Selector { component, tree, metadata },
     )
 }
 
@@ -539,7 +564,7 @@ mod tests {
         ];
 
         for (string, expected_path, expected_property) in test_vector {
-            let (_, tree_selector) = tree_selector(string).unwrap();
+            let (_, tree_selector) = tree_selector(false)(string).unwrap();
             assert_eq!(
                 tree_selector,
                 TreeSelector { node: expected_path, property: expected_property }
@@ -563,10 +588,36 @@ mod tests {
             "a/**:c",
             // Node path can't be empty
             ":c",
+            // Spaces aren't accepted when parsing with allow_spaces=false.
+            "a b:c",
+            "a*b:\tc",
         ];
         for string in test_vector {
-            assert!(all_consuming(tree_selector)(string).is_err(), "{} should fail", string);
+            assert!(all_consuming(tree_selector(false))(string).is_err(), "{} should fail", string);
         }
+    }
+
+    #[test]
+    fn tree_selector_with_spaces() {
+        let with_spaces = vec![
+            ("a b:c", vec![Segment::Exact("a b")], Some(Segment::Exact("c"))),
+            (
+                "ab/ d:c ",
+                vec![Segment::Exact("ab"), Segment::Exact(" d")],
+                Some(Segment::Exact("c ")),
+            ),
+            ("a\t*b:c", vec![Segment::Pattern("a\t*b")], Some(Segment::Exact("c"))),
+            (r#"a \"x\":c"#, vec![Segment::Exact(r#"a \"x\""#)], Some(Segment::Exact("c"))),
+        ];
+        for (string, node, property) in with_spaces {
+            assert_eq!(
+                all_consuming(tree_selector(true))(string).unwrap().1,
+                TreeSelector { node, property }
+            );
+        }
+
+        // Un-escaped quotes aren't accepted when parsing with spaces.
+        assert!(all_consuming(tree_selector(true))(r#"a/b:"xc"/d"#).is_err());
     }
 
     #[test]
@@ -618,11 +669,32 @@ mod tests {
     }
 
     #[test]
+    fn parse_full_selector_with_spaces() {
+        assert_eq!(
+            selector(r#""core/foo:some node/*:prop" where pid = 123"#).unwrap(),
+            Selector {
+                component: ComponentSelector {
+                    segments: vec![Segment::Exact("core"), Segment::Exact("foo"),],
+                },
+                tree: TreeSelector {
+                    node: vec![Segment::Exact("some node"), Segment::Pattern("*"),],
+                    property: Some(Segment::Exact("prop")),
+                },
+                metadata: Some(MetadataSelector::new(vec![FilterExpression {
+                    identifier: Identifier::Pid,
+                    op: Operation::Comparison(ComparisonOperator::Equal, Value::Number(123)),
+                },])),
+            }
+        );
+    }
+
+    #[test]
     fn parse_selector_list() {
         let input = "// this is a comment
           foo/bar:baz where pid = 123  // inline comment for a selector starting with whitespace
           //this is a comment starting with whitespace
 core/**:quux:rust\t// another inline comment
+      \"core/foo:bar baz:quux\" where severity in [info, error]
         ";
         let selectors = selector_list(input).unwrap();
         assert_eq!(
@@ -647,6 +719,22 @@ core/**:quux:rust\t// another inline comment
                         property: Some(Segment::Exact("rust")),
                     },
                     metadata: None,
+                },
+                Selector {
+                    component: ComponentSelector {
+                        segments: vec![Segment::Exact("core"), Segment::Exact("foo"),],
+                    },
+                    tree: TreeSelector {
+                        node: vec![Segment::Exact("bar baz")],
+                        property: Some(Segment::Exact("quux"))
+                    },
+                    metadata: Some(MetadataSelector::new(vec![FilterExpression {
+                        identifier: Identifier::Severity,
+                        op: Operation::Inclusion(
+                            InclusionOperator::In,
+                            vec![Value::Severity(Severity::Info), Value::Severity(Severity::Error),]
+                        ),
+                    }])),
                 },
             ]
         );
