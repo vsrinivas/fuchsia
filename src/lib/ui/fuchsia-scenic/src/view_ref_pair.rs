@@ -32,6 +32,15 @@ impl ViewRefPair {
     }
 }
 
+impl From<ViewRefPair> for fidl_fuchsia_ui_views::ViewIdentityOnCreation {
+    fn from(item: ViewRefPair) -> Self {
+        fidl_fuchsia_ui_views::ViewIdentityOnCreation {
+            view_ref: item.view_ref,
+            view_ref_control: item.control_ref,
+        }
+    }
+}
+
 /// Given a ViewRef, returns a new version which has been duplicated.
 pub fn duplicate_view_ref(view_ref: &ViewRef) -> Result<ViewRef, Error> {
     let handle = view_ref.reference.as_handle_ref().duplicate(Rights::SAME_RIGHTS)?;

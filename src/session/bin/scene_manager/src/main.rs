@@ -15,11 +15,12 @@ use {
         RegistryRequest as A11yViewRegistryRequest,
         RegistryRequestStream as A11yViewRegistryRequestStream,
     },
+    fidl_fuchsia_ui_composition as fland,
     fidl_fuchsia_ui_scenic::ScenicMarker,
     fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_inspect as inspect,
-    fuchsia_syslog::fx_log_warn,
+    fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::{StreamExt, TryFutureExt, TryStreamExt},
@@ -45,7 +46,7 @@ async fn main() -> Result<(), Error> {
 
     let mut fs = ServiceFs::new_local();
 
-    // This will later be replaced by a flag, perhaps config-data.
+    // TODO(fxbug.dev/86450): flip this to use Flatland instead of legacy Scenic Gfx API.
     let use_flatland = false;
 
     inspect_runtime::serve(inspect::component::inspector(), &mut fs)?;
@@ -65,8 +66,18 @@ async fn main() -> Result<(), Error> {
     // It also listens to configuration.
     let text_handler = text_settings::Handler::new(None);
 
+    fx_log_info!("Instantiating SceneManager, use_flatland: {:?}", use_flatland);
+
     let scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = if use_flatland {
-        panic!("Flatland not supported yet");
+        // TODO(fxbug.dev/86379): Support for insertion of accessibility view.  Pass ViewRefInstalled
+        // to the SceneManager, the same way we do for the Gfx branch.
+        let display = connect_to_protocol::<fland::FlatlandDisplayMarker>()?;
+        let root_flatland = connect_to_protocol::<fland::FlatlandMarker>()?;
+        let a11y_flatland = connect_to_protocol::<fland::FlatlandMarker>()?;
+        Arc::new(Mutex::new(Box::new(
+            scene_management::FlatlandSceneManager::new(display, root_flatland, a11y_flatland)
+                .await?,
+        )))
     } else {
         let scenic = connect_to_protocol::<ScenicMarker>()?;
         let view_ref_installed = connect_to_protocol::<ui_views::ViewRefInstalledMarker>()?;
@@ -145,6 +156,7 @@ async fn main() -> Result<(), Error> {
         }
     }
 
+    fx_log_info!("Finished service handler loop; exiting main.");
     Ok(())
 }
 

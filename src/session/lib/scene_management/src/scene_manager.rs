@@ -5,9 +5,10 @@
 use {
     anyhow::Error,
     async_trait::async_trait,
-    fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_scenic as ui_scenic,
-    fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync, fuchsia_scenic as scenic,
-    fuchsia_scenic, fuchsia_syslog as syslog,
+    fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_composition as ui_comp,
+    fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
+    fuchsia_async as fasync, fuchsia_scenic as scenic, fuchsia_scenic,
+    fuchsia_syslog::{fx_log_err, fx_log_warn},
     futures::channel::mpsc::{UnboundedReceiver, UnboundedSender},
     futures::future::TryFutureExt,
     futures::prelude::*,
@@ -19,6 +20,7 @@ use {
 /// Presentation messages.
 pub enum PresentationMessage {
     /// Request a present call.
+    // TODO(fxbug.dev/86837): delete this message type when Gfx is removed.
     RequestPresent,
     /// Submit a present call.
     Present,
@@ -198,7 +200,72 @@ fn present(session: &scenic::SessionPtr) {
             // one future time.
             .present2(0, 0)
             .map_ok(|_| ())
-            .unwrap_or_else(|error| syslog::fx_log_err!("Present error: {:?}", error)),
+            .unwrap_or_else(|error| fx_log_err!("Present error: {:?}", error)),
     )
     .detach();
+}
+
+pub fn start_flatland_presentation_loop(
+    mut receiver: PresentationReceiver,
+    weak_flatland: Weak<Mutex<ui_comp::FlatlandProxy>>,
+) {
+    fasync::Task::local(async move {
+        let mut event_stream = {
+            if let Some(flatland) = weak_flatland.upgrade() {
+                let event_stream = flatland.lock().take_event_stream();
+                event_stream
+            } else {
+                fx_log_warn!("Failed to upgrade Flatand weak ref; exiting presentation loop.");
+                return;
+            }
+        };
+
+        while let Some(message) = receiver.next().await {
+            match message {
+                PresentationMessage::RequestPresent => {
+                    // TODO(fxbug.dev/86837): delete this message type when Gfx is removed.
+                    panic!("PresentationMessage::RequestPresent is not allowed.");
+                }
+                PresentationMessage::Present => {
+                    match weak_flatland.upgrade() {
+                        None => {
+                            fx_log_warn!(
+                                "Failed to upgrade Flatand weak ref; exiting presentation loop."
+                            );
+                            return;
+                        }
+                        Some(flatland) => {
+                            if let Err(e) = flatland.lock().present(ui_comp::PresentArgs {
+                                requested_presentation_time: Some(0),
+                                ..ui_comp::PresentArgs::EMPTY
+                            }) {
+                                fx_log_err!("Present() encountered FIDL error: {}", e);
+                                return;
+                            }
+
+                            // Wait for frame to be presented before we queue another present.
+                            while let Some(event) =
+                                event_stream.try_next().await.expect("Failed to get next event")
+                            {
+                                match event {
+                                    ui_comp::FlatlandEvent::OnNextFrameBegin { values: _ } => break,
+                                    ui_comp::FlatlandEvent::OnFramePresented {
+                                        frame_presented_info: _,
+                                    } => {}
+                                    ui_comp::FlatlandEvent::OnError { error } => {
+                                        fx_log_err!(
+                                            "Received FlatlandError code: {}; exiting presentation loop.",
+                                            error.into_primitive()
+                                        );
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    })
+    .detach()
 }
