@@ -151,7 +151,7 @@ impl Pipe {
             return error!(EPIPE);
         }
 
-        self.messages.write(task, user_buffers, None, &mut None)
+        self.messages.write_stream(task, user_buffers, None, &mut None)
     }
 
     fn fcntl(

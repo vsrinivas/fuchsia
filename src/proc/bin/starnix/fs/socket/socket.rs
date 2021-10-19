@@ -333,7 +333,7 @@ impl Socket {
             return error!(EISCONN);
         }
         let mut peer = peer.lock();
-        peer.write(task, user_buffers, local_address, ancillary_data)
+        peer.write(task, user_buffers, local_address, ancillary_data, self.socket_type)
     }
 
     /// Writes the provided message into this socket. If the write succeeds, all the bytes were
@@ -447,20 +447,17 @@ impl SocketInner {
         socket_type: SocketType,
         flags: SocketMessageFlags,
     ) -> Result<MessageReadInfo, Errno> {
-        let info = match socket_type {
-            SocketType::Stream => {
-                if flags.contains(SocketMessageFlags::PEEK) {
-                    return error!(ENOSYS);
-                } else {
-                    self.messages.read_stream(task, user_buffers)?
-                }
+        let info = if socket_type == SocketType::Stream {
+            if flags.contains(SocketMessageFlags::PEEK) {
+                return error!(ENOSYS);
+            } else {
+                self.messages.read_stream(task, user_buffers)?
             }
-            SocketType::Datagram | SocketType::SeqPacket | SocketType::Raw => {
-                if flags.contains(SocketMessageFlags::PEEK) {
-                    self.messages.peek_datagram(task, user_buffers)?
-                } else {
-                    self.messages.read_datagram(task, user_buffers)?
-                }
+        } else {
+            if flags.contains(SocketMessageFlags::PEEK) {
+                self.messages.peek_datagram(task, user_buffers)?
+            } else {
+                self.messages.read_datagram(task, user_buffers)?
             }
         };
         if info.bytes_read == 0 && user_buffers.remaining() > 0 && !self.messages.is_closed() {
@@ -501,8 +498,13 @@ impl SocketInner {
         user_buffers: &mut UserBufferIterator<'_>,
         address: Option<SocketAddress>,
         ancillary_data: &mut Option<AncillaryData>,
+        socket_type: SocketType,
     ) -> Result<usize, Errno> {
-        let bytes_written = self.messages.write(task, user_buffers, address, ancillary_data)?;
+        let bytes_written = if socket_type == SocketType::Stream {
+            self.messages.write_stream(task, user_buffers, address, ancillary_data)?
+        } else {
+            self.messages.write_datagram(task, user_buffers, address, ancillary_data)?
+        };
         if bytes_written > 0 {
             self.waiters.notify_events(FdEvents::POLLIN);
         }

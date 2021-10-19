@@ -286,6 +286,21 @@ pub struct MessageData {
 }
 
 impl MessageData {
+    /// Copies data from user memory into a new MessageData object.
+    pub fn new_from_user(
+        task: &Task,
+        user_buffers: &mut UserBufferIterator<'_>,
+        limit: usize,
+    ) -> Result<MessageData, Errno> {
+        let mut bytes = vec![0u8; limit];
+        let mut offset = 0;
+        while let Some(buffer) = user_buffers.next(limit - offset) {
+            task.mm.read_memory(buffer.address, &mut bytes[offset..(offset + buffer.length)])?;
+            offset += buffer.length;
+        }
+        Ok(bytes.into())
+    }
+
     /// Returns true if data is empty.
     pub fn is_empty(&self) -> bool {
         self.bytes.is_empty()

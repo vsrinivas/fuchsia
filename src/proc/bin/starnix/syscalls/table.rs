@@ -111,6 +111,7 @@ pub fn dispatch_syscall(
         linkat[5],
         listen[2],
         lseek[3],
+        madvise[3],
         memfd_create[2],
         mkdirat[3],
         mknodat[4],

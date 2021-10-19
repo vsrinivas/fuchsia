@@ -283,7 +283,7 @@ impl MessageQueue {
     /// - `user_buffers`: The `UserBufferIterator` to read the data from.
     ///
     /// Returns the number of bytes that were written to the socket.
-    pub fn write(
+    pub fn write_stream(
         &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
@@ -294,13 +294,38 @@ impl MessageQueue {
             return error!(EPIPE);
         }
         let actual = std::cmp::min(self.available_capacity(), user_buffers.remaining());
-        let mut bytes = vec![0u8; actual];
-        let mut offset = 0;
-        while let Some(buffer) = user_buffers.next(actual - offset) {
-            task.mm.read_memory(buffer.address, &mut bytes[offset..(offset + buffer.length)])?;
-            offset += buffer.length;
+        let data = MessageData::new_from_user(task, user_buffers, actual)?;
+        self.write_message(Message::new(data, address, ancillary_data.take()));
+        Ok(actual)
+    }
+
+    /// Writes the the contents of `UserBufferIterator` into this socket as
+    /// single message.
+    ///
+    /// # Parameters
+    /// - `task`: The task to read memory from.
+    /// - `user_buffers`: The `UserBufferIterator` to read the data from.
+    ///
+    /// Returns the number of bytes that were written to the socket.
+    pub fn write_datagram(
+        &mut self,
+        task: &Task,
+        user_buffers: &mut UserBufferIterator<'_>,
+        address: Option<SocketAddress>,
+        ancillary_data: &mut Option<AncillaryData>,
+    ) -> Result<usize, Errno> {
+        if self.closed {
+            return error!(EPIPE);
         }
-        self.write_message(Message::new(bytes.into(), address, ancillary_data.take()));
+        let actual = user_buffers.remaining();
+        if actual > self.capacity() {
+            return error!(EMSGSIZE);
+        }
+        if actual > self.available_capacity() {
+            return error!(EAGAIN);
+        }
+        let data = MessageData::new_from_user(task, user_buffers, actual)?;
+        self.write_message(Message::new(data, address, ancillary_data.take()));
         Ok(actual)
     }
 
