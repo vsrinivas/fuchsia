@@ -242,6 +242,8 @@ template("assemble_system") {
     cache_packages = "${gendir}/data/cache_packages"
     base_meta_package = "${gendir}/system_image/meta/package"
     update_meta_package = "${gendir}/update/meta/package"
+    packages = "${gendir}/packages.json"
+    images_manifest = "${outdir}/images.json"
 
     # Determine which ZBI we are shipping.
     zbi_final = zbi
@@ -542,6 +544,8 @@ template("assemble_system") {
       files.zbi,
       files.zbi_manifest,
       files.update_package,
+      files.packages,
+      files.images_manifest,
     ]
 
     if (defined(invoker.zbi_signing_script)) {
@@ -756,7 +760,10 @@ template("assemble_system") {
 
     # public_deps is used, so that the outputs of these dependencies are
     # available to external targets.
-    public_deps = [ ":${labels.image_assembler}" ]
+    public_deps = [
+      ":${labels.image_assembler}",
+      ":${labels.partitions_config}",
+    ]
     if (defined(invoker.output_dir)) {
       public_deps += [ ":${labels.copy_images}" ]
     }
