@@ -216,8 +216,9 @@ Device::Device(zx_device_t* parent_device, Driver* parent_driver)
 
 // static
 zx_status_t Device::OverrideSizeFromCommandLine(const char* name, int64_t* memory_size) {
-  const char* pool_arg = getenv(name);
-  if (!pool_arg || strlen(pool_arg) == 0)
+  char pool_arg[32];
+  auto status = device_get_variable(parent(), name, pool_arg, sizeof(pool_arg), nullptr);
+  if (status != ZX_OK || strlen(pool_arg) == 0)
     return ZX_OK;
   char* end = nullptr;
   int64_t override_size = strtoll(pool_arg, &end, 10);
@@ -244,20 +245,25 @@ zx_status_t Device::GetContiguousGuardParameters(uint64_t* guard_bytes_out,
   *crash_on_fail_out = false;
 
   // If true, sysmem crashes on a guard page violation.
-  if (getenv("driver.sysmem.contiguous_guard_pages_fatal")) {
+  char arg[32];
+  if (ZX_OK == device_get_variable(parent(), "driver.sysmem.contiguous_guard_pages_fatal", arg,
+                                   sizeof(arg), nullptr)) {
     DRIVER_INFO("Setting contiguous_guard_pages_fatal");
     *crash_on_fail_out = true;
   }
 
   // If true, sysmem will create guard regions around every allocation.
-  if (getenv("driver.sysmem.contiguous_guard_pages_internal")) {
+  if (ZX_OK == device_get_variable(parent(), "driver.sysmem.contiguous_guard_pages_internal", arg,
+                                   sizeof(arg), nullptr)) {
     DRIVER_INFO("Setting contiguous_guard_pages_internal");
     *internal_guard_pages_out = true;
   }
 
   const char* kName = "driver.sysmem.contiguous_guard_page_count";
-  const char* guard_count = getenv(kName);
-  if (!guard_count || strlen(guard_count) == 0) {
+
+  char guard_count[32];
+  auto status = device_get_variable(parent(), kName, guard_count, sizeof(guard_count), nullptr);
+  if (status != ZX_OK || strlen(guard_count) == 0) {
     return ZX_OK;
   }
   char* end = nullptr;

@@ -67,100 +67,104 @@ class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
 };
 
 TEST(Device, OverrideCommandLine) {
+  sysmem_driver::Driver sysmem_ctx;
+  std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
+  sysmem_driver::Device sysmem{fake_parent.get(), &sysmem_ctx};
+
   const char* kCommandLine = "test.device.commandline";
 
   int64_t value;
   zx_status_t status;
 
   value = 10;
-  setenv(kCommandLine, "5", 1);
-  status = Device::OverrideSizeFromCommandLine(kCommandLine, &value);
+  fake_parent->SetVariable(kCommandLine, "5");
+  status = sysmem.OverrideSizeFromCommandLine(kCommandLine, &value);
   EXPECT_OK(status);
   EXPECT_EQ(5, value);
 
   value = 11;
-  setenv(kCommandLine, "65537", 1);
-  status = Device::OverrideSizeFromCommandLine(kCommandLine, &value);
+  fake_parent->SetVariable(kCommandLine, "65537");
+  status = sysmem.OverrideSizeFromCommandLine(kCommandLine, &value);
   EXPECT_OK(status);
   EXPECT_EQ(65537, value);
 
   // Trailing characters should cause the entire value to be ignored.
   value = 12;
-  setenv(kCommandLine, "65536a", 1);
-  status = Device::OverrideSizeFromCommandLine(kCommandLine, &value);
+  fake_parent->SetVariable(kCommandLine, "65536a");
+  status = sysmem.OverrideSizeFromCommandLine(kCommandLine, &value);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
   EXPECT_EQ(12, value);
 
   // Empty values should be ignored.
   value = 13;
-  setenv(kCommandLine, "", 1);
-  status = Device::OverrideSizeFromCommandLine(kCommandLine, &value);
+  fake_parent->SetVariable(kCommandLine, "");
+  status = sysmem.OverrideSizeFromCommandLine(kCommandLine, &value);
   EXPECT_OK(status);
   EXPECT_EQ(13, value);
 
   // Negative values are allowed (these get interpreted as a percentage of physical RAM), but only
   // up to 99% is allowed.
   value = 14;
-  setenv(kCommandLine, "-100", 1);
-  status = Device::OverrideSizeFromCommandLine(kCommandLine, &value);
+  fake_parent->SetVariable(kCommandLine, "-100");
+  status = sysmem.OverrideSizeFromCommandLine(kCommandLine, &value);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
   EXPECT_EQ(14, value);
 
   value = 15;
-  setenv(kCommandLine, "-99", 1);
-  status = Device::OverrideSizeFromCommandLine(kCommandLine, &value);
+  fake_parent->SetVariable(kCommandLine, "-99");
+  status = sysmem.OverrideSizeFromCommandLine(kCommandLine, &value);
   EXPECT_OK(status);
   EXPECT_EQ(-99, value);
 }
 
 TEST(Device, GuardPageCommandLine) {
+  sysmem_driver::Driver sysmem_ctx;
+  std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
+  sysmem_driver::Device sysmem{fake_parent.get(), &sysmem_ctx};
+
   uint64_t guard_bytes = 1;
   bool internal_guard_pages = true;
   bool crash_on_fail = true;
   const char* kName = "driver.sysmem.contiguous_guard_page_count";
   const char* kInternalName = "driver.sysmem.contiguous_guard_pages_internal";
 
-  setenv(kInternalName, "", true);
-  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
+  fake_parent->SetVariable(kInternalName, "");
+  EXPECT_EQ(ZX_OK, sysmem.GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
                                                         &crash_on_fail));
   EXPECT_EQ(zx_system_get_page_size(), guard_bytes);
   EXPECT_TRUE(internal_guard_pages);
   EXPECT_FALSE(crash_on_fail);
-  unsetenv(kInternalName);
+  fake_parent->SetVariable(kInternalName, nullptr);
 
-  setenv(kName, "fasfas", true);
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, Device::GetContiguousGuardParameters(
+  fake_parent->SetVariable(kName, "fasfas");
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, sysmem.GetContiguousGuardParameters(
                                      &guard_bytes, &internal_guard_pages, &crash_on_fail));
   EXPECT_EQ(zx_system_get_page_size(), guard_bytes);
   EXPECT_FALSE(internal_guard_pages);
   EXPECT_FALSE(crash_on_fail);
 
-  setenv(kName, "", true);
-  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
+  fake_parent->SetVariable(kName, "");
+  EXPECT_EQ(ZX_OK, sysmem.GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
                                                         &crash_on_fail));
   EXPECT_EQ(zx_system_get_page_size(), guard_bytes);
   EXPECT_FALSE(internal_guard_pages);
   EXPECT_FALSE(crash_on_fail);
 
-  setenv(kName, "2", true);
-  setenv(kInternalName, "", true);
-  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
+  fake_parent->SetVariable(kName, "2");
+  fake_parent->SetVariable(kInternalName, "");
+  EXPECT_EQ(ZX_OK, sysmem.GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
                                                         &crash_on_fail));
   EXPECT_EQ(zx_system_get_page_size() * 2, guard_bytes);
   EXPECT_TRUE(internal_guard_pages);
   EXPECT_FALSE(crash_on_fail);
 
   const char* kFatalName = "driver.sysmem.contiguous_guard_pages_fatal";
-  setenv(kFatalName, "", true);
-  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
+  fake_parent->SetVariable(kFatalName, "");
+  EXPECT_EQ(ZX_OK, sysmem.GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
                                                         &crash_on_fail));
   EXPECT_EQ(zx_system_get_page_size() * 2, guard_bytes);
   EXPECT_TRUE(internal_guard_pages);
   EXPECT_TRUE(crash_on_fail);
-
-  unsetenv(kName);
-  unsetenv(kFatalName);
-  unsetenv(kInternalName);
 }
 
 class FakeDdkSysmem : public zxtest::Test {
