@@ -267,6 +267,8 @@ impl ResolvedDriver {
                 let mut matched_driver = self.create_matched_driver();
                 matched_driver.node_index = Some(node_index);
                 matched_driver.num_nodes = Some((composite.additional_nodes.len() + 1) as u32);
+                matched_driver.composite_name =
+                    Some(composite.symbol_table[&composite.device_name_id].clone());
                 Ok(Some(matched_driver))
             }
         }
@@ -1046,6 +1048,7 @@ mod tests {
             );
             assert_eq!(result.node_index, Some(0));
             assert_eq!(result.num_nodes, Some(2));
+            assert_eq!(result.composite_name, Some("mimid".to_string()));
 
             // Match secondary node.
             let args = fdf::NodeAddArgs {

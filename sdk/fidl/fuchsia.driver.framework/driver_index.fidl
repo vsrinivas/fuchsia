@@ -18,6 +18,9 @@ type MatchedDriver = table {
     /// Total number of nodes for a composite driver (optional).
     3: num_nodes uint32;
 
+    /// The name of the composite device that is created (optional).
+    5: composite_name string:MAX;
+
     /// URL of the driver library.
     /// This should only be used by DriverManager before Drivers-As-Components.
     4: driver_url string:fuchsia.url.MAX_URL_LENGTH;
