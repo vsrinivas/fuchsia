@@ -190,6 +190,54 @@ whether a type may ever contain a floating point number to determine which...
 				{"[fidlgen_rust]", "/some/url/here"},
 			},
 		},
+		{
+			input: `
+> In blockquotes, we can wrap [inline
+> links](http://example.com) inside the link text.
+			`,
+			hrefUses: []string{
+				"(http://example.com)",
+			},
+		},
+		{
+			input: `
+> In blockquotes, we can wrap [reference
+> links][link label] inside the link text.
+
+[link label]: http://example.com
+			`,
+			xrefUses: []string{
+				"[link label]",
+			},
+			xrefDefs: []xrefDef{
+				{"[link label]", "http://example.com"},
+			},
+		},
+		{
+			ignore: "fxbug.dev/76515",
+			input: `
+> In blockquotes, we can wrap [inline links]
+> (http://example.com) between the "]" and "(".
+			`,
+			hrefUses: []string{
+				"(http://example.com)",
+			},
+		},
+		{
+			ignore: "fxbug.dev/76515",
+			input: `
+> In blockquotes, we can wrap [reference links]
+> [link label] between the "]" and "[".
+
+[link label]: http://example.com
+			`,
+			xrefUses: []string{
+				"[link label]",
+			},
+			xrefDefs: []xrefDef{
+				{"[link label]", "http://example.com"},
+			},
+		},
 	}
 	for inputNum, ex := range cases {
 		t.Run(fmt.Sprintf("input #%d", inputNum), func(t *testing.T) {
