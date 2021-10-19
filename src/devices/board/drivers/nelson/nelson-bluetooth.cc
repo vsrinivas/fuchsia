@@ -19,6 +19,7 @@
 #include <soc/aml-s905d3/s905d3-hw.h>
 
 #include "nelson.h"
+#include "src/devices/board/drivers/nelson/bt_uart_bind.h"
 
 namespace nelson {
 
@@ -74,16 +75,6 @@ static pbus_dev_t bt_uart_dev = []() {
   return dev;
 }();
 
-constexpr zx_bind_inst_t pwm_e_match[] = {
-    BI_MATCH_IF(EQ, BIND_INIT_STEP, BIND_INIT_STEP_PWM),
-};
-constexpr device_fragment_part_t pwm_e_fragment[] = {
-    {countof(pwm_e_match), pwm_e_match},
-};
-static const device_fragment_t uart_fragments[] = {
-    {"pwm", countof(pwm_e_fragment), pwm_e_fragment},
-};
-
 zx_status_t Nelson::BluetoothInit() {
   zx_status_t status;
 
@@ -109,8 +100,8 @@ zx_status_t Nelson::BluetoothInit() {
   }
 
   // Bind UART for Bluetooth HCI
-  status = pbus_.CompositeDeviceAdd(&bt_uart_dev, reinterpret_cast<uint64_t>(uart_fragments), 1,
-                                    nullptr);
+  status = pbus_.AddComposite(&bt_uart_dev, reinterpret_cast<uint64_t>(bt_uart_fragments),
+                              countof(bt_uart_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;

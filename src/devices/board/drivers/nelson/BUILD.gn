@@ -52,6 +52,17 @@ driver_bind_rules("backlight_bind") {
   ]
 }
 
+driver_bind_rules("bt_uart_bind") {
+  rules = "bind/bt_uart.bind"
+  header_output = "bt_uart_bind.h"
+  bind_output = "bt_uart_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
 driver_bind_rules("nelson_buttons_bind") {
   rules = "bind/nelson_buttons.bind"
   header_output = "nelson_buttons_bind.h"
@@ -373,6 +384,7 @@ fuchsia_driver("nelson-module-driver") {
     ":aml_video_bind_header",
     ":backlight_bind_header",
     ":brownout_protection_bind_header",
+    ":bt_uart_bind_header",
     ":display_bind_header",
     ":dwc2_bind_header",
     ":ft3x27_touch_bind_header",
