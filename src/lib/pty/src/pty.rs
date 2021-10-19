@@ -53,6 +53,11 @@ impl Pty {
     /// The launched process will close when the Pty is dropped so you do not need to
     /// explicitly close it.
     pub async fn spawn(&mut self, command: Option<&CStr>) -> Result<(), Error> {
+        let command = command.unwrap_or(&cstr!("/boot/bin/sh"));
+        self.spawn_with_argv(command, &[command]).await
+    }
+
+    pub async fn spawn_with_argv(&mut self, command: &CStr, argv: &[&CStr]) -> Result<(), Error> {
         if self.shell_process.is_some() {
             return Ok(());
         }
@@ -60,7 +65,7 @@ impl Pty {
         ftrace::duration!("pty", "Pty:spawn");
 
         self.shell_process = Some(
-            Pty::launch_shell(&self.server_pty, command.unwrap_or(&cstr!("/boot/bin/sh")))
+            Pty::launch_shell(&self.server_pty, command, argv)
                 .await
                 .context("launch shell process")?,
         );
@@ -139,11 +144,15 @@ impl Pty {
 
     /// Launches the shell process by creating the client side of the pty and then spawning the
     /// shell.
-    async fn launch_shell(server_pty: &File, command: &CStr) -> Result<zx::Process, Error> {
+    async fn launch_shell(
+        server_pty: &File,
+        command: &CStr,
+        argv: &[&CStr],
+    ) -> Result<zx::Process, Error> {
         ftrace::duration!("pty", "Pty:launch_shell");
         let client_pty =
             Pty::open_client_pty(server_pty).await.context("unable to create client_pty")?;
-        let process = Pty::spawn_shell_process(client_pty, command)
+        let process = Pty::spawn_shell_process(client_pty, command, argv)
             .context("unable to spawn shell process")?;
 
         Ok(process)
@@ -191,13 +200,17 @@ impl Pty {
     }
 
     /// spawns the shell and transfers the client pty to the process.
-    fn spawn_shell_process(client_pty: File, command: &CStr) -> Result<zx::Process, Error> {
+    fn spawn_shell_process(
+        client_pty: File,
+        command: &CStr,
+        argv: &[&CStr],
+    ) -> Result<zx::Process, Error> {
         ftrace::duration!("pty", "Pty:spawn_shell_process");
         let process = fdio::spawn_etc(
             &zx::Job::from_handle(zx::Handle::invalid()),
             fdio::SpawnOptions::CLONE_ALL - fdio::SpawnOptions::CLONE_STDIO,
             command,
-            &[command],
+            argv,
             None,
             &mut [fdio::SpawnAction::transfer_fd(
                 client_pty,
@@ -263,7 +276,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn can_spawn_shell_process() -> Result<(), Error> {
         let server_pty = Pty::open_server_pty()?;
-        let process = Pty::launch_shell(&server_pty, &cstr!("/pkg/bin/sh")).await?;
+        let cmd = cstr!("/pkg/bin/sh");
+        let process = Pty::launch_shell(&server_pty, &cmd, &[&cmd]).await?;
 
         let mut started = false;
         if let Ok(info) = process.info() {
@@ -315,7 +329,10 @@ mod tests {
     async fn exited_shell_process_is_not_running() -> Result<(), Error> {
         let window_size = WindowSize { width: 300 as u32, height: 300 as u32 };
         let mut pty = Pty::new().unwrap();
-        pty.spawn(Some(&cstr!("/pkg/bin/exit_with_code_util"))).await?;
+
+        // While argv[0] is usually the executable path, this particular program expects it to be
+        // an integer which is then parsed and returned as the status code.
+        pty.spawn_with_argv(&cstr!("/pkg/bin/exit_with_code_util"), &[cstr!("42")]).await?;
         pty.resize(window_size).await?;
 
         // Since these tests don't seem to timeout automatically, we must
