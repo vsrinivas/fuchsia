@@ -60,11 +60,6 @@ fuchsia_base = {
 
   if (!bootfs_only) {
     # minfs arguments
-    if (minfs_product_minimum_inodes != false) {
-      minfs_minimum_inodes = minfs_product_minimum_inodes
-    } else if (minfs_board_minimum_inodes != false) {
-      minfs_minimum_inodes = minfs_board_minimum_inodes
-    }
     if (minfs_product_minimum_data_bytes != false) {
       minfs_minimum_data_bytes = minfs_product_minimum_data_bytes
     } else if (minfs_board_minimum_data_bytes != false) {

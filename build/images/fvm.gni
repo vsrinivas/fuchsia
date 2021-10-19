@@ -52,8 +52,6 @@ declare_args() {
   # required for the filesystem.
   blobfs_board_minimum_inodes = false
   blobfs_product_minimum_inodes = false
-  minfs_board_minimum_inodes = false
-  minfs_product_minimum_inodes = false
 
   # Number of bytes to reserve for data in the fs. This is in addition
   # to what is reserved, if any, for the inodes. Data bytes constitutes

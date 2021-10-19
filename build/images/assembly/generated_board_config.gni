@@ -40,7 +40,7 @@ import("//build/zbi/zbi.gni")
 #     non-prime package during publishing.
 #
 # MinFS data partition arguments
-#   minfs_minimum_inodes, minfs_minimum_data_bytes, minfs_maximum_bytes (optional)
+#   minfs_minimum_data_bytes, minfs_maximum_bytes (optional)
 #     [int] Size options for minfs to pass to the fvm tool for the data partition.
 #
 # BlobFS arguments
@@ -176,9 +176,6 @@ template("generated_board_config") {
         MinFS = {
           name = "data"
 
-          if (defined(invoker.minfs_minimum_inodes)) {
-            minimum_inodes = invoker.minfs_minimum_inodes
-          }
           if (defined(invoker.minfs_minimum_data_bytes)) {
             minimum_data_bytes = invoker.minfs_minimum_data_bytes
           }
