@@ -200,6 +200,14 @@ const Attribute* AttributeList::Get(std::string_view attribute_name) const {
   return nullptr;
 }
 
+Attribute* AttributeList::Get(std::string_view attribute_name) {
+  for (const auto& attribute : attributes) {
+    if (attribute->name == attribute_name)
+      return attribute.get();
+  }
+  return nullptr;
+}
+
 std::string Decl::GetName() const { return std::string(name.decl_name()); }
 
 const std::set<std::pair<std::string, std::string_view>> allowed_simple_unions{{
@@ -1219,16 +1227,38 @@ bool AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const 
 
 bool AttributeArgSchema::ResolveArg(Library* library, Attribute* attribute,
                                     AttributeArg* arg) const {
+  Constant* constant = arg->value.get();
+
+  switch (special_case_) {
+    case SpecialCase::kNone:
+      break;
+    case SpecialCase::kStringLiteral: {
+      switch (constant->kind) {
+        case Constant::Kind::kLiteral: {
+          auto literal_constant = static_cast<LiteralConstant*>(constant);
+          if (!library->ResolveLiteralConstant(literal_constant, &library->kUnboundedStringType)) {
+            return false;
+          }
+          arg->type = std::make_unique<StringType>(library->kUnboundedStringType);
+          return true;
+        }
+        case Constant::Kind::kIdentifier:
+          return library->Fail(ErrAttributeArgDisallowsConstants, constant->span, arg->name.value(),
+                               attribute);
+        case Constant::Kind::kBinaryOperator:
+          assert(false && "binary operator in attribute arg should be parser error");
+      }
+    }
+      __builtin_unreachable();
+  }
+
   switch (type_) {
     case ConstantValue::Kind::kDocComment:
     case ConstantValue::Kind::kString: {
-      const auto max_size = Size::Max();
-      auto unbounded_string_type = std::make_unique<StringType>(
-          Name::CreateIntrinsic("string"), &max_size, types::Nullability::kNonnullable);
-      if (!library->ResolveConstant(arg->value.get(), unbounded_string_type.get())) {
+      if (!library->ResolveConstant(constant, &library->kUnboundedStringType)) {
         return false;
       }
-      arg->type = std::move(unbounded_string_type);
+      arg->type = std::make_unique<StringType>(library->kUnboundedStringType);
       break;
     }
     case ConstantValue::Kind::kBool:
@@ -1248,7 +1278,7 @@ bool AttributeArgSchema::ResolveArg(Library* library, Attribute* attribute,
       assert(primitive_subtype.has_value());
       auto primitive_type = std::make_unique<PrimitiveType>(Name::CreateIntrinsic(primitive_name),
                                                             primitive_subtype.value());
-      if (!library->ResolveConstant(arg->value.get(), primitive_type.get())) {
+      if (!library->ResolveConstant(constant, primitive_type.get())) {
         return false;
       }
       arg->type = std::move(primitive_type);
@@ -1276,17 +1306,12 @@ bool AttributeSchema::ResolveArgsWithoutSchema(Library* library, Attribute* attr
            "attribute arg starting with a binary operator is a parse error");
 
     // Try first as a string...
-    const auto max_size = Size::Max();
-    auto unbounded_string_type = std::make_unique<StringType>(
-        Name::CreateIntrinsic("string"), &max_size, types::Nullability::kNonnullable);
-    if (library->TryResolveConstant(arg->value.get(), unbounded_string_type.get())) {
-      arg->type = std::move(unbounded_string_type);
+    if (library->TryResolveConstant(arg->value.get(), &library->kUnboundedStringType)) {
+      arg->type = std::make_unique<StringType>(library->kUnboundedStringType);
     } else {
       // ...then as a bool if that doesn't work.
-      auto bool_type = std::make_unique<PrimitiveType>(Name::CreateIntrinsic("bool"),
-                                                       types::PrimitiveSubtype::kBool);
-      if (library->TryResolveConstant(arg->value.get(), bool_type.get())) {
-        arg->type = std::move(bool_type);
+      if (library->TryResolveConstant(arg->value.get(), &library->kBoolType)) {
+        arg->type = std::make_unique<PrimitiveType>(library->kBoolType);
       } else {
         // Since we cannot have an IdentifierConstant resolving to a kDocComment-kinded value,
         // we know that it must resolve to a numeric instead.
@@ -1606,7 +1631,10 @@ Libraries::Libraries() {
   }, SimpleLayoutConstraint));
   AddAttributeSchema("generated_name", AttributeSchema({
     AttributePlacement::kAnonymousLayout,
-  }, AttributeArgSchema(ConstantValue::Kind::kString),
+  }, AttributeArgSchema(
+      ConstantValue::Kind::kString,
+      AttributeArgSchema::Optionality::kRequired,
+      AttributeArgSchema::SpecialCase::kStringLiteral),
   OverrideNameConstraint)),
   AddAttributeSchema("max_bytes", AttributeSchema({
     AttributePlacement::kProtocolDecl,
@@ -2484,25 +2512,22 @@ void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration>
       std::make_unique<Service>(std::move(attributes), std::move(name), std::move(members)));
 }
 
-namespace {
-
-// Sets the naming context's generated name override to the @generated_name attribute's value if it
-// is present in the input attribute list, or does nothing otherwise.
-void MaybeOverrideName(const AttributeList& attributes, NamingContext* context) {
-  auto override_attr = attributes.Get("generated_name");
-  if (override_attr == nullptr)
-    return;
-  auto override_name_arg = override_attr->GetStandaloneAnonymousArg();
-  if (override_name_arg == nullptr)
+void Library::MaybeOverrideName(AttributeList& attributes, NamingContext* context) {
+  auto attr = attributes.Get("generated_name");
+  if (attr == nullptr)
     return;
 
-  const auto& attr_span = override_name_arg->value->span;
-  assert(attr_span.data().size() > 2 && "expected attribute arg to at least have quotes");
-  // remove the quotes from string literal
-  context->set_name_override(std::string(attr_span.data().substr(1, attr_span.data().size() - 2)));
+  // Although we are still in the consume step, this early compilation is safe
+  // since @generated_name uses AttributeArgSchema::SpecialCase::kStringLiteral.
+  if (!CompileAttribute(attr)) {
+    return;
+  }
+  const auto& arg = attr->GetArg(AttributeArg::kDefaultAnonymousName);
+  const ConstantValue& value = arg->value->Value();
+  assert(value.kind == ConstantValue::Kind::kString);
+  const auto string_value = static_cast<const StringConstantValue&>(value);
+  context->set_name_override(string_value.MakeContents());
 }
-
-}  // namespace
 
 // TODO(fxbug.dev/77853): these conversion methods may need to be refactored
 //  once the new flat AST lands, and such coercion  is no longer needed.

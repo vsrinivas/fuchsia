@@ -98,4 +98,18 @@ type Baz = struct {};
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
 }
 
+TEST(GeneratedNameTests, BadGeneratedNameFromConstant) {
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+const NAME string = "baz";
+
+type Foo = struct {
+  bar @generated_name(NAME) struct {};
+};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgDisallowsConstants);
+}
+
 }  // namespace

@@ -113,6 +113,7 @@ struct AttributeList final {
 
   bool Empty() const { return attributes.empty(); }
   const Attribute* Get(std::string_view attribute_name) const;
+  Attribute* Get(std::string_view attribute_name);
 
   std::vector<std::unique_ptr<Attribute>> attributes;
 };
@@ -968,13 +969,20 @@ class AttributeArgSchema {
     kRequired,
   };
 
+  enum class SpecialCase {
+    kNone,
+    kStringLiteral,
+    // TODO(fxbug.dev/67858): Add kVersionLiteral (allows number or "HEAD").
+  };
+
   using Constraint =
       fit::function<bool(Reporter* reporter, const std::unique_ptr<AttributeArg>& attribute_arg,
                          const Attributable* attributable)>;
 
   explicit AttributeArgSchema(ConstantValue::Kind type,
-                              Optionality optionality = Optionality::kRequired)
-      : type_(type), optionality_(optionality) {
+                              Optionality optionality = Optionality::kRequired,
+                              SpecialCase special_case = SpecialCase::kNone)
+      : type_(type), optionality_(optionality), special_case_(special_case) {
     assert(type != ConstantValue::Kind::kDocComment);
   };
 
@@ -988,6 +996,7 @@ class AttributeArgSchema {
  private:
   const ConstantValue::Kind type_;
   const Optionality optionality_ = Optionality::kRequired;
+  const SpecialCase special_case_ = SpecialCase::kNone;
 };
 
 // AttributeSchema defines a schema for attributes. This includes:
@@ -1278,6 +1287,10 @@ class Library : Attributable {
                      std::unique_ptr<raw::AttributeList> raw_attribute_list,
                      bool is_request_or_response);
 
+  // Sets the naming context's generated name override to the @generated_name attribute's value if
+  // it is present in the input attribute list, or does nothing otherwise.
+  void MaybeOverrideName(AttributeList& attributes, NamingContext* context);
+
   bool TypeCanBeConst(const Type* type);
   const Type* TypeResolve(const Type* type);
   // Return true if this constant refers to the built in `optional` constraint,
@@ -1385,6 +1398,11 @@ class Library : Attributable {
   // TODO(fxbug.dev/76219): Remove when canonicalizing types.
   const Name kSizeTypeName = Name::CreateIntrinsic("uint32");
   const PrimitiveType kSizeType = PrimitiveType(kSizeTypeName, types::PrimitiveSubtype::kUint32);
+  const Name kBoolTypeName = Name::CreateIntrinsic("bool");
+  const PrimitiveType kBoolType = PrimitiveType(kBoolTypeName, types::PrimitiveSubtype::kBool);
+  const Name kUnboundedStringTypeName = Name::CreateIntrinsic("string");
+  const StringType kUnboundedStringType = StringType(
+      kUnboundedStringTypeName, &VectorBaseType::kMaxSize, types::Nullability::kNonnullable);
 
   Dependencies dependencies_;
   const Libraries* all_libraries_;

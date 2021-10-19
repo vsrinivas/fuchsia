@@ -299,6 +299,8 @@ constexpr ErrorDef<flat::Attribute *, std::string> ErrDuplicateAttributeArg(
     "attribute '{}' declares the '{}' argument multiple times");
 constexpr ErrorDef<const flat::Attribute *> ErrAttributeDisallowsArgs(
     "attribute '{}' does not support arguments");
+constexpr ErrorDef<std::string, flat::Attribute *> ErrAttributeArgDisallowsConstants(
+    "argument '{}' of attribute '{}' does not support constants; please use a literal instead");
 constexpr ErrorDef<const flat::Attribute *> ErrAttributeConstraintNotSatisfied(
     "declaration did not satisfy constraint of attribute '{}'");
 constexpr ErrorDef<flat::Name> ErrUnionCannotBeSimple("union '{}' is not allowed to be simple");
