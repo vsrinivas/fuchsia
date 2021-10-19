@@ -8,6 +8,7 @@ use fidl_fuchsia_ui_composition as fuicomp;
 use fuchsia_component::client::connect_channel_to_protocol;
 use fuchsia_scenic;
 use fuchsia_zircon as zx;
+use zerocopy::{AsBytes, FromBytes};
 
 use std::sync::Arc;
 
@@ -40,6 +41,42 @@ pub struct DmaFile {
 
     /// The composition allocator proxy.
     composition_proxy: fuicomp::AllocatorSynchronousProxy,
+}
+
+#[derive(AsBytes, FromBytes, Default)]
+#[repr(packed)]
+pub struct DmaHeader {
+    pub type_: u32,
+    pub fd: u32,
+    pub flags: u32,
+}
+
+#[derive(AsBytes, FromBytes, Default)]
+#[repr(packed)]
+pub struct DmaBuffer {
+    pub width: u32,
+    pub height: u32,
+    pub format: u32,
+    pub stride0: u32,
+    pub stride1: u32,
+    pub stride2: u32,
+    pub offset0: u32,
+    pub offset1: u32,
+    pub offset2: u32,
+}
+
+#[derive(AsBytes, FromBytes, Default)]
+#[repr(packed)]
+pub struct DmaBufferAllocationArgs {
+    pub header: DmaHeader,
+    pub buffer: DmaBuffer,
+}
+
+#[derive(AsBytes, FromBytes, Default)]
+#[repr(packed)]
+pub struct DmaBufferSyncArgs {
+    pub header: DmaHeader,
+    pub size: u32,
 }
 
 impl DmaFile {
@@ -241,4 +278,49 @@ impl FileOps for DmaFile {
     ) -> Result<usize, Errno> {
         error!(EINVAL)
     }
+}
+
+/// Returns the buffer collection constraints to be set on the buffer collection associated with
+/// `buffer`.
+pub fn buffer_collection_constraints(buffer: &DmaBuffer) -> fsysmem::BufferCollectionConstraints {
+    let usage = fsysmem::BufferUsage {
+        cpu: fsysmem::CPU_USAGE_READ_OFTEN | fsysmem::CPU_USAGE_WRITE_OFTEN,
+        ..BUFFER_USAGE_DEFAULT
+    };
+
+    let buffer_memory_constraints = fsysmem::BufferMemoryConstraints {
+        ram_domain_supported: true,
+        cpu_domain_supported: true,
+        ..BUFFER_MEMORY_CONSTRAINTS_DEFAULT
+    };
+
+    let pixel_format = fsysmem::PixelFormat {
+        type_: drm_format_to_sysmem_format(buffer.format),
+        has_format_modifier: true,
+        format_modifier: fsysmem::FormatModifier { value: fsysmem::FORMAT_MODIFIER_LINEAR },
+    };
+
+    let mut image_constraints = fsysmem::ImageFormatConstraints {
+        min_coded_width: buffer.width,
+        min_coded_height: buffer.height,
+        max_coded_width: buffer.width,
+        max_coded_height: buffer.height,
+        min_bytes_per_row: min_bytes_per_row(buffer.format, buffer.width),
+        color_spaces_count: 1,
+        pixel_format,
+        ..IMAGE_FORMAT_CONSTRAINTS_DEFAULT
+    };
+    image_constraints.color_space[0].type_ = fsysmem::ColorSpaceType::Srgb;
+
+    let mut constraints = fsysmem::BufferCollectionConstraints {
+        min_buffer_count: 1,
+        usage,
+        has_buffer_memory_constraints: true,
+        buffer_memory_constraints,
+        image_format_constraints_count: 1,
+        ..BUFFER_COLLECTION_CONSTRAINTS_DEFAULT
+    };
+    constraints.image_format_constraints[0] = image_constraints;
+
+    constraints
 }
