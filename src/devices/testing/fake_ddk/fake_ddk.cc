@@ -605,6 +605,11 @@ zx_status_t device_get_fragment_metadata(zx_device_t* device, const char* name, 
 __EXPORT
 zx_handle_t get_root_resource() { return ZX_HANDLE_INVALID; }
 
+__EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out,
+                                         size_t out_size, size_t* size_actual) {
+  return ZX_ERR_NOT_FOUND;
+}
+
 __EXPORT zx_status_t driver_log_set_tags_internal(const zx_driver_t* drv, const char* const* tags,
                                                   size_t num_tags) {
   return ZX_ERR_NOT_SUPPORTED;

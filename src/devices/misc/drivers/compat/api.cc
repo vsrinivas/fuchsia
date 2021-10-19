@@ -137,4 +137,9 @@ __EXPORT zx_status_t device_get_fragment_metadata(zx_device_t* dev, const char* 
                                                   void* buf, size_t buflen, size_t* actual) {
   return ZX_ERR_NOT_SUPPORTED;
 }
+
+__EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out,
+                                         size_t out_size, size_t* size_actual) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
 }

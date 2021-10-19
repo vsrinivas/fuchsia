@@ -412,6 +412,12 @@ zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device, const cha
 // device_unbind_reply is called.
 async_dispatcher_t* device_get_dispatcher(zx_device_t* device);
 
+// Returns a string containing the variable for the given |name|. If |out| is not large enough,
+// |size_actual| will contain the size of the required buffer. |out| is guaranateed to be null
+// terminated.
+zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out, size_t out_size,
+                                size_t* size_actual);
+
 // Protocol Identifiers
 #define DDK_PROTOCOL_DEF(tag, val, name, flags) ZX_PROTOCOL_##tag = val,
 enum {

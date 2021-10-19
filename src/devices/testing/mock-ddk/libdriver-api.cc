@@ -7,6 +7,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <utility>
@@ -226,6 +227,11 @@ __EXPORT __WEAK zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_devic
     return ZX_ERR_INVALID_ARGS;
   }
   return device->LoadFirmware(path, fw, size);
+}
+
+__EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out,
+                                         size_t out_size, size_t* size_actual) {
+  return ZX_ERR_NOT_FOUND;
 }
 
 __EXPORT

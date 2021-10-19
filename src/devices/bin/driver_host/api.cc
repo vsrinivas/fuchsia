@@ -514,3 +514,20 @@ __EXPORT zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device,
 __EXPORT async_dispatcher_t* device_get_dispatcher(zx_device_t* device) {
   return device->dispatcher();
 }
+
+__EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out,
+                                         size_t out_size, size_t* size_actual) {
+  char* variable = getenv(name);
+  if (variable == nullptr) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  size_t len = strlen(variable);
+  if (size_actual) {
+    *size_actual = len;
+  }
+  if (len > out_size) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  strncpy(out, variable, out_size);
+  return ZX_OK;
+}
