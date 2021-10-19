@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 mod buffer_collection_file;
-mod dma_file;
+mod dma_buf_file;
 mod wayland;
 
 pub mod sysmem;
 
 pub use buffer_collection_file::*;
-pub use dma_file::*;
+pub use dma_buf_file::*;
 pub use wayland::*;

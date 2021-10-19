@@ -24,28 +24,16 @@ use crate::syscalls::*;
 use crate::task::{EventHandler, Task, Waiter};
 use crate::types::*;
 
-pub struct DmaNode {}
-impl FsNodeOps for DmaNode {
+pub struct DmaBufNode {}
+impl FsNodeOps for DmaBufNode {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        DmaFile::new()
+        DmaBufFile::new()
     }
-}
-
-/// A file that is responsible for allocating and managing memory on behalf of wayland clients.
-///
-/// Clients send ioctls to this file to create DMA buffers, and the file communicates with scenic
-/// and sysmem allocators to do so.
-pub struct DmaFile {
-    /// The sysmem allocator proxy.
-    sysmem_proxy: fsysmem::AllocatorSynchronousProxy,
-
-    /// The composition allocator proxy.
-    composition_proxy: fuicomp::AllocatorSynchronousProxy,
 }
 
 #[derive(AsBytes, FromBytes, Default)]
 #[repr(packed)]
-pub struct DmaHeader {
+pub struct DmaBufHeader {
     pub type_: u32,
     pub fd: u32,
     pub flags: u32,
@@ -53,7 +41,7 @@ pub struct DmaHeader {
 
 #[derive(AsBytes, FromBytes, Default)]
 #[repr(packed)]
-pub struct DmaBuffer {
+pub struct DmaBuf {
     pub width: u32,
     pub height: u32,
     pub format: u32,
@@ -67,20 +55,32 @@ pub struct DmaBuffer {
 
 #[derive(AsBytes, FromBytes, Default)]
 #[repr(packed)]
-pub struct DmaBufferAllocationArgs {
-    pub header: DmaHeader,
-    pub buffer: DmaBuffer,
+pub struct DmaBufAllocationArgs {
+    pub header: DmaBufHeader,
+    pub buffer: DmaBuf,
 }
 
 #[derive(AsBytes, FromBytes, Default)]
 #[repr(packed)]
-pub struct DmaBufferSyncArgs {
-    pub header: DmaHeader,
+pub struct DmaBufSyncArgs {
+    pub header: DmaBufHeader,
     pub size: u32,
 }
 
-impl DmaFile {
-    /// Creates a new `DmaFile`.
+/// A file that is responsible for allocating and managing memory on behalf of wayland clients.
+///
+/// Clients send ioctls to this file to create DMA buffers, and the file communicates with scenic
+/// and sysmem allocators to do so.
+pub struct DmaBufFile {
+    /// The sysmem allocator proxy.
+    sysmem_proxy: fsysmem::AllocatorSynchronousProxy,
+
+    /// The composition allocator proxy.
+    composition_proxy: fuicomp::AllocatorSynchronousProxy,
+}
+
+impl DmaBufFile {
+    /// Creates a new `DmaBufFile`.
     ///
     /// Returns an error if the file could not establish connections to `fsysmem::Allocator` and
     /// `fuicomp::Allocator`.
@@ -103,8 +103,8 @@ impl DmaFile {
     fn allocate_dma_buffer(
         &self,
         task: &Task,
-        buffer_allocation_args: &DmaBufferAllocationArgs,
-    ) -> Result<DmaBufferAllocationArgs, Errno> {
+        buffer_allocation_args: &DmaBufAllocationArgs,
+    ) -> Result<DmaBufAllocationArgs, Errno> {
         let buffer_collection_proxy = self.allocate_shared_collection()?;
         let buffer_collection_import_token =
             self.register_buffer_collection(&buffer_collection_proxy)?;
@@ -123,7 +123,7 @@ impl DmaFile {
             buffer_collection_import_token,
         )?;
 
-        let mut response = DmaBufferAllocationArgs::default();
+        let mut response = DmaBufAllocationArgs::default();
         // Matches VIRTIO_WL_RESP_VFD_NEW_DMABUF in //zircon/system/ulib/virtio/include/virtio/wl.h.
         const NEW_DMABUF: u32 = 0x1002;
         response.header.type_ = NEW_DMABUF;
@@ -192,7 +192,7 @@ impl DmaFile {
     fn bind_and_allocate_buffers(
         &self,
         buffer_collection_proxy: BufferCollectionTokenSynchronousProxy,
-        buffer_allocation_args: &DmaBufferAllocationArgs,
+        buffer_allocation_args: &DmaBufAllocationArgs,
     ) -> Result<fsysmem::BufferCollectionInfo2, Errno> {
         let (buffer_token, remote) =
             fidl::endpoints::create_endpoints::<fsysmem::BufferCollectionMarker>()
@@ -243,7 +243,7 @@ impl DmaFile {
     }
 }
 
-impl FileOps for DmaFile {
+impl FileOps for DmaBufFile {
     fd_impl_nonseekable!();
     fd_impl_nonblocking!();
 
@@ -258,7 +258,7 @@ impl FileOps for DmaFile {
         // TODO: Don't assume that this is a NEW_DMA_BUF request.
         // There are some macros for parsing request in the wayland demo that will need to be
         // matched here.
-        let mut allocation_args = DmaBufferAllocationArgs::default();
+        let mut allocation_args = DmaBufAllocationArgs::default();
         task.mm.read_object(UserRef::new(in_addr), &mut allocation_args)?;
         let mut result = self.allocate_dma_buffer(task, &allocation_args)?;
         task.mm.write_object(UserRef::new(in_addr), &mut result)?;
@@ -282,7 +282,7 @@ impl FileOps for DmaFile {
 
 /// Returns the buffer collection constraints to be set on the buffer collection associated with
 /// `buffer`.
-pub fn buffer_collection_constraints(buffer: &DmaBuffer) -> fsysmem::BufferCollectionConstraints {
+pub fn buffer_collection_constraints(buffer: &DmaBuf) -> fsysmem::BufferCollectionConstraints {
     let usage = fsysmem::BufferUsage {
         cpu: fsysmem::CPU_USAGE_READ_OFTEN | fsysmem::CPU_USAGE_WRITE_OFTEN,
         ..BUFFER_USAGE_DEFAULT

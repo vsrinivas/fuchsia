@@ -82,7 +82,7 @@ if (target_cpu == "x64") {
       "device/mod.rs",
       "device/registry.rs",
       "device/wayland/buffer_collection_file.rs",
-      "device/wayland/dma_file.rs",
+      "device/wayland/dma_buf_file.rs",
       "device/wayland/mod.rs",
       "device/wayland/sysmem.rs",
       "device/wayland/wayland.rs",

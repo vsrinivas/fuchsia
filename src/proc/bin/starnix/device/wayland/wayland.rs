@@ -18,7 +18,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 
 use crate::device::wayland::BufferCollectionFile;
-use crate::device::wayland::DmaNode;
+use crate::device::wayland::DmaBufNode;
 use crate::errno;
 use crate::error;
 use crate::from_status_like_fdio;
@@ -101,7 +101,7 @@ fn create_device_file(task: &Task, device_path: FsString) -> Result<(), Errno> {
     let (device_parent, device_basename) =
         task.lookup_parent_at(FdNumber::AT_FDCWD, &device_path)?;
     let mode = task.fs.apply_umask(mode!(IFREG, 0o765));
-    let _device_entry = device_parent.entry.add_node_ops(device_basename, mode, DmaNode {})?;
+    let _device_entry = device_parent.entry.add_node_ops(device_basename, mode, DmaBufNode {})?;
     Ok(())
 }
 
@@ -350,7 +350,7 @@ fn wait_async(socket: &Socket, wayland_channel: &zx::Channel, waiter: &Arc<Waite
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::device::wayland::DmaFile;
+    use crate::device::wayland::DmaBufFile;
     use crate::testing::create_kernel_and_task;
 
     /// Creates a display socket and adds it to the task's filesystem.
@@ -392,7 +392,7 @@ mod tests {
         assert!(node.entry.node.socket().is_some());
     }
 
-    /// Tests that the Dma file is created as expected.
+    /// Tests that the DmaBuf file is created as expected.
     #[test]
     fn test_create_device_file() {
         let (_kernel, task_owner) = create_kernel_and_task();
@@ -403,7 +403,7 @@ mod tests {
         let node = task.lookup_path_from_root(device_path).expect("Couldn't find device node.");
         let file = node.entry.node.open(OpenFlags::empty()).expect("Could not open device file.");
 
-        assert!(file.as_any().downcast_ref::<DmaFile>().is_some());
+        assert!(file.as_any().downcast_ref::<DmaBufFile>().is_some());
     }
 
     /// Tests that data sent from the wayland bridge is proxied to the display socket.
