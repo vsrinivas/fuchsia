@@ -39,11 +39,7 @@ async fn interfaces_watcher_after_invalid_state_request<N: Netstack>(name: &str)
         .expect("failed to write garbage to channel");
 
     // The channel to the State protocol should be closed by the server.
-    assert_eq!(
-        fasync::OnSignals::new(interfaces_state.as_channel(), zx::Signals::CHANNEL_PEER_CLOSED)
-            .await,
-        Ok(zx::Signals::CHANNEL_PEER_CLOSED),
-    );
+    assert_eq!(interfaces_state.on_closed().await, Ok(zx::Signals::CHANNEL_PEER_CLOSED));
 
     // But we should still be able to use the already obtained watcher.
     let stream = fidl_fuchsia_net_interfaces_ext::event_stream(watcher);

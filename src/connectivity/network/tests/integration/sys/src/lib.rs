@@ -168,11 +168,8 @@ async fn start_with_cache_no_space() {
     let netstack = realm_instance
         .root
         .connect_to_protocol_at_exposed_dir::<fnetstack::NetstackMarker>()
-        .expect("failed to connect to netstack")
-        .into_channel()
-        .expect("failed to convert netstack proxy into async channel");
-    let mut netstack_fut =
-        fuchsia_async::OnSignals::new(&netstack, zx::Signals::CHANNEL_PEER_CLOSED).fuse();
+        .expect("failed to connect to netstack");
+    let mut netstack_fut = netstack.on_closed().fuse();
 
     let (client_channel, server_channel) =
         zx::Channel::create().expect("failed to create zircon channel");

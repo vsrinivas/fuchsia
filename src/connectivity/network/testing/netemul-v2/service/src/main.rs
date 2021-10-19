@@ -1129,13 +1129,7 @@ mod tests {
         );
         drop(realm);
         assert_eq!(
-            fasync::OnSignals::new(
-                &counter
-                    .into_channel()
-                    .expect("failed to convert `CounterProxy` into `fasync::Channel`"),
-                zx::Signals::CHANNEL_PEER_CLOSED,
-            )
-            .await,
+            counter.on_closed().await,
             Ok(zx::Signals::CHANNEL_PEER_CLOSED),
             "`CounterProxy` should be closed when `ManagedRealmProxy` is dropped",
         );
@@ -1166,11 +1160,7 @@ mod tests {
         // Ensure there are no more events sent on the event stream after `OnShutdown`.
         matches::assert_matches!(events[..], [fnetemul::ManagedRealmEvent::OnShutdown {}]);
         assert_eq!(
-            fasync::OnSignals::new(
-                &counter.into_channel().expect("failed to convert proxy into async channel"),
-                zx::Signals::CHANNEL_PEER_CLOSED,
-            )
-            .await,
+            counter.on_closed().await,
             Ok(zx::Signals::CHANNEL_PEER_CLOSED),
             "counter proxy should be closed when managed realm is shut down",
         );
@@ -1208,13 +1198,7 @@ mod tests {
         drop(sandbox);
         for counter in counters {
             assert_eq!(
-                fasync::OnSignals::new(
-                    &counter
-                        .into_channel()
-                        .expect("failed to convert `CounterProxy` into `fasync::Channel`"),
-                    zx::Signals::CHANNEL_PEER_CLOSED,
-                )
-                .await,
+                counter.on_closed().await,
                 Ok(zx::Signals::CHANNEL_PEER_CLOSED),
                 "`CounterProxy` should be closed when `SandboxProxy` is dropped",
             );
@@ -1222,13 +1206,7 @@ mod tests {
         for realm in realms {
             let TestRealm { realm } = realm;
             assert_eq!(
-                fasync::OnSignals::new(
-                    &realm
-                        .into_channel()
-                        .expect("failed to convert `ManagedRealmProxy` into `fasync::Channel`"),
-                    zx::Signals::CHANNEL_PEER_CLOSED,
-                )
-                .await,
+                realm.on_closed().await,
                 Ok(zx::Signals::CHANNEL_PEER_CLOSED),
                 "`ManagedRealmProxy` should be closed when `SandboxProxy` is dropped",
             );
