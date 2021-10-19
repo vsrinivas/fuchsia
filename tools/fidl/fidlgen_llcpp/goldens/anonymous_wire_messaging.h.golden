@@ -63,6 +63,7 @@ struct ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
   fidl_message_header_t _hdr;
   ::fidl_test_anonymous::wire::UnionMember union_member;
   ::fidl_test_anonymous::wire::TableMember table_member;
+
   explicit WireRequest(::fidl_test_anonymous::wire::UnionMember union_member,
                        ::fidl_test_anonymous::wire::TableMember table_member)
       : union_member(union_member), table_member(table_member) {
@@ -98,26 +99,6 @@ struct ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
 class ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>::
     UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-                        ::fidl_test_anonymous::wire::UnionMember union_member,
-                        ::fidl_test_anonymous::wire::TableMember table_member)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size,
-                              union_member, table_member) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size,
-                        ::fidl_test_anonymous::wire::UnionMember union_member,
-                        ::fidl_test_anonymous::wire::TableMember table_member)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{union_member, table_member};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -162,20 +143,6 @@ class ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>::
 class ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>::
     OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(
-      ::fidl_test_anonymous::wire::UnionMember union_member,
-      ::fidl_test_anonymous::wire::TableMember table_member)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), union_member,
-                 table_member) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl_test_anonymous::wire::UnionMember union_member,
-      ::fidl_test_anonymous::wire::TableMember table_member)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), union_member,
-                 table_member) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -248,6 +215,7 @@ struct ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult result;
+
   explicit WireResponse(
       ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult result)
       : result(result) {
@@ -281,27 +249,6 @@ struct ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>
 class ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>::
     UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(
-      uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-      ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult result)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, result) {}
-  UnownedEncodedMessage(
-      uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-      uint32_t _backing_buffer_size,
-      ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult result)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireResponse _response{result};
-    message_.Encode<
-        ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>>(
-        &_response);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireResponse* response)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -349,16 +296,6 @@ class ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>::
 class ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>::
     OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(
-      ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult result)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), result) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult result)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), result) {}
   explicit OwnedEncodedMessage(
       ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
           response)
@@ -432,14 +369,14 @@ template <>
 class ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod> final
     : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> _client,
-      ::fidl_test_anonymous::wire::UnionMember union_member,
-      ::fidl_test_anonymous::wire::TableMember table_member);
   WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> _client,
-      ::fidl_test_anonymous::wire::UnionMember union_member,
-      ::fidl_test_anonymous::wire::TableMember table_member,
+      ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> client,
+      ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
+          request);
+  WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> client,
+      ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
+          request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
@@ -499,8 +436,8 @@ class ::fidl::WireUnownedResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      ::fidl_test_anonymous::wire::UnionMember union_member,
-      ::fidl_test_anonymous::wire::TableMember table_member,
+      ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
+          request,
       uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(
       ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
@@ -584,8 +521,10 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_anonymous::SomeProtocol>
   ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
   SomeMethod(::fidl_test_anonymous::wire::UnionMember union_member,
              ::fidl_test_anonymous::wire::TableMember table_member) {
+    ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
+        _request{union_member, table_member};
     return ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>(
-        _client_end(), union_member, table_member);
+        _client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -595,11 +534,12 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_anonymous::SomeProtocol>
              ::fidl_test_anonymous::wire::UnionMember union_member,
              ::fidl_test_anonymous::wire::TableMember table_member,
              ::fidl::BufferSpan _response_buffer) {
+    ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
+        _request{union_member, table_member};
     return ::fidl::WireUnownedResult<
         ::fidl_test_anonymous::SomeProtocol::SomeMethod>(
         _client_end(), _request_buffer.data, _request_buffer.capacity,
-        union_member, table_member, _response_buffer.data,
-        _response_buffer.capacity);
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
 
  private:
@@ -681,8 +621,10 @@ class ::fidl::WireSyncClient<::fidl_test_anonymous::SomeProtocol> final {
   SomeMethod(::fidl_test_anonymous::wire::UnionMember union_member,
              ::fidl_test_anonymous::wire::TableMember table_member) const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
+        _request{union_member, table_member};
     return ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>(
-        this->client_end(), union_member, table_member);
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -691,13 +633,14 @@ class ::fidl::WireSyncClient<::fidl_test_anonymous::SomeProtocol> final {
   SomeMethod(::fidl::BufferSpan _request_buffer,
              ::fidl_test_anonymous::wire::UnionMember union_member,
              ::fidl_test_anonymous::wire::TableMember table_member,
-             ::fidl::BufferSpan _response_buffer) const {
+             ::fidl::BufferSpan _response_buffer) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
+        _request{union_member, table_member};
     return ::fidl::WireUnownedResult<
         ::fidl_test_anonymous::SomeProtocol::SomeMethod>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
-        union_member, table_member, _response_buffer.data,
-        _response_buffer.capacity);
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
 
  private:

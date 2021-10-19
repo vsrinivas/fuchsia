@@ -64,6 +64,7 @@ struct ::fidl::WireRequest<
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::exampleusing::wire::Empty arg;
+
   explicit WireRequest(const ::exampleusing::wire::Empty& arg) : arg(arg) {
     _InitHeader();
   }
@@ -95,23 +96,6 @@ struct ::fidl::WireRequest<
 class ::fidl::WireRequest<::fidl_test_placementofattributes::ExampleProtocol::
                               Method>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-                        const ::exampleusing::wire::Empty& arg)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, arg) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size,
-                        const ::exampleusing::wire::Empty& arg)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{arg};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -156,15 +140,6 @@ class ::fidl::WireRequest<::fidl_test_placementofattributes::ExampleProtocol::
 class ::fidl::WireRequest<::fidl_test_placementofattributes::ExampleProtocol::
                               Method>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(const ::exampleusing::wire::Empty& arg)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), arg) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      const ::exampleusing::wire::Empty& arg)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), arg) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -237,10 +212,12 @@ class ::fidl::WireResult<
     ::fidl_test_placementofattributes::ExampleProtocol::Method>
     final : public ::fidl::Result {
  public:
-  explicit WireResult(::fidl::UnownedClientEnd<
-                          ::fidl_test_placementofattributes::ExampleProtocol>
-                          _client,
-                      const ::exampleusing::wire::Empty& arg);
+  WireResult(
+      ::fidl::UnownedClientEnd<
+          ::fidl_test_placementofattributes::ExampleProtocol>
+          client,
+      ::fidl::WireRequest<
+          ::fidl_test_placementofattributes::ExampleProtocol::Method>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -260,7 +237,8 @@ class ::fidl::WireUnownedResult<
           ::fidl_test_placementofattributes::ExampleProtocol>
           _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      const ::exampleusing::wire::Empty& arg);
+      ::fidl::WireRequest<
+          ::fidl_test_placementofattributes::ExampleProtocol::Method>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -285,9 +263,12 @@ class ::fidl::internal::WireSyncClientImpl<
   // necessary.
   ::fidl::WireResult<::fidl_test_placementofattributes::ExampleProtocol::Method>
   Method(const ::exampleusing::wire::Empty& arg) {
+    ::fidl::WireRequest<
+        ::fidl_test_placementofattributes::ExampleProtocol::Method>
+        _request{arg};
     return ::fidl::WireResult<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>(
-        _client_end(), arg);
+        _client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -296,9 +277,13 @@ class ::fidl::internal::WireSyncClientImpl<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>
   Method(::fidl::BufferSpan _request_buffer,
          const ::exampleusing::wire::Empty& arg) {
+    ::fidl::WireRequest<
+        ::fidl_test_placementofattributes::ExampleProtocol::Method>
+        _request{arg};
     return ::fidl::WireUnownedResult<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>(
-        _client_end(), _request_buffer.data, _request_buffer.capacity, arg);
+        _client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request);
   }
 
  private:
@@ -386,9 +371,12 @@ class ::fidl::WireSyncClient<::fidl_test_placementofattributes::ExampleProtocol>
   ::fidl::WireResult<::fidl_test_placementofattributes::ExampleProtocol::Method>
   Method(const ::exampleusing::wire::Empty& arg) const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<
+        ::fidl_test_placementofattributes::ExampleProtocol::Method>
+        _request{arg};
     return ::fidl::WireResult<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>(
-        this->client_end(), arg);
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -396,12 +384,15 @@ class ::fidl::WireSyncClient<::fidl_test_placementofattributes::ExampleProtocol>
   ::fidl::WireUnownedResult<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>
   Method(::fidl::BufferSpan _request_buffer,
-         const ::exampleusing::wire::Empty& arg) const {
+         const ::exampleusing::wire::Empty& arg) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<
+        ::fidl_test_placementofattributes::ExampleProtocol::Method>
+        _request{arg};
     return ::fidl::WireUnownedResult<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
-        arg);
+        &_request);
   }
 
  private:

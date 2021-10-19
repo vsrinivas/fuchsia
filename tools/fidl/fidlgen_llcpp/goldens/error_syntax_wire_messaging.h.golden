@@ -70,6 +70,7 @@ struct ::fidl::WireRequest<
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl::StringView s;
+
   explicit WireRequest(::fidl::StringView s) : s(s) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
 
@@ -103,22 +104,6 @@ class ::fidl::WireRequest<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
                               ComposedCallWhichMayFail>::UnownedEncodedMessage
     final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-                        ::fidl::StringView s)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, s) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size, ::fidl::StringView s)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{s};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -164,15 +149,6 @@ class ::fidl::WireRequest<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
                               ComposedCallWhichMayFail>::OwnedEncodedMessage
     final {
  public:
-  explicit OwnedEncodedMessage(::fidl::StringView s)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), s) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl::StringView s)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), s) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -249,6 +225,7 @@ struct ::fidl::WireResponse<
   fidl_message_header_t _hdr;
   ::fidl_test_errorsyntax_parent::wire::
       ParentUsesErrorSyntaxComposedCallWhichMayFailResult result;
+
   explicit WireResponse(
       ::fidl_test_errorsyntax_parent::wire::
           ParentUsesErrorSyntaxComposedCallWhichMayFailResult result)
@@ -284,29 +261,6 @@ class ::fidl::WireResponse<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
                                ComposedCallWhichMayFail>::UnownedEncodedMessage
     final {
  public:
-  UnownedEncodedMessage(
-      uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-      ::fidl_test_errorsyntax_parent::wire::
-          ParentUsesErrorSyntaxComposedCallWhichMayFailResult result)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, result) {}
-  UnownedEncodedMessage(
-      uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-      uint32_t _backing_buffer_size,
-      ::fidl_test_errorsyntax_parent::wire::
-          ParentUsesErrorSyntaxComposedCallWhichMayFailResult result)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireResponse _response{result};
-    message_.Encode<
-        ::fidl::WireResponse<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
-                                 ComposedCallWhichMayFail>>(&_response);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireResponse* response)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -355,18 +309,6 @@ class ::fidl::WireResponse<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
                                ComposedCallWhichMayFail>::OwnedEncodedMessage
     final {
  public:
-  explicit OwnedEncodedMessage(
-      ::fidl_test_errorsyntax_parent::wire::
-          ParentUsesErrorSyntaxComposedCallWhichMayFailResult result)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), result) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl_test_errorsyntax_parent::wire::
-          ParentUsesErrorSyntaxComposedCallWhichMayFailResult result)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), result) {}
   explicit OwnedEncodedMessage(
       ::fidl::WireResponse<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
                                ComposedCallWhichMayFail>* response)
@@ -444,6 +386,7 @@ struct ::fidl::WireRequest<
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl::StringView s;
+
   explicit WireRequest(::fidl::StringView s) : s(s) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
 
@@ -475,22 +418,6 @@ struct ::fidl::WireRequest<
 class ::fidl::WireRequest<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
                               CallWhichMayFail>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-                        ::fidl::StringView s)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, s) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size, ::fidl::StringView s)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{s};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -535,15 +462,6 @@ class ::fidl::WireRequest<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
 class ::fidl::WireRequest<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
                               CallWhichMayFail>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(::fidl::StringView s)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), s) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl::StringView s)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), s) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -622,6 +540,7 @@ struct ::fidl::WireResponse<
   fidl_message_header_t _hdr;
   ::fidl_test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult
       result;
+
   explicit WireResponse(
       ::fidl_test_errorsyntax::wire::
           ExampleUseOfErrorSyntaxCallWhichMayFailResult result)
@@ -656,29 +575,6 @@ struct ::fidl::WireResponse<
 class ::fidl::WireResponse<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
                                CallWhichMayFail>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(
-      uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-      ::fidl_test_errorsyntax::wire::
-          ExampleUseOfErrorSyntaxCallWhichMayFailResult result)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, result) {}
-  UnownedEncodedMessage(
-      uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-      uint32_t _backing_buffer_size,
-      ::fidl_test_errorsyntax::wire::
-          ExampleUseOfErrorSyntaxCallWhichMayFailResult result)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireResponse _response{result};
-    message_.Encode<::fidl::WireResponse<
-        ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>(
-        &_response);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireResponse* response)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -726,18 +622,6 @@ class ::fidl::WireResponse<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
 class ::fidl::WireResponse<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
                                CallWhichMayFail>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(
-      ::fidl_test_errorsyntax::wire::
-          ExampleUseOfErrorSyntaxCallWhichMayFailResult result)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), result) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl_test_errorsyntax::wire::
-          ExampleUseOfErrorSyntaxCallWhichMayFailResult result)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), result) {}
   explicit OwnedEncodedMessage(
       ::fidl::WireResponse<
           ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
@@ -816,14 +700,17 @@ class ::fidl::WireResult<
     ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
     final : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
-          _client,
-      ::fidl::StringView s);
   WireResult(
       ::fidl::UnownedClientEnd<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
-          _client,
-      ::fidl::StringView s, zx_time_t _deadline);
+          client,
+      ::fidl::WireRequest<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                              ComposedCallWhichMayFail>* request);
+  WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
+          client,
+      ::fidl::WireRequest<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                              ComposedCallWhichMayFail>* request,
+      zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -893,8 +780,9 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
           _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      ::fidl::StringView s, uint8_t* _response_bytes,
-      uint32_t _response_byte_capacity);
+      ::fidl::WireRequest<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                              ComposedCallWhichMayFail>* request,
+      uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(
       ::fidl::WireResponse<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
                                ComposedCallWhichMayFail>* response)
@@ -977,14 +865,19 @@ class ::fidl::WireResult<
     ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
     final : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
-          _client,
-      ::fidl::StringView s);
   WireResult(
       ::fidl::UnownedClientEnd<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
-          _client,
-      ::fidl::StringView s, zx_time_t _deadline);
+          client,
+      ::fidl::WireRequest<
+          ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
+          request);
+  WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
+          client,
+      ::fidl::WireRequest<
+          ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
+          request,
+      zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -1054,8 +947,10 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
           _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      ::fidl::StringView s, uint8_t* _response_bytes,
-      uint32_t _response_byte_capacity);
+      ::fidl::WireRequest<
+          ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
+          request,
+      uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(
       ::fidl::WireResponse<
           ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
@@ -1151,8 +1046,12 @@ class ::fidl::internal::WireSyncClientImpl<
   ::fidl::WireResult<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
                          ComposedCallWhichMayFail>
   ComposedCallWhichMayFail(::fidl::StringView s) {
+    ::fidl::WireRequest<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                            ComposedCallWhichMayFail>
+        _request{s};
     return ::fidl::WireResult<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
-                                  ComposedCallWhichMayFail>(_client_end(), s);
+                                  ComposedCallWhichMayFail>(_client_end(),
+                                                            &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1162,11 +1061,14 @@ class ::fidl::internal::WireSyncClientImpl<
   ComposedCallWhichMayFail(::fidl::BufferSpan _request_buffer,
                            ::fidl::StringView s,
                            ::fidl::BufferSpan _response_buffer) {
+    ::fidl::WireRequest<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                            ComposedCallWhichMayFail>
+        _request{s};
     return ::fidl::WireUnownedResult<
         ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
             ComposedCallWhichMayFail>(
-        _client_end(), _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
+        _client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
 
   // Allocates 40 bytes of response buffer on the stack. Request is
@@ -1174,9 +1076,12 @@ class ::fidl::internal::WireSyncClientImpl<
   ::fidl::WireResult<
       ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
   CallWhichMayFail(::fidl::StringView s) {
+    ::fidl::WireRequest<
+        ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+        _request{s};
     return ::fidl::WireResult<
         ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
-        _client_end(), s);
+        _client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1185,10 +1090,13 @@ class ::fidl::internal::WireSyncClientImpl<
       ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
   CallWhichMayFail(::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
                    ::fidl::BufferSpan _response_buffer) {
+    ::fidl::WireRequest<
+        ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+        _request{s};
     return ::fidl::WireUnownedResult<
         ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
-        _client_end(), _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
+        _client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
 
  private:
@@ -1276,9 +1184,12 @@ class ::fidl::WireSyncClient<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
                          ComposedCallWhichMayFail>
   ComposedCallWhichMayFail(::fidl::StringView s) const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                            ComposedCallWhichMayFail>
+        _request{s};
     return ::fidl::WireResult<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
                                   ComposedCallWhichMayFail>(this->client_end(),
-                                                            s);
+                                                            &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1287,13 +1198,16 @@ class ::fidl::WireSyncClient<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
                                 ComposedCallWhichMayFail>
   ComposedCallWhichMayFail(::fidl::BufferSpan _request_buffer,
                            ::fidl::StringView s,
-                           ::fidl::BufferSpan _response_buffer) const {
+                           ::fidl::BufferSpan _response_buffer) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                            ComposedCallWhichMayFail>
+        _request{s};
     return ::fidl::WireUnownedResult<
         ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
             ComposedCallWhichMayFail>(
-        this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
+        this->client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
 
   // Allocates 40 bytes of response buffer on the stack. Request is
@@ -1302,9 +1216,12 @@ class ::fidl::WireSyncClient<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
       ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
   CallWhichMayFail(::fidl::StringView s) const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<
+        ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+        _request{s};
     return ::fidl::WireResult<
         ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
-        this->client_end(), s);
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1312,12 +1229,15 @@ class ::fidl::WireSyncClient<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
   ::fidl::WireUnownedResult<
       ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
   CallWhichMayFail(::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-                   ::fidl::BufferSpan _response_buffer) const {
+                   ::fidl::BufferSpan _response_buffer) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<
+        ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+        _request{s};
     return ::fidl::WireUnownedResult<
         ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
-        this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
+        this->client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
 
  private:

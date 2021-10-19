@@ -21,14 +21,15 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_doccomments
 ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>::WireResult(
-    ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client) {
+    ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client,
+    ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>>
-      _request(::fidl::internal::AllowUnownedInputRef{});
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client.channel());
-  SetResult(_outgoing);
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client.channel());
+  SetResult(outgoing);
 }
 namespace fidl_test_doccomments {
 #endif  // __Fuchsia__
@@ -39,11 +40,14 @@ namespace fidl_test_doccomments {
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface>::Method() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>
+      _request_object{};
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>>
-      _request(::fidl::internal::AllowUnownedInputRef{});
+      _request_message(::fidl::internal::AllowUnownedInputRef{},
+                       &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request.GetOutgoingMessage());
+      _request_message.GetOutgoingMessage());
 }
 
 std::optional<::fidl::UnbindInfo> fidl::internal::
@@ -190,21 +194,23 @@ void ::fidl::WireResponse<
 
 fidl::Result
 fidl::WireEventSender<::fidl_test_doccomments::Interface>::OnEvent() const {
+  ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>
-      _response{::fidl::internal::AllowUnownedInputRef{}};
-  auto& _message = _response.GetOutgoingMessage();
+      _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
+  auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(server_end_.channel());
   return ::fidl::Result{_message};
 }
 
 fidl::Result fidl::internal::WireWeakEventSender<
     ::fidl_test_doccomments::Interface>::OnEvent() const {
+  ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>
-      _response{::fidl::internal::AllowUnownedInputRef{}};
-  return inner_.SendEvent(_response.GetOutgoingMessage());
+      _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
+  return inner_.SendEvent(_response_message.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__

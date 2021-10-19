@@ -43,31 +43,34 @@ extern "C" const fidl_type_t
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocolrequest
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>::WireResult(
-    ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client) {
+    ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>*
+        request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>>
-      _request(::fidl::internal::AllowUnownedInputRef{});
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Call<
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<
       ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>(
-      _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(_outgoing);
+      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+  SetResult(outgoing);
 }
 
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>::WireResult(
-    ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
-    zx_time_t _deadline) {
+    ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>* request,
+    zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>>
-      _request(::fidl::internal::AllowUnownedInputRef{});
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Call<
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<
       ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>(
-      _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      _deadline);
-  SetResult(_outgoing);
+      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+      deadline);
+  SetResult(outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -76,18 +79,20 @@ namespace fidl_test_protocolrequest {
 }  // namespace fidl_test_protocolrequest
 ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChild>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
-        uint8_t* _response_bytes, uint32_t _response_byte_capacity)
-    : bytes_(_response_bytes) {
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+        ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>*
+            request,
+        uint8_t* response_bytes, uint32_t response_byte_capacity)
+    : bytes_(response_bytes) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>>
-      _request(::fidl::internal::AllowUnownedInputRef{});
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Call<
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<
       ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>(
-      _client.channel(), _response_bytes, _response_byte_capacity);
-  ::fidl::Result::operator=(_outgoing);
+      client.channel(), response_bytes, response_byte_capacity);
+  ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -96,32 +101,36 @@ namespace fidl_test_protocolrequest {
 }  // namespace fidl_test_protocolrequest
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChildRequest>::
     WireResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client) {
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+        ::fidl::WireRequest<
+            ::fidl_test_protocolrequest::Parent::GetChildRequest>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>>
-      _request(::fidl::internal::AllowUnownedInputRef{});
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Call<::fidl::WireResponse<
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocolrequest::Parent::GetChildRequest>>(
-      _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(_outgoing);
+      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+  SetResult(outgoing);
 }
 
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChildRequest>::
     WireResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
-        zx_time_t _deadline) {
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+        ::fidl::WireRequest<
+            ::fidl_test_protocolrequest::Parent::GetChildRequest>* request,
+        zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>>
-      _request(::fidl::internal::AllowUnownedInputRef{});
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Call<::fidl::WireResponse<
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocolrequest::Parent::GetChildRequest>>(
-      _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      _deadline);
-  SetResult(_outgoing);
+      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+      deadline);
+  SetResult(outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -131,18 +140,20 @@ namespace fidl_test_protocolrequest {
 ::fidl::WireUnownedResult<
     ::fidl_test_protocolrequest::Parent::GetChildRequest>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
-        uint8_t* _response_bytes, uint32_t _response_byte_capacity)
-    : bytes_(_response_bytes) {
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+        ::fidl::WireRequest<
+            ::fidl_test_protocolrequest::Parent::GetChildRequest>* request,
+        uint8_t* response_bytes, uint32_t response_byte_capacity)
+    : bytes_(response_bytes) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>>
-      _request(::fidl::internal::AllowUnownedInputRef{});
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Call<::fidl::WireResponse<
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocolrequest::Parent::GetChildRequest>>(
-      _client.channel(), _response_bytes, _response_byte_capacity);
-  ::fidl::Result::operator=(_outgoing);
+      client.channel(), response_bytes, response_byte_capacity);
+  ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -150,15 +161,16 @@ namespace fidl_test_protocolrequest {
 #ifdef __Fuchsia__
 }  // namespace fidl_test_protocolrequest
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChild>::WireResult(
-    ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
-    ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) {
+    ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>*
+        request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>>
-      _request(::fidl::internal::AllowUnownedInputRef{}, std::move(c));
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client.channel());
-  SetResult(_outgoing);
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client.channel());
+  SetResult(outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -167,15 +179,16 @@ namespace fidl_test_protocolrequest {
 }  // namespace fidl_test_protocolrequest
 ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::TakeChild>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
-        uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-        ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) {
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+        uint8_t* request_bytes, uint32_t request_byte_capacity,
+        ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>*
+            request) {
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>>
-      _request(_request_bytes, _request_byte_capacity, std::move(c));
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client.channel());
-  ::fidl::Result::operator=(_outgoing);
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client.channel());
+  ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -184,15 +197,16 @@ namespace fidl_test_protocolrequest {
 }  // namespace fidl_test_protocolrequest
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChildRequest>::
     WireResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
-        ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+        ::fidl::WireRequest<
+            ::fidl_test_protocolrequest::Parent::TakeChildRequest>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_protocolrequest::Parent::TakeChildRequest>>
-      _request(::fidl::internal::AllowUnownedInputRef{}, std::move(r));
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client.channel());
-  SetResult(_outgoing);
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client.channel());
+  SetResult(outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -202,15 +216,16 @@ namespace fidl_test_protocolrequest {
 ::fidl::WireUnownedResult<
     ::fidl_test_protocolrequest::Parent::TakeChildRequest>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
-        uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-        ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
+        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+        uint8_t* request_bytes, uint32_t request_byte_capacity,
+        ::fidl::WireRequest<
+            ::fidl_test_protocolrequest::Parent::TakeChildRequest>* request) {
   ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_protocolrequest::Parent::TakeChildRequest>>
-      _request(_request_bytes, _request_byte_capacity, std::move(r));
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client.channel());
-  ::fidl::Result::operator=(_outgoing);
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client.channel());
+  ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -303,11 +318,13 @@ void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild> _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>::
-      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                           _context);
+      OwnedEncodedMessage _request_message(
+          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::internal::ClientBase::SendTwoWay(
+      _request_message.GetOutgoingMessage(), _context);
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
@@ -338,30 +355,38 @@ void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild> _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>::
-      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                           _context);
+      OwnedEncodedMessage _request_message(
+          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::internal::ClientBase::SendTwoWay(
+      _request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
     GetChild(::fidl::WireResponseContext<
              ::fidl_test_protocolrequest::Parent::GetChild>* _context) {
+  ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild> _request{};
+
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>::
-      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                           _context);
+      OwnedEncodedMessage _request_message(
+          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::internal::ClientBase::SendTwoWay(
+      _request_message.GetOutgoingMessage(), _context);
 }
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>
 fidl::internal::WireClientImpl<
     ::fidl_test_protocolrequest::Parent>::GetChild_Sync() {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>
+            _request{};
         return ::fidl::WireResult<
             ::fidl_test_protocolrequest::Parent::GetChild>(
             ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
-                _transport->get<fidl::internal::ChannelTransport>()));
+                _transport->get<fidl::internal::ChannelTransport>()),
+            &_request);
       });
 }
 ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChild>
@@ -369,11 +394,13 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
     GetChild_Sync(::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>
+            _request{};
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocolrequest::Parent::GetChild>(
             ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            _response_buffer.data, _response_buffer.capacity);
+            &_request, _response_buffer.data, _response_buffer.capacity);
       });
 }
 void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
@@ -399,11 +426,14 @@ void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>
+      _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>::
-      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                           _context);
+      OwnedEncodedMessage _request_message(
+          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::internal::ClientBase::SendTwoWay(
+      _request_message.GetOutgoingMessage(), _context);
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
@@ -436,31 +466,42 @@ void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>
+      _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>::
-      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                           _context);
+      OwnedEncodedMessage _request_message(
+          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::internal::ClientBase::SendTwoWay(
+      _request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
     GetChildRequest(
         ::fidl::WireResponseContext<
             ::fidl_test_protocolrequest::Parent::GetChildRequest>* _context) {
+  ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>
+      _request{};
+
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>::
-      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                           _context);
+      OwnedEncodedMessage _request_message(
+          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::internal::ClientBase::SendTwoWay(
+      _request_message.GetOutgoingMessage(), _context);
 }
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChildRequest>
 fidl::internal::WireClientImpl<
     ::fidl_test_protocolrequest::Parent>::GetChildRequest_Sync() {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::WireRequest<
+            ::fidl_test_protocolrequest::Parent::GetChildRequest>
+            _request{};
         return ::fidl::WireResult<
             ::fidl_test_protocolrequest::Parent::GetChildRequest>(
             ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
-                _transport->get<fidl::internal::ChannelTransport>()));
+                _transport->get<fidl::internal::ChannelTransport>()),
+            &_request);
       });
 }
 ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChildRequest>
@@ -468,52 +509,67 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
     GetChildRequest_Sync(::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::WireRequest<
+            ::fidl_test_protocolrequest::Parent::GetChildRequest>
+            _request{};
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocolrequest::Parent::GetChildRequest>(
             ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            _response_buffer.data, _response_buffer.capacity);
+            &_request, _response_buffer.data, _response_buffer.capacity);
       });
 }
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::TakeChild(
     ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>
+      _request_object{std::move(c)};
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>>
-      _request(::fidl::internal::AllowUnownedInputRef{}, std::move(c));
+      _request_message(::fidl::internal::AllowUnownedInputRef{},
+                       &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request.GetOutgoingMessage());
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::TakeChild(
     ::fidl::BufferSpan _request_buffer,
     ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) {
+  ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>
+      _request_object{std::move(c)};
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>>
-      _request(_request_buffer.data, _request_buffer.capacity, std::move(c));
+      _request_message(_request_buffer.data, _request_buffer.capacity,
+                       &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request.GetOutgoingMessage());
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_protocolrequest::Parent>::TakeChildRequest(
         ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChildRequest>
+      _request_object{std::move(r)};
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_protocolrequest::Parent::TakeChildRequest>>
-      _request(::fidl::internal::AllowUnownedInputRef{}, std::move(r));
+      _request_message(::fidl::internal::AllowUnownedInputRef{},
+                       &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request.GetOutgoingMessage());
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_protocolrequest::Parent>::TakeChildRequest(
         ::fidl::BufferSpan _request_buffer,
         ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
+  ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChildRequest>
+      _request_object{std::move(r)};
   ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_protocolrequest::Parent::TakeChildRequest>>
-      _request(_request_buffer.data, _request_buffer.capacity, std::move(r));
+      _request_message(_request_buffer.data, _request_buffer.capacity,
+                       &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request.GetOutgoingMessage());
+      _request_message.GetOutgoingMessage());
 }
 
 std::optional<::fidl::UnbindInfo> fidl::internal::
@@ -631,23 +687,27 @@ void fidl::WireServer<::fidl_test_protocolrequest::Parent>::dispatch_message(
 ::fidl::Result fidl::internal::
     WireCompleterBase<::fidl_test_protocolrequest::Parent::GetChild>::Reply(
         ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) {
+  ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild> _response{
+      std::move(c)};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>
-      _response{::fidl::internal::AllowUnownedInputRef{}, std::move(c)};
+      _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return ::fidl::internal::WireCompleterBase<
       ::fidl_test_protocolrequest::Parent::GetChild>::
-      SendReply(&_response.GetOutgoingMessage());
+      SendReply(&_response_message.GetOutgoingMessage());
 }
 
 ::fidl::Result fidl::internal::
     WireCompleterBase<::fidl_test_protocolrequest::Parent::GetChild>::Reply(
         ::fidl::BufferSpan _buffer,
         ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) {
+  ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild> _response{
+      std::move(c)};
   ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>::
-      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
-                                      std::move(c));
-  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
+      UnownedEncodedMessage _response_message(_buffer.data, _buffer.capacity,
+                                              &_response);
+  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
 
@@ -655,23 +715,27 @@ void fidl::WireServer<::fidl_test_protocolrequest::Parent>::dispatch_message(
 ::fidl::Result fidl::internal::WireCompleterBase<
     ::fidl_test_protocolrequest::Parent::GetChildRequest>::
     Reply(::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
+  ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChildRequest>
+      _response{std::move(r)};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
       ::fidl_test_protocolrequest::Parent::GetChildRequest>>
-      _response{::fidl::internal::AllowUnownedInputRef{}, std::move(r)};
+      _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return ::fidl::internal::WireCompleterBase<
       ::fidl_test_protocolrequest::Parent::GetChildRequest>::
-      SendReply(&_response.GetOutgoingMessage());
+      SendReply(&_response_message.GetOutgoingMessage());
 }
 
 ::fidl::Result fidl::internal::WireCompleterBase<
     ::fidl_test_protocolrequest::Parent::GetChildRequest>::
     Reply(::fidl::BufferSpan _buffer,
           ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
+  ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChildRequest>
+      _response{std::move(r)};
   ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChildRequest>::
-      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
-                                      std::move(r));
-  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
+      UnownedEncodedMessage _response_message(_buffer.data, _buffer.capacity,
+                                              &_response);
+  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
 

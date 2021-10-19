@@ -66,6 +66,7 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_requestflexibleenvelope::wire::StrictFoo s;
+
   explicit WireRequest(::fidl_test_requestflexibleenvelope::wire::StrictFoo s)
       : s(s) {
     _InitHeader();
@@ -102,23 +103,6 @@ class ::fidl::WireRequest<
     ::fidl_test_requestflexibleenvelope::Protocol::
         RequestStrictResponseFlexible>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-                        ::fidl_test_requestflexibleenvelope::wire::StrictFoo s)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, s) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size,
-                        ::fidl_test_requestflexibleenvelope::wire::StrictFoo s)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{s};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -164,16 +148,6 @@ class ::fidl::WireRequest<
     ::fidl_test_requestflexibleenvelope::Protocol::
         RequestStrictResponseFlexible>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), s) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), s) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -250,6 +224,7 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f;
+
   explicit WireResponse(
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f)
       : f(f) {
@@ -284,27 +259,6 @@ class ::fidl::WireResponse<
     ::fidl_test_requestflexibleenvelope::Protocol::
         RequestStrictResponseFlexible>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(
-      uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, f) {}
-  UnownedEncodedMessage(
-      uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-      uint32_t _backing_buffer_size,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireResponse _response{f};
-    message_.Encode<
-        ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestStrictResponseFlexible>>(&_response);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireResponse* response)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -353,16 +307,6 @@ class ::fidl::WireResponse<
     ::fidl_test_requestflexibleenvelope::Protocol::
         RequestStrictResponseFlexible>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), f) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), f) {}
   explicit OwnedEncodedMessage(
       ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                                RequestStrictResponseFlexible>* response)
@@ -442,6 +386,7 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s;
+
   explicit WireRequest(::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s)
       : s(s) {
     _InitHeader();
@@ -478,25 +423,6 @@ class ::fidl::WireRequest<
     ::fidl_test_requestflexibleenvelope::Protocol::
         RequestFlexibleResponseStrict>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(
-      uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, s) {}
-  UnownedEncodedMessage(
-      uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-      uint32_t _backing_buffer_size,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{s};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -542,16 +468,6 @@ class ::fidl::WireRequest<
     ::fidl_test_requestflexibleenvelope::Protocol::
         RequestFlexibleResponseStrict>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), s) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), s) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -628,6 +544,7 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_requestflexibleenvelope::wire::StrictFoo f;
+
   explicit WireResponse(::fidl_test_requestflexibleenvelope::wire::StrictFoo f)
       : f(f) {
     _InitHeader();
@@ -661,25 +578,6 @@ class ::fidl::WireResponse<
     ::fidl_test_requestflexibleenvelope::Protocol::
         RequestFlexibleResponseStrict>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-                        ::fidl_test_requestflexibleenvelope::wire::StrictFoo f)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, f) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size,
-                        ::fidl_test_requestflexibleenvelope::wire::StrictFoo f)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireResponse _response{f};
-    message_.Encode<
-        ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestFlexibleResponseStrict>>(&_response);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireResponse* response)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -728,16 +626,6 @@ class ::fidl::WireResponse<
     ::fidl_test_requestflexibleenvelope::Protocol::
         RequestFlexibleResponseStrict>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo f)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), f) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo f)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), f) {}
   explicit OwnedEncodedMessage(
       ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                                RequestFlexibleResponseStrict>* response)
@@ -817,14 +705,16 @@ class ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                              RequestStrictResponseFlexible>
     final : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
-          _client,
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s);
   WireResult(
       ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
-          _client,
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
+          client,
+      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                              RequestStrictResponseFlexible>* request);
+  WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
+          client,
+      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                              RequestStrictResponseFlexible>* request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
@@ -896,7 +786,8 @@ class ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
       ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
           _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
+      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                              RequestStrictResponseFlexible>* request,
       uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(
       ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
@@ -980,14 +871,16 @@ class ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                              RequestFlexibleResponseStrict>
     final : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
-          _client,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s);
   WireResult(
       ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
-          _client,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
+          client,
+      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                              RequestFlexibleResponseStrict>* request);
+  WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
+          client,
+      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                              RequestFlexibleResponseStrict>* request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
@@ -1059,7 +952,8 @@ class ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
       ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
           _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
+      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                              RequestFlexibleResponseStrict>* request,
       uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(
       ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
@@ -1155,9 +1049,12 @@ class ::fidl::internal::WireSyncClientImpl<
                          RequestStrictResponseFlexible>
   RequestStrictResponseFlexible(
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s) {
+    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestStrictResponseFlexible>
+        _request{s};
     return ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                                   RequestStrictResponseFlexible>(_client_end(),
-                                                                 s);
+                                                                 &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1168,11 +1065,14 @@ class ::fidl::internal::WireSyncClientImpl<
       ::fidl::BufferSpan _request_buffer,
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
       ::fidl::BufferSpan _response_buffer) {
+    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestStrictResponseFlexible>
+        _request{s};
     return ::fidl::WireUnownedResult<
         ::fidl_test_requestflexibleenvelope::Protocol::
             RequestStrictResponseFlexible>(
-        _client_end(), _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
+        _client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
 
   // Request is heap-allocated. Response is heap-allocated.
@@ -1180,9 +1080,12 @@ class ::fidl::internal::WireSyncClientImpl<
                          RequestFlexibleResponseStrict>
   RequestFlexibleResponseStrict(
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s) {
+    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestFlexibleResponseStrict>
+        _request{s};
     return ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                                   RequestFlexibleResponseStrict>(_client_end(),
-                                                                 s);
+                                                                 &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1193,11 +1096,14 @@ class ::fidl::internal::WireSyncClientImpl<
       ::fidl::BufferSpan _request_buffer,
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
       ::fidl::BufferSpan _response_buffer) {
+    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestFlexibleResponseStrict>
+        _request{s};
     return ::fidl::WireUnownedResult<
         ::fidl_test_requestflexibleenvelope::Protocol::
             RequestFlexibleResponseStrict>(
-        _client_end(), _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
+        _client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
 
  private:
@@ -1285,9 +1191,12 @@ class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
   RequestStrictResponseFlexible(
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s) const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestStrictResponseFlexible>
+        _request{s};
     return ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                                   RequestStrictResponseFlexible>(
-        this->client_end(), s);
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1297,13 +1206,16 @@ class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
   RequestStrictResponseFlexible(
       ::fidl::BufferSpan _request_buffer,
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
-      ::fidl::BufferSpan _response_buffer) const {
+      ::fidl::BufferSpan _response_buffer) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestStrictResponseFlexible>
+        _request{s};
     return ::fidl::WireUnownedResult<
         ::fidl_test_requestflexibleenvelope::Protocol::
             RequestStrictResponseFlexible>(
-        this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
+        this->client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
 
   // Request is heap-allocated. Response is heap-allocated.
@@ -1312,9 +1224,12 @@ class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
   RequestFlexibleResponseStrict(
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s) const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestFlexibleResponseStrict>
+        _request{s};
     return ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                                   RequestFlexibleResponseStrict>(
-        this->client_end(), s);
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1324,13 +1239,16 @@ class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
   RequestFlexibleResponseStrict(
       ::fidl::BufferSpan _request_buffer,
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
-      ::fidl::BufferSpan _response_buffer) const {
+      ::fidl::BufferSpan _response_buffer) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestFlexibleResponseStrict>
+        _request{s};
     return ::fidl::WireUnownedResult<
         ::fidl_test_requestflexibleenvelope::Protocol::
             RequestFlexibleResponseStrict>(
-        this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
+        this->client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
 
  private:

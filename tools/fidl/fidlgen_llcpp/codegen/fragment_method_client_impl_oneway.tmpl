@@ -32,19 +32,20 @@
   ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
         {{ RenderParams .RequestArgs }}) {
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-    ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
-        {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs }});
-    return ::fidl::internal::ClientBase::SendOneWay(_request.GetOutgoingMessage());
+    {{ .WireRequest }} _request_object{ {{ RenderForwardParams .RequestArgs }} };
+    ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request_message(
+        ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
+    return ::fidl::internal::ClientBase::SendOneWay(_request_message.GetOutgoingMessage());
   }
 
   {{- /* Caller-allocate flavor */}}
   {{- if .RequestArgs }}
     ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
           {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
-      ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> _request({{ RenderForwardParams
-        "_request_buffer.data" "_request_buffer.capacity" .RequestArgs
-         }});
-      return ::fidl::internal::ClientBase::SendOneWay(_request.GetOutgoingMessage());
+      {{ .WireRequest }} _request_object{ {{ RenderForwardParams .RequestArgs }} };
+      ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> _request_message(
+          _request_buffer.data, _request_buffer.capacity, &_request_object);
+      return ::fidl::internal::ClientBase::SendOneWay(_request_message.GetOutgoingMessage());
     }
   {{- end }}
 

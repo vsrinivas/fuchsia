@@ -64,6 +64,7 @@ struct ::fidl::WireRequest<
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
+
   WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
@@ -93,21 +94,6 @@ struct ::fidl::WireRequest<
 class ::fidl::WireRequest<::fidl_test_foreigntypeinresponseusedthroughcompose::
                               Top::GetFoo>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -152,14 +138,6 @@ class ::fidl::WireRequest<::fidl_test_foreigntypeinresponseusedthroughcompose::
 class ::fidl::WireRequest<::fidl_test_foreigntypeinresponseusedthroughcompose::
                               Top::GetFoo>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage()
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size())) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size())) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -233,6 +211,7 @@ struct ::fidl::WireResponse<
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::bottom::wire::Foo foo;
+
   explicit WireResponse(const ::bottom::wire::Foo& foo) : foo(foo) {
     _InitHeader();
   }
@@ -264,25 +243,6 @@ struct ::fidl::WireResponse<
 class ::fidl::WireResponse<::fidl_test_foreigntypeinresponseusedthroughcompose::
                                Top::GetFoo>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-                        const ::bottom::wire::Foo& foo)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, foo) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size,
-                        const ::bottom::wire::Foo& foo)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireResponse _response{foo};
-    message_.Encode<::fidl::WireResponse<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
-        &_response);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireResponse* response)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -330,15 +290,6 @@ class ::fidl::WireResponse<::fidl_test_foreigntypeinresponseusedthroughcompose::
 class ::fidl::WireResponse<::fidl_test_foreigntypeinresponseusedthroughcompose::
                                Top::GetFoo>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(const ::bottom::wire::Foo& foo)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), foo) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      const ::bottom::wire::Foo& foo)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), foo) {}
   explicit OwnedEncodedMessage(
       ::fidl::WireResponse<
           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
@@ -417,13 +368,21 @@ class ::fidl::WireResult<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
     final : public ::fidl::Result {
  public:
-  explicit WireResult(::fidl::UnownedClientEnd<
-                      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
-                          _client);
-  WireResult(::fidl::UnownedClientEnd<
-                 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
-                 _client,
-             zx_time_t _deadline);
+  WireResult(
+      ::fidl::UnownedClientEnd<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+          client,
+      ::fidl::WireRequest<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+          request);
+  WireResult(
+      ::fidl::UnownedClientEnd<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+          client,
+      ::fidl::WireRequest<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+          request,
+      zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -493,6 +452,9 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<
           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
           _client,
+      ::fidl::WireRequest<
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+          request,
       uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(
       ::fidl::WireResponse<
@@ -589,9 +551,12 @@ class ::fidl::internal::WireSyncClientImpl<
   ::fidl::WireResult<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
   GetFoo() {
+    ::fidl::WireRequest<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+        _request{};
     return ::fidl::WireResult<
         ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
-        _client_end());
+        _client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -599,9 +564,13 @@ class ::fidl::internal::WireSyncClientImpl<
   ::fidl::WireUnownedResult<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
   GetFoo(::fidl::BufferSpan _response_buffer) {
+    ::fidl::WireRequest<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+        _request{};
     return ::fidl::WireUnownedResult<
         ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
-        _client_end(), _response_buffer.data, _response_buffer.capacity);
+        _client_end(), &_request, _response_buffer.data,
+        _response_buffer.capacity);
   }
 
  private:
@@ -694,20 +663,27 @@ class ::fidl::WireSyncClient<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
   GetFoo() const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+        _request{};
     return ::fidl::WireResult<
         ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
-        this->client_end());
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
-  GetFoo(::fidl::BufferSpan _response_buffer) const {
+  GetFoo(::fidl::BufferSpan _response_buffer) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+        _request{};
     return ::fidl::WireUnownedResult<
         ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
-        this->client_end(), _response_buffer.data, _response_buffer.capacity);
+        this->client_end(), &_request, _response_buffer.data,
+        _response_buffer.capacity);
   }
 
  private:

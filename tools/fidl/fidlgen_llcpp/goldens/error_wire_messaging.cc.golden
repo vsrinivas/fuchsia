@@ -14,30 +14,31 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 #ifdef __Fuchsia__
 }  // namespace fidl_test_error
 ::fidl::WireResult<::fidl_test_error::Example::Foo>::WireResult(
-    ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
-    ::fidl::StringView s) {
+    ::fidl::UnownedClientEnd<::fidl_test_error::Example> client,
+    ::fidl::WireRequest<::fidl_test_error::Example::Foo>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_error::Example::Foo>>
-      _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Call<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
-      _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(_outgoing);
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
+      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+  SetResult(outgoing);
 }
 
 ::fidl::WireResult<::fidl_test_error::Example::Foo>::WireResult(
-    ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
-    ::fidl::StringView s, zx_time_t _deadline) {
+    ::fidl::UnownedClientEnd<::fidl_test_error::Example> client,
+    ::fidl::WireRequest<::fidl_test_error::Example::Foo>* request,
+    zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_error::Example::Foo>>
-      _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Call<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
-      _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      _deadline);
-  SetResult(_outgoing);
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
+      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+      deadline);
+  SetResult(outgoing);
 }
 namespace fidl_test_error {
 #endif  // __Fuchsia__
@@ -45,18 +46,18 @@ namespace fidl_test_error {
 #ifdef __Fuchsia__
 }  // namespace fidl_test_error
 ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>::WireUnownedResult(
-    ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
-    uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-    ::fidl::StringView s, uint8_t* _response_bytes,
-    uint32_t _response_byte_capacity)
-    : bytes_(_response_bytes) {
+    ::fidl::UnownedClientEnd<::fidl_test_error::Example> client,
+    uint8_t* request_bytes, uint32_t request_byte_capacity,
+    ::fidl::WireRequest<::fidl_test_error::Example::Foo>* request,
+    uint8_t* response_bytes, uint32_t response_byte_capacity)
+    : bytes_(response_bytes) {
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_error::Example::Foo>>
-      _request(_request_bytes, _request_byte_capacity, s);
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Call<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
-      _client.channel(), _response_bytes, _response_byte_capacity);
-  ::fidl::Result::operator=(_outgoing);
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
+      client.channel(), response_bytes, response_byte_capacity);
+  ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_error {
 #endif  // __Fuchsia__
@@ -113,11 +114,12 @@ void fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo(
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_error::Example::Foo>::OwnedEncodedMessage
-      _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                           _context);
+      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::internal::ClientBase::SendTwoWay(
+      _request_message.GetOutgoingMessage(), _context);
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo(
@@ -146,29 +148,34 @@ void fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo(
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_error::Example::Foo>::OwnedEncodedMessage
-      _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                           _context);
+      _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
+  ::fidl::internal::ClientBase::SendTwoWay(
+      _request_message.GetOutgoingMessage(), _context);
 }
 void fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo(
     ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
     ::fidl::WireResponseContext<::fidl_test_error::Example::Foo>* _context) {
+  ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
+
   ::fidl::WireRequest<::fidl_test_error::Example::Foo>::UnownedEncodedMessage
-      _request(_request_buffer.data, _request_buffer.capacity, s);
-  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                           _context);
+      _request_message(_request_buffer.data, _request_buffer.capacity,
+                       &_request);
+  ::fidl::internal::ClientBase::SendTwoWay(
+      _request_message.GetOutgoingMessage(), _context);
 }
 ::fidl::WireResult<::fidl_test_error::Example::Foo>
 fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo_Sync(
     ::fidl::StringView s) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
         return ::fidl::WireResult<::fidl_test_error::Example::Foo>(
             ::fidl::UnownedClientEnd<::fidl_test_error::Example>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            s);
+            &_request);
       });
 }
 ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>
@@ -177,10 +184,11 @@ fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo_Sync(
     ::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
         return ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>(
             ::fidl::UnownedClientEnd<::fidl_test_error::Example>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            _request_buffer.data, _request_buffer.capacity, s,
+            _request_buffer.data, _request_buffer.capacity, &_request,
             _response_buffer.data, _response_buffer.capacity);
       });
 }
@@ -244,12 +252,13 @@ void fidl::WireServer<::fidl_test_error::Example>::dispatch_message(
 ::fidl::Result
 fidl::internal::WireCompleterBase<::fidl_test_error::Example::Foo>::Reply(
     ::fidl_test_error::wire::ExampleFooResult result) {
+  ::fidl::WireResponse<::fidl_test_error::Example::Foo> _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_error::Example::Foo>>
-      _response{::fidl::internal::AllowUnownedInputRef{}, result};
+      _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return ::fidl::internal::WireCompleterBase<::fidl_test_error::Example::Foo>::
-      SendReply(&_response.GetOutgoingMessage());
+      SendReply(&_response_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::WireCompleterBase<
     ::fidl_test_error::Example::Foo>::ReplySuccess(int64_t y) {
@@ -270,9 +279,10 @@ fidl::internal::WireCompleterBase<::fidl_test_error::Example::Foo>::Reply(
 fidl::internal::WireCompleterBase<::fidl_test_error::Example::Foo>::Reply(
     ::fidl::BufferSpan _buffer,
     ::fidl_test_error::wire::ExampleFooResult result) {
+  ::fidl::WireResponse<::fidl_test_error::Example::Foo> _response{result};
   ::fidl::WireResponse<::fidl_test_error::Example::Foo>::UnownedEncodedMessage
-      _response(_buffer.data, _buffer.capacity, result);
-  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
+      _response_message(_buffer.data, _buffer.capacity, &_response);
+  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::WireCompleterBase<
     ::fidl_test_error::Example::Foo>::ReplySuccess(::fidl::BufferSpan _buffer,

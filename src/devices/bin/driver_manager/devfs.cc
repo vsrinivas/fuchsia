@@ -11,6 +11,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/coding.h>
+#include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/memfs/cpp/vnode.h>
 #include <stdio.h>
@@ -28,7 +29,6 @@
 #include <fbl/string_buffer.h>
 
 #include "coordinator.h"
-#include "lib/fidl/cpp/message_part.h"
 #include "src/devices/lib/log/log.h"
 
 namespace {
@@ -457,10 +457,11 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
     auto describe =
         [&ipc, describe = flags & ZX_FS_FLAG_DESCRIBE](zx::status<fio::wire::NodeInfo> node_info) {
           if (describe) {
-            fidl::WireResponse<fio::Node::OnOpen>::OwnedEncodedMessage response(
+            fidl::WireResponse<fio::Node::OnOpen> response{
                 node_info.status_value(),
-                node_info.is_ok() ? std::move(node_info.value()) : fio::wire::NodeInfo());
-            response.Write(ipc.channel());
+                node_info.is_ok() ? std::move(node_info.value()) : fio::wire::NodeInfo()};
+            fidl::OwnedEncodedMessage<fidl::WireResponse<fio::Node::OnOpen>> message(&response);
+            message.Write(ipc.channel());
           }
         };
 

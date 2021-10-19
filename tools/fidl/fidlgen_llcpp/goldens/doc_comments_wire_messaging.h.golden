@@ -64,6 +64,7 @@ template <>
 struct ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
+
   WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
@@ -91,21 +92,6 @@ struct ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method> final {
 class ::fidl::WireRequest<
     ::fidl_test_doccomments::Interface::Method>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -150,14 +136,6 @@ class ::fidl::WireRequest<
 class ::fidl::WireRequest<
     ::fidl_test_doccomments::Interface::Method>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage()
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size())) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size())) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -226,6 +204,7 @@ template <>
 struct ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
+
   WireResponse() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
@@ -253,23 +232,6 @@ struct ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent> final {
 class ::fidl::WireResponse<
     ::fidl_test_doccomments::Interface::OnEvent>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireResponse _response{};
-    message_.Encode<
-        ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>(
-        &_response);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireResponse* response)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -317,14 +279,6 @@ class ::fidl::WireResponse<
 class ::fidl::WireResponse<
     ::fidl_test_doccomments::Interface::OnEvent>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage()
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size())) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size())) {}
   explicit OwnedEncodedMessage(
       ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>*
           response)
@@ -398,8 +352,9 @@ template <>
 class ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> final
     : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client);
+  WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client,
+      ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -414,7 +369,8 @@ class ::fidl::WireUnownedResult<::fidl_test_doccomments::Interface::Method>
     final : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client);
+      ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client,
+      ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -439,8 +395,9 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_doccomments::Interface>
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> Method() {
+    ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method> _request{};
     return ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>(
-        _client_end());
+        _client_end(), &_request);
   }
 
  private:
@@ -530,8 +487,9 @@ class ::fidl::WireSyncClient<::fidl_test_doccomments::Interface> final {
   ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> Method()
       const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method> _request{};
     return ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>(
-        this->client_end());
+        this->client_end(), &_request);
   }
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the

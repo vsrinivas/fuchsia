@@ -488,7 +488,9 @@ zx_status_t FuchsiaVfs::UninstallAll(zx::time deadline) {
 
 zx_status_t FuchsiaVfs::UnmountHandle(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> handle,
                                       zx::time deadline) {
-  fidl::WireResult<fuchsia_io_admin::DirectoryAdmin::Unmount> result(handle, deadline.get());
+  fidl::WireRequest<fuchsia_io_admin::DirectoryAdmin::Unmount> request{};
+  fidl::WireResult<fuchsia_io_admin::DirectoryAdmin::Unmount> result(handle, &request,
+                                                                     deadline.get());
   if (!result.ok()) {
     return result.status();
   }

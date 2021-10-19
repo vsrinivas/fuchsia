@@ -53,6 +53,7 @@ struct ::fidl::WireRequest<::fidl_test_error::Example::Foo> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl::StringView s;
+
   explicit WireRequest(::fidl::StringView s) : s(s) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
 
@@ -82,22 +83,6 @@ struct ::fidl::WireRequest<::fidl_test_error::Example::Foo> final {
 class ::fidl::WireRequest<
     ::fidl_test_error::Example::Foo>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-                        ::fidl::StringView s)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, s) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size, ::fidl::StringView s)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{s};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -142,15 +127,6 @@ class ::fidl::WireRequest<
 class ::fidl::WireRequest<::fidl_test_error::Example::Foo>::OwnedEncodedMessage
     final {
  public:
-  explicit OwnedEncodedMessage(::fidl::StringView s)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), s) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl::StringView s)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), s) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -220,6 +196,7 @@ struct ::fidl::WireResponse<::fidl_test_error::Example::Foo> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_error::wire::ExampleFooResult result;
+
   explicit WireResponse(::fidl_test_error::wire::ExampleFooResult result)
       : result(result) {
     _InitHeader();
@@ -251,24 +228,6 @@ struct ::fidl::WireResponse<::fidl_test_error::Example::Foo> final {
 class ::fidl::WireResponse<
     ::fidl_test_error::Example::Foo>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-                        ::fidl_test_error::wire::ExampleFooResult result)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, result) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size,
-                        ::fidl_test_error::wire::ExampleFooResult result)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireResponse _response{result};
-    message_.Encode<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
-        &_response);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireResponse* response)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -315,15 +274,6 @@ class ::fidl::WireResponse<
 class ::fidl::WireResponse<::fidl_test_error::Example::Foo>::OwnedEncodedMessage
     final {
  public:
-  explicit OwnedEncodedMessage(::fidl_test_error::wire::ExampleFooResult result)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), result) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl_test_error::wire::ExampleFooResult result)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), result) {}
   explicit OwnedEncodedMessage(
       ::fidl::WireResponse<::fidl_test_error::Example::Foo>* response)
       : message_(1u, backing_buffer_.data(),
@@ -392,11 +342,11 @@ template <>
 class ::fidl::WireResult<::fidl_test_error::Example::Foo> final
     : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
-      ::fidl::StringView s);
-  WireResult(::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
-             ::fidl::StringView s, zx_time_t _deadline);
+  WireResult(::fidl::UnownedClientEnd<::fidl_test_error::Example> client,
+             ::fidl::WireRequest<::fidl_test_error::Example::Foo>* request);
+  WireResult(::fidl::UnownedClientEnd<::fidl_test_error::Example> client,
+             ::fidl::WireRequest<::fidl_test_error::Example::Foo>* request,
+             zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -449,8 +399,8 @@ class ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> final
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      ::fidl::StringView s, uint8_t* _response_bytes,
-      uint32_t _response_byte_capacity);
+      ::fidl::WireRequest<::fidl_test_error::Example::Foo>* request,
+      uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(
       ::fidl::WireResponse<::fidl_test_error::Example::Foo>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
@@ -523,8 +473,9 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_error::Example> final
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_error::Example::Foo> Foo(
       ::fidl::StringView s) {
+    ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
     return ::fidl::WireResult<::fidl_test_error::Example::Foo>(_client_end(),
-                                                               s);
+                                                               &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -532,9 +483,10 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_error::Example> final
   ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> Foo(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::BufferSpan _response_buffer) {
+    ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
     return ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>(
-        _client_end(), _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
+        _client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
 
  private:
@@ -611,19 +563,21 @@ class ::fidl::WireSyncClient<::fidl_test_error::Example> final {
   ::fidl::WireResult<::fidl_test_error::Example::Foo> Foo(
       ::fidl::StringView s) const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
     return ::fidl::WireResult<::fidl_test_error::Example::Foo>(
-        this->client_end(), s);
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> Foo(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-      ::fidl::BufferSpan _response_buffer) const {
+      ::fidl::BufferSpan _response_buffer) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
     return ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>(
-        this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
+        this->client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
 
  private:

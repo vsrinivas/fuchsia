@@ -68,11 +68,11 @@
     };
 
     auto* _context = new ResponseContext(std::move(_cb));
+    {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-    {{ .WireRequest }}::OwnedEncodedMessage _request(
-      {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs -}}
-    );
-    ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(), _context);
+    {{ .WireRequest }}::OwnedEncodedMessage _request_message(
+          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+    ::fidl::internal::ClientBase::SendTwoWay(_request_message.GetOutgoingMessage(), _context);
   }
 
   void {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
@@ -97,11 +97,11 @@
     };
 
     auto* _context = new ResponseContext(std::move(_cb));
+    {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-    {{ .WireRequest }}::OwnedEncodedMessage _request(
-      {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs -}}
-    );
-    ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(), _context);
+    {{ .WireRequest }}::OwnedEncodedMessage _request_message(
+          ::fidl::internal::AllowUnownedInputRef{}, &_request);
+    ::fidl::internal::ClientBase::SendTwoWay(_request_message.GetOutgoingMessage(), _context);
   }
 
 
@@ -114,17 +114,16 @@
       {{- else }}
         {{ .WireResponseContext }}* _context
       {{- end -}}) {
+    {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
     {{ if .RequestArgs }}
-      {{ .WireRequest }}::UnownedEncodedMessage _request(
-        {{ RenderForwardParams "_request_buffer.data"
-                              "_request_buffer.capacity"
-                              .RequestArgs }});
+      {{ .WireRequest }}::UnownedEncodedMessage _request_message(
+          _request_buffer.data, _request_buffer.capacity, &_request);
     {{- else }}
       FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-      {{ .WireRequest }}::OwnedEncodedMessage _request(
-        {{ RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs }});
+      {{ .WireRequest }}::OwnedEncodedMessage _request_message(
+          ::fidl::internal::AllowUnownedInputRef{}, &_request);
     {{- end }}
-    ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(), _context);
+    ::fidl::internal::ClientBase::SendTwoWay(_request_message.GetOutgoingMessage(), _context);
   }
 
   {{- EndifFuchsia -}}

@@ -18,15 +18,17 @@ extern "C" const fidl_type_t
 ::fidl::WireResult<::fidl_test_placementofattributes::ExampleProtocol::Method>::
     WireResult(::fidl::UnownedClientEnd<
                    ::fidl_test_placementofattributes::ExampleProtocol>
-                   _client,
-               const ::exampleusing::wire::Empty& arg) {
+                   client,
+               ::fidl::WireRequest<
+                   ::fidl_test_placementofattributes::ExampleProtocol::Method>*
+                   request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>>
-      _request(::fidl::internal::AllowUnownedInputRef{}, arg);
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client.channel());
-  SetResult(_outgoing);
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client.channel());
+  SetResult(outgoing);
 }
 namespace fidl_test_placementofattributes {
 #endif  // __Fuchsia__
@@ -35,17 +37,20 @@ namespace fidl_test_placementofattributes {
 }  // namespace fidl_test_placementofattributes
 ::fidl::WireUnownedResult<
     ::fidl_test_placementofattributes::ExampleProtocol::Method>::
-    WireUnownedResult(::fidl::UnownedClientEnd<
-                          ::fidl_test_placementofattributes::ExampleProtocol>
-                          _client,
-                      uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-                      const ::exampleusing::wire::Empty& arg) {
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_placementofattributes::ExampleProtocol>
+            client,
+        uint8_t* request_bytes, uint32_t request_byte_capacity,
+        ::fidl::WireRequest<
+            ::fidl_test_placementofattributes::ExampleProtocol::Method>*
+            request) {
   ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>>
-      _request(_request_bytes, _request_byte_capacity, arg);
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client.channel());
-  ::fidl::Result::operator=(_outgoing);
+      request_message(request_bytes, request_byte_capacity, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client.channel());
+  ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_placementofattributes {
 #endif  // __Fuchsia__
@@ -57,21 +62,29 @@ namespace fidl_test_placementofattributes {
     WireClientImpl<::fidl_test_placementofattributes::ExampleProtocol>::Method(
         const ::exampleusing::wire::Empty& arg) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::WireRequest<
+      ::fidl_test_placementofattributes::ExampleProtocol::Method>
+      _request_object{arg};
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>>
-      _request(::fidl::internal::AllowUnownedInputRef{}, arg);
+      _request_message(::fidl::internal::AllowUnownedInputRef{},
+                       &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request.GetOutgoingMessage());
+      _request_message.GetOutgoingMessage());
 }
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_placementofattributes::ExampleProtocol>::Method(
         ::fidl::BufferSpan _request_buffer,
         const ::exampleusing::wire::Empty& arg) {
+  ::fidl::WireRequest<
+      ::fidl_test_placementofattributes::ExampleProtocol::Method>
+      _request_object{arg};
   ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>>
-      _request(_request_buffer.data, _request_buffer.capacity, arg);
+      _request_message(_request_buffer.data, _request_buffer.capacity,
+                       &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request.GetOutgoingMessage());
+      _request_message.GetOutgoingMessage());
 }
 
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<

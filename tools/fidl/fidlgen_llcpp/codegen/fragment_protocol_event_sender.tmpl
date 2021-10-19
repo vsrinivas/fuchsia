@@ -79,11 +79,12 @@ class {{ .WireWeakEventSender }} {
     {{- /* Managed */}}
 fidl::Result {{ $.WireEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams .ResponseArgs }}) const {
+  {{ .WireResponse }} _response{ {{- RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response{
-      {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .ResponseArgs -}}
+  ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
-  auto& _message = _response.GetOutgoingMessage();
+  auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(server_end_.channel());
   return ::fidl::Result{_message};
 }
@@ -93,9 +94,10 @@ fidl::Result {{ $.WireEventSender.NoLeading }}::{{ .Name }}(
 {{ "" }}
 fidl::Result {{ $.WireEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const {
-  ::fidl::UnownedEncodedMessage<{{ .WireResponse }}> _response(
-      {{- RenderForwardParams "_buffer.data" "_buffer.capacity" .ResponseArgs }});
-  auto& _message = _response.GetOutgoingMessage();
+  {{ .WireResponse }} _response{ {{- RenderForwardParams .ResponseArgs }} };
+  ::fidl::UnownedEncodedMessage<{{ .WireResponse }}> _response_message(
+        _buffer.data, _buffer.capacity, &_response);
+  auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(server_end_.channel());
   return ::fidl::Result{_message};
 }
@@ -105,11 +107,12 @@ fidl::Result {{ $.WireEventSender.NoLeading }}::{{ .Name }}(
     {{- /* Weak, managed */}}
 fidl::Result {{ $.WireWeakEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams .ResponseArgs }}) const {
+  {{ .WireResponse }} _response{ {{- RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response{
-      {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .ResponseArgs -}}
+  ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response_message{
+      ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
-  return inner_.SendEvent(_response.GetOutgoingMessage());
+  return inner_.SendEvent(_response_message.GetOutgoingMessage());
 }
 
     {{- /* Weak, caller-allocated */}}
@@ -117,9 +120,10 @@ fidl::Result {{ $.WireWeakEventSender.NoLeading }}::{{ .Name }}(
 {{ "" }}
 fidl::Result {{ $.WireWeakEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const {
-  ::fidl::UnownedEncodedMessage<{{ .WireResponse }}> _response(
-      {{- RenderForwardParams "_buffer.data" "_buffer.capacity" .ResponseArgs }});
-  return inner_.SendEvent(_response.GetOutgoingMessage());
+  {{ .WireResponse }} _response{ {{- RenderForwardParams .ResponseArgs }} };
+  ::fidl::UnownedEncodedMessage<{{ .WireResponse }}> _response_message(
+        _buffer.data, _buffer.capacity, &_response);
+  return inner_.SendEvent(_response_message.GetOutgoingMessage());
 }
 {{ "" }}
 

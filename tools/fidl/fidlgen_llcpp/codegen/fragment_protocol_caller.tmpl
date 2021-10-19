@@ -20,7 +20,8 @@ class {{ .WireSyncClientImpl }} final :
     {{ .Docs }}
     //{{ template "Method:ClientAllocationComment:Helper" . }}
     {{ .WireResult }} {{ .Name }}({{- RenderParams .RequestArgs }}) {
-      return {{ .WireResult }}({{ RenderForwardParams "_client_end()" .RequestArgs }});
+      {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+      return {{ .WireResult }}(_client_end(), &_request);
     }
 {{ "" }}
 
@@ -34,19 +35,20 @@ class {{ .WireSyncClientImpl }} final :
         {{- $call_args = (List $call_args "::fidl::BufferSpan _response_buffer") }}
       {{- end }}
 
-      {{- $result_args := (List) }}
-      {{- if .RequestArgs }}
-        {{- $result_args = (List $result_args "_request_buffer.data" "_request_buffer.capacity") }}
-      {{- end }}
-      {{- $result_args = (List $result_args .RequestArgs) }}
-      {{- if .HasResponse -}}
-        {{- $result_args = (List $result_args "_response_buffer.data" "_response_buffer.capacity") }}
-      {{- end }}
 
       {{- .Docs }}
       // Caller provides the backing storage for FIDL message via request and response buffers.
-      {{ .WireUnownedResult }} {{ .Name }}({{ RenderParams $call_args }}) {
-        return {{ .WireUnownedResult }}({{ RenderForwardParams "_client_end()" $result_args }});
+      {{ .WireUnownedResult }} {{ .Name }}({{ RenderParams $call_args }}) {\
+        {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+        return {{ .WireUnownedResult }}(_client_end()
+          {{- if .RequestArgs -}}
+            , _request_buffer.data, _request_buffer.capacity
+          {{- end -}}
+          , &_request
+          {{- if .HasResponse -}}
+            , _response_buffer.data, _response_buffer.capacity
+          {{- end -}}
+        );
       }
 
     {{- end }}

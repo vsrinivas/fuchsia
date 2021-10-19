@@ -61,6 +61,7 @@ struct ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> final {
   fidl_message_header_t _hdr;
   int32_t a;
   int32_t b;
+
   explicit WireRequest(int32_t a, int32_t b) : a(a), b(b) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
 
@@ -91,22 +92,6 @@ struct ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> final {
 class ::fidl::WireRequest<
     ::fidl_test_nullable::SimpleProtocol::Add>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-                        int32_t a, int32_t b)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, a, b) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size, int32_t a, int32_t b)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{a, b};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -151,15 +136,6 @@ class ::fidl::WireRequest<
 class ::fidl::WireRequest<
     ::fidl_test_nullable::SimpleProtocol::Add>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(int32_t a, int32_t b)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), a, b) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned, int32_t a,
-      int32_t b)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), a, b) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -229,6 +205,7 @@ struct ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   int32_t sum;
+
   explicit WireResponse(int32_t sum) : sum(sum) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
 
@@ -257,24 +234,6 @@ struct ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add> final {
 class ::fidl::WireResponse<
     ::fidl_test_nullable::SimpleProtocol::Add>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-                        int32_t sum)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, sum) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size, int32_t sum)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireResponse _response{sum};
-    message_.Encode<
-        ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>>(
-        &_response);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireResponse* response)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -322,14 +281,6 @@ class ::fidl::WireResponse<
 class ::fidl::WireResponse<
     ::fidl_test_nullable::SimpleProtocol::Add>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(int32_t sum)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), sum) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned, int32_t sum)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), sum) {}
   explicit OwnedEncodedMessage(
       ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>* response)
       : message_(1u, backing_buffer_.data(),
@@ -401,12 +352,13 @@ template <>
 class ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add> final
     : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol> _client,
-      int32_t a, int32_t b);
   WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol> _client,
-      int32_t a, int32_t b, zx_time_t _deadline);
+      ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol> client,
+      ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>* request);
+  WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol> client,
+      ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>* request,
+      zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -462,8 +414,9 @@ class ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add> final
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol> _client,
-      uint8_t* _request_bytes, uint32_t _request_byte_capacity, int32_t a,
-      int32_t b, uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+      uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+      ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>* request,
+      uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(
       ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
@@ -543,8 +496,10 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_nullable::SimpleProtocol>
   // necessary.
   ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add> Add(int32_t a,
                                                                     int32_t b) {
+    ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> _request{a,
+                                                                            b};
     return ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add>(
-        _client_end(), a, b);
+        _client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -552,9 +507,11 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_nullable::SimpleProtocol>
   ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add> Add(
       ::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
       ::fidl::BufferSpan _response_buffer) {
+    ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> _request{a,
+                                                                            b};
     return ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add>(
-        _client_end(), _request_buffer.data, _request_buffer.capacity, a, b,
-        _response_buffer.data, _response_buffer.capacity);
+        _client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
 
  private:
@@ -636,19 +593,23 @@ class ::fidl::WireSyncClient<::fidl_test_nullable::SimpleProtocol> final {
   ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add> Add(
       int32_t a, int32_t b) const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> _request{a,
+                                                                            b};
     return ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add>(
-        this->client_end(), a, b);
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add> Add(
       ::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
-      ::fidl::BufferSpan _response_buffer) const {
+      ::fidl::BufferSpan _response_buffer) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> _request{a,
+                                                                            b};
     return ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add>(
-        this->client_end(), _request_buffer.data, _request_buffer.capacity, a,
-        b, _response_buffer.data, _response_buffer.capacity);
+        this->client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
 
  private:

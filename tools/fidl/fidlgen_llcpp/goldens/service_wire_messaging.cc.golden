@@ -17,14 +17,16 @@ extern "C" const fidl_type_t
 }  // namespace fidl_test_service
 ::fidl::WireResult<::fidl_test_service::SecondProtocol::MethodOnSecond>::
     WireResult(
-        ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> _client) {
+        ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> client,
+        ::fidl::WireRequest<
+            ::fidl_test_service::SecondProtocol::MethodOnSecond>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>>
-      _request(::fidl::internal::AllowUnownedInputRef{});
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client.channel());
-  SetResult(_outgoing);
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client.channel());
+  SetResult(outgoing);
 }
 namespace fidl_test_service {
 #endif  // __Fuchsia__
@@ -35,11 +37,14 @@ namespace fidl_test_service {
 ::fidl::Result fidl::internal::WireClientImpl<
     ::fidl_test_service::SecondProtocol>::MethodOnSecond() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>
+      _request_object{};
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>>
-      _request(::fidl::internal::AllowUnownedInputRef{});
+      _request_message(::fidl::internal::AllowUnownedInputRef{},
+                       &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request.GetOutgoingMessage());
+      _request_message.GetOutgoingMessage());
 }
 
 std::optional<::fidl::UnbindInfo> fidl::internal::
@@ -118,14 +123,16 @@ extern "C" const fidl_type_t
 }  // namespace fidl_test_service
 ::fidl::WireResult<::fidl_test_service::FirstProtocol::MethodOnFirst>::
     WireResult(
-        ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> _client) {
+        ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> client,
+        ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>*
+            request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>>
-      _request(::fidl::internal::AllowUnownedInputRef{});
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client.channel());
-  SetResult(_outgoing);
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client.channel());
+  SetResult(outgoing);
 }
 namespace fidl_test_service {
 #endif  // __Fuchsia__
@@ -136,11 +143,14 @@ namespace fidl_test_service {
 ::fidl::Result fidl::internal::WireClientImpl<
     ::fidl_test_service::FirstProtocol>::MethodOnFirst() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>
+      _request_object{};
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>>
-      _request(::fidl::internal::AllowUnownedInputRef{});
+      _request_message(::fidl::internal::AllowUnownedInputRef{},
+                       &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request.GetOutgoingMessage());
+      _request_message.GetOutgoingMessage());
 }
 
 std::optional<::fidl::UnbindInfo> fidl::internal::

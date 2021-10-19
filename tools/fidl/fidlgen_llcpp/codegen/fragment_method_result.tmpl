@@ -8,54 +8,52 @@
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireResult }} final : public ::fidl::Result {
-	public:
-	 explicit {{ .WireResult.Self }}(
-		 {{ RenderParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
-		                       .RequestArgs }});
+  public:
+    {{ .WireResult.Self }}(::fidl::UnownedClientEnd<{{ .Protocol }}> client,
+        {{ .WireRequest }}* request);
    {{- if .HasResponse }}
-	 {{ .WireResult.Self }}(
-		{{ RenderParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
-		                      .RequestArgs "zx_time_t _deadline"}});
+    {{ .WireResult.Self }}(::fidl::UnownedClientEnd<{{ .Protocol }}> client,
+        {{ .WireRequest }}* request, zx_time_t _deadline);
    {{- end }}
-	 explicit {{ .WireResult.Self }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
-	 {{ .WireResult.Self }}({{ .WireResult.Self }}&&) = delete;
-	 {{ .WireResult.Self }}(const {{ .WireResult.Self }}&) = delete;
-	 {{ .WireResult.Self }}* operator=({{ .WireResult.Self }}&&) = delete;
-	 {{ .WireResult.Self }}* operator=(const {{ .WireResult.Self }}&) = delete;
-	 {{- if and .HasResponse .Response.IsResource }}
-	 ~{{ .WireResult.Self }}() {
-	   if (ok()) {
-		 Unwrap()->_CloseHandles();
-	   }
-	 }
-	 {{- else }}
-	 ~{{ .WireResult.Self }}() = default;
-	 {{- end }}
-	 {{- if .HasResponse }}
+   explicit {{ .WireResult.Self }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
+   {{ .WireResult.Self }}({{ .WireResult.Self }}&&) = delete;
+   {{ .WireResult.Self }}(const {{ .WireResult.Self }}&) = delete;
+   {{ .WireResult.Self }}* operator=({{ .WireResult.Self }}&&) = delete;
+   {{ .WireResult.Self }}* operator=(const {{ .WireResult.Self }}&) = delete;
+   {{- if and .HasResponse .Response.IsResource }}
+   ~{{ .WireResult.Self }}() {
+     if (ok()) {
+     Unwrap()->_CloseHandles();
+     }
+   }
+   {{- else }}
+   ~{{ .WireResult.Self }}() = default;
+   {{- end }}
+   {{- if .HasResponse }}
 
-	 {{ .WireResponse }}* Unwrap() {
-	   ZX_DEBUG_ASSERT(ok());
-	   return reinterpret_cast<{{ .WireResponse }}*>(bytes_.data());
-	 }
-	 const {{ .WireResponse }}* Unwrap() const {
-	   ZX_DEBUG_ASSERT(ok());
-	   return reinterpret_cast<const {{ .WireResponse }}*>(bytes_.data());
-	 }
+   {{ .WireResponse }}* Unwrap() {
+     ZX_DEBUG_ASSERT(ok());
+     return reinterpret_cast<{{ .WireResponse }}*>(bytes_.data());
+   }
+   const {{ .WireResponse }}* Unwrap() const {
+     ZX_DEBUG_ASSERT(ok());
+     return reinterpret_cast<const {{ .WireResponse }}*>(bytes_.data());
+   }
 
-	 {{ .WireResponse }}& value() { return *Unwrap(); }
-	 const {{ .WireResponse }}& value() const { return *Unwrap(); }
+   {{ .WireResponse }}& value() { return *Unwrap(); }
+   const {{ .WireResponse }}& value() const { return *Unwrap(); }
 
-	 {{ .WireResponse }}* operator->() { return &value(); }
-	 const {{ .WireResponse }}* operator->() const { return &value(); }
+   {{ .WireResponse }}* operator->() { return &value(); }
+   const {{ .WireResponse }}* operator->() const { return &value(); }
 
-	 {{ .WireResponse }}& operator*() { return value(); }
-	 const {{ .WireResponse }}& operator*() const { return value(); }
-	 {{- end }}
+   {{ .WireResponse }}& operator*() { return value(); }
+   const {{ .WireResponse }}& operator*() const { return value(); }
+   {{- end }}
 
-	private:
-	 {{- if .HasResponse }}
-	   {{ .Response.ClientAllocationV1.BackingBufferType }} bytes_;
-	 {{- end }}
+  private:
+   {{- if .HasResponse }}
+     {{ .Response.ClientAllocationV1.BackingBufferType }} bytes_;
+   {{- end }}
 };
 {{- end }}
 
@@ -67,35 +65,30 @@ class {{ .WireResult }} final : public ::fidl::Result {
 {{- define "Method:Result:MessagingSource" }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
-{{ .WireResult }}::{{ .WireResult.Self }}(
-    {{- RenderParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
-                          .RequestArgs }})
-   {
+{{ .WireResult }}::{{ .WireResult.Self }}(::fidl::UnownedClientEnd<{{ .Protocol }}> client,
+    {{ .WireRequest }}* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
-      {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs }});
-  auto& _outgoing = _request.GetOutgoingMessage();
+  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> request_message(::fidl::internal::AllowUnownedInputRef{},
+      request);
+  auto& outgoing = request_message.GetOutgoingMessage();
   {{- if .HasResponse }}
-  _outgoing.Call<{{ .WireResponse }}>(
-    _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+  outgoing.Call<{{ .WireResponse }}>(
+    client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   {{- else }}
-  _outgoing.Write(_client.channel());
+  outgoing.Write(client.channel());
   {{- end }}
-  SetResult(_outgoing);
+  SetResult(outgoing);
 }
   {{- if .HasResponse }}
 
-{{ .WireResult }}::{{ .WireResult.Self }}(
-    {{- RenderParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
-                           .RequestArgs "zx_time_t _deadline" }})
-   {
+{{ .WireResult }}::{{ .WireResult.Self }}(::fidl::UnownedClientEnd<{{ .Protocol }}> client,
+    {{ .WireRequest }}* request, zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
-	  {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs }});
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Call<{{ .WireResponse }}>(
-    _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
-  SetResult(_outgoing);
+  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> request_message(
+      ::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Call<{{ .WireResponse }}>(client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()), deadline);
+  SetResult(outgoing);
 }
   {{- end }}
 {{- EndifFuchsia -}}

@@ -48,11 +48,12 @@
 {{- IfdefFuchsia -}}
 ::fidl::Result
 {{ .WireCompleterBase.NoLeading }}::Reply({{ RenderParams .ResponseArgs }}) {
+  {{ .WireResponse }} _response{ {{ RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response{
-    {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .ResponseArgs -}}
+  ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response_message{
+    ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
-  return {{ .WireCompleterBase }}::SendReply(&_response.GetOutgoingMessage());
+  return {{ .WireCompleterBase }}::SendReply(&_response_message.GetOutgoingMessage());
 }
 
 {{- if .Result }}
@@ -86,9 +87,10 @@
 
   ::fidl::Result {{ .WireCompleterBase.NoLeading }}::Reply(
         {{- RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) {
-    {{ .WireResponse }}::UnownedEncodedMessage _response(
-          {{ RenderForwardParams "_buffer.data" "_buffer.capacity" .ResponseArgs }});
-    return CompleterBase::SendReply(&_response.GetOutgoingMessage());
+    {{ .WireResponse }} _response{ {{ RenderForwardParams .ResponseArgs }} };
+    {{ .WireResponse }}::UnownedEncodedMessage _response_message(
+          _buffer.data, _buffer.capacity, &_response);
+    return CompleterBase::SendReply(&_response_message.GetOutgoingMessage());
   }
 
   {{- if .Result }}

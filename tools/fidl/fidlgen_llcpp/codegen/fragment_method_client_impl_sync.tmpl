@@ -46,20 +46,19 @@
 {{- define "Method:ClientImplSyncCallerAllocate:MessagingSource" }}
   {{ EnsureNamespace "" }}
 
-  {{- $base_args := (printf "::fidl::UnownedClientEnd<%s>(_transport->get<fidl::internal::ChannelTransport>())" .Protocol) }}
-  {{- if .RequestArgs }}
-    {{- $base_args = (List $base_args "_request_buffer.data" "_request_buffer.capacity") }}
-  {{- end }}
-  {{- $base_args = (List $base_args .RequestArgs) }}
-
   {{- IfdefFuchsia -}}
 
   {{ .WireUnownedResult }}
   {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync(
       {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
     return ::fidl::internal::ClientBase::MakeSyncCallWith([&] (std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-      return {{ .WireUnownedResult }}(
-          {{- RenderForwardParams $base_args "_response_buffer.data" "_response_buffer.capacity" }});
+      {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+      return {{ .WireUnownedResult }}(::fidl::UnownedClientEnd<{{ .Protocol }}>(_transport->get<fidl::internal::ChannelTransport>()),
+          {{- if .RequestArgs }}
+            _request_buffer.data, _request_buffer.capacity,
+          {{- end }}
+          &_request,
+          _response_buffer.data, _response_buffer.capacity);
     });
   }
 
@@ -75,9 +74,9 @@
   {{ .WireResult }}
   {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync({{ RenderParams .RequestArgs }}) {
     return ::fidl::internal::ClientBase::MakeSyncCallWith([&] (std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-      return {{ .WireResult }}(
-        {{- RenderForwardParams (printf "::fidl::UnownedClientEnd<%s>(_transport->get<fidl::internal::ChannelTransport>())" .Protocol)
-                                .RequestArgs }});
+      {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+      return {{ .WireResult }}(::fidl::UnownedClientEnd<{{ .Protocol }}>(_transport->get<fidl::internal::ChannelTransport>()),
+          &_request);
     });
   }
 

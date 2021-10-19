@@ -68,6 +68,7 @@ struct ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
+
   WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
@@ -95,21 +96,6 @@ struct ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>
 class ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>::
     UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -154,14 +140,6 @@ class ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>::
 class ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>::
     OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage()
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size())) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size())) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -231,8 +209,10 @@ template <>
 class ::fidl::WireResult<::fidl_test_service::SecondProtocol::MethodOnSecond>
     final : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> _client);
+  WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> client,
+      ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>*
+          request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -248,7 +228,9 @@ class ::fidl::WireUnownedResult<
     final : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> _client);
+      ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> _client,
+      ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>*
+          request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -271,8 +253,11 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_service::SecondProtocol>
   // necessary.
   ::fidl::WireResult<::fidl_test_service::SecondProtocol::MethodOnSecond>
   MethodOnSecond() {
+    ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>
+        _request{};
     return ::fidl::WireResult<
-        ::fidl_test_service::SecondProtocol::MethodOnSecond>(_client_end());
+        ::fidl_test_service::SecondProtocol::MethodOnSecond>(_client_end(),
+                                                             &_request);
   }
 
  private:
@@ -353,9 +338,11 @@ class ::fidl::WireSyncClient<::fidl_test_service::SecondProtocol> final {
   ::fidl::WireResult<::fidl_test_service::SecondProtocol::MethodOnSecond>
   MethodOnSecond() const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>
+        _request{};
     return ::fidl::WireResult<
-        ::fidl_test_service::SecondProtocol::MethodOnSecond>(
-        this->client_end());
+        ::fidl_test_service::SecondProtocol::MethodOnSecond>(this->client_end(),
+                                                             &_request);
   }
 
  private:
@@ -428,6 +415,7 @@ struct ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
+
   WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
@@ -455,21 +443,6 @@ struct ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>
 class ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>::
     UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -514,14 +487,6 @@ class ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>::
 class ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>::
     OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage()
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size())) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size())) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -591,8 +556,10 @@ template <>
 class ::fidl::WireResult<::fidl_test_service::FirstProtocol::MethodOnFirst>
     final : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> _client);
+  WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> client,
+      ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>*
+          request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -608,7 +575,9 @@ class ::fidl::WireUnownedResult<
     final : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> _client);
+      ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> _client,
+      ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>*
+          request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -631,8 +600,11 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_service::FirstProtocol>
   // necessary.
   ::fidl::WireResult<::fidl_test_service::FirstProtocol::MethodOnFirst>
   MethodOnFirst() {
+    ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>
+        _request{};
     return ::fidl::WireResult<
-        ::fidl_test_service::FirstProtocol::MethodOnFirst>(_client_end());
+        ::fidl_test_service::FirstProtocol::MethodOnFirst>(_client_end(),
+                                                           &_request);
   }
 
  private:
@@ -713,8 +685,11 @@ class ::fidl::WireSyncClient<::fidl_test_service::FirstProtocol> final {
   ::fidl::WireResult<::fidl_test_service::FirstProtocol::MethodOnFirst>
   MethodOnFirst() const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>
+        _request{};
     return ::fidl::WireResult<
-        ::fidl_test_service::FirstProtocol::MethodOnFirst>(this->client_end());
+        ::fidl_test_service::FirstProtocol::MethodOnFirst>(this->client_end(),
+                                                           &_request);
   }
 
  private:

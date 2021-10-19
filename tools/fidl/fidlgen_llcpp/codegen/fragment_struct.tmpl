@@ -165,7 +165,6 @@ class {{ .Name }}::DecodedMessage final : public ::fidl::internal::DecodedMessag
   // After calling this method, the |DecodedMessage| object should not be used anymore.
   void ReleasePrimaryObject() { ResetBytes(); }
 };
-
 {{- if .IsResourceType }}
 {{- EndifFuchsia -}}
 {{- end }}

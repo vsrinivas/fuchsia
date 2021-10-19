@@ -70,6 +70,7 @@ struct ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_emptystruct::wire::Empty e;
+
   explicit WireRequest(const ::fidl_test_emptystruct::wire::Empty& e) : e(e) {
     _InitHeader();
   }
@@ -101,23 +102,6 @@ struct ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> final {
 class ::fidl::WireRequest<
     ::fidl_test_emptystruct::EmptyProtocol::Send>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-                        const ::fidl_test_emptystruct::wire::Empty& e)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, e) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size,
-                        const ::fidl_test_emptystruct::wire::Empty& e)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{e};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -162,15 +146,6 @@ class ::fidl::WireRequest<
 class ::fidl::WireRequest<
     ::fidl_test_emptystruct::EmptyProtocol::Send>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(const ::fidl_test_emptystruct::wire::Empty& e)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), e) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      const ::fidl_test_emptystruct::wire::Empty& e)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), e) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -241,6 +216,7 @@ struct ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_emptystruct::wire::Empty e;
+
   explicit WireResponse(const ::fidl_test_emptystruct::wire::Empty& e) : e(e) {
     _InitHeader();
   }
@@ -272,25 +248,6 @@ struct ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>
 class ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>::
     UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-                        const ::fidl_test_emptystruct::wire::Empty& e)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, e) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size,
-                        const ::fidl_test_emptystruct::wire::Empty& e)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireResponse _response{e};
-    message_.Encode<
-        ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>>(
-        &_response);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireResponse* response)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -338,15 +295,6 @@ class ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>::
 class ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>::
     OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(const ::fidl_test_emptystruct::wire::Empty& e)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), e) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      const ::fidl_test_emptystruct::wire::Empty& e)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), e) {}
   explicit OwnedEncodedMessage(
       ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>*
           response)
@@ -421,6 +369,7 @@ struct ::fidl::WireRequest<
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_emptystruct::wire::Empty e;
+
   explicit WireRequest(const ::fidl_test_emptystruct::wire::Empty& e) : e(e) {
     _InitHeader();
   }
@@ -454,23 +403,6 @@ struct ::fidl::WireRequest<
 class ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::
                               SendAndReceive>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-                        const ::fidl_test_emptystruct::wire::Empty& e)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, e) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size,
-                        const ::fidl_test_emptystruct::wire::Empty& e)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{e};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -516,15 +448,6 @@ class ::fidl::WireRequest<
     ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::OwnedEncodedMessage
     final {
  public:
-  explicit OwnedEncodedMessage(const ::fidl_test_emptystruct::wire::Empty& e)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), e) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      const ::fidl_test_emptystruct::wire::Empty& e)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), e) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -596,6 +519,7 @@ struct ::fidl::WireResponse<
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_emptystruct::wire::Empty e;
+
   explicit WireResponse(const ::fidl_test_emptystruct::wire::Empty& e) : e(e) {
     _InitHeader();
   }
@@ -627,24 +551,6 @@ struct ::fidl::WireResponse<
 class ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::
                                SendAndReceive>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-                        const ::fidl_test_emptystruct::wire::Empty& e)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size, e) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size,
-                        const ::fidl_test_emptystruct::wire::Empty& e)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireResponse _response{e};
-    message_.Encode<::fidl::WireResponse<
-        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>(&_response);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireResponse* response)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -692,15 +598,6 @@ class ::fidl::WireResponse<
     ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::OwnedEncodedMessage
     final {
  public:
-  explicit OwnedEncodedMessage(const ::fidl_test_emptystruct::wire::Empty& e)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), e) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      const ::fidl_test_emptystruct::wire::Empty& e)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), e) {}
   explicit OwnedEncodedMessage(
       ::fidl::WireResponse<
           ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* response)
@@ -774,9 +671,10 @@ template <>
 class ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::Send> final
     : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> _client,
-      const ::fidl_test_emptystruct::wire::Empty& e);
+  WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> client,
+      ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>*
+          request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -793,7 +691,8 @@ class ::fidl::WireUnownedResult<::fidl_test_emptystruct::EmptyProtocol::Send>
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      const ::fidl_test_emptystruct::wire::Empty& e);
+      ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>*
+          request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -806,12 +705,15 @@ template <>
 class ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
     final : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> _client,
-      const ::fidl_test_emptystruct::wire::Empty& e);
   WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> _client,
-      const ::fidl_test_emptystruct::wire::Empty& e, zx_time_t _deadline);
+      ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> client,
+      ::fidl::WireRequest<
+          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* request);
+  WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> client,
+      ::fidl::WireRequest<
+          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* request,
+      zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -876,8 +778,9 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      const ::fidl_test_emptystruct::wire::Empty& e, uint8_t* _response_bytes,
-      uint32_t _response_byte_capacity);
+      ::fidl::WireRequest<
+          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* request,
+      uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(
       ::fidl::WireResponse<
           ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* response)
@@ -964,8 +867,10 @@ class ::fidl::internal::WireSyncClientImpl<
   // necessary.
   ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::Send> Send(
       const ::fidl_test_emptystruct::wire::Empty& e) {
+    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> _request{
+        e};
     return ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::Send>(
-        _client_end(), e);
+        _client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -973,18 +878,23 @@ class ::fidl::internal::WireSyncClientImpl<
   ::fidl::WireUnownedResult<::fidl_test_emptystruct::EmptyProtocol::Send> Send(
       ::fidl::BufferSpan _request_buffer,
       const ::fidl_test_emptystruct::wire::Empty& e) {
+    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> _request{
+        e};
     return ::fidl::WireUnownedResult<
         ::fidl_test_emptystruct::EmptyProtocol::Send>(
-        _client_end(), _request_buffer.data, _request_buffer.capacity, e);
+        _client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request);
   }
 
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
   SendAndReceive(const ::fidl_test_emptystruct::wire::Empty& e) {
+    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+        _request{e};
     return ::fidl::WireResult<
         ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(_client_end(),
-                                                                e);
+                                                                &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -994,10 +904,12 @@ class ::fidl::internal::WireSyncClientImpl<
   SendAndReceive(::fidl::BufferSpan _request_buffer,
                  const ::fidl_test_emptystruct::wire::Empty& e,
                  ::fidl::BufferSpan _response_buffer) {
+    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+        _request{e};
     return ::fidl::WireUnownedResult<
         ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(
-        _client_end(), _request_buffer.data, _request_buffer.capacity, e,
-        _response_buffer.data, _response_buffer.capacity);
+        _client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
 
  private:
@@ -1082,19 +994,24 @@ class ::fidl::WireSyncClient<::fidl_test_emptystruct::EmptyProtocol> final {
   ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::Send> Send(
       const ::fidl_test_emptystruct::wire::Empty& e) const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> _request{
+        e};
     return ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::Send>(
-        this->client_end(), e);
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_emptystruct::EmptyProtocol::Send> Send(
       ::fidl::BufferSpan _request_buffer,
-      const ::fidl_test_emptystruct::wire::Empty& e) const {
+      const ::fidl_test_emptystruct::wire::Empty& e) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> _request{
+        e};
     return ::fidl::WireUnownedResult<
         ::fidl_test_emptystruct::EmptyProtocol::Send>(
-        this->client_end(), _request_buffer.data, _request_buffer.capacity, e);
+        this->client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request);
   }
 
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
@@ -1102,9 +1019,11 @@ class ::fidl::WireSyncClient<::fidl_test_emptystruct::EmptyProtocol> final {
   ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
   SendAndReceive(const ::fidl_test_emptystruct::wire::Empty& e) const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+        _request{e};
     return ::fidl::WireResult<
         ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(
-        this->client_end(), e);
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1113,12 +1032,14 @@ class ::fidl::WireSyncClient<::fidl_test_emptystruct::EmptyProtocol> final {
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
   SendAndReceive(::fidl::BufferSpan _request_buffer,
                  const ::fidl_test_emptystruct::wire::Empty& e,
-                 ::fidl::BufferSpan _response_buffer) const {
+                 ::fidl::BufferSpan _response_buffer) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+        _request{e};
     return ::fidl::WireUnownedResult<
         ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(
-        this->client_end(), _request_buffer.data, _request_buffer.capacity, e,
-        _response_buffer.data, _response_buffer.capacity);
+        this->client_end(), _request_buffer.data, _request_buffer.capacity,
+        &_request, _response_buffer.data, _response_buffer.capacity);
   }
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the

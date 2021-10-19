@@ -196,7 +196,9 @@ TEST(DebugDataTests, ConfirmMatchingFuchsiaIODefinitions) {
   zx::channel ch1, ch2;
   ASSERT_OK(zx::channel::create(0, &ch1, &ch2));
   fidl::ServerEnd<fio::Node> server_end(std::move(ch2));
-  fidl::WireRequest<fio::Directory::Open>::OwnedEncodedMessage msg(0, 0, "", std::move(server_end));
+  fidl::WireRequest<fio::Directory::Open> request{0, 0, fidl::StringView(""),
+                                                  std::move(server_end)};
+  fidl::OwnedEncodedMessage<fidl::WireRequest<fio::Directory::Open>> msg{&request};
   ASSERT_OK(msg.status());
   ASSERT_EQ(sizeof(fuchsia_io_DirectoryOpenRequest), msg.GetOutgoingMessage().CopyBytes().size());
 }

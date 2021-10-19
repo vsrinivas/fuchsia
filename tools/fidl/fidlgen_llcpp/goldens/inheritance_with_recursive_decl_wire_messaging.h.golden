@@ -66,6 +66,7 @@ struct ::fidl::WireRequest<
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent> request;
+
   explicit WireRequest(
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
           request)
@@ -101,31 +102,6 @@ struct ::fidl::WireRequest<
 class ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Parent::
                               First>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(
-      uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size,
-                              std::move(request)) {}
-  UnownedEncodedMessage(
-      uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-      uint32_t _backing_buffer_size,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{std::move(request)};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -172,20 +148,6 @@ class ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Parent::
 class ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Parent::
                               First>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()),
-                 std::move(request)) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()),
-                 std::move(request)) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -261,11 +223,11 @@ class ::fidl::WireResult<
     ::fidl_test_inheritancewithrecursivedecl::Parent::First>
     final : public ::fidl::Result {
  public:
-  explicit WireResult(
+  WireResult(
       ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-          _client,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request);
+          client,
+      ::fidl::WireRequest<
+          ::fidl_test_inheritancewithrecursivedecl::Parent::First>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -284,8 +246,8 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
           _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request);
+      ::fidl::WireRequest<
+          ::fidl_test_inheritancewithrecursivedecl::Parent::First>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -311,9 +273,11 @@ class ::fidl::internal::WireSyncClientImpl<
   ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Parent::First>
   First(::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request) {
+    ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Parent::First>
+        _request{std::move(request)};
     return ::fidl::WireResult<
-        ::fidl_test_inheritancewithrecursivedecl::Parent::First>(
-        _client_end(), std::move(request));
+        ::fidl_test_inheritancewithrecursivedecl::Parent::First>(_client_end(),
+                                                                 &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -323,10 +287,12 @@ class ::fidl::internal::WireSyncClientImpl<
   First(::fidl::BufferSpan _request_buffer,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request) {
+    ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Parent::First>
+        _request{std::move(request)};
     return ::fidl::WireUnownedResult<
         ::fidl_test_inheritancewithrecursivedecl::Parent::First>(
         _client_end(), _request_buffer.data, _request_buffer.capacity,
-        std::move(request));
+        &_request);
   }
 
  private:
@@ -414,9 +380,11 @@ class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Parent>
   First(::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request) const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Parent::First>
+        _request{std::move(request)};
     return ::fidl::WireResult<
         ::fidl_test_inheritancewithrecursivedecl::Parent::First>(
-        this->client_end(), std::move(request));
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -425,12 +393,14 @@ class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Parent>
       ::fidl_test_inheritancewithrecursivedecl::Parent::First>
   First(::fidl::BufferSpan _request_buffer,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-            request) const {
+            request) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Parent::First>
+        _request{std::move(request)};
     return ::fidl::WireUnownedResult<
         ::fidl_test_inheritancewithrecursivedecl::Parent::First>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
-        std::move(request));
+        &_request);
   }
 
  private:
@@ -515,6 +485,7 @@ struct ::fidl::WireRequest<
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent> request;
+
   explicit WireRequest(
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
           request)
@@ -550,31 +521,6 @@ struct ::fidl::WireRequest<
 class ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::
                               First>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(
-      uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size,
-                              std::move(request)) {}
-  UnownedEncodedMessage(
-      uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-      uint32_t _backing_buffer_size,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{std::move(request)};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -622,20 +568,6 @@ class ::fidl::WireRequest<
     ::fidl_test_inheritancewithrecursivedecl::Child::First>::OwnedEncodedMessage
     final {
  public:
-  explicit OwnedEncodedMessage(
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()),
-                 std::move(request)) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()),
-                 std::move(request)) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -713,6 +645,7 @@ struct ::fidl::WireRequest<
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent> request;
+
   explicit WireRequest(
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
           request)
@@ -748,31 +681,6 @@ struct ::fidl::WireRequest<
 class ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::
                               Second>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(
-      uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size,
-                              std::move(request)) {}
-  UnownedEncodedMessage(
-      uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-      uint32_t _backing_buffer_size,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{std::move(request)};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -819,20 +727,6 @@ class ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::
 class ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::
                               Second>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()),
-                 std::move(request)) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()),
-                 std::move(request)) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -907,11 +801,11 @@ template <>
 class ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::First>
     final : public ::fidl::Result {
  public:
-  explicit WireResult(
+  WireResult(
       ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
-          _client,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request);
+          client,
+      ::fidl::WireRequest<
+          ::fidl_test_inheritancewithrecursivedecl::Child::First>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -930,8 +824,8 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
           _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request);
+      ::fidl::WireRequest<
+          ::fidl_test_inheritancewithrecursivedecl::Child::First>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -945,11 +839,11 @@ class ::fidl::WireResult<
     ::fidl_test_inheritancewithrecursivedecl::Child::Second>
     final : public ::fidl::Result {
  public:
-  explicit WireResult(
+  WireResult(
       ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
-          _client,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request);
+          client,
+      ::fidl::WireRequest<
+          ::fidl_test_inheritancewithrecursivedecl::Child::Second>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -968,8 +862,8 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
           _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-          request);
+      ::fidl::WireRequest<
+          ::fidl_test_inheritancewithrecursivedecl::Child::Second>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -995,9 +889,11 @@ class ::fidl::internal::WireSyncClientImpl<
   ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::First>
   First(::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request) {
+    ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::First>
+        _request{std::move(request)};
     return ::fidl::WireResult<
-        ::fidl_test_inheritancewithrecursivedecl::Child::First>(
-        _client_end(), std::move(request));
+        ::fidl_test_inheritancewithrecursivedecl::Child::First>(_client_end(),
+                                                                &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1007,10 +903,12 @@ class ::fidl::internal::WireSyncClientImpl<
   First(::fidl::BufferSpan _request_buffer,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request) {
+    ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::First>
+        _request{std::move(request)};
     return ::fidl::WireUnownedResult<
         ::fidl_test_inheritancewithrecursivedecl::Child::First>(
         _client_end(), _request_buffer.data, _request_buffer.capacity,
-        std::move(request));
+        &_request);
   }
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
@@ -1018,9 +916,11 @@ class ::fidl::internal::WireSyncClientImpl<
   ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::Second>
   Second(::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
              request) {
+    ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::Second>
+        _request{std::move(request)};
     return ::fidl::WireResult<
-        ::fidl_test_inheritancewithrecursivedecl::Child::Second>(
-        _client_end(), std::move(request));
+        ::fidl_test_inheritancewithrecursivedecl::Child::Second>(_client_end(),
+                                                                 &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1030,10 +930,12 @@ class ::fidl::internal::WireSyncClientImpl<
   Second(::fidl::BufferSpan _request_buffer,
          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
              request) {
+    ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::Second>
+        _request{std::move(request)};
     return ::fidl::WireUnownedResult<
         ::fidl_test_inheritancewithrecursivedecl::Child::Second>(
         _client_end(), _request_buffer.data, _request_buffer.capacity,
-        std::move(request));
+        &_request);
   }
 
  private:
@@ -1121,9 +1023,11 @@ class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>
   First(::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
             request) const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::First>
+        _request{std::move(request)};
     return ::fidl::WireResult<
         ::fidl_test_inheritancewithrecursivedecl::Child::First>(
-        this->client_end(), std::move(request));
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1132,12 +1036,14 @@ class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>
       ::fidl_test_inheritancewithrecursivedecl::Child::First>
   First(::fidl::BufferSpan _request_buffer,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-            request) const {
+            request) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::First>
+        _request{std::move(request)};
     return ::fidl::WireUnownedResult<
         ::fidl_test_inheritancewithrecursivedecl::Child::First>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
-        std::move(request));
+        &_request);
   }
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
@@ -1146,9 +1052,11 @@ class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>
   Second(::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
              request) const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::Second>
+        _request{std::move(request)};
     return ::fidl::WireResult<
         ::fidl_test_inheritancewithrecursivedecl::Child::Second>(
-        this->client_end(), std::move(request));
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1157,12 +1065,14 @@ class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>
       ::fidl_test_inheritancewithrecursivedecl::Child::Second>
   Second(::fidl::BufferSpan _request_buffer,
          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-             request) const {
+             request) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::Second>
+        _request{std::move(request)};
     return ::fidl::WireUnownedResult<
         ::fidl_test_inheritancewithrecursivedecl::Child::Second>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
-        std::move(request));
+        &_request);
   }
 
  private:

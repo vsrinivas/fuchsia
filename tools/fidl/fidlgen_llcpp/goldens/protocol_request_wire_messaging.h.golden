@@ -78,6 +78,7 @@ struct ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
+
   WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
@@ -107,21 +108,6 @@ struct ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>
 class ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>::
     UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -166,14 +152,6 @@ class ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>::
 class ::fidl::WireRequest<
     ::fidl_test_protocolrequest::Parent::GetChild>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage()
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size())) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size())) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -246,6 +224,7 @@ struct ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> c;
+
   explicit WireResponse(
       ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c)
       : c(std::move(c)) {
@@ -280,31 +259,6 @@ struct ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>
 class ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>::
     UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(
-      uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-      ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size,
-                              std::move(c)) {}
-  UnownedEncodedMessage(
-      uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-      uint32_t _backing_buffer_size,
-      ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireResponse _response{std::move(c)};
-    message_.Encode<
-        ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>(
-        &_response);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireResponse* response)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -354,16 +308,6 @@ class ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>::
 class ::fidl::WireResponse<
     ::fidl_test_protocolrequest::Parent::GetChild>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(
-      ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), std::move(c)) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), std::move(c)) {}
   explicit OwnedEncodedMessage(
       ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>*
           response)
@@ -440,6 +384,7 @@ struct ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
+
   WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
@@ -470,21 +415,6 @@ class ::fidl::WireRequest<
     ::fidl_test_protocolrequest::Parent::GetChildRequest>::UnownedEncodedMessage
     final {
  public:
-  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size) {}
-  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                        uint32_t _backing_buffer_size)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -530,14 +460,6 @@ class ::fidl::WireRequest<
     ::fidl_test_protocolrequest::Parent::GetChildRequest>::OwnedEncodedMessage
     final {
  public:
-  explicit OwnedEncodedMessage()
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size())) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size())) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -611,6 +533,7 @@ struct ::fidl::WireResponse<
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl::ServerEnd<::fidl_test_protocolrequest::Child> r;
+
   explicit WireResponse(
       ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r)
       : r(std::move(r)) {
@@ -646,30 +569,6 @@ class ::fidl::WireResponse<
     ::fidl_test_protocolrequest::Parent::GetChildRequest>::UnownedEncodedMessage
     final {
  public:
-  UnownedEncodedMessage(
-      uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-      ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size,
-                              std::move(r)) {}
-  UnownedEncodedMessage(
-      uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-      uint32_t _backing_buffer_size,
-      ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireResponse _response{std::move(r)};
-    message_.Encode<::fidl::WireResponse<
-        ::fidl_test_protocolrequest::Parent::GetChildRequest>>(&_response);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireResponse* response)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -719,16 +618,6 @@ class ::fidl::WireResponse<
     ::fidl_test_protocolrequest::Parent::GetChildRequest>::OwnedEncodedMessage
     final {
  public:
-  explicit OwnedEncodedMessage(
-      ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), std::move(r)) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), std::move(r)) {}
   explicit OwnedEncodedMessage(
       ::fidl::WireResponse<
           ::fidl_test_protocolrequest::Parent::GetChildRequest>* response)
@@ -808,6 +697,7 @@ struct ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> c;
+
   explicit WireRequest(
       ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c)
       : c(std::move(c)) {
@@ -842,29 +732,6 @@ struct ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>
 class ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>::
     UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(
-      uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-      ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size,
-                              std::move(c)) {}
-  UnownedEncodedMessage(
-      uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-      uint32_t _backing_buffer_size,
-      ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{std::move(c)};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -911,16 +778,6 @@ class ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>::
 class ::fidl::WireRequest<
     ::fidl_test_protocolrequest::Parent::TakeChild>::OwnedEncodedMessage final {
  public:
-  explicit OwnedEncodedMessage(
-      ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), std::move(c)) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), std::move(c)) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -998,6 +855,7 @@ struct ::fidl::WireRequest<
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl::ServerEnd<::fidl_test_protocolrequest::Child> r;
+
   explicit WireRequest(
       ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r)
       : r(std::move(r)) {
@@ -1032,29 +890,6 @@ struct ::fidl::WireRequest<
 class ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::
                               TakeChildRequest>::UnownedEncodedMessage final {
  public:
-  UnownedEncodedMessage(
-      uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
-      ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                              _backing_buffer, _backing_buffer_size,
-                              std::move(r)) {}
-  UnownedEncodedMessage(
-      uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-      uint32_t _backing_buffer_size,
-      ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = _iovec_capacity,
-            .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
-            .backing_buffer = _backing_buffer,
-            .backing_buffer_capacity = _backing_buffer_size,
-        }) {
-    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-    FIDL_ALIGNDECL WireRequest _request{std::move(r)};
-    message_.Encode<WireRequest>(&_request);
-  }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         WireRequest* request)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
@@ -1102,16 +937,6 @@ class ::fidl::WireRequest<
     ::fidl_test_protocolrequest::Parent::TakeChildRequest>::OwnedEncodedMessage
     final {
  public:
-  explicit OwnedEncodedMessage(
-      ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), std::move(r)) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), std::move(r)) {}
   explicit OwnedEncodedMessage(WireRequest* request)
       : message_(1u, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), request) {}
@@ -1186,10 +1011,14 @@ template <>
 class ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild> final
     : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client);
   WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
+      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+      ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>*
+          request);
+  WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+      ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>*
+          request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
@@ -1251,6 +1080,8 @@ class ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChild>
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
+      ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>*
+          request,
       uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(
       ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>*
@@ -1327,10 +1158,14 @@ template <>
 class ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChildRequest>
     final : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client);
   WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
+      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+      ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>*
+          request);
+  WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+      ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>*
+          request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
@@ -1397,6 +1232,8 @@ class ::fidl::WireUnownedResult<
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
+      ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>*
+          request,
       uint8_t* _response_bytes, uint32_t _response_byte_capacity);
   explicit WireUnownedResult(
       ::fidl::WireResponse<
@@ -1476,9 +1313,10 @@ template <>
 class ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChild> final
     : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
-      ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c);
+  WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+      ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>*
+          request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -1495,7 +1333,8 @@ class ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::TakeChild>
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c);
+      ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>*
+          request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -1508,9 +1347,10 @@ template <>
 class ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChildRequest>
     final : public ::fidl::Result {
  public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
-      ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r);
+  WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client,
+      ::fidl::WireRequest<
+          ::fidl_test_protocolrequest::Parent::TakeChildRequest>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -1528,7 +1368,8 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
       uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r);
+      ::fidl::WireRequest<
+          ::fidl_test_protocolrequest::Parent::TakeChildRequest>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -1550,25 +1391,33 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_protocolrequest::Parent>
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild> GetChild() {
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>
+        _request{};
     return ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>(
-        _client_end());
+        _client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChild>
   GetChild(::fidl::BufferSpan _response_buffer) {
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>
+        _request{};
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocolrequest::Parent::GetChild>(
-        _client_end(), _response_buffer.data, _response_buffer.capacity);
+        _client_end(), &_request, _response_buffer.data,
+        _response_buffer.capacity);
   }
 
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChildRequest>
   GetChildRequest() {
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>
+        _request{};
     return ::fidl::WireResult<
-        ::fidl_test_protocolrequest::Parent::GetChildRequest>(_client_end());
+        ::fidl_test_protocolrequest::Parent::GetChildRequest>(_client_end(),
+                                                              &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1576,17 +1425,22 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_protocolrequest::Parent>
   ::fidl::WireUnownedResult<
       ::fidl_test_protocolrequest::Parent::GetChildRequest>
   GetChildRequest(::fidl::BufferSpan _response_buffer) {
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>
+        _request{};
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocolrequest::Parent::GetChildRequest>(
-        _client_end(), _response_buffer.data, _response_buffer.capacity);
+        _client_end(), &_request, _response_buffer.data,
+        _response_buffer.capacity);
   }
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChild> TakeChild(
       ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) {
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>
+        _request{std::move(c)};
     return ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChild>(
-        _client_end(), std::move(c));
+        _client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1594,19 +1448,23 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_protocolrequest::Parent>
   ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::TakeChild>
   TakeChild(::fidl::BufferSpan _request_buffer,
             ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) {
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>
+        _request{std::move(c)};
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocolrequest::Parent::TakeChild>(
         _client_end(), _request_buffer.data, _request_buffer.capacity,
-        std::move(c));
+        &_request);
   }
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChildRequest>
   TakeChildRequest(::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChildRequest>
+        _request{std::move(r)};
     return ::fidl::WireResult<
         ::fidl_test_protocolrequest::Parent::TakeChildRequest>(_client_end(),
-                                                               std::move(r));
+                                                               &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
@@ -1615,10 +1473,12 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_protocolrequest::Parent>
       ::fidl_test_protocolrequest::Parent::TakeChildRequest>
   TakeChildRequest(::fidl::BufferSpan _request_buffer,
                    ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChildRequest>
+        _request{std::move(r)};
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocolrequest::Parent::TakeChildRequest>(
         _client_end(), _request_buffer.data, _request_buffer.capacity,
-        std::move(r));
+        &_request);
   }
 
  private:
@@ -1699,18 +1559,23 @@ class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final {
   ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild> GetChild()
       const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>
+        _request{};
     return ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>(
-        this->client_end());
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChild>
-  GetChild(::fidl::BufferSpan _response_buffer) const {
+  GetChild(::fidl::BufferSpan _response_buffer) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>
+        _request{};
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocolrequest::Parent::GetChild>(
-        this->client_end(), _response_buffer.data, _response_buffer.capacity);
+        this->client_end(), &_request, _response_buffer.data,
+        _response_buffer.capacity);
   }
 
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
@@ -1718,20 +1583,25 @@ class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final {
   ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChildRequest>
   GetChildRequest() const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>
+        _request{};
     return ::fidl::WireResult<
         ::fidl_test_protocolrequest::Parent::GetChildRequest>(
-        this->client_end());
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<
       ::fidl_test_protocolrequest::Parent::GetChildRequest>
-  GetChildRequest(::fidl::BufferSpan _response_buffer) const {
+  GetChildRequest(::fidl::BufferSpan _response_buffer) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>
+        _request{};
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocolrequest::Parent::GetChildRequest>(
-        this->client_end(), _response_buffer.data, _response_buffer.capacity);
+        this->client_end(), &_request, _response_buffer.data,
+        _response_buffer.capacity);
   }
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
@@ -1739,20 +1609,24 @@ class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final {
   ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChild> TakeChild(
       ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>
+        _request{std::move(c)};
     return ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChild>(
-        this->client_end(), std::move(c));
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::TakeChild>
   TakeChild(::fidl::BufferSpan _request_buffer,
-            ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) const {
+            ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>
+        _request{std::move(c)};
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocolrequest::Parent::TakeChild>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
-        std::move(c));
+        &_request);
   }
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
@@ -1761,23 +1635,26 @@ class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final {
   TakeChildRequest(
       ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) const {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChildRequest>
+        _request{std::move(r)};
     return ::fidl::WireResult<
         ::fidl_test_protocolrequest::Parent::TakeChildRequest>(
-        this->client_end(), std::move(r));
+        this->client_end(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<
       ::fidl_test_protocolrequest::Parent::TakeChildRequest>
-  TakeChildRequest(
-      ::fidl::BufferSpan _request_buffer,
-      ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) const {
+  TakeChildRequest(::fidl::BufferSpan _request_buffer,
+                   ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
     ZX_ASSERT(client_end_.is_valid());
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChildRequest>
+        _request{std::move(r)};
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocolrequest::Parent::TakeChildRequest>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
-        std::move(r));
+        &_request);
   }
 
  private:
