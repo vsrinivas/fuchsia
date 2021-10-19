@@ -24,5 +24,8 @@ zx_library("rtc_llcpp") {
   sdk = "source"
   sdk_headers = [ "librtc_llcpp.h" ]
   sources = [ "librtc_llcpp.cc" ]
-  deps = [ "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_llcpp" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_llcpp",
+    "//src/lib/ddk",
+  ]
 }

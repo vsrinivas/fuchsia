@@ -9,8 +9,8 @@
 #include <zxtest/zxtest.h>
 
 #include "fuchsia/hardware/rtc/c/fidl.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 #include "zircon/errors.h"
-
 static fuchsia_hardware_rtc_Time make_rtc(uint16_t year, uint8_t month, uint8_t day, uint8_t hours,
                                           uint8_t minutes, uint8_t seconds) {
   return fuchsia_hardware_rtc_Time{seconds, minutes, hours, day, month, year};
@@ -234,77 +234,77 @@ static zx_status_t rtc_bad_set(void*, const fuchsia_hardware_rtc_Time* rtc) {
   return ZX_ERR_ACCESS_DENIED;
 }
 
-static void backstop_clear() { unsetenv("clock.backstop"); }
 
 TEST(RTCLibTest, rtc_backstop_seconds) {
-  backstop_clear();
-  EXPECT_EQ(0, rtc_backstop_seconds());
-  setenv("clock.backstop", "invalid", 1);
-  EXPECT_EQ(0, rtc_backstop_seconds());
-  setenv("clock.backstop", "1563584646", 1);
-  EXPECT_EQ(1563584646, rtc_backstop_seconds());
+  auto parent = MockDevice::FakeRootParent();
+  EXPECT_EQ(0, rtc_backstop_seconds(parent.get()));
+  parent->SetVariable("clock.backstop", "invalid");
+  EXPECT_EQ(0, rtc_backstop_seconds(parent.get()));
+  parent->SetVariable("clock.backstop", "1563584646");
+  EXPECT_EQ(1563584646, rtc_backstop_seconds(parent.get()));
 }
 
 TEST(RTCLibTest, SanitizeRTCPreservesGoodValue) {
-  backstop_clear();
+  auto parent = MockDevice::FakeRootParent();
   auto t0 = make_rtc(2018, 8, 4, 1, 19, 1);  // good value
   EXPECT_FALSE(rtc_is_invalid(&t0));
   rtc_clear();
 
-  sanitize_rtc(NULL, &t0, rtc_get, rtc_set);
+  sanitize_rtc(NULL, parent.get(), &t0, rtc_get, rtc_set);
   EXPECT_TRUE(rtc_equal(&t0, &default_rtc));
 }
 
 TEST(RTCLibTest, SanitizeRTCCorrectsBadValue) {
-  backstop_clear();
+  auto parent = MockDevice::FakeRootParent();
   auto t0 = make_rtc(2018, 8, 4, 99, 19, 1);  // bad value
   EXPECT_TRUE(rtc_is_invalid(&t0));
   rtc_clear();
 
-  sanitize_rtc(NULL, &t0, rtc_get, rtc_set);
+  sanitize_rtc(NULL, parent.get(), &t0, rtc_get, rtc_set);
   // don't actually care what value it's set to
   EXPECT_FALSE(rtc_is_invalid(&t0));
   EXPECT_FALSE(rtc_is_invalid(&default_rtc));
 }
 
 TEST(RTCLibTest, SanitizeRTCCheecksGetError) {
+  auto parent = MockDevice::FakeRootParent();
   auto t0 = make_rtc(2018, 8, 4, 99, 19, 1);
   EXPECT_TRUE(rtc_is_invalid(&t0));
   rtc_clear();
 
-  sanitize_rtc(NULL, &t0, rtc_bad_get, rtc_set);
+  sanitize_rtc(NULL, parent.get(), &t0, rtc_bad_get, rtc_set);
   EXPECT_TRUE(rtc_is_invalid(&default_rtc));
   EXPECT_TRUE(rtc_is_invalid(&t0));
 }
 
 TEST(RTCLibTest, SanitizeRTCCheecksSetError) {
-  backstop_clear();
+  auto parent = MockDevice::FakeRootParent();
   auto t0 = make_rtc(2018, 8, 4, 99, 19, 1);
   EXPECT_TRUE(rtc_is_invalid(&t0));
   rtc_clear();
 
-  sanitize_rtc(NULL, &t0, rtc_get, rtc_bad_set);
+  sanitize_rtc(NULL, parent.get(), &t0, rtc_get, rtc_bad_set);
   EXPECT_TRUE(rtc_is_invalid(&default_rtc));
   EXPECT_TRUE(rtc_is_invalid(&t0));
 }
 
 TEST(RTCLibTest, SanitizeRTCSetsBackstop) {
-  backstop_clear();
+  auto parent = MockDevice::FakeRootParent();
 
   // There's no backstop value, but we're ahead of the hardcoded backstop.
   auto before_backstop = make_rtc(2019, 2, 2, 0, 0, 0);
-  sanitize_rtc(nullptr, &before_backstop, &rtc_get, &rtc_set);
+  sanitize_rtc(nullptr, parent.get(), &before_backstop, &rtc_get, &rtc_set);
   EXPECT_TRUE(rtc_equal(&before_backstop, &default_rtc));
 
   // There's no backstop, and the clock is behind the hardcoded backstop.
   auto before_default = make_rtc(2018, 1, 1, 0, 0, 0);
-  sanitize_rtc(nullptr, &before_default, &rtc_get, &rtc_set);
+  sanitize_rtc(nullptr, parent.get(), &before_default, &rtc_get, &rtc_set);
   auto constant_rtc = make_rtc(2019, 1, 1, 0, 0, 0);
   EXPECT_TRUE(rtc_equal(&constant_rtc, &default_rtc));
 
   // There's a backstop, so any date prior will be moved to the backstop.
   auto backstop = make_rtc(2019, 7, 20, 1, 4, 6);
-  setenv("clock.backstop", "1563584646", 1);
-  sanitize_rtc(nullptr, &before_backstop, &rtc_get, &rtc_set);
+  parent->SetVariable("clock.backstop", "1563584646");
+  sanitize_rtc(nullptr, parent.get(), &before_backstop, &rtc_get, &rtc_set);
   EXPECT_TRUE(rtc_equal(&backstop, &default_rtc));
 }

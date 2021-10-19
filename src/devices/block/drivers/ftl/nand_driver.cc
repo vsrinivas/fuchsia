@@ -24,8 +24,9 @@
 namespace {
 
 uint32_t GetParameter(const char* key) {
-  const char* value = getenv(key);
-  if (!value) {
+  char value[32];
+  auto status = device_get_variable(nullptr, key, value, sizeof(value), nullptr);
+  if (status != ZX_OK) {
     return 0;
   }
   return static_cast<uint32_t>(strtoul(value, nullptr, 0));

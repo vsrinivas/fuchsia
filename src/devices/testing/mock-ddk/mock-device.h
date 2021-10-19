@@ -296,7 +296,7 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   // Map of metadata set by SetMetadata.
   std::unordered_map<uint32_t, std::vector<uint8_t>> metadata_;
   // Map of variables set by SetVariable.
-  std::unordered_map<const char*, std::string> variables_;
+  std::unordered_map<std::string, std::string> variables_;
 
   // parent in the device tree
   MockDevice* parent_ = nullptr;  // This will default to a nullptr, for the root parent.

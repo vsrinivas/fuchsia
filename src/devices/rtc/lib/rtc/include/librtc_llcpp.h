@@ -6,6 +6,7 @@
 #define SRC_DEVICES_RTC_LIB_RTC_INCLUDE_LIBRTC_LLCPP_H_
 
 #include <fidl/fuchsia.hardware.rtc/cpp/wire.h>
+#include <lib/ddk/driver.h>
 
 namespace rtc {
 
@@ -37,7 +38,7 @@ uint64_t SecondsSinceEpoch(FidlRtc::wire::Time rtc);
 // Validate that |rtc| is set to a valid time and is later than the default year
 // and environment backstop time. If it is, then return |rtc|.  Otherwise, return
 // the backstop time. If the backstop time isn't available, return the default rtc.
-FidlRtc::wire::Time SanitizeRtc(FidlRtc::wire::Time rtc);
+FidlRtc::wire::Time SanitizeRtc(zx_device_t* device, FidlRtc::wire::Time rtc);
 
 }  // namespace rtc
 

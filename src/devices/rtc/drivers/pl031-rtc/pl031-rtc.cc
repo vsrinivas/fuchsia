@@ -46,7 +46,7 @@ zx_status_t Pl031::Bind(void* /*unused*/, zx_device_t* dev) {
 
   // Retrieve and sanitize the RTC value. Set the RTC to the value.
   FidlRtc::wire::Time rtc = SecondsToRtc(MmioRead32(&pl031_device->regs_->dr));
-  rtc = SanitizeRtc(rtc);
+  rtc = SanitizeRtc(dev, rtc);
   status = pl031_device->SetRtc(rtc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s failed to set rtc: %s", __func__, zx_status_get_string(status));

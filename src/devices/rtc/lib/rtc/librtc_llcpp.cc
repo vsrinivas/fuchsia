@@ -4,6 +4,8 @@
 
 #include "librtc_llcpp.h"
 
+#include <lib/ddk/driver.h>
+
 namespace rtc {
 
 namespace {
@@ -56,9 +58,10 @@ uint64_t DaysInMonth(uint64_t month, uint64_t year) {
   return days;
 }
 
-uint64_t RtcBackstopSeconds() {
-  const char* str = getenv("clock.backstop");
-  if (str == NULL) {
+uint64_t RtcBackstopSeconds(zx_device_t* device) {
+  char str[32];
+  zx_status_t status = device_get_variable(device, "clock.backstop", str, sizeof(str), nullptr);
+  if (status != ZX_OK) {
     return 0;
   }
   return strtoll(str, NULL, 10);
@@ -154,8 +157,8 @@ uint64_t SecondsSinceEpoch(FidlRtc::wire::Time rtc) {
   return kLocalEpoch + kSecondsSinceLocalEpoch;
 }
 
-FidlRtc::wire::Time SanitizeRtc(FidlRtc::wire::Time rtc) {
-  const uint64_t kBackstop = RtcBackstopSeconds();
+FidlRtc::wire::Time SanitizeRtc(zx_device_t* device, FidlRtc::wire::Time rtc) {
+  const uint64_t kBackstop = RtcBackstopSeconds(device);
   if (!IsRtcValid(rtc) || rtc.year < kDefaultYear || SecondsSinceEpoch(rtc) < kBackstop) {
     // Return a backstop value read from the environment.
     if (kBackstop > 0) {

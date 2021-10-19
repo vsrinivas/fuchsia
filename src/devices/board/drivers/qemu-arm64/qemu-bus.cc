@@ -23,8 +23,10 @@
 namespace board_qemu_arm64 {
 
 static bool use_fake_display() {
-  const char* ufd = getenv("driver.qemu_bus.use_fake_display");
-  return (ufd != nullptr && (!strcmp(ufd, "1") || !strcmp(ufd, "true") || !strcmp(ufd, "on")));
+  char ufd[32];
+  zx_status_t status =
+      device_get_variable(nullptr, "driver.qemu_bus.use_fake_display", ufd, sizeof(ufd), nullptr);
+  return (status == ZX_OK && (!strcmp(ufd, "1") || !strcmp(ufd, "true") || !strcmp(ufd, "on")));
 }
 
 int QemuArm64::Thread() {

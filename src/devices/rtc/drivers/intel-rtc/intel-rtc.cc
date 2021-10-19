@@ -281,7 +281,7 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
       std::make_unique<RtcDevice>(parent, std::move(pio->result.mutable_response().pio),
                                   resource_info.base, resource_info.size);
   auto time = rtc->ReadTime();
-  auto new_time = rtc::SanitizeRtc(time);
+  auto new_time = rtc::SanitizeRtc(parent, time);
   rtc->WriteTime(new_time);
 
   status = rtc->DdkAdd(ddk::DeviceAddArgs("rtc").set_proto_id(ZX_PROTOCOL_RTC));

@@ -4,6 +4,7 @@
 
 #include "src/devices/lib/iommu/iommu.h"
 
+#include <lib/ddk/driver.h>
 #include <zircon/status.h>
 
 #include <optional>
@@ -18,8 +19,9 @@ namespace {
 x86::IommuManager* iommu_mgr = nullptr;
 
 bool use_hardware_iommu(void) {
-  const char* value = getenv("driver.iommu.enable");
-  if (value == NULL) {
+  char value[32];
+  auto status = device_get_variable(nullptr, "driver.iommu.enable", value, sizeof(value), nullptr);
+  if (status != ZX_OK) {
     return false;  // Default to false currently
   } else if (!strcmp(value, "0") || !strcmp(value, "false") || !strcmp(value, "off")) {
     return false;

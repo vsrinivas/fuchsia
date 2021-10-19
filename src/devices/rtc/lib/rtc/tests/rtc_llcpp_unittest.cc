@@ -6,6 +6,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "src/devices/testing/mock-ddk/mock-device.h"
+
 namespace rtc {
 
 namespace {
@@ -198,47 +200,47 @@ TEST(RtcLlccpTest, SecondsSinceEpoch) {
 }
 
 TEST(RtcLlccpTest, SanitizeRtc) {
-  unsetenv("clock.backstop");
+  auto parent = MockDevice::FakeRootParent();
 
   // Backstop seconds for March 6, 2001.
   const FidlRtc::wire::Time kBackstop = MakeRtc(2001, 3, 6, 0, 0, 0);
   const uint64_t kBackstopSeconds = SecondsSinceEpoch(kBackstop);
-  setenv("clock.backstop", std::to_string(kBackstopSeconds).c_str(), 1);
+  parent->SetVariable("clock.backstop", std::to_string(kBackstopSeconds).c_str());
 
   // Test with a valid RTC value. The same value should be returned.
   FidlRtc::wire::Time t0 = MakeRtc(2020, 10, 3, 0, 0, 0);
   EXPECT_TRUE(IsRtcValid(t0));
-  EXPECT_TRUE(IsRtcEqual(t0, SanitizeRtc(t0)));
+  EXPECT_TRUE(IsRtcEqual(t0, SanitizeRtc(parent.get(), t0)));
 
   // Test with a valid RTC value earlier than the backstop. The backstop
   // value should be returned.
   auto t1 = MakeRtc(2001, 1, 1, 0, 0, 0);
   EXPECT_TRUE(IsRtcValid(t1));
-  EXPECT_TRUE(IsRtcEqual(kBackstop, SanitizeRtc(t1)));
+  EXPECT_TRUE(IsRtcEqual(kBackstop, SanitizeRtc(parent.get(), t1)));
 
   // Test with an invalid RTC value. The backstop value should be returned.
   auto t2 = MakeRtc(1999, 13, 1, 0, 0, 0);
   EXPECT_FALSE(IsRtcValid(t2));
-  EXPECT_TRUE(IsRtcEqual(kBackstop, SanitizeRtc(t2)));
+  EXPECT_TRUE(IsRtcEqual(kBackstop, SanitizeRtc(parent.get(), t2)));
 
   // Test with a RTC value earlier than the default year. The backstop
   // value should be returned.
   auto t3 = MakeRtc(2011, 1, 1, 0, 0, 0);
   EXPECT_TRUE(IsRtcValid(t3));
-  EXPECT_TRUE(IsRtcEqual(kBackstop, SanitizeRtc(t3)));
+  EXPECT_TRUE(IsRtcEqual(kBackstop, SanitizeRtc(parent.get(), t3)));
 }
 
 // Sanitize an invalid RTC with an invalid backstop.git  The default RTC
 // should be returned.
 TEST(RtcLlccpTest, SanitizeRtcWithInvalidBackstop) {
-  unsetenv("clock.backstop");
+  auto parent = MockDevice::FakeRootParent();
 
   const FidlRtc::wire::Time kInvalidRtc = MakeRtc(2000, 13, 1, 0, 0, 0);
   EXPECT_FALSE(IsRtcValid(kInvalidRtc));
 
   // Test with an invalid backstop.
-  setenv("clock.backstop", "invalid", 1);
-  EXPECT_TRUE(IsRtcEqual(kDefaultRtc, SanitizeRtc(kInvalidRtc)));
+  parent->SetVariable("clock.backstop", "invalid");
+  EXPECT_TRUE(IsRtcEqual(kDefaultRtc, SanitizeRtc(parent.get(), kInvalidRtc)));
 }
 
 }  // namespace rtc

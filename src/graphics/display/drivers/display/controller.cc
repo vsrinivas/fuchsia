@@ -47,8 +47,10 @@ constexpr zx::duration kVsyncStallThreshold = zx::sec(10);
 constexpr zx::duration kVsyncMonitorInterval = kVsyncStallThreshold / 2;
 
 bool IsKernelFramebufferEnabled() {
-  const char* value = getenv("driver.display.enable-kernel-framebuffer");
-  if (!value) {
+  char value[32];
+  auto status = device_get_variable(nullptr, "driver.display.enable-kernel-framebuffer", value,
+                                    sizeof(value), nullptr);
+  if (status != ZX_OK) {
     return false;
   }
   if ((strcmp(value, "0") == 0) || (strcmp(value, "false") == 0) || (strcmp(value, "off") == 0)) {
@@ -192,8 +194,8 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
     fbl::AllocChecker ac;
     auto info_or_status = DisplayInfo::Create(displays_added[i], &i2c_);
     if (info_or_status.is_error()) {
-      zxlogf(INFO, "failed to add display %ld: %s",
-             displays_added[i].display_id, info_or_status.status_string());
+      zxlogf(INFO, "failed to add display %ld: %s", displays_added[i].display_id,
+             info_or_status.status_string());
       continue;
     }
     auto info = std::move(info_or_status.value());

@@ -126,7 +126,7 @@ static zx_status_t pcf8563_bind(void* ctx, zx_device_t* parent) {
   }
 
   fuchsia_hardware_rtc_Time rtc;
-  sanitize_rtc(context, &rtc, pcf8563_rtc_get, pcf8563_rtc_set);
+  sanitize_rtc(context, parent, &rtc, pcf8563_rtc_get, pcf8563_rtc_set);
   return ZX_OK;
 }
 

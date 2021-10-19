@@ -5,6 +5,7 @@
 #include "include/librtc.h"
 
 #include <inttypes.h>
+#include <lib/ddk/driver.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -125,9 +126,11 @@ uint8_t from_bcd(uint8_t bcd) { return ((bcd >> 4) * 10) + (bcd & 0xf); }
 // If "clock.backstop" is set in the environment, it is parsed as seconds
 // since the Unix epoch and returned. If it is un-set, or parsing fails, 0 is
 // returned.
-uint64_t rtc_backstop_seconds(void) {
-  const char* str = getenv("clock.backstop");
-  if (str == NULL) {
+//
+uint64_t rtc_backstop_seconds(zx_device_t* device) {
+  char str[32];
+  zx_status_t status = device_get_variable(device, "clock.backstop", str, sizeof(str), NULL);
+  if (status != ZX_OK) {
     return 0;
   }
   return strtoll(str, NULL, 10);
@@ -171,7 +174,7 @@ bool rtc_is_invalid(const fuchsia_hardware_rtc_Time* rtc) { return !rtc_is_valid
 
 // Validate that the RTC is set to a valid time, and to a relatively
 // sane one. Report the validated or reset time back via rtc.
-void sanitize_rtc(void* ctx, fuchsia_hardware_rtc_Time* rtc,
+void sanitize_rtc(void* ctx, zx_device_t* device, fuchsia_hardware_rtc_Time* rtc,
                   zx_status_t (*rtc_get)(void*, fuchsia_hardware_rtc_Time*),
                   zx_status_t (*rtc_set)(void*, const fuchsia_hardware_rtc_Time*)) {
   // January 1, 2019 00:00:00
@@ -188,7 +191,7 @@ void sanitize_rtc(void* ctx, fuchsia_hardware_rtc_Time* rtc,
     fprintf(stderr, "sanitize_rtc: could not get RTC value (%d)\n", result);
     return;
   };
-  uint64_t backstop = rtc_backstop_seconds();
+  uint64_t backstop = rtc_backstop_seconds(device);
   if (rtc_is_invalid(rtc) || rtc->year < default_year || seconds_since_epoch(rtc) < backstop) {
     if (backstop > 0) {
       fprintf(stderr, "sanitize_rtc: clock set to clock.backstop=%ld\n", backstop);
