@@ -78,7 +78,7 @@
             ],
             "metric_id": 9002,
             "metric_type": "Occurrence",
-            "selector": "bootstrap/fshost:root/minfs_upgrade:3_done",
+            "selector": "bootstrap/fshost:root/minfs_upgrade:3_finished",
             "use_legacy_cobalt": true
         }
     ],
