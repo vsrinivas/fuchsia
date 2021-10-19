@@ -210,7 +210,7 @@ class ConsoleOut {
 
 }  // namespace
 
-static bool init_shell(const zx::socket& usock) {
+static bool init_shell(const zx::socket& usock, bool enter_container) {
   vm_tools::vsh::SetupConnectionRequest conn_req;
   vm_tools::vsh::SetupConnectionResponse conn_resp;
 
@@ -224,6 +224,15 @@ static bool init_shell(const zx::socket& usock) {
   // instead)
   conn_req.set_command("");
   conn_req.clear_argv();
+  if (enter_container) {
+    conn_req.add_argv("lxc");
+    conn_req.add_argv("exec");
+    conn_req.add_argv("buster");
+    conn_req.add_argv("--");
+    conn_req.add_argv("login");
+    conn_req.add_argv("-f");
+    conn_req.add_argv("machina");
+  }
 
   auto env = conn_req.mutable_env();
   if (auto term_env = getenv("TERM"))
@@ -266,7 +275,7 @@ static bool init_shell(const zx::socket& usock) {
 }
 
 zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
-                       std::optional<uint32_t> o_port, async::Loop* loop,
+                       std::optional<uint32_t> o_port, bool enter_container, async::Loop* loop,
                        sys::ComponentContext* context) {
   uint32_t env_id, cid, port = o_port.value_or(vsh::kVshPort);
 
@@ -333,23 +342,25 @@ zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t>
   // Now |socket| is a zircon socket plumbed to a port on the guest's vsock
   // interface. The vshd service is hopefully on the other end of this pipe.
   // We communicate with the service via protobuf messages.
-  if (!init_shell(socket)) {
+  if (!init_shell(socket, enter_container)) {
     std::cerr << "vsh SetupConnection failed.";
     return ZX_ERR_INTERNAL;
   }
   // Reset the TTY when the connection closes.
   auto cleanup = fit::defer([]() { reset_tty(); });
 
-  // Directly inject some helper functions for connecting to container.
-  // This sleep below is to give bash some time to start after being `exec`d.
-  // Otherwise the input will be duplicated in the output stream.
-  usleep(100'000);
-  vm_tools::vsh::GuestMessage msg_out;
-  msg_out.mutable_data_message()->set_stream(vm_tools::vsh::STDIN_STREAM);
-  msg_out.mutable_data_message()->set_data(
-      "function buster() { lxc exec buster -- login -f machina ; } \n\n");
-  if (!vsh::SendMessage(socket, msg_out)) {
-    std::cerr << "Warning: Failed to inject helper function.\n";
+  if (!enter_container) {
+    // Directly inject some helper functions for connecting to container.
+    // This sleep below is to give bash some time to start after being `exec`d.
+    // Otherwise the input will be duplicated in the output stream.
+    usleep(100'000);
+    vm_tools::vsh::GuestMessage msg_out;
+    msg_out.mutable_data_message()->set_stream(vm_tools::vsh::STDIN_STREAM);
+    msg_out.mutable_data_message()->set_data(
+        "function buster() { lxc exec buster -- login -f machina ; } \n\n");
+    if (!vsh::SendMessage(socket, msg_out)) {
+      std::cerr << "Warning: Failed to inject helper function.\n";
+    }
   }
 
   // Set up the I/O loops

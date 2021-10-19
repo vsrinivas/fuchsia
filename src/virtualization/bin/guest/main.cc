@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include <filesystem>
 #include <iostream>
 #include <optional>
 
@@ -32,7 +33,7 @@ static void usage() {
             << "  serial        <env_id> <cid>\n"
             << "  socat         <env_id> <cid> <port>\n"
             << "  socat-listen  <env_id> <host-port>\n"
-            << "  vsh           [<env_id> [<cid> [<port>]]]\n";
+            << "  vsh           [-c] [<env_id> [<cid> [<port>]]]\n";
 }
 
 template <class T>
@@ -61,8 +62,11 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
   if (argc < 1) {
     return false;
   }
-  std::string_view cmd_view(argv[0]);
-  if (cmd_view == "balloon" && argc == 4) {
+
+  // In case the cmd is actually an absolute executable path take just the filename.
+  auto cmd = std::filesystem::path(argv[0]).filename();
+
+  if (cmd == "balloon" && argc == 4) {
     uint32_t env_id, cid, num_pages;
     if (!parse_number(argv[1], "environment ID", &env_id)) {
       return false;
@@ -74,7 +78,7 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     *func = [env_id, cid, num_pages, context]() -> zx_status_t {
       return handle_balloon(env_id, cid, num_pages, context);
     };
-  } else if (cmd_view == "balloon-stats" && argc == 3) {
+  } else if (cmd == "balloon-stats" && argc == 3) {
     uint32_t env_id, cid;
     if (!parse_number(argv[1], "environment ID", &env_id)) {
       return false;
@@ -84,7 +88,7 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     *func = [env_id, cid, context]() -> zx_status_t {
       return handle_balloon_stats(env_id, cid, context);
     };
-  } else if (cmd_view == "launch" && argc >= 2) {
+  } else if (cmd == "launch" && argc >= 2) {
     *func = [argc, argv, loop, context]() mutable -> zx_status_t {
       fuchsia::virtualization::GuestConfig cfg;
       if (!read_guest_cfg(argc, argv, &cfg)) {
@@ -92,9 +96,9 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
       }
       return handle_launch(argc - 1, argv + 1, loop, std::move(cfg), context);
     };
-  } else if (cmd_view == "list") {
+  } else if (cmd == "list") {
     *func = [context]() -> zx_status_t { return handle_list(context); };
-  } else if (cmd_view == "serial" && argc == 3) {
+  } else if (cmd == "serial" && argc == 3) {
     uint32_t env_id, cid;
     if (!parse_number(argv[1], "environment ID", &env_id)) {
       return false;
@@ -104,7 +108,7 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     *func = [env_id, cid, loop, context]() -> zx_status_t {
       return handle_serial(env_id, cid, loop, context);
     };
-  } else if (cmd_view == "socat" && argc == 4) {
+  } else if (cmd == "socat" && argc == 4) {
     uint32_t env_id, cid, port;
     if (!parse_number(argv[1], "environment ID", &env_id)) {
       return false;
@@ -116,7 +120,7 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     *func = [env_id, cid, port, loop, context]() -> zx_status_t {
       return handle_socat_connect(env_id, cid, port, loop, context);
     };
-  } else if (cmd_view == "socat-listen" && argc == 3) {
+  } else if (cmd == "socat-listen" && argc == 3) {
     uint32_t env_id, host_port;
     if (!parse_number(argv[1], "environment ID", &env_id)) {
       return false;
@@ -126,9 +130,15 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     *func = [env_id, host_port, loop, context]() -> zx_status_t {
       return handle_socat_listen(env_id, host_port, loop, context);
     };
-  } else if (cmd_view == "vsh" && (argc >= 1 && argc <= 4)) {
-    std::optional<uint32_t> env_id, cid, port;
+  } else if (cmd == "vsh" && (argc >= 1 && argc <= 5)) {
+    bool enter_container = false;
+    if (argc > 1 && std::string_view{argv[1]} == "-c") {
+      enter_container = true;
+      argc -= 1;
+      argv += 1;
+    }
 
+    std::optional<uint32_t> env_id, cid, port;
     bool success = true;
     switch (argc) {
       case 4:
@@ -153,8 +163,8 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
       return false;
     }
 
-    *func = [env_id, cid, port, loop, context]() -> zx_status_t {
-      return handle_vsh(env_id, cid, port, loop, context);
+    *func = [env_id, cid, port, enter_container, loop, context]() -> zx_status_t {
+      return handle_vsh(env_id, cid, port, enter_container, loop, context);
     };
   } else {
     return false;
