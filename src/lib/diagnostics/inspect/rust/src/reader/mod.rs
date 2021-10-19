@@ -533,39 +533,15 @@ mod tests {
     #[fuchsia::test]
     async fn test_load_string_reference() {
         let inspector = Inspector::new();
-        let state = inspector.state().unwrap();
-        let mut locked_state = state.try_lock().unwrap();
+        let root = inspector.root();
 
-        let _root = inspector.root();
+        let name_value = StringReference::from("abc");
+        let longer_name_value = StringReference::from("abcdefg");
 
-        // TODO(fxbug.dev/80337) -- all of the generic calls to allocate_block can changed later.
+        let child = root.create_child(&name_value);
+        child.record_int(&name_value, 5);
 
-        let name_of_node = locked_state.allocate_block(16).unwrap();
-        name_of_node.become_string_reference().unwrap();
-        name_of_node.write_string_reference_inline("abc".as_bytes()).unwrap();
-
-        let root_node = locked_state.allocate_block(16).unwrap();
-        root_node.become_node(name_of_node.index(), 0).unwrap();
-        name_of_node.increment_string_reference_count().unwrap();
-
-        let child_node = locked_state.allocate_block(16).unwrap();
-        child_node.become_int_value(5, name_of_node.index(), root_node.index()).unwrap();
-        name_of_node.increment_string_reference_count().unwrap();
-
-        let longer = locked_state.allocate_block(16).unwrap();
-        longer.become_string_reference().unwrap();
-        longer.write_string_reference_inline("abcdefg".as_bytes()).unwrap();
-
-        let linked = locked_state.allocate_block(16).unwrap();
-        linked.become_extent(0).unwrap();
-        linked.extent_set_contents("efg".as_bytes()).unwrap();
-
-        longer.set_extent_next_index(linked.index()).unwrap();
-
-        let bool_val = locked_state.allocate_block(16).unwrap();
-        bool_val.become_bool_value(false, longer.index(), 0).unwrap();
-
-        drop(locked_state);
+        root.record_bool(&longer_name_value, false);
 
         let result = read(&inspector).await.unwrap();
         assert_data_tree!(result, root: {
