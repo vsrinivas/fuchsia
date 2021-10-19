@@ -448,7 +448,10 @@ rust_stdlib_dir="prebuilt/third_party/rust/linux-x64/lib/rustlib/$target_triple/
 # However, libunwind.a is not listed, but is directly needed by code
 # emitted by rustc.  Listing this here works around a missing upload issue,
 # and adheres to the guidance of listing files instead of whole directories.
-extra_rust_stdlibs=("$rust_stdlib_dir"/libunwind.a)
+extra_rust_stdlibs=()
+if test -f "$project_root/$rust_stdlib_dir"/libunwind.a
+then extra_rust_stdlibs+=("$rust_stdlib_dir"/libunwind.a)
+fi
 
 # At this time, the linker we pass is known to be statically linked itself
 # and doesn't need to be accompanied by any shlibs.
