@@ -166,7 +166,7 @@ void TestAllocationOfMemory(GpuAllocator* allocator) {
   EXPECT_EQ(0u, allocation_stat_each_test.back().total_bytes_allocated);
 }
 
-void TestAllocationOfBuffers(GpuAllocator* allocator) {
+void TestAllocationOfBuffers(GpuAllocator* allocator, bool expect_size_strictly_equal = true) {
   // vk_mem_alloc allocates power of 2 buffers by default, so this makes the
   // tests easier to verify.
   constexpr vk::DeviceSize kMemorySize = 1024;
@@ -212,7 +212,11 @@ void TestAllocationOfBuffers(GpuAllocator* allocator) {
   auto buffer_dedicated0 = allocator->AllocateBuffer(nullptr, kMemorySize, kBufferUsageFlags,
                                                      kMemoryPropertyFlags, &ptr);
   EXPECT_TRUE(ptr);
-  EXPECT_EQ(kMemorySize, ptr->size());
+  if (expect_size_strictly_equal) {
+    EXPECT_EQ(kMemorySize, ptr->size());
+  } else {
+    EXPECT_LE(kMemorySize, ptr->size());
+  }
   EXPECT_EQ(0u, ptr->offset());
   EXPECT_NE(nullptr, ptr->mapped_ptr());
   UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[3]
@@ -238,7 +242,11 @@ void TestAllocationOfBuffers(GpuAllocator* allocator) {
   buffer_dedicated0 = allocator->AllocateBuffer(nullptr, kMemorySize, kBufferUsageFlags,
                                                 kMemoryPropertyFlags, &ptr);
   EXPECT_TRUE(ptr);
-  EXPECT_EQ(kMemorySize, ptr->size());
+  if (expect_size_strictly_equal) {
+    EXPECT_EQ(kMemorySize, ptr->size());
+  } else {
+    EXPECT_LE(kMemorySize, ptr->size());
+  }
   EXPECT_EQ(0u, ptr->offset());
   EXPECT_NE(nullptr, ptr->mapped_ptr());
   UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[6]
@@ -502,7 +510,10 @@ VK_TEST_P(VmaAllocator, Buffers) {
   }
   VmaGpuAllocator allocator(vulkan_queues->GetVulkanContext());
 
-  TestAllocationOfBuffers(&allocator);
+  // Some Vulkan devices (e.g. SwiftShaderf) may require a memory size larger
+  // than the expected size in tests. We should allow for this case when using
+  // VMA memory allocator.
+  TestAllocationOfBuffers(&allocator, /* expect_size_strictly_equal= */ false);
 }
 
 VK_TEST_P(VmaAllocator, Images) {

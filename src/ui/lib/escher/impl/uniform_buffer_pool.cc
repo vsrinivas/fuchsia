@@ -52,12 +52,15 @@ void UniformBufferPool::InternalAllocate() {
 
   // Determine the memory requirements for a single buffer.
   vk::MemoryRequirements reqs = vk_device().getBufferMemoryRequirements(new_buffers[0]);
-  // If necessary, we can write the logic to deal with the conditions below.
-  FX_CHECK(buffer_size_ == reqs.size);
-  FX_CHECK(buffer_size_ % reqs.alignment == 0);
+
+  // It is possible that the Vulkan device requires a larger memory size to hold
+  // the buffer (for metadata or alignment). In that case, we'll need to
+  // increase the allocation size and make it aligned to alignment requirement.
+  auto single_buffer_alloc_size =
+      reqs.size + (reqs.alignment - reqs.size % reqs.alignment) % reqs.alignment;
 
   // Allocate enough memory for all of the buffers.
-  reqs.size *= kBufferBatchSize;
+  reqs.size = single_buffer_alloc_size * kBufferBatchSize;
   auto batch_mem = allocator_->AllocateMemory(reqs, flags_);
 
   // See below: when OnReceiveOwnable() receives the newly-allocated buffer we
@@ -73,12 +76,12 @@ void UniformBufferPool::InternalAllocate() {
     vk_device().getBufferMemoryRequirements(new_buffers[i]);
 
     // Sub-allocate memory for each buffer.
-    auto mem = batch_mem->Suballocate(buffer_size_, i * buffer_size_);
+    auto mem = batch_mem->Suballocate(single_buffer_alloc_size, i * single_buffer_alloc_size);
 
     // Workaround for dealing with RefPtr/Reffable Adopt() semantics.  Let the
     // RefPtr go out of scope immediately; the Buffer will be added to
     // free_buffers_ via OnReceiveOwnable().
-    NaiveBuffer::AdoptVkBuffer(this, std::move(mem), buffer_size_, new_buffers[i]);
+    NaiveBuffer::AdoptVkBuffer(this, std::move(mem), single_buffer_alloc_size, new_buffers[i]);
   }
 
   is_allocating_ = false;

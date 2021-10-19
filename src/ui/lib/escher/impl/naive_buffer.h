@@ -5,6 +5,8 @@
 #ifndef SRC_UI_LIB_ESCHER_IMPL_NAIVE_BUFFER_H_
 #define SRC_UI_LIB_ESCHER_IMPL_NAIVE_BUFFER_H_
 
+#include <optional>
+
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
@@ -18,8 +20,10 @@ namespace impl {
 // object.
 class NaiveBuffer : public Buffer {
  public:
-  // This constructor uses |mem->size()| as its |size_| property.
-  static BufferPtr New(ResourceManager* manager, GpuMemPtr mem, vk::BufferUsageFlags usage_flags);
+  // This constructor could accept a user-defined |size_| property, or it
+  // uses |mem->size()| as its |size_| property if |size| is nullopt.
+  static BufferPtr New(ResourceManager* manager, GpuMemPtr mem, vk::BufferUsageFlags usage_flags,
+                       std::optional<vk::DeviceSize> size = std::nullopt);
 
   // This constructor adopts existing VkBuffer and uses |vk_buffer_size| as its
   // |size_| property, which can be different from the size of |mem|.

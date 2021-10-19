@@ -48,8 +48,8 @@ VK_TEST_F(BufferTest, CreateWithPreExistingMemory) {
 
   // Allocate 2 buffers, one from the original allocation, and one from the
   // sub-allocation.
-  auto buf1 = impl::NaiveBuffer::New(recycler, mem1, kBufferUsageFlags);
-  auto buf2 = impl::NaiveBuffer::New(recycler, mem2, kBufferUsageFlags);
+  auto buf1 = impl::NaiveBuffer::New(recycler, mem1, kBufferUsageFlags, kDummyBufferSize);
+  auto buf2 = impl::NaiveBuffer::New(recycler, mem2, kBufferUsageFlags, kBufferSize);
   ASSERT_TRUE(buf1);
   EXPECT_EQ(mem1->mapped_ptr(), buf1->host_ptr());
   ASSERT_TRUE(buf2);

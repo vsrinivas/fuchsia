@@ -18,7 +18,11 @@ class Buffer : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Buffer(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem, ResourcePtr backing_resource);
+  Buffer(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem, ResourcePtr backing_resource,
+         std::optional<vk::DeviceSize> size);
+
+  static vk::MemoryRequirements GetMemoryRequirements(Session* session,
+                                                      vk::DeviceSize size_requested);
 
   void Accept(class ResourceVisitor* visitor) override;
 

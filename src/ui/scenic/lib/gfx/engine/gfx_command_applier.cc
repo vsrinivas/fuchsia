@@ -1428,21 +1428,25 @@ ResourcePtr GfxCommandApplier::CreateImage3(Session* session, ResourceId id,
 
 ResourcePtr GfxCommandApplier::CreateBuffer(Session* session, ResourceId id, MemoryPtr memory,
                                             uint32_t memory_offset, uint32_t num_bytes) {
-  if (memory_offset + num_bytes > memory->size()) {
-    session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::CreateBuffer(): "
-                                          "buffer does not fit within memory (buffer offset: "
-                                       << memory_offset << ", buffer size: " << num_bytes
-                                       << ", memory size: " << memory->size() << ")";
+  auto memory_reqs = Buffer::GetMemoryRequirements(session, num_bytes);
+  if (memory_offset + memory_reqs.size > memory->size() ||
+      memory_offset % memory_reqs.alignment != 0) {
+    session->error_reporter()->ERROR()
+        << "scenic_impl::gfx::GfxCommandApplier::CreateBuffer(): "
+           "buffer does not fit within memory (buffer offset: "
+        << memory_offset << ", buffer size: " << num_bytes << ", memory size: " << memory->size()
+        << "; required memory size: " << memory_reqs.size
+        << ", memory alignment: " << memory_reqs.alignment << ")";
     return ResourcePtr();
   }
 
   // Make a pointer to a subregion of the memory, if necessary.
-  escher::GpuMemPtr gpu_mem =
-      (memory_offset > 0 || num_bytes < memory->size())
-          ? memory->GetGpuMem(session->error_reporter())->Suballocate(num_bytes, memory_offset)
-          : memory->GetGpuMem(session->error_reporter());
+  escher::GpuMemPtr gpu_mem = (memory_offset > 0 || memory_reqs.size < memory->size())
+                                  ? memory->GetGpuMem(session->error_reporter())
+                                        ->Suballocate(memory_reqs.size, memory_offset)
+                                  : memory->GetGpuMem(session->error_reporter());
 
-  return fxl::MakeRefCounted<Buffer>(session, id, std::move(gpu_mem), std::move(memory));
+  return fxl::MakeRefCounted<Buffer>(session, id, std::move(gpu_mem), std::move(memory), num_bytes);
 }
 
 ResourcePtr GfxCommandApplier::CreateScene(Session* session, ResourceId id,

@@ -40,14 +40,14 @@ bool CheckBufferMemoryRequirements(ResourceManager* manager, vk::Buffer vk_buffe
 }  // namespace
 
 BufferPtr NaiveBuffer::New(ResourceManager* manager, GpuMemPtr mem,
-                           vk::BufferUsageFlags usage_flags) {
+                           vk::BufferUsageFlags usage_flags, std::optional<vk::DeviceSize> size) {
   TRACE_DURATION("gfx", "escher::NaiveBuffer::New");
   auto device = manager->vulkan_context().device;
-  auto size = mem->size();
+  auto buffer_size = size.has_value() ? *size : mem->size();
 
   // Create buffer.
   vk::BufferCreateInfo buffer_create_info;
-  buffer_create_info.size = mem->size();
+  buffer_create_info.size = buffer_size;
   buffer_create_info.usage = usage_flags;
   buffer_create_info.sharingMode = vk::SharingMode::eExclusive;
   auto vk_buffer = ESCHER_CHECKED_VK_RESULT(device.createBuffer(buffer_create_info));
@@ -58,7 +58,7 @@ BufferPtr NaiveBuffer::New(ResourceManager* manager, GpuMemPtr mem,
     return nullptr;
   }
 
-  return fxl::AdoptRef(new NaiveBuffer(manager, std::move(mem), size, vk_buffer));
+  return fxl::AdoptRef(new NaiveBuffer(manager, std::move(mem), buffer_size, vk_buffer));
 }
 
 BufferPtr NaiveBuffer::AdoptVkBuffer(ResourceManager* manager, GpuMemPtr mem,
