@@ -13,6 +13,7 @@ import 'package:ermine/src/services/settings/network_address_service.dart';
 import 'package:ermine/src/services/settings/task_service.dart';
 import 'package:ermine/src/services/settings/timezone_service.dart';
 import 'package:ermine/src/services/settings/volume_service.dart';
+import 'package:ermine/src/services/settings/wifi_service.dart';
 import 'package:ermine/src/services/shortcuts_service.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine_utils/ermine_utils.dart';
@@ -50,6 +51,11 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   bool get channelPageVisible => _channelPageVisible.value;
   late final _channelPageVisible =
       (() => settingsPage.value == SettingsPage.channel).asComputed();
+
+  @override
+  bool get wifiPageVisible => _wifiPageVisible.value;
+  late final _wifiPageVisible =
+      (() => settingsPage.value == SettingsPage.wifi).asComputed();
 
   @override
   WiFiStrength get wifiStrength => _wifiStrength.value;
@@ -154,6 +160,10 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   set volumeMuted(bool? value) => _volumeMuted.value = value;
   final Observable<bool?> _volumeMuted = Observable<bool?>(null);
 
+  @override
+  final List<NetworkInformation> availableNetworks =
+      ObservableList<NetworkInformation>();
+
   final List<String> _timezones;
 
   @override
@@ -177,6 +187,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   final BrightnessService brightnessService;
   final ChannelService channelService;
   final VolumeService volumeService;
+  final WiFiService wifiService;
 
   SettingsStateImpl({
     required ShortcutsService shortcutsService,
@@ -188,6 +199,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     required this.brightnessService,
     required this.channelService,
     required this.volumeService,
+    required this.wifiService,
   })  : shortcutBindings = shortcutsService.keyboardBindings,
         _timezones = _loadTimezones(),
         _selectedTimezone = timezoneService.timezone.asObservable() {
@@ -275,6 +287,15 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
         volumeMuted = volumeService.muted;
       });
     };
+    wifiService.onChanged = () {
+      runInAction(() {
+        // TODO(fxb/79885): remove network names with non-ASCII characters
+        availableNetworks
+          ..clear()
+          ..addAll(wifiService.scannedNetworks)
+          ..removeWhere((network) => network.name.isEmpty);
+      });
+    };
   }
 
   @override
@@ -288,6 +309,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       brightnessService.start(),
       channelService.start(),
       volumeService.start(),
+      wifiService.start(),
     ]);
   }
 
@@ -300,6 +322,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     await memoryWatcherService.stop();
     await batteryWatcherService.stop();
     await channelService.stop();
+    await wifiService.stop();
     _dateTimeNow = null;
   }
 
@@ -314,6 +337,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     brightnessService.dispose();
     channelService.dispose();
     volumeService.dispose();
+    wifiService.dispose();
   }
 
   @override
@@ -384,4 +408,8 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   void setVolumeMute({bool muted = false}) =>
       runInAction(() => volumeService.muted = muted);
+
+  @override
+  void showWiFiSettings() =>
+      runInAction(() => settingsPage.value = SettingsPage.wifi);
 }

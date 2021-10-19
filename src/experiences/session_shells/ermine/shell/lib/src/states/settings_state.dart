@@ -11,6 +11,7 @@ import 'package:ermine/src/services/settings/network_address_service.dart';
 import 'package:ermine/src/services/settings/task_service.dart';
 import 'package:ermine/src/services/settings/timezone_service.dart';
 import 'package:ermine/src/services/settings/volume_service.dart';
+import 'package:ermine/src/services/settings/wifi_service.dart';
 import 'package:ermine/src/services/shortcuts_service.dart';
 import 'package:ermine/src/states/settings_state_impl.dart';
 import 'package:ermine/src/widgets/quick_settings.dart';
@@ -53,6 +54,7 @@ abstract class SettingsState implements TaskService {
   bool get timezonesPageVisible;
   bool get aboutPageVisible;
   bool get channelPageVisible;
+  bool get wifiPageVisible;
   WiFiStrength get wifiStrength;
   BatteryCharge get batteryCharge;
   String get dateTime;
@@ -77,6 +79,7 @@ abstract class SettingsState implements TaskService {
   IconData get volumeIcon;
   double? get volumeLevel;
   bool? get volumeMuted;
+  List<NetworkInformation> get availableNetworks;
 
   factory SettingsState.from({required ShortcutsService shortcutsService}) {
     return SettingsStateImpl(
@@ -89,6 +92,7 @@ abstract class SettingsState implements TaskService {
       brightnessService: BrightnessService(),
       channelService: ChannelService(),
       volumeService: VolumeService(),
+      wifiService: WiFiService(),
     ) as SettingsState;
   }
 
@@ -106,4 +110,5 @@ abstract class SettingsState implements TaskService {
   void checkForUpdates();
   void setVolumeLevel(double value);
   void setVolumeMute({bool muted});
+  void showWiFiSettings();
 }

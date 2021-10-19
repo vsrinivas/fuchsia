@@ -7,6 +7,7 @@ import 'package:ermine/src/widgets/settings/about_settings.dart';
 import 'package:ermine/src/widgets/settings/channel_settings.dart';
 import 'package:ermine/src/widgets/settings/shortcut_settings.dart';
 import 'package:ermine/src/widgets/settings/timezone_settings.dart';
+import 'package:ermine/src/widgets/settings/wifi_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
@@ -48,6 +49,7 @@ class QuickSettings extends StatelessWidget {
                     onChange: state.setTargetChannel,
                     updateAlert: appState.checkingForUpdatesAlert,
                   ),
+                if (state.wifiPageVisible) WiFiSettings(state: state)
               ],
             ),
           );
@@ -206,6 +208,27 @@ class _ListSettings extends StatelessWidget {
                           ),
                   );
                 }),
+                // Wi-Fi
+                Observer(builder: (_) {
+                  return ListTile(
+                    enabled:
+                        appState.settingsState.availableNetworks.isNotEmpty,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                    leading: Icon(Icons.wifi),
+                    title: Text(Strings.wifi),
+                    trailing: Wrap(
+                      alignment: WrapAlignment.end,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      children: [
+                        if (appState.settingsState.availableNetworks.isEmpty)
+                          Text(Strings.loading.toLowerCase()),
+                        Icon(Icons.arrow_right),
+                      ],
+                    ),
+                    onTap: appState.settingsState.showWiFiSettings,
+                  );
+                }),
                 // Channel
                 ListTile(
                   enabled: true,
@@ -258,24 +281,7 @@ class _ListSettings extends StatelessWidget {
                   title: Text(Strings.aboutFuchsia),
                   onTap: appState.settingsState.showAboutSettings,
                 ),
-
                 // Features not implemented yet.
-                // Wi-Fi
-                ListTile(
-                  enabled: false,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.wifi),
-                  title: Text(Strings.wifi),
-                  trailing: Wrap(
-                    alignment: WrapAlignment.end,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    children: [
-                      Text('not-implemented'),
-                      Icon(Icons.arrow_right),
-                    ],
-                  ),
-                ),
                 // Bluetooth
                 ListTile(
                   enabled: false,

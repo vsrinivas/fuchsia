@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:ermine/src/services/settings/task_service.dart';
 import 'package:fidl/fidl.dart' show InterfaceHandle, InterfaceRequest;
 import 'package:fidl_fuchsia_wlan_common/fidl_async.dart';
 import 'package:fidl_fuchsia_wlan_policy/fidl_async.dart';
-import 'package:flutter/foundation.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_services/services.dart';
@@ -85,13 +85,32 @@ class WiFiService implements TaskService {
         log.warning('Error encountered during scan: $e');
       }
       _scannedNetworks = aggregateScanResults.toSet().toList();
+      onChanged();
     }()
         .asStream()
         .listen((_) {});
   }
 
-  List<String?> get scannedNetworks =>
-      _scannedNetworks.map((network) => network.id?.ssid.toString()).toList();
+  List<NetworkInformation> get scannedNetworks => _scannedNetworks
+      .map((network) => NetworkInformation(
+          name: nameFromScannedNetwork(network),
+          compatible: compatibleFromScannedNetwork(network),
+          icon: iconFromScannedNetwork(network)))
+      .toList();
+
+  String nameFromScannedNetwork(ScanResult network) {
+    return utf8.decode(network.id!.ssid.toList());
+  }
+
+  IconData iconFromScannedNetwork(ScanResult network) {
+    return network.id!.type == SecurityType.none
+        ? Icons.signal_wifi_4_bar
+        : Icons.wifi_lock;
+  }
+
+  bool compatibleFromScannedNetwork(ScanResult network) {
+    return network.compatibility == Compatibility.supported;
+  }
 }
 
 class ClientStateUpdatesMonitor extends ClientStateUpdates {
@@ -107,4 +126,16 @@ class ClientStateUpdatesMonitor extends ClientStateUpdates {
 
   @override
   Future<void> onClientStateUpdate(ClientStateSummary summary) async {}
+}
+
+/// Network information needed for UI
+class NetworkInformation {
+  String name;
+  bool compatible;
+  IconData icon;
+
+  NetworkInformation(
+      {this.name = '',
+      this.compatible = false,
+      this.icon = Icons.signal_wifi_4_bar});
 }
