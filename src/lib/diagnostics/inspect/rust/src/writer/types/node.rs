@@ -615,6 +615,60 @@ mod tests {
         assert_eq!(node_block.child_count().unwrap(), 0);
     }
 
+    #[fuchsia::test]
+    async fn lazy_child() {
+        let inspector = Inspector::new();
+        let _lazy = inspector.root().create_lazy_child("lazy-1", || {
+            async move {
+                let insp = Inspector::new();
+                insp.root().record_lazy_child("parent", || {
+                    async move {
+                        let insp2 = Inspector::new();
+                        insp2.root().record_int("create-lazy-child", 0);
+                        insp2.root().record_int("create-lazy-child-2", 2);
+                        Ok(insp2)
+                    }
+                    .boxed()
+                });
+                Ok(insp)
+            }
+            .boxed()
+        });
+
+        inspector.root().record_lazy_child("lazy-2", || {
+            async move {
+                let insp = Inspector::new();
+                insp.root().record_bool("recorded-lazy-child", true);
+                Ok(insp)
+            }
+            .boxed()
+        });
+
+        inspector.root().record_lazy_values("lazy", || {
+            async move {
+                let insp = Inspector::new();
+                insp.root().record_bool("recorded-lazy-values", true);
+                Ok(insp)
+            }
+            .boxed()
+        });
+
+        let result = reader::read(&inspector).await.unwrap();
+
+        assert_data_tree!(result, root: {
+            "lazy-1": {
+                "parent": {
+                    "create-lazy-child": 0i64,
+                    "create-lazy-child-2": 2i64,
+                },
+            },
+            "lazy-2": {
+                "recorded-lazy-child": true,
+            },
+            "recorded-lazy-values": true,
+        });
+    }
+
     #[test]
     fn node_no_op_clone_weak() {
         let default = Node::default();
