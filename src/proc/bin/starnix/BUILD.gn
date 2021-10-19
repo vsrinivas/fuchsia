@@ -125,6 +125,7 @@ if (target_cpu == "x64") {
       "fs/socket/socket.rs",
       "fs/socket/socket_file.rs",
       "fs/socket/socket_fs.rs",
+      "fs/socket/socket_types.rs",
       "fs/socket/syscalls.rs",
       "fs/symlink_node.rs",
       "fs/syscalls.rs",

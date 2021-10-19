@@ -358,8 +358,9 @@ pub fn sys_recvmsg(
 
     let mut message_header = msghdr::default();
     ctx.task.mm.read_object(user_message_header.clone(), &mut message_header)?;
-
     let iovec = ctx.task.mm.read_iovec(message_header.msg_iov, message_header.msg_iovlen as i32)?;
+
+    let flags = SocketMessageFlags::from_bits_truncate(flags);
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
     let (bytes_read, _address, ancillary_data) =
         socket_ops.recvmsg(ctx.task, &file, &iovec, flags)?;
@@ -368,7 +369,7 @@ pub fn sys_recvmsg(
         let mut num_bytes_to_write = message_header.msg_controllen as usize;
         if !ancillary_data.can_fit_all_data(num_bytes_to_write) {
             // If not all data can fit, set the MSG_CTRUNC flag.
-            message_header.msg_flags = MSG_CTRUNC;
+            message_header.msg_flags = MSG_CTRUNC as u64;
             if !ancillary_data.can_fit_any_data(num_bytes_to_write) {
                 // If the length is not large enough to fit any real data, set the number of bytes
                 // to write to 0.
@@ -412,6 +413,7 @@ pub fn sys_recvfrom(
         return error!(ENOTSOCK);
     }
 
+    let flags = SocketMessageFlags::from_bits_truncate(flags);
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
     let (bytes_read, address, _control) = socket_ops.recvmsg(
         ctx.task,
@@ -466,6 +468,7 @@ pub fn sys_sendmsg(
         None
     };
 
+    let flags = SocketMessageFlags::from_bits_truncate(flags);
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
     Ok(socket_ops.sendmsg(ctx.task, &file, &iovec, dest_address, ancillary_data, flags)?.into())
 }
@@ -488,6 +491,7 @@ pub fn sys_sendto(
         maybe_parse_socket_address(&ctx.task, user_dest_address, dest_address_length as usize)?;
     let data = &[UserBuffer { address: user_buffer, length: buffer_length }];
 
+    let flags = SocketMessageFlags::from_bits_truncate(flags);
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
     Ok(socket_ops.sendmsg(&ctx.task, &file, data, dest_address, None, flags)?.into())
 }

@@ -159,18 +159,31 @@ impl MessageQueue {
         user_buffers: &mut UserBufferIterator<'_>,
     ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
         if let Some(message) = self.read_message() {
-            let bytes = message.data.bytes();
-            let mut bytes_read = 0;
-            while let Some(user_buffer) = user_buffers.next(bytes.len() - bytes_read) {
-                let bytes_chunk = &bytes[bytes_read..(bytes_read + user_buffer.length)];
-                task.mm.write_memory(user_buffer.address, bytes_chunk)?;
-                bytes_read += user_buffer.length;
-            }
-
-            return Ok((bytes_read, message.address, message.ancillary_data));
+            Ok((message.data.read(task, user_buffers)?, message.address, message.ancillary_data))
+        } else {
+            Ok((0, None, None))
         }
+    }
 
-        Ok((0, None, None))
+    /// Peeks the first message in the queue without removing it.
+    ///
+    /// # Parameters
+    /// - `task`: The task to read memory from.
+    /// - `user_buffers`: The `UserBufferIterator` to write the data to.
+    ///
+    /// Returns the number of bytes that were read into the buffer, and any ancillary data that was
+    /// read.
+    pub fn peek_datagram(
+        &self,
+        task: &Task,
+        user_buffers: &mut UserBufferIterator<'_>,
+    ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
+        if let Some(message) = self.peek_message() {
+            // TODO: Can you peek ancillary data?
+            Ok((message.data.read(task, user_buffers)?, message.address.clone(), None))
+        } else {
+            Ok((0, None, None))
+        }
     }
 
     /// Reads messages, where the total length of the returned messages is less than `max_bytes`.
@@ -245,6 +258,14 @@ impl MessageQueue {
             self.length -= message.len();
             message
         })
+    }
+
+    /// Peeks the next message in the buffer, if such a message exists.
+    fn peek_message(&self) -> Option<&Message> {
+        if self.closed {
+            return None;
+        }
+        self.messages.front()
     }
 
     /// Writes the the contents of `UserBufferIterator` into this socket.

@@ -21,11 +21,12 @@ impl FileOps for SocketFile {
     fd_impl_nonseekable!();
 
     fn read(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        self.recvmsg(task, file, data, 0).map(|(bytes_read, _, _)| bytes_read)
+        self.recvmsg(task, file, data, SocketMessageFlags::empty())
+            .map(|(bytes_read, _, _)| bytes_read)
     }
 
     fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        self.sendmsg(task, file, data, None, None, 0)
+        self.sendmsg(task, file, data, None, None, SocketMessageFlags::empty())
     }
 
     fn wait_async(
@@ -64,7 +65,7 @@ impl SocketFile {
         data: &[UserBuffer],
         mut dest_address: Option<SocketAddress>,
         mut ancillary_data: Option<AncillaryData>,
-        flags: u32,
+        flags: SocketMessageFlags,
     ) -> Result<usize, Errno> {
         // TODO: Implement more `flags`.
 
@@ -97,7 +98,7 @@ impl SocketFile {
             Ok(actual)
         };
 
-        if flags & MSG_DONTWAIT != 0 {
+        if flags.contains(SocketMessageFlags::DONTWAIT) {
             op()
         } else {
             file.blocking_op(
@@ -122,15 +123,15 @@ impl SocketFile {
         task: &Task,
         file: &FileObject,
         data: &[UserBuffer],
-        flags: u32,
+        flags: SocketMessageFlags,
     ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
         // TODO: Implement more `flags`.
 
         let op = || {
             let mut user_buffers = UserBufferIterator::new(data);
-            self.socket.read(task, &mut user_buffers)
+            self.socket.read(task, &mut user_buffers, flags)
         };
-        if flags & MSG_DONTWAIT != 0 {
+        if flags.contains(SocketMessageFlags::DONTWAIT) {
             op()
         } else {
             file.blocking_op(

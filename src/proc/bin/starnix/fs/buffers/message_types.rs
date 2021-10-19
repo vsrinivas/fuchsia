@@ -312,6 +312,23 @@ impl MessageData {
     pub fn bytes(&self) -> &[u8] {
         &self.bytes
     }
+
+    /// Copies the message out to the user buffers in the given task.
+    ///
+    /// Returns the number of bytes that were read into the buffer.
+    pub fn read(
+        &self,
+        task: &Task,
+        user_buffers: &mut UserBufferIterator<'_>,
+    ) -> Result<usize, Errno> {
+        let mut bytes_read = 0;
+        while let Some(user_buffer) = user_buffers.next(self.bytes.len() - bytes_read) {
+            let bytes_chunk = &self.bytes[bytes_read..(bytes_read + user_buffer.length)];
+            task.mm.write_memory(user_buffer.address, bytes_chunk)?;
+            bytes_read += user_buffer.length;
+        }
+        Ok(bytes_read)
+    }
 }
 
 impl From<Vec<u8>> for MessageData {

@@ -127,10 +127,10 @@ pub const SCM_SECURITY: u32 = 3;
 /// The maximum number of bytes that the file descriptor array can occupy.
 pub const SCM_MAX_FD: usize = 253;
 
-pub const MSG_PEEK: u64 = 2;
-pub const MSG_DONTROUTE: u64 = 4;
-pub const MSG_TRYHARD: u64 = 4;
-pub const MSG_CTRUNC: u64 = 8;
+pub const MSG_PEEK: u32 = 2;
+pub const MSG_DONTROUTE: u32 = 4;
+pub const MSG_TRYHARD: u32 = 4;
+pub const MSG_CTRUNC: u32 = 8;
 pub const MSG_PROBE: u32 = 0x10;
 pub const MSG_TRUNC: u32 = 0x20;
 pub const MSG_DONTWAIT: u32 = 0x40;

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bitflags::bitflags;
 use fuchsia_zircon as zx;
 use std::collections::VecDeque;
 
@@ -22,108 +21,6 @@ use std::sync::Arc;
 const SOCKET_MIN_SIZE: usize = 4 << 10;
 const SOCKET_DEFAULT_SIZE: usize = 208 << 10;
 const SOCKET_MAX_SIZE: usize = 4 << 20;
-
-bitflags! {
-    /// The flags for shutting down sockets.
-    pub struct SocketShutdownFlags: u32 {
-        /// Further receptions will be disallowed.
-        const READ = 1 << 0;
-
-        /// Durther transmissions will be disallowed.
-        const WRITE = 1 << 2;
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum SocketDomain {
-    /// The `Unix` socket domain contains sockets that were created with the `AF_UNIX` domain. These
-    /// sockets communicate locally, with other sockets on the same host machine.
-    Unix,
-}
-
-impl SocketDomain {
-    pub fn from_raw(raw: u16) -> Option<SocketDomain> {
-        match raw {
-            AF_UNIX => Some(SocketDomain::Unix),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum SocketType {
-    Stream,
-    Datagram,
-    Raw,
-    SeqPacket,
-}
-
-impl SocketType {
-    pub fn from_raw(raw: u32) -> Option<SocketType> {
-        match raw {
-            SOCK_STREAM => Some(SocketType::Stream),
-            SOCK_DGRAM => Some(SocketType::Datagram),
-            SOCK_RAW => Some(SocketType::Datagram),
-            SOCK_SEQPACKET => Some(SocketType::SeqPacket),
-            _ => None,
-        }
-    }
-
-    pub fn as_raw(&self) -> u32 {
-        match self {
-            SocketType::Stream => SOCK_STREAM,
-            SocketType::Datagram => SOCK_DGRAM,
-            SocketType::Raw => SOCK_RAW,
-            SocketType::SeqPacket => SOCK_SEQPACKET,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SocketAddress {
-    /// An address in the AF_UNSPEC domain.
-    #[allow(dead_code)]
-    Unspecified,
-
-    /// A `Unix` socket address contains the filesystem path that was used to bind the socket.
-    Unix(FsString),
-}
-
-pub const SA_FAMILY_SIZE: usize = std::mem::size_of::<uapi::__kernel_sa_family_t>();
-
-impl SocketAddress {
-    pub fn default_for_domain(domain: SocketDomain) -> SocketAddress {
-        match domain {
-            SocketDomain::Unix => SocketAddress::Unix(FsString::new()),
-        }
-    }
-
-    pub fn to_bytes(&self) -> Vec<u8> {
-        match self {
-            SocketAddress::Unspecified => AF_UNSPEC.to_ne_bytes().to_vec(),
-            SocketAddress::Unix(name) => {
-                if name.len() > 0 {
-                    let template = sockaddr_un::default();
-                    let path_length = std::cmp::min(template.sun_path.len() - 1, name.len());
-                    let mut bytes = vec![0u8; SA_FAMILY_SIZE + path_length + 1];
-                    bytes[..SA_FAMILY_SIZE].copy_from_slice(&AF_UNIX.to_ne_bytes());
-                    bytes[SA_FAMILY_SIZE..(SA_FAMILY_SIZE + path_length)]
-                        .copy_from_slice(&name[..path_length]);
-                    bytes
-                } else {
-                    AF_UNIX.to_ne_bytes().to_vec()
-                }
-            }
-        }
-    }
-
-    fn is_abstract_unix(&self) -> bool {
-        match self {
-            SocketAddress::Unix(name) => name.first() == Some(&b'\0'),
-            _ => false,
-        }
-    }
-}
 
 trait SocketOps: Send + Sync {
     fn connect(
@@ -367,7 +264,11 @@ impl Socket {
         }
     }
 
-    fn check_type_for_connect(&self, peer: &Socket, peer_address: &Option<SocketAddress>) -> Result<(), Errno> {
+    fn check_type_for_connect(
+        &self,
+        peer: &Socket,
+        peer_address: &Option<SocketAddress>,
+    ) -> Result<(), Errno> {
         if self.domain != peer.domain || self.socket_type != peer.socket_type {
             // According to ConnectWithWrongType in accept_bind_test, abstract
             // UNIX domain sockets return ECONNREFUSED rather than EPROTOTYPE.
@@ -396,8 +297,9 @@ impl Socket {
         &self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
+        flags: SocketMessageFlags,
     ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
-        self.lock().read(task, user_buffers, self.socket_type)
+        self.lock().read(task, user_buffers, self.socket_type, flags)
     }
 
     /// Reads all the available messages out of this socket.
@@ -543,11 +445,22 @@ impl SocketInner {
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
         socket_type: SocketType,
+        flags: SocketMessageFlags,
     ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
         let (bytes_read, address, ancillary_data) = match socket_type {
-            SocketType::Stream => self.messages.read_stream(task, user_buffers)?,
+            SocketType::Stream => {
+                if flags.contains(SocketMessageFlags::PEEK) {
+                    return error!(ENOSYS);
+                } else {
+                    self.messages.read_stream(task, user_buffers)?
+                }
+            }
             SocketType::Datagram | SocketType::SeqPacket | SocketType::Raw => {
-                self.messages.read_datagram(task, user_buffers)?
+                if flags.contains(SocketMessageFlags::PEEK) {
+                    self.messages.peek_datagram(task, user_buffers)?
+                } else {
+                    self.messages.read_datagram(task, user_buffers)?
+                }
             }
         };
         if bytes_read == 0 && user_buffers.remaining() > 0 && !self.messages.is_closed() {
