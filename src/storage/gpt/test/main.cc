@@ -21,10 +21,10 @@ int main(int argc, char** argv) {
       gUseRamDisk = false;
     } else if (!strcmp(argv[i], "-s") && (i + 1 < argc)) {
       gRandSeed = static_cast<unsigned int>(strtoul(argv[i + 1], NULL, 0));
-    } else {
-      // Ignore options we don't recognize. See ulib/unittest/README.md.
-      continue;
     }
+    // Ignore options that we don't recognize so that they are passed
+    // through to zxtest. Similarly, zxtest ignores options that it
+    // does not recognize (or only warns about them).
   }
   fprintf(stdout, "Starting test with %u\n", gRandSeed);
   srand(gRandSeed);
