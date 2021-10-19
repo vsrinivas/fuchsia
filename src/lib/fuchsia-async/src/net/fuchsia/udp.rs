@@ -104,6 +104,16 @@ impl DatagramSocket {
         Ok(Self(evented_fd))
     }
 
+    /// Create a new async datagram socket from an existing socket.
+    pub fn new_from_socket(socket: socket2::Socket) -> io::Result<Self> {
+        if socket.r#type()? != socket2::Type::DGRAM {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "socket type is not datagram"));
+        }
+        socket.set_nonblocking(true)?;
+        let evented_fd = unsafe { EventedFd::new(socket)? };
+        Ok(Self(evented_fd))
+    }
+
     /// Returns the socket address that this socket was created from.
     pub fn local_addr(&self) -> io::Result<socket2::SockAddr> {
         self.0.as_ref().local_addr()
@@ -303,5 +313,22 @@ impl<'a> Future for SendToVectored<'a> {
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         self.socket.async_send_to_vectored(self.bufs, &self.addr, cx)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn datagram_socket_new_from_socket() {
+        let sock = socket2::Socket::new(socket2::Domain::IPV4, socket2::Type::STREAM, None)
+            .expect("failed to create stream socket");
+        match super::DatagramSocket::new_from_socket(sock) {
+            Err(e) => {
+                if e.kind() != std::io::ErrorKind::InvalidInput {
+                    panic!("got: {:?}; want error of kind InvalidInput", e);
+                }
+            }
+            Ok(_) => panic!("DatagramSocket created from stream socket succeeded unexpectedly"),
+        }
     }
 }
