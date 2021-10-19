@@ -176,9 +176,10 @@ void SemanticsIntegrationTestV2::LaunchClient(std::string debug_name) {
   session_ = std::make_unique<scenic::Session>(std::move(session_pair.first),
                                                std::move(session_pair.second));
   session_->SetDebugName(debug_name);
-  bool is_rendering = false;
+  bool client_view_connected = false, test_view_attached_to_scene = false;
   session_->set_event_handler(
-      [this, debug_name, &is_rendering](const std::vector<fuchsia::ui::scenic::Event>& events) {
+      [this, debug_name, &client_view_connected,
+       &test_view_attached_to_scene](const std::vector<fuchsia::ui::scenic::Event>& events) {
         for (const auto& event : events) {
           if (!event.is_gfx())
             continue;  // skip non-gfx events
@@ -189,16 +190,18 @@ void SemanticsIntegrationTestV2::LaunchClient(std::string debug_name) {
             FX_CHECK(view_holder_) << "Expect that view holder is already set up.";
             view_holder_->SetViewProperties(properties);
             session_->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {});
-
-          } else if (event.gfx().is_view_state_changed()) {
-            FX_LOGS(INFO) << "View state changed to is_rendering: "
-                          << event.gfx().view_state_changed().state.is_rendering;
-            is_rendering = event.gfx().view_state_changed().state.is_rendering;
-            FX_VLOGS(1) << "Child's view content is rendering: " << std::boolalpha << is_rendering;
           } else if (event.gfx().is_view_connected()) {
             FX_LOGS(INFO) << "Client view connected";
+            client_view_connected = true;
           } else if (event.gfx().is_view_disconnected()) {
             FX_LOGS(INFO) << "Client view disconnected";
+            client_view_connected = false;
+          } else if (event.gfx().is_view_attached_to_scene()) {
+            FX_LOGS(INFO) << "Test view attached to scene";
+            test_view_attached_to_scene = true;
+          } else if (event.gfx().is_view_detached_from_scene()) {
+            FX_LOGS(INFO) << "Test view detached from scene";
+            test_view_attached_to_scene = false;
           }
         }
       });
@@ -228,11 +231,13 @@ void SemanticsIntegrationTestV2::LaunchClient(std::string debug_name) {
   view_provider->CreateViewWithViewRef(std::move(tokens_tf.view_token.value),
                                        std::move(client_control_ref), std::move(client_view_ref));
 
-  FX_LOGS(INFO) << "Waiting for client to begin rendering";
-  RunLoopUntil([&is_rendering] { return is_rendering; });
-  FX_LOGS(INFO) << "Client is rendering";
+  FX_LOGS(INFO) << "Waiting for scene to be ready";
+  RunLoopUntil([&test_view_attached_to_scene, &client_view_connected] {
+    return test_view_attached_to_scene && client_view_connected;
+  });
+  FX_LOGS(INFO) << "Scene is ready";
 
-  // Reset the event handler without capturing the is_rendering stack variable.
+  // Reset the event handler without capturing the stack variables.
   session_->set_event_handler(
       [this, debug_name](const std::vector<fuchsia::ui::scenic::Event>& events) {
         for (const auto& event : events) {
