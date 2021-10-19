@@ -25,23 +25,23 @@ type RealOrPresentationTime = flexible union {
 };
 
 type StartError = flexible enum {
-    CANCELLED = 1;
+    CANCELED = 1;
     ALREADY_STARTED = 2;
 };
 
 type StopError = flexible enum {
-    CANCELLED = 1;
+    CANCELED = 1;
     ALREADY_STOPPED = 2;
 };
 
 type SetRateError = flexible enum {
     NOT_SUPPORTED = 1;
-    CANCELLED = 2;
+    CANCELED = 2;
     SCHEDULED_IN_PAST = 3;
 };
 
 type AmendPresentationError = flexible enum {
-    CANCELLED = 1;
+    CANCELED = 1;
     SCHEDULED_IN_PAST = 2;
     NOT_STARTED = 3;
 };

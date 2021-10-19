@@ -70,7 +70,7 @@ type Packet = struct {
 
     /// Timestamp indicating when this packet should be presented as a
     /// presentation timeline value.
-    timestamp Timestamp;
+    timestamp PacketTimestamp;
 
     /// Capture time for this packet as a system monotonic time value.
     /// This field is generally zero, but may be set by capturers
@@ -104,7 +104,7 @@ type PayloadRange = struct {
 };
 
 /// Indicates the time of the packet in the presentation timeline.
-type Timestamp = flexible union {
+type PacketTimestamp = flexible union {
     /// Specific timestamp in the presentation timeline.
     1: specified int64;
 

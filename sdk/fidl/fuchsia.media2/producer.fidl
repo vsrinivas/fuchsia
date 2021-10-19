@@ -36,7 +36,7 @@ protocol ActiveProducer {
     ///
     /// Otherwise, if this method is called when a `Start` operation
     /// is already pending (requested but not completed), the pending
-    /// operation fails with a `CANCELLED` error.
+    /// operation fails with a `CANCELED` error.
     Start(struct {
         when RealTime:optional;
     }) -> (struct {
@@ -67,7 +67,7 @@ protocol ActiveProducer {
     ///
     /// Otherwise, if this method is called when a `Stop` operation
     /// is already pending (requested but not completed), the pending
-    /// operation fails with a `CANCELLED` error.
+    /// operation fails with a `CANCELED` error.
     Stop(struct {
         when RealOrPresentationTime:optional;
     }) -> (struct {

@@ -40,7 +40,7 @@ protocol ActiveConsumer {
     ///
     /// Otherwise, if this method is called when a `Start` operation
     /// is already pending (requested but not completed), the pending
-    /// operation fails with a `CANCELLED` error.
+    /// operation fails with a `CANCELED` error.
     Start(struct {
         when RealTime:optional;
         presentation_time zx.duration;
@@ -76,7 +76,7 @@ protocol ActiveConsumer {
     ///
     /// Otherwise, if this method is called when a `Stop` operation
     /// is already pending (requested but not completed), the pending
-    /// operation fails with a `CANCELLED` error.
+    /// operation fails with a `CANCELED` error.
     Stop(struct {
         when RealOrPresentationTime:optional;
     }) -> (struct {
@@ -123,7 +123,7 @@ protocol ActiveConsumer {
     ///
     /// Otherwise, if this method is called when a `SetRate` operation
     /// is already pending (requested but not completed), the pending
-    /// operation fails with a `CANCELLED` error.
+    /// operation fails with a `CANCELED` error.
     SetRate(struct {
         when RealOrPresentationTime:optional;
         desired_rate float32;
@@ -158,7 +158,7 @@ protocol ActiveConsumer {
     /// is sent when the failure is detected.
     ///
     /// If an amend operation is pending when presentation is stopped,
-    /// the pending operation fails with a `CANCELLED` error.
+    /// the pending operation fails with a `CANCELED` error.
     ///
     /// If this method is called when presentation is stopped, the
     /// call fails immediately with an `NOT_STARTED` error.
@@ -169,7 +169,7 @@ protocol ActiveConsumer {
     ///
     /// Otherwise, if this method is called when a `AmendPresentation`
     /// operation is already pending (requested but not completed),
-    /// the pending operation fails with a `CANCELLED` error.
+    /// the pending operation fails with a `CANCELED` error.
     AmendPresentation(struct {
         when RealOrPresentationTime:optional;
         delta zx.duration;
