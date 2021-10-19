@@ -749,6 +749,27 @@ TEST(SpawnTest, SpawnErrors) {
   }
 
   {
+    zxio_storage_t* storage = nullptr;
+    fdio_t* io = fdio_zxio_create(&storage);
+    int fd = fdio_bind_to_fd(io, -1, 0);
+    ASSERT_GE(fd, 3);
+
+    fdio_spawn_action_t actions[2];
+    actions[0].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
+    // Adding an invalid handle is an error.
+    actions[0].h.handle = ZX_HANDLE_INVALID;
+    actions[0].h.id = PA_FD;
+    actions[1].action = FDIO_SPAWN_ACTION_TRANSFER_FD;
+    actions[1].fd.local_fd = fd;
+    actions[1].fd.target_fd = 21;
+
+    status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr, 2,
+                            actions, process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, status, "%s", err_msg);
+    ASSERT_EQ(-1, close(fd));
+  }
+
+  {
     // FDIO_SPAWN_ACTION_CLONE_DIR with trailing '/' should be rejected.
     fdio_spawn_action_t action;
     action.action = FDIO_SPAWN_ACTION_CLONE_DIR;

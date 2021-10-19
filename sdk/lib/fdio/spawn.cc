@@ -13,6 +13,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/txn_header.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -26,10 +27,12 @@
 #include <zircon/syscalls.h>
 #include <zircon/utc.h>
 
+#include <algorithm>
 #include <bitset>
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
+#include <iterator>
 #include <list>
 #include <string>
 #include <utility>
@@ -89,7 +92,9 @@ static_assert(offsetof(fdio_spawn_action_t, name) == 8,
 static_assert(offsetof(fdio_spawn_action_t, name.data) == 8,
               "fdio_spawn_action_t must have a stable ABI");
 
-static void report_error(char* err_msg, const char* format, ...) {
+namespace {
+
+void report_error(char* err_msg, const char* format, ...) {
   if (!err_msg)
     return;
   va_list args;
@@ -98,7 +103,7 @@ static void report_error(char* err_msg, const char* format, ...) {
   va_end(args);
 }
 
-static zx_status_t load_path(const char* path, zx::vmo* out_vmo, char* err_msg) {
+zx_status_t load_path(const char* path, zx::vmo* out_vmo, char* err_msg) {
   fbl::unique_fd fd;
   zx_status_t status =
       fdio_open_fd(path, fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,
@@ -134,8 +139,8 @@ static zx_status_t load_path(const char* path, zx::vmo* out_vmo, char* err_msg) 
 
 // resolve_name makes a call to the fuchsia.process.Resolver service and may return a vmo and
 // associated loader service, if the name resolves within the current realm.
-static zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_executable,
-                                zx::channel* out_ldsvc, char* err_msg) {
+zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_executable,
+                         zx::channel* out_ldsvc, char* err_msg) {
   fidl::WireSyncClient<fprocess::Resolver> resolver;
   zx::channel request;
   zx_status_t status = zx::channel::create(0, &request, resolver.mutable_channel());
@@ -172,7 +177,7 @@ static zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_
 
 // Find the starting point of the interpreter and the interpreter arguments in a #! script header.
 // Note that the input buffer (line) will be modified to add a NUL after the interpreter name.
-static zx_status_t parse_interp_spec(char* line, char** interp_start, char** args_start) {
+zx_status_t parse_interp_spec(char* line, char** interp_start, char** args_start) {
   *args_start = nullptr;
 
   // Skip the '#!' prefix
@@ -224,8 +229,8 @@ static zx_status_t parse_interp_spec(char* line, char** interp_start, char** arg
 // updated based on the resolved directives. executable must always be valid, and ldsvc must be
 // valid at minimum for the 2nd case above, though it should generally always be valid as well when
 // calling this.
-static zx_status_t handle_interpreters(zx::vmo* executable, zx::channel* ldsvc,
-                                       std::list<std::string>* extra_args, char* err_msg) {
+zx_status_t handle_interpreters(zx::vmo* executable, zx::channel* ldsvc,
+                                std::list<std::string>* extra_args, char* err_msg) {
   extra_args->clear();
 
   // Mixing #!resolve and general #! within a single spawn is unsupported so that the #!
@@ -324,20 +329,144 @@ static zx_status_t handle_interpreters(zx::vmo* executable, zx::channel* ldsvc,
   return ZX_OK;
 }
 
-static zx_status_t send_handles(fidl::WireSyncClient<fprocess::Launcher>* launcher,
-                                size_t handle_capacity, uint32_t flags, zx_handle_t job,
-                                zx::channel ldsvc, zx_handle_t utc_clock, size_t action_count,
-                                const fdio_spawn_action_t* actions, char* err_msg) {
+// |SpawnActions| is a C++ helper that owns the resources referenced by a list
+// of |fdio_spawn_action_t|, and offers range-based iteration.
+class SpawnActions {
+ public:
+  SpawnActions(const fdio_spawn_action_t* actions, size_t action_count)
+      : actions_(actions), action_count_(action_count) {}
+
+  ~SpawnActions() {
+    // |actions_| will be nullptr if the user did not supply any actions, or if
+    // the actions ownership have been moved to a |ConsumingIterator|.
+    if (!actions_)
+      return;
+
+    for (size_t i = 0; i < action_count_; ++i) {
+      Free(actions_[i]);
+    }
+  }
+
+  // Iterates through the list of actions without consuming them.
+  const fdio_spawn_action_t* begin() const { return actions_; }
+  const fdio_spawn_action_t* end() const { return &actions_[action_count_]; }
+
+  // An iterator-style object that only allows traversing through the list of
+  // spawn actions once. The contract is that the user consumes any resources
+  // held by a particular action as they iterate over it.
+  //
+  // If the user did not finish iterating over all the actions, the iterator
+  // will close any resources held in the remaining actions.
+  class ConsumingIterator {
+   public:
+    ConsumingIterator(const fdio_spawn_action_t* actions, size_t action_count)
+        : actions_(actions), action_count_(action_count), used_(0) {}
+
+    ~ConsumingIterator() {
+      // |actions_| will be nullptr if the user did not supply any actions.
+      if (!actions_)
+        return;
+
+      for (size_t i = used_; i < action_count_; ++i) {
+        Free(actions_[i]);
+      }
+    }
+
+    ConsumingIterator(const ConsumingIterator&) = delete;
+    ConsumingIterator& operator=(ConsumingIterator&) = delete;
+    ConsumingIterator(ConsumingIterator&&) = delete;
+    ConsumingIterator& operator=(ConsumingIterator&&) = delete;
+
+    bool has_next() const { return used_ < action_count_; }
+    size_t index() const { return used_; }
+    const fdio_spawn_action_t& operator*() const { return actions_[used_]; }
+    const fdio_spawn_action_t* operator->() { return &actions_[used_]; }
+    ConsumingIterator& operator++() {
+      used_++;
+      return *this;
+    }
+
+   private:
+    const fdio_spawn_action_t* actions_;
+    size_t action_count_;
+    size_t used_;
+  };
+
+  // Converts the object into a consuming iterator. This transfers the resources
+  // owned by |SpawnActions| into the iterator.
+  ConsumingIterator ConsumeWhileIterating() && {
+    auto* actions = actions_;
+    actions_ = nullptr;
+    if (action_count_ > 0) {
+      ZX_DEBUG_ASSERT(actions != nullptr);
+    }
+    return ConsumingIterator(actions, action_count_);
+  }
+
+  // Frees the resources held in an |action|. If new spawn action types are
+  // introduced that holds resources, corresponding cleanup logic should be
+  // added here.
+  static void Free(const fdio_spawn_action_t& action) {
+    switch (action.action) {
+      case FDIO_SPAWN_ACTION_ADD_NS_ENTRY:
+        zx_handle_close(action.ns.handle);
+        break;
+      case FDIO_SPAWN_ACTION_ADD_HANDLE:
+        zx_handle_close(action.h.handle);
+        break;
+      case FDIO_SPAWN_ACTION_TRANSFER_FD:
+        close(action.fd.local_fd);
+        break;
+      default:
+        break;
+    }
+  }
+
+ private:
+  const fdio_spawn_action_t* actions_;
+  size_t action_count_;
+};
+
+// Bounds-checking helper for populating an array of |T| of predefined capacity.
+template <typename T>
+class Inserter {
+ public:
+  Inserter(T* data, size_t capacity) : data_(data), used_(0), capacity_(capacity) {}
+
+  T* AddNext() {
+    ZX_DEBUG_ASSERT(used_ < capacity_);
+    size_t idx = used_;
+    used_++;
+    return &data_[idx];
+  }
+
+  auto vector_view() { return fidl::VectorView<T>::FromExternal(data_, used_); }
+
+  size_t used() const { return used_; }
+
+ private:
+  T* data_;
+  size_t used_;
+  size_t capacity_;
+};
+
+zx_status_t send_handles_and_namespace(fidl::WireSyncClient<fprocess::Launcher>* launcher,
+                                       size_t handle_capacity, uint32_t flags, zx_handle_t job,
+                                       zx::channel ldsvc, zx_handle_t utc_clock, size_t name_count,
+                                       fdio_flat_namespace_t* flat,
+                                       SpawnActions::ConsumingIterator action, char* err_msg) {
+  zx_status_t status = ZX_OK;
   // TODO(abarth): In principle, we should chunk array into separate
   // messages if we exceed ZX_CHANNEL_MAX_MSG_HANDLES.
 
-  fprocess::wire::HandleInfo handle_infos[handle_capacity];
+  // VLAs cannot have zero size.
+  fprocess::wire::HandleInfo handle_infos_storage[std::max(handle_capacity, 1UL)];
+  fprocess::wire::NameInfo names_storage[std::max(name_count, 1UL)];
   // VLAs cannot be initialized.
-  memset(handle_infos, 0, sizeof(handle_infos));
-
-  zx_status_t status = ZX_OK;
-  uint32_t h = 0;
-  size_t a = 0;
+  memset(handle_infos_storage, 0, sizeof(handle_infos_storage));
+  memset(names_storage, 0, sizeof(names_storage));
+  Inserter handle_infos(handle_infos_storage, handle_capacity);
+  Inserter names(names_storage, name_count);
 
   std::bitset<FDIO_MAX_FD> fds_in_use;
   auto check_fd = [&fds_in_use](int fd) -> zx_status_t {
@@ -353,81 +482,90 @@ static zx_status_t send_handles(fidl::WireSyncClient<fprocess::Launcher>* launch
   };
 
   if ((flags & FDIO_SPAWN_CLONE_JOB) != 0) {
-    auto* handle_info = &handle_infos[h++];
+    auto* handle_info = handle_infos.AddNext();
     handle_info->id = PA_JOB_DEFAULT;
     status =
         zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, handle_info->handle.reset_and_get_address());
     if (status != ZX_OK) {
       report_error(err_msg, "failed to duplicate job: %d", status);
-      goto cleanup;
+      return status;
     }
   }
 
   // ldsvc may be valid if flags contains FDIO_SPAWN_DEFAULT_LDSVC or if a ldsvc was obtained
   // through handling a '#!resolve' directive.
   if (ldsvc.is_valid()) {
-    auto* handle_info = &handle_infos[h++];
+    auto* handle_info = handle_infos.AddNext();
     handle_info->id = PA_LDSVC_LOADER;
     handle_info->handle = std::move(ldsvc);
   }
 
-  for (; a < action_count; ++a) {
-    zx_handle_t fd_handle = ZX_HANDLE_INVALID;
-
-    switch (actions[a].action) {
+  for (; action.has_next(); ++action) {
+    switch (action->action) {
       case FDIO_SPAWN_ACTION_CLONE_FD: {
-        status = check_fd(actions[a].fd.target_fd);
+        zx_handle_t fd_handle = ZX_HANDLE_INVALID;
+        status = check_fd(action->fd.target_fd);
         if (status != ZX_OK) {
           report_error(err_msg, "invalid target %d to clone fd %d (action index %zu): %d",
-                       actions[a].fd.target_fd, actions[a].fd.local_fd, a, status);
-          goto cleanup;
+                       action->fd.target_fd, action->fd.local_fd, action.index(), status);
+          return status;
         }
-        status = fdio_fd_clone(actions[a].fd.local_fd, &fd_handle);
+        status = fdio_fd_clone(action->fd.local_fd, &fd_handle);
         if (status != ZX_OK) {
-          report_error(err_msg, "failed to clone fd %d (action index %zu): %d",
-                       actions[a].fd.local_fd, a, status);
-          goto cleanup;
+          report_error(err_msg, "failed to clone fd %d (action index %zu): %d", action->fd.local_fd,
+                       action.index(), status);
+          return status;
         }
+        auto* handle_info = handle_infos.AddNext();
+        handle_info->id = PA_HND(PA_FD, action->fd.target_fd);
+        handle_info->handle.reset(fd_handle);
         break;
       }
       case FDIO_SPAWN_ACTION_TRANSFER_FD: {
-        status = check_fd(actions[a].fd.target_fd);
+        zx_handle_t fd_handle = ZX_HANDLE_INVALID;
+        status = check_fd(action->fd.target_fd);
         if (status != ZX_OK) {
           report_error(err_msg, "invalid target %d to transfer fd %d (action index %zu): %d",
-                       actions[a].fd.target_fd, actions[a].fd.local_fd, a, status);
-          goto cleanup;
+                       action->fd.target_fd, action->fd.local_fd, action.index(), status);
+          return status;
         }
-        status = fdio_fd_transfer(actions[a].fd.local_fd, &fd_handle);
+        status = fdio_fd_transfer(action->fd.local_fd, &fd_handle);
         if (status != ZX_OK) {
           report_error(err_msg, "failed to transfer fd %d (action index %zu): %d",
-                       actions[a].fd.local_fd, a, status);
-          goto cleanup;
+                       action->fd.local_fd, action.index(), status);
+          return status;
         }
+        auto* handle_info = handle_infos.AddNext();
+        handle_info->id = PA_HND(PA_FD, action->fd.target_fd);
+        handle_info->handle.reset(fd_handle);
+        break;
+      }
+      case FDIO_SPAWN_ACTION_ADD_NS_ENTRY: {
+        auto* name = names.AddNext();
+        auto path = action->ns.prefix;
+        name->path = fidl::StringView::FromExternal(path);
+        name->directory = fidl::ClientEnd<fio::Directory>(zx::channel(action->ns.handle));
         break;
       }
       case FDIO_SPAWN_ACTION_ADD_HANDLE: {
-        if (PA_HND_TYPE(actions[a].h.id) == PA_FD) {
-          int fd = PA_HND_ARG(actions[a].h.id) & ~FDIO_FLAG_USE_FOR_STDIO;
+        if (PA_HND_TYPE(action->h.id) == PA_FD) {
+          int fd = PA_HND_ARG(action->h.id) & ~FDIO_FLAG_USE_FOR_STDIO;
           status = check_fd(fd);
           if (status != ZX_OK) {
             report_error(err_msg, "add-handle action has invalid fd %d (action index %zu): %d", fd,
-                         a, status);
-            goto cleanup;
+                         action.index(), status);
+            return status;
           }
         }
-        auto* handle_info = &handle_infos[h++];
-        handle_info->id = actions[a].h.id;
-        handle_info->handle.reset(actions[a].h.handle);
-        continue;
+        auto* handle_info = handle_infos.AddNext();
+        handle_info->id = action->h.id;
+        handle_info->handle.reset(action->h.handle);
+        break;
       }
       default: {
-        continue;
+        break;
       }
     }
-
-    auto* handle_info = &handle_infos[h++];
-    handle_info->id = PA_HND(PA_FD, actions[a].fd.target_fd);
-    handle_info->handle.reset(fd_handle);
   }
 
   // Do these after generic actions so that actions can set these fds first.
@@ -447,9 +585,9 @@ static zx_status_t send_handles(fidl::WireSyncClient<fprocess::Launcher>* launch
       }
       if (status != ZX_OK) {
         report_error(err_msg, "failed to clone fd %d: %d", fd, status);
-        goto cleanup;
+        return status;
       }
-      auto* handle_info = &handle_infos[h++];
+      auto* handle_info = handle_infos.AddNext();
       handle_info->id = PA_HND(PA_FD, fd);
       handle_info->handle.reset(fd_handle);
     }
@@ -457,91 +595,46 @@ static zx_status_t send_handles(fidl::WireSyncClient<fprocess::Launcher>* launch
 
   if ((flags & FDIO_SPAWN_CLONE_UTC_CLOCK) != 0) {
     if (utc_clock != ZX_HANDLE_INVALID) {
-      auto* handle_info = &handle_infos[h++];
+      auto* handle_info = handle_infos.AddNext();
       handle_info->id = PA_CLOCK_UTC;
       status = zx_handle_duplicate(
           utc_clock, ZX_RIGHT_READ | ZX_RIGHT_WAIT | ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER,
           handle_info->handle.reset_and_get_address());
       if (status != ZX_OK) {
         report_error(err_msg, "failed to clone UTC clock: %d", status);
-        goto cleanup;
+        return status;
       }
     }
   }
 
-  ZX_DEBUG_ASSERT(h <= handle_capacity);
-
-  status =
-      launcher
-          ->AddHandles(fidl::VectorView<fprocess::wire::HandleInfo>::FromExternal(handle_infos, h))
-          .status();
-
-  if (status != ZX_OK)
+  ZX_DEBUG_ASSERT(handle_infos.used() <= handle_capacity);
+  status = launcher->AddHandles(handle_infos.vector_view()).status();
+  if (status != ZX_OK) {
     report_error(err_msg, "failed to send handles: %d", status);
-
-  return status;
-
-cleanup:
-  // If |a| is less than |action_count|, that means we encountered an error
-  // before we processed all the actions. We need to iterate through the rest
-  // of the table and close the file descriptors and handles that we're
-  // supposed to consume.
-  for (size_t i = a; i < action_count; ++i) {
-    switch (actions[i].action) {
-      case FDIO_SPAWN_ACTION_TRANSFER_FD:
-        close(actions[i].fd.local_fd);
-        break;
-      case FDIO_SPAWN_ACTION_ADD_HANDLE:
-        zx_handle_close(actions[i].h.handle);
-        break;
-    }
+    return status;
   }
-
-  return status;
-}
-
-static zx_status_t send_namespace(fidl::WireSyncClient<fprocess::Launcher>* launcher,
-                                  size_t name_count, fdio_flat_namespace_t* flat,
-                                  size_t action_count, const fdio_spawn_action_t* actions,
-                                  char* err_msg) {
-  fprocess::wire::NameInfo names[name_count];
-  // VLAs cannot be initialized.
-  memset(names, 0, sizeof(names));
-
-  size_t n = 0;
 
   if (flat) {
-    while (n < flat->count) {
-      auto* name = &names[n];
-      auto path = flat->path[n];
+    for (size_t i = 0; i < flat->count; i++) {
+      auto* name = names.AddNext();
+      auto path = flat->path[i];
       name->path = fidl::StringView::FromExternal(path);
-      name->directory = fidl::ClientEnd<fio::Directory>(zx::channel(flat->handle[n]));
-      flat->handle[n] = ZX_HANDLE_INVALID;
-      n++;
+      name->directory = fidl::ClientEnd<fio::Directory>(zx::channel(flat->handle[i]));
+      flat->handle[i] = ZX_HANDLE_INVALID;
     }
   }
 
-  for (size_t i = 0; i < action_count; ++i) {
-    if (actions[i].action == FDIO_SPAWN_ACTION_ADD_NS_ENTRY) {
-      auto* name = &names[n];
-      auto path = actions[i].ns.prefix;
-      name->path = fidl::StringView::FromExternal(path);
-      name->directory = fidl::ClientEnd<fio::Directory>(zx::channel(actions[i].ns.handle));
-      n++;
-    }
-  }
-
-  ZX_DEBUG_ASSERT(n == name_count);
-
-  zx_status_t status =
-      launcher->AddNames(fidl::VectorView<fprocess::wire::NameInfo>::FromExternal(names, n))
-          .status();
-
-  if (status != ZX_OK)
+  ZX_DEBUG_ASSERT(names.used() == name_count);
+  status = launcher->AddNames(names.vector_view()).status();
+  if (status != ZX_OK) {
     report_error(err_msg, "failed send namespace: %d", status);
+    return status;
+  }
 
-  return status;
+  return ZX_OK;
 }
+
+}  // namespace
 
 __EXPORT
 zx_status_t fdio_spawn(zx_handle_t job, uint32_t flags, const char* path, const char* const* argv,
@@ -578,8 +671,9 @@ zx_status_t fdio_spawn_etc(zx_handle_t job, uint32_t flags, const char* path,
   return status != ZX_OK ? status : spawn_status;
 }
 
-static bool should_clone_namespace(std::string_view path,
-                                   const std::vector<std::string_view>& prefixes) {
+namespace {
+
+bool should_clone_namespace(std::string_view path, const std::vector<std::string_view>& prefixes) {
   for (const auto& prefix : prefixes) {
     // Only share path if there is a directory prefix in |prefixes| that matches the path.
     // Also take care to not match partial directory names. Ex, /foo should not match
@@ -592,8 +686,8 @@ static bool should_clone_namespace(std::string_view path,
   return false;
 }
 
-static void filter_flat_namespace(fdio_flat_namespace_t* flat,
-                                  const std::vector<std::string_view>& prefixes) {
+void filter_flat_namespace(fdio_flat_namespace_t* flat,
+                           const std::vector<std::string_view>& prefixes) {
   size_t read, write;
   for (read = 0, write = 0; read < flat->count; ++read) {
     if (should_clone_namespace(flat->path[read], prefixes)) {
@@ -611,94 +705,71 @@ static void filter_flat_namespace(fdio_flat_namespace_t* flat,
   flat->count = write;
 }
 
-__EXPORT
-zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executable_vmo,
+zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_vmo,
                            const char* const* argv, const char* const* explicit_environ,
-                           size_t action_count, const fdio_spawn_action_t* actions,
-                           zx_handle_t* process_out, char* err_msg) {
-  zx_status_t status = ZX_OK;
-  fdio_flat_namespace_t* flat = nullptr;
-  size_t name_count = 0;
-  size_t handle_capacity = 0;
-  std::vector<std::string_view> shared_dirs;
-  fidl::WireSyncClient<fprocess::Launcher> launcher;
-  zx::channel request;
-  zx::channel ldsvc;
-  const char* process_name = nullptr;
-  size_t process_name_size = 0;
-  std::list<std::string> extra_args;
-  zx_handle_t utc_clock = ZX_HANDLE_INVALID;
-  fprocess::wire::LaunchInfo launch_info = {
-      .executable = zx::vmo(executable_vmo),
-  };
-  executable_vmo = ZX_HANDLE_INVALID;
-
-  if (err_msg)
-    err_msg[0] = '\0';
-
+                           SpawnActions& spawn_actions, zx_handle_t* process_out, char* err_msg) {
   // We intentionally don't fill in |err_msg| for invalid args.
-
-  if (!launch_info.executable.is_valid() || !argv || (action_count != 0 && !actions)) {
-    status = ZX_ERR_INVALID_ARGS;
-    goto cleanup;
+  if (!executable_vmo.is_valid() || !argv) {
+    return ZX_ERR_INVALID_ARGS;
   }
 
   if (job == ZX_HANDLE_INVALID)
     job = zx_job_default();
 
-  process_name = argv[0];
+  const char* process_name = argv[0];
+  size_t process_name_size = 0;
+  std::vector<std::string_view> shared_dirs;
 
-  for (size_t i = 0; i < action_count; ++i) {
-    switch (actions[i].action) {
+  // Do a first pass over the actions and flags to calculate how many handles
+  // and namespace entries to send. In the second pass later, we would allocate
+  // data structures bespoke to that size.
+  size_t handle_capacity = 0;
+  size_t name_count = 0;
+  for (const auto& action : spawn_actions) {
+    switch (action.action) {
       case FDIO_SPAWN_ACTION_CLONE_FD:
       case FDIO_SPAWN_ACTION_TRANSFER_FD:
         ++handle_capacity;
         break;
       case FDIO_SPAWN_ACTION_ADD_NS_ENTRY:
-        if (actions[i].ns.handle == ZX_HANDLE_INVALID || !actions[i].ns.prefix) {
-          status = ZX_ERR_INVALID_ARGS;
-          goto cleanup;
+        if (action.ns.handle == ZX_HANDLE_INVALID || !action.ns.prefix) {
+          return ZX_ERR_INVALID_ARGS;
         }
         ++name_count;
         break;
       case FDIO_SPAWN_ACTION_ADD_HANDLE:
-        if (actions[i].h.handle == ZX_HANDLE_INVALID) {
-          status = ZX_ERR_INVALID_ARGS;
-          goto cleanup;
+        if (action.h.handle == ZX_HANDLE_INVALID) {
+          return ZX_ERR_INVALID_ARGS;
         }
-        if (actions[i].h.id == PA_CLOCK_UTC) {
+        if (action.h.id == PA_CLOCK_UTC) {
           // A UTC Clock handle is explicitly passed in.
           if ((flags & FDIO_SPAWN_CLONE_UTC_CLOCK) != 0) {
-            status = ZX_ERR_INVALID_ARGS;
             report_error(err_msg, "cannot clone global UTC clock and send explicit clock");
-            goto cleanup;
+            return ZX_ERR_INVALID_ARGS;
           }
         }
         ++handle_capacity;
         break;
       case FDIO_SPAWN_ACTION_SET_NAME:
-        if (actions[i].name.data == nullptr) {
-          status = ZX_ERR_INVALID_ARGS;
-          goto cleanup;
+        if (action.name.data == nullptr) {
+          return ZX_ERR_INVALID_ARGS;
         }
-        process_name = actions[i].name.data;
+        process_name = action.name.data;
         break;
       case FDIO_SPAWN_ACTION_CLONE_DIR: {
-        if (!actions[i].dir.prefix) {
-          status = ZX_ERR_INVALID_ARGS;
-          goto cleanup;
+        if (!action.dir.prefix) {
+          return ZX_ERR_INVALID_ARGS;
         }
         // The path must be absolute (rooted at '/') and not contain a trailing '/', but do
         // allow the root namespace to be specified as "/".
-        size_t len = strlen(actions[i].dir.prefix);
-        if (len == 0 || actions[i].dir.prefix[0] != '/' ||
-            (len > 1 && actions[i].dir.prefix[len - 1] == '/')) {
-          status = ZX_ERR_INVALID_ARGS;
-          goto cleanup;
-        } else if (len == 1 && actions[i].dir.prefix[0] == '/') {
+        size_t len = strlen(action.dir.prefix);
+        if (len == 0 || action.dir.prefix[0] != '/' ||
+            (len > 1 && action.dir.prefix[len - 1] == '/')) {
+          return ZX_ERR_INVALID_ARGS;
+        } else if (len == 1 && action.dir.prefix[0] == '/') {
           flags |= FDIO_SPAWN_CLONE_NAMESPACE;
         } else {
-          shared_dirs.push_back(actions[i].dir.prefix);
+          shared_dirs.push_back(action.dir.prefix);
         }
       } break;
       default:
@@ -707,25 +778,27 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   }
 
   if (!process_name) {
-    status = ZX_ERR_INVALID_ARGS;
-    goto cleanup;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   if ((flags & FDIO_SPAWN_CLONE_JOB) != 0)
     ++handle_capacity;
 
   // Need to clone ldsvc here so it's available for handle_interpreters.
+  zx::channel ldsvc;
+  zx_status_t status = ZX_OK;
   if ((flags & FDIO_SPAWN_DEFAULT_LDSVC) != 0) {
     status = dl_clone_loader_service(ldsvc.reset_and_get_address());
     if (status != ZX_OK) {
       report_error(err_msg, "failed to clone library loader service: %d", status);
-      goto cleanup;
+      return status;
     }
   }
 
   if ((flags & FDIO_SPAWN_CLONE_STDIO) != 0)
     handle_capacity += 3;
 
+  zx_handle_t utc_clock = ZX_HANDLE_INVALID;
   if ((flags & FDIO_SPAWN_CLONE_UTC_CLOCK) != 0) {
     utc_clock = zx_utc_reference_get();
     if (utc_clock != ZX_HANDLE_INVALID) {
@@ -733,41 +806,31 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
     }
   }
 
-  if (!shared_dirs.empty() || (flags & FDIO_SPAWN_CLONE_NAMESPACE) != 0) {
-    status = fdio_ns_export_root(&flat);
-    if (status != ZX_OK) {
-      report_error(err_msg, "Could not make copy of root namespace: %d", status);
-      goto cleanup;
-    }
-
-    // If we don't clone the entire namespace, we need to filter down to only the
-    // directories that are prefixed by paths in FDIO_SPAWN_ACTION_CLONE_DIR actions.
-    if ((flags & FDIO_SPAWN_CLONE_NAMESPACE) == 0) {
-      filter_flat_namespace(flat, shared_dirs);
-    }
-
-    name_count += flat->count;
-  }
-
+  fprocess::wire::LaunchInfo launch_info = {
+      .executable = std::move(executable_vmo),
+  };
+  std::list<std::string> extra_args;
   // resolve any '#!' directives that are present, updating executable and ldsvc as needed
   status = handle_interpreters(&launch_info.executable, &ldsvc, &extra_args, err_msg);
   if (status != ZX_OK) {
-    goto cleanup;
+    return status;
   }
   if (ldsvc.is_valid()) {
     ++handle_capacity;
   }
 
+  fidl::WireSyncClient<fprocess::Launcher> launcher;
+  zx::channel request;
   status = zx::channel::create(0, &request, launcher.mutable_channel());
   if (status != ZX_OK) {
     report_error(err_msg, "failed to create channel for launcher service: %d", status);
-    goto cleanup;
+    return status;
   }
   status = fdio_service_connect_by_name(fidl::DiscoverableProtocolName<fprocess::Launcher>,
                                         request.release());
   if (status != ZX_OK) {
     report_error(err_msg, "failed to connect to launcher service: %d", status);
-    goto cleanup;
+    return status;
   }
 
   // send any extra arguments from handle_interpreters, then the normal arguments.
@@ -792,7 +855,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
         launcher.AddArgs(fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(args)).status();
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send argument vector: %d", status);
-      goto cleanup;
+      return status;
     }
   }
 
@@ -811,7 +874,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
                  .status();
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send environment: %d", status);
-      goto cleanup;
+      return status;
     }
   } else if ((flags & FDIO_SPAWN_CLONE_ENVIRON) != 0) {
     size_t capacity = 0;
@@ -829,42 +892,39 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send environment clone with FDIO_SPAWN_CLONE_ENVIRON: %d",
                    status);
-      goto cleanup;
+      return status;
     }
   }
 
-  if (handle_capacity) {
-    status = send_handles(&launcher, handle_capacity, flags, job, std::move(ldsvc), utc_clock,
-                          action_count, actions, err_msg);
+  fdio_flat_namespace_t* flat = nullptr;
+  auto flat_namespace_cleanup = fit::defer([&flat] {
+    if (flat) {
+      fdio_ns_free_flat_ns(flat);
+    }
+  });
+
+  if (!shared_dirs.empty() || (flags & FDIO_SPAWN_CLONE_NAMESPACE) != 0) {
+    status = fdio_ns_export_root(&flat);
     if (status != ZX_OK) {
-      // When |send_handles| fails, it consumes all the action handles
-      // that it knows about, but it doesn't consume the handles used for
-      // |FDIO_SPAWN_ACTION_ADD_NS_ENTRY|.
-
-      for (size_t i = 0; i < action_count; ++i) {
-        switch (actions[i].action) {
-          case FDIO_SPAWN_ACTION_ADD_NS_ENTRY:
-            zx_handle_close(actions[i].ns.handle);
-            break;
-          default:
-            break;
-        }
-      }
-
-      action_count = 0;  // We've now consumed all the handles.
-      goto cleanup;
+      report_error(err_msg, "Could not make copy of root namespace: %d", status);
+      return status;
     }
+
+    // If we don't clone the entire namespace, we need to filter down to only the
+    // directories that are prefixed by paths in FDIO_SPAWN_ACTION_CLONE_DIR actions.
+    if ((flags & FDIO_SPAWN_CLONE_NAMESPACE) == 0) {
+      filter_flat_namespace(flat, shared_dirs);
+    }
+
+    name_count += flat->count;
   }
 
-  if (name_count) {
-    status = send_namespace(&launcher, name_count, flat, action_count, actions, err_msg);
-    if (status != ZX_OK) {
-      action_count = 0;
-      goto cleanup;
-    }
+  status = send_handles_and_namespace(&launcher, handle_capacity, flags, job, std::move(ldsvc),
+                                      utc_clock, name_count, flat,
+                                      std::move(spawn_actions).ConsumeWhileIterating(), err_msg);
+  if (status != ZX_OK) {
+    return status;
   }
-
-  action_count = 0;  // We've consumed all the actions at this point.
 
   process_name_size = strlen(process_name);
   if (process_name_size >= ZX_MAX_NAME_LEN)
@@ -874,55 +934,54 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   status = zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, launch_info.job.reset_and_get_address());
   if (status != ZX_OK) {
     report_error(err_msg, "failed to duplicate job handle: %d", status);
-    goto cleanup;
-  }
-  {
-    auto reply = launcher.Launch(std::move(launch_info));
-    status = reply.status();
-    if (status != ZX_OK) {
-      report_error(err_msg, "failed to send launch message: %d", status);
-      goto cleanup;
-    }
-
-    status = reply->status;
-    if (status == ZX_OK) {
-      // The launcher claimed to succeed but didn't actually give us a
-      // process handle. Something is wrong with the launcher.
-      if (!reply->process.is_valid()) {
-        status = ZX_ERR_BAD_HANDLE;
-        report_error(err_msg, "failed receive process handle");
-        // This jump skips over closing the process handle, but that's
-        // fine because we didn't receive a process handle.
-        goto cleanup;
-      }
-
-      if (process_out) {
-        *process_out = reply->process.release();
-      }
-    } else {
-      report_error(err_msg, "fuchsia.process.Launcher failed");
-    }
+    return status;
   }
 
-cleanup:
-  if (actions) {
-    for (size_t i = 0; i < action_count; ++i) {
-      switch (actions[i].action) {
-        case FDIO_SPAWN_ACTION_ADD_NS_ENTRY:
-          zx_handle_close(actions[i].ns.handle);
-          break;
-        case FDIO_SPAWN_ACTION_ADD_HANDLE:
-          zx_handle_close(actions[i].h.handle);
-          break;
-        default:
-          break;
-      }
-    }
+  fidl::WireResult reply = launcher.Launch(std::move(launch_info));
+  status = reply.status();
+  if (status != ZX_OK) {
+    report_error(err_msg, "failed to send launch message: %d", status);
+    return status;
   }
 
-  if (flat) {
-    fdio_ns_free_flat_ns(flat);
+  status = reply->status;
+  if (status != ZX_OK) {
+    report_error(err_msg, "fuchsia.process.Launcher failed");
+    return status;
   }
+
+  // The launcher claimed to succeed but didn't actually give us a
+  // process handle. Something is wrong with the launcher.
+  if (!reply->process.is_valid()) {
+    report_error(err_msg, "failed receive process handle");
+    return ZX_ERR_BAD_HANDLE;
+  }
+
+  if (process_out) {
+    *process_out = reply->process.release();
+  }
+
+  return ZX_OK;
+}
+
+}  // namespace
+
+__EXPORT
+zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executable_vmo,
+                           const char* const* argv, const char* const* explicit_environ,
+                           size_t action_count, const fdio_spawn_action_t* actions,
+                           zx_handle_t* process_out, char* err_msg) {
+  zx::vmo executable(executable_vmo);
+  if (err_msg)
+    err_msg[0] = '\0';
+
+  if (action_count > 0 && !actions) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  SpawnActions spawn_actions(actions, action_count);
+  zx_status_t status = spawn_vmo_impl(job, flags, std::move(executable), argv, explicit_environ,
+                                      spawn_actions, process_out, err_msg);
 
   // If we observe ZX_ERR_NOT_FOUND in the VMO spawn, it really means a
   // dependency of launching could not be fulfilled, but clients of spawn_etc

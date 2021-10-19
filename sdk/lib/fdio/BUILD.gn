@@ -107,6 +107,7 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_llcpp",
       "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_llcpp",
       "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
+      "//sdk/lib/fit",
       "//sdk/lib/stdcompat",
       "//sdk/lib/zxio",
       "//sdk/lib/zxio:inception",
