@@ -9,11 +9,11 @@ use crate::types::*;
 use nom::{
     self,
     branch::alt,
-    bytes::complete::{escaped, is_not, tag},
-    character::complete::{
-        alphanumeric1, char, digit1, hex_digit1, multispace0, multispace1, none_of,
+    bytes::complete::{escaped, is_not, tag, take_while, take_while1},
+    character::complete::{alphanumeric1, char, digit1, hex_digit1, multispace0, none_of, one_of},
+    combinator::{
+        all_consuming, complete, cond, map, map_opt, map_res, opt, peek, recognize, verify,
     },
-    combinator::{all_consuming, complete, map, map_opt, map_res, opt, peek, recognize, verify},
     error::{ErrorKind, ParseError},
     multi::{many0, many1, separated_nonempty_list},
     sequence::{delimited, preceded, tuple},
@@ -38,12 +38,22 @@ fn comparison(input: &str) -> IResult<&str, ComparisonOperator> {
     ))(input)
 }
 
+/// Recognizes 1 or more spaces or tabs.
+fn whitespace1<'a, E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, &'a str, E> {
+    take_while1(move |c| c == ' ' || c == '\t')(input)
+}
+
+/// Recognizes 0 or more spaces or tabs.
+fn whitespace0<'a, E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, &'a str, E> {
+    take_while(move |c| c == ' ' || c == '\t')(input)
+}
+
 /// Parses the `has any` operator in the two flavors we support: all characters uppercase or all
 /// of them lowercase.
 fn has_any(input: &str) -> IResult<&str, (&str, &str)> {
     let (rest, (has, _, any)) = alt((
-        tuple((tag("has"), multispace1, tag("any"))),
-        tuple((tag("HAS"), multispace1, tag("ANY"))),
+        tuple((tag("has"), whitespace1, tag("any"))),
+        tuple((tag("HAS"), whitespace1, tag("ANY"))),
     ))(input)?;
     Ok((rest, (has, any)))
 }
@@ -52,8 +62,8 @@ fn has_any(input: &str) -> IResult<&str, (&str, &str)> {
 /// of them lowercase.
 fn has_all(input: &str) -> IResult<&str, (&str, &str)> {
     let (rest, (has, _, all)) = alt((
-        tuple((tag("has"), multispace1, tag("all"))),
-        tuple((tag("HAS"), multispace1, tag("ALL"))),
+        tuple((tag("has"), whitespace1, tag("all"))),
+        tuple((tag("HAS"), whitespace1, tag("ALL"))),
     ))(input)?;
     Ok((rest, (has, all)))
 }
@@ -257,7 +267,7 @@ where
     F: Fn(&'a str) -> IResult<&'a str, O, E>,
     E: ParseError<&'a str>,
 {
-    preceded(multispace0, parser)
+    preceded(whitespace0, parser)
 }
 
 /// Parses the input as a string literal wrapped in double quotes. Returns the value
@@ -398,23 +408,53 @@ fn component_selector(input: &str) -> IResult<&str, ComponentSelector<'_>> {
     Ok((rest, ComponentSelector { segments: segments.into_iter().map(|s| s.into()).collect() }))
 }
 
+/// A comment allowed in selector files.
+fn comment(input: &str) -> IResult<&str, &str> {
+    let (rest, comment) = spaced(preceded(tag("//"), is_not("\n\r")))(input)?;
+    if rest.len() > 0 {
+        let (rest, _) = one_of("\n\r")(rest)?; // consume the newline character
+        return Ok((rest, comment));
+    }
+    Ok((rest, comment))
+}
+
+/// Recognizes selectors, with comments allowed or disallowed.
+fn do_parse_selector<'a>(
+    allow_inline_comment: bool,
+) -> impl Fn(&'a str) -> IResult<&'a str, Selector<'a>, (&'a str, ErrorKind)> {
+    map(
+        tuple((
+            spaced(component_selector),
+            tag(":"),
+            tree_selector,
+            opt(metadata_selector),
+            cond(allow_inline_comment, opt(comment)),
+            multispace0,
+        )),
+        move |(component, _, tree, metadata, _, _)| Selector { component, tree, metadata },
+    )
+}
+
 /// Parses the input into a `Selector`.
 pub fn selector(input: &str) -> Result<Selector<'_>, (&str, ErrorKind)> {
-    // TODO(fxbug.dev/55118): allow comments when parsing files.
-    // TODO(fxbug.dev/55118): enforce wrapping component+tree selectors in quotes when they contain
-    // whitespace.
-    let result = complete(all_consuming(tuple((
-        multispace0,
-        component_selector,
-        tag(":"),
-        tree_selector,
-        opt(metadata_selector),
-        multispace0,
-    ))))(input);
+    let result = complete(all_consuming(do_parse_selector(/*allow_inline_comment=*/ false)))(input);
     match result {
-        Err(nom::Err::Error(e)) => Err(e),
-        Err(nom::Err::Failure(e)) => Err(e),
-        Ok((_, (_, component, _, tree, metadata, _))) => Ok(Selector { component, tree, metadata }),
+        Ok((_, s)) => Ok(s),
+        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(e),
+        _ => unreachable!("through the complete combinator we get rid of Incomplete"),
+    }
+}
+
+/// Parses a newline-separated list of selectors. Each line might contain comments and selectors
+/// are allowed to contain inline comments as well.
+pub fn selector_list(input: &str) -> Result<Vec<Selector<'_>>, (&str, ErrorKind)> {
+    let result = complete(all_consuming(many1(alt((
+        map(comment, |_| None),
+        map(do_parse_selector(/*allow_inline_comment=*/ true), |s| Some(s)),
+    )))))(input);
+    match result {
+        Ok((_, matches)) => Ok(matches.into_iter().filter_map(|s| s).collect()),
+        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(e),
         _ => unreachable!("through the complete combinator we get rid of Incomplete"),
     }
 }
@@ -525,9 +565,6 @@ mod tests {
             ":c",
         ];
         for string in test_vector {
-            if !all_consuming(tree_selector)(string).is_err() {
-                println!("GOT: {:?}", all_consuming(tree_selector)(string));
-            }
             assert!(all_consuming(tree_selector)(string).is_err(), "{} should fail", string);
         }
     }
@@ -578,6 +615,41 @@ mod tests {
 
         // At least one filter is required when `where` is provided.
         assert!(selector("foo:bar where").is_err());
+    }
+
+    #[test]
+    fn parse_selector_list() {
+        let input = "// this is a comment
+          foo/bar:baz where pid = 123  // inline comment for a selector starting with whitespace
+          //this is a comment starting with whitespace
+core/**:quux:rust\t// another inline comment
+        ";
+        let selectors = selector_list(input).unwrap();
+        assert_eq!(
+            selectors,
+            vec![
+                Selector {
+                    component: ComponentSelector {
+                        segments: vec![Segment::Exact("foo"), Segment::Exact("bar"),],
+                    },
+                    tree: TreeSelector { node: vec![Segment::Exact("baz")], property: None },
+                    metadata: Some(MetadataSelector::new(vec![FilterExpression {
+                        identifier: Identifier::Pid,
+                        op: Operation::Comparison(ComparisonOperator::Equal, Value::Number(123)),
+                    },])),
+                },
+                Selector {
+                    component: ComponentSelector {
+                        segments: vec![Segment::Exact("core"), Segment::Pattern("**"),],
+                    },
+                    tree: TreeSelector {
+                        node: vec![Segment::Exact("quux")],
+                        property: Some(Segment::Exact("rust")),
+                    },
+                    metadata: None,
+                },
+            ]
+        );
     }
 
     macro_rules! test_sym_parser {
@@ -1070,7 +1142,7 @@ mod tests {
         assert_eq!(
             Ok(("", expected)),
             metadata_selector(
-                "where line_number = 10, filename in [\"foo.rs\"],
+                "where line_number = 10, filename in [\"foo.rs\"],\
                  severity <= ERROR, tags HAS ALL [\"foo\", \"bar\"]"
             )
         );
