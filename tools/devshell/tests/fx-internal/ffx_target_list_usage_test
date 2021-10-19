@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### Test expected usage of device-finder in fx scripts
+### Test expected usage of ffx target list in fx scripts
 
 
 BT_FILE_DEPS=(
@@ -18,9 +18,6 @@ BT_FILE_DEPS=(
 )
 
 declare fx ffx
-
-# Ensure that the variable influences the output
-export FX_ENABLE_IPV4=dummyarg
 
 BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
@@ -50,7 +47,7 @@ expect_args() {
   done
 }
 
-# ensure that set-device invocations of device-finder use the proper network flags
+# ensure that set-device invocations of ffx use the proper network flags
 TEST_setdevice() {
   ${fx} set-device >/dev/null 2>&1
   expect_args "${ffx}.mock_state" "target" "list" "--format" "s"
@@ -109,7 +106,7 @@ TEST_getdeviceaddr_name_looks_like_ipv4() {
   BT_EXPECT_EQ "$(${fx} -d "${name}" get-device-addr)" "${ip}"
 }
 
-# ensure that get-fuchsia-device-addr invocations of device-finder use the proper network flags
+# ensure that get-fuchsia-device-addr invocations of ffx use the proper network flags
 TEST_getdeviceaddr_singledevice() {
   local ip="fe80::c0ff:eec0:ffee%coffee"
   echo "${ip}" > "${ffx}.mock_stdout"
@@ -117,15 +114,15 @@ TEST_getdeviceaddr_singledevice() {
   not_expect_args "${ffx}.mock_state" "-mdns=false"
 }
 
-# ensure that get-fuchsia-device-addr invocations of device-finder use the proper network flags
+# ensure that get-fuchsia-device-addr invocations of ffx use the proper network flags
 TEST_getdeviceaddr_multipledevice() {
   local ip1="ccff::c0ff:eec0:ffee%coffee"
   local ip2="00ee::c0ff:eec0:ffee%coffee"
   echo -e "${ip1}\n${ip2}" > "${ffx}.mock_stdout"
   # in this test we don't care about the results of get-device-addr
   ${fx} get-device-addr >/dev/null 2>&1
-  # first device-finder call is for a regular list and
-  # second device-finder call is for a -full list. Both require the same network
+  # first ffx call is for a regular list and
+  # second ffx call is for a -full list. Both require the same network
   # flags.
   not_expect_args "${ffx}.mock_state.1" "-mdns=false"
   not_expect_args "${ffx}.mock_state.2" "-mdns=false"

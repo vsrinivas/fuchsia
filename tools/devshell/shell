@@ -79,7 +79,7 @@ if $check; then
     echo "ok, created ${conffile}"
   fi
 
-  # ignore stderr in case device-finder is not built yet
+  # ignore stderr in case ffx is not built yet
   deviceaddr="$(get-fuchsia-device-addr 2>/dev/null)"
   deviceport="$(get-fuchsia-device-port 2>/dev/null)"
   echo "Device address: ${deviceaddr:-"unknown"}"

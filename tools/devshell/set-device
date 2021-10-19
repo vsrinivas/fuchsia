@@ -19,7 +19,7 @@
 ## provide it to a subsequent invocation of the command.
 ##
 ## If specified, DEVICE may be a Fuchsia device name that will be resolved
-## using device-finder or an IP address. An IPv4 address must be specified
+## using ffx or an IP address. An IPv4 address must be specified
 ## directly, while IPv6 need to be surrounded by brackets.
 ##
 ## SSH_PORT, if specified, will be used for all commands that rely on SSH to

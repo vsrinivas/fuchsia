@@ -69,7 +69,7 @@ script.
 subcommand.
 
 `fx-export-device-address` resolves the current device as currently
-configured by set-device, or detected via `device-finder` and
+configured by set-device, or detected via `ffx` and
 exports:
 
 * `FX_DEVICE_NAME` the device name as either set using `-d`, `fx

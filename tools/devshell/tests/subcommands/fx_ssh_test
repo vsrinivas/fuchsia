@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### Test expected usage of device-finder in fx scripts
+### Test expected usage of ssh in fx scripts
 
 
 BT_FILE_DEPS=(
@@ -87,7 +87,7 @@ TEST_ssh_only_port() {
 # ensure that "fx set-device ipv6; fx -d :port shell" does not use the device
 # specified in set-device, since "-d" takes precedence even when it only
 # specifies a port. The expected behavior is if "-d :port" is specified without
-# host name or address, "device-finder" will be used to find a device, even if
+# host name or address, "ffx" will be used to find a device, even if
 # "fx set-device" was executed before.
 TEST_ssh_only_port_and_setdevice() {
   local addr_from_setdevice="fe80::4607:bff:fea0:44f%enx44070ba0044e"

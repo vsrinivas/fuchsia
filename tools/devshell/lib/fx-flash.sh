@@ -8,7 +8,6 @@
 set -o errexit
 
 function fx-flash {
-  local enable_ipv4="${FX_ENABLE_IPV4:-false}"
   local serial="$1"
   local device="$2"
   local flash_manifest="$3"
@@ -58,7 +57,7 @@ function fx-flash {
           let num_gb_devices=$num_gb_devices+1
           gb_device_ip=${elements[0]}
         fi
-      done < <(fx-command-run host-tool --check-firewall device-finder list -ipv4="${enable_ipv4}" -netboot -full)
+      done < <(fx-command-run host-tool --check-firewall ffx target list --format s)
 
       if [[ ! -z "${gb_device_ip}" ]]; then
         fastboot_args+=("-s" "udp:${gb_device_ip}")

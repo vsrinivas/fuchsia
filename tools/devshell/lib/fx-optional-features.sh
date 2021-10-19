@@ -6,7 +6,6 @@
 function list_optional_features {
   echo \
     "incremental" \
-    "ffx_discovery" \
     "legacy_fastboot" \
     "legacy_serve"
 }
@@ -15,7 +14,6 @@ function list_optional_features {
 function is_feature_enabled_by_default {
   case "$1" in
   "incremental") return 1 ;;
-  "ffx_discovery") return 0 ;;
   "legacy_fastboot") return 1 ;;
   "legacy_serve") return 0 ;;
   esac
@@ -32,11 +30,6 @@ function help_optional_feature {
     h=(
       "Packages are published and served incrementally by 'fx serve-updates'"
       "as they are built. Explicit 'fx build' is not required for most operations."
-      )
-    ;;
-  "ffx_discovery")
-    h=(
-      "Device discovery based on ffx instead of device-finder."
       )
     ;;
   "legacy_fastboot")

@@ -8,13 +8,6 @@ else
   devshell_lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 fi
 
-# We are migrating FX to support ipv4. This variable influences
-# invocations of device-finder to modulate whether ipv4 is enabled or
-# not, and is present to allow negatively affected users to turn the
-# feature off. This flag will be removed once the migration is
-# complete. Tracking Bug: fxbug.dev/49230
-export FX_ENABLE_IPV4="${FX_ENABLE_IPV4:-false}"
-
 FUCHSIA_DIR="$(dirname "$(dirname "$(dirname "${devshell_lib_dir}")")")"
 export FUCHSIA_DIR
 export FUCHSIA_OUT_DIR="${FUCHSIA_OUT_DIR:-${FUCHSIA_DIR}/out}"
@@ -355,33 +348,19 @@ function fx-target-finder-resolve {
     fx-error "Invalid arguments to fx-target-finder-resolve: [$*]"
     return 1
   fi
-  if is_feature_enabled "ffx_discovery"; then
-    ffx target list --format a "$1"
-  else
-    fx-command-run host-tool --check-firewall device-finder resolve -ipv4="$FX_ENABLE_IPV4" "$1"
-  fi
+  ffx target list --format a "$1"
 }
 
 function fx-target-finder-list {
-  if is_feature_enabled "ffx_discovery"; then
-    ffx target list --format a
-  else
-    fx-command-run host-tool --check-firewall device-finder list -ipv4="$FX_ENABLE_IPV4"
-  fi
+  ffx target list --format a
 }
 
 function fx-target-finder-info {
-  if is_feature_enabled "ffx_discovery"; then
-    ffx target list --format s
-  else
-    fx-command-run host-tool --check-firewall device-finder list -ipv4="$FX_ENABLE_IPV4" --full
-  fi
+  ffx target list --format s
 }
 
 function fx-target-ssh-address {
-  if is_feature_enabled "ffx_discovery"; then
-    ffx target get-ssh-address
-  fi
+  ffx target get-ssh-address
 }
 
 function multi-device-fail {

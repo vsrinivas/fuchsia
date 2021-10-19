@@ -56,7 +56,7 @@ group("tests") {
 # test the bash fx scripts.
 test_scripts = [
   "tests/fx-internal/bash_test_framework_test",
-  "tests/fx-internal/devfinder_usage_test",
+  "tests/fx-internal/ffx_target_list_usage_test",
   "tests/fx-internal/fvm_test",
   "tests/fx-internal/fx_helpers_test",
   "tests/fx-internal/fx_test",

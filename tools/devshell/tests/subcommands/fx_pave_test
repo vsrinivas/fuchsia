@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### Test expected usage of device-finder in fx scripts
+### Test expected usage of pave in fx scripts
 
 
 BT_FILE_DEPS=(
