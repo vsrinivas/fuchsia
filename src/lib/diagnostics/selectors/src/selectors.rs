@@ -887,6 +887,8 @@ mod tests {
     use std::io::prelude::*;
     use tempfile::TempDir;
 
+    // TODO(fxbug.dev/55118): REMOVE. When updating this test, please make sure the one of the same
+    // name in parser.rs is updated.
     #[test]
     fn canonical_component_selector_test() {
         let test_vector = vec![
@@ -1011,6 +1013,8 @@ mod tests {
         }
     }
 
+    // TODO(fxbug.dev/55118): REMOVE. When updating this test, please make sure the one of the same
+    // name in parser.rs is updated.
     #[test]
     fn missing_path_component_selector_test() {
         let component_selector_string = "c";
@@ -1022,6 +1026,8 @@ mod tests {
         assert!(path_vec.is_empty());
     }
 
+    // TODO(fxbug.dev/55118): REMOVE. When updating this test, please make sure the one of the same
+    // name in parser.rs is updated.
     #[test]
     fn path_components_have_spaces_as_names_selector_test() {
         let component_selector_string = " ";
@@ -1033,6 +1039,8 @@ mod tests {
         assert!(path_vec.is_empty());
     }
 
+    // TODO(fxbug.dev/55118): REMOVE. When updating this test, please make sure the one of the same
+    // name in parser.rs is updated.
     #[test]
     fn errorful_component_selector_test() {
         let test_vector: Vec<String> = vec![
@@ -1049,6 +1057,8 @@ mod tests {
         }
     }
 
+    // TODO(fxbug.dev/55118): REMOVE. When updating this test, please make sure the one of the same
+    // name in parser.rs is updated.
     #[test]
     fn canonical_tree_selector_test() {
         let test_vector = vec![
@@ -1116,6 +1126,8 @@ mod tests {
         }
     }
 
+    // TODO(fxbug.dev/55118): REMOVE. When updating this test, please make sure the one of the same
+    // name in parser.rs is updated.
     #[test]
     fn errorful_tree_selector_test() {
         let test_vector = vec![

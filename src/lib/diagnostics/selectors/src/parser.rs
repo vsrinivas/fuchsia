@@ -7,12 +7,15 @@
 
 use crate::types::*;
 use nom::{
+    self,
     branch::alt,
-    bytes::complete::{is_not, tag},
-    character::complete::{char, digit1, hex_digit1, multispace0, multispace1},
-    combinator::{map, map_opt, map_res, recognize, verify},
-    error::ParseError,
-    multi::{many0, separated_nonempty_list},
+    bytes::complete::{escaped, is_not, tag},
+    character::complete::{
+        alphanumeric1, char, digit1, hex_digit1, multispace0, multispace1, none_of,
+    },
+    combinator::{all_consuming, complete, map, map_opt, map_res, opt, peek, recognize, verify},
+    error::{ErrorKind, ParseError},
+    multi::{many0, many1, separated_nonempty_list},
     sequence::{delimited, preceded, tuple},
     IResult,
 };
@@ -336,20 +339,246 @@ fn metadata_selector(input: &str) -> IResult<&str, MetadataSelector<'_>> {
     Ok((rest, MetadataSelector::new(filters)))
 }
 
-// TODO(fxbug.dev/55118): implement parsing of component and tree selectors using nom.
-///// Parses the input into a `Selector`.
-//pub fn selector(input: &str) -> nom::IResult<&str, Selector> {
-//    let (rest, component_selector) = component_selector(input);
-//    let (rest, tree_selector) = tree_selector(rest);
-//    let (rest, metadata_selector) = metadata_selector(rest);
-//    Ok(Selector { component_selector, tree_selector, metadata_selector }
-//}
+/// Parses a tree selector, which is a node selector and an optional property selector.
+fn tree_selector(input: &str) -> IResult<&str, TreeSelector<'_>> {
+    // TODO(fxbug.dev/55118): handle whitespace in tree selectors.
+    let esc = escaped(none_of(":/\"\\ \t\n"), '\\', alt((tag("/"), tag(":"), tag(r#"\"#))));
+    let (rest, node_segments) =
+        verify(separated_nonempty_list(tag("/"), &esc), |segments: &Vec<&str>| {
+            !segments.iter().any(|s| s.contains("**"))
+        })(input)?;
+    let (rest, property_segment) = if peek::<&str, _, (&str, ErrorKind), _>(tag(":"))(rest).is_ok()
+    {
+        let (rest, _) = tag(":")(rest)?;
+        let (rest, property) =
+            verify(esc, |value: &str| !value.is_empty() && !value.contains("**"))(rest)?;
+        (rest, Some(property))
+    } else {
+        (rest, None)
+    };
+    Ok((
+        rest,
+        TreeSelector {
+            node: node_segments.into_iter().map(|value| value.into()).collect(),
+            property: property_segment.map(|value| value.into()),
+        },
+    ))
+}
+
+impl<'a> Into<Segment<'a>> for &'a str {
+    fn into(self) -> Segment<'a> {
+        if self.contains('*') {
+            Segment::Pattern(self)
+        } else {
+            Segment::Exact(self)
+        }
+    }
+}
+
+/// Parses a component selector.
+fn component_selector(input: &str) -> IResult<&str, ComponentSelector<'_>> {
+    let accepted_characters = alt((alphanumeric1, tag("*"), tag("."), tag("-"), tag("_")));
+    let (rest, segments) = verify(
+        separated_nonempty_list(tag("/"), recognize(many1(accepted_characters))),
+        |segments: &Vec<&str>| {
+            // TODO: it's probably possible to write this more cleanly as a combinator.
+            segments.iter().enumerate().all(|(i, segment)| {
+                if segment.contains("**") {
+                    if i == segments.len() - 1 {
+                        // The last segment can be the recursive glob, but nothing else.
+                        return *segment == "**";
+                    }
+                    // Other segments aren't allowed to contain recursive globs.
+                    return false;
+                }
+                true
+            })
+        },
+    )(input)?;
+    Ok((rest, ComponentSelector { segments: segments.into_iter().map(|s| s.into()).collect() }))
+}
+
+/// Parses the input into a `Selector`.
+pub fn selector(input: &str) -> Result<Selector<'_>, (&str, ErrorKind)> {
+    // TODO(fxbug.dev/55118): allow comments when parsing files.
+    // TODO(fxbug.dev/55118): enforce wrapping component+tree selectors in quotes when they contain
+    // whitespace.
+    let result = complete(all_consuming(tuple((
+        multispace0,
+        component_selector,
+        tag(":"),
+        tree_selector,
+        opt(metadata_selector),
+        multispace0,
+    ))))(input);
+    match result {
+        Err(nom::Err::Error(e)) => Err(e),
+        Err(nom::Err::Failure(e)) => Err(e),
+        Ok((_, (_, component, _, tree, metadata, _))) => Ok(Selector { component, tree, metadata }),
+        _ => unreachable!("through the complete combinator we get rid of Incomplete"),
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use nom::combinator::all_consuming;
     use rand::distributions::Distribution;
+
+    #[test]
+    fn canonical_component_selector_test() {
+        let test_vector = vec![
+            ("a/b/c", vec![Segment::Exact("a"), Segment::Exact("b"), Segment::Exact("c")]),
+            ("a/*/c", vec![Segment::Exact("a"), Segment::Pattern("*"), Segment::Exact("c")]),
+            ("a/b*/c", vec![Segment::Exact("a"), Segment::Pattern("b*"), Segment::Exact("c")]),
+            ("a/b/**", vec![Segment::Exact("a"), Segment::Exact("b"), Segment::Pattern("**")]),
+            ("c", vec![Segment::Exact("c")]),
+            (
+                r#"a/*/b/**"#,
+                vec![
+                    Segment::Exact("a"),
+                    Segment::Pattern("*"),
+                    Segment::Exact("b"),
+                    Segment::Pattern("**"),
+                ],
+            ),
+        ];
+
+        for (test_string, expected_segments) in test_vector {
+            let (_, component_selector) = component_selector(&test_string).unwrap();
+
+            assert_eq!(
+                expected_segments, component_selector.segments,
+                "For '{}', got: {:?}",
+                test_string, component_selector,
+            );
+        }
+    }
+
+    #[test]
+    fn missing_path_component_selector_test() {
+        let component_selector_string = "c";
+        let (_, component_selector) = component_selector(component_selector_string).unwrap();
+        let mut path_vec = component_selector.segments;
+        assert_eq!(path_vec.pop(), Some(Segment::Exact("c")));
+        assert!(path_vec.is_empty());
+    }
+
+    #[test]
+    fn errorful_component_selector_test() {
+        let test_vector: Vec<&str> = vec![
+            "",
+            "a\\",
+            r#"a/b***/c"#,
+            r#"a/***/c"#,
+            r#"a/**/c"#,
+            // NOTE: This used to be accepted but not anymore. Spaces shouldn't be a valid component
+            // selector character since it's not a valid moniker character.
+            " ",
+            // NOTE: The previous parser was accepting quotes in component selectors. However, by
+            // definition, a component moniker (both in v1 and v2) doesn't allow a `*` in its name.
+            r#"a/b\*/c"#,
+            r#"a/\*/c"#,
+            // Invalid characters
+            "a$c/d",
+        ];
+        for test_string in test_vector {
+            let component_selector_result = all_consuming(component_selector)(test_string);
+            assert!(component_selector_result.is_err(), "expected '{}' to fail", test_string);
+        }
+    }
+
+    #[test]
+    fn canonical_tree_selector_test() {
+        let test_vector = vec![
+            ("a/b:c", vec![Segment::Exact("a"), Segment::Exact("b")], Some(Segment::Exact("c"))),
+            ("a/*:c", vec![Segment::Exact("a"), Segment::Pattern("*")], Some(Segment::Exact("c"))),
+            ("a/b:*", vec![Segment::Exact("a"), Segment::Exact("b")], Some(Segment::Pattern("*"))),
+            ("a/b", vec![Segment::Exact("a"), Segment::Exact("b")], None),
+            (r#"a/b\:c"#, vec![Segment::Exact("a"), Segment::Exact(r#"b\:c"#)], None),
+        ];
+
+        for (string, expected_path, expected_property) in test_vector {
+            let (_, tree_selector) = tree_selector(string).unwrap();
+            assert_eq!(
+                tree_selector,
+                TreeSelector { node: expected_path, property: expected_property }
+            );
+        }
+    }
+
+    #[test]
+    fn errorful_tree_selector_test() {
+        let test_vector = vec![
+            // Not allowed due to empty property selector.
+            "a/b:",
+            // Not allowed due to glob property selector.
+            "a/b:**",
+            // String literals can't have globs.
+            r#"a/b**:c"#,
+            // Property selector string literals cant have globs.
+            r#"a/b:c**"#,
+            "a/b:**",
+            // Node path cant have globs.
+            "a/**:c",
+            // Node path can't be empty
+            ":c",
+        ];
+        for string in test_vector {
+            if !all_consuming(tree_selector)(string).is_err() {
+                println!("GOT: {:?}", all_consuming(tree_selector)(string));
+            }
+            assert!(all_consuming(tree_selector)(string).is_err(), "{} should fail", string);
+        }
+    }
+
+    #[test]
+    fn parse_full_selector() {
+        assert_eq!(
+            selector(
+                "core/**:some-node/he*re:prop where filename = \"baz\", severity in [info, error]"
+            )
+            .unwrap(),
+            Selector {
+                component: ComponentSelector {
+                    segments: vec![Segment::Exact("core"), Segment::Pattern("**"),],
+                },
+                tree: TreeSelector {
+                    node: vec![Segment::Exact("some-node"), Segment::Pattern("he*re"),],
+                    property: Some(Segment::Exact("prop")),
+                },
+                metadata: Some(MetadataSelector::new(vec![
+                    FilterExpression {
+                        identifier: Identifier::Filename,
+                        op: Operation::Comparison(
+                            ComparisonOperator::Equal,
+                            Value::StringLiteral("baz")
+                        ),
+                    },
+                    FilterExpression {
+                        identifier: Identifier::Severity,
+                        op: Operation::Inclusion(
+                            InclusionOperator::In,
+                            vec![Value::Severity(Severity::Info), Value::Severity(Severity::Error)]
+                        ),
+                    },
+                ])),
+            }
+        );
+
+        // Parses selectors without metadata. Also ignores whitespace.
+        assert_eq!(
+            selector("   foo:bar  ").unwrap(),
+            Selector {
+                component: ComponentSelector { segments: vec![Segment::Exact("foo")] },
+                tree: TreeSelector { node: vec![Segment::Exact("bar")], property: None },
+                metadata: None,
+            }
+        );
+
+        // At least one filter is required when `where` is provided.
+        assert!(selector("foo:bar where").is_err());
+    }
 
     macro_rules! test_sym_parser {
         (

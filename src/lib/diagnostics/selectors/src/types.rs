@@ -118,3 +118,27 @@ impl<'a> MetadataSelector<'a> {
         &self.0
     }
 }
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum Segment<'a> {
+    Exact(&'a str),
+    Pattern(&'a str),
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct TreeSelector<'a> {
+    pub node: Vec<Segment<'a>>,
+    pub property: Option<Segment<'a>>,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct ComponentSelector<'a> {
+    pub segments: Vec<Segment<'a>>,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Selector<'a> {
+    pub component: ComponentSelector<'a>,
+    pub tree: TreeSelector<'a>,
+    pub metadata: Option<MetadataSelector<'a>>,
+}
