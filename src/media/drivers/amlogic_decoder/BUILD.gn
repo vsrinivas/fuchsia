@@ -209,6 +209,7 @@ if (target_cpu == "arm64") {
       "//sdk/lib/fidl/cpp",
       "//src/lib/ddktl",
       "//src/lib/fsl",
+      "//src/lib/metrics_buffer",
       "//src/media/lib/codec_impl",
     ]
     public_configs = [ ":sources_include_config" ]
