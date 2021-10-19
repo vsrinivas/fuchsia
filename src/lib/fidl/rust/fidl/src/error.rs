@@ -7,7 +7,7 @@
 use {
     crate::handle::{ObjectType, Rights},
     fuchsia_zircon_status as zx_status,
-    std::{io, result},
+    std::result,
     thiserror::Error,
 };
 
@@ -211,9 +211,9 @@ pub enum Error {
     )]
     ChannelPairCreate(#[source] zx_status::Status),
 
-    /// There was an error attaching a FIDL channel to the Tokio reactor.
-    #[error("There was an error attaching a FIDL channel to the Tokio reactor: {}", _0)]
-    AsyncChannel(#[source] io::Error),
+    /// There was an error attaching a FIDL channel to the async executor.
+    #[error("There was an error attaching a FIDL channel to the async executor: {}", _0)]
+    AsyncChannel(#[source] zx_status::Status),
 
     /// There was a miscellaneous io::Error during a test.
     #[cfg(target_os = "fuchsia")]

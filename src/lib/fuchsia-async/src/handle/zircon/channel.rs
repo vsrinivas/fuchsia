@@ -4,7 +4,6 @@
 
 use std::fmt;
 use std::future::Future;
-use std::io;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
@@ -36,7 +35,7 @@ impl From<Channel> for zx::Channel {
 
 impl Channel {
     /// Creates a new `Channel` from a previously-created `zx::Channel`.
-    pub fn from_channel(channel: zx::Channel) -> io::Result<Channel> {
+    pub fn from_channel(channel: zx::Channel) -> Result<Self, zx::Status> {
         Ok(Channel(RWHandle::new(channel)?))
     }
 

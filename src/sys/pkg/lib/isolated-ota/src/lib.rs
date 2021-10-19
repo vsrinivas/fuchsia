@@ -73,7 +73,8 @@ pub async fn download_and_apply_update(
     omaha_cfg: Option<OmahaConfig>,
 ) -> Result<(), UpdateError> {
     let blobfs_proxy = DirectoryProxy::from_channel(
-        fasync::Channel::from_channel(blobfs.into_channel()).map_err(UpdateError::IoError)?,
+        fasync::Channel::from_channel(blobfs.into_channel())
+            .map_err(|e| UpdateError::FidlError(fidl::Error::AsyncChannel(e)))?,
     );
 
     let pkgfs =

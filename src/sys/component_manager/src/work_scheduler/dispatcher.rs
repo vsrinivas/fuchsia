@@ -17,7 +17,6 @@ use {
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::{
         hash::{Hash, Hasher},
-        io,
         sync::Arc,
     },
     thiserror::Error,
@@ -36,8 +35,6 @@ pub enum Error {
     FIDL(fidl::Error),
     #[error("syscall failed with status {:?}", 0)]
     Internal(zx::Status),
-    #[error("io errror: {:?}", 0)]
-    IO(io::Error),
     #[error("component model error: {:?}", 0)]
     Model(ModelError),
 }
@@ -118,7 +115,7 @@ async fn dispatch(
         .await
         .map_err(|err| Error::Model(err))?;
 
-    let client_end = Channel::from_channel(client_end).map_err(|err| Error::IO(err))?;
+    let client_end = Channel::from_channel(client_end).map_err(|err| Error::Internal(err))?;
     let worker = fsys::WorkerProxy::new(client_end);
 
     for work_item in work_items.into_iter() {

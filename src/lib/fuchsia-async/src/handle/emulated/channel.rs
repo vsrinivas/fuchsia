@@ -125,7 +125,7 @@ impl Channel {
     }
 
     /// Creates a new `Channel` from a previously-created `emulated_handle::Channel`.
-    pub fn from_channel(channel: super::Channel) -> std::io::Result<Channel> {
+    pub fn from_channel(channel: super::Channel) -> Result<Self, zx_status::Status> {
         Ok(Channel { channel })
     }
 }
