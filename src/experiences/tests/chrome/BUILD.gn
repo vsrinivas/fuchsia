@@ -16,6 +16,8 @@ dart_test("workstation_chrome_smoke_test") {
     "//src/experiences/tests:ermine_driver",
     "//third_party/dart-pkg/pub/test",
   ]
+
+  environments = [ atlas_env ]
 }
 
 copy("runtime_deps") {
