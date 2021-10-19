@@ -406,32 +406,6 @@ mod tests {
         assert!(file.as_any().downcast_ref::<DmaFile>().is_some());
     }
 
-    /// Tests that the display socket data is proxied to the wayland bridge channel.
-    #[test]
-    fn test_write_display_socket() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let task = &task_owner.task;
-        let (client_socket, wayland_server_channel) = create_socket_and_channel(task);
-
-        let sent_bytes = vec![1, 2, 3];
-        let message = Message::new(sent_bytes.clone().into(), None, None);
-        client_socket.write_kernel(message).expect("Failed to write socket data.");
-
-        let waiter = Waiter::new();
-        waiter
-            .wake_on_signals(
-                &wayland_server_channel.as_handle_ref(),
-                zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED,
-                Box::new(|_signals| {}),
-            )
-            .expect("wake on signals failed.");
-        waiter.wait_kernel(zx::Time::INFINITE).expect("");
-
-        let mut buffer = zx::MessageBuf::new();
-        wayland_server_channel.read(&mut buffer).expect("Failed to read data from channel.");
-        assert_eq!(buffer.bytes(), &sent_bytes);
-    }
-
     /// Tests that data sent from the wayland bridge is proxied to the display socket.
     #[test]
     fn test_write_wayland_bridge() {
