@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
         binary: "/data/tests/socket_unix_dgram_local_test",
-        args: [ "--gunit_filter=*.IncreasedSocketSendBufUnblocksWrites/*" ],
+        args: [ "--gunit_filter=-*.SendMsgTooLarge/*:*.SplitRecv/*:*.SingleRecv/*:*.SinglePeek/*:*.MsgTruncTruncation/*:*.MsgTruncTruncationRecvmsgMsghdrFlagMsgTrunc/*:*.RecvmsgMsgTruncZeroLen/*:*.RecvmsgMsgTruncMsgPeekZeroLen/*:*.RecvmsgTruncPeekDontwaitZeroLen/*" ],
     },
 }

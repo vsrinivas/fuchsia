@@ -473,10 +473,14 @@ impl FileObject {
         loop {
             self.ops().wait_async(self, &waiter, events, WaitCallback::none());
             match op() {
-                Err(errno) if errno == EAGAIN => waiter.wait_until(
-                    task,
-                    timeout.map(|duration| zx::Time::after(duration)).unwrap_or(zx::Time::INFINITE),
-                )?,
+                Err(errno) if errno == EAGAIN => waiter
+                    .wait_until(
+                        task,
+                        timeout
+                            .map(|duration| zx::Time::after(duration))
+                            .unwrap_or(zx::Time::INFINITE),
+                    )
+                    .map_err(|e| if e == ETIMEDOUT { errno!(EAGAIN) } else { e })?,
                 result => return result,
             }
         }
