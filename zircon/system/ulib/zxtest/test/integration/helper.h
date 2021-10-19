@@ -6,8 +6,8 @@
 #define ZIRCON_SYSTEM_ULIB_ZXTEST_TEST_INTEGRATION_HELPER_H_
 
 #include <stdlib.h>
-
 #include <zircon/compiler.h>
+
 #include <zxtest/zxtest.h>
 
 #ifdef __cplusplus
@@ -34,8 +34,8 @@ __BEGIN_CDECLS
 #define HAS_ERRORS true
 #define NO_ERRORS false
 
-#define CHECK_ERROR() ZX_ASSERT_MSG(_ZXTEST_TEST_HAS_ERRORS, "Expected errors, non registered.");
-#define CHECK_NO_ERROR() ZX_ASSERT_MSG(!_ZXTEST_TEST_HAS_ERRORS, "Unexpected errors.");
+#define CHECK_ERROR() ZX_ASSERT_MSG(LIB_ZXTEST_TEST_HAS_ERRORS, "Expected errors, non registered.");
+#define CHECK_NO_ERROR() ZX_ASSERT_MSG(!LIB_ZXTEST_TEST_HAS_ERRORS, "Unexpected errors.");
 
 typedef struct test_expectation {
   // Information of where the error happened.

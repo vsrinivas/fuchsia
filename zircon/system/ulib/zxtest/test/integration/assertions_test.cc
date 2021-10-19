@@ -235,7 +235,7 @@ TEST(ZxTestAssertionTest, AssertGEFailureFatal) {
   int b = 2;
 
   ASSERT_GE(a, b, "EXPECT_GE failed.");
-  ZX_ASSERT_MSG(_ZXTEST_ABORT_IF_ERROR, "Assert was did not abort test.");
+  ZX_ASSERT_MSG(LIB_ZXTEST_ABORT_IF_ERROR, "Assert was did not abort test.");
   TEST_CHECKPOINT();
 }
 
@@ -1168,17 +1168,17 @@ TEST(ZxTestAssertionTest, AssertBytesEvaluationIsFirstStatement) {
 
 TEST(ZxTestAssertionTest, AssertHasErrorEvaluationIsFirstStatement) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
-                   "_ZXTEST_ASSERT_ERROR should not have evaluated.");
+                   "LIB_ZXTEST_ASSERT_ERROR should not have evaluated.");
   bool touched = false;
   auto eval = [&touched]() {
     touched = true;
     return false;
   };
 
-  // Intentionally lacking {} around the if block to expose whether _ZXTEST_ASSERT_ERROR is
+  // Intentionally lacking {} around the if block to expose whether LIB_ZXTEST_ASSERT_ERROR is
   // expanding into multiple statements.
   if (false)
-    _ZXTEST_ASSERT_ERROR(eval(), false, "desc");
+    LIB_ZXTEST_ASSERT_ERROR(eval(), false, "desc");
 
   EXPECT_FALSE(touched, "Expression should not have been evaluated.");
   TEST_CHECKPOINT();

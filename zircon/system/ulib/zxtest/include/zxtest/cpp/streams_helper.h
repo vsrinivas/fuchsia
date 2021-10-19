@@ -15,9 +15,9 @@
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_status_value, status_value, zx_status_t (C::*)() const);
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_status, status, zx_status_t (C::*)() const);
 
-#define _RETURN_TAG_true return Tag()&
-#define _RETURN_TAG_false
-#define _RETURN_TAG(val) _RETURN_TAG_##val
+#define LIB_ZXTEST_RETURN_TAG_true return Tag()&
+#define LIB_ZXTEST_RETURN_TAG_false
+#define LIB_ZXTEST_RETURN_TAG(val) LIB_ZXTEST_RETURN_TAG_##val
 
 template <typename T>
 zx_status_t GetStatus(const T& status) {

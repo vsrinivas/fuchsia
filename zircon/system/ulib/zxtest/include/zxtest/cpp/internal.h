@@ -13,7 +13,7 @@
 #include <zxtest/base/runner.h>
 #include <zxtest/base/types.h>
 
-#define _ZXTEST_CHECK_RUNNING()                                                                \
+#define LIB_ZXTEST_CHECK_RUNNING()                                                             \
   do {                                                                                         \
     ZX_ASSERT_MSG(zxtest::Runner::GetInstance()->IsRunning(), "See Context Check in README."); \
   } while (0)

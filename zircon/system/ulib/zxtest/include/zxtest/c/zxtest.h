@@ -100,40 +100,40 @@ void zxtest_c_clean_buffer(char** buffer);
 
 __END_CDECLS
 
-#define _EQ(actual, expected) actual == expected
-#define _NE(actual, expected) actual != expected
-#define _BOOL(actual, expected) (bool)actual == expected
-#define _LT(actual, expected) actual < expected
-#define _LE(actual, expected) actual <= expected
-#define _GT(actual, expected) actual > expected
-#define _GE(actual, expected) actual >= expected
-#define _STREQ(actual, expected)           \
+#define LIB_ZXTEST_EQ(actual, expected) actual == expected
+#define LIB_ZXTEST_NE(actual, expected) actual != expected
+#define LIB_ZXTEST_BOOL(actual, expected) (bool)actual == expected
+#define LIB_ZXTEST_LT(actual, expected) actual < expected
+#define LIB_ZXTEST_LE(actual, expected) actual <= expected
+#define LIB_ZXTEST_GT(actual, expected) actual > expected
+#define LIB_ZXTEST_GE(actual, expected) actual >= expected
+#define LIB_ZXTEST_STREQ(actual, expected) \
   ((actual == NULL && expected == NULL) || \
    ((!actual == !expected) && strcmp(actual, expected) == 0))
-#define _STRNE(actual, expected) !_STREQ(actual, expected)
-#define _SUBSTR(str, substr) (strstr(str, substr) != NULL)
-#define _BYTEEQ(actual, expected, size) memcmp(actual, expected, size) == 0
-#define _BYTENE(actual, expected, size) memcmp(actual, expected, size) != 0
+#define LIB_ZXTEST_STRNE(actual, expected) !LIB_ZXTEST_STREQ(actual, expected)
+#define LIB_ZXTEST_SUBSTR(str, substr) (strstr(str, substr) != NULL)
+#define LIB_ZXTEST_BYTEEQ(actual, expected, size) memcmp(actual, expected, size) == 0
+#define LIB_ZXTEST_BYTENE(actual, expected, size) memcmp(actual, expected, size) != 0
 
 // C specific macros for registering tests.
 #define RUN_ALL_TESTS(argc, argv) zxtest_run_all_tests(argc, argv)
 
-#define _ZXTEST_TEST_REF(TestCase, Test) TestCase##_##Test##_ref
+#define LIB_ZXTEST_TEST_REF(TestCase, Test) TestCase##_##Test##_ref
 
-#define _ZXTEST_TEST_FN(TestCase, Test) TestCase##_##Test##_fn
+#define LIB_ZXTEST_TEST_FN(TestCase, Test) TestCase##_##Test##_fn
 
-#define _ZXTEST_REGISTER_FN(TestCase, Test) TestCase##_##Test##_register_fn
+#define LIB_ZXTEST_REGISTER_FN(TestCase, Test) TestCase##_##Test##_register_fn
 
-#define _ZXTEST_REGISTER(TestCase, Test)                                              \
-  static zxtest_test_ref_t _ZXTEST_TEST_REF(TestCase, Test) = {.test_index = 0,       \
-                                                               .test_case_index = 0}; \
-  static void _ZXTEST_TEST_FN(TestCase, Test)(void);                                  \
-  static void _ZXTEST_REGISTER_FN(TestCase, Test)(void) __attribute__((constructor)); \
-  void _ZXTEST_REGISTER_FN(TestCase, Test)(void) {                                    \
-    _ZXTEST_TEST_REF(TestCase, Test) = zxtest_runner_register_test(                   \
-        #TestCase, #Test, __FILE__, __LINE__, &_ZXTEST_TEST_FN(TestCase, Test));      \
-  }                                                                                   \
-  void _ZXTEST_TEST_FN(TestCase, Test)(void)
+#define LIB_ZXTEST_REGISTER(TestCase, Test)                                              \
+  static zxtest_test_ref_t LIB_ZXTEST_TEST_REF(TestCase, Test) = {.test_index = 0,       \
+                                                                  .test_case_index = 0}; \
+  static void LIB_ZXTEST_TEST_FN(TestCase, Test)(void);                                  \
+  static void LIB_ZXTEST_REGISTER_FN(TestCase, Test)(void) __attribute__((constructor)); \
+  void LIB_ZXTEST_REGISTER_FN(TestCase, Test)(void) {                                    \
+    LIB_ZXTEST_TEST_REF(TestCase, Test) = zxtest_runner_register_test(                   \
+        #TestCase, #Test, __FILE__, __LINE__, &LIB_ZXTEST_TEST_FN(TestCase, Test));      \
+  }                                                                                      \
+  void LIB_ZXTEST_TEST_FN(TestCase, Test)(void)
 
 // Register a test as part of a TestCase.
 //
@@ -141,15 +141,15 @@ __END_CDECLS
 // _ZXTEST_REGISTER) is a C/C++ preprocessor hack that causes the tokens
 // TestCase and Test to be macro-expanded when taking the strings #TestCase
 // and #Test.
-#define TEST(TestCase, Test) _ZXTEST_REGISTER(TestCase, Test)
+#define TEST(TestCase, Test) LIB_ZXTEST_REGISTER(TestCase, Test)
 
-#define _ZXTEST_CHECK_RUNNING()                                               \
+#define LIB_ZXTEST_CHECK_RUNNING()                                            \
   do {                                                                        \
     ZX_ASSERT_MSG(zxtest_runner_is_running(), "See Context check in README"); \
   } while (0)
 
 // Helper function to print variables.
-#define _ZXTEST_SPRINT_PRINTER(var, buffer, size) \
+#define LIB_ZXTEST_SPRINT_PRINTER(var, buffer, size) \
   _Generic((var),                                                     \
              char: _zxtest_print_int,                                   \
              signed char: _zxtest_print_int,                            \
@@ -170,46 +170,46 @@ __END_CDECLS
              default: _zxtest_print_ptr) \
   (var, buffer, size)
 
-#define _ZXTEST_NULLPTR NULL
+#define LIB_ZXTEST_NULLPTR NULL
 
-#define _ZXTEST_HEX_PRINTER(var, var_size, buffer, size) \
+#define LIB_ZXTEST_HEX_PRINTER(var, var_size, buffer, size) \
   _zxtest_print_hex((const void*)var, var_size, buffer, size)
 
-#define _ZXTEST_PRINT_BUFFER_NAME(var, type, line)                                   \
+#define LIB_ZXTEST_PRINT_BUFFER_NAME(var, type, line)                                \
   char str_placeholder_##type##_##line = '\0';                                       \
   size_t buff_size_##type##_##line =                                                 \
-      _ZXTEST_SPRINT_PRINTER(var, &str_placeholder_##type##_##line, 1) + 1;          \
+      LIB_ZXTEST_SPRINT_PRINTER(var, &str_placeholder_##type##_##line, 1) + 1;       \
   char* str_buffer_##type##_##line __attribute__((cleanup(zxtest_c_clean_buffer))) = \
       (char*)malloc(buff_size_##type##_##line * sizeof(char));                       \
   memset(str_buffer_##type##_##line, '\0', buff_size_##type##_##line);               \
-  _ZXTEST_SPRINT_PRINTER(var, str_buffer_##type##_##line, buff_size_##type##_##line)
+  LIB_ZXTEST_SPRINT_PRINTER(var, str_buffer_##type##_##line, buff_size_##type##_##line)
 
-#define _ZXTEST_PRINT_BUFFER_NAME_HEX(var, var_size, type, line)                     \
-  char str_placeholder_##type##_##line = '\0';                                       \
-  size_t buff_size_##type##_##line =                                                 \
-      _ZXTEST_HEX_PRINTER(var, var_size, &str_placeholder_##type##_##line, 1) + 1;   \
-  char* str_buffer_##type##_##line __attribute__((cleanup(zxtest_c_clean_buffer))) = \
-      (char*)malloc(buff_size_##type##_##line * sizeof(char));                       \
-  memset(str_buffer_##type##_##line, '\0', buff_size_##type##_##line);               \
-  _ZXTEST_HEX_PRINTER(var, var_size, str_buffer_##type##_##line, buff_size_##type##_##line)
+#define LIB_ZXTEST_PRINT_BUFFER_NAME_HEX(var, var_size, type, line)                   \
+  char str_placeholder_##type##_##line = '\0';                                        \
+  size_t buff_size_##type##_##line =                                                  \
+      LIB_ZXTEST_HEX_PRINTER(var, var_size, &str_placeholder_##type##_##line, 1) + 1; \
+  char* str_buffer_##type##_##line __attribute__((cleanup(zxtest_c_clean_buffer))) =  \
+      (char*)malloc(buff_size_##type##_##line * sizeof(char));                        \
+  memset(str_buffer_##type##_##line, '\0', buff_size_##type##_##line);                \
+  LIB_ZXTEST_HEX_PRINTER(var, var_size, str_buffer_##type##_##line, buff_size_##type##_##line)
 
-#define _ZXTEST_LOAD_PRINT_VAR(var, type, line) _ZXTEST_PRINT_BUFFER_NAME(var, type, line)
+#define LIB_ZXTEST_LOAD_PRINT_VAR(var, type, line) LIB_ZXTEST_PRINT_BUFFER_NAME(var, type, line)
 
-#define _ZXTEST_LOAD_PRINT_HEX(var, var_size, type, line) \
-  _ZXTEST_PRINT_BUFFER_NAME_HEX(var, var_size, type, line)
+#define LIB_ZXTEST_LOAD_PRINT_HEX(var, var_size, type, line) \
+  LIB_ZXTEST_PRINT_BUFFER_NAME_HEX(var, var_size, type, line)
 
-#define _ZXTEST_GET_PRINT_VAR(var, type, line) str_buffer_##type##_##line
+#define LIB_ZXTEST_GET_PRINT_VAR(var, type, line) str_buffer_##type##_##line
 
 // Provides an alias for assertion mechanisms.
-#define _ZXTEST_ASSERT(desc, expected, expected_var, actual, actual_var, file, line, is_fatal) \
-  zxtest_runner_notify_assertion(desc, expected, expected_var, actual, actual_var, file, line, \
+#define LIB_ZXTEST_ASSERT(desc, expected, expected_var, actual, actual_var, file, line, is_fatal) \
+  zxtest_runner_notify_assertion(desc, expected, expected_var, actual, actual_var, file, line,    \
                                  is_fatal)
 
-#define _ZXTEST_TEST_HAS_ERRORS zxtest_runner_current_test_has_failures()
-#define _ZXTEST_ABORT_IF_ERROR zxtest_runner_current_test_has_fatal_failures()
-#define _ZXTEST_STRCMP(actual, expected) (strcmp(actual, expected) == 0)
+#define LIB_ZXTEST_TEST_HAS_ERRORS zxtest_runner_current_test_has_failures()
+#define LIB_ZXTEST_ABORT_IF_ERROR zxtest_runner_current_test_has_fatal_failures()
+#define LIB_ZXTEST_STRCMP(actual, expected) (strcmp(actual, expected) == 0)
 
-#define _ZXTEST_AUTO_VAR_TYPE(var) __typeof__(var)
+#define LIB_ZXTEST_AUTO_VAR_TYPE(var) __typeof__(var)
 
 // Basic macros for assertions.
 
@@ -218,7 +218,7 @@ __END_CDECLS
 static void zxtest_clean_buffer(char** buffer) __attribute__((unused));
 static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
 
-#define _GEN_ASSERT_DESC(out_desc, desc, ...)                               \
+#define LIB_ZXTEST_GEN_ASSERT_DESC(out_desc, desc, ...)                     \
   char* out_desc __attribute__((cleanup(zxtest_c_clean_buffer))) = NULL;    \
   do {                                                                      \
     char tmp;                                                               \
@@ -230,105 +230,105 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
     snprintf(out_desc + strlen(desc) + 1, req_size, " "__VA_ARGS__);        \
   } while (0)
 
-#define _RETURN_IF_FATAL_1        \
-  do {                            \
-    unittest_fails();             \
-    if (_ZXTEST_ABORT_IF_ERROR) { \
-      return;                     \
-    }                             \
+#define LIB_ZXTEST_RETURN_IF_FATAL_1 \
+  do {                               \
+    unittest_fails();                \
+    if (LIB_ZXTEST_ABORT_IF_ERROR) { \
+      return;                        \
+    }                                \
   } while (0)
 
-#define _RETURN_IF_FATAL_0 \
-  do {                     \
-    unittest_fails();      \
+#define LIB_ZXTEST_RETURN_IF_FATAL_0 \
+  do {                               \
+    unittest_fails();                \
   } while (0)
 
-#define _RETURN_IF_FATAL(fatal) _RETURN_IF_FATAL_##fatal
+#define LIB_ZXTEST_RETURN_IF_FATAL(fatal) LIB_ZXTEST_RETURN_IF_FATAL_##fatal
 
-#define _CHECK_VAR_BYTES(op, expected, actual, size, fatal, file, line, desc, ...)           \
-  do {                                                                                       \
-    _ZXTEST_CHECK_RUNNING();                                                                 \
-    const void* _actual = (const void*)(actual);                                             \
-    const void* _expected = (const void*)(expected);                                         \
-    if (!(op(_actual, _expected, size))) {                                                   \
-      _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                                     \
-      _ZXTEST_LOAD_PRINT_HEX(_actual, size, act, line);                                      \
-      _ZXTEST_LOAD_PRINT_HEX(_expected, size, exptd, line);                                  \
-      _ZXTEST_ASSERT(msg_buffer, #expected, _ZXTEST_GET_PRINT_VAR(_expected, exptd, line),   \
-                     #actual, _ZXTEST_GET_PRINT_VAR(_actual, act, line), file, line, fatal); \
-      _RETURN_IF_FATAL(fatal);                                                               \
-    }                                                                                        \
+#define LIB_ZXTEST_CHECK_VAR_BYTES(op, expected, actual, size, fatal, file, line, desc, ...)       \
+  do {                                                                                             \
+    LIB_ZXTEST_CHECK_RUNNING();                                                                    \
+    const void* _actual = (const void*)(actual);                                                   \
+    const void* _expected = (const void*)(expected);                                               \
+    if (!(op(_actual, _expected, size))) {                                                         \
+      LIB_ZXTEST_GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                                 \
+      LIB_ZXTEST_LOAD_PRINT_HEX(_actual, size, act, line);                                         \
+      LIB_ZXTEST_LOAD_PRINT_HEX(_expected, size, exptd, line);                                     \
+      LIB_ZXTEST_ASSERT(msg_buffer, #expected, LIB_ZXTEST_GET_PRINT_VAR(_expected, exptd, line),   \
+                        #actual, LIB_ZXTEST_GET_PRINT_VAR(_actual, act, line), file, line, fatal); \
+      LIB_ZXTEST_RETURN_IF_FATAL(fatal);                                                           \
+    }                                                                                              \
   } while (0)
 
-#define _CHECK_VAR_COERCE(op, expected, actual, type, fatal, file, line, desc, ...)          \
-  do {                                                                                       \
-    _ZXTEST_CHECK_RUNNING();                                                                 \
-    const type _actual = (const type)(actual);                                               \
-    const type _expected = (const type)(expected);                                           \
-    if (!(op(_actual, _expected))) {                                                         \
-      _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                                     \
-      _ZXTEST_LOAD_PRINT_VAR(_actual, act, line);                                            \
-      _ZXTEST_LOAD_PRINT_VAR(_expected, exptd, line);                                        \
-      _ZXTEST_ASSERT(msg_buffer, #expected, _ZXTEST_GET_PRINT_VAR(_expected, exptd, line),   \
-                     #actual, _ZXTEST_GET_PRINT_VAR(_actual, act, line), file, line, fatal); \
-      _RETURN_IF_FATAL(fatal);                                                               \
-    }                                                                                        \
+#define LIB_ZXTEST_CHECK_VAR_COERCE(op, expected, actual, type, fatal, file, line, desc, ...)      \
+  do {                                                                                             \
+    LIB_ZXTEST_CHECK_RUNNING();                                                                    \
+    const type _actual = (const type)(actual);                                                     \
+    const type _expected = (const type)(expected);                                                 \
+    if (!(op(_actual, _expected))) {                                                               \
+      LIB_ZXTEST_GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                                 \
+      LIB_ZXTEST_LOAD_PRINT_VAR(_actual, act, line);                                               \
+      LIB_ZXTEST_LOAD_PRINT_VAR(_expected, exptd, line);                                           \
+      LIB_ZXTEST_ASSERT(msg_buffer, #expected, LIB_ZXTEST_GET_PRINT_VAR(_expected, exptd, line),   \
+                        #actual, LIB_ZXTEST_GET_PRINT_VAR(_actual, act, line), file, line, fatal); \
+      LIB_ZXTEST_RETURN_IF_FATAL(fatal);                                                           \
+    }                                                                                              \
   } while (0)
 
-#define _CHECK_VAR(op, expected, actual, fatal, file, line, desc, ...)                        \
-  _CHECK_VAR_COERCE(op, expected, actual, _ZXTEST_AUTO_VAR_TYPE(expected), fatal, file, line, \
-                    desc, ##__VA_ARGS__)
+#define LIB_ZXTEST_CHECK_VAR(op, expected, actual, fatal, file, line, desc, ...)               \
+  LIB_ZXTEST_CHECK_VAR_COERCE(op, expected, actual, LIB_ZXTEST_AUTO_VAR_TYPE(expected), fatal, \
+                              file, line, desc, ##__VA_ARGS__)
 
-#define _ZXTEST_FAIL_NO_RETURN(fatal, desc, ...)                            \
+#define LIB_ZXTEST_FAIL_NO_RETURN(fatal, desc, ...)                         \
   do {                                                                      \
-    _ZXTEST_CHECK_RUNNING();                                                \
-    _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                      \
+    LIB_ZXTEST_CHECK_RUNNING();                                             \
+    LIB_ZXTEST_GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);            \
     zxtest_runner_fail_current_test(fatal, __FILE__, __LINE__, msg_buffer); \
   } while (0)
 
-#define _ZXTEST_ASSERT_ERROR(has_errors, fatal, desc, ...) \
-  do {                                                     \
-    if (has_errors) {                                      \
-      _ZXTEST_FAIL_NO_RETURN(fatal, desc, ##__VA_ARGS__);  \
-      _RETURN_IF_FATAL(fatal);                             \
-    }                                                      \
+#define LIB_ZXTEST_ASSERT_ERROR(has_errors, fatal, desc, ...) \
+  do {                                                        \
+    if (has_errors) {                                         \
+      LIB_ZXTEST_FAIL_NO_RETURN(fatal, desc, ##__VA_ARGS__);  \
+      LIB_ZXTEST_RETURN_IF_FATAL(fatal);                      \
+    }                                                         \
   } while (0)
 
-#define FAIL(...)                                    \
-  do {                                               \
-    _ZXTEST_CHECK_RUNNING();                         \
-    _ZXTEST_FAIL_NO_RETURN(true, "", ##__VA_ARGS__); \
-    return;                                          \
+#define FAIL(...)                                       \
+  do {                                                  \
+    LIB_ZXTEST_CHECK_RUNNING();                         \
+    LIB_ZXTEST_FAIL_NO_RETURN(true, "", ##__VA_ARGS__); \
+    return;                                             \
   } while (0)
 
 #define ZXTEST_SKIP(desc, ...)                                       \
   do {                                                               \
-    _ZXTEST_CHECK_RUNNING();                                         \
-    _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);               \
+    LIB_ZXTEST_CHECK_RUNNING();                                      \
+    LIB_ZXTEST_GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);     \
     zxtest_runner_skip_current_test(__FILE__, __LINE__, msg_buffer); \
     return;                                                          \
   } while (0)
 
 #ifdef __Fuchsia__
-#define _CHECK_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...)         \
-  do {                                                                                \
-    _ZXTEST_CHECK_RUNNING();                                                          \
-    const zx_status_t _actual = (const zx_status_t)(actual);                          \
-    const zx_status_t _expected = (const zx_status_t)(expected);                      \
-    if (!(op(_actual, _expected))) {                                                  \
-      _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                              \
-      _ZXTEST_ASSERT(msg_buffer, #expected, zx_status_get_string(_expected), #actual, \
-                     zx_status_get_string(_actual), file, line, fatal);               \
-      _RETURN_IF_FATAL(fatal);                                                        \
-    }                                                                                 \
+#define LIB_ZXTEST_CHECK_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...)  \
+  do {                                                                                   \
+    LIB_ZXTEST_CHECK_RUNNING();                                                          \
+    const zx_status_t _actual = (const zx_status_t)(actual);                             \
+    const zx_status_t _expected = (const zx_status_t)(expected);                         \
+    if (!(op(_actual, _expected))) {                                                     \
+      LIB_ZXTEST_GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                       \
+      LIB_ZXTEST_ASSERT(msg_buffer, #expected, zx_status_get_string(_expected), #actual, \
+                        zx_status_get_string(_actual), file, line, fatal);               \
+      LIB_ZXTEST_RETURN_IF_FATAL(fatal);                                                 \
+    }                                                                                    \
   } while (0)
 
-#define _ZXTEST_DEATH_STATUS_COMPLETE kDeathResultComplete
-#define _ZXTEST_DEATH_STATUS_EXCEPTION kDeathResultRaiseException
-#define _ZXTEST_DEATH_STATEMENT(statement, expected_result, desc, ...)                  \
+#define LIB_ZXTEST_DEATH_STATUS_COMPLETE kDeathResultComplete
+#define LIB_ZXTEST_DEATH_STATUS_EXCEPTION kDeathResultRaiseException
+#define LIB_ZXTEST_DEATH_STATEMENT(statement, expected_result, desc, ...)               \
   do {                                                                                  \
-    _ZXTEST_CHECK_RUNNING();                                                            \
-    _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                                  \
+    LIB_ZXTEST_CHECK_RUNNING();                                                         \
+    LIB_ZXTEST_GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                        \
     if (!zxtest_death_statement_execute(statement, expected_result, __FILE__, __LINE__, \
                                         msg_buffer)) {                                  \
       return;                                                                           \
@@ -336,7 +336,7 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
   } while (0)
 
 #else
-#define _CHECK_VAR_STATUS(...) _CHECK_VAR(__VA_ARGS__)
+#define LIB_ZXTEST_CHECK_VAR_STATUS(...) LIB_ZXTEST_CHECK_VAR(__VA_ARGS__)
 #endif
 
 #endif  // ZXTEST_C_ZXTEST_H_

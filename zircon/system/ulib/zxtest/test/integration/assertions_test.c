@@ -233,7 +233,7 @@ TEST(ZxTestCAssertionsTest, AssertGEFailureFatal) {
   int b = 2;
 
   ASSERT_GE(a, b, "EXPECT_GE failed.");
-  ZX_ASSERT_MSG(_ZXTEST_ABORT_IF_ERROR, "Assert was did not abort test.");
+  ZX_ASSERT_MSG(LIB_ZXTEST_ABORT_IF_ERROR, "Assert was did not abort test.");
   TEST_CHECKPOINT();
 }
 

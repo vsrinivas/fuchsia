@@ -15,7 +15,7 @@ TEST(CTest, AutoRegister) { called = 1; }
 static void Verify(void) {
   // This variable should exist if everything works well. Else we would reference an
   // inexistent symbol and get a compile error.
-  __attribute__((unused)) zxtest_test_ref_t test_ref = _ZXTEST_TEST_REF(CTest, AutoRegister);
+  __attribute__((unused)) zxtest_test_ref_t test_ref = LIB_ZXTEST_TEST_REF(CTest, AutoRegister);
   ZX_ASSERT_MSG(called != 0, "TEST registered test did not run.");
   called = 0;
 }
