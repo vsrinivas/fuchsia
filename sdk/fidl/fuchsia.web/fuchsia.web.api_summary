@@ -10,6 +10,11 @@ enum/member fuchsia.web/ConsoleLogLevel.INFO 0
 enum/member fuchsia.web/ConsoleLogLevel.NONE 100
 enum/member fuchsia.web/ConsoleLogLevel.WARN 1
 strict enum fuchsia.web/ConsoleLogLevel int32
+table/member fuchsia.web/ContentAreaSettings.autoplay_policy fuchsia.web/AutoplayPolicy
+table/member fuchsia.web/ContentAreaSettings.hide_scrollbars bool
+table/member fuchsia.web/ContentAreaSettings.page_scale float32
+table/member fuchsia.web/ContentAreaSettings.theme fuchsia.settings/ThemeType
+table fuchsia.web/ContentAreaSettings
 table/member fuchsia.web/ContentDirectoryProvider.directory fuchsia.io/Directory
 table/member fuchsia.web/ContentDirectoryProvider.name string:255
 resource table fuchsia.web/ContentDirectoryProvider
@@ -96,8 +101,10 @@ protocol/member fuchsia.web/Frame.GetNavigationController(server_end:fuchsia.web
 protocol/member fuchsia.web/Frame.GetPrivateMemorySize() -> (uint64 size_bytes)
 protocol/member fuchsia.web/Frame.PostMessage(string:65536 target_origin,fuchsia.web/WebMessage message) -> (fuchsia.web/Frame_PostMessage_Result result)
 protocol/member fuchsia.web/Frame.RemoveBeforeLoadJavaScript(uint64 id)
+protocol/member fuchsia.web/Frame.ResetContentAreaSettings()
 protocol/member fuchsia.web/Frame.SetBlockMediaLoading(bool blocked)
 protocol/member fuchsia.web/Frame.SetConsoleLogSink(fuchsia.logger/LogSink:optional sink)
+protocol/member fuchsia.web/Frame.SetContentAreaSettings(fuchsia.web/ContentAreaSettings settings)
 protocol/member fuchsia.web/Frame.SetJavaScriptLogLevel(fuchsia.web/ConsoleLogLevel level)
 protocol/member fuchsia.web/Frame.SetMediaSessionId(uint64 session_id)
 protocol/member fuchsia.web/Frame.SetNavigationEventListener(client_end:<fuchsia.web/NavigationEventListener,optional> listener)

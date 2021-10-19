@@ -106,6 +106,39 @@ type PermissionState = strict enum : uint8 {
     GRANTED = 2;
 };
 
+/// Settings for the web content in the Frame. Popup Frames created by the Frame will have their
+/// settings initialized to the Frame's current settings.
+type ContentAreaSettings = table {
+    /// Specifies whether scrollbars are hidden for the Frame. If omitted, the default is false.
+    1: hide_scrollbars bool;
+
+    /// Specifies the autoplay policy for the Frame. If omitted, the default policy is
+    /// `REQUIRE_USER_ACTIVATION`.
+    2: autoplay_policy AutoplayPolicy;
+
+    /// Specifies the color theme reported to web content via the `prefers-color-scheme` media
+    /// query.
+    /// Valid inputs are `LIGHT`, `DARK`, and `DEFAULT`. If omitted, the default is LIGHT theme.
+    /// Specifying `DEFAULT` means using the system settings, and requires that the [`Context`] have
+    /// the [`fuchsia.settings.Display`] service. If the service is not available, the [`Frame`]
+    /// will disconnect with `ZX_ERR_INVALID_ARGS`.
+    3: theme fuchsia.settings.ThemeType;
+
+    /// Sets scale factor (zoom level) that should be applied to web content rendered in this
+    /// frame. Values above 1.0 make all web content (including text and images) larger, while
+    /// values below 1.0 will make it smaller. In other words, values above 1.0 are used to zoom in
+    /// and values below 1.0 zoom out. The overall ratio between physical pixel and CSS pixel is a
+    /// product of the scale set with this method and the scale provided by Scenic (see
+    /// [`fuchsia.ui.gfx.Metrics`]). That product is visible to the web content as
+    /// `window.devicePixelRatio`. If omitted, the default is 1.0.
+    ///
+    /// This setting does not have any effect on the size of the view on the screen and the
+    /// resolution at which the view is rendered. Native (non-web) UI elements, such as default
+    /// scroll bars and default mouse cursor, are not scaled. User may zoom the page further when
+    /// pinch-zoom is enabled (see [`InputTypes.GESTURE_PINCH`]).
+    4: page_scale float32;
+};
+
 protocol Frame {
     /// Creates a new view using the specified `view_token`. Caller should pass the other end of
     /// the token to [`fuchsia.ui.gfx/ViewHolderArgs`] to attach the new view to a view tree.
@@ -388,6 +421,7 @@ protocol Frame {
     /// Specifying `DEFAULT` means using the system settings, and requires that the [`Context`] have
     /// the [`fuchsia.settings.Display`] service. If the service is not available, the [`Frame`]
     /// will disconnect with `ZX_ERR_INVALID_ARGS`.
+    @deprecated("use fuchsia.web.SetContentAreaSettings instead")
     SetPreferredTheme(struct {
         theme fuchsia.settings.ThemeType;
     });
@@ -404,9 +438,25 @@ protocol Frame {
     /// resolution at which the view is rendered. Native (non-web) UI elements, such as default
     /// scroll bars and default mouse cursor, are not scaled. User may zoom the page further when
     /// pinch-zoom is enabled (see [`InputTypes.GESTURE_PINCH`]).
+    @deprecated("use fuchsia.web.SetContentAreaSettings instead")
     SetPageScale(struct {
         scale float32;
     });
+
+    /// Sets various settings for how web content should be run in the Frame. May be called at any
+    /// time, including after the URL has loaded. Each call to SetContentAreaSettings() changes
+    /// only the specified fields, overwriting any prior value.
+    ///
+    /// This method will fail with `ZX_ERR_NOT_SUPPORTED` if any value in [`ContentAreaSettings`]
+    /// is not supported by the Frame.
+    @transitional
+    SetContentAreaSettings(struct {
+        settings ContentAreaSettings;
+    });
+
+    /// Reset the Frame's |ContentAreaSettings| to default values.
+    @transitional
+    ResetContentAreaSettings();
 };
 
 type WebMessage = resource table {
