@@ -41,6 +41,7 @@ StubBootServices::StubBootServices()
           .SetTimer = Wrap<&StubBootServices::SetTimer>,
           .CloseEvent = Wrap<&StubBootServices::CloseEvent>,
           .CheckEvent = Wrap<&StubBootServices::CheckEvent>,
+          .LocateHandle = Wrap<&StubBootServices::LocateHandle>,
           .OpenProtocol = Wrap<&StubBootServices::OpenProtocol>,
           .CloseProtocol = Wrap<&StubBootServices::CloseProtocol>,
           .LocateHandleBuffer = Wrap<&StubBootServices::LocateHandleBuffer>,

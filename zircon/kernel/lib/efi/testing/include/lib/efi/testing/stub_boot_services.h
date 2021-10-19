@@ -77,8 +77,12 @@ class StubBootServices {
   //   efi_status (*HandleProtocol)(efi_handle handle, efi_guid* protocol, void** intf);
   //   efi_status (*RegisterProtocolNotify)(efi_guid* protocol, efi_event event,
   //                                        void** registration);
-  //   efi_status (*LocateHandle)(efi_locate_search_type search_type, efi_guid* protocol,
-  //                              void* search_key, size_t* buf_size, efi_handle* buf);
+
+  virtual efi_status LocateHandle(efi_locate_search_type search_type, efi_guid* protocol,
+                                  void* search_key, size_t* buf_size, efi_handle* buf) {
+    return EFI_UNSUPPORTED;
+  }
+
   //   efi_status (*LocateDevicePath)(efi_guid* protocol, efi_device_path_protocol** path,
   //                                  efi_handle* device);
   //   efi_status (*InstallConfigurationTable)(efi_guid* guid, void* table);
@@ -166,6 +170,10 @@ class MockBootServices : public StubBootServices {
   MOCK_METHOD(efi_status, CloseEvent, (efi_event event), (override));
   MOCK_METHOD(efi_status, CheckEvent, (efi_event event), (override));
 
+  MOCK_METHOD(efi_status, LocateHandle,
+              (efi_locate_search_type search_type, efi_guid* protocol, void* search_key,
+               size_t* buf_size, efi_handle* buf),
+              (override));
   MOCK_METHOD(efi_status, OpenProtocol,
               (efi_handle handle, efi_guid* protocol, void** intf, efi_handle agent_handle,
                efi_handle controller_handle, uint32_t attributes),

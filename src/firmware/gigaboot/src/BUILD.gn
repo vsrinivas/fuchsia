@@ -27,6 +27,7 @@ source_set("src") {
     "netifc.c",
     "osboot.c",
     "pci.c",
+    "tcp.c",
     "utf_conversion.c",
     "zircon.c",
   ]
@@ -76,6 +77,8 @@ if (!is_mac) {
       "osboot.c",
       "osboot_test.cc",
       "pci.c",
+      "tcp.c",
+      "tcp_test.cc",
       "utf_conversion.c",
     ]
     include_dirs = [ "." ]
