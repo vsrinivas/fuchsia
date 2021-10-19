@@ -183,13 +183,13 @@ impl InformationRequesting {
 
         let retrans_timeout = self.retransmission_timeout(rng);
 
-        (
-            ClientState::InformationRequesting(InformationRequesting { retrans_timeout }),
-            vec![
+        Transition {
+            state: ClientState::InformationRequesting(InformationRequesting { retrans_timeout }),
+            actions: vec![
                 Action::SendMessage(buf),
                 Action::ScheduleTimer(ClientTimerType::Retransmission, retrans_timeout),
             ],
-        )
+        }
     }
 
     /// Retransmits information request.
@@ -227,12 +227,12 @@ impl InformationRequesting {
         .chain(dns_servers.clone().map(|server_addrs| Action::UpdateDnsServers(server_addrs)))
         .collect::<Vec<_>>();
 
-        (
-            ClientState::InformationReceived(InformationReceived {
+        Transition {
+            state: ClientState::InformationReceived(InformationReceived {
                 dns_servers: dns_servers.unwrap_or(Vec::new()),
             }),
             actions,
-        )
+        }
     }
 }
 
@@ -364,18 +364,18 @@ impl ServerDiscovery {
         let retrans_timeout = self.retransmission_timeout(rng);
         let first_solicit_time = self.first_solicit_time.unwrap_or(Instant::now());
 
-        (
-            ClientState::ServerDiscovery(ServerDiscovery {
+        Transition {
+            state: ClientState::ServerDiscovery(ServerDiscovery {
                 client_id: self.client_id,
                 configured_addresses: self.configured_addresses,
                 first_solicit_time: Some(first_solicit_time),
                 retrans_timeout,
             }),
-            vec![
+            actions: vec![
                 Action::SendMessage(buf),
                 Action::ScheduleTimer(ClientTimerType::Retransmission, retrans_timeout),
             ],
-        )
+        }
     }
 }
 
@@ -395,8 +395,12 @@ enum ClientState {
     ServerDiscovery(ServerDiscovery),
 }
 
-/// Defines the next state, and the actions the client should take to transition to that state.
-type Transition = (ClientState, Actions);
+/// State transition, containing the next state, and the actions the client
+/// should take to transition to that state.
+struct Transition {
+    state: ClientState,
+    actions: Actions,
+}
 
 impl ClientState {
     /// Dispatches reply message received event based on the current state (self).
@@ -405,7 +409,7 @@ impl ClientState {
     fn reply_message_received<B: ByteSlice>(self, msg: v6::Message<'_, B>) -> Transition {
         match self {
             ClientState::InformationRequesting(s) => s.reply_message_received(msg),
-            state => (state, Vec::new()),
+            state => Transition { state, actions: Vec::new() },
         }
     }
 
@@ -422,7 +426,7 @@ impl ClientState {
             ClientState::InformationRequesting(s) => {
                 s.retransmission_timer_expired(transaction_id, options_to_request, rng)
             }
-            state => (state, Vec::new()),
+            state => Transition { state, actions: Vec::new() },
         }
     }
 
@@ -439,7 +443,7 @@ impl ClientState {
             ClientState::InformationReceived(s) => {
                 s.refresh_timer_expired(transaction_id, options_to_request, rng)
             }
-            state => (state, Vec::new()),
+            state => Transition { state, actions: Vec::new() },
         }
     }
 
@@ -487,7 +491,7 @@ impl<R: Rng> ClientStateMachine<R> {
         options_to_request: Vec<v6::OptionCode>,
         mut rng: R,
     ) -> (Self, Actions) {
-        let (state, actions) =
+        let Transition { state, actions } =
             InformationRequesting::start(transaction_id, &options_to_request, &mut rng);
         (Self { state: Some(state), transaction_id, options_to_request, rng }, actions)
     }
@@ -505,7 +509,7 @@ impl<R: Rng> ClientStateMachine<R> {
         options_to_request: Vec<v6::OptionCode>,
         mut rng: R,
     ) -> (Self, Actions) {
-        let (state, actions) = ServerDiscovery::start(
+        let Transition { state, actions } = ServerDiscovery::start(
             transaction_id,
             client_id,
             configured_addresses,
@@ -526,7 +530,7 @@ impl<R: Rng> ClientStateMachine<R> {
     /// `handle_timeout` panics if current state is None.
     pub fn handle_timeout(&mut self, timeout_type: ClientTimerType) -> Actions {
         let state = self.state.take().expect("state should not be empty");
-        let (new_state, actions) = match timeout_type {
+        let Transition { state, actions } = match timeout_type {
             ClientTimerType::Retransmission => state.retransmission_timer_expired(
                 self.transaction_id,
                 &self.options_to_request,
@@ -538,7 +542,7 @@ impl<R: Rng> ClientStateMachine<R> {
                 &mut self.rng,
             ),
         };
-        self.state = Some(new_state);
+        self.state = Some(state);
         actions
     }
 
@@ -553,12 +557,12 @@ impl<R: Rng> ClientStateMachine<R> {
         } else {
             match msg.msg_type() {
                 v6::MessageType::Reply => {
-                    let (new_state, actions) = self
+                    let Transition { state, actions } = self
                         .state
                         .take()
                         .expect("state should not be empty")
                         .reply_message_received(msg);
-                    self.state = Some(new_state);
+                    self.state = Some(state);
                     actions
                 }
                 v6::MessageType::Advertise => {
