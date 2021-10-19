@@ -103,6 +103,7 @@ mod tests {
         fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_tap as fidl_wlantap,
         fuchsia_zircon::prelude::*,
         futures::{poll, task::Poll},
+        log::info,
         pin_utils::pin_mut,
         std::convert::TryInto,
         wlan_common::{ie::*, test_utils::ExpectWithin},
@@ -135,12 +136,12 @@ mod tests {
         let dir = fidl_fuchsia_io::DirectoryProxy::from_channel(async_channel);
         let monitor_fut = device_watcher::recursive_wait_and_open_node(&dir, "sys/test/wlantapctl");
         pin_mut!(monitor_fut);
+
+        info!("Beginning wlantapctl monitor.");
         exec.run_singlethreaded(async {
-            monitor_fut
-                .expect_within(5.seconds(), "wlantapctl monitor never finished")
-                .await
-                .expect("error while watching for wlantapctl")
+            monitor_fut.await.expect("error while watching for wlantapctl")
         });
+        info!("wlantapctl discovered.");
 
         // Now that the wlantapctl device is present, connect to it.
         let wlantap = wlantap_client::Wlantap::open().expect("Failed to connect to wlantapctl");

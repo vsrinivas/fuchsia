@@ -11,11 +11,6 @@ import("//third_party/cobalt/metrics_registry.gni")
 group("tests") {
   testonly = true
   deps = [ ":wlandevicemonitor-tests" ]
-
-  # TODO(https://fxbug.dev/81652): Add this test back when it's no longer flaky.
-  if (!is_coverage) {
-    deps += [ ":wlandevicemonitor-tests" ]
-  }
 }
 
 metrics_registry("wlan_metrics_registry") {
