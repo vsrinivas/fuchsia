@@ -9,12 +9,12 @@
 #include <lib/syslog/global.h>
 #include <zircon/pixelformat.h>
 
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <utility>
 #include <vector>
 
-#include <fbl/condition_variable.h>
-#include <fbl/mutex.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
@@ -44,61 +44,61 @@ class TaskTest : public zxtest::Test {
  public:
   void ProcessFrameCallback(uint32_t input_buffer_index, uint32_t output_buffer_index,
                             frame_status_t status, uint64_t capture_timestamp) {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard al(lock_);
     callback_check_.emplace_back(input_buffer_index, output_buffer_index, capture_timestamp);
     frame_ready_ = true;
-    event_.Signal();
+    event_.notify_one();
     if (status != FRAME_STATUS_OK) {
       frame_status_error_ = true;
     }
   }
 
   void ResChangeCallback() {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard al(lock_);
     frame_ready_ = true;
-    event_.Signal();
+    event_.notify_one();
   }
 
   void RemoveTaskCallback(task_remove_status_t status) {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard al(lock_);
     frame_removed_ = true;
     frame_status_error_ = status;
-    remove_task_event_.Signal();
+    remove_task_event_.notify_one();
   }
 
   void WaitAndReset() {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard al(lock_);
     while (frame_ready_ == false) {
-      event_.Wait(&lock_);
+      event_.wait(lock_);
     }
     frame_ready_ = false;
   }
 
   void WaitForRemoveTaskAndReset() {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard al(lock_);
     while (frame_removed_ == false) {
-      remove_task_event_.Wait(&lock_);
+      remove_task_event_.wait(lock_);
     }
     frame_removed_ = false;
   }
 
   uint32_t GetCallbackSize() {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard al(lock_);
     return callback_check_.size();
   }
 
   uint32_t GetCallbackBackOutputBufferIndex() {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard al(lock_);
     return std::get<1>(callback_check_.back());
   }
 
   uint32_t GetCallbackBackInputBufferIndex() {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard al(lock_);
     return std::get<0>(callback_check_.back());
   }
 
   uint64_t GetCallbackBackCaptureTimestamp() {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard al(lock_);
     return std::get<2>(callback_check_.back());
   }
 
@@ -245,9 +245,9 @@ class TaskTest : public zxtest::Test {
   std::vector<std::tuple<uint32_t, uint32_t, uint64_t>> callback_check_;
   bool frame_ready_;
   bool frame_removed_;
-  fbl::Mutex lock_;
-  fbl::ConditionVariable event_;
-  fbl::ConditionVariable remove_task_event_ __TA_GUARDED(lock_);
+  std::mutex lock_;
+  std::condition_variable_any event_;
+  std::condition_variable_any remove_task_event_ __TA_GUARDED(lock_);
 };
 
 TEST_F(TaskTest, BasicCreationTest) {
