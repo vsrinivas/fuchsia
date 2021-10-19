@@ -27,10 +27,12 @@ source_set("llcpp") {
     "inspect.h",
     "logger.cc",
     "logger.h",
+    "logger_internal.h",
     "namespace.cc",
     "namespace.h",
     "promise.h",
     "start_args.h",
+    "structured_logger.h",
   ]
 
   public_deps = [

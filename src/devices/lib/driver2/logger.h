@@ -31,6 +31,9 @@ class Logger {
   Logger(Logger&& other) noexcept;
   Logger& operator=(Logger&& other) noexcept;
 
+  // Retrieves the number of dropped logs and resets it
+  uint32_t GetAndResetDropped();
+
   void logf(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
             const char* msg, ...) __PRINTFLIKE(6, 7);
   void logvf(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,

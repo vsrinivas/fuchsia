@@ -8,7 +8,7 @@ use {
         events::{self, Event},
         matcher::EventMatcher,
     },
-    diagnostics_reader::{ArchiveReader, Logs},
+    diagnostics_reader::{assert_data_tree, ArchiveReader, Logs},
     fasync::futures::StreamExt,
     fidl_fuchsia_driver_test as fdt, fuchsia_async as fasync,
     fuchsia_component_test::builder::RealmBuilder,
@@ -88,6 +88,13 @@ async fn driver_runner_test() -> Result<(), anyhow::Error> {
             }
             Ok(log) => {
                 if log.msg().unwrap().contains("Hello world") {
+                    assert_data_tree!(log.payload.as_ref().unwrap(), root:{
+                        "keys": {
+                            "The answer is": 42u64,
+                        },
+                        "message": contains {
+                        "value": "Hello world",
+                    }});
                     found = true;
                     break;
                 }

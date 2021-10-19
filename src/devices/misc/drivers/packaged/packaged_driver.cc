@@ -6,9 +6,9 @@
 #include <lib/svc/outgoing.h>
 
 #include "src/devices/lib/driver2/inspect.h"
-#include "src/devices/lib/driver2/logger.h"
 #include "src/devices/lib/driver2/namespace.h"
 #include "src/devices/lib/driver2/record.h"
+#include "src/devices/lib/driver2/structured_logger.h"
 
 namespace {
 
@@ -36,12 +36,12 @@ class PackagedDriver {
 
     auto inspect = driver::ExposeInspector(inspector_, outgoing_.root_dir());
     if (inspect.is_error()) {
-      FDF_LOG(ERROR, "Failed to expose inspector: %s", inspect.status_string());
+      FDF_SLOG(ERROR, "Failed to expose inspector", KV("error_string", inspect.status_string()));
       return inspect.take_error();
     }
     inspect_vmo_ = std::move(inspect.value());
 
-    FDF_LOG(INFO, "Hello world");
+    FDF_SLOG(INFO, "Hello world", KV("The answer is", 42));
     auto& root = inspector_.GetRoot();
     root.CreateString("hello", "world", &inspector_);
     zx_status_t status = outgoing_.Serve(std::move(start_args->outgoing_dir()));
