@@ -211,7 +211,7 @@ type Root struct {
 	Dependencies []fidlgen.LibraryIdentifier
 }
 
-func (r Root) declsOfKind(kind declKind) []Kinded {
+func (r *Root) declsOfKind(kind declKind) []Kinded {
 	ds := []Kinded{}
 	for _, d := range r.Decls {
 		if d.Kind() == kind {
@@ -221,39 +221,39 @@ func (r Root) declsOfKind(kind declKind) []Kinded {
 	return ds
 }
 
-func (r Root) Bits() []Kinded {
+func (r *Root) Bits() []Kinded {
 	return r.declsOfKind(Kinds.Bits)
 }
 
-func (r Root) Consts() []Kinded {
+func (r *Root) Consts() []Kinded {
 	return r.declsOfKind(Kinds.Const)
 }
 
-func (r Root) Enums() []Kinded {
+func (r *Root) Enums() []Kinded {
 	return r.declsOfKind(Kinds.Enum)
 }
 
-func (r Root) Protocols() []Kinded {
+func (r *Root) Protocols() []Kinded {
 	return r.declsOfKind(Kinds.Protocol)
 }
 
-func (r Root) Services() []Kinded {
+func (r *Root) Services() []Kinded {
 	return r.declsOfKind(Kinds.Service)
 }
 
-func (r Root) Structs() []Kinded {
+func (r *Root) Structs() []Kinded {
 	return r.declsOfKind(Kinds.Struct)
 }
 
-func (r Root) Tables() []Kinded {
+func (r *Root) Tables() []Kinded {
 	return r.declsOfKind(Kinds.Table)
 }
 
-func (r Root) Unions() []Kinded {
+func (r *Root) Unions() []Kinded {
 	return r.declsOfKind(Kinds.Union)
 }
 
-func (r Root) ProtocolsForTransport() func(string) []*Protocol {
+func (r *Root) ProtocolsForTransport() func(string) []*Protocol {
 	return func(t string) []*Protocol {
 		var ps []*Protocol
 		for _, k := range r.Protocols() {
@@ -267,11 +267,11 @@ func (r Root) ProtocolsForTransport() func(string) []*Protocol {
 	}
 }
 
-func (r Root) LegacyIncludeDir() string {
+func (r *Root) LegacyIncludeDir() string {
 	return formatLibraryLegacyPath(r.Library) + "/cpp"
 }
 
-func (r Root) UnifiedIncludeDir() string {
+func (r *Root) UnifiedIncludeDir() string {
 	return formatLibraryUnifiedPath(r.Library) + "/cpp"
 }
 
@@ -279,13 +279,13 @@ func (r Root) UnifiedIncludeDir() string {
 // a single identifier (e.g. "library foo;"). This is significant because the
 // unified namespace and the natural namespace are identical when the library
 // only has one component.
-func (r Root) SingleComponentLibraryName() bool {
+func (r *Root) SingleComponentLibraryName() bool {
 	return len(r.Library) == 1
 }
 
 // Namespace returns the C++ namespace for generated protocol types this FIDL
 // library.
-func (r Root) Namespace() namespace {
+func (r *Root) Namespace() namespace {
 	switch currentVariant {
 	case noVariant:
 		fidlgen.TemplateFatalf("Called Root.Namespace() when currentVariant isn't set.\n")
@@ -575,7 +575,7 @@ func (c *compiler) getAnonymousChildren(layout fidlgen.Layout) []ScopedLayout {
 	return c.anonymousChildren[toKey(layout.NamingContext)]
 }
 
-func compile(r fidlgen.Root) Root {
+func compile(r fidlgen.Root) *Root {
 	root := Root{
 		Library: fidlgen.ParseLibraryName(r.Name),
 	}
@@ -704,9 +704,9 @@ func compile(r fidlgen.Root) Root {
 	sort.Sort(sort.StringSlice(handleTypes))
 	root.HandleTypes = handleTypes
 
-	return root
+	return &root
 }
 
-func compileFor(r fidlgen.Root, n string) Root {
+func compileFor(r fidlgen.Root, n string) *Root {
 	return compile(r.ForBindings(n))
 }

@@ -13,7 +13,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 )
 
-func onlyProtocol(t *testing.T, root Root) *Protocol {
+func onlyProtocol(t *testing.T, root *Root) *Protocol {
 	var protocols []*Protocol
 	for _, decl := range root.Decls {
 		if p, ok := decl.(*Protocol); ok {

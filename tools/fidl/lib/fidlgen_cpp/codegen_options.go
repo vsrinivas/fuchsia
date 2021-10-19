@@ -65,7 +65,7 @@ func NewCmdlineFlags(name string, validExperiments []string) *CmdlineFlags {
 	return &flags
 }
 
-func (c *CmdlineFlags) ParseAndLoadIR() Root {
+func (c *CmdlineFlags) ParseAndLoadIR() *Root {
 	flag.Parse()
 	if !flag.Parsed() {
 		flag.PrintDefaults()

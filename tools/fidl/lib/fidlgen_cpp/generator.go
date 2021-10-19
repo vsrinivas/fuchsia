@@ -85,8 +85,7 @@ func (gen *Generator) generateFilename(file string, library fidlgen.LibraryIdent
 	return string(fn)
 }
 
-func (gen *Generator) GenerateFiles(tree Root, files []string) {
-
+func (gen *Generator) GenerateFiles(tree *Root, files []string) {
 	for _, f := range files {
 		fn := path.Join(gen.flags.root, gen.generateFilename(f, tree.Library))
 		err := gen.gen.GenerateFile(fn, "File:"+f, tree)
@@ -94,5 +93,4 @@ func (gen *Generator) GenerateFiles(tree Root, files []string) {
 			log.Fatalf("Error generating %s: %v", fn, err)
 		}
 	}
-
 }
