@@ -4,6 +4,9 @@
 
 group("examples") {
   if (target_cpu == "x64") {
-    deps = [ "hello_starnix:hello-starnix" ]
+    deps = [
+      "hello_starnix:hello-starnix",
+      "wayland:starnix_wayland",
+    ]
   }
 }
