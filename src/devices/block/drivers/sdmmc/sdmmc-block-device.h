@@ -146,7 +146,10 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
 
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkSuspend(ddk::SuspendTxn txn);
-  void DdkRelease() { delete this; }
+  void DdkRelease() {
+    StopWorkerThread();
+    delete this;
+  }
 
   // Called by children of this device.
   void Queue(BlockOperation txn) TA_EXCL(lock_);
