@@ -5,6 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_GLOBAL_TOPOLOGY_DATA_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_GLOBAL_TOPOLOGY_DATA_H_
 
+#include <string>
 #include <unordered_set>
 
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
@@ -46,6 +47,9 @@ struct GlobalTopologyData {
 
   // ViewRef for each TransformHandle.
   std::unordered_map<TransformHandle, std::shared_ptr<const fuchsia::ui::views::ViewRef>> view_refs;
+
+  // Debug name for each transform handle, if present.
+  std::unordered_map<TransformHandle, std::string> debug_names;
 
   // Computes the GlobalTopologyData consisting of all TransformHandles reachable from |root|.
   //

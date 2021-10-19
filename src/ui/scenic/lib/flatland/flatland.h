@@ -297,6 +297,9 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // The link from this Flatland instance to our parent.
   std::optional<LinkSystem::ParentLink> parent_link_;
 
+  // Instance name from SetDebugName().
+  std::string debug_name_;
+
   // Represents a geometric transformation as three separate components applied in the following
   // order: translation (relative to the parent's coordinate space), orientation (around the new
   // origin as defined by the translation), and scale (relative to the new rotated origin).

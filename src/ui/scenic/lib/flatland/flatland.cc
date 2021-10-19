@@ -254,6 +254,8 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
     uber_struct->view_ref = parent_link_->view_ref;
   }
 
+  uber_struct->debug_name = debug_name_;
+
   // Register a Present to get the PresentId needed to queue the UberStruct. This happens before
   // waiting on the acquire fences to indicate that a Present is pending.
   auto present_id =
@@ -453,6 +455,8 @@ void Flatland::Clear() {
 
   pending_link_operations_.push_back(
       [local_links = std::move(local_links)]() mutable { local_links.clear(); });
+
+  debug_name_.clear();
 }
 
 void Flatland::CreateTransform(TransformId transform_id) {
@@ -1114,6 +1118,7 @@ void Flatland::SetDebugName(std::string name) {
                        << " " << this;
 
   error_reporter_->SetPrefix(stream.str());
+  debug_name_ = std::move(name);
 }
 
 void Flatland::OnNextFrameBegin(uint32_t additional_present_credits,

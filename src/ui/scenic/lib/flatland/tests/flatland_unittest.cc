@@ -859,6 +859,36 @@ TEST_F(FlatlandTest, SetDebugNameAddsPrefixToLogs) {
   }
 }
 
+TEST_F(FlatlandTest, SetDebugNameAddsDebugNameToUberStruct) {
+  // debug_name is empty when SetDebugName() is not called.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    PRESENT(flatland, true);
+    auto uber_struct = GetUberStruct(flatland.get());
+    EXPECT_TRUE(uber_struct->debug_name.empty());
+  }
+  // UberStruct sees value of SetDebugName() after Present().
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->SetDebugName("test_client");
+    PRESENT(flatland, true);
+    auto uber_struct = GetUberStruct(flatland.get());
+    EXPECT_EQ("test_client", uber_struct->debug_name);
+  }
+  // Clear() resets the debug_name member of UberStruct.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->SetDebugName("test_client");
+    PRESENT(flatland, true);
+    auto uber_struct = GetUberStruct(flatland.get());
+    EXPECT_EQ("test_client", uber_struct->debug_name);
+    flatland->Clear();
+    PRESENT(flatland, true);
+    uber_struct = GetUberStruct(flatland.get());
+    EXPECT_TRUE(uber_struct->debug_name.empty());
+  }
+}
+
 TEST_F(FlatlandTest, CreateAndReleaseTransformValidCases) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 

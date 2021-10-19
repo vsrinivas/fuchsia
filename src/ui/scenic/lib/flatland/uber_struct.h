@@ -8,6 +8,7 @@
 #include <fuchsia/ui/composition/cpp/fidl.h>
 
 #include <memory>
+#include <string>
 #include <unordered_map>
 
 // clang-format off
@@ -65,6 +66,9 @@ struct UberStruct {
   // The ViewRef for the root (View) of this Flatland instance.
   // Can be nullptr when not attached to the scene, otherwise must be set.
   std::shared_ptr<const fuchsia::ui::views::ViewRef> view_ref = nullptr;
+
+  // Set from SetDebugName(). Can be empty if the client does not calls SetDebugName().
+  std::string debug_name;
 };
 
 }  // namespace flatland

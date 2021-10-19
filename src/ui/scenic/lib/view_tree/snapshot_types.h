@@ -11,6 +11,7 @@
 
 #include <array>
 #include <map>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -52,12 +53,16 @@ struct ViewNode {
 
   std::shared_ptr<const fuchsia::ui::views::ViewRef> view_ref = nullptr;
 
+  // Session name that created this view.
+  std::string debug_name;
+
   bool operator==(const ViewNode& other) const {
     return parent == other.parent && bounding_box == other.bounding_box &&
            local_from_world_transform == other.local_from_world_transform &&
            is_focusable == other.is_focusable && children == other.children &&
            ((!view_ref && !other.view_ref) ||
-            utils::ExtractKoid(*view_ref) == utils::ExtractKoid(*other.view_ref));
+            utils::ExtractKoid(*view_ref) == utils::ExtractKoid(*other.view_ref)) &&
+           debug_name == other.debug_name;
   }
 };
 

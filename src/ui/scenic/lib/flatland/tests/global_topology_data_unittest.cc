@@ -292,12 +292,14 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
     auto uber_struct = std::make_unique<UberStruct>();
     uber_struct->local_topology = vectors[0];
     uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref1));
+    uber_struct->debug_name = "test_instance_1";
     uber_structs[vectors[0][0].handle.GetInstanceId()] = std::move(uber_struct);
   }
   {
     auto uber_struct = std::make_unique<UberStruct>();
     uber_struct->local_topology = vectors[1];
     uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref2));
+    uber_struct->debug_name = "test_instance_2";
     uber_structs[vectors[1][0].handle.GetInstanceId()] = std::move(uber_struct);
   }
 
@@ -339,6 +341,7 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
       EXPECT_THAT(node1.children, testing::UnorderedElementsAre(view_ref2_koid));
       EXPECT_THAT(node1.bounding_box.min, testing::ElementsAre(0, 0));
       EXPECT_THAT(node1.bounding_box.max, testing::ElementsAre(kWidth, kHeight));
+      EXPECT_EQ(node1.debug_name, "test_instance_1");
     }
 
     {
@@ -348,6 +351,7 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
       EXPECT_TRUE(node2.children.empty());
       EXPECT_THAT(node2.bounding_box.min, testing::ElementsAre(0, 0));
       EXPECT_THAT(node2.bounding_box.max, testing::ElementsAre(kWidth, kHeight));
+      EXPECT_EQ(node2.debug_name, "test_instance_2");
     }
 
     EXPECT_TRUE(unconnected_views.empty());

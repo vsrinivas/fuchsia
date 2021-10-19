@@ -212,4 +212,51 @@ TEST(GetAncestorsOfTest, Comprehensive) {
   EXPECT_THAT(snapshot.GetAncestorsOf(5), testing::ElementsAre(3, 1));
 }
 
+// Check if the == operator works correctly.
+TEST(ViewNodeComparisonTest, Comprehensive) {
+  BoundingBox box1 = {.min = {1.0, 2.0}, .max = {4.0, 5.0}};
+  BoundingBox box2 = {.min = {1.0, 2.0}, .max = {4.0, 5.0}};
+  glm::mat4 transform1 = {1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4};
+  glm::mat4 transform2 = {1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4};
+  fuchsia::ui::views::ViewRef view_ref;
+  auto view_ref_1 = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref));
+  auto view_ref_2 = view_ref_1;
+  // Equality operator should work correctly when two nodes are equal.
+  {
+    ViewNode view_node_1 = {.parent = 1,
+                            .children = {},
+                            .bounding_box = std::move(box1),
+                            .local_from_world_transform = std::move(transform1),
+                            .is_focusable = true,
+                            .view_ref = view_ref_1,
+                            .debug_name = "view_node"};
+    ViewNode view_node_2 = {.parent = 1,
+                            .children = {},
+                            .bounding_box = std::move(box2),
+                            .local_from_world_transform = std::move(transform2),
+                            .is_focusable = true,
+                            .view_ref = view_ref_2,
+                            .debug_name = "view_node"};
+    EXPECT_EQ(view_node_1, view_node_2);
+  }
+  // Equality operator should work correctly when two nodes do not have the same debug name.
+  {
+    ViewNode view_node_1 = {.parent = 1,
+                            .children = {},
+                            .bounding_box = std::move(box1),
+                            .local_from_world_transform = std::move(transform1),
+                            .is_focusable = true,
+                            .view_ref = view_ref_1,
+                            .debug_name = "view_node_1"};
+    ViewNode view_node_2 = {.parent = 1,
+                            .children = {},
+                            .bounding_box = std::move(box2),
+                            .local_from_world_transform = std::move(transform2),
+                            .is_focusable = true,
+                            .view_ref = view_ref_2,
+                            .debug_name = "view_node_2"};
+    EXPECT_FALSE(view_node_1 == view_node_2);
+  }
+}
+
 }  // namespace view_tree::test
