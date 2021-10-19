@@ -35,7 +35,7 @@ async fn publish_kcounter_inspect(
         let kcounter_clone = kcounter.clone();
         let vmo_clone = vmo.clone();
         async move {
-            zx::ok(kcounter_clone.update_inspect_vmo().check()?.await?)?;
+            zx::ok(kcounter_clone.update_inspect_vmo().await?)?;
             Ok(fuchsia_inspect::Inspector::no_op_from_vmo(vmo_clone))
         }
         .boxed()

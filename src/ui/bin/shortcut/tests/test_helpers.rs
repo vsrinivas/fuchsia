@@ -113,7 +113,7 @@ impl RegistryService {
     /// Registers a new shortcut with the shortcut registry service.
     /// Returns a future that resolves to the FIDL response.
     pub async fn register_shortcut(&self, shortcut: ui_shortcut::Shortcut) -> Result<()> {
-        self.registry.register_shortcut(shortcut).check()?.await.map_err(Into::into)
+        self.registry.register_shortcut(shortcut).await.map_err(Into::into)
     }
 
     /// Creates a new dummy `ViewRef` for testing.
@@ -178,7 +178,7 @@ impl ManagerService {
             ..ui_input3::KeyEvent::EMPTY
         };
 
-        self.manager.handle_key3_event(event).check()?.await.map_err(Into::into)
+        self.manager.handle_key3_event(event).await.map_err(Into::into)
     }
 
     /// Emulates sending the specified key events verbatim: can be used to send
@@ -248,6 +248,6 @@ impl ManagerService {
             ),
             ..ui_focus::FocusChain::EMPTY
         };
-        self.manager.handle_focus_change(focus_chain).check()?.await.map_err(Into::into)
+        self.manager.handle_focus_change(focus_chain).await.map_err(Into::into)
     }
 }
