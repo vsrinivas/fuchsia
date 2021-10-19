@@ -183,7 +183,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
 
   DeviceState* sys_proxy() { return &sys_proxy_; }
   DeviceState* platform_bus() { return &platform_bus_; }
-  DeviceState* device(size_t index) const { return &devices_[index]; }
+  DeviceState* device(size_t index) { return &devices_[index]; }
 
   void AddDevice(const fbl::RefPtr<Device>& parent, const char* name, uint32_t protocol_id,
                  fbl::String driver, bool has_init, bool reply_to_init, bool always_init,
