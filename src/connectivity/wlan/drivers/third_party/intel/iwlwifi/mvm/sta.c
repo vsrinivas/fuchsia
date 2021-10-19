@@ -1688,6 +1688,23 @@ err:
   return ret;
 }
 
+struct iwl_mvm_sta* iwl_mvm_find_sta_by_addr(struct iwl_mvm* mvm, uint8_t addr[ETH_ALEN]) {
+  struct iwl_mvm_sta* sta = NULL;
+  iwl_assert_lock_held(&mvm->mutex);
+
+  for (size_t sta_id = 0; sta_id < ARRAY_SIZE(mvm->fw_id_to_mac_id); sta_id++) {
+    sta = mvm->fw_id_to_mac_id[sta_id];
+    if (sta == NULL) {
+      continue;
+    }
+    if (memcmp(sta->addr, addr, sizeof(sta->addr)) == 0) {
+      return sta;
+    }
+  }
+
+  return NULL;
+}
+
 zx_status_t iwl_mvm_drain_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool drain) {
   struct iwl_mvm_add_sta_cmd cmd = {};
   zx_status_t ret;

@@ -7,7 +7,6 @@
 
 // This file contains Fuchsia-specific debug compilation support.
 
-#include <fuchsia/hardware/wlan/mac/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <stddef.h>
 #include <stdio.h>

@@ -19,6 +19,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_IEEE80211_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_IEEE80211_H_
 
+#include <fuchsia/hardware/wlan/mac/c/banjo.h>
 #include <netinet/if_ether.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -95,7 +96,6 @@ struct cfg80211_sched_scan_request;
 struct cfg80211_wowlan;
 struct ieee80211_key_conf;
 struct ieee80211_sta_ht_cap;
-struct ieee80211_rx_status;
 struct ieee80211_scan_ies;
 struct ieee80211_tdls_ch_sw_params;
 
@@ -187,6 +187,24 @@ struct ieee80211_mac_packet {
   size_t body_size;
 };
 
+// Flags for the ieee80211_rx_status.flag
+enum ieee80211_rx_status_flags {
+  RX_FLAG_DECRYPTED = 0x1,
+  RX_FLAG_PN_VALIDATED = 0x2,
+  RX_FLAG_ALLOW_SAME_PN = 0x4,
+};
+
+struct ieee80211_rx_status {
+  // RX flags, as in Linux.
+  uint64_t flag;
+
+  // The encryption IV, copied here since the encryption header is removed for Fuchsia.
+  uint8_t extiv[8];
+
+  // RX info struct to pass to wlanstack.
+  struct wlan_rx_info rx_info;
+};
+
 size_t ieee80211_get_header_len(const struct ieee80211_frame_header* fh);
 
 struct ieee80211_hw* ieee80211_alloc_hw(size_t priv_data_len, const struct ieee80211_ops* ops);
@@ -194,6 +212,14 @@ struct ieee80211_hw* ieee80211_alloc_hw(size_t priv_data_len, const struct ieee8
 bool ieee80211_is_valid_chan(uint8_t primary);
 
 uint16_t ieee80211_get_center_freq(uint8_t channel_num);
+
+bool ieee80211_has_protected(const struct ieee80211_frame_header* fh);
+
+bool ieee80211_is_data(const struct ieee80211_frame_header* fh);
+
+bool ieee80211_is_data_qos(const struct ieee80211_frame_header* fh);
+
+uint8_t ieee80211_get_tid(const struct ieee80211_frame_header* fh);
 
 #if defined(__cplusplus)
 }  // extern "C"

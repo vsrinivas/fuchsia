@@ -500,6 +500,8 @@ zx_status_t iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_
                                    unsigned int flags);
 int iwl_mvm_add_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* sta);
 
+struct iwl_mvm_sta* iwl_mvm_find_sta_by_addr(struct iwl_mvm* mvm, uint8_t addr[ETH_ALEN]);
+
 static inline int iwl_mvm_update_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_sta) {
   return iwl_mvm_sta_send_to_fw(mvm, mvm_sta, true, 0);
 }

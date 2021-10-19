@@ -33,93 +33,120 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#include <wlan/protocol/ieee80211.h>
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 
-#if 0   // NEEDS_PORTING
-static inline int iwl_mvm_check_pn(struct iwl_mvm* mvm, struct sk_buff* skb, int queue,
-                                   struct ieee80211_sta* sta) {
-    struct iwl_mvm_sta* mvmsta;
-    struct ieee80211_hdr* hdr = (struct ieee80211_hdr*)skb->data;
-    struct ieee80211_rx_status* stats = IEEE80211_SKB_RXCB(skb);
-    struct iwl_mvm_key_pn* ptk_pn;
-    int res;
-    uint8_t tid, keyidx;
-    uint8_t pn[IEEE80211_CCMP_PN_LEN];
-    uint8_t* extiv;
+static bool is_multicast_ether_addr(uint8_t addr[6]) { return (addr[0] & 0x1) != 0; }
 
-    /* do PN checking */
+static inline zx_status_t iwl_mvm_check_pn(struct iwl_mvm* mvm, struct ieee80211_frame_header* hdr,
+                                           struct ieee80211_rx_status* stats, int queue,
+                                           struct iwl_mvm_sta* mvmsta) {
+  struct iwl_mvm_key_pn* ptk_pn;
+  int res;
+  uint8_t tid, keyidx;
+  uint8_t pn[IEEE80211_CCMP_PN_LEN];
 
-    /* multicast and non-data only arrives on default queue */
-    if (!ieee80211_is_data(hdr->frame_control) || is_multicast_ether_addr(hdr->addr1)) { return 0; }
+  /* do PN checking */
 
-    /* do not check PN for open AP */
-    if (!(stats->flag & RX_FLAG_DECRYPTED)) { return 0; }
+  /* multicast and non-data only arrives on default queue */
+  if (!ieee80211_is_data(hdr) || is_multicast_ether_addr(hdr->addr1)) {
+    return ZX_OK;
+  }
 
-    /*
-     * avoid checking for default queue - we don't want to replicate
-     * all the logic that's necessary for checking the PN on fragmented
-     * frames, leave that to mac80211
-     */
-    if (queue == 0) { return 0; }
+  /* do not check PN for open AP */
+  if (!(stats->flag & RX_FLAG_DECRYPTED)) {
+    return ZX_OK;
+  }
 
-    /* if we are here - this for sure is either CCMP or GCMP */
-    if (IS_ERR_OR_NULL(sta)) {
-        IWL_ERR(mvm, "expected hw-decrypted unicast frame for station\n");
-        return -1;
-    }
+  /*
+   * avoid checking for default queue - we don't want to replicate
+   * all the logic that's necessary for checking the PN on fragmented
+   * frames, leave that to mac80211
+   */
+  if (queue == 0) {
+    return ZX_OK;
+  }
 
-    mvmsta = iwl_mvm_sta_from_mac80211(sta);
+  /* if we are here - this for sure is either CCMP or GCMP */
+  if (mvmsta == NULL) {
+    IWL_ERR(mvm, "expected hw-decrypted unicast frame for station\n");
+    return ZX_ERR_BAD_STATE;
+  }
 
-    extiv = (uint8_t*)hdr + ieee80211_hdrlen(hdr->frame_control);
-    keyidx = extiv[3] >> 6;
+  keyidx = stats->extiv[3] >> 6;
 
-    ptk_pn = rcu_dereference(mvmsta->ptk_pn[keyidx]);
-    if (!ptk_pn) { return -1; }
+  mtx_lock(&mvmsta->ptk_pn_mutex);
+  ptk_pn = rcu_dereference(mvmsta->ptk_pn[keyidx]);
+  if (!ptk_pn) {
+    mtx_unlock(&mvmsta->ptk_pn_mutex);
+    return ZX_ERR_BAD_STATE;
+  }
 
-    if (ieee80211_is_data_qos(hdr->frame_control)) {
-        tid = ieee80211_get_tid(hdr);
-    } else {
-        tid = 0;
-    }
+  if (ieee80211_is_data_qos(hdr)) {
+    tid = ieee80211_get_tid(hdr);
+  } else {
+    tid = 0;
+  }
 
-    /* we don't use HCCA/802.11 QoS TSPECs, so drop such frames */
-    if (tid >= IWL_MAX_TID_COUNT) { return -1; }
+  /* we don't use HCCA/802.11 QoS TSPECs, so drop such frames */
+  if (tid >= IWL_MAX_TID_COUNT) {
+    mtx_unlock(&mvmsta->ptk_pn_mutex);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    /* load pn */
-    pn[0] = extiv[7];
-    pn[1] = extiv[6];
-    pn[2] = extiv[5];
-    pn[3] = extiv[4];
-    pn[4] = extiv[1];
-    pn[5] = extiv[0];
+  /* load pn */
+  pn[0] = stats->extiv[7];
+  pn[1] = stats->extiv[6];
+  pn[2] = stats->extiv[5];
+  pn[3] = stats->extiv[4];
+  pn[4] = stats->extiv[1];
+  pn[5] = stats->extiv[0];
 
-    res = memcmp(pn, ptk_pn->q[queue].pn[tid], IEEE80211_CCMP_PN_LEN);
-    if (res < 0) { return -1; }
-    if (!res && !(stats->flag & RX_FLAG_ALLOW_SAME_PN)) { return -1; }
+  res = memcmp(pn, ptk_pn->q[queue].pn[tid], IEEE80211_CCMP_PN_LEN);
+  if (res < 0) {
+    mtx_unlock(&mvmsta->ptk_pn_mutex);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (!res && !(stats->flag & RX_FLAG_ALLOW_SAME_PN)) {
+    mtx_unlock(&mvmsta->ptk_pn_mutex);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    memcpy(ptk_pn->q[queue].pn[tid], pn, IEEE80211_CCMP_PN_LEN);
-    stats->flag |= RX_FLAG_PN_VALIDATED;
+  memcpy(ptk_pn->q[queue].pn[tid], pn, IEEE80211_CCMP_PN_LEN);
+  mtx_unlock(&mvmsta->ptk_pn_mutex);
 
-    return 0;
+  stats->flag |= RX_FLAG_PN_VALIDATED;
+
+  return ZX_OK;
 }
 
-/* iwl_mvm_create_skb Adds the rxb to a new skb */
-static void iwl_mvm_create_skb(struct sk_buff* skb, struct ieee80211_hdr* hdr, uint16_t len,
-                               uint8_t crypt_len, struct iwl_rx_cmd_buffer* rxb) {
-    struct iwl_rx_packet* pkt = rxb_addr(rxb);
-    struct iwl_rx_mpdu_desc* desc = (void*)pkt->data;
-    unsigned int headlen, fraglen, pad_len = 0;
-    unsigned int hdrlen = ieee80211_hdrlen(hdr->frame_control);
+// iwl_mvm_create_packet formats the packets for passing to mac80211.
+// Note: this is derived from iwl_mvm_create_skb(), but the Fuchsia version formats the packet
+// in-place.
+static size_t iwl_mvm_create_packet(struct ieee80211_frame_header* hdr, size_t len,
+                                    size_t crypt_len, struct ieee80211_rx_status* status,
+                                    struct iwl_rx_cmd_buffer* rxb) {
+  struct iwl_rx_packet* pkt = rxb_addr(rxb);
+  struct iwl_rx_mpdu_desc* desc = (void*)pkt->data;
+  size_t hdrlen = ieee80211_get_header_len(hdr);
+  size_t datalen = len - hdrlen;
+  size_t padlen = 0;
 
-    if (desc->mac_flags2 & IWL_RX_MPDU_MFLG2_PAD) {
-        len -= 2;
-        pad_len = 2;
-    }
+  /* The firmware may align the packet to DWORD.
+   * The padding is inserted after the IV.
+   * After copying the header + IV skip the padding if
+   * present before copying packet data.
+   */
+  if (desc->mac_flags2 & IWL_RX_MPDU_MFLG2_PAD) {
+    padlen += 2;
+  }
 
+  // Fuchsia requires that the crypto header is stripped out.
+  padlen += crypt_len;
+
+#if 0   // NEEDS_PORTING
     /* If frame is small enough to fit in skb->head, pull it completely.
      * If not, only pull ieee80211_hdr (including crypto if present, and
      * an additional 8 bytes for SNAP/ethertype, see below) so that
@@ -133,65 +160,65 @@ static void iwl_mvm_create_skb(struct sk_buff* skb, struct ieee80211_hdr* hdr, u
      * to do so) we should revisit this and ieee80211_data_to_8023().
      */
     headlen = (len <= skb_tailroom(skb)) ? len : hdrlen + crypt_len + 8;
-
-    /* The firmware may align the packet to DWORD.
-     * The padding is inserted after the IV.
-     * After copying the header + IV skip the padding if
-     * present before copying packet data.
-     */
     hdrlen += crypt_len;
     skb_put_data(skb, hdr, hdrlen);
-    skb_put_data(skb, (uint8_t*)hdr + hdrlen + pad_len, headlen - hdrlen);
+    skb_put_data(skb, (uint8_t*)hdr + hdrlen + padlen, headlen - hdrlen);
+#endif  // NEEDS_PORTING
 
+  // For Fuchsia, we take out padlen, which includes any crypt header if present.
+  if (padlen > 0) {
+    if (padlen < 4 && ((hdrlen + padlen) % 4) == 0) {
+      // There is padding equivalent to padding for 4-byte alignment, so we we indicate this to SME
+      // using a flag instead of manually copying the packet contents.
+      status->rx_info.rx_flags |= WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
+    } else {
+      datalen -= padlen;
+      memmove((char*)hdr + hdrlen, (char*)hdr + hdrlen + padlen, datalen);
+    }
+  }
+
+#if 0   // NEEDS_PORTING
     fraglen = len - headlen;
 
     if (fraglen) {
-        int offset = (void*)hdr + headlen + pad_len - rxb_addr(rxb) + rxb_offset(rxb);
+        int offset = (void*)hdr + headlen + padlen - rxb_addr(rxb) + rxb_offset(rxb);
 
         skb_add_rx_frag(skb, 0, rxb_steal_page(rxb), offset, fraglen, rxb->truesize);
     }
-}
 #endif  // NEEDS_PORTING
+
+  return hdrlen + datalen;
+}
 
 /* iwl_mvm_pass_packet_to_mac80211 - passes the packet for mac80211 */
 static void iwl_mvm_pass_packet_to_mac80211(struct iwl_mvm* mvm,
-                                            struct ieee80211_frame_header* frame,
-                                            struct iwl_rx_mpdu_desc* desc,
-                                            wlan_rx_info_t* rx_info) {
-  // Send to MLME
-  uint32_t frame_len = desc->mpdu_len;
-  if (desc->mac_flags2 & IWL_RX_MPDU_MFLG2_PAD) {
-    // FW indicates it has padded the header for 4-byte alignment. Indicate the same to SME.
-    uint32_t hdrlen = ieee80211_hdrlen(frame);
-    IWL_DEBUG_RX(mvm, "Frame body padding FC: 0x%x framelen: %u hdrlen: %d", frame->frame_ctrl,
-                 frame_len, hdrlen);
-    rx_info->rx_flags |= WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
-  }
-  IWL_DEBUG_RX(mvm, "Rx desc: chan: 0x%x energy a: 0x%x energy b: 0x%x status: 0x%x rate: 0x%x",
-               desc->v1.channel, desc->v1.energy_a, desc->v1.energy_b, desc->status,
-               desc->v1.rate_n_flags);
-  IWL_DEBUG_RX(mvm, "Rx pkt len: %u flags: 0x%x phy : %d chn: %d", frame_len, rx_info->valid_fields,
-               rx_info->phy, rx_info->channel.primary);
-  // TODO(fxbug.dev/43218) Need to revisit to handle multiple IFs
-  wlanmac_ifc_recv(&mvm->mvmvif[0]->ifc, 0, (uint8_t*)frame, frame_len, rx_info);
+                                            struct ieee80211_frame_header* frame, size_t frame_len,
+                                            struct ieee80211_rx_status* rx_status, int queue,
+                                            struct iwl_mvm_sta* sta) {
 #if 0   // NEEDS_PORTING
     struct ieee80211_rx_status* rx_status = IEEE80211_SKB_RXCB(skb);
-
-    if (iwl_mvm_check_pn(mvm, skb, queue, sta)) {
-        kfree_skb(skb);
-    } else {
-        unsigned int radiotap_len = 0;
-
-        if (rx_status->flag & RX_FLAG_RADIOTAP_HE) {
-            radiotap_len += sizeof(struct ieee80211_radiotap_he);
-        }
-        if (rx_status->flag & RX_FLAG_RADIOTAP_HE_MU) {
-            radiotap_len += sizeof(struct ieee80211_radiotap_he_mu);
-        }
-        __skb_push(skb, radiotap_len);
-        ieee80211_rx_napi(mvm->hw, sta, skb, napi);
-    }
 #endif  // NEEDS_PORTING
+
+  if (iwl_mvm_check_pn(mvm, frame, rx_status, queue, sta) != ZX_OK) {
+    return;
+  }
+
+#if 0   // NEEDS_PORTING
+  unsigned int radiotap_len = 0;
+
+  if (rx_status->flag & RX_FLAG_RADIOTAP_HE) {
+      radiotap_len += sizeof(struct ieee80211_radiotap_he);
+  }
+  if (rx_status->flag & RX_FLAG_RADIOTAP_HE_MU) {
+      radiotap_len += sizeof(struct ieee80211_radiotap_he_mu);
+  }
+  __skb_push(skb, radiotap_len);
+  ieee80211_rx_napi(mvm->hw, sta, skb, napi);
+#endif  // NEEDS_PORTING
+
+  // Send to MLME
+  // TODO(fxbug.dev/43218) Need to revisit to handle multiple IFs
+  wlanmac_ifc_recv(&mvm->mvmvif[0]->ifc, 0, (uint8_t*)frame, frame_len, &rx_status->rx_info);
 }
 
 static int iwl_mvm_get_signal_strength(struct iwl_mvm* mvm, int energy_a, int energy_b) {
@@ -205,44 +232,56 @@ static int iwl_mvm_get_signal_strength(struct iwl_mvm* mvm, int energy_a, int en
   return max_energy;
 }
 
-#if 0
-static int iwl_mvm_rx_crypto(struct iwl_mvm* mvm, struct ieee80211_hdr* hdr,
-                             struct ieee80211_rx_status* stats, uint16_t phy_info,
-                             struct iwl_rx_mpdu_desc* desc, uint32_t pkt_flags, int queue,
-                             uint8_t* crypt_len) {
-    uint16_t status = le16_to_cpu(desc->status);
+static zx_status_t iwl_mvm_rx_crypto(struct iwl_mvm* mvm, struct ieee80211_frame_header* hdr,
+                                     struct ieee80211_rx_status* stats, uint16_t phy_info,
+                                     struct iwl_rx_mpdu_desc* desc, uint32_t pkt_flags,
+                                     size_t* crypt_len) {
+  uint16_t status = le16_to_cpu(desc->status);
 
-    /*
-     * Drop UNKNOWN frames in aggregation, unless in monitor mode
-     * (where we don't have the keys).
-     * We limit this to aggregation because in TKIP this is a valid
-     * scenario, since we may not have the (correct) TTAK (phase 1
-     * key) in the firmware.
-     */
-    if (phy_info & IWL_RX_MPDU_PHY_AMPDU &&
-        (status & IWL_RX_MPDU_STATUS_SEC_MASK) == IWL_RX_MPDU_STATUS_SEC_UNKNOWN &&
-        !mvm->monitor_on) {
-        return -1;
-    }
+  /*
+   * Drop UNKNOWN frames in aggregation, unless in monitor mode
+   * (where we don't have the keys).
+   * We limit this to aggregation because in TKIP this is a valid
+   * scenario, since we may not have the (correct) TTAK (phase 1
+   * key) in the firmware.
+   */
+  if (phy_info & IWL_RX_MPDU_PHY_AMPDU &&
+      (status & IWL_RX_MPDU_STATUS_SEC_MASK) == IWL_RX_MPDU_STATUS_SEC_UNKNOWN &&
+      !mvm->monitor_on) {
+    return ZX_ERR_BAD_STATE;
+  }
 
-    if (!ieee80211_has_protected(hdr->frame_control) ||
-        (status & IWL_RX_MPDU_STATUS_SEC_MASK) == IWL_RX_MPDU_STATUS_SEC_NONE) {
-        return 0;
-    }
+  if (!ieee80211_has_protected(hdr) ||
+      (status & IWL_RX_MPDU_STATUS_SEC_MASK) == IWL_RX_MPDU_STATUS_SEC_NONE) {
+    return ZX_OK;
+  }
 
-    /* TODO: handle packets encrypted with unknown alg */
+  /* TODO: handle packets encrypted with unknown alg */
 
-    switch (status & IWL_RX_MPDU_STATUS_SEC_MASK) {
+  switch (status & IWL_RX_MPDU_STATUS_SEC_MASK) {
     case IWL_RX_MPDU_STATUS_SEC_CCM:
     case IWL_RX_MPDU_STATUS_SEC_GCM:
+#if 0   // NEEDS_PORTING
         BUILD_BUG_ON(IEEE80211_CCMP_PN_LEN != IEEE80211_GCMP_PN_LEN);
-        /* alg is CCM: check MIC only */
-        if (!(status & IWL_RX_MPDU_STATUS_MIC_OK)) { return -1; }
+#endif  // NEEDS_PORTING
 
-        stats->flag |= RX_FLAG_DECRYPTED;
+      /* alg is CCM: check MIC only */
+      if (!(status & IWL_RX_MPDU_STATUS_MIC_OK)) {
+        return ZX_ERR_BAD_STATE;
+      }
+
+      stats->flag |= RX_FLAG_DECRYPTED;
+#if 0   // NEEDS_PORTING
         if (pkt_flags & FH_RSCSR_RADA_EN) { stats->flag |= RX_FLAG_MIC_STRIPPED; }
-        *crypt_len = IEEE80211_CCMP_HDR_LEN;
-        return 0;
+#endif  // NEEDS_PORTING
+
+      // Fuchsia needs the extiv copied, since it will remove the crypt header from the packet.
+      memcpy(stats->extiv, (char*)hdr + ieee80211_get_header_len(hdr), 8);
+
+      *crypt_len = IEEE80211_CCMP_HDR_LEN;
+      return ZX_OK;
+
+#if 0   // NEEDS_PORTING
     case IWL_RX_MPDU_STATUS_SEC_TKIP:
         /* Don't drop the frame and decrypt it in SW */
         if (!fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_DEPRECATE_TTAK) &&
@@ -274,14 +313,16 @@ static int iwl_mvm_rx_crypto(struct iwl_mvm* mvm, struct ieee80211_hdr* hdr,
         if (!(status & IWL_RX_MPDU_STATUS_MIC_OK)) { return -1; }
         stats->flag |= RX_FLAG_DECRYPTED;
         return 0;
+#endif  // NEEDS_PORTING
     default:
         /* Expected in monitor (not having the keys) */
         if (!mvm->monitor_on) { IWL_ERR(mvm, "Unhandled alg: 0x%x\n", status); }
-    }
+  }
 
-    return 0;
+  return 0;
 }
 
+#if 0  // NEEDS_PORTING
 static void iwl_mvm_rx_csum(struct ieee80211_sta* sta, struct sk_buff* skb,
                             struct iwl_rx_mpdu_desc* desc) {
     struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
@@ -1172,21 +1213,24 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
                         struct iwl_rx_cmd_buffer* rxb, int queue) {
   struct iwl_rx_packet* pkt = rxb_addr(rxb);
   struct iwl_rx_mpdu_desc* desc = (void*)pkt->data;
-  uint16_t phy_flags = le16_to_cpu(desc->phy_info);
-  struct ieee80211_frame_header* frame;
-  wlan_rx_info_t rx_info = {};
+  struct ieee80211_frame_header* hdr;
+  uint32_t len = le16_to_cpu(desc->mpdu_len);
   uint32_t rate_n_flags;
-  uint16_t sts_phy_info = le16_to_cpu(desc->phy_info);
+  uint16_t phy_info = le16_to_cpu(desc->phy_info);
+  struct iwl_mvm_sta* sta = NULL;
   uint8_t channel, energy_a, energy_b;
+  size_t crypt_len = 0, desc_size;
+
+  struct ieee80211_rx_status rx_status = {};
+  uint16_t sts_phy_info = le16_to_cpu(desc->phy_info);
   uint8_t band;
-  size_t desc_size;
+
 #if 0   // NEEDS_PORTING
   // TODO(fxbug.dev/84773)
   struct iwl_mvm_rx_phy_data phy_data = {
       .d4 = desc->phy_data4,
       .info_type = IWL_RX_PHY_INFO_TYPE_NONE,
   };
-  uint8_t crypt_len = 0;
 #endif  // NEEDS_PORTING
 
   if (unlikely(test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status))) {
@@ -1227,7 +1271,10 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
   if (sts_phy_info & IWL_RX_MPDU_PHY_TSF_OVERLOAD) {
     phy_data.info_type = le32_get_bits(phy_data.d1, IWL_RX_PHY_DATA1_INFO_TYPE_MASK);
   }
+#endif  // NEEDS_PORTING
 
+  hdr = (void*)(pkt->data + desc_size);
+#if 0   // NEEDS_PORTING
     /* Dont use dev_alloc_skb(), we'll have enough headroom once
      * ieee80211_hdr pulled.
      */
@@ -1251,16 +1298,16 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
   /* This may be overridden by iwl_mvm_rx_he() to HE_RU */
   switch (rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK) {
     case RATE_MCS_CHAN_WIDTH_20:
-      rx_info.channel.cbw = CHANNEL_BANDWIDTH_CBW20;
+      rx_status.rx_info.channel.cbw = CHANNEL_BANDWIDTH_CBW20;
       break;
     case RATE_MCS_CHAN_WIDTH_40:
-      rx_info.channel.cbw = CHANNEL_BANDWIDTH_CBW40;
+      rx_status.rx_info.channel.cbw = CHANNEL_BANDWIDTH_CBW40;
       break;
     case RATE_MCS_CHAN_WIDTH_80:
-      rx_info.channel.cbw = CHANNEL_BANDWIDTH_CBW80;
+      rx_status.rx_info.channel.cbw = CHANNEL_BANDWIDTH_CBW80;
       break;
     case RATE_MCS_CHAN_WIDTH_160:
-      rx_info.channel.cbw = CHANNEL_BANDWIDTH_CBW160;
+      rx_status.rx_info.channel.cbw = CHANNEL_BANDWIDTH_CBW160;
       break;
   }
 
@@ -1270,13 +1317,12 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     }
 
     iwl_mvm_decode_lsig(skb, &phy_data);
-
-    if (iwl_mvm_rx_crypto(mvm, hdr, rx_status, phy_info, desc, le32_to_cpu(pkt->len_n_flags), queue,
-                          &crypt_len)) {
-        kfree_skb(skb);
-        return;
-    }
 #endif  // NEEDS_PORTING
+
+  if (iwl_mvm_rx_crypto(mvm, hdr, &rx_status, phy_info, desc, le32_to_cpu(pkt->len_n_flags),
+                        &crypt_len) != ZX_OK) {
+    return;
+  }
 
   /*
    * Keep packets with CRC errors (and with overrun) for monitor mode
@@ -1286,7 +1332,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
       !(desc->status & cpu_to_le16(IWL_RX_MPDU_STATUS_OVERRUN_OK))) {
     IWL_DEBUG_RX(mvm, "Bad CRC or FIFO: 0x%08X.\n", le16_to_cpu(desc->status));
     // rx_status->flag |= RX_FLAG_FAILED_FCS_CRC;
-    rx_info.rx_flags |= WLAN_RX_INFO_FLAGS_FCS_INVALID;
+    rx_status.rx_info.rx_flags |= WLAN_RX_INFO_FLAGS_FCS_INVALID;
   }
 
 #if 0   // NEEDS_PORTING
@@ -1313,11 +1359,10 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
   rx_status->freq = ieee80211_channel_to_frequency(channel, band);
 #endif  // NEEDS_PORTING
 
-  rx_info.rssi_dbm = iwl_mvm_get_signal_strength(mvm, energy_a, energy_b);
-  rx_info.valid_fields |= WLAN_RX_INFO_VALID_RSSI;
+  rx_status.rx_info.rssi_dbm = iwl_mvm_get_signal_strength(mvm, energy_a, energy_b);
+  rx_status.rx_info.valid_fields |= WLAN_RX_INFO_VALID_RSSI;
   band = iwl_mvm_get_channel_band(channel);
-  rx_info.channel.primary = channel;
-  frame = (void*)(pkt->data + desc_size);
+  rx_status.rx_info.channel.primary = channel;
 
   /* update aggregation data for monitor sake on default queue */
   if (!queue && (sts_phy_info & IWL_RX_MPDU_PHY_AMPDU)) {
@@ -1336,22 +1381,23 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
 
   rcu_read_lock();
 
-#if 0  // NEEDS_PORTING
-    if (desc->status & cpu_to_le16(IWL_RX_MPDU_STATUS_SRC_STA_FOUND)) {
-        uint8_t id = desc->sta_id_flags & IWL_RX_MPDU_SIF_STA_ID_MASK;
+  if (desc->status & cpu_to_le16(IWL_RX_MPDU_STATUS_SRC_STA_FOUND)) {
+    uint8_t id = desc->sta_id_flags & IWL_RX_MPDU_SIF_STA_ID_MASK;
 
-        if (!WARN_ON_ONCE(id >= ARRAY_SIZE(mvm->fw_id_to_mac_id))) {
-            sta = rcu_dereference(mvm->fw_id_to_mac_id[id]);
-            if (IS_ERR(sta)) { sta = NULL; }
-        }
-    } else if (!is_multicast_ether_addr(hdr->addr2)) {
-        /*
-         * This is fine since we prevent two stations with the same
-         * address from being added.
-         */
-        sta = ieee80211_find_sta_by_ifaddr(mvm->hw, hdr->addr2, NULL);
+    if (!WARN_ON_ONCE(id >= ARRAY_SIZE(mvm->fw_id_to_mac_id))) {
+      sta = rcu_dereference(mvm->fw_id_to_mac_id[id]);
     }
+  } else if (!is_multicast_ether_addr(hdr->addr2)) {
+    /*
+     * This is fine since we prevent two stations with the same
+     * address from being added.
+     */
+    mtx_lock(&mvm->mutex);
+    sta = iwl_mvm_find_sta_by_addr(mvm, hdr->addr2);
+    mtx_unlock(&mvm->mutex);
+  }
 
+#if 0  // NEEDS_PORTING
     if (sta) {
         struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
         struct ieee80211_vif* tx_blocked_vif = rcu_dereference(mvm->csa_tx_blocked_vif);
@@ -1452,7 +1498,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     rx_status->rate_idx = rate_n_flags & RATE_HT_MCS_INDEX_MSK;
     rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
 #endif  // NEEDS_PORTING
-    rx_info.phy = WLAN_INFO_PHY_TYPE_HT;
+    rx_status.rx_info.phy = WLAN_INFO_PHY_TYPE_HT;
   } else if (rate_n_flags & RATE_MCS_VHT_MSK) {
 #if 0   // NEEDS_PORTING
     // TODO(fxbug.dev/36684)
@@ -1465,14 +1511,14 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
       rx_status->enc_flags |= RX_ENC_FLAG_BF;
     }
 #endif  // NEEDS_PORTING
-    rx_info.phy = WLAN_INFO_PHY_TYPE_VHT;
+    rx_status.rx_info.phy = WLAN_INFO_PHY_TYPE_VHT;
   } else if (!(rate_n_flags & RATE_MCS_HE_MSK)) {
     int rate;
     if (ZX_OK != iwl_mvm_legacy_rate_to_mac80211_idx(rate_n_flags, band, &rate)) {
       IWL_WARN(mvm, "Error converting rate to mac80211 idx");
       goto out;
     }
-    if (ZX_OK != mac80211_idx_to_data_rate(band, rate, &rx_info.data_rate)) {
+    if (ZX_OK != mac80211_idx_to_data_rate(band, rate, &rx_status.rx_info.data_rate)) {
       IWL_ERR(mvm, "Cannot convert mac80211 index (%d) to data rate for MLME (band=%d)", rate,
               band);
       goto out;
@@ -1483,10 +1529,10 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
       goto out;
     }
     // rx_status->rate_idx = rate;
-    rx_info.phy =
-        phy_flags & RX_RES_PHY_FLAGS_MOD_CCK ? WLAN_INFO_PHY_TYPE_CCK : WLAN_INFO_PHY_TYPE_OFDM;
+    rx_status.rx_info.phy =
+        phy_info & RX_RES_PHY_FLAGS_MOD_CCK ? WLAN_INFO_PHY_TYPE_CCK : WLAN_INFO_PHY_TYPE_OFDM;
   }
-  rx_info.valid_fields |= WLAN_RX_INFO_VALID_DATA_RATE;
+  rx_status.rx_info.valid_fields |= WLAN_RX_INFO_VALID_DATA_RATE;
 
 #if 0   // NEEDS_PORTING
     /* management stuff on default queue */
@@ -1502,11 +1548,11 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
             rx_status->boottime_ns = ktime_get_boot_ns();
         }
     }
-    iwl_mvm_create_skb(skb, hdr, len, crypt_len, rxb);
 #endif  // NEEDS_PORTING
 
+  len = iwl_mvm_create_packet(hdr, len, crypt_len, &rx_status, rxb);
   if (!iwl_mvm_reorder(mvm, queue, desc)) {
-    iwl_mvm_pass_packet_to_mac80211(mvm, frame, desc, &rx_info);
+    iwl_mvm_pass_packet_to_mac80211(mvm, hdr, len, &rx_status, queue, sta);
   }
 out:
   rcu_read_unlock();
