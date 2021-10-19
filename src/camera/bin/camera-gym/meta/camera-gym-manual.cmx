@@ -9,9 +9,6 @@
         "binary": "bin/camera_gym_bin"
     },
     "sandbox": {
-        "features": [
-            "isolated-persistent-storage"
-        ],
         "services": [
             "fuchsia.camera.gym.Controller",
             "fuchsia.camera3.DeviceWatcher",

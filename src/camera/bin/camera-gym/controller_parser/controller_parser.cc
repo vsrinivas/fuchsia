@@ -19,7 +19,6 @@ using AddStreamCommand = fuchsia::camera::gym::AddStreamCommand;
 using SetCropCommand = fuchsia::camera::gym::SetCropCommand;
 using SetResolutionCommand = fuchsia::camera::gym::SetResolutionCommand;
 using SetDescriptionCommand = fuchsia::camera::gym::SetDescriptionCommand;
-using CaptureFrameCommand = fuchsia::camera::gym::CaptureFrameCommand;
 
 fpromise::result<std::vector<Command>> ControllerParser::ParseArgcArgv(int argc,
                                                                        const char** argv) {
@@ -100,13 +99,6 @@ fpromise::result<Command> ControllerParser::ParseOneCommand(const std::string& n
     if (result.is_ok()) {
       SetDescriptionCommand set_description = result.take_value();
       Command command = Command::WithSetDescription(std::move(set_description));
-      return fpromise::ok(std::move(command));
-    }
-  } else if (name.compare("capture-frame") == 0) {
-    auto result = ParseCaptureFrameCommand(name, value);
-    if (result.is_ok()) {
-      CaptureFrameCommand capture_frame = result.take_value();
-      Command command = Command::WithCaptureFrame(std::move(capture_frame));
       return fpromise::ok(std::move(command));
     }
   } else {
@@ -191,19 +183,6 @@ fpromise::result<SetDescriptionCommand> ControllerParser::ParseSetDescriptionCom
   SetDescriptionCommand set_description;
   set_description.enable = values.i[0];
   return fpromise::ok(set_description);
-}
-
-fpromise::result<CaptureFrameCommand> ControllerParser::ParseCaptureFrameCommand(
-    const std::string& name, const std::string& value) {
-  auto result = ParseValues(value, "i");
-  if (result.is_error()) {
-    fprintf(stderr, "Failed to parse arguments: \"%s\"\n", name.c_str());
-    return fpromise::error();
-  }
-  ValuesArray values = result.take_value();
-  CaptureFrameCommand capture_frame;
-  capture_frame.stream_id = values.i[0];
-  return fpromise::ok(capture_frame);
 }
 
 // TODO(?????) - Should we tolerate the case where more than enough args are present?

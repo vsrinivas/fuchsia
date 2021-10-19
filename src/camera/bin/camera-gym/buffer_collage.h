@@ -21,7 +21,6 @@
 #include <map>
 
 #include "fuchsia/camera/gym/cpp/fidl.h"
-#include "src/camera/bin/camera-gym/frame_capture.h"
 
 namespace camera {
 
@@ -53,10 +52,6 @@ struct CollectionView {
   bool has_content = false;
   bool darkened = true;
   std::unique_ptr<BitmapImageNode> description_node;
-
-  // Frame capture support
-  std::map<uint32_t, uintptr_t> vmo_virt_addr_table;
-  uint32_t bytes_per_row_divisor = 1;
 };
 
 // This class takes ownership of the display and presents the contents of buffer collections in a
@@ -109,16 +104,15 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   // Updates the view to show or hide a mute icon.
   void PostSetMuteIconVisibility(bool visible);
 
-  // Enable the frame capture utility.
-  void SetFrameCapture(std::unique_ptr<FrameCapture> frame_capture) {
-    frame_capture_ = std::move(frame_capture);
+  // Returns the current magnify boxes mode. (Global to all streams)
+  bool show_magnify_boxes() {
+    return (show_state_ & kShowMagnifyBoxes) != 0;
   }
 
-  // Returns the current magnify boxes mode. (Global to all streams)
-  bool show_magnify_boxes() const { return (show_state_ & kShowMagnifyBoxes) != 0; }
-
   // Returns the current description mode. (Global to all streams)
-  bool show_description() const { return (show_state_ & kShowDescription) != 0; }
+  bool show_description() {
+    return (show_state_ & kShowDescription) != 0;
+  }
 
   // Updates the magnify boxes mode. (Global to all streams)
   void set_show_magnify_boxes(bool enable) {
@@ -143,7 +137,6 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   void ExecuteCommand(fuchsia::camera::gym::Command command, CommandStatusHandler handler);
   void PostedExecuteCommand(fuchsia::camera::gym::Command command, CommandStatusHandler handler);
   void ExecuteSetDescriptionCommand(fuchsia::camera::gym::SetDescriptionCommand& command);
-  void ExecuteCaptureFrameCommand(fuchsia::camera::gym::CaptureFrameCommand& command);
 
  private:
   BufferCollage();
@@ -207,9 +200,6 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
 
   // TODO(?????) - Is this really the ideal way to communicate status back?
   CommandStatusHandler command_status_handler_;
-
-  std::unique_ptr<FrameCapture> frame_capture_;
-  uint32_t frame_capture_trigger_ = 0;
 };
 
 }  // namespace camera
