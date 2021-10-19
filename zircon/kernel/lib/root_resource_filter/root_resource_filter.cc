@@ -142,7 +142,7 @@ std::optional<uintptr_t> RootResourceFilter::ProcessCmdLineReservation(size_t si
   // Great, we have the region reserved.  All we need to do now is to update the
   // deny list.  Start by fetching the phys addr of the region we allocated and
   // pinned.
-  paddr_t phys;
+  paddr_t phys = 0;
   status = node->vmo->GetPage(0, 0, nullptr, nullptr, nullptr, &phys);
   if (status != ZX_OK) {
     Printf("WARNING - Failed to fetch physaddr for command line reservation \"%V\" (status=%d)\n",
