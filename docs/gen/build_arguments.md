@@ -1008,12 +1008,26 @@ build outputs that are part of the build API (e.g. zbi's, package servers).
 
 From //build/dev.gni:14
 
+### dev_kernel_cmdline
+List of strings to append to the kernel command line.
+
+**Current value (from the default):** `[]`
+
+From //build/dev.gni:26
+
 ### dev_recovery_bootfs_labels
 List of binary labels to include in the recovery ZBI.
 
 **Current value (from the default):** `[]`
 
 From //build/dev.gni:23
+
+### dev_recovery_kernel_cmdline
+List of strings to append to the recovery kernel command line.
+
+**Current value (from the default):** `[]`
+
+From //build/dev.gni:32
 
 ### dev_system_image_deps
 List of labels for binaries to include in the system image.
@@ -1028,6 +1042,13 @@ List of binary labels to include in the zedboot ZBI.
 **Current value (from the default):** `[]`
 
 From //build/dev.gni:20
+
+### dev_zedboot_kernel_cmdline
+List of strings to append to the zedboot kernel command line.
+
+**Current value (from the default):** `[]`
+
+From //build/dev.gni:29
 
 ### devmgr_config
 List of arguments to add to /boot/config/devmgr.
@@ -1256,26 +1277,19 @@ corrupted. Setting this flag to true helps debugging corruptions.
 
 From //src/storage/fshost/BUILD.gn:33
 
-### f2fs_bu_debug
-F2FS debug message
-
-**Current value (from the default):** `false`
-
-From //src/storage/f2fs/BUILD.gn:11
-
 ### f2fs_force_ssr
 Enforce every allocation in a ssr manner [for test]
 
 **Current value (from the default):** `true`
 
-From //src/storage/f2fs/BUILD.gn:14
+From //src/storage/f2fs/BUILD.gn:11
 
 ### f2fs_roll_fwd
 Enable f2fs_roll_forward
 
 **Current value (from the default):** `false`
 
-From //src/storage/f2fs/BUILD.gn:17
+From //src/storage/f2fs/BUILD.gn:14
 
 ### fastboot_product
 
