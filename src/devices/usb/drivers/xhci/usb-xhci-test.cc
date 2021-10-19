@@ -676,6 +676,7 @@ zx_status_t Interrupter::Init(uint16_t interrupter, size_t page_size, ddk::MmioB
                               const RuntimeRegisterOffset& offset, uint32_t erst_max,
                               DoorbellOffset doorbell_offset, UsbXhci* hci, HCCPARAMS1 hcc_params_1,
                               uint64_t* dcbaa) {
+  interrupter_ = interrupter;
   hci_ = hci;
   return ZX_OK;
 }
@@ -686,6 +687,10 @@ zx_status_t Interrupter::Start(const RuntimeRegisterOffset& offset,
 }
 
 int Interrupter::IrqThread() { return 0; }
+
+TRBPromise Interrupter::Timeout(zx::time deadline) {
+  return fpromise::make_ok_promise(static_cast<TRB*>(nullptr));
+}
 
 // Enumerates a device as specified in xHCI section 4.3 starting from step 4
 // This method should be called once the physical port of a device has been

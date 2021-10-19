@@ -200,6 +200,10 @@ uint16_t UsbXhci::InterrupterMapping() {
   return idx;
 }
 
+TRBPromise UsbXhci::Timeout(uint16_t target_interrupter, zx::time deadline) {
+  return interrupter(target_interrupter).Timeout(deadline);
+}
+
 TRBPromise UsbXhci::DisableSlotCommand(uint32_t slot_id) {
   uint8_t port;
   bool connected_to_hub = false;
@@ -1761,6 +1765,11 @@ int UsbXhci::InitThread() {
 zx_status_t UsbXhci::HciFinalize() {
   hcc_ = HCCPARAMS1::Get().ReadFrom(&mmio_.value());
   HCSPARAMS1 hcsparams1 = HCSPARAMS1::Get().ReadFrom(&mmio_.value());
+  // Reset Warm Reset Change bit
+  for (uint16_t i = 0; i < hcsparams1.MaxPorts(); i++) {
+    auto sc = PORTSC::Get(cap_length_, i).ReadFrom(&mmio_.value());
+    sc.set_WRC(sc.WRC()).WriteTo(&mmio_.value());
+  }
 
   is_32bit_ = !hcc_.AC64();
   params_ = hcsparams1;

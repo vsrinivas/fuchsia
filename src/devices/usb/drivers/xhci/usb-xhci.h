@@ -251,9 +251,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   }
 
   // Creates a promise that resolves after a timeout
-  TRBPromise Timeout(uint16_t target_interrupter, zx::time deadline) {
-    return interrupter(target_interrupter).Timeout(deadline);
-  }
+  TRBPromise Timeout(uint16_t target_interrupter, zx::time deadline);
 
   // Provides a barrier for promises.
   // After this method is invoked, all pending promises on all interrupters will be flushed.

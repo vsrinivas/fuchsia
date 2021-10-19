@@ -174,7 +174,8 @@ TRBPromise EventRing::HandlePortStatusChangeEvent(uint8_t port_id) {
     // Wait for the port to exit polling state, if applicable.
     // Only 2.0 ports should go into a polling state, so if we get here,
     // we can be sure that it's a 2.0 port. Some controllers may skip this step though....
-    if ((sc.PLS() == PORTSC::Polling)) {
+    if ((sc.PLS() == PORTSC::Polling) || (hci_->GetPortState()[port_id - 1].is_connected &&
+                                          !hci_->GetPortState()[port_id - 1].is_USB3)) {
       // USB 2.0 port connect
       if (!hci_->GetPortState()[port_id - 1].is_connected) {
         // USB 2.0 requires a port reset to advance to U0

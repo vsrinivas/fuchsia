@@ -321,6 +321,10 @@ void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request,
 
 uint16_t UsbXhci::InterrupterMapping() { return 0; }
 
+TRBPromise UsbXhci::Timeout(uint16_t target_interrupter, zx::time deadline) {
+  return fpromise::make_ok_promise(static_cast<TRB*>(nullptr));
+}
+
 zx_status_t TransferRing::Init(size_t page_size, const zx::bti& bti, EventRing* ring, bool is_32bit,
                                ddk::MmioBuffer* mmio, const UsbXhci& hci) {
   fbl::AutoLock _(&mutex_);

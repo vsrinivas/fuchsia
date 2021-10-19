@@ -354,6 +354,10 @@ fpromise::promise<OwnedRequest, void> UsbXhci::UsbHciRequestQueue(OwnedRequest u
 
 size_t UsbXhci::UsbHciGetRequestSize() { return Request::RequestSize(sizeof(usb_request_t)); }
 
+TRBPromise UsbXhci::Timeout(uint16_t target_interrupter, zx::time deadline) {
+  return interrupter(target_interrupter).Timeout(deadline);
+}
+
 class EnumerationTests : public zxtest::Test {
  public:
   EnumerationTests()
