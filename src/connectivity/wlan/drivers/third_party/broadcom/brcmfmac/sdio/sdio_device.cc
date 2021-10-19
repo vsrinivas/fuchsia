@@ -95,7 +95,7 @@ zx_status_t SdioDevice::Init() {
 }
 
 zx_status_t SdioDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {
-  return device_add(zxdev(), args, out_device);
+  return device_add(parent(), args, out_device);
 }
 
 void SdioDevice::DeviceAsyncRemove(zx_device_t* dev) { device_async_remove(dev); }
