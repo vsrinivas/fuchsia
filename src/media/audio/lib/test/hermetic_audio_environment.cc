@@ -185,6 +185,7 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
                   fuchsia::media::Audio::Name_,
                   fuchsia::media::AudioCore::Name_,
                   fuchsia::media::AudioDeviceEnumerator::Name_,
+                  fuchsia::media::ProfileProvider::Name_,
                   fuchsia::media::tuning::AudioTuner::Name_,
                   fuchsia::media::UsageGainReporter::Name_,
                   fuchsia::media::UsageReporter::Name_,
