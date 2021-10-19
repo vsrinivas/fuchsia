@@ -23,6 +23,7 @@ version = "0.1.0"
 
 [dependencies]
 # Keep this sorted alphabetically, please.
+aes-gcm = "0.9"
 ansi_term = "0.11.0"
 anyhow = "1.0.38"
 arbitrary = { version = "0.4.0", features = ["derive"] }
