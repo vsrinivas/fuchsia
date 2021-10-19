@@ -81,15 +81,12 @@ type ResultOkEntry struct {
 }
 
 type Result struct {
-	fidlgen.Attributes
 	ECI       EncodedCompoundIdentifier
 	Derives   derives
 	Name      string
 	Ok        []ResultOkEntry
 	ErrOGType fidlgen.Type
 	ErrType   string
-	Size      int
-	Alignment int
 }
 
 type Struct struct {
@@ -1166,19 +1163,15 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 	return r
 }
 
-func (c *compiler) compileResultFromUnion(val fidlgen.Union, mr fidlgen.MethodResult, root Root) Result {
+func (c *compiler) compileResultFromUnion(mr fidlgen.MethodResult, root Root) Result {
 	r := Result{
-		Attributes: val.Attributes,
-		ECI:        val.Name,
-		Name:       c.compileCamelCompoundIdentifier(val.Name),
-		Ok:         []ResultOkEntry{},
-		ErrOGType:  mr.ErrorType,
-		ErrType:    c.compileUnionMember(*mr.ErrorMember).Type,
-		Size:       val.TypeShapeV1.InlineSize,
-		Alignment:  val.TypeShapeV1.Alignment,
+		ECI:       mr.ResultType.Identifier,
+		Name:      c.compileCamelCompoundIdentifier(mr.ResultType.Identifier),
+		ErrOGType: mr.ErrorType,
+		ErrType:   c.compileType(mr.ErrorType),
 	}
 
-	for _, m := range root.findStruct(mr.ValueStruct.Name).Members {
+	for _, m := range root.findStruct(mr.ValueType.Identifier).Members {
 		wrapperName, hasHandleMetadata := c.compileHandleMetadataWrapper(&m.OGType)
 		r.Ok = append(r.Ok, ResultOkEntry{
 			OGType:            m.OGType,
@@ -1432,16 +1425,20 @@ typeSwitch:
 		}
 		table.Derives = derivesOut
 	case fidlgen.UnionDeclType:
-		union := dc.root.findUnion(eci)
-		var result *Result
-		if union == nil {
-			result = dc.root.findResult(eci)
-		}
-		if union == nil && result == nil {
-			panic(fmt.Sprintf("union not found: %v", eci))
-		}
-		if union != nil {
-			// It's a union, not a result
+		if result := dc.root.findResult(eci); result != nil {
+			// It's a Result, not a union
+			// Check if the derives have already been calculated
+			if deriveStatus.complete {
+				derivesOut = result.Derives
+				break typeSwitch
+			}
+			derivesOut = derivesAllButZerocopy
+			for _, ok := range result.Ok {
+				derivesOut = derivesOut.and(dc.fillDerivesForType(ok.OGType))
+			}
+			derivesOut = derivesOut.and(dc.fillDerivesForType(result.ErrOGType))
+			result.Derives = derivesOut
+		} else if union := dc.root.findUnion(eci); union != nil {
 			// Check if the derives have already been calculated
 			if deriveStatus.complete {
 				derivesOut = union.Derives
@@ -1460,18 +1457,7 @@ typeSwitch:
 			}
 			union.Derives = derivesOut
 		} else {
-			// It's a Result, not a union
-			// Check if the derives have already been calculated
-			if deriveStatus.complete {
-				derivesOut = result.Derives
-				break typeSwitch
-			}
-			derivesOut = derivesAllButZerocopy
-			for _, ok := range result.Ok {
-				derivesOut = derivesOut.and(dc.fillDerivesForType(ok.OGType))
-			}
-			derivesOut = derivesOut.and(dc.fillDerivesForType(result.ErrOGType))
-			result.Derives = derivesOut
+			panic(fmt.Sprintf("union not found: %v", eci))
 		}
 	default:
 		panic(fmt.Sprintf("unknown declaration type: %v", declInfo.Type))
@@ -1588,17 +1574,26 @@ func Compile(r fidlgen.Root) Root {
 		}
 	}
 
-	for _, v := range r.Unions {
-		if v.MethodResult != nil {
-			root.Results = append(root.Results,
-				c.compileResultFromUnion(v, *v.MethodResult, root))
-		} else {
-			root.Unions = append(root.Unions, c.compileUnion(v))
+	for _, v := range r.Tables {
+		root.Tables = append(root.Tables, c.compileTable(v))
+	}
+
+	for _, v := range r.Protocols {
+		for _, m := range v.Methods {
+			// A result is referenced multiple times when a method is composed.
+			// We must only compile the non-composed method to avoid generating
+			// duplicates.
+			if m.MethodResult != nil && !m.IsComposed {
+				root.Results = append(root.Results,
+					c.compileResultFromUnion(*m.MethodResult, root))
+			}
 		}
 	}
 
-	for _, v := range r.Tables {
-		root.Tables = append(root.Tables, c.compileTable(v))
+	for _, v := range r.Unions {
+		if result := root.findResult(v.Name); result == nil {
+			root.Unions = append(root.Unions, c.compileUnion(v))
+		}
 	}
 
 	for _, v := range r.Protocols {

@@ -103,12 +103,14 @@ type UnionMember struct {
 
 // Struct represents a struct declaration.
 type Struct struct {
+	Identifier       fidlgen.EncodedCompoundIdentifier
 	Name             string
 	Members          []StructMember
 	TypeSymbol       string
 	TypeExpr         string
 	HasNullableField bool
 	Documented
+	isEmptyStruct bool
 }
 
 // StructMember represents a member of a struct declaration.
@@ -166,11 +168,12 @@ type MethodResponse struct {
 	// when using generated methods. When HasError is false, this is the same as
 	// WireParameters. When HasError is true, MethodParameters corresponds to the
 	// fields of a successful response.
-	MethodParameters []StructMember
-	HasError         bool
-	ResultType       Union
-	ValueType        Type
-	ErrorType        Type
+	MethodParameters  []StructMember
+	HasError          bool
+	ResultTypeName    string
+	ResultTypeTagName string
+	ValueType         Type
+	ErrorType         Type
 }
 
 // Method represents a method declaration within an protocol declaration.
@@ -430,6 +433,7 @@ func libraryPrefix(library fidlgen.LibraryIdentifier) string {
 }
 
 type compiler struct {
+	Root
 	decls                  fidlgen.DeclInfoMap
 	library                fidlgen.LibraryIdentifier
 	typesRoot              fidlgen.Root
@@ -866,19 +870,24 @@ func (c *compiler) compileMethodResponse(method fidlgen.Method) MethodResponse {
 		}
 	}
 
-	// Turn the struct into a parameter array that will be used for function arguments.
 	var parameters []StructMember
-	for _, v := range method.MethodResult.ValueStruct.Members {
-		parameters = append(parameters, c.compileStructMember(v))
+	for _, s := range c.Root.Structs {
+		if s.Identifier == method.MethodResult.ValueType.Identifier {
+			if !s.isEmptyStruct {
+				parameters = s.Members
+			}
+			break
+		}
 	}
 
 	return MethodResponse{
-		WireParameters:   c.compileParameterArray(method.ResponsePayload),
-		MethodParameters: parameters,
-		HasError:         true,
-		ResultType:       c.compileUnion(*method.MethodResult.ResultUnion),
-		ValueType:        c.compileType(method.MethodResult.ValueType),
-		ErrorType:        c.compileType(method.MethodResult.ErrorType),
+		WireParameters:    c.compileParameterArray(method.ResponsePayload),
+		MethodParameters:  parameters,
+		HasError:          true,
+		ResultTypeName:    c.compileUpperCamelCompoundIdentifier(fidlgen.ParseCompoundIdentifier(method.MethodResult.ResultType.Identifier), "", declarationContext),
+		ResultTypeTagName: c.compileUpperCamelCompoundIdentifier(fidlgen.ParseCompoundIdentifier(method.MethodResult.ResultType.Identifier), "Tag", declarationContext),
+		ValueType:         c.compileType(method.MethodResult.ValueType),
+		ErrorType:         c.compileType(method.MethodResult.ErrorType),
 	}
 }
 
@@ -981,6 +990,7 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	ci := fidlgen.ParseCompoundIdentifier(val.Name)
 	r := Struct{
+		Identifier:       val.Name,
 		Name:             c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
 		Members:          []StructMember{},
 		TypeSymbol:       c.typeSymbolForCompoundIdentifier(ci),
@@ -1000,6 +1010,7 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	}
 
 	if len(r.Members) == 0 {
+		r.isEmptyStruct = true
 		r.Members = []StructMember{
 			c.compileStructMember(fidlgen.EmptyStructMember("reserved")),
 		}
@@ -1101,7 +1112,6 @@ resource: %t,
 // Compile the language independent type definition into the Dart-specific representation.
 func Compile(r fidlgen.Root) Root {
 	r = r.ForBindings("dart")
-	root := Root{}
 	c := compiler{
 		decls:                  r.DeclsWithDependencies(),
 		library:                fidlgen.ParseLibraryName(r.Name),
@@ -1109,38 +1119,38 @@ func Compile(r fidlgen.Root) Root {
 		requestResponsePayload: map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct{},
 	}
 
-	root.LibraryName = fmt.Sprintf("fidl_%s", formatLibraryName(c.library))
+	c.Root.LibraryName = fmt.Sprintf("fidl_%s", formatLibraryName(c.library))
 
 	for _, v := range r.Consts {
-		root.Consts = append(root.Consts, c.compileConst(v))
+		c.Root.Consts = append(c.Root.Consts, c.compileConst(v))
 	}
 
 	for _, v := range r.Enums {
-		root.Enums = append(root.Enums, c.compileEnum(v))
+		c.Root.Enums = append(c.Root.Enums, c.compileEnum(v))
 	}
 
 	for _, v := range r.Bits {
-		root.Bits = append(root.Bits, c.compileBits(v))
+		c.Root.Bits = append(c.Root.Bits, c.compileBits(v))
 	}
 
 	for _, v := range r.Structs {
 		if v.IsRequestOrResponse {
 			c.requestResponsePayload[v.Name] = v
 		} else {
-			root.Structs = append(root.Structs, c.compileStruct(v))
+			c.Root.Structs = append(c.Root.Structs, c.compileStruct(v))
 		}
 	}
 
 	for _, v := range r.Tables {
-		root.Tables = append(root.Tables, c.compileTable(v))
+		c.Root.Tables = append(c.Root.Tables, c.compileTable(v))
 	}
 
 	for _, v := range r.Unions {
-		root.Unions = append(root.Unions, c.compileUnion(v))
+		c.Root.Unions = append(c.Root.Unions, c.compileUnion(v))
 	}
 
 	for _, v := range r.Protocols {
-		root.Protocols = append(root.Protocols, c.compileProtocol(v))
+		c.Root.Protocols = append(c.Root.Protocols, c.compileProtocol(v))
 	}
 
 	for _, l := range r.Libraries {
@@ -1149,11 +1159,11 @@ func Compile(r fidlgen.Root) Root {
 			continue
 		}
 		library := fidlgen.ParseLibraryName(l.Name)
-		root.Imports = append(root.Imports, Import{
+		c.Root.Imports = append(c.Root.Imports, Import{
 			LocalName: libraryPrefix(library),
 			AsyncURL:  fmt.Sprintf("package:fidl_%s/fidl_async.dart", formatLibraryName(library)),
 		})
 	}
 
-	return root
+	return c.Root
 }

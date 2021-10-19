@@ -552,9 +552,9 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 
 		var result *Result
 		if v.MethodResult != nil {
-			// If the method uses the error syntax, Response[0] will be a union
-			// that was placed in c.resultForUnion. Otherwise, this will be nil.
-			result = c.resultForUnion[v.Response[0].Type.Identifier]
+			// TODO(fxb/64992): Here, we are incorrectly assuming that
+			// the union is in the same library.
+			result = c.resultForUnion[v.MethodResult.ResultType.Identifier]
 		}
 
 		methodMarker := protocolName.nest(name.Wire.Name())

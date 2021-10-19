@@ -634,7 +634,8 @@ func compile(r fidlgen.Root) Root {
 		decls[v.Name] = c.compileEnum(v)
 	}
 
-	// Note: for Result calculation unions must be compiled before structs.
+	// Note: for results calculation, we must first compile unions, and structs.
+
 	for _, v := range r.Unions {
 		decls[v.Name] = c.compileUnion(v)
 	}
