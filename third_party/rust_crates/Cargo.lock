@@ -1244,10 +1244,12 @@ dependencies = [
  "rust_icu_common",
  "rust_icu_sys",
  "rust_icu_ucal",
+ "rust_icu_uchar",
  "rust_icu_udat",
  "rust_icu_udata",
  "rust_icu_uenum",
  "rust_icu_uloc",
+ "rust_icu_unorm2",
  "rust_icu_ustring",
  "rustc-demangle",
  "rustc-hash",
@@ -3040,9 +3042,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_common"
-version = "1.0.0"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5083f394db5411ebe2ba37197d4dda96001e049e4f470608bf3b2b3fcd709b7e"
+checksum = "68dc162ee5e465ecc6c076efa732a19f25226e024453adcf64bdc760cb2349c3"
 dependencies = [
  "anyhow",
  "rust_icu_sys",
@@ -3051,9 +3053,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_sys"
-version = "1.0.0"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59ffcdf01daf2554f1c232954ff1dec7d9896716cdd60edb11f08c1da6a035cc"
+checksum = "00b8180bf8c56d9c38ca852b0381d41c500605101f47afc1e36a2f9c8d0b902a"
 dependencies = [
  "anyhow",
  "lazy_static",
@@ -3063,9 +3065,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_ucal"
-version = "1.0.0"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aefe5942e310d18ce3b38bc8ec3fa5720219d3d9a345bcaddd3c0e162830afcb"
+checksum = "604da10d3099d34812720fb4b6186d2a52ede733fecf7499aabaeaa20da5b80a"
 dependencies = [
  "log 0.4.11",
  "paste",
@@ -3076,10 +3078,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust_icu_udat"
-version = "1.0.0"
+name = "rust_icu_uchar"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a45d027a8cb9abcc2f7176d9c591b51765efb2be432e0119358d79417afd5b3"
+checksum = "ca27702bfe73f0cfecaf5780ae7fb14f682e5f3748c0123215455ae73416b485"
+dependencies = [
+ "log 0.4.11",
+ "paste",
+ "rust_icu_common",
+ "rust_icu_sys",
+]
+
+[[package]]
+name = "rust_icu_udat"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51a49c58352ae54d3736e5c35bbfe0e9eaf852b1ba3ff432afa7a90754f04dc4"
 dependencies = [
  "anyhow",
  "log 0.4.11",
@@ -3094,9 +3108,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_udata"
-version = "1.0.0"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8c8ad73c712d5d8b1b609b5360306ce56f556ba1c0272a4e504f85e7540883f"
+checksum = "34a88a3d0af840949fb852a371cc6ea337c8244fac970ac56ce6cd112300f4e3"
 dependencies = [
  "log 0.4.11",
  "paste",
@@ -3106,9 +3120,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_uenum"
-version = "1.0.0"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "520cf3be4b98dab4a03a01dece0ab8dc8ed1e5ca6744812141034dcdaf7b7ab5"
+checksum = "2daf1c47fc9a001730fcf9e37a866ac293eb78db323cf83e12ade6526b3a502e"
 dependencies = [
  "paste",
  "rust_icu_common",
@@ -3117,9 +3131,9 @@ dependencies = [
 
 [[package]]
 name = "rust_icu_uloc"
-version = "1.0.0"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cbb0e3a2161140c4888b99caf10c768b43091d9aba059c4ea72c180711741dc"
+checksum = "094f2e0c71e069adff2170de016dba0b82166eef716eea3727561b54afe1c05e"
 dependencies = [
  "anyhow",
  "log 0.4.11",
@@ -3131,10 +3145,27 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust_icu_ustring"
-version = "1.0.0"
+name = "rust_icu_unorm2"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50aa3f37c91ede36fc919fdd5e0cd4acf3f0e277ea644abe6920bc48b9aacedf"
+checksum = "a358f44d2c810c6cf27fb0e149786c50550284c939dfc1d05599e3e59813a535"
+dependencies = [
+ "anyhow",
+ "log 0.4.11",
+ "paste",
+ "rust_icu_common",
+ "rust_icu_sys",
+ "rust_icu_ucal",
+ "rust_icu_uenum",
+ "rust_icu_uloc",
+ "rust_icu_ustring",
+]
+
+[[package]]
+name = "rust_icu_ustring"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8512bba1446e148856207a5fe5bbab4fc75fa78b26f204ba9bf19892012a750a"
 dependencies = [
  "log 0.4.11",
  "paste",

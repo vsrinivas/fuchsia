@@ -11,11 +11,10 @@
 
 [package]
 edition = "2018"
-name = "rust_icu_udat"
+name = "rust_icu_unorm2"
 version = "1.0.3"
 authors = ["Google Inc."]
-build = "build.rs"
-description = "Native bindings to the ICU4C library from Unicode.\n\nudat.h\n"
+description = "Native bindings to the ICU4C library from Unicode.\n\nunorm2.h\n"
 readme = "README.md"
 keywords = ["icu", "unicode", "i18n", "l10n"]
 license = "Apache-2.0"

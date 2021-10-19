@@ -53,6 +53,7 @@ readonly BINDGEN_SOURCE_MODULES=(
         "ustring"
         "utext"
         "utrans"
+        "unorm2"
 )
 
 # Types for which to generate the bindings.  Expand this list if you need more.
@@ -94,6 +95,7 @@ readonly BINDGEN_ALLOWLIST_TYPES=(
         "UTransPosition"
         "UTransliterator"
         "UWordBreak"
+        "UNorm.*"
 )
 
 # Functions for which to generate the bindings.  Expand this list if you need
@@ -118,6 +120,7 @@ readonly BINDGEN_ALLOWLIST_FUNCTIONS=(
         "uplrules_.*"
         "utext_.*"
         "utrans_.*"
+        "unorm2_.*"
 )
 
 function check_requirements() {

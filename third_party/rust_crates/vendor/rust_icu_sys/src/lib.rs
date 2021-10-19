@@ -12,12 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #![doc(test(ignore))]
+
+// Notes:
+// * deref_nullptr: since rustc 1.53, bindgen causes UB warnings -- see
+// https://github.com/rust-lang/rust-bindgen/issues/1651 remove this once bindgen has fixed the
+// issue (currently at version 1.59.1)
 #![allow(
     dead_code,
     non_snake_case,
     non_camel_case_types,
     non_upper_case_globals,
-    unused_imports
+    unused_imports,
+    rustdoc::bare_urls,
+    deref_nullptr,
 )]
 
 #[cfg(all(feature = "icu_version_in_env", feature = "icu_config"))]
@@ -79,3 +86,45 @@ extern crate libc;
 #[link(name = "icui18n", kind = "dylib")]
 #[link(name = "icuuc", kind = "dylib")]
 extern "C" {}
+
+impl From<i8> for UCharCategory {
+    fn from(value: i8) -> Self {
+        match value {
+            0 => UCharCategory::U_UNASSIGNED,
+            1 => UCharCategory::U_UPPERCASE_LETTER,
+            2 => UCharCategory::U_LOWERCASE_LETTER,
+            3 => UCharCategory::U_TITLECASE_LETTER,
+            4 => UCharCategory::U_MODIFIER_LETTER,
+            5 => UCharCategory::U_OTHER_LETTER,
+            6 => UCharCategory::U_NON_SPACING_MARK,
+            7 => UCharCategory::U_ENCLOSING_MARK,
+            8 => UCharCategory::U_COMBINING_SPACING_MARK,
+            9 => UCharCategory::U_DECIMAL_DIGIT_NUMBER,
+            10 => UCharCategory::U_LETTER_NUMBER,
+            11 => UCharCategory::U_OTHER_NUMBER,
+            12 => UCharCategory::U_SPACE_SEPARATOR,
+            13 => UCharCategory::U_LINE_SEPARATOR,
+            14 => UCharCategory::U_PARAGRAPH_SEPARATOR,
+            15 => UCharCategory::U_CONTROL_CHAR,
+            16 => UCharCategory::U_FORMAT_CHAR,
+            17 => UCharCategory::U_PRIVATE_USE_CHAR,
+            18 => UCharCategory::U_SURROGATE,
+            19 => UCharCategory::U_DASH_PUNCTUATION,
+            20 => UCharCategory::U_START_PUNCTUATION,
+            21 => UCharCategory::U_END_PUNCTUATION,
+            22 => UCharCategory::U_CONNECTOR_PUNCTUATION,
+            23 => UCharCategory::U_OTHER_PUNCTUATION,
+            24 => UCharCategory::U_MATH_SYMBOL,
+            25 => UCharCategory::U_CURRENCY_SYMBOL,
+            26 => UCharCategory::U_MODIFIER_SYMBOL,
+            27 => UCharCategory::U_OTHER_SYMBOL,
+            28 => UCharCategory::U_INITIAL_PUNCTUATION,
+            29 => UCharCategory::U_FINAL_PUNCTUATION,
+            30 => UCharCategory::U_CHAR_CATEGORY_COUNT,
+            _ => { 
+                panic!("could not convert: {}", value);
+            }
+        }
+    }
+}
+
