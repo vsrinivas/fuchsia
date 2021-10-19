@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <iostream>
 #include <sstream>
+#include <type_traits>
 #include <utility>
 
 #include "fidl/attributes.h"
@@ -3804,87 +3805,70 @@ bool Library::CompileDecl(Decl* decl) {
   return true;
 }
 
+template <template <typename> typename Constness, typename MemberFn>
+static void ForEachDeclMemberHelper(Constness<Decl>* decl, MemberFn f) {
+  switch (decl->kind) {
+    case Decl::Kind::kBits:
+      for (auto& member : static_cast<Constness<Bits>*>(decl)->members) {
+        f(&member);
+      }
+      break;
+    case Decl::Kind::kConst:
+      break;
+    case Decl::Kind::kEnum:
+      for (auto& member : static_cast<Constness<Enum>*>(decl)->members) {
+        f(&member);
+      }
+      break;
+    case Decl::Kind::kProtocol:
+      for (auto& method_with_info : static_cast<Constness<Protocol>*>(decl)->all_methods) {
+        f(method_with_info.method);
+      }
+      break;
+    case Decl::Kind::kResource:
+      for (auto& member : static_cast<Constness<Resource>*>(decl)->properties) {
+        f(&member);
+      }
+      break;
+    case Decl::Kind::kService:
+      for (auto& member : static_cast<Constness<Service>*>(decl)->members) {
+        f(&member);
+      }
+      break;
+    case Decl::Kind::kStruct:
+      for (auto& member : static_cast<Constness<Struct>*>(decl)->members) {
+        f(&member);
+      }
+      break;
+    case Decl::Kind::kTable:
+      for (auto& member : static_cast<Constness<Table>*>(decl)->members) {
+        f(&member);
+      }
+      break;
+    case Decl::Kind::kUnion:
+      for (auto& member : static_cast<Constness<Union>*>(decl)->members) {
+        f(&member);
+      }
+      break;
+    case Decl::Kind::kTypeAlias:
+      break;
+  }  // switch
+}
+
+template <typename MemberFn>
+static void ForEachDeclMember(const Decl* decl, MemberFn f) {
+  ForEachDeclMemberHelper<std::add_const_t>(decl, f);
+}
+
+template <typename MemberFn>
+static void ForEachDeclMember(Decl* decl, MemberFn f) {
+  ForEachDeclMemberHelper<std::remove_const_t>(decl, f);
+}
+
 void Library::VerifyDeclAttributes(const Decl* decl) {
   assert(decl->compiled && "verification must happen after compilation of decls");
-  switch (decl->kind) {
-    case Decl::Kind::kBits: {
-      auto bits_declaration = static_cast<const Bits*>(decl);
-      ValidateAttributes(bits_declaration);
-      for (const auto& member : bits_declaration->members) {
-        ValidateAttributes(&member);
-      }
-      break;
-    }
-    case Decl::Kind::kConst: {
-      auto const_decl = static_cast<const Const*>(decl);
-      ValidateAttributes(const_decl);
-      break;
-    }
-    case Decl::Kind::kEnum: {
-      auto enum_declaration = static_cast<const Enum*>(decl);
-      ValidateAttributes(enum_declaration);
-      for (const auto& member : enum_declaration->members) {
-        ValidateAttributes(&member);
-      }
-      break;
-    }
-    case Decl::Kind::kProtocol: {
-      auto protocol_declaration = static_cast<const Protocol*>(decl);
-      ValidateAttributes(protocol_declaration);
-      for (const auto& composed_protocol : protocol_declaration->composed_protocols) {
-        ValidateAttributes(&composed_protocol);
-      }
-      for (const auto& method_with_info : protocol_declaration->all_methods) {
-        ValidateAttributes(method_with_info.method);
-      }
-      break;
-    }
-    case Decl::Kind::kResource: {
-      auto resource_declaration = static_cast<const Resource*>(decl);
-      ValidateAttributes(resource_declaration);
-      for (const auto& property : resource_declaration->properties) {
-        ValidateAttributes(&property);
-      }
-      break;
-    }
-    case Decl::Kind::kService: {
-      auto service_decl = static_cast<const Service*>(decl);
-      ValidateAttributes(service_decl);
-      for (const auto& member : service_decl->members) {
-        ValidateAttributes(&member);
-      }
-      break;
-    }
-    case Decl::Kind::kStruct: {
-      auto struct_declaration = static_cast<const Struct*>(decl);
-      ValidateAttributes(struct_declaration);
-      for (const auto& member : struct_declaration->members) {
-        ValidateAttributes(&member);
-      }
-      break;
-    }
-    case Decl::Kind::kTable: {
-      auto table_declaration = static_cast<const Table*>(decl);
-      ValidateAttributes(table_declaration);
-      for (const auto& member : table_declaration->members) {
-        ValidateAttributes(&member);
-      }
-      break;
-    }
-    case Decl::Kind::kUnion: {
-      auto union_declaration = static_cast<const Union*>(decl);
-      ValidateAttributes(union_declaration);
-      for (const auto& member : union_declaration->members) {
-        ValidateAttributes(&member);
-      }
-      break;
-    }
-    case Decl::Kind::kTypeAlias: {
-      auto type_alias_declaration = static_cast<const TypeAlias*>(decl);
-      ValidateAttributes(type_alias_declaration);
-      break;
-    }
-  }  // switch
+  ValidateAttributes(decl);
+  ForEachDeclMember(decl, [this](const Attributable* member) { ValidateAttributes(member); });
 }
 
 void VerifyResourcenessStep::ForDecl(const Decl* decl) {
