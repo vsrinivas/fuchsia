@@ -10,6 +10,14 @@ use crate::fs::socket::SocketAddress;
 use crate::task::Task;
 use crate::types::*;
 
+#[derive(Debug, Default)]
+pub struct MessageReadInfo {
+    pub bytes_read: usize,
+    pub message_length: usize,
+    pub address: Option<SocketAddress>,
+    pub ancillary_data: Option<AncillaryData>,
+}
+
 /// A `MessageQueue` stores a FIFO sequence of messages.
 pub struct MessageQueue {
     /// The messages stored in the message queue.
@@ -106,16 +114,17 @@ impl MessageQueue {
         &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
-    ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
+    ) -> Result<MessageReadInfo, Errno> {
         if self.closed {
             if self.peer_closed_with_unread_data {
                 return error!(ECONNRESET);
             }
-            return Ok((0, None, None));
+            return Ok(MessageReadInfo::default());
         }
 
         let mut total_bytes_read = 0;
         let mut address = None;
+        let mut ancillary_data = None;
 
         while !self.is_empty() {
             if let Some(mut user_buffer) = user_buffers.next(self.length) {
@@ -128,7 +137,8 @@ impl MessageQueue {
                     user_buffer.address += message.len();
                     total_bytes_read += message.len();
                     if message.ancillary_data.is_some() {
-                        return Ok((total_bytes_read, address, message.ancillary_data));
+                        ancillary_data = message.ancillary_data;
+                        break;
                     }
                 }
 
@@ -142,47 +152,45 @@ impl MessageQueue {
             }
         }
 
-        Ok((total_bytes_read, address, None))
+        Ok(MessageReadInfo {
+            bytes_read: total_bytes_read,
+            message_length: total_bytes_read,
+            address,
+            ancillary_data,
+        })
     }
 
-    /// Reads the first message in the queue.
-    ///
-    /// # Parameters
-    /// - `task`: The task to read memory from.
-    /// - `user_buffers`: The `UserBufferIterator` to write the data to.
-    ///
-    /// Returns the number of bytes that were read into the buffer, and any ancillary data that was
-    /// read.
     pub fn read_datagram(
         &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
-    ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
+    ) -> Result<MessageReadInfo, Errno> {
         if let Some(message) = self.read_message() {
-            Ok((message.data.read(task, user_buffers)?, message.address, message.ancillary_data))
+            Ok(MessageReadInfo {
+                bytes_read: message.data.read(task, user_buffers)?,
+                message_length: message.len(),
+                address: message.address,
+                ancillary_data: message.ancillary_data,
+            })
         } else {
-            Ok((0, None, None))
+            error!(EAGAIN)
         }
     }
 
-    /// Peeks the first message in the queue without removing it.
-    ///
-    /// # Parameters
-    /// - `task`: The task to read memory from.
-    /// - `user_buffers`: The `UserBufferIterator` to write the data to.
-    ///
-    /// Returns the number of bytes that were read into the buffer, and any ancillary data that was
-    /// read.
     pub fn peek_datagram(
-        &self,
+        &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
-    ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
+    ) -> Result<MessageReadInfo, Errno> {
         if let Some(message) = self.peek_message() {
-            // TODO: Can you peek ancillary data?
-            Ok((message.data.read(task, user_buffers)?, message.address.clone(), None))
+            Ok(MessageReadInfo {
+                bytes_read: message.data.read(task, user_buffers)?,
+                message_length: message.len(),
+                address: message.address.clone(),
+                ancillary_data: message.ancillary_data.clone(),
+            })
         } else {
-            Ok((0, None, None))
+            error!(EAGAIN)
         }
     }
 

@@ -362,14 +362,15 @@ pub fn sys_recvmsg(
 
     let flags = SocketMessageFlags::from_bits_truncate(flags);
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    let (bytes_read, _address, ancillary_data) =
-        socket_ops.recvmsg(ctx.task, &file, &iovec, flags)?;
+    let info = socket_ops.recvmsg(ctx.task, &file, &iovec, flags)?;
 
-    if let Some(ancillary_data) = ancillary_data {
+    message_header.msg_flags = 0;
+
+    if let Some(ancillary_data) = info.ancillary_data {
         let mut num_bytes_to_write = message_header.msg_controllen as usize;
         if !ancillary_data.can_fit_all_data(num_bytes_to_write) {
             // If not all data can fit, set the MSG_CTRUNC flag.
-            message_header.msg_flags = MSG_CTRUNC as u64;
+            message_header.msg_flags |= MSG_CTRUNC as u64;
             if !ancillary_data.can_fit_any_data(num_bytes_to_write) {
                 // If the length is not large enough to fit any real data, set the number of bytes
                 // to write to 0.
@@ -394,9 +395,20 @@ pub fn sys_recvmsg(
         // If there is no control message, make sure to clear the length.
         message_header.msg_controllen = 0;
     }
+
+    // TODO: Handle info.address.
+
+    if info.bytes_read != info.message_length {
+        message_header.msg_flags |= MSG_TRUNC as u64;
+    }
+
     ctx.task.mm.write_object(user_message_header, &message_header)?;
 
-    Ok(bytes_read.into())
+    if flags.contains(SocketMessageFlags::TRUNC) {
+        Ok(info.message_length.into())
+    } else {
+        Ok(info.bytes_read.into())
+    }
 }
 
 pub fn sys_recvfrom(
@@ -415,7 +427,7 @@ pub fn sys_recvfrom(
 
     let flags = SocketMessageFlags::from_bits_truncate(flags);
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    let (bytes_read, address, _control) = socket_ops.recvmsg(
+    let into = socket_ops.recvmsg(
         ctx.task,
         &file,
         &[UserBuffer { address: user_buffer, length: buffer_length }],
@@ -423,7 +435,7 @@ pub fn sys_recvfrom(
     )?;
 
     if !user_src_address.is_null() {
-        if let Some(address) = address {
+        if let Some(address) = into.address {
             write_socket_address(
                 &ctx.task,
                 user_src_address,
@@ -435,7 +447,11 @@ pub fn sys_recvfrom(
         }
     }
 
-    Ok(bytes_read.into())
+    if flags.contains(SocketMessageFlags::TRUNC) {
+        Ok(into.message_length.into())
+    } else {
+        Ok(into.bytes_read.into())
+    }
 }
 
 pub fn sys_sendmsg(

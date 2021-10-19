@@ -298,7 +298,7 @@ impl Socket {
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
         flags: SocketMessageFlags,
-    ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
+    ) -> Result<MessageReadInfo, Errno> {
         self.lock().read(task, user_buffers, self.socket_type, flags)
     }
 
@@ -446,8 +446,8 @@ impl SocketInner {
         user_buffers: &mut UserBufferIterator<'_>,
         socket_type: SocketType,
         flags: SocketMessageFlags,
-    ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
-        let (bytes_read, address, ancillary_data) = match socket_type {
+    ) -> Result<MessageReadInfo, Errno> {
+        let info = match socket_type {
             SocketType::Stream => {
                 if flags.contains(SocketMessageFlags::PEEK) {
                     return error!(ENOSYS);
@@ -463,13 +463,14 @@ impl SocketInner {
                 }
             }
         };
-        if bytes_read == 0 && user_buffers.remaining() > 0 && !self.messages.is_closed() {
+        if info.bytes_read == 0 && user_buffers.remaining() > 0 && !self.messages.is_closed() {
             return error!(EAGAIN);
         }
-        if bytes_read > 0 {
+        if info.bytes_read > 0 {
             self.waiters.notify_events(FdEvents::POLLOUT);
         }
-        Ok((bytes_read, address, ancillary_data))
+
+        Ok(info)
     }
 
     /// Reads all the available messages out of this socket.
