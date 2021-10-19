@@ -84,9 +84,22 @@ rustc_binary("bin") {
   sources = [ "src/bin/terminal.rs" ]
 }
 
-fuchsia_package_with_single_component("terminal") {
+fuchsia_component("terminal_component") {
+  component_name = "terminal"
   manifest = "meta/terminal.cmx"
   deps = [ ":bin" ]
+}
+
+fuchsia_component("vsh-terminal") {
+  manifest = "meta/vsh-terminal.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("terminal") {
+  deps = [
+    ":terminal_component",
+    ":vsh-terminal",
+  ]
 }
 
 config_data("tiles_config") {

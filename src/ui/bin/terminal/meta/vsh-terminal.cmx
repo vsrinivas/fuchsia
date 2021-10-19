@@ -1,0 +1,11 @@
+{
+    "include": [
+        "//src/ui/bin/terminal/meta/terminal.cmx"
+    ],
+    "program": {
+        "args": [
+            "/bin/vsh",
+            "-c"
+        ]
+    }
+}

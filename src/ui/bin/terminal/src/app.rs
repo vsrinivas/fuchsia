@@ -6,21 +6,23 @@ use {
     crate::terminal_view::TerminalViewAssistant,
     anyhow::Error,
     carnelian::{AppAssistant, AppContext, ViewAssistantPtr, ViewKey},
+    std::ffi::CString,
 };
 
 pub struct TerminalAssistant {
     app_context: AppContext,
+    cmd: Vec<CString>,
 }
 
 impl TerminalAssistant {
-    pub fn new(app_context: &AppContext) -> TerminalAssistant {
-        TerminalAssistant { app_context: app_context.clone() }
+    pub fn new(app_context: &AppContext, cmd: Vec<CString>) -> TerminalAssistant {
+        TerminalAssistant { app_context: app_context.clone(), cmd }
     }
 
     #[cfg(test)]
     fn new_for_test() -> TerminalAssistant {
         let app_context = AppContext::new_for_testing_purposes_only();
-        Self::new(&app_context)
+        Self::new(&app_context, vec![])
     }
 }
 
@@ -30,7 +32,7 @@ impl AppAssistant for TerminalAssistant {
     }
 
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(TerminalViewAssistant::new(&self.app_context, view_key)))
+        Ok(Box::new(TerminalViewAssistant::new(&self.app_context, view_key, self.cmd.clone())))
     }
 }
 

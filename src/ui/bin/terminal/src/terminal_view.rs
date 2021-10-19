@@ -18,7 +18,9 @@ use {
     futures::{channel::mpsc, io::AsyncReadExt, select, FutureExt, StreamExt},
     log::error,
     pty::Pty,
-    std::{cell::RefCell, convert::TryFrom, ffi::CStr, fs::File, io::prelude::*, rc::Rc},
+    std::{
+        cell::RefCell, convert::TryFrom, ffi::CStr, ffi::CString, fs::File, io::prelude::*, rc::Rc,
+    },
     term_model::{
         ansi::Processor,
         clipboard::Clipboard,
@@ -168,13 +170,17 @@ pub struct TerminalViewAssistant {
     app_context: AppContextWrapper,
     view_key: ViewKey,
 
-    /// If set, will use this command when spawning the pty, this is useful for tests.
-    spawn_command: Option<&'static CStr>,
+    /// If non-empty, will use this command when spawning the pty.
+    spawn_command: Vec<CString>,
 }
 
 impl TerminalViewAssistant {
     /// Creates a new instance of the TerminalViewAssistant.
-    pub fn new(app_context: &AppContext, view_key: ViewKey) -> TerminalViewAssistant {
+    pub fn new(
+        app_context: &AppContext,
+        view_key: ViewKey,
+        spawn_command: Vec<CString>,
+    ) -> TerminalViewAssistant {
         let cell_size = Size::new(12.0, 22.0);
         let size_info = SizeInfo {
             // set the initial size/width to be that of the cell size which prevents
@@ -203,16 +209,14 @@ impl TerminalViewAssistant {
             terminal_scene: TerminalScene::new(Color::new()),
             app_context,
             view_key,
-            spawn_command: None,
+            spawn_command,
         }
     }
 
     #[cfg(test)]
     pub fn new_for_test() -> TerminalViewAssistant {
         let app_context = AppContext::new_for_testing_purposes_only();
-        let mut view = Self::new(&app_context, 1);
-        view.spawn_command = Some(cstr!("/pkg/bin/sh"));
-        view
+        Self::new(&app_context, 1, vec![cstr!("/pkg/bin/sh").to_owned()])
     }
 
     /// Checks if we need to perform a resize based on a new size.
@@ -286,7 +290,12 @@ impl TerminalViewAssistant {
         // do move to multithreaded we will need to refactor the term parsing
         // logic to account for thread safaty.
         fasync::Task::local(async move {
-            pty.spawn(spawn_command).await.expect("unable to spawn pty");
+            if spawn_command.is_empty() {
+                pty.spawn(None).await.expect("unable to spawn pty");
+            } else {
+                let argv: Vec<&CStr> = spawn_command.iter().map(|s| s.as_ref()).collect();
+                pty.spawn_with_argv(&argv[0], argv.as_slice()).await.expect("unable to spawn pty");
+            }
 
             let fd = pty.try_clone_fd().expect("unable to clone pty read fd");
             let mut evented_fd = unsafe {
