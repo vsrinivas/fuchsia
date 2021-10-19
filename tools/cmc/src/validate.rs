@@ -926,19 +926,25 @@ impl<'a> ValidationContext<'a> {
         target: DependencyNode<'a>,
         strong_dependencies: &mut DirectedGraph<DependencyNode<'a>>,
     ) {
-        let possible_storage_name = match (source, name) {
-            (DependencyNode::Named(name), _) => Some(name),
-            (DependencyNode::Self_, Some(name)) => Some(name),
-            _ => None,
+        let source = {
+            // A dependency on a storage capability from `self` is really a dependency on the
+            // backing dir.  Perform that translation here.
+            let possible_storage_name = match (source, name) {
+                (DependencyNode::Named(name), _) => Some(name),
+                (DependencyNode::Self_, Some(name)) => Some(name),
+                _ => None,
+            };
+            let possible_storage_source =
+                possible_storage_name.map(|name| self.all_storage_and_sources.get(&name)).flatten();
+            let source = possible_storage_source
+                .map(|r| DependencyNode::capability_from_ref(r))
+                .unwrap_or(Some(source));
+            if source.is_none() {
+                return;
+            }
+            source.unwrap()
         };
-        // A dependency on a storage capability is really a dependency on the backing dir. Perform
-        // that translation here.
-        let source = possible_storage_name
-            .map(|name| self.all_storage_and_sources.get(&name))
-            .flatten()
-            .map(|r| DependencyNode::capability_from_ref(r))
-            .flatten()
-            .unwrap_or(source);
+
         if source == DependencyNode::Self_ && target == DependencyNode::Self_ {
             // `self` dependencies (e.g. `use from self`) are allowed.
         } else {
@@ -1984,8 +1990,14 @@ mod tests {
             json!({
                 "capabilities": [
                     {
-                        "storage": "data",
+                        "storage": "cdata",
                         "from": "#backend",
+                        "backing_dir": "blobfs",
+                        "storage_id": "static_instance_id_or_moniker",
+                    },
+                    {
+                        "storage": "pdata",
+                        "from": "parent",
                         "backing_dir": "blobfs",
                         "storage_id": "static_instance_id_or_moniker",
                     },
@@ -2008,13 +2020,56 @@ mod tests {
                 ],
                 "offer": [
                     {
-                        "storage": "data",
+                        "storage": "cdata",
+                        "from": "self",
+                        "to": "#child",
+                    },
+                    {
+                        "storage": "pdata",
                         "from": "self",
                         "to": "#child",
                     },
                 ],
             }),
             Ok(())
+        ),
+        test_cml_use_from_child_offer_storage_cycle(
+            json!({
+                "capabilities": [
+                    {
+                        "storage": "data",
+                        "from": "self",
+                        "backing_dir": "blobfs",
+                        "storage_id": "static_instance_id_or_moniker",
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "child",
+                        "url": "#meta/child.cm",
+                    },
+                ],
+                "use": [
+                    {
+                        "protocol": "fuchsia.example.Protocol",
+                        "from": "#child",
+                    },
+                ],
+                "offer": [
+                    {
+                        "storage": "data",
+                        "from": "self",
+                        "to": "#child",
+                    },
+                ],
+            }),
+            Err(Error::Validate {
+                schema_name: None,
+                err,
+                ..
+            }) if &err ==
+                "Strong dependency cycles were found. Break the cycle by removing a \
+                dependency or marking an offer as weak. Cycles: {{#child -> self -> #child}}"
         ),
 
         // expose

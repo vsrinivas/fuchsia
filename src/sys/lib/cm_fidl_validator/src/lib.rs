@@ -1618,19 +1618,26 @@ impl<'a> ValidationContext<'a> {
         }
         let source = source.unwrap();
         let target = target.unwrap();
-        let possible_storage_name = match (source, source_name) {
-            (DependencyNode::Capability(name), _) => Some(name),
-            (DependencyNode::Self_, Some(name)) => Some(name.as_str()),
-            _ => None,
+
+        let source = {
+            // A dependency on a storage capability from `self` is really a dependency on the
+            // backing dir.  Perform that translation here.
+            let possible_storage_name = match (source, source_name) {
+                (DependencyNode::Capability(name), _) => Some(name),
+                (DependencyNode::Self_, Some(name)) => Some(name.as_str()),
+                _ => None,
+            };
+            let possible_storage_source =
+                possible_storage_name.map(|name| self.all_storage_and_sources.get(name)).flatten();
+            let source = possible_storage_source
+                .map(|r| DependencyNode::try_from_ref(*r))
+                .unwrap_or(Some(source));
+            if source.is_none() {
+                return;
+            }
+            source.unwrap()
         };
-        // A dependency on a storage capability is really a dependency on the backing dir. Perform
-        // that translation here.
-        let source = possible_storage_name
-            .map(|name| self.all_storage_and_sources.get(name))
-            .flatten()
-            .map(|r| DependencyNode::try_from_ref(*r))
-            .flatten()
-            .unwrap_or(source);
+
         if source == target {
             // This is already its own error, or is a valid `use from self`, don't report this as a
             // cycle.
@@ -3245,12 +3252,19 @@ mod tests {
                 ComponentDecl {
                     capabilities: Some(vec![
                         CapabilityDecl::Storage(StorageDecl {
-                            name: Some("data".to_string()),
+                            name: Some("cdata".to_string()),
                             source: Some(fsys::Ref::Child(fsys::ChildRef { name: "child2".to_string(), collection: None } )),
                             backing_dir: Some("minfs".to_string()),
                             storage_id: Some(StorageId::StaticInstanceIdOrMoniker),
                             ..StorageDecl::EMPTY
-                        })
+                        }),
+                        CapabilityDecl::Storage(StorageDecl {
+                            name: Some("pdata".to_string()),
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef{})),
+                            backing_dir: Some("minfs".to_string()),
+                            storage_id: Some(StorageId::StaticInstanceIdOrMoniker),
+                            ..StorageDecl::EMPTY
+                        }),
                     ]),
                     uses: Some(vec![
                         UseDecl::Protocol(UseProtocolDecl {
@@ -3264,9 +3278,16 @@ mod tests {
                     offers: Some(vec![
                         OfferDecl::Storage(OfferStorageDecl {
                             source: Some(Ref::Self_(SelfRef{})),
-                            source_name: Some("data".to_string()),
+                            source_name: Some("cdata".to_string()),
                             target: Some(Ref::Child(ChildRef { name: "child1".to_string(), collection: None })),
-                            target_name: Some("data".to_string()),
+                            target_name: Some("cdata".to_string()),
+                            ..OfferStorageDecl::EMPTY
+                        }),
+                        OfferDecl::Storage(OfferStorageDecl {
+                            source: Some(Ref::Self_(SelfRef{})),
+                            source_name: Some("pdata".to_string()),
+                            target: Some(Ref::Child(ChildRef { name: "child1".to_string(), collection: None })),
+                            target_name: Some("pdata".to_string()),
                             ..OfferStorageDecl::EMPTY
                         }),
                     ]),
@@ -3290,6 +3311,52 @@ mod tests {
                 }
             },
             result = Ok(()),
+        },
+        test_validate_use_from_child_storage_cycle => {
+            input = {
+                ComponentDecl {
+                    capabilities: Some(vec![
+                        CapabilityDecl::Storage(StorageDecl {
+                            name: Some("data".to_string()),
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            backing_dir: Some("minfs".to_string()),
+                            storage_id: Some(StorageId::StaticInstanceIdOrMoniker),
+                            ..StorageDecl::EMPTY
+                        }),
+                    ]),
+                    uses: Some(vec![
+                        UseDecl::Protocol(UseProtocolDecl {
+                            dependency_type: Some(DependencyType::Strong),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "child".to_string(), collection: None})),
+                            source_name: Some("a".to_string()),
+                            target_path: Some("/svc/a".to_string()),
+                            ..UseProtocolDecl::EMPTY
+                        }),
+                    ]),
+                    offers: Some(vec![
+                        OfferDecl::Storage(OfferStorageDecl {
+                            source: Some(Ref::Self_(SelfRef{})),
+                            source_name: Some("data".to_string()),
+                            target: Some(Ref::Child(ChildRef { name: "child".to_string(), collection: None })),
+                            target_name: Some("data".to_string()),
+                            ..OfferStorageDecl::EMPTY
+                        }),
+                    ]),
+                    children: Some(vec![
+                        ChildDecl {
+                            name: Some("child".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            on_terminate: None,
+                            ..ChildDecl::EMPTY
+                        },
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result = Err(ErrorList::new(vec![
+                Error::dependency_cycle("{{self -> child child -> self}}".to_string()),
+            ])),
         },
         test_validate_storage_strong_cycle_between_children => {
             input = {

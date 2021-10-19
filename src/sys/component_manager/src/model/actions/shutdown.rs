@@ -530,10 +530,11 @@ fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut Depende
                         if let Some(s) = find_storage_source(decl, offer.source_name()) {
                             s
                         } else {
-                            // We have a strong transitive dependency on ourself, which means a
-                            // dependency cycle. This should be prevented by manifest validation,
-                            // so if we see this it's a bug
-                            panic!("dependency cycle detected when processing transitive child dependencies");
+                            // If the `offer` was not for storage, it should be impossible to get
+                            // here since that would indicate a cycle. Therefore, getting here
+                            // implies that the storage source was the parent, in which case
+                            // there's no dependency to add.
+                            continue;
                         }
                     }
                 };
@@ -1726,19 +1727,36 @@ mod tests {
     #[test]
     fn test_use_from_child_offer_storage() {
         let decl = ComponentDecl {
-            capabilities: vec![CapabilityDecl::Storage(StorageDecl {
-                name: "data".into(),
-                source: StorageDirectorySource::Child("childB".to_string()),
-                backing_dir: "directory".into(),
-                subdir: None,
-                storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
-            })],
-            offers: vec![OfferDecl::Storage(OfferStorageDecl {
-                source: OfferSource::Self_,
-                source_name: "data".into(),
-                target_name: "data".into(),
-                target: OfferTarget::static_child("childA".to_string()),
-            })],
+            capabilities: vec![
+                CapabilityDecl::Storage(StorageDecl {
+                    name: "cdata".into(),
+                    source: StorageDirectorySource::Child("childB".to_string()),
+                    backing_dir: "directory".into(),
+                    subdir: None,
+                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                }),
+                CapabilityDecl::Storage(StorageDecl {
+                    name: "pdata".into(),
+                    source: StorageDirectorySource::Parent,
+                    backing_dir: "directory".into(),
+                    subdir: None,
+                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                }),
+            ],
+            offers: vec![
+                OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferSource::Self_,
+                    source_name: "cdata".into(),
+                    target_name: "cdata".into(),
+                    target: OfferTarget::static_child("childA".to_string()),
+                }),
+                OfferDecl::Storage(OfferStorageDecl {
+                    source: OfferSource::Self_,
+                    source_name: "pdata".into(),
+                    target_name: "pdata".into(),
+                    target: OfferTarget::static_child("childA".to_string()),
+                }),
+            ],
             children: vec![
                 ChildDecl {
                     name: "childA".to_string(),
