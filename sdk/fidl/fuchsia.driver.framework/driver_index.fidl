@@ -18,6 +18,10 @@ type MatchedDriver = table {
     /// Total number of nodes for a composite driver (optional).
     3: num_nodes uint32;
 
+    /// A list of all the node names for this composite driver (optional).
+    /// These are ordered according to index.
+    6: composite_node_names vector<string:MAX>:MAX;
+
     /// The name of the composite device that is created (optional).
     5: composite_name string:MAX;
 

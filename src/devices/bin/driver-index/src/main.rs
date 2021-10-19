@@ -269,6 +269,14 @@ impl ResolvedDriver {
                 matched_driver.num_nodes = Some((composite.additional_nodes.len() + 1) as u32);
                 matched_driver.composite_name =
                     Some(composite.symbol_table[&composite.device_name_id].clone());
+
+                let mut node_names = vec![];
+                node_names.push(composite.symbol_table[&composite.primary_node.name_id].clone());
+                for node in &composite.additional_nodes {
+                    node_names.push(composite.symbol_table[&node.name_id].clone());
+                }
+                matched_driver.composite_node_names = Some(node_names);
+
                 Ok(Some(matched_driver))
             }
         }
@@ -1049,6 +1057,10 @@ mod tests {
             assert_eq!(result.node_index, Some(0));
             assert_eq!(result.num_nodes, Some(2));
             assert_eq!(result.composite_name, Some("mimid".to_string()));
+            assert_eq!(
+                result.composite_node_names,
+                Some(vec!["catbird".to_string(), "mockingbird".to_string()])
+            );
 
             // Match secondary node.
             let args = fdf::NodeAddArgs {
