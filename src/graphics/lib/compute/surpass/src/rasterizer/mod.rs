@@ -13,9 +13,9 @@ use crate::{
     PIXEL_MASK, PIXEL_SHIFT, PIXEL_WIDTH, TILE_MASK, TILE_SHIFT,
 };
 
-mod raster_segment;
+mod pixel_segment;
 
-pub use raster_segment::{search_last_by_key, CompactSegment};
+pub use pixel_segment::{search_last_by_key, PixelSegment, BIT_FIELD_LENS};
 
 const INDICES_MAX_CHUNK_SIZE: u32 = 16_258;
 const SEGMENTS_MIN_LEN: usize = 4_096;
@@ -134,15 +134,15 @@ fn tiles(border_x: i32, border_y: i32, octant: u8) -> (i16, i16, u8, u8) {
         _ => unreachable!(),
     };
 
-    let tile_i = (border_x >> TILE_SHIFT as i32) as i16;
-    let tile_j = (border_y >> TILE_SHIFT as i32) as i16;
-    let tile_x = (border_x & TILE_MASK as i32) as u8;
-    let tile_y = (border_y & TILE_MASK as i32) as u8;
+    let tile_x = (border_x >> TILE_SHIFT as i32) as i16;
+    let tile_y = (border_y >> TILE_SHIFT as i32) as i16;
+    let local_x = (border_x & TILE_MASK as i32) as u8;
+    let local_y = (border_y & TILE_MASK as i32) as u8;
 
-    (tile_i, tile_j, tile_x, tile_y)
+    (tile_x, tile_y, local_x, local_y)
 }
 
-fn area_cover(x0: i32, x1: i32, y0: i32, y1: i32, octant: u8) -> (i16, i8) {
+fn area_cover_for_octant(x0: i32, x1: i32, y0: i32, y1: i32, octant: u8) -> (u8, i8) {
     let (x0, x1, y0, y1) = match octant {
         0 => (x0, x1, y0, y1),
         1 => (y0, y1, x0, x1),
@@ -158,18 +158,15 @@ fn area_cover(x0: i32, x1: i32, y0: i32, y1: i32, octant: u8) -> (i16, i8) {
     let border = (x0 & !(PIXEL_MASK as i32)) + PIXEL_WIDTH as i32;
     let height = y1 - y0;
 
-    let triangle = ((y1 - y0) * (x1 - x0) / 2) as i16;
-    let rectangle = (height * (border - x1)) as i16;
-
-    let area = (triangle + rectangle) as i16;
+    let double_area_multiplier = ((x1 - x0) + 2 * (border - x1)).abs() as u8;
     let cover = height as i8;
 
-    (area, cover)
+    (double_area_multiplier, cover)
 }
 
 #[inline]
 fn segment(
-    layer: u16,
+    layer_id: u32,
     x0: i32,
     x1: i32,
     y0: i32,
@@ -177,18 +174,18 @@ fn segment(
     border_x: i32,
     border_y: i32,
     octant: u8,
-) -> CompactSegment {
+) -> PixelSegment {
     let (ti, tj, tx, ty) = tiles(border_x, border_y, octant);
-    let (area, cover) = area_cover(x0, x1, y0, y1, octant);
+    let (double_area_multiplier, cover) = area_cover_for_octant(x0, x1, y0, y1, octant);
 
-    CompactSegment::new(0, tj, ti, layer, ty, tx, area, cover)
+    PixelSegment::new(false, tj, ti, layer_id, ty, tx, double_area_multiplier, cover)
 }
 
 #[derive(Debug, Default)]
 pub struct Rasterizer {
     line_indices: Vec<MaybeUninit<usize>>,
     pixel_indices: Vec<MaybeUninit<i32>>,
-    segments: Vec<[CompactSegment; 2]>,
+    segments: Vec<[PixelSegment; 2]>,
     segments_len: usize,
 }
 
@@ -197,11 +194,11 @@ impl Rasterizer {
         Self::default()
     }
 
-    pub fn segments(&self) -> &[CompactSegment] {
+    pub fn segments(&self) -> &[PixelSegment] {
         unsafe { std::slice::from_raw_parts(self.segments.as_ptr() as *const _, self.segments_len) }
     }
 
-    fn segments_mut(&mut self) -> &mut [CompactSegment] {
+    fn segments_mut(&mut self) -> &mut [PixelSegment] {
         unsafe {
             std::slice::from_raw_parts_mut(self.segments.as_mut_ptr() as *mut _, self.segments_len)
         }
@@ -267,7 +264,7 @@ impl Rasterizer {
                     let segment0 =
                         segment(layer, x0_sub, x1_sub, y0_sub, y1_sub, border_x, border_y, octant);
 
-                    [segment0, CompactSegment::default()]
+                    [segment0, PixelSegment::default()]
                 }
             });
 
@@ -278,8 +275,11 @@ impl Rasterizer {
     pub fn sort(&mut self) {
         duration!("gfx", "Rasterizer::sort");
 
-        self.segments_mut()
-            .par_sort_unstable_by_key(|segment| segment.unwrap() >> (16 + 2 * TILE_SHIFT));
+        self.segments_mut().par_sort_unstable_by_key(|segment| {
+            let segment: u64 = segment.into();
+            segment
+                >> (BIT_FIELD_LENS[4] + BIT_FIELD_LENS[5] + BIT_FIELD_LENS[6] + BIT_FIELD_LENS[7])
+        });
     }
 }
 
@@ -289,7 +289,7 @@ mod tests {
 
     use super::*;
 
-    use crate::{rasterizer::raster_segment::RasterSegment, Point, Segment, TILE_SIZE};
+    use crate::{rasterizer::pixel_segment::PixelSegmentUnpacked, Point, Segment, TILE_SIZE};
 
     #[test]
     fn lengths_to_indices() {
@@ -305,7 +305,7 @@ mod tests {
         assert_eq!(unsafe { pixel_indices.assume_init() }, [0, 0, 1, 0, 1, 2, 0, 0, 1, 0, 1, 2]);
     }
 
-    fn segments(p0: Point<f32>, p1: Point<f32>) -> Vec<CompactSegment> {
+    fn segments(p0: Point<f32>, p1: Point<f32>) -> Vec<PixelSegment> {
         let mut builder = LinesBuilder::new();
         builder.push(0, &Segment::new(p0, p1));
         let lines = builder.build(|_| None);
@@ -316,12 +316,12 @@ mod tests {
         rasterizer.segments().to_vec()
     }
 
-    fn areas_and_covers(segments: &[CompactSegment]) -> Vec<Option<(i16, i8)>> {
+    fn areas_and_covers(segments: &[PixelSegment]) -> Vec<Option<(i16, i8)>> {
         segments
             .iter()
             .map(|&segment| {
-                let raster_segment: Option<RasterSegment> = segment.try_into().ok();
-                raster_segment.map(|segment| (segment.area, segment.cover))
+                let segment: Option<PixelSegmentUnpacked> = segment.try_into().ok();
+                segment.map(|segment| (segment.double_area, segment.cover))
             })
             .collect()
     }
@@ -331,11 +331,11 @@ mod tests {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(3.0, 2.0))),
             [
-                Some((11 * 16 / 2, 11)),
+                Some((11 * 16, 11)),
                 None,
-                Some((5 * 8 / 2 + 5 * 8, 5)),
-                Some((5 * 8 / 2, 5)),
-                Some((11 * 16 / 2, 11)),
+                Some((5 * 8 + 2 * (5 * 8), 5)),
+                Some((5 * 8, 5)),
+                Some((11 * 16, 11)),
                 None,
             ],
         );
@@ -346,11 +346,11 @@ mod tests {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(2.0, 3.0))),
             [
-                Some((16 * 11 / 2 + 16 * 5, 16)),
+                Some((16 * 11 + 2 * (16 * 5), 16)),
                 None,
-                Some((8 * 5 / 2, 8)),
-                Some((8 * 5 / 2 + 8 * 11, 8)),
-                Some((16 * 11 / 2, 16)),
+                Some((8 * 5, 8)),
+                Some((8 * 5 + 2 * (8 * 11), 8)),
+                Some((16 * 11, 16)),
                 None,
             ],
         );
@@ -361,11 +361,11 @@ mod tests {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-2.0, 3.0))),
             [
-                Some((16 * 11 / 2, 16)),
+                Some((16 * 11, 16)),
                 None,
-                Some((8 * 5 / 2 + 8 * 11, 8)),
-                Some((8 * 5 / 2, 8)),
-                Some((16 * 11 / 2 + 16 * 5, 16)),
+                Some((8 * 5 + 2 * (8 * 11), 8)),
+                Some((8 * 5, 8)),
+                Some((16 * 11 + 2 * (16 * 5), 16)),
                 None,
             ],
         );
@@ -376,11 +376,11 @@ mod tests {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-3.0, 2.0))),
             [
-                Some((11 * 16 / 2, 11)),
+                Some((11 * 16, 11)),
                 None,
-                Some((5 * 8 / 2 + 5 * 8, 5)),
-                Some((5 * 8 / 2, 5)),
-                Some((11 * 16 / 2, 11)),
+                Some((5 * 8 + 2 * (5 * 8), 5)),
+                Some((5 * 8, 5)),
+                Some((11 * 16, 11)),
                 None,
             ],
         );
@@ -391,11 +391,11 @@ mod tests {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-3.0, -2.0))),
             [
-                Some((-(11 * 16 / 2), -11)),
+                Some((-(11 * 16), -11)),
                 None,
-                Some((-(5 * 8 / 2 + 5 * 8), -5)),
-                Some((-(5 * 8 / 2), -5)),
-                Some((-(11 * 16 / 2), -11)),
+                Some((-(5 * 8 + 2 * (5 * 8)), -5)),
+                Some((-(5 * 8), -5)),
+                Some((-(11 * 16), -11)),
                 None,
             ],
         );
@@ -406,11 +406,11 @@ mod tests {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-2.0, -3.0))),
             [
-                Some((-(16 * 11 / 2 + 16 * 5), -16)),
+                Some((-(16 * 11 + 2 * (16 * 5)), -16)),
                 None,
-                Some((-(8 * 5 / 2), -8)),
-                Some((-(8 * 5 / 2 + 8 * 11), -8)),
-                Some((-(16 * 11 / 2), -16)),
+                Some((-(8 * 5), -8)),
+                Some((-(8 * 5 + 2 * (8 * 11)), -8)),
+                Some((-(16 * 11), -16)),
                 None,
             ],
         );
@@ -421,11 +421,11 @@ mod tests {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(2.0, -3.0))),
             [
-                Some((-(16 * 11 / 2), -16)),
+                Some((-(16 * 11), -16)),
                 None,
-                Some((-(8 * 5 / 2 + 8 * 11), -8)),
-                Some((-(8 * 5 / 2), -8)),
-                Some((-(16 * 11 / 2 + 16 * 5), -16)),
+                Some((-(8 * 5 + 2 * (8 * 11)), -8)),
+                Some((-(8 * 5), -8)),
+                Some((-(16 * 11 + 2 * (16 * 5)), -16)),
                 None,
             ],
         );
@@ -436,11 +436,11 @@ mod tests {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(3.0, -2.0))),
             [
-                Some((-(11 * 16 / 2), -11)),
+                Some((-(11 * 16), -11)),
                 None,
-                Some((-(5 * 8 / 2 + 5 * 8), -5)),
-                Some((-(5 * 8 / 2), -5)),
-                Some((-(11 * 16 / 2), -11)),
+                Some((-(5 * 8 + 2 * (5 * 8)), -5)),
+                Some((-(5 * 8), -5)),
+                Some((-(11 * 16), -11)),
                 None,
             ],
         );
@@ -455,7 +455,7 @@ mod tests {
     fn area_cover_axis_45() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(1.0, 1.0))),
-            [Some((16 * 16 / 2, 16)), None],
+            [Some((16 * 16, 16)), None],
         );
     }
 
@@ -463,7 +463,7 @@ mod tests {
     fn area_cover_axis_90() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(0.0, 1.0))),
-            [Some((16 * 16, 16)), None],
+            [Some((2 * 16 * 16, 16)), None],
         );
     }
 
@@ -471,7 +471,7 @@ mod tests {
     fn area_cover_axis_135() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-1.0, 1.0))),
-            [Some((16 * 16 / 2, 16)), None],
+            [Some((16 * 16, 16)), None],
         );
     }
 
@@ -484,7 +484,7 @@ mod tests {
     fn area_cover_axis_225() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-1.0, -1.0))),
-            [Some((-(16 * 16 / 2), -16)), None],
+            [Some((-(16 * 16), -16)), None],
         );
     }
 
@@ -492,7 +492,7 @@ mod tests {
     fn area_cover_axis_270() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(0.0, -1.0))),
-            [Some((-(16 * 16), -16)), None],
+            [Some((2 * -(16 * 16), -16)), None],
         );
     }
 
@@ -500,17 +500,18 @@ mod tests {
     fn area_cover_axis_315() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-1.0, -1.0))),
-            [Some((-(16 * 16 / 2), -16)), None],
+            [Some((-(16 * 16), -16)), None],
         );
     }
 
-    fn tiles(segments: &[CompactSegment]) -> Vec<Option<(i16, i16, u8, u8)>> {
+    fn tiles(segments: &[PixelSegment]) -> Vec<Option<(i16, i16, u8, u8)>> {
         segments
             .iter()
             .map(|&segment| {
-                let raster_segment: Option<RasterSegment> = segment.try_into().ok();
-                raster_segment
-                    .map(|segment| (segment.tile_i, segment.tile_j, segment.tile_x, segment.tile_y))
+                let segment: Option<PixelSegmentUnpacked> = segment.try_into().ok();
+                segment.map(|segment| {
+                    (segment.tile_x, segment.tile_y, segment.local_x, segment.local_y)
+                })
             })
             .collect()
     }
@@ -663,12 +664,12 @@ mod tests {
     fn start_and_end_not_on_pixel_border() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.5, 0.25), Point::new(4.0, 2.0)))[0],
-            Some((4 * 8 / 2, 4)),
+            Some((4 * 8, 4)),
         );
 
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(3.5, 1.75)))[6],
-            Some((4 * 8 / 2 + 4 * 8, 4)),
+            Some((4 * 8 + 2 * (4 * 8), 4)),
         );
     }
 }

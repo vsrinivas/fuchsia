@@ -64,7 +64,7 @@ impl Composition {
         let mut len = 0;
         for segment in segments {
             self.builder().push(
-                layer_id.0,
+                layer_id.0 as u32,
                 &surpass::Segment::new(
                     surpass::Point::new(segment.p0.x, segment.p0.y),
                     surpass::Point::new(segment.p1.x, segment.p1.y),
@@ -76,7 +76,7 @@ impl Composition {
 
         let layer = self.layers.entry(layer_id.0).or_default();
 
-        layer.inner.order = Some(layer_id.0);
+        layer.inner.order = Some(layer_id.0 as u32);
         layer.inner.is_enabled = true;
         layer.len += len;
 
@@ -130,7 +130,10 @@ impl Composition {
         if self.builder().len() >= self.actual_len() * LINES_GARBAGE_THRESHOLD {
             take_builder!(self, |mut builder: LinesBuilder| {
                 builder.retain(|layer| {
-                    self.layers.get(&layer).map(|layer| layer.inner.is_enabled).unwrap_or_default()
+                    self.layers
+                        .get(&(layer as u16))
+                        .map(|layer| layer.inner.is_enabled)
+                        .unwrap_or_default()
                 });
                 builder
             });
@@ -175,7 +178,7 @@ impl Composition {
         for (layer_id, layer) in &self.layers {
             if layer.inner.is_enabled {
                 self.orders_to_layers.insert(
-                    layer.inner.order.expect("Layers should always have orders"),
+                    layer.inner.order.expect("Layers should always have orders") as u16,
                     *layer_id,
                 );
             }
@@ -198,10 +201,10 @@ impl Composition {
 
         impl LayerProps for CompositionContext<'_> {
             #[inline]
-            fn get(&self, layer: u16) -> Cow<'_, Props> {
+            fn get(&self, layer_id: u32) -> Cow<'_, Props> {
                 let layer_id = self
                     .orders_to_layers
-                    .get(&layer)
+                    .get(&(layer_id as u16))
                     .expect("orders_to_layers was not populated in Composition::render");
                 Cow::Borrowed(
                     self.layers
@@ -212,13 +215,13 @@ impl Composition {
             }
 
             #[inline]
-            fn is_unchanged(&self, layer: u16) -> bool {
+            fn is_unchanged(&self, layer_id: u32) -> bool {
                 match self.cache_id {
                     None => return false,
                     Some(cache_id) => {
                         let layer_id = self
                             .orders_to_layers
-                            .get(&layer)
+                            .get(&(layer_id as u16))
                             .expect("orders_to_layers was not populated in Composition::render");
                         self.layers
                             .get(layer_id)
@@ -236,14 +239,14 @@ impl Composition {
         };
 
         take_builder!(self, |builder: LinesBuilder| {
-            let lines =
-                builder.build(|layer_id| layers.get(&layer_id).map(|layer| layer.inner.clone()));
+            let lines = builder
+                .build(|layer_id| layers.get(&(layer_id as u16)).map(|layer| layer.inner.clone()));
 
             rasterizer.rasterize(&lines);
             rasterizer.sort();
 
             let last_segment =
-                rasterizer::search_last_by_key(rasterizer.segments(), 0, |segment| {
+                rasterizer::search_last_by_key(rasterizer.segments(), false, |segment| {
                     segment.is_none()
                 })
                 .unwrap_or(0);

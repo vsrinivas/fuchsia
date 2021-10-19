@@ -16,8 +16,10 @@ pub use point::Point;
 pub use segment::{Lines, LinesBuilder, Segment};
 
 const PIXEL_WIDTH: usize = 16;
+const PIXEL_DOUBLE_WIDTH: usize = PIXEL_WIDTH * 2;
 const PIXEL_SHIFT: usize = PIXEL_WIDTH.trailing_zeros() as usize;
 const PIXEL_MASK: usize = PIXEL_WIDTH - 1;
+
 pub const TILE_SIZE: usize = 16;
 const _ASSERT_TILE_SIZE_MULTIPLE_OF_16: usize = 0 - (TILE_SIZE % 16);
 const _ASSERT_MAX_TILE_SIZE: usize = 128 - TILE_SIZE;

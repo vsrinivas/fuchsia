@@ -31,7 +31,7 @@ rustc_library("surpass") {
     "src/painter/style.rs",
     "src/point.rs",
     "src/rasterizer/mod.rs",
-    "src/rasterizer/raster_segment.rs",
+    "src/rasterizer/pixel_segment.rs",
     "src/segment.rs",
     "src/simd/auto.rs",
     "src/simd/avx.rs",

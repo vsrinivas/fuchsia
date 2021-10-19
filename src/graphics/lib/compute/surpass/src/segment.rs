@@ -45,7 +45,7 @@ impl LinesBuilder {
     }
 
     #[inline]
-    pub fn push(&mut self, layer_id: u16, segment: &Segment<f32>) {
+    pub fn push(&mut self, layer_id: u32, segment: &Segment<f32>) {
         self.lines.p0xs.push(segment.p0.x);
         self.lines.p0ys.push(segment.p0.y);
         self.lines.p1xs.push(segment.p1.x);
@@ -55,7 +55,7 @@ impl LinesBuilder {
 
     pub fn retain<F>(&mut self, mut f: F)
     where
-        F: FnMut(u16) -> bool,
+        F: FnMut(u32) -> bool,
     {
         let len = self.len();
         let mut del = 0;
@@ -91,7 +91,7 @@ impl LinesBuilder {
 
     pub fn build<F>(mut self, layers: F) -> Lines
     where
-        F: Fn(u16) -> Option<Layer> + Send + Sync,
+        F: Fn(u32) -> Option<Layer> + Send + Sync,
     {
         duration!("gfx", "LinesBuilder::build");
 
@@ -232,8 +232,8 @@ pub struct Lines {
     pub p1xs: Vec<f32>,
     pub p1ys: Vec<f32>,
     transform: Option<[f32; 6]>,
-    pub layer_ids: Vec<u16>,
-    pub orders: Vec<u16>,
+    pub layer_ids: Vec<u32>,
+    pub orders: Vec<u32>,
     pub starts: Vec<i32>,
     pub starts_f32: Vec<f32>,
     pub ends_f32: Vec<f32>,

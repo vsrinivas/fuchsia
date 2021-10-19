@@ -13,7 +13,7 @@ use rayon::prelude::*;
 
 use crate::{
     painter::LayerProps,
-    rasterizer::{search_last_by_key, CompactSegment},
+    rasterizer::{search_last_by_key, PixelSegment},
     TILE_MASK, TILE_SHIFT, TILE_SIZE,
 };
 
@@ -124,9 +124,9 @@ pub struct BufferLayout {
 }
 
 impl BufferLayout {
-    fn par_tile_rows<F>(&mut self, layers_per_tile: Option<&mut [Option<u16>]>, f: F)
+    fn par_tile_rows<F>(&mut self, layers_per_tile: Option<&mut [Option<u32>]>, f: F)
     where
-        F: Fn(usize, ChunksExactMut<'_, TileSlice>, Option<&mut [Option<u16>]>) + Send + Sync,
+        F: Fn(usize, ChunksExactMut<'_, TileSlice>, Option<&mut [Option<u32>]>) + Send + Sync,
     {
         let row_len = self.row_len;
         if let Some(layers_per_tile) = layers_per_tile {
@@ -153,9 +153,9 @@ impl BufferLayout {
     pub fn print<S: LayerProps>(
         &mut self,
         buffer: &mut [[u8; 4]],
-        layers_per_tile: Option<&mut [Option<u16>]>,
+        layers_per_tile: Option<&mut [Option<u32>]>,
         flusher: Option<&dyn Flusher>,
-        mut segments: &[CompactSegment],
+        mut segments: &[PixelSegment],
         clear_color: [f32; 4],
         crop: Option<Rect>,
         styles: S,
@@ -170,7 +170,7 @@ impl BufferLayout {
         }
 
         if let Ok(end) =
-            search_last_by_key(segments, false, |segment| segment.tile_j().is_negative())
+            search_last_by_key(segments, false, |segment| segment.tile_y().is_negative())
         {
             segments = &segments[..=end];
         }
@@ -182,10 +182,10 @@ impl BufferLayout {
                 }
             }
 
-            let segments = search_last_by_key(segments, j as i16, |segment| segment.tile_j())
+            let segments = search_last_by_key(segments, j as i16, |segment| segment.tile_y())
                 .map(|end| {
                     let result =
-                        search_last_by_key(segments, j as i16 - 1, |segment| segment.tile_j());
+                        search_last_by_key(segments, j as i16 - 1, |segment| segment.tile_y());
                     let start = match result {
                         Ok(i) => i + 1,
                         Err(i) => i,
@@ -239,7 +239,7 @@ mod tests {
     fn flusher() {
         macro_rules! seg {
             ( $j:expr, $i:expr ) => {
-                CompactSegment::new(0, $j, $i, 0, 0, 0, 0, 0)
+                PixelSegment::new(false, $j, $i, 0, 0, 0, 0, 0)
             };
         }
 
@@ -299,8 +299,8 @@ mod tests {
 
         let mut segments = vec![];
         for y in 0..TILE_SIZE {
-            segments.push(CompactSegment::new(
-                0,
+            segments.push(PixelSegment::new(
+                false,
                 0,
                 -1,
                 2,
@@ -311,8 +311,8 @@ mod tests {
             ));
         }
 
-        segments.push(CompactSegment::new(
-            0,
+        segments.push(PixelSegment::new(
+            false,
             0,
             -1,
             0,
@@ -321,11 +321,11 @@ mod tests {
             0,
             PIXEL_WIDTH as i8,
         ));
-        segments.push(CompactSegment::new(0, 0, 0, 1, 1, 0, 0, PIXEL_WIDTH as i8));
+        segments.push(PixelSegment::new(false, 0, 0, 1, 1, 0, 0, PIXEL_WIDTH as i8));
 
         for y in 0..TILE_SIZE {
-            segments.push(CompactSegment::new(
-                0,
+            segments.push(PixelSegment::new(
+                false,
                 0,
                 1,
                 2,
@@ -375,8 +375,8 @@ mod tests {
         let mut segments = vec![];
         for j in 0..3 {
             for y in 0..TILE_SIZE {
-                segments.push(CompactSegment::new(
-                    0,
+                segments.push(PixelSegment::new(
+                    false,
                     j,
                     0,
                     0,

@@ -6,7 +6,7 @@
 pub struct Layer {
     pub is_enabled: bool,
     pub affine_transform: Option<[f32; 6]>,
-    pub order: Option<u16>,
+    pub order: Option<u32>,
 }
 
 impl Default for Layer {

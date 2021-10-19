@@ -202,14 +202,14 @@ impl Layer {
 
     #[inline]
     pub fn order(&self) -> u16 {
-        self.inner.order.expect("Layers should always have orders")
+        self.inner.order.expect("Layers should always have orders") as u16
     }
 
     #[inline]
     pub fn set_order(&mut self, order: u16) -> &mut Self {
-        if self.inner.order != Some(order) {
+        if self.inner.order != Some(order as u32) {
             self.is_unchanged.clear();
-            self.inner.order = Some(order);
+            self.inner.order = Some(order as u32);
         }
 
         self

@@ -12,19 +12,19 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
     painter::{BlendMode, Cover, CoverCarry, Fill, FillRule, Func, LayerProps, Props, Style},
-    rasterizer::{self, CompactSegment},
+    rasterizer::{self, PixelSegment},
 };
 
 pub(crate) trait LayerPainter {
     fn clear_cells(&mut self);
-    fn acc_segment(&mut self, segment: CompactSegment);
+    fn acc_segment(&mut self, segment: PixelSegment);
     fn acc_cover(&mut self, cover: Cover);
     fn clear(&mut self, color: [f32; 4]);
     fn paint_layer(
         &mut self,
-        tile_i: usize,
-        tile_j: usize,
-        layer: u16,
+        tile_x: usize,
+        tile_y: usize,
+        layer_id: u32,
         props: &Props,
         apply_clip: bool,
     ) -> Cover;
@@ -105,20 +105,20 @@ pub enum TileWriteOp {
 }
 
 pub struct Context<'c, P: LayerProps> {
-    pub tile_i: usize,
-    pub tile_j: usize,
-    pub segments: &'c [CompactSegment],
+    pub tile_x: usize,
+    pub tile_y: usize,
+    pub segments: &'c [PixelSegment],
     pub props: &'c P,
-    pub previous_layers: Cell<Option<&'c mut Option<u16>>>,
+    pub previous_layers: Cell<Option<&'c mut Option<u32>>>,
     pub clear_color: [f32; 4],
 }
 
 #[derive(Debug, Default)]
 pub(crate) struct LayerWorkbench {
-    ids: MaskedVec<u16>,
-    segment_ranges: FxHashMap<u16, RangeInclusive<usize>>,
-    queue_indices: FxHashMap<u16, usize>,
-    skip_clipping: FxHashSet<u16>,
+    ids: MaskedVec<u32>,
+    segment_ranges: FxHashMap<u32, RangeInclusive<usize>>,
+    queue_indices: FxHashMap<u32, usize>,
+    skip_clipping: FxHashSet<u32>,
     queue: Vec<CoverCarry>,
     next_queue: Vec<CoverCarry>,
 }
@@ -147,19 +147,19 @@ impl LayerWorkbench {
     fn segments<'c, P: LayerProps>(
         &self,
         context: &'c Context<'_, P>,
-        id: u16,
-    ) -> Option<&'c [CompactSegment]> {
+        id: u32,
+    ) -> Option<&'c [PixelSegment]> {
         self.segment_ranges.get(&id).map(|range| &context.segments[range.clone()])
     }
 
-    fn cover(&self, id: u16) -> Option<&Cover> {
+    fn cover(&self, id: u32) -> Option<&Cover> {
         self.queue_indices.get(&id).map(|&i| &self.queue[i].cover)
     }
 
     fn layer_is_full<'c, P: LayerProps>(
         &self,
         context: &'c Context<'_, P>,
-        id: u16,
+        id: u32,
         fill_rule: FillRule,
     ) -> bool {
         self.segments(context, id).is_none()
@@ -169,13 +169,13 @@ impl LayerWorkbench {
     fn cover_carry<'c, P: LayerProps>(
         &self,
         context: &'c Context<'_, P>,
-        id: u16,
+        id: u32,
     ) -> Option<CoverCarry> {
         let mut acc_cover = Cover::default();
 
         if let Some(segments) = self.segments(context, id) {
             for segment in segments {
-                acc_cover.as_slice_mut()[segment.tile_y() as usize] += segment.cover();
+                acc_cover.as_slice_mut()[segment.local_y() as usize] += segment.cover();
             }
         }
 
@@ -184,7 +184,7 @@ impl LayerWorkbench {
         }
 
         (!acc_cover.is_empty(context.props.get(id).fill_rule))
-            .then(|| CoverCarry { cover: acc_cover, layer: id })
+            .then(|| CoverCarry { cover: acc_cover, layer_id: id })
     }
 
     fn tile_unchanged_pass<'c, P: LayerProps>(
@@ -192,7 +192,7 @@ impl LayerWorkbench {
         context: &'c Context<'_, P>,
     ) -> ControlFlow<TileWriteOp> {
         let tile_paint = context.previous_layers.take().and_then(|previous_layers| {
-            let layers = self.ids.len() as u16;
+            let layers = self.ids.len() as u32;
 
             let is_unchanged = if let Some(previous_layers) = previous_layers {
                 let old_layers = mem::replace(previous_layers, layers);
@@ -217,7 +217,7 @@ impl LayerWorkbench {
     ) -> ControlFlow<TileWriteOp> {
         struct Clip {
             is_full: bool,
-            last_layer_id: u16,
+            last_layer_id: u32,
             i: Index,
             is_used: bool,
         }
@@ -230,7 +230,7 @@ impl LayerWorkbench {
             if let Func::Clip(layers) = props.func {
                 let is_full = self.layer_is_full(context, id, props.fill_rule);
 
-                clip = Some(Clip { is_full, last_layer_id: id + layers as u16, i, is_used: false });
+                clip = Some(Clip { is_full, last_layer_id: id + layers as u32, i, is_used: false });
 
                 if is_full {
                     // Skip full clips.
@@ -362,9 +362,9 @@ impl LayerWorkbench {
 
     fn populate_layers<'c, P: LayerProps>(&mut self, context: &'c Context<'_, P>) {
         let mut start = 0;
-        while let Some(id) = context.segments.get(start).map(|s| s.layer()) {
+        while let Some(id) = context.segments.get(start).map(|s| s.layer_id()) {
             let diff =
-                rasterizer::search_last_by_key(&context.segments[start..], id, |s| s.layer())
+                rasterizer::search_last_by_key(&context.segments[start..], id, |s| s.layer_id())
                     .unwrap();
 
             self.segment_ranges.insert(id, start..=start + diff);
@@ -372,8 +372,9 @@ impl LayerWorkbench {
             start += diff + 1;
         }
 
-        self.queue_indices
-            .extend(self.queue.iter().enumerate().map(|(i, cover_carry)| (cover_carry.layer, i)));
+        self.queue_indices.extend(
+            self.queue.iter().enumerate().map(|(i, cover_carry)| (cover_carry.layer_id, i)),
+        );
 
         self.ids
             .extend(self.segment_ranges.keys().copied().chain(self.queue_indices.keys().copied()));
@@ -424,10 +425,10 @@ impl LayerWorkbench {
                 }
 
                 let cover =
-                    painter.paint_layer(context.tile_i, context.tile_j, id, &props, apply_clip);
+                    painter.paint_layer(context.tile_x, context.tile_y, id, &props, apply_clip);
 
                 if !cover.is_empty(props.fill_rule) {
-                    self.next_queue.push(CoverCarry { cover, layer: id });
+                    self.next_queue.push(CoverCarry { cover, layer_id: id });
                 }
             } else if let Some(cover_carry) = self.cover_carry(context, id) {
                 self.next_queue.push(cover_carry);
@@ -498,7 +499,7 @@ mod tests {
         Full,
     }
 
-    fn cover(layer: u16, cover_type: CoverType) -> CoverCarry {
+    fn cover(layer_id: u32, cover_type: CoverType) -> CoverCarry {
         let cover = match cover_type {
             CoverType::Partial => Cover { covers: [i8x16::splat(1); TILE_SIZE / i8x16::LANES] },
             CoverType::Full => {
@@ -506,11 +507,11 @@ mod tests {
             }
         };
 
-        CoverCarry { cover, layer }
+        CoverCarry { cover, layer_id }
     }
 
-    fn segment(layer: u16) -> CompactSegment {
-        CompactSegment::new(0, 0, 0, layer, 0, 0, 0, 0)
+    fn segment(layer_id: u32) -> PixelSegment {
+        PixelSegment::new(false, 0, 0, layer_id, 0, 0, 0, 0)
     }
 
     #[test]
@@ -520,11 +521,11 @@ mod tests {
         struct UnimplementedProps;
 
         impl LayerProps for UnimplementedProps {
-            fn get(&self, _layer: u16) -> Cow<'_, Props> {
+            fn get(&self, _layer_id: u32) -> Cow<'_, Props> {
                 unimplemented!()
             }
 
-            fn is_unchanged(&self, _layer: u16) -> bool {
+            fn is_unchanged(&self, _layer_id: u32) -> bool {
                 unimplemented!()
             }
         }
@@ -536,8 +537,8 @@ mod tests {
         ]);
 
         let context = Context {
-            tile_i: 0,
-            tile_j: 0,
+            tile_x: 0,
+            tile_y: 0,
             segments: &[
                 segment(0),
                 segment(1),
@@ -580,20 +581,20 @@ mod tests {
         struct TestProps;
 
         impl LayerProps for TestProps {
-            fn get(&self, _layer: u16) -> Cow<'_, Props> {
+            fn get(&self, _layer_id: u32) -> Cow<'_, Props> {
                 unimplemented!()
             }
 
-            fn is_unchanged(&self, layer: u16) -> bool {
-                layer < 5
+            fn is_unchanged(&self, layer_id: u32) -> bool {
+                layer_id < 5
             }
         }
 
         let mut layers = Some(4);
 
         let context = Context {
-            tile_i: 0,
-            tile_j: 0,
+            tile_x: 0,
+            tile_y: 0,
             segments: &[segment(0), segment(1), segment(2), segment(3), segment(4)],
             props: &TestProps,
             previous_layers: Cell::new(Some(&mut layers)),
@@ -607,8 +608,8 @@ mod tests {
         assert_eq!(layers, Some(5));
 
         let context = Context {
-            tile_i: 0,
-            tile_j: 0,
+            tile_x: 0,
+            tile_y: 0,
             segments: &[segment(0), segment(1), segment(2), segment(3), segment(4)],
             props: &TestProps,
             previous_layers: Cell::new(Some(&mut layers)),
@@ -620,8 +621,8 @@ mod tests {
         assert_eq!(layers, Some(5));
 
         let context = Context {
-            tile_i: 0,
-            tile_j: 0,
+            tile_x: 0,
+            tile_y: 0,
             segments: &[segment(1), segment(2), segment(3), segment(4), segment(5)],
             props: &TestProps,
             previous_layers: Cell::new(Some(&mut layers)),
@@ -643,17 +644,17 @@ mod tests {
         struct TestProps;
 
         impl LayerProps for TestProps {
-            fn get(&self, layer: u16) -> Cow<'_, Props> {
-                Cow::Owned(match layer {
+            fn get(&self, layer_id: u32) -> Cow<'_, Props> {
+                Cow::Owned(match layer_id {
                     1 | 3 => Props { func: Func::Clip(1), ..Default::default() },
                     _ => Props {
-                        func: Func::Draw(Style { is_clipped: layer == 2, ..Default::default() }),
+                        func: Func::Draw(Style { is_clipped: layer_id == 2, ..Default::default() }),
                         ..Default::default()
                     },
                 })
             }
 
-            fn is_unchanged(&self, _layer: u16) -> bool {
+            fn is_unchanged(&self, _layer_id: u32) -> bool {
                 unimplemented!()
             }
         }
@@ -666,8 +667,8 @@ mod tests {
         ]);
 
         let context = Context {
-            tile_i: 0,
-            tile_j: 0,
+            tile_x: 0,
+            tile_y: 0,
             segments: &[],
             props: &TestProps,
             previous_layers: Cell::default(),
@@ -690,14 +691,14 @@ mod tests {
         struct TestProps;
 
         impl LayerProps for TestProps {
-            fn get(&self, _layer: u16) -> Cow<'_, Props> {
+            fn get(&self, _layer_id: u32) -> Cow<'_, Props> {
                 Cow::Owned(Props {
                     func: Func::Draw(Style { is_clipped: true, ..Default::default() }),
                     ..Default::default()
                 })
             }
 
-            fn is_unchanged(&self, _layer: u16) -> bool {
+            fn is_unchanged(&self, _layer_id: u32) -> bool {
                 unimplemented!()
             }
         }
@@ -705,8 +706,8 @@ mod tests {
         workbench.init([cover(0, CoverType::Partial), cover(1, CoverType::Partial)]);
 
         let context = Context {
-            tile_i: 0,
-            tile_j: 0,
+            tile_x: 0,
+            tile_y: 0,
             segments: &[],
             props: &TestProps,
             previous_layers: Cell::default(),
@@ -727,14 +728,14 @@ mod tests {
         struct TestProps;
 
         impl LayerProps for TestProps {
-            fn get(&self, layer: u16) -> Cow<'_, Props> {
-                Cow::Owned(match layer {
+            fn get(&self, layer_id: u32) -> Cow<'_, Props> {
+                Cow::Owned(match layer_id {
                     1 | 4 => Props { func: Func::Clip(1), ..Default::default() },
                     _ => Props::default(),
                 })
             }
 
-            fn is_unchanged(&self, _layer: u16) -> bool {
+            fn is_unchanged(&self, _layer_id: u32) -> bool {
                 unimplemented!()
             }
         }
@@ -747,8 +748,8 @@ mod tests {
         ]);
 
         let context = Context {
-            tile_i: 0,
-            tile_j: 0,
+            tile_x: 0,
+            tile_y: 0,
             segments: &[],
             props: &TestProps,
             previous_layers: Cell::default(),
@@ -769,11 +770,11 @@ mod tests {
         struct TestProps;
 
         impl LayerProps for TestProps {
-            fn get(&self, _layer: u16) -> Cow<'_, Props> {
+            fn get(&self, _layer_id: u32) -> Cow<'_, Props> {
                 Cow::Owned(Props::default())
             }
 
-            fn is_unchanged(&self, _layer: u16) -> bool {
+            fn is_unchanged(&self, _layer_id: u32) -> bool {
                 unimplemented!()
             }
         }
@@ -785,8 +786,8 @@ mod tests {
         ]);
 
         let context = Context {
-            tile_i: 0,
-            tile_j: 0,
+            tile_x: 0,
+            tile_y: 0,
             segments: &[segment(3)],
             props: &TestProps,
             previous_layers: Cell::default(),
@@ -807,11 +808,11 @@ mod tests {
         struct TestProps;
 
         impl LayerProps for TestProps {
-            fn get(&self, layer: u16) -> Cow<'_, Props> {
+            fn get(&self, layer_id: u32) -> Cow<'_, Props> {
                 Cow::Owned(Props {
                     func: Func::Draw(Style {
                         fill: Fill::Solid([0.5; 4]),
-                        blend_mode: match layer {
+                        blend_mode: match layer_id {
                             0 => BlendMode::Over,
                             1 => BlendMode::Multiply,
                             _ => unimplemented!(),
@@ -822,7 +823,7 @@ mod tests {
                 })
             }
 
-            fn is_unchanged(&self, _layer: u16) -> bool {
+            fn is_unchanged(&self, _layer_id: u32) -> bool {
                 unimplemented!()
             }
         }
@@ -830,8 +831,8 @@ mod tests {
         workbench.init([cover(0, CoverType::Full), cover(1, CoverType::Full)]);
 
         let context = Context {
-            tile_i: 0,
-            tile_j: 0,
+            tile_x: 0,
+            tile_y: 0,
             segments: &[],
             props: &TestProps,
             previous_layers: Cell::default(),
@@ -853,7 +854,7 @@ mod tests {
         struct TestProps;
 
         impl LayerProps for TestProps {
-            fn get(&self, _layer: u16) -> Cow<'_, Props> {
+            fn get(&self, _layer_id: u32) -> Cow<'_, Props> {
                 Cow::Owned(Props {
                     func: Func::Draw(Style {
                         fill: Fill::Solid([0.5; 4]),
@@ -864,7 +865,7 @@ mod tests {
                 })
             }
 
-            fn is_unchanged(&self, _layer: u16) -> bool {
+            fn is_unchanged(&self, _layer_id: u32) -> bool {
                 unimplemented!()
             }
         }
@@ -872,8 +873,8 @@ mod tests {
         workbench.init([cover(0, CoverType::Full), cover(1, CoverType::Full)]);
 
         let context = Context {
-            tile_i: 0,
-            tile_j: 0,
+            tile_x: 0,
+            tile_y: 0,
             segments: &[],
             props: &TestProps,
             previous_layers: Cell::default(),
@@ -895,9 +896,9 @@ mod tests {
         struct TestProps;
 
         impl LayerProps for TestProps {
-            fn get(&self, layer: u16) -> Cow<'_, Props> {
+            fn get(&self, layer_id: u32) -> Cow<'_, Props> {
                 Cow::Owned(Props {
-                    func: match layer {
+                    func: match layer_id {
                         0 => Func::Clip(1),
                         1 => Func::Draw(Style {
                             blend_mode: BlendMode::Multiply,
@@ -909,7 +910,7 @@ mod tests {
                 })
             }
 
-            fn is_unchanged(&self, _layer: u16) -> bool {
+            fn is_unchanged(&self, _layer_id: u32) -> bool {
                 unimplemented!()
             }
         }
@@ -917,8 +918,8 @@ mod tests {
         workbench.init([cover(0, CoverType::Partial), cover(1, CoverType::Full)]);
 
         let context = Context {
-            tile_i: 0,
-            tile_j: 0,
+            tile_x: 0,
+            tile_y: 0,
             segments: &[],
             props: &TestProps,
             previous_layers: Cell::default(),
@@ -937,9 +938,9 @@ mod tests {
         struct TestProps;
 
         impl LayerProps for TestProps {
-            fn get(&self, layer: u16) -> Cow<'_, Props> {
+            fn get(&self, layer_id: u32) -> Cow<'_, Props> {
                 Cow::Owned(Props {
-                    func: match layer {
+                    func: match layer_id {
                         0 => Func::Clip(1),
                         1 => Func::Draw(Style {
                             fill: Fill::Solid([0.5; 4]),
@@ -952,7 +953,7 @@ mod tests {
                 })
             }
 
-            fn is_unchanged(&self, _layer: u16) -> bool {
+            fn is_unchanged(&self, _layer_id: u32) -> bool {
                 unimplemented!()
             }
         }
@@ -964,7 +965,7 @@ mod tests {
                 unimplemented!();
             }
 
-            fn acc_segment(&mut self, _segment: CompactSegment) {
+            fn acc_segment(&mut self, _segment: PixelSegment) {
                 unimplemented!();
             }
 
@@ -978,9 +979,9 @@ mod tests {
 
             fn paint_layer(
                 &mut self,
-                _tile_i: usize,
-                _tile_j: usize,
-                _layer: u16,
+                _tile_x: usize,
+                _tile_y: usize,
+                _layer_id: u32,
                 _props: &Props,
                 _apply_clip: bool,
             ) -> Cover {
@@ -991,8 +992,8 @@ mod tests {
         workbench.init([cover(0, CoverType::Partial), cover(1, CoverType::Full)]);
 
         let context = Context {
-            tile_i: 0,
-            tile_j: 0,
+            tile_x: 0,
+            tile_y: 0,
             segments: &[],
             props: &TestProps,
             previous_layers: Cell::default(),

@@ -47,7 +47,7 @@ impl Buffer<'_> {
 #[derive(Clone, Debug)]
 pub struct BufferLayerCache {
     pub(crate) id: u8,
-    pub(crate) layers_per_tile: Rc<RefCell<Vec<Option<u16>>>>,
+    pub(crate) layers_per_tile: Rc<RefCell<Vec<Option<u32>>>>,
     pub(crate) buffers_with_caches: Weak<RefCell<SmallBitSet>>,
 }
 

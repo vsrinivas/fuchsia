@@ -6,9 +6,9 @@ use std::{borrow::Cow, cell::Cell, collections::BTreeMap, mem, slice::ChunksExac
 
 use crate::{
     painter::layer_workbench::TileWriteOp,
-    rasterizer::{search_last_by_key, CompactSegment},
+    rasterizer::{search_last_by_key, PixelSegment},
     simd::{f32x8, i16x16, i32x8, i8x16, u8x32, u8x8, Simd},
-    PIXEL_WIDTH, TILE_SIZE,
+    PIXEL_DOUBLE_WIDTH, PIXEL_WIDTH, TILE_SIZE,
 };
 
 mod buffer_layout;
@@ -23,8 +23,11 @@ use layer_workbench::{Context, LayerPainter, LayerWorkbench};
 
 pub use style::{BlendMode, Fill, FillRule, Gradient, GradientBuilder, GradientType, Style};
 
-const LAST_BYTE_MASK: i32 = 0b1111_1111;
-const LAST_BIT_MASK: i32 = 0b1;
+const PIXEL_AREA: usize = PIXEL_WIDTH * PIXEL_WIDTH;
+const PIXEL_DOUBLE_AREA: usize = 2 * PIXEL_AREA;
+
+const MAGNITUDE_BIT_LEN: usize = PIXEL_DOUBLE_AREA.trailing_zeros() as usize;
+const MAGNITUDE_MASK: usize = MAGNITUDE_BIT_LEN - 1;
 
 macro_rules! cols {
     ( & $array:expr, $x0:expr, $x1:expr ) => {{
@@ -51,21 +54,21 @@ macro_rules! cols {
 }
 
 #[inline]
-fn from_area(area: i32x8, fill_rule: FillRule) -> f32x8 {
+fn doubled_area_to_coverage(doubled_area: i32x8, fill_rule: FillRule) -> f32x8 {
     match fill_rule {
         FillRule::NonZero => {
-            let area: f32x8 = area.into();
-            (area * f32x8::splat(256.0f32.recip()))
+            let doubled_area: f32x8 = doubled_area.into();
+            (doubled_area * f32x8::splat((PIXEL_DOUBLE_AREA as f32).recip()))
                 .abs()
                 .clamp(f32x8::splat(0.0), f32x8::splat(1.0))
         }
         FillRule::EvenOdd => {
-            let number = area >> i32x8::splat(8);
-            let masked: f32x8 = (area & i32x8::splat(LAST_BYTE_MASK)).into();
-            let capped = masked * f32x8::splat(256.0f32.recip());
+            let winding_number = doubled_area >> i32x8::splat(MAGNITUDE_BIT_LEN as i32);
+            let magnitude: f32x8 = (doubled_area & i32x8::splat(MAGNITUDE_MASK as i32)).into();
+            let norm = magnitude * f32x8::splat((PIXEL_DOUBLE_AREA as f32).recip());
 
-            let mask = (number & i32x8::splat(LAST_BIT_MASK)).eq(i32x8::splat(0));
-            capped.select(f32x8::splat(1.0) - capped, mask)
+            let mask = (winding_number & i32x8::splat(0b1)).eq(i32x8::splat(0));
+            norm.select(f32x8::splat(1.0) - norm, mask)
         }
     }
 }
@@ -141,8 +144,8 @@ pub struct Props {
 }
 
 pub trait LayerProps: Send + Sync {
-    fn get(&self, layer: u16) -> Cow<'_, Props>;
-    fn is_unchanged(&self, layer: u16) -> bool;
+    fn get(&self, layer_id: u32) -> Cow<'_, Props>;
+    fn is_unchanged(&self, layer_id: u32) -> bool;
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -193,14 +196,14 @@ impl PartialEq for Cover {
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct CoverCarry {
     cover: Cover,
-    layer: u16,
+    layer_id: u32,
 }
 
 #[derive(Debug)]
 pub(crate) struct Painter {
-    areas: [i16x16; TILE_SIZE * TILE_SIZE / i16x16::LANES],
+    doubled_areas: [i16x16; TILE_SIZE * TILE_SIZE / i16x16::LANES],
     covers: [i8x16; (TILE_SIZE + 1) * TILE_SIZE / i8x16::LANES],
-    clip: Option<([f32x8; TILE_SIZE * TILE_SIZE / f32x8::LANES], u16)>,
+    clip: Option<([f32x8; TILE_SIZE * TILE_SIZE / f32x8::LANES], u32)>,
     c0: [f32x8; TILE_SIZE * TILE_SIZE / f32x8::LANES],
     c1: [f32x8; TILE_SIZE * TILE_SIZE / f32x8::LANES],
     c2: [f32x8; TILE_SIZE * TILE_SIZE / f32x8::LANES],
@@ -210,19 +213,20 @@ pub(crate) struct Painter {
 
 impl LayerPainter for Painter {
     fn clear_cells(&mut self) {
-        self.areas.iter_mut().for_each(|area| *area = i16x16::splat(0));
+        self.doubled_areas.iter_mut().for_each(|doubled_area| *doubled_area = i16x16::splat(0));
         self.covers.iter_mut().for_each(|cover| *cover = i8x16::splat(0));
     }
 
-    fn acc_segment(&mut self, segment: CompactSegment) {
-        let x = segment.tile_x() as usize;
-        let y = segment.tile_y() as usize;
+    fn acc_segment(&mut self, segment: PixelSegment) {
+        let x = segment.local_x() as usize;
+        let y = segment.local_y() as usize;
 
-        let areas: &mut [i16; TILE_SIZE * TILE_SIZE] = unsafe { mem::transmute(&mut self.areas) };
+        let doubled_areas: &mut [i16; TILE_SIZE * TILE_SIZE] =
+            unsafe { mem::transmute(&mut self.doubled_areas) };
         let covers: &mut [i8; (TILE_SIZE + 1) * TILE_SIZE] =
             unsafe { mem::transmute(&mut self.covers) };
 
-        areas[x * TILE_SIZE + y] += segment.area();
+        doubled_areas[x * TILE_SIZE + y] += segment.double_area();
         covers[(x + 1) * TILE_SIZE + y] += segment.cover();
     }
 
@@ -239,28 +243,28 @@ impl LayerPainter for Painter {
 
     fn paint_layer(
         &mut self,
-        tile_i: usize,
-        tile_j: usize,
-        layer: u16,
+        tile_x: usize,
+        tile_y: usize,
+        layer_id: u32,
         props: &Props,
         apply_clip: bool,
     ) -> Cover {
-        let mut areas = [i32x8::splat(0); TILE_SIZE / i32x8::LANES];
+        let mut doubled_areas = [i32x8::splat(0); TILE_SIZE / i32x8::LANES];
         let mut covers = [i8x16::splat(0); TILE_SIZE / i8x16::LANES];
         let mut coverages = [f32x8::splat(0.0); TILE_SIZE / f32x8::LANES];
 
         if let Some((_, last_layer)) = self.clip {
-            if last_layer < layer {
+            if last_layer < layer_id {
                 self.clip = None;
             }
         }
 
         for x in 0..=TILE_SIZE {
             if x != 0 {
-                self.compute_areas(x - 1, &covers, &mut areas);
+                self.compute_doubled_areas(x - 1, &covers, &mut doubled_areas);
 
                 for y in 0..coverages.len() {
-                    coverages[y] = from_area(areas[y], props.fill_rule);
+                    coverages[y] = doubled_area_to_coverage(doubled_areas[y], props.fill_rule);
 
                     match &props.func {
                         Func::Draw(style) => {
@@ -273,15 +277,15 @@ impl LayerPainter for Painter {
                             }
 
                             let fill = Self::fill_at(
-                                x + tile_i * TILE_SIZE,
-                                y * f32x8::LANES + tile_j * TILE_SIZE,
+                                x + tile_x * TILE_SIZE,
+                                y * f32x8::LANES + tile_y * TILE_SIZE,
                                 &style,
                             );
 
                             self.blend_at(x - 1, y, coverages, apply_clip, fill, style.blend_mode);
                         }
                         Func::Clip(layers) => {
-                            self.clip_at(x - 1, y, coverages, layer + *layers as u16)
+                            self.clip_at(x - 1, y, coverages, layer_id + *layers as u32)
                         }
                     }
                 }
@@ -300,7 +304,7 @@ impl LayerPainter for Painter {
 impl Painter {
     pub fn new() -> Self {
         Self {
-            areas: [i16x16::splat(0); TILE_SIZE * TILE_SIZE / i16x16::LANES],
+            doubled_areas: [i16x16::splat(0); TILE_SIZE * TILE_SIZE / i16x16::LANES],
             covers: [i8x16::splat(0); (TILE_SIZE + 1) * TILE_SIZE / i8x16::LANES],
             clip: None,
             c0: [f32x8::splat(0.0); TILE_SIZE * TILE_SIZE / f32x8::LANES],
@@ -321,19 +325,20 @@ impl Painter {
         }
     }
 
-    fn compute_areas(
+    fn compute_doubled_areas(
         &self,
         x: usize,
         covers: &[i8x16; TILE_SIZE / i8x16::LANES],
-        areas: &mut [i32x8; TILE_SIZE / i32x8::LANES],
+        doubled_areas: &mut [i32x8; TILE_SIZE / i32x8::LANES],
     ) {
-        let column = cols!(&self.areas, x, x + 1);
+        let column = cols!(&self.doubled_areas, x, x + 1);
         for y in 0..covers.len() {
             let covers: [i32x8; 2] = covers[y].into();
             let column: [i32x8; 2] = column[y].into();
 
             for yy in 0..2 {
-                areas[2 * y + yy] = i32x8::splat(PIXEL_WIDTH as i32) * covers[yy] + column[yy];
+                doubled_areas[2 * y + yy] =
+                    i32x8::splat(PIXEL_DOUBLE_WIDTH as i32) * covers[yy] + column[yy];
             }
         }
     }
@@ -381,10 +386,10 @@ impl Painter {
         x: usize,
         y: usize,
         coverages: [f32x8; TILE_SIZE / f32x8::LANES],
-        last_layer: u16,
+        last_layer_id: u32,
     ) {
         let clip = self.clip.get_or_insert_with(|| {
-            ([f32x8::splat(0.0); TILE_SIZE * TILE_SIZE / f32x8::LANES], last_layer)
+            ([f32x8::splat(0.0); TILE_SIZE * TILE_SIZE / f32x8::LANES], last_layer_id)
         });
         cols!(&mut clip.0, x, x + 1)[y] = coverages[y];
     }
@@ -469,28 +474,28 @@ impl Painter {
     pub fn paint_tile_row<'c, P: LayerProps>(
         &mut self,
         workbench: &mut LayerWorkbench,
-        j: usize,
-        mut segments: &[CompactSegment],
+        y: usize,
+        mut segments: &[PixelSegment],
         props: &P,
         clear_color: [f32; 4],
-        mut previous_layers: Option<&mut [Option<u16>]>,
+        mut previous_layers: Option<&mut [Option<u32>]>,
         flusher: Option<&dyn Flusher>,
         row: ChunksExactMut<'_, TileSlice>,
         crop: Option<Rect>,
     ) {
-        fn acc_covers(segments: &[CompactSegment], covers: &mut BTreeMap<u16, Cover>) {
+        fn acc_covers(segments: &[PixelSegment], covers: &mut BTreeMap<u32, Cover>) {
             for segment in segments {
-                let cover = covers.entry(segment.layer()).or_default();
+                let cover = covers.entry(segment.layer_id()).or_default();
 
-                cover.as_slice_mut()[segment.tile_y() as usize] += segment.cover();
+                cover.as_slice_mut()[segment.local_y() as usize] += segment.cover();
             }
         }
 
-        let mut covers_left_of_row: BTreeMap<u16, Cover> = BTreeMap::new();
+        let mut covers_left_of_row: BTreeMap<u32, Cover> = BTreeMap::new();
         let mut populate_covers = |limit: Option<i16>| {
             let query = search_last_by_key(segments, false, |segment| match limit {
-                Some(limit) => (segment.tile_i() - limit).is_positive(),
-                None => segment.tile_i().is_negative(),
+                Some(limit) => (segment.tile_x() - limit).is_positive(),
+                None => segment.tile_x().is_negative(),
             });
 
             if let Ok(i) = query {
@@ -517,18 +522,21 @@ impl Painter {
             }
         }
 
-        workbench
-            .init(covers_left_of_row.into_iter().map(|(layer, cover)| CoverCarry { cover, layer }));
+        workbench.init(
+            covers_left_of_row
+                .into_iter()
+                .map(|(layer, cover)| CoverCarry { cover, layer_id: layer }),
+        );
 
-        for (i, tile) in row.enumerate() {
+        for (x, tile) in row.enumerate() {
             if let Some(rect) = &crop {
-                if !rect.horizontal.contains(&i) {
+                if !rect.horizontal.contains(&x) {
                     continue;
                 }
             }
 
             let current_segments =
-                search_last_by_key(segments, i as i16, |segment| segment.tile_i())
+                search_last_by_key(segments, x as i16, |segment| segment.tile_x())
                     .map(|last_index| {
                         let current_segments = &segments[..=last_index];
                         segments = &segments[last_index + 1..];
@@ -537,12 +545,12 @@ impl Painter {
                     .unwrap_or(&[]);
 
             let context = Context {
-                tile_i: i,
-                tile_j: j,
+                tile_x: x,
+                tile_y: y,
                 segments: current_segments,
                 props,
                 previous_layers: Cell::new(
-                    previous_layers.as_mut().map(|layers_per_tile| &mut layers_per_tile[i]),
+                    previous_layers.as_mut().map(|layers_per_tile| &mut layers_per_tile[x]),
                 ),
                 clear_color,
             };
@@ -582,39 +590,39 @@ mod tests {
     const GREEN_50: [f32; 4] = [0.0, 0.5, 0.0, 1.0];
     const RED_GREEN_50: [f32; 4] = [0.5, 0.5, 0.0, 1.0];
 
-    impl LayerProps for HashMap<u16, Style> {
-        fn get(&self, layer: u16) -> Cow<'_, Props> {
-            let style = self.get(&layer).unwrap().clone();
+    impl LayerProps for HashMap<u32, Style> {
+        fn get(&self, layer_id: u32) -> Cow<'_, Props> {
+            let style = self.get(&layer_id).unwrap().clone();
 
             Cow::Owned(Props { fill_rule: FillRule::NonZero, func: Func::Draw(style) })
         }
 
-        fn is_unchanged(&self, _: u16) -> bool {
+        fn is_unchanged(&self, _: u32) -> bool {
             false
         }
     }
 
-    impl LayerProps for HashMap<u16, Props> {
-        fn get(&self, layer: u16) -> Cow<'_, Props> {
-            Cow::Owned(self.get(&layer).unwrap().clone())
+    impl LayerProps for HashMap<u32, Props> {
+        fn get(&self, layer_id: u32) -> Cow<'_, Props> {
+            Cow::Owned(self.get(&layer_id).unwrap().clone())
         }
 
-        fn is_unchanged(&self, _: u16) -> bool {
+        fn is_unchanged(&self, _: u32) -> bool {
             false
         }
     }
 
     impl<F> LayerProps for F
     where
-        F: Fn(u16) -> Style + Send + Sync,
+        F: Fn(u32) -> Style + Send + Sync,
     {
-        fn get(&self, layer: u16) -> Cow<'_, Props> {
-            let style = self(layer);
+        fn get(&self, layer_id: u32) -> Cow<'_, Props> {
+            let style = self(layer_id);
 
             Cow::Owned(Props { fill_rule: FillRule::NonZero, func: Func::Draw(style) })
         }
 
-        fn is_unchanged(&self, _: u16) -> bool {
+        fn is_unchanged(&self, _: u32) -> bool {
             false
         }
     }
@@ -639,12 +647,12 @@ mod tests {
         }
     }
 
-    fn line_segments(points: &[(Point<f32>, Point<f32>)], same_layer: bool) -> Vec<CompactSegment> {
+    fn line_segments(points: &[(Point<f32>, Point<f32>)], same_layer: bool) -> Vec<PixelSegment> {
         let mut builder = LinesBuilder::new();
 
         for (layer, &(p0, p1)) in points.iter().enumerate() {
             let layer = if same_layer { 0 } else { layer };
-            builder.push(layer as u16, &Segment::new(p0, p1));
+            builder.push(layer as u32, &Segment::new(p0, p1));
         }
 
         let lines = builder.build(|_| None);
@@ -656,22 +664,23 @@ mod tests {
         segments.sort_unstable();
 
         let last_segment =
-            rasterizer::search_last_by_key(&segments, 0, |segment| segment.is_none()).unwrap_or(0);
+            rasterizer::search_last_by_key(&segments, false, |segment| segment.is_none())
+                .unwrap_or(0);
         segments.truncate(last_segment + 1);
         segments
     }
 
     fn paint_tile(
         cover_carries: impl IntoIterator<Item = CoverCarry>,
-        segments: &[CompactSegment],
+        segments: &[PixelSegment],
         props: &impl LayerProps,
     ) -> [[f32; 4]; TILE_SIZE * TILE_SIZE] {
         let mut painter = Painter::new();
         let mut workbench = LayerWorkbench::new();
 
         let context = Context {
-            tile_i: 0,
-            tile_j: 0,
+            tile_x: 0,
+            tile_y: 0,
             segments,
             props,
             previous_layers: Cell::new(None),
@@ -686,12 +695,9 @@ mod tests {
 
     #[test]
     fn carry_cover() {
-        let mut cover_carry = CoverCarry {
-            cover: Cover { covers: [i8x16::splat(0); TILE_SIZE / i8x16::LANES] },
-            layer: 0,
-        };
+        let mut cover_carry = CoverCarry { cover: Cover::default(), layer_id: 0 };
         cover_carry.cover.covers[0].as_mut_array()[1] = 16;
-        cover_carry.layer = 1;
+        cover_carry.layer_id = 1;
 
         let segments =
             line_segments(&[(Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32))], false);
@@ -841,8 +847,8 @@ mod tests {
         let mut workbench = LayerWorkbench::new();
 
         let mut context = Context {
-            tile_i: 0,
-            tile_j: 0,
+            tile_x: 0,
+            tile_y: 0,
             segments: &segments,
             props: &props,
             previous_layers: Cell::new(None),
@@ -869,7 +875,7 @@ mod tests {
             false,
         );
 
-        context.tile_i = 1;
+        context.tile_x = 1;
         context.segments = &segments;
 
         workbench.drive_tile_painting(&mut painter, &context);
