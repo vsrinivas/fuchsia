@@ -102,7 +102,7 @@ impl MessageQueue {
     ///
     /// Returns the number of bytes that were read into the buffer, and any ancillary data that was
     /// read.
-    pub fn read(
+    pub fn read_stream(
         &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
@@ -143,6 +143,34 @@ impl MessageQueue {
         }
 
         Ok((total_bytes_read, address, None))
+    }
+
+    /// Reads the first message in the queue.
+    ///
+    /// # Parameters
+    /// - `task`: The task to read memory from.
+    /// - `user_buffers`: The `UserBufferIterator` to write the data to.
+    ///
+    /// Returns the number of bytes that were read into the buffer, and any ancillary data that was
+    /// read.
+    pub fn read_datagram(
+        &mut self,
+        task: &Task,
+        user_buffers: &mut UserBufferIterator<'_>,
+    ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
+        if let Some(message) = self.read_message() {
+            let bytes = message.data.bytes();
+            let mut bytes_read = 0;
+            while let Some(user_buffer) = user_buffers.next(bytes.len() - bytes_read) {
+                let bytes_chunk = &bytes[bytes_read..(bytes_read + user_buffer.length)];
+                task.mm.write_memory(user_buffer.address, bytes_chunk)?;
+                bytes_read += user_buffer.length;
+            }
+
+            return Ok((bytes_read, message.address, message.ancillary_data));
+        }
+
+        Ok((0, None, None))
     }
 
     /// Reads messages, where the total length of the returned messages is less than `max_bytes`.

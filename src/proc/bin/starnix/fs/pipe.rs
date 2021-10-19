@@ -134,7 +134,7 @@ impl Pipe {
             return error!(EAGAIN);
         }
 
-        self.messages.read(task, user_buffers).map(|(bytes_read, _, _)| bytes_read)
+        self.messages.read_stream(task, user_buffers).map(|(bytes_read, _, _)| bytes_read)
     }
 
     pub fn write(

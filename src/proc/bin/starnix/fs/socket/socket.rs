@@ -397,7 +397,7 @@ impl Socket {
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
     ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
-        self.lock().read(task, user_buffers)
+        self.lock().read(task, user_buffers, self.socket_type)
     }
 
     /// Reads all the available messages out of this socket.
@@ -542,8 +542,14 @@ impl SocketInner {
         &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
+        socket_type: SocketType,
     ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
-        let (bytes_read, address, ancillary_data) = self.messages.read(task, user_buffers)?;
+        let (bytes_read, address, ancillary_data) = match socket_type {
+            SocketType::Stream => self.messages.read_stream(task, user_buffers)?,
+            SocketType::Datagram | SocketType::SeqPacket | SocketType::Raw => {
+                self.messages.read_datagram(task, user_buffers)?
+            }
+        };
         if bytes_read == 0 && user_buffers.remaining() > 0 && !self.messages.is_closed() {
             return error!(EAGAIN);
         }

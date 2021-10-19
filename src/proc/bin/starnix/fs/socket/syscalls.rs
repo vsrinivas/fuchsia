@@ -349,21 +349,20 @@ pub fn sys_recvmsg(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
     user_message_header: UserRef<msghdr>,
-    _flags: u32,
+    flags: u32,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
     if !file.node().is_sock() {
         return error!(ENOTSOCK);
     }
 
-    // TODO: Respect the `flags` argument.
-
     let mut message_header = msghdr::default();
     ctx.task.mm.read_object(user_message_header.clone(), &mut message_header)?;
 
     let iovec = ctx.task.mm.read_iovec(message_header.msg_iov, message_header.msg_iovlen as i32)?;
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    let (bytes_read, _address, ancillary_data) = socket_ops.recvmsg(ctx.task, &file, &iovec)?;
+    let (bytes_read, _address, ancillary_data) =
+        socket_ops.recvmsg(ctx.task, &file, &iovec, flags)?;
 
     if let Some(ancillary_data) = ancillary_data {
         let mut num_bytes_to_write = message_header.msg_controllen as usize;
@@ -404,7 +403,7 @@ pub fn sys_recvfrom(
     fd: FdNumber,
     user_buffer: UserAddress,
     buffer_length: usize,
-    _flags: u32,
+    flags: u32,
     user_src_address: UserAddress,
     user_src_address_length: UserRef<socklen_t>,
 ) -> Result<SyscallResult, Errno> {
@@ -413,13 +412,12 @@ pub fn sys_recvfrom(
         return error!(ENOTSOCK);
     }
 
-    // TODO: Respect the `flags` argument.
-
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
     let (bytes_read, address, _control) = socket_ops.recvmsg(
         ctx.task,
         &file,
         &[UserBuffer { address: user_buffer, length: buffer_length }],
+        flags,
     )?;
 
     if !user_src_address.is_null() {
