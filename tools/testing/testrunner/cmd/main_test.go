@@ -10,8 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
-	"regexp"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -24,7 +26,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/clock"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
-	"go.fuchsia.dev/fuchsia/tools/testing/testrunner"
 )
 
 const (
@@ -40,21 +41,25 @@ var errFatal = fatalError{errors.New("fatal error occurred")}
 
 type fakeTester struct {
 	testErr   error
-	runTest   func(testsharder.Test, io.Writer, io.Writer)
+	runTest   func(context.Context, testsharder.Test, io.Writer, io.Writer) error
 	funcCalls []string
 	outDirs   map[string]bool
 }
 
-func (t *fakeTester) Test(_ context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
+func (t *fakeTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
 	t.funcCalls = append(t.funcCalls, testFunc)
 	if t.outDirs == nil {
 		t.outDirs = make(map[string]bool)
 	}
 	t.outDirs[outDir] = true
+	var err error
 	if t.runTest != nil {
-		t.runTest(test, stdout, stderr)
+		err = t.runTest(ctx, test, stdout, stderr)
 	}
-	return runtests.DataSinkReference{}, t.testErr
+	if err == nil {
+		err = t.testErr
+	}
+	return runtests.DataSinkReference{}, err
 }
 
 func (t *fakeTester) Close() error {
@@ -69,30 +74,6 @@ func (t *fakeTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReferen
 
 func (t *fakeTester) RunSnapshot(_ context.Context, _ string) error {
 	t.funcCalls = append(t.funcCalls, runSnapshotFunc)
-	return nil
-}
-
-type hangForeverTester struct {
-	called   chan struct{}
-	waitChan chan struct{}
-}
-
-func (t *hangForeverTester) Test(_ context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
-	t.called <- struct{}{}
-	<-t.waitChan
-	return runtests.DataSinkReference{}, nil
-}
-
-func (t *hangForeverTester) Close() error {
-	close(t.waitChan)
-	return nil
-}
-
-func (t *hangForeverTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReference, _ *testOutputs) error {
-	return nil
-}
-
-func (t *hangForeverTester) RunSnapshot(_ context.Context, _ string) error {
 	return nil
 }
 
@@ -217,362 +198,605 @@ func TestValidateTest(t *testing.T) {
 	}
 }
 
-func TestRunAndOutputTest(t *testing.T) {
-	cases := []struct {
-		name           string
-		test           build.Test
-		runs           int
-		runAlgorithm   testsharder.RunAlgorithm
-		testErr        error
-		runTestFunc    func(testsharder.Test, io.Writer, io.Writer)
-		expectedErr    error
-		expectedResult []*testrunner.TestResult
+func stdioPath(testName string, runIndex int) string {
+	return filepath.Join(testName, strconv.Itoa(runIndex), runtests.TestOutputFilename)
+}
+
+func testDetails(name string, runIndex int, duration time.Duration, result runtests.TestResult) runtests.TestDetails {
+	return runtests.TestDetails{
+		Name:           name,
+		Result:         result,
+		DurationMillis: duration.Milliseconds(),
+		OutputFiles:    []string{stdioPath(name, runIndex)},
+	}
+}
+
+func succeededTest(name string, runIndex int, duration time.Duration) runtests.TestDetails {
+	return testDetails(name, runIndex, duration, runtests.TestSuccess)
+}
+
+func failedTest(name string, runIndex int, duration time.Duration) runtests.TestDetails {
+	return testDetails(name, runIndex, duration, runtests.TestFailure)
+}
+
+func TestRunAndOutputTests(t *testing.T) {
+	defaultDuration := time.Second
+	perTestTimeout := 3 * time.Minute
+	// A duration that slightly exceeds the total allowed runtime for each test.
+	tooLong := perTestTimeout + testTimeoutGracePeriod + time.Second
+
+	// Defines how the fake tester's Test() method should behave when running a
+	// specified test.
+	type testBehavior struct {
+		// Whether running the test should return a (non-fatal) error.
+		fail bool
+		// Whether the test should hang indefinitely. Takes precedent over `fail`.
+		hang bool
+		// Whether the test should emit a fatal error.
+		fatal bool
+		// The duration that the test will take to run.
+		duration time.Duration
+		// Data that the test should emit to stdout and stderr.
+		stdout, stderr string
+	}
+
+	testCases := []struct {
+		name string
+		// The input tests for testrunner to run.
+		tests []testsharder.Test
+		// How the fake tester should behave when running each test, where keys
+		// are of the form "test_name/run_index". Default is for the test to
+		// pass with a duration of `defaultDuration`.
+		behavior map[string]testBehavior
+		// Don't impose a per-test timeout when running these tests.
+		noTimeout bool
+		// The test results that should be output.
+		expectedResults []runtests.TestDetails
+		// Mapping from relative filepath within the results dir to expected contents.
+		expectedOutputs map[string]string
+		// The error value that the function should return, as determined by errors.Is().
+		expectedErr error
 	}{
 		{
-			name: "host test pass",
-			test: build.Test{
-				Name: "bar",
-				Path: "/foo/bar",
-				OS:   "linux",
-			},
-			expectedResult: []*testrunner.TestResult{{
-				Name:   "bar",
-				Result: runtests.TestSuccess,
-			}},
+			name: "no tests",
 		},
 		{
-			name: "fuchsia test pass",
-			test: build.Test{
-				Name:       "bar",
-				Path:       "/foo/bar",
-				OS:         "fuchsia",
-				PackageURL: "fuchsia-pkg://foo/bar",
+			name: "passed test",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnFailure,
+					Runs:         1,
+				},
 			},
-			expectedResult: []*testrunner.TestResult{{
-				Name:   "bar",
-				Result: runtests.TestSuccess,
-			}},
+			expectedResults: []runtests.TestDetails{
+				succeededTest("foo", 0, defaultDuration),
+			},
 		},
 		{
-			name: "fuchsia test fail",
-			test: build.Test{
-				Name:       "bar",
-				Path:       "/foo/bar",
-				OS:         "fuchsia",
-				PackageURL: "fuchsia-pkg://foo/bar",
+			name: "failed test",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnFailure,
+					Runs:         1,
+				},
 			},
-			testErr: fmt.Errorf("test failed"),
-			expectedResult: []*testrunner.TestResult{{
-				Name:   "bar",
-				Result: runtests.TestFailure,
-			}},
+			behavior: map[string]testBehavior{
+				"foo/0": {fail: true},
+			},
+			expectedResults: []runtests.TestDetails{
+				failedTest("foo", 0, defaultDuration),
+			},
 		},
 		{
-			name: "fatal error",
-			test: build.Test{
-				Name:       "bar",
-				Path:       "/foo/bar",
-				OS:         "fuchsia",
-				PackageURL: "fuchsia-pkg://foo/bar",
+			name: "timed out test",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnFailure,
+					Runs:         1,
+				},
 			},
-			testErr:     errFatal,
+			behavior: map[string]testBehavior{
+				"foo/0": {duration: tooLong},
+			},
+			expectedResults: []runtests.TestDetails{
+				failedTest("foo", 0, tooLong),
+			},
+		},
+		{
+			name: "many tests",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnFailure,
+					Runs:         1,
+				},
+				{
+					Test:         build.Test{Name: "bar"},
+					RunAlgorithm: testsharder.StopOnFailure,
+					Runs:         1,
+				},
+				{
+					Test:         build.Test{Name: "baz"},
+					RunAlgorithm: testsharder.StopOnFailure,
+					Runs:         1,
+				},
+				{
+					Test:         build.Test{Name: "quux"},
+					RunAlgorithm: testsharder.StopOnFailure,
+					Runs:         1,
+				},
+			},
+			expectedResults: []runtests.TestDetails{
+				succeededTest("foo", 0, defaultDuration),
+				succeededTest("bar", 0, defaultDuration),
+				succeededTest("baz", 0, defaultDuration),
+				succeededTest("quux", 0, defaultDuration),
+			},
+		},
+		{
+			name:      "no timeout set",
+			noTimeout: true,
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnFailure,
+					Runs:         1,
+				},
+			},
+			behavior: map[string]testBehavior{
+				"foo/0": {duration: tooLong},
+			},
+			expectedResults: []runtests.TestDetails{
+				// As long as they complete successfully within a finite
+				// duration, tests should never be considered failures if
+				// there's no timeout set.
+				succeededTest("foo", 0, tooLong),
+			},
+		},
+		{
+			name: "stop on success",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnSuccess,
+					// The test should stop as soon as it passes, even if it has
+					// not yet reached `runs`.
+					Runs: 10,
+				},
+			},
+			behavior: map[string]testBehavior{
+				"foo/0": {fail: true},
+				"foo/1": {fail: true},
+			},
+			expectedResults: []runtests.TestDetails{
+				failedTest("foo", 0, defaultDuration),
+				failedTest("foo", 1, defaultDuration),
+				succeededTest("foo", 2, defaultDuration),
+			},
+		},
+		{
+			name: "stop on failure",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnFailure,
+					// The test should stop as soon as it fails, even if is has
+					// not yet reached `runs`.
+					Runs: 10,
+				},
+			},
+			behavior: map[string]testBehavior{
+				"foo/5": {fail: true},
+			},
+			expectedResults: []runtests.TestDetails{
+				succeededTest("foo", 0, defaultDuration),
+				succeededTest("foo", 1, defaultDuration),
+				succeededTest("foo", 2, defaultDuration),
+				succeededTest("foo", 3, defaultDuration),
+				succeededTest("foo", 4, defaultDuration),
+				failedTest("foo", 5, defaultDuration),
+			},
+		},
+		{
+			name: "stop on success, runs exceeded",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnSuccess,
+					Runs:         5,
+				},
+			},
+			behavior: map[string]testBehavior{
+				"foo/0": {fail: true},
+				"foo/1": {fail: true},
+				// Throw in a timeout too just to be sure it's handled the same
+				// as non-timeout failures.
+				"foo/2": {duration: tooLong},
+				"foo/3": {fail: true},
+				"foo/4": {fail: true},
+			},
+			expectedResults: []runtests.TestDetails{
+				failedTest("foo", 0, defaultDuration),
+				failedTest("foo", 1, defaultDuration),
+				failedTest("foo", 2, tooLong),
+				failedTest("foo", 3, defaultDuration),
+				failedTest("foo", 4, defaultDuration),
+			},
+		},
+		{
+			name: "stop on failure, runs exceeded",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnFailure,
+					Runs:         5,
+				},
+			},
+			expectedResults: []runtests.TestDetails{
+				succeededTest("foo", 0, defaultDuration),
+				succeededTest("foo", 1, defaultDuration),
+				succeededTest("foo", 2, defaultDuration),
+				succeededTest("foo", 3, defaultDuration),
+				succeededTest("foo", 4, defaultDuration),
+			},
+		},
+		{
+			name: "keep going with mixed passes and fails",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.KeepGoing,
+					Runs:         5,
+				},
+			},
+			behavior: map[string]testBehavior{
+				"foo/0": {fail: true},
+				"foo/3": {fail: true},
+			},
+			expectedResults: []runtests.TestDetails{
+				failedTest("foo", 0, defaultDuration),
+				succeededTest("foo", 1, defaultDuration),
+				succeededTest("foo", 2, defaultDuration),
+				failedTest("foo", 3, defaultDuration),
+				succeededTest("foo", 4, defaultDuration),
+			},
+		},
+		{
+			name: "multiple tests fail",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnSuccess,
+					Runs:         1,
+				},
+				{
+					Test:         build.Test{Name: "bar"},
+					RunAlgorithm: testsharder.StopOnSuccess,
+					Runs:         1,
+				},
+			},
+			behavior: map[string]testBehavior{
+				"foo/0": {fail: true},
+				"bar/0": {fail: true},
+			},
+			expectedResults: []runtests.TestDetails{
+				failedTest("foo", 0, defaultDuration),
+				failedTest("bar", 0, defaultDuration),
+			},
+		},
+		{
+			name: "multiple tests with one failing until the last attempt",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnSuccess,
+					Runs:         10,
+				},
+				{
+					Test:         build.Test{Name: "bar"},
+					RunAlgorithm: testsharder.StopOnSuccess,
+					Runs:         10,
+				},
+			},
+			behavior: map[string]testBehavior{
+				"foo/0": {fail: true},
+				"foo/1": {fail: true},
+				"foo/2": {fail: true},
+			},
+			expectedResults: []runtests.TestDetails{
+				failedTest("foo", 0, defaultDuration),
+				succeededTest("bar", 0, defaultDuration),
+				failedTest("foo", 1, defaultDuration),
+				failedTest("foo", 2, defaultDuration),
+				succeededTest("foo", 3, defaultDuration),
+			},
+		},
+		{
+			name: "multiple tests with one timing out then passing",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnSuccess,
+					Runs:         2,
+				},
+				{
+					Test:         build.Test{Name: "bar"},
+					RunAlgorithm: testsharder.StopOnSuccess,
+					Runs:         2,
+				},
+			},
+			behavior: map[string]testBehavior{
+				"foo/0": {duration: tooLong},
+			},
+			expectedResults: []runtests.TestDetails{
+				failedTest("foo", 0, tooLong),
+				succeededTest("bar", 0, defaultDuration),
+				succeededTest("foo", 1, defaultDuration),
+			},
+		},
+		{
+			name: "multiple tests fail with retries",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnSuccess,
+					Runs:         5,
+				},
+				{
+					Test:         build.Test{Name: "bar"},
+					RunAlgorithm: testsharder.StopOnSuccess,
+					Runs:         5,
+				},
+			},
+			behavior: map[string]testBehavior{
+				"foo/0": {fail: true},
+				"foo/1": {fail: true},
+				"bar/0": {fail: true},
+				"bar/1": {fail: true},
+				"bar/2": {fail: true},
+				"bar/3": {fail: true},
+			},
+			expectedResults: []runtests.TestDetails{
+				failedTest("foo", 0, defaultDuration),
+				failedTest("bar", 0, defaultDuration),
+				failedTest("foo", 1, defaultDuration),
+				failedTest("bar", 1, defaultDuration),
+				succeededTest("foo", 2, defaultDuration),
+				failedTest("bar", 2, defaultDuration),
+				failedTest("bar", 3, defaultDuration),
+				succeededTest("bar", 4, defaultDuration),
+			},
+		},
+		{
+			name: "stop repeating after secs",
+			tests: []testsharder.Test{
+				{
+					Test:                   build.Test{Name: "foo"},
+					RunAlgorithm:           testsharder.StopOnFailure,
+					StopRepeatingAfterSecs: int((5 * defaultDuration).Seconds()),
+					Runs:                   1000,
+				},
+			},
+			expectedResults: []runtests.TestDetails{
+				succeededTest("foo", 0, defaultDuration),
+				succeededTest("foo", 1, defaultDuration),
+				succeededTest("foo", 2, defaultDuration),
+				succeededTest("foo", 3, defaultDuration),
+				succeededTest("foo", 4, defaultDuration),
+			},
+		},
+		{
+			name: "stop repeating early on failure",
+			tests: []testsharder.Test{
+				{
+					Test:                   build.Test{Name: "foo"},
+					RunAlgorithm:           testsharder.StopOnFailure,
+					StopRepeatingAfterSecs: int((5 * defaultDuration).Seconds()),
+					Runs:                   1000,
+				},
+			},
+			behavior: map[string]testBehavior{
+				"foo/1": {fail: true},
+			},
+			expectedResults: []runtests.TestDetails{
+				succeededTest("foo", 0, defaultDuration),
+				failedTest("foo", 1, defaultDuration),
+			},
+		},
+		{
+			name: "test hangs on first attempt",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnSuccess,
+					Runs:         5,
+				},
+				{
+					Test:         build.Test{Name: "bar"},
+					RunAlgorithm: testsharder.StopOnSuccess,
+					Runs:         5,
+				},
+			},
+			behavior: map[string]testBehavior{
+				"foo/0": {hang: true, duration: tooLong},
+			},
+			expectedResults: []runtests.TestDetails{
+				failedTest("foo", 0, tooLong),
+				succeededTest("bar", 0, defaultDuration),
+				succeededTest("foo", 1, defaultDuration),
+			},
+		},
+		{
+			name: "fatal error running test",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnSuccess,
+					Runs:         5,
+				},
+				{
+					Test:         build.Test{Name: "bar"},
+					RunAlgorithm: testsharder.StopOnFailure,
+					Runs:         5,
+				},
+			},
+			behavior: map[string]testBehavior{
+				"foo/0": {fail: true},
+				"bar/1": {fatal: true},
+			},
+			// A fatal error should not be reported as a test failure since
+			// fatal errors are generally not the fault of any one specific
+			// test, but all previous results should still be reported.
+			expectedResults: []runtests.TestDetails{
+				failedTest("foo", 0, defaultDuration),
+				succeededTest("bar", 0, defaultDuration),
+				succeededTest("foo", 1, defaultDuration),
+			},
 			expectedErr: errFatal,
 		},
 		{
-			name: "multiplier test gets unique index",
-			test: build.Test{
-				Name:       "bar (2)",
-				Path:       "/foo/bar",
-				OS:         "fuchsia",
-				PackageURL: "fuchsia-pkg://foo/bar",
-			},
-			runs:         2,
-			runAlgorithm: testsharder.KeepGoing,
-			expectedResult: []*testrunner.TestResult{{
-				Name:   "bar (2)",
-				Result: runtests.TestSuccess,
-			}, {
-				Name:     "bar (2)",
-				Result:   runtests.TestSuccess,
-				RunIndex: 1,
-			}},
-		},
-		{
-			name: "combines stdio and stdout in chronological order",
-			test: build.Test{
-				Name:       "fuchsia-pkg://foo/bar",
-				OS:         "fuchsia",
-				PackageURL: "fuchsia-pkg://foo/bar",
-			},
-			expectedResult: []*testrunner.TestResult{{
-				Name:   "fuchsia-pkg://foo/bar",
-				Result: runtests.TestSuccess,
-				Stdio:  []byte("stdout stderr stdout"),
-			}},
-			runTestFunc: func(t testsharder.Test, stdout, stderr io.Writer) {
-				stdout.Write([]byte("stdout "))
-				stderr.Write([]byte("stderr "))
-				stdout.Write([]byte("stdout"))
-			},
-		},
-		{
-			name: "retries test",
-			test: build.Test{
-				Name:       "fuchsia-pkg://foo/bar",
-				OS:         "fuchsia",
-				PackageURL: "fuchsia-pkg://foo/bar",
-			},
-			runs:         6,
-			runAlgorithm: testsharder.StopOnSuccess,
-			testErr:      fmt.Errorf("test failed"),
-			expectedResult: []*testrunner.TestResult{
+			name: "collects stdio",
+			tests: []testsharder.Test{
 				{
-					Name:   "fuchsia-pkg://foo/bar",
-					Result: runtests.TestFailure,
-					Stdio:  []byte("stdio"),
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnSuccess,
+					Runs:         5,
 				},
 				{
-					Name:     "fuchsia-pkg://foo/bar",
-					Result:   runtests.TestFailure,
-					RunIndex: 1,
-					Stdio:    []byte("stdio"),
-				},
-				{
-					Name:     "fuchsia-pkg://foo/bar",
-					Result:   runtests.TestFailure,
-					RunIndex: 2,
-					Stdio:    []byte("stdio"),
-				},
-				{
-					Name:     "fuchsia-pkg://foo/bar",
-					Result:   runtests.TestFailure,
-					RunIndex: 3,
-					Stdio:    []byte("stdio"),
-				},
-				{
-					Name:     "fuchsia-pkg://foo/bar",
-					Result:   runtests.TestFailure,
-					RunIndex: 4,
-					Stdio:    []byte("stdio"),
-				},
-				{
-					Name:     "fuchsia-pkg://foo/bar",
-					Result:   runtests.TestFailure,
-					RunIndex: 5,
-					Stdio:    []byte("stdio"),
+					Test:         build.Test{Name: "bar"},
+					RunAlgorithm: testsharder.StopOnSuccess,
+					Runs:         5,
 				},
 			},
-			runTestFunc: func(t testsharder.Test, stdout, stderr io.Writer) {
-				stdout.Write([]byte("stdio"))
+			behavior: map[string]testBehavior{
+				"foo/0": {fail: true, stdout: "stdout0\n", stderr: "stderr0\n"},
+				"foo/1": {duration: tooLong, stdout: "stdout1\n", stderr: "stderr1\n"},
+				"foo/2": {stdout: "stdout2\n", stderr: "stderr2\n"},
+				"bar/0": {stdout: "bar-stdout0\n", stderr: "bar-stderr0\n"},
 			},
-		},
-		{
-			name: "retries test after timeout",
-			test: build.Test{
-				Name:       "bar",
-				Path:       "/foo/bar",
-				OS:         "fuchsia",
-				PackageURL: "fuchsia-pkg://foo/bar",
+			expectedResults: []runtests.TestDetails{
+				failedTest("foo", 0, defaultDuration),
+				succeededTest("bar", 0, defaultDuration),
+				failedTest("foo", 1, tooLong),
+				succeededTest("foo", 2, defaultDuration),
 			},
-			runAlgorithm: testsharder.StopOnSuccess,
-			runs:         2,
-			testErr:      &timeoutError{timeout: time.Minute},
-			expectedResult: []*testrunner.TestResult{
-				{
-					Name:     "bar",
-					Result:   runtests.TestFailure,
-					RunIndex: 0,
-				},
-				{
-					Name:     "bar",
-					Result:   runtests.TestFailure,
-					RunIndex: 1,
-				},
+			expectedOutputs: map[string]string{
+				// The fake tester writes to stdout before stderr, so stdout
+				// always comes first.
+				stdioPath("foo", 0): "stdout0\nstderr0\n",
+				stdioPath("foo", 1): "stdout1\nstderr1\n",
+				stdioPath("foo", 2): "stdout2\nstderr2\n",
+				stdioPath("bar", 0): "bar-stdout0\nbar-stderr0\n",
 			},
-		},
-		{
-			name: "returns on first success even if max attempts > 1",
-			test: build.Test{
-				Name:       "fuchsia-pkg://foo/bar",
-				OS:         "fuchsia",
-				PackageURL: "fuchsia-pkg://foo/bar",
-			},
-			runs:         5,
-			runAlgorithm: testsharder.StopOnSuccess,
-			expectedResult: []*testrunner.TestResult{{
-				Name:   "fuchsia-pkg://foo/bar",
-				Result: runtests.TestSuccess,
-			}},
-		},
-		{
-			name: "returns on first failure even if max attempts > 1",
-			test: build.Test{
-				Name:       "fuchsia-pkg://foo/bar",
-				OS:         "fuchsia",
-				PackageURL: "fuchsia-pkg://foo/bar",
-			},
-			runs:         5,
-			runAlgorithm: testsharder.StopOnFailure,
-			testErr:      fmt.Errorf("test failed"),
-			expectedResult: []*testrunner.TestResult{{
-				Name:   "fuchsia-pkg://foo/bar",
-				Result: runtests.TestFailure,
-			}},
 		},
 	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			tester := &fakeTester{
-				testErr: c.testErr,
-				runTest: c.runTestFunc,
-			}
-			var buf bytes.Buffer
-			producer := tap.NewProducer(&buf)
-			o, err := createTestOutputs(producer, "")
-			if err != nil {
-				t.Fatalf("failed to create a test outputs object: %s", err)
-			}
-			defer o.Close()
-			if c.runs == 0 {
-				c.runs = 1
-			}
-			results, err := runAndOutputTest(context.Background(), testsharder.Test{Test: c.test, Runs: c.runs, RunAlgorithm: c.runAlgorithm}, tester, o, &buf, &buf, "out-dir", 0)
 
-			if err != c.expectedErr {
-				t.Fatalf("got error: %q, expected: %q", err, c.expectedErr)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeClock := clock.NewFakeClock()
+			ctx := clock.NewContext(context.Background(), fakeClock)
+
+			// Make sure the test data is realistic and could actually pass
+			// validation; there's not much point in testing bogus inputs since
+			// it would fail validation before testrunner even started running
+			// any tests.
+			for _, test := range tc.tests {
+				// These fields aren't important for the purpose of this
+				// function so we don't require that they be set by each test
+				// case.
+				test.OS = "linux"
+				test.Path = filepath.Join("path", "to", test.Name)
+				if err := validateTest(test); err != nil {
+					t.Fatal(err)
+				}
 			}
 
-			opts := []cmp.Option{
-				cmpopts.IgnoreFields(testrunner.TestResult{}, "StartTime", "EndTime"),
+			timeout := perTestTimeout
+			if tc.noTimeout {
+				timeout = 0
+			}
+
+			runCounts := make(map[string]int)
+			testerForTest := func(testsharder.Test) (tester, *[]runtests.DataSinkReference, error) {
+				return &fakeTester{runTest: func(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer) error {
+					runIndex := runCounts[test.Name]
+					runCounts[test.Name]++
+					behavior := tc.behavior[fmt.Sprintf("%s/%d", test.Name, runIndex)]
+
+					stdout.Write([]byte(behavior.stdout))
+					stderr.Write([]byte(behavior.stderr))
+
+					if behavior.duration == 0 {
+						behavior.duration = defaultDuration
+					}
+					fakeClock.Advance(behavior.duration)
+
+					if behavior.hang {
+						// Block forever (well, technically just until the test
+						// ends and the Cleanup callback executes, since we
+						// don't want to leak goroutines).
+						c := make(chan struct{})
+						t.Cleanup(func() { close(c) })
+						<-c
+						return fmt.Errorf("killed")
+					} else if behavior.fatal {
+						return errFatal
+					} else if behavior.fail {
+						return fmt.Errorf("test failed")
+					}
+
+					if timeout > 0 && behavior.duration >= timeout {
+						// If the test is expected to time out, make sure to
+						// wait until the context gets canceled before exiting
+						// so we know that we've already hit the timeout
+						// handler. Otherwise there's a race condition between
+						// this function exiting and the timeout handler
+						// triggering.
+						<-ctx.Done()
+					}
+					return nil
+				}}, &[]runtests.DataSinkReference{}, nil
+			}
+
+			resultsDir := mkdtemp(t, "results")
+			outputs := createTestOutputs(tap.NewProducer(io.Discard), resultsDir)
+
+			err := runAndOutputTests(ctx, tc.tests, testerForTest, timeout, outputs, mkdtemp(t, "outputs"))
+			if !errors.Is(err, tc.expectedErr) {
+				t.Errorf("Wrong error; expected %s, got %s", err, tc.expectedErr)
+			}
+			opts := cmp.Options{
 				cmpopts.EquateEmpty(),
+				cmpopts.IgnoreFields(runtests.TestDetails{}, "StartTime"),
 			}
-			if diff := cmp.Diff(results, c.expectedResult, opts...); diff != "" {
-				t.Errorf("test results mismatch (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.expectedResults, outputs.summary.Tests, opts...); diff != "" {
+				t.Errorf("test results diff (-want +got): %s", diff)
 			}
-
-			if c.runs > 1 {
-				funcCalls := strings.Join(tester.funcCalls, ",")
-				testCount := strings.Count(funcCalls, testFunc)
-				expectedTries := 1
-				if (c.runAlgorithm == testsharder.StopOnSuccess && c.testErr != nil) || c.runAlgorithm == testsharder.KeepGoing {
-					expectedTries = c.runs
+			for path, want := range tc.expectedOutputs {
+				got, err := ioutil.ReadFile(filepath.Join(resultsDir, path))
+				if err != nil {
+					t.Errorf("Error reading expected output file %q: %s", path, err)
+					continue
 				}
-				if testCount != expectedTries {
-					t.Errorf("ran test %d times, expected: %d", testCount, expectedTries)
+				if diff := cmp.Diff(want, string(got)); diff != "" {
+					t.Errorf("File contents diff (-want +got): %s", diff)
 				}
-				// Each try should have a unique outDir
-				if len(tester.outDirs) != expectedTries {
-					t.Errorf("got %d unique outDirs, expected %d", len(tester.outDirs), expectedTries)
-				}
-			}
-			expectedOutput := ""
-			for i, result := range c.expectedResult {
-				statusString := "ok"
-				if result.Result != runtests.TestSuccess {
-					statusString = "not ok"
-				}
-				expectedOutput += fmt.Sprintf("%s%s %d %s (.*)\n", result.Stdio, statusString, i+1, result.Name)
-			}
-			actualOutput := buf.String()
-			expectedOutputRegex := regexp.MustCompile(strings.ReplaceAll(strings.ReplaceAll(expectedOutput, "(", "\\("), ")", "\\)"))
-			submatches := expectedOutputRegex.FindStringSubmatch(actualOutput)
-			if len(submatches) != 1 {
-				t.Errorf("unexpected output:\nexpected: %q\nactual: %q\n", expectedOutput, actualOutput)
 			}
 		})
 	}
+}
 
-	// Tests that `runAndOutputTest` doesn't return an error if running in
-	// StopOnFailure mode with a deadline, as would be the case with
-	// `StopRepeatingAfterSecs`.
-	t.Run("multiplied shard hitting time limit", func(t *testing.T) {
-		test := testsharder.Test{
-			Test: build.Test{
-				Name:       "fuchsia-pkg://foo/bar",
-				OS:         "fuchsia",
-				PackageURL: "fuchsia-pkg://foo/bar",
-			},
-			RunAlgorithm:           testsharder.StopOnFailure,
-			Runs:                   100,
-			StopRepeatingAfterSecs: 5,
-		}
-
-		o, err := createTestOutputs(tap.NewProducer(io.Discard), "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer o.Close()
-
-		fakeClock := clock.NewFakeClock()
-		ctx := clock.NewContext(context.Background(), fakeClock)
-
-		// If each test run takes 1 second, we should be able to run the test
-		// exactly `StopRepeatingAfterSecs` times.
-		tester := fakeTester{
-			runTest: func(t testsharder.Test, w1, w2 io.Writer) {
-				fakeClock.Advance(time.Second)
-			},
-		}
-
-		results, err := runAndOutputTest(ctx, test, &tester, o, io.Discard, io.Discard, t.TempDir(), 0)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(results) != test.StopRepeatingAfterSecs {
-			t.Fatalf("Expected %d test results but got %d", test.StopRepeatingAfterSecs, len(results))
-		}
-	})
-
-	t.Run("enforces test timeout when tester hangs", func(t *testing.T) {
-		test := testsharder.Test{
-			Test: build.Test{
-				Name:       "fuchsia-pkg://foo/bar",
-				OS:         "fuchsia",
-				PackageURL: "fuchsia-pkg://foo/bar",
-			},
-			RunAlgorithm: testsharder.StopOnFailure,
-			Runs:         2,
-		}
-
-		o, err := createTestOutputs(tap.NewProducer(io.Discard), "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer o.Close()
-
-		fakeClock := clock.NewFakeClock()
-		ctx := clock.NewContext(context.Background(), fakeClock)
-
-		tester := hangForeverTester{
-			called:   make(chan struct{}),
-			waitChan: make(chan struct{}),
-		}
-		timeout := time.Minute
-		errs := make(chan error)
-		var results []*testrunner.TestResult
-		go func() {
-			var runErr error
-			results, runErr = runAndOutputTest(ctx, test, &tester, o, io.Discard, io.Discard, t.TempDir(), timeout)
-			errs <- runErr
-		}()
-		// Wait for Test() to be called before timing out.
-		<-tester.called
-		// Wait for After() to be called before advancing the clock.
-		<-fakeClock.AfterCalledChan()
-		fakeClock.Advance(timeout + 40*time.Second)
-
-		// A timeout should result in a nil err and a failed test result.
-		if err := <-errs; err != nil {
-			t.Errorf("expected nil, got: %s", err)
-		}
-		close(tester.waitChan)
-		if len(results) > 1 {
-			t.Errorf("expected 1 result, got: %d", len(results))
-		}
-		if results[0].Result != runtests.TestFailure {
-			t.Errorf("expected test failure, got: %s", results[0].Result)
-		}
-	})
+// mkdtemp creates a new temporary directory within t.TempDir.
+func mkdtemp(t *testing.T, pattern string) string {
+	t.Helper()
+	dir, err := ioutil.TempDir(t.TempDir(), pattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dir
 }
 
 func TestExecute(t *testing.T) {
@@ -665,12 +889,9 @@ func TestExecute(t *testing.T) {
 
 			var buf bytes.Buffer
 			producer := tap.NewProducer(&buf)
-			o, err := createTestOutputs(producer, "")
-			if err != nil {
-				t.Fatalf("failed to create a test outputs object: %s", err)
-			}
+			o := createTestOutputs(producer, "")
 			defer o.Close()
-			err = execute(context.Background(), tests, o, net.IPAddr{}, c.sshKeyFile, c.serialSocketPath, "out-dir", testrunnerFlags{})
+			err := execute(context.Background(), tests, o, net.IPAddr{}, c.sshKeyFile, c.serialSocketPath, "out-dir", testrunnerFlags{})
 			if c.wantErr {
 				if err == nil {
 					t.Errorf("got nil error, want an error for failing to initialize a tester")

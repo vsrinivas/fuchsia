@@ -28,11 +28,11 @@ type testOutputs struct {
 	tap     *tap.Producer
 }
 
-func createTestOutputs(producer *tap.Producer, outDir string) (*testOutputs, error) {
+func createTestOutputs(producer *tap.Producer, outDir string) *testOutputs {
 	return &testOutputs{
 		outDir: outDir,
 		tap:    producer,
-	}, nil
+	}
 }
 
 // Record writes the test result to initialized outputs.
@@ -43,7 +43,7 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 	// Strip any leading //.
 	outputRelPath = strings.TrimLeft(outputRelPath, "//")
 
-	duration := result.EndTime.Sub(result.StartTime)
+	duration := result.Duration()
 	if duration <= 0 {
 		return fmt.Errorf("test %q must have positive duration: (start, end) = (%s, %s)", result.Name, result.StartTime, result.EndTime)
 	}
@@ -60,7 +60,7 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 	})
 
 	desc := fmt.Sprintf("%s (%s)", result.Name, duration)
-	o.tap.Ok(result.Result == runtests.TestSuccess, desc)
+	o.tap.Ok(result.Passed(), desc)
 
 	if o.outDir != "" {
 		outputRelPath = filepath.Join(o.outDir, outputRelPath)

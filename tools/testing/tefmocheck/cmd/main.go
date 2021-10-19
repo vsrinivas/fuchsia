@@ -121,6 +121,11 @@ func main() {
 		for i := range swarmingOutputPerTest {
 			test := &inputSummary.Tests[i]
 			testLog := &swarmingOutputPerTest[i]
+			// TODO(olivernewman): This check fails when a unit test for
+			// testrunner fails and the failure output contains the TAP output
+			// referencing fake tests used for test data. Make this check less
+			// strict by having `SplitTestLogs` only create a split log for
+			// tests that actually appear in summary.json.
 			if test.Name != testLog.TestName {
 				log.Fatalf("swarmingOutputPerTest[%d].TestName != inputSummary.Tests[%d] (%q vs %q)", i, i, testLog.TestName, test.Name)
 			}

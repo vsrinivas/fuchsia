@@ -46,6 +46,7 @@ go_library("main") {
     "//tools/lib/logger",
     "//tools/lib/osmisc",
     "//tools/lib/retry",
+    "//tools/lib/streams",
     "//tools/lib/subprocess",
     "//tools/net/sshutil",
     "//tools/testing/runtests",

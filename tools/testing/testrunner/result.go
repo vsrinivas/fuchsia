@@ -38,3 +38,13 @@ type TestResult struct {
 	StartTime time.Time
 	EndTime   time.Time
 }
+
+// Passed indicates whether the test completed successfully. This will be false
+// if the test timed out or failed.
+func (r TestResult) Passed() bool {
+	return r.Result == runtests.TestSuccess
+}
+
+func (r TestResult) Duration() time.Duration {
+	return r.EndTime.Sub(r.StartTime)
+}

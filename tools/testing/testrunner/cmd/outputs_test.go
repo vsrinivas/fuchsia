@@ -62,10 +62,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 	var buf bytes.Buffer
 	producer := tap.NewProducer(&buf)
 	producer.Plan(len(results))
-	o, err := createTestOutputs(producer, outDir)
-	if err != nil {
-		t.Fatalf("failed to create a test outputs object: %v", err)
-	}
+	o := createTestOutputs(producer, outDir)
 	defer o.Close()
 
 	outputFileA := filepath.Join(url.PathEscape("fuchsia-pkg//foo#test_a"), "0", "stdout-and-stderr.txt")

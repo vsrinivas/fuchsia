@@ -53,22 +53,16 @@ type timer struct {
 	ch      chan time.Time
 }
 
-func (t *timer) advanceTo(newTime time.Time) {
-	if newTime.After(t.endTime) {
-		t.ch <- newTime
-	}
-}
-
 // FakeClock provides support for mocking the current time in tests.
 type FakeClock struct {
-	mu          sync.Mutex
-	now         time.Time
-	timer       *timer
-	afterCalled chan struct{}
+	mu            sync.Mutex
+	now           time.Time
+	pendingTimers []*timer
+	afterCalled   chan struct{}
 }
 
 func NewFakeClock() *FakeClock {
-	return &FakeClock{now: time.Now(), afterCalled: make(chan struct{}, 1)}
+	return &FakeClock{now: time.Now(), afterCalled: make(chan struct{})}
 }
 
 func (c *FakeClock) Now() time.Time {
@@ -81,9 +75,11 @@ func (c *FakeClock) After(d time.Duration) <-chan time.Time {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	t := &timer{c.now.Add(d), make(chan time.Time, 1)}
-	c.timer = t
-	if len(c.afterCalled) == 0 {
-		c.afterCalled <- struct{}{}
+	c.pendingTimers = append(c.pendingTimers, t)
+	select {
+	case <-c.afterCalled: // Channel already closed.
+	default:
+		close(c.afterCalled)
 	}
 	return t.ch
 }
@@ -92,14 +88,21 @@ func (c *FakeClock) Advance(d time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.now = c.now.Add(d)
-	// Notify timer that the time has changed
-	if c.timer != nil {
-		c.timer.advanceTo(c.now)
+
+	// Notify timers that the time has changed.
+	var pendingTimers []*timer
+	for _, t := range c.pendingTimers {
+		if !c.now.Before(t.endTime) {
+			t.ch <- c.now
+		} else {
+			pendingTimers = append(pendingTimers, t)
+		}
 	}
+	c.pendingTimers = pendingTimers
 }
 
 // AfterCalledChan returns the channel to wait for the clock's timer to be set from a
 // call to After().
-func (c *FakeClock) AfterCalledChan() chan struct{} {
+func (c *FakeClock) AfterCalledChan() <-chan struct{} {
 	return c.afterCalled
 }

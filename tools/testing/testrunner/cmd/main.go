@@ -34,6 +34,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/streams"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
 	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
@@ -44,6 +45,8 @@ import (
 const (
 	// A directory that will be automatically archived on completion of a task.
 	testOutDirEnvKey = "FUCHSIA_TEST_OUTDIR"
+
+	testTimeoutGracePeriod = 30 * time.Second
 )
 
 type testrunnerFlags struct {
@@ -141,14 +144,6 @@ func setupAndExecute(ctx context.Context, flags testrunnerFlags) error {
 	}
 	logger.Debugf(ctx, "test output directory: %s", testOutDir)
 
-	tapProducer := tap.NewProducer(os.Stdout)
-	tapProducer.Plan(len(tests))
-	outputs, err := createTestOutputs(tapProducer, testOutDir)
-	if err != nil {
-		return fmt.Errorf("failed to create test results object: %w", err)
-	}
-	defer outputs.Close()
-
 	var addr net.IPAddr
 	if deviceAddr, ok := os.LookupEnv(constants.DeviceAddrEnvKey); ok {
 		addrPtr, err := net.ResolveIPAddr("ip", deviceAddr)
@@ -165,8 +160,19 @@ func setupAndExecute(ctx context.Context, flags testrunnerFlags) error {
 	}
 	defer cleanUp()
 
+	tapProducer := tap.NewProducer(os.Stdout)
+	tapProducer.Plan(len(tests))
+	outputs := createTestOutputs(tapProducer, testOutDir)
+
 	serialSocketPath := os.Getenv(constants.SerialSocketEnvKey)
-	return execute(ctx, tests, outputs, addr, sshKeyFile, serialSocketPath, testOutDir, flags)
+	execErr := execute(ctx, tests, outputs, addr, sshKeyFile, serialSocketPath, testOutDir, flags)
+	if err := outputs.Close(); err != nil {
+		if execErr == nil {
+			return err
+		}
+		logger.Warningf(ctx, "Failed to save test outputs: %s", err)
+	}
+	return execErr
 }
 
 func validateTest(test testsharder.Test) error {
@@ -180,7 +186,9 @@ func validateTest(test testsharder.Test) error {
 		return fmt.Errorf("one or more tests with invalid `runs` field")
 	}
 	if test.Runs > 1 {
-		if test.RunAlgorithm == "" {
+		switch test.RunAlgorithm {
+		case testsharder.KeepGoing, testsharder.StopOnFailure, testsharder.StopOnSuccess:
+		default:
 			return fmt.Errorf("one or more tests with invalid `run_algorithm` field")
 		}
 	}
@@ -250,69 +258,60 @@ func execute(
 ) error {
 	var fuchsiaSinks, localSinks []runtests.DataSinkReference
 	var fuchsiaTester, localTester tester
-	var finalError error
+	var ffx ffxTester
 
 	localEnv := append(os.Environ(),
 		// Tell tests written in Rust to print stack on failures.
 		"RUST_BACKTRACE=1",
 	)
 
-	for _, test := range tests {
-		var t tester
-		var sinks *[]runtests.DataSinkReference
+	// Function to select the tester to use for a test, along with destination
+	// for the test to write any data sinks. This logic is not easily testable
+	// because it requires a lot of network requests and environment inspection,
+	// so we use dependency injection and pass it as a parameter to
+	// `runAndOutputTests` to make that function more easily testable.
+	testerForTest := func(test testsharder.Test) (tester, *[]runtests.DataSinkReference, error) {
 		switch test.OS {
 		case "fuchsia":
 			if fuchsiaTester == nil {
 				var err error
 				if sshKeyFile != "" {
-					var ffx ffxTester
 					ffx, err = ffxInstance(
 						flags.ffxPath, flags.localWD, localEnv, os.Getenv(constants.NodenameEnvKey),
 						os.Getenv(constants.SSHKeyEnvKey), outputs.outDir)
 					if err != nil {
-						finalError = err
-						break
-					}
-					if ffx != nil {
-						defer ffx.Stop()
+						return nil, nil, err
 					}
 					fuchsiaTester, err = sshTester(
 						ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, flags.useRuntests,
 						flags.perTestTimeout, ffx)
 				} else {
 					if serialSocketPath == "" {
-						finalError = fmt.Errorf("%q must be set if %q is not set", constants.SerialSocketEnvKey, constants.SSHKeyEnvKey)
-						break
+						return nil, nil, fmt.Errorf("%q must be set if %q is not set", constants.SerialSocketEnvKey, constants.SSHKeyEnvKey)
 					}
 					fuchsiaTester, err = serialTester(ctx, serialSocketPath, flags.perTestTimeout)
 				}
 				if err != nil {
-					finalError = fmt.Errorf("failed to initialize fuchsia tester: %w", err)
-					break
+					return nil, nil, fmt.Errorf("failed to initialize fuchsia tester: %w", err)
 				}
 			}
-			t = fuchsiaTester
-			sinks = &fuchsiaSinks
+			return fuchsiaTester, &fuchsiaSinks, nil
 		case "linux", "mac":
 			if test.OS == "linux" && runtime.GOOS != "linux" {
-				finalError = fmt.Errorf("cannot run linux tests when GOOS = %q", runtime.GOOS)
-				break
+				return nil, nil, fmt.Errorf("cannot run linux tests when GOOS = %q", runtime.GOOS)
 			}
 			if test.OS == "mac" && runtime.GOOS != "darwin" {
-				finalError = fmt.Errorf("cannot run mac tests when GOOS = %q", runtime.GOOS)
-				break
+				return nil, nil, fmt.Errorf("cannot run mac tests when GOOS = %q", runtime.GOOS)
 			}
 			// Initialize the fuchsia SSH tester to run the snapshot at the end in case
 			// we ran any host-target interaction tests.
 			if fuchsiaTester == nil && sshKeyFile != "" {
-				ffx, err := ffxInstance(
+				var err error
+				ffx, err = ffxInstance(
 					flags.ffxPath, flags.localWD, localEnv, os.Getenv(constants.NodenameEnvKey),
 					os.Getenv(constants.SSHKeyEnvKey), outputs.outDir)
 				if err != nil {
 					logger.Errorf(ctx, "failed to initialize fuchsia tester: %s", err)
-				}
-				if ffx != nil {
-					defer ffx.Stop()
 				}
 				fuchsiaTester, err = sshTester(
 					ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, flags.useRuntests,
@@ -324,25 +323,15 @@ func execute(
 			if localTester == nil {
 				localTester = newSubprocessTester(flags.localWD, localEnv, outputs.outDir, flags.perTestTimeout)
 			}
-			t = localTester
-			sinks = &localSinks
+			return localTester, &localSinks, nil
 		default:
-			finalError = fmt.Errorf("test %#v has unsupported OS: %q", test, test.OS)
-			break
+			return nil, nil, fmt.Errorf("test %#v has unsupported OS: %q", test, test.OS)
 		}
+	}
 
-		if finalError != nil {
-			break
-		}
-
-		results, err := runAndOutputTest(ctx, test, t, outputs, os.Stdout, os.Stderr, outDir, flags.perTestTimeout)
-		if err != nil {
-			finalError = err
-			break
-		}
-		for _, result := range results {
-			*sinks = append(*sinks, result.DataSinks)
-		}
+	var finalError error
+	if err := runAndOutputTests(ctx, tests, testerForTest, flags.perTestTimeout, outputs, outDir); err != nil {
+		finalError = err
 	}
 
 	if fuchsiaTester != nil {
@@ -350,6 +339,9 @@ func execute(
 	}
 	if localTester != nil {
 		defer localTester.Close()
+	}
+	if ffx != nil {
+		defer ffx.Stop()
 	}
 	finalize := func(t tester, sinks []runtests.DataSinkReference) error {
 		if t != nil {
@@ -390,36 +382,85 @@ func (b *stdioBuffer) Write(p []byte) (n int, err error) {
 	return b.buf.Write(p)
 }
 
-func runAndOutputTest(ctx context.Context, test testsharder.Test, t tester, outputs *testOutputs, collectiveStdout, collectiveStderr io.Writer, outDir string, timeout time.Duration) ([]*testrunner.TestResult, error) {
-	var results []*testrunner.TestResult
-
-	var stopRepeatingTime time.Time
-	if test.StopRepeatingAfterSecs > 0 {
-		timeLimit := time.Second * time.Duration(test.StopRepeatingAfterSecs)
-		stopRepeatingTime = clock.Now(ctx).Add(timeLimit)
+// runAndOutputTests runs all the tests, possibly with retries, and records the
+// results to `outputs`.
+func runAndOutputTests(
+	ctx context.Context,
+	tests []testsharder.Test,
+	testerForTest func(testsharder.Test) (tester, *[]runtests.DataSinkReference, error),
+	timeout time.Duration,
+	outputs *testOutputs,
+	globalOutDir string,
+) error {
+	// testToRun represents an entry in the queue of tests to run.
+	type testToRun struct {
+		testsharder.Test
+		// The number of times the test has already been run.
+		previousRuns int
+		// The sum of the durations of all the test's previous runs.
+		totalDuration time.Duration
 	}
 
-	for i := 0; i < test.Runs; i++ {
-		outDir := filepath.Join(outDir, url.PathEscape(strings.ReplaceAll(test.Name, ":", "")), strconv.Itoa(i))
-		result, err := runTestOnce(ctx, test, t, collectiveStdout, collectiveStderr, outDir, timeout)
+	// Since only a single goroutine writes to and reads from the queue it would
+	// be more appropriate to use a true Queue data structure, but we'd need to
+	// implement that ourselves so it's easier to just use a channel. Make the
+	// channel double the necessary size just to be safe and avoid potential
+	// deadlocks.
+	testQueue := make(chan testToRun, 2*len(tests))
+	for _, test := range tests {
+		testQueue <- testToRun{Test: test}
+	}
+
+	// `for test := range testQueue` might seem simpler, but it would block
+	// instead of exiting once the queue becomes empty. To exit the loop we
+	// would need to close the channel when it became empty. That would require
+	// a length check within the loop body anyway, and it's more robust to put
+	// the length check in the for loop condition.
+	for len(testQueue) > 0 {
+		test := <-testQueue
+
+		t, sinks, err := testerForTest(test.Test)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		result.RunIndex = i
-		if err := outputs.record(*result); err != nil {
-			return nil, err
-		}
-		results = append(results, result)
 
-		// Stop rerunning the test if we've exceeded the time limit for reruns,
-		// or if the most recent test run met one of the stop conditions.
-		if (!stopRepeatingTime.IsZero() && !clock.Now(ctx).Before(stopRepeatingTime)) ||
-			(test.RunAlgorithm == testsharder.StopOnSuccess && result.Result == runtests.TestSuccess) ||
-			(test.RunAlgorithm == testsharder.StopOnFailure && result.Result == runtests.TestFailure) {
-			break
+		runIndex := test.previousRuns
+		outDir := filepath.Join(globalOutDir, url.PathEscape(strings.ReplaceAll(test.Name, ":", "")), strconv.Itoa(runIndex))
+		result, err := runTestOnce(ctx, test.Test, t, outDir, timeout)
+		if err != nil {
+			return err
 		}
+		result.RunIndex = runIndex
+		if err := outputs.record(*result); err != nil {
+			return err
+		}
+
+		test.previousRuns++
+		test.totalDuration += result.Duration()
+
+		// Schedule another run of the test if we haven't yet exceeded the
+		// time limit for reruns, or if the most recent test run didn't meet
+		// the stop condition for this test.
+		stopRepeatingDuration := time.Duration(test.StopRepeatingAfterSecs) * time.Second
+		keepGoing := true
+		if stopRepeatingDuration > 0 && test.totalDuration >= stopRepeatingDuration {
+			keepGoing = false
+		} else if test.Runs > 0 && test.previousRuns >= test.Runs {
+			keepGoing = false
+		} else if test.RunAlgorithm == testsharder.StopOnSuccess && result.Passed() {
+			keepGoing = false
+		} else if test.RunAlgorithm == testsharder.StopOnFailure && !result.Passed() {
+			keepGoing = false
+		}
+		if keepGoing {
+			// Schedule the test to be run again.
+			testQueue <- test
+		}
+		// TODO(olivernewman): Add a unit test to make sure data sinks are
+		// recorded correctly.
+		*sinks = append(*sinks, result.DataSinks)
 	}
-	return results, nil
+	return nil
 }
 
 // runTestOnce runs the given test once. It will not return an error if the test
@@ -428,8 +469,6 @@ func runTestOnce(
 	ctx context.Context,
 	test testsharder.Test,
 	t tester,
-	collectiveStdout io.Writer,
-	collectiveStderr io.Writer,
 	outDir string,
 	timeout time.Duration,
 ) (*testrunner.TestResult, error) {
@@ -438,8 +477,8 @@ func runTestOnce(
 	stdout := new(bytes.Buffer)
 	stdio := new(stdioBuffer)
 
-	multistdout := io.MultiWriter(collectiveStdout, stdio, stdout)
-	multistderr := io.MultiWriter(collectiveStderr, stdio)
+	multistdout := io.MultiWriter(streams.Stdout(ctx), stdio, stdout)
+	multistderr := io.MultiWriter(streams.Stderr(ctx), stdio)
 
 	// In the case of running tests on QEMU over serial, we do not wish to
 	// forward test output to stdout, as QEMU is already redirecting serial
@@ -454,35 +493,42 @@ func runTestOnce(
 
 	result := runtests.TestSuccess
 	startTime := clock.Now(ctx)
-	// Run the test in a goroutine so that we don't block in case the tester fails
-	// to respect the timeout.
-	type testResult struct {
-		dataSinks runtests.DataSinkReference
-		err       error
-	}
-	ch := make(chan testResult, 1)
-	// We don't use context.WithTimeout() because it uses the real time.Now()
-	// instead of clock.Now(), which makes it much harder to simulate timeouts
-	// in this function's unit tests.
-	testCtx, cancelTest := context.WithCancel(ctx)
-	defer cancelTest()
-	go func() {
-		dataSinks, err := t.Test(testCtx, test, multistdout, multistderr, outDir)
-		ch <- testResult{dataSinks, err}
-	}()
 
 	// Set the outer timeout to a slightly higher value in order to give the tester
 	// time to handle the timeout itself.  Other steps such as retrying tests over
 	// serial or fetching data sink references may also cause the Test() method to
 	// exceed the perTestTimeout, so we give enough time for the tester to complete
 	// those steps as well.
-	outerTestTimeout := timeout + 30*time.Second
+	outerTestTimeout := timeout + testTimeoutGracePeriod
+
 	var timeoutCh <-chan time.Time
 	if timeout > 0 {
+		// Intentionally call After(), thereby resolving a completion deadline,
+		// *before* starting to run the test. This helps avoid race conditions
+		// in this function's unit tests that advance the fake clock's time
+		// within the `t.Test()` call.
 		timeoutCh = clock.After(ctx, outerTestTimeout)
 	}
 	// Else, timeoutCh will be nil. Receiving from a nil channel blocks forever,
 	// so no timeout will be enforced, which is what we want.
+
+	type testResult struct {
+		dataSinks runtests.DataSinkReference
+		err       error
+	}
+	ch := make(chan testResult, 1)
+
+	// We don't use context.WithTimeout() because it uses the real time.Now()
+	// instead of clock.Now(), which makes it much harder to simulate timeouts
+	// in this function's unit tests.
+	testCtx, cancelTest := context.WithCancel(ctx)
+	defer cancelTest()
+	// Run the test in a goroutine so that we don't block in case the tester fails
+	// to respect the timeout.
+	go func() {
+		dataSinks, err := t.Test(testCtx, test, multistdout, multistderr, outDir)
+		ch <- testResult{dataSinks, err}
+	}()
 
 	var dataSinks runtests.DataSinkReference
 	var err error
@@ -490,7 +536,6 @@ func runTestOnce(
 	case res := <-ch:
 		dataSinks = res.dataSinks
 		err = res.err
-		break
 	case <-timeoutCh:
 		err = &timeoutError{outerTestTimeout}
 		cancelTest()
