@@ -140,7 +140,9 @@ TEST_fx-hosttools-subcommand-run() {
 }
 
 # executes a simple fx command from different fuchsia checkout,
-# while the two fuchsia checkouts have the same version of fx.
+# while the two fuchsia checkouts have the same version of fx. This is
+# not allowed, as while the callers API may be the same, the callee's
+# expectations may not be met.
 TEST_fx-run_from_same_version() {
   # creates a temp fuchsia checkout directory.
   BT_TEMP_DIR_1="$(mktemp -d)"
@@ -149,16 +151,18 @@ TEST_fx-run_from_same_version() {
   # check whether fx command executed successfully, since the two fuchsia checkouts
   # have the same versions of fx code.
   output="$(${fx} help 2>&1)"
-  BT_EXPECT_EQ $? 0
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" "usage: fx"
+  BT_EXPECT_EQ $? 1
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" "ERROR: You are executing fx from outside of the current source tree"
 }
 
 # executes fx command from different fuchsia checkout to detect the
 # inconsistencies in fx versions.
 TEST_fx-run_from_different_version() {
   local output
-  local line1="WARNING: You are executing fx from outside of the current"
-  local line2="'fx' was executed from:"
+
+  local line1="ERROR: You are executing fx from outside of the current source tree"
+  local line2="    'fx' was executed from:"
+
   # creates a temp fuchsia checkout directory and run fx command.
   BT_TEMP_DIR_1="$(mktemp -d)"
   cp -RL "${BT_TEMP_DIR}/." "${BT_TEMP_DIR_1}"
@@ -168,6 +172,7 @@ TEST_fx-run_from_different_version() {
   echo "# test" >>  "${BT_TEMP_DIR}/scripts/fx"
 
   output="$(${fx} help 2>&1)"
+  BT_EXPECT_EQ $? 1
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" "${line1}"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" "${line2} ${BT_TEMP_DIR}"
 }

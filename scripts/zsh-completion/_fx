@@ -62,18 +62,20 @@ _fx() {
     exit 1
   fi
 
-  _this_script="$0"
-  if [[ "$_this_script" != "${fuchsia_dir}/.jiri_root/bin/fx" &&
-      "$_this_script" != *"_fx" ]]; then
-    _this_fuchsia_dir="$(find_tree_root "$(dirname "$_this_script")")"
-    if [[ $? -ne 0 || "$_this_fuchsia_dir" != "$fuchsia_dir" ]]; then
-      if ! cmp -s "$_this_script" "${fuchsia_dir}/.jiri_root/bin/fx"; then
-        echo >&2 "WARNING: You are executing fx from outside of the current"
-        echo >&2 "source tree, and it is a different version."
-        echo >&2 "This can cause inconsistencies. Please update your PATH."
-        echo >&2 "    'fx' was executed from: ${_this_script}"
-      fi
-    fi
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+
+  if [[ "${script_dir}" != "${fuchsia_dir}"* ]]; then
+    echo >&2 "ERROR: You are executing fx from outside of the current source tree"
+    echo >&2 "ERROR: This is not supported as fx does not have a stable internal API"
+    echo >&2
+    echo >&2 "    'fx' was executed from: ${BASH_SOURCE[0]}"
+    echo >&2 "    'fuchsia directory' resolved to: ${fuchsia_dir}"
+    echo >&2
+    echo >&2 "To run a command in the current Fuchsia directory, run fx from:"
+    echo >&2 "  ${fuchsia_dir}/scripts/fx"
+    echo >&2 "Or, if you use fx-env.sh, source fx-env from the current fuchsia dir:"
+    echo >&2 "  source ${fuchsia_dir}/scripts/fx-env.sh"
+    exit 1
   fi
 
   # list of commands based on //tools/devshell/
