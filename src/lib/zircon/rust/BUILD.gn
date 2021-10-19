@@ -77,6 +77,7 @@ rustc_library("fuchsia-cprng") {
   version = "0.1.1"
   edition = "2018"
   with_unit_tests = true
+  visibility = [ ":*" ]
   source_root = "fuchsia-cprng/src/lib.rs"
 
   sources = [ "fuchsia-cprng/src/lib.rs" ]

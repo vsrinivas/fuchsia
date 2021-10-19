@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_cprng::cprng_draw;
+use fuchsia_zircon::cprng_draw;
 
 use crate::error;
 use crate::fd_impl_nonblocking;

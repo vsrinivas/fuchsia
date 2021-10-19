@@ -46,7 +46,6 @@ if (target_cpu == "x64") {
       "//src/lib/process_builder",
       "//src/lib/ui/fuchsia-scenic",
       "//src/lib/zerocopy",
-      "//src/lib/zircon/rust:fuchsia-cprng",
       "//src/lib/zircon/rust:fuchsia-zircon",
       "//src/lib/zircon/rust:fuchsia-zircon-sys",
       "//src/proc/lib/linux_uapi",

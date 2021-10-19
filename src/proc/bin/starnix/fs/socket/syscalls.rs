@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_cprng::cprng_draw;
 use fuchsia_zircon as zx;
 use std::convert::TryInto;
 use zerocopy::{AsBytes, FromBytes};
@@ -129,7 +128,7 @@ fn maybe_parse_socket_address(
 // See "Autobind feature" section of https://man7.org/linux/man-pages/man7/unix.7.html
 fn generate_autobind_address() -> Vec<u8> {
     let mut bytes = [0u8; 4];
-    cprng_draw(&mut bytes);
+    zx::cprng_draw(&mut bytes);
     let value = u32::from_ne_bytes(bytes) & 0xFFFFF;
     format!("\0{:05x}", value).into_bytes()
 }
