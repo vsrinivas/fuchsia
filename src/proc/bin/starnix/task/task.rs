@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::ffi::{CStr, CString};
 use std::fmt;
-use std::ops;
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::auth::{Credentials, ShellJobControl};
@@ -23,18 +23,71 @@ use crate::mm::MemoryManager;
 use crate::not_implemented;
 use crate::signals::signal_handling::dequeue_signal;
 use crate::signals::types::*;
-use crate::syscalls::SyscallContext;
 use crate::task::*;
 use crate::types::*;
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct TaskOwner {
-    pub task: Arc<Task>,
+pub struct CurrentTask {
+    task: Arc<Task>,
+
+    /// A copy of the registers associated with the Zircon thread. Up-to-date values can be read
+    /// from `self.handle.read_state_general_regs()`. To write these values back to the thread, call
+    /// `self.handle.write_state_general_regs(self.registers)`.
+    pub registers: zx::sys::zx_thread_state_general_regs_t,
+
+    /// Exists only to prevent Sync from being implemented, since CurrentTask should only be used
+    /// on the thread that runs the task. impl !Sync is a compiler error, the message is confusing
+    /// but I think it might be nightly only.
+    _not_sync: std::marker::PhantomData<std::cell::UnsafeCell<()>>,
 }
 
-impl ops::Drop for TaskOwner {
+impl CurrentTask {
+    fn new(task: Task) -> CurrentTask {
+        CurrentTask {
+            task: Arc::new(task),
+            registers: zx::sys::zx_thread_state_general_regs_t::default(),
+            _not_sync: PhantomData,
+        }
+    }
+
+    pub fn kernel(&self) -> &Arc<Kernel> {
+        &self.task.thread_group.kernel
+    }
+
+    pub fn task_arc_clone(&self) -> Arc<Task> {
+        Arc::clone(&self.task)
+    }
+
+    /// Sets the task's signal mask to `signal_mask` and runs `wait_function`.
+    ///
+    /// Signals are dequeued prior to the original signal mask being restored.
+    ///
+    /// The returned result is the result returned from the wait function.
+    pub fn wait_with_temporary_mask<F, T>(
+        &mut self,
+        signal_mask: u64,
+        wait_function: F,
+    ) -> Result<T, Errno>
+    where
+        F: FnOnce(&CurrentTask) -> Result<T, Errno>,
+    {
+        let old_mask = self.signals.write().set_signal_mask(signal_mask);
+        let wait_result = wait_function(self);
+        dequeue_signal(self);
+        self.signals.write().set_signal_mask(old_mask);
+        wait_result
+    }
+}
+
+impl std::ops::Drop for CurrentTask {
     fn drop(&mut self) {
         self.task.destroy();
+    }
+}
+
+impl std::ops::Deref for CurrentTask {
+    type Target = Task;
+    fn deref(&self) -> &Self::Target {
+        &self.task
     }
 }
 
@@ -138,30 +191,28 @@ impl Task {
         abstract_socket_namespace: Arc<AbstractSocketNamespace>,
         sjc: ShellJobControl,
         exit_signal: Option<Signal>,
-    ) -> TaskOwner {
-        TaskOwner {
-            task: Arc::new(Task {
-                id,
-                command: RwLock::new(comm),
-                executable_node: RwLock::new(executable_node),
-                thread_group,
-                parent,
-                children: RwLock::new(HashSet::new()),
-                thread,
-                files,
-                mm,
-                fs,
-                creds: RwLock::new(creds),
-                abstract_socket_namespace,
-                shell_job_control: sjc,
-                clear_child_tid: Mutex::new(UserRef::default()),
-                signal_actions,
-                signals: Default::default(),
-                exit_signal,
-                exit_code: Mutex::new(None),
-                zombie_children: Mutex::new(vec![]),
-            }),
-        }
+    ) -> CurrentTask {
+        CurrentTask::new(Task {
+            id,
+            command: RwLock::new(comm),
+            executable_node: RwLock::new(executable_node),
+            thread_group,
+            parent,
+            children: RwLock::new(HashSet::new()),
+            thread,
+            files,
+            mm,
+            fs,
+            creds: RwLock::new(creds),
+            abstract_socket_namespace,
+            shell_job_control: sjc,
+            clear_child_tid: Mutex::new(UserRef::default()),
+            signal_actions,
+            signals: Default::default(),
+            exit_signal,
+            exit_code: Mutex::new(None),
+            zombie_children: Mutex::new(vec![]),
+        })
     }
 
     /// Create a task that is the leader of a new thread group.
@@ -178,7 +229,7 @@ impl Task {
         creds: Credentials,
         abstract_socket_namespace: Arc<AbstractSocketNamespace>,
         exit_signal: Option<Signal>,
-    ) -> Result<TaskOwner, Errno> {
+    ) -> Result<CurrentTask, Errno> {
         let (process, root_vmar) = kernel
             .job
             .create_child_process(comm.as_bytes())
@@ -195,7 +246,7 @@ impl Task {
         let mut pids = kernel.pids.write();
         let id = pids.allocate_pid();
 
-        let task_owner = Self::new(
+        let task = Self::new(
             id,
             comm.clone(),
             None,
@@ -215,9 +266,9 @@ impl Task {
             exit_signal,
         );
 
-        pids.add_task(&task_owner.task);
-        pids.add_thread_group(&task_owner.task.thread_group);
-        Ok(task_owner)
+        pids.add_task(&task.task);
+        pids.add_thread_group(&task.task.thread_group);
+        Ok(task)
     }
 
     /// Create a task that is a member of an existing thread group.
@@ -232,7 +283,7 @@ impl Task {
         fs: Arc<FsContext>,
         signal_actions: Arc<SignalActions>,
         creds: Credentials,
-    ) -> Result<TaskOwner, Errno> {
+    ) -> Result<CurrentTask, Errno> {
         let thread = self
             .thread_group
             .process
@@ -241,7 +292,7 @@ impl Task {
 
         let mut pids = self.thread_group.kernel.pids.write();
         let id = pids.allocate_pid();
-        let task_owner = Self::new(
+        let task = Self::new(
             id,
             self.command.read().clone(),
             self.executable_node.read().clone(),
@@ -257,9 +308,9 @@ impl Task {
             ShellJobControl::new(self.shell_job_control.sid),
             None,
         );
-        pids.add_task(&task_owner.task);
-        self.thread_group.add(&task_owner.task);
-        Ok(task_owner)
+        pids.add_task(&task.task);
+        self.thread_group.add(&task.task);
+        Ok(task)
     }
 
     /// Clone this task.
@@ -273,7 +324,7 @@ impl Task {
         flags: u64,
         user_parent_tid: UserRef<pid_t>,
         user_child_tid: UserRef<pid_t>,
-    ) -> Result<TaskOwner, Errno> {
+    ) -> Result<CurrentTask, Errno> {
         // TODO: Implement more flags.
         const IMPLEMENTED_FLAGS: u64 = (CLONE_VM
             | CLONE_FS
@@ -387,8 +438,8 @@ impl Task {
         //       the CLONE_FILES flag of clone(2).
         //
         // To make this work, we can put the files in an RwLock and then cache
-        // a reference to the files on the SyscallContext. That will let
-        // functions that have SyscallContext access the FdTable without
+        // a reference to the files on the CurrentTask. That will let
+        // functions that have CurrentTask access the FdTable without
         // needing to grab the read-lock.
         //
         // For now, we do not implement that behavior.
@@ -422,7 +473,7 @@ impl Task {
         Ok(())
     }
 
-    /// Called by the Drop trait on TaskOwner.
+    /// Called by the Drop trait on CurrentTask.
     fn destroy(self: &Arc<Self>) {
         let _ignored = self.clear_child_tid_if_needed();
         self.thread_group.remove(self);
@@ -760,27 +811,6 @@ impl Task {
     fn remove_child(&self, pid: pid_t) {
         self.children.write().remove(&pid);
     }
-
-    /// Sets the task's signal mask to `signal_mask` and runs `wait_function`.
-    ///
-    /// Signals are dequeued prior to the original signal mask being restored.
-    ///
-    /// The returned result is the result returned from the wait function.
-    pub fn wait_with_temporary_mask<F, T>(
-        &self,
-        ctx: &mut SyscallContext<'_>,
-        signal_mask: u64,
-        wait_function: F,
-    ) -> Result<T, Errno>
-    where
-        F: FnOnce() -> Result<T, Errno>,
-    {
-        let old_mask = self.signals.write().set_signal_mask(signal_mask);
-        let wait_result = wait_function();
-        dequeue_signal(ctx);
-        self.signals.write().set_signal_mask(old_mask);
-        wait_result
-    }
 }
 
 impl fmt::Debug for Task {
@@ -807,13 +837,11 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_tid_allocation() {
-        let (kernel, task_owner) = create_kernel_and_task();
+        let (kernel, current_task) = create_kernel_and_task();
 
-        let task = &task_owner.task;
-        assert_eq!(task.get_tid(), 1);
-        let another_task_owner = create_task(&kernel, "another-task");
-        let another_task = &another_task_owner.task;
-        assert_eq!(another_task.get_tid(), 2);
+        assert_eq!(current_task.get_tid(), 1);
+        let another_current = create_task(&kernel, "another-task");
+        assert_eq!(another_current.get_tid(), 2);
 
         let pids = kernel.pids.read();
         assert_eq!(pids.get_task(1).unwrap().get_tid(), 1);

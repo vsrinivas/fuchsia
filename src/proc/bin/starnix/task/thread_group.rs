@@ -139,34 +139,34 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_long_name() {
-        let (_kernel, task_owner) = create_kernel_and_task();
+        let (_kernel, current_task) = create_kernel_and_task();
         let bytes = [1; sys::ZX_MAX_NAME_LEN];
         let name = CString::new(bytes).unwrap();
 
         let max_bytes = [1; sys::ZX_MAX_NAME_LEN - 1];
         let expected_name = CString::new(max_bytes).unwrap();
 
-        assert!(task_owner.task.thread_group.set_name(&name).is_ok());
-        assert_eq!(task_owner.task.thread_group.process.get_name(), Ok(expected_name));
+        assert!(current_task.thread_group.set_name(&name).is_ok());
+        assert_eq!(current_task.thread_group.process.get_name(), Ok(expected_name));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_max_length_name() {
-        let (_kernel, task_owner) = create_kernel_and_task();
+        let (_kernel, current_task) = create_kernel_and_task();
         let bytes = [1; sys::ZX_MAX_NAME_LEN - 1];
         let name = CString::new(bytes).unwrap();
 
-        assert!(task_owner.task.thread_group.set_name(&name).is_ok());
-        assert_eq!(task_owner.task.thread_group.process.get_name(), Ok(name));
+        assert!(current_task.thread_group.set_name(&name).is_ok());
+        assert_eq!(current_task.thread_group.process.get_name(), Ok(name));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_short_name() {
-        let (_kernel, task_owner) = create_kernel_and_task();
+        let (_kernel, current_task) = create_kernel_and_task();
         let bytes = [1; sys::ZX_MAX_NAME_LEN - 10];
         let name = CString::new(bytes).unwrap();
 
-        assert!(task_owner.task.thread_group.set_name(&name).is_ok());
-        assert_eq!(task_owner.task.thread_group.process.get_name(), Ok(name));
+        assert!(current_task.thread_group.set_name(&name).is_ok());
+        assert_eq!(current_task.thread_group.process.get_name(), Ok(name));
     }
 }

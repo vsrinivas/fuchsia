@@ -126,7 +126,7 @@ impl EpollFileObject {
     /// Blocking wait on all waited upon events with a timeout.
     pub fn wait(
         &self,
-        current: &Task,
+        current_task: &Task,
         max_events: i32,
         timeout: i32,
     ) -> Result<Vec<EpollEvent>, Errno> {
@@ -157,7 +157,7 @@ impl EpollFileObject {
         // how this happens.
         let mut pending_list: Vec<ReadyObject> = vec![];
         loop {
-            match self.waiter.wait_until(current, wait_deadline) {
+            match self.waiter.wait_until(current_task, wait_deadline) {
                 Ok(_) => {}
                 Err(err) => {
                     if err == ETIMEDOUT {
@@ -237,7 +237,6 @@ mod tests {
     use super::*;
     use crate::fs::pipe::new_pipe;
     use crate::fs::FdEvents;
-    use crate::syscalls::SyscallContext;
     use crate::types::UserBuffer;
     use fuchsia_async as fasync;
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -249,21 +248,20 @@ mod tests {
         static WRITE_COUNT: AtomicU64 = AtomicU64::new(0);
         const EVENT_DATA: u64 = 42;
 
-        let (kernel, task_owner) = create_kernel_and_task();
+        let (kernel, current_task) = create_kernel_and_task();
+        let writer_task = create_task(&kernel, "writer-task");
 
-        let task = &task_owner.task;
-        let ctx = SyscallContext::new(&task_owner.task);
         let (pipe_out, pipe_in) = new_pipe(&kernel).unwrap();
 
         let test_string = "hello startnix".to_string();
         let test_bytes = test_string.as_bytes();
         let test_len = test_bytes.len();
-        let read_mem = map_memory(&ctx, UserAddress::default(), test_len as u64);
+        let read_mem = map_memory(&current_task, UserAddress::default(), test_len as u64);
         let read_buf = [UserBuffer { address: read_mem, length: test_len }];
-        let write_mem = map_memory(&ctx, UserAddress::default(), test_len as u64);
-        let write_buf = [UserBuffer { address: write_mem, length: test_len }];
 
-        task.mm.write_memory(write_mem, test_bytes).unwrap();
+        let write_mem = map_memory(&writer_task, UserAddress::default(), test_len as u64);
+        let write_buf = [UserBuffer { address: write_mem, length: test_len }];
+        writer_task.mm.write_memory(write_mem, test_bytes).unwrap();
 
         let epoll_file = EpollFileObject::new(&kernel);
         let epoll_file = epoll_file.downcast_file::<EpollFileObject>().unwrap();
@@ -271,13 +269,12 @@ mod tests {
             .add(&pipe_out, EpollEvent { events: FdEvents::POLLIN.mask(), data: EVENT_DATA })
             .unwrap();
 
-        let task_clone = task.clone();
         let thread = std::thread::spawn(move || {
-            let bytes_written = pipe_in.write(&task_clone, &write_buf).unwrap();
+            let bytes_written = pipe_in.write(&writer_task, &write_buf).unwrap();
             assert_eq!(bytes_written, test_len);
             WRITE_COUNT.fetch_add(bytes_written as u64, Ordering::Relaxed);
         });
-        let events = epoll_file.wait(&task, 10, -1).unwrap();
+        let events = epoll_file.wait(&current_task, 10, -1).unwrap();
         let _ = thread.join();
         assert_eq!(1, events.len());
         let event = &events[0];
@@ -285,11 +282,11 @@ mod tests {
         let data = event.data;
         assert_eq!(EVENT_DATA, data);
 
-        let bytes_read = pipe_out.read(task, &read_buf).unwrap();
+        let bytes_read = pipe_out.read(&current_task, &read_buf).unwrap();
         assert_eq!(bytes_read as u64, WRITE_COUNT.load(Ordering::Relaxed));
         assert_eq!(bytes_read, test_len);
         let mut read_data = vec![0u8; test_len];
-        task.mm.read_memory(read_buf[0].address, &mut read_data).unwrap();
+        current_task.mm.read_memory(read_buf[0].address, &mut read_data).unwrap();
         assert_eq!(read_data.as_bytes(), test_bytes);
     }
 }

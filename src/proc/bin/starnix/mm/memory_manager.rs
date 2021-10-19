@@ -725,13 +725,12 @@ mod tests {
     use super::*;
     use fuchsia_async as fasync;
 
-    use crate::syscalls::*;
     use crate::testing::*;
 
     #[fasync::run_singlethreaded(test)]
     async fn test_brk() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let mm = &task_owner.task.mm;
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
 
         // Look up the given addr in the mappings table.
         let get_range = |addr: &UserAddress| {
@@ -788,9 +787,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_mm_exec() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
-        let mm = &task_owner.task.mm;
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
 
         let has = |addr: &UserAddress| -> bool {
             let state = mm.state.read();
@@ -802,7 +800,7 @@ mod tests {
         assert!(brk_addr > UserAddress::default());
         assert!(has(&brk_addr));
 
-        let mapped_addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
+        let mapped_addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
         assert!(mapped_addr > UserAddress::default());
         assert!(has(&mapped_addr));
 
@@ -812,20 +810,19 @@ mod tests {
         assert!(!has(&mapped_addr));
 
         // Check that the old addresses are actually available for mapping.
-        let brk_addr2 = map_memory(&ctx, brk_addr, *PAGE_SIZE);
+        let brk_addr2 = map_memory(&current_task, brk_addr, *PAGE_SIZE);
         assert_eq!(brk_addr, brk_addr2);
-        let mapped_addr2 = map_memory(&ctx, mapped_addr, *PAGE_SIZE);
+        let mapped_addr2 = map_memory(&current_task, mapped_addr, *PAGE_SIZE);
         assert_eq!(mapped_addr, mapped_addr2);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_each() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
-        let mm = &task_owner.task.mm;
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
 
         let page_size = *PAGE_SIZE;
-        let addr = map_memory(&ctx, UserAddress::default(), 64 * page_size);
+        let addr = map_memory(&current_task, UserAddress::default(), 64 * page_size);
 
         let data: Vec<u8> = (0..1024).map(|i| (i % 256) as u8).collect();
         mm.write_memory(addr, &data).expect("failed to write test data");
@@ -865,12 +862,11 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_all() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
-        let mm = &task_owner.task.mm;
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
 
         let page_size = *PAGE_SIZE;
-        let addr = map_memory(&ctx, UserAddress::default(), 64 * page_size);
+        let addr = map_memory(&current_task, UserAddress::default(), 64 * page_size);
 
         let data: Vec<u8> = (0..1024).map(|i| (i % 256) as u8).collect();
         mm.write_memory(addr, &data).expect("failed to write test data");
@@ -896,12 +892,11 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_write_each() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
-        let mm = &task_owner.task.mm;
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
 
         let page_size = *PAGE_SIZE;
-        let addr = map_memory(&ctx, UserAddress::default(), 64 * page_size);
+        let addr = map_memory(&current_task, UserAddress::default(), 64 * page_size);
 
         let data: Vec<u8> = (0..1024).map(|i| (i % 256) as u8).collect();
 
@@ -939,12 +934,11 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_write_all() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
-        let mm = &task_owner.task.mm;
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
 
         let page_size = *PAGE_SIZE;
-        let addr = map_memory(&ctx, UserAddress::default(), 64 * page_size);
+        let addr = map_memory(&current_task, UserAddress::default(), 64 * page_size);
 
         let data: Vec<u8> = (0..1024).map(|i| (i % 256) as u8).collect();
 

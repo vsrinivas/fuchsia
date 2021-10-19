@@ -16,7 +16,7 @@ use crate::task::Waiter;
 use crate::types::*;
 
 pub fn sys_uname(
-    ctx: &SyscallContext<'_>,
+    current_task: &CurrentTask,
     name: UserRef<utsname_t>,
 ) -> Result<SyscallResult, Errno> {
     fn init_array(fixed: &mut [u8; 65], init: &'static str) {
@@ -37,24 +37,24 @@ pub fn sys_uname(
     init_array(&mut result.release, "5.7.17-starnix");
     init_array(&mut result.version, "starnix");
     init_array(&mut result.machine, "x86_64");
-    ctx.task.mm.write_object(name, &result)?;
+    current_task.mm.write_object(name, &result)?;
     return Ok(SUCCESS);
 }
 
 pub fn sys_getrandom(
-    ctx: &SyscallContext<'_>,
+    current_task: &CurrentTask,
     buf_addr: UserAddress,
     size: usize,
     _flags: i32,
 ) -> Result<SyscallResult, Errno> {
     let mut buf = vec![0; size];
     zx::cprng_draw(&mut buf);
-    ctx.task.mm.write_memory(buf_addr, &buf[0..size])?;
+    current_task.mm.write_memory(buf_addr, &buf[0..size])?;
     Ok(size.into())
 }
 
 pub fn sys_clock_getres(
-    ctx: &SyscallContext<'_>,
+    current_task: &CurrentTask,
     which_clock: i32,
     tp_addr: UserRef<timespec>,
 ) -> Result<SyscallResult, Errno> {
@@ -72,43 +72,43 @@ pub fn sys_clock_getres(
         | CLOCK_PROCESS_CPUTIME_ID => timespec { tv_sec: 0, tv_nsec: 1 },
         _ => {
             // Error if no dynamic clock can be found.
-            let _ = get_dynamic_clock(ctx, which_clock)?;
+            let _ = get_dynamic_clock(current_task, which_clock)?;
             timespec { tv_sec: 0, tv_nsec: 1 }
         }
     };
-    ctx.task.mm.write_object(tp_addr, &tv).map(|_| SUCCESS)
+    current_task.mm.write_object(tp_addr, &tv).map(|_| SUCCESS)
 }
 
 pub fn sys_clock_gettime(
-    ctx: &SyscallContext<'_>,
+    current_task: &CurrentTask,
     which_clock: i32,
     tp_addr: UserRef<timespec>,
 ) -> Result<SyscallResult, Errno> {
     let nanos = if which_clock < 0 {
-        get_dynamic_clock(ctx, which_clock)?
+        get_dynamic_clock(current_task, which_clock)?
     } else {
         match which_clock as u32 {
             CLOCK_REALTIME => utc_time().into_nanos(),
             CLOCK_MONOTONIC | CLOCK_MONOTONIC_COARSE | CLOCK_MONOTONIC_RAW | CLOCK_BOOTTIME => {
                 zx::Time::get_monotonic().into_nanos()
             }
-            CLOCK_THREAD_CPUTIME_ID => get_thread_cpu_time(ctx, ctx.task.id)?,
-            CLOCK_PROCESS_CPUTIME_ID => get_process_cpu_time(ctx, ctx.task.id)?,
+            CLOCK_THREAD_CPUTIME_ID => get_thread_cpu_time(current_task, current_task.id)?,
+            CLOCK_PROCESS_CPUTIME_ID => get_process_cpu_time(current_task, current_task.id)?,
             _ => return error!(EINVAL),
         }
     };
     let tv = timespec { tv_sec: nanos / NANOS_PER_SECOND, tv_nsec: nanos % NANOS_PER_SECOND };
-    return ctx.task.mm.write_object(tp_addr, &tv).map(|_| SUCCESS);
+    return current_task.mm.write_object(tp_addr, &tv).map(|_| SUCCESS);
 }
 
 pub fn sys_gettimeofday(
-    ctx: &SyscallContext<'_>,
+    current_task: &CurrentTask,
     user_tv: UserRef<timeval>,
     user_tz: UserRef<timezone>,
 ) -> Result<SyscallResult, Errno> {
     if !user_tv.is_null() {
         let tv = timeval_from_time(utc_time());
-        ctx.task.mm.write_object(user_tv, &tv)?;
+        current_task.mm.write_object(user_tv, &tv)?;
     }
     if !user_tz.is_null() {
         not_implemented!("gettimeofday does not implement tz argument");
@@ -117,19 +117,19 @@ pub fn sys_gettimeofday(
 }
 
 pub fn sys_nanosleep(
-    ctx: &SyscallContext<'_>,
+    current_task: &CurrentTask,
     user_request: UserRef<timespec>,
     user_remaining: UserRef<timespec>,
 ) -> Result<SyscallResult, Errno> {
     let mut request = timespec::default();
-    ctx.task.mm.read_object(user_request, &mut request)?;
+    current_task.mm.read_object(user_request, &mut request)?;
     let deadline = zx::Time::after(duration_from_timespec(request)?);
-    match Waiter::new().wait_until(&ctx.task, deadline) {
+    match Waiter::new().wait_until(&current_task, deadline) {
         Err(err) if err == EINTR => {
             let now = zx::Time::get_monotonic();
             let remaining =
                 timespec_from_duration(std::cmp::max(zx::Duration::from_nanos(0), deadline - now));
-            ctx.task.mm.write_object(user_remaining, &remaining)?;
+            current_task.mm.write_object(user_remaining, &remaining)?;
         }
         Err(err) if err == ETIMEDOUT => return Ok(SUCCESS),
         non_eintr => non_eintr?,
@@ -137,7 +137,7 @@ pub fn sys_nanosleep(
     Ok(SUCCESS)
 }
 
-pub fn sys_unknown(_ctx: &SyscallContext<'_>, syscall_number: u64) -> Result<SyscallResult, Errno> {
+pub fn sys_unknown(_ctx: &CurrentTask, syscall_number: u64) -> Result<SyscallResult, Errno> {
     warn!(target: "unknown_syscall", "UNKNOWN syscall({}): {}", syscall_number, SyscallDecl::from_number(syscall_number).name);
     // TODO: We should send SIGSYS once we have signals.
     error!(ENOSYS)
@@ -146,8 +146,8 @@ pub fn sys_unknown(_ctx: &SyscallContext<'_>, syscall_number: u64) -> Result<Sys
 /// Returns the cpu time for the task with the given `pid`.
 ///
 /// Returns EINVAL if no such task can be found.
-fn get_thread_cpu_time(ctx: &SyscallContext<'_>, pid: pid_t) -> Result<i64, Errno> {
-    let task = ctx.task.get_task(pid).ok_or(errno!(EINVAL))?;
+fn get_thread_cpu_time(current_task: &CurrentTask, pid: pid_t) -> Result<i64, Errno> {
+    let task = current_task.get_task(pid).ok_or(errno!(EINVAL))?;
     Ok(task.thread.get_runtime_info().map_err(|status| from_status_like_fdio!(status))?.cpu_time)
 }
 
@@ -156,8 +156,8 @@ fn get_thread_cpu_time(ctx: &SyscallContext<'_>, pid: pid_t) -> Result<i64, Errn
 /// process cpu time for any `task` by simply using `task.pid`).
 ///
 /// Returns EINVAL if no such process can be found.
-fn get_process_cpu_time(ctx: &SyscallContext<'_>, pid: pid_t) -> Result<i64, Errno> {
-    let task = ctx.task.get_task(pid).ok_or(errno!(EINVAL))?;
+fn get_process_cpu_time(current_task: &CurrentTask, pid: pid_t) -> Result<i64, Errno> {
+    let task = current_task.get_task(pid).ok_or(errno!(EINVAL))?;
     Ok(task
         .thread_group
         .process
@@ -206,7 +206,7 @@ fn is_thread_clock(clock: i32) -> bool {
 ///   - Bit 0 and 1 are used to determine the type of clock.
 ///   - Bit 3 is used to determine whether the clock is for a thread or process.
 ///   - The remaining bits encode the pid of the thread/process.
-fn get_dynamic_clock(ctx: &SyscallContext<'_>, which_clock: i32) -> Result<i64, Errno> {
+fn get_dynamic_clock(current_task: &CurrentTask, which_clock: i32) -> Result<i64, Errno> {
     if !is_valid_cpu_clock(which_clock) {
         return error!(EINVAL);
     }
@@ -214,8 +214,8 @@ fn get_dynamic_clock(ctx: &SyscallContext<'_>, which_clock: i32) -> Result<i64, 
     let pid = pid_of_clock_id(which_clock);
 
     if is_thread_clock(which_clock) {
-        get_thread_cpu_time(ctx, pid)
+        get_thread_cpu_time(current_task, pid)
     } else {
-        get_process_cpu_time(ctx, pid)
+        get_process_cpu_time(current_task, pid)
     }
 }

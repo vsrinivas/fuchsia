@@ -295,7 +295,6 @@ mod tests {
     use crate::fs::fuchsia::*;
     use crate::fs::pipe::new_pipe;
     use crate::fs::FdEvents;
-    use crate::syscalls::SyscallContext;
     use crate::types::UserBuffer;
     use fuchsia_async as fasync;
 
@@ -309,14 +308,12 @@ mod tests {
         static COUNTER: AtomicU64 = AtomicU64::new(INIT_VAL);
         static WRITE_COUNT: AtomicU64 = AtomicU64::new(0);
 
-        let (kernel, task_owner) = create_kernel_and_task();
-        let task = &task_owner.task;
-        let ctx = SyscallContext::new(&task_owner.task);
+        let (kernel, current_task) = create_kernel_and_task();
         let (local_socket, remote_socket) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
         let pipe = create_fuchsia_pipe(&kernel, remote_socket).unwrap();
 
         const MEM_SIZE: usize = 1024;
-        let proc_mem = map_memory(&ctx, UserAddress::default(), MEM_SIZE as u64);
+        let proc_mem = map_memory(&current_task, UserAddress::default(), MEM_SIZE as u64);
         let proc_read_buf = [UserBuffer { address: proc_mem, length: MEM_SIZE }];
 
         let test_string = "hello startnix".to_string();
@@ -337,13 +334,13 @@ mod tests {
 
         // this code would block on failure
         assert_eq!(INIT_VAL, COUNTER.load(Ordering::Relaxed));
-        waiter.wait(task).unwrap();
+        waiter.wait(&current_task).unwrap();
         let _ = thread.join();
         assert_eq!(FINAL_VAL, COUNTER.load(Ordering::Relaxed));
 
-        let read_size = pipe.read(&task, &proc_read_buf).unwrap();
+        let read_size = pipe.read(&current_task, &proc_read_buf).unwrap();
         let mut read_mem = [0u8; MEM_SIZE];
-        task.mm.read_all(&proc_read_buf, &mut read_mem).unwrap();
+        current_task.mm.read_all(&proc_read_buf, &mut read_mem).unwrap();
 
         let no_written = WRITE_COUNT.load(Ordering::Relaxed);
         assert_eq!(no_written, read_size as u64);
@@ -357,20 +354,19 @@ mod tests {
         static COUNTER: AtomicU64 = AtomicU64::new(INIT_VAL);
         static WRITE_COUNT: AtomicU64 = AtomicU64::new(0);
 
-        let (kernel, task_owner) = create_kernel_and_task();
-        let task = &task_owner.task;
-        let ctx = SyscallContext::new(&task_owner.task);
+        let (kernel, current_task) = create_kernel_and_task();
+        let writer_task = create_task(&kernel, "writer-task");
         let (pipe_out, pipe_in) = new_pipe(&kernel).unwrap();
 
         let test_string = "hello startnix".to_string();
         let test_bytes = test_string.as_bytes();
         let test_len = test_bytes.len();
-        let read_mem = map_memory(&ctx, UserAddress::default(), test_len as u64);
+        let read_mem = map_memory(&current_task, UserAddress::default(), test_len as u64);
         let read_buf = [UserBuffer { address: read_mem, length: test_len }];
-        let write_mem = map_memory(&ctx, UserAddress::default(), test_len as u64);
-        let write_buf = [UserBuffer { address: write_mem, length: test_len }];
 
-        task.mm.write_memory(write_mem, test_bytes).unwrap();
+        let write_mem = map_memory(&writer_task, UserAddress::default(), test_len as u64);
+        let write_buf = [UserBuffer { address: write_mem, length: test_len }];
+        writer_task.mm.write_memory(write_mem, test_bytes).unwrap();
 
         let waiter = Waiter::new();
         let watched_events = FdEvents::POLLIN;
@@ -380,24 +376,23 @@ mod tests {
         };
         pipe_out.wait_async(&waiter, watched_events, Box::new(report_packet));
 
-        let task_clone = task.clone();
         let thread = std::thread::spawn(move || {
-            let no_written = pipe_in.write(&task_clone, &write_buf).unwrap();
+            let no_written = pipe_in.write(&writer_task, &write_buf).unwrap();
             assert_eq!(no_written, test_len);
             WRITE_COUNT.fetch_add(no_written as u64, Ordering::Relaxed);
         });
 
         // this code would block on failure
         assert_eq!(INIT_VAL, COUNTER.load(Ordering::Relaxed));
-        waiter.wait(task).unwrap();
+        waiter.wait(&current_task).unwrap();
         let _ = thread.join();
         assert_eq!(FINAL_VAL, COUNTER.load(Ordering::Relaxed));
 
-        let no_read = pipe_out.read(task, &read_buf).unwrap();
+        let no_read = pipe_out.read(&current_task, &read_buf).unwrap();
         assert_eq!(no_read as u64, WRITE_COUNT.load(Ordering::Relaxed));
         assert_eq!(no_read, test_len);
         let mut read_data = vec![0u8, test_len as u8];
-        task.mm.read_memory(read_buf[0].address, &mut read_data).unwrap();
+        current_task.mm.read_memory(read_buf[0].address, &mut read_data).unwrap();
         for (test_out, test_ref) in read_data.iter().zip(test_bytes) {
             assert_eq!(*test_out, *test_ref);
         }
@@ -405,8 +400,7 @@ mod tests {
 
     #[test]
     fn test_wait_queue() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let task = &task_owner.task;
+        let (_kernel, current_task) = create_kernel_and_task();
         let mut queue = WaitQueue::default();
 
         let waiter0 = Waiter::new();
@@ -418,25 +412,24 @@ mod tests {
         queue.wait_async(&waiter2);
 
         queue.notify_count(2);
-        assert!(waiter0.wait_until(task, zx::Time::ZERO).is_ok());
-        assert!(waiter1.wait_until(task, zx::Time::ZERO).is_ok());
-        assert!(waiter2.wait_until(task, zx::Time::ZERO).is_err());
+        assert!(waiter0.wait_until(&current_task, zx::Time::ZERO).is_ok());
+        assert!(waiter1.wait_until(&current_task, zx::Time::ZERO).is_ok());
+        assert!(waiter2.wait_until(&current_task, zx::Time::ZERO).is_err());
 
         queue.notify_all();
-        assert!(waiter0.wait_until(task, zx::Time::ZERO).is_err());
-        assert!(waiter1.wait_until(task, zx::Time::ZERO).is_err());
-        assert!(waiter2.wait_until(task, zx::Time::ZERO).is_ok());
+        assert!(waiter0.wait_until(&current_task, zx::Time::ZERO).is_err());
+        assert!(waiter1.wait_until(&current_task, zx::Time::ZERO).is_err());
+        assert!(waiter2.wait_until(&current_task, zx::Time::ZERO).is_ok());
 
         queue.notify_count(3);
-        assert!(waiter0.wait_until(task, zx::Time::ZERO).is_err());
-        assert!(waiter1.wait_until(task, zx::Time::ZERO).is_err());
-        assert!(waiter2.wait_until(task, zx::Time::ZERO).is_err());
+        assert!(waiter0.wait_until(&current_task, zx::Time::ZERO).is_err());
+        assert!(waiter1.wait_until(&current_task, zx::Time::ZERO).is_err());
+        assert!(waiter2.wait_until(&current_task, zx::Time::ZERO).is_err());
     }
 
     #[test]
     fn test_wait_queue_mask() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let task = &task_owner.task;
+        let (_kernel, current_task) = create_kernel_and_task();
         let mut queue = WaitQueue::default();
 
         let waiter0 = Waiter::new();
@@ -448,13 +441,13 @@ mod tests {
         queue.wait_async_mask(&waiter2, 0x12, WaitCallback::none());
 
         queue.notify_mask_count(0x2, 2);
-        assert!(waiter0.wait_until(task, zx::Time::ZERO).is_ok());
-        assert!(waiter1.wait_until(task, zx::Time::ZERO).is_err());
-        assert!(waiter2.wait_until(task, zx::Time::ZERO).is_ok());
+        assert!(waiter0.wait_until(&current_task, zx::Time::ZERO).is_ok());
+        assert!(waiter1.wait_until(&current_task, zx::Time::ZERO).is_err());
+        assert!(waiter2.wait_until(&current_task, zx::Time::ZERO).is_ok());
 
         queue.notify_mask_count(0x1, usize::MAX);
-        assert!(waiter0.wait_until(task, zx::Time::ZERO).is_err());
-        assert!(waiter1.wait_until(task, zx::Time::ZERO).is_ok());
-        assert!(waiter2.wait_until(task, zx::Time::ZERO).is_err());
+        assert!(waiter0.wait_until(&current_task, zx::Time::ZERO).is_err());
+        assert!(waiter1.wait_until(&current_task, zx::Time::ZERO).is_ok());
+        assert!(waiter2.wait_until(&current_task, zx::Time::ZERO).is_err());
     }
 }

@@ -380,14 +380,14 @@ mod tests {
     /// Tests that the display socket is created as expected.
     #[test]
     fn test_create_display_socket() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let task = &task_owner.task;
+        let (_kernel, current_task) = create_kernel_and_task();
         let display_socket_path = b"test.s";
-        let _display_socket = create_display_socket(task, display_socket_path.to_vec())
+        let _display_socket = create_display_socket(&current_task, display_socket_path.to_vec())
             .expect("Failed to create display socket.");
 
-        let node =
-            task.lookup_path_from_root(display_socket_path).expect("Couldn't find socket node.");
+        let node = current_task
+            .lookup_path_from_root(display_socket_path)
+            .expect("Couldn't find socket node.");
 
         assert!(node.entry.node.socket().is_some());
     }
@@ -395,12 +395,13 @@ mod tests {
     /// Tests that the DmaBuf file is created as expected.
     #[test]
     fn test_create_device_file() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let task = &task_owner.task;
+        let (_kernel, current_task) = create_kernel_and_task();
         let device_path = b"test.d";
-        create_device_file(task, device_path.to_vec()).expect("Failed to create device file.");
+        create_device_file(&current_task, device_path.to_vec())
+            .expect("Failed to create device file.");
 
-        let node = task.lookup_path_from_root(device_path).expect("Couldn't find device node.");
+        let node =
+            current_task.lookup_path_from_root(device_path).expect("Couldn't find device node.");
         let file = node.entry.node.open(OpenFlags::empty()).expect("Could not open device file.");
 
         assert!(file.as_any().downcast_ref::<DmaBufFile>().is_some());
@@ -409,9 +410,8 @@ mod tests {
     /// Tests that data sent from the wayland bridge is proxied to the display socket.
     #[test]
     fn test_write_wayland_bridge() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let task = &task_owner.task;
-        let (client_socket, wayland_server_channel) = create_socket_and_channel(task);
+        let (_kernel, current_task) = create_kernel_and_task();
+        let (client_socket, wayland_server_channel) = create_socket_and_channel(&current_task);
 
         let sent_bytes = vec![1, 2, 3];
         wayland_server_channel

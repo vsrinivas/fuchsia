@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 pub mod decls;
-mod syscall_context;
 mod syscall_result;
 pub mod system;
 pub mod table;
 
-pub use syscall_context::*;
 pub use syscall_result::*;
+
+pub use crate::task::CurrentTask;

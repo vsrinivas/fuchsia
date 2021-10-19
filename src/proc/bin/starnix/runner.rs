@@ -81,8 +81,7 @@ fn read_channel_sync(chan: &zx::Channel, buf: &mut zx::MessageBuf) -> Result<(),
 ///
 /// Once this function has completed, the process' exit code (if one is available) can be read from
 /// `process_context.exit_code`.
-fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error> {
-    let task = &task_owner.task;
+fn run_task(mut current_task: CurrentTask, exceptions: zx::Channel) -> Result<i32, Error> {
     let mut buffer = zx::MessageBuf::new();
     loop {
         read_channel_sync(&exceptions, &mut buffer)?;
@@ -99,7 +98,7 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
 
         let thread = exception.get_thread()?;
         assert!(
-            thread.get_koid() == task.thread.get_koid(),
+            thread.get_koid() == current_task.thread.get_koid(),
             "Exception thread did not match task thread."
         );
 
@@ -111,12 +110,12 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
         }
 
         let syscall_number = report.context.synth_data as u64;
-        let mut ctx = SyscallContext { task, registers: thread.read_state_general_regs()? };
+        current_task.registers = thread.read_state_general_regs()?;
 
-        let regs = &ctx.registers;
+        let regs = &current_task.registers;
         let args = (regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
         strace!(
-            task,
+            current_task,
             "{}({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x})",
             SyscallDecl::from_number(syscall_number).name,
             args.0,
@@ -126,52 +125,58 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
             args.4,
             args.5
         );
-        match dispatch_syscall(&mut ctx, syscall_number, args) {
+        match dispatch_syscall(&mut current_task, syscall_number, args) {
             Ok(SyscallResult::Exit(error_code)) => {
-                strace!(task, "-> exit {:#x}", error_code);
+                strace!(current_task, "-> exit {:#x}", error_code);
                 exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
                 return Ok(error_code);
             }
             Ok(SyscallResult::Success(return_value)) => {
-                strace!(task, "-> {:#x}", return_value);
-                ctx.registers.rax = return_value;
+                strace!(current_task, "-> {:#x}", return_value);
+                current_task.registers.rax = return_value;
             }
             Ok(SyscallResult::SigReturn) => {
                 // Do not modify the register state of the thread. The sigreturn syscall has
                 // restored the proper register state for the thread to continue with.
-                strace!(task, "-> sigreturn");
+                strace!(current_task, "-> sigreturn");
             }
             Err(errno) => {
-                strace!(task, "!-> {}", errno);
-                ctx.registers.rax = (-errno.value()) as u64;
+                strace!(current_task, "!-> {}", errno);
+                current_task.registers.rax = (-errno.value()) as u64;
             }
         }
 
-        dequeue_signal(&mut ctx);
-        thread.write_state_general_regs(ctx.registers)?;
+        dequeue_signal(&mut current_task);
+        thread.write_state_general_regs(current_task.registers)?;
         exception.set_exception_state(&ZX_EXCEPTION_STATE_HANDLED)?;
     }
 }
 
 fn start_task(
-    task: &Task,
+    current_task: &CurrentTask,
     registers: zx_thread_state_general_regs_t,
 ) -> Result<zx::Channel, zx::Status> {
-    let exceptions = task.thread.create_exception_channel()?;
-    let suspend_token = task.thread.suspend()?;
-    if task.id == task.thread_group.leader {
-        task.thread_group.process.start(&task.thread, 0, 0, zx::Handle::invalid(), 0)?;
+    let exceptions = current_task.thread.create_exception_channel()?;
+    let suspend_token = current_task.thread.suspend()?;
+    if current_task.id == current_task.thread_group.leader {
+        current_task.thread_group.process.start(
+            &current_task.thread,
+            0,
+            0,
+            zx::Handle::invalid(),
+            0,
+        )?;
     } else {
-        task.thread.start(0, 0, 0, 0)?;
+        current_task.thread.start(0, 0, 0, 0)?;
     }
-    task.thread.wait_handle(zx::Signals::THREAD_SUSPENDED, zx::Time::INFINITE)?;
-    task.thread.write_state_general_regs(registers)?;
+    current_task.thread.wait_handle(zx::Signals::THREAD_SUSPENDED, zx::Time::INFINITE)?;
+    current_task.thread.write_state_general_regs(registers)?;
     mem::drop(suspend_token);
     Ok(exceptions)
 }
 
 pub fn spawn_task<F>(
-    task_owner: TaskOwner,
+    current_task: CurrentTask,
     registers: zx_thread_state_general_regs_t,
     task_complete: F,
 ) where
@@ -179,8 +184,8 @@ pub fn spawn_task<F>(
 {
     std::thread::spawn(move || {
         task_complete(|| -> Result<i32, Error> {
-            let exceptions = start_task(&task_owner.task, registers)?;
-            run_task(task_owner, exceptions)
+            let exceptions = start_task(&current_task, registers)?;
+            run_task(current_task, exceptions)
         }());
     });
 }
@@ -341,7 +346,7 @@ fn start_component(
     let files = startup_handles.files;
     let shell_controller = startup_handles.shell_controller;
 
-    let task_owner = Task::create_process(
+    let current_task = Task::create_process(
         &kernel,
         &binary_path,
         0,
@@ -355,17 +360,16 @@ fn start_component(
 
     for mount_spec in mounts_iter {
         let (mount_point, child_fs) =
-            create_filesystem_from_spec(&kernel, Some(&task_owner.task), &pkg, mount_spec)?;
-        let mount_point = task_owner.task.lookup_path_from_root(mount_point)?;
+            create_filesystem_from_spec(&kernel, Some(&current_task), &pkg, mount_spec)?;
+        let mount_point = current_task.lookup_path_from_root(mount_point)?;
         mount_point.mount(child_fs)?;
     }
 
     // Hack to allow mounting apexes before apexd is working.
     // TODO(tbodt): Remove once apexd works.
     if let Some(apexes) = apex_hack {
-        let task = &task_owner.task;
-        task.lookup_path_from_root(b"apex")?.mount(WhatToMount::Fs(TmpFs::new()))?;
-        let apex_dir = task.lookup_path_from_root(b"apex")?;
+        current_task.lookup_path_from_root(b"apex")?.mount(WhatToMount::Fs(TmpFs::new()))?;
+        let apex_dir = current_task.lookup_path_from_root(b"apex")?;
         for apex in apexes {
             let apex = apex.as_bytes();
             let apex_subdir = apex_dir.create_node(
@@ -373,23 +377,24 @@ fn start_component(
                 FileMode::IFDIR | FileMode::from_bits(0o700),
                 DeviceType::NONE,
             )?;
-            let apex_source = task.lookup_path_from_root(&[b"system/apex/", apex].concat())?;
+            let apex_source =
+                current_task.lookup_path_from_root(&[b"system/apex/", apex].concat())?;
             apex_subdir.mount(WhatToMount::Dir(apex_source.entry))?;
         }
     }
 
     // Run all the features (e.g., wayland) that were specified in the .cml.
     if let Some(features) = features {
-        run_features(&features, &task_owner.task)
+        run_features(&features, &current_task)
             .map_err(|e| anyhow!("Failed to initialize features: {:?}", e))?;
     }
 
     let mut argv = vec![binary_path];
     argv.extend(args.into_iter());
 
-    let start_info = task_owner.task.exec(&argv[0], &argv, &environ)?;
+    let start_info = current_task.exec(&argv[0], &argv, &environ)?;
 
-    spawn_task(task_owner, start_info.to_registers(), |result| {
+    spawn_task(current_task, start_info.to_registers(), |result| {
         // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to
         // communicate the exit code. The component manager could interpret certain epitaphs as starnix
         // being unstable, and chose to terminate starnix as a result.

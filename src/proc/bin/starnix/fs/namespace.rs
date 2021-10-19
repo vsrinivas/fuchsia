@@ -313,8 +313,8 @@ impl NamespaceNode {
     /// FsNode except at mountpoints, where the link switches from one
     /// filesystem to another.
     pub fn parent(&self) -> Option<NamespaceNode> {
-        let current = self.mountpoint().unwrap_or_else(|| self.clone());
-        Some(current.with_new_entry(current.entry.parent()?.clone()))
+        let current_task = self.mountpoint().unwrap_or_else(|| self.clone());
+        Some(current_task.with_new_entry(current_task.entry.parent()?.clone()))
     }
 
     /// Returns the mountpoint at this location in the namespace.
@@ -336,10 +336,10 @@ impl NamespaceNode {
             return self.entry.local_name().to_vec();
         }
         let mut components = vec![];
-        let mut current = self.mountpoint().unwrap_or_else(|| self.clone());
-        while let Some(parent) = current.parent() {
-            components.push(current.entry.local_name().to_vec());
-            current = parent.mountpoint().unwrap_or(parent);
+        let mut current_task = self.mountpoint().unwrap_or_else(|| self.clone());
+        while let Some(parent) = current_task.parent() {
+            components.push(current_task.entry.local_name().to_vec());
+            current_task = parent.mountpoint().unwrap_or(parent);
         }
         if components.is_empty() {
             return b"/".to_vec();
@@ -424,7 +424,7 @@ mod test {
 
     #[test]
     fn test_namespace() -> anyhow::Result<()> {
-        let (_kernel, task_owner) = create_kernel_and_task();
+        let (_kernel, current_task) = create_kernel_and_task();
         let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.create_dir(b"dev").expect("failed to mkdir dev");
@@ -436,18 +436,18 @@ mod test {
         let mut context = LookupContext::default();
         let dev = ns
             .root()
-            .lookup_child(&mut context, &task_owner.task, b"dev")
+            .lookup_child(&mut context, &current_task, b"dev")
             .expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
 
         let mut context = LookupContext::default();
         let dev = ns
             .root()
-            .lookup_child(&mut context, &task_owner.task, b"dev")
+            .lookup_child(&mut context, &current_task, b"dev")
             .expect("failed to lookup dev");
         let mut context = LookupContext::default();
         let pts =
-            dev.lookup_child(&mut context, &task_owner.task, b"pts").expect("failed to lookup pts");
+            dev.lookup_child(&mut context, &current_task, b"pts").expect("failed to lookup pts");
         let pts_parent = pts.parent().ok_or(errno!(ENOENT)).expect("failed to get parent of pts");
         assert!(Arc::ptr_eq(&pts_parent.entry, &dev.entry));
 
@@ -458,7 +458,7 @@ mod test {
 
     #[test]
     fn test_mount_does_not_upgrade() -> anyhow::Result<()> {
-        let (_kernel, task_owner) = create_kernel_and_task();
+        let (_kernel, current_task) = create_kernel_and_task();
         let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.create_dir(b"dev").expect("failed to mkdir dev");
@@ -470,30 +470,30 @@ mod test {
         let mut context = LookupContext::default();
         let dev = ns
             .root()
-            .lookup_child(&mut context, &task_owner.task, b"dev")
+            .lookup_child(&mut context, &current_task, b"dev")
             .expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
         let mut context = LookupContext::default();
         let new_dev = ns
             .root()
-            .lookup_child(&mut context, &task_owner.task, b"dev")
+            .lookup_child(&mut context, &current_task, b"dev")
             .expect("failed to lookup dev again");
         assert!(!Arc::ptr_eq(&dev.entry, &new_dev.entry));
         assert_ne!(&dev, &new_dev);
 
         let mut context = LookupContext::default();
         let _new_pts = new_dev
-            .lookup_child(&mut context, &task_owner.task, b"pts")
+            .lookup_child(&mut context, &current_task, b"pts")
             .expect("failed to lookup pts");
         let mut context = LookupContext::default();
-        assert!(dev.lookup_child(&mut context, &task_owner.task, b"pts").is_err());
+        assert!(dev.lookup_child(&mut context, &current_task, b"pts").is_err());
 
         Ok(())
     }
 
     #[test]
     fn test_path() -> anyhow::Result<()> {
-        let (_kernel, task_owner) = create_kernel_and_task();
+        let (_kernel, current_task) = create_kernel_and_task();
         let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.create_dir(b"dev").expect("failed to mkdir dev");
@@ -505,18 +505,18 @@ mod test {
         let mut context = LookupContext::default();
         let dev = ns
             .root()
-            .lookup_child(&mut context, &task_owner.task, b"dev")
+            .lookup_child(&mut context, &current_task, b"dev")
             .expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
 
         let mut context = LookupContext::default();
         let dev = ns
             .root()
-            .lookup_child(&mut context, &task_owner.task, b"dev")
+            .lookup_child(&mut context, &current_task, b"dev")
             .expect("failed to lookup dev");
         let mut context = LookupContext::default();
         let pts =
-            dev.lookup_child(&mut context, &task_owner.task, b"pts").expect("failed to lookup pts");
+            dev.lookup_child(&mut context, &current_task, b"pts").expect("failed to lookup pts");
 
         assert_eq!(b"/".to_vec(), ns.root().path());
         assert_eq!(b"/dev".to_vec(), dev.path());

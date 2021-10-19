@@ -4,7 +4,6 @@
 
 use crate::not_implemented;
 use crate::signals::*;
-use crate::syscalls::SyscallContext;
 use crate::task::*;
 use crate::types::*;
 use std::convert::TryFrom;
@@ -66,12 +65,12 @@ fn misalign_stack_pointer(pointer: u64) -> u64 {
     pointer - (pointer % 16 + 8)
 }
 
-/// Prepares `ctx` state to execute the signal handler stored in `action`.
+/// Prepares `current` state to execute the signal handler stored in `action`.
 ///
 /// This function stores the state required to restore after the signal handler on the stack.
 // TODO(lindkvist): Honor the flags in `sa_flags`.
 fn dispatch_signal_handler(
-    ctx: &mut SyscallContext<'_>,
+    current_task: &mut CurrentTask,
     signal_state: &mut SignalState,
     signal: Signal,
     action: sigaction_t,
@@ -79,24 +78,24 @@ fn dispatch_signal_handler(
     let signal_stack_frame = SignalStackFrame::new(
         ucontext {
             uc_mcontext: sigcontext {
-                r8: ctx.registers.r8,
-                r9: ctx.registers.r9,
-                r10: ctx.registers.r10,
-                r11: ctx.registers.r11,
-                r12: ctx.registers.r12,
-                r13: ctx.registers.r13,
-                r14: ctx.registers.r14,
-                r15: ctx.registers.r15,
-                rdi: ctx.registers.rdi,
-                rsi: ctx.registers.rsi,
-                rbp: ctx.registers.rbp,
-                rbx: ctx.registers.rbx,
-                rdx: ctx.registers.rdx,
-                rax: ctx.registers.rax,
-                rcx: ctx.registers.rcx,
-                rsp: ctx.registers.rsp,
-                rip: ctx.registers.rip,
-                eflags: ctx.registers.rflags,
+                r8: current_task.registers.r8,
+                r9: current_task.registers.r9,
+                r10: current_task.registers.r10,
+                r11: current_task.registers.r11,
+                r12: current_task.registers.r12,
+                r13: current_task.registers.r13,
+                r14: current_task.registers.r14,
+                r15: current_task.registers.r15,
+                rdi: current_task.registers.rdi,
+                rsi: current_task.registers.rsi,
+                rbp: current_task.registers.rbp,
+                rbx: current_task.registers.rbx,
+                rdx: current_task.registers.rdx,
+                rax: current_task.registers.rax,
+                rcx: current_task.registers.rcx,
+                rsp: current_task.registers.rsp,
+                rip: current_task.registers.rip,
+                eflags: current_task.registers.rflags,
                 oldmask: signal_state.mask,
                 ..Default::default()
             },
@@ -125,33 +124,33 @@ fn dispatch_signal_handler(
                 // "bottom" of the stack.
                 (sigaltstack.ss_sp.ptr() + sigaltstack.ss_size) as u64
             }
-            None => ctx.registers.rsp - RED_ZONE_SIZE,
+            None => current_task.registers.rsp - RED_ZONE_SIZE,
         }
     } else {
-        ctx.registers.rsp - RED_ZONE_SIZE
+        current_task.registers.rsp - RED_ZONE_SIZE
     };
     stack_pointer -= SIG_STACK_SIZE as u64;
     stack_pointer = misalign_stack_pointer(stack_pointer);
 
     // Write the signal stack frame at the updated stack pointer.
-    ctx.task
+    current_task
         .mm
         .write_memory(UserAddress::from(stack_pointer), &signal_stack_frame.as_bytes())
         .unwrap();
 
     signal_state.mask = action.sa_mask;
 
-    ctx.registers.rsp = stack_pointer;
-    ctx.registers.rdi = signal.number() as u64;
-    ctx.registers.rip = action.sa_handler.ptr() as u64;
+    current_task.registers.rsp = stack_pointer;
+    current_task.registers.rdi = signal.number() as u64;
+    current_task.registers.rip = action.sa_handler.ptr() as u64;
 }
 
-pub fn restore_from_signal_handler(ctx: &mut SyscallContext<'_>) {
+pub fn restore_from_signal_handler(current_task: &mut CurrentTask) {
     // The stack pointer was intentionally misaligned, so this must be done
     // again to get the correct address for the stack frame.
-    let signal_frame_address = misalign_stack_pointer(ctx.registers.rsp);
+    let signal_frame_address = misalign_stack_pointer(current_task.registers.rsp);
     let mut signal_stack_bytes = [0; SIG_STACK_SIZE];
-    ctx.task
+    current_task
         .mm
         .read_memory(UserAddress::from(signal_frame_address), &mut signal_stack_bytes)
         .unwrap();
@@ -159,7 +158,7 @@ pub fn restore_from_signal_handler(ctx: &mut SyscallContext<'_>) {
     let signal_stack_frame = SignalStackFrame::from_bytes(signal_stack_bytes);
     let uctx = &signal_stack_frame.context.uc_mcontext;
     // Restore the register state from before executing the signal handler.
-    ctx.registers = zx::sys::zx_thread_state_general_regs_t {
+    current_task.registers = zx::sys::zx_thread_state_general_regs_t {
         r8: uctx.r8,
         r9: uctx.r9,
         r10: uctx.r10,
@@ -178,10 +177,10 @@ pub fn restore_from_signal_handler(ctx: &mut SyscallContext<'_>) {
         rsp: uctx.rsp,
         rip: uctx.rip,
         rflags: uctx.eflags,
-        fs_base: ctx.registers.fs_base,
-        gs_base: ctx.registers.gs_base,
+        fs_base: current_task.registers.fs_base,
+        gs_base: current_task.registers.gs_base,
     };
-    ctx.task.signals.write().mask = signal_stack_frame.context.uc_sigmask;
+    current_task.signals.write().mask = signal_stack_frame.context.uc_sigmask;
 }
 
 pub fn send_signal(task: &Task, unchecked_signal: &UncheckedSignal) -> Result<(), Errno> {
@@ -258,9 +257,9 @@ fn action_for_signal(signal: Signal, sigaction: sigaction_t) -> DeliveryAction {
     }
 }
 
-/// Dequeues and handles a pending signal for `ctx.task`.
-pub fn dequeue_signal(ctx: &mut SyscallContext<'_>) {
-    let task = ctx.task;
+/// Dequeues and handles a pending signal for `current_task`.
+pub fn dequeue_signal(current_task: &mut CurrentTask) {
+    let task = current_task.task_arc_clone();
     let mut signal_state = task.signals.write();
 
     if let Some(signal) = next_pending_signal(&signal_state) {
@@ -268,7 +267,7 @@ pub fn dequeue_signal(ctx: &mut SyscallContext<'_>) {
         let action = action_for_signal(signal, sigaction);
         match action {
             DeliveryAction::CallHandler => {
-                dispatch_signal_handler(ctx, &mut signal_state, signal, sigaction);
+                dispatch_signal_handler(current_task, &mut signal_state, signal, sigaction);
             }
 
             DeliveryAction::Ignore => {}

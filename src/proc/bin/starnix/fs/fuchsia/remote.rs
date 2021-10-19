@@ -477,12 +477,11 @@ mod test {
 
     use crate::errno;
     use crate::mm::PAGE_SIZE;
-    use crate::syscalls::*;
     use crate::testing::*;
 
     #[::fuchsia::test]
     async fn test_tree() -> Result<(), anyhow::Error> {
-        let (_kernel, task_owner) = create_kernel_and_task();
+        let (_kernel, current_task) = create_kernel_and_task();
         let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
         let root = io_util::directory::open_in_namespace("/pkg", rights)?;
         let fs = RemoteFs::new(root.into_channel().unwrap().into_zx_channel(), rights)?;
@@ -490,31 +489,32 @@ mod test {
         let root = ns.root();
         let mut context = LookupContext::default();
         assert_eq!(
-            root.lookup_child(&mut context, &task_owner.task, b"nib").err(),
+            root.lookup_child(&mut context, &current_task, b"nib").err(),
             Some(errno!(ENOENT))
         );
         let mut context = LookupContext::default();
-        root.lookup_child(&mut context, &task_owner.task, b"lib").unwrap();
+        root.lookup_child(&mut context, &current_task, b"lib").unwrap();
 
         let mut context = LookupContext::default();
         let _test_file = root
-            .lookup_child(&mut context, &task_owner.task, b"bin/hello_starnix")?
+            .lookup_child(&mut context, &current_task, b"bin/hello_starnix")?
             .open(OpenFlags::RDONLY)?;
         Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_blocking_io() -> Result<(), anyhow::Error> {
-        let (kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
-        let task = Arc::clone(ctx.task);
+        let (kernel, current_task) = create_kernel_and_task();
 
-        let address = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
+        let address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
         let (client, server) = zx::Socket::create(zx::SocketOpts::empty())?;
         let pipe = create_fuchsia_pipe(&kernel, client)?;
 
         let thread = std::thread::spawn(move || {
-            assert_eq!(64, pipe.read(&task, &[UserBuffer { address, length: 64 }]).unwrap());
+            assert_eq!(
+                64,
+                pipe.read(&current_task, &[UserBuffer { address, length: 64 }]).unwrap()
+            );
         });
 
         // Wait for the thread to become blocked on the read.

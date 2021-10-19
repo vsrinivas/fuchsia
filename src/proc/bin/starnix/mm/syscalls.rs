@@ -29,7 +29,7 @@ fn mmap_prot_to_vm_opt(prot: u32) -> zx::VmarFlags {
 }
 
 pub fn sys_mmap(
-    ctx: &SyscallContext<'_>,
+    current_task: &CurrentTask,
     addr: UserAddress,
     length: usize,
     prot: u32,
@@ -105,12 +105,12 @@ pub fn sys_mmap(
         vmo
     } else {
         // TODO(tbodt): maximize protection flags so that mprotect works
-        let file = ctx.task.files.get(fd)?;
+        let file = current_task.files.get(fd)?;
         filename = Some(file.name.clone());
         let zx_prot = mmap_prot_to_vm_opt(prot);
         if flags & MAP_PRIVATE != 0 {
             // TODO(tbodt): Use VMO_FLAG_PRIVATE to have the filesystem server do the clone for us.
-            let vmo = file.get_vmo(&ctx.task, zx_prot - zx::VmarFlags::PERM_WRITE)?;
+            let vmo = file.get_vmo(&current_task, zx_prot - zx::VmarFlags::PERM_WRITE)?;
             let mut clone_flags = zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE;
             if !zx_prot.contains(zx::VmarFlags::PERM_WRITE) {
                 clone_flags |= zx::VmoChildOptions::NO_WRITE;
@@ -118,7 +118,7 @@ pub fn sys_mmap(
             vmo.create_child(clone_flags, 0, vmo.get_size().map_err(impossible_error)?)
                 .map_err(impossible_error)?
         } else {
-            file.get_vmo(&ctx.task, zx_prot)?
+            file.get_vmo(&current_task, zx_prot)?
         }
     };
 
@@ -131,7 +131,7 @@ pub fn sys_mmap(
     }
 
     let try_map = |addr, flags| {
-        ctx.task.mm.map(
+        current_task.mm.map(
             addr,
             Arc::clone(&vmo),
             vmo_offset,
@@ -166,26 +166,26 @@ pub fn sys_mmap(
 }
 
 pub fn sys_mprotect(
-    ctx: &SyscallContext<'_>,
+    current_task: &CurrentTask,
     addr: UserAddress,
     length: usize,
     prot: u32,
 ) -> Result<SyscallResult, Errno> {
-    ctx.task.mm.protect(addr, length, mmap_prot_to_vm_opt(prot))?;
+    current_task.mm.protect(addr, length, mmap_prot_to_vm_opt(prot))?;
     Ok(SUCCESS)
 }
 
 pub fn sys_munmap(
-    ctx: &SyscallContext<'_>,
+    current_task: &CurrentTask,
     addr: UserAddress,
     length: usize,
 ) -> Result<SyscallResult, Errno> {
-    ctx.task.mm.unmap(addr, length)?;
+    current_task.mm.unmap(addr, length)?;
     Ok(SUCCESS)
 }
 
 pub fn sys_msync(
-    _ctx: &SyscallContext<'_>,
+    _ctx: &CurrentTask,
     _addr: UserAddress,
     _length: usize,
     _flags: u32,
@@ -195,7 +195,7 @@ pub fn sys_msync(
 }
 
 pub fn sys_madvise(
-    _ctx: &SyscallContext<'_>,
+    _current_task: &CurrentTask,
     _addr: UserAddress,
     _length: usize,
     _advice: u32,
@@ -204,12 +204,12 @@ pub fn sys_madvise(
     Ok(SUCCESS)
 }
 
-pub fn sys_brk(ctx: &SyscallContext<'_>, addr: UserAddress) -> Result<SyscallResult, Errno> {
-    Ok(ctx.task.mm.set_brk(addr)?.into())
+pub fn sys_brk(current_task: &CurrentTask, addr: UserAddress) -> Result<SyscallResult, Errno> {
+    Ok(current_task.mm.set_brk(addr)?.into())
 }
 
 pub fn sys_process_vm_readv(
-    ctx: &SyscallContext<'_>,
+    current_task: &CurrentTask,
     pid: pid_t,
     local_iov_addr: UserAddress,
     local_iov_count: i32,
@@ -217,16 +217,16 @@ pub fn sys_process_vm_readv(
     remote_iov_count: i32,
     _flags: usize,
 ) -> Result<SyscallResult, Errno> {
-    let task = ctx.task.get_task(pid).ok_or(errno!(ESRCH))?;
+    let task = current_task.get_task(pid).ok_or(errno!(ESRCH))?;
     // When this check is loosened to allow reading memory from other processes, the check should
     // be like checking if the current process is allowed to debug the other process.
-    if !Arc::ptr_eq(&task, ctx.task) {
+    if !Arc::ptr_eq(&task, &current_task.task_arc_clone()) {
         return error!(EPERM);
     }
     let local_iov = task.mm.read_iovec(local_iov_addr, local_iov_count)?;
     let remote_iov = task.mm.read_iovec(remote_iov_addr, remote_iov_count)?;
     strace!(
-        ctx.task,
+        current_task,
         "process_vm_readv(pid={}, local_iov={:?}, remote_iov={:?})",
         pid,
         local_iov,
@@ -254,13 +254,12 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_mmap_with_colliding_hint() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
+        let (_kernel, current_task) = create_kernel_and_task();
         let page_size = *PAGE_SIZE;
 
-        let mapped_address = map_memory(&ctx, UserAddress::default(), page_size);
+        let mapped_address = map_memory(&current_task, UserAddress::default(), page_size);
         match sys_mmap(
-            &ctx,
+            &current_task,
             mapped_address,
             page_size as usize,
             PROT_READ,
@@ -279,13 +278,12 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_mmap_with_fixed_collision() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
+        let (_kernel, current_task) = create_kernel_and_task();
         let page_size = *PAGE_SIZE;
 
-        let mapped_address = map_memory(&ctx, UserAddress::default(), page_size);
+        let mapped_address = map_memory(&current_task, UserAddress::default(), page_size);
         match sys_mmap(
-            &ctx,
+            &current_task,
             mapped_address,
             page_size as usize,
             PROT_READ,
@@ -304,13 +302,12 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_mmap_with_fixed_noreplace_collision() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
+        let (_kernel, current_task) = create_kernel_and_task();
         let page_size = *PAGE_SIZE;
 
-        let mapped_address = map_memory(&ctx, UserAddress::default(), page_size);
+        let mapped_address = map_memory(&current_task, UserAddress::default(), page_size);
         match sys_mmap(
-            &ctx,
+            &current_task,
             mapped_address,
             page_size as usize,
             PROT_READ,
@@ -331,66 +328,67 @@ mod tests {
     /// a non-zero length.
     #[fasync::run_singlethreaded(test)]
     async fn test_munmap() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
+        let (_kernel, current_task) = create_kernel_and_task();
 
-        let mapped_address = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
-        assert_eq!(sys_munmap(&ctx, mapped_address, *PAGE_SIZE as usize), Ok(SUCCESS));
+        let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        assert_eq!(sys_munmap(&current_task, mapped_address, *PAGE_SIZE as usize), Ok(SUCCESS));
 
         // Verify that the memory is no longer readable.
         let mut data: [u8; 5] = [0; 5];
-        assert_eq!(ctx.task.mm.read_memory(mapped_address, &mut data), error!(EFAULT));
+        assert_eq!(current_task.mm.read_memory(mapped_address, &mut data), error!(EFAULT));
     }
 
     /// It is ok to call munmap on an unmapped range.
     #[fasync::run_singlethreaded(test)]
     async fn test_munmap_not_mapped() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
+        let (_kernel, current_task) = create_kernel_and_task();
 
-        let mapped_address = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
-        assert_eq!(sys_munmap(&ctx, mapped_address, *PAGE_SIZE as usize), Ok(SUCCESS));
-        assert_eq!(sys_munmap(&ctx, mapped_address, *PAGE_SIZE as usize), Ok(SUCCESS));
+        let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        assert_eq!(sys_munmap(&current_task, mapped_address, *PAGE_SIZE as usize), Ok(SUCCESS));
+        assert_eq!(sys_munmap(&current_task, mapped_address, *PAGE_SIZE as usize), Ok(SUCCESS));
     }
 
     /// It is an error to call munmap with a length of 0.
     #[fasync::run_singlethreaded(test)]
     async fn test_munmap_0_length() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
+        let (_kernel, current_task) = create_kernel_and_task();
 
-        let mapped_address = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
-        assert_eq!(sys_munmap(&ctx, mapped_address, 0), error!(EINVAL));
+        let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        assert_eq!(sys_munmap(&current_task, mapped_address, 0), error!(EINVAL));
     }
 
     /// It is an error to call munmap with an address that is not a multiple of the page size.
     #[fasync::run_singlethreaded(test)]
     async fn test_munmap_not_aligned() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
+        let (_kernel, current_task) = create_kernel_and_task();
 
-        let mapped_address = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
-        assert_eq!(sys_munmap(&ctx, mapped_address + 1u64, *PAGE_SIZE as usize), error!(EINVAL));
+        let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        assert_eq!(
+            sys_munmap(&current_task, mapped_address + 1u64, *PAGE_SIZE as usize),
+            error!(EINVAL)
+        );
 
         // Verify that the memory is still readable.
         let mut data: [u8; 5] = [0; 5];
-        assert_eq!(ctx.task.mm.read_memory(mapped_address, &mut data), Ok(()));
+        assert_eq!(current_task.mm.read_memory(mapped_address, &mut data), Ok(()));
     }
 
     /// The entire page should be unmapped, not just the range [address, address + length).
     #[fasync::run_singlethreaded(test)]
     async fn test_munmap_unmap_partial() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
+        let (_kernel, current_task) = create_kernel_and_task();
 
-        let mapped_address = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
-        assert_eq!(sys_munmap(&ctx, mapped_address, (*PAGE_SIZE as usize) / 2), Ok(SUCCESS));
+        let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        assert_eq!(
+            sys_munmap(&current_task, mapped_address, (*PAGE_SIZE as usize) / 2),
+            Ok(SUCCESS)
+        );
 
         // Verify that memory can't be read in either half of the page.
         let mut data: [u8; 5] = [0; 5];
-        assert_eq!(ctx.task.mm.read_memory(mapped_address, &mut data), error!(EFAULT));
+        assert_eq!(current_task.mm.read_memory(mapped_address, &mut data), error!(EFAULT));
         assert_eq!(
-            ctx.task.mm.read_memory(mapped_address + (*PAGE_SIZE - 2), &mut data),
+            current_task.mm.read_memory(mapped_address + (*PAGE_SIZE - 2), &mut data),
             error!(EFAULT)
         );
     }
@@ -398,17 +396,19 @@ mod tests {
     /// All pages that intersect the munmap range should be unmapped.
     #[fasync::run_singlethreaded(test)]
     async fn test_munmap_multiple_pages() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
+        let (_kernel, current_task) = create_kernel_and_task();
 
-        let mapped_address = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE * 2);
-        assert_eq!(sys_munmap(&ctx, mapped_address, (*PAGE_SIZE as usize) + 1), Ok(SUCCESS));
+        let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 2);
+        assert_eq!(
+            sys_munmap(&current_task, mapped_address, (*PAGE_SIZE as usize) + 1),
+            Ok(SUCCESS)
+        );
 
         // Verify that neither page is readable.
         let mut data: [u8; 5] = [0; 5];
-        assert_eq!(ctx.task.mm.read_memory(mapped_address, &mut data), error!(EFAULT));
+        assert_eq!(current_task.mm.read_memory(mapped_address, &mut data), error!(EFAULT));
         assert_eq!(
-            ctx.task.mm.read_memory(mapped_address + *PAGE_SIZE + 1u64, &mut data),
+            current_task.mm.read_memory(mapped_address + *PAGE_SIZE + 1u64, &mut data),
             error!(EFAULT)
         );
     }
@@ -416,15 +416,20 @@ mod tests {
     /// Only the pages that intersect the munmap range should be unmapped.
     #[fasync::run_singlethreaded(test)]
     async fn test_munmap_one_of_many_pages() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
+        let (_kernel, current_task) = create_kernel_and_task();
 
-        let mapped_address = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE * 2);
-        assert_eq!(sys_munmap(&ctx, mapped_address, (*PAGE_SIZE as usize) - 1), Ok(SUCCESS));
+        let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 2);
+        assert_eq!(
+            sys_munmap(&current_task, mapped_address, (*PAGE_SIZE as usize) - 1),
+            Ok(SUCCESS)
+        );
 
         // Verify that the second page is still readable.
         let mut data: [u8; 5] = [0; 5];
-        assert_eq!(ctx.task.mm.read_memory(mapped_address, &mut data), error!(EFAULT));
-        assert_eq!(ctx.task.mm.read_memory(mapped_address + *PAGE_SIZE + 1u64, &mut data), Ok(()));
+        assert_eq!(current_task.mm.read_memory(mapped_address, &mut data), error!(EFAULT));
+        assert_eq!(
+            current_task.mm.read_memory(mapped_address + *PAGE_SIZE + 1u64, &mut data),
+            Ok(())
+        );
     }
 }

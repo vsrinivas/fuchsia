@@ -144,7 +144,6 @@ mod test {
 
     use crate::fs::*;
     use crate::mm::*;
-    use crate::syscalls::*;
     use crate::task::*;
     use crate::testing::*;
     use crate::{errno, error, fd_impl_nonblocking, fd_impl_seekable};
@@ -199,15 +198,14 @@ mod test {
 
     #[test]
     fn test_stuff() -> Result<(), Errno> {
-        let (kern, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
-        let address = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
+        let (kern, current_task) = create_kernel_and_task();
+        let address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
         let file = Anon::new_file(anon_fs(&kern), Box::new(TestSeqFile::new()), OpenFlags::RDONLY);
 
         let read_test = |offset: usize, length: usize| -> Result<Vec<u8>, Errno> {
-            let size = file.read_at(ctx.task, offset, &[UserBuffer { address, length }])?;
+            let size = file.read_at(&current_task, offset, &[UserBuffer { address, length }])?;
             let mut data = vec![0u8; size];
-            ctx.task.mm.read_memory(address, &mut data)?;
+            current_task.mm.read_memory(address, &mut data)?;
             Ok(data)
         };
 

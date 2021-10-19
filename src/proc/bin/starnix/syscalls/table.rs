@@ -12,39 +12,39 @@ use crate::mm::syscalls::*;
 use crate::signals::syscalls::*;
 use crate::signals::types::*;
 use crate::syscalls::system::*;
-use crate::syscalls::{SyscallContext, SyscallResult};
+use crate::syscalls::{CurrentTask, SyscallResult};
 use crate::task::syscalls::*;
 use crate::types::*;
 
 macro_rules! syscall_match {
     {
-        $ctx:ident; $syscall_number:ident; $args:ident;
+        $current_task:ident; $syscall_number:ident; $args:ident;
         $($call:ident [$num_args:tt],)*
     } => {
         paste! {
             match $syscall_number as u32 {
-                $(crate::types::[<__NR_ $call>] => syscall_match!(@call $ctx; $args; [<sys_ $call>][$num_args]),)*
-                _ => sys_unknown($ctx, $syscall_number),
+                $(crate::types::[<__NR_ $call>] => syscall_match!(@call $current_task; $args; [<sys_ $call>][$num_args]),)*
+                _ => sys_unknown($current_task, $syscall_number),
             }
         }
     };
 
-    (@call $ctx:ident; $args:ident; $func:ident [0]) => ($func($ctx));
-    (@call $ctx:ident; $args:ident; $func:ident [1]) => ($func($ctx, $args.0.into_arg()));
-    (@call $ctx:ident; $args:ident; $func:ident [2]) => ($func($ctx, $args.0.into_arg(), $args.1.into_arg()));
-    (@call $ctx:ident; $args:ident; $func:ident [3]) => ($func($ctx, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg()));
-    (@call $ctx:ident; $args:ident; $func:ident [4]) => ($func($ctx, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg(), $args.3.into_arg()));
-    (@call $ctx:ident; $args:ident; $func:ident [5]) => ($func($ctx, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg(), $args.3.into_arg(), $args.4.into_arg()));
-    (@call $ctx:ident; $args:ident; $func:ident [6]) => ($func($ctx, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg(), $args.3.into_arg(), $args.4.into_arg(), $args.5.into_arg()));
+    (@call $current_task:ident; $args:ident; $func:ident [0]) => ($func($current_task));
+    (@call $current_task:ident; $args:ident; $func:ident [1]) => ($func($current_task, $args.0.into_arg()));
+    (@call $current_task:ident; $args:ident; $func:ident [2]) => ($func($current_task, $args.0.into_arg(), $args.1.into_arg()));
+    (@call $current_task:ident; $args:ident; $func:ident [3]) => ($func($current_task, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg()));
+    (@call $current_task:ident; $args:ident; $func:ident [4]) => ($func($current_task, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg(), $args.3.into_arg()));
+    (@call $current_task:ident; $args:ident; $func:ident [5]) => ($func($current_task, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg(), $args.3.into_arg(), $args.4.into_arg()));
+    (@call $current_task:ident; $args:ident; $func:ident [6]) => ($func($current_task, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg(), $args.3.into_arg(), $args.4.into_arg(), $args.5.into_arg()));
 }
 
 pub fn dispatch_syscall(
-    ctx: &mut SyscallContext<'_>,
+    current_task: &mut CurrentTask,
     syscall_number: u64,
     args: (u64, u64, u64, u64, u64, u64),
 ) -> Result<SyscallResult, Errno> {
     syscall_match! {
-        ctx; syscall_number; args;
+        current_task; syscall_number; args;
         accept[3],
         accept4[4],
         access[2],

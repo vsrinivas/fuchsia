@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use std::mem;
-use std::sync::Arc;
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::errno;
@@ -89,20 +88,24 @@ pub trait DirentSink {
     fn actual(&self) -> usize;
 }
 
-pub struct DirentSink64 {
-    task: Arc<Task>,
+pub struct DirentSink64<'a> {
+    current_task: &'a CurrentTask,
     user_buffer: UserAddress,
     user_capacity: usize,
     actual: usize,
 }
 
-impl DirentSink64 {
-    pub fn new(task: Arc<Task>, user_buffer: UserAddress, user_capacity: usize) -> Self {
-        Self { task, user_buffer, user_capacity, actual: 0 }
+impl<'a> DirentSink64<'a> {
+    pub fn new(
+        current_task: &'a CurrentTask,
+        user_buffer: UserAddress,
+        user_capacity: usize,
+    ) -> Self {
+        Self { current_task, user_buffer, user_capacity, actual: 0 }
     }
 }
 
-impl DirentSink for DirentSink64 {
+impl DirentSink for DirentSink64<'_> {
     fn add(
         &mut self,
         inode_num: ino_t,
@@ -130,7 +133,7 @@ impl DirentSink for DirentSink64 {
             buffer.push(b'\0');
         }
         assert_eq!(buffer.len(), entry_size);
-        self.task
+        self.current_task
             .mm
             .write_memory(self.user_buffer + self.actual, buffer.as_slice())
             .map_err(|_| errno!(ENOSPC))?;
@@ -143,20 +146,24 @@ impl DirentSink for DirentSink64 {
     }
 }
 
-pub struct DirentSink32 {
-    task: Arc<Task>,
+pub struct DirentSink32<'a> {
+    current_task: &'a CurrentTask,
     user_buffer: UserAddress,
     user_capacity: usize,
     actual: usize,
 }
 
-impl DirentSink32 {
-    pub fn new(task: Arc<Task>, user_buffer: UserAddress, user_capacity: usize) -> Self {
-        Self { task, user_buffer, user_capacity, actual: 0 }
+impl<'a> DirentSink32<'a> {
+    pub fn new(
+        current_task: &'a CurrentTask,
+        user_buffer: UserAddress,
+        user_capacity: usize,
+    ) -> Self {
+        Self { current_task, user_buffer, user_capacity, actual: 0 }
     }
 }
 
-impl DirentSink for DirentSink32 {
+impl DirentSink for DirentSink32<'_> {
     fn add(
         &mut self,
         inode_num: ino_t,
@@ -184,7 +191,7 @@ impl DirentSink for DirentSink32 {
         }
         buffer.push(entry_type.bits()); // Include the type.
         assert_eq!(buffer.len(), entry_size);
-        self.task
+        self.current_task
             .mm
             .write_memory(self.user_buffer + self.actual, buffer.as_slice())
             .map_err(|_| errno!(ENOSPC))?;

@@ -708,15 +708,15 @@ mod tests {
 
     #[test]
     fn test_read_write_kernel() {
-        let (_kernel, task_owner) = create_kernel_and_task();
+        let (_kernel, current_task) = create_kernel_and_task();
         let socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
         socket.bind(SocketAddress::Unix(b"\0".to_vec())).expect("Failed to bind socket.");
         socket.listen(10).expect("Failed to listen.");
         let connecting_socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
         connecting_socket
-            .connect(&socket, task_owner.task.as_ucred())
+            .connect(&socket, current_task.as_ucred())
             .expect("Failed to connect socket.");
-        let server_socket = socket.accept(task_owner.task.as_ucred()).unwrap();
+        let server_socket = socket.accept(current_task.as_ucred()).unwrap();
 
         let message = Message::new(vec![1, 2, 3].into(), None, None);
         server_socket.write_kernel(message.clone()).expect("Failed to write.");

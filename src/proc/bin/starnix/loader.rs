@@ -285,22 +285,19 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_load_hello_starnix() {
-        let (_kernel, task_owner) = create_kernel_and_task_with_pkgfs();
-        let task = &task_owner.task;
-        exec_hello_starnix(task).expect("failed to load executable");
-        assert!(task.mm.get_mapping_count() > 0);
+        let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
+        exec_hello_starnix(&current_task).expect("failed to load executable");
+        assert!(current_task.mm.get_mapping_count() > 0);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_snapshot_hello_starnix() {
-        let (kernel, task_owner) = create_kernel_and_task_with_pkgfs();
-        let task = &task_owner.task;
-        exec_hello_starnix(task).expect("failed to load executable");
+        let (kernel, current_task) = create_kernel_and_task_with_pkgfs();
+        exec_hello_starnix(&current_task).expect("failed to load executable");
 
-        let task_owner2 = create_task(&kernel, "another-task");
-        let task2 = &task_owner2.task;
-        task.mm.snapshot_to(&task2.mm).expect("failed to snapshot mm");
+        let current2 = create_task(&kernel, "another-task");
+        current_task.mm.snapshot_to(&current2.mm).expect("failed to snapshot mm");
 
-        assert_eq!(task.mm.get_mapping_count(), task2.mm.get_mapping_count());
+        assert_eq!(current_task.mm.get_mapping_count(), current2.mm.get_mapping_count());
     }
 }

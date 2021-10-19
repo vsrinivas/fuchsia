@@ -14,7 +14,6 @@ use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
 use crate::mm::syscalls::sys_mmap;
 use crate::signals::SignalActions;
-use crate::syscalls::SyscallContext;
 use crate::syscalls::SyscallResult;
 use crate::task::*;
 use crate::types::*;
@@ -38,17 +37,17 @@ fn create_pkgfs() -> Arc<FsContext> {
 /// Creates a `Kernel` and `Task` with the package file system for testing purposes.
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
-pub fn create_kernel_and_task_with_pkgfs() -> (Arc<Kernel>, TaskOwner) {
+pub fn create_kernel_and_task_with_pkgfs() -> (Arc<Kernel>, CurrentTask) {
     create_kernel_and_task_with_fs(create_pkgfs())
 }
 
-pub fn create_kernel_and_task() -> (Arc<Kernel>, TaskOwner) {
+pub fn create_kernel_and_task() -> (Arc<Kernel>, CurrentTask) {
     create_kernel_and_task_with_fs(FsContext::new(TmpFs::new()))
 }
 /// Creates a `Kernel` and `Task` for testing purposes.
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
-pub fn create_kernel_and_task_with_fs(fs: Arc<FsContext>) -> (Arc<Kernel>, TaskOwner) {
+pub fn create_kernel_and_task_with_fs(fs: Arc<FsContext>) -> (Arc<Kernel>, CurrentTask) {
     let kernel = Arc::new(
         Kernel::new(&CString::new("test-kernel").unwrap()).expect("failed to create kernel"),
     );
@@ -72,7 +71,7 @@ pub fn create_kernel_and_task_with_fs(fs: Arc<FsContext>) -> (Arc<Kernel>, TaskO
 /// Creates a new `Task` in the provided kernel.
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
-pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> TaskOwner {
+pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> CurrentTask {
     Task::create_process(
         kernel,
         &CString::new(task_name).unwrap(),
@@ -90,9 +89,9 @@ pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> TaskOwner {
 /// Maps `length` at `address` with `PROT_READ | PROT_WRITE`, `MAP_ANONYMOUS | MAP_PRIVATE`.
 ///
 /// Returns the address returned by `sys_mmap`.
-pub fn map_memory(ctx: &SyscallContext<'_>, address: UserAddress, length: u64) -> UserAddress {
+pub fn map_memory(current_task: &CurrentTask, address: UserAddress, length: u64) -> UserAddress {
     match sys_mmap(
-        &ctx,
+        &current_task,
         address,
         length as usize,
         PROT_READ | PROT_WRITE,
