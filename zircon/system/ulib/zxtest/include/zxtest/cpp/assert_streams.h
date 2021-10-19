@@ -10,60 +10,46 @@
 #include "streams_helper.h"
 
 // Basic assert macro implementation with stream support.
-#define LIB_ZXTEST_CHECK_VAR(op, expected, actual, fatal, file, line, desc, ...)              \
-  if (StreamableAssertion assertion =                                                         \
-          [&] {                                                                               \
-            LIB_ZXTEST_CHECK_RUNNING();                                                       \
-            return StreamableAssertion(actual, expected, #actual, #expected,                  \
-                                       {.filename = file, .line_number = line}, fatal,        \
-                                       LIB_ZXTEST_COMPARE_FN(op), LIB_ZXTEST_DEFAULT_PRINTER, \
-                                       LIB_ZXTEST_DEFAULT_PRINTER);                           \
-          }();                                                                                \
-      assertion.IsTriggered())                                                                \
+#define LIB_ZXTEST_CHECK_VAR(op, expected, actual, fatal, file, line, desc, ...)                  \
+  if ([]() { LIB_ZXTEST_CHECK_RUNNING(); }(); true)                                               \
+    if (StreamableAssertion assertion = StreamableAssertion(                                      \
+            actual, expected, #actual, #expected, {.filename = file, .line_number = line}, fatal, \
+            LIB_ZXTEST_COMPARE_FN(op), LIB_ZXTEST_DEFAULT_PRINTER, LIB_ZXTEST_DEFAULT_PRINTER);   \
+        assertion.IsTriggered())                                                                  \
   LIB_ZXTEST_RETURN_TAG(fatal) assertion << desc << " "
 
-#define LIB_ZXTEST_CHECK_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...)            \
-  if (StreamableAssertion assertion =                                                              \
-          [&] {                                                                                    \
-            LIB_ZXTEST_CHECK_RUNNING();                                                            \
-            return StreamableAssertion(GetStatus(actual), GetStatus(expected), #actual, #expected, \
-                                       {.filename = file, .line_number = line}, fatal,             \
-                                       LIB_ZXTEST_COMPARE_FN(op), LIB_ZXTEST_STATUS_PRINTER,       \
-                                       LIB_ZXTEST_STATUS_PRINTER);                                 \
-          }();                                                                                     \
-      assertion.IsTriggered())                                                                     \
+#define LIB_ZXTEST_CHECK_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...) \
+  if ([]() { LIB_ZXTEST_CHECK_RUNNING(); }(); true)                                     \
+    if (StreamableAssertion assertion = StreamableAssertion(                            \
+            GetStatus(actual), GetStatus(expected), #actual, #expected,                 \
+            {.filename = file, .line_number = line}, fatal, LIB_ZXTEST_COMPARE_FN(op),  \
+            LIB_ZXTEST_STATUS_PRINTER, LIB_ZXTEST_STATUS_PRINTER);                      \
+        assertion.IsTriggered())                                                        \
   LIB_ZXTEST_RETURN_TAG(fatal) assertion << desc << " "
 
-#define LIB_ZXTEST_CHECK_VAR_COERCE(op, expected, actual, coerce_type, fatal, file, line, desc, \
-                                    ...)                                                        \
-  if (StreamableAssertion assertion =                                                           \
-          [&] {                                                                                 \
-            LIB_ZXTEST_CHECK_RUNNING();                                                         \
-            return StreamableAssertion(                                                         \
-                actual, expected, #actual, #expected, {.filename = file, .line_number = line},  \
-                fatal,                                                                          \
-                [&](const auto& expected_, const auto& actual_) {                               \
-                  using DecayType = typename std::decay<coerce_type>::type;                     \
-                  return op(static_cast<const DecayType&>(actual_),                             \
-                            static_cast<const DecayType&>(expected_));                          \
-                },                                                                              \
-                LIB_ZXTEST_DEFAULT_PRINTER, LIB_ZXTEST_DEFAULT_PRINTER);                        \
-          }();                                                                                  \
-      assertion.IsTriggered())                                                                  \
+#define LIB_ZXTEST_CHECK_VAR_COERCE(op, expected, actual, coerce_type, fatal, file, line, desc,   \
+                                    ...)                                                          \
+  if ([]() { LIB_ZXTEST_CHECK_RUNNING(); }(); true)                                               \
+    if (StreamableAssertion assertion = StreamableAssertion(                                      \
+            actual, expected, #actual, #expected, {.filename = file, .line_number = line}, fatal, \
+            [&](const auto& expected_, const auto& actual_) {                                     \
+              using DecayType = typename std::decay<coerce_type>::type;                           \
+              return op(static_cast<const DecayType&>(actual_),                                   \
+                        static_cast<const DecayType&>(expected_));                                \
+            },                                                                                    \
+            LIB_ZXTEST_DEFAULT_PRINTER, LIB_ZXTEST_DEFAULT_PRINTER);                              \
+        assertion.IsTriggered())                                                                  \
   LIB_ZXTEST_RETURN_TAG(fatal) assertion << desc << " "
 
-#define LIB_ZXTEST_CHECK_VAR_BYTES(op, expected, actual, size, fatal, file, line, desc, ...)     \
-  if (StreamableAssertion assertion =                                                            \
-          [&] {                                                                                  \
-            LIB_ZXTEST_CHECK_RUNNING();                                                          \
-            size_t byte_count = size;                                                            \
-            return StreamableAssertion(                                                          \
-                zxtest::internal::ToPointer(actual), zxtest::internal::ToPointer(expected),      \
-                #actual, #expected, {.filename = file, .line_number = line}, fatal,              \
-                LIB_ZXTEST_COMPARE_3_FN(op, byte_count), LIB_ZXTEST_HEXDUMP_PRINTER(byte_count), \
-                LIB_ZXTEST_HEXDUMP_PRINTER(byte_count));                                         \
-          }();                                                                                   \
-      assertion.IsTriggered())                                                                   \
+#define LIB_ZXTEST_CHECK_VAR_BYTES(op, expected, actual, size, fatal, file, line, desc, ...)       \
+  if ([]() { LIB_ZXTEST_CHECK_RUNNING(); }(); true)                                                \
+    if (size_t byte_count = size; true)                                                            \
+      if (StreamableAssertion assertion = StreamableAssertion(                                     \
+              zxtest::internal::ToPointer(actual), zxtest::internal::ToPointer(expected), #actual, \
+              #expected, {.filename = file, .line_number = line}, fatal,                           \
+              LIB_ZXTEST_COMPARE_3_FN(op, byte_count), LIB_ZXTEST_HEXDUMP_PRINTER(byte_count),     \
+              LIB_ZXTEST_HEXDUMP_PRINTER(byte_count));                                             \
+          assertion.IsTriggered())                                                                 \
   LIB_ZXTEST_RETURN_TAG(fatal) assertion << desc << " "
 
 #define LIB_ZXTEST_FAIL_NO_RETURN(fatal, desc, ...) \
