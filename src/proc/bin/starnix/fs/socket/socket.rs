@@ -23,8 +23,141 @@ const SOCKET_MIN_SIZE: usize = 4 << 10;
 const SOCKET_DEFAULT_SIZE: usize = 208 << 10;
 const SOCKET_MAX_SIZE: usize = 4 << 20;
 
-/// A `Socket` represents one endpoint of a bidirectional communication channel.
-pub struct Socket(Mutex<SocketInner>);
+bitflags! {
+    /// The flags for shutting down sockets.
+    pub struct SocketShutdownFlags: u32 {
+        /// Further receptions will be disallowed.
+        const READ = 1 << 0;
+
+        /// Durther transmissions will be disallowed.
+        const WRITE = 1 << 2;
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum SocketDomain {
+    /// The `Unix` socket domain contains sockets that were created with the `AF_UNIX` domain. These
+    /// sockets communicate locally, with other sockets on the same host machine.
+    Unix,
+}
+
+impl SocketDomain {
+    pub fn from_raw(raw: u16) -> Option<SocketDomain> {
+        match raw {
+            AF_UNIX => Some(SocketDomain::Unix),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum SocketType {
+    Stream,
+    Datagram,
+    Raw,
+    SeqPacket,
+}
+
+impl SocketType {
+    pub fn from_raw(raw: u32) -> Option<SocketType> {
+        match raw {
+            SOCK_STREAM => Some(SocketType::Stream),
+            SOCK_DGRAM => Some(SocketType::Datagram),
+            SOCK_RAW => Some(SocketType::Datagram),
+            SOCK_SEQPACKET => Some(SocketType::SeqPacket),
+            _ => None,
+        }
+    }
+
+    pub fn as_raw(&self) -> u32 {
+        match self {
+            SocketType::Stream => SOCK_STREAM,
+            SocketType::Datagram => SOCK_DGRAM,
+            SocketType::Raw => SOCK_RAW,
+            SocketType::SeqPacket => SOCK_SEQPACKET,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SocketAddress {
+    /// An address in the AF_UNSPEC domain.
+    #[allow(dead_code)]
+    Unspecified,
+
+    /// A `Unix` socket address contains the filesystem path that was used to bind the socket.
+    Unix(FsString),
+}
+
+pub const SA_FAMILY_SIZE: usize = std::mem::size_of::<uapi::__kernel_sa_family_t>();
+
+impl SocketAddress {
+    pub fn default_for_domain(domain: SocketDomain) -> SocketAddress {
+        match domain {
+            SocketDomain::Unix => SocketAddress::Unix(FsString::new()),
+        }
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        match self {
+            SocketAddress::Unspecified => AF_UNSPEC.to_ne_bytes().to_vec(),
+            SocketAddress::Unix(name) => {
+                if name.len() > 0 {
+                    let template = sockaddr_un::default();
+                    let path_length = std::cmp::min(template.sun_path.len() - 1, name.len());
+                    let mut bytes = vec![0u8; SA_FAMILY_SIZE + path_length + 1];
+                    bytes[..SA_FAMILY_SIZE].copy_from_slice(&AF_UNIX.to_ne_bytes());
+                    bytes[SA_FAMILY_SIZE..(SA_FAMILY_SIZE + path_length)]
+                        .copy_from_slice(&name[..path_length]);
+                    bytes
+                } else {
+                    AF_UNIX.to_ne_bytes().to_vec()
+                }
+            }
+        }
+    }
+
+    fn is_abstract_unix(&self) -> bool {
+        match self {
+            SocketAddress::Unix(name) => name.first() == Some(&b'\0'),
+            _ => false,
+        }
+    }
+}
+
+trait SocketOps: Send + Sync {
+    fn connect(
+        &self,
+        socket: &SocketHandle,
+        peer: &SocketHandle,
+        credentials: ucred,
+    ) -> Result<(), Errno>;
+
+    fn listen(&self, socket: &Socket, backlog: i32) -> Result<(), Errno>;
+
+    fn accept(&self, socket: &Socket, credentials: ucred) -> Result<SocketHandle, Errno>;
+}
+
+fn create_socket_ops(_domain: SocketDomain, socket_type: SocketType) -> Box<dyn SocketOps> {
+    match socket_type {
+        SocketType::Stream | SocketType::SeqPacket => ConnectionedSocket::new(),
+        SocketType::Datagram | SocketType::Raw => ConnectionlessSocket::new(),
+    }
+}
+
+enum SocketState {
+    /// The socket has not been connected.
+    Disconnected,
+
+    /// The socket has had `listen` called and can accept incoming connections.
+    Listening(AcceptQueue),
+
+    /// The socket is connected to a peer.
+    Connected(SocketHandle),
+
+    /// The socket is closed.
+    Closed,
+}
 
 pub struct SocketInner {
     /// The `MessageQueue` that contains messages for this socket.
@@ -32,12 +165,6 @@ pub struct SocketInner {
 
     /// This queue will be notified on reads, writes, disconnects etc.
     waiters: WaitQueue,
-
-    /// The domain of this socket.
-    domain: SocketDomain,
-
-    /// The type of this socket.
-    socket_type: SocketType,
 
     /// The address that this socket has been bound to, if it has been bound.
     address: Option<SocketAddress>,
@@ -59,18 +186,17 @@ pub struct SocketInner {
     state: SocketState,
 }
 
-enum SocketState {
-    /// The socket has not been connected.
-    Disconnected,
+/// A `Socket` represents one endpoint of a bidirectional communication channel.
+pub struct Socket {
+    ops: Box<dyn SocketOps>,
 
-    /// The socket has had `listen` called and can accept incoming connections.
-    Listening(AcceptQueue),
+    /// The domain of this socket.
+    domain: SocketDomain,
 
-    /// The socket is connected to a peer.
-    Connected(SocketHandle),
+    /// The type of this socket.
+    socket_type: SocketType,
 
-    /// The socket is closed.
-    Closed,
+    inner: Mutex<SocketInner>,
 }
 
 pub type SocketHandle = Arc<Socket>;
@@ -81,18 +207,21 @@ impl Socket {
     /// # Parameters
     /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
     pub fn new(domain: SocketDomain, socket_type: SocketType) -> SocketHandle {
-        Arc::new(Socket(Mutex::new(SocketInner {
-            messages: MessageQueue::new(SOCKET_DEFAULT_SIZE),
-            waiters: WaitQueue::default(),
+        Arc::new(Socket {
+            ops: create_socket_ops(domain, socket_type),
             domain,
             socket_type,
-            address: None,
-            receive_timeout: None,
-            send_timeout: None,
-            linger: uapi::linger::default(),
-            credentials: None,
-            state: SocketState::Disconnected,
-        })))
+            inner: Mutex::new(SocketInner {
+                messages: MessageQueue::new(SOCKET_DEFAULT_SIZE),
+                waiters: WaitQueue::default(),
+                address: None,
+                receive_timeout: None,
+                send_timeout: None,
+                linger: uapi::linger::default(),
+                credentials: None,
+                state: SocketState::Disconnected,
+            }),
+        })
     }
 
     /// Creates a pair of connected sockets.
@@ -132,11 +261,8 @@ impl Socket {
         FileObject::new_anonymous(SocketFile::new(socket), node, open_flags)
     }
 
-    /// Locks and returns the inner state of the Socket.
-    // TODO(tbodt): Make this private. A good time to do this is in the refactor that will be
-    // necessary to support AF_INET.
-    pub fn lock(&self) -> parking_lot::MutexGuard<'_, SocketInner> {
-        self.0.lock()
+    pub fn socket_type(&self) -> SocketType {
+        self.socket_type
     }
 
     /// Returns the name of this socket.
@@ -144,7 +270,12 @@ impl Socket {
     /// The name is derived from the address and domain. A socket
     /// will always have a name, even if it is not bound to an address.
     pub fn getsockname(&self) -> Vec<u8> {
-        self.lock().name()
+        let inner = self.lock();
+        if let Some(address) = &inner.address {
+            address.to_bytes()
+        } else {
+            SocketAddress::default_for_domain(self.domain).to_bytes()
+        }
     }
 
     /// Returns the name of the peer of this socket, if such a peer exists.
@@ -152,8 +283,7 @@ impl Socket {
     /// Returns an error if the socket is not connected.
     pub fn getpeername(&self) -> Result<Vec<u8>, Errno> {
         let peer = self.lock().peer().ok_or_else(|| errno!(ENOTCONN))?.clone();
-        let name = peer.lock().name();
-        Ok(name)
+        Ok(peer.getsockname())
     }
 
     pub fn peer_cred(&self) -> Option<ucred> {
@@ -200,6 +330,36 @@ impl Socket {
         }
     }
 
+    /// Locks and returns the inner state of the Socket.
+    // TODO(tbodt): Make this private. A good time to do this is in the refactor that will be
+    // necessary to support AF_INET.
+    pub fn lock(&self) -> parking_lot::MutexGuard<'_, SocketInner> {
+        self.inner.lock()
+    }
+
+    /// Binds this socket to a `socket_address`.
+    ///
+    /// Returns an error if the socket could not be bound.
+    pub fn bind(&self, socket_address: SocketAddress) -> Result<(), Errno> {
+        self.lock().bind(socket_address)
+    }
+
+    pub fn connect(
+        self: &SocketHandle,
+        peer: &SocketHandle,
+        credentials: ucred,
+    ) -> Result<(), Errno> {
+        self.ops.connect(self, peer, credentials)
+    }
+
+    pub fn listen(&self, backlog: i32) -> Result<(), Errno> {
+        self.ops.listen(self, backlog)
+    }
+
+    pub fn accept(&self, credentials: ucred) -> Result<SocketHandle, Errno> {
+        self.ops.accept(self, credentials)
+    }
+
     pub fn is_listening(&self) -> bool {
         match self.lock().state {
             SocketState::Listening(_) => true,
@@ -207,94 +367,20 @@ impl Socket {
         }
     }
 
-    /// Initiate a connection from this socket to the given server socket.
-    ///
-    /// The given `socket` must be in a listening state.
-    ///
-    /// If there is enough room the listening socket's queue of incoming connections, this socket
-    /// is connected to a new socket, which is placed in the queue for the listening socket to
-    /// accept.
-    ///
-    /// Returns an error if the connection cannot be established (e.g., if one of the sockets is
-    /// already connected).
-    pub fn connect(
-        self: &SocketHandle,
-        listener: &SocketHandle,
-        credentials: ucred,
-    ) -> Result<(), Errno> {
-        // Only hold one lock at a time until we make sure the lock ordering is right: client
-        // before listener
-        match listener.lock().state {
-            SocketState::Listening(_) => {}
-            _ => return error!(ECONNREFUSED),
-        }
-        let mut client = self.lock();
-        match client.state {
-            SocketState::Disconnected => {}
-            SocketState::Connected(_) => return error!(EISCONN),
-            _ => return error!(EINVAL),
-        };
-        let mut listener = listener.lock();
-        // Must check this again because we released the listener lock for a moment
-        let queue = match &listener.state {
-            SocketState::Listening(queue) => queue,
-            _ => return error!(ECONNREFUSED),
-        };
-
-        if client.domain != listener.domain || client.socket_type != listener.socket_type {
+    fn check_type_for_connect(&self, peer: &Socket, peer_address: &Option<SocketAddress>) -> Result<(), Errno> {
+        if self.domain != peer.domain || self.socket_type != peer.socket_type {
             // According to ConnectWithWrongType in accept_bind_test, abstract
             // UNIX domain sockets return ECONNREFUSED rather than EPROTOTYPE.
             // TODO(tbodt): it's possible this entire file is only applicable to UNIX domain
             // sockets, in which case this can be simplified.
-            if let Some(address) = &listener.address {
+            if let Some(address) = peer_address {
                 if address.is_abstract_unix() {
                     return error!(ECONNREFUSED);
                 }
             }
             return error!(EPROTOTYPE);
         }
-
-        if queue.sockets.len() >= queue.backlog {
-            return error!(EAGAIN);
-        }
-
-        let server = Socket::new(listener.domain, listener.socket_type);
-        server.lock().messages.set_capacity(listener.messages.capacity())?;
-
-        client.state = SocketState::Connected(server.clone());
-        client.credentials = Some(credentials);
-        {
-            let mut server = server.lock();
-            server.state = SocketState::Connected(self.clone());
-            server.address = listener.address.clone();
-        }
-
-        // We already checked that the socket is in Listening state...but the borrow checker cannot
-        // be convinced that it's ok to combine these checks
-        let queue = match listener.state {
-            SocketState::Listening(ref mut queue) => queue,
-            _ => panic!("something changed the server socket state while I held a lock on it"),
-        };
-        queue.sockets.push_back(server);
-        listener.waiters.notify_events(FdEvents::POLLIN);
         Ok(())
-    }
-
-    /// Accept an incoming connection on this socket, with the provided credentials.
-    ///
-    /// The socket holds a queue of incoming connections. This function reads the first entry from
-    /// the queue (if any) and creates and returns the server end of the connection.
-    ///
-    /// Returns an error if the socket is not listening or if the queue is empty.
-    pub fn accept(&self, credentials: ucred) -> Result<SocketHandle, Errno> {
-        let mut inner = self.lock();
-        let queue = match &mut inner.state {
-            SocketState::Listening(queue) => queue,
-            _ => return error!(EINVAL),
-        };
-        let socket = queue.sockets.pop_front().ok_or(errno!(EAGAIN))?;
-        socket.lock().credentials = Some(credentials);
-        Ok(socket)
     }
 
     /// Reads the specified number of bytes from the socket, if possible.
@@ -417,28 +503,6 @@ impl Socket {
 }
 
 impl SocketInner {
-    /// Returns the local name of the socket.
-    pub fn name(&self) -> Vec<u8> {
-        self.address
-            .clone()
-            .unwrap_or_else(|| SocketAddress::default_for_domain(self.domain))
-            .to_bytes()
-    }
-
-    pub fn socket_type(&self) -> SocketType {
-        self.socket_type
-    }
-
-    fn set_capacity(&mut self, requested_capacity: usize) {
-        let capacity = requested_capacity.clamp(SOCKET_MIN_SIZE, SOCKET_MAX_SIZE);
-        let capacity = std::cmp::max(capacity, self.messages.len());
-        // We have validated capacity sufficiently that set_capacity should always succeed.
-        self.messages.set_capacity(capacity).unwrap();
-    }
-
-    /// Binds this socket to a `socket_address`.
-    ///
-    /// Returns an error if the socket could not be bound.
     pub fn bind(&mut self, socket_address: SocketAddress) -> Result<(), Errno> {
         if self.address.is_some() {
             return error!(EINVAL);
@@ -447,22 +511,11 @@ impl SocketInner {
         Ok(())
     }
 
-    /// Listen for incoming connections on this socket.
-    ///
-    /// Returns an error if the socket is not bound.
-    pub fn listen(&mut self, backlog: i32) -> Result<(), Errno> {
-        let backlog = if backlog < 0 { 1024 } else { backlog as usize };
-        match &mut self.state {
-            SocketState::Disconnected if self.address.is_some() => {
-                self.state = SocketState::Listening(AcceptQueue::new(backlog));
-                Ok(())
-            }
-            SocketState::Listening(queue) => {
-                queue.set_backlog(backlog)?;
-                Ok(())
-            }
-            _ => error!(EINVAL),
-        }
+    fn set_capacity(&mut self, requested_capacity: usize) {
+        let capacity = requested_capacity.clamp(SOCKET_MIN_SIZE, SOCKET_MAX_SIZE);
+        let capacity = std::cmp::max(capacity, self.messages.len());
+        // We have validated capacity sufficiently that set_capacity should always succeed.
+        self.messages.set_capacity(capacity).unwrap();
     }
 
     /// Returns the socket that is connected to this socket, if such a peer exists. Returns
@@ -556,111 +609,12 @@ impl SocketInner {
 
     fn shutdown_read(&mut self) {
         self.messages.close();
-        self.waiters.notify_events(FdEvents::POLLIN | FdEvents::POLLOUT |FdEvents::POLLHUP);
+        self.waiters.notify_events(FdEvents::POLLIN | FdEvents::POLLOUT | FdEvents::POLLHUP);
     }
 
     fn shutdown_write(&mut self) {
         self.messages.close();
         self.waiters.notify_events(FdEvents::POLLIN | FdEvents::POLLOUT | FdEvents::POLLHUP);
-    }
-}
-
-bitflags! {
-    /// The flags for shutting down sockets.
-    pub struct SocketShutdownFlags: u32 {
-        /// Further receptions will be disallowed.
-        const READ = 1 << 0;
-
-        /// Durther transmissions will be disallowed.
-        const WRITE = 1 << 2;
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum SocketDomain {
-    /// The `Unix` socket domain contains sockets that were created with the `AF_UNIX` domain. These
-    /// sockets communicate locally, with other sockets on the same host machine.
-    Unix,
-}
-
-impl SocketDomain {
-    pub fn from_raw(raw: u16) -> Option<SocketDomain> {
-        match raw {
-            AF_UNIX => Some(SocketDomain::Unix),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum SocketType {
-    Stream,
-    Datagram,
-    SeqPacket,
-}
-
-impl SocketType {
-    pub fn from_raw(raw: u32) -> Option<SocketType> {
-        match raw {
-            SOCK_STREAM => Some(SocketType::Stream),
-            SOCK_DGRAM => Some(SocketType::Datagram),
-            SOCK_SEQPACKET => Some(SocketType::SeqPacket),
-            _ => None,
-        }
-    }
-
-    pub fn as_raw(&self) -> u32 {
-        match self {
-            SocketType::Stream => SOCK_STREAM,
-            SocketType::Datagram => SOCK_DGRAM,
-            SocketType::SeqPacket => SOCK_SEQPACKET,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SocketAddress {
-    /// An address in the AF_UNSPEC domain.
-    #[allow(dead_code)]
-    Unspecified,
-
-    /// A `Unix` socket address contains the filesystem path that was used to bind the socket.
-    Unix(FsString),
-}
-
-pub const SA_FAMILY_SIZE: usize = std::mem::size_of::<uapi::__kernel_sa_family_t>();
-
-impl SocketAddress {
-    pub fn default_for_domain(domain: SocketDomain) -> SocketAddress {
-        match domain {
-            SocketDomain::Unix => SocketAddress::Unix(FsString::new()),
-        }
-    }
-
-    pub fn to_bytes(&self) -> Vec<u8> {
-        match self {
-            SocketAddress::Unspecified => AF_UNSPEC.to_ne_bytes().to_vec(),
-            SocketAddress::Unix(name) => {
-                if name.len() > 0 {
-                    let template = sockaddr_un::default();
-                    let path_length = std::cmp::min(template.sun_path.len() - 1, name.len());
-                    let mut bytes = vec![0u8; SA_FAMILY_SIZE + path_length + 1];
-                    bytes[..SA_FAMILY_SIZE].copy_from_slice(&AF_UNIX.to_ne_bytes());
-                    bytes[SA_FAMILY_SIZE..(SA_FAMILY_SIZE + path_length)]
-                        .copy_from_slice(&name[..path_length]);
-                    bytes
-                } else {
-                    AF_UNIX.to_ne_bytes().to_vec()
-                }
-            }
-        }
-    }
-
-    fn is_abstract_unix(&self) -> bool {
-        match self {
-            SocketAddress::Unix(name) => name.first() == Some(&b'\0'),
-            _ => false,
-        }
     }
 }
 
@@ -683,6 +637,148 @@ impl AcceptQueue {
     }
 }
 
+struct ConnectionedSocket;
+
+impl ConnectionedSocket {
+    fn new() -> Box<dyn SocketOps> {
+        Box::new(ConnectionedSocket)
+    }
+}
+
+impl SocketOps for ConnectionedSocket {
+    /// Initiate a connection from this socket to the given server socket.
+    ///
+    /// The given `socket` must be in a listening state.
+    ///
+    /// If there is enough room the listening socket's queue of incoming connections, this socket
+    /// is connected to a new socket, which is placed in the queue for the listening socket to
+    /// accept.
+    ///
+    /// Returns an error if the connection cannot be established (e.g., if one of the sockets is
+    /// already connected).
+    fn connect(
+        &self,
+        socket: &SocketHandle,
+        peer: &SocketHandle,
+        credentials: ucred,
+    ) -> Result<(), Errno> {
+        // Only hold one lock at a time until we make sure the lock ordering is right: client
+        // before listener
+        match peer.lock().state {
+            SocketState::Listening(_) => {}
+            _ => return error!(ECONNREFUSED),
+        }
+        let mut client = socket.lock();
+        match client.state {
+            SocketState::Disconnected => {}
+            SocketState::Connected(_) => return error!(EISCONN),
+            _ => return error!(EINVAL),
+        };
+        let mut listener = peer.lock();
+        // Must check this again because we released the listener lock for a moment
+        let queue = match &listener.state {
+            SocketState::Listening(queue) => queue,
+            _ => return error!(ECONNREFUSED),
+        };
+
+        socket.check_type_for_connect(peer, &listener.address)?;
+
+        if queue.sockets.len() >= queue.backlog {
+            return error!(EAGAIN);
+        }
+
+        let server = Socket::new(peer.domain, peer.socket_type);
+        server.lock().messages.set_capacity(listener.messages.capacity())?;
+
+        client.state = SocketState::Connected(server.clone());
+        client.credentials = Some(credentials);
+        {
+            let mut server = server.lock();
+            server.state = SocketState::Connected(socket.clone());
+            server.address = listener.address.clone();
+        }
+
+        // We already checked that the socket is in Listening state...but the borrow checker cannot
+        // be convinced that it's ok to combine these checks
+        let queue = match listener.state {
+            SocketState::Listening(ref mut queue) => queue,
+            _ => panic!("something changed the server socket state while I held a lock on it"),
+        };
+        queue.sockets.push_back(server);
+        listener.waiters.notify_events(FdEvents::POLLIN);
+        Ok(())
+    }
+
+    /// Listen for incoming connections on this socket.
+    ///
+    /// Returns an error if the socket is not bound.
+    fn listen(&self, socket: &Socket, backlog: i32) -> Result<(), Errno> {
+        let mut inner = socket.lock();
+        let is_bound = inner.address.is_some();
+        let backlog = if backlog < 0 { 1024 } else { backlog as usize };
+        match &mut inner.state {
+            SocketState::Disconnected if is_bound => {
+                inner.state = SocketState::Listening(AcceptQueue::new(backlog));
+                Ok(())
+            }
+            SocketState::Listening(queue) => {
+                queue.set_backlog(backlog)?;
+                Ok(())
+            }
+            _ => error!(EINVAL),
+        }
+    }
+
+    /// Accept an incoming connection on this socket, with the provided credentials.
+    ///
+    /// The socket holds a queue of incoming connections. This function reads the first entry from
+    /// the queue (if any) and creates and returns the server end of the connection.
+    ///
+    /// Returns an error if the socket is not listening or if the queue is empty.
+    fn accept(&self, socket: &Socket, credentials: ucred) -> Result<SocketHandle, Errno> {
+        let mut inner = socket.lock();
+        let queue = match &mut inner.state {
+            SocketState::Listening(queue) => queue,
+            _ => return error!(EINVAL),
+        };
+        let socket = queue.sockets.pop_front().ok_or(errno!(EAGAIN))?;
+        socket.lock().credentials = Some(credentials);
+        Ok(socket)
+    }
+}
+
+struct ConnectionlessSocket;
+
+impl ConnectionlessSocket {
+    fn new() -> Box<dyn SocketOps> {
+        Box::new(ConnectionlessSocket)
+    }
+}
+
+impl SocketOps for ConnectionlessSocket {
+    fn connect(
+        &self,
+        socket: &SocketHandle,
+        peer: &SocketHandle,
+        _credentials: ucred,
+    ) -> Result<(), Errno> {
+        {
+            let peer_inner = peer.lock();
+            socket.check_type_for_connect(peer, &peer_inner.address)?;
+        }
+        socket.lock().state = SocketState::Connected(peer.clone());
+        Ok(())
+    }
+
+    fn listen(&self, _socket: &Socket, _backlog: i32) -> Result<(), Errno> {
+        error!(EOPNOTSUPP)
+    }
+
+    fn accept(&self, _socket: &Socket, _credentials: ucred) -> Result<SocketHandle, Errno> {
+        error!(EOPNOTSUPP)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -692,8 +788,8 @@ mod tests {
     fn test_read_write_kernel() {
         let (_kernel, task_owner) = create_kernel_and_task();
         let socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
-        socket.lock().bind(SocketAddress::Unix(b"\0".to_vec())).expect("Failed to bind socket.");
-        socket.lock().listen(10).expect("Failed to listen.");
+        socket.bind(SocketAddress::Unix(b"\0".to_vec())).expect("Failed to bind socket.");
+        socket.listen(10).expect("Failed to listen.");
         let connecting_socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
         connecting_socket
             .connect(&socket, task_owner.task.as_ucred())

@@ -27,9 +27,8 @@ pub fn sys_socket(
 ) -> Result<SyscallResult, Errno> {
     let flags = socket_type & (SOCK_NONBLOCK | SOCK_CLOEXEC);
     let domain = parse_socket_domain(domain)?;
-    let socket_type = parse_socket_type(socket_type)?;
+    let socket_type = parse_socket_type(domain, socket_type)?;
     let open_flags = socket_flags_to_open_flags(flags);
-
     let socket_file = Socket::new_file(ctx.kernel(), Socket::new(domain, socket_type), open_flags);
 
     let fd_flags = socket_flags_to_fd_flags(flags);
@@ -58,10 +57,16 @@ fn parse_socket_domain(domain: u32) -> Result<SocketDomain, Errno> {
     })
 }
 
-fn parse_socket_type(socket_type: u32) -> Result<SocketType, Errno> {
-    SocketType::from_raw(socket_type & 0xf).ok_or_else(|| {
+fn parse_socket_type(domain: SocketDomain, socket_type: u32) -> Result<SocketType, Errno> {
+    let socket_type = SocketType::from_raw(socket_type & 0xf).ok_or_else(|| {
         not_implemented!("unsupported socket type 0x{:x}", socket_type);
         errno!(EPROTONOSUPPORT)
+    })?;
+    // For AF_UNIX, SOCK_RAW sockets are treated as if they were SOCK_DGRAM.
+    Ok(if domain == SocketDomain::Unix && socket_type == SocketType::Raw {
+        SocketType::Datagram
+    } else {
+        socket_type
     })
 }
 
@@ -182,7 +187,7 @@ pub fn sys_listen(
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
-    socket.lock().listen(backlog)?;
+    socket.listen(backlog)?;
     Ok(SUCCESS)
 }
 
@@ -316,7 +321,7 @@ pub fn sys_socketpair(
 ) -> Result<SyscallResult, Errno> {
     let flags = socket_type & (SOCK_NONBLOCK | SOCK_CLOEXEC);
     let domain = parse_socket_domain(domain)?;
-    let socket_type = parse_socket_type(socket_type)?;
+    let socket_type = parse_socket_type(domain, socket_type)?;
     let open_flags = socket_flags_to_open_flags(flags);
 
     let (left, right) = Socket::new_pair(
@@ -501,7 +506,7 @@ pub fn sys_getsockopt(
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let opt_value = match level {
         SOL_SOCKET => match optname {
-            SO_TYPE => socket.lock().socket_type().as_raw().to_ne_bytes().to_vec(),
+            SO_TYPE => socket.socket_type().as_raw().to_ne_bytes().to_vec(),
             SO_PEERCRED => socket
                 .peer_cred()
                 .unwrap_or(ucred { pid: 0, uid: uid_t::MAX, gid: gid_t::MAX })
@@ -633,7 +638,7 @@ mod tests {
             Err(EAFNOSUPPORT)
         );
         assert_eq!(
-            sys_socketpair(&ctx, AF_UNIX as u32, SOCK_RAW, 0, UserRef::new(UserAddress::default())),
+            sys_socketpair(&ctx, AF_UNIX as u32, 4, 0, UserRef::new(UserAddress::default())),
             Err(EPROTONOSUPPORT)
         );
         assert_eq!(

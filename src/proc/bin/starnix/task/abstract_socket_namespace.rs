@@ -32,7 +32,7 @@ impl AbstractSocketNamespace {
         let mut table = self.table.lock();
         match table.entry(address.clone()) {
             Entry::Vacant(entry) => {
-                socket.lock().bind(SocketAddress::Unix(address))?;
+                socket.bind(SocketAddress::Unix(address))?;
                 entry.insert(Arc::downgrade(socket));
             }
             Entry::Occupied(mut entry) => {
@@ -40,7 +40,7 @@ impl AbstractSocketNamespace {
                 if occupant.is_some() {
                     return error!(EADDRINUSE);
                 }
-                socket.lock().bind(SocketAddress::Unix(address))?;
+                socket.bind(SocketAddress::Unix(address))?;
                 entry.insert(Arc::downgrade(socket));
             }
         }

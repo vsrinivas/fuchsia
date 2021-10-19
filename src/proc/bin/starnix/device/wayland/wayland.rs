@@ -91,7 +91,7 @@ fn create_display_socket(task: &Task, display_path: FsString) -> Result<SocketHa
         SocketAddress::Unix(display_path.clone()),
         mode,
     );
-    display_socket.lock().listen(1)?;
+    display_socket.listen(1)?;
 
     Ok(display_socket)
 }
