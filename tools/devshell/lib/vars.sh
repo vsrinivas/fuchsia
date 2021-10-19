@@ -427,21 +427,33 @@ function get-fuchsia-device-addr {
           exit $code
         }
         if [[ "$(echo "${output}" | wc -l)" -gt "1" ]]; then
-          fx-error "Multiple devices found."
-          fx-error "Please specify one of the following devices using either \`fx -d <device-name>\` or \`fx set-device <device-name>\`."
-          devices="$(fx-target-finder-info)" || {
-            code=$?
-            fx-error "Device discovery failed with status: $code"
-            exit $code
-          }
-          while IFS="" read -r line; do
-            fx-error "\t${line}"
-          done < <(printf '%s\n' "${devices}")
-          exit 1
+          multi-device-fail
         fi
         echo "${output}" ;;
      *) fx-target-finder-resolve "$device" ;;
   esac
+}
+
+function get-fuchsia-device-port {
+  fx-config-read
+  local port
+  port="$(get-device-ssh-port)" || exit $?
+
+  if [[ -z "${port}" ]]; then
+    local device
+    device="$(fx-target-ssh-address)" || {
+      code=$?
+      fx-error "Device discovery failed with status: ${code}"
+      exit ${code}
+    }
+    if [[ "$(echo "${device}" | wc -l)" -gt "1" ]]; then
+      multi-device-fail
+    fi
+    if [[ "${device}" =~ :([0-9]+)$ ]]; then
+      port="${BASH_REMATCH[1]}"
+    fi
+  fi
+  echo "${port}"
 }
 
 # get-device-addr-resource returns an address that is properly encased

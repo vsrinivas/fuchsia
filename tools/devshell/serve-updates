@@ -124,8 +124,8 @@ target-addr() {
       serve_updates_target_addr="$(get-device-raw)"
     fi
 
-    if [[ -n "${serve_updates_target_addr}" && -n "$(get-device-ssh-port)" ]]; then
-      serve_updates_target_addr="${serve_updates_target_addr}:$(get-device-ssh-port)"
+    if [[ -n "${serve_updates_target_addr}" && -n "$(get-fuchsia-device-port)" ]]; then
+      serve_updates_target_addr="${serve_updates_target_addr}:$(get-fuchsia-device-port)"
     fi
   fi
 
