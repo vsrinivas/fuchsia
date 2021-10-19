@@ -65,7 +65,7 @@ template("generated_partitions_config") {
         {
           name = zircon_a_partition
           type = "ZBI"
-          slot = "SystemA"
+          slot = "A"
         },
       ]
     }
@@ -74,7 +74,7 @@ template("generated_partitions_config") {
         {
           name = zircon_b_partition
           type = "ZBI"
-          slot = "SystemB"
+          slot = "B"
         },
       ]
     }
@@ -83,7 +83,7 @@ template("generated_partitions_config") {
         {
           name = vbmeta_a_partition
           type = "VBMeta"
-          slot = "SystemA"
+          slot = "A"
         },
       ]
     }
@@ -92,7 +92,7 @@ template("generated_partitions_config") {
         {
           name = vbmeta_b_partition
           type = "VBMeta"
-          slot = "SystemB"
+          slot = "B"
         },
       ]
     }
@@ -101,7 +101,6 @@ template("generated_partitions_config") {
         {
           name = fvm_partition
           type = "FVM"
-          slot = "SystemA"
         },
       ]
     }
