@@ -15,7 +15,7 @@
 
 namespace sys::testing::internal {
 
-class MockRunner {
+class MockRunner final {
  public:
   MockRunner() = default;
 

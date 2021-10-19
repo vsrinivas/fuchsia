@@ -19,6 +19,8 @@ namespace {
 constexpr char kSvcDirectoryPath[] = "/svc";
 }
 
+MockComponent::~MockComponent() = default;
+
 void MockComponent::Start(std::unique_ptr<MockHandles> mock_handles) {}
 
 MockHandles::MockHandles(fdio_ns_t* ns, OutgoingDirectory outgoing_dir)

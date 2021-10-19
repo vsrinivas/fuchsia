@@ -6,6 +6,7 @@
 #include <fuchsia/component/decl/cpp/fidl.h>
 #include <fuchsia/component/test/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
+#include <lib/async/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
@@ -22,8 +23,6 @@
 
 #include <memory>
 #include <variant>
-
-#include "lib/async/default.h"
 
 namespace sys::testing {
 

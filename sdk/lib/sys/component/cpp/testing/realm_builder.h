@@ -8,6 +8,7 @@
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/component/test/cpp/fidl.h>
 #include <fuchsia/io2/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
 #include <lib/sys/component/cpp/testing/internal/mock_runner.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/component/cpp/testing/scoped_child.h>
@@ -19,8 +20,6 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include "lib/async/dispatcher.h"
 
 namespace sys::testing {
 

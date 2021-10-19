@@ -123,6 +123,8 @@ class MockHandles final {
 // The interface for backing implementations of components with a Source of Mock.
 class MockComponent {
  public:
+  virtual ~MockComponent();
+
   // Invoked when the Component Manager issues a Start request to the component.
   // |mock_handles| contains the outgoing directory and namespace of
   // the component.
