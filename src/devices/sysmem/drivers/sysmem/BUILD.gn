@@ -134,7 +134,7 @@ test("sysmem-unittest-bin") {
     "//sdk/lib/fit",
     "//src/devices/bus/testing/fake-pdev",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/async:async-cpp",

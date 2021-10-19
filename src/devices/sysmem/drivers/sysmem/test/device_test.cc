@@ -9,7 +9,6 @@
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
 #include <stdlib.h>
@@ -22,14 +21,17 @@
 #include "../device.h"
 #include "../driver.h"
 #include "../logical_buffer_collection.h"
+#include "ddktl/unbind-txn.h"
+#include "lib/async-loop/loop.h"
 #include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace sysmem_driver {
 namespace {
 class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
  public:
-  FakePBus() : proto_({&pbus_protocol_ops_, this}) {}
-  const pbus_protocol_t* proto() const { return &proto_; }
+  FakePBus() {}
+  const pbus_protocol_ops_t* ops() const { return &pbus_protocol_ops_; }
   zx_status_t PBusDeviceAdd(const pbus_dev_t* dev) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -61,7 +63,6 @@ class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
   uint32_t registered_proto_id() const { return registered_proto_id_; }
 
  private:
-  pbus_protocol_t proto_;
   uint32_t registered_proto_id_ = 0;
 };
 
@@ -166,14 +167,16 @@ class FakeDdkSysmem : public zxtest::Test {
  public:
   void SetUp() override {
     pdev_.UseFakeBti();
-    ddk_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
-    EXPECT_EQ(sysmem_.Bind(), ZX_OK);
+    fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, pdev_.proto()->ops, pdev_.proto()->ctx);
+    EXPECT_EQ(sysmem_->Bind(), ZX_OK);
   }
 
   void TearDown() override {
-    sysmem_.DdkAsyncRemove();
-    EXPECT_OK(ddk_.WaitUntilRemove());
-    EXPECT_TRUE(ddk_.Ok());
+    ddk::UnbindTxn txn{sysmem_->zxdev()};
+    sysmem_->DdkUnbind(std::move(txn));
+    EXPECT_OK(sysmem_->zxdev()->WaitUntilUnbindReplyCalled());
+    sysmem_.release();
+    loop_.Shutdown();
   }
 
   fidl::ClientEnd<fuchsia_sysmem::Allocator> Connect() {
@@ -181,10 +184,16 @@ class FakeDdkSysmem : public zxtest::Test {
     EXPECT_OK(allocator_endpoints);
     auto [allocator_client_end, allocator_server_end] = std::move(*allocator_endpoints);
 
+    zx::status connector_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::DriverConnector>();
+    EXPECT_OK(connector_endpoints);
+    auto [connector_client_end, connector_server_end] = std::move(*connector_endpoints);
+
+    fidl::BindServer(loop_.dispatcher(), std::move(connector_server_end), sysmem_.get());
+    EXPECT_OK(loop_.StartThread());
+
     fidl::WireResult result =
-        fidl::WireCall(
-            fidl::UnownedClientEnd<fuchsia_sysmem::DriverConnector>(zx::unowned(ddk_.FidlClient())))
-            ->Connect(std::move(allocator_server_end));
+        fidl::WireCall(connector_client_end)->Connect(std::move(allocator_server_end));
+
     EXPECT_OK(result);
     return std::move(allocator_client_end);
   }
@@ -202,21 +211,21 @@ class FakeDdkSysmem : public zxtest::Test {
 
  protected:
   sysmem_driver::Driver sysmem_ctx_;
-  sysmem_driver::Device sysmem_{fake_ddk::kFakeParent, &sysmem_ctx_};
+  std::shared_ptr<MockDevice> fake_parent_ = MockDevice::FakeRootParent();
+  std::unique_ptr<sysmem_driver::Device> sysmem_{new Device{fake_parent_.get(), &sysmem_ctx_}};
 
   fake_pdev::FakePDev pdev_;
-  // ddk must be destroyed before sysmem because it may be executing messages against sysmem on
-  // another thread.
-  fake_ddk::Bind ddk_;
+
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
 };
 
 class FakeDdkSysmemPbus : public FakeDdkSysmem {
  public:
   void SetUp() override {
     pdev_.UseFakeBti();
-    ddk_.SetProtocol(ZX_PROTOCOL_PBUS, pbus_.proto());
-    ddk_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
-    EXPECT_EQ(sysmem_.Bind(), ZX_OK);
+    fake_parent_->AddProtocol(ZX_PROTOCOL_PBUS, pbus_.ops(), &pbus_);
+    fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, pdev_.proto()->ops, pdev_.proto()->ctx);
+    EXPECT_EQ(sysmem_->Bind(), ZX_OK);
   }
 
  protected:
@@ -233,10 +242,10 @@ TEST_F(FakeDdkSysmem, TearDownLoop) {
 TEST_F(FakeDdkSysmem, DummySecureMem) {
   zx::channel securemem_server, securemem_client;
   ASSERT_OK(zx::channel::create(0u, &securemem_server, &securemem_client));
-  EXPECT_EQ(ZX_OK, sysmem_.SysmemRegisterSecureMem(std::move(securemem_server)));
+  EXPECT_EQ(ZX_OK, sysmem_->SysmemRegisterSecureMem(std::move(securemem_server)));
 
   // This shouldn't deadlock waiting for a message on the channel.
-  EXPECT_EQ(ZX_OK, sysmem_.SysmemUnregisterSecureMem());
+  EXPECT_EQ(ZX_OK, sysmem_->SysmemUnregisterSecureMem());
 
   // This shouldn't cause a panic due to receiving peer closed.
   securemem_client.reset();
@@ -269,9 +278,9 @@ TEST_F(FakeDdkSysmem, NamedToken) {
   while (true) {
     bool found_collection = false;
     sync_completion_t completion;
-    async::PostTask(sysmem_.dispatcher(), [&] {
-      if (sysmem_.logical_buffer_collections().size() == 1) {
-        const auto* logical_collection = *sysmem_.logical_buffer_collections().begin();
+    async::PostTask(sysmem_->dispatcher(), [&] {
+      if (sysmem_->logical_buffer_collections().size() == 1) {
+        const auto* logical_collection = *sysmem_->logical_buffer_collections().begin();
         auto collection_views = logical_collection->collection_views();
         if (collection_views.size() == 1) {
           auto name = logical_collection->name();
@@ -300,9 +309,9 @@ TEST_F(FakeDdkSysmem, NamedClient) {
   while (true) {
     bool found_collection = false;
     sync_completion_t completion;
-    async::PostTask(sysmem_.dispatcher(), [&] {
-      if (sysmem_.logical_buffer_collections().size() == 1) {
-        const auto* logical_collection = *sysmem_.logical_buffer_collections().begin();
+    async::PostTask(sysmem_->dispatcher(), [&] {
+      if (sysmem_->logical_buffer_collections().size() == 1) {
+        const auto* logical_collection = *sysmem_->logical_buffer_collections().begin();
         if (logical_collection->collection_views().size() == 1) {
           const BufferCollection* collection = logical_collection->collection_views().front();
           if (collection->node_properties().client_debug_info().name == "a") {
@@ -346,9 +355,9 @@ TEST_F(FakeDdkSysmem, NamedAllocatorToken) {
   while (true) {
     bool found_collection = false;
     sync_completion_t completion;
-    async::PostTask(sysmem_.dispatcher(), [&] {
-      if (sysmem_.logical_buffer_collections().size() == 1) {
-        const auto* logical_collection = *sysmem_.logical_buffer_collections().begin();
+    async::PostTask(sysmem_->dispatcher(), [&] {
+      if (sysmem_->logical_buffer_collections().size() == 1) {
+        const auto* logical_collection = *sysmem_->logical_buffer_collections().begin();
         auto collection_views = logical_collection->collection_views();
         if (collection_views.size() == 1) {
           const auto& collection = collection_views.front();
@@ -368,7 +377,7 @@ TEST_F(FakeDdkSysmem, NamedAllocatorToken) {
 }
 
 TEST_F(FakeDdkSysmem, MaxSize) {
-  sysmem_.set_settings(sysmem_driver::Settings{.max_allocation_size = zx_system_get_page_size()});
+  sysmem_->set_settings(sysmem_driver::Settings{.max_allocation_size = zx_system_get_page_size()});
 
   auto collection_client = AllocateNonSharedCollection();
 
@@ -448,8 +457,8 @@ TEST_F(FakeDdkSysmem, AuxBufferLeak) {
   while (true) {
     bool no_collections = false;
     sync_completion_t completion;
-    async::PostTask(sysmem_.dispatcher(), [&] {
-      no_collections = sysmem_.logical_buffer_collections().empty();
+    async::PostTask(sysmem_->dispatcher(), [&] {
+      no_collections = sysmem_->logical_buffer_collections().empty();
       sync_completion_signal(&completion);
     });
 
