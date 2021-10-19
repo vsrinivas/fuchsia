@@ -21,7 +21,7 @@ use {
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     ieee80211::MacAddr,
-    log::{error, info, warn},
+    log::{debug, error, info, trace, warn},
     static_assertions::assert_eq_size,
     std::convert::TryInto,
     wlan_common::{
@@ -866,9 +866,13 @@ impl States {
         });
 
         // Parse mac frame. Drop corrupted ones.
+        trace!("Parsing MAC frame:\n  {:02x?}", bytes.deref());
         let mac_frame = match mac::MacFrame::parse(bytes, body_aligned) {
             Some(mac_frame) => mac_frame,
-            None => return self,
+            None => {
+                debug!("Dropping corrupt MAC frame.");
+                return self;
+            }
         };
 
         if !sta.sta.should_handle_frame(&mac_frame) {
@@ -877,12 +881,14 @@ impl States {
             if !sta.scanner.is_scanning() {
                 warn!("Mac frame is either from a foreign BSS or not destined for us. Dropped.");
             }
+            debug!("Dropping MAC frame that should not be handled.");
             return self;
         }
 
         // Drop frames which are not permitted in the STA's current state.
         let frame_class = mac::FrameClass::from(&mac_frame);
         if !self.is_frame_class_permitted(frame_class) {
+            debug!("Dropping MAC frame with prohibited frame class.");
             return self;
         }
 
@@ -900,13 +906,17 @@ impl States {
                         body,
                     );
                     state.extract_and_record_signal_dbm(rx_info);
+                } else {
+                    // Drop data frames in all other states
+                    debug!("Dropping MAC data frame while not associated.");
                 }
-
-                // Drop data frames in all other states
                 self
             }
             // Control frames are not yet supported. Drop them.
-            _ => self,
+            _ => {
+                debug!("Dropping unsupported MAC control frame.");
+                self
+            }
         }
     }
 
