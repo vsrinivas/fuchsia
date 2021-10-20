@@ -21,6 +21,12 @@ rustc_macro("macro") {
     "src/derive_checked_vec.rs",
     "src/derive_one_or_many.rs",
     "src/derive_reference.rs",
+    "src/derive_reference_doc.rs",
     "src/lib.rs",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "derive-reference-doc-tests" ]
 }

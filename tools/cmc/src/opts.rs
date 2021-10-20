@@ -203,6 +203,9 @@ pub enum Commands {
         /// EXPERIMENTAL and subject to removal without warning.
         experimental_force_runner: Option<String>,
     },
+
+    #[structopt(name = "print-cml-reference")]
+    PrintReferenceDocs,
 }
 
 fn parse_extra_schema_arg(src: &str) -> (PathBuf, Option<String>) {

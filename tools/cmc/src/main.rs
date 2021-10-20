@@ -9,7 +9,9 @@
 //! `cmc` is the Component Manifest Compiler.
 
 use anyhow::{ensure, Error};
-pub use cml::{self, error, one_or_many, translate};
+pub use cml::{
+    self, error, one_or_many, reference_doc::MarkdownReferenceDocGenerator, translate, Document,
+};
 use std::fs;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
@@ -108,6 +110,9 @@ fn run_cmc() -> Result<(), Error> {
                 &features.into(),
                 &experimental_force_runner,
             )?
+        }
+        opts::Commands::PrintReferenceDocs => {
+            println!("{}", Document::get_markdown_reference_docs())
         }
     }
     if let Some(stamp_path) = opt.stamp {
