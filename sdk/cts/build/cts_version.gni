@@ -1,3 +1,5 @@
+import("//sdk/config.gni")
+
 # Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -11,5 +13,5 @@ declare_args() {
   #
   # Usage:
   #   `fx set PRODUCT.BOARD --args cts_version='"version_name"'`
-  cts_version = ""
+  cts_version = sdk_id
 }
