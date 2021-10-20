@@ -25,7 +25,7 @@ namespace hidctl {
 
 zx_status_t HidCtl::Create(void* ctx, zx_device_t* parent) {
   auto dev = std::unique_ptr<HidCtl>(new HidCtl(parent));
-  zx_status_t status = dev->DdkAdd("hidctl");
+  zx_status_t status = dev->DdkAdd(ddk::DeviceAddArgs("hidctl").set_flags(DEVICE_ADD_NON_BINDABLE));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: could not add device: %d", __func__, status);
   } else {
