@@ -207,14 +207,18 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   // and the device is not allowed to be bound multiple times, ZX_ERR_NEXT if
   // the driver is not capable of binding to the device, and a different error
   // if the driver was capable of binding but failed to bind.
-  zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv, bool autobind) {
-    return BindDriverToDevice(dev, drv, autobind,
-                              fit::bind_member(this, &Coordinator::AttemptBind));
+  zx_status_t MatchAndBindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv,
+                                         bool autobind) {
+    return MatchAndBindDriverToDevice(dev, drv, autobind,
+                                      fit::bind_member(this, &Coordinator::AttemptBind));
   }
 
   // The same as above, but the given function is called to perform the
   // bind attempt.
-  zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv, bool autobind,
+  zx_status_t MatchAndBindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv,
+                                         bool autobind, const AttemptBindFunc& attempt_bind);
+
+  zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv,
                                  const AttemptBindFunc& attempt_bind);
 
   // Used to implement fuchsia::device::manager::Coordinator.

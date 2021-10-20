@@ -1394,14 +1394,19 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
   }
 }
 
-zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv,
-                                            bool autobind, const AttemptBindFunc& attempt_bind) {
+zx_status_t Coordinator::MatchAndBindDriverToDevice(const fbl::RefPtr<Device>& dev,
+                                                    const Driver* drv, bool autobind,
+                                                    const AttemptBindFunc& attempt_bind) {
   zx_status_t status = MatchDeviceToDriver(dev, drv, autobind);
   if (status != ZX_OK) {
     return status;
   }
+  return BindDriverToDevice(dev, drv, attempt_bind);
+}
 
-  status = attempt_bind(drv, dev);
+zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* drv,
+                                            const AttemptBindFunc& attempt_bind) {
+  zx_status_t status = attempt_bind(drv, dev);
   if (status != ZX_OK) {
     LOGF(ERROR, "%s: Failed to bind driver '%s' to device '%s': %s", __func__, drv->name.data(),
          dev->name().data(), zx_status_get_string(status));
@@ -1417,7 +1422,8 @@ zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, cons
 // the Coordinator.  Existing devices are inspected to see if the
 // new driver is bindable to them (unless they are already bound).
 zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind) {
-  zx_status_t status = BindDriverToDevice(root_device_, drv, true /* autobind */, attempt_bind);
+  zx_status_t status =
+      MatchAndBindDriverToDevice(root_device_, drv, true /* autobind */, attempt_bind);
   if (status != ZX_ERR_NEXT) {
     return status;
   }
@@ -1426,7 +1432,7 @@ zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_
   }
   for (auto& dev : devices_) {
     zx_status_t status =
-        BindDriverToDevice(fbl::RefPtr(&dev), drv, true /* autobind */, attempt_bind);
+        MatchAndBindDriverToDevice(fbl::RefPtr(&dev), drv, true /* autobind */, attempt_bind);
     if (status == ZX_ERR_NEXT || status == ZX_ERR_ALREADY_BOUND) {
       continue;
     }
@@ -1499,7 +1505,8 @@ zx_status_t Coordinator::MatchAndBindDeviceDriverIndex(
 
   auto drivers = driver_loader_.MatchDeviceDriverIndex(dev, config);
   for (auto driver : drivers) {
-    zx_status_t status = AttemptBind(driver, dev);
+    zx_status_t status =
+        BindDriverToDevice(dev, driver, fit::bind_member(this, &Coordinator::AttemptBind));
     // If we get this here it means we've successfully bound one driver
     // and the device isn' multi-bind.
     if (status == ZX_ERR_ALREADY_BOUND) {
