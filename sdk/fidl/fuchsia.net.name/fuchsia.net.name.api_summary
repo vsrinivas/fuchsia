@@ -12,6 +12,9 @@ union/member fuchsia.net.name/DnsServerSource.static_source fuchsia.net.name/Sta
 strict union fuchsia.net.name/DnsServerSource
 protocol/member fuchsia.net.name/DnsServerWatcher.WatchServers() -> (vector<fuchsia.net.name/DnsServer> servers)
 protocol fuchsia.net.name/DnsServerWatcher
+protocol/member fuchsia.net.name/Lookup.LookupHostname(fuchsia.net/IpAddress addr) -> (fuchsia.net.name/Lookup_LookupHostname_Result result)
+protocol/member fuchsia.net.name/Lookup.LookupIp(string:255 hostname,fuchsia.net.name/LookupIpOptions options) -> (fuchsia.net.name/Lookup_LookupIp_Result result)
+protocol fuchsia.net.name/Lookup
 protocol/member fuchsia.net.name/LookupAdmin.GetDnsServers() -> (vector<fuchsia.net/SocketAddress> servers)
 protocol/member fuchsia.net.name/LookupAdmin.SetDnsServers(vector<fuchsia.net/SocketAddress> servers) -> (fuchsia.net.name/LookupAdmin_SetDnsServers_Result result)
 protocol fuchsia.net.name/LookupAdmin
@@ -19,6 +22,28 @@ struct fuchsia.net.name/LookupAdmin_SetDnsServers_Response
 union/member fuchsia.net.name/LookupAdmin_SetDnsServers_Result.err int32
 union/member fuchsia.net.name/LookupAdmin_SetDnsServers_Result.response fuchsia.net.name/LookupAdmin_SetDnsServers_Response
 strict union fuchsia.net.name/LookupAdmin_SetDnsServers_Result
+enum/member fuchsia.net.name/LookupError.INTERNAL_ERROR 4
+enum/member fuchsia.net.name/LookupError.INVALID_ARGS 3
+enum/member fuchsia.net.name/LookupError.NOT_FOUND 1
+enum/member fuchsia.net.name/LookupError.TRANSIENT 2
+strict enum fuchsia.net.name/LookupError uint32
+table/member fuchsia.net.name/LookupIpOptions.ipv4_lookup bool
+table/member fuchsia.net.name/LookupIpOptions.ipv6_lookup bool
+table/member fuchsia.net.name/LookupIpOptions.sort_addresses bool
+table fuchsia.net.name/LookupIpOptions
+table/member fuchsia.net.name/LookupResult.addresses vector<fuchsia.net/IpAddress>
+table fuchsia.net.name/LookupResult
+struct/member fuchsia.net.name/Lookup_LookupHostname_Response.hostname string:255
+struct fuchsia.net.name/Lookup_LookupHostname_Response
+union/member fuchsia.net.name/Lookup_LookupHostname_Result.err fuchsia.net.name/LookupError
+union/member fuchsia.net.name/Lookup_LookupHostname_Result.response fuchsia.net.name/Lookup_LookupHostname_Response
+strict union fuchsia.net.name/Lookup_LookupHostname_Result
+struct/member fuchsia.net.name/Lookup_LookupIp_Response.result fuchsia.net.name/LookupResult
+struct fuchsia.net.name/Lookup_LookupIp_Response
+union/member fuchsia.net.name/Lookup_LookupIp_Result.err fuchsia.net.name/LookupError
+union/member fuchsia.net.name/Lookup_LookupIp_Result.response fuchsia.net.name/Lookup_LookupIp_Response
+strict union fuchsia.net.name/Lookup_LookupIp_Result
+const fuchsia.net.name/MAX_HOSTNAME_SIZE uint64 255
 table/member fuchsia.net.name/NdpDnsServerSource.source_interface uint64
 table fuchsia.net.name/NdpDnsServerSource
 table fuchsia.net.name/StaticDnsServerSource

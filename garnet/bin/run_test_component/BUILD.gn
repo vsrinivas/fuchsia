@@ -30,7 +30,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.name",
     "//sdk/fidl/fuchsia.posix.socket",
     "//sdk/fidl/fuchsia.scheduler",

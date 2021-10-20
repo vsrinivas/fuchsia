@@ -355,7 +355,6 @@
         {
             protocol: [
                 "fuchsia.net.name.Lookup",
-                "fuchsia.net.NameLookup",
                 "fuchsia.net.routes.State",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.netstack.Netstack",

@@ -5,18 +5,6 @@ library fuchsia.net.name;
 
 using fuchsia.net;
 
-/// The maximum length of a hostname, as per [RFC 1035 section 2.3.4](https://tools.ietf.org/html/rfc1035#section-2.3.4).
-const MAX_HOSTNAME_SIZE uint64 = 255;
-
-/// A hostname.
-///
-/// Although the maximum length of a domain or hostname is 255 characters,
-/// each label within a name must not be longer than 63 characters as per
-/// [RFC 1035 section 2.3.4](https://tools.ietf.org/html/rfc1035#section-2.3.4).
-/// A label in a host name is the alphanumeric characters or hyphens, seperated
-/// by a period (e.g. abc.com has two labels, 'abc' and 'com').
-alias Hostname = string:MAX_HOSTNAME_SIZE;
-
 /// Lookup operation errors.
 type LookupError = strict enum {
     /// No result was found for this query.
@@ -39,7 +27,7 @@ protocol Lookup {
     /// If `hostname` is an Internationalized Domain Name, it must be encoded as
     /// per RFC 3490.
     LookupIp(struct {
-        hostname Hostname;
+        hostname fuchsia.net.Hostname;
         options @generated_name("LookupIpOptions") table {
             /// Include IPv4 results.
             ///
@@ -74,6 +62,6 @@ protocol Lookup {
     LookupHostname(struct {
         addr fuchsia.net.IpAddress;
     }) -> (struct {
-        hostname Hostname;
+        hostname fuchsia.net.Hostname;
     }) error LookupError;
 };

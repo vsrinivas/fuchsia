@@ -15,7 +15,6 @@
             protocol: [
                 "fuchsia.net.name.Lookup",
                 "fuchsia.net.name.LookupAdmin",
-                "fuchsia.net.NameLookup",
             ],
         },
     ],
@@ -32,7 +31,6 @@
             protocol: [
                 "fuchsia.net.name.Lookup",
                 "fuchsia.net.name.LookupAdmin",
-                "fuchsia.net.NameLookup",
             ],
             from: "self",
         },

@@ -378,10 +378,6 @@
             path: "/svc_for_sys/fuchsia.net.stack.Stack",
         },
         {
-            protocol: "fuchsia.net.NameLookup",
-            path: "/svc_for_sys/fuchsia.net.NameLookup",
-        },
-        {
             protocol: "fuchsia.netstack.Netstack",
             path: "/svc_for_sys/fuchsia.netstack.Netstack",
         },

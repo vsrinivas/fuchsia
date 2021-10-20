@@ -153,13 +153,7 @@
             from: "#netstack",
         },
         {
-            protocol: [
-                "fuchsia.net.name.Lookup",
-
-                // TODO(https://fxbug.dev/49741): Remove once migration is
-                // complete.
-                "fuchsia.net.NameLookup",
-            ],
+            protocol: [ "fuchsia.net.name.Lookup" ],
             from: "#dns-resolver",
         },
         {

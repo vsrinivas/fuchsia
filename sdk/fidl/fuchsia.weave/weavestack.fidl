@@ -58,7 +58,7 @@ type QrCode = struct {
 
 /// Representation of a host either in the form of a hostname or IP address.
 type Host = strict union {
-    1: hostname string:net.MAX_HOSTNAME_SIZE;
+    1: hostname net.Hostname;
     2: ip_address net.IpAddress;
 };
 

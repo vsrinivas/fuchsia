@@ -3,6 +3,20 @@
 // found in the LICENSE file.
 library fuchsia.net;
 
+/// The maximum length of a hostname, as per
+/// [RFC 1035 section 2.3.4](https://tools.ietf.org/html/rfc1035#section-2.3.4).
+// TODO(https://fxbug.dev/84190): inline this constant below.
+const MAX_HOSTNAME_SIZE uint64 = 255;
+
+/// A hostname.
+///
+/// Although the maximum length of a domain or hostname is 255 characters,
+/// each label within a name must not be longer than 63 characters as per
+/// [RFC 1035 section 2.3.4](https://tools.ietf.org/html/rfc1035#section-2.3.4).
+/// A label in a host name is the alphanumeric characters or hyphens, seperated
+/// by a period (e.g. abc.com has two labels, 'abc' and 'com').
+alias Hostname = string:MAX_HOSTNAME_SIZE;
+
 /// A unique non-zero interface identifier.
 alias interface_id = uint64;
 

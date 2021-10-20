@@ -10,7 +10,6 @@
 #include <fuchsia/hardware/pty/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/net/name/cpp/fidl.h>
 #include <fuchsia/posix/socket/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
@@ -109,7 +108,6 @@ const std::unordered_set<std::string> kNetworkUsingTestsThatShouldBeE2E = {
 };
 
 const std::unordered_set<std::string> kRealNetworkServices = {
-    fuchsia::net::NameLookup::Name_,
     fuchsia::net::name::Lookup::Name_,
     fuchsia::posix::socket::Provider::Name_,
 };
