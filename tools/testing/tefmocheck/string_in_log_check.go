@@ -283,11 +283,13 @@ func StringInLogsChecks() []FailureModeCheck {
 			String: "Failed to stream partitions to FVM",
 			Type:   swarmingOutputType,
 		},
-		// Emitted by the GCS Go library from within botanist during image download.
-		// https://github.com/googleapis/google-cloud-go/blob/bc966a3c318d162263ebce3d71bc39b3880c8e90/storage/reader.go#L416
+		// Emitted by the GCS Go library during image download.
 		&stringInLogCheck{
 			String: bootserverconstants.BadCRCErrorMsg,
 			Type:   swarmingOutputType,
+			// This error is generally transient, so ignore it as long as the
+			// download can be retried and eventually succeeds.
+			SkipPassedTask: true,
 		},
 		// For fxbug.dev/53101.
 		&stringInLogCheck{
