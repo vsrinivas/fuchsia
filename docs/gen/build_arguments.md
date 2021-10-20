@@ -804,7 +804,7 @@ warn on all. Note: setting lint levels in source takes precedence over this.
 
 **Current value (from the default):** `false`
 
-From //build/rust/config.gni:69
+From //build/rust/config.gni:59
 
 ### cobalt_environment
 Selects the Cobalt environment to send data to. Choices:
@@ -874,19 +874,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/d9535a25935870420953b865287978d579acbc50/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/207f78cd34d39b1e140f0fca3e056ed9da82a5d6/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/d9535a25935870420953b865287978d579acbc50/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/207f78cd34d39b1e140f0fca3e056ed9da82a5d6/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/d9535a25935870420953b865287978d579acbc50/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/207f78cd34d39b1e140f0fca3e056ed9da82a5d6/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -1637,7 +1637,7 @@ Enables generation of corresponding clippy targets for all `rustc_binary`,
 
 **Current value (from the default):** `true`
 
-From //build/rust/config.gni:65
+From //build/rust/config.gni:55
 
 ### generate_plasa_artifacts
 If set, causes the plasa artifacts to be generated.  Not all builds need to
@@ -3351,24 +3351,6 @@ Sets the default LTO type for rustc bulids.
 
 From //build/rust/config.gni:43
 
-### rust_override_lto
-Overrides the LTO setting for all Rust builds, regardless of
-debug/release flags.
-Valid values are "none", "thin", and "fat".
-
-**Current value (from the default):** `""`
-
-From //build/rust/config.gni:61
-
-### rust_override_opt
-Overrides the optimization level for all Rust builds, regardless of
-debug/release flags or the `force_opt` arg to the rustc_ templates.
-Valid values are 0-3, o, and z.
-
-**Current value (from the default):** `""`
-
-From //build/rust/config.gni:56
-
 ### rust_sysroot
 Sets a custom base directory for where rust tooling
 looks for the standard library
@@ -3421,7 +3403,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"0xnMHEXW6SWp9cI3IFICm1g9AMPXoKUN6hDTLfp0eEEC"`
+**Current value (from the default):** `"dJexSuyWWTvAoabObVcLk5fBr-cRK_Wg2Ds7xsO4MqIC"`
 
 From //build/rust/config.gni:30
 
