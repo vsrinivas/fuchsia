@@ -18,7 +18,6 @@ per-file exec-host-tests=joshuaseaton@google.com
 per-file extract_pprof=ghanan@google.com,tamird@google.com
 per-file ffx=raggi@google.com,boetger@google.com,jwing@google.com,awdavies@google.com
 per-file fidlcat=jeremymanson@google.com,vbelliard@google.com
-per-file flutter-attach=zra@google.com
 per-file format-code=jeremymanson@google.com
 per-file fuzz=aarongreen@google.com,eep@google.com,markdittmer@google.com,mvanotti@google.com
 per-file             gc = file: /src/sys/pkg/OWNERS
