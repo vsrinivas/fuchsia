@@ -46,7 +46,8 @@ class IntelDspStream : public codecs::IntelHDAStreamBase,
 
   void CreateRingBuffer(StreamChannel* channel, fuchsia_hardware_audio::wire::Format format,
                         ::fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer> ring_buffer,
-                        StreamChannel::CreateRingBufferCompleter::Sync& completer) override;
+                        StreamChannel::CreateRingBufferCompleter::Sync& completer) override
+      __TA_REQUIRES(obj_lock());
 
   // fuchsia hardware audio RingBuffer Interface
   void GetProperties(GetPropertiesRequestView request,

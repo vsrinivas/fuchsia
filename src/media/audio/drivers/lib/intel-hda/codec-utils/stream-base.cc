@@ -370,8 +370,6 @@ void IntelHDAStreamBase::GetChannel(GetChannelRequestView request,
 
 void IntelHDAStreamBase::GetSupportedFormats(
     StreamChannel::GetSupportedFormatsCompleter::Sync& completer) {
-  fbl::AutoLock channel_lock(&obj_lock_);
-
   if (supported_formats_.size() > std::numeric_limits<uint16_t>::max()) {
     LOG("Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
         supported_formats_.size());
@@ -466,7 +464,6 @@ void IntelHDAStreamBase::CreateRingBuffer(
   uint16_t encoded_fmt;
   zx_status_t res;
 
-  fbl::AutoLock channel_lock(&obj_lock_);
   // Only the privileged stream channel is allowed to change the format.
   if (channel != stream_channel_.get()) {
     LOG("Unprivileged channel cannot set the format");
@@ -577,7 +574,6 @@ void IntelHDAStreamBase::WatchGainState(StreamChannel* channel,
   ZX_DEBUG_ASSERT(!channel->gain_completer_);
   channel->gain_completer_ = completer.ToAsync();
 
-  fbl::AutoLock obj_lock(&obj_lock_);
   OnGetGainLocked(&cur_gain_state_);
 
   // Reply is delayed if there is no change since the last reported gain state.
@@ -599,7 +595,6 @@ void IntelHDAStreamBase::WatchGainState(StreamChannel* channel,
 
 void IntelHDAStreamBase::SetGain(audio_fidl::wire::GainState target_state,
                                  StreamChannel::SetGainCompleter::Sync& completer) {
-  fbl::AutoLock obj_lock(&obj_lock_);
   OnGetGainLocked(&cur_gain_state_);
 
   // Sanity check the request before passing it along
@@ -662,7 +657,6 @@ void IntelHDAStreamBase::WatchPlugState(StreamChannel* channel,
 
   audio_proto::PlugDetectResp plug = {};
 
-  fbl::AutoLock lock(obj_lock());
   OnPlugDetectLocked(channel, &plug);
 
   bool plugged = plug.flags & AUDIO_PDNF_PLUGGED;
@@ -694,7 +688,6 @@ void IntelHDAStreamBase::NotifyPlugStateLocked(bool plugged, int64_t plug_time) 
 void IntelHDAStreamBase::GetProperties(
     StreamChannel* channel,
     fidl::WireServer<audio_fidl::StreamConfig>::GetPropertiesCompleter::Sync& completer) {
-  fbl::AutoLock obj_lock(&obj_lock_);
   fidl::Arena allocator;
   audio_fidl::wire::StreamProperties response(allocator);
 

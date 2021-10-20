@@ -90,25 +90,31 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
     // fuchsia hardware audio Stream Interface.
     void GetProperties(GetPropertiesRequestView request,
                        GetPropertiesCompleter::Sync& completer) override {
+      fbl::AutoLock obj_lock(stream_.obj_lock());
       stream_.GetProperties(this, completer);
     }
     void GetSupportedFormats(GetSupportedFormatsRequestView request,
                              GetSupportedFormatsCompleter::Sync& completer) override {
+      fbl::AutoLock obj_lock(stream_.obj_lock());
       stream_.GetSupportedFormats(completer);
     }
     void WatchGainState(WatchGainStateRequestView request,
                         WatchGainStateCompleter::Sync& completer) override {
+      fbl::AutoLock obj_lock(stream_.obj_lock());
       stream_.WatchGainState(this, completer);
     }
     void WatchPlugState(WatchPlugStateRequestView request,
                         WatchPlugStateCompleter::Sync& completer) override {
+      fbl::AutoLock obj_lock(stream_.obj_lock());
       stream_.WatchPlugState(this, completer);
     }
     void SetGain(SetGainRequestView request, SetGainCompleter::Sync& completer) override {
+      fbl::AutoLock obj_lock(stream_.obj_lock());
       stream_.SetGain(request->target_state, completer);
     }
     void CreateRingBuffer(CreateRingBufferRequestView request,
                           CreateRingBufferCompleter::Sync& completer) override {
+      fbl::AutoLock obj_lock(stream_.obj_lock());
       stream_.CreateRingBuffer(this, request->format, std::move(request->ring_buffer), completer);
     }
 
@@ -204,7 +210,7 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   virtual zx_status_t BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt)
       __TA_REQUIRES(obj_lock_);
   virtual zx_status_t FinishChangeStreamFormatLocked(uint16_t encoded_fmt) __TA_REQUIRES(obj_lock_);
-  // IntelHDAStreamBase assumes the derived classes do not update their gain on thier own.
+  // IntelHDAStreamBase assumes the derived classes do not update their gain on their own.
   virtual void OnGetGainLocked(audio_proto::GainState* out_resp) __TA_REQUIRES(obj_lock_);
   virtual void OnSetGainLocked(const audio_proto::SetGainReq& req,
                                audio_proto::SetGainResp* out_resp) __TA_REQUIRES(obj_lock_);
@@ -239,21 +245,26 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
 
   // fuchsia hardware audio Stream Interface (forwarded from StreamChannel)
-  void GetProperties(StreamChannel* channel,
-                     StreamChannel::GetPropertiesCompleter::Sync& completer);
-  void GetSupportedFormats(StreamChannel::GetSupportedFormatsCompleter::Sync& completer);
+  // All require obj_lock since they take StreamConfig's address and use it.
+  void GetProperties(StreamChannel* channel, StreamChannel::GetPropertiesCompleter::Sync& completer)
+      __TA_REQUIRES(obj_lock_);
+  void GetSupportedFormats(StreamChannel::GetSupportedFormatsCompleter::Sync& completer)
+      __TA_REQUIRES(obj_lock_);
   virtual void CreateRingBuffer(StreamChannel* channel, fuchsia_hardware_audio::wire::Format format,
                                 ::fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer> ring_buffer,
-                                StreamChannel::CreateRingBufferCompleter::Sync& completer);
+                                StreamChannel::CreateRingBufferCompleter::Sync& completer)
+      __TA_REQUIRES(obj_lock_);
   // If a derived class needs to update gain on its own, it can override this method.
   void WatchGainState(StreamChannel* channel,
-                      StreamChannel::WatchGainStateCompleter::Sync& completer);
+                      StreamChannel::WatchGainStateCompleter::Sync& completer)
+      __TA_REQUIRES(obj_lock_);
   // Derived classes with async plug detect support can call NotifyPlugStateLocked and not
   // override this method.
   void WatchPlugState(StreamChannel* channel,
-                      StreamChannel::WatchPlugStateCompleter::Sync& completer);
+                      StreamChannel::WatchPlugStateCompleter::Sync& completer)
+      __TA_REQUIRES(obj_lock_);
   void SetGain(fuchsia_hardware_audio::wire::GainState target_state,
-               StreamChannel::SetGainCompleter::Sync& completer);
+               StreamChannel::SetGainCompleter::Sync& completer) __TA_REQUIRES(obj_lock_);
 
  private:
   void DeactivateStreamChannel(StreamChannel* channel);
