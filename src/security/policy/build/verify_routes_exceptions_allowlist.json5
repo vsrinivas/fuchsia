@@ -877,7 +877,7 @@
         },
         {
           "using_node": "/core/test_manager/starnix_test_runner/starnix_runner",
-          "capability": "fuchsia.sys2.Realm",
+          "capability": "fuchsia.component.Realm",
           "error": {
             "error": {
               "analyzer_model_error": {
@@ -907,12 +907,12 @@
                         }
                       ]
                     },
-                    "capability_id": "fuchsia.sys2.Realm"
+                    "capability_id": "fuchsia.component.Realm"
                   }
                 }
               }
             },
-            "message": "A `use from parent` declaration was found at `/core/test_manager/starnix_test_runner/starnix_runner` for `fuchsia.sys2.Realm`, but no matching `offer` declaration was found in the parent"
+            "message": "A `use from parent` declaration was found at `/core/test_manager/starnix_test_runner/starnix_runner` for `fuchsia.component.Realm`, but no matching `offer` declaration was found in the parent"
           }
         },
         {
