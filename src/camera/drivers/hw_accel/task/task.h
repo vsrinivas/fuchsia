@@ -13,9 +13,7 @@
 #include <zircon/fidl.h>
 
 #include <deque>
-
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
+#include <mutex>
 
 namespace generictask {
 // The |Task| class store all the information pertaining to
@@ -43,7 +41,7 @@ class GenericTask {
   // Returns the physical address for the output buffer which is
   // picked from the pool of free buffers.
   fpromise::result<uint32_t, zx_status_t> GetOutputBufferPhysAddr() {
-    fbl::AutoLock lock(&output_vmo_pool_lock_);
+    std::lock_guard lock(output_vmo_pool_lock_);
     auto buffer = output_buffers_.LockBufferForWrite();
     if (!buffer) {
       return fpromise::error(ZX_ERR_NO_MEMORY);
@@ -54,7 +52,7 @@ class GenericTask {
   }
 
   std::optional<fzl::VmoPool::Buffer> WriteLockOutputBuffer() {
-    fbl::AutoLock lock(&output_vmo_pool_lock_);
+    std::lock_guard lock(output_vmo_pool_lock_);
     auto buffer = output_buffers_.LockBufferForWrite();
     if (buffer)
       return std::move(*buffer);
@@ -63,7 +61,7 @@ class GenericTask {
 
   // Releases the write lock of the output buffer and returns back and index.
   uint32_t GetOutputBufferIndex() {
-    fbl::AutoLock lock(&output_vmo_pool_lock_);
+    std::lock_guard lock(output_vmo_pool_lock_);
     auto index = write_locked_buffers_.back().ReleaseWriteLockAndGetIndex();
     write_locked_buffers_.pop_back();
     return index;
@@ -71,13 +69,13 @@ class GenericTask {
 
   // Returns the output buffer back to the VMO pool to be reused again.
   zx_status_t ReleaseOutputBuffer(uint32_t index) {
-    fbl::AutoLock lock(&output_vmo_pool_lock_);
+    std::lock_guard lock(output_vmo_pool_lock_);
     return output_buffers_.ReleaseBuffer(index);
   }
 
   // Returns the output buffer back to the VMO pool to be reused again.
   zx_status_t ReleaseOutputBuffer(fzl::VmoPool::Buffer buffer) {
-    fbl::AutoLock lock(&output_vmo_pool_lock_);
+    std::lock_guard lock(output_vmo_pool_lock_);
     return buffer.Release();
   }
 
@@ -138,7 +136,7 @@ class GenericTask {
   // Guards Allocations and Frees of buffers in the output pool.
 
  private:
-  fbl::Mutex output_vmo_pool_lock_;
+  std::mutex output_vmo_pool_lock_;
   size_t input_image_format_count_;
   std::unique_ptr<image_format_2_t[]> input_image_format_list_;
   uint32_t cur_input_image_format_index_;
