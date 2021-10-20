@@ -1,27 +1,6 @@
 {
   "artifacts": [
     {
-      "name": "flutter_aot_product_runner/0",
-      "type": "package",
-      "artifact_store": {
-        "name": "workstation_tuf_repo",
-        "type": "tuf",
-        "repo": "tuf_repo_url",
-        "artifact_group_name": "5bc31e08-4890-4855-9f89-3337273c3b89",
-        "content_address_storage": "fuchsia-blobs.googleusercontent.com"
-      },
-      "attributes": {
-        "architecture": "x64",
-        "branch": "release",
-        "creation_time": "2021-09-06T11:37:36.054281",
-        "sdk_version": "5.20210630.1.1",
-        "user": "test_user",
-        "version": "test_version_20210701_0330"
-      },
-      "merkle": "46ae86ed0a14dc0c894ec3f8982ce54dbed9bb69a46593903b037f0167cd1d91",
-      "blobs": []
-    },
-    {
       "name": "twentyfortyeight/0",
       "type": "package",
       "artifact_store": {
@@ -29,7 +8,7 @@
         "type": "tuf",
         "repo": "tuf_repo_url",
         "artifact_group_name": "5bc31e08-4890-4855-9f89-3337273c3b89",
-        "content_address_storage": "fuchsia-blobs.googleusercontent.com"
+        "content_address_storage": "tuf_repo_url"
       },
       "attributes": {
         "architecture": "x64",
@@ -39,8 +18,11 @@
         "user": "test_user",
         "version": "test_version_20210701_0330"
       },
-      "merkle": "10ded35b8849e64b074a1c3b3be85a521f11ab041c4a807a40caaca25f27833f",
-      "blobs": []
+      "merkle": "0000000000000000000000000000000000000000000000000000000000000000",
+      "blobs": [
+        "0000000000000000000000000000000000000000000000000000000000000000",
+        "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b"
+      ]
     }
   ]
 }

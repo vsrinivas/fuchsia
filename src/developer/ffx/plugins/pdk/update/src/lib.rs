@@ -11,6 +11,9 @@ use {
     ffx_pdk_lib::spec::{Spec, SpecArtifactStore, SpecArtifactStoreKind},
     ffx_pdk_update_args::UpdateCommand,
     fuchsia_hyper::new_https_client,
+    fuchsia_pkg::MetaContents,
+    futures_lite::io::AsyncWriteExt,
+    hyper::body::HttpBody,
     hyper::{body, StatusCode, Uri},
     serde_json::{json, Map, Value},
     serde_json5,
@@ -269,6 +272,42 @@ fn merge(a: &Option<Map<String, Value>>, b: &Option<Map<String, Value>>) -> Map<
     result
 }
 
+async fn get_blobs(content_address_storage: Option<String>, hash: String) -> Result<Vec<String>> {
+    let mut result = vec![hash.clone()];
+    let tempdir = tempfile::tempdir().unwrap();
+    let meta_far_path = tempdir.path().join("meta.far");
+    // TODO: Implement blob list for the Local flow
+    if content_address_storage.is_none() {
+        return Ok(result);
+    }
+    let hostname = content_address_storage.unwrap();
+    let uri = format!("{}/{}", hostname, hash).parse::<Uri>()?;
+    let client = new_https_client();
+    let mut res = client.get(uri.clone()).await?;
+    let status = res.status();
+    if status != StatusCode::OK {
+        ffx_bail!(
+            "Cannot download meta.far to {}. Status is {}. Uri is: {}. \n",
+            meta_far_path.display(),
+            status,
+            &uri
+        );
+    }
+    let mut output = async_fs::File::create(&meta_far_path).await?;
+    while let Some(next) = res.data().await {
+        let chunk = next?;
+        output.write_all(&chunk).await?;
+    }
+    output.sync_all().await?;
+
+    let mut archive = File::open(&meta_far_path)?;
+    let mut meta_far = fuchsia_archive::Reader::new(&mut archive)?;
+    let meta_contents = meta_far.read_file("meta/contents")?;
+    let meta_contents = MetaContents::deserialize(meta_contents.as_slice())?.into_contents();
+    result.extend(meta_contents.into_iter().map(|(_, hash)| hash.to_string()));
+    return Ok(result);
+}
+
 /// Main processing of a spec file
 ///
 async fn process_spec(spec: &Spec, cmd: &UpdateCommand) -> Result<()> {
@@ -305,8 +344,12 @@ async fn process_spec(spec: &Spec, cmd: &UpdateCommand) -> Result<()> {
                 },
                 attributes: matching_group.attributes.as_object().unwrap().clone(),
                 // todo: rename to hash
-                merkle: artifact_store_group_entry.hash,
-                blobs: vec![],
+                merkle: artifact_store_group_entry.hash.clone(),
+                blobs: get_blobs(
+                    matching_group.content_address_storage.clone(),
+                    artifact_store_group_entry.hash,
+                )
+                .await?,
             };
             lock_artifacts.push(artifact_output);
         }
@@ -326,11 +369,17 @@ async fn process_spec(spec: &Spec, cmd: &UpdateCommand) -> Result<()> {
 mod test {
     use super::*;
     use fuchsia_async as fasync;
+    use fuchsia_pkg::MetaPackage;
+    use fuchsia_pkg::{build_with_file_system, CreationManifest, FileSystem};
+    use maplit::{btreemap, hashmap};
     use pkg::repository::{RepositoryManager, RepositoryServer};
     use pkg::test_utils::make_writable_empty_repository;
     use serde_json::json;
     use serde_json5;
+    use std::collections::HashMap;
     use std::fs;
+    use std::io;
+    use std::io::Write;
     use std::net::Ipv4Addr;
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -492,6 +541,58 @@ mod test {
         assert_eq!(new_artifact_lock, golden_artifact_lock);
     }
 
+    struct FakeFileSystem {
+        content_map: HashMap<String, Vec<u8>>,
+    }
+
+    impl<'a> FileSystem<'a> for FakeFileSystem {
+        type File = &'a [u8];
+        fn open(&'a self, path: &str) -> Result<Self::File, io::Error> {
+            Ok(self.content_map.get(path).unwrap().as_slice())
+        }
+        fn len(&self, path: &str) -> Result<u64, io::Error> {
+            Ok(self.content_map.get(path).unwrap().len() as u64)
+        }
+        fn read(&self, path: &str) -> Result<Vec<u8>, io::Error> {
+            Ok(self.content_map.get(path).unwrap().clone())
+        }
+    }
+
+    fn create_meta_far(path: PathBuf) {
+        let creation_manifest = CreationManifest::from_external_and_far_contents(
+            btreemap! {
+                "lib/mylib.so".to_string() => "host/mylib.so".to_string()
+            },
+            btreemap! {
+                "meta/my_component.cmx".to_string() => "host/my_component.cmx".to_string(),
+                "meta/package".to_string() => "host/meta/package".to_string()
+            },
+        )
+        .unwrap();
+        let component_manifest_contents = "my_component.cmx contents";
+        let mut v = vec![];
+        let meta_package = MetaPackage::from_name_and_variant(
+            "my-package-name".parse().unwrap(),
+            "my-package-variant".parse().unwrap(),
+        );
+        meta_package.serialize(&mut v).unwrap();
+        let file_system = FakeFileSystem {
+            content_map: hashmap! {
+                "host/mylib.so".to_string() => Vec::new(),
+                "host/my_component.cmx".to_string() => component_manifest_contents.as_bytes().to_vec(),
+                "host/meta/package".to_string() => v
+            },
+        };
+
+        build_with_file_system(&creation_manifest, &path, "my-package-name", &file_system).unwrap();
+    }
+
+    fn write_file(path: PathBuf, body: &[u8]) {
+        let mut tmp = tempfile::NamedTempFile::new().unwrap();
+        tmp.write(body).unwrap();
+        tmp.persist(path).unwrap();
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_end_to_end_tuf() {
         let manager = RepositoryManager::new();
@@ -500,12 +601,12 @@ mod test {
         let repo = make_writable_empty_repository("artifact_store", root.clone()).await.unwrap();
         let out_filename = tempdir.path().join("artifact_lock.json");
 
-        // write artifact_groups.json to server.
-        let tuf_dir = root.join("targets/");
-        fs::create_dir(&tuf_dir).unwrap();
-        let artifact_group_path = tuf_dir.join("artifact_groups.json");
-        fs::write(artifact_group_path, include_str!("../test_data/tuf_artifact_groups.json"))
-            .unwrap();
+        let meta_far_path =
+            root.join("0000000000000000000000000000000000000000000000000000000000000000");
+        create_meta_far(meta_far_path);
+        let blob_path =
+            root.join("15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b");
+        write_file(blob_path, "".as_bytes());
 
         manager.add(Arc::new(repo));
 
@@ -517,6 +618,17 @@ mod test {
         let task = fasync::Task::local(server_fut);
 
         let tuf_repo_url = server.local_url() + "/artifact_store";
+
+        // write artifact_groups.json to server.
+        let tuf_dir = root.join("targets/");
+        fs::create_dir(&tuf_dir).unwrap();
+        let artifact_group_path = tuf_dir.join("artifact_groups.json");
+        fs::write(
+            artifact_group_path,
+            include_str!("../test_data/tuf_artifact_groups.json")
+                .replace("tuf_repo_url", &tuf_repo_url),
+        )
+        .unwrap();
 
         // write spec file.
         let spec_file_path = tempdir.path().join("artifact_spec.json");

@@ -19,7 +19,7 @@
         "version": "npm_20210701_0330"
       },
       "merkle": "46ae86ed0a14dc0c894ec3f8982ce54dbed9bb69a46593903b037f0167cd1d91",
-      "blobs": []
+      "blobs": ["46ae86ed0a14dc0c894ec3f8982ce54dbed9bb69a46593903b037f0167cd1d91"]
     },
     {
       "name": "twentyfortyeight/0",
@@ -40,7 +40,7 @@
         "version": "npm_20210701_0330"
       },
       "merkle": "10ded35b8849e64b074a1c3b3be85a521f11ab041c4a807a40caaca25f27833f",
-      "blobs": []
+      "blobs": ["10ded35b8849e64b074a1c3b3be85a521f11ab041c4a807a40caaca25f27833f"]
     },
     {
       "name": "config-file",
@@ -61,7 +61,7 @@
         "version": "npm_20210701_0330"
       },
       "merkle": "65675a6ad7600c924549bd28a6b26b40691fcb213bb943d60e812912c737ccb4",
-      "blobs": []
+      "blobs": ["65675a6ad7600c924549bd28a6b26b40691fcb213bb943d60e812912c737ccb4"]
     }
   ]
 }

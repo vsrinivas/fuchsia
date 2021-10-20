@@ -12,9 +12,6 @@
       },
       artifacts: [
         {
-          name: 'flutter_aot_product_runner/0'
-        },
-        {
           name: 'twentyfortyeight/0'
         }
       ]
