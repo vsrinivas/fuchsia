@@ -23,6 +23,7 @@ go_library("bootserver_lib") {
     "//tools/lib/iomisc",
     "//tools/lib/jsonutil",
     "//tools/lib/logger",
+    "//tools/lib/osmisc",
     "//tools/lib/retry",
     "//tools/net/netboot",
     "//tools/net/tftp",

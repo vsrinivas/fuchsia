@@ -6,14 +6,19 @@ package bootserver
 
 import (
 	"bytes"
+	"compress/flate"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
+	"os"
 	"path/filepath"
 	"testing"
+
+	constants "go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 )
 
 func TestDownloadImagesToDir(t *testing.T) {
@@ -240,5 +245,111 @@ func TestValidateBoard(t *testing.T) {
 				t.Errorf("failed to validate board; want err: %v, err: %v", test.wantErr, err)
 			}
 		})
+	}
+}
+
+func TestDownloadWithRetries(t *testing.T) {
+	// Temporarily override the global variable to avoid sleeping during tests.
+	originalSleep := downloadRetrySleep
+	downloadRetrySleep = 0
+	defer func() {
+		downloadRetrySleep = originalSleep
+	}()
+
+	tests := []struct {
+		name    string
+		wantErr bool
+		// errFunc is a function that determines the fake error the download
+		// function should return, based on the index of the attempt.
+		errFunc      func(attempt int) error
+		wantAttempts int
+	}{
+		{
+			name: "succeeds",
+			errFunc: func(_ int) error {
+				return nil
+			},
+			wantAttempts: 1,
+		},
+		{
+			name: "exits immediately after non-transient failure",
+			errFunc: func(_ int) error {
+				return errors.New("failure")
+			},
+			wantAttempts: 1,
+			wantErr:      true,
+		},
+		{
+			name: "retries after flate error",
+			errFunc: func(_ int) error {
+				return flate.CorruptInputError(123)
+			},
+			wantAttempts: maxDownloadAttempts,
+			wantErr:      true,
+		},
+		{
+			name: "passes on retry if flate error goes away",
+			errFunc: func(attempt int) error {
+				if attempt == 0 {
+					return flate.CorruptInputError(123)
+				}
+				return nil
+			},
+			wantAttempts: 2,
+		},
+		{
+			name: "passes on retry if CRC error goes away",
+			errFunc: func(attempt int) error {
+				if attempt == 0 {
+					return fmt.Errorf("download failed: %s", constants.BadCRCErrorMsg)
+				}
+				return nil
+			},
+			wantAttempts: 2,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			dest := filepath.Join(t.TempDir(), "foo.txt")
+
+			var attempts int
+			download := func() error {
+				defer func() {
+					attempts++
+				}()
+				createFile(t, dest)
+				return test.errFunc(attempts)
+			}
+
+			if err := DownloadWithRetries(context.Background(), dest, download); (err != nil) != test.wantErr {
+				t.Errorf("DownloadWithRetries() error = %q, wantErr %t", err, test.wantErr)
+			}
+
+			if test.wantAttempts != attempts {
+				t.Errorf("Wrong number of download attempts: wanted %d, got %d", test.wantAttempts, attempts)
+			}
+			exists, err := osmisc.FileExists(dest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if test.wantErr && exists {
+				t.Errorf("DownloadWithRetries() should delete the file after a failure")
+			} else if !test.wantErr && !exists {
+				t.Errorf("DownloadWithRetries() did not create the file")
+			}
+		})
+	}
+}
+
+func createFile(t *testing.T, path string) {
+	t.Helper()
+
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
 	}
 }

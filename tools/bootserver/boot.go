@@ -29,6 +29,13 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 )
 
+// Maximum number of times to attempt to download an image.
+const maxDownloadAttempts = 3
+
+// Delay between consecutive image download retries.
+// Can be overridden in tests to avoid sleeping.
+var downloadRetrySleep = 5 * time.Second
+
 // Maps bootserver argument to a corresponding netsvc name.
 var bootserverArgToNameMap = map[string]string{
 	"--boot":       constants.KernelNetsvcName,
@@ -98,17 +105,19 @@ func skipOnTransferError(name string) bool {
 // retries if the function returns an error that corresponds to a failure mode
 // that's known to be transient.
 func DownloadWithRetries(ctx context.Context, dest string, download func() error) error {
-	retryStrategy := retry.WithMaxAttempts(retry.NewConstantBackoff(5*time.Second), 3)
+	retryStrategy := retry.WithMaxAttempts(
+		retry.NewConstantBackoff(downloadRetrySleep),
+		maxDownloadAttempts)
 	return retry.Retry(ctx, retryStrategy, func() error {
 		if downloadErr := download(); downloadErr != nil {
+			// Clean up the destination file, which may be only partially
+			// written, before potentially retrying.
+			if err := os.RemoveAll(dest); err != nil {
+				return retry.Fatal(err)
+			}
 			if !isTransientDownloadError(ctx, downloadErr) {
 				// Don't retry if there was a non-transient failure.
 				return retry.Fatal(downloadErr)
-			}
-			// Clean up the destination file, which may be only partially
-			// written, before retrying.
-			if err := os.RemoveAll(dest); err != nil {
-				return retry.Fatal(err)
 			}
 			return downloadErr
 		}
