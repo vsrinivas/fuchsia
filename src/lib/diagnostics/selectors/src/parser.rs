@@ -394,9 +394,10 @@ impl<'a> Into<Segment<'a>> for &'a str {
 
 /// Parses a component selector.
 fn component_selector(input: &str) -> IResult<&str, ComponentSelector<'_>> {
-    let accepted_characters = alt((alphanumeric1, tag("*"), tag("."), tag("-"), tag("_")));
+    let accepted_characters =
+        escaped(alt((alphanumeric1, tag("*"), tag("."), tag("-"), tag("_"))), '\\', tag(":"));
     let (rest, segments) = verify(
-        separated_nonempty_list(tag("/"), recognize(many1(accepted_characters))),
+        separated_nonempty_list(tag("/"), recognize(accepted_characters)),
         |segments: &Vec<&str>| {
             // TODO: it's probably possible to write this more cleanly as a combinator.
             segments.iter().enumerate().all(|(i, segment)| {
@@ -497,6 +498,10 @@ mod tests {
             ("a/*/c", vec![Segment::Exact("a"), Segment::Pattern("*"), Segment::Exact("c")]),
             ("a/b*/c", vec![Segment::Exact("a"), Segment::Pattern("b*"), Segment::Exact("c")]),
             ("a/b/**", vec![Segment::Exact("a"), Segment::Exact("b"), Segment::Pattern("**")]),
+            (
+                "core/session\\:id/foo",
+                vec![Segment::Exact("core"), Segment::Exact("session\\:id"), Segment::Exact("foo")],
+            ),
             ("c", vec![Segment::Exact("c")]),
             (
                 r#"a/*/b/**"#,
