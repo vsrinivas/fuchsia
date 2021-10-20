@@ -15,8 +15,6 @@ Rough edges encountered during code authoring or reviewing under the proposed
 guidelines are expected to make their way back into this document, so we can
 codify alternative patterns when needed.
 
-> TODO(https://fxbug.dev/86009): Encode process for changes to this page.
-
 ## Avoid unused results
 
 This is mostly machine-enforced since <https://fxrev.dev/510442> via rustc's
@@ -99,6 +97,48 @@ std::mem::drop(foo());
 let _: Foo = foo();
 ```
 
+## Process for changes to this page
+
+All are invited and welcome to propose changes to the patterns adopted by the
+[Netstack team]. Proposed patterns will be accepted or rejected by the team
+after a process of consensus building through discussion, falling back to a
+go/no-go simple majority vote.
+
+Follow the steps below to propose a change.
+
+1. Author and publish a CL changing this page.
+1. *\[optional\]* Socialize with a small group and iterate.
+1. Request review from the entire team through e-mail and chat. Non-Googlers can
+   reach out through [discussion groups].
+1. Iterate on the CL based on review comments and offline sessions.
+   Remember to publish outcomes of offline sessions back to the CL.
+1. Team members may express support `+1`, opposition `-1`, or indifference.
+   Indifference is voiced through a single comment thread on Gerrit where
+   members state indifference. That thread is to be kept unresolved until the
+   CL merges. Team members may change their vote at any time.
+1. Proposals will be in review for at most 2 weeks. A last call announcement is
+   sent at the end of the first week. The timeline may be short-circuited if the
+   *entire* team has cast their vote.
+1. When consensus can't be achieved, the team will tally the votes and make a
+   decision to go ahead or not using a simple majority.
+
+Things to keep in mind:
+
+* Authors and leads will shepherd changes through this process.
+* Be respectful of others; address points on their merits alone.
+* Avoid long comments; express disagreement with supporting arguments
+  succinctly.
+* Back-and-forth on the CL is discouraged. Fallback to breakout video or
+  in-person sessions (public, preferably) and encode the consensus back into
+  the comment thread.
+* Controversial points can be dropped and addressed in a follow-up proposal if
+  necessary.
+* Indifference votes are used to measure the perceived benefit of encoding some
+  patterns. A strong indifference signal is interpreted as a hint that the point
+  being discussed does not merit encoding as a pattern.
+
 [api-rust]: /docs/concepts/api/rust.md
 [unused-results]: https://doc.rust-lang.org/rustc/lints/listing/allowed-by-default.html#unused-results
 [unused-results-explanation]: https://doc.rust-lang.org/rustc/lints/listing/allowed-by-default.html#explanation-31
+[Netstack team]: /src/connectivity/network/OWNERS
+[discussion groups]: /docs/contribute/community/get-involved.md#join_a_discussion_group
