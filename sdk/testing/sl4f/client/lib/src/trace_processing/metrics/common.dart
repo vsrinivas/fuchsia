@@ -111,10 +111,19 @@ DurationEvent findFollowingVsync(DurationEvent durationEvent) {
       getFollowingEvents(durationEvent),
       category: 'gfx',
       name: 'Display::Controller::OnDisplayVsync');
-  if (followingVsyncs.isEmpty) {
-    return null;
+  if (followingVsyncs.isNotEmpty) {
+    return followingVsyncs.first;
   }
-  return followingVsyncs.first;
+  // TODO(fxbug.dev/72588): Remove after we complete migration to
+  // using the new Vsync events.
+  final followingVsync2s = filterEventsTyped<DurationEvent>(
+      getFollowingEvents(durationEvent),
+      category: 'gfx',
+      name: 'Display::Controller::OnDisplayVsync2');
+  if (followingVsync2s.isNotEmpty) {
+    return followingVsync2s.first;
+  }
+  return null;
 }
 
 /// Compute the mean (https://en.wikipedia.org/wiki/Arithmetic_mean#Definition)
