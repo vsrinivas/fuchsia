@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/sdmmc/cpp/banjo.h>
 #include <lib/ddk/phys-iter.h>
+#include <lib/fit/function.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
 #include <lib/stdcompat/span.h>
@@ -83,9 +84,19 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   struct TuneWindow {
     uint32_t start = 0;
     uint32_t size = 0;
-    std::string results;
+    uint32_t param_max = 0;
+    uint64_t results;
 
     uint32_t middle() const { return start + (size / 2); }
+
+    std::string GetResultsString() const {
+      char string[param_max + 2];
+      for (uint32_t i = 0; i <= param_max; i++) {
+        string[i] = (results & (1ULL << i)) ? '|' : '-';
+      }
+      string[param_max + 1] = '\0';
+      return string;
+    }
   };
 
   // VMO metadata that needs to be stored in accordance with the SDMMC protocol.
@@ -113,9 +124,9 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   zx_status_t TuningDoTransfer(uint8_t* tuning_res, size_t blk_pattern_size,
                                uint32_t tuning_cmd_idx);
   bool TuningTestSettings(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx);
-  template <typename SetParamCallback>
-  TuneWindow TuneDelayParam(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx,
-                            uint32_t param_max, SetParamCallback& set_param);
+  // Sweeps from zero to param_max and creates a TuneWindow representing the largest span of values
+  // for which check_param returned true.
+  static TuneWindow TuneDelayParam(uint32_t param_max, fit::function<bool(uint32_t)> check_param);
 
   void SetAdjDelay(uint32_t adj_delay);
   void SetDelayLines(uint32_t delay);

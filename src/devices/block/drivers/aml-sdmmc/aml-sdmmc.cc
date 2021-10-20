@@ -1056,28 +1056,21 @@ bool AmlSdmmc::TuningTestSettings(cpp20::span<const uint8_t> tuning_blk, uint32_
   return (n == AML_SDMMC_TUNING_TEST_ATTEMPTS);
 }
 
-template <typename SetParamCallback>
-AmlSdmmc::TuneWindow AmlSdmmc::TuneDelayParam(cpp20::span<const uint8_t> tuning_blk,
-                                              uint32_t tuning_cmd_idx, uint32_t param_max,
-                                              SetParamCallback& set_param) {
+AmlSdmmc::TuneWindow AmlSdmmc::TuneDelayParam(uint32_t param_max,
+                                              fit::function<bool(uint32_t)> check_param) {
   TuneWindow best_window, current_window;
   uint32_t first_size = 0;
 
-  char tuning_results[std::max(AmlSdmmcClock::kMaxClkDiv, AmlSdmmcClock::kMaxDelay) + 2];
-
+  uint64_t tuning_results = 0;
   for (uint32_t param = 0; param <= param_max; param++) {
-    set_param(param);
-
-    if (TuningTestSettings(tuning_blk, tuning_cmd_idx)) {
-      tuning_results[param] = '|';
+    if (check_param(param)) {
+      tuning_results |= 1ULL << param;
 
       current_window.size++;
       if (current_window.start == 0) {
         first_size = current_window.size;
       }
     } else {
-      tuning_results[param] = '-';
-
       if (current_window.size > best_window.size) {
         best_window = current_window;
       }
@@ -1086,8 +1079,6 @@ AmlSdmmc::TuneWindow AmlSdmmc::TuneDelayParam(cpp20::span<const uint8_t> tuning_
     }
   }
 
-  tuning_results[param_max + 1] = '\0';
-
   if (current_window.start == 0) {
     best_window = {.start = 0, .size = param_max + 1};
   } else if (current_window.size + first_size > best_window.size) {
@@ -1095,6 +1086,7 @@ AmlSdmmc::TuneWindow AmlSdmmc::TuneDelayParam(cpp20::span<const uint8_t> tuning_
     best_window = {.start = current_window.start, .size = current_window.size + first_size};
   }
 
+  best_window.param_max = param_max;
   best_window.results = tuning_results;
   return best_window;
 }
@@ -1164,27 +1156,30 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
 
   auto clk = AmlSdmmcClock::Get().ReadFrom(&mmio_);
 
-  auto set_adj_delay = [&](uint32_t param) -> void { SetAdjDelay(param); };
-  auto set_delay_lines = [&](uint32_t param) -> void { SetDelayLines(param); };
-
   TuneWindow adj_delay_windows[AmlSdmmcClock::kMaxClkDiv] = {};
   for (uint32_t i = 0; i < clk.cfg_div(); i++) {
-    set_adj_delay(i);
+    SetAdjDelay(i);
 
     char property_name[28];  // strlen("tuning_results_adj_delay_63")
     snprintf(property_name, sizeof(property_name), "tuning_results_adj_delay_%u", i);
 
-    adj_delay_windows[i] = TuneDelayParam(tuning_blk, tuning_cmd_idx, max_delay(), set_delay_lines);
-    inspect_.tuning_results.push_back(
-        inspect_.root.CreateString(property_name, adj_delay_windows[i].results));
+    adj_delay_windows[i] = TuneDelayParam(max_delay(), [=](uint32_t delay) {
+      SetDelayLines(delay);
+      return TuningTestSettings(tuning_blk, tuning_cmd_idx);
+    });
 
-    AML_SDMMC_INFO("Tuning results [%*u]: %s", 2, i, adj_delay_windows[i].results.c_str());
+    inspect_.tuning_results.push_back(
+        inspect_.root.CreateString(property_name, adj_delay_windows[i].GetResultsString()));
+
+    AML_SDMMC_INFO("Tuning results [%*u]: %s", 2, i,
+                   adj_delay_windows[i].GetResultsString().c_str());
   }
 
-  set_delay_lines(0);
-
-  TuneWindow adj_delay_window =
-      TuneDelayParam(tuning_blk, tuning_cmd_idx, clk.cfg_div() - 1, set_adj_delay);
+  const TuneWindow adj_delay_window =
+      TuneDelayParam(clk.cfg_div() - 1, [=, &adj_delay_windows](uint32_t adj_delay) {
+        return adj_delay_windows[adj_delay].results & 1;
+      });
+  AML_SDMMC_INFO("Tuning results: %s", adj_delay_window.GetResultsString().c_str());
 
   if (adj_delay_window.size == 0) {
     AML_SDMMC_ERROR("No window found for any phase");
@@ -1195,7 +1190,7 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   const uint32_t best_adj_delay =
       adj_delay_window.size == clk.cfg_div() ? 0 : adj_delay_window.middle() % clk.cfg_div();
 
-  set_adj_delay(best_adj_delay);
+  SetAdjDelay(best_adj_delay);
   inspect_.adj_delay.Set(best_adj_delay);
 
   const TuneWindow& delay_window = adj_delay_windows[best_adj_delay];
@@ -1208,7 +1203,7 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   inspect_.delay_window_size.Set(delay_window.size);
 
   const uint32_t best_delay = delay_window.middle() % (max_delay() + 1);
-  set_delay_lines(best_delay);
+  SetDelayLines(best_delay);
   inspect_.delay_lines.Set(best_delay);
 
   AML_SDMMC_INFO("Clock divider %u, adj delay %u, delay %u", clk.cfg_div(), best_adj_delay,
