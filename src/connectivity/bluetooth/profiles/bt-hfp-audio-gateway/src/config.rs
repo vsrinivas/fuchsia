@@ -4,6 +4,8 @@
 
 use {
     anyhow::Error,
+    fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::{AttachError, Inspect},
     serde::Deserialize,
     std::{fs::File, io::Read},
 };
@@ -30,6 +32,40 @@ pub struct AudioGatewayFeatureSupport {
     pub enhanced_voice_recognition_with_text: bool,
 }
 
+impl Inspect for AudioGatewayFeatureSupport {
+    /// iattach for AudioGatewayFeatureSupport creates an immutable record of
+    /// the inspect data without the need to store the node separately from the
+    /// parent node. For this reason, the lifetime of the inspect data is tied
+    /// to the lifetime of the `parent` node.
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        let init = |node: &inspect::Node| {
+            node.record_bool("reject_incoming_voice_call", self.reject_incoming_voice_call);
+            node.record_bool("three_way_calling", self.three_way_calling);
+            node.record_bool("in_band_ringtone", self.in_band_ringtone);
+            node.record_bool(
+                "echo_canceling_and_noise_reduction",
+                self.echo_canceling_and_noise_reduction,
+            );
+            node.record_bool("voice_recognition", self.voice_recognition);
+            node.record_bool(
+                "attach_phone_number_to_voice_tag",
+                self.attach_phone_number_to_voice_tag,
+            );
+            node.record_bool("remote_audio_volume_control", self.remote_audio_volume_control);
+            node.record_bool("respond_and_hold", self.respond_and_hold);
+            node.record_bool("enhanced_call_controls", self.enhanced_call_controls);
+            node.record_bool("wide_band_speech", self.wide_band_speech);
+            node.record_bool("enhanced_voice_recognition", self.enhanced_voice_recognition);
+            node.record_bool(
+                "enhanced_voice_recognition_with_text",
+                self.enhanced_voice_recognition_with_text,
+            );
+        };
+        let _child = parent.record_child(name.as_ref(), init);
+        Ok(())
+    }
+}
+
 impl AudioGatewayFeatureSupport {
     /// Load AudioGatewayFeatureSupport from package config data directory.
     pub fn load() -> Result<Self, Error> {
@@ -44,6 +80,7 @@ impl AudioGatewayFeatureSupport {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuchsia_inspect::assert_data_tree;
 
     #[fuchsia::test]
     fn successful_deserialization_of_configuration_file() {
@@ -113,5 +150,33 @@ mod tests {
             }
         "#;
         assert!(AudioGatewayFeatureSupport::from_reader(&incorrectly_typed_fields[..]).is_err());
+    }
+
+    #[fuchsia::test]
+    fn expected_inspect_tree() {
+        let inspector = inspect::Inspector::new();
+        assert_data_tree!(inspector, root: {});
+
+        let mut config = AudioGatewayFeatureSupport::default();
+        config.three_way_calling = true;
+        config.in_band_ringtone = true;
+
+        let _ = config.iattach(&inspector.root(), "audio_gateway_feature_support").unwrap();
+        assert_data_tree!(inspector, root: {
+            audio_gateway_feature_support: {
+                reject_incoming_voice_call: false,
+                three_way_calling: true,
+                in_band_ringtone: true,
+                echo_canceling_and_noise_reduction: false,
+                voice_recognition: false,
+                attach_phone_number_to_voice_tag: false,
+                remote_audio_volume_control: false,
+                respond_and_hold: false,
+                enhanced_call_controls: false,
+                wide_band_speech: false,
+                enhanced_voice_recognition: false,
+                enhanced_voice_recognition_with_text: false,
+            }
+        });
     }
 }
