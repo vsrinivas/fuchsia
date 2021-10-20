@@ -24,7 +24,7 @@ use {
     parking_lot::Mutex,
     profile_client::ProfileEvent,
     std::{convert::TryInto, fmt, pin::Pin, sync::Arc},
-    tracing::{debug, error, info, warn},
+    tracing::{error, info, warn},
     vigil::{DropWatch, Vigil},
 };
 
@@ -370,7 +370,7 @@ impl PeerTask {
 
     /// Processes a `request` for information from an HFP procedure.
     async fn procedure_request(&mut self, request: SlcRequest) {
-        debug!("HF procedure request ({}): {:?}", self.id, request);
+        info!("HF procedure request ({}): {:?}", self.id, request);
         let marker = (&request).into();
         match request {
             SlcRequest::GetAgFeatures { response } => {
@@ -504,14 +504,14 @@ impl PeerTask {
                         .connection
                         .get_selected_codec()
                         .map_or(vec![CodecId::CVSD], |c| vec![c]);
-                    debug!("About to connect SCO for peer {:}.", self.id);
+                    info!("About to connect SCO for peer {:}.", self.id);
                     let setup_result = self.sco_connector.connect(self.id.clone(), codecs).await;
-                    debug!("About to finish connecting SCO for peer {:}.", self.id);
+                    info!("About to finish connecting SCO for peer {:}.", self.id);
                     let finish_result = match setup_result {
                         Ok(conn) => self.finish_sco_connection(conn).await,
                         Err(err) => Err(err.into()),
                     };
-                    debug!("SCO set up for peer {:} with result {:?}", self.id, finish_result);
+                    info!("SCO set up for peer {:} with result {:?}", self.id, finish_result);
                     let result = finish_result
                         .map_err(|e| warn!("Error setting up audio connection: {:?}", e));
                     self.connection.receive_ag_request(marker, response(result)).await;
@@ -527,7 +527,7 @@ impl PeerTask {
     pub async fn run(mut self, mut task_channel: mpsc::Receiver<PeerRequest>) -> Self {
         loop {
             let mut active_sco_closed_fut = self.on_active_sco_closed().fuse();
-            debug!("Beginning select for peer {:?}, SCO state is {:?}", self.id, self.sco_state);
+            info!("Beginning select for peer {:?}, SCO state is {:?}", self.id, self.sco_state);
             let mut sco_connection_fut = match &mut self.sco_state {
                 ScoState::AwaitingRemote(ref mut fut) => fut.fuse(),
                 _ => Fuse::terminated(),
@@ -542,7 +542,7 @@ impl PeerTask {
                             break;
                         }
                     } else {
-                        debug!("Peer task channel closed for peer {}", self.id);
+                        info!("Peer task channel closed for peer {}", self.id);
                         break;
                     }
                 }
@@ -607,7 +607,7 @@ impl PeerTask {
                             }
                         }
                     } else {
-                        debug!("Peer task channel closed for peer {}", self.id);
+                        info!("Peer task channel closed for peer {}", self.id);
                         break;
                     }
                 }
@@ -631,7 +631,7 @@ impl PeerTask {
             }
         }
 
-        debug!("Stopping task for peer {}", self.id);
+        info!("Stopping task for peer {}", self.id);
 
         self
     }
@@ -640,7 +640,7 @@ impl PeerTask {
     fn hf_indicator_update(&mut self, indicator: HfIndicator) {
         match indicator {
             ind @ HfIndicator::EnhancedSafety(_) => {
-                debug!(
+                info!(
                     "Received EnhancedSafety HF Indicator update {:?} for peer {}",
                     ind, self.id
                 );
@@ -679,7 +679,7 @@ impl PeerTask {
 
         let previous_sco_state = &self.sco_state;
 
-        debug!("Updating SCO state for peer {}.  Call active: {}, Call transferred: {}, Previous SCO state: {:?}", self.id, call_active, call_transferred, previous_sco_state);
+        info!("Updating SCO state for peer {}.  Call active: {}, Call transferred: {}, Previous SCO state: {:?}", self.id, call_active, call_transferred, previous_sco_state);
 
         if call_active {
             match previous_sco_state {
@@ -732,7 +732,7 @@ impl PeerTask {
             self.sco_state = ScoState::Inactive
         };
 
-        debug!(
+        info!(
             "Finished updating SCO state for peer {}; SCO state is now {:?}",
             self.id, self.sco_state
         );
@@ -742,7 +742,7 @@ impl PeerTask {
 
     async fn finish_sco_connection(&mut self, sco_connection: ScoConnection) -> Result<(), Error> {
         let peer_id = self.id.clone();
-        debug!("Finishing SCO connection for peer {:}.", peer_id);
+        info!("Finishing SCO connection for peer {:}.", peer_id);
         let res = self.a2dp_control.pause(Some(self.id.clone())).await;
         let pause_token = match res {
             Err(e) => {
@@ -750,7 +750,7 @@ impl PeerTask {
                 None
             }
             Ok(token) => {
-                debug!("Successfully paused aduio for peer {:}.", peer_id);
+                info!("Successfully paused aduio for peer {:}.", peer_id);
                 Some(token)
             }
         };
@@ -768,7 +768,7 @@ impl PeerTask {
                 );
                 return Err(Error::system(format!("Couldn't start audio DAI"), e));
             } else {
-                debug!("Successfully started Audio DAI for peer {:}.", peer_id);
+                info!("Successfully started Audio DAI for peer {:}.", peer_id);
             }
         }
 
@@ -780,7 +780,7 @@ impl PeerTask {
                 Ok(()) => info!("Stopped HFP Audio for peer {:}", peer_id),
             }
         });
-        debug!("In finish_sco_connection for peer {:}, SCO state is {:?}", peer_id, vigil);
+        info!("In finish_sco_connection for peer {:}, SCO state is {:?}", peer_id, vigil);
         self.sco_state = ScoState::Active(vigil);
 
         Ok(())
@@ -1324,25 +1324,33 @@ mod tests {
     #[fuchsia::test]
     fn transfers_change_sco_state() {
         // Set up the executor, peer, and background call manager task
+        info!("transfers_change_sco_state: Creating executer.");
         let mut exec = fasync::TestExecutor::new().unwrap();
 
         // Setup the peer task.
+        info!("transfers_change_sco_state: Creating SLC.");
         let (connection, _remote) = create_and_initialize_slc(SlcState::default());
+        info!("transfers_change_sco_state: Creating peer task.");
         let (peer, mut sender, receiver, mut profile) = setup_peer_task(Some(connection));
 
+        info!("transfers_change_sco_state: Creating peer handler proxy.");
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
 
         // Pass in the client end connected to the call manager
+        info!("transfers_change_sco_state: Sending peer handler proxy.");
         let result = exec.run_singlethreaded(sender.send(PeerRequest::Handle(proxy)));
         assert!(result.is_ok());
 
         let run_fut = peer.run(receiver);
         pin_mut!(run_fut);
+        info!("transfers_change_sco_state: Receiving peer handler stream.");
         let (mut stream, run_fut) = run_while(&mut exec, run_fut, wait_for_call_stream(stream));
 
         // Send the incoming call
+        info!("transfers_change_sco_state: Getting call stream responder.");
         let (responder, run_fut) = run_while(&mut exec, run_fut, stream.next());
+        info!("transfers_change_sco_state: Creating call stream.");
         let (client_end, mut call_stream) = fidl::endpoints::create_request_stream().unwrap();
         let next_call = NextCall {
             call: Some(client_end),
@@ -1351,74 +1359,101 @@ mod tests {
             direction: Some(CallDirection::MobileTerminated),
             ..NextCall::EMPTY
         };
+        info!("transfers_change_sco_state: Sending next call.");
         responder.unwrap().send(next_call).expect("Successfully send call information");
 
         // Answer call.
+        info!("transfers_change_sco_state: Awaiting watch state to answer call.");
         let (request, run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
         let state_responder = match request {
             Some(Ok(CallRequest::WatchState { responder })) => responder,
             req => panic!("Expected WatchState, got {:?}", req),
         };
+        info!("transfers_change_sco_state: Sending OngoingActive to initially answer call.");
         state_responder.send(CallState::OngoingActive).expect("Sent OngoingActive.");
+        info!("transfers_change_sco_state: Setting up SCO connection part 1.");
         let (sco, mut run_fut) =
             run_while(&mut exec, run_fut, expect_sco_connection(&mut profile, true, Ok(())));
+        info!("transfers_change_sco_state: Setting up SCO connection part 2.");
         exec.run_until_stalled(&mut run_fut).expect_pending("Create SCO conn.");
+        info!("transfers_change_sco_state: Setting up SCO connection part 3.");
         while let None = exec.run_one_step(&mut run_fut) {}
         let sco = sco.expect("SCO Connection.");
 
         // Call is transferred to AG by AG and SCO is torn down.
+        info!("transfers_change_sco_state: Getting WatchState for transferring call to AG by AG part 1.");
         let (request, mut run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
+        info!("transfers_change_sco_state: Getting WatchState for transferring call to AG by AG part 2.");
         let _ = exec.run_one_step(&mut run_fut);
         let state_responder = match request {
             Some(Ok(CallRequest::WatchState { responder })) => responder,
             req => panic!("Expected WatchState, got {:?}", req),
         };
+        info!("transfers_change_sco_state: Transferring call to AG by AG part 1.");
         state_responder.send(CallState::TransferredToAg).expect("Sent TransferredToAg.");
+        info!("transfers_change_sco_state: More transferring call to AG by AG part 2.");
         exec.run_until_stalled(&mut run_fut).expect_pending("Sending TransferredToAg");
+        info!("transfers_change_sco_state: Transferring call to AG by AG part 3.");
         while let None = exec.run_one_step(&mut run_fut) {}
+        info!("transfers_change_sco_state: Checking if SCO is closed.");
         let sco_is_closed = sco
             .as_handle_ref()
             .wait(zx::Signals::SOCKET_PEER_CLOSED, zx::Time::after(zx::Duration::from_nanos(0)));
         assert!(sco_is_closed.is_ok());
 
         // Call is transferred to HF by AG and SCO is set up.
+        info!("transfers_change_sco_state: Getting WatchState for transferring call to HF by AG.");
         let (request, mut run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
         let state_responder = match request {
             Some(Ok(CallRequest::WatchState { responder })) => responder,
             req => panic!("Expected WatchState, got {:?}", req),
         };
+        info!("transfers_change_sco_state: Sending OngoingActive.");
         state_responder.send(CallState::OngoingActive).expect("Sent OngoingActive.");
         // Don't send a SCO connection until they are trying to connect.
+        info!("transfers_change_sco_state: Transferring call to HF by AG part 1.");
         let _ = exec.run_one_step(&mut run_fut);
+        info!("transfers_change_sco_state: Transferring call to HF by AG part 2.");
         let (sco, mut run_fut) =
             run_while(&mut exec, run_fut, expect_sco_connection(&mut profile, true, Ok(())));
         let sco = sco.expect("SCO Connection.");
         // Run until the connection is handled by the task.  This avoids a race where the
         // the incoming SCO connection is closed before it's received, in which case a call
         // is never set to active.
+        info!("transfers_change_sco_state: Transferring call to HF by AG part 3.");
         let _ = exec.run_one_step(&mut run_fut);
 
         // SCO is torn down by HF and call is transferred to AG
+        info!("transfers_change_sco_state: Dropping SCO.");
         drop(sco);
+        info!("transfers_change_sco_state: Getting WatchState for transferring to AG.");
         let (watch_state_req, run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
+        info!("transfers_change_sco_state: Getting RequestTransferAudio.");
         let (req, run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
         assert_matches!(req, Some(Ok(CallRequest::RequestTransferAudio { .. })));
         let state_responder = match watch_state_req {
             Some(Ok(CallRequest::WatchState { responder })) => responder,
             req => panic!("Expected WatchState, got {:?}", req),
         };
+        info!("transfers_change_sco_state: Sending TransferredToAg.");
         state_responder.send(CallState::TransferredToAg).expect("Sent TransferredToAg");
 
         // SCO is set up by HF and call is transferred to HF
+        info!("transfers_change_sco_state: Expecting SCO set up by HF part 1.");
         let (_sco, run_fut) =
             run_while(&mut exec, run_fut, expect_sco_connection(&mut profile, false, Ok(())));
+        info!("transfers_change_sco_state: Expecting SCO set up by HF part 2.");
         let (_watch_state_req, run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
+        info!("transfers_change_sco_state: Getting RequestActive.");
         let (req, mut run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
         assert_matches!(req, Some(Ok(CallRequest::RequestActive { .. })));
 
         // Drop the peer task sender to force the PeerTask's run future to complete
+        info!("transfers_change_sco_state: Dropping sender.");
         drop(sender);
+        info!("transfers_change_sco_state: Finishing.");
         let _ = exec.run_until_stalled(&mut run_fut).expect("run_fut to complete");
+        info!("transfers_change_sco_state: Finished.");
     }
 
     #[fuchsia::test]
