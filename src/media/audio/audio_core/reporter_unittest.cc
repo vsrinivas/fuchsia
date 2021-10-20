@@ -673,9 +673,9 @@ TEST_F(ReporterTest, CacheThermalStateTransitions) {
   // Reporter initializes thermal state to 0.
   under_test_.SetThermalState(1);  // ThermalState 2, first cached
   under_test_.SetThermalState(2);
-  under_test_.SetThermalState(3);
+  under_test_.SetThermalState(0);
   under_test_.SetThermalState(1);
-  under_test_.SetThermalState(3);
+  under_test_.SetThermalState(2);
   under_test_.SetThermalState(1);
   under_test_.SetThermalState(2);
   under_test_.SetThermalState(2);  // Skip duplicate.
@@ -696,17 +696,17 @@ TEST_F(ReporterTest, CacheThermalStateTransitions) {
                   NameMatches("3"),
                   PropertyList(IsSupersetOf({BoolIs("active", false), StringIs("state", "2")})),
                   Not(PropertyList(Contains(UintIs("duration (ns)", 0)))))),
-              NodeMatches(AllOf(
-                  NameMatches("4"),
-                  PropertyList(IsSupersetOf({BoolIs("active", false), StringIs("state", "3")})),
-                  Not(PropertyList(Contains(UintIs("duration (ns)", 0)))))),
+              NodeMatches(AllOf(NameMatches("4"),
+                                PropertyList(IsSupersetOf(
+                                    {BoolIs("active", false), StringIs("state", "normal")})),
+                                Not(PropertyList(Contains(UintIs("duration (ns)", 0)))))),
               NodeMatches(AllOf(
                   NameMatches("5"),
                   PropertyList(IsSupersetOf({BoolIs("active", false), StringIs("state", "1")})),
                   Not(PropertyList(Contains(UintIs("duration (ns)", 0)))))),
               NodeMatches(AllOf(
                   NameMatches("6"),
-                  PropertyList(IsSupersetOf({BoolIs("active", false), StringIs("state", "3")})),
+                  PropertyList(IsSupersetOf({BoolIs("active", false), StringIs("state", "2")})),
                   Not(PropertyList(Contains(UintIs("duration (ns)", 0)))))),
               NodeMatches(AllOf(
                   NameMatches("7"),
