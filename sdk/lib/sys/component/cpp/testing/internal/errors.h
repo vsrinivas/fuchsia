@@ -10,7 +10,9 @@
 #ifndef LIB_SYS_COMPONENT_CPP_TESTING_INTERNAL_ERRORS_H_
 #define LIB_SYS_COMPONENT_CPP_TESTING_INTERNAL_ERRORS_H_
 
-namespace sys::testing::internal {
+namespace sys {
+namespace testing {
+namespace internal {
 
 const char* ConvertToString(fuchsia::component::test::RealmBuilderError& error);
 const char* ConvertToString(fuchsia::component::Error& error);
@@ -20,7 +22,9 @@ void PanicWithMessage(const char* stacktrace, const char* context,
 void PanicWithMessage(const char* stacktrace, const char* context,
                       fuchsia::component::Error& error);
 
-}  // namespace sys::testing::internal
+}  // namespace internal
+}  // namespace testing
+}  // namespace sys
 
 #define ZX_SYS_ASSERT_STATUS_OK(method, status)                                            \
   do {                                                                                     \

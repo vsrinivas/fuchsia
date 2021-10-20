@@ -18,7 +18,8 @@
 
 #include <random>
 
-namespace sys::testing {
+namespace sys {
+namespace testing {
 
 namespace {
 
@@ -84,4 +85,5 @@ zx_status_t ScopedChild::Connect(const std::string& interface_name, zx::channel 
 
 std::string ScopedChild::GetChildName() const { return child_ref_.name; }
 
-}  // namespace sys::testing
+}  // namespace testing
+}  // namespace sys

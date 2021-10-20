@@ -12,7 +12,8 @@
 
 #include <memory>
 
-namespace sys::testing {
+namespace sys {
+namespace testing {
 
 namespace {
 
@@ -54,4 +55,5 @@ ServiceDirectory MockHandles::svc() {
   return ServiceDirectory(std::move(local));
 }
 
-}  // namespace sys::testing
+}  // namespace testing
+}  // namespace sys

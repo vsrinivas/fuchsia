@@ -13,7 +13,9 @@
 
 #include <map>
 
-namespace sys::testing::internal {
+namespace sys {
+namespace testing {
+namespace internal {
 
 class MockRunner final {
  public:
@@ -37,6 +39,8 @@ class MockRunner final {
   fuchsia::component::test::RealmBuilderPtr realm_builder_proxy_;
 };
 
-}  // namespace sys::testing::internal
+}  // namespace internal
+}  // namespace testing
+}  // namespace sys
 
 #endif  // LIB_SYS_COMPONENT_CPP_TESTING_INTERNAL_MOCK_RUNNER_H_

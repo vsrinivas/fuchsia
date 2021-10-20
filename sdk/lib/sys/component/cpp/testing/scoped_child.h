@@ -12,7 +12,8 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-namespace sys::testing {
+namespace sys {
+namespace testing {
 
 // A scoped instance of a dynamically created child component. This class
 // will automatically destroy the child component once it goes out of scope.
@@ -99,6 +100,7 @@ class ScopedChild final {
   bool has_moved_;
 };
 
-}  // namespace sys::testing
+}  // namespace testing
+}  // namespace sys
 
 #endif  // LIB_SYS_COMPONENT_CPP_TESTING_SCOPED_CHILD_H_

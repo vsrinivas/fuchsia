@@ -24,7 +24,8 @@
 #include <memory>
 #include <variant>
 
-namespace sys::testing {
+namespace sys {
+namespace testing {
 
 namespace {
 
@@ -40,11 +41,22 @@ void PanicIfMonikerBad(Moniker& moniker) {
   }
 }
 
+// Basic implementation of std::get_if (since C++17).
+// This function is namespaced with `cpp17` prefix because
+// the name `get_if` clashes with std:: namespace usage *when* this
+// library is compiled in C++17+.
+// TODO(yaneury): Implement this in stdcompat library.
+template <class T, class... Ts>
+constexpr std::add_pointer_t<T> cpp17_get_if(cpp17::variant<Ts...>* pv) noexcept {
+  return pv && cpp17::holds_alternative<T>(*pv) ? std::addressof(cpp17::get<T, Ts...>(*pv))
+                                                : nullptr;
+}
+
 fuchsia::component::test::RouteEndpoint ConvertToFidl(Endpoint endpoint) {
-  if (auto moniker = std::get_if<Moniker>(&endpoint)) {
+  if (auto moniker = cpp17_get_if<Moniker>(&endpoint)) {
     return fuchsia::component::test::RouteEndpoint::WithComponent(std::string(moniker->path));
   }
-  if (auto _ = std::get_if<AboveRoot>(&endpoint)) {
+  if (auto _ = cpp17_get_if<AboveRoot>(&endpoint)) {
     return fuchsia::component::test::RouteEndpoint::WithAboveRoot(
         fuchsia::component::test::AboveRoot());
   }
@@ -53,19 +65,19 @@ fuchsia::component::test::RouteEndpoint ConvertToFidl(Endpoint endpoint) {
 }
 
 fuchsia::component::test::Capability ConvertToFidl(Capability capability) {
-  if (auto protocol = std::get_if<Protocol>(&capability)) {
+  if (auto protocol = cpp17_get_if<Protocol>(&capability)) {
     fuchsia::component::test::ProtocolCapability fidl_capability;
     fidl_capability.set_name(std::string(protocol->name));
     return fuchsia::component::test::Capability::WithProtocol(std::move(fidl_capability));
   }
-  if (auto directory = std::get_if<Directory>(&capability)) {
+  if (auto directory = cpp17_get_if<Directory>(&capability)) {
     fuchsia::component::test::DirectoryCapability fidl_capability;
     fidl_capability.set_name(std::string(directory->name));
     fidl_capability.set_path(std::string(directory->path));
     fidl_capability.set_rights(std::move(directory->rights));
     return fuchsia::component::test::Capability::WithDirectory(std::move(fidl_capability));
   }
-  if (auto storage = std::get_if<Storage>(&capability)) {
+  if (auto storage = cpp17_get_if<Storage>(&capability)) {
     fuchsia::component::test::StorageCapability fidl_capability;
     fidl_capability.set_name(std::string(storage->name));
     fidl_capability.set_path(std::string(storage->path));
@@ -77,10 +89,10 @@ fuchsia::component::test::Capability ConvertToFidl(Capability capability) {
 
 fuchsia::component::test::Component ConvertToFidl(Source source) {
   fuchsia::component::test::Component result;
-  if (auto url = std::get_if<ComponentUrl>(&source)) {
+  if (auto url = cpp17_get_if<ComponentUrl>(&source)) {
     return fuchsia::component::test::Component::WithUrl(std::string(url->url));
   }
-  if (auto url = std::get_if<LegacyComponentUrl>(&source)) {
+  if (auto url = cpp17_get_if<LegacyComponentUrl>(&source)) {
     return fuchsia::component::test::Component::WithLegacyUrl(std::string(url->url));
   }
 
@@ -143,7 +155,7 @@ Realm::Builder& Realm::Builder::AddComponent(Moniker moniker, Component componen
                moniker.path.data());
     }
   }
-  if (auto mock = std::get_if<Mock>(&component.source)) {
+  if (auto mock = cpp17_get_if<Mock>(&component.source)) {
     fuchsia::component::test::RealmBuilder_SetMockComponent_Result result;
     ZX_SYS_ASSERT_STATUS_AND_RESULT_OK(
         "FrameworkIntemediary/SetMockComponent",
@@ -206,4 +218,5 @@ Realm::Builder Realm::Builder::New(const sys::ComponentContext* context) {
                  std::make_unique<internal::MockRunner>());
 }
 
-}  // namespace sys::testing
+}  // namespace testing
+}  // namespace sys

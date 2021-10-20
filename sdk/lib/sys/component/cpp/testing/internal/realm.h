@@ -12,7 +12,9 @@
 
 #include <string>
 
-namespace sys::testing::internal {
+namespace sys {
+namespace testing {
+namespace internal {
 
 fuchsia::component::RealmSyncPtr CreateRealmPtr(const sys::ComponentContext* context);
 ServiceDirectory OpenExposedDir(fuchsia::component::Realm_Sync* realm,
@@ -24,6 +26,8 @@ void CreateChild(fuchsia::component::Realm_Sync* realm, std::string collection, 
 void DestroyChild(fuchsia::component::Realm_Sync* realm,
                   fuchsia::component::decl::ChildRef child_ref);
 
-}  // namespace sys::testing::internal
+}  // namespace internal
+}  // namespace testing
+}  // namespace sys
 
 #endif  // LIB_SYS_COMPONENT_CPP_TESTING_INTERNAL_REALM_H_

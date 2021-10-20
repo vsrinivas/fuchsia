@@ -7,7 +7,9 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 
-namespace sys::testing::internal {
+namespace sys {
+namespace testing {
+namespace internal {
 
 fuchsia::component::RealmSyncPtr CreateRealmPtr(const sys::ComponentContext* context) {
   ZX_SYS_ASSERT_NOT_NULL(context);
@@ -53,4 +55,6 @@ void DestroyChild(fuchsia::component::Realm_Sync* realm,
                                      realm->DestroyChild(std::move(child_ref), &result), result);
 }
 
-}  // namespace sys::testing::internal
+}  // namespace internal
+}  // namespace testing
+}  // namespace sys

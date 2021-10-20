@@ -21,7 +21,8 @@
 #include <variant>
 #include <vector>
 
-namespace sys::testing {
+namespace sys {
+namespace testing {
 
 // A Realm is a subtree of the a component instance. This library allows users
 // to create realms at runtime in an idiomatic and ergonomic way. Users can
@@ -135,6 +136,7 @@ class Realm::Builder final {
   std::unique_ptr<internal::MockRunner> mock_runner_;
 };
 
-}  // namespace sys::testing
+}  // namespace testing
+}  // namespace sys
 
 #endif  // LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_H_

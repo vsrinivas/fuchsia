@@ -5,7 +5,7 @@
 #include <fuchsia/component/test/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fdio/include/lib/fdio/namespace.h>
+#include <lib/fdio/namespace.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/component/cpp/testing/internal/mock_runner.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
@@ -15,7 +15,9 @@
 #include <memory>
 #include <optional>
 
-namespace sys::testing::internal {
+namespace sys {
+namespace testing {
+namespace internal {
 
 namespace {
 
@@ -64,4 +66,6 @@ bool MockRunner::Contains(std::string mock_id) const {
   return mocks_.find(mock_id) != mocks_.cend();
 }
 
-}  // namespace sys::testing::internal
+}  // namespace internal
+}  // namespace testing
+}  // namespace sys

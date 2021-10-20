@@ -7,7 +7,7 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fdio/include/lib/fdio/namespace.h>
+#include <lib/fdio/namespace.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/sys/cpp/service_directory.h>
 
@@ -18,7 +18,8 @@
 
 // This file contains structs used by the RealmBuilder library to create realms.
 
-namespace sys::testing {
+namespace sys {
+namespace testing {
 // A moniker identifies a specific component instance in the component tree
 // using a topological path. For example, given the following component tree:
 //   <root>
@@ -43,7 +44,7 @@ struct Moniker final {
 struct AboveRoot final {};
 
 // An endpoint refers to either a source or target when routing a capability.
-using Endpoint = std::variant<AboveRoot, Moniker>;
+using Endpoint = cpp17::variant<AboveRoot, Moniker>;
 
 // A protocol capability. The name refers to the name of the FIDL protocol,
 // e.g. `fuchsia.logger.LogSink`.
@@ -69,7 +70,7 @@ struct Storage final {
 
 // A capability to be routed from one component to another.
 // See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities
-using Capability = std::variant<Protocol, Directory, Storage>;
+using Capability = cpp17::variant<Protocol, Directory, Storage>;
 
 // A routing of a capability from source to multiple targets.
 struct CapabilityRoute final {
@@ -138,7 +139,7 @@ struct Mock final {
 
 // The source of a component. If it's `ComponentUrl`, then it will be located
 // via its component URL.
-using Source = std::variant<ComponentUrl, LegacyComponentUrl, Mock>;
+using Source = cpp17::variant<ComponentUrl, LegacyComponentUrl, Mock>;
 
 // A component as referred to by its source.
 struct Component final {
@@ -150,6 +151,7 @@ struct Component final {
   bool eager = false;
 };
 
-}  // namespace sys::testing
+}  // namespace testing
+}  // namespace sys
 
 #endif  // LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_TYPES_H_

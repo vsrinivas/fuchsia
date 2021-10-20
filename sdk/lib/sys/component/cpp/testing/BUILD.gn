@@ -52,4 +52,6 @@ sdk_source_set("cpp_library") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
   ]
+
+  public_configs = [ "//sdk/config" ]
 }
