@@ -11,6 +11,7 @@ group("tests") {
   deps = [
     ":device_tests_package",
     ":device_unittests_package",
+    ":request_watchdog_unittests_package",
   ]
 }
 
@@ -82,6 +83,38 @@ fuchsia_package_with_single_component("virtio_balloon") {
   deps = [ ":virtio_balloon_bin" ]
 }
 
+source_set("request_watchdog") {
+  visibility = [ ":*" ]
+
+  public = [ "request_watchdog.h" ]
+
+  public_deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+executable("request_watchdog_unittests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [ "request_watchdog_unittest.cc" ]
+
+  deps = [
+    ":request_watchdog",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-testing",
+  ]
+}
+
+fuchsia_unittest_package("request_watchdog_unittests_package") {
+  package_name = "request_watchdog_unittests"
+  deps = [ ":request_watchdog_unittests" ]
+}
+
 source_set("block") {
   visibility = [ ":*" ]
 
@@ -107,6 +140,7 @@ executable("virtio_block_bin") {
   sources = [ "virtio_block.cc" ]
   deps = [
     ":block",
+    ":request_watchdog",
     ":virtio",
   ]
 }

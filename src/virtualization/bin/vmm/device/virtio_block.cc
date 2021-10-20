@@ -16,6 +16,7 @@
 #include "src/virtualization/bin/vmm/device/block.h"
 #include "src/virtualization/bin/vmm/device/block_dispatcher.h"
 #include "src/virtualization/bin/vmm/device/device_base.h"
+#include "src/virtualization/bin/vmm/device/request_watchdog.h"
 #include "src/virtualization/bin/vmm/device/stream_base.h"
 
 enum class Queue : uint16_t {
@@ -25,7 +26,11 @@ enum class Queue : uint16_t {
 // A single asynchronous block request.
 class Request : public fbl::RefCounted<Request> {
  public:
-  Request(VirtioChain chain) : chain_(std::move(chain)) {
+  struct RequestState;
+  struct RequestPrinter;
+
+  Request(RequestWatchdog<RequestPrinter>& watchdog, VirtioChain chain)
+      : chain_(std::move(chain)), token_(watchdog.Start(RequestPrinter{this})) {
     TRACE_FLOW_BEGIN("machina", "block:request", nonce_);
   }
 
@@ -33,6 +38,7 @@ class Request : public fbl::RefCounted<Request> {
     if (status_ptr_ != nullptr) {
       *status_ptr_ = status_;
     }
+    token_.reset();
     chain_.Return();
     TRACE_FLOW_END("machina", "block:request", nonce_);
   }
@@ -60,8 +66,34 @@ class Request : public fbl::RefCounted<Request> {
   void SetStatus(uint8_t status) { status_ = status; }
   void AddUsed(uint32_t used) { *chain_.Used() += used; }
 
+  // Information about the state of this request.
+  //
+  // Used for logging.
+  struct RequestState {
+    std::string_view device_id;
+    uint32_t operation;
+    uint64_t sector;
+  };
+  const RequestState& state() { return state_; }
+  void set_state(const RequestState& state) { state_ = state; }
+
+  // Class to print out a Request object.
+  struct RequestPrinter {
+    Request* request;
+
+    friend std::ostream& operator<<(std::ostream& os, const RequestPrinter& printer) {
+      const RequestState& state = printer.request->state_;
+      os << "Request{device_id=\"" << state.device_id << "\", operation=" << state.operation
+         << ", sector=" << state.sector
+         << ", status=" << static_cast<uint32_t>(printer.request->status_) << "}";
+      return os;
+    }
+  };
+
  private:
   VirtioChain chain_;
+  RequestWatchdog<RequestPrinter>::RequestToken token_;
+  RequestState state_ = {};
   trace_async_id_t nonce_ = TRACE_NONCE();
   uint8_t status_ = VIRTIO_BLK_S_OK;
   uint8_t* status_ptr_ = nullptr;
@@ -70,6 +102,8 @@ class Request : public fbl::RefCounted<Request> {
 // Stream for request queue.
 class RequestStream : public StreamBase {
  public:
+  explicit RequestStream(async_dispatcher_t* dispatcher) : watchdog_(dispatcher) {}
+
   void Init(std::unique_ptr<BlockDispatcher> disp, const std::string& id, const PhysMem& phys_mem,
             VirtioQueue::InterruptFn interrupt) {
     dispatcher_ = std::move(disp);
@@ -80,13 +114,23 @@ class RequestStream : public StreamBase {
   void DoRequest(bool read_only) {
     TRACE_DURATION("machina", "RequestStream::DoRequest");
     while (queue_.NextChain(&chain_)) {
-      auto request = fbl::MakeRefCounted<Request>(std::move(chain_));
+      auto request = fbl::MakeRefCounted<Request>(watchdog_, std::move(chain_));
+
+      // Fetch the virtio header.
       if (!request->NextDescriptor(&desc_, false /* writable */) ||
           desc_.len != sizeof(virtio_blk_req_t)) {
         DoError(std::move(request), VIRTIO_BLK_S_IOERR);
         continue;
       }
       const auto header = static_cast<virtio_blk_req_t*>(desc_.addr);
+
+      // Propagate details of the operation into the request object.
+      request->set_state(Request::RequestState{
+          .device_id = id_,
+          .operation = header->type,
+          .sector = header->sector,
+      });
+
       // Virtio 1.0, Section 5.2.5.2: If the VIRTIO_BLK_F_BLK_SIZE feature is
       // negotiated, blk_size can be read to determine the optimal sector size
       // for the driver to use. This does not affect the units used in the
@@ -130,6 +174,9 @@ class RequestStream : public StreamBase {
  private:
   std::unique_ptr<BlockDispatcher> dispatcher_;
   std::string id_;
+
+  // TODO(fxbug.dev/87089): Consider if this is valuable enough to keep long term.
+  RequestWatchdog<Request::RequestPrinter> watchdog_;
 
   void DoRead(fbl::RefPtr<Request> request, uint64_t off) {
     TRACE_DURATION("machina", "RequestStream::DoRead");
@@ -218,7 +265,8 @@ class RequestStream : public StreamBase {
 class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
                         public fuchsia::virtualization::hardware::VirtioBlock {
  public:
-  VirtioBlockImpl(sys::ComponentContext* context) : DeviceBase(context) {}
+  VirtioBlockImpl(sys::ComponentContext* context, async_dispatcher_t* dispatcher)
+      : DeviceBase(context), request_stream_(dispatcher) {}
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
@@ -300,6 +348,6 @@ int main(int argc, char** argv) {
   std::unique_ptr<sys::ComponentContext> context =
       sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  VirtioBlockImpl virtio_block(context.get());
+  VirtioBlockImpl virtio_block(context.get(), loop.dispatcher());
   return loop.Run();
 }
