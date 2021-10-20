@@ -20,7 +20,7 @@ base_package_labels += [
   "//src/fonts",
   "//src/fonts:open-fonts-collection",
   "//src/graphics/bin/vulkan_loader",
-  "//src/identity/bin:tier_2",
+  "//src/identity/bin:password_authenticator_only",
   "//src/intl/intl_services:config",
   "//src/intl/intl_services:pkg",
   "//src/media/audio/bundles:services",
