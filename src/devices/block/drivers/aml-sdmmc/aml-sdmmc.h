@@ -18,6 +18,7 @@
 #include <lib/zx/status.h>
 #include <threads.h>
 
+#include <limits>
 #include <optional>
 #include <vector>
 
@@ -81,15 +82,19 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
  private:
   constexpr static size_t kResponseCount = 4;
 
-  struct TuneWindow {
-    uint32_t start = 0;
-    uint32_t size = 0;
+  struct TuneResults {
+    uint64_t results = 0;
     uint32_t param_max = 0;
-    uint64_t results;
 
-    uint32_t middle() const { return start + (size / 2); }
+    bool all_passed() const {
+      if (results == std::numeric_limits<decltype(results)>::max()) {
+        return true;
+      }
 
-    std::string GetResultsString() const {
+      return results == ((1ULL << param_max) - 1);
+    }
+
+    std::string ToString() const {
       char string[param_max + 2];
       for (uint32_t i = 0; i <= param_max; i++) {
         string[i] = (results & (1ULL << i)) ? '|' : '-';
@@ -97,6 +102,14 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
       string[param_max + 1] = '\0';
       return string;
     }
+  };
+
+  struct TuneWindow {
+    uint32_t start = 0;
+    uint32_t size = 0;
+    TuneResults results;
+
+    uint32_t middle() const { return start + (size / 2); }
   };
 
   // VMO metadata that needs to be stored in accordance with the SDMMC protocol.
@@ -113,20 +126,33 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
     inspect::UintProperty adj_delay;
     inspect::UintProperty delay_lines;
     std::vector<inspect::StringProperty> tuning_results;
-    inspect::UintProperty delay_window_size;
     inspect::UintProperty max_delay;
+    inspect::UintProperty longest_window_start;
+    inspect::UintProperty longest_window_size;
+    inspect::UintProperty longest_window_adj_delay;
+    inspect::StringProperty tuning_method;
 
     void Init(const pdev_device_info_t& device_info);
   };
 
   using SdmmcVmoStore = vmo_store::VmoStore<vmo_store::HashTableStorage<uint32_t, OwnedVmoInfo>>;
 
+  zx_status_t PerformNewTuning(cpp20::span<const TuneResults> adj_delay_results);
+  zx_status_t PerformOldTuning(cpp20::span<const TuneResults> adj_delay_results);
   zx_status_t TuningDoTransfer(uint8_t* tuning_res, size_t blk_pattern_size,
                                uint32_t tuning_cmd_idx);
   bool TuningTestSettings(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx);
   // Sweeps from zero to param_max and creates a TuneWindow representing the largest span of values
   // for which check_param returned true.
-  static TuneWindow TuneDelayParam(uint32_t param_max, fit::function<bool(uint32_t)> check_param);
+  static TuneWindow ProcessTuningResults(uint32_t param_max,
+                                         fit::function<bool(uint32_t)> check_param);
+  // Like above, but considers param_max to be adjacent to zero when creating the TuneWindow.
+  static TuneWindow ProcessTuningResultsWithWrapping(uint32_t param_max,
+                                                     fit::function<bool(uint32_t)> check_param);
+  static TuneWindow ProcessTuningResultsInternal(uint32_t param_max,
+                                                 fit::function<bool(uint32_t)> check_param,
+                                                 bool wrap);
+  TuneResults TuneDelayLines(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx);
 
   void SetAdjDelay(uint32_t adj_delay);
   void SetDelayLines(uint32_t delay);

@@ -535,11 +535,6 @@ TEST_F(AmlSdmmcTest, DelayLineTuningNoWindowWrap) {
   EXPECT_STR_EQ(tuning_results->value(),
                 "|-----------||||||||||---------------------||-------------------");
 
-  const auto* delay_window_size =
-      root->node().get_property<inspect::UintPropertyValue>("delay_window_size");
-  ASSERT_NOT_NULL(delay_window_size);
-  EXPECT_EQ(delay_window_size->value(), 10);
-
   const auto* max_delay = root->node().get_property<inspect::UintPropertyValue>("max_delay");
   ASSERT_NOT_NULL(max_delay);
   EXPECT_EQ(max_delay->value(), 64);
@@ -595,11 +590,6 @@ TEST_F(AmlSdmmcTest, DelayLineTuningWindowWrap) {
   EXPECT_STR_EQ(tuning_results->value(),
                 "|||||||||||||||-----------|||||||||||||||||||---------||||||||||");
 
-  const auto* delay_window_size =
-      root->node().get_property<inspect::UintPropertyValue>("delay_window_size");
-  ASSERT_NOT_NULL(delay_window_size);
-  EXPECT_EQ(delay_window_size->value(), 25);
-
   const auto* max_delay = root->node().get_property<inspect::UintPropertyValue>("max_delay");
   ASSERT_NOT_NULL(max_delay);
   EXPECT_EQ(max_delay->value(), 64);
@@ -634,14 +624,266 @@ TEST_F(AmlSdmmcTest, DelayLineTuningAllFail) {
   EXPECT_STR_EQ(tuning_results->value(),
                 "----------------------------------------------------------------");
 
-  const auto* delay_window_size =
-      root->node().get_property<inspect::UintPropertyValue>("delay_window_size");
-  ASSERT_NOT_NULL(delay_window_size);
-  EXPECT_EQ(delay_window_size->value(), 0);
-
   const auto* max_delay = root->node().get_property<inspect::UintPropertyValue>("max_delay");
   ASSERT_NOT_NULL(max_delay);
   EXPECT_EQ(max_delay->value(), 64);
+}
+
+TEST_F(AmlSdmmcTest, NewDelayLineTuningAllPass) {
+  dut_->set_board_config({
+      .supports_dma = true,
+      .min_freq = 400000,
+      .max_freq = 120000000,
+      .version_3 = true,
+      .prefs = 0,
+      .use_new_tuning = true,
+  });
+  ASSERT_OK(dut_->Init({}));
+
+  AmlSdmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
+
+  auto adjust = AmlSdmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
+  auto delay1 = AmlSdmmcDelay1::Get().FromValue(0).WriteTo(&mmio_);
+  auto delay2 = AmlSdmmcDelay2::Get().FromValue(0).WriteTo(&mmio_);
+
+  // The new tuning method should fail because no transfers failed. The old tuning method should be
+  // used as a fallback.
+  EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
+
+  adjust.ReadFrom(&mmio_);
+  delay1.ReadFrom(&mmio_);
+  delay2.ReadFrom(&mmio_);
+
+  EXPECT_EQ(adjust.adj_delay(), 0);
+  EXPECT_EQ(delay1.dly_0(), 32);
+  EXPECT_EQ(delay1.dly_1(), 32);
+  EXPECT_EQ(delay1.dly_2(), 32);
+  EXPECT_EQ(delay1.dly_3(), 32);
+  EXPECT_EQ(delay1.dly_4(), 32);
+  EXPECT_EQ(delay2.dly_5(), 32);
+  EXPECT_EQ(delay2.dly_6(), 32);
+  EXPECT_EQ(delay2.dly_7(), 32);
+  EXPECT_EQ(delay2.dly_8(), 32);
+  EXPECT_EQ(delay2.dly_9(), 32);
+
+  const auto* root = dut_->GetInspectRoot("-unknown");
+  ASSERT_NOT_NULL(root);
+
+  const auto* adj_delay = root->node().get_property<inspect::UintPropertyValue>("adj_delay");
+  ASSERT_NOT_NULL(adj_delay);
+  EXPECT_EQ(adj_delay->value(), 0);
+
+  const auto* delay_lines = root->node().get_property<inspect::UintPropertyValue>("delay_lines");
+  ASSERT_NOT_NULL(delay_lines);
+  EXPECT_EQ(delay_lines->value(), 32);
+
+  const auto* tuning_results =
+      root->node().get_property<inspect::StringPropertyValue>("tuning_results_adj_delay_0");
+  ASSERT_NOT_NULL(tuning_results);
+  EXPECT_STR_EQ(tuning_results->value(),
+                "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+}
+
+TEST_F(AmlSdmmcTest, NewDelayLineTuningFallBackToOld) {
+  dut_->SetRequestResults(
+      "-----------|||||||||||||||||||||||||||||||||||||||||||||||||----"
+      "-------------------------------|||||||||||||||||||||||||||||||||"
+      "||||||||||-----------------------------------------|||||||||||||"
+      "||||||||||||||||||||||||||||||----------------------------------"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||--------------"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "-----------|||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "-------------------------------|||||||||||||||||||||||||||||||||"
+      "||||||||||||||||||||-------------------------------|||||||||||||"
+      "||||||||||||||||||||||||||||||||||||||||------------------------");
+
+  dut_->set_board_config({
+      .supports_dma = true,
+      .min_freq = 400000,
+      .max_freq = 120000000,
+      .version_3 = true,
+      .prefs = 0,
+      .use_new_tuning = true,
+  });
+  ASSERT_OK(dut_->Init({}));
+
+  AmlSdmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
+
+  auto adjust = AmlSdmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
+  auto delay1 = AmlSdmmcDelay1::Get().FromValue(0).WriteTo(&mmio_);
+  auto delay2 = AmlSdmmcDelay2::Get().FromValue(0).WriteTo(&mmio_);
+
+  // The new tuning method should fail because no transfers failed. The old tuning method should be
+  // used as a fallback.
+  EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
+
+  adjust.ReadFrom(&mmio_);
+  delay1.ReadFrom(&mmio_);
+  delay2.ReadFrom(&mmio_);
+
+  EXPECT_EQ(adjust.adj_delay(), 4);
+  EXPECT_EQ(delay1.dly_0(), 25);
+  EXPECT_EQ(delay1.dly_1(), 25);
+  EXPECT_EQ(delay1.dly_2(), 25);
+  EXPECT_EQ(delay1.dly_3(), 25);
+  EXPECT_EQ(delay1.dly_4(), 25);
+  EXPECT_EQ(delay2.dly_5(), 25);
+  EXPECT_EQ(delay2.dly_6(), 25);
+  EXPECT_EQ(delay2.dly_7(), 25);
+  EXPECT_EQ(delay2.dly_8(), 25);
+  EXPECT_EQ(delay2.dly_9(), 25);
+
+  const auto* root = dut_->GetInspectRoot("-unknown");
+  ASSERT_NOT_NULL(root);
+
+  const auto* adj_delay = root->node().get_property<inspect::UintPropertyValue>("adj_delay");
+  ASSERT_NOT_NULL(adj_delay);
+  EXPECT_EQ(adj_delay->value(), 4);
+
+  const auto* delay_lines = root->node().get_property<inspect::UintPropertyValue>("delay_lines");
+  ASSERT_NOT_NULL(delay_lines);
+  EXPECT_EQ(delay_lines->value(), 25);
+
+  const auto* tuning_results =
+      root->node().get_property<inspect::StringPropertyValue>("tuning_results_adj_delay_4");
+  ASSERT_NOT_NULL(tuning_results);
+  EXPECT_STR_EQ(tuning_results->value(),
+                "||||||||||||||||||||||||||||||||||||||||||||||||||--------------");
+}
+
+TEST_F(AmlSdmmcTest, NewDelayLineTuningEvenDivider) {
+  dut_->SetRequestResults(
+      // Largest failing window: adj_delay 8, middle delay 25
+      "||||||||||||||||||||||||||||||||||||||||||||||||||--------------"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "-|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "---------------------|||||||||||||||||||||||||||||||||||||||||||"
+      "||||||||||-------------------------------|||||||||||||||||||||||"
+      "||||||||||||||||||||||||||||||-------------------------------|||");
+
+  dut_->set_board_config({
+      .supports_dma = true,
+      .min_freq = 400000,
+      .max_freq = 120000000,
+      .version_3 = true,
+      .prefs = 0,
+      .use_new_tuning = true,
+  });
+  ASSERT_OK(dut_->Init({}));
+
+  AmlSdmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
+
+  auto adjust = AmlSdmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
+  auto delay1 = AmlSdmmcDelay1::Get().FromValue(0).WriteTo(&mmio_);
+  auto delay2 = AmlSdmmcDelay2::Get().FromValue(0).WriteTo(&mmio_);
+
+  EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
+
+  adjust.ReadFrom(&mmio_);
+  delay1.ReadFrom(&mmio_);
+  delay2.ReadFrom(&mmio_);
+
+  EXPECT_EQ(adjust.adj_delay(), 3);
+  EXPECT_EQ(delay1.dly_0(), 25);
+  EXPECT_EQ(delay1.dly_1(), 25);
+  EXPECT_EQ(delay1.dly_2(), 25);
+  EXPECT_EQ(delay1.dly_3(), 25);
+  EXPECT_EQ(delay1.dly_4(), 25);
+  EXPECT_EQ(delay2.dly_5(), 25);
+  EXPECT_EQ(delay2.dly_6(), 25);
+  EXPECT_EQ(delay2.dly_7(), 25);
+  EXPECT_EQ(delay2.dly_8(), 25);
+  EXPECT_EQ(delay2.dly_9(), 25);
+
+  const auto* root = dut_->GetInspectRoot("-unknown");
+  ASSERT_NOT_NULL(root);
+
+  const auto* adj_delay = root->node().get_property<inspect::UintPropertyValue>("adj_delay");
+  ASSERT_NOT_NULL(adj_delay);
+  EXPECT_EQ(adj_delay->value(), 3);
+
+  const auto* delay_lines = root->node().get_property<inspect::UintPropertyValue>("delay_lines");
+  ASSERT_NOT_NULL(delay_lines);
+  EXPECT_EQ(delay_lines->value(), 25);
+
+  const auto* tuning_results =
+      root->node().get_property<inspect::StringPropertyValue>("tuning_results_adj_delay_4");
+  ASSERT_NOT_NULL(tuning_results);
+  EXPECT_STR_EQ(tuning_results->value(),
+                "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+}
+
+TEST_F(AmlSdmmcTest, NewDelayLineTuningOddDivider) {
+  dut_->SetRequestResults(
+      // Largest failing window: adj_delay 3, first delay 0
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "-----------|||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "-------------------------------|||||||||||||||||||||||||||||||||"
+      "||||||||||||||||||||-------------------------------|||||||||||||"
+      "||||||||||||||||||||||||||||||||||||||||------------------------"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||----"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+      "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+
+  dut_->set_board_config({
+      .supports_dma = true,
+      .min_freq = 400000,
+      .max_freq = 120000000,
+      .version_3 = true,
+      .prefs = 0,
+      .use_new_tuning = true,
+  });
+  ASSERT_OK(dut_->Init({}));
+
+  AmlSdmmcClock::Get().FromValue(0).set_cfg_div(9).WriteTo(&mmio_);
+  AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
+
+  auto adjust = AmlSdmmcAdjust::Get().FromValue(0).set_adj_delay(0x3f).WriteTo(&mmio_);
+  auto delay1 = AmlSdmmcDelay1::Get().FromValue(0).WriteTo(&mmio_);
+  auto delay2 = AmlSdmmcDelay2::Get().FromValue(0).WriteTo(&mmio_);
+
+  EXPECT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
+
+  adjust.ReadFrom(&mmio_);
+  delay1.ReadFrom(&mmio_);
+  delay2.ReadFrom(&mmio_);
+
+  EXPECT_EQ(adjust.adj_delay(), 7);
+  EXPECT_EQ(delay1.dly_0(), 0);
+  EXPECT_EQ(delay1.dly_1(), 0);
+  EXPECT_EQ(delay1.dly_2(), 0);
+  EXPECT_EQ(delay1.dly_3(), 0);
+  EXPECT_EQ(delay1.dly_4(), 0);
+  EXPECT_EQ(delay2.dly_5(), 0);
+  EXPECT_EQ(delay2.dly_6(), 0);
+  EXPECT_EQ(delay2.dly_7(), 0);
+  EXPECT_EQ(delay2.dly_8(), 0);
+  EXPECT_EQ(delay2.dly_9(), 0);
+
+  const auto* root = dut_->GetInspectRoot("-unknown");
+  ASSERT_NOT_NULL(root);
+
+  const auto* adj_delay = root->node().get_property<inspect::UintPropertyValue>("adj_delay");
+  ASSERT_NOT_NULL(adj_delay);
+  EXPECT_EQ(adj_delay->value(), 7);
+
+  const auto* delay_lines = root->node().get_property<inspect::UintPropertyValue>("delay_lines");
+  ASSERT_NOT_NULL(delay_lines);
+  EXPECT_EQ(delay_lines->value(), 0);
+
+  const auto* tuning_results =
+      root->node().get_property<inspect::StringPropertyValue>("tuning_results_adj_delay_7");
+  ASSERT_NOT_NULL(tuning_results);
+  EXPECT_STR_EQ(tuning_results->value(),
+                "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
 }
 
 TEST_F(AmlSdmmcTest, SetBusFreq) {
