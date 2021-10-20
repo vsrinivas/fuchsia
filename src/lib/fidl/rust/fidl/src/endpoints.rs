@@ -406,7 +406,7 @@ pub fn create_endpoints<T: ProtocolMarker>() -> Result<(ClientEnd<T>, ServerEnd<
 /// Create a client proxy and a server endpoint connected to it by a channel.
 ///
 /// Useful for sending channel handles to calls that take arguments
-/// of type `request<SomeInterface>`
+/// of type `server_end:SomeProtocol`
 pub fn create_proxy<T: ProtocolMarker>() -> Result<(T::Proxy, ServerEnd<T>), Error> {
     let (client, server) = create_endpoints()?;
     Ok((client.into_proxy()?, server))
@@ -415,7 +415,7 @@ pub fn create_proxy<T: ProtocolMarker>() -> Result<(T::Proxy, ServerEnd<T>), Err
 /// Create a request stream and a client endpoint connected to it by a channel.
 ///
 /// Useful for sending channel handles to calls that take arguments
-/// of type `SomeInterface`
+/// of type `client_end:SomeProtocol`
 pub fn create_request_stream<T: ProtocolMarker>() -> Result<(ClientEnd<T>, T::RequestStream), Error>
 {
     let (client, server) = create_endpoints()?;
