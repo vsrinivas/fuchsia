@@ -51,6 +51,9 @@ type DeviceConfig struct {
 
 	// Serial is the path to the device file for serial i/o.
 	Serial string `json:"serial,omitempty"`
+
+	// SerialMux is the path to the device's serial multiplexer.
+	SerialMux string `json:"serial_mux,omitempty"`
 }
 
 // NetworkProperties are the static network properties of a target.
@@ -104,7 +107,16 @@ func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*D
 		return nil, fmt.Errorf("could not parse out signers from private keys: %w", err)
 	}
 	var s io.ReadWriteCloser
-	if config.Serial != "" {
+	if config.SerialMux != "" {
+		s, err = serial.NewSocket(ctx, config.SerialMux)
+		if err != nil {
+			return nil, fmt.Errorf("unable to open: %s: %w", config.SerialMux, err)
+		}
+		// Dump the existing serial debug log buffer.
+		if _, err := io.WriteString(s, dlogCmd); err != nil {
+			return nil, fmt.Errorf("failed to tail serial logs: %w", err)
+		}
+	} else if config.Serial != "" {
 		s, err = serial.Open(config.Serial)
 		if err != nil {
 			return nil, fmt.Errorf("unable to open %s: %w", config.Serial, err)
