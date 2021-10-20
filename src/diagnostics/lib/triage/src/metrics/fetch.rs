@@ -322,27 +322,21 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
             component.get(key).ok_or_else(|| anyhow!("'{}' not found in Inspect component", key))
         }
 
-        fn path_from(component: &JsonValue) -> Result<String, Error> {
-            let value = extract_json_value(component, "moniker").or_else(|_| {
-                extract_json_value(component, "path")
-                    .or_else(|_| bail!("Neither 'path' nor 'moniker' found in Inspect component"))
-            })?;
+        fn moniker_from(component: &JsonValue) -> Result<Vec<String>, Error> {
+            let value = extract_json_value(component, "moniker")
+                .or_else(|_| bail!("'moniker' not found in Inspect component"))?;
             Ok(value
                 .as_str()
                 .ok_or_else(|| anyhow!("Inspect component path wasn't a valid string"))?
-                .to_owned())
-        }
-
-        fn moniker_from(path_string: &String) -> Result<Vec<String>, Error> {
-            selectors::parse_path_to_moniker(path_string)
-                .context("Path string needs to be a moniker")
+                .split("/")
+                .map(|s| s.to_owned())
+                .collect())
         }
 
         let components: Vec<_> = component_vec
             .iter()
             .map(|raw_component| {
-                let path = path_from(raw_component)?;
-                let moniker = moniker_from(&path)?;
+                let moniker = moniker_from(raw_component)?;
                 let raw_contents = extract_json_value(raw_component, "payload").or_else(|_| {
                     extract_json_value(raw_component, "contents").or_else(|_| {
                         bail!("Neither 'payload' nor 'contents' found in Inspect component")
@@ -357,7 +351,7 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
                         serde_json::from_value(raw_contents.clone()).with_context(|| {
                             format!(
                                 "Unable to deserialize Inspect contents for {} to node hierarchy",
-                                path
+                                moniker.join("/")
                             )
                         })?
                     }
@@ -705,7 +699,7 @@ mod test {
             r#"[
         {"moniker":"asdf/foo/qwer",
          "payload":{"root":{"dataInt":5, "child":{"dataFloat":2.3}}}},
-        {"path":"hub/r/zxcv/1/r/bar/2/c/hjkl.cmx/1",
+        {"moniker":"zxcv/bar/hjkl.cmx",
          "contents":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}},
         {"moniker":"fail_component",
          "payload": ["a", "b"]},

@@ -1,6 +1,6 @@
 [
     {
-        "moniker": "/hub/c/feedback_agent.cmx/1641492/out/inspect/root.inspect",
+        "moniker": "feedback_agent.cmx",
         "payload": {
             "root": {
                 "current_num_connections": 1,
@@ -25,8 +25,8 @@
         "moniker": "session-1/app.cmx",
         "payload": {
             "root": {
-              "requests": 100,
-              "errors": 95
+                "requests": 100,
+                "errors": 95
             }
         }
     }

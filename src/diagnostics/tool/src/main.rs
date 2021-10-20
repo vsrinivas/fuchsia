@@ -182,10 +182,6 @@ fn filter_json_schema_by_selectors(
     mut schema: InspectData,
     selector_vec: &Vec<Selector>,
 ) -> Option<InspectData> {
-    // A failure here implies a malformed snapshot. We want to panic.
-    let moniker = selectors::parse_path_to_moniker(&schema.moniker)
-        .expect("Snapshot contained an unparsable path.");
-
     if schema.payload.is_none() {
         schema.payload = Some(hierarchy! {
             root: {
@@ -196,6 +192,7 @@ fn filter_json_schema_by_selectors(
     }
     let hierarchy = schema.payload.unwrap();
 
+    let moniker: Vec<_> = schema.moniker.split("/").map(|s| s.to_owned()).collect();
     match selectors::match_component_moniker_against_selectors(&moniker, selector_vec.as_slice()) {
         Ok(matched_selectors) => {
             if matched_selectors.is_empty() {
@@ -257,18 +254,18 @@ fn filter_data_to_lines(
     // Filter the source data that we diff against to only contain the component
     // of interest.
     let mut diffable_source: Vec<InspectData> = match requested_name_opt {
-        Some(requested_name) => data
-            .into_iter()
-            .cloned()
-            .filter(|schema| {
-                let moniker = selectors::parse_path_to_moniker(&schema.moniker)
-                    .expect("Snapshot contained an unparsable path.");
-                let component_name = moniker
-                    .last()
-                    .expect("Monikers in provided data dumps are required to be non-empty.");
-                requested_name == component_name
-            })
-            .collect(),
+        Some(requested_name) => {
+            data.into_iter()
+                .cloned()
+                .filter(|schema| {
+                    let component_name =
+                        schema.moniker.split("/").last().expect(
+                            "Monikers in provided data dumps are required to be non-empty.",
+                        );
+                    requested_name == component_name
+                })
+                .collect()
+        }
         None => data.to_vec(),
     };
 
@@ -345,9 +342,7 @@ fn generate_selectors<'a>(
     let matching_hierarchies: Vec<MatchedHierarchy> = data
         .into_iter()
         .filter_map(|schema| {
-            let moniker = selectors::parse_path_to_moniker(&schema.moniker)
-                .expect("Snapshot contained an unparsable moniker.");
-
+            let moniker: Vec<_> = schema.moniker.split("/").map(|s| s.to_owned()).collect();
             let component_name_matches = component_name.is_none()
                 || component_name.as_ref().unwrap()
                     == moniker
