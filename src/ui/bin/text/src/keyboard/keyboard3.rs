@@ -553,7 +553,6 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    #[ignore] // TODO(fxbug.dev/85005) debug and re-enable
     async fn test_single_client() -> Result<(), Error> {
         let mut helper = Helper::new();
 
