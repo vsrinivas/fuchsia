@@ -53,6 +53,7 @@ static aml_sdmmc_config_t sherlock_config = {
     .max_freq = 120'000'000,
     .version_3 = true,
     .prefs = SDMMC_HOST_PREFS_DISABLE_HS400,
+    .use_new_tuning = true,
 };
 
 static aml_sdmmc_config_t luis_config = {
