@@ -11,7 +11,7 @@
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake-object/object.h>
-#include <lib/fake_ddk/fake_ddk.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
@@ -27,6 +27,7 @@
 #include <fbl/auto_lock.h>
 #include <gtest/gtest.h>
 
+#include "src/devices/testing/mock-ddk/mock-device.h"
 #include "src/graphics/drivers/misc/goldfish_control/render_control_commands.h"
 
 #define ASSERT_OK(expr) ASSERT_EQ(ZX_OK, expr)
@@ -34,41 +35,6 @@
 
 namespace goldfish {
 namespace {
-
-// A RAII memory mapping wrapper of VMO to memory.
-class VmoMapping {
- public:
-  VmoMapping(const zx::vmo& vmo, size_t size, size_t offset = 0,
-             zx_vm_option_t perm = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE)
-      : vmo_(vmo), size_(size), offset_(offset), perm_(perm) {
-    map();
-  }
-
-  ~VmoMapping() { unmap(); }
-
-  void map() {
-    if (!ptr_) {
-      zx::vmar::root_self()->map(perm_, 0, vmo_, offset_, size_,
-                                 reinterpret_cast<uintptr_t*>(&ptr_));
-    }
-  }
-
-  void unmap() {
-    if (ptr_) {
-      zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(ptr_), size_);
-      ptr_ = nullptr;
-    }
-  }
-
-  void* ptr() const { return ptr_; }
-
- private:
-  const zx::vmo& vmo_;
-  size_t size_ = 0u;
-  size_t offset_ = 0u;
-  zx_vm_option_t perm_ = 0;
-  void* ptr_ = nullptr;
-};
 
 // TODO(fxbug.dev/80642): Use //src/devices/lib/goldfish/fake_pipe instead.
 class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> {
@@ -115,14 +81,14 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
 
   void GoldfishPipeOpen(int32_t id) {
     auto mapping = MapCmdBuffer();
-    reinterpret_cast<pipe_cmd_buffer_t*>(mapping->ptr())->status = 0;
+    reinterpret_cast<pipe_cmd_buffer_t*>(mapping.start())->status = 0;
 
     pipe_opened_ = true;
   }
 
   void GoldfishPipeExec(int32_t id) {
     auto mapping = MapCmdBuffer();
-    pipe_cmd_buffer_t* cmd_buffer = reinterpret_cast<pipe_cmd_buffer_t*>(mapping->ptr());
+    pipe_cmd_buffer_t* cmd_buffer = reinterpret_cast<pipe_cmd_buffer_t*>(mapping.start());
     cmd_buffer->rw_params.consumed_size = cmd_buffer->rw_params.sizes[0];
     cmd_buffer->status = 0;
 
@@ -130,21 +96,21 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
       // Store io buffer contents.
       auto io_buffer = MapIoBuffer();
       io_buffer_contents_.emplace_back(std::vector<uint8_t>(io_buffer_size_, 0));
-      memcpy(io_buffer_contents_.back().data(), io_buffer->ptr(), io_buffer_size_);
+      memcpy(io_buffer_contents_.back().data(), io_buffer.start(), io_buffer_size_);
     }
 
     if (cmd_buffer->cmd == PIPE_CMD_CODE_READ) {
       auto io_buffer = MapIoBuffer();
-      uint32_t op = *reinterpret_cast<uint32_t*>(io_buffer->ptr());
+      uint32_t op = *reinterpret_cast<uint32_t*>(io_buffer.start());
 
       switch (op) {
         case kOP_rcCreateBuffer2:
         case kOP_rcCreateColorBuffer:
-          *reinterpret_cast<uint32_t*>(io_buffer->ptr()) = ++buffer_id_;
+          *reinterpret_cast<uint32_t*>(io_buffer.start()) = ++buffer_id_;
           break;
         case kOP_rcMapGpaToBufferHandle2:
         case kOP_rcSetColorBufferVulkanMode2:
-          *reinterpret_cast<int32_t*>(io_buffer->ptr()) = 0;
+          *reinterpret_cast<int32_t*>(io_buffer.start()) = 0;
           break;
         default:
           ZX_ASSERT_MSG(false, "invalid renderControl command (op %u)", op);
@@ -184,16 +150,19 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
     return ZX_OK;
   }
 
-  std::unique_ptr<VmoMapping> MapCmdBuffer() const {
-    return std::make_unique<VmoMapping>(pipe_cmd_buffer_, /*size=*/sizeof(pipe_cmd_buffer_t),
-                                        /*offset=*/0);
+  fzl::VmoMapper MapCmdBuffer() const {
+    fzl::VmoMapper mapping;
+    mapping.Map(pipe_cmd_buffer_, 0, sizeof(pipe_cmd_buffer_t), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+    return mapping;
   }
 
-  std::unique_ptr<VmoMapping> MapIoBuffer() {
+  fzl::VmoMapper MapIoBuffer() {
     if (!pipe_io_buffer_.is_valid()) {
       PrepareIoBuffer();
     }
-    return std::make_unique<VmoMapping>(pipe_io_buffer_, /*size=*/io_buffer_size_, /*offset=*/0);
+    fzl::VmoMapper mapping;
+    mapping.Map(pipe_io_buffer_, 0, io_buffer_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+    return mapping;
   }
 
   bool IsPipeReady() const { return pipe_created_ && pipe_opened_; }
@@ -339,47 +308,57 @@ class FakeSync : public ddk::GoldfishSyncProtocol<FakeSync, ddk::base_protocol> 
 
 class ControlDeviceTest : public testing::Test {
  public:
+  ControlDeviceTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+
   void SetUp() override {
-    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[3], 3);
-    fragments[0].name = "goldfish-pipe";
-    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
-        ZX_PROTOCOL_GOLDFISH_PIPE, *reinterpret_cast<const fake_ddk::Protocol*>(pipe_.proto())});
-    fragments[1].name = "goldfish-address-space";
-    fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
-        ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE,
-        *reinterpret_cast<const fake_ddk::Protocol*>(address_space_.proto())});
-    fragments[2].name = "goldfish-sync";
-    fragments[2].protocols.emplace_back(fake_ddk::ProtocolEntry{
-        ZX_PROTOCOL_GOLDFISH_SYNC, *reinterpret_cast<const fake_ddk::Protocol*>(sync_.proto())});
-    ddk_.SetFragments(std::move(fragments));
+    fake_parent_ = MockDevice::FakeRootParent();
+    fake_parent_->AddProtocol(ZX_PROTOCOL_GOLDFISH_PIPE, pipe_.proto()->ops, pipe_.proto()->ctx,
+                              "goldfish-pipe");
+    fake_parent_->AddProtocol(ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE, address_space_.proto()->ops,
+                              address_space_.proto()->ctx, "goldfish-address-space");
+    fake_parent_->AddProtocol(ZX_PROTOCOL_GOLDFISH_SYNC, sync_.proto()->ops, sync_.proto()->ctx,
+                              "goldfish-sync");
 
-    dut_ = std::make_unique<Control>(fake_ddk::kFakeParent);
+    auto dut = std::make_unique<Control>(fake_parent_.get());
+    ASSERT_OK(dut->Bind());
+    // The device will be deleted by MockDevice when the test ends.
+    dut.release();
 
-    ASSERT_OK(dut_->Bind());
+    ASSERT_EQ(fake_parent_->child_count(), 1u);
+    auto fake_dut = fake_parent_->GetLatestChild();
+    dut_ = fake_dut->GetDeviceContext<Control>();
+
     ASSERT_OK(pipe_.SetUpPipeDevice());
     ASSERT_TRUE(pipe_.IsPipeReady());
 
-    fidl_client_ =
-        fidl::BindSyncClient(ddk_.FidlClient<fuchsia_hardware_goldfish::ControlDevice>());
+    // Bind FIDL server.
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::ControlDevice>();
+    ASSERT_TRUE(endpoints.is_ok());
+    fidl_server_ = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server),
+                                    fake_dut->GetDeviceContext<Control>());
+    loop_.StartThread("goldfish-control-device-fidl-server");
+
+    fidl_client_ = fidl::BindSyncClient(std::move(endpoints->client));
   }
 
   void TearDown() override {
-    dut_->DdkAsyncRemove();
-    EXPECT_TRUE(ddk_.Ok());
-
-    dut_.reset();
+    device_async_remove(dut_->zxdev());
+    mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
   }
 
  protected:
-  std::unique_ptr<Control> dut_;
+  Control* dut_ = nullptr;
 
   FakePipe pipe_;
   FakeAddressSpace address_space_;
   FakeSync sync_;
 
-  fake_ddk::Bind ddk_;
+  std::shared_ptr<MockDevice> fake_parent_;
 
-  fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> fidl_client_;
+  async::Loop loop_;
+  std::optional<fidl::ServerBindingRef<fuchsia_hardware_goldfish::ControlDevice>> fidl_server_ =
+      std::nullopt;
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> fidl_client_ = {};
 };
 
 TEST_F(ControlDeviceTest, Bind) {

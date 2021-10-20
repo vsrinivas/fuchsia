@@ -84,7 +84,7 @@ test("goldfish-control-device-test") {
   ]
   deps = common_deps + [
            "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
-           "//src/devices/testing/fake_ddk",
+           "//src/devices/testing/mock-ddk",
            "//third_party/googletest:gtest",
            "//third_party/googletest:gtest_main",
            "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
