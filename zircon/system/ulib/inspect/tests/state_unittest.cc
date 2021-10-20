@@ -201,6 +201,29 @@ Snapshot SnapshotAndScan(const zx::vmo& vmo,
   return snapshot;
 }
 
+void CheckVmoGenCount(uint64_t expected, const zx::vmo& vmo) {
+  auto expected_header = MakeHeader(expected);
+
+  size_t free_blocks, allocated_blocks;
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
+  auto snapshot = SnapshotAndScan(vmo, &blocks, &free_blocks, &allocated_blocks);
+  ASSERT_TRUE(snapshot);
+  auto actual_block = blocks.find(0)->block;
+
+  CompareBlock(actual_block, expected_header);
+}
+
+TEST(State, DoFrozenVmoCopy) {
+  auto state = State::CreateWithSize(4096);
+  ASSERT_TRUE(state);
+
+  const auto copy = state->FrozenVmoCopy();
+  ASSERT_TRUE(copy.has_value());
+
+  CheckVmoGenCount(inspect::internal::kVmoFrozen, copy.value());
+  CheckVmoGenCount(0, state->GetVmo());
+}
+
 TEST(State, CreateAndCopy) {
   auto state = State::CreateWithSize(4096);
   ASSERT_TRUE(state);

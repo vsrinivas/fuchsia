@@ -65,6 +65,14 @@ Inspector::Inspector(zx::vmo vmo)
   *root_ = state_->CreateRootNode();
 }
 
+cpp17::optional<zx::vmo> Inspector::FrozenVmoCopy() const {
+  if (!state_) {
+    return {};
+  }
+
+  return state_->FrozenVmoCopy();
+}
+
 zx::vmo Inspector::DuplicateVmo() const {
   zx::vmo ret;
 

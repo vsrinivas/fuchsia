@@ -68,13 +68,24 @@ class InspectTreeService final : public fuchsia::inspect::Tree {
     fuchsia::inspect::TreeContent ret;
     fuchsia::mem::Buffer buffer;
     const auto primary_behavior = settings_.snapshot_behavior.PrimaryBehavior();
+    const auto failure_behavior = settings_.snapshot_behavior.FailureBehavior();
     using behavior_types = TreeServerSendPreference::Type;
 
-    if (primary_behavior == behavior_types::DeepCopy) {
-      buffer.vmo = inspector_.CopyVmo();
+    if (primary_behavior == behavior_types::Frozen) {
+      auto maybe_vmo = inspector_.FrozenVmoCopy();
+      if (maybe_vmo.has_value()) {
+        buffer.vmo = std::move(maybe_vmo.value());
+      } else if (failure_behavior.has_value() && *failure_behavior == behavior_types::Live) {
+        buffer.vmo = inspector_.DuplicateVmo();
+      } else {
+        buffer.vmo = inspector_.CopyVmo();
+      }
     } else if (primary_behavior == behavior_types::Live) {
       buffer.vmo = inspector_.DuplicateVmo();
+    } else {
+      buffer.vmo = inspector_.CopyVmo();
     }
+
     buffer.vmo.get_size(&buffer.size);
     ret.set_buffer(std::move(buffer));
     callback(std::move(ret));

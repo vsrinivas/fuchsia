@@ -145,8 +145,8 @@ TEST(MetricsTest, PageInMetrics) {
   // Setup a connection to the Inspect VMO
   auto connector = inspect::MakeTreeHandler(
       metrics.inspector(), loop.dispatcher(),
-      inspect::TreeHandlerSettings{.snapshot_behavior =
-                                       inspect::TreeServerSendPreference::DeepCopy()});
+      inspect::TreeHandlerSettings{.snapshot_behavior = inspect::TreeServerSendPreference::Frozen(
+                                       inspect::TreeServerSendPreference::Type::DeepCopy)});
   fuchsia::inspect::TreePtr tree;
   fidl::InterfaceRequest<fuchsia::inspect::Tree> request = tree.NewRequest(loop.dispatcher());
   connector(std::move(request));

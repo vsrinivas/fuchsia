@@ -63,6 +63,10 @@ class State final {
   // Obtain a read-only duplicate of the VMO backing this State.
   bool DuplicateVmo(zx::vmo* vmo) const;
 
+  // Obtain a copy-on-write copy of the backing VMO. Generation count
+  // will be `kVmoFrozen`.
+  cpp17::optional<zx::vmo> FrozenVmoCopy() const;
+
   // Obtain a copy of the VMO backing this state.
   //
   // Returns true on success, false otherwise.

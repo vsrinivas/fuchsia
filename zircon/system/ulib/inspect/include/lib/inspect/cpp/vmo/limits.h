@@ -7,6 +7,9 @@
 
 #include <zircon/types.h>
 
+#include <climits>
+#include <cstdint>
+
 namespace inspect {
 namespace internal {
 
@@ -30,6 +33,8 @@ constexpr char kMagicNumber[5] = "INSP";
 
 // The version of Inspect Format we support.
 constexpr size_t kVersion = 2;
+
+constexpr size_t kVmoFrozen = 0xFFFFFFFFFFFFFFFE;
 
 template <typename T>
 constexpr size_t OrderToSize(T order) {

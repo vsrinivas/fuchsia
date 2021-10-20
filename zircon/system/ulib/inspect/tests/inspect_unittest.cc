@@ -7,6 +7,7 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/inspect/cpp/reader.h>
+#include <lib/inspect/cpp/vmo/limits.h>
 #include <lib/inspect/cpp/vmo/types.h>
 
 #include <algorithm>
@@ -131,6 +132,55 @@ TEST(Inspect, DeallocateStringReferencesThenAddMore) {
 
   ASSERT_EQ(1u, hierarchy.children().size());
   EXPECT_EQ("outer", hierarchy.children()[0].name());
+}
+
+cpp17::optional<uint64_t> GetGenerationCount(const zx::vmo& vmo) {
+  uint8_t bytes[16];
+  vmo.read(bytes, 0, sizeof bytes);
+  const auto header = reinterpret_cast<inspect::internal::Block*>(bytes);
+  return header->payload.u64;
+}
+
+cpp17::optional<uint64_t> GetGenerationCount(Inspector* insp) {
+  const auto state = inspect::internal::GetState(insp);
+  if (state == nullptr) {
+    return {};
+  }
+
+  return GetGenerationCount(state->GetVmo());
+}
+
+TEST(Inspect, DoingFrozenVmoCopy) {
+  Inspector inspector;
+  inspector.GetRoot().CreateChild("child", &inspector);
+  inspector.GetRoot().CreateChild("child2", &inspector);
+  const auto result_one = GetGenerationCount(&inspector);
+  ASSERT_TRUE(result_one.has_value());
+  ASSERT_EQ(4, result_one.value());
+
+  auto frozen_vmo = inspector.FrozenVmoCopy();
+  ASSERT_TRUE(frozen_vmo.has_value());
+
+  const auto result = GetGenerationCount(frozen_vmo.value());
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(inspect::internal::kVmoFrozen, result.value());
+
+  auto original_vmo = inspector.DuplicateVmo();
+
+  for (int i = 0; i < 1000; i++) {
+    inspector.GetRoot().CreateInt(std::to_string(i), i, &inspector);
+  }
+
+  auto original = inspect::ReadFromVmo(original_vmo);
+  ASSERT_TRUE(original.is_ok());
+  auto frozen = inspect::ReadFromVmo(frozen_vmo.value());
+  ASSERT_TRUE(frozen.is_ok());
+
+  auto original_hierarchy = original.take_value();
+  auto frozen_hierarchy = frozen.take_value();
+
+  ASSERT_EQ(1000u, original_hierarchy.node().properties().size());
+  ASSERT_EQ(2u, frozen_hierarchy.children().size());
 }
 
 TEST(Inspect, UsingStringReferencesAsNames) {

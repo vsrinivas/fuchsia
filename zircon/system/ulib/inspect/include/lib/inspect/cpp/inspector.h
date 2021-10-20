@@ -72,13 +72,17 @@ class Inspector final {
 
   // Construct a new Inspector backed by the given VMO.
   //
-  // The VMO must support ZX_RIGHT_WRITE, ZX_VM_CAN_MAP_WRITE, and ZX_VM_CAN_MAP_READ permissions.
+  // The VMO must support ZX_RIGHT_WRITE, ZX_VM_CAN_MAP_WRITE, ZX_VM_CAN_MAP_READ
+  // permissions, and must be exclusively written to via the constructed Inspector.
   //
   // If an invalid VMO is passed all Node operations will have no effect.
   explicit Inspector(zx::vmo vmo);
 
   // Returns a duplicated read-only version of the VMO backing this inspector.
   zx::vmo DuplicateVmo() const;
+
+  // Returns a read-only, page-by-page copy-on-write duplicate of the backing VMO.
+  cpp17::optional<zx::vmo> FrozenVmoCopy() const;
 
   // Returns a copied version of the VMO backing this inspector.
   //

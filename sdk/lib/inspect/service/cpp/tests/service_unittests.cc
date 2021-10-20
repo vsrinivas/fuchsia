@@ -35,8 +35,8 @@ class InspectServiceTest : public gtest::RealLoopFixture {
   void MakePrivateSnapshotHandler() {
     handler_ = inspect::MakeTreeHandler(
         &inspector_, dispatcher(),
-        inspect::TreeHandlerSettings{.snapshot_behavior =
-                                         inspect::TreeServerSendPreference::DeepCopy()});
+        inspect::TreeHandlerSettings{.snapshot_behavior = inspect::TreeServerSendPreference::Frozen(
+                                         inspect::TreeServerSendPreference::Type::DeepCopy)});
   }
 
   async::Executor executor_;
@@ -70,7 +70,7 @@ TEST_F(InspectServiceTest, SingleTree) {
   EXPECT_TRUE(names.empty());
 }
 
-TEST_F(InspectServiceTest, SingleTreeGetContent) {
+TEST_F(InspectServiceTest, SingleTreeGetContentCoW) {
   auto val = root().CreateInt("val", 1);
 
   auto ptr = Connect();
@@ -85,6 +85,7 @@ TEST_F(InspectServiceTest, SingleTreeGetContent) {
 
   RunLoopUntil([&] { return !!content; });
 
+  // copy-on-write -- this value won't appear in VMO obtained over FIDL
   val.Add(1);
 
   auto hierarchy = inspect::ReadFromVmo(std::move(content.take_value().buffer().vmo));
@@ -93,7 +94,7 @@ TEST_F(InspectServiceTest, SingleTreeGetContent) {
   const inspect::IntPropertyValue* val_prop =
       hierarchy.value().node().get_property<inspect::IntPropertyValue>("val");
   ASSERT_NE(nullptr, val_prop);
-  EXPECT_EQ(2, val_prop->value());
+  EXPECT_EQ(1, val_prop->value());
 }
 
 TEST_F(InspectServiceTest, SingleTreeGetContentPrivate) {

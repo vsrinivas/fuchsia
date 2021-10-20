@@ -6,6 +6,7 @@
 #include <lib/fpromise/sequencer.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/vmo/block.h>
+#include <lib/inspect/cpp/vmo/limits.h>
 #include <lib/inspect/cpp/vmo/state.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/stdcompat/optional.h>
@@ -25,10 +26,23 @@ namespace inspect {
 namespace internal {
 
 namespace {
+
+// Freeze_t is a tag type for overload resolution of `AutoGenerationIncrement`.
+struct Freeze_t {
+} Freeze;
+
 // Helper class to support RAII locking of the generation count.
 class AutoGenerationIncrement final {
  public:
   AutoGenerationIncrement(BlockIndex target, Heap* heap);
+
+  // This version of `AutoGenerationIncrement` puts RAII semantics on freezing a
+  // VMO. I.e. it will write kVmoFrozen to the `target_`'s payload at the beginning
+  // of existence and put back the original value at the end.
+  //
+  // This is used over directly writing to the frozen VMO duplicate because
+  // we want the duplicate to be read-only.
+  AutoGenerationIncrement(Freeze_t, BlockIndex target, Heap* heap);
   ~AutoGenerationIncrement();
 
   // Disallow copy assign and move.
@@ -44,30 +58,50 @@ class AutoGenerationIncrement final {
   // any changes to the buffer.
   void Acquire(Block* block);
 
+  // Set the generation count to kVmoFrozen.
+  void Acquire(Freeze_t, Block* block);
+
   // Release the generation count lock.
-  // This consists of atomically incrementing the count using release
-  // ordering, ensuring readers see this increment after all changes to
-  // the buffer are committed.
+  // This consists of either a) atomically incrementing the count using release
+  // ordering, if the VMO was not frozen, or b) resetting the generation count
+  // to last_gen_count_. The memory ordering will ensure readers see this increment
+  // after all changes to the buffer are committed.
   void Release(Block* block);
 
+  cpp17::optional<uint64_t> last_gen_count_;
   BlockIndex target_;
   Heap* heap_;
 };
 
-AutoGenerationIncrement ::AutoGenerationIncrement(BlockIndex target, Heap* heap)
+AutoGenerationIncrement::AutoGenerationIncrement(BlockIndex target, Heap* heap)
     : target_(target), heap_(heap) {
   Acquire(heap_->GetBlock(target_));
 }
 AutoGenerationIncrement::~AutoGenerationIncrement() { Release(heap_->GetBlock(target_)); }
 
-void AutoGenerationIncrement ::Acquire(Block* block) {
+AutoGenerationIncrement::AutoGenerationIncrement(Freeze_t, BlockIndex target, Heap* heap)
+    : target_(target), heap_(heap) {
+  Acquire(Freeze, heap_->GetBlock(target_));
+}
+
+void AutoGenerationIncrement::Acquire(Freeze_t, Block* block) {
   uint64_t* ptr = &block->payload.u64;
-  __atomic_fetch_add(ptr, 1, static_cast<int>(std::memory_order_acq_rel));
+  last_gen_count_ = block->payload.u64;
+  __atomic_store_n(ptr, kVmoFrozen, __ATOMIC_SEQ_CST);
+}
+
+void AutoGenerationIncrement::Acquire(Block* block) {
+  uint64_t* ptr = &block->payload.u64;
+  __atomic_fetch_add(ptr, 1, __ATOMIC_ACQ_REL);
 }
 
 void AutoGenerationIncrement::Release(Block* block) {
   uint64_t* ptr = &block->payload.u64;
-  __atomic_fetch_add(ptr, 1, static_cast<int>(std::memory_order_release));
+  if (last_gen_count_.has_value()) {
+    __atomic_store_n(ptr, last_gen_count_.value(), __ATOMIC_SEQ_CST);
+  } else {
+    __atomic_fetch_add(ptr, 1, __ATOMIC_RELEASE);
+  }
 }
 
 }  // namespace
@@ -193,6 +227,21 @@ const zx::vmo& State::GetVmo() const {
 bool State::DuplicateVmo(zx::vmo* vmo) const {
   std::lock_guard<std::mutex> lock(mutex_);
   return ZX_OK == heap_->GetVmo().duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, vmo);
+}
+
+cpp17::optional<zx::vmo> State::FrozenVmoCopy() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(Freeze, header_, heap_.get());
+
+  uint64_t size;
+  heap_->GetVmo().get_size(&size);
+  zx::vmo vmo;
+  if (heap_->GetVmo().create_child(ZX_VMO_CHILD_SNAPSHOT | ZX_VMO_CHILD_NO_WRITE, 0, size, &vmo) !=
+      ZX_OK) {
+    return {};
+  }
+
+  return {std::move(vmo)};
 }
 
 bool State::Copy(zx::vmo* vmo) const {

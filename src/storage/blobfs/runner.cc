@@ -76,9 +76,9 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, Serve
   auto inspect_tree = fbl::MakeRefCounted<fs::Service>(
       [connector = inspect::MakeTreeHandler(
            blobfs_->GetMetrics()->inspector(), loop_->dispatcher(),
-           inspect::TreeHandlerSettings{.snapshot_behavior =
-                                            inspect::TreeServerSendPreference::DeepCopy()})](
-          zx::channel chan) mutable {
+           inspect::TreeHandlerSettings{
+               .snapshot_behavior = inspect::TreeServerSendPreference::Frozen(
+                   inspect::TreeServerSendPreference::Type::DeepCopy)})](zx::channel chan) mutable {
         connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
         return ZX_OK;
       });
