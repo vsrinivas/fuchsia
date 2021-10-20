@@ -143,7 +143,6 @@ zx_library("fake_ddk") {
     "//src/graphics/drivers/misc/goldfish/*",
     "//src/graphics/drivers/misc/goldfish_address_space/*",
     "//src/graphics/drivers/misc/goldfish_control/*",
-    "//src/graphics/drivers/misc/goldfish_sync/*",
     "//src/graphics/lib/magma/tests/unit_tests/*",
     "//src/media/audio/drivers/aml-g12-pdm/test/*",
     "//src/media/audio/drivers/codecs/alc5663/tests/*",

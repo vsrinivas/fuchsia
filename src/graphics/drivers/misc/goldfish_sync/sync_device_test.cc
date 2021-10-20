@@ -8,8 +8,6 @@
 #include <fuchsia/hardware/acpi/cpp/banjo-mock.h>
 #include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <lib/fake-bti/bti.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fake_ddk/fidl-helper.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
@@ -31,6 +29,7 @@
 #include <zxtest/zxtest.h>
 
 #include "src/devices/lib/acpi/mock/mock-acpi.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 #include "src/graphics/drivers/misc/goldfish_sync/sync_common_defs.h"
 
 namespace goldfish {
@@ -60,8 +59,8 @@ struct __attribute__((__packed__)) Registers {
 
 }  // namespace
 
-// Test device used for fake DDK based tests. Due to limitation of fake ACPI bus
-// used in fake DDK tests, only a fixed VMO can be bound to the ACPI MMIO, thus
+// Test device used for mock DDK based tests. Due to limitation of fake ACPI bus
+// used in mock DDK tests, only a fixed VMO can be bound to the ACPI MMIO, thus
 // we cannot block MMIO reads / writes or have callbacks, thus we can only feed
 // one host command to device at a time.
 //
@@ -119,14 +118,29 @@ class SyncDeviceTest : public zxtest::Test {
 
     mock_acpi_.ExpectGetBti(ZX_OK, kGoldfishSyncBtiId, 0, std::move(out_bti));
 
-    auto acpi_client = mock_acpi_fidl_.CreateClient(async_loop_.dispatcher());
-    ASSERT_OK(acpi_client.status_value());
-    ddk_.SetProtocol(ZX_PROTOCOL_ACPI, mock_acpi_.GetProto());
-    dut_ = std::make_unique<TestDevice>(fake_ddk::FakeParent(), std::move(acpi_client.value()));
+    fake_parent_ = MockDevice::FakeRootParent();
+    fake_parent_->AddProtocol(ZX_PROTOCOL_ACPI, mock_acpi_.GetProto()->ops,
+                              mock_acpi_.GetProto()->ctx);
   }
 
   // |zxtest::Test|
   void TearDown() override {}
+
+  TestDevice* CreateAndBindDut() {
+    auto acpi_client = mock_acpi_fidl_.CreateClient(async_loop_.dispatcher());
+    EXPECT_OK(acpi_client.status_value());
+    if (!acpi_client.is_ok()) {
+      return nullptr;
+    }
+
+    auto dut = std::make_unique<TestDevice>(fake_parent_.get(), std::move(acpi_client.value()));
+    auto status = dut->Bind();
+    EXPECT_OK(status);
+    if (status != ZX_OK) {
+      return nullptr;
+    }
+    return dut.release();
+  }
 
   fzl::VmoMapper MapControlRegisters() const {
     fzl::VmoMapper mapping;
@@ -181,9 +195,7 @@ class SyncDeviceTest : public zxtest::Test {
   ddk::MockAcpi mock_acpi_;
   acpi::mock::Device mock_acpi_fidl_;
   async::Loop async_loop_;
-  fake_ddk::Bind ddk_;
-  std::unique_ptr<TestDevice> dut_;
-
+  std::shared_ptr<MockDevice> fake_parent_;
   zx::bti acpi_bti_;
   zx::vmo vmo_control_;
   zx::vmo io_buffer_;
@@ -203,7 +215,8 @@ TEST_F(SyncDeviceTest, Bind) {
     ctrl_regs->init = 0xffffffffu;
   }
 
-  ASSERT_OK(dut_->Bind());
+  auto dut = CreateAndBindDut();
+  ASSERT_NE(dut, nullptr);
 
   {
     auto mapped = MapControlRegisters();
@@ -214,9 +227,6 @@ TEST_F(SyncDeviceTest, Bind) {
     ASSERT_NE(ctrl_regs->batch_guestcommand_addr, 0u);
     ASSERT_EQ(ctrl_regs->init, 0u);
   }
-
-  dut_->DdkAsyncRemove();
-  EXPECT_TRUE(ddk_.Ok());
 }
 
 // Tests FIDL channel creation and TriggerHostWait() call.
@@ -224,7 +234,9 @@ TEST_F(SyncDeviceTest, Bind) {
 // This creates a FIDL channel for banjo clients, so that clients can call
 // SyncTimeline.TriggerHostWait() method on the channel to get a waitable event.
 TEST_F(SyncDeviceTest, TriggerHostWait) {
-  ASSERT_OK(dut_->Bind());
+  auto dut = CreateAndBindDut();
+  ASSERT_NE(dut, nullptr);
+
   {
     auto mapped = MapControlRegisters();
     Registers* ctrl_regs = reinterpret_cast<Registers*>(mapped.start());
@@ -235,7 +247,7 @@ TEST_F(SyncDeviceTest, TriggerHostWait) {
 
   zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::SyncTimeline>();
   ASSERT_TRUE(endpoints.is_ok());
-  ASSERT_OK(dut_->GoldfishSyncCreateTimeline(endpoints->server.TakeChannel()));
+  ASSERT_OK(dut->GoldfishSyncCreateTimeline(endpoints->server.TakeChannel()));
 
   auto tl = fidl::BindSyncClient(std::move(endpoints->client));
 
@@ -284,7 +296,9 @@ TEST_F(SyncDeviceTest, TriggerHostWait) {
 //
 // This tests CMD_CREATE_SYNC_TIMELINE and CMD_DESTROY_SYNC_TIMELINE commands.
 TEST_F(SyncDeviceTest, HostCommand_CreateDestroyTimeline) {
-  ASSERT_OK(dut_->Bind());
+  auto dut = CreateAndBindDut();
+  ASSERT_NE(dut, nullptr);
+
   {
     auto mapped = MapControlRegisters();
     Registers* ctrl_regs = reinterpret_cast<Registers*>(mapped.start());
@@ -296,7 +310,7 @@ TEST_F(SyncDeviceTest, HostCommand_CreateDestroyTimeline) {
 
   uint64_t kHostCmdHandle = 0xabcd'1234'5678'abcdUL;
   // Test "CMD_CREATE_SYNC_TIMELINE" command.
-  dut_->RunHostCommand({
+  dut->RunHostCommand({
       .hostcmd_handle = kHostCmdHandle,
       .cmd = CMD_CREATE_SYNC_TIMELINE,
   });
@@ -329,7 +343,7 @@ TEST_F(SyncDeviceTest, HostCommand_CreateDestroyTimeline) {
   EXPECT_TRUE(timeline_ptr->InContainer());
 
   // Test "CMD_DESTROY_SYNC_TIMELINE" command.
-  dut_->RunHostCommand({
+  dut->RunHostCommand({
       .handle = reinterpret_cast<uint64_t>(timeline_ptr.get()),
       .hostcmd_handle = kHostCmdHandle,
       .cmd = CMD_DESTROY_SYNC_TIMELINE,
@@ -344,7 +358,9 @@ TEST_F(SyncDeviceTest, HostCommand_CreateDestroyTimeline) {
 // This tests CMD_CREATE_SYNC_FENCE and CMD_SYNC_TIMELINE_INC commands, as well
 // as fence signaling logic.
 TEST_F(SyncDeviceTest, HostCommand_CreateSignalFences) {
-  ASSERT_OK(dut_->Bind());
+  auto dut = CreateAndBindDut();
+  ASSERT_NE(dut, nullptr);
+
   {
     auto mapped = MapControlRegisters();
     Registers* ctrl_regs = reinterpret_cast<Registers*>(mapped.start());
@@ -355,7 +371,7 @@ TEST_F(SyncDeviceTest, HostCommand_CreateSignalFences) {
   }
 
   // Create timeline.
-  dut_->RunHostCommand({
+  dut->RunHostCommand({
       .hostcmd_handle = 1u,
       .cmd = CMD_CREATE_SYNC_TIMELINE,
   });
@@ -378,7 +394,7 @@ TEST_F(SyncDeviceTest, HostCommand_CreateSignalFences) {
   }
 
   // Create fence.
-  dut_->RunHostCommand({
+  dut->RunHostCommand({
       .handle = reinterpret_cast<uint64_t>(timeline_ptr.get()),
       .hostcmd_handle = 2u,
       .cmd = CMD_CREATE_SYNC_FENCE,
@@ -403,7 +419,7 @@ TEST_F(SyncDeviceTest, HostCommand_CreateSignalFences) {
   }
 
   // Create another fence, waiting on the same timeline at timestamp 2.
-  dut_->RunHostCommand({
+  dut->RunHostCommand({
       .handle = reinterpret_cast<uint64_t>(timeline_ptr.get()),
       .hostcmd_handle = 3u,
       .cmd = CMD_CREATE_SYNC_FENCE,
@@ -436,7 +452,7 @@ TEST_F(SyncDeviceTest, HostCommand_CreateSignalFences) {
       ZX_ERR_TIMED_OUT);
 
   // Now we increase timeline to timestamp 1.
-  dut_->RunHostCommand({
+  dut->RunHostCommand({
       .handle = reinterpret_cast<uint64_t>(timeline_ptr.get()),
       .hostcmd_handle = 4u,
       .cmd = CMD_SYNC_TIMELINE_INC,
@@ -453,7 +469,7 @@ TEST_F(SyncDeviceTest, HostCommand_CreateSignalFences) {
       ZX_ERR_TIMED_OUT);
 
   // Now we increase timeline to timestamp 2.
-  dut_->RunHostCommand({
+  dut->RunHostCommand({
       .handle = reinterpret_cast<uint64_t>(timeline_ptr.get()),
       .hostcmd_handle = 5u,
       .cmd = CMD_SYNC_TIMELINE_INC,
@@ -466,7 +482,7 @@ TEST_F(SyncDeviceTest, HostCommand_CreateSignalFences) {
       ZX_OK);
 
   // Destroy the timeline.
-  dut_->RunHostCommand({
+  dut->RunHostCommand({
       .handle = reinterpret_cast<uint64_t>(timeline_ptr.get()),
       .hostcmd_handle = 6u,
       .cmd = CMD_DESTROY_SYNC_TIMELINE,
@@ -488,7 +504,9 @@ TEST_F(SyncDeviceTest, IrqHandler) {
     ctrl_regs->batch_command = 0xffffffffu;
     ctrl_regs->batch_guestcommand = 0xffffffffu;
   }
-  ASSERT_OK(dut_->Bind());
+
+  auto dut = CreateAndBindDut();
+  ASSERT_NE(dut, nullptr);
 
   {
     auto mapped = MapIoBuffer();
@@ -529,11 +547,12 @@ TEST_F(SyncDeviceTest, IrqHandler) {
 // command and triggers the interrupt, making driver signal the event to notify
 // clients.
 TEST_F(SyncDeviceTest, TriggerHostWaitAndSignalFence) {
-  ASSERT_OK(dut_->Bind());
+  auto dut = CreateAndBindDut();
+  ASSERT_NE(dut, nullptr);
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::SyncTimeline>();
   ASSERT_TRUE(endpoints.is_ok());
-  ASSERT_OK(dut_->GoldfishSyncCreateTimeline(endpoints->server.TakeChannel()));
+  ASSERT_OK(dut->GoldfishSyncCreateTimeline(endpoints->server.TakeChannel()));
 
   auto tl = fidl::BindSyncClient(std::move(endpoints->client));
 
@@ -584,23 +603,25 @@ TEST_F(SyncDeviceTest, TriggerHostWaitAndSignalFence) {
 // |event_client| object is closed, both Fence and SyncTimeline should be
 // destroyed safely without causing any errors.
 TEST_F(SyncDeviceTest, TimelineDestroyedAfterFenceClosed) {
-  ASSERT_OK(dut_->Bind());
+  auto dut = CreateAndBindDut();
+  ASSERT_NE(dut, nullptr);
+
   // Instead of running the loop in another thread, we reset that loop and
   // will run it later in this test.
-  dut_->loop()->ResetQuit();
+  dut->loop()->ResetQuit();
 
   zx::eventpair event_client, event_server;
   zx_status_t status = zx::eventpair::create(0u, &event_client, &event_server);
   ASSERT_EQ(status, ZX_OK);
 
-  fbl::RefPtr<SyncTimeline> tl = fbl::MakeRefCounted<SyncTimeline>(dut_.get());
+  fbl::RefPtr<SyncTimeline> tl = fbl::MakeRefCounted<SyncTimeline>(dut);
   tl->CreateFence(std::move(event_server));
   tl.reset();
 
-  ASSERT_EQ(ZX_OK, dut_->loop()->RunUntilIdle());
+  ASSERT_EQ(ZX_OK, dut->loop()->RunUntilIdle());
 
   event_client.reset();
-  ASSERT_EQ(ZX_OK, dut_->loop()->RunUntilIdle());
+  ASSERT_EQ(ZX_OK, dut->loop()->RunUntilIdle());
 }
 
 }  // namespace sync

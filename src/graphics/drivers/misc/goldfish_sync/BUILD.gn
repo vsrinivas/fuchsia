@@ -69,7 +69,7 @@ test("goldfish-sync-device-test") {
     "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp_mock",
     "//src/devices/lib/acpi/mock:mock-acpi",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
     "//zircon/system/ulib/mock-function",
