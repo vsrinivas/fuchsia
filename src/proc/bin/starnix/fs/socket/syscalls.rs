@@ -164,9 +164,8 @@ pub fn sys_bind(
                 current_task.abstract_socket_namespace.bind(name, socket)?;
             } else {
                 let mode = current_task.fs.apply_umask(mode!(IFSOCK, 0o765));
-                let (parent, basename) = current_task
-                    .lookup_parent_at(FdNumber::AT_FDCWD, &name)
-                    .map_err(translate_fs_error)?;
+                let (parent, basename) =
+                    current_task.lookup_parent_at(FdNumber::AT_FDCWD, &name)?;
 
                 let _dir_entry = parent
                     .entry
