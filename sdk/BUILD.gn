@@ -48,6 +48,16 @@ generated_file("all_fidl_sdk_json") {
   data_keys = [ "fidl_json" ]
 }
 
+# Contains the list of all plasa fragment files, which have a dump of the
+# public API surfaces.
+generated_file("plasa") {
+  testonly = true
+  data_keys = [ "plasa" ]
+  outputs = [ "$root_build_dir/plasa.manifest.json" ]
+  output_conversion = "json"
+  deps = _sdk_public_deps
+}
+
 group("sdk.modular") {
   testonly = true
 

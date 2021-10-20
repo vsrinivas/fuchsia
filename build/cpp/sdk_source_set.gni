@@ -191,17 +191,6 @@ template("sdk_source_set") {
                              ])
       file_base = file_base
     }
-
-    _plasa_manifest_target_name = "${target_name}_plasa_manifest"
-    _plasa_output_file =
-        "${target_gen_dir}/$main_target_name.manifest.plasa.json"
-    generated_file(_plasa_manifest_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
-      outputs = [ _plasa_output_file ]
-      data_keys = [ "plasa" ]
-      output_conversion = "json"
-      deps = [ ":${_plasa_artifacts_target_name}" ]
-    }
   }
 
   metadata_target_name = "${target_name}_sdk_metadata"
@@ -230,15 +219,6 @@ template("sdk_source_set") {
     args += [ "--sources" ] + sdk_metadata_sources
     args += [ "--headers" ] + sdk_metadata_headers
     deps = sdk_deps
-
-    # Optionally attaches the information about the C++ API surface area.
-    if (generate_plasa_artifacts) {
-      args += [
-        "--plasa",
-        rebase_path(_plasa_output_file, root_build_dir),
-      ]
-      deps += [ ":${_plasa_manifest_target_name}" ]
-    }
   }
 
   sdk_atom(sdk_target_name) {
@@ -261,9 +241,6 @@ template("sdk_source_set") {
       source = metadata_file
       dest = "$file_base/meta.json"
       schema = "cc_source_library"
-      if (generate_plasa_artifacts) {
-        plasa_manifest = _plasa_output_file
-      }
     }
 
     files = sdk_files

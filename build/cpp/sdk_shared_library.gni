@@ -242,11 +242,27 @@ template("sdk_shared_library") {
         },
       ]
 
+  if (generate_plasa_artifacts) {
+    _plasa_artifacts_target_name = "${main_target_name}_plasa"
+    plasa_artifacts(_plasa_artifacts_target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "source_dir",
+                               "testonly",
+                               "all_headers",
+                               "all_deps",
+                               "non_public_headers",
+                             ])
+      file_base = file_base
+    }
+  }
+
   metadata_file = "$target_gen_dir/$metadata_target_name.sdk_meta.json"
   debug_mapping_file = "$target_gen_dir/$metadata_target_name.mappings.txt"
   debug_lib_file = "$shared_out_dir/lib.unstripped/$lib_name"
 
   action(metadata_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
     script = "//build/cpp/gen_sdk_prebuilt_meta_file.py"
 
     inputs = sdk_metas + [ debug_lib_file ]
@@ -284,20 +300,6 @@ template("sdk_shared_library") {
     args += [ "--headers" ] + sdk_metadata_headers
 
     deps = sdk_deps + [ shared_lib_target ]
-  }
-
-  if (generate_plasa_artifacts) {
-    _plasa_artifacts_target_name = "${main_target_name}_plasa"
-    plasa_artifacts(_plasa_artifacts_target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "source_dir",
-                               "testonly",
-                               "all_headers",
-                               "all_deps",
-                               "non_public_headers",
-                             ])
-    }
   }
 
   verify_pragma_once(verify_pragma_target_name) {
@@ -415,5 +417,9 @@ template("sdk_shared_library") {
     atom = ":$manifest_target_name"
 
     non_sdk_deps = [ ":$verify_target_name" ]
+
+    if (generate_plasa_artifacts) {
+      non_sdk_deps += [ ":$_plasa_artifacts_target_name" ]
+    }
   }
 }
