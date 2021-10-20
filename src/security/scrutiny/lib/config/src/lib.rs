@@ -239,6 +239,8 @@ pub struct ModelConfig {
     /// The path to the device manager configuration inside bootfs inside the
     /// ZBI.
     pub devmgr_config_path: String,
+    /// The path to the blobfs command line utility.
+    pub blobfs_tool_path: PathBuf,
 }
 
 impl ModelConfig {
@@ -254,6 +256,9 @@ impl ModelConfig {
         let repository_path = build_path.join("amber-files/repository");
         let blob_manifest_path =
             build_path.join("obj/build/images/fuchsia/fuchsia/gen/blob.manifest");
+        // TODO(benwright): Find the location of blobfs within |build_path|, which requires
+        // passing in some extra context to find the host output directory.
+        let blobfs_tool_path = PathBuf::from("blobfs");
         ModelConfig {
             uri: "{memory}".to_string(),
             build_path,
@@ -263,6 +268,7 @@ impl ModelConfig {
             config_data_package_url: "fuchsia-pkg://fuchsia.com/config-data".to_string(),
             zbi_path: "fuchsia.zbi".to_string(),
             devmgr_config_path: "config/devmgr".to_string(),
+            blobfs_tool_path,
         }
     }
     pub fn minimal() -> ModelConfig {
