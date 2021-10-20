@@ -308,6 +308,9 @@ config("optimize_debug") {
     # making debugging difficult in known specific reproducible ways.
     cflags = [ "-Og" ]
     ldflags = cflags
+
+    # Rust doesn't recognize opt level "g", the closest is "1".
+    # See: https://doc.rust-lang.org/rustc/codegen-options/index.html#opt-level
     rustflags = [ "-Copt-level=1" ]
   } else if (zircon_toolchain != false) {
     cflags = [ "-Og" ]
@@ -324,6 +327,7 @@ config("optimize_default") {
 }
 
 config("optimize_size") {
+  # GCC doesn't have -Oz
   if (!is_gcc && clang_use_oz) {
     cflags = [ "-Oz" ]
     if (clang_ml_inliner) {
@@ -340,9 +344,13 @@ config("optimize_size") {
   }
   ldflags = cflags
 
-  # TODO(http://fxbug.dev/63313): This should be the same as for C/C++. Also,
-  # we don't fully understand why -Os is smaller than -Oz.
-  rustflags = [ "-Copt-level=s" ]
+  if (clang_use_oz) {
+    rustflags = [ "-Copt-level=z" ]
+  } else {
+    # TODO(fxbug.dev/84386): We would ideally be using -Oz by default but that
+    # currently frequently results in binaries that are larger than -Oz.
+    rustflags = [ "-Copt-level=s" ]
+  }
 
   # Fewer codegen units produce smaller code
   rustflags += [ "-Ccodegen-units=1" ]
