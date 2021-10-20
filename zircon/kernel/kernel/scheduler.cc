@@ -1043,11 +1043,17 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     }
   }
 
-  // Update the current performance scale only after any uses of it in the
-  // reschedule path to ensure the scale value is applied consistently over the
-  // interval between reschedules (i.e. not earlier than the requested update).
+  // Update the current performance scale only after any uses in the reschedule
+  // path above to ensure the scale is applied consistently over the interval
+  // between reschedules (i.e. not earlier than the requested update).
+  //
+  // Updating the performance scale also results in updating the target
+  // preemption time below when the current thread is deadline scheduled.
+  //
   // TODO(eieio): Apply a minimum value threshold to the userspace value.
-  if (performance_scale_ != pending_user_performance_scale_) {
+  // TODO(eieio): Shed load when total utilization is above kCpuUtilizationLimit.
+  const bool performance_scale_updated = performance_scale_ != pending_user_performance_scale_;
+  if (performance_scale_updated) {
     performance_scale_ = pending_user_performance_scale_;
     performance_scale_reciprocal_ = 1 / performance_scale_;
   }
@@ -1116,6 +1122,13 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     LOCAL_KTRACE_FLOW_END(KTRACE_FLOW, "sched_latency", next_state->flow_id(), next_thread->tid());
   } else {
     LocalTraceDuration<KTRACE_DETAILED> trace_continue{"continue: preempt,abs"_stringref};
+
+    // Update the target preemption time for consistency with the updated CPU
+    // performance scale.
+    if (performance_scale_updated && IsDeadlineThread(current_thread)) {
+      target_preemption_time_ns_ = NextThreadTimeslice(current_thread, now);
+    }
+
     // The current thread should continue to run. A throttled deadline thread
     // might become eligible before the current time slice expires. Figure out
     // whether to set the preemption time earlier to switch to the newly
@@ -2055,7 +2068,7 @@ void Scheduler::UpdatePerformanceScales(zx_cpu_performance_info_t* info, size_t 
     entry.performance_scale = ToUserPerformanceScale(scheduler->performance_scale());
   }
 
-  mp_reschedule(cpus_to_reschedule_mask, 0);
+  RescheduleMask(cpus_to_reschedule_mask);
 }
 
 void Scheduler::GetPerformanceScales(zx_cpu_performance_info_t* info, size_t count) {

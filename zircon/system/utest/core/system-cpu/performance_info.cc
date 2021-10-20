@@ -346,6 +346,62 @@ TEST(SystemCpu, GetPerformanceInfo) {
   }
 }
 
+// Verify that the scheduler's target preemption time is properly updated when the performance scale
+// changes. Failure to maintain consistency will result in a kernel panic. See fxbug.dev/86901.
+TEST(SystemCpu, TargetPreemptionTimeAssert) {
+  if (GetCpuCount() < kTestThreadCpu + 1) {
+    return;
+  }
+
+  const zx::status resource = GetSystemCpuResource();
+  ASSERT_TRUE(resource.is_ok());
+
+  const zx::status cpu_count = GetCpuCount();
+  ASSERT_TRUE(cpu_count.is_ok());
+  std::vector<zx_cpu_performance_info_t> original_performance_info(*cpu_count);
+
+  size_t count = 0;
+  ASSERT_OK(zx_system_get_performance_info(resource->get(), ZX_CPU_PERF_SCALE,
+                                           original_performance_info.size(),
+                                           original_performance_info.data(), &count));
+  EXPECT_EQ(count, original_performance_info.size());
+
+  const auto spin = [](const zx::duration spin_duration) {
+      const zx::time time_end = zx::clock::get_monotonic() + spin_duration;
+      zx::time now;
+      do {
+        now = zx::clock::get_monotonic();
+      } while (now < time_end);
+  };
+
+  ASSERT_OK(RunThread([&] {
+    for (int i = 0; i < 10; i++) {
+      // Set the perf scale to 1.0 for the start of the period.
+      zx_cpu_performance_info_t perf_scale_one[] = {{kTestThreadCpu, {1, 0}}};
+      ASSERT_OK(zx_system_set_performance_info(resource->get(), ZX_CPU_PERF_SCALE, &perf_scale_one,
+                                               std::size(perf_scale_one)));
+
+      // Yield to start a new period.
+      zx::nanosleep(zx::time{0});
+
+      // Spin until half capacity is exhausted.
+      spin(zx::duration{kTestThreadDeadlineParams.capacity / 2});
+
+      // Set the perf scale to 0.5 for the remainder of the period.
+      zx_cpu_performance_info_t perf_scale_half[] = {{kTestThreadCpu, {0, 1u << 31}}};
+      ASSERT_OK(zx_system_set_performance_info(resource->get(), ZX_CPU_PERF_SCALE, &perf_scale_half,
+                                               std::size(perf_scale_half)));
+
+      // Spin until after the scaled capacity is exhausted: C / 2 / 0.5 = C
+      spin(zx::duration{kTestThreadDeadlineParams.capacity} + zx::usec(100));
+    }
+  }));
+
+  ASSERT_OK(zx_system_set_performance_info(resource->get(), ZX_CPU_PERF_SCALE,
+                                           original_performance_info.data(),
+                                           original_performance_info.size()));
+}
+
 // TODO(fxbug.dev/85846): Re-enable when we can limit the test to HW trybots.
 #if 0
 TEST(SystemCpu, ScaleBandwidth) {
