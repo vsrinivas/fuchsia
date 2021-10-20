@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        async_enter,
         errors::FxfsError,
         lsm_tree::{
             merge::{Merger, MergerIterator},
@@ -17,7 +18,6 @@ use {
             transaction::{Mutation, Options, Transaction},
             ObjectStore,
         },
-        trace_duration,
     },
     anyhow::{bail, Context, Error},
     fuchsia_async::{self as fasync},
@@ -123,11 +123,11 @@ impl Graveyard {
         mut receiver: UnboundedReceiver<(u64, u64)>,
     ) {
         log::info!("Reaping graveyard starting, gen: {}", journal_offset);
-        trace_duration!("Graveyard::reap");
-        match self.reap_task_inner(journal_offset).await {
+        match self.initial_reap(journal_offset).await {
             Ok(deleted) => log::info!("Reaping graveyard done, removed {} elements", deleted),
             Err(e) => log::error!("Reaping graveyard encountered error: {:?}", e),
         };
+        // Wait and process reap requests.
         while let Some((store_id, object_id)) = receiver.next().await {
             if let Err(e) = self.tombstone(store_id, object_id).await {
                 log::error!("Tombstone error for {}.{}: {:?}", store_id, object_id, e);
@@ -135,7 +135,9 @@ impl Graveyard {
         }
     }
 
-    async fn reap_task_inner(self: &Arc<Self>, journal_offset: u64) -> Result<usize, Error> {
+    // Performs the initial mount-time reap.
+    async fn initial_reap(self: &Arc<Self>, journal_offset: u64) -> Result<usize, Error> {
+        async_enter!("Graveyard::reap");
         let purge_items = {
             let mut purge_items = vec![];
             let layer_set = self.store().tree().layer_set();

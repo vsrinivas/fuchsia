@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        async_enter,
         object_handle::{GetProperties, ObjectHandle, WriteObjectHandle},
         object_store::{
             filesystem::SyncOptions, CachingObjectHandle, StoreObjectHandle, Timestamp,
@@ -24,6 +25,7 @@ use {
     fidl_fuchsia_mem::Buffer,
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
+    futures::join,
     once_cell::sync::Lazy,
     std::sync::{
         atomic::{AtomicBool, AtomicUsize, Ordering},
@@ -40,6 +42,79 @@ use {
         path::Path,
     },
 };
+
+// Transfer buffers are to be used with supply_pages. supply_pages only works with pages that are
+// unmapped, but we need the pages to be mapped so that we can decrypt and potentially verify
+// checksums.  To keep things simple, the buffers are fixed size at 1 MiB which should cover most
+// requests.
+const TRANSFER_BUFFER_MAX_SIZE: u64 = 1_048_576;
+
+// The number of transfer buffers we support.
+const TRANSFER_BUFFER_COUNT: u64 = 8;
+
+struct TransferBuffers {
+    vmo: zx::Vmo,
+    free_list: Mutex<Vec<u64>>,
+    event: event_listener::Event,
+}
+
+impl TransferBuffers {
+    fn new() -> Self {
+        const VMO_SIZE: u64 = TRANSFER_BUFFER_COUNT * TRANSFER_BUFFER_MAX_SIZE;
+        Self {
+            vmo: zx::Vmo::create(VMO_SIZE).unwrap(),
+            free_list: Mutex::new(
+                (0..VMO_SIZE).step_by(TRANSFER_BUFFER_MAX_SIZE as usize).collect(),
+            ),
+            event: event_listener::Event::new(),
+        }
+    }
+
+    async fn get(&self) -> TransferBuffer<'_> {
+        loop {
+            let listener = self.event.listen();
+            if let Some(offset) = self.free_list.lock().unwrap().pop() {
+                return TransferBuffer { buffers: self, offset };
+            }
+            listener.await;
+        }
+    }
+}
+
+struct TransferBuffer<'a> {
+    buffers: &'a TransferBuffers,
+
+    // The offset this buffer starts at in the VMO.
+    offset: u64,
+}
+
+impl TransferBuffer<'_> {
+    fn vmo(&self) -> &zx::Vmo {
+        &self.buffers.vmo
+    }
+
+    fn offset(&self) -> u64 {
+        self.offset
+    }
+
+    // Allocating pages in the kernel is time-consuming, so it can help to commit pages first,
+    // whilst other work is occurring in the background, and then copy later which is relatively
+    // fast.
+    fn commit(&self, size: u64) {
+        let _ignore_error = self.buffers.vmo.op_range(
+            zx::VmoOp::COMMIT,
+            self.offset,
+            std::cmp::min(size, TRANSFER_BUFFER_MAX_SIZE),
+        );
+    }
+}
+
+impl Drop for TransferBuffer<'_> {
+    fn drop(&mut self) {
+        self.buffers.free_list.lock().unwrap().push(self.offset);
+        self.buffers.event.notify(1);
+    }
+}
 
 // When the top bit of the open count is set, it means the file has been deleted and when the count
 // drops to zero, it will be tombstoned.  Once it has dropped to zero, it cannot be opened again
@@ -113,7 +188,14 @@ impl FxFile {
         static ZERO_VMO: Lazy<zx::Vmo> = Lazy::new(|| zx::Vmo::create(ZERO_VMO_SIZE).unwrap());
 
         let vmo = self.vmo();
-        let aligned_size = round_up(self.handle.min_size(), zx::system_get_page_size()).unwrap();
+        // We have to check the VMO's size as well as min_size from the handle because min_size gets
+        // updated *after* the VMO's size changes and whilst the kernel locking will mean that this
+        // request is guaranteed to be within bounds, with read-ahead, we need to be careful not to
+        // extend the range so that it's out-of-bounds.
+        let aligned_size = std::cmp::min(
+            round_up(self.handle.min_size(), zx::system_get_page_size()).unwrap(),
+            vmo.get_size().unwrap(),
+        );
         let mut offset = std::cmp::max(range.start, aligned_size);
         while offset < range.end {
             let end = std::cmp::min(range.end, offset + ZERO_VMO_SIZE);
@@ -122,26 +204,50 @@ impl FxFile {
         }
         if aligned_size < range.end {
             range.end = aligned_size;
+        } else {
+            const READ_AHEAD: u64 = 131_072;
+            if aligned_size - range.end < READ_AHEAD {
+                range.end = aligned_size;
+            } else {
+                range.end += READ_AHEAD;
+            }
         }
         if range.end <= range.start {
             return;
         }
         let this = self.clone();
         fasync::Task::spawn_on(self.handle.owner().executor(), async move {
-            match this.handle.read_uncached(range.clone()).await {
-                Ok(buffer) => {
-                    const AUX_VMO_SIZE: u64 = 1024 * 1024;
-                    static AUX_VMO: Lazy<Mutex<zx::Vmo>> =
-                        Lazy::new(|| Mutex::new(zx::Vmo::create(AUX_VMO_SIZE).unwrap()));
-                    let aux_vmo = AUX_VMO.lock().unwrap();
-                    aux_vmo.write(buffer.as_slice(), 0).unwrap();
-                    // TODO(csuter): Check the tail is zeroed.
-                    this.handle.owner().pager().supply_pages(this.vmo(), range, &aux_vmo, 0);
+            async_enter!("page_in");
+            static TRANSFER_BUFFERS: Lazy<TransferBuffers> = Lazy::new(|| TransferBuffers::new());
+            let (buffer, transfer_buffer) = join!(
+                async {
+                    this.handle.read_uncached(range.clone()).await.expect("TODO handle errors")
+                },
+                async {
+                    let buffer = TRANSFER_BUFFERS.get().await;
+                    // Committing pages in the kernel is time consuming, so we do this in parallel
+                    // to the read.  This assumes that the implementation of join! polls the other
+                    // future first (which happens to be the case for now).
+                    buffer.commit(range.end - range.start);
+                    buffer
                 }
-                Err(e) => {
-                    // TODO(csuter): Handle errors properly.
-                    panic!("read_uncached error: {:?}", e);
-                }
+            );
+            let mut buf = buffer.as_slice();
+            while !buf.is_empty() {
+                let (source, remainder) =
+                    buf.split_at(std::cmp::min(buf.len(), TRANSFER_BUFFER_MAX_SIZE as usize));
+                buf = remainder;
+                transfer_buffer
+                    .vmo()
+                    .write(source, transfer_buffer.offset())
+                    .expect("TODO handle errors");
+                this.handle.owner().pager().supply_pages(
+                    this.vmo(),
+                    range.start..range.start + source.len() as u64,
+                    transfer_buffer.vmo(),
+                    transfer_buffer.offset(),
+                );
+                range.start += source.len() as u64;
             }
         })
         .detach();

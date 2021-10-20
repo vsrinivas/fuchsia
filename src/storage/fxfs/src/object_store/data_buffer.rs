@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        async_enter,
         errors::FxfsError,
         object_handle::ReadObjectHandle,
         round::{round_down, round_up},
@@ -12,7 +13,10 @@ use {
     async_trait::async_trait,
     async_utils::event::Event,
     either::Either::{Left, Right},
-    futures::{pin_mut, stream::futures_unordered::FuturesUnordered, try_join, TryStreamExt},
+    futures::{
+        future::try_join_all, pin_mut, stream::futures_unordered::FuturesUnordered, try_join,
+        TryStreamExt,
+    },
     pin_project::{pin_project, pinned_drop},
     slab::Slab,
     std::{
@@ -118,6 +122,18 @@ impl<'a, T: AsRef<StackListChain<T>>> Iterator for StackListIter<'a, T> {
             }
             self.last_node
         }
+    }
+}
+
+#[must_use]
+fn copy_out(source_buf: &[u8], offset: u64, buf: &mut [u8]) -> usize {
+    if offset < source_buf.len() as u64 {
+        let range = offset as usize..std::cmp::min(offset as usize + buf.len(), source_buf.len());
+        let len = range.end - range.start;
+        buf[..len].copy_from_slice(&source_buf[range]);
+        len
+    } else {
+        0
     }
 }
 
@@ -240,6 +256,22 @@ impl Inner {
 // pages.
 const PAGE_SIZE: u64 = 4096;
 
+// Reads smaller than this are rounded up to this size if possible.
+const READ_SIZE: u64 = 128 * 1024;
+
+// Aligns range and applies read-ahead.  The range will not be extended past `limit`.
+fn align_range(mut range: Range<u64>, limit: u64) -> Range<u64> {
+    range.start = round_down(range.start, PAGE_SIZE);
+    range.end = round_up(range.end, PAGE_SIZE).unwrap();
+    if range.end - range.start < READ_SIZE {
+        range.end = range.start + READ_SIZE;
+    }
+    if range.end > limit {
+        range.end = limit;
+    }
+    range
+}
+
 struct BoxedPage(Box<PageCell>);
 
 impl BoxedPage {
@@ -351,16 +383,14 @@ impl MemDataBuffer {
         }))
     }
 
-    // Reads from the source starting at the provided offset.
+    // Reads from the source starting at the provided offset.  Calls `f` once the read is complete.
     async fn read_some(
         &self,
-        offset: u64,
-        out_buf: &mut [u8],
+        aligned_range: Range<u64>,
         source: &dyn ReadObjectHandle,
         read_key: usize,
+        f: impl FnOnce(&Inner),
     ) -> Result<(), Error> {
-        let aligned_range = round_down(offset, PAGE_SIZE)
-            ..round_up(offset + out_buf.len() as u64, PAGE_SIZE).unwrap();
         let mut read_buf =
             source.allocate_buffer((aligned_range.end - aligned_range.start) as usize);
         let amount = source.read(aligned_range.start, read_buf.as_mut()).await?;
@@ -378,25 +408,40 @@ impl MemDataBuffer {
             }
             read_buf = &read_buf[PAGE_SIZE as usize..];
         }
-        // Whilst we were reading, it's possible the buffer was truncated; only copy out what we
-        // can.  The read function will make sure that the correct value for the amount read is
-        // returned.
-        if offset < buf.len() as u64 {
-            let range = offset as usize..std::cmp::min(offset as usize + out_buf.len(), buf.len());
-            out_buf.copy_from_slice(&buf[range]);
-        }
+
         readers.get(read_key).unwrap().wait_event.as_ref().map(|e| e.signal());
+
+        f(&*inner);
+
         Ok(())
     }
 
-    async fn wait_for_pending_read(
+    // Like `read_some` but copies out to `buf`.
+    async fn read_and_copy(
+        &self,
+        aligned_range: Range<u64>,
+        offset: u64,
+        source: &dyn ReadObjectHandle,
+        read_key: usize,
+        buf: &mut [u8],
+    ) -> Result<(), Error> {
+        self.read_some(aligned_range, source, read_key, |inner| {
+            // Whilst we were reading, it's possible the buffer was truncated; copy_out will only
+            // copy out what we can.  The read function will make sure that the correct value for
+            // the amount read is returned.
+            let _ = copy_out(&inner.buf, offset, buf);
+        })
+        .await
+    }
+
+    // Reads or waits for a page to be read and then calls `f`.
+    async fn read_page(
         &self,
         offset: u64,
-        buf: &mut [u8],
         source: &dyn ReadObjectHandle,
         keys: ReadKeysPtr,
+        f: impl FnOnce(&Inner),
     ) -> Result<(), Error> {
-        let aligned_offset = round_down(offset, PAGE_SIZE);
         loop {
             let result = {
                 let mut inner_lock = self.0.lock().unwrap();
@@ -405,7 +450,7 @@ impl MemDataBuffer {
                 if *read_keys.as_mut().project().end_offset.get_mut() <= offset {
                     return Ok(());
                 }
-                match inner.pages.get(&aligned_offset) {
+                match inner.pages.get(&offset) {
                     None => {
                         // In this case, the page might have been pending a read but the
                         // read was dropped or it failed.  Or the page could have been
@@ -437,11 +482,9 @@ impl MemDataBuffer {
                                     .wait_or_dropped(),
                             )
                         } else {
-                            // The page is present and not pending a read so we can
-                            // just copy it.
-                            buf.copy_from_slice(
-                                &inner.buf[offset as usize..offset as usize + buf.len()],
-                            );
+                            // The page is present and not pending a read so we can pass it to the
+                            // callback.
+                            f(inner);
                             return Ok(());
                         }
                     }
@@ -451,7 +494,7 @@ impl MemDataBuffer {
             // read to finish...
             match result {
                 Left(read_key) => {
-                    return self.read_some(offset, buf, source, read_key).await;
+                    return self.read_some(offset..offset + PAGE_SIZE, source, read_key, f).await;
                 }
                 Right(event) => {
                     let _ = event.await;
@@ -473,24 +516,30 @@ impl DataBuffer for MemDataBuffer {
         let end = offset.checked_add(buf.len() as u64).ok_or(FxfsError::TooBig)?;
         let aligned_end = end - end % PAGE_SIZE;
         if aligned_start != offset || aligned_end != end {
-            try_join!(
-                async {
-                    if aligned_start != offset {
-                        // TODO(csuter): We don't need the buffer so with a bit of refactoring we
-                        // could get rid of it.
-                        let mut buf = [0u8; PAGE_SIZE as usize];
-                        self.read(aligned_start, &mut buf, source).await?;
-                    }
-                    Result::<(), Error>::Ok(())
-                },
-                async {
-                    if aligned_end != end && aligned_end != offset {
-                        let mut buf = [0u8; PAGE_SIZE as usize];
-                        self.read(aligned_end, &mut buf, source).await?;
-                    }
-                    Result::<(), Error>::Ok(())
+            let read_keys = ReadKeys::new(self);
+            pin_mut!(read_keys);
+            let mut reads = Vec::new();
+            {
+                let mut inner = self.0.lock().unwrap();
+                let mut issue_read = |offset| {
+                    reads.push(self.read_page(
+                        offset,
+                        source,
+                        read_keys.as_mut().get_ptr(),
+                        |_| {},
+                    ));
+                };
+                if aligned_start != offset && aligned_start < inner.size {
+                    issue_read(aligned_start);
+                };
+                if aligned_end != end && aligned_end != offset && aligned_end < inner.size {
+                    issue_read(aligned_end);
                 }
-            )?;
+                if !reads.is_empty() {
+                    read_keys.as_mut().add_to_list(&mut inner.read_keys_list, end);
+                }
+            }
+            try_join_all(reads).await?;
         }
         let mut inner = self.0.lock().unwrap();
         if end > inner.size {
@@ -523,6 +572,8 @@ impl DataBuffer for MemDataBuffer {
         mut read_buf: &mut [u8],
         source: &dyn ReadObjectHandle,
     ) -> Result<usize, Error> {
+        async_enter!("MemDataBuffer::read");
+
         // A list of all the futures for any required reads.
         let reads = FuturesUnordered::new();
 
@@ -566,16 +617,14 @@ impl DataBuffer for MemDataBuffer {
                 if page.offset() > offset {
                     // Schedule a read for the gap.
                     let (head, tail) = read_buf.split_at_mut((page.offset() - offset) as usize);
-                    reads.push(
-                        self.read_some(
-                            offset,
-                            head,
-                            source,
-                            read_keys
-                                .as_mut()
-                                .new_read(offset..page.offset(), readers, |p| new_pages.push(p)),
-                        ),
-                    );
+                    let aligned_range = round_down(offset, PAGE_SIZE)..page.offset();
+                    reads.push(self.read_and_copy(
+                        aligned_range.clone(),
+                        offset,
+                        source,
+                        read_keys.as_mut().new_read(aligned_range, readers, |p| new_pages.push(p)),
+                        head,
+                    ));
                     read_buf = tail;
                     offset = page.offset();
                 }
@@ -584,14 +633,19 @@ impl DataBuffer for MemDataBuffer {
                     read_buf.split_at_mut(std::cmp::min(PAGE_SIZE as usize, read_buf.len()));
 
                 if page.is_reading() {
-                    pending_reads.push(self.wait_for_pending_read(
-                        offset,
-                        head,
+                    pending_reads.push(self.read_page(
+                        page.offset(),
                         source,
                         read_keys.as_mut().get_ptr(),
+                        move |inner| {
+                            // Whilst we were reading, it's possible the buffer was truncated;
+                            // copy_out will only copy out what we can.  Later, we will make sure
+                            // that the correct value for the amount read is returned.
+                            let _ = copy_out(&inner.buf, offset, head);
+                        },
                     ));
                 } else {
-                    head.copy_from_slice(&buf[offset as usize..offset as usize + head.len()]);
+                    let _ = copy_out(buf, offset, head);
                 }
 
                 read_buf = tail;
@@ -599,11 +653,13 @@ impl DataBuffer for MemDataBuffer {
             }
             // Handle the tail.
             if !read_buf.is_empty() {
-                reads.push(self.read_some(
+                let aligned_range = align_range(offset..end_offset, buf.len() as u64);
+                reads.push(self.read_and_copy(
+                    aligned_range.clone(),
                     offset,
-                    read_buf,
                     source,
-                    read_keys.as_mut().new_read(offset..end_offset, readers, |p| new_pages.push(p)),
+                    read_keys.as_mut().new_read(aligned_range, readers, |p| new_pages.push(p)),
+                    read_buf,
                 ));
             }
 
@@ -673,14 +729,14 @@ impl ReadKeys {
     // will get properly cleaned up if dropped.
     fn new_read(
         self: Pin<&mut Self>,
-        range: Range<u64>,
+        aligned_range: Range<u64>,
         readers: &mut Slab<ReadContext>,
         mut new_page_fn: impl FnMut(BoxedPage),
     ) -> usize {
-        let range = round_down(range.start, PAGE_SIZE)..round_up(range.end, PAGE_SIZE).unwrap();
-        let read_key = readers.insert(ReadContext { range: range.clone(), wait_event: None });
+        let read_key =
+            readers.insert(ReadContext { range: aligned_range.clone(), wait_event: None });
         self.project().keys.push(read_key);
-        for offset in range.step_by(PAGE_SIZE as usize) {
+        for offset in aligned_range.step_by(PAGE_SIZE as usize) {
             new_page_fn(BoxedPage(Box::new(PageCell(UnsafeCell::new(Page::new(
                 offset, read_key,
             ))))));
@@ -704,9 +760,11 @@ impl ReadKeys {
 
 // Holds a reference to a ReadKeys instance which can be dereferenced with a mutable borrow of the
 // list.
+#[derive(Clone, Copy)]
 struct ReadKeysPtr(*mut ReadKeys);
 
 unsafe impl Send for ReadKeysPtr {}
+unsafe impl Sync for ReadKeysPtr {}
 
 impl ReadKeysPtr {
     // Allow a dereference provided we have a mutable borrow for the list which ensures exclusive
@@ -750,7 +808,7 @@ impl AsRef<StackListChain<ReadKeys>> for ReadKeys {
 #[cfg(test)]
 mod tests {
     use {
-        super::{DataBuffer, MemDataBuffer, PAGE_SIZE},
+        super::{DataBuffer, MemDataBuffer, PAGE_SIZE, READ_SIZE},
         crate::{
             errors::FxfsError,
             object_handle::{ObjectHandle, ReadObjectHandle},
@@ -886,7 +944,7 @@ mod tests {
         let device = Arc::new(FakeDevice::new(100, PAGE_SIZE as u32));
         let source = FakeSource::new(device.clone());
         let mut buf = [0; PAGE_SIZE as usize];
-        let mut buf2 = [0; PAGE_SIZE as usize * 2];
+        let mut buf2 = [0; READ_SIZE as usize * 2];
         let mut read_fut = data_buf.read(0, buf.as_mut(), &source);
         let mut read_fut2 = data_buf.read(0, buf2.as_mut(), &source);
         poll_fn(|ctx| {
@@ -898,9 +956,10 @@ mod tests {
         .await;
         // If we now drop the first future, the second future should complete.
         std::mem::drop(read_fut);
-        assert_eq!(read_fut2.await.expect("read failed"), PAGE_SIZE as usize * 2);
+        assert_eq!(read_fut2.await.expect("read failed"), READ_SIZE as usize * 2);
         assert_eq!(&buf2[0..PAGE_SIZE as usize], [2; PAGE_SIZE as usize]);
-        assert_eq!(&buf2[PAGE_SIZE as usize..], [1; PAGE_SIZE as usize]);
+        // The tail should not have been waiting for the first read.
+        assert_eq!(&buf2[READ_SIZE as usize..], [1; READ_SIZE as usize]);
     }
 
     #[fasync::run_singlethreaded(test)]

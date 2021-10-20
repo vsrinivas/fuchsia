@@ -41,3 +41,12 @@ macro_rules! trace_flow_end {
         ::fuchsia_trace::flow_end!("fxfs", $name, $flow_id $(,$key => $val)*);
     }
 }
+
+#[macro_export]
+macro_rules! async_enter {
+    ($name:expr $(, $key:expr => $val:expr)*) => {
+        #[cfg(feature = "tracing")]
+        let _async_enter_guard = ::fuchsia_trace::async_enter!(
+            ::fuchsia_trace::generate_nonce(), "fxfs", $name $(, $key => $val)*);
+    }
+}

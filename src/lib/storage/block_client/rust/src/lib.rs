@@ -43,8 +43,19 @@ const TEMP_VMO_SIZE: usize = 65536;
 const BLOCKIO_READ: u32 = 1;
 const BLOCKIO_WRITE: u32 = 2;
 const BLOCKIO_FLUSH: u32 = 3;
-const _BLOCKIO_TRIM: u32 = 4;
+const BLOCKIO_TRIM: u32 = 4;
 const BLOCKIO_CLOSE_VMO: u32 = 5;
+
+fn op_code_str(op_code: u32) -> &'static str {
+    match op_code {
+        BLOCKIO_READ => "read",
+        BLOCKIO_WRITE => "write",
+        BLOCKIO_FLUSH => "flush",
+        BLOCKIO_TRIM => "trim",
+        BLOCKIO_CLOSE_VMO => "close_vmo",
+        _ => "unknown",
+    }
+}
 
 #[repr(C)]
 #[derive(Default)]
@@ -153,6 +164,34 @@ impl FifoState {
         }
         if let Some(waker) = self.poller_waker.take() {
             waker.wake();
+        }
+    }
+
+    // Returns true if polling should be terminated.
+    fn poll_send_requests(&mut self, context: &mut Context<'_>) -> bool {
+        let fifo = if let Some(fifo) = self.fifo.as_ref() {
+            fifo
+        } else {
+            return true;
+        };
+
+        loop {
+            let slice = self.queue.as_slices().0;
+            if slice.is_empty() {
+                return false;
+            }
+            match fifo.write(context, slice) {
+                Poll::Ready(Ok(sent)) => {
+                    self.queue.drain(0..sent);
+                }
+                Poll::Ready(Err(_)) => {
+                    self.terminate();
+                    return true;
+                }
+                Poll::Pending => {
+                    return false;
+                }
+            }
         }
     }
 }
@@ -295,13 +334,19 @@ impl Common {
 
     // Sends the request and waits for the response.
     async fn send(&self, mut request: BlockFifoRequest) -> Result<(), Error> {
-        trace::duration!("storage", "RemoteBlockClient::send");
+        let _guard = trace::async_enter!(
+            trace::generate_nonce(),
+            "storage",
+            "BlockOp",
+            "op" => op_code_str(request.op_code)
+        );
         let (request_id, trace_flow_id) = {
             let mut state = self.fifo_state.lock().unwrap();
             if state.fifo.is_none() {
                 // Fifo has been closed.
                 return Err(zx::Status::CANCELED.into());
             }
+            trace::duration!("storage", "BlockOp::start");
             let request_id = state.next_request_id;
             let trace_flow_id = generate_trace_flow_id(request_id);
             state.next_request_id = state.next_request_id.overflowing_add(1).0;
@@ -311,15 +356,16 @@ impl Common {
             );
             request.request_id = request_id;
             request.trace_flow_id = generate_trace_flow_id(request_id);
-            trace::flow_begin!("storage", "BlockTransaction", trace_flow_id);
+            trace::flow_begin!("storage", "BlockOp", trace_flow_id);
             state.queue.push_back(request);
-            if let Some(waker) = state.poller_waker.take() {
-                waker.wake();
+            if let Some(waker) = state.poller_waker.clone() {
+                state.poll_send_requests(&mut Context::from_waker(&waker));
             }
             (request_id, trace_flow_id)
         };
         ResponseFuture::new(self.fifo_state.clone(), request_id).await?;
-        trace::flow_end!("storage", "BlockTransaction", trace_flow_id);
+        trace::duration!("storage", "BlockOp::end");
+        trace::flow_end!("storage", "BlockOp", trace_flow_id);
         Ok(())
     }
 }
@@ -358,7 +404,6 @@ impl Common {
     ) -> Result<(), Error> {
         match buffer_slice {
             MutableBufferSlice::VmoId { vmo_id, offset, length } => {
-                trace::duration!("storage", "RemoteBlockClient::read_at", "len" => length);
                 self.send(BlockFifoRequest {
                     op_code: BLOCKIO_READ,
                     vmoid: vmo_id.id(),
@@ -370,10 +415,6 @@ impl Common {
                 .await?
             }
             MutableBufferSlice::Memory(mut slice) => {
-                trace::duration!(
-                    "storage",
-                    "RemoteBlockClient::read_at",
-                    "len" => slice.len() as u64);
                 let temp_vmo = self.temp_vmo.lock().await;
                 let mut device_block = self.to_blocks(device_offset)?;
                 loop {
@@ -407,7 +448,6 @@ impl Common {
     ) -> Result<(), Error> {
         match buffer_slice {
             BufferSlice::VmoId { vmo_id, offset, length } => {
-                trace::duration!("storage", "RemoteBlockClient::write_at", "len" => length);
                 self.send(BlockFifoRequest {
                     op_code: BLOCKIO_WRITE,
                     vmoid: vmo_id.id(),
@@ -419,10 +459,6 @@ impl Common {
                 .await?;
             }
             BufferSlice::Memory(mut slice) => {
-                trace::duration!(
-                    "storage",
-                    "RemoteBlockClient::write_at",
-                    "len" => slice.len() as u64);
                 let temp_vmo = self.temp_vmo.lock().await;
                 let mut device_block = self.to_blocks(device_offset)?;
                 loop {
@@ -662,33 +698,13 @@ impl Future for FifoPoller {
         let mut state_lock = self.fifo_state.lock().unwrap();
         let state = state_lock.deref_mut(); // So that we can split the borrow.
 
-        let fifo = if let Some(fifo) = state.fifo.as_ref() {
-            fifo
-        } else {
-            return Poll::Ready(());
-        };
-
         // Send requests.
-        loop {
-            let slice = state.queue.as_slices().0;
-            if slice.is_empty() {
-                break;
-            }
-            match fifo.write(context, slice) {
-                Poll::Ready(Ok(sent)) => {
-                    state.queue.drain(0..sent);
-                }
-                Poll::Ready(Err(_)) => {
-                    state.terminate();
-                    return Poll::Ready(());
-                }
-                Poll::Pending => {
-                    break;
-                }
-            }
+        if state.poll_send_requests(context) {
+            return Poll::Ready(());
         }
 
         // Receive responses.
+        let fifo = state.fifo.as_ref().unwrap(); // Safe because poll_send_requests checks.
         while let Poll::Ready(result) = fifo.read(context) {
             match result {
                 Ok(Some(response)) => {

@@ -101,7 +101,10 @@ template("isolated_devmgr_unittest_v2_component") {
                       path = "/dev"
                     },
                     {
-                      protocol = "fuchsia.process.Launcher"
+                      protocol = [
+                        "fuchsia.process.Launcher",
+                        "fuchsia.tracing.provider.Registry",
+                      ]
                     },
                     {
                       protocol = "fuchsia.component.Realm"
@@ -114,6 +117,7 @@ template("isolated_devmgr_unittest_v2_component") {
                   "fuchsia.logger.LogSink",
                   "fuchsia.process.Launcher",
                   "fuchsia.sys.Launcher",
+                  "fuchsia.tracing.provider.Registry",
                 ]
                 from = "parent"
                 to = [ "#isolated-devmgr" ]

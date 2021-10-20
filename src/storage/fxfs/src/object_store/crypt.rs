@@ -6,6 +6,7 @@
 // with real implementations.
 
 use {
+    crate::trace_duration,
     anyhow::{anyhow, ensure, Error},
     async_trait::async_trait,
     byteorder::{ByteOrder, LittleEndian},
@@ -14,8 +15,8 @@ use {
 
 pub use crate::object_store::record::AES256XTSKeys;
 
-// This structure stores unwrapped keys. For now, the format is used just makes it convenient for
-// the simple XOR scheme we are using, but going forward, this can take whatever form is suitable.
+// This structure stores unwrapped keys. For now, the format used just makes it convenient for the
+// simple XOR scheme we are using, but going forward, this can take whatever form is suitable.
 pub struct UnwrappedKeys {
     keys: Vec<(u64, [u64; 4])>,
 }
@@ -36,11 +37,8 @@ impl UnwrappedKeys {
         Ok(Self { keys })
     }
 
-    /// Decrypt the data in buffer.  `key_id` specifies which of the unwrapped keys to use.
-    /// `offset` is the tweak.
-    pub fn decrypt(&self, mut offset: u64, key_id: u64, buffer: &mut [u8]) -> Result<(), Error> {
-        let key =
-            &self.keys.iter().find(|(id, _)| *id == key_id).ok_or(anyhow!("Key not found"))?.1;
+    // Stub routine that just xors the data.
+    fn xor(&self, mut offset: u64, buffer: &mut [u8], key: &[u64; 4]) {
         assert_eq!(buffer.len() % 16, 0);
         assert_eq!(offset % 8, 0);
         let mut i = (offset / 8 % 4) as usize;
@@ -49,14 +47,26 @@ impl UnwrappedKeys {
             i = (i + 1) & 3;
             offset += 8;
         }
+    }
+
+    /// Decrypt the data in buffer.  `key_id` specifies which of the unwrapped keys to use.
+    /// `offset` is the tweak.
+    pub fn decrypt(&self, offset: u64, key_id: u64, buffer: &mut [u8]) -> Result<(), Error> {
+        trace_duration!("decrypt");
+        self.xor(
+            offset,
+            buffer,
+            &self.keys.iter().find(|(id, _)| *id == key_id).ok_or(anyhow!("Key not found"))?.1,
+        );
         Ok(())
     }
 
     /// Encrypts data in the buffer.  The first key in the unwrapped keys will be used.  `offset` is
     /// the tweak.
     pub fn encrypt(&self, offset: u64, buffer: &mut [u8]) {
-        // For now, always use the first key and since it's XOR, we can just use decrypt.
-        self.decrypt(offset, self.keys[0].0, buffer).unwrap();
+        trace_duration!("encrypt");
+        // For now, always use the first key.
+        self.xor(offset, buffer, &self.keys[0].1);
     }
 }
 

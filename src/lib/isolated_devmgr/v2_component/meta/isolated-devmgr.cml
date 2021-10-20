@@ -54,6 +54,11 @@
             to: [ "#driver-manager-test" ],
         },
         {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+            to: [ "#driver-manager-test" ],
+        },
+        {
             directory: "pkgfs-delayed",
             from: "#driver-manager-support",
             to: [ "#driver-manager-test" ],

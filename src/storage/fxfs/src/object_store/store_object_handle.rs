@@ -28,7 +28,10 @@ use {
     },
     anyhow::{anyhow, bail, Context, Error},
     async_trait::async_trait,
-    futures::{stream::FuturesOrdered, try_join, TryStreamExt},
+    futures::{
+        stream::{FuturesOrdered, FuturesUnordered},
+        try_join, TryStreamExt,
+    },
     interval_tree::utils::RangeOps,
     std::{
         cmp::min,
@@ -737,6 +740,20 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
     pub async fn flush_device(&self) -> Result<(), Error> {
         self.store().device().flush().await
     }
+
+    async fn read_and_decrypt(
+        &self,
+        device_offset: u64,
+        file_offset: u64,
+        mut buffer: MutableBufferRef<'_>,
+        key_id: u64,
+    ) -> Result<(), Error> {
+        self.store().device.read(device_offset, buffer.reborrow()).await?;
+        if let Some(keys) = &self.keys {
+            keys.decrypt(file_offset, key_id, buffer.as_mut_slice())?;
+        }
+        Ok(())
+    }
 }
 
 impl<S: AsRef<ObjectStore> + Send + Sync + 'static> AssociatedObject for StoreObjectHandle<S> {
@@ -849,6 +866,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ReadObjectHandle for StoreOb
         buf = buf.subslice_mut(0..to_do);
         let end_align = ((offset + to_do as u64) % block_size) as usize;
         let trace = self.trace.load(atomic::Ordering::Relaxed);
+        let reads = FuturesUnordered::new();
         while let Some(ItemRef { key: extent_key, value: extent_value, .. }) = iter.get() {
             if extent_key.object_id != self.object_id
                 || extent_key.attribute_id != self.attribute_id
@@ -881,12 +899,9 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ReadObjectHandle for StoreOb
                             device_offset..device_offset + to_copy as u64
                         );
                     }
-                    let mut subslice = buf.reborrow().subslice_mut(..to_copy);
-                    self.store().device.read(device_offset, subslice.reborrow()).await?;
-                    if let Some(keys) = &self.keys {
-                        keys.decrypt(offset, *key_id, subslice.as_mut_slice())?;
-                    }
-                    buf = buf.subslice_mut(to_copy..);
+                    let (head, tail) = buf.split_at_mut(to_copy);
+                    reads.push(self.read_and_decrypt(device_offset, offset, head, *key_id));
+                    buf = tail;
                     if buf.is_empty() {
                         break;
                     }
@@ -894,7 +909,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ReadObjectHandle for StoreOb
                     device_offset += to_copy as u64;
                 }
 
-                // Deal with end alignment, again by reading the exsting contents into an alignment
+                // Deal with end alignment by reading the existing contents into an alignment
                 // buffer.
                 if offset < extent_key.range.end && end_align > 0 {
                     let mut align_buf = self.store().device.allocate_buffer(block_size as usize);
@@ -906,10 +921,8 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ReadObjectHandle for StoreOb
                             device_offset..device_offset + align_buf.len() as u64
                         );
                     }
-                    self.store().device.read(device_offset, align_buf.as_mut()).await?;
-                    if let Some(keys) = &self.keys {
-                        keys.decrypt(offset, *key_id, align_buf.as_mut_slice())?;
-                    }
+                    self.read_and_decrypt(device_offset, offset, align_buf.as_mut(), *key_id)
+                        .await?;
                     buf.as_mut_slice().copy_from_slice(&align_buf.as_slice()[..end_align]);
                     buf = buf.subslice_mut(0..0);
                     break;
@@ -921,6 +934,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ReadObjectHandle for StoreOb
 
             iter.advance().await?;
         }
+        reads.try_collect().await?;
         buf.as_mut_slice().fill(0);
         Ok(to_do)
     }

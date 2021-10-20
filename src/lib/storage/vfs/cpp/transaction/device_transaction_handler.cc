@@ -63,7 +63,7 @@ zx_status_t DeviceTransactionHandler::RunRequests(
         request.trace_flow_id = operation.trace_flow_id;
       } else {
         request.trace_flow_id = GenerateTraceId();
-        TRACE_FLOW_BEGIN("storage", "BlockTransaction", request.trace_flow_id);
+        TRACE_FLOW_BEGIN("storage", "BlockOp", request.trace_flow_id);
         trace_flow_ids.push_back(request.trace_flow_id);
       }
     }
@@ -73,7 +73,7 @@ zx_status_t DeviceTransactionHandler::RunRequests(
 
   TRACE_DURATION("storage", "DeviceTransactionHandler::RunRequests::Finish");
   for (const auto& id : trace_flow_ids) {
-    TRACE_FLOW_END("storage", "BlockTransaction", id);
+    TRACE_FLOW_END("storage", "BlockOp", id);
   }
 
   return status;

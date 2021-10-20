@@ -76,13 +76,13 @@ annotated as such:
 
 ```
 // The start of a block transaction. There must be exactly one of these per ID.
-TRACE_FLOW_BEGIN("storage", "BlockTransaction", request.trace_flow_id);
+TRACE_FLOW_BEGIN("storage", "BlockOp", request.trace_flow_id);
 
 // A step in a block transaction. We can have zero or more of these.
-TRACE_FLOW_STEP("storage", "BlockTransaction", request.trace_flow_id);
+TRACE_FLOW_STEP("storage", "BlockOp", request.trace_flow_id);
 
 // The end of a block transaction. There must be exactly one of these per ID.
-TRACE_FLOW_END("storage", "BlockTransaction", request.trace_flow_id);
+TRACE_FLOW_END("storage", "BlockOp", request.trace_flow_id);
 ```
 
 If we added another flow step, it *must* match the above definition exactly to

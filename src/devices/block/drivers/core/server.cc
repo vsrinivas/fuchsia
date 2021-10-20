@@ -279,7 +279,7 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
                                                           block_fifo_request_t& req) mutable {
         TRACE_DURATION("storage", "FinishTransactionGroup");
         if (req.trace_flow_id) {
-          TRACE_FLOW_STEP("storage", "BlockTransaction", req.trace_flow_id);
+          TRACE_FLOW_STEP("storage", "BlockOp", req.trace_flow_id);
         }
         transaction_group->Complete(status);
       };
@@ -310,7 +310,7 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
     auto completer = [this](zx_status_t status, block_fifo_request_t& req) {
       TRACE_DURATION("storage", "FinishTransaction");
       if (req.trace_flow_id) {
-        TRACE_FLOW_STEP("storage", "BlockTransaction", req.trace_flow_id);
+        TRACE_FLOW_STEP("storage", "BlockOp", req.trace_flow_id);
       }
       FinishTransaction(status, req.reqid, req.group);
     };
@@ -395,7 +395,7 @@ void Server::ProcessRequest(block_fifo_request_t* request) {
   }
   TRACE_DURATION("storage", "Server::ProcessRequest", "opcode", request->opcode);
   if (request->trace_flow_id) {
-    TRACE_FLOW_STEP("storage", "BlockTransaction", request->trace_flow_id);
+    TRACE_FLOW_STEP("storage", "BlockOp", request->trace_flow_id);
   }
   switch (request->opcode & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:
