@@ -168,7 +168,8 @@ func (pi *adminAddressStateProviderImpl) UpdateAddressProperties(_ fidl.Context,
 	_ = syslog.WarnTf(addressStateProviderName, "UpdateAddressProperties for %s: not supported", pi.protocolAddr.AddressWithPrefix.Address)
 
 	pi.onRemove(admin.AddressRemovalReasonUserRemoved)
-	return nil
+	// Always return an error here so we never issue a response to the request.
+	return fmt.Errorf("UpdateAddressPoprties is for %s: not supported", pi.protocolAddr.AddressWithPrefix.Address)
 }
 
 func (pi *adminAddressStateProviderImpl) Detach(fidl.Context) error {

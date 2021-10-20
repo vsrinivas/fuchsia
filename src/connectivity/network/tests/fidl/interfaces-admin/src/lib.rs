@@ -251,10 +251,12 @@ async fn add_address_errors() {
         )
         .await
         .expect("add address");
-        let () = address_state_provider
-            .update_address_properties(fidl_fuchsia_net_interfaces_admin::AddressProperties::EMPTY)
-            .await
-            .expect("FIDL error calling AddressStateProvider.UpdateAddressProperties");
+        matches::assert_matches!(
+            address_state_provider
+                .update_address_properties(fidl_fuchsia_net_interfaces_admin::AddressProperties::EMPTY)
+                .await,
+            Err(err) if err.is_closed()
+        );
         matches::assert_matches!(
             address_state_provider.take_event_stream().try_next().await,
             Ok(Some(
