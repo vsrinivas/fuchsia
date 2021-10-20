@@ -67,9 +67,12 @@ class InspectTreeService final : public fuchsia::inspect::Tree {
   void GetContent(GetContentCallback callback) override {
     fuchsia::inspect::TreeContent ret;
     fuchsia::mem::Buffer buffer;
-    if (settings_.force_private_snapshot) {
+    const auto primary_behavior = settings_.snapshot_behavior.PrimaryBehavior();
+    using behavior_types = TreeServerSendPreference::Type;
+
+    if (primary_behavior == behavior_types::DeepCopy) {
       buffer.vmo = inspector_.CopyVmo();
-    } else {
+    } else if (primary_behavior == behavior_types::Live) {
       buffer.vmo = inspector_.DuplicateVmo();
     }
     buffer.vmo.get_size(&buffer.size);

@@ -7,14 +7,45 @@
 
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/stdcompat/optional.h>
 
 namespace inspect {
 
+// TreeServerSendPreference describes how the VMO should be served.
+class TreeServerSendPreference {
+ public:
+  // Default behavior is to send a Live VMO.
+  TreeServerSendPreference() = default;
+
+  enum class Type {
+    Live,
+    DeepCopy,
+  };
+
+  // Send a live VMO.
+  static constexpr TreeServerSendPreference Live() {
+    return TreeServerSendPreference(Type::Live, cpp17::nullopt);
+  }
+
+  // Send a true copy of the VMO.
+  static constexpr TreeServerSendPreference DeepCopy() {
+    return TreeServerSendPreference(Type::DeepCopy, cpp17::nullopt);
+  }
+
+  constexpr Type PrimaryBehavior() { return primary_send_type_; }
+  constexpr cpp17::optional<Type> FailureBehavior() { return failure_behavior_; }
+
+ private:
+  explicit constexpr TreeServerSendPreference(Type primary, cpp17::optional<Type> failure)
+      : primary_send_type_(primary), failure_behavior_(failure) {}
+
+  const Type primary_send_type_ = Type::Live;
+  const cpp17::optional<Type> failure_behavior_ = cpp17::nullopt;
+};
+
 struct TreeHandlerSettings {
-  // If true, snapshots of trees returned by the handler must be private
-  // copies. Setting this option disables VMO sharing between a reader
-  // and the writer.
-  bool force_private_snapshot = false;
+  // Control the way a VMO is served for snapshotting.
+  TreeServerSendPreference snapshot_behavior;
 };
 
 // Returns a handler for fuchsia.inspect.Tree connections on the given Inspector.

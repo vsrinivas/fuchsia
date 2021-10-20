@@ -71,12 +71,13 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, Serve
     return status;
   }
 
-  // TODO(fxbug.dev/57330): Remove force_private_snapshot when we support requesting different
+  // TODO(fxbug.dev/57330): Remove DeepCopy when we support requesting different
   // consistency from servers.
   auto inspect_tree = fbl::MakeRefCounted<fs::Service>(
-      [connector =
-           inspect::MakeTreeHandler(blobfs_->GetMetrics()->inspector(), loop_->dispatcher(),
-                                    inspect::TreeHandlerSettings{.force_private_snapshot = true})](
+      [connector = inspect::MakeTreeHandler(
+           blobfs_->GetMetrics()->inspector(), loop_->dispatcher(),
+           inspect::TreeHandlerSettings{.snapshot_behavior =
+                                            inspect::TreeServerSendPreference::DeepCopy()})](
           zx::channel chan) mutable {
         connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
         return ZX_OK;

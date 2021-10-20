@@ -34,7 +34,9 @@ class InspectServiceTest : public gtest::RealLoopFixture {
 
   void MakePrivateSnapshotHandler() {
     handler_ = inspect::MakeTreeHandler(
-        &inspector_, dispatcher(), inspect::TreeHandlerSettings{.force_private_snapshot = true});
+        &inspector_, dispatcher(),
+        inspect::TreeHandlerSettings{.snapshot_behavior =
+                                         inspect::TreeServerSendPreference::DeepCopy()});
   }
 
   async::Executor executor_;
