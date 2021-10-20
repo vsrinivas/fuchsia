@@ -61,7 +61,8 @@ impl job::work::Sequential for StubWorkload {
         _messenger: Messenger,
         _store: job::data::StoreHandle,
         _nonce: TracingNonce,
-    ) {
+    ) -> Result<(), job::work::Error> {
+        Ok(())
     }
 }
 
@@ -94,11 +95,12 @@ impl job::work::Sequential for Workload {
         messenger: Messenger,
         _store: data::StoreHandle,
         _nonce: TracingNonce,
-    ) {
+    ) -> Result<(), job::work::Error> {
         messenger
             .message(self.payload.clone().into(), Audience::Messenger(self.target))
             .send()
             .ack();
+        Ok(())
     }
 }
 
@@ -126,7 +128,8 @@ impl<T: Fn(Messenger, data::StoreHandle) -> BoxFuture<'static, ()> + Send + Sync
         messenger: Messenger,
         store: data::StoreHandle,
         _nonce: TracingNonce,
-    ) {
+    ) -> Result<(), job::work::Error> {
         (self.callback)(messenger, store).await;
+        Ok(())
     }
 }

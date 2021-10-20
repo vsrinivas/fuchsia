@@ -13,6 +13,7 @@
 //! will process each received source for new [Jobs](Job) and provide the necessary backing, such as
 //! caches, to support executing the [Job].
 
+use crate::event::{self, source::Event as SourceEvent, Event};
 use crate::job::source::{self, Error};
 use crate::job::{self, Job, Payload};
 use crate::job::{execution, PinStream};
@@ -20,9 +21,8 @@ use crate::message::base::MessengerType;
 use crate::service::{self, message};
 use crate::trace;
 use crate::trace::TracingNonce;
-
 use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_warn;
+use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use futures::stream::{FuturesUnordered, StreamFuture};
 use futures::{FutureExt, StreamExt};
 use std::collections::HashMap;
@@ -56,6 +56,8 @@ pub(crate) struct Manager {
     /// A [delegate](message::Delegate) used to generate the necessary messaging components for
     /// [Jobs](Job) to use.
     message_hub_delegate: message::Delegate,
+    /// An event publisher used to signal when a source has begun and ended.
+    event_publisher: event::Publisher,
 }
 
 impl Manager {
@@ -77,6 +79,8 @@ impl Manager {
         // Capture the top-level receptor's signature so it can be passed back
         // to the caller for sending new sources.
         let signature = receptor.get_signature();
+        let event_publisher =
+            event::Publisher::create(&message_hub_delegate, MessengerType::Unbound).await;
 
         let mut manager = Self {
             sources: HashMap::new(),
@@ -84,6 +88,7 @@ impl Manager {
             source_id_generator: source::IdGenerator::new(),
             execution_completion_sender,
             message_hub_delegate: message_hub_delegate.clone(),
+            event_publisher,
         };
 
         // Spawn a task to run the main event loop, which handles the following events:
@@ -134,7 +139,7 @@ impl Manager {
         // Fetch the source and inform it that its child Job has completed.
         let source_handler = &mut self.sources.get_mut(&source_id).expect("should find source");
         source_handler.handle_job_completion(job_info);
-        self.remove_source_if_necessary(&source_id);
+        self.remove_source_if_necessary(source_id);
 
         // Continue processing available jobs.
         self.process_next_job(nonce).await;
@@ -180,15 +185,15 @@ impl Manager {
         // Create a handler to manage jobs produced by this stream.
         let _ = self.sources.insert(source_id, source::Handler::new());
 
-        // Add the stream to the monitored pool. associate jobs with the source id along with
+        // Add the stream to the monitored pool. Associate jobs with the source id along with
         // appending an empty value to the end for indicating when the stream has completed.
-        self.job_futures.push(
-            job_stream
-                .map(move |val| (source_id, Some(val)))
-                .chain(async move { (source_id, None) }.into_stream())
-                .boxed()
-                .into_future(),
-        );
+        let stream_fut = job_stream
+            .map(move |val| (source_id, Some(val)))
+            .chain(async move { (source_id, None) }.into_stream())
+            .boxed()
+            .into_future();
+        self.job_futures.push(stream_fut);
+        self.event_publisher.send_event(Event::Source(SourceEvent::Start(source_id)));
     }
 
     async fn process_job(
@@ -200,19 +205,21 @@ impl Manager {
     ) {
         match job {
             Some(Ok(job)) => {
-                // When the stream produces a job, associate with the appropriate source. Then try see
-                // if any job is available to run.
-                self.sources
+                // When the stream produces a job, associate with the appropriate source. Then try
+                // to see if any job is available to run.
+                if let Err(e) = self
+                    .sources
                     .get_mut(&source)
                     .expect("source should be present")
-                    .add_pending_job(job);
-                self.job_futures.push(source_stream.into_future());
-                self.process_next_job(nonce).await;
+                    .add_pending_job(job)
+                {
+                    fx_log_err!("Failed to add job: {:?}", e);
+                    return;
+                }
             }
             Some(Err(Error::InvalidInput(error_responder))) => {
-                // When the stream failed to produce a job due to bad input, just skip to the next
-                // job in the queue. The client should have use its responder (if any) to notify the
-                // client of the error.
+                // When the stream failed to produce a job due to bad input, report back the error
+                // through the APIs error responder.
                 let id = error_responder.id();
                 if let Err(e) = error_responder.respond(fidl_fuchsia_settings::Error::Failed) {
                     fx_log_warn!(
@@ -223,30 +230,54 @@ impl Manager {
                         e
                     );
                 }
-
-                self.job_futures.push(source_stream.into_future());
-                self.process_next_job(nonce).await;
             }
-            _ => {
-                // In the case of an error or the end of the stream has been reached (None), clean up
-                // the source.
-                self.complete_source(&source);
-
-                // TODO(fxbug.dev/73414): Cancel in-flight jobs for the source.
+            Some(Err(Error::Unexpected(err))) if !err.is_closed() => {
+                // No-op. If the error did not close the stream then just warn and allow the rest
+                // of the stream to continue processing.
+                fx_log_warn!("Received an unexpected error on source {:?}: {:?}", source, err);
+            }
+            Some(Err(err @ (Error::Unexpected(_) | Error::Unsupported))) => {
+                // All other errors cause the source stream to close. Clean up the source and cancel
+                // any pending jobs. We still need to wait for any remaining jobs to finish.
+                fx_log_warn!(
+                    "Unable to process anymore job requests for {:?} due to fatal error: {:?}",
+                    source,
+                    err
+                );
+                self.cancel_source(source);
+                self.event_publisher
+                    .send_event(Event::Source(SourceEvent::Complete(source, Err(err.into()))));
+                return;
+            }
+            None => {
+                // The end of the stream has been reached (None), so clean up the source.
+                self.complete_source(source);
+                self.event_publisher
+                    .send_event(Event::Source(SourceEvent::Complete(source, Ok(()))));
+                return;
             }
         }
+
+        self.job_futures.push(source_stream.into_future());
+        self.process_next_job(nonce).await;
     }
 
-    fn complete_source(&mut self, source_id: &source::Id) {
-        self.sources.get_mut(source_id).expect("should find source").complete();
+    fn complete_source(&mut self, source_id: source::Id) {
+        self.sources.get_mut(&source_id).expect("should find source").complete();
         self.remove_source_if_necessary(source_id);
     }
 
-    fn remove_source_if_necessary(&mut self, source_id: &source::Id) {
-        let source_info = self.sources.get_mut(source_id).expect("should find source");
+    fn cancel_source(&mut self, source_id: source::Id) {
+        let source = self.sources.get_mut(&source_id).expect("should find source");
+        source.cancel();
+        self.remove_source_if_necessary(source_id);
+    }
+
+    fn remove_source_if_necessary(&mut self, source_id: source::Id) {
+        let source_info = self.sources.get_mut(&source_id).expect("should find source");
 
         if source_info.is_completed() {
-            let _ = self.sources.remove(source_id);
+            let _ = self.sources.remove(&source_id);
         }
     }
 }
@@ -254,14 +285,15 @@ impl Manager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::event;
+    use crate::event::source::CompleteError;
     use crate::job::Payload;
     use crate::message::base::Audience;
     use crate::message::MessageHubUtil;
-    use crate::service::test;
-    use crate::service::MessageHub;
+    use crate::service::{build_event_listener, test, MessageHub};
     use crate::tests::scaffold::workload::Workload;
-
     use async_trait::async_trait;
+    use fuchsia_zircon as zx;
     use futures::channel::mpsc;
     use futures::channel::oneshot::{self, Receiver, Sender};
     use futures::lock::Mutex;
@@ -390,6 +422,80 @@ mod tests {
             test::Payload::Integer(value) if value == RESULT);
     }
 
+    // Validates that a request that failed to convert to a job does not block the remaining jobs
+    // from running.
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_manager_job_processing_handles_errored_fidl() {
+        // Create delegate for communication between components.
+        let message_hub_delegate = MessageHub::create_hub();
+
+        // Create a top-level receptor to receive job results from.
+        let mut receptor = message_hub_delegate
+            .create(MessengerType::Unbound)
+            .await
+            .expect("should create receptor")
+            .1;
+
+        let mut event_listener = build_event_listener(&message_hub_delegate).await;
+
+        let manager_signature = Manager::spawn(&message_hub_delegate).await;
+
+        // Create a messenger to send job sources to the manager.
+        let messenger = message_hub_delegate
+            .create(MessengerType::Unbound)
+            .await
+            .expect("should create messenger")
+            .0;
+
+        let (requests_tx, requests_rx) = mpsc::unbounded();
+
+        // Send a fidl error before a valid job.
+        requests_tx
+            .unbounded_send(Err(Error::Unexpected(fidl::Error::ClientRead(
+                zx::Status::PEER_CLOSED,
+            ))))
+            .expect("Should be able to queue requests");
+
+        // Now send a valid job, which should not be processed after the error.
+        let signature = receptor.get_signature();
+        requests_tx
+            .unbounded_send(Ok(Job::new(job::work::Load::Independent(Workload::new(
+                test::Payload::Integer(1),
+                signature,
+            )))))
+            .expect("Should be able to queue requests");
+
+        messenger
+            .message(
+                Payload::Source(Arc::new(Mutex::new(Some(requests_rx.boxed())))).into(),
+                Audience::Messenger(manager_signature),
+            )
+            .send()
+            .ack();
+
+        // Ensure the source started and completed before moving on.
+        assert_matches!(
+            event_listener.next_of::<event::Payload>().await,
+            Ok((event::Payload::Event(Event::Source(SourceEvent::Start(_))), _))
+        );
+        assert_matches!(
+            event_listener.next_of::<event::Payload>().await,
+            Ok((
+                event::Payload::Event(Event::Source(SourceEvent::Complete(
+                    _,
+                    Err(CompleteError::Unexpected)
+                ))),
+                _
+            ))
+        );
+
+        // Now we can delete the receptor signature so we don't hang the test on the next assertion.
+        message_hub_delegate.delete(signature);
+
+        // Confirm we never get the result from the request.
+        assert!(receptor.next_of::<test::Payload>().await.is_err());
+    }
+
     struct WaitingWorkload {
         rx: Receiver<()>,
         execute_tx: Sender<()>,
@@ -410,9 +516,10 @@ mod tests {
             _: message::Messenger,
             _: job::data::StoreHandle,
             _nonce: TracingNonce,
-        ) {
+        ) -> Result<(), job::work::Error> {
             self.execute_tx.send(()).expect("Should be able to signal start of execution");
             let _ = self.rx.await;
+            Ok(())
         }
     }
 

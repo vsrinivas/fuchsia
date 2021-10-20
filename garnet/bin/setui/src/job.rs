@@ -26,11 +26,12 @@ use crate::trace;
 
 use core::fmt::{Debug, Formatter};
 use core::pin::Pin;
-use futures::future::BoxFuture;
+use futures::channel::oneshot;
 use futures::lock::Mutex;
 use futures::stream::Stream;
 use std::any::TypeId;
 use std::collections::HashMap;
+use std::future::Future;
 use std::sync::Arc;
 
 pub mod manager;
@@ -109,6 +110,12 @@ pub mod work {
         Independent(Box<dyn Independent + Send + Sync>),
     }
 
+    /// Possible error conditions that can be encountered during work execution.
+    pub enum Error {
+        /// The work was canceled.
+        Canceled,
+    }
+
     impl Load {
         /// Executes the contained workload, providing the individualized parameters based on type.
         /// This function is asynchronous and is meant to be waited upon for workload completion.
@@ -120,7 +127,7 @@ pub mod work {
             messenger: message::Messenger,
             store: Option<data::StoreHandle>,
             nonce: TracingNonce,
-        ) {
+        ) -> Result<(), Error> {
             match self {
                 Load::Sequential(load, _) => {
                     load.execute(
@@ -128,10 +135,11 @@ pub mod work {
                         store.expect("all sequential loads should have store"),
                         nonce,
                     )
-                    .await;
+                    .await
                 }
                 Load::Independent(load) => {
                     load.execute(messenger, nonce).await;
+                    Ok(())
                 }
             }
         }
@@ -158,7 +166,7 @@ pub mod work {
             messenger: message::Messenger,
             store: data::StoreHandle,
             nonce: TracingNonce,
-        );
+        ) -> Result<(), Error>;
     }
 
     #[async_trait]
@@ -207,9 +215,11 @@ impl Signature {
 #[derive(Debug)]
 pub struct Job {
     /// The [work::Load] to be run.
-    pub workload: work::Load,
+    workload: work::Load,
     /// The [execution::Type] determining how the [work::Load] will be run.
-    pub execution_type: execution::Type,
+    execution_type: execution::Type,
+    /// The trigger that can be used to cancel this job. Not all jobs are cancelable.
+    cancelation_tx: Option<oneshot::Sender<()>>,
 }
 
 impl Job {
@@ -219,7 +229,29 @@ impl Job {
             _ => execution::Type::Independent,
         };
 
-        Self { workload, execution_type }
+        Self { workload, execution_type, cancelation_tx: None }
+    }
+
+    pub(crate) fn new_with_cancellation(
+        workload: work::Load,
+        cancelation_tx: oneshot::Sender<()>,
+    ) -> Self {
+        let execution_type = match &workload {
+            work::Load::Sequential(_, signature) => execution::Type::Sequential(*signature),
+            _ => execution::Type::Independent,
+        };
+
+        Self { workload, execution_type, cancelation_tx: Some(cancelation_tx) }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn workload(&self) -> &work::Load {
+        &self.workload
+    }
+
+    #[cfg(test)]
+    pub(crate) fn execution_type(&self) -> execution::Type {
+        self.execution_type
     }
 }
 
@@ -264,8 +296,10 @@ enum State {
     Ready(Job),
     /// The workload is executing.
     Executing,
-    /// THe workload execution has completed.
+    /// The workload execution has completed.
     Executed,
+    /// The workload was canceled before it completed.
+    Canceled,
 }
 
 /// [Info] is used to capture details about a [Job] once it has been accepted by an entity that will
@@ -274,12 +308,14 @@ pub(self) struct Info {
     id: Id,
     state: State,
     execution_type: execution::Type,
+    cancelation_tx: Option<oneshot::Sender<()>>,
 }
 
 impl Info {
-    fn new(id: Id, job: Job) -> Self {
+    fn new(id: Id, mut job: Job) -> Self {
         let execution_type = job.execution_type.clone();
-        Self { id, state: State::Ready(job), execution_type }
+        let cancelation_tx = job.cancelation_tx.take();
+        Self { id, state: State::Ready(job), execution_type, cancelation_tx }
     }
 
     /// Retrieves the [execution::Type] of the underlying [Job].
@@ -290,12 +326,12 @@ impl Info {
     /// Prepares the components necessary for a [Job] to execute and then returns a future to
     /// execute the [Job] workload with them. These components include a messenger for communicating
     /// with the system and the store associated with the [Job's](Job) group if applicable.
-    async fn prepare_execution<F: Fn(Self, execution::Details) + Send + 'static>(
+    async fn prepare_execution<F: FnOnce(Self, execution::Details) + Send + 'static>(
         mut self,
         delegate: &mut message::Delegate,
         stores: &mut StoreHandleMapping,
         callback: F,
-    ) -> BoxFuture<'static, ()> {
+    ) -> impl Future<Output = ()> {
         // Create a messenger for the workload to communicate with the rest of the setting
         // service.
         let messenger = delegate
@@ -309,7 +345,7 @@ impl Info {
             .get_signature()
             .map(|signature| stores.entry(*signature).or_insert_with(Default::default).clone());
 
-        Box::pin(async move {
+        async move {
             let nonce = fuchsia_trace::generate_nonce();
             trace!(nonce, "job execution");
             let start = now();
@@ -317,13 +353,18 @@ impl Info {
             std::mem::swap(&mut state, &mut self.state);
 
             if let State::Ready(job) = state {
-                job.workload.execute(messenger, store, nonce).await;
-                self.state = State::Executed;
+                self.state = if let Err(work::Error::Canceled) =
+                    job.workload.execute(messenger, store, nonce).await
+                {
+                    State::Canceled
+                } else {
+                    State::Executed
+                };
                 callback(self, execution::Details { start_time: start, end_time: now() });
             } else {
                 panic!("job not in the ready state");
             }
-        })
+        }
     }
 }
 
@@ -331,11 +372,12 @@ pub(super) mod execution {
     use super::Signature;
     use crate::job;
     use fuchsia_zircon as zx;
-    use std::collections::{HashSet, VecDeque};
+    use futures::channel::oneshot;
+    use std::collections::{HashMap, VecDeque};
 
     /// The workload types of a [job::Job]. This enumeration is used to define how a [job::Job] will
     /// be treated in relation to other jobs from the same source.
-    #[derive(PartialEq, Clone, Debug, Eq, Hash)]
+    #[derive(PartialEq, Clone, Copy, Debug, Eq, Hash)]
     pub enum Type {
         /// Independent jobs are executed in isolation from other [Jobs](job::Job). Some
         /// functionality is unavailable for Independent jobs, such as caches.
@@ -355,18 +397,25 @@ pub(super) mod execution {
         }
     }
 
+    #[derive(thiserror::Error, Debug, Clone, Copy)]
+    pub(super) enum GroupError {
+        #[error("The group is closed, so no new jobs can be added")]
+        Closed,
+    }
+
     /// A collection of [Jobs](job::Job) which have matching execution types. [Groups](Group)
     /// determine how similar [Jobs](job::Job) are executed.
     pub(super) struct Group {
         group_type: Type,
-        active: HashSet<job::Id>,
+        active: HashMap<job::Id, Option<oneshot::Sender<()>>>,
         pending: VecDeque<job::Info>,
+        canceled: bool,
     }
 
     impl Group {
         /// Creates a new [Group] based on the execution [Type].
         pub(super) fn new(group_type: Type) -> Self {
-            Self { group_type, active: HashSet::new(), pending: VecDeque::new() }
+            Self { group_type, active: HashMap::new(), pending: VecDeque::new(), canceled: false }
         }
 
         /// Returns whether any [Jobs](job::Job) are currently active. Pending [Jobs](job::Job) do
@@ -387,8 +436,13 @@ pub(super) mod execution {
             }
         }
 
-        pub(super) fn add(&mut self, job_info: job::Info) {
-            self.pending.push_back(job_info);
+        pub(super) fn add(&mut self, job_info: job::Info) -> Result<(), GroupError> {
+            if self.canceled {
+                Err(GroupError::Closed)
+            } else {
+                self.pending.push_back(job_info);
+                Ok(())
+            }
         }
 
         /// Invoked by [Job](super::Job) processing code to retrieve the next [Job](super::Job) to
@@ -400,10 +454,10 @@ pub(super) mod execution {
                 return None;
             }
 
-            let active_job = self.pending.pop_front();
+            let mut active_job = self.pending.pop_front();
 
-            if let Some(job) = &active_job {
-                let _ = self.active.insert(job.id);
+            if let Some(ref mut job) = active_job {
+                let _ = self.active.insert(job.id, job.cancelation_tx.take());
             }
 
             active_job
@@ -411,6 +465,16 @@ pub(super) mod execution {
 
         pub(super) fn complete(&mut self, job_info: job::Info) {
             let _ = self.active.remove(&job_info.id);
+        }
+
+        pub(super) fn cancel(&mut self) {
+            self.canceled = true;
+            self.pending.clear();
+            for (_, cancelation_tx) in self.active.iter_mut() {
+                if let Some(cancelation_tx) = cancelation_tx.take() {
+                    let _ = cancelation_tx.send(());
+                }
+            }
         }
     }
 
@@ -475,7 +539,8 @@ mod tests {
             receptor.get_signature(),
         )));
 
-        job.workload.execute(messenger, Some(Arc::new(Mutex::new(HashMap::new()))), 0).await;
+        let _ =
+            job.workload.execute(messenger, Some(Arc::new(Mutex::new(HashMap::new()))), 0).await;
 
         // Confirm received value matches the value sent from workload.
         assert_matches!(

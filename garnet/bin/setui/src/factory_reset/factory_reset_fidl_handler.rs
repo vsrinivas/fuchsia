@@ -68,7 +68,7 @@ impl TryFrom<FactoryResetRequest> for Job {
                 None => Err(JobError::InvalidInput(Box::new(responder))),
             },
             FactoryResetRequest::Watch { responder } => {
-                Ok(watch::Work::new(SettingType::FactoryReset, responder).into())
+                Ok(watch::Work::new_job(SettingType::FactoryReset, responder))
             }
             _ => {
                 fx_log_warn!("Received a call to an unsupported API: {:?}", item);
@@ -142,13 +142,9 @@ mod tests {
             .expect("should have on request before stream is closed")
             .expect("should have gotten a request");
         let job = Job::try_from(request);
-        assert_matches!(
-            job,
-            Ok(Job {
-                workload: work::Load::Independent(_),
-                execution_type: execution::Type::Independent,
-            })
-        );
+        let job = job.as_ref();
+        assert_matches!(job.map(|j| j.workload()), Ok(work::Load::Independent(_)));
+        assert_matches!(job.map(|j| j.execution_type()), Ok(execution::Type::Independent));
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -164,12 +160,8 @@ mod tests {
             .expect("should have on request before stream is closed")
             .expect("should have gotten a request");
         let job = Job::try_from(request);
-        assert_matches!(
-            job,
-            Ok(Job {
-                workload: work::Load::Sequential(_, _),
-                execution_type: execution::Type::Sequential(_),
-            })
-        );
+        let job = job.as_ref();
+        assert_matches!(job.map(|j| j.workload()), Ok(work::Load::Sequential(_, _)));
+        assert_matches!(job.map(|j| j.execution_type()), Ok(execution::Type::Sequential(_)));
     }
 }

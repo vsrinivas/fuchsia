@@ -27,6 +27,7 @@ pub enum Event {
     Restore(restore::Event),
     Closed(&'static str),
     Handler(SettingType, handler::Event),
+    Source(source::Event),
 }
 
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
@@ -64,6 +65,33 @@ pub(crate) mod earcon {
     #[derive(PartialEq, Clone, Debug, Eq, Hash)]
     pub enum EarconType {
         Volume,
+    }
+}
+
+pub(crate) mod source {
+    use crate::job::source::{Error, Id};
+
+    #[derive(PartialEq, Clone, Copy, Debug, Eq, Hash)]
+    pub enum Event {
+        Start(Id),
+        Complete(Id, Result<(), CompleteError>),
+    }
+
+    #[derive(PartialEq, Clone, Copy, Debug, Eq, Hash)]
+    pub enum CompleteError {
+        Unexpected,
+        InvalidInput,
+        Unsupported,
+    }
+
+    impl From<Error> for CompleteError {
+        fn from(err: Error) -> Self {
+            match err {
+                Error::Unexpected(_) => CompleteError::Unexpected,
+                Error::InvalidInput(_) => CompleteError::InvalidInput,
+                Error::Unsupported => CompleteError::Unsupported,
+            }
+        }
     }
 }
 

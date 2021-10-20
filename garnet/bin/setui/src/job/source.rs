@@ -15,12 +15,12 @@
 //!  produced [Jobs](Job) and their results.
 
 use crate::clock::now;
+use crate::job::execution::GroupError;
 use crate::job::{self, execution, Job, Payload, StoreHandleMapping};
 use crate::message::base::{Audience, MessengerType};
 use crate::service::message::{Delegate, Messenger, Signature};
 use crate::trace::TracingNonce;
 use crate::trace_guard;
-
 use core::pin::Pin;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -91,8 +91,8 @@ impl Seeder {
 /// related-errors. This enumeration should be expanded to capture any future error variant.
 #[derive(ThisError)]
 pub enum Error {
-    #[error("Unknown error")]
-    Unknown,
+    #[error("Unexpected error")]
+    Unexpected(fidl::Error),
     #[error("Invalid input")]
     InvalidInput(Box<dyn ErrorResponder + Send>),
     #[error("Unsupported API call")]
@@ -102,7 +102,7 @@ pub enum Error {
 impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Unknown => f.write_str("Unknown"),
+            Error::Unexpected(_) => f.write_str("Unexpected"),
             Error::InvalidInput(_) => f.write_str("InvalidInput(..)"),
             Error::Unsupported => f.write_str("Unsupported"),
         }
@@ -129,8 +129,8 @@ impl From<Infallible> for Error {
 }
 
 impl From<fidl::Error> for Error {
-    fn from(_item: fidl::Error) -> Self {
-        Error::Unknown
+    fn from(error: fidl::Error) -> Self {
+        Error::Unexpected(error)
     }
 }
 
@@ -150,7 +150,7 @@ pub(super) enum State {
 /// [Id] provides a unique identifier for a source within its parent space, most often a manager.
 // TODO(fxbug.dev/73541): Explore using generational indices instead.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub(super) struct Id {
+pub struct Id {
     _identifier: usize,
 }
 
@@ -219,6 +219,14 @@ impl Handler {
         self.set_state(if self.is_active() { State::PendingCompletion } else { State::Completed });
     }
 
+    /// Drops any job that has not yet been started and any watch jobs.
+    pub(crate) fn cancel(&mut self) {
+        for execution_group in self.jobs.values_mut() {
+            execution_group.cancel();
+        }
+        self.complete();
+    }
+
     /// Returns whether the source has completed.
     pub(crate) fn is_completed(&mut self) -> bool {
         matches!(self.states.back(), Some(&(State::Completed, _)))
@@ -237,7 +245,9 @@ impl Handler {
     }
 
     /// Returns true if any job is executed, false otherwise.
-    pub(crate) async fn execute_next<F: Fn(job::Info, job::execution::Details) + Send + 'static>(
+    pub(crate) async fn execute_next<
+        F: FnOnce(job::Info, job::execution::Details) + Send + 'static,
+    >(
         &mut self,
         delegate: &mut Delegate,
         callback: F,
@@ -266,7 +276,7 @@ impl Handler {
     }
 
     /// Adds a [Job] to be handled by this [Handler].
-    pub(crate) fn add_pending_job(&mut self, incoming_job: Job) {
+    pub(crate) fn add_pending_job(&mut self, incoming_job: Job) -> Result<(), GroupError> {
         let job_info = job::Info::new(self.job_id_generator.generate(), incoming_job);
         let execution_type = job_info.get_execution_type().clone();
 
@@ -275,7 +285,7 @@ impl Handler {
             .jobs
             .entry(execution_type.clone())
             .or_insert_with(move || execution::Group::new(execution_type));
-        execution_group.add(job_info);
+        execution_group.add(job_info)
     }
 
     /// Informs the [Handler] that a [Job] by the given [Id](job::Id) has completed.
@@ -355,7 +365,7 @@ mod tests {
         assert!(!handler.execute_next(&mut message_hub_delegate, |_, _| {}, 0).await);
 
         for result in &results {
-            handler.add_pending_job(Job::new(job::work::Load::Independent(Workload::new(
+            let _ = handler.add_pending_job(Job::new(job::work::Load::Independent(Workload::new(
                 test::Payload::Integer(*result),
                 receptor.get_signature(),
             ))));
@@ -387,6 +397,71 @@ mod tests {
         }
     }
 
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_drop_pending() {
+        // Create delegate for communication between components.
+        let mut message_hub_delegate = MessageHub::create_hub();
+
+        let mut results: Vec<i64> = (0..10).collect();
+
+        // Create a top-level receptor to receive job results from.
+        let mut receptor = message_hub_delegate
+            .create(MessengerType::Unbound)
+            .await
+            .expect("should create receptor")
+            .1;
+
+        let mut handler = Handler::new();
+
+        assert!(!handler.execute_next(&mut message_hub_delegate, |_, _| {}, 0).await);
+
+        for result in &results {
+            let _ = handler.add_pending_job(Job::new(job::work::Load::Independent(Workload::new(
+                test::Payload::Integer(*result),
+                receptor.get_signature(),
+            ))));
+        }
+
+        let result = results.remove(0);
+        let (execution_tx, mut execution_rx) = futures::channel::mpsc::unbounded::<job::Info>();
+
+        // Execute job concurrently.
+        assert!(
+            handler
+                .execute_next(
+                    &mut message_hub_delegate,
+                    move |job, _| {
+                        execution_tx.unbounded_send(job).expect("send should succeed");
+                    },
+                    0,
+                )
+                .await
+        );
+
+        handler.cancel();
+
+        // Confirm received value matches the value sent from workload.
+        let test::Payload::Integer(value) =
+            receptor.next_of::<test::Payload>().await.expect("should have payload").0;
+        assert_eq!(value, result);
+
+        handler.handle_job_completion(execution_rx.next().await.expect("should have gotten job"));
+
+        // Validate there are no more jobs to execute.
+        let (execution_tx, _execution_rx) = futures::channel::mpsc::unbounded::<job::Info>();
+        assert!(
+            !handler
+                .execute_next(
+                    &mut message_hub_delegate,
+                    move |job, _| {
+                        execution_tx.unbounded_send(job).expect("send should succeed");
+                    },
+                    0,
+                )
+                .await
+        );
+    }
+
     // Ensures that proper queueing happens amongst Jobs within Execution Groups.
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_execution_order() {
@@ -410,7 +485,7 @@ mod tests {
         assert!(!handler.execute_next(&mut message_hub_delegate, |_, _| {}, 0).await);
 
         for result in &results {
-            handler.add_pending_job(Job::new(job::work::Load::Sequential(
+            let _ = handler.add_pending_job(Job::new(job::work::Load::Sequential(
                 Workload::new(test::Payload::Integer(*result), receptor.get_signature()),
                 job::Signature::new::<usize>(),
             )));
@@ -445,7 +520,8 @@ mod tests {
         assert!(!handler.execute_next(&mut message_hub_delegate, move |_, _| {}, 0).await);
 
         // Add an independent job.
-        handler.add_pending_job(Job::new(job::work::Load::Independent(StubWorkload::new())));
+        let _ =
+            handler.add_pending_job(Job::new(job::work::Load::Independent(StubWorkload::new())));
 
         // Execute independent job.
         {
@@ -530,7 +606,7 @@ mod tests {
             let result_tx = result_tx.clone();
 
             // Add a job that writes the initial value and reads it back.
-            handler.add_pending_job(Job::new(job::work::Load::Sequential(
+            let _ = handler.add_pending_job(Job::new(job::work::Load::Sequential(
                 Sequential::boxed(move |_, store| {
                     let result_tx = result_tx.clone();
                     let data_key = data_key.clone();
