@@ -22,9 +22,13 @@ use {
     pin_utils::unsafe_pinned,
 };
 
+mod flatten_unordered;
 mod future_map;
 mod stream_map;
 
+pub use flatten_unordered::{
+    FlattenUnordered, FlattenUnorderedExt, TryFlattenUnordered, TryFlattenUnorderedExt,
+};
 pub use future_map::FutureMap;
 pub use stream_map::StreamMap;
 
