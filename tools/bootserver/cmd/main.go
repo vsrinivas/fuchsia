@@ -18,6 +18,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
@@ -414,20 +415,19 @@ func execute(ctx context.Context, cmdlineArgs []string) error {
 	}
 
 	// Keep discovering and booting devices.
-	for {
-		err = connectAndBoot(ctx, n, imgs, cmdlineArgs, authorizedKeys)
-		if !(err == nil || errors.Is(err, errIncompleteTransfer)) {
-			// Exit early for any error other than an errIncompleteTransfer.
-			return err
-		} else if bootOnce || (failFast && err != nil) {
-			// Exit after booting first device or if boot failed.
-			return err
-		} else if err != nil {
+	return retry.Retry(ctx, retry.NewConstantBackoff(retryDelay), func() error {
+		if err := connectAndBoot(ctx, n, imgs, cmdlineArgs, authorizedKeys); err != nil {
+			if bootOnce || failFast || !errors.Is(err, errIncompleteTransfer) {
+				// Exit early for any error other than an errIncompleteTransfer,
+				// or if failFast or bootOnce is enabled.
+				return retry.Fatal(err)
+			}
 			// Error is an errIncompleteTransfer. Retry after some delay.
 			logger.Errorf(ctx, "%v", err)
-			time.Sleep(retryDelay)
+			return err
 		}
-	}
+		return nil
+	}, nil)
 }
 
 func main() {

@@ -52,4 +52,28 @@ func TestRetry(t *testing.T) {
 			t.Errorf("got %d tries, wanted %d", i, tries)
 		}
 	})
+
+	t.Run("stops retrying after a fatal error", func(t *testing.T) {
+		var i int
+		var lastErr error
+		err := Retry(context.Background(), &ZeroBackoff{}, func() error {
+			i++
+			err := fmt.Errorf("try %d", i)
+			lastErr = err
+			if i == tries {
+				return Fatal(err)
+			}
+			return err
+		}, nil)
+
+		if err == nil {
+			t.Error("error is nil")
+		} else if err != lastErr {
+			t.Errorf("got error: %q, wanted: %q", err, lastErr)
+		}
+
+		if i != tries {
+			t.Errorf("got %d tries, wanted %d", i, tries)
+		}
+	})
 }

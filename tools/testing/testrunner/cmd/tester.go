@@ -373,27 +373,32 @@ func (t *fuchsiaSSHTester) isTimeoutError(err error) bool {
 }
 
 func (t *fuchsiaSSHTester) runSSHCommandWithRetry(ctx context.Context, command []string, stdout, stderr io.Writer) error {
-	var cmdErr error
 	const maxReconnectAttempts = 3
-	retry.Retry(ctx, retry.WithMaxAttempts(t.connectionErrorRetryBackoff, maxReconnectAttempts), func() error {
-		cmdErr = t.client.Run(ctx, command, stdout, stderr)
-		if sshutil.IsConnectionError(cmdErr) {
+	return retry.Retry(ctx, retry.WithMaxAttempts(t.connectionErrorRetryBackoff, maxReconnectAttempts), func() error {
+		if cmdErr := t.client.Run(ctx, command, stdout, stderr); cmdErr != nil {
+			if !sshutil.IsConnectionError(cmdErr) {
+				// Not a connection error -> break retry loop.
+				return retry.Fatal(cmdErr)
+			}
 			logger.Errorf(ctx, "attempting to reconnect over SSH after error: %s", cmdErr)
 			if err := t.reconnect(ctx); err != nil {
 				logger.Errorf(ctx, "%s: %s", constants.FailedToReconnectMsg, err)
 				// If we fail to reconnect, continuing is likely hopeless.
-				return nil
+				// Return the *original* error (which will generally be more
+				// closely related to the root cause of the failure) rather than
+				// the reconnection error.
+				return retry.Fatal(cmdErr)
 			}
-			// Return non-ConnectionError because code in main.go will exit early if
-			// it sees that. Since reconnection succeeded, we don't want that.
-			// TODO(garymm): Clean this up; have main.go do its own connection recovery between tests.
+			// Return non-ConnectionError because code in main.go will exit
+			// early if it sees that. Since reconnection succeeded, we don't
+			// want that.
+			// TODO(olivernewman): Clean this up; have main.go do its own
+			// connection recovery between tests.
 			cmdErr = fmt.Errorf("%s", cmdErr)
 			return cmdErr
 		}
-		// Not a connection error -> command passed or failed -> break retry loop.
 		return nil
 	}, nil)
-	return cmdErr
 }
 
 // Test runs a test over SSH.

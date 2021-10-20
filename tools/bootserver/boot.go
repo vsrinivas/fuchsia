@@ -98,24 +98,22 @@ func skipOnTransferError(name string) bool {
 // retries if the function returns an error that corresponds to a failure mode
 // that's known to be transient.
 func DownloadWithRetries(ctx context.Context, dest string, download func() error) error {
-	var finalErr error
 	retryStrategy := retry.WithMaxAttempts(retry.NewConstantBackoff(5*time.Second), 3)
-	retry.Retry(ctx, retryStrategy, func() error {
-		finalErr = download()
-		if isTransientDownloadError(ctx, finalErr) {
+	return retry.Retry(ctx, retryStrategy, func() error {
+		if downloadErr := download(); downloadErr != nil {
+			if !isTransientDownloadError(ctx, downloadErr) {
+				// Don't retry if there was a non-transient failure.
+				return retry.Fatal(downloadErr)
+			}
 			// Clean up the destination file, which may be only partially
 			// written, before retrying.
 			if err := os.RemoveAll(dest); err != nil {
-				finalErr = err
-				return nil
+				return retry.Fatal(err)
 			}
-			return finalErr
+			return downloadErr
 		}
-		// Don't retry if the operation passed or if there was a non-transient
-		// failure.
 		return nil
 	}, nil)
-	return finalErr
 }
 
 // isTransientDownloadError returns whether an error corresponds to a GCS
@@ -299,35 +297,30 @@ func transferImages(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArg
 
 // ValidateBoard reads the board info from the target and validates that it matches boardName.
 func ValidateBoard(ctx context.Context, t tftp.Client, boardName string) error {
-	var r *bytes.Reader
-	var err error
 	// Attempt to read a file. If the server tells us we need to wait, then try
 	// again as long as it keeps telling us this. ErrShouldWait implies the server
 	// is still responding and will eventually be able to handle our request.
 	logger.Debugf(ctx, "attempting to read %s...", constants.BoardInfoNetsvcName)
-	for {
-		if ctx.Err() != nil {
-			return nil
-		}
+	var r *bytes.Reader
+	if err := retry.Retry(ctx, retry.NewConstantBackoff(time.Second), func() error {
+		var err error
 		r, err = t.Read(ctx, constants.BoardInfoNetsvcName)
-		switch err {
-		case nil:
-		case tftp.ErrShouldWait:
-			// The target is busy, so let's sleep for a bit before
-			// trying again, otherwise we'll be wasting cycles and
-			// printing too often.
+		if err != nil {
+			if !errors.Is(err, tftp.ErrShouldWait) {
+				return retry.Fatal(err)
+			}
+			// The target is busy, so let's sleep for a bit before trying again,
+			// otherwise we'll be wasting cycles and printing too often.
 			logger.Debugf(ctx, "target is busy, retrying in one second")
-			time.Sleep(time.Second)
-			continue
-		default:
+			return err
 		}
-		break
-	}
-	if err != nil {
+		return nil
+	}, nil); err != nil {
 		return fmt.Errorf("Unable to read the board info from [%s]: %w", constants.BoardInfoNetsvcName, err)
 	}
+
 	buf := make([]byte, r.Size())
-	if _, err = r.Read(buf); err != nil {
+	if _, err := r.Read(buf); err != nil {
 		return fmt.Errorf("Unable to read the board info from [%s]: %w", constants.BoardInfoNetsvcName, err)
 	}
 	// Get the bytes before the first null byte.

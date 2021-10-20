@@ -42,6 +42,7 @@ go_library("main") {
   ]
   deps = [
     ":bootserver_lib",
+    "//tools/lib/retry",
     "//tools/net/netboot",
     "//tools/net/netutil",
     "//tools/net/tftp",
