@@ -92,18 +92,23 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
       .Open = OpenEmulatorChannel,
   };
 
+  // Responsible for running the thread-hostile fake_device_, along with other members listed below.
+  // Device publishes a bt-hci child, which is bound to by a bt-host child, which talks to the
+  // fake_device_ over some channels. As such, |loop_| cannot be safely shut down until Device's
+  // children are released, i.e. loop_ and members responsible for servicing bt-host live past
+  // Unbind, and are shut down upon Release.
   async::Loop loop_;
 
   zx_device_t* const parent_;
 
-  // The device that implements the bt-hci protocol. |hci_dev_| will only be accessed and modified
-  // on the following threads/conditions:
-  //   1. It only gets initialized on the |loop_| dispatcher during Publish().
+  // The device that implements the bt-hci protocol. |hci_dev_| will only be accessed on |loop_|,
+  // and only in the following conditions:
+  //   1. Initialized during Publish().
   //   2. Unpublished when the HciEmulator FIDL channel (i.e. |binding_|) gets closed, which gets
   //      processed on the |loop_| dispatcher.
-  //   3. Unpublished in the DDK Unbind() call which runs on a devhost thread. This is guaranteed
-  //      not to happen concurrently with #1 and #2 as Unbind always drains and joins the |loop_|
-  //      threads before removing devices.
+  //   3. Unpublished in the DDK Unbind() call. While the Unbind method itself runs on a devhost
+  //      thread, the Unpublish call is posted to |loop_| and joined upon during unbind, ensuring
+  //      that |hci_dev_| is never accessed across threads.
   zx_device_t* hci_dev_;
 
   // The device that implements the bt-emulator protocol.

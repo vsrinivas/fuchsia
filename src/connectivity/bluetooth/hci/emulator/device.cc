@@ -26,6 +26,9 @@ using bt::testing::FakePeer;
 namespace bt_hci_emulator {
 namespace {
 
+// Arbitrary value to signal between userland eventpairs.
+constexpr uint32_t PEER_SIGNAL = ZX_USER_SIGNAL_0;
+
 FakeController::Settings SettingsFromFidl(const ftest::EmulatorSettings& input) {
   FakeController::Settings settings;
   if (input.has_hci_config() && input.hci_config() == ftest::HciConfig::LE_ONLY) {
@@ -144,27 +147,56 @@ zx_status_t Device::Bind(std::string_view name) {
   return status;
 }
 
-void Device::Release() {
-  logf(TRACE, "release\n");
-  delete this;
-}
-
 void Device::Unbind() {
   logf(TRACE, "unbind\n");
+  zx::eventpair this_thread_waiter, loop_signaller;
+  zx_status_t status = zx::eventpair::create(0, &this_thread_waiter, &loop_signaller);
+  // If eventpair creation fails, the rest of Unbind will not work properly, so we assert to fail
+  // fast and obviously. This is OK since the emulator is only run in tests anyway.
+  ZX_ASSERT_MSG(status == ZX_OK, "could not create eventpair: %s\n", zx_status_get_string(status));
 
-  // Clean up all FIDL channels and the underlying FakeController on the
-  // dispatcher thread, due to the FakeController object's thread-safety
-  // requirements. It is OK to capture references to members in the task since
-  // this function will block until the dispatcher loop has terminated.
-  async::PostTask(loop_.dispatcher(),
-                  [binding = &binding_, dev = fake_device_, loop = &loop_, peers = &peers_] {
-                    binding->Unbind();
-                    dev->Stop();
-                    loop->Quit();
-                    // Clean up all fake peers. This will close their local channels and remove them
-                    // from the fake controller.
-                    peers->clear();
-                  });
+  // It is OK to capture a self-reference since this function blocks on the task completion.
+  async::PostTask(loop_.dispatcher(), [this, loop_signaller = std::move(loop_signaller)] {
+    // Stop servicing HciEmulator FIDL messages from higher layers.
+    binding_.Unbind();
+    // Unpublish the bt-hci device.
+    UnpublishHci();
+    zx_status_t status = loop_signaller.signal_peer(/*clear_mask=*/0, /*set_mask=*/PEER_SIGNAL);
+    if (status != ZX_OK) {
+      logf(ERROR, "could not signal event peer: %s\n", zx_status_get_string(status));
+    }
+  });
+
+  // Block here to ensure that UnpublishHci runs before Unbind completion.  We use EventPair instead
+  // of loop_.JoinThreads to block because fake_device_ has tasks on the loop_ that won't complete
+  // until fake_device_ is stopped during Release.
+  zx_signals_t _ignored;
+  status = this_thread_waiter.wait_one(PEER_SIGNAL, zx::time::infinite(), &_ignored);
+  if (status != ZX_OK) {
+    logf(ERROR, "failed to wait for eventpair signal: %s\n", zx_status_get_string(status));
+  } else {
+    logf(TRACE, "emulator's bt-hci device unpublished\n");
+  }
+
+  device_unbind_reply(emulator_dev_);
+  emulator_dev_ = nullptr;
+}
+
+void Device::Release() {
+  logf(TRACE, "release\n");
+  // Clean up fake_device_ on the dispatcher thread due to its thread-safety requirements. It is OK
+  // to capture references to members in the task since this function blocks until the dispatcher
+  // loop terminates.
+  // This is done in Release (vs. Unbind) because bt-host, a child of this device's bt-hci child,
+  // has open channels to fake_device_, so fake_device_ cannot be safely shut down until that bt-
+  // host child is released, which is only guaranteed during this Release.
+  async::PostTask(loop_.dispatcher(), [this] {
+    fake_device_->Stop();
+    loop_.Quit();
+    // Clean up all fake peers. This will close their local channels and remove them
+    // from the fake controller.
+    peers_.clear();
+  });
 
   // Block here until all the shutdown tasks we just posted are completed on the FIDL/emulator
   // dispatcher thread to guarantee that the operations below don't happen concurrently with them.
@@ -174,10 +206,7 @@ void Device::Unbind() {
   // Destroy the FakeController here. Since |loop_| has been shutdown, we
   // don't expect it to be dereferenced again.
   fake_device_ = nullptr;
-  UnpublishHci();
-
-  device_unbind_reply(emulator_dev_);
-  emulator_dev_ = nullptr;
+  delete this;
 }
 
 zx_status_t Device::HciMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
@@ -252,6 +281,10 @@ void Device::Publish(ftest::EmulatorSettings in_settings, PublishCallback callba
   logf(TRACE, "HciEmulator.Publish\n");
 
   ftest::HciEmulator_Publish_Result result;
+  // Between Device::Unbind & Device::Release, this->hci_dev_ == nullptr, but this->fake_device_
+  // != nullptr. This seems like it might cause issues for this logic; however, because binding_ is
+  // unbound during Device::Unbind, it is impossible for further messages, including Publish, to be
+  // received during this window.
   if (hci_dev_) {
     result.set_err(ftest::EmulatorError::HCI_ALREADY_PUBLISHED);
     callback(std::move(result));
