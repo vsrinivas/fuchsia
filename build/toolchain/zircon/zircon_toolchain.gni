@@ -661,7 +661,7 @@ template("zircon_toolchain") {
       #
       _zircon_optimize = invoker.optimize_override
     } else if (optimize == "none" || optimize == "sanitizer" ||
-               optimize == "profile" || optimize == "size") {
+               optimize == "profile") {
       _zircon_optimize = optimize
     } else {
       _zircon_optimize = zircon_optimize
@@ -672,8 +672,8 @@ template("zircon_toolchain") {
       current_os = invoker.os
 
       # NOTE: The Zircon build uses "default" for the default optimization
-      # level, but the Fuchsia one uses either "debug" or "speed" if not
-      # set explicitly, depending on 'is_debug'.
+      # level, but the Fuchsia one uses different levels if not set explicitly,
+      # depending on 'is_debug'.
       #
       # Until both defaults are unified, overwrite the Fuchsia value with
       # the zircon one. This can also be overriden by a specific Zircon

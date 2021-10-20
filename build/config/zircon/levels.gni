@@ -14,6 +14,6 @@ declare_args() {
 
   # Zircon optimization level. Same acceptable values as `optimize`.
   # Note that this will be ignored, in favor of the global `optimize` variable
-  # if the latter is one of: "none", "sanitizer", "profile" or "size".
+  # if the latter is one of: "none", "sanitizer", or "profile".
   zircon_optimize = "default"
 }
