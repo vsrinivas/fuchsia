@@ -25,15 +25,11 @@ class IsolatedFfxRunner extends FfxRunner {
   /// The process for the `ffx daemon start` command.
   Process? _ffxDaemon;
 
-  IsolatedFfxRunner(String ffxPath, {Map<String, String>? environment})
-      : super(ffxPath) {
-    environment ??= Platform.environment;
-
+  IsolatedFfxRunner(String ffxPath) : super(ffxPath) {
     final socketPath = path.join(_ffxDir.path, 'ascendd');
     final config = {
       'overnet.socket': socketPath,
-      'log.dir':
-          environment['FUCHSIA_TEST_OUTDIR'] ?? path.join(_ffxDir.path, 'logs')
+      'log.dir': path.join(_ffxDir.path, 'logs')
     };
     _extraArgs = config.entries
         .expand((entry) => ['--config', '${entry.key}=${entry.value}'])
