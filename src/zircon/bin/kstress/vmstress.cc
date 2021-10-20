@@ -941,9 +941,9 @@ class MultiVmoTestInstance : public TestInstance {
     bool reliable_mappings = true;
     uint64_t vmo_size = uniform_rand(kMaxVmoPages, rng) * zx_system_get_page_size();
 
-    // Skew heavily away from contiguous VMOs as they are very limited in what operations are
-    // supported and need less testing.
-    if (bti_ && uniform_rand(6, rng) == 0) {
+    // Some contiguous VMO operations work differently, so create a contiguous VMO at 0.5
+    // probability.
+    if (bti_ && uniform_rand(2, rng) == 0) {
       zx_status_t result = zx::vmo::create_contiguous(bti_, vmo_size, 0, &vmo);
       if (result != ZX_OK) {
         return;

@@ -240,6 +240,63 @@ TEST(VmoSliceTestCase, ChildSliceOfContiguousParentIsContiguous) {
   EXPECT_EQ(info.flags & ZX_INFO_VMO_CONTIGUOUS, ZX_INFO_VMO_CONTIGUOUS);
 }
 
+TEST(VmoSliceTestCase, ParentContiguousVmoStaysPinnedWithoutHandle) {
+  if (!get_root_resource) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+  // Several pages to increase chance of seeing a failure if parent contiguous VMO doesn't stay
+  // pinned.
+  constexpr uint32_t kPageCount = 32;
+  const size_t size = kPageCount * zx_system_get_page_size();
+
+  zx::vmo parent_contig_vmo;
+  zx::unowned_resource root_res(get_root_resource());
+
+  zx::iommu iommu;
+  zx::bti bti;
+  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
+
+  zx_iommu_desc_dummy_t desc;
+  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+  bti =
+      vmo_test::CreateNamedBti(iommu, 0, 0xdeadbeef, "ParentContiguousVmoStaysPinnedWithoutHandle");
+  EXPECT_OK(zx::vmo::create_contiguous(bti, size, 0, &parent_contig_vmo));
+
+  zx_paddr_t paddr[kPageCount];
+  zx::pmt pmt;
+  ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, parent_contig_vmo, 0, size, &paddr[0], kPageCount, &pmt));
+  EXPECT_OK(pmt.unpin());
+
+  // Create child slice.
+  zx::vmo child;
+  ASSERT_OK(
+      parent_contig_vmo.create_child(ZX_VMO_CHILD_SLICE, 0, size, &child));
+
+  parent_contig_vmo.reset();
+
+  // If the parent handle closing removed the implicit pin_count tally on the parent, then this
+  // ZX_VMO_OP_ZERO will remove pages from the parent contiguous VMO (which would be incorrect).
+  EXPECT_OK(
+      child.op_range(ZX_VMO_OP_ZERO, /*offset=*/0, size, /*buffer=*/nullptr, /*buffer_size=*/0));
+
+  // Commit some pages to a different unrelated VMO, to reduce chances of the contiguous parent
+  // getting back same pages which could potentially lead to a false pass.  These stay committed
+  // while we're checking the paddr_t(s) we get back from the slice.
+  zx::vmo unrelated_vmo;
+  EXPECT_OK(zx::vmo::create(size, /*options=*/0, &unrelated_vmo));
+  EXPECT_OK(unrelated_vmo.op_range(ZX_VMO_OP_COMMIT, /*offset=*/0, size, /*buffer=*/nullptr,
+                                   /*buffer_size=*/0));
+
+  zx_paddr_t paddr_slice[kPageCount];
+  ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, child, 0, size, &paddr_slice[0], kPageCount, &pmt));
+  EXPECT_OK(pmt.unpin());
+
+  for (uint32_t i = 0; i < kPageCount; ++i) {
+    EXPECT_EQ(paddr[i], paddr_slice[i]);
+  }
+}
+
 TEST(VmoSliceTestCase, ZeroChildren) {
   // Create parent VMO.
   zx::vmo vmo;

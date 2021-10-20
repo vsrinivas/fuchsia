@@ -63,14 +63,6 @@ VmObjectPaged::~VmObjectPaged() {
 
   Guard<Mutex> guard{&lock_};
 
-  if (is_contiguous() && !is_slice()) {
-    // A contiguous VMO either has all its pages committed and pinned or, if creation failed, no
-    // pages committed and pinned. Check if we are in the failure case by looking up the first page.
-    if (GetPageLocked(0, 0, nullptr, nullptr, nullptr, nullptr) == ZX_OK) {
-      cow_pages_locked()->UnpinLocked(0, size_locked());
-    }
-  }
-
   AssertHeld(hierarchy_state_ptr_->lock_ref());
   hierarchy_state_ptr_->IncrementHierarchyGenerationCountLocked();
 
@@ -285,12 +277,14 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
   // We already added the pages, so this will just cause them to be pinned.
   status = vmo->cow_pages_locked()->PinRangeLocked(0, size);
   if (status != ZX_OK) {
-    // Decommit the range so the destructor doesn't attempt to unpin.
-    zx_status_t decommit_status = vmo->DecommitRangeLocked(0, size);
-    ASSERT_MSG(decommit_status == ZX_OK,
-               "Decommit of a known committed range of size %zu failed with %d", size, status);
     return status;
   }
+
+  // VmCowPages will remove the implicit pin_count tally added above during delete of VmCowPages.
+  // We need the VmCowPages to do this in case the VmObjectPaged is deleted before a child slice
+  // is deleted, since the child slice should remain contiguous after the parent VMO handle is
+  // closed.
+  vmo->cow_pages_locked()->SetUnpinOnDeleteLocked();
 
   *obj = ktl::move(vmo);
   return ZX_OK;
@@ -687,7 +681,8 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
     // must avoid.
     if (pin && offset > original_offset) {
       AssertHeld(*lock());
-      cow_pages_locked()->UnpinLocked(original_offset, offset - original_offset);
+      cow_pages_locked()->UnpinLocked(original_offset, offset - original_offset,
+                                      /*allow_gaps=*/false);
     }
   });
 

@@ -62,6 +62,12 @@ class VmCowPages final
   zx_status_t CreateChildSliceLocked(uint64_t offset, uint64_t size,
                                      fbl::RefPtr<VmCowPages>* cow_slice) TA_REQ(lock_);
 
+  // Remove 1 pin_count tally from each present page during delete.  This option is set only after
+  // successful pin of the pages, and only for contiguous VMOs.  This method must only be called
+  // up to once (exactly once for a successfully created contiguous VMO), shortly after the initial
+  // pin_count tally has been added successfully.
+  void SetUnpinOnDeleteLocked() TA_REQ(lock_);
+
   // Returns the size in bytes of this cow pages range. This will always be a multiple of the page
   // size.
   uint64_t size_locked() const TA_REQ(lock_) { return size_; }
@@ -169,7 +175,7 @@ class VmCowPages final
   zx_status_t PinRangeLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
   // See VmObject::Unpin
-  void UnpinLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
+  void UnpinLocked(uint64_t offset, uint64_t len, bool allow_gaps) TA_REQ(lock_);
 
   // Returns true if a page is not currently committed, and if the offset were to be read from, it
   // would be read as zero. Requested offset must be page aligned and within range.
@@ -308,6 +314,7 @@ class VmCowPages final
 
   bool is_hidden_locked() const TA_REQ(lock_) { return (options_ & kHidden); }
   bool is_slice_locked() const TA_REQ(lock_) { return options_ & kSlice; }
+  bool is_unpin_on_delete_locked() const TA_REQ(lock_) { return options_ & kUnpinOnDelete; }
 
   // Add a page to the object. This operation unmaps the corresponding
   // offset from any existing mappings.
@@ -591,6 +598,7 @@ class VmCowPages final
   // |options_| is a bitmask of:
   static constexpr uint32_t kHidden = (1u << 2);
   static constexpr uint32_t kSlice = (1u << 3);
+  static constexpr uint32_t kUnpinOnDelete = (1u << 4);
   uint32_t options_ TA_GUARDED(lock_);
 
   uint64_t size_ TA_GUARDED(lock_);

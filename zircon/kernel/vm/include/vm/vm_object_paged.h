@@ -123,7 +123,7 @@ class VmObjectPaged final : public VmObject {
 
   void Unpin(uint64_t offset, uint64_t len) override {
     Guard<Mutex> guard{&lock_};
-    cow_pages_locked()->UnpinLocked(offset, len);
+    cow_pages_locked()->UnpinLocked(offset, len, /*allow_gaps=*/false);
   }
 
   zx_status_t LockRange(uint64_t offset, uint64_t len,

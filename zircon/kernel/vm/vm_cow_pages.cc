@@ -29,7 +29,7 @@
     if (VMO_VALIDATION) {        \
       ASSERT(x);                 \
     }                            \
-  } while (0);
+  } while (0)
 
 namespace {
 
@@ -194,6 +194,8 @@ VmCowPages::VmCowPages(fbl::RefPtr<VmHierarchyState> hierarchy_state_ptr, uint32
       pmm_alloc_flags_(pmm_alloc_flags),
       page_source_(ktl::move(page_source)) {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+  // This option is only set after pages are successfully pinned by VmObjectPaged.
+  DEBUG_ASSERT(!(options & kUnpinOnDelete));
 }
 
 VmCowPages::~VmCowPages() {
@@ -207,6 +209,11 @@ VmCowPages::~VmCowPages() {
   // dropped, but that is always done without holding the lock.
   Guard<Mutex> guard{&lock_};
   VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
+  if (is_unpin_on_delete_locked()) {
+    DEBUG_ASSERT(!is_slice_locked());
+    // Unpin all present pages.
+    UnpinLocked(0, size_, /*allow_gaps=*/true);
+  }
   // If we're not a hidden vmo, then we need to remove ourself from our parent. This needs
   // to be done before emptying the page list so that a hidden parent can't merge into this
   // vmo and repopulate the page list.
@@ -479,6 +486,13 @@ zx_status_t VmCowPages::CreateChildSliceLocked(uint64_t offset, uint64_t size,
 
   *cow_slice = slice;
   return ZX_OK;
+}
+
+void VmCowPages::SetUnpinOnDeleteLocked() {
+  canary_.Assert();
+  // Called up to once.
+  DEBUG_ASSERT(!(options_ & kUnpinOnDelete));
+  options_ |= kUnpinOnDelete;
 }
 
 void VmCowPages::CloneParentIntoChildLocked(fbl::RefPtr<VmCowPages>& child) {
@@ -1264,6 +1278,7 @@ zx_status_t VmCowPages::AddNewPagesLocked(uint64_t start_offset, list_node_t* pa
     // other mappings may have covered this offset into the vmo, so unmap those ranges
     RangeChangeUpdateLocked(start_offset, offset - start_offset, RangeChangeOp::Unmap);
   }
+
   VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
   return ZX_OK;
 }
@@ -1941,7 +1956,7 @@ zx_status_t VmCowPages::PinRangeLocked(uint64_t offset, uint64_t len) {
   auto pin_cleanup = fit::defer([this, offset, &next_offset]() {
     if (next_offset > offset) {
       AssertHeld(*lock());
-      UnpinLocked(offset, next_offset - offset);
+      UnpinLocked(offset, next_offset - offset, /*allow_gaps=*/false);
     }
   });
 
@@ -1952,6 +1967,7 @@ zx_status_t VmCowPages::PinRangeLocked(uint64_t offset, uint64_t len) {
         }
         vm_page_t* page = p->Page();
         DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
+
         if (page->object.pin_count == VM_PAGE_OBJECT_MAX_PIN_COUNT) {
           return ZX_ERR_UNAVAILABLE;
         }
@@ -1960,6 +1976,7 @@ zx_status_t VmCowPages::PinRangeLocked(uint64_t offset, uint64_t len) {
         if (page->object.pin_count == 1) {
           pmm_page_queues()->MoveToWired(page);
         }
+
         // Pinning every page in the largest vmo possible as many times as possible can't overflow
         static_assert(VmPageList::MAX_SIZE / PAGE_SIZE < UINT64_MAX / VM_PAGE_OBJECT_MAX_PIN_COUNT);
         next_offset += PAGE_SIZE;
@@ -2454,7 +2471,7 @@ void VmCowPages::MarkAsLatencySensitiveLocked() {
   }
 }
 
-void VmCowPages::UnpinLocked(uint64_t offset, uint64_t len) {
+void VmCowPages::UnpinLocked(uint64_t offset, uint64_t len, bool allow_gaps) {
   canary_.Assert();
 
   // verify that the range is within the object
@@ -2466,27 +2483,36 @@ void VmCowPages::UnpinLocked(uint64_t offset, uint64_t len) {
     uint64_t parent_offset;
     VmCowPages* parent = PagedParentOfSliceLocked(&parent_offset);
     AssertHeld(parent->lock_);
-    return parent->UnpinLocked(offset + parent_offset, len);
+    return parent->UnpinLocked(offset + parent_offset, len, allow_gaps);
   }
 
   const uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
   const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
+  uint64_t unpin_count = 0;
   zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-      [this](const auto* page, uint64_t off) {
+      [this, &unpin_count, allow_gaps](const auto* page, uint64_t off) {
         if (page->IsMarker()) {
+          // So far, allow_gaps is only used on contiguous VMOs which have no markers.  We'd need
+          // to decide if a marker counts as a gap to allow before removing this assert.
+          DEBUG_ASSERT(!allow_gaps);
           return ZX_ERR_NOT_FOUND;
         }
         AssertHeld(lock_);
         UnpinPage(page->Page(), off);
+        ++unpin_count;
         return ZX_ERR_NEXT;
       },
-      [](uint64_t gap_start, uint64_t gap_end) { return ZX_ERR_NOT_FOUND; }, start_page_offset,
-      end_page_offset);
-  ASSERT_MSG(status == ZX_OK, "Tried to unpin an uncommitted page");
+      [allow_gaps](uint64_t gap_start, uint64_t gap_end) {
+        if (!allow_gaps) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return ZX_ERR_NEXT;
+      },
+      start_page_offset, end_page_offset);
+  ASSERT_MSG(status == ZX_OK, "Tried to unpin an uncommitted page with allow_gaps false");
 
-  bool overflow = sub_overflow(
-      pinned_page_count_, (end_page_offset - start_page_offset) / PAGE_SIZE, &pinned_page_count_);
+  bool overflow = sub_overflow(pinned_page_count_, unpin_count, &pinned_page_count_);
   ASSERT(!overflow);
 
   return;
@@ -3212,6 +3238,14 @@ bool VmCowPages::DebugValidatePageSplitsLocked() const {
     }
     vm_page_t* p = page->Page();
     AssertHeld(this->lock_);
+
+    // All pages present in a VMO with kUnpinOnDelete should have a pin_count tally.
+    if (is_unpin_on_delete_locked() && !p->object.pin_count) {
+      printf("Found contiguous page without its pin_count tally - pin_count: %u\n",
+             static_cast<uint32_t>(p->object.pin_count));
+      valid = false;
+      return ZX_ERR_STOP;
+    }
 
     // All pages in non-hidden VMOs should not be split, as this is a meaningless thing to talk
     // about and indicates a book keeping error somewhere else.
