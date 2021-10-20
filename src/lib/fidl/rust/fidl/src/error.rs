@@ -15,7 +15,7 @@ use {
 pub type Result<T> = result::Result<T, Error>;
 
 /// The error type used by FIDL operations.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 #[non_exhaustive]
 pub enum Error {
     /// Unexpected response to synchronous FIDL query.
