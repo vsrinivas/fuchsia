@@ -12,6 +12,7 @@ zx_library("gfxconsole") {
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/gfx",
     "//zircon/kernel/lib/io",
+    "//zircon/system/ulib/gfx-font-data",
   ]
   public_deps = [
     # <lib/gfxconsole.h> has #include <lib/gfx.h>.

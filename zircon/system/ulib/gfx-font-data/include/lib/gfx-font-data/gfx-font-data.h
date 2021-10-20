@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_GFX_FONT_DATA_GFX_FONT_DATA_H_
+#define LIB_GFX_FONT_DATA_GFX_FONT_DATA_H_
 
-#include <gfx/gfx-font.h>
+#include <gfx-common/gfx-font.h>
 
 extern const gfx_font gfx_font_9x16;
 extern const gfx_font gfx_font_18x32;
+
+#endif  // LIB_GFX_FONT_DATA_GFX_FONT_DATA_H_

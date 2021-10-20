@@ -8,7 +8,7 @@ zx_library("gfx-font-data") {
   sdk = "static"
   sdk_headers = [ "lib/gfx-font-data/gfx-font-data.h" ]
 
-  public_deps = [ "//zircon/system/ulib/gfx:headers" ]
+  public_deps = [ "//zircon/system/ulib/gfx-common:gfx-common-headers" ]
   sources = [
     "18x32.c",
     "9x16.c",

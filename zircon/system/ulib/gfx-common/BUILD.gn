@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/library_headers.gni")
+
+library_headers("gfx-common-headers") {
+  headers = [
+    "gfx-common/gfx-common.h",
+    "gfx-common/gfx-font.h",
+  ]
+  deps = [ "//src/zircon/lib/zircon:headers" ]
+}
+
+source_set("gfx-common") {
+  sources = [ "gfx-common.cc" ]
+  deps = [ "//src/zircon/lib/zircon" ]
+  public_deps = [ ":gfx-common-headers" ]
+}

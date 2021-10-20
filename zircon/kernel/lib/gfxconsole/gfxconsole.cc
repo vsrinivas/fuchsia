@@ -19,6 +19,7 @@
 #include <debug.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/boot-options/types.h>
+#include <lib/gfx-font-data/gfx-font-data.h>
 #include <lib/gfx.h>
 #include <lib/gfxconsole.h>
 #include <lib/io.h>

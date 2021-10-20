@@ -13,6 +13,7 @@ zx_library("gfx") {
   } else {
     sources = [ "gfx.c" ]
     deps = [ "//src/zircon/lib/zircon" ]
+    public_deps = [ "//zircon/system/ulib/gfx-common" ]
   }
 }
 
