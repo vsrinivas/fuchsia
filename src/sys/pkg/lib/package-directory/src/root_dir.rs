@@ -39,7 +39,9 @@ use {
     },
 };
 
-pub(crate) struct RootDir {
+/// The root directory of Fuchsia package.
+#[derive(Debug)]
+pub struct RootDir {
     pub(crate) blobfs: blobfs::Client,
     pub(crate) hash: fuchsia_hash::Hash,
     pub(crate) meta_far: FileProxy,
@@ -51,6 +53,8 @@ pub(crate) struct RootDir {
 }
 
 impl RootDir {
+    /// Loads the package metadata given by `hash` from `blobfs`, returning an object representing
+    /// the package, backed by `blobfs`.
     pub(crate) async fn new(
         blobfs: blobfs::Client,
         hash: fuchsia_hash::Hash,

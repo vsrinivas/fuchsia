@@ -4,12 +4,20 @@
 
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{DirectoryMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN},
+    fidl_fuchsia_io::{
+        DirectoryMarker, NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
+    },
     fuchsia_zircon as zx,
     std::{collections::HashSet, convert::TryInto as _, sync::Arc},
-    vfs::directory::{
-        connection::io1::DerivedConnection, dirents_sink::AppendResult, entry::EntryInfo,
-        traversal_position::TraversalPosition,
+    vfs::{
+        common::send_on_open_with_error,
+        directory::{
+            connection::io1::DerivedConnection,
+            dirents_sink::AppendResult,
+            entry::{DirectoryEntry, EntryInfo},
+            traversal_position::TraversalPosition,
+        },
+        path::Path as VfsPath,
     },
 };
 
@@ -19,6 +27,8 @@ mod meta_file;
 mod meta_subdir;
 mod non_meta_subdir;
 mod root_dir;
+
+pub use root_dir::RootDir;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -38,6 +48,23 @@ pub enum Error {
     FileDirectoryCollision { path: String },
 }
 
+impl Error {
+    fn to_zx_status(&self) -> zx::Status {
+        use io_util::node::OpenError;
+
+        // TODO(fxbug.dev/86995) Align this mapping with pkgfs.
+        match self {
+            Error::OpenMetaFar(OpenError::OpenError(s)) => *s,
+            Error::OpenMetaFar(_) => zx::Status::INTERNAL,
+            Error::ArchiveReader(fuchsia_archive::Error::Read(_)) => zx::Status::NOT_FOUND,
+            Error::ArchiveReader(_)
+            | Error::ReadMetaContents(_)
+            | Error::DeserializeMetaContents(_) => zx::Status::INVALID_ARGS,
+            Error::FileDirectoryCollision { .. } => zx::Status::INVALID_ARGS,
+        }
+    }
+}
+
 /// Serves a package directory for the package with hash `meta_far` on `server_end`.
 /// The connection rights are set by `flags`, used the same as the `flags` parameter of
 ///   fuchsia.io/Directory.Open.
@@ -51,12 +78,37 @@ pub async fn serve(
     let () = vfs::directory::immutable::connection::io1::ImmutableConnection::create_connection(
         scope,
         vfs::directory::connection::util::OpenDirectory::new(Arc::new(
-            root_dir::RootDir::new(blobfs, meta_far).await?,
+            RootDir::new(blobfs, meta_far).await?,
         )),
         flags,
         server_end.into_channel().into(),
     );
     Ok(())
+}
+
+/// Serves a sub-`path` of a package directory for the package with hash `meta_far` on `server_end`.
+/// The connection rights are set by `flags`, used the same as the `flags` parameter of
+///   fuchsia.io/Directory.Open.
+/// On error while loading the package metadata, closes the provided server end, sending an OnOpen
+///   response with an error status if requested.
+pub async fn serve_path(
+    scope: vfs::execution_scope::ExecutionScope,
+    blobfs: blobfs::Client,
+    meta_far: fuchsia_hash::Hash,
+    flags: u32,
+    mode: u32,
+    path: VfsPath,
+    server_end: ServerEnd<NodeMarker>,
+) -> Result<(), Error> {
+    let root_dir = match RootDir::new(blobfs, meta_far).await {
+        Ok(d) => d,
+        Err(e) => {
+            let () = send_on_open_with_error(flags, server_end, e.to_zx_status());
+            return Err(e);
+        }
+    };
+
+    Ok(Arc::new(root_dir).open(scope, flags, mode, path, server_end))
 }
 
 fn usize_to_u64_safe(u: usize) -> u64 {
@@ -158,7 +210,11 @@ async fn read_dirents<'a>(
 mod tests {
     use {
         super::*,
+        fidl_fuchsia_io::{FileMarker, NodeEvent, NodeProxy},
+        fuchsia_hash::Hash,
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
+        futures::StreamExt,
+        matches::assert_matches,
         std::any::Any,
         vfs::directory::dirents_sink::{self, Sealed, Sink},
     };
@@ -188,6 +244,127 @@ mod tests {
                 kind: files_async::DirentKind::Directory
             }]
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn serve_path_open_root() {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
+        let (metafar_blob, _) = package.contents();
+        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
+        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
+
+        crate::serve_path(
+            vfs::execution_scope::ExecutionScope::new(),
+            blobfs_client,
+            metafar_blob.merkle,
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            0,
+            VfsPath::validate_and_split(".").unwrap(),
+            server_end.into_channel().into(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            files_async::readdir(&proxy).await.unwrap(),
+            vec![files_async::DirEntry {
+                name: "meta".to_string(),
+                kind: files_async::DirentKind::Directory
+            }]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn serve_path_open_meta() {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+        let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
+        let (metafar_blob, _) = package.contents();
+        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
+        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
+
+        crate::serve_path(
+            vfs::execution_scope::ExecutionScope::new(),
+            blobfs_client,
+            metafar_blob.merkle,
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_FLAG_NOT_DIRECTORY,
+            0,
+            VfsPath::validate_and_split("meta").unwrap(),
+            server_end.into_channel().into(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            io_util::file::read_to_string(&proxy).await.unwrap(),
+            metafar_blob.merkle.to_string(),
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn serve_path_open_missing_path_in_package() {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
+        let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
+        let (metafar_blob, _) = package.contents();
+        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
+        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
+
+        assert_matches!(
+            crate::serve_path(
+                vfs::execution_scope::ExecutionScope::new(),
+                blobfs_client,
+                metafar_blob.merkle,
+                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE,
+                0,
+                VfsPath::validate_and_split("not-present").unwrap(),
+                server_end.into_channel().into(),
+            )
+            .await,
+            // serve_path succeeds in opening the package, but the forwarded open will discover
+            // that the requested path does not exist.
+            Ok(())
+        );
+
+        assert_eq!(node_into_on_open_status(proxy).await, Some(zx::Status::NOT_FOUND));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn serve_path_open_missing_package() {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
+        let (_blobfs_fake, blobfs_client) = FakeBlobfs::new();
+
+        assert_matches!(
+            crate::serve_path(
+                vfs::execution_scope::ExecutionScope::new(),
+                blobfs_client,
+                Hash::from([0u8; 32]),
+                fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE,
+                0,
+                VfsPath::validate_and_split(".").unwrap(),
+                server_end.into_channel().into(),
+            )
+            .await,
+            // RootDir opens the meta.far without requesting an OnOpen event, which improves
+            // latency, but results in a less-than-ideal error (a PEER_CLOSED while reading from
+            // the meta.far).
+            Err(Error::ArchiveReader(_))
+        );
+
+        assert_eq!(node_into_on_open_status(proxy).await, Some(zx::Status::NOT_FOUND));
+    }
+
+    async fn node_into_on_open_status(node: NodeProxy) -> Option<zx::Status> {
+        // Handle either an io1 OnOpen Status or an io2 epitaph status, though only one will be
+        // sent, determined by the open() API used.
+        let mut events = node.take_event_stream();
+        match events.next().await? {
+            Ok(NodeEvent::OnOpen_ { s: status, .. }) => {
+                return Some(zx::Status::from_raw(status));
+            }
+            Ok(NodeEvent::OnConnectionInfo { .. }) => return Some(zx::Status::OK),
+            Err(fidl::Error::ClientChannelClosed { status, .. }) => return Some(status),
+            other => panic!("unexpected stream event or error: {:?}", other),
+        }
     }
 
     fn file() -> EntryInfo {
