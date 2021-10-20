@@ -196,10 +196,11 @@ driver_bind_rules("aml_sdio_bind") {
   ]
 }
 
-driver_bind_rules("wifi_bind") {
+driver_bind_rules("nelson_wifi_bind") {
   rules = "bind/wifi.bind"
   header_output = "wifi_bind.h"
   bind_output = "wifi_bind.bc"
+  tests = "bind/wifi-bind-tests.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
     "//src/devices/bind/fuchsia.broadcom.sdio",
@@ -395,6 +396,7 @@ fuchsia_driver("nelson-module-driver") {
     ":nelson-bind",
     ":nelson_buttons_bind_header",
     ":nelson_emmc_bind_header",
+    ":nelson_wifi_bind_header",
     ":pwm_init_bind_header",
     ":selina_bind_header",
     ":spi_1_bind_header",
@@ -402,7 +404,6 @@ fuchsia_driver("nelson-module-driver") {
     ":tee_bind_header",
     ":ti_ina231_mlb_bind_header",
     ":ti_ina231_speakers_bind_header",
-    ":wifi_bind_header",
     ":xhci_bind_header",
     "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
@@ -457,5 +458,8 @@ fuchsia_driver_component("nelson-module") {
 
 group("tests") {
   testonly = true
-  deps = [ ":nelson-bind_test" ]
+  deps = [
+    ":nelson-bind_test",
+    ":nelson_wifi_bind_test",
+  ]
 }
