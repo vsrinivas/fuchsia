@@ -453,3 +453,29 @@ fn works_with_identifier_defaults() {
         Err(e) => panic!("Did not expect to fail to build ValidFidl: got {:?}", e),
     };
 }
+
+#[test]
+fn works_with_default_impls() {
+    #[derive(Default, Debug, PartialEq)]
+    struct Fidl {
+        values: Option<Vec<u32>>,
+    }
+    dummy_impl_decodable!(Fidl);
+
+    #[derive(ValidFidlTable, Debug, PartialEq)]
+    #[fidl_table_src(Fidl)]
+    struct ValidFidl {
+        #[fidl_field_type(default)]
+        values: Vec<u32>,
+    }
+
+    match ValidFidl::try_from(Fidl { values: None }) {
+        Ok(valid) => assert_eq!(ValidFidl { values: Vec::default() }, valid),
+        Err(e) => panic!("Did not expect to fail to build ValidFidl: got {:?}", e),
+    };
+
+    match ValidFidl::try_from(Fidl { values: Some(vec![1]) }) {
+        Ok(valid) => assert_eq!(ValidFidl { values: vec![1] }, valid),
+        Err(e) => panic!("Did not expect to fail to build ValidFidl: got {:?}", e),
+    };
+}

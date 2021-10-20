@@ -227,6 +227,9 @@ impl FidlField {
                     },
                 ),
             },
+            FidlFieldKind::Default => quote!(
+                #ident: src.#ident.unwrap_or_default(),
+            ),
             FidlFieldKind::ExprDefault(default_ident) => quote!(
                 #ident: src.#ident.unwrap_or(#default_ident),
             ),
@@ -241,6 +244,7 @@ impl FidlField {
 enum FidlFieldKind {
     Required,
     Optional,
+    Default,
     ExprDefault(Ident),
     HasDefault(Lit),
 }
@@ -253,6 +257,7 @@ impl TryFrom<(Span, &[Attribute])> for FidlFieldKind {
                 field_type.get_ident().and_then(|i| match i.to_string().as_str() {
                     "required" => Some(FidlFieldKind::Required),
                     "optional" => Some(FidlFieldKind::Optional),
+                    "default" => Some(FidlFieldKind::Default),
                     _ => None,
                 })
             }

@@ -75,7 +75,8 @@
 //! ## Non-literal defaults
 //!
 //! Attribute syntax for `name = value` only supports literals. Another attribute for
-//! expressing defaults is used for consts.
+//! expressing defaults is used for consts. Or any type that has a `Default` impl can simply omit
+//! the literal.
 //!
 //! ```
 //! const MY_DEFAULT: MyEnum = MyEnum::MyVariant;
@@ -83,6 +84,8 @@
 //! #[derive(ValidFidlTable)]
 //! #[fidl_table_src(FidlHello)]
 //! struct ValidatedFidlTable {
+//!     #[fidl_field_type(default)]
+//!     has_default_impl: Vec<u32>,
 //!     #[fidl_field_with_default(MY_DEFAULT)]
 //!     has_default: MyEnum,
 //! }
