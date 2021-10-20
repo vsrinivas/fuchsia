@@ -415,28 +415,46 @@ impl ElementManager {
         initial_annotations: Vec<felement::Annotation>,
         annotation_controller: Option<ClientEnd<felement::AnnotationControllerMarker>>,
     ) -> Result<felement::ViewControllerProxy, Error> {
+        // TODO(fxbug.dev/86450): flip this to use Flatland instead of legacy Scenic Gfx API.
+        let use_flatland = false;
+
         let view_provider = element.connect_to_protocol::<fuiapp::ViewProviderMarker>()?;
-        let token_pair = scenic::ViewTokenPair::new()?;
         let scenic::ViewRefPair { mut control_ref, mut view_ref } = scenic::ViewRefPair::new()?;
         let view_ref_dup = scenic::duplicate_view_ref(&view_ref)?;
-
-        // note: this call will never fail since connecting to a service is
-        // always successful and create_view doesn't have a return value.
-        // If there is no view provider, the view_holder_token will be invalidated
-        // and the presenter can choose to close the view controller if it
-        // only wants to allow graphical views.
-        view_provider.create_view_with_view_ref(
-            token_pair.view_token.value,
-            &mut control_ref,
-            &mut view_ref,
-        )?;
-
-        let view_spec = felement::ViewSpec {
-            view_holder_token: Some(token_pair.view_holder_token),
-            view_ref: Some(view_ref_dup),
+        let mut view_spec = felement::ViewSpec {
             annotations: Some(initial_annotations),
+            view_ref: Some(view_ref_dup),
             ..felement::ViewSpec::EMPTY
         };
+
+        if use_flatland {
+            let link_token_pair = scenic::flatland::LinkTokenPair::new()?;
+
+            view_provider.create_view2(fuiapp::CreateView2Args {
+                view_creation_token: Some(link_token_pair.view_creation_token),
+                ..fuiapp::CreateView2Args::EMPTY
+            })?;
+
+            view_spec.viewport_creation_token = Some(link_token_pair.viewport_creation_token);
+
+            // TODO(fxbug.dev/86649): Instead of passing |view_ref_dup| we should let the child send
+            // us the one they minted for Flatland.
+        } else {
+            let token_pair = scenic::ViewTokenPair::new()?;
+
+            // note: this call will never fail since connecting to a service is
+            // always successful and create_view doesn't have a return value.
+            // If there is no view provider, the view_holder_token will be invalidated
+            // and the presenter can choose to close the view controller if it
+            // only wants to allow graphical views.
+            view_provider.create_view_with_view_ref(
+                token_pair.view_token.value,
+                &mut control_ref,
+                &mut view_ref,
+            )?;
+
+            view_spec.view_holder_token = Some(token_pair.view_holder_token);
+        }
 
         let (view_controller_proxy, server_end) =
             fidl::endpoints::create_proxy::<felement::ViewControllerMarker>()?;

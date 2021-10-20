@@ -57,5 +57,6 @@ protocol fuchsia.element/ViewController
 table/member fuchsia.element/ViewSpec.annotations vector<fuchsia.element/Annotation>:1024
 table/member fuchsia.element/ViewSpec.view_holder_token fuchsia.ui.views/ViewHolderToken
 table/member fuchsia.element/ViewSpec.view_ref fuchsia.ui.views/ViewRef
+table/member fuchsia.element/ViewSpec.viewport_creation_token fuchsia.ui.views/ViewportCreationToken
 resource table fuchsia.element/ViewSpec
 library fuchsia.element

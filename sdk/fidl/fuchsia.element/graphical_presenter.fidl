@@ -55,11 +55,17 @@ type PresentViewError = strict enum {
 
 /// A description of a view that can be presented by a `GraphicalPresenter`.
 type ViewSpec = resource table {
-    /// The view holder token for the presented view. Required.
+    /// The view holder token for the presented view. Either this field or |viewport_creation_token|
+    /// is required. If both are set, error `PresentViewError.INVALID_ARGS` is thrown.
     1: view_holder_token fuchsia.ui.views.ViewHolderToken;
 
     /// The `ViewRef` of the presented view. Required.
     2: view_ref fuchsia.ui.views.ViewRef;
+
+    /// The viewport creation token for the presented Flatland view. Either this field or
+    /// |view_holder_token| is required. If both are set, error `PresentViewError.INVALID_ARGS` is
+    /// thrown.
+    4: viewport_creation_token fuchsia.ui.views.ViewportCreationToken;
 
     /// The annotations associated with the presented view.
     ///
