@@ -7,7 +7,7 @@ use ffx_core::ffx_command;
 use std::path::PathBuf;
 
 #[ffx_command()]
-#[derive(FromArgs, PartialEq, Debug, Default)]
+#[derive(FromArgs, PartialEq, Debug, Default, Clone)]
 #[argh(subcommand, name = "update", description = "Update the artifact_lock.json")]
 pub struct UpdateCommand {
     #[argh(option, description = "path to the artifact_spec.json file.")]

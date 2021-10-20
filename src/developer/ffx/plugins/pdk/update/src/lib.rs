@@ -20,6 +20,7 @@ use {
     std::cmp::Ordering,
     std::fs::{read_to_string, File, OpenOptions},
     std::io::BufReader,
+    std::path::PathBuf,
 };
 
 // Outputs artifacts to a lock file based on a general specification.
@@ -272,33 +273,34 @@ fn merge(a: &Option<Map<String, Value>>, b: &Option<Map<String, Value>>) -> Map<
     result
 }
 
-async fn get_blobs(content_address_storage: Option<String>, hash: String) -> Result<Vec<String>> {
-    let mut result = vec![hash.clone()];
+async fn get_blobs(
+    content_address_storage: Option<String>,
+    hash: String,
+    artifact_root: Option<String>,
+) -> Result<Vec<String>> {
     let tempdir = tempfile::tempdir().unwrap();
-    let meta_far_path = tempdir.path().join("meta.far");
-    // TODO: Implement blob list for the Local flow
-    if content_address_storage.is_none() {
-        return Ok(result);
-    }
-    let hostname = content_address_storage.unwrap();
-    let uri = format!("{}/{}", hostname, hash).parse::<Uri>()?;
-    let client = new_https_client();
-    let mut res = client.get(uri.clone()).await?;
-    let status = res.status();
-    if status != StatusCode::OK {
-        ffx_bail!(
-            "Cannot download meta.far to {}. Status is {}. Uri is: {}. \n",
-            meta_far_path.display(),
-            status,
-            &uri
-        );
-    }
-    let mut output = async_fs::File::create(&meta_far_path).await?;
-    while let Some(next) = res.data().await {
-        let chunk = next?;
-        output.write_all(&chunk).await?;
-    }
-    output.sync_all().await?;
+    let mut result = vec![hash.clone()];
+    let meta_far_path = if content_address_storage.is_none() {
+        PathBuf::from(artifact_root.unwrap()).join(hash.to_string())
+    } else {
+        let hostname = content_address_storage.unwrap();
+        let uri = format!("{}/{}", hostname, hash).parse::<Uri>()?;
+        let client = new_https_client();
+        let mut res = client.get(uri.clone()).await?;
+        let status = res.status();
+
+        if status != StatusCode::OK {
+            ffx_bail!("Cannot download meta.far. Status is {}. Uri is: {}. \n", status, &uri);
+        }
+        let meta_far_path = tempdir.path().join("meta.far");
+        let mut output = async_fs::File::create(&meta_far_path).await?;
+        while let Some(next) = res.data().await {
+            let chunk = next?;
+            output.write_all(&chunk).await?;
+        }
+        output.sync_all().await?;
+        meta_far_path
+    };
 
     let mut archive = File::open(&meta_far_path)?;
     let mut meta_far = fuchsia_archive::Reader::new(&mut archive)?;
@@ -348,6 +350,7 @@ async fn process_spec(spec: &Spec, cmd: &UpdateCommand) -> Result<()> {
                 blobs: get_blobs(
                     matching_group.content_address_storage.clone(),
                     artifact_store_group_entry.hash,
+                    cmd.artifact_root.clone(),
                 )
                 .await?,
             };
@@ -509,38 +512,6 @@ mod test {
         assert_eq!(ordering, Some(Ordering::Less));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_end_to_end() {
-        let tempdir = tempfile::tempdir().unwrap();
-        let out_filename = tempdir.path().join("artifact_lock.json");
-
-        // recreate the test_data directory
-        for (filename, data) in [
-            ("artifact_spec.json", include_str!("../test_data/artifact_spec.json")),
-            ("artifact_groups.json", include_str!("../test_data/artifact_groups.json")),
-            ("artifact_groups2.json", include_str!("../test_data/artifact_groups2.json")),
-        ] {
-            fs::write(tempdir.path().join(filename), data).expect("Unable to write file");
-        }
-
-        let cmd = UpdateCommand {
-            spec_file: PathBuf::from(tempdir.path().join("artifact_spec.json")),
-            out: out_filename.clone(),
-            artifact_root: Some(tempdir.path().display().to_string()),
-        };
-
-        let r = cmd_update(cmd).await;
-        assert!(r.is_ok());
-        let new_artifact_lock: Lock = File::open(&out_filename)
-            .map(BufReader::new)
-            .map(serde_json::from_reader)
-            .unwrap()
-            .unwrap();
-        let golden_artifact_lock: Lock =
-            serde_json::from_str(include_str!("../test_data/golden_artifact_lock.json")).unwrap();
-        assert_eq!(new_artifact_lock, golden_artifact_lock);
-    }
-
     struct FakeFileSystem {
         content_map: HashMap<String, Vec<u8>>,
     }
@@ -591,6 +562,46 @@ mod test {
         let mut tmp = tempfile::NamedTempFile::new().unwrap();
         tmp.write(body).unwrap();
         tmp.persist(path).unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_end_to_end_local() {
+        let tempdir = tempfile::tempdir().unwrap();
+        let root = tempdir.path();
+        let out_filename = root.join("artifact_lock.json");
+
+        // recreate the test_data directory
+        for (filename, data) in [
+            ("artifact_spec.json", include_str!("../test_data/artifact_spec.json")),
+            ("artifact_groups.json", include_str!("../test_data/artifact_groups.json")),
+            ("artifact_groups2.json", include_str!("../test_data/artifact_groups2.json")),
+        ] {
+            fs::write(root.join(filename), data).expect("Unable to write file");
+        }
+
+        let meta_far_path =
+            root.join("0000000000000000000000000000000000000000000000000000000000000000");
+        create_meta_far(meta_far_path);
+        let blob_path =
+            root.join("15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b");
+        write_file(blob_path, "".as_bytes());
+
+        let cmd = UpdateCommand {
+            spec_file: PathBuf::from(root.join("artifact_spec.json")),
+            out: out_filename.clone(),
+            artifact_root: Some(root.display().to_string()),
+        };
+
+        let r = cmd_update(cmd).await;
+        assert!(r.is_ok());
+        let new_artifact_lock: Lock = File::open(&out_filename)
+            .map(BufReader::new)
+            .map(serde_json::from_reader)
+            .unwrap()
+            .unwrap();
+        let golden_artifact_lock: Lock =
+            serde_json::from_str(include_str!("../test_data/golden_artifact_lock.json")).unwrap();
+        assert_eq!(new_artifact_lock, golden_artifact_lock);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
