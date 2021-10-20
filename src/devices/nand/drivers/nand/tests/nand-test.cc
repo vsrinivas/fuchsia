@@ -19,6 +19,7 @@
 #include <fbl/mutex.h>
 #include <zxtest/zxtest.h>
 
+#include "fuchsia/hardware/nand/c/banjo.h"
 #include "lib/inspect/cpp/hierarchy.h"
 #include "lib/inspect/cpp/inspector.h"
 #include "lib/inspect/cpp/reader.h"
@@ -519,6 +520,7 @@ void ExpectMetricsMatch(const ReadMetrics& expected, const zx::vmo& inspect_vmo)
 }
 
 TEST_F(NandDeviceTest, ReadMetrics) {
+  // Read different pages every time to avoid caching effects.
   Operation operation(op_size(), this);
   ASSERT_TRUE(operation.SetVmo());
 
@@ -560,7 +562,7 @@ TEST_F(NandDeviceTest, ReadMetrics) {
   nand.set_result(ZX_ERR_IO_DATA_INTEGRITY);
   op->rw.command = NAND_OP_READ;
   op->rw.length = 1;
-  op->rw.offset_nand = 3;
+  op->rw.offset_nand = 4;
   ASSERT_TRUE(operation.SetVmo());
   device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
   ASSERT_TRUE(Wait());
@@ -577,7 +579,7 @@ TEST_F(NandDeviceTest, ReadMetrics) {
   retries = 3;
   op->rw.command = NAND_OP_READ;
   op->rw.length = 1;
-  op->rw.offset_nand = 3;
+  op->rw.offset_nand = 5;
   ASSERT_TRUE(operation.SetVmo());
   device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
   ASSERT_TRUE(Wait());
@@ -593,7 +595,7 @@ TEST_F(NandDeviceTest, ReadMetrics) {
   retries = 1000000;
   op->rw.command = NAND_OP_READ;
   op->rw.length = 1;
-  op->rw.offset_nand = 3;
+  op->rw.offset_nand = 6;
   ASSERT_TRUE(operation.SetVmo());
   device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
   ASSERT_TRUE(Wait());
@@ -604,6 +606,186 @@ TEST_F(NandDeviceTest, ReadMetrics) {
   expected.internal_failure += nand::NandDevice::kNandReadRetries;
   expected.ecc_bit_flips[ecc_limit + 1] += nand::NandDevice::kNandReadRetries;
   ASSERT_NO_FAILURES(ExpectMetricsMatch(expected, inspect_vmo));
+}
+
+TEST_F(NandDeviceTest, ReadCacheForPoorECC) {
+  Operation operation(op_size(), this);
+
+  nand_operation_t* op = operation.GetOperation();
+  ASSERT_NOT_NULL(op);
+
+  // Normal read with no ECC errors. Should not cache.
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 1;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+
+  FakeRawNand& nand = raw_nand();
+
+  // Read the same page with moderate ECC errors. Should not cache.
+  nand.set_ecc_bits(1);
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 1;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+
+  nand_info_t info;
+  ASSERT_OK(nand.RawNandGetNandInfo(&info));
+  uint32_t ecc_limit = info.ecc_bits;
+
+  // Read the same page with terrible ECC errors. Should do a normal read, but also should cache
+  // for the next call.
+  nand.set_ecc_bits(ecc_limit);
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 1;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+  // See all the bit flips.
+  ASSERT_EQ(operation.GetOperation()->rw.corrected_bit_flips, ecc_limit);
+
+  // Read the same page again. Should get the cached result.
+  nand.set_ecc_bits(ecc_limit);
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 1;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+  // Cached result reports no bit flips.
+  ASSERT_EQ(operation.GetOperation()->rw.corrected_bit_flips, 0);
+}
+
+TEST_F(NandDeviceTest, ReadCacheFailedRetry) {
+  Operation operation(op_size(), this);
+
+  nand_operation_t* op = operation.GetOperation();
+  ASSERT_NOT_NULL(op);
+
+  // Normal read with no ECC errors. Should not cache.
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 1;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+
+  FakeRawNand& nand = raw_nand();
+  nand_info_t info;
+  ASSERT_OK(nand.RawNandGetNandInfo(&info));
+  size_t ecc_limit = info.ecc_bits;
+  int retries = 2;
+  nand.set_read_callback([&retries](FakeRawNand* n) {
+    if (--retries == 0) {
+      n->set_result(ZX_OK);
+    }
+  });
+
+  // Read the same page. Fails ECC the first time before succeeding with max bit flips.
+  nand.set_ecc_bits(1);
+  nand.set_result(ZX_ERR_IO_DATA_INTEGRITY);
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 1;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+  ASSERT_EQ(operation.GetOperation()->rw.corrected_bit_flips, ecc_limit);
+
+  // Read again. Prime for failures and bit flips again. It should return no bitflips this time due
+  // to cache.
+  nand.set_ecc_bits(1);
+  retries = 2;
+  nand.set_result(ZX_ERR_IO_DATA_INTEGRITY);
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 1;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+  ASSERT_EQ(operation.GetOperation()->rw.corrected_bit_flips, 0);
+}
+
+TEST_F(NandDeviceTest, ReadCachePurgeOnErase) {
+  Operation operation(op_size(), this);
+
+  nand_operation_t* op = operation.GetOperation();
+  ASSERT_NOT_NULL(op);
+
+  // Normal read with no ECC errors. Should not cache.
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 1;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+
+  FakeRawNand& nand = raw_nand();
+
+  nand_info_t info;
+  ASSERT_OK(nand.RawNandGetNandInfo(&info));
+  uint32_t ecc_limit = info.ecc_bits;
+
+  // Read the same page with terrible ECC errors. Should do a normal read, but also should cache
+  // for the next call.
+  nand.set_ecc_bits(ecc_limit);
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 1;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+  // See all the bit flips.
+  ASSERT_EQ(operation.GetOperation()->rw.corrected_bit_flips, ecc_limit);
+
+  // Read the same page again. Should get the cached result.
+  nand.set_ecc_bits(ecc_limit);
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 1;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+  // Cached result reports no bit flips.
+  ASSERT_EQ(operation.GetOperation()->rw.corrected_bit_flips, 0);
+
+  // Purge from cache.
+  Operation erase_operation(op_size(), this);
+  nand_operation_t* erase_op = erase_operation.GetOperation();
+  erase_op->command = NAND_OP_ERASE;
+  erase_op->erase.command = NAND_OP_ERASE;
+  erase_op->erase.first_block = 3 / info.pages_per_block;
+  erase_op->erase.num_blocks = 1;
+  device()->NandQueue(erase_op, &NandDeviceTest::CompletionCb, &erase_operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(erase_operation.status());
+
+  // Get a full read without cached result, so we see bit flips.
+  nand.set_ecc_bits(ecc_limit);
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 1;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+  // See all the bit flips.
+  ASSERT_EQ(operation.GetOperation()->rw.corrected_bit_flips, ecc_limit);
 }
 
 }  // namespace
