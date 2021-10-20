@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
+use assembly_update_packages_manifest::UpdatePackagesManifest;
 use assembly_util::create_meta_package_file;
 use fuchsia_hash::Hash;
 use fuchsia_pkg::{CreationManifest, PackageManifest, PackagePath};
-use fuchsia_url::pkg_url::PkgUrl;
-use serde::{Deserialize, Serialize};
 use serde_json::ser;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
@@ -17,7 +16,7 @@ use std::path::Path;
 pub struct UpdatePackageBuilder {
     // Maps the blob destination -> source.
     contents: BTreeMap<String, String>,
-    packages: PackageList,
+    packages: UpdatePackagesManifest,
 }
 
 impl UpdatePackageBuilder {
@@ -25,7 +24,7 @@ impl UpdatePackageBuilder {
     pub fn new() -> Self {
         UpdatePackageBuilder {
             contents: BTreeMap::new(),
-            packages: PackageList::V1(BTreeSet::new()),
+            packages: UpdatePackagesManifest::V1(BTreeSet::new()),
         }
     }
 
@@ -41,18 +40,12 @@ impl UpdatePackageBuilder {
 
     /// Add a package to be updated by its PackageManifest.
     pub fn add_package_by_manifest(&mut self, package: PackageManifest) -> Result<()> {
-        let path = package.package_path();
-        let meta_blob = package.into_blobs().into_iter().find(|blob| blob.path == "meta/");
-        match meta_blob {
-            Some(meta_blob) => self.add_package(path, meta_blob.merkle),
-            _ => bail!(format!("Failed to find the meta far in package {}", path)),
-        }
+        self.packages.add_by_manifest(package)
     }
 
     /// Add a package to be updated by its path and meta far merkle.
     pub fn add_package(&mut self, path: PackagePath, merkle: Hash) -> Result<()> {
-        let path = format!("/{}", path.to_string());
-        self.packages.insert(path, merkle)
+        self.packages.add(path, merkle)
     }
 
     /// Build the update package.
@@ -90,40 +83,6 @@ impl UpdatePackageBuilder {
     }
 }
 
-/// A list of all packages included in an update, which can be written as a JSON
-/// package list.
-/// TODO(fxbug.dev/76488): Share this enum with the rest of the SWD code.
-///
-/// ```
-/// {
-///   "version": "1",
-///   "content": [
-///       "fuchsia-pkg://fuchsia.com/build-info/0?hash=30a83..",
-///       "fuchsia-pkg://fuchsia.com/log_listener/0?hash=816c8..",
-///     ...
-///   ]
-/// }
-/// ```
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(tag = "version", content = "content", deny_unknown_fields)]
-enum PackageList {
-    #[serde(rename = "1")]
-    V1(BTreeSet<PkgUrl>),
-}
-
-impl PackageList {
-    /// Add a new package with `name` and `merkle`.
-    fn insert(&mut self, path: impl AsRef<str>, merkle: Hash) -> Result<()> {
-        let url =
-            PkgUrl::new_package("fuchsia.com".to_string(), path.as_ref().to_string(), Some(merkle))
-                .context(format!("Failed to create package url for {}", path.as_ref()))?;
-        match self {
-            PackageList::V1(contents) => contents.insert(url),
-        };
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -133,22 +92,6 @@ mod tests {
     use serde_json::json;
     use std::str::FromStr;
     use tempfile::{tempdir, NamedTempFile};
-
-    #[test]
-    fn package_list() {
-        let mut list = PackageList::V1(BTreeSet::new());
-        list.insert("/one/0", [0u8; 32].into()).unwrap();
-        let out = serde_json::to_value(&list).unwrap();
-        assert_eq!(
-            out,
-            json!({
-                "version": "1",
-                "content": [
-                    "fuchsia-pkg://fuchsia.com/one/0?hash=0000000000000000000000000000000000000000000000000000000000000000"
-                ],
-            })
-        );
-    }
 
     #[test]
     fn add_package() {
