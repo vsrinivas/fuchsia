@@ -140,7 +140,7 @@ mod test {
         super::*,
         crate::device::test::{create_ramdisk, format},
         fidl::endpoints::DiscoverableProtocolMarker,
-        fidl_fuchsia_fs::{AdminMarker, FilesystemInfoQuery, QueryMarker},
+        fidl_fuchsia_fs::{AdminMarker, QueryMarker},
         fuchsia_zircon as zx,
     };
 
@@ -171,7 +171,7 @@ mod test {
                 fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
 
             // Try sending two requests simultaneously to trigger a race.
-            let _info = query.get_info(FilesystemInfoQuery::FsId).await.expect("get_info OK");
+            let _info = query.get_info().await.expect("get_info OK");
             admin.get_root(remote).expect("get_root OK");
 
             // Drop the connection to the ServiceFs so that the test can complete.

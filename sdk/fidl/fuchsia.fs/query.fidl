@@ -12,13 +12,9 @@ using zx;
 protocol Query {
     /// Queries the filesystem.
     ///
-    /// + `query` specifies the fields in `FilesystemInfo` that the caller is
-    ///   interested in.
     /// - `info` see [`fuchsia.fs/FilesystemInfo`] for details on the fields.
     ///
-    GetInfo(struct {
-        query FilesystemInfoQuery;
-    }) -> (resource struct {
+    GetInfo() -> (resource struct {
         info FilesystemInfo;
     }) error zx.status;
 
@@ -71,44 +67,6 @@ type FilesystemInfo = resource table {
 
     /// Path to the device backing this filesystem.
    11: device_path fuchsia.io2.Path;
-};
-
-/// When calling [`Query.GetInfo`], set the corresponding bit to one
-/// to query a particular field.
-/// The elements here correspond one-to-one with [`FilesystemInfo`].
-type FilesystemInfoQuery = strict bits : uint64 {
-    /// Requests [`FilesystemInfoQuery.total_bytes`].
-    TOTAL_BYTES = 0x1;
-
-    /// Requests [`FilesystemInfoQuery.used_bytes`].
-    USED_BYTES = 0x2;
-
-    /// Requests [`FilesystemInfoQuery.total_nodes`].
-    TOTAL_NODES = 0x4;
-
-    /// Requests [`FilesystemInfoQuery.used_nodes`].
-    USED_NODES = 0x8;
-
-    /// Requests [`FilesystemInfoQuery.free_shared_pool_bytes`].
-    FREE_SHARED_POOL_BYTES = 0x10;
-
-    /// Requests [`FilesystemInfoQuery.fs_id`].
-    FS_ID = 0x20;
-
-    /// Requests [`FilesystemInfoQuery.block_size`].
-    BLOCK_SIZE = 0x40;
-
-    /// Requests [`FilesystemInfoQuery.max_node_name_size`].
-    MAX_NODE_NAME_SIZE = 0x80;
-
-    /// Requests [`FilesystemInfoQuery.fs_type`].
-    FS_TYPE = 0x100;
-
-    /// Requests [`FilesystemInfoQuery.name`].
-    NAME = 0x200;
-
-    /// Requests [`FilesystemInfoQuery.device_path`].
-    DEVICE_PATH = 0x400;
 };
 
 /// The maximum length of the name of a filesystem.

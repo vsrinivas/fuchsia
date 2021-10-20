@@ -4,10 +4,6 @@
 
 #include "src/storage/f2fs/f2fs.h"
 
-#ifdef __Fuchsia__
-using fuchsia_fs::wire::FilesystemInfoQuery;
-#endif  // __Fuchsia__
-
 namespace f2fs {
 
 #ifdef __Fuchsia__
@@ -26,60 +22,35 @@ void QueryService::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& c
   fidl::Arena allocator;
   fuchsia_fs::wire::FilesystemInfo filesystem_info(allocator);
 
-  if (request->query & FilesystemInfoQuery::kTotalBytes) {
-    filesystem_info.set_total_bytes(allocator,
-                                    f2fs_->GetSuperblockInfo().GetUserBlockCount() * kBlockSize);
-  }
+  filesystem_info.set_total_bytes(allocator,
+                                  f2fs_->GetSuperblockInfo().GetUserBlockCount() * kBlockSize);
+  filesystem_info.set_used_bytes(allocator, f2fs_->ValidUserBlocks() * kBlockSize);
+  filesystem_info.set_total_nodes(allocator, f2fs_->GetSuperblockInfo().GetTotalNodeCount());
+  filesystem_info.set_used_nodes(allocator, f2fs_->ValidInodeCount());
 
-  if (request->query & FilesystemInfoQuery::kUsedBytes) {
-    filesystem_info.set_used_bytes(allocator, f2fs_->ValidUserBlocks() * kBlockSize);
+  zx::event fs_id;
+  zx_status_t status = f2fs_->GetFsId(&fs_id);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
   }
+  filesystem_info.set_fs_id(allocator, std::move(fs_id));
 
-  if (request->query & FilesystemInfoQuery::kTotalNodes) {
-    filesystem_info.set_total_nodes(allocator, f2fs_->GetSuperblockInfo().GetTotalNodeCount());
-  }
+  filesystem_info.set_block_size(allocator, kBlockSize);
+  filesystem_info.set_max_node_name_size(allocator, kMaxNameLen);
+  filesystem_info.set_fs_type(allocator, fuchsia_fs::wire::FsType::kF2Fs);
 
-  if (request->query & FilesystemInfoQuery::kUsedNodes) {
-    filesystem_info.set_used_nodes(allocator, f2fs_->ValidInodeCount());
-  }
-
-  if (request->query & FilesystemInfoQuery::kFsId) {
-    zx::event fs_id;
-    zx_status_t status = f2fs_->GetFsId(&fs_id);
-    if (status != ZX_OK) {
-      completer.ReplyError(status);
-      return;
-    }
-    filesystem_info.set_fs_id(allocator, std::move(fs_id));
-  }
-
-  if (request->query & FilesystemInfoQuery::kBlockSize) {
-    filesystem_info.set_block_size(allocator, kBlockSize);
-  }
-
-  if (request->query & FilesystemInfoQuery::kMaxNodeNameSize) {
-    filesystem_info.set_max_node_name_size(allocator, kMaxNameLen);
-  }
-
-  if (request->query & FilesystemInfoQuery::kFsType) {
-    filesystem_info.set_fs_type(allocator, fuchsia_fs::wire::FsType::kF2Fs);
-  }
-
-  if (request->query & FilesystemInfoQuery::kName) {
-    fidl::StringView name(kFsName);
-    filesystem_info.set_name(allocator, std::move(name));
-  }
+  fidl::StringView name(kFsName);
+  filesystem_info.set_name(allocator, std::move(name));
 
   std::string device_path;
-  if (request->query & FilesystemInfoQuery::kDevicePath) {
-    if (auto device_path_or = f2fs_->GetBc().device()->GetDevicePath(); device_path_or.is_error()) {
-      completer.ReplyError(device_path_or.error_value());
-      return;
-    } else {
-      device_path = std::move(device_path_or).value();
-    }
-    filesystem_info.set_device_path(allocator, fidl::StringView::FromExternal(device_path));
+  if (auto device_path_or = f2fs_->GetBc().device()->GetDevicePath(); device_path_or.is_error()) {
+    completer.ReplyError(device_path_or.error_value());
+    return;
+  } else {
+    device_path = std::move(device_path_or).value();
   }
+  filesystem_info.set_device_path(allocator, fidl::StringView::FromExternal(device_path));
 
   completer.ReplySuccess(std::move(filesystem_info));
 }

@@ -464,8 +464,7 @@ void QueryInfo(fs_test::TestFilesystem& fs, size_t expected_nodes, size_t expect
   auto svc = fs.GetSvcDirectory();
   auto client_end = service::ConnectAt<fuchsia_fs::Query>(svc);
   ASSERT_TRUE(client_end.is_ok());
-  const auto& query_result =
-      fidl::WireCall(client_end->borrow())->GetInfo(fuchsia_fs::wire::FilesystemInfoQuery::kMask);
+  const auto& query_result = fidl::WireCall(client_end->borrow())->GetInfo();
   ASSERT_TRUE(query_result.ok());
 
   const fuchsia_fs::wire::FilesystemInfo& info = query_result.value().result.response().info;

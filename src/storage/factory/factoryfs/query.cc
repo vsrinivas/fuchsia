@@ -13,7 +13,6 @@
 namespace factoryfs {
 
 namespace fuchsia_fs = fuchsia_fs;
-using fuchsia_fs::wire::FilesystemInfoQuery;
 
 constexpr char kFsName[] = "factoryfs";
 
@@ -30,57 +29,31 @@ void QueryService::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& c
   fidl::Arena allocator;
   fuchsia_fs::wire::FilesystemInfo filesystem_info(allocator);
 
-  if (request->query & FilesystemInfoQuery::kTotalBytes) {
-    // Account for 1 block for superblock.
-    uint64_t num_blocks =
-        1 + factoryfs_->Info().data_blocks + factoryfs_->Info().directory_ent_blocks;
-    filesystem_info.set_total_bytes(allocator, num_blocks * factoryfs_->Info().block_size);
-  }
+  // Account for 1 block for superblock.
+  uint64_t num_blocks =
+      1 + factoryfs_->Info().data_blocks + factoryfs_->Info().directory_ent_blocks;
+  filesystem_info.set_total_bytes(allocator, num_blocks * factoryfs_->Info().block_size);
 
-  if (request->query & FilesystemInfoQuery::kUsedBytes) {
-    filesystem_info.set_used_bytes(allocator,
-                                   factoryfs_->Info().data_blocks * factoryfs_->Info().block_size);
-  }
+  filesystem_info.set_used_bytes(allocator,
+                                 factoryfs_->Info().data_blocks * factoryfs_->Info().block_size);
+  filesystem_info.set_total_nodes(allocator, factoryfs_->Info().directory_entries);
+  filesystem_info.set_used_nodes(allocator, factoryfs_->Info().directory_entries);
+  filesystem_info.set_fs_id(allocator, factoryfs_->GetFsId());
+  filesystem_info.set_block_size(allocator, kFactoryfsBlockSize);
+  filesystem_info.set_max_node_name_size(allocator, kFactoryfsMaxNameSize);
+  filesystem_info.set_fs_type(allocator, fuchsia_fs::wire::FsType::kFactoryfs);
 
-  if (request->query & FilesystemInfoQuery::kTotalNodes) {
-    filesystem_info.set_total_nodes(allocator, factoryfs_->Info().directory_entries);
-  }
-
-  if (request->query & FilesystemInfoQuery::kUsedNodes) {
-    filesystem_info.set_used_nodes(allocator, factoryfs_->Info().directory_entries);
-  }
-
-  if (request->query & FilesystemInfoQuery::kFsId) {
-    filesystem_info.set_fs_id(allocator, factoryfs_->GetFsId());
-  }
-
-  if (request->query & FilesystemInfoQuery::kBlockSize) {
-    filesystem_info.set_block_size(allocator, kFactoryfsBlockSize);
-  }
-
-  if (request->query & FilesystemInfoQuery::kMaxNodeNameSize) {
-    filesystem_info.set_max_node_name_size(allocator, kFactoryfsMaxNameSize);
-  }
-
-  if (request->query & FilesystemInfoQuery::kFsType) {
-    filesystem_info.set_fs_type(allocator, fuchsia_fs::wire::FsType::kFactoryfs);
-  }
-
-  if (request->query & FilesystemInfoQuery::kName) {
-    fidl::StringView name(kFsName);
-    filesystem_info.set_name(allocator, std::move(name));
-  }
+  fidl::StringView name(kFsName);
+  filesystem_info.set_name(allocator, std::move(name));
 
   std::string device_path;
-  if (request->query & FilesystemInfoQuery::kDevicePath) {
-    if (auto device_path_or = factoryfs_->Device().GetDevicePath(); device_path_or.is_error()) {
-      completer.ReplyError(device_path_or.error_value());
-      return;
-    } else {
-      device_path = std::move(device_path_or).value();
-    }
-    filesystem_info.set_device_path(allocator, fidl::StringView::FromExternal(device_path));
+  if (auto device_path_or = factoryfs_->Device().GetDevicePath(); device_path_or.is_error()) {
+    completer.ReplyError(device_path_or.error_value());
+    return;
+  } else {
+    device_path = std::move(device_path_or).value();
   }
+  filesystem_info.set_device_path(allocator, fidl::StringView::FromExternal(device_path));
 
   completer.ReplySuccess(std::move(filesystem_info));
 }

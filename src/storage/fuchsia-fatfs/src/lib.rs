@@ -5,7 +5,7 @@ use {
     crate::{directory::FatDirectory, filesystem::FatFilesystem, node::Node},
     anyhow::Error,
     fatfs::FsOptions,
-    fidl_fuchsia_fs::{AdminRequest, FilesystemInfo, FilesystemInfoQuery, FsType, QueryRequest},
+    fidl_fuchsia_fs::{AdminRequest, FilesystemInfo, FsType, QueryRequest},
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     fuchsia_zircon::{HandleBased, Rights, Status},
@@ -86,43 +86,22 @@ impl FatFs {
         Ok(self.root.clone())
     }
 
-    fn get_info(&self, query: FilesystemInfoQuery) -> Result<FilesystemInfo, Status> {
+    fn get_info(&self) -> Result<FilesystemInfo, Status> {
         let mut result = FilesystemInfo::EMPTY;
         let fs_lock = self.inner.lock().unwrap();
-        if query.contains(FilesystemInfoQuery::TotalBytes)
-            || query.contains(FilesystemInfoQuery::UsedBytes)
-        {
-            let cluster_size = fs_lock.cluster_size() as u64;
-            let total_clusters = fs_lock.total_clusters()? as u64;
-            if query.contains(FilesystemInfoQuery::TotalBytes) {
-                result.total_bytes = Some(cluster_size * total_clusters);
-            }
 
-            if query.contains(FilesystemInfoQuery::UsedBytes) {
-                let free_clusters = fs_lock.free_clusters()? as u64;
-                result.used_bytes = Some(cluster_size * (total_clusters - free_clusters));
-            }
-        }
+        let cluster_size = fs_lock.cluster_size() as u64;
+        let total_clusters = fs_lock.total_clusters()? as u64;
+        result.total_bytes = Some(cluster_size * total_clusters);
 
-        if query.contains(FilesystemInfoQuery::FsId) {
-            result.fs_id = Some(self.inner.fs_id().duplicate_handle(Rights::BASIC)?);
-        }
+        let free_clusters = fs_lock.free_clusters()? as u64;
+        result.used_bytes = Some(cluster_size * (total_clusters - free_clusters));
 
-        if query.contains(FilesystemInfoQuery::BlockSize) {
-            result.block_size = Some(fs_lock.sector_size()? as u32);
-        }
-
-        if query.contains(FilesystemInfoQuery::MaxNodeNameSize) {
-            result.max_node_name_size = Some(MAX_FILENAME_LEN);
-        }
-
-        if query.contains(FilesystemInfoQuery::FsType) {
-            result.fs_type = Some(FsType::Fatfs);
-        }
-
-        if query.contains(FilesystemInfoQuery::Name) {
-            result.name = Some("fatfs".to_owned());
-        }
+        result.fs_id = Some(self.inner.fs_id().duplicate_handle(Rights::BASIC)?);
+        result.block_size = Some(fs_lock.sector_size()? as u32);
+        result.max_node_name_size = Some(MAX_FILENAME_LEN);
+        result.fs_type = Some(FsType::Fatfs);
+        result.name = Some("fatfs".to_owned());
 
         Ok(result)
     }
@@ -136,8 +115,8 @@ impl FatFs {
                 };
                 responder.send(result)?;
             }
-            QueryRequest::GetInfo { query, responder } => {
-                responder.send(&mut self.get_info(query).map_err(|e| e.into_raw()))?;
+            QueryRequest::GetInfo { responder } => {
+                responder.send(&mut self.get_info().map_err(|e| e.into_raw()))?;
             }
         };
         Ok(())
@@ -385,9 +364,9 @@ mod tests {
         let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
         let fatfs = disk.into_fatfs();
 
-        let result = fatfs
-            .get_info(FilesystemInfoQuery::all() - FilesystemInfoQuery::FsId)
-            .expect("get_info succeeds");
+        let mut result = fatfs.get_info().expect("get_info succeeds");
+        result.fs_id = None; // Skip comparing this ID since it's not predictable.
+
         assert_eq!(
             result,
             FilesystemInfo {
@@ -418,32 +397,15 @@ mod tests {
         let cluster_size = disk.cluster_size();
         let fatfs = disk.into_fatfs();
 
-        let result = fatfs.get_info(FilesystemInfoQuery::UsedBytes).expect("get_info succeeds");
-        assert_eq!(
-            result,
-            FilesystemInfo {
-                total_bytes: None,
-                // 1 cluster allocated for the file.
-                used_bytes: Some(cluster_size as u64),
-                total_nodes: None,
-                used_nodes: None,
-                free_shared_pool_bytes: None,
-                fs_id: None,
-                block_size: None,
-                max_node_name_size: None,
-                fs_type: None,
-                name: None,
-                device_path: None,
-                ..FilesystemInfo::EMPTY
-            }
-        );
+        let result = fatfs.get_info().expect("get_info succeeds");
+        assert_eq!(result.used_bytes, Some(cluster_size as u64));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_info_fs_id() {
         let fatfs = TestFatDisk::empty_disk(TEST_DISK_SIZE).into_fatfs();
-        let result = fatfs.get_info(FilesystemInfoQuery::FsId).expect("get_info succeeds");
-        let result2 = fatfs.get_info(FilesystemInfoQuery::FsId).expect("get_info succeeds");
+        let result = fatfs.get_info().expect("get_info succeeds");
+        let result2 = fatfs.get_info().expect("get_info succeeds");
         let koid = result.fs_id.unwrap().get_koid().expect("get_koid succeeds");
         let koid2 = result2.fs_id.unwrap().get_koid().expect("get_koid succeeds");
         assert_eq!(koid, koid2);

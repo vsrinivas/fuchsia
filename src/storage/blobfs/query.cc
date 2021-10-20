@@ -11,8 +11,6 @@
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/runner.h"
 
-using fuchsia_fs::wire::FilesystemInfoQuery;
-
 namespace blobfs {
 
 constexpr char kFsName[] = "blobfs";
@@ -30,55 +28,28 @@ void QueryService::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& c
   fidl::Arena allocator;
   fuchsia_fs::wire::FilesystemInfo filesystem_info(allocator);
 
-  if (request->query & FilesystemInfoQuery::kTotalBytes) {
-    filesystem_info.set_total_bytes(allocator,
-                                    blobfs_->Info().data_block_count * blobfs_->Info().block_size);
-  }
+  filesystem_info.set_total_bytes(allocator,
+                                  blobfs_->Info().data_block_count * blobfs_->Info().block_size);
+  filesystem_info.set_used_bytes(allocator,
+                                 blobfs_->Info().alloc_block_count * blobfs_->Info().block_size);
+  filesystem_info.set_total_nodes(allocator, blobfs_->Info().inode_count);
+  filesystem_info.set_used_nodes(allocator, blobfs_->Info().alloc_inode_count);
+  filesystem_info.set_fs_id(allocator, blobfs_->GetFsId());
+  filesystem_info.set_block_size(allocator, kBlobfsBlockSize);
+  filesystem_info.set_max_node_name_size(allocator, digest::kSha256HexLength);
+  filesystem_info.set_fs_type(allocator, fuchsia_fs::wire::FsType::kBlobfs);
 
-  if (request->query & FilesystemInfoQuery::kUsedBytes) {
-    filesystem_info.set_used_bytes(allocator,
-                                   blobfs_->Info().alloc_block_count * blobfs_->Info().block_size);
-  }
-
-  if (request->query & FilesystemInfoQuery::kTotalNodes) {
-    filesystem_info.set_total_nodes(allocator, blobfs_->Info().inode_count);
-  }
-
-  if (request->query & FilesystemInfoQuery::kUsedNodes) {
-    filesystem_info.set_used_nodes(allocator, blobfs_->Info().alloc_inode_count);
-  }
-
-  if (request->query & FilesystemInfoQuery::kFsId) {
-    filesystem_info.set_fs_id(allocator, blobfs_->GetFsId());
-  }
-
-  if (request->query & FilesystemInfoQuery::kBlockSize) {
-    filesystem_info.set_block_size(allocator, kBlobfsBlockSize);
-  }
-
-  if (request->query & FilesystemInfoQuery::kMaxNodeNameSize) {
-    filesystem_info.set_max_node_name_size(allocator, digest::kSha256HexLength);
-  }
-
-  if (request->query & FilesystemInfoQuery::kFsType) {
-    filesystem_info.set_fs_type(allocator, fuchsia_fs::wire::FsType::kBlobfs);
-  }
-
-  if (request->query & FilesystemInfoQuery::kName) {
-    fidl::StringView name(kFsName);
-    filesystem_info.set_name(allocator, std::move(name));
-  }
+  fidl::StringView name(kFsName);
+  filesystem_info.set_name(allocator, std::move(name));
 
   std::string device_path;
-  if (request->query & FilesystemInfoQuery::kDevicePath) {
-    if (auto device_path_or = blobfs_->Device()->GetDevicePath(); device_path_or.is_error()) {
-      completer.ReplyError(device_path_or.error_value());
-      return;
-    } else {
-      device_path = std::move(device_path_or).value();
-    }
-    filesystem_info.set_device_path(allocator, fidl::StringView::FromExternal(device_path));
+  if (auto device_path_or = blobfs_->Device()->GetDevicePath(); device_path_or.is_error()) {
+    completer.ReplyError(device_path_or.error_value());
+    return;
+  } else {
+    device_path = std::move(device_path_or).value();
   }
+  filesystem_info.set_device_path(allocator, fidl::StringView::FromExternal(device_path));
 
   completer.ReplySuccess(std::move(filesystem_info));
 }

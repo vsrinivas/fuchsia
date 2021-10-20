@@ -27,8 +27,6 @@ namespace {
 namespace fio = fuchsia_io;
 namespace fuchsia_fs = fuchsia_fs;
 
-using fuchsia_fs::wire::FilesystemInfoQuery;
-
 class QueryServiceTest : public BlobfsWithFvmTest {
  protected:
   fidl::WireSyncClient<fuchsia_fs::Query> ConnectToQueryService() {
@@ -47,7 +45,7 @@ class QueryServiceTest : public BlobfsWithFvmTest {
 
   void QueryInfo(size_t expected_nodes, size_t expected_bytes) {
     fidl::WireSyncClient<fuchsia_fs::Query> query_service = ConnectToQueryService();
-    auto call_result = query_service.GetInfo(FilesystemInfoQuery::kMask);
+    auto call_result = query_service.GetInfo();
     ASSERT_EQ(call_result.status(), ZX_OK);
     const auto& query_result = call_result.value().result;
     ASSERT_TRUE(query_result.is_response());
@@ -107,36 +105,6 @@ TEST_F(QueryServiceTest, QueryInfo) {
   }
 
   ASSERT_NO_FATAL_FAILURE(QueryInfo(6, total_bytes));
-}
-
-TEST_F(QueryServiceTest, SelectiveQueryInfoEmpty) {
-  fidl::WireSyncClient<fuchsia_fs::Query> query_service = ConnectToQueryService();
-  auto call_result = query_service.GetInfo(FilesystemInfoQuery());
-  ASSERT_EQ(call_result.status(), ZX_OK);
-  const auto& query_result = call_result.value().result;
-  ASSERT_TRUE(query_result.is_response());
-  ASSERT_TRUE(query_result.response().info.IsEmpty());
-}
-
-TEST_F(QueryServiceTest, SelectiveQueryInfoSingleField) {
-  fidl::WireSyncClient<fuchsia_fs::Query> query_service = ConnectToQueryService();
-  auto call_result = query_service.GetInfo(FilesystemInfoQuery::kTotalBytes);
-  ASSERT_EQ(call_result.status(), ZX_OK);
-  const auto& query_result = call_result.value().result;
-  ASSERT_TRUE(query_result.is_response());
-  const fuchsia_fs::wire::FilesystemInfo& info = query_result.response().info;
-
-  ASSERT_FALSE(info.IsEmpty());
-  ASSERT_TRUE(info.has_total_bytes());
-  ASSERT_FALSE(info.has_used_bytes());
-  ASSERT_FALSE(info.has_total_nodes());
-  ASSERT_FALSE(info.has_used_nodes());
-  ASSERT_FALSE(info.has_fs_id());
-  ASSERT_FALSE(info.has_block_size());
-  ASSERT_FALSE(info.has_max_node_name_size());
-  ASSERT_FALSE(info.has_fs_type());
-  ASSERT_FALSE(info.has_name());
-  ASSERT_FALSE(info.has_device_path());
 }
 
 TEST_F(QueryServiceTest, IsNodeInFilesystemPositiveCase) {

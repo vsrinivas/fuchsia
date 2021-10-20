@@ -46,7 +46,7 @@ TEST_P(QueryFilesystemTest, QueryTest) {
     ASSERT_FALSE(client_end_or.is_error());
     fs_query = std::move(client_end_or).value();
 
-    auto result = fidl::WireCall(fs_query)->GetInfo(fuchsia_fs::wire::FilesystemInfoQuery::kMask);
+    auto result = fidl::WireCall(fs_query)->GetInfo();
     ASSERT_TRUE(result.ok() && result->result.is_response());
     const auto& info2 = result->result.response().info;
 
@@ -88,7 +88,7 @@ TEST_P(QueryFilesystemTest, QueryTest) {
   }
 
   if (fs().GetTraits().supports_fs_query) {
-    auto result2 = fidl::WireCall(fs_query)->GetInfo(fuchsia_fs::wire::FilesystemInfoQuery::kMask);
+    auto result2 = fidl::WireCall(fs_query)->GetInfo();
     ASSERT_TRUE(result2.ok() && result2->result.is_response());
     const auto& info3 = result2->result.response().info;
 
