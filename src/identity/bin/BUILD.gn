@@ -83,3 +83,14 @@ group("tier_2") {
     "password_authenticator",
   ]
 }
+
+# This temporary group should be used in place of Tier 2 until the account
+# system is re-enabled following an extended lack of maintenance. It
+# provides a minimal implementation of the account API supporting only one
+# account with only one authentication mechanism.
+group("password_authenticator_only") {
+  public_deps = [
+    "account",
+    "password_authenticator",
+  ]
+}

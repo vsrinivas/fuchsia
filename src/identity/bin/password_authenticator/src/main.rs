@@ -22,7 +22,7 @@ enum Services {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["pw_auth"]).expect("Can't init logger");
+    fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting password authenticator");
 
     let mut fs = ServiceFs::new();

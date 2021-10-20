@@ -12,6 +12,11 @@
             to: "#account",
         },
         {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#account",
+        },
+        {
             protocol: [ "fuchsia.identity.account.AccountManager" ],
             from: "#account",
             to: "#session-manager",

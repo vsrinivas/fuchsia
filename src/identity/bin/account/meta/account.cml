@@ -2,12 +2,17 @@
     children: [
         {
             name: "password_authenticator",
-            url: "fuchsia-pkg://fuchsia.com/password_authenticator#meta/password-authenticator.cml",
+            url: "fuchsia-pkg://fuchsia.com/password_authenticator#meta/password-authenticator.cm",
         },
     ],
     offer: [
         {
             directory: "dev",
+            from: "parent",
+            to: "#password_authenticator",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: "#password_authenticator",
         },
