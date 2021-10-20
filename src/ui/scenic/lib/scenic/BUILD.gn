@@ -19,7 +19,7 @@ source_set("scenic") {
     "//sdk/fidl/fuchsia.ui.annotation",
     "//sdk/fidl/fuchsia.ui.focus",
     "//sdk/fidl/fuchsia.ui.gfx",
-    "//sdk/fidl/fuchsia.ui.policy.accessibility",
+    "//sdk/fidl/fuchsia.ui.input.accessibility",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.scenic.internal",
     "//sdk/lib/fit",

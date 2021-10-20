@@ -18,10 +18,10 @@
             protocol: [
                 "fuchsia.ui.annotation.Registry",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.accessibility.PointerEventRegistry",
                 "fuchsia.ui.input.PointerCaptureListenerRegistry",
                 "fuchsia.ui.lifecycle.LifecycleController",
                 "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.policy.accessibility.PointerEventRegistry",
                 "fuchsia.ui.scenic.internal.Snapshot",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.views.ViewRefInstalled",
@@ -59,10 +59,10 @@
             protocol: [
                 "fuchsia.ui.annotation.Registry",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.accessibility.PointerEventRegistry",
                 "fuchsia.ui.input.PointerCaptureListenerRegistry",
                 "fuchsia.ui.lifecycle.LifecycleController",
                 "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.policy.accessibility.PointerEventRegistry",
                 "fuchsia.ui.scenic.internal.Snapshot",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.views.ViewRefInstalled",

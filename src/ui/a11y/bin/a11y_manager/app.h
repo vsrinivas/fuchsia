@@ -12,7 +12,7 @@
 #include <fuchsia/settings/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
-#include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
+#include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/views/accessibility/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -185,7 +185,7 @@ class App {
 
   // Interface between a11y manager and Scenic to register a
   // accessibility pointer event listener.
-  fuchsia::ui::policy::accessibility::PointerEventRegistryPtr pointer_event_registry_;
+  fuchsia::ui::input::accessibility::PointerEventRegistryPtr pointer_event_registry_;
 
   // Interface between Setui and a11y manager to get updates when user settings change.
   fuchsia::settings::AccessibilityPtr setui_settings_;

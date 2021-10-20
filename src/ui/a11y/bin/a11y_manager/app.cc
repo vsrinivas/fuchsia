@@ -174,9 +174,9 @@ void App::UpdateGestureManagerState() {
     // called, so we should wait until we need the service to register.
     if (!pointer_event_registry_) {
       pointer_event_registry_ =
-          context_->svc()->Connect<fuchsia::ui::policy::accessibility::PointerEventRegistry>();
+          context_->svc()->Connect<fuchsia::ui::input::accessibility::PointerEventRegistry>();
       pointer_event_registry_.set_error_handler([](zx_status_t status) {
-        FX_LOGS(ERROR) << "Error from fuchsia::ui::policy::accessibility::PointerEventRegistry"
+        FX_LOGS(ERROR) << "Error from fuchsia::ui::input::accessibility::PointerEventRegistry"
                        << zx_status_get_string(status);
       });
     }

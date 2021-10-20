@@ -5,7 +5,7 @@
 #ifndef SRC_UI_A11Y_BIN_A11Y_MANAGER_TESTS_MOCKS_MOCK_POINTER_EVENT_REGISTRY_H_
 #define SRC_UI_A11Y_BIN_A11Y_MANAGER_TESTS_MOCKS_MOCK_POINTER_EVENT_REGISTRY_H_
 
-#include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
+#include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
@@ -15,12 +15,12 @@ namespace accessibility_test {
 
 // A simple mock that accepts the registration of an accessibility pointer event listener.
 // Used only for testing a11y code.
-class MockPointerEventRegistry : public fuchsia::ui::policy::accessibility::PointerEventRegistry {
+class MockPointerEventRegistry : public fuchsia::ui::input::accessibility::PointerEventRegistry {
  public:
   explicit MockPointerEventRegistry(sys::testing::ComponentContextProvider* context);
   ~MockPointerEventRegistry() = default;
 
-  // |fuchsia.ui.policy.accessibility.PointerEventRegistry|
+  // |fuchsia.ui.input.accessibility.PointerEventRegistry|
   void Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
                     pointer_event_listener,
                 RegisterCallback callback) override;
@@ -28,7 +28,7 @@ class MockPointerEventRegistry : public fuchsia::ui::policy::accessibility::Poin
   fuchsia::ui::input::accessibility::PointerEventListenerPtr& listener() { return listener_; }
 
  private:
-  fidl::BindingSet<fuchsia::ui::policy::accessibility::PointerEventRegistry> bindings_;
+  fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventRegistry> bindings_;
 
   fuchsia::ui::input::accessibility::PointerEventListenerPtr listener_;
 
