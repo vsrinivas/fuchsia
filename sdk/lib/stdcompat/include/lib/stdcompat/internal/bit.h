@@ -8,6 +8,8 @@
 #include <limits>
 #include <type_traits>
 
+#include "../type_traits.h"
+
 namespace cpp20 {
 namespace internal {
 
@@ -187,18 +189,22 @@ constexpr std::enable_if_t<is_bit_type<T>::value, T> bit_width(T value) {
   return std::numeric_limits<T>::digits - zeros_left;
 }
 
-// When there is no integer promotion.
 template <typename T>
 constexpr std::enable_if_t<is_bit_type<T>::value && !std::is_same<T, decltype(+T())>::value, T>
 bit_ceil(T value) {
   unsigned ub_offset = std::numeric_limits<unsigned>::digits - std::numeric_limits<T>::digits;
-  return static_cast<T>(1u << (bit_width(static_cast<T>(value - 1)) + ub_offset) >> ub_offset);
+  return static_cast<T>(1 << (bit_width(static_cast<T>(value - 1)) + ub_offset) >> ub_offset);
 }
 
+// When there is no integer promotion.
 template <typename T>
 constexpr std::enable_if_t<is_bit_type<T>::value && std::is_same<T, decltype(+T())>::value, T>
 bit_ceil(T value) {
-  return static_cast<T>(1) << (bit_width(value - 1));
+  auto width = bit_width(value - 1);
+  if (!cpp20::is_constant_evaluated() && width == std::numeric_limits<T>::digits) {
+    __builtin_abort();
+  }
+  return static_cast<T>(1) << width;
 }
 
 template <typename T>

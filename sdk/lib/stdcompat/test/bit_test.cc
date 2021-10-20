@@ -588,6 +588,11 @@ TEST(IntPow2Test, BitCeiIsCorrect) {
   static_assert(CheckBitCeil<uint_fast16_t>(), "bit_ceil failed for uint_least16_t.");
   static_assert(CheckBitCeil<uint_fast32_t>(), "bit_ceil failed for uint_least32_t.");
   static_assert(CheckBitCeil<uint_fast64_t>(), "bit_ceil failed for uint_least64_t.");
+
+// Check that the polfill provides UB checks.
+#if __cpp_lib_int_pow2 < 202002L || defined(LIB_STDCOMPAT_USE_POLYFILLS)
+  ASSERT_DEATH({ cpp20::bit_ceil<uint64_t>(1 + (uint64_t(1) << 63)); }, ".*");
+#endif
 }
 
 template <typename T>
