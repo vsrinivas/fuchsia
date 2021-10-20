@@ -88,10 +88,10 @@ pub struct Socket {
     ops: Box<dyn SocketOps>,
 
     /// The domain of this socket.
-    domain: SocketDomain,
+    pub domain: SocketDomain,
 
     /// The type of this socket.
-    socket_type: SocketType,
+    pub socket_type: SocketType,
 
     inner: Mutex<SocketInner>,
 }
@@ -156,10 +156,6 @@ impl Socket {
         let node = fs.create_node(Box::new(Anon), mode);
         node.set_socket(socket.clone());
         FileObject::new_anonymous(SocketFile::new(socket), node, open_flags)
-    }
-
-    pub fn socket_type(&self) -> SocketType {
-        self.socket_type
     }
 
     /// Returns the name of this socket.

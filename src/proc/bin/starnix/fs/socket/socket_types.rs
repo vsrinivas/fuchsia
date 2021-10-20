@@ -107,6 +107,13 @@ impl SocketAddress {
         }
     }
 
+    pub fn valid_for_domain(&self, domain: SocketDomain) -> bool {
+        match self {
+            SocketAddress::Unspecified => false,
+            SocketAddress::Unix(_) => domain == SocketDomain::Unix,
+        }
+    }
+
     pub fn to_bytes(&self) -> Vec<u8> {
         match self {
             SocketAddress::Unspecified => AF_UNSPEC.to_ne_bytes().to_vec(),

@@ -109,7 +109,7 @@ fn parse_socket_address(
                 }
             }
         }
-        _ => return error!(EAFNOSUPPORT),
+        _ => SocketAddress::Unspecified,
     };
     Ok(address)
 }
@@ -150,8 +150,11 @@ pub fn sys_bind(
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let address = parse_socket_address(&current_task, user_socket_address, address_length)?;
+    if !address.valid_for_domain(socket.domain) {
+        return error!(EINVAL);
+    }
     match address {
-        SocketAddress::Unspecified => return error!(EAFNOSUPPORT),
+        SocketAddress::Unspecified => return error!(EINVAL),
         SocketAddress::Unix(mut name) => {
             if name.is_empty() {
                 // If the name is empty, then we're supposed to generate an
@@ -240,9 +243,8 @@ pub fn sys_connect(
     let client_file = current_task.files.get(fd)?;
     let client_socket = client_file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let address = parse_socket_address(&current_task, user_socket_address, address_length)?;
-
     let listening_socket = match address {
-        SocketAddress::Unspecified => return error!(EAFNOSUPPORT),
+        SocketAddress::Unspecified => return error!(ECONNREFUSED),
         SocketAddress::Unix(name) => {
             strace!(
                 &current_task,
@@ -534,7 +536,7 @@ pub fn sys_getsockopt(
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let opt_value = match level {
         SOL_SOCKET => match optname {
-            SO_TYPE => socket.socket_type().as_raw().to_ne_bytes().to_vec(),
+            SO_TYPE => socket.socket_type.as_raw().to_ne_bytes().to_vec(),
             SO_PEERCRED => socket
                 .peer_cred()
                 .unwrap_or(ucred { pid: 0, uid: uid_t::MAX, gid: gid_t::MAX })
