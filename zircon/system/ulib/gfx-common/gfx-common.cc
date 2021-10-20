@@ -41,6 +41,24 @@
     }                                                                            \
   } while (0)
 
+namespace {
+
+struct Rgb888 {
+  Rgb888() = default;
+  explicit Rgb888(uint32_t rgba) {
+    b = rgba & 0xff;
+    g = (rgba & 0xff00) >> 8;
+    r = (rgba & 0xff0000) >> 16;
+  }
+  uint32_t ToRgba32() const { return b | (g << 8) | (r << 16) | (0xff << 24); }
+
+  uint8_t b = 0;
+  uint8_t g = 0;
+  uint8_t r = 0;
+} __attribute__((packed));
+
+}  // namespace
+
 // Convert a 32bit ARGB image to its respective gamma corrected grayscale value.
 static uint32_t ARGB8888_to_Luma(uint32_t in) {
   uint8_t out;
@@ -55,6 +73,8 @@ static uint32_t ARGB8888_to_Luma(uint32_t in) {
 
   return out;
 }
+
+static uint32_t ARGB8888_to_RGB888(uint32_t in) { return in & 0xFFFFFF; }
 
 static uint32_t ARGB8888_to_RGB565(uint32_t in) {
   uint32_t out;
@@ -418,6 +438,50 @@ void gfx_blend(struct gfx_surface* target, struct gfx_surface* source, uint32_t 
       dest += dest_stride_diff;
       src += source_stride_diff;
     }
+  } else if (source->format == ZX_PIXEL_FORMAT_ARGB_8888 &&
+             target->format == ZX_PIXEL_FORMAT_RGB_888) {
+    // 32 bit to 24 bit modes, alpha to no-alpha
+    const uint32_t* src = static_cast<uint32_t*>(source->ptr) + (srcx + srcy * source->stride);
+    Rgb888* dest = static_cast<Rgb888*>(target->ptr) + (destx + desty * target->stride);
+    uint32_t dest_stride_diff = target->stride - width;
+    uint32_t source_stride_diff = source->stride - width;
+
+    GFX_LOG(ctx, "w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff,
+            source_stride_diff);
+
+    uint32_t i, j;
+    for (i = 0; i < height; i++) {
+      for (j = 0; j < width; j++) {
+        // TODO(fxbug.dev/84457): Currently it ignores destination alpha.
+        // We should implement alpha blending correctly.
+        *dest = Rgb888(alpha32_add_ignore_destalpha(dest->ToRgba32(), *src));
+        dest++;
+        src++;
+      }
+      dest += dest_stride_diff;
+      src += source_stride_diff;
+    }
+  } else if (source->format == ZX_PIXEL_FORMAT_RGB_x888 &&
+             target->format == ZX_PIXEL_FORMAT_RGB_888) {
+    // 32 bit to 24 bit modes, no alpha
+    const uint32_t* src = static_cast<uint32_t*>(source->ptr) + (srcx + srcy * source->stride);
+    Rgb888* dest = static_cast<Rgb888*>(target->ptr) + (destx + desty * target->stride);
+    uint32_t dest_stride_diff = target->stride - width;
+    uint32_t source_stride_diff = source->stride - width;
+
+    GFX_LOG(ctx, "w %u h %u dstride %u sstride %u\n", width, height, dest_stride_diff,
+            source_stride_diff);
+
+    uint32_t i, j;
+    for (i = 0; i < height; i++) {
+      for (j = 0; j < width; j++) {
+        *dest = Rgb888(*src);
+        dest++;
+        src++;
+      }
+      dest += dest_stride_diff;
+      src += source_stride_diff;
+    }
   } else if (source->format == ZX_PIXEL_FORMAT_MONO_8 && target->format == ZX_PIXEL_FORMAT_MONO_8) {
     // both are 8 bit modes, no alpha
     const uint8_t* src = static_cast<uint8_t*>(source->ptr) + (srcx + srcy * source->stride);
@@ -572,6 +636,15 @@ zx_status_t gfx_init_surface(gfx_surface* surface, void* ptr, uint32_t width, ui
       surface->putpixel = &putpixel<uint16_t>;
       surface->putchar = &putchar<uint16_t>;
       surface->pixelsize = 2;
+      surface->len = (surface->height * surface->stride * surface->pixelsize);
+      break;
+    case ZX_PIXEL_FORMAT_RGB_888:
+      surface->translate_color = &ARGB8888_to_RGB888;
+      surface->copyrect = &copyrect<Rgb888>;
+      surface->fillrect = &fillrect<Rgb888>;
+      surface->putpixel = &putpixel<Rgb888>;
+      surface->putchar = &putchar<Rgb888>;
+      surface->pixelsize = 3;
       surface->len = (surface->height * surface->stride * surface->pixelsize);
       break;
     case ZX_PIXEL_FORMAT_RGB_x888:
