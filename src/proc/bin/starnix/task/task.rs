@@ -151,6 +151,7 @@ pub struct Task {
     pub zombie_children: Mutex<Vec<ZombieTask>>,
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct ZombieTask {
     pub id: pid_t,
     pub parent: pid_t,
