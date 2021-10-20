@@ -321,7 +321,7 @@ constexpr ErrorDef<const flat::Attribute *, std::string> ErrUnableToParseBound(
     "unable to parse '{}' bound of '{}'");
 constexpr WarningDef<std::string, std::string> WarnAttributeTypo(
     "suspect attribute with name '{}'; did you mean '{}'?");
-constexpr ErrorDef<> ErrInvalidNameOverride("name override must be a valid identifier");
+constexpr ErrorDef<> ErrInvalidGeneratedName("generated name must be a valid identifier");
 
 // ---------------------------------------------------------------------------
 // Type Templates

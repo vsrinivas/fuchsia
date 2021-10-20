@@ -1391,13 +1391,13 @@ bool Library::VerifyInlineSize(const Struct* struct_decl) {
   return true;
 }
 
-bool OverrideNameConstraint(Reporter* reporter, const Attribute* attribute,
-                            const Attributable* attributable) {
+bool GeneratedNameConstraint(Reporter* reporter, const Attribute* attribute,
+                             const Attributable* attributable) {
   auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
   auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
 
   if (!utils::IsValidIdentifierComponent(arg_value.MakeContents())) {
-    reporter->Report(ErrInvalidNameOverride, attribute->span);
+    reporter->Report(ErrInvalidGeneratedName, attribute->span);
     return false;
   }
   return true;
@@ -1636,7 +1636,7 @@ Libraries::Libraries() {
       ConstantValue::Kind::kString,
       AttributeArgSchema::Optionality::kRequired,
       AttributeArgSchema::SpecialCase::kStringLiteral),
-  OverrideNameConstraint)),
+  GeneratedNameConstraint)),
   AddAttributeSchema("max_bytes", AttributeSchema({
     AttributePlacement::kProtocolDecl,
     AttributePlacement::kMethod,
