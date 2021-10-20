@@ -27,11 +27,14 @@ rustc_test("bt_profile_integration_tests") {
 }
 
 fuchsia_test_component("bt-profile-integration-tests-component") {
-  manifest = "meta/bt-profile-integration-tests.cmx"
+  manifest = "meta/bt-profile-integration-tests.cml"
   deps = [ ":bt_profile_integration_tests" ]
 }
 
 fuchsia_test_package("bt-profile-integration-tests") {
   test_components = [ ":bt-profile-integration-tests-component" ]
-  deps = [ "//src/connectivity/bluetooth/hci/emulator" ]
+  test_specs = {
+    # control the parallelism
+    parallel = 1
+  }
 }

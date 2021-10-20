@@ -15,7 +15,7 @@ pub mod host_watcher_v2;
 pub mod inspect;
 pub mod low_energy_central;
 pub mod low_energy_peripheral;
-pub mod profile;
+pub mod profile_v2;
 
 // Use a framework-wide timeout of 4 minutes.
 //
