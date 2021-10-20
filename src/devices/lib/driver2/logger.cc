@@ -85,6 +85,8 @@ uint32_t Logger::GetAndResetDropped() {
   return dropped_logs_.exchange(0, std::memory_order_relaxed);
 }
 
+FuchsiaLogSeverity Logger::GetSeverity() { return severity_.load(std::memory_order_relaxed); }
+
 void Logger::logf(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
                   const char* msg, ...) {
   va_list args;

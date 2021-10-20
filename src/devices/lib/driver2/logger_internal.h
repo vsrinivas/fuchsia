@@ -144,10 +144,13 @@ static auto MakeKV(std::tuple<Args...> args) {
 }
 
 template <typename Msg, typename... Args>
-static void fx_slog(driver::Logger& logger, FuchsiaLogSeverity flag, const char* file, int line,
+static void fx_slog(driver::Logger& logger, FuchsiaLogSeverity severity, const char* file, int line,
                     Msg msg, Args... args) {
+  if (severity < logger.GetSeverity()) {
+    return;
+  }
   MakeValue(msg, MakeKV<Args...>(std::make_tuple(args...)))
-      .LogNew(logger, flag, file, line, nullptr);
+      .LogNew(logger, severity, file, line, nullptr);
 }
 
 }  // namespace driver_internal

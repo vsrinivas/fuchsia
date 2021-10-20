@@ -34,6 +34,8 @@ class Logger {
   // Retrieves the number of dropped logs and resets it
   uint32_t GetAndResetDropped();
 
+  FuchsiaLogSeverity GetSeverity();
+
   void logf(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
             const char* msg, ...) __PRINTFLIKE(6, 7);
   void logvf(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,

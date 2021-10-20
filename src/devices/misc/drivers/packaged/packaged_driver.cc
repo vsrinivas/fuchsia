@@ -40,7 +40,7 @@ class PackagedDriver {
       return inspect.take_error();
     }
     inspect_vmo_ = std::move(inspect.value());
-
+    FDF_SLOG(DEBUG, "Debug world");
     FDF_SLOG(INFO, "Hello world", KV("The answer is", 42));
     auto& root = inspector_.GetRoot();
     root.CreateString("hello", "world", &inspector_);

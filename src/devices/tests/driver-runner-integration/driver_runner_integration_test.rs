@@ -87,6 +87,9 @@ async fn driver_runner_test() -> Result<(), anyhow::Error> {
                 panic!("error in subscription: {}", e);
             }
             Ok(log) => {
+                if log.msg().unwrap().contains("Debug world") {
+                    panic!("Debug logs shouldn't print by default");
+                }
                 if log.msg().unwrap().contains("Hello world") {
                     assert_data_tree!(log.payload.as_ref().unwrap(), root:{
                         "keys": {
