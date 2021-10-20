@@ -111,13 +111,18 @@ template("plasa_artifacts") {
     metadata = {
       plasa = [
         {
-          # TODO(fxbug.dev/82512): I happen to like the annotations
-          # since I can then reason about what the metadata is for.
-          # But it is not minimal, so perhaps should be removed if
-          # we're after being very very strict.
-          type = "plasa_fragment_api_cc"
+          # 'kind' specifies the type of the file. Knowing 'kind' should be
+          # enough to know which data schema to use to read and interpret it.
+          kind = "fragment_api_cc"
+
+          # 'file' is the label of the file, i.e. a string starting with '//'.
           file = _plasa_api_output_file
+
+          # 'path' is the path to the file relative to `$root_build_dir`.
           path = rebase_path(_plasa_api_output_file, root_build_dir)
+
+          # 'dest' is the packaging destination should this file be packaged
+          # anywhere in particular.
           dest = "${file_base}/" +
                  rebase_path(_plasa_api_output_file, target_gen_dir)
         },
