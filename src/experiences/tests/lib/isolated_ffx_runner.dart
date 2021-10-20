@@ -47,13 +47,8 @@ class IsolatedFfxRunner extends FfxRunner {
   }
 
   Future<void> tearDown() async {
-    try {
-      await run(['daemon', 'stop']);
-    } on FfxException catch (e) {
-      print('Warning: `ffx daemon stop` did not exit cleanly:\n$e');
-    } finally {
-      _ffxDaemon!.kill();
-    }
+    _ffxDaemon!.kill();
+    await run(['daemon', 'stop']);
     await _ffxDir.delete(recursive: true);
   }
 
