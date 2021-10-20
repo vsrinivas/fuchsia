@@ -7,18 +7,17 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.fonts.Provider",
             "fuchsia.logger.LogSink",
+            "fuchsia.modular.ComponentContext",
             "fuchsia.modular.ModuleContext",
-            "fuchsia.posix.socket.Provider",
-            "fuchsia.net.NameLookup",
             "fuchsia.netstack.Netstack",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.ImeVisibilityService",
-            "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.policy.Presenter",
-            "fuchsia.modular.ComponentContext",
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }
