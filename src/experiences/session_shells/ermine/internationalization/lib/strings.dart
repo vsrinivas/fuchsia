@@ -980,6 +980,22 @@ class Strings {
         name: 'unmute',
         desc: 'The label for "Unmute" text field.',
       );
+  static String get connect => Intl.message(
+        'Connect',
+        name: 'connect',
+        desc: 'The label for "connect" text field.',
+      );
+  static String enterPasswordForNetwork(String network) => Intl.message(
+        'Enter password for $network',
+        name: 'Enter password for network',
+        desc: 'The prompt text to enter password for selected network.',
+        args: [network],
+      );
+  static String get selectNetwork => Intl.message(
+        'Select a network.',
+        name: 'Select a network.',
+        desc: 'The label for "select a network" text field.',
+      );
 
   /// Lookup message given it's name.
   static String? lookup(String name) {

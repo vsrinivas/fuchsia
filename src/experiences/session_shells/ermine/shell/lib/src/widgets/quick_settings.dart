@@ -49,7 +49,8 @@ class QuickSettings extends StatelessWidget {
                     onChange: state.setTargetChannel,
                     updateAlert: appState.checkingForUpdatesAlert,
                   ),
-                if (state.wifiPageVisible) WiFiSettings(state: state)
+                if (state.wifiPageVisible)
+                  WiFiSettings(state: state, onChange: state.setTargetNetwork)
               ],
             ),
           );

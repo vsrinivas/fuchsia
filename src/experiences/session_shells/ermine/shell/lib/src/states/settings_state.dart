@@ -80,6 +80,7 @@ abstract class SettingsState implements TaskService {
   double? get volumeLevel;
   bool? get volumeMuted;
   List<NetworkInformation> get availableNetworks;
+  String get targetNetwork;
 
   factory SettingsState.from({required ShortcutsService shortcutsService}) {
     return SettingsStateImpl(
@@ -111,4 +112,6 @@ abstract class SettingsState implements TaskService {
   void setVolumeLevel(double value);
   void setVolumeMute({bool muted});
   void showWiFiSettings();
+  void connectToWPA2Network(String password);
+  void setTargetNetwork(String network);
 }

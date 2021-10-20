@@ -161,6 +161,11 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   final Observable<bool?> _volumeMuted = Observable<bool?>(null);
 
   @override
+  String get targetNetwork => _targetNetwork.value;
+  set targetNetwork(String value) => _targetNetwork.value = value;
+  final Observable<String> _targetNetwork = Observable<String>('');
+
+  @override
   final List<NetworkInformation> availableNetworks =
       ObservableList<NetworkInformation>();
 
@@ -294,6 +299,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
           ..clear()
           ..addAll(wifiService.scannedNetworks)
           ..removeWhere((network) => network.name.isEmpty);
+        targetNetwork = wifiService.targetNetwork;
       });
     };
   }
@@ -412,4 +418,12 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   void showWiFiSettings() =>
       runInAction(() => settingsPage.value = SettingsPage.wifi);
+
+  @override
+  void connectToWPA2Network(String password) =>
+      runInAction(() => wifiService.connectToWPA2Network(password));
+
+  @override
+  void setTargetNetwork(String network) =>
+      runInAction(() => wifiService.targetNetwork = network);
 }

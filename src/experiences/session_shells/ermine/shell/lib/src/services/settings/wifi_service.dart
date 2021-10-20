@@ -4,7 +4,9 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:ermine/src/services/settings/task_service.dart';
 import 'package:fidl/fidl.dart' show InterfaceHandle, InterfaceRequest;
 import 'package:fidl_fuchsia_wlan_common/fidl_async.dart';
@@ -22,10 +24,12 @@ class WiFiService implements TaskService {
   late ClientStateUpdatesMonitor _monitor;
   StreamSubscription? _scanForNetworksSubscription;
   ScanResultIteratorProxy? _scanResultIteratorProvider;
+  StreamSubscription? _connectToWPA2NetworkSubscription;
 
   Timer? _timer;
   int scanIntervalInSeconds = 20;
   late List<ScanResult> _scannedNetworks;
+  String _targetNetwork = '';
 
   WiFiService();
 
@@ -55,6 +59,7 @@ class WiFiService implements TaskService {
   Future<void> stop() async {
     _timer?.cancel();
     await _scanForNetworksSubscription?.cancel();
+    await _connectToWPA2NetworkSubscription?.cancel();
     dispose();
   }
 
@@ -66,6 +71,12 @@ class WiFiService implements TaskService {
     _clientController = ClientControllerProxy();
     _scanResultIteratorProvider?.ctrl.close();
     _scanResultIteratorProvider = ScanResultIteratorProxy();
+  }
+
+  String get targetNetwork => _targetNetwork;
+  set targetNetwork(String network) {
+    _targetNetwork = network;
+    onChanged();
   }
 
   Future<void> scanForNetworks() async {
@@ -110,6 +121,38 @@ class WiFiService implements TaskService {
 
   bool compatibleFromScannedNetwork(ScanResult network) {
     return network.compatibility == Compatibility.supported;
+  }
+
+  Future<void> connectToWPA2Network(String password) async {
+    try {
+      _connectToWPA2NetworkSubscription = () async {
+        final utf8password = Uint8List.fromList(password.codeUnits);
+        final credential = Credential.withPassword(utf8password);
+        ScanResult? network = _scannedNetworks.firstWhereOrNull(
+            (network) => nameFromScannedNetwork(network) == _targetNetwork);
+
+        if (network == null) {
+          throw Exception(
+              '$targetNetwork network not found in scanned networks.');
+        }
+
+        final networkConfig =
+            NetworkConfig(id: network.id, credential: credential);
+
+        // TODO(fxb/79885): Separate save and connect functionality.
+        await _clientController?.saveNetwork(networkConfig);
+
+        final requestStatus = await _clientController?.connect(network.id!);
+        if (requestStatus != RequestStatus.acknowledged) {
+          throw Exception(
+              'connecting to $targetNetwork rejected: $requestStatus.');
+        }
+      }()
+          .asStream()
+          .listen((_) {});
+    } on Exception catch (e) {
+      log.warning('Connecting to $targetNetwork failed: $e');
+    }
   }
 }
 
