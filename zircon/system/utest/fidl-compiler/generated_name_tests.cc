@@ -124,9 +124,7 @@ protocol Foo {
   auto result_type = response_type->members[0].type_ctor->type;
   auto* result_union = library.LookupUnion(std::string(result_type->name.decl_name()));
   auto* error_type = result_union->members[1].maybe_used->type_ctor->type;
-
-  // TODO(fxbug.dev/85453): Should be named "Good".
-  EXPECT_EQ(error_type->name.decl_name(), "Foo_Bar_Error");
+  EXPECT_EQ(error_type->name.decl_name(), "Good");
 }
 
 TEST(GeneratedNameTests, GoodOnBits) {
@@ -144,9 +142,7 @@ type Foo = struct {
   auto foo = library.LookupStruct("Foo");
   ASSERT_NOT_NULL(foo);
   auto bar_type = foo->members[0].type_ctor->type;
-
-  // TODO(fxbug.dev/84104): Should be named "Good".
-  EXPECT_EQ(bar_type->name.decl_name(), "Bar");
+  EXPECT_EQ(bar_type->name.decl_name(), "Good");
 }
 
 TEST(GeneratedNameTests, GoodOnEnum) {
@@ -164,9 +160,7 @@ type Foo = struct {
   auto foo = library.LookupStruct("Foo");
   ASSERT_NOT_NULL(foo);
   auto bar_type = foo->members[0].type_ctor->type;
-
-  // TODO(fxbug.dev/84104): Should be named "Good".
-  EXPECT_EQ(bar_type->name.decl_name(), "Bar");
+  EXPECT_EQ(bar_type->name.decl_name(), "Good");
 }
 
 TEST(GeneratedNameTests, GoodOnStruct) {

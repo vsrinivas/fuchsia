@@ -2565,6 +2565,7 @@ bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
   if (!ConsumeAttributeList(std::move(raw_attribute_list), &attributes)) {
     return false;
   }
+  MaybeOverrideName(*attributes, context.get());
 
   auto strictness = types::Strictness::kFlexible;
   if (layout->modifiers != nullptr)
