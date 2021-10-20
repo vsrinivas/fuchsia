@@ -185,7 +185,7 @@ constexpr ErrorDef<flat::Decl *> ErrNotYetSupportedParameterListType(
     "'{}' cannot be yet be used as a parameter list (http://fxbug.dev/76349)");
 constexpr ErrorDef<SourceSpan> ErrResponsesWithErrorsMustNotBeEmpty(
     "must define success type of method '{}'");
-constexpr ErrorDef<flat::Name> ErrEmptyPayloadStructs(
+constexpr ErrorDef<std::string_view> ErrEmptyPayloadStructs(
     "method '{}' cannot have an empty struct as a payload, prefer omitting the payload altogether");
 constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateMethodName(
     "multiple protocol methods named '{}'; previous was at {}");

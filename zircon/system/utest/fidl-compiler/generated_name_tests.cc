@@ -68,10 +68,9 @@ protocol Foo {
 )FIDL");
   ASSERT_COMPILED(library);
   auto foo = library.LookupProtocol("Foo");
-
-  // TODO(fxbug.dev/87028): Assert that Foo exists, and that the anonymous
-  // struct gets named "Good".
-  ASSERT_NULL(foo);
+  ASSERT_NOT_NULL(foo);
+  auto* request_type = foo->methods[0].maybe_request_payload;
+  EXPECT_EQ(request_type->name.decl_name(), "Good");
 }
 
 TEST(GeneratedNameTests, GoodInsideResponse) {
@@ -85,10 +84,9 @@ protocol Foo {
 )FIDL");
   ASSERT_COMPILED(library);
   auto foo = library.LookupProtocol("Foo");
-
-  // TODO(fxbug.dev/87028): Assert that Foo exists, and that the anonymous
-  // struct gets named "Good".
-  ASSERT_NULL(foo);
+  ASSERT_NOT_NULL(foo);
+  auto* response_type = foo->methods[0].maybe_response_payload;
+  EXPECT_EQ(response_type->name.decl_name(), "Good");
 }
 
 TEST(GeneratedNameTests, GoodInsideResultSuccess) {
@@ -102,10 +100,12 @@ protocol Foo {
 )FIDL");
   ASSERT_COMPILED(library);
   auto foo = library.LookupProtocol("Foo");
-
-  // TODO(fxbug.dev/87028): Assert that Foo exists, and that the anonymous
-  // struct gets named "Good".
-  ASSERT_NULL(foo);
+  ASSERT_NOT_NULL(foo);
+  auto* response_type = foo->methods[0].maybe_response_payload;
+  auto result_type = response_type->members[0].type_ctor->type;
+  auto* result_union = library.LookupUnion(std::string(result_type->name.decl_name()));
+  auto* success_type = result_union->members[0].maybe_used->type_ctor->type;
+  EXPECT_EQ(success_type->name.decl_name(), "Good");
 }
 
 TEST(GeneratedNameTests, GoodInsideResultError) {

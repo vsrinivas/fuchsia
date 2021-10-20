@@ -2402,45 +2402,41 @@ void Library::ConsumeProtocolDeclaration(
 bool Library::ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
                                    std::unique_ptr<raw::ParameterList> parameter_layout,
                                    bool is_request_or_response, Struct** out_struct_decl) {
-  // If is_request_or_response is false, this parameter list is being generated
-  // as one of two members in the "Foo_Result" union.  In this case, we proceed
-  // with generating an empty struct, so that the first member of this union,
-  // "Foo_Response," may be filled.  In the other case, an empty parameter list
-  // means that the body payload is expected to be empty, so the out_struct_decl
-  // should be left as null to indicate as much.
+  // If the payload is empty, like the request in `Foo()` or the response in
+  // `Foo(...) -> ()` or the success variant in `Foo(...) -> () error uint32`:
   if (!parameter_layout->type_ctor) {
+    // If this is not a request or response, but a success variant:
     if (!is_request_or_response) {
-      Fail(ErrResponsesWithErrorsMustNotBeEmpty, parameter_layout->span(), method_name);
-      return false;
+      // Fail because we want `Foo(...) -> (struct {}) error uint32` instead.
+      return Fail(ErrResponsesWithErrorsMustNotBeEmpty, parameter_layout->span(), method_name);
     }
+    // Otherwise, there is nothing to do for an empty payload.
     return true;
   }
 
-  Name name = Name::CreateAnonymous(this, parameter_layout->span(), context);
-  if (!ConsumeTypeConstructor(std::move(parameter_layout->type_ctor), std::move(context),
-                              /*raw_attribute_list=*/nullptr, is_request_or_response,
-                              /*out_type_=*/nullptr))
+  std::unique_ptr<TypeConstructor> type_ctor;
+  if (!ConsumeTypeConstructor(std::move(parameter_layout->type_ctor), context,
+                              /*raw_attribute_list=*/nullptr, is_request_or_response, &type_ctor))
     return false;
 
-  auto* decl = LookupDeclByName(name);
-  if (!decl)
-    return false;
+  auto* decl = LookupDeclByName(type_ctor->name);
+  assert(decl);
 
   switch (decl->kind) {
     case Decl::Kind::kStruct: {
       auto struct_decl = static_cast<Struct*>(decl);
       if (is_request_or_response && struct_decl->members.empty()) {
-        Fail(ErrEmptyPayloadStructs, name);
+        return Fail(ErrEmptyPayloadStructs, method_name, method_name.data());
       }
       break;
     }
     case Decl::Kind::kBits:
     case Decl::Kind::kEnum: {
-      return Fail(ErrInvalidParameterListType, decl);
+      return Fail(ErrInvalidParameterListType, method_name, decl);
     }
     case Decl::Kind::kTable:
     case Decl::Kind::kUnion: {
-      return Fail(ErrNotYetSupportedParameterListType, decl);
+      return Fail(ErrNotYetSupportedParameterListType, method_name, decl);
     }
     default: {
       assert(false && "unexpected decl kind");
