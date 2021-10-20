@@ -8,6 +8,8 @@
 #include <lib/efi/testing/mock_tcp6.h>
 #include <lib/efi/testing/stub_boot_services.h>
 
+#include <array>
+
 #include <efi/protocol/service-binding.h>
 #include <efi/protocol/tcp6.h>
 #include <gmock/gmock.h>
@@ -43,6 +45,24 @@ const uint16_t kTestPort = 12345;
 class TcpTest : public Test {
  public:
   void SetUp() override {
+    // For many functions, the default behavior of returning 0 (EFI_SUCCESS)
+    // works without any explicit mocking.
+    static_assert(EFI_SUCCESS == 0, "Fix default mocking");
+
+    // It's important to create non-null events, since the TCP code checks
+    // against null to determine if the event is pending or not.
+    ON_CALL(mock_boot_services_, CreateEvent)
+        .WillByDefault([this](Unused, Unused, Unused, Unused, efi_event* event) {
+          open_events_++;
+          *event = kTestEvent;
+          return EFI_SUCCESS;
+        });
+    ON_CALL(mock_boot_services_, CloseEvent(kTestEvent)).WillByDefault([this](Unused) {
+      EXPECT_GT(open_events_, 0);
+      open_events_--;
+      return EFI_SUCCESS;
+    });
+
     // Opening the service binding handle and protocol.
     ON_CALL(
         mock_boot_services_,
@@ -82,23 +102,7 @@ class TcpTest : public Test {
           return EFI_SUCCESS;
         });
 
-    // For tcp6_close(), the default behavior of returning 0 (EFI_SUCCESS)
-    // works without any explicit mocking.
-    static_assert(EFI_SUCCESS == 0, "Fix tcp6_close() mocking");
-
-    // It's important to create non-null events, since the TCP code checks
-    // against null to determine if the event is pending or not.
-    ON_CALL(mock_boot_services_, CreateEvent)
-        .WillByDefault([this](Unused, Unused, Unused, Unused, efi_event* event) {
-          open_events_++;
-          *event = kTestEvent;
-          return EFI_SUCCESS;
-        });
-    ON_CALL(mock_boot_services_, CloseEvent(kTestEvent)).WillByDefault([this](Unused) {
-      EXPECT_GT(open_events_, 0);
-      open_events_--;
-      return EFI_SUCCESS;
-    });
+    // Read/Write/Disconnect/Close will work correctly using default behavior.
   }
 
   void TearDown() override { EXPECT_EQ(open_events_, 0); }
@@ -373,6 +377,319 @@ TEST_F(TcpTest, AcceptFailOpenClientProtocol) {
             tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
 
   EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_accept(&socket));
+}
+
+TEST_F(TcpTest, Read) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  // Make sure we pass the expected parameters through.
+  EXPECT_CALL(mock_client_protocol_, Receive).WillOnce([&data](efi_tcp6_io_token* token) {
+    EXPECT_FALSE(token->Packet.RxData->UrgentFlag);
+    EXPECT_EQ(token->Packet.RxData->DataLength, data.size());
+    EXPECT_EQ(token->Packet.RxData->FragmentCount, 1u);
+    EXPECT_EQ(token->Packet.RxData->FragmentTable[0].FragmentLength, data.size());
+    EXPECT_EQ(token->Packet.RxData->FragmentTable[0].FragmentBuffer, data.data());
+    return EFI_SUCCESS;
+  });
+
+  // Make sure we call Poll() each time we read, for performance.
+  EXPECT_CALL(mock_client_protocol_, Poll);
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_SUCCESS, tcp6_read(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, ReadPending) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  // Read isn't ready the first time.
+  EXPECT_CALL(mock_boot_services_, CheckEvent(kTestEvent))
+      .WillOnce(Return(EFI_SUCCESS))    // Accept()
+      .WillOnce(Return(EFI_NOT_READY))  // Receive() #1
+      .WillOnce(Return(EFI_SUCCESS));   // Receive() #2
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_PENDING, tcp6_read(&socket, data.data(), data.size()));
+  EXPECT_EQ(TCP6_RESULT_SUCCESS, tcp6_read(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, ReadPartial) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  EXPECT_CALL(mock_client_protocol_, Receive)
+      .WillOnce([&data](efi_tcp6_io_token* token) {
+        token->Packet.RxData->DataLength = 6;
+        token->Packet.RxData->FragmentTable[0].FragmentLength = 6;
+        token->Packet.RxData->FragmentTable[0].FragmentBuffer = data.data();
+        return EFI_SUCCESS;
+      })
+      .WillOnce([&data](efi_tcp6_io_token* token) {
+        token->Packet.RxData->DataLength = 2;
+        token->Packet.RxData->FragmentTable[0].FragmentLength = 2;
+        token->Packet.RxData->FragmentTable[0].FragmentBuffer = data.data() + 6;
+        return EFI_SUCCESS;
+      });
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  // When we see a partial read we try again immediately, so we should only
+  // have to call tcp6_read() once, but this is an implementation detail so
+  // may change in the future.
+  EXPECT_EQ(TCP6_RESULT_SUCCESS, tcp6_read(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, ReadFailCreateEvent) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  EXPECT_CALL(mock_boot_services_, CreateEvent)
+      .WillOnce(Return(EFI_SUCCESS))            // Accept()
+      .WillOnce(Return(EFI_OUT_OF_RESOURCES));  // Receive()
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_read(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, ReadFailReceive) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  EXPECT_CALL(mock_client_protocol_, Receive).WillOnce(Return(EFI_OUT_OF_RESOURCES));
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_read(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, ReadFailCheckEvent) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  EXPECT_CALL(mock_boot_services_, CheckEvent)
+      .WillOnce(Return(EFI_SUCCESS))            // Accept()
+      .WillOnce(Return(EFI_OUT_OF_RESOURCES));  // Receive()
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_read(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, ReadFailCompletionError) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  EXPECT_CALL(mock_client_protocol_, Receive).WillOnce([](efi_tcp6_io_token* token) {
+    token->CompletionToken.Status = EFI_OUT_OF_RESOURCES;
+    return EFI_SUCCESS;
+  });
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_read(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, ReadFailDisconnectFin) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  EXPECT_CALL(mock_client_protocol_, Receive).WillOnce([](efi_tcp6_io_token* token) {
+    token->CompletionToken.Status = EFI_CONNECTION_FIN;
+    return EFI_SUCCESS;
+  });
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_DISCONNECTED, tcp6_read(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, ReadFailDisconnectReset) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  EXPECT_CALL(mock_client_protocol_, Receive).WillOnce([](efi_tcp6_io_token* token) {
+    token->CompletionToken.Status = EFI_CONNECTION_RESET;
+    return EFI_SUCCESS;
+  });
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_DISCONNECTED, tcp6_read(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, ReadFailOverflow) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  // Receive() returns success, but gives us more data than expected.
+  EXPECT_CALL(mock_client_protocol_, Receive).WillOnce([](efi_tcp6_io_token* token) {
+    token->Packet.RxData->DataLength = 10;
+    token->Packet.RxData->FragmentTable[0].FragmentLength = 10;
+    return EFI_SUCCESS;
+  });
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_read(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, Write) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  // Make sure we pass the expected parameters through.
+  EXPECT_CALL(mock_client_protocol_, Transmit).WillOnce([&data](efi_tcp6_io_token* token) {
+    EXPECT_TRUE(token->Packet.TxData->Push);
+    EXPECT_FALSE(token->Packet.TxData->Urgent);
+    EXPECT_EQ(token->Packet.TxData->DataLength, data.size());
+    EXPECT_EQ(token->Packet.TxData->FragmentCount, 1u);
+    EXPECT_EQ(token->Packet.TxData->FragmentTable[0].FragmentLength, data.size());
+    EXPECT_EQ(token->Packet.TxData->FragmentTable[0].FragmentBuffer, data.data());
+    return EFI_SUCCESS;
+  });
+
+  // Make sure we call Poll() each time we read, for performance.
+  EXPECT_CALL(mock_client_protocol_, Poll);
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_SUCCESS, tcp6_write(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, WriteFailCreateEvent) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  EXPECT_CALL(mock_boot_services_, CreateEvent)
+      .WillOnce(Return(EFI_SUCCESS))            // Accept()
+      .WillOnce(Return(EFI_OUT_OF_RESOURCES));  // Transmit()
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_write(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, WriteFailTransmit) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  EXPECT_CALL(mock_client_protocol_, Transmit).WillOnce(Return(EFI_OUT_OF_RESOURCES));
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_write(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, WriteFailCheckEvent) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  EXPECT_CALL(mock_boot_services_, CheckEvent)
+      .WillOnce(Return(EFI_SUCCESS))            // Accept()
+      .WillOnce(Return(EFI_OUT_OF_RESOURCES));  // Transmit()
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_write(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, WriteFailCompletionError) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  EXPECT_CALL(mock_client_protocol_, Transmit).WillOnce([](efi_tcp6_io_token* token) {
+    token->CompletionToken.Status = EFI_OUT_OF_RESOURCES;
+    return EFI_SUCCESS;
+  });
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_write(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, WriteFailDisconnectFin) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  EXPECT_CALL(mock_client_protocol_, Transmit).WillOnce([](efi_tcp6_io_token* token) {
+    token->CompletionToken.Status = EFI_CONNECTION_FIN;
+    return EFI_SUCCESS;
+  });
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_DISCONNECTED, tcp6_write(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, WriteFailDisconnectReset) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  EXPECT_CALL(mock_client_protocol_, Transmit).WillOnce([](efi_tcp6_io_token* token) {
+    token->CompletionToken.Status = EFI_CONNECTION_RESET;
+    return EFI_SUCCESS;
+  });
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_DISCONNECTED, tcp6_write(&socket, data.data(), data.size()));
+}
+
+TEST_F(TcpTest, WriteFailPartial) {
+  tcp6_socket socket = {};
+  std::array<uint8_t, 8> data;
+
+  // Transmit() returns success, but gives us less data than expected.
+  EXPECT_CALL(mock_client_protocol_, Transmit).WillOnce([](efi_tcp6_io_token* token) {
+    token->Packet.TxData->DataLength = 4;
+    token->Packet.TxData->FragmentTable[0].FragmentLength = 4;
+    return EFI_SUCCESS;
+  });
+
+  ASSERT_EQ(TCP6_RESULT_SUCCESS,
+            tcp6_open(&socket, mock_boot_services_.services(), &kTestAddress, kTestPort));
+  ASSERT_EQ(TCP6_RESULT_SUCCESS, tcp6_accept(&socket));
+
+  EXPECT_EQ(TCP6_RESULT_ERROR, tcp6_write(&socket, data.data(), data.size()));
 }
 
 TEST_F(TcpTest, Disconnect) {

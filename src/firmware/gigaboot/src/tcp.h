@@ -62,6 +62,14 @@ typedef struct {
   efi_handle client_handle;
   efi_tcp6_protocol* client_protocol;
   efi_tcp6_close_token client_close_token;
+
+  // R/W state. If we ever need to support multiple in-flight reads/writes,
+  // this could be dynamically allocated instead.
+  efi_tcp6_receive_data read_data;
+  const uint8_t* read_end;
+  efi_tcp6_io_token read_token;
+  efi_tcp6_transmit_data write_data;
+  efi_tcp6_io_token write_token;
 } tcp6_socket;
 
 typedef enum {
@@ -101,10 +109,43 @@ tcp6_result tcp6_open(tcp6_socket* socket, efi_boot_services* boot_services,
 //   TCP6_RESULT_ERROR
 tcp6_result tcp6_accept(tcp6_socket* socket);
 
+// Reads bytes from the connected TCP client.
+//
+// Only a single in-flight read is supported. |data| and |size| are cached
+// when starting a new read, and cannot be changed until the read completes.
+//
+// On SUCCESS it is guaranteed that exactly |size| bytes have been read.
+//
+// Returns:
+//   TCP6_RESULT_SUCCESS
+//   TCP6_RESULT_PENDING
+//   TCP6_RESULT_DISCONNECTED
+//   TCP6_RESULT_ERROR
+tcp6_result tcp6_read(tcp6_socket* socket, void* data, uint32_t size);
+
+// Writes bytes to the connected TCP client.
+//
+// Like tcp6_read(), only a single in-flight write is supported. Additionally,
+// |data| is not copied internally, so the caller must ensure that it remains
+// valid and unchanged while a write is pending.
+//
+// On SUCCESS it is guaranteed that exactly |size| bytes have been written.
+//
+// Returns:
+//   TCP6_RESULT_SUCCESS
+//   TCP6_RESULT_PENDING
+//   TCP6_RESULT_DISCONNECTED
+//   TCP6_RESULT_ERROR
+tcp6_result tcp6_write(tcp6_socket* socket, const void* data, uint32_t size);
+
 // Disconnects the currently connected TCP client.
 //
 // This performs a graceful shutdown; any pending TX data is flushed and the
 // TCP close handshake is performed before returning TCP6_RESULT_SUCCESS.
+//
+// Even if another operation has returned TCP6_RESULT_DISCONNECTED, this still
+// needs to be called until it returns SUCCESS to clean up resources before
+// attempting to accept the next client.
 //
 // No-op if there is no connected TCP client.
 //
