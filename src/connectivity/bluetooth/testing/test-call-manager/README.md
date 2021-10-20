@@ -10,6 +10,11 @@ Using background tasks, it asynchronously handles requests and responses made by
 bt-hfp-audio-gateway. It does this using the state that has been set by the owner of the
 `TestCallManager`.
 
+## Build
+
+This library relies on the `fuchsia.bluetooth.hfp.Hfp` and `fuchsia.bluetooth.hfp.test.HfpTest`
+capabilities. Ensure both are available by including them in the integration test manifest.
+
 ## Test
 
 This library is used to build integration tests. Its functionality is exercised in those tests

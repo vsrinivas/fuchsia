@@ -386,6 +386,36 @@
           },
           "using_node": "/core/appmgr"
         },
+        {
+          "capability": "fuchsia.bluetooth.hfp.test.HfpTest",
+          "error": {
+            "error": {
+              "analyzer_model_error": {
+                "routing_error": {
+                  "use_from_parent_not_found": {
+                    "capability_id": "fuchsia.bluetooth.hfp.test.HfpTest",
+                    "moniker": {
+                      "path": [
+                        {
+                          "collection": null,
+                          "name": "core",
+                          "rep": "core"
+                        },
+                        {
+                          "collection": null,
+                          "name": "appmgr",
+                          "rep": "appmgr"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "message": "A `use from parent` declaration was found at `/core/appmgr` for `fuchsia.bluetooth.hfp.test.HfpTest`, but no matching `offer` declaration was found in the parent"
+          },
+          "using_node": "/core/appmgr"
+        },
 	// Not all products (eg. core) include CodecFactory
         {
           "using_node": "/core/appmgr",

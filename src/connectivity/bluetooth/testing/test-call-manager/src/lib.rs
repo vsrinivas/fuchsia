@@ -26,9 +26,6 @@ use std::{
     sync::Arc,
 };
 
-pub const HFP_AG_URL: &str =
-    "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-default#meta/bt-hfp-audio-gateway.cmx";
-
 type CallId = u64;
 type Number = String;
 type Memory = String;
@@ -278,9 +275,6 @@ impl From<Dialer> for DialerSer {
 #[derive(Derivative, Default)]
 #[derivative(Debug)]
 struct TestCallManagerInner {
-    /// Running instance of the bt-hfp-audio-gateway component.
-    #[derivative(Debug = "ignore")]
-    hfp_component: Option<client::App>,
     /// Connection to HFP Test interface
     #[derivative(Debug = "ignore")]
     test_proxy: Option<HfpTestProxy>,
@@ -355,21 +349,16 @@ impl TestCallManager {
         let mut inner = self.inner.lock().await;
 
         if inner.manager.peer_watcher.is_none() {
-            fx_log_info!("Launching HFP and setting new service proxy");
-            let launcher = client::launcher()
-                .map_err(|err| format_err!("Failed to get launcher service: {}", err))?;
-            let bt_hfp = client::launch(&launcher, HFP_AG_URL.to_string(), None)?;
+            fx_log_info!("Connecting to HFP and setting new service proxy");
 
-            let hfp_service_proxy = bt_hfp
-                .connect_to_protocol::<HfpMarker>()
+            let hfp_service_proxy = client::connect_to_protocol::<HfpMarker>()
                 .map_err(|err| format_err!("Failed to create HFP service proxy: {}", err))?;
 
             inner.test_proxy =
-                Some(bt_hfp.connect_to_protocol::<HfpTestMarker>().map_err(|err| {
+                Some(client::connect_to_protocol::<HfpTestMarker>().map_err(|err| {
                     format_err!("Failed to create HFP Test service proxy: {}", err)
                 })?);
 
-            inner.hfp_component = Some(bt_hfp);
             let (client_end, stream) =
                 fidl::endpoints::create_request_stream::<CallManagerMarker>()?;
             hfp_service_proxy.register(client_end)?;

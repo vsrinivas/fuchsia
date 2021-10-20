@@ -518,10 +518,6 @@
             path: "/svc_for_sys/fuchsia.bluetooth.avrcp.PeerManager",
         },
         {
-            protocol: "fuchsia.bluetooth.avrcp.test.PeerManagerExt",
-            path: "/svc_for_sys/fuchsia.bluetooth.avrcp.test.PeerManagerExt",
-        },
-        {
             protocol: "fuchsia.bluetooth.a2dp.AudioMode",
             path: "/svc_for_sys/fuchsia.bluetooth.a2dp.AudioMode",
         },
@@ -532,6 +528,18 @@
         {
             protocol: "fuchsia.bluetooth.hfp.Hfp",
             path: "/svc_for_sys/fuchsia.bluetooth.hfp.Hfp",
+        },
+
+        // From v2 Bluetooth components (testonly capabilities).
+        // TODO(fxbug.dev/86390): These capabilities should not always be available to the system.
+        // Remove this once we can conditionally expose these testonly capabilities.
+        {
+            protocol: "fuchsia.bluetooth.avrcp.test.PeerManagerExt",
+            path: "/svc_for_sys/fuchsia.bluetooth.avrcp.test.PeerManagerExt",
+        },
+        {
+            protocol: "fuchsia.bluetooth.hfp.test.HfpTest",
+            path: "/svc_for_sys/fuchsia.bluetooth.hfp.test.HfpTest",
         },
 
         // From archivist
