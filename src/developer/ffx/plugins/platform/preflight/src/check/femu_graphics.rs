@@ -132,21 +132,26 @@ impl<'a> FemuGraphics<'a> {
             )));
         }
 
-        Ok(match self.linux_get_nvidia_driver_version() {
-            Ok(driver_version) => {
-                if driver_version >= NVIDIA_REQ_DRIVER_VERSION {
-                    Success(format!("Found supported graphics hardware: {}", cards.join(", ")))
-                } else {
-                    Warning(format!("Found supported graphics hardware but nVidia driver version {}.{} is older than required version {}.{}. Download the required version at https://www.nvidia.com/download/driverResults.aspx/160175",
-                        driver_version.0, driver_version.1, NVIDIA_REQ_DRIVER_VERSION.0, NVIDIA_REQ_DRIVER_VERSION.1))
+        let has_nvidia_card = cards.iter().any(|name| name.starts_with("NVIDIA"));
+        if has_nvidia_card {
+            Ok(match self.linux_get_nvidia_driver_version() {
+                Ok(driver_version) => {
+                    if driver_version >= NVIDIA_REQ_DRIVER_VERSION {
+                        Success(format!("Found supported graphics hardware: {}", cards.join(", ")))
+                    } else {
+                        Warning(format!("Found supported graphics hardware but nVidia driver version {}.{} is older than required version {}.{}. Download the required version at https://www.nvidia.com/download/driverResults.aspx/160175",
+                            driver_version.0, driver_version.1, NVIDIA_REQ_DRIVER_VERSION.0, NVIDIA_REQ_DRIVER_VERSION.1))
+                    }
                 }
-            }
-            Err(e) => Warning(format!(
-                "Found supported graphics hardware: {}; nVidia hardware couldn't be detected: {}",
-                cards.join(", "),
-                e
-            )),
-        })
+                Err(e) => Warning(format!(
+                    "Found supported graphics hardware: {}; nVidia hardware couldn't be detected: {}",
+                    cards.join(", "),
+                    e
+                )),
+            })
+        } else {
+            Ok(Success(format!("Found supported graphics hardware: {}", cards.join(", "))))
+        }
     }
 
     fn macos_find_supported_graphics_cards(&self) -> Result<Vec<String>> {
@@ -363,18 +368,12 @@ NVIDIA Quadro K1200:
             if args.to_vec() == vec!["lspci"] {
                 return Ok((ExitStatus(0), LSPCI_OUTPUT_GOOD_INTEL.to_string(), "".to_string()));
             }
-            assert_eq!(
-                args.to_vec(),
-                vec!["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"]
-            );
-            Err(anyhow!(
-                "Could not run 'nvidia-smi --query-gpu=driver_version --format=csv,noheader'"
-            ))
+            unreachable!();
         };
 
         let check = FemuGraphics::new(&run_command);
         let response = check.run(&PreflightConfig { system: OperatingSystem::Linux }).await;
-        assert!(matches!(response?, PreflightCheckResult::Warning(..)));
+        assert!(matches!(response?, PreflightCheckResult::Success(..)));
         Ok(())
     }
 
