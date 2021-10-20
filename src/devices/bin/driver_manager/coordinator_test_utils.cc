@@ -37,10 +37,6 @@ void InitializeCoordinator(Coordinator* coordinator) {
   zx_status_t status = coordinator->InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
 
-  // Load the fragment driver
-  load_driver(nullptr, coordinator->GetFragmentDriverPath().c_str(),
-              fit::bind_member(coordinator, &Coordinator::DriverAddedInit));
-
   // Add the driver we're using as platform bus
   load_driver(nullptr, kSystemDriverPath,
               fit::bind_member(coordinator, &Coordinator::DriverAddedInit));

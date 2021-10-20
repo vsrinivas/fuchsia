@@ -336,6 +336,21 @@ zx_status_t LaunchDriverManager(const Args& args, zx::job& job, zx::channel devf
       },
       std::move(local));
 
+  status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY, remote.release());
+  if (status != ZX_OK) {
+    return status;
+  }
+  actions.AddActionWithNamespace(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+          .ns = {.prefix = "/pkg"},
+      },
+      std::move(local));
+
   actions.AddActionWithNamespace(
       fdio_spawn_action_t{
           .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,

@@ -315,7 +315,7 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   ResumeContext& resume_context() { return resume_context_; }
   const ResumeContext& resume_context() const { return resume_context_; }
 
-  const Driver* fragment_driver() const { return fragment_driver_; }
+  const Driver* fragment_driver() { return driver_loader_.LoadDriverUrl(GetFragmentDriverUrl()); }
 
   InspectManager& inspect_manager() { return *inspect_manager_; }
   DriverLoader& driver_loader() { return driver_loader_; }
@@ -336,8 +336,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   void RegisterDriverHost(DriverHost* dh) { driver_hosts_.push_back(dh); }
   void UnregisterDriverHost(DriverHost* dh) { driver_hosts_.erase(*dh); }
 
-  // Returns path to driver that should be bound to fragments of composite devices.
-  std::string GetFragmentDriverPath() const;
+  // Returns URL to driver that should be bound to fragments of composite devices.
+  std::string GetFragmentDriverUrl() const;
 
   using RegisterWithPowerManagerCompletion = fit::callback<void(zx_status_t)>;
   void RegisterWithPowerManager(fidl::ClientEnd<fuchsia_io::Directory> devfs,
@@ -433,10 +433,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   void OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                   const zx_packet_signal_t* signal);
   async::WaitMethod<Coordinator, &Coordinator::OnOOMEvent> wait_on_oom_event_{this};
-
-  // Once the special fragment driver is loaded, this will refer to it.  This
-  // driver is used for binding against fragments of composite devices
-  const Driver* fragment_driver_ = nullptr;
 
   cpp17::optional<fidl::ServerBindingRef<fuchsia_driver_registrar::DriverRegistrar>>
       driver_registrar_binding_;

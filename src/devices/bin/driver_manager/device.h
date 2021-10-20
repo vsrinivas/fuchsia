@@ -198,7 +198,7 @@ class Device
                 // If there are no more children and this is a fragment device,
                 // run through the Composite state next.
                 if (device_->parent_ &&
-                    device_->libname() == device_->coordinator->GetFragmentDriverPath()) {
+                    device_->libname() == device_->coordinator->GetFragmentDriverUrl()) {
                   state_ = Composite{device_->parent_->fragments().begin()};
                   return true;
                 } else {

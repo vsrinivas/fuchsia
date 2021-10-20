@@ -545,7 +545,7 @@ zx_status_t Coordinator::AddDevice(
 
   // If we're creating a device that's using the fragment driver, inform the
   // fragment.
-  if (fragment_driver_ != nullptr && dev->libname() == fragment_driver_->libname) {
+  if (dev->libname() == GetFragmentDriverUrl()) {
     for (auto& cur_fragment : dev->parent()->fragments()) {
       if (cur_fragment.fragment_device() == nullptr) {
         // Pick the first fragment that does not have a device added by the fragment
@@ -671,7 +671,7 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
   }
 
   // Check if this device is a composite fragment device
-  if (fragment_driver_ != nullptr && dev->libname() == fragment_driver_->libname) {
+  if (dev->libname() == GetFragmentDriverUrl()) {
     // If it is, then its parent will know about which one (since the parent
     // is the actual device matched by the fragment description).
     const auto& parent = dev->parent();
@@ -1381,10 +1381,6 @@ void Coordinator::DriverAdded(Driver* drv, const char* version) {
 // TODO: fancier priorities
 void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
   auto driver = std::unique_ptr<Driver>(drv);
-  // Record the special fragment driver when we see it
-  if (driver->libname.data() == GetFragmentDriverPath()) {
-    fragment_driver_ = driver.get();
-  }
 
   if (driver->fallback) {
     // fallback driver, load only if all else fails
@@ -2163,9 +2159,7 @@ void Coordinator::OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wa
   suspend_handler_.ShutdownFilesystems([](zx_status_t status) {});
 }
 
-std::string Coordinator::GetFragmentDriverPath() const {
-  return config_.path_prefix + "driver/fragment.so";
-}
+std::string Coordinator::GetFragmentDriverUrl() const { return "#driver/fragment.so"; }
 
 void Coordinator::RestartDriverHosts(RestartDriverHostsRequestView request,
                                      RestartDriverHostsCompleter::Sync& completer) {
