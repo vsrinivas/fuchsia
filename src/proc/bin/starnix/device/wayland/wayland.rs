@@ -353,30 +353,6 @@ mod tests {
     use crate::device::wayland::DmaBufFile;
     use crate::testing::create_kernel_and_task;
 
-    /// Creates a display socket and adds it to the task's filesystem.
-    ///
-    /// Returns a socket that is connected to the display socket, as well as a channel endpoint that
-    /// would normally be handed to the wayland bridge.
-    fn create_socket_and_channel(task: &Task) -> (SocketHandle, zx::Channel) {
-        let display_socket_path = b"serve_display_socket.s";
-        let display_socket = create_display_socket(task, display_socket_path.to_vec())
-            .expect("Failed to create display socket.");
-
-        let (wayland_server_channel, wayland_bridge) =
-            zx::Channel::create().expect("Failed to create channel");
-
-        let weak_kernel = Arc::downgrade(&task.thread_group.kernel);
-        let cloned_display_socket = display_socket.clone();
-        let _display_thread = std::thread::spawn(move || {
-            let _ = serve_display_socket(weak_kernel, cloned_display_socket, wayland_bridge);
-        });
-
-        let socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
-        socket.connect(&display_socket, ucred::default()).expect("Could not connect to socket.");
-
-        (socket, wayland_server_channel)
-    }
-
     /// Tests that the display socket is created as expected.
     #[test]
     fn test_create_display_socket() {
@@ -405,28 +381,5 @@ mod tests {
         let file = node.entry.node.open(OpenFlags::empty()).expect("Could not open device file.");
 
         assert!(file.as_any().downcast_ref::<DmaBufFile>().is_some());
-    }
-
-    /// Tests that data sent from the wayland bridge is proxied to the display socket.
-    #[test]
-    fn test_write_wayland_bridge() {
-        let (_kernel, current_task) = create_kernel_and_task();
-        let (client_socket, wayland_server_channel) = create_socket_and_channel(&current_task);
-
-        let sent_bytes = vec![1, 2, 3];
-        wayland_server_channel
-            .write(&sent_bytes, &mut vec![])
-            .expect("Failed to send data to channel.");
-
-        let waiter = Waiter::new();
-        client_socket.wait_async(
-            &waiter,
-            FdEvents::POLLIN | FdEvents::POLLHUP,
-            Box::new(|_events| {}),
-        );
-        waiter.wait_kernel(zx::Time::INFINITE).expect("");
-
-        let messages = client_socket.read_kernel();
-        assert_eq!(messages[0].data.bytes(), sent_bytes);
     }
 }
