@@ -140,6 +140,7 @@ sdk://pkg/async-loop-cpp
 sdk://pkg/async-loop-default
 sdk://pkg/async-loop-testing
 sdk://pkg/async-testing
+sdk://pkg/component_cpp_testing
 sdk://pkg/fdio
 sdk://pkg/fidl
 sdk://pkg/fidl_base
@@ -160,6 +161,7 @@ sdk://pkg/stdcompat
 sdk://pkg/svc
 sdk://pkg/sync
 sdk://pkg/sys_cpp
+sdk://pkg/component_cpp_testing
 sdk://pkg/sys_cpp_testing
 sdk://pkg/sys_inspect_cpp
 sdk://pkg/sys_service_cpp

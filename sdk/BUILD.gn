@@ -366,6 +366,7 @@ sdk_molecule("core_lib") {
     "//sdk/lib/modular/cpp:cpp_sdk",
     "//sdk/lib/stdcompat:stdcompat_sdk",
     "//sdk/lib/svc:svc_sdk",
+    "//sdk/lib/sys/component/cpp/testing:cpp_library_sdk",
     "//sdk/lib/sys/cpp:cpp_sdk",
     "//sdk/lib/sys/cpp/testing:cpp_sdk",
     "//sdk/lib/sys/inspect/cpp:cpp_sdk",
