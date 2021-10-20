@@ -178,6 +178,7 @@ performance in some cases. For that reason, prefilters can be disabled via
 [`AhoCorasickBuilder::prefilter`](struct.AhoCorasickBuilder.html#method.prefilter).
 */
 
+#![allow(warnings)]
 #![deny(missing_docs)]
 
 // We can never be truly no_std, but we could be alloc-only some day, so

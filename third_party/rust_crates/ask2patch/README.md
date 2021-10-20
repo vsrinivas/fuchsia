@@ -4,9 +4,11 @@ Crates in this directory don't fall under Google's [patching policy]. Googlers w
 contribute to the upstream projects here must seek approval by filing a bug under the `OSRB`
 component.
 
-Crates moved to this directory should not be modified from their upstream contents. If you need to
-make code changes, move the crate to `//third_party/rust_crates/forks/<crate_name>` and add a
-`README.fuchsia` file explaining the changes *and* this upstream patching policy restriction.
+Crates moved to this directory should not be modified from their upstream contents, except
+to add a single `#![allow(warnings)]` to the crate's `lib.rs` to prevent repeated warnings
+when operated on by Cargo. If you need to make code changes, move the crate to
+`//third_party/rust_crates/forks/<crate_name>` and add a `README.fuchsia` file explaining
+the changes *and* this upstream patching policy restriction.
 
 To update a crate in this directory:
 
