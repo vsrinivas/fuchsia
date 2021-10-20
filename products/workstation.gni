@@ -76,7 +76,7 @@ universe_package_labels += [
   "//src/ui/examples/spinning_square_view",
   "//src/virtualization/bin",
 
-  "//src/proc/bundles:starsh",
+  "//src/proc/bundles:examples",
 ]
 
 product_bootfs_labels += [

@@ -2,13 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("starsh") {
+group("examples") {
   testonly = true
 
   if (target_cpu == "x64") {
     deps = [
       "//src/proc/bin/starnix",
       "//src/proc/bin/starsh",
+      "//src/proc/examples/wayland:starnix_wayland",
       "//src/proc/tests/android:test_android_distro",
     ]
   }
