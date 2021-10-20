@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
+
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"

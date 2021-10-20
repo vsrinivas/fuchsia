@@ -286,7 +286,7 @@ func StringInLogsChecks() []FailureModeCheck {
 		// Emitted by the GCS Go library from within botanist during image download.
 		// https://github.com/googleapis/google-cloud-go/blob/bc966a3c318d162263ebce3d71bc39b3880c8e90/storage/reader.go#L416
 		&stringInLogCheck{
-			String: "storage: bad CRC on read",
+			String: bootserverconstants.BadCRCErrorMsg,
 			Type:   swarmingOutputType,
 		},
 		// For fxbug.dev/53101.

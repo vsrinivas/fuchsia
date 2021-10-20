@@ -6,6 +6,7 @@ package bootserver
 
 import (
 	"bytes"
+	"compress/flate"
 	"context"
 	"errors"
 	"fmt"
@@ -18,13 +19,14 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	constants "go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
-	"golang.org/x/sync/errgroup"
 )
 
 // Maps bootserver argument to a corresponding netsvc name.
@@ -92,6 +94,50 @@ func skipOnTransferError(name string) bool {
 	return strings.HasPrefix(name, constants.FirmwareNetsvcPrefix)
 }
 
+// DownloadWithRetries runs a function that downloads a blob from GCS, and
+// retries if the function returns an error that corresponds to a failure mode
+// that's known to be transient.
+func DownloadWithRetries(ctx context.Context, dest string, download func() error) error {
+	var finalErr error
+	retryStrategy := retry.WithMaxAttempts(retry.NewConstantBackoff(5*time.Second), 3)
+	retry.Retry(ctx, retryStrategy, func() error {
+		finalErr = download()
+		if isTransientDownloadError(ctx, finalErr) {
+			// Clean up the destination file, which may be only partially
+			// written, before retrying.
+			if err := os.RemoveAll(dest); err != nil {
+				finalErr = err
+				return nil
+			}
+			return finalErr
+		}
+		// Don't retry if the operation passed or if there was a non-transient
+		// failure.
+		return nil
+	}, nil)
+	return finalErr
+}
+
+// isTransientDownloadError returns whether an error corresponds to a GCS
+// download failure mode that's known to be transient.
+func isTransientDownloadError(ctx context.Context, err error) bool {
+	if err == nil {
+		return false
+	}
+	if strings.Contains(err.Error(), constants.BadCRCErrorMsg) {
+		// Checksum failure likely indicates transient corruption during download.
+		logger.Warningf(ctx, "GCS checksum failure detected, retrying download...")
+		return true
+	}
+	var flateErr flate.CorruptInputError
+	if errors.As(err, &flateErr) {
+		// Ditto, likely indicates transient corruption.
+		logger.Warningf(ctx, "Flake corruption error detected, retrying download...")
+		return true
+	}
+	return false
+}
+
 func downloadImagesToDir(ctx context.Context, dir string, imgs []Image) ([]Image, func() error, error) {
 	// Copy each in a goroutine for efficiency's sake.
 	eg := errgroup.Group{}
@@ -103,10 +149,16 @@ func downloadImagesToDir(ctx context.Context, dir string, imgs []Image) ([]Image
 		}
 		img := img
 		eg.Go(func() error {
-			f, err := downloadAndOpenImage(ctx, filepath.Join(dir, img.Name), img)
-			if err != nil {
+			var f *os.File
+			dest := filepath.Join(dir, img.Name)
+			if err := DownloadWithRetries(ctx, dest, func() error {
+				var err error
+				f, err = downloadAndOpenImage(ctx, dest, img)
+				return err
+			}); err != nil {
 				return err
 			}
+
 			fi, err := f.Stat()
 			if err != nil {
 				f.Close()

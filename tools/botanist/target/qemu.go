@@ -401,20 +401,21 @@ func copyImagesToDir(ctx context.Context, dir string, preservePath bool, imgs ..
 		if img.Reader != nil {
 			img := img
 			eg.Go(func() error {
-				return copyImageToDir(ctx, dir, preservePath, img)
+				base := img.Name
+				if preservePath {
+					base = img.Path
+				}
+				dest := filepath.Join(dir, base)
+				return bootserver.DownloadWithRetries(ctx, dest, func() error {
+					return copyImageToDir(ctx, dest, img)
+				})
 			})
 		}
 	}
 	return eg.Wait()
 }
 
-func copyImageToDir(ctx context.Context, dir string, preservePath bool, img *bootserver.Image) error {
-	base := img.Name
-	if preservePath {
-		base = img.Path
-	}
-	dest := filepath.Join(dir, base)
-
+func copyImageToDir(ctx context.Context, dest string, img *bootserver.Image) error {
 	f, ok := img.Reader.(*os.File)
 	if ok {
 		if err := osmisc.CopyFile(f.Name(), dest); err != nil {
@@ -451,8 +452,7 @@ func copyImageToDir(ctx context.Context, dir string, preservePath bool, img *boo
 	}
 
 	// We no longer need the reader at this point.
-	c, ok := img.Reader.(io.Closer)
-	if ok {
+	if c, ok := img.Reader.(io.Closer); ok {
 		c.Close()
 	}
 	img.Reader = nil
