@@ -473,7 +473,10 @@ zx_status_t EventRing::HandleIRQ() {
         } break;
         case Control::TransferEvent: {
           auto completion = static_cast<TransferEvent*>(erdp_virt_);
-          auto state = &hci_->GetDeviceState()[completion->SlotID() - 1];
+          auto state = hci_->GetDeviceState(completion->SlotID() - 1);
+          if (!state) {
+            break;
+          }
           fbl::AutoLock l(&state->transaction_lock());
           std::unique_ptr<TRBContext> context;
           TransferRing* ring;
