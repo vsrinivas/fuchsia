@@ -179,8 +179,8 @@ impl Reservation {
     /// Commits a previously held amount.
     pub fn commit(&self, amount: u64) {
         let mut inner = self.inner.lock().unwrap();
-        inner.amount -= amount;
-        inner.held -= amount;
+        inner.amount = inner.amount.checked_sub(amount).unwrap();
+        inner.held = inner.held.checked_sub(amount).unwrap();
     }
 
     /// Returns the entire amount of the reservation.  The caller is responsible for maintaining

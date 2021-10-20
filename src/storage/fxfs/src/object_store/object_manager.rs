@@ -88,6 +88,9 @@ struct Inner {
     // A running counter that tracks metadata space that has been borrowed on the understanding that
     // eventually it will be recovered (potentially after a full compaction).
     borrowed_metadata_space: u64,
+
+    // The maximum transaction size that has been encountered so far.
+    max_txn_size: u64,
 }
 
 impl Inner {
@@ -123,6 +126,7 @@ impl ObjectManager {
                 reservations: HashMap::new(),
                 last_end_offset: 0,
                 borrowed_metadata_space: 0,
+                max_txn_size: 0,
             }),
             metadata_reservation: OnceCell::new(),
         }
@@ -421,9 +425,12 @@ impl ObjectManager {
     ) {
         let reservation = self.metadata_reservation();
         let mut inner = self.inner.write().unwrap();
-        let txn_space = reserved_space_from_journal_usage(
-            end_offset - std::mem::replace(&mut inner.last_end_offset, end_offset),
-        );
+        let journal_usage = end_offset - std::mem::replace(&mut inner.last_end_offset, end_offset);
+        if journal_usage > inner.max_txn_size {
+            inner.max_txn_size = journal_usage;
+            log::info!("max txn size: {}", journal_usage);
+        }
+        let txn_space = reserved_space_from_journal_usage(journal_usage);
         match &mut transaction.metadata_reservation {
             MetadataReservation::Borrowed => {
                 // Account for the amount we need to borrow for the transaction itself now that we

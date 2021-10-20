@@ -699,14 +699,9 @@ impl Mutations for ObjectStore {
         log_offset: u64,
         _assoc_obj: AssocObj<'_>,
     ) {
-        // It's not safe to fully open a store until replay is fully complete (because
-        // subsequent mutations could render current records invalid). The exception to
-        // this is the root parent object store which contains the extents for the journal
-        // file: whilst we are replaying we need to be able to track new extents for the
-        // journal file so that we can read from it whilst we are replaying.
-        assert!(
-            mode.is_live() || self.store_info_handle.get().is_none() || self.parent_store.is_none()
-        );
+        // It's not safe to fully open a store until replay is fully complete (because subsequent
+        // mutations could render current records invalid).
+        assert!(mode.is_live() || self.store_info_handle.get().is_none());
 
         match mutation {
             Mutation::ObjectStore(ObjectStoreMutation { mut item, op }) => {

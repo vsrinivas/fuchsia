@@ -211,6 +211,15 @@ pub enum Checksums {
     Fletcher(Vec<u64>),
 }
 
+impl Checksums {
+    pub fn split_off(&mut self, at: usize) -> Checksums {
+        match self {
+            Checksums::None => Checksums::None,
+            Checksums::Fletcher(sums) => Checksums::Fletcher(sums.split_off(at)),
+        }
+    }
+}
+
 /// ExtentValue is the payload for an extent in the object store, which describes where the extent
 /// is physically located.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -57,7 +57,7 @@ pub struct Options<'a> {
 // amount chosen here must be large enough for the maximum possible transaction that can be created,
 // so transactions always need to be bounded which might involve splitting an operation up into
 // smaller transactions.
-pub const TRANSACTION_METADATA_MAX_AMOUNT: u64 = reserved_space_from_journal_usage(16384);
+pub const TRANSACTION_METADATA_MAX_AMOUNT: u64 = reserved_space_from_journal_usage(24_576);
 
 #[must_use]
 pub struct TransactionLocks<'a>(pub WriteGuard<'a>);

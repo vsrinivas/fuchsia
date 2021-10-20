@@ -16,7 +16,7 @@ use {
     std::ops::Range,
     std::sync::Mutex,
     std::time::Duration,
-    storage_device::buffer::{Buffer, BufferRef},
+    storage_device::buffer::{Buffer, MutableBufferRef},
 };
 
 // This module contains an implementation of a writeback cache.
@@ -55,6 +55,10 @@ use {
 
 /// When reading into the cache, this is the minimum granularity that we load data at.
 pub const CACHE_READ_AHEAD_SIZE: u64 = 32_768;
+
+// When flushing, the maximum number of independent ranges that will be returned.  This is used to
+// limit the size of transactions.
+const MAX_FLUSH_RANGE_COUNT: usize = 50;
 
 /// StorageReservation should be implemented by filesystems to provide in-memory reservation of
 /// blocks for pending writes.
@@ -153,7 +157,7 @@ struct Inner {
 impl Inner {
     fn complete_flush<'a>(
         &mut self,
-        ranges: Vec<FlushableRange<'a>>,
+        ranges: Vec<Range<u64>>,
         reservation: &allocator::Reservation,
         reserver: &dyn StorageReservation,
         completed: bool,
@@ -161,7 +165,7 @@ impl Inner {
         let dirty_bytes_before = self.dirty_bytes;
         for range in ranges {
             let removed =
-                self.intervals.remove_matching_interval(&range.range, |i| i.is_flushing()).unwrap();
+                self.intervals.remove_matching_interval(&range, |i| i.is_flushing()).unwrap();
             for mut interval in removed {
                 if !completed {
                     interval.state = CacheState::Dirty;
@@ -213,39 +217,16 @@ impl FlushableMetadata {
     }
 }
 
-/// A block-aligned range that can be written out to disk.
-pub struct FlushableRange<'a> {
-    range: Range<u64>,
-    data: Buffer<'a>,
-}
-
-impl<'a> FlushableRange<'a> {
-    pub fn offset(&self) -> u64 {
-        self.range.start
-    }
-    pub fn data(&self) -> BufferRef<'_> {
-        self.data.as_ref()
-    }
-}
-
-impl std::fmt::Debug for FlushableRange<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("FlushableRange")
-            .field("range", &self.range)
-            .field("data_len", &self.data.len())
-            .finish()
-    }
-}
-
 pub struct FlushableData<'a, 'b, B: DataBuffer> {
     pub metadata: FlushableMetadata,
     // TODO(jfsulliv): Create a VFS version of this so that we don't need to depend on fxfs code.
     // (That will require porting fxfs to use the VFS version.)
     reservation: &'b allocator::Reservation,
     reserver: &'b dyn StorageReservation,
-    ranges: Vec<FlushableRange<'a>>,
+    ranges: Vec<Range<u64>>,
     flush_progress_offset: Option<u64>,
     cache: Option<&'b WritebackCache<B>>,
+    pub buffer: Buffer<'a>,
 }
 
 impl<B: DataBuffer> std::fmt::Debug for FlushableData<'_, '_, B> {
@@ -259,8 +240,8 @@ impl<B: DataBuffer> std::fmt::Debug for FlushableData<'_, '_, B> {
 }
 
 impl<'a, 'b, B: DataBuffer> FlushableData<'a, 'b, B> {
-    pub fn ranges(&self) -> std::slice::Iter<'_, FlushableRange<'a>> {
-        self.ranges.iter()
+    pub fn data(&mut self) -> (&[Range<u64>], MutableBufferRef<'_>) {
+        (&self.ranges, self.buffer.as_mut())
     }
     pub fn has_data(&self) -> bool {
         !self.ranges.is_empty()
@@ -275,7 +256,7 @@ impl<'a, 'b, B: DataBuffer> FlushableData<'a, 'b, B> {
     }
     #[cfg(test)]
     fn dirty_bytes(&self) -> u64 {
-        self.ranges.iter().map(|r| r.range.end - r.range.start).sum()
+        self.ranges.iter().map(|r| r.end - r.start).sum()
     }
 }
 
@@ -601,9 +582,6 @@ impl<B: DataBuffer> WritebackCache<B> {
 
             let interval_end = std::cmp::min(size, interval.range.end);
             let end = std::cmp::min(interval_end, interval.range.start + limit - bytes_to_flush);
-            let len = end - interval.range.start;
-            let mut buffer = allocate_buffer(len as usize);
-            self.data.raw_read(interval.range.start, buffer.as_mut_slice());
 
             if end < interval_end {
                 // If we only flushed part of the interval due to limit being hit,
@@ -619,14 +597,14 @@ impl<B: DataBuffer> WritebackCache<B> {
                 interval.state = CacheState::Flushing;
                 inner.intervals.add_interval(&interval).unwrap();
             }
-            ranges.push(FlushableRange { range: interval.range.clone(), data: buffer });
+            ranges.push(interval.range.clone());
 
             flush_progress_offset =
                 if i == intervals.len() - 1 && end == interval_end { None } else { Some(end) };
             i += 1;
 
             bytes_to_flush += interval.range.end - interval.range.start;
-            if bytes_to_flush >= limit {
+            if bytes_to_flush >= limit || ranges.len() >= MAX_FLUSH_RANGE_COUNT {
                 break;
             }
         }
@@ -635,6 +613,14 @@ impl<B: DataBuffer> WritebackCache<B> {
             inner.intervals.add_interval(interval).unwrap();
         }
         inner.dirty_bytes = inner.dirty_bytes.checked_sub(bytes_to_flush).unwrap();
+
+        let mut buffer = allocate_buffer(bytes_to_flush as usize);
+        let mut slice = buffer.as_mut_slice();
+        for r in &ranges {
+            let (head, tail) = slice.split_at_mut((r.end - r.start) as usize);
+            self.data.raw_read(r.start, head);
+            slice = tail;
+        }
 
         let content_size = if let Some(offset) = flush_progress_offset {
             // If this is a partial flush, we can only update the content size as far as the data
@@ -666,6 +652,7 @@ impl<B: DataBuffer> WritebackCache<B> {
             reservation: &reservation,
             reserver,
             ranges,
+            buffer,
             flush_progress_offset,
             cache: Some(self),
         }
@@ -871,7 +858,6 @@ mod tests {
         }
     }
 
-    // Matcher for FlushableRange.
     #[derive(Debug)]
     struct ExpectedRange(u64, Vec<u8>);
     fn check_data_matches(
@@ -882,12 +868,15 @@ mod tests {
             panic!("Expected {} ranges, got {} ranges", expected.len(), actual.ranges.len());
         }
         let mut i = 0;
+        let mut slice = actual.buffer.as_slice();
         while i < actual.ranges.len() {
             let expected = expected.get(i).unwrap();
             let actual = actual.ranges.get(i).unwrap();
-            if expected.0 != actual.offset() || &expected.1[..] != actual.data.as_slice() {
-                panic!("Expected {:?}, got {:?}", expected, actual);
+            let (head, tail) = slice.split_at((actual.end - actual.start) as usize);
+            if expected.0 != actual.start || &expected.1[..] != head {
+                panic!("Expected {:?}, got {:?}, {:?}", expected, actual, slice);
             }
+            slice = tail;
             i += 1;
         }
     }
@@ -1027,14 +1016,11 @@ mod tests {
         );
         check_data_matches(
             &flushable,
-            &[ExpectedRange(
-                0,
-                (|| {
-                    let mut data = vec![0u8; 512];
-                    data[0] = 123u8;
-                    data
-                })(),
-            )],
+            &[ExpectedRange(0, {
+                let mut data = vec![0u8; 512];
+                data[0] = 123u8;
+                data
+            })],
         );
         assert_eq!(flushable.metadata.content_size, Some(1000));
         cache.complete_flush(flushable);
@@ -1069,7 +1055,14 @@ mod tests {
             FLUSH_BATCH_SIZE,
         );
         assert_eq!(flushable.dirty_bytes(), 1024);
-        check_data_matches(&flushable, &[ExpectedRange(0, vec![123u8; 1000])]);
+        check_data_matches(
+            &flushable,
+            &[ExpectedRange(0, {
+                let mut data = vec![0; 1024];
+                data[..1000].fill(123);
+                data
+            })],
+        );
         assert_eq!(flushable.metadata.content_size, Some(1000));
         cache.complete_flush(flushable);
         cache.cleanup(&reserver);
@@ -1140,24 +1133,18 @@ mod tests {
         check_data_matches(
             &data,
             &[
-                ExpectedRange(
-                    0,
-                    (|| {
-                        let mut data = vec![0u8; 2560];
-                        data[..2000].fill(123u8);
-                        data[2048..2049].fill(45u8);
-                        data
-                    })(),
-                ),
-                ExpectedRange(
-                    3584,
-                    (|| {
-                        let mut data = vec![0u8; 516];
-                        data[416..466].fill(89u8);
-                        data[466..516].fill(67u8);
-                        data
-                    })(),
-                ),
+                ExpectedRange(0, {
+                    let mut data = vec![0u8; 2560];
+                    data[..2000].fill(123u8);
+                    data[2048..2049].fill(45u8);
+                    data
+                }),
+                ExpectedRange(3584, {
+                    let mut data = vec![0u8; 1024];
+                    data[416..466].fill(89u8);
+                    data[466..516].fill(67u8);
+                    data
+                }),
             ],
         );
         assert!(data.metadata.has_updates());
@@ -1344,7 +1331,9 @@ mod tests {
         );
         assert!(data.metadata.has_updates());
         assert_eq!(data.metadata.content_size, Some(511));
-        check_data_matches(&data, &[ExpectedRange(0, vec![123u8; 511])]);
+        let mut expected = vec![123u8; 511];
+        expected.append(&mut vec![0]);
+        check_data_matches(&data, &[ExpectedRange(0, expected)]);
         cache.complete_flush(data);
         cache.cleanup(&reserver);
     }

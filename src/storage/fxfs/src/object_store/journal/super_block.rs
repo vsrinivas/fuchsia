@@ -93,34 +93,34 @@ pub struct SuperBlock {
     /// discarded.
     pub generation: u64,
 
-    // The root parent store is an in-memory only store and serves as the backing store for the root
-    // store and the journal.  The records for this store are serialized into the super-block and
-    // mutations are also recorded in the journal.
+    /// The root parent store is an in-memory only store and serves as the backing store for the
+    /// root store and the journal.  The records for this store are serialized into the super-block
+    /// and mutations are also recorded in the journal.
     pub root_parent_store_object_id: u64,
 
-    // The root object store contains all other metadata objects (including the allocator, the
-    // journal and the super-blocks) and is the parent for all other object stores.
+    /// The root object store contains all other metadata objects (including the allocator, the
+    /// journal and the super-blocks) and is the parent for all other object stores.
     pub root_store_object_id: u64,
 
-    // This is in the root object store.
+    /// This is in the root object store.
     pub allocator_object_id: u64,
 
-    // This is in the root parent object store.
+    /// This is in the root parent object store.
     pub journal_object_id: u64,
 
-    // Start checkpoint for the journal file.
+    /// Start checkpoint for the journal file.
     pub journal_checkpoint: JournalCheckpoint,
 
-    // Offset of the journal file when the super-block was written.  If no entry is present in
-    // journal_file_offsets for a particular object, then an object might have dependencies on the
-    // journal from super_block_journal_file_offset onwards, but not earlier.
+    /// Offset of the journal file when the super-block was written.  If no entry is present in
+    /// journal_file_offsets for a particular object, then an object might have dependencies on the
+    /// journal from super_block_journal_file_offset onwards, but not earlier.
     pub super_block_journal_file_offset: u64,
 
-    // object id -> journal file offset. Indicates where each object has been flushed to.
+    /// object id -> journal file offset. Indicates where each object has been flushed to.
     pub journal_file_offsets: HashMap<u64, u64>,
 
-    // Records the amount of borrowed metadata space as applicable at
-    // `super_block_journal_file_offset`.
+    /// Records the amount of borrowed metadata space as applicable at
+    /// `super_block_journal_file_offset`.
     pub borrowed_metadata_space: u64,
 }
 

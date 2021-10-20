@@ -28,7 +28,7 @@ use {
     },
     anyhow::{anyhow, bail, Context, Error},
     async_trait::async_trait,
-    futures::{stream::FuturesUnordered, try_join, TryStreamExt},
+    futures::{stream::FuturesOrdered, try_join, TryStreamExt},
     interval_tree::utils::RangeOps,
     std::{
         cmp::min,
@@ -113,61 +113,92 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         self.update_allocated_size(transaction, device_range.end - device_range.start, 0).await
     }
 
+    // Returns a new aligned buffer (reading the head and tail blocks if necessary) with a copy of
+    // the data from `buf`.
+    async fn align_buffer(
+        &self,
+        offset: u64,
+        buf: BufferRef<'_>,
+    ) -> Result<(std::ops::Range<u64>, Buffer<'_>), Error> {
+        let block_size = u64::from(self.block_size());
+        let end = offset + buf.len() as u64;
+        let aligned =
+            round_down(offset, block_size)..round_up(end, block_size).ok_or(FxfsError::TooBig)?;
+
+        let mut aligned_buf =
+            self.store().device.allocate_buffer((aligned.end - aligned.start) as usize);
+
+        // Deal with head alignment.
+        if aligned.start < offset {
+            let mut head_block = aligned_buf.subslice_mut(..block_size as usize);
+            let read = self.read(aligned.start, head_block.reborrow()).await?;
+            head_block.as_mut_slice()[read..].fill(0);
+        }
+
+        // Deal with tail alignment.
+        if aligned.end > end {
+            let end_block_offset = aligned.end - block_size;
+            // There's no need to read the tail block if we read it as part of the head block.
+            if offset <= end_block_offset {
+                let mut tail_block =
+                    aligned_buf.subslice_mut(aligned_buf.len() - block_size as usize..);
+                let read = self.read(end_block_offset, tail_block.reborrow()).await?;
+                tail_block.as_mut_slice()[read..].fill(0);
+            }
+        }
+
+        aligned_buf.as_mut_slice()
+            [(offset - aligned.start) as usize..(end - aligned.start) as usize]
+            .copy_from_slice(buf.as_slice());
+
+        Ok((aligned, aligned_buf))
+    }
+
+    // Writes potentially unaligned data at `device_offset` and returns checksums if requested. The
+    // data will be encrypted if necessary.
     async fn write_at(
         &self,
         offset: u64,
         buf: BufferRef<'_>,
-        mut device_offset: u64,
+        device_offset: u64,
         compute_checksum: bool,
     ) -> Result<Checksums, Error> {
-        let block_size = u64::from(self.block_size());
-        let start_align = offset % block_size;
-        let start_offset = offset - start_align;
-        let end = offset + buf.len() as u64;
-        let trace = self.trace.load(atomic::Ordering::Relaxed);
-        let mut checksums = Vec::new();
-        let mut transfer_buf = self
-            .store()
-            .device
-            .allocate_buffer(round_up(end - start_offset, block_size).unwrap() as usize);
-        let mut end_align = end % block_size;
+        let (aligned, mut transfer_buf) = self.align_buffer(offset, buf).await?;
 
-        // Deal with head alignment.
-        if start_align > 0 {
-            let mut head_block = transfer_buf.subslice_mut(..block_size as usize);
-            let read = self.read(start_offset, head_block.reborrow()).await?;
-            head_block.as_mut_slice()[read..].fill(0);
-            device_offset -= start_align;
-            if end - end_align == start_offset {
-                end_align = 0;
-            }
-        };
-
-        // Deal with tail alignment.
-        if end_align > 0 {
-            let mut tail_block =
-                transfer_buf.subslice_mut(transfer_buf.len() - block_size as usize..);
-            let read = self.read(end - end_align, tail_block.reborrow()).await?;
-            tail_block.as_mut_slice()[read..].fill(0);
+        if let Some(keys) = &self.keys {
+            keys.encrypt(aligned.start, transfer_buf.as_mut_slice());
         }
 
-        transfer_buf.as_mut_slice()[start_align as usize..start_align as usize + buf.len()]
-            .copy_from_slice(buf.as_slice());
-        if trace {
+        self.write_aligned(
+            transfer_buf.as_ref(),
+            device_offset - (offset - aligned.start),
+            compute_checksum,
+        )
+        .await
+    }
+
+    // Writes aligned data (that should already be encrypted) to the given offset and computes
+    // checksums if requested.
+    async fn write_aligned(
+        &self,
+        buf: BufferRef<'_>,
+        device_offset: u64,
+        compute_checksum: bool,
+    ) -> Result<Checksums, Error> {
+        if self.trace.load(atomic::Ordering::Relaxed) {
             log::info!(
                 "{}.{} W {:?} ({})",
                 self.store().store_object_id(),
                 self.object_id,
-                device_offset..device_offset + transfer_buf.len() as u64,
-                transfer_buf.len(),
+                device_offset..device_offset + buf.len() as u64,
+                buf.len(),
             );
         }
-        if let Some(keys) = &self.keys {
-            keys.encrypt(start_offset, transfer_buf.as_mut_slice());
-        }
-        try_join!(self.store().device.write(device_offset, transfer_buf.as_ref()), async {
+        let mut checksums = Vec::new();
+        try_join!(self.store().device.write(device_offset, buf), async {
             if compute_checksum {
-                for chunk in transfer_buf.as_slice().chunks_exact(block_size as usize) {
+                let block_size = u64::from(self.block_size());
+                for chunk in buf.as_slice().chunks_exact(block_size as usize) {
                     checksums.push(fletcher64(chunk, 0));
                 }
             }
@@ -257,15 +288,12 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         if buf.is_empty() {
             return Ok(());
         }
-        let block_size = u64::from(self.block_size());
-        let aligned = round_down(offset, block_size)
-            ..round_up(offset + buf.len() as u64, block_size).ok_or(FxfsError::TooBig)?;
-        let mut buf_offset = 0;
-        let store = self.store();
-        let store_id = store.store_object_id;
+
+        let (aligned, mut transfer_buf) = self.align_buffer(offset, buf).await?;
+
         if offset + buf.len() as u64 > self.txn_get_size(transaction) {
             transaction.add_with_object(
-                store_id,
+                self.store().store_object_id,
                 Mutation::replace_or_insert_object(
                     ObjectKey::attribute(self.object_id, self.attribute_id),
                     ObjectValue::attribute(offset + buf.len() as u64),
@@ -273,15 +301,43 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 AssocObj::Borrowed(self),
             );
         }
+
+        self.multi_write(transaction, &[aligned], transfer_buf.as_mut()).await
+    }
+
+    // Writes to multiple ranges with data provided in `buf`.  The buffer can be modified in place
+    // if encryption takes place.  The ranges must all be aligned and no change to content size is
+    // applied; the caller is responsible for updating size if required.
+    pub async fn multi_write<'a>(
+        &'a self,
+        transaction: &mut Transaction<'a>,
+        ranges: &[Range<u64>],
+        mut buf: MutableBufferRef<'_>,
+    ) -> Result<(), Error> {
+        if buf.is_empty() {
+            return Ok(());
+        }
+        let block_size = u64::from(self.block_size());
+        let store = self.store();
+        let store_id = store.store_object_id;
+
+        if let Some(keys) = &self.keys {
+            let mut slice = buf.as_mut_slice();
+            for r in ranges {
+                let l = r.end - r.start;
+                let (head, tail) = slice.split_at_mut(l as usize);
+                keys.encrypt(r.start, head);
+                slice = tail;
+            }
+        }
+
         let mut allocated = 0;
         let allocator = store.allocator();
         let trace = self.trace.load(atomic::Ordering::Relaxed);
-        let futures = FuturesUnordered::new();
-        let mut aligned_offset = aligned.start;
-        let mut current_offset = offset;
-        while buf_offset < buf.len() {
+        let mut writes = FuturesOrdered::new();
+        while !buf.is_empty() {
             let device_range = allocator
-                .allocate(transaction, aligned.end - aligned_offset)
+                .allocate(transaction, buf.len() as u64)
                 .await
                 .context("allocation failed")?;
             if trace {
@@ -293,37 +349,64 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                     device_range.end - device_range.start
                 );
             }
-            allocated += device_range.end - device_range.start;
-            let end = aligned_offset + device_range.end - device_range.start;
-            let len = min(buf.len() - buf_offset, (end - current_offset) as usize);
-            assert!(len > 0);
-            futures.push(async move {
-                let checksum = self
-                    .write_at(
-                        current_offset,
-                        buf.subslice(buf_offset..buf_offset + len),
-                        device_range.start + current_offset % block_size,
-                        true,
-                    )
-                    .await?;
-                Ok(Mutation::extent(
-                    ExtentKey::new(self.object_id, self.attribute_id, aligned_offset..end),
-                    ExtentValue::with_checksum(device_range.start, checksum),
+            let device_range_len = device_range.end - device_range.start;
+            allocated += device_range_len;
+
+            let (head, tail) = buf.split_at_mut(device_range_len as usize);
+            buf = tail;
+
+            writes.push(async move {
+                let len = head.len() as u64;
+                Result::<_, Error>::Ok((
+                    device_range.start,
+                    len,
+                    self.write_aligned(head.as_ref(), device_range.start, true).await?,
                 ))
             });
-            aligned_offset = end;
-            buf_offset += len;
-            current_offset += len as u64;
         }
-        let (mutations, _): (Vec<_>, _) = try_join!(futures.try_collect(), async {
-            let deallocated = self.deallocate_old_extents(transaction, aligned.clone()).await?;
-            self.update_allocated_size(transaction, allocated, deallocated).await
-        })?;
+
+        let (mutations, deallocated) = try_join!(
+            async {
+                let mut current_range = 0..0;
+                let mut mutations = Vec::new();
+                let mut ranges = ranges.iter();
+                while let Some((mut device_offset, mut len, mut checksums)) =
+                    writes.try_next().await?
+                {
+                    while len > 0 {
+                        if current_range.end <= current_range.start {
+                            current_range = ranges.next().unwrap().clone();
+                        }
+                        let l = std::cmp::min(len, current_range.end - current_range.start);
+                        let tail = checksums.split_off((l / block_size) as usize);
+                        mutations.push(Mutation::extent(
+                            ExtentKey::new(
+                                self.object_id,
+                                self.attribute_id,
+                                current_range.start..current_range.start + l,
+                            ),
+                            ExtentValue::with_checksum(device_offset, checksums),
+                        ));
+                        checksums = tail;
+                        device_offset += l;
+                        len -= l;
+                        current_range.start += l;
+                    }
+                }
+                Result::<_, Error>::Ok(mutations)
+            },
+            async {
+                let mut deallocated = 0;
+                for r in ranges {
+                    deallocated += self.deallocate_old_extents(transaction, r.clone()).await?;
+                }
+                Result::<_, Error>::Ok(deallocated)
+            }
+        )?;
         for m in mutations {
             transaction.add(store_id, m);
         }
-
-        Ok(())
+        self.update_allocated_size(transaction, allocated, deallocated).await
     }
 
     // All the extents for the range must have been preallocated using preallocate_range or from
@@ -987,7 +1070,7 @@ mod tests {
         matches::assert_matches,
         rand::Rng,
         std::{
-            ops::Bound,
+            ops::{Bound, Range},
             sync::{Arc, Mutex},
             time::Duration,
         },
@@ -1154,7 +1237,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_read_whole_blocks_with_multiple_objects() {
         let (fs, object) = test_filesystem_and_object().await;
-        let mut buffer = object.allocate_buffer(512);
+        let bs = object.block_size() as usize;
+        let mut buffer = object.allocate_buffer(bs);
         buffer.as_mut_slice().fill(0xaf);
         object.write_or_append(Some(0), buffer.as_ref()).await.expect("write failed");
 
@@ -1169,25 +1253,87 @@ mod tests {
                 .await
                 .expect("create_object failed");
         transaction.commit().await.expect("commit failed");
-        let mut ef_buffer = object.allocate_buffer(512);
+        let mut ef_buffer = object.allocate_buffer(bs);
         ef_buffer.as_mut_slice().fill(0xef);
         object2.write_or_append(Some(0), ef_buffer.as_ref()).await.expect("write failed");
 
-        let mut buffer = object.allocate_buffer(512);
+        let mut buffer = object.allocate_buffer(bs);
         buffer.as_mut_slice().fill(0xaf);
-        object.write_or_append(Some(512), buffer.as_ref()).await.expect("write failed");
+        object.write_or_append(Some(bs as u64), buffer.as_ref()).await.expect("write failed");
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
-        object.truncate(&mut transaction, 1536).await.expect("truncate failed");
+        object.truncate(&mut transaction, 3 * bs as u64).await.expect("truncate failed");
         transaction.commit().await.expect("commit failed");
-        object2.write_or_append(Some(512), ef_buffer.as_ref()).await.expect("write failed");
+        object2.write_or_append(Some(bs as u64), ef_buffer.as_ref()).await.expect("write failed");
 
-        let mut buffer = object.allocate_buffer(2048);
+        let mut buffer = object.allocate_buffer(4 * bs);
         buffer.as_mut_slice().fill(123);
-        assert_eq!(object.read(0, buffer.as_mut()).await.expect("read failed"), 1536);
-        assert_eq!(&buffer.as_slice()[..1024], &[0xaf; 1024]);
-        assert_eq!(&buffer.as_slice()[1024..1536], &[0; 512]);
-        assert_eq!(object2.read(0, buffer.as_mut()).await.expect("read failed"), 1024);
-        assert_eq!(&buffer.as_slice()[..1024], &[0xef; 1024]);
+        assert_eq!(object.read(0, buffer.as_mut()).await.expect("read failed"), 3 * bs);
+        assert_eq!(&buffer.as_slice()[..2 * bs], &vec![0xaf; 2 * bs]);
+        assert_eq!(&buffer.as_slice()[2 * bs..3 * bs], &vec![0; bs]);
+        assert_eq!(object2.read(0, buffer.as_mut()).await.expect("read failed"), 2 * bs);
+        assert_eq!(&buffer.as_slice()[..2 * bs], &vec![0xef; 2 * bs]);
+        fs.close().await.expect("Close failed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_alignment() {
+        let (fs, object) = test_filesystem_and_object().await;
+
+        struct AlignTest {
+            fill: u8,
+            object: StoreObjectHandle<ObjectStore>,
+            mirror: Vec<u8>,
+        }
+
+        impl AlignTest {
+            async fn new(object: StoreObjectHandle<ObjectStore>) -> Self {
+                let mirror = {
+                    let mut buf = object.allocate_buffer(object.get_size() as usize);
+                    assert_eq!(object.read(0, buf.as_mut()).await.expect("read failed"), buf.len());
+                    buf.as_slice().to_vec()
+                };
+                Self { fill: 0, object, mirror }
+            }
+
+            async fn test(&mut self, range: Range<u64>) {
+                let mut buf = self.object.allocate_buffer((range.end - range.start) as usize);
+                self.fill += 1;
+                buf.as_mut_slice().fill(self.fill);
+                self.object
+                    .write_or_append(Some(range.start), buf.as_ref())
+                    .await
+                    .expect("write_or_append failed");
+                if range.end > self.mirror.len() as u64 {
+                    self.mirror.resize(range.end as usize, 0);
+                }
+                self.mirror[range.start as usize..range.end as usize].fill(self.fill);
+                let mut buf = self.object.allocate_buffer(self.mirror.len() + 1);
+                assert_eq!(
+                    self.object.read(0, buf.as_mut()).await.expect("read failed"),
+                    self.mirror.len()
+                );
+                assert_eq!(&buf.as_slice()[..self.mirror.len()], self.mirror.as_slice());
+            }
+        }
+
+        let block_size = object.block_size() as u64;
+        let mut align = AlignTest::new(object).await;
+
+        // Fill the object to start with.
+        align.test(0..2 * block_size + 1).await;
+
+        // Unaligned head.
+        align.test(1..block_size).await;
+        align.test(1..2 * block_size).await;
+
+        // Unaligned tail.
+        align.test(0..block_size - 1).await;
+        align.test(0..2 * block_size - 1).await;
+
+        // Both unaligned.
+        align.test(1..block_size - 1).await;
+        align.test(1..2 * block_size - 1).await;
+
         fs.close().await.expect("Close failed");
     }
 

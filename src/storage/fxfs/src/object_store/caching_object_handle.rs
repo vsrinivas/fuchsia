@@ -30,7 +30,7 @@ use {
 pub use crate::object_store::writeback_cache::CACHE_READ_AHEAD_SIZE;
 
 /// How much data each sync transaction in a given flush will cover.
-pub const FLUSH_BATCH_SIZE: u64 = 1_048_576;
+pub const FLUSH_BATCH_SIZE: u64 = 524_288;
 
 // TODO(jfsulliv): We should move away from having CachingObjectHandle implement ObjectHandle, since
 // it stubs out most of the methods.
@@ -240,7 +240,7 @@ impl<S: HandleOwner> WriteObjectHandle for CachingObjectHandle<S> {
             // because we need to drop flushable before dropping the locks.
             let mut transaction;
 
-            let flushable = self.cache.take_flushable_data(
+            let mut flushable = self.cache.take_flushable_data(
                 bs,
                 self.handle.get_size(),
                 |size| self.allocate_buffer(size),
@@ -297,19 +297,10 @@ impl<S: HandleOwner> WriteObjectHandle for CachingObjectHandle<S> {
                     },
                 )
                 .await?;
-            for range in flushable.ranges() {
-                self.handle
-                    .txn_write(&mut transaction, range.offset(), range.data())
-                    .await
-                    .context("Write failed")?;
-            }
-            self.handle
-                .write_timestamps(
-                    &mut transaction,
-                    flushable.metadata.creation_time.map(|t| t.into()),
-                    flushable.metadata.modification_time.map(|t| t.into()),
-                )
-                .await?;
+
+            let (ranges, buffer) = flushable.data();
+            self.handle.multi_write(&mut transaction, ranges, buffer).await?;
+
             if let Some(content_size) = flushable.metadata.content_size {
                 // TODO(jfsulliv): We also need to zero the last block here, but this is tricky to
                 // deal with, since a txn_write might conflict with the write of the last block.
@@ -335,6 +326,14 @@ impl<S: HandleOwner> WriteObjectHandle for CachingObjectHandle<S> {
                     AssocObj::Borrowed(&self.handle),
                 );
             }
+
+            self.handle
+                .write_timestamps(
+                    &mut transaction,
+                    flushable.metadata.creation_time.map(|t| t.into()),
+                    flushable.metadata.modification_time.map(|t| t.into()),
+                )
+                .await?;
 
             flush_progress_offset = flushable.flush_progress_offset().clone();
             transaction
