@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:convert';
-import 'dart:isolate';
 
 import 'package:ermine/src/services/focus_service.dart';
 import 'package:ermine/src/services/launch_service.dart';
@@ -84,20 +83,6 @@ class AppStateImpl with Disposable implements AppState {
           overlayVisibility.value = true;
         }
       }))
-      ..add(when((_) => oobeVisible, () async {
-        // Start oobe component.
-        try {
-          final elementController = await launchService.launch(
-              'Oobe', 'fuchsia-pkg://fuchsia.com/oobe#meta/oobe.cmx');
-          await elementController.ctrl.whenClosed;
-          // ignore: avoid_catches_without_on_clauses
-        } catch (e) {
-          // If OOBE launch fails, it is a fatal error. Quit the shell.
-          log.severe('Failed to launch OOBE. Quiting.');
-          Isolate.current.kill();
-        }
-        oobeFinished();
-      }))
       ..add(reaction<bool>((_) => isIdle, (idle) async {
         if (idle) {
           // Start screenSaver.
@@ -163,18 +148,11 @@ class AppStateImpl with Disposable implements AppState {
   @override
   bool get overlaysVisible => _overlaysVisible.value;
   late final _overlaysVisible = (() {
-    return !oobeVisible &&
-        !isIdle &&
+    return !isIdle &&
         !appIsLaunching.value &&
         shellHasFocus.value &&
         (appBarVisible || sideBarVisible || switcherVisible || alertsVisible);
   }).asComputed();
-
-  @override
-  bool get oobeVisible => _oobeVisible.value;
-  late final _oobeVisible = () {
-    return preferencesService.launchOobe.value;
-  }.asComputed();
 
   @override
   bool get appBarVisible => _appBarVisible.value;
@@ -331,7 +309,7 @@ class AppStateImpl with Disposable implements AppState {
   @override
   void closeView() => _closeView();
   late final Action _closeView = () {
-    if (views.isEmpty || oobeVisible) {
+    if (views.isEmpty) {
       return;
     }
     appIsLaunching.value = false;
@@ -381,10 +359,6 @@ class AppStateImpl with Disposable implements AppState {
 
   @override
   void shutdown() => runInAction(startupService.shutdownDevice);
-
-  @override
-  void oobeFinished() =>
-      runInAction(() => preferencesService.launchOobe.value = false);
 
   @override
   void checkingForUpdatesAlert() {

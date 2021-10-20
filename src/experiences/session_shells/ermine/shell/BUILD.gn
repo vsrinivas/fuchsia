@@ -22,9 +22,6 @@ declare_args() {
   # using '--args=ermine_app_entries="config/app_launch_entries.json"'
   ermine_app_entries = "config/app_launch_entries.json"
 
-  # Whether or not to launch OOBE workflow on startup.
-  start_oobe = false
-
   # Whether or not to launch screensaver.
   ermine_start_screensaver = true
 }
@@ -160,12 +157,6 @@ flutter_component("component") {
 
 fuchsia_package("ermine") {
   deps = [ ":component" ]
-
-  if (start_oobe) {
-    deps += [ ":oobe_config" ]
-  } else {
-    deps += [ ":default_config" ]
-  }
 }
 
 tz_ids_path = "${target_gen_dir}/tz_ids.txt"
@@ -229,22 +220,6 @@ config_data("images") {
                         ])
 
   outputs = [ "{{source_file_part}}" ]
-}
-
-# With the default config, Ermine will not launch the OOBE on startup.
-config_data("default_config") {
-  for_pkg = "ermine"
-
-  sources = [ "config/default_config.json" ]
-  outputs = [ "startup_config.json" ]
-}
-
-# With the OOBE config, Ermine will launch the OOBE on startup.
-config_data("oobe_config") {
-  for_pkg = "ermine"
-
-  sources = [ "config/oobe_config.json" ]
-  outputs = [ "startup_config.json" ]
 }
 
 flutter_test("ermine_unittests") {

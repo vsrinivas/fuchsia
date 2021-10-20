@@ -4,8 +4,10 @@
 
 import 'dart:ui';
 
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:oobe/src/services/channel_service.dart';
 import 'package:oobe/src/services/privacy_consent_service.dart';
+import 'package:oobe/src/services/shell_service.dart';
 import 'package:oobe/src/services/ssh_keys_service.dart';
 import 'package:oobe/src/states/oobe_state_impl.dart';
 
@@ -33,6 +35,9 @@ abstract class OobeState {
   List<String> get sshKeys;
   abstract int sshKeyIndex;
   bool get privacyVisible;
+  bool get launchOobe;
+
+  FuchsiaViewConnection get ermineViewConnection;
   String get privacyPolicy;
 
   void setCurrentChannel(String channel);
@@ -50,6 +55,7 @@ abstract class OobeState {
 
   factory OobeState.fromEnv() {
     return OobeStateImpl(
+      shellService: ShellService(),
       channelService: ChannelService(),
       sshKeysService: SshKeysService(),
       privacyConsentService: PrivacyConsentService(),

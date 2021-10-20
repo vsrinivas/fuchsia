@@ -55,10 +55,10 @@ async fn launch_ermine() -> Result<(App, zx::Channel), Error> {
         client_chan,
     );
 
-    // Check if shell is overridden. Otherwise use the default ermine shell.
+    // Check if shell is overridden. Otherwise start ermine shell's oobe.
     let shell_url = match fs::read_to_string("/config/data/shell") {
         Ok(url) => url,
-        Err(_) => "fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cmx".to_string(),
+        Err(_) => "fuchsia-pkg://fuchsia.com/oobe#meta/oobe.cmx".to_string(),
     };
 
     let app = launch_with_options(&launcher, shell_url, None, launch_options)?;

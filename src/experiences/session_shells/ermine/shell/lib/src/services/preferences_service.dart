@@ -16,14 +16,8 @@ class PreferencesService with Disposable {
   /// The JSON file that provides preferences as part of package install.
   static const kStartupPreferencesJson = '/pkg/data/preferences.json';
 
-  /// The JSON file that provides preferences for OOBE at first boot.
-  static const kOobeConfigJson = '/config/data/startup_config.json';
-
   // Use dark mode: true | false.
   final darkMode = true.asObservable();
-
-  // Launch oobe: true | false.
-  final launchOobe = false.asObservable();
 
   // Show screensaver: true | false.
   bool showScreensaver = false;
@@ -33,19 +27,11 @@ class PreferencesService with Disposable {
   PreferencesService() : _data = _readPreferences() {
     darkMode.value = _data['dark_mode'] ?? true;
     showScreensaver = _data['screensaver'] ?? true;
-    launchOobe.value = _data['launch_oobe'] ?? _launchOobeFromConfig();
-    reactions
-      ..add(reaction<bool>((_) => darkMode.value, _setDarkMode))
-      ..add(reaction<bool>((_) => launchOobe.value, _setLaunchOobe));
+    reactions.add(reaction<bool>((_) => darkMode.value, _setDarkMode));
   }
 
   void _setDarkMode(bool value) {
     _data['dark_mode'] = value;
-    _writePreferences(_data);
-  }
-
-  void _setLaunchOobe(bool value) {
-    _data['launch_oobe'] = value;
     _writePreferences(_data);
   }
 
@@ -85,14 +71,5 @@ class PreferencesService with Disposable {
 
   static void _writePreferences(Map<String, dynamic> data) {
     File(kPreferencesJson).writeAsStringSync(json.encode(data));
-  }
-
-  static bool _launchOobeFromConfig() {
-    final file = File(kOobeConfigJson);
-    if (file.existsSync()) {
-      final data = json.decode(file.readAsStringSync());
-      return data['launch_oobe'] ?? false;
-    }
-    return false;
   }
 }

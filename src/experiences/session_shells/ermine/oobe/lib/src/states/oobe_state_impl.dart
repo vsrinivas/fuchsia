@@ -2,28 +2,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:isolate';
+import 'dart:convert' show json;
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:ermine_utils/ermine_utils.dart';
+import 'package:fuchsia_logger/logger.dart';
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
+import 'package:fuchsia_services/services.dart';
 import 'package:internationalization/strings.dart';
 import 'package:mobx/mobx.dart';
 import 'package:oobe/src/services/channel_service.dart';
 import 'package:oobe/src/services/privacy_consent_service.dart';
+import 'package:oobe/src/services/shell_service.dart';
 import 'package:oobe/src/services/ssh_keys_service.dart';
 import 'package:oobe/src/states/oobe_state.dart';
 
-/// Defines an implementation of [ViewState].
+/// Defines an implementation of [OobeState].
 class OobeStateImpl with Disposable implements OobeState {
+  static const kDefaultConfigJson = '/config/data/startup_config.json';
+  static const kStartupConfigJson = '/data/startup_config.json';
+
+  final ComponentContext componentContext;
   final ChannelService channelService;
   final SshKeysService sshKeysService;
+  final ShellService shellService;
   final PrivacyConsentService privacyConsentService;
 
   OobeStateImpl({
+    required this.shellService,
     required this.channelService,
     required this.sshKeysService,
     required this.privacyConsentService,
-  }) : _localeStream = channelService.stream.asObservable() {
+  })  : componentContext = ComponentContext.create(),
+        _localeStream = channelService.stream.asObservable() {
     privacyPolicy = privacyConsentService.privacyPolicy;
 
     channelService.onConnected = (connected) => runInAction(() async {
@@ -35,6 +47,8 @@ class OobeStateImpl with Disposable implements OobeState {
           }
           _updateChannelsAvailable.value = connected;
         });
+    shellService.advertise(componentContext.outgoing);
+    componentContext.outgoing.serveFromStartupInfo();
   }
 
   @override
@@ -43,11 +57,35 @@ class OobeStateImpl with Disposable implements OobeState {
     channelService.dispose();
     privacyConsentService.dispose();
     sshKeysService.dispose();
+    shellService.dispose();
   }
+
+  @override
+  bool get launchOobe => _launchOobe.value;
+  set launchOobe(bool value) => runInAction(() => _launchOobe.value = value);
+  final Observable<bool> _launchOobe = Observable<bool>(() {
+    File config = File(kStartupConfigJson);
+    // If startup config does not exist, open the default config.
+    if (!config.existsSync()) {
+      config = File(kDefaultConfigJson);
+    }
+    // If default config is missing, log error and return defaults.
+    if (!config.existsSync()) {
+      log.severe('Missing startup and default configs. Skipping OOBE.');
+      return false;
+    }
+    final data = json.decode(config.readAsStringSync()) ?? {};
+    return data['launch_oobe'] == true;
+  }());
 
   @override
   Locale? get locale => _localeStream.value;
   final ObservableStream<Locale> _localeStream;
+
+  FuchsiaViewConnection? _ermineViewConnection;
+  @override
+  FuchsiaViewConnection get ermineViewConnection =>
+      _ermineViewConnection ??= shellService.launchErmineShell();
 
   @override
   OobeScreen get screen => _screen.value;
@@ -111,7 +149,7 @@ class OobeStateImpl with Disposable implements OobeState {
   @override
   int get sshKeyIndex => _sshKeyIndex.value;
   @override
-  set sshKeyIndex(int value) => _sshKeyIndex.value = value;
+  set sshKeyIndex(int value) => runInAction(() => _sshKeyIndex.value = value);
   final _sshKeyIndex = 0.asObservable();
 
   @override
@@ -233,7 +271,13 @@ class OobeStateImpl with Disposable implements OobeState {
 
   @override
   void finish() => runInAction(() {
+        // Dismiss OOBE UX.
+        launchOobe = false;
+
+        // Persistently record OOBE done.
+        File(kStartupConfigJson).writeAsStringSync('{"launch_oobe":false}');
+
+        // Clean up.
         dispose();
-        Isolate.current.kill();
       });
 }

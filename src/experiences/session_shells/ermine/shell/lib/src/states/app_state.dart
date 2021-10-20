@@ -31,7 +31,6 @@ abstract class AppState {
   bool get appBarVisible;
   bool get sideBarVisible;
   bool get overlaysVisible;
-  bool get oobeVisible;
   bool get isIdle;
   bool get switcherVisible;
   bool get viewsVisible;
@@ -61,7 +60,6 @@ abstract class AppState {
   void shutdown();
   void launchFeedback();
   void launchLicense();
-  void oobeFinished();
   void checkingForUpdatesAlert();
 
   factory AppState.fromEnv() {

@@ -4,7 +4,8 @@
     },
     "sandbox": {
         "features": [
-            "config-data"
+            "config-data",
+            "isolated-persistent-storage"
         ],
         "pkgfs": [
             "packages"
@@ -12,6 +13,7 @@
         "services": [
             "fuchsia.accessibility.semantics.SemanticsManager",
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.element.Manager",
             "fuchsia.fonts.Provider",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
@@ -19,10 +21,13 @@
             "fuchsia.settings.Privacy",
             "fuchsia.ssh.AuthorizedKeys",
             "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.ui.focus.FocusChainListenerRegistry",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.InputDeviceRegistry",
             "fuchsia.ui.input3.Keyboard",
             "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.views.ViewRefInstalled",
             "fuchsia.update.channelcontrol.ChannelControl"
         ]
     }

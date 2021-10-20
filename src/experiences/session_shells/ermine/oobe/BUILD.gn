@@ -7,6 +7,11 @@ import("//build/dart/dart_library.gni")
 import("//build/fidl/fidl.gni")
 import("//build/flutter/flutter_component.gni")
 
+declare_args() {
+  # Whether or not to launch OOBE workflow on startup.
+  start_oobe = false
+}
+
 dart_library("lib") {
   package_name = "oobe"
   null_safe = true
@@ -16,6 +21,7 @@ dart_library("lib") {
   services = [
     "src/services/channel_service.dart",
     "src/services/privacy_consent_service.dart",
+    "src/services/shell_service.dart",
     "src/services/ssh_keys_service.dart",
   ]
 
@@ -25,6 +31,8 @@ dart_library("lib") {
   ]
 
   widgets = [
+    "src/widgets/app.dart",
+    "src/widgets/ermine.dart",
     "src/widgets/oobe.dart",
     "src/widgets/channels.dart",
     "src/widgets/data_sharing.dart",
@@ -37,10 +45,19 @@ dart_library("lib") {
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia_internationalization_flutter",
     "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_scenic_flutter",
     "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
+    "//sdk/fidl/fuchsia.element",
+    "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.ssh",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.focus",
+    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.update.channelcontrol",
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/utils:ermine_utils",
@@ -66,6 +83,12 @@ flutter_component("component") {
 
 fuchsia_package("oobe") {
   deps = [ ":component" ]
+
+  if (start_oobe) {
+    deps += [ ":oobe_config" ]
+  } else {
+    deps += [ ":default_config" ]
+  }
 }
 
 resource("resources") {
@@ -76,4 +99,20 @@ resource("resources") {
   ]
 
   outputs = [ "data/{{source_file_part}}" ]
+}
+
+# With the default config, OOBE will be skipped on startup.
+config_data("default_config") {
+  for_pkg = "oobe"
+
+  sources = [ "config/default_config.json" ]
+  outputs = [ "startup_config.json" ]
+}
+
+# With the OOBE config, OOBE will launch at startup.
+config_data("oobe_config") {
+  for_pkg = "oobe"
+
+  sources = [ "config/oobe_config.json" ]
+  outputs = [ "startup_config.json" ]
 }
