@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use anyhow::Result;
-use ffx_emulator_common::args::{Args, VDLCommand};
-use ffx_emulator_common::vdl_files::VDLFiles;
+use fvdl_emulator_common::args::{Args, VDLCommand};
+use fvdl_emulator_common::vdl_files::VDLFiles;
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<()> {

@@ -15,7 +15,7 @@ if (is_host) {
     test_environments = [ host_env ]
 
     deps = [
-      "//src/developer/ffx/plugins/emulator/common:lib",
+      "common:lib",
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
@@ -38,5 +38,8 @@ if (is_host) {
 
 group("tests") {
   testonly = true
-  deps = [ ":bin_test($host_toolchain)" ]
+  deps = [
+    ":bin_test($host_toolchain)",
+    "common:tests($host_toolchain)",
+  ]
 }

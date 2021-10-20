@@ -1,0 +1,20 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+# TODO(86949): Clean up forked ffx emu plugin code.
+# //tools/fvdl does not use this target as a plugin,
+# it is reusing existing code from the ffx emu plugin.
+# It is copied here to be stable while ffx emu plugin
+# is experimental and being changed in a way that could
+# break engprod users of fvdl.
+# See the TODO issue for migration timing.
+ffx_plugin("fvdl_emulator_remote") {
+  version = "0.1.0"
+  edition = "2018"
+  deps = [ "//tools/fvdl/common:lib" ]
+  args_sources = [ "src/args.rs" ]
+  sources = [ "src/lib.rs" ]
+}
