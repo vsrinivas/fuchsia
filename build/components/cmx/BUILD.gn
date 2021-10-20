@@ -48,7 +48,6 @@ group("cmx_allowlist") {
     "//examples/fidl/test/*",
     "//examples/fuzzers/*",
     "//examples/hello_world/dart/*",
-    "//examples/intl/manager/*",
     "//examples/isolated_cache/*",
     "//examples/speech/tts/speak/*",
     "//garnet/bin/catapult_converter/*",

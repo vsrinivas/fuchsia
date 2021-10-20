@@ -305,17 +305,11 @@ mod test {
             CalendarId, LocaleId, Profile, PropertyProviderEventStream, PropertyProviderMarker,
             PropertyProviderProxy, TemperatureUnit, TimeZoneId,
         },
-        fidl_fuchsia_sys::LauncherProxy,
         fuchsia_async as fasync,
-        fuchsia_component::client,
+        fuchsia_component_test::{builder::*, RouteBuilder},
         futures::{self, prelude::*},
         lazy_static::lazy_static,
     };
-
-    static COMPONENT_URL: &str =
-        "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx";
-    static COMPONENT_URL_WITHOUT_FLAGS: &str =
-        "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager_without_flags.cmx";
 
     lazy_static! {
         static ref PROFILE_EMPTY: Profile =
@@ -358,17 +352,41 @@ mod test {
     #[fasync::run_singlethreaded]
     #[test]
     async fn test_get_set_profile() -> Result<(), Error> {
-        let launcher: LauncherProxy =
-            client::launcher().context("Failed to open launcher service")?;
-        let app = client::launch(&launcher, COMPONENT_URL_WITHOUT_FLAGS.to_string(), None)
-            .context("Failed to launch Intl Property Manager")?;
+        // Create the test realm,
+        let mut builder = RealmBuilder::new().await?;
+        builder
+            .add_component(
+                "intl_property_manager",
+                ComponentSource::url("#meta/intl_property_manager_without_flags.cm"),
+            )
+            .await?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.intl.PropertyProvider"),
+                source: RouteEndpoint::component("intl_property_manager"),
+                targets: vec![RouteEndpoint::AboveRoot],
+            })?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.examples.intl.manager.PropertyManager"),
+                source: RouteEndpoint::component("intl_property_manager"),
+                targets: vec![RouteEndpoint::AboveRoot],
+            })?
+            .add_route(
+                RouteBuilder::protocol("fuchsia.logger.LogSink")
+                    .source(RouteEndpoint::above_root())
+                    .targets(vec![RouteEndpoint::component("intl_property_manager")]),
+            )?;
+        let realm = builder.build();
+        // Create the realm instance
+        let realm_instance = realm.create().await?;
 
-        let property_manager: PropertyManagerProxy = app
-            .connect_to_protocol::<PropertyManagerMarker>()
+        let property_manager: PropertyManagerProxy = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<PropertyManagerMarker>()
             .context("Failed to connect to intl PropertyManager service")?;
 
-        let property_provider: PropertyProviderProxy = app
-            .connect_to_protocol::<PropertyProviderMarker>()
+        let property_provider: PropertyProviderProxy = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<PropertyProviderMarker>()
             .context("Failed to connect to intl PropertyProvider service")?;
 
         let initial_profile = property_provider.get_profile().await?;
@@ -388,6 +406,9 @@ mod test {
         let actual = property_provider.get_profile().await?;
         assert_eq!(actual, *PROFILE_B);
 
+        // Clean up the realm instance
+        realm_instance.destroy().await?;
+
         Ok(())
     }
 
@@ -398,17 +419,38 @@ mod test {
     #[fasync::run_singlethreaded]
     #[test]
     async fn test_set_initial_profile() -> Result<(), Error> {
-        let launcher: LauncherProxy =
-            client::launcher().context("Failed to open launcher service")?;
-        let app = client::launch(&launcher, COMPONENT_URL.to_string(), None)
-            .context("Failed to launch Intl Property Manager")?;
+        // Create the test realm,
+        let mut builder = RealmBuilder::new().await?;
+        builder
+            .add_component(
+                "intl_property_manager",
+                ComponentSource::url("#meta/intl_property_manager.cm"),
+            )
+            .await?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.intl.PropertyProvider"),
+                source: RouteEndpoint::component("intl_property_manager"),
+                targets: vec![RouteEndpoint::AboveRoot],
+            })?
+            .add_route(
+                RouteBuilder::protocol("fuchsia.logger.LogSink")
+                    .source(RouteEndpoint::above_root())
+                    .targets(vec![RouteEndpoint::component("intl_property_manager")]),
+            )?;
+        let realm = builder.build();
+        // Create the realm instance
+        let realm_instance = realm.create().await?;
 
-        let property_provider: PropertyProviderProxy = app
-            .connect_to_protocol::<PropertyProviderMarker>()
+        let property_provider: PropertyProviderProxy = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<PropertyProviderMarker>()
             .context("Failed to connect to intl PropertyProvider service")?;
 
         let initial_profile = property_provider.get_profile().await?;
         assert_eq!(initial_profile, *INITIAL_PROFILE);
+
+        // Clean up the realm instance
+        realm_instance.destroy().await?;
 
         Ok(())
     }

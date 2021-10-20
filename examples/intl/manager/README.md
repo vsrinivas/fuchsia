@@ -8,50 +8,57 @@ Demo implementation of [`fuchsia.intl.PropertyProvider`][1]. This service provid
 `PropertyProvider` are expected to construct a `Profile` by reading the user's
 settings.
 
-## Initial profile
+## Building
 
-Without additional flags, the `intl_property_manager` serves an empty `Profile`.  It is
-possible to add flags to instruct it to serve a nonempty `Profile`, as follows:
+If these components are not present in your build, they can be added by
+appending `--with //examples` to your `fx set` command. For example:
 
-* `--set_initial_profile`: this flag *must* be set to instruct the server to serve a nonempty
-initial locale.
-* `--locale_ids=...`: a comma-separated list of BCP-47 compatible locale identifiers to be served,
-in the order of preference.
-* `--locale_ids=...`: a comma-separated list of BCP-47 compatible time zone identifiers to be served, in the order of preference.
-
-The above flags can be set in the `"args"` section of the file
-[`intl_property_manager.cmx`](meta/intl_property_manager.cmx).
-
-In case the above list of flags goes out of date, running `intl_property_manager` with the flag
-`--help` will always display the currently accepted list of flags.
-
-# Compile and run
-
-Configure the environment using:
-
-```
-fx set core.x64 --with=//examples/intl
-fx build
+```bash
+$ fx set core.x64 --with //examples --with //examples:tests
+$ fx build
 ```
 
-You can then start the QEMU with networking, assuming that you use QEMU as a testing device and
-that you have confirmed that it works:
+If you do not already have one running, start a package server so the example
+components can be resolved from your device:
 
-```
-fx emu -N
-```
-
-Once it runs:
-
-```
-fx serve
+```bash
+$ fx serve
 ```
 
-If all of the above are running, you can now test the implementation using:
+## Running
 
-```shell
+To run the example component, provide the full component URL to `run`:
+
+```bash
+$ ffx component run 'fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cm'
+```
+
+You can see the component output using `fx log`.
+
+## Testing
+
+To run the test components defined here, provide the build target to
+`fx test`:
+
+```bash
 $ fx test intl_property_manager_tests
 ```
+
+## Options
+
+Without additional flags, the `intl_property_manager` serves an empty `Profile`.
+It is possible to add flags to instruct it to serve a nonempty `Profile`, as
+follows:
+
+* `--set_initial_profile`: this flag *must* be set to instruct the server to
+  serve a nonempty initial locale.
+* `--locale_ids=...`: a comma-separated list of BCP-47 compatible locale
+  identifiers to be served, in the order of preference.
+* `--locale_ids=...`: a comma-separated list of BCP-47 compatible time zone
+  identifiers to be served, in the order of preference.
+
+The above flags can be set in the `"args"` section of the file
+[`intl_property_manager.cml`](meta/intl_property_manager.cml).
 
 [1]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.intl/property_provider.fidl
 [2]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.intl/intl.fidl#69

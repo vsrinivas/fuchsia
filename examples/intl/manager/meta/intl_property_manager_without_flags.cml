@@ -5,10 +5,15 @@
     },
     capabilities: [
         { protocol: "fuchsia.intl.PropertyProvider" },
+        { protocol: "fuchsia.examples.intl.manager.PropertyManager" },
     ],
     expose: [
         {
             protocol: "fuchsia.intl.PropertyProvider",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.examples.intl.manager.PropertyManager",
             from: "self",
         },
     ],
