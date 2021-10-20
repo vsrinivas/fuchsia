@@ -1200,7 +1200,7 @@ Whether or not to launch screensaver.
 
 **Current value (from the default):** `true`
 
-From //src/experiences/session_shells/ermine/shell/BUILD.gn:29
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:26
 
 ### escher_test_for_glsl_spirv_mismatch
 If true, this enables the |SpirvNotChangedTest| to check if the precompiled
@@ -3712,7 +3712,7 @@ Whether or not to launch OOBE workflow on startup.
 
 **Current value (from the default):** `false`
 
-From //src/experiences/session_shells/ermine/shell/BUILD.gn:26
+From //src/experiences/session_shells/ermine/oobe/BUILD.gn:12
 
 ### sysmgr_golden_warn_override
 Used by config_package().
