@@ -263,3 +263,22 @@ source_set("scenic") {
     "//zircon/system/ulib/zx",
   ]
 }
+
+source_set("timezone_provider") {
+  testonly = true
+
+  sources = [
+    "timezone_provider.cc",
+    "timezone_provider.h",
+  ]
+
+  public_deps = [
+    ":fidl_server",
+    "//sdk/fidl/fuchsia.intl",
+  ]
+
+  deps = [
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+}

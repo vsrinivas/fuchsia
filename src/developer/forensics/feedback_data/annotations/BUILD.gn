@@ -27,6 +27,7 @@ source_set("annotation_providers") {
     ":board_info_provider",
     ":channel_provider",
     ":product_info_provider",
+    ":timezone_provider",
     ":types",
     ":utils",
     "//sdk/lib/fit-promise",
@@ -154,6 +155,32 @@ source_set("static_annotations") {
     "//src/developer/forensics/utils:errors",
     "//src/lib/files",
     "//src/lib/fxl",
+  ]
+}
+
+# Exposed separately for unit test purposes.
+source_set("timezone_provider") {
+  public = [ "timezone_provider.h" ]
+
+  sources = [
+    "annotation_provider.h",
+    "timezone_provider.cc",
+    "timezone_provider.h",
+  ]
+
+  public_deps = [
+    ":types",
+    "//sdk/fidl/fuchsia.intl",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils/fit",
+  ]
+
+  deps = [
+    ":utils",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/utils:errors",
   ]
 }
 

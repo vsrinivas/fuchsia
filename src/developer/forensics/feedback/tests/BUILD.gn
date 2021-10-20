@@ -375,6 +375,7 @@ group("tests") {
     ":feedback-tests",
 
     # Packages for the components that we are injecting in the integration tests.
+    "//garnet/bin/setui",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/connectivity/network/netstack",
     "//src/developer/forensics:copy-pkg",
@@ -387,7 +388,9 @@ group("tests") {
     "//src/graphics/bin/vulkan_loader",
     "//src/hwinfo:fake_legacy_hwinfo",
     "//src/hwinfo:hwinfo_tests_factory_config",
+    "//src/intl/intl_services:pkg_small",
     "//src/sys/pkg/bin/fake-channel-control",
+    "//src/sys/stash",
     "//src/sys/time/timekeeper",
   ]
 }

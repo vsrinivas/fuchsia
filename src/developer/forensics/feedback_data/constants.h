@@ -56,6 +56,7 @@ constexpr char kAnnotationSystemBootIdCurrent[] = "system.boot-id.current";
 constexpr char kAnnotationSystemBootIdPrevious[] = "system.boot-id.previous";
 constexpr char kAnnotationSystemLastRebootReason[] = "system.last-reboot.reason";
 constexpr char kAnnotationSystemLastRebootUptime[] = "system.last-reboot.uptime";
+constexpr char kAnnotationSystemTimezonePrimary[] = "system.timezone.primary";
 constexpr char kAnnotationSystemUpdateChannelCurrent[] = "system.update-channel.current";
 constexpr char kAnnotationSystemUpdateChannelTarget[] = "system.update-channel.target";
 

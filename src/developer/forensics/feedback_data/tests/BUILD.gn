@@ -355,6 +355,25 @@ executable("system_log_unittest_exe") {
   ]
 }
 
+executable("timezone_provider_unittest_exe") {
+  testonly = true
+
+  sources = [ "timezone_provider_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/feedback_data/annotations:timezone_provider",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:timezone_provider",
+    "//src/lib/timekeeper:testing",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -529,6 +548,14 @@ fuchsia_component("system_log_unittest") {
   deps = [ ":system_log_unittest_exe" ]
 }
 
+fuchsia_component("timezone_provider_unittest") {
+  testonly = true
+
+  manifest = "meta/timezone_provider_unittest.cml"
+
+  deps = [ ":timezone_provider_unittest_exe" ]
+}
+
 ###############################################################################
 # PACKAGES
 ###############################################################################
@@ -550,6 +577,7 @@ fuchsia_test_package("feedback-data-tests") {
     ":product_info_provider_unittest",
     ":screenshot_ptr_unittest",
     ":system_log_unittest",
+    ":timezone_provider_unittest",
   ]
 
   test_specs = {

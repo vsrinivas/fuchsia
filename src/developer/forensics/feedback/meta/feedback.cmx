@@ -27,6 +27,7 @@
             "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
             "fuchsia.hwinfo.Board",
             "fuchsia.hwinfo.Product",
+            "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.Log",
             "fuchsia.metrics.MetricEventLoggerFactory",
             "fuchsia.net.http.Loader",

@@ -4,6 +4,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/hwinfo/cpp/fidl.h>
+#include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <fuchsia/metrics/cpp/fidl.h>
@@ -57,6 +58,7 @@ using fuchsia::hwinfo::BoardInfo;
 using fuchsia::hwinfo::BoardPtr;
 using fuchsia::hwinfo::ProductInfo;
 using fuchsia::hwinfo::ProductPtr;
+using fuchsia::intl::Profile;
 using testing::Key;
 using testing::UnorderedElementsAreArray;
 
@@ -201,6 +203,17 @@ class FeedbackIntegrationTest : public gtest::TestWithEnvironmentFixture {
     RunLoopUntil([&ready] { return ready; });
   }
 
+  // Makes sure the component serving fuchsia.intl.PropertyProvider is up and running as the
+  // GetProfile() request could time out on machines where the component is too slow to start.
+  void WaitForProfileProvider() {
+    fuchsia::intl::PropertyProviderPtr property_provider;
+    environment_services_->Connect(property_provider.NewRequest());
+
+    bool ready = false;
+    property_provider->GetProfile([&](Profile profile) { ready = true; });
+    RunLoopUntil([&ready] { return ready; });
+  }
+
   void FileCrashReport() {
     fuchsia::feedback::CrashReport report;
     report.set_program_name("crashing_program");
@@ -309,6 +322,7 @@ TEST_F(FeedbackIntegrationTest, DataProvider_GetSnapshot_CheckKeys) {
   WaitForInspect();
   WaitForBoardProvider();
   WaitForProductProvider();
+  WaitForProfileProvider();
 
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());
@@ -342,6 +356,7 @@ TEST_F(FeedbackIntegrationTest, DataProvider_GetSnapshot_CheckKeys) {
                   MatchesKey(feedback_data::kAnnotationHardwareProductSKU),
                   MatchesKey(feedback_data::kAnnotationSystemBootIdCurrent),
                   MatchesKey(feedback_data::kAnnotationSystemLastRebootReason),
+                  MatchesKey(feedback_data::kAnnotationSystemTimezonePrimary),
                   MatchesKey(feedback_data::kAnnotationSystemUpdateChannelCurrent),
                   MatchesKey(feedback_data::kAnnotationSystemUpdateChannelTarget),
               }));
@@ -406,6 +421,7 @@ TEST_F(FeedbackIntegrationTest, DataProvider_GetAnnotation_CheckKeys) {
   WaitForChannelProvider();
   WaitForBoardProvider();
   WaitForProductProvider();
+  WaitForProfileProvider();
 
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());
@@ -450,6 +466,7 @@ TEST_F(FeedbackIntegrationTest, DataProvider_GetSnapshot_CheckCobalt) {
   WaitForInspect();
   WaitForBoardProvider();
   WaitForProductProvider();
+  WaitForProfileProvider();
 
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());
@@ -474,6 +491,7 @@ TEST_F(FeedbackIntegrationTest,
   WaitForInspect();
   WaitForBoardProvider();
   WaitForProductProvider();
+  WaitForProfileProvider();
 
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());
