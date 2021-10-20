@@ -202,9 +202,9 @@ template("generate_chromium_targets") {
 
     # TODO(crbug.com/1148608): Change directory path when m97 becomes release.
     if (use_chromium_canary) {
-      archive_dir = "${prebuilt_archive_root_path}/web_engine_tests${invoker.archive_path_suffix}${canary_suffix}/arch/x64"
+      archive_dir = "${prebuilt_archive_root_path}/web_engine_tests${invoker.archive_path_suffix}${canary_suffix}/arch/${target_cpu}"
     } else {
-      archive_dir = "${prebuilt_archive_root_path}/chromium_tests${invoker.archive_path_suffix}/arch/x64"
+      archive_dir = "${prebuilt_archive_root_path}/chromium_tests${invoker.archive_path_suffix}/arch/${target_cpu}"
     }
 
     # The specific tests binaries are specified by the "tests" target in
