@@ -23,6 +23,7 @@ const MAX_DYNAMIC_OFFER_COUNT uint32 = 128;
 /// The component framework provides this service to components that use
 /// `fuchsia.sys2.Realm`.
 @discoverable
+@deprecated("Use the SDK version of this protocol, fuchsia.component.Realm")
 protocol Realm {
     /// Opens the exposed directory of a child component instance. When this
     /// function successfully returns, `exposed_dir` is bound to a directory
