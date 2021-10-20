@@ -306,8 +306,10 @@ pub struct DeviceInfo {
     /// The amount of bytes the device requests be free as `tail` space in a tx buffer.
     pub min_tx_buffer_tail: u16,
     /// Available rx acceleration flags for this device.
+    #[fidl_field_type(default)]
     pub rx_accel: Vec<netdev::RxAcceleration>,
     /// Available tx acceleration flags for this device.
+    #[fidl_field_type(default)]
     pub tx_accel: Vec<netdev::TxAcceleration>,
 }
 
