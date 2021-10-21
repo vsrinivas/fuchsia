@@ -448,12 +448,17 @@ magma_status_t PrimaryWrapper::Sync() {
   return MagmaChannelStatus(result.status());
 }
 
+magma_status_t PrimaryWrapper::Flush() {
+  auto result = client_->Flush_Sync();
+  return MagmaChannelStatus(result.status());
+}
+
 magma_status_t PrimaryWrapper::GetError() {
   std::lock_guard<std::mutex> lock(get_error_lock_);
   if (error_ != MAGMA_STATUS_OK)
     return error_;
 
-  auto result = client_->Sync_Sync();
+  auto result = client_->Flush_Sync();
 
   if (!result.ok()) {
     // Only run the loop if the channel has been closed - we don't want to process any
@@ -628,6 +633,11 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
   magma_status_t GetError() override {
     DLOG("ZirconPlatformConnectionClient: GetError");
     return client_.GetError();
+  }
+
+  magma_status_t Flush() override {
+    DLOG("ZirconPlatformConnectionClient: Flush");
+    return client_.Flush();
   }
 
   magma_status_t Sync() override {

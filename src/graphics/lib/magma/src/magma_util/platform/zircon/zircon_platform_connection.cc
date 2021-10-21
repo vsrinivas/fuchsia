@@ -272,6 +272,11 @@ void ZirconPlatformConnection::ExecuteImmediateCommands(
     SetError(&completer, status.get());
 }
 
+void ZirconPlatformConnection::Flush(FlushRequestView request, FlushCompleter::Sync& completer) {
+  DLOG("ZirconPlatformConnection: Flush");
+  completer.Reply();
+}
+
 void ZirconPlatformConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: Sync");
   completer.Reply();

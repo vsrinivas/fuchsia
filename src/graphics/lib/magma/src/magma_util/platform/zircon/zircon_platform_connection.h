@@ -150,6 +150,7 @@ class ZirconPlatformConnection : public fidl::WireServer<fuchsia_gpu_magma::Prim
   void ExecuteCommandBufferWithResources2(
       ExecuteCommandBufferWithResources2RequestView request,
       ExecuteCommandBufferWithResources2Completer::Sync& completer) override;
+  void Flush(FlushRequestView request, FlushCompleter::Sync& _completer) override;
   void Sync(SyncRequestView request, SyncCompleter::Sync& _completer) override;
   void MapBufferGpu(MapBufferGpuRequestView request,
                     MapBufferGpuCompleter::Sync& _completer) override;

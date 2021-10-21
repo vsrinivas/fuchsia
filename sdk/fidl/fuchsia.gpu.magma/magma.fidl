@@ -219,7 +219,11 @@ protocol Primary {
         semaphores vector<zx.koid>:MAX;
     });
 
-    /// Incurs a round-trip to the system driver, used to ensure all previous messages are seen.
+    /// Incurs a round-trip to the system driver, used to ensure all previous messages have been
+    /// observed, but not necessarily completed.
+    Flush() -> ();
+
+    /// Deprecated.
     Sync() -> ();
 
     /// Maps `page_count` pages of `buffer` from `page_offset` onto the GPU in the connection's

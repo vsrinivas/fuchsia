@@ -250,6 +250,17 @@ class TestPlatformConnection {
     shared_data_->test_complete = true;
   }
 
+  void TestFlush() {
+    constexpr uint64_t kNumMessages = 10;
+    uint32_t context_id;
+    for (uint32_t i = 0; i < kNumMessages; i++) {
+      client_connection_->CreateContext(&context_id);
+    }
+    EXPECT_EQ(client_connection_->Flush(), MAGMA_STATUS_OK);
+    FlowControlCheck(kNumMessages, 0);
+    EXPECT_EQ(shared_data_->test_context_id, context_id);
+  }
+
   void TestMapUnmapBuffer() {
     auto buf = magma::PlatformBuffer::Create(1, "test");
     shared_data_->test_buffer_id = buf->id();
@@ -942,4 +953,10 @@ TEST(PlatformConnection, TestPerformanceCounters) {
   auto Test = TestPlatformConnection::Create();
   ASSERT_NE(Test, nullptr);
   Test->TestPerformanceCounters();
+}
+
+TEST(PlatformConnection, TestFlush) {
+  auto Test = TestPlatformConnection::Create();
+  ASSERT_NE(Test, nullptr);
+  Test->TestFlush();
 }

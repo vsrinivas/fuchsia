@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 79,
+    "next-free-ordinal": 80,
     "exports": [
       {
         "ordinal": 4,
@@ -1054,6 +1054,19 @@
             "name": "handle_out",
             "type": "magma_handle_t*",
             "description": "Pointer to the returned handle."
+          }
+        ]
+      },
+      {
+        "ordinal": 79,
+        "name": "magma_flush",
+        "type": "magma_status_t",
+        "description": "Incurs a round-trip to the system driver, used to ensure all previous messages have been observed, but not necessarily completed.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
           }
         ]
       }

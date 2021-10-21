@@ -581,6 +581,14 @@ magma_status_t magma_get_buffer_handle2(
     magma_buffer_t buffer,
     magma_handle_t* handle_out);
 
+///
+/// \brief Incurs a round-trip to the system driver, used to ensure all previous messages have been
+///        observed, but not necessarily completed.
+/// \param connection An open connection.
+///
+magma_status_t magma_flush(
+    magma_connection_t connection);
+
 #if defined(__cplusplus)
 }
 #endif
