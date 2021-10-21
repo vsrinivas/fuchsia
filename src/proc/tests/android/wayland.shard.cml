@@ -1,6 +1,9 @@
 {
     include: [ "//src/proc/tests/android/starnix_test.shard.cml" ],
     program: {
-        environ: [ "XDG_RUNTIME_DIR=/data/tmp" ],
+        environ: [
+            "XDG_RUNTIME_DIR=/data/tmp",
+            "VIRTWL_DEVICE=/data/tmp/wayland-1",
+        ],
     },
 }

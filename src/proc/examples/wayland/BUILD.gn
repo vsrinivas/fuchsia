@@ -4,7 +4,7 @@
 
 import("//build/components.gni")
 
-resource("bin") {
+resource("demo_bin") {
   sources = [
     "//prebuilt/starnix/tests/syscalls/linux-amd64/wayland_demo/wayland_demo",
   ]
@@ -23,8 +23,33 @@ fuchsia_component("component") {
   manifest = "meta/wayland_demo.cml"
 
   deps = [
-    ":bin",
+    ":demo_bin",
     "//src/proc/tests/android:android_system_image",
     "//src/proc/tests/android:starnix_data_tmp_placeholder",
   ]
+}
+
+resource("test_bin") {
+  sources = [
+    "//prebuilt/starnix/tests/syscalls/linux-amd64/wayland_demo/wayland_test",
+  ]
+  outputs = [ "data/tests/wayland_test" ]
+}
+
+fuchsia_test_component("test_component") {
+  component_name = "wayland_test"
+  manifest = "meta/wayland_test.cml"
+
+  deps = [
+    ":test_bin",
+    "//src/proc/tests/android:android_system_image",
+    "//src/proc/tests/android:starnix_data_tmp_placeholder",
+  ]
+}
+
+fuchsia_test_package("starnix_wayland_test") {
+  package_name = "starnix_wayland_test"
+  test_components = [ ":test_component" ]
+
+  disable_elf_binaries_checks = true
 }

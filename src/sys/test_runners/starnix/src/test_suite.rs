@@ -107,11 +107,13 @@ async fn run_test_cases(
         let ns = Some(ComponentNamespace::try_into(namespace.clone())?);
         let numbered_handles =
             Some(vec![stdin_handle_info, stdout_handle_info, stderr_handle_info]);
+        let (outgoing_dir, _outgoing_dir) =
+            zx::Channel::create().expect("Failed to create channel.");
         let start_info = ComponentStartInfo {
             resolved_url: Some(test_url.to_string()),
             program: program.clone(),
             ns,
-            outgoing_dir: None,
+            outgoing_dir: Some(outgoing_dir.into()),
             runtime_dir: None,
             numbered_handles,
             ..ComponentStartInfo::EMPTY

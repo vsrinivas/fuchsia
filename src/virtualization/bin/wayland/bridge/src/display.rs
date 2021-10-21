@@ -97,18 +97,9 @@ impl Display {
 
     /// Notify client that presentation of view should stop.
     pub fn delete_view_provider(&self, view_id: u32) {
-        self.view_producer_binding
-            .lock()
-            .as_ref()
-            .expect(
-                "\
-                 A view has been deleted without a ViewProducer connection. \
-                 The ViewProducer must be bound before issuing any new channels \
-                 into the bridge.",
-            )
-            .control_handle()
-            .send_on_shutdown_view(view_id)
-            .expect("Failed to emit OnShutdownView event");
+        if let Some(view_producer_ref) = self.view_producer_binding.lock().as_ref() {
+            let _ = view_producer_ref.control_handle().send_on_shutdown_view(view_id);
+        }
     }
 
     pub fn bind_view_producer(&self, stream: ViewProducerRequestStream) {

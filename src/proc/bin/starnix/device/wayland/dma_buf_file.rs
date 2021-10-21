@@ -128,6 +128,8 @@ impl DmaBufFile {
         const NEW_DMABUF: u32 = 0x1002;
         response.header.type_ = NEW_DMABUF;
         response.header.fd = fd.raw() as u32;
+        response.buffer.width = buffer_allocation_args.buffer.width;
+        response.buffer.height = buffer_allocation_args.buffer.height;
         response.buffer.stride0 = bytes_per_row as u32;
 
         Ok(response)
