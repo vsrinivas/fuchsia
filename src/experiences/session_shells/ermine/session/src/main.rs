@@ -6,14 +6,16 @@
 #![recursion_limit = "256"]
 
 use {
-    anyhow::{Context as _, Error},
-    fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, Proxy},
+    anyhow::{anyhow, Context as _, Error},
+    fidl::endpoints::{create_endpoints, ClientEnd, DiscoverableProtocolMarker, Proxy},
     fidl_fuchsia_element::{
         GraphicalPresenterMarker, GraphicalPresenterProxy, GraphicalPresenterRequest,
         GraphicalPresenterRequestStream, ManagerMarker as ElementManagerMarker,
         ManagerProxy as ElementManagerProxy, ManagerRequest as ElementManagerRequest,
         ManagerRequestStream as ElementManagerRequestStream,
     },
+    fidl_fuchsia_identity_account::{AccountManagerMarker, AccountMetadata, AccountProxy},
+    fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_session_scene::ManagerMarker as SceneManagerMarker,
     fidl_fuchsia_sys::LauncherMarker,
     fidl_fuchsia_ui_app::ViewProviderMarker,
@@ -24,9 +26,9 @@ use {
         client::{connect_to_protocol, launch_with_options, App, LaunchOptions},
         server::ServiceFs,
     },
-    fuchsia_syslog::macros::fx_log_err,
     fuchsia_zircon as zx,
     futures::{try_join, StreamExt, TryStreamExt},
+    log::{error, info, warn},
     std::fs,
     std::rc::Rc,
     std::sync::{Arc, Weak},
@@ -43,6 +45,12 @@ enum ExposedServices {
 /// is the ElementManager service and we don't expect many connections to it at
 /// any given time.
 const NUM_CONCURRENT_REQUESTS: usize = 5;
+
+/// A hardcoded password to send on the AccountManager interface.
+const EMPTY_PASSWORD: &str = "";
+
+/// A hardcoded name to set on all accounts we create via AccountManager.
+const ACCOUNT_NAME: &str = "created_by_session";
 
 async fn launch_ermine() -> Result<(App, zx::Channel), Error> {
     let launcher = connect_to_protocol::<LauncherMarker>()?;
@@ -96,14 +104,12 @@ async fn expose_services(
                 ExposedServices::ElementManager(request_stream) => {
                     run_proxy_element_manager_service(element_manager, request_stream)
                         .await
-                        .unwrap_or_else(|e| fx_log_err!("Failure in element manager proxy: {}", e));
+                        .unwrap_or_else(|e| error!("Failure in element manager proxy: {}", e));
                 }
                 ExposedServices::GraphicalPresenter(request_stream) => {
                     run_proxy_graphical_presenter_service(graphical_presenter, request_stream)
                         .await
-                        .unwrap_or_else(|e| {
-                            fx_log_err!("Failure in graphical presenter proxy: {}", e)
-                        });
+                        .unwrap_or_else(|e| error!("Failure in graphical presenter proxy: {}", e));
                 }
             }
         }
@@ -191,12 +197,70 @@ async fn set_view_focus(
     }
 }
 
+/// Use the AccountManager API (with the supplied password) to either get the only existing account
+/// or create a new account then acquire a data directory for that account.
+async fn get_account_directory(password: &str) -> Result<DirectoryProxy, Error> {
+    let account_manager = Arc::new(connect_to_protocol::<AccountManagerMarker>().unwrap());
+    info!("Connected to AccountManager");
+
+    let account_ids = account_manager.get_account_ids().await?;
+    let maybe_account_id = match account_ids.len() {
+        0 => None,
+        1 => Some(account_ids[0]),
+        count => {
+            return Err(anyhow!("Multiple ({}) accounts found, cannot get data directory", count));
+        }
+    };
+
+    let (account_client_end, account_server_end) = create_endpoints()?;
+    let account_metadata =
+        AccountMetadata { name: Some(ACCOUNT_NAME.to_string()), ..AccountMetadata::EMPTY };
+
+    match maybe_account_id {
+        None => {
+            info!("Creating a new account through AccountManager");
+            account_manager
+                .deprecated_provision_new_account(password, account_metadata, account_server_end)
+                .await?
+                .map_err(|err| anyhow!("Error provisioning new account: {:?}", err))?;
+        }
+        Some(account_id) => {
+            info!("Getting existing account with ID {}", account_id);
+            account_manager
+                .deprecated_get_account(account_id, password, account_server_end)
+                .await?
+                .map_err(|err| anyhow!("Error getting account: {:?}", err))?;
+        }
+    }
+
+    let account: AccountProxy = account_client_end.into_proxy()?;
+    let (directory_client_end, directory_server_end) = create_endpoints()?;
+    info!("Getting directory on account");
+    account
+        .get_data_directory(directory_server_end)
+        .await?
+        .map_err(|err| anyhow!("Error getting data directory: {:?}", err))?;
+    Ok(directory_client_end.into_proxy()?)
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["workstation_session"]).expect("Failed to initialize logger.");
 
     let (app, ermine_services_server_end) = launch_ermine().await?;
     let view_provider = app.connect_to_protocol::<ViewProviderMarker>()?;
+
+    // Attempt to retrieve a data directory for the account from AccountManager. If this fails
+    // just continue without the directory.
+    match get_account_directory(EMPTY_PASSWORD).await {
+        Ok(_dir) => {
+            // TODO(jsankey): Bind this directory to a storage capability.
+            info!("Successfully acquired an account directory");
+        }
+        Err(err) => {
+            warn!("Error getting account directory: {:?}", err)
+        }
+    }
 
     let scene_manager = Arc::new(connect_to_protocol::<SceneManagerMarker>().unwrap());
 
