@@ -36,12 +36,19 @@ func (w *GZIPWriter) Flush() {
 
 type LoggingWriter struct {
 	http.ResponseWriter
-	Status int
+	Status       int
+	ResponseSize int64
 }
 
 func (lw *LoggingWriter) WriteHeader(status int) {
 	lw.Status = status
 	lw.ResponseWriter.WriteHeader(status)
+}
+
+func (lw *LoggingWriter) Write(b []byte) (int, error) {
+	n, err := lw.ResponseWriter.Write(b)
+	lw.ResponseSize += int64(n)
+	return n, err
 }
 
 func (lw *LoggingWriter) Flush() {

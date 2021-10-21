@@ -211,11 +211,17 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 			gw.Header().Set("Content-Encoding", "gzip")
 			w = gw
 		}
-		lw := &pmhttp.LoggingWriter{w, 0}
+		lw := &pmhttp.LoggingWriter{w, 0, 0}
 		mux.ServeHTTP(lw, r)
 		if !*quiet {
-			fmt.Printf("%s [pm serve] %d %s\n",
-				time.Now().Format("2006-01-02 15:04:05"), lw.Status, r.RequestURI)
+			fmt.Printf("%s [pm serve] %s \"%s %s %s\" %d %d\n",
+				time.Now().Format("2006-01-02 15:04:05"),
+				r.RemoteAddr,
+				r.Method,
+				r.RequestURI,
+				r.Proto,
+				lw.Status,
+				lw.ResponseSize)
 		}
 	})
 
