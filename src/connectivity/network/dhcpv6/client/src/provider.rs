@@ -29,7 +29,7 @@ pub(crate) async fn run_client_provider<Fut, F>(
                     let params_str = format!("{:?}", params);
                     let () =
                         serve_client(params, request).await.unwrap_or_else(|e: anyhow::Error| {
-                            log::error!("error running client with params {}: {}", params_str, e)
+                            log::error!("error running client with params {}: {:?}", params_str, e)
                         });
                 }
                 Err(e) => log::warn!("client provider request FIDL error: {}", e),
