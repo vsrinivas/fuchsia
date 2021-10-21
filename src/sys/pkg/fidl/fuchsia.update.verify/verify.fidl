@@ -17,19 +17,17 @@ protocol Verifier {
     /// The caller is responsible for setting any timeouts.
     ///
     /// + request `options` the configuration to use when verifying.
-    /// * response a [`VerifyError`] describing why the verification failed.
+    /// * error a value describing the cause of verification failure.
     Verify(struct {
         options @generated_name("VerifyOptions") table {};
-    }) -> (struct {}) error VerifyError;
+    }) -> (struct {}) error @generated_name("VerifyError") flexible enum {
+        /// A problem occured when doing update verification.
+        INTERNAL = 1;
+    };
 };
 
 /// An update verifier to determine if Blobfs is working as expected.
 @discoverable
 protocol BlobfsVerifier {
     compose Verifier;
-};
-
-/// A problem occured when doing an update verification.
-type VerifyError = flexible enum {
-    INTERNAL = 1;
 };
