@@ -1,0 +1,46 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+source_set("metrics_buffer") {
+  sources = [
+    "metrics_buffer.cc",
+    "metrics_buffer.h",
+  ]
+  public_deps = [
+    "//src/lib/cobalt/cpp:cobalt_event_builder",
+    "//src/lib/cobalt/cpp:cobalt_logger",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+
+    # Only for <ddk/debug.h>'s severity levels.
+    "//src/lib/ddk",
+  ]
+}
+
+executable("metrics_buffer_unittests") {
+  testonly = true
+
+  sources = [ "metrics_buffer_unittests.cc" ]
+
+  deps = [
+    ":metrics_buffer",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_llcpp",
+    "//sdk/lib/fdio:fdio",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+  ]
+}
+
+fuchsia_unittest_package("metrics_buffer_tests") {
+  deps = [ ":metrics_buffer_unittests" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":metrics_buffer_tests" ]
+}
