@@ -10,8 +10,8 @@ ffx_plugin("ffx_emulator") {
   with_unit_tests = true
   args_sources = [ "src/args.rs" ]
   plugin_deps = [
-    "kill:ffx_emulator_kill",
     "remote:ffx_emulator_remote",
+    "shutdown:ffx_emulator_shutdown",
     "start:ffx_emulator_start",
   ]
   test_deps = [ "common:lib_test" ]

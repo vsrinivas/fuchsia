@@ -12,7 +12,7 @@ use crate::vdl_proto_parser::{get_emu_pid, get_ssh_port};
 use ansi_term::Colour::*;
 use anyhow::Result;
 use errors::ffx_bail;
-use ffx_emulator_kill_args::KillCommand;
+use ffx_emulator_shutdown_args::ShutdownCommand;
 use ffx_emulator_start_args::StartCommand;
 use fidl_fuchsia_developer_bridge as bridge;
 use regex::Regex;
@@ -533,7 +533,7 @@ impl VDLFiles {
             match fuchsia_async::unblock(move || monitored_child_process(&child_arc)).await {
                 Ok(_) => {
                     self.stop_vdl(
-                        &KillCommand {
+                        &ShutdownCommand {
                             launched_proto: Some(self.output_proto.display().to_string()),
                             vdl_path: Some(vdl.display().to_string()),
                             sdk: self.is_sdk,
@@ -545,7 +545,7 @@ impl VDLFiles {
                 }
                 Err(e) => {
                     self.stop_vdl(
-                        &KillCommand {
+                        &ShutdownCommand {
                             launched_proto: Some(self.output_proto.display().to_string()),
                             vdl_path: Some(vdl.display().to_string()),
                             sdk: self.is_sdk,
@@ -607,12 +607,12 @@ impl VDLFiles {
             println!(
                 "{}",
                 Yellow.paint(
-                    "\nNOTE: For --nointeractive, launcher artifacts need to be manually cleaned using the `kill` subcommand:"));
+                    "\nNOTE: For --nointeractive, launcher artifacts need to be manually cleaned using the `shutdown` subcommand:"));
             if !self.is_sdk {
                 println!(
                     "{}",
                     Yellow.paint(format!(
-                        "    ffx emu kill --launched-proto {}",
+                        "    ffx emu shutdown --launched-proto {}",
                         self.output_proto.display()
                     ))
                 );
@@ -620,7 +620,7 @@ impl VDLFiles {
                 println!(
                     "{}",
                     Yellow.paint(format!(
-                        "    fvdl --sdk kill --launched-proto {}",
+                        "    fvdl --sdk shutdown --launched-proto {}",
                         self.output_proto.display()
                     ))
                 );
@@ -663,7 +663,7 @@ impl VDLFiles {
             })
             .await;
             self.stop_vdl(
-                &KillCommand {
+                &ShutdownCommand {
                     launched_proto: Some(self.output_proto.display().to_string()),
                     vdl_path: Some(vdl.display().to_string()),
                     sdk: self.is_sdk,
@@ -720,7 +720,7 @@ impl VDLFiles {
     // Shuts down emulator and local services.
     pub async fn stop_vdl(
         &self,
-        kill_command: &KillCommand,
+        shutdown_command: &ShutdownCommand,
         daemon_proxy: Option<&bridge::DaemonProxy>,
     ) -> Result<()> {
         let invoker = self.resolve_invoker();
@@ -729,7 +729,7 @@ impl VDLFiles {
         // default path for device_launcher, when running in-tree this will be read from
         // tool_paths.json, when running in sdk, this will be empty; if found, use that.
         // If empty (i.e from sdk), look for the tool in sdk_data_dir.
-        let vdl: PathBuf = match &kill_command.vdl_path {
+        let vdl: PathBuf = match &shutdown_command.vdl_path {
             Some(vdl_path) => PathBuf::from(vdl_path),
             None => match read_env_path("PREBUILT_VDL_DIR") {
                 Ok(default_path) => default_path.join("device_launcher"),
@@ -752,12 +752,12 @@ impl VDLFiles {
         if !vdl.exists() || !vdl.is_file() {
             ffx_bail!("device_launcher binary cannot be found at {}", vdl.display())
         }
-        match &kill_command.launched_proto {
+        match &shutdown_command.launched_proto {
             None => {
                 ffx_bail!(
-                    "--launched-proto must be specified for `kill` subcommand.\n\
-                    example: \"ffx emu kill --launched-proto /path/to/saved/output.log\"\n\
-                    example: \"./fvdl --sdk kill --launched-proto /path/to/saved/output.log\"\n"
+                    "--launched-proto must be specified for `shutdown` subcommand.\n\
+                    example: \"ffx emu shutdown --launched-proto /path/to/saved/output.log\"\n\
+                    example: \"./fvdl --sdk shutdown --launched-proto /path/to/saved/output.log\"\n"
                 )
             }
             Some(proto_location) => {

@@ -132,7 +132,7 @@ pub struct StartCommand {
 
     /// file destination to write `device_launcher` output.
     /// Required for --nointeractive mode. Default is a temp file that is deleted after `fvdl` exits.
-    /// Specify this flag if you plan to use the `kill` subcommand.
+    /// Specify this flag if you plan to use the `shutdown` subcommand.
     #[argh(option)]
     pub vdl_output: Option<String>,
 
@@ -144,14 +144,14 @@ pub struct StartCommand {
     /// if turned off, fvdl will not land user in the ssh console but GUI will still be launched.
     /// A ssh port will still be forwarded.
     /// User needs to specify --vdl-output flag with this mode, and manually call
-    /// the `kill` subcommand to perform clean shutdown.
+    /// the `shutdown` subcommand to perform clean shutdown.
     /// In order to run the emulator completely in the background
     /// use this flag along with --headless.
     #[argh(switch)]
     pub nointeractive: bool,
 
     /// bool, download and re-use image files in the cached location ~/.fuchsia/<image_name>/<sdk_version>/.
-    /// If not set (default), image files will be stored in a temp location and removed with `kill` subcommand.
+    /// If not set (default), image files will be stored in a temp location and removed with `shutdown` subcommand.
     /// If image location is specified with --kernel-image, --zbi-image, --fvm-image etc., the cached image will
     /// be overwritten for the specified image file.
     #[argh(switch, short = 'i')]

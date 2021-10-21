@@ -7,11 +7,9 @@ use ffx_core::ffx_command;
 
 #[ffx_command()]
 #[derive(FromArgs, Default, Debug, PartialEq)]
-#[argh(subcommand, name = "kill")]
-/// Killing Fuchsia Emulator -
-/// only required in nointeractive mode else emulator can be closed by hitting the close button
-/// on the GUI or sending a `dm poweroff` command through the console.
-pub struct KillCommand {
+#[argh(subcommand, name = "shutdown")]
+/// Shutdown running Fuchsia emulator.
+pub struct ShutdownCommand {
     /// device_launcher binary location. Defaults to looking in prebuilt/vdl/device_launcher
     #[argh(option, short = 'd')]
     pub vdl_path: Option<String>,

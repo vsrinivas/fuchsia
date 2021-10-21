@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use argh::FromArgs;
-use ffx_emulator_kill_args::KillCommand;
 use ffx_emulator_remote_args::RemoteCommand;
+use ffx_emulator_shutdown_args::ShutdownCommand;
 use ffx_emulator_start_args::StartCommand;
 
 /// entry point for fvdl
@@ -22,6 +22,6 @@ pub struct Args {
 #[argh(subcommand)]
 pub enum VDLCommand {
     Start(StartCommand),
-    Kill(KillCommand),
+    Shutdown(ShutdownCommand),
     Remote(RemoteCommand),
 }
