@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability, OptionalTask},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         model::{
             addable_directory::AddableDirectoryWithResult,
@@ -16,6 +16,7 @@ use {
             lifecycle_controller_factory::LifecycleControllerFactory,
             routing_fns::{route_expose_fn, route_use_fn},
         },
+        task_scope::TaskScope,
     },
     async_trait::async_trait,
     cm_rust::{CapabilityPath, ComponentDecl},
@@ -56,11 +57,12 @@ impl HubCapabilityProvider {
 impl CapabilityProvider for HubCapabilityProvider {
     async fn open(
         self: Box<Self>,
+        _task_scope: TaskScope,
         flags: u32,
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let mut relative_path = relative_path
             .to_str()
             .ok_or_else(|| ModelError::path_is_not_utf8(relative_path.clone()))?
@@ -70,7 +72,7 @@ impl CapabilityProvider for HubCapabilityProvider {
             ModelError::open_directory_error(self.abs_moniker.to_partial(), relative_path)
         })?;
         self.hub.open(&self.abs_moniker, flags, open_mode, dir_path, server_end).await?;
-        Ok(None.into())
+        Ok(())
     }
 }
 

@@ -4,9 +4,10 @@
 
 use {
     crate::model::{component::ComponentInstance, error::ModelError},
+    crate::task_scope::TaskScope,
     ::routing::capability_source::CapabilitySourceInterface,
     async_trait::async_trait,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     std::path::PathBuf,
 };
 
@@ -16,31 +17,6 @@ pub type InternalCapability = ::routing::capability_source::InternalCapability;
 pub type ComponentCapability = ::routing::capability_source::ComponentCapability;
 pub type AggregateCapability = ::routing::capability_source::AggregateCapability;
 pub type NamespaceCapabilities = ::routing::capability_source::NamespaceCapabilities;
-
-/// Wrapper that might hold an `fasync::Task`. `#[must_use]` to make sure the client grabs the
-/// task.
-#[must_use]
-pub struct OptionalTask {
-    task: Option<fasync::Task<()>>,
-}
-
-impl OptionalTask {
-    pub fn take(self) -> Option<fasync::Task<()>> {
-        self.task
-    }
-}
-
-impl From<Option<fasync::Task<()>>> for OptionalTask {
-    fn from(task: Option<fasync::Task<()>>) -> Self {
-        Self { task }
-    }
-}
-
-impl From<fasync::Task<()>> for OptionalTask {
-    fn from(task: fasync::Task<()>) -> Self {
-        Some(task).into()
-    }
-}
 
 /// The server-side of a capability implements this trait.
 /// Multiple `CapabilityProvider` objects can compose with one another for a single
@@ -59,9 +35,10 @@ pub trait CapabilityProvider: Send + Sync {
     /// it stays live for an appropriate scope associated with the capability.
     async fn open(
         self: Box<Self>,
+        task_scope: TaskScope,
         flags: u32,
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError>;
+    ) -> Result<(), ModelError>;
 }

@@ -4,18 +4,19 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability, OptionalTask},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
         },
+        task_scope::TaskScope,
     },
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::CapabilityName,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_process as fproc, fuchsia_async as fasync,
+    fidl_fuchsia_process as fproc,
     fuchsia_runtime::{HandleInfo, HandleInfoError},
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::prelude::*,
@@ -345,22 +346,25 @@ impl ProcessLauncherCapabilityProvider {
 impl CapabilityProvider for ProcessLauncherCapabilityProvider {
     async fn open(
         self: Box<Self>,
+        task_scope: TaskScope,
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fproc::LauncherMarker>::new(server_end);
         let stream: fproc::LauncherRequestStream =
             server_end.into_stream().map_err(ModelError::stream_creation_error)?;
-        Ok(fasync::Task::spawn(async move {
-            let result = ProcessLauncher::serve(stream).await;
-            if let Err(e) = result {
-                warn!("ProcessLauncher.serve failed: {}", e);
-            }
-        })
-        .into())
+        task_scope
+            .add_task(async move {
+                let result = ProcessLauncher::serve(stream).await;
+                if let Err(e) = result {
+                    warn!("ProcessLauncher.serve failed: {}", e);
+                }
+            })
+            .await;
+        Ok(())
     }
 }
 
@@ -417,7 +421,7 @@ mod tests {
     }
 
     async fn serve_launcher(
-    ) -> Result<(fproc::LauncherProxy, Arc<ProcessLauncher>, Option<fasync::Task<()>>), Error> {
+    ) -> Result<(fproc::LauncherProxy, Arc<ProcessLauncher>, TaskScope), Error> {
         let process_launcher = Arc::new(ProcessLauncher::new());
         let hooks = Hooks::new(None);
         hooks.install(process_launcher.hooks()).await;
@@ -441,16 +445,15 @@ mod tests {
         hooks.dispatch(&event).await?;
 
         let capability_provider = capability_provider.lock().await.take();
-        let provider_task = if let Some(capability_provider) = capability_provider {
-            capability_provider.open(0, 0, PathBuf::new(), &mut server).await?.take()
-        } else {
-            None
+        let task_scope = TaskScope::new();
+        if let Some(capability_provider) = capability_provider {
+            capability_provider.open(task_scope.clone(), 0, 0, PathBuf::new(), &mut server).await?;
         };
 
         let launcher_proxy = ClientEnd::<fproc::LauncherMarker>::new(client)
             .into_proxy()
             .expect("failed to create launcher proxy");
-        Ok((launcher_proxy, process_launcher, provider_task))
+        Ok((launcher_proxy, process_launcher, task_scope))
     }
 
     fn connect_util(client: &zx::Channel) -> Result<UtilProxy, Error> {
@@ -533,7 +536,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn start_util_with_args() -> Result<(), Error> {
-        let (launcher, _process_launcher, _provider_task) = serve_launcher().await?;
+        let (launcher, _process_launcher, _task_scope) = serve_launcher().await?;
         let (mut launch_info, proxy) = setup_test_util(&launcher).await?;
 
         let test_args = vec!["arg0", "arg1", "arg2"];
@@ -559,7 +562,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn start_util_with_env() -> Result<(), Error> {
-        let (launcher, _process_launcher, _provider_task) = serve_launcher().await?;
+        let (launcher, _process_launcher, _task_scope) = serve_launcher().await?;
         let (mut launch_info, proxy) = setup_test_util(&launcher).await?;
 
         let test_env = vec![("VAR1", "value2"), ("VAR2", "value2")];
@@ -585,7 +588,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn start_util_with_namespace_entries() -> Result<(), Error> {
-        let (launcher, _process_launcher, _provider_task) = serve_launcher().await?;
+        let (launcher, _process_launcher, _task_scope) = serve_launcher().await?;
         let (mut launch_info, proxy) = setup_test_util(&launcher).await?;
 
         let mut randbuf = [0; 8];
@@ -630,7 +633,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn create_without_starting() -> Result<(), Error> {
-        let (launcher, _process_launcher, _provider_task) = serve_launcher().await?;
+        let (launcher, _process_launcher, _task_scope) = serve_launcher().await?;
         let (mut launch_info, proxy) = setup_test_util(&launcher).await?;
 
         let test_args = vec!["arg0", "arg1", "arg2"];

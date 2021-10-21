@@ -6,7 +6,6 @@ use {
     crate::{
         capability::{
             CapabilityProvider, CapabilitySource, ComponentCapability, InternalCapability,
-            OptionalTask,
         },
         channel,
         model::{
@@ -16,10 +15,11 @@ use {
             model::Model,
             routing::report_routing_failure,
         },
+        task_scope::TaskScope,
     },
     async_trait::async_trait,
     cm_rust::{CapabilityName, CapabilityPath, ProtocolDecl},
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     lazy_static::lazy_static,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     std::{
@@ -61,30 +61,37 @@ impl BinderCapabilityProvider {
 impl CapabilityProvider for BinderCapabilityProvider {
     async fn open(
         self: Box<Self>,
+        task_scope: TaskScope,
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let host = self.host.clone();
         let target = self.target.clone();
         let source = self.source.clone();
         let server_end = channel::take_channel(server_end);
-        Ok(fasync::Task::spawn(async move {
-            if let Err(err) = host.bind(source).await {
-                let res = target.upgrade().map_err(|e| ModelError::from(e));
-                match res {
-                    Ok(target) => {
-                        report_routing_failure(&target, &*BINDER_CAPABILITY, &err, server_end)
-                            .await;
-                    }
-                    Err(err) => {
-                        log::warn!("failed to upgrade reference to {}: {}", target.moniker, err);
+        task_scope
+            .add_task(async move {
+                if let Err(err) = host.bind(source).await {
+                    let res = target.upgrade().map_err(|e| ModelError::from(e));
+                    match res {
+                        Ok(target) => {
+                            report_routing_failure(&target, &*BINDER_CAPABILITY, &err, server_end)
+                                .await;
+                        }
+                        Err(err) => {
+                            log::warn!(
+                                "failed to upgrade reference to {}: {}",
+                                target.moniker,
+                                err
+                            );
+                        }
                     }
                 }
-            }
-        })
-        .into())
+            })
+            .await;
+        Ok(())
     }
 }
 
@@ -254,15 +261,14 @@ mod tests {
             zx::Channel::create().expect("failed to create channels");
         let moniker: AbsoluteMoniker = vec!["source:0"].into();
 
-        let () = fixture
+        let task_scope = TaskScope::new();
+        fixture
             .provider(moniker.clone(), vec!["target:0"].into())
             .await
-            .open(0, 0, PathBuf::new(), &mut server_end)
+            .open(task_scope.clone(), 0, 0, PathBuf::new(), &mut server_end)
             .await
-            .expect("failed to call open()")
-            .take()
-            .expect("task is empty")
-            .await;
+            .expect("failed to call open()");
+        task_scope.shutdown().await;
 
         assert!(event_stream.wait_until(EventType::Resolved, moniker.clone()).await.is_some());
         assert!(event_stream.wait_until(EventType::Started, moniker.clone()).await.is_some());
@@ -284,15 +290,14 @@ mod tests {
             zx::Channel::create().expect("failed to create channels");
         let moniker: AbsoluteMoniker = AbsoluteMoniker::from(vec!["foo:0"]);
 
-        let () = fixture
+        let task_scope = TaskScope::new();
+        fixture
             .provider(moniker, vec![].into())
             .await
-            .open(0, 0, PathBuf::new(), &mut server_end)
+            .open(task_scope.clone(), 0, 0, PathBuf::new(), &mut server_end)
             .await
-            .expect("failed to call open()")
-            .take()
-            .expect("task is empty")
-            .await;
+            .expect("failed to call open()");
+        task_scope.shutdown().await;
 
         let client_end =
             AsyncChannel::from_channel(client_end).expect("failed to create AsyncChanel");

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability, OptionalTask},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         config::RuntimeConfig,
         model::{
@@ -12,11 +12,12 @@ use {
             policy::ScopedPolicyChecker,
             runner::Runner,
         },
+        task_scope::TaskScope,
     },
     async_trait::async_trait,
     cm_rust::CapabilityName,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_component_runner as fcrunner, fuchsia_zircon as zx,
     futures::stream::TryStreamExt,
     std::{
         path::PathBuf,
@@ -101,25 +102,28 @@ impl RunnerCapabilityProvider {
 impl CapabilityProvider for RunnerCapabilityProvider {
     async fn open(
         self: Box<Self>,
+        task_scope: TaskScope,
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let runner = Arc::clone(&self.runner);
         let server_end = channel::take_channel(server_end);
         let mut stream = ServerEnd::<fcrunner::ComponentRunnerMarker>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
-        Ok(fasync::Task::spawn(async move {
-            // Keep handling requests until the stream closes.
-            while let Ok(Some(request)) = stream.try_next().await {
-                let fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } =
-                    request;
-                runner.start(start_info, controller).await;
-            }
-        })
-        .into())
+        task_scope
+            .add_task(async move {
+                // Keep handling requests until the stream closes.
+                while let Ok(Some(request)) = stream.try_next().await {
+                    let fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } =
+                        request;
+                    runner.start(start_info, controller).await;
+                }
+            })
+            .await;
+        Ok(())
     }
 }
 
@@ -158,7 +162,7 @@ mod tests {
         hooks: &Hooks,
         moniker: AbsoluteMoniker,
         url: &str,
-    ) -> Result<OptionalTask, Error> {
+    ) -> Result<TaskScope, Error> {
         let provider_result = Arc::new(Mutex::new(None));
         hooks
             .dispatch(&Event::new_for_test(
@@ -180,12 +184,13 @@ mod tests {
         let (_, server_controller) =
             fidl::endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>()?;
         let mut server = server.into_channel();
-        let provider_task = provider.open(0, 0, PathBuf::from("."), &mut server).await?;
+        let task_scope = TaskScope::new();
+        provider.open(task_scope.clone(), 0, 0, PathBuf::from("."), &mut server).await?;
 
         // Start the component.
         client.start(sample_start_info(url), server_controller)?;
 
-        Ok(provider_task)
+        Ok(task_scope)
     }
 
     // Test plumbing a `BuiltinRunner` through the hook system.
@@ -215,7 +220,7 @@ mod tests {
 
         // Case 1: The started component's moniker matches the allowlist entry above.
         let url = "xxx://test";
-        let _provider_task =
+        let _task_scope =
             start_component_through_hooks(&hooks, AbsoluteMoniker::from(vec!["foo:0"]), url)
                 .await?;
         runner.wait_for_url(&url).await;
@@ -223,7 +228,7 @@ mod tests {
         assert_matches!(checker.ambient_mark_vmo_exec_allowed(), Ok(()));
 
         // Case 2: Moniker does not match allowlist entry.
-        let _provider_task =
+        let _task_scope =
             start_component_through_hooks(&hooks, AbsoluteMoniker::root(), url).await?;
         runner.wait_for_url(&url).await;
         let checker = runner.last_checker().expect("No PolicyChecker held by MockRunner");
@@ -244,7 +249,8 @@ mod tests {
         // Open a connection to the provider.
         let (client, server) = fidl::endpoints::create_proxy::<fcrunner::ComponentRunnerMarker>()?;
         let mut server = server.into_channel();
-        let _provider_task = provider.open(0, 0, PathBuf::from("."), &mut server).await?;
+        let task_scope = TaskScope::new();
+        provider.open(task_scope.clone(), 0, 0, PathBuf::from("."), &mut server).await?;
 
         // Ensure errors are propagated back to the caller.
         //

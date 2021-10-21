@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability, OptionalTask},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         config::RuntimeConfig,
         convert::{
@@ -17,6 +17,7 @@ use {
             model::Model,
             routing::error::RoutingError,
         },
+        task_scope::TaskScope,
     },
     ::routing::error::ComponentInstanceError,
     anyhow::Error,
@@ -79,11 +80,12 @@ impl RealmCapabilityProvider {
 impl CapabilityProvider for RealmCapabilityProvider {
     async fn open(
         self: Box<Self>,
+        task_scope: TaskScope,
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
         let scope_moniker = self.scope_moniker.to_partial();
         let host = self.host.clone();
@@ -91,33 +93,35 @@ impl CapabilityProvider for RealmCapabilityProvider {
         // These operations should all work, even if the component is not running.
         let model = host.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
         let component = WeakComponentInstance::from(&model.look_up(&scope_moniker).await?);
-        Ok(fasync::Task::spawn(async move {
-            let serve_result = match &self.path {
-                RequestPath::Internal => {
-                    host.serve_for_internal_namespace(
-                        component,
-                        ServerEnd::<fsys::RealmMarker>::new(server_end)
-                            .into_stream()
-                            .expect("could not convert channel into stream"),
-                    )
-                    .await
+        task_scope
+            .add_task(async move {
+                let serve_result = match &self.path {
+                    RequestPath::Internal => {
+                        host.serve_for_internal_namespace(
+                            component,
+                            ServerEnd::<fsys::RealmMarker>::new(server_end)
+                                .into_stream()
+                                .expect("could not convert channel into stream"),
+                        )
+                        .await
+                    }
+                    RequestPath::Sdk => {
+                        host.serve_for_sdk_namespace(
+                            component,
+                            ServerEnd::<fcomponent::RealmMarker>::new(server_end)
+                                .into_stream()
+                                .expect("could not convert channel into stream"),
+                        )
+                        .await
+                    }
+                };
+                if let Err(e) = serve_result {
+                    // TODO: Set an epitaph to indicate this was an unexpected error.
+                    warn!("serve failed: {}", e);
                 }
-                RequestPath::Sdk => {
-                    host.serve_for_sdk_namespace(
-                        component,
-                        ServerEnd::<fcomponent::RealmMarker>::new(server_end)
-                            .into_stream()
-                            .expect("could not convert channel into stream"),
-                    )
-                    .await
-                }
-            };
-            if let Err(e) = serve_result {
-                // TODO: Set an epitaph to indicate this was an unexpected error.
-                warn!("serve failed: {}", e);
-            }
-        })
-        .into())
+            })
+            .await;
+        Ok(())
     }
 }
 

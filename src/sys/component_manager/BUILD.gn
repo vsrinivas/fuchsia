@@ -212,6 +212,7 @@ template("component_manager") {
     "src/model/testing/test_hook.rs",
     "src/root_stop_notifier.rs",
     "src/startup.rs",
+    "src/task_scope.rs",
     "src/work_scheduler/delegate.rs",
     "src/work_scheduler/dispatcher.rs",
     "src/work_scheduler/hook.rs",

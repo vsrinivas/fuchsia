@@ -12,7 +12,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, ComponentCapability, OptionalTask},
+        capability::{CapabilityProvider, CapabilitySource, ComponentCapability},
         channel,
         model::{
             component::{BindReason, ComponentInstance, WeakComponentInstance},
@@ -22,6 +22,7 @@ use {
             routing::{RouteRequest, RouteSource},
             storage,
         },
+        task_scope::TaskScope,
     },
     ::routing::{capability_source::StorageCapabilitySource, route_capability},
     anyhow::{format_err, Error},
@@ -72,31 +73,34 @@ impl StorageAdminProtocolProvider {
 impl CapabilityProvider for StorageAdminProtocolProvider {
     async fn open(
         self: Box<Self>,
+        task_scope: TaskScope,
         flags: u32,
         _open_mode: u32,
         in_relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
         if (flags & (OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE))
             != (OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
         {
             warn!("open request for the storage admin protocol rejected: access denied");
-            return Ok(None.into());
+            return Ok(());
         }
         if in_relative_path != PathBuf::from("") {
             warn!("open request for the storage admin protocol rejected: invalid path");
-            return Ok(None.into());
+            return Ok(());
         }
         let storage_decl = self.storage_decl.clone();
         let component = self.component.clone();
         let storage_admin = self.storage_admin.clone();
-        Ok(fasync::Task::spawn(async move {
-            if let Err(e) = storage_admin.serve(storage_decl, component, server_end).await {
-                warn!("failed to serve storage admin protocol: {:?}", e);
-            }
-        })
-        .into())
+        task_scope
+            .add_task(async move {
+                if let Err(e) = storage_admin.serve(storage_decl, component, server_end).await {
+                    warn!("failed to serve storage admin protocol: {:?}", e);
+                }
+            })
+            .await;
+        Ok(())
     }
 }
 

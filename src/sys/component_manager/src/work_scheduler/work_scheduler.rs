@@ -776,6 +776,7 @@ mod connect_tests {
                 hooks::{Event, EventPayload, Hooks},
                 testing::mocks::FakeBinder,
             },
+            task_scope::TaskScope,
         },
         anyhow::Error,
         fidl::endpoints::ClientEnd,
@@ -820,10 +821,9 @@ mod connect_tests {
         hooks.dispatch(&event).await?;
 
         let capability_provider = capability_provider.lock().await.take();
-        let _provider_task = if let Some(capability_provider) = capability_provider {
-            capability_provider.open(0, 0, PathBuf::new(), &mut server).await?.take()
-        } else {
-            None
+        let task_scope = TaskScope::new();
+        if let Some(capability_provider) = capability_provider {
+            capability_provider.open(task_scope.clone(), 0, 0, PathBuf::new(), &mut server).await?;
         };
 
         let work_scheduler_control = ClientEnd::<WorkSchedulerControlMarker>::new(client)

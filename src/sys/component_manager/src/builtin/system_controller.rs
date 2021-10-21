@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability, OptionalTask},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         model::{
             actions::{ActionSet, ShutdownAction},
@@ -12,6 +12,7 @@ use {
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
         },
+        task_scope::TaskScope,
     },
     anyhow::{format_err, Context as _, Error},
     async_trait::async_trait,
@@ -145,22 +146,25 @@ impl SystemControllerCapabilityProvider {
 impl CapabilityProvider for SystemControllerCapabilityProvider {
     async fn open(
         self: Box<Self>,
+        task_scope: TaskScope,
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<SystemControllerMarker>::new(server_end);
         let stream: SystemControllerRequestStream =
             server_end.into_stream().map_err(ModelError::stream_creation_error)?;
-        Ok(fasync::Task::spawn(async move {
-            let result = self.open_async(stream).await;
-            if let Err(e) = result {
-                warn!("SystemController.open failed: {}", e);
-            }
-        })
-        .into())
+        task_scope
+            .add_task(async move {
+                let result = self.open_async(stream).await;
+                if let Err(e) = result {
+                    warn!("SystemController.open failed: {}", e);
+                }
+            })
+            .await;
+        Ok(())
     }
 }
 
@@ -215,8 +219,9 @@ mod tests {
             endpoints::create_endpoints::<fsys::SystemControllerMarker>()
                 .expect("failed creating channel endpoints");
         let mut server_channel = server_channel.into_channel();
-        let _provider_task = sys_controller
-            .open(0, 0, PathBuf::new(), &mut server_channel)
+        let task_scope = TaskScope::new();
+        sys_controller
+            .open(task_scope.clone(), 0, 0, PathBuf::new(), &mut server_channel)
             .await
             .expect("failed to open capability");
         let controller_proxy =
@@ -300,8 +305,9 @@ mod tests {
                 endpoints::create_endpoints::<fsys::SystemControllerMarker>()
                     .expect("failed creating channel endpoints");
             let mut server_channel = server_channel.into_channel();
-            let _provider_task = sys_controller
-                .open(0, 0, PathBuf::new(), &mut server_channel)
+            let task_scope = TaskScope::new();
+            sys_controller
+                .open(task_scope.clone(), 0, 0, PathBuf::new(), &mut server_channel)
                 .await
                 .expect("failed to open capability");
             let controller_proxy =

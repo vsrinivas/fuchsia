@@ -11,7 +11,7 @@ pub use open::*;
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, ComponentCapability, OptionalTask},
+        capability::{CapabilityProvider, CapabilitySource, ComponentCapability},
         channel,
         model::{
             component::{BindReason, ComponentInstance, ExtendedInstance, WeakComponentInstance},
@@ -19,6 +19,7 @@ use {
             hooks::{Event, EventPayload},
             storage,
         },
+        task_scope::TaskScope,
     },
     ::routing::{
         component_instance::ComponentInstanceInterface, path::PathBufExt, route_capability,
@@ -163,11 +164,12 @@ struct DefaultComponentCapabilityProvider {
 impl CapabilityProvider for DefaultComponentCapabilityProvider {
     async fn open(
         self: Box<Self>,
+        _task_scope: TaskScope,
         flags: u32,
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let capability = Arc::new(Mutex::new(Some(channel::take_channel(server_end))));
         let res = async {
             // Start the source component, if necessary
@@ -205,7 +207,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
         } else {
             let _ = res?;
         }
-        Ok(None.into())
+        Ok(())
     }
 }
 
@@ -271,19 +273,12 @@ async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), 
 
     // If a hook in the component tree gave a capability provider, then use it.
     if let Some(capability_provider) = capability_provider {
-        if let Some(task) =
-            capability_provider.open(flags, open_mode, relative_path, server_chan).await?.take()
-        {
-            let source_instance = source.source_instance().upgrade()?;
-            match source_instance {
-                ExtendedInstance::AboveRoot(top) => {
-                    top.add_task(task).await;
-                }
-                ExtendedInstance::Component(component) => {
-                    component.add_task(task).await;
-                }
-            }
-        }
+        let source_instance = source.source_instance().upgrade()?;
+        let task_scope = match source_instance {
+            ExtendedInstance::AboveRoot(top) => top.task_scope(),
+            ExtendedInstance::Component(component) => component.task_scope(),
+        };
+        capability_provider.open(task_scope, flags, open_mode, relative_path, server_chan).await?;
         Ok(())
     } else {
         // TODO(fsamuel): This is a temporary hack. If a global path-based framework capability

@@ -10,11 +10,11 @@ use {
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
         },
+        task_scope::TaskScope,
     },
     anyhow::{format_err, Error},
     async_trait::async_trait,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
-    fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, ResourceInfo},
     log::warn,
     std::{
@@ -137,23 +137,26 @@ impl<B: 'static + BuiltinCapability + Sync + Send> CapabilityProvider
 {
     async fn open(
         self: Box<Self>,
+        task_scope: TaskScope,
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<B::Marker>::new(server_end);
         let stream = server_end.into_stream().map_err(ModelError::stream_creation_error)?;
-        Ok(fasync::Task::spawn(async move {
-            if let Some(capability) = self.capability.upgrade() {
-                if let Err(err) = capability.serve(stream).await {
-                    warn!("{}::open failed: {}", B::NAME, err);
+        task_scope
+            .add_task(async move {
+                if let Some(capability) = self.capability.upgrade() {
+                    if let Err(err) = capability.serve(stream).await {
+                        warn!("{}::open failed: {}", B::NAME, err);
+                    }
+                } else {
+                    warn!("{} has been dropped", B::NAME);
                 }
-            } else {
-                warn!("{} has been dropped", B::NAME);
-            }
-        })
-        .into())
+            })
+            .await;
+        Ok(())
     }
 }

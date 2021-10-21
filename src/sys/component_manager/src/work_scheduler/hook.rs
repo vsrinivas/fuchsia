@@ -4,13 +4,14 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability, OptionalTask},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             routing::RoutingError,
         },
+        task_scope::TaskScope,
         work_scheduler::work_scheduler::{
             WorkScheduler, WORK_SCHEDULER_CAPABILITY_NAME, WORK_SCHEDULER_CONTROL_CAPABILITY_NAME,
         },
@@ -18,7 +19,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     futures::TryStreamExt,
     log::warn,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
@@ -168,23 +169,26 @@ impl CapabilityProvider for WorkSchedulerControlCapabilityProvider {
     /// Spawn an event loop to service `WorkScheduler` FIDL operations.
     async fn open(
         self: Box<Self>,
+        task_scope: TaskScope,
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fsys::WorkSchedulerControlMarker>::new(server_end);
         let stream: fsys::WorkSchedulerControlRequestStream =
             server_end.into_stream().map_err(ModelError::stream_creation_error)?;
-        Ok(fasync::Task::spawn(async move {
-            let result = self.open_async(stream).await;
-            if let Err(e) = result {
-                // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
-                warn!("WorkSchedulerCapabilityProvider.open failed: {}", e);
-            }
-        })
-        .into())
+        task_scope
+            .add_task(async move {
+                let result = self.open_async(stream).await;
+                if let Err(e) = result {
+                    // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
+                    warn!("WorkSchedulerCapabilityProvider.open failed: {}", e);
+                }
+            })
+            .await;
+        Ok(())
     }
 }
 
@@ -236,24 +240,27 @@ impl CapabilityProvider for WorkSchedulerCapabilityProvider {
     /// Spawn an event loop to service `WorkScheduler` FIDL operations.
     async fn open(
         self: Box<Self>,
+        task_scope: TaskScope,
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fsys::WorkSchedulerMarker>::new(server_end);
         let stream: fsys::WorkSchedulerRequestStream =
             server_end.into_stream().map_err(ModelError::stream_creation_error)?;
         let work_scheduler = self.work_scheduler.clone();
         let scope_moniker = self.scope_moniker.clone();
-        Ok(fasync::Task::spawn(async move {
-            let result = Self::open_async(work_scheduler, scope_moniker, stream).await;
-            if let Err(e) = result {
-                // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
-                warn!("WorkSchedulerCapabilityProvider.open failed: {}", e);
-            }
-        })
-        .into())
+        task_scope
+            .add_task(async move {
+                let result = Self::open_async(work_scheduler, scope_moniker, stream).await;
+                if let Err(e) = result {
+                    // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
+                    warn!("WorkSchedulerCapabilityProvider.open failed: {}", e);
+                }
+            })
+            .await;
+        Ok(())
     }
 }

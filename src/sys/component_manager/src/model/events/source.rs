@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, OptionalTask},
+        capability::CapabilityProvider,
         channel,
         model::{
             error::ModelError,
@@ -20,6 +20,7 @@ use {
             },
             model::Model,
         },
+        task_scope::TaskScope,
     },
     async_trait::async_trait,
     cm_rust::EventMode,
@@ -151,15 +152,21 @@ impl EventSource {
 impl CapabilityProvider for EventSource {
     async fn open(
         self: Box<Self>,
+        task_scope: TaskScope,
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
         let stream = ServerEnd::<fsys::EventSourceMarker>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
-        Ok(self.serve(stream).into())
+        task_scope
+            .add_task(async move {
+                serve_event_source_sync(*self, stream).await;
+            })
+            .await;
+        Ok(())
     }
 }

@@ -16,7 +16,7 @@ use {
     crate::{
         capability::{
             AggregateCapability, CapabilityProvider, CapabilitySource, ComponentCapability,
-            InternalCapability, OptionalTask,
+            InternalCapability,
         },
         channel,
         framework::SDK_REALM_SERVICE,
@@ -31,6 +31,7 @@ use {
             routing::{RouteRequest, RouteSource, RoutingError},
             testing::{routing_test_helpers::*, test_helpers::*},
         },
+        task_scope::TaskScope,
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -40,7 +41,7 @@ use {
     fidl_fidl_examples_echo::{self as echo},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     futures::{join, lock::Mutex, StreamExt, TryStreamExt},
     log::*,
     maplit::hashmap,
@@ -83,24 +84,27 @@ async fn use_framework_service() {
     impl CapabilityProvider for MockRealmCapabilityProvider {
         async fn open(
             self: Box<Self>,
+            task_scope: TaskScope,
             _flags: u32,
             _open_mode: u32,
             _relative_path: PathBuf,
             server_end: &mut zx::Channel,
-        ) -> Result<OptionalTask, ModelError> {
+        ) -> Result<(), ModelError> {
             let server_end = channel::take_channel(server_end);
             let stream = ServerEnd::<fcomponent::RealmMarker>::new(server_end)
                 .into_stream()
                 .expect("could not convert channel into stream");
             let scope_moniker = self.scope_moniker.clone();
             let host = self.host.clone();
-            Ok(fasync::Task::spawn(async move {
-                if let Err(e) = host.serve(scope_moniker, stream).await {
-                    // TODO: Set an epitaph to indicate this was an unexpected error.
-                    warn!("serve_realm failed: {}", e);
-                }
-            })
-            .into())
+            task_scope
+                .add_task(async move {
+                    if let Err(e) = host.serve(scope_moniker, stream).await {
+                        // TODO: Set an epitaph to indicate this was an unexpected error.
+                        warn!("serve_realm failed: {}", e);
+                    }
+                })
+                .await;
+            Ok(())
         }
     }
 
@@ -1670,13 +1674,14 @@ async fn use_runner_from_environment_failed() {
     impl CapabilityProvider for RunnerCapabilityProvider {
         async fn open(
             self: Box<Self>,
+            _task_scope: TaskScope,
             _flags: u32,
             _open_mode: u32,
             _relative_path: PathBuf,
             server_end: &mut zx::Channel,
-        ) -> Result<OptionalTask, ModelError> {
+        ) -> Result<(), ModelError> {
             let _ = channel::take_channel(server_end);
-            Ok(None.into())
+            Ok(())
         }
     }
 

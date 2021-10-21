@@ -11,6 +11,7 @@ use {
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
         },
+        task_scope::TaskScope,
     },
     async_trait::async_trait,
     fidl::endpoints::{ClientEnd, ServerEnd},
@@ -359,15 +360,15 @@ impl HubInjectionCapabilityProvider {
 impl CapabilityProvider for HubInjectionCapabilityProvider {
     async fn open(
         self: Box<Self>,
+        task_scope: TaskScope,
         flags: u32,
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let (client_chan, mut server_chan) = zx::Channel::create().unwrap();
-        let task = self
-            .intercepted_capability
-            .open(flags, open_mode, PathBuf::new(), &mut server_chan)
+        self.intercepted_capability
+            .open(task_scope, flags, open_mode, PathBuf::new(), &mut server_chan)
             .await?;
 
         let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan)
@@ -382,7 +383,7 @@ impl CapabilityProvider for HubInjectionCapabilityProvider {
             pfsPath::validate_and_split(relative_path).expect("failed to split and validate path");
         let server_end = channel::take_channel(server_end);
         dir.open(ExecutionScope::new(), flags, open_mode, path, ServerEnd::new(server_end));
-        Ok(task)
+        Ok(())
     }
 }
 

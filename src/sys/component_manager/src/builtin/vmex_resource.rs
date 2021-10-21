@@ -64,6 +64,7 @@ mod tests {
         crate::{
             builtin::capability::BuiltinCapability,
             model::hooks::{Event, EventPayload, Hooks},
+            task_scope::TaskScope,
         },
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
@@ -158,10 +159,9 @@ mod tests {
         hooks.dispatch(&event).await?;
 
         let (client, mut server) = zx::Channel::create()?;
-        let _provider_task = if let Some(provider) = provider.lock().await.take() {
-            provider.open(0, 0, PathBuf::new(), &mut server).await?.take()
-        } else {
-            None
+        let task_scope = TaskScope::new();
+        if let Some(provider) = provider.lock().await.take() {
+            provider.open(task_scope.clone(), 0, 0, PathBuf::new(), &mut server).await?;
         };
 
         let vmex_client = ClientEnd::<fkernel::VmexResourceMarker>::new(client)

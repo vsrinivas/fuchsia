@@ -27,6 +27,7 @@ use {
             },
             runner::{NullRunner, RemoteRunner, Runner},
         },
+        task_scope::TaskScope,
     },
     ::routing::{
         capability_source::BuiltinCapabilities,
@@ -200,6 +201,9 @@ pub struct ComponentManagerInstance {
     /// The list of capabilities offered from component manager as built-in capabilities.
     pub builtin_capabilities: BuiltinCapabilities,
 
+    /// Tasks owned by component manager's instance.
+    task_scope: TaskScope,
+
     /// Mutable state for component manager's instance.
     state: Mutex<ComponentManagerInstanceState>,
 }
@@ -208,9 +212,6 @@ pub struct ComponentManagerInstance {
 pub struct ComponentManagerInstanceState {
     /// The root component instance, this instance's only child.
     root: Option<Arc<ComponentInstance>>,
-
-    /// Tasks owned by component manager's instance.
-    tasks: Vec<fasync::Task<()>>,
 
     /// Task that is rebooting the system, if any.
     reboot_task: Option<fasync::Task<()>>,
@@ -225,12 +226,13 @@ impl ComponentManagerInstance {
             namespace_capabilities,
             builtin_capabilities,
             state: Mutex::new(ComponentManagerInstanceState::new()),
+            task_scope: TaskScope::new(),
         }
     }
 
-    /// Adds a task to the list of tasks owned by component manager.
-    pub async fn add_task(&self, task: fasync::Task<()>) {
-        self.state.lock().await.tasks.push(task);
+    /// Returns a scope for this instance where tasks can be run
+    pub fn task_scope(&self) -> TaskScope {
+        self.task_scope.clone()
     }
 
     #[cfg(test)]
@@ -309,7 +311,7 @@ impl ComponentManagerInstance {
 
 impl ComponentManagerInstanceState {
     pub fn new() -> Self {
-        Self { tasks: vec![], reboot_task: None, root: None }
+        Self { reboot_task: None, root: None }
     }
 }
 
@@ -355,7 +357,7 @@ pub struct ComponentInstance {
     /// Actions on the instance that must eventually be completed.
     actions: Mutex<ActionSet>,
     /// Tasks owned by this component instance.
-    tasks: Mutex<Vec<fasync::Task<()>>>,
+    task_scope: TaskScope,
 }
 
 impl ComponentInstance {
@@ -403,7 +405,7 @@ impl ComponentInstance {
             execution: Mutex::new(ExecutionState::new()),
             actions: Mutex::new(ActionSet::new()),
             hooks,
-            tasks: Mutex::new(vec![]),
+            task_scope: TaskScope::new(),
             numbered_handles: Mutex::new(numbered_handles),
         })
     }
@@ -428,9 +430,9 @@ impl ComponentInstance {
         self.context.upgrade()
     }
 
-    /// Adds a task to the list of tasks owned by this component instance.
-    pub async fn add_task(&self, task: fasync::Task<()>) {
-        self.tasks.lock().await.push(task);
+    /// Returns a scope for this instance where tasks can be run
+    pub fn task_scope(&self) -> TaskScope {
+        self.task_scope.clone()
     }
 
     /// Locks and returns a lazily resolved and populated `ResolvedInstanceState`. Does not

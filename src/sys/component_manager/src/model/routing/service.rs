@@ -9,8 +9,9 @@ use {
         model::{
             component::{ComponentInstance, WeakComponentInstance},
             error::ModelError,
-            routing::{open_capability_at_source, OpenRequest, OptionalTask},
+            routing::{open_capability_at_source, OpenRequest},
         },
+        task_scope::TaskScope,
     },
     ::routing::capability_source::AggregateCapabilityProvider,
     async_trait::async_trait,
@@ -66,11 +67,12 @@ impl CollectionServiceDirectoryProvider {
 impl CapabilityProvider for CollectionServiceDirectoryProvider {
     async fn open(
         self: Box<Self>,
+        _task_scope: TaskScope,
         flags: u32,
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let relative_path_utf8 = relative_path
             .to_str()
             .ok_or_else(|| ModelError::path_is_not_utf8(relative_path.clone()))?;
@@ -87,7 +89,7 @@ impl CapabilityProvider for CollectionServiceDirectoryProvider {
             relative_path,
             ServerEnd::new(channel::take_channel(server_end)),
         );
-        Ok(None.into())
+        Ok(())
     }
 }
 
@@ -481,15 +483,16 @@ mod tests {
             .await
             .expect("failed to create CollectionServiceDirectoryProvider"),
         );
-        let _task = host
-            .open(
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
-                fio::MODE_TYPE_DIRECTORY,
-                PathBuf::new(),
-                &mut server_end,
-            )
-            .await
-            .expect("failed to serve");
+        let task_scope = TaskScope::new();
+        host.open(
+            task_scope.clone(),
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            PathBuf::new(),
+            &mut server_end,
+        )
+        .await
+        .expect("failed to serve");
 
         // List the entries of the directory served by `open`.
         let entries =
@@ -585,15 +588,16 @@ mod tests {
             .await
             .expect("failed to create CollectionServiceDirectoryProvider"),
         );
-        let _task = host
-            .open(
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
-                fio::MODE_TYPE_DIRECTORY,
-                PathBuf::new(),
-                &mut server_end,
-            )
-            .await
-            .expect("failed to serve");
+        let task_scope = TaskScope::new();
+        host.open(
+            task_scope.clone(),
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            PathBuf::new(),
+            &mut server_end,
+        )
+        .await
+        .expect("failed to serve");
 
         // Choose a value such that there is only room for a single entry.
         const MAX_BYTES: u64 = 30;

@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability, OptionalTask},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         model::{
             error::ModelError,
@@ -12,6 +12,7 @@ use {
             rights,
             testing::routing_test_helpers::*,
         },
+        task_scope::TaskScope,
     },
     ::routing_test_helpers::{rights::CommonRightsTest, RoutingTestModel},
     async_trait::async_trait,
@@ -75,18 +76,19 @@ struct MockFrameworkDirectoryHost {
 impl CapabilityProvider for MockFrameworkDirectoryProvider {
     async fn open(
         self: Box<Self>,
+        _task_scope: TaskScope,
         flags: u32,
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let relative_path = relative_path.to_str().unwrap();
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fio::NodeMarker>::new(server_end);
         self.test_dir_proxy
             .open(flags, open_mode, relative_path, server_end)
             .expect("failed to open test dir");
-        Ok(None.into())
+        Ok(())
     }
 }
 

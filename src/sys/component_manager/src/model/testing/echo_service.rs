@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::{capability::*, channel, model::error::ModelError, model::hooks::*},
+    crate::{
+        capability::*, channel, model::error::ModelError, model::hooks::*, task_scope::TaskScope,
+    },
     async_trait::async_trait,
     cm_rust::*,
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
-    fuchsia_async as fasync,
     fuchsia_zircon::{self as zx},
     futures::prelude::*,
     lazy_static::lazy_static,
@@ -35,22 +36,25 @@ impl EchoCapabilityProvider {
 impl CapabilityProvider for EchoCapabilityProvider {
     async fn open(
         self: Box<Self>,
+        task_scope: TaskScope,
         _flags: u32,
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
+    ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<EchoMarker>::new(server_end);
         let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
-        Ok(fasync::Task::spawn(async move {
-            while let Some(EchoRequest::EchoString { value, responder }) =
-                stream.try_next().await.unwrap()
-            {
-                responder.send(value.as_ref().map(|s| &**s)).unwrap();
-            }
-        })
-        .into())
+        task_scope
+            .add_task(async move {
+                while let Some(EchoRequest::EchoString { value, responder }) =
+                    stream.try_next().await.unwrap()
+                {
+                    responder.send(value.as_ref().map(|s| &**s)).unwrap();
+                }
+            })
+            .await;
+        Ok(())
     }
 }
 
