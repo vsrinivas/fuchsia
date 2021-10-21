@@ -800,7 +800,9 @@ TEST_F(AudioConsumerTests, VolumeControl) {
   volume_control->SetVolume(0.5f);
   volume_control->SetMute(true);
 
-  RunLoopUntil([this]() { return fake_audio_.renderer().gain() == -20.0f; });
+  RunLoopUntil([this]() {
+    return fake_audio_.renderer().gain() == -20.0f && fake_audio_.renderer().mute();
+  });
 
   EXPECT_EQ(fake_audio_.renderer().gain(), -20.0f);
   EXPECT_EQ(fake_audio_.renderer().mute(), true);
