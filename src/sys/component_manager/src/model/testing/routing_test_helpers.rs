@@ -29,6 +29,7 @@ use {
         endpoints::{self, create_proxy, ClientEnd, Proxy, ServerEnd},
     },
     fidl_fidl_examples_echo::{self as echo},
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, FileEvent, FileMarker, FileProxy, MemoryInfo, NodeInfo,
@@ -366,8 +367,13 @@ impl RoutingTest {
         collection: &'a str,
         decl: impl Into<ChildDecl>,
     ) {
-        self.create_dynamic_child_with_args(moniker, collection, decl, fsys::CreateChildArgs::EMPTY)
-            .await
+        self.create_dynamic_child_with_args(
+            moniker,
+            collection,
+            decl,
+            fcomponent::CreateChildArgs::EMPTY,
+        )
+        .await
     }
 
     /// Creates a dynamic child `child_decl` in `moniker`'s `collection`.
@@ -376,7 +382,7 @@ impl RoutingTest {
         moniker: PartialAbsoluteMoniker,
         collection: &'a str,
         decl: impl Into<ChildDecl>,
-        args: fsys::CreateChildArgs,
+        args: fcomponent::CreateChildArgs,
     ) {
         let component_name =
             self.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
@@ -504,7 +510,7 @@ impl RoutingTest {
         assert_eq!(expected_paths, actual_paths);
     }
 
-    /// Checks a `use /svc/fuchsia.sys2.Realm` declaration at `moniker` by calling
+    /// Checks a `use /svc/fuchsia.component.Realm` declaration at `moniker` by calling
     /// `BindChild`.
     pub async fn check_use_realm(
         &self,
@@ -514,7 +520,7 @@ impl RoutingTest {
         let component_name =
             self.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
-        let path = "/svc/fuchsia.sys2.Realm".try_into().unwrap();
+        let path = "/svc/fuchsia.component.Realm".try_into().unwrap();
         Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
         capability_util::call_realm_svc(
             path,
@@ -1403,7 +1409,7 @@ pub mod capability_util {
     }
 
     /// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service
-    /// to be fuchsia.sys2.Realm.
+    /// to be fuchsia.component.Realm.
     pub async fn call_realm_svc(
         path: CapabilityPath,
         resolved_url: &str,
@@ -1418,8 +1424,8 @@ pub mod capability_util {
             MODE_TYPE_SERVICE,
         )
         .expect("failed to open realm service");
-        let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
-        let mut child_ref = fsys::ChildRef { name: "my_child".to_string(), collection: None };
+        let realm_proxy = fcomponent::RealmProxy::new(node_proxy.into_channel().unwrap());
+        let mut child_ref = fdecl::ChildRef { name: "my_child".to_string(), collection: None };
         let (_, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let res = realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
         // Check for side effects: realm service should have received the `open_exposed_dir` call.
@@ -1430,14 +1436,15 @@ pub mod capability_util {
         assert_eq!(bind_url, resolved_url);
     }
 
-    /// Call `fuchsia.sys2.Realm.CreateChild` to create a dynamic child.
+    /// Call `fuchsia.component.Realm.CreateChild` to create a dynamic child.
     pub async fn call_create_child<'a>(
         namespace: &ManagedNamespace,
         collection: &'a str,
         child_decl: ChildDecl,
-        args: fsys::CreateChildArgs,
+        args: fcomponent::CreateChildArgs,
     ) {
-        let path: CapabilityPath = "/svc/fuchsia.sys2.Realm".try_into().expect("no realm service");
+        let path: CapabilityPath =
+            "/svc/fuchsia.component.Realm".try_into().expect("no realm service");
         let dir_proxy = take_dir_from_namespace(namespace, &path.dirname).await;
         let node_proxy = io_util::open_node(
             &dir_proxy,
@@ -1447,21 +1454,22 @@ pub mod capability_util {
         )
         .expect("failed to open realm service");
         add_dir_to_namespace(namespace, &path.dirname, dir_proxy).await;
-        let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
-        let mut collection_ref = fsys::CollectionRef { name: collection.to_string() };
+        let realm_proxy = fcomponent::RealmProxy::new(node_proxy.into_channel().unwrap());
+        let mut collection_ref = fdecl::CollectionRef { name: collection.to_string() };
         let child_decl = child_decl.native_into_fidl();
         let res = realm_proxy.create_child(&mut collection_ref, child_decl, args).await;
         let _ = res.expect("failed to create child");
     }
 
-    /// Call `fuchsia.sys2.Realm.DestroyChild` to destroy a dynamic child, waiting for
+    /// Call `fuchsia.component.Realm.DestroyChild` to destroy a dynamic child, waiting for
     /// destruction to complete.
     pub async fn call_destroy_child<'a>(
         namespace: &ManagedNamespace,
         collection: &'a str,
         name: &'a str,
     ) {
-        let path: CapabilityPath = "/svc/fuchsia.sys2.Realm".try_into().expect("no realm service");
+        let path: CapabilityPath =
+            "/svc/fuchsia.component.Realm".try_into().expect("no realm service");
         let dir_proxy = take_dir_from_namespace(namespace, &path.dirname).await;
         let node_proxy = io_util::open_node(
             &dir_proxy,
@@ -1471,9 +1479,9 @@ pub mod capability_util {
         )
         .expect("failed to open realm service");
         add_dir_to_namespace(namespace, &path.dirname, dir_proxy).await;
-        let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
+        let realm_proxy = fcomponent::RealmProxy::new(node_proxy.into_channel().unwrap());
         let mut child_ref =
-            fsys::ChildRef { collection: Some(collection.to_string()), name: name.to_string() };
+            fdecl::ChildRef { collection: Some(collection.to_string()), name: name.to_string() };
         let res = realm_proxy.destroy_child(&mut child_ref).await;
         let _ = res.expect("failed to destroy child");
     }

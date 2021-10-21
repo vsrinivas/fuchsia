@@ -44,7 +44,7 @@ pub async fn start_policy_test(
     EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
 
     let realm = connect_to_root_service::<fcomponent::RealmMarker>(&test)
-        .context("failed to connect to root sys2.Realm")?;
+        .context("failed to connect to root component.Realm")?;
     Ok((test, realm, event_stream))
 }
 

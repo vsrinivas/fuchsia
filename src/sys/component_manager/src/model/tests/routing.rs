@@ -19,7 +19,7 @@ use {
             InternalCapability, OptionalTask,
         },
         channel,
-        framework::INTERNAL_REALM_SERVICE,
+        framework::SDK_REALM_SERVICE,
         model::{
             actions::{
                 ActionSet, DestroyChildAction, PurgeAction, PurgeChildAction, ShutdownAction,
@@ -38,6 +38,7 @@ use {
     cm_rust_testing::*,
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo::{self as echo},
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{join, lock::Mutex, StreamExt, TryStreamExt},
@@ -64,7 +65,7 @@ instantiate_common_routing_tests! { RoutingTestBuilder }
 ///    \
 ///     b
 ///
-/// b: uses framework service /svc/fuchsia.sys2.Realm
+/// b: uses framework service /svc/fuchsia.component.Realm
 #[fuchsia::test]
 async fn use_framework_service() {
     pub struct MockRealmCapabilityProvider {
@@ -88,7 +89,7 @@ async fn use_framework_service() {
             server_end: &mut zx::Channel,
         ) -> Result<OptionalTask, ModelError> {
             let server_end = channel::take_channel(server_end);
-            let stream = ServerEnd::<fsys::RealmMarker>::new(server_end)
+            let stream = ServerEnd::<fcomponent::RealmMarker>::new(server_end)
                 .into_stream()
                 .expect("could not convert channel into stream");
             let scope_moniker = self.scope_moniker.clone();
@@ -142,11 +143,11 @@ async fn use_framework_service() {
         async fn serve(
             &self,
             scope_moniker: AbsoluteMoniker,
-            mut stream: fsys::RealmRequestStream,
+            mut stream: fcomponent::RealmRequestStream,
         ) -> Result<(), Error> {
             while let Some(request) = stream.try_next().await? {
                 match request {
-                    fsys::RealmRequest::OpenExposedDir { responder, .. } => {
+                    fcomponent::RealmRequest::OpenExposedDir { responder, .. } => {
                         self.open_calls.lock().await.push(
                             scope_moniker
                                 .path()
@@ -171,7 +172,7 @@ async fn use_framework_service() {
         ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
             // If some other capability has already been installed, then there's nothing to
             // do here.
-            if capability.matches_protocol(&INTERNAL_REALM_SERVICE) {
+            if capability.matches_protocol(&SDK_REALM_SERVICE) {
                 Ok(Some(Box::new(MockRealmCapabilityProvider::new(
                     scope_moniker.clone(),
                     self.clone(),
@@ -190,8 +191,8 @@ async fn use_framework_service() {
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     dependency_type: DependencyType::Strong,
                     source: UseSource::Framework,
-                    source_name: "fuchsia.sys2.Realm".into(),
-                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    source_name: "fuchsia.component.Realm".into(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                 }))
                 .build(),
         ),
@@ -374,8 +375,8 @@ async fn use_in_collection() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_name: "fuchsia.sys2.Realm".into(),
-                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    source_name: "fuchsia.component.Realm".into(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
@@ -496,8 +497,8 @@ async fn use_in_collection_not_offered() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_name: "fuchsia.sys2.Realm".into(),
-                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    source_name: "fuchsia.component.Realm".into(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_transient_collection("coll")
@@ -581,9 +582,9 @@ async fn dynamic_offer_from_parent() {
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source_name: "fuchsia.sys2.Realm".into(),
+                    source_name: "fuchsia.component.Realm".into(),
                     source: UseSource::Framework,
-                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_collection(
@@ -627,15 +628,15 @@ async fn dynamic_offer_from_parent() {
             environment: None,
             on_terminate: None,
         },
-        fsys::CreateChildArgs {
-            dynamic_offers: Some(vec![fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
+        fcomponent::CreateChildArgs {
+            dynamic_offers: Some(vec![fdecl::Offer::Protocol(fdecl::OfferProtocol {
                 source_name: Some("hippo_svc".to_string()),
-                source: Some(fsys::Ref::Parent(fsys::ParentRef)),
+                source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
                 target_name: Some("hippo_svc".to_string()),
-                dependency_type: Some(fsys::DependencyType::Strong),
-                ..fsys::OfferProtocolDecl::EMPTY
+                dependency_type: Some(fdecl::DependencyType::Strong),
+                ..fdecl::OfferProtocol::EMPTY
             })]),
-            ..fsys::CreateChildArgs::EMPTY
+            ..fcomponent::CreateChildArgs::EMPTY
         },
     )
     .await;
@@ -679,9 +680,9 @@ async fn dynamic_offer_siblings_same_collection() {
             "a",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source_name: "fuchsia.sys2.Realm".into(),
+                    source_name: "fuchsia.component.Realm".into(),
                     source: UseSource::Framework,
-                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_collection(
@@ -739,18 +740,18 @@ async fn dynamic_offer_siblings_same_collection() {
             environment: None,
             on_terminate: None,
         },
-        fsys::CreateChildArgs {
-            dynamic_offers: Some(vec![fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
+        fcomponent::CreateChildArgs {
+            dynamic_offers: Some(vec![fdecl::Offer::Protocol(fdecl::OfferProtocol {
                 source_name: Some("hippo_svc".to_string()),
-                source: Some(fsys::Ref::Child(fsys::ChildRef {
+                source: Some(fdecl::Ref::Child(fdecl::ChildRef {
                     name: "b".to_string(),
                     collection: Some("coll".to_string()),
                 })),
                 target_name: Some("hippo_svc".to_string()),
-                dependency_type: Some(fsys::DependencyType::Strong),
-                ..fsys::OfferProtocolDecl::EMPTY
+                dependency_type: Some(fdecl::DependencyType::Strong),
+                ..fdecl::OfferProtocol::EMPTY
             })]),
-            ..fsys::CreateChildArgs::EMPTY
+            ..fcomponent::CreateChildArgs::EMPTY
         },
     )
     .await;
@@ -774,9 +775,9 @@ async fn dynamic_offer_siblings_cross_collection() {
             "a",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source_name: "fuchsia.sys2.Realm".into(),
+                    source_name: "fuchsia.component.Realm".into(),
                     source: UseSource::Framework,
-                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_collection(
@@ -837,18 +838,18 @@ async fn dynamic_offer_siblings_cross_collection() {
             environment: None,
             on_terminate: None,
         },
-        fsys::CreateChildArgs {
-            dynamic_offers: Some(vec![fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
-                source: Some(fsys::Ref::Child(fsys::ChildRef {
+        fcomponent::CreateChildArgs {
+            dynamic_offers: Some(vec![fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                source: Some(fdecl::Ref::Child(fdecl::ChildRef {
                     name: "b".to_string(),
                     collection: Some("source_coll".to_string()),
                 })),
                 source_name: Some("hippo_svc".to_string()),
-                dependency_type: Some(fsys::DependencyType::Strong),
+                dependency_type: Some(fdecl::DependencyType::Strong),
                 target_name: Some("hippo_svc".to_string()),
-                ..fsys::OfferProtocolDecl::EMPTY
+                ..fdecl::OfferProtocol::EMPTY
             })]),
-            ..fsys::CreateChildArgs::EMPTY
+            ..fcomponent::CreateChildArgs::EMPTY
         },
     )
     .await;
@@ -872,9 +873,9 @@ async fn dynamic_offer_destroyed_on_source_destruction() {
             "a",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source_name: "fuchsia.sys2.Realm".into(),
+                    source_name: "fuchsia.component.Realm".into(),
                     source: UseSource::Framework,
-                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_collection(
@@ -932,18 +933,18 @@ async fn dynamic_offer_destroyed_on_source_destruction() {
             environment: None,
             on_terminate: None,
         },
-        fsys::CreateChildArgs {
-            dynamic_offers: Some(vec![fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
+        fcomponent::CreateChildArgs {
+            dynamic_offers: Some(vec![fdecl::Offer::Protocol(fdecl::OfferProtocol {
                 source_name: Some("hippo_svc".to_string()),
-                source: Some(fsys::Ref::Child(fsys::ChildRef {
+                source: Some(fdecl::Ref::Child(fdecl::ChildRef {
                     name: "b".to_string(),
                     collection: Some("coll".to_string()),
                 })),
                 target_name: Some("hippo_svc".to_string()),
-                dependency_type: Some(fsys::DependencyType::Strong),
-                ..fsys::OfferProtocolDecl::EMPTY
+                dependency_type: Some(fdecl::DependencyType::Strong),
+                ..fdecl::OfferProtocol::EMPTY
             })]),
-            ..fsys::CreateChildArgs::EMPTY
+            ..fcomponent::CreateChildArgs::EMPTY
         },
     )
     .await;
@@ -990,9 +991,9 @@ async fn dynamic_offer_destroyed_on_target_destruction() {
             "a",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source_name: "fuchsia.sys2.Realm".into(),
+                    source_name: "fuchsia.component.Realm".into(),
                     source: UseSource::Framework,
-                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_collection(
@@ -1054,18 +1055,18 @@ async fn dynamic_offer_destroyed_on_target_destruction() {
             environment: None,
             on_terminate: None,
         },
-        fsys::CreateChildArgs {
-            dynamic_offers: Some(vec![fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
+        fcomponent::CreateChildArgs {
+            dynamic_offers: Some(vec![fdecl::Offer::Directory(fdecl::OfferDirectory {
                 source_name: Some("hippo_data".to_string()),
-                source: Some(fsys::Ref::Child(fsys::ChildRef {
+                source: Some(fdecl::Ref::Child(fdecl::ChildRef {
                     name: "b".to_string(),
                     collection: Some("coll".to_string()),
                 })),
                 target_name: Some("hippo_data".to_string()),
-                dependency_type: Some(fsys::DependencyType::Strong),
-                ..fsys::OfferDirectoryDecl::EMPTY
+                dependency_type: Some(fdecl::DependencyType::Strong),
+                ..fdecl::OfferDirectory::EMPTY
             })]),
-            ..fsys::CreateChildArgs::EMPTY
+            ..fcomponent::CreateChildArgs::EMPTY
         },
     )
     .await;
@@ -1108,9 +1109,9 @@ async fn dynamic_offer_to_static_offer() {
             "a",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source_name: "fuchsia.sys2.Realm".into(),
+                    source_name: "fuchsia.component.Realm".into(),
                     source: UseSource::Framework,
-                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_collection(
@@ -1171,18 +1172,18 @@ async fn dynamic_offer_to_static_offer() {
             environment: None,
             on_terminate: None,
         },
-        fsys::CreateChildArgs {
-            dynamic_offers: Some(vec![fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
+        fcomponent::CreateChildArgs {
+            dynamic_offers: Some(vec![fdecl::Offer::Protocol(fdecl::OfferProtocol {
                 source_name: Some("hippo_svc".to_string()),
-                source: Some(fsys::Ref::Child(fsys::ChildRef {
+                source: Some(fdecl::Ref::Child(fdecl::ChildRef {
                     name: "b".to_string(),
                     collection: None,
                 })),
                 target_name: Some("hippo_svc".to_string()),
-                dependency_type: Some(fsys::DependencyType::Strong),
-                ..fsys::OfferProtocolDecl::EMPTY
+                dependency_type: Some(fdecl::DependencyType::Strong),
+                ..fdecl::OfferProtocol::EMPTY
             })]),
-            ..fsys::CreateChildArgs::EMPTY
+            ..fcomponent::CreateChildArgs::EMPTY
         },
     )
     .await;
@@ -1202,8 +1203,8 @@ async fn destroying_instance_kills_framework_service_task() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_name: "fuchsia.sys2.Realm".into(),
-                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    source_name: "fuchsia.component.Realm".into(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
                 }))
                 .build(),
@@ -1213,9 +1214,9 @@ async fn destroying_instance_kills_framework_service_task() {
 
     // Connect to `Realm`, which is a framework service.
     let namespace = test.bind_and_get_namespace(vec!["b"].into()).await;
-    let proxy = capability_util::connect_to_svc_in_namespace::<fsys::RealmMarker>(
+    let proxy = capability_util::connect_to_svc_in_namespace::<fcomponent::RealmMarker>(
         &namespace,
-        &"/svc/fuchsia.sys2.Realm".try_into().unwrap(),
+        &"/svc/fuchsia.component.Realm".try_into().unwrap(),
     )
     .await;
 
@@ -1320,8 +1321,8 @@ async fn use_runner_from_environment_in_collection() {
                 )
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_name: "fuchsia.sys2.Realm".into(),
-                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    source_name: "fuchsia.component.Realm".into(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
                 }))
                 .runner(RunnerDecl {
@@ -1828,8 +1829,8 @@ async fn use_with_destroyed_parent() {
                 .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_name: "fuchsia.sys2.Realm".into(),
-                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    source_name: "fuchsia.component.Realm".into(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
@@ -2372,8 +2373,8 @@ async fn list_service_instances_from_collection() {
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     dependency_type: DependencyType::Strong,
                     source: UseSource::Framework,
-                    source_name: "fuchsia.sys2.Realm".into(),
-                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    source_name: "fuchsia.component.Realm".into(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.component.Realm").unwrap(),
                 }))
                 .offer(OfferDecl::Service(OfferServiceDecl {
                     source: OfferSource::Collection("coll".to_string()),
@@ -2520,8 +2521,8 @@ async fn use_service_from_sibling_collection() {
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     dependency_type: DependencyType::Strong,
                     source: UseSource::Framework,
-                    source_name: "fuchsia.sys2.Realm".into(),
-                    target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
+                    source_name: "fuchsia.component.Realm".into(),
+                    target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
                 }))
                 .expose(ExposeDecl::Service(ExposeServiceDecl {
                     source: ExposeSource::Collection("coll".to_string()),

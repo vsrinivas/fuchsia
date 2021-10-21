@@ -26,7 +26,8 @@ use {
     cm_types::Url,
     diagnostics_message::{LoggerMessage, MonikerWithUrl},
     fidl::endpoints::{self, ProtocolMarker, Proxy},
-    fidl_fidl_examples_echo as echo, fidl_fuchsia_component_runner as fcrunner,
+    fidl_fidl_examples_echo as echo, fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE,
         OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
@@ -370,7 +371,7 @@ pub struct ActionsTest {
     pub model: Arc<Model>,
     pub builtin_environment: Arc<Mutex<BuiltinEnvironment>>,
     pub test_hook: Arc<TestHook>,
-    pub realm_proxy: Option<fsys::RealmProxy>,
+    pub realm_proxy: Option<fcomponent::RealmProxy>,
     pub runner: Arc<MockRunner>,
 }
 
@@ -408,7 +409,7 @@ impl ActionsTest {
         let builtin_environment_inner = builtin_environment.clone();
         let realm_proxy = if let Some(moniker) = moniker {
             let (realm_proxy, stream) =
-                endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
+                endpoints::create_proxy_and_stream::<fcomponent::RealmMarker>().unwrap();
             let component = WeakComponentInstance::from(
                 &model.look_up(&moniker).await.expect(&format!("could not look up {}", moniker)),
             );
@@ -417,7 +418,7 @@ impl ActionsTest {
                     .lock()
                     .await
                     .realm_capability_host
-                    .serve_for_internal_namespace(component, stream)
+                    .serve_for_sdk_namespace(component, stream)
                     .await
                     .expect("failed serving realm service");
             })
@@ -444,7 +445,7 @@ impl ActionsTest {
     /// Add a dynamic child to the given collection, with the given name to the
     /// component that our proxy member variable corresponds to.
     pub async fn create_dynamic_child(&self, coll: &str, name: &str) {
-        let mut collection_ref = fsys::CollectionRef { name: coll.to_string() };
+        let mut collection_ref = fdecl::CollectionRef { name: coll.to_string() };
         let child_decl = ChildDecl {
             name: name.to_string(),
             url: format!("test:///{}", name),
@@ -457,7 +458,7 @@ impl ActionsTest {
             .realm_proxy
             .as_ref()
             .expect("realm service not started")
-            .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
+            .create_child(&mut collection_ref, child_decl, fcomponent::CreateChildArgs::EMPTY)
             .await;
         res.expect("failed to create child").expect("failed to create child");
     }

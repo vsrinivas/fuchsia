@@ -124,8 +124,8 @@ async fn use_in_collection_from_parent() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_name: "fuchsia.sys2.Realm".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
+                    source_name: "fuchsia.component.Realm".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
@@ -311,8 +311,8 @@ async fn use_in_collection_from_grandparent() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_name: "fuchsia.sys2.Realm".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
+                    source_name: "fuchsia.component.Realm".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {

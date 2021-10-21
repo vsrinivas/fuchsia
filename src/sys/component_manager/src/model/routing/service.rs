@@ -367,8 +367,8 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Framework,
-                        source_name: "fuchsia.sys2.Realm".into(),
-                        target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
+                        source_name: "fuchsia.component.Realm".into(),
+                        target_path: "/svc/fuchsia.component.Realm".try_into().unwrap(),
                         dependency_type: DependencyType::Strong,
                     }))
                     .expose(ExposeDecl::Service(ExposeServiceDecl {
