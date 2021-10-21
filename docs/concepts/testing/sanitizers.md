@@ -99,10 +99,21 @@ Specifically to detect use-after-free bugs in kernel code you will need to
 
 ### Test
 
-Test as you normally would, in your local workflow or on CQ. If a sanitizer
-detects an issue during test runtime then the test failure will include a
-descriptive error message indicating the nature of the problem and a stack trace
-pointing to the root cause.
+Test as you normally would, in your local workflow or on a CQ builder which has
+sanitizers enabled (the tryjob has `asan` in the name). If a sanitizer detects
+an issue then messages will be printed to the logs containing one of the
+following strings:
+
+*   `ERROR: AddressSanitizer`
+*   `ERROR: LeakSanitizer`
+*   `SUMMARY: UndefinedBehaviorSanitizer`
+
+Following these messages you will find stack traces that identify the nature of
+the problem and point to the root cause. You can find these messages in
+`fx log`.
+
+Note that the test that triggered the sanitizer may still appear as passing.
+Sanitizer issues don't manifest as test failures.
 
 Issues detected by sanitizers typically have similar root causes. You may be
 able to find references for prior work by [searching Fuchsia bugs][fxb] for a
