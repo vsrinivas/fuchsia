@@ -16,14 +16,16 @@ script_dir="$(dirname "$script")"
 # The value is an absolute path.
 project_root="$(readlink -f "$script_dir"/../..)"
 
+script_subdir="$(realpath --relative-to="$project_root" "$script_dir")"
+
 # $PWD must be inside $project_root.
 build_subdir="$(realpath --relative-to="$project_root" . )"
+project_root_rel="$(realpath --relative-to=. "$project_root")"
 
 # defaults
 config="$script_dir"/fuchsia-re-client.cfg
 # location of reclient binaries relative to output directory where build is run
-# TODO(fangism): this could also be set relative to --exec_root.
-reclient_bindir="$script_dir"/../../prebuilt/proprietary/third_party/reclient/linux-x64
+reclient_bindir="$project_root_rel"/prebuilt/proprietary/third_party/reclient/linux-x64
 auto_reproxy="$script_dir"/fuchsia-reproxy-wrap.sh
 
 usage() {
@@ -41,6 +43,9 @@ options:
       [default: $reclient_bindir]
   --dry-run: If set, print the computed rewrapper command without running it.
 
+  --log: capture stdout/stderr to \$output_files[0].remote-log.
+      This is useful when the stdout/stderr size exceeds RPC limits.
+
   --fsatrace-path: location of fsatrace tool (which must reside under
       'exec_root').  If provided, a remote trace will be created and
       downloaded as \$output_files[0].remote-fsatrace.
@@ -54,6 +59,7 @@ EOF
 }
 
 dry_run=0
+log=0
 fsatrace_path=
 inputs=
 output_files=
@@ -80,6 +86,7 @@ do
   case "$opt" in
     --help|-h) usage; exit;;
     --dry-run) dry_run=1 ;;
+    --log) log=1 ;;
 
     --cfg=*) config="$optarg" ;;
     --cfg) prev_opt=config ;;
@@ -130,6 +137,16 @@ else
 fi
 primary_output_rel="${primary_output#$build_subdir/}"
 
+# When --log is requested, capture stdout/err to a log file remotely,
+# and then download it.
+log_wrapper=()
+test "$log" = 0 || {
+  logfile="$primary_output_rel.remote-log"
+  log_wrapper+=( "$script_dir"/log-it.sh --log "$logfile" -- )
+  inputs_array+=( "$script_subdir"/log-it.sh )
+  output_files_array+=( "$build_subdir/$logfile" )
+}
+
 # Use fsatrace on the remote command, and also fetch the resulting log.
 fsatrace_prefix=()
 test -z "$fsatrace_path" || {
@@ -160,6 +177,7 @@ rewrapped_command=(
   --cfg="$rewrapper_cfg"
   "${rewrapper_options[@]}"
 
+  "${log_wrapper[@]}"
   "${fsatrace_prefix[@]}"
   "$@"
 )

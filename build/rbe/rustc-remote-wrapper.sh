@@ -26,8 +26,6 @@ Options:
   --local: disable remote execution and run the original command locally.
   --verbose|-v: print debug information, including details about uploads.
   --dry-run: print remote execution command without executing (remote only).
-  --log: capture stdout/stderr to log file.  Log file is named the same as
-      the primary output (e.g. .rlib) with a ".log" extension.
 
   --project-root: location of source tree which also encompasses outputs
       and prebuilt tools, forwarded to --exec-root in the reclient tools.
@@ -64,7 +62,6 @@ trace=0
 dry_run=0
 verbose=0
 compare=0
-log=0
 rewrapper_options=()
 
 # Extract script options before --
@@ -90,7 +87,6 @@ do
     --fsatrace) trace=1 ;;
     --verbose|-v) verbose=1 ;;
     --compare) compare=1 ;;
-    --log) log=1 ;;
     --project-root=*) project_root="$optarg" ;;
     --project-root) prev_opt=project_root ;;
     --source=*) top_source="$optarg" ;;
@@ -533,15 +529,6 @@ depfile_inputs+=( "${depfile_shlibs[@]}" )
 
 extra_outputs+=( "${extra_linker_outputs[@]}" )
 
-log_wrapper=()
-logfile="$output.log"
-if [[ "$log" == 1 ]]
-then
-  log_wrapper+=("$script_dir"/log-it.sh --log "$logfile" -- )
-  extra_inputs+=("$script_dir"/log-it.sh)
-  extra_outputs+=( "$build_subdir/$logfile" )
-fi
-
 test "$save_analysis" = 0 || {
   analysis_file=save-analysis-temp/"$(basename "$output" .rlib)".json
   analysis_file_stripped="${analysis_file#./}"
@@ -672,7 +659,6 @@ remote_rustc_command=(
   --output_files="$outputs_joined"
   "${rewrapper_options[@]}"
   --
-  "${log_wrapper[@]}"
   "${rustc_command[@]}"
 )
 
