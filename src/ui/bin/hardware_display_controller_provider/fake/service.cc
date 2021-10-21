@@ -12,8 +12,8 @@
 
 namespace fake_display {
 
-ProviderService::ProviderService(sys::ComponentContext* app_context,
-                                 async_dispatcher_t* dispatcher) {
+ProviderService::ProviderService(sys::ComponentContext* app_context, async_dispatcher_t* dispatcher,
+                                 bool use_vsync2) {
   FX_DCHECK(dispatcher);
 
   // |app_context| may be null for in-process tests.
@@ -24,7 +24,7 @@ ProviderService::ProviderService(sys::ComponentContext* app_context,
   auto sysmem = std::make_unique<display::GenericSysmemDeviceWrapper<display::SysmemProxyDevice>>();
   state_ = std::make_shared<State>(State{.dispatcher = dispatcher,
                                          .tree = std::make_unique<display::FakeDisplayDeviceTree>(
-                                             std::move(sysmem), /*start_vsync=*/true)});
+                                             std::move(sysmem), /*start_vsync=*/true, use_vsync2)});
 }
 
 ProviderService::~ProviderService() { state_->tree->AsyncShutdown(); }

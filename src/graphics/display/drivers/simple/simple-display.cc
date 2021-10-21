@@ -193,7 +193,8 @@ uint32_t SimpleDisplay::DisplayControllerImplCheckConfiguration(
 }
 
 void SimpleDisplay::DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
-                                                            size_t display_count) {
+                                                            size_t display_count,
+                                                            const config_stamp_t* config_stamp) {
   has_image_ = display_count != 0 && display_config[0]->layer_count != 0;
 }
 
@@ -443,6 +444,7 @@ SimpleDisplay::SimpleDisplay(zx_device_t* parent, sysmem_protocol_t sysmem,
   loop_.StartThread("simple-display");
 }
 
+// TODO(fxbug.dev/72588): Switch to use OnDisplayVsync2().
 void SimpleDisplay::OnPeriodicVSync() {
   if (intf_.is_valid()) {
     uint64_t handles[] = {kImageHandle};

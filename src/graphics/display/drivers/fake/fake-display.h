@@ -54,9 +54,14 @@ class FakeDisplay : public DeviceType,
         capture_proto_({&display_capture_impl_protocol_ops_, this}),
         clamp_rgbimpl_proto_({&display_clamp_rgb_impl_protocol_ops_, this}) {}
 
-  // This function is called from the c-bind function upon driver matching. If start_vsync is
-  // true, a background thread will be started to issue vsync events.
-  zx_status_t Bind(bool start_vsync);
+  // This function is called from the c-bind function upon driver matching.
+  //
+  // Arguments
+  // - If |start_vsync| is true, a background thread will be started to issue
+  //   vsync events.
+  // - If |use_vsync2| is true, the vsync thread will emit OnDisplayVsync2()
+  //   events; otherwise it will emit OnDisplayVsync() events.
+  zx_status_t Bind(bool start_vsync, bool use_vsync2);
 
   // Required functions needed to implement Display Controller Protocol
   void DisplayControllerImplSetDisplayControllerInterface(
@@ -72,7 +77,8 @@ class FakeDisplay : public DeviceType,
                                                    uint32_t** layer_cfg_results,
                                                    size_t* layer_cfg_result_count);
   void DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
-                                               size_t display_count);
+                                               size_t display_count,
+                                               const config_stamp_t* config_stamp);
   void DisplayControllerImplSetEld(uint64_t display_id, const uint8_t* raw_eld_list,
                                    size_t raw_eld_count) {}
   zx_status_t DisplayControllerImplGetSysmemConnection(zx::channel connection);
@@ -109,7 +115,7 @@ class FakeDisplay : public DeviceType,
   const display_clamp_rgb_impl_protocol_t* clamp_rgbimpl_proto() const {
     return &clamp_rgbimpl_proto_;
   }
-  void SendVsync();
+  void SendVsync(bool use_vsync2);
 
   // Just for display core unittests.
   zx_status_t ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
@@ -123,7 +129,7 @@ class FakeDisplay : public DeviceType,
 
  private:
   zx_status_t SetupDisplayInterface();
-  int VSyncThread();
+  int VSyncThread(bool use_vsync2);
   int CaptureThread() __TA_EXCLUDES(capture_lock_, display_lock_);
   void PopulateAddedDisplayArgs(added_display_args_t* args);
 
@@ -155,6 +161,7 @@ class FakeDisplay : public DeviceType,
 
   uint64_t current_image_ TA_GUARDED(display_lock_);
   bool current_image_valid_ TA_GUARDED(display_lock_);
+  config_stamp_t current_config_stamp_ TA_GUARDED(display_lock_) = {.value = INVALID_CONFIG_STAMP};
 
   // Capture complete is signaled at vsync time. This counter introduces a bit of delay
   // for signal capture complete

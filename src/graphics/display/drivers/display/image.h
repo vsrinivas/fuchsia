@@ -100,6 +100,9 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   void set_z_index(uint32_t z_index) { z_index_ = z_index; }
   uint32_t z_index() const { return z_index_; }
 
+  void set_latest_config_stamp(config_stamp_t stamp) { latest_config_stamp_ = stamp; }
+  config_stamp_t latest_config_stamp() const { return latest_config_stamp_; }
+
   // The node alternates between a client's waiting image list and the controller's
   // presented image list. The presented image list is protected with the controller mutex,
   // and the waiting list is only accessed on the loop and thus is not generally
@@ -119,6 +122,9 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
 
   image_t info_;
   uint32_t stride_px_;
+
+  // Stamp of the latest display configuration that uses this image.
+  config_stamp_t latest_config_stamp_ = {.value = INVALID_CONFIG_STAMP};
   Controller* const controller_;
 
   // z_index is set/read by controller.cpp under its lock

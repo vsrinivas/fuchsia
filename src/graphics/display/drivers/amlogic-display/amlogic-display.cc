@@ -329,7 +329,8 @@ uint32_t AmlogicDisplay::DisplayControllerImplCheckConfiguration(
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
-    const display_config_t** display_configs, size_t display_count) {
+    const display_config_t** display_configs, size_t display_count,
+    const config_stamp_t* config_stamp) {
   ZX_DEBUG_ASSERT(display_configs);
 
   fbl::AutoLock lock(&display_lock_);
@@ -381,6 +382,7 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
 
   // If bootloader does not enable any of the display hardware, no vsync will be generated.
   // This fakes a vsync to let clients know we are ready until we actually initialize hardware
+  // TODO(fxbug.dev/72588): Switch to use OnDisplayVsync2().
   if (!fully_initialized()) {
     if (dc_intf_.is_valid()) {
       if (display_count == 0 || display_configs[0]->layer_count == 0) {

@@ -227,7 +227,8 @@ uint32_t GpuDevice::DisplayControllerImplCheckConfiguration(
 }
 
 void GpuDevice::DisplayControllerImplApplyConfiguration(const display_config_t** display_configs,
-                                                        size_t display_count) {
+                                                        size_t display_count,
+                                                        const config_stamp_t* config_stamp) {
   uint64_t handle = display_count == 0 || display_configs[0]->layer_count == 0
                         ? 0
                         : display_configs[0]->layer_list[0]->cfg.primary.image.handle;
@@ -507,6 +508,7 @@ void GpuDevice::Flush() {
   cnd_signal(&flush_cond_);
 }
 
+// TODO(fxbug.dev/72588): Switch to use OnDisplayVsync2().
 void GpuDevice::virtio_gpu_flusher() {
   LTRACE_ENTRY;
   zx_time_t next_deadline = zx_clock_get_monotonic();

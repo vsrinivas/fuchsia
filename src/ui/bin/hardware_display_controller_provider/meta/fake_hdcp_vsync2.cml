@@ -3,5 +3,6 @@
     program: {
         runner: "elf",
         binary: "bin/fake_hw_display_controller_provider",
+        args: [ "--use-vsync2" ],
     },
 }

@@ -654,7 +654,8 @@ zx_status_t Display::PresentColorBuffer(uint32_t display_id, ColorBuffer* color_
 }
 
 void Display::DisplayControllerImplApplyConfiguration(const display_config_t** display_configs,
-                                                      size_t display_count) {
+                                                      size_t display_count,
+                                                      const config_stamp_t* config_stamp) {
   for (auto it : devices_) {
     uint64_t handle = 0;
     for (unsigned i = 0; i < display_count; i++) {
@@ -1096,6 +1097,7 @@ void Display::TeardownDisplay(uint64_t display_id) {
   }
 }
 
+// TODO(fxbug.dev/72588): Switch to use OnDisplayVsync2().
 void Display::FlushDisplay(async_dispatcher_t* dispatcher, uint64_t display_id) {
   Device& device = devices_[display_id];
 

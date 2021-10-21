@@ -18,18 +18,21 @@
 
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
 #include <audio-proto-utils/format-utils.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
 
 #include "client.h"
 #include "eld.h"
+#include "fuchsia/hardware/display/controller/c/banjo.h"
 #include "src/graphics/display/drivers/display/display-bind.h"
 
 namespace fidl_display = fuchsia_hardware_display;
@@ -364,6 +367,8 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
 
     if (done) {
       info->pending_layer_change = false;
+      info->pending_layer_change_client_stamp = std::nullopt;
+
       info->switching_client = false;
 
       if (active_client_ && info->delayed_apply) {
@@ -465,6 +470,139 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   }
 }
 
+void Controller::DisplayControllerInterfaceOnDisplayVsync2(uint64_t display_id, zx_time_t timestamp,
+                                                           const config_stamp_t* config_stamp) {
+  // Emit an event called "VSYNC", which is by convention the event
+  // that Trace Viewer looks for in its "Highlight VSync" feature.
+  TRACE_INSTANT("gfx", "VSYNC", TRACE_SCOPE_THREAD, "display_id", display_id);
+  TRACE_DURATION("gfx", "Display::Controller::OnDisplayVsync2", "display_id", display_id);
+
+  last_vsync_ns_property_.Set(timestamp);
+  last_vsync_interval_ns_property_.Set(timestamp - last_vsync_timestamp_.load().get());
+  last_vsync_timestamp_ = zx::time(timestamp);
+  vsync_stalled_ = false;
+
+  fbl::AutoLock lock(mtx());
+  DisplayInfo* info = nullptr;
+  for (auto& display_config : displays_) {
+    if (display_config.id == display_id) {
+      info = &display_config;
+      break;
+    }
+  }
+
+  if (!info) {
+    zxlogf(ERROR, "No such display %lu", display_id);
+    return;
+  }
+
+  uint64_t config_stamp_value = config_stamp ? config_stamp->value : INVALID_CONFIG_STAMP;
+
+  // See ::ApplyConfig for more explanation of how vsync image tracking works.
+  //
+  // If there's a pending layer change, don't process any present/retire actions
+  // until the change is complete.
+  if (info->pending_layer_change) {
+    bool done = config_stamp_value >= (*info->pending_layer_change_client_stamp);
+    if (done) {
+      info->pending_layer_change = false;
+      info->pending_layer_change_client_stamp = std::nullopt;
+      info->switching_client = false;
+
+      if (active_client_ && info->delayed_apply) {
+        active_client_->ReapplyConfig();
+      }
+    }
+  }
+
+  if (!info->pending_layer_change) {
+    // Since we know there are no pending layer changes, we know that every
+    // layer (i.e z_index) has an image. So every image either matches a handle
+    // (in which case it's being displayed), is older than its layer's image
+    // (i.e. in front of in the queue) and can be retired, or is newer than
+    // its layer's image (i.e. behind in the queue) and has yet to be presented.
+    image_node_t* cur;
+    image_node_t* tmp;
+    list_for_every_entry_safe (&info->images, cur, tmp, image_node_t, link) {
+      bool should_retire = cur->self->latest_config_stamp().value < config_stamp_value;
+
+      // Retire any images for which we don't already have a z-match, since
+      // those are older than whatever is currently in their layer.
+      if (should_retire) {
+        list_delete(&cur->link);
+        AssertMtxAliasHeld(cur->self->mtx());
+        cur->self->OnRetire();
+        // Older images may not be presented. Ending their flows here
+        // ensures the correctness of traces.
+        //
+        // NOTE: If changing this flow name or ID, please also do so in the
+        // corresponding FLOW_BEGIN in display_swapchain.cc.
+        TRACE_FLOW_END("gfx", "present_image", cur->self->id);
+        cur->self.reset();
+      }
+    }
+  }
+
+  // TODO(fxbug.dev/72588): This is a stopgap solution to support existing
+  // OnVsync() DisplayController FIDL events. In the future we'll remove this
+  // logic and only return config seqnos in OnVsync() events instead.
+  std::vector<uint64_t> primary_images, virtcon_images;
+
+  if (config_stamp_value != INVALID_CONFIG_STAMP) {
+    auto& config_image_queue = info->config_image_queue;
+
+    // Evict retired configurations from the queue.
+    while (!config_image_queue.empty() &&
+           config_image_queue.front().config_stamp.value < config_stamp_value) {
+      config_image_queue.pop();
+    }
+
+    // Since the stamps sent from Controller to drivers are in chronological
+    // order, the Vsync signals Controller receives should also be in
+    // chronological order as well.
+    //
+    // Applying empty configs won't create entries in |config_image_queue|.
+    // Otherwise, we'll get the list of images used at ApplyConfig() with
+    // the given |config_stamp|.
+    if (!config_image_queue.empty() &&
+        config_image_queue.front().config_stamp.value == config_stamp_value) {
+      for (const auto& image : config_image_queue.front().images) {
+        // End of the flow for the image going to be presented.
+        //
+        // NOTE: If changing this flow name or ID, please also do so in the
+        // corresponding FLOW_BEGIN in display_swapchain.cc.
+        TRACE_FLOW_END("gfx", "present_image", image.image_id);
+
+        if (vc_client_ && image.client_id == vc_client_->id()) {
+          virtcon_images.push_back(image.image_id);
+        } else if (primary_client_ && image.client_id == primary_client_->id()) {
+          primary_images.push_back(image.image_id);
+        } else {
+          // Otherwise, if the client ID isn't either current primary client
+          // nor virtcon client, there must be a client change and this image
+          // is not used by current client anymore, so we drop the image.
+        }
+      }
+    }
+  }
+
+  if (vc_applied_ && vc_client_) {
+    vc_client_->OnDisplayVsync(display_id, timestamp, virtcon_images.data(), virtcon_images.size());
+  } else if (!vc_applied_ && primary_client_) {
+    // A previous client applied a config and then disconnected before the vsync. Don't send garbage
+    // image IDs to the new primary client.
+    if (primary_client_->id() != applied_client_id_) {
+      zxlogf(DEBUG,
+             "Dropping vsync. This was meant for client[%d], "
+             "but client[%d] is currently active.\n",
+             applied_client_id_, primary_client_->id());
+    } else {
+      primary_client_->OnDisplayVsync(display_id, timestamp, primary_images.data(),
+                                      primary_images.size());
+    }
+  }
+}
+
 zx_status_t Controller::DisplayControllerInterfaceGetAudioFormat(
     uint64_t display_id, uint32_t fmt_idx, audio_types_audio_stream_format_range_t* fmt_out) {
   fbl::AutoLock lock(mtx());
@@ -529,6 +667,10 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
       }
     }
 
+    // Now we can guarantee that this configuration will be applied to display
+    // controller. Thus increment the controller ApplyConfiguration() counter.
+    controller_stamp_.value++;
+
     for (int i = 0; i < count; i++) {
       auto* config = configs[i];
       auto display = displays_.find(config->id);
@@ -536,8 +678,14 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
         continue;
       }
 
+      auto& config_image_queue = display->config_image_queue;
+      config_image_queue.push({.config_stamp = controller_stamp_, .images = {}});
+
       display->switching_client = switching_client;
       display->pending_layer_change = config->apply_layer_change();
+      if (display->pending_layer_change) {
+        display->pending_layer_change_client_stamp = client_stamp;
+      }
       display->vsync_layer_count = config->vsync_layer_count();
       display->delayed_apply = false;
 
@@ -558,6 +706,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
         // Set the image z index so vsync knows what layer the image is in
         AssertMtxAliasHeld(image->mtx());
         image->set_z_index(layer->z_order());
+        image->set_latest_config_stamp(controller_stamp_);
         image->StartPresent();
 
         // It's possible that the image's layer was moved between displays. The logic around
@@ -573,6 +722,8 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
           image->node.self = image;
         }
         list_add_tail(&display->images, &image->node.link);
+
+        config_image_queue.back().images.push_back({image->id, image->client_id()});
       }
       ZX_ASSERT(display->vsync_layer_count == 0 || !list_is_empty(&display->images));
     }
@@ -584,7 +735,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
       active_client_->ReapplySpecialConfigs();
     }
   }
-  dc_.ApplyConfiguration(display_configs.get(), display_count);
+  dc_.ApplyConfiguration(display_configs.get(), display_count, &controller_stamp_);
 }
 
 void Controller::ReleaseImage(Image* image) { dc_.ReleaseImage(&image->info()); }
@@ -934,7 +1085,8 @@ void Controller::DdkRelease() {
   loop_.Shutdown();
   // Set an empty config so that the display driver releases resources.
   const display_config_t* configs;
-  dc_.ApplyConfiguration(&configs, 0);
+  ++controller_stamp_.value;
+  dc_.ApplyConfiguration(&configs, 0, &controller_stamp_);
   delete this;
 }
 

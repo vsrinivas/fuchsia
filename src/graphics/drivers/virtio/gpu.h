@@ -67,7 +67,8 @@ class GpuDevice : public Device,
                                                    size_t* layer_cfg_result_count);
 
   void DisplayControllerImplApplyConfiguration(const display_config_t** display_config_list,
-                                               size_t display_config_count);
+                                               size_t display_config_count,
+                                               const config_stamp_t* config_stamp);
 
   void DisplayControllerImplSetEld(uint64_t display_id, const uint8_t* raw_eld_list,
                                    size_t raw_eld_count) {}  // No ELD required for non-HDA systems.

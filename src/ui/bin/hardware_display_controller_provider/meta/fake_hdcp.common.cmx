@@ -1,0 +1,11 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "sandbox": {
+        "services": [
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

@@ -30,6 +30,7 @@ class TestBase : public zxtest::Test {
  public:
   TestBase() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
+  void SetUp(bool use_vsync2);
   void SetUp() override;
   void TearDown() override;
 
@@ -43,10 +44,12 @@ class TestBase : public zxtest::Test {
   bool RunLoopWithTimeoutOrUntil(fit::function<bool()>&& condition,
                                  zx::duration timeout = zx::sec(1),
                                  zx::duration step = zx::msec(10));
+  bool use_vsync2() const { return use_vsync2_; }
 
  private:
   async::Loop loop_;
   thrd_t loop_thrd_ = 0;
+  bool use_vsync2_ = false;
 
   std::unique_ptr<FakeDisplayDeviceTree> tree_;
 };

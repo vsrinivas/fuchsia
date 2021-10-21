@@ -28,6 +28,7 @@
 
 #include <functional>
 #include <memory>
+#include <queue>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -75,6 +76,8 @@ class Controller : public ControllerParent,
                                                    size_t* display_info_actual);
   void DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
                                                 const uint64_t* handles, size_t handle_count);
+  void DisplayControllerInterfaceOnDisplayVsync2(uint64_t display_id, zx_time_t timestamp,
+                                                 const config_stamp_t* config_stamp);
   zx_status_t DisplayControllerInterfaceGetAudioFormat(
       uint64_t display_id, uint32_t fmt_idx, audio_types_audio_stream_format_range_t* fmt_out);
 
@@ -123,6 +126,7 @@ class Controller : public ControllerParent,
 
   // Test helpers
   size_t TEST_imported_images_count() const;
+  config_stamp_t TEST_controller_stamp() const { return controller_stamp_; }
 
   // Typically called by OpenController/OpenVirtconController.  However, this is made public
   // for use by testing services which provide a fake display controller.
@@ -190,6 +194,8 @@ class Controller : public ControllerParent,
   zx_time_t last_valid_apply_config_timestamp_{};
   inspect::UintProperty last_valid_apply_config_timestamp_ns_property_;
   inspect::UintProperty last_valid_apply_config_interval_ns_property_;
+
+  config_stamp_t controller_stamp_ = {.value = INVALID_CONFIG_STAMP};
 };
 
 }  // namespace display

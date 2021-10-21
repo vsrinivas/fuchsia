@@ -3,6 +3,9 @@
         "//src/ui/bin/hardware_display_controller_provider/meta/fake_hdcp.common.cmx"
     ],
     "program": {
-        "binary": "bin/fake_hw_display_controller_provider"
+        "binary": "bin/fake_hw_display_controller_provider",
+        "args": [
+            "--use-vsync2"
+        ]
     }
 }

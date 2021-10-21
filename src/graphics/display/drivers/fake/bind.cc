@@ -17,7 +17,7 @@ static zx_status_t fake_display_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  auto status = dev->Bind(/*start_vsync=*/true);
+  auto status = dev->Bind(/*start_vsync=*/true, /*use_vsync2=*/true);
   if (status == ZX_OK) {
     // devmgr is now in charge of the memory for dev
     __UNUSED auto ptr = dev.release();

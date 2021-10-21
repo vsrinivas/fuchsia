@@ -322,7 +322,7 @@ static uint32_t vim_check_configuration(void* ctx, const display_config_t** disp
 }
 
 static void vim_apply_configuration(void* ctx, const display_config_t** display_configs,
-                                    size_t display_count) {
+                                    size_t display_count, const config_stamp_t* config_stamp) {
   vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
   mtx_lock(&display->display_lock);
 
@@ -689,6 +689,7 @@ static int hdmi_irq_handler(void* arg) {
   }
 }
 
+// TODO(fxbug.dev/72588): Switch to use OnDisplayVsync2().
 static int vsync_thread(void* arg) {
   vim2_display_t* display = static_cast<vim2_display_t*>(arg);
 

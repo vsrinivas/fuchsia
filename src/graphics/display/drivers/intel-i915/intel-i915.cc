@@ -228,6 +228,7 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
   }
 }
 
+// TODO(fxbug.dev/72588): Switch to use OnDisplayVsync2().
 void Controller::HandlePipeVsync(registers::Pipe pipe, zx_time_t timestamp) {
   fbl::AutoLock lock(&display_lock_);
 
@@ -1691,7 +1692,8 @@ void Controller::DisplayControllerImplSetEld(uint64_t display_id, const uint8_t*
 }
 
 void Controller::DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
-                                                         size_t display_count) {
+                                                         size_t display_count,
+                                                         const config_stamp_t* config_stamp) {
   uint64_t fake_vsyncs[registers::kDdiCount];
   uint32_t fake_vsync_count = 0;
 

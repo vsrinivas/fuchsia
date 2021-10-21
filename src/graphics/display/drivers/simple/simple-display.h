@@ -60,7 +60,8 @@ class SimpleDisplay : public DeviceType,
                                                    uint32_t** layer_cfg_results,
                                                    size_t* layer_cfg_result_count);
   void DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
-                                               size_t display_count);
+                                               size_t display_count,
+                                               const config_stamp_t* config_stamp);
   void DisplayControllerImplSetEld(uint64_t display_id, const uint8_t* raw_eld_list,
                                    size_t raw_eld_count) {}  // No ELD required for non-HDA systems.
   uint32_t DisplayControllerImplComputeLinearStride(uint32_t width, zx_pixel_format_t format);

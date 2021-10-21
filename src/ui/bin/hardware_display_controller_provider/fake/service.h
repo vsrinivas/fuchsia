@@ -25,7 +25,8 @@ namespace fake_display {
 class ProviderService : public fuchsia::hardware::display::Provider {
  public:
   // |app_context| is used to publish this service.
-  ProviderService(sys::ComponentContext* app_context, async_dispatcher_t* dispatcher);
+  ProviderService(sys::ComponentContext* app_context, async_dispatcher_t* dispatcher,
+                  bool use_vsync2);
   ~ProviderService();
 
   // |fuchsia::hardware::display::Provider|.

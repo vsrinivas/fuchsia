@@ -80,7 +80,7 @@ bool Binder::Ok() {
 }
 
 FakeDisplayDeviceTree::FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper> sysmem,
-                                             bool start_vsync)
+                                             bool start_vsync, bool use_vsync2)
     : sysmem_(std::move(sysmem)) {
   pdev_.UseFakeBti();
   ddk_.SetMetadata(SYSMEM_METADATA_TYPE, &sysmem_metadata_, sizeof(sysmem_metadata_));
@@ -104,8 +104,8 @@ FakeDisplayDeviceTree::FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper
   ddk_.SetFragments(std::move(fragments));
 
   display_ = new fake_display::FakeDisplay(fake_ddk::kFakeParent);
-  if (auto status = display_->Bind(start_vsync); status != ZX_OK) {
-    ZXLOG(ERROR, "display_->Bind(start_vsync) return status was not ZX_OK. Error: %s.",
+  if (auto status = display_->Bind(start_vsync, use_vsync2); status != ZX_OK) {
+    ZXLOG(ERROR, "display_->Bind(start_vsync, use_vsync2) return status was not ZX_OK. Error: %s.",
           zx_status_get_string(status));
     return;
   }
