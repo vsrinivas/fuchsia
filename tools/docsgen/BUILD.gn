@@ -15,6 +15,7 @@ group("docsgen") {
     ":dart_sdk_docs($host_toolchain)",
     ":invoke_clidoc($host_toolchain)",
     ":invoke_fidldoc($host_toolchain)",
+    "//bundles:create_all_drivers_doc",
   ]
 }
 
@@ -75,6 +76,7 @@ build_api_module("generated_docs") {
   contents = {
     output_path = rebase_path("$host_out_dir/obj/tools/docsgen", root_build_dir)
     dartdoc_zip = "dartdoc_out.zip"
+    driversdoc_json = "$root_gen_dir/all_drivers_doc.json"
   }
 }
 
