@@ -287,7 +287,7 @@ EOF
       # Tell rustc to report all transitive *library* dependencies,
       # not just the sources, because these all need to be uploaded.
       # This includes (prebuilt) system libraries as well.
-      # TODO(fxb/78292): this -Z flag is not known to be stable yet.
+      # TODO(https://fxbug.dev/78292): this -Z flag is not known to be stable yet.
       dep_only_command+=( "-Zbinary-dep-depinfo" )
       ;;
 
@@ -507,6 +507,29 @@ mapfile -t depfile_inputs < <(depfile_inputs_by_line "$depfile.nolink" | \
   xargs -n 1 realpath --relative-to="$project_root" )
 # Done with temporary depfile, remove it.
 rm -f "$depfile.nolink"
+
+# Some Rust libraries come with both .rlib and .so (like libstd), however,
+# the depfile generator fails to list the .so file in some cases,
+# which causes the build to silently fallback to static linking when
+# dynamic linking is requested and intended.  This can result in a mismatch
+# between local and remote building.
+# See https://github.com/rust-lang/rust/issues/90106
+# Workaround (https://fxbug.dev/86896): check for existence of .so and include it.
+depfile_shlibs=()
+for f in "${depfile_inputs[@]}"
+do
+  case "$f" in
+    *.rlib)
+      basename="$(basename "$f" .rlib)"
+      dirname="$(dirname "$f")"
+      shlib="$project_root/$dirname/$basename".so
+      if test -r "$shlib"
+      then depfile_shlibs+=( "$dirname/$basename".so )
+      fi
+      ;;
+  esac
+done
+depfile_inputs+=( "${depfile_shlibs[@]}" )
 
 extra_outputs+=( "${extra_linker_outputs[@]}" )
 
