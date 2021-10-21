@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod packages;
+mod versions;
 
 #[cfg(test)]
 mod testing {

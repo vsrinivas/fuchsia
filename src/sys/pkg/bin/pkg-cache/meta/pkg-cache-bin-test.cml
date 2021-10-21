@@ -11,4 +11,15 @@
     program: {
         binary: "bin/pkg_cache_bin_test",
     },
+    use: [
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sys.Loader",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+        },
+    ],
 }

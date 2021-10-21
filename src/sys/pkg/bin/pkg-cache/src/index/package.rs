@@ -11,7 +11,7 @@ use {
     },
     fuchsia_hash::Hash,
     fuchsia_inspect as finspect,
-    fuchsia_pkg::PackagePath,
+    fuchsia_pkg::{PackageName, PackagePath},
     futures::lock::Mutex,
     std::{
         collections::{HashMap, HashSet},
@@ -124,6 +124,11 @@ impl PackageIndex {
     /// Returns a snapshot of all active dynamic packages and their hashes.
     pub fn active_packages(&self) -> HashMap<PackagePath, Hash> {
         self.dynamic.active_packages()
+    }
+
+    /// Returns package name if the package is active.
+    pub fn get_name_if_active(&self, hash: &Hash) -> Option<&PackageName> {
+        self.dynamic.get_name_if_active(hash)
     }
 
     /// Returns all blobs protected by the dynamic and retained indices.

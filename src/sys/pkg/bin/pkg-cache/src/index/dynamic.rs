@@ -6,7 +6,7 @@ use {
     anyhow::{Context as _, Error},
     fuchsia_inspect as finspect,
     fuchsia_merkle::Hash,
-    fuchsia_pkg::PackagePath,
+    fuchsia_pkg::{PackageName, PackagePath},
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     fuchsia_zircon as zx,
     std::{
@@ -56,6 +56,15 @@ impl DynamicIndex {
     /// Returns a snapshot of all active packages and their hashes.
     pub fn active_packages(&self) -> HashMap<PackagePath, Hash> {
         self.active_packages.clone()
+    }
+
+    /// Returns package name if the package is active.
+    pub fn get_name_if_active(&self, hash: &Hash) -> Option<&PackageName> {
+        self.packages.get(hash).and_then(|p| match p {
+            PackageWithInspect { package: Package::Active { path, .. }, .. } => Some(path.name()),
+            PackageWithInspect { package: Package::Pending, .. }
+            | PackageWithInspect { package: Package::WithMetaFar { .. }, .. } => None,
+        })
     }
 
     fn make_package_node(&mut self, package: &Package, hash: &Hash) -> PackageNode {
@@ -324,9 +333,44 @@ mod tests {
         std::{
             collections::HashMap,
             fs::{create_dir, create_dir_all, File},
+            str::FromStr,
         },
         tempfile::TempDir,
     };
+
+    #[test]
+    fn test_get_name_if_active() {
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
+        dynamic_index.add_package(Hash::from([1; 32]), Package::Pending);
+        dynamic_index.add_package(
+            Hash::from([2; 32]),
+            Package::WithMetaFar {
+                path: PackagePath::from_name_and_variant(
+                    "fake-package".parse().unwrap(),
+                    "0".parse().unwrap(),
+                ),
+                required_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
+            },
+        );
+        dynamic_index.add_package(
+            Hash::from([3; 32]),
+            Package::Active {
+                path: PackagePath::from_name_and_variant(
+                    "fake-package-2".parse().unwrap(),
+                    "0".parse().unwrap(),
+                ),
+                required_blobs: hashset! { Hash::from([6; 32]) },
+            },
+        );
+
+        assert_eq!(dynamic_index.get_name_if_active(&Hash::from([1; 32])), None);
+        assert_eq!(dynamic_index.get_name_if_active(&Hash::from([2; 32])), None);
+        assert_eq!(
+            dynamic_index.get_name_if_active(&Hash::from([3; 32])),
+            Some(&PackageName::from_str("fake-package-2").unwrap())
+        );
+    }
 
     #[test]
     fn test_all_blobs() {

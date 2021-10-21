@@ -38,6 +38,7 @@ rustc_binary("bin") {
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
+    "//src/sys/pkg/lib/package-directory",
     "//src/sys/pkg/lib/pkgfs",
     "//src/sys/pkg/lib/system-image",
     "//third_party/rust_crates:anyhow",
@@ -50,6 +51,7 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
+    "//garnet/lib/rust/files_async",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
@@ -64,6 +66,7 @@ rustc_binary("bin") {
     "src/compat.rs",
     "src/compat/pkgfs.rs",
     "src/compat/pkgfs/packages.rs",
+    "src/compat/pkgfs/versions.rs",
     "src/gc_service.rs",
     "src/index.rs",
     "src/index/dynamic.rs",
@@ -89,7 +92,10 @@ fuchsia_package("pkg-cache") {
 fuchsia_component("pkg-cache-test") {
   testonly = true
   manifest = "meta/pkg-cache-bin-test.cml"
-  deps = [ ":bin_test" ]
+  deps = [
+    ":bin_test",
+    "//src/sys/pkg/bin/pm:pm_bin",
+  ]
 }
 
 fuchsia_test_package("pkg-cache-tests") {
