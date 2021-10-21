@@ -39,6 +39,8 @@ Options:
       This file lists all source files needed for this crate.
       [default: this is inferred from --emit=dep-info=FILE]
 
+  --fsatrace: [for --local only] record files accessed at \$output.fsatrace.
+
   --compare: In this mode, build locally and remotely (sequentially) and
       compare the outputs, failing if there are any differences.
 
@@ -58,6 +60,7 @@ EOF
 }
 
 local_only=0
+trace=0
 dry_run=0
 verbose=0
 compare=0
@@ -84,6 +87,7 @@ do
     --help|-h) usage ; exit ;;
     --dry-run) dry_run=1 ;;
     --local) local_only=1 ;;
+    --fsatrace) trace=1 ;;
     --verbose|-v) verbose=1 ;;
     --compare) compare=1 ;;
     --log) log=1 ;;
@@ -397,13 +401,22 @@ EOF
 done
 test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
 
-# Copy the original command.
-# Prefix with env, in case command starts with VAR=VALUE ...
+
+trace_prefix=()
+test "$trace" = 0 || {
+  trace_prefix=(
+    env FSAT_BUF_SIZE=5000000
+    "$fsatrace" ertwdm "$output".fsatrace --
+  )
+}
 
 if test "$local_only" = 1
 then
+  test "${#trace_prefix[@]}" = 0 || {
+    echo "Logging file access trace to $output.fsatrace."
+  }
   # Run original command and exit (no remote execution).
-  "${rustc_command[@]}"
+  "${trace_prefix[@]}" "${rustc_command[@]}"
   exit "$?"
 fi
 
