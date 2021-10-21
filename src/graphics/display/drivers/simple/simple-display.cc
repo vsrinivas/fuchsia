@@ -29,6 +29,8 @@
 
 #include <fbl/alloc_checker.h>
 
+#include "fbl/auto_lock.h"
+
 namespace {
 
 static constexpr uint64_t kDisplayId = 1;
@@ -196,6 +198,10 @@ void SimpleDisplay::DisplayControllerImplApplyConfiguration(const display_config
                                                             size_t display_count,
                                                             const config_stamp_t* config_stamp) {
   has_image_ = display_count != 0 && display_config[0]->layer_count != 0;
+  {
+    fbl::AutoLock lock(&mtx_);
+    config_stamp_ = *config_stamp;
+  }
 }
 
 // TODO(fxb/81875): Remove support when no longer used.
@@ -444,11 +450,10 @@ SimpleDisplay::SimpleDisplay(zx_device_t* parent, sysmem_protocol_t sysmem,
   loop_.StartThread("simple-display");
 }
 
-// TODO(fxbug.dev/72588): Switch to use OnDisplayVsync2().
 void SimpleDisplay::OnPeriodicVSync() {
   if (intf_.is_valid()) {
-    uint64_t handles[] = {kImageHandle};
-    intf_.OnDisplayVsync(kDisplayId, next_vsync_time_.get(), handles, has_image_);
+    fbl::AutoLock lock(&mtx_);
+    intf_.OnDisplayVsync2(kDisplayId, next_vsync_time_.get(), &config_stamp_);
   }
   next_vsync_time_ += kVSyncInterval;
   async::PostTaskForTime(

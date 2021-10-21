@@ -9,6 +9,8 @@
 #include <zircon/compiler.h>
 #include <zircon/pixelformat.h>
 
+#include "fbl/mutex.h"
+
 #if __cplusplus
 
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
@@ -82,6 +84,11 @@ class SimpleDisplay : public DeviceType,
   std::atomic<zx_koid_t> framebuffer_koid_;
   static_assert(std::atomic<bool>::is_always_lock_free);
   std::atomic<bool> has_image_;
+
+  // A lock is required to ensure the atomicity when setting |config_stamp| in
+  // |ApplyConfiguration()| and passing |&config_stamp_| to |OnDisplayVsync2()|.
+  fbl::Mutex mtx_;
+  config_stamp_t config_stamp_ TA_GUARDED(mtx_) = {.value = INVALID_CONFIG_STAMP};
 
   const ddk::MmioBuffer framebuffer_mmio_;
   const uint32_t width_;
