@@ -24,7 +24,7 @@
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/utils/clock.h"
-#include "third_party/cobalt/src/registry/buckets_config.h"
+#include "third_party/cobalt/src/lib/client/cpp/buckets_config.h"
 
 // A daemon to send system metrics to Cobalt.
 //

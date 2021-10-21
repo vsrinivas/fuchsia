@@ -14,7 +14,7 @@
 #include "lib/inspect/cpp/inspect.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
-#include "third_party/cobalt/src/registry/buckets_config.h"
+#include "third_party/cobalt/src/lib/client/cpp/buckets_config.h"
 
 namespace scheduling {
 
