@@ -12,15 +12,6 @@ using zx;
 
 type Empty = struct {};
 
-/// A storage capability variant specifying the type of storage the component
-/// has access to.
-// TODO(https://fxbug.dev/84104): Inline on method once generated name can be
-// controlled.
-type StorageVariant = strict enum : uint8 {
-    /// The `data` storage capability variant.
-    DATA = 0;
-};
-
 /// `Sandbox` is a hermetic container for network emulation testing.
 ///
 /// Every connection to `Sandbox` represents a self-contained context where
@@ -130,7 +121,10 @@ protocol Sandbox {
                             /// The variant of the storage capability.
                             ///
                             /// Required.
-                            1: variant StorageVariant;
+                            1: variant @generated_name("StorageVariant") strict enum : uint8 {
+                                /// The `data` storage capability variant.
+                                DATA = 0;
+                            };
 
                             /// The path at which the storage capability will be
                             /// offered.

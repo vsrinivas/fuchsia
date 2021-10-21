@@ -35,9 +35,7 @@ type Entry = table {
     /// | Reachability Probe        | ARP Request | Neighbor Solicitation  |
     /// | Reachability Confirmation | ARP Reply   | Neighbor Advertisement |
     /// `---------------------------+-------------+------------------------'
-    // TODO(https://fxbug.dev/84104): rename back to `state` when
-    // generated_name annotation works on strict enum.
-    3: entry_state @generated_name("EntryState") strict enum {
+    3: state @generated_name("EntryState") strict enum {
         /// Reachability is in the process of being confirmed for a newly
         /// created, non-static entry.
         INCOMPLETE = 1;

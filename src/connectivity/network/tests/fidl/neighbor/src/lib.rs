@@ -270,7 +270,7 @@ fn assert_entry(
         fidl_fuchsia_net_neighbor::Entry {
             interface: Some(interface),
             neighbor: Some(neighbor),
-            entry_state: Some(state),
+            state: Some(state),
             mac: Some(mac),
             updated_at: Some(updated_at), ..
         } if interface == match_interface && neighbor == match_neighbor && state == match_state && mac == match_mac && updated_at != 0
@@ -1056,17 +1056,17 @@ async fn neigh_unreachable_entries() {
             fidl_fuchsia_net_neighbor::Entry {
                 interface: Some(interface),
                 neighbor: Some(BOB_IP),
-                entry_state: Some(_),
+                state: Some(_),
                 mac: None,
                 updated_at: Some(updated_at), ..
             } if interface == alice.ep.id() && updated_at != 0
         );
 
-        if entry.entry_state == Some(fidl_fuchsia_net_neighbor::EntryState::Unreachable) {
+        if entry.state == Some(fidl_fuchsia_net_neighbor::EntryState::Unreachable) {
             break;
         }
 
-        assert_eq!(entry.entry_state, Some(fidl_fuchsia_net_neighbor::EntryState::Incomplete));
+        assert_eq!(entry.state, Some(fidl_fuchsia_net_neighbor::EntryState::Incomplete));
         println!("Found incomplete entry, waiting for the transition to unreachable...");
     }
 }

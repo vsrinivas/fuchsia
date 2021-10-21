@@ -35,12 +35,12 @@ macro_rules! write_field {
 
 impl std::fmt::Display for Entry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        let Self(fidl::Entry { interface, neighbor, mac, entry_state, updated_at: _, .. }) = self;
+        let Self(fidl::Entry { interface, neighbor, mac, state, updated_at: _, .. }) = self;
 
         write_field!(f, "Interface", interface, "|");
         write_field!(f, "IP", neighbor.map(IpAddress::from), "|");
         write_field!(f, "MAC", mac.map(MacAddress::from), "|");
-        match entry_state {
+        match state {
             None => write!(f, "?"),
             Some(fidl::EntryState::Incomplete) => write!(f, "INCOMPLETE"),
             Some(fidl::EntryState::Reachable) => write!(f, "REACHABLE"),
