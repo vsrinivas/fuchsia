@@ -95,16 +95,3 @@ dart_tool("fuchsia_tester") {
 
   non_dart_deps = [ "$flutter_root/shell" ]
 }
-
-dart_tool("fuchsia_attach") {
-  package_name = "fuchsia_attach"
-  main_dart = "bin/fuchsia_attach.dart"
-
-  disable_analysis = true
-  disable_metadata_entry = true
-  disable_source_verification = true
-
-  deps = [ ":flutter_tools" ]
-
-  non_dart_deps = [ "//third_party/flutter/frontend_server:frontend_server_tool_snapshot($host_toolchain)" ]
-}
