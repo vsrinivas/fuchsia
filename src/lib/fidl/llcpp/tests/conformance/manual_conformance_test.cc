@@ -125,6 +125,40 @@ TEST(PrimitiveInXUnionInStruct, Success) {
   }
 }
 
+TEST(SampleXUnion, Success) {
+  // clang-format off
+  const auto expected = std::vector<uint8_t>{
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // xunion header
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes; num handles
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope data present
+      0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00,  // envelope content
+  };
+  // clang-format on
+  int32_t integer = 0xdeadbeef;
+  // encode
+  {
+    llcpp_misc::wire::SampleXUnion xu;
+    xu.set_i(integer);
+    fidl::OwnedEncodedMessage<llcpp_misc::wire::SampleXUnion> encoded(&xu);
+    ASSERT_TRUE(encoded.ok()) << encoded.FormatDescription();
+    auto bytes = encoded.GetOutgoingMessage().CopyBytes();
+    EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
+                                                        expected.size()));
+  }
+  // decode
+  {
+    std::vector<uint8_t> encoded_bytes = expected;
+    fidl::DecodedMessage<llcpp_misc::wire::SampleXUnion> decoded(
+        fidl::internal::WireFormatVersion::kV1, encoded_bytes.data(),
+        static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
+    ASSERT_TRUE(decoded.ok());
+    const llcpp_misc::wire::SampleXUnion& xu = *decoded.PrimaryObject();
+    ASSERT_EQ(xu.which(), llcpp_misc::wire::SampleXUnion::Tag::kI);
+    const int32_t& i = xu.i();
+    ASSERT_EQ(i, integer);
+  }
+}
+
 TEST(InlineXUnionInStruct, FailToEncodeAbsentXUnion) {
   llcpp_misc::wire::InlineXUnionInStruct input = {};
   std::string empty_str = "";

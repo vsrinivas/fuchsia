@@ -13,17 +13,19 @@ type Union struct {
 	fidlgen.Strictness
 	fidlgen.Resourceness
 	nameVariants
-	CodingTableType    string
-	AnonymousChildren  []ScopedLayout
-	TagEnum            nameVariants
-	TagUnknown         nameVariants
-	TagInvalid         nameVariants
-	WireOrdinalEnum    name
-	WireInvalidOrdinal name
-	Members            []UnionMember
-	Result             *Result
-	TypeShapeV1        TypeShape
-	TypeShapeV2        TypeShape
+	CodingTableType     string
+	AnonymousChildren   []ScopedLayout
+	TagEnum             nameVariants
+	TagUnknown          nameVariants
+	TagInvalid          nameVariants
+	WireOrdinalEnum     name
+	WireInvalidOrdinal  name
+	Members             []UnionMember
+	BackingBufferTypeV1 string
+	BackingBufferTypeV2 string
+	Result              *Result
+	TypeShapeV1         TypeShape
+	TypeShapeV2         TypeShape
 }
 
 func (*Union) Kind() declKind {
@@ -72,6 +74,12 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 		TagInvalid:         tagEnum.nest("Invalid"),
 		WireOrdinalEnum:    wireOrdinalEnum,
 		WireInvalidOrdinal: wireOrdinalEnum.nest("Invalid"),
+		BackingBufferTypeV1: computeAllocation(
+			TypeShape{val.TypeShapeV1}.MaxTotalSize(), boundednessBounded).
+			BackingBufferType(),
+		BackingBufferTypeV2: computeAllocation(
+			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
+			BackingBufferType(),
 	}
 
 	for _, mem := range val.Members {

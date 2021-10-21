@@ -890,6 +890,8 @@ zx_status_t PrimaryObjectSize(const fidl_type_t* type, uint32_t buffer_size,
     primary_size = FIDL_VERSIONED_VALUE(type->coded_struct().size_v1, type->coded_struct().size_v2);
   } else if (likely(type->type_tag() == kFidlTypeTable)) {
     primary_size = sizeof(fidl_table_t);
+  } else if (likely(type->type_tag() == kFidlTypeXUnion)) {
+    primary_size = FIDL_VERSIONED_VALUE(sizeof(fidl_xunion_t), sizeof(fidl_xunion_v2_t));
   } else {
     set_error("Message must be a struct or a table");
     return ZX_ERR_INVALID_ARGS;
