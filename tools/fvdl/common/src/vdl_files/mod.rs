@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::args::{KillCommand, StartCommand};
 use crate::device::DeviceSpec;
 use crate::portpicker::{is_free_tcp_port, pick_unused_port, Port};
 use crate::tools::HostTools;
 use crate::types::{get_sdk_data_dir, read_env_path, ImageFiles, InTreePaths, SSHKeys, VDLArgs};
-
 use crate::vdl_proto_parser::get_emu_pid;
+
 use ansi_term::Colour::*;
 use anyhow::Result;
 use errors::ffx_bail;
-use fvdl_emulator_kill_args::KillCommand;
-use fvdl_emulator_start_args::StartCommand;
 use regex::Regex;
 use shared_child::SharedChild;
 use signal_hook;
@@ -27,8 +26,6 @@ use std::sync::Arc;
 use std::thread;
 use std::time;
 use tempfile::{Builder, TempDir};
-
-mod remote;
 
 static ANALYTICS_ENV_VAR: &str = "FVDL_INVOKER";
 static DEFAULT_SSH_PORT: u16 = 8022;

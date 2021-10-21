@@ -20,9 +20,6 @@ async fn process_command(command: VDLCommand, is_sdk: bool) -> Result<()> {
         VDLCommand::Kill(stop_command) => {
             VDLFiles::new(is_sdk, false)?.stop_vdl(&stop_command).await?;
         }
-        VDLCommand::Remote(remote_command) => {
-            VDLFiles::new(is_sdk, false)?.remote_emulator(&remote_command)?;
-        }
     }
     Ok(())
 }
