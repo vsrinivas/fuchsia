@@ -39,6 +39,9 @@ Options:
       This file lists all source files needed for this crate.
       [default: this is inferred from --emit=dep-info=FILE]
 
+  --compare: In this mode, build locally and remotely (sequentially) and
+      compare the outputs, failing if there are any differences.
+
   All other options before -- are forwarded to rewrapper.
 
 If the rust-command contains --remote-inputs=..., those will be interpreted
@@ -57,6 +60,7 @@ EOF
 local_only=0
 dry_run=0
 verbose=0
+compare=0
 log=0
 rewrapper_options=()
 
@@ -81,6 +85,7 @@ do
     --dry-run) dry_run=1 ;;
     --local) local_only=1 ;;
     --verbose|-v) verbose=1 ;;
+    --compare) compare=1 ;;
     --log) log=1 ;;
     --project-root=*) project_root="$optarg" ;;
     --project-root) prev_opt=project_root ;;
@@ -521,6 +526,9 @@ test "${#linker[@]}" = 0 || {
   # to be able to use lld.
   lld=( "$(dirname "${linker[0]}")"/ld.lld )
 
+  objdump="$clang_dir_local"/bin/llvm-objdump
+  readelf="$clang_dir_local"/bin/llvm-readelf
+
   clang_lib_triple="$target_triple"
   case "$target_triple" in
     x86_64-fuchsia) clang_lib_triple="x86_64-unknown-fuchsia" ;;
@@ -701,6 +709,99 @@ EOF
   then
     print_var "Error: Forbidden absolute paths in remote-generated depfile" "${abs_deps[@]}"
   fi
+}
+
+# Diff two files, run through a command: diff -u <(command $1) <(command $2)
+# Usage: diff_with command [options] -- input1 input2
+function diff_with() {
+  local tool
+  local inputs
+  tool=()
+  for token in "$@"
+  do
+    case "$token" in
+      --) shift; break ;;
+      *) tool+=("$token") ;;
+    esac
+    shift
+  done
+
+  # The rest of "$@" are input files.
+  test "$#" = 2 || {
+    echo "diff_with: Expected two inputs, but got $#."
+    exit 1
+  }
+
+  diff -u <("${tool[@]}" "$1") <("${tool[@]}" "$2")
+}
+
+# In compare mode, also build locally and compare outputs.
+# Fail if any differences are found.
+test "$status" -ne 0 || test "$compare" = 0 || {
+  # Backup remote outputs.
+  for f in "${outputs[@]}"
+  do
+    out_rel="${f#$build_subdir/}"
+    mv "$out_rel"{,.remote}
+  done
+
+  # Run locally.
+  "${rustc_command[@]}" || {
+    status=$?
+    echo "Local command failed for comparison: ${rustc_command[@]}"
+    exit "$status"
+  }
+
+  # Compare outputs.
+  output_diffs=()
+  for f in "${outputs[@]}"
+  do
+    out_rel="${f#$build_subdir/}"
+    if cmp "$out_rel"{,.remote}
+    then
+      # Reclaim space when outputs match.
+      rm -f "$out_rel".remote
+    else
+      # cmp already reports that files differ.
+      output_diffs+=("$out_rel")
+    fi
+  done
+
+  diff_limit=20
+  test "${#output_diffs[@]}" = 0 || {
+    echo "*** Differences between local and remote build outputs found. ***"
+    for f in "${output_diffs[@]}"
+    do
+      echo "  $build_subdir/$f vs."
+      echo "    $build_subdir/$f.remote"
+      echo
+      case "$f" in
+        *.d | *.map)
+          echo "text diff (first $diff_limit lines):"
+          diff -u "$f"{,.remote} | head -n "$diff_limit"
+          ;;
+        *)
+          # Intended for binaries (rlibs, executables).
+          test "${#linker[@]}" = 0 || {
+            echo "objdump-diff (first $diff_limit lines):"
+            diff_with "$objdump" --full-contents -- "$f"{,.remote} | head -n "$diff_limit"
+            echo
+            echo "readelf-diff (first $diff_limit lines):"
+            diff_with "$readelf" -a -- "$f"{,.remote} | head -n "$diff_limit"
+            echo
+          }
+          echo "nm-diff (first $diff_limit lines):"
+          diff_with nm -- "$f"{,.remote} | head -n "$diff_limit"
+          echo
+          echo "strings-diff (first $diff_limit lines):"
+          diff_with strings -- "$f"{,.remote} | head -n "$diff_limit"
+          ;;
+      esac
+      echo
+      echo "------------------------------------"
+    done
+    status=1
+  }
 }
 
 exit "$status"

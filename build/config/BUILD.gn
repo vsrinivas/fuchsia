@@ -214,8 +214,11 @@ config("relative_paths") {
     ]
   }
 
-  # Do not pass --remap-path-prefix because its absolute path argument causes
-  # object difference when built from different environments.
+  # `-Zremap-cwd-prefix` ensures that absolute paths do not leak into
+  # outputs for universal reproducibility while keeping the command line
+  # free of absolute paths for remote caching benefit.
+  # Available since: https://github.com/rust-lang/rust/pull/87320
+  rustflags = [ "-Zremap-cwd-prefix=." ]
 }
 
 config("debug") {
