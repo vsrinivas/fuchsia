@@ -63,6 +63,7 @@ unified_only = [
   "default-exception-handler",  # needs job tree w/o exception handler.
   "debuglog:unified-only",
   "interrupt",
+  "next-vdso",
   "profile",
   "resource",
   "system-event",
@@ -130,6 +131,7 @@ zbi_test("core-tests") {
 
   args = [
     "userboot=test/core-standalone-test",
+    "kernel.vdso.always_use_next=true",
     "kernel.enable-debugging-syscalls=true",
     "kernel.ram.reserve.test=0x8000,0xXXXXXXXXXXXXXXXX",
   ]
@@ -161,6 +163,7 @@ if (current_cpu == "x64") {
     args = [
       "userboot=test/core-standalone-test",
       "kernel.wallclock=hpet",
+      "kernel.vdso.always_use_next=true",
       "kernel.enable-debugging-syscalls=true",
       "kernel.ram.reserve.test=0x8000,0xXXXXXXXXXXXXXXXX",
     ]

@@ -227,6 +227,7 @@ if (is_kernel) {
       ":rodso",
       ":userboot-code.h",
       ":userboot.image",
+      "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/cmdline",
       "//zircon/kernel/lib/console",
       "//zircon/kernel/lib/counters",

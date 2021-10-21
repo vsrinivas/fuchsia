@@ -306,6 +306,11 @@ If set to "none", the kernel debug serial port will be disabled and will not
 be reserved, allowing the default serial port to be used outside the kernel.
 )""")
 
+DEFINE_OPTION("kernel.vdso.always_use_next", bool, always_use_next_vdso, {false}, R"""(
+If this option is set, the kernel will supply userspace with the "next" vDSO
+rather than the "stable" vDSO as the default vDSO.
+)""")
+
 DEFINE_OPTION("vdso.ticks_get_force_syscall", bool, vdso_ticks_get_force_syscall, {false}, R"""(
 If this option is set, the `zx_ticks_get` vDSO call will be forced to be a true
 syscall, even if the hardware cycle counter registers are accessible from

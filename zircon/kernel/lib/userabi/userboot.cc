@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/counters.h>
@@ -362,6 +363,9 @@ void userboot_init(uint) {
     ASSERT(handles[kFirstVdso + i]);
   }
   DEBUG_ASSERT(handles[kFirstVdso + 1]->dispatcher() == vdso->vmo());
+  if (gBootOptions->always_use_next_vdso) {
+    std::swap(handles[kFirstVdso], handles[kFirstVdso + 1]);
+  }
   bootstrap_vmos(handles);
 
   // Make the channel that will hold the message.

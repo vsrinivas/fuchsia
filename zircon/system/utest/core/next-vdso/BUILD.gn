@@ -1,0 +1,14 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("next-vdso") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+
+  testonly = true
+  sources = [ "next-vdso.cc" ]
+  public_deps = [
+    "//src/zircon/lib/zircon",
+    "//zircon/system/ulib/zxtest",
+  ]
+}

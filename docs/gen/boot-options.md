@@ -317,6 +317,12 @@ a reserved resource and may not be used outside of the kernel.
 If set to "none", the kernel debug serial port will be disabled and will not
 be reserved, allowing the default serial port to be used outside the kernel.
 
+### kernel.vdso.always_use_next=\<bool>
+**Default:** `false`
+
+If this option is set, the kernel will supply userspace with the "next" vDSO
+rather than the "stable" vDSO as the default vDSO.
+
 ### vdso.ticks_get_force_syscall=\<bool>
 **Default:** `false`
 
