@@ -24,7 +24,7 @@ use netstack_testing_common::realms::{
     constants, KnownServiceProvider, Manager, Netstack2, TestSandboxExt as _,
 };
 use netstack_testing_common::{
-    try_all, try_any, wait_for_component_stopped, wait_for_non_loopback_interface_up, Result,
+    try_all, try_any, wait_for_component_stopped, wait_for_non_loopback_interface_up,
     ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
@@ -32,8 +32,8 @@ use netstack_testing_macros::variants_test;
 /// Test that NetCfg discovers a newly added device and it adds the device
 /// to the Netstack.
 #[variants_test]
-async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
-    let sandbox = netemul::TestSandbox::new().context("create sandbox")?;
+async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox
         .create_netstack_realm_with::<Netstack2, _, _>(
             name,
@@ -45,22 +45,21 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
                 KnownServiceProvider::SecureStash,
             ],
         )
-        .context("create netstack realm")?;
+        .expect("create netstack realm");
 
     // Add a device to the realm.
-    let endpoint = sandbox.create_endpoint::<E, _>(name).await.context("create endpoint")?;
-    let () = endpoint.set_link_up(true).await.context("set link up")?;
+    let endpoint = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
+    let () = endpoint.set_link_up(true).await.expect("set link up");
     let endpoint_mount_path = E::dev_path("ep");
     let endpoint_mount_path = endpoint_mount_path.as_path();
-    let () = realm
-        .add_virtual_device(&endpoint, endpoint_mount_path)
-        .await
-        .with_context(|| format!("add virtual device {}", endpoint_mount_path.display()))?;
+    let () = realm.add_virtual_device(&endpoint, endpoint_mount_path).await.unwrap_or_else(|e| {
+        panic!("add virtual device {}: {:?}", endpoint_mount_path.display(), e)
+    });
 
     // Make sure the Netstack got the new device added.
     let interface_state = realm
         .connect_to_protocol::<net_interfaces::StateMarker>()
-        .context("connect to fuchsia.net.interfaces/State service")?;
+        .expect("connect to fuchsia.net.interfaces/State service");
     let wait_for_netmgr =
         wait_for_component_stopped(&realm, constants::netcfg::COMPONENT_NAME, None).fuse();
     futures::pin_mut!(wait_for_netmgr);
@@ -71,18 +70,17 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
         ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
     )
     .await
-    .context("wait for non loopback interface")?;
+    .expect("wait for non loopback interface");
 
-    realm
-        .remove_virtual_device(endpoint_mount_path)
-        .await
-        .with_context(|| format!("remove virtual device {}", endpoint_mount_path.display()))
+    let () = realm.remove_virtual_device(endpoint_mount_path).await.unwrap_or_else(|e| {
+        panic!("remove virtual device {}: {:?}", endpoint_mount_path.display(), e)
+    });
 }
 
 /// Tests that stable interface name conflicts are handled gracefully.
 #[variants_test]
-async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
-    let sandbox = netemul::TestSandbox::new().context("create sandbox")?;
+async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox
         .create_netstack_realm_with::<Netstack2, _, _>(
             name,
@@ -94,14 +92,14 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
                 KnownServiceProvider::SecureStash,
             ],
         )
-        .context("create netstack realm")?;
+        .expect("create netstack realm");
 
     let wait_for_netmgr =
         wait_for_component_stopped(&realm, constants::netcfg::COMPONENT_NAME, None).fuse();
     futures::pin_mut!(wait_for_netmgr);
     let netstack = realm
         .connect_to_protocol::<netstack::NetstackMarker>()
-        .context("connect to netstack service")?;
+        .expect("connect to netstack service");
 
     // Add a device to the realm and wait for it to be added to the netstack.
     //
@@ -115,17 +113,16 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
             netemul_network::EndpointConfig { mtu: 1500, mac: mac(), backing: E::NETEMUL_BACKING },
         )
         .await
-        .context("create ethx7")?;
-    let () = ethx7.set_link_up(true).await.context("set link up")?;
+        .expect("create ethx7");
+    let () = ethx7.set_link_up(true).await.expect("set link up");
     let endpoint_mount_path = E::dev_path("ep1");
     let endpoint_mount_path = endpoint_mount_path.as_path();
-    let () = realm
-        .add_virtual_device(&ethx7, endpoint_mount_path)
-        .await
-        .with_context(|| format!("add virtual device1 {}", endpoint_mount_path.display()))?;
+    let () = realm.add_virtual_device(&ethx7, endpoint_mount_path).await.unwrap_or_else(|e| {
+        panic!("add virtual device1 {}: {:?}", endpoint_mount_path.display(), e)
+    });
     let interface_state = realm
         .connect_to_protocol::<net_interfaces::StateMarker>()
-        .context("connect to fuchsia.net.interfaces/State service")?;
+        .expect("connect to fuchsia.net.interfaces/State service");
     let (id_ethx7, name_ethx7) = wait_for_non_loopback_interface_up(
         &interface_state,
         &mut wait_for_netmgr,
@@ -133,7 +130,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
         ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
     )
     .await
-    .context("wait for first non loopback interface")?;
+    .expect("wait for first non loopback interface");
     assert_eq!(
         &name_ethx7, "ethx7",
         "first interface should use a stable name based on its MAC address"
@@ -142,8 +139,8 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
     // Create an interface that the network manager does not know about that will cause a
     // name conflict with the first temporary name.
     let etht0 =
-        sandbox.create_endpoint::<netemul::Ethernet, _>("etht0").await.context("create eth0")?;
-    let () = etht0.set_link_up(true).await.context("set link up")?;
+        sandbox.create_endpoint::<netemul::Ethernet, _>("etht0").await.expect("create eth0");
+    let () = etht0.set_link_up(true).await.expect("set link up");
     let name = "etht0";
     let netstack_id_etht0 = netstack
         .add_ethernet_device(
@@ -156,15 +153,15 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
             etht0
                 .get_ethernet()
                 .await
-                .context("netstack.add_ethernet_device requires an Ethernet endpoint")?,
+                .expect("netstack.add_ethernet_device requires an Ethernet endpoint"),
         )
         .await
-        .context("add_ethernet_device FIDL error")?
+        .expect("add_ethernet_device FIDL error")
         .map_err(fuchsia_zircon::Status::from_raw)
-        .context("add_ethernet_device error")?;
+        .expect("add_ethernet_device error");
     let () = netstack
         .set_interface_status(netstack_id_etht0, true /* enabled */)
-        .context("set interface status FIDL error")?;
+        .expect("set interface status FIDL error");
     let (id_etht0, name_etht0) = wait_for_non_loopback_interface_up(
         &interface_state,
         &mut wait_for_netmgr,
@@ -172,7 +169,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
         ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
     )
     .await
-    .context("wait for second non loopback interface")?;
+    .expect("wait for second non loopback interface");
     assert_eq!(id_etht0, u64::from(netstack_id_etht0));
     assert_eq!(&name_etht0, "etht0");
 
@@ -185,14 +182,13 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
             netemul_network::EndpointConfig { mtu: 1500, mac: mac(), backing: E::NETEMUL_BACKING },
         )
         .await
-        .context("create etht1")?;
-    let () = etht1.set_link_up(true).await.context("set link up")?;
+        .expect("create etht1");
+    let () = etht1.set_link_up(true).await.expect("set link up");
     let endpoint_mount_path = E::dev_path("ep2");
     let endpoint_mount_path = endpoint_mount_path.as_path();
-    let () = realm
-        .add_virtual_device(&etht1, endpoint_mount_path)
-        .await
-        .with_context(|| format!("add virtual device2 {}", endpoint_mount_path.display()))?;
+    let () = realm.add_virtual_device(&etht1, endpoint_mount_path).await.unwrap_or_else(|e| {
+        panic!("add virtual device2 {}: {:?}", endpoint_mount_path.display(), e)
+    });
     let (id_etht1, name_etht1) = wait_for_non_loopback_interface_up(
         &interface_state,
         &mut wait_for_netmgr,
@@ -200,7 +196,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
         ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
     )
     .await
-    .context("wait for third non loopback interface")?;
+    .expect("wait for third non loopback interface");
     assert_ne!(id_ethx7, id_etht1, "interface IDs should be different");
     assert_ne!(id_etht0, id_etht1, "interface IDs should be different");
     assert_eq!(
@@ -211,8 +207,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
     // Block on destruction of the test realm before we allow test interfaces to be cleaned up.
     // This avoids test interfaces being removed out from under components still using them, which
     // can cause spurious errors.
-    let () = realm.shutdown().await.context("failed to shutdown realm")?;
-    Ok(())
+    let () = realm.shutdown().await.expect("failed to shutdown realm");
 }
 
 /// Make sure the DHCP server is configured to start serving requests when NetCfg discovers
@@ -221,7 +216,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
 /// Also make sure that a new WLAN AP interface may be added after a previous interface has been
 /// removed from the netstack.
 #[variants_test]
-async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
+async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) {
     // Use a large timeout to check for resolution.
     //
     // These values effectively result in a large timeout of 60s which should avoid
@@ -232,16 +227,16 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
     const RETRY_COUNT: u64 = 120;
 
     /// Check if the DHCP server is started.
-    async fn check_dhcp_status(dhcp_server: &dhcp::Server_Proxy, started: bool) -> Result {
+    async fn check_dhcp_status(dhcp_server: &dhcp::Server_Proxy, started: bool) {
         for _ in 0..RETRY_COUNT {
             let () = fuchsia_async::Timer::new(POLL_WAIT.after_now()).await;
 
-            if started == dhcp_server.is_serving().await.context("query server status request")? {
-                return Ok(());
+            if started == dhcp_server.is_serving().await.expect("query server status request") {
+                return;
             }
         }
 
-        Err(anyhow::anyhow!("timed out checking DHCP server status"))
+        panic!("timed out checking DHCP server status");
     }
 
     /// Make sure the DHCP server is configured to start serving requests when NetCfg discovers
@@ -253,7 +248,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
         sandbox: &'a netemul::TestSandbox,
         realm: &netemul::TestRealm<'a>,
         offset: u8,
-    ) -> Result {
+    ) {
         // These constants are all hard coded in NetCfg for the WLAN AP interface and
         // the DHCP server.
         const DHCP_LEASE_TIME: u32 = 24 * 60 * 60; // 1 day in seconds.
@@ -276,28 +271,29 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
         let network = sandbox
             .create_network(format!("dhcp-server-{}", offset))
             .await
-            .context("create network")?;
+            .expect("create network");
         let wlan_ap = network
             .create_endpoint::<E, _>(format!("wlanif-ap-dhcp-server-{}", offset))
             .await
-            .context("create wlan ap")?;
+            .expect("create wlan ap");
         let path = E::dev_path(&format!("dhcp-server-ep-{}", offset));
         let () = realm
             .add_virtual_device(&wlan_ap, path.as_path())
             .await
-            .with_context(|| format!("add WLAN AP virtual device {}", path.display()))?;
-        let () = wlan_ap.set_link_up(true).await.context("set wlan ap link up")?;
+            .unwrap_or_else(|e| panic!("add WLAN AP virtual device {}: {:?}", path.display(), e));
+        let () = wlan_ap.set_link_up(true).await.expect("set wlan ap link up");
 
         // Make sure the WLAN AP interface is added to the Netstack and is brought up with
         // the right IP address.
         let interface_state = realm
             .connect_to_protocol::<net_interfaces::StateMarker>()
-            .context("connect to fuchsia.net.interfaces/State service")?;
+            .expect("connect to fuchsia.net.interfaces/State service");
         let (watcher, watcher_server) =
-            ::fidl::endpoints::create_proxy::<net_interfaces::WatcherMarker>()?;
+            ::fidl::endpoints::create_proxy::<net_interfaces::WatcherMarker>()
+                .expect("create proxy");
         let () = interface_state
             .get_watcher(net_interfaces::WatcherOptions::EMPTY, watcher_server)
-            .context("failed to initialize interface watcher")?;
+            .expect("failed to initialize interface watcher");
         let mut if_map = HashMap::new();
         let (wlan_ap_id, wlan_ap_name) = fidl_fuchsia_net_interfaces_ext::wait_interface(
             fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
@@ -329,12 +325,12 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
             Err(anyhow::anyhow!("timed out"))
         })
         .await
-        .context("failed to wait for presence of a WLAN AP interface")?;
+        .expect("failed to wait for presence of a WLAN AP interface");
 
         // Check the DHCP server's configured parameters.
         let dhcp_server = realm
             .connect_to_protocol::<dhcp::Server_Marker>()
-            .context("connect to DHCP server service")?;
+            .expect("connect to DHCP server service");
         let checks = [
             (dhcp::ParameterName::IpAddrs, dhcp::Parameter::IpAddrs(vec![INTERFACE_ADDR])),
             (
@@ -368,37 +364,40 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
                 Ok(dhcp_server_ref
                     .get_parameter(*param_name)
                     .await
-                    .with_context(|| format!("get {:?} paramter request", param_name))?
-                    .map_err(zx::Status::from_raw)
-                    .with_context(|| format!("error getting {:?} paramter", param_name))?
+                    .unwrap_or_else(|e| panic!("get {:?} parameter request: {:?}", param_name, e))
+                    .unwrap_or_else(|e| {
+                        panic!(
+                            "error getting {:?} parameter: {}",
+                            param_name,
+                            zx::Status::from_raw(e)
+                        )
+                    })
                     == *param_value)
             }))
             .await
             .with_context(|| format!("{}-th iteration checking DHCP parameters", i))
         }))
         .await
-        .context("checking DHCP parameters")?
+        .expect("checking DHCP parameters")
         {
             // Too many retries.
-            return Err(anyhow::anyhow!("timed out waiting for DHCP server configurations"));
+            panic!("timed out waiting for DHCP server configurations");
         }
 
         // The DHCP server should be started.
-        let () = check_dhcp_status(&dhcp_server, true)
-            .await
-            .context("check DHCP server started after interface added")?;
+        let () = check_dhcp_status(&dhcp_server, true).await;
 
         // Add a host endpoint to the network. It should be configured by the DHCP server.
         let host = network
             .create_endpoint::<E, _>(format!("host-dhcp-client-{}", offset))
             .await
-            .context("create host")?;
+            .expect("create host");
         let path = E::dev_path(&format!("dhcp-client-ep-{}", offset));
         let () = realm
             .add_virtual_device(&host, path.as_path())
             .await
-            .with_context(|| format!("add host virtual device {}", path.display()))?;
-        let () = host.set_link_up(true).await.context("set host link up")?;
+            .unwrap_or_else(|e| panic!("add host virtual device {}: {:?}", path.display(), e));
+        let () = host.set_link_up(true).await.expect("set host link up");
         let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
             fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
             &mut if_map,
@@ -433,30 +432,21 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
             Err(anyhow::anyhow!("timed out"))
         })
         .await
-        .context("wait for host interface to be configured")?;
+        .expect("wait for host interface to be configured");
 
         // Take the interface down, the DHCP server should be stopped.
-        let () = wlan_ap.set_link_up(false).await.context("set wlan ap link down")?;
-        let () = check_dhcp_status(&dhcp_server, false)
-            .await
-            .context("check DHCP server stopped after interface down")?;
+        let () = wlan_ap.set_link_up(false).await.expect("set wlan ap link down");
+        let () = check_dhcp_status(&dhcp_server, false).await;
 
         // Bring the interface back up, the DHCP server should be started.
-        let () = wlan_ap.set_link_up(true).await.context("set wlan ap link up")?;
-        let () = check_dhcp_status(&dhcp_server, true)
-            .await
-            .context("check DHCP server started after interface up")?;
-
+        let () = wlan_ap.set_link_up(true).await.expect("set wlan ap link up");
+        let () = check_dhcp_status(&dhcp_server, true).await;
         // Remove the interface, the DHCP server should be stopped.
         std::mem::drop(wlan_ap);
-        let () = check_dhcp_status(&dhcp_server, false)
-            .await
-            .context("check DHCP server stopped after interface removed")?;
-
-        Ok(())
+        let () = check_dhcp_status(&dhcp_server, false).await;
     }
 
-    let sandbox = netemul::TestSandbox::new().context("create sandbox")?;
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox
         .create_netstack_realm_with::<Netstack2, _, _>(
             name,
@@ -468,7 +458,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
                 KnownServiceProvider::SecureStash,
             ],
         )
-        .context("create netstack realm")?;
+        .expect("create netstack realm");
     let wait_for_netmgr =
         wait_for_component_stopped(&realm, constants::netcfg::COMPONENT_NAME, None).fuse();
     futures::pin_mut!(wait_for_netmgr);
@@ -479,16 +469,13 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
         let test_fut = wlan_ap_dhcp_server_inner::<E>(&sandbox, &realm, i).fuse();
         futures::pin_mut!(test_fut);
         let () = futures::select! {
-            test_res = test_fut => test_res,
+            () = test_fut => {},
             stopped_event = wait_for_netmgr => {
-                Err(anyhow::anyhow!(
+                panic!(
                     "NetCfg unexpectedly exited with exit status = {:?}",
                     stopped_event
-                ))
+                );
             }
-        }
-        .with_context(|| format!("test {}-th interface", i))?;
+        };
     }
-
-    Ok(())
 }
