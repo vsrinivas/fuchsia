@@ -1,3 +1,98 @@
 {
-    // Core shard stub for soft migration.
+    children: [
+        {
+            name: "system-update-checker",
+            url: "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cm",
+            startup: "eager",
+            on_terminate: "reboot",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.update.installer.Installer",
+            from: "#system-updater",
+            to: [ "#system-update-checker" ],
+        },
+        {
+            protocol: [
+                "fuchsia.update.channel.Provider",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
+            ],
+            from: "#system-update-checker",
+            to: "#appmgr",
+        },
+        {
+            protocol: "fuchsia.cobalt.SystemDataUpdater",
+            from: "#cobalt",
+            to: "#system-update-checker",
+        },
+        {
+            protocol: "fuchsia.pkg.PackageResolver",
+            from: "#pkg-resolver",
+            to: "#system-update-checker",
+        },
+        {
+            protocol: "fuchsia.pkg.RepositoryManager",
+            from: "#pkg-resolver",
+            to: "#system-update-checker",
+        },
+        {
+            protocol: "fuchsia.pkg.rewrite.Engine",
+            from: "#pkg-resolver",
+            to: "#system-update-checker",
+        },
+        {
+            directory: "pkgfs",
+            from: "parent",
+            as: "pkgfs-system",
+            to: "#system-update-checker",
+            subdir: "system",
+        },
+        {
+            directory: "pkgfs",
+            from: "parent",
+            as: "pkgfs-packages",
+            to: "#system-update-checker",
+            subdir: "packages",
+        },
+        {
+            directory: "pkgfs",
+            from: "parent",
+            as: "pkgfs-ctl",
+            to: "#system-update-checker",
+            subdir: "ctl",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#system-update-checker",
+            subdir: "system-update-checker",
+        },
+        {
+            protocol: "fuchsia.update.CommitStatusProvider",
+            from: "#system-update-committer",
+            to: "#system-update-checker",
+        },
+
+        // Remove once the misc directory is removed (fxbug.dev/87093)
+        {
+            storage: "tmp",
+            from: "self",
+            to: "#system-update-checker",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#system-update-checker",
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.paver.Paver",
+            ],
+            from: "parent",
+            to: "#system-update-checker",
+        },
+    ],
 }

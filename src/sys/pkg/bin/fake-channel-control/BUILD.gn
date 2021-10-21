@@ -25,3 +25,9 @@ fuchsia_package_with_single_component("fake-channel-control") {
   manifest = "meta/fake-channel-control.cmx"
   deps = [ ":bin" ]
 }
+
+fuchsia_component("fake-channel-control-v2") {
+  component_name = "fake-channel-control"
+  manifest = "meta/fake-channel-control.cml"
+  deps = [ ":bin" ]
+}

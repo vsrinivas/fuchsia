@@ -46,6 +46,7 @@
                 "fuchsia.exception.Handler",
                 "fuchsia.factory.MiscFactoryStoreProvider",
                 "fuchsia.factory.WeaveFactoryStoreProvider",
+                "fuchsia.feedback.ComponentDataRegister",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.hwinfo.Device",
@@ -726,6 +727,20 @@
             protocol: "fuchsia.mediacodec.CodecFactory",
             path: "/svc_for_sys/fuchsia.mediacodec.CodecFactory",
         },
+
+        // From system-update-checker or omaha-client-service
+        {
+            protocol: "fuchsia.update.channel.Provider",
+            path: "/svc_for_sys/fuchsia.update.channel.Provider",
+        },
+        {
+            protocol: "fuchsia.update.channelcontrol.ChannelControl",
+            path: "/svc_for_sys/fuchsia.update.channelcontrol.ChannelControl",
+        },
+        {
+            protocol: "fuchsia.update.Manager",
+            path: "/svc_for_sys/fuchsia.update.Manager",
+        },
     ],
     expose: [
         {
@@ -741,6 +756,7 @@
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.factory.MiscFactoryStoreProvider",
                 "fuchsia.factory.WeaveFactoryStoreProvider",
+                "fuchsia.feedback.ComponentDataRegister",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.hwinfo.Device",

@@ -1,0 +1,93 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/lib/fuchsia-hyper/hyper_testing.shard.cml" ],
+    children: [
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/test_driver.cm",
+        },
+        {
+            name: "netstack",
+            url: "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/netstack.cm",
+        },
+        {
+            name: "dns_resolver",
+            url: "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/dns_resolver.cm",
+        },
+        {
+            name: "stash2",
+            url: "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/stash2.cm",
+        },
+        {
+            name: "mock_cobalt",
+            url: "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/mock_cobalt.cm",
+        },
+    ],
+    offer: [
+        {
+            storage: "data",
+            from: "parent",
+            to: [
+                "#stash2",
+                "#test_driver",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#mock_cobalt",
+                "#stash2",
+                "#test_driver",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#netstack",
+            to: "#test_driver",
+        },
+        {
+            protocol: [ "fuchsia.stash.Store2" ],
+            from: "#stash2",
+            to: "#test_driver",
+        },
+        {
+            protocol: [ "fuchsia.net.name.Lookup" ],
+            from: "#dns_resolver",
+            to: "#test_driver",
+        },
+        {
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            from: "#mock_cobalt",
+            to: "#test_driver",
+        },
+        {
+            protocol: [ "fuchsia.process.Launcher" ],
+            from: "parent",
+            to: "#test_driver",
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#test_driver",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: "#test_driver",
+        },
+        {
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
+            from: "parent",
+            to: "#test_driver",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test_driver",
+        },
+    ],
+}

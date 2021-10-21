@@ -20,6 +20,7 @@
             name: "system-update-committer",
             url: "fuchsia-pkg://fuchsia.com/system-update-committer#meta/system-update-committer.cm",
             startup: "eager",
+            on_terminate: "reboot",
         },
         {
             name: "last_reboot",

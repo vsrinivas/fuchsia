@@ -5,6 +5,7 @@
 #![cfg(test)]
 use {
     anyhow::anyhow,
+    fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_paver::{self as paver, PaverRequestStream},
     fidl_fuchsia_update::{
         CheckOptions, CheckingForUpdatesData, CommitStatusProviderMarker,
@@ -14,9 +15,10 @@ use {
     },
     fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
     fidl_fuchsia_update_installer_ext as installer, fuchsia_async as fasync,
-    fuchsia_component::{
-        client::{App, AppBuilder},
-        server::{NestedEnvironment, ServiceFs},
+    fuchsia_component::server::ServiceFs,
+    fuchsia_component_test::{
+        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+        RealmInstance,
     },
     fuchsia_pkg_testing::make_packages_json,
     fuchsia_zircon as zx,
@@ -27,14 +29,9 @@ use {
     mock_resolver::MockResolverService,
     mock_verifier::MockVerifierService,
     parking_lot::Mutex,
-    std::{fs::File, sync::Arc},
+    std::sync::Arc,
     tempfile::TempDir,
 };
-
-const SYSTEM_UPDATE_CHECKER_CMX: &str =
-    "fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-checker-for-integration-test.cmx";
-const SYSTEM_UPDATE_COMMITTER_CMX: &str =
-    "fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-committer.cmx";
 
 struct Mounts {
     misc_ota: TempDir,
@@ -76,7 +73,7 @@ impl TestEnvBuilder {
         Self { paver: Some(paver), ..self }
     }
 
-    fn build(self) -> TestEnv {
+    async fn build(self) -> TestEnv {
         let mounts = Mounts::new();
         std::fs::write(
             mounts.pkgfs_system.path().join("meta"),
@@ -84,17 +81,25 @@ impl TestEnvBuilder {
         )
         .expect("write pkgfs/system/meta");
 
-        let mut system_update_committer = AppBuilder::new(SYSTEM_UPDATE_COMMITTER_CMX.to_owned());
-
         let mut fs = ServiceFs::new();
-        fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
-            .add_proxy_service_to::<fidl_fuchsia_update::CommitStatusProviderMarker, _>(
-            system_update_committer.directory_request().unwrap().clone(),
-        );
+        // Add fake directories.
+        let misc = io_util::directory::open_in_namespace(
+            mounts.misc_ota.path().to_str().unwrap(),
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        )
+        .unwrap();
+        let pkgfs_system = io_util::directory::open_in_namespace(
+            mounts.pkgfs_system.path().to_str().unwrap(),
+            io_util::OPEN_RIGHT_READABLE,
+        )
+        .unwrap();
+        fs.dir("misc").add_remote("ota", misc);
+        fs.dir("pkgfs").add_remote("system", pkgfs_system);
 
+        // Setup the mock resolver service.
         let resolver = Arc::new(MockResolverService::new(None));
         let resolver_clone = Arc::clone(&resolver);
-        fs.add_fidl_service(move |stream| {
+        fs.dir("svc").add_fidl_service(move |stream| {
             fasync::Task::spawn(
                 Arc::clone(&resolver_clone)
                     .run_resolver_service(stream)
@@ -103,14 +108,15 @@ impl TestEnvBuilder {
             .detach()
         });
 
+        // Setup the mock installer service.
         let installer = Arc::new(self.installer);
         let installer_clone = Arc::clone(&installer);
-        fs.add_fidl_service(move |stream| {
+        fs.dir("svc").add_fidl_service(move |stream| {
             fasync::Task::spawn(Arc::clone(&installer_clone).run_service(stream)).detach()
         });
-
+        // Setup the mock paver service
         let paver = Arc::new(self.paver.unwrap_or_else(|| MockPaverServiceBuilder::new().build()));
-        fs.add_fidl_service(move |stream: PaverRequestStream| {
+        fs.dir("svc").add_fidl_service(move |stream: PaverRequestStream| {
             fasync::Task::spawn(
                 Arc::clone(&paver)
                     .run_paver_service(stream)
@@ -118,66 +124,131 @@ impl TestEnvBuilder {
             )
             .detach();
         });
-
-        // Set up verifier service.
+        // Setup the mock verifier service.
         let verifier = Arc::new(MockVerifierService::new(|_| Ok(())));
         let verifier_clone = Arc::clone(&verifier);
-        fs.add_fidl_service(move |stream| {
+        fs.dir("svc").add_fidl_service(move |stream| {
             fasync::Task::spawn(Arc::clone(&verifier_clone).run_blobfs_verifier_service(stream))
                 .detach()
         });
 
-        let env = fs
-            .create_salted_nested_environment("system-update-checker_integration_test_env")
-            .expect("nested environment to create successfully");
-        fasync::Task::spawn(fs.collect()).detach();
+        let fs_holder = Mutex::new(Some(fs));
+        let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
+        builder
+            .add_eager_component("system_update_checker",
+                ComponentSource::url("fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-checker.cm")).await.unwrap()
+            .add_eager_component("system_update_committer",
+                ComponentSource::url("fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-committer.cm")).await.unwrap()
+            .add_component("fake_capabilities", ComponentSource::mock(move |mock_handles| {
+            let mut rfs = fs_holder.lock().take().expect("mock component should only be launched once");
+            async {
+                rfs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
+                fasync::Task::spawn(rfs.collect()).detach();
+                Ok(())
+            }.boxed()
+            })).await.unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.logger.LogSink"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![
+                    RouteEndpoint::component("system_update_checker"),
+                    RouteEndpoint::component("system_update_committer"),
+                ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.paver.Paver"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![
+                    RouteEndpoint::component("system_update_checker"),
+                    RouteEndpoint::component("system_update_committer"),
+                ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.update.installer.Installer"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![ RouteEndpoint::component("system_update_checker") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.pkg.PackageResolver"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![ RouteEndpoint::component("system_update_checker")],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.pkg.rewrite.Engine"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![ RouteEndpoint::component("system_update_checker") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.pkg.RepositoryManager"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![ RouteEndpoint::component("system_update_checker") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::directory("pkgfs-system", "/pkgfs/system", fio2::R_STAR_DIR),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![ RouteEndpoint::component("system_update_checker") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::directory("deprecated-misc-storage", "/misc", fio2::RW_STAR_DIR),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![ RouteEndpoint::component("system_update_checker") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.update.channel.Provider"),
+                source: RouteEndpoint::component("system_update_checker"),
+                targets: vec! [ RouteEndpoint::AboveRoot ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.update.channelcontrol.ChannelControl"),
+                source: RouteEndpoint::component("system_update_checker"),
+                targets: vec! [ RouteEndpoint::AboveRoot ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.update.Manager"),
+                source: RouteEndpoint::component("system_update_checker"),
+                targets: vec! [ RouteEndpoint::AboveRoot ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.update.CommitStatusProvider"),
+                source: RouteEndpoint::component("system_update_committer"),
+                targets: vec![
+                        RouteEndpoint::component("system_update_checker"),
+                        RouteEndpoint::AboveRoot,
+                ],
+            }).unwrap();
 
-        let system_update_committer = system_update_committer
-            .spawn(env.launcher())
-            .expect("system-update-committer to launch");
-
-        let system_update_checker = AppBuilder::new(SYSTEM_UPDATE_CHECKER_CMX)
-            .add_dir_to_namespace(
-                "/misc/ota".to_string(),
-                File::open(mounts.misc_ota.path()).expect("/misc/ota tempdir to open"),
-            )
-            .expect("/misc/ota to mount")
-            .add_dir_to_namespace(
-                "/pkgfs/system".to_string(),
-                File::open(mounts.pkgfs_system.path()).expect("/pkgfs/system tempdir to open"),
-            )
-            .expect("/pkgfs/system to mount")
-            .spawn(env.launcher())
-            .expect("system_update_checker to launch");
+        let realm_instance = builder.build().create().await.unwrap();
+        let channel_provider = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<ProviderMarker>()
+            .expect("connect to channel provider");
+        let update_manager = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<ManagerMarker>()
+            .expect("connect to update manager");
+        let commit_status_provider = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<CommitStatusProviderMarker>()
+            .expect("connect to commit status provider");
 
         TestEnv {
-            _env: env,
+            _realm_instance: realm_instance,
             _mounts: mounts,
             proxies: Proxies {
                 resolver,
-                channel_provider: system_update_checker
-                    .connect_to_protocol::<ProviderMarker>()
-                    .expect("connect to channel provider"),
-                update_manager: system_update_checker
-                    .connect_to_protocol::<ManagerMarker>()
-                    .expect("connect to update manager"),
-                commit_status_provider: system_update_committer
-                    .connect_to_protocol::<CommitStatusProviderMarker>()
-                    .expect("connect to commit status provider"),
+                channel_provider,
+                update_manager,
+                commit_status_provider,
                 _verifier: verifier,
             },
-            system_update_checker,
-            system_update_committer,
         }
     }
 }
 
 struct TestEnv {
-    _env: NestedEnvironment,
+    _realm_instance: RealmInstance,
     _mounts: Mounts,
     proxies: Proxies,
-    system_update_checker: App,
-    system_update_committer: App,
 }
 
 impl TestEnv {
@@ -224,7 +295,7 @@ fn progress(fraction_completed: Option<f32>) -> Option<InstallationProgress> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_channel_provider_get_current() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     assert_eq!(
         env.proxies.channel_provider.get_current().await.expect("get_current"),
@@ -234,7 +305,7 @@ async fn test_channel_provider_get_current() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_update_manager_check_now_error_checking_for_update() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     let (client_end, request_stream) =
         fidl::endpoints::create_request_stream().expect("create_request_stream");
@@ -273,7 +344,7 @@ async fn test_update_manager_progress() {
     let (mut sender, receiver) = mpsc::channel(0);
     let installer = MockUpdateInstallerService::builder().states_receiver(receiver).build();
 
-    let env = TestEnvBuilder::new().installer(installer).build();
+    let env = TestEnvBuilder::new().installer(installer).build().await;
 
     env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update").resolve(
         &env.proxies
@@ -390,7 +461,8 @@ async fn test_installation_deferred() {
                 }))
                 .build(),
         )
-        .build();
+        .build()
+        .await;
 
     env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update").resolve(
         &env.proxies
@@ -458,33 +530,4 @@ async fn test_installation_deferred() {
         ],
     )
     .await;
-}
-
-// When the system-update-committer crashes, the system-update-checker should crash as well.
-// TODO(fxbug.dev/66760): remove this since we won't crash the system-update-checker.
-#[fasync::run_singlethreaded(test)]
-async fn test_system_update_checker_crashes_on_commit_status_provider_error() {
-    // Block the paver with a throttle to ensure it never responds to the system-update-committer.
-    // Otherwise, the paver may try to respond (and panic) when the system-update-committer is dead.
-    let (throttle_hook, _throttler) = mphooks::throttle();
-    let mut env = TestEnvBuilder::new()
-        .paver(MockPaverServiceBuilder::new().insert_hook(throttle_hook).build())
-        .build();
-
-    env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update").resolve(
-        &env.proxies
-            .resolver
-            .package("update", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
-            .add_file(
-                "packages.json",
-                make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"]),
-            )
-            .add_file("zbi", "fake zbi"),
-    );
-
-    env.system_update_committer.kill().unwrap();
-
-    env.check_now().await;
-
-    assert!(env.system_update_checker.wait().await.unwrap().exited());
 }

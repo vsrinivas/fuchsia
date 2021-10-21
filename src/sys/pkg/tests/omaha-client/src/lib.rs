@@ -5,6 +5,8 @@
 #![cfg(test)]
 use {
     anyhow::anyhow,
+    diagnostics_reader::{ArchiveReader, /*ComponentSelector, */ Inspect},
+    fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_paver::{self as paver, PaverRequestStream},
     fidl_fuchsia_pkg::{PackageCacheRequestStream, PackageResolverRequestStream},
     fidl_fuchsia_update::{
@@ -15,11 +17,12 @@ use {
         MonitorRequest, MonitorRequestStream, NoUpdateAvailableData, State, UpdateInfo,
     },
     fidl_fuchsia_update_channelcontrol::{ChannelControlMarker, ChannelControlProxy},
-    fidl_fuchsia_update_installer::{InstallerMarker, UpdateNotStartedReason},
+    fidl_fuchsia_update_installer::UpdateNotStartedReason,
     fidl_fuchsia_update_installer_ext as installer, fuchsia_async as fasync,
-    fuchsia_component::{
-        client::{App, AppBuilder},
-        server::{NestedEnvironment, ServiceFs},
+    fuchsia_component::server::ServiceFs,
+    fuchsia_component_test::{
+        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+        RealmInstance,
     },
     fuchsia_inspect::{
         assert_data_tree,
@@ -27,7 +30,7 @@ use {
         testing::{AnyProperty, TreeAssertion},
         tree_assertion,
     },
-    fuchsia_pkg_testing::{get_inspect_hierarchy, make_packages_json},
+    fuchsia_pkg_testing::make_packages_json,
     fuchsia_zircon as zx,
     futures::{
         channel::{mpsc, oneshot},
@@ -44,19 +47,19 @@ use {
     parking_lot::Mutex,
     serde_json::json,
     std::{
-        fs::{self, create_dir, File},
+        fs::{self, create_dir},
         path::PathBuf,
         sync::Arc,
     },
     tempfile::TempDir,
 };
 
-const OMAHA_CLIENT_CMX: &str =
-    "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/omaha-client-service-for-integration-test.cmx";
-const SYSTEM_UPDATER_CMX: &str =
-    "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/system-updater-isolated.cmx";
-const SYSTEM_UPDATE_COMMITTER_CMX: &str =
-    "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/system-update-committer.cmx";
+const OMAHA_CLIENT_CML: &str =
+    "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/omaha-client-service.cm";
+const SYSTEM_UPDATER_CML: &str =
+    "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/system-updater.cm";
+const SYSTEM_UPDATE_COMMITTER_CML: &str =
+    "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/system-update-committer.cm";
 
 struct Mounts {
     _test_dir: TempDir,
@@ -143,17 +146,24 @@ impl TestEnvBuilder {
         Self { crash_reporter: Some(crash_reporter), ..self }
     }
 
-    fn build(self) -> TestEnv {
+    async fn build(self) -> TestEnv {
+        // Add the mount directories to fs service.
         let mounts = Mounts::new();
-
-        let mut system_update_committer = AppBuilder::new(SYSTEM_UPDATE_COMMITTER_CMX.to_owned());
-
         let mut fs = ServiceFs::new();
-        fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
-            .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>()
-            .add_proxy_service_to::<fidl_fuchsia_update::CommitStatusProviderMarker, _>(
-                system_update_committer.directory_request().unwrap().clone(),
-            );
+        let config_data_path = mounts.config_data.clone().into_os_string().into_string().unwrap();
+        let build_info_path = mounts.build_info.clone().into_os_string().into_string().unwrap();
+        let config_data = io_util::directory::open_in_namespace(
+            config_data_path.as_str(),
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        )
+        .unwrap();
+        let build_info = io_util::directory::open_in_namespace(
+            build_info_path.as_str(),
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        )
+        .unwrap();
+        fs.dir("config").add_remote("data", config_data);
+        fs.dir("config").add_remote("build-info", build_info);
 
         let server = OmahaServer::new(self.response);
         let url = server.start().expect("start server");
@@ -168,7 +178,7 @@ impl TestEnvBuilder {
         );
 
         let paver = Arc::new(self.paver.unwrap_or_else(|| MockPaverServiceBuilder::new().build()));
-        fs.add_fidl_service(move |stream: PaverRequestStream| {
+        fs.dir("svc").add_fidl_service(move |stream: PaverRequestStream| {
             fasync::Task::spawn(
                 Arc::clone(&paver)
                     .run_paver_service(stream)
@@ -179,7 +189,7 @@ impl TestEnvBuilder {
 
         let resolver = Arc::new(MockResolverService::new(None));
         let resolver_clone = resolver.clone();
-        fs.add_fidl_service(move |stream: PackageResolverRequestStream| {
+        fs.dir("svc").add_fidl_service(move |stream: PackageResolverRequestStream| {
             let resolver_clone = resolver_clone.clone();
             fasync::Task::spawn(
                 Arc::clone(&resolver_clone)
@@ -191,7 +201,7 @@ impl TestEnvBuilder {
 
         let cache = Arc::new(MockCache::new());
         let cache_clone = cache.clone();
-        fs.add_fidl_service(move |stream: PackageCacheRequestStream| {
+        fs.dir("svc").add_fidl_service(move |stream: PackageCacheRequestStream| {
             fasync::Task::spawn(Arc::clone(&cache_clone).run_cache_service(stream)).detach()
         });
 
@@ -202,7 +212,7 @@ impl TestEnvBuilder {
             send.lock().take().unwrap().send(()).unwrap();
             Ok(())
         })));
-        fs.add_fidl_service(move |stream| {
+        fs.dir("svc").add_fidl_service(move |stream| {
             fasync::Task::spawn(
                 Arc::clone(&reboot_service)
                     .run_reboot_service(stream)
@@ -214,7 +224,7 @@ impl TestEnvBuilder {
         // Set up verifier service.
         let verifier = Arc::new(MockVerifierService::new(|_| Ok(())));
         let verifier_clone = Arc::clone(&verifier);
-        fs.add_fidl_service(move |stream| {
+        fs.dir("svc").add_fidl_service(move |stream| {
             fasync::Task::spawn(Arc::clone(&verifier_clone).run_blobfs_verifier_service(stream))
                 .detach()
         });
@@ -224,115 +234,325 @@ impl TestEnvBuilder {
             self.crash_reporter.unwrap_or_else(|| MockCrashReporterService::new(|_| Ok(()))),
         );
         let crash_reporter_clone = Arc::clone(&crash_reporter);
-        fs.add_fidl_service(move |stream| {
+        fs.dir("svc").add_fidl_service(move |stream| {
             fasync::Task::spawn(
                 Arc::clone(&crash_reporter_clone).run_crash_reporter_service(stream),
             )
             .detach()
         });
 
-        let nested_environment_label = Self::make_nested_environment_label();
+        let mut use_real_system_updater = true;
+        if let Some(installer) = self.installer {
+            use_real_system_updater = false;
+            let installer = Arc::new(installer);
+            let installer_clone = Arc::clone(&installer);
+            fs.dir("svc").add_fidl_service(move |stream| {
+                fasync::Task::spawn(Arc::clone(&installer_clone).run_service(stream)).detach()
+            });
+        }
 
-        let (system_updater, env) = match self.installer {
-            Some(installer) => {
-                let installer = Arc::new(installer);
-                let installer_clone = Arc::clone(&installer);
-                fs.add_fidl_service(move |stream| {
-                    fasync::Task::spawn(Arc::clone(&installer_clone).run_service(stream)).detach()
-                });
-                let env = fs
-                    .create_nested_environment(&nested_environment_label)
-                    .expect("nested environment to create successfully");
-                (SystemUpdater::Mock(installer), env)
-            }
-            None => {
-                let mut system_updater = AppBuilder::new(SYSTEM_UPDATER_CMX)
-                    .add_dir_to_namespace(
-                        "/config/build-info".into(),
-                        File::open(&mounts.build_info).expect("open build_info"),
-                    )
-                    .unwrap();
-                fs.add_proxy_service_to::<InstallerMarker, _>(
-                    system_updater.directory_request().unwrap().clone(),
-                );
+        let fs_holder = Mutex::new(Some(fs));
+        let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
+        builder
+            .add_eager_component("omaha_client_service", ComponentSource::url(OMAHA_CLIENT_CML))
+            .await
+            .unwrap()
+            .add_eager_component(
+                "system_update_committer",
+                ComponentSource::url(SYSTEM_UPDATE_COMMITTER_CML),
+            )
+            .await
+            .unwrap()
+            .add_component(
+                "fake_capabilities",
+                ComponentSource::mock(move |mock_handles| {
+                    let mut rfs = fs_holder
+                        .lock()
+                        .take()
+                        .expect("mock component should only be launched once");
+                    async {
+                        rfs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
+                        fasync::Task::spawn(rfs.collect()).detach();
+                        Ok(())
+                    }
+                    .boxed()
+                }),
+            )
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::directory("config-data", "/config/data", fio2::R_STAR_DIR),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![
+                    RouteEndpoint::component("omaha_client_service"),
+                    RouteEndpoint::component("system_update_committer"),
+                ],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::directory(
+                    "build-info",
+                    "/config/build-info",
+                    fio2::R_STAR_DIR,
+                ),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![RouteEndpoint::component("omaha_client_service")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::directory(
+                    "root-ssl-certificates",
+                    "/config/ssl",
+                    fio2::R_STAR_DIR,
+                ),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::component("omaha_client_service")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.logger.LogSink"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![
+                    RouteEndpoint::component("omaha_client_service"),
+                    RouteEndpoint::component("system_update_committer"),
+                ],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.ui.activity.Provider"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![RouteEndpoint::component("omaha_client_service")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.paver.Paver"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![
+                    RouteEndpoint::component("omaha_client_service"),
+                    RouteEndpoint::component("system_update_committer"),
+                ],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.update.verify.BlobfsVerifier"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![RouteEndpoint::component("system_update_committer")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.posix.socket.Provider"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![
+                    RouteEndpoint::component("omaha_client_service"),
+                    RouteEndpoint::component("system_update_committer"),
+                ],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.net.name.Lookup"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![
+                    RouteEndpoint::component("omaha_client_service"),
+                    RouteEndpoint::component("system_update_committer"),
+                ],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.stash.Store2"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::component("omaha_client_service")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.cobalt.LoggerFactory"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::component("omaha_client_service")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.feedback.CrashReporter"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![RouteEndpoint::component("omaha_client_service")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.feedback.ComponentDataRegister"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![RouteEndpoint::component("omaha_client_service")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.hardware.power.statecontrol.Admin"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![
+                    RouteEndpoint::component("omaha_client_service"),
+                    RouteEndpoint::component("system_update_committer"),
+                ],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.pkg.PackageResolver"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![RouteEndpoint::component("omaha_client_service")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.pkg.rewrite.Engine"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![RouteEndpoint::component("omaha_client_service")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.pkg.RepositoryManager"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![RouteEndpoint::component("omaha_client_service")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.update.CommitStatusProvider"),
+                source: RouteEndpoint::component("system_update_committer"),
+                targets: vec![
+                    RouteEndpoint::component("omaha_client_service"),
+                    RouteEndpoint::AboveRoot,
+                ],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.update.channel.Provider"),
+                source: RouteEndpoint::component("omaha_client_service"),
+                targets: vec![RouteEndpoint::AboveRoot],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.update.channelcontrol.ChannelControl"),
+                source: RouteEndpoint::component("omaha_client_service"),
+                targets: vec![RouteEndpoint::AboveRoot],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.update.Manager"),
+                source: RouteEndpoint::component("omaha_client_service"),
+                targets: vec![RouteEndpoint::AboveRoot],
+            })
+            .unwrap();
 
-                let env = fs
-                    .create_nested_environment(&nested_environment_label)
-                    .expect("nested environment to create successfully");
-                (
-                    SystemUpdater::Real(
-                        system_updater.spawn(env.launcher()).expect("system_updater to launch"),
+        if use_real_system_updater {
+            builder
+                .add_eager_component("system_updater", ComponentSource::url(SYSTEM_UPDATER_CML))
+                .await
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::directory(
+                        "config-data",
+                        "/config/data",
+                        fio2::R_STAR_DIR,
                     ),
-                    env,
-                )
-            }
-        };
-        fasync::Task::spawn(fs.collect()).detach();
+                    source: RouteEndpoint::component("fake_capabilities"),
+                    targets: vec![RouteEndpoint::component("system_updater")],
+                })
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::storage("data", "/data"),
+                    source: RouteEndpoint::AboveRoot,
+                    targets: vec![RouteEndpoint::component("system_updater")],
+                })
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::protocol("fuchsia.cobalt.LoggerFactory"),
+                    source: RouteEndpoint::AboveRoot,
+                    targets: vec![RouteEndpoint::component("system_updater")],
+                })
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::protocol("fuchsia.logger.LogSink"),
+                    source: RouteEndpoint::AboveRoot,
+                    targets: vec![RouteEndpoint::component("system_updater")],
+                })
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::protocol("fuchsia.update.installer.Installer"),
+                    source: RouteEndpoint::component("system_updater"),
+                    targets: vec![RouteEndpoint::component("omaha_client_service")],
+                })
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::protocol("fuchsia.paver.Paver"),
+                    source: RouteEndpoint::component("fake_capabilities"),
+                    targets: vec![RouteEndpoint::component("system_updater")],
+                })
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::protocol("fuchsia.pkg.PackageCache"),
+                    source: RouteEndpoint::component("fake_capabilities"),
+                    targets: vec![RouteEndpoint::component("system_updater")],
+                })
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::protocol("fuchsia.pkg.PackageResolver"),
+                    source: RouteEndpoint::component("fake_capabilities"),
+                    targets: vec![RouteEndpoint::component("system_updater")],
+                })
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::protocol("fuchsia.hardware.power.statecontrol.Admin"),
+                    source: RouteEndpoint::component("fake_capabilities"),
+                    targets: vec![RouteEndpoint::component("system_updater")],
+                })
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::directory(
+                        "build-info",
+                        "/config/build-info",
+                        fio2::R_STAR_DIR,
+                    ),
+                    source: RouteEndpoint::component("fake_capabilities"),
+                    targets: vec![RouteEndpoint::component("system_updater")],
+                })
+                .unwrap();
+        } else {
+            builder
+                .add_route(CapabilityRoute {
+                    capability: Capability::protocol("fuchsia.update.installer.Installer"),
+                    source: RouteEndpoint::component("fake_capabilities"),
+                    targets: vec![RouteEndpoint::component("omaha_client_service")],
+                })
+                .unwrap();
+        }
 
-        let system_update_committer = system_update_committer
-            .spawn(env.launcher())
-            .expect("system-update-committer to launch");
-
-        let omaha_client = AppBuilder::new(OMAHA_CLIENT_CMX)
-            .add_dir_to_namespace(
-                "/config/data".into(),
-                File::open(&mounts.config_data).expect("open config_data"),
-            )
-            .unwrap()
-            .add_dir_to_namespace(
-                "/config/build-info".into(),
-                File::open(&mounts.build_info).expect("open build_info"),
-            )
-            .unwrap()
-            .spawn(env.launcher())
-            .expect("omaha_client to launch");
+        let realm_instance = builder.build().create().await.unwrap();
+        let channel_control = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<ChannelControlMarker>()
+            .expect("connect to channel control provider");
+        let update_manager = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<ManagerMarker>()
+            .expect("connect to update manager");
+        let commit_status_provider = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<CommitStatusProviderMarker>()
+            .expect("connect to commit status provider");
 
         TestEnv {
-            _env: env,
+            realm_instance,
             _mounts: mounts,
             proxies: Proxies {
                 _cache: cache,
                 resolver,
-                update_manager: omaha_client
-                    .connect_to_protocol::<ManagerMarker>()
-                    .expect("connect to update manager"),
-                channel_control: omaha_client
-                    .connect_to_protocol::<ChannelControlMarker>()
-                    .expect("connect to channel control"),
-                commit_status_provider: system_update_committer
-                    .connect_to_protocol::<CommitStatusProviderMarker>()
-                    .expect("connect to commit status provider"),
+                update_manager,
+                channel_control,
+                commit_status_provider,
                 _verifier: verifier,
             },
-            omaha_client,
-            _system_updater: system_updater,
-            system_update_committer,
-            nested_environment_label,
             reboot_called,
         }
     }
-
-    fn make_nested_environment_label() -> String {
-        let mut salt = [0; 4];
-        zx::cprng_draw(&mut salt[..]);
-        // omaha_client_integration_test_env_xxxxxxxx is too long and gets truncated.
-        format!("omaha_client_test_env_{}", hex::encode(&salt))
-    }
-}
-
-enum SystemUpdater {
-    Real(App),
-    Mock(Arc<MockUpdateInstallerService>),
 }
 
 struct TestEnv {
-    _env: NestedEnvironment,
+    realm_instance: RealmInstance,
     _mounts: Mounts,
     proxies: Proxies,
-    omaha_client: App,
-    _system_updater: SystemUpdater,
-    system_update_committer: App,
-    nested_environment_label: String,
     reboot_called: oneshot::Receiver<()>,
 }
 
@@ -363,11 +583,20 @@ impl TestEnv {
     }
 
     async fn inspect_hierarchy(&self) -> DiagnosticsHierarchy {
-        get_inspect_hierarchy(
-            &self.nested_environment_label,
-            "omaha-client-service-for-integration-test.cmx",
-        )
-        .await
+        let nested_environment_label = format!(
+            "test_driver/fuchsia_component_test_collection\\:{}/omaha_client_service:root",
+            self.realm_instance.root.child_name()
+        );
+        ArchiveReader::new()
+            .add_selector(nested_environment_label.to_string())
+            .snapshot::<Inspect>()
+            .await
+            .expect("read inspect hierarchy")
+            .into_iter()
+            .next()
+            .expect("one result")
+            .payload
+            .expect("payload is not none")
     }
 
     async fn assert_platform_metrics(&self, children: TreeAssertion) {
@@ -502,7 +731,7 @@ async fn omaha_client_update(mut env: TestEnv, platform_metrics: TreeAssertion) 
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_update() {
-    let env = TestEnvBuilder::new().response(OmahaResponse::Update).build();
+    let env = TestEnvBuilder::new().response(OmahaResponse::Update).build().await;
     omaha_client_update(
         env,
         tree_assertion!(
@@ -528,7 +757,8 @@ async fn test_omaha_client_update() {
 async fn test_omaha_client_update_progress_with_mock_installer() {
     let (mut sender, receiver) = mpsc::channel(0);
     let installer = MockUpdateInstallerService::builder().states_receiver(receiver).build();
-    let env = TestEnvBuilder::new().response(OmahaResponse::Update).installer(installer).build();
+    let env =
+        TestEnvBuilder::new().response(OmahaResponse::Update).installer(installer).build().await;
 
     let mut stream = env.check_now().await;
 
@@ -641,7 +871,8 @@ async fn test_omaha_client_installation_deferred() {
                 .build(),
         )
         .response(OmahaResponse::Update)
-        .build();
+        .build()
+        .await;
 
     // Allow the paver to emit enough events to unblock the CommitStatusProvider FIDL server, but
     // few enough to guarantee the commit is still pending.
@@ -722,27 +953,9 @@ async fn test_omaha_client_installation_deferred() {
     .await;
 }
 
-// When the system-update-committer crashes, OMCL should crash as well.
-// TODO(fxbug.dev/66760): remove this since we won't crash OMCL -- otherwise this test will hang.
-#[fasync::run_singlethreaded(test)]
-async fn test_omaha_client_crashes_on_commit_status_provider_error() {
-    // Block the paver with a throttle to ensure it never responds to the system-update-committer.
-    // Otherwise, the paver may try to respond (and panic) when the system-update-committer is dead.
-    let (throttle_hook, _throttler) = mphooks::throttle();
-    let mut env = TestEnvBuilder::new()
-        .paver(MockPaverServiceBuilder::new().insert_hook(throttle_hook).build())
-        .response(OmahaResponse::Update)
-        .build();
-    env.system_update_committer.kill().unwrap();
-
-    env.check_now().await;
-
-    assert!(env.omaha_client.wait().await.unwrap().exited());
-}
-
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_update_error() {
-    let env = TestEnvBuilder::new().response(OmahaResponse::Update).build();
+    let env = TestEnvBuilder::new().response(OmahaResponse::Update).build().await;
 
     let mut stream = env.check_now().await;
     expect_states(
@@ -835,7 +1048,7 @@ async fn test_omaha_client_update_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_no_update() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     let mut stream = env.check_now().await;
     expect_states(
@@ -876,7 +1089,7 @@ async fn do_failed_update_check(env: &TestEnv) {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_invalid_response() {
-    let env = TestEnvBuilder::new().response(OmahaResponse::InvalidResponse).build();
+    let env = TestEnvBuilder::new().response(OmahaResponse::InvalidResponse).build().await;
 
     do_failed_update_check(&env).await;
 
@@ -895,7 +1108,7 @@ async fn test_omaha_client_invalid_response() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_invalid_url() {
-    let env = TestEnvBuilder::new().response(OmahaResponse::InvalidURL).build();
+    let env = TestEnvBuilder::new().response(OmahaResponse::InvalidURL).build().await;
 
     let mut stream = env.check_now().await;
     expect_states(
@@ -937,7 +1150,7 @@ async fn test_omaha_client_invalid_url() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_invalid_app_set() {
-    let env = TestEnvBuilder::new().version("invalid-version").build();
+    let env = TestEnvBuilder::new().version("invalid-version").build().await;
 
     let options = CheckOptions {
         initiator: Some(Initiator::User),
@@ -952,7 +1165,7 @@ async fn test_omaha_client_invalid_app_set() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_policy_config_inspect() {
-    let env = TestEnvBuilder::new().build();
+    let env = TestEnvBuilder::new().build().await;
 
     // Wait for omaha client to start.
     let _ = env.proxies.channel_control.get_current().await;
@@ -972,7 +1185,7 @@ async fn test_omaha_client_policy_config_inspect() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_perform_pending_reboot_after_out_of_space() {
-    let env = TestEnvBuilder::new().response(OmahaResponse::Update).build();
+    let env = TestEnvBuilder::new().response(OmahaResponse::Update).build().await;
 
     // We should be able to get the update package just fine
     env.proxies
@@ -1062,7 +1275,8 @@ async fn test_crash_report_installation_error() {
             UpdateNotStartedReason::AlreadyInProgress,
         )))
         .crash_reporter(MockCrashReporterService::new(hook))
-        .build();
+        .build()
+        .await;
 
     let mut stream = env.check_now().await;
 
@@ -1096,7 +1310,8 @@ async fn test_crash_report_consecutive_failed_update_checks() {
     let env = TestEnvBuilder::new()
         .response(OmahaResponse::InvalidResponse)
         .crash_reporter(MockCrashReporterService::new(hook))
-        .build();
+        .build()
+        .await;
 
     // Failing <5 times will not yield crash reports.
     do_failed_update_check(&env).await;

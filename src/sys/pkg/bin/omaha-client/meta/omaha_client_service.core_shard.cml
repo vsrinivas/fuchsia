@@ -1,3 +1,100 @@
 {
-    // Temporary stub for soft migration.
+    children: [
+        {
+            name: "omaha-client-service",
+            url: "fuchsia-pkg://fuchsia.com/omaha-client#meta/omaha-client-service.cm",
+            startup: "eager",
+            on_terminate: "reboot",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.update.installer.Installer",
+            from: "#system-updater",
+            to: [ "#omaha-client-service" ],
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.cobalt.SystemDataUpdater",
+            ],
+            from: "#cobalt",
+            to: [ "#omaha-client-service" ],
+        },
+        {
+            protocol: "fuchsia.hardware.power.statecontrol.Admin",
+            from: "parent",
+            to: [ "#omaha-client-service" ],
+        },
+        {
+            protocol: "fuchsia.stash.Store2",
+            from: "#stash2",
+            to: [ "#omaha-client-service" ],
+        },
+        {
+            protocol: "fuchsia.ui.activity.Provider",
+            from: "#activity",
+            to: [ "#omaha-client-service" ],
+        },
+        {
+            protocol: [
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#network",
+            to: [ "#omaha-client-service" ],
+        },
+        {
+            protocol: [
+                "fuchsia.update.channel.Provider",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
+            ],
+            from: "#omaha-client-service",
+            to: "#appmgr",
+        },
+        {
+            protocol: "fuchsia.update.CommitStatusProvider",
+            from: "#system-update-committer",
+            to: "#omaha-client-service",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#omaha-client-service",
+        },
+        {
+            protocol: [
+                "fuchsia.feedback.ComponentDataRegister",
+                "fuchsia.feedback.CrashReporter",
+            ],
+            from: "#appmgr",
+            to: "#omaha-client-service",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.paver.Paver",
+            ],
+            from: "parent",
+            to: "#omaha-client-service",
+        },
+        {
+            directory: "build-info",
+            from: "parent",
+            to: "#omaha-client-service",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#omaha-client-service",
+            subdir: "omaha-client",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: "#omaha-client-service",
+        },
+    ],
 }

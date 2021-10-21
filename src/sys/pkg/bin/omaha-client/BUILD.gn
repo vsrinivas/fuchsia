@@ -16,6 +16,10 @@ declare_args() {
 omaha_app_id_file = "$root_gen_dir/omaha-app-id.txt"
 write_file(omaha_app_id_file, omaha_app_id)
 
+core_shard("omaha-client-service-core-shard") {
+  shard_file = "meta/omaha_client_service.core_shard.cml"
+}
+
 rustc_binary("bin") {
   output_name = "omaha_client_service"
 
@@ -101,33 +105,42 @@ rustc_binary("bin") {
   ]
 }
 
-core_shard("omaha-client-service-core-shard") {
-  shard_file = "meta/omaha_client_service.core_shard.cml"
-}
-
-fuchsia_component("omaha-client-service") {
-  manifest = "meta/omaha-client-service.cmx"
+fuchsia_component("component") {
+  component_name = "omaha-client-service"
+  manifest = "meta/omaha-client-service.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_package("omaha-client") {
-  deps = [ ":omaha-client-service" ]
+  deps = [ ":component" ]
 }
 
-fuchsia_component("omaha-client-service-for-integration-test") {
+fuchsia_component("omaha-client-service-bin-tests-test-driver") {
   testonly = true
-  manifest = "meta/omaha-client-service-for-integration-test.cmx"
-  deps = [ ":bin" ]
+  component_name = "test-driver"
+  manifest = "meta/test-driver.cml"
+  deps = [ ":bin_test" ]
 }
 
 fuchsia_unittest_package("omaha-client-service-bin-tests") {
+  manifest = "meta/omaha-client-service-bin-test.cml"
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   deps = [
-    ":bin_test",
+    ":omaha-client-channels-test-config",
     ":omaha-client-policy-config-for-test",
-    "//src/connectivity/network/dns:component-legacy",
-    "//src/connectivity/network/netstack:component-legacy",
+    ":omaha-client-service-bin-tests-test-driver",
+    ":omaha-client-test-config",
+    "//src/connectivity/network/dns:component",
+    "//src/connectivity/network/netstack:component",
+    "//src/connectivity/network/netstack:component",
+    "//src/power/shutdown-shim/tests:shutdown_shim_component",
+    "//src/sys/pkg/bin/fake-channel-control:fake-channel-control-v2",
+    "//src/sys/stash:stash2_v2",
   ]
-  manifest = "meta/omaha-client-service-bin-test.cmx"
 }
 
 metrics_registry("mos_metrics_registry") {
@@ -156,12 +169,6 @@ config_data("omaha-client-channels-test-config") {
   for_pkg = "omaha-client-service-bin-tests"
   outputs = [ "channel_config.json" ]
   sources = [ rebase_path("test_data/test_channel_config.json") ]
-}
-
-config_data("omaha-client-sysmgr-config") {
-  for_pkg = "sysmgr"
-  outputs = [ "omaha_client_sysmgr.config" ]
-  sources = [ "sysmgr.config" ]
 }
 
 omcl_policy_config("omaha-client-policy-config-for-test") {

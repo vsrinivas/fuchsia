@@ -70,10 +70,7 @@ group("tools") {
 }
 
 group("system-update-checker") {
-  public_deps = [
-    "bin/system-update-checker",
-    "bin/system-update-checker:config",
-  ]
+  public_deps = [ "bin/system-update-checker" ]
   deps = [ "//build/validate:non_production_tag" ]
 }
 
@@ -81,7 +78,6 @@ group("omaha-client") {
   public_deps = [
     "bin/omaha-client",
     "bin/omaha-client:omaha-client-config",
-    "bin/omaha-client:omaha-client-sysmgr-config",
     "//src/diagnostics/config/triage:omaha-client-detect",
   ]
 }

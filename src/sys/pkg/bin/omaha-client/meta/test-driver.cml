@@ -1,0 +1,36 @@
+{
+    include: [
+        "//src/lib/fuchsia-hyper/hyper.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/omaha_client_service_bin_test",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.net.routes.State",
+                "fuchsia.process.Launcher",
+                "fuchsia.stash.Store2",
+                "fuchsia.sys.Launcher",
+                "fuchsia.update.channelcontrol.ChannelControl",
+            ],
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+            subdir: "omaha-client-service-bin-tests",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/ssl",
+        },
+    ],
+}

@@ -1,0 +1,45 @@
+{
+    include: [
+        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//src/lib/fuchsia-hyper/hyper.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/omaha_client_integration_test",
+    },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
+            from: "parent",
+        },
+    ],
+    offer: [
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: "#fuchsia_component_test_collection",
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: "#fuchsia_component_test_collection",
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.process.Launcher",
+                "fuchsia.stash.Store2",
+            ],
+            from: "parent",
+            to: "#fuchsia_component_test_collection",
+        },
+    ],
+}

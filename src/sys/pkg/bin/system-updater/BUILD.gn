@@ -98,9 +98,14 @@ rustc_binary("bin") {
   inputs = [ base_epoch_file ]
 }
 
-fuchsia_package_with_single_component("system-updater") {
+fuchsia_component("component") {
+  component_name = "system-updater"
   manifest = "meta/system-updater.cml"
   deps = [ ":bin" ]
+}
+
+fuchsia_package("system-updater") {
+  deps = [ ":component" ]
 }
 
 fuchsia_unittest_package("system-updater-tests") {

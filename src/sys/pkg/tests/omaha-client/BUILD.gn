@@ -10,7 +10,9 @@ rustc_test("driver") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
@@ -18,10 +20,12 @@ rustc_test("driver") {
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
     "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
     "//src/sys/pkg/lib/fidl-fuchsia-update-installer-ext",
@@ -45,19 +49,30 @@ rustc_test("driver") {
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_component("omaha-client-integration-test") {
+fuchsia_component("omaha-client-test-root") {
+  component_name = "test_root"
   testonly = true
-  manifest = "meta/omaha-client-integration-test.cmx"
+  manifest = "meta/test_root.cml"
+}
+
+fuchsia_component("omaha-client-test-driver") {
+  component_name = "test_driver"
+  testonly = true
+  manifest = "meta/test_driver.cml"
   deps = [ ":driver" ]
 }
 
 fuchsia_test_package("omaha-client-integration-tests") {
-  test_components = [ ":omaha-client-integration-test" ]
+  test_components = [ ":omaha-client-test-root" ]
   deps = [
-    "//src/connectivity/network/netstack:component-legacy",
-    "//src/sys/pkg/bin/omaha-client:omaha-client-service-for-integration-test",
-    "//src/sys/pkg/bin/system-updater:isolated",
-    "//src/sys/pkg/tests/system-update-committer",
+    ":omaha-client-test-driver",
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/connectivity/network/dns:component",
+    "//src/connectivity/network/netstack:component",
+    "//src/sys/pkg/bin/omaha-client:component",
+    "//src/sys/pkg/bin/system-update-committer:component",
+    "//src/sys/pkg/bin/system-updater:component",
+    "//src/sys/stash:stash2_v2",
   ]
 
   test_specs = {

@@ -1,0 +1,18 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/fake-channel-control",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.update.channelcontrol.ChannelControl" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.update.channelcontrol.ChannelControl" ],
+            from: "self",
+        },
+    ],
+}

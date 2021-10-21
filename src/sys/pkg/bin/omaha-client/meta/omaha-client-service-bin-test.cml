@@ -1,0 +1,111 @@
+{
+    include: [ "//src/lib/fuchsia-hyper/hyper_testing.shard.cml" ],
+    children: [
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/omaha-client-service-bin-tests#meta/test-driver.cm",
+        },
+        {
+            name: "netstack",
+            url: "fuchsia-pkg://fuchsia.com/omaha-client-service-bin-tests#meta/netstack.cm",
+        },
+        {
+            name: "dns_resolver",
+            url: "fuchsia-pkg://fuchsia.com/omaha-client-service-bin-tests#meta/dns_resolver.cm",
+        },
+        {
+            name: "stash2",
+            url: "fuchsia-pkg://fuchsia.com/omaha-client-service-bin-tests#meta/stash2.cm",
+        },
+        {
+            name: "shutdown_shim",
+            url: "fuchsia-pkg://fuchsia.com/omaha-client-service-bin-tests#meta/shutdown-shim.cm",
+        },
+        {
+            name: "fake_channel_control",
+            url: "fuchsia-pkg://fuchsia.com/omaha-client-service-bin-tests#meta/fake-channel-control.cm",
+        },
+    ],
+    offer: [
+        {
+            storage: "data",
+            from: "parent",
+            to: "#stash2",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: "#test_driver",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#test_driver",
+        },
+        {
+            protocol: "fuchsia.update.channelcontrol.ChannelControl",
+            from: "#fake_channel_control",
+            to: "#test_driver",
+        },
+        {
+            protocol: "fuchsia.boot.WriteOnlyLog",
+            from: "parent",
+            to: "#shutdown_shim",
+        },
+        {
+            protocol: "fuchsia.sys2.SystemController",
+            from: "parent",
+            to: "#shutdown_shim",
+        },
+        {
+            protocol: "fuchsia.hardware.power.statecontrol.Admin",
+            from: "#shutdown_shim",
+            to: "#test_driver",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#stash2",
+                "#test_driver",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: "#test_driver",
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#test_driver",
+        },
+        {
+            protocol: [
+                "fuchsia.net.routes.State",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#netstack",
+            to: "#test_driver",
+        },
+        {
+            protocol: [ "fuchsia.stash.Store2" ],
+            from: "#stash2",
+            to: "#test_driver",
+        },
+        {
+            protocol: [ "fuchsia.net.name.Lookup" ],
+            from: "#dns_resolver",
+            to: "#test_driver",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test_driver",
+        },
+    ],
+}

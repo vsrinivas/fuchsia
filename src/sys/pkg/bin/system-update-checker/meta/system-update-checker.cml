@@ -1,0 +1,78 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/system_update_checker",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.update.channel.Provider",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.cobalt.SystemDataUpdater",
+                "fuchsia.paver.Paver",
+                "fuchsia.pkg.PackageResolver",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+                "fuchsia.update.CommitStatusProvider",
+                "fuchsia.update.installer.Installer",
+            ],
+            from: "parent",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+
+        // Remove once the misc directory is removed (fxbug.dev/87093)
+        {
+            storage: "tmp",
+            path: "/misc",
+        },
+        {
+            directory: "pkgfs-system",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/pkgfs/system",
+        },
+        {
+            directory: "pkgfs-ctl",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/pkgfs/ctl",
+        },
+        {
+            directory: "pkgfs-packages",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/pkgfs/packages",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.update.channel.Provider",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.update.channelcontrol.ChannelControl",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.update.Manager",
+            from: "self",
+        },
+    ],
+}

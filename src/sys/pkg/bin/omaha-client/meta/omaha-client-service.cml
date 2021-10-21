@@ -1,0 +1,69 @@
+{
+    include: [
+        "//src/lib/fuchsia-hyper/hyper.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/omaha_client_service",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.update.channel.Provider",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.cobalt.SystemDataUpdater",
+                "fuchsia.feedback.ComponentDataRegister",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.stash.Store2",
+                "fuchsia.ui.activity.Provider",
+                "fuchsia.update.CommitStatusProvider",
+                "fuchsia.update.installer.Installer",
+            ],
+            from: "parent",
+        },
+        {
+            directory: "build-info",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/build-info",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/ssl",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.update.channel.Provider",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.update.channelcontrol.ChannelControl",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.update.Manager",
+            from: "self",
+        },
+    ],
+}
