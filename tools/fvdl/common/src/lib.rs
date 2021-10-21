@@ -10,7 +10,6 @@ mod cipd;
 mod device;
 mod graphic_utils;
 mod images;
-mod target;
 mod tools;
 mod types;
 mod vdl_proto_parser;

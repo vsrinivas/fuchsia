@@ -15,12 +15,10 @@ async fn main() -> Result<()> {
 async fn process_command(command: VDLCommand, is_sdk: bool) -> Result<()> {
     match command {
         VDLCommand::Start(start_command) => std::process::exit(
-            VDLFiles::new(is_sdk, start_command.verbose)?
-                .start_emulator(&start_command, None)
-                .await?,
+            VDLFiles::new(is_sdk, start_command.verbose)?.start_emulator(&start_command).await?,
         ),
         VDLCommand::Kill(stop_command) => {
-            VDLFiles::new(is_sdk, false)?.stop_vdl(&stop_command, None).await?;
+            VDLFiles::new(is_sdk, false)?.stop_vdl(&stop_command).await?;
         }
         VDLCommand::Remote(remote_command) => {
             VDLFiles::new(is_sdk, false)?.remote_emulator(&remote_command)?;

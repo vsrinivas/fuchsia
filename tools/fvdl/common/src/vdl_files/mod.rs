@@ -4,15 +4,13 @@
 
 use crate::device::DeviceSpec;
 use crate::portpicker::{is_free_tcp_port, pick_unused_port, Port};
-use crate::target;
 use crate::tools::HostTools;
 use crate::types::{get_sdk_data_dir, read_env_path, ImageFiles, InTreePaths, SSHKeys, VDLArgs};
 
-use crate::vdl_proto_parser::{get_emu_pid, get_ssh_port};
+use crate::vdl_proto_parser::get_emu_pid;
 use ansi_term::Colour::*;
 use anyhow::Result;
 use errors::ffx_bail;
-use fidl_fuchsia_developer_bridge as bridge;
 use fvdl_emulator_kill_args::KillCommand;
 use fvdl_emulator_start_args::StartCommand;
 use regex::Regex;
@@ -363,11 +361,7 @@ impl VDLFiles {
     }
 
     /// Launches FEMU, opens an SSH session, and waits for the FEMU instance or SSH session to exit.
-    pub async fn start_emulator(
-        &mut self,
-        start_command: &StartCommand,
-        daemon_proxy: Option<&bridge::DaemonProxy>,
-    ) -> Result<i32> {
+    pub async fn start_emulator(&mut self, start_command: &StartCommand) -> Result<i32> {
         self.check_start_command(&start_command)?;
         let vdl_args: VDLArgs = start_command.clone().into();
 
@@ -521,37 +515,24 @@ impl VDLFiles {
         let shared_process = SharedChild::spawn(&mut cmd)?;
         let child_arc = Arc::new(shared_process);
         if start_command.emu_only || start_command.monitor {
-            if !vdl_args.tuntap {
-                // Pre-emptively add device to ffx target before actually starting the emulator.
-                if let Some(proxy) = daemon_proxy {
-                    println!("[fvdl] adding manual target at port: {} to ffx", ssh_port);
-                    target::add_target(proxy, ssh_port).await?;
-                }
-            }
             // When running with '--emu-only' or '--monitor' mode, the user is directly interacting
             // with the emulator console, the execution ends when either QEMU or AEMU terminates.
             match fuchsia_async::unblock(move || monitored_child_process(&child_arc)).await {
                 Ok(_) => {
-                    self.stop_vdl(
-                        &KillCommand {
-                            launched_proto: Some(self.output_proto.display().to_string()),
-                            vdl_path: Some(vdl.display().to_string()),
-                            sdk: self.is_sdk,
-                        },
-                        daemon_proxy,
-                    )
+                    self.stop_vdl(&KillCommand {
+                        launched_proto: Some(self.output_proto.display().to_string()),
+                        vdl_path: Some(vdl.display().to_string()),
+                        sdk: self.is_sdk,
+                    })
                     .await?;
                     return Ok(0);
                 }
                 Err(e) => {
-                    self.stop_vdl(
-                        &KillCommand {
-                            launched_proto: Some(self.output_proto.display().to_string()),
-                            vdl_path: Some(vdl.display().to_string()),
-                            sdk: self.is_sdk,
-                        },
-                        daemon_proxy,
-                    )
+                    self.stop_vdl(&KillCommand {
+                        launched_proto: Some(self.output_proto.display().to_string()),
+                        vdl_path: Some(vdl.display().to_string()),
+                        sdk: self.is_sdk,
+                    })
                     .await?;
                     ffx_bail!("emulator launcher did not terminate properly, error: {}", e)
                 }
@@ -582,14 +563,6 @@ impl VDLFiles {
             return Ok(exit_code);
         }
 
-        if !vdl_args.tuntap {
-            // When using SLIRP and running as ffx plugin (i.e ffx vdl start ...), automatically add device to ffx target
-            if let Some(proxy) = daemon_proxy {
-                println!("[fvdl] adding manual target at port: {} to ffx", ssh_port);
-                target::add_target(proxy, ssh_port).await?;
-            }
-        }
-
         if !self.is_sdk {
             let command;
             if vdl_args.tuntap {
@@ -612,7 +585,7 @@ impl VDLFiles {
                 println!(
                     "{}",
                     Yellow.paint(format!(
-                        "    ffx emu kill --launched-proto {}",
+                        "    fvdl kill --launched-proto {}",
                         self.output_proto.display()
                     ))
                 );
@@ -662,14 +635,11 @@ impl VDLFiles {
                 }
             })
             .await;
-            self.stop_vdl(
-                &KillCommand {
-                    launched_proto: Some(self.output_proto.display().to_string()),
-                    vdl_path: Some(vdl.display().to_string()),
-                    sdk: self.is_sdk,
-                },
-                daemon_proxy,
-            )
+            self.stop_vdl(&KillCommand {
+                launched_proto: Some(self.output_proto.display().to_string()),
+                vdl_path: Some(vdl.display().to_string()),
+                sdk: self.is_sdk,
+            })
             .await?;
         }
         Ok(0)
@@ -718,11 +688,7 @@ impl VDLFiles {
     }
 
     // Shuts down emulator and local services.
-    pub async fn stop_vdl(
-        &self,
-        kill_command: &KillCommand,
-        daemon_proxy: Option<&bridge::DaemonProxy>,
-    ) -> Result<()> {
+    pub async fn stop_vdl(&self, kill_command: &KillCommand) -> Result<()> {
         let invoker = self.resolve_invoker();
         // If user specified vdl_path in arg, use that. If not, check if environment variable
         // PREBUILD_VDL_DIR is set, if set use that. If not, check if self.host_tools has found
@@ -756,7 +722,6 @@ impl VDLFiles {
             None => {
                 ffx_bail!(
                     "--launched-proto must be specified for `kill` subcommand.\n\
-                    example: \"ffx emu kill --launched-proto /path/to/saved/output.log\"\n\
                     example: \"./fvdl --sdk kill --launched-proto /path/to/saved/output.log\"\n"
                 )
             }
@@ -766,21 +731,6 @@ impl VDLFiles {
                     .arg(format!("--launched_virtual_device_proto={}", &proto_location))
                     .arg(format!("--event_action={}", &invoker))
                     .status()?;
-                if let Ok(ssh_port) = get_ssh_port(&PathBuf::from(proto_location)) {
-                    if ssh_port != 0 && ssh_port != 22 {
-                        if let Some(proxy) = daemon_proxy {
-                            let mut target = format!("127.0.0.1:{}", ssh_port);
-                            println!("[fvdl] removing manual target {} from ffx", target);
-                            let result = target::remove_target(proxy, &mut target, &mut 3).await;
-                            if result.is_err() {
-                                println!("{}", Yellow.paint(format!(
-                                        "\nNOTE: Target removal failed due to error {:?}.\n\
-                                        To remove this target, please run 'ffx target remove 127.0.0.1:{}'", result.err(), ssh_port
-                                    )));
-                            }
-                        }
-                    }
-                }
             }
         }
         Ok(())

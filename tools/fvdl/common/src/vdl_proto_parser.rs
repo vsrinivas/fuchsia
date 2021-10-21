@@ -39,36 +39,6 @@ pub fn get_emu_pid(vdl_output: &PathBuf) -> Result<u32> {
     ));
 }
 
-pub fn get_ssh_port(vdl_output: &PathBuf) -> Result<u32> {
-    let reader = BufReader::new(File::open(vdl_output)?);
-    let name_regex = Regex::new(r#"\s+name:\s+"ssh"$"#).unwrap();
-    let value_regex = Regex::new(r"\s+value:\s+(?P<port>\d+)$").unwrap();
-
-    let mut found_ssh = false;
-    let mut ssh_port = 0;
-    for line in reader.lines() {
-        if let Ok(l) = line {
-            if !found_ssh && name_regex.is_match(&l) {
-                found_ssh = true;
-                continue;
-            }
-            if found_ssh {
-                value_regex.captures(&l).and_then(|cap| {
-                    cap.name("port").map(|p| ssh_port = p.as_str().parse::<u32>().unwrap())
-                });
-                if ssh_port == 0 {
-                    break;
-                }
-                return Ok(ssh_port);
-            }
-        }
-    }
-    return Err(format_err!(
-        "Cannot parse --vdl-output {} to obtain forwarded ssh port",
-        vdl_output.display()
-    ));
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,8 +76,7 @@ mod tests {
         File::create(&vdl_out)?.write_all(data.as_bytes())?;
         let pid = get_emu_pid(&vdl_out)?;
         assert_eq!(pid, 1454638);
-        let ssh_port = get_ssh_port(&vdl_out)?;
-        assert_eq!(ssh_port, 57306);
+
         Ok(())
     }
 
@@ -142,8 +111,7 @@ mod tests {
         File::create(&vdl_out)?.write_all(data.as_bytes())?;
         let pid = get_emu_pid(&vdl_out);
         assert_eq!(pid.is_err(), true);
-        let ssh_port = get_ssh_port(&vdl_out);
-        assert_eq!(ssh_port.is_err(), true);
+
         Ok(())
     }
     #[test]
@@ -169,8 +137,7 @@ mod tests {
         File::create(&vdl_out)?.write_all(data.as_bytes())?;
         let pid = get_emu_pid(&vdl_out);
         assert_eq!(pid.is_err(), true);
-        let ssh_port = get_ssh_port(&vdl_out);
-        assert_eq!(ssh_port.is_err(), true);
+
         Ok(())
     }
 }

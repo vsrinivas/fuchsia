@@ -17,7 +17,6 @@ if (is_host) {
       "src/images.rs",
       "src/lib.rs",
       "src/portpicker.rs",
-      "src/target.rs",
       "src/tools.rs",
       "src/types.rs",
       "src/vdl_files/mod.rs",
@@ -25,15 +24,9 @@ if (is_host) {
       "src/vdl_proto_parser.rs",
     ]
     deps = [
-      "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
-      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-      "//src/connectivity/overnet/lib/hoist",
       "//src/developer/ffx/config:lib",
-      "//src/developer/ffx/core:lib",
       "//src/developer/ffx/lib/errors:lib",
-      "//src/lib/diagnostics/selectors",
-      "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
       "//src/lib/fuchsia-hyper:fuchsia-hyper",
       "//third_party/rust_crates:ansi_term-v0_11_0",

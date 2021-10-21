@@ -10,22 +10,18 @@ pub type Port = u16;
 fn ask_free_tcp_port() -> Option<Port> {
     let ipv4 = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0);
     let ipv6 = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 0, 0, 0);
-    bind_tcp(ipv6).or_else(|| bind_tcp(ipv4))
+    test_bind_tcp(ipv6).or_else(|| test_bind_tcp(ipv4))
 }
 
-/// Asks the OS if the specified port is free
-pub fn is_free_tcp_port(port: u16) -> Option<Port> {
+/// Check if a port is free on TCP
+pub fn is_free_tcp_port(port: Port) -> Option<Port> {
     let ipv4 = SocketAddrV4::new(Ipv4Addr::LOCALHOST, port);
     let ipv6 = SocketAddrV6::new(Ipv6Addr::LOCALHOST, port, 0, 0);
-    bind_tcp(ipv6).or_else(|| bind_tcp(ipv4))
-}
 
-// Try to bind to a socket using TCP
-fn bind_tcp<A: ToSocketAddrs>(addr: A) -> Option<Port> {
-    match TcpListener::bind(addr).map(|s| s.local_addr().map(|a| a.port())) {
-        Ok(port) => port.ok(),
-        Err(_) => None,
+    if test_bind_tcp(ipv6).is_some() && test_bind_tcp(ipv4).is_some() {
+        return Some(port);
     }
+    None
 }
 
 /// Picks an available tcp port
@@ -36,4 +32,9 @@ pub fn pick_unused_port() -> Option<Port> {
         }
     }
     None
+}
+
+// Try to bind to a socket using TCP
+fn test_bind_tcp<A: ToSocketAddrs>(addr: A) -> Option<Port> {
+    Some(TcpListener::bind(addr).ok()?.local_addr().ok()?.port())
 }
