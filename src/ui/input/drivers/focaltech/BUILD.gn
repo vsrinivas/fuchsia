@@ -73,7 +73,6 @@ fuchsia_driver_component("focaltech") {
   deps = [ ":focaltech-driver" ]
 }
 
-# Requires internal access.
 fuchsia_driver("focaltech-sherlock-driver") {
   output_name = "focaltech-sherlock"
   configs += [
@@ -85,10 +84,13 @@ fuchsia_driver("focaltech-sherlock-driver") {
     "ft_device.cc",
     "ft_firmware.cc",
   ]
-  deps = [
-    ":common",
-    ":firmware-sherlock",
-  ]
+  deps = [ ":common" ]
+
+  if (internal_access) {
+    deps += [ ":firmware-sherlock" ]
+  } else {
+    sources += [ "ft_firmware_none.cc" ]
+  }
 }
 
 fuchsia_driver_component("focaltech-sherlock") {
