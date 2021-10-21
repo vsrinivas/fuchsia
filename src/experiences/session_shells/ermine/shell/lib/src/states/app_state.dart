@@ -13,7 +13,6 @@ import 'package:ermine/src/states/app_state_impl.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine/src/states/view_state.dart';
 import 'package:ermine/src/widgets/app_bar.dart';
-import 'package:ermine/src/widgets/side_bar.dart';
 import 'package:flutter/material.dart' hide Action, AppBar;
 import 'package:fuchsia_scenic/views.dart';
 
@@ -72,7 +71,7 @@ abstract class AppState {
       preferencesService: PreferencesService(),
       pointerEventsService: PointerEventsService(
         ScenicContext.hostViewRef(),
-        insets: EdgeInsets.only(left: AppBar.kWidth, right: SideBar.kWidth),
+        insets: EdgeInsets.only(left: AppBar.kWidth),
       ),
     ) as AppState;
   }
