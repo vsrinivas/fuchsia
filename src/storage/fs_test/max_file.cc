@@ -154,7 +154,8 @@ TEST_P(MaxFileTest, TruncatingToMaxSupportedOffset) {
 }
 
 TEST_P(MaxFileTest, TruncatingBeyondMaxSupportedOffset) {
-  if (!fs().GetTraits().supports_sparse_files) {
+  if (!fs().GetTraits().supports_sparse_files ||
+      fs().GetTraits().max_file_size == std::numeric_limits<off_t>::max()) {
     return;
   }
   fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR));

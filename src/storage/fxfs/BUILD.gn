@@ -208,11 +208,6 @@ slow_fs_test_suite("fxfs") {
     ":fxfs_fs_test_config",
     "//src/storage/fxfs",
   ]
-  omit_components = [
-    # TODO(jfsulliv): Fix and enable these tests.
-    ":fxfs-max-file-tests",
-    ":fxfs-sparse-large-tests",
-  ]
 }
 
 group("tests") {

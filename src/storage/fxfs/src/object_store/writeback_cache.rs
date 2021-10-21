@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        errors::FxfsError,
         object_handle::ReadObjectHandle,
         object_store::{
             allocator::{self},
@@ -11,7 +12,7 @@ use {
         },
         round::{round_down, round_up},
     },
-    anyhow::Error,
+    anyhow::{ensure, Error},
     interval_tree::{interval::Interval, interval_tree::IntervalTree, utils::RangeOps},
     std::ops::Range,
     std::sync::Mutex,
@@ -361,6 +362,7 @@ impl<B: DataBuffer> WritebackCache<B> {
         block_size: u64,
         reserver: &dyn StorageReservation,
     ) -> Result<(), Error> {
+        ensure!(size <= i64::MAX as u64, FxfsError::TooBig);
         {
             let mut inner = self.inner.lock().unwrap();
             let old_size = *inner.content_size.as_ref().unwrap_or(&(self.data.size() as u64));
@@ -433,7 +435,7 @@ impl<B: DataBuffer> WritebackCache<B> {
     pub async fn write_or_append(
         &self,
         offset: Option<u64>,
-        buf: &[u8],
+        mut buf: &[u8],
         block_size: u64,
         reserver: &dyn StorageReservation,
         current_time: Option<Duration>,
@@ -441,6 +443,15 @@ impl<B: DataBuffer> WritebackCache<B> {
     ) -> Result<(), Error> {
         let size = self.data.size();
         let offset = offset.unwrap_or(size);
+
+        // Whilst Fxfs could support up to u64::MAX, off_t is i64 so allowing files larger than that
+        // become difficult to deal with via the POSIX APIs, so, for now, we limit sizes to
+        // i64::MAX.
+        ensure!(offset < i64::MAX as u64, FxfsError::TooBig);
+        let max_len = i64::MAX as u64 - offset;
+        if buf.len() as u64 > max_len {
+            buf = &buf[..max_len as usize];
+        }
 
         // |inner| shouldn't be modified until we're at a part of the function where nothing can
         // fail (either before an early-return, or at the end of the function).
