@@ -95,11 +95,50 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
         .expect("create netstack realm");
 
     let wait_for_netmgr =
-        wait_for_component_stopped(&realm, constants::netcfg::COMPONENT_NAME, None).fuse();
-    futures::pin_mut!(wait_for_netmgr);
+        wait_for_component_stopped(&realm, constants::netcfg::COMPONENT_NAME, None);
+
     let netstack = realm
         .connect_to_protocol::<netstack::NetstackMarker>()
         .expect("connect to netstack service");
+
+    let interface_state = realm
+        .connect_to_protocol::<net_interfaces::StateMarker>()
+        .expect("connect to fuchsia.net.interfaces/State service");
+    let interfaces_stream =
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+            .expect("interface event stream")
+            .map(|r| r.expect("watcher error"))
+            .filter_map(|event| {
+                futures::future::ready(match event {
+                    fidl_fuchsia_net_interfaces::Event::Added(
+                        fidl_fuchsia_net_interfaces::Properties { id, name, .. },
+                    )
+                    | fidl_fuchsia_net_interfaces::Event::Existing(
+                        fidl_fuchsia_net_interfaces::Properties { id, name, .. },
+                    ) => Some((
+                        id.expect("missing interface ID"),
+                        name.expect("missing interface name"),
+                    )),
+                    fidl_fuchsia_net_interfaces::Event::Removed(id) => {
+                        let _: u64 = id;
+                        None
+                    }
+                    fidl_fuchsia_net_interfaces::Event::Idle(
+                        fidl_fuchsia_net_interfaces::Empty {},
+                    )
+                    | fidl_fuchsia_net_interfaces::Event::Changed(
+                        fidl_fuchsia_net_interfaces::Properties { .. },
+                    ) => None,
+                })
+            });
+    let interfaces_stream = futures::stream::select(
+        interfaces_stream,
+        futures::stream::once(wait_for_netmgr.map(|r| panic!("network manager exited {:?}", r))),
+    )
+    .fuse();
+    futures::pin_mut!(interfaces_stream);
+    // Observe the initially existing loopback interface.
+    let _: (u64, String) = interfaces_stream.select_next_some().await;
 
     // Add a device to the realm and wait for it to be added to the netstack.
     //
@@ -114,23 +153,13 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
         )
         .await
         .expect("create ethx7");
-    let () = ethx7.set_link_up(true).await.expect("set link up");
     let endpoint_mount_path = E::dev_path("ep1");
     let endpoint_mount_path = endpoint_mount_path.as_path();
     let () = realm.add_virtual_device(&ethx7, endpoint_mount_path).await.unwrap_or_else(|e| {
         panic!("add virtual device1 {}: {:?}", endpoint_mount_path.display(), e)
     });
-    let interface_state = realm
-        .connect_to_protocol::<net_interfaces::StateMarker>()
-        .expect("connect to fuchsia.net.interfaces/State service");
-    let (id_ethx7, name_ethx7) = wait_for_non_loopback_interface_up(
-        &interface_state,
-        &mut wait_for_netmgr,
-        None,
-        ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
-    )
-    .await
-    .expect("wait for first non loopback interface");
+
+    let (id_ethx7, name_ethx7) = interfaces_stream.select_next_some().await;
     assert_eq!(
         &name_ethx7, "ethx7",
         "first interface should use a stable name based on its MAC address"
@@ -140,7 +169,6 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
     // name conflict with the first temporary name.
     let etht0 =
         sandbox.create_endpoint::<netemul::Ethernet, _>("etht0").await.expect("create eth0");
-    let () = etht0.set_link_up(true).await.expect("set link up");
     let name = "etht0";
     let netstack_id_etht0 = netstack
         .add_ethernet_device(
@@ -159,17 +187,8 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
         .expect("add_ethernet_device FIDL error")
         .map_err(fuchsia_zircon::Status::from_raw)
         .expect("add_ethernet_device error");
-    let () = netstack
-        .set_interface_status(netstack_id_etht0, true /* enabled */)
-        .expect("set interface status FIDL error");
-    let (id_etht0, name_etht0) = wait_for_non_loopback_interface_up(
-        &interface_state,
-        &mut wait_for_netmgr,
-        Some(&std::iter::once(id_ethx7).collect()),
-        ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
-    )
-    .await
-    .expect("wait for second non loopback interface");
+
+    let (id_etht0, name_etht0) = interfaces_stream.select_next_some().await;
     assert_eq!(id_etht0, u64::from(netstack_id_etht0));
     assert_eq!(&name_etht0, "etht0");
 
@@ -183,20 +202,12 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
         )
         .await
         .expect("create etht1");
-    let () = etht1.set_link_up(true).await.expect("set link up");
     let endpoint_mount_path = E::dev_path("ep2");
     let endpoint_mount_path = endpoint_mount_path.as_path();
     let () = realm.add_virtual_device(&etht1, endpoint_mount_path).await.unwrap_or_else(|e| {
         panic!("add virtual device2 {}: {:?}", endpoint_mount_path.display(), e)
     });
-    let (id_etht1, name_etht1) = wait_for_non_loopback_interface_up(
-        &interface_state,
-        &mut wait_for_netmgr,
-        Some(&vec![id_ethx7, id_etht0].into_iter().collect()),
-        ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
-    )
-    .await
-    .expect("wait for third non loopback interface");
+    let (id_etht1, name_etht1) = interfaces_stream.select_next_some().await;
     assert_ne!(id_ethx7, id_etht1, "interface IDs should be different");
     assert_ne!(id_etht0, id_etht1, "interface IDs should be different");
     assert_eq!(
