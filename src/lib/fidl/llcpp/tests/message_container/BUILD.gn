@@ -10,6 +10,7 @@ group("message_container") {
   testonly = true
   deps = [
     ":fidl_llcpp_message_container_tests",
+    ":fidl_llcpp_message_storage_tests",
     ":fidl_llcpp_result_types_tests",
     ":fidl_llcpp_result_types_tests_bin($host_toolchain)",
   ]
@@ -17,6 +18,12 @@ group("message_container") {
 
 fidl("fidl.llcpp.linearized.test") {
   sources = [ "linearized.test.fidl" ]
+}
+
+fidl("fidl.llcpp.buffersize.test") {
+  sources = [ "buffersize.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+  host_llcpp = true
 }
 
 test("fidl_llcpp_message_container_tests_bin") {
@@ -54,4 +61,21 @@ test("fidl_llcpp_result_types_tests_bin") {
 
 fuchsia_unittest_package("fidl_llcpp_result_types_tests") {
   deps = [ ":fidl_llcpp_result_types_tests_bin" ]
+}
+
+test("fidl_llcpp_message_storage_tests_bin") {
+  output_name = "fidl_llcpp_message_storage_tests"
+  sources = [
+    "any_allocator_test.cc",
+    "message_buffer_size_test.cc",
+  ]
+  deps = [
+    ":fidl.llcpp.buffersize.test_llcpp",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("fidl_llcpp_message_storage_tests") {
+  deps = [ ":fidl_llcpp_message_storage_tests_bin" ]
 }

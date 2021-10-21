@@ -186,14 +186,16 @@ void OutgoingMessage::CallImpl(const fidl_type_t* response_type, zx_handle_t cha
   zx_handle_info_t result_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_num_bytes = 0u;
   uint32_t actual_num_handles = 0u;
-  zx_channel_call_etc_args_t args = {.wr_bytes = iovecs(),
-                                     .wr_handles = handles(),
-                                     .rd_bytes = result_bytes,
-                                     .rd_handles = result_handles,
-                                     .wr_num_bytes = iovec_actual(),
-                                     .wr_num_handles = handle_actual(),
-                                     .rd_num_bytes = result_capacity,
-                                     .rd_num_handles = ZX_CHANNEL_MAX_MSG_HANDLES};
+  zx_channel_call_etc_args_t args = {
+      .wr_bytes = iovecs(),
+      .wr_handles = handles(),
+      .rd_bytes = result_bytes,
+      .rd_handles = result_handles,
+      .wr_num_bytes = iovec_actual(),
+      .wr_num_handles = handle_actual(),
+      .rd_num_bytes = result_capacity,
+      .rd_num_handles = ZX_CHANNEL_MAX_MSG_HANDLES,
+  };
 
   zx_status_t status;
   status = zx_channel_call_etc(channel, ZX_CHANNEL_WRITE_USE_IOVEC, deadline, &args,
@@ -234,7 +236,8 @@ void OutgoingMessage::CallImpl(const fidl_type_t* response_type, zx_handle_t cha
     return;
   }
 }
-#endif
+
+#endif  // __Fuchsia__
 
 OutgoingMessage::CopiedBytes::CopiedBytes(const OutgoingMessage& msg) {
   uint32_t byte_count = 0;

@@ -450,10 +450,10 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<
           ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-          _client,
+          client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                              LibfuzzerNeedsNonemptyProtocol>* request,
-      uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+                              LibfuzzerNeedsNonemptyProtocol>* request);
   explicit WireUnownedResult(
       ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                LibfuzzerNeedsNonemptyProtocol>* response)
@@ -544,8 +544,8 @@ template <>
 class ::fidl::internal::WireSyncClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
     final : public ::fidl::internal::SyncEndpointVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>> {
+                WireSyncClientImpl,
+                ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
  public:
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -558,6 +558,35 @@ class ::fidl::internal::WireSyncClientImpl<
     return ::fidl::WireResult<
         ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
             LibfuzzerNeedsNonemptyProtocol>(_client_end(), &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<
+        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>(_channel());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                                LibfuzzerNeedsNonemptyProtocol>
+  LibfuzzerNeedsNonemptyProtocol() {
+    ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                            LibfuzzerNeedsNonemptyProtocol>
+        _request{};
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+            LibfuzzerNeedsNonemptyProtocol>(_client_end(), _allocator(),
+                                            &_request);
   }
 
  private:
@@ -758,8 +787,23 @@ struct ::fidl::internal::WireServerDispatcher<
 template <>
 class ::fidl::internal::WireSyncClientImpl<
     ::fidl_test_bindingsdenylist::OnlyCppAndDeps>
-    final : public ::fidl::internal::SyncEndpointVeneer<
-                ::fidl::internal::WireSyncClientImpl<
+    final
+    : public ::fidl::internal::SyncEndpointVeneer<
+          WireSyncClientImpl, ::fidl_test_bindingsdenylist::OnlyCppAndDeps> {
+ public:
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<
+        ::fidl_test_bindingsdenylist::OnlyCppAndDeps>(_channel());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<
+    ::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
                     ::fidl_test_bindingsdenylist::OnlyCppAndDeps>> {
  public:
  private:

@@ -846,18 +846,19 @@ ways to create the buffer:
 
 ```cpp
 // 1. On the stack
-fidl::Buffer<StartGameRequest> request_buffer;
-auto result = client.StartGame(request_buffer.view(), true);
+using StartGame = TicTacToe::StartGame;
+fidl::SyncClientBuffer<StartGame> buffer;
+auto result = client.StartGame(buffer.view(), true);
 
 // 2. On the heap
-auto request_buffer = std::make_unique<fidl::Buffer<StartGameRequest>>();
-auto result = client.StartGame(request_buffer->view(), true);
+auto buffer = std::make_unique<fidl::SyncClientBuffer<StartGame>>();
+auto result = client.StartGame(buffer->view(), true);
 
 // 3. Some other means, e.g. thread-local storage
-constexpr uint32_t request_size = fidl::MaxSizeInChannel<StartGameRequest>();
-uint8_t* buffer = allocate_buffer_of_size(request_size);
-fidl::BufferSpan request_buffer(/* data = */buffer, /* capacity = */request_size);
-auto result = client.StartGame(request_buffer, true);
+constexpr uint32_t buffer_size = fidl::SyncClientMethodBufferSizeInChannel<StartGame>();
+uint8_t* buffer = allocate_buffer_of_size(buffer_size);
+fidl::BufferSpan buffer_span(/* data = */buffer, /* capacity = */request_size);
+auto result = client.StartGame(buffer_span, true);
 
 // Check the transport status (encoding error, channel writing error, etc.)
 if (result.status() != ZX_OK) {
@@ -873,7 +874,8 @@ if (result.status() != ZX_OK) {
 > See [UnownedResultOf](#resultof-and-unownedresultof).
 
 Note: Buffers passed to the bindings must be aligned to 8 bytes. The
-`fidl::Buffer` helper class does this automatically. Failure to align would
+`fidl::SyncClientBuffer` helper class does this automatically. For an
+asynchronous client, use `fidl::AsyncClientBuffer`. Failure to align would
 result in a run-time error.
 
 ### Events {#events}

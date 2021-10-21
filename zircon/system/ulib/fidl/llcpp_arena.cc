@@ -40,9 +40,11 @@ uint8_t* AnyArena::Allocate(size_t size, size_t count,
     // The data doesn't fit within the current block => allocate a new block.
     // Note: the data available at the end of the current block is lost forever (until the
     // deallocation of the arena).
-    available_size_ = (block_size > ExtraBlock::kExtraSize) ? block_size : ExtraBlock::kExtraSize;
-    size_t extra_block_size = available_size_ + FIDL_ALIGN(sizeof(ExtraBlock*));
-    last_extra_block_ = new (new uint8_t[extra_block_size]) ExtraBlock(last_extra_block_);
+    available_size_ =
+        (block_size > ExtraBlock::kDefaultExtraSize) ? block_size : ExtraBlock::kDefaultExtraSize;
+    size_t extra_block_size = available_size_ + FIDL_ALIGN(ExtraBlock::kExtraBlockHeaderSize);
+    last_extra_block_ =
+        new (new uint8_t[extra_block_size]) ExtraBlock(last_extra_block_, available_size_);
     next_data_available_ = last_extra_block_->data();
   }
   // At this point we have enough space within the current block (either because there was enough
@@ -57,5 +59,15 @@ uint8_t* AnyArena::Allocate(size_t size, size_t count,
   }
   return data;
 }
+
+namespace internal {
+
+AnyBufferAllocator MakeAnyBufferAllocator(AnyArena& arena) {
+  return AnyBufferAllocator([&arena](uint32_t num_bytes) mutable -> uint8_t* {
+    return arena.AllocateVector<uint8_t>(num_bytes);
+  });
+}
+
+}  // namespace internal
 
 }  // namespace fidl

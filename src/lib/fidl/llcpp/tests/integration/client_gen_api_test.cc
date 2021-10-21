@@ -98,7 +98,7 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
                                          std::make_unique<Server>(data, strlen(data)));
 
   sync_completion_t done;
-  fidl::Buffer<fidl::WireRequest<Example::TwoWay>> buffer;
+  fidl::AsyncClientBuffer<Example::TwoWay> buffer;
   ResponseContext context(&done, data, strlen(data));
   client->TwoWay(buffer.view(), fidl::StringView(data), &context);
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
@@ -410,7 +410,7 @@ TEST(GenAPITestCase, ResponseContextOwnershipReleasedOnError) {
   ExpectErrorResponseContext context(error.get(), ZX_ERR_ACCESS_DENIED,
                                      fidl::Reason::kTransportError);
 
-  fidl::Buffer<fidl::WireRequest<Example::TwoWay>> buffer;
+  fidl::AsyncClientBuffer<Example::TwoWay> buffer;
   client->TwoWay(buffer.view(), "foo", &context);
   ASSERT_OK(error.Wait());
 }
@@ -429,7 +429,7 @@ TEST(GenAPITestCase, AsyncNotifySendError) {
     ExpectErrorResponseContext context(error.get(), ZX_ERR_ACCESS_DENIED,
                                        fidl::Reason::kTransportError);
 
-    fidl::Buffer<fidl::WireRequest<Example::TwoWay>> buffer;
+    fidl::AsyncClientBuffer<Example::TwoWay> buffer;
     client->TwoWay(buffer.view(), "foo", &context);
     // The context should be asynchronously notified.
     EXPECT_FALSE(error.signaled());
@@ -454,7 +454,7 @@ TEST(GenAPITestCase, AsyncNotifyTeardownError) {
   sync::Completion error;
   ExpectErrorResponseContext context(error.get(), ZX_ERR_CANCELED, fidl::Reason::kUnbind);
 
-  fidl::Buffer<fidl::WireRequest<Example::TwoWay>> buffer;
+  fidl::AsyncClientBuffer<Example::TwoWay> buffer;
   client->TwoWay(buffer.view(), "foo", &context);
   EXPECT_FALSE(error.signaled());
   loop.RunUntilIdle();
@@ -484,7 +484,7 @@ TEST(GenAPITestCase, SyncNotifyErrorIfDispatcherShutdown) {
     loop.Shutdown();
     EXPECT_FALSE(error.signaled());
 
-    fidl::Buffer<fidl::WireRequest<Example::TwoWay>> buffer;
+    fidl::AsyncClientBuffer<Example::TwoWay> buffer;
     client->TwoWay(buffer.view(), "foo", &context);
     // If the loop was shutdown, |context| should still be notified, although
     // it has to happen on the current stack frame.

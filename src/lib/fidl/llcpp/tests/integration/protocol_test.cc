@@ -189,12 +189,12 @@ TEST(MagicNumberTest, ResponseWrite) {
   FrobinatorImpl server;
   fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(endpoints->server), &server);
 
-  fidl::Buffer<fidl::WireRequest<test::Frobinator::Grob>> request;
-  fidl::Buffer<fidl::WireResponse<test::Frobinator::Grob>> response;
+  fidl::SyncClientBuffer<test::Frobinator::Grob> fidl_buffer;
   auto result = WireCall(endpoints->client)
-                    ->Grob(request.view(), fidl::StringView::FromExternal(s), response.view());
+                    .buffer(fidl_buffer.view())
+                    ->Grob(fidl::StringView::FromExternal(s));
   ASSERT_OK(result.status());
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(response.data());
+  auto hdr = reinterpret_cast<fidl_message_header_t*>(result.Unwrap());
   ASSERT_EQ(hdr->magic_number, kFidlWireFormatMagicNumberInitial);
 }
 

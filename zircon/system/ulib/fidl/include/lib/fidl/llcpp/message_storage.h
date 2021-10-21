@@ -6,6 +6,7 @@
 #define LIB_FIDL_LLCPP_MESSAGE_STORAGE_H_
 
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fit/function.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -90,6 +91,58 @@ struct BoxedMessageBuffer {
  private:
   uint8_t* bytes_ = new uint8_t[kSize];
 };
+
+// |AnyBufferAllocator| is a type-erasing buffer allocator. Its main purpose is
+// to extend the caller-allocating call/reply flavors to work with a flexible
+// range of buffer-like types ("upstream allocators").
+//
+// This class is similar in spirit to a |std::pmr::polymorphic_allocator|,
+// except that it is specialized to allocating buffers (ranges of bytes).
+//
+// This class is compact (4 machine words), such that it may be efficiently
+// moved around as a temporary value.
+//
+// If initialized with a |BufferSpan|, allocates in that buffer span. If
+// initialized with a reference to some arena, allocates in that arena.
+//
+// To extend |AnyBufferAllocator| to work with future buffer-like types,
+// declare a function overload for a user type |U| in the |::fidl::internal|
+// namespace:
+//
+//     AnyBufferAllocator MakeAnyBufferAllocator(U upstream_allocator);
+//
+class AnyBufferAllocator {
+ public:
+  // An upstream allocator is an object that responds to allocation commands and
+  // updates the state of the underlying memory resource referenced by the
+  // function. It is similar to a reducer in functional-reactive programming.
+  //
+  // If the allocator cannot satisfy the allocation, it should return nullptr,
+  // and preserve its original state before the allocation.
+  //
+  // Using |inline_function| ensures that there is no heap allocation, which
+  // would otherwise defeat the purpose of caller-allocating flavors.
+  //
+  // |num_bytes| represents the size of the allocation request.
+  using UpstreamAllocator = fit::inline_function<uint8_t*(uint32_t num_bytes)>;
+
+  // This constructor should only be used by |MakeAnyBufferAllocator|.
+  explicit AnyBufferAllocator(UpstreamAllocator&& upstream_allocator)
+      : resource_(std::move(upstream_allocator)) {}
+
+  // Allocates a buffer of size |num_bytes|.
+  uint8_t* Allocate(uint32_t num_bytes) { return resource_(num_bytes); }
+
+ private:
+  UpstreamAllocator resource_;
+};
+
+static_assert(sizeof(AnyBufferAllocator) <= 4 * sizeof(void*),
+              "AnyBufferAllocator should be reasonably small");
+
+// Type erasing adaptor from |BufferSpan| to |AnyBufferAllocator|.
+// See |AnyBufferAllocator|.
+AnyBufferAllocator MakeAnyBufferAllocator(fidl::BufferSpan buffer_span);
 
 }  // namespace internal
 }  // namespace fidl

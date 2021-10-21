@@ -767,11 +767,11 @@ class ::fidl::WireUnownedResult<
     final : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
+      ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                               StrictXUnionHenceResponseMayBeStackAllocated>*
-          request,
-      uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+          request);
   explicit WireUnownedResult(
       ::fidl::WireResponse<::fidl_test_union::TestProtocol::
                                StrictXUnionHenceResponseMayBeStackAllocated>*
@@ -935,11 +935,11 @@ class ::fidl::WireUnownedResult<
     final : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
+      ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                               FlexibleXUnionHenceResponseMustBeHeapAllocated>*
-          request,
-      uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+          request);
   explicit WireUnownedResult(
       ::fidl::WireResponse<::fidl_test_union::TestProtocol::
                                FlexibleXUnionHenceResponseMustBeHeapAllocated>*
@@ -1029,8 +1029,7 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::internal::WireSyncClientImpl<::fidl_test_union::TestProtocol>
     final : public ::fidl::internal::SyncEndpointVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_union::TestProtocol>> {
+                WireSyncClientImpl, ::fidl_test_union::TestProtocol> {
  public:
   // Allocates 80 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -1043,22 +1042,6 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_union::TestProtocol>
     return ::fidl::WireResult<::fidl_test_union::TestProtocol::
                                   StrictXUnionHenceResponseMayBeStackAllocated>(
         _client_end(), &_request);
-  }
-
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  ::fidl::WireUnownedResult<::fidl_test_union::TestProtocol::
-                                StrictXUnionHenceResponseMayBeStackAllocated>
-  StrictXUnionHenceResponseMayBeStackAllocated(
-      ::fidl::BufferSpan _response_buffer) {
-    ::fidl::WireRequest<::fidl_test_union::TestProtocol::
-                            StrictXUnionHenceResponseMayBeStackAllocated>
-        _request{};
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_union::TestProtocol::
-            StrictXUnionHenceResponseMayBeStackAllocated>(
-        _client_end(), &_request, _response_buffer.data,
-        _response_buffer.capacity);
   }
 
   // Allocates 16 bytes of request buffer on the stack. Response is
@@ -1075,20 +1058,47 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_union::TestProtocol>
                                                             &_request);
   }
 
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol>(
+        _channel());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<
+    ::fidl_test_union::TestProtocol>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::fidl_test_union::TestProtocol>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<::fidl_test_union::TestProtocol::
+                                StrictXUnionHenceResponseMayBeStackAllocated>
+  StrictXUnionHenceResponseMayBeStackAllocated() {
+    ::fidl::WireRequest<::fidl_test_union::TestProtocol::
+                            StrictXUnionHenceResponseMayBeStackAllocated>
+        _request{};
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>(
+        _client_end(), _allocator(), &_request);
+  }
+
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
   ::fidl::WireUnownedResult<::fidl_test_union::TestProtocol::
                                 FlexibleXUnionHenceResponseMustBeHeapAllocated>
-  FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      ::fidl::BufferSpan _response_buffer) {
+  FlexibleXUnionHenceResponseMustBeHeapAllocated() {
     ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                             FlexibleXUnionHenceResponseMustBeHeapAllocated>
         _request{};
     return ::fidl::WireUnownedResult<
         ::fidl_test_union::TestProtocol::
             FlexibleXUnionHenceResponseMustBeHeapAllocated>(
-        _client_end(), &_request, _response_buffer.data,
-        _response_buffer.capacity);
+        _client_end(), _allocator(), &_request);
   }
 
  private:
@@ -1182,16 +1192,16 @@ class ::fidl::WireSyncClient<::fidl_test_union::TestProtocol> final {
   ::fidl::WireUnownedResult<::fidl_test_union::TestProtocol::
                                 StrictXUnionHenceResponseMayBeStackAllocated>
   StrictXUnionHenceResponseMayBeStackAllocated(
-      ::fidl::BufferSpan _response_buffer) {
+      ::fidl::BufferSpan _buffer_span) const {
     ZX_ASSERT(client_end_.is_valid());
+    auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                             StrictXUnionHenceResponseMayBeStackAllocated>
         _request{};
     return ::fidl::WireUnownedResult<
         ::fidl_test_union::TestProtocol::
             StrictXUnionHenceResponseMayBeStackAllocated>(
-        this->client_end(), &_request, _response_buffer.data,
-        _response_buffer.capacity);
+        this->client_end(), _allocator, &_request);
   }
 
   // Allocates 16 bytes of request buffer on the stack. Response is
@@ -1214,16 +1224,16 @@ class ::fidl::WireSyncClient<::fidl_test_union::TestProtocol> final {
   ::fidl::WireUnownedResult<::fidl_test_union::TestProtocol::
                                 FlexibleXUnionHenceResponseMustBeHeapAllocated>
   FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      ::fidl::BufferSpan _response_buffer) {
+      ::fidl::BufferSpan _buffer_span) const {
     ZX_ASSERT(client_end_.is_valid());
+    auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                             FlexibleXUnionHenceResponseMustBeHeapAllocated>
         _request{};
     return ::fidl::WireUnownedResult<
         ::fidl_test_union::TestProtocol::
             FlexibleXUnionHenceResponseMustBeHeapAllocated>(
-        this->client_end(), &_request, _response_buffer.data,
-        _response_buffer.capacity);
+        this->client_end(), _allocator, &_request);
   }
 
  private:
@@ -1515,7 +1525,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
   ::fidl::WireUnownedResult<::fidl_test_union::TestProtocol::
                                 StrictXUnionHenceResponseMayBeStackAllocated>
   StrictXUnionHenceResponseMayBeStackAllocated_Sync(
-      ::fidl::BufferSpan _response_buffer);
+      ::fidl::BufferSpan _buffer_span);
   // Asynchronous variant of
   // |TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated()|. Allocates
   // 16 bytes of request buffer on the stack. The callback is stored on the
@@ -1558,7 +1568,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
   ::fidl::WireUnownedResult<::fidl_test_union::TestProtocol::
                                 FlexibleXUnionHenceResponseMustBeHeapAllocated>
   FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync(
-      ::fidl::BufferSpan _response_buffer);
+      ::fidl::BufferSpan _buffer_span);
   WireClientImpl() = default;
 
  private:

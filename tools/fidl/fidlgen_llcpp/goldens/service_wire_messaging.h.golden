@@ -228,7 +228,8 @@ class ::fidl::WireUnownedResult<
     final : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> _client,
+      ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>*
           request);
   explicit WireUnownedResult(const ::fidl::Result& result)
@@ -246,8 +247,7 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::internal::WireSyncClientImpl<::fidl_test_service::SecondProtocol>
     final : public ::fidl::internal::SyncEndpointVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_service::SecondProtocol>> {
+                WireSyncClientImpl, ::fidl_test_service::SecondProtocol> {
  public:
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -258,6 +258,32 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_service::SecondProtocol>
     return ::fidl::WireResult<
         ::fidl_test_service::SecondProtocol::MethodOnSecond>(_client_end(),
                                                              &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol>(
+        _channel());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<
+    ::fidl_test_service::SecondProtocol>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::fidl_test_service::SecondProtocol>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<::fidl_test_service::SecondProtocol::MethodOnSecond>
+  MethodOnSecond() {
+    ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>
+        _request{};
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_service::SecondProtocol::MethodOnSecond>(
+        _client_end(), _allocator(), &_request);
   }
 
  private:
@@ -575,7 +601,8 @@ class ::fidl::WireUnownedResult<
     final : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> _client,
+      ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>*
           request);
   explicit WireUnownedResult(const ::fidl::Result& result)
@@ -593,8 +620,7 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::internal::WireSyncClientImpl<::fidl_test_service::FirstProtocol>
     final : public ::fidl::internal::SyncEndpointVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_service::FirstProtocol>> {
+                WireSyncClientImpl, ::fidl_test_service::FirstProtocol> {
  public:
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -605,6 +631,32 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_service::FirstProtocol>
     return ::fidl::WireResult<
         ::fidl_test_service::FirstProtocol::MethodOnFirst>(_client_end(),
                                                            &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol>(
+        _channel());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<
+    ::fidl_test_service::FirstProtocol>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::fidl_test_service::FirstProtocol>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<::fidl_test_service::FirstProtocol::MethodOnFirst>
+  MethodOnFirst() {
+    ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>
+        _request{};
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_service::FirstProtocol::MethodOnFirst>(
+        _client_end(), _allocator(), &_request);
   }
 
  private:

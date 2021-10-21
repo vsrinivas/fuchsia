@@ -397,10 +397,9 @@ class ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> final
     : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client,
-      uint8_t* _request_bytes, uint32_t _request_byte_capacity,
-      ::fidl::WireRequest<::fidl_test_error::Example::Foo>* request,
-      uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+      ::fidl::UnownedClientEnd<::fidl_test_error::Example> client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
+      ::fidl::WireRequest<::fidl_test_error::Example::Foo>* request);
   explicit WireUnownedResult(
       ::fidl::WireResponse<::fidl_test_error::Example::Foo>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
@@ -466,8 +465,8 @@ class ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> final
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::fidl_test_error::Example> final
-    : public ::fidl::internal::SyncEndpointVeneer<
-          ::fidl::internal::WireSyncClientImpl<::fidl_test_error::Example>> {
+    : public ::fidl::internal::SyncEndpointVeneer<WireSyncClientImpl,
+                                                  ::fidl_test_error::Example> {
  public:
   // Allocates 40 bytes of response buffer on the stack. Request is
   // heap-allocated.
@@ -478,15 +477,25 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_error::Example> final
                                                                &_request);
   }
 
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client_end() const {
+    return ::fidl::UnownedClientEnd<::fidl_test_error::Example>(_channel());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<::fidl_test_error::Example>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::fidl_test_error::Example>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
   ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> Foo(
-      ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-      ::fidl::BufferSpan _response_buffer) {
+      ::fidl::StringView s) {
     ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
     return ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>(
-        _client_end(), _request_buffer.data, _request_buffer.capacity,
-        &_request, _response_buffer.data, _response_buffer.capacity);
+        _client_end(), _allocator(), &_request);
   }
 
  private:
@@ -571,13 +580,12 @@ class ::fidl::WireSyncClient<::fidl_test_error::Example> final {
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> Foo(
-      ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-      ::fidl::BufferSpan _response_buffer) {
+      ::fidl::BufferSpan _buffer_span, ::fidl::StringView s) const {
     ZX_ASSERT(client_end_.is_valid());
+    auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
     return ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>(
-        this->client_end(), _request_buffer.data, _request_buffer.capacity,
-        &_request, _response_buffer.data, _response_buffer.capacity);
+        this->client_end(), _allocator, &_request);
   }
 
  private:
@@ -718,8 +726,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_error::Example> final
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> Foo_Sync(
-      ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-      ::fidl::BufferSpan _response_buffer);
+      ::fidl::BufferSpan _buffer_span, ::fidl::StringView s);
   WireClientImpl() = default;
 
  private:

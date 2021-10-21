@@ -32,33 +32,27 @@ class {{ .WireSyncClient }} final {
   bool is_valid() const { return client_end_.is_valid(); }
   explicit operator bool() const { return is_valid(); }
 
-   {{- /* Client-calling functions do not apply to events. */}}
-   {{- range .ClientMethods }}
-   {{ .Docs }}
-   //{{ template "Method:ClientAllocationComment:Helper" . }}
-   {{ .WireResult }} {{ .Name }}({{ RenderParams .RequestArgs }}) const {
-      ZX_ASSERT(client_end_.is_valid());
-      {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-      return {{ .WireResult }}(this->client_end(), &_request);
-   }
-   {{- if or .RequestArgs .ResponseArgs }}
-    {{ .Docs }}
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    {{ .WireUnownedResult }} {{ .Name }}({{ template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
-      ZX_ASSERT(client_end_.is_valid());
-      {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-      return {{ .WireUnownedResult }}(this->client_end()
-        {{- if .RequestArgs -}}
-          , _request_buffer.data, _request_buffer.capacity
-        {{- end -}}
-        , &_request
-        {{- if .HasResponse }}
-          ,_response_buffer.data, _response_buffer.capacity
-        {{- end }}
-      );
-    }
-     {{- end }}
+  {{- /* Client-calling functions do not apply to events. */}}
+  {{- range .ClientMethods }}
+  {{ .Docs }}
+  //{{ template "Method:ClientAllocationComment:Helper" . }}
+  {{ .WireResult }} {{ .Name }}({{ RenderParams .RequestArgs }}) const {
+    ZX_ASSERT(client_end_.is_valid());
+    {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+    return {{ .WireResult }}(this->client_end(), &_request);
+  }
 
+  {{- if or .RequestArgs .ResponseArgs }}
+  {{ .Docs }}
+  // Caller provides the backing storage for FIDL message via request and response buffers.
+  {{ .WireUnownedResult }} {{ .Name }}(
+      {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) const {
+    ZX_ASSERT(client_end_.is_valid());
+    auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
+    {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+    return {{ .WireUnownedResult }}(this->client_end(), _allocator, &_request);
+  }
+  {{- end }}
   {{- end }}
 
   {{- if .Events }}

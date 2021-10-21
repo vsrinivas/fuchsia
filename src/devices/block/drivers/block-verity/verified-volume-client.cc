@@ -214,9 +214,7 @@ zx_status_t VerifiedVolumeClient::Close() {
 }
 
 zx_status_t VerifiedVolumeClient::CloseAndGenerateSeal(
-    fidl::Buffer<
-        fidl::WireResponse<fuchsia_hardware_block_verified::DeviceManager::CloseAndGenerateSeal>>*
-        seal_response_buffer,
+    fidl::AnyArena& arena,
     fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResult* out) {
   // We use the caller-provided buffer FIDL call style because the caller
   // needs to do something with the seal returned, so we need to keep the
@@ -224,7 +222,8 @@ zx_status_t VerifiedVolumeClient::CloseAndGenerateSeal(
   // function returns.
   auto seal_resp = fidl::WireCall<fuchsia_hardware_block_verified::DeviceManager>(
                        zx::unowned_channel(verity_chan_))
-                       ->CloseAndGenerateSeal(seal_response_buffer->view());
+                       .buffer(arena)
+                       ->CloseAndGenerateSeal();
   if (seal_resp.status() != ZX_OK) {
     return seal_resp.status();
   }
@@ -232,7 +231,7 @@ zx_status_t VerifiedVolumeClient::CloseAndGenerateSeal(
     return seal_resp->result.err();
   }
 
-  *out = std::move(seal_resp->result);
+  *out = seal_resp->result;
   return ZX_OK;
 }
 

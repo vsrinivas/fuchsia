@@ -37,11 +37,6 @@
 // |T::MessageKind|         identifies if this message is a request or a response. If undefined,
 //                          the type may be used either as a request or a response.
 //
-// Additionally, if |T| is a non-empty request message of a FIDL transaction:
-//
-// |T::ResponseType| resolves to the corresponding response message type, if the FIDL method calls
-//                   for a response. Otherwise, the definition does not exist.
-//
 
 namespace fidl {
 
@@ -262,16 +257,8 @@ template <typename FidlType>
 struct IsResponseType<FidlType, void_t<decltype(FidlType::MessageKind)>>
     : std::integral_constant<bool, FidlType::MessageKind == TransactionalMessageKind::kResponse> {};
 
-// A type trait that indicates if the given FidlType is a request message type that also
-// unambiguously declare a corresponding response message type.
-template <typename, typename = void_t<>>
-struct HasResponseType : std::false_type {};
-template <typename FidlType>
-struct HasResponseType<FidlType, void_t<typename FidlType::ResponseType>> : std::true_type {};
-
 // Calculates the maximum possible message size for a FIDL type,
 // clamped at the Zircon channel transport packet size.
-// TODO(fxbug.dev/8093): users of this API should always specify a meaningful direction.
 template <typename FidlType, const MessageDirection Direction>
 constexpr uint32_t ClampedMessageSize() {
   static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");
@@ -294,7 +281,6 @@ constexpr uint32_t ClampedMessageSize() {
 
 // Calculates the maximum possible handle count for a FIDL type,
 // clamped at the Zircon channel transport handle limit.
-// TODO(fxbug.dev/8093): users of this API should always specify a meaningful direction.
 template <typename FidlType, const MessageDirection Direction>
 constexpr uint32_t ClampedHandleCount() {
   static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");

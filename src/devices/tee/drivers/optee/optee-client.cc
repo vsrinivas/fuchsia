@@ -1400,14 +1400,13 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
   uint64_t offset = message->file_offset();
   size_t bytes_left = buffer_mem->size();
   size_t bytes_read = 0;
-  fidl::Buffer<fidl::WireRequest<fuchsia_io::File::ReadAt>> request_buffer;
-  fidl::Buffer<fidl::WireResponse<fuchsia_io::File::ReadAt>> response_buffer;
+  fidl::SyncClientBuffer<fuchsia_io::File::ReadAt> fidl_buffer;
   while (bytes_left > 0) {
     uint64_t read_chunk_request = std::min(bytes_left, fuchsia_io::wire::kMaxBuf);
     uint64_t read_chunk_actual = 0;
 
-    auto result = fidl::WireCall(file)->ReadAt(request_buffer.view(), read_chunk_request, offset,
-                                               response_buffer.view());
+    auto result =
+        fidl::WireCall(file).buffer(fidl_buffer.view())->ReadAt(read_chunk_request, offset);
     if (!result.ok()) {
       LOG(ERROR, "failed to read from file (FIDL error: %s)", result.FormatDescription().c_str());
       message->set_return_code(TEEC_ERROR_GENERIC);

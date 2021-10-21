@@ -161,45 +161,6 @@ TEST(LlcppTypesTests, VectorView) {
   EXPECT_EQ(view.at(1), 2);
 }
 
-TEST(LlcppTypesTests, InlineMessageBuffer) {
-  fidl::internal::InlineMessageBuffer<32> buffer;
-  ASSERT_EQ(32u, buffer.size());
-  ASSERT_EQ(reinterpret_cast<uint8_t*>(&buffer), buffer.data());
-  ASSERT_EQ(buffer.data(), buffer.view().data);
-  ASSERT_EQ(32u, buffer.view().capacity);
-
-  const fidl::internal::InlineMessageBuffer<32> const_buffer;
-  ASSERT_EQ(reinterpret_cast<const uint8_t*>(&const_buffer), const_buffer.data());
-}
-
-TEST(LlcppTypesTests, BoxedMessageBuffer) {
-  fidl::internal::BoxedMessageBuffer<32> buffer;
-  ASSERT_EQ(32u, buffer.size());
-  ASSERT_NE(reinterpret_cast<uint8_t*>(&buffer), buffer.data());
-  ASSERT_EQ(buffer.data(), buffer.view().data);
-  ASSERT_EQ(32u, buffer.view().capacity);
-
-  const fidl::internal::BoxedMessageBuffer<32> const_buffer;
-  ASSERT_NE(reinterpret_cast<const uint8_t*>(&const_buffer), const_buffer.data());
-}
-
-TEST(LlcppTypesTests, ResponseStorageAllocationStrategyTest) {
-  // The stack allocation limit of 512 bytes is defined in
-  // tools/fidl/lib/fidlgen_cpp/protocol.go
-
-  static_assert(sizeof(fidl::WireRequest<TypesTest::RequestOf512Bytes>) == 512);
-  // Buffers for messages no bigger than 512 bytes are embedded, for this request,
-  // OwnedEncodedMessage size is bigger than 512 bytes.
-  static_assert(sizeof(fidl::OwnedEncodedMessage<fidl::WireRequest<TypesTest::RequestOf512Bytes>>) >
-                512);
-
-  static_assert(sizeof(fidl::WireRequest<TypesTest::RequestOf513Bytes>) == 520);
-  // Buffers for messages bigger than 512 bytes are store on the heap, for this request,
-  // OwnedEncodedMessage size is smaller than 512 bytes.
-  static_assert(sizeof(fidl::OwnedEncodedMessage<fidl::WireRequest<TypesTest::RequestOf513Bytes>>) <
-                512);
-}
-
 // Ensure the encoded message with default number of iovecs can be decoded and accessed without
 // triggering ASAN errors, even after the initial encoded object goes out of scope.
 // A vector is used in this test because the encoder will typically use a dedicated iovec to

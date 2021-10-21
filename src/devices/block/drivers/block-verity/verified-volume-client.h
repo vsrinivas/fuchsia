@@ -51,12 +51,10 @@ class VerifiedVolumeClient {
   // Requests that the volume unbind the `mutable` child, regenerated integrity
   // data, update the superblock, and return a seal for future use with
   // `OpenForVerifiedRead`.  If successful, the result of the seal operation is
-  // written into the caller-owned `out` buffer, so the caller can persist it
-  // somewhere.
+  // allocated in a caller-owned `arena` and returned via `out`, so the caller
+  // can persist it somewhere.
   zx_status_t CloseAndGenerateSeal(
-      fidl::Buffer<
-          fidl::WireResponse<fuchsia_hardware_block_verified::DeviceManager::CloseAndGenerateSeal>>*
-          seal_response_buffer,
+      fidl::AnyArena& arena,
       fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResult* out);
 
   // Requests that the volume be opened for verified reads, with the expectation

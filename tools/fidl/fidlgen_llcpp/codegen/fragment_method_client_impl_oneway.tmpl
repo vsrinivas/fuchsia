@@ -44,7 +44,7 @@
           {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
       {{ .WireRequest }} _request_object{ {{ RenderForwardParams .RequestArgs }} };
       ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> _request_message(
-          _request_buffer.data, _request_buffer.capacity, &_request_object);
+          _buffer_span.data, _buffer_span.capacity, &_request_object);
       return ::fidl::internal::ClientBase::SendOneWay(_request_message.GetOutgoingMessage());
     }
   {{- end }}

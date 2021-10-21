@@ -434,11 +434,10 @@ class ::fidl::WireUnownedResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
     final : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> _client,
-      uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+      ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
-          request,
-      uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+          request);
   explicit WireUnownedResult(
       ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
           response)
@@ -513,8 +512,7 @@ class ::fidl::WireUnownedResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
 template <>
 class ::fidl::internal::WireSyncClientImpl<::fidl_test_anonymous::SomeProtocol>
     final : public ::fidl::internal::SyncEndpointVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_anonymous::SomeProtocol>> {
+                WireSyncClientImpl, ::fidl_test_anonymous::SomeProtocol> {
  public:
   // Allocates 128 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -527,19 +525,31 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_anonymous::SomeProtocol>
         _client_end(), &_request);
   }
 
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol>(
+        _channel());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<
+    ::fidl_test_anonymous::SomeProtocol>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::fidl_test_anonymous::SomeProtocol>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
   ::fidl::WireUnownedResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-  SomeMethod(::fidl::BufferSpan _request_buffer,
-             ::fidl_test_anonymous::wire::UnionMember union_member,
-             ::fidl_test_anonymous::wire::TableMember table_member,
-             ::fidl::BufferSpan _response_buffer) {
+  SomeMethod(::fidl_test_anonymous::wire::UnionMember union_member,
+             ::fidl_test_anonymous::wire::TableMember table_member) {
     ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
         _request{union_member, table_member};
     return ::fidl::WireUnownedResult<
         ::fidl_test_anonymous::SomeProtocol::SomeMethod>(
-        _client_end(), _request_buffer.data, _request_buffer.capacity,
-        &_request, _response_buffer.data, _response_buffer.capacity);
+        _client_end(), _allocator(), &_request);
   }
 
  private:
@@ -630,17 +640,16 @@ class ::fidl::WireSyncClient<::fidl_test_anonymous::SomeProtocol> final {
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-  SomeMethod(::fidl::BufferSpan _request_buffer,
+  SomeMethod(::fidl::BufferSpan _buffer_span,
              ::fidl_test_anonymous::wire::UnionMember union_member,
-             ::fidl_test_anonymous::wire::TableMember table_member,
-             ::fidl::BufferSpan _response_buffer) {
+             ::fidl_test_anonymous::wire::TableMember table_member) const {
     ZX_ASSERT(client_end_.is_valid());
+    auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
         _request{union_member, table_member};
     return ::fidl::WireUnownedResult<
-        ::fidl_test_anonymous::SomeProtocol::SomeMethod>(
-        this->client_end(), _request_buffer.data, _request_buffer.capacity,
-        &_request, _response_buffer.data, _response_buffer.capacity);
+        ::fidl_test_anonymous::SomeProtocol::SomeMethod>(this->client_end(),
+                                                         _allocator, &_request);
   }
 
  private:
@@ -819,10 +828,9 @@ class ::fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-  SomeMethod_Sync(::fidl::BufferSpan _request_buffer,
+  SomeMethod_Sync(::fidl::BufferSpan _buffer_span,
                   ::fidl_test_anonymous::wire::UnionMember union_member,
-                  ::fidl_test_anonymous::wire::TableMember table_member,
-                  ::fidl::BufferSpan _response_buffer);
+                  ::fidl_test_anonymous::wire::TableMember table_member);
   WireClientImpl() = default;
 
  private:

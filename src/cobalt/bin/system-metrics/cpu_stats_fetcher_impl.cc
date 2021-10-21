@@ -95,9 +95,9 @@ void CpuStatsFetcherImpl::InitializeKernelStats() {
     return;
   }
   cpu_stats_buffer_ =
-      std::make_unique<fidl::Buffer<fidl::WireResponse<fuchsia_kernel::Stats::GetCpuStats>>>();
+      std::make_unique<fidl::SyncClientBuffer<fuchsia_kernel::Stats::GetCpuStats>>();
   last_cpu_stats_buffer_ =
-      std::make_unique<fidl::Buffer<fidl::WireResponse<fuchsia_kernel::Stats::GetCpuStats>>>();
+      std::make_unique<fidl::SyncClientBuffer<fuchsia_kernel::Stats::GetCpuStats>>();
   stats_service_ = fidl::WireSyncClient<fuchsia_kernel::Stats>(std::move(local));
 }
 

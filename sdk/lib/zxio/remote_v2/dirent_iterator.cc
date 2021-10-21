@@ -94,7 +94,7 @@ class DirentIteratorImpl {
   }
 
   zx_status_t ReadNextBatch() {
-    auto result = iterator_.GetNext(boxed_->response_buffer.view());
+    auto result = iterator_.GetNext(boxed_->fidl_buffer.view());
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -102,7 +102,7 @@ class DirentIteratorImpl {
       return result->result.err();
     }
     auto& response = result->result.mutable_response();
-    entries_ = std::move(response.entries);
+    entries_ = response.entries;
     return ZX_OK;
   }
 
@@ -112,7 +112,7 @@ class DirentIteratorImpl {
     Boxed() = default;
 
     // Buffer used by the FIDL calls.
-    fidl::Buffer<fidl::WireResponse<fio2::DirectoryIterator::GetNext>> response_buffer;
+    fidl::SyncClientBuffer<fio2::DirectoryIterator::GetNext> fidl_buffer;
 
     // At each |zxio_dirent_iterator_next| call, we would extract the next
     // dirent segment from |response_buffer|, and populate |current_entry|

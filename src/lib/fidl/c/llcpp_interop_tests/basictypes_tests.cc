@@ -284,11 +284,9 @@ TEST(BasicTypesTest, SyncCallerAllocateCallStruct) {
   }
 
   // perform call
-  FIDL_ALIGNDECL uint8_t request_buf[512] = {};
-  FIDL_ALIGNDECL uint8_t response_buf[512] = {};
-  auto result = test.ConsumeSimpleStruct(fidl::BufferSpan(request_buf, sizeof(request_buf)),
-                                         std::move(simple_struct),
-                                         fidl::BufferSpan(response_buf, sizeof(response_buf)));
+  FIDL_ALIGNDECL uint8_t buf[1024] = {};
+  auto result =
+      test.ConsumeSimpleStruct(fidl::BufferSpan(buf, sizeof(buf)), std::move(simple_struct));
   ASSERT_OK(result.status());
   ASSERT_OK(result.Unwrap()->status);
   ASSERT_EQ(result.Unwrap()->field, 123);

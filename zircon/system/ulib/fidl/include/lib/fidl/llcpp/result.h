@@ -120,6 +120,7 @@ extern const char* const kErrorUnknownOrdinal;
 extern const char* const kErrorTransport;
 extern const char* const kErrorChannelUnbound;
 extern const char* const kErrorWaitOneFailed;
+extern const char* const kCallerAllocatedBufferTooSmall;
 
 }  // namespace internal
 

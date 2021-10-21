@@ -235,8 +235,8 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<
           ::fidl_test_placementofattributes::ExampleProtocol>
-          _client,
-      uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+          client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::WireRequest<
           ::fidl_test_placementofattributes::ExampleProtocol::Method>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
@@ -256,8 +256,8 @@ template <>
 class ::fidl::internal::WireSyncClientImpl<
     ::fidl_test_placementofattributes::ExampleProtocol>
     final : public ::fidl::internal::SyncEndpointVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_placementofattributes::ExampleProtocol>> {
+                WireSyncClientImpl,
+                ::fidl_test_placementofattributes::ExampleProtocol> {
  public:
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -271,19 +271,32 @@ class ::fidl::internal::WireSyncClientImpl<
         _client_end(), &_request);
   }
 
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_placementofattributes::ExampleProtocol>
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<
+        ::fidl_test_placementofattributes::ExampleProtocol>(_channel());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<
+    ::fidl_test_placementofattributes::ExampleProtocol>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::fidl_test_placementofattributes::ExampleProtocol>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
   ::fidl::WireUnownedResult<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>
-  Method(::fidl::BufferSpan _request_buffer,
-         const ::exampleusing::wire::Empty& arg) {
+  Method(const ::exampleusing::wire::Empty& arg) {
     ::fidl::WireRequest<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>
         _request{arg};
     return ::fidl::WireUnownedResult<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>(
-        _client_end(), _request_buffer.data, _request_buffer.capacity,
-        &_request);
+        _client_end(), _allocator(), &_request);
   }
 
  private:
@@ -383,16 +396,16 @@ class ::fidl::WireSyncClient<::fidl_test_placementofattributes::ExampleProtocol>
   // response buffers.
   ::fidl::WireUnownedResult<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>
-  Method(::fidl::BufferSpan _request_buffer,
-         const ::exampleusing::wire::Empty& arg) {
+  Method(::fidl::BufferSpan _buffer_span,
+         const ::exampleusing::wire::Empty& arg) const {
     ZX_ASSERT(client_end_.is_valid());
+    auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>
         _request{arg};
     return ::fidl::WireUnownedResult<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>(
-        this->client_end(), _request_buffer.data, _request_buffer.capacity,
-        &_request);
+        this->client_end(), _allocator, &_request);
   }
 
  private:
@@ -459,7 +472,7 @@ class ::fidl::internal::WireClientImpl<
   ::fidl::Result Method(const ::exampleusing::wire::Empty& arg);
 
   // Caller provides the backing storage for FIDL message via request buffer.
-  ::fidl::Result Method(::fidl::BufferSpan _request_buffer,
+  ::fidl::Result Method(::fidl::BufferSpan _buffer_span,
                         const ::exampleusing::wire::Empty& arg);
   WireClientImpl() = default;
 

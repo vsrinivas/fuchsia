@@ -80,9 +80,8 @@ class EffectsStageV2 : public ReadableStream {
   const int64_t ringout_total_frames_;  // total frames of ring out
   int64_t next_ringout_frame_ = 0;      // start of the next ringout period
 
-  // These buffers hold the one encoded FIDL Process request and response message, respectively.
-  fidl::Buffer<fidl::WireRequest<fuchsia_audio_effects::Processor::Process>> request_buffer_;
-  fidl::Buffer<fidl::WireResponse<fuchsia_audio_effects::Processor::Process>> response_buffer_;
+  // Buffer holding one pair of encoded FIDL Process request and response message.
+  fidl::SyncClientBuffer<fuchsia_audio_effects::Processor::Process> process_buffer_;
 };
 
 }  // namespace media::audio

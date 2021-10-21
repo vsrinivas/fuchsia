@@ -58,16 +58,28 @@ namespace fidl_test_protocols {
     ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>::
     WireUnownedResult(
         ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>
-            client,
-        uint8_t* request_bytes, uint32_t request_byte_capacity,
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<
             ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>*
             request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
   ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client.channel());
+  outgoing.Write(client_end.channel());
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -123,20 +135,37 @@ namespace fidl_test_protocols {
     ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>::
     WireUnownedResult(
         ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>
-            client,
-        uint8_t* request_bytes, uint32_t request_byte_capacity,
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<
             ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>*
-            request,
-        uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
+            request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<
+          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
   ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>(
-      client.channel(), response_bytes, response_byte_capacity);
+      client_end.channel(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -194,13 +223,13 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
 }
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
-    NoResponseMethod(::fidl::BufferSpan _request_buffer, ::zx::socket&& h) {
+    NoResponseMethod(::fidl::BufferSpan _buffer_span, ::zx::socket&& h) {
   ::fidl::WireRequest<
       ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>
       _request_object{std::move(h)};
   ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>>
-      _request_message(_request_buffer.data, _request_buffer.capacity,
+      _request_message(_buffer_span.data, _buffer_span.capacity,
                        &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
@@ -320,8 +349,8 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
 ::fidl::WireUnownedResult<
     ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>
 fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
-    ResponseMethod_Sync(::fidl::BufferSpan _request_buffer, ::zx::socket&& h,
-                        ::fidl::BufferSpan _response_buffer) {
+    ResponseMethod_Sync(::fidl::BufferSpan _buffer_span, ::zx::socket&& h) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<
@@ -332,8 +361,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
             ::fidl::UnownedClientEnd<
                 ::fidl_test_protocols::HandleRightsProtocol>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            _request_buffer.data, _request_buffer.capacity, &_request,
-            _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 
@@ -843,22 +871,40 @@ namespace fidl_test_protocols {
                               NoRequestWithResponse>::
     WireUnownedResult(::fidl::UnownedClientEnd<
                           ::fidl_test_protocols::WithAndWithoutRequestResponse>
-                          client,
+                          client_end,
+                      ::fidl::internal::AnyBufferAllocator& allocator,
                       ::fidl::WireRequest<
                           ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                              NoRequestWithResponse>* request,
-                      uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+                              NoRequestWithResponse>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          NoRequestWithResponse>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                              NoRequestWithResponse>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               NoRequestWithResponse>>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+      request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          NoRequestWithResponse>>(client.channel(), response_bytes,
+          NoRequestWithResponse>>(client_end.channel(), response_bytes,
                                   response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -892,17 +938,30 @@ namespace fidl_test_protocols {
                               WithRequestNoResponse>::
     WireUnownedResult(::fidl::UnownedClientEnd<
                           ::fidl_test_protocols::WithAndWithoutRequestResponse>
-                          client,
-                      uint8_t* request_bytes, uint32_t request_byte_capacity,
+                          client_end,
+                      ::fidl::internal::AnyBufferAllocator& allocator,
                       ::fidl::WireRequest<
                           ::fidl_test_protocols::WithAndWithoutRequestResponse::
                               WithRequestNoResponse>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestNoResponse>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               WithRequestNoResponse>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client.channel());
+  outgoing.Write(client_end.channel());
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -962,13 +1021,30 @@ namespace fidl_test_protocols {
                               WithRequestEmptyResponse>::
     WireUnownedResult(::fidl::UnownedClientEnd<
                           ::fidl_test_protocols::WithAndWithoutRequestResponse>
-                          client,
-                      uint8_t* request_bytes, uint32_t request_byte_capacity,
+                          client_end,
+                      ::fidl::internal::AnyBufferAllocator& allocator,
                       ::fidl::WireRequest<
                           ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestEmptyResponse>* request,
-                      uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
+                              WithRequestEmptyResponse>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestEmptyResponse>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                              WithRequestEmptyResponse>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               WithRequestEmptyResponse>>
@@ -976,8 +1052,9 @@ namespace fidl_test_protocols {
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          WithRequestEmptyResponse>>(client.channel(), response_bytes,
+          WithRequestEmptyResponse>>(client_end.channel(), response_bytes,
                                      response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -1037,13 +1114,30 @@ namespace fidl_test_protocols {
                               WithRequestWithResponse>::
     WireUnownedResult(::fidl::UnownedClientEnd<
                           ::fidl_test_protocols::WithAndWithoutRequestResponse>
-                          client,
-                      uint8_t* request_bytes, uint32_t request_byte_capacity,
+                          client_end,
+                      ::fidl::internal::AnyBufferAllocator& allocator,
                       ::fidl::WireRequest<
                           ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                              WithRequestWithResponse>* request,
-                      uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
+                              WithRequestWithResponse>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestWithResponse>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                              WithRequestWithResponse>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               WithRequestWithResponse>>
@@ -1051,8 +1145,9 @@ namespace fidl_test_protocols {
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
-          WithRequestWithResponse>>(client.channel(), response_bytes,
+          WithRequestWithResponse>>(client_end.channel(), response_bytes,
                                     response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -1463,7 +1558,8 @@ fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
 fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
-    NoRequestWithResponse_Sync(::fidl::BufferSpan _response_buffer) {
+    NoRequestWithResponse_Sync(::fidl::BufferSpan _buffer_span) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<
@@ -1476,7 +1572,7 @@ fidl::internal::WireClientImpl<
             ::fidl::UnownedClientEnd<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            &_request, _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 ::fidl::Result fidl::internal::WireClientImpl<
@@ -1496,7 +1592,7 @@ fidl::internal::WireClientImpl<
 }
 ::fidl::Result fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
-    WithRequestNoResponse(::fidl::BufferSpan _request_buffer,
+    WithRequestNoResponse(::fidl::BufferSpan _buffer_span,
                           ::fidl::StringView arg) {
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           WithRequestNoResponse>
@@ -1504,7 +1600,7 @@ fidl::internal::WireClientImpl<
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                               WithRequestNoResponse>>
-      _request_message(_request_buffer.data, _request_buffer.capacity,
+      _request_message(_buffer_span.data, _buffer_span.capacity,
                        &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
@@ -1634,9 +1730,9 @@ fidl::internal::WireClientImpl<
                               WithRequestEmptyResponse>
 fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
-    WithRequestEmptyResponse_Sync(::fidl::BufferSpan _request_buffer,
-                                  ::fidl::StringView arg,
-                                  ::fidl::BufferSpan _response_buffer) {
+    WithRequestEmptyResponse_Sync(::fidl::BufferSpan _buffer_span,
+                                  ::fidl::StringView arg) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<
@@ -1649,8 +1745,7 @@ fidl::internal::WireClientImpl<
             ::fidl::UnownedClientEnd<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            _request_buffer.data, _request_buffer.capacity, &_request,
-            _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 void fidl::internal::WireClientImpl<
@@ -1778,9 +1873,9 @@ fidl::internal::WireClientImpl<
                               WithRequestWithResponse>
 fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
-    WithRequestWithResponse_Sync(::fidl::BufferSpan _request_buffer,
-                                 ::fidl::StringView arg,
-                                 ::fidl::BufferSpan _response_buffer) {
+    WithRequestWithResponse_Sync(::fidl::BufferSpan _buffer_span,
+                                 ::fidl::StringView arg) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<
@@ -1793,8 +1888,7 @@ fidl::internal::WireClientImpl<
             ::fidl::UnownedClientEnd<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            _request_buffer.data, _request_buffer.capacity, &_request,
-            _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 
@@ -2420,19 +2514,36 @@ namespace fidl_test_protocols {
 }  // namespace fidl_test_protocols
 ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::Request>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocols::Transitional> client,
-        uint8_t* request_bytes, uint32_t request_byte_capacity,
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::Transitional>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>*
-            request,
-        uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
+            request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::Transitional::Request>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing
       .Call<::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>>(
-          client.channel(), response_bytes, response_byte_capacity);
+          client_end.channel(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -2458,15 +2569,28 @@ namespace fidl_test_protocols {
 }  // namespace fidl_test_protocols
 ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::OneWay>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocols::Transitional> client,
-        uint8_t* request_bytes, uint32_t request_byte_capacity,
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::Transitional>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>*
             request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::Transitional::OneWay>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client.channel());
+  outgoing.Write(client_end.channel());
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -2602,8 +2726,8 @@ fidl::internal::WireClientImpl<
 }
 ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::Request> fidl::
     internal::WireClientImpl<::fidl_test_protocols::Transitional>::Request_Sync(
-        ::fidl::BufferSpan _request_buffer, int64_t x,
-        ::fidl::BufferSpan _response_buffer) {
+        ::fidl::BufferSpan _buffer_span, int64_t x) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>
@@ -2612,8 +2736,7 @@ fidl::internal::WireClientImpl<
             ::fidl_test_protocols::Transitional::Request>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::Transitional>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            _request_buffer.data, _request_buffer.capacity, &_request,
-            _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 ::fidl::Result fidl::internal::WireClientImpl<
@@ -2630,12 +2753,12 @@ fidl::internal::WireClientImpl<
 }
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::OneWay(
-    ::fidl::BufferSpan _request_buffer, int64_t x) {
+    ::fidl::BufferSpan _buffer_span, int64_t x) {
   ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>
       _request_object{x};
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>>
-      _request_message(_request_buffer.data, _request_buffer.capacity,
+      _request_message(_buffer_span.data, _buffer_span.capacity,
                        &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
@@ -2923,15 +3046,28 @@ namespace fidl_test_protocols {
 }  // namespace fidl_test_protocols
 ::fidl::WireUnownedResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion> client,
-        uint8_t* request_bytes, uint32_t request_byte_capacity,
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<
             ::fidl_test_protocols::MethodWithUnion::UnionMethod>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::MethodWithUnion::UnionMethod>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::MethodWithUnion::UnionMethod>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client.channel());
+  outgoing.Write(client_end.channel());
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -2955,13 +3091,13 @@ namespace fidl_test_protocols {
 }
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_protocols::MethodWithUnion>::UnionMethod(
-        ::fidl::BufferSpan _request_buffer,
+        ::fidl::BufferSpan _buffer_span,
         ::fidl_test_protocols::wire::TheUnion u) {
   ::fidl::WireRequest<::fidl_test_protocols::MethodWithUnion::UnionMethod>
       _request_object{u};
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::MethodWithUnion::UnionMethod>>
-      _request_message(_request_buffer.data, _request_buffer.capacity,
+      _request_message(_buffer_span.data, _buffer_span.capacity,
                        &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
@@ -3108,19 +3244,35 @@ namespace fidl_test_protocols {
 ::fidl::WireUnownedResult<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
     WireUnownedResult(
         ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>
-            client,
-        uint8_t* request_bytes, uint32_t request_byte_capacity,
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<
-            ::fidl_test_protocols::WithProtocolEnds::ClientEnds>* request,
-        uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
+            ::fidl_test_protocols::WithProtocolEnds::ClientEnds>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::WithProtocolEnds::ClientEnds>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithProtocolEnds::ClientEnds>>(
-      client.channel(), response_bytes, response_byte_capacity);
+      client_end.channel(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -3171,19 +3323,35 @@ namespace fidl_test_protocols {
 ::fidl::WireUnownedResult<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
     WireUnownedResult(
         ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>
-            client,
-        uint8_t* request_bytes, uint32_t request_byte_capacity,
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<
-            ::fidl_test_protocols::WithProtocolEnds::ServerEnds>* request,
-        uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
+            ::fidl_test_protocols::WithProtocolEnds::ServerEnds>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::WithProtocolEnds::ServerEnds>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithProtocolEnds::ServerEnds>>(
-      client.channel(), response_bytes, response_byte_capacity);
+      client_end.channel(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -3239,20 +3407,37 @@ namespace fidl_test_protocols {
     ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
     WireUnownedResult(
         ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>
-            client,
-        uint8_t* request_bytes, uint32_t request_byte_capacity,
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<
             ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>*
-            request,
-        uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
+            request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<
+          ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
   ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>(
-      client.channel(), response_bytes, response_byte_capacity);
+      client_end.channel(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -3464,9 +3649,9 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
 ::fidl::WireUnownedResult<::fidl_test_protocols::WithProtocolEnds::ClientEnds>
 fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
     ClientEnds_Sync(
-        ::fidl::BufferSpan _request_buffer,
-        ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
-        ::fidl::BufferSpan _response_buffer) {
+        ::fidl::BufferSpan _buffer_span,
+        ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>
@@ -3475,8 +3660,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
             ::fidl_test_protocols::WithProtocolEnds::ClientEnds>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            _request_buffer.data, _request_buffer.capacity, &_request,
-            _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
@@ -3587,9 +3771,9 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
 ::fidl::WireUnownedResult<::fidl_test_protocols::WithProtocolEnds::ServerEnds>
 fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
     ServerEnds_Sync(
-        ::fidl::BufferSpan _request_buffer,
-        ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
-        ::fidl::BufferSpan _response_buffer) {
+        ::fidl::BufferSpan _buffer_span,
+        ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>
@@ -3598,8 +3782,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
             ::fidl_test_protocols::WithProtocolEnds::ServerEnds>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            _request_buffer.data, _request_buffer.capacity, &_request,
-            _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
@@ -3720,9 +3903,9 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
 ::fidl::WireUnownedResult<
     ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>
 fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
-    StructContainingEnds_Sync(::fidl::BufferSpan _request_buffer,
-                              ::fidl_test_protocols::wire::ProtocolEnds&& in,
-                              ::fidl::BufferSpan _response_buffer) {
+    StructContainingEnds_Sync(::fidl::BufferSpan _buffer_span,
+                              ::fidl_test_protocols::wire::ProtocolEnds&& in) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<
@@ -3732,8 +3915,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
             ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            _request_buffer.data, _request_buffer.capacity, &_request,
-            _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 
@@ -4049,15 +4231,28 @@ namespace fidl_test_protocols {
 }  // namespace fidl_test_protocols
 ::fidl::WireUnownedResult<::fidl_test_protocols::ManyParameters::Fifteen>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters> client,
-        uint8_t* request_bytes, uint32_t request_byte_capacity,
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>*
             request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::ManyParameters::Fifteen>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client.channel());
+  outgoing.Write(client_end.channel());
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -4083,7 +4278,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ManyParameters>::Fifteen(
 }
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_protocols::ManyParameters>::Fifteen(
-    ::fidl::BufferSpan _request_buffer, bool p1, bool p2, bool p3, bool p4,
+    ::fidl::BufferSpan _buffer_span, bool p1, bool p2, bool p3, bool p4,
     bool p5, bool p6, bool p7, bool p8, bool p9, bool p10, bool p11, bool p12,
     bool p13, bool p14, bool p15) {
   ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>
@@ -4091,7 +4286,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ManyParameters>::Fifteen(
                       p9, p10, p11, p12, p13, p14, p15};
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>>
-      _request_message(_request_buffer.data, _request_buffer.capacity,
+      _request_message(_buffer_span.data, _buffer_span.capacity,
                        &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
@@ -4246,19 +4441,38 @@ namespace fidl_test_protocols {
 ::fidl::WireUnownedResult<
     ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax> client,
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<
-            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>* request,
-        uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>*
+            request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<
+          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+      request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>(
-      client.channel(), response_bytes, response_byte_capacity);
+      client_end.channel(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -4308,19 +4522,38 @@ namespace fidl_test_protocols {
 ::fidl::WireUnownedResult<
     ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax> client,
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<
-            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>* request,
-        uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>*
+            request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+      request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>(
-      client.channel(), response_bytes, response_byte_capacity);
+      client_end.channel(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -4368,19 +4601,36 @@ namespace fidl_test_protocols {
 }  // namespace fidl_test_protocols
 ::fidl::WireUnownedResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax> client,
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<
-            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>* request,
-        uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+      request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>(
-      client.channel(), response_bytes, response_byte_capacity);
+      client_end.channel(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -4429,19 +4679,37 @@ namespace fidl_test_protocols {
 ::fidl::WireUnownedResult<
     ::fidl_test_protocols::WithErrorSyntax::HandleInResult>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax> client,
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<
-            ::fidl_test_protocols::WithErrorSyntax::HandleInResult>* request,
-        uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+            ::fidl_test_protocols::WithErrorSyntax::HandleInResult>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::WithErrorSyntax::HandleInResult>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<
+          ::fidl_test_protocols::WithErrorSyntax::HandleInResult>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+      request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>(
-      client.channel(), response_bytes, response_byte_capacity);
+      client_end.channel(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -4684,7 +4952,8 @@ fidl::internal::WireClientImpl<
 ::fidl::WireUnownedResult<
     ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
 fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
-    ResponseAsStruct_Sync(::fidl::BufferSpan _response_buffer) {
+    ResponseAsStruct_Sync(::fidl::BufferSpan _buffer_span) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<
@@ -4694,7 +4963,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
             ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            &_request, _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
@@ -4804,7 +5073,8 @@ fidl::internal::WireClientImpl<
 ::fidl::WireUnownedResult<
     ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
 fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
-    ErrorAsPrimitive_Sync(::fidl::BufferSpan _response_buffer) {
+    ErrorAsPrimitive_Sync(::fidl::BufferSpan _buffer_span) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<
@@ -4814,7 +5084,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
             ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            &_request, _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
@@ -4919,7 +5189,8 @@ fidl::internal::WireClientImpl<
 }
 ::fidl::WireUnownedResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
 fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
-    ErrorAsEnum_Sync(::fidl::BufferSpan _response_buffer) {
+    ErrorAsEnum_Sync(::fidl::BufferSpan _buffer_span) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
@@ -4928,7 +5199,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
             ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            &_request, _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
@@ -5035,7 +5306,8 @@ fidl::internal::WireClientImpl<
 ::fidl::WireUnownedResult<
     ::fidl_test_protocols::WithErrorSyntax::HandleInResult>
 fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
-    HandleInResult_Sync(::fidl::BufferSpan _response_buffer) {
+    HandleInResult_Sync(::fidl::BufferSpan _buffer_span) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<
@@ -5045,7 +5317,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
             ::fidl_test_protocols::WithErrorSyntax::HandleInResult>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            &_request, _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 
@@ -5630,15 +5902,28 @@ namespace fidl_test_protocols {
 }  // namespace fidl_test_protocols
 ::fidl::WireUnownedResult<::fidl_test_protocols::ChannelProtocol::MethodA>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol> client,
-        uint8_t* request_bytes, uint32_t request_byte_capacity,
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>*
             request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::ChannelProtocol::MethodA>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client.channel());
+  outgoing.Write(client_end.channel());
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -5684,19 +5969,36 @@ namespace fidl_test_protocols {
 }  // namespace fidl_test_protocols
 ::fidl::WireUnownedResult<::fidl_test_protocols::ChannelProtocol::MethodB>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol> client,
-        uint8_t* request_bytes, uint32_t request_byte_capacity,
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>*
-            request,
-        uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
+            request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::ChannelProtocol::MethodB>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<
       ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>>(
-      client.channel(), response_bytes, response_byte_capacity);
+      client_end.channel(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -5744,19 +6046,36 @@ namespace fidl_test_protocols {
 }  // namespace fidl_test_protocols
 ::fidl::WireUnownedResult<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol> client,
-        uint8_t* request_bytes, uint32_t request_byte_capacity,
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>*
-            request,
-        uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
+            request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::ChannelProtocol::TakeHandle>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<
       ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>>(
-      client.channel(), response_bytes, response_byte_capacity);
+      client_end.channel(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -5805,19 +6124,36 @@ namespace fidl_test_protocols {
 ::fidl::WireUnownedResult<
     ::fidl_test_protocols::ChannelProtocol::MutateSocket>::
     WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol> client,
-        uint8_t* request_bytes, uint32_t request_byte_capacity,
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<
-            ::fidl_test_protocols::ChannelProtocol::MutateSocket>* request,
-        uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
+            ::fidl_test_protocols::ChannelProtocol::MutateSocket>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_protocols::ChannelProtocol::MutateSocket>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocols::ChannelProtocol::MutateSocket>>(
-      client.channel(), response_bytes, response_byte_capacity);
+      client_end.channel(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_protocols {
@@ -5933,12 +6269,12 @@ fidl::WireResponseContext<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
 }
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MethodA(
-    ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b) {
+    ::fidl::BufferSpan _buffer_span, int64_t a, int64_t b) {
   ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>
       _request_object{a, b};
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>>
-      _request_message(_request_buffer.data, _request_buffer.capacity,
+      _request_message(_buffer_span.data, _buffer_span.capacity,
                        &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
@@ -6045,8 +6381,8 @@ fidl::internal::WireClientImpl<
 }
 ::fidl::WireUnownedResult<::fidl_test_protocols::ChannelProtocol::MethodB>
 fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
-    MethodB_Sync(::fidl::BufferSpan _request_buffer, int64_t a, int64_t b,
-                 ::fidl::BufferSpan _response_buffer) {
+    MethodB_Sync(::fidl::BufferSpan _buffer_span, int64_t a, int64_t b) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>
@@ -6055,8 +6391,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
             ::fidl_test_protocols::ChannelProtocol::MethodB>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            _request_buffer.data, _request_buffer.capacity, &_request,
-            _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
@@ -6163,8 +6498,8 @@ fidl::internal::WireClientImpl<
 }
 ::fidl::WireUnownedResult<::fidl_test_protocols::ChannelProtocol::TakeHandle>
 fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
-    TakeHandle_Sync(::fidl::BufferSpan _request_buffer, ::zx::handle&& h,
-                    ::fidl::BufferSpan _response_buffer) {
+    TakeHandle_Sync(::fidl::BufferSpan _buffer_span, ::zx::handle&& h) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>
@@ -6173,8 +6508,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
             ::fidl_test_protocols::ChannelProtocol::TakeHandle>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            _request_buffer.data, _request_buffer.capacity, &_request,
-            _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
@@ -6282,8 +6616,8 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
 }
 ::fidl::WireUnownedResult<::fidl_test_protocols::ChannelProtocol::MutateSocket>
 fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
-    MutateSocket_Sync(::fidl::BufferSpan _request_buffer, ::zx::socket&& a,
-                      ::fidl::BufferSpan _response_buffer) {
+    MutateSocket_Sync(::fidl::BufferSpan _buffer_span, ::zx::socket&& a) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<
@@ -6293,8 +6627,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
             ::fidl_test_protocols::ChannelProtocol::MutateSocket>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            _request_buffer.data, _request_buffer.capacity, &_request,
-            _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 

@@ -58,19 +58,36 @@ namespace fidl_test_transitivedependenciescompose {
     ::fidl_test_transitivedependenciescompose::Top::GetFoo>::
     WireUnownedResult(
         ::fidl::UnownedClientEnd<::fidl_test_transitivedependenciescompose::Top>
-            client,
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<
-            ::fidl_test_transitivedependenciescompose::Top::GetFoo>* request,
-        uint8_t* response_bytes, uint32_t response_byte_capacity)
-    : bytes_(response_bytes) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
+            ::fidl_test_transitivedependenciescompose::Top::GetFoo>* request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_transitivedependenciescompose::Top::GetFoo>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<
+          ::fidl_test_transitivedependenciescompose::Top::GetFoo>,
+      ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+
+  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_transitivedependenciescompose::Top::GetFoo>>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+      request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<
       ::fidl_test_transitivedependenciescompose::Top::GetFoo>>(
-      client.channel(), response_bytes, response_byte_capacity);
+      client_end.channel(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_transitivedependenciescompose {
@@ -217,7 +234,8 @@ fidl::internal::WireClientImpl<
 ::fidl::WireUnownedResult<
     ::fidl_test_transitivedependenciescompose::Top::GetFoo>
 fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
-    GetFoo_Sync(::fidl::BufferSpan _response_buffer) {
+    GetFoo_Sync(::fidl::BufferSpan _buffer_span) {
+  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
         ::fidl::WireRequest<
@@ -228,7 +246,7 @@ fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
             ::fidl::UnownedClientEnd<
                 ::fidl_test_transitivedependenciescompose::Top>(
                 _transport->get<fidl::internal::ChannelTransport>()),
-            &_request, _response_buffer.data, _response_buffer.capacity);
+            _allocator, &_request);
       });
 }
 

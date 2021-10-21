@@ -29,38 +29,38 @@ void DispatchPtyDeviceMessage(fidl::WireServer<fuchsia_hardware_pty::Device>* in
 // Return ZX_ERR_NOT_SUPPORTED for all of the PTY things we don't actually support
 void NullPtyDeviceImpl::OpenClient(OpenClientRequestView request,
                                    OpenClientCompleter::Sync& completer) {
-  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::OpenClient>> buf;
+  fidl::ServerBuffer<fuchsia_hardware_pty::Device::OpenClient> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED);
 }
 
 void NullPtyDeviceImpl::ClrSetFeature(ClrSetFeatureRequestView request,
                                       ClrSetFeatureCompleter::Sync& completer) {
-  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::ClrSetFeature>> buf;
+  fidl::ServerBuffer<fuchsia_hardware_pty::Device::ClrSetFeature> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, 0);
 }
 
 void NullPtyDeviceImpl::GetWindowSize(GetWindowSizeRequestView request,
                                       GetWindowSizeCompleter::Sync& completer) {
-  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::GetWindowSize>> buf;
+  fidl::ServerBuffer<fuchsia_hardware_pty::Device::GetWindowSize> buf;
   fuchsia_hardware_pty::wire::WindowSize wsz = {.width = 0, .height = 0};
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, wsz);
 }
 
 void NullPtyDeviceImpl::MakeActive(MakeActiveRequestView request,
                                    MakeActiveCompleter::Sync& completer) {
-  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::MakeActive>> buf;
+  fidl::ServerBuffer<fuchsia_hardware_pty::Device::MakeActive> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED);
 }
 
 void NullPtyDeviceImpl::ReadEvents(ReadEventsRequestView request,
                                    ReadEventsCompleter::Sync& completer) {
-  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::ReadEvents>> buf;
+  fidl::ServerBuffer<fuchsia_hardware_pty::Device::ReadEvents> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED, 0);
 }
 
 void NullPtyDeviceImpl::SetWindowSize(SetWindowSizeRequestView request,
                                       SetWindowSizeCompleter::Sync& completer) {
-  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::SetWindowSize>> buf;
+  fidl::ServerBuffer<fuchsia_hardware_pty::Device::SetWindowSize> buf;
   completer.Reply(buf.view(), ZX_ERR_NOT_SUPPORTED);
 }
 

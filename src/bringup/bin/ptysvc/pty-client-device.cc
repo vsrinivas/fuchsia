@@ -8,7 +8,7 @@
 
 void PtyClientDevice::SetWindowSize(SetWindowSizeRequestView request,
                                     SetWindowSizeCompleter::Sync& completer) {
-  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::SetWindowSize>> buf;
+  fidl::ServerBuffer<fuchsia_hardware_pty::Device::SetWindowSize> buf;
   client_->server()->set_window_size(
       {.width = request->size.width, .height = request->size.height});
   completer.Reply(buf.view(), ZX_OK);
@@ -16,7 +16,7 @@ void PtyClientDevice::SetWindowSize(SetWindowSizeRequestView request,
 
 void PtyClientDevice::OpenClient(OpenClientRequestView request,
                                  OpenClientCompleter::Sync& completer) {
-  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::OpenClient>> buf;
+  fidl::ServerBuffer<fuchsia_hardware_pty::Device::OpenClient> buf;
 
   // Only controlling clients (and the server itself) may create new clients
   if (!client_->is_control()) {
@@ -36,7 +36,7 @@ void PtyClientDevice::OpenClient(OpenClientRequestView request,
 
 void PtyClientDevice::ClrSetFeature(ClrSetFeatureRequestView request,
                                     ClrSetFeatureCompleter::Sync& completer) {
-  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::ClrSetFeature>> buf;
+  fidl::ServerBuffer<fuchsia_hardware_pty::Device::ClrSetFeature> buf;
 
   constexpr uint32_t kAllowedFeatureBits = fuchsia_hardware_pty::wire::kFeatureRaw;
 
@@ -51,7 +51,7 @@ void PtyClientDevice::ClrSetFeature(ClrSetFeatureRequestView request,
 
 void PtyClientDevice::GetWindowSize(GetWindowSizeRequestView request,
                                     GetWindowSizeCompleter::Sync& completer) {
-  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::GetWindowSize>> buf;
+  fidl::ServerBuffer<fuchsia_hardware_pty::Device::GetWindowSize> buf;
   auto size = client_->server()->window_size();
   fuchsia_hardware_pty::wire::WindowSize wsz = {.width = size.width, .height = size.height};
   completer.Reply(buf.view(), ZX_OK, wsz);
@@ -59,7 +59,7 @@ void PtyClientDevice::GetWindowSize(GetWindowSizeRequestView request,
 
 void PtyClientDevice::MakeActive(MakeActiveRequestView request,
                                  MakeActiveCompleter::Sync& completer) {
-  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::MakeActive>> buf;
+  fidl::ServerBuffer<fuchsia_hardware_pty::Device::MakeActive> buf;
 
   if (!client_->is_control()) {
     completer.Reply(buf.view(), ZX_ERR_ACCESS_DENIED);
@@ -72,7 +72,7 @@ void PtyClientDevice::MakeActive(MakeActiveRequestView request,
 
 void PtyClientDevice::ReadEvents(ReadEventsRequestView request,
                                  ReadEventsCompleter::Sync& completer) {
-  fidl::Buffer<fidl::WireResponse<fuchsia_hardware_pty::Device::ReadEvents>> buf;
+  fidl::ServerBuffer<fuchsia_hardware_pty::Device::ReadEvents> buf;
 
   if (!client_->is_control()) {
     completer.Reply(buf.view(), ZX_ERR_ACCESS_DENIED, 0);

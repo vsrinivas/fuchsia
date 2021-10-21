@@ -12,11 +12,10 @@
 // avoiding setting up a client.
 template<>
 class {{ .WireSyncClientImpl }} final :
-    public ::fidl::internal::SyncEndpointVeneer<{{ .WireSyncClientImpl }}> {
+    public ::fidl::internal::SyncEndpointVeneer<{{ .WireSyncClientImpl.Self }}, {{ . }}> {
  public:
-{{ "" }}
-  {{- /* Client-calling functions do not apply to events. */}}
-  {{- range .ClientMethods }}
+  {{/* Client-calling functions do not apply to events. */}}
+  {{ range .ClientMethods }}
     {{ .Docs }}
     //{{ template "Method:ClientAllocationComment:Helper" . }}
     {{ .WireResult }} {{ .Name }}({{- RenderParams .RequestArgs }}) {
@@ -24,37 +23,28 @@ class {{ .WireSyncClientImpl }} final :
       return {{ .WireResult }}(_client_end(), &_request);
     }
 {{ "" }}
-
-    {{- if or .RequestArgs .ResponseArgs }}
-
-      {{- $call_args := (List) }}
-      {{- if .RequestArgs }}
-        {{- $call_args = (List $call_args "::fidl::BufferSpan _request_buffer" .RequestArgs) }}
-      {{- end }}
-      {{- if .HasResponse }}
-        {{- $call_args = (List $call_args "::fidl::BufferSpan _response_buffer") }}
-      {{- end }}
-
-
-      {{- .Docs }}
-      // Caller provides the backing storage for FIDL message via request and response buffers.
-      {{ .WireUnownedResult }} {{ .Name }}({{ RenderParams $call_args }}) {\
-        {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-        return {{ .WireUnownedResult }}(_client_end()
-          {{- if .RequestArgs -}}
-            , _request_buffer.data, _request_buffer.capacity
-          {{- end -}}
-          , &_request
-          {{- if .HasResponse -}}
-            , _response_buffer.data, _response_buffer.capacity
-          {{- end -}}
-        );
-      }
-
-    {{- end }}
-{{ "" }}
   {{- end }}
 
+ private:
+  ::fidl::UnownedClientEnd<{{ . }}> _client_end() const {
+    return ::fidl::UnownedClientEnd<{{ . }}>(_channel());
+  }
+};
+
+template <>
+class {{ .WireSyncBufferClientImpl }} final :
+    public ::fidl::internal::SyncEndpointBufferVeneer<{{ .WireSyncBufferClientImpl }}> {
+ public:
+  {{/* Client-calling functions do not apply to events. */}}
+  {{ range .ClientMethods }}
+    {{- .Docs }}
+    // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
+    {{ .WireUnownedResult }} {{ .Name }}({{ RenderParams .RequestArgs }}) {
+      {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+      return {{ .WireUnownedResult }}(_client_end(), _allocator(), &_request);
+    }
+{{ "" }}
+  {{- end }}
  private:
   ::fidl::UnownedClientEnd<{{ . }}> _client_end() const {
     return ::fidl::UnownedClientEnd<{{ . }}>(_channel());

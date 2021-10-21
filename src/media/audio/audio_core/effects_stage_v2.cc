@@ -504,8 +504,7 @@ void EffectsStageV2::CallProcess(int64_t num_frames, float total_applied_gain_db
       fidl::ObjectView<fidl::VectorView<uint32_t>>::FromExternal(&usage_mask_vector));
 
   // Synchronous IPC.
-  auto result = processor_.Process(request_buffer_.view(), num_frames, std::move(options),
-                                   response_buffer_.view());
+  auto result = processor_.Process(process_buffer_.view(), num_frames, std::move(options));
   auto status = result.status();
   if (result.ok() && result->result.is_err()) {
     status = result->result.err();

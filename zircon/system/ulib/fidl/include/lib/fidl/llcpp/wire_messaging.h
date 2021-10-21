@@ -22,6 +22,15 @@
 // wire domain objects over Zircon channels for IPC. The code generator should
 // populate the implementation by generating template specializations for each
 // class over FIDL method/protocol markers.
+//
+// Note: a recurring pattern below is a pair of struct/using declaration:
+//
+//     template <typename T> struct FooTraits;
+//     template <typename T> using Foo = typename FooTraits<T>::Foo;
+//
+// The extra |FooTraits| type is a workaround for C++ not having type alias
+// partial specialization. The code generator would specialize |FooTraits|,
+// and the using-declarations are helpers to pull out items from the struct.
 namespace fidl {
 
 template <typename FidlMethod>
@@ -89,6 +98,11 @@ class WireClientImpl;
 // |WireSyncClientImpl| implements synchronous FIDL calls with managed buffers.
 template <typename FidlProtocol>
 class WireSyncClientImpl;
+
+// |WireSyncBufferClientImpl| implements synchronous FIDL calls with
+// caller-provided buffers.
+template <typename FidlProtocol>
+class WireSyncBufferClientImpl;
 
 template <typename FidlProtocol>
 class WireEventHandlerInterface;

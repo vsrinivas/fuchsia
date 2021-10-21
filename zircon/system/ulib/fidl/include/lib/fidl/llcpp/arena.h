@@ -5,13 +5,29 @@
 #ifndef LIB_FIDL_LLCPP_ARENA_H_
 #define LIB_FIDL_LLCPP_ARENA_H_
 
+#include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <zircon/assert.h>
 
 #include <functional>
 #include <type_traits>
 
+namespace fidl_testing {
+// Forward declaration of test helpers to support friend declaration.
+class ArenaChecker;
+}  // namespace fidl_testing
+
 namespace fidl {
+
+class AnyArena;
+
+namespace internal {
+
+// Type-erasing adaptor from |AnyArena&| to |AnyBufferAllocator|.
+// See |AnyBufferAllocator|.
+AnyBufferAllocator MakeAnyBufferAllocator(AnyArena& arena);
+
+}  // namespace internal
 
 // |AnyArena| is the base class of all of the |Arena| classes. It is independent
 // of the initial buffer size. All the implementation is done here. The |Arena|
@@ -71,22 +87,41 @@ class AnyArena {
   // Struct used to have more allocation buffers on the heap (when the initial
   // buffer is full).
   struct ExtraBlock {
+   private:
+    // Separately define the header of the extra block, to provide a sizeof.
+    struct Header {
+      // Next block to deallocate (block allocated before this one).
+      ExtraBlock* next_block;
+
+      // Size of the |data_| portion. Note: although |data_| is declared to have
+      // a fixed size, in practice an |ExtraBlock| might be allocated with a
+      // bespoke bigger size to serve a particular big object.
+      size_t size;
+    };
+
    public:
+    // The size of the extra block without the data portion.
+    static constexpr size_t kExtraBlockHeaderSize = sizeof(Header);
+
     // In most cases, the size in big enough to only need an extra allocation.
     // It's also small enough to not use too much heap memory. The actual
     // allocated size for the ExtraBlock struct will be 16 KiB.
-    static constexpr size_t kExtraSize = 16 * 1024 - FIDL_ALIGN(sizeof(ExtraBlock*));
+    static constexpr size_t kDefaultExtraSize = 16 * 1024 - kExtraBlockHeaderSize;
 
-    explicit ExtraBlock(ExtraBlock* next_block) : next_block_(next_block) {}
+    explicit ExtraBlock(ExtraBlock* next_block, size_t size)
+        : header_(Header{
+              .next_block = next_block,
+              .size = size,
+          }) {}
 
-    ExtraBlock* next_block() const { return next_block_; }
+    ExtraBlock* next_block() const { return header_.next_block; }
     uint8_t* data() { return data_; }
+    size_t size() const { return header_.size; }
 
    private:
-    // Next block to deallocate (block allocated before this one).
-    ExtraBlock* next_block_;
+    Header header_;
     // The usable data.
-    alignas(FIDL_ALIGNMENT) uint8_t data_[kExtraSize];
+    alignas(FIDL_ALIGNMENT) uint8_t data_[kDefaultExtraSize];
   };
 
   // Deallocate anything allocated by the arena. Any data previously allocated
@@ -164,6 +199,9 @@ class AnyArena {
 
   template <size_t>
   friend class Arena;
+
+  friend internal::AnyBufferAllocator internal::MakeAnyBufferAllocator(AnyArena& arena);
+  friend ::fidl_testing::ArenaChecker;
 };
 
 // Class which supports arena allocation of data for the views (ObjectView,
@@ -185,6 +223,8 @@ class Arena : public AnyArena {
 
  private:
   alignas(FIDL_ALIGNMENT) uint8_t initial_buffer_[initial_capacity];
+
+  friend ::fidl_testing::ArenaChecker;
 };
 
 }  // namespace fidl

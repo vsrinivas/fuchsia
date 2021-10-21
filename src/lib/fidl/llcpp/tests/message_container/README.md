@@ -15,3 +15,6 @@ for them:
 
 In addition, the `fidl::Result` result/error types are also tested here, since
 a major use case is them being composed by message container types.
+
+Types and utilities responsible for message storage and buffer allocation are
+also tested here, since they're typically used as part of message containers.

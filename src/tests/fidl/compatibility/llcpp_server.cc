@@ -69,12 +69,10 @@ class EchoClientApp {
     return client_.HandleOneEvent(event_handler).status();
   }
 
-  fidl::WireUnownedResult<Echo::EchoArrays> EchoArrays(::fidl::BufferSpan request_buffer,
+  fidl::WireUnownedResult<Echo::EchoArrays> EchoArrays(::fidl::BufferSpan buffer,
                                                        wire::ArraysStruct value,
-                                                       ::fidl::StringView forward_to_server,
-                                                       ::fidl::BufferSpan response_buffer) {
-    return client_.EchoArrays(request_buffer, std::move(value), std::move(forward_to_server),
-                              response_buffer);
+                                                       ::fidl::StringView forward_to_server) {
+    return client_.EchoArrays(buffer, std::move(value), forward_to_server);
   }
 
   fidl::WireResult<Echo::EchoArraysWithError> EchoArraysWithError(
@@ -96,21 +94,16 @@ class EchoClientApp {
                                         result_variant);
   }
 
-  fidl::WireUnownedResult<Echo::EchoTable> EchoTable(::fidl::BufferSpan request_buffer,
+  fidl::WireUnownedResult<Echo::EchoTable> EchoTable(::fidl::BufferSpan buffer,
                                                      wire::AllTypesTable value,
-                                                     ::fidl::StringView forward_to_server,
-                                                     ::fidl::BufferSpan response_buffer) {
-    return client_.EchoTable(request_buffer, std::move(value), std::move(forward_to_server),
-                             response_buffer);
+                                                     ::fidl::StringView forward_to_server) {
+    return client_.EchoTable(buffer, value, forward_to_server);
   }
 
   fidl::WireUnownedResult<Echo::EchoTableWithError> EchoTableWithError(
-      ::fidl::BufferSpan request_buffer, wire::AllTypesTable value, wire::DefaultEnum err,
-      ::fidl::StringView forward_to_server, wire::RespondWith result_variant,
-      ::fidl::BufferSpan response_buffer) {
-    return client_.EchoTableWithError(request_buffer, std::move(value), err,
-                                      std::move(forward_to_server), result_variant,
-                                      response_buffer);
+      ::fidl::BufferSpan buffer, wire::AllTypesTable value, wire::DefaultEnum err,
+      ::fidl::StringView forward_to_server, wire::RespondWith result_variant) {
+    return client_.EchoTableWithError(buffer, value, err, forward_to_server, result_variant);
   }
 
   fidl::WireResult<Echo::EchoXunions> EchoXunions(::fidl::VectorView<wire::AllTypesXunion> value,
@@ -294,13 +287,9 @@ class EchoConnection final : public fidl::WireServer<Echo> {
     if (request->forward_to_server.empty()) {
       completer.Reply(std::move(request->value));
     } else {
-      std::vector<uint8_t> request_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
-      std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
+      fidl::SyncClientBuffer<Echo::EchoArrays> buffer;
       EchoClientApp app(request->forward_to_server);
-      auto result = app.EchoArrays(
-          ::fidl::BufferSpan(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
-          std::move(request->value), "",
-          ::fidl::BufferSpan(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
+      auto result = app.EchoArrays(buffer.view(), std::move(request->value), "");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
                     result.FormatDescription().c_str());
       completer.Reply(std::move(result.Unwrap()->value));
@@ -358,18 +347,14 @@ class EchoConnection final : public fidl::WireServer<Echo> {
 
   void EchoTable(EchoTableRequestView request, EchoTableCompleter::Sync& completer) override {
     if (request->forward_to_server.empty()) {
-      completer.Reply(std::move(request->value));
+      completer.Reply(request->value);
     } else {
-      std::vector<uint8_t> request_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
-      std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
+      fidl::SyncClientBuffer<Echo::EchoTable> buffer;
       EchoClientApp app(request->forward_to_server);
-      auto result = app.EchoTable(
-          ::fidl::BufferSpan(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
-          std::move(request->value), "",
-          ::fidl::BufferSpan(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
+      auto result = app.EchoTable(buffer.view(), request->value, "");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.FormatDescription().c_str());
-      completer.Reply(std::move(result.Unwrap()->value));
+      completer.Reply(result.Unwrap()->value);
     }
   }
 
@@ -379,16 +364,13 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       if (request->result_variant == wire::RespondWith::kErr) {
         completer.ReplyError(request->result_err);
       } else {
-        completer.ReplySuccess(std::move(request->value));
+        completer.ReplySuccess(request->value);
       }
     } else {
-      std::vector<uint8_t> request_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
-      std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
+      fidl::SyncClientBuffer<Echo::EchoTableWithError> buffer;
       EchoClientApp app(request->forward_to_server);
-      auto result = app.EchoTableWithError(
-          ::fidl::BufferSpan(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
-          std::move(request->value), request->result_err, "", request->result_variant,
-          ::fidl::BufferSpan(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
+      auto result = app.EchoTableWithError(buffer.view(), request->value, request->result_err, "",
+                                           request->result_variant);
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.FormatDescription().c_str());
       completer.Reply(std::move(result->result));

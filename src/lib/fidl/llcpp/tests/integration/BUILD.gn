@@ -132,6 +132,8 @@ fidl("llcpptest.protocol.test") {
 test("fidl_llcpp_protocol_tests_bin") {
   output_name = "fidl_llcpp_protocol_tests"
   sources = [
+    "arena_checker.cc",
+    "caller_allocating_test.cc",
     "protocol_test.cc",
     "sync_client_error_tests.cc",
   ]

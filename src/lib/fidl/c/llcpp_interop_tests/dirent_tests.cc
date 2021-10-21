@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/test/llcpp/dirent/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
@@ -22,7 +23,6 @@
 #include <memory>
 #include <utility>
 
-#include <fidl/test/llcpp/dirent/c/fidl.h>
 #include <zxtest/zxtest.h>
 
 // Interface under test.
@@ -296,13 +296,13 @@ class CallerAllocateServer : public ServerBase {
         count++;
       }
     }
-    fidl::Buffer<fidl::WireResponse<gen::DirEntTestInterface::CountNumDirectories>> buffer;
+    fidl::ServerBuffer<gen::DirEntTestInterface::CountNumDirectories> buffer;
     txn.Reply(buffer.view(), count);
   }
 
   void ReadDir(ReadDirRequestView request, ReadDirCompleter::Sync& txn) override {
     read_dir_num_calls_.fetch_add(1);
-    fidl::Buffer<fidl::WireResponse<gen::DirEntTestInterface::ReadDir>> buffer;
+    fidl::ServerBuffer<gen::DirEntTestInterface::ReadDir> buffer;
     txn.Reply(buffer.view(), golden_dirents());
   }
 
@@ -443,11 +443,9 @@ void CallerAllocateCountNumDirectories() {
   // Stress test linearizing dirents
   for (uint64_t iter = 0; iter < kNumIterations; iter++) {
     auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
-    fidl::Buffer<fidl::WireRequest<gen::DirEntTestInterface::CountNumDirectories>> request_buffer;
-    fidl::Buffer<fidl::WireResponse<gen::DirEntTestInterface::CountNumDirectories>> response_buffer;
+    fidl::SyncClientBuffer<gen::DirEntTestInterface::CountNumDirectories> fidl_buffer;
     auto result = client.CountNumDirectories(
-        request_buffer.view(), fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents),
-        response_buffer.view());
+        fidl_buffer.view(), fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));
     int64_t expected_num_dir = 0;
     for (const auto& dirent : dirents) {
       if (dirent.is_dir) {
@@ -472,7 +470,7 @@ void CallerAllocateReadDir() {
   constexpr uint64_t kNumIterations = 100;
   // Stress test server-linearizing dirents
   for (uint64_t iter = 0; iter < kNumIterations; iter++) {
-    fidl::Buffer<fidl::WireResponse<gen::DirEntTestInterface::ReadDir>> buffer;
+    fidl::SyncClientBuffer<gen::DirEntTestInterface::ReadDir> buffer;
     auto result = client.ReadDir(buffer.view());
     ASSERT_OK(result.status());
     const auto& dirents = result.Unwrap()->dirents;
@@ -513,10 +511,8 @@ void CallerAllocateConsumeDirectories() {
   fidl::WireSyncClient<gen::DirEntTestInterface> client(std::move(client_chan));
 
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 0);
-  fidl::Buffer<fidl::WireRequest<gen::DirEntTestInterface::ConsumeDirectories>> request_buffer;
-  fidl::Buffer<fidl::WireResponse<gen::DirEntTestInterface::ConsumeDirectories>> response_buffer;
-  auto result =
-      client.ConsumeDirectories(request_buffer.view(), golden_dirents(), response_buffer.view());
+  fidl::SyncClientBuffer<gen::DirEntTestInterface::ConsumeDirectories> fidl_buffer;
+  auto result = client.ConsumeDirectories(fidl_buffer.view(), golden_dirents());
   ASSERT_OK(result.status());
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
 }
@@ -550,7 +546,7 @@ void CallerAllocateOneWayDirents() {
   zx::eventpair client_ep, server_ep;
   ASSERT_OK(zx::eventpair::create(0, &client_ep, &server_ep));
   ASSERT_EQ(server.OneWayDirentsNumCalls(), 0);
-  fidl::Buffer<fidl::WireRequest<gen::DirEntTestInterface::OneWayDirents>> buffer;
+  fidl::SyncClientBuffer<gen::DirEntTestInterface::OneWayDirents> buffer;
   ASSERT_OK(client.OneWayDirents(buffer.view(), golden_dirents(), std::move(server_ep)).status());
   zx_signals_t signals = 0;
   client_ep.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &signals);
@@ -627,8 +623,7 @@ TEST(DirentServerTest, CallerAllocateSendOnDirents) {
     name[i] = 'B';
   }
   auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
-  auto buffer =
-      std::make_unique<fidl::Buffer<fidl::WireResponse<gen::DirEntTestInterface::OnDirents>>>();
+  auto buffer = std::make_unique<fidl::ServerBuffer<gen::DirEntTestInterface::OnDirents>>();
   fidl::WireEventSender<gen::DirEntTestInterface> event_sender(std::move(server_chan));
   auto status = event_sender.OnDirents(buffer->view(),
                                        fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));

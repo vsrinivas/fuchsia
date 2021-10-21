@@ -169,12 +169,6 @@ protocol TypesTest {
     NonNullableChannel(resource struct {
         channel zx.handle:CHANNEL;
     });
-    RequestOf512Bytes(struct {
-        value array<byte, 496>;
-    });
-    RequestOf513Bytes(struct {
-        value array<byte, 497>;
-    });
 };
 
 protocol UsesAnonymous {

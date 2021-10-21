@@ -115,6 +115,7 @@ if (is_fuchsia) {
       "llcpp_coding.c",
       "llcpp_encoding.cc",
       "llcpp_message.cc",
+      "llcpp_message_storage.cc",
       "llcpp_result.cc",
       "llcpp_server.cc",
       "llcpp_transaction.cc",
@@ -164,6 +165,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/coding.h",
                     "lib/fidl/llcpp/envelope.h",
                     "lib/fidl/llcpp/arena.h",
+                    "lib/fidl/llcpp/message_storage.h",
                     "lib/fidl/llcpp/object_view.h",
                     "lib/fidl/llcpp/soft_migration.h",
                     "lib/fidl/llcpp/string_view.h",
@@ -177,6 +179,7 @@ if (is_fuchsia) {
       "llcpp_coding.c",
       "llcpp_encoding.cc",
       "llcpp_message.cc",
+      "llcpp_message_storage.cc",
       "llcpp_result.cc",
     ]
     public_deps = [

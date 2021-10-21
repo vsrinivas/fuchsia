@@ -40,16 +40,28 @@ namespace fidl_test_placementofattributes {
     WireUnownedResult(
         ::fidl::UnownedClientEnd<
             ::fidl_test_placementofattributes::ExampleProtocol>
-            client,
-        uint8_t* request_bytes, uint32_t request_byte_capacity,
+            client_end,
+        ::fidl::internal::AnyBufferAllocator& allocator,
         ::fidl::WireRequest<
             ::fidl_test_placementofattributes::ExampleProtocol::Method>*
             request) {
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
+      ::fidl_test_placementofattributes::ExampleProtocol::Method>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(::fidl::Result::EncodeError(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
+
   ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Write(client.channel());
+  outgoing.Write(client_end.channel());
   ::fidl::Result::operator=(outgoing);
 }
 namespace fidl_test_placementofattributes {
@@ -74,14 +86,14 @@ namespace fidl_test_placementofattributes {
 }
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_placementofattributes::ExampleProtocol>::Method(
-        ::fidl::BufferSpan _request_buffer,
+        ::fidl::BufferSpan _buffer_span,
         const ::exampleusing::wire::Empty& arg) {
   ::fidl::WireRequest<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>
       _request_object{arg};
   ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>>
-      _request_message(_request_buffer.data, _request_buffer.capacity,
+      _request_message(_buffer_span.data, _buffer_span.capacity,
                        &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());

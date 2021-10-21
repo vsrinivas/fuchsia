@@ -434,10 +434,10 @@ class ::fidl::WireUnownedResult<
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::fidl_test_transitivedependenciescompose::Top>
-          _client,
+          client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::WireRequest<
-          ::fidl_test_transitivedependenciescompose::Top::GetFoo>* request,
-      uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+          ::fidl_test_transitivedependenciescompose::Top::GetFoo>* request);
   explicit WireUnownedResult(
       ::fidl::WireResponse<
           ::fidl_test_transitivedependenciescompose::Top::GetFoo>* response)
@@ -516,9 +516,9 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::internal::WireSyncClientImpl<
     ::fidl_test_transitivedependenciescompose::Top>
-    final : public ::fidl::internal::SyncEndpointVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_transitivedependenciescompose::Top>> {
+    final
+    : public ::fidl::internal::SyncEndpointVeneer<
+          WireSyncClientImpl, ::fidl_test_transitivedependenciescompose::Top> {
  public:
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -531,17 +531,31 @@ class ::fidl::internal::WireSyncClientImpl<
                                                                 &_request);
   }
 
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_transitivedependenciescompose::Top>
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<
+        ::fidl_test_transitivedependenciescompose::Top>(_channel());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<
+    ::fidl_test_transitivedependenciescompose::Top>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::fidl_test_transitivedependenciescompose::Top>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
   ::fidl::WireUnownedResult<
       ::fidl_test_transitivedependenciescompose::Top::GetFoo>
-  GetFoo(::fidl::BufferSpan _response_buffer) {
+  GetFoo() {
     ::fidl::WireRequest<::fidl_test_transitivedependenciescompose::Top::GetFoo>
         _request{};
     return ::fidl::WireUnownedResult<
         ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
-        _client_end(), &_request, _response_buffer.data,
-        _response_buffer.capacity);
+        _client_end(), _allocator(), &_request);
   }
 
  private:
@@ -639,14 +653,14 @@ class ::fidl::WireSyncClient<::fidl_test_transitivedependenciescompose::Top>
   // response buffers.
   ::fidl::WireUnownedResult<
       ::fidl_test_transitivedependenciescompose::Top::GetFoo>
-  GetFoo(::fidl::BufferSpan _response_buffer) {
+  GetFoo(::fidl::BufferSpan _buffer_span) const {
     ZX_ASSERT(client_end_.is_valid());
+    auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<::fidl_test_transitivedependenciescompose::Top::GetFoo>
         _request{};
     return ::fidl::WireUnownedResult<
         ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
-        this->client_end(), &_request, _response_buffer.data,
-        _response_buffer.capacity);
+        this->client_end(), _allocator, &_request);
   }
 
  private:
@@ -802,7 +816,7 @@ class ::fidl::internal::WireClientImpl<
   // response buffers.
   ::fidl::WireUnownedResult<
       ::fidl_test_transitivedependenciescompose::Top::GetFoo>
-  GetFoo_Sync(::fidl::BufferSpan _response_buffer);
+  GetFoo_Sync(::fidl::BufferSpan _buffer_span);
   WireClientImpl() = default;
 
  private:

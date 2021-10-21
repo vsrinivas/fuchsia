@@ -5,13 +5,8 @@
 */}}
 
 {{- define "Method:ClientImplSyncCallerAllocateArguments:Helper" -}}
-{{- $args := (List) }}
-{{- if .RequestArgs }}
-  {{- $args = (List $args "::fidl::BufferSpan _request_buffer" .RequestArgs) }}
-{{- end }}
-{{- if .HasResponse }}
-  {{- $args = (List $args "::fidl::BufferSpan _response_buffer") }}
-{{- end }}
+{{- /* TODO(fxbug.dev/85688): Replace with a `.buffer()` accessor on the client object. */}}
+{{- $args := (List "::fidl::BufferSpan _buffer_span" .RequestArgs) }}
 {{- RenderParams $args }}
 {{- end }}
 
@@ -51,14 +46,12 @@
   {{ .WireUnownedResult }}
   {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync(
       {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
+    auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     return ::fidl::internal::ClientBase::MakeSyncCallWith([&] (std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
       {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-      return {{ .WireUnownedResult }}(::fidl::UnownedClientEnd<{{ .Protocol }}>(_transport->get<fidl::internal::ChannelTransport>()),
-          {{- if .RequestArgs }}
-            _request_buffer.data, _request_buffer.capacity,
-          {{- end }}
-          &_request,
-          _response_buffer.data, _response_buffer.capacity);
+      {{- $args := (printf "::fidl::UnownedClientEnd<%s>(_transport->get<fidl::internal::ChannelTransport>())" .Protocol) }}
+      {{- $args = (List $args "_allocator" "&_request") }}
+      return {{ .WireUnownedResult }}({{ RenderForwardParams $args }});
     });
   }
 
@@ -75,8 +68,9 @@
   {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync({{ RenderParams .RequestArgs }}) {
     return ::fidl::internal::ClientBase::MakeSyncCallWith([&] (std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
       {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-      return {{ .WireResult }}(::fidl::UnownedClientEnd<{{ .Protocol }}>(_transport->get<fidl::internal::ChannelTransport>()),
-          &_request);
+      {{- $args := (printf "::fidl::UnownedClientEnd<%s>(_transport->get<fidl::internal::ChannelTransport>())" .Protocol) }}
+      {{- $args = (List $args "&_request") }}
+      return {{ .WireResult }}({{- RenderForwardParams $args }});
     });
   }
 

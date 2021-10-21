@@ -9,17 +9,12 @@
 template<>
 class {{ .WireUnownedResult }} final : public ::fidl::Result {
  public:
-  {{- $args := (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol) }}
-  {{- if .RequestArgs -}}
-    {{ $args = (List $args "uint8_t* _request_bytes" "uint32_t _request_byte_capacity") }}
-  {{- end }}
+  {{- $args := (printf "::fidl::UnownedClientEnd<%s> client_end" .Protocol) }}
+  {{- $args = (List $args "::fidl::internal::AnyBufferAllocator& allocator") }}
   {{- $args = (List $args (printf "%s* request" .WireRequest)) }}
-  {{- if .HasResponse -}}
-    {{ $args = (List $args "uint8_t* _response_bytes" "uint32_t _response_byte_capacity") }}
-  {{- end }}
   explicit {{ .WireUnownedResult.Self }}({{ RenderParams $args }});
   {{- if .HasResponse }}
-  explicit {{ .WireUnownedResult.Self }}({{ .WireResponse }} * response)
+  explicit {{ .WireUnownedResult.Self }}({{ .WireResponse }}* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   {{- end }}
   explicit {{ .WireUnownedResult.Self }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
@@ -79,32 +74,51 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
 {{- define "Method:UnownedResult:MessagingSource" }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
-{{ $args := (printf "::fidl::UnownedClientEnd<%s> client" .Protocol) }}
-{{- if .RequestArgs }}
-  {{- $args = (List $args "uint8_t* request_bytes" "uint32_t request_byte_capacity") }}
-{{- end }}
+{{- $args := (printf "::fidl::UnownedClientEnd<%s> client_end" .Protocol) }}
+{{- $args = (List $args "::fidl::internal::AnyBufferAllocator& allocator") }}
 {{- $args = (List $args (printf "%s* request" .WireRequest)) }}
-{{- if .HasResponse }}
-  {{- $args = (List $args "uint8_t* response_bytes" "uint32_t response_byte_capacity") }}
-{{- end -}}
-{{ .WireUnownedResult }}::{{ .WireUnownedResult.Self }}({{ RenderParams $args }})
-{{- if .HasResponse }}
-    : bytes_(response_bytes)
+{{ .WireUnownedResult }}::{{ .WireUnownedResult.Self }}({{ RenderParams $args }}) {
+  {{/* TODO(fxbug.dev/86367): Factor out common buffer allocation logic once we have other instances
+  of this pattern. */ -}}
+
+  {{/* Allocate one buffer for both request/response (if applicable). */ -}}
+  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<{{ .Marker }}>();
+  uint8_t* buffer = allocator.Allocate(buffer_size);
+  if (!buffer) {
+    ::fidl::Result::operator=(
+        ::fidl::Result::EncodeError(
+            ZX_ERR_BUFFER_TOO_SMALL,
+            ::fidl::internal::kCallerAllocatedBufferTooSmall));
+    return;
+  }
+
+{{- if .HasResponse -}}
+  {{/* TODO(fxbug.dev/85843): We should be able optimize this to just the max of
+  the send/receive size, once Zircon channel calls guarantee that the
+  send/receive buffers can overlap.
+
+  For now, the invariant of SyncClientMethodBufferSizeInChannel is that it returns
+  the sum of the request/response size, so we can index into it and get the
+  address of the response buffer. */ -}}
+  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
+      ::fidl::WireRequest<{{ .Marker }}>, ::fidl::MessageDirection::kSending>();
+  uint8_t* request_bytes = buffer;
+  static_assert(buffer_size > request_byte_capacity);
+  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
+  uint8_t* response_bytes = &buffer[request_byte_capacity];
+{{- else }}
+  uint32_t request_byte_capacity = buffer_size;
+  uint8_t* request_bytes = buffer;
 {{- end }}
-{
-{{- if .RequestArgs -}}
+
   ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> request_message(
       request_bytes, request_byte_capacity, request);
-{{- else -}}
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> request_message(
-      ::fidl::internal::AllowUnownedInputRef{}, request);
-{{- end -}}
   auto& outgoing = request_message.GetOutgoingMessage();
 {{- if .HasResponse }}
-  outgoing.Call<{{ .WireResponse }}>(client.channel(), response_bytes, response_byte_capacity);
+  outgoing.Call<{{ .WireResponse }}>(client_end.channel(), response_bytes, response_byte_capacity);
+  bytes_ = response_bytes;
 {{- else }}
-  outgoing.Write(client.channel());
+  outgoing.Write(client_end.channel());
 {{- end }}
   ::fidl::Result::operator=(outgoing);
 }

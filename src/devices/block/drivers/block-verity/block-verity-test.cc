@@ -81,7 +81,7 @@ class BlockVerityTest : public zxtest::Test {
 
   void CloseAndGenerateSeal(
       fuchsia_hardware_block_verified::wire::DeviceManagerCloseAndGenerateSealResult* out) {
-    ASSERT_OK(vvc_->CloseAndGenerateSeal(&seal_response_buffer_, out));
+    ASSERT_OK(vvc_->CloseAndGenerateSeal(seal_arena_, out));
   }
 
   zx_status_t OpenForVerifiedRead(const fuchsia_hardware_block_verified::wire::Seal& expected_seal,
@@ -105,9 +105,7 @@ class BlockVerityTest : public zxtest::Test {
 
   IsolatedDevmgr devmgr_;
   std::unique_ptr<fvm::RamdiskRef> ramdisk_;
-  fidl::Buffer<
-      fidl::WireResponse<fuchsia_hardware_block_verified::DeviceManager::CloseAndGenerateSeal>>
-      seal_response_buffer_;
+  fidl::Arena<> seal_arena_;
 
   std::unique_ptr<block_verity::VerifiedVolumeClient> vvc_;
 };

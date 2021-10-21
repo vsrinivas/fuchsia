@@ -1,0 +1,23 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fidl.llcpp.buffersize.test;
+
+protocol Protocol {
+    RequestOf512Bytes(struct {
+        value array<byte, 496>;
+    });
+    RequestOf513Bytes(struct {
+        value array<byte, 497>;
+    });
+
+    RequestOf512BytesAndResponseOf256Bytes(struct {
+        value array<byte, 496>;
+    }) -> (struct {
+        value array<byte, 240>;
+    });
+
+    -> EventOf256Bytes(struct {
+        value array<byte, 240>;
+    });
+};

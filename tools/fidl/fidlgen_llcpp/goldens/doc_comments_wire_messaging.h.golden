@@ -369,7 +369,8 @@ class ::fidl::WireUnownedResult<::fidl_test_doccomments::Interface::Method>
     final : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client,
+      ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client_end,
+      ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
@@ -386,8 +387,7 @@ class ::fidl::WireUnownedResult<::fidl_test_doccomments::Interface::Method>
 template <>
 class ::fidl::internal::WireSyncClientImpl<::fidl_test_doccomments::Interface>
     final : public ::fidl::internal::SyncEndpointVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_doccomments::Interface>> {
+                WireSyncClientImpl, ::fidl_test_doccomments::Interface> {
  public:
   /// method comment #1
   ///
@@ -398,6 +398,34 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_doccomments::Interface>
     ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method> _request{};
     return ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>(
         _client_end(), &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface>(
+        _channel());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<
+    ::fidl_test_doccomments::Interface>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::fidl_test_doccomments::Interface>> {
+ public:
+  /// method comment #1
+  ///
+  /// method comment #3
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<::fidl_test_doccomments::Interface::Method>
+  Method() {
+    ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method> _request{};
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_doccomments::Interface::Method>(_client_end(), _allocator(),
+                                                    &_request);
   }
 
  private:
