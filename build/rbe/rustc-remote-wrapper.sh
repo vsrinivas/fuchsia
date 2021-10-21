@@ -37,12 +37,18 @@ Options:
       This file lists all source files needed for this crate.
       [default: this is inferred from --emit=dep-info=FILE]
 
-  --fsatrace: [for --local only] record files accessed at \$output.fsatrace.
+  --fsatrace:
+      for --local execution: record files accessed at \$output.fsatrace.
+      for remote execution: record files accessed at \$output.remote-fsatrace.
 
   --compare: In this mode, build locally and remotely (sequentially) and
       compare the outputs, failing if there are any differences.
+      On comparison failure, if --fsatrace is enabled, compare file accesses.
 
-  All other options before -- are forwarded to rewrapper.
+  All other options before -- are forwarded to
+  $script_dir/fuchsia-rbe-action.sh,
+  most of which are forwarded to 'rewrapper'.
+  See '$script_dir/fuchsia-rbe-action.sh --help' for additional debug features.
 
 If the rust-command contains --remote-inputs=..., those will be interpreted
 as extra --inputs to upload, and removed from the command prior to local and
@@ -102,10 +108,12 @@ do
 done
 test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
 
-# For debugging, trace the files accessed.
-fsatrace="$project_root"/prebuilt/fsatrace/fsatrace
-
 build_subdir="$(realpath --relative-to="$project_root" . )"
+project_root_rel="$(realpath --relative-to=. "$project_root")"
+
+# For debugging, trace the files accessed.
+fsatrace="$project_root_rel"/prebuilt/fsatrace/fsatrace
+
 
 # Modify original command to extract dep-info only (fast).
 # Start with `env` in case command starts with environment variables.
@@ -398,21 +406,21 @@ done
 test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
 
 
-trace_prefix=()
+local_trace_prefix=()
 test "$trace" = 0 || {
-  trace_prefix=(
+  local_trace_prefix=(
     env FSAT_BUF_SIZE=5000000
-    "$fsatrace" ertwdm "$output".fsatrace --
+    "$fsatrace" ertwdmq "$output".fsatrace --
   )
 }
 
 if test "$local_only" = 1
 then
-  test "${#trace_prefix[@]}" = 0 || {
+  test "${#local_trace_prefix[@]}" = 0 || {
     echo "Logging file access trace to $output.fsatrace."
   }
   # Run original command and exit (no remote execution).
-  "${trace_prefix[@]}" "${rustc_command[@]}"
+  "${local_trace_prefix[@]}" "${rustc_command[@]}"
   exit "$?"
 fi
 
@@ -646,6 +654,11 @@ dump_vars() {
 
 dump_vars
 
+remote_trace_flags=()
+test "$trace" = 0 || {
+  remote_trace_flags=( --fsatrace-path="$fsatrace" )
+}
+
 # Assemble the remote execution command.
 # During development, if you need to test a pre-release at top-of-tree,
 # symlink the bazel-built binaries into a single directory, e.g.:
@@ -655,6 +668,7 @@ dump_vars
 remote_rustc_command=(
   "$script_dir"/fuchsia-rbe-action.sh
   --exec_root="$project_root"
+  "${remote_trace_flags[@]}"
   --inputs="$remote_inputs_joined"
   --output_files="$outputs_joined"
   "${rewrapper_options[@]}"
@@ -754,6 +768,7 @@ function diff_with() {
     exit 1
   }
 
+  echo "diff -u <(${tool[@]} $1) <(${tool[@]} $2)"
   diff -u <("${tool[@]}" "$1") <("${tool[@]}" "$2")
 }
 
@@ -791,7 +806,7 @@ test "$status" -ne 0 || test "$compare" = 0 || {
 
   diff_limit=20
   test "${#output_diffs[@]}" = 0 || {
-    echo "*** Differences between local and remote build outputs found. ***"
+    echo "*** Differences between local (-) and remote (+) build outputs found. ***"
     for f in "${output_diffs[@]}"
     do
       echo "  $build_subdir/$f vs."
@@ -822,6 +837,15 @@ test "$status" -ne 0 || test "$compare" = 0 || {
       echo
       echo "------------------------------------"
     done
+
+    # If we 'fsatrace'd local and remote actions, compare their traces.
+    test "$trace" = 0 || {
+      echo "Comparing local (-) vs. remote (+) file access traces."
+      # Use sed to normalize absolute paths.
+      diff -u \
+        <(sed -e "s|$project_root/||" "$output.fsatrace") \
+        <(sed -e 's|/b/f/w/||' "$output.remote-fsatrace")
+    }
     status=1
   }
 }
