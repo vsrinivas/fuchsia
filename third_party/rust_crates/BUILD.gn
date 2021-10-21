@@ -70,6 +70,10 @@ group("atomic-waker") {
   deps = [ ":atomic-waker-v1_0_0" ]
 }
 
+group("atty") {
+  deps = [ ":atty-v0_2_11" ]
+}
+
 group("base64") {
   deps = [ ":base64-v0_9_3" ]
 }
