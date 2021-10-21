@@ -415,11 +415,6 @@ bool VmAddressRegion::CheckGapLocked(VmAddressRegionOrMapping* prev, VmAddressRe
   vaddr_t gap_beg;  // first byte of a gap
   vaddr_t gap_end;  // last byte of a gap
 
-  uint prev_arch_mmu_flags;
-  uint next_arch_mmu_flags;
-  VmMapping* prev_mapping;
-  VmMapping* next_mapping;
-
   DEBUG_ASSERT(pva);
 
   // compute the starting address of the gap
@@ -464,23 +459,7 @@ bool VmAddressRegion::CheckGapLocked(VmAddressRegionOrMapping* prev, VmAddressRe
   LTRACEF_LEVEL(2, "search base %#" PRIxPTR " gap_beg %#" PRIxPTR " end %#" PRIxPTR "\n",
                 search_base, gap_beg, gap_end);
 
-  prev_mapping = (prev != nullptr ? prev->as_vm_mapping().get() : nullptr);
-  next_mapping = (next != nullptr ? next->as_vm_mapping().get() : nullptr);
-  if (prev_mapping) {
-    AssertHeld(prev_mapping->lock_ref());
-    prev_arch_mmu_flags = prev_mapping->arch_mmu_flags_locked();
-  } else {
-    prev_arch_mmu_flags = ARCH_MMU_FLAG_INVALID;
-  }
-  if (next_mapping) {
-    AssertHeld(next_mapping->lock_ref());
-    next_arch_mmu_flags = next_mapping->arch_mmu_flags_locked();
-  } else {
-    next_arch_mmu_flags = ARCH_MMU_FLAG_INVALID;
-  }
-
-  *pva = aspace_->arch_aspace().PickSpot(gap_beg, prev_arch_mmu_flags, gap_end, next_arch_mmu_flags,
-                                         align, region_size, arch_mmu_flags);
+  *pva = aspace_->arch_aspace().PickSpot(gap_beg, gap_end, align, region_size, arch_mmu_flags);
   if (*pva < gap_beg) {
     goto not_found;  // address wrapped around
   }

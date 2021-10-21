@@ -97,8 +97,7 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
   zx_status_t Protect(vaddr_t vaddr, size_t count, uint mmu_flags) override;
   zx_status_t Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) override;
 
-  vaddr_t PickSpot(vaddr_t base, uint prev_region_mmu_flags, vaddr_t end,
-                   uint next_region_mmu_flags, vaddr_t align, size_t size, uint mmu_flags) override;
+  vaddr_t PickSpot(vaddr_t base, vaddr_t end, vaddr_t align, size_t size, uint mmu_flags) override;
 
   // On x86 the hardware can always set the accessed bit so we do not need to support the software
   // fault method.

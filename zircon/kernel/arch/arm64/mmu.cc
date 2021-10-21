@@ -1816,8 +1816,7 @@ ArmArchVmAspace::~ArmArchVmAspace() {
   DEBUG_ASSERT(pt_pages_ == 0);
 }
 
-vaddr_t ArmArchVmAspace::PickSpot(vaddr_t base, uint prev_region_mmu_flags, vaddr_t end,
-                                  uint next_region_mmu_flags, vaddr_t align, size_t size,
+vaddr_t ArmArchVmAspace::PickSpot(vaddr_t base, vaddr_t end, vaddr_t align, size_t size,
                                   uint mmu_flags) {
   canary_.Assert();
   return PAGE_ALIGN(base);

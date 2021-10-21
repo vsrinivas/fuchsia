@@ -83,8 +83,7 @@ class ArchVmAspaceInterface {
 
   virtual zx_status_t Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) = 0;
 
-  virtual vaddr_t PickSpot(vaddr_t base, uint prev_region_mmu_flags, vaddr_t end,
-                           uint next_region_mmu_flags, vaddr_t align, size_t size,
+  virtual vaddr_t PickSpot(vaddr_t base, vaddr_t end, vaddr_t align, size_t size,
                            uint mmu_flags) = 0;
 
   // Walks the given range of pages and for any pages that are mapped and have their access bit set

@@ -790,8 +790,7 @@ X86ArchVmAspace::~X86ArchVmAspace() {
   // TODO(fxbug.dev/30927): check that we've destroyed the aspace.
 }
 
-vaddr_t X86ArchVmAspace::PickSpot(vaddr_t base, uint prev_region_mmu_flags, vaddr_t end,
-                                  uint next_region_mmu_flags, vaddr_t align, size_t size,
+vaddr_t X86ArchVmAspace::PickSpot(vaddr_t base, vaddr_t end, vaddr_t align, size_t size,
                                   uint mmu_flags) {
   canary_.Assert();
   return PAGE_ALIGN(base);
