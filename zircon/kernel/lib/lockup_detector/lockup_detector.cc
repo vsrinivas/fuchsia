@@ -369,7 +369,8 @@ void HeartbeatLockupChecker::PerformCheck(LockupDetectorState& state, cpu_num_t 
   // threshold, then it is time to file a crashlog and reboot the system.
   if ((fatal_threshold() > 0) && (observed_age > fatal_threshold())) {
     if (g_fatal_condition_reporter_role.Acquire()) {
-      platform_panic_start();
+      // Leave the other CPUs running so we can gather diagnostics.
+      platform_panic_start(PanicStartHaltOtherCpus::No);
       ReportFailure(FailureSeverity::Fatal);
       platform_halt(HALT_ACTION_REBOOT, ZirconCrashReason::SoftwareWatchdog);
       g_fatal_condition_reporter_role.Release();
@@ -427,7 +428,8 @@ void CriticalSectionLockupChecker::PerformCheck(LockupDetectorState& state, cpu_
     // Check the fatal condition first.
     if ((fatal_threshold_ticks() > 0) && (age_ticks >= fatal_threshold_ticks())) {
       if (g_fatal_condition_reporter_role.Acquire()) {
-        platform_panic_start();
+        // Leave the other CPUs running so we can gather diagnostics.
+        platform_panic_start(PanicStartHaltOtherCpus::No);
         ReportFailure(FailureSeverity::Fatal);
         platform_halt(HALT_ACTION_REBOOT, ZirconCrashReason::SoftwareWatchdog);
         g_fatal_condition_reporter_role.Release();

@@ -94,7 +94,7 @@ void platform_halt_cpu(void) {
   halted_cpus.fetch_or(cpu_num_to_mask(arch_curr_cpu_num()));
 }
 
-void platform_panic_start(void) {
+void platform_panic_start(PanicStartHaltOtherCpus option) {
   platform_debug_panic_start();
   arch_disable_ints();
 
@@ -105,7 +105,9 @@ void platform_panic_start(void) {
     jtrace_dump(jtrace::TraceBufferType::Current);
   }
 
-  halt_other_cpus();
+  if (option == PanicStartHaltOtherCpus::Yes) {
+    halt_other_cpus();
+  }
 }
 
 extern const char* manufacturer;

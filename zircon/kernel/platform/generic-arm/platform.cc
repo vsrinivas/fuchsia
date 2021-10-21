@@ -130,10 +130,12 @@ static uint64_t ToMpid(const zbi_topology_processor_t& processor) {
          info.cpu_id;
 }
 
-void platform_panic_start(void) {
+void platform_panic_start(PanicStartHaltOtherCpus option) {
   arch_disable_ints();
 
-  halt_other_cpus();
+  if (option == PanicStartHaltOtherCpus::Yes) {
+    halt_other_cpus();
+  }
 
   if (panic_started.exchange(1) == 0) {
     dlog_bluescreen_init();

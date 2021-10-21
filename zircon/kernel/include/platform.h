@@ -51,13 +51,6 @@ void platform_prevm_init(void);
 /* later init, after the kernel has come up */
 void platform_init(void);
 
-/* platform_panic_start informs the system that a panic message is about
- * to be printed and that platform_halt will be called shortly.  The
- * platform should stop other CPUs if possible and do whatever is necessary
- * to safely ensure that the panic message will be visible to the user.
- */
-void platform_panic_start(void);
-
 /* platform_halt halts the system and performs the |suggested_action|.
  *
  * This function is used in both the graceful shutdown and panic paths so it
@@ -127,6 +120,13 @@ const affine::Ratio& platform_get_ticks_to_time_ratio(void);
 // Convert a sample taken early on to a proper zx_ticks_t, if possible.
 // This returns 0 if early samples are not convertible.
 zx_ticks_t platform_convert_early_ticks(arch::EarlyTicks sample);
+
+// platform_panic_start informs the system that a panic message is about
+// to be printed and that platform_halt will be called shortly.  The
+// platform should stop other CPUs if requested and do whatever is necessary
+// to safely ensure that the panic message will be visible to the user.
+enum class PanicStartHaltOtherCpus { No = 0, Yes };
+void platform_panic_start(PanicStartHaltOtherCpus option = PanicStartHaltOtherCpus::Yes);
 
 #endif  // __cplusplus
 
