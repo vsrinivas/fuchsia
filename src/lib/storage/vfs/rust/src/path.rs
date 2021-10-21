@@ -12,7 +12,7 @@ use {
     fuchsia_zircon::Status,
 };
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Path {
     is_dir: bool,
     inner: String,
@@ -90,7 +90,7 @@ impl Path {
     }
 
     /// Returns `true` when the path contains only one component - that is, it is not empty and
-    /// contains not `/` characters.
+    /// contains no `/` characters.
     pub fn is_single_component(&self) -> bool {
         let end = if self.is_dir { self.inner.len() - 1 } else { self.inner.len() };
         self.next < self.inner.len() && self.inner[self.next..end].find('/').is_none()
@@ -149,20 +149,17 @@ impl Path {
         }
     }
 
-    /// Converts this `Path` into a `String` holding the rest of the path.  If [`Self::next()`] was
-    /// called, this would cause reallocation.  Note that if there are no more components, this will
-    /// return an empty string, which is *not* a valid path for fuchsia.io.
-    pub fn into_string(self) -> String {
-        if self.next == 0 {
-            self.inner
-        } else {
-            self.inner.split_at(self.next).1.to_string()
-        }
+    /// Converts this `Path` into a `String` holding the rest of the path.  Note that if there are
+    /// no more components, this will return an empty string, which is *not* a valid path for
+    /// fuchsia.io.
+    pub fn into_string(mut self) -> String {
+        self.inner.drain(0..self.next);
+        self.inner
     }
 
     /// Like `into_string` but returns a reference and the path returned is valid for fuchsia.io
     /// i.e. if there are no remaining components, "." is returned.
-    pub fn remainder(&self) -> &str {
+    fn remainder(&self) -> &str {
         if self.is_empty() {
             "."
         } else {
@@ -171,16 +168,16 @@ impl Path {
     }
 }
 
+impl PartialEq for Path {
+    fn eq(&self, other: &Self) -> bool {
+        self.remainder() == other.remainder()
+    }
+}
+impl Eq for Path {}
+
 impl AsRef<str> for Path {
     fn as_ref(&self) -> &str {
-        if self.is_dot() {
-            "."
-        } else if self.inner.starts_with("/") {
-            // Prefer to return a canonical path.
-            &self.inner[1..]
-        } else {
-            &self.inner
-        }
+        self.remainder()
     }
 }
 
@@ -214,6 +211,13 @@ mod tests {
         };
     }
 
+    fn path(s: &str) -> Path {
+        match Path::validate_and_split(s) {
+            Ok(path) => path,
+            Err(e) => panic!("'{}' construction failed: {}", s, e),
+        }
+    }
+
     #[test]
     fn empty() {
         negative_construction_test! {
@@ -234,7 +238,7 @@ mod tests {
                 assert_eq!(path.as_ref(), ".");
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
-                assert_eq!(path.remainder(), ".");
+                assert_eq!(path.as_ref(), ".");
                 assert_eq!(path.into_string(), String::new());
             }
         };
@@ -253,7 +257,7 @@ mod tests {
                 assert_eq!(path.next(), Some("a"));
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
-                assert_eq!(path.remainder(), ".");
+                assert_eq!(path.as_ref(), ".");
                 assert_eq!(path.into_string(), String::new());
             }
         };
@@ -272,7 +276,7 @@ mod tests {
                 assert_eq!(path.next(), Some("some"));
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
-                assert_eq!(path.remainder(), ".");
+                assert_eq!(path.as_ref(), ".");
                 assert_eq!(path.into_string(), String::new());
             }
         };
@@ -291,7 +295,7 @@ mod tests {
                 assert_eq!(path.next(), Some("some"));
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
-                assert_eq!(path.remainder(), ".");
+                assert_eq!(path.as_ref(), ".");
                 assert_eq!(path.into_string(), String::new());
             }
         };
@@ -313,7 +317,7 @@ mod tests {
                 assert_eq!(path.next(), Some("b"));
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
-                assert_eq!(path.remainder(), ".");
+                assert_eq!(path.as_ref(), ".");
                 assert_eq!(path.into_string(), String::new());
             }
         };
@@ -335,7 +339,7 @@ mod tests {
                 assert_eq!(path.next(), Some("path"));
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
-                assert_eq!(path.remainder(), ".");
+                assert_eq!(path.as_ref(), ".");
                 assert_eq!(path.into_string(), String::new());
             }
         };
@@ -357,7 +361,7 @@ mod tests {
                 assert_eq!(path.next(), Some("path"));
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
-                assert_eq!(path.remainder(), ".");
+                assert_eq!(path.as_ref(), ".");
                 assert_eq!(path.into_string(), String::new());
             }
         };
@@ -379,7 +383,7 @@ mod tests {
                 assert_eq!(path.next(), Some("string"));
                 assert_eq!(path.peek(), Some("half"));
                 assert_eq!(path.peek(), Some("half"));
-                assert_eq!(path.remainder(), "half/way");
+                assert_eq!(path.as_ref(), "half/way");
                 assert_eq!(path.into_string(), "half/way".to_string());
             }
         };
@@ -401,7 +405,7 @@ mod tests {
                 assert_eq!(path.next(), Some("string"));
                 assert_eq!(path.peek(), Some("half"));
                 assert_eq!(path.peek(), Some("half"));
-                assert_eq!(path.remainder(), "half/way/");
+                assert_eq!(path.as_ref(), "half/way/");
                 assert_eq!(path.into_string(), "half/way/".to_string());
             }
         };
@@ -422,7 +426,7 @@ mod tests {
                 assert_eq!(path.peek(), Some("string"));
                 assert_eq!(path.next(), Some("string"));
                 assert_eq!(path.peek(), None);
-                assert_eq!(path.remainder(), ".");
+                assert_eq!(path.as_ref(), ".");
                 assert_eq!(path.into_string(), "".to_string());
             }
         };
@@ -446,7 +450,7 @@ mod tests {
                 assert!(!path.is_dir());
                 assert!(!path.is_single_component());
                 assert_eq!(path.as_ref(), "a/b/c");
-                assert_eq!(path.remainder(), "a/b/c");
+                assert_eq!(path.clone().into_string(), "a/b/c");
                 assert_eq!(path.peek(), Some("a"));
                 assert_eq!(path.peek(), Some("a"));
                 assert_eq!(path.next(), Some("a"));
@@ -454,7 +458,7 @@ mod tests {
                 assert_eq!(path.next(), Some("c"));
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
-                assert_eq!(path.remainder(), ".");
+                assert_eq!(path.as_ref(), ".");
                 assert_eq!(path.into_string(), "".to_string());
             }
         }
@@ -545,8 +549,109 @@ mod tests {
             assert_eq!(path.next(), None);
             assert_eq!(path.peek(), None);
             assert_eq!(path.as_ref(), ".");
-            assert_eq!(path.remainder(), ".");
+            assert_eq!(path.as_ref(), ".");
             assert_eq!(path.into_string(), "");
         }
+    }
+
+    #[test]
+    fn eq_compares_remainder() {
+        let mut pos = path("a/b/c");
+
+        assert_eq!(pos, path("a/b/c"));
+        assert_ne!(pos, path("b/c"));
+        assert_ne!(pos, path("c"));
+        assert_ne!(pos, path("."));
+
+        assert_eq!(pos.next(), Some("a"));
+
+        assert_ne!(pos, path("a/b/c"));
+        assert_eq!(pos, path("b/c"));
+        assert_ne!(pos, path("c"));
+        assert_ne!(pos, path("."));
+
+        assert_eq!(pos.next(), Some("b"));
+
+        assert_ne!(pos, path("a/b/c"));
+        assert_ne!(pos, path("b/c"));
+        assert_eq!(pos, path("c"));
+        assert_ne!(pos, path("."));
+
+        assert_eq!(pos.next(), Some("c"));
+
+        assert_ne!(pos, path("a/b/c"));
+        assert_ne!(pos, path("b/c"));
+        assert_ne!(pos, path("c"));
+        assert_eq!(pos, path("."));
+    }
+
+    #[test]
+    fn eq_considers_is_dir() {
+        let mut pos_not = path("a/b");
+        let mut pos_dir = path("a/b/");
+
+        assert_ne!(pos_not, pos_dir);
+        assert_eq!(pos_not, path("a/b"));
+        assert_eq!(pos_dir, path("a/b/"));
+
+        pos_not.next();
+        pos_dir.next();
+
+        assert_ne!(pos_not, pos_dir);
+        assert_eq!(pos_not, path("b"));
+        assert_eq!(pos_dir, path("b/"));
+
+        pos_not.next();
+        pos_dir.next();
+
+        // once all that is left is ".", now they are equivalent
+        assert_eq!(pos_not, pos_dir);
+        assert_eq!(pos_not, path("."));
+        assert_eq!(pos_dir, path("."));
+    }
+
+    #[test]
+    fn eq_does_not_consider_absolute_different_from_relative() {
+        let abs = path("/a/b");
+        let rel = path("a/b");
+
+        assert_eq!(abs, rel);
+        assert_ne!(abs, path("different/path"));
+        assert_ne!(rel, path("different/path"));
+    }
+
+    #[test]
+    fn as_ref_is_remainder() {
+        let mut path = Path::validate_and_split(".").unwrap();
+        assert_eq!(path.as_ref(), ".");
+        path.next();
+        assert_eq!(path.as_ref(), ".");
+
+        let mut path = Path::validate_and_split("a/b/c").unwrap();
+        assert_eq!(path.as_ref(), "a/b/c");
+        path.next();
+        assert_eq!(path.as_ref(), "b/c");
+        path.next();
+        assert_eq!(path.as_ref(), "c");
+        path.next();
+        assert_eq!(path.as_ref(), ".");
+
+        let mut path = Path::validate_and_split("/a/b/c").unwrap();
+        assert_eq!(path.as_ref(), "a/b/c");
+        path.next();
+        assert_eq!(path.as_ref(), "b/c");
+        path.next();
+        assert_eq!(path.as_ref(), "c");
+        path.next();
+        assert_eq!(path.as_ref(), ".");
+
+        let mut path = Path::validate_and_split("/a/b/c/").unwrap();
+        assert_eq!(path.as_ref(), "a/b/c/");
+        path.next();
+        assert_eq!(path.as_ref(), "b/c/");
+        path.next();
+        assert_eq!(path.as_ref(), "c/");
+        path.next();
+        assert_eq!(path.as_ref(), ".");
     }
 }

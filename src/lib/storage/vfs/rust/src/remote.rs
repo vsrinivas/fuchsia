@@ -59,7 +59,7 @@ where
 pub fn remote_dir(dir: DirectoryProxy) -> Arc<Remote> {
     remote_boxed_with_type(
         Box::new(move |_scope, flags, mode, path, server_end| {
-            let _ = dir.open(flags, mode, path.remainder(), server_end);
+            let _ = dir.open(flags, mode, path.as_ref(), server_end);
         }),
         DIRENT_TYPE_DIRECTORY,
     )
