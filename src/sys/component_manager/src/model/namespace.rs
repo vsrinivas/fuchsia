@@ -334,7 +334,7 @@ impl IncomingNamespace {
                     route_to_storage_decl(use_storage_decl.clone(), &instance, &mut noop_mapper)
                         .await
                 {
-                    verify_instance_in_component_id_index(&source, &instance).await?;
+                    verify_instance_in_component_id_index(&source, &instance)?;
                 }
             }
             _ => unreachable!("unexpected storage decl"),

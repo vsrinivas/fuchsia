@@ -593,7 +593,7 @@ make_noop_visitor!(StorageVisitor, {
 /// Verifies that the given component is in the index if its `storage_id` is StaticInstanceId.
 /// - On success, Ok(()) is returned
 /// - RoutingError::ComponentNotInIndex is returned on failure.
-pub async fn verify_instance_in_component_id_index<C>(
+pub fn verify_instance_in_component_id_index<C>(
     source: &CapabilitySourceInterface<C>,
     instance: &Arc<C>,
 ) -> Result<(), RoutingError>
@@ -651,7 +651,7 @@ where
     C: ComponentInstanceInterface + 'static,
 {
     let source = route_to_storage_decl(use_decl, &target, mapper).await?;
-    verify_instance_in_component_id_index(&source, target).await?;
+    verify_instance_in_component_id_index(&source, target)?;
     target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
     Ok(RouteSource::Storage(source))
 }
