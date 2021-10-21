@@ -24,7 +24,7 @@ class Network : public fuchsia::netemul::network::Network {
   using ClosedCallback = fit::function<void(const Network&)>;
 
   Network(NetworkContext* context, std::string name, Config config);
-  ~Network();
+  ~Network() override;
 
   const std::string& name() const { return name_; }
 

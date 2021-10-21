@@ -71,22 +71,21 @@ class NetworkBus : public data::BusConsumer {
       return [this](InterceptPacket packet) {
         ForwardData(packet.data().data(), packet.data().size(), packet.origin());
       };
-    } else {
-      // if interceptors already have members, point onto the back for chaining
-      auto* next = interceptors_.back().get();
-      return [next](InterceptPacket packet) { next->Intercept(std::move(packet)); };
     }
+    // if interceptors already have members, point onto the back for chaining
+    auto* next = interceptors_.back().get();
+    return [next](InterceptPacket packet) { next->Intercept(std::move(packet)); };
   }
 
   void ForwardData(const void* data, size_t len, const data::Consumer::Ptr& sender) {
     for (auto i = sinks_.begin(); i != sinks_.end();) {
       if (*i) {
-        if (i->get() != sender.get()) {  // flood all sinks different than sender
+        if (i->get() != sender.get()) {  // flood all sinks other than sender
           (*i)->Consume(data, len);
         }
         ++i;
       } else {
-        // sink has been free'd, erase it
+        // sink has been freed, erase it
         i = sinks_.erase(i);
       }
     }
@@ -144,7 +143,8 @@ zx_status_t Network::AttachEndpoint(std::string name) {
 
   if (status != ZX_OK) {
     return status;
-  } else if (!src) {
+  }
+  if (!src) {
     return ZX_ERR_INTERNAL;
   }
 

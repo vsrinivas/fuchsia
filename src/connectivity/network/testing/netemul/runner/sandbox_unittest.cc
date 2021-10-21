@@ -5,9 +5,7 @@
 #include "sandbox.h"
 
 #include <fuchsia/logger/cpp/fidl.h>
-#include <lib/fpromise/sequencer.h>
 #include <lib/fpromise/single_threaded_executor.h>
-#include <lib/sys/cpp/termination_reason.h>
 
 #include <iostream>
 #include <unordered_set>
@@ -28,8 +26,6 @@ enum EventType {
   OnClientAttached,
   OnClientDetached,
 };
-
-using namespace fuchsia::netemul;
 
 class SandboxTest : public ::gtest::RealLoopFixture {
  protected:
@@ -71,10 +67,10 @@ class SandboxTest : public ::gtest::RealLoopFixture {
 
     RunLoopUntil([&done]() { return done; });
 
-    // We quit the loop when sandbox terminates,
-    // but because some of the tests will look at services in the sandbox when
-    // we exit, we run the loop until idle to make sure the sandbox will have a
-    // last chance to read any events pending.
+    // We quit the loop when sandbox terminates, but because some tests will
+    // look at services in the sandbox when we exit, we run the loop until idle
+    // to make sure the sandbox will have a last chance to read any events
+    // pending.
     RunLoopUntilIdle();
 
     // If we're expecting unspecified status, we will just check for expected
@@ -134,11 +130,11 @@ class SandboxTest : public ::gtest::RealLoopFixture {
 
   const std::unordered_set<int32_t>& events() { return collected_codes_; }
 
-  sync::BusPtr& bus() { return bus_; }
+  fuchsia::netemul::sync::BusPtr& bus() { return bus_; }
 
-  network::NetworkManagerPtr& network_manager() { return net_manager_; }
+  fuchsia::netemul::network::NetworkManagerPtr& network_manager() { return net_manager_; }
 
-  network::EndpointManagerPtr& endpoint_manager() { return endp_manager_; }
+  fuchsia::netemul::network::EndpointManagerPtr& endpoint_manager() { return endp_manager_; }
 
   SandboxArgs TakeArgs() { return std::move(sandbox_args_); }
 
@@ -152,10 +148,10 @@ class SandboxTest : public ::gtest::RealLoopFixture {
 
   void InstallEventCollection(Sandbox* sandbox) {
     // connect to bus manager:
-    sync::SyncManagerPtr syncManager;
+    fuchsia::netemul::sync::SyncManagerPtr syncManager;
     sandbox->sandbox_environment()->sync_manager().GetHandler()(syncManager.NewRequest());
     syncManager->BusSubscribe(kBusName, kBusClientName, bus_.NewRequest());
-    bus_.events().OnBusData = [this](sync::Event event) {
+    bus_.events().OnBusData = [this](fuchsia::netemul::sync::Event event) {
       if (!event.has_code()) {
         return;
       }
@@ -201,10 +197,10 @@ class SandboxTest : public ::gtest::RealLoopFixture {
   std::unordered_set<std::string> observed_clients_;
   std::unordered_set<std::string> detached_clients_;
   std::unique_ptr<TestListener> log_listener_;
-  sync::BusPtr bus_;
-  network::NetworkContextPtr net_ctx_;
-  network::NetworkManagerPtr net_manager_;
-  network::EndpointManagerPtr endp_manager_;
+  fuchsia::netemul::sync::BusPtr bus_;
+  fuchsia::netemul::network::NetworkContextPtr net_ctx_;
+  fuchsia::netemul::network::NetworkManagerPtr net_manager_;
+  fuchsia::netemul::network::EndpointManagerPtr endp_manager_;
 };
 
 TEST_F(SandboxTest, SimpleSuccess) {
@@ -344,7 +340,7 @@ TEST_F(SandboxTest, AppsAreLaunched) {
     // if all app events are seen and root is waiting for us
     // unlock root with event code 100
     if (PeekEvents({1, 2, 3}) && ObservedClient("root")) {
-      sync::Event evt;
+      fuchsia::netemul::sync::Event evt;
       evt.set_code(100);
       bus()->Publish(std::move(evt));
     }
@@ -379,7 +375,7 @@ TEST_F(SandboxTest, AppExitCodesAreIgnored) {
     // if all app events are seen and root is waiting for us
     // unlock root with event code 100
     if (PeekEvents({1}) && ObservedClient("root")) {
-      sync::Event evt;
+      fuchsia::netemul::sync::Event evt;
       evt.set_code(100);
       bus()->Publish(std::move(evt));
     }
@@ -565,13 +561,13 @@ TEST_F(SandboxTest, DuplicateEndpointNameFails) {
 }
 
 TEST_F(SandboxTest, ValidNetworkSetup) {
-  // - Configures 2 networks with 2 endpoints each
-  // - waits for root process to start and then
-  //   connects to network FIDL service to check
-  //   that the networks and endpoints were
-  //   created correctly
-  // - finally, tries to attach endpoints to network again
-  //   to asses that they were correctly put in place
+  // - Configures 2 networks with 2 endpoints each.
+  //
+  // - waits for root process to start and then connects to network FIDL
+  // service to check that the networks and endpoints were created correctly.
+  //
+  // - tries to attach endpoints to network again to assess that they were
+  // correctly put in place.
   SetCmx(R"(
   {
     "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
@@ -606,24 +602,25 @@ TEST_F(SandboxTest, ValidNetworkSetup) {
       std::make_pair<int, std::string>(1, "ep3"),
       std::make_pair<int, std::string>(1, "ep4"),
   });
-  std::vector<network::NetworkPtr> found_nets;
+  std::vector<fuchsia::netemul::network::NetworkPtr> found_nets;
 
   auto nets = networks.begin();
   auto eps = endpoints.begin();
   auto attach = attachments.begin();
 
   fit::function<void()> check;
-  // check will keep a reference to itself so
-  // it can recur.
-  // Plus, it'll keep a reference to the iterators
-  // so it runs all the checks over network, endpoint, and attachment
+  // check will keep a reference to itself so that it can recur.
+  //
+  // Plus, it'll keep a reference to the iterators so that it runs all the
+  // checks over network, endpoint, and attachment
   check = [&nets, &eps, &networks, &endpoints, &attach, &attachments, &check, &found_nets, this]() {
     if (nets != networks.end()) {
       // iterate over networks and check they're there
       auto lookup = *nets++;
       std::cout << "checking network " << lookup << std::endl;
       network_manager()->GetNetwork(
-          lookup, [&check, &found_nets](fidl::InterfaceHandle<network::Network> net) {
+          lookup,
+          [&check, &found_nets](fidl::InterfaceHandle<fuchsia::netemul::network::Network> net) {
             ASSERT_TRUE(net.is_valid());
             // keep network for attachments check
             found_nets.emplace_back(net.Bind());
@@ -633,11 +630,11 @@ TEST_F(SandboxTest, ValidNetworkSetup) {
       // iterate over endpoints and check they're there
       auto lookup = *eps++;
       std::cout << "checking endpoint " << lookup << std::endl;
-      endpoint_manager()->GetEndpoint(lookup,
-                                      [&check](fidl::InterfaceHandle<network::Endpoint> ep) {
-                                        ASSERT_TRUE(ep.is_valid());
-                                        check();
-                                      });
+      endpoint_manager()->GetEndpoint(
+          lookup, [&check](fidl::InterfaceHandle<fuchsia::netemul::network::Endpoint> ep) {
+            ASSERT_TRUE(ep.is_valid());
+            check();
+          });
     } else if (attach != attachments.end()) {
       // iterate over attachments and check they're there
       auto& a = *attach++;
@@ -647,7 +644,7 @@ TEST_F(SandboxTest, ValidNetworkSetup) {
         check();
       });
     } else {
-      sync::Event event;
+      fuchsia::netemul::sync::Event event;
       event.set_code(100);
       bus()->Publish(std::move(event));
     }
@@ -802,10 +799,10 @@ TEST_F(SandboxTest, ServiceExittingCausesFailure) {
 
 TEST_F(SandboxTest, DestructorRunsCleanly) {
   // This test verifies that if the sandbox is destroyed while tests are
-  // running inside it, it'll shutdown cleanly.
+  // running inside it, it'll shut down cleanly.
   //
-  // Dummy proc is launched with an event wait that will never be fulfilled to ensure that we
-  // destroy the sandbox while it is still running.
+  // Dummy proc is launched with an event wait that will never be fulfilled to
+  // ensure that we destroy the sandbox while it is still running.
   SetCmx(R"(
 {
    "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
@@ -867,7 +864,7 @@ TEST_F(SandboxTest, SyslogWithNoKlog) {
   EnableLogCapture([this](const fuchsia::logger::LogMessage& msg) {
     if (std::find(msg.tags.begin(), msg.tags.end(), expected_tag) != msg.tags.end()) {
       FX_LOGS(INFO) << "Got log tagged with '" << expected_tag << "'! Sending event...";
-      sync::Event evt;
+      fuchsia::netemul::sync::Event evt;
       evt.set_code(100);
       bus()->Publish(std::move(evt));
       FX_LOGS(INFO) << "Published event!";
@@ -909,7 +906,7 @@ TEST_F(SandboxTest, SyslogWithKlog) {
       }
     }
     if (got_dummy_log && klog_count != 0) {
-      sync::Event evt;
+      fuchsia::netemul::sync::Event evt;
       evt.set_code(100);
       bus()->Publish(std::move(evt));
     }
