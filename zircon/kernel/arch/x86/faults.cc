@@ -40,27 +40,13 @@
 static bool is_from_user(const iframe_t* frame) { return SELECTOR_PL(frame->cs) != 0; }
 
 static void dump_fault_frame(iframe_t* frame) {
-  dprintf(CRITICAL, " CS:  %#18" PRIx64 " RIP: %#18" PRIx64 " EFL: %#18" PRIx64 " CR2: %#18lx\n",
-          frame->cs, frame->ip, frame->flags, x86_get_cr2());
-  dprintf(CRITICAL,
-          " RAX: %#18" PRIx64 " RBX: %#18" PRIx64 " RCX: %#18" PRIx64 " RDX: %#18" PRIx64 "\n",
-          frame->rax, frame->rbx, frame->rcx, frame->rdx);
-  dprintf(CRITICAL,
-          " RSI: %#18" PRIx64 " RDI: %#18" PRIx64 " RBP: %#18" PRIx64 " RSP: %#18" PRIx64 "\n",
-          frame->rsi, frame->rdi, frame->rbp, frame->user_sp);
-  dprintf(CRITICAL,
-          "  R8: %#18" PRIx64 "  R9: %#18" PRIx64 " R10: %#18" PRIx64 " R11: %#18" PRIx64 "\n",
-          frame->r8, frame->r9, frame->r10, frame->r11);
-  dprintf(CRITICAL,
-          " R12: %#18" PRIx64 " R13: %#18" PRIx64 " R14: %#18" PRIx64 " R15: %#18" PRIx64 "\n",
-          frame->r12, frame->r13, frame->r14, frame->r15);
-  dprintf(CRITICAL, "errc: %#18" PRIx64 "\n", frame->err_code);
+  PrintFrame(stdout, *frame);
 
   // dump the bottom of the current stack
   void* stack = frame;
 
   if (frame->cs == CODE_64_SELECTOR) {
-    dprintf(CRITICAL, "bottom of kernel stack at %p:\n", stack);
+    printf("bottom of kernel stack at %p:\n", stack);
     hexdump(stack, 128);
   }
 }

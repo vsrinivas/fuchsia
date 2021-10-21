@@ -28,6 +28,7 @@
 #include <zircon/hw/debug/x86.h>
 
 #include <arch/ops.h>
+#include <arch/regs.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
@@ -757,3 +758,21 @@ void x86_print_dr7(uint64_t dr7) {
 }
 
 #endif
+
+void PrintFrame(FILE* file, const iframe_t& frame) {
+  fprintf(file, " CS:  %#18" PRIx64 " RIP: %#18" PRIx64 " EFL: %#18" PRIx64 " CR2: %#18lx\n",
+          frame.cs, frame.ip, frame.flags, x86_get_cr2());
+  fprintf(file,
+          " RAX: %#18" PRIx64 " RBX: %#18" PRIx64 " RCX: %#18" PRIx64 " RDX: %#18" PRIx64 "\n",
+          frame.rax, frame.rbx, frame.rcx, frame.rdx);
+  fprintf(file,
+          " RSI: %#18" PRIx64 " RDI: %#18" PRIx64 " RBP: %#18" PRIx64 " RSP: %#18" PRIx64 "\n",
+          frame.rsi, frame.rdi, frame.rbp, frame.user_sp);
+  fprintf(file,
+          "  R8: %#18" PRIx64 "  R9: %#18" PRIx64 " R10: %#18" PRIx64 " R11: %#18" PRIx64 "\n",
+          frame.r8, frame.r9, frame.r10, frame.r11);
+  fprintf(file,
+          " R12: %#18" PRIx64 " R13: %#18" PRIx64 " R14: %#18" PRIx64 " R15: %#18" PRIx64 "\n",
+          frame.r12, frame.r13, frame.r14, frame.r15);
+  fprintf(file, "errc: %#18" PRIx64 "\n", frame.err_code);
+}

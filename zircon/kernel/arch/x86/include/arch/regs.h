@@ -35,6 +35,7 @@
 
 #include <assert.h>
 #include <stdint.h>
+#include <stdio.h>
 
 // Registers saved on entering the kernel via interrrupt or fault.
 struct iframe_t {
@@ -70,6 +71,8 @@ static_assert(offsetof(iframe_t, cs) == X86_IFRAME_OFFSET_CS, "");
 static_assert(offsetof(iframe_t, flags) == X86_IFRAME_OFFSET_FLAGS, "");
 static_assert(offsetof(iframe_t, user_sp) == X86_IFRAME_OFFSET_USER_SP, "");
 static_assert(offsetof(iframe_t, user_ss) == X86_IFRAME_OFFSET_USER_SS, "");
+
+void PrintFrame(FILE* file, const iframe_t& frame);
 
 // This structure holds the user general purpose integer registers during syscalls.
 //
