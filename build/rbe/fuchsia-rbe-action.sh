@@ -16,6 +16,9 @@ script_dir="$(dirname "$script")"
 # The value is an absolute path.
 project_root="$(readlink -f "$script_dir"/../..)"
 
+# $PWD must be inside $project_root.
+build_subdir="$(realpath --relative-to="$project_root" . )"
+
 # defaults
 config="$script_dir"/fuchsia-re-client.cfg
 # location of reclient binaries relative to output directory where build is run
@@ -36,6 +39,11 @@ options:
       [default: $config]
   --bindir DIR: location of reproxy and rewrapper tools
       [default: $reclient_bindir]
+  --dry-run: If set, print the computed rewrapper command without running it.
+
+  --fsatrace-path: location of fsatrace tool (which must reside under
+      'exec_root').  If provided, a remote trace will be created and
+      downloaded as \$output_files[0].remote-fsatrace.
 
   --auto-reproxy: startup and shutdown reproxy around the command.
   --no-reproxy: assume reproxy is already running, and only use rewrapper.
@@ -45,8 +53,13 @@ options:
 EOF
 }
 
+dry_run=0
+fsatrace_path=
+inputs=
+output_files=
 rewrapper_options=()
 want_auto_reproxy=0
+
 prev_opt=
 # Extract script options before --
 for opt
@@ -65,10 +78,24 @@ do
     *=) optarg= ;;
   esac
   case "$opt" in
+    --help|-h) usage; exit;;
+    --dry-run) dry_run=1 ;;
+
     --cfg=*) config="$optarg" ;;
     --cfg) prev_opt=config ;;
+
     --bindir=*) reclient_bindir="$optarg" ;;
     --bindir) prev_opt=reclient_bindir ;;
+
+    --fsatrace-path=*) fsatrace_path="$optarg" ;;
+    --fsatrace-path) prev_opt=fsatrace_path ;;
+
+    # Intercept --inputs and --output_files to allow for possible adjustments.
+    --inputs=*) inputs="$optarg" ;;
+    --inputs) prev_opt=inputs ;;
+    --output_files=*) output_files="$optarg" ;;
+    --output_files) prev_opt=output_files ;;
+
     --auto-reproxy) want_auto_reproxy=1 ;;
     --no-reproxy) want_auto_reproxy=0 ;;
     # stop option processing
@@ -85,17 +112,71 @@ rewrapper_cfg="$config"
 
 rewrapper="$reclient_bindir"/rewrapper
 
-# command is in "$@"
-rewrapped_command=("$rewrapper" --cfg="$rewrapper_cfg" "${rewrapper_options[@]}" "$@")
+# env for remote execution
+remote_env=/usr/bin/env
 
-if test "$want_auto_reproxy" = 1
+# Split up $inputs and $output_files for possible modification.
+IFS="," read -r -a inputs_array <<< "$inputs"
+IFS="," read -r -a output_files_array <<< "$output_files"
+
+default_primary_output=rbe-action-output
+if test "${#output_files_array[@]}" -gt 0
 then
-  # startup and stop reproxy around this single command
-  "$auto_reproxy" --cfg="$reproxy_cfg" -- "${rewrapped_command[@]}"
+  primary_output="${output_files_array[0]}"
 else
-  # reproxy is already running
-  "${rewrapped_command[@]}"
+  # This name is not unique, but this is only used for tracing,
+  # which should be investigated one action at a time.
+  primary_output="$build_subdir/$default_primary_output"
 fi
+primary_output_rel="${primary_output#$build_subdir/}"
+
+# Use fsatrace on the remote command, and also fetch the resulting log.
+fsatrace_prefix=()
+test -z "$fsatrace_path" || {
+  # Adjust paths so that command is relative to $PWD, while rewrapper
+  # parameters are relative to $project_root.
+
+  fsatrace_relpath="$(realpath -s --relative-to="$project_root" "$fsatrace_path")"
+  fsatrace_so="$fsatrace_relpath.so"
+  inputs_array+=( "$fsatrace_relpath" "$fsatrace_so" )
+  output_files_array+=( "$primary_output.remote-fsatrace" )
+  fsatrace_prefix=(
+    "$remote_env" FSAT_BUF_SIZE=5000000
+    "$fsatrace_path" erwdtmq "$primary_output_rel.remote-fsatrace" --
+  )
+}
+
+inputs_joined="$(IFS=, ; echo "${inputs_array[*]}")"
+output_files_joined="$(IFS=, ; echo "${output_files_array[*]}")"
+
+rewrapper_options+=(
+  --inputs="$inputs_joined"
+  --output_files="$output_files_joined"
+)
+
+# The remote command is in "$@".
+rewrapped_command=(
+  "$rewrapper"
+  --cfg="$rewrapper_cfg"
+  "${rewrapper_options[@]}"
+
+  "${fsatrace_prefix[@]}"
+  "$@"
+)
+
+reproxy_prefix=()
+# Prefix to startup and stop reproxy around this single command,
+# which is needed if reproxy is not already running.
+test "$want_auto_reproxy" = 0 ||
+  reproxy_prefix=( "$auto_reproxy" --cfg="$reproxy_cfg" -- )
+
+full_command=( "${reproxy_prefix[@]}" "${rewrapped_command[@]}" )
+
+test "$dry_run" = 0 || {
+  echo "[$script]:" "${full_command[@]}"
+  exit
+}
+"${full_command[@]}"
 
 # Exit normally on success.
 status="$?"
