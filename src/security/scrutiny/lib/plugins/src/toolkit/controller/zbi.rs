@@ -9,7 +9,7 @@ use {
         model::controller::{ConnectionMode, DataController, HintDataType},
         model::model::*,
     },
-    scrutiny_utils::{blobfs::export_blobfs, bootfs::*, fvm::*, usage::*, zbi::*},
+    scrutiny_utils::{blobfs::*, bootfs::*, fvm::*, usage::*, zbi::*},
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
     std::collections::HashMap,
@@ -31,7 +31,7 @@ pub struct ZbiExtractRequest {
 pub struct ZbiExtractController {}
 
 impl DataController for ZbiExtractController {
-    fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
+    fn query(&self, _model: Arc<DataModel>, query: Value) -> Result<Value> {
         let request: ZbiExtractRequest = serde_json::from_value(query)?;
         let mut zbi_file = File::open(request.input)?;
         let output_path = PathBuf::from(request.output);
@@ -97,10 +97,8 @@ impl DataController for ZbiExtractController {
                         };
                         let mut fvm_partition_path = fvm_dir.clone();
                         fvm_partition_path.push(file_name);
-                        {
-                            let mut fvm_file = File::create(fvm_partition_path.clone())?;
-                            fvm_file.write_all(&partition.buffer)?;
-                        }
+                        let mut fvm_file = File::create(fvm_partition_path)?;
+                        fvm_file.write_all(&partition.buffer)?;
 
                         // Write out the blobfs data.
                         if partition.partition_type == FvmPartitionType::BlobFs {
@@ -108,11 +106,15 @@ impl DataController for ZbiExtractController {
                             let mut blobfs_dir = fvm_dir.clone();
                             blobfs_dir.push("blobfs");
                             fs::create_dir_all(blobfs_dir.clone())?;
-                            export_blobfs(
-                                &model.config().blobfs_tool_path,
-                                &fvm_partition_path,
-                                &blobfs_dir,
-                            )?;
+                            let mut reader = BlobFsReader::new(partition.buffer.clone());
+                            let blobs = reader.parse()?;
+
+                            for blob in blobs {
+                                let mut path = blobfs_dir.clone();
+                                path.push(blob.merkle.clone());
+                                let mut file = File::create(path)?;
+                                file.write_all(&blob.buffer)?;
+                            }
                         }
                     }
                 } else {

@@ -178,7 +178,6 @@ pub enum FvmError {
 /// by the Allocation Table. The reader will return a vector of FvmPartitions
 /// which contain a filesystem type and the "virtual" representation of the
 /// partition (sorted pslices by vslice).
-/// TODO(fxbug.dev/81578): Remove this and use either the FVM binary or a library binding.
 pub struct FvmReader {
     cursor: Cursor<Vec<u8>>,
 }

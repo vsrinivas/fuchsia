@@ -38,3 +38,17 @@ pub fn launch_from_config(config: Config) -> Result<String> {
 pub fn launch() -> Result<String> {
     launch_from_config(Scrutiny::args_from_env()?)
 }
+
+/// Provides a utility launcher for the Scruity frontend. This is intended to
+/// be used by consumer libraries that simply want to launch the framework to
+/// run a single command.
+pub fn run_command(command: String) -> Result<String> {
+    launch_from_config(Config::run_command(command))
+}
+
+/// Provides a utility launcher for the Scrutiny frontend. This is inteded to
+/// be used by consumer libraries that simply want to launch the framework to
+/// run a Scrutiny script.
+pub fn run_script(script_path: String) -> Result<String> {
+    launch_from_config(Config::run_script(script_path))
+}

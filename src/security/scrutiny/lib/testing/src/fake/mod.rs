@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    scrutiny::model::model::DataModel,
-    scrutiny_config::ModelConfig,
-    std::sync::Arc,
-    tempfile::{tempdir, NamedTempFile},
+    scrutiny::model::model::DataModel, scrutiny_config::ModelConfig, std::sync::Arc,
+    tempfile::tempdir,
 };
 
 /// Creates a simple fake model configuration that uses an in memory uri and
@@ -24,8 +22,6 @@ pub fn fake_model_config() -> ModelConfig {
         config_data_package_url: "fuchsia-pkg://fuchsia.com/config-data".to_string(),
         zbi_path: "fuchsia.zbi".to_string(),
         devmgr_config_path: "config/devmgr".to_string(),
-        // TODO(benwright): If needed, point to the in-tree blobfs tool.
-        blobfs_tool_path: NamedTempFile::new().unwrap().into_temp_path().to_path_buf(),
     }
 }
 

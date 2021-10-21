@@ -4,10 +4,9 @@
 
 use {
     anyhow::Error,
-    ffx_config::get_sdk,
     ffx_core::ffx_plugin,
     ffx_scrutiny_shell_args::ScrutinyShellCommand,
-    scrutiny_config::{Config, LaunchConfig, LoggingVerbosity, ModelConfig, RuntimeConfig},
+    scrutiny_config::{Config, LaunchConfig, LoggingVerbosity, RuntimeConfig},
     scrutiny_frontend::launcher,
     std::path::PathBuf,
 };
@@ -16,16 +15,10 @@ use {
 pub async fn scrutiny_shell(cmd: ScrutinyShellCommand) -> Result<(), Error> {
     let batch_mode = cmd.command.is_some() || cmd.script.is_some();
 
-    let sdk = get_sdk().await?;
-    let blobfs = sdk.get_host_tool("blobfs")?;
-
     let mut config = match batch_mode {
         true => Config {
             launch: LaunchConfig { command: cmd.command, script_path: cmd.script },
-            runtime: RuntimeConfig {
-                model: ModelConfig { blobfs_tool_path: blobfs, ..ModelConfig::minimal() },
-                ..RuntimeConfig::minimal()
-            },
+            runtime: RuntimeConfig::minimal(),
         },
         false => Config::default(),
     };
