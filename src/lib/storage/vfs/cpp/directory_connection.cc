@@ -116,11 +116,7 @@ void DirectoryConnection::Close(CloseRequestView request, CloseCompleter::Sync& 
 void DirectoryConnection::Close2(Close2RequestView request, Close2Completer::Sync& completer) {
   auto result = Connection::NodeClose();
   if (result.is_error()) {
-    // TODO(fxbug.dev/64992) this should just be:
-    //    completer.ReplyError(result.error());
-    // when the bug is fixed. This applies to other error replies in this file.
-    zx_status_t error = result.error();
-    completer.Reply(::fuchsia_io::wire::NodeClose2Result::WithErr(error));
+    completer.ReplyError(result.error());
   } else {
     completer.Reply({});
   }
@@ -308,11 +304,7 @@ void DirectoryConnection::Unlink(UnlinkRequestView request, UnlinkCompleter::Syn
                                                   fuchsia_io2::wire::UnlinkFlags::kMustBeDirectory))
                              : false);
   if (status == ZX_OK) {
-    // TODO(fxbug.dev/64992) this should just be:
-    //    completer.ReplySuccess();
-    // when the bug is fixed. This applies to other success replies in this file.
-    ::fuchsia_io::wire::DirectoryUnlinkResponse response;
-    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithResponse(std::move(response)));
+    completer.ReplySuccess();
   } else {
     completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(status));
   }
@@ -385,8 +377,7 @@ void DirectoryConnection::Rename2(Rename2RequestView request, Rename2Completer::
                          std::string_view(request->src.data(), request->src.size()),
                          std::string_view(request->dst.data(), request->dst.size()));
   if (status == ZX_OK) {
-    ::fuchsia_io::wire::DirectoryRename2Response response;
-    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithResponse(std::move(response)));
+    completer.ReplySuccess();
   } else {
     completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(status));
   }

@@ -26,10 +26,7 @@ import './fidl_async.dart';
 
 class ExampleUseOfErrorSyntax$TestBase extends ExampleUseOfErrorSyntax {
   @override
-  $async.Future<
-          lib$fidl_test_errorsyntax_parent
-              .ParentUsesErrorSyntaxComposedCallWhichMayFailResult>
-      composedCallWhichMayFail(String s) {
+  $async.Future<int> composedCallWhichMayFail(String s) {
     return $async.Future.error(
         UnimplementedError(
             r'composedCallWhichMayFail not implemented on ExampleUseOfErrorSyntax test base. Please implement.'),

@@ -47,7 +47,6 @@ func DecodeJSONIr(r io.Reader) (Root, error) {
 	}
 
 	root.initializeDeclarationsMap()
-	root.initializeMethodResults()
 
 	return root, nil
 }
@@ -774,8 +773,6 @@ type Struct struct {
 	Resourceness        `json:"resource"`
 	TypeShapeV1         TypeShape `json:"type_shape_v1"`
 	TypeShapeV2         TypeShape `json:"type_shape_v2"`
-
-	MethodResult *MethodResult
 }
 
 // StructMember represents the declaration of a field in a FIDL struct.
@@ -874,47 +871,16 @@ type Method struct {
 	ResponseTypeShapeV2 TypeShape                 `json:"maybe_response_type_shape_v2,omitempty"`
 	ResponsePadding     bool                      `json:"maybe_response_has_padding,omitempty"`
 	ResponseFlexible    bool                      `json:"experimental_maybe_response_has_flexible_envelope,omitempty"`
-
-	MethodResult *MethodResult
+	HasError            bool                      `json:"has_error"`
+	ResultType          *Type                     `json:"maybe_response_result_type,omitempty"`
+	ValueType           *Type                     `json:"maybe_response_success_type,omitempty"`
+	ValueStruct         *Struct                   `json:"maybe_response_success_struct,omitempty"`
+	ErrorType           *Type                     `json:"maybe_response_err_type,omitempty"`
 }
 
 // IsTransitional returns whether this method has the `Transitional` attribute.
 func (m *Method) IsTransitional() bool {
 	return m.HasAttribute("transitional")
-}
-
-// MethodResult represents how FIDL methods that use the error syntax are manifested in the IR.
-type MethodResult struct {
-	ResultType Type
-	ValueType  Type
-	ErrorType  Type
-}
-
-func (m *Method) calculateMethodResult(r *Root) *MethodResult {
-	// Methods with a result have a single response parameter.
-	if !m.HasResponse || len(m.Response) != 1 {
-		return nil
-	}
-	resultType := m.Response[0].Type
-
-	// Result response parameters are always unions
-	if resultType.Kind != IdentifierType ||
-		r.Decls[resultType.Identifier] != UnionDeclType {
-		return nil
-	}
-
-	// Find the result union
-	resultUnion, _ := r.LookupDecl(resultType.Identifier).(*Union)
-	if !resultUnion.HasAttribute("result") {
-		// After all that it's not even a result union.
-		return nil
-	}
-
-	return &MethodResult{
-		ResultType: resultType,
-		ValueType:  resultUnion.Members[0].Type,
-		ErrorType:  resultUnion.Members[1].Type,
-	}
 }
 
 // Parameter represents a parameter to a FIDL method.
@@ -1136,15 +1102,6 @@ func (r *Root) initializeDeclarationsMap() {
 	}
 	for i, d := range r.Unions {
 		r.declarations[d.Name] = &r.Unions[i]
-	}
-}
-
-func (r *Root) initializeMethodResults() {
-	for p := 0; p < len(r.Protocols); p++ {
-		protocol := &r.Protocols[p]
-		for m := 0; m < len(protocol.Methods); m++ {
-			protocol.Methods[m].MethodResult = protocol.Methods[m].calculateMethodResult(r)
-		}
 	}
 }
 

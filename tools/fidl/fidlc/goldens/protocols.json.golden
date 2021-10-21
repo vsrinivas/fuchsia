@@ -331,7 +331,8 @@
             "has_flexible_envelope": false
           },
           "has_response": false,
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 4641225961522096302,
@@ -382,7 +383,8 @@
             "has_padding": false,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 4935493674668456948,
@@ -474,7 +476,8 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 8985942600963248509,
@@ -547,7 +550,8 @@
             "has_flexible_envelope": false
           },
           "has_response": false,
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 7344052883704365182,
@@ -639,7 +643,8 @@
             "has_padding": false,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 2103802322332450033,
@@ -772,7 +777,8 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 1323081535741489193,
@@ -804,7 +810,8 @@
             "has_padding": false,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 1691906546593908418,
@@ -877,7 +884,8 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     },
@@ -982,7 +990,76 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 24,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 24,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "uint32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          }
         },
         {
           "ordinal": 3421672554503271630,
@@ -1075,7 +1152,76 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "uint32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          }
         },
         {
           "ordinal": 627496610701472780,
@@ -1168,7 +1314,77 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/ErrorEnum",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          }
         },
         {
           "ordinal": 2147949819621101463,
@@ -1261,7 +1477,76 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": true,
+          "maybe_response_result_type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithErrorSyntax_HandleInResult_Result",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 1,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_success_type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithErrorSyntax_HandleInResult_Response",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "maybe_response_err_type": {
+            "kind": "primitive",
+            "subtype": "uint32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          }
         }
       ]
     },
@@ -1418,7 +1703,8 @@
             "has_flexible_envelope": false
           },
           "has_response": false,
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 5963604044179602938,
@@ -1530,7 +1816,8 @@
             "has_padding": false,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 6746905632127147242,
@@ -1702,7 +1989,8 @@
             "has_padding": false,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 875219241480379432,
@@ -1797,7 +2085,8 @@
             "has_padding": false,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 9065806117349865322,
@@ -1936,7 +2225,8 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     },
@@ -2093,7 +2383,8 @@
             "has_flexible_envelope": false
           },
           "has_response": false,
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     },
@@ -2250,7 +2541,8 @@
             "has_padding": false,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 1124136612964114085,
@@ -2335,7 +2627,8 @@
             "has_flexible_envelope": false
           },
           "has_response": false,
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 6033576734966581606,
@@ -2420,7 +2713,8 @@
             "has_padding": false,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     },
@@ -2476,7 +2770,8 @@
             "has_flexible_envelope": false
           },
           "has_response": false,
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     },
@@ -2564,7 +2859,8 @@
             "has_flexible_envelope": false
           },
           "has_response": false,
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 6841738779450413052,
@@ -2703,7 +2999,8 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 929632006073412977,
@@ -2779,7 +3076,8 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     },
@@ -2926,7 +3224,8 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 4493250268989071740,
@@ -3061,7 +3360,8 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 175407360796475740,
@@ -3196,7 +3496,8 @@
             "has_padding": false,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     },
@@ -3860,7 +4161,8 @@
             "has_flexible_envelope": false
           },
           "has_response": false,
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     },
@@ -3946,7 +4248,8 @@
             "has_flexible_envelope": true
           },
           "has_response": false,
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     }

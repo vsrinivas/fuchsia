@@ -89,7 +89,8 @@
             "has_flexible_envelope": false
           },
           "has_response": false,
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 5025214662316626400,
@@ -163,7 +164,8 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 6253929606062814577,
@@ -298,7 +300,8 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     }

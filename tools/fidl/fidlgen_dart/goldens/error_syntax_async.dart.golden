@@ -219,7 +219,7 @@ const $fidl.StructType<ExampleUseOfErrorSyntaxCallWhichMayFailResponse>
   structDecode: ExampleUseOfErrorSyntaxCallWhichMayFailResponse._structDecode,
 );
 
-// composedCallWhichMayFail: (String s) -> (lib$fidl_test_errorsyntax_parent.ParentUsesErrorSyntaxComposedCallWhichMayFailResult result)
+// composedCallWhichMayFail: (String s) -> (int value)
 const int _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal =
     0x71f05a4555fd5234;
 const $fidl.MethodType _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Type =
@@ -271,10 +271,7 @@ const $fidl.MethodType _kExampleUseOfErrorSyntax_CallWhichMayFail_Type =
 
 abstract class ExampleUseOfErrorSyntax {
   $fidl.ServiceData? get $serviceData => ExampleUseOfErrorSyntaxData();
-  $async.Future<
-          lib$fidl_test_errorsyntax_parent
-              .ParentUsesErrorSyntaxComposedCallWhichMayFailResult>
-      composedCallWhichMayFail(String s);
+  $async.Future<int> composedCallWhichMayFail(String s);
   $async.Future<int> callWhichMayFail(String s);
 }
 
@@ -338,7 +335,14 @@ class ExampleUseOfErrorSyntaxProxy extends $fidl
                   .responseInlineSize($message.wireFormat),
               $types[0]);
 
-          $completer.complete($response);
+          if ($response.$tag ==
+              lib$fidl_test_errorsyntax_parent
+                  .ParentUsesErrorSyntaxComposedCallWhichMayFailResultTag
+                  .response) {
+            $completer.complete($response.response.value);
+          } else {
+            $completer.completeError($fidl.MethodException($response.err));
+          }
         }, 'method response');
         break;
       case _kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal:
@@ -370,10 +374,7 @@ class ExampleUseOfErrorSyntaxProxy extends $fidl
   }
 
   @override
-  $async.Future<
-          lib$fidl_test_errorsyntax_parent
-              .ParentUsesErrorSyntaxComposedCallWhichMayFailResult>
-      composedCallWhichMayFail(String s) async {
+  $async.Future<int> composedCallWhichMayFail(String s) async {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -391,9 +392,7 @@ class ExampleUseOfErrorSyntaxProxy extends $fidl
             .requestInlineSize($encoder.wireFormat), () {
       $types[0].encode($encoder, s, $fidl.kMessageHeaderSize, 1);
     });
-    final $completer = $async.Completer<
-        lib$fidl_test_errorsyntax_parent
-            .ParentUsesErrorSyntaxComposedCallWhichMayFailResult>();
+    final $completer = $async.Completer<int>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
   }
@@ -439,13 +438,8 @@ class ExampleUseOfErrorSyntaxBinding
               _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Type.request!;
           // ignore: prefer_const_declarations
           final _impl = impl!;
-          final $async.Future<
-                  lib$fidl_test_errorsyntax_parent
-                      .ParentUsesErrorSyntaxComposedCallWhichMayFailResult>
-              $future = $fidl.decodeMessageWithCallback<
-                      $async.Future<
-                          lib$fidl_test_errorsyntax_parent
-                              .ParentUsesErrorSyntaxComposedCallWhichMayFailResult>>(
+          final $async.Future<int> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<int>>(
                   $message,
                   _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Type
                       .requestInlineSize($message.wireFormat),
@@ -454,7 +448,21 @@ class ExampleUseOfErrorSyntaxBinding
               $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
           });
-          $future.then(($response) {
+          $future.then(($responseValue) {
+            return lib$fidl_test_errorsyntax_parent
+                    .ParentUsesErrorSyntaxComposedCallWhichMayFailResult
+                .withResponse(lib$fidl_test_errorsyntax_parent
+                    .ParentUsesErrorSyntaxComposedCallWhichMayFailResponse(
+                        value: $responseValue));
+          }, onError: ($error) {
+            if ($error is $fidl.MethodException) {
+              return lib$fidl_test_errorsyntax_parent
+                      .ParentUsesErrorSyntaxComposedCallWhichMayFailResult
+                  .withErr($error.value);
+            } else {
+              return Future.error($error, StackTrace.current);
+            }
+          }).then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(

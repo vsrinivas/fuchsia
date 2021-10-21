@@ -119,7 +119,8 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 1819029190665166744,
@@ -212,7 +213,8 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 374110854839013230,
@@ -286,7 +288,8 @@
             "has_flexible_envelope": false
           },
           "has_response": false,
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 1574820689302890956,
@@ -360,7 +363,8 @@
             "has_flexible_envelope": false
           },
           "has_response": false,
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     }

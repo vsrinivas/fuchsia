@@ -47,7 +47,8 @@
             "has_flexible_envelope": false
           },
           "has_response": false,
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     },
@@ -91,7 +92,8 @@
             "has_flexible_envelope": false
           },
           "has_response": false,
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     }

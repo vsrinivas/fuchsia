@@ -150,7 +150,8 @@
             "has_padding": true,
             "has_flexible_envelope": true
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         },
         {
           "ordinal": 4374294377437089654,
@@ -285,7 +286,8 @@
             "has_padding": true,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     }

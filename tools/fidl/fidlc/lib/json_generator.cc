@@ -373,6 +373,26 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
       GenerateRequest("maybe_response", value.maybe_response_payload);
     }
     GenerateObjectMember("is_composed", method_with_info.is_composed);
+    GenerateObjectMember("has_error", value.has_error);
+    if (value.has_error) {
+      const auto* result_union_type = static_cast<const flat::IdentifierType*>(
+          value.maybe_response_payload->members[0].type_ctor->type);
+      const auto* result_union = static_cast<const flat::Union*>(result_union_type->type_decl);
+      const auto* success_variant_type = static_cast<const flat::IdentifierType*>(
+          result_union->members[0].maybe_used->type_ctor->type);
+      GenerateObjectMember("maybe_response_result_type", result_union_type);
+      GenerateObjectMember("maybe_response_success_type", success_variant_type);
+      // TODO(fxbug.dev/74683): Assumption that this is a struct, whereas this
+      // will be relaxed to also allow a union or table.
+      assert(success_variant_type->type_decl->kind == flat::Decl::Kind::kStruct);
+      const auto* success_variant_struct =
+          static_cast<const flat::Struct*>(success_variant_type->type_decl);
+      if (success_variant_struct->name.library() != library_) {
+        GenerateObjectMember("maybe_response_success_struct", success_variant_struct);
+      }
+      GenerateObjectMember("maybe_response_err_type",
+                           result_union->members[1].maybe_used->type_ctor->type);
+    }
   });
 }
 

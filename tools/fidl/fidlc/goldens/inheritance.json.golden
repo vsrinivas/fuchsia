@@ -148,7 +148,8 @@
             "has_padding": false,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     },
@@ -336,7 +337,8 @@
             "has_padding": false,
             "has_flexible_envelope": false
           },
-          "is_composed": true
+          "is_composed": true,
+          "has_error": false
         }
       ]
     }

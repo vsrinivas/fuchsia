@@ -2325,8 +2325,9 @@ void Library::ConsumeProtocolDeclaration(
 
     Struct* maybe_response = nullptr;
     bool has_response = method->maybe_response != nullptr;
+    bool has_error = false;
     if (has_response) {
-      const bool has_error = method->maybe_error_ctor != nullptr;
+      has_error = method->maybe_error_ctor != nullptr;
 
       SourceSpan response_span = method->maybe_response->span();
       auto response_context = has_request ? protocol_context->EnterResponse(method_name)
@@ -2387,7 +2388,7 @@ void Library::ConsumeProtocolDeclaration(
 
     assert(has_request || has_response);
     methods.emplace_back(std::move(attributes), std::move(method->identifier), method_name,
-                         has_request, maybe_request, has_response, maybe_response);
+                         has_request, maybe_request, has_response, maybe_response, has_error);
   }
 
   std::unique_ptr<AttributeList> attributes;

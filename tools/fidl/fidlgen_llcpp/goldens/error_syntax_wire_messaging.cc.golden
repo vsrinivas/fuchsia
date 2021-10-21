@@ -630,6 +630,28 @@ void fidl::WireServer<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>::
           ComposedCallWhichMayFail>::SendReply(&_response_message
                                                     .GetOutgoingMessage());
 }
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+        ComposedCallWhichMayFail>::ReplySuccess(int64_t value) {
+  ::fidl_test_errorsyntax_parent::wire::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailResponse _response;
+  _response.value = std::move(value);
+  return Reply(
+      ::fidl_test_errorsyntax_parent::wire::
+          ParentUsesErrorSyntaxComposedCallWhichMayFailResult::WithResponse(
+              ::fidl::ObjectView<
+                  ::fidl_test_errorsyntax_parent::wire::
+                      ParentUsesErrorSyntaxComposedCallWhichMayFailResponse>::
+                  FromExternal(&_response)));
+}
+
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+        ComposedCallWhichMayFail>::ReplyError(uint32_t error) {
+  return Reply(::fidl_test_errorsyntax_parent::wire::
+                   ParentUsesErrorSyntaxComposedCallWhichMayFailResult::WithErr(
+                       std::move(error)));
+}
 
 ::fidl::Result fidl::internal::WireCompleterBase<
     ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
@@ -644,6 +666,22 @@ void fidl::WireServer<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>::
                            ComposedCallWhichMayFail>::UnownedEncodedMessage
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage());
+}
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+        ComposedCallWhichMayFail>::ReplySuccess(::fidl::BufferSpan _buffer,
+                                                int64_t value) {
+  ::fidl_test_errorsyntax_parent::wire::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailResponse response;
+  response.value = std::move(value);
+  return Reply(
+      std::move(_buffer),
+      ::fidl_test_errorsyntax_parent::wire::
+          ParentUsesErrorSyntaxComposedCallWhichMayFailResult::WithResponse(
+              ::fidl::ObjectView<
+                  ::fidl_test_errorsyntax_parent::wire::
+                      ParentUsesErrorSyntaxComposedCallWhichMayFailResponse>::
+                  FromExternal(&response)));
 }
 #endif  // __Fuchsia__
 

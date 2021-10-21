@@ -422,12 +422,7 @@ func (c *compiler) compileNameVariants(eci fidlgen.EncodedCompoundIdentifier) na
 }
 
 func (c *compiler) compileCodingTableType(eci fidlgen.EncodedCompoundIdentifier) string {
-	val := fidlgen.ParseCompoundIdentifier(eci)
-	if c.isInExternalLibrary(val) {
-		panic(fmt.Sprintf("can't create coding table type for external identifier: %v", val))
-	}
-
-	return fmt.Sprintf("%s_%sTable", c.symbolPrefix, val.Name)
+	return fmt.Sprintf("%s_%sTable", c.symbolPrefix, fidlgen.ParseCompoundIdentifier(eci).Name)
 }
 
 func (c *compiler) compileType(val fidlgen.Type) Type {
@@ -650,15 +645,28 @@ func compile(r fidlgen.Root) *Root {
 
 	for _, v := range r.Protocols {
 		for _, m := range v.Methods {
-			if m.MethodResult != nil {
-				var (
-					mr = m.MethodResult
-					u  = decls[mr.ResultType.Identifier].(*Union)
-					s  = decls[mr.ValueType.Identifier].(*Struct)
-				)
-				result := c.compileResult(u, s, m.MethodResult)
-				u.Result = result
-				s.Result = result
+			if m.HasError {
+				var s *Struct
+				valueTypeDecl, ok := decls[m.ValueType.Identifier]
+				if ok {
+					s = valueTypeDecl.(*Struct)
+				} else {
+					// If we are unable to look up the struct, this implies that
+					// this is an externally defined struct. In this case, the
+					// IR exposes the declaration.
+					s = c.compileStruct(*m.ValueStruct)
+				}
+				result := c.compileResult(s, &m)
+				if ok {
+					s.Result = result
+					if resultTypeDecl, ok := decls[m.ResultType.Identifier]; !ok {
+						panic(fmt.Sprintf("success struct %s in library, but result union %s is not",
+							m.ValueType.Identifier, m.ResultType.Identifier))
+					} else {
+						u := resultTypeDecl.(*Union)
+						u.Result = result
+					}
+				}
 			}
 		}
 	}

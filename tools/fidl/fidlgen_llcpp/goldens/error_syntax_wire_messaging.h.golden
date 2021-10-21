@@ -1263,10 +1263,13 @@ class ::fidl::internal::WireCompleterBase<
   ::fidl::Result Reply(
       ::fidl_test_errorsyntax_parent::wire::
           ParentUsesErrorSyntaxComposedCallWhichMayFailResult result);
+  ::fidl::Result ReplySuccess(int64_t value);
+  ::fidl::Result ReplyError(uint32_t error);
   ::fidl::Result Reply(
       ::fidl::BufferSpan _buffer,
       ::fidl_test_errorsyntax_parent::wire::
           ParentUsesErrorSyntaxComposedCallWhichMayFailResult result);
+  ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int64_t value);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

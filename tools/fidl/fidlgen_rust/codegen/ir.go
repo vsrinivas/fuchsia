@@ -1163,15 +1163,15 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 	return r
 }
 
-func (c *compiler) compileResultFromUnion(mr fidlgen.MethodResult, root Root) Result {
+func (c *compiler) compileResultFromUnion(m fidlgen.Method, root Root) Result {
 	r := Result{
-		ECI:       mr.ResultType.Identifier,
-		Name:      c.compileCamelCompoundIdentifier(mr.ResultType.Identifier),
-		ErrOGType: mr.ErrorType,
-		ErrType:   c.compileType(mr.ErrorType),
+		ECI:       m.ResultType.Identifier,
+		Name:      c.compileCamelCompoundIdentifier(m.ResultType.Identifier),
+		ErrOGType: *m.ErrorType,
+		ErrType:   c.compileType(*m.ErrorType),
 	}
 
-	for _, m := range root.findStruct(mr.ValueType.Identifier).Members {
+	for _, m := range root.findStruct(m.ValueType.Identifier).Members {
 		wrapperName, hasHandleMetadata := c.compileHandleMetadataWrapper(&m.OGType)
 		r.Ok = append(r.Ok, ResultOkEntry{
 			OGType:            m.OGType,
@@ -1583,9 +1583,8 @@ func Compile(r fidlgen.Root) Root {
 			// A result is referenced multiple times when a method is composed.
 			// We must only compile the non-composed method to avoid generating
 			// duplicates.
-			if m.MethodResult != nil && !m.IsComposed {
-				root.Results = append(root.Results,
-					c.compileResultFromUnion(*m.MethodResult, root))
+			if m.HasError && !m.IsComposed {
+				root.Results = append(root.Results, c.compileResultFromUnion(m, root))
 			}
 		}
 	}

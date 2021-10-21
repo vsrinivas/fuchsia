@@ -766,6 +766,10 @@
                     "description": "Flag indicating whether method was composed into this protocol",
                     "type": "boolean"
                 },
+                "has_error": {
+                    "description": "Flag indicating whether method uses the error syntax",
+                    "type": "boolean"
+                },
                 "location": {
                     "$ref": "#/definitions/location",
                     "description": "Source location of the declaration"
@@ -812,6 +816,22 @@
                     "$ref": "#/definitions/typeshape",
                     "description": "Type shape of this declaration"
                 },
+                "maybe_response_result_type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Type of the result union (only present if has_error)"
+                },
+                "maybe_response_success_type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Type of the success variant of the result union (only present if has_error)"
+                },
+                "maybe_response_success_struct": {
+                    "$ref": "#/definitions/struct",
+                    "description": "Declaration of the success struct of the result union (only present if has_error and struct is from external library)"
+                },
+                "maybe_response_err_type": {
+                    "$ref": "#/definitions/type",
+                    "description": "Type of the error variant of the result union (only present if has_error)"
+                },
                 "name": {
                     "$ref": "#/definitions/identifier",
                     "description": "Name of the protocol method"
@@ -825,6 +845,7 @@
                 "has_request",
                 "has_response",
                 "is_composed",
+                "has_error",
                 "location",
                 "name",
                 "ordinal"

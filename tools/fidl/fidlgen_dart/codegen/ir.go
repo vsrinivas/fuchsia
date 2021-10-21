@@ -440,6 +440,15 @@ type compiler struct {
 	requestResponsePayload map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
 }
 
+func (c *compiler) findStruct(name fidlgen.EncodedCompoundIdentifier) (Struct, bool) {
+	for _, s := range c.Root.Structs {
+		if name == s.Identifier {
+			return s, true
+		}
+	}
+	return Struct{}, false
+}
+
 func (c *compiler) getPayload(name fidlgen.EncodedCompoundIdentifier) fidlgen.Struct {
 	val, ok := c.requestResponsePayload[name]
 	if !ok {
@@ -862,32 +871,43 @@ func (c *compiler) compileParameterArray(payload fidlgen.EncodedCompoundIdentifi
 }
 
 func (c *compiler) compileMethodResponse(method fidlgen.Method) MethodResponse {
-	if method.MethodResult == nil {
-		response := c.compileParameterArray(method.ResponsePayload)
-		return MethodResponse{
-			WireParameters:   response,
-			MethodParameters: response,
-		}
-	}
-
-	var parameters []StructMember
-	for _, s := range c.Root.Structs {
-		if s.Identifier == method.MethodResult.ValueType.Identifier {
+	if method.HasError {
+		var parameters []StructMember
+		if s, ok := c.findStruct(method.ValueType.Identifier); ok {
 			if !s.isEmptyStruct {
 				parameters = s.Members
 			}
-			break
+		} else {
+			// If we are unable to look up the struct, this implies that this is
+			// an externally defined struct. In this case, the IR exposes the
+			// declaration.
+			//
+			// We compile the members directly, such that the empty struct case
+			// results in an empty parameters list. (Note that when we compile
+			// structs otherwise, the empty struct case results in a synthetic
+			// member to represent the uint8 on the wire, hence the special
+			// handling above.)
+			// TODO(fxbug.dev/74683): This assumes the value is a struct,
+			// whereas this could be a union or table too.
+			for _, m := range method.ValueStruct.Members {
+				parameters = append(parameters, c.compileStructMember(m))
+			}
+		}
+		return MethodResponse{
+			WireParameters:    c.compileParameterArray(method.ResponsePayload),
+			MethodParameters:  parameters,
+			HasError:          true,
+			ResultTypeName:    c.compileUpperCamelCompoundIdentifier(fidlgen.ParseCompoundIdentifier(method.ResultType.Identifier), "", declarationContext),
+			ResultTypeTagName: c.compileUpperCamelCompoundIdentifier(fidlgen.ParseCompoundIdentifier(method.ResultType.Identifier), "Tag", declarationContext),
+			ValueType:         c.compileType(*method.ValueType),
+			ErrorType:         c.compileType(*method.ErrorType),
 		}
 	}
 
+	response := c.compileParameterArray(method.ResponsePayload)
 	return MethodResponse{
-		WireParameters:    c.compileParameterArray(method.ResponsePayload),
-		MethodParameters:  parameters,
-		HasError:          true,
-		ResultTypeName:    c.compileUpperCamelCompoundIdentifier(fidlgen.ParseCompoundIdentifier(method.MethodResult.ResultType.Identifier), "", declarationContext),
-		ResultTypeTagName: c.compileUpperCamelCompoundIdentifier(fidlgen.ParseCompoundIdentifier(method.MethodResult.ResultType.Identifier), "Tag", declarationContext),
-		ValueType:         c.compileType(method.MethodResult.ValueType),
-		ErrorType:         c.compileType(method.MethodResult.ErrorType),
+		WireParameters:   response,
+		MethodParameters: response,
 	}
 }
 

@@ -334,7 +334,8 @@
             "has_padding": false,
             "has_flexible_envelope": false
           },
-          "is_composed": false
+          "is_composed": false,
+          "has_error": false
         }
       ]
     },

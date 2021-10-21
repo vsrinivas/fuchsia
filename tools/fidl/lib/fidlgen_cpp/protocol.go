@@ -551,10 +551,8 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		name := methodNameContext.transform(v.Name)
 
 		var result *Result
-		if v.MethodResult != nil {
-			// TODO(fxb/64992): Here, we are incorrectly assuming that
-			// the union is in the same library.
-			result = c.resultForUnion[v.MethodResult.ResultType.Identifier]
+		if v.HasError {
+			result = c.resultForUnion[v.ResultType.Identifier]
 		}
 
 		methodMarker := protocolName.nest(name.Wire.Name())

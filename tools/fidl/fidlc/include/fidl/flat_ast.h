@@ -712,7 +712,7 @@ class Protocol final : public TypeDecl {
 
     Method(std::unique_ptr<AttributeList> attributes, std::unique_ptr<raw::Identifier> identifier,
            SourceSpan name, bool has_request, Struct* maybe_request, bool has_response,
-           Struct* maybe_response)
+           Struct* maybe_response, bool has_error)
         : Attributable(AttributePlacement::kMethod, std::move(attributes)),
           identifier(std::move(identifier)),
           name(name),
@@ -720,6 +720,7 @@ class Protocol final : public TypeDecl {
           maybe_request_payload(maybe_request),
           has_response(has_response),
           maybe_response_payload(maybe_response),
+          has_error(has_error),
           generated_ordinal64(nullptr) {
       assert(this->has_request || this->has_response);
     }
@@ -730,6 +731,7 @@ class Protocol final : public TypeDecl {
     Struct* maybe_request_payload;
     bool has_response;
     Struct* maybe_response_payload;
+    bool has_error;
     // This is set to the |Protocol| instance that owns this |Method|,
     // when the |Protocol| is constructed.
     Protocol* owning_protocol = nullptr;

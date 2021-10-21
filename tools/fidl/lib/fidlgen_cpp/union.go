@@ -96,20 +96,21 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 	return &u
 }
 
-func (c *compiler) compileResult(u *Union, s *Struct, mr *fidlgen.MethodResult) *Result {
+func (c *compiler) compileResult(s *Struct, m *fidlgen.Method) *Result {
+	valueType, errType := c.compileType(*m.ValueType), c.compileType(*m.ErrorType)
 	result := Result{
-		ResultDecl:      u.nameVariants,
-		ValueStructDecl: u.Members[0].Type.nameVariants,
-		Value:           u.Members[0].Type,
-		ErrorDecl:       u.Members[1].Type.nameVariants,
-		Error:           u.Members[1].Type,
+		ResultDecl:      c.compileNameVariants(m.ResultType.Identifier),
+		ValueStructDecl: valueType.nameVariants,
+		Value:           valueType,
+		ErrorDecl:       errType.nameVariants,
+		Error:           errType,
 	}
 
 	var memberTypeNames []name
 	if !s.isEmptyStruct {
-		for _, m := range s.Members {
-			memberTypeNames = append(memberTypeNames, m.Type.Natural)
-			result.ValueMembers = append(result.ValueMembers, m.AsParameter())
+		for _, sm := range s.Members {
+			memberTypeNames = append(memberTypeNames, sm.Type.Natural)
+			result.ValueMembers = append(result.ValueMembers, sm.AsParameter())
 		}
 	}
 	result.ValueTupleDecl = makeTupleName(memberTypeNames)
@@ -122,7 +123,7 @@ func (c *compiler) compileResult(u *Union, s *Struct, mr *fidlgen.MethodResult) 
 		result.ValueDecl = result.ValueTupleDecl
 	}
 
-	c.resultForUnion[mr.ResultType.Identifier] = &result
+	c.resultForUnion[m.ResultType.Identifier] = &result
 
 	return &result
 }
