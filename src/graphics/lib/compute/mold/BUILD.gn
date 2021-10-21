@@ -18,8 +18,6 @@ rustc_library("mold") {
   # TODO(fxbug.dev/56138): Fix the leaks and remove this.
   test_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  configs += [ ":mold-performance" ]
-
   sources = [
     "src/buffer.rs",
     "src/composition.rs",
@@ -32,18 +30,6 @@ rustc_library("mold") {
     "src/segment.rs",
     "src/utils.rs",
   ]
-}
-
-config("mold-performance") {
-  rustflags = [ "-Copt-level=3" ]
-
-  if (target_cpu == "x64") {
-    rustflags += [ "-Ctarget-cpu=haswell" ]
-  }
-
-  if (target_cpu == "arm64") {
-    rustflags += [ "-Ctarget-cpu=cortex-a53" ]
-  }
 }
 
 fuchsia_unittest_package("mold-tests") {
