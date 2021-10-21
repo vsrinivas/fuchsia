@@ -28,5 +28,3 @@ toc:
     path: /docs/development/hardware/khadas-vim2.md
   - title: "Install Fuchsia on Toulouse"
     path: /docs/development/hardware/toulouse.md
-  - title: "Install Fuchsia on iMX8M EVK"
-    path: /docs/development/hardware/imx8mevk.md
