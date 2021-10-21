@@ -36,13 +36,14 @@ use {
     crate::{
         readers::Reader,
         structs::{
-            BlockGroupDesc32, DirEntry2, EntryType, Extent, ExtentHeader, INode,
-            InvalidAddressErrorType, ParseToStruct, ParsingError, SuperBlock, FIRST_BG_PADDING,
-            MIN_EXT4_SIZE, ROOT_INODE_NUM,
+            BlockGroupDesc32, DirEntry2, EntryType, Extent, ExtentHeader, ExtentIndex,
+            ExtentTreeNode, INode, InvalidAddressErrorType, ParseToStruct, ParsingError,
+            SuperBlock, FIRST_BG_PADDING, MIN_EXT4_SIZE, ROOT_INODE_NUM,
         },
     },
     once_cell::sync::OnceCell,
     std::{
+        convert::TryInto,
         mem::size_of,
         path::{Component, Path},
         str,
@@ -51,6 +52,7 @@ use {
     vfs::{
         directory::immutable, file::vmo::asynchronous::read_only_const, tree_builder::TreeBuilder,
     },
+    zerocopy::ByteSlice,
 };
 
 // Assuming/ensuring that we are on a 64bit system where u64 == usize.
@@ -85,7 +87,7 @@ impl<T: 'static + Reader> Parser<T> {
     }
 
     /// Reads block size from the Super Block.
-    fn block_size(&self) -> Result<usize, ParsingError> {
+    fn block_size(&self) -> Result<u64, ParsingError> {
         self.super_block()?.block_size()
     }
 
@@ -99,12 +101,11 @@ impl<T: 'static + Reader> Parser<T> {
             ));
         }
         let block_size = self.block_size()?;
-        let address = (block_number as usize)
+        let address = block_number
             .checked_mul(block_size)
             .ok_or(ParsingError::BlockNumberOutOfBounds(block_number))?;
 
-        let mut data = vec![0u8; block_size];
-
+        let mut data = vec![0u8; block_size.try_into().unwrap()];
         self.reader.read(address, data.as_mut_slice()).map_err(Into::<ParsingError>::into)?;
 
         Ok(data.into_boxed_slice())
@@ -139,9 +140,9 @@ impl<T: 'static + Reader> Parser<T> {
             block_size * 2
         };
 
-        let bgd_offset = (inode_number - 1) as usize / sb.e2fs_ipg.get() as usize
-            * size_of::<BlockGroupDesc32>();
-        let bgd = BlockGroupDesc32::parse_offset(
+        let bgd_offset = (inode_number - 1) as u64 / sb.e2fs_ipg.get() as u64
+            * size_of::<BlockGroupDesc32>() as u64;
+        let bgd = BlockGroupDesc32::from_reader_with_offset(
             self.reader.clone(),
             bgd_table_offset + bgd_offset,
             ParsingError::InvalidBlockGroupDesc(block_size),
@@ -149,9 +150,9 @@ impl<T: 'static + Reader> Parser<T> {
 
         // Offset could really be anywhere, and the Reader will enforce reading within the
         // filesystem size. Not much can be checked here.
-        let inode_table_offset = (inode_number - 1) as usize % sb.e2fs_ipg.get() as usize
-            * sb.e2fs_inode_size.get() as usize;
-        let inode_addr = (bgd.ext2bgd_i_tables.get() as usize * block_size) + inode_table_offset;
+        let inode_table_offset =
+            (inode_number - 1) as u64 % sb.e2fs_ipg.get() as u64 * sb.e2fs_inode_size.get() as u64;
+        let inode_addr = (bgd.ext2bgd_i_tables.get() as u64 * block_size) + inode_table_offset;
         if inode_addr < MIN_EXT4_SIZE {
             return Err(ParsingError::InvalidAddress(
                 InvalidAddressErrorType::Lower,
@@ -160,7 +161,7 @@ impl<T: 'static + Reader> Parser<T> {
             ));
         }
 
-        INode::parse_offset(
+        INode::from_reader_with_offset(
             self.reader.clone(),
             inode_addr,
             ParsingError::InvalidInode(inode_number),
@@ -172,14 +173,14 @@ impl<T: 'static + Reader> Parser<T> {
         self.inode(ROOT_INODE_NUM)
     }
 
-    /// Read all raw data from a given extent leaf node.
-    fn extent_data(&self, extent: &Extent, mut allowance: usize) -> Result<Vec<u8>, ParsingError> {
+    /// Reads all raw data from a given extent leaf node.
+    fn extent_data(&self, extent: &Extent, mut allowance: u64) -> Result<Vec<u8>, ParsingError> {
         let block_number = extent.target_block_num();
-        let block_count = extent.e_len.get();
+        let block_count = extent.e_len.get() as u64;
         let block_size = self.block_size()?;
         let mut read_len;
 
-        let mut data = Vec::with_capacity(block_size * block_count as usize);
+        let mut data = Vec::with_capacity((block_size * block_count).try_into().unwrap());
 
         for i in 0..block_count {
             let block_data = self.block(block_number + i as u64)?;
@@ -188,7 +189,7 @@ impl<T: 'static + Reader> Parser<T> {
             } else {
                 read_len = allowance;
             }
-            let block_data = &block_data[0..read_len];
+            let block_data = &block_data[0..read_len.try_into().unwrap()];
             data.append(&mut block_data.to_vec());
             allowance -= read_len;
         }
@@ -196,64 +197,152 @@ impl<T: 'static + Reader> Parser<T> {
         Ok(data)
     }
 
-    /// List of directory entries from the directory that is the given Inode.
+    /// Reads extent data from a leaf node.
+    ///
+    /// # Arguments
+    /// * `extent`: Extent from which to read data from.
+    /// * `data`: Vec where data that is read is added.
+    /// * `allowance`: The maximum number of bytes to read from the extent. The
+    ///    given file allowance is updated on each call to track sizing for an
+    ///    entire extent tree.
+    fn read_extent_data(
+        &self,
+        extent: &Extent,
+        data: &mut Vec<u8>,
+        allowance: &mut u64,
+    ) -> Result<(), ParsingError> {
+        let mut extent_data = self.extent_data(&extent, *allowance)?;
+        let extent_len = extent_data.len() as u64;
+        if extent_len > *allowance {
+            return Err(ParsingError::ExtentUnexpectedLength(extent_len, *allowance));
+        }
+        *allowance -= extent_len;
+        data.append(&mut extent_data);
+        Ok(())
+    }
+
+    /// Reads directory entries from an extent leaf node.
+    fn read_dir_entries(
+        &self,
+        extent: &Extent,
+        entries: &mut Vec<Arc<DirEntry2>>,
+    ) -> Result<(), ParsingError> {
+        let block_size = self.block_size()?;
+        let target_block_offset = extent.target_block_num() * block_size;
+
+        // The `e2d_reclen` of the last entry will be large enough fill the
+        // remaining space of the block.
+        for block_index in 0..extent.e_len.get() {
+            let mut dir_entry_offset = 0u64;
+            while (dir_entry_offset + size_of::<DirEntry2>() as u64) < block_size {
+                let offset =
+                    dir_entry_offset + target_block_offset + (block_index as u64 * block_size);
+
+                let de = DirEntry2::from_reader_with_offset(
+                    self.reader.clone(),
+                    offset,
+                    ParsingError::InvalidDirEntry2(offset),
+                )?;
+
+                dir_entry_offset += de.e2d_reclen.get() as u64;
+
+                if de.e2d_ino.get() != 0 {
+                    entries.push(de);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Handles an extent tree leaf node by invoking `extent_handler` for each contained extent.
+    fn iterate_extents_in_leaf<B: ByteSlice, F: FnMut(&Extent) -> Result<(), ParsingError>>(
+        &self,
+        extent_tree_node: &ExtentTreeNode<B>,
+        extent_handler: &mut F,
+    ) -> Result<(), ParsingError> {
+        for e_index in 0..extent_tree_node.header.eh_ecount.get() {
+            let start = size_of::<Extent>() * e_index as usize;
+            let end = start + size_of::<Extent>() as usize;
+            let e = Extent::to_struct_ref(
+                &(extent_tree_node.entries)[start..end],
+                ParsingError::InvalidExtent(start as u64),
+            )?;
+
+            extent_handler(e)?;
+        }
+
+        Ok(())
+    }
+
+    /// Handles traversal down an extent tree.
+    fn iterate_extents_in_tree<B: ByteSlice, F: FnMut(&Extent) -> Result<(), ParsingError>>(
+        &self,
+        extent_tree_node: &ExtentTreeNode<B>,
+        extent_handler: &mut F,
+    ) -> Result<(), ParsingError> {
+        let block_size = self.block_size()?;
+
+        match extent_tree_node.header.eh_depth.get() {
+            0 => {
+                self.iterate_extents_in_leaf(extent_tree_node, extent_handler)?;
+            }
+            1..=4 => {
+                for e_index in 0..extent_tree_node.header.eh_ecount.get() {
+                    let start: usize = size_of::<Extent>() * e_index as usize;
+                    let end = start + size_of::<Extent>();
+                    let e = ExtentIndex::to_struct_ref(
+                        &(extent_tree_node.entries)[start..end],
+                        ParsingError::InvalidExtent(start as u64),
+                    )?;
+
+                    let next_level_offset = e.target_block_num() as u64 * block_size;
+
+                    let next_extent_header = ExtentHeader::from_reader_with_offset(
+                        self.reader.clone(),
+                        next_level_offset,
+                        ParsingError::InvalidExtent(next_level_offset),
+                    )?;
+
+                    let entry_count = next_extent_header.eh_ecount.get() as usize;
+                    let entry_size = match next_extent_header.eh_depth.get() {
+                        0 => size_of::<Extent>(),
+                        _ => size_of::<ExtentIndex>(),
+                    };
+                    let node_size = size_of::<ExtentHeader>() + (entry_count * entry_size);
+
+                    let mut data = vec![0u8; node_size];
+                    self.reader.read(next_level_offset, data.as_mut_slice())?;
+
+                    let next_level_node = ExtentTreeNode::parse(data.as_slice())
+                        .ok_or_else(|| ParsingError::InvalidExtent(next_level_offset))?;
+
+                    self.iterate_extents_in_tree(&next_level_node, extent_handler)?;
+                }
+            }
+            _ => return Err(ParsingError::InvalidExtentHeader),
+        };
+
+        Ok(())
+    }
+
+    /// Lists directory entries from the directory that is the given Inode.
     ///
     /// Errors if the Inode does not map to a Directory.
-    ///
-    /// Currently only supports a single block of DirEntrys, with only one extent entry.
     pub fn entries_from_inode(
         &self,
         inode: &Arc<INode>,
     ) -> Result<Vec<Arc<DirEntry2>>, ParsingError> {
-        let root_extent = inode.root_extent_header()?;
-        // TODO(vfcc): Will use entry_count when we support having N entries.
-        let block_size = self.block_size()?;
+        let root_extent_tree_node = inode.extent_tree_node()?;
+        let mut dir_entries = Vec::new();
 
-        let mut entries = Vec::new();
+        self.iterate_extents_in_tree(&root_extent_tree_node, &mut |extent| {
+            self.read_dir_entries(extent, &mut dir_entries)
+        })?;
 
-        match root_extent.eh_depth.get() {
-            0 => {
-                let offset = size_of::<ExtentHeader>();
-                let e_offset = offset + size_of::<ExtentHeader>();
-                if e_offset > inode.e2di_blocks.len() {
-                    return Err(ParsingError::InvalidAddress(
-                        InvalidAddressErrorType::Upper,
-                        e_offset,
-                        inode.e2di_blocks.len(),
-                    ));
-                }
-                let e = Extent::to_struct_ref(
-                    &(inode.e2di_blocks)[offset..e_offset],
-                    ParsingError::InvalidExtent(offset),
-                )?;
-
-                let mut index = 0usize;
-                let start_index = e.target_block_num() as usize * block_size;
-
-                // The `e2d_reclen` of the last entry will be large enough be approximately the
-                // end of the block.
-                while (index + size_of::<DirEntry2>()) < block_size {
-                    let offset = index + start_index;
-                    let de = DirEntry2::parse_offset(
-                        self.reader.clone(),
-                        offset,
-                        ParsingError::InvalidDirEntry2(offset),
-                    )?;
-                    index += de.e2d_reclen.get() as usize;
-                    entries.push(de);
-                }
-                Ok(entries)
-            }
-            _ => {
-                //TODO(vfcc): Support nested extent nodes.
-                return Err(ParsingError::Incompatible(
-                    "Nested extents are not supported".to_string(),
-                ));
-            }
-        }
+        Ok(dir_entries)
     }
 
-    /// Get any DirEntry2 that isn't root.
+    /// Gets any DirEntry2 that isn't root.
     ///
     /// Root doesn't have a DirEntry2.
     ///
@@ -304,61 +393,48 @@ impl<T: 'static + Reader> Parser<T> {
         }
     }
 
-    /// Read all raw data for a given inode. For a file, this will be the file data. For a symlink.
-    /// this will be the symlink target.
+    /// Reads all raw data for a given inode.
     ///
-    /// Currently does not support extent trees, only basic "flat" trees.
-    pub fn read_data(&self, inode: u32) -> Result<Vec<u8>, ParsingError> {
-        let inode = self.inode(inode)?;
-        let mut data = Vec::with_capacity(inode.size());
+    /// For a file, this will be the file data. For a symlink,
+    /// this will be the symlink target.
+    pub fn read_data(&self, inode_num: u32) -> Result<Vec<u8>, ParsingError> {
+        let inode = self.inode(inode_num)?;
+        let mut size_remaining = inode.size();
+        let mut data = Vec::with_capacity(size_remaining.try_into().unwrap());
 
-        // Check for symlink with inline data
+        // Check for symlink with inline data.
         if u16::from(inode.e2di_mode) & 0xa000 != 0 && u32::from(inode.e2di_nblock) == 0 {
-            data.extend_from_slice(&inode.e2di_blocks[..inode.size()]);
+            data.extend_from_slice(&inode.e2di_blocks[..inode.size().try_into().unwrap()]);
             return Ok(data);
         }
 
-        let root_extent = inode.root_extent_header()?;
-        let entry_count = root_extent.eh_ecount.get();
-        let mut size_remaining = inode.size();
+        let root_extent_tree_node = inode.extent_tree_node()?;
+        let mut extents = Vec::new();
 
-        match root_extent.eh_depth.get() {
-            0 => {
-                for i in 0..entry_count {
-                    let offset: usize =
-                        size_of::<ExtentHeader>() + (size_of::<Extent>() * i as usize);
-                    let e_offset = offset + size_of::<Extent>();
-                    if e_offset > inode.e2di_blocks.len() {
-                        return Err(ParsingError::InvalidAddress(
-                            InvalidAddressErrorType::Upper,
-                            e_offset,
-                            inode.e2di_blocks.len(),
-                        ));
-                    }
-                    let e = Extent::to_struct_ref(
-                        &(inode.e2di_blocks)[offset..e_offset],
-                        ParsingError::InvalidExtent(offset),
-                    )?;
+        self.iterate_extents_in_tree(&root_extent_tree_node, &mut |extent| {
+            extents.push(extent.clone());
+            Ok(())
+        })?;
 
-                    let mut extent_data = self.extent_data(e, size_remaining)?;
-                    let extent_len = extent_data.len();
-                    if extent_len > size_remaining {
-                        return Err(ParsingError::ExtentUnexpectedLength(
-                            extent_len,
-                            size_remaining,
-                        ));
-                    }
-                    size_remaining -= extent_data.len();
-                    data.append(&mut extent_data);
-                }
+        let block_size = self.block_size()?;
+
+        // Summarized from https://www.kernel.org/doc/ols/2007/ols2007v2-pages-21-34.pdf,
+        // Section 2.2: Extent and ExtentHeader entries must be sorted by logical block number. This
+        // enforces that when the extent tree is traversed depth first that a list of extents sorted
+        // by logical block number is produced. This is a requirement to produce the proper ordering
+        // of bytes within `data` here.
+        for extent in extents {
+            let buffer_offset = extent.e_blk.get() as u64 * block_size;
+
+            // File may be sparse. Sparse files will have gaps
+            // between logical blocks. Fill in any gaps with zeros.
+            if buffer_offset > data.len() as u64 {
+                size_remaining -= buffer_offset - data.len() as u64;
+                data.resize(buffer_offset.try_into().unwrap(), 0);
             }
-            _ => {
-                //TODO(vfcc): Support nested extent nodes.
-                return Err(ParsingError::Incompatible(
-                    "Nested extents are not supported".to_string(),
-                ));
-            }
-        };
+
+            self.read_extent_data(&extent, &mut data, &mut size_remaining)?;
+        }
 
         Ok(data)
     }
@@ -438,15 +514,22 @@ impl<T: 'static + Reader> Parser<T> {
 #[cfg(test)]
 mod tests {
     use {
-        crate::{readers::VecReader, structs::EntryType},
+        crate::{parser::Parser, readers::VecReader, structs::EntryType},
         crypto::{digest::Digest, sha2::Sha256},
-        std::{collections::HashSet, fs, path::Path, str},
+        maplit::hashmap,
+        std::{
+            collections::{HashMap, HashSet},
+            fs,
+            path::Path,
+            str,
+        },
+        test_case::test_case,
     };
 
     #[test]
     fn list_root_1_file() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
-        let parser = super::Parser::new(VecReader::new(data));
+        let parser = Parser::new(VecReader::new(data));
         assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
         let root_inode = parser.root_inode().expect("Parse INode");
         let entries = parser.entries_from_inode(&root_inode).expect("List entries");
@@ -458,14 +541,20 @@ mod tests {
         assert_eq!(expected_entries.len(), 0);
     }
 
-    #[test]
-    fn list_root() {
-        let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
-        let parser = super::Parser::new(VecReader::new(data));
+    #[test_case(
+        "/pkg/data/nest.img",
+        vec!["inner", "file1", "lost+found", "..", "."];
+        "fs with a single directory")]
+    #[test_case(
+        "/pkg/data/extents.img",
+        vec!["a", "smallfile", "largefile", "sparsefile", "lost+found", "..", "."];
+        "fs with multiple files with multiple extents")]
+    fn list_root(ext4_path: &str, mut expected_entries: Vec<&str>) {
+        let data = fs::read(ext4_path).expect("Unable to read file");
+        let parser = Parser::new(VecReader::new(data));
         assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
         let root_inode = parser.root_inode().expect("Parse INode");
         let entries = parser.entries_from_inode(&root_inode).expect("List entries");
-        let mut expected_entries = vec!["inner", "file1", "lost+found", "..", "."];
 
         for de in &entries {
             assert_eq!(expected_entries.pop().unwrap(), de.name().unwrap());
@@ -476,7 +565,7 @@ mod tests {
     #[test]
     fn get_from_path() {
         let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
-        let parser = super::Parser::new(VecReader::new(data));
+        let parser = Parser::new(VecReader::new(data));
         assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
 
         let entry = parser.entry_at_path(Path::new("/inner")).expect("Entry at path");
@@ -491,7 +580,7 @@ mod tests {
     #[test]
     fn read_data() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
-        let parser = super::Parser::new(VecReader::new(data));
+        let parser = Parser::new(VecReader::new(data));
         assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
 
         let entry = parser.entry_at_path(Path::new("file1")).expect("Entry at path");
@@ -507,14 +596,14 @@ mod tests {
     #[test]
     fn fail_inode_zero() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
-        let parser = super::Parser::new(VecReader::new(data));
+        let parser = Parser::new(VecReader::new(data));
         assert!(parser.inode(0).is_err());
     }
 
     #[test]
     fn index() {
         let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
-        let parser = super::Parser::new(VecReader::new(data));
+        let parser = Parser::new(VecReader::new(data));
         assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
 
         let mut count = 0;
@@ -536,10 +625,38 @@ mod tests {
         assert_eq!(count, 4);
     }
 
-    #[test]
-    fn check_data() {
-        let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
-        let parser = super::Parser::new(VecReader::new(data));
+    #[test_case(
+        "/pkg/data/extents.img",
+        hashmap!{
+            "largefile".to_string() => "de2cf635ae4e0e727f1e412f978001d6a70d2386dc798d4327ec8c77a8e4895d".to_string(),
+            "smallfile".to_string() => "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03".to_string(),
+            "sparsefile".to_string() => "3f411e42c1417cd8845d7144679812be3e120318d843c8c6e66d8b2c47a700e9".to_string(),
+            "a/multi/dir/path/within/this/crowded/extents/test/img/empty".to_string() => "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".to_string(),
+        },
+        vec!["a/multi/dir/path/within/this/crowded/extents/test/img", "lost+found"];
+        "fs with multiple files with multiple extents")]
+    #[test_case(
+        "/pkg/data/1file.img",
+        hashmap!{
+            "file1".to_string() => "6bc35bfb2ca96c75a1fecde205693c19a827d4b04e90ace330048f3e031487dd".to_string(),
+        },
+        vec!["lost+found"];
+        "fs with one small file")]
+    #[test_case(
+        "/pkg/data/nest.img",
+        hashmap!{
+            "file1".to_string() => "6bc35bfb2ca96c75a1fecde205693c19a827d4b04e90ace330048f3e031487dd".to_string(),
+            "inner/file2".to_string() => "215ca145cbac95c9e2a6f5ff91ca1887c837b18e5f58fd2a7a16e2e5a3901e10".to_string(),
+        },
+        vec!["inner", "lost+found"];
+        "fs with a single directory")]
+    fn check_data(
+        ext4_path: &str,
+        mut file_hashes: HashMap<String, String>,
+        expected_dirs: Vec<&str>,
+    ) {
+        let data = fs::read(ext4_path).expect("Unable to read file");
+        let parser = Parser::new(VecReader::new(data));
         assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
 
         let root_inode = parser.root_inode().expect("Root inode");
@@ -547,31 +664,30 @@ mod tests {
         parser
             .index(root_inode, Vec::new(), &mut |my_self, path, entry| {
                 let entry_type = EntryType::from_u8(entry.e2d_type).expect("Entry Type");
+                let file_path = path.join("/");
+
                 match entry_type {
                     EntryType::RegularFile => {
                         let data = my_self.read_data(entry.e2d_ino.into()).expect("File data");
 
                         let mut hasher = Sha256::new();
                         hasher.input(&data);
-                        if path == vec!["inner", "file2"] {
-                            assert_eq!(
-                                "215ca145cbac95c9e2a6f5ff91ca1887c837b18e5f58fd2a7a16e2e5a3901e10",
-                                hasher.result_str()
-                            );
-                        } else if path == vec!["file1"] {
-                            assert_eq!(
-                                "6bc35bfb2ca96c75a1fecde205693c19a827d4b04e90ace330048f3e031487dd",
-                                hasher.result_str()
-                            );
-                        } else {
-                            assert!(false, "Got an invalid file.");
-                        }
+                        assert_eq!(
+                            file_hashes.remove(&file_path).unwrap(),
+                            hasher.result_str().as_str()
+                        );
                     }
                     EntryType::Directory => {
-                        if path != vec!["inner"] && path != vec!["lost+found"] {
-                            // These should be the only possible directories.
-                            assert!(false, "Unexpected path {:?}", path);
+                        let mut found = false;
+
+                        // These should be the only possible directories.
+                        for expected_dir in expected_dirs.iter() {
+                            if expected_dir.starts_with(&file_path) {
+                                found = true;
+                                break;
+                            }
                         }
+                        assert!(found, "Unexpected path {}", file_path);
                     }
                     _ => {
                         assert!(false, "No other types should exist in this image.");
@@ -580,5 +696,6 @@ mod tests {
                 Ok(true)
             })
             .expect("Index");
+        assert!(file_hashes.is_empty(), "Expected files were not found {:?}", file_hashes);
     }
 }

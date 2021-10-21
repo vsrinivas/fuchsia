@@ -3,19 +3,19 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_mem::Buffer;
-use std::sync::Arc;
+use std::{convert::TryInto, sync::Arc};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ReaderError {
     #[error("Read error at: 0x{:X}", _0)]
-    Read(usize),
+    Read(u64),
     #[error("Out of bound read 0x{:X} when size is 0x{:X}", _0, _1)]
-    OutOfBounds(usize, usize),
+    OutOfBounds(u64, u64),
 }
 
 pub trait Reader {
-    fn read(&self, offset: usize, data: &mut [u8]) -> Result<(), ReaderError>;
+    fn read(&self, offset: u64, data: &mut [u8]) -> Result<(), ReaderError>;
 }
 
 pub struct VmoReader {
@@ -23,12 +23,12 @@ pub struct VmoReader {
 }
 
 impl Reader for VmoReader {
-    fn read(&self, offset: usize, data: &mut [u8]) -> Result<(), ReaderError> {
-        let offset_max = offset as usize + data.len();
-        if offset_max > self.buffer.size as usize {
-            return Err(ReaderError::OutOfBounds(offset_max, self.buffer.size as usize));
+    fn read(&self, offset: u64, data: &mut [u8]) -> Result<(), ReaderError> {
+        let offset_max = offset + data.len() as u64;
+        if offset_max > self.buffer.size {
+            return Err(ReaderError::OutOfBounds(offset_max, self.buffer.size));
         }
-        match self.buffer.vmo.read(data, offset as u64) {
+        match self.buffer.vmo.read(data, offset) {
             Ok(_) => Ok(()),
             Err(_) => Err(ReaderError::Read(offset)),
         }
@@ -46,12 +46,17 @@ pub struct VecReader {
 }
 
 impl Reader for VecReader {
-    fn read(&self, offset: usize, data: &mut [u8]) -> Result<(), ReaderError> {
-        let offset_max = offset + data.len();
-        if offset_max > self.data.len() - 1 {
-            return Err(ReaderError::OutOfBounds(offset_max, self.data.len()));
+    fn read(&self, offset: u64, data: &mut [u8]) -> Result<(), ReaderError> {
+        let data_len = data.len() as u64;
+        let self_data_len = self.data.len() as u64;
+        let offset_max = offset + data_len;
+        if offset_max > self_data_len {
+            return Err(ReaderError::OutOfBounds(offset_max, self_data_len));
         }
-        match self.data.get(offset..offset + data.len()) {
+
+        let offset_for_range: usize = offset.try_into().unwrap();
+
+        match self.data.get(offset_for_range..offset_for_range + data.len()) {
             Some(slice) => {
                 data.clone_from_slice(slice);
                 Ok(())

@@ -37,11 +37,11 @@ use {
     byteorder::LittleEndian,
     std::{collections::HashMap, fmt, mem::size_of, str, sync::Arc},
     thiserror::Error,
-    zerocopy::{FromBytes, LayoutVerified, Unaligned, U16, U32, U64},
+    zerocopy::{ByteSlice, FromBytes, LayoutVerified, Unaligned, U16, U32, U64},
 };
 
 // Block Group 0 Padding
-pub const FIRST_BG_PADDING: usize = 1024;
+pub const FIRST_BG_PADDING: u64 = 1024;
 // INode number of root directory '/'.
 pub const ROOT_INODE_NUM: u32 = 2;
 // EXT 2/3/4 magic number.
@@ -49,7 +49,7 @@ pub const SB_MAGIC: u16 = 0xEF53;
 // Extent Header magic number.
 pub const EH_MAGIC: u16 = 0xF30A;
 // Any smaller would not even fit the first copy of the ext4 Super Block.
-pub const MIN_EXT4_SIZE: usize = FIRST_BG_PADDING + size_of::<SuperBlock>();
+pub const MIN_EXT4_SIZE: u64 = FIRST_BG_PADDING + size_of::<SuperBlock>() as u64;
 
 type LEU16 = U16<LittleEndian>;
 type LEU32 = U32<LittleEndian>;
@@ -89,7 +89,7 @@ pub struct ExtentIndex {
 // https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
 assert_eq_size!(ExtentIndex, [u8; 12]);
 
-#[derive(FromBytes, Unaligned)]
+#[derive(Clone, FromBytes, Unaligned)]
 #[repr(C)]
 pub struct Extent {
     /// First logical block.
@@ -105,7 +105,7 @@ pub struct Extent {
 // https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
 assert_eq_size!(Extent, [u8; 12]);
 
-#[derive(FromBytes, Unaligned)]
+#[derive(FromBytes, Unaligned, std::fmt::Debug)]
 #[repr(C)]
 pub struct DirEntry2 {
     /// INode number of entry
@@ -371,6 +371,13 @@ assert_eq_size!(BlockGroupDesc32, [u8; 32]);
 // https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
 // assert_eq_size!(BlockGroupDesc64, [u8; 64]);
 
+#[derive(FromBytes)]
+#[repr(C)]
+pub struct ExtentTreeNode<B: ByteSlice> {
+    pub header: LayoutVerified<B, ExtentHeader>,
+    pub entries: B,
+}
+
 #[derive(FromBytes, Unaligned)]
 #[repr(C)]
 pub struct INode {
@@ -461,7 +468,7 @@ impl fmt::Display for InvalidAddressErrorType {
 #[derive(Error, Debug, PartialEq)]
 pub enum ParsingError {
     #[error("Unable to parse Super Block at 0x{:X}", _0)]
-    InvalidSuperBlock(usize),
+    InvalidSuperBlock(u64),
     #[error("Invalid Super Block magic number {} should be 0xEF53", _0)]
     InvalidSuperBlockMagic(u16),
     #[error("Block number {} out of bounds.", _0)]
@@ -470,7 +477,7 @@ pub enum ParsingError {
     BlockSizeInvalid(u32),
 
     #[error("Unable to parse Block Group Description at 0x{:X}", _0)]
-    InvalidBlockGroupDesc(usize),
+    InvalidBlockGroupDesc(u64),
     #[error("Unable to parse INode {}", _0)]
     InvalidInode(u32),
 
@@ -480,12 +487,12 @@ pub enum ParsingError {
     #[error("Invalid Extent Header magic number {} should be 0xF30A", _0)]
     InvalidExtentHeaderMagic(u16),
     #[error("Unable to parse Extent at 0x{:X}", _0)]
-    InvalidExtent(usize),
+    InvalidExtent(u64),
     #[error("Extent has more data {} than expected {}", _0, _1)]
-    ExtentUnexpectedLength(usize, usize),
+    ExtentUnexpectedLength(u64, u64),
 
     #[error("Invalid Directory Entry at 0x{:X}", _0)]
-    InvalidDirEntry2(usize),
+    InvalidDirEntry2(u64),
     #[error("Directory Entry has invalid string in name field: {:?}", _0)]
     DirEntry2NonUtf8(Vec<u8>),
     #[error("Requested path contains invalid string")]
@@ -510,10 +517,10 @@ pub enum ParsingError {
     BadDirectory(String),
 
     #[error("Attempted to access at 0x{:X} when the {} bound is 0x{:X}", _1, _0, _2)]
-    InvalidAddress(InvalidAddressErrorType, usize, usize),
+    InvalidAddress(InvalidAddressErrorType, u64, u64),
 
     #[error("Reader failed to read at 0x{:X}", _0)]
-    SourceReadError(usize),
+    SourceReadError(u64),
 }
 
 impl From<ReaderError> for ParsingError {
@@ -615,18 +622,19 @@ pub const BANNED_FEATURE_INCOMPAT: u32 = FeatureIncompat::Compression as u32 |
     FeatureIncompat::SmallFilesInINode as u32 |
     FeatureIncompat::EncryptedINodes as u32;
 
+// TODO(mbrunson): Update this trait to follow error conventions similar to ExtentTreeNode::parse.
 /// All functions to help parse data into respective structs.
 pub trait ParseToStruct: FromBytes + Unaligned + Sized {
-    fn parse_offset(
+    fn from_reader_with_offset(
         reader: Arc<dyn Reader>,
-        offset: usize,
+        offset: u64,
         error_type: ParsingError,
     ) -> Result<Arc<Self>, ParsingError> {
         let data = Self::read_from_offset(reader, offset)?;
         Self::to_struct_arc(data, error_type)
     }
 
-    fn read_from_offset(reader: Arc<dyn Reader>, offset: usize) -> Result<Box<[u8]>, ParsingError> {
+    fn read_from_offset(reader: Arc<dyn Reader>, offset: u64) -> Result<Box<[u8]>, ParsingError> {
         if offset < FIRST_BG_PADDING {
             return Err(ParsingError::InvalidAddress(
                 InvalidAddressErrorType::Lower,
@@ -665,6 +673,17 @@ pub trait ParseToStruct: FromBytes + Unaligned + Sized {
 /// Apply to all EXT4 structs as seen above.
 impl<T: FromBytes + Unaligned> ParseToStruct for T {}
 
+impl<B: ByteSlice> ExtentTreeNode<B> {
+    /// Parses a slice of bytes to create an `ExtentTreeNode`.
+    ///
+    /// `data` must be large enough to construct an ExtentHeader. If not, `None`
+    /// is returned. `data` is consumed by this operation.
+    pub fn parse(data: B) -> Option<Self> {
+        LayoutVerified::<B, ExtentHeader>::new_from_prefix(data)
+            .map(|(header, entries)| Self { header, entries })
+    }
+}
+
 impl SuperBlock {
     /// Parse the Super Block at its default location.
     pub fn parse(reader: Arc<dyn Reader>) -> Result<Arc<SuperBlock>, ParsingError> {
@@ -687,14 +706,12 @@ impl SuperBlock {
         }
     }
 
-    /// Reported block size.
+    /// Gets file system block size.
     ///
     /// Per spec, the only valid block sizes are 1KiB, 2KiB, 4KiB, and 64KiB. We will only
     /// permit these values.
-    ///
-    /// Returning as `usize` for ease of use in calculations.
-    pub fn block_size(&self) -> Result<usize, ParsingError> {
-        let bs = 2usize
+    pub fn block_size(&self) -> Result<u64, ParsingError> {
+        let bs = 2u64
             .checked_pow(self.e2fs_log_bsize.get() + 10)
             .ok_or(ParsingError::BlockSizeInvalid(self.e2fs_log_bsize.get()))?;
         if bs == 1024 || bs == 2048 || bs == 4096 || bs == 65536 {
@@ -722,20 +739,20 @@ impl SuperBlock {
 impl INode {
     /// INode contains the root of its Extent tree within `e2di_blocks`.
     /// Read `e2di_blocks` and return the root Extent Header.
-    pub fn root_extent_header(&self) -> Result<&ExtentHeader, ParsingError> {
-        let eh = ExtentHeader::to_struct_ref(
-            // Bounds here are known and static on a field that is defined to be much larger
-            // than an `ExtentHeader`.
-            &(self.e2di_blocks)[0..size_of::<ExtentHeader>()],
-            ParsingError::InvalidExtentHeader,
-        )?;
-        eh.check_magic()?;
+    pub fn extent_tree_node(&self) -> Result<ExtentTreeNode<&[u8]>, ParsingError> {
+        let eh = ExtentTreeNode::<&[u8]>::parse(
+            // Bounds here are known and static on a field that is defined to be
+            // the same size as an ExtentTreeNode.
+            &self.e2di_blocks,
+        )
+        .ok_or_else(|| ParsingError::InvalidExtentHeader)?;
+        eh.header.check_magic()?;
         Ok(eh)
     }
 
     /// Size of the file/directory/entry represented by this INode.
-    pub fn size(&self) -> usize {
-        (self.e2di_size_high.get() as usize) << 32 | self.e2di_size.get() as usize
+    pub fn size(&self) -> u64 {
+        (self.e2di_size_high.get() as u64) << 32 | self.e2di_size.get() as u64
     }
 }
 
@@ -949,12 +966,12 @@ mod test {
         assert!(sb.block_size().is_err());
     }
 
-    /// Covers ParseToStruct::parse_offset.
+    /// Covers ParseToStruct::from_reader_with_offset.
     #[test]
-    fn parse_to_struct_parse_offset() {
+    fn parse_to_struct_from_reader_with_offset() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
         let reader = Arc::new(VecReader::new(data));
-        let sb = SuperBlock::parse_offset(
+        let sb = SuperBlock::from_reader_with_offset(
             reader,
             FIRST_BG_PADDING,
             ParsingError::InvalidSuperBlock(FIRST_BG_PADDING),

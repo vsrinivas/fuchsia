@@ -28,6 +28,11 @@ rustc_library("ext4-read-only") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:test-case",
+  ]
+
   sources = [
     "src/lib.rs",
     "src/parser.rs",
@@ -39,6 +44,7 @@ rustc_library("ext4-read-only") {
 resource("test-images") {
   sources = [
     "test_files/1file.img",
+    "test_files/extents.img",
     "test_files/nest.img",
   ]
   outputs = [ "data/{{source_file_part}}" ]

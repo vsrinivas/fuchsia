@@ -264,7 +264,7 @@ struct RawChunkHeader {
 
 #[derive(Debug)]
 enum SparseChunk {
-    Raw { in_offset: usize, in_size: usize },
+    Raw { in_offset: u64, in_size: u32 },
     Fill { fill: [u8; 4] },
     DontCare,
 }
@@ -282,14 +282,14 @@ impl<R: ext4_readers::Reader> AndroidSparseReader<R> {
             if header.major_version != 1 {
                 anyhow::bail!("unknown sparse image major version {}", header.major_version);
             }
-            let mut in_offset = size_of_val(&header);
+            let mut in_offset = size_of_val(&header) as u64;
             let mut out_offset = 0;
             for _ in 0..header.total_chunks {
                 let mut chunk_header = RawChunkHeader::default();
-                inner.read(in_offset, chunk_header.as_bytes_mut())?;
-                let data_offset = in_offset + size_of_val(&chunk_header);
-                let data_size = chunk_header.total_sz as usize - size_of_val(&chunk_header);
-                in_offset += chunk_header.total_sz as usize;
+                inner.read(in_offset as u64, chunk_header.as_bytes_mut())?;
+                let data_offset = in_offset + size_of_val(&chunk_header) as u64;
+                let data_size = chunk_header.total_sz - size_of_val(&chunk_header) as u32;
+                in_offset += chunk_header.total_sz as u64;
                 let chunk_out_offset = out_offset;
                 out_offset += chunk_header.chunk_sz as usize * header.blk_sz as usize;
                 let chunk = match chunk_header.chunk_type {
@@ -298,14 +298,14 @@ impl<R: ext4_readers::Reader> AndroidSparseReader<R> {
                     }
                     CHUNK_TYPE_FILL => {
                         let mut fill = [0u8; 4];
-                        if data_size != size_of_val(&fill) {
+                        if data_size as usize != size_of_val(&fill) {
                             anyhow::bail!(
                                 "fill chunk of sparse image is the wrong size: {}, should be {}",
                                 data_size,
                                 size_of_val(&fill),
                             );
                         }
-                        inner.read(data_offset, fill.as_bytes_mut())?;
+                        inner.read(data_offset as u64, fill.as_bytes_mut())?;
                         SparseChunk::Fill { fill }
                     }
                     CHUNK_TYPE_DONT_CARE | _ => SparseChunk::DontCare,
@@ -318,27 +318,28 @@ impl<R: ext4_readers::Reader> AndroidSparseReader<R> {
 }
 
 impl<R: ext4_readers::Reader> ext4_readers::Reader for AndroidSparseReader<R> {
-    fn read(&self, offset: usize, data: &mut [u8]) -> Result<(), ext4_readers::ReaderError> {
+    fn read(&self, offset: u64, data: &mut [u8]) -> Result<(), ext4_readers::ReaderError> {
+        let offset_usize = offset as usize;
         if self.header.magic != SPARSE_HEADER_MAGIC {
             return self.inner.read(offset, data);
         }
-        let total_size = self.header.total_blks as usize * self.header.blk_sz as usize;
+        let total_size = self.header.total_blks as u64 * self.header.blk_sz as u64;
 
-        let (chunk_start, chunk) = match self.chunks.range(..offset + 1).next_back() {
+        let (chunk_start, chunk) = match self.chunks.range(..offset_usize + 1).next_back() {
             Some(x) => x,
             _ => return Err(ext4_readers::ReaderError::OutOfBounds(offset, total_size)),
         };
         match chunk {
             SparseChunk::Raw { in_offset, in_size } => {
-                let chunk_offset = offset - chunk_start;
-                if chunk_offset > *in_size {
+                let chunk_offset = offset - *chunk_start as u64;
+                if chunk_offset > *in_size as u64 {
                     return Err(ext4_readers::ReaderError::OutOfBounds(chunk_offset, total_size));
                 }
-                self.inner.read(in_offset + chunk_offset, data)?;
+                self.inner.read(*in_offset as u64 + chunk_offset, data)?;
             }
             SparseChunk::Fill { fill } => {
-                for i in offset..offset + data.len() {
-                    data[i - offset] = fill[offset % fill.len()];
+                for i in offset_usize..offset_usize + data.len() {
+                    data[i - offset_usize] = fill[offset_usize % fill.len()];
                 }
             }
             SparseChunk::DontCare => {}
