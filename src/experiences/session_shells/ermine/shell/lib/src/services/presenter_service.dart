@@ -59,27 +59,35 @@ class PresenterService extends GraphicalPresenter {
                 ? url?.split('#meta/')[1].split('.cm')[0] ?? id
                 : id);
 
-    final viewHolderToken = viewSpec.viewHolderToken;
     final viewRef = viewSpec.viewRef;
-    if (viewHolderToken == null || viewRef == null) {
-      if (url != null) {
-        onError(url, 'presentView spec has null ViewHolderToken or ViewRef');
-      }
+    if (!_validateViewSpec(viewSpec, url)) {
       viewController.close();
       throw MethodException(PresentViewError.invalidArgs);
     }
 
-    final viewConnection = FuchsiaViewConnection(
-      viewHolderToken,
-      viewRef: viewRef,
-      onViewConnected: (_) => viewState.viewConnected(),
-      onViewStateChanged: (_, state) {
-        viewState.viewStateChanged(state: state ?? false);
-      },
-    );
+    final useFlatland = viewSpec.viewportCreationToken != null;
+    // TODO(fxbug.dev/86649): Instead of passing |viewRef| we should let the
+    // child send us the one they minted for Flatland.
+    final viewConnection = useFlatland
+        ? FuchsiaViewConnection.flatland(
+            viewSpec.viewportCreationToken,
+            viewRef: viewRef,
+            onViewConnected: (_) => viewState.viewConnected(),
+            onViewStateChanged: (_, state) {
+              viewState.viewStateChanged(state: state ?? false);
+            },
+          )
+        : FuchsiaViewConnection(
+            viewSpec.viewHolderToken,
+            viewRef: viewRef,
+            onViewConnected: (_) => viewState.viewConnected(),
+            onViewStateChanged: (_, state) {
+              viewState.viewStateChanged(state: state ?? false);
+            },
+          );
 
     final viewRefDup =
-        ViewRef(reference: viewRef.reference.duplicate(ZX.RIGHT_SAME_RIGHTS));
+        ViewRef(reference: viewRef!.reference.duplicate(ZX.RIGHT_SAME_RIGHTS));
 
     viewState = ViewStateImpl(
       viewConnection: viewConnection,
@@ -123,6 +131,29 @@ class PresenterService extends GraphicalPresenter {
       }
     }
     return null;
+  }
+
+  bool _validateViewSpec(ViewSpec viewSpec, String? url) {
+    if ((viewSpec.viewHolderToken == null &&
+            viewSpec.viewportCreationToken == null) ||
+        viewSpec.viewRef == null) {
+      if (url != null) {
+        onError(url,
+            'ViewSpec has null ViewportCreationToken, ViewHolderToken or ViewRef');
+      }
+      return false;
+    }
+
+    if (viewSpec.viewportCreationToken != null &&
+        viewSpec.viewHolderToken != null) {
+      if (url != null) {
+        onError(url,
+            'ViewSpec has both ViewportCreationToken and ViewHolderToken set');
+      }
+      return false;
+    }
+
+    return true;
   }
 }
 
