@@ -145,31 +145,6 @@ class StreamQueue {
     deque_.push_back(Element(packet));
   }
 
-  // Returns a reference to the element at the front of the queue. Must not be called if this queue
-  // is empty. The reference returned by this method is invalidated by any call that changes the
-  // front element (i.e. pop, pull, or clear) on the current thread or any other.
-  Element& front() {
-    std::lock_guard<std::mutex> locker(mutex_);
-    FX_CHECK(!deque_.empty());
-    return deque_.front();
-  }
-
-  // Returns a const reference to the element at the front of the queue. Must not be called if this
-  // queue is empty. The reference returned by this method is invalidated by any call that changes
-  // the front element (i.e. pop, pull, or clear) on the current thread or any other.
-  const Element& front() const {
-    std::lock_guard<std::mutex> locker(mutex_);
-    FX_CHECK(!deque_.empty());
-    return deque_.front();
-  }
-
-  // Removes the element at the front of the queue. Must not be called if this queue is empty.
-  void pop() {
-    std::lock_guard<std::mutex> locker(mutex_);
-    FX_CHECK(!deque_.empty());
-    deque_.pop_front();
-  }
-
   using PullResult = fpromise::result<Element, StreamQueueError>;
 
   // Returns a promise that completes with the element at the front of the queue, removing it on
