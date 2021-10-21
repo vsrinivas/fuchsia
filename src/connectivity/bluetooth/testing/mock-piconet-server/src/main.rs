@@ -7,7 +7,7 @@
 use {
     anyhow::{format_err, Error},
     argh::FromArgs,
-    async_utils::stream::{StreamItem, WithEpitaph, WithTag},
+    async_utils::stream::{StreamItem, StreamWithEpitaph, Tagged, WithEpitaph, WithTag},
     fidl::endpoints::ClientEnd,
     fidl::prelude::*,
     fidl_fuchsia_bluetooth::ErrorCode,
@@ -17,14 +17,21 @@ use {
     fuchsia_bluetooth::{profile::Psm, types::PeerId},
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
-    futures::{self, channel::mpsc, future::FutureExt, select, sink::SinkExt, stream::StreamExt},
+    futures::{
+        self,
+        channel::mpsc,
+        future::FutureExt,
+        select,
+        sink::SinkExt,
+        stream::{SelectAll, StreamExt},
+    },
     parking_lot::Mutex,
     std::{
         collections::{hash_map::Entry, HashMap, HashSet},
         convert::TryFrom,
         sync::Arc,
     },
-    tracing::{error, info},
+    tracing::{error, info, warn},
 };
 
 mod peer;
@@ -178,29 +185,30 @@ impl MockPiconetServer {
         }
     }
 
-    async fn handle_mock_peer_request(
+    fn handle_mock_peer_request(
         &self,
         id: PeerId,
         request: bredr::MockPeerRequest,
-        mut sender: mpsc::Sender<(PeerId, bredr::ProfileRequestStream)>,
+        profile_requests: &mut SelectAll<
+            StreamWithEpitaph<Tagged<PeerId, bredr::ProfileRequestStream>, PeerId>,
+        >,
     ) {
-        info!("Received mock peer request for peer {:?}: {:?}", id, request);
+        info!("Received mock peer request for peer {:?}: {:?}", id, request.method_name());
         match request {
             bredr::MockPeerRequest::ConnectProxy_ { interface, responder, .. } => {
-                // Relay the ProfileRequestStream to the central handler.
                 match interface.into_stream() {
                     Ok(stream) => {
-                        if let Err(e) = sender.send((id, stream)).await {
-                            error!("Error relaying ProfileRequestStream: {:?}", e);
-                            responder.control_handle().shutdown_with_epitaph(zx::Status::INTERNAL);
-                            return;
-                        }
+                        profile_requests.push(stream.tagged(id).with_epitaph(id));
+                        info!(
+                            "Added ProfileRequestStream from MockPeer request for peer: {:?}",
+                            id
+                        );
                         if let Err(e) = responder.send() {
-                            error!("Error sending on responder: {:?}", e);
+                            warn!("Error sending on responder: {:?}", e);
                         }
                     }
                     Err(e) => {
-                        error!("Peer {} unable to connect ProfileProxy: {:?}", id, e);
+                        warn!("Peer {} unable to connect ProfileProxy: {:?}", id, e);
                         responder.control_handle().shutdown_with_epitaph(zx::Status::BAD_HANDLE);
                     }
                 }
@@ -211,7 +219,7 @@ impl MockPiconetServer {
                     Err(_) => Err(ErrorCode::InvalidArguments),
                 };
                 if let Err(e) = responder.send(&mut result) {
-                    error!("Error sending on responder: {:?}", e);
+                    warn!("Error sending on responder: {:?}", e);
                 }
             }
         }
@@ -229,22 +237,22 @@ impl MockPiconetServer {
     ) {
         // A combined stream of all the active peers' MockPeerRequestStreams.
         // Each MockPeerRequest is tagged with its corresponding PeerId.
-        let mut mock_peer_requests = futures::stream::SelectAll::new();
+        let mut mock_peer_requests = SelectAll::new();
 
         // A channel used for relaying the ProfileRequestStream of a peer.
         let (profile_stream_sender, mut profile_stream_receiver) = mpsc::channel(1);
 
         // A combined stream of all the active peers' ProfileRequestStreams.
         // Each ProfileRequest is tagged with it's corresponding PeerId.
-        let mut profile_requests = futures::stream::SelectAll::new();
+        let mut profile_requests = SelectAll::new();
 
         loop {
             select! {
                 // A request from the `ProfileTest` FIDL request stream has been received.
                 test_request = profile_test_requests.select_next_some() => {
                     let bredr::ProfileTestRequest::RegisterPeer { peer_id, peer, observer, responder, .. } = test_request;
-                    info!("Received ProfileTest request to register peer: {:?}", peer_id);
                     let id = peer_id.into();
+                    info!("Received ProfileTest request to register peer: {:?}", id);
                     let request_stream = match peer.into_stream() {
                         Ok(stream) => stream,
                         Err(_) => {
@@ -255,8 +263,8 @@ impl MockPiconetServer {
                     let registration =
                         self.register_peer(id, observer, profile_stream_sender.clone());
 
-                    // If registration was successful, tag the MockPeerRequestStream
-                    // with the `id` and add to the combinator.
+                    // If registration was successful, tag the stream with the client's `id` and add
+                    // to the combinator.
                     match registration {
                         Ok(_) => {
                             mock_peer_requests.push(request_stream.tagged(id).with_epitaph(id));
@@ -267,11 +275,11 @@ impl MockPiconetServer {
                     }
                     let _ = responder.send();
                 }
-                // A request from the `MockPeer` FIDL request stream has been received.
+                // A request from the `MockPeer` FIDL request stream.
                 mock_peer_request = mock_peer_requests.next() => {
                     match mock_peer_request {
                         Some(StreamItem::Item((peer_id, Ok(request)))) => {
-                            self.handle_mock_peer_request(peer_id, request, profile_stream_sender.clone()).await;
+                            self.handle_mock_peer_request(peer_id, request, &mut profile_requests);
                         },
                         Some(StreamItem::Item((peer_id, Err(e)))) => {
                             error!("Peer {} received MockPeerRequest error: {:?}", peer_id, e);
@@ -295,9 +303,7 @@ impl MockPiconetServer {
                                 self.handle_profile_request(peer_id, req);
                             }
                         },
-                        Some(StreamItem::Epitaph(_)) => {
-                        },
-                        None => (),
+                        Some(StreamItem::Epitaph(_)) | None =>  (),
                     }
                 }
                 // A new ProfileRequestStream has been received. Tag with the relevant PeerId, and
