@@ -5,7 +5,7 @@
 use crate::agent::earcons::agent::CommonEarconsParams;
 use crate::agent::earcons::sound_ids::{VOLUME_CHANGED_SOUND_ID, VOLUME_MAX_SOUND_ID};
 use crate::agent::earcons::utils::{connect_to_sound_player, play_sound};
-use crate::audio::types::{AudioInfo, AudioStream, AudioStreamType};
+use crate::audio::types::{AudioInfo, AudioSettingSource, AudioStream, AudioStreamType};
 use crate::audio::{create_default_modified_counters, ModifiedCounters};
 use crate::base::{SettingInfo, SettingType};
 use crate::event;
@@ -134,12 +134,22 @@ impl VolumeChangeHandler {
         changed_streams.iter().find(|&&x| x.stream_type == stream_type).map(|x| x.user_volume_level)
     }
 
+    /// Retrieve the change source of the specified `stream_type` from the given `changed_streams`.
+    fn get_change_source(
+        &self,
+        changed_streams: Vec<AudioStream>,
+        stream_type: AudioStreamType,
+    ) -> Option<AudioSettingSource> {
+        changed_streams.iter().find(|&&x| x.stream_type == stream_type).map(|x| x.source)
+    }
+
     /// Helper for on_audio_info. Handles the changes for a specific AudioStreamType.
     /// Enables separate handling of earcons on different streams.
     async fn on_audio_info_for_stream(
         &mut self,
         new_user_volume: f32,
         stream_type: AudioStreamType,
+        change_source: Option<AudioSettingSource>,
     ) {
         let volume_is_max = new_user_volume == MAX_VOLUME;
         let last_user_volume = self.last_user_volumes.get(&stream_type);
@@ -154,10 +164,15 @@ impl VolumeChangeHandler {
         );
 
         if last_user_volume != Some(&new_user_volume) || volume_is_max {
-            if last_user_volume != None {
-                // On restore, the last media user volume is set for the first time, and registers
-                // as different from the last seen volume, because it is initially None. Don't play
-                // the earcons sound on that set.
+            // On restore, the last media user volume is set for the first time, and registers
+            // as different from the last seen volume, because it is initially None. Don't play
+            // the earcons sound on that set.
+            //
+            // If the change_source is System, do not play a sound since the user doesn't need
+            // to hear feedback for such changes. For system sounds that need to play earcons,
+            // the source should be AudioSettingSource::SystemWithFeedback. An example
+            // of a system change is when the volume is reset after night mode deactivates.
+            if last_user_volume != None && change_source != Some(AudioSettingSource::System) {
                 self.play_volume_sound(new_user_volume);
             }
 
@@ -176,14 +191,25 @@ impl VolumeChangeHandler {
         let media_user_volume =
             self.get_user_volume(changed_streams.clone(), AudioStreamType::Media);
         let interruption_user_volume =
-            self.get_user_volume(changed_streams, AudioStreamType::Interruption);
+            self.get_user_volume(changed_streams.clone(), AudioStreamType::Interruption);
+        let media_change_source =
+            self.get_change_source(changed_streams.clone(), AudioStreamType::Media);
 
         if let Some(media_user_volume) = media_user_volume {
-            self.on_audio_info_for_stream(media_user_volume, AudioStreamType::Media).await;
+            self.on_audio_info_for_stream(
+                media_user_volume,
+                AudioStreamType::Media,
+                media_change_source,
+            )
+            .await;
         }
         if let Some(interruption_user_volume) = interruption_user_volume {
-            self.on_audio_info_for_stream(interruption_user_volume, AudioStreamType::Interruption)
-                .await;
+            self.on_audio_info_for_stream(
+                interruption_user_volume,
+                AudioStreamType::Interruption,
+                None,
+            )
+            .await;
         }
     }
 

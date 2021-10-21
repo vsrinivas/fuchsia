@@ -92,6 +92,29 @@ const CHANGED_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     ..AudioStreamSettings::EMPTY
 };
 
+const CHANGED_MEDIA_STREAM_SETTINGS_SYSTEM: AudioStreamSettings = AudioStreamSettings {
+    stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
+    source: Some(AudioStreamSettingSource::System),
+    user_volume: Some(Volume {
+        level: Some(CHANGED_VOLUME_LEVEL_2),
+        muted: Some(CHANGED_VOLUME_MUTED),
+        ..Volume::EMPTY
+    }),
+    ..AudioStreamSettings::EMPTY
+};
+
+const CHANGED_MEDIA_STREAM_SETTINGS_SYSTEM_WITH_FEEDBACK: AudioStreamSettings =
+    AudioStreamSettings {
+        stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
+        source: Some(AudioStreamSettingSource::SystemWithFeedback),
+        user_volume: Some(Volume {
+            level: Some(CHANGED_VOLUME_LEVEL_2),
+            muted: Some(CHANGED_VOLUME_MUTED),
+            ..Volume::EMPTY
+        }),
+        ..AudioStreamSettings::EMPTY
+    };
+
 const CHANGED_MEDIA_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
     stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
     source: Some(AudioStreamSettingSource::User),
@@ -270,6 +293,44 @@ async fn test_media_sounds() {
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
     verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID, AudioRenderUsage::Background)
         .await;
+}
+
+// Test to ensure that when the media volume changes via a system update, the SoundPlayer does
+// not receive a request to play the volume changed sound.
+#[should_panic]
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_media_sounds_system_source() {
+    let (service_registry, fake_services) = create_services().await;
+    let (env, ..) = create_environment(service_registry, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
+
+    // Create channel to receive notifications for when sounds are played. Used to know when to
+    // check the sound player fake that the sound has been played.
+    let mut sound_event_receiver =
+        fake_services.sound_player.lock().await.create_sound_played_listener().await;
+
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_SYSTEM]).await;
+
+    // There should be no next sound event to receive, this is expected to panic.
+    verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID, AudioRenderUsage::Background).await;
+}
+
+// Test to ensure that when the media volume changes via a system update, the SoundPlayer does
+// not receive a request to play the volume changed sound.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_media_sounds_system_with_feedback_source() {
+    let (service_registry, fake_services) = create_services().await;
+    let (env, ..) = create_environment(service_registry, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
+
+    // Create channel to receive notifications for when sounds are played. Used to know when to
+    // check the sound player fake that the sound has been played.
+    let mut sound_event_receiver =
+        fake_services.sound_player.lock().await.create_sound_played_listener().await;
+
+    // Test that the volume-changed sound gets played on the soundplayer for media.
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_SYSTEM_WITH_FEEDBACK]).await;
+    verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID, AudioRenderUsage::Background).await;
 }
 
 // Test to ensure that when the volume changes, the SoundPlayer receives requests to play the sounds
