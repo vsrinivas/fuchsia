@@ -151,6 +151,9 @@
                 // TODO(fxbug.dev/83038): Remove once e2e is better supported.
                 "fuchsia.net.http.Loader",
                 "fuchsia.scheduler.ProfileProvider",
+
+                // TODO(fxbug.dev/86634): Remove once cts has its own realm.
+                "fuchsia.settings.FactoryReset",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.vulkan.loader.Loader",

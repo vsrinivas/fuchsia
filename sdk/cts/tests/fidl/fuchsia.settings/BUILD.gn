@@ -7,36 +7,24 @@ import("//sdk/cts/build/cts.gni")
 cts_executable("settings_test_bin") {
   testonly = true
 
-  sources = [ "factory_reset_test_builder.cc" ]
+  sources = [ "factory_reset_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/sys/cpp",
+    "//sdk/testing/fidl:fidl_test",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zxtest",
   ]
-
-  non_cts_deps = [
-    "//sdk/fidl/fuchsia.sys2",
-    "//sdk/lib/sys/component/cpp/testing:cpp",
-  ]
 }
 
-fuchsia_component("settings_test_realm") {
-  manifest = "meta/settings_test_builder.cml"
+fuchsia_component("settings_test") {
   testonly = true
-
-  deps = [
-    ":settings_test_bin",
-    "//sdk/fidl/fuchsia.component",
-  ]
+  manifest = "meta/settings_test.cml"
+  deps = [ ":settings_test_bin" ]
 }
 
 fuchsia_test_package("fuchsia_settings_test") {
-  test_components = [ ":settings_test_realm" ]
-  deps = [
-    "//garnet/bin/setui:setui_service",
-    "//src/sys/stash:pkg",
-  ]
+  test_components = [ ":settings_test" ]
 }

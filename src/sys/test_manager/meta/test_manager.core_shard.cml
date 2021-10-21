@@ -87,6 +87,12 @@
             to: "#test_manager",
         },
         {
+            // TODO(fxbug.dev/86634): Remove once cts has its own realm.
+            protocol: [ "fuchsia.settings.FactoryReset" ],
+            from: "#setui_service",
+            to: "#test_manager",
+        },
+        {
             protocol: "fuchsia.vulkan.loader.Loader",
             from: "#vulkan_loader",
             to: "#test_manager",
