@@ -2259,7 +2259,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)] // for raw MlmeRequestMessage
     fn state_transitions_joined_authing() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
@@ -2343,7 +2342,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)] // for raw MlmeRequestMessage
     fn state_transitions_authing_timeout() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);

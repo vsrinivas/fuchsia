@@ -187,26 +187,6 @@ impl ParentEvent {
     }
 }
 
-/// A type which can be used to send responses and events into a borrowed channel.
-///
-/// Note: this should only be used when the channel must be temporarily
-/// borrowed. For a typical sending of events, use the send_ methods
-/// on the ControlHandle types, which can be acquired through a
-/// RequestStream or Responder type.
-#[deprecated(note = "Use ParentRequestStream / Responder instead")]
-pub struct ParentServerSender<'a> {
-    // Some protocols don't define events which would render this channel unused.
-    #[allow(dead_code)]
-    channel: &'a fidl::Channel,
-}
-
-#[allow(deprecated)]
-impl<'a> ParentServerSender<'a> {
-    pub fn new(channel: &'a fidl::Channel) -> Self {
-        Self { channel }
-    }
-}
-
 /// A Stream of incoming requests for Parent
 pub struct ParentRequestStream {
     inner: std::sync::Arc<fidl::ServeInner>,
@@ -299,51 +279,6 @@ impl futures::Stream for ParentRequestStream {
                 }),
             }))
         })
-    }
-}
-
-/// Represents a single request.
-/// RequestMessages should only be used for manual deserialization when higher level
-/// structs such as RequestStream cannot be used. One usually would only encounter
-/// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
-#[derive(Debug)]
-#[deprecated(note = "Use ParentRequest instead")]
-pub enum ParentRequestMessage {
-    First { request: fidl::endpoints::ServerEnd<ParentMarker> },
-}
-
-#[allow(deprecated)]
-impl ParentRequestMessage {
-    pub fn decode(
-        bytes: &[u8],
-        _handles: &mut [fidl::HandleInfo],
-    ) -> Result<ParentRequestMessage, fidl::Error> {
-        let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-        match header.ordinal() {
-            0x2a592d0a81dac39b => {
-                let mut out_tuple: (
-                    HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
-                        fidl::endpoints::ServerEnd<ParentMarker>,
-                    >,
-                ) = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest");
-                fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(
-                    &header,
-                    _body_bytes,
-                    _handles,
-                    &mut out_tuple,
-                )?;
-                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
-
-                Ok(ParentRequestMessage::First { request: out_tuple.0.into_inner() })
-            }
-            _ => Err(fidl::Error::UnknownOrdinal {
-                ordinal: header.ordinal(),
-                protocol_name: <ParentMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
-            }),
-        }
     }
 }
 #[derive(Debug)]
@@ -596,26 +531,6 @@ impl ChildEvent {
     }
 }
 
-/// A type which can be used to send responses and events into a borrowed channel.
-///
-/// Note: this should only be used when the channel must be temporarily
-/// borrowed. For a typical sending of events, use the send_ methods
-/// on the ControlHandle types, which can be acquired through a
-/// RequestStream or Responder type.
-#[deprecated(note = "Use ChildRequestStream / Responder instead")]
-pub struct ChildServerSender<'a> {
-    // Some protocols don't define events which would render this channel unused.
-    #[allow(dead_code)]
-    channel: &'a fidl::Channel,
-}
-
-#[allow(deprecated)]
-impl<'a> ChildServerSender<'a> {
-    pub fn new(channel: &'a fidl::Channel) -> Self {
-        Self { channel }
-    }
-}
-
 /// A Stream of incoming requests for Child
 pub struct ChildRequestStream {
     inner: std::sync::Arc<fidl::ServeInner>,
@@ -722,70 +637,6 @@ impl futures::Stream for ChildRequestStream {
                 }),
             }))
         })
-    }
-}
-
-/// Represents a single request.
-/// RequestMessages should only be used for manual deserialization when higher level
-/// structs such as RequestStream cannot be used. One usually would only encounter
-/// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
-#[derive(Debug)]
-#[deprecated(note = "Use ChildRequest instead")]
-pub enum ChildRequestMessage {
-    First { request: fidl::endpoints::ServerEnd<ParentMarker> },
-    Second { request: fidl::endpoints::ServerEnd<ParentMarker> },
-}
-
-#[allow(deprecated)]
-impl ChildRequestMessage {
-    pub fn decode(
-        bytes: &[u8],
-        _handles: &mut [fidl::HandleInfo],
-    ) -> Result<ChildRequestMessage, fidl::Error> {
-        let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-        match header.ordinal() {
-            0x2a592d0a81dac39b => {
-                let mut out_tuple: (
-                    HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
-                        fidl::endpoints::ServerEnd<ParentMarker>,
-                    >,
-                ) = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritancewithrecursivedecl/ChildFirstRequest");
-                fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(
-                    &header,
-                    _body_bytes,
-                    _handles,
-                    &mut out_tuple,
-                )?;
-                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
-
-                Ok(ChildRequestMessage::First { request: out_tuple.0.into_inner() })
-            }
-            0x6cba5c5e01fee86 => {
-                let mut out_tuple: (
-                    HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
-                        fidl::endpoints::ServerEnd<ParentMarker>,
-                    >,
-                ) = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritancewithrecursivedecl/ChildSecondRequest");
-                fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(
-                    &header,
-                    _body_bytes,
-                    _handles,
-                    &mut out_tuple,
-                )?;
-                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
-
-                Ok(ChildRequestMessage::Second { request: out_tuple.0.into_inner() })
-            }
-            _ => Err(fidl::Error::UnknownOrdinal {
-                ordinal: header.ordinal(),
-                protocol_name: <ChildMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
-            }),
-        }
     }
 }
 #[derive(Debug)]

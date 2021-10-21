@@ -178,39 +178,6 @@ impl TopEvent {
     }
 }
 
-/// A type which can be used to send responses and events into a borrowed channel.
-///
-/// Note: this should only be used when the channel must be temporarily
-/// borrowed. For a typical sending of events, use the send_ methods
-/// on the ControlHandle types, which can be acquired through a
-/// RequestStream or Responder type.
-#[deprecated(note = "Use TopRequestStream / Responder instead")]
-pub struct TopServerSender<'a> {
-    // Some protocols don't define events which would render this channel unused.
-    #[allow(dead_code)]
-    channel: &'a fidl::Channel,
-}
-
-#[allow(deprecated)]
-impl<'a> TopServerSender<'a> {
-    pub fn new(channel: &'a fidl::Channel) -> Self {
-        Self { channel }
-    }
-    pub fn send_get_foo_response(
-        &self,
-        txid: fidl::client::Txid,
-        mut foo: &mut fidl_bottom::Foo,
-    ) -> Result<(), fidl::Error> {
-        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
-            TopEncoder::encode_get_foo_response(bytes_, handles_, txid.as_raw_id(), foo)?;
-            self.channel
-                .write_etc(&*bytes_, &mut *handles_)
-                .map_err(fidl::Error::ServerResponseWrite)?;
-            Ok(())
-        })
-    }
-}
-
 /// A Stream of incoming requests for Top
 pub struct TopRequestStream {
     inner: std::sync::Arc<fidl::ServeInner>,
@@ -305,47 +272,6 @@ impl futures::Stream for TopRequestStream {
                 }),
             }))
         })
-    }
-}
-
-/// Represents a single request.
-/// RequestMessages should only be used for manual deserialization when higher level
-/// structs such as RequestStream cannot be used. One usually would only encounter
-/// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
-#[derive(Debug)]
-#[deprecated(note = "Use TopRequest instead")]
-pub enum TopRequestMessage {
-    GetFoo { tx_id: fidl::client::Txid },
-}
-
-#[allow(deprecated)]
-impl TopRequestMessage {
-    pub fn decode(
-        bytes: &[u8],
-        _handles: &mut [fidl::HandleInfo],
-    ) -> Result<TopRequestMessage, fidl::Error> {
-        let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-        match header.ordinal() {
-            0x2c8ccb022c3c571f => {
-                let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.transitivedependenciescompose/TopGetFooRequest");
-                fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(
-                    &header,
-                    _body_bytes,
-                    _handles,
-                    &mut out_tuple,
-                )?;
-                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
-
-                Ok(TopRequestMessage::GetFoo { tx_id: header.tx_id().into() })
-            }
-            _ => Err(fidl::Error::UnknownOrdinal {
-                ordinal: header.ordinal(),
-                protocol_name: <TopMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
-            }),
-        }
     }
 }
 #[derive(Debug)]

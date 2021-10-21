@@ -356,26 +356,6 @@ impl MyProtocolEvent {
     }
 }
 
-/// A type which can be used to send responses and events into a borrowed channel.
-///
-/// Note: this should only be used when the channel must be temporarily
-/// borrowed. For a typical sending of events, use the send_ methods
-/// on the ControlHandle types, which can be acquired through a
-/// RequestStream or Responder type.
-#[deprecated(note = "Use MyProtocolRequestStream / Responder instead")]
-pub struct MyProtocolServerSender<'a> {
-    // Some protocols don't define events which would render this channel unused.
-    #[allow(dead_code)]
-    channel: &'a fidl::Channel,
-}
-
-#[allow(deprecated)]
-impl<'a> MyProtocolServerSender<'a> {
-    pub fn new(channel: &'a fidl::Channel) -> Self {
-        Self { channel }
-    }
-}
-
 /// A Stream of incoming requests for MyProtocol
 pub struct MyProtocolRequestStream {
     inner: std::sync::Arc<fidl::ServeInner>,
@@ -455,31 +435,6 @@ impl futures::Stream for MyProtocolRequestStream {
                 }),
             }))
         })
-    }
-}
-
-/// Represents a single request.
-/// RequestMessages should only be used for manual deserialization when higher level
-/// structs such as RequestStream cannot be used. One usually would only encounter
-/// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
-#[derive(Debug)]
-#[deprecated(note = "Use MyProtocolRequest instead")]
-pub enum MyProtocolRequestMessage {}
-
-#[allow(deprecated)]
-impl MyProtocolRequestMessage {
-    pub fn decode(
-        bytes: &[u8],
-        _handles: &mut [fidl::HandleInfo],
-    ) -> Result<MyProtocolRequestMessage, fidl::Error> {
-        let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-        match header.ordinal() {
-            _ => Err(fidl::Error::UnknownOrdinal {
-                ordinal: header.ordinal(),
-                protocol_name: <MyProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
-            }),
-        }
     }
 }
 #[derive(Debug)]

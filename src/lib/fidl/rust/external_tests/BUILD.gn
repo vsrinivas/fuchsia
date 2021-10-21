@@ -33,7 +33,6 @@ rustc_test("fidl_rust_external_tests_bin") {
     "src/handle_rights.rs",
     "src/lib.rs",
     "src/persistence.rs",
-    "src/server_sender.rs",
     "src/stream_handler_test.rs",
   ]
 }

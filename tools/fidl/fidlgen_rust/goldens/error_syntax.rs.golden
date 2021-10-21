@@ -271,62 +271,6 @@ impl ExampleUseOfErrorSyntaxEvent {
     }
 }
 
-/// A type which can be used to send responses and events into a borrowed channel.
-///
-/// Note: this should only be used when the channel must be temporarily
-/// borrowed. For a typical sending of events, use the send_ methods
-/// on the ControlHandle types, which can be acquired through a
-/// RequestStream or Responder type.
-#[deprecated(note = "Use ExampleUseOfErrorSyntaxRequestStream / Responder instead")]
-pub struct ExampleUseOfErrorSyntaxServerSender<'a> {
-    // Some protocols don't define events which would render this channel unused.
-    #[allow(dead_code)]
-    channel: &'a fidl::Channel,
-}
-
-#[allow(deprecated)]
-impl<'a> ExampleUseOfErrorSyntaxServerSender<'a> {
-    pub fn new(channel: &'a fidl::Channel) -> Self {
-        Self { channel }
-    }
-    pub fn send_composed_call_which_may_fail_response(
-        &self,
-        txid: fidl::client::Txid,
-        mut result: &mut fidl_fidl_test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResult,
-    ) -> Result<(), fidl::Error> {
-        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
-            ExampleUseOfErrorSyntaxEncoder::encode_composed_call_which_may_fail_response(
-                bytes_,
-                handles_,
-                txid.as_raw_id(),
-                result,
-            )?;
-            self.channel
-                .write_etc(&*bytes_, &mut *handles_)
-                .map_err(fidl::Error::ServerResponseWrite)?;
-            Ok(())
-        })
-    }
-    pub fn send_call_which_may_fail_response(
-        &self,
-        txid: fidl::client::Txid,
-        mut result: &mut ExampleUseOfErrorSyntaxCallWhichMayFailResult,
-    ) -> Result<(), fidl::Error> {
-        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
-            ExampleUseOfErrorSyntaxEncoder::encode_call_which_may_fail_response(
-                bytes_,
-                handles_,
-                txid.as_raw_id(),
-                result,
-            )?;
-            self.channel
-                .write_etc(&*bytes_, &mut *handles_)
-                .map_err(fidl::Error::ServerResponseWrite)?;
-            Ok(())
-        })
-    }
-}
-
 /// A Stream of incoming requests for ExampleUseOfErrorSyntax
 pub struct ExampleUseOfErrorSyntaxRequestStream {
     inner: std::sync::Arc<fidl::ServeInner>,
@@ -437,69 +381,6 @@ impl futures::Stream for ExampleUseOfErrorSyntaxRequestStream {
 				}),
 			}))
         })
-    }
-}
-
-/// Represents a single request.
-/// RequestMessages should only be used for manual deserialization when higher level
-/// structs such as RequestStream cannot be used. One usually would only encounter
-/// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
-#[derive(Debug)]
-#[deprecated(note = "Use ExampleUseOfErrorSyntaxRequest instead")]
-pub enum ExampleUseOfErrorSyntaxRequestMessage {
-    ComposedCallWhichMayFail { s: String, tx_id: fidl::client::Txid },
-    CallWhichMayFail { s: String, tx_id: fidl::client::Txid },
-}
-
-#[allow(deprecated)]
-impl ExampleUseOfErrorSyntaxRequestMessage {
-    pub fn decode(
-        bytes: &[u8],
-        _handles: &mut [fidl::HandleInfo],
-    ) -> Result<ExampleUseOfErrorSyntaxRequestMessage, fidl::Error> {
-        let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-        match header.ordinal() {
-            0x71f05a4555fd5234 => {
-                let mut out_tuple: (String,) = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequest");
-                fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(
-                    &header,
-                    _body_bytes,
-                    _handles,
-                    &mut out_tuple,
-                )?;
-                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
-
-                Ok(ExampleUseOfErrorSyntaxRequestMessage::ComposedCallWhichMayFail {
-                    s: out_tuple.0,
-                    tx_id: header.tx_id().into(),
-                })
-            }
-            0x67314da4a7f84897 => {
-                let mut out_tuple: (String,) = fidl::encoding::Decodable::new_empty();
-                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest");
-                fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(
-                    &header,
-                    _body_bytes,
-                    _handles,
-                    &mut out_tuple,
-                )?;
-                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
-
-                Ok(ExampleUseOfErrorSyntaxRequestMessage::CallWhichMayFail {
-                    s: out_tuple.0,
-                    tx_id: header.tx_id().into(),
-                })
-            }
-            _ => Err(fidl::Error::UnknownOrdinal {
-                ordinal: header.ordinal(),
-                protocol_name:
-                    <ExampleUseOfErrorSyntaxMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
-            }),
-        }
     }
 }
 #[derive(Debug)]
