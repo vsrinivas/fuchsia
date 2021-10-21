@@ -10,7 +10,6 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include "src/storage/blobfs/query.h"
 
 namespace blobfs {
 
@@ -63,6 +62,11 @@ void Runner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   });
 }
 
+zx_status_t Runner::GetFilesystemInfo(fidl::AnyArena& allocator,
+                                      fuchsia_fs::wire::FilesystemInfo& out) {
+  return blobfs_->GetFilesystemInfo(allocator, out);
+}
+
 zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout) {
   fbl::RefPtr<fs::Vnode> vn;
   zx_status_t status = blobfs_->OpenRootNode(&vn);
@@ -89,17 +93,17 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, Serve
       export_root = std::move(vn);
       break;
     case ServeLayout::kExportDirectory:
-      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>();
+      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(this);
       outgoing->AddEntry(kOutgoingDataRoot, std::move(vn));
 
-      auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+      auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
       outgoing->AddEntry("diagnostics", diagnostics_dir);
       diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
 
-      auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+      auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
       outgoing->AddEntry("svc", svc_dir);
 
-      query_svc_ = fbl::MakeRefCounted<QueryService>(loop_->dispatcher(), blobfs_.get(), this);
+      query_svc_ = fbl::MakeRefCounted<fs::QueryService>(this);
       svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc_);
 
       health_check_svc_ = fbl::MakeRefCounted<HealthCheckService>(loop_->dispatcher(), *blobfs_);

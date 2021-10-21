@@ -52,6 +52,7 @@ static_library("cpp") {
       "pager_thread_pool.h",
       "pseudo_dir.h",
       "pseudo_file.h",
+      "query_service.h",
       "queue.h",
       "ref_counted.h",
       "remote_container.h",
@@ -87,6 +88,7 @@ static_library("cpp") {
       "pager_thread_pool.cc",
       "pseudo_dir.cc",
       "pseudo_file.cc",
+      "query_service.cc",
       "remote_container.cc",
       "remote_dir.cc",
       "remote_file.cc",
@@ -102,12 +104,13 @@ static_library("cpp") {
       "watcher.cc",
     ]
     public_deps += [
-      # <fs/vnode.h> has #include <fidl/fuchsia.io/cpp/wire.h>.
+      "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//sdk/fidl/fuchsia.io.admin:fuchsia.io.admin_llcpp",
       "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
       "//sdk/lib/file-lock:cpp",
       "//zircon/system/ulib/async",
+      "//zircon/system/ulib/fidl-async:fidl-async-cpp",
 
       # <fs/tracked_remote_dir.h> has #include <lib/async/cpp/wait.h>.
       "//zircon/system/ulib/async:async-cpp",

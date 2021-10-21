@@ -79,6 +79,7 @@ static_library("blobfs") {
   ]
   public_deps = [
     # format.h includes digest.h.
+    "//sdk/fidl/fuchsia.fs",
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
     "//src/lib/digest",
@@ -137,7 +138,6 @@ static_library("blobfs") {
       "mount.cc",
       "page_loader.cc",
       "page_loader.h",
-      "query.cc",
       "read_metrics.cc",
       "runner.cc",
       "transaction.cc",

@@ -13,6 +13,7 @@
 #endif
 
 #include <fidl/fuchsia.blobfs/cpp/wire.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
@@ -106,7 +107,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   zx_status_t AddBlocks(size_t nblocks, RawBitmap* block_map) final;
 
   // Returns filesystem specific information.
-  void GetFilesystemInfo(FilesystemInfo* info) const;
+  zx_status_t GetFilesystemInfo(fidl::AnyArena& allocator, fuchsia_fs::wire::FilesystemInfo& out);
 
   // TransactionManager interface.
   //

@@ -13,14 +13,12 @@
 
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
+#include "src/lib/storage/vfs/cpp/query_service.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/health_check_service.h"
 #include "src/storage/blobfs/mount.h"
-#include "src/storage/blobfs/query.h"
 
 namespace blobfs {
-
-class QueryService;
 
 // A wrapper class around a "Blobfs" object which additionally manages external IPC connections.
 //
@@ -37,8 +35,10 @@ class Runner : public fs::PagedVfs {
                                                     const MountOptions& options,
                                                     zx::resource vmex_resource);
 
-  // fs::ManagedVfs interface.
+  // fs::PagedVfs implementation.
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback closure) final;
+  zx_status_t GetFilesystemInfo(fidl::AnyArena& allocator,
+                                fuchsia_fs::wire::FilesystemInfo& out) override;
 
   // Serves the root directory of the filesystem using |root| as the server-end of an IPC
   // connection.
@@ -52,7 +52,7 @@ class Runner : public fs::PagedVfs {
 
   async::Loop* loop_;
   std::unique_ptr<Blobfs> blobfs_;
-  fbl::RefPtr<QueryService> query_svc_;
+  fbl::RefPtr<fs::QueryService> query_svc_;
   fbl::RefPtr<HealthCheckService> health_check_svc_;
 };
 

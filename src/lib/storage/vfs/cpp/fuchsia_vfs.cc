@@ -208,6 +208,11 @@ zx_status_t FuchsiaVfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
   return ZX_OK;
 }
 
+zx_status_t FuchsiaVfs::GetFilesystemInfo(fidl::AnyArena& allocator,
+                                          fuchsia_fs::wire::FilesystemInfo& out) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t FuchsiaVfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, std::string_view oldStr,
                              std::string_view newStr) {
   std::lock_guard lock(vfs_lock_);

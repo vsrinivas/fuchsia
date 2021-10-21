@@ -51,6 +51,10 @@ namespace fs {
 class Vfs;
 struct VdirCookie;
 
+#ifdef __Fuchsia__
+class FuchsiaVfs;
+#endif
+
 inline bool IsValidName(std::string_view name) {
   return name.length() > 0 && name.length() <= NAME_MAX &&
          memchr(name.data(), '/', name.length()) == nullptr && name != "." && name != "..";
@@ -77,6 +81,14 @@ inline bool IsValidName(std::string_view name) {
 // Derived classes should override RecycleNode() to implement the desired caching behavior.
 class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
  public:
+  // Define the current Vfs type so Fuchsia-ifdefed code can assume a FuchsiaVfs associated
+  // class if vfs_ is non-null.
+#ifdef __Fuchsia__
+  using PlatformVfs = FuchsiaVfs;
+#else
+  using PlatformVfs = Vfs;
+#endif
+
   virtual ~Vnode();
 
   // See class comment above about memory management.
@@ -423,7 +435,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
   // The associated Vfs pointer is optional. Subclasses should require this if they need to access
   // the Vfs, but can leave null if not. See vfs() getter for more.
-  explicit Vnode(Vfs* vfs = nullptr);
+  explicit Vnode(PlatformVfs* vfs = nullptr);
 
   // Mutex for the data of this vnode. This is a shared mutex to support derived classes
   // implementing multiple simultaneous readers if desired.
@@ -437,7 +449,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   //
   // Additionally, this will be null when the Vfs is destroyed (since Vnodes are reference-counted
   // they can outlive the Vfs). Uses should always be inside the mutex_.
-  Vfs* vfs() __TA_REQUIRES_SHARED(mutex_) { return vfs_; }
+  PlatformVfs* vfs() __TA_REQUIRES_SHARED(mutex_) { return vfs_; }
 
   // Returns the number of open connections, not counting node_reference connections. See Open().
   size_t open_count() const __TA_REQUIRES_SHARED(mutex_) { return open_count_; }
@@ -456,7 +468,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 #endif
 
  private:
-  Vfs* vfs_ __TA_GUARDED(mutex_) = nullptr;  // Possibly null, see getter above.
+  PlatformVfs* vfs_ __TA_GUARDED(mutex_) = nullptr;  // Possibly null, see getter above.
   size_t inflight_transactions_ __TA_GUARDED(mutex_) = 0;
   size_t open_count_ __TA_GUARDED(mutex_) = 0;
 #ifdef __Fuchsia__

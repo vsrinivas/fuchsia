@@ -116,7 +116,7 @@ class PseudoDir : public Vnode {
   using EntryByNameMap = fbl::TaggedWAVLTree<fbl::String, Entry*, NameTreeTag, KeyByNameTraits>;
 
   // Creates a directory which is initially empty.
-  PseudoDir();
+  PseudoDir(PlatformVfs* vfs = nullptr);
 
   // Destroys the directory and releases the nodes it contains.
   ~PseudoDir() override;

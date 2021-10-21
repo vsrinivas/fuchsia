@@ -18,7 +18,7 @@ namespace fio = fuchsia_io;
 
 namespace fs {
 
-PseudoDir::PseudoDir() = default;
+PseudoDir::PseudoDir(PlatformVfs* vfs) : Vnode(vfs) {}
 
 PseudoDir::~PseudoDir() {
   entries_by_name_.clear_unsafe();

@@ -1003,11 +1003,6 @@ void Blob::SetTargetCompressionSize(uint64_t size) {
 
 #ifdef __Fuchsia__
 
-zx_status_t Blob::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* info) {
-  blobfs_->GetFilesystemInfo(info);
-  return ZX_OK;
-}
-
 zx::status<std::string> Blob::GetDevicePath() const { return blobfs_->Device()->GetDevicePath(); }
 
 zx_status_t Blob::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, size_t* out_size) {

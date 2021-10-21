@@ -738,31 +738,25 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
   return ZX_OK;
 }
 
-void Blobfs::GetFilesystemInfo(FilesystemInfo* info) const {
-  *info = {};
-  info->block_size = kBlobfsBlockSize;
-  info->max_filename_size = digest::kSha256HexLength;
-  info->fs_type = VFS_TYPE_BLOBFS;
-  info->total_bytes = Info().data_block_count * Info().block_size;
-  info->used_bytes = Info().alloc_block_count * Info().block_size;
-  info->total_nodes = Info().inode_count;
-  info->used_nodes = Info().alloc_inode_count;
+zx_status_t Blobfs::GetFilesystemInfo(fidl::AnyArena& allocator,
+                                      fuchsia_fs::wire::FilesystemInfo& out) {
+  out.set_block_size(allocator, kBlobfsBlockSize);
+  out.set_max_node_name_size(allocator, digest::kSha256HexLength);
+  out.set_fs_type(allocator, fuchsia_fs::wire::FsType::kBlobfs);
+  out.set_total_bytes(allocator, Info().data_block_count * Info().block_size);
+  out.set_used_bytes(allocator, Info().alloc_block_count * Info().block_size);
+  out.set_total_nodes(allocator, Info().inode_count);
+  out.set_used_nodes(allocator, Info().alloc_inode_count);
+  out.set_name(allocator, fidl::StringView(allocator, "blobfs"));
 
-  // The globally-unique filesystem ID is the koid of the fs_id_ event.
-  zx_info_handle_basic_t handle_info;
-  if (zx_status_t status = fs_id_.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info),
-                                           nullptr, nullptr);
-      status == ZX_OK) {
-    info->fs_id = handle_info.koid;
-  } else {
-    info->fs_id = ZX_KOID_INVALID;
-  }
+  zx::event fs_id_copy;
+  if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
+    out.set_fs_id(allocator, std::move(fs_id_copy));
 
-  static constexpr std::string_view kFsName = "blobfs";
-  static_assert(kFsName.size() + 1 < fuchsia_io_admin::wire::kMaxFsNameBuffer,
-                "Blobfs name too long");
-  info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
-                          fuchsia_io_admin::wire::kMaxFsNameBuffer - 1)] = '\0';
+  if (auto device_path_or = Device()->GetDevicePath(); device_path_or.is_ok())
+    out.set_device_path(allocator, fidl::StringView(allocator, device_path_or.value()));
+
+  return ZX_OK;
 }
 
 zx::status<BlockIterator> Blobfs::BlockIteratorByNodeIndex(uint32_t node_index) {

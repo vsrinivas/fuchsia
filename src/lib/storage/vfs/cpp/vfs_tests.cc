@@ -38,7 +38,7 @@ class TestNode : public fs::Vnode {
   friend fbl::internal::MakeRefCountedHelper<TestNode>;
   friend fbl::RefPtr<TestNode>;
 
-  explicit TestNode(fs::Vfs* vfs) : Vnode(vfs) {}
+  explicit TestNode(fs::FuchsiaVfs* vfs) : Vnode(vfs) {}
   ~TestNode() override {}
 };
 

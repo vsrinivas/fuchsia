@@ -27,7 +27,7 @@
 
 namespace blobfs {
 
-Directory::Directory(Blobfs* bs) : blobfs_(bs) {}
+Directory::Directory(Blobfs* bs) : Vnode(bs->vfs()), blobfs_(bs) {}
 
 BlobCache& Directory::GetCache() { return blobfs_->GetCache(); }
 
@@ -119,11 +119,6 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
 }
 
 #ifdef __Fuchsia__
-
-zx_status_t Directory::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* info) {
-  blobfs_->GetFilesystemInfo(info);
-  return ZX_OK;
-}
 
 zx::status<std::string> Directory::GetDevicePath() const {
   return blobfs_->Device()->GetDevicePath();

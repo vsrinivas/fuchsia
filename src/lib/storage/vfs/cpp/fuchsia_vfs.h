@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_FUCHSIA_VFS_H_
 #define SRC_LIB_STORAGE_VFS_CPP_FUCHSIA_VFS_H_
 
+#include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/async/dispatcher.h>
@@ -59,6 +60,13 @@ class FuchsiaVfs : public Vfs {
                    std::string_view newStr) __TA_EXCLUDES(vfs_lock_);
   zx_status_t Rename(zx::event token, fbl::RefPtr<Vnode> oldparent, std::string_view oldStr,
                      std::string_view newStr) __TA_EXCLUDES(vfs_lock_);
+
+  // Provides the implementation for fuchsia.fs.Query. This default implementation returns
+  // ZX_ERR_NOT_SUPPORTED. The implementation should use the given allocator when setting the
+  // values in the |out| struct.
+  virtual zx_status_t GetFilesystemInfo(fidl::AnyArena& allocator,
+                                        fuchsia_fs::wire::FilesystemInfo& out)
+      __TA_EXCLUDES(vfs_lock_);
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
   void SetDispatcher(async_dispatcher_t* dispatcher);
