@@ -90,6 +90,10 @@ if (current_toolchain == default_toolchain) {
 
         # Everywhere has #include <zx/status.h>
         "//zircon/system/ulib/zxc:headers.config",
+
+        "//zircon/kernel/lib/backtrace:headers.config",
+
+        "//zircon/kernel/lib/version:headers.config",
       ]
 
       configs = [ "//zircon/kernel:kernel_config" ]

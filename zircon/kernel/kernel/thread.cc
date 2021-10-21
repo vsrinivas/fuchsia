@@ -1603,143 +1603,88 @@ void ktrace_report_live_threads() {
   }
 }
 
-static zx_status_t thread_read_stack(Thread* t, vaddr_t ptr, vaddr_t* out, size_t sz) {
-  if (!is_kernel_address(ptr) || (ptr < t->stack().base()) ||
-      (ptr > (t->stack().top() - sizeof(void*)))) {
+void Thread::UpdateSchedulerStats(const RuntimeStats::SchedulerStats& stats) {
+  if (user_thread_) {
+    user_thread_->UpdateSchedulerStats(stats);
+  }
+}
+
+namespace {
+
+// TODO(maniscalco): Consider moving this method to the KernelStack class.
+// That's probably a better home for it.
+zx_status_t ReadStack(Thread* thread, vaddr_t ptr, vaddr_t* out, size_t sz) {
+  if (!is_kernel_address(ptr) || (ptr < thread->stack().base()) ||
+      (ptr > (thread->stack().top() - sz))) {
     return ZX_ERR_NOT_FOUND;
   }
   memcpy(out, reinterpret_cast<const void*>(ptr), sz);
   return ZX_OK;
 }
 
-static size_t thread_get_backtrace(Thread* t, vaddr_t fp, Thread::Backtrace* tb) {
-  // without frame pointers, dont even try
-  // the compiler should optimize out the body of all the callers if it's not present
+void GetBacktraceCommon(Thread* thread, vaddr_t fp, Backtrace& out_bt) {
+  // Be sure that all paths out of this function leave with |out_bt| either
+  // properly filled in or empty.
+  out_bt.reset();
+
+  // Without frame pointers, dont even try.  The compiler should optimize out
+  // the body of all the callers if it's not present.
   if (!WITH_FRAME_POINTERS) {
-    return 0;
+    return;
+  }
+
+  // Perhaps we don't yet have a thread context?
+  if (thread == nullptr) {
+    return;
+  }
+
+  if (fp == 0) {
+    return;
   }
 
   vaddr_t pc;
-  if (t == nullptr) {
-    return 0;
-  }
   size_t n = 0;
-  for (; n < Thread::kBacktraceDepth; n++) {
-    if (thread_read_stack(t, fp + 8, &pc, sizeof(vaddr_t))) {
+  for (; n < Backtrace::kMaxSize; n++) {
+    if (ReadStack(thread, fp + 8, &pc, sizeof(vaddr_t))) {
       break;
     }
-    tb->pc[n] = pc;
-    if (thread_read_stack(t, fp, &fp, sizeof(vaddr_t))) {
+    out_bt.push_back(pc);
+    if (ReadStack(thread, fp, &fp, sizeof(vaddr_t))) {
       break;
     }
   }
-  return n;
-}
-
-namespace {
-
-constexpr const char* bt_fmt = "{{{bt:%zu:%p}}}\n";
-
-void thread_print_backtrace(Thread::Backtrace* tb) {
-  print_backtrace_version_info();
-
-  for (size_t n = 0; n < Thread::kBacktraceDepth; n++) {
-    if (tb->pc[n] == 0) {
-      break;
-    }
-    printf(bt_fmt, n, reinterpret_cast<void*>(tb->pc[n]));
-  }
-}
-
-zx_status_t thread_print_backtrace(Thread* t, vaddr_t fp) {
-  if (!t || !fp) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  Thread::Backtrace tb;
-  size_t count = thread_get_backtrace(t, fp, &tb);
-  if (count == 0) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  thread_print_backtrace(&tb);
-
-  return ZX_OK;
 }
 
 }  // namespace
 
-size_t Thread::Current::GetBacktrace(Thread::Backtrace* bt) {
+void Thread::Current::GetBacktrace(Backtrace& out_bt) {
   auto fp = reinterpret_cast<vaddr_t>(__GET_FRAME(0));
-  return thread_get_backtrace(Thread::Current::Get(), fp, bt);
+  GetBacktraceCommon(Thread::Current::Get(), fp, out_bt);
 }
 
-void Thread::PrintBacktrace(Thread::Backtrace* bt) { thread_print_backtrace(bt); }
-
-// Print the backtrace of the current thread, at the current spot.
-void Thread::Current::PrintBacktrace() {
-  auto fp = reinterpret_cast<vaddr_t>(__GET_FRAME(0));
-  thread_print_backtrace(Thread::Current::Get(), fp);
+void Thread::Current::GetBacktrace(vaddr_t fp, Backtrace& out_bt) {
+  GetBacktraceCommon(Thread::Current::Get(), fp, out_bt);
 }
 
-// Append the backtrace of the current thread to the passed in char pointer.
-// Return the number of chars appended.
-size_t Thread::Current::AppendBacktrace(char* out, const size_t out_len) {
-  Thread* current = Thread::Current::Get();
-  auto fp = reinterpret_cast<vaddr_t>(__GET_FRAME(0));
+void Thread::GetBacktrace(Backtrace& out_bt) {
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
 
-  if (!current || !fp) {
-    return 0;
-  }
-
-  Thread::Backtrace tb;
-  size_t count = thread_get_backtrace(current, fp, &tb);
-  if (count == 0) {
-    return 0;
-  }
-
-  char* buf = out;
-  size_t remain = out_len;
-  size_t len;
-  for (size_t n = 0; n < count; n++) {
-    len = snprintf(buf, remain, bt_fmt, n, reinterpret_cast<void*>(tb.pc[n]));
-    if (len > remain) {
-      return out_len;
-    }
-    remain -= len;
-    buf += len;
-  }
-
-  return out_len - remain;
-}
-
-// Print the backtrace of the current thread, at the given spot.
-void Thread::Current::PrintBacktraceAtFrame(void* caller_frame) {
-  thread_print_backtrace(Thread::Current::Get(), reinterpret_cast<vaddr_t>(caller_frame));
-}
-
-// Print the backtrace of a passed in thread, if possible.
-zx_status_t Thread::PrintBacktrace() {
-  // get the starting point if it's in a usable state
+  // Get the starting point if it's in a usable state.
   vaddr_t fp = 0;
   switch (state()) {
     case THREAD_BLOCKED:
     case THREAD_BLOCKED_READ_LOCK:
     case THREAD_SLEEPING:
     case THREAD_SUSPENDED:
-      // thread is blocked, so ask the arch code to get us a starting point
+      // Thread is blocked, so ask the arch code to get us a starting point.
       fp = arch_thread_get_blocked_fp(this);
       break;
-    // we can't deal with every other state
     default:
-      return ZX_ERR_BAD_STATE;
+      // Not in a valid state, can't get a backtrace.  Reset it so the caller
+      // doesn't inadvertently use a previous value.
+      out_bt.reset();
+      return;
   }
 
-  return thread_print_backtrace(this, fp);
-}
-
-void Thread::UpdateSchedulerStats(const RuntimeStats::SchedulerStats& stats) {
-  if (user_thread_) {
-    user_thread_->UpdateSchedulerStats(stats);
-  }
+  GetBacktraceCommon(this, fp, out_bt);
 }

@@ -6,18 +6,11 @@
 
 import("//build/zircon/migrated_targets.gni")
 
-zx_library("lockup_detector") {
-  sources = [ "lockup_detector.cc" ]
+zx_library("backtrace") {
+  sources = [ "backtrace.cc" ]
   deps = [
     "tests",
-    "//zircon/kernel/lib/backtrace",
-    "//zircon/kernel/lib/boot-options",
-    "//zircon/kernel/lib/console",
-    "//zircon/kernel/lib/counters",
-    "//zircon/kernel/lib/crashlog",
     "//zircon/kernel/lib/version",
-    "//zircon/kernel/object",
-    "//zircon/system/ulib/affine",
   ]
   public_deps = [ "//zircon/kernel/lib/ktl:headers" ]
 }

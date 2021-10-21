@@ -27,6 +27,6 @@ void print_version(void);
 void PrintSymbolizerContext(FILE*);
 
 // Prints version info and kernel mappings required to interpret backtraces.
-void print_backtrace_version_info(void);
+void print_backtrace_version_info(FILE* f = stdout);
 
 #endif  // ZIRCON_KERNEL_LIB_VERSION_INCLUDE_LIB_VERSION_H_

@@ -9,6 +9,7 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_H_
 
 #include <debug.h>
+#include <lib/backtrace.h>
 #include <lib/relaxed_atomic.h>
 #include <platform.h>
 #include <sys/types.h>
@@ -628,11 +629,6 @@ class MemoryAllocationState {
 };
 
 struct Thread {
-  static constexpr size_t kBacktraceDepth = 16;
-  struct Backtrace {
-    vaddr_t pc[kBacktraceDepth]{};
-  };
-
   // TODO(kulakowski) Are these needed?
   // Default constructor/destructor declared to be not-inline in order to
   // avoid circular include dependencies involving Thread, WaitQueue, and
@@ -762,9 +758,6 @@ struct Thread {
   static void SleepHandler(Timer* timer, zx_time_t now, void* arg);
   void HandleSleep(Timer* timer, zx_time_t now);
 
-  // Decode and print a thread backtrace.
-  static void PrintBacktrace(Backtrace*);
-
   // All of these operations implicitly operate on the current thread.
   struct Current {
     // This is defined below, just after the Thread declaration.
@@ -815,19 +808,17 @@ struct Thread {
       return Thread::Current::Get()->memory_allocation_state_;
     }
 
-    // Get the backtrace of the current thread.
-    static size_t GetBacktrace(Backtrace*);
+    // Generate a backtrace for the calling thread.
+    //
+    // |out_bt| will be reset() prior to be filled in and if a backtrace cannot
+    // be obtained, it will be left empty.
+    static void GetBacktrace(Backtrace& out_bt);
 
-    // Print the backtrace on the current thread.
-    static void PrintBacktrace();
-
-    // Print the backtrace on the current thread at the given frame.
-    static void PrintBacktraceAtFrame(void* caller_frame);
-
-    // Append the backtrace of the current thread to the passed in char pointer up
-    // to `len' characters.
-    // Returns the number of chars appended.
-    static size_t AppendBacktrace(char* out, size_t len);
+    // Generate a backtrace for the calling thread starting at frame pointer |fp|.
+    //
+    // |out_bt| will be reset() prior to be filled in and if a backtrace cannot
+    // be obtained, it will be left empty.
+    static void GetBacktrace(vaddr_t fp, Backtrace& out_bt);
 
     static void DumpLocked(bool full) TA_REQ(thread_lock);
     static void Dump(bool full) TA_EXCL(thread_lock);
@@ -930,9 +921,6 @@ struct Thread {
   };
 
   void UpdateSchedulerStats(const RuntimeStats::SchedulerStats& stats) TA_REQ(thread_lock);
-
-  // Print the backtrace of the thread, if possible.
-  zx_status_t PrintBacktrace();
 
   void DumpDuringPanic(bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
     dump_thread_during_panic(this, full);
@@ -1037,6 +1025,14 @@ struct Thread {
 
   using Canary = fbl::Canary<fbl::magic("thrd")>;
   const Canary& canary() const { return canary_; }
+
+  // Generate a backtrace for |this| thread.
+  //
+  // |this| must be blocked, sleeping or suspended (i.e. not running).
+  //
+  // |out_bt| will be reset() prior to be filled in and if a backtrace cannot be
+  // obtained, it will be left empty.
+  void GetBacktrace(Backtrace& out_bt) TA_EXCL(thread_lock);
 
  private:
   // The architecture-specific methods for getting and setting the

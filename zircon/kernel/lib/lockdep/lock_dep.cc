@@ -144,7 +144,9 @@ void SystemLockValidationError(AcquiredLockEntry* bad_entry, AcquiredLockEntry* 
          conflicting_entry->order());
   printf("caller=%p frame=%p\n", caller_address, caller_frame);
 
-  Thread::Current::PrintBacktraceAtFrame(caller_frame);
+  Backtrace bt;
+  Thread::Current::GetBacktrace(reinterpret_cast<vaddr_t>(caller_frame), bt);
+  bt.Print();
   printf("\n");
 }
 

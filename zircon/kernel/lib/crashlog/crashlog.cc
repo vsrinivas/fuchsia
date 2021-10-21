@@ -231,9 +231,9 @@ size_t crashlog_to_string(ktl::span<char> target, zircon_crash_reason_t reason) 
 
     fprintf(&outfile, "BACKTRACE (up to 16 calls)\n");
 
-    ktl::span<char> backtrace_target = outfile.available_region();
-    size_t len = Thread::Current::AppendBacktrace(backtrace_target.data(), backtrace_target.size());
-    outfile.Skip(len);
+    Backtrace bt;
+    Thread::Current::GetBacktrace(bt);
+    bt.PrintWithoutVersion(&outfile);
 
     fprintf(&outfile, "\n");
   }

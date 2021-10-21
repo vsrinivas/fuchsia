@@ -7,6 +7,7 @@
 
 #include <assert.h>
 #include <debug.h>
+#include <lib/backtrace.h>
 #include <lib/fit/defer.h>
 #include <lib/unittest/unittest.h>
 #include <lib/zircon-internal/macros.h>
@@ -703,7 +704,10 @@ bool migrate_stress_test() {
       // that cannot be reproduced locally. Once resolved, this additional
       // logging can be removed.
       dump_thread(thread.thread, /*full=*/true);
-      thread.thread->PrintBacktrace();
+      Backtrace bt;
+      thread.thread->GetBacktrace(bt);
+      bt.Print();
+
       ZX_ASSERT_MSG(result == ZX_OK, "Failed to join worker thread: %d\n", result);
     }
   }
@@ -782,45 +786,13 @@ bool set_migrate_fn_stress_test() {
       // that cannot be reproduced locally. Once resolved, this additional
       // logging can be removed.
       dump_thread(thread.thread, /*full=*/true);
-      thread.thread->PrintBacktrace();
+      Backtrace bt;
+      thread.thread->GetBacktrace(bt);
+      bt.Print();
+
       ZX_ASSERT_MSG(result == ZX_OK, "Failed to join worker thread: %d\n", result);
     }
   }
-
-  END_TEST;
-}
-
-bool backtrace_test() {
-  BEGIN_TEST;
-
-  char buffer[64]{};
-
-  // See that we don't write more than the specified length.
-  EXPECT_EQ(Thread::Current::AppendBacktrace(buffer, 1), 1U);
-  EXPECT_EQ(0, buffer[1]);
-
-  // See that we can generate a backtrace.  If this fails, then perhaps the code is compiled without
-  // frame pointers?
-  memset(buffer, 0, sizeof(buffer));
-  EXPECT_GT(Thread::Current::AppendBacktrace(buffer, sizeof(buffer) - 1), 0U);
-  EXPECT_NE(nullptr, strstr(buffer, "{{{bt:0:"));
-
-  END_TEST;
-}
-
-bool get_backtrace_test() {
-  BEGIN_TEST;
-
-  Thread::Backtrace bt;
-  Thread::Current::GetBacktrace(&bt);
-  int non_null_pcs = 0;
-
-  for (size_t i = 0; i < Thread::kBacktraceDepth; i++) {
-    if (bt.pc[i] != 0) {
-      non_null_pcs++;
-    }
-  }
-  EXPECT_GT(non_null_pcs, 0);
 
   END_TEST;
 }
@@ -852,6 +824,91 @@ bool scoped_allocation_disabled_test() {
   END_TEST;
 }
 
+bool backtrace_static_method_test() {
+  BEGIN_TEST;
+
+  Backtrace bt;
+  Thread::Current::GetBacktrace(bt);
+
+  ASSERT_GT(bt.size(), 0u);
+
+  bt.reset();
+  Thread::Current::GetBacktrace(reinterpret_cast<vaddr_t>(__GET_FRAME(0)), bt);
+  ASSERT_GT(bt.size(), 0u);
+
+  // See that we don't crash.
+  bt.reset();
+  Thread::Current::GetBacktrace(0, bt);
+  ASSERT_EQ(bt.size(), 0u);
+
+  END_TEST;
+}
+
+bool backtrace_instance_method_test() {
+  BEGIN_TEST;
+
+  struct Args {
+    ktl::atomic<bool> running{false};
+    Event event;
+  } args;
+
+  thread_start_routine helper = [](void* _args) -> int {
+    auto args = reinterpret_cast<Args*>(_args);
+    args->running.store(true);
+
+    // Busy wait.
+    while (args->running.load()) {
+      arch::Yield();
+    }
+
+    // Block.
+    args->event.Wait();
+
+    return 0;
+  };
+
+  Thread* t = Thread::Create("backtrace helper", helper, &args, DEFAULT_PRIORITY);
+  ASSERT_NONNULL(t);
+  auto cleanup = fit::defer([&]() { t->Join(nullptr, ZX_TIME_INFINITE); });
+
+  t->Resume();
+
+  // Wait for the thread to run.
+  while (!args.running.load()) {
+    arch::Yield();
+  }
+
+  // Can't take the backtrace of a running thread.
+  Backtrace bt;
+  t->GetBacktrace(bt);
+  ASSERT_EQ(0u, bt.size());
+
+  // Tell the thread to go block.
+  args.running.store(false);
+
+  // Wait for it to block.
+  thread_state state = thread_state::THREAD_RUNNING;
+  while (state != thread_state::THREAD_BLOCKED) {
+    Thread::Current::SleepRelative(ZX_USEC(200));
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+    state = t->state();
+  }
+
+  // See that we can backtrace a blocked thread.
+  bt.reset();
+  t->GetBacktrace(bt);
+  ASSERT_GT(bt.size(), 0u);
+
+  args.event.Signal();
+
+  int result = -1;
+  cleanup.cancel();
+  ASSERT_EQ(ZX_OK, t->Join(&result, ZX_TIME_INFINITE));
+  ASSERT_EQ(ZX_OK, result);
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(thread_tests)
@@ -867,7 +924,7 @@ UNITTEST("migrate_unpinned_threads_test", migrate_unpinned_threads_test)
 UNITTEST("migrate_stress_test", migrate_stress_test)
 UNITTEST("set_migrate_fn_stress_test", set_migrate_fn_stress_test)
 UNITTEST("runtime_test", runtime_test)
-UNITTEST("backtrace_test", backtrace_test)
-UNITTEST("get_backtrace_test", get_backtrace_test)
 UNITTEST("scoped_allocation_disabled_test", scoped_allocation_disabled_test)
+UNITTEST("backtrace_static_method_test", backtrace_static_method_test)
+UNITTEST("backtrace_instance_method_test", backtrace_instance_method_test)
 UNITTEST_END_TESTCASE(thread_tests, "thread", "thread tests")

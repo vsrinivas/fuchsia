@@ -703,7 +703,9 @@ void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_
   }
 
   if (reason == ZirconCrashReason::Panic) {
-    Thread::Current::PrintBacktrace();
+    Backtrace bt;
+    Thread::Current::GetBacktrace(bt);
+    bt.Print();
     if (!halt_on_panic) {
       power_reboot(REBOOT_NORMAL);
       printf("reboot failed\n");

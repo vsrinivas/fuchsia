@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 //
 
+#include <lib/backtrace.h>
 #include <lib/console.h>
 #include <lib/debuglog.h>
 #include <lib/jtrace/jtrace.h>
@@ -147,7 +148,9 @@ void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_
   }
 
   if (reason == ZirconCrashReason::Panic) {
-    Thread::Current::PrintBacktrace();
+    Backtrace bt;
+    Thread::Current::GetBacktrace(bt);
+    bt.Print();
   }
 
   if (!halt_on_panic) {

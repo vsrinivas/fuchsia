@@ -17,6 +17,7 @@ source_set("top") {
     "//zircon/kernel/arch/$zircon_cpu",
     "//zircon/kernel/dev/hw_rng",
     "//zircon/kernel/kernel",
+    "//zircon/kernel/lib/backtrace",
     "//zircon/kernel/lib/counters",
     "//zircon/kernel/lib/crashlog",
     "//zircon/kernel/lib/cxxabi-dynamic-init:headers",

@@ -110,14 +110,14 @@ void PrintSymbolizerContext(FILE* f) {
   print_mmap(f, bias, __bss_start, _end, "rw");
 }
 
-void print_backtrace_version_info() {
-  printf("zx_system_get_version_string %s\n\n", kVersionString);
+void print_backtrace_version_info(FILE* f) {
+  fprintf(f, "zx_system_get_version_string %s\n\n", kVersionString);
 
   // Log the ELF build ID in the format the symbolizer scripts understand.
   if (gElfBuildIdString[0] != '\0') {
-    PrintSymbolizerContext(stdout);
-    printf("dso: id=%s base=%#lx name=zircon.elf\n", gElfBuildIdString,
-           reinterpret_cast<uintptr_t>(__code_start));
+    PrintSymbolizerContext(f);
+    fprintf(f, "dso: id=%s base=%#lx name=zircon.elf\n", gElfBuildIdString,
+            reinterpret_cast<uintptr_t>(__code_start));
   }
 }
 

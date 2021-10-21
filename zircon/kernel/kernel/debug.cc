@@ -69,7 +69,9 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
       t = thread_id_to_thread_slow(argv[2].u);
     }
     if (t) {
-      t->PrintBacktrace();
+      Backtrace bt;
+      t->GetBacktrace(bt);
+      bt.Print();
     }
   } else if (!strcmp(argv[1].str, "dump")) {
     if (argc < 3) {
