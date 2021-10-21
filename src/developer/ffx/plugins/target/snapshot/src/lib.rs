@@ -11,14 +11,30 @@ use {
         Annotation, DataProviderProxy, GetAnnotationsParameters, GetSnapshotParameters,
     },
     fidl_fuchsia_io::{FileMarker, MAX_BUF},
-    std::convert::TryFrom,
+    futures::stream::{FuturesOrdered, StreamExt},
+    std::convert::{TryFrom, TryInto},
     std::fs,
     std::io::Write,
     std::path::{Path, PathBuf},
     std::time::Duration,
 };
 
+// read_data reads all of the contents of the given file from the current seek
+// offset to end of file, returning the content. It errors if the seek pointer
+// starts at an offset that results in reading less than the size of the file as
+// reported on by the first request made by this function.
+//
+// The implementation attempts to maintain 8 concurrent in-flight requests so as
+// to overcome the BDP that otherwise leads to a performance problem with a
+// networked peer and only 8kb buffers in fuchsia.io.
 pub async fn read_data(file: &fidl_fuchsia_io::FileProxy) -> Result<Vec<u8>> {
+    // Number of concurrent read operations to maintain (aim for a 128kb
+    // in-flight buffer, divided by the fuchsia.io chunk size). On a short range
+    // network, 64kb should be more than sufficient, but on an LFN such as a
+    // work-from-home scenario, having some more space further optimizes
+    // performance.
+    const CONCURRENCY: u64 = 131072 / fidl_fuchsia_io::MAX_BUF;
+
     let mut out = Vec::new();
 
     let (status, attrs) = file
@@ -30,8 +46,15 @@ pub async fn read_data(file: &fidl_fuchsia_io::FileProxy) -> Result<Vec<u8>> {
         bail!("Error: Failed to get attributes, status: {}", status);
     }
 
+    let mut queue = FuturesOrdered::new();
+
+    for _ in 0..CONCURRENCY {
+        queue.push(file.read(MAX_BUF));
+    }
+
     loop {
-        let (status, mut bytes) = file.read(MAX_BUF).await?;
+        let (status, mut bytes) =
+            queue.next().await.ok_or(anyhow!("Error: read stream closed prematurely"))??;
 
         if status != 0 {
             bail!("Error: Failed to get data, status: {}", status);
@@ -41,6 +64,10 @@ pub async fn read_data(file: &fidl_fuchsia_io::FileProxy) -> Result<Vec<u8>> {
             break;
         }
         out.append(&mut bytes);
+
+        while queue.len() < CONCURRENCY.try_into().unwrap() {
+            queue.push(file.read(MAX_BUF));
+        }
     }
 
     if out.len() != usize::try_from(attrs.content_size).map_err(|e| anyhow!(e))? {
