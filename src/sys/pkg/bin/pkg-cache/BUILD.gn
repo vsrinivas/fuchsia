@@ -66,6 +66,7 @@ rustc_binary("bin") {
     "src/compat.rs",
     "src/compat/pkgfs.rs",
     "src/compat/pkgfs/packages.rs",
+    "src/compat/pkgfs/packages/variants.rs",
     "src/compat/pkgfs/versions.rs",
     "src/gc_service.rs",
     "src/index.rs",

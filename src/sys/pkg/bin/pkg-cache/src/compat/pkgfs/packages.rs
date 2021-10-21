@@ -22,7 +22,7 @@ use {
     },
     system_image::NonStaticAllowList,
     vfs::{
-        common::{rights_to_posix_mode_bits, send_on_open_with_error},
+        common::send_on_open_with_error,
         directory::{
             connection::{io1::DerivedConnection, util::OpenDirectory},
             dirents_sink,
@@ -36,32 +36,8 @@ use {
     },
 };
 
-#[derive(Debug)]
-struct PkgfsPackagesVariants {
-    // TODO(fxbug.dev/85268)
-    #[allow(unused)]
-    contents: HashMap<PackageVariant, Hash>,
-    // TODO(fxbug.dev/85268)
-    #[allow(unused)]
-    blobfs: blobfs::Client,
-}
-impl DirectoryEntry for PkgfsPackagesVariants {
-    fn open(
-        self: Arc<Self>,
-        _scope: ExecutionScope,
-        flags: u32,
-        _mode: u32,
-        _path: Path,
-        server_end: ServerEnd<NodeMarker>,
-    ) {
-        // TODO(fxbug.dev/85268) Implement this, update tests here asserting open fails with
-        // TIMED_OUT.
-        send_on_open_with_error(flags, server_end, zx::Status::TIMED_OUT)
-    }
-    fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
-    }
-}
+mod variants;
+use variants::PkgfsPackagesVariants;
 
 #[derive(Debug)]
 pub struct PkgfsPackages {
@@ -165,11 +141,10 @@ impl DirectoryEntry for PkgfsPackages {
                     server_end,
                 ),
                 Some(Ok(package_name)) => match self.package_variants(&package_name).await {
-                    Some(variants) => Arc::new(PkgfsPackagesVariants {
-                        contents: variants,
-                        blobfs: self.blobfs.clone(),
-                    })
-                    .open(scope, flags, mode, path, server_end),
+                    Some(variants) => {
+                        Arc::new(PkgfsPackagesVariants::new(variants, self.blobfs.clone()))
+                            .open(scope, flags, mode, path, server_end)
+                    }
                     None => send_on_open_with_error(flags, server_end, zx::Status::NOT_FOUND),
                 },
                 Some(Err(_)) => {
@@ -256,8 +231,7 @@ impl Directory for PkgfsPackages {
 
     async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
         Ok(NodeAttributes {
-            mode: MODE_TYPE_DIRECTORY
-                | rights_to_posix_mode_bits(/*r*/ true, /*w*/ false, /*x*/ true),
+            mode: MODE_TYPE_DIRECTORY,
             id: 1,
             content_size: 0,
             storage_size: 0,
@@ -279,6 +253,7 @@ mod tests {
         crate::{compat::pkgfs::testing::FakeSink, index::register_dynamic_package},
         fidl_fuchsia_io::OPEN_RIGHT_READABLE,
         fuchsia_pkg::PackagePath,
+        fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         maplit::{convert_args, hashmap},
         matches::assert_matches,
     };
@@ -658,7 +633,7 @@ mod tests {
 
         assert_matches!(
             io_util::directory::open_directory(&proxy, "static", OPEN_RIGHT_READABLE).await,
-            Err(io_util::node::OpenError::OpenError(zx::Status::TIMED_OUT))
+            Ok(_)
         );
     }
 
@@ -680,7 +655,37 @@ mod tests {
 
         assert_matches!(
             io_util::directory::open_directory(&proxy, "dynamic", OPEN_RIGHT_READABLE).await,
-            Err(io_util::node::OpenError::OpenError(zx::Status::TIMED_OUT))
+            Ok(_)
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn open_opens_path_within_known_package_variant() {
+        let package_index = Arc::new(Mutex::new(PackageIndex::new_test()));
+        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
+        let pkgfs_packages = Arc::new(PkgfsPackages::new(
+            system_image::StaticPackages::from_entries(vec![]),
+            Arc::clone(&package_index),
+            non_static_allow_list(&["dynamic"]),
+            blobfs_client,
+        ));
+
+        let proxy = pkgfs_packages.proxy();
+
+        let package = PackageBuilder::new("dynamic")
+            .add_resource_at("meta/message", &b"yes"[..])
+            .build()
+            .await
+            .expect("created pkg");
+        let (metafar_blob, _) = package.contents();
+        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
+        register_dynamic_package(&package_index, path("dynamic", "0"), metafar_blob.merkle).await;
+
+        let file =
+            io_util::directory::open_file(&proxy, "dynamic/0/meta/message", OPEN_RIGHT_READABLE)
+                .await
+                .unwrap();
+        let message = io_util::file::read_to_string(&file).await.unwrap();
+        assert_eq!(message, "yes");
     }
 }
