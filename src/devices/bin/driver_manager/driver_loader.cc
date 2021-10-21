@@ -140,10 +140,10 @@ bool DriverLoader::MatchesLibnameDriverIndex(const std::string& driver_url,
   return result.value().compare(libname) == 0;
 }
 
-std::vector<const Driver*> DriverLoader::MatchDeviceDriverIndex(const fbl::RefPtr<Device>& dev,
-                                                                const MatchDeviceConfig& config) {
+const std::vector<MatchedDriver> DriverLoader::MatchDeviceDriverIndex(
+    const fbl::RefPtr<Device>& dev, const MatchDeviceConfig& config) {
   if (!driver_index_.is_valid()) {
-    return std::vector<const Driver*>();
+    return std::vector<MatchedDriver>();
   }
 
   bool autobind = config.libname.empty();
@@ -192,10 +192,10 @@ std::vector<const Driver*> DriverLoader::MatchDeviceDriverIndex(const fbl::RefPt
   return MatchPropertiesDriverIndex(fidl_props, config);
 }
 
-std::vector<const Driver*> DriverLoader::MatchPropertiesDriverIndex(
+const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
     fidl::VectorView<fdf::wire::NodeProperty> props, const MatchDeviceConfig& config) {
-  std::vector<const Driver*> matched_drivers;
-  std::vector<const Driver*> matched_fallback_drivers;
+  std::vector<MatchedDriver> matched_drivers;
+  std::vector<MatchedDriver> matched_fallback_drivers;
   if (!driver_index_.is_valid()) {
     return matched_drivers;
   }
@@ -232,6 +232,32 @@ std::vector<const Driver*> DriverLoader::MatchPropertiesDriverIndex(
     if (!loaded_driver) {
       continue;
     }
+    MatchedDriver matched_driver = {};
+    matched_driver.driver = loaded_driver;
+
+    MatchedCompositeDriver composite = {};
+    bool uses_composite = false;
+
+    if (driver.has_num_nodes()) {
+      composite.num_nodes = driver.num_nodes();
+      uses_composite = true;
+    }
+    if (driver.has_node_index()) {
+      composite.node = driver.node_index();
+    }
+    if (driver.has_composite_name()) {
+      composite.name = std::string(driver.composite_name().data(), driver.composite_name().size());
+    }
+    if (driver.has_composite_node_names()) {
+      std::vector<std::string> names;
+      for (auto& name : driver.composite_node_names()) {
+        names.push_back(std::string(name.data(), name.size()));
+      }
+      composite.node_names = std::move(names);
+    }
+    if (uses_composite) {
+      matched_driver.composite = std::move(composite);
+    }
 
     if (config.only_return_base_and_fallback_drivers) {
       if (IsFuchsiaBootScheme(driver_url) && !loaded_driver->fallback) {
@@ -242,10 +268,10 @@ std::vector<const Driver*> DriverLoader::MatchPropertiesDriverIndex(
     if (config.libname.empty() || MatchesLibnameDriverIndex(driver_url, config.libname)) {
       if (loaded_driver->fallback) {
         if (include_fallback_drivers_ || !config.libname.empty()) {
-          matched_fallback_drivers.push_back(loaded_driver);
+          matched_fallback_drivers.push_back(matched_driver);
         }
       } else {
-        matched_drivers.push_back(loaded_driver);
+        matched_drivers.push_back(matched_driver);
       }
     }
   }

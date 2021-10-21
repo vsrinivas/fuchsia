@@ -186,6 +186,8 @@
 //src/devices/temperature/drivers/tmp112:tmp112-driver
 //src/devices/tests/bind-fail-test:fuchsia_driver
 //src/devices/tests/bind-test-v2:bind-test-driver-v2-driver
+//src/devices/tests/composite-driver-v1/test-root:driver
+//src/devices/tests/composite-driver-v1:driver
 //src/devices/tests/ddk-environment-test:ddk-environment-test-driver
 //src/devices/tests/ddk-fallback-test-v2:ddk-fallback-test-driver-module
 //src/devices/tests/ddk-fallback-test:ddk-fallback-test-driver

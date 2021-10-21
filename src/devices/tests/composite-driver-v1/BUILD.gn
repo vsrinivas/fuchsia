@@ -1,0 +1,63 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":pkg" ]
+}
+
+group("drivers") {
+  testonly = true
+  deps = [
+    ":component",
+    "test-root:component",
+  ]
+}
+
+driver_bind_rules("bind") {
+  rules = "composite_driver_v1.bind"
+  header_output = "composite_driver_v1-bind.h"
+  bind_output = "composite_driver_v1.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.pci" ]
+}
+
+fuchsia_driver("driver") {
+  output_name = "composite-driver-v1"
+  sources = [ "composite_driver_v1.cc" ]
+  deps = [
+    ":bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_driver_component("component") {
+  component_name = "composite-driver-v1"
+  deps = [ ":driver" ]
+}
+
+test("composite-driver-v1-test") {
+  sources = [ "test.cc" ]
+  deps = [
+    ":component",
+    "test-root:component",
+    "//sdk/lib/driver_test_realm/simple",
+    "//src/devices/internal/drivers/fragment",
+    "//src/devices/lib/device-watcher/cpp",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("pkg") {
+  package_name = "composite-driver-v1-test"
+  deps = [ ":composite-driver-v1-test" ]
+}

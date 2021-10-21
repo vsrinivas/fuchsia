@@ -18,6 +18,20 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 
+struct Driver;
+
+struct MatchedCompositeDriver {
+  uint32_t node;
+  uint32_t num_nodes;
+  std::string name;
+  std::vector<std::string> node_names;
+};
+
+struct MatchedDriver {
+  std::optional<MatchedCompositeDriver> composite;
+  const Driver* driver = nullptr;
+};
+
 struct Driver : public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
   Driver() = default;
 

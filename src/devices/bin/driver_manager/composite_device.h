@@ -15,6 +15,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 
+#include "driver.h"
 #include "metadata.h"
 
 // Forward declaration
@@ -104,7 +105,7 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
   CompositeDevice(fbl::String name, fbl::Array<const zx_device_prop_t> properties,
                   fbl::Array<const StrProperty> str_properties, uint32_t fragments_count,
                   uint32_t primary_fragment_index, bool spawn_colocated,
-                  fbl::Array<std::unique_ptr<Metadata>> metadata);
+                  fbl::Array<std::unique_ptr<Metadata>> metadata, bool from_driver_index);
 
   CompositeDevice(CompositeDevice&&) = delete;
   CompositeDevice& operator=(CompositeDevice&&) = delete;
@@ -117,6 +118,8 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
   static zx_status_t Create(std::string_view name,
                             fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc,
                             std::unique_ptr<CompositeDevice>* out);
+  static zx_status_t CreateFromDriverIndex(MatchedDriver driver,
+                                           std::unique_ptr<CompositeDevice>* out);
 
   const fbl::String& name() const { return name_; }
   const fbl::Array<const zx_device_prop_t>& properties() const { return properties_; }
@@ -162,6 +165,8 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
   const uint32_t primary_fragment_index_;
   const bool spawn_colocated_;
   const fbl::Array<std::unique_ptr<Metadata>> metadata_;
+  const bool from_driver_index_;
+  const Driver* driver_index_driver_;
 
   FragmentList unbound_;
   FragmentList bound_;

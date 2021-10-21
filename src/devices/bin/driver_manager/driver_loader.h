@@ -51,9 +51,9 @@ class DriverLoader {
     bool only_return_base_and_fallback_drivers = false;
   };
 
-  std::vector<const Driver*> MatchDeviceDriverIndex(const fbl::RefPtr<Device>& dev,
-                                                    const MatchDeviceConfig& config);
-  std::vector<const Driver*> MatchPropertiesDriverIndex(
+  const std::vector<MatchedDriver> MatchDeviceDriverIndex(const fbl::RefPtr<Device>& dev,
+                                                          const MatchDeviceConfig& config);
+  const std::vector<MatchedDriver> MatchPropertiesDriverIndex(
       fidl::VectorView<fdf::wire::NodeProperty> props, const MatchDeviceConfig& config);
 
   const Driver* LibnameToDriver(std::string_view libname) const;

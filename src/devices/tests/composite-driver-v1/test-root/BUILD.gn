@@ -1,0 +1,33 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/test.gni")
+
+driver_bind_rules("bind") {
+  rules = "test_root.bind"
+  header_output = "test_root-bind.h"
+  bind_output = "test_root.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("driver") {
+  output_name = "test-root"
+  sources = [ "test_root.cc" ]
+  deps = [
+    ":bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_driver_component("component") {
+  component_name = "test-root"
+  deps = [ ":driver" ]
+}

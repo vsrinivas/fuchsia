@@ -1,0 +1,19 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite composite_driver_v1;
+
+using fuchsia.pci;
+
+primary node "a" {
+    fuchsia.BIND_PCI_VID == 1;
+}
+
+node "b" {
+    fuchsia.BIND_PCI_VID == 2;
+}
+
+node "c" {
+    fuchsia.BIND_PCI_VID == 3;
+}

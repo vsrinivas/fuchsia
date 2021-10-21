@@ -22,14 +22,16 @@ CompositeDevice::CompositeDevice(fbl::String name, fbl::Array<const zx_device_pr
                                  fbl::Array<const StrProperty> str_properties,
                                  uint32_t fragments_count, uint32_t primary_fragment_index,
                                  bool spawn_colocated,
-                                 fbl::Array<std::unique_ptr<Metadata>> metadata)
+                                 fbl::Array<std::unique_ptr<Metadata>> metadata,
+                                 bool from_driver_index)
     : name_(std::move(name)),
       properties_(std::move(properties)),
       str_properties_(std::move(str_properties)),
       fragments_count_(fragments_count),
       primary_fragment_index_(primary_fragment_index),
       spawn_colocated_(spawn_colocated),
-      metadata_(std::move(metadata)) {}
+      metadata_(std::move(metadata)),
+      from_driver_index_(from_driver_index) {}
 
 CompositeDevice::~CompositeDevice() = default;
 
@@ -78,7 +80,7 @@ zx_status_t CompositeDevice::Create(std::string_view name,
   auto dev = std::make_unique<CompositeDevice>(
       std::move(name), std::move(properties), std::move(str_properties),
       comp_desc.fragments.count(), comp_desc.primary_fragment_index, comp_desc.spawn_colocated,
-      std::move(metadata));
+      std::move(metadata), false);
   for (uint32_t i = 0; i < comp_desc.fragments.count(); ++i) {
     const auto& fidl_fragment = comp_desc.fragments[i];
     size_t parts_count = fidl_fragment.parts.count();
@@ -106,7 +108,31 @@ zx_status_t CompositeDevice::Create(std::string_view name,
   return ZX_OK;
 }
 
+zx_status_t CompositeDevice::CreateFromDriverIndex(MatchedDriver driver,
+                                                   std::unique_ptr<CompositeDevice>* out) {
+  ZX_ASSERT_MSG(driver.composite, "DriverIndex Composite driver must have composite set\n");
+  fbl::String name(driver.composite->name);
+  auto dev = std::make_unique<CompositeDevice>(
+      std::move(name), fbl::Array<const zx_device_prop_t>(), fbl::Array<const StrProperty>(),
+      driver.composite->num_nodes, 0, true /* TODO(dgilhooley): spawn colocated in follow up CL */,
+      fbl::Array<std::unique_ptr<Metadata>>(), true);
+
+  for (uint32_t i = 0; i < driver.composite->num_nodes; ++i) {
+    std::string name = driver.composite->node_names[i];
+    auto fragment = std::make_unique<CompositeDeviceFragment>(dev.get(), std::string(name), i,
+                                                              fbl::Array<const zx_bind_inst_t>());
+    dev->unbound_.push_back(std::move(fragment));
+  }
+  dev->driver_index_driver_ = driver.driver;
+
+  *out = std::move(dev);
+  return ZX_OK;
+}
+
 bool CompositeDevice::TryMatchFragments(const fbl::RefPtr<Device>& dev, size_t* index_out) {
+  if (from_driver_index_) {
+    return false;
+  }
   for (auto itr = bound_.begin(); itr != bound_.end(); ++itr) {
     if (itr->TryMatch(dev)) {
       LOGF(ERROR, "Ambiguous bind for composite device %p '%s': device 1 '%s', device 2 '%s'", this,
@@ -272,6 +298,15 @@ zx_status_t CompositeDevice::TryAssemble() {
 
   status = device_->SignalReadyForBind();
   if (status != ZX_OK) {
+    return status;
+  }
+  if (from_driver_index_) {
+    zx_status_t status = coordinator->AttemptBind(driver_index_driver_, device_);
+    if (status != ZX_OK) {
+      LOGF(ERROR, "%s: Failed to bind composite driver '%s' to device '%s': %s", __func__,
+           driver_index_driver_->libname.data(), device_->name().data(),
+           zx_status_get_string(status));
+    }
     return status;
   }
 
