@@ -5,9 +5,9 @@
 #include <array>
 #include <limits>
 
+#include <ffl/fixed.h>
 #include <gtest/gtest.h>
 
-#include "ffl/fixed.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 
 namespace media::audio::mixer {

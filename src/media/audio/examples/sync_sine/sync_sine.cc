@@ -5,14 +5,13 @@
 #include "src/media/audio/examples/sync_sine/sync_sine.h"
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls.h>
 
 #include <cmath>
 #include <iostream>
-
-#include "lib/fidl/cpp/synchronous_interface_ptr.h"
 
 namespace {
 // Set the audio stream_type to: 44.1 kHz, stereo, 16-bit LPCM (signed integer).

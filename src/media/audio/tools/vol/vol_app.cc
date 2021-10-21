@@ -6,6 +6,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
+#include <lib/media/audio/cpp/perceived_level.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
@@ -17,7 +18,6 @@
 #include <iomanip>
 #include <iostream>
 
-#include "lib/media/audio/cpp/perceived_level.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/command_line.h"
 

@@ -6,8 +6,8 @@
 #define SRC_MEDIA_AUDIO_VIRTUAL_AUDIO_SERVICE_VIRTUAL_AUDIO_SERVICE_IMPL_H_
 
 #include <fuchsia/virtualaudio/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
 
-#include "lib/sys/cpp/component_context.h"
 #include "src/lib/fxl/macros.h"
 
 namespace virtual_audio {

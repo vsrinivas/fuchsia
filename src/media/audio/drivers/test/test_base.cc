@@ -9,6 +9,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 
 #include <algorithm>
 #include <cstring>
@@ -17,7 +18,6 @@
 #include <fbl/unique_fd.h>
 
 #include "gtest/gtest.h"
-#include "lib/zx/time.h"
 #include "src/media/audio/drivers/test/audio_device_enumerator_stub.h"
 
 namespace media::audio::drivers::test {

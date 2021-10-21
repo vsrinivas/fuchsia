@@ -4,13 +4,14 @@
 
 #include "src/media/audio/audio_core/mixer/gain.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <iterator>
 
 #include <fbl/algorithm.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/lib/test/constants.h"
 
 using testing::Each;

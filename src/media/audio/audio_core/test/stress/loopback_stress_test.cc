@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/media/audio/cpp/types.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -13,7 +14,6 @@
 #include <set>
 #include <vector>
 
-#include "lib/media/audio/cpp/types.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/test/comparators.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"

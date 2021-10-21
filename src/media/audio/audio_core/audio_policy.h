@@ -6,10 +6,9 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_POLICY_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/zx/time.h>
 
 #include <vector>
-
-#include "lib/zx/time.h"
 
 namespace media::audio {
 
