@@ -79,6 +79,9 @@ template("fuchsia_test_package") {
 
   package_name = target_name
   package_label = get_label_info(":$target_name", "label_with_toolchain")
+  package_manifest =
+      rebase_path("$target_out_dir/$target_name/package_manifest.json",
+                  root_build_dir)
   if (defined(invoker.package_name)) {
     package_name = invoker.package_name
   }
@@ -146,6 +149,7 @@ template("fuchsia_test_package") {
       forward_variables_from(test_specs, "*")
       target = get_label_info(":$target_name", "label_with_toolchain")
       package_label = package_label
+      package_manifest = package_manifest
       package_url =
           "fuchsia-pkg://fuchsia.com/$package_name#meta/$manifest_name"
     }
