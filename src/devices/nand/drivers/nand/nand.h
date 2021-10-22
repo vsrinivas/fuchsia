@@ -21,6 +21,7 @@
 #include <fbl/mutex.h>
 
 #include "lib/inspect/cpp/vmo/types.h"
+#include "src/devices/nand/drivers/nand/read_cache.h"
 
 namespace nand {
 
@@ -98,6 +99,12 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
 
   // Count read failures where all retries are exhausted.
   inspect::UintProperty read_failure_;
+
+  // Cache for recent reads that came close to failure.
+  std::unique_ptr<ReadCache> dangerous_reads_cache_ = nullptr;
+
+  // If a read call doesn't want the oob, store it here instead to facilitate caching.
+  std::unique_ptr<uint8_t[]> oob_buffer_ = nullptr;
 
   thrd_t worker_thread_;
 

@@ -12,7 +12,10 @@ group("test") {
 
 test("nand-unittest-bin") {
   output_name = "nand-unittest"
-  sources = [ "nand-test.cc" ]
+  sources = [
+    "nand-test.cc",
+    "read_cache_test.cc",
+  ]
   deps = [
     "//src/devices/nand/drivers/nand:common",
     "//src/devices/testing/fake_ddk",

@@ -16,7 +16,10 @@ driver_bind_rules("nand-bind") {
 source_set("common") {
   configs += [ "//build/config:all_source" ]
   public = [ "nand.h" ]
-  sources = [ "nand.cc" ]
+  sources = [
+    "nand.cc",
+    "read_cache.cc",
+  ]
   deps = [
     ":nand-bind",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",

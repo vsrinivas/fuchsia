@@ -31,12 +31,18 @@ namespace nand {
 
 zx_status_t NandDevice::ReadPage(uint8_t* data, uint8_t* oob, uint32_t nand_page,
                                  uint32_t* corrected_bits, size_t retries) {
-  zx_status_t status = ZX_ERR_INTERNAL;
+  // Always grab the oob, whether the caller wants it or not.
+  uint8_t* oob_result = oob ? oob : oob_buffer_.get();
+  if (data && dangerous_reads_cache_->GetPage(nand_page, data, oob_result)) {
+    *corrected_bits = 0;
+    return ZX_OK;
+  }
 
+  zx_status_t status = ZX_ERR_INTERNAL;
   size_t retry = 0;
   bool ecc_failure = false;
   for (; status != ZX_OK && retry < retries; retry++) {
-    status = raw_nand_.ReadPageHwecc(nand_page, data, nand_info_.page_size, nullptr, oob,
+    status = raw_nand_.ReadPageHwecc(nand_page, data, nand_info_.page_size, nullptr, oob_result,
                                      nand_info_.oob_size, nullptr, corrected_bits);
     if (status == ZX_OK) {
       // Only record the returned corrected bits number on success, otherwise it is undefined.
@@ -66,6 +72,10 @@ zx_status_t NandDevice::ReadPage(uint8_t* data, uint8_t* oob, uint32_t nand_page
   if (ecc_failure) {
     *corrected_bits = nand_info_.ecc_bits;
   }
+  if (status == ZX_OK && data && *corrected_bits > nand_info_.ecc_bits / 2) {
+    // Cache this page, since we should re-read it for a block transfer soon.
+    dangerous_reads_cache_->Insert(nand_page, data, oob_result);
+  }
   return status;
 }
 
@@ -74,6 +84,8 @@ zx_status_t NandDevice::EraseOp(nand_operation_t* nand_op) {
 
   for (uint32_t i = 0; i < nand_op->erase.num_blocks; i++) {
     nand_page = (nand_op->erase.first_block + i) * nand_info_.pages_per_block;
+    // Purge cache for deleted content.
+    dangerous_reads_cache_->PurgeRange(nand_page, nand_info_.pages_per_block);
     zx_status_t status = raw_nand_.EraseBlock(nand_page);
     if (status != ZX_OK) {
       zxlogf(ERROR, "nand: Erase of block %u failed", nand_op->erase.first_block + i);
@@ -340,6 +352,10 @@ zx_status_t NandDevice::Init() {
     zxlogf(ERROR, "nand: get_nand_info returned error %d", status);
     return status;
   }
+
+  dangerous_reads_cache_ =
+      std::make_unique<ReadCache>(8, nand_info_.page_size, nand_info_.oob_size);
+  oob_buffer_ = std::make_unique<uint8_t[]>(nand_info_.oob_size);
 
   num_nand_pages_ = nand_info_.num_blocks * nand_info_.pages_per_block;
 
