@@ -71,10 +71,6 @@
   ],
   "customProjectLicenses" : [
     {
-      "projectRoot": "prebuilt/third_party/cmake/linux-x64",
-      "licenseLocation": "doc/cmake-3.20/Copyright.txt"
-    },
-    {
       "projectRoot": "third_party/lss",
       "licenseLocation": "linux_syscall_support.h"
     },

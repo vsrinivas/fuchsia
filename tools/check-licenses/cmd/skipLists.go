@@ -16,6 +16,7 @@ var additionalSkipDirs = []string{
 	"prebuilt/third_party", // TODO(jcecil): remove in a moment
 	"third_party/glfw/examples",
 	"third_party/glfw/tests",
+	"prebuilt/third_party/cmake", // fxbug.dev/87178
 	"prebuilt/third_party/go/linux-x64/pkg/linux_amd64/cmd/vendor",
 	"prebuilt/third_party/go/linux-x64/pkg/linux_amd64/vendor",
 	"prebuilt/third_party/go/linux-x64/src/cmd/vendor",
