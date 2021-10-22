@@ -282,7 +282,11 @@ impl VDLFiles {
 
     // Checks if user has specified a portmap. If portmap is specified, we'll check if ssh port is included.
     // If ssh port is not included, we'll pick a port and forward that together with the rest of portmap.
-    pub fn resolve_portmap(&self, start_command: &StartCommand) -> (String, u16) {
+    pub fn resolve_portmap(
+        &self,
+        start_command: &StartCommand,
+        device_spec: &mut DeviceSpec,
+    ) -> (String, u16) {
         let ssh_port = match is_free_tcp_port(DEFAULT_SSH_PORT) {
             Some(port) => port,
             None => pick_unused_port().unwrap(),
@@ -300,7 +304,19 @@ impl VDLFiles {
                     (port_map.clone(), mapped_port)
                 }
             }
-            None => (format!("hostfwd=tcp::{}-:22", ssh_port), ssh_port),
+            None => match &mut device_spec.port_map {
+                Some(port_map) => {
+                    let result = port_map.get_ssh_port().map_or_else(
+                        || {
+                            port_map.add_ssh_port(ssh_port);
+                            ssh_port
+                        },
+                        |v| v,
+                    );
+                    (port_map.to_string(), result)
+                }
+                None => (format!("hostfwd=tcp::{}-:22", ssh_port), ssh_port),
+            },
         }
     }
 
@@ -404,7 +420,7 @@ impl VDLFiles {
             self.ssh_files.check()?;
         }
 
-        let device_spec = DeviceSpec::from_manifest(&start_command)?;
+        let mut device_spec = DeviceSpec::from_manifest(&start_command)?;
 
         let fvd = match &start_command.device_proto {
             Some(proto) => PathBuf::from(proto),
@@ -441,7 +457,7 @@ impl VDLFiles {
             self.output_proto = PathBuf::from(location);
         }
 
-        let (port_map, ssh_port) = self.resolve_portmap(&start_command);
+        let (port_map, ssh_port) = self.resolve_portmap(&start_command, &mut device_spec);
 
         // Enable emulator grpc server if running on linux
         // doc: https://android.googlesource.com/platform/external/qemu/+/refs/heads/emu-master-dev/android/android-grpc/docs
@@ -892,20 +908,25 @@ mod tests {
         setup();
 
         let mut start_command = &mut create_start_command();
+        let mut device_spec = &mut DeviceSpec::default();
         start_command.port_map = None;
-        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
+        device_spec.port_map = None;
+        let (port_map, ssh) =
+            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
         assert!(ssh > 0);
         let re = Regex::new(r"hostfwd=tcp::\d+-:22").unwrap();
         assert!(re.is_match(&port_map));
 
         start_command.port_map = Some("".to_string());
-        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
+        let (port_map, ssh) =
+            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
         assert!(ssh > 0);
         let re = Regex::new(r"hostfwd=tcp::\d+-:22").unwrap();
         assert!(re.is_match(&port_map));
 
         start_command.port_map = Some("hostfwd=tcp::123-:222,hostfwd=tcp::80-:223".to_string());
-        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
+        let (port_map, ssh) =
+            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
         assert!(ssh > 0);
         let re =
             Regex::new(r"hostfwd=tcp::123-:222,hostfwd=tcp::80-:223,hostfwd=tcp::\d+-:22").unwrap();
@@ -913,39 +934,46 @@ mod tests {
 
         start_command.port_map =
             Some("hostfwd=tcp::123-:223,hostfwd=tcp::80-:322,hostfwd=tcp::456-:22".to_string());
-        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
+        let (port_map, ssh) =
+            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
         assert_eq!(456, ssh);
         assert_eq!("hostfwd=tcp::123-:223,hostfwd=tcp::80-:322,hostfwd=tcp::456-:22", port_map);
 
         start_command.port_map = Some("hostfwd=tcp::789-:22".to_string());
-        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
+        let (port_map, ssh) =
+            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
         assert_eq!(789, ssh);
         assert_eq!("hostfwd=tcp::789-:22", port_map);
 
         start_command.port_map =
             Some("hostfwd=tcp::123-:22,hostfwd=tcp::80-:8022,hostfwd=tcp::456-:222".to_string());
-        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
+        let (port_map, ssh) =
+            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
         assert_eq!(123, ssh);
         assert_eq!("hostfwd=tcp::123-:22,hostfwd=tcp::80-:8022,hostfwd=tcp::456-:222", port_map);
 
         start_command.port_map = Some("tcp:123:22".to_string());
-        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
+        let (port_map, ssh) =
+            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
         assert_eq!(123, ssh);
         assert_eq!("tcp:123:22", port_map);
 
         start_command.port_map = Some("tcp:123:222".to_string());
-        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
+        let (port_map, ssh) =
+            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
         assert!(ssh > 0);
         let re = Regex::new(r"tcp:123:222,hostfwd=tcp::\d+-:22").unwrap();
         assert!(re.is_match(&port_map));
 
         start_command.port_map = Some("tcp:234:80,tcp:123:22".to_string());
-        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
+        let (port_map, ssh) =
+            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
         assert_eq!(123, ssh);
         assert_eq!("tcp:234:80,tcp:123:22", port_map);
 
         start_command.port_map = Some("tcp:234:22,tcp:123:80".to_string());
-        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
+        let (port_map, ssh) =
+            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
         assert_eq!(234, ssh);
         assert_eq!("tcp:234:22,tcp:123:80", port_map);
 

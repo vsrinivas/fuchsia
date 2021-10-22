@@ -10,7 +10,7 @@ use std::io::BufReader;
 // TODO(fxbug.dev/84803): This will need to move to the parsing library once we have a schema.
 // Note: this struct is a holding place for inputs from device manifest files, which are defined
 // by a fixed schema in //build/sdk/meta. Any changes to one must be reflected in the other.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct DeviceSpec {
     pub audio: bool,
     pub image_size: String,
@@ -18,6 +18,44 @@ pub struct DeviceSpec {
     pub ram_mb: usize,
     pub window_height: usize,
     pub window_width: usize,
+    pub port_map: Option<PortMap>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct PortMap {
+    pub ports: Vec<MappedPort>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MappedPort {
+    protocol: Option<Protocol>,
+    version: Option<IPVersion>,
+    host: Option<String>,
+    host_port: u16,
+    guest: Option<String>,
+    guest_port: u16,
+}
+
+#[derive(Debug, Deserialize)]
+enum Protocol {
+    TCP,
+    UDP,
+}
+impl Default for Protocol {
+    fn default() -> Self {
+        Protocol::TCP
+    }
+}
+
+#[derive(Debug, Deserialize)]
+enum IPVersion {
+    V4,
+    V6,
+}
+impl Default for IPVersion {
+    fn default() -> Self {
+        IPVersion::V4
+    }
 }
 
 fn default_audio() -> bool {
@@ -46,6 +84,21 @@ fn default_pointing_device() -> String {
     "touch".to_string()
 }
 
+fn ssh_port(port: u16) -> MappedPort {
+    MappedPort {
+        protocol: Some(Protocol::TCP),
+        version: Some(IPVersion::V4),
+        host: None,
+        host_port: port,
+        guest: None,
+        guest_port: 22,
+    }
+}
+
+fn default_port_map() -> Option<PortMap> {
+    Some(PortMap { ports: vec![ssh_port(8022)] })
+}
+
 impl DeviceSpec {
     pub fn default() -> DeviceSpec {
         DeviceSpec {
@@ -55,6 +108,7 @@ impl DeviceSpec {
             ram_mb: default_ram_mb(),
             window_height: default_window_height(),
             window_width: default_window_width(),
+            port_map: default_port_map(),
         }
     }
 
@@ -82,6 +136,66 @@ impl DeviceSpec {
         };
         spec.get_values_from_flags(cmd);
         return Ok(spec);
+    }
+}
+
+impl PortMap {
+    pub fn get_ssh_port(&self) -> Option<u16> {
+        let result = None;
+        for port in &self.ports {
+            if port.guest_port == 22 {
+                return Some(port.host_port);
+            }
+        }
+        result
+    }
+
+    pub fn add_ssh_port(&mut self, port: u16) {
+        self.ports.push(ssh_port(port));
+    }
+
+    pub fn to_string(&self) -> String {
+        let mut result = "".to_string();
+        let mut optional_comma = "";
+        for mapped_port in &self.ports {
+            let version_prefix;
+            let open_bracket;
+            let close_bracket;
+            match mapped_port.version {
+                Some(IPVersion::V6) => {
+                    version_prefix = "ipv6-";
+                    open_bracket = "[";
+                    close_bracket = "]";
+                }
+                Some(IPVersion::V4) | None => {
+                    version_prefix = "";
+                    open_bracket = "";
+                    close_bracket = "";
+                }
+            }
+            result = format!(
+                "{}{}{}hostfwd={}:{}:{}-{}:{}",
+                result,
+                optional_comma,
+                version_prefix,
+                match mapped_port.protocol {
+                    Some(Protocol::UDP) => "udp",
+                    Some(Protocol::TCP) | None => "tcp",
+                },
+                match &mapped_port.host {
+                    Some(address) => format!("{}{}{}", open_bracket, address, close_bracket),
+                    None => "".to_string(),
+                },
+                mapped_port.host_port,
+                match &mapped_port.guest {
+                    Some(address) => format!("{}{}{}", open_bracket, address, close_bracket),
+                    None => "".to_string(),
+                },
+                mapped_port.guest_port,
+            );
+            optional_comma = ",";
+        }
+        result
     }
 }
 
