@@ -459,8 +459,6 @@ type DeviceInfo = struct {
     ///
     /// Devices that do not support scatter-gather DMA may set this to a value
     /// smaller than a page size to guarantee compatibility.
-    ///
-    /// Can't be larger than `MAX_PHYSICAL_PARTS` pages.
     max_buffer_length uint32;
     /// Alignment requirement for buffers relative to the start of VMOs.
     ///

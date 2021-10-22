@@ -302,6 +302,17 @@ TEST_F(NetworkDeviceTest, GetInfo) {
   EXPECT_EQ(info.rx_accel().count(), impl_.info().rx_accel_count);
 }
 
+TEST_F(NetworkDeviceTest, OptionalMaxBufferLength) {
+  impl_.info().max_buffer_length = 0;
+  ASSERT_OK(CreateDevice());
+  fidl::WireSyncClient connection = OpenConnection();
+  fidl::WireResult rsp = connection.GetInfo();
+  ASSERT_OK(rsp.status());
+  auto& info = rsp.value().info;
+  ASSERT_FALSE(info.has_max_buffer_length())
+      << "Unexpected buffer length " << info.max_buffer_length();
+}
+
 TEST_F(NetworkDeviceTest, MinReportedBufferAlignment) {
   // Tests that device creation is rejected with an invalid buffer_alignment value.
   impl_.info().buffer_alignment = 0;

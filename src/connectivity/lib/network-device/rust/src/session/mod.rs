@@ -7,7 +7,7 @@
 mod buffer;
 
 use std::fmt::Debug;
-use std::num::{NonZeroU16, NonZeroU64};
+use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
 use std::pin::Pin;
 use std::sync::{Arc, Weak};
 use std::{convert::TryFrom as _, task::Waker};
@@ -296,7 +296,8 @@ pub struct DeviceInfo {
     /// Alignment requirement for buffers in the data VMO.
     pub buffer_alignment: u32,
     /// Maximum supported length of buffers in the data VMO, in bytes.
-    pub max_buffer_length: u32,
+    #[fidl_field_type(optional)]
+    pub max_buffer_length: Option<NonZeroU32>,
     /// The minimum rx buffer length required for device.
     pub min_rx_buffer_length: u32,
     /// The minimum tx buffer length required for the device.
@@ -355,19 +356,19 @@ impl DeviceInfo {
         let num_tx_buffers =
             NonZeroU16::new(*tx_depth).ok_or_else(|| Error::Config("no TX buffers".to_owned()))?;
 
-        let larger_than_max_buffer_length = |l: usize| {
-            usize::try_from(*max_buffer_length).map_or(
-                // This is the case where max_buffer_length can't fix in a
-                // usize, but l is already a usize so max_buffer_length > l,
-                // i.e. larger_than_max_buffer_length = false.
-                false,
-                // If converted successfully, we can just do the comparison.
-                |max| l > max,
-            )
-        };
+        let max_buffer_length = max_buffer_length
+            .and_then(|max| {
+                match usize::try_from(max.get()) {
+                    Ok(max) => Some(max),
+                    // The error case is the case where max_buffer_length can't fix in a
+                    // usize, but we use it to compare it to usizes, so that's
+                    // equivalent to no limit.
+                    Err(std::num::TryFromIntError { .. }) => None,
+                }
+            })
+            .unwrap_or(usize::MAX);
 
-        // This makes sure usize::try_from(data_length).unwrap() is always safe.
-        if larger_than_max_buffer_length(buffer_length) {
+        if buffer_length > max_buffer_length {
             return Err(Error::Config(format!(
                 "buffer length too big: {} > {}",
                 buffer_length, max_buffer_length
@@ -385,14 +386,6 @@ impl DeviceInfo {
 
         let buffer_stride =
             (buffer_length + buffer_alignment - 1) / buffer_alignment * buffer_alignment;
-
-        // This makes sure usize::try_from(offset).unwrap() is always safe.
-        if larger_than_max_buffer_length(buffer_stride) {
-            return Err(Error::Config(format!(
-                "cannot align {} to {} under {}",
-                buffer_stride, buffer_alignment, max_buffer_length,
-            )));
-        }
 
         if buffer_stride < buffer_length {
             return Err(Error::Config(format!(

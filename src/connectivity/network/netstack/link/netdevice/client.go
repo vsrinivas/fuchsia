@@ -713,13 +713,15 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 		deviceInfo.HasRxDepth() &&
 		deviceInfo.HasTxDepth() &&
 		deviceInfo.HasBufferAlignment() &&
-		deviceInfo.HasMaxBufferLength() &&
 		deviceInfo.HasMinRxBufferLength() &&
 		deviceInfo.HasMinTxBufferLength() &&
 		deviceInfo.HasMinTxBufferHead() &&
 		deviceInfo.HasMinTxBufferTail() &&
 		deviceInfo.HasMaxBufferParts()) {
 		return nil, fmt.Errorf("incomplete DeviceInfo: %#v", deviceInfo)
+	}
+	if deviceInfo.HasMaxBufferLength() && deviceInfo.MaxBufferLength == 0 {
+		return nil, fmt.Errorf("invalid MaxBufferLength: %d, expected != 0", deviceInfo.MaxBufferLength)
 	}
 
 	config, err := sessionConfigFactory.MakeSessionConfig(deviceInfo)

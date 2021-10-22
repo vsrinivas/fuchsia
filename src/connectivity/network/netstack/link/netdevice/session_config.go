@@ -48,7 +48,7 @@ type SimpleSessionConfigFactory struct{}
 // MakeSessionConfig implements SessionConfigFactory.
 func (c *SimpleSessionConfigFactory) MakeSessionConfig(deviceInfo network.DeviceInfo) (SessionConfig, error) {
 	bufferLength := DefaultBufferLength
-	if bufferLength > deviceInfo.MaxBufferLength {
+	if deviceInfo.HasMaxBufferLength() && bufferLength > deviceInfo.MaxBufferLength {
 		bufferLength = deviceInfo.MaxBufferLength
 	}
 	if bufferLength < deviceInfo.MinRxBufferLength {
@@ -67,12 +67,8 @@ func (c *SimpleSessionConfigFactory) MakeSessionConfig(deviceInfo network.Device
 	}
 	align := deviceInfo.BufferAlignment
 	if config.BufferStride%align != 0 {
-		// Align back.
-		config.BufferStride -= config.BufferStride % align
-		// Align up if we have space.
-		if config.BufferStride+align <= deviceInfo.MaxBufferLength {
-			config.BufferStride += align
-		}
+		// Align up.
+		config.BufferStride += align - (config.BufferStride % align)
 	}
 	return config, nil
 }

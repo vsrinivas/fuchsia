@@ -29,11 +29,17 @@ constexpr zx_signals_t kFifoWaitWrites = ZX_FIFO_WRITABLE;
 
 zx::status<DeviceInfo> DeviceInfo::Create(const netdev::wire::DeviceInfo& fidl) {
   if (!(fidl.has_min_descriptor_length() && fidl.has_descriptor_version() && fidl.has_rx_depth() &&
-        fidl.has_tx_depth() && fidl.has_buffer_alignment() && fidl.has_max_buffer_length() &&
-        fidl.has_min_rx_buffer_length() && fidl.has_min_tx_buffer_length() &&
-        fidl.has_min_tx_buffer_head() && fidl.has_min_tx_buffer_tail() &&
-        fidl.has_max_buffer_parts())) {
+        fidl.has_tx_depth() && fidl.has_buffer_alignment() && fidl.has_min_rx_buffer_length() &&
+        fidl.has_min_tx_buffer_length() && fidl.has_min_tx_buffer_head() &&
+        fidl.has_min_tx_buffer_tail() && fidl.has_max_buffer_parts())) {
     return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  uint32_t max_buffer_length = std::numeric_limits<uint32_t>::max();
+  if (fidl.has_max_buffer_length()) {
+    max_buffer_length = fidl.max_buffer_length();
+    if (max_buffer_length == 0) {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
   }
 
   DeviceInfo info = {
@@ -42,7 +48,7 @@ zx::status<DeviceInfo> DeviceInfo::Create(const netdev::wire::DeviceInfo& fidl) 
       .rx_depth = fidl.rx_depth(),
       .tx_depth = fidl.tx_depth(),
       .buffer_alignment = fidl.buffer_alignment(),
-      .max_buffer_length = fidl.max_buffer_length(),
+      .max_buffer_length = max_buffer_length,
       .min_rx_buffer_length = fidl.min_rx_buffer_length(),
       .min_tx_buffer_length = fidl.min_tx_buffer_length(),
       .min_tx_buffer_head = fidl.min_tx_buffer_head(),

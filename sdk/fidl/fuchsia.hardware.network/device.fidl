@@ -51,7 +51,9 @@ type DeviceInfo = table {
     /// relative to the start of the VMO. `buffer_alignment == 0` is never
     /// reported. Required.
     5: buffer_alignment uint32;
-    /// Maximum supported length of buffers in the data VMO, in bytes. Required.
+    /// Maximum supported length of buffers in the data VMO, in bytes.
+    ///
+    /// Absent if no maximum buffer length is defined. Must be nonzero.
     6: max_buffer_length uint32;
     /// The minimum rx buffer length required for device. Required.
     7: min_rx_buffer_length uint32;

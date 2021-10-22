@@ -345,7 +345,6 @@ void DeviceInterface::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync
       .set_rx_depth(rx_depth)
       .set_tx_depth(tx_depth)
       .set_buffer_alignment(device_info_.buffer_alignment)
-      .set_max_buffer_length(device_info_.max_buffer_length)
       .set_max_buffer_parts(device_info_.max_buffer_parts)
       .set_min_rx_buffer_length(device_info_.min_rx_buffer_length)
       .set_min_tx_buffer_length(device_info_.min_tx_buffer_length)
@@ -353,6 +352,10 @@ void DeviceInterface::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync
       .set_min_tx_buffer_tail(device_info_.tx_tail_length)
       .set_tx_accel(fidl::ObjectView<decltype(tx_accel)>::FromExternal(&tx_accel))
       .set_rx_accel(fidl::ObjectView<decltype(rx_accel)>::FromExternal(&rx_accel));
+
+  if (device_info_.max_buffer_length != 0) {
+    device_info.set_max_buffer_length(device_info_.max_buffer_length);
+  }
 
   completer.Reply(std::move(device_info));
 }

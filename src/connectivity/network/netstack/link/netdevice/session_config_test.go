@@ -97,6 +97,24 @@ func TestMakeSessionConfig(t *testing.T) {
 				Options:           network.SessionFlagsPrimary,
 			},
 		},
+		{
+			name: "align up",
+			updateInfo: func(info *network.DeviceInfo) {
+				info.SetBufferAlignment(8)
+				info.SetMinRxBufferLength(1500)
+				info.SetMaxBufferLength(1500)
+			},
+			expectedConfig: SessionConfig{
+				BufferLength:      1500,
+				BufferStride:      1504,
+				DescriptorLength:  descriptorLength,
+				TxHeaderLength:    baseInfo.MinTxBufferHead,
+				TxTailLength:      baseInfo.MinTxBufferTail,
+				RxDescriptorCount: baseInfo.TxDepth,
+				TxDescriptorCount: baseInfo.RxDepth,
+				Options:           network.SessionFlagsPrimary,
+			},
+		},
 	}
 
 	for _, test := range tests {
