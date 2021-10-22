@@ -67,13 +67,13 @@ pub enum RealmError {
     #[error("failed to bind to the framework intermediary: {:?}", _0)]
     FailedBindToRealmBuilder(fcomponent::Error),
 
-    #[error("failed to use fuchsia.sys2.Realm: {:?}", _0)]
+    #[error("failed to use fuchsia.component.Realm: {:?}", _0)]
     FailedToUseRealm(fidl::Error),
 
     #[error("failed to create proxy: {:?}", _0)]
     CreateProxy(fidl::Error),
 
-    #[error("failed to connect to fuchsia.sys2.Realm: {:?}", _0)]
+    #[error("failed to connect to fuchsia.component.Realm: {:?}", _0)]
     ConnectToRealmService(anyhow::Error),
 
     #[error("failed to connect to the framework intermediary: {:?}", _0)]

@@ -485,8 +485,8 @@ impl Realm {
 
     /// Initializes the realm, but doesn't create it. Returns the root URL, the collection name,
     /// and the mocks runner. The caller should pass the URL and collection name into
-    /// `fuchsial.sys2.Realm#CreateChild`, and keep the mocks runner alive until after
-    /// `fuchsia.sys2.Realm#DestroyChild` has been called.
+    /// `fuchsial.component.Realm#CreateChild`, and keep the mocks runner alive until after
+    /// `fuchsia.component.Realm#DestroyChild` has been called.
     pub async fn initialize(mut self) -> Result<(String, String, mock::MocksRunner), Error> {
         self.flush_routes().await?;
         let root_url =
@@ -612,7 +612,7 @@ impl ScopedInstanceFactory {
         ScopedInstanceFactory { realm_proxy: None, collection_name: collection_name.into() }
     }
 
-    /// Use `realm_proxy` instead of the fuchsia.sys2.Realm protocol in this component's
+    /// Use `realm_proxy` instead of the fuchsia.component.Realm protocol in this component's
     /// incoming namespace. This can be used to start component's in a collection belonging
     /// to another component.
     pub fn with_realm_proxy(mut self, realm_proxy: fcomponent::RealmProxy) -> Self {

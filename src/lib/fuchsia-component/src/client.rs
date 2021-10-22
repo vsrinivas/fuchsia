@@ -340,7 +340,7 @@ pub async fn open_childs_exposed_directory(
 }
 
 /// Connects to a FIDL protocol exposed by a child that's within the `/svc` directory. Only works in
-/// CFv2, and only works if this component uses `fuchsia.sys2.Realm`.
+/// CFv2, and only works if this component uses `fuchsia.component.Realm`.
 pub async fn connect_to_childs_protocol<P: DiscoverableProtocolMarker>(
     child_name: String,
     collection_name: Option<String>,

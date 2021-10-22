@@ -20,7 +20,7 @@ namespace testing {
 class ScopedChild final {
  public:
   // Create a dynamic child component using the fuchsia.component.Realm API.
-  // |realm_proxy| must be bound to a connection to the fuchsia.sys2.Realm protocol.
+  // |realm_proxy| must be bound to a connection to the fuchsia.component.Realm protocol.
   // |collection| is the name of the collection to create the child under. This
   // field must refer to a name in the current component's manifest file.
   // |name| is the name to assign to the child.
