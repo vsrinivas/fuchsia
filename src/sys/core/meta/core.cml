@@ -988,7 +988,10 @@
         {
             protocol: [ "fuchsia.vulkan.loader.Loader" ],
             from: "#vulkan_loader",
-            to: "#appmgr",
+            to: [
+                "#appmgr",
+                "#session-manager",
+            ],
         },
         {
             directory: "dev",
