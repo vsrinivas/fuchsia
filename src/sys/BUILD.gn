@@ -22,6 +22,7 @@ group("tests") {
     "component_index:tests",
     "component_manager:tests",
     "component_test_runner:tests",
+    "core:tests",
     "device_settings:tests",
     "fuzzing:tests",
     "installer:tests",

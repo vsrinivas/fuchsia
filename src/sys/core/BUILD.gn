@@ -3,7 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
 import("//src/sys/core/build/core_shard.gni")
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":core_proxy_integration_test" ]
+}
 
 # This shard declares 3 storage capabilities: data (persistent), cache, and
 # temp.
@@ -19,4 +27,70 @@ core_shard("core-storage-restricted") {
 # them.
 core_shard("core-storage-unrestricted") {
   shard_file = "meta/unrestricted-storage.core_shard.cml"
+}
+
+executable("core_proxy") {
+  sources = [ "src/main.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/storage/vfs/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+fuchsia_component("fake_core") {
+  testonly = true
+  manifest = "meta/fake_core.cml"
+
+  # Disable check that requires syslog shard
+  check_includes = false
+  deps = [ ":core_proxy" ]
+}
+
+fuchsia_component("fake_appmgr") {
+  testonly = true
+  manifest = "meta/fake_appmgr.cml"
+  deps = [ ":fake_appmgr_bin" ]
+}
+
+rustc_binary("fake_appmgr_bin") {
+  name = "fake_appmgr"
+  edition = "2018"
+  source_root = "test/fake_appmgr.rs"
+  sources = [ "test/fake_appmgr.rs" ]
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+}
+
+rustc_test("core_proxy_integration_test_bin") {
+  name = "core_proxy_integration_test"
+  edition = "2018"
+  source_root = "test/integration_test.rs"
+  sources = [ "test/integration_test.rs" ]
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component-test",
+    "//third_party/rust_crates:log",
+  ]
+}
+
+fuchsia_unittest_package("core_proxy_integration_test") {
+  manifest = "meta/core_proxy_integration_test.cml"
+  deps = [
+    ":core_proxy_integration_test_bin",
+    ":fake_appmgr",
+    ":fake_core",
+    "//examples/components/routing/echo_server:echo_server_component",
+  ]
 }

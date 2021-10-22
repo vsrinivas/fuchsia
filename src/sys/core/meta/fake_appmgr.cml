@@ -1,0 +1,30 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/fake_appmgr",
+    },
+    capabilities: [
+        {
+            directory: "svc_from_sys",
+            rights: [ "rw*" ],
+            path: "/svc",
+        },
+    ],
+    use: [
+        {
+            directory: "svc_for_sys",
+            rights: [ "rw*" ],
+            path: "/svc_for_sys",
+        },
+    ],
+    expose: [
+        {
+            directory: "svc_from_sys",
+            from: "self",
+        },
+    ],
+}

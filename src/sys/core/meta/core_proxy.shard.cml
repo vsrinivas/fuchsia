@@ -1,0 +1,32 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    program: {
+        runner: "elf",
+        binary: "bin/core_proxy",
+    },
+    capabilities: [
+        {
+            directory: "svc_for_sys",
+            rights: [ "rw*" ],
+            path: "/svc_for_sys",
+        },
+    ],
+    use: [
+        {
+            directory: "svc_from_sys",
+            from: "#appmgr",
+            rights: [ "rw*" ],
+            path: "/svc_from_sys",
+            dependency: "weak_for_migration",
+        },
+    ],
+    offer: [
+        {
+            directory: "svc_for_sys",
+            from: "self",
+            to: "#appmgr",
+        },
+    ],
+}
