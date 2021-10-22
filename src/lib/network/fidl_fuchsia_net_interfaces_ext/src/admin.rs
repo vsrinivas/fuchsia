@@ -102,20 +102,38 @@ where
         .and_then(|opt| opt.ok_or_else(|| AddressStateProviderError::ChannelClosed))
 }
 
-type ControlEventToReason =
-    fn(fnet_interfaces_admin::ControlEvent) -> fnet_interfaces_admin::InterfaceRemovedReason;
+type ControlEventStreamFutureToReason =
+    fn(
+        (
+            Option<Result<fnet_interfaces_admin::ControlEvent, fidl::Error>>,
+            fnet_interfaces_admin::ControlEventStream,
+        ),
+    ) -> Result<Option<fnet_interfaces_admin::InterfaceRemovedReason>, fidl::Error>;
 
 /// A wrapper for fuchsia.net.interfaces.admin/Control that observes terminal
 /// events.
+#[derive(Clone)]
 pub struct Control {
     proxy: fnet_interfaces_admin::ControlProxy,
-    events: futures::stream::MapOk<fnet_interfaces_admin::ControlEventStream, ControlEventToReason>,
+    // Keeps a shared future that will resolve when the first event is seen on a
+    // ControlEventStream. The shared future makes the observed terminal event
+    // "sticky" for as long as we clone the future before polling it. Note that
+    // we don't drive the event stream to completion, the future is resolved
+    // when the first event is seen. That means this relies on the terminal
+    // event contract but does *not* enforce that the channel is closed
+    // immediately after or that no other events are issued.
+    terminal_event_fut: futures::future::Shared<
+        futures::future::Map<
+            futures::stream::StreamFuture<fnet_interfaces_admin::ControlEventStream>,
+            ControlEventStreamFutureToReason,
+        >,
+    >,
 }
 
 impl Control {
     /// Calls AddAddress on the proxy.
     pub fn add_address(
-        &mut self,
+        &self,
         address: &mut fidl_fuchsia_net::InterfaceAddress,
         parameters: fnet_interfaces_admin::AddressParameters,
         address_state_provider: fidl::endpoints::ServerEnd<
@@ -131,14 +149,14 @@ impl Control {
 
     /// Calls GetId on the proxy.
     pub async fn get_id(
-        &mut self,
+        &self,
     ) -> Result<u64, TerminalError<fnet_interfaces_admin::InterfaceRemovedReason>> {
         self.or_terminal_event(self.proxy.get_id()).await
     }
 
     /// Calls RemoveAddress on the proxy.
     pub async fn remove_address(
-        &mut self,
+        &self,
         address: &mut fidl_fuchsia_net::InterfaceAddress,
     ) -> Result<
         fnet_interfaces_admin::ControlRemoveAddressResult,
@@ -149,7 +167,7 @@ impl Control {
 
     /// Cals Enable on the proxy.
     pub async fn enable(
-        &mut self,
+        &self,
     ) -> Result<
         fnet_interfaces_admin::ControlEnableResult,
         TerminalError<fnet_interfaces_admin::InterfaceRemovedReason>,
@@ -159,7 +177,7 @@ impl Control {
 
     /// Cals Disable on the proxy.
     pub async fn disable(
-        &mut self,
+        &self,
     ) -> Result<
         fnet_interfaces_admin::ControlDisableResult,
         TerminalError<fnet_interfaces_admin::InterfaceRemovedReason>,
@@ -169,19 +187,31 @@ impl Control {
 
     /// Creates a new `Control` wrapper from `proxy`.
     pub fn new(proxy: fnet_interfaces_admin::ControlProxy) -> Self {
-        let events =
-            proxy.take_event_stream().map_ok::<_, ControlEventToReason>(|event| match event {
-                fnet_interfaces_admin::ControlEvent::OnInterfaceRemoved { reason } => reason,
-            });
-        Self { proxy, events }
+        let terminal_event_fut = proxy
+            .take_event_stream()
+            .into_future()
+            .map::<_, ControlEventStreamFutureToReason>(|(event, _stream)| {
+                event
+                    .map(|r| {
+                        r.map(|event| {
+                            let fidl_fuchsia_net_interfaces_admin::ControlEvent::OnInterfaceRemoved {
+                                reason,
+                            } = event;
+                            reason
+                        })
+                    })
+                    .transpose()
+            })
+            .shared();
+        Self { proxy, terminal_event_fut }
     }
 
     /// Waits for interface removal.
     pub async fn wait_termination(
         self,
     ) -> TerminalError<fnet_interfaces_admin::InterfaceRemovedReason> {
-        let Self { proxy: _, mut events } = self;
-        match events.try_next().await {
+        let Self { proxy: _, terminal_event_fut } = self;
+        match terminal_event_fut.await {
             Ok(Some(event)) => TerminalError::Terminal(event),
             Ok(None) => {
                 TerminalError::Fidl(fidl::Error::ClientRead(fuchsia_zircon::Status::PEER_CLOSED))
@@ -199,10 +229,10 @@ impl Control {
     }
 
     async fn or_terminal_event<R: Unpin>(
-        &mut self,
+        &self,
         fut: fidl::client::QueryResponseFut<R>,
     ) -> Result<R, TerminalError<fnet_interfaces_admin::InterfaceRemovedReason>> {
-        match futures::future::select(self.events.try_next(), fut).await {
+        match futures::future::select(self.terminal_event_fut.clone(), fut).await {
             futures::future::Either::Left((event, _fut)) => {
                 let event = event.map_err(TerminalError::Fidl)?;
                 let event = event.ok_or(TerminalError::Fidl(fidl::Error::ClientRead(
@@ -217,7 +247,7 @@ impl Control {
     }
 
     fn or_terminal_event_no_return(
-        &mut self,
+        &self,
         r: Result<(), fidl::Error>,
     ) -> Result<(), TerminalError<fnet_interfaces_admin::InterfaceRemovedReason>> {
         r.map_err(|err| {
@@ -226,14 +256,14 @@ impl Control {
             }
             // Poll event stream to see if we have a terminal event to return
             // instead of a FIDL closed error.
-            match self.events.next().now_or_never() {
-                Some(Some(Ok(terminal_event))) => TerminalError::Terminal(terminal_event),
-                Some(Some(Err(e))) => {
+            match self.terminal_event_fut.clone().now_or_never() {
+                Some(Ok(Some(terminal_event))) => TerminalError::Terminal(terminal_event),
+                Some(Err(e)) => {
                     // Prefer the error observed by the proxy.
                     let _: fidl::Error = e;
                     TerminalError::Fidl(err)
                 }
-                None | Some(None) => TerminalError::Fidl(err),
+                None | Some(Ok(None)) => TerminalError::Fidl(err),
             }
         })
     }
@@ -346,7 +376,7 @@ mod test {
         let (control, mut request_stream) =
             fidl::endpoints::create_proxy_and_stream::<fnet_interfaces_admin::ControlMarker>()
                 .expect("create proxy");
-        let mut control = super::Control::new(control);
+        let control = super::Control::new(control);
         const EXPECTED_EVENT: fnet_interfaces_admin::InterfaceRemovedReason =
             fnet_interfaces_admin::InterfaceRemovedReason::BadPort;
         let ((), ()) = futures::future::join(
@@ -385,7 +415,7 @@ mod test {
         let (control, mut request_stream) =
             fidl::endpoints::create_proxy_and_stream::<fnet_interfaces_admin::ControlMarker>()
                 .expect("create proxy");
-        let mut control = super::Control::new(control);
+        let control = super::Control::new(control);
         let ((), ()) = futures::future::join(
             async move {
                 matches::assert_matches!(
@@ -418,7 +448,7 @@ mod test {
         let (control, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<fnet_interfaces_admin::ControlMarker>()
                 .expect("create proxy");
-        let mut control = super::Control::new(control);
+        let control = super::Control::new(control);
         const CLOSE_REASON: fnet_interfaces_admin::InterfaceRemovedReason =
             fnet_interfaces_admin::InterfaceRemovedReason::BadPort;
         let () = request_stream
