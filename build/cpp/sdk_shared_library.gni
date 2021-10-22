@@ -265,7 +265,11 @@ template("sdk_shared_library") {
     forward_variables_from(invoker, [ "testonly" ])
     script = "//build/cpp/gen_sdk_prebuilt_meta_file.py"
 
-    inputs = sdk_metas + [ debug_lib_file ]
+    inputs = sdk_metas + [
+               debug_lib_file,
+               "//build/cpp/binaries.py",
+               "//build/images/elfinfo.py",
+             ]
 
     outputs = [
       debug_mapping_file,
