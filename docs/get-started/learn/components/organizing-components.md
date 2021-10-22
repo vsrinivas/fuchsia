@@ -251,7 +251,7 @@ in the component topology. This can happen in one of two ways:
   of another component in the tree. Static components are only created and
   destroyed when an update changes the component topology.
 * **Dynamically**: The instance is added or removed in a component `collection`
-  at runtime using the `fuchsia.sys2.Realm` protocol. Dynamic components are
+  at runtime using the `fuchsia.component.Realm` protocol. Dynamic components are
   destroyed on system shutdown.
 
 Once a component is destroyed, the framework removes its persistent state

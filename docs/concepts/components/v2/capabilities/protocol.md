@@ -137,7 +137,7 @@ Any component may `use` these capabilities by setting `framework` as the source
 without an accompanying `offer` from its parent.
 Fuchsia supports the following framework protocols:
 
--   [`fuchsia.sys2.Realm`][fidl-realm]: Allows a component to manage and bind to
+-   [`fuchsia.component.Realm`][fidl-realm]: Allows a component to manage and bind to
     its children. Scoped to the component's realm.
 -   [`fuchsia.component.Binder`][fidl-binder]: Allows a component to start
     another component.
@@ -146,7 +146,7 @@ Fuchsia supports the following framework protocols:
 {
     use: [
         {
-            protocol: "fuchsia.sys2.Realm",
+            protocol: "fuchsia.component.Realm",
             from: "framework",
         },
     ],

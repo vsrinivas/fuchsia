@@ -121,7 +121,7 @@ to the parent. Child components can be created one of two ways:
 * **Statically**: The parent declares the existence of the child in its own
   component declaration.
 * **Dynamically**: The parent adds the child to a component collection at
-  runtime using the `fuchsia.sys2.Realm` protocol.
+  runtime using the `fuchsia.component.Realm` protocol.
 
 Any parent component and all its children form a group within the tree called
 a **realm**. Realms enable a parent to control which capabilities flow into

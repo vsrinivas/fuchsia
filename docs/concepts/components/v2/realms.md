@@ -184,7 +184,7 @@ through the environment.
 ## The Realm framework protocol {#realm-framework-protocol}
 
 There is a [framework protocol][framework-protocols] available to every
-component, [`fuchsia.sys2.Realm`][realm.fidl]. The `Realm` protocol provides
+component, [`fuchsia.component.Realm`][realm.fidl]. The `Realm` protocol provides
 APIs for a component instance to manage the children in its realm, such as
 binding to children and creating dynamic children. See the linked FIDL
 definitions for full documentation.

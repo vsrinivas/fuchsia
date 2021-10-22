@@ -254,7 +254,7 @@ directly used by (or will be implicitly provided to) components without their
 parent offering these capabilities. Currently these are:
 
 -   `/pkg`: a handle to the package from which the component was created.
--   [`/svc/fuchsia.sys2.Realm`][realm.fidl]: a protocol which components can use
+-   [`/svc/fuchsia.component.Realm`][realm.fidl]: a protocol which components can use
     to manage their own realm.
 
 [binding]: #binding-to-a-component-and-sending-a-protocol-channel
