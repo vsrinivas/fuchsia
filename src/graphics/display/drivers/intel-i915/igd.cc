@@ -113,8 +113,6 @@ static uint8_t iboost_idx_to_level(uint8_t iboost_idx) {
 
 namespace i915 {
 
-IgdOpRegion::IgdOpRegion() {}
-
 IgdOpRegion::~IgdOpRegion() {
   if (igd_opregion_pages_base_) {
     zx::vmar::root_self()->unmap(igd_opregion_pages_base_, igd_opregion_pages_len_);
@@ -360,9 +358,8 @@ zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
   }
   igd_opregion_pages_ = zx::vmo(vmo);
 
-  status =
-      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, igd_opregion_pages_, 0,
-                                 igd_opregion_pages_len_, &igd_opregion_pages_base_);
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, igd_opregion_pages_, 0,
+                                      igd_opregion_pages_len_, &igd_opregion_pages_base_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to map IGD OpRegion (%d)", status);
     return status;

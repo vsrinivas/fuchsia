@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "src/devices/pci/testing/pci_protocol_fake.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
@@ -43,12 +43,12 @@ TEST(InterruptTest, Init) {
 
   pci.AddLegacyInterrupt();
   EXPECT_EQ(ZX_OK, InitInterrupts(&interrupts, parent.get(), &pci, &mmio_space));
-  EXPECT_EQ(1, pci.GetIrqCount());
+  EXPECT_EQ(1u, pci.GetIrqCount());
   EXPECT_EQ(PCI_IRQ_MODE_LEGACY, pci.GetIrqMode());
 
   pci.AddMsiInterrupt();
   EXPECT_EQ(ZX_OK, InitInterrupts(&interrupts, parent.get(), &pci, &mmio_space));
-  EXPECT_EQ(1, pci.GetIrqCount());
+  EXPECT_EQ(1u, pci.GetIrqCount());
   EXPECT_EQ(PCI_IRQ_MODE_MSI, pci.GetIrqMode());
 }
 

@@ -6,32 +6,18 @@
 
 #include <lib/mmio-ptr/fake.h>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "fake-dpcd-channel.h"
 #include "intel-i915.h"
 
 namespace {
 
-// TODO(fxbug.dev/86308): Remove this and use the library version once the test is migrated to
-// GTest.
-// Floating point comparison function for the brightness percentage tests below. We choose a delta
-// that is appropriate for the tests below.
-#define EXPECT_FLOAT_EQ(a, b)                                                                      \
-  do {                                                                                             \
-    float val1 = (a);                                                                              \
-    float val2 = (b);                                                                              \
-    if (std::abs(val1 - val2) >= 0.001) {                                                          \
-      ADD_FAILURE(#a " (value: %f) and " #b " (value: %f) not within epsilon=0.001 of each other", \
-                  val1, val2);                                                                     \
-    }                                                                                              \
-  } while (0)
-
 // Value used to allocate space for the fake i915 register MMIO space.
 // TODO(fxbug.dev/83998): Remove this once DpDisplay no longer depends on i915::Controller.
 constexpr uint32_t kMmioSize = 0xd0000;
 
-class DpDisplayTest : public zxtest::Test {
+class DpDisplayTest : public ::testing::Test {
  protected:
   DpDisplayTest()
       : controller_(nullptr),
@@ -147,7 +133,7 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInit) {
   ASSERT_NE(nullptr, display);
 
   EXPECT_TRUE(display->Init());
-  EXPECT_EQ(5400, display->link_rate_mhz());
+  EXPECT_EQ(5400u, display->link_rate_mhz());
 }
 
 // Tests that the link rate is set to a caller-assigned value upon initialization with
@@ -164,7 +150,7 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInitWithDpllState) {
       .dp_rate = registers::DpllControl1::LinkRate::k2160Mhz,
   };
   display->InitWithDpllState(&dpll_state);
-  EXPECT_EQ(4320, display->link_rate_mhz());
+  EXPECT_EQ(4320u, display->link_rate_mhz());
 }
 
 // Tests that the brightness value is obtained using the i915 south backlight control register

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "dp-display.h"
 #include "fake-dpcd-channel.h"
@@ -107,7 +107,7 @@ TEST(DpCapabilitiesTest, MaxLinkRate1620NoEdp) {
   ASSERT_TRUE(cap.is_ok());
   EXPECT_FALSE(cap.value().use_link_rate_table());
   ASSERT_EQ(1u, cap.value().supported_link_rates_mbps().size());
-  EXPECT_EQ(1620, cap.value().supported_link_rates_mbps()[0]);
+  EXPECT_EQ(1620u, cap.value().supported_link_rates_mbps()[0]);
 }
 
 // Tests that the list of supported link rates is populated correctly using the "Max Link Rate"
@@ -122,8 +122,8 @@ TEST(DpCapabilitiesTest, MaxLinkRate2700NoEdp) {
   ASSERT_TRUE(cap.is_ok());
   EXPECT_FALSE(cap.value().use_link_rate_table());
   ASSERT_EQ(2u, cap.value().supported_link_rates_mbps().size());
-  EXPECT_EQ(1620, cap.value().supported_link_rates_mbps()[0]);
-  EXPECT_EQ(2700, cap.value().supported_link_rates_mbps()[1]);
+  EXPECT_EQ(1620u, cap.value().supported_link_rates_mbps()[0]);
+  EXPECT_EQ(2700u, cap.value().supported_link_rates_mbps()[1]);
 }
 
 // Tests that the list of supported link rates is populated correctly using the "Max Link Rate"
@@ -138,9 +138,9 @@ TEST(DpCapabilitiesTest, MaxLinkRate5400NoEdp) {
   ASSERT_TRUE(cap.is_ok());
   EXPECT_FALSE(cap.value().use_link_rate_table());
   ASSERT_EQ(3u, cap.value().supported_link_rates_mbps().size());
-  EXPECT_EQ(1620, cap.value().supported_link_rates_mbps()[0]);
-  EXPECT_EQ(2700, cap.value().supported_link_rates_mbps()[1]);
-  EXPECT_EQ(5400, cap.value().supported_link_rates_mbps()[2]);
+  EXPECT_EQ(1620u, cap.value().supported_link_rates_mbps()[0]);
+  EXPECT_EQ(2700u, cap.value().supported_link_rates_mbps()[1]);
+  EXPECT_EQ(5400u, cap.value().supported_link_rates_mbps()[2]);
 }
 
 // Tests that the list of supported link rates is populated correctly using the "Max Link Rate"
@@ -155,10 +155,10 @@ TEST(DpCapabilitiesTest, MaxLinkRate8100NoEdp) {
   ASSERT_TRUE(cap.is_ok());
   EXPECT_FALSE(cap.value().use_link_rate_table());
   ASSERT_EQ(4u, cap.value().supported_link_rates_mbps().size());
-  EXPECT_EQ(1620, cap.value().supported_link_rates_mbps()[0]);
-  EXPECT_EQ(2700, cap.value().supported_link_rates_mbps()[1]);
-  EXPECT_EQ(5400, cap.value().supported_link_rates_mbps()[2]);
-  EXPECT_EQ(8100, cap.value().supported_link_rates_mbps()[3]);
+  EXPECT_EQ(1620u, cap.value().supported_link_rates_mbps()[0]);
+  EXPECT_EQ(2700u, cap.value().supported_link_rates_mbps()[1]);
+  EXPECT_EQ(5400u, cap.value().supported_link_rates_mbps()[2]);
+  EXPECT_EQ(8100u, cap.value().supported_link_rates_mbps()[3]);
 }
 
 // Tests that link rate discovery falls back to MAX_LINK_RATE if eDP v1.4 is supported but the
@@ -191,7 +191,7 @@ TEST(DpCapabilitiesTest, LinkRateTableOneEntry) {
   ASSERT_TRUE(cap.is_ok());
   EXPECT_TRUE(cap.value().use_link_rate_table());
   EXPECT_EQ(1u, cap.value().supported_link_rates_mbps().size());
-  EXPECT_EQ(20, cap.value().supported_link_rates_mbps()[0]);
+  EXPECT_EQ(20u, cap.value().supported_link_rates_mbps()[0]);
 }
 
 // Tests that the list of supported link rates is populated correctly when using the "Link Rate

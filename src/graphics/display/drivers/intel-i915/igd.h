@@ -206,7 +206,7 @@ static_assert(sizeof(lfp_backlight_t) == 113, "Bad struct size");
 
 class IgdOpRegion {
  public:
-  IgdOpRegion();
+  IgdOpRegion() = default;
   ~IgdOpRegion();
   zx_status_t Init(pci_protocol_t* pci);
 
@@ -257,13 +257,13 @@ class IgdOpRegion {
   bool ddi_supports_dp_[registers::kDdiCount] = {};
   bool ddi_is_edp_[registers::kDdiCount] = {};
 
-  bool edp_is_low_voltage_;
+  bool edp_is_low_voltage_ = false;
   uint8_t panel_type_;
   double min_backlight_brightness_;
 
   struct {
-    uint8_t hdmi_iboost;
-    uint8_t dp_iboost;
+    uint8_t hdmi_iboost = 0;
+    uint8_t dp_iboost = 0;
   } iboosts_[registers::kDdiCount];
   uint8_t hdmi_buffer_translation_idx_[registers::kDdiCount];
 };

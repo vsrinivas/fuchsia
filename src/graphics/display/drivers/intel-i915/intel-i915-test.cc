@@ -17,10 +17,13 @@
 #include <type_traits>
 #include <vector>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "src/devices/pci/testing/pci_protocol_fake.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
+
+#define ASSERT_OK(x) ASSERT_EQ(ZX_OK, (x))
+#define EXPECT_OK(x) EXPECT_EQ(ZX_OK, (x))
 
 namespace sysmem = fuchsia_sysmem;
 
@@ -84,7 +87,7 @@ class FakeSysmem : public ddk::SysmemProtocol<FakeSysmem> {
   zx_status_t SysmemUnregisterSecureMem() { return ZX_ERR_NOT_SUPPORTED; }
 };
 
-class IntegrationTest : public zxtest::Test {
+class IntegrationTest : public ::testing::Test {
  protected:
   void SetUp() final {
     SetFramebuffer({});
@@ -202,9 +205,9 @@ TEST_F(IntegrationTest, BindAndInit) {
 
   // There should be two published devices: one "intel_i915" device rooted at |parent()|, and a
   // grandchild "intel-gpu-core" device.
-  ASSERT_EQ(1, parent()->child_count());
+  ASSERT_EQ(1u, parent()->child_count());
   auto dev = parent()->GetLatestChild();
-  ASSERT_EQ(1, dev->child_count());
+  ASSERT_EQ(1u, dev->child_count());
 
   // Perform the async initialization and wait for a response.
   dev->InitOp();
@@ -215,7 +218,7 @@ TEST_F(IntegrationTest, BindAndInit) {
   EXPECT_TRUE(dev->UnbindReplyCalled());
 
   mock_ddk::ReleaseFlaggedDevices(parent());
-  EXPECT_EQ(0, dev->child_count());
+  EXPECT_EQ(0u, dev->child_count());
 }
 
 // Tests that the device can initialize even if bootloader framebuffer information is not available
@@ -253,7 +256,7 @@ TEST_F(IntegrationTest, GttAllocationDoesNotOverlapBootloaderFramebuffer) {
 
   // There should be two published devices: one "intel_i915" device rooted at |parent()|, and a
   // grandchild "intel-gpu-core" device.
-  ASSERT_EQ(1, parent()->child_count());
+  ASSERT_EQ(1u, parent()->child_count());
   auto dev = parent()->GetLatestChild();
   i915::Controller* ctx = dev->GetDeviceContext<i915::Controller>();
 

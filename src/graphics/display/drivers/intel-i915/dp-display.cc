@@ -842,7 +842,7 @@ bool DpDisplay::LinkTrainingSetup() {
     ddi_buf_trans_low.WriteTo(mmio_space());
   }
 
-  uint8_t i_boost_val = i_boost_override ? i_boost_override : i_boost;
+  const uint8_t i_boost_val = i_boost_override ? i_boost_override : i_boost;
   auto disio_cr_tx_bmu = registers::DisplayIoCtrlRegTxBmu::Get().ReadFrom(mmio_space());
   disio_cr_tx_bmu.set_disable_balance_leg(!i_boost && !i_boost_override);
   disio_cr_tx_bmu.tx_balance_leg_select(ddi()).set(i_boost_val);
