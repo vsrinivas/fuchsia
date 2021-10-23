@@ -30,7 +30,8 @@ protocol BaseSocket {
         value bool;
     }) error fuchsia.posix.Errno;
 
-    // NOTE: get `SOL_SOCKET` -> `SO_TYPE` is implemented in the client (libfdio).
+    // NOTE: get `SOL_SOCKET` -> `SO_TYPE` is implemented in the client
+    // (libfdio).
 
     /// Get `SOL_SOCKET` -> `SO_ERROR`.
     /// Returns the last error if there is an error set on the socket.
@@ -112,8 +113,10 @@ protocol BaseSocket {
 
     // NOTE: get `SOL_SOCKET` -> `SO_PEERCRED` not supported in netstack.
 
-    // NOTE: get/set `SOL_SOCKET` -> `SO_SNDTIMEO` is implemented in the client (libfdio).
-    // NOTE: get/set `SOL_SOCKET` -> `SO_RCVTIMEO` is implemented in the client (libfdio).
+    // NOTE: get/set `SOL_SOCKET` -> `SO_SNDTIMEO` is implemented in the client
+    // (libfdio).
+    // NOTE: get/set `SOL_SOCKET` -> `SO_RCVTIMEO` is implemented in the client
+    // (libfdio).
 
     /// Get `SOL_SOCKET` -> `SO_ACCEPTCONN`.
     GetAcceptConn() -> (struct {
@@ -599,30 +602,34 @@ type SendMsgFlags = strict bits : uint16 {
 
 /// A datagram socket.
 ///
-/// This type's [`fuchsia.io.Node/Describe`] method returns an eventpair which is used to signal
-/// additional information about the state of the socket such as readiness or shutdown-ness.
+/// This type's [`fuchsia.io.Node/Describe`] method returns an eventpair which
+/// is used to signal additional information about the state of the socket such
+/// as readiness or shutdown-ness.
 ///
-/// All methods on this type are nonblocking; their exact behaviors match their Linux counterparts.
+/// All methods on this type are nonblocking; their exact behaviors match their
+/// Linux counterparts.
 ///
-/// *Warning:* This protocol is not yet ready for direct use by clients. Instead, clients should
-/// use the BSD sockets API to interact with sockets. We plan to change this protocol substantially
-/// and clients that couple directly to this protocol will make those changes more difficult.
+/// *Warning:* This protocol is not yet ready for direct use by clients.
+/// Instead, clients should use the BSD sockets API to interact with sockets.
+/// We plan to change this protocol substantially and clients that couple
+/// directly to this protocol will make those changes more difficult.
 protocol DatagramSocket {
     compose BaseNetworkSocket;
 
     /// Receives a message from the socket.
     ///
-    /// + request `want_addr` request message's source address information to be
-    ///   returned.
+    /// + request `want_addr` request message's source address information to
+    ///   be returned.
     /// + request `data_len` the maximum allowed length of the response data
     ///   buffer.
     /// + request `want_control` request ancillary data to be returned.
     /// + request `flags` flags for the receive request.
-    /// - response `addr` the message's source address information, if requested.
+    /// - response `addr` the message's source address information, if
+    ///   requested.
     /// - response `data` the message.
     /// - response `control` control messages, if requested.
-    /// - response `truncated` indicates whether or not the returned message was
-    ///   truncated.
+    /// - response `truncated` indicates whether or not the returned message
+    ///   was truncated.
     RecvMsg(struct {
         want_addr bool;
         data_len uint32;
@@ -637,8 +644,8 @@ protocol DatagramSocket {
 
     /// Sends a message on the socket.
     ///
-    /// + request `addr` the address to send the message to. If unset, will send
-    ///   to the connected peer.
+    /// + request `addr` the address to send the message to. If unset, will
+    ///   send to the connected peer.
     /// + request `data` the message.
     /// + request `control` ancillary data.
     /// + request `flags` flags for the send request.
@@ -665,21 +672,24 @@ protocol DatagramSocket {
 
 /// A stream socket.
 ///
-/// This type's [`fuchsia.io.Node/Describe`] method returns a socket which is used to transfer data
-/// to and from the caller. Signals are used to communicate additional information about the state
-/// of the socket such as connectedness and the presence of incoming connections in the case of a
+/// This type's [`fuchsia.io.Node/Describe`] method returns a socket which is
+/// used to transfer data to and from the caller. Signals are used to
+/// communicate additional information about the state of the socket such as
+/// connectedness and the presence of incoming connections in the case of a
 /// listening socket.
 ///
-/// All methods on this type are nonblocking; their exact behaviors match their Linux counterparts.
+/// All methods on this type are nonblocking; their exact behaviors match their
+/// Linux counterparts.
 ///
-/// *Warning:* This protocol is not yet ready for direct use by clients. Instead, clients should
-/// use the BSD sockets API to interact with sockets. We plan to change this protocol substantially
-/// and clients that couple directly to this protocol will make those changes more difficult.
+/// *Warning:* This protocol is not yet ready for direct use by clients.
+/// Instead, clients should use the BSD sockets API to interact with sockets.
+/// We plan to change this protocol substantially and clients that couple
+/// directly to this protocol will make those changes more difficult.
 protocol StreamSocket {
     compose BaseNetworkSocket;
 
-    /// Begins listening for new incoming connections. At most `backlog` connections will be
-    /// buffered.
+    /// Begins listening for new incoming connections. At most `backlog`
+    /// connections will be buffered.
     Listen(struct {
         backlog int16;
     }) -> (struct {}) error fuchsia.posix.Errno;
@@ -945,35 +955,37 @@ type Domain = strict enum : int16 {
 
 /// Protocols supported by [`fuchsia.posix.socket/DatagramSocket`].
 ///
-/// `DatagramSocketProtocol` enumerates the protocols supported by the network stack over datagram
-/// sockets.
-// NOTE: This list can be expanded to accommodate other protocols should the need arise. Most
-// notably, there exists the question on whether to support raw IP sockets and what the access model
-// for those should be.
+/// `DatagramSocketProtocol` enumerates the protocols supported by the network
+/// stack over datagram sockets.
+// NOTE: This list can be expanded to accommodate other protocols should the
+// need arise. Most notably, there exists the question on whether to support
+// raw IP sockets and what the access model for those should be.
 type DatagramSocketProtocol = strict enum {
     /// UDP (User Datagram Protocol).
     ///
-    /// A UDP socket is equivalent to the POSIX API of `SOCK_DGRAM` with a protocol of 0 or
-    /// `IPPROTO_UDP`.
+    /// A UDP socket is equivalent to the POSIX API of `SOCK_DGRAM` with a
+    /// protocol of 0 or `IPPROTO_UDP`.
     UDP = 1;
     /// ICMP (Internet Control Message Protocol) echo.
     ///
-    /// An ICMP echo socket is equivalent to the POSIX API of `SOCK_DGRAM` with a protocol of
-    /// `IPPROTO_ICMP` `IPPROTO_ICMPV6` (depending on provided domain).
+    /// An ICMP echo socket is equivalent to the POSIX API of `SOCK_DGRAM` with
+    /// a protocol of `IPPROTO_ICMP` `IPPROTO_ICMPV6` (depending on provided
+    /// domain).
     ///
-    /// Datagrams sent over an ICMP echo socket *must* have a valid ICMP or ICMPv6 echo header.
+    /// Datagrams sent over an ICMP echo socket *must* have a valid ICMP or
+    /// ICMPv6 echo header.
     ICMP_ECHO = 2;
 };
 
 /// Protocols supported by [`fuchsia.posix.socket/StreamSocket`].
 ///
-/// `StreamSocketProtocol` enumerates the protocols supported by the network stack over stream
-/// sockets.
+/// `StreamSocketProtocol` enumerates the protocols supported by the network
+/// stack over stream sockets.
 type StreamSocketProtocol = strict enum {
     /// TCP (Transmission Control Protocol).
     ///
-    /// A TCP socket is equivalent to the POSIX API of `SOCK_STREAM` with a protocol of 0 or
-    /// `IPPROTO_TCP`.
+    /// A TCP socket is equivalent to the POSIX API of `SOCK_STREAM` with a
+    /// protocol of 0 or `IPPROTO_TCP`.
     TCP = 0;
 };
 
@@ -1001,9 +1013,10 @@ type InterfaceFlags = strict bits : uint16 {
 
 /// Provider implements the POSIX sockets API.
 ///
-/// *Warning:* This protocol is not yet ready for direct use by clients. Instead, clients should
-/// use the BSD sockets API to interact with sockets. We plan to change this protocol substantially
-/// and clients that couple directly to this protocol will make those changes more difficult.
+/// *Warning:* This protocol is not yet ready for direct use by clients.
+/// Instead, clients should use the BSD sockets API to interact with sockets.
+/// We plan to change this protocol substantially and clients that couple
+/// directly to this protocol will make those changes more difficult.
 @discoverable
 protocol Provider {
     /// Requests a stream socket with the specified parameters.
@@ -1021,22 +1034,22 @@ protocol Provider {
         s client_end:DatagramSocket;
     }) error fuchsia.posix.Errno;
 
-    /// Looks up an interface by its index and returns its name. Returns `ZX_ERR_NOT_FOUND` if the
-    /// specified index doesn't exist.
+    /// Looks up an interface by its index and returns its name. Returns
+    /// `ZX_ERR_NOT_FOUND` if the specified index doesn't exist.
     InterfaceIndexToName(struct {
         index uint64;
     }) -> (struct {
         name fuchsia.net.interfaces.name;
     }) error zx.status;
-    /// Looks up an interface by its name and returns its index. Returns `ZX_ERR_NOT_FOUND` if the
-    /// specified name doesn't exist.
+    /// Looks up an interface by its name and returns its index. Returns
+    /// `ZX_ERR_NOT_FOUND` if the specified name doesn't exist.
     InterfaceNameToIndex(struct {
         name fuchsia.net.interfaces.name;
     }) -> (struct {
         index uint64;
     }) error zx.status;
-    /// Looks up an interface by its name and returns its flags. Returns `ZX_ERR_NOT_FOUND` if the
-    /// specified name doesn't exist.
+    /// Looks up an interface by its name and returns its flags. Returns
+    /// `ZX_ERR_NOT_FOUND` if the specified name doesn't exist.
     InterfaceNameToFlags(struct {
         name fuchsia.net.interfaces.name;
     }) -> (struct {

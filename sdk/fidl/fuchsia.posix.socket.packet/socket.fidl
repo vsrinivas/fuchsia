@@ -41,7 +41,8 @@ type ProtocolAssociation = strict union {
 };
 
 /// The type of a hardware.
-// `ARPHDR_*` values from `//zircon/third_party/ulib/musl/include/net/if_arp.h`.
+// `ARPHDR_*` values from
+// `//zircon/third_party/ulib/musl/include/net/if_arp.h`.
 type HardwareType = strict enum {
     /// Hardware that operates only at the network layer; a pure L3 interface.
     ///
@@ -59,7 +60,8 @@ type HardwareType = strict enum {
 };
 
 /// The type of a packet.
-// `PACKET_*` values from `//zircon/third_party/ulib/musl/include/netpacket/packet.h`.
+// `PACKET_*` values from
+// `//zircon/third_party/ulib/musl/include/netpacket/packet.h`.
 type PacketType = strict enum {
     /// A packet that arrived at its destination.
     HOST = 1;
@@ -73,8 +75,8 @@ type PacketType = strict enum {
     /// A packet that arrived at a host that isn't its destination.
     OTHER_HOST = 4;
 
-    /// A packet that is being sent on a local interface, regardless of how
-    /// it is being sent (unicasted, multicasted, broadcasted).
+    /// A packet that is being sent on a local interface, regardless of how it
+    /// is being sent (unicasted, multicasted, broadcasted).
     OUTGOING = 5;
 
 // Intentionally do not include PACKET_LOOPBACK or PACKET_FASTROUTE as those
@@ -118,11 +120,13 @@ type PacketInfo = struct {
 ///
 /// This interface is essentially POSIX.
 ///
-/// All methods on this type are nonblocking; their exact behaviors match their Linux counterparts.
+/// All methods on this type are nonblocking; their exact behaviors match their
+/// Linux counterparts.
 ///
-/// *Warning:* This protocol is not yet ready for direct use by clients. Instead, clients should
-/// use the BSD sockets API to interact with sockets. We plan to change this protocol substantially
-/// and clients that couple directly to this protocol will make those changes more difficult.
+/// *Warning:* This protocol is not yet ready for direct use by clients.
+/// Instead, clients should use the BSD sockets API to interact with sockets.
+/// We plan to change this protocol substantially and clients that couple
+/// directly to this protocol will make those changes more difficult.
 // TODO(https://fxbug.dev/85597): Implement RFC-0109 for packet sockets.
 protocol Socket {
     compose fuchsia.posix.socket.BaseSocket;
@@ -165,8 +169,8 @@ protocol Socket {
     /// - response `packet_info` information about the packet, if requested.
     /// - response `data` the message.
     /// - response `control_data` control messages, if requested.
-    /// - response `truncated` indicates whether or not the returned message was
-    ///   truncated.
+    /// - response `truncated` indicates whether or not the returned message
+    ///   was truncated.
     RecvMsg(struct {
         want_packet_info bool;
         data_len uint32;
