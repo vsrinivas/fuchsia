@@ -10,13 +10,19 @@
 #include <kernel/cpu.h>
 #include <kernel/thread.h>
 
-struct int_handler_saved_state_t {};
+struct int_handler_saved_state_t {
+  bool blocking_disallowed;
+};
 
 // Start the main part of handling an interrupt in which preemption and
 // blocking are disabled.  This must be matched by a later call to
 // int_handler_finish().
 inline void int_handler_start(int_handler_saved_state_t* state) {
+  // Save the current blocking_disallowed value so that we can restore it during
+  // int_handler_finish.
+  state->blocking_disallowed = arch_blocking_disallowed();
   arch_set_blocking_disallowed(true);
+
   PreemptionState& preemption_state = Thread::Current::preemption_state();
 
   // Disable all reschedules at least until the interrupt is finishing up.
@@ -50,7 +56,12 @@ inline void int_handler_start(int_handler_saved_state_t* state) {
   // preemption is now enabled, indicate that the caller should perform the
   // preemption.
   const bool do_preempt = preemption_state.PreemptReenableDelayFlush();
-  arch_set_blocking_disallowed(false);
+
+  // We can't blindly set blocking_disallowed to false because it's possible
+  // this interrupt handler interrupted a context where blocking_disallowed was
+  // true.  Instead, simply restore the value we saved during int_handler_start.
+  arch_set_blocking_disallowed(state->blocking_disallowed);
+
   return do_preempt;
 }
 
