@@ -6,6 +6,13 @@
 
 source_set("tests") {
   # TODO: testonly = true
-  sources = [ "backtrace_tests.cc" ]
-  deps = [ "//zircon/kernel/lib/unittest" ]
+  sources = [
+    "backtrace_tests.cc",
+    "cpu_context_exchange_tests.cc",
+  ]
+
+  deps = [
+    "//zircon/kernel/lib/backtrace:headers",
+    "//zircon/kernel/lib/unittest",
+  ]
 }

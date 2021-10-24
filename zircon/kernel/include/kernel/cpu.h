@@ -50,4 +50,16 @@ static inline cpu_num_t lowest_cpu_set(cpu_mask_t mask) {
   return (cpu_num_t)(__builtin_ctz(mask));
 }
 
+// Removes one CPU from the mask and returns its ID.
+//
+// Returns INVALID_CPU if the mask is empty.
+static inline cpu_num_t remove_cpu_from_mask(cpu_mask_t& mask) {
+  if (mask == 0) {
+    return INVALID_CPU;
+  }
+  cpu_num_t index_of_lowest_set_bit = __builtin_ffsl(mask) - 1;
+  mask &= ~cpu_num_to_mask(index_of_lowest_set_bit);
+  return index_of_lowest_set_bit;
+}
+
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_CPU_H_

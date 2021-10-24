@@ -14,6 +14,7 @@
 #include <inttypes.h>
 #include <lib/arch/x86/boot-cpuid.h>
 #include <lib/arch/x86/lbr.h>
+#include <lib/backtrace/global_cpu_context_exchange.h>
 #include <lib/console.h>
 #include <lib/version.h>
 #include <platform.h>
@@ -32,6 +33,7 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/interrupts.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/mmu_mem_types.h>
 #include <arch/x86/mp.h>
@@ -39,6 +41,7 @@
 #include <hwreg/x86msr.h>
 #include <kernel/cpu.h>
 #include <kernel/mp.h>
+#include <kernel/percpu.h>
 #include <lk/init.h>
 #include <lk/main.h>
 #include <vm/vm.h>
@@ -136,6 +139,42 @@ int LbrCtrl(int argc, const cmd_args* argv, uint32_t flags) {
     print_usage();
     return 1;
   }
+
+  return 0;
+}
+
+int GetContext(int argc, const cmd_args* argv, uint32_t flags) {
+  auto print_usage = [&]() {
+    printf("usage:\n");
+    printf("%s context <cpu_id> <timeout_ms>\n", argv[0].str);
+  };
+
+  if (argc < 4) {
+    printf("not enough arguments\n");
+    print_usage();
+    return 1;
+  }
+
+  cpu_num_t target = static_cast<cpu_num_t>(argv[2].u);
+  if (target >= percpu::processor_count()) {
+    printf("invalid cpu_id: %u\n", target);
+    return 1;
+  }
+
+  const zx_duration_t timeout = ZX_MSEC(argv[2].u);
+
+  printf("requesting context of CPU-%u\n", target);
+  CpuContext context;
+  zx_status_t status;
+  {
+    InterruptDisableGuard irqd;
+    status = g_cpu_context_exchange.RequestContext(target, timeout, context);
+  }
+  if (status != ZX_OK) {
+    printf("error: %d\n", status);
+    return 1;
+  }
+  context.backtrace.Print();
 
   return 0;
 }
@@ -328,6 +367,7 @@ static int cmd_cpu(int argc, const cmd_args* argv, uint32_t flags) {
     printf("%s rdmsr <cpu_id> <msr_id>\n", argv[0].str);
     printf("%s wrmsr <cpu_id> <msr_id> <value>\n", argv[0].str);
     printf("%s lbr <subcommand>\n", argv[0].str);
+    printf("%s context <cpu_id> <timeout_ms>\n", argv[0].str);
     return ZX_ERR_INTERNAL;
   }
 
@@ -349,6 +389,8 @@ static int cmd_cpu(int argc, const cmd_args* argv, uint32_t flags) {
     write_msr_on_cpu((uint)argv[2].u, (uint)argv[3].u, argv[4].u);
   } else if (!strcmp(argv[1].str, "lbr")) {
     return LbrCtrl(argc, argv, flags);
+  } else if (!strcmp(argv[1].str, "context")) {
+    return GetContext(argc, argv, flags);
   } else {
     printf("unknown command\n");
     goto usage;

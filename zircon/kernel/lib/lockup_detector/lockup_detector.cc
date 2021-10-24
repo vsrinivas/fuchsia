@@ -36,6 +36,10 @@
 #include <arch/arm64/dap.h>
 #endif
 
+#if defined(__x86_64__)
+#include <lib/backtrace/global_cpu_context_exchange.h>
+#endif
+
 // Counter for the number of lockups detected.
 KCOUNTER(counter_lockup_cs_count, "lockup_detector.critical_section.count")
 
@@ -65,6 +69,7 @@ inline zx_ticks_t DurationToTicks(zx_duration_t duration) {
 #if defined(__aarch64__)
 void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target) {
   arm64_dap_processor_state state;
+  // TODO(maniscalco): Update the DAP to make use of lockup_detector_diagnostic_query_timeout_ms.
   zx_status_t result = arm64_dap_read_processor_state(cpu, &state);
 
   if (result != ZX_OK) {
@@ -123,7 +128,25 @@ void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target) {
 }
 #elif defined(__x86_64__)
 void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target) {
-  fprintf(output_target, "Regs and Backtrace unavailable for CPU-%u on x64\n", cpu);
+  DEBUG_ASSERT(arch_ints_disabled());
+
+  zx_duration_t timeout = ZX_MSEC(gBootOptions->lockup_detector_diagnostic_query_timeout_ms);
+  if (timeout == 0) {
+    fprintf(output_target, "diagnostic query disabled (timeout is 0)\n");
+    return;
+  }
+
+  CpuContext context;
+  zx_status_t status = g_cpu_context_exchange.RequestContext(cpu, timeout, context);
+  if (status != ZX_OK) {
+    fprintf(output_target, "failed to get context of CPU-%u: %d\n", cpu, status);
+    return;
+  }
+
+  printf("cpu context follows\n");
+  context.backtrace.Print(output_target);
+  PrintFrame(output_target, context.frame);
+  printf("end of cpu context\n");
 }
 #else
 #error "Unknown architecture! Neither __aarch64__ nor __x86_64__ are defined"
@@ -584,11 +607,12 @@ void lockup_primary_init() {
 
   dprintf(INFO,
           "lockup_detector: heartbeats %s, period is %" PRId64 " ms, threshold is %" PRId64
-          " ms, fatal threshold is %" PRId64 " ms\n",
+          " ms, fatal threshold is %" PRId64 " ms, dump diagnostics timeout is %" PRIu64 " ms\n",
           (HeartbeatLockupChecker::period() > 0) ? "enabled" : "disabled",
           HeartbeatLockupChecker::period() / ZX_MSEC(1),
           HeartbeatLockupChecker::threshold() / ZX_MSEC(1),
-          HeartbeatLockupChecker::fatal_threshold() / ZX_MSEC(1));
+          HeartbeatLockupChecker::fatal_threshold() / ZX_MSEC(1),
+          gBootOptions->lockup_detector_diagnostic_query_timeout_ms);
 
   // Initialize parameters for the critical section checks, but only if the
   // heartbeat mechanism is enabled.  If the heartbeat mechanism is disabled, no

@@ -164,6 +164,7 @@ zx_library("x86") {
     "//zircon/kernel/dev/iommu/intel",
     "//zircon/kernel/lib/acpi_lite",
     "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/backtrace",
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/code-patching:headers",
     "//zircon/kernel/lib/console",

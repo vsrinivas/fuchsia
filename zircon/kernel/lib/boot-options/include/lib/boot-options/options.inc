@@ -171,6 +171,14 @@ See also [lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
 When 0, heartbeat crashlog generation and reboot is disabled.
 )""")
 
+DEFINE_OPTION("kernel.lockup-detector.diagnostic-query-timeout-ms", uint64_t,
+              lockup_detector_diagnostic_query_timeout_ms, {100}, R"""(
+The maximum amount of time to spend trying to get diagnostic data from an
+unresponsive CPU before giving up.
+
+When 0, querying for diagnostic data is disabled.
+)""")
+
 DEFINE_OPTION("kernel.oom.behavior", OomBehavior, oom_behavior, {OomBehavior::kReboot}, R"""(
 This option can be used to configure the behavior of the kernel when
 encountering an out-of-memory (OOM) situation. Valid values are `jobkill`, and

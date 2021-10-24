@@ -166,6 +166,14 @@ See also [lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
 
 When 0, heartbeat crashlog generation and reboot is disabled.
 
+### kernel.lockup-detector.diagnostic-query-timeout-ms=\<uint64_t>
+**Default:** `0x64`
+
+The maximum amount of time to spend trying to get diagnostic data from an
+unresponsive CPU before giving up.
+
+When 0, querying for diagnostic data is disabled.
+
 ### kernel.oom.behavior=[reboot | jobkill]
 **Default:** `reboot`
 

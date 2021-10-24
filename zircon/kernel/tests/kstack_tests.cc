@@ -53,18 +53,6 @@ bool kstack_interrupt_depth_test_no_safestack() {
 }
 #endif
 
-// Removes one CPU from the mask and returns its ID.
-//
-// Returns INVALID_CPU if the mask is empty.
-cpu_num_t RemoveCpuFromMask(cpu_mask_t& mask) {
-  if (mask == 0) {
-    return INVALID_CPU;
-  }
-  cpu_num_t index_of_lowest_set_bit = __builtin_ffsl(mask) - 1;
-  mask &= ~cpu_num_to_mask(index_of_lowest_set_bit);
-  return index_of_lowest_set_bit;
-}
-
 // Test that we can handle an mp_sync_exec callback while half the kernel stack is used.
 bool kstack_mp_sync_exec_test() {
   BEGIN_TEST;
@@ -72,8 +60,8 @@ bool kstack_mp_sync_exec_test() {
   // We need 2 or more CPUs for this test, CPU-A and CPU-B.  The thread calling into this test will
   // be pinned to CPU-A and the thread spawned by this test will be pinned to CPU-B.
   cpu_mask_t mask = mp_get_active_mask();
-  const cpu_num_t cpu_a = RemoveCpuFromMask(mask);
-  const cpu_num_t cpu_b = RemoveCpuFromMask(mask);
+  const cpu_num_t cpu_a = remove_cpu_from_mask(mask);
+  const cpu_num_t cpu_b = remove_cpu_from_mask(mask);
   if (cpu_a == INVALID_CPU || cpu_b == INVALID_CPU) {
     printf("not enough active cpus; skipping test\n");
     END_TEST;

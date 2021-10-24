@@ -8,6 +8,7 @@
 
 #include <bits.h>
 #include <debug.h>
+#include <lib/backtrace/global_cpu_context_exchange.h>
 #include <lib/counters.h>
 #include <lib/crashlog.h>
 #include <lib/fit/defer.h>
@@ -145,7 +146,22 @@ static void x86_debug_handler(iframe_t* frame) {
   exception_die(frame, "unhandled hw breakpoint, halting\n");
 }
 
-static void x86_nmi_handler(iframe_t* frame) {}
+static void x86_nmi_handler(iframe_t* frame) {
+  // Generally speaking, NMIs don't "stack".  That is, further NMIs are disabled
+  // until the execution of the next IRET instruction so to prevent reentrancy
+  // we must take care to not execute an IRET until the NMI handler is complete.
+  //
+  // Keeping interrupts disabled and avoiding faults is critical because the
+  // *next* IRET to execute will enable further NMIs.  Consider what might
+  // happen if we enabled interrupts here.  If interrupts were enabled, a timer
+  // interrupt might fire and stack the timer interrupt handler on top of this
+  // NMI handler.  When the timer interrupt handler completes, and issues an
+  // IRET, NMIs would be re-enabled even though this handler is still on the
+  // stack.  We'd be open to unexpected reentrancy.
+  DEBUG_ASSERT(arch_ints_disabled());
+
+  g_cpu_context_exchange.HandleRequest(frame->rbp, *frame);
+}
 
 static void x86_breakpoint_handler(iframe_t* frame) {
   if (try_dispatch_user_exception(frame, ZX_EXCP_SW_BREAKPOINT))
