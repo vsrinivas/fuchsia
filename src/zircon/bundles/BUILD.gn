@@ -9,6 +9,5 @@ group("debugging") {
     "//src/zircon/bin/ktrace",
     "//src/zircon/bin/loadgen",
     "//zircon/third_party/uapp/dash",
-    "//zircon/third_party/uapp/kilo",
   ]
 }
