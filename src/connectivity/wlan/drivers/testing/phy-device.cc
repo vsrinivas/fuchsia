@@ -218,6 +218,16 @@ void PhyDevice::ClearCountry(ClearCountryCallback callback) {
   callback(ZX_OK);
 }
 
+void PhyDevice::SetPsMode(wlan_common::PowerSaveType req, SetPsModeCallback callback) {
+  zxlogf(INFO, "testing/PHY: SetPsMode [%d]", req);
+  callback(ZX_OK);
+}
+
+void PhyDevice::GetPsMode(GetPsModeCallback callback) {
+  zxlogf(INFO, "testing/PHY: GetPSMode");
+  callback(fpromise::error(ZX_ERR_NOT_SUPPORTED));
+}
+
 zx_status_t PhyDevice::Connect(zx::channel request) {
   return dispatcher_->AddBinding(std::move(request), this);
 }

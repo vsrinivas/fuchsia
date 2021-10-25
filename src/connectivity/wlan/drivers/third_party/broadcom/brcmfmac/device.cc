@@ -19,6 +19,7 @@
 #include <ddktl/init-txn.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/feature.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
@@ -266,6 +267,19 @@ zx_status_t Device::WlanphyImplGetCountry(wlanphy_country_t* out_country) {
     return ZX_ERR_INVALID_ARGS;
   }
   return WlanInterface::GetCountry(brcmf_pub_.get(), out_country);
+}
+
+zx_status_t Device::WlanphyImplSetPsMode(const wlanphy_ps_mode_t* ps_mode) {
+  BRCMF_DBG(WLANPHY, "Setting power save mode %d", ps_mode->ps_mode);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Device::WlanphyImplGetPsMode(wlanphy_ps_mode_t* out_ps_mode) {
+  BRCMF_DBG(WLANPHY, "Received request for PS mode from SME");
+  if (out_ps_mode == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 void Device::DestroyAllIfaces(void) {

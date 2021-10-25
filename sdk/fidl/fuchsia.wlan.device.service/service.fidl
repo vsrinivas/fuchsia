@@ -78,6 +78,18 @@ type ClearCountryRequest = struct {
     phy_id uint16;
 };
 
+type SetPsModeRequest = struct {
+    /// Interface's PHY ID
+    phy_id uint16;
+    /// Power Save Mode bit mask
+    ps_mode fuchsia.wlan.common.PowerSaveType;
+};
+
+type GetPsModeResponse = struct {
+    /// Power Save Mode bit mask
+    ps_mode fuchsia.wlan.common.PowerSaveType;
+};
+
 type AddIfaceRequest = resource struct {
     phy_id uint16;
     assigned_iface_id uint16;
@@ -194,6 +206,16 @@ protocol DeviceMonitor {
     }) -> (struct {
         status int32;
     });
+    SetPsMode(struct {
+        req SetPsModeRequest;
+    }) -> (struct {
+        status int32;
+    });
+    GetPsMode(struct {
+        phy_id uint16;
+    }) -> (struct {
+        resp GetPsModeResponse;
+    }) error int32;
 
     // Iface methods
     CreateIface(struct {

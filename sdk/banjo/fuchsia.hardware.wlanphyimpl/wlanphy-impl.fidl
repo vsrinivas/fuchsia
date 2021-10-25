@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.hardware.wlanphyimpl;
 
+using fuchsia.wlan.common;
 using ddk.hw.wlan.wlaninfo;
 using fuchsia.wlan.ieee80211 as ieee80211;
 using zx;
@@ -39,6 +40,11 @@ type WlanphyCountry = strict union {
     /// requires more than two octets.
     1: alpha2 array<uint8, WLANPHY_ALPHA2_LEN>;
     2: val uint16;
+};
+
+
+type WlanphyPsMode = struct {
+    ps_mode fuchsia.wlan.common.PowerSaveType;
 };
 
 @transport("Banjo")
@@ -85,5 +91,20 @@ protocol WlanphyImpl {
     GetCountry() -> (struct {
         s zx.status;
         country WlanphyCountry;
+    });
+
+    /// Set Power Save mode On/Off on device. In most implementations this
+    /// likely to be set in Firmware.
+    SetPsMode(struct {
+        ps_mode WlanphyPsMode;
+    }) -> (struct {
+        s zx.status;
+    });
+
+    /// Get current Power Save Mode from device. In most implementation this
+    /// likely to be retrieved from Firmware.
+    GetPsMode() -> (struct {
+        s zx.status;
+        ps_mode WlanphyPsMode;
     });
 };

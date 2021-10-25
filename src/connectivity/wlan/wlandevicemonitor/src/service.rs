@@ -52,6 +52,12 @@ pub(crate) async fn serve_monitor_requests(
                 let status = clear_country(&phys, req).await;
                 responder.send(status.into_raw())
             }
+            DeviceMonitorRequest::SetPsMode { req, responder } => {
+                let status = set_ps_mode(&phys, req).await;
+                responder.send(status.into_raw())
+            }
+            DeviceMonitorRequest::GetPsMode { phy_id, responder } => responder
+                .send(&mut get_ps_mode(&phys, phy_id).await.map_err(|status| status.into_raw())),
             DeviceMonitorRequest::CreateIface { req, responder } => {
                 match create_iface(&dev_svc, &phys, req).await {
                     Ok(new_iface) => {
@@ -135,6 +141,40 @@ async fn clear_country(phys: &PhyMap, req: fidl_svc::ClearCountryRequest) -> zx:
                 req.phy_id, e
             );
             zx::Status::INTERNAL
+        }
+    }
+}
+
+async fn set_ps_mode(phys: &PhyMap, req: fidl_svc::SetPsModeRequest) -> zx::Status {
+    let phy_id = req.phy_id;
+    let phy = match phys.get(&req.phy_id) {
+        None => return zx::Status::NOT_FOUND,
+        Some(p) => p,
+    };
+
+    let phy_req = req.ps_mode;
+    match phy.proxy.set_ps_mode(phy_req).await {
+        Ok(status) => zx::Status::from_raw(status),
+        Err(e) => {
+            error!("Error sending SetPsModeRequest request to phy #{}: {}", phy_id, e);
+            zx::Status::INTERNAL
+        }
+    }
+}
+
+async fn get_ps_mode(
+    phys: &PhyMap,
+    phy_id: u16,
+) -> Result<fidl_svc::GetPsModeResponse, zx::Status> {
+    let phy = phys.get(&phy_id).ok_or(Err(zx::Status::NOT_FOUND))?;
+    match phy.proxy.get_ps_mode().await {
+        Ok(result) => match result {
+            Ok(resp) => Ok(fidl_svc::GetPsModeResponse { ps_mode: resp }),
+            Err(status) => Err(zx::Status::from_raw(status)),
+        },
+        Err(e) => {
+            error!("Error sending 'GetPsMode' request to phy #{}: {}", phy_id, e);
+            Err(zx::Status::INTERNAL)
         }
     }
 }
@@ -245,7 +285,7 @@ mod tests {
         super::*,
         crate::device::PhyOwnership,
         fidl::endpoints::create_proxy,
-        fuchsia_async as fasync,
+        fidl_fuchsia_wlan_common as fidl_wlan_common, fuchsia_async as fasync,
         futures::{future::BoxFuture, task::Poll, StreamExt},
         ieee80211::NULL_MAC_ADDR,
         pin_utils::pin_mut,
@@ -817,7 +857,7 @@ mod tests {
 
         // Initiate a QueryPhy request. The returned future should not be able
         // to produce a result immediately
-        // Issue service.fidl::SetCountryRequest()
+        // Issue service.fidl::GetCountryRequest()
         let req_fut = super::get_country(&test_values.phys, phy_id);
         pin_mut!(req_fut);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
@@ -827,7 +867,7 @@ mod tests {
                 // Pretend to be a WLAN PHY to return the result.
                 responder.send(
                     &mut Ok(fidl_dev::CountryCode { alpha2 })
-                ).expect("failed to send the response to SetCountry");
+                ).expect("failed to send the response to GetCountry");
             }
         );
 
@@ -858,7 +898,7 @@ mod tests {
                 // Pretend to be a WLAN PHY to return the result.
                 // Right now the returned country code is not optional, so we just return garbage.
                 responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))
-                    .expect("failed to send the response to SetCountry");
+                    .expect("failed to send the response to GetCountry");
             }
         );
 
@@ -923,6 +963,136 @@ mod tests {
         let resp = zx::Status::NOT_SUPPORTED.into_raw();
         responder.send(resp).expect("failed to send the response to ClearCountry");
         assert_eq!(Poll::Ready(zx::Status::NOT_SUPPORTED), exec.run_until_stalled(&mut req_fut));
+    }
+
+    #[test]
+    fn test_set_ps_mode_succeeds() {
+        // Setup environment
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+        let (phy, mut phy_stream) = fake_phy();
+        let phy_id = 10u16;
+        test_values.phys.insert(phy_id, phy);
+
+        // Initiate a QueryPhy request. The returned future should not be able
+        // to produce a result immediately
+        // Issue service.fidl::SetPsModeRequest()
+        let req_msg = fidl_svc::SetPsModeRequest {
+            phy_id,
+            ps_mode: fidl_wlan_common::PowerSaveType::FastPsMode,
+        };
+        let req_fut = super::set_ps_mode(&test_values.phys, req_msg);
+        pin_mut!(req_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(fidl_dev::PhyRequest::SetPsMode { req, responder }))) => {
+                assert_eq!(req, fidl_wlan_common::PowerSaveType::FastPsMode);
+                // Pretend to be a WLAN PHY to return the result.
+                responder.send(zx::Status::OK.into_raw())
+                    .expect("failed to send the response to SetPsModeRequest");
+            }
+        );
+
+        // req_fut should have completed by now. Test the result.
+        assert_eq!(exec.run_until_stalled(&mut req_fut), Poll::Ready(zx::Status::OK));
+    }
+
+    #[test]
+    fn test_set_ps_mode_fails() {
+        // Setup environment
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+        let (phy, mut phy_stream) = fake_phy();
+        let phy_id = 10u16;
+        test_values.phys.insert(phy_id, phy);
+
+        // Initiate a QueryPhy request. The returned future should not be able
+        // to produce a result immediately
+        // Issue service.fidl::SetPsModeRequest()
+        let req_msg = fidl_svc::SetPsModeRequest {
+            phy_id,
+            ps_mode: fidl_wlan_common::PowerSaveType::PsPollMode,
+        };
+        let req_fut = super::set_ps_mode(&test_values.phys, req_msg);
+        pin_mut!(req_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        let (req, responder) = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(fidl_dev::PhyRequest::SetPsMode { req, responder }))) => (req, responder)
+        );
+        assert_eq!(req, fidl_wlan_common::PowerSaveType::PsPollMode);
+
+        // Failure case #1: WLAN PHY not responding
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        // Failure case #2: WLAN PHY has not implemented the feature.
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+        let resp = zx::Status::NOT_SUPPORTED.into_raw();
+        responder.send(resp).expect("failed to send the response to SetPsMode");
+        assert_eq!(Poll::Ready(zx::Status::NOT_SUPPORTED), exec.run_until_stalled(&mut req_fut));
+    }
+
+    #[test]
+    fn test_get_ps_mode_succeeds() {
+        // Setup environment
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+
+        let (phy, mut phy_stream) = fake_phy();
+        let phy_id = 10u16;
+        test_values.phys.insert(phy_id, phy);
+
+        // Initiate a QueryPhy request. The returned future should not be able
+        // to produce a result immediately
+        // Issue service.fidl::SetCountryRequest()
+        let req_fut = super::get_ps_mode(&test_values.phys, phy_id);
+        pin_mut!(req_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(fidl_dev::PhyRequest::GetPsMode { responder }))) => {
+                // Pretend to be a WLAN PHY to return the result.
+                responder.send(
+                    &mut Ok(fidl_wlan_common::PowerSaveType::PsModeOff)
+                ).expect("failed to send the response to SetPsMode");
+            }
+        );
+
+        assert_eq!(
+            exec.run_until_stalled(&mut req_fut),
+            Poll::Ready(Ok(fidl_svc::GetPsModeResponse {
+                ps_mode: fidl_wlan_common::PowerSaveType::PsModeOff
+            }))
+        );
+    }
+
+    #[test]
+    fn test_get_ps_mode_fails() {
+        // Setup environment
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+        let (phy, mut phy_stream) = fake_phy();
+        let phy_id = 10u16;
+        test_values.phys.insert(phy_id, phy);
+
+        // Initiate a QueryPhy request. The returned future should not be able
+        // to produce a result immediately
+        // Issue service.fidl::GetCountryRequest()
+        let req_fut = super::get_ps_mode(&test_values.phys, phy_id);
+        pin_mut!(req_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(fidl_dev::PhyRequest::GetPsMode { responder }))) => {
+                // Pretend to be a WLAN PHY to return the result.
+                // Right now the returned country code is not optional, so we just return garbage.
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))
+                    .expect("failed to send the response to GetPsMode");
+            }
+        );
+
+        assert_variant!(exec.run_until_stalled(&mut req_fut), Poll::Ready(Err(_)));
     }
 
     fn fake_phy_info() -> fidl_dev::PhyInfo {

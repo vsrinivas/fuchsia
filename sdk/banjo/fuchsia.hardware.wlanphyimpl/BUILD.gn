@@ -8,6 +8,7 @@ fidl("fuchsia.hardware.wlanphyimpl") {
   sources = [ "wlanphy-impl.fidl" ]
   public_deps = [
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//zircon/vdso/zx",
   ]

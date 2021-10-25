@@ -37,6 +37,8 @@ class Device : public ::fuchsia::wlan::device::Phy {
                           SetCountryCallback callback) override;
   virtual void GetCountry(GetCountryCallback callback) override;
   virtual void ClearCountry(ClearCountryCallback callback) override;
+  void SetPsMode(::fuchsia::wlan::common::PowerSaveType req, SetPsModeCallback callback) override;
+  void GetPsMode(GetPsModeCallback callback) override;
 
  private:
   zx_status_t Connect(zx::channel request);

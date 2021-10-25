@@ -82,4 +82,12 @@ zx_status_t WlanphyImplDevice::WlanphyImplGetCountry(wlanphy_country_t* out_coun
   return phy_get_country(drvdata(), out_country);
 }
 
+zx_status_t WlanphyImplDevice::WlanphyImplSetPsMode(const wlanphy_ps_mode_t* pm_mode) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t WlanphyImplDevice::WlanphyImplGetPsMode(wlanphy_ps_mode_t* out_pm_mode) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 }  // namespace wlan::iwlwifi

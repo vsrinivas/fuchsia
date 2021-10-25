@@ -222,4 +222,33 @@ void Device::ClearCountry(ClearCountryCallback callback) {
   callback(status);
 }
 
+void Device::SetPsMode(wlan_common::PowerSaveType req, SetPsModeCallback callback) {
+  ltrace_fn();
+  ldebug_device("SetPsMode to %d\n", req);
+
+  wlanphy_ps_mode_t ps_mode_req;
+  ps_mode_req.ps_mode = (power_save_type_t)req;
+  auto status = wlanphy_impl_.ops->set_ps_mode(wlanphy_impl_.ctx, &ps_mode_req);
+
+  if (status != ZX_OK) {
+    ldebug_device("SetPsMode to %d failed with error %s\n", req, zx_status_get_string(status));
+  }
+  callback(status);
+}
+
+void Device::GetPsMode(GetPsModeCallback callback) {
+  ltrace_fn();
+
+  wlanphy_ps_mode_t ps_mode;
+  auto status = wlanphy_impl_.ops->get_ps_mode(wlanphy_impl_.ctx, &ps_mode);
+  if (status != ZX_OK) {
+    ldebug_device("GetPsMode failed with error %s\n", zx_status_get_string(status));
+    callback(fpromise::error(status));
+  } else {
+    wlan_common::PowerSaveType resp;
+    resp = (wlan_common::PowerSaveType)ps_mode.ps_mode;
+    ldebug_device("GetPsMode returning %d\n", resp);
+    callback(fpromise::ok(std::move(resp)));
+  }
+}
 }  // namespace wlanphy

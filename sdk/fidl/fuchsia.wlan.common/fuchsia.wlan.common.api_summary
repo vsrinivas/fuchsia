@@ -29,6 +29,10 @@ enum/member fuchsia.wlan.common/PHY.HR 1
 enum/member fuchsia.wlan.common/PHY.HT 3
 enum/member fuchsia.wlan.common/PHY.VHT 4
 strict enum fuchsia.wlan.common/PHY uint32
+enum/member fuchsia.wlan.common/PowerSaveType.FAST_PS_MODE 1
+enum/member fuchsia.wlan.common/PowerSaveType.PS_MODE_OFF 0
+enum/member fuchsia.wlan.common/PowerSaveType.PS_POLL_MODE 2
+strict enum fuchsia.wlan.common/PowerSaveType uint32
 enum/member fuchsia.wlan.common/RequestStatus.ACKNOWLEDGED 0
 enum/member fuchsia.wlan.common/RequestStatus.REJECTED_ALREADY_IN_USE 3
 enum/member fuchsia.wlan.common/RequestStatus.REJECTED_DUPLICATE_REQUEST 4

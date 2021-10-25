@@ -36,6 +36,7 @@ type Capability = strict enum : uint32 {
     SIMULTANEOUS_CLIENT_AP = 0x10000;
 };
 
+
 type ChannelList = struct {
     base_freq uint16;
     channels vector<uint8>:200;
@@ -121,6 +122,14 @@ protocol Phy {
     ClearCountry() -> (struct {
         status int32;
     });
+    SetPsMode(struct {
+        req fuchsia.wlan.common.PowerSaveType;
+    }) -> (struct {
+        status int32;
+    });
+    GetPsMode() -> (struct {
+        resp fuchsia.wlan.common.PowerSaveType;
+    }) error int32;
 };
 
 // Temporary interface for bridging between the devhost-owned channel model and

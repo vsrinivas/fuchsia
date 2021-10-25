@@ -84,6 +84,12 @@ wlanphy_impl_protocol_ops_t make_ops_for_get_country(
         return ZX_ERR_NOT_SUPPORTED;
       },
       .get_country = get_country,
+      .set_ps_mode = [](void* ctx, const wlanphy_ps_mode_t* ps_mode) -> zx_status_t {
+        return ZX_ERR_NOT_SUPPORTED;
+      },
+      .get_ps_mode = [](void* ctx, wlanphy_ps_mode_t* ps_mode) -> zx_status_t {
+        return ZX_ERR_NOT_SUPPORTED;
+      },
   };
 }
 
@@ -120,6 +126,46 @@ TEST(WlanphyTest, GetCountryConvertsNonPrintableAndReturnSuccess) {
     fuchsia::wlan::device::CountryCode expected_country = {0x00, 0xff};
     ASSERT_TRUE(result.is_response());
     EXPECT_EQ(result.response().resp.alpha2, expected_country.alpha2);
+    invoked_callback = true;
+  });
+  EXPECT_EQ(invoked_callback, true);
+}
+
+wlanphy_impl_protocol_ops_t make_ops_for_get_ps_mode(
+    zx_status_t (*get_ps_mode)(void* ctx, wlanphy_ps_mode_t* ps_mode)) {
+  return wlanphy_impl_protocol_ops_t{
+      .query = [](void* ctx, wlanphy_impl_info_t* info) -> zx_status_t {
+        return ZX_ERR_NOT_SUPPORTED;
+      },
+      .create_iface = [](void* ctx, const wlanphy_impl_create_iface_req_t* req,
+                         uint16_t* out_iface_id) -> zx_status_t { return ZX_ERR_NOT_SUPPORTED; },
+      .destroy_iface = [](void* ctx, uint16_t id) -> zx_status_t { return ZX_ERR_NOT_SUPPORTED; },
+      .set_country = [](void* ctx, const wlanphy_country_t* country) -> zx_status_t {
+        return ZX_ERR_NOT_SUPPORTED;
+      },
+      .get_country = [](void* ctx, wlanphy_country_t* country) -> zx_status_t {
+        return ZX_ERR_NOT_SUPPORTED;
+      },
+      .set_ps_mode = [](void* ctx, const wlanphy_ps_mode_t* ps_mode) -> zx_status_t {
+        return ZX_ERR_NOT_SUPPORTED;
+      },
+      .get_ps_mode = get_ps_mode,
+  };
+}
+
+TEST(WlanphyTest, GetPsModeReturnsSuccess) {
+  auto ops = make_ops_for_get_ps_mode([](void* ctx, wlanphy_ps_mode_t* ps_mode) {
+    ps_mode->ps_mode = POWER_SAVE_TYPE_FAST_PS_MODE;
+    return ZX_OK;
+  });
+  void* ctx = nullptr;
+  wlanphy_init(&ctx);
+
+  Device dev(nullptr, wlanphy_impl_protocol_t{.ops = &ops, .ctx = ctx});
+  bool invoked_callback = false;
+  dev.GetPsMode([&invoked_callback](fuchsia::wlan::device::Phy_GetPsMode_Result result) {
+    constexpr power_save_type_t exp_ps_mode = POWER_SAVE_TYPE_FAST_PS_MODE;
+    EXPECT_EQ((power_save_type_t)result.response().resp, exp_ps_mode);
     invoked_callback = true;
   });
   EXPECT_EQ(invoked_callback, true);

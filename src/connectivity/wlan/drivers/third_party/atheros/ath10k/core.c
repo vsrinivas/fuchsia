@@ -2384,12 +2384,32 @@ static zx_status_t ath10k_core_get_country(void* ctx, wlanphy_country_t* out_cou
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+static zx_status_t ath10k_core_set_ps_mode(void* ctx, const wlanphy_ps_mode_t* ps_mode) {
+  if (ps_mode == NULL) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  ath10k_err("ath10k_core_set_ps_mode() not implemented\n");
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ath10k_core_get_ps_mode(void* ctx, wlanphy_ps_mode_t* out_ps_mode) {
+  if (out_ps_mode == NULL) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  ath10k_err("ath10k_core_get_ps_mode() not implemented\n");
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 static wlanphy_impl_protocol_ops_t wlanphy_ops = {
     .query = ath10k_core_phy_query,
     .create_iface = ath10k_core_create_iface,
     .destroy_iface = ath10k_core_destroy_iface,
     .set_country = ath10k_core_set_country,
     .get_country = ath10k_core_get_country,
+    .set_ps_mode = ath10k_core_set_ps_mode,
+    .get_ps_mode = ath10k_core_get_ps_mode,
 };
 
 zx_status_t ath10k_core_add_phy_interface(struct ath10k* ar, zx_device_t* dev) {

@@ -61,6 +61,8 @@ class Device : public DeviceType, public ::ddk::WlanphyImplProtocol<Device, ::dd
   zx_status_t WlanphyImplSetCountry(const wlanphy_country_t* country);
   zx_status_t WlanphyImplClearCountry();
   zx_status_t WlanphyImplGetCountry(wlanphy_country_t* out_country);
+  zx_status_t WlanphyImplSetPsMode(const wlanphy_ps_mode_t* ps_mode);
+  zx_status_t WlanphyImplGetPsMode(wlanphy_ps_mode_t* out_ps_mode);
 
   // Trampolines for DDK functions, for platforms that support them.
   virtual zx_status_t Init() = 0;
