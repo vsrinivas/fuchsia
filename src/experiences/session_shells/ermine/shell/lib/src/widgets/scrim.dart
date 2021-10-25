@@ -7,16 +7,19 @@ import 'package:flutter/material.dart' hide AppBar;
 
 /// Defines a widget to listen to tap gesture used to dismiss overlays.
 class Scrim extends StatelessWidget {
-  final AppState state;
+  final AppState app;
 
-  const Scrim(this.state);
+  const Scrim(this.app);
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
       child: GestureDetector(
-        onTapDown: (_) => state.hideOverlay(),
-        child: Container(color: Colors.black.withOpacity(0.0)),
+        onTapDown: (_) => app.hideOverlay(),
+        child: Container(
+            color: app.views.isEmpty
+                ? Colors.transparent
+                : Colors.black.withOpacity(0.8)),
       ),
     );
   }
