@@ -874,19 +874,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/207f78cd34d39b1e140f0fca3e056ed9da82a5d6/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/6a75bad14727b3dc768cf6a92f4d9f47af6a2479/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/207f78cd34d39b1e140f0fca3e056ed9da82a5d6/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/6a75bad14727b3dc768cf6a92f4d9f47af6a2479/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/207f78cd34d39b1e140f0fca3e056ed9da82a5d6/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/6a75bad14727b3dc768cf6a92f4d9f47af6a2479/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -4340,7 +4340,7 @@ From //build/images/args.gni:91
 
 **Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:172
+From //build/config/fuchsia/BUILD.gn:180
 
 ### zircon_b_partition
 
@@ -4441,43 +4441,13 @@ Path to the amlogic decoder firmware file. Overrides the default in the build.
 
 From //src/media/drivers/amlogic_decoder/BUILD.gn:12
 
-### arm_float_abi
-The ARM floating point mode. This is either the string "hard", "soft", or
-"softfp". An empty string means to use the default one for the
-arm_version.
-
-**Current value (from the default):** `""`
-
-From //build/config/arm.gni:20
-
-### arm_optionally_use_neon
-Whether to enable optional NEON code paths.
-
-**Current value (from the default):** `false`
-
-From //build/config/arm.gni:31
-
-### arm_tune
-The ARM variant-specific tuning mode. This will be a string like "armv6"
-or "cortex-a15". An empty string means to use the default for the
-arm_version.
-
-**Current value (from the default):** `""`
-
-From //build/config/arm.gni:25
-
 ### arm_use_neon
 Whether to use the neon FPU instruction set or not.
+TODO(fxbug.dev/87237): move this to boards.
 
 **Current value (from the default):** `true`
 
-From //build/config/arm.gni:28
-
-### arm_version
-
-**Current value (from the default):** `8`
-
-From //build/config/arm.gni:12
+From //build/config/arm.gni:9
 
 ## `target_cpu = "x64"`
 
