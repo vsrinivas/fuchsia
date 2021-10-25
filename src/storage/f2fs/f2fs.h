@@ -42,6 +42,7 @@
 
 #ifdef __Fuchsia__
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/query_service.h"
 #include "src/lib/storage/vfs/cpp/watcher.h"
 #include "src/lib/storage/vfs/cpp/shared_mutex.h"
 #include "src/lib/storage/vfs/cpp/service.h"
@@ -66,7 +67,6 @@
 #include "src/storage/f2fs/mount.h"
 #include "src/storage/f2fs/fsck.h"
 #include "src/storage/f2fs/admin.h"
-#include "src/storage/f2fs/query.h"
 // clang-format on
 
 namespace f2fs {
@@ -127,16 +127,15 @@ class F2fs : public fs::Vfs {
   void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
 
-  void SetQueryService(fbl::RefPtr<QueryService> svc) { query_svc_ = std::move(svc); }
+  void SetQueryService(fbl::RefPtr<fs::QueryService> svc) { query_svc_ = std::move(svc); }
   void SetAdminService(fbl::RefPtr<AdminService> svc) { admin_svc_ = std::move(svc); }
 
-  zx_status_t GetFsId(zx::event *out_fs_id) const;
+  zx_status_t GetFilesystemInfo(fidl::AnyArena &allocator,
+                                fuchsia_fs::wire::FilesystemInfo &out) final;
 #else   // __Fuchsia__
   [[nodiscard]] static zx_status_t Create(std::unique_ptr<f2fs::Bcache> bc,
                                           const MountOptions &options, std::unique_ptr<F2fs> *out);
 #endif  // __Fuchsia__
-
-  uint64_t GetFsIdLegacy() const { return fs_id_legacy_; }
 
   VnodeCache &GetVCache() { return vnode_cache_; }
   inline zx_status_t InsertVnode(VnodeF2fs *vn) { return vnode_cache_.Add(vn); }
@@ -264,12 +263,11 @@ class F2fs : public fs::Vfs {
   VnodeCache vnode_cache_{};
 
 #ifdef __Fuchsia__
-  fbl::RefPtr<QueryService> query_svc_;
+  fbl::RefPtr<fs::QueryService> query_svc_;
   fbl::RefPtr<AdminService> admin_svc_;
 
   zx::event fs_id_{};
 #endif  // __Fuchsia__
-  uint64_t fs_id_legacy_ = 0;
 };
 
 f2fs_hash_t DentryHash(const char *name, int len);

@@ -575,31 +575,6 @@ void VnodeF2fs::Sync(SyncCallback closure) {
 }
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-zx_status_t VnodeF2fs::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo *info) {
-  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
-  *info = {};
-  info->block_size = kBlockSize;
-  info->max_filename_size = kMaxNameLen;
-  info->fs_type = VFS_TYPE_F2FS;
-  info->fs_id = Vfs()->GetFsIdLegacy();
-  info->total_bytes = superblock_info.GetUserBlockCount() * kBlockSize;
-  info->used_bytes = Vfs()->ValidUserBlocks() * kBlockSize;
-  info->total_nodes = superblock_info.GetTotalNodeCount();
-  info->used_nodes = superblock_info.GetTotalValidInodeCount();
-
-  constexpr std::string_view kFsName = "f2fs";
-  static_assert(kFsName.size() + 1 < fuchsia_io_admin::wire::kMaxFsNameBuffer,
-                "f2fs name too long");
-  info->name[kFsName.copy(reinterpret_cast<char *>(info->name.data()),
-                          fuchsia_io_admin::wire::kMaxFsNameBuffer - 1)] = '\0';
-
-  // TODO(unknown): Fill info->free_shared_pool_bytes using fvm info
-
-  return ZX_OK;
-}
-#endif  // __Fuchsia__
-
 zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
   SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
   __UNUSED uint64_t cur_version;

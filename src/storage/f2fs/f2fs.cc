@@ -37,15 +37,7 @@ F2fs::F2fs(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc,
       bc_(std::move(bc)),
       mount_options_(mount_options),
       raw_sb_(std::move(sb)) {
-  zx::event event;
-  if (zx_status_t status = zx::event::create(0, &event); status == ZX_OK) {
-    zx_info_handle_basic_t info;
-    if (status = event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-        status == ZX_OK) {
-      fs_id_ = std::move(event);
-      fs_id_legacy_ = info.koid;
-    }
-  }
+  zx::event::create(0, &fs_id_);
 }
 #else   // __Fuchsia__
 F2fs::F2fs(std::unique_ptr<f2fs::Bcache> bc, std::unique_ptr<Superblock> sb,
@@ -149,13 +141,13 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_opti
       export_root = std::move(data_root);
       break;
     case ServeLayout::kExportDirectory:
-      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>();
+      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
       outgoing->AddEntry("root", std::move(data_root));
 
-      auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+      auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
       outgoing->AddEntry("svc", svc_dir);
 
-      auto query_svc = fbl::MakeRefCounted<QueryService>(fs->dispatcher(), fs.get());
+      auto query_svc = fbl::MakeRefCounted<fs::QueryService>(fs.get());
       svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc);
       fs->SetQueryService(std::move(query_svc));
 
@@ -278,10 +270,30 @@ zx_status_t FlushDirtyNodePage(F2fs* fs, Page* page) {
 }
 
 #ifdef __Fuchsia__
-zx_status_t F2fs::GetFsId(zx::event* out_fs_id) const {
-  ZX_DEBUG_ASSERT(fs_id_.is_valid());
-  return fs_id_.duplicate(ZX_RIGHTS_BASIC, out_fs_id);
+
+zx_status_t F2fs::GetFilesystemInfo(fidl::AnyArena& allocator,
+                                    fuchsia_fs::wire::FilesystemInfo& out) {
+  out.set_block_size(allocator, kBlockSize);
+  out.set_max_node_name_size(allocator, kMaxNameLen);
+  out.set_fs_type(allocator, fuchsia_fs::wire::FsType::kF2Fs);
+  out.set_total_bytes(allocator, superblock_info_->GetUserBlockCount() * kBlockSize);
+  out.set_used_bytes(allocator, ValidUserBlocks() * kBlockSize);
+  out.set_total_nodes(allocator, superblock_info_->GetTotalNodeCount());
+  out.set_used_nodes(allocator, superblock_info_->GetTotalValidInodeCount());
+  out.set_name(allocator, fidl::StringView(allocator, "f2fs"));
+
+  zx::event fs_id_copy;
+  if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
+    out.set_fs_id(allocator, std::move(fs_id_copy));
+
+  if (auto device_path_or = bc_->device()->GetDevicePath(); device_path_or.is_ok())
+    out.set_device_path(allocator, fidl::StringView(allocator, device_path_or.value()));
+
+  // TODO(unknown): Fill free_shared_pool_bytes using fvm info
+
+  return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 bool F2fs::IsValid() const {
