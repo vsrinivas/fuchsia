@@ -6,9 +6,18 @@ import("//build/components.gni")
 import("//build/test.gni")
 
 source_set("stream_sink") {
-  public = [ "stream_queue.h" ]
+  public = [
+    "clear_request.h",
+    "converters.h",
+    "release_fence.h",
+    "stream_queue.h",
+    "stream_sink_client.h",
+    "stream_sink_impl.h",
+  ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.media2",
+    "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async:async-cpp",
   ]
@@ -19,17 +28,20 @@ group("tests") {
   deps = [ ":stream_sink_unittests" ]
 }
 
-executable("stream_sink_unittests_bin") {
+test("stream_sink_unittests_bin") {
   testonly = true
 
   output_name = "stream_sink_unittests"
 
-  sources = [ "stream_queue_unittests.cc" ]
+  sources = [
+    "stream_queue_unittests.cc",
+    "stream_sink_unittests.cc",
+  ]
 
   deps = [
     ":stream_sink",
-    "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
