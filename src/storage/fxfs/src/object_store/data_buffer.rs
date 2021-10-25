@@ -25,6 +25,14 @@ use {
     },
 };
 
+// This is unrelated to any system page size; this is merely the size of the pages used by
+// MemDataBuffer.  These pages are similar in concept but completely independent of any system
+// pages.
+const PAGE_SIZE: u64 = 4096;
+
+// Reads smaller than this are rounded up to this size if possible.
+const READ_SIZE: u64 = 128 * 1024;
+
 // StackList holds a doubly linked list of structures on the stack.  After pushing nodes onto the
 // list, the caller *must* call erase_node before or as the node is dropped.
 struct StackListNodePtr<T>(*const T);
@@ -201,23 +209,17 @@ impl Inner {
             // Fill in any missing pages.
             if page.offset > offset {
                 for offset in (offset..page.offset).step_by(PAGE_SIZE as usize) {
-                    new_pages.push(BoxedPage(Box::new(PageCell(UnsafeCell::new(Page::new(
-                        offset,
-                        usize::MAX,
-                    ))))));
+                    new_pages.push(BoxedPage::new(offset, usize::MAX));
                 }
             }
             offset = page.offset + PAGE_SIZE;
         }
         for page in new_pages {
-            self.pages.insert(page);
+            assert!(self.pages.insert(page));
         }
         // Add any pages for the end of the range.
         for offset in (offset..range.end).step_by(PAGE_SIZE as usize) {
-            self.pages.insert(BoxedPage(Box::new(PageCell(UnsafeCell::new(Page::new(
-                offset,
-                usize::MAX,
-            ))))));
+            assert!(self.pages.insert(BoxedPage::new(offset, usize::MAX)));
         }
     }
 
@@ -251,18 +253,17 @@ impl Inner {
     }
 }
 
-// This is unrelated to any system page size; this is merely the size of the pages used by
-// MemDataBuffer.  These pages are similar in concept but completely independent of any system
-// pages.
-const PAGE_SIZE: u64 = 4096;
-
-// Reads smaller than this are rounded up to this size if possible.
-const READ_SIZE: u64 = 128 * 1024;
-
-// Aligns range and applies read-ahead.  The range will not be extended past `limit`.
-fn align_range(mut range: Range<u64>, limit: u64) -> Range<u64> {
+// Returns an page-aligned range and applies read-ahead.  The range will not be extended past
+// `limit`.
+fn align_range(mut range: Range<u64>, block_size: u32, limit: u64) -> Range<u64> {
+    // Align the start to the page boundary rather than the block boundary because the preceding
+    // page might already be present.
     range.start = round_down(range.start, PAGE_SIZE);
-    range.end = round_up(range.end, PAGE_SIZE).unwrap();
+
+    // We can align the end to the block boundary because we have `limit` which will prevent it from
+    // being extended to include a page that is already present.
+    range.end = round_up(range.end, block_size).unwrap();
+
     if range.end - range.start < READ_SIZE {
         range.end = range.start + READ_SIZE;
     }
@@ -275,6 +276,10 @@ fn align_range(mut range: Range<u64>, limit: u64) -> Range<u64> {
 struct BoxedPage(Box<PageCell>);
 
 impl BoxedPage {
+    fn new(offset: u64, read_key: usize) -> Self {
+        BoxedPage(Box::new(PageCell(UnsafeCell::new(Page::new(offset, read_key)))))
+    }
+
     unsafe fn page(&self) -> &Page {
         self.0.page()
     }
@@ -398,15 +403,18 @@ impl MemDataBuffer {
 
         let mut inner = self.0.lock().unwrap();
         let Inner { pages, buf, readers, .. } = &mut *inner;
-        let mut read_buf = read_buf.as_slice();
+        let read_buf = read_buf.as_slice();
+        let aligned_start = aligned_range.start;
         for page in pages.range(aligned_range) {
             let page = unsafe { page.page_mut() };
             if page.read_key == read_key {
+                let read_buf_offset = (page.offset - aligned_start) as usize;
                 buf[page.offset as usize..page.offset as usize + PAGE_SIZE as usize]
-                    .copy_from_slice(&read_buf[..PAGE_SIZE as usize]);
+                    .copy_from_slice(
+                        &read_buf[read_buf_offset..read_buf_offset + PAGE_SIZE as usize],
+                    );
                 page.read_key = usize::MAX;
             }
-            read_buf = &read_buf[PAGE_SIZE as usize..];
         }
 
         readers.get(read_key).unwrap().wait_event.as_ref().map(|e| e.signal());
@@ -463,7 +471,7 @@ impl MemDataBuffer {
                             offset..offset + PAGE_SIZE,
                             &mut inner.readers,
                             |p| {
-                                pages.insert(p);
+                                assert!(pages.insert(p));
                             },
                         );
                         Left(read_key)
@@ -494,7 +502,15 @@ impl MemDataBuffer {
             // read to finish...
             match result {
                 Left(read_key) => {
-                    return self.read_some(offset..offset + PAGE_SIZE, source, read_key, f).await;
+                    let block_size = std::cmp::max(source.block_size(), PAGE_SIZE as u32);
+                    return self
+                        .read_some(
+                            round_down(offset, block_size)..offset + PAGE_SIZE,
+                            source,
+                            read_key,
+                            f,
+                        )
+                        .await;
                 }
                 Right(event) => {
                     let _ = event.await;
@@ -609,62 +625,84 @@ impl DataBuffer for MemDataBuffer {
             read_keys.as_mut().add_to_list(&mut inner.read_keys_list, end_offset);
 
             let Inner { pages, readers, buf, .. } = &mut *inner;
-            let mut offset = offset;
-            for page in pages.range(round_down(offset, PAGE_SIZE)..offset + read_buf.len() as u64) {
+            let mut last_offset = offset;
+            let block_size = std::cmp::max(source.block_size(), PAGE_SIZE as u32);
+            let aligned_start = round_down(offset, block_size);
+            let mut readahead_limit = buf.len() as u64;
+            for page in pages.range(aligned_start..) {
                 let page = unsafe { page.page_mut() };
+                let page_offset = page.offset();
+
+                if page_offset + PAGE_SIZE <= last_offset {
+                    // This is possible due to different filesystem and page size alignment.
+                    continue;
+                }
+
+                if page_offset >= end_offset {
+                    readahead_limit = page_offset;
+                    break;
+                }
 
                 // Handle any gap between the last page we found and this one.
-                if page.offset() > offset {
+                if page_offset > last_offset {
                     // Schedule a read for the gap.
-                    let (head, tail) = read_buf.split_at_mut((page.offset() - offset) as usize);
-                    let aligned_range = round_down(offset, PAGE_SIZE)..page.offset();
+                    let (head, tail) = read_buf.split_at_mut((page_offset - last_offset) as usize);
+                    let page_range = round_down(last_offset, PAGE_SIZE)..page_offset;
+                    let block_range = round_down(page_range.start, block_size)..page_range.end;
                     reads.push(self.read_and_copy(
-                        aligned_range.clone(),
-                        offset,
+                        block_range,
+                        last_offset,
                         source,
-                        read_keys.as_mut().new_read(aligned_range, readers, |p| new_pages.push(p)),
+                        read_keys.as_mut().new_read(page_range, readers, |p| new_pages.push(p)),
                         head,
                     ));
                     read_buf = tail;
-                    offset = page.offset();
+                    last_offset = page_offset;
                 }
 
-                let (head, tail) =
-                    read_buf.split_at_mut(std::cmp::min(PAGE_SIZE as usize, read_buf.len()));
+                let (head, tail) = read_buf.split_at_mut(std::cmp::min(
+                    (page_offset + PAGE_SIZE - last_offset) as usize,
+                    read_buf.len(),
+                ));
 
                 if page.is_reading() {
                     pending_reads.push(self.read_page(
-                        page.offset(),
+                        page_offset,
                         source,
                         read_keys.as_mut().get_ptr(),
                         move |inner| {
                             // Whilst we were reading, it's possible the buffer was truncated;
                             // copy_out will only copy out what we can.  Later, we will make sure
                             // that the correct value for the amount read is returned.
-                            let _ = copy_out(&inner.buf, offset, head);
+                            let _ = copy_out(&inner.buf, last_offset, head);
                         },
                     ));
                 } else {
-                    let _ = copy_out(buf, offset, head);
+                    let _ = copy_out(buf, last_offset, head);
                 }
 
                 read_buf = tail;
-                offset += PAGE_SIZE;
+                last_offset = page_offset + PAGE_SIZE;
             }
             // Handle the tail.
             if !read_buf.is_empty() {
-                let aligned_range = align_range(offset..end_offset, buf.len() as u64);
+                let page_range = align_range(
+                    if last_offset == offset { aligned_start } else { last_offset }..end_offset,
+                    block_size,
+                    readahead_limit,
+                );
+                let block_range = round_down(page_range.start, block_size)..page_range.end;
                 reads.push(self.read_and_copy(
-                    aligned_range.clone(),
-                    offset,
+                    block_range,
+                    last_offset,
                     source,
-                    read_keys.as_mut().new_read(aligned_range, readers, |p| new_pages.push(p)),
+                    read_keys.as_mut().new_read(page_range, readers, |p| new_pages.push(p)),
                     read_buf,
                 ));
             }
 
             for page in new_pages {
-                pages.insert(page);
+                assert!(pages.insert(page));
             }
         }
 
@@ -737,9 +775,7 @@ impl ReadKeys {
             readers.insert(ReadContext { range: aligned_range.clone(), wait_event: None });
         self.project().keys.push(read_key);
         for offset in aligned_range.step_by(PAGE_SIZE as usize) {
-            new_page_fn(BoxedPage(Box::new(PageCell(UnsafeCell::new(Page::new(
-                offset, read_key,
-            ))))));
+            new_page_fn(BoxedPage::new(offset, read_key));
         }
         read_key
     }
@@ -832,6 +868,21 @@ mod tests {
         },
     };
 
+    // Fills a buffer with a pattern seeded by counter.
+    fn fill_buf(buf: &mut [u8], counter: u8) {
+        for (i, chunk) in buf.chunks_exact_mut(2).enumerate() {
+            chunk[0] = counter;
+            chunk[1] = i as u8;
+        }
+    }
+
+    // Returns a buffer filled with fill_buf.
+    fn make_buf(counter: u8, size: u64) -> Vec<u8> {
+        let mut buf = vec![0; size as usize];
+        fill_buf(&mut buf, counter);
+        buf
+    }
+
     struct FakeSource {
         device: Arc<dyn Device>,
         go: Event,
@@ -851,7 +902,7 @@ mod tests {
             assert_eq!(offset % PAGE_SIZE, 0);
             assert_eq!(buf.len() % PAGE_SIZE as usize, 0);
             let _ = self.go.wait_or_dropped().await;
-            buf.as_mut_slice().fill(self.counter.fetch_add(1, Ordering::Relaxed));
+            fill_buf(buf.as_mut_slice(), self.counter.fetch_add(1, Ordering::Relaxed));
             Ok(buf.len())
         }
     }
@@ -867,7 +918,7 @@ mod tests {
         }
 
         fn block_size(&self) -> u32 {
-            unreachable!();
+            self.device.block_size()
         }
 
         fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
@@ -878,17 +929,17 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_sequential_reads() {
         let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
-        let device = Arc::new(FakeDevice::new(100, PAGE_SIZE as u32));
+        let device = Arc::new(FakeDevice::new(100, 8192));
         let mut buf = [0; PAGE_SIZE as usize];
 
         let source = FakeSource::new(device.clone());
         source.go.signal();
 
         data_buf.read(0, &mut buf, &source).await.expect("read failed");
-        assert_eq!(&buf, &[1; PAGE_SIZE as usize]);
+        assert_eq!(&buf, make_buf(1, PAGE_SIZE).as_slice());
 
         data_buf.read(0, &mut buf, &source).await.expect("read failed");
-        assert_eq!(&buf, &[1; PAGE_SIZE as usize]);
+        assert_eq!(&buf, make_buf(1, PAGE_SIZE).as_slice());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -910,14 +961,14 @@ mod tests {
                 source.go.signal();
             }
         );
-        assert_eq!(&buf, &[1; PAGE_SIZE as usize]);
-        assert_eq!(&buf2, &[1; PAGE_SIZE as usize]);
+        assert_eq!(&buf, make_buf(1, PAGE_SIZE).as_slice());
+        assert_eq!(&buf2, make_buf(1, PAGE_SIZE).as_slice());
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_unaligned_write() {
         let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
-        let device = Arc::new(FakeDevice::new(100, PAGE_SIZE as u32));
+        let device = Arc::new(FakeDevice::new(100, 8192));
         let source = FakeSource::new(device.clone());
         source.go.signal();
         let mut buf = [0; 3 * PAGE_SIZE as usize];
@@ -929,37 +980,37 @@ mod tests {
         data_buf.read(0, &mut buf, &source).await.expect("read failed");
 
         // There are two combinations depending on which read goes first.
-        let mut expected1 = [1; PAGE_SIZE as usize - 10].to_vec();
+        let mut expected1 = make_buf(1, PAGE_SIZE - 10);
         expected1.extend(&[67; PAGE_SIZE as usize + 20]);
-        expected1.extend(&[2; PAGE_SIZE as usize - 10]);
-        let mut expected2 = [1; PAGE_SIZE as usize - 10].to_vec();
+        expected1.extend(&make_buf(2, PAGE_SIZE)[..PAGE_SIZE as usize - 10]);
+        let mut expected2 = make_buf(1, PAGE_SIZE - 10);
         expected2.extend(&[67; PAGE_SIZE as usize + 20]);
-        expected2.extend(&[2; PAGE_SIZE as usize - 10]);
+        expected2.extend(&make_buf(2, PAGE_SIZE)[10..]);
         assert!(&buf[..] == expected1 || &buf[..] == expected2);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_dropped_read() {
         let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
-        let device = Arc::new(FakeDevice::new(100, PAGE_SIZE as u32));
+        let device = Arc::new(FakeDevice::new(100, 8192));
         let source = FakeSource::new(device.clone());
         let mut buf = [0; PAGE_SIZE as usize];
         let mut buf2 = [0; READ_SIZE as usize * 2];
         let mut read_fut = data_buf.read(0, buf.as_mut(), &source);
         let mut read_fut2 = data_buf.read(0, buf2.as_mut(), &source);
         poll_fn(|ctx| {
-            assert!(matches!(read_fut.poll_unpin(ctx), Poll::Pending));
+            assert!(read_fut.poll_unpin(ctx).is_pending());
             source.go.signal();
-            assert!(matches!(read_fut2.poll_unpin(ctx), Poll::Pending));
+            assert!(read_fut2.poll_unpin(ctx).is_pending());
             Poll::Ready(())
         })
         .await;
         // If we now drop the first future, the second future should complete.
         std::mem::drop(read_fut);
         assert_eq!(read_fut2.await.expect("read failed"), READ_SIZE as usize * 2);
-        assert_eq!(&buf2[0..PAGE_SIZE as usize], [2; PAGE_SIZE as usize]);
+        assert_eq!(&buf2[0..PAGE_SIZE as usize], make_buf(2, PAGE_SIZE).as_slice());
         // The tail should not have been waiting for the first read.
-        assert_eq!(&buf2[READ_SIZE as usize..], [1; READ_SIZE as usize]);
+        assert_eq!(&buf2[READ_SIZE as usize..], make_buf(1, READ_SIZE).as_slice());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -978,21 +1029,21 @@ mod tests {
             PAGE_SIZE as usize
         );
 
-        assert_eq!(&buf[..PAGE_SIZE as usize], [1; PAGE_SIZE as usize]);
+        assert_eq!(&buf[..PAGE_SIZE as usize], make_buf(1, PAGE_SIZE).as_slice());
 
         assert_eq!(
             data_buf.read(0, &mut buf, &source).await.expect("read failed"),
             PAGE_SIZE as usize * 2
         );
 
-        assert_eq!(&buf[..PAGE_SIZE as usize], [2; PAGE_SIZE as usize]);
-        assert_eq!(&buf[PAGE_SIZE as usize..], [1; PAGE_SIZE as usize]);
+        assert_eq!(&buf[..PAGE_SIZE as usize], make_buf(2, PAGE_SIZE).as_slice());
+        assert_eq!(&buf[PAGE_SIZE as usize..], make_buf(1, PAGE_SIZE).as_slice());
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_unaligned() {
         let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
-        let device = Arc::new(FakeDevice::new(100, PAGE_SIZE as u32));
+        let device = Arc::new(FakeDevice::new(100, 8192));
         let source = FakeSource::new(device.clone());
 
         let mut buf = [0; 10];
@@ -1001,9 +1052,9 @@ mod tests {
         let mut read_fut2 = data_buf.read(10, &mut buf2, &source);
 
         poll_fn(|ctx| {
-            assert!(matches!(read_fut.poll_unpin(ctx), Poll::Pending));
+            assert!(read_fut.poll_unpin(ctx).is_pending());
             source.go.signal();
-            assert!(matches!(read_fut2.poll_unpin(ctx), Poll::Pending));
+            assert!(read_fut2.poll_unpin(ctx).is_pending());
             Poll::Ready(())
         })
         .await;
@@ -1011,17 +1062,31 @@ mod tests {
         assert_eq!(read_fut.await.expect("read failed"), 10 as usize);
         assert_eq!(read_fut2.await.expect("read failed"), 10 as usize);
 
-        assert_eq!(&buf, &[1; 10]);
-        assert_eq!(&buf2, &[1; 10]);
+        // The read should get aligned to the block size
+        let mut expected = make_buf(1, READ_SIZE);
+        assert_eq!(&buf, &expected[10..20]);
+        assert_eq!(&buf2, &expected[10..20]);
 
         assert_eq!(data_buf.read(0, &mut buf, &source).await.expect("read failed"), 10);
-        assert_eq!(&buf, &[1; 10]);
+        assert_eq!(&buf, &expected[..10]);
+
+        // Issue an unaligned read that is big enough to trigger another read (so this needs
+        // to exceed the read-ahead).
+        let mut buf = [0; READ_SIZE as usize];
+        assert_eq!(
+            data_buf.read(10, &mut buf, &source).await.expect("read failed"),
+            READ_SIZE as usize
+        );
+
+        // The above should have triggered another read.
+        expected.extend(&make_buf(2, PAGE_SIZE));
+        assert_eq!(&buf, &expected[10..10 + READ_SIZE as usize]);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_write_too_big() {
         let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
-        let device = Arc::new(FakeDevice::new(100, PAGE_SIZE as u32));
+        let device = Arc::new(FakeDevice::new(100, 8192));
         let source = FakeSource::new(device.clone());
         let buf = [0; PAGE_SIZE as usize];
 
@@ -1043,9 +1108,9 @@ mod tests {
 
         // Poll the futures once.
         poll_fn(|ctx| {
-            assert!(matches!(read_fut.poll_unpin(ctx), Poll::Pending));
-            assert!(matches!(read_fut2.poll_unpin(ctx), Poll::Pending));
-            assert!(matches!(read_fut3.poll_unpin(ctx), Poll::Pending));
+            assert!(read_fut.poll_unpin(ctx).is_pending());
+            assert!(read_fut2.poll_unpin(ctx).is_pending());
+            assert!(read_fut3.poll_unpin(ctx).is_pending());
             Poll::Ready(())
         })
         .await;
@@ -1067,5 +1132,69 @@ mod tests {
             data_buf.read(PAGE_SIZE - 1, buf.as_mut(), &source).await.expect("read failed"),
             11
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_block_unaligned_read() {
+        let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
+        let device = Arc::new(FakeDevice::new(100, 8192));
+        let source = FakeSource::new(device.clone());
+        source.go.signal();
+        let mut buf = [0; PAGE_SIZE as usize];
+        assert_eq!(
+            data_buf.read(PAGE_SIZE, buf.as_mut(), &source).await.expect("read failed"),
+            buf.len()
+        );
+
+        // The read should have been issued for offset 0 to align with the device block size.
+        let expected = make_buf(1, PAGE_SIZE * 2);
+        assert_eq!(&buf, &expected[PAGE_SIZE as usize..]);
+
+        // And offset 0 should have been cached.
+        assert_eq!(data_buf.read(0, buf.as_mut(), &source).await.expect("read failed"), buf.len());
+        assert_eq!(&buf, &expected[..PAGE_SIZE as usize]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_readahead() {
+        let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
+        let device = Arc::new(FakeDevice::new(100, 8192));
+        let source = FakeSource::new(device.clone());
+        source.go.signal();
+        let mut buf = [0; PAGE_SIZE as usize];
+        assert_eq!(
+            data_buf.read(10 * PAGE_SIZE, buf.as_mut(), &source).await.expect("read failed"),
+            buf.len()
+        );
+
+        let expected = make_buf(1, PAGE_SIZE * 2);
+        assert_eq!(&buf, &expected[..PAGE_SIZE as usize]);
+
+        // And there should have been readahead...
+        assert_eq!(
+            data_buf.read(11 * PAGE_SIZE, buf.as_mut(), &source).await.expect("read failed"),
+            buf.len()
+        );
+        assert_eq!(&buf, &expected[PAGE_SIZE as usize..]);
+
+        // Issue a read at offset zero.
+        assert_eq!(data_buf.read(0, buf.as_mut(), &source).await.expect("read failed"), buf.len());
+
+        let expected2 = make_buf(2, PAGE_SIZE * 2);
+        assert_eq!(&buf, &expected2[..PAGE_SIZE as usize]);
+
+        // And there should have been readahead for that too.
+        assert_eq!(
+            data_buf.read(PAGE_SIZE, buf.as_mut(), &source).await.expect("read failed"),
+            buf.len()
+        );
+        assert_eq!(&buf, &expected2[PAGE_SIZE as usize..]);
+
+        // And it shouldn't have impacted the results of the first read.
+        assert_eq!(
+            data_buf.read(10 * PAGE_SIZE, buf.as_mut(), &source).await.expect("read failed"),
+            buf.len()
+        );
+        assert_eq!(&buf, &expected[..PAGE_SIZE as usize]);
     }
 }

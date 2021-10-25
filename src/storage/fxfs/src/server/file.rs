@@ -9,7 +9,7 @@ use {
         object_store::{
             filesystem::SyncOptions, CachingObjectHandle, StoreObjectHandle, Timestamp,
         },
-        round::round_up,
+        round::{round_down, round_up},
         server::{
             directory::FxDirectory,
             errors::map_to_status,
@@ -215,6 +215,7 @@ impl FxFile {
         if range.end <= range.start {
             return;
         }
+        range.start = round_down(range.start, self.handle.block_size());
         let this = self.clone();
         fasync::Task::spawn_on(self.handle.owner().executor(), async move {
             async_enter!("page_in");
