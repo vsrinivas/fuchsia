@@ -244,6 +244,15 @@ void F2fs::InitSuperblockInfo() {
   superblock_info_->SetRootIno(LeToCpu(RawSb().root_ino));
   superblock_info_->SetNodeIno(LeToCpu(RawSb().node_ino));
   superblock_info_->SetMetaIno(LeToCpu(RawSb().meta_ino));
+
+  std::vector<std::string> extension_list;
+  for (int index = 0; index < safemath::checked_cast<int>(RawSb().extension_count); ++index) {
+    ZX_ASSERT(index < kMaxExtension);
+    ZX_ASSERT(RawSb().extension_list[index][7] == '\0');
+    extension_list.push_back(reinterpret_cast<char *>(RawSb().extension_list[index]));
+  }
+  ZX_ASSERT(RawSb().extension_count == extension_list.size());
+  superblock_info_->SetExtensionList(std::move(extension_list));
 }
 
 void F2fs::Reset() {

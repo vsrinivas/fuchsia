@@ -196,7 +196,7 @@ TEST_F(NodeManagerTest, FreeNid) {
   ASSERT_EQ(nid, node_manager.GetNextScanNid());
 
   // Alloc Done
-  fs_->GetNodeManager().AllocNid(&nid);
+  fs_->GetNodeManager().AllocNid(nid);
   ASSERT_EQ(nid, static_cast<nid_t>(4));
   ASSERT_EQ(node_manager.GetFreeNidCount(), init_fcnt - 1);
 
@@ -210,7 +210,7 @@ TEST_F(NodeManagerTest, FreeNid) {
   ASSERT_EQ(fi->state, static_cast<int>(NidState::kNidNew));
 
   // Alloc Failed
-  fs_->GetNodeManager().AllocNid(&nid);
+  fs_->GetNodeManager().AllocNid(nid);
   ASSERT_EQ(nid, static_cast<nid_t>(5));
   ASSERT_EQ(node_manager.GetFreeNidCount(), init_fcnt - 2);
 

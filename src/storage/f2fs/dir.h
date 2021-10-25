@@ -68,8 +68,8 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
 
   // helper
   ino_t InodeByName(std::string_view name);
-  int IsMultimediaFile(VnodeF2fs *vnode, const char *sub);
-  void SetColdFile(VnodeF2fs *vnode);
+  bool IsMultimediaFile(VnodeF2fs &vnode, std::string_view sub);
+  void SetColdFile(VnodeF2fs &vnode);
   block_t DirBlocks();
   static uint32_t DirBuckets(uint32_t level, uint8_t dir_level);
   static uint32_t BucketBlocks(uint32_t level);

@@ -118,7 +118,9 @@ zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) 
     fbl::RefPtr<VnodeF2fs> failed = std::move(*out);
     failed->ClearNlink();
     failed->SetFlag(InodeInfoFlag::kBad);
+    failed.reset();
     out = nullptr;
+    F2fsPutPage(node_page, 1);
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -273,6 +275,9 @@ zx_status_t VnodeF2fs::Vget(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
   if (!(ino == fs->GetSuperblockInfo().GetNodeIno() ||
         ino == fs->GetSuperblockInfo().GetMetaIno())) {
     if (!fs->GetSuperblockInfo().IsOnRecovery() && vnode_refptr->GetNlink() == 0) {
+      vnode_refptr->SetFlag(InodeInfoFlag::kBad);
+      vnode_refptr.reset();
+      *out = nullptr;
       return ZX_ERR_NOT_FOUND;
     }
   }
@@ -343,7 +348,7 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
 #endif
 }
 
-int VnodeF2fs::WriteInode(WritebackControl *wbc) {
+zx_status_t VnodeF2fs::WriteInode(WritebackControl *wbc) {
   SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
   Page *node_page = nullptr;
   zx_status_t ret = ZX_OK;
@@ -443,7 +448,7 @@ void VnodeF2fs::TruncatePartialDataPage(uint64_t from) {
 
 zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
   SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
-  unsigned int blocksize = superblock_info.GetBlocksize();
+  uint32_t blocksize = superblock_info.GetBlocksize();
   DnodeOfData dn;
   int count = 0;
   zx_status_t err;
@@ -578,7 +583,7 @@ void VnodeF2fs::Sync(SyncCallback closure) {
 zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
   SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
   __UNUSED uint64_t cur_version;
-  zx_status_t ret = 0;
+  zx_status_t ret = ZX_OK;
   bool need_cp = false;
 #if 0  // porting needed
   // WritebackControl wbc;
@@ -662,7 +667,7 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
   return ret;
 }
 
-int VnodeF2fs::NeedToSyncDir() {
+bool VnodeF2fs::NeedToSyncDir() {
 #if 0  // porting needed
   // dentry = d_find_any_alias(vnode);
   // if (!dentry) {

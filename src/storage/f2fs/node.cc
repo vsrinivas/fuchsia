@@ -697,7 +697,7 @@ zx_status_t NodeManager::GetDnodeOfData(DnodeOfData &dn, pgoff_t index, int ro) 
 
     if (!nids[i] && !ro) {
       /* alloc new node */
-      if (!AllocNid(&(nids[i]))) {
+      if (!AllocNid(nids[i])) {
         err = ZX_ERR_NO_SPACE;
         release_pages();
         return err;
@@ -1573,7 +1573,7 @@ void NodeManager::BuildFreeNids() {
 // If this function returns success, caller can obtain a new nid
 // from second parameter of this function.
 // The returned nid could be used ino as well as nid when inode is created.
-bool NodeManager::AllocNid(nid_t *out) {
+bool NodeManager::AllocNid(nid_t &out) {
   FreeNid *i = nullptr;
   list_node_t *this_list;
   do {
@@ -1606,7 +1606,7 @@ bool NodeManager::AllocNid(nid_t *out) {
   }
 
   ZX_ASSERT(i->state == static_cast<int>(NidState::kNidNew));
-  *out = i->nid;
+  out = i->nid;
   i->state = static_cast<int>(NidState::kNidAlloc);
   --free_nid_count_;
   return true;

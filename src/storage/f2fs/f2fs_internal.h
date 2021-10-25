@@ -265,6 +265,9 @@ class SuperblockInfo {
 
   void SetLastVictim(int mode, uint32_t last_victim) { last_victim_[mode] = last_victim; }
 
+  const std::vector<std::string> &GetExtensionList() const { return extension_list_; }
+  void SetExtensionList(std::vector<std::string> list) { extension_list_ = std::move(list); }
+
 #ifdef __Fuchsia__
   fbl::Mutex &GetStatLock() { return stat_lock_; };
 #endif  // __Fuchsia__
@@ -402,6 +405,9 @@ class SuperblockInfo {
   uint64_t segment_count_[2] = {0};  // # of allocated segments
   uint64_t block_count_[2] = {0};    // # of allocated blocks
   uint32_t last_victim_[2] = {0};    // last victim segment #
+
+  std::vector<std::string> extension_list_;
+
 #ifdef __Fuchsia__
   fbl::Mutex stat_lock_;  // lock for stat operations
 #endif                    // __Fuchsia__

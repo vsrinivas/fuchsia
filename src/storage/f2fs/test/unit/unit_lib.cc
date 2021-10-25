@@ -139,9 +139,9 @@ void FileTester::DeleteChildren(std::vector<fbl::RefPtr<VnodeF2fs>> &vnodes,
 
 void FileTester::VnodeWithoutParent(F2fs *fs, uint32_t mode, fbl::RefPtr<VnodeF2fs> &vnode) {
   nid_t inode_nid;
-  ASSERT_TRUE(fs->GetNodeManager().AllocNid(&inode_nid));
+  ASSERT_TRUE(fs->GetNodeManager().AllocNid(inode_nid));
 
-  VnodeF2fs::Allocate(fs, inode_nid, S_IFREG, &vnode);
+  VnodeF2fs::Allocate(fs, inode_nid, mode, &vnode);
   ASSERT_EQ(vnode->Open(vnode->ValidateOptions(fs::VnodeConnectionOptions()).value(), nullptr),
             ZX_OK);
   vnode->UnlockNewInode();

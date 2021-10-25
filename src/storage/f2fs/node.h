@@ -144,7 +144,7 @@ class NodeManager {
   int SyncNodePages(nid_t ino, WritebackControl *wbc);
   void SyncInodePage(DnodeOfData &dn);
 
-  bool AllocNid(nid_t *out);
+  bool AllocNid(nid_t &out);
   void AllocNidFailed(nid_t nid);
   void AllocNidDone(nid_t nid);
   zx_status_t TruncateInodeBlocks(VnodeF2fs &vnode, pgoff_t from);

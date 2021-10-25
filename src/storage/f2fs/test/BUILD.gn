@@ -30,6 +30,7 @@ test("f2fs_unit") {
     "unit/orphan.cc",
     "unit/segment.cc",
     "unit/unit_lib.cc",
+    "unit/vnode.cc",
     "unit/vnode_cache.cc",
   ]
   public = [ "unit/unit_lib.h" ]

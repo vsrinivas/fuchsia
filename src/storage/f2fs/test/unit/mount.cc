@@ -215,5 +215,44 @@ TEST(MountTest, ActiveLogsOptions) {
   }
 }
 
+TEST(MountTest, EnableDiscardOptions) {
+  std::unique_ptr<f2fs::Bcache> bc;
+  FileTester::MkfsOnFakeDev(&bc);
+
+  std::unique_ptr<F2fs> fs;
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  MountOptions options{};
+  ASSERT_EQ(options.SetValue(options.GetNameView(kOptDiscard), 1), ZX_OK);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  ASSERT_TRUE(fs->GetSuperblockInfo().TestOpt(kMountDiscard));
+
+  FileTester::Unmount(std::move(fs), &bc);
+}
+
+TEST(MountTest, InvalidOptions) {
+  MountOptions options{};
+  ASSERT_EQ(options.SetValue(options.GetNameView(kOptActiveLogs), kMaxActiveLogs),
+            ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(options.SetValue(options.GetNameView(kOptBgGcOff), 1), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(options.SetValue(options.GetNameView(kOptNoHeap), 1), ZX_ERR_INVALID_ARGS);
+}
+
+TEST(MountTest, MountException) {
+  std::unique_ptr<Bcache> bc;
+  auto device =
+      std::make_unique<block_client::FakeBlockDevice>(block_client::FakeBlockDevice::Config{
+          .block_count = 1, .block_size = kDefaultSectorSize, .supports_trim = true});
+  bool readonly_device = false;
+  ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
+
+  std::unique_ptr<F2fs> fs;
+  MountOptions mount_options;
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  ASSERT_EQ(Mount(mount_options, std::move(bc)), ZX_ERR_BAD_STATE);
+}
+
 }  // namespace
 }  // namespace f2fs

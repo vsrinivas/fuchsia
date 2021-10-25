@@ -65,7 +65,7 @@ class VnodeF2fs : public fs::Vnode,
   void Sync(SyncCallback closure) final;
 #endif  // __Fuchsia__
   zx_status_t SyncFile(loff_t start, loff_t end, int datasync);
-  int NeedToSyncDir();
+  bool NeedToSyncDir();
 
   void fbl_recycle() { RecycleNode(); };
 

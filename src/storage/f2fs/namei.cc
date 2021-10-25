@@ -19,7 +19,7 @@ zx_status_t Dir::NewInode(uint32_t mode, fbl::RefPtr<VnodeF2fs> *out) {
 #ifdef __Fuchsia__
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
 #endif  // __Fuchsia__
-    if (!Vfs()->GetNodeManager().AllocNid(&ino)) {
+    if (!Vfs()->GetNodeManager().AllocNid(ino)) {
       return ZX_ERR_NO_SPACE;
     }
   } while (false);
@@ -62,37 +62,26 @@ zx_status_t Dir::NewInode(uint32_t mode, fbl::RefPtr<VnodeF2fs> *out) {
   return ZX_OK;
 }
 
-int Dir::IsMultimediaFile(VnodeF2fs *vnode, const char *sub) {
-  int slen = vnode->GetNameLen();
-  int sublen = static_cast<int>(strlen(sub));
-  int ret;
+bool Dir::IsMultimediaFile(VnodeF2fs &vnode, std::string_view sub) {
+  // compare lower case
+  if (cpp20::ends_with(vnode.GetNameView(), sub))
+    return true;
 
-  if (sublen > slen)
-    return 1;
-
-  if (ret = memcmp(vnode->GetName() + slen - sublen, sub, sublen);
-      ret != 0) { /* compare upper case */
-    int i;
-    char upper_sub[8];
-    for (i = 0; i < sublen && i < static_cast<int>(sizeof(upper_sub)); i++)
-      upper_sub[i] = static_cast<char>(toupper(sub[i]));
-    return memcmp(vnode->GetName() + slen - sublen, upper_sub, sublen);
-  }
-
-  return ret;
+  // compare upper case
+  std::string upper_sub(sub);
+  std::transform(upper_sub.cbegin(), upper_sub.cend(), upper_sub.begin(), ::toupper);
+  return cpp20::ends_with(vnode.GetNameView(), upper_sub.c_str());
 }
 
 /**
  * Set multimedia files as cold files for hot/cold data separation
  */
-inline void Dir::SetColdFile(VnodeF2fs *vnode) {
-  int i;
-  uint8_t(*extlist)[8] = Vfs()->RawSb().extension_list;
+void Dir::SetColdFile(VnodeF2fs &vnode) {
+  const std::vector<std::string> &extension_list = Vfs()->GetSuperblockInfo().GetExtensionList();
 
-  int count = LeToCpu(Vfs()->RawSb().extension_count);
-  for (i = 0; i < count; i++) {
-    if (!IsMultimediaFile(vnode, reinterpret_cast<const char *>(extlist[i]))) {
-      vnode->SetAdvise(FAdvise::kCold);
+  for (const auto &extension : extension_list) {
+    if (IsMultimediaFile(vnode, extension)) {
+      vnode.SetAdvise(FAdvise::kCold);
       break;
     }
   }
@@ -110,7 +99,7 @@ zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::
   vnode->SetName(name);
 
   if (!superblock_info.TestOpt(kMountDisableExtIdentify))
-    SetColdFile(vnode);
+    SetColdFile(*vnode);
 
   vnode->SetFlag(InodeInfoFlag::kIncLink);
   {
