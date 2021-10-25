@@ -24,15 +24,10 @@ import (
 )
 
 type downloadCmd struct {
-	gcsBucket                    string
-	buildIDs                     string
-	outDir                       string
-	productBundleMappingFileName string
-}
-
-type ProductBundleMapping struct {
-	Name string
-	Path string
+	gcsBucket                   string
+	buildIDs                    string
+	outDir                      string
+	outputProductBundleFileName string
 }
 
 const (
@@ -56,8 +51,8 @@ func (*downloadCmd) Usage() string {
 func (cmd *downloadCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.gcsBucket, "bucket", "", "GCS bucket from which to read the files from.")
 	f.StringVar(&cmd.buildIDs, "build_ids", "", "Comma separated list of build_ids.")
-	f.StringVar(&cmd.outDir, "out_dir", "", "Directory to write outputs to.")
-	f.StringVar(&cmd.productBundleMappingFileName, "mapping_file_name", "product_bundle_mapping.json", "Name of the mapping file containing the name of product and path to product bundle.")
+	f.StringVar(&cmd.outDir, "out_dir", "", "Directory to write out_file_name to.")
+	f.StringVar(&cmd.outputProductBundleFileName, "out_file_name", "product_bundles.json", "Name of the output file containing all the product bundles.")
 }
 
 func (cmd *downloadCmd) parseFlags() error {
@@ -74,20 +69,20 @@ func (cmd *downloadCmd) parseFlags() error {
 	}
 	info, err := os.Stat(cmd.outDir)
 	if os.IsNotExist(err) {
-		return fmt.Errorf("out directory path %v does not exist", cmd.outDir)
+		return fmt.Errorf("out directory path %s does not exist", cmd.outDir)
 	}
 	if err != nil {
 		return err
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("out directory path %v is not a directory", cmd.outDir)
+		return fmt.Errorf("out directory path %s is not a directory", cmd.outDir)
 	}
 	return nil
 }
 
 func (cmd *downloadCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if err := cmd.execute(ctx); err != nil {
-		logger.Errorf(ctx, "%v", err)
+		logger.Errorf(ctx, "%s", err)
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess
@@ -104,46 +99,35 @@ func (cmd *downloadCmd) execute(ctx context.Context) error {
 	}
 	defer sink.close()
 
-	var productBundleMappings []ProductBundleMapping
+	var productBundles []artifactory.ProductBundle
 
 	buildIDsList := strings.Split(cmd.buildIDs, ",")
 	for _, buildID := range buildIDsList {
+		buildID = strings.TrimSpace(buildID)
 		buildsNamespaceDir := filepath.Join(buildsDirName, buildID)
 		imageDir := filepath.Join(buildsNamespaceDir, imageDirName)
 		imagesJSONPath := filepath.Join(imageDir, imageJSONName)
 
 		productBundlePath, err := getProductBundlePathFromImagesJSON(ctx, sink, imagesJSONPath)
 		if err != nil {
-			return fmt.Errorf("unable to get product bundle path from images.json for build_id '%v': %v", buildID, err)
+			return fmt.Errorf("unable to get product bundle path from images.json for build_id %s: %w", buildID, err)
 		}
 		productBundleAbsPath := filepath.Join(imageDir, productBundlePath)
-		logger.Debugf(ctx, "%v contains the product bundle in abs path %v", buildID, productBundleAbsPath)
+		logger.Debugf(ctx, "%s contains the product bundle in abs path %s", buildID, productBundleAbsPath)
 
 		updatedProductBundleData, err := readAndUpdateProductBundle(ctx, sink, productBundleAbsPath)
 		if err != nil {
-			return fmt.Errorf("unable to read product bundle data for build_id '%v': %v", buildID, err)
+			return fmt.Errorf("unable to read product bundle data for build_id %s: %w", buildID, err)
 		}
-		data, err := json.MarshalIndent(&updatedProductBundleData, "", "  ")
-		if err != nil {
-			return fmt.Errorf("unable to json marshall product bundle for build_id '%v': %v", buildID, err)
-		}
-		outputFilePath := filepath.Join(cmd.outDir, buildID+".json")
-		logger.Debugf(ctx, "writing updated product bundle to: %v", outputFilePath)
-		if err := ioutil.WriteFile(outputFilePath, data, 0644); err != nil {
-			return err
-		}
-		productBundleMappings = append(productBundleMappings, ProductBundleMapping{
-			Name: updatedProductBundleData.Data.Name,
-			Path: outputFilePath,
-		})
+		productBundles = append(productBundles, updatedProductBundleData)
 	}
 
-	outputFilePath := filepath.Join(cmd.outDir, cmd.productBundleMappingFileName)
-	data, err := json.MarshalIndent(productBundleMappings, "", "  ")
+	outputFilePath := filepath.Join(cmd.outDir, cmd.outputProductBundleFileName)
+	data, err := json.MarshalIndent(productBundles, "", "  ")
 	if err != nil {
-		return fmt.Errorf("unable to json marshall product bundle mapping: %v", err)
+		return fmt.Errorf("unable to json marshall product bundles: %w", err)
 	}
-	logger.Debugf(ctx, "writing product bundle mapping to: %v", outputFilePath)
+	logger.Debugf(ctx, "writing final product bundle file to: %s", outputFilePath)
 	if err := ioutil.WriteFile(outputFilePath, data, 0644); err != nil {
 		return err
 	}
@@ -163,7 +147,7 @@ func getGCSURIBasedOnFileURI(ctx context.Context, sink dataSink, fileURI, produc
 		return "", err
 	}
 	if !validPath {
-		return "", fmt.Errorf("base_uri is invalid %v", baseURI)
+		return "", fmt.Errorf("base_uri is invalid %s", baseURI)
 	}
 	return gcsBaseURI + filepath.Join(bucket, baseURI), nil
 }
@@ -181,14 +165,14 @@ func readAndUpdateProductBundle(ctx context.Context, sink dataSink, productBundl
 	var newImages []*artifactory.Image
 	var newPackages []*artifactory.Package
 
-	logger.Debugf(ctx, "updating images for product bundle %q", productBundleJSONPath)
+	logger.Debugf(ctx, "updating images for product bundle %s", productBundleJSONPath)
 	for _, image := range data.Images {
 		if image.Format == fileFormatName {
 			gcsURI, err := getGCSURIBasedOnFileURI(ctx, sink, image.BaseURI, productBundleJSONPath, sink.getBucketName())
 			if err != nil {
 				return artifactory.ProductBundle{}, err
 			}
-			logger.Debugf(ctx, "gcs_uri is %v for image base_uri %v", gcsURI, image.BaseURI)
+			logger.Debugf(ctx, "gcs_uri is %s for image base_uri %s", gcsURI, image.BaseURI)
 			newImages = append(newImages, &artifactory.Image{
 				Format:  fileFormatName,
 				BaseURI: gcsURI,
@@ -196,21 +180,21 @@ func readAndUpdateProductBundle(ctx context.Context, sink dataSink, productBundl
 		}
 	}
 
-	logger.Debugf(ctx, "updating packages for product bundle %q", productBundleJSONPath)
+	logger.Debugf(ctx, "updating packages for product bundle %s", productBundleJSONPath)
 	for _, pkg := range data.Packages {
 		if pkg.Format == fileFormatName {
 			repoURI, err := getGCSURIBasedOnFileURI(ctx, sink, pkg.RepoURI, productBundleJSONPath, sink.getBucketName())
 			if err != nil {
 				return artifactory.ProductBundle{}, err
 			}
-			logger.Debugf(ctx, "gcs_uri is %v for package repo_uri %v", repoURI, pkg.RepoURI)
+			logger.Debugf(ctx, "gcs_uri is %s for package repo_uri %s", repoURI, pkg.RepoURI)
 
 			blobURI, err := getGCSURIBasedOnFileURI(ctx, sink, pkg.BlobURI, productBundleJSONPath, sink.getBucketName())
 			if err != nil {
 				return artifactory.ProductBundle{}, err
 			}
 
-			logger.Debugf(ctx, "gcs_uri is %v for package blob_uri %v", blobURI, pkg.BlobURI)
+			logger.Debugf(ctx, "gcs_uri is %s for package blob_uri %s", blobURI, pkg.BlobURI)
 			newPackages = append(newPackages, &artifactory.Package{
 				Format:  fileFormatName,
 				RepoURI: repoURI,
@@ -252,7 +236,7 @@ func getProductBundlePathFromImagesJSON(ctx context.Context, sink dataSink, imag
 			return entry.Path, nil
 		}
 	}
-	return "", fmt.Errorf("unable to find product bundle in image manifest: %v", imagesJSONPath)
+	return "", fmt.Errorf("unable to find product bundle in image manifest: %s", imagesJSONPath)
 }
 
 // DataSink is an abstract data sink, providing a mockable interface to
@@ -288,7 +272,7 @@ func (s *cloudSink) close() {
 
 // readFromGCS reads an object from GCS.
 func (s *cloudSink) readFromGCS(ctx context.Context, object string) ([]byte, error) {
-	logger.Debugf(ctx, "reading %v from GCS", object)
+	logger.Debugf(ctx, "reading %s from GCS", object)
 	ctx, cancel := context.WithTimeout(ctx, time.Second*50)
 	defer cancel()
 	rc, err := s.bucket.Object(object).NewReader(ctx)
@@ -310,7 +294,7 @@ func (s *cloudSink) getBucketName() string {
 
 // doesPathExist checks if a path exists in GCS.
 func (s *cloudSink) doesPathExist(ctx context.Context, prefix string) (bool, error) {
-	logger.Debugf(ctx, "checking if %v is a valid path in GCS", prefix)
+	logger.Debugf(ctx, "checking if %s is a valid path in GCS", prefix)
 	it := s.bucket.Objects(ctx, &storage.Query{
 		Prefix:    prefix,
 		Delimiter: "/",

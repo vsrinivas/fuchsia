@@ -110,7 +110,7 @@ func TestParseFlags(t *testing.T) {
 
 	for _, test := range tests {
 		if err := test.downloadCmd.parseFlags(); err != nil && err.Error() != test.expectedErr {
-			t.Errorf("Got error: '%v', want: '%v'", err.Error(), test.expectedErr)
+			t.Errorf("Got error: %s, want: %s", err.Error(), test.expectedErr)
 		}
 	}
 }
@@ -166,13 +166,13 @@ func TestGetProductBundlePathFromImagesJSON(t *testing.T) {
 			sink := newMemSink(contents, test.dataSinkErr, "")
 			output, err := getProductBundlePathFromImagesJSON(ctx, sink, test.imageJSONPath)
 			if output != test.expectedOutput {
-				t.Errorf("Got output: '%v', want: '%v'", output, test.expectedOutput)
+				t.Errorf("Got output: %v, want: %v", output, test.expectedOutput)
 			}
 			if err != nil && err.Error() != test.expectedErrMessage {
-				t.Errorf("Got error: '%v', want: '%v'", err.Error(), test.expectedErrMessage)
+				t.Errorf("Got error: %s, want: %s", err.Error(), test.expectedErrMessage)
 			}
 			if err == nil && test.expectedErrMessage != "" {
-				t.Errorf("Got no error, want: '%v", test.expectedErrMessage)
+				t.Errorf("Got no error, want: %s", test.expectedErrMessage)
 			}
 		})
 	}
@@ -441,13 +441,13 @@ func TestGetProductBundleData(t *testing.T) {
 			sink := newMemSink(contents, test.dataSinkErr, test.dir)
 			output, err := readAndUpdateProductBundle(ctx, sink, test.productBundlePath)
 			if !cmp.Equal(&output, &test.expectedProductBundle) {
-				t.Errorf("Got output: '%v', want: '%v'", output, test.expectedProductBundle)
+				t.Errorf("Got output: %v, want: %v", output, test.expectedProductBundle)
 			}
 			if err != nil && err.Error() != test.expectedErrMessage {
-				t.Errorf("Got error: '%v', want: '%v'", err.Error(), test.expectedErrMessage)
+				t.Errorf("Got error: %s, want: %s", err.Error(), test.expectedErrMessage)
 			}
 			if err == nil && test.expectedErrMessage != "" {
-				t.Errorf("Got no error, want: '%v", test.expectedErrMessage)
+				t.Errorf("Got no error, want: %s", test.expectedErrMessage)
 			}
 		})
 	}
