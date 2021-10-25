@@ -36,10 +36,11 @@ const TUF_ARTIFACT_GROUPS_PATH: &str = "targets/artifact_groups.json";
 #[ffx_plugin("ffx_pdk")]
 pub async fn cmd_update(cmd: UpdateCommand) -> Result<()> {
     let spec: Spec = read_to_string(cmd.spec_file.clone())
-        .map_err(|e| ffx_error!("Cannot open file {:?} \nerror: {:?}", cmd.spec_file, e))
+        .map_err(|e| ffx_error!(r#"Cannot open spec file "{}": {}"#, cmd.spec_file.display(), e))
         .and_then(|contents| {
-            serde_json5::from_str(&contents)
-                .map_err(|e| ffx_error!("Spec json parsing errored {}", e))
+            serde_json5::from_str(&contents).map_err(|e| {
+                ffx_error!(r#"JSON5 error from spec file "{}": {}"#, cmd.spec_file.display(), e)
+            })
         })?;
     process_spec(&spec, &cmd).await?;
     println!("Spec file for product \"{}\" processed.", spec.product);
@@ -184,15 +185,21 @@ async fn read_artifact_groups(
                 ffx_bail!("Missing repo field in artifact store")
             }
             let repo = store.repo.as_ref().unwrap();
-            let uri = format!("{}/{}", repo, TUF_ARTIFACT_GROUPS_PATH).parse::<Uri>()?;
+            let uri = format!("{}/{}", repo, TUF_ARTIFACT_GROUPS_PATH)
+                .parse::<Uri>()
+                .map_err(|e| ffx_error!(r#"Parse Uri failed for "{}": {}"#, repo, e))?;
             let client = new_https_client();
-            let response = client.get(uri.clone()).await?;
+            let response = client
+                .get(uri.clone())
+                .await
+                .map_err(|e| ffx_error!(r#"Failed on http get for "{}": {}"#, uri, e))?;
             if response.status() != StatusCode::OK {
                 ffx_bail!("http get error {} {}. \n", &uri, response.status(),);
             }
             let bytes = body::to_bytes(response.into_body()).await?;
             let body = String::from_utf8(bytes.to_vec()).expect("response was not valid utf-8");
-            Ok(serde_json::from_str(&body)?)
+            Ok(serde_json::from_str(&body)
+                .map_err(|e| ffx_error!(r#"Cannot parse json from "{}": {}"#, &uri, e))?)
         }
         SpecArtifactStoreKind::Local => {
             if store.path.is_none() {
@@ -203,8 +210,12 @@ async fn read_artifact_groups(
                 ffx_bail!("Missing --artifact-root parameter");
             }
             let path = format!("{}/{}", cmd.artifact_root.as_ref().unwrap(), path_suffix);
-            let reader = BufReader::new(File::open(path)?);
-            Ok(serde_json::from_reader(reader)?)
+            let reader = BufReader::new(
+                File::open(path.clone())
+                    .map_err(|e| ffx_error!(r#"Cannot open "{}": {}"#, &path, e))?,
+            );
+            Ok(serde_json::from_reader(reader)
+                .map_err(|e| ffx_error!(r#"Cannot parse json from "{}": {}"#, &path, e))?)
         }
     }
 }
@@ -284,13 +295,18 @@ async fn get_blobs(
         PathBuf::from(artifact_root.unwrap()).join(hash.to_string())
     } else {
         let hostname = content_address_storage.unwrap();
-        let uri = format!("{}/{}", hostname, hash).parse::<Uri>()?;
+        let uri = format!("{}/{}", hostname, hash)
+            .parse::<Uri>()
+            .map_err(|e| ffx_error!(r#"Parse Uri failed for "{}": {}"#, hostname, e))?;
         let client = new_https_client();
-        let mut res = client.get(uri.clone()).await?;
+        let mut res = client
+            .get(uri.clone())
+            .await
+            .map_err(|e| ffx_error!(r#"Failed on http get for "{}": {}"#, uri, e))?;
         let status = res.status();
 
         if status != StatusCode::OK {
-            ffx_bail!("Cannot download meta.far. Status is {}. Uri is: {}. \n", status, &uri);
+            ffx_bail!("Cannot download meta.far. Status is {}. Uri is: {}.", status, &uri);
         }
         let meta_far_path = tempdir.path().join("meta.far");
         let mut output = async_fs::File::create(&meta_far_path).await?;
@@ -302,9 +318,14 @@ async fn get_blobs(
         meta_far_path
     };
 
-    let mut archive = File::open(&meta_far_path)?;
-    let mut meta_far = fuchsia_archive::Reader::new(&mut archive)?;
-    let meta_contents = meta_far.read_file("meta/contents")?;
+    let mut archive = File::open(&meta_far_path)
+        .map_err(|e| ffx_error!(r#"Cannot open meta_far "{}": {}"#, meta_far_path.display(), e))?;
+    let mut meta_far = fuchsia_archive::Reader::new(&mut archive).map_err(|e| {
+        ffx_error!(r#"Cannot read fuchsia_archive "{}": {}"#, meta_far_path.display(), e)
+    })?;
+    let meta_contents = meta_far.read_file("meta/contents").map_err(|e| {
+        ffx_error!(r#"Cannot read "meta/contens" from "{}": {}"#, meta_far_path.display(), e)
+    })?;
     let meta_contents = MetaContents::deserialize(meta_contents.as_slice())?.into_contents();
     result.extend(meta_contents.into_iter().map(|(_, hash)| hash.to_string()));
     return Ok(result);
@@ -358,7 +379,12 @@ async fn process_spec(spec: &Spec, cmd: &UpdateCommand) -> Result<()> {
         }
     }
     let lock = Lock { artifacts: lock_artifacts };
-    let file = OpenOptions::new().create(true).write(true).truncate(true).open(cmd.out.clone())?;
+    let file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(cmd.out.clone())
+        .map_err(|e| ffx_error!(r#"Cannot create lock file "{}": {}"#, cmd.out.display(), e))?;
 
     // write file
     serde_json::to_writer_pretty(&file, &lock)?;
