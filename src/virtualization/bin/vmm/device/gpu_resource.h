@@ -5,10 +5,10 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_GPU_RESOURCE_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_GPU_RESOURCE_H_
 
-#include <virtio/gpu.h>
-
 #include <memory>
 #include <vector>
+
+#include <virtio/gpu.h>
 
 #include "src/virtualization/bin/vmm/device/phys_mem.h"
 
