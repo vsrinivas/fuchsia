@@ -778,7 +778,7 @@ def main():
 
     # fsatrace output buffer size is chosen empirically to be large enough for
     # all CI/CQ builds.
-    os.environ["FSAT_BUF_SIZE"] = "6000000"
+    os.environ["FSAT_BUF_SIZE"] = "7500000"
     retval = subprocess.call(
         [
             args.fsatrace_path,
