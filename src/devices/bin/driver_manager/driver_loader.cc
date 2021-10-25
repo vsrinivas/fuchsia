@@ -235,6 +235,10 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
     MatchedDriver matched_driver = {};
     matched_driver.driver = loaded_driver;
 
+    if (driver.has_colocate()) {
+      matched_driver.colocate = driver.colocate();
+    }
+
     MatchedCompositeDriver composite = {};
     bool uses_composite = false;
 

@@ -28,6 +28,11 @@ def main():
         help=
         'Generates a DFv1 component manifest. (If this is not included a DFv2 manifest is generated)'
     )
+    parser.add_argument(
+        '--colocate',
+        action='store_true',
+        help='If this exists then the driver should be colocated with its parent'
+    )
     args = parser.parse_args()
 
     distribution_manifest = json.load(args.distribution_manifest_file)
@@ -69,6 +74,9 @@ def main():
         manifest["program"]["compat"] = program
     else:
         manifest["program"]["binary"] = program
+
+    if args.colocate:
+        manifest["program"]["colocate"] = "true"
 
     json_manifest = json.dumps(manifest)
     args.output.write(json_manifest)

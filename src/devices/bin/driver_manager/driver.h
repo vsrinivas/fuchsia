@@ -29,6 +29,7 @@ struct MatchedCompositeDriver {
 
 struct MatchedDriver {
   std::optional<MatchedCompositeDriver> composite;
+  bool colocate = false;
   const Driver* driver = nullptr;
 };
 

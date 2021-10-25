@@ -95,6 +95,7 @@ fuchsia_driver_component("test-bind-component") {
     ":fake-driver",
     ":test-bind",
   ]
+  colocate = true
 }
 
 fuchsia_driver("fake-driver2") {

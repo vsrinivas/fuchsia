@@ -114,8 +114,8 @@ zx_status_t CompositeDevice::CreateFromDriverIndex(MatchedDriver driver,
   fbl::String name(driver.composite->name);
   auto dev = std::make_unique<CompositeDevice>(
       std::move(name), fbl::Array<const zx_device_prop_t>(), fbl::Array<const StrProperty>(),
-      driver.composite->num_nodes, 0, true /* TODO(dgilhooley): spawn colocated in follow up CL */,
-      fbl::Array<std::unique_ptr<Metadata>>(), true);
+      driver.composite->num_nodes, 0, driver.colocate, fbl::Array<std::unique_ptr<Metadata>>(),
+      true);
 
   for (uint32_t i = 0; i < driver.composite->num_nodes; ++i) {
     std::string name = driver.composite->node_names[i];

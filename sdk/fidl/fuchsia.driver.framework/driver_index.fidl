@@ -28,6 +28,9 @@ type MatchedDriver = table {
     /// URL of the driver library.
     /// This should only be used by DriverManager before Drivers-As-Components.
     4: driver_url string:fuchsia.url.MAX_URL_LENGTH;
+
+    /// If this is true then the driver should be colocated in its parent's DriverHost.
+    7: colocate bool;
 };
 
 /// Protocol through which the driver index can be queried.

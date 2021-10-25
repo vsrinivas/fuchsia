@@ -32,6 +32,11 @@ import("//tools/cmc/build/cmc.gni")
 #     compatibility shim when running in a DFv2 environment.
 #     Type: bool
 #     Default: true
+#   colocate (optional)
+#     If this is true, the driver will be put in the same DriverHost as its parent.
+#     This currently only affects composite drivers.
+#     Type: boolean
+#     Default: false
 #   deps
 #   testonly
 #   visibility
@@ -80,6 +85,9 @@ template("fuchsia_driver_component") {
       ]
       if (is_v1_driver) {
         args += [ "--is_v1" ]
+      }
+      if (defined(invoker.colocate) && invoker.colocate) {
+        args += [ "--colocate" ]
       }
     }
 

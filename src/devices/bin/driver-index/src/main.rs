@@ -136,11 +136,17 @@ async fn load_driver(
         .with_context(|| format!("{}: Failed to parse bind", component_url.as_str()))?;
 
     let v1_driver_path = get_rules_string_value(&component, "compat");
+    let colocate = get_rules_string_value(&component, "colocate");
+    let colocate = match colocate {
+        Some(s) => s == "true",
+        None => false,
+    };
 
     Ok(Some(ResolvedDriver {
         component_url: component_url,
         v1_driver_path: v1_driver_path,
         bind_rules: bind,
+        colocate: colocate,
     }))
 }
 
@@ -176,6 +182,7 @@ struct ResolvedDriver {
     component_url: url::Url,
     v1_driver_path: Option<String>,
     bind_rules: DecodedRules,
+    colocate: bool,
 }
 
 impl std::fmt::Display for ResolvedDriver {
@@ -295,6 +302,7 @@ impl ResolvedDriver {
         fdf::MatchedDriver {
             url: Some(self.component_url.as_str().to_string()),
             driver_url: driver_url,
+            colocate: Some(self.colocate),
             ..fdf::MatchedDriver::EMPTY
         }
     }
@@ -730,6 +738,7 @@ mod tests {
                     .to_string(),
                 result.driver_url.unwrap(),
             );
+            assert!(result.colocate.unwrap());
 
             // Check the value from the 'test-bind2' binary. This should match my-driver2.cm
             let property = fdf::NodeProperty {
@@ -803,6 +812,7 @@ mod tests {
                 .unwrap(),
             v1_driver_path: None,
             bind_rules: always_match.clone(),
+            colocate: false,
         },]);
 
         let (proxy, stream) =
@@ -860,6 +870,7 @@ mod tests {
                 .unwrap(),
                 v1_driver_path: Some("meta/my-driver.so".to_string()),
                 bind_rules: always_match.clone(),
+                colocate: false,
             },
             ResolvedDriver {
                 component_url: url::Url::parse(
@@ -868,6 +879,7 @@ mod tests {
                 .unwrap(),
                 v1_driver_path: Some("meta/my-driver2.so".to_string()),
                 bind_rules: always_match.clone(),
+                colocate: false,
             }
         ]);
 
@@ -1031,6 +1043,7 @@ mod tests {
                 .unwrap(),
             v1_driver_path: None,
             bind_rules: rules,
+            colocate: false,
         },]);
 
         let (proxy, stream) =
