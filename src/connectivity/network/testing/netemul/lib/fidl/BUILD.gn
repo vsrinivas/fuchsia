@@ -23,6 +23,7 @@ fidl("network") {
     "//sdk/fidl/fuchsia.hardware.ethertap",
     "//sdk/fidl/fuchsia.hardware.network",
     "//sdk/fidl/fuchsia.net",
+    "//sdk/fidl/fuchsia.net.virtualization",
   ]
 }
 

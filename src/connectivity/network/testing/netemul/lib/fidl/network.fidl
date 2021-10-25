@@ -6,6 +6,7 @@ library fuchsia.netemul.network;
 using fuchsia.hardware.ethernet;
 using fuchsia.hardware.ethertap;
 using fuchsia.hardware.network;
+using fuchsia.net.virtualization;
 using fuchsia.net;
 using zx;
 
@@ -135,6 +136,9 @@ protocol FakeEndpoint {
 
 /// Virtual network.
 protocol Network {
+    // Allows guest VMs to interact with the [`Network`].
+    compose fuchsia.net.virtualization.Network;
+
     /// Gets network configuration.
     GetConfig() -> (struct {
         config NetworkConfig;

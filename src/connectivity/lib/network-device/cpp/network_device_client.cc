@@ -80,12 +80,20 @@ NetworkDeviceClient::NetworkDeviceClient(fidl::ClientEnd<netdev::Device> handle,
       executor_(std::make_unique<async::Executor>(dispatcher_)) {}
 
 void NetworkDeviceClient::OnDeviceError(fidl::UnbindInfo info) {
-  FX_LOGS(ERROR) << "device handler error: " << info;
+  if (info.status() == ZX_ERR_PEER_CLOSED) {
+    FX_LOGS(WARNING) << "device detached";
+  } else {
+    FX_LOGS(ERROR) << "device handler error: " << info;
+  }
   ErrorTeardown(info.status());
 }
 
 void NetworkDeviceClient::OnSessionError(fidl::UnbindInfo info) {
-  FX_LOGS(ERROR) << "session handler error: " << info;
+  if (info.status() == ZX_ERR_PEER_CLOSED) {
+    FX_LOGS(WARNING) << "session detached";
+  } else {
+    FX_LOGS(ERROR) << "session handler error: " << info;
+  }
   ErrorTeardown(info.status());
 }
 
@@ -528,7 +536,7 @@ void NetworkDeviceClient::TxSignal(async_dispatcher_t* dispatcher, async::WaitBa
     return;
   }
   if (signal->observed & wait->trigger() & ZX_FIFO_PEER_CLOSED) {
-    FX_LOGS(ERROR) << "tx fifo was closed";
+    FX_LOGS(WARNING) << "tx fifo was closed";
     ErrorTeardown(ZX_ERR_PEER_CLOSED);
     return;
   }
@@ -552,7 +560,7 @@ void NetworkDeviceClient::RxSignal(async_dispatcher_t* dispatcher, async::WaitBa
   }
 
   if (signal->observed & wait->trigger() & ZX_FIFO_PEER_CLOSED) {
-    FX_LOGS(ERROR) << "rx fifo was closed";
+    FX_LOGS(WARNING) << "rx fifo was closed";
     ErrorTeardown(ZX_ERR_PEER_CLOSED);
     return;
   }
@@ -596,7 +604,7 @@ zx_status_t NetworkDeviceClient::Send(NetworkDeviceClient::Buffer* buffer) {
     return ZX_ERR_UNAVAILABLE;
   }
   if (buffer->rx_) {
-    // If this is an rx buffer, we need to get a tx buffer from the pool and return it as an rx
+    // If this is an RX buffer, we need to get a TX buffer from the pool and return it as an RX
     // buffer in place of this.
     auto tx_buffer = AllocTx();
     if (!tx_buffer.is_valid()) {
@@ -758,6 +766,8 @@ netdev::wire::FrameType NetworkDeviceClient::BufferData::frame_type() const {
 void NetworkDeviceClient::BufferData::SetFrameType(netdev::wire::FrameType type) {
   part(0).desc_->frame_type = static_cast<uint8_t>(type);
 }
+
+uint8_t NetworkDeviceClient::BufferData::port_id() const { return part(0).desc_->port_id; }
 
 void NetworkDeviceClient::BufferData::SetPortId(uint8_t port_id) {
   part(0).desc_->port_id = port_id;

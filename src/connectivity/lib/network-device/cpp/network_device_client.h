@@ -230,6 +230,7 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
     // The total length, in bytes, of the buffer.
     uint32_t len() const;
 
+    uint8_t port_id() const;
     netdev::wire::FrameType frame_type() const;
     netdev::wire::InfoType info_type() const;
     uint32_t inbound_flags() const;

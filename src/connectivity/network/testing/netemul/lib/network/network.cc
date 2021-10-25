@@ -118,6 +118,83 @@ void Network::Bind(fidl::InterfaceRequest<FNetwork> req) {
   bindings_.AddBinding(this, std::move(req), parent_->dispatcher());
 }
 
+void Network::AddDevice(uint8_t port_id,
+                        fidl::InterfaceHandle<::fuchsia::hardware::network::Device> device,
+                        fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface) {
+  const zx_handle_t key = interface.channel().get();
+  auto [it, inserted] =
+      guests_.try_emplace(key, port_id, std::move(interface), parent_->dispatcher(),
+                          fidl::ClientEnd<fuchsia_hardware_network::Device>(device.TakeChannel()));
+  if (!inserted) {
+    interface.Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  Interface& guest = it->second;
+  auto cleanup = [this, key, &guest](zx_status_t status) {
+    guest.binding().Close(status);
+    // There may be other tasks running on the promise executor; schedule destruction so that it
+    // happens after other pending work that may want to access the executor.
+    async::PostTask(parent_->dispatcher(), [this, key]() { guests_.erase(key); });
+  };
+  guest.binding().set_error_handler(cleanup);
+  guest.client().OpenSession(name_, [this, port_id, &guest, cleanup](zx_status_t status) {
+    if (status != ZX_OK) {
+      cleanup(status);
+      return;
+    }
+    guest.client().AttachPort(
+        port_id, {fuchsia_hardware_network::wire::FrameType::kEthernet},
+        [this, &guest, cleanup](zx_status_t status) {
+          if (status != ZX_OK) {
+            cleanup(status);
+            return;
+          }
+          bus_->sinks().emplace_back(guest.GetPointer());
+          guest.client().SetErrorCallback(cleanup);
+          guest.client().SetRxCallback(
+              [this, &guest](network::client::NetworkDeviceClient::Buffer buffer) {
+                switch (buffer.data().parts()) {
+                  case 0:
+                    break;
+                  case 1: {
+                    const cpp20::span src = buffer.data().part(0).data();
+                    bus_->Consume(src.data(), src.size(), guest.GetPointer());
+                  } break;
+                  default: {
+                    std::vector<uint8_t> dst;
+                    for (uint32_t i = 0; i < buffer.data().parts(); ++i) {
+                      const cpp20::span src = buffer.data().part(i).data();
+                      std::copy(src.begin(), src.end(), std::back_inserter(dst));
+                    }
+                    bus_->Consume(dst.data(), dst.size(), guest.GetPointer());
+                  };
+                }
+              });
+        });
+  });
+}
+
+void Network::Interface::Consume(const void* data, size_t len) {
+  network::client::NetworkDeviceClient::Buffer buffer = client_.AllocTx();
+  if (!buffer.is_valid()) {
+    FX_LOGS(ERROR) << "network device client TX buffers depleted, dropping " << len << " bytes";
+    return;
+  }
+  buffer.data().SetPortId(port_id_);
+  buffer.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
+  const size_t n = buffer.data().Write(data, len);
+  if (n != len) {
+    FX_LOGS(ERROR) << "network device client TX MTU (" << n << " bytes) exceeded, dropping " << len
+                   << " bytes";
+    return;
+  }
+  if (zx_status_t status = buffer.Send(); status != ZX_OK) {
+    FX_LOGS(ERROR) << "network device client TX send failed: " << zx_status_get_string(status)
+                   << "; dropping " << len << " bytes";
+    return;
+  }
+}
+
 void Network::GetConfig(Network::GetConfigCallback callback) {
   Config config;
   config_.Clone(&config);

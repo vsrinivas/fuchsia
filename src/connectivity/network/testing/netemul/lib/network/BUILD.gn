@@ -59,6 +59,7 @@ source_set("network_service") {
   public_deps = [
     "//sdk/fidl/fuchsia.net.tun",
     "//sdk/lib/stdcompat",
+    "//src/connectivity/lib/network-device/cpp",
     "//src/connectivity/network/testing/netemul/lib/fidl:internal",
     "//src/connectivity/network/testing/netemul/lib/fidl:network",
   ]

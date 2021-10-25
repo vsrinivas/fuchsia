@@ -18,7 +18,7 @@
 #include "src/lib/testing/predicates/status.h"
 
 namespace {
-// Set kTestTimeout to a value different than infinity to test timeouts locally.
+// Set kTestTimeout to a value other than infinity to test timeouts locally.
 constexpr zx::duration kTestTimeout = zx::duration::infinite();
 constexpr fuchsia_hardware_network::wire::FrameType kEndpointFrameType =
     static_cast<fuchsia_hardware_network::wire::FrameType>(netemul::Endpoint::kFrameType);
@@ -825,7 +825,7 @@ TEST_F(NetworkServiceTest, NetworkContext) {
   }  // test above performed in closed scope so all bindings are destroyed after
   // it's done
 
-  // check that attempting to setup with repeated network name will fail:
+  // check that attempting to set up with repeated network name will fail:
   std::vector<NetworkSetup> repeated_net_name;
   fidl::InterfaceHandle<NetworkContext::FSetupHandle> dummy_handle;
   auto& repeated_cfg = repeated_net_name.emplace_back();
@@ -834,7 +834,7 @@ TEST_F(NetworkServiceTest, NetworkContext) {
   ASSERT_STATUS(status, ZX_ERR_ALREADY_EXISTS);
   ASSERT_FALSE(dummy_handle.is_valid());
 
-  // check that attempting to setup with invalid ep name (ep1 already exists) will fail, and all
+  // check that attempting to set up with invalid ep name (ep1 already exists) will fail, and all
   // setup is discarded
   std::vector<NetworkSetup> repeated_ep_name;
   auto& good_net = repeated_ep_name.emplace_back();
@@ -1315,6 +1315,347 @@ TEST_F(NetworkServiceTest, DualNetworkDevice) {
   }
   RunLoopUntilIdle();
   ASSERT_FALSE(rx2) << "Unexpectedly triggered cli2 data callback";
+}
+
+TEST_F(NetworkServiceTest, VirtualizationTeardown) {
+  constexpr char netname[] = "mynet";
+  StartServices();
+
+  // Create a network.
+  fidl::SynchronousInterfacePtr<FNetwork> net;
+  CreateNetwork(netname, &net);
+
+  fidl::SynchronousInterfacePtr<fuchsia::net::tun::Control> tun_ctl =
+      svc_->ConnectNetworkTun().BindSync();
+  fidl::SynchronousInterfacePtr<fuchsia::net::tun::Device> tun_device;
+  ASSERT_OK(tun_ctl->CreateDevice({}, tun_device.NewRequest()));
+
+  fidl::InterfacePtr<fuchsia::net::virtualization::Interface> virtualization_interface;
+  std::optional<zx_status_t> virtualization_interface_status;
+  virtualization_interface.set_error_handler(
+      [&virtualization_interface_status](zx_status_t status) {
+        virtualization_interface_status = status;
+      });
+
+  // Attempt to attach to a port that doesn't exist.
+  constexpr uint8_t kPortID = 12;
+  {
+    fidl::InterfaceHandle<fuchsia::hardware::network::Device> network_device;
+    ASSERT_OK(tun_device->GetDevice(network_device.NewRequest()));
+    ASSERT_OK(
+        net->AddDevice(kPortID, std::move(network_device), virtualization_interface.NewRequest()));
+  }
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&virtualization_interface_status]() { return virtualization_interface_status.has_value(); },
+      kTestTimeout));
+  ASSERT_STATUS(virtualization_interface_status.value(), ZX_ERR_NOT_FOUND);
+  virtualization_interface_status.reset();
+
+  // Now create the port and attach.
+  fidl::SynchronousInterfacePtr<fuchsia::net::tun::Port> tun_port;
+  ASSERT_OK(tun_device->AddPort(
+      []() {
+        fuchsia::net::tun::DevicePortConfig config;
+        config.set_base([]() {
+          fuchsia::net::tun::BasePortConfig config;
+          config.set_id(kPortID);
+          config.set_rx_types({Endpoint::kFrameType});
+          config.set_tx_types({{
+              .type = Endpoint::kFrameType,
+          }});
+          return config;
+        }());
+        config.set_online(true);
+        return config;
+      }(),
+      tun_port.NewRequest()));
+
+  {
+    fidl::InterfaceHandle<fuchsia::hardware::network::Device> network_device;
+    tun_device->GetDevice(network_device.NewRequest());
+    ASSERT_OK(
+        net->AddDevice(kPortID, std::move(network_device), virtualization_interface.NewRequest()));
+  }
+
+  // Wait for the session to attach to the port.
+  while (true) {
+    fuchsia::net::tun::InternalState state;
+    ASSERT_OK(tun_port->WatchState(&state));
+    if (state.has_has_session() && state.has_session()) {
+      break;
+    }
+  }
+
+  // Now destroy the network and observe cleanup.
+  net.Unbind();
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&virtualization_interface_status]() { return virtualization_interface_status.has_value(); },
+      kTestTimeout));
+  ASSERT_STATUS(virtualization_interface_status.value(), ZX_ERR_PEER_CLOSED);
+  virtualization_interface_status.reset();
+  while (true) {
+    fuchsia::net::tun::InternalState state;
+    ASSERT_OK(tun_port->WatchState(&state));
+    if (state.has_has_session() && !state.has_session()) {
+      break;
+    }
+  }
+
+  // Recreate the network and attach to it.
+  CreateNetwork(netname, &net);
+
+  {
+    fidl::InterfaceHandle<fuchsia::hardware::network::Device> network_device;
+    tun_device->GetDevice(network_device.NewRequest());
+    ASSERT_OK(
+        net->AddDevice(kPortID, std::move(network_device), virtualization_interface.NewRequest()));
+  }
+
+  // Wait for the session to attach to the port.
+  while (true) {
+    fuchsia::net::tun::InternalState state;
+    ASSERT_OK(tun_port->WatchState(&state));
+    if (state.has_has_session() && state.has_session()) {
+      break;
+    }
+  }
+
+  // Now destroy the tun device and observe cleanup.
+  tun_device.Unbind();
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&virtualization_interface_status]() { return virtualization_interface_status.has_value(); },
+      kTestTimeout));
+  ASSERT_STATUS(virtualization_interface_status.value(), ZX_ERR_PEER_CLOSED);
+  virtualization_interface_status.reset();
+}
+
+TEST_F(NetworkServiceTest, NetworkDeviceAndVirtualization) {
+  constexpr char netname[] = "mynet";
+  constexpr char epname[] = "ep";
+  StartServices();
+
+  // Create a network.
+  fidl::SynchronousInterfacePtr<FNetwork> net;
+  CreateNetwork(netname, &net);
+
+  // Create and attach network device endpoint.
+  fidl::SynchronousInterfacePtr<FEndpoint> ep;
+  CreateEndpoint(epname, &ep, Endpoint::Backing::NETWORK_DEVICE);
+  ASSERT_OK(ep->SetLinkUp(true));
+  {
+    zx_status_t status;
+    ASSERT_OK(net->AttachEndpoint(epname, &status));
+    ASSERT_OK(status);
+  }
+
+  // Start and configure ethernet client.
+  fuchsia::netemul::network::DeviceConnection conn;
+  ASSERT_OK(ep->GetDevice(&conn));
+  ASSERT_TRUE(conn.is_network_device() && conn.network_device().is_valid());
+  // Create and configure network device client.
+  fidl::InterfaceHandle<fuchsia::hardware::network::Device> device;
+  conn.network_device().Bind()->GetDevice(device.NewRequest());
+  // TODO(https://fxbug.dev/72980): Use more ergonomic conversion.
+  network::client::NetworkDeviceClient cli(
+      fidl::ClientEnd<fuchsia_hardware_network::Device>(device.TakeChannel()));
+  bool ok = false;
+  cli.OpenSession("test_session", [&ok](zx_status_t status) {
+    ok = true;
+    ASSERT_OK(status);
+  });
+  WAIT_FOR_OK_AND_RESET(ok);
+  cli.AttachPort(Endpoint::kPortId, {kEndpointFrameType}, [&ok](zx_status_t status) {
+    ok = true;
+    ASSERT_OK(status);
+  });
+  WAIT_FOR_OK_AND_RESET(ok);
+
+  // Create and attach virtualized guest.
+  fidl::SynchronousInterfacePtr<fuchsia::net::tun::Control> tun_ctl =
+      svc_->ConnectNetworkTun().BindSync();
+  std::optional<zx_status_t> tun_device_status;
+  fidl::InterfacePtr<fuchsia::net::tun::Device> tun_device;
+  tun_device.set_error_handler(
+      [&tun_device_status](zx_status_t status) { tun_device_status = status; });
+  ASSERT_OK(tun_ctl->CreateDevice(
+      []() {
+        fuchsia::net::tun::DeviceConfig config;
+        config.set_blocking(true);
+        return config;
+      }(),
+      tun_device.NewRequest()));
+  constexpr uint8_t kPortID = 7;
+  fidl::InterfacePtr<fuchsia::net::tun::Port> tun_port;
+  std::optional<zx_status_t> tun_port_status;
+  tun_port.set_error_handler([&tun_port_status](zx_status_t status) { tun_port_status = status; });
+  tun_device->AddPort(
+      []() {
+        fuchsia::net::tun::DevicePortConfig config;
+        config.set_base([]() {
+          fuchsia::net::tun::BasePortConfig config;
+          config.set_id(kPortID);
+          config.set_rx_types({Endpoint::kFrameType});
+          config.set_tx_types({{
+              .type = Endpoint::kFrameType,
+          }});
+          return config;
+        }());
+        config.set_online(true);
+        return config;
+      }(),
+      tun_port.NewRequest());
+
+  fidl::InterfaceHandle<fuchsia::net::virtualization::Interface> virtualization_interface;
+  {
+    fidl::InterfaceHandle<fuchsia::hardware::network::Device> network_device;
+    tun_device->GetDevice(network_device.NewRequest());
+    ASSERT_OK(
+        net->AddDevice(kPortID, std::move(network_device), virtualization_interface.NewRequest()));
+  }
+
+  // Wait for both data paths to become ready.
+  {
+    bool online = false;
+    bool attached = false;
+    auto watcher = cli.WatchStatus(
+        Endpoint::kPortId, [&online](fuchsia_hardware_network::wire::PortStatus status) {
+          if (status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline) {
+            online = true;
+          }
+        });
+    fit::function<void(fuchsia::net::tun::InternalState)> cb;
+    cb = [&cb, &tun_port, &attached](fuchsia::net::tun::InternalState state) {
+      if (state.has_has_session() && state.has_session()) {
+        attached = true;
+      } else {
+        tun_port->WatchState(
+            [&cb](fuchsia::net::tun::InternalState state) { cb(std::move(state)); });
+      }
+    };
+    tun_port->WatchState([&cb](fuchsia::net::tun::InternalState state) { cb(std::move(state)); });
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+        [&tun_device_status, &tun_port_status, &online, &attached]() {
+          return tun_device_status.has_value() || tun_port_status.has_value() ||
+                 (online && attached);
+        },
+        kTestTimeout));
+    ASSERT_FALSE(tun_device_status.has_value()) << zx_status_get_string(tun_device_status.value());
+    ASSERT_FALSE(tun_port_status.has_value()) << zx_status_get_string(tun_port_status.value());
+  }
+
+  // Create some test buffs.
+  uint8_t test_buff1[TEST_BUF_SIZE];
+  uint8_t test_buff2[TEST_BUF_SIZE];
+  for (size_t i = 0; i < TEST_BUF_SIZE; i++) {
+    test_buff1[i] = static_cast<uint8_t>(i);
+    test_buff2[i] = ~static_cast<uint8_t>(i);
+  }
+
+  // Send data from virtualized guest to network device.
+  {
+    bool rx = false;
+    cli.SetRxCallback([&rx, &test_buff1](network::client::NetworkDeviceClient::Buffer buff) {
+      rx = true;
+      ASSERT_EQ(buff.data().port_id(), Endpoint::kPortId);
+      ASSERT_EQ(buff.data().frame_type(), kEndpointFrameType);
+      ASSERT_EQ(TEST_BUF_SIZE, buff.data().len());
+      ASSERT_EQ(buff.data().parts(), 1u);
+      ASSERT_EQ(0, memcmp(buff.data().part(0).data().data(), test_buff1, TEST_BUF_SIZE));
+    });
+
+    bool tx = false;
+    tun_device->WriteFrame(
+        [&test_buff1]() {
+          fuchsia::net::tun::Frame frame;
+          frame.set_frame_type(Endpoint::kFrameType);
+          frame.set_data({std::begin(test_buff1), std::end(test_buff1)});
+          frame.set_port(kPortID);
+          return frame;
+        }(),
+        [&tx](fuchsia::net::tun::Device_WriteFrame_Result result) {
+          tx = true;
+          switch (result.Which()) {
+            case fuchsia::net::tun::Device_WriteFrame_Result::Tag::kResponse:
+              break;
+            case fuchsia::net::tun::Device_WriteFrame_Result::Tag::kErr:
+              FAIL() << zx_status_get_string(result.err());
+              break;
+            case fuchsia::net::tun::Device_WriteFrame_Result::Tag::Invalid:
+              FAIL() << "invalid WriteFrame response";
+          }
+        });
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+        [&tun_device_status, &tun_port_status, &rx, &tx]() {
+          return tun_device_status.has_value() || tun_port_status.has_value() || (rx && tx);
+        },
+        kTestTimeout));
+    ASSERT_FALSE(tun_device_status.has_value()) << zx_status_get_string(tun_device_status.value());
+    ASSERT_FALSE(tun_port_status.has_value()) << zx_status_get_string(tun_port_status.value());
+  }
+
+  // Send data from network device to virtualized guest.
+  {
+    auto tx = cli.AllocTx();
+    ASSERT_TRUE(tx.is_valid());
+    tx.data().SetPortId(Endpoint::kPortId);
+    tx.data().SetFrameType(kEndpointFrameType);
+    ASSERT_EQ(tx.data().Write(test_buff2, TEST_BUF_SIZE), TEST_BUF_SIZE);
+    ASSERT_OK(tx.Send());
+
+    bool rx = false;
+    tun_device->ReadFrame(
+        [kPortID, &rx, &test_buff2](fuchsia::net::tun::Device_ReadFrame_Result result) {
+          rx = true;
+          switch (result.Which()) {
+            case fuchsia::net::tun::Device_ReadFrame_Result::Tag::kResponse: {
+              const fuchsia::net::tun::Frame& frame = result.response().frame;
+              ASSERT_TRUE(frame.has_port());
+              ASSERT_EQ(frame.port(), kPortID);
+              ASSERT_TRUE(frame.has_frame_type());
+              ASSERT_EQ(frame.frame_type(), Endpoint::kFrameType);
+              ASSERT_TRUE(frame.has_data());
+              ASSERT_EQ(TEST_BUF_SIZE, frame.data().size());
+              ASSERT_EQ(0, memcmp(frame.data().data(), test_buff2, TEST_BUF_SIZE));
+            } break;
+            case fuchsia::net::tun::Device_ReadFrame_Result::Tag::kErr:
+              FAIL() << zx_status_get_string(result.err());
+              break;
+            case fuchsia::net::tun::Device_ReadFrame_Result::Tag::Invalid:
+              FAIL() << "invalid ReadFrame response";
+          }
+        });
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+        [&tun_device_status, &tun_port_status, &rx]() {
+          return tun_device_status.has_value() || tun_port_status.has_value() || rx;
+        },
+        kTestTimeout));
+    ASSERT_FALSE(tun_device_status.has_value()) << zx_status_get_string(tun_device_status.value());
+    ASSERT_FALSE(tun_port_status.has_value()) << zx_status_get_string(tun_port_status.value());
+  }
+
+  // Drop the virtualized guest.
+  virtualization_interface.TakeChannel().reset();
+  // Check that the session was destroyed.
+  {
+    bool detached = false;
+    fit::function<void(fuchsia::net::tun::InternalState)> cb;
+    cb = [&cb, &tun_port, &detached](fuchsia::net::tun::InternalState state) {
+      if (state.has_has_session() && !state.has_session()) {
+        detached = true;
+      } else {
+        tun_port->WatchState(
+            [&cb](fuchsia::net::tun::InternalState state) { cb(std::move(state)); });
+      }
+    };
+    tun_port->WatchState([&cb](fuchsia::net::tun::InternalState state) { cb(std::move(state)); });
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+        [&tun_device_status, &tun_port_status, &detached]() {
+          return tun_device_status.has_value() || tun_port_status.has_value() || detached;
+        },
+        kTestTimeout));
+    ASSERT_FALSE(tun_device_status.has_value()) << zx_status_get_string(tun_device_status.value());
+    ASSERT_FALSE(tun_port_status.has_value()) << zx_status_get_string(tun_port_status.value());
+  }
 }
 
 }  // namespace testing

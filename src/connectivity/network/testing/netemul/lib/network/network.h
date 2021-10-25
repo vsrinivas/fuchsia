@@ -5,10 +5,15 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_NETWORK_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_NETWORK_H_
 
+#include <fuchsia/net/virtualization/cpp/fidl.h>
 #include <fuchsia/netemul/network/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
 #include <memory>
+#include <unordered_map>
+
+#include "src/connectivity/lib/network-device/cpp/network_device_client.h"
+#include "src/connectivity/network/testing/netemul/lib/network/consumer.h"
 
 namespace netemul {
 namespace impl {
@@ -32,6 +37,9 @@ class Network : public fuchsia::netemul::network::Network {
   zx_status_t AttachEndpoint(std::string name);
 
   // fidl interface implementations:
+  void AddDevice(
+      uint8_t port_id, fidl::InterfaceHandle<::fuchsia::hardware::network::Device> device,
+      fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface) override;
   void GetConfig(GetConfigCallback callback) override;
   void GetName(GetNameCallback callback) override;
   void SetConfig(fuchsia::netemul::network::NetworkConfig config,
@@ -53,6 +61,35 @@ class Network : public fuchsia::netemul::network::Network {
   void Bind(fidl::InterfaceRequest<FNetwork> req);
 
  private:
+  class Interface : public fuchsia::net::virtualization::Interface, public data::Consumer {
+   public:
+    explicit Interface(uint8_t port_id,
+                       fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface,
+                       async_dispatcher_t* dispatcher,
+                       fidl::ClientEnd<fuchsia_hardware_network::Device> device)
+        : port_id_(port_id),
+          binding_(this, std::move(interface), dispatcher),
+          client_(std::move(device), dispatcher),
+          weak_ptr_factory_(this) {}
+
+    // The binding retains a pointer to |this|, so |this| must never move.
+    Interface(Interface&&) = delete;
+    Interface& operator=(Interface&&) = delete;
+
+    fidl::Binding<fuchsia::net::virtualization::Interface>& binding() { return binding_; }
+    network::client::NetworkDeviceClient& client() { return client_; }
+
+    void Consume(const void* data, size_t len) override;
+
+    fxl::WeakPtr<data::Consumer> GetPointer() { return weak_ptr_factory_.GetWeakPtr(); };
+
+   private:
+    const uint8_t port_id_;
+    fidl::Binding<fuchsia::net::virtualization::Interface> binding_;
+    network::client::NetworkDeviceClient client_;
+    fxl::WeakPtrFactory<data::Consumer> weak_ptr_factory_;
+  };
+
   ClosedCallback closed_callback_;
   std::shared_ptr<impl::NetworkBus> bus_;
   // Pointer to parent context. Not owned.
@@ -60,6 +97,7 @@ class Network : public fuchsia::netemul::network::Network {
   std::string name_;
   Config config_;
   fidl::BindingSet<FNetwork> bindings_;
+  std::unordered_map<zx_handle_t, Interface> guests_;
 };
 
 }  // namespace netemul
