@@ -47,6 +47,9 @@ The table below shows some example parts with links to the manufacturer's produc
 | SSD | [CRUCIAL MX300 SSD](https://www.crucial.com/products/ssd/mx300-ssd) | Works fine, but is discontinued. |
 | Monitor | [HP 22cwa](https://support.hp.com/au-en/document/c04837546) | Works fine. |
 
+Note that Fuchsia only supports the specific system configurations listed in
+[Supported system configurations][supported-sys-config].
+
 ## 2. Prepare the NUC {#prepare-the-nuc}
 
 NUCs do not come with RAM or an SSD, so you need to manually install them.
@@ -242,3 +245,4 @@ when doing `fx ota`), they do not work with Zedboot.
 [glossary.zedboot]: /docs/glossary/README.md#zedboot
 [netbooting]: /docs/development/kernel/getting_started.md#network-booting
 [usb-setup]: /docs/development/hardware/usb_setup.md
+[supported-sys-config]: /docs/reference/hardware/support-system-config.md
