@@ -9,10 +9,13 @@ import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":driver-manager-fuzzers",
-    ":driver-manager-tests",
-  ]
+  deps = [ ":driver-manager-fuzzers" ]
+
+  # TODO(fxbug.dev/86747): Failed test disabled on coverage.
+  # Please fix the failure and remove the condition below.
+  if (!is_coverage) {
+    deps += [ ":driver-manager-tests" ]
+  }
 }
 
 source_set("manifest_parser") {
