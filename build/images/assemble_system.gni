@@ -2,10 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/compiled_action.gni")
 import("//build/component/component_id_index.gni")
 import("//build/config.gni")
-import("//build/dist/generated_resource.gni")
 import("//build/drivers/driver_manifest.gni")
 import("//build/images/assembly/generated_board_config.gni")
 import("//build/images/assembly/generated_partitions_config.gni")
@@ -19,10 +17,8 @@ import("//build/security/verifier/verify_bootfs.gni")
 import("//build/security/verifier/verify_kernel_cmdline.gni")
 import("//build/security/verifier/verify_route_sources.gni")
 import("//build/security/verifier/verify_static_pkgs.gni")
-import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
 import("//src/developer/ffx/build/ffx_action.gni")
-import("//src/sys/pkg/bin/pm/pm.gni")
 
 # Assembles a Fuchsia system.
 #
