@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -91,11 +91,11 @@ class TestMoveSources(unittest.TestCase):
             False,
             True,
         ]
-        self.assertEquals(len(actual), len(expected_labels))
+        self.assertEqual(len(actual), len(expected_labels))
         for i in range(len(expected_labels)):
-            self.assertEquals(actual[i].label, expected_labels[i], msg=i)
-            self.assertEquals(actual[i].testonly, expected_testonly[i], msg=i)
-            self.assertEquals(actual[i].is_go_library,
+            self.assertEqual(actual[i].label, expected_labels[i], msg=i)
+            self.assertEqual(actual[i].testonly, expected_testonly[i], msg=i)
+            self.assertEqual(actual[i].is_go_library,
                               expected_is_go_library[i], msg=i)
 
 
@@ -190,7 +190,7 @@ go_library("foo") {
             self.assertEqual(rel_path, case["expected_path"], msg=case["name"])
             self.assertSetEqual(build.imports, case[
                                 "expected_imports"], msg=case["name"])
-            self.assertEquals(build.snippet, case[
+            self.assertEqual(build.snippet, case[
                               "expected_snippet"], msg=case["name"])
 
 

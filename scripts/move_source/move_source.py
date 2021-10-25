@@ -1,10 +1,11 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env fuchsia-vendored-python
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import argparse
 import datetime
+from functools import total_ordering
 import json
 import logging
 import os
@@ -64,7 +65,7 @@ def is_go_library_target(target):
 Stores information about a forwarding GN target to generate.
 """
 
-
+@total_ordering
 class ForwardingTarget:
 
     def __init__(self, label, target):
@@ -79,6 +80,9 @@ class ForwardingTarget:
     def __str__(self):
         return '%s testonly %s go_library %s' % (
             self.label, self.testonly, self.is_go_library)
+
+    def __lt__(self, other):
+        return id(self) < id(other)
 
 
 """
@@ -243,7 +247,7 @@ def write_forwarding_build_rules(forwarding_targets, source, dest, dry_run):
 
         build_files[path].merge(build)
 
-    for path, build in build_files.iteritems():
+    for path, build in build_files.items():
         if not dry_run:
             if not os.path.exists(path):
                 dest_dir = os.path.dirname(path)
@@ -399,7 +403,7 @@ def find_externally_referenced_headers(source):
     # search for all includes
     grep_results = subprocess.check_output(jiri_grep_args, cwd=fuchsia_root)
     for line in grep_results.splitlines():
-        print line
+        print(line)
         file, include = line.split(':', 1)
         # filter out includes from within the source directory
         if not os.path.normpath(file).startswith(source):
