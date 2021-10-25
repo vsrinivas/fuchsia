@@ -1,9 +1,9 @@
 {% include "docs/reference/hardware/_common/_sys_header.md" %}
 
-# Supported system configuration
+# Supported system configurations
 
 {% comment %}
-The list of Fuchsia supported system configuration is generated from the
+The list of Fuchsia supported system configurations is generated from the
 information in the following files:
 /docs/reference/hardware/_supported_sys_config.yaml
 
