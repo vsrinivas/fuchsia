@@ -332,6 +332,7 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
     const display_config_t** display_configs, size_t display_count,
     const config_stamp_t* config_stamp) {
   ZX_DEBUG_ASSERT(display_configs);
+  ZX_DEBUG_ASSERT(config_stamp);
 
   fbl::AutoLock lock(&display_lock_);
 
@@ -364,7 +365,7 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
         reinterpret_cast<ImageInfo*>(display_configs[0]->layer_list[0]->cfg.primary.image.handle);
     current_image_valid_ = true;
     current_image_ = display_configs[0]->layer_list[0]->cfg.primary.image.handle;
-    osd_->FlipOnVsync(info->canvas_idx, display_configs[0]);
+    osd_->FlipOnVsync(info->canvas_idx, display_configs[0], config_stamp);
   } else {
     current_image_valid_ = false;
     if (fully_initialized()) {
@@ -382,11 +383,10 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
 
   // If bootloader does not enable any of the display hardware, no vsync will be generated.
   // This fakes a vsync to let clients know we are ready until we actually initialize hardware
-  // TODO(fxbug.dev/72588): Switch to use OnDisplayVsync2().
   if (!fully_initialized()) {
     if (dc_intf_.is_valid()) {
       if (display_count == 0 || display_configs[0]->layer_count == 0) {
-        dc_intf_.OnDisplayVsync(display_id_, zx_clock_get_monotonic(), nullptr, 0);
+        dc_intf_.OnDisplayVsync2(display_id_, zx_clock_get_monotonic(), config_stamp);
       }
     }
   }
@@ -746,14 +746,14 @@ int AmlogicDisplay::VSyncThread() {
       DISP_ERROR("VSync Interrupt Wait failed\n");
       break;
     }
-    uint64_t live = 0;
+    std::optional<config_stamp_t> current_config_stamp = std::nullopt;
     if (fully_initialized()) {
-      live = osd_->GetLastImageApplied();
+      current_config_stamp = osd_->GetLastConfigStampApplied();
     }
-    bool current_image_valid = live != 0;
     fbl::AutoLock lock(&display_lock_);
     if (dc_intf_.is_valid() && display_attached_) {
-      dc_intf_.OnDisplayVsync(display_id_, timestamp.get(), &live, current_image_valid);
+      dc_intf_.OnDisplayVsync2(display_id_, timestamp.get(),
+                               current_config_stamp.has_value() ? &*current_config_stamp : nullptr);
     }
   }
 

@@ -116,7 +116,7 @@ void Osd::TryResolvePendingRdma() {
   }
 }
 
-uint64_t Osd::GetLastImageApplied() {
+config_stamp_t Osd::GetLastConfigStampApplied() {
   ZX_DEBUG_ASSERT(initialized_);
   fbl::AutoLock lock(&rdma_lock_);
   if (rdma_active_) {
@@ -138,7 +138,7 @@ void Osd::ProcessRdmaUsageTable() {
     if (val == rdma_usage_table_[i]) {
       // Found the last table that was written to
       last_table_index = i;
-      latest_applied_config_ = rdma_usage_table_[i];  // save this for vsync
+      latest_applied_config_ = {.value = rdma_usage_table_[i]};  // save this for vsync
     }
     rdma_usage_table_[i] = kRdmaTableUnavailable;  // mark as unavailable for now
   }
@@ -167,9 +167,9 @@ void Osd::ProcessRdmaUsageTable() {
     start_index_used_ = static_cast<uint8_t>(last_table_index + 1);
     vpu_mmio_->Write32(static_cast<uint32_t>(rdma_chnl_container_[start_index_used_].phys_offset),
                        VPU_RDMA_AHB_START_ADDR(kRdmaChannel));
-    vpu_mmio_->Write32(static_cast<uint32_t>(rdma_chnl_container_[start_index_used_].phys_offset +
-                                             kTableSize - 4),
-                       VPU_RDMA_AHB_END_ADDR(kRdmaChannel));
+    vpu_mmio_->Write32(
+        static_cast<uint32_t>(rdma_chnl_container_[start_index_used_].phys_offset + kTableSize - 4),
+        VPU_RDMA_AHB_END_ADDR(kRdmaChannel));
     uint32_t regVal = vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO);
     regVal |= RDMA_ACCESS_AUTO_INT_EN(kRdmaChannel);  // VSYNC interrupt source
     regVal |= RDMA_ACCESS_AUTO_WRITE(kRdmaChannel);   // Write
@@ -263,7 +263,7 @@ void Osd::Disable(void) {
   StopRdma();
   Osd1CtrlStatReg::Get().ReadFrom(&(*vpu_mmio_)).set_blk_en(0).WriteTo(&(*vpu_mmio_));
   fbl::AutoLock lock(&rdma_lock_);
-  latest_applied_config_ = 0;
+  latest_applied_config_ = {.value = INVALID_CONFIG_STAMP};
 }
 
 void Osd::Enable(void) {
@@ -313,39 +313,40 @@ void Osd::SetColorCorrection(uint32_t rdma_table_idx, const display_config_t* co
 
   // Load PreOffset values (or 0 if none entered)
   auto offset0_1 = (config->cc_flags & COLOR_CONVERSION_PREOFFSET
-                    ? (FloatToFixed2_10(config->cc_preoffsets[0]) << 16 |
-                       FloatToFixed2_10(config->cc_preoffsets[1]) << 0)
-                    : 0);
+                        ? (FloatToFixed2_10(config->cc_preoffsets[0]) << 16 |
+                           FloatToFixed2_10(config->cc_preoffsets[1]) << 0)
+                        : 0);
   SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_PRE_OFFSET0_1, offset0_1);
   auto offset2 = (config->cc_flags & COLOR_CONVERSION_PREOFFSET
-                  ? (FloatToFixed2_10(config->cc_preoffsets[2]) << 0)
-                  : 0);
+                      ? (FloatToFixed2_10(config->cc_preoffsets[2]) << 0)
+                      : 0);
   SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_PRE_OFFSET2, offset2);
   // TODO(b/182481217): remove when this bug is closed.
   DISP_TRACE("pre offset0_1=%u offset2=%u\n", offset0_1, offset2);
 
   // Load PostOffset values (or 0 if none entered)
   offset0_1 = (config->cc_flags & COLOR_CONVERSION_POSTOFFSET
-               ? (FloatToFixed2_10(config->cc_postoffsets[0]) << 16 |
-                  FloatToFixed2_10(config->cc_postoffsets[1]) << 0)
-               : 0);
+                   ? (FloatToFixed2_10(config->cc_postoffsets[0]) << 16 |
+                      FloatToFixed2_10(config->cc_postoffsets[1]) << 0)
+                   : 0);
   offset2 = (config->cc_flags & COLOR_CONVERSION_PREOFFSET
-             ? (FloatToFixed2_10(config->cc_postoffsets[2]) << 0)
-             : 0);
+                 ? (FloatToFixed2_10(config->cc_postoffsets[2]) << 0)
+                 : 0);
   SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_OFFSET0_1, offset0_1);
   SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_OFFSET2, offset2);
   // TODO(b/182481217): remove when this bug is closed.
   DISP_TRACE("post offset0_1=%u offset2=%u\n", offset0_1, offset2);
 
+  // clang-format off
   const float identity[3][3] = {
-    {1, 0, 0,},
-    {0, 1, 0,},
-    {0, 0, 1,},
+      {1, 0, 0,},
+      {0, 1, 0,},
+      {0, 0, 1,},
   };
+  // clang-format on
 
-  const auto* ccm = (config->cc_flags & COLOR_CONVERSION_COEFFICIENTS)
-                    ? config->cc_coefficients
-                    : identity;
+  const auto* ccm =
+      (config->cc_flags & COLOR_CONVERSION_COEFFICIENTS) ? config->cc_coefficients : identity;
 
   // Load up the coefficient matrix registers
   auto coef00_01 = FloatToFixed3_10(ccm[0][0]) << 16 | FloatToFixed3_10(ccm[0][1]) << 0;
@@ -363,7 +364,8 @@ void Osd::SetColorCorrection(uint32_t rdma_table_idx, const display_config_t* co
              coef02_10, coef11_12, coef20_21, coef22);
 }
 
-void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
+void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config,
+                      const config_stamp_t* config_stamp) {
   auto info = reinterpret_cast<ImageInfo*>(config[0].layer_list[0]->cfg.primary.image.handle);
   const int next_table_idx = GetNextAvailableRdmaTableIndex();
   if (next_table_idx < 0) {
@@ -513,10 +515,8 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
 
   // update last element of table which will be used to indicate whether RDMA operation was
   // completed or not
-  SetRdmaTableValue(next_table_idx, IDX_RDMA_CFG_STAMP_HIGH,
-                    (config[0].layer_list[0]->cfg.primary.image.handle >> 32));
-  SetRdmaTableValue(next_table_idx, IDX_RDMA_CFG_STAMP_LOW,
-                    (config[0].layer_list[0]->cfg.primary.image.handle & 0xFFFFFFFF));
+  SetRdmaTableValue(next_table_idx, IDX_RDMA_CFG_STAMP_HIGH, (config_stamp->value >> 32));
+  SetRdmaTableValue(next_table_idx, IDX_RDMA_CFG_STAMP_LOW, (config_stamp->value & 0xFFFFFFFF));
 
   FlushRdmaTable(next_table_idx);
   if (supports_afbc_ && info->is_afbc) {
@@ -536,7 +536,7 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
   // if rdma is already active, just update the end_addr
   if (rdma_active_) {
     end_index_used_ = static_cast<uint8_t>(next_table_idx);
-    rdma_usage_table_[next_table_idx] = config[0].layer_list[0]->cfg.primary.image.handle;
+    rdma_usage_table_[next_table_idx] = config_stamp->value;
     vpu_mmio_->Write32(
         static_cast<uint32_t>(rdma_chnl_container_[next_table_idx].phys_offset + kTableSize - 4),
         VPU_RDMA_AHB_END_ADDR(kRdmaChannel));
@@ -557,7 +557,7 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
   regVal |= RDMA_ACCESS_AUTO_INT_EN(kRdmaChannel);  // VSYNC interrupt source
   regVal |= RDMA_ACCESS_AUTO_WRITE(kRdmaChannel);   // Write
   vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
-  rdma_usage_table_[next_table_idx] = config[0].layer_list[0]->cfg.primary.image.handle;
+  rdma_usage_table_[next_table_idx] = config_stamp->value;
   rdma_active_ = true;
   rdma_begin_count_.Add(1);
   if (supports_afbc_ && info->is_afbc) {
@@ -1267,7 +1267,7 @@ void Osd::DumpRdmaState() {
   }
 
   DISP_INFO("start_index = %ld, end_index = %ld", start_index_used_, end_index_used_);
-  DISP_INFO("latest applied config = 0x%lx", latest_applied_config_);
+  DISP_INFO("latest applied config stamp = 0x%lx", latest_applied_config_.value);
   DISP_INFO("\n\n=========================================\n\n");
 }
 

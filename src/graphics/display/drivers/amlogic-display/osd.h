@@ -158,8 +158,8 @@ struct RdmaChannelContainer {
  *                 image handle that is contained in the config (we currently assume 1 image per
  *                 config).
  *
- * The client of the Osd instance is expected to call Osd::GetLastImageApplied() on every vsync
- * interrupt to obtain the most recently applied config. This method checks if a previously
+ * The client of the Osd instance is expected to call Osd::GetLastConfigStampApplied() on every
+ * vsync interrupt to obtain the most recently applied config. This method checks if a previously
  * scheduled RDMA (via Osd::FlipOnVsync) has completed, and if so,  checks how far the RDMA was able
  * to write by comparing the "Config Stamp" in a scratch register to rdma_usage_table_. If RDMA did
  * not apply all the configs, it will re-schedule a new RDMA transaction.
@@ -176,7 +176,7 @@ class Osd {
 
   // Schedules the given |config| to be applied by the RDMA engine when the next VSYNC interrupt
   // occurs.
-  void FlipOnVsync(uint8_t idx, const display_config_t* config);
+  void FlipOnVsync(uint8_t idx, const display_config_t* config, const config_stamp_t* config_stamp);
 
   // Returns the image handle that was most recently processed by the RDMA engine. If RDMA is
   // determined to be in progress and incomplete, then the previously applied image is returned. If
@@ -184,7 +184,7 @@ class Osd {
   // updated accordingly.
   //
   // This function is used by the vsync thread to determine the latest applied config.
-  uint64_t GetLastImageApplied();
+  config_stamp_t GetLastConfigStampApplied();
 
   void Dump();
   void Release();
@@ -254,7 +254,7 @@ class Osd {
   size_t end_index_used_ TA_GUARDED(rdma_lock_) = 0;
 
   bool rdma_active_ TA_GUARDED(rdma_lock_) = false;
-  uint64_t latest_applied_config_ TA_GUARDED(rdma_lock_) = 0;
+  config_stamp_t latest_applied_config_ TA_GUARDED(rdma_lock_) = {.value = INVALID_CONFIG_STAMP};
 
   RdmaChannelContainer rdma_chnl_container_[kNumberOfTables];
 
