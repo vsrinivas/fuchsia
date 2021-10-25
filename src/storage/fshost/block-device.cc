@@ -562,12 +562,13 @@ zx_status_t BlockDevice::CheckFilesystem() {
         FX_LOGS(INFO) << "fsck took " << duration.to_secs() << "." << duration.to_msecs() % 1000
                       << " seconds";
       });
-      FX_LOGS(INFO) << "fsck of " << disk_format_string(format_) << " started";
+      FX_LOGS(INFO) << "fsck of data partition started";
 
       if (device_config_->is_set(Config::kDataFilesystemBinaryPath)) {
-        FX_LOGS(INFO) << "Using "
-                      << device_config_->ReadStringOptionValue(Config::kDataFilesystemBinaryPath);
-        status = CheckFilesystem();
+        std::string binary_path =
+            device_config_->ReadStringOptionValue(Config::kDataFilesystemBinaryPath);
+        FX_LOGS(INFO) << "Using " << binary_path;
+        status = CheckCustomFilesystem(std::move(binary_path));
       } else {
         uint64_t device_size = info.block_size * info.block_count / minfs::kMinfsBlockSize;
         std::unique_ptr<block_client::BlockDevice> device;
