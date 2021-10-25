@@ -48,10 +48,7 @@ protocol Control {
         address fuchsia.net.InterfaceAddress;
     }) -> (struct {
         did_remove bool;
-    }) error flexible enum {
-        // TODO(https://fxbug.dev/85667): This should be an empty enum.
-        RESERVED = 0;
-    };
+    }) error flexible enum {};
 
     /// Gets the interface identifier.
     ///
@@ -66,10 +63,7 @@ protocol Control {
     /// enabled as a consequence of this call.
     Enable() -> (struct {
         did_enable bool;
-    }) error flexible enum {
-        // TODO(https://fxbug.dev/85667): This should be an empty enum.
-        RESERVED = 0;
-    };
+    }) error flexible enum {};
 
     /// Disables the interface.
     ///
@@ -77,10 +71,7 @@ protocol Control {
     /// disabled as a consequence of this call.
     Disable() -> (struct {
         did_disable bool;
-    }) error flexible enum {
-        // TODO(https://fxbug.dev/85667): This should be an empty enum.
-        RESERVED = 0;
-    };
+    }) error flexible enum {};
 
     /// Terminal event. Immediately precedes the closure of the server end of
     /// the protocol.

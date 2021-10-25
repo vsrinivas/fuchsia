@@ -47,7 +47,6 @@ protocol Filter {
         rules vector<Rule>:MAX_RULES;
         generation uint32;
     }) error strict enum {
-        // TODO(https://fxbug.dev/85667): This should be an empty enum.
         RESERVED = 0;
     };
 
@@ -84,7 +83,6 @@ protocol Filter {
         rules vector<Nat>:MAX_RULES;
         generation uint32;
     }) error strict enum {
-        // TODO(https://fxbug.dev/85667): This should be an empty enum.
         RESERVED = 0;
     };
 
@@ -116,7 +114,6 @@ protocol Filter {
         rules vector<Rdr>:MAX_RULES;
         generation uint32;
     }) error strict enum {
-        // TODO(https://fxbug.dev/85667): This should be an empty enum.
         RESERVED = 0;
     };
 
