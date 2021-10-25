@@ -69,7 +69,9 @@ following configurations:
 In addition, sanitizers apply to host tools.
 
 Tests for all of the above are exercised on CI/CQ on [qemu][qemu]{:.external}
-and [Intel NUC][nuc].
+and [Intel NUC][nuc]. Other platforms are not tested with sanitizers due to
+resources and capacity issues, but you may test on these platforms locally
+using the build workflow [below](#build).
 
 Additional tryjobs for configurations defined under `//vendor` may be shown in
 Gerrit and in CI consoles for certain signed-in users. Look for configurations
@@ -93,6 +95,9 @@ Alternatively you may select to only instrument certain binaries:
 ```posix-terminal
 fx set {{ '<var label="product">product</var>' }} --variant asan-ubsan/{{ '<var>executable_name</var>' }}
 ```
+
+The selective instrumentation workflow is useful for testing locally on
+hardware where a fully instrumented build does not fit on the device.
 
 Specifically to detect use-after-free bugs in kernel code you will need to
 [enable the kernel PMM checker][enable-pmm-checker].
