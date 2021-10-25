@@ -45,7 +45,6 @@ class GpuResource {
   static constexpr uint32_t kPixelSizeInBytes = 4;
 
   const PhysMem* phys_mem_;
-  uint32_t format_;
   uint32_t width_;
   uint32_t height_;
 
@@ -56,8 +55,6 @@ class GpuResource {
   std::vector<BackingPage> guest_backing_;
   size_t host_backing_size_;
   std::unique_ptr<uint8_t[]> host_backing_;
-
-  void CopyBytes(uint64_t off, uint8_t* dest, size_t size);
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_GPU_RESOURCE_H_
