@@ -1,4 +1,3 @@
-//examples/drivers/fifo:demo-fifo-driver
 //src/camera/drivers/bus/aml_mipicsi:aml_mipicsi_driver-driver
 //src/camera/drivers/controller/sherlock:sherlock-camera-controller_driver
 //src/camera/drivers/hw_accel/gdc:fuchsia_driver

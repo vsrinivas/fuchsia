@@ -187,7 +187,6 @@ check_included_drivers("drivers-build-only") {
   testonly = true
   contains_all_drivers = true
   deps = [
-    "//examples/drivers/fifo:demo-fifo",
     "//src/camera:drivers",
     "//src/connectivity/bundles:drivers",
     "//src/devices/bundles:drivers",

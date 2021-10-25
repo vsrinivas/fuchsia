@@ -3,16 +3,10 @@
 # found in the LICENSE file.
 
 group("drivers") {
-  deps = [
-    "dotmatrix_display",
-    "fifo",
-  ]
+  deps = [ "dotmatrix_display" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "driver_test_realm:tests",
-    "fifo:tests",
-  ]
+  deps = [ "driver_test_realm:tests" ]
 }
