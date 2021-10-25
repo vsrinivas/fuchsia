@@ -38,9 +38,8 @@ class MyFlexibleEnumWithCustomUnknown final {
       case 2u:
 
         return false;
-      default:
-        return true;
     }
+    return true;
   }
 
   constexpr static MyFlexibleEnumWithCustomUnknown Unknown() {
@@ -89,9 +88,8 @@ class MyFlexibleEnum final {
       case 2u:
 
         return false;
-      default:
-        return true;
     }
+    return true;
   }
 
   constexpr static MyFlexibleEnum Unknown() {
@@ -115,6 +113,31 @@ constexpr const ::fidl::test::enum_::MyFlexibleEnum MyFlexibleEnum::BAR =
 
 inline zx_status_t Clone(::fidl::test::enum_::MyFlexibleEnum value,
                          ::fidl::test::enum_::MyFlexibleEnum* result) {
+  *result = value;
+  return ZX_OK;
+}
+
+class MyEmptyFlexibleEnum final {
+ public:
+  constexpr MyEmptyFlexibleEnum() : value_(0) {}
+  constexpr explicit MyEmptyFlexibleEnum(uint32_t value) : value_(value) {}
+  constexpr operator uint32_t() const { return value_; }
+
+  constexpr bool IsUnknown() const { return true; }
+
+  constexpr static MyEmptyFlexibleEnum Unknown() {
+    return MyEmptyFlexibleEnum(0xffffffff);
+  }
+
+ private:
+  uint32_t value_;
+};
+
+#if !(__cplusplus < 201703)
+#endif  // !(__cplusplus < 201703)
+
+inline zx_status_t Clone(::fidl::test::enum_::MyEmptyFlexibleEnum value,
+                         ::fidl::test::enum_::MyEmptyFlexibleEnum* result) {
   *result = value;
   return ZX_OK;
 }
@@ -231,6 +254,43 @@ template <>
 struct Equality<::fidl::test::enum_::MyFlexibleEnum> {
   bool operator()(const ::fidl::test::enum_::MyFlexibleEnum& _lhs,
                   const ::fidl::test::enum_::MyFlexibleEnum& _rhs) const {
+    return _lhs == _rhs;
+  }
+};
+
+template <>
+struct CodingTraits<::fidl::test::enum_::MyEmptyFlexibleEnum> {
+  static constexpr size_t inline_size_old =
+      sizeof(::fidl::test::enum_::MyEmptyFlexibleEnum);
+  static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::fidl::test::enum_::MyEmptyFlexibleEnum);
+  static constexpr size_t inline_size_v2 =
+      sizeof(::fidl::test::enum_::MyEmptyFlexibleEnum);
+  static void Encode(
+      Encoder* encoder, ::fidl::test::enum_::MyEmptyFlexibleEnum* value,
+      size_t offset,
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
+    uint32_t underlying = static_cast<uint32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(Decoder* decoder,
+                     ::fidl::test::enum_::MyEmptyFlexibleEnum* value,
+                     size_t offset) {
+    uint32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value = static_cast<::fidl::test::enum_::MyEmptyFlexibleEnum>(underlying);
+  }
+};
+
+inline zx_status_t Clone(::fidl::test::enum_::MyEmptyFlexibleEnum value,
+                         ::fidl::test::enum_::MyEmptyFlexibleEnum* result) {
+  return ::fidl::test::enum_::Clone(value, result);
+}
+template <>
+struct Equality<::fidl::test::enum_::MyEmptyFlexibleEnum> {
+  bool operator()(const ::fidl::test::enum_::MyEmptyFlexibleEnum& _lhs,
+                  const ::fidl::test::enum_::MyEmptyFlexibleEnum& _rhs) const {
     return _lhs == _rhs;
   }
 };

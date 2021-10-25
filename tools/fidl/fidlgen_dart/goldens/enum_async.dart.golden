@@ -233,3 +233,49 @@ const $fidl.EnumType<MyFlexibleEnumWithCustomUnknown>
         type: $fidl.Uint32Type(),
         values: {0x1: null, 0x2: null, 0x3: null},
         ctor: MyFlexibleEnumWithCustomUnknown._ctor);
+
+class MyEmptyFlexibleEnum extends $fidl.Enum {
+  static final Map<int, MyEmptyFlexibleEnum> _internedValues = {};
+  factory MyEmptyFlexibleEnum(int _v) {
+    if (!_internedValues.containsKey(_v)) {
+      _internedValues[_v] = MyEmptyFlexibleEnum._(_v, true);
+    }
+    return _internedValues[_v]!;
+  }
+
+  /// Default unknown placeholder.
+  static const MyEmptyFlexibleEnum $unknown =
+      MyEmptyFlexibleEnum._(0xffffffff, true);
+
+  const MyEmptyFlexibleEnum._(this.$value, this._isUnknown);
+
+  @override
+  final int $value;
+
+  final bool _isUnknown;
+
+  static const Map<String, MyEmptyFlexibleEnum> $valuesMap = {};
+
+  static const List<MyEmptyFlexibleEnum> $values = [];
+
+  static MyEmptyFlexibleEnum? $valueOf(String name) => $valuesMap[name];
+
+  @override
+  bool isUnknown() {
+    return _isUnknown;
+  }
+
+  @override
+  String toString() {
+    switch ($value) {
+      default:
+        return r'MyEmptyFlexibleEnum.' '${$value}';
+    }
+  }
+
+  static MyEmptyFlexibleEnum _ctor(int v) => MyEmptyFlexibleEnum(v);
+}
+
+const $fidl.EnumType<MyEmptyFlexibleEnum> kMyEmptyFlexibleEnum_Type =
+    $fidl.EnumType<MyEmptyFlexibleEnum>(
+        type: $fidl.Uint32Type(), values: {}, ctor: MyEmptyFlexibleEnum._ctor);

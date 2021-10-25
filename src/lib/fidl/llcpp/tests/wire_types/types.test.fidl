@@ -116,6 +116,8 @@ type FlexibleEnum = flexible enum : uint32 {
     CUSTOM = 56;
 };
 
+type EmptyFlexibleEnum = flexible enum :uint32 {};
+
 type EmptyStruct = struct {};
 
 type TestTable = table {

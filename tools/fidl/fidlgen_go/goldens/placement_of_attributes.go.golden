@@ -33,9 +33,8 @@ func (x ExampleEnum) IsUnknown() bool {
 	switch x {
 	case 1:
 		return false
-	default:
-		return true
 	}
+	return true
 }
 
 func (x ExampleEnum) String() string {

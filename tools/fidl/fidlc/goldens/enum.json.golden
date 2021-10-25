@@ -199,6 +199,22 @@
       ],
       "strict": false,
       "maybe_unknown_value": 3
+    },
+    {
+      "name": "fidl.test.enum/MyEmptyFlexibleEnum",
+      "naming_context": [
+        "MyEmptyFlexibleEnum"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",
+        "line": 20,
+        "column": 6,
+        "length": 19
+      },
+      "type": "uint32",
+      "members": [],
+      "strict": false,
+      "maybe_unknown_value": 4294967295
     }
   ],
   "experimental_resource_declarations": [],
@@ -211,11 +227,13 @@
   "declaration_order": [
     "fidl.test.enum/MyStrictEnum",
     "fidl.test.enum/MyFlexibleEnumWithCustomUnknown",
-    "fidl.test.enum/MyFlexibleEnum"
+    "fidl.test.enum/MyFlexibleEnum",
+    "fidl.test.enum/MyEmptyFlexibleEnum"
   ],
   "declarations": {
     "fidl.test.enum/MyStrictEnum": "enum",
     "fidl.test.enum/MyFlexibleEnum": "enum",
-    "fidl.test.enum/MyFlexibleEnumWithCustomUnknown": "enum"
+    "fidl.test.enum/MyFlexibleEnumWithCustomUnknown": "enum",
+    "fidl.test.enum/MyEmptyFlexibleEnum": "enum"
   }
 }

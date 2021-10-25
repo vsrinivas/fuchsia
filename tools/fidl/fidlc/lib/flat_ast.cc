@@ -2534,7 +2534,6 @@ bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
                                  const std::shared_ptr<NamingContext>& context,
                                  std::unique_ptr<raw::AttributeList> raw_attribute_list) {
   std::vector<M> members;
-  size_t index = 0;
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::ValueLayoutMember*>(mem.get());
     auto span = member->identifier->span();
@@ -2549,7 +2548,6 @@ bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
       return false;
 
     members.emplace_back(span, std::move(value), std::move(attributes));
-    index++;
   }
 
   std::unique_ptr<TypeConstructor> subtype_ctor;
@@ -2571,6 +2569,11 @@ bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
   auto strictness = types::Strictness::kFlexible;
   if (layout->modifiers != nullptr)
     strictness = layout->modifiers->maybe_strictness.value_or(types::Strictness::kFlexible);
+
+  if (layout->members.size() == 0) {
+    if (!std::is_same<T, Enum>::value || strictness != types::Strictness::kFlexible)
+      return Fail(ErrMustHaveOneMember, layout->span());
+  }
 
   RegisterDecl(std::make_unique<T>(std::move(attributes), context->ToName(this, layout->span()),
                                    std::move(subtype_ctor), std::move(members), strictness));

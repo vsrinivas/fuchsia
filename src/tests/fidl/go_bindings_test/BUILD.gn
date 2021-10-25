@@ -1,0 +1,28 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_unittest_package.gni")
+import("//build/fidl/fidl.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/go/toolchain.gni")
+
+go_library("gopkg") {
+  name = "go.fuchsia.dev/fuchsia/src/tests/fidl/go_bindings_test"
+  deps = [ ":fidl.go.types($go_toolchain)" ]
+  sources = [ "enums_test.go" ]
+}
+
+go_test("fidl-go-bindings-test") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/fidl/go_bindings_test" ]
+  deps = [ ":gopkg" ]
+}
+
+fidl("fidl.go.types") {
+  sources = [ "types.test.fidl" ]
+}
+
+fuchsia_unittest_package("go_bindings_test") {
+  deps = [ ":fidl-go-bindings-test" ]
+}

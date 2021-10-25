@@ -1225,9 +1225,6 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
   if (!checkpoint.NoNewErrors())
     return nullptr;
 
-  if (member_kind == raw::LayoutMember::Kind::kValue && members.empty())
-    return Fail(ErrMustHaveOneMember);
-
   if (kind == raw::Layout::Kind::kUnion) {
     bool contains_non_reserved_member = false;
     for (const std::unique_ptr<raw::LayoutMember>& member : members) {

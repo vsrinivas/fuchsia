@@ -53,9 +53,8 @@ func (x EnumType) IsUnknown() bool {
 		return false
 	case 2:
 		return false
-	default:
-		return true
 	}
+	return true
 }
 
 func (x EnumType) String() string {

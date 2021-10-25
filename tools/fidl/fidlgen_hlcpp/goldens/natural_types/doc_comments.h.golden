@@ -131,9 +131,8 @@ class MyFlexibleEnum final {
       case 2u:
 
         return false;
-      default:
-        return true;
     }
+    return true;
   }
 
   constexpr static MyFlexibleEnum Unknown() {

@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 
+using fidl_llcpp_types_test::wire::EmptyFlexibleEnum;
 using fidl_llcpp_types_test::wire::FlexibleEnum;
 using fidl_llcpp_types_test::wire::StrictEnum;
 
@@ -28,6 +29,12 @@ TEST(FlexibleEnum, IsUnknown) {
   EXPECT_FALSE(EnumType::kE.IsUnknown());
 
   EXPECT_TRUE(EnumType::kCustom.IsUnknown());
+  EXPECT_TRUE(EnumType::Unknown().IsUnknown());
+}
+
+TEST(EmptyFlexibleEnum, IsUnknown) {
+  using EnumType = EmptyFlexibleEnum;
+
   EXPECT_TRUE(EnumType::Unknown().IsUnknown());
 }
 

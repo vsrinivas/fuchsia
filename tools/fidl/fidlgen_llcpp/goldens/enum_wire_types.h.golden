@@ -44,9 +44,8 @@ class MyFlexibleEnumWithCustomUnknown final {
       case 2u:
 
         return false;
-      default:
-        return true;
     }
+    return true;
   }
 
   constexpr static MyFlexibleEnumWithCustomUnknown Unknown() {
@@ -85,9 +84,8 @@ class MyFlexibleEnum final {
       case 2u:
 
         return false;
-      default:
-        return true;
     }
+    return true;
   }
 
   constexpr static MyFlexibleEnum Unknown() {
@@ -105,6 +103,22 @@ constexpr const ::fidl_test_enum::wire::MyFlexibleEnum MyFlexibleEnum::kFoo =
     ::fidl_test_enum::wire::MyFlexibleEnum(1u);
 constexpr const ::fidl_test_enum::wire::MyFlexibleEnum MyFlexibleEnum::kBar =
     ::fidl_test_enum::wire::MyFlexibleEnum(2u);
+
+class MyEmptyFlexibleEnum final {
+ public:
+  constexpr MyEmptyFlexibleEnum() : value_(0) {}
+  constexpr explicit MyEmptyFlexibleEnum(uint32_t value) : value_(value) {}
+  constexpr operator uint32_t() const { return value_; }
+
+  constexpr bool IsUnknown() const { return true; }
+
+  constexpr static MyEmptyFlexibleEnum Unknown() {
+    return MyEmptyFlexibleEnum(0xffffffff);
+  }
+
+ private:
+  uint32_t value_;
+};
 
 }  // namespace wire
 }  // namespace fidl_test_enum
@@ -129,6 +143,13 @@ struct IsFidlType<::fidl_test_enum::wire::MyFlexibleEnum>
     : public std::true_type {};
 template <>
 struct ContainsHandle<::fidl_test_enum::wire::MyFlexibleEnum>
+    : public std::false_type {};
+
+template <>
+struct IsFidlType<::fidl_test_enum::wire::MyEmptyFlexibleEnum>
+    : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_enum::wire::MyEmptyFlexibleEnum>
     : public std::false_type {};
 
 }  // namespace fidl

@@ -32,9 +32,8 @@ func (x MyStrictEnum) IsUnknown() bool {
 		return false
 	case 2:
 		return false
-	default:
-		return true
 	}
+	return true
 }
 
 func (x MyStrictEnum) String() string {
@@ -76,9 +75,8 @@ func (x MyFlexibleEnum) IsUnknown() bool {
 		return false
 	case 2:
 		return false
-	default:
-		return true
 	}
+	return true
 }
 
 func (x MyFlexibleEnum) String() string {
@@ -122,9 +120,8 @@ func (x MyFlexibleEnumWithCustomUnknown) IsUnknown() bool {
 		return false
 	case 2:
 		return false
-	default:
-		return true
 	}
+	return true
 }
 
 func (x MyFlexibleEnumWithCustomUnknown) String() string {
@@ -136,5 +133,31 @@ func (x MyFlexibleEnumWithCustomUnknown) String() string {
 	case 3:
 		return "CustomUnknown"
 	}
+	return "Unknown"
+}
+
+var _ _bindings.Enum = MyEmptyFlexibleEnum(0)
+
+type MyEmptyFlexibleEnum uint32
+
+const (
+
+	// MyEmptyFlexibleEnum_Unknown is the default unknown placeholder.
+	MyEmptyFlexibleEnum_Unknown MyEmptyFlexibleEnum = 0xffffffff
+)
+
+func (_ MyEmptyFlexibleEnum) I_EnumValues() []MyEmptyFlexibleEnum {
+	return []MyEmptyFlexibleEnum{}
+}
+
+func (_ MyEmptyFlexibleEnum) I_EnumIsStrict() bool {
+	return false
+}
+
+func (x MyEmptyFlexibleEnum) IsUnknown() bool {
+	return true
+}
+
+func (x MyEmptyFlexibleEnum) String() string {
 	return "Unknown"
 }

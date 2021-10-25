@@ -124,13 +124,31 @@ type Fruit = enum : uint64 {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
 
-TEST(EnumsTests, BadEnumTestNoMembers) {
+TEST(EnumsTests, GoodEnumTestNoMembersAllowedWhenDefaultsToFlexible) {
   TestLibrary library(R"FIDL(
 library example;
 
 type E = enum {};
 )FIDL");
+  ASSERT_COMPILED(library);
+}
+
+TEST(EnumsTests, BadEnumTestNoMembersWhenStrict) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type E = strict enum {};
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneMember);
+}
+
+TEST(EnumsTests, GoodEnumTestNoMembersAllowedWhenFlexible) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type E = flexible enum {};
+)FIDL");
+  ASSERT_COMPILED(library);
 }
 
 TEST(EnumsTests, GoodEnumTestKeywordNames) {

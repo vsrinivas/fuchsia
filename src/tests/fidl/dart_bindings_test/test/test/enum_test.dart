@@ -23,6 +23,9 @@ void main() {
       expect(FlexibleEnumFour.$unknown.isUnknown(), isTrue);
       expect(FlexibleEnumFour.customUnknown.isUnknown(), isTrue);
     });
+    test('empty-flexible-enum-unknown', () {
+      expect(EmptyFlexibleEnum.$unknown.isUnknown(), isTrue);
+    });
   });
   group('unknown placeholders', () {
     test(r'$unknown', () {

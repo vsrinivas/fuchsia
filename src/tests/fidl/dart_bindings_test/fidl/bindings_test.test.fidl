@@ -264,6 +264,8 @@ type FlexibleEnumFour = flexible enum : int32 {
     CUSTOM_UNKNOWN = -123;
 };
 
+type EmptyFlexibleEnum = flexible enum :int32 {};
+
 type UnionOne = strict union {
     1: foo string;
     2: bar string;

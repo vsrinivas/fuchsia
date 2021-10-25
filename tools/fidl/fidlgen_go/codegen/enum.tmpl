@@ -39,6 +39,7 @@ func (_ {{.Name}}) I_EnumIsStrict() bool {
 }
 
 func (x {{.Name}}) IsUnknown() bool {
+	{{- if .Members }}
 	switch x {
 		{{- range .Members }}
 		{{- if not .IsUnknown }}
@@ -46,18 +47,20 @@ func (x {{.Name}}) IsUnknown() bool {
 			return false
 		{{- end }}
 		{{- end }}
-		default:
-			return true
-		}
+	}
+	{{- end }}
+	return true
 }
 
 func (x {{.Name}}) String() string {
+	{{- if .Members }}
 	switch x {
 	{{- range .Members }}
 	case {{ .Value }}:
 		return "{{.Name}}"
 	{{- end }}
 	}
+	{{- end }}
 	return "Unknown"
 }
 {{- end -}}

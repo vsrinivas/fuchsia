@@ -136,6 +136,8 @@ type FlexibleEnum = flexible enum {
     MEMBER_CUSTOM_UNKNOWN = 89;
 };
 
+type EmptyFlexibleEnum = flexible enum {};
+
 type VariousDefaults = struct {
     int64_with_default int64 = 5;
     string_with_default string = "stuff";

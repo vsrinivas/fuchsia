@@ -6,6 +6,7 @@
 __LOCAL extern const struct FidlCodedEnum fidl_test_enum_MyStrictEnumTable;
 __LOCAL extern const struct FidlCodedEnum fidl_test_enum_MyFlexibleEnumWithCustomUnknownTable;
 __LOCAL extern const struct FidlCodedEnum fidl_test_enum_MyFlexibleEnumTable;
+__LOCAL extern const struct FidlCodedEnum fidl_test_enum_MyEmptyFlexibleEnumTable;
 
 
 
@@ -24,4 +25,6 @@ const struct FidlCodedEnum fidl_test_enum_MyStrictEnumTable = {.tag=kFidlTypeEnu
 const struct FidlCodedEnum fidl_test_enum_MyFlexibleEnumWithCustomUnknownTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="fidl.test.enum/MyFlexibleEnumWithCustomUnknown"};
 
 const struct FidlCodedEnum fidl_test_enum_MyFlexibleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="fidl.test.enum/MyFlexibleEnum"};
+
+const struct FidlCodedEnum fidl_test_enum_MyEmptyFlexibleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="fidl.test.enum/MyEmptyFlexibleEnum"};
 

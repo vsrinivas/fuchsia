@@ -5,8 +5,9 @@
 //! This file tests the public APIs of FIDL data types.
 
 use fidl_fidl_rust_test_external::{
-    FlexibleAnimal, FlexibleButtons, FlexibleResourceThing, FlexibleValueThing, ResourceRecord,
-    StrictAnimal, StrictButtons, StrictResourceThing, StrictValueThing, ValueRecord,
+    FlexibleAnimal, FlexibleButtons, FlexibleEmptyEnum, FlexibleResourceThing, FlexibleValueThing,
+    ResourceRecord, StrictAnimal, StrictButtons, StrictResourceThing, StrictValueThing,
+    ValueRecord,
 };
 use matches::assert_matches;
 
@@ -99,6 +100,23 @@ fn flexible_enum() {
     assert_eq!(FlexibleAnimal::Cat.validate(), Ok(FlexibleAnimal::Cat));
     assert_eq!(FlexibleAnimal::from_primitive_allow_unknown(3).validate(), Err(3));
     assert_eq!(FlexibleAnimal::unknown().validate(), Err(i32::MAX));
+}
+
+#[test]
+fn flexible_empty_enum() {
+    assert_eq!(FlexibleEmptyEnum::from_primitive(3), None);
+
+    #[allow(deprecated)] // allow referencing __Unknown
+    let unknown3 = FlexibleEmptyEnum::__Unknown(3);
+    assert_eq!(FlexibleEmptyEnum::from_primitive_allow_unknown(3), unknown3);
+
+    assert_eq!(FlexibleEmptyEnum::unknown().into_primitive(), i32::MAX);
+
+    assert_eq!(FlexibleEmptyEnum::from_primitive_allow_unknown(3).is_unknown(), true);
+    assert_eq!(FlexibleEmptyEnum::unknown().is_unknown(), true);
+
+    assert_eq!(FlexibleEmptyEnum::from_primitive_allow_unknown(3).validate(), Err(3));
+    assert_eq!(FlexibleEmptyEnum::unknown().validate(), Err(i32::MAX));
 }
 
 #[test]

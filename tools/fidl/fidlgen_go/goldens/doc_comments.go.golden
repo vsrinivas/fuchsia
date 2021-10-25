@@ -50,9 +50,8 @@ func (x MyStrictEnum) IsUnknown() bool {
 		return false
 	case 2:
 		return false
-	default:
-		return true
 	}
+	return true
 }
 
 func (x MyStrictEnum) String() string {
@@ -105,9 +104,8 @@ func (x MyFlexibleEnum) IsUnknown() bool {
 		return false
 	case 2:
 		return false
-	default:
-		return true
 	}
+	return true
 }
 
 func (x MyFlexibleEnum) String() string {

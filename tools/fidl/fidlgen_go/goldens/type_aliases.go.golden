@@ -34,9 +34,8 @@ func (x ObjType) IsUnknown() bool {
 		return false
 	case 4:
 		return false
-	default:
-		return true
 	}
+	return true
 }
 
 func (x ObjType) String() string {

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test/misc/cpp/fidl.h>
+
 #include <zxtest/zxtest.h>
 
 #include "lib/fidl/cpp/builder.h"
@@ -20,7 +21,7 @@ TEST(Enum, Defaults) {
   EXPECT_EQ(0u, static_cast<uint32_t>(flexible_enum_default));
 }
 
-TEST(Enum, IsUnknowm) {
+TEST(FlexibleEnum, IsUnknown) {
   EXPECT_FALSE(FlexibleEnum::MEMBER_A.IsUnknown());
   EXPECT_FALSE(FlexibleEnum::MEMBER_B.IsUnknown());
   EXPECT_FALSE(FlexibleEnum::MEMBER_C.IsUnknown());
@@ -28,7 +29,7 @@ TEST(Enum, IsUnknowm) {
   EXPECT_TRUE(FlexibleEnum::Unknown().IsUnknown());
 }
 
-TEST(Enum, Equality) {
+TEST(FlexibleEnum, Equality) {
   EXPECT_TRUE(FlexibleEnum::MEMBER_A == FlexibleEnum(23));
   EXPECT_TRUE(FlexibleEnum::MEMBER_B == FlexibleEnum(34));
   EXPECT_TRUE(FlexibleEnum::MEMBER_C == FlexibleEnum(45));
@@ -39,6 +40,8 @@ TEST(Enum, Equality) {
   EXPECT_FALSE(FlexibleEnum::MEMBER_C != FlexibleEnum(45));
   EXPECT_FALSE(FlexibleEnum::Unknown() != FlexibleEnum::MEMBER_CUSTOM_UNKNOWN);
 }
+
+TEST(EmptyFlexibleEnum, IsUnknown) { EXPECT_TRUE(EmptyFlexibleEnum::Unknown().IsUnknown()); }
 
 TEST(Enum, Switch) {
   // This is a compilation test ensuring that we can use strict and flexible

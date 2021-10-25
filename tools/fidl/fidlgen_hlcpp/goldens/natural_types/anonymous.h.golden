@@ -30,9 +30,8 @@ class SomeProtocol_SomeMethod_Error final {
       case 2u:
 
         return false;
-      default:
-        return true;
     }
+    return true;
   }
 
   constexpr static SomeProtocol_SomeMethod_Error Unknown() {
@@ -78,9 +77,8 @@ class Op final {
       case 3u:
 
         return false;
-      default:
-        return true;
     }
+    return true;
   }
 
   constexpr static Op Unknown() { return Op(0xffffffff); }

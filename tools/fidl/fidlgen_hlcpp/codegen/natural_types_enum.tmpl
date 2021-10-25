@@ -23,6 +23,7 @@ public:
   constexpr operator {{ .Type }}() const { return value_; }
 
   constexpr bool IsUnknown() const {
+    {{ if .Members }}
     switch (value_) {
       {{ range .Members }}
       {{ if not .IsUnknown }}
@@ -30,9 +31,9 @@ public:
       {{ end }}
       {{ end }}
       return false;
-    default:
-      return true;
     }
+    {{- end }}
+    return true;
   }
 
   constexpr static {{ .Name }} Unknown() {

@@ -16,3 +16,5 @@ type MyFlexibleEnumWithCustomUnknown = flexible enum : uint32 {
     @unknown
     CUSTOM_UNKNOWN = 3;
 };
+
+type MyEmptyFlexibleEnum = flexible enum :uint32 {};

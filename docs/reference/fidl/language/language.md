@@ -262,7 +262,7 @@ We also alias **`byte`** to mean **`uint8`** as a [built-in alias](#built-in-ali
 * Discrete subset of named values chosen from an underlying integer primitive
   type.
 * Never optional.
-* Enums must have at least one member.
+* Strict enums must have at least one member (flexible enums can be memberless).
 * Enums can be [`strict` or `flexible`](#strict-vs-flexible).
 * Enums default to `flexible`.
 

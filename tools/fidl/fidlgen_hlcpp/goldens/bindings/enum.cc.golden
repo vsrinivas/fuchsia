@@ -30,6 +30,9 @@ constexpr const ::fidl::test::enum_::MyFlexibleEnum MyFlexibleEnum::BAR =
     ::fidl::test::enum_::MyFlexibleEnum(2u);
 #endif  // (__cplusplus < 201703)
 
+#if (__cplusplus < 201703)
+#endif  // (__cplusplus < 201703)
+
 //
 // Proxies and stubs definitions
 //

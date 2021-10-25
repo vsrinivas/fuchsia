@@ -35,9 +35,8 @@ func (x SomeProtocolSomeMethodError) IsUnknown() bool {
 		return false
 	case 2:
 		return false
-	default:
-		return true
 	}
+	return true
 }
 
 func (x SomeProtocolSomeMethodError) String() string {
@@ -83,9 +82,8 @@ func (x Op) IsUnknown() bool {
 		return false
 	case 3:
 		return false
-	default:
-		return true
 	}
+	return true
 }
 
 func (x Op) String() string {

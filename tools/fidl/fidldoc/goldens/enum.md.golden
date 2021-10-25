@@ -12,6 +12,17 @@
 
 ## **ENUMS**
 
+### MyEmptyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#MyEmptyFlexibleEnum}
+Type: <code>uint32</code>
+
+*Defined in [fidl.test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=20)*
+
+
+
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr></table>
+
 ### MyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleEnum}
 Type: <code>uint32</code>
 

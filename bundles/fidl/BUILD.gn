@@ -16,6 +16,7 @@ group("tests_no_e2e") {
     "//sdk/lib/fidl/cpp/fuzzing:tests",
     "//src/lib/fidl:tests",
     "//src/lib/fidl_table_validation/fidl_table_validation_tests",
+    "//src/tests/fidl/go_bindings_test",
     "//third_party/go:fidl-tests",
     "//tools/fidl:tests",
     "//zircon/system/ulib/fidl:fidl-llcpp_sdk",

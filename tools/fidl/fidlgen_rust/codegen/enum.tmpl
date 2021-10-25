@@ -103,7 +103,9 @@ impl {{ .Name }} {
 			{{- end }}
 			#[allow(deprecated)]
 			Self::__Unknown(x) => Err(x),
+			{{- if .Members }}
 			_ => Ok(self),
+			{{- end }}
 		}
 	}
 

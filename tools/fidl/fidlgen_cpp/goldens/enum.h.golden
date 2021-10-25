@@ -13,4 +13,6 @@ using MyFlexibleEnumWithCustomUnknown =
 
 using MyFlexibleEnum = ::fidl::test::enum_::MyFlexibleEnum;
 
+using MyEmptyFlexibleEnum = ::fidl::test::enum_::MyEmptyFlexibleEnum;
+
 }  // namespace fidl_test_enum
