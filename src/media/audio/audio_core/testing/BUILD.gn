@@ -22,6 +22,7 @@ source_set("testing") {
     "matchers.h",
     "packet_factory.cc",
     "packet_factory.h",
+    "sine_wave_stream.h",
     "test_process_config.h",
     "threading_model_fixture.h",
   ]
@@ -39,6 +40,7 @@ source_set("testing") {
     "//src/media/audio/audio_core:audio_core_lib",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/drivers/lib/audio-proto-utils",
+    "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/clock",
     "//src/media/audio/lib/clock/testing",
     "//src/media/audio/lib/format",

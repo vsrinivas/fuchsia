@@ -1,0 +1,9 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tools") {
+  testonly = true
+  deps =
+      [ "//src/media/audio/audio_core/tools/output_pipeline_benchmark:tools" ]
+}

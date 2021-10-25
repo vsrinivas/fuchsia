@@ -1,0 +1,116 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/config.gni")
+
+# Example:
+# ```
+#   # Creates the shell command 'audio-output-pipeline-benchmark-astro'.
+#   audio_pipeline_benchmark("audio-output-pipeline-benchmark-astro") {
+#     config = "//path/to/audio_core_config.json"
+#   }
+# ```
+#
+# Parameters
+#
+#     config_files (required)
+#       Path to config files, which must include an audio_core_config.json file.
+#       Type: string
+#
+#     extra_cmx (optional)
+#       A list of extra manifest files to merge into the manifest.
+#
+#      deps (optional)
+#        Usual GN meaning.
+#
+template("audio_pipeline_benchmark") {
+  assert(defined(invoker.config_files))
+
+  bin_name = target_name
+
+  # Create the manifest file.
+  generated_file("${bin_name}-cmx-base") {
+    contents = "{"
+    contents += "  \"include\": [ \"syslog/client.shard.cmx\" ],"
+    contents += "  \"program\": { \"binary\": \"bin/${bin_name}\" },"
+    contents += "  \"sandbox\": {"
+    contents += "    \"features\": [ \"config-data\" ],"
+    contents += "    \"services\": ["
+    contents += "      \"fuchsia.media.ProfileProvider\","
+    contents += "      \"fuchsia.audio.effects.ProcessorCreator\""
+    contents += "    ]"
+    contents += "  }"
+    contents += "}"
+    outputs = [ "${target_gen_dir}/${bin_name}.cmx" ]
+    output_conversion = "string"
+    testonly = true
+  }
+
+  base_manifest_file = get_target_outputs(":${bin_name}-cmx-base")
+  base_manifest_file = base_manifest_file[0]
+
+  if (defined(invoker.extra_cmx)) {
+    cmc_merge("${bin_name}-cmx-merged") {
+      deps = [ ":${bin_name}-cmx-base" ]
+      sources = [ base_manifest_file ]
+      sources += invoker.extra_cmx
+      output_name = "${bin_name}.merged.cmx"
+      testonly = true
+    }
+    manifest_file = get_target_outputs(":${bin_name}-cmx-merged")
+    manifest_file = manifest_file[0]
+  } else {
+    manifest_file = base_manifest_file
+  }
+
+  executable("${bin_name}-bin") {
+    output_name = bin_name
+    testonly = true
+
+    sources = [
+      "//src/media/audio/audio_core/tools/output_pipeline_benchmark/main.cc",
+      "//src/media/audio/audio_core/tools/output_pipeline_benchmark/output_pipeline_benchmark.cc",
+      "//src/media/audio/audio_core/tools/output_pipeline_benchmark/output_pipeline_benchmark.h",
+    ]
+
+    deps = [
+      "//garnet/lib/profiler",
+      "//sdk/fidl/fuchsia.media",
+      "//src/lib/fxl",
+      "//src/media/audio/audio_core:audio_core_lib",
+      "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
+      "//src/media/audio/audio_core/testing",
+      "//src/media/audio/lib/analysis",
+      "//src/media/audio/lib/clock/testing",
+      "//src/media/audio/lib/effects_loader",
+      "//src/media/audio/lib/format",
+      "//zircon/system/ulib/perftest",
+    ]
+  }
+
+  config_data("${bin_name}-config") {
+    for_pkg = bin_name
+    sources = invoker.config_files
+    outputs = [ "{{source_file_part}}" ]
+    testonly = true
+  }
+
+  fuchsia_package_with_single_component(bin_name) {
+    forward_variables_from(invoker, [ "deps" ])
+    testonly = true
+    manifest = manifest_file
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [
+      ":${bin_name}-bin",
+      ":${bin_name}-cmx-base",
+      ":${bin_name}-config",
+    ]
+    if (defined(invoker.extra_cmx)) {
+      deps += [ ":${bin_name}-cmx-merged" ]
+    }
+  }
+}

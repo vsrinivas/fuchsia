@@ -37,7 +37,7 @@ class EffectsStageV1 : public ReadableStream {
   EffectsStageV1(std::shared_ptr<ReadableStream> source,
                  std::unique_ptr<EffectsProcessorV1> effects_processor, VolumeCurve volume_curve);
 
-  uint32_t block_size() const { return effects_processor_->block_size(); }
+  int64_t block_size() const { return effects_processor_->block_size(); }
 
   fpromise::result<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& config);
