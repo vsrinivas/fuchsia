@@ -506,10 +506,12 @@ mod test {
         // For some reason the socket read size does *not* match the recorded
         // metadata size
         assert_eq!(msg.metadata.size_bytes, Some(read_len - 2));
+        assert_eq!(msg.metadata.tags, Some(tags.map(|e| e.to_string()).to_vec()));
         assert_data_tree!(msg.payload.as_ref().expect("message had no payload"),
-            root: contains {
-                "tag": tags[0],
-                "message": "hello-world"
+            root: {
+                message: {
+                    value: "hello-world"
+                }
             }
         );
     }

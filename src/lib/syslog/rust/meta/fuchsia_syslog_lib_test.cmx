@@ -6,5 +6,8 @@
         "features": [
             "isolated-temp"
         ]
-    }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ]
 }
