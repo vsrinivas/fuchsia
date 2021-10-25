@@ -361,7 +361,6 @@ enum brcmf_disconnect_mode {
  * @pub: common driver information.
  * @channel: current channel.
  * @ibss_starter: indicates this sta is ibss starter.
- * @pwr_save: indicate whether dongle to support power save mode.
  * @dongle_up: indicate whether dongle up or not.
  * @roam_on: on/off switch for dongle self-roaming.
  * @scan_tried: indicates if first scan attempted.
@@ -401,7 +400,6 @@ struct brcmf_cfg80211_info {
   struct brcmf_pub* pub;
   uint32_t channel;
   bool ibss_starter;
-  bool pwr_save;
   bool dongle_up;
   bool scan_tried;
   uint8_t* dcmd_buf;

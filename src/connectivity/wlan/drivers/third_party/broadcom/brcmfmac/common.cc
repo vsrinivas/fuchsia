@@ -29,6 +29,7 @@
 #include "calls.h"
 #include "cfg80211.h"
 #include "debug.h"
+#include "defs.h"
 #include "device.h"
 #include "fwil.h"
 #include "fwil_types.h"
@@ -329,6 +330,65 @@ zx_status_t brcmf_clear_country(brcmf_pub* drvr) {
   return err;
 }
 
+/* Set Power Save Mode On/Off */
+zx_status_t brcmf_set_ps_mode(brcmf_pub* drvr, const wlanphy_ps_mode_t* ps_mode) {
+  struct brcmf_if* ifp = brcmf_get_ifp(drvr, 0);
+  zx_status_t err;
+  bcme_status_t fw_err = BCME_OK;
+  uint32_t fw_ps_mode;
+
+  switch (ps_mode->ps_mode) {
+    case POWER_SAVE_TYPE_FAST_PS_MODE:
+      fw_ps_mode = PM_FAST;
+      break;
+    case POWER_SAVE_TYPE_PS_POLL_MODE:
+      fw_ps_mode = PM_MAX;
+      break;
+    case POWER_SAVE_TYPE_PS_MODE_OFF:
+      fw_ps_mode = PM_OFF;
+      break;
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+  BRCMF_INFO("Request to set PS Mode %d", fw_ps_mode);
+  err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_PM, fw_ps_mode, &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Firmware rejected power save mode: %s fw err %s", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+    return err;
+  }
+  BRCMF_INFO("PS Mode set successfully");
+  return ZX_OK;
+}
+
+/* Get Power Save Mode from FW */
+zx_status_t brcmf_get_ps_mode(brcmf_pub* drvr, wlanphy_ps_mode_t* out_ps_mode) {
+  struct brcmf_if* ifp = brcmf_get_ifp(drvr, 0);
+  zx_status_t err;
+  bcme_status_t fw_err = BCME_OK;
+  uint32_t fw_ps_mode;
+
+  err = brcmf_fil_cmd_int_get(ifp, BRCMF_C_GET_PM, &fw_ps_mode, &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Firmware rejected power save mode get req: %s fw err %s", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+    return err;
+  }
+  switch (fw_ps_mode) {
+    case PM_OFF:
+      out_ps_mode->ps_mode = POWER_SAVE_TYPE_PS_MODE_OFF;
+      break;
+    case PM_FAST:
+      out_ps_mode->ps_mode = POWER_SAVE_TYPE_FAST_PS_MODE;
+      break;
+    case PM_MAX:
+      out_ps_mode->ps_mode = POWER_SAVE_TYPE_PS_POLL_MODE;
+      break;
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+  return ZX_OK;
+}
 // This function applies configured platform specific iovars to the firmware
 static void brcmf_set_init_cfg_params(brcmf_if* ifp) {
   int i;

@@ -12,6 +12,7 @@
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
@@ -705,6 +706,46 @@ void DynamicIfTest::TestApStop(bool use_cdown) {
   // Disassoc and other assoc scenarios are covered in assoc_test.cc
 }
 
+// Start both client and SoftAP interfaces simultaneously and check if
+// the client can associate to a FakeAP and a fake client can associate to the
+// SoftAP. Set PM mode and ensure it does not get affected during start/stop/delete
+// of the IFs as well as during client assoc.
+TEST_F(DynamicIfTest, PM_ModeDoesNotGetAffected) {
+  // Create our device instances
+  Init();
+  StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
+  brcmf_simdev* sim = device_->GetSim();
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  uint32_t pm_mode = PM_FAST;
+  zx_status_t err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_PM, pm_mode, nullptr);
+  EXPECT_EQ(err, ZX_OK);
+  uint32_t cur_pm_mode = PM_OFF;
+  err = brcmf_fil_cmd_int_get(ifp, BRCMF_C_GET_PM, &cur_pm_mode, nullptr);
+  EXPECT_EQ(err, ZX_OK);
+  EXPECT_EQ(cur_pm_mode, pm_mode);
+  StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_);
+
+  // Start our SoftAP
+  softap_ifc_.StartSoftAp();
+
+  // Associate to FakeAp
+  client_ifc_.AssociateWith(ap_, zx::msec(10));
+  // Associate to SoftAP
+  env_->ScheduleNotification(std::bind(&DynamicIfTest::TxAuthAndAssocReq, this), zx::msec(100));
+
+  env_->Run(kTestDuration);
+
+  // Check if the client's assoc with FakeAP succeeded
+  EXPECT_EQ(client_ifc_.stats_.assoc_attempts, 1U);
+  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
+  // Verify Assoc with SoftAP succeeded
+  VerifyAssocWithSoftAP();
+  EXPECT_EQ(DeleteInterface(&softap_ifc_), ZX_OK);
+  cur_pm_mode = PM_OFF;
+  err = brcmf_fil_cmd_int_get(ifp, BRCMF_C_GET_PM, &cur_pm_mode, nullptr);
+  EXPECT_EQ(err, ZX_OK);
+  EXPECT_EQ(cur_pm_mode, pm_mode);
+}
 // Start both client and SoftAP interfaces simultaneously and check if stopping the AP's beacons
 // does not affect the client.
 TEST_F(DynamicIfTest, StopAPDoesntAffectClientIF) {

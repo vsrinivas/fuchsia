@@ -63,6 +63,10 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp);
 zx_status_t brcmf_set_country(brcmf_pub* drvr, const wlanphy_country_t* country);
 zx_status_t brcmf_get_country(brcmf_pub* drvr, wlanphy_country_t* out_country);
 zx_status_t brcmf_clear_country(brcmf_pub* drvr);
+// Set PS mode in FW
+zx_status_t brcmf_set_ps_mode(brcmf_pub* drvr, const wlanphy_ps_mode_t* ps_mode);
+// Get PS mode from FW
+zx_status_t brcmf_get_ps_mode(brcmf_pub* drvr, wlanphy_ps_mode_t* out_ps_mode);
 // Get WiFi metadata
 zx_status_t brcmf_get_meta_data(brcmf_if* ifp, wifi_config_t* config);
 

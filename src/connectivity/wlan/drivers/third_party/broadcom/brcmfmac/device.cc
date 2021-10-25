@@ -271,7 +271,7 @@ zx_status_t Device::WlanphyImplGetCountry(wlanphy_country_t* out_country) {
 
 zx_status_t Device::WlanphyImplSetPsMode(const wlanphy_ps_mode_t* ps_mode) {
   BRCMF_DBG(WLANPHY, "Setting power save mode %d", ps_mode->ps_mode);
-  return ZX_ERR_NOT_SUPPORTED;
+  return brcmf_set_ps_mode(brcmf_pub_.get(), ps_mode);
 }
 
 zx_status_t Device::WlanphyImplGetPsMode(wlanphy_ps_mode_t* out_ps_mode) {
@@ -279,7 +279,7 @@ zx_status_t Device::WlanphyImplGetPsMode(wlanphy_ps_mode_t* out_ps_mode) {
   if (out_ps_mode == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  return ZX_ERR_NOT_SUPPORTED;
+  return brcmf_get_ps_mode(brcmf_pub_.get(), out_ps_mode);
 }
 
 void Device::DestroyAllIfaces(void) {

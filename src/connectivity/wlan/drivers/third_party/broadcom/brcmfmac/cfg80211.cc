@@ -5662,7 +5662,6 @@ static zx_status_t brcmf_init_cfg(struct brcmf_cfg80211_info* cfg) {
   async_dispatcher_t* dispatcher = cfg->pub->device->GetDispatcher();
 
   cfg->scan_request = nullptr;
-  cfg->pwr_save = false;  // FIXME #37793: should be set per-platform
   cfg->dongle_up = false; /* dongle is not up yet */
   err = brcmf_init_cfg_mem(cfg);
   if (err != ZX_OK) {
@@ -5816,7 +5815,6 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
   struct net_device* ndev;
   struct wireless_dev* wdev;
   struct brcmf_if* ifp;
-  int32_t power_mode;
   zx_status_t err = ZX_OK;
   bool enable_arp_nd_offload;
 
@@ -5834,13 +5832,6 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
   brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 0, nullptr);
 
   brcmf_dongle_scantime(ifp);
-
-  power_mode = cfg->pwr_save ? PM_FAST : PM_OFF;
-  err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_PM, power_mode, nullptr);
-  if (err != ZX_OK) {
-    goto default_conf_out;
-  }
-  BRCMF_DBG(FIL, "power save set to %s", (power_mode ? "enabled" : "disabled"));
 
   err = brcmf_dongle_roam(ifp);
   if (err != ZX_OK) {

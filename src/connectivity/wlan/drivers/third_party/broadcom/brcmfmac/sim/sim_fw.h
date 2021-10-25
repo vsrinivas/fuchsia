@@ -524,7 +524,7 @@ class SimFirmware {
   common::MacAddr pfn_mac_addr_;
   bool default_passive_scan_ = true;
   uint32_t default_passive_time_ = -1;  // In ms. -1 indicates value has not been set.
-  int32_t power_mode_ = -1;             // -1 indicates value has not been set.
+  int32_t power_mode_ = 0;              // Default value of PM in FW is 0 (OFF)
   struct brcmf_fil_country_le country_code_;
   uint32_t assoc_max_retries_ = 0;
   bool dev_is_up_ = false;
