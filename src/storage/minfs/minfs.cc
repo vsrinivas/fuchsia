@@ -1385,7 +1385,7 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mo
       export_root = std::move(data_root);
       break;
     case ServeLayout::kExportDirectory:
-      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>();
+      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
       outgoing->AddEntry("root", std::move(data_root));
       export_root = std::move(outgoing);
       break;
@@ -1438,15 +1438,34 @@ void Minfs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   });
 }
 
-uint64_t Minfs::GetFsId() const {
-  // The globally-unique filesystem ID is the koid of the fs_id_ event.
-  zx_info_handle_basic_t handle_info;
-  if (zx_status_t status = fs_id_.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info),
-                                           nullptr, nullptr);
-      status == ZX_OK) {
-    return handle_info.koid;
+zx_status_t Minfs::GetFilesystemInfo(fidl::AnyArena& allocator,
+                                     fuchsia_fs::wire::FilesystemInfo& out) {
+  uint32_t reserved_blocks = BlocksReserved();
+
+  out.set_block_size(allocator, BlockSize());
+  out.set_max_node_name_size(allocator, kMinfsMaxNameSize);
+  out.set_fs_type(allocator, fuchsia_fs::wire::FsType::kMinfs);
+  out.set_total_bytes(allocator, Info().block_count * Info().block_size);
+  out.set_used_bytes(allocator, (Info().alloc_block_count + reserved_blocks) * Info().block_size);
+  out.set_total_nodes(allocator, Info().inode_count);
+  out.set_used_nodes(allocator, Info().alloc_inode_count);
+
+  zx::event fs_id_copy;
+  if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
+    out.set_fs_id(allocator, std::move(fs_id_copy));
+
+  fuchsia_hardware_block_volume_VolumeInfo fvm_info;
+  if (FVMQuery(&fvm_info) == ZX_OK) {
+    uint64_t free_slices = fvm_info.pslice_total_count - fvm_info.pslice_allocated_count;
+    out.set_free_shared_pool_bytes(allocator, fvm_info.slice_size * free_slices);
   }
-  return ZX_KOID_INVALID;
+
+  if (auto device_path_or = bc_->device()->GetDevicePath(); device_path_or.is_ok())
+    out.set_device_path(allocator, fidl::StringView(allocator, device_path_or.value()));
+
+  out.set_name(allocator, fidl::StringView(allocator, "minfs"));
+
+  return ZX_OK;
 }
 
 #endif

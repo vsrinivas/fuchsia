@@ -327,6 +327,8 @@ zx_status_t Vnode::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* out) 
     out->total_nodes = input.total_nodes();
   if (input.has_used_nodes())
     out->used_nodes = input.used_nodes();
+  if (input.has_free_shared_pool_bytes())
+    out->free_shared_pool_bytes = input.free_shared_pool_bytes();
 
   if (input.has_fs_id()) {
     zx_info_handle_basic_t handle_info;

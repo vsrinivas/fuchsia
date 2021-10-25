@@ -635,7 +635,7 @@ zx_status_t VnodeMinfs::SetAttributes(fs::VnodeAttributesUpdate attr) {
   return ZX_OK;
 }
 
-VnodeMinfs::VnodeMinfs(Minfs* fs) : fs_(fs) {}
+VnodeMinfs::VnodeMinfs(Minfs* fs) : Vnode(fs), fs_(fs) {}
 
 #ifdef __Fuchsia__
 void VnodeMinfs::Notify(std::string_view name, unsigned event) { watcher_.Notify(name, event); }
@@ -679,34 +679,6 @@ void VnodeMinfs::Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* out) {
 }
 
 #ifdef __Fuchsia__
-
-constexpr std::string_view kFsName = "minfs";
-
-zx_status_t VnodeMinfs::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* info) {
-  uint32_t reserved_blocks = Vfs()->BlocksReserved();
-  Transaction transaction(fs_);
-  *info = {};
-  info->block_size = fs_->BlockSize();
-  info->max_filename_size = kMinfsMaxNameSize;
-  info->fs_type = VFS_TYPE_MINFS;
-  info->fs_id = fs_->GetFsId();
-  info->total_bytes = fs_->Info().block_count * fs_->Info().block_size;
-  info->used_bytes = (fs_->Info().alloc_block_count + reserved_blocks) * fs_->Info().block_size;
-  info->total_nodes = fs_->Info().inode_count;
-  info->used_nodes = fs_->Info().alloc_inode_count;
-
-  fuchsia_hardware_block_volume_VolumeInfo fvm_info;
-  if (fs_->FVMQuery(&fvm_info) == ZX_OK) {
-    uint64_t free_slices = fvm_info.pslice_total_count - fvm_info.pslice_allocated_count;
-    info->free_shared_pool_bytes = fvm_info.slice_size * free_slices;
-  }
-
-  static_assert(kFsName.size() + 1 < fuchsia_io_admin::wire::kMaxFsNameBuffer,
-                "Minfs name too long");
-  info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
-                          fuchsia_io_admin::wire::kMaxFsNameBuffer - 1)] = '\0';
-  return ZX_OK;
-}
 
 zx::status<std::string> VnodeMinfs::GetDevicePath() const {
   return fs_->bc_->device()->GetDevicePath();
