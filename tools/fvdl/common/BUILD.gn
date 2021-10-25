@@ -19,7 +19,7 @@ if (is_host) {
       "src/portpicker.rs",
       "src/tools.rs",
       "src/types.rs",
-      "src/vdl_files/mod.rs",
+      "src/vdl_files.rs",
       "src/vdl_proto_parser.rs",
     ]
     deps = [
