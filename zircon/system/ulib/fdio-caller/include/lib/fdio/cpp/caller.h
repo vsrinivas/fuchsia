@@ -32,13 +32,13 @@ class FdioCaller {
   explicit FdioCaller(fbl::unique_fd fd)
       : fd_(std::move(fd)), io_(fdio_unsafe_fd_to_io(fd_.get())) {}
 
-  FdioCaller& operator=(FdioCaller&& o) {
+  FdioCaller& operator=(FdioCaller&& o) noexcept {
     fd_ = std::move(o.fd_);
     io_ = o.io_;
     o.io_ = nullptr;
     return *this;
   }
-  FdioCaller(FdioCaller&& o) : fd_(std::move(o.fd_)), io_(o.io_) { o.io_ = nullptr; }
+  FdioCaller(FdioCaller&& o) noexcept : fd_(std::move(o.fd_)), io_(o.io_) { o.io_ = nullptr; }
   FdioCaller(const FdioCaller&) = delete;
   FdioCaller& operator=(const FdioCaller&) = delete;
 
@@ -159,7 +159,7 @@ class FdioCaller {
   // Be careful to only use this if you know the type of the protocol being spoken.
   template <typename T>
   zx::status<fidl::ClientEnd<T>> take_as() {
-    auto channel = clone_channel();
+    auto channel = take_channel();
     if (channel.is_error()) {
       return channel.take_error();
     }
