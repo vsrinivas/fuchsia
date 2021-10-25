@@ -46,6 +46,16 @@ pub async fn cmd_update(cmd: FetchCommand) -> Result<()> {
         .await;
     }
 
+    if cmd.artifact.is_some() {
+        return fetch_artifact(
+            artifact_lock.clone(),
+            cmd.artifact.unwrap(),
+            &cmd.out,
+            &Arc::clone(&client),
+        )
+        .await;
+    }
+
     let mut tasks = Vec::new();
     let artifact_store_root_path = cmd.out.join("artifact_stores");
     let mut merkle_map = BTreeMap::new();
@@ -107,6 +117,48 @@ pub async fn cmd_update(cmd: FetchCommand) -> Result<()> {
         hard_link(src, destination)?;
     }
     Ok(())
+}
+
+async fn fetch_artifact(
+    artifact_lock: Lock,
+    artifact_name: String,
+    out_path: &PathBuf,
+    client: &HttpsClient,
+) -> Result<()> {
+    let blob_output_path = out_path.join("blobs");
+    if !blob_output_path.exists() {
+        async_fs::create_dir_all(&blob_output_path).await?;
+    }
+
+    for artifact in artifact_lock.artifacts {
+        if artifact_name != artifact.name.replace("/0", "") {
+            continue;
+        }
+        let mut tasks = Vec::new();
+        let blob_hostname = match artifact.artifact_store.content_address_storage {
+            Some(hostname) => hostname,
+            None => BLOB_URL.to_string(),
+        };
+        for merkle in artifact.blobs {
+            let uri = format!("{}/{}", &blob_hostname, &merkle).parse::<Uri>()?;
+            let destination = blob_output_path.join(&merkle);
+            tasks
+                .push(async move { download_file_to_destination(uri, &client, destination).await });
+        }
+        futures::future::join_all(tasks).await;
+
+        let src = blob_output_path.join(artifact.merkle);
+        let artifact_store_root_path = out_path.join("artifact_stores");
+        let artifact_store_path = artifact_store_root_path.join(artifact.artifact_store.name);
+        async_fs::create_dir_all(&artifact_store_path).await?;
+        let destination = artifact_store_path.join(artifact.name.replace("/0", ""));
+        if destination.exists() {
+            remove_file(&destination)?;
+        }
+        hard_link(src, destination)?;
+        return Ok(());
+    }
+    ffx_bail!("Cannot find artifact {:#?}.", artifact_name);
 }
 
 async fn fetch_blob(
@@ -371,6 +423,62 @@ mod test {
         };
         cmd_update(cmd).await.unwrap();
         assert!(result_dir.join(format!("blobs/{}", EMTPY_BLOB_MERKLE)).exists());
+
+        // Signal the server to shutdown.
+        server.stop();
+
+        // Wait for the server to actually shut down.
+        task.await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_fetch_one_artifact() {
+        let manager = RepositoryManager::new();
+
+        let tempdir = tempfile::tempdir().unwrap();
+        let root = tempdir.path().join("artifact_store");
+        let repo = make_writable_empty_repository("artifact_store", root.clone()).await.unwrap();
+
+        let blob_dir = root.join("blobs");
+        create_dir(&blob_dir).unwrap();
+
+        // Put meta.far and blob into blobs directory
+        let meta_far_path = blob_dir.join(META_FAR_MERKLE);
+        create_meta_far(meta_far_path);
+
+        let blob_path = blob_dir.join(EMTPY_BLOB_MERKLE);
+        write_file(blob_path, "".as_bytes());
+
+        manager.add(Arc::new(repo));
+
+        let addr = (Ipv4Addr::LOCALHOST, 0).into();
+        let (server_fut, _, server) =
+            RepositoryServer::builder(addr, Arc::clone(&manager)).start().await.unwrap();
+
+        // Run the server in the background.
+        let task = fasync::Task::local(server_fut);
+
+        let blob_url = server.local_url() + "/artifact_store/blobs";
+
+        let artifact_lock_path = tempdir.path().join("artifact_lock.json");
+        create_artifact_lock(artifact_lock_path.clone(), blob_url.clone());
+
+        let result_dir = tempdir.path().join("results");
+        create_dir(&result_dir).unwrap();
+
+        let cmd = FetchCommand {
+            lock_file: artifact_lock_path,
+            out: result_dir.clone(),
+            merkle: None,
+            artifact: Some("test_package".to_string()),
+            local_dir: None,
+            show_progress: true,
+        };
+        cmd_update(cmd).await.unwrap();
+        assert!(result_dir.join(format!("blobs/{}", META_FAR_MERKLE)).exists());
+        assert!(result_dir.join(format!("blobs/{}", EMTPY_BLOB_MERKLE)).exists());
+
+        assert!(result_dir.join("artifact_stores/test_artifact_store/test_package").exists());
 
         // Signal the server to shutdown.
         server.stop();
