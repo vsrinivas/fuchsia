@@ -17,7 +17,9 @@
 #include <string>
 #include <vector>
 
-#include "inspector/inspector.h"
+#include <inspector/inspector.h>
+
+#include "gwp-asan.h"
 #include "utils-impl.h"
 
 namespace inspector {
@@ -234,6 +236,26 @@ static void print_exception_report(FILE* out, const zx_exception_report_t& repor
   }
 }
 
+// Print the GWP-ASan information if the thread is on a GWP-ASan exception. Do nothing otherwise.
+// The process and the thread must be readable.
+void print_gwp_asan_info(FILE* out, const zx::process& process,
+                         const zx_exception_report_t& exception_report) {
+  GwpAsanInfo info;
+  if (inspector_get_gwp_asan_info(process, exception_report, &info) && info.error_type) {
+    fprintf(out, "GWP-ASan Error: %s at %#lx\n", info.error_type, info.faulting_addr);
+    fprintf(out, "Allocated with size %lu here:\n", info.allocation_size);
+    for (size_t i = 0; i < info.allocation_trace.size(); i++) {
+      fprintf(out, "{{{bt:%lu:%#lx}}}\n", i, info.allocation_trace[i]);
+    }
+    if (!info.deallocation_trace.empty()) {
+      fprintf(out, "Freed here:\n");
+      for (size_t i = 0; i < info.deallocation_trace.size(); i++) {
+        fprintf(out, "{{{bt:%lu:%#lx}}}\n", i, info.deallocation_trace[i]);
+      }
+    }
+  }
+}
+
 // |skip_markup_context| avoids printing dso list repeatedly for multiple threads in a process.
 void inspector_print_debug_info_impl(FILE* out, zx_handle_t process_handle,
                                      zx_handle_t thread_handle, bool skip_markup_context) {
@@ -267,6 +289,7 @@ void inspector_print_debug_info_impl(FILE* out, zx_handle_t process_handle,
 
   // Check if the thread is on an exception.
   zx_exception_report_t report;
+  bool on_exception = false;
   if (thread->get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), nullptr,
                        nullptr) == ZX_OK) {
     // The thread is in a valid exception state.
@@ -274,6 +297,7 @@ void inspector_print_debug_info_impl(FILE* out, zx_handle_t process_handle,
       return;
     }
 
+    on_exception = true;
     backtrace_requested = is_backtrace_request(report.header.type, &regs);
     if (backtrace_requested) {
       fprintf(out, "<== BACKTRACE REQUEST: process %s[%" PRIu64 "] thread %s[%" PRIu64 "]\n",
@@ -318,6 +342,9 @@ void inspector_print_debug_info_impl(FILE* out, zx_handle_t process_handle,
   inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(process->get());
   inspector_print_backtrace_markup(out, process->get(), thread->get(), dso_list, decoded.pc,
                                    decoded.sp, decoded.fp);
+  if (on_exception)
+    print_gwp_asan_info(out, *process, report);
+
   inspector_dso_free_list(dso_list);
 
   if (inspector::verbosity_level >= 1)

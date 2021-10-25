@@ -4,6 +4,11 @@
 
 import("//build/unification/zx_library.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ "tests" ]
+}
+
 zx_library("inspector") {
   # This should only ever be used as a shared library because it hides
   # the otherwise problematic ngunwind symbols.
@@ -19,6 +24,7 @@ zx_library("inspector") {
     "utils.cc",
   ]
   deps = [
+    ":gwp-asan",
     "//zircon/system/ulib/backtrace-request:backtrace-request-utils",
     "//zircon/system/ulib/elf-search",
     "//zircon/system/ulib/fbl",
@@ -34,4 +40,16 @@ zx_library("inspector") {
     configs -= [ "//build/config:default_frame_pointers" ]
     configs += [ "//build/config:frame_pointers" ]
   }
+}
+
+# GWP-ASan crash handling utility that wraps //zircon/system/ulib/c/scudo:gwp-asan-common.
+source_set("gwp-asan") {
+  sources = [
+    "gwp-asan.cc",
+    "gwp-asan.h",
+  ]
+  deps = [
+    "//zircon/system/ulib/c/scudo:gwp-asan-common",
+    "//zircon/system/ulib/elf-search",
+  ]
 }

@@ -228,7 +228,6 @@ test("gwp-asan-test") {
 }
 
 executable("gwp-asan-test-helper") {
-  visibility = [ ":*" ]
   testonly = true
   sources = [ "gwp-asan-test-helper.cc" ]
 
