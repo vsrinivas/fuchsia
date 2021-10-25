@@ -187,7 +187,9 @@ def main():
     args_dict = vars(args)
 
     if args_dict['fuchsia_dir'] == "":
-        raise ValueError("Missing --fuchsia_dir arg, and FUCHSIA_DIR environment variable is empty.")
+        raise ValueError(
+            "Missing --fuchsia_dir arg, and FUCHSIA_DIR environment variable is empty."
+        )
 
     cts = CTS(**args_dict)
     cts.run()

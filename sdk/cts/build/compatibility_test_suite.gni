@@ -1,0 +1,54 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/packages/prebuilt_test_manifest.gni")
+
+# Generates test targets from a CTS archive.
+#
+# Users can build both ABI and API tests using the following target names:
+#   - ABI tests: {target_name}_abi
+#   - API tests: {target_name}_api
+#   - Both: target_name
+#
+# Parameters:
+#
+#  path (required)
+#    The path to the extracted CTS archive contents as a target label.
+#    Example: "//prebuilt/cts/canary/$host_platform/cts"
+#
+#  disabled_tests
+#    [list of scopes] List of scopes containing "package" and "component_name"
+#    entries to disable.
+#
+#  generate_api_tests (default = false)
+#    Whether to make targets that compile the test sources against the SDK.
+template("compatibility_test_suite") {
+  assert(defined(invoker.path),
+         "The path to the extracted CTS archive is required.")
+
+  # ABI Tests
+  abi_test_target_name = "${target_name}_abi"
+  prebuilt_test_manifest(abi_test_target_name) {
+    forward_variables_from(invoker, [ "disabled_tests" ])
+    archive_dir = rebase_path(invoker.path)
+  }
+
+  test_targets = [ ":$abi_test_target_name" ]
+
+  # API Tests
+  if (defined(invoker.generate_api_tests) && invoker.generate_api_tests) {
+    api_test_target_name = "${target_name}_api"
+    group(api_test_target_name) {
+      testonly = true
+      deps = [ invoker.path ]
+    }
+
+    test_targets += [ ":$api_test_target_name" ]
+  }
+
+  group(target_name) {
+    testonly = true
+    deps = test_targets
+  }
+}

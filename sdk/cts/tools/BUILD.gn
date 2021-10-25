@@ -2,10 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/packages/prebuilt_test_manifest.gni")
+import("//build/python/python_host_test.gni")
 
-# TODO(87189): Delete this when CQ uses //sdk/cts/release:tests
+python_host_test("verify_release_test") {
+  main_source = "verify_release.py"
+}
+
 group("tests") {
   testonly = true
-  deps = [ "//sdk/cts/release:tests" ]
+  public_deps = [ ":verify_release_test($host_toolchain)" ]
 }

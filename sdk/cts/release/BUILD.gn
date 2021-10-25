@@ -2,13 +2,37 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/python/python_host_test.gni")
-
-python_host_test("verify_release_test") {
-  main_source = "verify_release.py"
-}
+import("//sdk/cts/build/compatibility_test_suite.gni")
 
 group("tests") {
   testonly = true
-  public_deps = [ ":verify_release_test($host_toolchain)" ]
+  deps = [
+    ":canary_tests",
+    ":current_milestone_tests",
+  ]
+}
+
+compatibility_test_suite("canary_tests") {
+  path = "//prebuilt/cts/canary/$host_platform/cts"
+}
+
+compatibility_test_suite("current_milestone_tests") {
+  path = "//prebuilt/cts/current_milestone/$host_platform/cts"
+
+  # Disable tests that are failing because they existed back when the CTS
+  # builder did not have to pass on CQ. Delete this after branching F6.
+  disabled_tests = [
+    {
+      package = "fuchsia-diagnostics-tests_f5"
+      component_name = "inspect-publisher"
+    },
+    {
+      package = "fuchsia-hwinfo-tests_f5"
+      component_name = "hwinfo-test"
+    },
+    {
+      package = "fuchsia-element-tests_f5"
+      component_name = "element-manager-test"
+    },
+  ]
 }
