@@ -355,8 +355,33 @@ type Node = table {
     ///  [ 0    0    0    1  ]
     ///
     ///  where Sx, Sy, and Sz are scale factors and Tx, Ty, Tz are the translation factors for
-    ///  the x, y, and z components
+    ///  the x, y, and z components.
+    ///
+    /// TODO(fxb.dev/87181): Deprecate.
     8: transform fuchsia.ui.gfx.mat4;
+
+    /// NOTE: We are deprecating `transform` in favor of `node_to_container_transform`. Clients
+    /// must NOT set both fields.
+    ///
+    /// Transform from this node's coordinate space to its container's space. If the `container_id`
+    /// field is set, then that id specifies the container node. Otherwise, this node's parent is
+    /// the container node.
+    ///
+    /// Additionally, if `container_id` is set, the fuchsia accessibility manager will
+    /// post-translate this node's coordinate space by its container's `location.min` after
+    /// applying `node_to_container_transform` when converting to the container's coordinate space.
+    /// If `container_id` is unset, this post-translation will NOT be applied.
+    ///
+    /// 4x4 for compatibility with scenic.  This matrix is required to have the form:
+    ///
+    ///  [ Sx   0    0    Tx ]
+    ///  [ 0    Sy   0    Ty ]
+    ///  [ 0    0    Sz   Tz ]
+    ///  [ 0    0    0    1  ]
+    ///
+    ///  where Sx, Sy, and Sz are scale factors and Tx, Ty, Tz are the translation factors for
+    ///  the x, y, and z components.
+   10: node_to_container_transform fuchsia.ui.gfx.mat4;
 
     /// Node ID of the ancestor of this node that is used as the target of |transform|.
     /// If not present, this is interpreted as this node's parent.

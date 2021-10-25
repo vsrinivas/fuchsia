@@ -53,6 +53,7 @@ table/member fuchsia.accessibility.semantics/Node.child_ids vector<uint32>:20000
 table/member fuchsia.accessibility.semantics/Node.container_id uint32
 table/member fuchsia.accessibility.semantics/Node.location fuchsia.ui.gfx/BoundingBox
 table/member fuchsia.accessibility.semantics/Node.node_id uint32
+table/member fuchsia.accessibility.semantics/Node.node_to_container_transform fuchsia.ui.gfx/mat4
 table/member fuchsia.accessibility.semantics/Node.role fuchsia.accessibility.semantics/Role
 table/member fuchsia.accessibility.semantics/Node.states fuchsia.accessibility.semantics/States
 table/member fuchsia.accessibility.semantics/Node.transform fuchsia.ui.gfx/mat4
