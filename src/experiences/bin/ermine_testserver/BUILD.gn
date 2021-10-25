@@ -3,20 +3,23 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/dart/dart_component.gni")
 import("//build/dart/dart_library.gni")
 import("//build/dart/test.gni")
+import("//build/flutter/flutter_component.gni")
 
 dart_library("lib") {
   package_name = "ermine_testserver"
   source_dir = "lib"
+  null_safe = true
+
   sources = [
     "main.dart",
-    "src/file_group.dart",
+    "src/app.dart",
   ]
   deps = [
     "//sdk/dart/fuchsia_logger",
-    "//src/experiences/lib/ermine_localhost:ermine_localhost",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/mime",
   ]
 }
 
@@ -40,10 +43,10 @@ resource("browser_test_files") {
   outputs = [ "data/simple_browser_test/{{source_file_part}}" ]
 }
 
-dart_component("component") {
+flutter_component("component") {
+  main_dart = "main.dart"
   component_name = "ermine_testserver"
   manifest = "meta/ermine_testserver.cmx"
-  main_package = "ermine_testserver"
   deps = [
     ":browser_test_files",
     ":lib",
@@ -52,13 +55,4 @@ dart_component("component") {
 
 fuchsia_package("ermine_testserver") {
   deps = [ ":component" ]
-}
-
-dart_test("ermine_testserver_unittests") {
-  sources = [ "file_group_test.dart" ]
-
-  deps = [
-    ":lib",
-    "//third_party/dart-pkg/pub/test",
-  ]
 }

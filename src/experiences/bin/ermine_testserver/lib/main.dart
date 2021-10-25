@@ -1,37 +1,51 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:io';
 
-import 'package:ermine_localhost/localhost.dart';
+import 'package:flutter/material.dart';
 import 'package:fuchsia_logger/logger.dart';
+import 'package:mime/mime.dart';
 
-import 'src/file_group.dart';
+import 'src/app.dart';
 
-/// See go/workstation_localhost for more details about using this component.
-// TODO(fxb/68320): Add UIs that can change the test case.
 void main(List<String> args) async {
   setupLogger(name: 'ermine_testserver');
 
-  final localhost = Localhost();
-  final url = await localhost.bindServer();
-  log.info('Server is ready: $url');
+  String _getPath(String fileName) => '/pkg/data/simple_browser_test/$fileName';
 
-  final fileGroup = fileGroups[TestCase.simpleBrowserTest];
-  for (var fileName in fileGroup.fileList) {
-    final index = fileGroup.fileList.indexOf(fileName);
-    final path = fileGroup.getPath(index);
-    final file = File(path);
-    if (file.existsSync()) {
-      localhost.passWebFile(file);
-    } else {
-      log.warning('No such file or directory: $path');
-    }
-  }
+  log.info('ermine_testserver is running.');
 
-  localhost.startServing();
+  await HttpServer.bind(InternetAddress.loopbackIPv4, 8080).then((server) {
+    server.listen((HttpRequest request) {
+      final fileName = request.uri.path.substring(1); // eleminates '/'
+      final mimeType = lookupMimeType(fileName);
+      try {
+        if (mimeType == null) {
+          log.warning('The server has no such file: $fileName');
+          request.response
+            ..statusCode = 404
+            ..close();
+        } else {
+          final file = File(_getPath(fileName));
+          if (file.existsSync()) {
+            log.info('Serving $fileName');
+            request.response
+              ..headers.contentType = ContentType.parse(mimeType)
+              ..addStream(file.openRead())
+                  .then((_) => request.response.close());
+          } else {
+            log.warning('Failed to load $fileName');
+            request.response
+              ..statusCode = 404
+              ..close();
+          }
+        }
+      } on Exception catch (e) {
+        log.severe('$e: Failed to response on ${request.uri.path}');
+      }
+    });
+  });
+
+  runApp(App());
 }
