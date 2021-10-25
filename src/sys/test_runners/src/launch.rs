@@ -38,6 +38,9 @@ pub enum LaunchError {
     #[error("Error launching process: {:?}", _0)]
     ProcessLaunch(zx::Status),
 
+    #[error("Error duplicating vDSO: {:?}", _0)]
+    DuplicateVdso(zx::Status),
+
     #[error("Error launching process: {:?}", _0)]
     Fidl(#[from] fidl::Error),
 

@@ -4,7 +4,9 @@
 
 use {
     async_trait::async_trait,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_process as fproc, fuchsia_runtime as runtime,
+    fuchsia_zircon::{self as zx, HandleBased},
+    lazy_static::lazy_static,
     test_runners_lib::{
         elf::{Component, KernelError},
         errors::*,
@@ -12,6 +14,13 @@ use {
         logs::LoggerStream,
     },
 };
+
+lazy_static! {
+    static ref VDSO_VMO: zx::Handle = {
+        runtime::take_startup_handle(runtime::HandleInfo::new(runtime::HandleType::VdsoVmo, 0))
+            .expect("failed to take vDSO handle")
+    };
+}
 
 #[async_trait]
 pub trait ComponentLauncher: Sized + Sync + Send {
@@ -47,7 +56,12 @@ impl ComponentLauncher for ElfComponentLauncher {
             args: Some(args),
             name_infos: None,
             environs: component.environ.clone(),
-            handle_infos: None,
+            handle_infos: Some(vec![fproc::HandleInfo {
+                handle: (*VDSO_VMO)
+                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
+                    .map_err(launch::LaunchError::DuplicateVdso)?,
+                id: runtime::HandleInfo::new(runtime::HandleType::VdsoVmo, 0).as_raw(),
+            }]),
             loader_proxy_chan: Some(client_end.into_channel()),
             executable_vmo,
         })

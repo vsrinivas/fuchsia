@@ -3,6 +3,7 @@
     program: {
         runner: "elf",
         binary: "bin/elf_test_runner",
+        use_next_vdso: "true",
     },
     capabilities: [
         {
