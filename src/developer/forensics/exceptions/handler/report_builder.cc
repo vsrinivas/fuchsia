@@ -106,6 +106,11 @@ CrashReportBuilder& CrashReportBuilder::SetProcessTerminated() {
   return *this;
 }
 
+CrashReportBuilder& CrashReportBuilder::SetGwpAsanExceptionType(std::string exception_type) {
+  gwp_asan_exception_type_ = std::move(exception_type);
+  return *this;
+}
+
 const std::optional<std::string>& CrashReportBuilder::ProcessName() const { return process_name_; }
 
 fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
@@ -139,6 +144,9 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
   }
   if (realm_path_.has_value()) {
     AddAnnotation("crash.realm-path", realm_path_.value());
+  }
+  if (gwp_asan_exception_type_.has_value()) {
+    AddAnnotation("crash.gwp_asan.exception-type", gwp_asan_exception_type_.value());
   }
 
   // Crash signature overwrite on channel/port overflow.

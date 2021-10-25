@@ -13,6 +13,7 @@
 #include <third_party/crashpad/util/fuchsia/scoped_task_suspend.h>
 
 #include "src/lib/fsl/handles/object_info.h"
+#include "zircon/system/ulib/inspector/gwp-asan.h"
 
 namespace forensics {
 namespace exceptions {
@@ -96,7 +97,8 @@ std::optional<ExceptionReason> DetectExceptionReason(
 }  // namespace
 
 zx::vmo GenerateMinidump(const zx::exception& exception,
-                         std::optional<ExceptionReason>* exception_reason) {
+                         std::optional<ExceptionReason>* exception_reason,
+                         std::optional<std::string>* gwp_asan_exception_type) {
   zx::process process = GetProcess(exception);
   if (!process.is_valid())
     return {};
@@ -120,6 +122,12 @@ zx::vmo GenerateMinidump(const zx::exception& exception,
     FX_PLOGS(WARNING, status) << "Process " << process_name
                               << ": Could not obtain ZX_INFO_THREAD_EXCEPTION_REPORT.";
     return {};
+  }
+
+  inspector::GwpAsanInfo gwp_asan_info;
+  if (inspector::inspector_get_gwp_asan_info(process, report, &gwp_asan_info) &&
+      gwp_asan_info.error_type) {
+    *gwp_asan_exception_type = gwp_asan_info.error_type;
   }
 
   // Set the exception reason.

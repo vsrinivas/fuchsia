@@ -47,9 +47,12 @@ TEST(MinidumpTest, GenerateMinidump) {
   ASSERT_TRUE(MarkExceptionAsHandled(&ec));
 
   std::optional<ExceptionReason> exception_reason;
-  zx::vmo minidump_vmo = GenerateMinidump(std::move(ec.exception), &exception_reason);
+  std::optional<std::string> gwp_asan_exception_type;
+  zx::vmo minidump_vmo =
+      GenerateMinidump(std::move(ec.exception), &exception_reason, &gwp_asan_exception_type);
   ASSERT_TRUE(minidump_vmo.is_valid());
   ASSERT_FALSE(exception_reason.has_value());
+  ASSERT_FALSE(gwp_asan_exception_type.has_value());
 
   uint64_t vmo_size;
   ASSERT_EQ(minidump_vmo.get_size(&vmo_size), ZX_OK);

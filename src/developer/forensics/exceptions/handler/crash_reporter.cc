@@ -73,7 +73,8 @@ void CrashReporter::Send(zx::exception exception, zx::process crashed_process,
 
   if (exception.is_valid()) {
     std::optional<ExceptionReason> exception_reason{std::nullopt};
-    zx::vmo minidump = GenerateMinidump(exception, &exception_reason);
+    std::optional<std::string> gwp_asan_exception_type;
+    zx::vmo minidump = GenerateMinidump(exception, &exception_reason, &gwp_asan_exception_type);
     ResetException(dispatcher_, std::move(exception), crashed_process);
 
     if (minidump.is_valid()) {
@@ -82,6 +83,9 @@ void CrashReporter::Send(zx::exception exception, zx::process crashed_process,
       builder.SetProcessTerminated();
     }
     builder.SetExceptionReason(exception_reason);
+    if (gwp_asan_exception_type.has_value()) {
+      builder.SetGwpAsanExceptionType(gwp_asan_exception_type.value());
+    }
   } else {
     builder.SetExceptionExpired();
   }

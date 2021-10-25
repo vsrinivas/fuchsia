@@ -29,6 +29,7 @@ class CrashReportBuilder {
   CrashReportBuilder& SetComponentInfo(const ComponentInfo& component_info);
   CrashReportBuilder& SetExceptionExpired();
   CrashReportBuilder& SetProcessTerminated();
+  CrashReportBuilder& SetGwpAsanExceptionType(std::string exception_type);
 
   const std::optional<std::string>& ProcessName() const;
 
@@ -44,6 +45,7 @@ class CrashReportBuilder {
   std::optional<ExceptionReason> exception_reason_{std::nullopt};
   std::optional<std::string> component_url_{std::nullopt};
   std::optional<std::string> realm_path_{std::nullopt};
+  std::optional<std::string> gwp_asan_exception_type_;
   bool exception_expired_{false};
   bool process_already_terminated_{false};
 

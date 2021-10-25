@@ -31,7 +31,8 @@ enum class ExceptionReason {
 zx::vmo GenerateVMOFromStringFile(const crashpad::StringFile& string_file);
 
 zx::vmo GenerateMinidump(const zx::exception& exception,
-                         std::optional<ExceptionReason>* exception_reason);
+                         std::optional<ExceptionReason>* exception_reason,
+                         std::optional<std::string>* gwp_asan_exception_type);
 
 }  // namespace handler
 }  // namespace exceptions
