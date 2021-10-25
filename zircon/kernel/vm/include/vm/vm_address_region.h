@@ -19,6 +19,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <ktl/limits.h>
+#include <ktl/optional.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page_list.h>
@@ -584,11 +585,12 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   zx_status_t UnmapInternalLocked(vaddr_t base, size_t size, bool can_destroy_regions,
                                   bool allow_partial_vmar) TA_REQ(lock());
 
-  // returns true if we can meet the allocation between the given children,
-  // and if so populates pva with the base address to use.
-  bool CheckGapLocked(VmAddressRegionOrMapping* prev, VmAddressRegionOrMapping* next, vaddr_t* pva,
-                      vaddr_t search_base, vaddr_t align, size_t region_size, size_t min_gap,
-                      uint arch_mmu_flags) TA_REQ(lock());
+  // If the allocation between the given children can be met this returns a virtual address of the
+  // base address of that allocation, otherwise a nullopt is returned.
+  ktl::optional<vaddr_t> CheckGapLocked(VmAddressRegionOrMapping* prev,
+                                        VmAddressRegionOrMapping* next, vaddr_t search_base,
+                                        vaddr_t align, size_t region_size, size_t min_gap,
+                                        uint arch_mmu_flags) TA_REQ(lock());
 
   // search for a spot to allocate for a region of a given size
   zx_status_t AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags, vaddr_t* spot,

@@ -409,19 +409,19 @@ zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags, LazyPageReques
   return ZX_ERR_NOT_FOUND;
 }
 
-bool VmAddressRegion::CheckGapLocked(VmAddressRegionOrMapping* prev, VmAddressRegionOrMapping* next,
-                                     vaddr_t* pva, vaddr_t search_base, vaddr_t align,
-                                     size_t region_size, size_t min_gap, uint arch_mmu_flags) {
+ktl::optional<vaddr_t> VmAddressRegion::CheckGapLocked(VmAddressRegionOrMapping* prev,
+                                                       VmAddressRegionOrMapping* next,
+                                                       vaddr_t search_base, vaddr_t align,
+                                                       size_t region_size, size_t min_gap,
+                                                       uint arch_mmu_flags) {
   vaddr_t gap_beg;  // first byte of a gap
   vaddr_t gap_end;  // last byte of a gap
-
-  DEBUG_ASSERT(pva);
 
   // compute the starting address of the gap
   if (prev != nullptr) {
     if (add_overflow(prev->base(), prev->size(), &gap_beg) ||
         add_overflow(gap_beg, min_gap, &gap_beg)) {
-      goto not_found;
+      return ktl::nullopt;
     }
   } else {
     gap_beg = base_;
@@ -430,17 +430,17 @@ bool VmAddressRegion::CheckGapLocked(VmAddressRegionOrMapping* prev, VmAddressRe
   // compute the ending address of the gap
   if (next != nullptr) {
     if (gap_beg == next->base()) {
-      goto next_gap;  // no gap between regions
+      return ktl::nullopt;  // no gap between regions
     }
     if (sub_overflow(next->base(), 1, &gap_end) || sub_overflow(gap_end, min_gap, &gap_end)) {
-      goto not_found;
+      return ktl::nullopt;
     }
   } else {
     if (gap_beg - base_ == size_) {
-      goto not_found;  // no gap at the end of address space. Stop search
+      return ktl::nullopt;  // no gap at the end of address space.
     }
     if (add_overflow(base_, size_ - 1, &gap_end)) {
-      goto not_found;
+      return ktl::nullopt;
     }
   }
 
@@ -448,7 +448,7 @@ bool VmAddressRegion::CheckGapLocked(VmAddressRegionOrMapping* prev, VmAddressRe
 
   // trim it to the search range
   if (gap_end <= search_base) {
-    return false;
+    return ktl::nullopt;
   }
   if (gap_beg < search_base) {
     gap_beg = search_base;
@@ -459,22 +459,18 @@ bool VmAddressRegion::CheckGapLocked(VmAddressRegionOrMapping* prev, VmAddressRe
   LTRACEF_LEVEL(2, "search base %#" PRIxPTR " gap_beg %#" PRIxPTR " end %#" PRIxPTR "\n",
                 search_base, gap_beg, gap_end);
 
-  *pva = aspace_->arch_aspace().PickSpot(gap_beg, gap_end, align, region_size, arch_mmu_flags);
-  if (*pva < gap_beg) {
-    goto not_found;  // address wrapped around
+  vaddr_t va =
+      aspace_->arch_aspace().PickSpot(gap_beg, gap_end, align, region_size, arch_mmu_flags);
+
+  if (va < gap_beg) {
+    return ktl::nullopt;  // address wrapped around
   }
 
-  if (*pva < gap_end && ((gap_end - *pva + 1) >= region_size)) {
-    // we have enough room
-    return true;  // found spot, stop search
+  if (va >= gap_end || ((gap_end - va + 1) < region_size)) {
+    return ktl::nullopt;  // not enough room
   }
 
-next_gap:
-  return false;  // continue search
-
-not_found:
-  *pva = -1;
-  return true;  // not_found: stop search
+  return va;
 }
 
 template <typename ON_VMAR, typename ON_MAPPING>
@@ -1163,8 +1159,8 @@ zx_status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, ui
   if (after_iter.IsValid()) {
     after = &(*after_iter);
   }
-  if (CheckGapLocked(before, after, spot, alloc_spot, align, size, 0, arch_mmu_flags) &&
-      *spot != static_cast<vaddr_t>(-1)) {
+  if (auto va = CheckGapLocked(before, after, alloc_spot, align, size, 0, arch_mmu_flags)) {
+    *spot = *va;
     return ZX_OK;
   }
   panic("Unexpected allocation failure\n");
