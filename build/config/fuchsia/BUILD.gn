@@ -5,6 +5,7 @@
 import("//build/config/build_id.gni")
 import("//build/config/clang/clang.gni")
 import("//build/config/current_target_tuple.gni")
+import("//build/config/fuchsia/platform_version.gni")
 import("//build/config/sanitizers/sanitizer_default_options.gni")
 import("//build/config/sysroot.gni")
 import("//build/rust/config.gni")
@@ -48,6 +49,7 @@ config("compiler") {
     ":compiler_sysroot",
     ":compiler_target",
     ":compiler_cpu",
+    ":compiler_fuchsia_api_level",
   ]
   if (use_ccache) {
     configs += [ ":ccache" ]
@@ -106,6 +108,12 @@ config("compiler_cpu") {
     ":skylake_jcc",
     ":cortex_a53_843419",
   ]
+}
+
+config("compiler_fuchsia_api_level") {
+  cflags = [ "-ffuchsia-api-level=$current_fuchsia_api_level" ]
+  asmflags = cflags
+  ldflags = cflags
 }
 
 # Mitigate Jump Conditional Code erratum.

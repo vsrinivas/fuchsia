@@ -5,6 +5,7 @@
 #ifndef LIB_FDIO_INCLUDE_LIB_FDIO_FD_H_
 #define LIB_FDIO_INCLUDE_LIB_FDIO_FD_H_
 
+#include <zircon/availability.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -28,7 +29,7 @@ __BEGIN_CDECLS
 // # Errors
 //
 // TODO: Catalog errors.
-zx_status_t fdio_fd_create(zx_handle_t handle, int* fd_out);
+zx_status_t fdio_fd_create(zx_handle_t handle, int* fd_out) ZX_AVAILABLE_SINCE(1);
 
 // Clones the current working directory.
 //
@@ -44,7 +45,7 @@ zx_status_t fdio_fd_create(zx_handle_t handle, int* fd_out);
 //
 // ZX_ERR_ACCESS_DENIED: The cwd has insufficient rights to clone the underlying
 // object.
-zx_status_t fdio_cwd_clone(zx_handle_t* out_handle);
+zx_status_t fdio_cwd_clone(zx_handle_t* out_handle) ZX_AVAILABLE_SINCE(1);
 
 // Clones a file descriptor.
 //
@@ -63,7 +64,7 @@ zx_status_t fdio_cwd_clone(zx_handle_t* out_handle);
 //
 // ZX_ERR_ACCESS_DENIED: |fd| has insufficient rights to clone the underlying
 // object.
-zx_status_t fdio_fd_clone(int fd, zx_handle_t* out_handle);
+zx_status_t fdio_fd_clone(int fd, zx_handle_t* out_handle) ZX_AVAILABLE_SINCE(1);
 
 // Prepares a file descriptor for transfer to another process.
 //
@@ -87,7 +88,7 @@ zx_status_t fdio_fd_clone(int fd, zx_handle_t* out_handle);
 //
 // ZX_ERR_ACCESS_DENIED: |fd| has insufficient rights to clone the underlying
 // object.
-zx_status_t fdio_fd_transfer(int fd, zx_handle_t* out_handle);
+zx_status_t fdio_fd_transfer(int fd, zx_handle_t* out_handle) ZX_AVAILABLE_SINCE(1);
 
 // Prepares a file descriptor for transfer, or falls-back to cloning it if
 // the descriptor is not transferrable (e.g. it is an FD that has been dup()ed).
@@ -111,7 +112,7 @@ zx_status_t fdio_fd_transfer(int fd, zx_handle_t* out_handle);
 //
 // ZX_ERR_ACCESS_DENIED: |fd| has insufficient rights to clone the underlying
 // object.
-zx_status_t fdio_fd_transfer_or_clone(int fd, zx_handle_t* out_handle);
+zx_status_t fdio_fd_transfer_or_clone(int fd, zx_handle_t* out_handle) ZX_AVAILABLE_SINCE(1);
 
 __END_CDECLS
 
