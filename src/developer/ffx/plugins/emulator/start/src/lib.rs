@@ -13,6 +13,9 @@ pub async fn start(
     daemon_proxy: bridge::DaemonProxy,
 ) -> Result<(), anyhow::Error> {
     std::process::exit(
-        VDLFiles::new(cmd.sdk, cmd.verbose)?.start_emulator(&cmd, Some(&daemon_proxy)).await?,
+        VDLFiles::new(cmd.sdk, cmd.verbose, None)
+            .await?
+            .start_emulator(&cmd, Some(&daemon_proxy))
+            .await?,
     )
 }

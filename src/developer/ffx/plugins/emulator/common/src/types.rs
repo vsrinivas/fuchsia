@@ -5,9 +5,14 @@
 use crate::graphic_utils::get_default_graphics;
 use crate::images::Images;
 use crate::tools::Tools;
+use async_trait::async_trait;
+
 use anyhow::{anyhow, Result};
 use errors::ffx_bail;
-use ffx_config::sdk::{Sdk, SdkVersion};
+use ffx_config::{
+    api::ConfigError,
+    sdk::{Sdk, SdkVersion},
+};
 use ffx_emulator_start_args::StartCommand;
 use home::home_dir;
 use mockall::automock;
@@ -18,6 +23,10 @@ use std::fs::{create_dir, read_dir, File};
 use std::io::{BufRead, BufReader};
 use std::os::unix;
 use std::path::PathBuf;
+
+// Keys to config properties
+pub const SSH_PRIVATE_KEY: &'static str = "ssh.priv";
+pub const SSH_PUBLIC_KEY: &'static str = "ssh.pub";
 
 pub fn read_env_path(var: &str) -> Result<PathBuf> {
     env::var_os(var)
@@ -291,40 +300,52 @@ impl ImageFiles {
     }
 }
 
+/// ConfigWrapper is a trait for testing access to ffx_config::
+/// methods. Non-test code should use None as the value where
+/// a method requires a ConfigWrapper parameter.
+#[async_trait]
+pub trait ConfigWrapper {
+    async fn get_filename_from_config(&self, property_name: &str) -> Result<PathBuf, ConfigError>;
+}
+
+/// FfxConfigWrapper is the implementation of ConfigWrapper trait that
+/// calls the running ffx_config methods.
+struct FfxConfigWrapper;
+const FFXCONFIG: FfxConfigWrapper = FfxConfigWrapper {};
+
+#[async_trait]
+impl ConfigWrapper for FfxConfigWrapper {
+    async fn get_filename_from_config(&self, property_name: &str) -> Result<PathBuf, ConfigError> {
+        ffx_config::file(property_name).await
+    }
+}
 #[derive(Clone)]
-pub struct SSHKeys {
+pub struct SshKeys {
     pub authorized_keys: PathBuf,
+    // TODO(fxbug.dev/86973): Remove private key usage when not using device_launcher.
     pub private_key: PathBuf,
 }
 
-impl fmt::Debug for SSHKeys {
+impl fmt::Debug for SshKeys {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "[fvdl] private_key {:?}", self.private_key)?;
-        write!(f, "[fvdl] authorized_keys {:?}", self.authorized_keys)
+        writeln!(f, "[emulator] private_key {:?}", self.private_key)?;
+        write!(f, "[emulator] authorized_keys {:?}", self.authorized_keys)
     }
 }
 
-impl SSHKeys {
-    /// Initialize SSH key files for in-tree usage.
-    ///
-    /// Requires the environment variable FUCHSIA_BUILD_DIR to be specified.
-    pub fn from_tree_env(f: &mut impl FuchsiaPaths) -> Result<Self> {
-        let ssh_file = File::open(f.find_fuchsia_root()?.join(".fx-ssh-path"))?;
-        let ssh_file = BufReader::new(ssh_file);
-        let mut lines = ssh_file.lines();
-
-        let private_key = PathBuf::from(lines.next().unwrap()?);
-        let authorized_keys = PathBuf::from(lines.next().unwrap()?);
-        Ok(Self { authorized_keys: authorized_keys, private_key: private_key })
-    }
-
-    /// Initialize SSH key files for GN SDK usage.
-    ///
-    /// Requires SSH keys to have been generated and stored in $HOME/.ssh/...
-    pub fn from_sdk_env() -> Result<Self> {
+impl SshKeys {
+    /// Initialize SSH key files.
+    /// Non-test code should use None for the optional ConfigWrapper.
+    /// Test code should pass in an implementation of ConfigWrapper which
+    /// suites the needs of the test.
+    pub async fn from_ffx(test_config: Option<&dyn ConfigWrapper>) -> Result<Self> {
+        let config = match test_config {
+            Some(config) => config,
+            None => &FFXCONFIG,
+        };
         Ok(Self {
-            authorized_keys: home_dir().unwrap_or_default().join(".ssh/fuchsia_authorized_keys"),
-            private_key: home_dir().unwrap_or_default().join(".ssh/fuchsia_ed25519"),
+            authorized_keys: config.get_filename_from_config(SSH_PUBLIC_KEY).await?,
+            private_key: config.get_filename_from_config(SSH_PRIVATE_KEY).await?,
         })
     }
 
@@ -336,14 +357,6 @@ impl SSHKeys {
             ffx_bail!("authorized_keys file at {:?} does not exist", self.authorized_keys);
         }
         Ok(())
-    }
-
-    pub fn update_paths_from_args(&mut self, start_command: &StartCommand) {
-        if let Some(path) = &start_command.ssh {
-            let ssh_path = PathBuf::from(path);
-            self.authorized_keys = ssh_path.join("fuchsia_authorized_keys").to_path_buf();
-            self.private_key = ssh_path.join("fuchsia_ed25519").to_path_buf();
-        }
     }
 
     pub fn stage_files(&mut self, dir: &PathBuf) -> Result<()> {
@@ -452,7 +465,39 @@ impl From<&StartCommand> for VDLArgs {
 }
 
 #[cfg(test)]
+pub mod testing {
+    use super::*;
+    /// TestConfigWrapper is the implementation of the ConfigWrapper trait
+    /// that uses a hash map to store the values. This allows tests
+    /// to set the configuration desired then pass it into methods requiring
+    /// ConfigWrapper parameter.
+    /// TODO(fxbug.dev/86958): Support injecting configuration for tests into ffx::config.
+    pub struct TestConfigWrapper {
+        pub test_properties: std::collections::HashMap<&'static str, &'static str>,
+    }
+
+    impl TestConfigWrapper {
+        pub fn new() -> Self {
+            Self { test_properties: std::collections::HashMap::new() }
+        }
+    }
+
+    #[async_trait]
+    impl ConfigWrapper for TestConfigWrapper {
+        async fn get_filename_from_config(
+            &self,
+            property_name: &str,
+        ) -> Result<PathBuf, ConfigError> {
+            match self.test_properties.get(property_name) {
+                Some(value) => Ok(PathBuf::from(value)),
+                None => Err(ConfigError::from(anyhow!("key not found {}", property_name))),
+            }
+        }
+    }
+}
+#[cfg(test)]
 mod tests {
+    use super::testing::TestConfigWrapper;
     use super::*;
     use serial_test::serial;
     use std::io::Write;
@@ -580,57 +625,24 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
-    fn test_ssh_files() -> Result<()> {
-        let mut mock = MockFuchsiaPaths::new();
-        let data = format!(
-            "/usr/local/home/foo/.ssh/fuchsia_ed25519
-/usr/local/home/foo/.ssh/fuchsia_authorized_keys
-",
-        );
-        let tmp_dir = Builder::new().prefix("fvdl_tests_").tempdir()?;
-        let a = tmp_dir.into_path();
-        File::create(a.join(".fx-ssh-path"))?.write_all(data.as_bytes())?;
-        mock.expect_find_fuchsia_root().returning(move || Ok(a.clone()));
-        let mut ssh_files = SSHKeys::from_tree_env(&mut mock)?;
-        assert_eq!(
-            ssh_files.private_key.to_str().unwrap(),
-            "/usr/local/home/foo/.ssh/fuchsia_ed25519"
-        );
-        assert_eq!(
-            ssh_files.authorized_keys.to_str().unwrap(),
-            "/usr/local/home/foo/.ssh/fuchsia_authorized_keys"
-        );
-        let tmp_dir = Builder::new().prefix("fvdl_test_ssh_").tempdir()?;
-        ssh_files.stage_files(&tmp_dir.path().to_owned())?;
-        assert!(ssh_files.private_key.ends_with("id_ed25519"));
-        Ok(())
-    }
-
-    #[test]
-    #[serial]
-    fn test_ssh_dir() -> Result<()> {
-        let mut ssh_files = SSHKeys::from_sdk_env()?;
-        assert_eq!(
-            ssh_files.private_key,
-            home_dir().unwrap_or_default().join(".ssh/fuchsia_ed25519")
-        );
-        assert_eq!(
-            ssh_files.authorized_keys,
-            home_dir().unwrap_or_default().join(".ssh/fuchsia_authorized_keys")
-        );
-
-        ssh_files.update_paths_from_args(&StartCommand {
-            ssh: Some("/path/to/ssh".to_string()),
-            ..Default::default()
-        });
-
-        assert_eq!(ssh_files.private_key.to_str().unwrap(), "/path/to/ssh/fuchsia_ed25519");
-        assert_eq!(
-            ssh_files.authorized_keys.to_str().unwrap(),
-            "/path/to/ssh/fuchsia_authorized_keys"
-        );
+    async fn test_ssh_files() -> Result<()> {
+        // This test looks like it does not do much, but it was helpful
+        // in developing how to inject the TestConfigWrapper so methods
+        // that access ffx_config can do so safely and still be tested
+        // since ffx_config is currently a giant, non-hermetic global.
+        let mut test_config = TestConfigWrapper::new();
+        test_config.test_properties.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
+        test_config.test_properties.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
+        let result = SshKeys::from_ffx(Some(&test_config)).await;
+        match result {
+            Ok(ssh_keys) => {
+                assert_eq!(ssh_keys.authorized_keys.to_str().unwrap(), "/path/to/authorized_keys");
+                assert_eq!(ssh_keys.private_key.to_str().unwrap(), "/path/to/private_key");
+            }
+            _ => assert!(false, "Error getting ssh_keys: {:?}", result),
+        }
         Ok(())
     }
 

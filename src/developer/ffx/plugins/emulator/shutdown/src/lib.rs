@@ -12,5 +12,5 @@ pub async fn shutdown(
     cmd: ShutdownCommand,
     daemon_proxy: bridge::DaemonProxy,
 ) -> Result<(), anyhow::Error> {
-    VDLFiles::new(cmd.sdk, false)?.stop_vdl(&cmd, Some(&daemon_proxy)).await
+    VDLFiles::new(cmd.sdk, false, None).await?.stop_vdl(&cmd, Some(&daemon_proxy)).await
 }

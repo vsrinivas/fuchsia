@@ -6,7 +6,9 @@ use crate::device::DeviceSpec;
 use crate::portpicker::{is_free_tcp_port, pick_unused_port, Port};
 use crate::target;
 use crate::tools::HostTools;
-use crate::types::{get_sdk_data_dir, read_env_path, ImageFiles, InTreePaths, SSHKeys, VDLArgs};
+use crate::types::{
+    get_sdk_data_dir, read_env_path, ConfigWrapper, ImageFiles, InTreePaths, SshKeys, VDLArgs,
+};
 
 use crate::vdl_proto_parser::{get_emu_pid, get_ssh_port};
 use ansi_term::Colour::*;
@@ -56,7 +58,7 @@ fn monitored_child_process(child_arc: &Arc<SharedChild>) -> Result<()> {
 pub struct VDLFiles {
     image_files: ImageFiles,
     host_tools: HostTools,
-    ssh_files: SSHKeys,
+    ssh_files: SshKeys,
 
     /// A temp directory to stage required files used to start emulator.
     staging_dir: TempDir,
@@ -91,7 +93,11 @@ impl Clone for VDLFiles {
 }
 
 impl VDLFiles {
-    pub fn new(is_sdk: bool, verbose: bool) -> Result<VDLFiles> {
+    pub async fn new(
+        is_sdk: bool,
+        verbose: bool,
+        test_config: Option<&dyn ConfigWrapper>,
+    ) -> Result<VDLFiles> {
         let staging_dir = Builder::new().prefix("vdl_staging_").tempdir()?;
         let staging_dir_path = staging_dir.path().to_owned();
         let vdl_files;
@@ -99,7 +105,7 @@ impl VDLFiles {
             vdl_files = VDLFiles {
                 image_files: ImageFiles::from_sdk_env()?,
                 host_tools: HostTools::from_sdk_env()?,
-                ssh_files: SSHKeys::from_sdk_env()?,
+                ssh_files: SshKeys::from_ffx(test_config).await?,
                 output_proto: staging_dir_path.join("vdl_proto"),
                 emulator_log: staging_dir_path.join("emu_log"),
                 staging_dir: staging_dir,
@@ -111,7 +117,7 @@ impl VDLFiles {
             vdl_files = VDLFiles {
                 image_files: ImageFiles::from_tree_env(&mut in_tree)?,
                 host_tools: HostTools::from_tree_env(&mut in_tree)?,
-                ssh_files: SSHKeys::from_tree_env(&mut in_tree)?,
+                ssh_files: SshKeys::from_ffx(test_config).await?,
                 output_proto: staging_dir_path.join("vdl_proto"),
                 emulator_log: staging_dir_path.join("emu_log"),
                 staging_dir: staging_dir,
@@ -398,7 +404,6 @@ impl VDLFiles {
 
         // overriding image files via args will make cache a no-op
         self.image_files.update_paths_from_args(&start_command);
-        self.ssh_files.update_paths_from_args(&start_command);
 
         // If minimum required image files are specified & exist, skip download by clearing out gcs related flags even
         // if user has specified --sdk-version etc.
@@ -408,6 +413,7 @@ impl VDLFiles {
             sdk_version = String::from("");
             self.image_files.stage_files(&self.staging_dir.path().to_owned())?;
         }
+
         self.ssh_files.stage_files(&self.staging_dir.path().to_owned())?;
 
         if self.verbose {
@@ -806,6 +812,7 @@ impl VDLFiles {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::{testing::TestConfigWrapper, SSH_PRIVATE_KEY, SSH_PUBLIC_KEY};
     use serial_test::serial;
 
     pub fn setup() {
@@ -835,38 +842,52 @@ mod tests {
             ..Default::default()
         }
     }
-    #[test]
+    #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
-    fn test_choosing_prebuild_with_path_specified() -> Result<()> {
+    async fn test_choosing_prebuild_with_path_specified() -> Result<()> {
         setup();
+
+        // Set up the config for the test.
+        let mut test_config = TestConfigWrapper::new();
+        test_config.test_properties.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
+        test_config.test_properties.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
+
         let start_command = &create_start_command();
 
-        // --sdk
-        let aemu = VDLFiles::new(true, false)?.resolve_aemu_path(start_command)?;
+        let vdl_files =
+            VDLFiles::new(/*is_sdk=*/ true, /*verbose=*/ false, Some(&test_config)).await?;
+        let aemu = vdl_files.resolve_aemu_path(start_command)?;
         assert_eq!(PathBuf::from("/path/to/aemu"), aemu);
-        let vdl = VDLFiles::new(true, false)?.resolve_vdl_path(start_command)?;
+        let vdl = vdl_files.resolve_vdl_path(start_command)?;
         assert_eq!(PathBuf::from("/path/to/device_launcher"), vdl);
-        let grpcwebproxy = VDLFiles::new(true, false)?.resolve_grpcwebproxy_path(start_command)?;
+        let grpcwebproxy = vdl_files.resolve_grpcwebproxy_path(start_command)?;
         assert_eq!(PathBuf::from("/path/to/grpcwebproxy"), grpcwebproxy);
         Ok(())
     }
 
     // TODO(fxb/73555) Mock download instead of downloading from cipd in this test.
     #[ignore]
-    #[test]
+    #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
-    fn test_choosing_prebuild_with_cipd_label_specified() -> Result<()> {
+    async fn test_choosing_prebuild_with_cipd_label_specified() -> Result<()> {
         setup();
 
         let tmp_dir = Builder::new().prefix("fvdl_test_cipd_label_").tempdir()?;
         env::set_var("FEMU_DOWNLOAD_DIR", tmp_dir.path());
+
+        // Set up the config
+        let mut test_config = TestConfigWrapper::new();
+        test_config.test_properties.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
+        test_config.test_properties.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
 
         let mut start_command = &mut create_start_command();
         start_command.vdl_path = None;
         start_command.vdl_version = Some("g3-revision:vdl_fuchsia_20210113_RC00".to_string());
 
         // --sdk
-        let vdl = VDLFiles::new(true, false)?.resolve_vdl_path(start_command)?;
+        let vdl = VDLFiles::new(true, false, Some(&test_config))
+            .await?
+            .resolve_vdl_path(start_command)?;
         assert_eq!(
             tmp_dir.path().join("vdl-g3-revision-vdl_fuchsia_20210113_RC00/device_launcher"),
             vdl
@@ -876,10 +897,15 @@ mod tests {
 
     // TODO(fxb/73555) Mock download instead of downloading from cipd in this test.
     #[ignore]
-    #[test]
+    #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
-    fn test_choosing_prebuild_default() -> Result<()> {
+    async fn test_choosing_prebuild_default() -> Result<()> {
         setup();
+
+        // Set up the config
+        let mut test_config = TestConfigWrapper::new();
+        test_config.test_properties.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
+        test_config.test_properties.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
 
         let tmp_dir = Builder::new().prefix("fvdl_test_default_").tempdir()?;
         env::set_var("FEMU_DOWNLOAD_DIR", tmp_dir.path());
@@ -892,41 +918,47 @@ mod tests {
         start_command.grpcwebproxy_path = None;
         start_command.grpcwebproxy_version = None;
 
+        let vdl_files =
+            VDLFiles::new(/*is_sdk=*/ true, /*verbose=*/ false, Some(&test_config)).await?;
         // --sdk
-        let vdl = VDLFiles::new(true, false)?.resolve_vdl_path(start_command)?;
+        let vdl = vdl_files.resolve_vdl_path(start_command)?;
         assert_eq!(tmp_dir.path().join("vdl-latest/device_launcher"), vdl);
-        let aemu = VDLFiles::new(true, false)?.resolve_aemu_path(start_command)?;
+        let aemu = vdl_files.resolve_aemu_path(start_command)?;
         assert_eq!(tmp_dir.path().join("aemu-integration/emulator"), aemu);
-        let grpcwebproxy = VDLFiles::new(true, false)?.resolve_grpcwebproxy_path(start_command)?;
+        let grpcwebproxy = vdl_files.resolve_grpcwebproxy_path(start_command)?;
         assert_eq!(tmp_dir.path().join("grpcwebproxy-latest/grpcwebproxy"), grpcwebproxy);
         Ok(())
     }
 
-    #[test]
+    #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
-    fn test_resolve_portmap() -> Result<()> {
+    async fn test_resolve_portmap() -> Result<()> {
         setup();
+        // Set up the config
+        let mut test_config = TestConfigWrapper::new();
+        test_config.test_properties.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
+        test_config.test_properties.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
 
         let mut start_command = &mut create_start_command();
         let mut device_spec = &mut DeviceSpec::default();
         start_command.port_map = None;
         device_spec.port_map = None;
-        let (port_map, ssh) =
-            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
+        let vdl_files =
+            VDLFiles::new(/*is_sdk=*/ true, /*verbose=*/ false, Some(&test_config)).await?;
+
+        let (port_map, ssh) = vdl_files.resolve_portmap(start_command, device_spec);
         assert!(ssh > 0);
         let re = Regex::new(r"hostfwd=tcp::\d+-:22").unwrap();
         assert!(re.is_match(&port_map));
 
         start_command.port_map = Some("".to_string());
-        let (port_map, ssh) =
-            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
+        let (port_map, ssh) = vdl_files.resolve_portmap(start_command, device_spec);
         assert!(ssh > 0);
         let re = Regex::new(r"hostfwd=tcp::\d+-:22").unwrap();
         assert!(re.is_match(&port_map));
 
         start_command.port_map = Some("hostfwd=tcp::123-:222,hostfwd=tcp::80-:223".to_string());
-        let (port_map, ssh) =
-            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
+        let (port_map, ssh) = vdl_files.resolve_portmap(start_command, device_spec);
         assert!(ssh > 0);
         let re =
             Regex::new(r"hostfwd=tcp::123-:222,hostfwd=tcp::80-:223,hostfwd=tcp::\d+-:22").unwrap();
@@ -934,46 +966,39 @@ mod tests {
 
         start_command.port_map =
             Some("hostfwd=tcp::123-:223,hostfwd=tcp::80-:322,hostfwd=tcp::456-:22".to_string());
-        let (port_map, ssh) =
-            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
+        let (port_map, ssh) = vdl_files.resolve_portmap(start_command, device_spec);
         assert_eq!(456, ssh);
         assert_eq!("hostfwd=tcp::123-:223,hostfwd=tcp::80-:322,hostfwd=tcp::456-:22", port_map);
 
         start_command.port_map = Some("hostfwd=tcp::789-:22".to_string());
-        let (port_map, ssh) =
-            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
+        let (port_map, ssh) = vdl_files.resolve_portmap(start_command, device_spec);
         assert_eq!(789, ssh);
         assert_eq!("hostfwd=tcp::789-:22", port_map);
 
         start_command.port_map =
             Some("hostfwd=tcp::123-:22,hostfwd=tcp::80-:8022,hostfwd=tcp::456-:222".to_string());
-        let (port_map, ssh) =
-            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
+        let (port_map, ssh) = vdl_files.resolve_portmap(start_command, device_spec);
         assert_eq!(123, ssh);
         assert_eq!("hostfwd=tcp::123-:22,hostfwd=tcp::80-:8022,hostfwd=tcp::456-:222", port_map);
 
         start_command.port_map = Some("tcp:123:22".to_string());
-        let (port_map, ssh) =
-            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
+        let (port_map, ssh) = vdl_files.resolve_portmap(start_command, device_spec);
         assert_eq!(123, ssh);
         assert_eq!("tcp:123:22", port_map);
 
         start_command.port_map = Some("tcp:123:222".to_string());
-        let (port_map, ssh) =
-            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
+        let (port_map, ssh) = vdl_files.resolve_portmap(start_command, device_spec);
         assert!(ssh > 0);
         let re = Regex::new(r"tcp:123:222,hostfwd=tcp::\d+-:22").unwrap();
         assert!(re.is_match(&port_map));
 
         start_command.port_map = Some("tcp:234:80,tcp:123:22".to_string());
-        let (port_map, ssh) =
-            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
+        let (port_map, ssh) = vdl_files.resolve_portmap(start_command, device_spec);
         assert_eq!(123, ssh);
         assert_eq!("tcp:234:80,tcp:123:22", port_map);
 
         start_command.port_map = Some("tcp:234:22,tcp:123:80".to_string());
-        let (port_map, ssh) =
-            VDLFiles::new(true, false)?.resolve_portmap(start_command, device_spec);
+        let (port_map, ssh) = vdl_files.resolve_portmap(start_command, device_spec);
         assert_eq!(234, ssh);
         assert_eq!("tcp:234:22,tcp:123:80", port_map);
 
@@ -991,13 +1016,21 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
-    fn test_resolve_analytics_label() -> Result<()> {
-        let mut label = VDLFiles::new(true /* is_sdk */, false /* verbose */)?.resolve_invoker();
+    async fn test_resolve_analytics_label() -> Result<()> {
+        // Set up the config
+        let mut test_config = TestConfigWrapper::new();
+        test_config.test_properties.insert(SSH_PUBLIC_KEY, "/path/to/authorized_keys");
+        test_config.test_properties.insert(SSH_PRIVATE_KEY, "/path/to/private_key");
+
+        let vdl_files =
+            VDLFiles::new(/*is_sdk=*/ true, /*verbose=*/ false, Some(&test_config)).await?;
+
+        let mut label = vdl_files.resolve_invoker();
         assert_eq!(label, "fvdl-sdk");
         env::set_var(ANALYTICS_ENV_VAR, "apple-pie");
-        label = VDLFiles::new(true /* is_sdk */, false /* verbose */)?.resolve_invoker();
+        label = vdl_files.resolve_invoker();
         assert_eq!(label, "apple-pie");
         Ok(())
     }

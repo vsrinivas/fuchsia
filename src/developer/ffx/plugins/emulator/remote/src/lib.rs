@@ -8,5 +8,5 @@ use ffx_emulator_remote_args::RemoteCommand;
 
 #[ffx_plugin("emu.remote.experimental")]
 pub async fn remote(cmd: RemoteCommand) -> Result<(), anyhow::Error> {
-    VDLFiles::new(cmd.sdk, false)?.remote_emulator(&cmd)
+    VDLFiles::new(cmd.sdk, false, None).await?.remote_emulator(&cmd)
 }
