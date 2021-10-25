@@ -80,27 +80,28 @@ Category selection arguments
 Reading and writing individual registers
 
   The "regs" command only shows full categories of registers. If you want to see
-  individual ones or modify them, use the expression system:
+  individual ones or modify them, use the expression system (see
+  "help expressions" for more).
 
-    [zxdb] print $rax
+    [zxdb] print $reg(rax)   # Canonical register name for expressions.
     41
 
-    [zxdb] print -x $rbx      # Use -x for hex formatting.
+    [zxdb] print rax         # Can be unescaped if there's no variable conflict.
+    41
+
+    [zxdb] print -x rbx      # Use -x for hex formatting.
     0x7cc6120190
 
-    [zxdb] print $xmm3
-    {0.0, 3.14159}      # Note [0] index is first in contrast to the table view!
+    [zxdb] print xmm3
+    {0.0, 3.14159}           # See "help expressions" for vector interpretation.
 
-    [zxdb] print $xmm3[0]
+    [zxdb] print xmm3[1]
     3.14159
 
   The print command can also be used to set register values:
 
-    [zxdb] print $rax = 42
+    [zxdb] print rax = 42
     42
-
-  The "$" may be omitted for registers if there is no collision with program
-  variables.
 
 Examples
 
