@@ -41,6 +41,8 @@ class HermeticAudioEnvironment {
     std::vector<std::string> audio_core_arguments;
     std::vector<std::string> extra_allowed_parent_services;
     std::vector<TestEffectsV2::Effect> test_effects_v2;
+    std::string processor_creator_url;
+    std::string processor_creator_config_data_path;
   };
   HermeticAudioEnvironment(Options options);
   ~HermeticAudioEnvironment();
@@ -64,6 +66,7 @@ class HermeticAudioEnvironment {
     kAudioCoreComponent,
     kVirtualAudioComponent,
     kThermalTestControlComponent,
+    kProcessorCreatorComponent,
   };
 
   // Read the exported inspect info for the given component.

@@ -49,6 +49,7 @@ source_set("hermetic_audio_test") {
   public_deps = [
     ":constants",
     ":test_fixture",
+    "//sdk/fidl/fuchsia.audio.effects",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.audio",
     "//sdk/fidl/fuchsia.ultrasound",

@@ -4,6 +4,7 @@
 
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
 
+#include <fuchsia/audio/effects/cpp/fidl.h>
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <fuchsia/media/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
@@ -217,6 +218,30 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
       },
   };
 
+  if (options_.processor_creator_url.length()) {
+    to_launch.push_back({
+        .type = kProcessorCreatorComponent,
+        .url = options_.processor_creator_url,
+        .launch_info =
+            LaunchInfoWithIsolatedDevmgrForUrl(options_.processor_creator_url, devmgr_services_,
+                                               options_.processor_creator_config_data_path),
+        .service_names =
+            {
+                fuchsia::audio::effects::ProcessorCreator::Name_,
+                fuchsia::media::audio::EffectsController::Name_,
+            },
+    });
+
+    // Remove EffectsController from audio_core service list if external effects service is being
+    // launched.
+    auto& audio_core_services = to_launch[0].service_names;
+    auto effects_controller_it = std::find(audio_core_services.begin(), audio_core_services.end(),
+                                           fuchsia::media::audio::EffectsController::Name_);
+    if (effects_controller_it != audio_core_services.end()) {
+      audio_core_services.erase(effects_controller_it);
+    }
+  }
+
   auto services = sys::testing::EnvironmentServices::Create(real_env);
   for (auto& c : to_launch) {
     component_urls_[c.type] = c.url;
@@ -225,6 +250,10 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
     }
   }
   if (!options_.test_effects_v2.empty()) {
+    FX_CHECK(!options_.processor_creator_url.length())
+        << "Can't specify both test_effects_v2 and an external v2 effects service in one test "
+           "environment";
+
     for (auto& effect : options_.test_effects_v2) {
       test_effects_v2_.AddEffect(effect);
     }
@@ -233,7 +262,7 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
           test_effects_v2_.HandleRequest(
               fidl::ServerEnd<fuchsia_audio_effects::ProcessorCreator>(std::move(channel)));
         }),
-        "fuchsia.audio.effects.ProcessorCreator");
+        fuchsia::audio::effects::ProcessorCreator::Name_);
   }
   services->AllowParentService("fuchsia.logger.LogSink");
   services->AllowParentService("fuchsia.tracing.provider.Registry");
