@@ -166,6 +166,7 @@ impl Fsck {
         for root_object in root_objects {
             object_refs.insert(*root_object, (0, 1));
         }
+        let mut object_count = 0;
         while let Some(ItemRef { key, value, .. }) = iter.get() {
             match (key, value) {
                 (
@@ -184,6 +185,7 @@ impl Fsck {
                             vacant.insert((refs, 0));
                         }
                     }
+                    object_count += 1;
                 }
                 (
                     ObjectKey { data: ObjectKeyData::Child { .. }, .. },
@@ -230,6 +232,16 @@ impl Fsck {
                 );
             }
         }
+
+        if object_count != store.object_count() {
+            bail!(
+                "Store {}: object count mistmatch: actual: {}, expected: {}",
+                store.store_object_id(),
+                store.object_count(),
+                object_count
+            );
+        }
+
         Ok(())
     }
 }

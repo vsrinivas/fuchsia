@@ -455,8 +455,11 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
 
     // If |transaction| has an impending mutation for the underlying object, returns that.
     // Otherwise, looks up the object from the tree.
-    async fn txn_get_object(&self, transaction: &Transaction<'_>) -> Result<ObjectItem, Error> {
-        self.store().txn_get_object(transaction, self.object_id).await
+    async fn txn_get_object_mutation(
+        &self,
+        transaction: &Transaction<'_>,
+    ) -> Result<ObjectStoreMutation, Error> {
+        self.store().txn_get_object_mutation(transaction, self.object_id).await
     }
 
     // Within a transaction, the size of the object might have changed, so get the size from there
@@ -505,11 +508,9 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         if allocated == deallocated {
             return Ok(());
         }
-        let mut item = self.txn_get_object(transaction).await?;
-        if let ObjectItem {
-            value: ObjectValue::Object { kind: ObjectKind::File { ref mut allocated_size, .. }, .. },
-            ..
-        } = item
+        let mut mutation = self.txn_get_object_mutation(transaction).await?;
+        if let ObjectValue::Object { kind: ObjectKind::File { allocated_size, .. }, .. } =
+            &mut mutation.item.value
         {
             // The only way for these to fail are if the volume is inconsistent.
             *allocated_size = allocated_size
@@ -522,10 +523,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         } else {
             panic!("Unexpceted object value");
         }
-        transaction.add(
-            self.store().store_object_id,
-            Mutation::replace_or_insert_object(item.key, item.value),
-        );
+        transaction.add(self.store().store_object_id, Mutation::ObjectStore(mutation));
         Ok(())
     }
 
@@ -690,8 +688,8 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         if let (None, None) = (crtime.as_ref(), mtime.as_ref()) {
             return Ok(());
         }
-        let mut item = self.txn_get_object(transaction).await?;
-        if let ObjectValue::Object { ref mut attributes, .. } = item.value {
+        let mut mutation = self.txn_get_object_mutation(transaction).await?;
+        if let ObjectValue::Object { ref mut attributes, .. } = mutation.item.value {
             if let Some(time) = crtime {
                 attributes.creation_time = time;
             }
@@ -703,10 +701,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 anyhow!(FxfsError::Inconsistent).context("write_timestamps: Expected object value")
             );
         };
-        transaction.add(
-            self.store().store_object_id(),
-            Mutation::replace_or_insert_object(item.key, item.value),
-        );
+        transaction.add(self.store().store_object_id(), Mutation::ObjectStore(mutation));
         Ok(())
     }
 

@@ -17,6 +17,7 @@ use {
             file::FxFile,
             node::{FxNode, GetResult, OpenedNode},
             volume::FxVolume,
+            TOTAL_NODES,
         },
     },
     anyhow::{bail, Error},
@@ -626,12 +627,13 @@ impl Directory for FxDirectory {
     }
 
     fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
-        let info = self.directory.store().filesystem().get_info();
+        let store = self.directory.store();
+        let info = store.filesystem().get_info();
         Ok(FilesystemInfo {
             total_bytes: info.total_bytes,
             used_bytes: info.used_bytes,
-            total_nodes: 0,
-            used_nodes: 0,
+            total_nodes: TOTAL_NODES,
+            used_nodes: store.object_count(),
             free_shared_pool_bytes: 0,
             fs_id: 0, // TODO(csuter)
             block_size: info.block_size,

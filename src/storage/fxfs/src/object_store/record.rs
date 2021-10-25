@@ -443,6 +443,19 @@ impl ObjectValue {
 
 pub type ObjectItem = Item<ObjectKey, ObjectValue>;
 
+impl ObjectItem {
+    pub fn is_tombstone(&self) -> bool {
+        matches!(
+            self,
+            Item {
+                key: ObjectKey { data: ObjectKeyData::Object, .. },
+                value: ObjectValue::None,
+                ..
+            }
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {

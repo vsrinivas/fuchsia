@@ -11,7 +11,6 @@ use {
             allocator::{AllocatorItem, Reservation},
             object_manager::{reserved_space_from_journal_usage, ObjectManager},
             record::{ExtentKey, ExtentValue, ObjectItem, ObjectKey, ObjectValue},
-            StoreInfo,
         },
     },
     anyhow::Error,
@@ -20,12 +19,12 @@ use {
     futures::future::poll_fn,
     serde::{Deserialize, Serialize},
     std::{
-        any::Any,
         cmp::Ordering,
         collections::{
             hash_map::{Entry, HashMap},
             BTreeSet,
         },
+        ops::{Deref, DerefMut},
         sync::{Arc, Mutex},
         task::{Poll, Waker},
         vec::Vec,
@@ -155,8 +154,8 @@ impl Mutation {
         })
     }
 
-    pub fn store_info(store_info: StoreInfo) -> Self {
-        Mutation::ObjectStoreInfo(StoreInfoMutation(store_info))
+    pub fn store_info(store_info: StoreInfoMutation) -> Self {
+        Mutation::ObjectStoreInfo(store_info)
     }
 
     pub fn allocation(item: AllocatorItem) -> Self {
@@ -169,6 +168,14 @@ impl Mutation {
 
     pub fn extent(key: ExtentKey, value: ExtentValue) -> Self {
         Mutation::Extent(ExtentMutation(key, value))
+    }
+
+    pub fn root_directory(oid: u64) -> Self {
+        Mutation::ObjectStoreInfo(StoreInfoMutation::RootDirectory(NoOrd(oid)))
+    }
+
+    pub fn graveyard_directory(oid: u64) -> Self {
+        Mutation::ObjectStoreInfo(StoreInfoMutation::GraveyardDirectory(NoOrd(oid)))
     }
 }
 
@@ -233,28 +240,49 @@ impl PartialEq for ExtentMutation {
 
 impl Eq for ExtentMutation {}
 
+// NoOrd is used to wrap values that shouldn't be used for comparing mutations, so that it's
+// possible to replace a mutation with a different mutation.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct StoreInfoMutation(pub StoreInfo);
+pub struct NoOrd<T>(pub T);
 
-impl Ord for StoreInfoMutation {
+impl<T> Ord for NoOrd<T> {
     fn cmp(&self, _other: &Self) -> Ordering {
         Ordering::Equal
     }
 }
 
-impl PartialOrd for StoreInfoMutation {
+impl<T> PartialOrd for NoOrd<T> {
     fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
         Some(Ordering::Equal)
     }
 }
 
-impl PartialEq for StoreInfoMutation {
+impl<T> PartialEq for NoOrd<T> {
     fn eq(&self, _other: &Self) -> bool {
         true
     }
 }
 
-impl Eq for StoreInfoMutation {}
+impl<T> Eq for NoOrd<T> {}
+
+impl<T> Deref for NoOrd<T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for NoOrd<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+pub enum StoreInfoMutation {
+    RootDirectory(NoOrd<u64>),
+    GraveyardDirectory(NoOrd<u64>),
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AllocatorMutation(pub AllocatorItem);
@@ -316,27 +344,11 @@ impl LockKey {
     }
 }
 
-pub trait AsAny: Any {
-    fn as_any(&self) -> &dyn Any;
-
-    fn as_any_box(self: Box<Self>) -> Box<dyn Any>;
-}
-
 /// Mutations can be associated with an object so that when mutations are applied, updates can be
 /// applied to in-memory structures.  For example, we cache object sizes, so when a size change is
 /// applied, we can update the cached object size.
-pub trait AssociatedObject: AsAny + Send + Sync {
+pub trait AssociatedObject: Send + Sync {
     fn will_apply_mutation(&self, _mutation: &Mutation, _object_id: u64, _manager: &ObjectManager) {
-    }
-}
-
-impl<T: AssociatedObject + 'static> AsAny for T {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_box(self: Box<Self>) -> Box<dyn Any> {
-        self
     }
 }
 
@@ -347,33 +359,12 @@ pub enum AssocObj<'a> {
 }
 
 impl AssocObj<'_> {
-    pub fn downcast_ref<T: AssociatedObject + 'static>(&self) -> Option<&T> {
-        match self {
-            AssocObj::None => None,
-            AssocObj::Borrowed(b) => b.as_any().downcast_ref(),
-            AssocObj::Owned(o) => o.as_any().downcast_ref(),
-        }
-    }
-
     pub fn map<R, F: FnOnce(&dyn AssociatedObject) -> R>(&self, f: F) -> Option<R> {
         match self {
             AssocObj::None => None,
             AssocObj::Borrowed(ref b) => Some(f(*b)),
             AssocObj::Owned(ref o) => Some(f(o.as_ref())),
         }
-    }
-
-    pub fn take<T: AssociatedObject + 'static>(&mut self) -> Option<Box<T>> {
-        if let AssocObj::Owned(o) = self {
-            if o.as_any().is::<T>() {
-                if let AssocObj::Owned(o) = std::mem::replace(self, AssocObj::None) {
-                    return Some(o.as_any_box().downcast().unwrap());
-                } else {
-                    unreachable!();
-                }
-            }
-        }
-        None
     }
 }
 
@@ -551,23 +542,6 @@ impl<'a> Transaction<'a> {
             })
         {
             Some(mutation)
-        } else {
-            None
-        }
-    }
-
-    /// Searches for an exsting store info object mutation within the transaction and returns it if
-    /// found.
-    pub fn get_store_info(&self, object_id: u64) -> Option<&StoreInfo> {
-        if let Some(TxnMutation {
-            mutation: Mutation::ObjectStoreInfo(StoreInfoMutation(store_info)),
-            ..
-        }) = self.mutations.get(&TxnMutation {
-            object_id,
-            mutation: Mutation::store_info(StoreInfo::default()),
-            associated_object: AssocObj::None,
-        }) {
-            Some(store_info)
         } else {
             None
         }
