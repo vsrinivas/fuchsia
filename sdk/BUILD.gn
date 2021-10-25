@@ -305,7 +305,6 @@ sdk_molecule("host_tools") {
   visibility = [ ":*" ]
 
   cross_compiled = [
-    "tools:symbolize_sdk",
     "//tools/fidl/fidlgen_hlcpp:fidlgen_sdk",
     "//tools/cmc:cmc_sdk",
     "//tools/fvdl:fvdl_sdk",
@@ -462,7 +461,6 @@ if (is_host) {
     api = "manifests/host_tools_${current_os}_${current_cpu}.manifest"
 
     deps = [
-      "tools:symbolize_sdk",
       "//src/developer/debug/zxdb:zxdb_sdk",
       "//src/developer/ffx:bin_sdk",
       "//src/storage/bin/fvm:fvm_sdk",
