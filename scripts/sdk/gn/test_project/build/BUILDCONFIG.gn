@@ -74,7 +74,6 @@ set_default_toolchain(_default_toolchain)
 default_compiler_configs = [
   "//build/config/compiler:assembler_debug_dir",
   "//build/config/compiler:compiler",
-  "//build/config/compiler:compiler_arm_fpu",
   "//build/config/compiler:c++",
   "//build/config/compiler:default_include_dirs",
   "//build/config/compiler:default_optimization",

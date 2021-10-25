@@ -99,13 +99,6 @@ config("symbol_visibility_hidden") {
   cflags_objcc = cflags_cc
 }
 
-config("compiler_arm_fpu") {
-  if (current_cpu == "arm") {
-    cflags = [ "-mfpu=$arm_fpu" ]
-    asmflags = cflags
-  }
-}
-
 # export_dynamic ---------------------------------------------------------------
 #
 # Ensures all exported symbols are added to the dynamic symbol table.  This is
