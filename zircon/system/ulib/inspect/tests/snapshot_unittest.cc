@@ -10,6 +10,7 @@
 
 namespace {
 
+using inspect::BackingBuffer;
 using inspect::Snapshot;
 using inspect::internal::Block;
 using inspect::internal::BlockType;
@@ -63,7 +64,7 @@ TEST(Snapshot, InvalidBufferSize) {
     Snapshot snapshot;
     std::vector<uint8_t> buffer;
     buffer.resize(i);
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS, Snapshot::Create(std::move(buffer), &snapshot));
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, Snapshot::Create(BackingBuffer(std::move(buffer)), &snapshot));
   }
 }
 

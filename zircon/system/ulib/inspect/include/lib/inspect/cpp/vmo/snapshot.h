@@ -7,6 +7,7 @@
 
 #include <lib/fit/function.h>
 #include <lib/inspect/cpp/vmo/block.h>
+#include <lib/stdcompat/variant.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
 #include <zircon/types.h>
@@ -15,6 +16,28 @@
 #include <vector>
 
 namespace inspect {
+
+class BackingBuffer final {
+ public:
+  using AllowedTypes = cpp17::variant<std::vector<uint8_t>>;
+  uint8_t const* Data() const;
+  size_t Size() const;
+  bool Empty() const;
+
+  explicit BackingBuffer(AllowedTypes&& data) : data_(std::move(data)) {}
+  BackingBuffer(BackingBuffer&&) = default;
+  BackingBuffer(const BackingBuffer&) = delete;
+  BackingBuffer& operator=(BackingBuffer&&) = default;
+  BackingBuffer& operator=(const BackingBuffer&) = delete;
+
+ private:
+  AllowedTypes data_;
+  enum DiscriminateData {
+    kVector,
+  };
+
+  DiscriminateData Index() const { return static_cast<DiscriminateData>(data_.index()); }
+};
 
 // |Snapshot| parses an incoming VMO buffer and produces a snapshot of
 // the VMO contents. |Snapshot::Options| determines the behavior of
@@ -61,7 +84,7 @@ class Snapshot final {
 
   // Create a new snapshot over the supplied buffer. If the buffer cannot be interpreted as a
   // snapshot, an error status is returned. There are no observers or writers involved.
-  static zx_status_t Create(std::vector<uint8_t> buffer, Snapshot* out_snapshot);
+  static zx_status_t Create(BackingBuffer&& buffer, Snapshot* out_snapshot);
 
   Snapshot() = default;
   ~Snapshot() = default;
@@ -70,27 +93,27 @@ class Snapshot final {
   Snapshot& operator=(Snapshot&&) = default;
   Snapshot& operator=(const Snapshot&) = default;
 
-  explicit operator bool() const { return buffer_ != nullptr && !buffer_->empty(); }
+  explicit operator bool() const { return buffer_ != nullptr && !buffer_->Empty(); }
 
   // Returns the start of the snapshot data.
-  const uint8_t* data() const { return buffer_ ? buffer_->data() : nullptr; }
+  const uint8_t* data() const { return buffer_ ? buffer_->Data() : nullptr; }
 
   // Returns the size of the snapshot.
-  size_t size() const { return buffer_ ? buffer_->size() : 0; }
+  size_t size() const { return buffer_ ? buffer_->Size() : 0; }
 
  private:
   // Read from the VMO into a buffer.
   static zx_status_t Read(const zx::vmo& vmo, size_t size, uint8_t* buffer);
 
   // Parse the header from a buffer and obtain the generation count.
-  static zx_status_t ParseHeader(uint8_t* buffer, uint64_t* out_generation_count);
+  static zx_status_t ParseHeader(uint8_t const* buffer, uint64_t* out_generation_count);
 
   // Take a new snapshot of the VMO with default options.
   // If reading fails, the boolean value of the constructed |Snapshot| will be false.
-  explicit Snapshot(std::vector<uint8_t> buffer);
+  explicit Snapshot(BackingBuffer&& buffer);
 
   // The buffer storing the snapshot.
-  std::shared_ptr<std::vector<uint8_t>> buffer_;
+  std::shared_ptr<BackingBuffer> buffer_;
 };
 
 namespace internal {

@@ -582,7 +582,7 @@ fpromise::result<Hierarchy> ReadFromVmo(const zx::vmo& vmo) {
 
 fpromise::result<Hierarchy> ReadFromBuffer(std::vector<uint8_t> buffer) {
   inspect::Snapshot snapshot;
-  if (inspect::Snapshot::Create(std::move(buffer), &snapshot) != ZX_OK) {
+  if (inspect::Snapshot::Create(BackingBuffer(std::move(buffer)), &snapshot) != ZX_OK) {
     // TODO(fxbug.dev/4734): Best-effort read of invalid snapshots.
     return fpromise::error();
   }

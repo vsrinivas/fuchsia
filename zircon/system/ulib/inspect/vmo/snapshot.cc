@@ -20,13 +20,13 @@ namespace inspect {
 const Snapshot::Options Snapshot::kDefaultOptions = {.read_attempts = 1024,
                                                      .skip_consistency_check = false};
 
-Snapshot::Snapshot(std::vector<uint8_t> buffer)
-    : buffer_(std::make_shared<std::vector<uint8_t>>(std::move(buffer))) {}
+Snapshot::Snapshot(BackingBuffer&& buffer)
+    : buffer_(std::make_shared<BackingBuffer>(std::move(buffer))) {}
 
-zx_status_t Snapshot::Create(std::vector<uint8_t> buffer, Snapshot* out_snapshot) {
+zx_status_t Snapshot::Create(BackingBuffer&& buffer, Snapshot* out_snapshot) {
   ZX_ASSERT(out_snapshot);
 
-  if (buffer.size() < kMinOrderSize) {
+  if (buffer.Size() < kMinOrderSize) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -34,7 +34,7 @@ zx_status_t Snapshot::Create(std::vector<uint8_t> buffer, Snapshot* out_snapshot
   // this.
   uint64_t unused;
   // Verify that the buffer can, in fact, be parsed as a snapshot.
-  zx_status_t status = Snapshot::ParseHeader(buffer.data(), &unused);
+  zx_status_t status = Snapshot::ParseHeader(buffer.Data(), &unused);
   if (status != ZX_OK) {
     return status;
   }
@@ -100,8 +100,7 @@ zx_status_t Snapshot::Create(const zx::vmo& vmo, Options options, ReadObserver r
     }
 
     // Read the header out of the buffer again,
-    std::vector<uint8_t> new_header;
-    new_header.resize(sizeof(Block));
+    std::vector<uint8_t> new_header(sizeof(Block));
     status = Snapshot::Read(vmo, new_header.size(), new_header.data());
     if (status != ZX_OK) {
       return status;
@@ -127,7 +126,7 @@ zx_status_t Snapshot::Create(const zx::vmo& vmo, Options options, ReadObserver r
       continue;
     }
 
-    *out_snapshot = Snapshot(std::move(buffer));
+    *out_snapshot = Snapshot(BackingBuffer(std::move(buffer)));
 
     return ZX_OK;
   }
@@ -140,8 +139,8 @@ zx_status_t Snapshot::Read(const zx::vmo& vmo, size_t size, uint8_t* buffer) {
   return vmo.read(buffer, 0, size);
 }
 
-zx_status_t Snapshot::ParseHeader(uint8_t* buffer, uint64_t* out_generation_count) {
-  auto* block = reinterpret_cast<Block*>(buffer);
+zx_status_t Snapshot::ParseHeader(uint8_t const* buffer, uint64_t* out_generation_count) {
+  auto* block = reinterpret_cast<Block const*>(buffer);
   if (memcmp(&block->header_data[4], internal::kMagicNumber, 4) != 0 ||
       internal::HeaderBlockFields::Version::Get<uint64_t>(block->header) > internal::kVersion) {
     return ZX_ERR_INTERNAL;
@@ -169,4 +168,24 @@ const Block* GetBlock(const Snapshot* snapshot, BlockIndex index) {
 }
 }  // namespace internal
 
+uint8_t const* BackingBuffer::Data() const {
+  switch (Index()) {
+    case DiscriminateData::kVector:
+      return cpp17::get<DiscriminateData::kVector>(data_).data();
+  }
+}
+
+size_t BackingBuffer::Size() const {
+  switch (Index()) {
+    case DiscriminateData::kVector:
+      return cpp17::get<DiscriminateData::kVector>(data_).size();
+  }
+}
+
+bool BackingBuffer::Empty() const {
+  switch (Index()) {
+    case DiscriminateData::kVector:
+      return cpp17::get<DiscriminateData::kVector>(data_).empty();
+  }
+}
 }  // namespace inspect
