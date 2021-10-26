@@ -744,7 +744,10 @@
         {
             protocol: "fuchsia.fonts.Provider",
             from: "#font_provider",
-            to: "#appmgr",
+            to: [
+                "#appmgr",
+                "#session-manager",
+            ],
         },
         {
             protocol: "fuchsia.kernel.Stats",

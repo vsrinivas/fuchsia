@@ -50,6 +50,7 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.feedback.CrashReporter",
+                "fuchsia.fonts.Provider",
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.identity.account.AccountManager",
                 "fuchsia.intl.PropertyProvider",
