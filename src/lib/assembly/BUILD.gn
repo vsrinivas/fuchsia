@@ -8,6 +8,7 @@ group("tests") {
     "base_package:tests",
     "blobfs:tests",
     "fvm:tests",
+    "images_manifest:tests",
     "minfs:tests",
     "partitions_config:tests",
     "test_util:tests",

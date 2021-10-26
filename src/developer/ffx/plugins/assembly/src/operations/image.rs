@@ -6,12 +6,12 @@ use crate::base_package::{construct_base_package, BasePackage};
 use crate::blobfs::construct_blobfs;
 use crate::config::{from_reader, BoardConfig, ProductConfig};
 use crate::fvm::{construct_fvm, Fvms};
-use crate::images_manifest::construct_images_manifest;
 use crate::update_package::{construct_update, UpdatePackage};
 use crate::vbmeta::construct_vbmeta;
 use crate::zbi::{construct_zbi, vendor_sign_zbi};
 
 use anyhow::{Context, Result};
+use assembly_images_manifest::{Image, ImagesManifest};
 use ffx_assembly_args::ImageArgs;
 use ffx_config::get_sdk;
 use futures::executor::block_on;
@@ -98,14 +98,29 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     };
 
     info!("Creating images manifest");
-    construct_images_manifest(
-        &zbi_path,
-        &outdir,
-        base_package.as_ref(),
-        blobfs_path.as_ref(),
-        fvms.as_ref(),
-        vbmeta_path.as_ref(),
-    )?;
+    let mut images_manifest = ImagesManifest::default();
+    images_manifest.images.push(Image::ZBI(zbi_path.clone()));
+    if let Some(base_package) = &base_package {
+        images_manifest.images.push(Image::BasePackage(base_package.path.clone()));
+    }
+    if let Some(blobfs_path) = &blobfs_path {
+        images_manifest.images.push(Image::BlobFS(blobfs_path.clone()));
+    }
+    if let Some(fvms) = &fvms {
+        images_manifest.images.push(Image::FVM(fvms.default.clone()));
+        images_manifest.images.push(Image::FVMSparse(fvms.sparse.clone()));
+        images_manifest.images.push(Image::FVMSparseBlob(fvms.sparse_blob.clone()));
+        if let Some(path) = &fvms.fastboot {
+            images_manifest.images.push(Image::FVMFastboot(path.clone()));
+        }
+    }
+    if let Some(vbmeta_path) = &vbmeta_path {
+        images_manifest.images.push(Image::VBMeta(vbmeta_path.clone()));
+    }
+    let images_json_path = outdir.join("images.json");
+    let images_json = File::create(images_json_path).context("Failed to create images.json")?;
+    serde_json::to_writer(images_json, &images_manifest)
+        .context("Failed to write to images.json")?;
 
     // If the board specifies a vendor-specific signing script, use that to
     // post-process the ZBI, and then use the post-processed ZBI in the update

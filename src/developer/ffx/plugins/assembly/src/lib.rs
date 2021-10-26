@@ -9,7 +9,6 @@ mod blobfs;
 mod config;
 mod extra_hash_descriptor;
 mod fvm;
-mod images_manifest;
 mod operations;
 mod update_package;
 mod util;
