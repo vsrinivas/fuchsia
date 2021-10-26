@@ -15,6 +15,7 @@ use {
     std::hash::Hash,
     std::pin::Pin,
     std::rc::{Rc, Weak},
+    std::result,
     std::task::{Context, Poll},
     std::time::Duration,
     timeout::timeout,
@@ -76,7 +77,10 @@ struct Dispatcher<T: EventTrait + 'static> {
 }
 
 impl<T: EventTrait + 'static> Dispatcher<T> {
-    async fn handler_helper(event: T, inner: Rc<DispatcherInner<T>>) -> Result<()> {
+    async fn handler_helper(
+        event: T,
+        inner: Rc<DispatcherInner<T>>,
+    ) -> result::Result<(), Result<()>> {
         inner
             .handler
             .on_event(event)
@@ -92,12 +96,12 @@ impl<T: EventTrait + 'static> Dispatcher<T> {
                 // Result<()> to preserve the original intended behavior.
                 if let Ok(r) = r {
                     if r == Status::Done {
-                        Err(anyhow!("dispatcher done"))
+                        Err(Ok(()))
                     } else {
                         Ok(())
                     }
                 } else {
-                    Err(r.unwrap_err())
+                    Err(Err(r.unwrap_err()))
                 }
             })
             .await
@@ -115,7 +119,11 @@ impl<T: EventTrait + 'static> Dispatcher<T> {
                         Self::handler_helper(e, inner.clone())
                     })
                     .await
-                    .unwrap_or_else(|e| log::warn!("dispatcher failed in detached task: {:#?}", e));
+                    .unwrap_or_else(|e| {
+                        if let Err(e) = e {
+                            log::warn!("dispatcher failed in detached task: {:#?}", e)
+                        }
+                    });
             }),
         }
     }
