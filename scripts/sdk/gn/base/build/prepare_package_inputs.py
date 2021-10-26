@@ -219,9 +219,14 @@ def _write_component_manifest(
     return manifest_dest_file_path
 
 
+def _is_in_excluded_dir(filename, dir_exclusions):
+    """Returns true if |filename| is rooted under any |dir_exclusions|."""
+    return any([filename.startswith(excluded_dir) for excluded_dir in dir_exclusions])
+
+
 def _write_package_manifest(
-        manifest_entries, expanded_files, out_dir, exclude_file, root_dir,
-        component_info):
+        manifest_entries, expanded_files, out_dir, exclude_file, exclude_dir,
+        root_dir, component_info):
     """Writes the package manifest for a Fuchsia package
 
     Returns a list of binaries in the package.
@@ -256,10 +261,10 @@ def _write_package_manifest(
 
         if in_package_path in excluded_files_set:
             excluded_files_set.remove(in_package_path)
-        else:
+        elif not _is_in_excluded_dir(in_package_path, exclude_dir):
             manifest_entries[in_package_path] = current_file
 
-    # Check to make sure we saw all expected files to
+    # Ensure that all --exclude-file entries were handled.
     if excluded_files_set:
         raise Exception(
             'Some files were excluded with --exclude-file, but '
@@ -281,7 +286,7 @@ def _build_manifest(args):
     for component_item in component_info:
         _write_package_manifest(
             manifest_entries, expanded_files, args.out_dir, args.exclude_file,
-            args.root_dir, component_item)
+            args.exclude_dir, args.root_dir, component_item)
         component_manifests.append(
             _write_component_manifest(
                 manifest_entries, component_item, args.manifest_path,
@@ -298,9 +303,10 @@ def _build_manifest(args):
     gen_dir = os.path.normpath(os.path.join(args.out_dir, 'gen'))
     roots = [gen_dir, args.root_dir, args.out_dir]
     excluded_files_set = set(args.exclude_file)
-    expanded_deps_files = [path for path in expanded_files
-                           if make_package_path(path, roots)
-                           not in excluded_files_set]
+    expanded_deps_files = [
+        path for path in expanded_files
+        if make_package_path(path, roots) not in excluded_files_set and
+        not _is_in_excluded_dir(make_package_path(path, roots), args.exclude_dir)]
 
     _write_gn_deps_file(
         args.depfile_path, args.manifest_path, component_manifests,
@@ -326,6 +332,11 @@ def main():
         action='append',
         default=[],
         help='Package-relative file path to exclude from the package.')
+    parser.add_argument(
+        '--exclude-dir',
+        action='append',
+        default=[],
+        help='Package-relative directory path to exclude from the package.')
     parser.add_argument(
         '--manifest-path', required=True, help='Manifest output path.')
     parser.add_argument(
