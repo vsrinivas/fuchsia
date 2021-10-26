@@ -1,0 +1,48 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+source_set("threads") {
+  public = [ "thread.h" ]
+
+  sources = [ "thread.cc" ]
+
+  public_deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":thread_unittests" ]
+}
+
+test("thread_unittests_bin") {
+  testonly = true
+
+  output_name = "thread_unittests"
+
+  sources = [ "thread_unittests.cc" ]
+
+  deps = [
+    ":threads",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_unittest_package("thread_unittests") {
+  package_name = "thread_unittests"
+  deps = [ ":thread_unittests_bin" ]
+}
