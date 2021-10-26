@@ -16,28 +16,14 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
-)
 
-// fullName reconstructs the fully qualified name of an identifier, given its
-// unqualified name and namespace components.
-func fullName(name Name, ns []ID) string {
-	s := make([]string, len(ns)+1)
-	for i, n := range ns {
-		nc := string(n.Name)
-		if nc == "GlobalNamespace" {
-			nc = ""
-		}
-		s[len(s)-i-2] = nc
-	}
-	s[len(s)-1] = string(name)
-	return strings.Join(s, "::")
-}
+	"go.fuchsia.dev/fuchsia/sdk/cts/plasa/model"
+)
 
 // addAllFromDir scans inputDir for YAML aggregate files and extracts information from them.
 // The information is funneled into the supplied function 'add'.  The function 'add' is allowed
 // to fail, in which case the scanning is stopped.
-func addAllFromDir(lenient bool, inputDir string, addFn func(a Aggregate) error) error {
+func addAllFromDir(lenient bool, inputDir string, addFn func(a model.Aggregate) error) error {
 	err := filepath.WalkDir(inputDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return fmt.Errorf("filepath.WalkDir called with err != nil:\n\t%w", err)
@@ -49,7 +35,7 @@ func addAllFromDir(lenient bool, inputDir string, addFn func(a Aggregate) error)
 		if err != nil {
 			return fmt.Errorf("while opening: %v:\n\t%w", path, err)
 		}
-		a, err := ParseYAML(f, lenient)
+		a, err := model.ParseYAML(f, lenient)
 		if err != nil {
 			return fmt.Errorf("while parsing: %v:\n\t%w", path, err)
 		}
@@ -67,14 +53,13 @@ func addAllFromDir(lenient bool, inputDir string, addFn func(a Aggregate) error)
 // run executes the report generator on all files in the directory inputDir,
 // and writes a report into the supplied writer.
 func run(inputDir string, w io.Writer, args args) error {
-	var r Report
-	r.setFileRegexes(args.allowlistFilenameRegexp)
-	r.setSymRegexes(args.allowlistNameRegexp)
+	var r model.Report
+	r.SetFileRegexes(args.allowlistFilenameRegexp)
+	r.SetSymRegexes(args.allowlistNameRegexp)
 	if err := addAllFromDir(args.lenient, inputDir, r.Add); err != nil {
 		return fmt.Errorf("in main.run(): while reading dir:\n\t%w", err)
-		os.Exit(-1)
 	}
-	if err := r.writeJSON(w); err != nil {
+	if err := r.WriteJSON(w); err != nil {
 		return fmt.Errorf("in main.run(): while writing output file:\n\t%w", err)
 	}
 	return nil

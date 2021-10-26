@@ -1,0 +1,958 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+---
+USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+Name:            'channel'
+Path:            'zx'
+Namespace:
+  - Type:            Namespace
+    Name:            'zx'
+    USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+DefLocation:
+  LineNumber:      14
+  Filename:        '../../zircon/system/ulib/zx/include/lib/zx/channel.h'
+Location:
+  - LineNumber:      10
+    Filename:        '../../zircon/system/ulib/zx/include/lib/zx/object_traits.h'
+TagType:         Class
+Bases:
+  - USR:             'C0D58B2FC2472AA2AB5ADE1E3EA04852BDECFA21'
+    Name:            'object<class zx::channel>'
+    Path:            'zx'
+    ChildFunctions:
+      - USR:             'ACAA8B9BEBE7ABC08CDA7DE2652B6CEBF7A45981'
+        Name:            'object'
+        Namespace:
+          - Type:            Record
+            Name:            'object'
+            USR:             '830A5E5245B4D588E7B6B3770223D5F4453718C1'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        DefLocation:     {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'zx_handle_t'
+            Name:            'value'
+        ReturnType:
+          Type:
+            Name:            'void'
+        Access:          Public
+      - USR:             '5ADD723CAC2A00BBEA85CBC4DB6E11946561E572'
+        Name:            'swap'
+        Namespace:
+          - Type:            Record
+            Name:            'object'
+            USR:             '830A5E5245B4D588E7B6B3770223D5F4453718C1'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        Location:
+          - {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'object<class zx::channel> &'
+            Name:            'other'
+        ReturnType:
+          Type:
+            Name:            'void'
+        Access:          Public
+      - USR:             '50069C82D76951B2071F35F19E7536FE742C68EB'
+        Name:            'duplicate'
+        Namespace:
+          - Type:            Record
+            Name:            'object'
+            USR:             '830A5E5245B4D588E7B6B3770223D5F4453718C1'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        Location:
+          - {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'zx_rights_t'
+            Name:            'rights'
+          - Type:
+              Name:            'object<class zx::channel> *'
+            Name:            'result'
+        ReturnType:
+          Type:
+            Name:            'zx_status_t'
+        Access:          Public
+      - USR:             '21E95E865EEB560A9F87CE021A9900D6D3B431C4'
+        Name:            'replace'
+        Namespace:
+          - Type:            Record
+            Name:            'object'
+            USR:             '830A5E5245B4D588E7B6B3770223D5F4453718C1'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        Location:
+          - {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'zx_rights_t'
+            Name:            'rights'
+          - Type:
+              Name:            'object<class zx::channel> *'
+            Name:            'result'
+        ReturnType:
+          Type:
+            Name:            'zx_status_t'
+        Access:          Public
+      - USR:             'E276AB3AA9E0E6DC8F06337E498BAFCFD085868F'
+        Name:            'wait_one'
+        Namespace:
+          - Type:            Record
+            Name:            'object'
+            USR:             '830A5E5245B4D588E7B6B3770223D5F4453718C1'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        Location:
+          - {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'zx_signals_t'
+            Name:            'signals'
+          - Type:
+              Type:            Record
+              Name:            'basic_time'
+              USR:             'A33619F216DEB8934DCA66BD36E5D0C169AFC7AA'
+              Path:            'zx'
+            Name:            'deadline'
+          - Type:
+              Name:            'zx_signals_t *'
+            Name:            'pending'
+        ReturnType:
+          Type:
+            Name:            'zx_status_t'
+        Access:          Public
+      - USR:             '5DA77D7B482D9AD00B503929C6709617DE7DF2D3'
+        Name:            'wait_async'
+        Namespace:
+          - Type:            Record
+            Name:            'object'
+            USR:             '830A5E5245B4D588E7B6B3770223D5F4453718C1'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        Location:
+          - {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'const object<class zx::port> &'
+            Name:            'port'
+          - Type:
+              Name:            'uint64_t'
+            Name:            'key'
+          - Type:
+              Name:            'zx_signals_t'
+            Name:            'signals'
+          - Type:
+              Name:            'uint32_t'
+            Name:            'options'
+        ReturnType:
+          Type:
+            Name:            'zx_status_t'
+        Access:          Public
+      - USR:             '8583B26780FA03A7D6A5F94EFD9F2A203C722E1F'
+        Name:            'wait_many'
+        Namespace:
+          - Type:            Record
+            Name:            'object'
+            USR:             '830A5E5245B4D588E7B6B3770223D5F4453718C1'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        Location:
+          - {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'zx_wait_item_t *'
+            Name:            'wait_items'
+          - Type:
+              Name:            'uint32_t'
+            Name:            'count'
+          - Type:
+              Type:            Record
+              Name:            'basic_time'
+              USR:             'A33619F216DEB8934DCA66BD36E5D0C169AFC7AA'
+              Path:            'zx'
+            Name:            'deadline'
+        ReturnType:
+          Type:
+            Name:            'zx_status_t'
+        Access:          Public
+      - USR:             'ADB499576E7CFCBEE6C4A8BEC5626310DDEEBC42'
+        Name:            'signal'
+        Namespace:
+          - Type:            Record
+            Name:            'object'
+            USR:             '830A5E5245B4D588E7B6B3770223D5F4453718C1'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        Location:
+          - {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'uint32_t'
+            Name:            'clear_mask'
+          - Type:
+              Name:            'uint32_t'
+            Name:            'set_mask'
+        ReturnType:
+          Type:
+            Name:            'zx_status_t'
+        Access:          Public
+      - USR:             'B99CB01BD77F1C8D8281F8883560E92BE8F50696'
+        Name:            'signal_peer'
+        Namespace:
+          - Type:            Record
+            Name:            'object'
+            USR:             '830A5E5245B4D588E7B6B3770223D5F4453718C1'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        Location:
+          - {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'uint32_t'
+            Name:            'clear_mask'
+          - Type:
+              Name:            'uint32_t'
+            Name:            'set_mask'
+        ReturnType:
+          Type:
+            Name:            'zx_status_t'
+        Access:          Public
+      - USR:             '8CB512BCE4C57CBECA851284128E7C93083673D0'
+        Name:            'get_child'
+        Namespace:
+          - Type:            Record
+            Name:            'object'
+            USR:             '830A5E5245B4D588E7B6B3770223D5F4453718C1'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        Location:
+          - {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'uint64_t'
+            Name:            'koid'
+          - Type:
+              Name:            'zx_rights_t'
+            Name:            'rights'
+          - Type:
+              Name:            'object<void> *'
+            Name:            'result'
+        ReturnType:
+          Type:
+            Name:            'zx_status_t'
+        Access:          Public
+      - USR:             '3742F1F0F7CE556EC8A216AE55D478DF54951B2A'
+        Name:            'set_profile'
+        Namespace:
+          - Type:            Record
+            Name:            'object'
+            USR:             '830A5E5245B4D588E7B6B3770223D5F4453718C1'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        Location:
+          - {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'const object<class zx::profile> &'
+            Name:            'profile'
+          - Type:
+              Name:            'uint32_t'
+            Name:            'options'
+        ReturnType:
+          Type:
+            Name:            'zx_status_t'
+        Access:          Public
+      - USR:             '93373A3D7F7450B15FF8B71E97F07F601AB7F259'
+        Name:            'borrow'
+        Namespace:
+          - Type:            Record
+            Name:            'object'
+            USR:             '830A5E5245B4D588E7B6B3770223D5F4453718C1'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        Location:
+          - {}
+        IsMethod:        true
+        ReturnType:
+          Type:
+            Type:            Record
+            Name:            'unowned'
+            USR:             '36D280DA6F150CC1A756DBB85145BB22F0C84B8E'
+            Path:            'zx'
+        Access:          Public
+    Access:          Public
+    IsParent:        true
+  - USR:             'AF75743FAE89341045268BB9AD95010AD2237D93'
+    Name:            'object_base'
+    Path:            'zx'
+    Members:
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'value_'
+        Access:          Protected
+    ChildFunctions:
+      - USR:             'C294BF05180F3F82971CFF137CDF4E5D702B78A5'
+        Name:            'reset'
+        Namespace:
+          - Type:            Record
+            Name:            'object_base'
+            USR:             'AF75743FAE89341045268BB9AD95010AD2237D93'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        DefLocation:     {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'zx_handle_t'
+            Name:            'value'
+        ReturnType:
+          Type:
+            Name:            'void'
+        Access:          Public
+      - USR:             'E4F5CF1E632EB8D907B510DE0E4D469FBA9EFD38'
+        Name:            'is_valid'
+        Namespace:
+          - Type:            Record
+            Name:            'object_base'
+            USR:             'AF75743FAE89341045268BB9AD95010AD2237D93'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        DefLocation:     {}
+        IsMethod:        true
+        ReturnType:
+          Type:
+            Name:            '_Bool'
+        Access:          Public
+      - USR:             '7E1F74C4CCD6A9650B71F0C3652E0563AAFDCF61'
+        Name:            'operator bool'
+        Namespace:
+          - Type:            Record
+            Name:            'object_base'
+            USR:             'AF75743FAE89341045268BB9AD95010AD2237D93'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        DefLocation:     {}
+        IsMethod:        true
+        ReturnType:
+          Type:
+            Name:            '_Bool'
+        Access:          Public
+      - USR:             'BBEFA6B1B4878129BE32F53FB019663B1F4133FD'
+        Name:            'get'
+        Namespace:
+          - Type:            Record
+            Name:            'object_base'
+            USR:             'AF75743FAE89341045268BB9AD95010AD2237D93'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        DefLocation:     {}
+        IsMethod:        true
+        ReturnType:
+          Type:
+            Name:            'zx_handle_t'
+        Access:          Public
+      - USR:             '56691BF7C257BB3D8F69836A0E02C40376A491BC'
+        Name:            'reset_and_get_address'
+        Namespace:
+          - Type:            Record
+            Name:            'object_base'
+            USR:             'AF75743FAE89341045268BB9AD95010AD2237D93'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        DefLocation:     {}
+        IsMethod:        true
+        ReturnType:
+          Type:
+            Name:            'zx_handle_t *'
+        Access:          Public
+      - USR:             '9DFCCDF624A9BC2733F76BE8EE6E28DCBEC614BE'
+        Name:            'release'
+        Namespace:
+          - Type:            Record
+            Name:            'object_base'
+            USR:             'AF75743FAE89341045268BB9AD95010AD2237D93'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        DefLocation:     {}
+        IsMethod:        true
+        ReturnType:
+          Type:
+            Name:            'zx_handle_t'
+        Access:          Public
+      - USR:             '6B1CC78660085D2B393470ECA8CD07091F6A79E0'
+        Name:            'get_info'
+        Namespace:
+          - Type:            Record
+            Name:            'object_base'
+            USR:             'AF75743FAE89341045268BB9AD95010AD2237D93'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        DefLocation:     {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'uint32_t'
+            Name:            'topic'
+          - Type:
+              Name:            'void *'
+            Name:            'buffer'
+          - Type:
+              Name:            'size_t'
+            Name:            'buffer_size'
+          - Type:
+              Name:            'size_t *'
+            Name:            'actual_count'
+          - Type:
+              Name:            'size_t *'
+            Name:            'avail_count'
+        ReturnType:
+          Type:
+            Name:            'zx_status_t'
+        Access:          Public
+      - USR:             '42D7C867CC267EBC212CD1CC86F7A2EF7BC88147'
+        Name:            'get_property'
+        Namespace:
+          - Type:            Record
+            Name:            'object_base'
+            USR:             'AF75743FAE89341045268BB9AD95010AD2237D93'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        DefLocation:     {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'uint32_t'
+            Name:            'property'
+          - Type:
+              Name:            'void *'
+            Name:            'value'
+          - Type:
+              Name:            'size_t'
+            Name:            'size'
+        ReturnType:
+          Type:
+            Name:            'zx_status_t'
+        Access:          Public
+      - USR:             '4EC218B092083EEF66429F9085CDDCF7CABA92AE'
+        Name:            'set_property'
+        Namespace:
+          - Type:            Record
+            Name:            'object_base'
+            USR:             'AF75743FAE89341045268BB9AD95010AD2237D93'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        DefLocation:     {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'uint32_t'
+            Name:            'property'
+          - Type:
+              Name:            'const void *'
+            Name:            'value'
+          - Type:
+              Name:            'size_t'
+            Name:            'size'
+        ReturnType:
+          Type:
+            Name:            'zx_status_t'
+        Access:          Public
+      - USR:             '2C5C98968DF655AAF9E4931C3E81D3978D11371E'
+        Name:            'object_base'
+        Namespace:
+          - Type:            Record
+            Name:            'object_base'
+            USR:             'AF75743FAE89341045268BB9AD95010AD2237D93'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        DefLocation:     {}
+        IsMethod:        true
+        ReturnType:
+          Type:
+            Name:            'void'
+        Access:          Protected
+      - USR:             '8323AA4BE9818A5C99BCC3E87A5C1C68564F9146'
+        Name:            'object_base'
+        Namespace:
+          - Type:            Record
+            Name:            'object_base'
+            USR:             'AF75743FAE89341045268BB9AD95010AD2237D93'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        DefLocation:     {}
+        IsMethod:        true
+        Params:
+          - Type:
+              Name:            'zx_handle_t'
+            Name:            'value'
+        ReturnType:
+          Type:
+            Name:            'void'
+        Access:          Protected
+      - USR:             'D0CC79BBFDFCD6CF5D10E88ACEA7A439B06D0AA9'
+        Name:            '~object_base'
+        Namespace:
+          - Type:            Record
+            Name:            'object_base'
+            USR:             'AF75743FAE89341045268BB9AD95010AD2237D93'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        DefLocation:     {}
+        IsMethod:        true
+        ReturnType:
+          Type:
+            Name:            'void'
+        Access:          Protected
+      - USR:             '500C129BD9975898856AD0F8B967F03D55B41F48'
+        Name:            'close'
+        Namespace:
+          - Type:            Record
+            Name:            'object_base'
+            USR:             'AF75743FAE89341045268BB9AD95010AD2237D93'
+          - Type:            Namespace
+            Name:            'zx'
+            USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+        DefLocation:     {}
+        IsMethod:        true
+        ReturnType:
+          Type:
+            Name:            'void'
+        Access:          Protected
+    Access:          Public
+Parents:
+  - Type:            Record
+    Name:            'object<class zx::channel>'
+    USR:             'C0D58B2FC2472AA2AB5ADE1E3EA04852BDECFA21'
+ChildFunctions:
+  - USR:             'EE0512283746EB178CA5700CCBF4374C7CCA0786'
+    Name:            'channel'
+    Namespace:
+      - Type:            Record
+        Name:            'channel'
+        USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      18
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/channel.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'channel'
+      USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+    ReturnType:
+      Type:
+        Name:            'void'
+    Access:          Public
+  - USR:             '7A4C2CD5AEE75B61DD6AD56A8690E90D704A8CE0'
+    Name:            'channel'
+    Namespace:
+      - Type:            Record
+        Name:            'channel'
+        USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      20
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/channel.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'channel'
+      USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+    Params:
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'value'
+    ReturnType:
+      Type:
+        Name:            'void'
+    Access:          Public
+  - USR:             '856665BEF3A0F617269BC75BE731BCA711189BDE'
+    Name:            'channel'
+    Namespace:
+      - Type:            Record
+        Name:            'channel'
+        USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      22
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/channel.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'channel'
+      USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+    Params:
+      - Type:
+          Name:            'zx::handle &&'
+        Name:            'h'
+    ReturnType:
+      Type:
+        Name:            'void'
+    Access:          Public
+  - USR:             '2F4951CA90B4CECE60F5E841FF82466534F64C3E'
+    Name:            'channel'
+    Namespace:
+      - Type:            Record
+        Name:            'channel'
+        USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      24
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/channel.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'channel'
+      USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+    Params:
+      - Type:
+          Name:            'class zx::channel &&'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            'void'
+    Access:          Public
+  - USR:             '04B48D0AAC00BBBF8ADA43B234906DBFCEC19ED6'
+    Name:            'operator='
+    Namespace:
+      - Type:            Record
+        Name:            'channel'
+        USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      26
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/channel.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'channel'
+      USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+    Params:
+      - Type:
+          Name:            'class zx::channel &&'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            'class zx::channel &'
+    Access:          Public
+  - USR:             '6FB0FB4A35B139B2EBD6A319C48327F6DF31C249'
+    Name:            'create'
+    Namespace:
+      - Type:            Record
+        Name:            'channel'
+        USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    Location:
+      - LineNumber:      31
+        Filename:        '../../zircon/system/ulib/zx/include/lib/zx/channel.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'channel'
+      USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+    Params:
+      - Type:
+          Name:            'uint32_t'
+        Name:            'flags'
+      - Type:
+          Name:            'class zx::channel *'
+        Name:            'endpoint0'
+      - Type:
+          Name:            'class zx::channel *'
+        Name:            'endpoint1'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+    Access:          Public
+  - USR:             '0FED59FC2B95C26905F6EBD520ED33F903CF6A33'
+    Name:            'read'
+    Namespace:
+      - Type:            Record
+        Name:            'channel'
+        USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      33
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/channel.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'channel'
+      USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+    Params:
+      - Type:
+          Name:            'uint32_t'
+        Name:            'flags'
+      - Type:
+          Name:            'void *'
+        Name:            'bytes'
+      - Type:
+          Name:            'zx_handle_t *'
+        Name:            'handles'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_bytes'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_handles'
+      - Type:
+          Name:            'uint32_t *'
+        Name:            'actual_bytes'
+      - Type:
+          Name:            'uint32_t *'
+        Name:            'actual_handles'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+    Access:          Public
+  - USR:             'BADB5A1504BDABF39952E6354928292EF34874D3'
+    Name:            'read_etc'
+    Namespace:
+      - Type:            Record
+        Name:            'channel'
+        USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      39
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/channel.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'channel'
+      USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+    Params:
+      - Type:
+          Name:            'uint32_t'
+        Name:            'flags'
+      - Type:
+          Name:            'void *'
+        Name:            'bytes'
+      - Type:
+          Name:            'zx_handle_info_t *'
+        Name:            'handles'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_bytes'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_handles'
+      - Type:
+          Name:            'uint32_t *'
+        Name:            'actual_bytes'
+      - Type:
+          Name:            'uint32_t *'
+        Name:            'actual_handles'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+    Access:          Public
+  - USR:             '649C4D67B4AEBECB3C0505D087E407CD54EC510A'
+    Name:            'write'
+    Namespace:
+      - Type:            Record
+        Name:            'channel'
+        USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      46
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/channel.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'channel'
+      USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+    Params:
+      - Type:
+          Name:            'uint32_t'
+        Name:            'flags'
+      - Type:
+          Name:            'const void *'
+        Name:            'bytes'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_bytes'
+      - Type:
+          Name:            'const zx_handle_t *'
+        Name:            'handles'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_handles'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+    Access:          Public
+  - USR:             '46DE8B89AC1D3B0FAAE2DCBE6C89C3B652143123'
+    Name:            'write_etc'
+    Namespace:
+      - Type:            Record
+        Name:            'channel'
+        USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      51
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/channel.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'channel'
+      USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+    Params:
+      - Type:
+          Name:            'uint32_t'
+        Name:            'flags'
+      - Type:
+          Name:            'const void *'
+        Name:            'bytes'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_bytes'
+      - Type:
+          Name:            'zx_handle_disposition_t *'
+        Name:            'handles'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_handles'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+    Access:          Public
+  - USR:             '4650CE837F699C0B6358D2BB9111A184631EE6C5'
+    Name:            'call'
+    Namespace:
+      - Type:            Record
+        Name:            'channel'
+        USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      56
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/channel.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'channel'
+      USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+    Params:
+      - Type:
+          Name:            'uint32_t'
+        Name:            'flags'
+      - Type:
+          Type:            Record
+          Name:            'basic_time'
+          USR:             'A33619F216DEB8934DCA66BD36E5D0C169AFC7AA'
+          Path:            'zx'
+        Name:            'deadline'
+      - Type:
+          Name:            'const zx_channel_call_args_t *'
+        Name:            'args'
+      - Type:
+          Name:            'uint32_t *'
+        Name:            'actual_bytes'
+      - Type:
+          Name:            'uint32_t *'
+        Name:            'actual_handles'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+    Access:          Public
+  - USR:             'E3F960333AB8251000ADBA23879A8E0894C45C13'
+    Name:            'call_etc'
+    Namespace:
+      - Type:            Record
+        Name:            'channel'
+        USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      61
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/channel.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'channel'
+      USR:             '3BD9A30EA23C0E4057BE518A08E698D4043F5925'
+    Params:
+      - Type:
+          Name:            'uint32_t'
+        Name:            'flags'
+      - Type:
+          Type:            Record
+          Name:            'basic_time'
+          USR:             'A33619F216DEB8934DCA66BD36E5D0C169AFC7AA'
+          Path:            'zx'
+        Name:            'deadline'
+      - Type:
+          Name:            'zx_channel_call_etc_args_t *'
+        Name:            'args'
+      - Type:
+          Name:            'uint32_t *'
+        Name:            'actual_bytes'
+      - Type:
+          Name:            'uint32_t *'
+        Name:            'actual_handles'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+    Access:          Public
+...

@@ -11,14 +11,30 @@
 // does not give a pretty go formatting, but is likely the only way to keep
 // track of the coverage of the recovered data model.
 
-package main
+package model
 
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
+
+// fullName reconstructs the fully qualified name of an identifier, given its
+// unqualified name and namespace components.
+func fullName(name Name, ns []ID) string {
+	s := make([]string, len(ns)+1)
+	for i, n := range ns {
+		nc := string(n.Name)
+		if nc == "GlobalNamespace" {
+			nc = ""
+		}
+		s[len(s)-i-2] = nc
+	}
+	s[len(s)-1] = string(name)
+	return strings.Join(s, "::")
+}
 
 // Needs serdes. Unclear why Type is not the same as TagType.
 type Type string

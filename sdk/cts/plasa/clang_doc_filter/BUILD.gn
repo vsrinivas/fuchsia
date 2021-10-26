@@ -10,12 +10,11 @@ import("//build/testing/host_test_data.gni")
 
 if (is_host) {
   go_library("gopkg") {
-    sources = [
-      "main.go",
-      "model.go",
-      "report.go",
+    sources = [ "main.go" ]
+    deps = [
+      "//sdk/cts/plasa/model:gopkg",
+      "//third_party/golibs:gopkg.in/yaml.v2",
     ]
-    deps = [ "//third_party/golibs:gopkg.in/yaml.v2" ]
   }
 
   go_binary("clang_doc_filter") {
@@ -25,17 +24,15 @@ if (is_host) {
 
   go_library("clang_doc_filter_test_lib") {
     testonly = true
-    sources = [
-      "model_test.go",
-      "report_test.go",
-    ]
+    sources = [ "report_test.go" ]
     deps = [
       ":gopkg",
+      "//sdk/cts/plasa/model:gopkg",
       "//third_party/golibs:github.com/google/go-cmp",
     ]
   }
 
-  _testdata_path = "${target_gen_dir}/testdata"
+  _testdata_path = "${target_gen_dir}/testdata/dir"
 
   go_test("clang_doc_filter_test") {
     output_name = "clang_doc_filter_test"
@@ -45,24 +42,7 @@ if (is_host) {
       rebase_path(_testdata_path),
     ]
     deps = [ ":clang_doc_filter_test_lib" ]
-    non_go_deps = [
-      ":testdatadir",
-      ":testdatafiles",
-    ]
-  }
-
-  host_test_data("testdatafiles") {
-    sources = [
-      "testdata/@nonymous_record_FFBFAD8A3BBD799586600B40A3453BBD95900F13.yaml",
-      "testdata/GlobalNamespace/index.yaml",
-      "testdata/zx/basic_time.yaml",
-      "testdata/zx/bti.yaml",
-      "testdata/zx/channel.yaml",
-      "testdata/zx/clock.yaml",
-      "testdata/zx/debuglog.yaml",
-      "testdata/zx/duration.yaml",
-    ]
-    outputs = [ "${_testdata_path}/files/{{source_file_part}}" ]
+    non_go_deps = [ ":testdatadir" ]
   }
 
   host_test_data("testdatadir") {

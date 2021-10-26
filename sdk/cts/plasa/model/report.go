@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file
 
-package main
+package model
 
 import (
 	"encoding/json"
@@ -36,14 +36,14 @@ type Report struct {
 	symregex []regexp.Regexp
 }
 
-// setFileRegexes sets the regular expressions used to match the filename of
+// SetFileRegexes sets the regular expressions used to match the filename of
 // the symbols.  Only symbols that match at least one regexp will be included,
 // if the regexp is specified.  Otherwise, everything matches.
-func (r *Report) setFileRegexes(regexes []string) error {
+func (r *Report) SetFileRegexes(regexes []string) error {
 	return addRegexes(&r.fileregex, regexes)
 }
 
-func (r *Report) setSymRegexes(regexes []string) error {
+func (r *Report) SetSymRegexes(regexes []string) error {
 	return addRegexes(&r.symregex, regexes)
 }
 
@@ -100,7 +100,7 @@ func (r *Report) Add(a Aggregate) error {
 
 // WriteJSON writes the contents of the report in JSON format to the supplied
 // writer.
-func (r Report) writeJSON(w io.Writer) error {
+func (r Report) WriteJSON(w io.Writer) error {
 	// Ensure the output is stable.
 	if r.Items != nil {
 		sort.SliceStable(r.Items, func(i, j int) bool {
@@ -118,9 +118,9 @@ func (r Report) writeJSON(w io.Writer) error {
 	return nil
 }
 
-// readReportJSON reads the contents of the report in JSON format from the
+// ReadReportJSON reads the contents of the report in JSON format from the
 // supplied reader.
-func readReportJSON(r io.Reader) (Report, error) {
+func ReadReportJSON(r io.Reader) (Report, error) {
 	d := json.NewDecoder(r)
 	// Verifying the parsing gets confusing if we're lenient about unknown
 	// fields.

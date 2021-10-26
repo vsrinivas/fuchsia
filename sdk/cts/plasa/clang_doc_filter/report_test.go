@@ -5,23 +5,33 @@
 package main
 
 import (
-	"path/filepath"
+	"flag"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"go.fuchsia.dev/fuchsia/sdk/cts/plasa/model"
 )
+
+var testDir = flag.String("test_data_dir", "", "The directory where test data reside")
+
+func TestTestDir(t *testing.T) {
+	if *testDir == "" {
+		t.Fatalf("the required flag --test_data_dir=... was not supplied")
+	}
+}
 
 func TestReportGeneration(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		dirName        string
+		name           string
 		args           args
 		expectedOutput string
 	}{
 		{
-			dirName: "dir",
+			name: "fidling",
 			args: args{
 				allowlistFilenameRegexp: []string{"fidling"},
 			},
@@ -41,7 +51,7 @@ func TestReportGeneration(t *testing.T) {
 			`,
 		},
 		{
-			dirName: "dir",
+			name: "fdio",
 			args: args{
 				allowlistNameRegexp: []string{`^fdio.*`},
 			},
@@ -88,25 +98,29 @@ func TestReportGeneration(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		t.Run(test.dirName, func(t *testing.T) {
-			dirName := filepath.Join(*testDir, test.dirName)
+		t.Run(test.name, func(t *testing.T) {
+			dirName := *testDir
 			var output strings.Builder
 			if err := run(dirName, &output, test.args); err != nil {
 				t.Fatalf("error invoking main.run() from the test:\n\t%v", err)
 			}
 
-			actual, err := readReportJSON(strings.NewReader(output.String()))
+			fmt.Printf("TEST: %+v: output: %+v\n", dirName, output.String())
+
+			actual, err := model.ReadReportJSON(strings.NewReader(output.String()))
 			if err != nil {
 				t.Fatalf("error: could not read report from JSON:\n\t%v", err)
 			}
 
-			expected, err := readReportJSON(strings.NewReader(test.expectedOutput))
+			fmt.Printf("TEST: %+v: actual: %+v\n", dirName, actual)
+
+			expected, err := model.ReadReportJSON(strings.NewReader(test.expectedOutput))
 			if err != nil {
 				t.Fatalf("error: could not read from expectedOutput:\n\t%v", err)
 			}
-			if !cmp.Equal(expected, actual, cmpopts.IgnoreUnexported(Report{})) {
+			if !cmp.Equal(expected, actual, cmpopts.IgnoreUnexported(model.Report{})) {
 				t.Errorf("error: want: %+v\n\ngot: %+v\n\ndiff: %v",
-					expected, actual, cmp.Diff(expected, actual, cmpopts.IgnoreUnexported(Report{})))
+					expected, actual, cmp.Diff(actual, expected, cmpopts.IgnoreUnexported(model.Report{})))
 			}
 		})
 	}
