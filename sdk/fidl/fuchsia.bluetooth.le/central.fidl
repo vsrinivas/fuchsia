@@ -134,13 +134,15 @@ protocol Central {
     ///
     /// The following epitaphs may be sent by the server on error:
     /// + `INVALID_ARGS`: Some of the parameters are invalid.
+    /// + `ALREADY_BOUND`: A Connection to the peer already exists for this Central. The existing
+    ///                    Connection should be used.
     /// + `NOT_CONNECTED`: A connection could not be established.
+    /// + `CONNECTION_RESET`: The peer disconnected.
     ///
     /// + request `id` Identifier of the peer to initiate a connection to.
     /// + request `options` Options used to configure the connection.
     /// + request `handle` Handle that remains valid for the duration of this
     ///   connection.
-    @transitional("Not yet implemented")
     Connect(resource struct {
         id bt.PeerId;
         options ConnectionOptions;
