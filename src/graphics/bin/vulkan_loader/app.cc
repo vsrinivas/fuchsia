@@ -71,14 +71,12 @@ zx_status_t LoaderApp::InitDeviceFs() {
 
 zx_status_t LoaderApp::ServeDeviceFs(zx::channel dir_request) {
   auto options = fs::VnodeConnectionOptions::ReadWrite();
-  return device_fs_.Serve(device_root_node_,
-                          fidl::ServerEnd<fuchsia_io::Node>(std::move(dir_request)), options);
+  return device_fs_.Serve(device_root_node_, std::move(dir_request), options);
 }
 
 zx_status_t LoaderApp::ServeManifestFs(zx::channel dir_request) {
   auto options = fs::VnodeConnectionOptions::ReadWrite();
-  return manifest_fs_.Serve(manifest_fs_root_node_,
-                            fidl::ServerEnd<fuchsia_io::Node>(std::move(dir_request)), options);
+  return manifest_fs_.Serve(manifest_fs_root_node_, std::move(dir_request), options);
 }
 
 zx_status_t LoaderApp::InitManifestFs() {

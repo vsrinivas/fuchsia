@@ -38,7 +38,7 @@ int main(int argc, const char* const* argv) {
 
   zx::channel dir_request = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
   auto options = fs::VnodeConnectionOptions::ReadExec();
-  status = vfs.Serve(root, fidl::ServerEnd<fuchsia_io::Node>(std::move(dir_request)), options);
+  status = vfs.Serve(root, std::move(dir_request), options);
 
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to serve outgoing.");

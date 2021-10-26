@@ -257,7 +257,7 @@ zx_status_t FuchsiaVfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, std:
   return ZX_OK;
 }
 
-zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<fuchsia_io::Node> channel,
+zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
                               VnodeConnectionOptions options) {
   auto result = vnode->ValidateOptions(options);
   if (result.is_error()) {
@@ -276,11 +276,21 @@ zx_status_t FuchsiaVfs::AddInotifyFilterToVnode(fbl::RefPtr<Vnode> vnode,
   return ZX_OK;
 }
 
-zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode,
-                              fidl::ServerEnd<fuchsia_io::Node> server_end,
+zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
                               Vnode::ValidatedOptions options) {
-  // |ValidateOptions| was called, hence at least one protocol must be supported.
+  // At this point, the protocol that will be spoken over |server_end| is not
+  // yet determined.
+  //
+  // To determine the protocol, we pick one that is both requested by the user
+  // and supported by the vnode, deferring to |Vnode::Negotiate| if there are
+  // multiple.
+  //
+  // In addition, if the |describe| option is set, then the channel always first
+  // speaks the |fuchsia.io/Node| protocol, and then switches to the determined
+  // protocol after sending the initial event.
+
   auto candidate_protocols = options->protocols() & vnode->GetProtocols();
+  // |ValidateOptions| was called, hence at least one protocol must be supported.
   ZX_DEBUG_ASSERT(candidate_protocols.any());
   auto maybe_protocol = candidate_protocols.which();
   VnodeProtocol protocol;
@@ -295,23 +305,24 @@ zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode,
     fpromise::result<VnodeRepresentation, zx_status_t> result =
         internal::Describe(vnode, protocol, *options);
     if (result.is_error()) {
-      fidl::WireEventSender<fio::Node>(std::move(server_end))
+      fidl::WireEventSender<fio::Node>(fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end)))
           .OnOpen(result.error(), fio::wire::NodeInfo());
       return result.error();
     }
     ConvertToIoV1NodeInfo(result.take_value(), [&](fio::wire::NodeInfo&& info) {
       // The channel may switch from |Node| protocol back to a custom protocol, after sending the
       // event, in the case of |VnodeProtocol::kConnector|.
-      fidl::WireEventSender<fio::Node> event_sender{std::move(server_end)};
+      fidl::WireEventSender<fio::Node> event_sender{
+          fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end))};
       event_sender.OnOpen(ZX_OK, std::move(info));
-      server_end = std::move(event_sender.server_end());
+      server_end = event_sender.server_end().TakeChannel();
     });
   }
 
   // If |node_reference| is specified, serve |fuchsia.io/Node| even for |VnodeProtocol::kConnector|
   // nodes. Otherwise, connect the raw channel to the custom service.
   if (!options->flags.node_reference && protocol == VnodeProtocol::kConnector) {
-    return vnode->ConnectService(server_end.TakeChannel());
+    return vnode->ConnectService(std::move(server_end));
   }
 
   std::unique_ptr<internal::Connection> connection;
@@ -363,7 +374,7 @@ zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode,
     return status;
   }
 
-  return RegisterConnection(std::move(connection), server_end.TakeChannel());
+  return RegisterConnection(std::move(connection), std::move(server_end));
 }
 
 void FuchsiaVfs::OnConnectionClosedRemotely(internal::Connection* connection) {

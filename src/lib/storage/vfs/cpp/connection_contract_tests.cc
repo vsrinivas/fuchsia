@@ -75,7 +75,8 @@ void RunTest(async::Loop* loop, VfsType&& vfs) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(endpoints.status_value());
 
-  ASSERT_OK(vfs.Serve(root, std::move(endpoints->server), fs::VnodeConnectionOptions::ReadOnly()));
+  ASSERT_OK(
+      vfs.Serve(root, endpoints->server.TakeChannel(), fs::VnodeConnectionOptions::ReadOnly()));
   loop->RunUntilIdle();
 }
 

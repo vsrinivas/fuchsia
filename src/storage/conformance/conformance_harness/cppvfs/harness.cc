@@ -68,8 +68,7 @@ class TestHarness : public fuchsia::io::test::Io1Harness {
   void GetDirectoryWithRemoteDirectory(
       fidl::InterfaceHandle<fuchsia::io::Directory> remote_directory, std::string dirname,
       uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
-    // Convert the interface handle/request to a typed ClientEnd/ServerEnd, respectively.
-    fidl::ServerEnd<fuchsia_io::Node> server_end{directory_request.TakeChannel()};
+    // Convert the interface handle to a typed ClientEnd, respectively.
     fidl::ClientEnd<fuchsia_io::Directory> client_end{remote_directory.TakeChannel()};
 
     fbl::RefPtr<fs::PseudoDir> root{fbl::MakeRefCounted<fs::PseudoDir>()};
@@ -79,7 +78,8 @@ class TestHarness : public fuchsia::io::test::Io1Harness {
     fs::VnodeConnectionOptions filtered_options =
         fs::VnodeConnectionOptions::FilterForNewConnection(options);
 
-    zx_status_t status = vfs_->Serve(std::move(root), std::move(server_end), filtered_options);
+    zx_status_t status =
+        vfs_->Serve(std::move(root), directory_request.TakeChannel(), filtered_options);
 
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Serving directory with remote failed: " << zx_status_get_string(status);
@@ -99,9 +99,7 @@ class TestHarness : public fuchsia::io::test::Io1Harness {
 
     fs::VnodeConnectionOptions options = fs::VnodeConnectionOptions::FromIoV1Flags(flags);
     options = fs::VnodeConnectionOptions::FilterForNewConnection(options);
-    // Convert the interface request to a typed ServerEnd and serve the directory.
-    fidl::ServerEnd<fuchsia_io::Node> server_end{directory_request.TakeChannel()};
-    zx_status_t status = vfs_->Serve(std::move(dir), std::move(server_end), options);
+    zx_status_t status = vfs_->Serve(std::move(dir), directory_request.TakeChannel(), options);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Serving directory failed: " << zx_status_get_string(status);
       return;

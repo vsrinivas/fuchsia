@@ -283,7 +283,7 @@ zx_status_t Connection::EnsureVnodeClosed() {
   return vnode_->Close();
 }
 
-void Connection::NodeClone(uint32_t clone_flags, fidl::ServerEnd<fio::Node> channel) {
+void Connection::NodeClone(uint32_t clone_flags, fidl::ServerEnd<fio::Node> server_end) {
   auto clone_options = VnodeConnectionOptions::FromIoV1Flags(clone_flags);
   auto write_error = [describe = clone_options.flags.describe](fidl::ServerEnd<fio::Node> channel,
                                                                zx_status_t error) {
@@ -294,14 +294,14 @@ void Connection::NodeClone(uint32_t clone_flags, fidl::ServerEnd<fio::Node> chan
   if (!PrevalidateFlags(clone_flags)) {
     FS_PRETTY_TRACE_DEBUG("[NodeClone] prevalidate failed",
                           ", incoming flags: ", ZxFlags(clone_flags));
-    return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
+    return write_error(std::move(server_end), ZX_ERR_INVALID_ARGS);
   }
   FS_PRETTY_TRACE_DEBUG("[NodeClone] our options: ", options(),
                         ", incoming options: ", clone_options);
 
   // If CLONE_SAME_RIGHTS is specified, the client cannot request any specific rights.
   if (clone_options.flags.clone_same_rights && clone_options.rights.any()) {
-    return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
+    return write_error(std::move(server_end), ZX_ERR_INVALID_ARGS);
   }
   // These two flags are always preserved.
   clone_options.flags.append = options().flags.append;
@@ -313,13 +313,13 @@ void Connection::NodeClone(uint32_t clone_flags, fidl::ServerEnd<fio::Node> chan
   }
   if (!clone_options.rights.StricterOrSameAs(options().rights)) {
     FS_PRETTY_TRACE_DEBUG("Rights violation during NodeClone");
-    return write_error(std::move(channel), ZX_ERR_ACCESS_DENIED);
+    return write_error(std::move(server_end), ZX_ERR_ACCESS_DENIED);
   }
 
   fbl::RefPtr<Vnode> vn(vnode_);
   auto result = vn->ValidateOptions(clone_options);
   if (result.is_error()) {
-    return write_error(std::move(channel), result.error());
+    return write_error(std::move(server_end), result.error());
   }
   auto& validated_options = result.value();
   zx_status_t open_status = ZX_OK;
@@ -327,10 +327,10 @@ void Connection::NodeClone(uint32_t clone_flags, fidl::ServerEnd<fio::Node> chan
     open_status = OpenVnode(validated_options, &vn);
   }
   if (open_status != ZX_OK) {
-    return write_error(std::move(channel), open_status);
+    return write_error(std::move(server_end), open_status);
   }
 
-  vfs_->Serve(vn, std::move(channel), validated_options);
+  vfs_->Serve(vn, server_end.TakeChannel(), validated_options);
 }
 
 Connection::Result<> Connection::NodeClose() {

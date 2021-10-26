@@ -67,8 +67,7 @@ class PtyTestCase : public zxtest::Test {
 
     auto endpoints = fidl::CreateEndpoints<Device>();
     ASSERT_OK(endpoints.status_value());
-    ASSERT_OK(vfs()->Serve(std::move(vnode),
-                           fidl::ServerEnd<fuchsia_io::Node>(endpoints->server.TakeChannel()),
+    ASSERT_OK(vfs()->Serve(std::move(vnode), endpoints->server.TakeChannel(),
                            fs::VnodeConnectionOptions::ReadWrite()));
     *conn = Connection(std::move(endpoints->client));
   }

@@ -74,12 +74,18 @@ class FuchsiaVfs : public Vfs {
   // Begins serving VFS messages over the specified channel. If the vnode supports multiple
   // protocols and the client requested more than one of them, it would use |Vnode::Negotiate| to
   // tie-break and obtain the resulting protocol.
-  zx_status_t Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<fuchsia_io::Node> server_end,
+  //
+  // |server_end| usually speaks a protocol that composes |fuchsia.io/Node|, but
+  // can speak an arbitrary protocol when serving a |Connector|.
+  zx_status_t Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
                     VnodeConnectionOptions options) __TA_EXCLUDES(vfs_lock_);
 
   // Begins serving VFS messages over the specified channel. This version takes an |options|
   // that have been validated.
-  zx_status_t Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<fuchsia_io::Node> server_end,
+  //
+  // |server_end| usually speaks a protocol that composes |fuchsia.io/Node|, but
+  // can speak an arbitrary protocol when serving a |Connector|.
+  zx_status_t Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
                     Vnode::ValidatedOptions options) __TA_EXCLUDES(vfs_lock_);
 
   // Adds a inotify filter to the vnode.

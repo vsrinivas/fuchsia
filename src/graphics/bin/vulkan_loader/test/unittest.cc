@@ -271,9 +271,7 @@ TEST_F(LoaderUnittest, MagmaDependencyInjection) {
       }));
   fidl::InterfaceHandle<fuchsia::io::Directory> gpu_dir;
   auto options = fs::VnodeConnectionOptions::ReadWrite();
-  EXPECT_EQ(ZX_OK,
-            vfs.Serve(root, fidl::ServerEnd<fuchsia_io::Node>(gpu_dir.NewRequest().TakeChannel()),
-                      options));
+  EXPECT_EQ(ZX_OK, vfs.Serve(root, gpu_dir.NewRequest().TakeChannel(), options));
 
   fdio_ns_t* ns;
   EXPECT_EQ(ZX_OK, fdio_ns_get_installed(&ns));

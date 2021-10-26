@@ -41,7 +41,7 @@ class ComponentControllerImpl : public fuchsia::component::runner::ComponentCont
     zx::channel dir_request = directory_request.TakeChannel();
     auto options = fs::VnodeConnectionOptions::ReadExec();
     options.rights.write = 1;
-    return vfs_.Serve(root, fidl::ServerEnd<fuchsia_io::Node>(std::move(dir_request)), options);
+    return vfs_.Serve(root, std::move(dir_request), options);
   }
 
   void Add(std::unique_ptr<ComponentControllerImpl> controller,

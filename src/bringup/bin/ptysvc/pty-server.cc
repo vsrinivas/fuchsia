@@ -93,8 +93,8 @@ zx_status_t PtyServer::CreateClient(uint32_t id,
   clients_.push_back(client);
 
   auto vnode = fbl::MakeRefCounted<PtyClientVnode>(client);
-  status = vfs_->Serve(vnode, fidl::ServerEnd<fuchsia_io::Node>(client_request.TakeChannel()),
-                       fs::VnodeConnectionOptions::ReadWrite());
+  status =
+      vfs_->Serve(vnode, client_request.TakeChannel(), fs::VnodeConnectionOptions::ReadWrite());
   if (status != ZX_OK) {
     return status;
   }

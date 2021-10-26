@@ -38,8 +38,7 @@ TEST_F(DeviceWatcher, IgnoreDot) {
 
   auto request = dir_handle.NewRequest();
   async::PostTask(fs_loop.dispatcher(), [&, request = std::move(request)]() mutable {
-    vfs.Serve(empty_dir, fidl::ServerEnd<fuchsia_io::Node>(request.TakeChannel()),
-              fs::VnodeConnectionOptions::ReadWrite());
+    vfs.Serve(empty_dir, request.TakeChannel(), fs::VnodeConnectionOptions::ReadWrite());
   });
 
   fdio_ns_t* ns;

@@ -41,27 +41,28 @@ namespace fs {
 namespace {
 
 // Performs a path walk and opens a connection to another node.
-void OpenAt(FuchsiaVfs* vfs, const fbl::RefPtr<Vnode>& parent, fidl::ServerEnd<fio::Node> channel,
-            std::string_view path, VnodeConnectionOptions options, Rights parent_rights,
-            uint32_t mode) {
+void OpenAt(FuchsiaVfs* vfs, const fbl::RefPtr<Vnode>& parent,
+            fidl::ServerEnd<fio::Node> server_end, std::string_view path,
+            VnodeConnectionOptions options, Rights parent_rights, uint32_t mode) {
   bool describe = options.flags.describe;
   vfs->Open(parent, path, options, parent_rights, mode).visit([&](auto&& result) {
     using ResultT = std::decay_t<decltype(result)>;
     using OpenResult = fs::Vfs::OpenResult;
     if constexpr (std::is_same_v<ResultT, OpenResult::Error>) {
       if (describe) {
-        fidl::WireEventSender<fio::Node>(std::move(channel)).OnOpen(result, fio::wire::NodeInfo());
+        fidl::WireEventSender<fio::Node>(std::move(server_end))
+            .OnOpen(result, fio::wire::NodeInfo());
       }
     } else if constexpr (std::is_same_v<ResultT, OpenResult::Remote>) {
       // Remote handoff to a remote filesystem node.
-      vfs->ForwardOpenRemote(std::move(result.vnode), std::move(channel), result.path, options,
+      vfs->ForwardOpenRemote(std::move(result.vnode), std::move(server_end), result.path, options,
                              mode);
     } else if constexpr (std::is_same_v<ResultT, OpenResult::RemoteRoot>) {
       // Remote handoff to a remote filesystem node.
-      vfs->ForwardOpenRemote(std::move(result.vnode), std::move(channel), ".", options, mode);
+      vfs->ForwardOpenRemote(std::move(result.vnode), std::move(server_end), ".", options, mode);
     } else if constexpr (std::is_same_v<ResultT, OpenResult::Ok>) {
       // |Vfs::Open| already performs option validation for us.
-      vfs->Serve(result.vnode, std::move(channel), result.validated_options);
+      vfs->Serve(result.vnode, server_end.TakeChannel(), result.validated_options);
     }
   });
 }
@@ -471,11 +472,11 @@ void DirectoryConnection::UnmountNode(UnmountNodeRequestView request,
                                       UnmountNodeCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminUnmountNode] our options: ", options());
 
+  fidl::ClientEnd<fuchsia_io::Directory> c;
   if (!options().rights.admin) {
-    completer.Reply(ZX_ERR_ACCESS_DENIED, zx::channel());
+    completer.Reply(ZX_ERR_ACCESS_DENIED, std::move(c));
     return;
   }
-  fidl::ClientEnd<fuchsia_io::Directory> c;
   zx_status_t status = vfs()->UninstallRemote(vnode(), &c);
   completer.Reply(status, std::move(c));
 }
