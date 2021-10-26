@@ -11,6 +11,7 @@
 #include "interceptors/packet_loss.h"
 #include "interceptors/reorder.h"
 #include "network_context.h"
+#include "src/connectivity/lib/network-device/cpp/network_device_client.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace std {
@@ -34,6 +35,54 @@ struct equal_to<fxl::WeakPtr<T>> {
 namespace netemul {
 namespace impl {
 
+class Guest : public fuchsia::net::virtualization::Interface, public data::Consumer {
+ public:
+  explicit Guest(uint8_t port_id,
+                 fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface,
+                 async_dispatcher_t* dispatcher,
+                 fidl::ClientEnd<fuchsia_hardware_network::Device> device)
+      : port_id_(port_id),
+        binding_(this, std::move(interface), dispatcher),
+        client_(std::move(device), dispatcher),
+        weak_ptr_factory_(this) {}
+
+  // The binding retains a pointer to |this|, so |this| must never move.
+  Guest(Guest&&) = delete;
+  Guest& operator=(Guest&&) = delete;
+
+  fidl::Binding<fuchsia::net::virtualization::Interface>& binding() { return binding_; }
+  network::client::NetworkDeviceClient& client() { return client_; }
+
+  void Consume(const void* data, size_t len) override {
+    network::client::NetworkDeviceClient::Buffer buffer = client_.AllocTx();
+    if (!buffer.is_valid()) {
+      FX_LOGS(ERROR) << "network device client TX buffers depleted, dropping " << len << " bytes";
+      return;
+    }
+    buffer.data().SetPortId(port_id_);
+    buffer.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
+    const size_t n = buffer.data().Write(data, len);
+    if (n != len) {
+      FX_LOGS(ERROR) << "network device client TX MTU (" << n << " bytes) exceeded, dropping "
+                     << len << " bytes";
+      return;
+    }
+    if (zx_status_t status = buffer.Send(); status != ZX_OK) {
+      FX_LOGS(ERROR) << "network device client TX send failed: " << zx_status_get_string(status)
+                     << "; dropping " << len << " bytes";
+      return;
+    }
+  }
+
+  fxl::WeakPtr<data::Consumer> GetPointer() { return weak_ptr_factory_.GetWeakPtr(); };
+
+ private:
+  const uint8_t port_id_;
+  fidl::Binding<fuchsia::net::virtualization::Interface> binding_;
+  network::client::NetworkDeviceClient client_;
+  fxl::WeakPtrFactory<data::Consumer> weak_ptr_factory_;
+};
+
 class NetworkBus : public data::BusConsumer {
  public:
   NetworkBus() : weak_ptr_factory_(this) {}
@@ -51,6 +100,7 @@ class NetworkBus : public data::BusConsumer {
 
   std::unordered_set<data::Consumer::Ptr>& sinks() { return sinks_; }
   std::unordered_map<zx_handle_t, FakeEndpoint>& fake_endpoints() { return fake_endpoints_; }
+  std::unordered_map<zx_handle_t, Guest>& guests() { return guests_; }
 
   void UpdateConfiguration(const Network::Config& config) {
     // first, flush all packets that are currently in interceptors:
@@ -114,6 +164,7 @@ class NetworkBus : public data::BusConsumer {
   fxl::WeakPtrFactory<data::BusConsumer> weak_ptr_factory_;
   std::unordered_set<data::Consumer::Ptr> sinks_;
   std::unordered_map<zx_handle_t, FakeEndpoint> fake_endpoints_;
+  std::unordered_map<zx_handle_t, Guest> guests_;
   std::vector<std::unique_ptr<Interceptor>> interceptors_;
 };
 
@@ -139,23 +190,23 @@ void Network::Bind(fidl::InterfaceRequest<FNetwork> req) {
 }
 
 void Network::AddDevice(uint8_t port_id,
-                        fidl::InterfaceHandle<::fuchsia::hardware::network::Device> device,
+                        fidl::InterfaceHandle<fuchsia::hardware::network::Device> device,
                         fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface) {
   const zx_handle_t key = interface.channel().get();
-  auto [it, inserted] =
-      guests_.try_emplace(key, port_id, std::move(interface), parent_->dispatcher(),
-                          fidl::ClientEnd<fuchsia_hardware_network::Device>(device.TakeChannel()));
+  auto [it, inserted] = bus_->guests().try_emplace(
+      key, port_id, std::move(interface), parent_->dispatcher(),
+      fidl::ClientEnd<fuchsia_hardware_network::Device>(device.TakeChannel()));
   if (!inserted) {
     interface.Close(ZX_ERR_INTERNAL);
     return;
   }
-  Interface& guest = it->second;
+  impl::Guest& guest = it->second;
   auto cleanup = [this, key, &guest](zx_status_t status) {
     bus_->sinks().erase(guest.GetPointer());
     guest.binding().Close(status);
     // There may be other tasks running on the promise executor; schedule destruction so that it
     // happens after other pending work that may want to access the executor.
-    async::PostTask(parent_->dispatcher(), [this, key]() { guests_.erase(key); });
+    async::PostTask(parent_->dispatcher(), [this, key]() { bus_->guests().erase(key); });
   };
   {
     auto [it, inserted] = bus_->sinks().insert(guest.GetPointer());
@@ -196,27 +247,6 @@ void Network::AddDevice(uint8_t port_id,
                                 }
                               });
   });
-}
-
-void Network::Interface::Consume(const void* data, size_t len) {
-  network::client::NetworkDeviceClient::Buffer buffer = client_.AllocTx();
-  if (!buffer.is_valid()) {
-    FX_LOGS(ERROR) << "network device client TX buffers depleted, dropping " << len << " bytes";
-    return;
-  }
-  buffer.data().SetPortId(port_id_);
-  buffer.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
-  const size_t n = buffer.data().Write(data, len);
-  if (n != len) {
-    FX_LOGS(ERROR) << "network device client TX MTU (" << n << " bytes) exceeded, dropping " << len
-                   << " bytes";
-    return;
-  }
-  if (zx_status_t status = buffer.Send(); status != ZX_OK) {
-    FX_LOGS(ERROR) << "network device client TX send failed: " << zx_status_get_string(status)
-                   << "; dropping " << len << " bytes";
-    return;
-  }
 }
 
 void Network::GetConfig(Network::GetConfigCallback callback) {
