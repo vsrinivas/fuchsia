@@ -130,6 +130,7 @@ void Network::AddDevice(uint8_t port_id,
     return;
   }
   Interface& guest = it->second;
+  bus_->sinks().emplace_back(guest.GetPointer());
   auto cleanup = [this, key, &guest](zx_status_t status) {
     guest.binding().Close(status);
     // There may be other tasks running on the promise executor; schedule destruction so that it
@@ -137,40 +138,36 @@ void Network::AddDevice(uint8_t port_id,
     async::PostTask(parent_->dispatcher(), [this, key]() { guests_.erase(key); });
   };
   guest.binding().set_error_handler(cleanup);
-  guest.client().OpenSession(name_, [this, port_id, &guest, cleanup](zx_status_t status) {
+  guest.client().SetErrorCallback(cleanup);
+  guest.client().SetRxCallback([this, &guest](network::client::NetworkDeviceClient::Buffer buffer) {
+    switch (buffer.data().parts()) {
+      case 0:
+        break;
+      case 1: {
+        const cpp20::span src = buffer.data().part(0).data();
+        bus_->Consume(src.data(), src.size(), guest.GetPointer());
+      } break;
+      default: {
+        std::vector<uint8_t> dst;
+        for (uint32_t i = 0; i < buffer.data().parts(); ++i) {
+          const cpp20::span src = buffer.data().part(i).data();
+          std::copy(src.begin(), src.end(), std::back_inserter(dst));
+        }
+        bus_->Consume(dst.data(), dst.size(), guest.GetPointer());
+      };
+    }
+  });
+  guest.client().OpenSession(name_, [port_id, &guest, cleanup](zx_status_t status) {
     if (status != ZX_OK) {
       cleanup(status);
       return;
     }
-    guest.client().AttachPort(
-        port_id, {fuchsia_hardware_network::wire::FrameType::kEthernet},
-        [this, &guest, cleanup](zx_status_t status) {
-          if (status != ZX_OK) {
-            cleanup(status);
-            return;
-          }
-          bus_->sinks().emplace_back(guest.GetPointer());
-          guest.client().SetErrorCallback(cleanup);
-          guest.client().SetRxCallback(
-              [this, &guest](network::client::NetworkDeviceClient::Buffer buffer) {
-                switch (buffer.data().parts()) {
-                  case 0:
-                    break;
-                  case 1: {
-                    const cpp20::span src = buffer.data().part(0).data();
-                    bus_->Consume(src.data(), src.size(), guest.GetPointer());
-                  } break;
-                  default: {
-                    std::vector<uint8_t> dst;
-                    for (uint32_t i = 0; i < buffer.data().parts(); ++i) {
-                      const cpp20::span src = buffer.data().part(i).data();
-                      std::copy(src.begin(), src.end(), std::back_inserter(dst));
-                    }
-                    bus_->Consume(dst.data(), dst.size(), guest.GetPointer());
-                  };
-                }
-              });
-        });
+    guest.client().AttachPort(port_id, {fuchsia_hardware_network::wire::FrameType::kEthernet},
+                              [cleanup](zx_status_t status) {
+                                if (status != ZX_OK) {
+                                  cleanup(status);
+                                }
+                              });
   });
 }
 
