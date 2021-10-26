@@ -1,0 +1,48 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+// This program converts a directory of YAML reports produced by `clang_doc` into
+// a report usable by test coverage.
+//
+// Please refer to the file README.md in this directory for more information
+// about the program and its use.
+
+package main
+
+import (
+	"flag"
+	"os"
+	"path"
+	"strings"
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+)
+
+var testDir = flag.String("test_data_dir", "", "The directory where test data reside")
+
+func TestTestDir(t *testing.T) {
+	if *testDir == "" {
+		t.Fatalf("the required flag --test_data_dir=... was not supplied")
+	}
+}
+
+func TestPlasaManifestRead(t *testing.T) {
+	expected := `foo1
+foo2
+`
+	manifest := path.Join(*testDir, "plasa.manifest.json")
+	m, err := os.Open(manifest)
+	if err != nil {
+		t.Fatalf("could not open: %v: %v", manifest, err)
+	}
+	var s strings.Builder
+	if err := filter(m, &s); err != nil {
+		t.Errorf("while running manifest check: %v", err)
+	}
+	if !cmp.Equal(s.String(), expected) {
+		t.Errorf("want: %v, got: %v, diff: %v",
+			expected, s.String(), cmp.Diff(expected, s.String()))
+	}
+}
