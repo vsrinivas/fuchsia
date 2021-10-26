@@ -34,10 +34,10 @@ use {
     fuchsia_inspect_derive::Inspect,
     fuchsia_zircon as zx,
     futures::{self, Stream, StreamExt},
-    log::{debug, error, info, trace, warn},
     parking_lot::Mutex,
     profile_client as profile,
     std::{collections::HashSet, convert::TryFrom, sync::Arc},
+    tracing::{debug, error, info, trace, warn},
 };
 
 mod avrcp_relay;
@@ -343,8 +343,8 @@ async fn connect_after_timeout(
     trace!("{}: trying to connect control channel..", peer_id);
     let connect_fut = peers.lock().try_connect(peer_id.clone(), channel_mode);
     let channel = match connect_fut.await {
-        Err(e) => return warn!("Failed to connect control channel to {}: {:?}", peer_id, e),
-        Ok(None) => return warn!("Control channel already connected for {}", peer_id),
+        Err(e) => return warn!(?peer_id, "Failed to connect control channel: {:?}", e),
+        Ok(None) => return warn!(?peer_id, "Control channel already connected"),
         Ok(Some(channel)) => channel,
     };
 

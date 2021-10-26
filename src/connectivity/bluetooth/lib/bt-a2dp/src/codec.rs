@@ -5,8 +5,8 @@
 use anyhow::format_err;
 use bt_avdtp::{self as avdtp, MediaCodecType, ServiceCapability, StreamEndpointId};
 use fidl_fuchsia_media as media;
-use log::trace;
 use std::convert::TryFrom;
+use tracing::trace;
 
 use crate::media_types::{
     AacChannels, AacCodecInfo, SbcAllocation, SbcBlockCount, SbcChannelMode, SbcCodecInfo,

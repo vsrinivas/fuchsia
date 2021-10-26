@@ -28,9 +28,9 @@ use {
         task::{Context, Poll},
         Future, StreamExt, TryFutureExt,
     },
-    log::{info, warn},
     std::collections::HashSet,
     std::{convert::TryInto, io, pin::Pin},
+    tracing::{info, warn},
 };
 
 use crate::latm::AudioMuxElement;

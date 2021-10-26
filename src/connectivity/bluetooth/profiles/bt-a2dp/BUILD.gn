@@ -56,13 +56,13 @@ rustc_binary("bin") {
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:nom",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [
@@ -72,9 +72,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:matches",
   ]
-
-  # TODO(fxbug.dev/81181): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   sources = [
     "src/avrcp_relay.rs",
@@ -177,7 +174,6 @@ rustc_test("encoding_integration_bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:futures-test",
     "//third_party/rust_crates:hex",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:nom",
     "//third_party/rust_crates:parking_lot",
@@ -185,10 +181,8 @@ rustc_test("encoding_integration_bin") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
   ]
-
-  # TODO(fxbug.dev/81181): Fix the leaks and remove this.
-  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   sources = [
     "src/avrcp_relay.rs",

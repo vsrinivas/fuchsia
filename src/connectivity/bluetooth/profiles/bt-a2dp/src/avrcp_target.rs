@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_sys::{LauncherMarker, LauncherProxy},
     fuchsia_component::{client, fuchsia_single_component_package_url},
     futures::{future::BoxFuture, FutureExt},
-    log::info,
+    tracing::info,
 };
 
 /// The v1 component URL for the AVRCP-Target component.

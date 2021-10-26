@@ -15,8 +15,8 @@ use futures::{
     task::{Context, Poll},
     FutureExt, Stream, StreamExt,
 };
-use log::info;
 use std::{collections::VecDeque, pin::Pin};
+use tracing::info;
 
 pub struct EncodedStream {
     /// The input media stream

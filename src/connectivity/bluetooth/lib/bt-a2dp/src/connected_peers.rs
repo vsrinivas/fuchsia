@@ -22,13 +22,13 @@ use {
         task::{Context, Poll},
         Future,
     },
-    log::{info, warn},
     std::{
         collections::{hash_map::Entry, HashMap, HashSet},
         convert::TryInto,
         pin::Pin,
         sync::Arc,
     },
+    tracing::{info, warn},
 };
 
 use crate::{codec::CodecNegotiation, peer::Peer, permits::Permits, stream::Streams};
@@ -104,7 +104,9 @@ impl DiscoveredPeers {
     }
 
     fn connected(&mut self, id: PeerId) {
-        self.stats.get_mut(&id).map(|stats| stats.record_connected());
+        if let Some(stats) = self.stats.get_mut(&id) {
+            stats.record_connected();
+        }
     }
 
     /// Returns the descriptor and preferred endpoint direction associated with the peer `id`.
@@ -231,7 +233,9 @@ impl ConnectedPeers {
         preferred_directions: HashSet<avdtp::EndpointType>,
     ) {
         self.discovered.insert(id, desc.clone(), preferred_directions);
-        self.get(&id).map(|p| p.set_descriptor(desc));
+        if let Some(peer) = self.get(&id) {
+            let _ = peer.set_descriptor(desc);
+        }
     }
 
     pub fn set_preferred_direction(&mut self, direction: avdtp::EndpointType) {
@@ -255,6 +259,7 @@ impl ConnectedPeers {
                 return Ok(None);
             }
 
+            info!(?id, "Connecting channel..");
             let channel = match proxy
                 .connect(
                     &mut id.into(),
@@ -270,17 +275,14 @@ impl ConnectedPeers {
                 .await
             {
                 Err(e) => {
-                    warn!("FIDL error on connect: {:?}", e);
+                    warn!(?id, "FIDL error on connect: {:?}", e);
                     return Err(e.into());
                 }
                 Ok(Err(e)) => {
-                    warn!("Couldn't connect to {}: {:?}", id, e);
                     return Err(format_err!("Bluetooth error: {:?}", e));
                 }
                 Ok(Ok(channel)) => channel,
             };
-
-            info!("{} got channel back when connecting..", id);
 
             let channel = channel
                 .try_into()
@@ -326,14 +328,14 @@ impl ConnectedPeers {
         self.discovered.connected(id);
 
         let peer_preferred_direction = if let Some((desc, dir)) = self.discovered.get(&id) {
-            peer.set_descriptor(desc);
+            let _ = peer.set_descriptor(desc);
             dir
         } else {
             None
         };
 
         if let Err(e) = peer.iattach(&self.inspect, inspect::unique_name("peer_")) {
-            warn!("Couldn't attach peer {} to inspect tree: {:?}", id, e);
+            warn!(?e, %id, "Couldn't attach to inspect tree");
         }
 
         let closed_fut = peer.closed();
@@ -363,11 +365,13 @@ impl ConnectedPeers {
                 fasync::Timer::new(fasync::Time::after(delay)).await;
 
                 if let Err(e) = ConnectedPeers::start_streaming(&peer, negotiation).await {
-                    info!("Peer {} start failed with error: {:?}", peer.key(), e);
+                    info!(?e, "Peer {} start failed with", peer.key());
                     peer.detach();
                 }
             });
-            self.start_stream_tasks.insert(peer_id, start_stream_task);
+            if self.start_stream_tasks.insert(peer_id, start_stream_task).is_some() {
+                info!(%peer_id, "Replacing a previous start stream dwell");
+            }
         }
 
         // Remove the peer when we disconnect.
@@ -510,7 +514,7 @@ mod tests {
         (exec, id, peers, stream)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connect_creates_peer() {
         let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
@@ -522,7 +526,7 @@ mod tests {
         exercise_avdtp(&mut exec, remote, &peer);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connect_notifies_streams() {
         let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
@@ -556,7 +560,7 @@ mod tests {
         exercise_avdtp(&mut exec, remote2, &peer2);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn find_preferred_direction_returns_correct_endpoints() {
         let empty = HashSet::new();
         assert_eq!(find_preferred_direction(&empty), None);
@@ -653,7 +657,6 @@ mod tests {
         exec.set_fake_time(fasync::Time::from_nanos(1_000_000));
         let (proxy, stream) =
             create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
-        let (cobalt_sender, _) = fake_cobalt_sender();
 
         let aac_sink_codec: avdtp::ServiceCapability = aac_sink_codec();
         let sbc_sink_codec: avdtp::ServiceCapability = sbc_sink_codec();
@@ -683,18 +686,12 @@ mod tests {
             sbc_source_codec.clone(),
         ));
 
-        let peers = ConnectedPeers::new(
-            streams,
-            negotiation.clone(),
-            Permits::new(1),
-            proxy,
-            Some(cobalt_sender),
-        );
+        let peers = ConnectedPeers::new(streams, negotiation.clone(), Permits::new(1), proxy, None);
 
         (exec, peers, stream, sbc_sink_codec, aac_sink_codec)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn streaming_start_with_streaming_peer_is_noop() {
         let (mut exec, mut peers, _stream, sbc_codec, _aac_codec) = setup_negotiation_test();
         let id = PeerId(1);
@@ -724,7 +721,7 @@ mod tests {
         // wait for the delay to expire now.
 
         exec.set_fake_time(fasync::Time::after(delay) + zx::Duration::from_micros(1));
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
 
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
 
@@ -780,7 +777,7 @@ mod tests {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn streaming_start_configure_while_discovery() {
         let (mut exec, mut peers, _stream, sbc_codec, _aac_codec) = setup_negotiation_test();
         let id = PeerId(1);
@@ -797,7 +794,7 @@ mod tests {
 
         // The delay expires, and the discovery is start!
         exec.set_fake_time(fasync::Time::after(delay) + zx::Duration::from_micros(1));
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
         expect_peer_discovery(
             &mut exec,
             &mut remote_requests,
@@ -830,7 +827,7 @@ mod tests {
 
     /// Tests connection initiation selects the appropriate stream endpoint based
     /// on a biased codec negotiation that is set from the peer's discovered services.
-    #[test]
+    #[fuchsia::test]
     fn connect_initiation_uses_biased_codec_negotiation_by_peer() {
         let (mut exec, mut peers, _stream, sbc_codec, _aac_codec) = setup_negotiation_test();
         let id = PeerId(1);
@@ -850,7 +847,7 @@ mod tests {
         let delay = zx::Duration::from_seconds(1);
         peers.found(id, desc, HashSet::from_iter(preferred_direction.into_iter()));
 
-        peers.connected(id, channel, Some(delay)).expect("connect control channel is ok");
+        let _ = peers.connected(id, channel, Some(delay)).expect("connect control channel is ok");
         // run the start task until it's stalled.
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
 
@@ -860,7 +857,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut remote_requests.next()).is_pending());
 
         exec.set_fake_time(fasync::Time::after(delay + zx::Duration::from_micros(1)));
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
 
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
         // Even though the peer supports both SBC Sink and Source, we expect to negotiate and start
@@ -911,7 +908,7 @@ mod tests {
     /// on a biased codec negotiation that is set from by the system (in practice, the AudioMode
     /// FIDL). This case typically occurs when a peer advertises both sink and source, and therefore
     /// has no preference for the endpoint direction.
-    #[test]
+    #[fuchsia::test]
     fn connect_initiation_uses_biased_codec_negotiation_by_system() {
         let (mut exec, mut peers, _stream, sbc_codec, _aac_codec) = setup_negotiation_test();
         let id = PeerId(1);
@@ -935,14 +932,14 @@ mod tests {
         peers.found(id, desc, HashSet::from_iter(vec![avdtp::EndpointType::Sink].into_iter()));
 
         let delay = zx::Duration::from_seconds(1);
-        peers.connected(id, channel, Some(delay)).expect("connect control channel is ok");
+        let _ = peers.connected(id, channel, Some(delay)).expect("connect control channel is ok");
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
 
         let mut remote_requests = remote.take_request_stream();
         // Should wait for the specified amount of time.
         assert!(exec.run_until_stalled(&mut remote_requests.next()).is_pending());
         exec.set_fake_time(fasync::Time::after(delay + zx::Duration::from_micros(1)));
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
 
         // Because the peer advertises both Sink and Source, we fall back to the system-biased
@@ -989,7 +986,7 @@ mod tests {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connect_initiation_uses_negotiation() {
         let (mut exec, mut peers, _stream, sbc_codec, aac_codec) = setup_negotiation_test();
         let id = PeerId(1);
@@ -998,7 +995,7 @@ mod tests {
 
         let delay = zx::Duration::from_seconds(1);
 
-        peers.connected(id, channel, Some(delay)).expect("connect control channel is ok");
+        let _ = peers.connected(id, channel, Some(delay)).expect("connect control channel is ok");
 
         // run the start task until it's stalled.
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
@@ -1009,7 +1006,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut remote_requests.next()).is_pending());
 
         exec.set_fake_time(fasync::Time::after(delay + zx::Duration::from_micros(1)));
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
 
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
 
@@ -1054,7 +1051,7 @@ mod tests {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connected_peers_inspect() {
         let (_exec, id, mut peers, _stream) = setup_connected_peer_test();
 
@@ -1083,7 +1080,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connected_peers_peer_disconnect_removes_peer() {
         let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
@@ -1100,7 +1097,7 @@ mod tests {
         assert!(peers.get(&id).is_none());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn connected_peers_reconnect_works() {
         let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 

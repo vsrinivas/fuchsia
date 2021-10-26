@@ -18,9 +18,9 @@ use {
     futures::select,
     futures::stream::{SelectAll, Stream},
     futures::StreamExt,
-    log::{info, trace, warn},
     std::cell::RefCell,
     std::sync::{Arc, Weak},
+    tracing::{info, trace, warn},
 };
 
 /// An interface for managing the state of streaming connections with remote peers.
@@ -515,8 +515,17 @@ mod tests {
         let permit_holder = Arc::new(Mutex::new(None));
 
         let revoke_from_holder_fn = {
-            let holder = permit_holder.clone();
-            move || holder.lock().take().expect("should be holding Permit")
+            // The permit we have holds a reference to this, so a strong ref to the holder
+            // here means dropping the holder doesn't drop the permit. Use a weak ref instead.
+            let holder = Arc::downgrade(&permit_holder);
+            move || {
+                holder
+                    .upgrade()
+                    .expect("holder must exist")
+                    .lock()
+                    .take()
+                    .expect("should be holding Permit")
+            }
         };
 
         let permit = permits.get_revokable(revoke_from_holder_fn.clone());

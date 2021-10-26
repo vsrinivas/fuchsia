@@ -15,8 +15,8 @@ use {
         future::{Fuse, FusedFuture},
         pin_mut, select, Future, FutureExt, StreamExt,
     },
-    log::{info, trace, warn},
     std::fmt::Debug,
+    tracing::{info, trace, warn},
 };
 
 pub(crate) struct VolumeRelay {

@@ -13,9 +13,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_bluetooth::{detachable_map::DetachableWeak, types::PeerId},
     futures::{TryFutureExt, TryStreamExt},
-    log::{error, info, warn},
     parking_lot::Mutex,
     std::{collections::HashMap, convert::TryInto, sync::Arc},
+    tracing::{error, info, warn},
 };
 
 use crate::peer::Peer;
@@ -336,7 +336,7 @@ impl ControllerPoolInner {
     /// the connection.
     fn peer_connected(&mut self, peer: DetachableWeak<PeerId, Peer>) {
         let peer_id = peer.key().clone();
-        self.peers.insert(peer_id, peer);
+        drop(self.peers.insert(peer_id, peer));
         if let Some(handle) = self.control_handle.as_ref() {
             if let Err(e) = handle.send_on_peer_connected(&mut peer_id.into()) {
                 info!("Peer connected callback failed: {:?}", e);
@@ -476,7 +476,7 @@ mod tests {
             test_builder.builder(),
         ));
         let peer = Peer::create(fake_peer_id, avdtp_peer, streams, None, profile_proxy, None);
-        peer_map.insert(fake_peer_id, peer);
+        let _ = peer_map.insert(fake_peer_id, peer);
         let weak_peer = peer_map.get(&fake_peer_id).expect("just inserted");
 
         controller_pool.peer_connected(weak_peer);

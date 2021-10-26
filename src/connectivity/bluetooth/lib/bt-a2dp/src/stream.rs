@@ -12,8 +12,8 @@ use {
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{future::BoxFuture, FutureExt, TryFutureExt},
-    log::warn,
     std::{collections::HashMap, convert::TryFrom, fmt, sync::Arc},
+    tracing::warn,
 };
 
 use crate::codec::MediaCodecConfig;
@@ -202,22 +202,27 @@ impl Stream {
         Ok(())
     }
 
+    fn stop_media_task(&mut self) {
+        if let Some(mut task) = self.media_task.take() {
+            // Ignoring stop errors, best effort.
+            let _ = task.stop();
+        }
+        self.media_task_runner = None;
+        self.peer_id = None;
+    }
+
     /// Releases the endpoint and stops the processing of audio.
     pub async fn release(
         &mut self,
         responder: avdtp::SimpleResponder,
         peer: &avdtp::Peer,
     ) -> avdtp::Result<()> {
-        self.media_task.take().map(|mut x| x.stop());
-        self.media_task_runner = None;
-        self.peer_id = None;
+        self.stop_media_task();
         self.endpoint.release(responder, peer).await
     }
 
     pub async fn abort(&mut self, peer: Option<&avdtp::Peer>) {
-        self.media_task.take().map(|mut x| x.stop());
-        self.media_task_runner = None;
-        self.peer_id = None;
+        self.stop_media_task();
         self.endpoint.abort(peer).await
     }
 }
@@ -242,10 +247,8 @@ impl Streams {
     /// Makes a copy of this set of streams, but with all streams copied with their states set to
     /// idle.
     pub fn as_new(&self) -> Self {
-        let mut streams = HashMap::new();
-        for (id, stream) in self.streams.iter() {
-            streams.insert(id.clone(), stream.as_new());
-        }
+        let streams =
+            self.streams.iter().map(|(id, stream)| (id.clone(), stream.as_new())).collect();
         Self { streams, ..Default::default() }
     }
 
@@ -257,7 +260,9 @@ impl Streams {
     /// Inserts a stream, indexing it by the local endpoint id.
     /// It replaces any other stream with the same endpoint id.
     pub fn insert(&mut self, stream: Stream) {
-        self.streams.insert(stream.endpoint().local_id().clone(), stream);
+        if let Some(s) = self.streams.insert(stream.endpoint().local_id().clone(), stream) {
+            warn!("Replacing stream with local id {}", s.endpoint().local_id());
+        }
     }
 
     /// Retrieves a reference to the Stream referenced by `id`, if the stream exists,
@@ -351,7 +356,7 @@ pub(crate) mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_streams() {
         let mut streams = Streams::new();
 
@@ -385,7 +390,7 @@ pub(crate) mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_rejects_unsupported_configurations() {
         // Needed to make fasync::Tasks.
         let _exec = fasync::TestExecutor::new().unwrap();
@@ -470,12 +475,12 @@ pub(crate) mod tests {
         assert!(stream.reconfigure(new_codec_caps.clone()).is_ok());
 
         // Should be able to start after reconfigure, and we used the right configuration.
-        stream.start().expect("stream should start ok");
+        let _ = stream.start().expect("stream should start ok");
         let task = builder.expect_task();
         assert_eq!(task.codec_config, MediaCodecConfig::try_from(&new_codec_caps[0]).unwrap());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_reconfigure_runner_fails() {
         // Needed to make fasync::Tasks.
         let _exec = fasync::TestExecutor::new().unwrap();
@@ -515,7 +520,7 @@ pub(crate) mod tests {
         };
 
         // Should be able to start after configure, and we used the right configuration.
-        stream.start().expect("stream should start ok");
+        let _ = stream.start().expect("stream should start ok");
         let task = builder.expect_task();
         assert_eq!(task.codec_config, MediaCodecConfig::try_from(&orig_codec_cap).unwrap());
         stream.suspend().expect("stream should suspend ok");
@@ -545,13 +550,13 @@ pub(crate) mod tests {
         );
 
         // Should be able to start after reconfigure, but it will use the old configuration.
-        stream.start().expect("stream should start ok");
+        let _ = stream.start().expect("stream should start ok");
         let task = builder.expect_task();
         assert_eq!(task.codec_config, MediaCodecConfig::try_from(&orig_codec_cap).unwrap());
         stream.suspend().expect("stream should suspend ok")
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_suspend_stops_media_task() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -572,7 +577,7 @@ pub(crate) mod tests {
 
         stream.endpoint_mut().establish().expect("establishment should start okay");
         let (_remote, transport) = Channel::create();
-        stream.endpoint_mut().receive_channel(transport).expect("should be ready for a channel");
+        let _ = stream.endpoint_mut().receive_channel(transport).expect("ready for a channel");
 
         assert!(stream.start().is_ok());
 
@@ -606,7 +611,7 @@ pub(crate) mod tests {
         assert!(task.is_started());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_media_task_ending_ends_future() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -628,7 +633,7 @@ pub(crate) mod tests {
 
         stream.endpoint_mut().establish().expect("establishment should start okay");
         let (_remote, transport) = Channel::create();
-        stream.endpoint_mut().receive_channel(transport).expect("should be ready for a channel");
+        let _ = stream.endpoint_mut().receive_channel(transport).expect("ready for a channel");
 
         let stream_finish_fut = stream.start().expect("start to succeed with a future");
         pin_mut!(stream_finish_fut);

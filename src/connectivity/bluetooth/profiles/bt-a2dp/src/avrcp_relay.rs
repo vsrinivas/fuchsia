@@ -12,8 +12,8 @@ use {
     fuchsia_bluetooth::types::PeerId,
     fuchsia_zircon as zx,
     futures::{select, StreamExt},
-    log::{info, trace},
     std::fmt::Debug,
+    tracing::{info, trace},
 };
 
 #[derive(Debug, Clone, ValidFidlTable, PartialEq)]

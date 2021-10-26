@@ -16,8 +16,8 @@ use {
         lock::Mutex,
         AsyncWriteExt, FutureExt, TryFutureExt, TryStreamExt,
     },
-    log::{info, trace, warn},
     std::sync::Arc,
+    tracing::{info, trace, warn},
 };
 
 use crate::encoding::EncodedStream;

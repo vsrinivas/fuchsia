@@ -19,9 +19,9 @@ use {
         lock::Mutex,
         select, FutureExt, StreamExt, TryFutureExt,
     },
-    log::{info, trace, warn},
     std::sync::Arc,
     thiserror::Error,
+    tracing::{info, trace, warn},
 };
 
 use crate::avrcp_relay::AvrcpRelay;

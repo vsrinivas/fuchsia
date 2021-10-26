@@ -6,44 +6,84 @@
 //! Permits are granted either immediately, or can be retrieved via a future which will resolve
 //! to a valid permit once one becomes available.
 
-use {
-    anyhow::{format_err, Error},
-    futures::{
-        channel::oneshot,
-        ready,
-        task::{Context, Poll},
-        Future, FutureExt,
-    },
-    parking_lot::Mutex,
-    slab::Slab,
-    std::collections::VecDeque,
-    std::pin::Pin,
-    std::sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+use anyhow::{format_err, Error};
+use futures::{
+    channel::oneshot,
+    future::FusedFuture,
+    ready,
+    task::{Context, Poll},
+    Future, FutureExt,
+};
+use parking_lot::Mutex;
+use slab::Slab;
+use std::collections::VecDeque;
+use std::pin::Pin;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Weak,
 };
 
 type BoxRevokeFn = Box<dyn FnOnce() -> Permit + Send>;
+
+struct RevokeFnHolder(Mutex<Option<BoxRevokeFn>>);
+
+impl RevokeFnHolder {
+    // Makes a new non-revokable holder.
+    fn new() -> Arc<Self> {
+        Arc::new(Self(Mutex::new(None)))
+    }
+
+    // Replaces the revokable function within, returning the previously stored fn, if there was one.
+    fn replace(&self, f: BoxRevokeFn) -> Option<BoxRevokeFn> {
+        self.0.lock().replace(f)
+    }
+
+    fn take(&self) -> Option<BoxRevokeFn> {
+        self.0.lock().take()
+    }
+
+    fn is_revokable(&self) -> bool {
+        self.0.lock().is_some()
+    }
+
+    fn extract(weak: &Weak<Self>) -> BoxRevokeFn {
+        weak.upgrade().expect("should be resolvable").take().expect("revokable fn missing")
+    }
+}
+
+impl std::fmt::Debug for RevokeFnHolder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RevokeFnHolder").field("present", &self.is_revokable()).finish()
+    }
+}
+
+struct WaitingReservation {
+    sender: futures::channel::oneshot::Sender<Permit>,
+}
 
 struct PermitsInner {
     // The maximum number of permits allowed.
     limit: usize,
     // The current permits out. Permits are indexed by their key.
-    out: Slab<Option<BoxRevokeFn>>,
+    // If the permit is revokable, then Weak::upgrade() will return Some
+    out: Slab<Weak<RevokeFnHolder>>,
     // A queue of oneshot senders who are waiting for permits.
-    waiting: VecDeque<futures::channel::oneshot::Sender<Permit>>,
+    waiting: VecDeque<WaitingReservation>,
     // An ordered queue of indexes into `out` which are revokable.
+    // If a permit index is listed here, the Weak at out.get(i) should be upgradable.
     revocations: VecDeque<usize>,
 }
 
 impl std::fmt::Debug for PermitsInner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let letter_outs: Vec<(usize, &str)> =
-            self.out.iter().map(|(k, r)| (k, if r.is_some() { "R" } else { "I" })).collect();
+        let letter_outs: Vec<(usize, &str)> = self
+            .out
+            .iter()
+            .map(|(k, r)| (k, if r.upgrade().unwrap().is_revokable() { "R" } else { "I" }))
+            .collect();
         f.debug_struct("PermitsInner")
             .field("limit", &self.limit)
-            .field("waiting", &self.waiting)
+            .field("waiting", &self.waiting.len())
             .field("out", &letter_outs)
             .finish()
     }
@@ -61,12 +101,12 @@ impl PermitsInner {
 
     // Try to reserve a key in the permits. If `revoke_fn` is Some then this permit is
     // revokable. Returns the key associated with the permit.
-    fn try_get(&mut self, revoke_fn: Option<BoxRevokeFn>) -> Result<usize, Error> {
+    fn try_get(&mut self, fn_holder: &Arc<RevokeFnHolder>) -> Result<usize, Error> {
         if self.out.len() == self.out.capacity() {
             return Err(format_err!("No permits left"));
         }
-        let idx = self.out.insert(revoke_fn);
-        if self.out[idx].is_some() {
+        let idx = self.out.insert(Arc::downgrade(fn_holder));
+        if fn_holder.is_revokable() {
             self.revocations.push_back(idx);
         }
         Ok(idx)
@@ -76,16 +116,21 @@ impl PermitsInner {
     // to hand off their permit to the next waiting reservation.
     // `inner` is a pointer to the shared mutex of this.
     // `key` is the key of the permit being released.
+    //
+    // Panics: if `key` is not currently out.
     fn release(&mut self, inner: Arc<Mutex<Self>>, key: usize) {
-        assert!(self.out.contains(key), "released a permit that is not out");
+        // Not being revoked, so drop the revocation.
+        self.revocations.retain(|k| *k != key);
+        // Holder should be resolvable at this point, drop the revoke fn if it's present.
+        let holder = self.out.get(key).expect("reservation present").upgrade().unwrap();
+        drop(holder.take());
         while let Some(sender) = self.waiting.pop_front() {
-            if let Ok(()) = Permit::handoff(sender, inner.clone(), key) {
+            if let Ok(()) = Permit::handoff(sender, inner.clone(), holder.clone(), key) {
                 return;
             }
         }
         // No permits were handed off, so this one gets turned in.
         drop(self.out.remove(key));
-        self.revocations.retain(|k| *k != key)
     }
 
     // Create a Reservation future that will complete with a Permit when one becomes available.
@@ -93,55 +138,64 @@ impl PermitsInner {
     // TODO(https://github.com/rust-lang/rust/issues/75861): When new_cyclic is stable, we can
     // eliminate the inner and store a ref to ourselves.
     fn reservation(inner: Arc<Mutex<Self>>, revoke_fn: Option<BoxRevokeFn>) -> Reservation {
-        let (sender, receiver) = oneshot::channel::<Permit>();
+        let (sender, receiver) = oneshot::channel();
         let mut lock = inner.lock();
         match Permit::try_issue_locked(&mut *lock, inner.clone(), None) {
-            Some(permit) => sender.send(permit).expect("just created sender should accept"),
-            None => lock.waiting.push_back(sender),
+            // Unwrap is ok - a just created sender can always send.
+            Some(permit) => sender.send(permit).ok().unwrap(),
+            None => lock.waiting.push_back(WaitingReservation { sender }),
         }
-        Reservation { receiver, inner: inner.clone(), revoke_fn }
+        Reservation { receiver, revoke_fn, inner: Arc::downgrade(&inner) }
     }
 
     /// Make a previously unrevokable permit revokable by supplying a function to revoke it.
     fn make_revokable(&mut self, key: usize, revoke_fn: BoxRevokeFn) {
-        let prev = self.out.get_mut(key).expect("reservation should be out").replace(revoke_fn);
+        let prev = self
+            .out
+            .get(key)
+            .expect("reservation should be out")
+            .upgrade()
+            .expect("holder should resolve")
+            .replace(revoke_fn);
         assert!(prev.is_none(), "shouldn't be replacing a previous revocation function");
         self.revocations.push_back(key);
     }
 
     /// Get the next revokable permit function.
     fn pop_revoke(&mut self) -> Option<BoxRevokeFn> {
-        self.revocations
-            .pop_front()
-            .map(|idx| self.out[idx].take().expect("revokable permits must have a fn"))
+        self.revocations.pop_front().map(|idx| RevokeFnHolder::extract(&self.out[idx]))
     }
 
     /// Empty the queue of revokable permit functions, returning them all for revocation.
     fn revoke_all(&mut self) -> Vec<BoxRevokeFn> {
         let mut indices = std::mem::take(&mut self.revocations);
-        indices
-            .drain(..)
-            .map(|idx| self.out[idx].take().expect("revokable permits must have a fn"))
-            .collect()
+        indices.drain(..).map(|idx| RevokeFnHolder::extract(&self.out[idx])).collect()
     }
 }
 
 /// A Reservation is a future that will eventually receive a permit once one becomes available.
 pub struct Reservation {
+    // Receiver for the Permit when it is granted.
     receiver: oneshot::Receiver<Permit>,
-    inner: Arc<Mutex<PermitsInner>>,
     revoke_fn: Option<BoxRevokeFn>,
+    inner: Weak<Mutex<PermitsInner>>,
 }
 
 impl Future for Reservation {
     type Output = Permit;
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let res = ready!(self.receiver.poll_unpin(cx));
-        let permit = res.expect("sender shouldn't ever be dropped");
-        if let Some(f) = self.revoke_fn.take() {
-            self.inner.lock().make_revokable(permit.key, f);
+        let permit = res.expect("sender shouldn't be dropped, polled after termination?");
+        if let (Some(f), Some(inner)) = (self.revoke_fn.take(), self.inner.upgrade()) {
+            inner.lock().make_revokable(permit.key, f);
         }
         Poll::Ready(permit)
+    }
+}
+
+impl FusedFuture for Reservation {
+    fn is_terminated(&self) -> bool {
+        self.receiver.is_terminated()
     }
 }
 
@@ -168,10 +222,8 @@ impl Permits {
     }
 
     /// Attempts to get a permit that is revokable.  Revokable permits can be revoked at any time
-    /// after this function returns and must return a Permit when asked. `revoked_fn` will be
+    /// after this function returns and must return the Permit when asked. `revoked_fn` will be
     /// called to retrieve the permit when it is revoked.
-    /// A reservation is provided to the function which can be waited on to retrieve a permit
-    /// as soon as it is available.
     pub fn get_revokable(
         &self,
         revoked_fn: impl FnOnce() -> Permit + 'static + Send,
@@ -233,6 +285,7 @@ impl Permits {
 pub struct Permit {
     inner: Option<Arc<Mutex<PermitsInner>>>,
     committed: Arc<AtomicBool>,
+    _fn_holder: Arc<RevokeFnHolder>,
     key: usize,
 }
 
@@ -251,25 +304,31 @@ impl Permit {
         ptr: Arc<Mutex<PermitsInner>>,
         revoke_fn: Option<BoxRevokeFn>,
     ) -> Option<Self> {
-        inner.try_get(revoke_fn).ok().map(|key| Self {
+        let fn_holder = RevokeFnHolder::new();
+        if let Some(f) = revoke_fn {
+            let _ = fn_holder.replace(f);
+        }
+        inner.try_get(&fn_holder).ok().map(|key| Self {
             inner: Some(ptr),
+            _fn_holder: fn_holder,
             committed: Arc::new(AtomicBool::new(true)),
             key,
         })
     }
 
-    // Tries to hand off a permit through a sender. This creates a new Permit and makes sure it
+    // Tries to hand off a permit to a reservation. This creates a new Permit and makes sure it
     // is in the channel before it returns. The permit is then "real", and guarantees it will
     // release itself when dropped.
     fn handoff(
-        sender: oneshot::Sender<Permit>,
+        waiting: WaitingReservation,
         inner: Arc<Mutex<PermitsInner>>,
+        fn_holder: Arc<RevokeFnHolder>,
         key: usize,
     ) -> Result<(), Error> {
         let committed = Arc::new(AtomicBool::new(false));
         let commit_clone = committed.clone();
-        let potential = Self { inner: Some(inner), committed, key };
-        match sender.send(potential) {
+        let potential = Self { inner: Some(inner), committed, key, _fn_holder: fn_holder };
+        match waiting.sender.send(potential) {
             Ok(()) => {
                 commit_clone.store(true, Ordering::Relaxed);
                 Ok(())
@@ -297,6 +356,7 @@ impl Drop for Permit {
 mod tests {
     use super::*;
 
+    use async_utils::PollExt;
     use fuchsia_async as fasync;
 
     #[track_caller]
@@ -304,6 +364,20 @@ mod tests {
         if let Some(_) = opt {
             panic!("{}", msg);
         }
+    }
+
+    #[track_caller]
+    fn expect_no_permits(exec: &mut fasync::TestExecutor, reservation: &mut Reservation) {
+        exec.run_until_stalled(reservation)
+            .expect_pending("expected reservation to have no permits");
+    }
+
+    #[track_caller]
+    fn expect_permit_available(
+        exec: &mut fasync::TestExecutor,
+        reservation: &mut Reservation,
+    ) -> Permit {
+        exec.run_until_stalled(reservation).expect("reservation to have available permit")
     }
 
     #[test]
@@ -315,23 +389,6 @@ mod tests {
 
         // Can still get a reservation, that will never complete.
         let _reservation = permits.reserve();
-    }
-
-    fn expect_reservation_status(
-        exec: &mut fasync::TestExecutor,
-        reservation: &mut Reservation,
-        done: bool,
-    ) -> Option<Permit> {
-        match exec.run_until_stalled(reservation) {
-            Poll::Pending => {
-                assert!(!done, "expected reservation to be done");
-                None
-            }
-            Poll::Ready(permit) => {
-                assert!(done, "expected reservation to be pending");
-                Some(permit)
-            }
-        }
     }
 
     #[test]
@@ -376,22 +433,20 @@ mod tests {
         // We should be able to drop any of these reservations before they become a Permit
         drop(second);
 
-        expect_reservation_status(&mut exec, &mut first, false);
-        expect_reservation_status(&mut exec, &mut third, false);
-        expect_reservation_status(&mut exec, &mut fourth, false);
+        expect_no_permits(&mut exec, &mut first);
+        expect_no_permits(&mut exec, &mut third);
+        expect_no_permits(&mut exec, &mut fourth);
 
         drop(one);
 
-        let first_out =
-            expect_reservation_status(&mut exec, &mut first, true).expect("first resolved");
-        expect_reservation_status(&mut exec, &mut third, false);
-        expect_reservation_status(&mut exec, &mut fourth, false);
+        let first_out = expect_permit_available(&mut exec, &mut first);
+        expect_no_permits(&mut exec, &mut third);
+        expect_no_permits(&mut exec, &mut fourth);
 
         drop(first_out);
 
-        let third_out =
-            expect_reservation_status(&mut exec, &mut third, true).expect("third resolved");
-        expect_reservation_status(&mut exec, &mut fourth, false);
+        let third_out = expect_permit_available(&mut exec, &mut third);
+        expect_no_permits(&mut exec, &mut fourth);
 
         drop(fourth);
 
@@ -414,15 +469,13 @@ mod tests {
         // will work fine (we just won't be able to make any more)
         drop(permits);
 
-        let _fifth_out =
-            expect_reservation_status(&mut exec, &mut fifth, true).expect("fifth retrieved");
+        let _fifth_out = expect_permit_available(&mut exec, &mut fifth);
 
         drop(third_out);
 
         drop(sixth);
 
-        let _seventh_out =
-            expect_reservation_status(&mut exec, &mut seventh, true).expect("seventh retrieved");
+        let _seventh_out = expect_permit_available(&mut exec, &mut seventh);
     }
 
     #[test]
@@ -439,7 +492,7 @@ mod tests {
 
         let revokable_permit =
             permits.get_revokable(revoke_from_holder_fn.clone()).expect("permit available");
-        permit_holder.lock().replace(revokable_permit);
+        *permit_holder.lock() = Some(revokable_permit);
 
         let seized_permits = permits.seize();
 
@@ -455,7 +508,7 @@ mod tests {
         let _nonrevokable_permit = permits.take().expect("permit available");
         let revokable_permit =
             permits.get_revokable(revoke_from_holder_fn.clone()).expect("two permits");
-        permit_holder.lock().replace(revokable_permit);
+        *permit_holder.lock() = Some(revokable_permit);
 
         // Seizing all the (remaining) permits doesn't get the non-revokable one.
         let seized_permits = permits.seize();
@@ -466,7 +519,7 @@ mod tests {
         drop(seized_permits);
 
         let revokable_permit = permits.get_revokable(revoke_from_holder_fn).expect("permit");
-        permit_holder.lock().replace(revokable_permit);
+        *permit_holder.lock() = Some(revokable_permit);
 
         // Can take the permit from the revokable one.
         let _taken = permits.take().expect("can take the permit");
@@ -518,7 +571,7 @@ mod tests {
         permit
     }
 
-    #[test]
+    #[fuchsia::test]
     fn revokable_reservations() {
         let mut exec = fasync::TestExecutor::new().expect("executor should start");
         const TOTAL_PERMITS: usize = 2;
@@ -543,9 +596,8 @@ mod tests {
             move || revoke_then_reserve_again(permits, holder, reservations)
         };
 
-        let mut revokable_reservation = permits.reserve_revokable(revoke_then_reserve_fn.clone());
-        let revokable_permit =
-            expect_reservation_status(&mut exec, &mut revokable_reservation, true).expect("ready");
+        let mut revokable_reservation = permits.reserve_revokable(revoke_then_reserve_fn);
+        let revokable_permit = expect_permit_available(&mut exec, &mut revokable_reservation);
         permits_holder.lock().push(revokable_permit);
 
         let seized_permits = permits.seize();
@@ -556,18 +608,14 @@ mod tests {
         // But! also a reservation.
         let mut another_reservation = reservations_holder.lock().pop().expect("reservation");
         // This one won't get us another reservation, but is still revokable.
-        let mut revokable_reservation_two =
-            permits.reserve_revokable(revoke_from_holder_fn.clone());
+        let mut revokable_reservation_two = permits.reserve_revokable(revoke_from_holder_fn);
 
         // Dropping both seized permits will deliver both reservations.
         drop(seized_permits);
 
-        let revokable_permit =
-            expect_reservation_status(&mut exec, &mut another_reservation, true).expect("ready");
+        let revokable_permit = expect_permit_available(&mut exec, &mut another_reservation);
         permits_holder.lock().push(revokable_permit);
-        let revokable_permit =
-            expect_reservation_status(&mut exec, &mut revokable_reservation_two, true)
-                .expect("ready");
+        let revokable_permit = expect_permit_available(&mut exec, &mut revokable_reservation_two);
         permits_holder.lock().push(revokable_permit);
 
         // We can seize both of these again! Hah!
@@ -577,7 +625,7 @@ mod tests {
         assert_eq!(0, permits_holder.lock().len());
         // But we have yet another reservation (from the recycling one)
         let mut yet_another = reservations_holder.lock().pop().expect("reservation");
-        expect_reservation_status(&mut exec, &mut yet_another, false);
+        expect_no_permits(&mut exec, &mut yet_another);
 
         // If we drop both seized permits..
         drop(seized_permits);
@@ -588,8 +636,7 @@ mod tests {
         // But not a second one, since the reservation has it.
         expect_none(permits.get(), "none should be available");
 
-        let revokable_permit =
-            expect_reservation_status(&mut exec, &mut yet_another, true).expect("ready");
+        let revokable_permit = expect_permit_available(&mut exec, &mut yet_another);
         permits_holder.lock().push(revokable_permit);
 
         // Seizing now will only seize the revokable one.
@@ -599,16 +646,27 @@ mod tests {
 
         // We still get another reservation (from the recycling one)
         let mut yet_another = reservations_holder.lock().pop().expect("reservation");
-        expect_reservation_status(&mut exec, &mut yet_another, false);
+        expect_no_permits(&mut exec, &mut yet_another);
 
         // Dropping the unrevokable one will fulfill the revokable reservation.
         drop(one);
 
-        let revokable_permit =
-            expect_reservation_status(&mut exec, &mut yet_another, true).expect("ready");
+        let revokable_permit = expect_permit_available(&mut exec, &mut yet_another);
         permits_holder.lock().push(revokable_permit);
 
         // And we can take that one away too.
-        let _taken_permit = permits.take().expect("should be able to take one");
+        let taken_permit = permits.take().expect("should be able to take one");
+
+        // Drop so that ASAN is happy.
+        drop(taken_permit);
+        // Need to empty the permits holder before dropping it, otherwise the permits
+        // inside will hold a reference loop (the permits hold the revocation function which hold
+        // a ref to the holder)
+        permits_holder.lock().clear();
+        drop(permits_holder);
+        // Same for the reservations.
+        reservations_holder.lock().clear();
+        drop(reservations_holder);
+        drop(permits);
     }
 }

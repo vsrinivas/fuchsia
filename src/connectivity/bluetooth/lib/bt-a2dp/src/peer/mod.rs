@@ -30,7 +30,6 @@ use {
         task::{Context, Poll, Waker},
         Future, FutureExt, StreamExt,
     },
-    log::{error, info, trace, warn},
     parking_lot::Mutex,
     std::{
         collections::{HashMap, HashSet},
@@ -38,6 +37,7 @@ use {
         pin::Pin,
         sync::{Arc, Weak},
     },
+    tracing::{error, info, trace, warn},
 };
 
 /// For sending out-of-band commands over the A2DP peer.
@@ -139,7 +139,9 @@ impl StreamPermits {
                 let open_streams = self.open_streams.clone();
                 async {
                     let permit = reservation.await;
-                    open_streams.lock().insert(local_id.clone(), permit);
+                    if open_streams.lock().insert(local_id.clone(), permit).is_some() {
+                        warn!("Reservation replaces acquired permit for {}", local_id.clone());
+                    }
                     StreamPermit { local_id, open_streams }
                 }
             };
@@ -210,7 +212,7 @@ impl Peer {
         if lock.receive_channel(channel)? {
             let weak = Arc::downgrade(&self.inner);
             let mut task_lock = self.start_stream_task.lock();
-            task_lock.replace(fasync::Task::local(async move {
+            *task_lock = Some(fasync::Task::local(async move {
                 trace!("Dwelling to start remotely-opened stream..");
                 fasync::Timer::new(Self::STREAM_DWELL.after_now()).await;
                 PeerInner::start_opened(weak).await
@@ -343,20 +345,20 @@ impl Peer {
                 .await
                 .context("FIDL error: {}")?
                 .or(Err(avdtp::Error::PeerDisconnected))?;
-            trace!("{} Connected transport channel, converting to local Channel..", peer_id);
+            trace!(%peer_id, "Connected transport channel, converting to local Channel");
             let channel = match channel.try_into() {
-                Err(_e) => {
-                    warn!("Couldn't connect media transport {}: no channel", peer_id);
+                Err(e) => {
+                    warn!(%peer_id, ?e, "Couldn't connect media transport: no channel");
                     return Err(avdtp::Error::PeerDisconnected);
                 }
                 Ok(c) => c,
             };
 
-            trace!("{} Connected transport channel, passing to Peer..", peer_id);
+            trace!(%peer_id, "Connected transport channel, passing to Peer..");
 
             {
                 let strong = PeerInner::upgrade(peer.clone())?;
-                strong.lock().receive_channel(channel)?;
+                let _ = strong.lock().receive_channel(channel)?;
             }
             // Start streams immediately if the channel is locally initiated.
             PeerInner::start_opened(peer).await
@@ -439,11 +441,11 @@ impl Peer {
                 }
             }
             info!("{}: Peer disconnected", id);
-            disconnect_wakers.upgrade().map(|wakers| {
+            if let Some(wakers) = disconnect_wakers.upgrade() {
                 for waker in wakers.lock().take().unwrap_or_else(Vec::new) {
                     waker.wake();
                 }
-            });
+            }
         })
         .detach();
     }
@@ -717,7 +719,10 @@ impl PeerInner {
         info!("Starting stream: {:?}", stream);
         let stream_finished = stream.start().map_err(|c| avdtp::Error::RequestInvalid(c))?;
         // TODO(fxbug.dev/68238): if streaming stops unexpectedly, send a suspend to match to peer
-        self.started.insert(local_id.clone(), WatchedStream::new(permit, stream_finished));
+        let watched_stream = WatchedStream::new(permit, stream_finished);
+        if self.started.insert(local_id.clone(), watched_stream).is_some() {
+            warn!(%local_id, "Started stream that was already started");
+        }
         Ok(())
     }
 
@@ -1044,7 +1049,7 @@ mod tests {
         assert!(remote.as_ref().write(&get_capabilities_rsp).is_ok());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_disconnected() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (proxy, _stream) =
@@ -1068,7 +1073,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut closed_fut).is_ready());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_peer_collect_capabilities_success() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -1079,7 +1084,7 @@ mod tests {
             major_version: 1,
             minor_version: 2,
         };
-        peer.set_descriptor(p);
+        let _ = peer.set_descriptor(p);
 
         let collect_future = peer.collect_capabilities();
         pin_mut!(collect_future);
@@ -1176,7 +1181,7 @@ mod tests {
         assert!(cobalt_receiver.try_next().is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_peer_collect_all_capabilities_success() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -1186,7 +1191,7 @@ mod tests {
             major_version: 1,
             minor_version: 3,
         };
-        peer.set_descriptor(p);
+        let _ = peer.set_descriptor(p);
 
         let collect_future = peer.collect_capabilities();
         pin_mut!(collect_future);
@@ -1283,7 +1288,7 @@ mod tests {
         assert!(cobalt_receiver.try_next().is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_peer_collect_capabilities_discovery_fails() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -1320,7 +1325,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_peer_collect_capabilities_get_capability_fails() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -1412,7 +1417,7 @@ mod tests {
         assert!(remote.as_ref().write(response).is_ok());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_peer_stream_start_success() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -1475,11 +1480,11 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_peer_stream_start_picks_correct_direction() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
-        let (remote, _profile_request_stream, _, peer) = setup_peer_test();
+        let (remote, _profile_request_stream, _cobalt_recv, peer) = setup_peer_test();
         let remote = avdtp::Peer::new(remote);
         let mut remote_events = remote.take_request_stream();
 
@@ -1564,7 +1569,7 @@ mod tests {
         remote_handle_request(request.expect("should have an open request").unwrap());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_peer_stream_start_fails_wrong_direction() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -1649,7 +1654,7 @@ mod tests {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_peer_stream_start_fails_to_connect() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -1700,7 +1705,7 @@ mod tests {
     }
 
     /// Test that the delay reports get acknowledged
-    #[test]
+    #[fuchsia::test]
     fn test_peer_delay_report() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -1734,7 +1739,7 @@ mod tests {
     }
 
     /// Test that the remote end can configure and start a stream.
-    #[test]
+    #[fuchsia::test]
     fn test_peer_as_acceptor() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -1842,7 +1847,7 @@ mod tests {
         assert!(!media_task.is_started());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_peer_set_config_reject_first() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -1893,7 +1898,7 @@ mod tests {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_peer_starts_waiting_streams() {
         let mut exec = fasync::TestExecutor::new_with_fake_time().expect("an executor");
 
@@ -1947,7 +1952,7 @@ mod tests {
 
         // After the timeout has passed..
         exec.set_fake_time(zx::Duration::from_seconds(3).after_now());
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
 
         let stream_ids = match exec.run_until_stalled(&mut next_remote_request_fut) {
             Poll::Ready(Some(Ok(avdtp::Request::Start { responder, stream_ids }))) => {
@@ -1978,7 +1983,7 @@ mod tests {
         assert!(!media_task.is_started());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_needs_permit_to_start_stream() {
         let mut exec = fasync::TestExecutor::new().expect("an executor");
 
@@ -2124,7 +2129,7 @@ mod tests {
         media_task
     }
 
-    #[test]
+    #[fuchsia::test]
     fn permits_can_be_revoked_and_reinstated_all() {
         let mut exec = fasync::TestExecutor::new().expect("an executor");
 
@@ -2223,7 +2228,7 @@ mod tests {
         assert!(two_media_task.is_started());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn permits_can_be_revoked_one_at_a_time() {
         let mut exec = fasync::TestExecutor::new().expect("an executor");
 
@@ -2316,7 +2321,7 @@ mod tests {
 
     /// Test that the version check method correctly differentiates between newer
     /// and older A2DP versions.
-    #[test]
+    #[fuchsia::test]
     fn test_a2dp_version_check() {
         let p1: ProfileDescriptor = ProfileDescriptor {
             profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
