@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 {
     include: [
+        "//sdk/lib/driver_test_realm/meta/client.shard.cml",
+        "//sdk/lib/driver_test_realm/platform/meta/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
@@ -16,11 +18,6 @@
                 "fuchsia.process.Launcher",
                 "fuchsia.tracing.provider.Registry",
             ],
-        },
-        {
-            directory: "dev",
-            rights: [ "r*" ],
-            path: "/dev",
         },
     ],
 }
