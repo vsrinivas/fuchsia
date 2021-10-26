@@ -777,8 +777,9 @@ def main():
     os.makedirs(trace_output_dir, exist_ok=True)
 
     # fsatrace output buffer size is chosen empirically to be large enough for
-    # all CI/CQ builds.
-    os.environ["FSAT_BUF_SIZE"] = "7500000"
+    # all CI/CQ builds. The current buffer size is the largest, any size
+    # increase will cause fsatrace to exit with an opaque error.
+    os.environ["FSAT_BUF_SIZE"] = "8300000"
     retval = subprocess.call(
         [
             args.fsatrace_path,
