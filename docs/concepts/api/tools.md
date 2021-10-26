@@ -18,9 +18,6 @@ The Integrator Development Kit (IDK) will contain:
 
   * The tool binary itself.
 
-  * The [device-finder](/docs/development/idk/documentation/device_discovery.md)
-    tool, which can enumerate Fuchsia devices to get their names.
-
   * A document in
     [//docs/development/idk/documentation](/docs/development/idk/documentation)
     describing the contract of this tool and how to connect it to the target
@@ -29,16 +26,16 @@ The Integrator Development Kit (IDK) will contain:
 
 ## Environment-specific SDKs
 
-The `device-finder` abstracts device listing and selection across all SDK
-variants. With the right tool design, the extent of integration required should
-be to run `device-finder` to get the address and pass the address to the tool with
-other environment-specific flags. In the case of the debugger the tool-specific
-code would:
+The `ffx target list` command abstracts device listing and selection across all
+SDK variants. With the right tool design, the extent of integration required
+should be to run `ffx target list` to get the address and pass the address to
+the tool with other environment-specific flags. In the case of the debugger the
+tool-specific code would:
 
   * Connect to a shell (this should be a primitive provided by the
     environment-specific SDK) on the target and run the `debug_agent`.
 
-  * Run zxdb with the address provided by `device-finder`, passing any local
+  * Run zxdb with the address provided by `ffx target list`, passing any local
     settings files and symbol paths on the command-line.
 
 ## Tool requirements
@@ -49,13 +46,14 @@ locations. This allows different SDKs to be hermetic.
 
 Tools should be written to make writing environment-specific scripts as simple
 as possible. For example, the debugger should automatically retry connections
-(fxbug.dev/5931) so the current behavior of waiting for the port to be open in the
-launch scripts can be removed.
+(fxbug.dev/5931) so the current behavior of waiting for the port to be open in
+the launch scripts can be removed.
 
 Tool authors are responsible for:
 
-  * Writing the tool with the appropriate interface.
-  * Providing documentation on this interface in //docs/development/idk/documentation.
-  * Currently please reach out to get bugs filed on individual SDKs. We are
+*   Writing the tool with the appropriate interface.
+*   Providing documentation on this interface in
+    //docs/development/idk/documentation.
+*   Currently please reach out to get bugs filed on individual SDKs. We are
     working on a better process for this (fxbug.dev/5908).
 
