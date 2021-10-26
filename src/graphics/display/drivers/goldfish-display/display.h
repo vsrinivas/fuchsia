@@ -122,6 +122,21 @@ class Display : public DisplayType,
     zx::time expected_next_flush = zx::time::infinite_past();
   };
 
+  struct DisplayConfig {
+    // For displays with image framebuffer attached to the display, the
+    // framebuffer is represented as a |ColorBuffer| in goldfish graphics
+    // device implementation.
+    // A configuration with a non-null |color_buffer| field means that it will
+    // present this |ColorBuffer| image at Vsync; the |ColorBuffer| instance
+    // will be created when importing the image and destroyed when releasing
+    // the image or removing the display device. Otherwise, it means the display
+    // has no framebuffers to display.
+    ColorBuffer* color_buffer = nullptr;
+
+    // The |config_stamp| value of the ApplyConfiguration() call to which this
+    // DisplayConfig corresponds.
+    config_stamp_t config_stamp = {.value = INVALID_CONFIG_STAMP};
+  };
   // TODO(fxbug.dev/81211): Remove these pipe IO functions and use
   // //src/devices/lib/goldfish/pipe_io instead.
   zx_status_t WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
@@ -146,7 +161,7 @@ class Display : public DisplayType,
                                    uint32_t h, uint32_t* result) TA_REQ(lock_);
   zx_status_t ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
 
-  zx_status_t PresentColorBuffer(uint32_t display_id, ColorBuffer* color_buffer);
+  zx_status_t PresentColorBuffer(uint32_t display_id, const DisplayConfig& display_config);
   zx_status_t SetupDisplayLocked(uint64_t id) TA_REQ(lock_);
   void TeardownDisplay(uint64_t id);
   void FlushDisplay(async_dispatcher_t* dispatcher, uint64_t id);
@@ -162,8 +177,10 @@ class Display : public DisplayType,
   std::map<uint64_t, Device> devices_;
   fbl::Mutex flush_lock_;
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(flush_lock_);
-  std::map<uint64_t, ColorBuffer*> current_cb_;
-  std::map<uint64_t, ColorBuffer*> pending_cb_;
+
+  std::map<uint64_t, DisplayConfig> current_config_;
+  std::map<uint64_t, DisplayConfig> pending_config_;
+  config_stamp_t latest_config_stamp_ = {.value = INVALID_CONFIG_STAMP};
 
   zx::event pipe_event_;
 
