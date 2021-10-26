@@ -26,6 +26,7 @@
                 "fuchsia.process.Launcher",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
+                "fuchsia.sys2.ComponentResolver",
                 "fuchsia.sys2.EventSource",
             ],
             from: "parent",
@@ -38,4 +39,7 @@
             rights: [ "rw*" ],
         },
     ],
+    facets: {
+        "fuchsia.test": { type: "system" },
+    },
 }

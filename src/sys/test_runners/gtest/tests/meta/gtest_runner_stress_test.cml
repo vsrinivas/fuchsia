@@ -3,4 +3,7 @@
     program: {
         binary: "bin/gtest_runner_stress_test",
     },
+    facets: {
+        "fuchsia.test": { type: "system" },
+    },
 }

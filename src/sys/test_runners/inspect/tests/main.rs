@@ -96,6 +96,11 @@ async fn run_test(
             targets: vec![RouteEndpoint::component("test_manager")],
         })?
         .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.sys2.ComponentResolver"),
+            source: RouteEndpoint::above_root(),
+            targets: vec![RouteEndpoint::component("test_manager")],
+        })?
+        .add_route(CapabilityRoute {
             capability: Capability::protocol(ftest_manager::RunBuilderMarker::DEBUG_NAME),
             source: RouteEndpoint::component("test_manager"),
             targets: vec![RouteEndpoint::above_root()],

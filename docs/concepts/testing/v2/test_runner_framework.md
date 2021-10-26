@@ -386,12 +386,10 @@ fuchsia_unittest_package("foo-tests") {
 ## Hermeticity
 
 A test is *hermetic* if it [uses][manifests-use] or [offers][manifests-offer] no
-capabilities from the [test root's](#tests-as-components) parent. As a rule of
-thumb, tests should be hermetic, but sometimes a test requires a capability that
-cannot be injected in the test realm.
+capabilities from the [test root's](#tests-as-components) parent. The tests are
+by default hermetic unless explicitly stated otherwise.
 
-In the context of hermetic tests, a capability that originates from outside of
-the test's realm is called a *system capability*.
+### Hermetic capabilities for tests
 
 There are some capabilities which all tests can use which do not violate test
 hermeticity:
@@ -402,6 +400,10 @@ hermeticity:
 | `fuchsia.logger.LogSink` | Write to syslog |
 | `fuchsia.process.Launcher` | Launch a child process from the test package |
 | `fuchsia.sys2.EventSource` | Access to event protocol |
+
+The hermeticity is retained because these capabilities are carefully curated
+to not allow tests to affect the behavior of system components outside the test
+realm or of other tests.
 
 To use these capabilities, there should be a use declaration added to test's
 manifest file:
@@ -444,8 +446,89 @@ Add a use declaration in test's manifest file to use these capabilities.
 }
 ```
 
-The framework also provides some [capabilities][framework-capabilities] to all the
-components and can be used by test components if required.
+The framework also provides some [capabilities][framework-capabilities] to all
+the components and can be used by test components if required.
+
+### Legacy non-hermetic tests
+
+These tests that were introduced before hermetic testing was enforced. They
+could access some pre-defined capabilities outside of the test realm. A
+capability accessed by non-hermetic test from outside its test realm is called
+a *system capability*.
+
+To use a system capability, a test must explicitly mark itself to run in
+non-hermetic "system" realm as shown below.
+
+```json5
+// my_component_test.cml
+
+{
+    include: [
+        // Select the appropriate test runner shard here:
+        // rust, gtest, go, etc.
+        "//src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/my_component_test",
+    },
+    {{ '<strong>' }}facets: {
+        "fuchsia.test": {
+            type: "system"
+        },
+    },
+    use: [
+        {
+            protocol: [ "fuchsia.sysmem.Allocator" ],
+        },
+    ],{{ '</strong>' }}
+}
+```
+
+Possible values of `fuchsia.test.type`:
+
+| Value | Description |
+| ----- | ----------- |
+| `hermetic` | Hermetic realm |
+| `system` | Legacy non hermetic realm |
+
+Below is the list of system capabilities provided to legacy non-hermetic tests:
+
+{# Update the list when it is updated at
+//src/sys/test_manager/meta/common.shard.cml#}
+Protocols:
+
+```text
+fuchsia.boot.ReadOnlyLog
+fuchsia.hwinfo.Board
+fuchsia.hwinfo.Device
+fuchsia.hwinfo.Product
+fuchsia.kernel.RootJobForInspect
+fuchsia.kernel.Stats
+fuchsia.kernel.VmexResource
+fuchsia.net.http.Loader
+fuchsia.scheduler.ProfileProvider
+fuchsia.sys2.ComponentResolver
+fuchsia.sysmem.Allocator
+fuchsia.tracing.provider.Registry
+fuchsia.vulkan.loader.Loader
+fuchsia.sysinfo.SysInfo
+```
+
+Directories:
+
+```text
+root-ssl-certificates
+config-data
+dev-input-report
+dev-display-controller
+dev-goldfish-address-space
+dev-goldfish-control
+dev-goldfish-pipe
+dev-goldfish-sync
+dev-gpu
+dev-mediacodec
+```
+
 
 ## Performance
 
@@ -498,3 +581,4 @@ Components in the test realm may play various roles in the test, as follows:
 [caching-loader-service]: /src/sys/test_runners/src/elf/elf_component.rs
 [framework-capabilities]: /docs/concepts/components/v2/capabilities/protocol.md#framework
 [sys-migration-guide]: /docs/development/components/v2/migration.md
+[sys-migration-guide-system-services]: /docs/development/components/v2/migration.md#system-services

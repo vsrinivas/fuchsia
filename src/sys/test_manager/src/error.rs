@@ -5,7 +5,8 @@
 use {
     anyhow, fidl_fuchsia_developer_remotecontrol::StreamError,
     fidl_fuchsia_test_manager::LaunchError,
-    fuchsia_component_test::error::Error as RealmBuilderError, thiserror::Error,
+    fuchsia_component_test::error::Error as RealmBuilderError, fuchsia_zircon::Status,
+    thiserror::Error,
 };
 
 /// Error encountered running test manager
@@ -40,17 +41,49 @@ pub enum LaunchTestError {
 
     #[error("Failed to stream logs from embedded Archivist: {0:?}")]
     StreamIsolatedLogs(StreamError),
+
+    #[error("Failed to resolve test: {0:?}")]
+    ResolveTest(#[source] anyhow::Error),
+
+    #[error("Failed to read manifest: {0}")]
+    ManifestIo(Status),
+
+    #[error("Resolver returned invalid manifest data")]
+    InvalidResolverData,
+
+    #[error("Invalid manifest: {0:?}")]
+    InvalidManifest(#[source] anyhow::Error),
 }
 
-impl Into<LaunchError> for LaunchTestError {
-    fn into(self) -> LaunchError {
-        match self {
-            Self::CreateProxyForArchiveAccessor(_)
-            | Self::InitializeTestRealm(_)
-            | Self::ConnectToArchiveAccessor(_)
-            | Self::StreamIsolatedLogs(_) => LaunchError::InternalError,
-            Self::CreateTestRealm(_) => LaunchError::InstanceCannotResolve,
-            Self::ConnectToTestSuite(_) => LaunchError::FailedToConnectToTestSuite,
+#[derive(Debug, Error)]
+pub enum FacetError {
+    #[error("Facet '{0}' defined but is null")]
+    NullFacet(&'static str),
+
+    #[error("Invalid facet: {0}, value: {1:?}, allowed value(s): {2}")]
+    InvalidFacetValue(&'static str, String, String),
+}
+
+impl From<FacetError> for LaunchTestError {
+    fn from(e: FacetError) -> Self {
+        Self::InvalidManifest(e.into())
+    }
+}
+
+impl From<LaunchTestError> for LaunchError {
+    fn from(e: LaunchTestError) -> Self {
+        match e {
+            LaunchTestError::CreateProxyForArchiveAccessor(_)
+            | LaunchTestError::InitializeTestRealm(_)
+            | LaunchTestError::ConnectToArchiveAccessor(_)
+            | LaunchTestError::StreamIsolatedLogs(_)
+            | LaunchTestError::InvalidResolverData
+            | LaunchTestError::InvalidManifest(_)
+            | LaunchTestError::ManifestIo(_) => Self::InternalError,
+            LaunchTestError::CreateTestRealm(_) | LaunchTestError::ResolveTest(_) => {
+                Self::InstanceCannotResolve
+            }
+            LaunchTestError::ConnectToTestSuite(_) => Self::FailedToConnectToTestSuite,
         }
     }
 }

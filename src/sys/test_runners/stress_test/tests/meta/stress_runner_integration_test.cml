@@ -23,19 +23,17 @@
     ],
     offer: [
         {
-            protocol: "fuchsia.logger.LogSink",
-            from: "parent",
-            to: "#test_manager",
-        },
-        {
-            protocol: "fuchsia.process.Launcher",
-            from: "parent",
-            to: "#test_manager",
-        },
-        {
-            protocol: "fuchsia.sys2.EventSource",
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.ComponentResolver",
+                "fuchsia.sys2.EventSource",
+            ],
             from: "parent",
             to: "#test_manager",
         },
     ],
+    facets: {
+        "fuchsia.test": { type: "system" },
+    },
 }

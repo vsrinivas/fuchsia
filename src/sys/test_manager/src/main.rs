@@ -4,7 +4,8 @@
 
 use {
     anyhow::Error,
-    fuchsia_async as fasync,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::StreamExt,
@@ -23,25 +24,38 @@ async fn main() -> Result<(), Error> {
 
     let routing_info = Arc::new(AboveRootCapabilitiesForTest::new("test_manager.cm").await?);
     let routing_info_clone = routing_info.clone();
-
+    let resolver = Arc::new(
+        connect_to_protocol::<fsys::ComponentResolverMarker>()
+            .expect("Cannot connect to component resolver"),
+    );
+    let resolver_clone = resolver.clone();
     fs.dir("svc")
         .add_fidl_service(move |stream| {
             let test_map = test_map_clone2.clone();
             let routing_info_for_task = routing_info_clone.clone();
+            let resolver = resolver.clone();
             fasync::Task::spawn(async move {
-                test_manager_lib::run_test_manager(stream, test_map.clone(), routing_info_for_task)
-                    .await
-                    .unwrap_or_else(|error| warn!(?error, "test manager returned error"))
+                test_manager_lib::run_test_manager(
+                    stream,
+                    test_map.clone(),
+                    resolver,
+                    routing_info_for_task,
+                )
+                .await
+                .unwrap_or_else(|error| warn!(?error, "test manager returned error"))
             })
             .detach();
         })
         .add_fidl_service(move |stream| {
             let test_map = test_map_clone.clone();
             let routing_info_for_task = routing_info.clone();
+            let resolver = resolver_clone.clone();
+
             fasync::Task::spawn(async move {
                 test_manager_lib::run_test_manager_query_server(
                     stream,
                     test_map.clone(),
+                    resolver,
                     routing_info_for_task,
                 )
                 .await

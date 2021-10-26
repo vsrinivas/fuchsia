@@ -5,11 +5,15 @@
                 "/core/appmgr",
                 "/core/test_manager/elf_test_ambient_exec_runner",
 
+                // TODO(https://fxbug.dev/76568): Remove this from the list once we remove all
+                // non-hermetic tests from this collection.
+                "/core/test_manager/tests:**",
+
                 // We allow tests to access ambient executability in the same
                 // way that we're permissive with use of the components v1
                 // deprecated-ambient-replace-as-executable feature and
                 // VmexResource protocol on eng builds.
-                "/core/test_manager/tests:**",
+                "/core/test_manager/system-tests:**",
             ],
             main_process_critical: [
                 "/bootstrap/archivist",
@@ -358,6 +362,20 @@
                 source_name: "fuchsia.sys2.ComponentResolver",
                 capability: "protocol",
                 target_monikers: [
+                    "/core/full-resolver",
+                ],
+            },
+
+            // Only route Component resolver to test manager and system tests.
+            // TODO(fxbug.dev/86464): Remove this once we have facet API
+            {
+                source_moniker: "/core/full-resolver",
+                source: "component",
+                source_name: "fuchsia.sys2.ComponentResolver",
+                capability: "protocol",
+                target_monikers: [
+                    "/core/test_manager",
+                    "/core/test_manager/system-tests:**",
                     "/core/full-resolver",
                 ],
             },

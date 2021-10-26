@@ -48,6 +48,7 @@ rustc_library("lib") {
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata-rustc",
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
@@ -80,15 +81,13 @@ rustc_library("lib") {
     "//third_party/rust_crates:futures-util",
     "//third_party/rust_crates:glob",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
-  test_deps = [
-    "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:matches",
-  ]
+  test_deps = [ "//third_party/rust_crates:matches" ]
 
   sources = [
     "src/diagnostics.rs",
@@ -105,6 +104,7 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

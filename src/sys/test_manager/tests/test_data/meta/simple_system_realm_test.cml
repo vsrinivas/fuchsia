@@ -1,0 +1,14 @@
+// This test marks itself as non hermetic so that it is launched in non
+// hermetic realm.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/simple_system_realm_test",
+    },
+    facets: {
+        "fuchsia.test": { type: "system" },
+    },
+}

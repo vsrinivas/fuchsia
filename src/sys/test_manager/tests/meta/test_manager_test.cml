@@ -20,29 +20,19 @@
     ],
     offer: [
         {
-            protocol: "fuchsia.logger.LogSink",
-            from: "parent",
-            to: "#test_manager",
-        },
-        {
-            protocol: "fuchsia.sys.Environment",
-            from: "parent",
-            to: "#test_manager",
-        },
-        {
-            protocol: "fuchsia.sys.Loader",
-            from: "parent",
-            to: "#test_manager",
-        },
-        {
-            protocol: "fuchsia.sys2.EventSource",
-            from: "parent",
-            to: "#test_manager",
-        },
-        {
-            protocol: "fuchsia.process.Launcher",
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+                "fuchsia.sys2.ComponentResolver",
+                "fuchsia.sys2.EventSource",
+            ],
             from: "parent",
             to: "#test_manager",
         },
     ],
+    facets: {
+        "fuchsia.test": { type: "system" },
+    },
 }

@@ -709,3 +709,26 @@ async fn enumerate_huge_test() {
 
     assert_eq!(cases.into_iter().map(|c| c.name.unwrap()).collect::<Vec<_>>(), expected_cases);
 }
+
+// TODO(76568): Write tests for hermetic collection once we remove system capabilities from its
+// namespace. This test is able to test that "system-tests" collection has the ComponentResolver
+// service, which is not available to the hermetic collection.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_non_hermetic_test() {
+    // This test is launched in system realm. Once we remove system capabilities from hermetic
+    // realm, we would be able to test this better.
+    let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/simple_system_realm_test.cm";
+    let (events, logs) = run_single_test(test_url, default_run_option()).await.unwrap();
+
+    let expected_events = vec![
+        RunEvent::suite_started(),
+        RunEvent::case_found("noop_test"),
+        RunEvent::case_started("noop_test"),
+        RunEvent::case_stopped("noop_test", CaseStatus::Passed),
+        RunEvent::case_finished("noop_test"),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
+    ];
+
+    assert_eq!(logs, Vec::<String>::new());
+    assert_eq!(&expected_events, &events);
+}

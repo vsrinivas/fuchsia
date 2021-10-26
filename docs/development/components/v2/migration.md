@@ -406,7 +406,9 @@ Consider the following example test component that uses a single system service,
 
 To migrate this test to the Test Runner Framework, declare each available system
 service with the other [required services](#required-services) in your test
-component manifest.
+component manifest. Since this test uses the `fuchsia.sysmem.Allocator`
+system capability, it also needs to be marked as `hermetic: "false"` as shown
+below.
 
 ```json5
 // my_component_test.cml
@@ -420,11 +422,16 @@ component manifest.
     program: {
         binary: "bin/my_component_test",
     },
+    {{ '<strong>' }}facets: {
+        "fuchsia.test": {
+            type: "system"
+        },
+    },
     use: [
         {
             protocol: [ "fuchsia.sysmem.Allocator" ],
         },
-    ],
+    ],{{ '</strong>' }}
 }
 ```
 

@@ -67,6 +67,11 @@
             environment: "#test-env",
             durability: "transient",
         },
+        {
+            name: "system-tests",
+            environment: "#test-env",
+            durability: "transient",
+        },
     ],
     capabilities: [
         {
@@ -107,6 +112,9 @@
         },
         { protocol: "fuchsia.sys.Environment" },
         { protocol: "fuchsia.sys.Loader" },
+
+        // TODO(fxbug.dev/86464): Clean this up
+        { protocol: "fuchsia.sys2.ComponentResolver" },
         {
             protocol: "fuchsia.sys2.StorageAdmin",
             from: "#custom_artifacts",
@@ -120,7 +128,10 @@
                 "fuchsia.sys2.EventSource",
             ],
             from: "parent",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
         },
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
@@ -160,6 +171,36 @@
             ],
             from: "parent",
             to: "#tests",
+        },
+        {
+            // update https://fuchsia.dev/fuchsia-src/concepts/testing/v2/test_runner_framework#legacy_non-hermetic_tests
+            // when this list is updated.
+            protocol: [
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.WriteOnlyLog",
+
+                // TODO(fxbug.dev/83029): Package these `hwinfo` protocols better.
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Device",
+                "fuchsia.hwinfo.Product",
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.Stats",
+                "fuchsia.kernel.VmexResource",
+
+                // Needed for //src/cobalt/bin/meta/cobalt_testapp_for_prober_do_not_run_manually.cml
+                // TODO(fxbug.dev/83038): Remove once e2e is better supported.
+                "fuchsia.net.http.Loader",
+                "fuchsia.scheduler.ProfileProvider",
+
+                // Needed for test_manager_tests and test runner tests.
+                // TODO(fxbug.dev/86464): Remove this once we have facet API.
+                "fuchsia.sys2.ComponentResolver",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#system-tests",
         },
         {
             protocol: "fuchsia.logger.LogSink",
@@ -249,6 +290,7 @@
                 "#rust_test_runner",
                 "#starnix_test_runner",
                 "#starnix_unit_test_runner",
+                "#system-tests",
                 "#tests",
             ],
         },
@@ -261,7 +303,10 @@
         {
             directory: "root-ssl-certificates",
             from: "parent",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
             rights: [ "r*" ],
         },
 
@@ -271,17 +316,26 @@
         {
             directory: "config-data",
             from: "parent",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
         },
         {
             storage: "tmp",
             from: "self",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
         },
         {
             storage: "cache",
             from: "self",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
         },
         {
             storage: "custom_artifacts",
@@ -296,7 +350,10 @@
             directory: "memfs",
             from: "#test_tmpfs",
             as: "deprecated-tmp",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
         },
 
         // fuchsia-pkg://fuchsia.com/input_session_tests#meta/input_session_bin_test.cm
@@ -304,7 +361,10 @@
         {
             directory: "dev-input-report",
             from: "parent",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
             rights: [ "r*" ],
         },
 
@@ -312,7 +372,10 @@
         {
             directory: "dev-display-controller",
             from: "parent",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
             rights: [ "rw*" ],
         },
 
@@ -320,31 +383,46 @@
         {
             directory: "dev-goldfish-address-space",
             from: "parent",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
             rights: [ "rw*" ],
         },
         {
             directory: "dev-goldfish-control",
             from: "parent",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
             rights: [ "rw*" ],
         },
         {
             directory: "dev-goldfish-pipe",
             from: "parent",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
             rights: [ "rw*" ],
         },
         {
             directory: "dev-goldfish-sync",
             from: "parent",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
             rights: [ "rw*" ],
         },
         {
             directory: "dev-gpu",
             from: "parent",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
             rights: [ "rw*" ],
         },
 
@@ -353,7 +431,10 @@
         {
             directory: "dev-mediacodec",
             from: "parent",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
             rights: [ "rw*" ],
         },
 
@@ -362,7 +443,10 @@
         {
             protocol: "fuchsia.sysinfo.SysInfo",
             from: "parent",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
         },
     ],
     expose: [

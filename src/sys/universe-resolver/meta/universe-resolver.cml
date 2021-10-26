@@ -13,6 +13,7 @@
             resolver: "full-resolver",
             path: "/svc/fuchsia.sys2.ComponentResolver",
         },
+        { protocol: "fuchsia.sys2.ComponentResolver" },
     ],
     use: [
         {
@@ -25,6 +26,10 @@
     expose: [
         {
             resolver: "full-resolver",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.sys2.ComponentResolver",
             from: "self",
         },
     ],

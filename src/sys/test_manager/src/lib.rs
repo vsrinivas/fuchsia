@@ -10,10 +10,11 @@ use {
     fdiagnostics::ArchiveAccessorProxy,
     fidl::endpoints::{create_proxy, ClientEnd},
     fidl::prelude::*,
-    fidl_fuchsia_debugdata as fdebugdata, fidl_fuchsia_diagnostics as fdiagnostics,
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys as fv1sys, fidl_fuchsia_sys2 as fsys,
-    fidl_fuchsia_test as ftest, fidl_fuchsia_test_internal as ftest_internal,
-    fidl_fuchsia_test_manager as ftest_manager,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_debugdata as fdebugdata,
+    fidl_fuchsia_diagnostics as fdiagnostics, fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
+    fidl_fuchsia_sys as fv1sys, fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
+    fidl_fuchsia_test_internal as ftest_internal, fidl_fuchsia_test_manager as ftest_manager,
+    fsys::ComponentResolverProxy,
     ftest::Invocation,
     ftest_manager::{
         CaseStatus, LaunchError, RunControllerRequest, RunControllerRequestStream,
@@ -41,6 +42,7 @@ use {
     },
     io_util,
     lazy_static::lazy_static,
+    maplit::hashmap,
     moniker::RelativeMonikerBase,
     regex::Regex,
     routing::rights::READ_RIGHTS,
@@ -52,7 +54,7 @@ use {
             Arc, Mutex, Weak,
         },
     },
-    tracing::{debug, error, warn},
+    tracing::{debug, error, info, warn},
 };
 
 mod diagnostics;
@@ -63,7 +65,17 @@ const WRAPPER_ROOT_REALM_PATH: &'static str = "test_wrapper/test_root";
 const ARCHIVIST_REALM_PATH: &'static str = "test_wrapper/archivist";
 const ARCHIVIST_FOR_EMBEDDING_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/test_manager#meta/archivist-for-embedding.cm";
-const TESTS_COLLECTION: &'static str = "tests";
+const HERMETIC_TESTS_COLLECTION: &'static str = "tests";
+const SYSTEM_TESTS_COLLECTION: &'static str = "system-tests";
+lazy_static! {
+    static ref TEST_TYPE_REALM_MAP: HashMap<&'static str, &'static str> =
+        [("hermetic", HERMETIC_TESTS_COLLECTION), ("system", SYSTEM_TESTS_COLLECTION)]
+            .iter()
+            .copied()
+            .collect();
+}
+const TEST_TYPE_FACET_KEY: &'static str = "fuchsia.test.type";
+
 const ENCLOSING_ENV: &'static str = "test_wrapper/enclosing_env";
 
 struct TestMapValue {
@@ -161,6 +173,7 @@ struct Suite {
     test_url: String,
     options: ftest_manager::RunOptions,
     controller: SuiteControllerRequestStream,
+    resolver: Arc<ComponentResolverProxy>,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 }
 
@@ -780,6 +793,7 @@ impl Suite {
         match RunningSuite::launch(
             &self.test_url,
             test_map,
+            &self.resolver,
             self.above_root_capabilities_for_test.clone(),
         )
         .await
@@ -799,6 +813,7 @@ impl Suite {
 pub async fn run_test_manager(
     mut stream: ftest_manager::RunBuilderRequestStream,
     test_map: Arc<TestMap>,
+    resolver: Arc<ComponentResolverProxy>,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 ) -> Result<(), TestManagerError> {
     let mut builder = TestRunBuilder { suites: vec![] };
@@ -821,10 +836,12 @@ pub async fn run_test_manager(
                         break;
                     }
                 };
+
                 builder.suites.push(Suite {
                     test_url,
                     options,
                     controller,
+                    resolver: resolver.clone(),
                     above_root_capabilities_for_test: above_root_capabilities_for_test.clone(),
                 });
             }
@@ -850,6 +867,7 @@ pub async fn run_test_manager(
 pub async fn run_test_manager_query_server(
     mut stream: ftest_manager::QueryRequestStream,
     test_map: Arc<TestMap>,
+    resolver: Arc<ComponentResolverProxy>,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 ) -> Result<(), TestManagerError> {
     while let Some(event) = stream.try_next().await.map_err(TestManagerError::Stream)? {
@@ -866,6 +884,7 @@ pub async fn run_test_manager_query_server(
                 match RunningSuite::launch(
                     &test_url,
                     test_map.clone(),
+                    &resolver,
                     above_root_capabilities_for_test.clone(),
                 )
                 .await
@@ -949,7 +968,8 @@ pub async fn run_test_manager_info_server(
 ) -> Result<(), TestManagerError> {
     // This ensures all monikers are relative to test_manager and supports capturing the top-level
     // name of the test realm.
-    let re = Regex::new(r"^\./tests:(.*?):.*$").unwrap();
+    let collection_names = [HERMETIC_TESTS_COLLECTION, SYSTEM_TESTS_COLLECTION];
+    let re = Regex::new(&format!(r"^\./(?:{}):(.*?):.*$", collection_names.join("|"))).unwrap();
     while let Some(event) = stream.try_next().await.map_err(TestManagerError::Stream)? {
         match event {
             ftest_internal::InfoRequest::GetTestUrl { moniker, responder } => {
@@ -987,6 +1007,9 @@ struct RunningSuite {
     /// Reference to an entry in the TestMap that marks it stale when the RunningSuite
     /// drops out of scope.
     test_map_entry: ScopedTestMapEntry,
+
+    /// The test collection in which this suite is running.
+    test_collection: &'static str,
 }
 
 /// A struct that exists purely to mark the instance in a test map stale when it
@@ -1000,13 +1023,84 @@ impl Drop for ScopedTestMapEntry {
     }
 }
 
+fn get_test_realm(decl: &fsys::ComponentDecl) -> Result<&'static str, FacetError> {
+    if let Some(obj) = &decl.facets {
+        let entries = match &obj.entries {
+            Some(e) => e,
+            None => return Ok(HERMETIC_TESTS_COLLECTION),
+        };
+        for entry in entries {
+            if entry.key == TEST_TYPE_FACET_KEY {
+                let test_type =
+                    entry.value.as_ref().ok_or(FacetError::NullFacet(TEST_TYPE_FACET_KEY))?;
+                match test_type.as_ref() {
+                    fdata::DictionaryValue::Str(s) => {
+                        if TEST_TYPE_REALM_MAP.contains_key(s.as_str()) {
+                            return Ok(TEST_TYPE_REALM_MAP[s.as_str()]);
+                        }
+                        return Err(FacetError::InvalidFacetValue(
+                            TEST_TYPE_FACET_KEY,
+                            format!("{:?}", s),
+                            format!(
+                                "one of {}",
+                                TEST_TYPE_REALM_MAP
+                                    .keys()
+                                    .map(|k| k.to_string())
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
+                            ),
+                        ));
+                    }
+                    fdata::DictionaryValue::StrVec(s) => {
+                        return Err(FacetError::InvalidFacetValue(
+                            TEST_TYPE_FACET_KEY,
+                            format!("{:?}", s),
+                            format!(
+                                "one of {}",
+                                TEST_TYPE_REALM_MAP
+                                    .keys()
+                                    .map(|k| k.to_string())
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
+                            ),
+                        ));
+                    }
+                };
+            }
+        }
+    }
+    Ok(HERMETIC_TESTS_COLLECTION)
+}
+
 impl RunningSuite {
     /// Launch a suite component.
     async fn launch(
         test_url: &str,
         test_map: Arc<TestMap>,
+        resolver: &ComponentResolverProxy,
         above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
     ) -> Result<Self, LaunchTestError> {
+        let component = resolver
+            .resolve(test_url)
+            .await
+            .map_err(|e| LaunchTestError::ResolveTest(e.into()))?
+            .map_err(|e| LaunchTestError::ResolveTest(format_err!("{:?}", e)))?;
+        let bytes = match component.decl.unwrap() {
+            fmem::Data::Bytes(bytes) => bytes,
+            fmem::Data::Buffer(buffer) => {
+                let mut contents = Vec::<u8>::new();
+                contents.resize(buffer.size as usize, 0);
+                buffer.vmo.read(&mut contents, 0).map_err(LaunchTestError::ManifestIo)?;
+                contents
+            }
+            _ => return Err(LaunchTestError::InvalidResolverData),
+        };
+        let component_decl: fsys::ComponentDecl = fidl::encoding::decode_persistent(&bytes)
+            .map_err(|e| LaunchTestError::InvalidManifest(e.into()))?;
+
+        let test_collection = get_test_realm(&component_decl)?;
+        info!("Starting '{}' in '{}' collection.", test_url, test_collection);
+
         // This archive accessor will be served by the embedded archivist.
         let (archive_accessor, archive_accessor_server_end) =
             fidl::endpoints::create_proxy::<fdiagnostics::ArchiveAccessorMarker>()
@@ -1016,11 +1110,12 @@ impl RunningSuite {
         let mut realm = get_realm(
             Arc::downgrade(&archive_accessor_arc),
             test_url,
+            test_collection,
             above_root_capabilities_for_test,
         )
         .await
         .map_err(LaunchTestError::InitializeTestRealm)?;
-        realm.set_collection_name(TESTS_COLLECTION);
+        realm.set_collection_name(test_collection);
         let instance = realm.create().await.map_err(LaunchTestError::CreateTestRealm)?;
         let test_name = instance.root.child_name().to_string();
         test_map.insert(test_name.clone(), test_url.to_string());
@@ -1041,6 +1136,7 @@ impl RunningSuite {
                 logs_iterator_task: None,
                 instance,
                 archive_accessor: archive_accessor_arc,
+                test_collection: test_collection,
             })
         };
 
@@ -1201,7 +1297,8 @@ impl RunningSuite {
     ) -> Result<(), Error> {
         let artifact_storage_admin = connect_to_protocol::<fsys::StorageAdminMarker>()?;
 
-        let root_moniker = format!("./{}:{}", TESTS_COLLECTION, self.instance.root.child_name());
+        let root_moniker =
+            format!("./{}:{}", self.test_collection, self.instance.root.child_name());
         let (iterator, iter_server) = create_proxy::<fsys::StorageIteratorMarker>()?;
         artifact_storage_admin
             .list_storage_in_realm(&root_moniker, iter_server)
@@ -1306,6 +1403,7 @@ where
 async fn get_realm(
     archive_accessor: Weak<fdiagnostics::ArchiveAccessorProxy>,
     test_url: &str,
+    collection: &str,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 ) -> Result<Realm, RealmBuilderError> {
     let mut builder = RealmBuilder::new().await?;
@@ -1421,7 +1519,7 @@ async fn get_realm(
             targets: vec![RouteEndpoint::component(ENCLOSING_ENV)],
         })?;
 
-    above_root_capabilities_for_test.apply(&mut builder)?;
+    above_root_capabilities_for_test.apply(collection, &mut builder)?;
 
     Ok(builder.build())
 }
@@ -1466,7 +1564,7 @@ fn map_suite_error_epitaph(suite: ftest::SuiteProxy, default_value: LaunchError)
 }
 
 pub struct AboveRootCapabilitiesForTest {
-    capabilities: Vec<Capability>,
+    capabilities: HashMap<&'static str, Vec<Capability>>,
 }
 
 impl AboveRootCapabilitiesForTest {
@@ -1478,35 +1576,45 @@ impl AboveRootCapabilitiesForTest {
         Ok(Self { capabilities })
     }
 
-    fn apply(&self, builder: &mut RealmBuilder) -> Result<(), RealmBuilderError> {
-        for capability in &self.capabilities {
-            builder.add_route(CapabilityRoute {
-                capability: capability.clone(),
-                source: RouteEndpoint::AboveRoot,
-                targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
-            })?;
+    fn apply(&self, collection: &str, builder: &mut RealmBuilder) -> Result<(), RealmBuilderError> {
+        if self.capabilities.contains_key(collection) {
+            for capability in &self.capabilities[collection] {
+                builder.add_route(CapabilityRoute {
+                    capability: capability.clone(),
+                    source: RouteEndpoint::AboveRoot,
+                    targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+                })?;
+            }
         }
         Ok(())
     }
 
-    fn load(decl: fsys::ComponentDecl) -> Vec<Capability> {
-        let mut capabilities = vec![];
+    fn load(decl: fsys::ComponentDecl) -> HashMap<&'static str, Vec<Capability>> {
+        let mut capabilities = hashmap! {
+            HERMETIC_TESTS_COLLECTION => vec![],
+            SYSTEM_TESTS_COLLECTION => vec![]
+        };
         for offer_decl in decl.offers.unwrap_or(vec![]) {
             match offer_decl {
                 fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
                     target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
                     target_name: Some(target_name),
                     ..
-                }) if name == TESTS_COLLECTION && target_name != "fuchsia.logger.LogSink" => {
-                    capabilities.push(Capability::protocol(target_name));
+                }) if capabilities.contains_key(name.as_str())
+                    && target_name != "fuchsia.logger.LogSink" =>
+                {
+                    capabilities
+                        .get_mut(name.as_str())
+                        .unwrap()
+                        .push(Capability::protocol(target_name));
                 }
                 fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
                     target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
                     rights,
                     target_name: Some(target_name),
                     ..
-                }) if name == TESTS_COLLECTION => {
-                    capabilities.push(Capability::directory(
+                }) if capabilities.contains_key(name.as_str()) => {
+                    capabilities.get_mut(name.as_str()).unwrap().push(Capability::directory(
                         target_name,
                         "",
                         rights.unwrap_or(*READ_RIGHTS),
@@ -1516,9 +1624,12 @@ impl AboveRootCapabilitiesForTest {
                     target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
                     target_name: Some(target_name),
                     ..
-                }) if name == TESTS_COLLECTION => {
+                }) if capabilities.contains_key(name.as_str()) => {
                     let use_path = format!("/{}", target_name);
-                    capabilities.push(Capability::storage(target_name, use_path));
+                    capabilities
+                        .get_mut(name.as_str())
+                        .unwrap()
+                        .push(Capability::storage(target_name, use_path));
                 }
                 fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                     target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
@@ -1531,7 +1642,7 @@ impl AboveRootCapabilitiesForTest {
                 | fsys::OfferDecl::Resolver(fsys::OfferResolverDecl {
                     target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
                     ..
-                }) if name == TESTS_COLLECTION => {
+                }) if capabilities.contains_key(name.as_str()) => {
                     unimplemented!(
                         "Services, runners and resolvers are not supported by realm builder"
                     );
@@ -1539,11 +1650,11 @@ impl AboveRootCapabilitiesForTest {
                 fsys::OfferDecl::Event(fsys::OfferEventDecl {
                     target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
                     ..
-                }) if name == TESTS_COLLECTION => {
+                }) if capabilities.contains_key(name.as_str()) => {
                     unreachable!("No events should be routed from above root to a test.");
                 }
                 _ => {
-                    // Ignore anything else that is not routed to #tests
+                    // Ignore anything else that is not routed to test collections
                 }
             }
         }
@@ -1772,8 +1883,8 @@ async fn gen_enclosing_env(handles: MockHandles) -> Result<(), Error> {
 mod tests {
     use {
         super::*, fasync::pin_mut, fidl::endpoints::create_proxy_and_stream,
-        ftest_internal::InfoMarker, maplit::hashset, matches::assert_matches, std::ops::Add,
-        zx::DurationNum,
+        fidl_fuchsia_data as fdata, ftest_internal::InfoMarker, maplit::hashset,
+        matches::assert_matches, std::ops::Add, zx::DurationNum,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -1799,11 +1910,25 @@ mod tests {
             Ok("my_test_url".into())
         );
         assert_eq!(
+            proxy
+                .get_test_url("./system-tests:my_test:0/test_wrapper:0/my_component:0")
+                .await
+                .unwrap(),
+            Ok("my_test_url".into())
+        );
+        assert_eq!(
             proxy.get_test_url("./tests/my_test:0/test_wrapper:0/my_component:0").await.unwrap(),
             Err(zx::sys::ZX_ERR_NOT_SUPPORTED)
         );
         assert_eq!(
             proxy.get_test_url("/tests:my_test:0/test_wrapper:0/my_component:0").await.unwrap(),
+            Err(zx::sys::ZX_ERR_NOT_SUPPORTED)
+        );
+        assert_eq!(
+            proxy
+                .get_test_url("./some-other-collection:my_test:0/test_wrapper:0/my_component:0")
+                .await
+                .unwrap(),
             Err(zx::sys::ZX_ERR_NOT_SUPPORTED)
         );
     }
@@ -2131,6 +2256,112 @@ mod tests {
             }))
         );
     }
+
+    #[test]
+    fn get_test_realm_works() {
+        const TEST_FACET: &str = "fuchsia.test";
+
+        // test that default hermetic value is true
+        let mut decl = fsys::ComponentDecl::EMPTY;
+        assert_eq!(get_test_realm(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
+
+        // empty facet
+        decl.facets =
+            Some(fdata::Dictionary { entries: vec![].into(), ..fdata::Dictionary::EMPTY });
+        assert_eq!(get_test_realm(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
+
+        // empty facet
+        decl.facets = Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY });
+        assert_eq!(get_test_realm(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
+
+        // make sure that the func can handle some other facet key
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![fdata::DictionaryEntry { key: "somekey".into(), value: None }].into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        assert_eq!(get_test_realm(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
+
+        // test facet with some other key works
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![
+                fdata::DictionaryEntry { key: "somekey".into(), value: None },
+                fdata::DictionaryEntry {
+                    key: format!("{}.somekey", TEST_FACET),
+                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
+                },
+            ]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        assert_eq!(get_test_realm(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
+
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![
+                fdata::DictionaryEntry { key: "somekey".into(), value: None },
+                fdata::DictionaryEntry {
+                    key: format!("{}.somekey", TEST_FACET),
+                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
+                },
+                fdata::DictionaryEntry {
+                    key: TEST_TYPE_FACET_KEY.into(),
+                    value: Some(fdata::DictionaryValue::Str("hermetic".into()).into()),
+                },
+            ]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        assert_eq!(get_test_realm(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
+
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![
+                fdata::DictionaryEntry { key: "somekey".into(), value: None },
+                fdata::DictionaryEntry {
+                    key: format!("{}.somekey", TEST_FACET),
+                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
+                },
+                fdata::DictionaryEntry {
+                    key: TEST_TYPE_FACET_KEY.into(),
+                    value: Some(fdata::DictionaryValue::Str("system".into()).into()),
+                },
+            ]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        assert_eq!(get_test_realm(&decl).unwrap(), SYSTEM_TESTS_COLLECTION);
+
+        // invalid facets
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![
+                fdata::DictionaryEntry { key: "somekey".into(), value: None },
+                fdata::DictionaryEntry {
+                    key: format!("{}.somekey", TEST_FACET),
+                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
+                },
+                fdata::DictionaryEntry {
+                    key: TEST_TYPE_FACET_KEY.into(),
+                    value: Some(fdata::DictionaryValue::Str("some_other_collection".into()).into()),
+                },
+            ]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        let _ = get_test_realm(&decl).expect_err("this should have failed");
+
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![
+                fdata::DictionaryEntry { key: "somekey".into(), value: None },
+                fdata::DictionaryEntry {
+                    key: format!("{}.somekey", TEST_FACET),
+                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
+                },
+                fdata::DictionaryEntry { key: TEST_TYPE_FACET_KEY.into(), value: None },
+            ]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        let _ = get_test_realm(&decl).expect_err("this should have failed");
+    }
+
     #[test]
     fn suite_status() {
         let all_case_status = vec![

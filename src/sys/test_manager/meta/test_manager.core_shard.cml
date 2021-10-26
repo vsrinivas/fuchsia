@@ -38,6 +38,11 @@
             dependency: "weak_for_migration",
         },
         {
+            protocol: [ "fuchsia.sys2.ComponentResolver" ],
+            from: "#full-resolver",
+            to: "#test_manager",
+        },
+        {
             storage: "tmp",
             from: "self",
             to: "#test_manager",
