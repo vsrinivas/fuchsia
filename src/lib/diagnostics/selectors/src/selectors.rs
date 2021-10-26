@@ -27,6 +27,9 @@ static PATH_NODE_DELIMITER: char = '/';
 // characers"; *, /, :, and \.
 static ESCAPE_CHARACTER: char = '\\';
 
+static TAB_CHAR: char = '\t';
+static SPACE_CHAR: char = ' ';
+
 // Pattern used to encode wildcard.
 pub(crate) static WILDCARD_SYMBOL_STR: &str = "*";
 static WILDCARD_SYMBOL_CHAR: char = '*';
@@ -463,6 +466,12 @@ fn is_special_character(character: char) -> bool {
         || character == PATH_NODE_DELIMITER
         || character == SELECTOR_DELIMITER
         || character == WILDCARD_SYMBOL_CHAR
+        || character == SPACE_CHAR
+        || character == TAB_CHAR
+}
+
+fn is_space_character(character: char) -> bool {
+    character == SPACE_CHAR || character == TAB_CHAR
 }
 
 /// Converts a single character from a StringSelector into a format that allows it
@@ -491,9 +500,9 @@ fn convert_escaped_char_to_regex(
     // We have to push an additional escape for escape characters
     // since the `\` has significance in Regex that we need to escape
     // in order to have literal matching on the backslash.
-    token_builder.push(ESCAPE_CHARACTER);
-    token_builder.push(ESCAPE_CHARACTER);
     let escaped_char_option: Option<(usize, char)> = selection_iter.next();
+    token_builder.push(ESCAPE_CHARACTER);
+    token_builder.push(ESCAPE_CHARACTER);
     escaped_char_option
         .map(|(_, escaped_char)| convert_single_character_to_regex(token_builder, escaped_char))
         .ok_or(format_err!("Selecter fails verification due to unmatched escape character"))
@@ -532,6 +541,11 @@ fn convert_string_selector_to_regex(
                     } else if selector_char == WILDCARD_SYMBOL_CHAR {
                         node_regex_builder.push_str(wildcard_symbol_replacement);
                     } else {
+                        // This enables us to accept temporarily selectors without escaped spaces.
+                        if is_space_character(selector_char) {
+                            node_regex_builder.push(ESCAPE_CHARACTER);
+                            node_regex_builder.push(ESCAPE_CHARACTER);
+                        }
                         convert_single_character_to_regex(&mut node_regex_builder, selector_char);
                     }
                 }
@@ -1290,6 +1304,8 @@ a:b:c
             (r#"echo.cmx:a:bob"#, r#"bob"#),
             (r#"echo.cmx:a:b*"#, r#"bob"#),
             (r#"echo.cmx:a:\*"#, r#"*"#),
+            (r#"echo.cmx:a:b\ c"#, r#"b c"#),
+            (r#"echo.cmx:a:b c"#, r#"b c"#),
         ];
         for (selector, string_to_match) in test_cases {
             let parsed_selector = parse_selector(selector).unwrap();
@@ -1305,7 +1321,11 @@ a:b:c
                     )
                     .unwrap();
                     assert!(
-                        selector_regex.is_match(&sanitize_string_for_selectors(string_to_match))
+                        selector_regex.is_match(&sanitize_string_for_selectors(string_to_match)),
+                        "{} failed for {} with regex={:?}",
+                        selector,
+                        string_to_match,
+                        selector_regex
                     );
                 }
                 _ => unreachable!(),
@@ -1577,5 +1597,25 @@ a:b:c
         let component_selector = selector.component_selector.as_ref().unwrap();
         let moniker = vec!["foo".to_string(), "coll:bar".to_string(), "baz".to_string()];
         assert!(match_moniker_against_component_selector(&moniker, &component_selector).unwrap());
+    }
+
+    #[test]
+    fn escaped_spaces() {
+        let selector_str = "foo:bar\\ baz:quux";
+        let selector = parse_selector(selector_str).unwrap();
+        assert_eq!(
+            selector,
+            Selector {
+                component_selector: Some(ComponentSelector {
+                    moniker_segments: Some(vec![StringSelector::StringPattern("foo".into()),]),
+                    ..ComponentSelector::EMPTY
+                }),
+                tree_selector: Some(TreeSelector::PropertySelector(PropertySelector {
+                    node_path: vec![StringSelector::StringPattern("bar\\ baz".into()),],
+                    target_properties: StringSelector::StringPattern("quux".into())
+                })),
+                ..Selector::EMPTY
+            }
+        );
     }
 }
