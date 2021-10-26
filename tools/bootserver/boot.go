@@ -139,7 +139,7 @@ func isTransientDownloadError(ctx context.Context, err error) bool {
 	var flateErr flate.CorruptInputError
 	if errors.As(err, &flateErr) {
 		// Ditto, likely indicates transient corruption.
-		logger.Warningf(ctx, "Flake corruption error detected, retrying download...")
+		logger.Warningf(ctx, "Flate corruption error detected, retrying download...")
 		return true
 	}
 	return false
