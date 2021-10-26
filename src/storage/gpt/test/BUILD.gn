@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
-import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 
 group("test") {
   testonly = true
@@ -17,39 +16,32 @@ test("gpt-unit-test") {
     "main.cc",
   ]
   deps = [
+    ":driver-test-realm",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/lib/fdio",
+    "//src/devices/lib/device-watcher/cpp",
     "//src/storage/gpt",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zx",
-    "//zircon/system/ulib/zxtest",
-
-    # TODO(https://fxbug.dev/74373) replace once `RecursiveWaitForFile` is
-    # extracted to a library.
-    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/mbr",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
     "//zircon/third_party/ulib/cksum",
   ]
 }
 
-isolated_devmgr_v2_component("ramdisk-devmgr") {
+group("driver-test-realm") {
+  testonly = true
   deps = [
+    "//sdk/lib/driver_test_realm/platform",
     "//src/devices/block/drivers/core",
     "//src/devices/block/drivers/ramdisk",
-    "//src/devices/bus/drivers/platform",
   ]
 }
 
-fuchsia_test_component("gpt-unit-test-component") {
-  component_name = "gpt-unit-test"
-  manifest = "meta/gpt-unit-test.cml"
+fuchsia_unittest_package("gpt-tests") {
   deps = [ ":gpt-unit-test" ]
-}
-
-fuchsia_test_package("gpt-tests") {
-  deps = [ ":ramdisk-devmgr" ]
-  test_components = [ ":gpt-unit-test-component" ]
 }

@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/devmgr-integration-test/fixture.h>
+#include <lib/service/llcpp/service.h>
 #include <limits.h>
 #include <time.h>
 #include <zircon/assert.h>
 
 #include <zxtest/zxtest.h>
+
+#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
 bool gUseRamDisk = true;
 unsigned int gRandSeed = 1;
@@ -38,7 +40,7 @@ int main(int argc, char** argv) {
   }
   fbl::unique_fd out;
   zx_status_t status =
-      devmgr_integration_test::RecursiveWaitForFile(dev, "sys/platform/00:00:2d/ramctl", &out);
+      device_watcher::RecursiveWaitForFile(dev, "sys/platform/00:00:2d/ramctl", &out);
   if (status != ZX_OK) {
     fprintf(stderr, "RecursiveWaitForFile(dev, \"sys/platform/00:00:2d/ramctl\"): %s\n",
             zx_status_get_string(status));
