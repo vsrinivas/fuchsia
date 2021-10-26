@@ -99,10 +99,10 @@ TEST(Swapchain, DeviceExtensions) {
   float queue_priorities[1] = {0.0};
   VkDeviceQueueCreateInfo queue_create_info = {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
                                                .pNext = nullptr,
+                                               .flags = 0,
                                                .queueFamilyIndex = 0,
                                                .queueCount = 1,
-                                               .pQueuePriorities = queue_priorities,
-                                               .flags = 0};
+                                               .pQueuePriorities = queue_priorities};
   VkDeviceCreateInfo device_create_info = {
       .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
       .pNext = nullptr,

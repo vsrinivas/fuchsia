@@ -16,7 +16,7 @@
 namespace {
 
 static constexpr fuchsia::ui::gfx::ViewProperties kViewProperties = {
-    .bounding_box = {.max = {.x = 100, .y = 50}, .min = {.x = 10, .y = 5}}};
+    .bounding_box = {.min = {.x = 10, .y = 5}, .max = {.x = 100, .y = 50}}};
 
 class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
  public:

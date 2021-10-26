@@ -255,12 +255,12 @@ class TestSwapchain {
     VkDeviceQueueCreateInfo queue_create_info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .pNext = nullptr,
-        .queueFamilyIndex = 0,
-        .queueCount = 1,
-        .pQueuePriorities = queue_priorities,
         .flags = protected_memory_
                      ? static_cast<VkDeviceQueueCreateFlags>(VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT)
-                     : 0};
+                     : 0,
+        .queueFamilyIndex = 0,
+        .queueCount = 1,
+        .pQueuePriorities = queue_priorities};
 
     VkDeviceCreateInfo device_create_info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -362,8 +362,8 @@ class TestSwapchain {
         .minImageCount = kSwapchainImageCount,
         .imageFormat = format,
         .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
-        .imageArrayLayers = 1,
         .imageExtent = {100, 100},
+        .imageArrayLayers = 1,
         .imageUsage = usage,
         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount = 0,
@@ -399,8 +399,8 @@ class TestSwapchain {
 
     VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
         .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
-        .imagePipeHandle = endpoint0.release(),
         .pNext = nullptr,
+        .imagePipeHandle = endpoint0.release(),
     };
     VkSurfaceKHR surface;
     EXPECT_EQ(VK_SUCCESS,
@@ -421,8 +421,8 @@ class TestSwapchain {
 
     VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
         .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
-        .imagePipeHandle = endpoint0.release(),
         .pNext = nullptr,
+        .imagePipeHandle = endpoint0.release(),
     };
     VkSurfaceKHR surface;
     EXPECT_EQ(VK_SUCCESS,
@@ -644,8 +644,8 @@ TEST_P(SwapchainTest, AcquireFence) {
 
   VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
       .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
-      .imagePipeHandle = endpoint0.release(),
       .pNext = nullptr,
+      .imagePipeHandle = endpoint0.release(),
   };
   VkSurfaceKHR surface;
   EXPECT_EQ(VK_SUCCESS,
@@ -693,8 +693,8 @@ TEST_P(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
 
   VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
       .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
-      .imagePipeHandle = local_endpoint.release(),
       .pNext = nullptr,
+      .imagePipeHandle = local_endpoint.release(),
   };
   VkSurfaceKHR surface;
   EXPECT_EQ(VK_SUCCESS,
@@ -793,8 +793,8 @@ TEST_P(SwapchainFidlTest, ForceQuit) {
 
   VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
       .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
-      .imagePipeHandle = local_endpoint.release(),
       .pNext = nullptr,
+      .imagePipeHandle = local_endpoint.release(),
   };
   VkSurfaceKHR surface;
   EXPECT_EQ(VK_SUCCESS,
@@ -866,8 +866,8 @@ TEST_P(SwapchainFidlTest, DeviceLostAvoidSemaphoreHang) {
 
   VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
       .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
-      .imagePipeHandle = local_endpoint.release(),
       .pNext = nullptr,
+      .imagePipeHandle = local_endpoint.release(),
   };
   VkSurfaceKHR surface;
   EXPECT_EQ(VK_SUCCESS,
@@ -980,8 +980,8 @@ TEST_P(SwapchainFidlTest, AcquireZeroTimeout) {
 
   VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
       .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
-      .imagePipeHandle = local_endpoint.release(),
       .pNext = nullptr,
+      .imagePipeHandle = local_endpoint.release(),
   };
 
   VkSurfaceKHR surface;

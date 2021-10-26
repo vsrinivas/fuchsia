@@ -61,8 +61,8 @@ class TestSurface {
 
     VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
         .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
-        .imagePipeHandle = use_framebuffer_ ? ZX_HANDLE_INVALID : endpoint0.release(),
         .pNext = nullptr,
+        .imagePipeHandle = use_framebuffer_ ? ZX_HANDLE_INVALID : endpoint0.release(),
     };
     VkSurfaceKHR surface = VK_NULL_HANDLE;
     VkResult result =
@@ -83,8 +83,8 @@ class TestSurface {
 
     VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
         .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
-        .imagePipeHandle = use_framebuffer_ ? ZX_HANDLE_INVALID : endpoint0.release(),
         .pNext = nullptr,
+        .imagePipeHandle = use_framebuffer_ ? ZX_HANDLE_INVALID : endpoint0.release(),
     };
 
     VkSurfaceKHR surface = VK_NULL_HANDLE;

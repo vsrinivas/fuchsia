@@ -561,11 +561,7 @@ config("Wno-reorder-init-list") {
   cflags = [ "-Wno-reorder-init-list" ]
   visibility = [
     "//src/developer/memory/metrics/tests/*",
-    "//src/graphics/examples/vkcube/*",
-    "//src/graphics/lib/compute/tests/*",
-    "//src/graphics/tests/vkext/*",
     "//src/lib/elflib/*",
-    "//src/lib/vulkan/tests/*",
     "//src/modular/bin/basemgr/*",
     "//src/modular/tests/*",
     "//third_party/*",
