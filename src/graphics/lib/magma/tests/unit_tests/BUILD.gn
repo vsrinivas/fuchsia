@@ -86,6 +86,7 @@ source_set("magma_util_tests") {
     "test_macros.cc",
     "test_mapped_batch.cc",
     "test_register_bitfields.cc",
+    "test_register_io.cc",
     "test_ringbuffer.cc",
     "test_semaphore_port.cc",
     "test_status.cc",
@@ -102,6 +103,7 @@ source_set("magma_util_tests") {
     "$magma_build_root/src/magma_util/platform:semaphore",
     "$magma_build_root/tests/mock:address_space",
     "$magma_build_root/tests/mock:bus_mapper",
+    "$magma_build_root/tests/mock:mmio",
     "//sdk/lib/fdio",
     "//third_party/googletest:gtest",
   ]

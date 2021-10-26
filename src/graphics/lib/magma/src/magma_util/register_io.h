@@ -37,6 +37,28 @@ class RegisterIo {
     return val;
   }
 
+  // For hwreg::RegisterBase::WriteTo.
+  template <typename T>
+  void Write(T val, uint32_t offset) {
+    if constexpr (sizeof(T) == sizeof(uint32_t)) {
+      this->Write32(val, offset);
+    } else {
+      static_assert(always_false<T>);
+    }
+  }
+
+  // For hwreg::RegisterBase::ReadFrom.
+  template <typename T>
+  T Read(uint32_t offset) {
+    if constexpr (sizeof(T) == sizeof(uint32_t)) {
+      return this->Read32(offset);
+    } else if constexpr (sizeof(T) == sizeof(uint64_t)) {
+      return this->Read64(offset);
+    } else {
+      static_assert(always_false<T>);
+    }
+  }
+
   magma::PlatformMmio* mmio() { return mmio_.get(); }
 
   class Hook {
@@ -57,6 +79,9 @@ class RegisterIo {
  private:
   std::unique_ptr<magma::PlatformMmio> mmio_;
   std::unique_ptr<Hook> hook_;
+
+  template <typename T>
+  static constexpr std::false_type always_false{};
 };
 
 }  // namespace magma

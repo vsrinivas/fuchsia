@@ -87,5 +87,8 @@ source_set("src") {
     "//zircon/system/ulib/fbl",
   ]
 
-  public_deps = [ "//sdk/banjo/fuchsia.hardware.intelgpucore:fuchsia.hardware.intelgpucore_banjo_cpp" ]
+  public_deps = [
+    "//sdk/banjo/fuchsia.hardware.intelgpucore:fuchsia.hardware.intelgpucore_banjo_cpp",
+    "//zircon/system/ulib/hwreg",
+  ]
 }

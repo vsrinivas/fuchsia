@@ -7,8 +7,8 @@
 
 #include <vector>
 
+#include "hwreg/bitfields.h"
 #include "magma_util/macros.h"
-#include "magma_util/register_bitfields.h"
 #include "magma_util/register_io.h"
 #include "types.h"
 
@@ -549,7 +549,7 @@ class MirrorEuDisable {
 // PWR_WELL_CTL: Power well control.  This allows enabling or disabling
 // power to various "power wells" (groups of functional units).
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf
-class PowerWellControl2 : public magma::RegisterBase {
+class PowerWellControl2 : public hwreg::RegisterBase<PowerWellControl2, uint32_t> {
  public:
   DEF_BIT(31, power_well_2_request);
   DEF_BIT(30, power_well_2_state);
@@ -566,7 +566,7 @@ class PowerWellControl2 : public magma::RegisterBase {
   DEF_BIT(1, misc_io_power_request);
   DEF_BIT(0, misc_io_power_state);
 
-  static auto Get() { return magma::RegisterAddr<PowerWellControl2>(0x45404); }
+  static auto Get() { return hwreg::RegisterAddr<PowerWellControl2>(0x45404); }
 };
 
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf p.86
@@ -581,16 +581,16 @@ class ArbiterControl {
   }
 };
 
-class RenderEngineTlbControl : public magma::RegisterBase {
+class RenderEngineTlbControl : public hwreg::RegisterBase<RenderEngineTlbControl, uint32_t> {
  public:
   DEF_BIT(0, invalidate);
-  static auto Get() { return magma::RegisterAddr<RenderEngineTlbControl>(0x4260); }
+  static auto Get() { return hwreg::RegisterAddr<RenderEngineTlbControl>(0x4260); }
 };
 
-class VideoEngineTlbControl : public magma::RegisterBase {
+class VideoEngineTlbControl : public hwreg::RegisterBase<VideoEngineTlbControl, uint32_t> {
  public:
   DEF_BIT(0, invalidate);
-  static auto Get() { return magma::RegisterAddr<VideoEngineTlbControl>(0x4264); }
+  static auto Get() { return hwreg::RegisterAddr<VideoEngineTlbControl>(0x4264); }
 };
 
 class CacheMode1 {

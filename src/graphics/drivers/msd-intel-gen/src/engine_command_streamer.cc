@@ -126,13 +126,13 @@ void EngineCommandStreamer::InvalidateTlbs() {
   switch (id()) {
     case RENDER_COMMAND_STREAMER: {
       auto reg = registers::RenderEngineTlbControl::Get().FromValue(0);
-      reg.invalidate().set(1);
+      reg.set_invalidate(1);
       reg.WriteTo(register_io());
       break;
     }
     case VIDEO_COMMAND_STREAMER: {
       auto reg = registers::VideoEngineTlbControl::Get().FromValue(0);
-      reg.invalidate().set(1);
+      reg.set_invalidate(1);
       reg.WriteTo(register_io());
       break;
     }
