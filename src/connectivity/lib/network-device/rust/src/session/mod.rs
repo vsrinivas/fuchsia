@@ -331,7 +331,7 @@ impl DeviceInfo {
             tx_depth,
             buffer_alignment,
             max_buffer_length,
-            min_rx_buffer_length: _,
+            min_rx_buffer_length,
             min_tx_buffer_length,
             min_tx_buffer_head,
             min_tx_buffer_tail,
@@ -340,13 +340,13 @@ impl DeviceInfo {
         } = self;
         if NETWORK_DEVICE_DESCRIPTOR_VERSION != u32::from(*descriptor_version) {
             return Err(Error::Config(format!(
-                "descriptor version mismatch {} != {}",
+                "descriptor version mismatch: {} != {}",
                 NETWORK_DEVICE_DESCRIPTOR_VERSION, descriptor_version
             )));
         }
         if NETWORK_DEVICE_DESCRIPTOR_LENGTH < usize::from(*min_descriptor_length) {
             return Err(Error::Config(format!(
-                "descriptor length too small {} < {}",
+                "descriptor length too small: {} < {}",
                 NETWORK_DEVICE_DESCRIPTOR_LENGTH, min_descriptor_length
             )));
         }
@@ -384,8 +384,15 @@ impl DeviceInfo {
             },
         )?;
 
-        let buffer_stride =
-            (buffer_length + buffer_alignment - 1) / buffer_alignment * buffer_alignment;
+        let buffer_stride = buffer_length
+            .checked_add(buffer_alignment - 1)
+            .map(|x| x / buffer_alignment * buffer_alignment)
+            .ok_or_else(|| {
+                Error::Config(format!(
+                    "not possible to align {} to {} under usize::MAX",
+                    buffer_length, buffer_alignment,
+                ))
+            })?;
 
         if buffer_stride < buffer_length {
             return Err(Error::Config(format!(
@@ -430,8 +437,26 @@ impl DeviceInfo {
         let buffer_stride = NonZeroU64::new(buffer_stride)
             .ok_or_else(|| Error::Config("buffer_stride is zero".to_owned()))?;
 
-        // min_tx_buffer_length <= buffer_length <= usize::MAX
-        let min_tx_data = usize::try_from(*min_tx_buffer_length).unwrap();
+        let min_tx_data = match usize::try_from(*min_tx_buffer_length)
+            .map(|min_tx| (min_tx <= buffer_length).then(|| min_tx))
+        {
+            Ok(Some(min_tx_buffer_length)) => min_tx_buffer_length,
+            // Either the conversion or the comparison failed.
+            Ok(None) | Err(std::num::TryFromIntError { .. }) => {
+                return Err(Error::Config(format!(
+                    "buffer_length smaller than minimum TX requirement: {} < {}",
+                    buffer_length, *min_tx_buffer_length
+                )));
+            }
+        };
+
+        if buffer_length < usize::try_from(*min_rx_buffer_length).unwrap_or(usize::MAX) {
+            return Err(Error::Config(format!(
+                "buffer_length smaller than minimum RX requirement: {} < {}",
+                buffer_length, *min_rx_buffer_length
+            )));
+        }
+
         Ok(Config {
             buffer_stride,
             num_rx_buffers,
@@ -502,5 +527,104 @@ impl<K: AllocKind> Pending<K> {
             .map_err(|status| Error::Fifo("write", K::REFL.as_str(), status))?;
         let _drained = storage.drain(0..submitted);
         Poll::Ready(Ok(submitted))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        buffer::NETWORK_DEVICE_DESCRIPTOR_LENGTH, buffer::NETWORK_DEVICE_DESCRIPTOR_VERSION,
+        DeviceInfo, Error,
+    };
+    use matches::assert_matches;
+    use std::{num::NonZeroU32, ops::Deref};
+    use test_case::test_case;
+
+    const BASE_DEVICE_INFO: DeviceInfo = DeviceInfo {
+        min_descriptor_length: 0,
+        descriptor_version: 1,
+        rx_depth: 1,
+        tx_depth: 1,
+        buffer_alignment: 1,
+        max_buffer_length: None,
+        min_rx_buffer_length: 0,
+        min_tx_buffer_head: 0,
+        min_tx_buffer_length: 0,
+        min_tx_buffer_tail: 0,
+        rx_accel: Vec::new(),
+        tx_accel: Vec::new(),
+    };
+
+    const DEFAULT_BUFFER_LENGTH: usize = 2048;
+
+    #[test_case(DEFAULT_BUFFER_LENGTH, DeviceInfo {
+        min_descriptor_length: u8::MAX,
+        ..BASE_DEVICE_INFO
+    }, format!("descriptor length too small: {} < {}", NETWORK_DEVICE_DESCRIPTOR_LENGTH, u8::MAX))]
+    #[test_case(DEFAULT_BUFFER_LENGTH, DeviceInfo {
+        descriptor_version: 42,
+        ..BASE_DEVICE_INFO
+    }, format!("descriptor version mismatch: {} != {}", NETWORK_DEVICE_DESCRIPTOR_VERSION, 42))]
+    #[test_case(DEFAULT_BUFFER_LENGTH, DeviceInfo {
+        tx_depth: 0,
+        ..BASE_DEVICE_INFO
+    }, "no TX buffers")]
+    #[test_case(DEFAULT_BUFFER_LENGTH, DeviceInfo {
+        rx_depth: 0,
+        ..BASE_DEVICE_INFO
+    }, "no RX buffers")]
+    #[test_case(DEFAULT_BUFFER_LENGTH, DeviceInfo {
+        tx_depth: u16::MAX,
+        rx_depth: u16::MAX,
+        ..BASE_DEVICE_INFO
+    }, format!("too many buffers requested: {} + {} > u16::MAX", u16::MAX, u16::MAX))]
+    #[test_case(DEFAULT_BUFFER_LENGTH, DeviceInfo {
+        max_buffer_length: Some(unsafe { NonZeroU32::new_unchecked(1) }),
+        ..BASE_DEVICE_INFO
+    }, format!("buffer length too big: {} > {}", DEFAULT_BUFFER_LENGTH, 1))]
+    #[test_case(DEFAULT_BUFFER_LENGTH, DeviceInfo {
+        min_tx_buffer_length: DEFAULT_BUFFER_LENGTH as u32 + 1,
+        ..BASE_DEVICE_INFO
+    }, format!(
+        "buffer_length smaller than minimum TX requirement: {} < {}",
+        DEFAULT_BUFFER_LENGTH, DEFAULT_BUFFER_LENGTH + 1))]
+    #[test_case(DEFAULT_BUFFER_LENGTH, DeviceInfo {
+        min_rx_buffer_length: DEFAULT_BUFFER_LENGTH as u32 + 1,
+        ..BASE_DEVICE_INFO
+    }, format!(
+        "buffer_length smaller than minimum RX requirement: {} < {}",
+        DEFAULT_BUFFER_LENGTH, DEFAULT_BUFFER_LENGTH + 1))]
+    #[test_case(DEFAULT_BUFFER_LENGTH, DeviceInfo {
+        min_tx_buffer_head: DEFAULT_BUFFER_LENGTH as u16 + 1,
+        ..BASE_DEVICE_INFO
+    }, format!(
+        "buffer length {} does not meet minimum tx buffer head/tail requirement {}/0",
+        DEFAULT_BUFFER_LENGTH, DEFAULT_BUFFER_LENGTH + 1))]
+    #[test_case(DEFAULT_BUFFER_LENGTH, DeviceInfo {
+        min_tx_buffer_tail: DEFAULT_BUFFER_LENGTH as u16 + 1,
+        ..BASE_DEVICE_INFO
+    }, format!(
+        "buffer length {} does not meet minimum tx buffer head/tail requirement 0/{}",
+        DEFAULT_BUFFER_LENGTH, DEFAULT_BUFFER_LENGTH + 1))]
+    #[test_case(0, BASE_DEVICE_INFO, "buffer_stride is zero")]
+    #[test_case(usize::MAX, BASE_DEVICE_INFO,
+    format!(
+        "too much memory required for the buffers: {} * {} > isize::MAX",
+        usize::MAX, 2))]
+    #[test_case(usize::MAX, DeviceInfo {
+        buffer_alignment: 2,
+        ..BASE_DEVICE_INFO
+    }, format!(
+        "not possible to align {} to {} under usize::MAX",
+        usize::MAX, 2))]
+    fn configs_from_device_info_err(
+        buffer_length: usize,
+        info: DeviceInfo,
+        expected: impl Deref<Target = str>,
+    ) {
+        assert_matches!(
+            info.primary_config(buffer_length),
+            Err(Error::Config(got)) if got.as_str() == expected.deref()
+        );
     }
 }
