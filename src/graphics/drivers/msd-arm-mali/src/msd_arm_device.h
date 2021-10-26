@@ -23,6 +23,7 @@
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
 #include "magma_util/thread.h"
+#include "mali_register_io.h"
 #include "msd.h"
 #include "msd_arm_connection.h"
 #include "msd_defs.h"
@@ -119,7 +120,7 @@ class MsdArmDevice : public msd_device_t,
     };
     std::vector<AddressSpaceStatus> address_space_status;
   };
-  static void DumpRegisters(const GpuFeatures& features, magma::RegisterIo* io,
+  static void DumpRegisters(const GpuFeatures& features, mali::RegisterIo* io,
                             DumpState* dump_state);
   void Dump(DumpState* dump_state, bool from_device_thread);
   void DumpToString(std::vector<std::string>* dump_string, bool from_device_thread);
@@ -189,12 +190,12 @@ class MsdArmDevice : public msd_device_t,
     inspect::ValueList properties;
   };
 
-  magma::RegisterIo* register_io() override {
+  mali::RegisterIo* register_io() override {
     DASSERT(register_io_);
     return register_io_.get();
   }
 
-  void set_register_io(std::unique_ptr<magma::RegisterIo> register_io) {
+  void set_register_io(std::unique_ptr<mali::RegisterIo> register_io) {
     register_io_ = std::move(register_io);
   }
 
@@ -210,7 +211,7 @@ class MsdArmDevice : public msd_device_t,
   void DisableInterrupts();
   bool InitializeHardware();
   void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
-  static void InitializeHardwareQuirks(GpuFeatures* features, magma::RegisterIo* registers);
+  static void InitializeHardwareQuirks(GpuFeatures* features, mali::RegisterIo* registers);
   bool PowerDownL2();
   bool PowerDownShaders();
   bool ResetDevice();
@@ -232,7 +233,7 @@ class MsdArmDevice : public msd_device_t,
   // memory pressure state.
   void PeriodicCriticalMemoryPressureCallback(bool force_instant);
 
-  void ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* registers);
+  void ExecuteAtomOnDevice(MsdArmAtom* atom, mali::RegisterIo* registers);
 
   // JobScheduler::Owner implementation.
   void RunAtom(MsdArmAtom* atom) override;
@@ -301,7 +302,7 @@ class MsdArmDevice : public msd_device_t,
   __TA_GUARDED(schedule_mutex_) std::vector<std::shared_ptr<MsdArmAtom>> atoms_to_schedule_;
 
   std::unique_ptr<magma::PlatformDevice> platform_device_;
-  std::unique_ptr<magma::RegisterIo> register_io_;
+  std::unique_ptr<mali::RegisterIo> register_io_;
   std::unique_ptr<magma::PlatformInterrupt> gpu_interrupt_;
   std::unique_ptr<magma::PlatformInterrupt> job_interrupt_;
   std::unique_ptr<magma::PlatformInterrupt> mmu_interrupt_;

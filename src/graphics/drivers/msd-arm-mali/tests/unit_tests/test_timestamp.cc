@@ -8,9 +8,9 @@
 #include "magma_util/register_io.h"
 #include "registers.h"
 
-class Hook : public magma::RegisterIo::Hook {
+class Hook : public mali::RegisterIo::Hook {
  public:
-  Hook(magma::RegisterIo* register_io) : register_io_(register_io) {}
+  Hook(mali::RegisterIo* register_io) : register_io_(register_io) {}
 
   void Write32(uint32_t val, uint32_t offset) override {}
   void Read64(uint64_t val, uint32_t offset) override {}
@@ -24,16 +24,16 @@ class Hook : public magma::RegisterIo::Hook {
 
   // Raw pointer to avoid circular reference. This class is owned by this
   // register_io_ and will be destroyed when it is.
-  magma::RegisterIo* register_io_;
+  mali::RegisterIo* register_io_;
 };
 
 class TestTimestamp : public testing::Test {
  public:
   void SetUp() override {
-    register_io_ = std::make_shared<magma::RegisterIo>(MockMmio::Create(8 * 1024 * 1024));
+    register_io_ = std::make_shared<mali::RegisterIo>(MockMmio::Create(8 * 1024 * 1024));
   }
 
-  std::shared_ptr<magma::RegisterIo> register_io_;
+  std::shared_ptr<mali::RegisterIo> register_io_;
 };
 
 constexpr uint64_t kTimestampBits = 0xff1234abcd;

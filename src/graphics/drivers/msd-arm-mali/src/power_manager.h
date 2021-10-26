@@ -12,18 +12,19 @@
 #include <magma_util/macros.h>
 #include <magma_util/register_io.h>
 
+#include "mali_register_io.h"
 #include "platform_semaphore.h"
 
 // This class generally lives on the device thread.
 class PowerManager {
  public:
-  PowerManager(magma::RegisterIo* io);
+  PowerManager(mali::RegisterIo* io);
 
   // Called on the device thread or the initial driver thread.
-  void EnableCores(magma::RegisterIo* io, uint64_t shader_bitmask);
+  void EnableCores(mali::RegisterIo* io, uint64_t shader_bitmask);
 
   // Called on the GPU interrupt thread.
-  void ReceivedPowerInterrupt(magma::RegisterIo* io);
+  void ReceivedPowerInterrupt(mali::RegisterIo* io);
 
   uint64_t l2_ready_status() const {
     std::lock_guard<std::mutex> lock(ready_status_mutex_);
@@ -39,11 +40,11 @@ class PowerManager {
                         std::chrono::steady_clock::duration* active_time_out);
   bool GetTotalTime(uint32_t* buffer_out);
 
-  void DisableL2(magma::RegisterIo* io);
-  void DisableShaders(magma::RegisterIo* io);
-  bool WaitForL2Disable(magma::RegisterIo* io);
-  bool WaitForShaderDisable(magma::RegisterIo* io);
-  bool WaitForShaderReady(magma::RegisterIo* io);
+  void DisableL2(mali::RegisterIo* io);
+  void DisableShaders(mali::RegisterIo* io);
+  bool WaitForL2Disable(mali::RegisterIo* io);
+  bool WaitForShaderDisable(mali::RegisterIo* io);
+  bool WaitForShaderReady(mali::RegisterIo* io);
 
  private:
   friend class TestMsdArmDevice;
@@ -55,7 +56,7 @@ class PowerManager {
     std::chrono::steady_clock::duration active_time;
   };
 
-  void UpdateReadyStatus(magma::RegisterIo* io);
+  void UpdateReadyStatus(mali::RegisterIo* io);
   // Called to update timekeeping and possible update the gpu activity info.
   void UpdateGpuActiveLocked(bool active) MAGMA_REQUIRES(active_time_mutex_);
   std::deque<TimePeriod>& time_periods() { return time_periods_; }

@@ -9,8 +9,8 @@
 
 #include <fbl/string_printf.h>
 
-#include "magma_util/register_bitfields.h"
 #include "magma_util/register_io.h"
+#include "mali_register_io.h"
 #include "registers.h"
 
 struct GpuFeatures {
@@ -69,28 +69,28 @@ struct GpuFeatures {
   uint32_t job_slot_count;
   uint32_t address_space_count;
 
-  void ReadFrom(magma::RegisterIo* io) {
+  void ReadFrom(mali::RegisterIo* io) {
     gpu_id = registers::GpuId::Get().ReadFrom(io);
     l2_features = registers::L2Features::Get().ReadFrom(io);
     tiler_features = registers::TilerFeatures::Get().ReadFrom(io);
-    suspend_size = io->Read32(kSuspendSizeOffset);
+    suspend_size = io->Read<uint32_t>(kSuspendSizeOffset);
     mem_features = registers::MemoryFeatures::Get().ReadFrom(io);
     mmu_features = registers::MmuFeatures::Get().ReadFrom(io);
-    address_space_present = io->Read32(kAsPresentOffset);
-    job_slot_present = io->Read32(kJsPresentOffset);
+    address_space_present = io->Read<uint32_t>(kAsPresentOffset);
+    job_slot_present = io->Read<uint32_t>(kJsPresentOffset);
     // Defaults to 0 on older GPUs.
-    thread_tls_alloc = io->Read32(kThreadTlsAllocOffset);
-    thread_max_threads = io->Read32(kThreadMaxThreadsOffset);
-    thread_max_workgroup_size = io->Read32(kThreadMaxWorkgroupSizeOffset);
-    thread_max_barrier_size = io->Read32(kThreadMaxBarrierSizeOffset);
+    thread_tls_alloc = io->Read<uint32_t>(kThreadTlsAllocOffset);
+    thread_max_threads = io->Read<uint32_t>(kThreadMaxThreadsOffset);
+    thread_max_workgroup_size = io->Read<uint32_t>(kThreadMaxWorkgroupSizeOffset);
+    thread_max_barrier_size = io->Read<uint32_t>(kThreadMaxBarrierSizeOffset);
     thread_features = registers::ThreadFeatures::Get().ReadFrom(io);
     coherency_features = registers::CoherencyFeatures::GetPresent().ReadFrom(io);
 
     for (uint32_t i = 0; i < kMaxJobSlots; i++)
-      job_slot_features[i] = io->Read32(kJsFeaturesOffset + i * 4);
+      job_slot_features[i] = io->Read<uint32_t>(kJsFeaturesOffset + i * 4);
 
     for (uint32_t i = 0; i < kNumTextureFeaturesRegisters; i++)
-      texture_features[i] = io->Read32(kTextureFeaturesOffset + i * 4);
+      texture_features[i] = io->Read<uint32_t>(kTextureFeaturesOffset + i * 4);
 
     shader_present = ReadPair(io, kShaderPresentLowOffset);
     tiler_present = ReadPair(io, kTilerPresentLowOffset);
@@ -141,9 +141,9 @@ struct GpuFeatures {
   }
 
  private:
-  uint64_t ReadPair(magma::RegisterIo* io, uint32_t low_offset) {
-    uint64_t low_word = io->Read32(low_offset);
-    uint64_t high_word = io->Read32(low_offset + 4);
+  uint64_t ReadPair(mali::RegisterIo* io, uint32_t low_offset) {
+    uint64_t low_word = io->Read<uint32_t>(low_offset);
+    uint64_t high_word = io->Read<uint32_t>(low_offset + 4);
     return (high_word << 32) | low_word;
   }
 

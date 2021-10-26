@@ -19,6 +19,22 @@
 #include "registers.h"
 
 namespace {
+class MaliMockMmioBase : public magma::PlatformMmio {
+ public:
+  virtual ~MaliMockMmioBase() { free(addr()); }
+
+  uint64_t physical_address() override { return 0; }
+
+ protected:
+  MaliMockMmioBase(void* addr, size_t size) : magma::PlatformMmio(addr, size) {}
+};
+
+using MaliMockMmio = mali::RegisterIoAdapter<MaliMockMmioBase>;
+
+std::unique_ptr<MaliMockMmio> CreateMockMmio(size_t size) {
+  void* data = calloc(1, size);
+  return std::make_unique<MaliMockMmio>(data, size);
+}
 
 class FakePlatformInterrupt : public magma::PlatformInterrupt {
  public:
@@ -74,7 +90,7 @@ class FakePlatformDevice : public magma::PlatformDevice {
 
   virtual std::unique_ptr<magma::PlatformMmio> CpuMapMmio(
       unsigned int index, magma::PlatformMmio::CachePolicy cache_policy) override {
-    auto mmio = MockMmio::Create(1024 * 1024);
+    auto mmio = CreateMockMmio(1024 * 1024);
 
     // Initialize with the S905D3 GPU ID so protected memory can be enabled.
     registers::GpuId::Get().FromValue(1888681984).WriteTo(mmio.get());
@@ -135,7 +151,7 @@ class TestNonHardwareMsdArmDevice {
   }
 
   void MockDump() {
-    auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+    auto reg_io = std::make_unique<mali::RegisterIo>(MockMmio::Create(1024 * 1024));
 
     uint32_t offset = static_cast<uint32_t>(registers::CoreReadyState::CoreType::kShader) +
                       static_cast<uint32_t>(registers::CoreReadyState::StatusType::kReady);
@@ -356,7 +372,7 @@ class TestNonHardwareMsdArmDevice {
   }
 
   void MockInitializeQuirks() {
-    auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+    auto reg_io = std::make_unique<mali::RegisterIo>(MockMmio::Create(1024 * 1024));
     GpuFeatures features;
     features.gpu_id.set_reg_value(0x72120000);
 

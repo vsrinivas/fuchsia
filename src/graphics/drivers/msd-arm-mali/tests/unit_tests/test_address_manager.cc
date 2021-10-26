@@ -17,12 +17,12 @@ namespace {
 
 class FakeOwner : public AddressManager::Owner {
  public:
-  FakeOwner(magma::RegisterIo* regs) : register_io_(regs) {}
+  FakeOwner(mali::RegisterIo* regs) : register_io_(regs) {}
 
-  magma::RegisterIo* register_io() override { return register_io_; }
+  mali::RegisterIo* register_io() override { return register_io_; }
 
  private:
-  magma::RegisterIo* register_io_;
+  mali::RegisterIo* register_io_;
 };
 
 class TestConnectionOwner : public FakeConnectionOwnerBase {
@@ -42,7 +42,7 @@ class TestConnectionOwner : public FakeConnectionOwnerBase {
 static constexpr uint64_t kMemoryAttributes = 0x8848u;
 
 TEST(AddressManager, MultipleAtoms) {
-  auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+  auto reg_io = std::make_unique<mali::RegisterIo>(MockMmio::Create(1024 * 1024));
   FakeOwner owner(reg_io.get());
   AddressManager address_manager(&owner, 8);
   TestConnectionOwner connection_owner(&address_manager);
@@ -88,7 +88,7 @@ TEST(AddressManager, MultipleAtoms) {
 }
 
 TEST(AddressManager, PreferUnused) {
-  auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+  auto reg_io = std::make_unique<mali::RegisterIo>(MockMmio::Create(1024 * 1024));
   FakeOwner owner(reg_io.get());
   AddressManager address_manager(&owner, 8);
   TestConnectionOwner connection_owner(&address_manager);
@@ -109,7 +109,7 @@ TEST(AddressManager, PreferUnused) {
 }
 
 TEST(AddressManager, ReuseSlot) {
-  auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+  auto reg_io = std::make_unique<mali::RegisterIo>(MockMmio::Create(1024 * 1024));
   FakeOwner owner(reg_io.get());
 
   const uint32_t kNumberAddressSpaces = 8;
@@ -155,7 +155,7 @@ TEST(AddressManager, ReuseSlot) {
 }
 
 TEST(AddressManager, FlushAddressRange) {
-  auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+  auto reg_io = std::make_unique<mali::RegisterIo>(MockMmio::Create(1024 * 1024));
   FakeOwner owner(reg_io.get());
   auto mapper = std::unique_ptr<MockBusMapper>();
 

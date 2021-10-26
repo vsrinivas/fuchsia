@@ -15,12 +15,12 @@
 namespace {
 class FakeOwner : public AddressManager::Owner {
  public:
-  FakeOwner(magma::RegisterIo* regs) : register_io_(regs) {}
+  FakeOwner(mali::RegisterIo* regs) : register_io_(regs) {}
 
-  magma::RegisterIo* register_io() override { return register_io_; }
+  mali::RegisterIo* register_io() override { return register_io_; }
 
  private:
-  magma::RegisterIo* register_io_;
+  mali::RegisterIo* register_io_;
 };
 
 class TestConnectionOwner : public FakeConnectionOwnerBase {
@@ -39,18 +39,18 @@ class TestConnectionOwner : public FakeConnectionOwnerBase {
 
 class TestCounterOwner : public PerformanceCounters::Owner {
  public:
-  TestCounterOwner(magma::RegisterIo* regs)
+  TestCounterOwner(mali::RegisterIo* regs)
       : register_io_(regs),
         address_manager_owner_(regs),
         address_manager_(&address_manager_owner_, 2),
         connection_owner_(&address_manager_) {}
 
-  magma::RegisterIo* register_io() override { return register_io_; }
+  mali::RegisterIo* register_io() override { return register_io_; }
   AddressManager* address_manager() override { return &address_manager_; }
   MsdArmConnection::Owner* connection_owner() override { return &connection_owner_; }
 
  private:
-  magma::RegisterIo* register_io_;
+  mali::RegisterIo* register_io_;
 
   FakeOwner address_manager_owner_;
   AddressManager address_manager_;
@@ -74,7 +74,7 @@ class TestManager : public PerformanceCountersManager {
 class PerformanceCounterTest {
  public:
   static void TestStateChange() {
-    auto mmio = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+    auto mmio = std::make_unique<mali::RegisterIo>(MockMmio::Create(1024 * 1024));
     TestCounterOwner owner(mmio.get());
     PerformanceCounters perf_counters(&owner);
     TestManager manager;
@@ -116,7 +116,7 @@ class PerformanceCounterTest {
   }
 
   static void TestEnabled() {
-    auto mmio = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+    auto mmio = std::make_unique<mali::RegisterIo>(MockMmio::Create(1024 * 1024));
     TestCounterOwner owner(mmio.get());
     PerformanceCounters perf_counters(&owner);
     TestManager manager;
@@ -149,7 +149,7 @@ class PerformanceCounterTest {
   }
 
   static void TestForceDisable() {
-    auto mmio = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+    auto mmio = std::make_unique<mali::RegisterIo>(MockMmio::Create(1024 * 1024));
     TestCounterOwner owner(mmio.get());
     PerformanceCounters perf_counters(&owner);
     TestManager manager;
@@ -202,7 +202,7 @@ class PerformanceCounterTest {
   }
 
   static void TestTriggerWhileDisabled() {
-    auto mmio = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+    auto mmio = std::make_unique<mali::RegisterIo>(MockMmio::Create(1024 * 1024));
     TestCounterOwner owner(mmio.get());
     PerformanceCounters perf_counters(&owner);
     TestManager manager;

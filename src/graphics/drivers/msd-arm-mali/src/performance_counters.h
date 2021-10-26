@@ -24,7 +24,7 @@ class PerformanceCounters {
  public:
   class Owner {
    public:
-    virtual magma::RegisterIo* register_io() = 0;
+    virtual mali::RegisterIo* register_io() = 0;
     virtual AddressManager* address_manager() = 0;
     virtual MsdArmConnection::Owner* connection_owner() = 0;
   };

@@ -17,7 +17,7 @@
 class TestPowerManager {
  public:
   void MockEnable() {
-    auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+    auto reg_io = std::make_unique<mali::RegisterIo>(MockMmio::Create(1024 * 1024));
     auto power_manager = std::make_unique<PowerManager>(reg_io.get());
 
     constexpr uint32_t kShaderOnOffset =
@@ -47,7 +47,7 @@ class TestPowerManager {
   }
 
   void MockDisable() {
-    auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+    auto reg_io = std::make_unique<mali::RegisterIo>(MockMmio::Create(1024 * 1024));
     auto power_manager = std::make_unique<PowerManager>(reg_io.get());
 
     constexpr uint64_t kCoresEnabled = 2;
@@ -85,7 +85,7 @@ class TestPowerManager {
   }
 
   void TimeCoalesce() {
-    auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+    auto reg_io = std::make_unique<mali::RegisterIo>(MockMmio::Create(1024 * 1024));
     PowerManager power_manager(reg_io.get());
 
     for (int i = 0; i < 100; i++) {
@@ -115,7 +115,7 @@ TEST(PowerManager, MockDisable) {
 }
 
 TEST(PowerManager, TimeAccumulation) {
-  auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+  auto reg_io = std::make_unique<mali::RegisterIo>(MockMmio::Create(1024 * 1024));
   PowerManager power_manager(reg_io.get());
   power_manager.UpdateGpuActive(true);
   usleep(150 * 1000);

@@ -215,7 +215,7 @@ std::shared_ptr<AddressSlotMapping> AddressManager::AssignToSlot(
   std::lock_guard<std::mutex> lock(hardware_slot.lock);
 
   auto old_address_space = slot.address_space;
-  magma::RegisterIo* io = owner_->register_io();
+  mali::RegisterIo* io = owner_->register_io();
   if (old_address_space)
     hardware_slot.InvalidateSlot(io);
   auto mapping = std::make_shared<AddressSlotMapping>(slot_number, connection);
@@ -250,7 +250,7 @@ void AddressManager::ReleaseSpaceMappings(const AddressSpace* address_space) {
   }
 }
 
-void AddressManager::HardwareSlot::InvalidateSlot(magma::RegisterIo* io) {
+void AddressManager::HardwareSlot::InvalidateSlot(mali::RegisterIo* io) {
   WaitForMmuIdle(io);
   constexpr uint64_t kFullAddressSpaceSize = 1ul << AddressSpace::kVirtualAddressSize;
   FlushMmuRange(io, 0, kFullAddressSpaceSize, true);
@@ -265,7 +265,7 @@ void AddressManager::HardwareSlot::InvalidateSlot(magma::RegisterIo* io) {
   magma::barriers::Barrier();
 }
 
-void AddressManager::HardwareSlot::WaitForMmuIdle(magma::RegisterIo* io) {
+void AddressManager::HardwareSlot::WaitForMmuIdle(mali::RegisterIo* io) {
   auto status_reg = registers.Status();
   if (!status_reg.ReadFrom(io).reg_value())
     return;
@@ -280,7 +280,7 @@ void AddressManager::HardwareSlot::WaitForMmuIdle(magma::RegisterIo* io) {
               registers.address_space(), status);
 }
 
-void AddressManager::HardwareSlot::FlushMmuRange(magma::RegisterIo* io, uint64_t start,
+void AddressManager::HardwareSlot::FlushMmuRange(mali::RegisterIo* io, uint64_t start,
                                                  uint64_t length, bool synchronous) {
   DASSERT(magma::is_page_aligned(start));
   DASSERT(AddressSpace::is_mali_page_aligned(start));
@@ -322,7 +322,7 @@ void AddressManager::HardwareSlot::FlushMmuRange(magma::RegisterIo* io, uint64_t
   magma::barriers::Barrier();
 }
 
-void AddressManager::HardwareSlot::UnlockMmu(magma::RegisterIo* io) {
+void AddressManager::HardwareSlot::UnlockMmu(mali::RegisterIo* io) {
   WaitForMmuIdle(io);
   registers.Command().FromValue(registers::AsCommand::kCmdUnlock).WriteTo(io);
 }

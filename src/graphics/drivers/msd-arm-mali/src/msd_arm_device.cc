@@ -218,7 +218,7 @@ bool MsdArmDevice::Init(std::unique_ptr<magma::PlatformDevice> platform_device,
   if (!mmio)
     return DRETF(false, "failed to map registers");
 
-  register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
+  register_io_ = std::make_unique<mali::RegisterIo>(std::move(mmio));
 
   gpu_features_.ReadFrom(register_io_.get());
   gpu_features_.InitializeInspect(&inspect_);
@@ -957,7 +957,7 @@ magma::PlatformPort* MsdArmDevice::GetPlatformPort() { return device_port_.get()
 
 void MsdArmDevice::UpdateGpuActive(bool active) { power_manager_->UpdateGpuActive(active); }
 
-void MsdArmDevice::DumpRegisters(const GpuFeatures& features, magma::RegisterIo* io,
+void MsdArmDevice::DumpRegisters(const GpuFeatures& features, mali::RegisterIo* io,
                                  DumpState* dump_state) {
   static struct {
     const char* name;
@@ -1224,7 +1224,7 @@ magma::Status MsdArmDevice::ProcessCancelAtoms(std::weak_ptr<MsdArmConnection> c
   return MAGMA_STATUS_OK;
 }
 
-void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* register_io) {
+void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, mali::RegisterIo* register_io) {
   TRACE_DURATION("magma", "ExecuteAtomOnDevice", "address", atom->gpu_address(), "slot",
                  atom->slot());
   TRACE_FLOW_STEP("magma", "atom", atom->trace_nonce());
@@ -1448,7 +1448,7 @@ magma_status_t MsdArmDevice::QueryReturnsBuffer(uint64_t id, uint32_t* buffer_ou
 }
 
 // static
-void MsdArmDevice::InitializeHardwareQuirks(GpuFeatures* features, magma::RegisterIo* reg) {
+void MsdArmDevice::InitializeHardwareQuirks(GpuFeatures* features, mali::RegisterIo* reg) {
   auto shader_config = registers::ShaderConfig::Get().FromValue(0);
   const uint32_t kGpuIdTGOX = 0x7212;
   uint32_t gpu_product_id = features->gpu_id.product_id();

@@ -24,7 +24,7 @@ class AddressManager final : public AddressSpaceObserver {
  public:
   class Owner {
    public:
-    virtual magma::RegisterIo* register_io() = 0;
+    virtual mali::RegisterIo* register_io() = 0;
   };
 
   AddressManager(Owner* owner, uint32_t address_slot_count);
@@ -75,12 +75,12 @@ class AddressManager final : public AddressSpaceObserver {
   struct HardwareSlot {
     HardwareSlot(uint32_t slot) : registers(slot) {}
 
-    void FlushMmuRange(magma::RegisterIo* io, uint64_t start, uint64_t length, bool synchronous)
+    void FlushMmuRange(mali::RegisterIo* io, uint64_t start, uint64_t length, bool synchronous)
         __TA_REQUIRES(lock);
     // Wait for the MMU to finish processing any existing commands.
-    void WaitForMmuIdle(magma::RegisterIo* io) __TA_REQUIRES(lock);
-    void InvalidateSlot(magma::RegisterIo* io) __TA_REQUIRES(lock);
-    void UnlockMmu(magma::RegisterIo* io) __TA_REQUIRES(lock);
+    void WaitForMmuIdle(mali::RegisterIo* io) __TA_REQUIRES(lock);
+    void InvalidateSlot(mali::RegisterIo* io) __TA_REQUIRES(lock);
+    void UnlockMmu(mali::RegisterIo* io) __TA_REQUIRES(lock);
 
     std::mutex lock;  // This lock should only be taken while address_slot_lock_ is held.
     __TA_GUARDED(lock) registers::AsRegisters registers;
