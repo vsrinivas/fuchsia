@@ -159,9 +159,7 @@ impl Ap {
         timer: Timer<TimedEvent>,
         bssid: Bssid,
     ) -> Self {
-        // TODO(fxbug.dev/41417): Remove this once devmgr installs a Rust logger.
-        logger::install();
-
+        logger::init();
         Self { ctx: Context::new(device, buf_provider, timer, bssid), bss: None }
     }
 

@@ -78,4 +78,9 @@ rustc_library("wlan-mlme") {
 
 fuchsia_unittest_package("wlan-mlme-tests") {
   deps = [ ":wlan-mlme_test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

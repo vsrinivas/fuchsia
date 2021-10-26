@@ -141,8 +141,7 @@ impl ClientMlme {
         buf_provider: BufferProvider,
         timer: Timer<TimedEvent>,
     ) -> Self {
-        // TODO(fxbug.dev/41417): Remove this once devmgr installs a Rust logger.
-        logger::install();
+        logger::init();
 
         let iface_mac = device.wlanmac_info().sta_addr;
         Self {
