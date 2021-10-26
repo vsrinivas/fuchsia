@@ -15,7 +15,7 @@ pub fn pread(raw_fd: RawFd, buffer: &mut Vec<u8>, offset: i64) -> Result<(), Err
         unsafe { libc::pread(raw_fd, buffer.as_mut_ptr() as *mut c_void, buffer.len(), offset) };
     debug!("safe_pread: {:?} {}", offset, ret);
     if ret < 0 {
-        return Err(Error::DoIoError(std::io::Error::last_os_error().kind()));
+        return Err(Error::DoIoError(std::io::Error::last_os_error().raw_os_error().unwrap()));
     } else if ret < buffer.len() as isize {
         return Err(Error::ShortRead);
     }
@@ -27,7 +27,7 @@ pub fn pwrite(raw_fd: RawFd, buffer: &mut Vec<u8>, offset: i64) -> Result<(), Er
         unsafe { libc::pwrite(raw_fd, buffer.as_ptr() as *const c_void, buffer.len(), offset) };
     debug!("safe_pwrite: {:?} {}", offset, ret);
     if ret < 0 {
-        return Err(Error::DoIoError(std::io::Error::last_os_error().kind()));
+        return Err(Error::DoIoError(std::io::Error::last_os_error().raw_os_error().unwrap()));
     } else if ret < buffer.len() as isize {
         // TODO(auradkar): Define a set of error codes to be used throughout the app.
         return Err(Error::ShortWrite);
@@ -64,6 +64,7 @@ mod tests {
 
     use {
         crate::common_operations::pwrite,
+        crate::target::Error,
         std::{fs::File, fs::OpenOptions, os::unix::io::AsRawFd},
     };
 
@@ -82,7 +83,6 @@ mod tests {
 
         let ret = pwrite(f.as_raw_fd(), &mut buffer, 0);
         assert!(ret.is_err());
-        // TODO(https://fxbug.dev/80290) update test to use std::io::Error::raw_os_error
-        // assert_eq!(ret.err(), Some(Error::DoIoError(ErrorKind::Other)));
+        assert_eq!(ret.err(), Some(Error::DoIoError(libc::EBADF)));
     }
 }

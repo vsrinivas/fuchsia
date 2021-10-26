@@ -6,7 +6,7 @@ use {
     crate::io_packet::{IoPacket, IoPacketType},
     crate::operations::OperationType,
     serde::{Deserialize, Serialize},
-    std::{io::ErrorKind, ops::Range, result::Result, sync::Arc, time::Instant},
+    std::{ops::Range, result::Result, sync::Arc, time::Instant},
     thiserror::Error,
 };
 
@@ -19,7 +19,7 @@ pub enum Error {
     ShortWrite,
 
     #[error("System error while performing IO.")]
-    DoIoError(ErrorKind),
+    DoIoError(i32),
 
     #[error("Read less bytes than requested")]
     ShortRead,
