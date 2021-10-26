@@ -1,20 +1,20 @@
 {
     select: {
         capture_overflows_vec: "INSPECT:audio_core.cmx:root/capturers/*/overflows:count",
-        capture_overflows_duration_vec: "INSPECT:audio_core.cmx:root/capturers/*/overflows:duration (ns)",
-        capture_sessions_duration_vec: "INSPECT:audio_core.cmx:root/capturers/*/overflows:total duration of all parent sessions (ns)",
+        capture_overflows_duration_vec: "INSPECT:audio_core.cmx:root/capturers/*/overflows:duration\\ (ns)",
+        capture_sessions_duration_vec: "INSPECT:audio_core.cmx:root/capturers/*/overflows:total\\ duration\\ of\\ all\\ parent\\ sessions\\ (ns)",
 
-        output_device_underflows: "INSPECT:audio_core.cmx:root/output devices/000/device underflows:count",
-        output_device_underflows_duration: "INSPECT:audio_core.cmx:root/output devices/000/device underflows:duration (ns)",
-        output_device_sessions_duration: "INSPECT:audio_core.cmx:root/output devices/000/device underflows:total duration of all parent sessions (ns)",
+        output_device_underflows: "INSPECT:audio_core.cmx:root/output\\ devices/000/device\\ underflows:count",
+        output_device_underflows_duration: "INSPECT:audio_core.cmx:root/output\\ devices/000/device\\ underflows:duration\\ (ns)",
+        output_device_sessions_duration: "INSPECT:audio_core.cmx:root/output\\ devices/000/device\\ underflows:total\\ duration\\ of\\ all\\ parent\\ sessions\\ (ns)",
 
-        output_pipeline_underflows: "INSPECT:audio_core.cmx:root/output devices/000/pipeline underflows:count",
-        output_pipeline_underflows_duration: "INSPECT:audio_core.cmx:root/output devices/000/pipeline underflows:duration (ns)",
-        output_pipeline_sessions_duration: "INSPECT:audio_core.cmx:root/output devices/000/pipeline underflows:total duration of all parent sessions (ns)",
+        output_pipeline_underflows: "INSPECT:audio_core.cmx:root/output\\ devices/000/pipeline\\ underflows:count",
+        output_pipeline_underflows_duration: "INSPECT:audio_core.cmx:root/output\\ devices/000/pipeline\\ underflows:duration\\ (ns)",
+        output_pipeline_sessions_duration: "INSPECT:audio_core.cmx:root/output\\ devices/000/pipeline\\ underflows:total\\ duration\\ of\\ all\\ parent\\ sessions\\ (ns)",
 
         render_underflows_vec: "INSPECT:audio_core.cmx:root/renderers/*/underflows:count",
-        render_underflows_duration_vec: "INSPECT:audio_core.cmx:root/renderers/*/underflows:duration (ns)",
-        render_sessions_duration_vec: "INSPECT:audio_core.cmx:root/renderers/*/underflows:total duration of all parent sessions (ns)",
+        render_underflows_duration_vec: "INSPECT:audio_core.cmx:root/renderers/*/underflows:duration\\ (ns)",
+        render_sessions_duration_vec: "INSPECT:audio_core.cmx:root/renderers/*/underflows:total\\ duration\\ of\\ all\\ parent\\ sessions\\ (ns)",
     },
 
     eval: {
