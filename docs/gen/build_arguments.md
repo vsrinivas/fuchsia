@@ -874,19 +874,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/6a75bad14727b3dc768cf6a92f4d9f47af6a2479/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/d5dd4224bbc1b99342c31842eeafbf0b12be3cac/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/6a75bad14727b3dc768cf6a92f4d9f47af6a2479/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/d5dd4224bbc1b99342c31842eeafbf0b12be3cac/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/6a75bad14727b3dc768cf6a92f4d9f47af6a2479/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/d5dd4224bbc1b99342c31842eeafbf0b12be3cac/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -2507,13 +2507,13 @@ From //src/storage/fshost/BUILD.gn:48
 
 **Current value (from the default):** `false`
 
-From [//third_party/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/chromium/mini_chromium/+/14b219d5d503e305a6d853e64de201659cfcbe2d/build/platform.gni#31)
+From [//third_party/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/chromium/mini_chromium/+/461b416dbe5f40a060ee08764b4986a949da6e6e/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/chromium/mini_chromium/+/14b219d5d503e305a6d853e64de201659cfcbe2d/build/platform.gni#30)
+From [//third_party/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/chromium/mini_chromium/+/461b416dbe5f40a060ee08764b4986a949da6e6e/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
