@@ -265,8 +265,10 @@ impl FlatlandViewStrategy {
 
         let sender = app_sender.clone();
         fasync::Task::local(async move {
-            let mut layout_info_stream =
-                HangingGetStream::new(Box::new(move || Some(parent_viewport_watcher.get_layout())));
+            let mut layout_info_stream = HangingGetStream::new(
+                parent_viewport_watcher,
+                flatland::ParentViewportWatcherProxy::get_layout,
+            );
 
             while let Some(result) = layout_info_stream.next().await {
                 match result {

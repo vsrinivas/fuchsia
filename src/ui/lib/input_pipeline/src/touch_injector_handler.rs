@@ -312,8 +312,10 @@ impl TouchInjectorHandler {
     /// Watches for viewport updates from the scene manager.
     pub async fn watch_viewport(self: Rc<Self>) {
         let configuration_proxy = self.configuration_proxy.clone();
-        let mut viewport_stream =
-            HangingGetStream::new(Box::new(move || Some(configuration_proxy.watch_viewport())));
+        let mut viewport_stream = HangingGetStream::new(
+            configuration_proxy,
+            pointerinjector_config::SetupProxy::watch_viewport,
+        );
         loop {
             match viewport_stream.next().await {
                 Some(Ok(new_viewport)) => {

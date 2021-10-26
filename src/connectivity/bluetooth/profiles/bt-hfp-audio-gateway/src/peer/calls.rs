@@ -138,8 +138,10 @@ fn call_state_to_request(
 /// `CallState`. When the channel for a given call is closed, an epitaph is returned with the
 /// `Number`.
 /// The `Number` uniquely identifies a call. TODO (fxbug.dev/64558): Handle multi-party calls.
-type CallStateUpdates =
-    StreamMap<CallIdx, StreamWithEpitaph<Tagged<CallIdx, HangingGetStream<CallState>>, CallIdx>>;
+type CallStateUpdates = StreamMap<
+    CallIdx,
+    StreamWithEpitaph<Tagged<CallIdx, HangingGetStream<CallProxy, CallState>>, CallIdx>,
+>;
 
 /// Manages the state of all ongoing calls reported by the call manager.
 ///
@@ -176,7 +178,7 @@ type CallStateUpdates =
 /// which represents the current state of the calls as reported by the Call Manager.
 pub(crate) struct Calls {
     /// A Stream of new calls.
-    new_calls: Option<HangingGetStream<NextCall>>,
+    new_calls: Option<HangingGetStream<PeerHandlerProxy, NextCall>>,
     /// Store the current state and associated resources of every Call.
     current_calls: CallList<CallEntry>,
     /// A Stream of all updates to the state of ongoing calls.
@@ -192,8 +194,9 @@ pub(crate) struct Calls {
 
 impl Calls {
     pub fn new(proxy: Option<PeerHandlerProxy>) -> Self {
-        let new_calls = proxy
-            .map(|proxy| HangingGetStream::new(Box::new(move || Some(proxy.watch_next_call()))));
+        let new_calls = proxy.map(|proxy| {
+            HangingGetStream::new_with_fn_ptr(proxy, PeerHandlerProxy::watch_next_call)
+        });
         Self {
             new_calls,
             current_calls: CallList::default(),
@@ -209,7 +212,7 @@ impl Calls {
         let call: CallEntry = call.try_into()?;
         let proxy = call.proxy.clone();
         let index = self.current_calls.insert(call);
-        let call_state = HangingGetStream::new(Box::new(move || Some(proxy.watch_state())));
+        let call_state = HangingGetStream::new_with_fn_ptr(proxy, CallProxy::watch_state);
         if self.call_updates.insert(index, call_state.tagged(index).with_epitaph(index)).is_some() {
             warn!("Replaced call at {} with a new call?", index)
         }

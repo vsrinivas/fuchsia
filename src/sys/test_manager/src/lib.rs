@@ -1207,7 +1207,8 @@ impl RunningSuite {
             .list_storage_in_realm(&root_moniker, iter_server)
             .await?
             .map_err(|e| format_err!("Error listing storage users in test realm: {:?}", e))?;
-        let mut stream = stream_fn(move || iterator.next());
+        let stream = stream_fn(move || iterator.next());
+        futures::pin_mut!(stream);
         while let Some(storage_moniker) = stream.try_next().await? {
             let (node, server) = fidl::endpoints::create_endpoints::<fio::NodeMarker>()?;
             let directory: ClientEnd<fio::DirectoryMarker> = node.into_channel().into();
@@ -1289,15 +1290,17 @@ impl RunningSuite {
 /// fidl_method() -> Future<Result<Vec<T>, E>>
 /// to
 /// Stream<Item=Result<T, E>>
-fn stream_fn<F, T, E, Fut>(mut query_fn: F) -> impl Stream<Item = Result<T, E>>
+fn stream_fn<F, T, E, Fut>(query_fn: F) -> impl Stream<Item = Result<T, E>>
 where
     F: 'static + FnMut() -> Fut + Unpin + Send + Sync,
     Fut: Future<Output = Result<Vec<T>, E>> + Unpin + Send + Sync,
 {
-    async_utils::hanging_get::client::GeneratedFutureStream::new(Box::new(move || Some(query_fn())))
-        .try_take_while(|vec| futures::future::ready(Ok(!vec.is_empty())))
-        .map_ok(|vec| futures::stream::iter(vec).map(Ok))
-        .try_flatten()
+    futures::stream::try_unfold(query_fn, |mut query_fn| async move {
+        Ok(Some((query_fn().await?, query_fn)))
+    })
+    .try_take_while(|vec| futures::future::ready(Ok(!vec.is_empty())))
+    .map_ok(|vec| futures::stream::iter(vec).map(Ok))
+    .try_flatten()
 }
 
 async fn get_realm(

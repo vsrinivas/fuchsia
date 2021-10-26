@@ -105,7 +105,7 @@ pub(super) struct PeerTask {
     handler: Option<PeerHandlerProxy>,
     network: NetworkInformation,
     network_updates: Either<
-        HangingGetStream<NetworkInformation>,
+        HangingGetStream<PeerHandlerProxy, NetworkInformation>,
         Empty<Result<NetworkInformation, fidl::Error>>,
     >,
     battery_level: u8,
@@ -339,8 +339,9 @@ impl PeerTask {
 
     /// Set a new HangingGetStream to watch for network information updates.
     fn create_network_updates_stream(&mut self, handler: PeerHandlerProxy) {
-        let closure = move || Some(handler.watch_network_information());
-        self.network_updates = HangingGetStream::new(Box::new(closure)).left_stream();
+        self.network_updates =
+            HangingGetStream::new_with_fn_ptr(handler, PeerHandlerProxy::watch_network_information)
+                .left_stream();
     }
 
     async fn peer_request(&mut self, request: PeerRequest) -> Result<(), Error> {

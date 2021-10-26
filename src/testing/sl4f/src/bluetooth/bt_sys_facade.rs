@@ -8,7 +8,7 @@ use fidl::endpoints::RequestStream;
 use fidl_fuchsia_bluetooth::PeerId;
 use fidl_fuchsia_bluetooth_sys::{
     AccessMarker, AccessProxy, BondableMode, ConfigurationMarker, ConfigurationProxy, HostInfo,
-    HostWatcherMarker, InputCapability, OutputCapability, PairingDelegateMarker,
+    HostWatcherMarker, HostWatcherProxy, InputCapability, OutputCapability, PairingDelegateMarker,
     PairingDelegateRequest, PairingDelegateRequestStream, PairingMethod, PairingOptions,
     PairingSecurityLevel, Peer, ProcedureTokenProxy, Settings, TechnologyType,
 };
@@ -57,11 +57,11 @@ struct InnerBluetoothSysFacade {
 
     /// Peer Watcher Stream for incomming and dropped peers
     #[derivative(Debug = "ignore")]
-    peer_watcher_stream: Option<HangingGetStream<(Vec<Peer>, Vec<PeerId>)>>,
+    peer_watcher_stream: Option<HangingGetStream<AccessProxy, (Vec<Peer>, Vec<PeerId>)>>,
 
     /// Host Watcher Stream for watching hosts
     #[derivative(Debug = "ignore")]
-    host_watcher_stream: Option<HangingGetStream<Vec<HostInfo>>>,
+    host_watcher_stream: Option<HangingGetStream<HostWatcherProxy, Vec<HostInfo>>>,
 
     /// Current active BT address
     active_bt_address: Option<String>,
@@ -118,7 +118,7 @@ impl BluetoothSysFacade {
         inner.access_proxy = Some(access_proxy.clone());
 
         inner.peer_watcher_stream =
-            Some(HangingGetStream::new(Box::new(move || Some(access_proxy.watch_peers()))));
+            Some(HangingGetStream::new_with_fn_ptr(access_proxy, AccessProxy::watch_peers));
 
         let host_watcher_proxy = match component::client::connect_to_protocol::<HostWatcherMarker>()
         {
@@ -130,7 +130,7 @@ impl BluetoothSysFacade {
         };
 
         inner.host_watcher_stream =
-            Some(HangingGetStream::new(Box::new(move || Some(host_watcher_proxy.watch()))));
+            Some(HangingGetStream::new_with_fn_ptr(host_watcher_proxy, HostWatcherProxy::watch));
 
         let configuration_proxy =
             match component::client::connect_to_protocol::<ConfigurationMarker>() {

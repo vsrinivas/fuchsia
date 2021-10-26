@@ -308,7 +308,7 @@ impl SbcHeader {
 pub struct Player {
     codec_config: MediaCodecConfig,
     audio_sink: Pin<Box<dyn AsyncWrite + Send>>,
-    watch_status_stream: HangingGetStream<AudioConsumerStatus>,
+    watch_status_stream: HangingGetStream<AudioConsumerProxy, AudioConsumerStatus>,
     playing: bool,
     next_packet_flags: mpsc::Sender<u32>,
     last_seq_played: u16,
@@ -370,7 +370,7 @@ impl Player {
         }
 
         let watch_status_stream =
-            HangingGetStream::new(Box::new(move || Some(audio_consumer.watch_status())));
+            HangingGetStream::new_with_fn_ptr(audio_consumer, AudioConsumerProxy::watch_status);
 
         Ok(Player {
             codec_config,

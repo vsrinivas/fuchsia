@@ -457,7 +457,7 @@ impl XdgToplevel {
         task_queue: TaskQueue,
     ) {
         let mut layout_info_stream =
-            HangingGetStream::new(Box::new(move || Some(parent_viewport_watcher.get_layout())));
+            HangingGetStream::new(parent_viewport_watcher, ParentViewportWatcherProxy::get_layout);
 
         fasync::Task::local(async move {
             while let Some(result) = layout_info_stream.next().await {

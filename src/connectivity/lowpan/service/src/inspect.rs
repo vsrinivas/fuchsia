@@ -215,8 +215,7 @@ pub async fn watch_device_changes<
 ) {
     let mut device_table: HashMap<String, Arc<Task<()>>> = HashMap::new();
     let lookup_clone = lookup.clone();
-    let mut lookup_stream =
-        HangingGetStream::new(Box::new(move || Some(lookup_clone.watch_devices())));
+    let mut lookup_stream = HangingGetStream::new(lookup_clone, |lookup| lookup.watch_devices());
     loop {
         match lookup_stream.next().await {
             None => {
@@ -499,13 +498,13 @@ async fn monitor_device<LP: 'static + LookupProxyInterface>(
     }
 
     let mut device_stream_handler =
-        HangingGetStream::new(Box::new(move || Some(device.watch_device_state())))
+        HangingGetStream::new(device, |device| device.watch_device_state())
             .map_ok(|state| {
                 iface_tree.update_status(state);
             })
             .try_collect::<()>();
     let mut device_extra_stream_handler =
-        HangingGetStream::new(Box::new(move || Some(device_extra.watch_identity())))
+        HangingGetStream::new(device_extra, |device| device.watch_identity())
             .map_ok(|identity| {
                 iface_tree.update_identity(identity);
             })

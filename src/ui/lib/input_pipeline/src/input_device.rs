@@ -137,8 +137,10 @@ pub fn initialize_report_stream<InputDeviceProcessReportsFn>(
         if device_proxy.get_input_reports_reader(server_end).is_err() {
             return; // TODO(fxbug.dev/54445): signal error
         }
-        let mut report_stream =
-            HangingGetStream::new(Box::new(move || Some(report_reader.read_input_reports())));
+        let mut report_stream = HangingGetStream::new(
+            report_reader,
+            fidl_input_report::InputReportsReaderProxy::read_input_reports,
+        );
         loop {
             match report_stream.next().await {
                 Some(Ok(Ok(input_reports))) => {

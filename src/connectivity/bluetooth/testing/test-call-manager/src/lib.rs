@@ -714,13 +714,12 @@ impl TestCallManager {
                 let proxy = control.into_proxy()?;
                 let proxy_ = proxy.clone();
                 let task = fasync::Task::spawn(async move {
-                    let proxy_ = proxy.clone();
                     let mut speaker_gain_stream =
-                        HangingGetStream::new(Box::new(move || Some(proxy_.watch_speaker_gain())));
-                    let proxy_ = proxy.clone();
-                    let mut microphone_gain_stream = HangingGetStream::new(Box::new(move || {
-                        Some(proxy_.watch_microphone_gain())
-                    }));
+                        HangingGetStream::new(proxy.clone(), HeadsetGainProxy::watch_speaker_gain);
+                    let mut microphone_gain_stream = HangingGetStream::new(
+                        proxy.clone(),
+                        HeadsetGainProxy::watch_microphone_gain,
+                    );
 
                     loop {
                         futures::select! {

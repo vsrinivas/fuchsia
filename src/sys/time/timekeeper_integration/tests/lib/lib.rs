@@ -24,7 +24,7 @@ use fuchsia_zircon::{self as zx, HandleBased, Rights};
 use futures::{
     channel::mpsc::Sender,
     stream::{Stream, StreamExt, TryStreamExt},
-    Future, FutureExt, SinkExt,
+    Future, SinkExt,
 };
 use lazy_static::lazy_static;
 use log::{debug, info};
@@ -407,10 +407,10 @@ pub fn create_cobalt_event_stream(
     proxy: Arc<LoggerQuerierProxy>,
     log_method: LogMethod,
 ) -> std::pin::Pin<Box<dyn Stream<Item = CobaltEvent>>> {
-    async_utils::hanging_get::client::GeneratedFutureStream::new(Box::new(move || {
-        Some(proxy.watch_logs2(PROJECT_ID, log_method).map(|res| res.unwrap().0))
-    }))
-    .map(futures::stream::iter)
+    async_utils::hanging_get::client::HangingGetStream::new(proxy, move |p| {
+        p.watch_logs2(PROJECT_ID, log_method)
+    })
+    .map(|res| futures::stream::iter(res.unwrap().0))
     .flatten()
     .boxed()
 }

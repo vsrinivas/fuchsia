@@ -126,7 +126,7 @@ impl InputSettingsHandler {
         // Create a HangingGetStream wrapper to abstract the details of the hanging-get pattern that
         // is used by the InputSettings service.
         let proxy = self.input_settings_proxy.clone();
-        let mut stream = HangingGetStream::new(Box::new(move || Some(proxy.watch2())));
+        let mut stream = HangingGetStream::new(proxy, fsettings::InputProxy::watch2);
 
         Ok(async move {
             self.inspect.set_handler_enabled(true);

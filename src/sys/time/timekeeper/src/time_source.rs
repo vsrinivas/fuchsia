@@ -4,7 +4,6 @@
 
 use {
     anyhow::{anyhow, Context as _, Error},
-    async_utils::hanging_get::client::GeneratedFutureStream,
     fidl_fuchsia_time_external::{self as ftexternal, PushSourceProxy, Status},
     fuchsia_async::futures::Stream,
     fuchsia_component::client::{launch, launcher, App},
@@ -88,30 +87,32 @@ impl PushTimeSource {
         let app_and_proxy = Arc::new((app, proxy));
         let app_and_proxy_clone = Arc::clone(&app_and_proxy);
 
-        let status_stream = GeneratedFutureStream::new(Box::new(move || {
-            Some(
-                app_and_proxy
-                    .1
-                    .watch_status()
-                    .map_ok(|status| Event::StatusChange { status })
-                    .err_into(),
-            )
-        }));
-        let sample_stream = GeneratedFutureStream::new(Box::new(move || {
-            Some(app_and_proxy_clone.1.watch_sample().map(|result| match result {
+        let status_stream = futures::stream::try_unfold(app_and_proxy, |app_and_proxy| {
+            app_and_proxy
+                .1
+                .watch_status()
+                .map_ok(move |status| Some((Event::StatusChange { status }, app_and_proxy)))
+                .err_into()
+        });
+
+        let sample_stream = futures::stream::try_unfold(app_and_proxy_clone, |app_and_proxy| {
+            app_and_proxy.1.watch_sample().map(move |result| match result {
                 Ok(sample) => match (sample.utc, sample.monotonic, sample.standard_deviation) {
                     (None, _, _) => Err(anyhow!("sample missing utc")),
                     (_, None, _) => Err(anyhow!("sample missing monotonic")),
                     (_, _, None) => Err(anyhow!("sample missing standard deviation")),
-                    (Some(utc), Some(monotonic), Some(std_dev)) => Ok(Event::Sample(Sample {
-                        utc: zx::Time::from_nanos(utc),
-                        monotonic: zx::Time::from_nanos(monotonic),
-                        std_dev: zx::Duration::from_nanos(std_dev),
-                    })),
+                    (Some(utc), Some(monotonic), Some(std_dev)) => Ok(Some((
+                        Event::Sample(Sample {
+                            utc: zx::Time::from_nanos(utc),
+                            monotonic: zx::Time::from_nanos(monotonic),
+                            std_dev: zx::Duration::from_nanos(std_dev),
+                        }),
+                        app_and_proxy,
+                    ))),
                 },
                 Err(err) => Err(err.into()),
-            }))
-        }));
+            })
+        });
 
         futures::stream::select(status_stream.boxed(), sample_stream.boxed())
     }

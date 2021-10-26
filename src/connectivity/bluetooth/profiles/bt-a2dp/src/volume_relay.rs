@@ -107,7 +107,7 @@ impl VolumeRelay {
 
         let audio_proxy_clone = audio.clone();
         let mut audio_watch_stream =
-            HangingGetStream::new(Box::new(move || Some(audio_proxy_clone.watch())));
+            HangingGetStream::new(audio_proxy_clone, settings::AudioProxy::watch);
 
         // Wait for the first update from the settings app.
         let mut current_volume = match audio_watch_stream.next().await {

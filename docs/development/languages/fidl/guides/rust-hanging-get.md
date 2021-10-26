@@ -14,7 +14,17 @@ to wrap the hanging get call in a `stream` by using
 [`HangingGetStream`][hanging-get-stream-impl]:
 
 ```rust
-let watch_foo_stream = HangingGetStream::new(Box::new(move || Some(proxy.watch_foo())));
+// When you don't need to write down the type of the result, you can use a
+// fn item, which has zero size and is statically dispatched when called.
+let watch_foo_stream = HangingGetStream::new(proxy, FooWatcherProxy::watch_foo);
+// Also you can use a capturing closure in that case.
+let watch_bar_stream = HangingGetStream::new(proxy, |p| p.watch_bar(some_captured_var));
+
+// If you do want to write down the type (for example when embedding this in
+// another Future), you can achieve so by storing a fn pointer. A fn pointer
+// can be obtained through coercion from a non-capturing closure or a fn item.
+// That said, if you use a capturing closure, there is no way to name the type.
+let watch_baz_stream: HangingGetStream<BazProxy, Baz> = HangingGetStream::new_with_fn_ptr(proxy, |p| p.watch_baz());
 ```
 
 Another alternative is using the pattern below to create a stream.
