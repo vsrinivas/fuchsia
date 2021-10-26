@@ -32,7 +32,6 @@
 namespace memfs {
 
 class Dnode;
-class Vfs;
 
 // Returns the page size used by Memfs (this is just the system memory page size).
 uint64_t GetPageSize();
@@ -50,8 +49,12 @@ class VnodeMemfs : public fs::Vnode {
 
   ~VnodeMemfs() override;
 
-  Vfs* vfs() const { return vfs_; }
   uint64_t ino() const { return ino_; }
+
+  static uint64_t GetInoCounter() { return ino_ctr_.load(std::memory_order_relaxed); }
+  static uint64_t GetDeletedInoCounter() {
+    return deleted_ino_ctr_.load(std::memory_order_relaxed);
+  }
 
   // TODO(smklein): Move member into the VnodeDir subclass.
   // Directories contain a raw reference to their location in the filesystem hierarchy.
@@ -66,16 +69,11 @@ class VnodeMemfs : public fs::Vnode {
   uint32_t link_count_ = 0;
 
  protected:
-  explicit VnodeMemfs(Vfs* vfs);
+  explicit VnodeMemfs(PlatformVfs* vfs);
 
-  Vfs* vfs_ = nullptr;
   uint64_t ino_ = 0;
   uint64_t create_time_ = 0;
   uint64_t modify_time_ = 0;
-
-  uint64_t GetInoCounter() const { return ino_ctr_.load(std::memory_order_relaxed); }
-
-  uint64_t GetDeletedInoCounter() const { return deleted_ino_ctr_.load(std::memory_order_relaxed); }
 
  private:
   static std::atomic<uint64_t> ino_ctr_;
@@ -84,7 +82,7 @@ class VnodeMemfs : public fs::Vnode {
 
 class VnodeFile final : public VnodeMemfs {
  public:
-  explicit VnodeFile(Vfs* vfs);
+  explicit VnodeFile(PlatformVfs* vfs);
   ~VnodeFile() override;
 
   fs::VnodeProtocolSet GetProtocols() const final;
@@ -111,7 +109,7 @@ class VnodeFile final : public VnodeMemfs {
 
 class VnodeDir final : public VnodeMemfs {
  public:
-  explicit VnodeDir(Vfs* vfs);
+  explicit VnodeDir(PlatformVfs* vfs);
   ~VnodeDir() override;
 
   fs::VnodeProtocolSet GetProtocols() const final;
@@ -127,7 +125,6 @@ class VnodeDir final : public VnodeMemfs {
   // Use the watcher container to implement a directory watcher
   void Notify(std::string_view name, unsigned event) final;
   zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
-  zx_status_t QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* out) final;
 
   // Vnode overrides.
   //
@@ -163,7 +160,7 @@ class VnodeDir final : public VnodeMemfs {
 
 class VnodeVmo final : public VnodeMemfs {
  public:
-  VnodeVmo(Vfs* vfs, zx_handle_t vmo, zx_off_t offset, zx_off_t length);
+  VnodeVmo(PlatformVfs* vfs, zx_handle_t vmo, zx_off_t offset, zx_off_t length);
   ~VnodeVmo() override;
 
   fs::VnodeProtocolSet GetProtocols() const final;
@@ -197,8 +194,6 @@ class Vfs : public fs::ManagedVfs {
   zx_status_t CreateFromVmo(VnodeDir* parent, std::string_view name, zx_handle_t vmo, zx_off_t off,
                             zx_off_t len);
 
-  uint64_t GetFsId() const;
-
   // Increases the size of the |vmo| to at least |request_size| bytes.
   // If the VMO is invalid, it will try to create it.
   // |current_size| is the current size of the VMO in number of bytes. It should be
@@ -206,6 +201,10 @@ class Vfs : public fs::ManagedVfs {
   // If the new size would cause us to exceed the limit on number of pages or if the system
   // ran out of memory, an error is returned.
   zx_status_t GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size, size_t* actual_size);
+
+  // fs::FuchsiaVfs override:
+  zx_status_t GetFilesystemInfo(fidl::AnyArena& allocator,
+                                fuchsia_fs::wire::FilesystemInfo& out) override;
 
  private:
   explicit Vfs(async_dispatcher_t* dispatcher);

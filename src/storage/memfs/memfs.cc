@@ -61,6 +61,35 @@ zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size,
   return ZX_OK;
 }
 
+zx_status_t Vfs::GetFilesystemInfo(fidl::AnyArena& allocator,
+                                   fuchsia_fs::wire::FilesystemInfo& out) {
+  out.set_block_size(allocator, GetPageSize());
+  out.set_max_node_name_size(allocator, kDnodeNameMax);
+  out.set_fs_type(allocator, fuchsia_fs::wire::FsType::kMemfs);
+
+  zx::event fs_id_copy;
+  if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
+    out.set_fs_id(allocator, std::move(fs_id_copy));
+
+  // There's no sensible value to use for the total_bytes for memfs. Fuchsia overcommits memory,
+  // which means you can have a memfs that stores more total bytes than the device has physical
+  // memory. You can actually commit more total_bytes than the device has physical memory because
+  // of zero-page deduplication.
+  out.set_total_bytes(allocator, UINT64_MAX);
+  // It's also very difficult to come up with a sensible value for used_bytes because memfs vends
+  // writable duplicates of its underlying VMOs to its client. The client can manipulate the VMOs
+  // in arbitrarily difficult ways to account for their memory usage.
+  out.set_used_bytes(allocator, 0);
+  out.set_total_nodes(allocator, UINT64_MAX);
+  uint64_t deleted_ino_count = VnodeMemfs::GetDeletedInoCounter();
+  uint64_t ino_count = VnodeMemfs::GetInoCounter();
+  ZX_DEBUG_ASSERT(ino_count >= deleted_ino_count);
+  out.set_used_nodes(allocator, ino_count - deleted_ino_count);
+  out.set_name(allocator, fidl::StringView(allocator, "memfs"));
+
+  return ZX_OK;
+}
+
 zx_status_t Vfs::Create(async_dispatcher_t* dispatcher, std::string_view fs_name,
                         std::unique_ptr<memfs::Vfs>* out_vfs, fbl::RefPtr<VnodeDir>* out_root) {
   auto fs = std::unique_ptr<memfs::Vfs>(new memfs::Vfs(dispatcher));
@@ -89,22 +118,12 @@ zx_status_t Vfs::CreateFromVmo(VnodeDir* parent, std::string_view name, zx_handl
   return parent->CreateFromVmo(name, vmo, off, len);
 }
 
-uint64_t Vfs::GetFsId() const {
-  // The globally-unique filesystem ID is the koid of the fs_id_ event.
-  zx_info_handle_basic_t handle_info;
-  if (zx_status_t status = fs_id_.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info),
-                                           nullptr, nullptr);
-      status == ZX_OK) {
-    return handle_info.koid;
-  }
-  return ZX_KOID_INVALID;
-}
-
 std::atomic<uint64_t> VnodeMemfs::ino_ctr_ = 0;
 std::atomic<uint64_t> VnodeMemfs::deleted_ino_ctr_ = 0;
 
-VnodeMemfs::VnodeMemfs(Vfs* vfs)
-    : vfs_(vfs), ino_(ino_ctr_.fetch_add(1, std::memory_order_relaxed)) {
+VnodeMemfs::VnodeMemfs(PlatformVfs* vfs)
+    : Vnode(vfs), ino_(ino_ctr_.fetch_add(1, std::memory_order_relaxed)) {
+  ZX_DEBUG_ASSERT(vfs);
   std::timespec ts;
   if (std::timespec_get(&ts, TIME_UTC)) {
     create_time_ = modify_time_ = zx_time_from_timespec(ts);

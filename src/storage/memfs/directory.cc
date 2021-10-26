@@ -25,13 +25,8 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace memfs {
-namespace {
 
-constexpr std::string_view kFsName = "memfs";
-
-}
-
-VnodeDir::VnodeDir(Vfs* vfs) : VnodeMemfs(vfs) {
+VnodeDir::VnodeDir(PlatformVfs* vfs) : VnodeMemfs(vfs) {
   link_count_ = 1;  // Implied '.'
 }
 
@@ -43,34 +38,6 @@ void VnodeDir::Notify(std::string_view name, unsigned event) { watcher_.Notify(n
 
 zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) {
   return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
-}
-
-zx_status_t VnodeDir::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* info) {
-  *info = {};
-  info->block_size = GetPageSize();
-  info->max_filename_size = kDnodeNameMax;
-  info->fs_type = VFS_TYPE_MEMFS;
-  info->fs_id = vfs()->GetFsId();
-
-  // There's no sensible value to use for the total_bytes for memfs. Fuchsia overcommits memory,
-  // which means you can have a memfs that stores more total bytes than the device has physical
-  // memory. You can actually commit more total_bytes than the device has physical memory because
-  // of zero-page deduplication.
-  info->total_bytes = UINT64_MAX;
-  // It's also very difficult to come up with a sensible value for used_bytes because memfs vends
-  // writable duplicates of its underlying VMOs to its client. The client can manipulate the VMOs
-  // in arbitrarily difficult ways to account for their memory usage.
-  info->used_bytes = 0;
-  info->total_nodes = UINT64_MAX;
-  uint64_t deleted_ino_count = GetDeletedInoCounter();
-  uint64_t ino_count = GetInoCounter();
-  ZX_DEBUG_ASSERT(ino_count >= deleted_ino_count);
-  info->used_nodes = ino_count - deleted_ino_count;
-  static_assert(kFsName.size() + 1 < fuchsia_io_admin::wire::kMaxFsNameBuffer,
-                "Memfs name too long");
-  info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
-                          fuchsia_io_admin::wire::kMaxFsNameBuffer - 1)] = '\0';
-  return ZX_OK;
 }
 
 zx_status_t VnodeDir::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, size_t* out_size) {
@@ -148,10 +115,13 @@ zx_status_t VnodeDir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<f
 
   fbl::AllocChecker ac;
   fbl::RefPtr<memfs::VnodeMemfs> vn;
-  if (S_ISDIR(mode)) {
-    vn = fbl::AdoptRef(new (&ac) memfs::VnodeDir(vfs()));
-  } else {
-    vn = fbl::AdoptRef(new (&ac) memfs::VnodeFile(vfs()));
+  {
+    std::lock_guard lock(mutex_);
+    if (S_ISDIR(mode)) {
+      vn = fbl::AdoptRef(new (&ac) memfs::VnodeDir(vfs()));
+    } else {
+      vn = fbl::AdoptRef(new (&ac) memfs::VnodeFile(vfs()));
+    }
   }
 
   if (!ac.check()) {
@@ -308,6 +278,8 @@ zx_status_t VnodeDir::CreateFromVmo(std::string_view name, zx_handle_t vmo, zx_o
   if ((status = CanCreate(name)) != ZX_OK) {
     return status;
   }
+
+  std::lock_guard lock(mutex_);
 
   fbl::AllocChecker ac;
   fbl::RefPtr<VnodeMemfs> vn;

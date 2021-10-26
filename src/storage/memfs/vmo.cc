@@ -38,7 +38,7 @@ bool WindowMatchesVMO(zx_handle_t vmo, zx_off_t offset, zx_off_t length) {
 
 }  // namespace
 
-VnodeVmo::VnodeVmo(Vfs* vfs, zx_handle_t vmo, zx_off_t offset, zx_off_t length)
+VnodeVmo::VnodeVmo(PlatformVfs* vfs, zx_handle_t vmo, zx_off_t offset, zx_off_t length)
     : VnodeMemfs(vfs), vmo_(vmo), offset_(offset), length_(length) {
   // Check whether the backing VMO has ZX_RIGHT_EXECUTE, which influences later validation and
   // behavior.
