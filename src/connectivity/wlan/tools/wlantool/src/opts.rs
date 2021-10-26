@@ -6,6 +6,7 @@
 
 use clap::arg_enum;
 use fidl_fuchsia_wlan_common as wlan_common;
+use fidl_fuchsia_wlan_common::PowerSaveType;
 use fidl_fuchsia_wlan_device as wlan;
 use structopt::StructOpt;
 
@@ -43,6 +44,15 @@ arg_enum! {
     }
 }
 
+arg_enum! {
+    #[derive(PartialEq, Copy, Clone, Debug)]
+    pub enum PsModeArg {
+        PsModeOff,
+        PsModeFast,
+        PsModePsPoll,
+    }
+}
+
 impl ::std::convert::From<RoleArg> for wlan::MacRole {
     fn from(arg: RoleArg) -> Self {
         match arg {
@@ -77,6 +87,16 @@ impl ::std::convert::From<ScanTypeArg> for wlan_common::ScanType {
         match arg {
             ScanTypeArg::Active => wlan_common::ScanType::Active,
             ScanTypeArg::Passive => wlan_common::ScanType::Passive,
+        }
+    }
+}
+
+impl ::std::convert::From<PsModeArg> for PowerSaveType {
+    fn from(arg: PsModeArg) -> Self {
+        match arg {
+            PsModeArg::PsModeOff => PowerSaveType::PsModeOff,
+            PsModeArg::PsModeFast => PowerSaveType::FastPsMode,
+            PsModeArg::PsModePsPoll => PowerSaveType::PsPollMode,
         }
     }
 }
@@ -149,6 +169,28 @@ pub enum PhyCmd {
     #[structopt(name = "clear-country")]
     /// sets the phy's country code to world-safe value
     ClearCountry {
+        #[structopt(raw(required = "true"))]
+        /// id of the phy to query
+        phy_id: u16,
+    },
+    #[structopt(name = "set-ps-mode")]
+    /// sets the phy's power save mode
+    SetPsMode {
+        #[structopt(raw(required = "true"))]
+        /// id of the phy to query
+        phy_id: u16,
+        #[structopt(raw(required = "true"))]
+        #[structopt(
+            raw(possible_values = "&PsModeArg::variants()"),
+            raw(case_insensitive = "true"),
+            help = "Specify PS Mode"
+        )]
+        mode: PsModeArg,
+    },
+
+    #[structopt(name = "get-ps-mode")]
+    /// gets the phy's power save mode
+    GetPsMode {
         #[structopt(raw(required = "true"))]
         /// id of the phy to query
         phy_id: u16,

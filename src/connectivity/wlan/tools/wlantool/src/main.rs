@@ -4,6 +4,7 @@
 
 use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints;
+use fidl_fuchsia_wlan_common::PowerSaveType;
 use fidl_fuchsia_wlan_device::MacRole;
 use fidl_fuchsia_wlan_device_service::{
     self as wlan_service, DeviceMonitorMarker, DeviceMonitorProxy, DeviceServiceMarker,
@@ -129,6 +130,33 @@ async fn do_phy(cmd: opts::PhyCmd, monitor_proxy: DeviceMonitor) -> Result<(), E
             let response =
                 monitor_proxy.clear_country(&mut req).await.context("error clearing country")?;
             println!("response: {:?}", zx::Status::from_raw(response));
+        }
+        opts::PhyCmd::SetPsMode { phy_id, mode } => {
+            println!("SetPSMode: phy_id {:?} ps_mode {:?}", phy_id, mode);
+            let mut req = wlan_service::SetPsModeRequest { phy_id, ps_mode: mode.into() };
+            let response =
+                monitor_proxy.set_ps_mode(&mut req).await.context("error setting ps mode")?;
+            println!("response: {:?}", zx::Status::from_raw(response));
+        }
+        opts::PhyCmd::GetPsMode { phy_id } => {
+            let result =
+                monitor_proxy.get_ps_mode(phy_id).await.context("error getting ps mode")?;
+            match result {
+                Ok(resp) => match resp.ps_mode {
+                    PowerSaveType::PsModeOff => {
+                        println!("PS Mode Off");
+                    }
+                    PowerSaveType::FastPsMode => {
+                        println!("Fast PS Mode");
+                    }
+                    PowerSaveType::PsPollMode => {
+                        println!("PS Poll Mode");
+                    }
+                },
+                Err(status) => {
+                    println!("response: Failed with status {:?}", zx::Status::from_raw(status));
+                }
+            }
         }
     }
     Ok(())
@@ -1056,6 +1084,58 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_get_ps_mode() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (monitor_svc_local, monitor_svc_remote) =
+            create_proxy::<DeviceMonitorMarker>().expect("failed to create DeviceMonitor service");
+        let mut monitor_svc_stream =
+            monitor_svc_remote.into_stream().expect("failed to create stream");
+        let fut = do_phy(PhyCmd::GetPsMode { phy_id: 45 }, monitor_svc_local);
+        pin_mut!(fut);
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut monitor_svc_stream.next()),
+            Poll::Ready(Some(Ok(wlan_service::DeviceMonitorRequest::GetPsMode {
+                phy_id, responder,
+            }))) => {
+                assert_eq!(phy_id, 45);
+                responder.send(
+                    &mut Ok(fidl_fuchsia_wlan_device_service::GetPsModeResponse {
+                        ps_mode: PowerSaveType::PsModeOff,
+                    })).expect("failed to send response");
+            }
+        );
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
+    }
+
+    #[test]
+    fn test_set_ps_mode() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (monitor_svc_local, monitor_svc_remote) =
+            create_proxy::<DeviceMonitorMarker>().expect("failed to create DeviceMonitor service");
+        let mut monitor_svc_stream =
+            monitor_svc_remote.into_stream().expect("failed to create stream");
+        let fut = do_phy(
+            PhyCmd::SetPsMode { phy_id: 45, mode: PsModeArg::PsModeFast },
+            monitor_svc_local,
+        );
+        pin_mut!(fut);
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut monitor_svc_stream.next()),
+            Poll::Ready(Some(Ok(wlan_service::DeviceMonitorRequest::SetPsMode {
+                req, responder,
+            }))) => {
+                assert_eq!(req.phy_id, 45);
+                assert_eq!(req.ps_mode, PowerSaveType::FastPsMode);
+                responder.send(zx::Status::OK.into_raw()).expect("failed to send response");
+            }
+        );
+    }
     #[test]
     fn test_generate_psk() {
         assert_eq!(
