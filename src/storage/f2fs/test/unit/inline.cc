@@ -246,5 +246,44 @@ TEST(InlineDirTest, InlineDentryOps) {
   EXPECT_EQ(Fsck(std::move(bc), &bc), ZX_OK);
 }
 
+TEST(InlineDirTest, NestedInlineDirectories) {
+  // There was a reported malfunction of inline-directories when the volume size is small.
+  // This test evaluates such case.
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDev(&bc, 102400, 512);
+
+  std::unique_ptr<F2fs> fs;
+  MountOptions options{};
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  fbl::RefPtr<VnodeF2fs> root;
+  FileTester::CreateRoot(fs.get(), &root);
+  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  fbl::RefPtr<fs::Vnode> vnode;
+  ASSERT_EQ(root_dir->Create(std::string("alpha"), S_IFDIR, &vnode), ZX_OK);
+  fbl::RefPtr<Dir> parent_dir = fbl::RefPtr<Dir>::Downcast(std::move(vnode));
+
+  ASSERT_EQ(parent_dir->Create(std::string("bravo"), S_IFDIR, &vnode), ZX_OK);
+  fbl::RefPtr<Dir> child_dir = fbl::RefPtr<Dir>::Downcast(std::move(vnode));
+
+  ASSERT_EQ(child_dir->Create(std::string("charlie"), S_IFREG, &vnode), ZX_OK);
+  fbl::RefPtr<File> child_file = fbl::RefPtr<File>::Downcast(std::move(vnode));
+
+  char data[] = "Hello, world!";
+  FileTester::AppendToFile(child_file.get(), data, sizeof(data));
+
+  ASSERT_EQ(child_file->Close(), ZX_OK);
+  ASSERT_EQ(child_dir->Close(), ZX_OK);
+  ASSERT_EQ(parent_dir->Close(), ZX_OK);
+  ASSERT_EQ(root_dir->Close(), ZX_OK);
+  root_dir = parent_dir = child_dir = nullptr;
+  child_file = nullptr;
+
+  FileTester::Unmount(std::move(fs), &bc);
+  EXPECT_EQ(Fsck(std::move(bc)), ZX_OK);
+}
+
 }  // namespace
 }  // namespace f2fs

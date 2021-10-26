@@ -247,7 +247,7 @@ void FileTester::AppendToFile(File *file, const void *data, size_t len) {
   size_t ret = 0;
 
   ASSERT_EQ(file->Append(data, len, &end, &ret), ZX_OK);
-  ASSERT_EQ(ret, kPageSize);
+  ASSERT_EQ(ret, len);
 }
 
 void MapTester::CheckNodeLevel(F2fs *fs, VnodeF2fs *vn, int level) {

@@ -264,9 +264,8 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
   FlushDirtyNodePage(Vfs(), ipage);
 #endif
 
-  vnode->SetParentNid(Ino());
-  vnode->UpdateInode(ipage);
   UpdateParentMetadata(vnode, 0);
+  UpdateInode(ipage);
 
 #if 0  // porting needed
   // up_write(&F2FS_I(inode)->i_sem);
@@ -327,6 +326,7 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
       Vfs()->AddOrphanInode(vnode);
     }
   }
+  UpdateInode(page);
 }
 
 bool Dir::IsEmptyInlineDir() {

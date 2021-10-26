@@ -533,7 +533,7 @@ TEST(FormatFilesystemTest, MkfsSmallVolume) {
     MkfsWorker mkfs(std::move(bc), mkfs_options);
     auto ret = mkfs.DoMkfs();
     if (volume_size >= 40) {
-      ASSERT_EQ(ret.is_error(), false);
+      ASSERT_TRUE(ret.is_ok());
       bc = std::move(*ret);
 
       std::unique_ptr<F2fs> fs;
@@ -545,8 +545,9 @@ TEST(FormatFilesystemTest, MkfsSmallVolume) {
       ASSERT_EQ(fsb.segment_count_main, static_cast<uint32_t>(volume_size / 2 - 8));
 
       FileTester::Unmount(std::move(fs), &bc);
+      EXPECT_EQ(Fsck(std::move(bc)), ZX_OK);
     } else {
-      ASSERT_EQ(ret.is_error(), true);
+      ASSERT_TRUE(ret.is_error());
       ASSERT_EQ(ret.status_value(), ZX_ERR_NO_SPACE);
       bc = mkfs.Destroy();
     }
