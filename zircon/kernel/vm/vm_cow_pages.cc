@@ -2925,6 +2925,8 @@ zx_status_t VmCowPages::TakePagesLocked(uint64_t offset, uint64_t len, VmPageSpl
 
   *pages = page_list_.TakePages(offset, len);
 
+  RangeChangeUpdateLocked(offset, len, RangeChangeOp::Unmap);
+
   VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
 
   return ZX_OK;

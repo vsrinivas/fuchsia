@@ -1189,7 +1189,7 @@ zx_status_t VmObjectPaged::TakePages(uint64_t offset, uint64_t len, VmPageSplice
   // what sorts of vmos are acceptable. If splice starts being used in more places,
   // then this restriction might need to be lifted.
   // TODO: Check that the region is locked once locking is implemented
-  if (mapping_list_len_ || children_list_len_) {
+  if (children_list_len_) {
     return ZX_ERR_BAD_STATE;
   }
   zx_status_t status = cow_pages_locked()->TakePagesLocked(offset, len, pages);

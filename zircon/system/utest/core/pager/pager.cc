@@ -4,7 +4,6 @@
 
 #include <lib/fit/defer.h>
 #include <lib/fzl/memory-probe.h>
-#include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/port.h>
@@ -1714,7 +1713,6 @@ TEST(Pager, InvalidPagerSupplyPages) {
   enum PagerViolation {
     kIsClone = 0,
     kFromPager,
-    kHasMapping,
     kHasClone,
     kHasPinned,
     kViolationCount,
@@ -1737,11 +1735,6 @@ TEST(Pager, InvalidPagerSupplyPages) {
                 ZX_OK);
     } else {
       ASSERT_EQ(zx::vmo::create(zx_system_get_page_size(), 0, &aux_vmo), ZX_OK);
-    }
-
-    fzl::VmoMapper mapper;
-    if (i == kHasMapping) {
-      ASSERT_EQ(mapper.Map(aux_vmo, 0, zx_system_get_page_size(), ZX_VM_PERM_READ), ZX_OK);
     }
 
     if (i == kHasClone) {
@@ -1799,6 +1792,42 @@ TEST(Pager, InvalidPagerSupplyPages) {
   ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), 0, zx_system_get_page_size(),
                                   aux_vmo.get(), zx_system_get_page_size()),
             ZX_ERR_OUT_OF_RANGE);
+}
+
+// Tests that supply_pages works when the source is mapped.
+TEST(Pager, MappedSupplyPages) {
+  zx::pager pager;
+  ASSERT_OK(zx::pager::create(0, &pager));
+
+  zx::port port;
+  ASSERT_OK(zx::port::create(0, &port));
+
+  zx::vmo vmo;
+  ASSERT_OK(pager.create_vmo(0, port, 0, zx_system_get_page_size(), &vmo));
+
+  zx::vmo aux_vmo;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &aux_vmo));
+
+  // Map the aux vmo.
+  auto root_vmar = zx::vmar::root_self();
+  zx_vaddr_t addr;
+  ASSERT_OK(root_vmar->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, aux_vmo, 0,
+                           zx_system_get_page_size(), &addr));
+  auto unmap = fit::defer([&]() { root_vmar->unmap(addr, zx_system_get_page_size()); });
+
+  // Write something to the aux vmo that can be verified later.
+  constexpr uint8_t kData = 0xcc;
+  *reinterpret_cast<volatile uint8_t*>(addr) = kData;
+
+  ASSERT_OK(pager.supply_pages(vmo, 0, zx_system_get_page_size(), aux_vmo, 0));
+
+  // Verify that the right page was moved over.
+  uint8_t buf;
+  ASSERT_OK(vmo.read(&buf, 0, sizeof(buf)));
+  EXPECT_EQ(buf, kData);
+
+  // The mapped address should now read zero.
+  EXPECT_EQ(*reinterpret_cast<volatile uint8_t*>(addr), 0u);
 }
 
 // Tests that resizing a non-resizable pager vmo fails.
