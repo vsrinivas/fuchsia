@@ -42,8 +42,6 @@ class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Con
                      GetDeviceNameCompleter::Sync& _completer) override;
   void GetTopologicalPath(GetTopologicalPathRequestView request,
                           GetTopologicalPathCompleter::Sync& _completer) override;
-  void GetEventHandle(GetEventHandleRequestView request,
-                      GetEventHandleCompleter::Sync& _completer) override;
   void GetMinDriverLogSeverity(GetMinDriverLogSeverityRequestView request,
                                GetMinDriverLogSeverityCompleter::Sync& _completer) override;
   void GetDevicePerformanceStates(GetDevicePerformanceStatesRequestView request,

@@ -168,12 +168,6 @@ protocol Controller {
         path string:MAX_DEVICE_PATH_LEN;
     }) error zx.status;
 
-    /// Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
-    GetEventHandle() -> (resource struct {
-        status zx.status;
-        event zx.handle:<EVENT, optional>;
-    });
-
     /// Return the current logging flags for this device's driver
     GetMinDriverLogSeverity() -> (struct {
         status zx.status;

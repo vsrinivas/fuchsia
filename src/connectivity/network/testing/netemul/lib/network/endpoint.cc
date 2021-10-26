@@ -309,10 +309,6 @@ class NetworkDeviceImpl : public EndpointImpl,
         fuchsia::device::Controller_GetTopologicalPath_Response(fxl::JoinStrings(parts, "/"))));
   }
 
-  void GetEventHandle(GetEventHandleCallback callback) override {
-    callback(ZX_ERR_NOT_SUPPORTED, zx::event());
-  }
-
   void GetMinDriverLogSeverity(GetMinDriverLogSeverityCallback callback) override {
     callback(ZX_ERR_NOT_SUPPORTED, 0);
   }

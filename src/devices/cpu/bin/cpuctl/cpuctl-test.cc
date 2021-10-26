@@ -74,8 +74,6 @@ class FakeCpuDevice : TestDeviceType,
                      GetDeviceNameCompleter::Sync& _completer) override {}
   void GetTopologicalPath(GetTopologicalPathRequestView request,
                           GetTopologicalPathCompleter::Sync& _completer) override {}
-  void GetEventHandle(GetEventHandleRequestView request,
-                      GetEventHandleCompleter::Sync& _completer) override {}
   void GetMinDriverLogSeverity(GetMinDriverLogSeverityRequestView request,
                                GetMinDriverLogSeverityCompleter::Sync& _completer) override {}
   void SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView request,

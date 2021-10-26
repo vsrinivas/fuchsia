@@ -228,20 +228,6 @@ void DevfsVnode::GetTopologicalPath(GetTopologicalPathRequestView request,
   completer.ReplySuccess(std::move(path));
 }
 
-void DevfsVnode::GetEventHandle(GetEventHandleRequestView request,
-                                GetEventHandleCompleter::Sync& completer) {
-  zx::eventpair event;
-  zx_status_t status = dev_->event.duplicate(ZX_RIGHTS_BASIC, &event);
-  static_assert(fuchsia_device::wire::kDeviceSignalReadable == DEV_STATE_READABLE);
-  static_assert(fuchsia_device::wire::kDeviceSignalWritable == DEV_STATE_WRITABLE);
-  static_assert(fuchsia_device::wire::kDeviceSignalError == DEV_STATE_ERROR);
-  static_assert(fuchsia_device::wire::kDeviceSignalHangup == DEV_STATE_HANGUP);
-  static_assert(fuchsia_device::wire::kDeviceSignalOob == DEV_STATE_OOB);
-  // TODO(teisenbe): The FIDL definition erroneously describes this as an event rather than
-  // eventpair.
-  completer.Reply(status, zx::event(event.release()));
-}
-
 void DevfsVnode::GetMinDriverLogSeverity(GetMinDriverLogSeverityRequestView request,
                                          GetMinDriverLogSeverityCompleter::Sync& completer) {
   if (!dev_->driver) {
