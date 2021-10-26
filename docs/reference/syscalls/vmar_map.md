@@ -46,12 +46,12 @@ closing the VMO handle does not remove the mapping added by this function.
   **ZX_RIGHT_READ** right.
 - **ZX_VM_PERM_WRITE**  Map *vmo* as writable.  It is an error if *handle*
   does not have **ZX_VM_CAN_MAP_WRITE** permissions, the *handle* does
-  not have the **ZX_RIGHT_WRITE** right, or the *vmo* handle does not have the
-  **ZX_RIGHT_WRITE** right.
+  not have the **ZX_RIGHT_WRITE** right, the *vmo* handle does not have the
+  **ZX_RIGHT_WRITE** right, or *options* does not specify **ZX_VM_PERM_READ**.
 - **ZX_VM_PERM_EXECUTE**  Map *vmo* as executable.  It is an error if *handle*
   does not have **ZX_VM_CAN_MAP_EXECUTE** permissions, the *handle* handle does
-  not have the **ZX_RIGHT_EXECUTE** right, or the *vmo* handle does not have the
-  **ZX_RIGHT_EXECUTE** right.
+  not have the **ZX_RIGHT_EXECUTE** right, the *vmo* handle does not have the
+  **ZX_RIGHT_EXECUTE** right, or *options* does not specify **ZX_VM_PERM_READ**.
 - **ZX_VM_MAP_RANGE**  Immediately page into the new mapping all backed
   regions of the VMO.  This cannot be specified if
   **ZX_VM_SPECIFIC_OVERWRITE** is used.
