@@ -14,6 +14,7 @@
 #include "src/media/audio/audio_core/testing/sine_wave_stream.h"
 
 using ASF = fuchsia::media::AudioSampleFormat;
+using StageMetricsVector = media::audio::ReadableStream::ReadLockContext::StageMetricsVector;
 
 namespace media::audio {
 namespace {
@@ -25,38 +26,71 @@ class Stats {
  public:
   explicit Stats(perftest::TestCaseResults* result) : perftest_result_(result) {}
 
-  size_t iterations() { return all_.size(); }
-  zx::duration total() { return total_; }
-  zx::duration mean() { return total_ / all_.size(); }
-  zx::duration min() {
-    std::sort(all_.begin(), all_.end());
-    return all_.front();
-  }
-  zx::duration max() {
-    std::sort(all_.begin(), all_.end());
-    return all_.back();
-  }
-  zx::duration median() {
-    std::sort(all_.begin(), all_.end());
-    if (all_.size() % 2 == 1) {
-      return all_[all_.size() / 2];
-    } else {
-      return (all_[all_.size() / 2 - 1] + all_[all_.size() / 2]) / 2;
+  struct Var {
+    std::string name;
+    zx::duration min;
+    zx::duration p10;
+    zx::duration p50;
+    zx::duration p90;
+    zx::duration max;
+  };
+
+  std::vector<Var> Summarize() {
+    std::vector<Var> out;
+    for (auto [name, values] : all_) {
+      std::sort(values.begin(), values.end());
+      out.push_back(Var{
+          .name = name,
+          .min = values.front(),
+          .p10 = PercentileFromSorted(values, 10),
+          .p50 = PercentileFromSorted(values, 50),
+          .p90 = PercentileFromSorted(values, 90),
+          .max = values.back(),
+      });
     }
+    return out;
   }
 
-  void Add(zx::duration elapsed) {
+  void Add(const StageMetrics& overall_metrics, const StageMetricsVector& per_stage_metrics) {
     if (perftest_result_) {
-      perftest_result_->AppendValue(static_cast<double>(elapsed.get()));
+      perftest_result_->AppendValue(static_cast<double>(overall_metrics.wall_time.get()));
     }
-    all_.push_back(elapsed);
-    total_ += elapsed;
+    Add(overall_metrics);
+    for (size_t k = 0; k < per_stage_metrics.size(); k++) {
+      Add(per_stage_metrics[k]);
+    }
   }
 
  private:
+  void Add(const StageMetrics& metrics) {
+    std::string name(std::string_view(metrics.name));
+    all_[name + ".wall"].push_back(metrics.wall_time);
+    all_[name + ".cpu"].push_back(metrics.cpu_time);
+    all_[name + ".queue"].push_back(metrics.queue_time);
+    all_[name + ".page_fault"].push_back(metrics.page_fault_time);
+    all_[name + ".kernel_locks"].push_back(metrics.kernel_lock_contention_time);
+  }
+
+  static zx::duration PercentileFromSorted(const std::vector<zx::duration>& sorted,
+                                           int percentile) {
+    auto size = static_cast<double>(sorted.size());
+    auto pos = static_cast<double>(percentile) / 100 * (size - 1);
+    auto pos_int = std::trunc(pos);
+    auto pos_frac = pos - pos_int;
+
+    if (static_cast<size_t>(pos_int) == sorted.size()) {
+      return sorted.back();
+    }
+
+    // LERP between pos_int and pos_int+1.
+    auto n = static_cast<size_t>(pos_int);
+    auto a = static_cast<double>(sorted[n].get());
+    auto b = static_cast<double>(sorted[n + 1].get());
+    return zx::nsec(static_cast<int64_t>((1.0 - pos_frac) * a + pos_frac * b));
+  }
+
   std::string scenario_name_;
-  std::vector<zx::duration> all_;
-  zx::duration total_;
+  std::map<std::string, std::vector<zx::duration>> all_;
   perftest::TestCaseResults* perftest_result_;
 };
 
@@ -227,8 +261,32 @@ void OutputPipelineBenchmark::PrintLegend(zx::duration mix_period) {
   auto mix_period_ms = static_cast<double>(mix_period.get()) / 1e6;
   printf(
       "\n"
-      "    Elapsed time in microseconds for a single %.2fms mix job\n"
-      "    for mixer configuration X/VV where X is a list of input\n"
+      "    Metrics for a single %.2fms mix job, displayed in the following format:\n"
+      "\n"
+      "        config(N runs):\n"
+      "          stage1.metric1\n"
+      "            [min, 10pp, 50pp, 90pp, max]\n"
+      "          stage1.metric3\n"
+      "            [min, 10pp, 50pp, 90pp, max]\n"
+      "          stage2.metric1\n"
+      "            [min, 10pp, 50pp, 90pp, max]\n"
+      "          ...\n"
+      "\n"
+      "    The \"main\" stage covers the full mix job end-to-end, with\n"
+      "    per-thread breakdowns computed on the main thread. Additional\n"
+      "    stages are pipeline-specific. For example, there might be one\n"
+      "    stage for each out-of-process effect invoked by the mix job.\n"
+      "\n"
+      "    For each metric we give a list of summary statistics (min, max,\n"
+      "    and three percentiles). All times are nanoseconds. The metrics are:\n"
+      "\n"
+      "        wall = wall time, in microseconds\n"
+      "        cpu = how long the thread spent running on cpu\n"
+      "        queue = how long the thread spent ready to run but waiting to be scheduled\n"
+      "        page_fault = how long the thread spent handling page faults\n"
+      "        kernel_locks = how long the thread spent blocked on kernel locks\n"
+      "\n"
+      "    The mixer config has the form X/VV, where X is a list of input\n"
       "    streams, each of which has one of the following usages:\n"
       "\n"
       "        B: BACKGROUND\n"
@@ -243,9 +301,7 @@ void OutputPipelineBenchmark::PrintLegend(zx::duration mix_period) {
       "        VM: muted volume\n"
       "        VC: constant volume\n"
       "        VS: discrete volume change just before each mix job (\"stepped\")\n"
-      "        VR: ramped volume change just before each mix job\n"
-      "\n"
-      "Config\t      Mean\t    Median\t      Best\t     Worst\tIterations\n",
+      "\n",
       mix_period_ms);
 }
 
@@ -302,11 +358,14 @@ void OutputPipelineBenchmark::Run(Scenario scenario, int64_t runs_per_scenario,
     Fixed frame_start = output_pipeline_->FracPresentationFrameAtRefTime(device_clock_->Read());
 
     ReadableStream::ReadLockContext ctx;
-    auto t0 = zx::clock::get_monotonic();
+    StageMetricsTimer timer("main");
+    timer.Start();
     auto got_buffer = output_pipeline_->ReadLock(ctx, frame_start, frames_per_mix).has_value();
     output_pipeline_->Trim(frame_start + Fixed(frames_per_mix));
-    auto t1 = zx::clock::get_monotonic();
-    stats.Add(t1 - t0);
+    timer.Stop();
+
+    auto overall_metrics = timer.Metrics();
+    stats.Add(overall_metrics, ctx.per_stage_metrics());
 
     if (!got_buffer) {
       silent++;
@@ -320,19 +379,22 @@ void OutputPipelineBenchmark::Run(Scenario scenario, int64_t runs_per_scenario,
     // jobs take artificially long due to CPU throttling from the kernel. To avoid this, sleep
     // until the end of the mix period.
     if (iter + 1 < runs_per_scenario) {
-      zx::nanosleep(zx::deadline_after(mix_period - (t1 - t0)));
+      zx::nanosleep(zx::deadline_after(mix_period - overall_metrics.wall_time));
     }
   }
 
   if (print_summary) {
-    printf("%s\t%10.3lf\t%10.3lf\t%10.3lf\t%10.3lf\t%10lu\n", scenario.ToString().c_str(),
-           to_usecs(stats.mean()), to_usecs(stats.median()), to_usecs(stats.min()),
-           to_usecs(stats.max()), stats.iterations());
+    printf("%s (%ld runs):\n", scenario.ToString().c_str(), runs_per_scenario);
+    for (auto& var : stats.Summarize()) {
+      printf("  %s\n", var.name.c_str());
+      printf("    [%10.3lf, %10.3lf, %10.3lf, %10.3lf, %10.3lf]\n", to_usecs(var.min),
+             to_usecs(var.p10), to_usecs(var.p50), to_usecs(var.p90), to_usecs(var.max));
+    }
 
     // This should never happen: we configure each input to cover the infinite past and
     // future, so as long as we have inputs there should be something to mix.
     if (silent > 0 && !scenario.inputs.empty()) {
-      printf("WARNING: %ld of %lu runs produced no output\n", silent, stats.iterations());
+      printf("WARNING: %ld of %lu runs produced no output\n", silent, runs_per_scenario);
     }
   }
 }

@@ -176,12 +176,11 @@ class ReadableStream : public BaseStream {
     }
 
     // Return all metrics accumulated via AddMetrics.
-    const static_vector<StageMetrics, kMaxStages>& per_stage_metrics() {
-      return per_stage_metrics_;
-    }
+    using StageMetricsVector = static_vector<StageMetrics, kMaxStages>;
+    const StageMetricsVector& per_stage_metrics() { return per_stage_metrics_; }
 
    private:
-    static_vector<StageMetrics, kMaxStages> per_stage_metrics_;
+    StageMetricsVector per_stage_metrics_;
   };
 
   // ReadableStream is implemented by audio pipeline stages that consume zero or more
