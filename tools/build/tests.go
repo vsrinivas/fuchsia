@@ -73,6 +73,9 @@ type Environment struct {
 
 	// Netboot tells whether to "netboot" instead of paving before running the tests.
 	Netboot bool `json:"netboot,omitempty"`
+
+	// IsEmu is true if this environment targets an emulator, false otherwise.
+	IsEmu bool `json:"is_emu,omitempty"`
 }
 
 // DimensionSet encapsulates the Swarming dimensions a test wishes to target.

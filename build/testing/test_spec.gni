@@ -298,6 +298,11 @@ template("test_spec") {
              "Mac environments must have a tag of \"mac\"")
     }
 
+    if (defined(dims.device_type) &&
+        (dims.device_type == "QEMU" || dims.device_type == "AEMU")) {
+      env.is_emu = true
+    }
+
     has_allowed_device_type = defined(dims.device_type) &&
                               allowed_device_types + [ dims.device_type ] -
                               [ dims.device_type ] != allowed_device_types
