@@ -14,18 +14,3 @@ mod target;
 mod tools;
 mod types;
 mod vdl_proto_parser;
-
-pub fn test_lib() -> Result<(), anyhow::Error> {
-    println!("Hello library world");
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_lib_exists() -> Result<(), anyhow::Error> {
-        assert!(test_lib().is_ok());
-        Ok(())
-    }
-}
