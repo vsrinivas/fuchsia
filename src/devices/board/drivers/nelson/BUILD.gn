@@ -11,17 +11,12 @@ if (internal_access) {
   config_tas5805m = "audio/config/tas5805m_config.h"
 }
 
-fuchsia_system_package("nelson") {
+group("nelson") {
   deps = [ ":nelson-module" ]
 
   if (internal_access) {
     deps += [ ":config-tas5805" ]
   }
-
-  # TODO(fxbug.dev/83058): Test groups currently depend on this target for
-  # test that build recovery images. Determine whether these dependencies
-  # can be unwound. For now, permit this dependency.
-  allowed_in_extra_deps = true
 }
 
 if (internal_access) {

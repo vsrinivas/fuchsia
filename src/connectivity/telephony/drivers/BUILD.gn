@@ -16,7 +16,7 @@ group("prod-drivers") {
 
 group("test-drivers") {
   testonly = true
-  deps = [ "qmi-fake-transport" ]
+  deps = [ "qmi-fake-transport:fake_qmi_driver" ]
 }
 
 group("tests") {

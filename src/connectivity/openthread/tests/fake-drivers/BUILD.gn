@@ -4,5 +4,5 @@
 
 group("fake-drivers") {
   testonly = true
-  deps = [ "fake-ot-radio" ]
+  deps = [ "fake-ot-radio:fake-ot-radio-driver" ]
 }

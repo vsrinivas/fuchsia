@@ -64,8 +64,3 @@ fuchsia_driver_component("wlantap_driver") {
   component_name = "wlantap"
   deps = [ ":wlantap_driver-driver" ]
 }
-
-fuchsia_system_package("wlantap") {
-  deps = [ ":wlantap_driver" ]
-  allowed_in_extra_deps = true
-}

@@ -77,7 +77,6 @@ group("tests") {
     "testing/wlan-service-util:wlan-service-util-tests",
     "testing/wlantap-client",
     "testing/wlantap-driver:tests",
-    "testing/wlantap-driver:wlantap",
     "tools/wlantool:wlantool-tests",
     "wlancfg:tests",
     "wlancfg/tool:donut-tests",

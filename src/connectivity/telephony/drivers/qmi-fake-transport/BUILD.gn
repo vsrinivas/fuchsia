@@ -6,15 +6,6 @@ import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/drivers.gni")
 
-fuchsia_system_package("qmi-fake-transport") {
-  testonly = true
-
-  deps = [ ":fake_qmi_driver" ]
-
-  # This package is reachable from //garnet/packages/prod:all
-  allowed_in_extra_deps = true
-}
-
 driver_bind_rules("qmi_fake_bind") {
   rules = "qmi_fake.bind"
   header_output = "qmi_fake_bind.h"

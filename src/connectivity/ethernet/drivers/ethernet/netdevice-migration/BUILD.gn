@@ -53,15 +53,6 @@ fuchsia_driver_component("netdevice-migration") {
   deps = [ ":netdevice-migration-driver" ]
 }
 
-fuchsia_system_package("pkg") {
-  package_name = "netdevice-migration"
-  deps = [ ":netdevice-migration" ]
-
-  # TODO(https://fxbug.dev/78293): Change the line below, as needed, once there exists a
-  # compile-time mechanism for binding the migration driver.
-  allowed_in_extra_deps = true
-}
-
 test("unit-tests") {
   output_name = "netdevice-migration-unit-tests"
   sources = [ "unit-tests.cc" ]

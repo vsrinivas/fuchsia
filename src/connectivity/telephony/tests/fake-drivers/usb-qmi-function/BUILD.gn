@@ -6,12 +6,6 @@ import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/drivers.gni")
 
-fuchsia_system_package("usb-qmi-function") {
-  testonly = true
-
-  deps = [ ":qmi_function" ]
-}
-
 driver_bind_rules("usb_qmi_function_bind") {
   rules = "usb_qmi_function.bind"
   header_output = "usb_qmi_function_bind.h"

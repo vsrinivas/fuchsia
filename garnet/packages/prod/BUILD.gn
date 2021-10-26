@@ -355,7 +355,7 @@ group("tee_manager") {
 group("telephony") {
   testonly = true
   public_deps = [
-    "//src/connectivity/telephony/drivers/qmi-fake-transport",
+    "//src/connectivity/telephony/drivers/qmi-fake-transport:fake_qmi_driver",
     "//src/connectivity/telephony/drivers/qmi-usb-transport",
     "//src/connectivity/telephony/ril-at",
     "//src/connectivity/telephony/ril-at:ril-at-tests",
