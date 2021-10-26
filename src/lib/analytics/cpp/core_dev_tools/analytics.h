@@ -56,7 +56,7 @@ namespace analytics::core_dev_tools {
 //     debug_ipc::Curl::GlobalInit();
 //     auto deferred_cleanup_curl = fit::defer(debug_ipc::Curl::GlobalCleanup);
 //     auto deferred_cleanup_analytics = fit::defer(Analytics::CleanUp);
-// and include related headers, e.g. <lib/fit/defer.h> and "src/developer/debug/shared/curl.h".
+// and include related headers, e.g. <lib/fit/defer.h> and "src/developer/debug/zxdb/common/curl.h".
 //
 // The derived class can also define their own functions for sending analytics. For example
 //

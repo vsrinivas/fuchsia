@@ -20,7 +20,7 @@ using GoogleAnalyticsTiming = ::analytics::google_analytics::Timing;
 // function before any threads are spawned and any use of Curl or this client:
 //     debug_ipc::Curl::GlobalInit();
 //     auto deferred_cleanup_curl = fit::defer(debug_ipc::Curl::GlobalCleanup);
-// and include related headers, e.g. <lib/fit/defer.h> and "src/developer/debug/shared/curl.h".
+// and include related headers, e.g. <lib/fit/defer.h> and "src/developer/debug/zxdb/common/curl.h".
 class GoogleAnalyticsClient : public google_analytics::Client {
  public:
   explicit GoogleAnalyticsClient(int64_t quit_timeout_ms) : executor_(quit_timeout_ms) {}

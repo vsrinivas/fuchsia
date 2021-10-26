@@ -26,8 +26,6 @@
 
 namespace zxdb {
 
-using ::debug::Curl;
-
 namespace {
 
 constexpr char kClientId[] =

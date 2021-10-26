@@ -7,9 +7,9 @@
 #include <fstream>
 #include <iostream>
 
-#include "src/developer/debug/shared/curl.h"
 #include "src/developer/debug/zxdb/client/cloud_storage_symbol_server.h"
 #include "src/developer/debug/zxdb/client/symbol_server.h"
+#include "src/developer/debug/zxdb/common/curl.h"
 #include "src/developer/debug/zxdb/common/version.h"
 #include "src/lib/fxl/strings/trim.h"
 #include "tools/symbolizer/analytics.h"
@@ -74,8 +74,8 @@ int AuthMode() {
 int Main(int argc, const char* argv[]) {
   using ::analytics::core_dev_tools::EarlyProcessAnalyticsOptions;
 
-  debug::Curl::GlobalInit();
-  auto deferred_cleanup_curl = fit::defer(debug::Curl::GlobalCleanup);
+  zxdb::Curl::GlobalInit();
+  auto deferred_cleanup_curl = fit::defer(zxdb::Curl::GlobalCleanup);
   auto deferred_cleanup_analytics = fit::defer(Analytics::CleanUp);
   CommandLineOptions options;
 

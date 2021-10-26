@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_SHARED_CURL_H_
-#define SRC_DEVELOPER_DEBUG_SHARED_CURL_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_COMMON_CURL_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_COMMON_CURL_H_
 
 #include <map>
 #include <memory>
@@ -17,7 +17,7 @@
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
-namespace debug {
+namespace zxdb {
 
 // To use Curl, one must add something like the following to the beginning of their main() function
 // (and include necessary header files).
@@ -121,6 +121,6 @@ class Curl : public fxl::RefCountedThreadSafe<Curl> {
   FRIEND_MAKE_REF_COUNTED(Curl);
 };
 
-}  // namespace debug
+}  // namespace zxdb
 
-#endif  // SRC_DEVELOPER_DEBUG_SHARED_CURL_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_COMMON_CURL_H_

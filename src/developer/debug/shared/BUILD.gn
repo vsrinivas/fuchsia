@@ -16,8 +16,6 @@ static_library("shared") {
     "buffered_fd.h",
     "component_utils.cc",
     "component_utils.h",
-    "curl.cc",
-    "curl.h",
     "handle_info.cc",
     "handle_info.h",
     "largest_less_or_equal.h",
@@ -46,7 +44,6 @@ static_library("shared") {
     "//src/developer/debug/shared/logging",
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
-    "//third_party/curl:libcurl",
   ]
 
   if (is_host) {

@@ -24,8 +24,7 @@ if (is_host) {
     sources = [ "main.cc" ]
     deps = [
       ":src",
-      "//src/developer/debug/shared",
-      "//src/developer/debug/zxdb/common:version",
+      "//src/developer/debug/zxdb/common",
       "//src/lib/fxl",
     ]
   }

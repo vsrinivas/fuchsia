@@ -13,8 +13,8 @@
 #include <thread>
 #include <vector>
 
-#include "src/developer/debug/shared/curl.h"
 #include "src/developer/debug/zxdb/client/symbol_server.h"
+#include "src/developer/debug/zxdb/common/curl.h"
 #include "src/developer/debug/zxdb/common/inet_util.h"
 #include "src/developer/debug/zxdb/common/version.h"
 #include "src/lib/fidl_codec/library_loader.h"
@@ -132,8 +132,8 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
 int ConsoleMain(int argc, const char* argv[]) {
   using ::analytics::core_dev_tools::EarlyProcessAnalyticsOptions;
 
-  debug::Curl::GlobalInit();
-  auto deferred_cleanup_curl = fit::defer(debug::Curl::GlobalCleanup);
+  zxdb::Curl::GlobalInit();
+  auto deferred_cleanup_curl = fit::defer(zxdb::Curl::GlobalCleanup);
   auto deferred_cleanup_analytics = fit::defer(Analytics::CleanUp);
   CommandLineOptions options;
   DecodeOptions decode_options;

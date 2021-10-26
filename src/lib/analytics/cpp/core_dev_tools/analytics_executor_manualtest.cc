@@ -12,13 +12,13 @@
 #include <iostream>
 #include <string>
 
-#include "src/developer/debug/shared/curl.h"
+#include "src/developer/debug/zxdb/common/curl.h"
 #include "src/lib/analytics/cpp/core_dev_tools/analytics_executor.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/substitute.h"
 
 using ::analytics::core_dev_tools::AnalyticsExecutor;
-using ::debug_ipc::Curl;
+using ::zxdb::Curl;
 
 namespace {
 

@@ -9,12 +9,12 @@
 
 #include <cstdlib>
 
-#include "src/developer/debug/shared/curl.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
+#include "src/developer/debug/zxdb/common/curl.h"
 #include "src/developer/debug/zxdb/common/version.h"
 #include "src/developer/debug/zxdb/console/actions.h"
 #include "src/developer/debug/zxdb/console/analytics.h"
@@ -147,8 +147,8 @@ void SetupCommandLineOptions(const CommandLineOptions& options, Session* session
 int ConsoleMain(int argc, const char* argv[]) {
   using ::analytics::core_dev_tools::EarlyProcessAnalyticsOptions;
 
-  debug::Curl::GlobalInit();
-  auto deferred_cleanup_curl = fit::defer(debug::Curl::GlobalCleanup);
+  Curl::GlobalInit();
+  auto deferred_cleanup_curl = fit::defer(Curl::GlobalCleanup);
   auto deferred_cleanup_analytics = fit::defer(Analytics::CleanUp);
   CommandLineOptions options;
   std::vector<std::string> params;

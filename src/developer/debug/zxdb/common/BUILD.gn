@@ -29,6 +29,7 @@ static_library("common") {
     "address_ranges.h",
     "cache_dir.h",
     "completion_callback.h",
+    "curl.h",
     "data_extractor.h",
     "err.h",
     "err_or.h",
@@ -45,6 +46,7 @@ static_library("common") {
   sources = [
     "address_ranges.cc",
     "cache_dir.cc",
+    "curl.cc",
     "data_extractor.cc",
     "err.cc",
     "file_util.cc",
@@ -62,6 +64,7 @@ static_library("common") {
     "//src/developer/debug/shared",
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
+    "//third_party/curl:libcurl",
   ]
 }
 

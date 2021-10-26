@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-#include "src/developer/debug/shared/curl.h"
+#include "src/developer/debug/zxdb/common/curl.h"
 #include "src/lib/analytics/cpp/core_dev_tools/google_analytics_client.h"
 
 using ::analytics::core_dev_tools::GoogleAnalyticsClient;
@@ -22,8 +22,8 @@ int main(int argc, char* argv[]) {
   std::string tracking_id(argv[1]);
   std::string client_id(argv[1]);
 
-  debug_ipc::Curl::GlobalInit();
-  auto deferred_cleanup_curl = fit::defer(debug_ipc::Curl::GlobalCleanup);
+  zxdb::Curl::GlobalInit();
+  auto deferred_cleanup_curl = fit::defer(zxdb::Curl::GlobalCleanup);
 
   auto ga_client = GoogleAnalyticsClient(-1);
   ga_client.SetTrackingId(tracking_id);
