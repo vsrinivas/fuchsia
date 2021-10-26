@@ -78,6 +78,10 @@ using GfxEvent = fuchsia::ui::gfx::Event;
 // Set this as low as you can that still works across all test platforms.
 constexpr zx::duration kTimeout = zx::min(5);
 
+// The type used to measure UTC time. The integer value here does not matter so
+// long as it differs from the ZX_CLOCK_MONOTONIC=0 defined by Zircon.
+using time_utc = zx::basic_time<1>;
+
 // Common services for each test.
 const std::map<std::string, std::string> LocalServices() {
   return {
@@ -454,11 +458,11 @@ class TouchInputBase : public gtest::TestWithEnvironmentFixture,
   }
 
   template <>
-  zx::time_utc RealNow() {
+  time_utc RealNow() {
     zx::unowned_clock utc_clock(zx_utc_reference_get());
     zx_time_t now;
     FX_CHECK(utc_clock->read(&now) == ZX_OK);
-    return zx::time_utc(now);
+    return time_utc(now);
   }
 
   template <typename TimeT>
@@ -604,8 +608,8 @@ class WebEngineTest_IP : public TouchInputBase {
   // For more detals, see fxbug.dev/57268.
   //
   // TODO(fxbug.dev/58322): Improve synchronization when we move to Flatland.
-  void TryInject(zx::basic_time<ZX_CLOCK_UTC>* input_injection_time) {
-    *input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_UTC>>(TapLocation::kTopLeft);
+  void TryInject(time_utc* input_injection_time) {
+    *input_injection_time = InjectInput<time_utc>(TapLocation::kTopLeft);
     async::PostDelayedTask(
         dispatcher(), [this, input_injection_time] { TryInject(input_injection_time); },
         kTapRetryInterval);
@@ -613,8 +617,8 @@ class WebEngineTest_IP : public TouchInputBase {
 
   // Helper method for checking the test.touch.ResponseListener response from a web app.
   void SetResponseExpectationsWeb(float expected_x, float expected_y,
-                                  zx::basic_time<ZX_CLOCK_UTC>& input_injection_time,
-                                  std::string component_name, bool& injection_complete) {
+                                  time_utc& input_injection_time, std::string component_name,
+                                  bool& injection_complete) {
     respond_callback_ = [expected_x, expected_y, component_name, &injection_complete,
                          &input_injection_time](test::touch::PointerData pointer_data) {
       // Convert Chromium's position, which is in logical pixels, to a position in physical
@@ -631,8 +635,7 @@ class WebEngineTest_IP : public TouchInputBase {
       FX_LOGS(INFO) << "Expected tap is at approximately (" << expected_x << ", " << expected_y
                     << ").";
 
-      zx::duration elapsed_time =
-          zx::basic_time<ZX_CLOCK_UTC>(pointer_data.time_received()) - input_injection_time;
+      zx::duration elapsed_time = time_utc(pointer_data.time_received()) - input_injection_time;
       EXPECT_NE(elapsed_time.get(), ZX_TIME_INFINITE);
       FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time.get();
       FX_LOGS(INFO) << "Chromium Received Time (ns): " << pointer_data.time_received();
@@ -675,8 +678,8 @@ class WebEngineTest_IP : public TouchInputBase {
 };
 
 TEST_F(WebEngineTest_IP, ChromiumTap) {
-  // Use `ZX_CLOCK_UTC` for compatibility with the time reported by `Date.now()` in web-engine.
-  zx::basic_time<ZX_CLOCK_UTC> input_injection_time(0);
+  // Use a UTC time for compatibility with the time reported by `Date.now()` in web-engine.
+  time_utc input_injection_time(0);
 
   // Note well: unlike one-flutter and cpp-gfx-client, the web app may be rendering before
   // it is hittable. Nonetheless, waiting for rendering is better than injecting the touch
@@ -732,8 +735,8 @@ TEST_F(WebEngineTest_IP, WebInFlutterTap) {
   // Embedded app takes up the left half of the screen. Expect response from it when injecting to
   // the left.
   {
-    // Use `ZX_CLOCK_UTC` for compatibility with the time reported by `Date.now()` in web-engine.
-    zx::basic_time<ZX_CLOCK_UTC> input_injection_time(0);
+    // Use a UTC time for compatibility with the time reported by `Date.now()` in web-engine.
+    time_utc input_injection_time(0);
 
     bool injection_complete = false;
     SetResponseExpectationsWeb(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
