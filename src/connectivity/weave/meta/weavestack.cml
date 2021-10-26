@@ -1,0 +1,60 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/weavestack",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.weave.Bootstrap",
+                "fuchsia.weave.Stack",
+                "fuchsia.weave.StackProvider",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.bluetooth.gatt.Server",
+                "fuchsia.bluetooth.le.Peripheral",
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.factory.WeaveFactoryStoreProvider",
+                "fuchsia.hwinfo.Device",
+                "fuchsia.hwinfo.Product",
+                "fuchsia.lowpan.device.Lookup",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.net.routes.State",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.net.tun.Control",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.weave.FactoryDataManager",
+                "fuchsia.weave.Signer",
+            ],
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.weave.Bootstrap",
+                "fuchsia.weave.Stack",
+                "fuchsia.weave.StackProvider",
+            ],
+            from: "self",
+        },
+    ],
+}
