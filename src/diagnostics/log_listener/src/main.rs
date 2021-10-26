@@ -259,7 +259,7 @@ impl LocalOptions {
         match self.clock {
             Clock::Monotonic => {
                 if self.hide_metadata {
-                    format!("{}.{}", timestamp / 1000000000, (timestamp / 1000000) % 1000)
+                    format!("{}.{:03}", timestamp / 1000000000, (timestamp / 1000000) % 1000)
                 } else {
                     format!("{:05}.{:06}", timestamp / 1000000000, (timestamp / 1000) % 1000000)
                 }
