@@ -29,7 +29,10 @@ fn resolve_path(suffix: &str) -> Result<String, Error> {
 }
 
 fn assert_valid_tz_version(tz_version: &str) -> Result<(), Error> {
-    let re = Regex::new(r"^20[0-9][0-9][a-z]$")?;
+    // Note: Standard TZ versions are of the form "2019a", but as of 2021-09, in ICU there can also
+    // be "in-between" versions with additional suffixes. See, for example,
+    // https://github.com/unicode-org/icu/pull/1885/.
+    let re = Regex::new(r"^20[0-9][0-9][a-z][a-z0-9]*$")?;
     assert!(
         re.is_match(tz_version),
         "Actual tz version '{}' did not match /{:?}/",

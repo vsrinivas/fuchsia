@@ -44,8 +44,10 @@ lazy_static! {
 // The default location at which to find the ICU data.
 const ICU_DATA_PATH_DEFAULT: &str = "/pkg/data/icudtl.dat";
 
-/// Expected length of a time zone revision ID (e.g. "2019c").
-const TZ_REVISION_ID_LENGTH: usize = 5;
+/// Minimum expected length of a time zone revision ID (e.g. "2019c").
+const MIN_TZ_REVISION_ID_LENGTH: usize = 5;
+/// Maximum expected length of a time zone revision ID.
+const MAX_TZ_REVISION_ID_LENGTH: usize = 15;
 
 /// Error type returned by `icu_udata`. The individual enum values encode
 /// classes of possible errors returned.
@@ -194,7 +196,9 @@ impl Loader {
             None => Ok(()),
             Some(tz_revision_file_path) => {
                 let expected_revision_id = std::fs::read_to_string(tz_revision_file_path)?;
-                if expected_revision_id.len() != TZ_REVISION_ID_LENGTH {
+                if !(MIN_TZ_REVISION_ID_LENGTH..=MAX_TZ_REVISION_ID_LENGTH)
+                    .contains(&expected_revision_id.len())
+                {
                     return Err(Error::Status(
                         zx::Status::IO_DATA_INTEGRITY,
                         Some(
@@ -291,7 +295,7 @@ mod tests {
     fn test_tz_res_loading_with_validation_invalid() -> Result<(), Error> {
         let result = Loader::new_with_tz_resources_and_validation(
             "/config/data/tzdata/icu/44/le",
-            "/pkg/data/test_bad_revision.txt",
+            "/pkg/data/test_inconsistent_revision.txt",
         );
         let err = result.unwrap_err();
         assert_matches!(err, Error::Status(zx::Status::IO_DATA_INTEGRITY, Some(_)));

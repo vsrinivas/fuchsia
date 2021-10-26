@@ -28,8 +28,10 @@ static constexpr char kIcuDataPath[] = "/pkg/data/icudtl.dat";
 static uintptr_t g_icu_data_ptr = 0u;
 static size_t g_icu_data_size = 0;
 
-// Maximum number of bytes a revision ID length may be (e.g. "2019c").
-static const size_t kRevisionIdLength = 5;
+// Minimum number of chars in a revision ID (e.g. "2019c").
+static const size_t kMinRevisionIdLength = 5;
+// Maximum number of chars in a revision ID.
+static const size_t kMaxRevisionIdLength = 15;
 
 // Map the memory into the process and return a pointer to the memory.
 // |size_out| is required and is set with the size of the mapped memory
@@ -42,8 +44,8 @@ uintptr_t GetData(const fsl::SizedVmo& icu_data, size_t* size_out) {
     return 0u;
 
   uintptr_t data = 0u;
-  zx_status_t status = zx::vmar::root_self()->map(
-      ZX_VM_PERM_READ, 0, icu_data.vmo(), 0, static_cast<size_t>(data_size), &data);
+  zx_status_t status = zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0, icu_data.vmo(), 0,
+                                                  static_cast<size_t>(data_size), &data);
   if (status == ZX_OK) {
     *size_out = static_cast<size_t>(data_size);
     return data;
@@ -88,7 +90,8 @@ zx_status_t InitializeWithTzResourceDirAndValidate(const char tz_files_dir[],
     }
     expected_tz_revision_id =
         std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
-    if (expected_tz_revision_id->length() != kRevisionIdLength) {
+    if (expected_tz_revision_id->length() < kMinRevisionIdLength ||
+        expected_tz_revision_id->length() > kMaxRevisionIdLength) {
       FX_LOGS(WARNING) << "corrupted time zone revision ID: " << expected_tz_revision_id.value();
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
@@ -127,7 +130,7 @@ zx_status_t InitializeWithTzResourceDirAndValidate(const char tz_files_dir[],
         FX_LOGS(WARNING) << "could not get tzdata version: " << ec.errorName();
         return ZX_ERR_INTERNAL;
       }
-      if (expected_tz_revision_id != std::string(actual_tz_revision_id, kRevisionIdLength)) {
+      if (expected_tz_revision_id != std::string(actual_tz_revision_id)) {
         FX_LOGS(WARNING) << "mismatched revision id: " << actual_tz_revision_id
                          << ", expected: " << expected_tz_revision_id.value();
         return ZX_ERR_IO_DATA_INTEGRITY;

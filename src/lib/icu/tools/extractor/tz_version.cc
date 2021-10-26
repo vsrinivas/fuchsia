@@ -18,7 +18,7 @@ namespace {
 
 constexpr const char kName[] = "tz-version";
 
-constexpr ssize_t kTzVersionLength = 5;
+constexpr ssize_t kMinTzVersionLength = 5;
 
 }  // namespace
 
@@ -34,7 +34,7 @@ int TzVersion::Execute(const fxl::CommandLine& command_line,
     return -1;
   }
 
-  if (strlen(version) != kTzVersionLength) {
+  if (strlen(version) < kMinTzVersionLength) {
     std::cerr << "Bad tz version string: " << version << std::endl;
     return -1;
   }

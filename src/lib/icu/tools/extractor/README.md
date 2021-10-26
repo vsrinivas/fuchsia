@@ -18,3 +18,13 @@ For usage instructions and available commands, run
 ```shell
 $ host-tools/icu_data_extractor --help
 ```
+
+## Testing
+
+To smoke-test the tool against the live ICU data files in the tree:
+
+```shell
+$ fx set core.x64 --with //src/lib/icu:tests &&\
+  fx build &&\
+  fx test icu_data_extractor_tests
+```

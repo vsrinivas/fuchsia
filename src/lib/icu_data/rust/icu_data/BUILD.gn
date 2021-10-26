@@ -39,7 +39,7 @@ icu_tzdata_config_data("icu_tzdata_for_icu_data_rust_tests") {
 }
 
 resource("icu_data_test_files") {
-  sources = [ "test_bad_revision.txt" ]
+  sources = [ "test_inconsistent_revision.txt" ]
   outputs = [ "data/{{source_file_part}}" ]
 }
 
