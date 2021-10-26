@@ -36,21 +36,19 @@ class GpuFeatures {
   bool halti5() { return minor_features_[5].reg_value() & registers::MinorFeatures::kHalti5; }
   bool has_mmu() { return minor_features_[1].reg_value() & registers::MinorFeatures::kHasMmu; }
 
-  uint32_t register_max() { return 1u << specs1_.log2_register_max().get(); }
-  uint32_t thread_count() { return 1u << specs1_.log2_thread_count().get(); }
-  uint32_t vertex_output_buffer_size() {
-    return 1u << specs1_.log2_vertex_output_buffer_size().get();
-  }
-  uint32_t vertex_cache_size() { return specs1_.vertex_cache_size().get(); }
-  uint32_t shader_core_count() { return specs1_.shader_core_count().get(); }
-  uint32_t pixel_pipes() { return specs1_.pixel_pipes().get(); }
-  uint32_t stream_count() { return specs4_.stream_count().get(); }
-  uint32_t buffer_size() { return specs2_.buffer_size().get(); }
-  uint32_t num_constants() { return specs2_.num_constants().get(); }
-  uint32_t varyings_count() { return specs3_.varyings_count().get(); }
+  uint32_t register_max() { return 1u << specs1_.log2_register_max(); }
+  uint32_t thread_count() { return 1u << specs1_.log2_thread_count(); }
+  uint32_t vertex_output_buffer_size() { return 1u << specs1_.log2_vertex_output_buffer_size(); }
+  uint32_t vertex_cache_size() { return specs1_.vertex_cache_size(); }
+  uint32_t shader_core_count() { return specs1_.shader_core_count(); }
+  uint32_t pixel_pipes() { return specs1_.pixel_pipes(); }
+  uint32_t stream_count() { return specs4_.stream_count(); }
+  uint32_t buffer_size() { return specs2_.buffer_size(); }
+  uint32_t num_constants() { return specs2_.num_constants(); }
+  uint32_t varyings_count() { return specs3_.varyings_count(); }
 
   uint32_t instruction_count() {
-    DASSERT(specs2_.instruction_count().get() == 0);
+    DASSERT(specs2_.instruction_count() == 0);
     return 256;
   }
 

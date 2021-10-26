@@ -120,8 +120,8 @@ bool MsdVsiDevice::Init(void* device_handle) {
 
   register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
 
-  device_id_ = registers::ChipId::Get().ReadFrom(register_io_.get()).chip_id().get();
-  customer_id_ = registers::CustomerId::Get().ReadFrom(register_io_.get()).customer_id().get();
+  device_id_ = registers::ChipId::Get().ReadFrom(register_io_.get()).chip_id();
+  customer_id_ = registers::CustomerId::Get().ReadFrom(register_io_.get()).customer_id();
   DLOG("Detected vsi chip id 0x%x customer id 0x%x", device_id_, customer_id_);
 
   if (HasAxiSram()) {
@@ -136,7 +136,7 @@ bool MsdVsiDevice::Init(void* device_handle) {
   if (device_id_ != 0x7000 && device_id_ != 0x8000)
     return DRETF(false, "Unspported gpu model 0x%x\n", device_id_);
 
-  revision_ = registers::Revision::Get().ReadFrom(register_io_.get()).chip_revision().get();
+  revision_ = registers::Revision::Get().ReadFrom(register_io_.get()).chip_revision();
 
   gpu_features_ = std::make_unique<GpuFeatures>(register_io_.get());
   DLOG("gpu features: 0x%x minor features 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
@@ -156,7 +156,7 @@ bool MsdVsiDevice::Init(void* device_handle) {
        gpu_features_->instruction_count(), gpu_features_->buffer_size(),
        gpu_features_->num_constants(), gpu_features_->varyings_count());
 
-  if (!gpu_features_->features().pipe_3d().get())
+  if (!gpu_features_->features().pipe_3d())
     return DRETF(false, "Gpu has no 3d pipe: features 0x%x\n",
                  gpu_features_->features().reg_value());
 
@@ -209,7 +209,7 @@ bool MsdVsiDevice::Init(void* device_handle) {
 void MsdVsiDevice::HardwareInit() {
   {
     auto reg = registers::PulseEater::Get().ReadFrom(register_io_.get());
-    reg.disable_internal_dfs().set(1);
+    reg.set_disable_internal_dfs(1);
     reg.WriteTo(register_io_.get());
   }
 
@@ -220,7 +220,7 @@ void MsdVsiDevice::HardwareInit() {
 
   {
     auto reg = registers::SecureAhbControl::Get().ReadFrom(register_io_.get());
-    reg.non_secure_access().set(1);
+    reg.set_non_secure_access(1);
     reg.WriteTo(register_io_.get());
   }
 
@@ -413,9 +413,9 @@ magma::Status MsdVsiDevice::ProcessInterrupt() {
   CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
   auto irq_status = registers::IrqAck::Get().ReadFrom(register_io_.get());
-  auto mmu_exception = irq_status.mmu_exception().get();
-  auto bus_error = irq_status.bus_error().get();
-  auto value = irq_status.value().get();
+  auto mmu_exception = irq_status.mmu_exception();
+  auto bus_error = irq_status.bus_error();
+  auto value = irq_status.value();
   bool do_dump = false;
   if (mmu_exception) {
     DMESSAGE("Interrupt thread received mmu_exception");
@@ -614,27 +614,27 @@ bool MsdVsiDevice::HardwareReset() {
                                                                start)
              .count() < kResetTimeoutMs) {
     auto clock_control = registers::ClockControl::Get().FromValue(0);
-    clock_control.isolate_gpu().set(1);
+    clock_control.set_isolate_gpu(1);
     clock_control.WriteTo(register_io());
 
     {
       auto reg = registers::SecureAhbControl::Get().FromValue(0);
-      reg.reset().set(1);
+      reg.set_reset(1);
       reg.WriteTo(register_io_.get());
     }
 
     std::this_thread::sleep_for(std::chrono::microseconds(100));
 
-    clock_control.soft_reset().set(0);
+    clock_control.set_soft_reset(0);
     clock_control.WriteTo(register_io());
 
-    clock_control.isolate_gpu().set(0);
+    clock_control.set_isolate_gpu(0);
     clock_control.WriteTo(register_io());
 
     clock_control = registers::ClockControl::Get().ReadFrom(register_io_.get());
 
     is_idle = IsIdle();
-    is_idle_3d = clock_control.idle_3d().get();
+    is_idle_3d = clock_control.idle_3d();
 
     if (is_idle && is_idle_3d) {
       DLOG("HardwareReset complete");
@@ -749,15 +749,15 @@ bool MsdVsiDevice::SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length,
   DLOG("Submitting buffer at bus addr 0x%lx", bus_addr);
 
   auto reg_cmd_addr = registers::FetchEngineCommandAddress::Get().FromValue(0);
-  reg_cmd_addr.addr().set(bus_addr & 0xFFFFFFFF);
+  reg_cmd_addr.set_addr(bus_addr & 0xFFFFFFFF);
 
   auto reg_cmd_ctrl = registers::FetchEngineCommandControl::Get().FromValue(0);
-  reg_cmd_ctrl.enable().set(1);
-  reg_cmd_ctrl.prefetch().set(prefetch);
+  reg_cmd_ctrl.set_enable(1);
+  reg_cmd_ctrl.set_prefetch(prefetch);
 
   auto reg_sec_cmd_ctrl = registers::SecureCommandControl::Get().FromValue(0);
-  reg_sec_cmd_ctrl.enable().set(1);
-  reg_sec_cmd_ctrl.prefetch().set(prefetch);
+  reg_sec_cmd_ctrl.set_enable(1);
+  reg_sec_cmd_ctrl.set_prefetch(prefetch);
 
   reg_cmd_addr.WriteTo(register_io_.get());
   reg_cmd_ctrl.WriteTo(register_io_.get());
@@ -784,15 +784,15 @@ bool MsdVsiDevice::StartRingbuffer(std::shared_ptr<MsdVsiContext> context) {
   MiLink::write(ringbuffer_.get(), kRbPrefetch, wait_gpu_addr);
 
   auto reg_cmd_addr = registers::FetchEngineCommandAddress::Get().FromValue(0);
-  reg_cmd_addr.addr().set(static_cast<uint32_t>(wait_gpu_addr));
+  reg_cmd_addr.set_addr(static_cast<uint32_t>(wait_gpu_addr));
 
   auto reg_cmd_ctrl = registers::FetchEngineCommandControl::Get().FromValue(0);
-  reg_cmd_ctrl.enable().set(1);
-  reg_cmd_ctrl.prefetch().set(kRbPrefetch);
+  reg_cmd_ctrl.set_enable(1);
+  reg_cmd_ctrl.set_prefetch(kRbPrefetch);
 
   auto reg_sec_cmd_ctrl = registers::SecureCommandControl::Get().FromValue(0);
-  reg_sec_cmd_ctrl.enable().set(1);
-  reg_sec_cmd_ctrl.prefetch().set(kRbPrefetch);
+  reg_sec_cmd_ctrl.set_enable(1);
+  reg_sec_cmd_ctrl.set_prefetch(kRbPrefetch);
 
   reg_cmd_addr.WriteTo(register_io_.get());
   reg_cmd_ctrl.WriteTo(register_io_.get());
@@ -1145,8 +1145,7 @@ magma_status_t MsdVsiDevice::ChipIdentity(magma_vsi_vip_chip_identity* out_ident
   memset(out_identity, 0, sizeof(*out_identity));
   out_identity->chip_model = device_id();
   out_identity->chip_revision = revision();
-  out_identity->chip_date =
-      registers::ChipDate::Get().ReadFrom(register_io_.get()).chip_date().get();
+  out_identity->chip_date = registers::ChipDate::Get().ReadFrom(register_io_.get()).chip_date();
 
   out_identity->stream_count = gpu_features_->stream_count();
   out_identity->pixel_pipes = gpu_features_->pixel_pipes();
@@ -1156,10 +1155,9 @@ magma_status_t MsdVsiDevice::ChipIdentity(magma_vsi_vip_chip_identity* out_ident
   out_identity->varyings_count = gpu_features_->varyings_count();
   out_identity->gpu_core_count = 0x1;
 
-  out_identity->product_id =
-      registers::ProductId::Get().ReadFrom(register_io_.get()).product_id().get();
+  out_identity->product_id = registers::ProductId::Get().ReadFrom(register_io_.get()).product_id();
   out_identity->chip_flags = 0x4;
-  out_identity->eco_id = registers::EcoId::Get().ReadFrom(register_io_.get()).eco_id().get();
+  out_identity->eco_id = registers::EcoId::Get().ReadFrom(register_io_.get()).eco_id();
   out_identity->customer_id = customer_id();
   return MAGMA_STATUS_OK;
 }

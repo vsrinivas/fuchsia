@@ -72,7 +72,7 @@ void PageTableArrays::HardwareInit(magma::RegisterIo* register_io) {
   }
   {
     auto reg = registers::PageTableArrayControl::Get().FromValue(0);
-    reg.enable().set(1);
+    reg.set_enable(1);
     reg.WriteTo(register_io);
   }
   {
@@ -87,15 +87,15 @@ void PageTableArrays::HardwareInit(magma::RegisterIo* register_io) {
   }
   {
     auto reg = registers::MmuSafeAddressConfig::Get().FromValue(0);
-    reg.non_security_safe_address_high().set(non_security_safe_page_bus_addr & 0xFF);
-    reg.security_safe_address_high().set(security_safe_page_bus_addr & 0xFF);
+    reg.set_non_security_safe_address_high(non_security_safe_page_bus_addr & 0xFF);
+    reg.set_security_safe_address_high(security_safe_page_bus_addr & 0xFF);
     reg.WriteTo(register_io);
   }
 }
 
 void PageTableArrays::Enable(magma::RegisterIo* register_io, bool enable) {
   auto reg_mmu_sec_ctrl = registers::MmuSecureControl::Get().ReadFrom(register_io);
-  reg_mmu_sec_ctrl.enable().set(enable ? 1 : 0);
+  reg_mmu_sec_ctrl.set_enable(enable ? 1 : 0);
   reg_mmu_sec_ctrl.WriteTo(register_io);
 }
 

@@ -30,7 +30,7 @@ class PageTableArrays {
   void AssignAddressSpace(uint32_t index, AddressSpace* address_space);
 
   bool IsEnabled(magma::RegisterIo* register_io) {
-    return registers::MmuSecureControl::Get().ReadFrom(register_io).enable().get();
+    return registers::MmuSecureControl::Get().ReadFrom(register_io).enable();
   }
 
  private:

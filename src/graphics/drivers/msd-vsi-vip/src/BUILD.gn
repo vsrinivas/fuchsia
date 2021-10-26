@@ -36,6 +36,7 @@ source_set("src") {
   public_deps = [
     "../include",
     "//src/graphics/lib/magma/include:msd",
+    "//zircon/system/ulib/hwreg",
   ]
   deps = [
     "//src/graphics/lib/magma/src/magma_util:address_space",
