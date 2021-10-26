@@ -17,7 +17,8 @@ FakePacketQueue::FakePacketQueue(
       timeline_function_(std::move(ref_time_to_frac_presentation_frame)),
       audio_clock_(std::move(audio_clock)) {}
 
-std::optional<ReadableStream::Buffer> FakePacketQueue::ReadLock(Fixed frame, int64_t frame_count) {
+std::optional<ReadableStream::Buffer> FakePacketQueue::ReadLock(ReadLockContext& ctx, Fixed frame,
+                                                                int64_t frame_count) {
   Fixed frame_end = frame + Fixed(frame_count);
 
   // Find the first intersecting packet.

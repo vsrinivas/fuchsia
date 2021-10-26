@@ -613,7 +613,8 @@ zx_status_t BaseCapturer::Process() {
     }
 
     // Mix the requested number of frames.
-    auto buf = mix_stage_->ReadLock(Fixed(frame_pointer_), mix_state->frames);
+    ReadableStream::ReadLockContext ctx;
+    auto buf = mix_stage_->ReadLock(ctx, Fixed(frame_pointer_), mix_state->frames);
     if (buf) {
       FX_DCHECK(buf->start().Floor() == frame_pointer_);
       FX_DCHECK(buf->length().Floor() > 0);

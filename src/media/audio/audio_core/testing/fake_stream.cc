@@ -19,7 +19,8 @@ FakeStream::FakeStream(const Format& format, std::shared_ptr<AudioClockFactory> 
   memset(buffer_.get(), 0, buffer_size_);
 }
 
-std::optional<ReadableStream::Buffer> FakeStream::ReadLock(Fixed frame, int64_t frame_count) {
+std::optional<ReadableStream::Buffer> FakeStream::ReadLock(ReadLockContext& ctx, Fixed frame,
+                                                           int64_t frame_count) {
   FX_CHECK(static_cast<uint64_t>(frame_count * format().bytes_per_frame()) < buffer_size_);
   return std::make_optional<ReadableStream::Buffer>(frame, Fixed(frame_count), buffer_.get(), true,
                                                     usage_mask_, gain_db_);

@@ -16,7 +16,8 @@ namespace media::audio {
 namespace {
 
 zx_status_t AddOne(uint64_t num_frames, float* input, float* output,
-                   float total_applied_gain_for_input) {
+                   float total_applied_gain_for_input,
+                   std::vector<fuchsia_audio_effects::wire::ProcessMetrics>& metrics) {
   for (uint64_t k = 0; k < num_frames; k++) {
     output[k] = input[k] + 1;
   }

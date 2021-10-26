@@ -72,8 +72,11 @@ class TestEffectsV2::TestProcessor : public fidl::WireServer<fuchsia_audio_effec
       db = request->options.total_applied_gain_db_per_input()[0];
     }
 
-    if (auto status = process_(request->num_frames, input_, output_, db); status == ZX_OK) {
-      completer.ReplySuccess();
+    std::vector<fuchsia_audio_effects::wire::ProcessMetrics> metrics;
+    if (auto status = process_(request->num_frames, input_, output_, db, metrics);
+        status == ZX_OK) {
+      completer.ReplySuccess(
+          fidl::VectorView<fuchsia_audio_effects::wire::ProcessMetrics>::FromExternal(metrics));
     } else {
       completer.ReplyError(status);
     }

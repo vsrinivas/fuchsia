@@ -25,6 +25,9 @@ using testing::Pointwise;
 namespace media::audio {
 namespace {
 
+// Used when the ReadLockContext is unused by the test.
+static media::audio::ReadableStream::ReadLockContext rlctx;
+
 constexpr uint32_t kDefaultFrameRate = 48000;
 const Format kDefaultFormat =
     Format::Create(fuchsia::media::AudioStreamType{
@@ -325,7 +328,7 @@ TEST_F(OutputPipelineTest, Loopback) {
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
   // and one on the linearize stage). Therefore we expect all samples to be 2.0.
-  auto buf = pipeline->ReadLock(Fixed(loopback_frame), 48);
+  auto buf = pipeline->ReadLock(rlctx, Fixed(loopback_frame), 48);
   ASSERT_TRUE(buf);
   ASSERT_EQ(buf->start().Floor(), loopback_frame);
   ASSERT_EQ(buf->length().Floor(), 48u);
@@ -336,7 +339,7 @@ TEST_F(OutputPipelineTest, Loopback) {
 
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
-  auto loopback_buf = pipeline->loopback()->ReadLock(Fixed(loopback_frame), 48);
+  auto loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), 48);
   ASSERT_TRUE(loopback_buf);
   ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
   ASSERT_LE(loopback_buf->length().Floor(), 48u);
@@ -348,7 +351,7 @@ TEST_F(OutputPipelineTest, Loopback) {
     // remaining frames instantly.
     loopback_frame += loopback_buf->length().Floor();
     auto frames_remaining = 48 - loopback_buf->length().Floor();
-    loopback_buf = pipeline->loopback()->ReadLock(Fixed(loopback_frame), frames_remaining);
+    loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), frames_remaining);
     ASSERT_TRUE(loopback_buf);
     ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
     ASSERT_EQ(loopback_buf->length().Floor(), frames_remaining);
@@ -419,7 +422,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
   // and one on the linearize stage). Therefore we expect all samples to be 2.0.
-  auto buf = pipeline->ReadLock(Fixed(loopback_frame), 96);
+  auto buf = pipeline->ReadLock(rlctx, Fixed(loopback_frame), 96);
   ASSERT_TRUE(buf);
   ASSERT_EQ(buf->start().Floor(), loopback_frame);
   ASSERT_EQ(buf->length().Floor(), 96u);
@@ -429,7 +432,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   context().clock_factory()->AdvanceMonoTimeBy(zx::msec(1));
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
-  auto loopback_buf = pipeline->loopback()->ReadLock(Fixed(loopback_frame), 48);
+  auto loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), 48);
   ASSERT_TRUE(loopback_buf);
   ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
   ASSERT_LE(loopback_buf->length().Floor(), 48u);
@@ -441,7 +444,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
     // remaining frames instantly.
     loopback_frame += loopback_buf->length().Floor();
     auto frames_remaining = 48 - loopback_buf->length().Floor();
-    loopback_buf = pipeline->loopback()->ReadLock(Fixed(loopback_frame), frames_remaining);
+    loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), frames_remaining);
     ASSERT_TRUE(loopback_buf);
     ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
     ASSERT_EQ(loopback_buf->length().Floor(), frames_remaining);
@@ -501,7 +504,7 @@ TEST_F(OutputPipelineTest, UpdateEffect) {
 
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a single effect that sets all samples to the size of the new config).
-  auto buf = pipeline->ReadLock(Fixed(0), 48);
+  auto buf = pipeline->ReadLock(rlctx, Fixed(0), 48);
   ASSERT_TRUE(buf);
   ASSERT_EQ(buf->start().Floor(), 0u);
   ASSERT_EQ(buf->length().Floor(), 48u);
@@ -697,7 +700,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   }
 
   {
-    auto buf = pipeline->ReadLock(Fixed(0), kFramesPerRead);
+    auto buf = pipeline->ReadLock(rlctx, Fixed(0), kFramesPerRead);
     RunLoopUntilIdle();
 
     EXPECT_TRUE(buf);
@@ -711,7 +714,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   }
 
   {
-    auto buf = pipeline->ReadLock(Fixed(kFramesPerRead), kFramesPerRead);
+    auto buf = pipeline->ReadLock(rlctx, Fixed(kFramesPerRead), kFramesPerRead);
     RunLoopUntilIdle();
 
     EXPECT_TRUE(buf);
@@ -726,7 +729,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   }
 
   {
-    auto buf = pipeline->ReadLock(Fixed(kFramesPerRead * 2), kFramesPerRead);
+    auto buf = pipeline->ReadLock(rlctx, Fixed(kFramesPerRead * 2), kFramesPerRead);
     RunLoopUntilIdle();
 
     EXPECT_TRUE(buf);
@@ -858,16 +861,24 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
 }
 
 TEST_F(OutputPipelineTest, PipelineWithEffectsV2) {
+  fidl::Arena arena;
   TestEffectsV2 test_effects;
   test_effects.AddEffect({
       .name = "AddOne",
       .process =
-          [](uint64_t num_frames, float* input, float* output, float total_applied_gain_for_input) {
+          [&arena](
+              uint64_t num_frames, float* input, float* output, float total_applied_gain_for_input,
+              std::vector<fuchsia_audio_effects::wire::ProcessMetrics>& metrics_vector) mutable {
             for (uint64_t k = 0; k < num_frames; k++) {
               for (int c = 0; c < 2; c++) {
                 output[k * 2 + c] = input[k * 2 + c] + 1;
               }
             }
+            fuchsia_audio_effects::wire::ProcessMetrics metrics(arena);
+            metrics.set_name(arena, "stage");
+            metrics.set_wall_time(arena, 10);
+            metrics.set_cpu_time(arena, 100);
+            metrics_vector.push_back(std::move(metrics));
             return ZX_OK;
           },
       .process_in_place = false,
@@ -924,11 +935,18 @@ TEST_F(OutputPipelineTest, PipelineWithEffectsV2) {
   // stream produces silent audio, so after two +1 effects, all samples should be 2.0.
   {
     SCOPED_TRACE("pipeline->ReadLock");
-    auto buf = pipeline->ReadLock(Fixed(loopback_frame), 48);
+    ReadableStream::ReadLockContext rlctx;
+    auto buf = pipeline->ReadLock(rlctx, Fixed(loopback_frame), 48);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->start().Floor(), loopback_frame);
     ASSERT_EQ(buf->length().Floor(), 48u);
     CheckBuffer(buf->payload(), 2.0, 96);
+
+    // Check metrics: must have called the effect twice.
+    ASSERT_EQ(rlctx.per_stage_metrics().size(), 1u);
+    EXPECT_EQ(std::string_view(rlctx.per_stage_metrics()[0].name), "stage");
+    EXPECT_EQ(rlctx.per_stage_metrics()[0].wall_time.get(), 20);
+    EXPECT_EQ(rlctx.per_stage_metrics()[0].cpu_time.get(), 200);
   }
 
   // Advance time to our safe_read_frame past the above ReadLock.
@@ -938,7 +956,7 @@ TEST_F(OutputPipelineTest, PipelineWithEffectsV2) {
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
   {
     SCOPED_TRACE("loopback->ReadLock");
-    auto loopback_buf = pipeline->loopback()->ReadLock(Fixed(loopback_frame), 48);
+    auto loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), 48);
     ASSERT_TRUE(loopback_buf);
     ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
     ASSERT_LE(loopback_buf->length().Floor(), 48u);
@@ -951,7 +969,7 @@ TEST_F(OutputPipelineTest, PipelineWithEffectsV2) {
       // remaining frames instantly.
       loopback_frame += loopback_buf->length().Floor();
       auto frames_remaining = 48 - loopback_buf->length().Floor();
-      loopback_buf = pipeline->loopback()->ReadLock(Fixed(loopback_frame), frames_remaining);
+      loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), frames_remaining);
       ASSERT_TRUE(loopback_buf);
       ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
       ASSERT_EQ(loopback_buf->length().Floor(), frames_remaining);

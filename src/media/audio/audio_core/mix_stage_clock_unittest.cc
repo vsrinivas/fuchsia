@@ -18,6 +18,9 @@ using testing::FloatEq;
 namespace media::audio {
 namespace {
 
+// Used when the ReadLockContext is unused by the test.
+static media::audio::ReadableStream::ReadLockContext rlctx;
+
 enum class ClockMode { SAME, WITH_OFFSET, RATE_ADJUST };
 
 enum class Direction { Render, Capture };
@@ -413,7 +416,7 @@ void MixStageClockTest::SyncTest(int32_t rate_adjust_ppm) {
       context().clock_factory()->AdvanceMonoTimeBy(kClockSyncMixDuration);
     }
 
-    mix_stage_->ReadLock(Fixed(kFramesToMix * mix_count), kFramesToMix);
+    mix_stage_->ReadLock(rlctx, Fixed(kFramesToMix * mix_count), kFramesToMix);
     ASSERT_EQ(mix_info.next_dest_frame, kFramesToMix * (mix_count + 1));
 
     // Track the worst-case position errors (overall min/max, 1%, 1us, final-settled).

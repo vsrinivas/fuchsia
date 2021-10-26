@@ -11,6 +11,7 @@
 
 #include <gmock/gmock.h>
 
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/testing/fake_packet_queue.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
@@ -28,6 +29,9 @@ using Arena = fidl::Arena<512>;
 
 namespace media::audio {
 namespace {
+
+// Used when the ReadLockContext is unused by the test.
+static media::audio::ReadableStream::ReadLockContext rlctx;
 
 const Format k48k1ChanFloatFormat =
     Format::Create(fuchsia::media::AudioStreamType{
@@ -306,12 +310,11 @@ void EffectsStageV2Test::TestAddOne(const Format& source_format, ConfigOptions o
   auto stream =
       MakePacketQueue(source_format, {packet_factory->CreatePacket(1.0, kPacketDuration)});
   auto effects_stage = EffectsStageV2::Create(std::move(config), stream).take_value();
-  FX_CHECK(effects_stage);  // XXX(DO NOT SUBMIT)
 
   {
     // Read the first packet. Since our effect adds 1.0 to each sample, and we populated the
     // packet with 1.0 samples, we expect to see only 2.0 samples in the result.
-    auto buf = effects_stage->ReadLock(Fixed(0), kPacketFrames);
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(0), kPacketFrames);
     ASSERT_TRUE(buf);
     ASSERT_EQ(0, buf->start().Floor());
     ASSERT_EQ(ReadLockFrames, buf->length().Floor());
@@ -335,7 +338,7 @@ void EffectsStageV2Test::TestAddOne(const Format& source_format, ConfigOptions o
     // to never return an out-of-bounds packet.
     stream->Trim(Fixed(kPacketFrames));
     // Read the next packet. This should be null, because there are no more packets.
-    auto buf = effects_stage->ReadLock(Fixed(kPacketFrames), kPacketFrames);
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(kPacketFrames), kPacketFrames);
     ASSERT_FALSE(buf);
   }
 }
@@ -445,7 +448,7 @@ class AddOneProcessor : public BaseProcessor {
         *output = (*input) + 1;
       }
     }
-    completer.ReplySuccess();
+    completer.ReplySuccess(fidl::VectorView<fuchsia_audio_effects::wire::ProcessMetrics>());
   }
 
  private:
@@ -494,7 +497,7 @@ class AddOneAndDupChannelProcessor : public BaseProcessor {
       output[0] = input[0] + 1;
       output[1] = input[0] + 1;
     }
-    completer.ReplySuccess();
+    completer.ReplySuccess(fidl::VectorView<fuchsia_audio_effects::wire::ProcessMetrics>());
   }
 };
 
@@ -531,7 +534,7 @@ class AddOneAndRemoveChannelProcessor : public BaseProcessor {
     for (; num_frames > 0; num_frames--, input += 2, output++) {
       output[0] = input[0] + 1;
     }
-    completer.ReplySuccess();
+    completer.ReplySuccess(fidl::VectorView<fuchsia_audio_effects::wire::ProcessMetrics>());
   }
 };
 
@@ -576,7 +579,7 @@ class AddOneWithSizeLimitsProcessor : public BaseProcessor {
     for (uint64_t k = 0; k < num_frames; k++) {
       output[k] = input[k] + 1;
     }
-    completer.ReplySuccess();
+    completer.ReplySuccess(fidl::VectorView<fuchsia_audio_effects::wire::ProcessMetrics>());
   }
 };
 
@@ -643,7 +646,7 @@ class CheckOptionsProcessor : public BaseProcessor {
     EXPECT_EQ(request->options.total_applied_gain_db_per_input()[0], kExpectedAppliedGainDb);
     ASSERT_EQ(request->options.usage_mask_per_input().count(), 1u);
     ASSERT_EQ(request->options.usage_mask_per_input()[0], kExpectedUsageMask);
-    completer.ReplySuccess();
+    completer.ReplySuccess(fidl::VectorView<fuchsia_audio_effects::wire::ProcessMetrics>());
   }
 };
 
@@ -673,8 +676,81 @@ TEST_F(EffectsStageV2Test, PassOptions) {
   stream->set_usage_mask(StreamUsageMask::FromMask(usage_mask));
 
   // Call ReadLock. Validate it returns a buffer, which ensures we invoked the effects processor.
-  auto buf = effects_stage->ReadLock(Fixed(0), kPacketFrames);
+  auto buf = effects_stage->ReadLock(rlctx, Fixed(0), kPacketFrames);
   ASSERT_TRUE(buf);
+}
+
+//
+// ReturnMetricsProcessor
+// Test an effect that returns metrics.
+//
+
+class ReturnMetricsProcessor : public BaseProcessor {
+ public:
+  ReturnMetricsProcessor(const ConfigOptions& options,
+                         fidl::ServerEnd<fuchsia_audio_effects::Processor> server_end,
+                         async_dispatcher_t* dispatcher,
+                         std::vector<fuchsia_audio_effects::wire::ProcessMetrics>& metrics)
+      : BaseProcessor(options, std::move(server_end), dispatcher), metrics_(metrics) {}
+
+  void Process(ProcessRequestView request, ProcessCompleter::Sync& completer) {
+    completer.ReplySuccess(
+        fidl::VectorView<fuchsia_audio_effects::wire::ProcessMetrics>::FromExternal(metrics_));
+  }
+
+ private:
+  std::vector<fuchsia_audio_effects::wire::ProcessMetrics>& metrics_;
+};
+
+TEST_F(EffectsStageV2Test, Metrics) {
+  std::vector<fuchsia_audio_effects::wire::ProcessMetrics> expected_metrics(2);
+  expected_metrics[0].Allocate(arena());
+  expected_metrics[0].set_name(arena(), "stage1");
+  expected_metrics[0].set_wall_time(arena(), 100);
+  expected_metrics[0].set_cpu_time(arena(), 101);
+  expected_metrics[0].set_queue_time(arena(), 102);
+  expected_metrics[1].Allocate(arena());
+  expected_metrics[1].set_name(arena(), "stage2");
+  expected_metrics[1].set_wall_time(arena(), 200);
+  expected_metrics[1].set_cpu_time(arena(), 201);
+  expected_metrics[1].set_queue_time(arena(), 201);
+
+  constexpr auto kInputPacketBytes = kPacketFrames * sizeof(float);
+  constexpr auto kOutputPacketBytes = kPacketFrames * sizeof(float);
+
+  ConfigOptions options;
+  CreateSeparateVmos(options, kInputPacketBytes, kOutputPacketBytes);
+  auto config = MakeProcessorConfig(arena(), DupConfigOptions(options));
+  auto server_end = AttachProcessorChannel(config);
+  ReturnMetricsProcessor processor(options, std::move(server_end), fidl_dispatcher(),
+                                   expected_metrics);
+
+  // Enqueue one packet in the source packet queue.
+  auto packet_factory = std::make_unique<testing::PacketFactory>(dispatcher(), k48k1ChanFloatFormat,
+                                                                 zx_system_get_page_size());
+  auto stream =
+      MakePacketQueue(k48k1ChanFloatFormat, {packet_factory->CreatePacket(1.0, kPacketDuration)});
+  auto effects_stage = EffectsStageV2::Create(std::move(config), stream).take_value();
+
+  // Call ReadLock and validate the metrics.
+  ReadableStream::ReadLockContext ctx;
+  auto buf = effects_stage->ReadLock(ctx, Fixed(0), kPacketFrames);
+  ASSERT_TRUE(buf);
+
+  EXPECT_EQ(ctx.per_stage_metrics().size(), expected_metrics.size());
+  for (size_t k = 0; k < expected_metrics.size(); k++) {
+    if (k >= ctx.per_stage_metrics().size()) {
+      break;
+    }
+    SCOPED_TRACE(fxl::StringPrintf("metrics[%lu]", k));
+    auto& metrics = ctx.per_stage_metrics()[k];
+    EXPECT_EQ(static_cast<std::string_view>(metrics.name), expected_metrics[k].name().get());
+    EXPECT_EQ(metrics.wall_time.to_nsecs(), expected_metrics[k].wall_time());
+    EXPECT_EQ(metrics.cpu_time.to_nsecs(), expected_metrics[k].cpu_time());
+    EXPECT_EQ(metrics.queue_time.to_nsecs(), expected_metrics[k].queue_time());
+    EXPECT_EQ(metrics.page_fault_time.to_nsecs(), 0);
+    EXPECT_EQ(metrics.kernel_lock_contention_time.to_nsecs(), 0);
+  }
 }
 
 //
@@ -1221,7 +1297,7 @@ TEST_P(EffectsStageV2RingOutTest, RingoutFrames) {
 
   // Read the first packet.
   {
-    auto buf = effects_stage->ReadLock(Fixed(0), 480);
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
     ASSERT_TRUE(buf);
     EXPECT_EQ(0, buf->start().Floor());
     EXPECT_EQ(48, buf->length().Floor());
@@ -1236,7 +1312,7 @@ TEST_P(EffectsStageV2RingOutTest, RingoutFrames) {
   uint32_t ringout_frames = 0;
   {
     while (ringout_frames < GetParam().ring_out_frames) {
-      auto buf = effects_stage->ReadLock(Fixed(start_frame), GetParam().ring_out_frames);
+      auto buf = effects_stage->ReadLock(rlctx, Fixed(start_frame), GetParam().ring_out_frames);
       ASSERT_TRUE(buf);
       EXPECT_EQ(start_frame, buf->start().Floor());
       EXPECT_EQ(GetParam().read_lock_frames, buf->length().Floor());
@@ -1246,7 +1322,7 @@ TEST_P(EffectsStageV2RingOutTest, RingoutFrames) {
   }
 
   {
-    auto buf = effects_stage->ReadLock(Fixed(start_frame), 480);
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(start_frame), 480);
     EXPECT_FALSE(buf);
   }
 
@@ -1258,7 +1334,7 @@ TEST_P(EffectsStageV2RingOutTest, RingoutFrames) {
 
   // Read the next packet.
   {
-    auto buf = effects_stage->ReadLock(Fixed(start_frame), 48);
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(start_frame), 48);
     ASSERT_TRUE(buf);
     EXPECT_EQ(start_frame, buf->start().Floor());
     EXPECT_EQ(48, buf->length().Floor());
@@ -1273,7 +1349,7 @@ TEST_P(EffectsStageV2RingOutTest, RingoutFrames) {
   ringout_frames = 0;
   {
     while (ringout_frames < GetParam().ring_out_frames) {
-      auto buf = effects_stage->ReadLock(Fixed(start_frame), GetParam().ring_out_frames);
+      auto buf = effects_stage->ReadLock(rlctx, Fixed(start_frame), GetParam().ring_out_frames);
       ASSERT_TRUE(buf);
       EXPECT_EQ(start_frame, buf->start().Floor());
       EXPECT_EQ(GetParam().read_lock_frames, buf->length().Floor());
@@ -1283,7 +1359,7 @@ TEST_P(EffectsStageV2RingOutTest, RingoutFrames) {
   }
 
   {
-    auto buf = effects_stage->ReadLock(Fixed(48), 480);
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(48), 480);
     EXPECT_FALSE(buf);
   }
 }

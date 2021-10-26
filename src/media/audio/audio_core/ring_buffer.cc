@@ -288,7 +288,8 @@ std::shared_ptr<WritableRingBuffer> BaseRingBuffer::CreateWritableHardwareBuffer
       frame_count, std::move(safe_write_frame));
 }
 
-std::optional<ReadableStream::Buffer> ReadableRingBuffer::ReadLock(Fixed frame,
+std::optional<ReadableStream::Buffer> ReadableRingBuffer::ReadLock(ReadLockContext& ctx,
+                                                                   Fixed frame,
                                                                    int64_t frame_count) {
   return LockBuffer<ReadableRingBuffer>(this, &safe_read_frame_, nullptr, frame.Floor(),
                                         frame_count, true);

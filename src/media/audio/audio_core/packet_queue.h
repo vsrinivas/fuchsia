@@ -54,7 +54,8 @@ class PacketQueue : public ReadableStream {
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return *audio_clock_; }
-  std::optional<ReadableStream::Buffer> ReadLock(Fixed frame, int64_t frame_count) override;
+  std::optional<ReadableStream::Buffer> ReadLock(ReadLockContext& ctx, Fixed frame,
+                                                 int64_t frame_count) override;
   void Trim(Fixed frame) override;
   void ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix_point,
                        zx::duration underflow_duration) override;

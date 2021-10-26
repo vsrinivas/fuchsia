@@ -137,7 +137,6 @@ class AudioOutput : public AudioDevice {
 
   std::unique_ptr<OutputPipeline> pipeline_;
   Reporter::Container<Reporter::OutputDevice, Reporter::kObjectsToCache>::Ptr reporter_;
-  ThreadCpuTimer cpu_timer_;
   EffectsLoaderV2* effects_loader_v2_;
 };
 

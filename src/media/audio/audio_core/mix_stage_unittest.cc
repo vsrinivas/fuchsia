@@ -27,6 +27,10 @@ using testing::FloatEq;
 namespace media::audio {
 
 namespace {
+
+// Used when the ReadLockContext is unused by the test.
+static media::audio::ReadableStream::ReadLockContext rlctx;
+
 enum class ClockMode { SAME, WITH_OFFSET, RATE_ADJUST };
 
 constexpr uint32_t kDefaultNumChannels = 2;
@@ -334,7 +338,7 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
   int64_t output_frame_start = 0;
   uint32_t output_frame_count = 96;
   {  // Mix frames 0-2ms. Expect 1 ms of 0.8 values, then 1 ms of 0.9 values.
-    auto buf = mix_stage_->ReadLock(Fixed(output_frame_start), output_frame_count);
+    auto buf = mix_stage_->ReadLock(rlctx, Fixed(output_frame_start), output_frame_count);
     // 1ms @ 48000hz == 48 frames. 2ms == 96 (frames).
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->length().Floor(), 96u);
@@ -351,7 +355,7 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
 
   output_frame_start += output_frame_count;
   {  // Mix frames 2-4ms. Expect 1 ms of 0.9 samples, then 1 ms of 0.8 values.
-    auto buf = mix_stage_->ReadLock(Fixed(output_frame_start), output_frame_count);
+    auto buf = mix_stage_->ReadLock(rlctx, Fixed(output_frame_start), output_frame_count);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->length().Floor(), 96u);
 
@@ -368,7 +372,7 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
 
   output_frame_start += output_frame_count;
   {  // Mix frames 4-6ms. Expect 1 ms of 0.8 values, then 1 ms of 0.6 values.
-    auto buf = mix_stage_->ReadLock(Fixed(output_frame_start), output_frame_count);
+    auto buf = mix_stage_->ReadLock(rlctx, Fixed(output_frame_start), output_frame_count);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->length().Floor(), 96u);
 
@@ -428,7 +432,7 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
   constexpr uint32_t kRequestedFrames = kRingSizeFrames / 2;
   {
     safe_write_frame = 1 * kFramesPerMs;
-    auto buf = mix_stage_->ReadLock(Fixed(0), kRequestedFrames);
+    auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), kRequestedFrames);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->start().Floor(), 0u);
     ASSERT_EQ(buf->length().Floor(), kRequestedFrames);
@@ -441,7 +445,7 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
 
   {
     safe_write_frame = 2 * kFramesPerMs;
-    auto buf = mix_stage_->ReadLock(Fixed(kRequestedFrames), kRequestedFrames);
+    auto buf = mix_stage_->ReadLock(rlctx, Fixed(kRequestedFrames), kRequestedFrames);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->start().Floor(), kRequestedFrames);
     ASSERT_EQ(buf->length().Floor(), kRequestedFrames);
@@ -455,7 +459,7 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
 
 TEST_F(MixStageTest, MixNoInputs) {
   constexpr uint32_t kRequestedFrames = 48;
-  auto buf = mix_stage_->ReadLock(Fixed(0), kRequestedFrames);
+  auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), kRequestedFrames);
 
   // With no inputs, we should return nullopt.
   ASSERT_FALSE(buf);
@@ -472,7 +476,7 @@ TEST_F(MixStageTest, MixSilentInput) {
   mix_stage_->AddInput(stream);
 
   constexpr uint32_t kRequestedFrames = 48;
-  auto buf = mix_stage_->ReadLock(Fixed(0), kRequestedFrames);
+  auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), kRequestedFrames);
 
   // If an input is silent, we can return silence.
   ASSERT_FALSE(buf);
@@ -500,7 +504,7 @@ TEST_F(MixStageTest, MixSilentInputWithNonSilentInput) {
   mix_stage_->AddInput(non_silent_stream);
 
   constexpr uint32_t kRequestedFrames = 48;
-  auto buf = mix_stage_->ReadLock(Fixed(0), kRequestedFrames);
+  auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), kRequestedFrames);
 
   // If an input is silent, we can return silence.
   ASSERT_TRUE(buf);
@@ -535,7 +539,7 @@ void MixStageTest::TestMixStageSingleInput(ClockMode clock_mode) {
   packet_queue->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(5)));
 
   constexpr uint32_t kRequestedFrames = 48;
-  auto buf = mix_stage_->ReadLock(Fixed(0), kRequestedFrames);
+  auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), kRequestedFrames);
   ASSERT_TRUE(buf);
   EXPECT_TRUE(buf->usage_mask().contains(kInputStreamUsage));
   EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), Gain::kUnityGainDb);
@@ -573,7 +577,7 @@ TEST_F(MixStageTest, MixMultipleInputs) {
       StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}));
   input2->set_gain_db(-15);
   {
-    auto buf = mix_stage_->ReadLock(Fixed(0), kRequestedFrames);
+    auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), kRequestedFrames);
     ASSERT_TRUE(buf);
     EXPECT_EQ(buf->usage_mask(), StreamUsageMask({
                                      StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
@@ -613,7 +617,7 @@ TEST_F(MixStageTest, BufferGainDbIncludesSourceGain) {
   input2->set_gain_db(0.0);
   mixer2->bookkeeping().gain.SetSourceGain(-15);
   {
-    auto buf = mix_stage_->ReadLock(Fixed(0), kRequestedFrames);
+    auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), kRequestedFrames);
     ASSERT_TRUE(buf);
     EXPECT_EQ(buf->usage_mask(), StreamUsageMask({
                                      StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
@@ -650,7 +654,7 @@ TEST_F(MixStageTest, BufferMaxAmplitudeIncludesDestGain) {
   input2->set_gain_db(0.0);
   mixer2->bookkeeping().gain.SetDestGain(-15);
   {
-    auto buf = mix_stage_->ReadLock(Fixed(0), kRequestedFrames);
+    auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), kRequestedFrames);
     ASSERT_TRUE(buf);
     EXPECT_EQ(buf->usage_mask(), StreamUsageMask({
                                      StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
@@ -678,7 +682,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
 
   // After mixing half the packet, the packet should not be released.
   {
-    auto buf = mix_stage->ReadLock(Fixed(0), 240);
+    auto buf = mix_stage->ReadLock(rlctx, Fixed(0), 240);
     RunLoopUntilIdle();
     ASSERT_TRUE(buf);
     EXPECT_EQ(0u, buf->start().Floor());
@@ -693,7 +697,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
   // After mixing all of the packet, the packet should be released.
   // However, we set fully consumed = false so the mix buffer will be cached.
   {
-    auto buf = mix_stage->ReadLock(Fixed(0), 480);
+    auto buf = mix_stage->ReadLock(rlctx, Fixed(0), 480);
     RunLoopUntilIdle();
     ASSERT_TRUE(buf);
     EXPECT_EQ(0u, buf->start().Floor());
@@ -706,7 +710,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
   // Mixing again should return the same buffer.
   // This time we set fully consumed = true to discard the cached mix result.
   {
-    auto buf = mix_stage->ReadLock(Fixed(0), 480);
+    auto buf = mix_stage->ReadLock(rlctx, Fixed(0), 480);
     RunLoopUntilIdle();
     ASSERT_TRUE(buf);
     EXPECT_EQ(0u, buf->start().Floor());
@@ -717,7 +721,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
 
   // The mix buffer is not cached and the packet is gone, so we must mix silence.
   {
-    auto buf = mix_stage->ReadLock(Fixed(0), 480);
+    auto buf = mix_stage->ReadLock(rlctx, Fixed(0), 480);
     RunLoopUntilIdle();
     ASSERT_FALSE(buf);
   }
@@ -753,7 +757,7 @@ TEST_F(MixStageTest, PositionResetAndAdvance) {
   auto source_pos_for_read_lock = Fixed(0);
   // The first mix resets position, so the above will be overwritten and we'll advance from zero.
   {
-    auto buffer = mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+    auto buffer = mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
     RunLoopUntilIdle();
 
     ASSERT_TRUE(buffer);
@@ -777,7 +781,7 @@ TEST_F(MixStageTest, PositionResetAndAdvance) {
   }
 
   {
-    auto buffer = mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+    auto buffer = mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
     RunLoopUntilIdle();
 
     ASSERT_TRUE(buffer);
@@ -800,7 +804,7 @@ TEST_F(MixStageTest, PositionResetAndAdvance) {
   // Subsequent mixes should not reset position, so this change should persist.
   bookkeeping.source_pos_modulo += 17;
   {
-    auto buffer = mix_stage_->ReadLock(Fixed(source_pos_for_read_lock), dest_frames_per_mix);
+    auto buffer = mix_stage_->ReadLock(rlctx, Fixed(source_pos_for_read_lock), dest_frames_per_mix);
     RunLoopUntilIdle();
 
     ASSERT_TRUE(buffer);
@@ -890,7 +894,7 @@ TEST_F(MixStageTest, PositionSkip) {
   auto source_pos_for_read_lock = Fixed(-mixer->pos_filter_width() + Fixed::FromRaw(4000));
   // The first mix resets position, so the above will be overwritten and we'll advance from zero.
   {
-    auto buffer = mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+    auto buffer = mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
     RunLoopUntilIdle();
 
     ASSERT_TRUE(buffer);
@@ -941,7 +945,7 @@ TEST_F(MixStageTest, SourceDestPositionRelationship) {
   // Request the initial mix: position relationship should be set
   auto source_pos_for_read_lock = Fixed(0);
   constexpr int32_t dest_frames_per_mix = 96;
-  mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+  mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
   EXPECT_TRUE(info.initial_position_is_set);
 
   source_pos_for_read_lock += Fixed(dest_frames_per_mix);
@@ -949,7 +953,7 @@ TEST_F(MixStageTest, SourceDestPositionRelationship) {
   // Pause the timeline and request another mix: position relationship should be cleared
   timeline_function_->Update(TimelineFunction(source_pos_for_read_lock.raw_value(),
                                               zx::clock::get_monotonic().get(), {0, 1}));
-  mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+  mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
   EXPECT_FALSE(info.initial_position_is_set);
 
   // Restart the timeline and request another mix: position relationship should be set
@@ -957,7 +961,7 @@ TEST_F(MixStageTest, SourceDestPositionRelationship) {
   timeline_function_->Update(TimelineFunction(
       source_pos_for_read_lock.raw_value(), zx::clock::get_monotonic().get(),
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
-  mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+  mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
   EXPECT_TRUE(info.initial_position_is_set);
   EXPECT_EQ(info.next_source_frame, long_running_source_pos + Fixed(dest_frames_per_mix * 2))
       << ffl::String::DecRational << info.next_source_frame;
@@ -983,7 +987,7 @@ zx::duration MixStageTest::GetDurationErrorForFracFrameError(Fixed frac_source_e
 
   // Initial mix
   //
-  mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+  mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
   RunLoopUntilIdle();
   expected_running_dest_frames += dest_frames_per_mix;
 
@@ -1002,7 +1006,7 @@ zx::duration MixStageTest::GetDurationErrorForFracFrameError(Fixed frac_source_e
     bookkeeping.SetRateModuloAndDenominator(1, denominator);
     bookkeeping.source_pos_modulo = source_pos_modulo;
   }
-  mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+  mix_stage_->ReadLock(rlctx, source_pos_for_read_lock, dest_frames_per_mix);
   RunLoopUntilIdle();
   expected_running_dest_frames += dest_frames_per_mix;
 

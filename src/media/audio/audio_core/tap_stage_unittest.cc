@@ -19,6 +19,9 @@ using testing::FloatEq;
 namespace media::audio {
 namespace {
 
+// Used when the ReadLockContext is unused by the test.
+static media::audio::ReadableStream::ReadLockContext rlctx;
+
 constexpr uint32_t kChannels = 2;
 const Format kDefaultFormat =
     Format::Create(fuchsia::media::AudioStreamType{
@@ -102,7 +105,7 @@ class TapStageTest : public testing::ThreadingModelFixture {
   template <int64_t frame_count>
   void CheckStream(ReadableStream* stream, int64_t frame, float expected_sample,
                    bool release = true) {
-    auto buffer = stream->ReadLock(Fixed(frame), frame_count);
+    auto buffer = stream->ReadLock(rlctx, Fixed(frame), frame_count);
     ASSERT_TRUE(buffer);
     CheckBuffer<frame_count>(*buffer, frame, expected_sample);
     buffer->set_is_fully_consumed(release);
@@ -134,7 +137,7 @@ TEST_F(TapStageTest, TruncateToInputBuffer) {
 
   constexpr int64_t frame_count = kPacketFrames;
   {  // Read from the tap, expect to get the same bytes from the packet.
-    auto buffer = tap().ReadLock(Fixed(0), frame_count * 2);
+    auto buffer = tap().ReadLock(rlctx, Fixed(0), frame_count * 2);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->start(), Fixed(0));
     EXPECT_EQ(buffer->length(), Fixed(frame_count));
@@ -194,7 +197,7 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
     uint32_t requested_frames = kPacketFrames;
     constexpr uint32_t expected_frames = expected_frames_region_1;
     int64_t frame = 2 * kPacketFrames;
-    auto buffer = ring_buffer().ReadLock(Fixed(frame), requested_frames);
+    auto buffer = ring_buffer().ReadLock(rlctx, Fixed(frame), requested_frames);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->start(), Fixed(frame));
     EXPECT_EQ(buffer->length(), Fixed(expected_frames));
@@ -206,7 +209,7 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
     constexpr uint32_t requested_frames = kPacketFrames;
     constexpr uint32_t expected_frames = expected_frames_region_2;
     int64_t frame = kRingBufferFrameCount;
-    auto buffer = ring_buffer().ReadLock(Fixed(frame), requested_frames);
+    auto buffer = ring_buffer().ReadLock(rlctx, Fixed(frame), requested_frames);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->start(), Fixed(frame));
     EXPECT_EQ(buffer->length(), Fixed(expected_frames));
@@ -295,7 +298,7 @@ TEST_F(TapStageTest, ShortSourceBuffer) {
   packet_queue().PushPacket(packet_factory().CreatePacket(kSourceBufferColor, kPacketDuration / 2));
 
   // Request 'region 1'
-  auto buffer = tap().ReadLock(Fixed(0), kPacketFrames);
+  auto buffer = tap().ReadLock(rlctx, Fixed(0), kPacketFrames);
   // But expect 'region 3', which corresponds to what is available in source.
   ASSERT_TRUE(buffer);
   CheckBuffer<kPacketFrames / 2>(*buffer, kPacketFrames / 4, 3.0);
@@ -321,7 +324,7 @@ TEST_F(TapStageTest, SilentSourceStream) {
   ClearRingBuffer(5.0);
 
   // Read from the ring buffer.
-  auto buffer = tap().ReadLock(Fixed(0), kPacketFrames);
+  auto buffer = tap().ReadLock(rlctx, Fixed(0), kPacketFrames);
 
   // Our packet queue source is empty so we expect no data here.
   EXPECT_FALSE(buffer);
@@ -346,7 +349,7 @@ TEST_F(TapStageTest, ShortTapBuffer) {
   packet_queue().PushPacket(packet_factory().CreatePacket(kSourceBufferColor, kPacketDuration / 2));
 
   // Request 'region 1'
-  auto buffer = tap().ReadLock(Fixed(0), kPacketFrames);
+  auto buffer = tap().ReadLock(rlctx, Fixed(0), kPacketFrames);
   // But expect 'region 3', which corresponds to what is available in source.
   ASSERT_TRUE(buffer);
   CheckBuffer<kPacketFrames / 2>(*buffer, kPacketFrames / 4, 3.0);

@@ -902,7 +902,8 @@ class AudioRendererEffectsV2Test : public AudioRendererPipelineTestFloat {
   }
 
   static zx_status_t Invert(uint64_t num_frames, float* input, float* output,
-                            float total_applied_gain_for_input) {
+                            float total_applied_gain_for_input,
+                            std::vector<fuchsia_audio_effects::wire::ProcessMetrics>& metrics) {
     for (uint64_t k = 0; k < num_frames; k++) {
       for (int c = 0; c < kNumChannels; c++) {
         output[k * kNumChannels + c] = -input[k * kNumChannels + c];
@@ -929,7 +930,9 @@ TEST_F(AudioRendererEffectsV2Test, RenderWithEffects) {
   auto ring_buffer = output_->SnapshotRingBuffer();
 
   // Simulate running the effect on the input buffer.
-  Invert(input_buffer.NumFrames(), &input_buffer.samples()[0], &input_buffer.samples()[0], 0);
+  std::vector<fuchsia_audio_effects::wire::ProcessMetrics> effects_metrics;
+  Invert(input_buffer.NumFrames(), &input_buffer.samples()[0], &input_buffer.samples()[0], 0,
+         effects_metrics);
 
   // The ring buffer should match the transformed input buffer for the first num_packets.
   // The remaining bytes should be zeros.

@@ -301,8 +301,9 @@ void OutputPipelineBenchmark::Run(Scenario scenario, int64_t runs_per_scenario,
 
     Fixed frame_start = output_pipeline_->FracPresentationFrameAtRefTime(device_clock_->Read());
 
+    ReadableStream::ReadLockContext ctx;
     auto t0 = zx::clock::get_monotonic();
-    auto got_buffer = output_pipeline_->ReadLock(frame_start, frames_per_mix).has_value();
+    auto got_buffer = output_pipeline_->ReadLock(ctx, frame_start, frames_per_mix).has_value();
     output_pipeline_->Trim(frame_start + Fixed(frames_per_mix));
     auto t1 = zx::clock::get_monotonic();
     stats.Add(t1 - t0);

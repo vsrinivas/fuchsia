@@ -3,11 +3,20 @@ table/member fuchsia.audio.effects/InputConfiguration.format fuchsia.mediastream
 resource table fuchsia.audio.effects/InputConfiguration
 const fuchsia.audio.effects/MAX_INPUT_STREAMS uint32 8
 const fuchsia.audio.effects/MAX_OUTPUT_STREAMS uint32 8
+const fuchsia.audio.effects/MAX_PROCESS_STAGES uint32 8
+const fuchsia.audio.effects/MAX_PROCESS_STAGE_NAME_LENGTH uint32 64
 table/member fuchsia.audio.effects/OutputConfiguration.buffer fuchsia.mem/Range
 table/member fuchsia.audio.effects/OutputConfiguration.format fuchsia.mediastreams/AudioFormat
 table/member fuchsia.audio.effects/OutputConfiguration.latency_frames uint64
 table/member fuchsia.audio.effects/OutputConfiguration.ring_out_frames uint64
 resource table fuchsia.audio.effects/OutputConfiguration
+table/member fuchsia.audio.effects/ProcessMetrics.cpu_time int64
+table/member fuchsia.audio.effects/ProcessMetrics.kernel_lock_contention_time int64
+table/member fuchsia.audio.effects/ProcessMetrics.name string:64
+table/member fuchsia.audio.effects/ProcessMetrics.page_fault_time int64
+table/member fuchsia.audio.effects/ProcessMetrics.queue_time int64
+table/member fuchsia.audio.effects/ProcessMetrics.wall_time int64
+table fuchsia.audio.effects/ProcessMetrics
 table/member fuchsia.audio.effects/ProcessOptions.total_applied_gain_db_per_input vector<float32>:8
 table/member fuchsia.audio.effects/ProcessOptions.usage_mask_per_input vector<uint32>:8
 table fuchsia.audio.effects/ProcessOptions
@@ -26,6 +35,7 @@ resource struct fuchsia.audio.effects/ProcessorCreator_Create_Response
 union/member fuchsia.audio.effects/ProcessorCreator_Create_Result.err int32
 union/member fuchsia.audio.effects/ProcessorCreator_Create_Result.response fuchsia.audio.effects/ProcessorCreator_Create_Response
 resource strict union fuchsia.audio.effects/ProcessorCreator_Create_Result
+struct/member fuchsia.audio.effects/Processor_Process_Response.per_stage_metrics vector<fuchsia.audio.effects/ProcessMetrics>:8
 struct fuchsia.audio.effects/Processor_Process_Response
 union/member fuchsia.audio.effects/Processor_Process_Result.err int32
 union/member fuchsia.audio.effects/Processor_Process_Result.response fuchsia.audio.effects/Processor_Process_Response

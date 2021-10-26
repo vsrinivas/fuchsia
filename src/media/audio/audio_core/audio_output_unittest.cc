@@ -17,6 +17,9 @@
 namespace media::audio {
 namespace {
 
+// Used when the ReadLockContext is unused by the test.
+static media::audio::ReadableStream::ReadLockContext rlctx;
+
 static constexpr size_t kFramesPerSecond = 48000;
 static const TimelineFunction kDriverRefPtsToFractionalFrames =
     TimelineFunction(0, 0, Fixed(kFramesPerSecond).raw_value(), zx::sec(1).get());
@@ -31,7 +34,8 @@ class TestOutputPipeline : public OutputPipeline {
   void Enqueue(ReadableStream::Buffer buffer) { buffers_.push_back(std::move(buffer)); }
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(Fixed frame, int64_t frame_count) override {
+  std::optional<ReadableStream::Buffer> ReadLock(ReadLockContext& ctx, Fixed frame,
+                                                 int64_t frame_count) override {
     if (buffers_.empty()) {
       return std::nullopt;
     }
@@ -403,7 +407,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
   pipeline->AddInput(default_stream, stream_usage);
 
   {
-    auto buf = pipeline->ReadLock(Fixed(0), 48);
+    auto buf = pipeline->ReadLock(rlctx, Fixed(0), 48);
 
     EXPECT_TRUE(buf);
     EXPECT_EQ(buf->start().Floor(), 0u);
@@ -467,7 +471,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
   pipeline->AddInput(default_stream, stream_usage);
 
   {
-    auto buf = pipeline->ReadLock(Fixed(0), 48);
+    auto buf = pipeline->ReadLock(rlctx, Fixed(0), 48);
     EXPECT_TRUE(buf);
     EXPECT_EQ(buf->start().Floor(), 0u);
     EXPECT_EQ(buf->length().Floor(), 48u);

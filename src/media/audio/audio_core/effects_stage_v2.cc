@@ -15,6 +15,10 @@
 namespace media::audio {
 namespace {
 
+// We expect to copy the fuchsia_audio_effects::ProcessMetrics name into the StageMetrics name.
+static_assert(fuchsia_audio_effects::wire::kMaxProcessStageNameLength <=
+              StageMetrics::kMaxNameLength);
+
 // We expect StreamUsageMask to map r to (1<<r) for each RenderUsage r.
 // See ProcessOptions.usage_mask_per_input in sdk/fidl/fuchsia.audio.effects/processor.fidl.
 static_assert(StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::BACKGROUND)}).mask() ==
@@ -407,7 +411,8 @@ EffectsStageV2::EffectsStageV2(fuchsia_audio_effects::wire::ProcessorConfigurati
   SetPresentationDelay(zx::duration(0));
 }
 
-std::optional<ReadableStream::Buffer> EffectsStageV2::ReadLock(Fixed dest_frame,
+std::optional<ReadableStream::Buffer> EffectsStageV2::ReadLock(ReadLockContext& ctx,
+                                                               Fixed dest_frame,
                                                                int64_t frame_count) {
   TRACE_DURATION("audio", "EffectsStageV2::ReadLock", "frame", dest_frame.Floor(), "length",
                  frame_count);
@@ -437,7 +442,7 @@ std::optional<ReadableStream::Buffer> EffectsStageV2::ReadLock(Fixed dest_frame,
   // Ensure we don't try to push more frames through our effects processor than supported.
   aligned_frame_count = std::min(aligned_frame_count, max_frames_per_call_);
 
-  auto source_buffer = source_->ReadLock(Fixed(aligned_first_frame), aligned_frame_count);
+  auto source_buffer = source_->ReadLock(ctx, Fixed(aligned_first_frame), aligned_frame_count);
   if (source_buffer) {
     // We expect an integral buffer length.
     FX_CHECK(source_buffer->length().Floor() == source_buffer->length().Ceiling());
@@ -448,7 +453,7 @@ std::optional<ReadableStream::Buffer> EffectsStageV2::ReadLock(Fixed dest_frame,
             num_frames * static_cast<int64_t>(source_->format().bytes_per_frame()));
 
     // Synchronous IPC.
-    CallProcess(source_buffer->length().Floor(), source_buffer->total_applied_gain_db(),
+    CallProcess(ctx, source_buffer->length().Floor(), source_buffer->total_applied_gain_db(),
                 source_buffer->usage_mask().mask() & kSupportedUsageMask);
 
     // Since we just sent some frames through the effects, update the start of the
@@ -469,7 +474,7 @@ std::optional<ReadableStream::Buffer> EffectsStageV2::ReadLock(Fixed dest_frame,
   if (next_ringout_frame_ <= aligned_first_frame && aligned_first_frame < ringout_end_frame) {
     // Synchronous IPC.
     memset(buffers_.input, 0, aligned_frame_count * source_->format().bytes_per_frame());
-    CallProcess(aligned_frame_count, 0.0f /* total_applied_gain_db */, 0 /* usage_mask */);
+    CallProcess(ctx, aligned_frame_count, 0.0f /* total_applied_gain_db */, 0 /* usage_mask */);
 
     // Ringout frames are by definition continuous with the previous buffer.
     const bool is_continuous = true;
@@ -483,8 +488,8 @@ std::optional<ReadableStream::Buffer> EffectsStageV2::ReadLock(Fixed dest_frame,
   return std::nullopt;
 }
 
-void EffectsStageV2::CallProcess(int64_t num_frames, float total_applied_gain_db,
-                                 uint32_t usage_mask) {
+void EffectsStageV2::CallProcess(ReadLockContext& ctx, int64_t num_frames,
+                                 float total_applied_gain_db, uint32_t usage_mask) {
   TRACE_DURATION("audio", "EffectsStageV2::CallProcess");
 
   std::array<float, 1> total_applied_gain_db_array = {total_applied_gain_db};
@@ -519,6 +524,35 @@ void EffectsStageV2::CallProcess(int64_t num_frames, float total_applied_gain_db
     } else {
       FX_PLOGS(DEBUG, status) << "Process call failed";
     }
+    return;
+  }
+
+  // On success, update our MixJobInfo.
+  auto& server_metrics = result->result.response().per_stage_metrics;
+  for (size_t k = 0; k < server_metrics.count(); k++) {
+    StageMetrics metrics;
+    if (server_metrics[k].has_name()) {
+      metrics.name.Append(server_metrics[k].name().get());
+    } else {
+      metrics.name.AppendPrintf("EffectsStageV2::stage%lu", k);
+    }
+    if (server_metrics[k].has_wall_time()) {
+      metrics.wall_time = zx::nsec(server_metrics[k].wall_time());
+    }
+    if (server_metrics[k].has_cpu_time()) {
+      metrics.cpu_time = zx::nsec(server_metrics[k].cpu_time());
+    }
+    if (server_metrics[k].has_queue_time()) {
+      metrics.queue_time = zx::nsec(server_metrics[k].queue_time());
+    }
+    if (server_metrics[k].has_page_fault_time()) {
+      metrics.page_fault_time = zx::nsec(server_metrics[k].page_fault_time());
+    }
+    if (server_metrics[k].has_kernel_lock_contention_time()) {
+      metrics.kernel_lock_contention_time =
+          zx::nsec(server_metrics[k].kernel_lock_contention_time());
+    }
+    ctx.AddStageMetrics(metrics);
   }
 }
 

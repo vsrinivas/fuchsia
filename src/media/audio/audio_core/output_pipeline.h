@@ -82,10 +82,11 @@ class OutputPipelineImpl : public OutputPipeline {
       const std::string& instance_name, const std::string& config) override;
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(Fixed dest_frame, int64_t frame_count) override {
+  std::optional<ReadableStream::Buffer> ReadLock(ReadLockContext& ctx, Fixed dest_frame,
+                                                 int64_t frame_count) override {
     TRACE_DURATION("audio", "OutputPipeline::ReadLock");
     FX_DCHECK(state_.stream);
-    return state_.stream->ReadLock(dest_frame, frame_count);
+    return state_.stream->ReadLock(ctx, dest_frame, frame_count);
   }
   void Trim(Fixed dest_frame) override {
     TRACE_DURATION("audio", "OutputPipeline::Trim");

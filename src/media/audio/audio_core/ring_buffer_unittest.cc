@@ -14,6 +14,9 @@
 namespace media::audio {
 namespace {
 
+// Used when the ReadLockContext is unused by the test.
+static media::audio::ReadableStream::ReadLockContext rlctx;
+
 const Format kDefaultFormat =
     Format::Create(fuchsia::media::AudioStreamType{
                        .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
@@ -92,7 +95,7 @@ class OutputRingBufferTest : public ::testing::Test {
 
 TEST_F(InputRingBufferTest, ReadEmptyRing) {
   Advance(zx::time(0));
-  auto buffer = ring_buffer()->ReadLock(Fixed(0), 1);
+  auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(0), 1);
   ASSERT_FALSE(buffer);
 }
 
@@ -100,7 +103,7 @@ TEST_F(InputRingBufferTest, ReadFullyExpiredBuffer) {
   // After 20ms, the ring will have been filled twice. If we request the first 480 frames then we
   // should get no buffer returned since all those frames are now unavailable.
   Advance(zx::time(0) + zx::msec(20));
-  auto buffer = ring_buffer()->ReadLock(Fixed(0), kRingBufferFrameCount);
+  auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(0), kRingBufferFrameCount);
   ASSERT_FALSE(buffer);
 }
 
@@ -108,14 +111,14 @@ TEST_F(InputRingBufferTest, ReadNotYetAvailableBuffer) {
   // After 10ms, 480 frames will have been produced (0-479). The 480th frame is not yet available
   // so we should get no buffer.
   Advance(zx::time(0) + zx::msec(10));
-  auto buffer = ring_buffer()->ReadLock(Fixed(480), 1);
+  auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(480), 1);
   ASSERT_FALSE(buffer);
 }
 
 TEST_F(InputRingBufferTest, ReadFullyAvailableRegion) {
   // After 1ms we expect 48 frames to be available to read at the start of the buffer.
   Advance(zx::time(0) + zx::msec(1));
-  auto buffer = ring_buffer()->ReadLock(Fixed(0), 48);
+  auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(0), 48);
   ASSERT_TRUE(buffer);
   EXPECT_EQ(buffer->start().Floor(), 0u);
   EXPECT_EQ(buffer->length().Floor(), 48u);
@@ -125,7 +128,7 @@ TEST_F(InputRingBufferTest, ReadPartialRegion) {
   // After 1ms we expect 48 frames to be available to read at the start of the buffer. If we ask for
   // 96 we should get a buffer that contains only the 48 available frames.
   Advance(zx::time(0) + zx::msec(1));
-  auto buffer = ring_buffer()->ReadLock(Fixed(0), 96);
+  auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(0), 96);
   ASSERT_TRUE(buffer);
   EXPECT_EQ(buffer->start().Floor(), 0u);
   EXPECT_EQ(buffer->length().Floor(), 48u);
@@ -135,7 +138,7 @@ TEST_F(InputRingBufferTest, SkipExpiredFrames) {
   // At 11ms we'll have written the entire ring + 48 more samples, so the first 48 frames are lost.
   // Test that the returned buffer correctly skips those 48 frames.
   Advance(zx::time(0) + zx::msec(11));
-  auto buffer = ring_buffer()->ReadLock(Fixed(0), 96);
+  auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(0), 96);
   ASSERT_TRUE(buffer);
   EXPECT_EQ(buffer->start().Floor(), 48u);
   EXPECT_EQ(buffer->length().Floor(), 48u);
@@ -147,13 +150,13 @@ TEST_F(InputRingBufferTest, ReadAfterTruncateBufferAtEndOfTheRing) {
   // ring again. Test our buffer is truncated for the first 48 frames requested at the end of the
   // ring.
   Advance(zx::time(0) + zx::msec(11));
-  auto buffer = ring_buffer()->ReadLock(Fixed(432), 96);
+  auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(432), 96);
   ASSERT_TRUE(buffer);
   EXPECT_EQ(buffer->start().Floor(), 432u);
   EXPECT_EQ(buffer->length().Floor(), 48u);
 
   // Now read that last 48 frames at the start of the ring again.
-  buffer = ring_buffer()->ReadLock(Fixed(480), 48);
+  buffer = ring_buffer()->ReadLock(rlctx, Fixed(480), 48);
   ASSERT_TRUE(buffer);
   EXPECT_EQ(buffer->start().Floor(), 480u);
   EXPECT_EQ(buffer->length().Floor(), 48u);
@@ -161,7 +164,7 @@ TEST_F(InputRingBufferTest, ReadAfterTruncateBufferAtEndOfTheRing) {
 
 TEST_F(InputRingBufferTest, ReadNegativeFrame) {
   Advance(zx::time(0));
-  auto buffer = ring_buffer()->ReadLock(Fixed(-10), 10);
+  auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(-10), 10);
   ASSERT_TRUE(buffer);
 
   auto rb_start_address = reinterpret_cast<uintptr_t>(ring_buffer()->virt());

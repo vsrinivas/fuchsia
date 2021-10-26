@@ -38,7 +38,8 @@ class MixStage : public ReadableStream {
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return output_ref_clock_; }
-  std::optional<ReadableStream::Buffer> ReadLock(Fixed dest_frame, int64_t frame_count) override;
+  std::optional<ReadableStream::Buffer> ReadLock(ReadLockContext& ctx, Fixed dest_frame,
+                                                 int64_t frame_count) override;
   void Trim(Fixed dest_frame) override;
   void SetPresentationDelay(zx::duration external_delay) override;
 
@@ -55,6 +56,7 @@ class MixStage : public ReadableStream {
   struct MixJob {
     // Job state set up once by an output implementation, used by all renderers.
     // TODO(fxbug.dev/13415): Integrate it into the Mixer class itself.
+    ReadLockContext* read_lock_ctx;
     float* buf;
     int64_t buf_frames;
     int64_t dest_start_frame;

@@ -18,7 +18,8 @@ TapStage::TapStage(std::shared_ptr<ReadableStream> source, std::shared_ptr<Writa
   FX_CHECK(source_->reference_clock() == tap_->reference_clock());
 }
 
-std::optional<ReadableStream::Buffer> TapStage::ReadLock(Fixed dest_frame, int64_t frame_count) {
+std::optional<ReadableStream::Buffer> TapStage::ReadLock(ReadLockContext& ctx, Fixed dest_frame,
+                                                         int64_t frame_count) {
   TRACE_DURATION("audio", "TapStage::ReadLock", "frame", dest_frame.Floor(), "length", frame_count);
 
   // The source and tap may have different frame timelines.
@@ -26,7 +27,7 @@ std::optional<ReadableStream::Buffer> TapStage::ReadLock(Fixed dest_frame, int64
 
   // The source and destinations, however, share the same frame timelines, therefore we have no need
   // to translate these parameters.
-  auto source_buffer = source_->ReadLock(dest_frame, frame_count);
+  auto source_buffer = source_->ReadLock(ctx, dest_frame, frame_count);
 
   // We need to write some silence to the tap if some part of the frame range is not available in
   // the source stream. If a single write buffer extends beyond the end of the silent region it

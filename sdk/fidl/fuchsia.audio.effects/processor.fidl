@@ -13,6 +13,12 @@ using zx;
 const MAX_INPUT_STREAMS uint32 = 8;
 const MAX_OUTPUT_STREAMS uint32 = 8;
 
+/// The maximum size of the per_stage_metrics array.
+const MAX_PROCESS_STAGES uint32 = 8;
+
+/// The maximum length of the name of a process stage.
+const MAX_PROCESS_STAGE_NAME_LENGTH uint32 = 64;
+
 /// An audio effect processor. Consumes one or more input streams, producing one
 /// or more output streams. On creation, this protocol must be tied to a
 /// [`fuchsia.audio.effects.Processor/ProcessorConfiguration`], which defines
@@ -38,11 +44,15 @@ protocol Processor {
     ///
     /// + request `num_frames` The number of frames to process.
     /// + request `options` Extra options.
+    /// - response `per_stage_metrics `Metrics about this process call, possibly
+    ///     subdivided into multiple stages.
     /// * error A zx.status value indicating success or failure.
     Process(struct {
         num_frames uint64;
         options ProcessOptions;
-    }) -> (struct {}) error zx.status;
+    }) -> (struct {
+        per_stage_metrics vector<ProcessMetrics>:MAX_PROCESS_STAGES;
+    }) error zx.status;
 };
 
 /// An extensible container of options for Processor.Process.
@@ -65,6 +75,35 @@ type ProcessOptions = table {
     /// Note: this field may be removed once we have transitions to the new
     /// Fuchsia media APIs.
     2: usage_mask_per_input vector<uint32>:MAX_INPUT_STREAMS;
+};
+
+/// An extensible container of metrics about a single Processor.Process call.
+/// All fields are optional.
+type ProcessMetrics = table {
+    /// Each process call may be (optionally) divided into multiple stages,
+    /// each with their own ProcessMetrics. This field names the stage described
+    /// by this table.
+    1: name string:MAX_PROCESS_STAGE_NAME_LENGTH;
+
+    /// Total wall-clock time from the moment the Process call is received to
+    /// the moment a response is returned.
+    2: wall_time zx.duration;
+
+    /// Total amount of time spent running on the CPU.
+    /// See zx_info_task_runtime.cpu_time.
+    3: cpu_time zx.duration;
+
+    /// Total amount of time spent waiting to run. Only counts "ready" time.
+    /// See zx_info_task_runtime.queue_time.
+    4: queue_time zx.duration;
+
+    /// Total amount of time spent handling page faults.
+    /// See zx_info_task_runtime.page_fault_time.
+    5: page_fault_time zx.duration;
+
+    /// Total amount of time spent waiting on contended kernel locks.
+    /// See zx_info_task_runtime.lock_contention_time.
+    6: kernel_lock_contention_time zx.duration;
 };
 
 /// Configures a Processor.

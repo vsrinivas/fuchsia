@@ -42,7 +42,7 @@ class SineWaveStream : public ReadableStream {
   AudioClock& reference_clock() override { return *clock_; }
   void Trim(Fixed frame) override {}
 
-  std::optional<Buffer> ReadLock(Fixed frame, int64_t frame_count) override {
+  std::optional<Buffer> ReadLock(ReadLockContext& ctx, Fixed frame, int64_t frame_count) override {
     int64_t frame_index = frame.Floor() % buffer_.NumFrames();
     int64_t sample_index = buffer_.SampleIndex(frame_index, 0);
     frame_count = std::min(frame_count, buffer_.NumFrames() - frame_index);

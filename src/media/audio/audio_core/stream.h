@@ -12,6 +12,8 @@
 #include <optional>
 
 #include "src/media/audio/audio_core/packet.h"
+#include "src/media/audio/audio_core/stage_metrics.h"
+#include "src/media/audio/audio_core/static_vector.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/format/format.h"
@@ -150,6 +152,38 @@ class ReadableStream : public BaseStream {
     float total_applied_gain_db_;
   };
 
+  // ReadLockContext provides a container for state that can be carried through a
+  // sequence of ReadLock calls.
+  class ReadLockContext {
+   private:
+    static constexpr size_t kMaxStages = 16;
+
+   public:
+    // Add the given metrics. Internally we maintain one StageMetrics object per stage.
+    // If this method is called multiple times with the same stage name, the metrics are
+    // accumulated.
+    void AddStageMetrics(const StageMetrics& new_stage) {
+      for (auto& old_stage : per_stage_metrics_) {
+        if (std::string_view(old_stage.name) == std::string_view(new_stage.name)) {
+          old_stage += new_stage;
+          return;
+        }
+      }
+      // Add a new stage, or silently drop if we've exceeded the maximum.
+      if (per_stage_metrics_.size() < kMaxStages) {
+        per_stage_metrics_.push_back(new_stage);
+      }
+    }
+
+    // Return all metrics accumulated via AddMetrics.
+    const static_vector<StageMetrics, kMaxStages>& per_stage_metrics() {
+      return per_stage_metrics_;
+    }
+
+   private:
+    static_vector<StageMetrics, kMaxStages> per_stage_metrics_;
+  };
+
   // ReadableStream is implemented by audio pipeline stages that consume zero or more
   // source streams and produce a destination stream. ReadLock acquires a readlock on
   // the destination stream. The parameters |dest_frame| and |frame_count| represent a
@@ -172,7 +206,8 @@ class ReadableStream : public BaseStream {
   //
   // TODO(fxbug.dev/50669): Implementations must return std::nullopt if they have no frames for the
   // requested range. This requirement is not enforced by all implementations (e.g., PacketQueue).
-  virtual std::optional<Buffer> ReadLock(Fixed dest_frame, int64_t frame_count) = 0;
+  virtual std::optional<Buffer> ReadLock(ReadLockContext& ctx, Fixed dest_frame,
+                                         int64_t frame_count) = 0;
 
   // Trims the stream by releasing any frames before the given frame. When invoked,
   // the caller is making a promise that they will not try to ReadLock any frame before

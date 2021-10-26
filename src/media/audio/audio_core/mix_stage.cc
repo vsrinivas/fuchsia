@@ -159,7 +159,8 @@ void MixStage::RemoveInput(const ReadableStream& stream) {
   streams_.erase(it);
 }
 
-std::optional<ReadableStream::Buffer> MixStage::ReadLock(Fixed dest_frame, int64_t frame_count) {
+std::optional<ReadableStream::Buffer> MixStage::ReadLock(ReadLockContext& ctx, Fixed dest_frame,
+                                                         int64_t frame_count) {
   TRACE_DURATION("audio", "MixStage::ReadLock", "frame", dest_frame.Floor(), "length", frame_count);
 
   // If we have a partially consumed block, return that here.
@@ -173,6 +174,7 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(Fixed dest_frame, int64
 
   auto snapshot = ref_time_to_frac_presentation_frame();
 
+  cur_mix_job_.read_lock_ctx = &ctx;
   cur_mix_job_.buf = &output_buffer_[0];
   cur_mix_job_.buf_frames = std::min(static_cast<int64_t>(frame_count), output_buffer_frames_);
   cur_mix_job_.dest_start_frame = dest_frame.Floor();
@@ -300,7 +302,8 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
         mixer.pos_filter_width();
 
     // Try to grab the front of the packet queue (or ring buffer, if capturing).
-    auto stream_buffer = stream.ReadLock(source_for_first_mix_job_frame, source_frames.Ceiling());
+    auto stream_buffer = stream.ReadLock(*cur_mix_job_.read_lock_ctx,
+                                         source_for_first_mix_job_frame, source_frames.Ceiling());
 
     // If the queue is empty, then we are done.
     if (!stream_buffer) {

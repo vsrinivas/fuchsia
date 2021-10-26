@@ -17,6 +17,9 @@
 namespace media::audio {
 namespace {
 
+// Used when the ReadLockContext is unused by the test.
+static media::audio::ReadableStream::ReadLockContext rlctx;
+
 class PacketQueueTest : public gtest::TestLoopFixture {
  protected:
   std::unique_ptr<PacketQueue> CreatePacketQueue() {
@@ -115,7 +118,7 @@ TEST_F(PacketQueueTest, LockUnlock) {
   //
   // Packet #0:
   {
-    auto buffer = packet_queue->ReadLock(Fixed(0), 0);
+    auto buffer = packet_queue->ReadLock(rlctx, Fixed(0), 0);
     ASSERT_TRUE(buffer);
     ASSERT_FALSE(buffer->is_continuous());
     ASSERT_EQ(0, buffer->start());
@@ -132,7 +135,7 @@ TEST_F(PacketQueueTest, LockUnlock) {
 
   // Packet #1
   {
-    auto buffer = packet_queue->ReadLock(Fixed(0), 0);
+    auto buffer = packet_queue->ReadLock(rlctx, Fixed(0), 0);
     ASSERT_TRUE(buffer);
     ASSERT_TRUE(buffer->is_continuous());
     ASSERT_EQ(20, buffer->start());
@@ -147,7 +150,7 @@ TEST_F(PacketQueueTest, LockUnlock) {
 
   // ...and #2
   {
-    auto buffer = packet_queue->ReadLock(Fixed(0), 0);
+    auto buffer = packet_queue->ReadLock(rlctx, Fixed(0), 0);
     ASSERT_TRUE(buffer);
     ASSERT_TRUE(buffer->is_continuous());
     ASSERT_EQ(40, buffer->start());
@@ -174,7 +177,7 @@ TEST_F(PacketQueueTest, LockUnlockNotFullyConsumed) {
 
   // Pop but don't fully consume.
   {
-    auto buffer = packet_queue->ReadLock(Fixed(0), 0);
+    auto buffer = packet_queue->ReadLock(rlctx, Fixed(0), 0);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(0, buffer->start());
     buffer->set_is_fully_consumed(false);
@@ -185,7 +188,7 @@ TEST_F(PacketQueueTest, LockUnlockNotFullyConsumed) {
 
   // Pop again, this time consume it fully.
   {
-    auto buffer = packet_queue->ReadLock(Fixed(0), 0);
+    auto buffer = packet_queue->ReadLock(rlctx, Fixed(0), 0);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(0, buffer->start());
     buffer->set_is_fully_consumed(true);
@@ -208,7 +211,7 @@ TEST_F(PacketQueueTest, LockFlushUnlock) {
 
   {
     // Pop packet #0.
-    auto buffer = packet_queue->ReadLock(Fixed(0), 0);
+    auto buffer = packet_queue->ReadLock(rlctx, Fixed(0), 0);
     ASSERT_TRUE(buffer);
     ASSERT_FALSE(buffer->is_continuous());
     ASSERT_EQ(0, buffer->start());
@@ -230,7 +233,7 @@ TEST_F(PacketQueueTest, LockFlushUnlock) {
 
   {
     // Pop the remaining packet.
-    auto buffer = packet_queue->ReadLock(Fixed(0), 0);
+    auto buffer = packet_queue->ReadLock(rlctx, Fixed(0), 0);
     ASSERT_TRUE(buffer);
     ASSERT_EQ(80, buffer->start());
   }
@@ -246,7 +249,7 @@ TEST_F(PacketQueueTest, LockReturnsNullThenFlush) {
   EXPECT_EQ(std::vector<int64_t>(), released_packets());
 
   // Since the queue is empty, this should return null.
-  auto buffer = packet_queue->ReadLock(Fixed(0), 10);
+  auto buffer = packet_queue->ReadLock(rlctx, Fixed(0), 10);
   EXPECT_FALSE(buffer);
 
   // Push some packets, then flush them immediately

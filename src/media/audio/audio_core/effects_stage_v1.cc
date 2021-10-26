@@ -185,7 +185,8 @@ EffectsStageV1::EffectsStageV1(std::shared_ptr<ReadableStream> source,
   SetPresentationDelay(zx::duration(0));
 }
 
-std::optional<ReadableStream::Buffer> EffectsStageV1::ReadLock(Fixed dest_frame,
+std::optional<ReadableStream::Buffer> EffectsStageV1::ReadLock(ReadLockContext& ctx,
+                                                               Fixed dest_frame,
                                                                int64_t frame_count) {
   TRACE_DURATION("audio", "EffectsStageV1::ReadLock", "frame", dest_frame.Floor(), "length",
                  frame_count);
@@ -207,7 +208,7 @@ std::optional<ReadableStream::Buffer> EffectsStageV1::ReadLock(Fixed dest_frame,
     aligned_frame_count = std::min<uint32_t>(aligned_frame_count, max_batch_size);
   }
 
-  auto source_buffer = source_->ReadLock(Fixed(aligned_first_frame), aligned_frame_count);
+  auto source_buffer = source_->ReadLock(ctx, Fixed(aligned_first_frame), aligned_frame_count);
   if (source_buffer) {
     // We expect an integral buffer length.
     FX_CHECK(source_buffer->length().Floor() == source_buffer->length().Ceiling());

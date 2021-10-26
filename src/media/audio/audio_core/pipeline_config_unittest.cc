@@ -13,7 +13,8 @@ namespace media::audio {
 namespace {
 
 zx_status_t NopEffect(uint64_t num_frames, float* input, float* output,
-                      float total_applied_gain_for_input) {
+                      float total_applied_gain_for_input,
+                      std::vector<fuchsia_audio_effects::wire::ProcessMetrics>& metrics) {
   return ZX_OK;
 }
 

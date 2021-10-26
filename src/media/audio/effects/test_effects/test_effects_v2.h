@@ -23,8 +23,9 @@ class TestEffectsV2 : public fidl::WireServer<fuchsia_audio_effects::ProcessorCr
   TestEffectsV2();
   ~TestEffectsV2() override;
 
-  using ProcessFn = zx_status_t (*)(uint64_t num_frames, float* input, float* output,
-                                    float total_applied_gain_for_input);
+  using ProcessFn = std::function<zx_status_t(
+      uint64_t num_frames, float* input, float* output, float total_applied_gain_for_input,
+      std::vector<fuchsia_audio_effects::wire::ProcessMetrics>& metrics)>;
 
   struct Effect {
     std::string name;
