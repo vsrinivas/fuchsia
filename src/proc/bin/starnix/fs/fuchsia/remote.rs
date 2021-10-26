@@ -223,6 +223,14 @@ fn zxio_wait_async(
     waiter.wake_on_signals(&handle, signals, Box::new(signal_handler)).unwrap();
 }
 
+fn zxio_query_events(zxio: &Arc<Zxio>) -> FdEvents {
+    let signals = get_zxio_signals_from_events(FdEvents::POLLIN | FdEvents::POLLOUT);
+    let (handle, signals) = zxio.wait_begin(signals);
+    let observed_signals = handle.wait(signals, zx::Time::INFINITE_PAST).unwrap();
+    let observed_zxio_signals = zxio.wait_end(observed_signals);
+    get_events_from_zxio_signals(observed_zxio_signals)
+}
+
 /// Helper struct to track the context necessary to iterate over dir entries.
 #[derive(Default)]
 struct RemoteDirectoryIterator {
@@ -430,6 +438,10 @@ impl FileOps for RemoteFileObject {
     ) {
         zxio_wait_async(&self.zxio, waiter, events, handler)
     }
+
+    fn query_events(&self) -> FdEvents {
+        zxio_query_events(&self.zxio)
+    }
 }
 
 struct RemotePipeObject {
@@ -465,6 +477,10 @@ impl FileOps for RemotePipeObject {
         handler: EventHandler,
     ) {
         zxio_wait_async(&self.zxio, waiter, events, handler)
+    }
+
+    fn query_events(&self) -> FdEvents {
+        zxio_query_events(&self.zxio)
     }
 }
 

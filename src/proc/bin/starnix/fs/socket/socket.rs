@@ -325,6 +325,7 @@ impl Socket {
             let inner = self.lock();
             (inner.peer().ok_or_else(|| errno!(EPIPE))?.clone(), inner.address.clone())
         };
+
         if dest_address.is_some() {
             return error!(EISCONN);
         }
@@ -350,7 +351,18 @@ impl Socket {
 
     pub fn wait_async(&self, waiter: &Arc<Waiter>, events: FdEvents, handler: EventHandler) {
         let mut inner = self.lock();
-        inner.waiters.wait_async_mask(waiter, events.mask(), handler)
+
+        let present_events = inner.query_events();
+        if events & present_events {
+            waiter.wake_immediately(present_events.mask(), handler);
+        } else {
+            inner.waiters.wait_async_mask(waiter, events.mask(), handler);
+        }
+    }
+
+    pub fn query_events(&self) -> FdEvents {
+        let inner = self.lock();
+        inner.query_events()
     }
 
     /// Shuts down this socket according to how, preventing any future reads and/or writes.
@@ -533,6 +545,22 @@ impl SocketInner {
     fn shutdown_write(&mut self) {
         self.messages.close();
         self.waiters.notify_events(FdEvents::POLLIN | FdEvents::POLLOUT | FdEvents::POLLHUP);
+    }
+
+    fn query_events(&self) -> FdEvents {
+        let local_events = self.messages.query_events();
+        let mut present_events = FdEvents::empty();
+        if local_events & FdEvents::POLLIN {
+            present_events = FdEvents::POLLIN;
+        }
+        if let Some(peer) = self.peer() {
+            let peer_inner = peer.inner.lock();
+            let peer_events = peer_inner.messages.query_events();
+            if peer_events & FdEvents::POLLOUT {
+                present_events |= FdEvents::POLLOUT;
+            }
+        }
+        present_events
     }
 }
 

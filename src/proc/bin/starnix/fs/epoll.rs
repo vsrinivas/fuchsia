@@ -104,7 +104,6 @@ impl EpollFileObject {
                     events: FdEvents::from(epoll_event.events),
                     data: epoll_event.data,
                 });
-                // if not waiting, put this on the rearm_queue?
                 self.wait_on_file(key, wait_object)
             }
         }
@@ -175,12 +174,21 @@ impl EpollFileObject {
             //the next wait.
             let mut trigger_list = self.trigger_list.lock();
             if let Some(pending) = trigger_list.pop_front() {
-                pending_list.push(pending);
-                if pending_list.len() == max_events as usize {
-                    break;
+                let wait_objects = self.wait_objects.read();
+                if let Some(wait) = wait_objects.get(&pending.key) {
+                    let observed = wait.target.query_events();
+                    if observed & wait.events {
+                        let ready = ReadyObject { key: pending.key, observed };
+                        pending_list.push(ready);
+                        if pending_list.len() == max_events as usize {
+                            break;
+                        }
+                        wait_deadline = zx::Time::ZERO;
+                    } else {
+                        self.wait_on_file(pending.key, wait)?;
+                    }
                 }
             }
-            wait_deadline = zx::Time::ZERO;
         }
 
         // Process the pening list and add processed ReadyObject
@@ -229,6 +237,10 @@ impl FileOps for EpollFileObject {
         _handler: EventHandler,
     ) {
         panic!("waiting on epoll unimplemnted")
+    }
+
+    fn query_events(&self) -> FdEvents {
+        panic!("querying epoll unimplemnted")
     }
 }
 
@@ -284,6 +296,46 @@ mod tests {
 
         let bytes_read = pipe_out.read(&current_task, &read_buf).unwrap();
         assert_eq!(bytes_read as u64, WRITE_COUNT.load(Ordering::Relaxed));
+        assert_eq!(bytes_read, test_len);
+        let mut read_data = vec![0u8; test_len];
+        current_task.mm.read_memory(read_buf[0].address, &mut read_data).unwrap();
+        assert_eq!(read_data.as_bytes(), test_bytes);
+    }
+
+    #[::fuchsia::test]
+    fn test_epoll_ready_then_wait() {
+        const EVENT_DATA: u64 = 42;
+
+        let (kernel, current_task) = create_kernel_and_task();
+
+        let (pipe_out, pipe_in) = new_pipe(&kernel).unwrap();
+
+        let test_string = "hello startnix".to_string();
+        let test_bytes = test_string.as_bytes();
+        let test_len = test_bytes.len();
+        let read_mem = map_memory(&current_task, UserAddress::default(), test_len as u64);
+        let read_buf = [UserBuffer { address: read_mem, length: test_len }];
+        let write_mem = map_memory(&current_task, UserAddress::default(), test_len as u64);
+        let write_buf = [UserBuffer { address: write_mem, length: test_len }];
+
+        current_task.mm.write_memory(write_mem, test_bytes).unwrap();
+
+        assert_eq!(pipe_in.write(&current_task, &write_buf).unwrap(), test_bytes.len());
+
+        let epoll_file = EpollFileObject::new(&kernel);
+        let epoll_file = epoll_file.downcast_file::<EpollFileObject>().unwrap();
+        epoll_file
+            .add(&pipe_out, EpollEvent { events: FdEvents::POLLIN.mask(), data: EVENT_DATA })
+            .unwrap();
+
+        let events = epoll_file.wait(&current_task, 10, -1).unwrap();
+        assert_eq!(1, events.len());
+        let event = &events[0];
+        assert!(FdEvents::from(event.events) & FdEvents::POLLIN);
+        let data = event.data;
+        assert_eq!(EVENT_DATA, data);
+
+        let bytes_read = pipe_out.read(&current_task, &read_buf).unwrap();
         assert_eq!(bytes_read, test_len);
         let mut read_data = vec![0u8; test_len];
         current_task.mm.read_memory(read_buf[0].address, &mut read_data).unwrap();

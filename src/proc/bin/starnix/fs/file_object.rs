@@ -96,6 +96,8 @@ pub trait FileOps: Send + Sync + AsAny {
     }
 
     /// Establish a one-shot, asynchronous wait for the given FdEvents for the given file and task.
+    /// If the events are already active at the time of calling, handler will be called on immediately
+    /// on the next wait.
     fn wait_async(
         &self,
         _file: &FileObject,
@@ -103,6 +105,8 @@ pub trait FileOps: Send + Sync + AsAny {
         _events: FdEvents,
         _handler: EventHandler,
     );
+
+    fn query_events(&self) -> FdEvents;
 
     fn ioctl(
         &self,
@@ -272,6 +276,10 @@ macro_rules! fd_impl_nonblocking {
             _events: FdEvents,
             _handler: EventHandler,
         ) {
+        }
+
+        fn query_events(&self) -> FdEvents {
+            FdEvents::POLLIN | FdEvents::POLLOUT
         }
     };
 }
@@ -615,12 +623,18 @@ impl FileObject {
         *self.async_owner.lock() = owner;
     }
 
-    /// TODO - document
-    #[allow(dead_code)]
+    /// Wait on the specified events and call the EventHandler when ready
     pub fn wait_async(&self, waiter: &Arc<Waiter>, events: FdEvents, handler: EventHandler) {
         self.ops().wait_async(self, waiter, events, handler)
     }
 
+    // Return the events currently active
+    #[allow(dead_code)]
+    pub fn query_events(&self) -> FdEvents {
+        self.ops().query_events()
+    }
+
+    //
     /// Updates the file's seek offset without an upper bound on the resulting offset.
     ///
     /// This is useful for files without a defined size.

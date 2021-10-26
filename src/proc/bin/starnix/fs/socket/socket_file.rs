@@ -40,6 +40,10 @@ impl FileOps for SocketFile {
         self.socket.wait_async(waiter, events, handler)
     }
 
+    fn query_events(&self) -> FdEvents {
+        self.socket.query_events()
+    }
+
     fn close(&self, _file: &FileObject) {
         self.socket.close();
     }

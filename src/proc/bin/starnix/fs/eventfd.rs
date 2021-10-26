@@ -107,6 +107,24 @@ impl FileOps for EventFdFileObject {
         handler: EventHandler,
     ) {
         let mut wait_queue = self.wait_queue.lock();
-        wait_queue.wait_async_mask(waiter, events.mask(), handler);
+        let present_events = self.query_events();
+        if events & present_events {
+            waiter.wake_immediately(present_events.mask(), handler);
+        } else {
+            wait_queue.wait_async_mask(waiter, events.mask(), handler);
+        }
+    }
+
+    fn query_events(&self) -> FdEvents {
+        // TODO check for error and HUP events
+        let value = self.value.lock();
+        let mut events = FdEvents::empty();
+        if *value > 0 {
+            events |= FdEvents::POLLIN;
+        }
+        if *value < u64::MAX - 1 {
+            events |= FdEvents::POLLOUT;
+        }
+        events
     }
 }

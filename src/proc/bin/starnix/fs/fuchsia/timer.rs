@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon as zx;
+use fuchsia_zircon::AsHandleRef;
 use parking_lot::Mutex;
 use zerocopy::AsBytes;
 
@@ -196,5 +197,11 @@ impl FileOps for TimerFile {
                 Box::new(signal_handler),
             )
             .unwrap(); // TODO return error
+    }
+
+    fn query_events(&self) -> FdEvents {
+        let observed =
+            self.timer.wait_handle(zx::Signals::TIMER_SIGNALED, zx::Time::INFINITE_PAST).unwrap();
+        TimerFile::get_events_from_signals(observed)
     }
 }

@@ -118,6 +118,14 @@ impl Pipe {
         self.messages.set_capacity(requested_capacity)
     }
 
+    fn is_readable(&self) -> bool {
+        self.messages.len() > 0 || (self.writer_count == 0 && self.had_writer)
+    }
+
+    fn is_writable(&self) -> bool {
+        self.messages.available_capacity() > 0 && self.had_reader
+    }
+
     pub fn read(
         &mut self,
         task: &Task,
@@ -130,7 +138,8 @@ impl Pipe {
         // Otherwise, we'll fall through the rest of this function and
         // return that we have read zero bytes, which will let the caller
         // know that they're done reading the pipe.
-        if self.messages.len() == 0 && (self.writer_count > 0 || !self.had_writer) {
+
+        if !self.is_readable() {
             return error!(EAGAIN);
         }
 
@@ -151,7 +160,25 @@ impl Pipe {
             return error!(EPIPE);
         }
 
+        if self.messages.available_capacity() == 0 {
+            return error!(EAGAIN);
+        }
+
         self.messages.write_stream(task, user_buffers, None, &mut None)
+    }
+
+    fn query_events(&self) -> FdEvents {
+        let mut events = FdEvents::empty();
+
+        if self.is_readable() {
+            events |= FdEvents::POLLIN;
+        }
+
+        if self.is_writable() {
+            events |= FdEvents::POLLOUT;
+        }
+
+        events
     }
 
     fn fcntl(
@@ -290,7 +317,17 @@ impl FileOps for PipeFileObject {
         handler: EventHandler,
     ) {
         let mut pipe = self.pipe.lock();
-        pipe.waiters.wait_async_mask(waiter, events.mask(), handler)
+        let present_events = pipe.query_events();
+        if events & present_events {
+            waiter.wake_immediately(present_events.mask(), handler);
+        } else {
+            pipe.waiters.wait_async_mask(waiter, events.mask(), handler);
+        }
+    }
+
+    fn query_events(&self) -> FdEvents {
+        let pipe = self.pipe.lock();
+        pipe.query_events()
     }
 
     fn fcntl(

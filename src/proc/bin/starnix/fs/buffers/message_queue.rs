@@ -7,6 +7,7 @@ use std::collections::VecDeque;
 use super::message_types::*;
 use crate::error;
 use crate::fs::socket::SocketAddress;
+use crate::fs::FdEvents;
 use crate::task::Task;
 use crate::types::*;
 
@@ -57,7 +58,7 @@ impl MessageQueue {
 
     /// Returns the number of bytes that can be written to the message queue before the buffer is
     /// full.
-    fn available_capacity(&self) -> usize {
+    pub fn available_capacity(&self) -> usize {
         self.capacity - self.length
     }
 
@@ -339,6 +340,17 @@ impl MessageQueue {
     pub fn write_message(&mut self, message: Message) {
         self.length += message.len();
         self.messages.push_back(message);
+    }
+
+    pub fn query_events(&self) -> FdEvents {
+        let mut events = FdEvents::empty();
+        if self.available_capacity() > 0 {
+            events |= FdEvents::POLLOUT;
+        }
+        if self.len() > 0 {
+            events |= FdEvents::POLLIN;
+        }
+        events
     }
 }
 
