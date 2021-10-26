@@ -10,7 +10,6 @@
 #include <memory>
 #include <utility>
 
-#include "src/storage/factory/factoryfs/query.h"
 #include "src/storage/factory/factoryfs/runner.h"
 
 namespace factoryfs {
@@ -20,16 +19,12 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options, zx
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
 
-  std::unique_ptr<Runner> runner;
-  zx_status_t status = Runner::Create(&loop, std::move(device), options, &runner);
-  if (status != ZX_OK) {
-    return status;
-  }
+  auto runner_or = Runner::Create(&loop, std::move(device), options);
+  if (runner_or.is_error())
+    return runner_or.error_value();
 
-  status = runner->ServeRoot(std::move(root), layout);
-  if (status != ZX_OK) {
+  if (zx_status_t status = runner_or->ServeRoot(std::move(root), layout); status != ZX_OK)
     return status;
-  }
 
   loop.Run();
   return ZX_OK;

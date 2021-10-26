@@ -16,10 +16,13 @@ namespace factoryfs {
 namespace {
 
 zx_status_t CheckMountability(std::unique_ptr<BlockDevice> device) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+
   MountOptions options = {};
   options.metrics = false;
-  std::unique_ptr<Factoryfs> factoryfs = nullptr;
-  return Factoryfs::Create(nullptr, std::move(device), &options, &factoryfs);
+
+  auto vfs = std::make_unique<fs::ManagedVfs>(loop.dispatcher());
+  return Factoryfs::Create(nullptr, std::move(device), &options, vfs.get()).status_value();
 }
 
 // Formatting filesystems should fail on devices that cannot be written.

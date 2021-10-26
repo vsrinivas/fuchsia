@@ -555,15 +555,6 @@ void Blobfs::DeleteExtent(uint64_t start_block, uint64_t num_blocks,
   }
 }
 
-zx::event Blobfs::GetFsId() const {
-  ZX_DEBUG_ASSERT(fs_id_.is_valid());
-
-  zx::event result;
-  // We can ignore the return value because we just return the empty event on failure.
-  fs_id_.duplicate(ZX_RIGHTS_BASIC, &result);
-  return result;
-}
-
 static_assert(sizeof(DirectoryCookie) <= sizeof(fs::VdirCookie),
               "Blobfs dircookie too large to fit in IO state");
 

@@ -10,20 +10,20 @@
 #include <fbl/auto_lock.h>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include "src/storage/factory/factoryfs/query.h"
 
 namespace factoryfs {
 
-zx_status_t Runner::Create(async::Loop* loop, std::unique_ptr<BlockDevice> device,
-                           MountOptions* options, std::unique_ptr<Runner>* out) {
-  std::unique_ptr<Factoryfs> fs;
-  zx_status_t status = Factoryfs::Create(loop->dispatcher(), std::move(device), options, &fs);
-  if (status != ZX_OK) {
-    return status;
-  }
-  auto runner = std::unique_ptr<Runner>(new Runner(loop, std::move(fs)));
-  *out = std::move(runner);
-  return ZX_OK;
+zx::status<std::unique_ptr<Runner>> Runner::Create(async::Loop* loop,
+                                                   std::unique_ptr<BlockDevice> device,
+                                                   MountOptions* options) {
+  auto runner = std::unique_ptr<Runner>(new Runner(loop));
+
+  auto fs_or = Factoryfs::Create(loop->dispatcher(), std::move(device), options, runner.get());
+  if (fs_or.is_error())
+    return fs_or.take_error();
+
+  runner->factoryfs_ = std::move(fs_or.value());
+  return zx::ok(std::move(runner));
 }
 
 void Runner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
@@ -43,6 +43,11 @@ void Runner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   });
 }
 
+zx_status_t Runner::GetFilesystemInfo(fidl::AnyArena& allocator,
+                                      fuchsia_fs::wire::FilesystemInfo& out) {
+  return factoryfs_->GetFilesystemInfo(allocator, out);
+}
+
 zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
   fbl::RefPtr<fs::Vnode> vn;
   zx_status_t status = factoryfs_->OpenRootNode(&vn);
@@ -57,12 +62,15 @@ zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
       export_root = std::move(vn);
       break;
     case ServeLayout::kExportDirectory:
-      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>();
+      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(factoryfs_->vfs());
       outgoing->AddEntry(kOutgoingDataRoot, std::move(vn));
-      auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+
+      auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(factoryfs_->vfs());
       outgoing->AddEntry("svc", svc_dir);
-      query_svc_ = fbl::MakeRefCounted<QueryService>(loop_->dispatcher(), factoryfs_.get(), this);
+
+      query_svc_ = fbl::MakeRefCounted<fs::QueryService>(factoryfs_->vfs());
       svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc_);
+
       export_root = std::move(outgoing);
       break;
   }
@@ -75,8 +83,7 @@ zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
   return ZX_OK;
 }
 
-Runner::Runner(async::Loop* loop, std::unique_ptr<Factoryfs> fs)
-    : ManagedVfs(loop->dispatcher()), loop_(loop), factoryfs_(std::move(fs)) {}
+Runner::Runner(async::Loop* loop) : ManagedVfs(loop->dispatcher()), loop_(loop) {}
 
 bool Runner::IsReadonly() const { return true; }
 

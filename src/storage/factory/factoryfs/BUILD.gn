@@ -14,7 +14,6 @@ source_set("factoryfs") {
     "format.cc",
     "fsck.cc",
     "mount.cc",
-    "query.cc",
     "runner.cc",
     "superblock.cc",
   ]

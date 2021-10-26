@@ -65,8 +65,27 @@ zx_status_t Factoryfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out) {
   return ZX_OK;
 }
 
-Factoryfs::Factoryfs(std::unique_ptr<BlockDevice> device, const Superblock* superblock)
-    : block_device_(std::move(device)), superblock_(*superblock) {
+zx_status_t Factoryfs::GetFilesystemInfo(fidl::AnyArena& allocator,
+                                         fuchsia_fs::wire::FilesystemInfo& out) {
+  out.set_block_size(allocator, kFactoryfsBlockSize);
+  out.set_max_node_name_size(allocator, kFactoryfsMaxNameSize);
+  out.set_fs_type(allocator, fuchsia_fs::wire::FsType::kFactoryfs);
+  out.set_total_bytes(allocator, superblock_.data_blocks * kFactoryfsBlockSize);
+  out.set_used_bytes(allocator, superblock_.data_blocks * kFactoryfsBlockSize);
+  out.set_total_nodes(allocator, superblock_.directory_entries);
+  out.set_used_nodes(allocator, superblock_.directory_entries);
+  out.set_name(allocator, fidl::StringView(allocator, "factoryfs"));
+
+  zx::event fs_id_copy;
+  if (fs_id_.duplicate(ZX_RIGHTS_BASIC, &fs_id_copy) == ZX_OK)
+    out.set_fs_id(allocator, std::move(fs_id_copy));
+
+  return ZX_OK;
+}
+
+Factoryfs::Factoryfs(std::unique_ptr<BlockDevice> device, const Superblock* superblock,
+                     fs::FuchsiaVfs* vfs)
+    : block_device_(std::move(device)), superblock_(*superblock), vfs_(vfs) {
   zx::event::create(0, &fs_id_);
 }
 
@@ -79,21 +98,22 @@ std::unique_ptr<BlockDevice> Factoryfs::Reset() {
   return std::move(block_device_);
 }
 
-zx_status_t Factoryfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
-                              MountOptions* options, std::unique_ptr<Factoryfs>* out) {
+zx::status<std::unique_ptr<Factoryfs>> Factoryfs::Create(async_dispatcher_t* dispatcher,
+                                                         std::unique_ptr<BlockDevice> device,
+                                                         MountOptions* options,
+                                                         fs::FuchsiaVfs* vfs) {
   TRACE_DURATION("factoryfs", "Factoryfs::Create");
   Superblock superblock;
-  zx_status_t status = device->ReadBlock(0, kFactoryfsBlockSize, &superblock);
-  if (status != ZX_OK) {
+  if (zx_status_t status = device->ReadBlock(0, kFactoryfsBlockSize, &superblock);
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "could not read info block: " << zx_status_get_string(status);
-    return status;
+    return zx::error(status);
   }
 
   fuchsia_hardware_block_BlockInfo block_info;
-  status = device->BlockGetInfo(&block_info);
-  if (status != ZX_OK) {
+  if (zx_status_t status = device->BlockGetInfo(&block_info); status != ZX_OK) {
     FX_LOGS(ERROR) << "cannot acquire block info: " << zx_status_get_string(status);
-    return status;
+    return zx::error(status);
   }
   // TODO(manalib).
   // Both generic fsck as well as generic mount open the device in read-write mode.
@@ -105,40 +125,22 @@ zx_status_t Factoryfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Bl
   if (kFactoryfsBlockSize % block_info.block_size != 0) {
     FX_LOGS(ERROR) << "Factoryfs block size (" << kFactoryfsBlockSize
                    << ") not divisible by device block size (" << block_info.block_size << ")";
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   }
 
   // Perform superblock validations.
-  status = CheckSuperblock(&superblock);
-  if (status != ZX_OK) {
+  if (zx_status_t status = CheckSuperblock(&superblock); status != ZX_OK) {
     FX_LOGS(ERROR) << "Check Superblock failure";
-    return status;
+    return zx::error(status);
   }
 
-  auto fs = std::unique_ptr<Factoryfs>(new Factoryfs(std::move(device), &superblock));
+  auto fs = std::unique_ptr<Factoryfs>(new Factoryfs(std::move(device), &superblock, vfs));
   fs->block_info_ = std::move(block_info);
 
-  *out = std::move(fs);
-  return ZX_OK;
+  return zx::ok(std::move(fs));
 }
 
 Factoryfs::~Factoryfs() { Reset(); }
-
-zx::event Factoryfs::GetFsId() const {
-  zx::event result;
-  fs_id_.duplicate(ZX_RIGHTS_BASIC, &result);
-  return result;
-}
-
-uint64_t Factoryfs::GetFsIdLegacy() const {
-  zx_info_handle_basic_t handle_info;
-  if (zx_status_t status = fs_id_.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info),
-                                           nullptr, nullptr);
-      status == ZX_OK) {
-    return handle_info.koid;
-  }
-  return ZX_KOID_INVALID;
-}
 
 zx_status_t Factoryfs::InitDirectoryVmo() {
   if (directory_vmo_.is_valid()) {

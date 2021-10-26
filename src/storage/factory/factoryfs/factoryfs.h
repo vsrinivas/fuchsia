@@ -37,12 +37,16 @@ class Factoryfs {
   // Creates a Factoryfs object.
   //
   // The dispatcher should be for the current thread that Factoryfs is running on.
-  static zx_status_t Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
-                            MountOptions* options, std::unique_ptr<Factoryfs>* out);
+  static zx::status<std::unique_ptr<Factoryfs>> Create(async_dispatcher_t* dispatcher,
+                                                       std::unique_ptr<BlockDevice> device,
+                                                       MountOptions* options, fs::FuchsiaVfs* vfs);
 
   virtual ~Factoryfs();
   zx_status_t OpenRootNode(fbl::RefPtr<fs::Vnode>* out);
 
+  zx_status_t GetFilesystemInfo(fidl::AnyArena& allocator, fuchsia_fs::wire::FilesystemInfo& out);
+
+  fs::FuchsiaVfs* vfs() const { return vfs_; }
   const Superblock& Info() const { return superblock_; }
 
   // Returns the dispatcher for the current thread that factoryfs uses.
@@ -50,11 +54,6 @@ class Factoryfs {
 
   BlockDevice& Device() const { return *block_device_; }
   const fuchsia_hardware_block_BlockInfo& GetDeviceBlockInfo() const { return block_info_; }
-
-  // Returns an unique identifier for this instance. Each invocation returns a new
-  // handle that references the same kernel object, which is used as the identifier.
-  zx::event GetFsId() const;
-  uint64_t GetFsIdLegacy() const;
 
   // Returns a vnode for a given path.
   zx::status<fbl::RefPtr<fs::Vnode>> Lookup(std::string_view path);
@@ -70,7 +69,7 @@ class Factoryfs {
   // iteration stops.
   using Callback = fbl::Function<zx_status_t(const DirectoryEntry* entry)>;
 
-  Factoryfs(std::unique_ptr<BlockDevice> device, const Superblock* info);
+  Factoryfs(std::unique_ptr<BlockDevice> device, const Superblock* info, fs::FuchsiaVfs* vfs);
 
   uint64_t GetDirectorySize() const {
     return superblock_.directory_ent_blocks * kFactoryfsBlockSize;
@@ -94,6 +93,8 @@ class Factoryfs {
   std::unique_ptr<BlockDevice> block_device_;
   Superblock superblock_;
   fuchsia_hardware_block_BlockInfo block_info_ = {};
+
+  fs::FuchsiaVfs* vfs_ = nullptr;
 
   // This event's koid is used as a unique identifier for this filesystem instance. This must be
   // an event because it's returned by the fs.Query interface.

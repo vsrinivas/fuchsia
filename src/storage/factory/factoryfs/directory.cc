@@ -16,7 +16,7 @@
 namespace factoryfs {
 
 Directory::Directory(factoryfs::Factoryfs& fs, std::string_view path)
-    : factoryfs_(fs), path_(path) {
+    : Vnode(fs.vfs()), factoryfs_(fs), path_(path) {
   factoryfs_.DidOpen(path_, *this);
 }
 
@@ -73,30 +73,11 @@ zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out
 }
 
 #ifdef __Fuchsia__
-
-constexpr std::string_view kFsName = "factoryfs";
-
-zx_status_t Directory::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* info) {
-  *info = {};
-  info->block_size = kFactoryfsBlockSize;
-  info->max_filename_size = kFactoryfsMaxNameSize;
-  info->fs_type = VFS_TYPE_FACTORYFS;
-  info->fs_id = factoryfs_.GetFsIdLegacy();
-  info->total_bytes = Info().data_blocks * kFactoryfsBlockSize;
-  info->used_bytes = Info().data_blocks * kFactoryfsBlockSize;
-  info->total_nodes = Info().directory_entries;
-  info->used_nodes = Info().directory_entries;
-  static_assert(kFsName.size() + 1 < fuchsia_io_admin::wire::kMaxFsNameBuffer,
-                "Factoryfs name too long");
-  info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
-                          fuchsia_io_admin::wire::kMaxFsNameBuffer - 1)] = '\0';
-  return ZX_OK;
-}
-
 zx::status<std::string> Directory::GetDevicePath() const {
   return factoryfs_.Device().GetDevicePath();
 }
 #endif
+
 zx_status_t Directory::Unlink(std::string_view path, bool is_dir) { return ZX_ERR_NOT_SUPPORTED; }
 
 const factoryfs::Superblock& Directory::Info() const { return factoryfs_.Info(); }

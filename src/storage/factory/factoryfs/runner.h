@@ -10,6 +10,7 @@
 #include <lib/zx/resource.h>
 
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/query_service.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/factory/factoryfs/factoryfs.h"
@@ -18,8 +19,6 @@
 namespace factoryfs {
 
 constexpr char kOutgoingDataRoot[] = "root";
-
-class QueryService;
 
 // A wrapper class around a "Factoryfs" object which additionally manages
 // external IPC connections.
@@ -34,11 +33,14 @@ class Runner : public fs::ManagedVfs {
   Runner& operator=(const Runner&) = delete;
   Runner& operator=(Runner&&) = delete;
 
-  static zx_status_t Create(async::Loop* loop, std::unique_ptr<BlockDevice> device,
-                            MountOptions* options, std::unique_ptr<Runner>* out);
+  static zx::status<std::unique_ptr<Runner>> Create(async::Loop* loop,
+                                                    std::unique_ptr<BlockDevice> device,
+                                                    MountOptions* options);
 
   // fs::ManagedVfs interface.
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback closure) final;
+  zx_status_t GetFilesystemInfo(fidl::AnyArena& allocator,
+                                fuchsia_fs::wire::FilesystemInfo& out) final;
 
   // Other methods.
 
@@ -47,11 +49,11 @@ class Runner : public fs::ManagedVfs {
   zx_status_t ServeRoot(zx::channel root, ServeLayout layout);
 
  private:
-  Runner(async::Loop* loop, std::unique_ptr<Factoryfs> fs);
+  explicit Runner(async::Loop* loop);
   bool IsReadonly() const;
   async::Loop* loop_;
   std::unique_ptr<Factoryfs> factoryfs_;
-  fbl::RefPtr<QueryService> query_svc_;
+  fbl::RefPtr<fs::QueryService> query_svc_;
 };
 
 }  // namespace factoryfs

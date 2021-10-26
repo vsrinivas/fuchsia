@@ -155,11 +155,6 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   BlockDevice* Device() const { return block_device_.get(); }
 
-  // Returns an unique identifier for this instance. Each invocation returns a new handle that
-  // references the same kernel object which is used as the identifier. The returned event should
-  // be valid unless the kernel runs out of memory.
-  zx::event GetFsId() const;
-
   // Synchronizes the journal and then executes the callback from the journal thread.
   //
   // During shutdown there is no journal but there is nothing to sync. In this case the callback
