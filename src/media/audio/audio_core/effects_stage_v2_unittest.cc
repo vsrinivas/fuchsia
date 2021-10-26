@@ -194,14 +194,13 @@ fuchsia_audio_effects::wire::ProcessorConfiguration MakeProcessorConfig(Arena& a
 
 fidl::ServerEnd<fuchsia_audio_effects::Processor> AttachProcessorChannel(
     fuchsia_audio_effects::wire::ProcessorConfiguration& config) {
-  zx::channel local;
-  zx::channel remote;
-  if (auto status = zx::channel::create(0, &local, &remote); status != ZX_OK) {
-    FX_PLOGS(FATAL, status) << "failed to construct a zx::channel";
+  auto endpoints = fidl::CreateEndpoints<fuchsia_audio_effects::Processor>();
+  if (!endpoints.is_ok()) {
+    FX_PLOGS(FATAL, endpoints.status_value()) << "failed to construct a zx::channel";
   }
 
-  config.set_processor(fidl::ClientEnd<fuchsia_audio_effects::Processor>{std::move(local)});
-  return fidl::ServerEnd<fuchsia_audio_effects::Processor>{std::move(remote)};
+  config.set_processor(std::move(endpoints->client));
+  return std::move(endpoints->server);
 }
 
 fuchsia_audio_effects::wire::ProcessorConfiguration DefaultGoodProcessorConfig(Arena& arena) {

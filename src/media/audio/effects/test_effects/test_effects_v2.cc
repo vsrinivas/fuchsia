@@ -115,17 +115,13 @@ zx_status_t TestEffectsV2::ClearEffects() {
 }
 
 fidl::ClientEnd<fuchsia_audio_effects::ProcessorCreator> TestEffectsV2::NewClient() {
-  zx::channel local;
-  zx::channel remote;
-  if (auto status = zx::channel::create(0, &local, &remote); status != ZX_OK) {
-    FX_PLOGS(FATAL, status) << "failed to construct a zx::channel";
+  auto endpoints = fidl::CreateEndpoints<fuchsia_audio_effects::ProcessorCreator>();
+  if (!endpoints.is_ok()) {
+    FX_PLOGS(FATAL, endpoints.status_value()) << "failed to construct a zx::channel";
   }
 
-  auto server_end = fidl::ServerEnd<fuchsia_audio_effects::ProcessorCreator>{std::move(local)};
-  auto client_end = fidl::ClientEnd<fuchsia_audio_effects::ProcessorCreator>{std::move(remote)};
-
-  HandleRequest(std::move(server_end));
-  return client_end;
+  HandleRequest(std::move(endpoints->server));
+  return std::move(endpoints->client);
 }
 
 void TestEffectsV2::HandleRequest(
