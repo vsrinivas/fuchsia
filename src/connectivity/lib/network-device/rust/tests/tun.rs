@@ -9,14 +9,19 @@ use fidl_fuchsia_net_tun as tun;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
-use futures::future::{Future, FutureExt as _};
+use futures::{
+    future::{Future, FutureExt as _},
+    stream::TryStreamExt as _,
+};
 use matches::assert_matches;
-use netdevice_client::error::Error;
-use netdevice_client::{Client, Session};
-use std::convert::TryInto as _;
-use std::io::{Read as _, Write as _};
+use netdevice_client::{Client, Error, Session};
+use std::{
+    convert::TryInto as _,
+    io::{Read as _, Write as _},
+};
 
 const DEFAULT_PORT_ID: u8 = 0;
+const DEFAULT_MTU: u32 = 1500;
 const DATA_BYTE: u8 = 42;
 const DATA_LEN: usize = 4;
 const SESSION_BUFFER_LEN: usize = 2048;
@@ -25,7 +30,7 @@ const SESSION_BUFFER_LEN: usize = 2048;
 async fn test_rx() {
     let (tun, _port) = create_tun_device_and_port();
     let client = create_netdev_client(&tun);
-    let () = with_netdev_session(&client, "test_rx", |session| async move {
+    let () = with_netdev_session(client, "test_rx", |session, _client| async move {
         let frame = tun::Frame {
             frame_type: Some(netdev::FrameType::Ethernet),
             data: Some(vec![DATA_BYTE; DATA_LEN]),
@@ -50,7 +55,7 @@ async fn test_rx() {
 async fn test_tx() {
     let (tun, _port) = create_tun_device_and_port();
     let client = create_netdev_client(&tun);
-    let () = with_netdev_session(&client, "test_tx", |session| async move {
+    let () = with_netdev_session(client, "test_tx", |session, _client| async move {
         let mut buffer =
             session.alloc_tx_buffer(DATA_LEN).await.expect("failed to alloc tx buffer");
         assert_eq!(
@@ -100,7 +105,7 @@ async fn test_echo_tun() {
     const FRAME_TOTAL_COUNT: u32 = 512;
     let (tun, _port) = create_tun_device_and_port();
     let client = create_netdev_client(&tun);
-    with_netdev_session(&client, "test_echo_tun", |session| async {
+    with_netdev_session(client, "test_echo_tun", |session, _client| async {
         let echo_fut = echo(session, FRAME_TOTAL_COUNT);
         let main_fut = async move {
             for i in 0..FRAME_TOTAL_COUNT {
@@ -137,25 +142,24 @@ async fn test_echo_tun() {
 async fn test_echo_pair() {
     const FRAME_TOTAL_COUNT: u32 = 512;
     let pair = create_tun_device_pair();
-    let ((client1, port1), (client2, port2)) = create_netdev_client_pair(&pair).await;
-    // TODO(https://fxbug.dev/75533): We can do better when the rust client
-    // has direct support for port status watcher.
-    async fn port_online(port: &netdev::PortProxy) {
-        let (watcher, server) = endpoints::create_proxy().expect("failed to create watcher proxy");
-        const WATCHER_BUFFER: u32 = 0;
-        port.get_status_watcher(server, WATCHER_BUFFER).expect("failed to get watcher");
-        loop {
-            let flags =
-                watcher.watch_status().await.expect("failed to watch status").flags.unwrap();
-            if flags.contains(netdev::StatusFlags::Online) {
-                return;
-            }
-        }
-    }
-    let () = with_netdev_session(&client1, "test_echo_pair_1", |session1| async {
-        let () = with_netdev_session(&client2, "test_echo_pair_2", |session2| async move {
+    let (client1, client2) = create_netdev_client_pair(&pair).await;
+    let () = with_netdev_session(client1, "test_echo_pair_1", |session1, client1| async move {
+        let () = with_netdev_session(client2, "test_echo_pair_2", |session2, client2| async move {
             // Wait for the ports to be online before we send anything.
-            futures::join!(port_online(&port1), port_online(&port2));
+            assert_matches!(
+                client1.wait_online(DEFAULT_PORT_ID.into()).await,
+                Ok(netdevice_client::PortStatus {
+                    flags: netdev::StatusFlags::Online,
+                    mtu: DEFAULT_MTU
+                })
+            );
+            assert_matches!(
+                client2.wait_online(DEFAULT_PORT_ID.into()).await,
+                Ok(netdevice_client::PortStatus {
+                    flags: netdev::StatusFlags::Online,
+                    mtu: DEFAULT_MTU
+                })
+            );
             let echo_fut = echo(session1, FRAME_TOTAL_COUNT);
             let main_fut = async {
                 for i in 0..FRAME_TOTAL_COUNT {
@@ -218,10 +222,61 @@ fn test_session_task_dropped() {
     })
 }
 
+#[fasync::run_singlethreaded(test)]
+async fn test_status_stream() {
+    const TOGGLE_COUNT: usize = 3;
+    let (tun, port) = create_tun_device_and_port();
+    let client = create_netdev_client(&tun);
+    let mut watcher = client
+        .port_status_stream(DEFAULT_PORT_ID.into())
+        .expect("failed to create a status watcher");
+
+    for _ in 0..TOGGLE_COUNT {
+        assert_matches!(
+            watcher.try_next().await,
+            Ok(Some(netdevice_client::PortStatus {
+                flags: netdev::StatusFlags::Online,
+                mtu: DEFAULT_MTU
+            }))
+        );
+        port.set_online(false).await.expect("failed to flip online flag");
+        assert_eq!(
+            watcher.try_next().await.expect("failed to get next status update"),
+            Some(netdevice_client::PortStatus {
+                flags: netdev::StatusFlags::empty(),
+                mtu: DEFAULT_MTU
+            })
+        );
+        port.set_online(true).await.expect("failed to flip online flag");
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_port_stream() {
+    let mut stream = {
+        let (tun, _port) = create_tun_device_and_port();
+        let client = create_netdev_client(&tun);
+        let mut stream = client.device_port_event_stream().expect("failed to create port stream");
+        assert_matches!(
+            stream.try_next().await.expect("failed to get next event"),
+            Some(netdev::DevicePortEvent::Existing(DEFAULT_PORT_ID))
+        );
+        assert_matches!(
+            stream.try_next().await.expect("failed to get next event"),
+            Some(netdev::DevicePortEvent::Idle(netdev::Empty { .. }))
+        );
+        stream
+    };
+    assert_matches!(
+        stream.try_next().await.expect("failed to get next event"),
+        Some(netdev::DevicePortEvent::Removed(DEFAULT_PORT_ID))
+    );
+}
+
 fn default_base_port_config() -> tun::BasePortConfig {
     tun::BasePortConfig {
         id: Some(DEFAULT_PORT_ID),
-        mtu: Some(1500),
+        mtu: Some(DEFAULT_MTU),
         rx_types: Some(vec![netdev::FrameType::Ethernet]),
         tx_types: Some(vec![netdev::FrameTypeSupport {
             type_: netdev::FrameType::Ethernet,
@@ -278,9 +333,7 @@ fn create_netdev_client(tun: &tun::DeviceProxy) -> Client {
     client
 }
 
-async fn create_netdev_client_pair(
-    pair: &tun::DevicePairProxy,
-) -> ((Client, netdev::PortProxy), (Client, netdev::PortProxy)) {
+async fn create_netdev_client_pair(pair: &tun::DevicePairProxy) -> (Client, Client) {
     let (device1, left) = endpoints::create_proxy::<netdev::DeviceMarker>()
         .expect("failed to create left device proxy");
     let (device2, right) = endpoints::create_proxy::<netdev::DeviceMarker>()
@@ -294,18 +347,12 @@ async fn create_netdev_client_pair(
     .await
     .unwrap()
     .expect("failed to create the default logical port");
-    let (port1, port1_server) =
-        endpoints::create_proxy::<netdev::PortMarker>().expect("failed to create left port proxy");
-    let (port2, port2_server) =
-        endpoints::create_proxy::<netdev::PortMarker>().expect("failed to create right port proxy");
-    let () = device1.get_port(DEFAULT_PORT_ID, port1_server).expect("failed to get left port");
-    let () = device2.get_port(DEFAULT_PORT_ID, port2_server).expect("failed to get right port");
-    ((Client::new(device1), port1), (Client::new(device2), port2))
+    (Client::new(device1), Client::new(device2))
 }
 
-async fn with_netdev_session<F, Fut>(client: &Client, name: &str, f: F)
+async fn with_netdev_session<F, Fut>(client: Client, name: &str, f: F)
 where
-    F: FnOnce(Session) -> Fut,
+    F: FnOnce(Session, Client) -> Fut,
     Fut: Future<Output = ()>,
 {
     let (session, task) =
@@ -315,7 +362,7 @@ where
         .await
         .expect("failed to attach session");
     futures::select! {
-        () = f(session).fuse() => {},
+        () = f(session, client).fuse() => {},
         res = task.fuse() => panic!("the background task for session terminated with {:?}", res),
     }
 }

@@ -42,6 +42,8 @@ pub enum Error {
     Map(&'static str, zx::Status),
     #[error("failed to validate netdev::DeviceInfo")]
     DeviceInfo(#[from] crate::session::DeviceInfoValidationError),
+    #[error("failed to validate netdev::PortStatus")]
+    PortStatus(#[from] crate::client::PortStatusValidationError),
     #[error("failed to attach port {0}: {1}")]
     Attach(u8, zx::Status),
     #[error("failed to detach port {0}: {1}")]

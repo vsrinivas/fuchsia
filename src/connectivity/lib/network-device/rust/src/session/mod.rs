@@ -487,6 +487,13 @@ impl From<u8> for Port {
     }
 }
 
+impl Into<u8> for Port {
+    fn into(self) -> u8 {
+        let Self(p) = self;
+        p
+    }
+}
+
 /// Pending descriptors to be sent to driver.
 struct Pending<K: AllocKind> {
     inner: Mutex<(Vec<DescId<K>>, Option<Waker>)>,
