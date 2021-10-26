@@ -8,8 +8,8 @@ use {
     fidl::AsHandleRef,
     fidl_fuchsia_io::{
         DirectoryProxy, FileObject, NodeAttributes, NodeInfo, NodeProxy, Service,
-        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_EXECUTABLE,
-        OPEN_RIGHT_READABLE,
+        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_NODE_REFERENCE,
+        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
     },
     fuchsia_zircon as zx,
 };
@@ -373,39 +373,119 @@ async fn verify_describe_meta_file_success(node: NodeProxy) -> Result<(), Error>
 
 #[fuchsia::test]
 async fn node_set_flags() {
-    for source in just_pkgfs_for_now().await {
+    for source in dirs_to_test().await {
         node_set_flags_per_package_source(source).await
     }
 }
 
 async fn node_set_flags_per_package_source(source: PackageSource) {
-    let root_dir = source.dir;
-    assert_node_set_flags(&root_dir, ".", MODE_TYPE_DIRECTORY).await;
-    assert_node_set_flags(&root_dir, "meta", MODE_TYPE_DIRECTORY).await;
-    assert_node_set_flags(&root_dir, "meta/dir", MODE_TYPE_DIRECTORY).await;
-    assert_node_set_flags(&root_dir, "dir", MODE_TYPE_DIRECTORY).await;
-    assert_node_set_flags(&root_dir, "meta", MODE_TYPE_FILE).await;
-    assert_node_set_flags(&root_dir, "meta/file", MODE_TYPE_FILE).await;
+    let package_root = &source.dir;
+    do_node_set_flags(package_root, ".", MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
+    do_node_set_flags(package_root, "meta", MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
+    do_node_set_flags(package_root, "meta/dir", MODE_TYPE_DIRECTORY, 0)
+        .await
+        .assert_not_supported();
+    do_node_set_flags(package_root, "dir", MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
+    do_node_set_flags(package_root, "file", MODE_TYPE_FILE, 0).await.assert_ok();
+    {
+        let outcome = do_node_set_flags(package_root, "meta", MODE_TYPE_FILE, 0).await;
+        if source.is_pkgdir() {
+            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
+            outcome.assert_ok();
+        } else {
+            outcome.assert_not_supported();
+        }
+    };
+    {
+        let outcome =
+            do_node_set_flags(package_root, "meta", MODE_TYPE_FILE, OPEN_FLAG_APPEND).await;
+        if source.is_pkgdir() {
+            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
+            outcome.assert_ok();
+        } else {
+            outcome.assert_not_supported();
+        }
+    };
+    {
+        let outcome = do_node_set_flags(package_root, "meta/file", MODE_TYPE_FILE, 0).await;
+        if source.is_pkgdir() {
+            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
+            outcome.assert_ok();
+        } else {
+            outcome.assert_not_supported();
+        }
+    };
+    {
+        let outcome =
+            do_node_set_flags(package_root, "meta/file", MODE_TYPE_FILE, OPEN_FLAG_APPEND).await;
+        if source.is_pkgdir() {
+            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
+            outcome.assert_ok();
+        } else {
+            outcome.assert_not_supported();
+        }
+    };
 }
 
-async fn assert_node_set_flags(package_root: &DirectoryProxy, path: &str, mode: u32) {
+struct NodeSetFlagsOutcome<'a> {
+    argument: crate::OpenFlags,
+    path: &'a str,
+    mode: Mode,
+    result: Result<Result<(), zx::Status>, fidl::Error>,
+}
+async fn do_node_set_flags<'a>(
+    package_root: &DirectoryProxy,
+    path: &'a str,
+    mode: u32,
+    argument: u32,
+) -> NodeSetFlagsOutcome<'a> {
     let node =
         io_util::directory::open_node(package_root, path, OPEN_RIGHT_READABLE, mode).await.unwrap();
 
-    if let Err(e) = verify_node_set_flag_success(node).await {
-        panic!("node_set_flags failed. path: {:?}, error: {:#}", path, e);
-    }
+    let result = node.node_set_flags(argument).await.map(zx::Status::ok);
+    NodeSetFlagsOutcome { path, mode: Mode(mode), result, argument: crate::OpenFlags(argument) }
 }
 
-async fn verify_node_set_flag_success(node: NodeProxy) -> Result<(), Error> {
-    match node.node_set_flags(0).await {
-        Ok(status) => {
-            if zx::Status::from_raw(status) == zx::Status::NOT_SUPPORTED {
-                return Ok(());
-            }
-            return Err(anyhow!("wrong status returned: {:?}", zx::Status::from_raw(status)));
+impl NodeSetFlagsOutcome<'_> {
+    fn error_context(&self) -> String {
+        format!("path: {:?} as {:?}", self.path, self.mode)
+    }
+
+    #[track_caller]
+    fn assert_not_supported(&self) {
+        match &self.result {
+            Ok(Err(zx::Status::NOT_SUPPORTED)) => {}
+            Ok(Err(e)) => panic!(
+                "node_set_flags({:?}): wrong error status: {} on {}",
+                self.argument,
+                e,
+                self.error_context()
+            ),
+            Err(e) => panic!(
+                "failed to call node_set_flags({:?}): {:?} on {}",
+                self.argument,
+                e,
+                self.error_context()
+            ),
+            Ok(Ok(())) => panic!(
+                "node_set_flags({:?}) suceeded unexpectedly on {}",
+                self.argument,
+                self.error_context()
+            ),
+        };
+    }
+
+    #[track_caller]
+    fn assert_ok(&self) {
+        match &self.result {
+            Ok(Ok(())) => {}
+            e => panic!(
+                "node_set_flags({:?}) failed: {:?} on {}",
+                self.argument,
+                e,
+                self.error_context()
+            ),
         }
-        Err(e) => return Err(e).context("failed to call node_set_flags"),
     }
 }
 
