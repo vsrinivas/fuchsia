@@ -209,12 +209,9 @@ using DescribeRequestView = fidl::WireServer<::fuchsia_io::Node>::DescribeReques
 using DescribeCompleter = fidl::WireServer<::fuchsia_io::Node>::DescribeCompleter;
 
 TEST_F(CreateTest, Device) {
-  zx::eventpair event0, event1;
-  ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
   node_server().set_describe_function(
-      [event1 = std::move(event1)](DescribeRequestView request,
-                                   DescribeCompleter::Sync& completer) mutable {
-        fuchsia_io::wire::Device device = {.event = std::move(event1)};
+      [](DescribeRequestView request, DescribeCompleter::Sync& completer) mutable {
+        fuchsia_io::wire::Device device;
         auto node_info = fuchsia_io::wire::NodeInfo::WithDevice(std::move(device));
         completer.Reply(std::move(node_info));
       });
@@ -222,40 +219,19 @@ TEST_F(CreateTest, Device) {
   StartServerThread();
 
   ASSERT_OK(zxio_create(TakeClientChannel().release(), storage()));
-
-  // Closing the zxio object should close our eventpair's peer event.
-  zx_signals_t pending = 0;
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
-  EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
-
-  ASSERT_OK(zxio_close(zxio()));
-
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
-  EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
 }
 
 TEST_F(CreateWithOnOpenTest, Device) {
-  zx::eventpair event0, event1;
-
-  ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
-  fuchsia_io::wire::Device device = {.event = std::move(event1)};
+  fuchsia_io::wire::Device device;
   auto node_info = fuchsia_io::wire::NodeInfo::WithDevice(std::move(device));
 
   SendOnOpenEvent(std::move(node_info));
 
   ASSERT_OK(zxio_create_with_on_open(TakeClientChannel().release(), storage()));
 
-  // Closing the zxio object should close our eventpair's peer event.
-  zx_signals_t pending = 0;
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
-  EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
-
   StartServerThread();
 
   ASSERT_OK(zxio_close(zxio()));
-
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
-  EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
 }
 
 class SyncNodeServer : public zxio_tests::DescribeNodeServer {

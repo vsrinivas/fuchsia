@@ -163,8 +163,6 @@ TEST(FidlTestCase, Basic) {
     auto result = fidl::WireCall<fio::File>(zx::unowned_channel(client))->Describe();
     auto info = std::move(result->info);
     ASSERT_TRUE(info.is_device());
-    ASSERT_NE(info.device().event, ZX_HANDLE_INVALID);
-    zx_handle_close(info.mutable_device().event.release());
   }
 }
 

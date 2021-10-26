@@ -48,7 +48,7 @@ type NodeInfo = strict resource union {
         /// An optional event which transmits information about a device's state.
         ///
         /// The "`DEVICE_SIGNAL_`" values may be observed on this event.
-        event zx.handle:<EVENTPAIR, optional>;
+        unused zx.handle:<EVENTPAIR, optional>;
     };
     7: tty resource struct {
         event zx.handle:<EVENTPAIR, optional>;

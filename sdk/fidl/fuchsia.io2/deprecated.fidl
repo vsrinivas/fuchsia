@@ -25,7 +25,7 @@ type DeviceInfo = resource table {
     /// An optional event which transmits information about a device's state.
     ///
     /// The [`DeviceSignal`] values may be observed on this event.
-    1: event zx.handle:EVENTPAIR;
+    1: unused zx.handle:EVENTPAIR;
 };
 
 /// The object may be cast to a Tty interface.

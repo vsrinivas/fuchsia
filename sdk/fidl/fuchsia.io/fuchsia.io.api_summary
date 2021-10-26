@@ -34,9 +34,9 @@ table/member fuchsia.io/DatagramSocketInfo.event zx/handle:EVENTPAIR
 resource table fuchsia.io/DatagramSocketInfo
 table/member fuchsia.io/DebuglogInfo.debuglog zx/handle:DEBUGLOG
 resource table fuchsia.io/DebuglogInfo
-struct/member fuchsia.io/Device.event zx/handle:<EVENTPAIR,optional>
+struct/member fuchsia.io/Device.unused zx/handle:<EVENTPAIR,optional>
 resource struct fuchsia.io/Device
-table/member fuchsia.io/DeviceInfo.event zx/handle:EVENTPAIR
+table/member fuchsia.io/DeviceInfo.unused zx/handle:EVENTPAIR
 resource table fuchsia.io/DeviceInfo
 protocol/member fuchsia.io/Directory.AddInotifyFilter(string:4095 path,fuchsia.io2/InotifyWatchMask filter,uint32 watch_descriptor,zx/handle:SOCKET socket) -> ()
 protocol/member fuchsia.io/Directory.AdvisoryLock(fuchsia.io2/AdvisoryLockRequest request) -> (fuchsia.io2/AdvisoryLocking_AdvisoryLock_Result result)

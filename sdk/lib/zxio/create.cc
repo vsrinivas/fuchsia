@@ -171,9 +171,7 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
                                       zxio_storage_t* storage) {
   switch (info.which()) {
     case fio::wire::NodeInfo::Tag::kDevice: {
-      auto& device = info.mutable_device();
-      zx::eventpair event = std::move(device.event);
-      return zxio_remote_init(storage, node.TakeChannel().release(), event.release());
+      return zxio_remote_init(storage, node.TakeChannel().release(), ZX_HANDLE_INVALID);
     }
     case fio::wire::NodeInfo::Tag::kDirectory: {
       return zxio_dir_init(storage, node.TakeChannel().release());

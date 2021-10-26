@@ -180,7 +180,7 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
       info.set_vmofile(fidl::ObjectView<fio::wire::Vmofile>::FromExternal(&vmofile));
       callback(std::move(info));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Device>) {
-      info.set_device({.event = std::move(repr.event)});
+      info.set_device(fio::wire::Device{});
       callback(std::move(info));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Tty>) {
       info.set_tty({.event = std::move(repr.event)});
@@ -222,7 +222,6 @@ ConnectionInfoConverter::ConnectionInfoConverter(VnodeRepresentation representat
       info.set_representation(arena, fio::wire::Representation::WithMemory(arena, memory));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Device>) {
       fio::wire::DeviceInfo device(arena);
-      device.set_event(std::move(repr.event));
       info.set_representation(arena,
                               fio::wire::Representation::WithDevice(arena, std::move(device)));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Tty>) {

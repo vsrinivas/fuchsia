@@ -46,7 +46,7 @@ protocol/member fuchsia.io2/Debuglog.UpdateAttributes(fuchsia.io2/NodeAttributes
 protocol fuchsia.io2/Debuglog
 table/member fuchsia.io2/DebuglogInfo.debuglog zx/handle:DEBUGLOG
 resource table fuchsia.io2/DebuglogInfo
-table/member fuchsia.io2/DeviceInfo.event zx/handle:EVENTPAIR
+table/member fuchsia.io2/DeviceInfo.unused zx/handle:EVENTPAIR
 resource table fuchsia.io2/DeviceInfo
 bits/member fuchsia.io2/DeviceSignal.ERROR 67108864
 bits/member fuchsia.io2/DeviceSignal.HANGUP 134217728

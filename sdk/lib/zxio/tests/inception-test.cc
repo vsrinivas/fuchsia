@@ -130,10 +130,7 @@ TEST(CreateWithInfo, Device) {
   ASSERT_OK(node_ends.status_value());
   auto [node_client, node_server] = std::move(node_ends.value());
 
-  zx::eventpair event0, event1;
-  ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
-
-  fuchsia_io::wire::Device device = {.event = std::move(event1)};
+  fuchsia_io::wire::Device device;
   auto node_info = fuchsia_io::wire::NodeInfo::WithDevice(std::move(device));
 
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
@@ -154,21 +151,10 @@ TEST(CreateWithInfo, Device) {
   ASSERT_OK(zxio_create_with_allocator(std::move(node_client), node_info, allocator, &context));
   ASSERT_NE(context, nullptr);
 
-  // The event in node_info should be consumed by zxio.
-  EXPECT_FALSE(node_info.device().event.is_valid());
-
   std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
   zxio_t* zxio = &(storage->io);
 
-  // Closing the zxio object should close our eventpair's peer event.
-  zx_signals_t pending = 0;
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
-  EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
-
   ASSERT_OK(zxio_close(zxio));
-
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
-  EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
 
   device_control_loop.Shutdown();
 }
