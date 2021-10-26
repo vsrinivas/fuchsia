@@ -577,14 +577,6 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
   // The opaque pointer representing the device's parent.
   zx_device_t* parent() const { return this->parent_; }
 
-  void SetState(zx_signals_t stateflag) { device_state_set(this->zxdev_, stateflag); }
-
-  void ClearState(zx_signals_t stateflag) { device_state_clr(this->zxdev_, stateflag); }
-
-  void ClearAndSetState(zx_signals_t clearflag, zx_signals_t setflag) {
-    device_state_clr_set(this->zxdev_, clearflag, setflag);
-  }
-
  protected:
   Device(zx_device_t* parent) : internal::base_device<D, Mixins...>(parent) {
     internal::CheckMixins<Mixins<D>...>();

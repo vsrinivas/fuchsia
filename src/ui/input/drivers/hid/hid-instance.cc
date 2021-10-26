@@ -30,15 +30,9 @@ static constexpr uint64_t hid_report_trace_id(uint32_t instance_id, uint64_t rep
   return (report_id << 32) | instance_id;
 }
 
-void HidInstance::SetReadable() {
-  SetState(DEV_STATE_READABLE);
-  fifo_event_.signal(0, DEV_STATE_READABLE);
-}
+void HidInstance::SetReadable() { fifo_event_.signal(0, DEV_STATE_READABLE); }
 
-void HidInstance::ClearReadable() {
-  ClearState(DEV_STATE_READABLE);
-  fifo_event_.signal(DEV_STATE_READABLE, 0);
-}
+void HidInstance::ClearReadable() { fifo_event_.signal(DEV_STATE_READABLE, 0); }
 
 zx_status_t HidInstance::ReadReportFromFifo(uint8_t* buf, size_t buf_size, zx_time_t* time,
                                             size_t* report_size) {

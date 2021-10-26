@@ -497,16 +497,6 @@ zx_status_t device_get_fragment_metadata(zx_device_t* dev, const char* name, uin
 #define DEV_STATE_OOB ZX_USER_SIGNAL_1
 //}
 
-void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_signals_t setflag);
-
-//@ #### device_state_set
-static inline void device_state_set(zx_device_t* dev, zx_signals_t stateflag) {
-  device_state_clr_set(dev, 0, stateflag);
-}
-static inline void device_state_clr(zx_device_t* dev, zx_signals_t stateflag) {
-  device_state_clr_set(dev, stateflag, 0);
-}
-
 __END_CDECLS
 
 #endif  // SRC_LIB_DDK_INCLUDE_LIB_DDK_DEVICE_H_

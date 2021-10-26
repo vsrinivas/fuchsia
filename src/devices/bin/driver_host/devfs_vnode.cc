@@ -69,14 +69,7 @@ fs::VnodeProtocolSet DevfsVnode::GetProtocols() const { return fs::VnodeProtocol
 zx_status_t DevfsVnode::GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                                fs::VnodeRepresentation* info) {
   if (protocol == fs::VnodeProtocol::kDevice) {
-    zx::eventpair event;
-    if (dev_->event.is_valid()) {
-      zx_status_t status = dev_->event.duplicate(ZX_RIGHTS_BASIC, &event);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
-    *info = fs::VnodeRepresentation::Device{std::move(event)};
+    *info = fs::VnodeRepresentation::Device{};
     return ZX_OK;
   }
   return ZX_ERR_NOT_SUPPORTED;

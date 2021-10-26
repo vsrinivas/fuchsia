@@ -148,10 +148,6 @@ void DriverHostContext::DeviceDestroy(zx_device_t* dev) {
 
   dev->magic = 0xdeaddeaddeaddead;
 
-  // ensure all owned handles are invalid
-  dev->event.reset();
-  dev->local_event.reset();
-
   // ensure all pointers are invalid
   dev->ctx = nullptr;
   dev->set_parent(nullptr);
@@ -441,12 +437,6 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
     }
   }
   VLOGD(1, *dev, "Adding device %p (parent %p)", dev.get(), parent.get());
-
-  // Don't create an event handle if we already have one
-  if (!dev->event.is_valid() &&
-      ((status = zx::eventpair::create(0, &dev->event, &dev->local_event)) < 0)) {
-    return status;
-  }
 
   dev->set_flag(DEV_FLAG_BUSY);
 

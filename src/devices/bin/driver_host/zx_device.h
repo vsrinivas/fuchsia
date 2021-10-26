@@ -17,7 +17,6 @@
 #include <lib/trace/event.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/eventpair.h>
 #include <zircon/compiler.h>
 
 #include <array>
@@ -252,9 +251,6 @@ struct zx_device
     flags_ &= ~flag;
     inspect_->set_flags(flags_);
   }
-
-  zx::eventpair event;
-  zx::eventpair local_event;
 
   // The RPC channel is owned by |conn|
   // fuchsia.device.manager.Coordinator

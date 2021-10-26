@@ -184,11 +184,6 @@ __EXPORT
 zx_off_t device_get_size(zx_device_t* device) { return device->GetSize(); }
 
 __EXPORT
-void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_signals_t setflag) {
-  // This is currently a no-op.
-}
-
-__EXPORT
 zx_status_t device_get_profile(zx_device_t* device, uint32_t priority, const char* name,
                                zx_handle_t* out_profile) {
   // This is currently a no-op.
@@ -231,7 +226,6 @@ __EXPORT __WEAK zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_devic
 
 __EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out,
                                          size_t out_size, size_t* size_actual) {
-
   return device->GetVariable(name, out, out_size, size_actual);
 }
 

@@ -160,30 +160,21 @@ void SerialDevice::StateCallback(serial_state_t state) {
   // update our event handle signals with latest state from the serial driver
   zx_signals_t event_set = 0;
   zx_signals_t event_clear = 0;
-  zx_signals_t device_set = 0;
-  zx_signals_t device_clear = 0;
 
   if (state & SERIAL_STATE_READABLE) {
     event_set |= kEventReadableSignal;
-    device_set |= DEV_STATE_READABLE;
   } else {
     event_clear |= kEventReadableSignal;
-    device_clear |= DEV_STATE_READABLE;
   }
   if (state & SERIAL_STATE_WRITABLE) {
     event_set |= kEventWritableSignal;
-    device_set |= DEV_STATE_WRITABLE;
   } else {
     event_clear |= kEventWritableSignal;
-    device_clear |= DEV_STATE_WRITABLE;
   }
 
   if (socket_ != ZX_HANDLE_INVALID) {
     // another driver bound to us
     event_.signal(event_clear, event_set);
-  } else {
-    // someone opened us via /dev file system
-    ClearAndSetState(device_clear, device_set);
   }
 }
 

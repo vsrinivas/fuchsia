@@ -299,10 +299,6 @@ __EXPORT zx_status_t device_close_protocol_session_multibindable(const zx_device
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-__EXPORT void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_signals_t setflag) {
-  dev->event.signal(clearflag, setflag);
-}
-
 __EXPORT zx_off_t device_get_size(zx_device_t* dev) { return dev->GetSizeOp(); }
 
 // LibDriver Misc Interfaces

@@ -225,8 +225,6 @@ void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
 
   composite_.reset();
   proxy_.reset();
-  this->event.reset();
-  this->local_event.reset();
 
   driver_host_context_->QueueDeviceForFinalization(this);
 }

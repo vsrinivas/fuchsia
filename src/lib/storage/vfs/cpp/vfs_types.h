@@ -417,9 +417,7 @@ class VnodeRepresentation {
     uint64_t length = {};
   };
 
-  struct Device {
-    zx::eventpair event = {};
-  };
+  struct Device {};
 
   struct Tty {
     zx::eventpair event = {};

@@ -85,7 +85,6 @@ using ConnectCallback = fit::function<zx_status_t(zx::channel)>;
 // Any automatic responses from the DDK
 // The following libdriver calls:
 //   device_open_protocol_session_multibindable
-//   device_state_clr_set
 //   device_get_profile
 //   device_get_deadline_profile
 //   device_fidl_transaction_take_ownership
