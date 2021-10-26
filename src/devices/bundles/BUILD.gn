@@ -91,7 +91,6 @@ group("usb-host-stack") {
     "//src/devices/ml/drivers/usb-harriet",
     "//src/devices/serial/drivers/ftdi",
     "//src/devices/serial/drivers/usb-cdc-acm",
-    "//src/devices/usb/bin/lsusb",
     "//src/devices/usb/drivers/usb-bus",
     "//src/devices/usb/drivers/usb-composite",
     "//src/devices/usb/drivers/usb-dfu",
@@ -133,6 +132,7 @@ group("utils") {
     "//src/devices/spi/bin/spiutil",
     "//src/devices/thermal/bin/temperature-cli",
     "//src/devices/thermal/bin/thermal-cli",
+    "//src/devices/usb/bin/lsusb",
   ]
 }
 
