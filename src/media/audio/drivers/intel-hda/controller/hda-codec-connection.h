@@ -67,9 +67,6 @@ class HdaCodecConnection : public fbl::RefCounted<HdaCodecConnection> {
   State state() const { return state_; }
   const char* log_prefix() const { return log_prefix_; }
 
-  // Debug/Diags
-  void DumpState();
-
  private:
   friend class fbl::RefPtr<HdaCodecConnection>;
 

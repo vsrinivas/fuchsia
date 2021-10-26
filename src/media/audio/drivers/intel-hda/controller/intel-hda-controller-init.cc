@@ -37,6 +37,13 @@ constexpr zx_duration_t INTEL_HDA_CODEC_DISCOVERY_WAIT_NSEC = ZX_USEC(521);  // 
 constexpr unsigned int MAX_CAPS = 10;  // Arbitrary number of capabilities to check
 }  // namespace
 
+// Get the version of the hardware.
+//
+// The HDA_REG_GCTL_HWINIT bit must be confirmed to be "1" prior to calling this function.
+IntelHDAController::HdaVersion IntelHDAController::GetHardwareVersion() {
+  return HdaVersion{.major = REG_RD(&regs()->vmaj), .minor = REG_RD(&regs()->vmin)};
+}
+
 zx_status_t IntelHDAController::ResetControllerHW() {
   zx_status_t res;
 
@@ -47,6 +54,12 @@ zx_status_t IntelHDAController::ResetControllerHW() {
   // hardware has caused some pretty profound hardware lockups which require
   // fully removing power (warm reboot == not good enough) to recover from.
   if (REG_RD(&regs()->gctl) & HDA_REG_GCTL_HWINIT) {
+    // Check our hardware version before moving forward with other register reads.
+    if (HdaVersion version = GetHardwareVersion(); version != kSupportedVersion) {
+      LOG(ERROR, "Unexpected HW revision %d.%d!", version.major, version.minor);
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
     // Explicitly disable all top level interrupt sources.
     REG_WR(&regs()->intctl, 0u);
     hw_mb();
@@ -106,6 +119,14 @@ zx_status_t IntelHDAController::ResetControllerHW() {
 
   // Wait the spec mandated discovery time.
   zx_nanosleep(zx_deadline_after(INTEL_HDA_CODEC_DISCOVERY_WAIT_NSEC));
+
+  // Now that we know we are not in reset, we can safely check our hardware version regardless
+  // of being held in reset as checked above.
+  if (HdaVersion version = GetHardwareVersion(); version != kSupportedVersion) {
+    LOG(ERROR, "Unexpected HW revision %d.%d!", version.major, version.minor);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   return res;
 }
 
@@ -548,16 +569,6 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
   res = SetupPCIDevice(pci_dev);
   if (res != ZX_OK) {
     return res;
-  }
-
-  // Check our hardware version
-  uint8_t major, minor;
-  major = REG_RD(&regs()->vmaj);
-  minor = REG_RD(&regs()->vmin);
-
-  if ((1 != major) || (0 != minor)) {
-    LOG(ERROR, "Unexpected HW revision %d.%d!", major, minor);
-    return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Completely reset the hardware

@@ -77,8 +77,21 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
     SHUTTING_DOWN,
     SHUT_DOWN,
   };
+  // Version of the Intel HDA hardware.
+  struct HdaVersion {
+    uint8_t major;
+    uint8_t minor;
+    friend bool operator==(const HdaVersion& left, const HdaVersion& right) {
+      return left.major == right.major && left.minor == right.minor;
+    }
+    friend bool operator!=(const HdaVersion& left, const HdaVersion& right) {
+      return !(left == right);
+    }
+  };
 
   static constexpr uint RIRB_RESERVED_RESPONSE_SLOTS = 8u;
+
+  static constexpr HdaVersion kSupportedVersion = HdaVersion{.major = 1, .minor = 0};
 
   // Accessor for our mapped registers
   MMIO_PTR hda_registers_t* regs() const {
@@ -134,6 +147,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   void HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_status_t status,
                  const zx_packet_interrupt_t* interrupt);
   void WakeupIrqHandler();
+  HdaVersion GetHardwareVersion();
 
   // Thunk for interacting with client channels
   zx_status_t ProcessClientRequest(Channel* channel);
