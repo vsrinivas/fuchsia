@@ -91,9 +91,6 @@ test("goldfish-pipe-device-test") {
          ]
 
   configs += [ "//build/config:all_source" ]
-
-  # TODO: delete the below and fix compiler errors
-  configs += [ "//build/config:Wno-unused-but-set-variable" ]
 }
 
 fuchsia_unittest_package("goldfish-pipe-device-test-package") {

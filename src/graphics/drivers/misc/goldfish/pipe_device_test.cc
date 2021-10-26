@@ -451,13 +451,12 @@ TEST_F(PipeDeviceTest, ConnectToSysmem) {
   ASSERT_OK(dut_child_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   zx::channel sysmem_server, sysmem_client;
-  zx_koid_t server_koid = ZX_KOID_INVALID, client_koid = ZX_KOID_INVALID;
+  zx_koid_t server_koid = ZX_KOID_INVALID;
   ASSERT_OK(zx::channel::create(0u, &sysmem_server, &sysmem_client));
 
   zx_info_handle_basic_t info;
   ASSERT_OK(sysmem_server.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
   server_koid = info.koid;
-  client_koid = info.related_koid;
 
   ASSERT_OK(dut_child_->GoldfishPipeConnectSysmem(std::move(sysmem_server)));
   ASSERT_NE(sysmem_request_koid_, ZX_KOID_INVALID);
@@ -465,13 +464,12 @@ TEST_F(PipeDeviceTest, ConnectToSysmem) {
 
   for (const auto& heap : kSysmemHeaps) {
     zx::channel heap_server, heap_client;
-    zx_koid_t server_koid = ZX_KOID_INVALID, client_koid = ZX_KOID_INVALID;
+    zx_koid_t server_koid = ZX_KOID_INVALID;
     ASSERT_OK(zx::channel::create(0u, &heap_server, &heap_client));
 
     zx_info_handle_basic_t info;
     ASSERT_OK(heap_server.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
     server_koid = info.koid;
-    client_koid = info.related_koid;
 
     uint64_t heap_id = static_cast<uint64_t>(heap);
     ASSERT_OK(dut_child_->GoldfishPipeRegisterSysmemHeap(heap_id, std::move(heap_server)));
