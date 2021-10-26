@@ -4,12 +4,32 @@
 
 #include "network.h"
 
+#include <unordered_set>
+
 #include "fake_endpoint.h"
 #include "interceptors/latency.h"
 #include "interceptors/packet_loss.h"
 #include "interceptors/reorder.h"
 #include "network_context.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+
+namespace std {
+
+template <typename T>
+struct hash<fxl::WeakPtr<T>> {
+  std::size_t operator()(fxl::WeakPtr<T> const& p) const noexcept {
+    return std::hash<T*>{}(p.get());
+  }
+};
+
+template <typename T>
+struct equal_to<fxl::WeakPtr<T>> {
+  bool operator()(fxl::WeakPtr<T> const& lhs, fxl::WeakPtr<T> const& rhs) const noexcept {
+    return lhs.get() == rhs.get();
+  }
+};
+
+}  // namespace std
 
 namespace netemul {
 namespace impl {
@@ -29,8 +49,8 @@ class NetworkBus : public data::BusConsumer {
     }
   }
 
-  std::vector<data::Consumer::Ptr>& sinks() { return sinks_; }
-  std::vector<FakeEndpoint::Ptr>& fake_endpoints() { return fake_endpoints_; }
+  std::unordered_set<data::Consumer::Ptr>& sinks() { return sinks_; }
+  std::unordered_map<zx_handle_t, FakeEndpoint>& fake_endpoints() { return fake_endpoints_; }
 
   void UpdateConfiguration(const Network::Config& config) {
     // first, flush all packets that are currently in interceptors:
@@ -92,8 +112,8 @@ class NetworkBus : public data::BusConsumer {
   }
 
   fxl::WeakPtrFactory<data::BusConsumer> weak_ptr_factory_;
-  std::vector<data::Consumer::Ptr> sinks_;
-  std::vector<FakeEndpoint::Ptr> fake_endpoints_;
+  std::unordered_set<data::Consumer::Ptr> sinks_;
+  std::unordered_map<zx_handle_t, FakeEndpoint> fake_endpoints_;
   std::vector<std::unique_ptr<Interceptor>> interceptors_;
 };
 
@@ -130,13 +150,20 @@ void Network::AddDevice(uint8_t port_id,
     return;
   }
   Interface& guest = it->second;
-  bus_->sinks().emplace_back(guest.GetPointer());
   auto cleanup = [this, key, &guest](zx_status_t status) {
+    bus_->sinks().erase(guest.GetPointer());
     guest.binding().Close(status);
     // There may be other tasks running on the promise executor; schedule destruction so that it
     // happens after other pending work that may want to access the executor.
     async::PostTask(parent_->dispatcher(), [this, key]() { guests_.erase(key); });
   };
+  {
+    auto [it, inserted] = bus_->sinks().insert(guest.GetPointer());
+    if (!inserted) {
+      cleanup(ZX_ERR_INTERNAL);
+      return;
+    }
+  }
   guest.binding().set_error_handler(cleanup);
   guest.client().SetErrorCallback(cleanup);
   guest.client().SetRxCallback([this, &guest](network::client::NetworkDeviceClient::Buffer buffer) {
@@ -222,7 +249,10 @@ zx_status_t Network::AttachEndpoint(std::string name) {
     return ZX_ERR_INTERNAL;
   }
 
-  bus_->sinks().emplace_back(std::move(src));
+  auto [it, inserted] = bus_->sinks().insert(std::move(src));
+  if (!inserted) {
+    return ZX_ERR_INTERNAL;
+  }
   return ZX_OK;
 }
 
@@ -234,38 +264,28 @@ void Network::RemoveEndpoint(::std::string name, Network::RemoveEndpointCallback
   data::Consumer::Ptr src;
   auto status = parent_->endpoint_manager().RemoveSink(name, bus_->GetPointer(), &src);
   if (status == ZX_OK && src) {
-    auto& sinks = bus_->sinks();
-    for (auto i = sinks.begin(); i != sinks.end(); i++) {
-      if (i->get() == src.get()) {
-        sinks.erase(i);
-        break;
-      }
-    }
+    bus_->sinks().erase(src);
   }
   callback(status);
 }
 
 void Network::CreateFakeEndpoint(
     fidl::InterfaceRequest<fuchsia::netemul::network::FakeEndpoint> ep) {
-  FakeEndpoint::Ptr fep =
-      std::make_unique<FakeEndpoint>(bus_->GetPointer(), std::move(ep), parent_->dispatcher());
+  const zx_handle_t key = ep.channel().get();
+  auto [it, inserted] = bus_->fake_endpoints().try_emplace(key, bus_->GetPointer(), std::move(ep),
+                                                           parent_->dispatcher());
+  ZX_ASSERT(inserted);
+  FakeEndpoint& fep = it->second;
 
-  fep->SetOnDisconnected([this](const FakeEndpoint* ep) {
-    // when endpoint is disconnected for whatever reason
-    // we remove it from the bus
-    auto& feps = bus_->fake_endpoints();
-    for (auto i = feps.begin(); i != feps.end(); i++) {
-      if (i->get() == ep) {
-        feps.erase(i);
-        break;
-      }
-    }
+  {
+    auto [it, inserted] = bus_->sinks().insert(fep.GetPointer());
+    ZX_ASSERT(inserted);
+  }
+
+  fep.SetOnDisconnected([this, key, &fep]() {
+    bus_->sinks().erase(fep.GetPointer());
+    bus_->fake_endpoints().erase(key);
   });
-
-  // save the sink in bus
-  bus_->sinks().emplace_back(fep->GetPointer());
-  // keep and save endpoint
-  bus_->fake_endpoints().emplace_back(std::move(fep));
 }
 
 void Network::SetClosedCallback(Network::ClosedCallback cb) { closed_callback_ = std::move(cb); }

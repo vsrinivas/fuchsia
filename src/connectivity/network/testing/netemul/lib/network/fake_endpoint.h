@@ -22,8 +22,7 @@ class FakeEndpoint : public fuchsia::netemul::network::FakeEndpoint, public data
   // The maximum number of frames a FakeEndpoint keeps before dropping the oldest one.
   static constexpr uint64_t kMaxPendingFrames = 1024;
   using FFakeEndpoint = fuchsia::netemul::network::FakeEndpoint;
-  using Ptr = std::unique_ptr<FakeEndpoint>;
-  using OnDisconnectedCallback = fit::function<void(const FakeEndpoint*)>;
+  using OnDisconnectedCallback = fit::function<void()>;
 
   explicit FakeEndpoint(data::BusConsumer::Ptr sink, fidl::InterfaceRequest<FFakeEndpoint> request,
                         async_dispatcher_t* dispatcher = nullptr);

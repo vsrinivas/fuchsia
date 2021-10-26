@@ -15,7 +15,7 @@ FakeEndpoint::FakeEndpoint(data::BusConsumer::Ptr sink,
       dropped_(0) {
   binding_.set_error_handler([this](zx_status_t err) {
     if (on_disconnected_) {
-      on_disconnected_(this);
+      on_disconnected_();
     }
   });
 }
