@@ -74,17 +74,17 @@ TEST(Service, ApiTest) {
 }
 
 TEST(Service, ServeDirectory) {
-  zx::channel client, server;
-  EXPECT_EQ(ZX_OK, zx::channel::create(0u, &client, &server));
+  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  ASSERT_EQ(ZX_OK, root.status_value());
 
   // open client
   zx::channel c1, c2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0u, &c1, &c2));
-  EXPECT_EQ(ZX_OK, fdio_service_connect_at(client.get(), "abc", c2.release()));
+  EXPECT_EQ(ZX_OK, fdio_service_connect_at(root->client.borrow().handle(), "abc", c2.release()));
 
   // Close client. We test the semantic that a pending open is processed even if the client has been
   // closed.
-  client.reset();
+  root->client.reset();
 
   // serve
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -97,14 +97,14 @@ TEST(Service, ServeDirectory) {
   });
   directory->AddEntry("abc", vnode);
 
-  EXPECT_EQ(ZX_OK, vfs.ServeDirectory(directory, std::move(server)));
+  EXPECT_EQ(ZX_OK, vfs.ServeDirectory(directory, std::move(root->server)));
   EXPECT_EQ(ZX_ERR_BAD_STATE, loop.RunUntilIdle());
 }
 
 TEST(Service, ServiceNodeIsNotDirectory) {
   // Set up the server
-  zx::channel client_end, server_end;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &client_end, &server_end));
+  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  ASSERT_EQ(ZX_OK, root.status_value());
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fs::SynchronousVfs vfs(loop.dispatcher());
@@ -117,7 +117,7 @@ TEST(Service, ServiceNodeIsNotDirectory) {
     return ZX_OK;
   });
   directory->AddEntry("abc", vnode);
-  ASSERT_EQ(ZX_OK, vfs.ServeDirectory(directory, std::move(server_end)));
+  ASSERT_EQ(ZX_OK, vfs.ServeDirectory(directory, std::move(root->server)));
 
   // Call |ValidateOptions| with the directory flag should fail.
   auto result = vnode->ValidateOptions(fs::VnodeConnectionOptions::ReadWrite().set_directory());
@@ -125,15 +125,15 @@ TEST(Service, ServiceNodeIsNotDirectory) {
   ASSERT_EQ(ZX_ERR_NOT_DIR, result.error());
 
   // Open the service through FIDL with the directory flag, which should fail.
-  zx::channel abc_client_end, abc_server_end;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &abc_client_end, &abc_server_end));
+  zx::status abc = fidl::CreateEndpoints<fio::Node>();
+  ASSERT_EQ(ZX_OK, abc.status_value());
 
   loop.StartThread();
 
-  auto open_result = fidl::WireCall<fio::Directory>(zx::unowned_channel(client_end))
+  auto open_result = fidl::WireCall(root->client)
                          ->Open(fio::wire::kOpenFlagDescribe | fio::wire::kOpenFlagDirectory |
                                     fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable,
-                                0755, fidl::StringView("abc"), std::move(abc_server_end));
+                                0755, fidl::StringView("abc"), std::move(abc->server));
   EXPECT_EQ(open_result.status(), ZX_OK);
   class EventHandler : public fidl::WireSyncEventHandler<fio::Node> {
    public:
@@ -148,7 +148,7 @@ TEST(Service, ServiceNodeIsNotDirectory) {
   };
 
   EventHandler event_handler;
-  fidl::Result handler_result = event_handler.HandleOneEvent(zx::unowned_channel(abc_client_end));
+  fidl::Result handler_result = event_handler.HandleOneEvent(abc->client);
   // Expect that |on_open| was received
   EXPECT_TRUE(handler_result.ok());
 
@@ -157,8 +157,8 @@ TEST(Service, ServiceNodeIsNotDirectory) {
 
 TEST(Service, OpeningServiceWithNodeReferenceFlag) {
   // Set up the server
-  zx::channel client_end, server_end;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &client_end, &server_end));
+  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  ASSERT_EQ(ZX_OK, root.status_value());
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fs::SynchronousVfs vfs(loop.dispatcher());
@@ -169,21 +169,21 @@ TEST(Service, OpeningServiceWithNodeReferenceFlag) {
     return ZX_OK;
   });
   directory->AddEntry("abc", vnode);
-  ASSERT_EQ(ZX_OK, vfs.ServeDirectory(directory, std::move(server_end)));
+  ASSERT_EQ(ZX_OK, vfs.ServeDirectory(directory, std::move(root->server)));
 
-  zx::channel abc_client_end, abc_server_end;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &abc_client_end, &abc_server_end));
+  zx::status abc = fidl::CreateEndpoints<fio::Node>();
+  ASSERT_EQ(ZX_OK, abc.status_value());
 
   loop.StartThread();
 
-  auto open_result = fidl::WireCall<fio::Directory>(zx::unowned_channel(client_end))
+  auto open_result = fidl::WireCall(root->client)
                          ->Open(fio::wire::kOpenFlagNodeReference, 0755, fidl::StringView("abc"),
-                                std::move(abc_server_end));
+                                std::move(abc->server));
   EXPECT_EQ(open_result.status(), ZX_OK);
 
   // The channel should speak |fuchsia.io/Node| instead of the custom service FIDL protocol. We
   // verify it by calling describe on it, which should return correctly.
-  auto describe_result = fidl::WireCall<fio::Node>(zx::unowned_channel(abc_client_end))->Describe();
+  auto describe_result = fidl::WireCall(abc->client)->Describe();
   ASSERT_EQ(ZX_OK, describe_result.status());
   ASSERT_EQ(fio::wire::NodeInfo::Tag::kService, describe_result->info.which());
 

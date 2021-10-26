@@ -89,15 +89,15 @@ TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
     auto vnode = fbl::AdoptRef<TestVNode>(new TestVNode());
     for (test_row_t& row : test_data) {
       // Set up a vfs connection with the testcase's connection flags
-      zx::channel client, server;
-      ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+      zx::status file = fidl::CreateEndpoints<fio::File>();
+      ASSERT_OK(file.status_value());
       uint32_t flags = row.connection_flags;
-      vfs->Serve(vnode, std::move(server), fs::VnodeConnectionOptions::FromIoV1Flags(flags));
+      vfs->Serve(vnode, file->server.TakeChannel(),
+                 fs::VnodeConnectionOptions::FromIoV1Flags(flags));
 
       // Call FileGetBuffer on the channel with the testcase's request flags. Check that we get the
       // expected result.
-      auto result = fidl::WireCall<fio::File>(zx::unowned_channel(client.get()))
-                        ->GetBuffer(row.request_flags);
+      auto result = fidl::WireCall(file->client)->GetBuffer(row.request_flags);
       EXPECT_EQ(result.status(), ZX_OK);
 
       // Verify that the result matches the value in our test table.

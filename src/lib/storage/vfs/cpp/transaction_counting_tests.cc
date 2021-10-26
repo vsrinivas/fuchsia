@@ -79,7 +79,7 @@ class TransactionCountingTest : public zxtest::Test {
     root_->AddEntry("file", file_);
   }
 
-  zx_status_t ConnectClient(zx::channel server_end) {
+  zx_status_t ConnectClient(fidl::ServerEnd<fio::Directory> server_end) {
     // Serve root directory with maximum rights
     return vfs_.ServeDirectory(root_, std::move(server_end));
   }
@@ -108,36 +108,41 @@ void SendHangingMessage(const zx::channel& c) {
   ASSERT_OK(c.write(0, &hdr, sizeof(hdr), nullptr, 0));
 }
 
+template <typename Protocol>
+void SendHangingMessage(const fidl::ClientEnd<Protocol>& client_end) {
+  SendHangingMessage(client_end.channel());
+}
+
 TEST_F(TransactionCountingTest, CountStartsAtZero) {
   // Create connection to vfs
-  zx::channel client_end, server_end;
-  ASSERT_OK(zx::channel::create(0u, &client_end, &server_end));
-  ASSERT_OK(ConnectClient(std::move(server_end)));
+  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  ASSERT_OK(root.status_value());
+  ASSERT_OK(ConnectClient(std::move(root->server)));
 
   ASSERT_EQ(inflight_transactions(), 0);
 
   // Connect to file
-  zx::channel fc1, fc1_remote;
-  ASSERT_OK(zx::channel::create(0u, &fc1, &fc1_remote));
-  ASSERT_OK(
-      fdio_open_at(client_end.get(), "file", fio::wire::kOpenRightReadable, fc1_remote.release()));
+  zx::status fc = fidl::CreateEndpoints<fio::File>();
+  ASSERT_OK(fc.status_value());
+  ASSERT_OK(fdio_open_at(root->client.channel().get(), "file", fio::wire::kOpenRightReadable,
+                         fc->server.TakeChannel().release()));
 
   ASSERT_EQ(inflight_transactions(), 0);
 }
 
 TEST_F(TransactionCountingTest, SingleTransactionInflightReplyShortMessage) {
   // Create connection to vfs
-  zx::channel client_end, server_end;
-  ASSERT_OK(zx::channel::create(0u, &client_end, &server_end));
-  ASSERT_OK(ConnectClient(std::move(server_end)));
+  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  ASSERT_OK(root.status_value());
+  ASSERT_OK(ConnectClient(std::move(root->server)));
 
   // Connect to file
-  zx::channel fc1, fc1_remote;
-  ASSERT_OK(zx::channel::create(0u, &fc1, &fc1_remote));
-  ASSERT_OK(
-      fdio_open_at(client_end.get(), "file", fio::wire::kOpenRightReadable, fc1_remote.release()));
+  zx::status fc = fidl::CreateEndpoints<fio::File>();
+  ASSERT_OK(fc.status_value());
+  ASSERT_OK(fdio_open_at(root->client.channel().get(), "file", fio::wire::kOpenRightReadable,
+                         fc->server.TakeChannel().release()));
 
-  SendHangingMessage(fc1);
+  SendHangingMessage(fc->client);
   {
     auto txn = GetNextInflightTransaction();
     ASSERT_EQ(inflight_transactions(), 1);
@@ -168,17 +173,17 @@ TEST_F(TransactionCountingTest, SingleTransactionInflightReplyShortMessage) {
 
 TEST_F(TransactionCountingTest, SingleTransactionInflightReplyValidMessage) {
   // Create connection to vfs
-  zx::channel client_end, server_end;
-  ASSERT_OK(zx::channel::create(0u, &client_end, &server_end));
-  ASSERT_OK(ConnectClient(std::move(server_end)));
+  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  ASSERT_OK(root.status_value());
+  ASSERT_OK(ConnectClient(std::move(root->server)));
 
   // Connect to file
-  zx::channel fc1, fc1_remote;
-  ASSERT_OK(zx::channel::create(0u, &fc1, &fc1_remote));
-  ASSERT_OK(
-      fdio_open_at(client_end.get(), "file", fio::wire::kOpenRightReadable, fc1_remote.release()));
+  zx::status fc = fidl::CreateEndpoints<fio::File>();
+  ASSERT_OK(fc.status_value());
+  ASSERT_OK(fdio_open_at(root->client.channel().get(), "file", fio::wire::kOpenRightReadable,
+                         fc->server.TakeChannel().release()));
 
-  SendHangingMessage(fc1);
+  SendHangingMessage(fc->client);
   {
     auto txn = GetNextInflightTransaction();
     ASSERT_EQ(inflight_transactions(), 1);
@@ -212,17 +217,17 @@ TEST_F(TransactionCountingTest, SingleTransactionInflightReplyValidMessage) {
 
 TEST_F(TransactionCountingTest, SingleTransactionInflightCloseOnMessage) {
   // Create connection to vfs
-  zx::channel client_end, server_end;
-  ASSERT_OK(zx::channel::create(0u, &client_end, &server_end));
-  ASSERT_OK(ConnectClient(std::move(server_end)));
+  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  ASSERT_OK(root.status_value());
+  ASSERT_OK(ConnectClient(std::move(root->server)));
 
   // Connect to file
-  zx::channel fc1, fc1_remote;
-  ASSERT_OK(zx::channel::create(0u, &fc1, &fc1_remote));
-  ASSERT_OK(
-      fdio_open_at(client_end.get(), "file", fio::wire::kOpenRightReadable, fc1_remote.release()));
+  zx::status fc = fidl::CreateEndpoints<fio::File>();
+  ASSERT_OK(fc.status_value());
+  ASSERT_OK(fdio_open_at(root->client.channel().get(), "file", fio::wire::kOpenRightReadable,
+                         fc->server.TakeChannel().release()));
 
-  SendHangingMessage(fc1);
+  SendHangingMessage(fc->client);
   {
     auto txn = GetNextInflightTransaction();
     ASSERT_EQ(inflight_transactions(), 1);
@@ -236,24 +241,24 @@ TEST_F(TransactionCountingTest, SingleTransactionInflightCloseOnMessage) {
 
 TEST_F(TransactionCountingTest, MultipleTransactionsInflight) {
   // Create connection to vfs
-  zx::channel client_end, server_end;
-  ASSERT_OK(zx::channel::create(0u, &client_end, &server_end));
-  ASSERT_OK(ConnectClient(std::move(server_end)));
+  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  ASSERT_OK(root.status_value());
+  ASSERT_OK(ConnectClient(std::move(root->server)));
 
   // Connect to file twice
-  zx::channel fc1, fc1_remote;
-  ASSERT_OK(zx::channel::create(0u, &fc1, &fc1_remote));
-  ASSERT_OK(
-      fdio_open_at(client_end.get(), "file", fio::wire::kOpenRightReadable, fc1_remote.release()));
+  zx::status fc1 = fidl::CreateEndpoints<fio::File>();
+  ASSERT_OK(fc1.status_value());
+  ASSERT_OK(fdio_open_at(root->client.channel().get(), "file", fio::wire::kOpenRightReadable,
+                         fc1->server.TakeChannel().release()));
 
-  zx::channel fc2, fc2_remote;
-  ASSERT_OK(zx::channel::create(0u, &fc2, &fc2_remote));
-  ASSERT_OK(
-      fdio_open_at(client_end.get(), "file", fio::wire::kOpenRightReadable, fc2_remote.release()));
+  zx::status fc2 = fidl::CreateEndpoints<fio::File>();
+  ASSERT_OK(fc2.status_value());
+  ASSERT_OK(fdio_open_at(root->client.channel().get(), "file", fio::wire::kOpenRightReadable,
+                         fc2->server.TakeChannel().release()));
 
-  SendHangingMessage(fc1);
+  SendHangingMessage(fc1->client);
   auto txn1 = GetNextInflightTransaction();
-  SendHangingMessage(fc2);
+  SendHangingMessage(fc2->client);
   auto txn2 = GetNextInflightTransaction();
 
   ASSERT_EQ(inflight_transactions(), 2);

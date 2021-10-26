@@ -65,14 +65,14 @@ TEST(SynchronousVfs, UnmountAndShutdown) {
   fs::SynchronousVfs vfs(loop.dispatcher());
   loop.StartThread();
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  zx::status root = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  ASSERT_EQ(ZX_OK, root.status_value());
 
   auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  ASSERT_OK(vfs.ServeDirectory(std::move(dir), std::move(remote)));
+  ASSERT_OK(vfs.ServeDirectory(std::move(dir),
+                               fidl::ServerEnd<fuchsia_io::Directory>(root->server.TakeChannel())));
 
-  auto result =
-      fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(zx::unowned_channel{local})->Unmount();
+  auto result = fidl::WireCall(root->client)->Unmount();
   ASSERT_OK(result.status());
   ASSERT_OK(result->s);
   ASSERT_TRUE(vfs.IsTerminating());
@@ -83,35 +83,37 @@ TEST(ManagedVfs, UnmountAndShutdown) {
   fs::ManagedVfs vfs(loop.dispatcher());
   loop.StartThread();
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  zx::status root = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  ASSERT_EQ(ZX_OK, root.status_value());
 
   auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  ASSERT_OK(vfs.ServeDirectory(std::move(dir), std::move(remote)));
+  ASSERT_OK(vfs.ServeDirectory(std::move(dir),
+                               fidl::ServerEnd<fuchsia_io::Directory>(root->server.TakeChannel())));
 
-  auto result =
-      fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(zx::unowned_channel{local})->Unmount();
+  auto result = fidl::WireCall(root->client)->Unmount();
   ASSERT_OK(result.status());
   ASSERT_OK(result->s);
   ASSERT_TRUE(vfs.IsTerminating());
 }
 
 static void CheckClosesConnection(fs::FuchsiaVfs* vfs, async::TestLoop* loop) {
-  zx::channel local_a, remote_a, local_b, remote_b;
-  ASSERT_OK(zx::channel::create(0, &local_a, &remote_a));
-  ASSERT_OK(zx::channel::create(0, &local_b, &remote_b));
+  zx::status a = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  zx::status b = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_OK(a.status_value());
+  ASSERT_OK(b.status_value());
 
   auto dir_a = fbl::MakeRefCounted<fs::PseudoDir>();
   auto dir_b = fbl::MakeRefCounted<fs::PseudoDir>();
-  ASSERT_OK(vfs->ServeDirectory(dir_a, std::move(remote_a)));
-  ASSERT_OK(vfs->ServeDirectory(dir_b, std::move(remote_b)));
+  ASSERT_OK(vfs->ServeDirectory(dir_a, std::move(a->server)));
+  ASSERT_OK(vfs->ServeDirectory(dir_b, std::move(b->server)));
   bool callback_called = false;
   vfs->CloseAllConnectionsForVnode(*dir_a, [&callback_called]() { callback_called = true; });
   loop->RunUntilIdle();
   zx_signals_t signals;
-  ASSERT_OK(local_a.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signals));
+  ASSERT_OK(a->client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signals));
   ASSERT_TRUE(signals & ZX_CHANNEL_PEER_CLOSED);
-  ASSERT_EQ(ZX_ERR_TIMED_OUT, local_b.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time(0), &signals));
+  ASSERT_EQ(ZX_ERR_TIMED_OUT,
+            b->client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time(0), &signals));
   ASSERT_TRUE(callback_called);
 }
 

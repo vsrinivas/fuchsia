@@ -89,13 +89,13 @@ class AsyncTearDownVnode : public FdCountVnode {
   zx_status_t status_for_sync_;
 };
 
-void SendSync(const zx::channel& client) {
+void SendSync(fidl::UnownedClientEnd<fuchsia_io::Node> client) {
   FIDL_ALIGNDECL
   fidl::WireRequest<fuchsia_io::Node::Sync> request;
   fidl::OwnedEncodedMessage<fidl::WireRequest<fuchsia_io::Node::Sync>> encoded(&request);
   ASSERT_OK(encoded.status());
   encoded.GetOutgoingMessage().set_txid(5);
-  encoded.Write(zx::unowned_channel(client.get()));
+  encoded.Write(zx::unowned_channel(client.handle()));
   ASSERT_OK(encoded.status());
 }
 
@@ -109,13 +109,13 @@ void SyncStart(sync_completion_t* completions, async::Loop* loop,
   ASSERT_OK(loop->StartThread());
 
   auto vn = fbl::AdoptRef(new AsyncTearDownVnode(completions, status_for_sync));
-  zx::channel client;
-  zx::channel server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  ASSERT_OK(endpoints.status_value());
+  auto [client, server] = std::move(*endpoints);
   auto validated_options = vn->ValidateOptions(fs::VnodeConnectionOptions());
   ASSERT_TRUE(validated_options.is_ok());
   ASSERT_OK(vn->Open(validated_options.value(), nullptr));
-  ASSERT_OK((*vfs)->Serve(vn, std::move(server), validated_options.value()));
+  ASSERT_OK((*vfs)->Serve(vn, server.TakeChannel(), validated_options.value()));
   vn = nullptr;
 
   ASSERT_NO_FAILURES(SendSync(client));
@@ -249,12 +249,13 @@ TEST(Teardown, TeardownSlowClone) {
   ASSERT_OK(loop.StartThread());
 
   auto vn = fbl::AdoptRef(new AsyncTearDownVnode(completions));
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  ASSERT_OK(endpoints.status_value());
+  auto [client, server] = std::move(*endpoints);
   auto validated_options = vn->ValidateOptions(fs::VnodeConnectionOptions());
   ASSERT_TRUE(validated_options.is_ok());
   ASSERT_OK(vn->Open(validated_options.value(), nullptr));
-  ASSERT_OK(vfs->Serve(vn, std::move(server), validated_options.value()));
+  ASSERT_OK(vfs->Serve(vn, server.TakeChannel(), validated_options.value()));
   vn = nullptr;
 
   // A) Wait for sync to begin. Block the connection to the server in a sync, while simultaneously
@@ -262,10 +263,10 @@ TEST(Teardown, TeardownSlowClone) {
   SendSync(client);
   sync_completion_wait(&completions[0], ZX_TIME_INFINITE);
 
-  zx::channel client2, server2;
-  ASSERT_OK(zx::channel::create(0, &client2, &server2));
-  fidl::WireSyncClient<fuchsia_io::Node> fidl_client2(std::move(client2));
-  ASSERT_OK(fidl_client2.Clone(0, std::move(server2)).status());
+  zx::status endpoints2 = fidl::CreateEndpoints<fuchsia_io::Node>();
+  ASSERT_OK(endpoints2.status_value());
+  fidl::WireSyncClient fidl_client2 = fidl::BindSyncClient(std::move(endpoints2->client));
+  ASSERT_OK(fidl_client2.Clone(0, std::move(endpoints2->server)).status());
 
   // The connection is now:
   // - In a sync callback,
