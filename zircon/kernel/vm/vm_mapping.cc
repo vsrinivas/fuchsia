@@ -320,12 +320,13 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     return ZX_ERR_BAD_STATE;
   }
 
-  // If our parent VMAR is DEAD, then we can only unmap everything.
-  DEBUG_ASSERT(parent_->state_ != LifeCycleState::DEAD || (base == base_ && size == size_));
+  // Should never be unmapping everything, otherwise should destroy.
+  DEBUG_ASSERT(base != base_ || size != size_);
 
   LTRACEF("%p\n", this);
 
-  // grab the lock for the vmo
+  // Grab the lock for the vmo. This is acquired here so that it is held continuously over both the
+  // architectural unmap and the set_size_locked call.
   DEBUG_ASSERT(object_);
   Guard<Mutex> guard{object_->lock()};
 
@@ -337,7 +338,8 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
       return status;
     }
 
-    if (base_ == base && size_ != size) {
+    if (base_ == base) {
+      DEBUG_ASSERT(size != size_);
       // We need to remove ourselves from tree before updating base_,
       // since base_ is the tree key.
       AssertHeld(parent_->lock_ref());
@@ -705,17 +707,16 @@ zx_status_t VmMapping::DestroyLocked() {
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  // unmap our entire range
-  zx_status_t status = UnmapLocked(base_, size_);
-  if (status != ZX_OK) {
-    return status;
-  }
-  // Unmap should have reset our size to 0
-  DEBUG_ASSERT(size_ == 0);
-
-  // grab the object lock and remove ourself from its list
+  // grab the object lock to unmap and remove ourselves from its list.
   {
     Guard<Mutex> guard{object_->lock()};
+    // The unmap needs to be performed whilst the object lock is being held so that set_size_locked
+    // can be called without there being an opportunity for mappings to be modified in between.
+    zx_status_t status = aspace_->arch_aspace().Unmap(base_, size_ / PAGE_SIZE, nullptr);
+    if (status != ZX_OK) {
+      return status;
+    }
+    set_size_locked(0);
     object_->RemoveMappingLocked(this);
   }
 
