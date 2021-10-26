@@ -1,0 +1,6 @@
+{
+    include: [ "//src/proc/tests/android/starnix_test.shard.cml" ],
+    program: {
+        environ: [ "TEST_TMPDIR=/data/tmp" ],
+    },
+}

@@ -1,0 +1,28 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+resource("bin") {
+  sources = [ "//prebuilt/starnix/tests/syscalls/linux-amd64/benchmarks" ]
+  outputs = [ "data/tests/benchmarks" ]
+}
+
+fuchsia_test_component("test_component") {
+  component_name = "starnix_benchmarks"
+  manifest = "meta/benchmarks.cml"
+
+  deps = [
+    ":bin",
+    "//src/proc/tests/android:android_system_image",
+    "//src/proc/tests/android:starnix_data_tmp_placeholder",
+  ]
+}
+
+fuchsia_test_package("starnix_benchmarks") {
+  package_name = "starnix_benchmarks"
+  test_components = [ ":test_component" ]
+
+  disable_elf_binaries_checks = true
+}

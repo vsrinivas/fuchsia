@@ -1,0 +1,6 @@
+{
+    include: [ "//src/proc/tests/android/benchmarks/benchmark.shard.cml" ],
+    program: {
+        binary: "data/tests/benchmarks",
+    },
+}

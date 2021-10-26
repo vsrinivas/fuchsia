@@ -13,6 +13,7 @@ group("tests") {
   if (target_cpu == "x64") {
     deps = [
       ":test_android_distro",
+      "//src/proc/tests/android/benchmarks:starnix_benchmarks",
       "//src/proc/tests/android/gvisor",
       "//src/proc/tests/android/wayland",
     ]
