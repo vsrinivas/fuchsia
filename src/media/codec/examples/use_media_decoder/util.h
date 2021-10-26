@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_UTIL_H_
 #define SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_UTIL_H_
 
+#include <endian.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
