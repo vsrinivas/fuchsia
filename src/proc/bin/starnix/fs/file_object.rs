@@ -459,7 +459,7 @@ impl FileObject {
         task: &Task,
         mut op: Op,
         events: FdEvents,
-        timeout: Option<zx::Duration>,
+        deadline: Option<zx::Time>,
     ) -> Result<T, Errno>
     where
         Op: FnMut() -> Result<T, Errno>,
@@ -474,12 +474,7 @@ impl FileObject {
             self.ops().wait_async(self, &waiter, events, WaitCallback::none());
             match op() {
                 Err(errno) if errno == EAGAIN => waiter
-                    .wait_until(
-                        task,
-                        timeout
-                            .map(|duration| zx::Time::after(duration))
-                            .unwrap_or(zx::Time::INFINITE),
-                    )
+                    .wait_until(task, deadline.unwrap_or(zx::Time::INFINITE))
                     .map_err(|e| if e == ETIMEDOUT { errno!(EAGAIN) } else { e })?,
                 result => return result,
             }

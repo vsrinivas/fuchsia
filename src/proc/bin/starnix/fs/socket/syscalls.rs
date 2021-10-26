@@ -355,17 +355,13 @@ pub fn sys_socketpair(
     Ok(SUCCESS)
 }
 
-pub fn sys_recvmsg(
+fn recvmsg_internal(
     current_task: &CurrentTask,
-    fd: FdNumber,
+    file: &FileHandle,
     user_message_header: UserRef<msghdr>,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
-    let file = current_task.files.get(fd)?;
-    if !file.node().is_sock() {
-        return error!(ENOTSOCK);
-    }
-
+    deadline: Option<zx::Time>,
+) -> Result<usize, Errno> {
     let mut message_header = msghdr::default();
     current_task.mm.read_object(user_message_header.clone(), &mut message_header)?;
     let iovec =
@@ -373,7 +369,7 @@ pub fn sys_recvmsg(
 
     let flags = SocketMessageFlags::from_bits_truncate(flags);
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    let info = socket_ops.recvmsg(current_task, &file, &iovec, flags)?;
+    let info = socket_ops.recvmsg(current_task, &file, &iovec, flags, deadline)?;
 
     message_header.msg_flags = 0;
 
@@ -416,10 +412,74 @@ pub fn sys_recvmsg(
     current_task.mm.write_object(user_message_header, &message_header)?;
 
     if flags.contains(SocketMessageFlags::TRUNC) {
-        Ok(info.message_length.into())
+        Ok(info.message_length)
     } else {
-        Ok(info.bytes_read.into())
+        Ok(info.bytes_read)
     }
+}
+
+pub fn sys_recvmsg(
+    current_task: &CurrentTask,
+    fd: FdNumber,
+    user_message_header: UserRef<msghdr>,
+    flags: u32,
+) -> Result<SyscallResult, Errno> {
+    let file = current_task.files.get(fd)?;
+    if !file.node().is_sock() {
+        return error!(ENOTSOCK);
+    }
+    Ok(recvmsg_internal(current_task, &file, user_message_header, flags, None)?.into())
+}
+
+pub fn sys_recvmmsg(
+    current_task: &CurrentTask,
+    fd: FdNumber,
+    user_mmsgvec: UserRef<mmsghdr>,
+    vlen: u32,
+    mut flags: u32,
+    user_timeout: UserRef<timespec>,
+) -> Result<SyscallResult, Errno> {
+    let file = current_task.files.get(fd)?;
+    if !file.node().is_sock() {
+        return error!(ENOTSOCK);
+    }
+
+    if vlen > UIO_MAXIOV {
+        return error!(EINVAL);
+    }
+
+    let deadline = if user_timeout.is_null() {
+        None
+    } else {
+        let mut ts = timespec::default();
+        current_task.mm.read_object(user_timeout, &mut ts)?;
+        Some(zx::Time::after(duration_from_timespec(ts)?))
+    };
+
+    let mut index = 0usize;
+    while index < vlen as usize {
+        let user_mmsghdr = user_mmsgvec.at(index);
+        let user_msghdr = user_mmsghdr.cast::<msghdr>();
+        match recvmsg_internal(current_task, &file, user_msghdr, flags, deadline) {
+            Err(error) => {
+                if index == 0 {
+                    return Err(error);
+                }
+                break;
+            }
+            Ok(bytes_read) => {
+                let msg_len = bytes_read as u32;
+                let user_msg_len =
+                    UserRef::<u32>::new(user_mmsghdr.addr() + std::mem::size_of::<msghdr>());
+                current_task.mm.write_object(user_msg_len, &msg_len)?;
+            }
+        }
+        index += 1;
+        if flags & MSG_WAITFORONE != 0 {
+            flags |= MSG_DONTWAIT;
+        }
+    }
+    Ok(index.into())
 }
 
 pub fn sys_recvfrom(
@@ -443,6 +503,7 @@ pub fn sys_recvfrom(
         &file,
         &[UserBuffer { address: user_buffer, length: buffer_length }],
         flags,
+        None,
     )?;
 
     if !user_src_address.is_null() {
@@ -465,17 +526,12 @@ pub fn sys_recvfrom(
     }
 }
 
-pub fn sys_sendmsg(
+fn sendmsg_internal(
     current_task: &CurrentTask,
-    fd: FdNumber,
+    file: &FileHandle,
     user_message_header: UserRef<msghdr>,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
-    let file = current_task.files.get(fd)?;
-    if !file.node().is_sock() {
-        return error!(ENOTSOCK);
-    }
-
+) -> Result<usize, Errno> {
     let mut message_header = msghdr::default();
     current_task.mm.read_object(user_message_header, &mut message_header)?;
 
@@ -498,7 +554,59 @@ pub fn sys_sendmsg(
 
     let flags = SocketMessageFlags::from_bits_truncate(flags);
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    Ok(socket_ops.sendmsg(current_task, &file, &iovec, dest_address, ancillary_data, flags)?.into())
+    socket_ops.sendmsg(current_task, &file, &iovec, dest_address, ancillary_data, flags)
+}
+
+pub fn sys_sendmsg(
+    current_task: &CurrentTask,
+    fd: FdNumber,
+    user_message_header: UserRef<msghdr>,
+    flags: u32,
+) -> Result<SyscallResult, Errno> {
+    let file = current_task.files.get(fd)?;
+    if !file.node().is_sock() {
+        return error!(ENOTSOCK);
+    }
+    Ok(sendmsg_internal(current_task, &file, user_message_header, flags)?.into())
+}
+
+pub fn sys_sendmmsg(
+    current_task: &CurrentTask,
+    fd: FdNumber,
+    user_mmsgvec: UserRef<mmsghdr>,
+    vlen: u32,
+    flags: u32,
+) -> Result<SyscallResult, Errno> {
+    let file = current_task.files.get(fd)?;
+    if !file.node().is_sock() {
+        return error!(ENOTSOCK);
+    }
+
+    if vlen > UIO_MAXIOV {
+        return error!(EINVAL);
+    }
+
+    let mut index = 0usize;
+    while index < vlen as usize {
+        let user_mmsghdr = user_mmsgvec.at(index);
+        let user_msghdr = user_mmsghdr.cast::<msghdr>();
+        match sendmsg_internal(current_task, &file, user_msghdr, flags) {
+            Err(error) => {
+                if index == 0 {
+                    return Err(error);
+                }
+                break;
+            }
+            Ok(bytes_read) => {
+                let msg_len = bytes_read as u32;
+                let user_msg_len =
+                    UserRef::<u32>::new(user_mmsghdr.addr() + std::mem::size_of::<msghdr>());
+                current_task.mm.write_object(user_msg_len, &msg_len)?;
+            }
+        }
+        index += 1;
+    }
+    Ok(index.into())
 }
 
 pub fn sys_sendto(

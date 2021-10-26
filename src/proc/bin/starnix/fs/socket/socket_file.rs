@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_zircon as zx;
 use std::sync::Arc;
 
 use crate::errno;
@@ -21,7 +22,8 @@ impl FileOps for SocketFile {
     fd_impl_nonseekable!();
 
     fn read(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        self.recvmsg(task, file, data, SocketMessageFlags::empty()).map(|info| info.bytes_read)
+        self.recvmsg(task, file, data, SocketMessageFlags::empty(), None)
+            .map(|info| info.bytes_read)
     }
 
     fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
@@ -100,12 +102,8 @@ impl SocketFile {
         if flags.contains(SocketMessageFlags::DONTWAIT) {
             op()
         } else {
-            file.blocking_op(
-                task,
-                op,
-                FdEvents::POLLOUT | FdEvents::POLLHUP,
-                self.socket.get_send_timeout(),
-            )
+            let deadline = self.socket.get_send_timeout().map(zx::Time::after);
+            file.blocking_op(task, op, FdEvents::POLLOUT | FdEvents::POLLHUP, deadline)
         }
     }
 
@@ -123,6 +121,7 @@ impl SocketFile {
         file: &FileObject,
         data: &[UserBuffer],
         flags: SocketMessageFlags,
+        deadline: Option<zx::Time>,
     ) -> Result<MessageReadInfo, Errno> {
         // TODO: Implement more `flags`.
 
@@ -133,12 +132,9 @@ impl SocketFile {
         if flags.contains(SocketMessageFlags::DONTWAIT) {
             op()
         } else {
-            file.blocking_op(
-                task,
-                op,
-                FdEvents::POLLIN | FdEvents::POLLHUP,
-                self.socket.get_receive_timeout(),
-            )
+            let deadline =
+                deadline.or_else(|| self.socket.get_receive_timeout().map(zx::Time::after));
+            file.blocking_op(task, op, FdEvents::POLLIN | FdEvents::POLLHUP, deadline)
         }
     }
 }

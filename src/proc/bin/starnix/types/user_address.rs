@@ -142,6 +142,14 @@ impl<T: AsBytes + FromBytes> UserRef<T> {
     pub fn next(&self) -> UserRef<T> {
         Self::new(self.addr() + mem::size_of::<T>())
     }
+
+    pub fn at(&self, index: usize) -> Self {
+        UserRef::<T>::new(self.addr() + index * mem::size_of::<T>())
+    }
+
+    pub fn cast<S: AsBytes + FromBytes>(&self) -> UserRef<S> {
+        UserRef::<S>::new(self.addr)
+    }
 }
 
 impl<T: AsBytes + FromBytes> ops::Deref for UserRef<T> {

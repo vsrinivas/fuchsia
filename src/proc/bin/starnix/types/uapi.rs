@@ -194,6 +194,14 @@ pub struct cmsghdr {
     pub cmsg_data: [u8; SCM_MAX_FD * 4],
 }
 
+#[derive(Debug, Default, Clone, AsBytes, FromBytes)]
+#[repr(C)]
+pub struct mmsghdr {
+    pub msg_hdr: msghdr,
+    pub msg_len: u32,
+    pub __reserved: [u8; 4usize],
+}
+
 impl cmsghdr {
     /// The header length (i.e., the length of the fixed fields in the struct).
     pub fn header_length() -> usize {
