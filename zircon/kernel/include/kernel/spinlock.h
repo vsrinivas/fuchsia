@@ -94,7 +94,10 @@ class TA_CAP("mutex") SpinLockBase {
   //
   // Interrupts must be disabled before calling this method, otherwise it could return true when it
   // should return false.
-  bool IsHeld() const { return arch_spin_lock_held(&spinlock_); }
+  bool IsHeld() const {
+    DEBUG_ASSERT(arch_ints_disabled());
+    return arch_spin_lock_held(&spinlock_);
+  }
 
   // Just like |Acquire|, but saves interrupt state and disables interrupts.
   void AcquireIrqSave(interrupt_saved_state_t& state) TA_ACQ() {

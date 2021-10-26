@@ -202,7 +202,7 @@ static struct io_apic* apic_io_resolve_global_irq(uint32_t irq) {
 
 static inline uint32_t apic_io_read_reg(struct io_apic* io_apic, uint8_t reg) {
   ASSERT(io_apic != nullptr);
-  DEBUG_ASSERT(io_apic_lock::Get()->lock().IsHeld());
+  io_apic_lock::Get()->lock().AssertHeld();
   *IO_APIC_IND(io_apic->vaddr) = reg;
   uint32_t val = *IO_APIC_DAT(io_apic->vaddr);
   return val;
@@ -210,13 +210,13 @@ static inline uint32_t apic_io_read_reg(struct io_apic* io_apic, uint8_t reg) {
 
 static inline void apic_io_write_reg(struct io_apic* io_apic, uint8_t reg, uint32_t val) {
   ASSERT(io_apic != nullptr);
-  DEBUG_ASSERT(io_apic_lock::Get()->lock().IsHeld());
+  io_apic_lock::Get()->lock().AssertHeld();
   *IO_APIC_IND(io_apic->vaddr) = reg;
   *IO_APIC_DAT(io_apic->vaddr) = val;
 }
 
 static uint64_t apic_io_read_redirection_entry(struct io_apic* io_apic, uint32_t global_irq) {
-  DEBUG_ASSERT(io_apic_lock::Get()->lock().IsHeld());
+  io_apic_lock::Get()->lock().AssertHeld();
 
   ASSERT(global_irq >= io_apic->desc.global_irq_base);
   uint32_t offset = global_irq - io_apic->desc.global_irq_base;
@@ -231,7 +231,7 @@ static uint64_t apic_io_read_redirection_entry(struct io_apic* io_apic, uint32_t
 
 static void apic_io_write_redirection_entry(struct io_apic* io_apic, uint32_t global_irq,
                                             uint64_t value) {
-  DEBUG_ASSERT(io_apic_lock::Get()->lock().IsHeld());
+  io_apic_lock::Get()->lock().AssertHeld();
 
   ASSERT(global_irq >= io_apic->desc.global_irq_base);
   uint32_t offset = global_irq - io_apic->desc.global_irq_base;

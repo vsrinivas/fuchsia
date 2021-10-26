@@ -771,8 +771,7 @@ void Thread::CallMigrateFnForCpuLocked(cpu_num_t cpu) {
 }
 
 bool Thread::CheckKillSignal() {
-  DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   if (signals() & THREAD_SIGNAL_KILL) {
     // Ensure we don't recurse into thread_exit.
@@ -844,7 +843,7 @@ void Thread::Current::DoSuspend() {
 }
 
 bool Thread::SaveUserStateLocked() {
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
   DEBUG_ASSERT(this == Thread::Current::Get());
   DEBUG_ASSERT(user_thread_ != nullptr);
 
@@ -857,7 +856,7 @@ bool Thread::SaveUserStateLocked() {
 }
 
 void Thread::RestoreUserStateLocked() {
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
   DEBUG_ASSERT(this == Thread::Current::Get());
   DEBUG_ASSERT(user_thread_ != nullptr);
 

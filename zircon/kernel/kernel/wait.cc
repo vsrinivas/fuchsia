@@ -222,8 +222,7 @@ void WaitQueueCollection::Validate() const {
 
 void WaitQueue::ValidateQueue() TA_REQ(thread_lock) {
   DEBUG_ASSERT_MAGIC_CHECK(this);
-  DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   collection_.Validate();
 }
@@ -278,12 +277,11 @@ zx_status_t WaitQueue::BlockEtc(const Deadline& deadline, uint signal_mask,
 
   DEBUG_ASSERT_MAGIC_CHECK(this);
   DEBUG_ASSERT(current_thread->state() == THREAD_RUNNING);
-  DEBUG_ASSERT(arch_ints_disabled());
 
   // Any time a thread blocks, it should be holding exactly one spinlock, and it
   // should be the thread lock.  If a thread blocks while holding another spin
   // lock, something has gone very wrong.
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
   DEBUG_ASSERT(arch_num_spinlocks_held() == 1);
 
   if (WAIT_QUEUE_VALIDATION) {
@@ -318,8 +316,7 @@ bool WaitQueue::WakeOne(zx_status_t wait_queue_error) {
   // priority inheritance, and all wake operations on an OwnedWaitQueue should
   // be going through their interface instead.
   DEBUG_ASSERT(magic_ == kMagic);
-  DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   if (WAIT_QUEUE_VALIDATION) {
     ValidateQueue();
@@ -340,8 +337,7 @@ bool WaitQueue::WakeOne(zx_status_t wait_queue_error) {
 
 void WaitQueue::DequeueThread(Thread* t, zx_status_t wait_queue_error) {
   DEBUG_ASSERT_MAGIC_CHECK(this);
-  DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   if (WAIT_QUEUE_VALIDATION) {
     ValidateQueue();
@@ -353,8 +349,7 @@ void WaitQueue::DequeueThread(Thread* t, zx_status_t wait_queue_error) {
 void WaitQueue::MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) {
   DEBUG_ASSERT_MAGIC_CHECK(source);
   DEBUG_ASSERT_MAGIC_CHECK(dest);
-  DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   if (WAIT_QUEUE_VALIDATION) {
     source->ValidateQueue();
@@ -390,8 +385,7 @@ void WaitQueue::WakeAll(zx_status_t wait_queue_error) {
   // Note(johngro): See the note in wake_one.  On one should ever be calling
   // this method on an OwnedWaitQueue
   DEBUG_ASSERT(magic_ == kMagic);
-  DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   if (WAIT_QUEUE_VALIDATION) {
     ValidateQueue();
@@ -419,8 +413,7 @@ void WaitQueue::WakeAll(zx_status_t wait_queue_error) {
 
 bool WaitQueue::IsEmpty() const {
   DEBUG_ASSERT_MAGIC_CHECK(this);
-  DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   return collection_.Count() == 0;
 }
@@ -459,8 +452,7 @@ WaitQueue::~WaitQueue() {
  */
 zx_status_t WaitQueue::UnblockThread(Thread* t, zx_status_t wait_queue_error) {
   t->canary().Assert();
-  DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   if (t->state() != THREAD_BLOCKED && t->state() != THREAD_BLOCKED_READ_LOCK) {
     return ZX_ERR_BAD_STATE;
@@ -485,8 +477,7 @@ zx_status_t WaitQueue::UnblockThread(Thread* t, zx_status_t wait_queue_error) {
 
 void WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) {
   t->canary().Assert();
-  DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
   DEBUG_ASSERT(t->state() == THREAD_BLOCKED || t->state() == THREAD_BLOCKED_READ_LOCK);
 
   DEBUG_ASSERT(t->wait_queue_state().blocking_wait_queue_ == this);

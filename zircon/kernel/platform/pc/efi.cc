@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/interrupt.h>
 #include <fbl/ref_ptr.h>
 #include <platform/pc/bootloader.h>
 #include <platform/pc/efi.h>
@@ -19,6 +20,7 @@ fbl::RefPtr<VmAspace> efi_aspace;
 // In some contexts (such as panicking) the thread lock may already be
 // held, in which case we avoid grabbing the lock again.
 void PanicFriendlySwitchAspace(VmAspace* aspace) {
+  InterruptDisableGuard interrupt_guard;
   if (thread_lock.IsHeld()) {
     vmm_set_active_aspace_locked(efi_aspace.get());
   } else {

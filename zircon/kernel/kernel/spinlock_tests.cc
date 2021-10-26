@@ -6,6 +6,7 @@
 
 #include <lib/unittest/unittest.h>
 
+#include <arch/arch_interrupt.h>
 #include <kernel/spinlock.h>
 
 namespace {
@@ -29,12 +30,12 @@ bool spinlock_is_held() {
   BEGIN_TEST;
 
   SpinLock spinlock;
-  interrupt_saved_state_t state;
+  InterruptDisableGuard interrupt_guard;
 
   EXPECT_FALSE(spinlock.IsHeld(), "Lock not held");
-  spinlock.AcquireIrqSave(state);
+  spinlock.Acquire();
   EXPECT_TRUE(spinlock.IsHeld(), "Lock held");
-  spinlock.ReleaseIrqRestore(state);
+  spinlock.Release();
   EXPECT_FALSE(spinlock.IsHeld(), "Lock not held");
 
   END_TEST;

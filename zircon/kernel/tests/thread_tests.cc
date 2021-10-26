@@ -498,14 +498,15 @@ static void spinlock_test() {
 
   // Verify basic functionality (single core).
   printf("testing spinlock:\n");
-  ASSERT(!lock.IsHeld());
+
+  // Note that it is invalid the call lock.IsHeld() with interrupts enabled.
+
   ASSERT(!arch_ints_disabled());
   lock.AcquireIrqSave(state);
   ASSERT(arch_ints_disabled());
   ASSERT(lock.IsHeld());
   ASSERT(lock.HolderCpu() == arch_curr_cpu_num());
   lock.ReleaseIrqRestore(state);
-  ASSERT(!lock.IsHeld());
   ASSERT(!arch_ints_disabled());
 
   // Verify slightly more advanced functionality that requires multiple cores.

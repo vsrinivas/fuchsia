@@ -907,8 +907,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
   Thread* const current_thread = Thread::Current::Get();
   SchedulerState* const current_state = &current_thread->scheduler_state();
 
-  DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
   // Aside from the thread_lock, spinlocks should never be held over a reschedule.
   DEBUG_ASSERT(arch_num_spinlocks_held() == 1);
   DEBUG_ASSERT_MSG(current_thread->state() != THREAD_RUNNING, "state %d\n",
@@ -1487,7 +1486,7 @@ inline void Scheduler::RescheduleMask(cpu_mask_t cpus_to_reschedule_mask) {
 void Scheduler::Block() {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_block"_stringref};
 
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   Thread* const current_thread = Thread::Current::Get();
 
@@ -1502,7 +1501,7 @@ void Scheduler::Unblock(Thread* thread) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_unblock"_stringref};
 
   thread->canary().Assert();
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   const SchedTime now = CurrentTime();
   const cpu_num_t target_cpu = FindTargetCpu(thread);
@@ -1518,7 +1517,7 @@ void Scheduler::Unblock(Thread* thread) {
 void Scheduler::Unblock(WaitQueueSublist list) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_unblock_list"_stringref};
 
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   const SchedTime now = CurrentTime();
 
@@ -1542,7 +1541,7 @@ void Scheduler::Unblock(WaitQueueSublist list) {
 }
 
 void Scheduler::UnblockIdle(Thread* thread) {
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   SchedulerState* const state = &thread->scheduler_state();
 
@@ -1556,7 +1555,7 @@ void Scheduler::UnblockIdle(Thread* thread) {
 void Scheduler::Yield() {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_yield"_stringref};
 
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   Thread* const current_thread = Thread::Current::Get();
   SchedulerState* const current_state = &current_thread->scheduler_state();
@@ -1588,7 +1587,7 @@ void Scheduler::Yield() {
 void Scheduler::Preempt() {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_preempt"_stringref};
 
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   Thread* const current_thread = Thread::Current::Get();
   SchedulerState* const current_state = &current_thread->scheduler_state();
@@ -1605,7 +1604,7 @@ void Scheduler::Preempt() {
 void Scheduler::Reschedule() {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_reschedule"_stringref};
 
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   Thread* const current_thread = Thread::Current::Get();
   SchedulerState* const current_state = &current_thread->scheduler_state();
@@ -1636,7 +1635,7 @@ void Scheduler::RescheduleInternal() {
 void Scheduler::Migrate(Thread* thread) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_migrate"_stringref};
 
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   SchedulerState* const state = &thread->scheduler_state();
   const cpu_mask_t effective_cpu_mask = state->GetEffectiveCpuMask(mp_get_active_mask());
@@ -1683,7 +1682,7 @@ void Scheduler::Migrate(Thread* thread) {
 void Scheduler::MigrateUnpinnedThreads() {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_migrate_unpinned"_stringref};
 
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   const cpu_num_t current_cpu = arch_curr_cpu_num();
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(current_cpu);
@@ -1934,7 +1933,7 @@ void Scheduler::ChangeWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_r
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_change_weight"_stringref};
 
   SchedulerState* const state = &thread->scheduler_state();
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
   if (thread->IsIdle() || thread->state() == THREAD_DEATH) {
     return;
   }
@@ -1962,7 +1961,7 @@ void Scheduler::ChangeDeadline(Thread* thread, const SchedDeadlineParams& params
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_change_deadline"_stringref};
 
   SchedulerState* const state = &thread->scheduler_state();
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
   if (thread->IsIdle() || thread->state() == THREAD_DEATH) {
     return;
   }
@@ -1990,7 +1989,7 @@ void Scheduler::InheritWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_inherit_weight"_stringref};
 
   SchedulerState* const state = &thread->scheduler_state();
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
 
   // For now deadline threads are logically max weight for the purposes of
   // priority inheritance.

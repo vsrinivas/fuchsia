@@ -283,7 +283,7 @@ bool PcieDevice::MaskUnmaskMsiIrqLocked(uint irq_id, bool mask) {
   DEBUG_ASSERT(irq_.handlers);
 
   pcie_irq_handler_state_t& hstate = irq_.handlers[irq_id];
-  DEBUG_ASSERT(hstate.lock.lock().IsHeld());
+  hstate.lock.lock().AssertHeld();
 
   /* Internal code should not be calling this function if they want to mask
    * the interrupt, but it is not possible to do so. */

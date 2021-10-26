@@ -114,8 +114,7 @@ void Event::Signal(zx_status_t wait_result) {
 
 /* same as above, but the thread lock must already be held */
 void Event::SignalLocked() {
-  DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  thread_lock.AssertHeld();
   SignalInternal(ZX_OK);
 }
 

@@ -750,7 +750,7 @@ struct Thread {
   //
   // Caller must hold the thread lock.
   bool IsUserStateSavedLocked() const TA_REQ(thread_lock) {
-    DEBUG_ASSERT(thread_lock.IsHeld());
+    thread_lock.AssertHeld();
     return user_state_saved_;
   }
 
