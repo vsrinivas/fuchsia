@@ -2,23 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <abr.h>
-#include <bootbyte.h>
-#include <bootimg.h>
-#include <diskio.h>
-#include <fastboot.h>
-#include <inet6.h>
+#define _POSIX_C_SOURCE 200809L  // Include strnlen() in string.h
+
+#include "fastboot.h"
+
 #include <inttypes.h>
 #include <lib/abr/data.h>
 #include <log.h>
-#include <mdns.h>
-#include <netifc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <xefi.h>
-#include <zircon.h>
 #include <zircon/hw/gpt.h>
+
+#include "abr.h"
+#include "bootbyte.h"
+#include "bootimg.h"
+#include "diskio.h"
+#include "inet6.h"
+#include "mdns.h"
+#include "netifc.h"
+#include "tcp.h"
+#include "zircon.h"
 
 // Constants.
 #define DEBUG 0
@@ -56,7 +61,7 @@ typedef struct {
 
 // A UDP destination address.
 typedef struct {
-  void *daddr;
+  const void *daddr;
   uint16_t dport;
   uint16_t sport;
 } udp_addr_t;
@@ -135,6 +140,13 @@ static uint8_t curr_var_arg_idx;
 static const char *slot_suffix_list[] = {"a", "b", NULL};
 static fb_bootimg_t boot_img;
 static fb_poll_next_action fb_poll_action = 0;
+static fb_udp_poll_func_t udp_poll_func = netifc_poll;
+static fb_udp6_send_func_t udp6_send_func = udp6_send;
+
+void fb_set_udp_functions_for_testing(fb_udp_poll_func_t poll_func, fb_udp6_send_func_t send_func) {
+  udp_poll_func = (poll_func ? poll_func : netifc_poll);
+  udp6_send_func = (send_func ? send_func : udp6_send);
+}
 
 // cmdlist maps a command name to the function that handles that command.
 static fb_cmd_t cmdlist[NUM_COMMANDS] = {
@@ -240,12 +252,12 @@ static fb_var_t varlist[NUM_VARIABLES] = {
     },
 };
 
-int fb_poll(fb_bootimg_t *img) {
+fb_poll_next_action fb_poll(fb_bootimg_t *img) {
   // If a previous fastboot boot failed, prevent retries by clearing fb_boot_now.
   fb_poll_action = POLL;
 
   // Continue processing fastboot packets.
-  netifc_poll();
+  udp_poll_func();
   if (fb_poll_action == BOOT_FROM_RAM) {
     memcpy((void *)img, (void *)&boot_img, sizeof(fb_bootimg_t));
   }
@@ -254,7 +266,7 @@ int fb_poll(fb_bootimg_t *img) {
 
 // fb_recv runs every time a UDP packet destined for the fastboot port is
 // received.
-void fb_recv(void *data, size_t len, void *saddr, uint16_t sport, uint16_t dport) {
+void fb_recv(void *data, size_t len, const void *saddr, uint16_t sport) {
   if (len > sizeof(fb_pkt_t)) {
     fb_send_fail("received fastboot packet larger than max packet size");
     return;
@@ -268,7 +280,7 @@ void fb_recv(void *data, size_t len, void *saddr, uint16_t sport, uint16_t dport
   // Prepare the destination address.
   dest_addr.daddr = saddr;
   dest_addr.dport = sport;
-  dest_addr.sport = dport;
+  dest_addr.sport = FB_SERVER_PORT;
 
   if (pkt->pkt_id == QUERY_TYPE) {
     // Clear the last response.
@@ -298,9 +310,9 @@ void fb_recv(void *data, size_t len, void *saddr, uint16_t sport, uint16_t dport
       pkt_to_send.pkt_id = ERROR_TYPE;
       snprintf((char *)pkt_to_send.data, FB_MAX_PAYLOAD_SIZE,
                "fastboot packet had malformed type %#02x", pkt->pkt_id);
-      udp6_send((void *)&pkt_to_send,
-                FB_HDR_SIZE + strnlen((char *)pkt_to_send.data, FB_MAX_PAYLOAD_SIZE),
-                dest_addr.daddr, dest_addr.dport, dest_addr.sport);
+      udp6_send_func((void *)&pkt_to_send,
+                     FB_HDR_SIZE + strnlen((char *)pkt_to_send.data, FB_MAX_PAYLOAD_SIZE),
+                     dest_addr.daddr, dest_addr.dport, dest_addr.sport);
       ELOG("malformed type: %#02x", pkt->pkt_id);
       return;
     }
@@ -355,7 +367,7 @@ void respond_to_fastboot_pkt(fb_pkt_t *pkt, size_t len) {
         cmd_phase = IDLE;
       } else {
         // Keep copying data from the host until we've received all of it.
-        uint32_t payload_size = len - FB_HDR_SIZE;
+        uint32_t payload_size = (uint32_t)len - FB_HDR_SIZE;
         memcpy(curr_img.data + curr_img.bytes_received, pkt->data, payload_size);
         curr_img.bytes_received += payload_size;
 
@@ -419,8 +431,8 @@ void respond_to_query_packet(fb_pkt_t *pkt) {
   if (DEBUG) {
     pp_fb_pkt("device", &pkt_to_send, FB_HDR_SIZE + sizeof(uint16_t));
   }
-  udp6_send((void *)&pkt_to_send, FB_HDR_SIZE + sizeof(uint16_t), dest_addr.daddr, dest_addr.dport,
-            dest_addr.sport);
+  udp6_send_func((void *)&pkt_to_send, FB_HDR_SIZE + sizeof(uint16_t), dest_addr.daddr,
+                 dest_addr.dport, dest_addr.sport);
 }
 
 void respond_to_init_packet(fb_pkt_t *pkt) {
@@ -441,8 +453,8 @@ void respond_to_init_packet(fb_pkt_t *pkt) {
     pp_fb_pkt("device", &pkt_to_send, FB_HDR_SIZE + 4);
   }
 
-  udp6_send((void *)&pkt_to_send, FB_HDR_SIZE + 4, dest_addr.daddr, dest_addr.dport,
-            dest_addr.sport);
+  udp6_send_func((void *)&pkt_to_send, FB_HDR_SIZE + 4, dest_addr.daddr, dest_addr.dport,
+                 dest_addr.sport);
 }
 
 void fb_reboot(char *cmd) {
@@ -482,7 +494,7 @@ void fb_flash(char *cmd) {
                                       (unsigned char *)curr_img.data, curr_img.size);
   if (status != EFI_SUCCESS) {
     char err_msg[FB_CMD_MAX_LEN];
-    snprintf(err_msg, FB_CMD_MAX_LEN, "failed to write partition; efi_status: %016llx", status);
+    snprintf(err_msg, FB_CMD_MAX_LEN, "failed to write partition; efi_status: %016" PRIx64, status);
     fb_send_fail(err_msg);
     return;
   }
@@ -527,7 +539,7 @@ void fb_erase(char *cmd) {
   efi_status status = gBS->AllocatePages(AllocateAnyPages, EfiLoaderData, num_pages, &pg_addr);
   if (status != EFI_SUCCESS) {
     char err_msg[FB_CMD_MAX_LEN];
-    snprintf(err_msg, FB_CMD_MAX_LEN, "failed to allocate memory; efi_status: %016llx", status);
+    snprintf(err_msg, FB_CMD_MAX_LEN, "failed to allocate memory; efi_status: %016" PRIx64, status);
     fb_send_fail(err_msg);
     return;
   }
@@ -544,7 +556,7 @@ void fb_erase(char *cmd) {
     efi_status status = disk_write(&disk, offset, (void *)pg_addr, len);
     if (status != EFI_SUCCESS) {
       char err_msg[FB_CMD_MAX_LEN];
-      snprintf(err_msg, FB_CMD_MAX_LEN, "failed to write to disk; efi_status: %016llx", status);
+      snprintf(err_msg, FB_CMD_MAX_LEN, "failed to write to disk; efi_status: %016" PRIx64, status);
       fb_send_fail(err_msg);
       return;
     }
@@ -593,7 +605,7 @@ void fb_download(char *cmd) {
     efi_status status = gBS->FreePages((efi_physical_addr)(curr_img.data), pages_used);
     if (status != EFI_SUCCESS) {
       char err_msg[FB_CMD_MAX_LEN];
-      snprintf(err_msg, FB_CMD_MAX_LEN, "failed to free memory; efi_status: %016llx", status);
+      snprintf(err_msg, FB_CMD_MAX_LEN, "failed to free memory; efi_status: %016" PRIx64, status);
       fb_send_fail(err_msg);
       return;
     }
@@ -619,7 +631,7 @@ void fb_download(char *cmd) {
   efi_status status = gBS->AllocatePages(AllocateAnyPages, EfiLoaderData, pages_needed, &mem_addr);
   if (status != EFI_SUCCESS) {
     char err_msg[FB_CMD_MAX_LEN];
-    snprintf(err_msg, FB_CMD_MAX_LEN, "failed to allocate memory; efi_status: %016llx", status);
+    snprintf(err_msg, FB_CMD_MAX_LEN, "failed to allocate memory; efi_status: %016" PRIx64, status);
     fb_send_fail(err_msg);
     return;
   }
@@ -754,7 +766,8 @@ int get_max_download_size(const char *arg, char *result) {
   efi_status status =
       gBS->GetMemoryMap(&buf_size, (efi_memory_descriptor *)buf, &mkey, &dsize, &dversion);
   if (status != EFI_SUCCESS) {
-    snprintf(result, FB_MAX_PAYLOAD_SIZE, "failed to get memory map; efi_status: %016llx", status);
+    snprintf(result, FB_MAX_PAYLOAD_SIZE, "failed to get memory map; efi_status: %016" PRIx64,
+             status);
     return -1;
   }
   // Look through the memory map for the largest contiguous region of memory.
@@ -764,7 +777,7 @@ int get_max_download_size(const char *arg, char *result) {
       max_download_size = (des->NumberOfPages * PAGE_SIZE);
     }
   }
-  snprintf(result, FB_MAX_PAYLOAD_SIZE, "0x%016llx", max_download_size);
+  snprintf(result, FB_MAX_PAYLOAD_SIZE, "0x%016" PRIx64, max_download_size);
   return 0;
 }
 
@@ -898,13 +911,13 @@ void fb_send_ack(void) {
   if (DEBUG) {
     pp_fb_pkt("device", &pkt_to_send, pkt_to_send_len);
   }
-  udp6_send((void *)&pkt_to_send, pkt_to_send_len, dest_addr.daddr, dest_addr.dport,
-            dest_addr.sport);
+  udp6_send_func((void *)&pkt_to_send, pkt_to_send_len, dest_addr.daddr, dest_addr.dport,
+                 dest_addr.sport);
 }
 
 void fb_resend(void) {
-  udp6_send((void *)&pkt_to_send, pkt_to_send_len, dest_addr.daddr, dest_addr.dport,
-            dest_addr.sport);
+  udp6_send_func((void *)&pkt_to_send, pkt_to_send_len, dest_addr.daddr, dest_addr.dport,
+                 dest_addr.sport);
 }
 
 void fb_send(const char *msg) {
@@ -917,8 +930,8 @@ void fb_send(const char *msg) {
     pp_fb_pkt("device", &pkt_to_send, pkt_to_send_len);
   }
 
-  udp6_send((void *)&pkt_to_send, pkt_to_send_len, dest_addr.daddr, dest_addr.dport,
-            dest_addr.sport);
+  udp6_send_func((void *)&pkt_to_send, pkt_to_send_len, dest_addr.daddr, dest_addr.dport,
+                 dest_addr.sport);
 }
 
 void fb_send_okay(const char *msg) {

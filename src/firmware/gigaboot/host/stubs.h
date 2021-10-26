@@ -8,6 +8,6 @@
 #ifndef SRC_FIRMWARE_GIGABOOT_HOST_STUBS_H_
 #define SRC_FIRMWARE_GIGABOOT_HOST_STUBS_H_
 
-int puts16(char16_t *str) { return 0; }
+int puts16(char16_t *str);
 
 #endif  // SRC_FIRMWARE_GIGABOOT_HOST_STUBS_H_

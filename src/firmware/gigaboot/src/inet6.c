@@ -300,7 +300,7 @@ void udp6_recv(ip6_hdr* ip, void* _data, size_t len) {
       tftp_recv((uint8_t*)_data + UDP_HDR_LEN, len, (void*)ip->dst, dport, (void*)ip->src, sport);
       break;
     case FB_SERVER_PORT:
-      fb_recv((uint8_t*)_data + UDP_HDR_LEN, len, (void*)ip->src, sport, dport);
+      fb_recv((uint8_t*)_data + UDP_HDR_LEN, len, (void*)ip->src, sport);
       break;
     default:
       // Ignore, we can receive packets not intended for us e.g. with unicast
