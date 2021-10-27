@@ -11,7 +11,11 @@ group("f2fs-compatibility-tests") {
 
 if (is_linux) {
   test("f2fs-compatibility-test") {
-    sources = [ "mkfs_fsck_test.cc" ]
+    sources = [
+      "basic.cc",
+      "compatibility.cc",
+      "mkfs_fsck_test.cc",
+    ]
     deps = [
       "//src/lib/fxl/test:gtest_main",
       "//src/storage/f2fs",

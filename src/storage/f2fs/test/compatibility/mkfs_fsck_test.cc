@@ -6,15 +6,10 @@
 
 #include <gtest/gtest.h>
 
-#include "src/storage/f2fs/f2fs.h"
+#include "src/storage/f2fs/test/compatibility/compatibility.h"
 
 namespace f2fs {
 namespace {
-
-std::string GenerateTestPath(std::string_view format) {
-  std::string test_path = std::filesystem::temp_directory_path().append(format).string();
-  return test_path;
-}
 
 TEST(CompatibilityTest, SimpleMkfsFsckTest) {
   uint64_t kBlockCount = 819200;

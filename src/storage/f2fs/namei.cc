@@ -7,6 +7,10 @@
 
 #include "src/storage/f2fs/f2fs.h"
 
+#ifndef __Fuchsia__
+#include "lib/stdcompat/string_view.h"
+#endif  // __Fuchsia__
+
 namespace f2fs {
 
 zx_status_t Dir::NewInode(uint32_t mode, fbl::RefPtr<VnodeF2fs> *out) {
