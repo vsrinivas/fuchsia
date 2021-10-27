@@ -52,7 +52,7 @@ group("tests") {
   testonly = true
   deps = [
     ":fshost-tests",
-    "//src/storage/testing:storage-isolated-devmgr",
+    "//src/storage/testing:isolated-devmgr",
   ]
 }
 
@@ -487,7 +487,8 @@ fuchsia_unittest_component("copier-test") {
   deps = [ ":copier_test" ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("fshost-integration-test") {
+fuchsia_component("fshost-integration-test") {
+  testonly = true
   manifest = "meta/fshost_integration_test.cml"
   deps = [
     ":fshost_integration_test",
@@ -519,6 +520,7 @@ fuchsia_test_package("fshost-tests") {
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
     "//src/storage/blobfs:decompressor-sandbox",
+    "//src/storage/testing:isolated-devmgr",
   ]
 }
 

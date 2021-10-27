@@ -217,6 +217,6 @@ group("tests") {
     ":fxfs-slow-fs-tests",
     ":fxfs-tests",
     ":lib_test($host_toolchain)",
-    "//src/storage/testing:storage-isolated-devmgr",
+    "//src/storage/testing:isolated-devmgr",
   ]
 }

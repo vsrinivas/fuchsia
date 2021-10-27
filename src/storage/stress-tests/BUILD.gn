@@ -122,7 +122,7 @@ group("stress-tests") {
   deps = [
     ":storage-stress-tests",
     ":storage-stress-tests-short",
-    "//src/storage/testing:storage-isolated-devmgr",
+    "//src/storage/testing:isolated-devmgr",
     "//src/sys/component_manager:component-manager",
   ]
 }

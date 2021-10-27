@@ -53,6 +53,6 @@ group("tests") {
   testonly = true
   deps = [
     ":block-client-tests",
-    "//src/storage/testing:storage-isolated-devmgr",
+    "//src/storage/testing:isolated-devmgr",
   ]
 }

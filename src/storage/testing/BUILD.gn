@@ -30,6 +30,27 @@ fuchsia_package("storage-isolated-devmgr") {
   deps = [ ":isolated-devmgr-component" ]
 }
 
+group("driver_test_realm") {
+  testonly = true
+  deps = [
+    ":storage_drivers",
+    "//sdk/lib/driver_test_realm/platform",
+  ]
+}
+
+fuchsia_component("component") {
+  component_name = "storage_driver_test_realm"
+  manifest = "meta/storage_driver_test_realm.cml"
+}
+
+fuchsia_package("storage_driver_test_realm") {
+  testonly = true
+  deps = [
+    ":component",
+    ":driver_test_realm",
+  ]
+}
+
 source_set("storage_driver_test_support") {
   testonly = true
   sources = [
@@ -60,5 +81,8 @@ source_set("storage_driver_test_support") {
 
 group("isolated-devmgr") {
   testonly = true
-  deps = [ ":storage-isolated-devmgr" ]
+  deps = [
+    ":storage-isolated-devmgr",
+    ":storage_driver_test_realm",
+  ]
 }

@@ -178,7 +178,7 @@ group("tests") {
   testonly = true
   public_deps = [
     ":hwstress_test_pkg",
-    "//src/storage/testing:storage-isolated-devmgr",
+    "//src/storage/testing:isolated-devmgr",
   ]
 }
 

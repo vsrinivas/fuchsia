@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/fvm_stressor",
@@ -17,7 +17,8 @@
     children: [
         {
             name: "isolated-devmgr",
-            url: "fuchsia-pkg://fuchsia.com/storage-isolated-devmgr#meta/isolated-devmgr.cm",
+            url: "fuchsia-pkg://fuchsia.com/storage_driver_test_realm#meta/storage_driver_test_realm.cm",
+            startup: "eager",
         },
     ],
     use: [

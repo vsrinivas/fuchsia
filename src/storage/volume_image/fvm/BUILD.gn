@@ -245,6 +245,6 @@ group("tests") {
   testonly = true
   deps = [
     ":fvm-sparse-image-reader-tests",
-    "//src/storage/testing:storage-isolated-devmgr",
+    "//src/storage/testing:isolated-devmgr",
   ]
 }
