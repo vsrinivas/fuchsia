@@ -1,5 +1,4 @@
-use crate::{Config, LevelPadding, ThreadPadding, ThreadLogMode};
-use chrono;
+use crate::{Config, LevelPadding, ThreadLogMode, ThreadPadding};
 use log::{LevelFilter, Record};
 use std::io::{Error, Write};
 use std::thread;
@@ -100,11 +99,11 @@ where
 {
     if let Some(name) = thread::current().name() {
         match config.thread_padding {
-            ThreadPadding::Left{0: qty} => {
-                write!(write, "({name:>0$}) ", qty, name=name)?;
+            ThreadPadding::Left { 0: qty } => {
+                write!(write, "({name:>0$}) ", qty, name = name)?;
             }
-            ThreadPadding::Right{0: qty} => {
-                write!(write, "({name:<0$}) ", qty, name=name)?;
+            ThreadPadding::Right { 0: qty } => {
+                write!(write, "({name:<0$}) ", qty, name = name)?;
             }
             ThreadPadding::Off => {
                 write!(write, "({}) ", name)?;
@@ -125,11 +124,11 @@ where
     let id = id.replace("ThreadId(", "");
     let id = id.replace(")", "");
     match config.thread_padding {
-        ThreadPadding::Left{0: qty} => {
-            write!(write, "({id:>0$}) ", qty, id=id)?;
+        ThreadPadding::Left { 0: qty } => {
+            write!(write, "({id:>0$}) ", qty, id = id)?;
         }
-        ThreadPadding::Right{0: qty} => {
-            write!(write, "({id:<0$}) ", qty, id=id)?;
+        ThreadPadding::Right { 0: qty } => {
+            write!(write, "({id:<0$}) ", qty, id = id)?;
         }
         ThreadPadding::Off => {
             write!(write, "({}) ", id)?;
@@ -151,9 +150,9 @@ where
 pub fn should_skip(config: &Config, record: &Record<'_>) -> bool {
     // If a module path and allowed list are available
     match (record.target(), &*config.filter_allow) {
-        (path, allowed) if allowed.len() > 0 => {
+        (path, allowed) if !allowed.is_empty() => {
             // Check that the module path matches at least one allow filter
-            if let None = allowed.iter().find(|v| path.starts_with(&***v)) {
+            if !allowed.iter().any(|v| path.starts_with(&**v)) {
                 // If not, skip any further writing
                 return true;
             }
@@ -163,9 +162,9 @@ pub fn should_skip(config: &Config, record: &Record<'_>) -> bool {
 
     // If a module path and ignore list are available
     match (record.target(), &*config.filter_ignore) {
-        (path, ignore) if ignore.len() > 0 => {
+        (path, ignore) if !ignore.is_empty() => {
             // Check that the module path does not match any ignore filters
-            if let Some(_) = ignore.iter().find(|v| path.starts_with(&***v)) {
+            if ignore.iter().any(|v| path.starts_with(&**v)) {
                 // If not, skip any further writing
                 return true;
             }
@@ -173,5 +172,5 @@ pub fn should_skip(config: &Config, record: &Record<'_>) -> bool {
         _ => {}
     }
 
-    return false;
+    false
 }

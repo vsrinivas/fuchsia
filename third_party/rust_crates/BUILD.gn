@@ -734,7 +734,7 @@ if (!(current_os == "fuchsia")) {
 
 if (!(current_os == "fuchsia")) {
   group("simplelog") {
-    deps = [ ":simplelog-v0_8_0" ]
+    deps = [ ":simplelog-v0_10_2" ]
   }
 }
 
@@ -9447,10 +9447,10 @@ rust_library("signal-hook-registry-v1_3_0") {
   ]
 }
 
-rust_library("simplelog-v0_8_0") {
+rust_library("simplelog-v0_10_2") {
   crate_name = "simplelog"
   crate_root = "//third_party/rust_crates/vendor/simplelog/src/lib.rs"
-  output_name = "simplelog-9ab6e681583324e0"
+  output_name = "simplelog-21aad7a3c5a1179d"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -9466,8 +9466,8 @@ rust_library("simplelog-v0_8_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=9ab6e681583324e0",
-    "-Cextra-filename=-9ab6e681583324e0",
+    "-Cmetadata=21aad7a3c5a1179d",
+    "-Cextra-filename=-21aad7a3c5a1179d",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"termcolor\"",
   ]
