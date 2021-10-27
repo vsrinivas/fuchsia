@@ -172,12 +172,26 @@ by filing a bug and referencing it in the comment as shown above.
 
 Furthermore the example above suppresses at the granularity of an entire
 executable. For finer-grained suppressions you may detect the presence of
-sanitizers in code. See:
+sanitizers in code. For C/C++ see:
 
 *   [Conditional Compilation with
     `__has_feature(address_sanitizer)`][asan-conditional]{:.external}
 *   [Disabling Instrumentation with
     `__attribute__((no_sanitize("address")))`][asan-disabling]{:.external}
+
+For Rust, you can follow this pattern:
+
+```rust
+#[cfg(test)]
+mod tests {
+    #[test]
+    // TODO(fxbug.dev/12345): delete the below and fix the leak
+    #[cfg_attr(feature = "variant_asan", ignore)]
+    fn test_that_leaks() {
+        // ...
+    }
+}
+```
 
 ### Test for flakiness
 
