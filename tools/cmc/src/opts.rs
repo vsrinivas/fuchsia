@@ -205,7 +205,13 @@ pub enum Commands {
     },
 
     #[structopt(name = "print-cml-reference")]
-    PrintReferenceDocs,
+    /// print generated .cml reference documentation
+    PrintReferenceDocs {
+        #[structopt(name = "file path", short = "o", long = "output", parse(from_os_str))]
+        /// If provided, will output generated reference documentation to a text
+        /// file at the file path provided.
+        output: Option<PathBuf>,
+    },
 }
 
 fn parse_extra_schema_arg(src: &str) -> (PathBuf, Option<String>) {

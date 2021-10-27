@@ -111,8 +111,12 @@ fn run_cmc() -> Result<(), Error> {
                 &experimental_force_runner,
             )?
         }
-        opts::Commands::PrintReferenceDocs => {
-            println!("{}", Document::get_markdown_reference_docs())
+        opts::Commands::PrintReferenceDocs { output } => {
+            let docs = Document::get_markdown_reference_docs();
+            match &output {
+                None => println!("{}", Document::get_markdown_reference_docs()),
+                Some(path) => fs::write(path, docs)?,
+            }
         }
     }
     if let Some(stamp_path) = opt.stamp {
