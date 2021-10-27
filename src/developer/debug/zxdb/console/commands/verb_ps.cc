@@ -6,39 +6,77 @@
 
 #include <iomanip>
 #include <optional>
+#include <set>
 #include <sstream>
 
+#include "src/developer/debug/zxdb/client/job.h"
+#include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/system.h"
+#include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 
 namespace zxdb {
 
 namespace {
 
-void OutputProcessTreeRecord(const debug_ipc::ProcessTreeRecord& rec, int indent,
-                             OutputBuffer* output) {
-  output->Append(std::string(indent * 2, ' '));
+// Computes the set of attached job and process koids so they can be marked in the output.
+std::set<uint64_t> ComputeAttachedKoidMap() {
+  std::set<uint64_t> attached;
 
+  System& system = Console::get()->context().session()->system();
+
+  for (Target* target : system.GetTargets()) {
+    if (Process* process = target->GetProcess())
+      attached.insert(process->GetKoid());
+  }
+
+  for (Job* job : system.GetJobs()) {
+    if (job->state() == Job::State::kAttached)
+      attached.insert(job->koid());
+  }
+
+  return attached;
+}
+
+void OutputProcessTreeRecord(const debug_ipc::ProcessTreeRecord& rec, int indent,
+                             const std::set<uint64_t>& attached, OutputBuffer* output) {
+  // Row marker for attached processes/jobs.
+  std::string prefix;
+  Syntax syntax = Syntax::kNormal;
+  if (auto found = attached.find(rec.koid); found != attached.end()) {
+    syntax = Syntax::kHeading;
+    prefix = GetCurrentRowMarker();
+  } else {
+    prefix = " ";  // Account for no prefix so everything is aligned.
+  }
+
+  // Indentation.
+  prefix.append(indent * 2, ' ');
+
+  // Record type.
   switch (rec.type) {
     case debug_ipc::ProcessTreeRecord::Type::kJob:
-      output->Append("j: ");
+      prefix.append("j: ");
       break;
     case debug_ipc::ProcessTreeRecord::Type::kProcess:
-      output->Append("p: ");
+      prefix.append("p: ");
       break;
     default:
-      output->Append("?: ");
+      prefix.append("?: ");
       break;
   }
 
+  output->Append(syntax, prefix);
   output->Append(Syntax::kSpecial, std::to_string(rec.koid));
-  output->Append(" " + rec.name + "\n");
+  output->Append(syntax, " " + rec.name + "\n");
 
   for (const auto& child : rec.children)
-    OutputProcessTreeRecord(child, indent + 1, output);
+    OutputProcessTreeRecord(child, indent + 1, attached, output);
 }
 
 // Recursively filters the given process tree. All jobs and processes that contain the given filter
@@ -66,16 +104,18 @@ std::optional<debug_ipc::ProcessTreeRecord> FilterProcessTree(
 
 void OnListProcessesComplete(const std::string& filter, const Err& err,
                              const debug_ipc::ProcessTreeReply& reply) {
+  std::set<uint64_t> attached = ComputeAttachedKoidMap();
+
   OutputBuffer out;
   if (err.has_error()) {
     out.Append(err);
   } else if (filter.empty()) {
     // Output everything.
-    OutputProcessTreeRecord(reply.root, 0, &out);
+    OutputProcessTreeRecord(reply.root, 0, attached, &out);
   } else {
     // Filter the results.
     if (auto filtered = FilterProcessTree(reply.root, filter)) {
-      OutputProcessTreeRecord(*filtered, 0, &out);
+      OutputProcessTreeRecord(*filtered, 0, attached, &out);
     } else {
       out.Append("No processes or jobs matching \"" + filter + "\".\n");
     }
