@@ -9,6 +9,7 @@ group("cpp") {
 
   public_deps = [
     ":cpp_library",
+    "//src/lib/fuchsia-component-test:includes",
     "//src/lib/fuchsia-component-test/framework_intermediary:fuchsia_component_test_framework_intermediary_component",
   ]
 }

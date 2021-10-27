@@ -18,7 +18,6 @@ group("realm_builder_version") {
   deps = [
     ":driver_test_realm_component",
     ":realm_builder_includes",
-    "//src/lib/fuchsia-component-test",
   ]
 }
 
