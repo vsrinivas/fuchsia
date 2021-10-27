@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env fuchsia-vendored-python
 #
 # Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -9,10 +9,6 @@
 For usage, see
 https://fuchsia.dev/fuchsia-src/development/memory/memory#visualize_memory_usage
 """
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import cgi
 import collections
@@ -221,7 +217,7 @@ def populate_process(process_node, process_record, hide_aggregated=True):
 
     # Create the aggregated VMO nodes.
     children = []
-    for name, vmos in name_to_vmo.iteritems():
+    for name, vmos in name_to_vmo.items():
         if len(vmos) == 1 or name == UNNAMED_NAME:
             # Only one VMO with this name, or multiple VMOs with an empty name.
             # Add them as direct children.
@@ -268,7 +264,7 @@ def build_webtreemap(node):
                     # webtreemap.js.
                     # '$symbol': node.type,
             },
-            'children': map(build_webtreemap, node.children)
+            'children': list(map(build_webtreemap, node.children))
     }
 
 
