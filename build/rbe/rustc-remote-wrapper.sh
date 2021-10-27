@@ -582,6 +582,47 @@ do
   extra_inputs_rel_project_root+=( "$(realpath --relative-to="$project_root" "$f" )" )
 done
 
+case "$target_triple" in
+  aarch64-*-linux*) sysroot_triple=aarch64-linux-gnu ;;
+  x86_64-*-linux*) sysroot_triple=x86_64-linux-gnu ;;
+  x86_64-fuchsia) sysroot_triple="" ;;
+  wasm32-*) sysroot_triple="" ;;
+  *) echo "[$script]: unhandled case for sysroot target subdir: $target_triple"
+    exit 1
+    ;;
+esac
+
+# The sysroot dir contains thousands of files, but only some essential libs and
+# shlibs are needed.  Include related symlinks as well.
+sysroot_files=()
+test "${#link_sysroot[@]}" = 0 || test -z "$sysroot_triple" || {
+  sysroot_dir="${link_sysroot[0]}"
+  # Find the correct architecture ld.so.
+  case "$sysroot_triple" in
+    aarch64-linux*) sysroot_files+=( "$sysroot_dir"/lib/"$sysroot_triple"/ld-linux-aarch64.so.1 ) ;;
+    x86_64-linux*) sysroot_files+=( "$sysroot_dir"/lib/"$sysroot_triple"/ld-linux-x86-64.so.2 ) ;;
+  esac
+  sysroot_files+=(
+    "$sysroot_dir"/lib/"$sysroot_triple"/libc.so.6
+    "$sysroot_dir"/lib/"$sysroot_triple"/libpthread.so.0
+    "$sysroot_dir"/lib/"$sysroot_triple"/libm.so.6
+    "$sysroot_dir"/lib/"$sysroot_triple"/librt.so.1
+    "$sysroot_dir"/lib/"$sysroot_triple"/libutil.so.1
+    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libc.so
+    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libc_nonshared.a
+    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libpthread.{a,so}
+    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libpthread_nonshared.a
+    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libm.{a,so}
+    "$sysroot_dir"/usr/lib/"$sysroot_triple"/librt.{a,so}
+    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libdl.{a,so}
+    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libutil.{a,so}
+    "$sysroot_dir"/usr/lib/"$sysroot_triple"/Scrt1.o
+    "$sysroot_dir"/usr/lib/"$sysroot_triple"/crt1.o
+    "$sysroot_dir"/usr/lib/"$sysroot_triple"/crti.o
+    "$sysroot_dir"/usr/lib/"$sysroot_triple"/crtn.o
+  )
+}
+
 # Inputs to upload include (all relative to $project_root):
 #   * rust tool(s) [$rustc_relative]
 #     * rust tool shared libraries [$rustc_shlibs]
@@ -598,6 +639,7 @@ done
 #   * linker binary (called by the driver) [$lld]
 #       For example: -Clinker=.../lld
 #   * run-time libraries [$rt_libdir]
+#   * sysroot libraries [$sysroot_files]
 #   * additional data dependencies [$extra_inputs_rel_project_root]
 
 remote_inputs=(
@@ -614,7 +656,7 @@ remote_inputs=(
   "${libcxx[@]}"
   "${rt_libdir[@]}"
   "${link_arg_files[@]}"
-  "${link_sysroot[@]}"
+  "${sysroot_files[@]}"
   "${extra_inputs_rel_project_root[@]}"
 )
 remote_inputs_joined="$(IFS=, ; echo "${remote_inputs[*]}")"
@@ -644,6 +686,7 @@ dump_vars() {
   debug_var "rt libdir" "${rt_libdir[@]}"
   debug_var "link args" "${link_arg_files[@]}"
   debug_var "link sysroot" "${link_sysroot[@]}"
+  debug_var "sysroot files" "${sysroot_files[@]}"
   debug_var "env var files" "${envvar_files[@]}"
   debug_var "depfile" "$depfile"
   debug_var "[$script: dep-info]" "${dep_only_command[@]}"
