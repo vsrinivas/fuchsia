@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/stdcompat/variant.h>
+#include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
 #include <zircon/types.h>
@@ -19,21 +20,27 @@ namespace inspect {
 
 class BackingBuffer final {
  public:
-  using AllowedTypes = cpp17::variant<std::vector<uint8_t>>;
   uint8_t const* Data() const;
   size_t Size() const;
   bool Empty() const;
 
-  explicit BackingBuffer(AllowedTypes&& data) : data_(std::move(data)) {}
+  explicit BackingBuffer(std::vector<uint8_t>&& data) : data_(std::move(data)) {
+    size_ = cpp17::get<DiscriminateData::kVector>(data_).size();
+  }
+  explicit BackingBuffer(const zx::vmo& data);
+  ~BackingBuffer();
   BackingBuffer(BackingBuffer&&) = default;
   BackingBuffer(const BackingBuffer&) = delete;
   BackingBuffer& operator=(BackingBuffer&&) = default;
   BackingBuffer& operator=(const BackingBuffer&) = delete;
 
  private:
-  AllowedTypes data_;
+  cpp17::variant<std::vector<uint8_t>, std::pair<uintptr_t, zx::vmar>> data_;
+  // the size of the vector or VMO, depending on discriminant
+  size_t size_;
   enum DiscriminateData {
     kVector,
+    kMapping,
   };
 
   DiscriminateData Index() const { return static_cast<DiscriminateData>(data_.index()); }
@@ -66,7 +73,7 @@ class Snapshot final {
   };
 
   // Type for observing reads on the VMO.
-  using ReadObserver = fit::function<void(uint8_t* buffer, size_t buffer_size)>;
+  using ReadObserver = fit::function<void(const uint8_t* buffer, size_t buffer_size)>;
 
   // Default options for snapshotting from a VMO.
   const static Options kDefaultOptions;
@@ -106,7 +113,7 @@ class Snapshot final {
   static zx_status_t Read(const zx::vmo& vmo, size_t size, uint8_t* buffer);
 
   // Parse the header from a buffer and obtain the generation count.
-  static zx_status_t ParseHeader(uint8_t const* buffer, uint64_t* out_generation_count);
+  static zx_status_t ParseHeader(const uint8_t* buffer, uint64_t* out_generation_count);
 
   // Take a new snapshot of the VMO with default options.
   // If reading fails, the boolean value of the constructed |Snapshot| will be false.

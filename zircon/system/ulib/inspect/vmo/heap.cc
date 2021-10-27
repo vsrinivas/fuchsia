@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/inspect/cpp/vmo/heap.h>
+#include <lib/zx/vmar.h>
 #include <zircon/process.h>
 
 namespace inspect {
@@ -21,8 +22,8 @@ constexpr BlockIndex Buddy(BlockIndex block, BlockOrder block_order) {
 Heap::Heap(zx::vmo vmo) : vmo_(std::move(vmo)) {
   ZX_ASSERT(ZX_OK == vmo_.get_size(&max_size_));
   ZX_ASSERT(max_size_ > 0);
-  ZX_ASSERT(ZX_OK == zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
-                                 vmo_.get(), 0, max_size_, &buffer_addr_));
+  ZX_ASSERT(ZX_OK == zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo_, 0,
+                                                max_size_, &buffer_addr_));
 
   Extend(kMinVmoSize);
 }

@@ -3,10 +3,15 @@
 // found in the LICENSE file.
 
 #include <lib/inspect/cpp/vmo/block.h>
+#include <lib/inspect/cpp/vmo/limits.h>
 #include <lib/inspect/cpp/vmo/snapshot.h>
+#include <lib/zx/vmar.h>
 #include <zircon/assert.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
-#include "lib/inspect/cpp/vmo/limits.h"
+#include <cstdint>
 
 using inspect::internal::Block;
 using inspect::internal::BlockIndex;
@@ -55,6 +60,18 @@ zx_status_t Snapshot::Create(const zx::vmo& vmo, Options options, Snapshot* out_
 
 zx_status_t Snapshot::Create(const zx::vmo& vmo, Options options, ReadObserver read_observer,
                              Snapshot* out_snapshot) {
+  uint64_t generation;
+  BackingBuffer maybe_frozen(vmo);
+  Snapshot::ParseHeader(maybe_frozen.Data(), &generation);
+  if (generation == internal::kVmoFrozen) {
+    if (read_observer) {
+      read_observer(maybe_frozen.Data(), maybe_frozen.Size());
+    }
+
+    *out_snapshot = Snapshot(std::move(maybe_frozen));
+    return ZX_OK;
+  }
+
   size_t tries_left = options.read_attempts;
 
   zx_status_t status;
@@ -81,7 +98,6 @@ zx_status_t Snapshot::Create(const zx::vmo& vmo, Options options, ReadObserver r
       read_observer(buffer.data(), sizeof(Block));
     }
 
-    uint64_t generation;
     status = Snapshot::ParseHeader(buffer.data(), &generation);
     if (status != ZX_OK) {
       return status;
@@ -139,8 +155,8 @@ zx_status_t Snapshot::Read(const zx::vmo& vmo, size_t size, uint8_t* buffer) {
   return vmo.read(buffer, 0, size);
 }
 
-zx_status_t Snapshot::ParseHeader(uint8_t const* buffer, uint64_t* out_generation_count) {
-  auto* block = reinterpret_cast<Block const*>(buffer);
+zx_status_t Snapshot::ParseHeader(const uint8_t* buffer, uint64_t* out_generation_count) {
+  auto* block = reinterpret_cast<const Block*>(buffer);
   if (memcmp(&block->header_data[4], internal::kMagicNumber, 4) != 0 ||
       internal::HeaderBlockFields::Version::Get<uint64_t>(block->header) > internal::kVersion) {
     return ZX_ERR_INTERNAL;
@@ -168,24 +184,48 @@ const Block* GetBlock(const Snapshot* snapshot, BlockIndex index) {
 }
 }  // namespace internal
 
-uint8_t const* BackingBuffer::Data() const {
+BackingBuffer::BackingBuffer(const zx::vmo& data) {
+  zx::vmar to_hold_data;
+  uintptr_t data_ptr;
+  auto status = data.get_size(&size_);
+  ZX_ASSERT(ZX_OK == status);
+
+  zx::vmar::root_self()->allocate(ZX_VM_CAN_MAP_READ, 0, size_, &to_hold_data, &data_ptr);
+
+  data_ = std::make_pair(0, std::move(to_hold_data));
+  auto& data_ref = cpp17::get<DiscriminateData::kMapping>(data_);
+  status = data_ref.second.map(ZX_VM_PERM_READ, 0, data, 0, size_, &data_ref.first);
+  ZX_ASSERT(ZX_OK == status);
+}
+
+BackingBuffer::~BackingBuffer() {
   switch (Index()) {
     case DiscriminateData::kVector:
-      return cpp17::get<DiscriminateData::kVector>(data_).data();
+      break;
+    case DiscriminateData::kMapping:
+      const auto& data_ref = cpp17::get<DiscriminateData::kMapping>(data_);
+      data_ref.second.unmap(data_ref.first, size_);
+      break;
   }
 }
 
-size_t BackingBuffer::Size() const {
+const uint8_t* BackingBuffer::Data() const {
   switch (Index()) {
     case DiscriminateData::kVector:
-      return cpp17::get<DiscriminateData::kVector>(data_).size();
+      return cpp17::get<DiscriminateData::kVector>(data_).data();
+    case DiscriminateData::kMapping:
+      return reinterpret_cast<const uint8_t*>(cpp17::get<DiscriminateData::kMapping>(data_).first);
   }
 }
+
+size_t BackingBuffer::Size() const { return size_; }
 
 bool BackingBuffer::Empty() const {
   switch (Index()) {
     case DiscriminateData::kVector:
       return cpp17::get<DiscriminateData::kVector>(data_).empty();
+    case DiscriminateData::kMapping:
+      return size_ == 0;
   }
 }
 }  // namespace inspect

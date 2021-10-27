@@ -163,7 +163,7 @@ TEST(Snapshot, InvalidGenerationChange) {
   Snapshot snapshot;
   zx_status_t status = Snapshot::Create(
       vmo.vmo(), Snapshot::kDefaultOptions,
-      [header](uint8_t* buffer, size_t buffer_size) { header->payload.u64 += 2; }, &snapshot);
+      [header](const uint8_t* buffer, size_t buffer_size) { header->payload.u64 += 2; }, &snapshot);
 
   EXPECT_EQ(ZX_ERR_INTERNAL, status);
 }
@@ -182,7 +182,7 @@ TEST(Snapshot, InvalidGenerationChangeFinalStep) {
   Snapshot snapshot;
   zx_status_t status = Snapshot::Create(
       vmo.vmo(), Snapshot::Options{.read_attempts = 1, .skip_consistency_check = false},
-      [&](uint8_t* buffer, size_t buffer_size) {
+      [&](const uint8_t* buffer, size_t buffer_size) {
         // Only change the generation count after the second read obtaining the whole buffer.
         if (++times_called == 2) {
           header->payload.u64 += 2;
@@ -206,7 +206,7 @@ TEST(Snapshot, ValidGenerationChangeSkipCheck) {
   Snapshot snapshot;
   zx_status_t status = Snapshot::Create(
       vmo.vmo(), {.read_attempts = 100, .skip_consistency_check = true},
-      [header](uint8_t* buffer, size_t buffer_size) { header->payload.u64 += 2; }, &snapshot);
+      [header](const uint8_t* buffer, size_t buffer_size) { header->payload.u64 += 2; }, &snapshot);
 
   EXPECT_OK(status);
   EXPECT_EQ(4096u, snapshot.size());
@@ -241,6 +241,26 @@ TEST(Snapshot, InvalidBadMagicNumberSkipCheck) {
       vmo.vmo(), {.read_attempts = 100, .skip_consistency_check = true}, &snapshot);
 
   EXPECT_EQ(ZX_ERR_INTERNAL, status);
+}
+
+TEST(Snapshot, FrozenVmo) {
+  fzl::OwnedVmoMapper vmo;
+  ASSERT_OK(vmo.CreateAndMap(4096, "test"));
+  Block* header = reinterpret_cast<Block*>(vmo.start());
+  header->header = HeaderBlockFields::Order::Make(0) |
+                   HeaderBlockFields::Type::Make(BlockType::kHeader) |
+                   HeaderBlockFields::Version::Make(0);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
+  header->payload.u64 = inspect::internal::kVmoFrozen;
+
+  Snapshot snapshot;
+  zx_status_t status = Snapshot::Create(
+      vmo.vmo(), {.read_attempts = 100, .skip_consistency_check = true}, &snapshot);
+
+  EXPECT_EQ(ZX_OK, status);
+
+  const auto* header_block = reinterpret_cast<Block const*>(snapshot.data());
+  EXPECT_EQ(inspect::internal::kVmoFrozen, header_block->payload.u64);
 }
 
 }  // namespace
