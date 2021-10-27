@@ -9,7 +9,7 @@ import("//build/images/vboot/vboot.gni")
 
 assert(current_toolchain == target_toolchain)
 
-assemble_system("bringup") {
+bringup_base = {
   testonly = true
   board_name = board_name
   output_dir = root_build_dir
@@ -35,8 +35,16 @@ assemble_system("bringup") {
     "//:additional_cache_packages",
     "//:additional_universe_packages",
   ]
+}
 
-  # zbi arguments
+# This target generates a (potentially signed) bringup ZBI and a corresponding
+# Vbmeta. Unfortunately, the resulting ZBI cannot be passed directly into a
+# fastboot boot invocation, as this command expects the image it is passed to
+# be a concatenation of the ZBI and Vbmeta. The bringup_fastboot target below
+# is responsible for generating that image.
+assemble_system("bringup_non_fastboot") {
+  forward_variables_from(bringup_base, "*")
+  image_name = "bringup"
   if (custom_signing_script != "") {
     zbi_signing_script = custom_signing_script
     deps = custom_signing_script_deps
@@ -110,4 +118,35 @@ assemble_system("bringup") {
       "IMAGE_NETBOOT_ZBI=bringup.zbi",
     ]
   }
+}
+
+# Builds a bringup image that we can RAM boot with fastboot boot.
+assemble_system("bringup_fastboot") {
+  forward_variables_from(bringup_base, "*")
+  zbi_signing_script = "concat_zbi_and_vbmeta.sh"
+  zbi_signing_args = []
+  if (use_vbmeta || use_vboot) {
+    assembly_out_dir = rebase_path(target_out_dir, root_build_dir)
+    zbi_signing_args = [
+      "-v",
+      "${assembly_out_dir}/${target_name}/bringup_fastboot.vbmeta",
+    ]
+  }
+  if (custom_signing_script != "") {
+    rebased_script = rebase_path(custom_signing_script, root_build_dir)
+    zbi_signing_args += [ "-s ${rebased_script}" ]
+    deps = custom_signing_script_deps
+  } else if (use_vboot) {
+    rebased_script = rebase_path(vboot_action.script, root_build_dir)
+    zbi_signing_args = [ "-s ${rebased_script}" ] + vboot_action.args
+    deps = vboot_action.deps
+  }
+}
+
+group("bringup") {
+  testonly = true
+  deps = [
+    ":bringup_fastboot",
+    ":bringup_non_fastboot",
+  ]
 }
