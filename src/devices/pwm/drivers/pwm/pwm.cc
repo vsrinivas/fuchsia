@@ -99,6 +99,59 @@ zx_status_t PwmDevice::PwmDisable() {
   return pwm_.Disable(id_.id);
 }
 
+void PwmDevice::GetConfig(GetConfigRequestView request, GetConfigCompleter::Sync& completer) {
+  pwm_config_t config;
+  zx_status_t status = PwmGetConfig(&config);
+
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+
+  fuchsia_hardware_pwm::wire::PwmConfig result;
+  result.polarity = config.polarity;
+  result.period_ns = config.period_ns;
+  result.duty_cycle = config.duty_cycle;
+
+  completer.ReplySuccess(result);
+}
+
+void PwmDevice::SetConfig(SetConfigRequestView request, SetConfigCompleter::Sync& completer) {
+  pwm_config_t new_config;
+
+  new_config.polarity = request->config.polarity;
+  new_config.period_ns = request->config.period_ns;
+  new_config.duty_cycle = request->config.duty_cycle;
+
+  zx_status_t result = PwmSetConfig(&new_config);
+
+  if (result != ZX_OK) {
+    completer.ReplyError(result);
+  } else {
+    completer.ReplySuccess();
+  }
+}
+
+void PwmDevice::Enable(EnableRequestView request, EnableCompleter::Sync& completer) {
+  zx_status_t result = PwmEnable();
+
+  if (result == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    completer.ReplyError(result);
+  }
+}
+
+void PwmDevice::Disable(DisableRequestView request, DisableCompleter::Sync& completer) {
+  zx_status_t result = PwmDisable();
+
+  if (result == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    completer.ReplyError(result);
+  }
+}
+
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;

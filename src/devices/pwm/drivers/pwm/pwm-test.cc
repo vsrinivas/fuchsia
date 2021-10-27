@@ -4,11 +4,23 @@
 
 #include "pwm.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/ddk/metadata.h>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
 
+#include "src/devices/testing/mock-ddk/mock-device.h"
+
 namespace pwm {
+
+namespace {
+
+constexpr pwm_id_t kTestMetadataIds[] = {{0}};
+
+}  // namespace
 
 zx_status_t fake_get_config(void* ctx, uint32_t idx, pwm_config_t* out_config) { return ZX_OK; }
 zx_status_t fake_set_config(void* ctx, uint32_t idx, const pwm_config_t* config) { return ZX_OK; }
@@ -28,32 +40,80 @@ struct fake_mode_config {
   uint32_t mode;
 };
 
-class FakePwmDevice : public PwmDevice {
+class FakePwmImpl : public ddk::PwmImplProtocol<FakePwmImpl> {
  public:
-  static std::unique_ptr<FakePwmDevice> Create() {
-    fbl::AllocChecker ac;
-    auto device = fbl::make_unique_checked<FakePwmDevice>(&ac);
-    if (!ac.check()) {
-      return nullptr;
-    }
+  FakePwmImpl() : proto_({&pwm_impl_protocol_ops_, this}) {}
+  const pwm_impl_protocol_t* proto() const { return &proto_; }
 
-    return device;
+  zx_status_t PwmImplGetConfig(uint32_t idx, pwm_config_t* out_config) {
+    get_config_count_++;
+    *out_config = config_;
+    return ZX_OK;
+  }
+  zx_status_t PwmImplSetConfig(uint32_t idx, const pwm_config_t* config) {
+    set_config_count_++;
+    config_ = *config;
+    return ZX_OK;
+  }
+  zx_status_t PwmImplEnable(uint32_t idx) {
+    enable_count_++;
+    return ZX_OK;
+  }
+  zx_status_t PwmImplDisable(uint32_t idx) {
+    disable_count_++;
+    return ZX_OK;
   }
 
-  explicit FakePwmDevice() : PwmDevice(&fake_proto) {}
+  // Accessors
+  unsigned int GetConfigCount() const { return get_config_count_; }
+  unsigned int SetConfigCount() const { return set_config_count_; }
+  unsigned int EnableCount() const { return enable_count_; }
+  unsigned int DisableCount() const { return disable_count_; }
+
+ private:
+  unsigned int get_config_count_ = 0;
+  unsigned int set_config_count_ = 0;
+  unsigned int enable_count_ = 0;
+  unsigned int disable_count_ = 0;
+
+  pwm_impl_protocol_t proto_;
+  pwm_config_t config_;
 };
 
 class PwmDeviceTest : public zxtest::Test {
  public:
+  PwmDeviceTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
   void SetUp() override {
-    pwm_ = FakePwmDevice::Create();
-    ASSERT_NOT_NULL(pwm_);
+    fake_parent_ = MockDevice::FakeRootParent();
+    fake_parent_->AddProtocol(ZX_PROTOCOL_PWM_IMPL, fake_pwm_impl_.proto()->ops,
+                              fake_pwm_impl_.proto()->ctx);
+    fake_parent_->SetMetadata(DEVICE_METADATA_PWM_IDS, &kTestMetadataIds, sizeof(kTestMetadataIds));
+
+    ASSERT_OK(PwmDevice::Create(nullptr, fake_parent_.get()));
+
+    ASSERT_EQ(fake_parent_->child_count(), 1u);
+
+    MockDevice* child_dev = fake_parent_->GetLatestChild();
+    pwm_ = child_dev->GetDeviceContext<PwmDevice>();
+
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_pwm::Pwm>();
+    std::optional<fidl::ServerBindingRef<fuchsia_hardware_pwm::Pwm>> fidl_server;
+    fidl_server = fidl::BindServer<fidl::WireServer<fuchsia_hardware_pwm::Pwm>>(
+        loop_.dispatcher(), std::move(endpoints->server), pwm_);
+    loop_.StartThread("pwm-fidl-test");
+
+    client_ = fidl::BindSyncClient(std::move(endpoints->client));
+    ASSERT_TRUE(client_.client_end().is_valid());
   }
 
-  void TearDown() override {}
+  void TearDown() override { loop_.Shutdown(); }
 
  protected:
-  std::unique_ptr<FakePwmDevice> pwm_;
+  PwmDevice* pwm_;
+  fidl::WireSyncClient<fuchsia_hardware_pwm::Pwm> client_;
+  std::shared_ptr<MockDevice> fake_parent_;
+  FakePwmImpl fake_pwm_impl_;
+  async::Loop loop_;
 };
 
 TEST_F(PwmDeviceTest, GetConfigTest) {
@@ -93,6 +153,81 @@ TEST_F(PwmDeviceTest, EnableTest) {
 TEST_F(PwmDeviceTest, DisableTest) {
   EXPECT_OK(pwm_->PwmDisable());
   EXPECT_OK(pwm_->PwmDisable());  // Second time
+}
+
+TEST_F(PwmDeviceTest, GetConfigFidlTest) {
+  // Set a config via the Banjo interface and validate that the same config is
+  // returned via the FIDL interface.
+  pwm_config_t fake_config{
+      .polarity = false,
+      .period_ns = 1000,
+      .duty_cycle = 45.0,
+  };
+  EXPECT_OK(pwm_->PwmSetConfig(&fake_config));
+
+  auto resp = client_.GetConfig();
+
+  ASSERT_TRUE(resp.ok());
+  ASSERT_TRUE(resp->result.is_response());
+  auto& config = resp->result.response().config;
+
+  EXPECT_EQ(fake_pwm_impl_.EnableCount(), 0);
+  EXPECT_EQ(fake_pwm_impl_.DisableCount(), 0);
+  EXPECT_EQ(fake_pwm_impl_.GetConfigCount(), 1);
+  EXPECT_EQ(fake_pwm_impl_.SetConfigCount(), 1);
+
+  EXPECT_EQ(config.polarity, fake_config.polarity);
+  EXPECT_EQ(config.period_ns, fake_config.period_ns);
+  EXPECT_EQ(config.duty_cycle, fake_config.duty_cycle);
+}
+
+TEST_F(PwmDeviceTest, SetConfigFidlTest) {
+  // Set a config via the FIDL interface and validate that the same config is
+  // returned via the Banjo interface.
+  fuchsia_hardware_pwm::wire::PwmConfig config;
+  config.polarity = true;
+  config.period_ns = 1235;
+  config.duty_cycle = 45.0;
+
+  EXPECT_OK(client_.SetConfig(config));
+
+  pwm_config_t fake_config;
+  EXPECT_OK(pwm_->PwmGetConfig(&fake_config));
+
+  EXPECT_EQ(fake_pwm_impl_.EnableCount(), 0);
+  EXPECT_EQ(fake_pwm_impl_.DisableCount(), 0);
+  EXPECT_EQ(fake_pwm_impl_.GetConfigCount(), 1);
+  EXPECT_EQ(fake_pwm_impl_.SetConfigCount(), 1);
+
+  EXPECT_EQ(config.polarity, fake_config.polarity);
+  EXPECT_EQ(config.period_ns, fake_config.period_ns);
+  EXPECT_EQ(config.duty_cycle, fake_config.duty_cycle);
+}
+
+TEST_F(PwmDeviceTest, EnableFidlTest) {
+  auto enable_resp = client_.Enable();
+
+  ASSERT_OK(enable_resp.status());
+
+  ASSERT_FALSE(enable_resp->result.is_err());
+
+  EXPECT_EQ(fake_pwm_impl_.EnableCount(), 1);
+  EXPECT_EQ(fake_pwm_impl_.DisableCount(), 0);
+  EXPECT_EQ(fake_pwm_impl_.GetConfigCount(), 0);
+  EXPECT_EQ(fake_pwm_impl_.SetConfigCount(), 0);
+}
+
+TEST_F(PwmDeviceTest, DisableFidlTest) {
+  auto enable_resp = client_.Disable();
+
+  ASSERT_OK(enable_resp.status());
+
+  ASSERT_FALSE(enable_resp->result.is_err());
+
+  EXPECT_EQ(fake_pwm_impl_.EnableCount(), 0);
+  EXPECT_EQ(fake_pwm_impl_.DisableCount(), 1);
+  EXPECT_EQ(fake_pwm_impl_.GetConfigCount(), 0);
+  EXPECT_EQ(fake_pwm_impl_.SetConfigCount(), 0);
 }
 
 }  // namespace pwm

@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_PWM_DRIVERS_PWM_PWM_H_
 #define SRC_DEVICES_PWM_DRIVERS_PWM_PWM_H_
 
+#include <fidl/fuchsia.hardware.pwm/cpp/wire.h>
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
 #include <lib/ddk/platform-defs.h>
 
@@ -14,7 +15,7 @@
 namespace pwm {
 
 class PwmDevice;
-using PwmDeviceType = ddk::Device<PwmDevice>;
+using PwmDeviceType = ddk::Device<PwmDevice, ddk::Messageable<fuchsia_hardware_pwm::Pwm>::Mixin>;
 
 class PwmDevice : public PwmDeviceType, public ddk::PwmProtocol<PwmDevice, ddk::base_protocol> {
  public:
@@ -28,9 +29,10 @@ class PwmDevice : public PwmDeviceType, public ddk::PwmProtocol<PwmDevice, ddk::
   zx_status_t PwmEnable();
   zx_status_t PwmDisable();
 
- protected:
-  // For unit testing
-  explicit PwmDevice(pwm_impl_protocol_t* pwm) : PwmDeviceType(nullptr), pwm_(pwm), id_({0}) {}
+  void GetConfig(GetConfigRequestView request, GetConfigCompleter::Sync& completer) override;
+  void SetConfig(SetConfigRequestView request, SetConfigCompleter::Sync& completer) override;
+  void Enable(EnableRequestView request, EnableCompleter::Sync& completer) override;
+  void Disable(DisableRequestView request, DisableCompleter::Sync& completer) override;
 
  private:
   explicit PwmDevice(zx_device_t* parent, pwm_impl_protocol_t* pwm, pwm_id_t id)

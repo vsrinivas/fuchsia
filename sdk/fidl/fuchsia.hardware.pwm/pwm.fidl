@@ -1,0 +1,25 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.pwm;
+
+using zx;
+
+type PwmConfig = struct {
+    polarity bool;
+    period_ns uint32;
+    duty_cycle float32; // In the range [0.0, 100.0]
+};
+
+protocol Pwm {
+    GetConfig() -> (struct {
+        config PwmConfig;
+    }) error zx.status;
+
+    SetConfig(struct {
+        config PwmConfig;
+    }) -> (struct {}) error zx.status;
+
+    Enable() -> (struct {}) error zx.status;
+    Disable() -> (struct {}) error zx.status;
+};

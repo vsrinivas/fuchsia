@@ -25,6 +25,7 @@ fuchsia_driver("pwm-driver") {
   sources = [ "pwm.cc" ]
   deps = [
     ":common",
+    "//sdk/fidl/fuchsia.hardware.pwm:fuchsia.hardware.pwm_llcpp",
     "//src/devices/lib/driver",
   ]
 }
@@ -43,7 +44,9 @@ test("pwm-test-bin") {
   ]
   deps = [
     ":common",
-    "//src/devices/testing/no_ddk",
+    "//src/devices/testing/mock-ddk",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
@@ -53,6 +56,7 @@ group("common") {
   public_deps = [
     ":pwm-bind",
     "//sdk/banjo/fuchsia.hardware.pwm:fuchsia.hardware.pwm_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.pwm:fuchsia.hardware.pwm_llcpp",
     "//src/devices/lib/amlogic",
     "//src/lib/ddk",
     "//src/lib/ddktl",
