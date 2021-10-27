@@ -13,6 +13,7 @@ import 'package:ermine/src/states/app_state_impl.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine/src/states/view_state.dart';
 import 'package:ermine/src/widgets/app_bar.dart';
+import 'package:ermine/src/widgets/dialogs/dialog.dart' as ermine;
 import 'package:flutter/material.dart' hide Action, AppBar;
 import 'package:fuchsia_scenic/views.dart';
 
@@ -26,7 +27,7 @@ import 'package:fuchsia_scenic/views.dart';
 abstract class AppState {
   ThemeData get theme;
   bool get hasDarkTheme;
-  bool get alertsVisible;
+  bool get dialogsVisible;
   bool get appBarVisible;
   bool get sideBarVisible;
   bool get overlaysVisible;
@@ -35,7 +36,7 @@ abstract class AppState {
   bool get viewsVisible;
   ViewState get topView;
   ViewState? get switchTarget;
-  List<AlertInfo> get alerts;
+  List<ermine.Dialog> get dialogs;
   List<ViewState> get views;
   Map<String, List<String>> get errors;
   Locale? get locale;
@@ -75,15 +76,4 @@ abstract class AppState {
       ),
     ) as AppState;
   }
-}
-
-class AlertInfo {
-  Key? key;
-  String? title;
-  String? content;
-  Map<String, VoidCallback> buttons;
-
-  AlertInfo({required this.buttons, this.title, this.content, this.key})
-      : assert(title != null || content != null),
-        assert(buttons.isNotEmpty);
 }

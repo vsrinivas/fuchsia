@@ -65,13 +65,16 @@ dart_library("lib") {
   ]
 
   widgets = [
-    "src/widgets/alert_dialogs.dart",
     "src/widgets/app.dart",
     "src/widgets/app_bar.dart",
     "src/widgets/app_chips.dart",
     "src/widgets/app_launcher.dart",
     "src/widgets/app_switcher.dart",
     "src/widgets/app_view.dart",
+    "src/widgets/dialogs/dialog.dart",
+    "src/widgets/dialogs/dialogs.dart",
+    "src/widgets/dialogs/text_only_dialog.dart",
+    "src/widgets/dialogs/textfield_dialog.dart",
     "src/widgets/launch_button.dart",
     "src/widgets/overlays.dart",
     "src/widgets/quick_settings.dart",

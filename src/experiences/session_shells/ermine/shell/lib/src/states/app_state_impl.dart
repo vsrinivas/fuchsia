@@ -15,6 +15,8 @@ import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine/src/states/view_state.dart';
 import 'package:ermine/src/states/view_state_impl.dart';
+import 'package:ermine/src/widgets/dialogs/dialog.dart' as ermine;
+import 'package:ermine/src/widgets/dialogs/text_only_dialog.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart' hide Action;
 import 'package:fuchsia_inspect/inspect.dart';
@@ -139,9 +141,9 @@ class AppStateImpl with Disposable implements AppState {
   final appIsLaunching = false.asObservable();
 
   @override
-  bool get alertsVisible => _alertsVisible.value;
-  late final _alertsVisible = (() {
-    return alerts.isNotEmpty;
+  bool get dialogsVisible => _dialogsVisible.value;
+  late final _dialogsVisible = (() {
+    return dialogs.isNotEmpty;
   }).asComputed();
 
   /// Returns true if shell has focus and any side bars are visible.
@@ -151,7 +153,7 @@ class AppStateImpl with Disposable implements AppState {
     return !isIdle &&
         !appIsLaunching.value &&
         shellHasFocus.value &&
-        (appBarVisible || sideBarVisible || switcherVisible || alertsVisible);
+        (appBarVisible || sideBarVisible || switcherVisible || dialogsVisible);
   }).asComputed();
 
   @override
@@ -171,7 +173,7 @@ class AppStateImpl with Disposable implements AppState {
   }).asComputed();
 
   @override
-  final alerts = <AlertInfo>[].asObservable();
+  final dialogs = <ermine.Dialog>[].asObservable();
 
   @override
   final errors = <String, List<String>>{}.asObservable();
@@ -365,17 +367,17 @@ class AppStateImpl with Disposable implements AppState {
     runInAction(() {
       final key = Key(
           'checkingforupdatesalert_${DateTime.now().millisecondsSinceEpoch}');
-      alerts.add(AlertInfo(
+      dialogs.add(TextOnlyDialog(
         key: key,
         title: Strings.channelUpdateAlertTitle,
-        content: Strings.channelUpdateAlertBody,
+        body: Strings.channelUpdateAlertBody,
         buttons: {
           Strings.close: () {
-            alerts.removeWhere((alert) => alert.key == key);
+            dialogs.removeWhere((dialog) => dialog.key == key);
           },
           Strings.continueLabel: () {
             settingsState.checkForUpdates();
-            alerts.removeWhere((alert) => alert.key == key);
+            dialogs.removeWhere((dialog) => dialog.key == key);
           },
         },
       ));
@@ -545,15 +547,15 @@ class AppStateImpl with Disposable implements AppState {
         errors[url] = [description, '$error\n$referenceLink'];
       } else {
         final key = Key('presenterr_${DateTime.now().millisecondsSinceEpoch}');
-        alerts.add(AlertInfo(
+        dialogs.add(TextOnlyDialog(
           key: key,
           title: description,
-          content: '${Strings.errorWhilePresenting},\n$url\n\n'
+          body: '${Strings.errorWhilePresenting},\n$url\n\n'
               '${Strings.errorType}: $error\n\n'
               '${Strings.moreErrorInformation}\n$referenceLink',
           buttons: {
             Strings.close: () {
-              alerts.removeWhere((alert) => alert.key == key);
+              dialogs.removeWhere((dialog) => dialog.key == key);
             }
           },
         ));
@@ -627,13 +629,13 @@ class AppStateImpl with Disposable implements AppState {
       }
       final description = Strings.applicationFailedToStart(view.title);
       final key = Key('startfail_${DateTime.now().millisecondsSinceEpoch}');
-      alerts.add(AlertInfo(
-        title: description,
-        content: 'Url: ${view.url}',
+      dialogs.add(TextOnlyDialog(
         key: key,
+        title: description,
+        body: 'Url: ${view.url}',
         buttons: {
           Strings.close: () {
-            alerts.removeWhere((alert) => alert.key == key);
+            dialogs.removeWhere((dialog) => dialog.key == key);
             view.close();
           }
         },

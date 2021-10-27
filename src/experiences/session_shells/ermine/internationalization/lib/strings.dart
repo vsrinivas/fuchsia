@@ -997,6 +997,12 @@ class Strings {
         desc: 'The label for "select a network" text field.',
       );
 
+  static String get showPassword => Intl.message(
+        'Show password',
+        name: 'Show password',
+        desc: 'The label for "Show password" checkbox.',
+      );
+
   /// Lookup message given it's name.
   static String? lookup(String name) {
     final _messages = <String, String>{
