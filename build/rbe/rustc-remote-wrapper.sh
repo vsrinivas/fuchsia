@@ -559,6 +559,7 @@ test "${#linker[@]}" = 0 || {
 
   objdump="$clang_dir_local"/bin/llvm-objdump
   readelf="$clang_dir_local"/bin/llvm-readelf
+  dwarfdump="$clang_dir_local"/bin/llvm-dwarfdump
 
   clang_lib_triple="$target_triple"
   case "$target_triple" in
@@ -804,7 +805,7 @@ test "$status" -ne 0 || test "$compare" = 0 || {
     fi
   done
 
-  diff_limit=20
+  diff_limit=25
   test "${#output_diffs[@]}" = 0 || {
     echo "*** Differences between local (-) and remote (+) build outputs found. ***"
     for f in "${output_diffs[@]}"
@@ -825,6 +826,9 @@ test "$status" -ne 0 || test "$compare" = 0 || {
             echo
             echo "readelf-diff (first $diff_limit lines):"
             diff_with "$readelf" -a -- "$f"{,.remote} | head -n "$diff_limit"
+            echo
+            echo "dwarfdump-diff (first $diff_limit lines):"
+            diff_with "$dwarfdump" -a -- "$f"{,.remote} | head -n "$diff_limit"
             echo
           }
           echo "nm-diff (first $diff_limit lines):"
