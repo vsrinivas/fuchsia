@@ -19,7 +19,12 @@ enum/member fuchsia.wlan.ieee80211/CipherSuiteType.WEP_40 1
 flexible enum fuchsia.wlan.ieee80211/CipherSuiteType uint32
 const fuchsia.wlan.ieee80211/MAC_ADDR_LEN uint8 6
 const fuchsia.wlan.ieee80211/MAX_MESH_ID_BYTE_LEN uint8 32
+const fuchsia.wlan.ieee80211/MAX_MGMT_FRAME_MAC_HEADER_BYTE_LEN uint8 28
+const fuchsia.wlan.ieee80211/MAX_MMPDU_BYTE_LEN uint16 2304
 const fuchsia.wlan.ieee80211/MAX_SSID_BYTE_LEN uint8 32
+const fuchsia.wlan.ieee80211/MAX_VHT_MPDU_BYTE_LEN_0 uint16 3895
+const fuchsia.wlan.ieee80211/MAX_VHT_MPDU_BYTE_LEN_1 uint16 7991
+const fuchsia.wlan.ieee80211/MAX_VHT_MPDU_BYTE_LEN_2 uint16 11454
 enum/member fuchsia.wlan.ieee80211/ReasonCode.AP_INITIATED 47
 enum/member fuchsia.wlan.ieee80211/ReasonCode.BAD_CIPHER_OR_AKM 29
 enum/member fuchsia.wlan.ieee80211/ReasonCode.BSS_TRANSITION_DISASSOC 12

@@ -27,3 +27,17 @@ alias MacAddr = array<uint8, MAC_ADDR_LEN>;
 /// IEEE Std 802.11-2016, 9.4.2.99
 @namespaced
 const MAX_MESH_ID_BYTE_LEN uint8 = 32;
+
+/// IEEE Std 802.11-2016, 9.2.4.7
+@namespaced
+const MAX_MMPDU_BYTE_LEN uint16 = 2304;
+@namespaced
+const MAX_VHT_MPDU_BYTE_LEN_0 uint16 = 3895;
+@namespaced
+const MAX_VHT_MPDU_BYTE_LEN_1 uint16 = 7991;
+@namespaced
+const MAX_VHT_MPDU_BYTE_LEN_2 uint16 = 11454;
+
+/// IEEE Std 802.11-2016, 9.3.3.2
+@namespaced
+const MAX_MGMT_FRAME_MAC_HEADER_BYTE_LEN uint8 = 28;

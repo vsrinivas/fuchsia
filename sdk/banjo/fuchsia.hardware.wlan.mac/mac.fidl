@@ -182,33 +182,6 @@ type WlanTxPacket = struct {
 type WlanIndication = strict enum : uint8 {
     PRE_TBTT = 1;
     BCN_TX_COMPLETE = 2;
-    HW_SCAN_COMPLETE = 3;
-    HW_SCAN_ABORTED = 4;
-};
-
-@derive_debug
-type WlanHwScanType = strict enum : uint8 {
-    ACTIVE = 1;
-    PASSIVE = 2;
-};
-
-type WlanHwScanConfig = struct {
-    scan_type WlanHwScanType;
-    /// Number of channels in the |channels| array. Must be at least 1
-    num_channels uint8;
-    /// Channel numbers to scan
-    channels array<uint8, ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
-    /// SSID for directed probe requests
-    ssid ieee80211.CSsid;
-};
-
-type WlanHwScan = strict enum : uint8 {
-    SUCCESS = 0;
-    ABORTED = 1;
-};
-
-type WlanHwScanResult = struct {
-    code WlanHwScan;
 };
 
 /// Includes the information about beacon template.
@@ -263,9 +236,12 @@ protocol WlanmacIfc {
         tx_status WlanTxStatus;
     });
 
-    /// Reports completion of a hardware scan
-    HwScanComplete(struct {
-        result WlanHwScanResult;
+    /// Reports completion of a scan associated with the unique `scan_id`. The status
+    /// `ZX_OUT_OF_RANGE` implies the scan request included a prohibited channel. The channel may be
+    /// prohibited because of the current country setting.
+    ScanComplete(struct {
+        scan_id uint64;
+        status zx.status;
     });
 };
 
@@ -372,17 +348,75 @@ protocol Wlanmac {
         st zx.status;
     });
 
-    /// Initiate a hardware scan
-    ///
-    /// Once the scan starts, scan results will be delivered as beacon and probe response frames
-    /// via the regular rx path.
-    ///
-    /// Unless an error is returned immediately, the driver will eventually
-    /// call wlanmac_ifc->hw_scan_complete()
-    StartHwScan(struct {
-        scan_config WlanHwScanConfig;
+    /// Start a passive scan in the device driver. Scan results will be delivered as Beacon
+    /// frames via WlanmacIfc.Recv(). When complete, WlanmacIfc.ScanComplete() will be called
+    /// with the corresponding unique `scan_id`.
+    StartPassiveScan(struct {
+        /// Channel numbers to scan.
+        ///
+        /// If a prohibited channel is specified, then `ZX_OUT_OF_RANGE` is returned either
+        /// immediately from this call or from the subsequent `ScanComplete` with the same
+        /// `scan_id`. The channel may be prohibited because of the current country setting.
+        @buffer
+        channel_list vector<uint8>:ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS;
+        /// Minimum duration to spend on each channel during the scan.
+        min_channel_time zx.duration;
+        /// Maximum duration to spend on each channel during the scan.
+        max_channel_time zx.duration;
+        /// Minimum duration to spend on the home channel(s) between the dwell time on each channel
+        /// where a home channel corresponds to channels the device should otherwise be present
+        /// on while not scanning.
+        min_home_time zx.duration;
     }) -> (struct {
-        st zx.status;
+        scan_id uint64;
+        status zx.status;
+    });
+
+    /// Start an active scan in the device driver. Scan results will be delivered as Beacon or
+    /// Probe Response frames via WlanmacIfc.Recv(). When complete, WlanmacIfc.ScanComplete()
+    /// will be called with the corresponding unique `scan_id`.
+    ///
+    /// The IEs specified must not result in a Probe Request MMPDU that exceed the limits
+    /// defined by IEEE Std 802.11-2016, 9.2.4.7. MMPDU limit constants can be found in
+    /// fuchsia.wlan.ieee80211. These limits are very large and will likely not be exceeded
+    /// by specifying the most common IEs found in Probe Request frames.
+    StartActiveScan(struct {
+        /// Channel numbers to scan.
+        ///
+        /// If a prohibited channel is specified, then `ZX_OUT_OF_RANGE` is returned either
+        /// immediately from this call or from the subsequent `ScanComplete` with the same
+        /// `scan_id`. The channel may be prohibited because of the current country setting.
+        @buffer
+        channel_list vector<uint8>:ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS;
+        /// List of SSIDs to include in Probe Request frames. Specifying an empty list in this
+        /// argument is equivalent to specifying a list with a single wildcard SSID.
+        ///
+        /// Note that only one SSID can be specified in each Probe Request frame, so the total
+        /// number of Probe Request frames required to complete an active scan is at least
+        /// the product of the lengths of channel_list and ssid_list.
+        ssid_list vector<ieee80211.CSsid>:MAX;
+        /// Buffer containing a MAC header (as defined in IEEE Std 802.11-2016, 9.3.3.2) to
+        /// include in each Probe Request frame.
+        @buffer
+        mac_header vector<uint8>:ieee80211.MAX_MGMT_FRAME_MAC_HEADER_BYTE_LEN;
+        /// Buffer containing IE bytes to include in each Probe Request frame.
+        @buffer
+        ies vector<uint8>:ieee80211.MAX_VHT_MPDU_BYTE_LEN_2;
+        /// Minimum duration to spend on each channel during the scan.
+        min_channel_time zx.duration;
+        /// Maximum duration to spend on each channel during the scan.
+        max_channel_time zx.duration;
+        /// Minimum duration to spend on the home channel(s) between the dwell time on each channel
+        /// where a home channel corresponds to channels the device should otherwise be present
+        /// on while not scanning.
+        min_home_time zx.duration;
+        /// Minimum number of Probe Request frames to transmit per channel.
+        min_probes_per_channel uint8;
+        /// Maximum number of Probe Request frames to transmit per channel.
+        max_probes_per_channel uint8;
+    }) -> (struct {
+        scan_id uint64;
+        status zx.status;
     });
 
     /// Notifies change of WMM parameters for specified AC
