@@ -6,6 +6,7 @@
 #define LIB_FDIO_INCLUDE_LIB_FDIO_NAMESPACE_H_
 
 #include <stdint.h>
+#include <zircon/availability.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -14,7 +15,7 @@ __BEGIN_CDECLS
 typedef struct fdio_namespace fdio_ns_t;
 
 // Create a new, empty namespace
-zx_status_t fdio_ns_create(fdio_ns_t** out);
+zx_status_t fdio_ns_create(fdio_ns_t** out) ZX_AVAILABLE_SINCE(1);
 
 // Destroy and deallocate a namespace.
 //
@@ -22,7 +23,7 @@ zx_status_t fdio_ns_create(fdio_ns_t** out);
 // no longer referenced.
 //
 // This function always returns |ZX_OK|.
-zx_status_t fdio_ns_destroy(fdio_ns_t* ns);
+zx_status_t fdio_ns_destroy(fdio_ns_t* ns) ZX_AVAILABLE_SINCE(1);
 
 // Create a new directory within a namespace, bound to the
 // directory-protocol-compatible handle h
@@ -31,7 +32,7 @@ zx_status_t fdio_ns_destroy(fdio_ns_t* ns);
 // namespace.
 //
 // Ownership of |h| is transferred to |ns|: it is closed on error.
-zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t h);
+zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t h) ZX_AVAILABLE_SINCE(1);
 
 // Unbinds |path| from a namespace, closing the handle within |ns| that
 // corresponds to that path when all references to the node go out of scope.
@@ -39,10 +40,10 @@ zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t h);
 // Returns ZX_ERR_NOT_FOUND if |path| is not a remote.
 // Returns ZX_ERR_NOT_SUPPORTED if |path| is the root of the namespace.
 // Returns ZX_ERR_INVALID_ARGS if |path| is otherwise invalid.
-zx_status_t fdio_ns_unbind(fdio_ns_t* ns, const char* path);
+zx_status_t fdio_ns_unbind(fdio_ns_t* ns, const char* path) ZX_AVAILABLE_SINCE(1);
 
 // Whether |path| is bound to a remote directory in |ns|.
-bool fdio_ns_is_bound(fdio_ns_t* ns, const char* path);
+bool fdio_ns_is_bound(fdio_ns_t* ns, const char* path) ZX_AVAILABLE_SINCE(1);
 
 // Create a new directory within a namespace, bound to the
 // directory referenced by the file descriptor fd.
@@ -57,16 +58,16 @@ bool fdio_ns_is_bound(fdio_ns_t* ns, const char* path);
 // ZX_ERR_BAD_STATE: Namespace is already in use and immutable.
 // ZX_ERR_ALREADY_EXISTS: There is already a mounted directory there.
 // ZX_ERR_NOT_SUPPORTED: This path would shadow a mounted directory.
-zx_status_t fdio_ns_bind_fd(fdio_ns_t* ns, const char* path, int fd);
+zx_status_t fdio_ns_bind_fd(fdio_ns_t* ns, const char* path, int fd) ZX_AVAILABLE_SINCE(1);
 
 // Open the root directory of the namespace as a file descriptor
-int fdio_ns_opendir(fdio_ns_t* ns);
+int fdio_ns_opendir(fdio_ns_t* ns) ZX_AVAILABLE_SINCE(1);
 
 // chdir to / in the provided namespace
-zx_status_t fdio_ns_chdir(fdio_ns_t* ns);
+zx_status_t fdio_ns_chdir(fdio_ns_t* ns) ZX_AVAILABLE_SINCE(1);
 
 // Retrieve the fdio "global" namespace (if any).
-zx_status_t fdio_ns_get_installed(fdio_ns_t** ns);
+zx_status_t fdio_ns_get_installed(fdio_ns_t** ns) ZX_AVAILABLE_SINCE(1);
 
 // flat_namespace contains parallel arrays of handles, path names, and types.  The number of
 // elements of these arrays is given by |count|.  For any given offset i:
@@ -78,7 +79,7 @@ typedef struct fdio_flat_namespace {
   zx_handle_t* handle;
   uint32_t* type;
   const char* const* path;
-} fdio_flat_namespace_t;
+} fdio_flat_namespace_t ZX_AVAILABLE_SINCE(1);
 
 // On success the caller takes ownership of a fdio_flat_namespace_t
 // containing a flat representation of the exported namespace (the
@@ -86,19 +87,20 @@ typedef struct fdio_flat_namespace {
 // The handles are CLONEs of the handles in the namespace and also
 // belong to the caller.
 // The whole data structure can be released with fdio_ns_free_flat_ns().
-zx_status_t fdio_ns_export(fdio_ns_t* ns, fdio_flat_namespace_t** out);
-zx_status_t fdio_ns_export_root(fdio_flat_namespace_t** out);
+zx_status_t fdio_ns_export(fdio_ns_t* ns, fdio_flat_namespace_t** out) ZX_AVAILABLE_SINCE(1);
+zx_status_t fdio_ns_export_root(fdio_flat_namespace_t** out) ZX_AVAILABLE_SINCE(1);
 
 // Attempt to connect to a service through the namespace.
 // The handle is always consumed.  It will be closed on error
 // or passed to the remote service on success.
 // The path must be an absolute path starting with / and containing
 // no ".." or "." or empty segments.
-zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, uint32_t zxflags, zx_handle_t h);
+zx_status_t fdio_ns_connect(fdio_ns_t* ns, const char* path, uint32_t zxflags, zx_handle_t h)
+    ZX_AVAILABLE_SINCE(1);
 
 // Frees a flat namespace.
 // Closes all handles contained within |ns|.
-void fdio_ns_free_flat_ns(fdio_flat_namespace_t* ns);
+void fdio_ns_free_flat_ns(fdio_flat_namespace_t* ns) ZX_AVAILABLE_SINCE(1);
 
 __END_CDECLS
 

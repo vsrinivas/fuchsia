@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <zircon/analyzer.h>
+#include <zircon/availability.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -42,7 +43,8 @@ __BEGIN_CDECLS
 //
 // ZX_ERR_ACCESS_DENIED: The namespace entry has insufficient rights to connect
 // to services.
-zx_status_t fdio_service_connect(const char* path, ZX_HANDLE_RELEASE zx_handle_t request);
+zx_status_t fdio_service_connect(const char* path, ZX_HANDLE_RELEASE zx_handle_t request)
+    ZX_AVAILABLE_SINCE(1);
 
 // Connects to a service at the given |path| relative to the given |directory|.
 //
@@ -64,10 +66,11 @@ zx_status_t fdio_service_connect(const char* path, ZX_HANDLE_RELEASE zx_handle_t
 // ZX_ERR_ACCESS_DENIED: |directory| has insufficient rights to connect to
 // services.
 zx_status_t fdio_service_connect_at(zx_handle_t directory, const char* path,
-                                    ZX_HANDLE_RELEASE zx_handle_t request);
+                                    ZX_HANDLE_RELEASE zx_handle_t request) ZX_AVAILABLE_SINCE(1);
 
 // Connect to a service named |name| in /svc.
-zx_status_t fdio_service_connect_by_name(const char* name, ZX_HANDLE_RELEASE zx_handle_t request);
+zx_status_t fdio_service_connect_by_name(const char* name, ZX_HANDLE_RELEASE zx_handle_t request)
+    ZX_AVAILABLE_SINCE(1);
 
 // Opens the remote object at the given |path| relative to the root of the namespace with the given
 // |flags| asynchronously.
@@ -77,7 +80,8 @@ zx_status_t fdio_service_connect_by_name(const char* name, ZX_HANDLE_RELEASE zx_
 // Always consumes |request|.
 //
 // See |fdio_service_connect| for details.
-zx_status_t fdio_open(const char* path, uint32_t flags, ZX_HANDLE_RELEASE zx_handle_t request);
+zx_status_t fdio_open(const char* path, uint32_t flags, ZX_HANDLE_RELEASE zx_handle_t request)
+    ZX_AVAILABLE_SINCE(1);
 
 // Opens the remote object at the given |path| relative to the given |directory| with the given
 // |flags| asynchronously.
@@ -88,7 +92,7 @@ zx_status_t fdio_open(const char* path, uint32_t flags, ZX_HANDLE_RELEASE zx_han
 //
 // See |fdio_service_connect_at| for details.
 zx_status_t fdio_open_at(zx_handle_t directory, const char* path, uint32_t flags,
-                         ZX_HANDLE_RELEASE zx_handle_t request);
+                         ZX_HANDLE_RELEASE zx_handle_t request) ZX_AVAILABLE_SINCE(1);
 
 // Opens the remote object at the given |path| relative to the root of the namespace with the given
 // |flags| synchronously, and on success, binds that channel to a file descriptor, returned via
@@ -100,7 +104,7 @@ zx_status_t fdio_open_at(zx_handle_t directory, const char* path, uint32_t flags
 // |flags| is a bit field of |fuchsia.io.OPEN_*|.
 //
 // See |fdio_service_connect| for details.
-zx_status_t fdio_open_fd(const char* path, uint32_t flags, int* out_fd);
+zx_status_t fdio_open_fd(const char* path, uint32_t flags, int* out_fd) ZX_AVAILABLE_SINCE(1);
 
 // Opens the remote object at the given |path| relative to the given |dir_fd| with the given |flags|
 // synchronously, and on success, binds that channel to a file descriptor, returned via |out_fd|.
@@ -111,7 +115,8 @@ zx_status_t fdio_open_fd(const char* path, uint32_t flags, int* out_fd);
 // |flags| is a bit field of |fuchsia.io.OPEN_*|.
 //
 // See |fdio_service_connect| fort details.
-zx_status_t fdio_open_fd_at(int dir_fd, const char* path, uint32_t flags, int* out_fd);
+zx_status_t fdio_open_fd_at(int dir_fd, const char* path, uint32_t flags, int* out_fd)
+    ZX_AVAILABLE_SINCE(1);
 
 // Clone the given |node| asynchronously.
 //
@@ -123,7 +128,7 @@ zx_status_t fdio_open_fd_at(int dir_fd, const char* path, uint32_t flags, int* o
 // The |node| is cloned as readable and writable.
 //
 // Upon failure, returns |ZX_HANDLE_INVALID|.
-zx_handle_t fdio_service_clone(ZX_HANDLE_USE zx_handle_t node);
+zx_handle_t fdio_service_clone(ZX_HANDLE_USE zx_handle_t node) ZX_AVAILABLE_SINCE(1);
 
 // Requests that |request| be connected to a clone of the given |node|
 // asynchronously.
@@ -143,7 +148,7 @@ zx_handle_t fdio_service_clone(ZX_HANDLE_USE zx_handle_t node);
 // Returns transport- and application-level errors associated with
 // |fuchsia.io.Node/Clone|.
 zx_status_t fdio_service_clone_to(ZX_HANDLE_USE zx_handle_t node,
-                                  ZX_HANDLE_RELEASE zx_handle_t request);
+                                  ZX_HANDLE_RELEASE zx_handle_t request) ZX_AVAILABLE_SINCE(1);
 
 __END_CDECLS
 

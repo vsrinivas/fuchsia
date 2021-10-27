@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <unistd.h>
+#include <zircon/availability.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -28,20 +29,20 @@ typedef struct fdio fdio_t;
 // # Errors
 //
 // TODO: Catalog errors.
-zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io);
+zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) ZX_AVAILABLE_SINCE(1);
 
 // Creates an |fdio_t| that does nothing.
-fdio_t* fdio_null_create(void);
+fdio_t* fdio_null_create(void) ZX_AVAILABLE_SINCE(1);
 
 // Access the |zxio_t| field within an |fdio_t|.
 typedef struct zxio_tag zxio_t;
-zxio_t* fdio_get_zxio(fdio_t* io);
+zxio_t* fdio_get_zxio(fdio_t* io) ZX_AVAILABLE_SINCE(1);
 
 // Creates a file descriptor that does nothing.
 //
 // Returns -1 and sets errno if the function is unable to create the file
 // descriptor (e.g., if the file descriptor table is full).
-int fdio_fd_create_null(void);
+int fdio_fd_create_null(void) ZX_AVAILABLE_SINCE(1);
 
 // Install an |fdio_t| in the file descriptor table for this process.
 //
@@ -54,7 +55,7 @@ int fdio_fd_create_null(void);
 // Always takes ownership of the given reference to the |fdio_t|. Upon success,
 // that reference is owned by the file descriptor table. Upon failure, the
 // reference is released.
-int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd);
+int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) ZX_AVAILABLE_SINCE(1);
 
 // Removes a file descriptor from the file descriptor table for this process.
 //
@@ -69,7 +70,7 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd);
 //
 // ZX_ERR_UNAVAILABLE: |fd| is busy or has been dup'ed and therefore is
 // referenced by multiple entries in the file descriptor table.
-zx_status_t fdio_unbind_from_fd(int fd, fdio_t** io_out);
+zx_status_t fdio_unbind_from_fd(int fd, fdio_t** io_out) ZX_AVAILABLE_SINCE(1);
 
 // If this fd represents a "service" (an rpc channel speaking
 // an unknown fidl protocol or a fuchsia.io.* protocol),
@@ -85,7 +86,7 @@ zx_status_t fdio_unbind_from_fd(int fd, fdio_t** io_out);
 // TODO: Can also return ZX_ERR_NOT_FOUND. Maybe should be ZX_ERR_INVALID_ARGS?
 // TODO: This function appears to work only for |fuchsia.io| protocols now.
 // Should we rename it to something like |fdio_take_remote|?
-zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out);
+zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) ZX_AVAILABLE_SINCE(1);
 
 // Storage for a ZXIO object.
 //
@@ -108,7 +109,7 @@ typedef struct zxio_storage zxio_storage_t;
 // upon success.
 //
 // Upon failure, returns NULL.
-fdio_t* fdio_zxio_create(zxio_storage_t** out_storage);
+fdio_t* fdio_zxio_create(zxio_storage_t** out_storage) ZX_AVAILABLE_SINCE(1);
 
 __END_CDECLS
 

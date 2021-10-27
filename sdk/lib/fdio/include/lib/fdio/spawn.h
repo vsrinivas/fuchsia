@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/analyzer.h>
+#include <zircon/availability.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -73,7 +74,8 @@ __BEGIN_CDECLS
 //
 // Returns the result of |fdio_spawn_vmo| in all other cases.
 zx_status_t fdio_spawn(ZX_HANDLE_USE zx_handle_t job, uint32_t flags, const char* path,
-                       const char* const* argv, ZX_HANDLE_ACQUIRE zx_handle_t* process_out);
+                       const char* const* argv, ZX_HANDLE_ACQUIRE zx_handle_t* process_out)
+    ZX_AVAILABLE_SINCE(1);
 
 // The |fdio_spawn_etc| function allows the running process to control the file
 // descriptor table in the process being spawned.
@@ -158,7 +160,7 @@ struct fdio_spawn_action {
       // The file descriptor in the spawned process that will receive the
       // clone or transfer.
       int target_fd;
-    } fd;
+    } fd ZX_AVAILABLE_SINCE(1);
     struct {
       // The prefix in which to install the given handle in the namespace
       // of the spawned process.
@@ -167,7 +169,7 @@ struct fdio_spawn_action {
       // The handle to install with the given prefix in the namespace of
       // the spawned process.
       zx_handle_t handle;
-    } ns;
+    } ns ZX_AVAILABLE_SINCE(1);
     struct {
       // The process argument identifier of the handle to pass to the
       // spawned process.
@@ -175,18 +177,18 @@ struct fdio_spawn_action {
 
       // The handle to pass to the process on startup.
       zx_handle_t handle;
-    } h;
+    } h ZX_AVAILABLE_SINCE(1);
     struct {
       // The name to assign to the spawned process.
       const char* data;
-    } name;
+    } name ZX_AVAILABLE_SINCE(1);
     struct {
       // The directory to share with the spawned process. |prefix| may match zero or more
       // entries in the callers flat namespace.
       const char* prefix;
-    } dir;
+    } dir ZX_AVAILABLE_SINCE(1);
   };
-};
+} ZX_AVAILABLE_SINCE(1);
 
 // The maximum size for error messages from |fdio_spawn_etc|.
 //
@@ -235,7 +237,7 @@ zx_status_t fdio_spawn_etc(ZX_HANDLE_USE zx_handle_t job, uint32_t flags, const 
                            const char* const* argv, const char* const* environ, size_t action_count,
                            ZX_HANDLE_RELEASE const fdio_spawn_action_t* actions,
                            ZX_HANDLE_ACQUIRE zx_handle_t* process_out,
-                           char err_msg_out[FDIO_SPAWN_ERR_MSG_MAX_LENGTH]);
+                           char err_msg_out[FDIO_SPAWN_ERR_MSG_MAX_LENGTH]) ZX_AVAILABLE_SINCE(1);
 
 // Spawn a process using the given executable in the given job.
 //
@@ -271,7 +273,7 @@ zx_status_t fdio_spawn_vmo(ZX_HANDLE_USE zx_handle_t job, uint32_t flags,
                            const char* const* environ, size_t action_count,
                            ZX_HANDLE_RELEASE const fdio_spawn_action_t* actions,
                            ZX_HANDLE_ACQUIRE zx_handle_t* process_out,
-                           char err_msg_out[FDIO_SPAWN_ERR_MSG_MAX_LENGTH]);
+                           char err_msg_out[FDIO_SPAWN_ERR_MSG_MAX_LENGTH]) ZX_AVAILABLE_SINCE(1);
 
 __END_CDECLS
 

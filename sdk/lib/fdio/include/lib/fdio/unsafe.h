@@ -6,6 +6,7 @@
 #define LIB_FDIO_INCLUDE_LIB_FDIO_UNSAFE_H_
 
 #include <stdint.h>
+#include <zircon/availability.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -23,19 +24,19 @@ typedef struct fdio fdio_t;
 // the reference.
 //
 // If the fd does not exist, it returns NULL
-fdio_t* fdio_unsafe_fd_to_io(int fd);
+fdio_t* fdio_unsafe_fd_to_io(int fd) ZX_AVAILABLE_SINCE(1);
 
 // Returns the handle corresponding to the underlying fdio,
 // if there is one. Returns ZX_HANDLE_INVALID otherwise.
 //
 // Since this handle is borrowed from the underlying fdio_t, it
 // is unsafe to close it or use it after fdio_unsafe_release is called.
-zx_handle_t fdio_unsafe_borrow_channel(fdio_t* io);
+zx_handle_t fdio_unsafe_borrow_channel(fdio_t* io) ZX_AVAILABLE_SINCE(1);
 
 // Releases a reference on a fdio_t.  Used to "return"
 // a fdio_t obtained from fdio_unsafe_fd_to_io() when you're
 // done with it.
-void fdio_unsafe_release(fdio_t* io);
+void fdio_unsafe_release(fdio_t* io) ZX_AVAILABLE_SINCE(1);
 
 // This given a fdio_t, and a bitmask of posix-style events
 // (EPOLLIN, EPOLLOUT, EPOLLERR), this returns a handle that
@@ -53,7 +54,7 @@ void fdio_unsafe_release(fdio_t* io);
 // hold a reference to.  It is not required that fdio_unsafe_wait_end() be
 // called after this.
 void fdio_unsafe_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle_out,
-                            zx_signals_t* signals_out);
+                            zx_signals_t* signals_out) ZX_AVAILABLE_SINCE(1);
 
 // This given a set of signals observed on a handle obtained
 // from fdio_unsafe_wait_begin() returns a set of posix-style events
@@ -61,7 +62,8 @@ void fdio_unsafe_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle_out
 //
 // This function is only safe to call on a fdio_t you
 // hold a reference to.
-void fdio_unsafe_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* events_out);
+void fdio_unsafe_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* events_out)
+    ZX_AVAILABLE_SINCE(1);
 
 __END_CDECLS
 

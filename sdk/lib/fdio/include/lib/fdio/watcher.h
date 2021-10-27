@@ -6,11 +6,13 @@
 #define LIB_FDIO_INCLUDE_LIB_FDIO_WATCHER_H_
 
 #include <lib/fdio/io.h>
+#include <zircon/availability.h>
 #include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
-typedef zx_status_t (*watchdir_func_t)(int dirfd, int event, const char* fn, void* cookie);
+typedef zx_status_t (*watchdir_func_t)(int dirfd, int event, const char* fn, void* cookie)
+    ZX_AVAILABLE_SINCE(1);
 
 // This event occurs when a file is added or removed, including
 // (for fdio_watch_directory()) files that already exist.
@@ -38,7 +40,8 @@ typedef zx_status_t (*watchdir_func_t)(int dirfd, int event, const char* fn, voi
 // by syscalls or public APIs, the callback does not need to
 // worry about it turning up normally.
 
-zx_status_t fdio_watch_directory(int dirfd, watchdir_func_t cb, zx_time_t deadline, void* cookie);
+zx_status_t fdio_watch_directory(int dirfd, watchdir_func_t cb, zx_time_t deadline, void* cookie)
+    ZX_AVAILABLE_SINCE(1);
 
 __END_CDECLS
 

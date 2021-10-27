@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <unistd.h>  // ssize_t
+#include <zircon/availability.h>
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
 #include <zircon/processargs.h>
@@ -38,7 +39,7 @@ typedef struct vnattr {
   uint64_t nlink;
   uint64_t create_time;  // posix time (seconds since epoch)
   uint64_t modify_time;  // posix time
-} vnattr_t;
+} vnattr_t ZX_AVAILABLE_SINCE(1);
 
 // mask that identifies what fields to set in setattr
 #define ATTR_CTIME 0000001
@@ -79,7 +80,7 @@ typedef struct vdirent {
   uint8_t size;
   uint8_t type;
   char name[0];
-} __PACKED vdirent_t;
+} __PACKED vdirent_t ZX_AVAILABLE_SINCE(1);
 
 __END_CDECLS
 

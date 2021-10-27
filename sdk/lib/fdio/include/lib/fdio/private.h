@@ -6,6 +6,7 @@
 #define LIB_FDIO_INCLUDE_LIB_FDIO_PRIVATE_H_
 
 #include <stdint.h>
+#include <zircon/availability.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -18,7 +19,8 @@ __BEGIN_CDECLS
 //
 // 'outlen' returns the length of the path placed in out, and 'is_dir'
 // is set to true if the returned path must be a directory.
-zx_status_t __fdio_cleanpath(const char* in, char* out, size_t* outlen, bool* is_dir);
+zx_status_t __fdio_cleanpath(const char* in, char* out, size_t* outlen, bool* is_dir)
+    ZX_AVAILABLE_SINCE(1);
 
 __END_CDECLS
 
