@@ -10,7 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:ermine/src/services/settings/task_service.dart';
 import 'package:fidl/fidl.dart' show InterfaceHandle, InterfaceRequest;
 import 'package:fidl_fuchsia_wlan_common/fidl_async.dart';
-import 'package:fidl_fuchsia_wlan_policy/fidl_async.dart';
+import 'package:fidl_fuchsia_wlan_policy/fidl_async.dart' as policy;
 import 'package:fuchsia_logger/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_services/services.dart';
@@ -19,25 +19,28 @@ import 'package:fuchsia_services/services.dart';
 class WiFiService implements TaskService {
   late final VoidCallback onChanged;
 
-  ClientProviderProxy? _clientProvider;
-  ClientControllerProxy? _clientController;
+  policy.ClientProviderProxy? _clientProvider;
+  policy.ClientControllerProxy? _clientController;
   late ClientStateUpdatesMonitor _monitor;
   StreamSubscription? _scanForNetworksSubscription;
-  ScanResultIteratorProxy? _scanResultIteratorProvider;
+  policy.ScanResultIteratorProxy? _scanResultIteratorProvider;
   StreamSubscription? _connectToWPA2NetworkSubscription;
+  StreamSubscription? _savedNetworksSubscription;
+  StreamSubscription? _removeNetworkSubscription;
 
   Timer? _timer;
   int scanIntervalInSeconds = 20;
-  late List<ScanResult> _scannedNetworks;
+  late List<policy.ScanResult> _scannedNetworks;
   String _targetNetwork = '';
+  late List<policy.NetworkConfig> _savedNetworks;
 
   WiFiService();
 
   @override
   Future<void> start() async {
-    _clientProvider = ClientProviderProxy();
-    _clientController = ClientControllerProxy();
-    _monitor = ClientStateUpdatesMonitor();
+    _clientProvider = policy.ClientProviderProxy();
+    _clientController = policy.ClientControllerProxy();
+    _monitor = ClientStateUpdatesMonitor(onChanged);
 
     Incoming.fromSvcPath().connectToService(_clientProvider);
 
@@ -51,6 +54,8 @@ class WiFiService implements TaskService {
           'Failed to start wlan client connection. Request status: $requestStatus');
     }
 
+    await getSavedNetworks();
+
     _timer = Timer.periodic(
         Duration(seconds: scanIntervalInSeconds), (_) => scanForNetworks());
   }
@@ -60,17 +65,19 @@ class WiFiService implements TaskService {
     _timer?.cancel();
     await _scanForNetworksSubscription?.cancel();
     await _connectToWPA2NetworkSubscription?.cancel();
+    await _savedNetworksSubscription?.cancel();
+    await _removeNetworkSubscription?.cancel();
     dispose();
   }
 
   @override
   void dispose() {
     _clientProvider?.ctrl.close();
-    _clientProvider = ClientProviderProxy();
+    _clientProvider = policy.ClientProviderProxy();
     _clientController?.ctrl.close();
-    _clientController = ClientControllerProxy();
+    _clientController = policy.ClientControllerProxy();
     _scanResultIteratorProvider?.ctrl.close();
-    _scanResultIteratorProvider = ScanResultIteratorProxy();
+    _scanResultIteratorProvider = policy.ScanResultIteratorProxy();
   }
 
   String get targetNetwork => _targetNetwork;
@@ -81,11 +88,11 @@ class WiFiService implements TaskService {
 
   Future<void> scanForNetworks() async {
     _scanForNetworksSubscription = () async {
-      _scanResultIteratorProvider = ScanResultIteratorProxy();
+      _scanResultIteratorProvider = policy.ScanResultIteratorProxy();
       await _clientController?.scanForNetworks(InterfaceRequest(
           _scanResultIteratorProvider?.ctrl.request().passChannel()));
-      List<ScanResult> aggregateScanResults = [];
-      List<ScanResult>? scanResults;
+      List<policy.ScanResult> aggregateScanResults = [];
+      List<policy.ScanResult>? scanResults;
       try {
         scanResults = await _scanResultIteratorProvider?.getNext();
         while (scanResults != null && scanResults.isNotEmpty) {
@@ -109,26 +116,26 @@ class WiFiService implements TaskService {
           icon: iconFromScannedNetwork(network)))
       .toList();
 
-  String nameFromScannedNetwork(ScanResult network) {
+  String nameFromScannedNetwork(policy.ScanResult network) {
     return utf8.decode(network.id!.ssid.toList());
   }
 
-  IconData iconFromScannedNetwork(ScanResult network) {
-    return network.id!.type == SecurityType.none
+  IconData iconFromScannedNetwork(policy.ScanResult network) {
+    return network.id!.type == policy.SecurityType.none
         ? Icons.signal_wifi_4_bar
         : Icons.wifi_lock;
   }
 
-  bool compatibleFromScannedNetwork(ScanResult network) {
-    return network.compatibility == Compatibility.supported;
+  bool compatibleFromScannedNetwork(policy.ScanResult network) {
+    return network.compatibility == policy.Compatibility.supported;
   }
 
   Future<void> connectToWPA2Network(String password) async {
     try {
       _connectToWPA2NetworkSubscription = () async {
         final utf8password = Uint8List.fromList(password.codeUnits);
-        final credential = Credential.withPassword(utf8password);
-        ScanResult? network = _scannedNetworks.firstWhereOrNull(
+        final credential = policy.Credential.withPassword(utf8password);
+        policy.ScanResult? network = _scannedNetworks.firstWhereOrNull(
             (network) => nameFromScannedNetwork(network) == _targetNetwork);
 
         if (network == null) {
@@ -137,7 +144,7 @@ class WiFiService implements TaskService {
         }
 
         final networkConfig =
-            NetworkConfig(id: network.id, credential: credential);
+            policy.NetworkConfig(id: network.id, credential: credential);
 
         // TODO(fxb/79885): Separate save and connect functionality.
         await _clientController?.saveNetwork(networkConfig);
@@ -154,21 +161,97 @@ class WiFiService implements TaskService {
       log.warning('Connecting to $targetNetwork failed: $e');
     }
   }
+
+  String? get currentNetwork => _monitor.currentNetwork();
+
+  bool get connectionsEnabled => _monitor.connectionsEnabled();
+
+  bool get incorrectPassword => _monitor.incorrectPassword();
+
+  Future<void> getSavedNetworks() async {
+    _savedNetworksSubscription = () async {
+      final iterator = policy.NetworkConfigIteratorProxy();
+      await _clientController?.getSavedNetworks(
+          InterfaceRequest(iterator.ctrl.request().passChannel()));
+
+      var aggregateNetworkResults = <policy.NetworkConfig>[];
+      var savedNetworkResults = await iterator.getNext();
+      while (savedNetworkResults.isNotEmpty) {
+        aggregateNetworkResults.addAll(savedNetworkResults);
+        savedNetworkResults = await iterator.getNext();
+      }
+
+      _savedNetworks = aggregateNetworkResults.toSet().toList();
+      onChanged();
+    }()
+        .asStream()
+        .listen((_) {});
+  }
+
+  // TODO(fxb/79885): Pass security type to ensure removing correct network
+  Future<void> remove(String network) async {
+    try {
+      _removeNetworkSubscription = () async {
+        final ssid = utf8.encode(network);
+        final foundNetwork = _savedNetworks
+            .firstWhereOrNull((network) => network.id?.ssid == ssid);
+
+        if (foundNetwork == null) {
+          throw Exception('$network not found in saved networks.');
+        }
+
+        final networkConfig = policy.NetworkConfig(
+            id: foundNetwork.id, credential: foundNetwork.credential);
+
+        await _clientController?.removeNetwork(networkConfig);
+      }()
+          .asStream()
+          .listen((_) {});
+    } on Exception catch (e) {
+      log.warning('Removing $network failed: $e');
+    }
+  }
 }
 
-class ClientStateUpdatesMonitor extends ClientStateUpdates {
-  final _binding = ClientStateUpdatesBinding();
-  ClientStateSummary? _summary;
+class ClientStateUpdatesMonitor extends policy.ClientStateUpdates {
+  final _binding = policy.ClientStateUpdatesBinding();
+  policy.ClientStateSummary? _summary;
+  late final VoidCallback _onChanged;
 
-  ClientStateUpdatesMonitor();
+  ClientStateUpdatesMonitor(this._onChanged);
 
-  InterfaceHandle<ClientStateUpdates> getInterfaceHandle() =>
+  InterfaceHandle<policy.ClientStateUpdates> getInterfaceHandle() =>
       _binding.wrap(this);
 
-  ClientStateSummary? getState() => _summary;
+  policy.ClientStateSummary? getState() => _summary;
+
+  bool connectionsEnabled() =>
+      _summary?.state == policy.WlanClientState.connectionsEnabled;
+
+  // Returns first found connected network.
+  // TODO(fxb/79885): expand to return multiple connected networks.
+  String? currentNetwork() {
+    final foundNetwork = _summary?.networks
+        ?.firstWhereOrNull(
+            (network) => network.state == policy.ConnectionState.connected)
+        ?.id!
+        .ssid
+        .toList();
+    return foundNetwork == null ? null : utf8.decode(foundNetwork);
+  }
+
+  // TODO(fxb/79855): ensure that failed password status is for target network
+  bool incorrectPassword() {
+    return _summary?.networks?.firstWhereOrNull((network) =>
+            network.status == policy.DisconnectStatus.credentialsFailed) !=
+        null;
+  }
 
   @override
-  Future<void> onClientStateUpdate(ClientStateSummary summary) async {}
+  Future<void> onClientStateUpdate(policy.ClientStateSummary summary) async {
+    _summary = summary;
+    _onChanged();
+  }
 }
 
 /// Network information needed for UI
