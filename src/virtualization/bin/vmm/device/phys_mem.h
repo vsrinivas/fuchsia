@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_PHYS_MEM_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_PHYS_MEM_H_
 
+#include <lib/stdcompat/span.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmo.h>
 
@@ -60,6 +61,13 @@ class PhysMem {
     FX_CHECK(off + len >= off && off + len >= addr_ && (off + len - addr_ <= vmo_size_))
         << "Pointer is not contained within guest physical memory";
     return off - addr_;
+  }
+
+  // Requests a span covering the given range of memory.
+  //
+  // Aborts if the input offset/size is out of range.
+  cpp20::span<std::byte> span(zx_vaddr_t offset, size_t len) const {
+    return cpp20::span<std::byte>(static_cast<std::byte*>(ptr(offset, len)), len);
   }
 
  protected:

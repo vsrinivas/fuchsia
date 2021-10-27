@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 
+#include <fbl/array.h>
 #include <virtio/gpu.h>
 
 #include "src/virtualization/bin/vmm/device/phys_mem.h"
@@ -26,7 +27,7 @@ class GpuResource {
   uint32_t height() const { return height_; }
   uint32_t stride() const { return width() * kPixelSizeInBytes; }
   uint32_t pixel_size() const { return kPixelSizeInBytes; }
-  const uint8_t* data() const { return host_backing_.get(); }
+  const uint8_t* data() const { return reinterpret_cast<uint8_t*>(host_backing_.get()); }
 
   // Called in response to VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING. This command
   // associates a set of guest memory pages with the resource.
@@ -53,8 +54,7 @@ class GpuResource {
     uint32_t len;
   };
   std::vector<BackingPage> guest_backing_;
-  size_t host_backing_size_;
-  std::unique_ptr<uint8_t[]> host_backing_;
+  fbl::Array<std::byte> host_backing_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_GPU_RESOURCE_H_

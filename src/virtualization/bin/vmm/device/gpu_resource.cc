@@ -4,14 +4,44 @@
 
 #include "src/virtualization/bin/vmm/device/gpu_resource.h"
 
+#include <lib/stdcompat/span.h>
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/compiler.h>
+
+#include <cstddef>
+
+#include <safemath/checked_math.h>
+
+namespace {
+
+// Return a subspan of the given fbl::Array.
+//
+// Aborts if the input is out of range.
+cpp20::span<std::byte> ArraySubspan(fbl::Array<std::byte>& source, size_t offset, size_t size) {
+  size_t end;
+  FX_CHECK(!add_overflow(offset, size, &end) && end <= source.size())
+      << "Specified range is out of bounds";
+  return cpp20::span<std::byte>(source.data() + offset, size);
+}
+
+// Copy the bytes in the span `src` to the span `dest`.
+//
+// Aborts if the size of `src` exceeds the size of `dest`.
+void CopyBytes(cpp20::span<std::byte> dest, cpp20::span<const std::byte> src) {
+  FX_CHECK(dest.size() >= src.size()) << "Destination memory range smaller than source range";
+  memcpy(dest.data(), src.data(), src.size());
+}
+
+// Zero the bytes in the given span.
+void ZeroBytes(cpp20::span<std::byte> dest) { memset(dest.data(), 0, dest.size()); }
+
+}  // namespace
 
 GpuResource::GpuResource(const PhysMem& phys_mem, uint32_t format, uint32_t width, uint32_t height)
-    : phys_mem_(&phys_mem),
-      width_(width),
-      height_(height),
-      host_backing_size_(width * height * kPixelSizeInBytes),
-      host_backing_(std::make_unique<uint8_t[]>(host_backing_size_)) {}
+    : phys_mem_(&phys_mem), width_(width), height_(height) {
+  host_backing_ =
+      fbl::MakeArray<std::byte>(safemath::CheckMul(width, height, kPixelSizeInBytes).ValueOrDie());
+}
 
 void GpuResource::AttachBacking(const virtio_gpu_mem_entry_t* mem_entries, uint32_t num_entries) {
   // NOTE: it is valid for driver to leave regions of the image without backing,
@@ -63,7 +93,8 @@ virtio_gpu_ctrl_type GpuResource::TransferToHost2d(const virtio_gpu_rect_t& rect
       }
 
       zx_vaddr_t src_vaddr = entry.addr + off - entry_off;
-      memcpy(&host_backing_[off], phys_mem_->ptr(src_vaddr, copy_size), copy_size);
+      CopyBytes(/*dest=*/ArraySubspan(host_backing_, /*offset=*/off, /*size=*/copy_size),
+                phys_mem_->span(src_vaddr, copy_size));
       transfer_bytes_remaining -= copy_size;
       off = off_next;
     }
@@ -71,7 +102,7 @@ virtio_gpu_ctrl_type GpuResource::TransferToHost2d(const virtio_gpu_rect_t& rect
   }
   if (transfer_bytes_remaining > 0) {
     FX_LOGS(WARNING) << "Transfer requested from unbacked pages";
-    memset(&host_backing_[off], 0, transfer_bytes_remaining);
+    ZeroBytes(ArraySubspan(host_backing_, off, transfer_bytes_remaining));
     return VIRTIO_GPU_RESP_ERR_UNSPEC;
   }
   return VIRTIO_GPU_RESP_OK_NODATA;
