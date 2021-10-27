@@ -18,6 +18,7 @@ use std::task::{Context, Poll};
 /// Polling (or attempting to extract the value from) a task after the
 /// executor is dropped may trigger a panic.
 #[must_use]
+#[derive(Debug)]
 pub struct Task<T> {
     remote_handle: RemoteHandle<T>,
 }
