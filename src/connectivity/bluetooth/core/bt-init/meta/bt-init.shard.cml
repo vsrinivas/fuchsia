@@ -80,6 +80,8 @@
                 "fuchsia.bluetooth.le.Central",
                 "fuchsia.bluetooth.le.Peripheral",
                 "fuchsia.bluetooth.sys.Access",
+                "fuchsia.bluetooth.sys.Bootstrap",
+                "fuchsia.bluetooth.sys.Configuration",
                 "fuchsia.bluetooth.sys.HostWatcher",
             ],
             from: "#bt-gap",

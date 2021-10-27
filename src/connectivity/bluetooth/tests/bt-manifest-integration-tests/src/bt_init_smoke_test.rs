@@ -10,7 +10,10 @@ use {
     fidl_fuchsia_bluetooth_gatt as fbgatt, fidl_fuchsia_bluetooth_le as fble,
     fidl_fuchsia_bluetooth_rfcomm_test::{RfcommTestMarker, RfcommTestProxy},
     fidl_fuchsia_bluetooth_snoop::{SnoopMarker, SnoopRequestStream},
-    fidl_fuchsia_bluetooth_sys::{AccessMarker, AccessProxy, HostWatcherMarker, HostWatcherProxy},
+    fidl_fuchsia_bluetooth_sys::{
+        AccessMarker, AccessProxy, BootstrapMarker, BootstrapProxy, ConfigurationMarker,
+        ConfigurationProxy, HostWatcherMarker, HostWatcherProxy,
+    },
     fidl_fuchsia_device::{NameProviderMarker, NameProviderRequestStream},
     fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_stash::SecureStoreMarker,
@@ -46,6 +49,8 @@ enum Event {
     LeCentral(Option<fble::CentralProxy>),
     LePeripheral(Option<fble::PeripheralProxy>),
     Access(Option<AccessProxy>),
+    Bootstrap(Option<BootstrapProxy>),
+    Config(Option<ConfigurationProxy>),
     HostWatcher(Option<HostWatcherProxy>),
     RfcommTest(Option<RfcommTestProxy>),
     Snoop(Option<SnoopRequestStream>),
@@ -55,6 +60,8 @@ enum Event {
     // there is no need to hold on to the requests in the Event.
     SecureStore,
 }
+
+const NUMBER_OF_EVENTS: usize = 12;
 
 impl From<SnoopRequestStream> for Event {
     fn from(src: SnoopRequestStream) -> Self {
@@ -98,6 +105,12 @@ async fn mock_client(mut sender: mpsc::Sender<Event>, handles: MockHandles) -> R
 
     let access_svc = handles.connect_to_service::<AccessMarker>()?;
     sender.send(Event::Access(Some(access_svc))).await.expect("failed sending ack to test");
+
+    let bootstrap_svc = handles.connect_to_service::<BootstrapMarker>()?;
+    sender.send(Event::Bootstrap(Some(bootstrap_svc))).await.expect("failed sending ack to test");
+
+    let configuration_svc = handles.connect_to_service::<ConfigurationMarker>()?;
+    sender.send(Event::Config(Some(configuration_svc))).await.expect("failed sending ack to test");
 
     let host_watcher_svc = handles.connect_to_service::<HostWatcherMarker>()?;
     sender
@@ -221,6 +234,8 @@ async fn bt_init_component_topology() {
     route_from_bt_init_to_mock_client::<fble::CentralMarker>(&mut builder);
     route_from_bt_init_to_mock_client::<fble::PeripheralMarker>(&mut builder);
     route_from_bt_init_to_mock_client::<AccessMarker>(&mut builder);
+    route_from_bt_init_to_mock_client::<BootstrapMarker>(&mut builder);
+    route_from_bt_init_to_mock_client::<ConfigurationMarker>(&mut builder);
     route_from_bt_init_to_mock_client::<HostWatcherMarker>(&mut builder);
     route_from_bt_init_to_mock_client::<RfcommTestMarker>(&mut builder);
 
@@ -280,13 +295,13 @@ async fn bt_init_component_topology() {
     // If the routing is correctly configured, we expect one of each of the Event enum to be
     // sent (so, in total, 10 events)
     let mut events = Vec::new();
-    for i in 0u32..10u32 {
+    for i in 0..NUMBER_OF_EVENTS {
         let msg = format!("Unexpected error waiting for {:?} event", i);
         let event = receiver.next().await.expect(&msg);
         info!("Got event with discriminant: {:?}", std::mem::discriminant(&event));
         events.push(event);
     }
-    assert_eq!(events.len(), 10);
+    assert_eq!(events.len(), NUMBER_OF_EVENTS);
     let discriminants: Vec<_> = events.iter().map(std::mem::discriminant).collect();
     for event in vec![
         Event::Profile(None),
@@ -294,6 +309,8 @@ async fn bt_init_component_topology() {
         Event::LeCentral(None),
         Event::LePeripheral(None),
         Event::Access(None),
+        Event::Bootstrap(None),
+        Event::Config(None),
         Event::HostWatcher(None),
         Event::RfcommTest(None),
         Event::Snoop(None),
