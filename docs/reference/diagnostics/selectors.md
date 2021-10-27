@@ -59,28 +59,6 @@ core/sessions/foo
 core2/session:foo  // inline comment
 ```
 
-#### Whitespace
-
-Significant trailing whitespace needs to be enclosed in quotes.
-For example, the following selectors are not equivalent:
-
-```
-a:b:c  // one
-"a:b:c  "  // two
-```
-
-`one` is processed as `a:b:c`. `two` is processed as <code>a:b:c &nbsp;&nbsp;</code>.
-
-Quotes do not have to be balanced, per component selector syntax rules. Therefore,
-the rightmost quote outside of a comment will always be considered the closing quote
-whenever there is a leading quote. 
-
-```
-"a:b"c"  // equivalent to `a:b"c`
-```
-
-Note: Quotes are not [legal moniker values][instance_and_collection_names], and the first portion of a valid selector is always a moniker.
-
 ## Component selector {#component-selector}
 
 ### Syntax {#syntax}
@@ -188,7 +166,7 @@ to a specific node within the data hierarchy.
 Each segment (the sections delimited by forward slashes) of the selector describes exactly one
 level, or node, of the data hierarchy. Hierarchy path selector segments may contain any characters,
 however if a segment needs to contain asterisk (`*`), forward slashes (`/`),
-back slashes (<code>\\</code>), or colons (`:`) they must be escaped.
+back slashes (<code>\\</code>), whitespace (tabs `\t` or ` `), or colons (`:`) they must be escaped.
 
 One thing to note that is unique to hierarchy path selectors and not component selectors, is the
 case in which a given node shares both a child and property of the same name. Consider the
@@ -238,8 +216,8 @@ hierarchies have string names. Omitting the property selector is effectively a
 [hierarchy path selector](#hierarchy-path-selector)
 
 Like the previous selector segments, if you wish to match against asterisks (`*`),
-forward slashes (`/`), back slashes (<code>\\</code>) or colons (`:`) they must be escaped with a
-backslash (<code>\\</code>).
+forward slashes (`/`), back slashes (<code>\\</code>), whitespace (tabs `\t` or ` `),
+or colons (`:`) they must be escaped with a backslash (<code>\\</code>).
 
 ### Wildcarding {#wildcarding}
 
