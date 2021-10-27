@@ -38,6 +38,8 @@ source_set("src") {
     "controller.h",
     "log_message_store.cc",
     "log_message_store.h",
+    "pressure_watcher.cc",
+    "pressure_watcher.h",
     "system_log_recorder.cc",
     "system_log_recorder.h",
     "writer.cc",
@@ -47,6 +49,7 @@ source_set("src") {
   public_deps = [
     "encoding:encoder",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.memorypressure",
     "//sdk/fidl/fuchsia.process.lifecycle",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",

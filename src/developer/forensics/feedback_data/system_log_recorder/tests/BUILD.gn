@@ -42,6 +42,21 @@ executable("lz4_encoding_unittest_exe") {
   ]
 }
 
+executable("pressure_watcher_unittest_exe") {
+  testonly = true
+
+  sources = [ "pressure_watcher_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback_data/system_log_recorder:src",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:memory_pressure",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("reader_unittest_exe") {
   testonly = true
 
@@ -123,6 +138,14 @@ fuchsia_component("lz4_encoding_unittest") {
   deps = [ ":lz4_encoding_unittest_exe" ]
 }
 
+fuchsia_component("pressure_watcher_unittest") {
+  testonly = true
+
+  manifest = "meta/pressure_watcher_unittest.cml"
+
+  deps = [ ":pressure_watcher_unittest_exe" ]
+}
+
 fuchsia_component("reader_unittest") {
   testonly = true
 
@@ -154,6 +177,7 @@ fuchsia_test_package("system-log-recorder-tests") {
   test_components = [
     ":log_message_store_unittest",
     ":lz4_encoding_unittest",
+    ":pressure_watcher_unittest",
     ":reader_unittest",
     ":system_log_recorder_unittest",
     ":writer_unittest",

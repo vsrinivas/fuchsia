@@ -29,6 +29,7 @@
             "fuchsia.hwinfo.Product",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.Log",
+            "fuchsia.memorypressure.Provider",
             "fuchsia.metrics.MetricEventLoggerFactory",
             "fuchsia.net.http.Loader",
             "fuchsia.net.name.Lookup",

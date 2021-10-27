@@ -60,6 +60,7 @@ int main() {
                                  .logs_dir = kCurrentLogsDir,
                                  .max_num_files = kMaxNumLogFiles,
                                  .total_log_size = kPersistentLogsMaxSize,
+                                 .min_fsync_interval = kMinFsyncInterval,
                              },
                              std::unique_ptr<Encoder>(new ProductionEncoder()));
 
