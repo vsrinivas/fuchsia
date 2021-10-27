@@ -39,19 +39,11 @@ assert(_optimize_valid + [ optimize ] - [ optimize ] != _optimize_valid,
 
 declare_args() {
   # Controls whether to use -Oz when `optimize` is set to `"size"`.
-  clang_use_oz = false
-
-  # Controls whether to use the ML inliner in Clang to reduce size. Note that
-  # the option only takes effect when `clang_use_oz` is set to `true`.
-  clang_ml_inliner = false
+  use_oz = false
 }
 
-if (clang_use_oz) {
+if (use_oz) {
   assert(optimize == "size", "clang_use_oz requires `optimize = \"size\"`")
-}
-
-if (clang_ml_inliner) {
-  assert(clang_use_oz, "clang_ml_inliner requires `clang_use_oz = true`")
 }
 
 # NOTE: Keep in sync with //build/config/zircon/levels.gni

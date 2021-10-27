@@ -27,6 +27,9 @@ declare_args() {
   # **NOTE:** This is for **experimentation only** and should not normally be
   # changed.  Set the version of the C++ standard to compile for, 17 or 20.
   experimental_cxx_version = 17
+
+  # Controls whether to use the ML inliner in Clang to reduce size.
+  clang_ml_inliner = false
 }
 
 # No frame pointers for host compiles.
@@ -331,15 +334,8 @@ config("optimize_default") {
 
 config("optimize_size") {
   # GCC doesn't have -Oz
-  if (!is_gcc && clang_use_oz) {
+  if (!is_gcc && use_oz) {
     cflags = [ "-Oz" ]
-    if (clang_ml_inliner) {
-      cflags += [
-        # `release` uses AOT model embedded inside the compiler.
-        "-mllvm",
-        "-enable-ml-inliner=release",
-      ]
-    }
   } else {
     # TODO(fxbug.dev/84386): We would ideally be using -Oz by default but that
     # currently frequently results in binaries that are larger than -Oz.
@@ -347,7 +343,15 @@ config("optimize_size") {
   }
   ldflags = cflags
 
-  if (clang_use_oz) {
+  if (clang_ml_inliner) {
+    cflags += [
+      # `release` uses AOT model embedded inside the compiler.
+      "-mllvm",
+      "-enable-ml-inliner=release",
+    ]
+  }
+
+  if (use_oz) {
     rustflags = [ "-Copt-level=z" ]
   } else {
     # TODO(fxbug.dev/84386): We would ideally be using -Oz by default but that
