@@ -310,15 +310,16 @@ zx_status_t VirtioMagma::Handle_internal_map2(const virtio_magma_internal_map2_c
   response->address_out = 0;
   response->hdr.type = VIRTIO_MAGMA_RESP_INTERNAL_MAP2;
 
+  zx::unowned_vmo vmo(static_cast<zx_handle_t>(request->buffer));
+
   // Buffer handle must have been stored.
-  auto iter = std::find(stored_handles_.begin(), stored_handles_.end(), request->buffer);
+  auto iter = std::find(stored_handles_.begin(), stored_handles_.end(), vmo->get());
   if (iter == stored_handles_.end()) {
     response->result_return = MAGMA_STATUS_INVALID_ARGS;
     return ZX_OK;
   }
 
   const uint64_t length = request->length;
-  zx::unowned_vmo vmo(request->buffer);
 
   zx_vaddr_t zx_vaddr;
   zx_status_t zx_status = vmar_.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0 /*vmar_offset*/, *vmo,
@@ -329,7 +330,7 @@ zx_status_t VirtioMagma::Handle_internal_map2(const virtio_magma_internal_map2_c
     return zx_status;
   }
 
-  buffer_maps2_.emplace(zx_vaddr, std::pair<zx_handle_t, size_t>(request->buffer, length));
+  buffer_maps2_.emplace(zx_vaddr, std::pair<zx_handle_t, size_t>(vmo->get(), length));
 
   response->address_out = zx_vaddr;
 
@@ -343,6 +344,7 @@ zx_status_t VirtioMagma::Handle_internal_unmap2(const virtio_magma_internal_unma
   response->hdr.type = VIRTIO_MAGMA_RESP_INTERNAL_UNMAP2;
 
   const uintptr_t address = request->address;
+  const uint64_t buffer = request->buffer;
 
   auto iter = buffer_maps2_.find(address);
   if (iter == buffer_maps2_.end()) {
@@ -354,7 +356,7 @@ zx_status_t VirtioMagma::Handle_internal_unmap2(const virtio_magma_internal_unma
   const zx_handle_t buffer_handle = mapping.first;
   const size_t length = mapping.second;
 
-  if (buffer_handle != request->buffer) {
+  if (buffer_handle != buffer) {
     response->result_return = MAGMA_STATUS_INVALID_ARGS;
     return ZX_OK;
   }
