@@ -119,7 +119,7 @@ void NetstackIntermediary::AddEthernetDevice(
 }
 
 fpromise::promise<fidl::InterfaceHandle<fuchsia::netemul::network::Network>>
-NetstackIntermediary::GetNetwork(std::string network_name) {
+NetstackIntermediary::GetNetwork(const std::string& network_name) {
   fpromise::bridge<fidl::InterfaceHandle<fuchsia::netemul::network::Network>> bridge;
 
   auto netc = std::make_shared<fidl::InterfacePtr<fuchsia::netemul::network::NetworkContext>>();

@@ -35,7 +35,7 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
   using NetworkBinding = std::pair<std::unique_ptr<netemul::EthernetClient>,
                                    fidl::InterfacePtr<fuchsia::netemul::network::FakeEndpoint>>;
 
-  NetstackIntermediary(NetworkMap mac_network_mapping);
+  explicit NetstackIntermediary(NetworkMap mac_network_mapping);
 
   // The following methods are required by the Machina guest's VirtioNet.
   void AddEthernetDevice(std::string topological_path,
@@ -66,18 +66,15 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
       ::fidl::InterfaceRequest<fuchsia::netstack::RouteTableTransaction> routeTableTransaction,
       StartRouteTableTransactionCallback callback) override {}
 
-  fidl::InterfaceRequestHandler<fuchsia::netstack::Netstack> GetHandler() {
-    return bindings_.GetHandler(this);
-  }
-
  protected:
   NetstackIntermediary(NetworkMap mac_network_mapping,
                        std::unique_ptr<sys::ComponentContext> context);
 
  private:
   fpromise::promise<fidl::InterfaceHandle<fuchsia::netemul::network::Network>> GetNetwork(
-      std::string network_name);
-  fpromise::promise<> SetupEthClient(const std::unique_ptr<netemul::EthernetClient>& eth_client);
+      const std::string& network_name);
+  static fpromise::promise<> SetupEthClient(
+      const std::unique_ptr<netemul::EthernetClient>& eth_client);
 
   void ReadGuestEp(size_t index);
 
