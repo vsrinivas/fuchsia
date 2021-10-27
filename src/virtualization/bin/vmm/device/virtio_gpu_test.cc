@@ -59,69 +59,63 @@ class VirtioGpuTest : public TestWithDevice, public fuchsia::ui::scenic::testing
     printf("Not implemented: Scenic::%s\n", name.data());
   }
 
-  void ResourceCreate2d() {
-    virtio_gpu_resource_create_2d_t request = {
-        .hdr = {.type = VIRTIO_GPU_CMD_RESOURCE_CREATE_2D},
-        .resource_id = kResourceId,
-        .format = kPixelFormat,
-        .width = kGpuStartupWidth,
-        .height = kGpuStartupHeight,
-    };
-    virtio_gpu_ctrl_hdr_t* response;
+  template <typename T>
+  zx_status_t SendRequest(const T& request, virtio_gpu_ctrl_hdr_t** response) {
     zx_status_t status = DescriptorChainBuilder(control_queue_)
                              .AppendReadableDescriptor(&request, sizeof(request))
-                             .AppendWritableDescriptor(&response, sizeof(*response))
+                             .AppendWritableDescriptor(response, sizeof(virtio_gpu_ctrl_hdr_t))
                              .Build();
-    ASSERT_EQ(ZX_OK, status);
+    if (status != ZX_OK) {
+      return status;
+    }
 
     status = gpu_->NotifyQueue(0);
-    ASSERT_EQ(ZX_OK, status);
-    status = WaitOnInterrupt();
-    ASSERT_EQ(ZX_OK, status);
+    if (status != ZX_OK) {
+      return status;
+    }
 
+    return WaitOnInterrupt();
+  }
+
+  void ResourceCreate2d() {
+    virtio_gpu_ctrl_hdr_t* response;
+    ASSERT_EQ(SendRequest(
+                  virtio_gpu_resource_create_2d_t{
+                      .hdr = {.type = VIRTIO_GPU_CMD_RESOURCE_CREATE_2D},
+                      .resource_id = kResourceId,
+                      .format = kPixelFormat,
+                      .width = kGpuStartupWidth,
+                      .height = kGpuStartupHeight,
+                  },
+                  &response),
+              ZX_OK);
     ASSERT_EQ(VIRTIO_GPU_RESP_OK_NODATA, response->type);
   }
 
   void ResourceAttachBacking() {
-    virtio_gpu_resource_attach_backing_t request = {
-        .hdr = {.type = VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING},
-        .resource_id = kResourceId,
-        .nr_entries = 0,
-    };
     virtio_gpu_ctrl_hdr_t* response;
-    zx_status_t status = DescriptorChainBuilder(control_queue_)
-                             .AppendReadableDescriptor(&request, sizeof(request))
-                             .AppendWritableDescriptor(&response, sizeof(*response))
-                             .Build();
-    ASSERT_EQ(ZX_OK, status);
-
-    status = gpu_->NotifyQueue(0);
-    ASSERT_EQ(ZX_OK, status);
-    status = WaitOnInterrupt();
-    ASSERT_EQ(ZX_OK, status);
-
+    ASSERT_EQ(SendRequest(
+                  virtio_gpu_resource_attach_backing_t{
+                      .hdr = {.type = VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING},
+                      .resource_id = kResourceId,
+                      .nr_entries = 0,
+                  },
+                  &response),
+              ZX_OK);
     ASSERT_EQ(VIRTIO_GPU_RESP_OK_NODATA, response->type);
   }
 
   void SetScanout(uint32_t resource_id, uint32_t response_type) {
-    virtio_gpu_set_scanout_t request = {
-        .hdr = {.type = VIRTIO_GPU_CMD_SET_SCANOUT},
-        .r = {.x = 0, .y = 0, .width = kGpuStartupWidth, .height = kGpuStartupHeight},
-        .scanout_id = kScanoutId,
-        .resource_id = resource_id,
-    };
     virtio_gpu_ctrl_hdr_t* response;
-    zx_status_t status = DescriptorChainBuilder(control_queue_)
-                             .AppendReadableDescriptor(&request, sizeof(request))
-                             .AppendWritableDescriptor(&response, sizeof(*response))
-                             .Build();
-    ASSERT_EQ(ZX_OK, status);
-
-    status = gpu_->NotifyQueue(0);
-    ASSERT_EQ(ZX_OK, status);
-    status = WaitOnInterrupt();
-    ASSERT_EQ(ZX_OK, status);
-
+    ASSERT_EQ(SendRequest(
+                  virtio_gpu_set_scanout_t{
+                      .hdr = {.type = VIRTIO_GPU_CMD_SET_SCANOUT},
+                      .r = {.x = 0, .y = 0, .width = kGpuStartupWidth, .height = kGpuStartupHeight},
+                      .scanout_id = kScanoutId,
+                      .resource_id = resource_id,
+                  },
+                  &response),
+              ZX_OK);
     EXPECT_EQ(response_type, response->type);
   }
 
@@ -166,4 +160,17 @@ TEST_F(VirtioGpuTest, SetScanoutWithInvalidResourceId) {
   ResourceCreate2d();
   ResourceAttachBacking();
   SetScanout(UINT32_MAX, VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
+}
+
+TEST_F(VirtioGpuTest, CreateLargeResource) {
+  virtio_gpu_ctrl_hdr_t* response;
+  ASSERT_EQ(SendRequest(
+                virtio_gpu_resource_create_2d_t{
+                    .hdr = {.type = VIRTIO_GPU_CMD_RESOURCE_CREATE_2D},
+                    .width = UINT32_MAX,
+                    .height = UINT32_MAX,
+                },
+                &response),
+            ZX_OK);
+  EXPECT_EQ(response->type, VIRTIO_GPU_RESP_ERR_OUT_OF_MEMORY);
 }

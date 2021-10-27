@@ -5,6 +5,8 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_GPU_RESOURCE_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_GPU_RESOURCE_H_
 
+#include <lib/zx/status.h>
+
 #include <memory>
 #include <vector>
 
@@ -16,7 +18,9 @@
 // A 2D GPU resource encapsulating guest and host memory.
 class GpuResource {
  public:
-  GpuResource(const PhysMem& phys_mem, uint32_t format, uint32_t width, uint32_t height);
+  static zx::status<GpuResource> Create(const PhysMem& phys_mem, uint32_t format, uint32_t width,
+                                        uint32_t height);
+
   GpuResource(GpuResource&&) = default;
   GpuResource& operator=(GpuResource&&) = default;
 
@@ -43,6 +47,9 @@ class GpuResource {
   virtio_gpu_ctrl_type TransferToHost2d(const virtio_gpu_rect_t& rect, uint64_t off);
 
  private:
+  GpuResource(const PhysMem& phys_mem, uint32_t format, uint32_t width, uint32_t height,
+              fbl::Array<std::byte> host_backing);
+
   static constexpr uint32_t kPixelSizeInBytes = 4;
 
   const PhysMem* phys_mem_;

@@ -14,6 +14,9 @@
 
 namespace {
 
+// Maximum size buffer we are willing to allocate for a user.
+constexpr size_t kMaxBufferSize = 256ul * 1024 * 1024;  // 256 MiB
+
 // Return a subspan of the given fbl::Array.
 //
 // Aborts if the input is out of range.
@@ -37,11 +40,25 @@ void ZeroBytes(cpp20::span<std::byte> dest) { memset(dest.data(), 0, dest.size()
 
 }  // namespace
 
-GpuResource::GpuResource(const PhysMem& phys_mem, uint32_t format, uint32_t width, uint32_t height)
-    : phys_mem_(&phys_mem), width_(width), height_(height) {
-  host_backing_ =
-      fbl::MakeArray<std::byte>(safemath::CheckMul(width, height, kPixelSizeInBytes).ValueOrDie());
+zx::status<GpuResource> GpuResource::Create(const PhysMem& phys_mem, uint32_t format,
+                                            uint32_t width, uint32_t height) {
+  // Ensure the created buffer is not too large.
+  uint64_t buffer_size;
+  if (!safemath::CheckMul(width, height, kPixelSizeInBytes).AssignIfValid(&buffer_size) ||
+      buffer_size > kMaxBufferSize) {
+    return zx::error(ZX_ERR_NO_RESOURCES);
+  }
+
+  return zx::success(
+      GpuResource(phys_mem, format, width, height, fbl::MakeArray<std::byte>(buffer_size)));
 }
+
+GpuResource::GpuResource(const PhysMem& phys_mem, uint32_t format, uint32_t width, uint32_t height,
+                         fbl::Array<std::byte> host_backing)
+    : phys_mem_(&phys_mem),
+      width_(width),
+      height_(height),
+      host_backing_(std::move(host_backing)) {}
 
 void GpuResource::AttachBacking(const virtio_gpu_mem_entry_t* mem_entries, uint32_t num_entries) {
   // NOTE: it is valid for driver to leave regions of the image without backing,

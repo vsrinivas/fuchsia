@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
+#include <lib/fitx/result.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/ui/scenic/cpp/session.h>
@@ -153,8 +154,14 @@ class ControlStream : public StreamBase {
 
   void ResourceCreate2d(const virtio_gpu_resource_create_2d_t* request,
                         virtio_gpu_ctrl_hdr_t* response) {
-    GpuResource resource(*phys_mem_, request->format, request->width, request->height);
-    resources_.insert_or_assign(request->resource_id, std::move(resource));
+    zx::status<GpuResource> resource =
+        GpuResource::Create(*phys_mem_, request->format, request->width, request->height);
+    if (resource.is_error()) {
+      response->type = VIRTIO_GPU_RESP_ERR_OUT_OF_MEMORY;
+      return;
+    }
+
+    resources_.insert_or_assign(request->resource_id, std::move(resource).value());
     response->type = VIRTIO_GPU_RESP_OK_NODATA;
   }
 
