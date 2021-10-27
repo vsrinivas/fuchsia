@@ -169,12 +169,22 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
   }
   // We encode start_args outside of callback in order to access stack-allocated
   // data before it is destroyed.
-  auto message =
-      std::make_unique<fdf::wire::DriverStartArgs::OwnedEncodedMessage>(&request->start_args);
-  if (!message->ok()) {
+  fdf::wire::DriverStartArgs::OwnedEncodedMessage message(&request->start_args);
+  if (!message.ok()) {
     LOGF(ERROR, "Failed to start driver '%s', could not encode start args: %s", url.data(),
-         message->FormatDescription().data());
-    completer.Close(message->status());
+         message.FormatDescription().data());
+    completer.Close(message.status());
+    return;
+  }
+
+  // We convert the outgoing message into an incoming message to provide to the
+  // driver on start.
+  auto converted_message =
+      std::make_unique<fidl::OutgoingToIncomingMessage>(message.GetOutgoingMessage());
+  if (!converted_message->ok()) {
+    LOGF(ERROR, "Failed to start driver '%s', could not convert start args: %s", url.data(),
+         converted_message->FormatDescription().data());
+    completer.Close(converted_message->status());
     return;
   }
 
@@ -184,7 +194,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
   fidl::WireSharedClient file(std::move(endpoints->client), loop_.dispatcher(),
                               std::make_unique<FileEventHandler>(url));
   auto callback = [this, request = std::move(request->driver), completer = completer.ToAsync(),
-                   url = std::move(url), message = std::move(message),
+                   url = std::move(url), converted_message = std::move(converted_message),
                    _ = file.Clone()](fidl::WireResponse<fio::File::GetBuffer>* response) mutable {
     if (response->s != ZX_OK) {
       LOGF(ERROR, "Failed to start driver '%s', could not get library VMO: %s", url.data(),
@@ -202,13 +212,6 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
     auto driver = Driver::Load(std::move(url), std::move(response->buffer->vmo));
     if (driver.is_error()) {
       completer.Close(driver.error_value());
-      return;
-    }
-
-    auto converted_message =
-        std::make_unique<fidl::OutgoingToIncomingMessage>(message->GetOutgoingMessage());
-    if (!converted_message->ok()) {
-      completer.Close(converted_message->status());
       return;
     }
 
