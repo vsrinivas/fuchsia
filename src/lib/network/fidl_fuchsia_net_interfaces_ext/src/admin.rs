@@ -269,6 +269,13 @@ impl Control {
     }
 }
 
+impl std::fmt::Debug for Control {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self { proxy, terminal_event_fut: _ } = self;
+        fmt.debug_struct("Control").field("proxy", proxy).finish()
+    }
+}
+
 /// Errors observed from wrapped terminal events.
 #[derive(Debug)]
 pub enum TerminalError<E> {

@@ -91,6 +91,8 @@ impl DeviceInfo {
 
 /// A type of device that may be discovered.
 #[async_trait]
+// TODO(https://fxbug.dev/74532): Delete this trait once we migrate away from
+// Ethernet devices.
 pub(super) trait Device {
     /// The name of this device.
     const NAME: &'static str;
@@ -118,10 +120,10 @@ pub(super) trait Device {
 
     /// Adds the device to the netstack.
     async fn add_to_stack(
-        netcfg: &mut super::NetCfg<'_>,
+        netcfg: &super::NetCfg<'_>,
         config: crate::InterfaceConfig,
         device_instance: &Self::DeviceInstance,
-    ) -> Result<u64, AddDeviceError>;
+    ) -> Result<(u64, fidl_fuchsia_net_interfaces_ext::admin::Control), AddDeviceError>;
 }
 
 /// An implementation of [`Device`] for ethernet devices.
@@ -193,10 +195,10 @@ impl Device for EthernetDevice {
     }
 
     async fn add_to_stack(
-        netcfg: &mut super::NetCfg<'_>,
+        netcfg: &super::NetCfg<'_>,
         config: crate::InterfaceConfig,
         device_instance: &Self::DeviceInstance,
-    ) -> Result<u64, AddDeviceError> {
+    ) -> Result<(u64, fidl_fuchsia_net_interfaces_ext::admin::Control), AddDeviceError> {
         let EthernetInstance { device: _, topological_path, file_path } = device_instance;
         let crate::InterfaceConfig { name, metric } = config;
 
@@ -216,6 +218,13 @@ impl Device for EthernetDevice {
         .with_context(|| format!("connect ethdev at {}", file_path))
         .map_err(errors::Error::NonFatal)?;
 
+        // NB: We create control ahead of time to prevent fallible operations
+        // after we have installed the device.
+        let (control, control_server_end) =
+            fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+                .context("create Control endpoints")
+                .map_err(errors::Error::NonFatal)?;
+
         let res = netcfg
             .netstack
             .add_ethernet_device(
@@ -230,12 +239,19 @@ impl Device for EthernetDevice {
             .map(Into::into);
 
         if res == Err(zx::Status::ALREADY_EXISTS) {
-            Err(AddDeviceError::AlreadyExists)
-        } else {
-            res.context("error adding ethernet device")
-                .map_err(errors::Error::NonFatal)
-                .map_err(AddDeviceError::Other)
+            return Err(AddDeviceError::AlreadyExists);
         }
+
+        let interface_id =
+            res.context("error adding ethernet device").map_err(errors::Error::NonFatal)?;
+
+        let () = netcfg
+            .debug
+            .get_admin(interface_id, control_server_end)
+            .context("calling get_admin")
+            .map_err(errors::Error::Fatal)?;
+
+        Ok((interface_id, control))
     }
 }
 
@@ -409,10 +425,10 @@ impl Device for NetworkDevice {
     }
 
     async fn add_to_stack(
-        netcfg: &mut super::NetCfg<'_>,
+        _netcfg: &super::NetCfg<'_>,
         config: crate::InterfaceConfig,
         device_instance: &Self::DeviceInstance,
-    ) -> Result<u64, AddDeviceError> {
+    ) -> Result<(u64, fidl_fuchsia_net_interfaces_ext::admin::Control), AddDeviceError> {
         let NetworkDeviceInstance { port: _, port_id, device_control, topological_path: _ } =
             device_instance;
         let crate::InterfaceConfig { name, metric } = config;
@@ -453,16 +469,7 @@ impl Device for NetworkDevice {
                 errors::Error::NonFatal(other).context("calling Control get_id"),
             )
         })?;
-
-        if let Some(fidl_fuchsia_net_interfaces_ext::admin::Control { .. }) =
-            netcfg.interface_control.insert(interface_id, control)
-        {
-            return Err(AddDeviceError::Other(errors::Error::Fatal(anyhow::anyhow!(
-                "unexpected existing interface with id {} in map",
-                interface_id
-            ))));
-        }
-        Ok(interface_id)
+        Ok((interface_id, control))
     }
 }
 

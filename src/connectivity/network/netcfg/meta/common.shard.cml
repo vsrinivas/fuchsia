@@ -10,6 +10,9 @@
     use: [
         {
             protocol: [
+                // TODO(https://fxbug.dev/74532): We won't need to reach out to
+                // debug once we don't have Ethernet interfaces anymore.
+                "fuchsia.net.debug.Interfaces",
                 "fuchsia.net.dhcp.Server",
                 "fuchsia.net.dhcpv6.ClientProvider",
                 "fuchsia.net.filter.Filter",

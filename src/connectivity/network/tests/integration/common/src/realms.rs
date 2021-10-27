@@ -223,6 +223,11 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                         path: Some("/data".to_string()),
                         ..fnetemul::StorageDep::EMPTY
                     }),
+                    // TODO(https://fxbug.dev/74532): We won't need to reach out to
+                    // debug once we don't have Ethernet interfaces anymore.
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_debug::InterfacesMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
                 ])),
                 eager: Some(true),
                 ..fnetemul::ChildDef::EMPTY

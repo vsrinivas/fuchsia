@@ -341,9 +341,16 @@ fn should_enable_filter(
     filter_enabled_interface_types.contains(&info.interface_type())
 }
 
+#[derive(Debug)]
+struct InterfaceState {
+    // Hold on to control to enforce interface ownership, even if unused.
+    _control: fidl_fuchsia_net_interfaces_ext::admin::Control,
+    config: InterfaceConfigState,
+}
+
 /// State for an interface.
 #[derive(Debug)]
-enum InterfaceState {
+enum InterfaceConfigState {
     Host(HostInterfaceState),
     WlanAp(WlanApInterfaceState),
 }
@@ -357,18 +364,22 @@ struct HostInterfaceState {
 struct WlanApInterfaceState {}
 
 impl InterfaceState {
-    fn new_host() -> Self {
-        Self::Host(HostInterfaceState { dhcpv6_client_addr: None })
+    fn new_host(control: fidl_fuchsia_net_interfaces_ext::admin::Control) -> Self {
+        Self {
+            _control: control,
+            config: InterfaceConfigState::Host(HostInterfaceState { dhcpv6_client_addr: None }),
+        }
     }
 
-    fn new_wlan_ap() -> Self {
-        Self::WlanAp(WlanApInterfaceState {})
+    fn new_wlan_ap(control: fidl_fuchsia_net_interfaces_ext::admin::Control) -> Self {
+        Self { _control: control, config: InterfaceConfigState::WlanAp(WlanApInterfaceState {}) }
     }
 
     fn is_wlan_ap(&self) -> bool {
-        match self {
-            InterfaceState::Host(_) => false,
-            InterfaceState::WlanAp(_) => true,
+        let Self { _control: _, config } = self;
+        match config {
+            InterfaceConfigState::Host(_) => false,
+            InterfaceConfigState::WlanAp(_) => true,
         }
     }
 
@@ -379,9 +390,10 @@ impl InterfaceState {
         dhcpv6_client_provider: Option<&fnet_dhcpv6::ClientProviderProxy>,
         watchers: &mut DnsServerWatchers<'_>,
     ) -> Result<(), errors::Error> {
+        let Self { _control: _, config } = self;
         let fnet_interfaces_ext::Properties { online, .. } = properties;
-        match self {
-            InterfaceState::Host(HostInterfaceState { dhcpv6_client_addr }) => {
+        match config {
+            InterfaceConfigState::Host(HostInterfaceState { dhcpv6_client_addr }) => {
                 if !online {
                     return Ok(());
                 }
@@ -392,7 +404,7 @@ impl InterfaceState {
                 *dhcpv6_client_addr =
                     start_dhcpv6_client(properties, dhcpv6_client_provider, watchers)?;
             }
-            InterfaceState::WlanAp(WlanApInterfaceState {}) => {}
+            InterfaceConfigState::WlanAp(WlanApInterfaceState {}) => {}
         }
         Ok(())
     }
@@ -406,6 +418,9 @@ pub struct NetCfg<'a> {
     filter: fnet_filter::FilterProxy,
     interface_state: fnet_interfaces::StateProxy,
     installer: fidl_fuchsia_net_interfaces_admin::InstallerProxy,
+    // TODO(https://fxbug.dev/74532): We won't need to reach out to debug once
+    // we don't have Ethernet interfaces anymore.
+    debug: fidl_fuchsia_net_debug::InterfacesProxy,
     dhcp_server: Option<fnet_dhcp::Server_Proxy>,
     dhcpv6_client_provider: Option<fnet_dhcpv6::ClientProviderProxy>,
 
@@ -419,7 +434,6 @@ pub struct NetCfg<'a> {
     // interface ID and store per-interface state, and should be merged.
     interface_states: HashMap<u64, InterfaceState>,
     interface_properties: HashMap<u64, fnet_interfaces_ext::Properties>,
-    interface_control: HashMap<u64, fidl_fuchsia_net_interfaces_ext::admin::Control>,
     interface_metrics: InterfaceMetrics,
 
     dns_servers: DnsServers,
@@ -548,6 +562,9 @@ impl<'a> NetCfg<'a> {
         let installer = svc_connect::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>(&svc_dir)
             .await
             .context("could not connect to installer")?;
+        let debug = svc_connect::<fidl_fuchsia_net_debug::InterfacesMarker>(&svc_dir)
+            .await
+            .context("could not connect to debug")?;
         let persisted_interface_config =
             interface::FileBackedConfig::load(&PERSISTED_INTERFACE_CONFIG_FILEPATH)
                 .context("error loading persistent interface configurations")?;
@@ -560,13 +577,13 @@ impl<'a> NetCfg<'a> {
             interface_state,
             dhcp_server,
             installer,
+            debug,
             dhcpv6_client_provider,
             allow_virtual_devices,
             persisted_interface_config,
             filter_enabled_interface_types,
             interface_properties: HashMap::new(),
             interface_states: HashMap::new(),
-            interface_control: HashMap::new(),
             interface_metrics,
             dns_servers: Default::default(),
         })
@@ -636,20 +653,20 @@ impl<'a> NetCfg<'a> {
             }
             DnsServersUpdateSource::Netstack => {}
             DnsServersUpdateSource::Dhcpv6 { interface_id } => {
-                let state = self
+                let InterfaceState { _control: _, config } = self
                     .interface_states
                     .get_mut(&interface_id)
                     .ok_or(anyhow::anyhow!("no interface state found for id={}", interface_id))?;
 
-                match state {
-                    InterfaceState::Host(HostInterfaceState { dhcpv6_client_addr }) => {
+                match config {
+                    InterfaceConfigState::Host(HostInterfaceState { dhcpv6_client_addr }) => {
                         let _: fnet::Ipv6SocketAddress =
                             dhcpv6_client_addr.take().ok_or(anyhow::anyhow!(
                                 "DHCPv6 was not being performed on host interface with id={}",
                                 interface_id
                             ))?;
                     }
-                    InterfaceState::WlanAp(WlanApInterfaceState {}) => {
+                    InterfaceConfigState::WlanAp(WlanApInterfaceState {}) => {
                         return Err(anyhow::anyhow!(
                             "should not have a DNS watcher for a WLAN AP interface with id={}",
                             interface_id
@@ -905,7 +922,11 @@ impl<'a> NetCfg<'a> {
                 match self.interface_states.get_mut(&id) {
                     // An interface netcfg is not configuring was changed, do nothing.
                     None => return Ok(()),
-                    Some(InterfaceState::Host(HostInterfaceState { dhcpv6_client_addr })) => {
+                    Some(InterfaceState {
+                        _control: _,
+                        config:
+                            InterfaceConfigState::Host(HostInterfaceState { dhcpv6_client_addr }),
+                    }) => {
                         let dhcpv6_client_provider =
                             if let Some(dhcpv6_client_provider) = &self.dhcpv6_client_provider {
                                 dhcpv6_client_provider
@@ -995,7 +1016,10 @@ impl<'a> NetCfg<'a> {
                         }
                         Ok(())
                     }
-                    Some(InterfaceState::WlanAp(WlanApInterfaceState {})) => {
+                    Some(InterfaceState {
+                        _control: _,
+                        config: InterfaceConfigState::WlanAp(WlanApInterfaceState {}),
+                    }) => {
                         // TODO(fxbug.dev/55879): Stop the DHCP server when the address it is
                         // listening on is removed.
                         let dhcp_server = if let Some(dhcp_server) = &self.dhcp_server {
@@ -1038,46 +1062,57 @@ impl<'a> NetCfg<'a> {
                     // An interface netcfg was not responsible for configuring was removed, do
                     // nothing.
                     None => Ok(()),
-                    Some(InterfaceState::Host(HostInterfaceState { mut dhcpv6_client_addr })) => {
-                        let sockaddr = match dhcpv6_client_addr.take() {
-                            Some(s) => s,
-                            None => return Ok(()),
-                        };
+                    Some(InterfaceState { _control: _, config }) => {
+                        match config {
+                            InterfaceConfigState::Host(HostInterfaceState {
+                                mut dhcpv6_client_addr,
+                            }) => {
+                                let sockaddr = match dhcpv6_client_addr.take() {
+                                    Some(s) => s,
+                                    None => return Ok(()),
+                                };
 
-                        info!(
-                            "host interface {} (id={}) removed \
+                                info!(
+                                    "host interface {} (id={}) removed \
                             so stopping DHCPv6 client w/ sockaddr = {}",
-                            name,
-                            id,
-                            sockaddr.display_ext()
-                        );
+                                    name,
+                                    id,
+                                    sockaddr.display_ext()
+                                );
 
-                        dhcpv6::stop_client(&self.lookup_admin, &mut self.dns_servers, id, watchers)
-                            .await
-                            .with_context(|| {
-                                format!(
-                                    "error stopping DHCPv6 client on removed interface {} (id={})",
-                                    name, id
+                                dhcpv6::stop_client(
+                                    &self.lookup_admin,
+                                    &mut self.dns_servers,
+                                    id,
+                                    watchers,
                                 )
-                            })
-                    }
-                    Some(InterfaceState::WlanAp(WlanApInterfaceState {})) => {
-                        if let Some(dhcp_server) = &self.dhcp_server {
-                            // The DHCP server should only run on the WLAN AP interface, so stop it
-                            // since the AP interface is removed.
-                            info!(
-                                "WLAN AP interface {} (id={}) is removed, stopping DHCP server",
-                                name, id
-                            );
-                            dhcpv4::stop_server(dhcp_server)
                                 .await
-                                .context("error stopping DHCP server")
-                        } else {
-                            Ok(())
+                                .with_context(|| {
+                                    format!(
+                                        "error stopping DHCPv6 client on removed interface {} (id={})",
+                                        name, id
+                                    )
+                                })
+                            }
+                            InterfaceConfigState::WlanAp(WlanApInterfaceState {}) => {
+                                if let Some(dhcp_server) = &self.dhcp_server {
+                                    // The DHCP server should only run on the WLAN AP interface, so stop it
+                                    // since the AP interface is removed.
+                                    info!(
+                                        "WLAN AP interface {} (id={}) is removed, stopping DHCP server",
+                                        name, id
+                                    );
+                                    dhcpv4::stop_server(dhcp_server)
+                                        .await
+                                        .context("error stopping DHCP server")
+                                } else {
+                                    Ok(())
+                                }
+                            }
                         }
+                        .context("failed to handle interface removed event")
                     }
                 }
-                .context("failed to handle interface removed event")
             }
             fnet_interfaces_ext::UpdateResult::NoChange => Ok(()),
         }
@@ -1257,7 +1292,7 @@ impl<'a> NetCfg<'a> {
 
         info!("adding {} {:?} to stack with name = {}", D::NAME, device_instance, interface_name);
 
-        let interface_id = D::add_to_stack(
+        let (interface_id, control) = D::add_to_stack(
             self,
             InterfaceConfig { name: interface_name.clone(), metric },
             device_instance,
@@ -1265,7 +1300,7 @@ impl<'a> NetCfg<'a> {
         .await
         .context("error adding to stack")?;
 
-        self.configure_eth_interface(interface_id, interface_name, &info)
+        self.configure_eth_interface(interface_id, control, interface_name, &info)
             .await
             .context("error configuring ethernet interface")
             .map_err(devices::AddDeviceError::Other)
@@ -1279,6 +1314,7 @@ impl<'a> NetCfg<'a> {
     async fn configure_eth_interface(
         &mut self,
         interface_id: u64,
+        control: fidl_fuchsia_net_interfaces_ext::admin::Control,
         interface_name: String,
         info: &DeviceInfo,
     ) -> Result<(), errors::Error> {
@@ -1300,7 +1336,7 @@ impl<'a> NetCfg<'a> {
                     return Err(errors::Error::Fatal(anyhow::anyhow!("multiple interfaces with the same ID = {}; attempting to add state for a WLAN AP, existing state = {:?}", entry.key(), entry.get())));
                 }
                 Entry::Vacant(entry) => {
-                    let _: &mut InterfaceState = entry.insert(InterfaceState::new_wlan_ap());
+                    let _: &mut InterfaceState = entry.insert(InterfaceState::new_wlan_ap(control));
                 }
             }
 
@@ -1319,7 +1355,7 @@ impl<'a> NetCfg<'a> {
                     return Err(errors::Error::Fatal(anyhow::anyhow!("multiple interfaces with the same ID = {}; attempting to add state for a host, existing state = {:?}", entry.key(), entry.get())));
                 }
                 Entry::Vacant(entry) => {
-                    let _: &mut InterfaceState = entry.insert(InterfaceState::new_host());
+                    let _: &mut InterfaceState = entry.insert(InterfaceState::new_host(control));
                 }
             }
 
@@ -1706,6 +1742,9 @@ mod tests {
         let (installer, _installer_server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
                 .context("error creating installer endpoints")?;
+        let (debug, _debug_server) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_net_debug::InterfacesMarker>()
+                .context("error creating installer endpoints")?;
         let persisted_interface_config =
             interface::FileBackedConfig::load(&PERSISTED_INTERFACE_CONFIG_FILEPATH)
                 .context("error loading persistent interface configurations")?;
@@ -1718,6 +1757,7 @@ mod tests {
                 filter,
                 interface_state,
                 installer,
+                debug,
                 dhcp_server: Some(dhcp_server),
                 dhcpv6_client_provider: Some(dhcpv6_client_provider),
                 persisted_interface_config,
@@ -1725,7 +1765,6 @@ mod tests {
                 filter_enabled_interface_types: Default::default(),
                 interface_properties: Default::default(),
                 interface_states: Default::default(),
-                interface_control: Default::default(),
                 interface_metrics: Default::default(),
                 dns_servers: Default::default(),
             },
@@ -1849,8 +1888,11 @@ mod tests {
 
         // Mock a new interface being discovered by NetCfg (we only need to make NetCfg aware of a
         // NIC with ID `INTERFACE_ID` to test DHCPv6).
+        let (control, _control_server_end) =
+            fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+                .expect("create endpoints");
         matches::assert_matches!(
-            netcfg.interface_states.insert(INTERFACE_ID, InterfaceState::new_host()),
+            netcfg.interface_states.insert(INTERFACE_ID, InterfaceState::new_host(control)),
             None
         );
 
@@ -2012,8 +2054,11 @@ mod tests {
 
         // Mock a new interface being discovered by NetCfg (we only need to make NetCfg aware of a
         // NIC with ID `INTERFACE_ID` to test DHCPv6).
+        let (control, _control_server_end) =
+            fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+                .expect("create endpoints");
         matches::assert_matches!(
-            netcfg.interface_states.insert(INTERFACE_ID, InterfaceState::new_host()),
+            netcfg.interface_states.insert(INTERFACE_ID, InterfaceState::new_host(control)),
             None
         );
 
