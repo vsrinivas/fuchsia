@@ -141,19 +141,6 @@ protocol Daemon {
         iterator server_end:rc.ArchiveIterator;
     }) -> (struct {}) error DiagnosticsStreamError;
 
-    /// Gets a target proxy for the given target.
-    /// The target param expects an exact match with a target's
-    /// nodename.
-    ///
-    /// If the target nodename is not included, this will return the target
-    /// control instance for the target iff there is only one target in the
-    /// cache, else will return an error. If there are no targets in the cache,
-    /// will wait until the client chooses to time out.
-    GetTarget(resource struct {
-        target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
-        target_controller server_end:TargetControl;
-    }) -> (struct {}) error DaemonError;
-
     /// Connects to a deamon service.
     ///
     /// Takes a service name under which the channel will be connected (the

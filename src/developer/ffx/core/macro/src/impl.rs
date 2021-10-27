@@ -41,7 +41,7 @@ lazy_static! {
         ("RemoteControlProxy", "remote_factory", true),
         ("DaemonProxy", "daemon_factory", true),
         ("FastbootProxy", "fastboot_factory", true),
-        ("TargetControlProxy", "target_factory", true),
+        ("TargetHandleProxy", "target_factory", true),
         ("VersionInfo", "build_info", false),
         ("Writer", "writer", false),
     ];
@@ -1565,7 +1565,7 @@ mod test {
         let proxies = Default::default();
         let original: ItemFn = parse_quote! {
             pub async fn echo(
-                target: TargetControlProxy,
+                target: TargetHandleProxy,
                 _cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
         ffx_plugin(original.clone(), proxies).map(|_| ())

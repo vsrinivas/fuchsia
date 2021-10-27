@@ -19,7 +19,6 @@ use {
 
 mod constants;
 mod daemon;
-mod target_control;
 
 pub use constants::{get_socket, LOG_FILE_PREFIX};
 
