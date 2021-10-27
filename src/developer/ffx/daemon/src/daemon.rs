@@ -586,58 +586,6 @@ impl Daemon {
             DaemonRequest::Hang { .. } => loop {
                 std::thread::park()
             },
-            DaemonRequest::GetRemoteControl { target, remote, responder } => {
-                let target = match self.get_target(target).await {
-                    Ok(t) => t,
-                    Err(e) => {
-                        responder.send(&mut Err(e)).context("sending error response")?;
-                        return Ok(());
-                    }
-                };
-                if matches!(target.get_connection_state(), TargetConnectionState::Fastboot(_)) {
-                    let nodename = target.nodename().unwrap_or("<No Nodename>".to_string());
-                    log::warn!("Attempting to connect to RCS on a fastboot target: {}", nodename);
-                    responder
-                        .send(&mut Err(DaemonError::TargetInFastboot))
-                        .context("sending error response")?;
-                    return Ok(());
-                }
-                if matches!(target.get_connection_state(), TargetConnectionState::Zedboot(_)) {
-                    let nodename = target.nodename().unwrap_or("<No Nodename>".to_string());
-                    log::warn!("Attempting to connect to RCS on a zedboot target: {}", nodename);
-                    responder
-                        .send(&mut Err(DaemonError::TargetInZedboot))
-                        .context("sending error response")?;
-                    return Ok(());
-                }
-
-                // Ensure auto-connect has at least started.
-                target.run_host_pipe();
-                match target.events.wait_for(None, |e| e == TargetEvent::RcsActivated).await {
-                    Ok(()) => (),
-                    Err(e) => {
-                        log::warn!("{}", e);
-                        responder
-                            .send(&mut Err(DaemonError::RcsConnectionError))
-                            .context("sending error response")?;
-                        return Ok(());
-                    }
-                }
-                let mut rcs = match target.rcs() {
-                    Some(r) => r,
-                    None => {
-                        log::warn!("rcs dropped after event fired");
-                        responder
-                            .send(&mut Err(DaemonError::TargetStateError))
-                            .context("sending error response")?;
-                        return Ok(());
-                    }
-                };
-                let mut response = rcs
-                    .copy_to_channel(remote.into_channel())
-                    .map_err(|_| DaemonError::RcsConnectionError);
-                responder.send(&mut response).context("error sending response")?;
-            }
             DaemonRequest::Quit { responder } => {
                 log::info!("Received quit request.");
 
@@ -1002,10 +950,8 @@ mod test {
         super::*,
         addr::TargetAddr,
         fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy, TargetAddrInfo, TargetIpPort},
-        fidl_fuchsia_developer_remotecontrol::{
-            self as rcs, RemoteControlMarker, RemoteControlProxy,
-        },
-        fidl_fuchsia_net::{IpAddress, Ipv6Address, Subnet},
+        fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
+        fidl_fuchsia_net::{IpAddress, Ipv6Address},
         fidl_fuchsia_overnet_protocol::PeerDescription,
         fuchsia_async::Task,
         matches::assert_matches,
@@ -1014,50 +960,6 @@ mod test {
         std::iter::FromIterator,
         std::net::SocketAddr,
     };
-
-    fn setup_fake_target_service(
-        nodename: String,
-        addrs: Vec<SocketAddr>,
-    ) -> (RemoteControlProxy, Task<()>) {
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
-
-        let task = Task::local(async move {
-            while let Ok(Some(req)) = stream.try_next().await {
-                match req {
-                    rcs::RemoteControlRequest::IdentifyHost { responder } => {
-                        let addrs = addrs
-                            .iter()
-                            .map(|addr| Subnet {
-                                addr: match addr.ip() {
-                                    std::net::IpAddr::V4(i) => fidl_fuchsia_net::IpAddress::Ipv4(
-                                        fidl_fuchsia_net::Ipv4Address { addr: i.octets() },
-                                    ),
-                                    std::net::IpAddr::V6(i) => fidl_fuchsia_net::IpAddress::Ipv6(
-                                        fidl_fuchsia_net::Ipv6Address { addr: i.octets() },
-                                    ),
-                                },
-                                // XXX: fictitious.
-                                prefix_len: 24,
-                            })
-                            .collect();
-                        let nodename = Some(nodename.clone());
-                        responder
-                            .send(&mut Ok(rcs::IdentifyHostResponse {
-                                nodename,
-                                addresses: Some(addrs),
-                                ..rcs::IdentifyHostResponse::EMPTY
-                            }))
-                            .context("sending testing response")
-                            .unwrap();
-                    }
-                    _ => assert!(false),
-                }
-            }
-        });
-
-        (proxy, task)
-    }
 
     fn spawn_test_daemon() -> (DaemonProxy, Daemon, Task<Result<()>>) {
         let d = Daemon::new();
@@ -1071,62 +973,24 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_multiple_connected_targets_none_query_is_ambiguous() {
-        let (proxy, daemon, _task) = spawn_test_daemon();
-        daemon.target_collection.merge_insert(Target::new_autoconnected("bazmumble"));
-        daemon.target_collection.merge_insert(Target::new_autoconnected("foobar"));
-        let (_, server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>().unwrap();
-
-        assert_matches!(
-            proxy.get_remote_control(None, server_end).await.unwrap(),
-            Err(DaemonError::TargetAmbiguous)
-        );
+    async fn test_open_rcs_on_fastboot_error() {
+        let (_proxy, daemon, _task) = spawn_test_daemon();
+        let target = Target::new_with_serial("abc");
+        daemon.target_collection.merge_insert(target);
+        let result = daemon.open_remote_control(None).await;
+        assert!(result.is_err());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_multiple_connected_targets_empty_query_is_ambiguous() {
-        let (proxy, daemon, _task) = spawn_test_daemon();
-        daemon.target_collection.merge_insert(Target::new_autoconnected("bazmumble"));
-        daemon.target_collection.merge_insert(Target::new_autoconnected("foobar"));
-        let (_, server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>().unwrap();
-
-        assert_matches!(
-            proxy.get_remote_control(Some(""), server_end).await.unwrap(),
-            Err(DaemonError::TargetAmbiguous)
+    async fn test_open_rcs_on_zedboot_error() {
+        let (_proxy, daemon, _task) = spawn_test_daemon();
+        let target = Target::new_with_netsvc_addrs(
+            Some("abc"),
+            BTreeSet::from_iter(vec![TargetAddr::new("[fe80::1%1]:22").unwrap()].into_iter()),
         );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_remote_control() {
-        let (proxy, daemon, _task) = spawn_test_daemon();
-        let (_, server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>().unwrap();
-
-        // get_remote_control only returns targets that have an RCS connection.
-        let (rcs_proxy, _task) =
-            setup_fake_target_service("foobar".to_string(), vec!["[fe80::1%1]:0".parse().unwrap()]);
-        daemon.target_collection.merge_insert(
-            Target::from_rcs_connection(RcsConnection::new_with_proxy(
-                rcs_proxy,
-                &NodeId { id: 0u64 },
-            ))
-            .await
-            .unwrap(),
-        );
-
-        assert_matches!(proxy.get_remote_control(Some("foobar"), server_end).await.unwrap(), Ok(_));
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_multiple_connected_targets_with_non_matching_query() {
-        let (proxy, daemon, _task) = spawn_test_daemon();
-        daemon.target_collection.merge_insert(Target::new_autoconnected("bazmumble"));
-        daemon.target_collection.merge_insert(Target::new_autoconnected("foobar"));
-        let (_, server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>().unwrap();
-
-        assert_matches!(
-            proxy.get_remote_control(Some("doesnotexist"), server_end).await.unwrap(),
-            Err(DaemonError::TargetNotFound)
-        );
+        daemon.target_collection.merge_insert(target);
+        let result = daemon.open_remote_control(None).await;
+        assert!(result.is_err());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1245,54 +1109,6 @@ mod test {
         d.target_collection.merge_insert(t.clone());
         d.target_collection.merge_insert(t2.clone());
         assert_eq!(DaemonError::TargetAmbiguous, d.get_target(None).await.unwrap_err());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_rcs_on_fastboot_error_msg() {
-        let (proxy, daemon, _task) = spawn_test_daemon();
-        let target = Target::new_with_serial("abc");
-        daemon.target_collection.merge_insert(target);
-        let (_, server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>().unwrap();
-
-        let result = proxy.get_remote_control(None, server_end).await.unwrap();
-
-        assert_matches!(result, Err(DaemonError::TargetInFastboot));
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_open_rcs_on_fastboot_error() {
-        let (_proxy, daemon, _task) = spawn_test_daemon();
-        let target = Target::new_with_serial("abc");
-        daemon.target_collection.merge_insert(target);
-        let result = daemon.open_remote_control(None).await;
-        assert!(result.is_err());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_open_rcs_on_zedboot_error() {
-        let (_proxy, daemon, _task) = spawn_test_daemon();
-        let target = Target::new_with_netsvc_addrs(
-            Some("abc"),
-            BTreeSet::from_iter(vec![TargetAddr::new("[fe80::1%1]:22").unwrap()].into_iter()),
-        );
-        daemon.target_collection.merge_insert(target);
-        let result = daemon.open_remote_control(None).await;
-        assert!(result.is_err());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_rcs_on_zedboot_error_msg() {
-        let (proxy, daemon, _task) = spawn_test_daemon();
-        let target = Target::new_with_netsvc_addrs(
-            Some("abc"),
-            BTreeSet::from_iter(vec![TargetAddr::new("[fe80::1%1]:22").unwrap()].into_iter()),
-        );
-        daemon.target_collection.merge_insert(target);
-        let (_, server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>().unwrap();
-
-        let result = proxy.get_remote_control(None, server_end).await.unwrap();
-
-        assert_matches!(result, Err(DaemonError::TargetInZedboot));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

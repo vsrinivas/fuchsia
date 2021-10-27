@@ -61,20 +61,6 @@ protocol Daemon {
         success bool;
     });
 
-    /// Gets a remote control proxy for the given target.
-    /// The target param expects an exact match with a target's
-    /// nodename.
-    ///
-    /// If the target nodename is not included, this will return the remote
-    /// control instance for the target iff there is only one target in the
-    /// cache, else will return an error. If there are no targets in the cache,
-    /// will wait until the client chooses to time out.
-    @deprecated("Use target_collection_service -> open_target -> open_remote_control instead")
-    GetRemoteControl(resource struct {
-        target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
-        remote server_end:rc.RemoteControl;
-    }) -> (struct {}) error DaemonError;
-
     /// Attempts to get the SSH address for a given target.
     ///
     /// Waits for:

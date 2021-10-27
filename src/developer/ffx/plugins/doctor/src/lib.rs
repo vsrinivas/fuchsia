@@ -17,7 +17,7 @@ use {
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_bridge::{
         DaemonProxy, Target, TargetCollectionIteratorMarker, TargetCollectionMarker,
-        TargetCollectionProxy, TargetState, VersionInfo,
+        TargetCollectionProxy, TargetHandleMarker, TargetState, VersionInfo,
     },
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     itertools::Itertools,
@@ -84,6 +84,7 @@ enum StepType {
     SkippedZedboot(Option<String>),
     CheckingTarget(Option<String>),
     RcsAttemptStarted(usize, usize),
+    OpeningTargetHandle(Option<String>),
     ConnectingToRcs,
     CommunicatingWithRcs,
     TargetSummary(HashMap<TargetCheckResult, Vec<Option<String>>>),
@@ -192,13 +193,20 @@ impl std::fmt::Display for StepType {
             StepType::CheckingTarget(nodename) => format!(
                 "{}\nChecking target: '{}'. {}{}",
                 style::Bold,
-                nodename.as_ref().unwrap_or(&"UNKNOWN".to_string()),
+                nodename.as_deref().unwrap_or("UNKNOWN"),
                 TARGET_CHOICE_HELP,
                 style::Reset
             ),
             StepType::RcsAttemptStarted(attempt_num, retry_count) => {
                 format!("\n\nAttempt {} of {}", attempt_num + 1, retry_count)
             }
+            StepType::OpeningTargetHandle(nodename) => format!(
+                "{}\nOpening target handle for: '{}'. {}{}",
+                style::Bold,
+                nodename.as_deref().unwrap_or("UNKNOWN"),
+                TARGET_CHOICE_HELP,
+                style::Reset,
+            ),
             StepType::ConnectingToRcs => CONNECTING_TO_RCS.to_string(),
             StepType::CommunicatingWithRcs => COMMUNICATING_WITH_RCS.to_string(),
             StepType::TargetSummary(results) => {
@@ -612,6 +620,7 @@ async fn execute_steps(
 
     let mut proxy_opt: Option<DaemonProxy> = None;
     let mut targets_opt: Option<Vec<Target>> = None;
+    let mut tc_proxy_opt: Option<TargetCollectionProxy> = None;
     for i in 0..retry_count {
         proxy_opt = None;
         if i > 0 {
@@ -682,7 +691,7 @@ async fn execute_steps(
                     .connect_to_service(TargetCollectionMarker::NAME, tc_server.into_channel())
             ),
             step_handler,
-            _r,
+            _t,
             {},
         );
         step_handler.step(StepType::ListingTargets(target_str.to_string())).await?;
@@ -692,6 +701,7 @@ async fn execute_steps(
             t,
             Some(t),
         );
+        tc_proxy_opt.replace(tc_proxy);
 
         if targets_opt.is_some() && targets_opt.as_ref().unwrap().len() == 0 {
             step_handler.output_step(StepType::NoTargetsFound).await?;
@@ -712,8 +722,8 @@ async fn execute_steps(
     }
 
     let targets = targets_opt.unwrap();
-    let daemon = proxy_opt.take().unwrap();
     let mut target_results: HashMap<Option<String>, TargetCheckResult> = HashMap::new();
+    let tc_proxy = tc_proxy_opt.unwrap();
 
     for target in targets.iter() {
         // Note: this match statement intentionally does not have a fallback case in order to ensure
@@ -743,19 +753,25 @@ async fn execute_steps(
             }
 
             // TODO(jwing): SSH into the device and kill Overnet+RCS if anything below this fails
-            step_handler.step(StepType::ConnectingToRcs).await?;
-            let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
+            let (target_proxy, target_server) =
+                fidl::endpoints::create_proxy::<TargetHandleMarker>()?;
+            step_handler.step(StepType::OpeningTargetHandle(target.nodename.clone())).await?;
             success_or_continue!(
                 timeout(
                     retry_delay,
-                    daemon.get_remote_control(
-                        target.nodename.as_ref().map(|s| s.as_str()),
-                        remote_server_end,
-                    )
+                    tc_proxy.open_target(target.nodename.as_deref(), target_server)
                 ),
                 step_handler,
+                _t,
+                {},
+            );
+            step_handler.step(StepType::ConnectingToRcs).await?;
+            let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
+            success_or_continue!(
+                timeout(retry_delay, target_proxy.open_remote_control(remote_server_end)),
+                step_handler,
                 _p,
-                {}
+                {},
             );
 
             step_handler.step(StepType::CommunicatingWithRcs).await?;
@@ -799,8 +815,9 @@ mod test {
         fidl::endpoints::{spawn_local_stream_handler, ProtocolMarker, Request, ServerEnd},
         fidl::Channel,
         fidl_fuchsia_developer_bridge::{
-            DaemonRequest, RemoteControlState, TargetCollectionIteratorRequest,
-            TargetCollectionRequest, TargetCollectionRequestStream, TargetType,
+            DaemonRequest, OpenTargetError, RemoteControlState, TargetCollectionIteratorRequest,
+            TargetCollectionRequest, TargetCollectionRequestStream, TargetHandleRequest,
+            TargetType,
         },
         fidl_fuchsia_developer_remotecontrol::{
             IdentifyHostResponse, RemoteControlMarker, RemoteControlRequest,
@@ -1091,11 +1108,16 @@ mod test {
         .detach();
     }
 
-    /// Helper function to list targets. Accepts a closure that will be run
-    /// inside a fake target collection.
-    fn handle_list_targets<F>(server_channel: Channel, closure: F)
-    where
+    // Spawns a target collection, accepting closures for handling listing and opening target hanles.
+    fn spawn_target_collection<F, F2>(
+        server_channel: Channel,
+        list_closure: F,
+        open_targets_closure: F2,
+    ) where
         F: Fn(Option<String>) -> Vec<Target> + Clone + 'static,
+        F2: Fn(Option<String>, ServerEnd<TargetHandleMarker>) -> Result<(), OpenTargetError>
+            + Clone
+            + 'static,
     {
         let channel = fidl::AsyncChannel::from_channel(server_channel).unwrap();
         let mut stream = TargetCollectionRequestStream::from_channel(channel);
@@ -1104,11 +1126,11 @@ mod test {
                 match req {
                     TargetCollectionRequest::ListTargets { query, iterator, responder } => {
                         let mut stream = iterator.into_stream().unwrap();
-                        let closure = closure.clone();
+                        let list_closure = list_closure.clone();
                         fuchsia_async::Task::local(async move {
                             let TargetCollectionIteratorRequest::GetNext { responder } =
                                 stream.try_next().await.unwrap().unwrap();
-                            let results = (closure)(query);
+                            let results = (list_closure)(query);
                             if !results.is_empty() {
                                 responder.send(&mut results.into_iter()).unwrap();
                                 let TargetCollectionIteratorRequest::GetNext { responder } =
@@ -1121,8 +1143,25 @@ mod test {
                         .detach();
                         responder.send().unwrap();
                     }
+                    TargetCollectionRequest::OpenTarget { query, responder, target_handle } => {
+                        let mut res = (open_targets_closure)(query, target_handle);
+                        responder.send(&mut res).unwrap();
+                    }
                     _ => {}
                 }
+            }
+        })
+        .detach();
+    }
+
+    fn spawn_target_handler<F>(target_handle: ServerEnd<TargetHandleMarker>, handler: F)
+    where
+        F: Fn(TargetHandleRequest) -> () + 'static,
+    {
+        fuchsia_async::Task::local(async move {
+            let mut stream = target_handle.into_stream().unwrap();
+            while let Ok(Some(req)) = stream.try_next().await {
+                (handler)(req)
             }
         })
         .detach();
@@ -1131,14 +1170,26 @@ mod test {
     fn setup_responsive_daemon_server() -> DaemonProxy {
         spawn_local_stream_handler(move |req| async move {
             match req {
-                DaemonRequest::GetRemoteControl { remote: _, target: _, responder } => {
-                    responder.send(&mut Ok(())).unwrap();
-                }
                 DaemonRequest::GetVersionInfo { responder } => {
                     responder.send(daemon_version_info()).unwrap();
                 }
                 DaemonRequest::ConnectToService { responder, name: _, server_channel } => {
-                    handle_list_targets(server_channel, |_| vec![]);
+                    spawn_target_collection(
+                        server_channel,
+                        |_| vec![],
+                        |_query, target_handle| {
+                            spawn_target_handler(target_handle, |req| match req {
+                                TargetHandleRequest::OpenRemoteControl {
+                                    responder,
+                                    remote_control: _,
+                                } => {
+                                    responder.send().unwrap();
+                                }
+                                r => panic!("unexpected request: {:?}", r),
+                            });
+                            Ok(())
+                        },
+                    );
                     responder.send(&mut Ok(())).unwrap();
                 }
                 _ => {
@@ -1186,28 +1237,40 @@ mod test {
     fn setup_responsive_daemon_server_with_fastboot_target() -> DaemonProxy {
         spawn_local_stream_handler(move |req| async move {
             match req {
-                DaemonRequest::GetRemoteControl { remote, target: _, responder } => {
-                    serve_responsive_rcs(remote);
-                    responder.send(&mut Ok(())).unwrap();
-                }
                 DaemonRequest::GetVersionInfo { responder } => {
                     responder.send(daemon_version_info()).unwrap();
                 }
                 DaemonRequest::ConnectToService { name: _, server_channel, responder } => {
-                    handle_list_targets(server_channel, |_| {
-                        vec![Target {
-                            nodename: Some(FASTBOOT_NODENAME.to_string()),
-                            addresses: Some(vec![]),
-                            age_ms: Some(0),
-                            rcs_state: Some(RemoteControlState::Unknown),
-                            target_type: Some(TargetType::Unknown),
-                            target_state: Some(TargetState::Fastboot),
-                            ..Target::EMPTY
-                        }]
-                    });
+                    spawn_target_collection(
+                        server_channel,
+                        |_| {
+                            vec![Target {
+                                nodename: Some(FASTBOOT_NODENAME.to_string()),
+                                addresses: Some(vec![]),
+                                age_ms: Some(0),
+                                rcs_state: Some(RemoteControlState::Unknown),
+                                target_type: Some(TargetType::Unknown),
+                                target_state: Some(TargetState::Fastboot),
+                                ..Target::EMPTY
+                            }]
+                        },
+                        |_query, target_handle| {
+                            spawn_target_handler(target_handle, |req| match req {
+                                TargetHandleRequest::OpenRemoteControl {
+                                    responder,
+                                    remote_control,
+                                } => {
+                                    serve_responsive_rcs(remote_control);
+                                    responder.send().unwrap();
+                                }
+                                r => panic!("unexpected request: {:?}", r),
+                            });
+                            Ok(())
+                        },
+                    );
                     responder.send(&mut Ok(())).unwrap();
                 }
-                _ => {
+                req => {
                     assert!(false, "got unexpected request: {:?}", req);
                 }
             }
@@ -1224,42 +1287,23 @@ mod test {
             async move {
                 let nodename = if has_nodename { Some(NODENAME.to_string()) } else { None };
                 match req {
-                    DaemonRequest::GetRemoteControl { remote, target, responder } => {
-                        let target = target.unwrap_or(String::from(NODENAME));
-                        if target == NODENAME {
-                            serve_responsive_rcs(remote);
-                        } else if target == UNRESPONSIVE_NODENAME {
-                            serve_unresponsive_rcs(remote, waiter);
-                        } else {
-                            panic!("got unexpected target string: '{}'", target);
-                        }
-                        responder.send(&mut Ok(())).unwrap();
-                    }
                     DaemonRequest::GetVersionInfo { responder } => {
                         responder.send(daemon_version_info()).unwrap();
                     }
                     DaemonRequest::ConnectToService { name: _, server_channel, responder } => {
                         let nodename = nodename.clone();
-                        handle_list_targets(server_channel, move |query| {
-                            let query = query.as_deref().unwrap_or("");
-                            if !query.is_empty()
-                                && query != NODENAME
-                                && query != UNRESPONSIVE_NODENAME
-                            {
-                                vec![]
-                            } else if query == NODENAME {
-                                vec![Target {
-                                    nodename: nodename.clone(),
-                                    addresses: Some(vec![]),
-                                    age_ms: Some(0),
-                                    rcs_state: Some(RemoteControlState::Unknown),
-                                    target_type: Some(TargetType::Unknown),
-                                    target_state: Some(TargetState::Unknown),
-                                    ..Target::EMPTY
-                                }]
-                            } else {
-                                vec![
-                                    Target {
+                        let waiter = waiter.clone();
+                        spawn_target_collection(
+                            server_channel,
+                            move |query| {
+                                let query = query.as_deref().unwrap_or("");
+                                if !query.is_empty()
+                                    && query != NODENAME
+                                    && query != UNRESPONSIVE_NODENAME
+                                {
+                                    vec![]
+                                } else if query == NODENAME {
+                                    vec![Target {
                                         nodename: nodename.clone(),
                                         addresses: Some(vec![]),
                                         age_ms: Some(0),
@@ -1267,22 +1311,54 @@ mod test {
                                         target_type: Some(TargetType::Unknown),
                                         target_state: Some(TargetState::Unknown),
                                         ..Target::EMPTY
-                                    },
-                                    Target {
-                                        nodename: Some(UNRESPONSIVE_NODENAME.to_string()),
-                                        addresses: Some(vec![]),
-                                        age_ms: Some(0),
-                                        rcs_state: Some(RemoteControlState::Unknown),
-                                        target_type: Some(TargetType::Unknown),
-                                        target_state: Some(TargetState::Unknown),
-                                        ..Target::EMPTY
-                                    },
-                                ]
-                            }
-                        });
+                                    }]
+                                } else {
+                                    vec![
+                                        Target {
+                                            nodename: nodename.clone(),
+                                            addresses: Some(vec![]),
+                                            age_ms: Some(0),
+                                            rcs_state: Some(RemoteControlState::Unknown),
+                                            target_type: Some(TargetType::Unknown),
+                                            target_state: Some(TargetState::Unknown),
+                                            ..Target::EMPTY
+                                        },
+                                        Target {
+                                            nodename: Some(UNRESPONSIVE_NODENAME.to_string()),
+                                            addresses: Some(vec![]),
+                                            age_ms: Some(0),
+                                            rcs_state: Some(RemoteControlState::Unknown),
+                                            target_type: Some(TargetType::Unknown),
+                                            target_state: Some(TargetState::Unknown),
+                                            ..Target::EMPTY
+                                        },
+                                    ]
+                                }
+                            },
+                            move |query, target_handle| {
+                                let waiter = waiter.clone();
+                                spawn_target_handler(target_handle, move |req| match req {
+                                    TargetHandleRequest::OpenRemoteControl {
+                                        responder,
+                                        remote_control,
+                                    } => {
+                                        let target = query.as_deref().unwrap_or(NODENAME);
+                                        if target == NODENAME {
+                                            serve_responsive_rcs(remote_control);
+                                        } else if target == UNRESPONSIVE_NODENAME {
+                                            serve_unresponsive_rcs(remote_control, waiter.clone());
+                                        } else {
+                                            panic!("got unexpected target string: '{}'", target);
+                                        }
+                                        responder.send().unwrap();
+                                    }
+                                    r => panic!("unexpected request: {:?}", r),
+                                });
+                                Ok(())
+                            },
+                        );
                         responder.send(&mut Ok(())).unwrap();
                     }
-
                     _ => {
                         assert!(false, "got unexpected request: {:?}", req);
                     }
@@ -1295,9 +1371,6 @@ mod test {
     fn setup_daemon_server_list_fails() -> DaemonProxy {
         spawn_local_stream_handler(move |req| async move {
             match req {
-                DaemonRequest::GetRemoteControl { remote: _, target: _, responder: _ } => {
-                    panic!("unexpected daemon call");
-                }
                 DaemonRequest::GetVersionInfo { responder } => {
                     responder.send(daemon_version_info()).unwrap();
                 }
@@ -1318,9 +1391,6 @@ mod test {
             let waiter = waiter.clone();
             async move {
                 match req {
-                    DaemonRequest::GetRemoteControl { remote: _, target: _, responder: _ } => {
-                        panic!("unexpected daemon call");
-                    }
                     DaemonRequest::GetVersionInfo { responder: _ } => {
                         waiter.await.unwrap();
                     }
@@ -1648,6 +1718,8 @@ mod test {
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::CheckingTarget(Some(NODENAME.to_string()))),
+                TestStepEntry::step(StepType::OpeningTargetHandle(Some(NODENAME.to_string()))),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ConnectingToRcs),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithRcs),
@@ -1655,6 +1727,10 @@ mod test {
                 TestStepEntry::output_step(StepType::CheckingTarget(Some(
                     UNRESPONSIVE_NODENAME.to_string(),
                 ))),
+                TestStepEntry::step(StepType::OpeningTargetHandle(Some(
+                    UNRESPONSIVE_NODENAME.to_string(),
+                ))),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ConnectingToRcs),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithRcs),
@@ -1710,6 +1786,8 @@ mod test {
                 TestStepEntry::step(StepType::ListingTargets(NODENAME.to_string())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::CheckingTarget(Some(NODENAME.to_string()))),
+                TestStepEntry::step(StepType::OpeningTargetHandle(Some(NODENAME.to_string()))),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ConnectingToRcs),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithRcs),
@@ -1979,6 +2057,8 @@ mod test {
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::CheckingTarget(None)),
+                TestStepEntry::step(StepType::OpeningTargetHandle(None)),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ConnectingToRcs),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithRcs),
@@ -1986,6 +2066,10 @@ mod test {
                 TestStepEntry::output_step(StepType::CheckingTarget(Some(
                     UNRESPONSIVE_NODENAME.to_string(),
                 ))),
+                TestStepEntry::step(StepType::OpeningTargetHandle(Some(
+                    UNRESPONSIVE_NODENAME.to_string(),
+                ))),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ConnectingToRcs),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithRcs),
