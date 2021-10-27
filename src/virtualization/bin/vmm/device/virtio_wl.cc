@@ -557,30 +557,31 @@ zx_status_t VirtioWl::HandleSend(const virtio_wl_ctrl_vfd_send_t* request, uint3
     return ZX_OK;
   }
 
+  const auto vfd_count = request->vfd_count;
   auto vfds = reinterpret_cast<const uint32_t*>(request + 1);
   uint32_t num_bytes = request_len - sizeof(*request);
 
-  if (num_bytes < request->vfd_count * sizeof(*vfds)) {
+  if (num_bytes < vfd_count * sizeof(*vfds)) {
     response->type = VIRTIO_WL_RESP_ERR;
     return ZX_OK;
   }
-  num_bytes -= request->vfd_count * sizeof(*vfds);
+  num_bytes -= vfd_count * sizeof(*vfds);
   if (num_bytes > ZX_CHANNEL_MAX_MSG_BYTES) {
     FX_LOGS(ERROR) << "Message too large for channel (size=" << num_bytes << ")";
     response->type = VIRTIO_WL_RESP_ERR;
     return ZX_OK;
   }
-  auto bytes = reinterpret_cast<const uint8_t*>(vfds + request->vfd_count);
+  auto bytes = reinterpret_cast<const uint8_t*>(vfds + vfd_count);
 
-  if (request->vfd_count > ZX_CHANNEL_MAX_MSG_HANDLES) {
-    FX_LOGS(ERROR) << "Too many VFDs for message (vfds=" << request->vfd_count << ")";
+  if (vfd_count > ZX_CHANNEL_MAX_MSG_HANDLES) {
+    FX_LOGS(ERROR) << "Too many VFDs for message (vfds=" << vfd_count << ")";
     response->type = VIRTIO_WL_RESP_ERR;
     return ZX_OK;
   }
 
   while (bytes_written_for_send_request_ < num_bytes) {
     zx::handle handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-    for (uint32_t i = 0; i < request->vfd_count; ++i) {
+    for (uint32_t i = 0; i < vfd_count; ++i) {
       auto it = vfds_.find(vfds[i]);
       if (it == vfds_.end()) {
         response->type = VIRTIO_WL_RESP_INVALID_ID;
@@ -597,13 +598,13 @@ zx_status_t VirtioWl::HandleSend(const virtio_wl_ctrl_vfd_send_t* request, uint3
 
     // The handles are consumed by Write() call below.
     zx_handle_t raw_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-    for (uint32_t i = 0; i < request->vfd_count; ++i) {
+    for (uint32_t i = 0; i < vfd_count; ++i) {
       raw_handles[i] = handles[i].release();
     }
     size_t actual_bytes = 0;
     zx_status_t status = it->second->Write(bytes + bytes_written_for_send_request_,
                                            num_bytes - bytes_written_for_send_request_, raw_handles,
-                                           request->vfd_count, &actual_bytes);
+                                           vfd_count, &actual_bytes);
     if (status == ZX_OK) {
       // Increment |bytes_written_for_send_request_|. Note: It is safe to use
       // this device global variable for this as we never process more than
