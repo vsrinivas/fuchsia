@@ -37,11 +37,13 @@ class FakeOwner : public MemoryAllocator::Owner {
   }
   inspect::Node* heap_node() override { return heap_node_; }
   TableSet& table_set() override { return table_set_; }
+  SysmemMetrics& metrics() override { return metrics_; }
 
  private:
   TableSet table_set_;
   inspect::Node* heap_node_;
   zx::bti bti_;
+  SysmemMetrics metrics_;
 };
 
 class ContiguousPooledSystem : public zxtest::Test {
@@ -57,6 +59,7 @@ class ContiguousPooledSystem : public zxtest::Test {
  protected:
   static constexpr uint32_t kVmoSize = 4096;
   static constexpr uint32_t kVmoCount = 1024;
+  static constexpr uint32_t kBigVmoSize = kVmoSize * kVmoCount / 2;
   static constexpr char kVmoName[] = "test-pool";
 
   inspect::Inspector inspector_;
@@ -201,7 +204,9 @@ TEST_F(ContiguousPooledSystem, GuardPages) {
   async::TestLoop loop;
   const uint32_t kGuardRegionSize = zx_system_get_page_size();
   EXPECT_OK(allocator_.Init());
-  allocator_.InitGuardRegion(kGuardRegionSize, true, false, loop.dispatcher());
+  const zx::duration kUnusedPageCheckCyclePeriod = zx::sec(600);
+  allocator_.InitGuardRegion(kGuardRegionSize, true, kUnusedPageCheckCyclePeriod, true, false,
+                             loop.dispatcher());
   allocator_.set_ready();
 
   zx::vmo vmo;
@@ -235,7 +240,9 @@ TEST_F(ContiguousPooledSystem, ExternalGuardPages) {
   async::TestLoop loop;
   const uint32_t kGuardRegionSize = zx_system_get_page_size();
   EXPECT_OK(allocator_.Init());
-  allocator_.InitGuardRegion(kGuardRegionSize, false, false, loop.dispatcher());
+  const zx::duration kUnusedPageCheckCyclePeriod = zx::sec(600);
+  allocator_.InitGuardRegion(kGuardRegionSize, true, kUnusedPageCheckCyclePeriod, false, false,
+                             loop.dispatcher());
   allocator_.set_ready();
 
   zx::vmo vmo;
@@ -273,6 +280,53 @@ TEST_F(ContiguousPooledSystem, ExternalGuardPages) {
   allocator_.Delete(std::move(vmo));
   // Deleting the allocator won't cause an external guard region check, so the count should be the
   // same.
+  EXPECT_EQ(2u, allocator_.failed_guard_region_checks());
+}
+
+TEST_F(ContiguousPooledSystem, UnusedGuardPages) {
+  async::TestLoop loop;
+  const zx::duration unused_page_check_cycle_period = zx::sec(2);
+  const uint32_t loop_time_seconds = unused_page_check_cycle_period.to_secs() + 1;
+  EXPECT_OK(allocator_.Init());
+  allocator_.InitGuardRegion(0, true, unused_page_check_cycle_period, false, false,
+                             loop.dispatcher());
+  allocator_.set_ready();
+
+  zx::vmo vmo;
+  EXPECT_OK(allocator_.Allocate(kBigVmoSize, {}, &vmo));
+  EXPECT_EQ(0u, allocator_.failed_guard_region_checks());
+
+  // The guard check happens every 5 seconds, so run for 6 seconds to ensure one
+  // happens. We're using a test loop, so it's guaranteed that it runs exactly this length of time.
+  loop.RunFor(zx::sec(loop_time_seconds));
+  EXPECT_EQ(0u, allocator_.failed_guard_region_checks());
+
+  uint8_t data_to_write = 12;
+  uint64_t vmo_offset = allocator_.GetVmoRegionOffsetForTest(vmo);
+  EXPECT_OK(
+      allocator_.GetPoolVmoForTest().write(&data_to_write, vmo_offset, sizeof(data_to_write)));
+
+  uint64_t just_outside_vmo_offset;
+  // pick an offset we know is inside the overall allocator space.
+  if (vmo_offset) {
+    just_outside_vmo_offset = vmo_offset - 1;
+  } else {
+    just_outside_vmo_offset = vmo_offset + kBigVmoSize;
+  }
+  EXPECT_OK(allocator_.GetPoolVmoForTest().write(&data_to_write, just_outside_vmo_offset,
+                                                 sizeof(data_to_write)));
+
+  loop.RunFor(zx::sec(loop_time_seconds));
+
+  // One mismatch in unused pages.  The page is written back with the correct pattern when the
+  // mismatch is noticed, partly so we can have this test say EQ instead of LE.
+  EXPECT_EQ(1u, allocator_.failed_guard_region_checks());
+  allocator_.Delete(std::move(vmo));
+
+  // Create another mismatch that's a write-after-free.
+  EXPECT_OK(
+      allocator_.GetPoolVmoForTest().write(&data_to_write, vmo_offset, sizeof(data_to_write)));
+  loop.RunFor(zx::sec(loop_time_seconds));
   EXPECT_EQ(2u, allocator_.failed_guard_region_checks());
 }
 

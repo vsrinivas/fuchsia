@@ -11,6 +11,7 @@
 #include <lib/zx/event.h>
 #include <zircon/limits.h>
 
+#include <fbl/algorithm.h>
 #include <fbl/vector.h>
 #include <region-alloc/region-alloc.h>
 
@@ -34,8 +35,10 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   // Initializes the guard regions. Must be called after Init. If
   // internal_guard_regions is not set, there will be only guard regions at the
   // begin and end of the buffer.
-  void InitGuardRegion(size_t guard_region_size, bool internal_guard_regions,
+  void InitGuardRegion(size_t guard_region_size, bool unused_pages_guarded,
+                       zx::duration unused_page_check_cycle_period, bool internal_guard_regions,
                        bool crash_on_guard_failure, async_dispatcher_t* dispatcher);
+  void FillUnusedRangeWithGuard(uint64_t start_offset, uint64_t size);
 
   // TODO(fxbug.dev/13609): Use this for VDEC.
   //
@@ -54,7 +57,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   }
 
   zx_status_t GetPhysicalMemoryInfo(uint64_t* base, uint64_t* size) override {
-    *base = start_;
+    *base = phys_start_;
     *size = size_;
     return ZX_OK;
   }
@@ -67,6 +70,10 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   uint64_t GetVmoRegionOffsetForTest(const zx::vmo& vmo);
 
   uint32_t failed_guard_region_checks() const { return failed_guard_region_checks_; }
+
+  bool is_already_cleared_on_allocate() override;
+
+  static constexpr zx::duration kDefaultUnusedPageCheckCyclePeriod = zx::sec(600);
 
  private:
   struct RegionData {
@@ -84,10 +91,14 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
 
   void CheckGuardPageCallback(async_dispatcher_t* dispatcher, async::TaskBase* task,
                               zx_status_t status);
+  void CheckUnusedPagesCallback(async_dispatcher_t* dispatcher, async::TaskBase* task,
+                                zx_status_t status);
   void CheckGuardRegion(const char* region_name, size_t region_size, bool pre,
                         uint64_t start_offset);
   void CheckGuardRegionData(const RegionData& region);
   void CheckExternalGuardRegions();
+  void CheckAnyUnusedPages(uint64_t start_offset, uint64_t end_offset);
+  void CheckUnusedRange(uint64_t offset, uint64_t size, bool and_also_zero);
   void DumpPoolStats();
   void DumpPoolHighWaterMark();
   void TracePoolSize(bool initial_trace);
@@ -97,6 +108,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   const uint64_t pool_id_{};
   char child_name_[ZX_MAX_NAME_LEN] = {};
 
+  uint64_t guard_region_size_ = 0;
   // Holds the default data to be placed into the guard region.
   std::vector<uint8_t> guard_region_data_;
   // Holds a copy of the guard region data that's compared with the real value.
@@ -112,7 +124,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   RegionAllocator region_allocator_;
   // From parent_vmo handle to std::unique_ptr<>
   std::map<zx_handle_t, RegionData> regions_;
-  uint64_t start_{};
+  zx_paddr_t phys_start_{};
   uint64_t size_{};
   bool is_cpu_accessible_{};
   bool is_ready_{};
@@ -152,6 +164,24 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   async::TaskMethod<ContiguousPooledMemoryAllocator,
                     &ContiguousPooledMemoryAllocator::CheckGuardPageCallback>
       guard_checker_{this};
+
+  // Split up the unused page check into relatively small pieces to avoid spiking the CPU or
+  // causing latency spikes for normal sysmem requests.
+  static constexpr uint32_t kUnusedCheckPartialCount = 64;
+  // We do this one page at a time to hopefully stay within L1 on all devices, since in the allocate
+  // path we're checking this amount of buffer space with memcmp(), then also zeroing the same space
+  // with memset().  If we did so in chunks larger than L1, we'd be spilling cache lines to L2
+  // or RAM during memcmp(), then pulling them back in during memset().  Cache sizes and tiers can
+  // vary of course.
+  const uint64_t unused_guard_data_size_ = zx_system_get_page_size();
+  bool unused_pages_guarded_ = false;
+  zx::duration unused_page_check_cycle_period_ = kDefaultUnusedPageCheckCyclePeriod;
+  uint64_t unused_check_phase_ = 0;
+  uint8_t* unused_check_mapping_ = nullptr;
+  async::TaskMethod<ContiguousPooledMemoryAllocator,
+                    &ContiguousPooledMemoryAllocator::CheckUnusedPagesCallback>
+      unused_checker_{this};
+  SysmemMetrics& metrics_;
 };
 
 }  // namespace sysmem_driver

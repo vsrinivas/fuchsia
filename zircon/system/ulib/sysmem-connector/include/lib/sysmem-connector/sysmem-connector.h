@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_SYSMEM_CONNECTOR_SYSMEM_CONNECTOR_H_
+#define LIB_SYSMEM_CONNECTOR_SYSMEM_CONNECTOR_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -35,7 +36,14 @@ __EXPORT zx_status_t sysmem_connector_init(const char* sysmem_directory_path,
 __EXPORT void sysmem_connector_queue_connection_request(sysmem_connector_t* connector,
                                                         zx_handle_t allocator2_request);
 
+// Sysmem needs access to Cobalt.  We provide a service directory to sysmem which has only Cobalt
+// in it.
+__EXPORT void sysmem_connector_queue_service_directory(sysmem_connector_t* connector_param,
+                                                       zx_handle_t service_directory_param);
+
 // This call is not allowed to fail.
 __EXPORT void sysmem_connector_release(sysmem_connector_t* connector);
 
 __END_CDECLS
+
+#endif  // LIB_SYSMEM_CONNECTOR_SYSMEM_CONNECTOR_H_

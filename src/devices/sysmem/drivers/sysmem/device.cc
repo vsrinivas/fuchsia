@@ -26,13 +26,16 @@
 #include <thread>
 
 #include <fbl/string_printf.h>
+#include <sdk/lib/sys/cpp/service_directory.h>
 
 #include "allocator.h"
 #include "buffer_collection_token.h"
 #include "contiguous_pooled_memory_allocator.h"
 #include "driver.h"
 #include "external_memory_allocator.h"
+#include "lib/ddk/driver.h"
 #include "macros.h"
+#include "src/devices/sysmem/metrics/metrics.cb.h"
 
 using sysmem_driver::MemoryAllocator;
 
@@ -214,7 +217,6 @@ Device::Device(zx_device_t* parent_device, Driver* parent_driver)
   loop_checker_.emplace(fit::thread_checker());
 }
 
-// static
 zx_status_t Device::OverrideSizeFromCommandLine(const char* name, int64_t* memory_size) {
   char pool_arg[32];
   auto status = device_get_variable(parent(), name, pool_arg, sizeof(pool_arg), nullptr);
@@ -237,10 +239,15 @@ zx_status_t Device::OverrideSizeFromCommandLine(const char* name, int64_t* memor
 }
 
 zx_status_t Device::GetContiguousGuardParameters(uint64_t* guard_bytes_out,
+                                                 bool* unused_pages_guarded,
+                                                 zx::duration* unused_page_check_cycle_period,
                                                  bool* internal_guard_pages_out,
                                                  bool* crash_on_fail_out) {
   const uint64_t kDefaultGuardBytes = zx_system_get_page_size();
   *guard_bytes_out = kDefaultGuardBytes;
+  *unused_pages_guarded = true;
+  *unused_page_check_cycle_period =
+      ContiguousPooledMemoryAllocator::kDefaultUnusedPageCheckCyclePeriod;
   *internal_guard_pages_out = false;
   *crash_on_fail_out = false;
 
@@ -259,22 +266,50 @@ zx_status_t Device::GetContiguousGuardParameters(uint64_t* guard_bytes_out,
     *internal_guard_pages_out = true;
   }
 
-  const char* kName = "driver.sysmem.contiguous_guard_page_count";
+  // If true, sysmem will _not_ treat currently-unused pages as guard pages.  We flip the sense on
+  // this one because we want the default to be enabled so we discover any issues with
+  // DMA-write-after-free by default, and because this mechanism doesn't cost any pages.
+  if (ZX_OK == device_get_variable(parent(), "driver.sysmem.contiguous_guard_pages_unused_disabled",
+                                   arg, sizeof(arg), nullptr)) {
+    DRIVER_INFO("Clearing unused_pages_guarded");
+    *unused_pages_guarded = false;
+  }
 
+  const char* kUnusedPageCheckCyclePeriodName =
+      "driver.sysmem.contiguous_guard_pages_unused_cycle_seconds";
+  char unused_page_check_cycle_period_seconds_string[32];
+  auto status = device_get_variable(parent(), kUnusedPageCheckCyclePeriodName,
+                                    unused_page_check_cycle_period_seconds_string,
+                                    sizeof(unused_page_check_cycle_period_seconds_string), nullptr);
+  if (status == ZX_OK && strlen(unused_page_check_cycle_period_seconds_string)) {
+    char* end = nullptr;
+    int64_t potential_cycle_period_seconds =
+        strtoll(unused_page_check_cycle_period_seconds_string, &end, 10);
+    if (*end != '\0') {
+      DRIVER_ERROR("Flag %s has invalid value \"%s\"", kUnusedPageCheckCyclePeriodName,
+                   unused_page_check_cycle_period_seconds_string);
+      return ZX_ERR_INVALID_ARGS;
+    }
+    DRIVER_INFO("Flag %s setting unused page check period to %ld seconds",
+                kUnusedPageCheckCyclePeriodName, potential_cycle_period_seconds);
+    *unused_page_check_cycle_period = zx::sec(potential_cycle_period_seconds);
+  }
+
+  const char* kGuardBytesName = "driver.sysmem.contiguous_guard_page_count";
   char guard_count[32];
-  auto status = device_get_variable(parent(), kName, guard_count, sizeof(guard_count), nullptr);
-  if (status != ZX_OK || strlen(guard_count) == 0) {
-    return ZX_OK;
+  status =
+      device_get_variable(parent(), kGuardBytesName, guard_count, sizeof(guard_count), nullptr);
+  if (status == ZX_OK && strlen(guard_count)) {
+    char* end = nullptr;
+    int64_t page_count = strtoll(guard_count, &end, 10);
+    // Check that entire string was used and there isn't garbage at the end.
+    if (*end != '\0') {
+      DRIVER_ERROR("Flag %s has invalid value \"%s\"", kGuardBytesName, guard_count);
+      return ZX_ERR_INVALID_ARGS;
+    }
+    DRIVER_INFO("Flag %s setting guard page count to %ld", kGuardBytesName, page_count);
+    *guard_bytes_out = zx_system_get_page_size() * page_count;
   }
-  char* end = nullptr;
-  int64_t page_count = strtoll(guard_count, &end, 10);
-  // Check that entire string was used and there isn't garbage at the end.
-  if (*end != '\0') {
-    DRIVER_ERROR("Ignoring flag %s with invalid value \"%s\"", kName, guard_count);
-    return ZX_ERR_INVALID_ARGS;
-  }
-  DRIVER_INFO("Flag %s setting guard page count to %ld", kName, page_count);
-  *guard_bytes_out = zx_system_get_page_size() * page_count;
 
   return ZX_OK;
 }
@@ -324,6 +359,8 @@ void Device::CheckForUnbind() {
 }
 
 TableSet& Device::table_set() { return table_set_; }
+
+SysmemMetrics& Device::metrics() { return metrics_; }
 
 zx_status_t Device::Bind() {
   std::lock_guard checker(*loop_checker_);
@@ -412,12 +449,16 @@ zx_status_t Device::Bind() {
       return ZX_ERR_NO_MEMORY;
     }
     uint64_t guard_region_size;
+    bool unused_pages_guarded;
+    zx::duration unused_page_check_cycle_period;
     bool internal_guard_regions;
     bool crash_on_guard;
-    if (GetContiguousGuardParameters(&guard_region_size, &internal_guard_regions,
+    if (GetContiguousGuardParameters(&guard_region_size, &unused_pages_guarded,
+                                     &unused_page_check_cycle_period, &internal_guard_regions,
                                      &crash_on_guard) == ZX_OK) {
-      pooled_allocator->InitGuardRegion(guard_region_size, internal_guard_regions, crash_on_guard,
-                                        loop_.dispatcher());
+      pooled_allocator->InitGuardRegion(guard_region_size, unused_pages_guarded,
+                                        unused_page_check_cycle_period, internal_guard_regions,
+                                        crash_on_guard, loop_.dispatcher());
     }
     contiguous_system_ram_allocator_ = std::move(pooled_allocator);
   } else {
@@ -496,6 +537,18 @@ void Device::Connect(ConnectRequestView request, ConnectCompleter::Sync& complet
                     // The Allocator is channel-owned / self-owned.
                     Allocator::CreateChannelOwned(allocator_request.TakeChannel(), this);
                   });
+}
+
+void Device::SetAuxServiceDirectory(SetAuxServiceDirectoryRequestView request,
+                                    SetAuxServiceDirectoryCompleter::Sync& completer) {
+  async::PostTask(loop_.dispatcher(), [this, aux_service_directory =
+                                                 std::make_shared<sys::ServiceDirectory>(
+                                                     request->service_directory.TakeChannel())] {
+    // Should the need arise in future, it'd be fine to stash a shared_ptr<aux_service_directory>
+    // here if we need it for anything else.  For now we only need it for metrics.
+    metrics_.metrics_buffer().SetServiceDirectory(aux_service_directory);
+    metrics_.LogUnusedPageCheck(sysmem_metrics::UnusedPageCheckMetricDimensionEvent_Connectivity);
+  });
 }
 
 zx_status_t Device::SysmemConnect(zx::channel allocator_request) {

@@ -94,6 +94,7 @@ enum/member fuchsia.sysmem/ColorSpaceType.REC709 6
 enum/member fuchsia.sysmem/ColorSpaceType.SRGB 1
 strict enum fuchsia.sysmem/ColorSpaceType uint32
 protocol/member fuchsia.sysmem/DriverConnector.Connect(server_end:fuchsia.sysmem/Allocator allocator_request)
+protocol/member fuchsia.sysmem/DriverConnector.SetAuxServiceDirectory(fuchsia.io/Directory service_directory)
 protocol fuchsia.sysmem/DriverConnector
 const fuchsia.sysmem/FORMAT_MODIFIER_ARM_AFBC_16X16 uint64 576460752303423489
 const fuchsia.sysmem/FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV uint64 576460752303423601

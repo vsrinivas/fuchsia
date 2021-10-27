@@ -32,7 +32,12 @@
 #include <region-alloc/region-alloc.h>
 
 #include "memory_allocator.h"
+#include "sysmem_metrics.h"
 #include "table_set.h"
+
+namespace sys {
+class ServiceDirectory;
+}  // namespace sys
 
 namespace sysmem_driver {
 
@@ -56,9 +61,10 @@ class Device final : public DdkDeviceType,
   Device(zx_device_t* parent_device, Driver* parent_driver);
 
   [[nodiscard]] zx_status_t OverrideSizeFromCommandLine(const char* name, int64_t* memory_size);
-  [[nodiscard]] zx_status_t GetContiguousGuardParameters(uint64_t* guard_bytes_out,
-                                                         bool* internal_guard_pages_out,
-                                                         bool* crash_on_fail_out);
+  [[nodiscard]] zx_status_t GetContiguousGuardParameters(
+      uint64_t* guard_bytes_out, bool* unused_pages_guarded,
+      zx::duration* unused_page_check_cycle_period, bool* internal_guard_pages_out,
+      bool* crash_on_fail_out);
 
   [[nodiscard]] zx_status_t Bind();
 
@@ -82,10 +88,13 @@ class Device final : public DdkDeviceType,
                                               zx::vmo* vmo_out) override;
   void CheckForUnbind() override;
   TableSet& table_set() override;
+  SysmemMetrics& metrics() override;
 
   inspect::Node* heap_node() override { return &heaps_; }
 
   void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
+  void SetAuxServiceDirectory(SetAuxServiceDirectoryRequestView request,
+                              SetAuxServiceDirectoryCompleter::Sync& completer) override;
 
   [[nodiscard]] uint32_t pdev_device_info_vid();
 
@@ -230,6 +239,8 @@ class Device final : public DdkDeviceType,
   Settings settings_;
 
   bool waiting_for_unbind_ __TA_GUARDED(*loop_checker_) = false;
+
+  SysmemMetrics metrics_;
 };
 
 }  // namespace sysmem_driver

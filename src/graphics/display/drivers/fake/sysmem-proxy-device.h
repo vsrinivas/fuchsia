@@ -72,6 +72,8 @@ class SysmemProxyDevice final : public DdkDeviceType2,
   void DdkRelease() { delete this; }
 
   void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
+  void SetAuxServiceDirectory(SetAuxServiceDirectoryRequestView request,
+                              SetAuxServiceDirectoryCompleter::Sync& completer) override;
 
   const sysmem_protocol_t* proto() const { return &in_proc_sysmem_protocol_; }
   const zx_device_t* device() const { return zxdev_; }

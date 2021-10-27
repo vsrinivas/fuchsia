@@ -7,14 +7,18 @@
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/zx/clock.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <algorithm>
 #include <numeric>
 
 #include <fbl/string_printf.h>
 
+#include "fbl/algorithm.h"
 #include "lib/fidl/llcpp/arena.h"
 #include "macros.h"
+#include "src/devices/sysmem/metrics/metrics.cb.h"
 
 namespace sysmem_driver {
 
@@ -55,7 +59,8 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
       size_(size),
       is_cpu_accessible_(is_cpu_accessible),
       is_ready_(is_ready),
-      can_be_torn_down_(can_be_torn_down) {
+      can_be_torn_down_(can_be_torn_down),
+      metrics_(parent_device->metrics()) {
   snprintf(child_name_, sizeof(child_name_), "%s-child", allocation_name_);
   // Ensure NUL-terminated.
   child_name_[sizeof(child_name_) - 1] = 0;
@@ -92,24 +97,54 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
 }
 
 void ContiguousPooledMemoryAllocator::InitGuardRegion(size_t guard_region_size,
+                                                      bool unused_pages_guarded,
+                                                      zx::duration unused_page_check_cycle_period,
                                                       bool internal_guard_regions,
                                                       bool crash_on_guard_failure,
                                                       async_dispatcher_t* dispatcher) {
   ZX_DEBUG_ASSERT(!regions_.size());
+  ZX_DEBUG_ASSERT(!guard_region_size_);
   ZX_DEBUG_ASSERT(!guard_region_data_.size());
   ZX_DEBUG_ASSERT(contiguous_vmo_.get());
+  ZX_DEBUG_ASSERT(!unused_pages_guarded_);
+  ZX_DEBUG_ASSERT(!unused_check_mapping_);
+  zx_status_t status;
+  uint64_t min_guard_data_size = guard_region_size;
+  if (unused_pages_guarded) {
+    unused_page_check_cycle_period_ = unused_page_check_cycle_period;
+    ZX_ASSERT(is_cpu_accessible_);
+    status = zx::vmar::root_self()->map(
+        /*options=*/(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE),
+        /*vmar_offset=*/0, contiguous_vmo_, /*vmo_offset=*/0, /*len=*/size_,
+        reinterpret_cast<zx_vaddr_t*>(&unused_check_mapping_));
+    if (status != ZX_OK) {
+      LOG(INFO, "mapping contiguous_vmo_ failed; can't do unused_pages_guarded");
+      // We don't want failure to set up unused page checking to prevent setting up normal guard
+      // pages, so continue.
+    } else {
+      ZX_DEBUG_ASSERT(status == ZX_OK);
+      unused_pages_guarded_ = true;
+      unused_checker_.PostDelayed(dispatcher,
+                                  unused_page_check_cycle_period_ / kUnusedCheckPartialCount);
+      min_guard_data_size = std::max(min_guard_data_size, unused_guard_data_size_);
+    }
+  }
+  ZX_DEBUG_ASSERT(guard_region_size % zx_system_get_page_size() == 0);
+  ZX_DEBUG_ASSERT(min_guard_data_size % zx_system_get_page_size() == 0);
+  guard_region_data_.resize(min_guard_data_size);
+  for (size_t i = 0; i < min_guard_data_size; i++) {
+    guard_region_data_[i] = ((i + 1) % 256);
+  }
+  if (unused_pages_guarded_) {
+    FillUnusedRangeWithGuard(0, size_);
+  }
   if (!guard_region_size) {
     return;
   }
   ZX_DEBUG_ASSERT(is_cpu_accessible_);
-  ZX_DEBUG_ASSERT(guard_region_size % zx_system_get_page_size() == 0);
+  guard_region_size_ = guard_region_size;
   has_internal_guard_regions_ = internal_guard_regions;
-  guard_region_data_.resize(guard_region_size);
   guard_region_copy_.resize(guard_region_size);
-  for (size_t i = 0; i < guard_region_size; i++) {
-    guard_region_data_[i] = ((i + 1) % 256);
-  }
-
   crash_on_guard_failure_ = crash_on_guard_failure;
 
   // Initialize external guard regions.
@@ -117,15 +152,29 @@ void ContiguousPooledMemoryAllocator::InitGuardRegion(size_t guard_region_size,
                                {.base = size_ - guard_region_size, .size = guard_region_size}};
 
   for (auto& region : regions) {
-    zx_status_t status = region_allocator_.SubtractRegion(region);
+    status = region_allocator_.SubtractRegion(region);
     ZX_DEBUG_ASSERT(status == ZX_OK);
-    status =
-        contiguous_vmo_.write(guard_region_data_.data(), region.base, guard_region_data_.size());
+    status = contiguous_vmo_.write(guard_region_data_.data(), region.base, guard_region_size_);
     ZX_DEBUG_ASSERT(status == ZX_OK);
   }
 
-  zx_status_t status = guard_checker_.PostDelayed(dispatcher, kGuardCheckInterval);
+  status = guard_checker_.PostDelayed(dispatcher, kGuardCheckInterval);
   ZX_ASSERT(status == ZX_OK);
+}
+
+void ContiguousPooledMemoryAllocator::FillUnusedRangeWithGuard(uint64_t start_offset,
+                                                               uint64_t size) {
+  ZX_DEBUG_ASSERT(unused_check_mapping_);
+  ZX_DEBUG_ASSERT(start_offset % zx_system_get_page_size() == 0);
+  ZX_DEBUG_ASSERT(size % zx_system_get_page_size() == 0);
+  uint64_t end = start_offset + size;
+  uint64_t to_copy_size;
+  for (uint64_t offset = start_offset; offset < end; offset += to_copy_size) {
+    to_copy_size = std::min(unused_guard_data_size_, end - offset);
+    memcpy(&unused_check_mapping_[offset], guard_region_data_.data(), to_copy_size);
+  }
+  zx_cache_flush(&unused_check_mapping_[start_offset], size, ZX_CACHE_FLUSH_DATA);
+  // zx_cache_flush() takes care of dsb sy when __aarch64__.
 }
 
 ContiguousPooledMemoryAllocator::~ContiguousPooledMemoryAllocator() {
@@ -135,6 +184,12 @@ ContiguousPooledMemoryAllocator::~ContiguousPooledMemoryAllocator() {
     trace_unregister_observer(trace_observer_event_.get());
   }
   guard_checker_.Cancel();
+  unused_checker_.Cancel();
+  if (unused_check_mapping_) {
+    zx_status_t status =
+        zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(unused_check_mapping_), size_);
+    ZX_ASSERT(status == ZX_OK);
+  }
 }
 
 zx_status_t ContiguousPooledMemoryAllocator::Init(uint32_t alignment_log2) {
@@ -222,13 +277,13 @@ zx_status_t ContiguousPooledMemoryAllocator::InitCommon(zx::vmo local_contiguous
             "%d",
             status);
         status = ZX_OK;
-        goto keepGoing;
+        // keep going
+      } else {
+        LOG(ERROR, "Failed to set_cache_policy(): %d", status);
+        return status;
       }
-      LOG(ERROR, "Failed to set_cache_policy(): %d", status);
-      return status;
     }
   }
-keepGoing:;
 
   zx_paddr_t addrs;
   // When running a unit test, the src/devices/testing/fake-bti provides a fake zx_bti_pin() that
@@ -241,7 +296,7 @@ keepGoing:;
     return status;
   }
 
-  start_ = addrs;
+  phys_start_ = addrs;
   contiguous_vmo_ = std::move(local_contiguous_vmo);
   ralloc_region_t region = {0, size_};
   region_allocator_.AddRegion(region);
@@ -259,8 +314,8 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
   RegionAllocator::Region::UPtr region;
   zx::vmo result_parent_vmo;
 
-  const uint64_t guard_region_size = has_internal_guard_regions_ ? guard_region_data_.size() : 0;
-  uint64_t allocation_size = size + guard_region_data_.size() * 2;
+  const uint64_t guard_region_size = has_internal_guard_regions_ ? guard_region_size_ : 0;
+  uint64_t allocation_size = size + guard_region_size_ * 2;
   // TODO(fxbug.dev/43184): Use a fragmentation-reducing allocator (such as best fit).
   //
   // The "region" param is an out ref.
@@ -284,18 +339,20 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
     return status;
   }
 
+  if (unused_pages_guarded_) {
+    CheckUnusedRange(region->base, region->size, /*and_also_zero*/ true);
+  }
+
   TracePoolSize(false);
 
   if (guard_region_size) {
-    status =
-        contiguous_vmo_.write(guard_region_data_.data(), region->base, guard_region_data_.size());
+    status = contiguous_vmo_.write(guard_region_data_.data(), region->base, guard_region_size_);
     if (status != ZX_OK) {
       LOG(ERROR, "Failed to write pre-guard region.");
       return status;
     }
-    status =
-        contiguous_vmo_.write(guard_region_data_.data(), region->base + guard_region_size + size,
-                              guard_region_data_.size());
+    status = contiguous_vmo_.write(guard_region_data_.data(),
+                                   region->base + guard_region_size + size, guard_region_size_);
     if (status != ZX_OK) {
       LOG(ERROR, "Failed to write post-guard region.");
       return status;
@@ -350,8 +407,13 @@ void ContiguousPooledMemoryAllocator::Delete(zx::vmo parent_vmo) {
   TRACE_DURATION("gfx", "ContiguousPooledMemoryAllocator::Delete");
   auto it = regions_.find(parent_vmo.get());
   ZX_ASSERT(it != regions_.end());
-  CheckGuardRegionData(it->second);
+  auto& region_data = it->second;
+  CheckGuardRegionData(region_data);
+  if (unused_pages_guarded_) {
+    FillUnusedRangeWithGuard(region_data.ptr->base, region_data.ptr->size);
+  }
   regions_.erase(it);
+  // region_data now invalid
   parent_vmo.reset();
   TracePoolSize(false);
   if (is_empty()) {
@@ -366,15 +428,14 @@ void ContiguousPooledMemoryAllocator::set_ready() {
 
 void ContiguousPooledMemoryAllocator::CheckGuardRegion(const char* region_name, size_t region_size,
                                                        bool pre, uint64_t start_offset) {
-  const uint64_t guard_region_size = guard_region_data_.size();
+  const uint64_t guard_region_size = guard_region_size_;
 
   zx_status_t status = contiguous_vmo_.op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, start_offset,
                                                 guard_region_size, nullptr, 0);
   ZX_ASSERT(status == ZX_OK);
   status = contiguous_vmo_.read(guard_region_copy_.data(), start_offset, guard_region_copy_.size());
   ZX_ASSERT(status == ZX_OK);
-  if (memcmp(guard_region_copy_.data(), guard_region_data_.data(), guard_region_data_.size()) !=
-      0) {
+  if (memcmp(guard_region_copy_.data(), guard_region_data_.data(), guard_region_size_) != 0) {
     size_t error_start = UINT64_MAX;
     size_t error_end = 0;
     for (size_t i = 0; i < guard_region_copy_.size(); i++) {
@@ -388,8 +449,8 @@ void ContiguousPooledMemoryAllocator::CheckGuardRegion(const char* region_name, 
     std::string bad_str;
     std::string good_str;
     constexpr uint32_t kRegionSizeToOutput = 16;
-    for (uint32_t i = error_start;
-         i < error_start + kRegionSizeToOutput && i < guard_region_data_.size(); i++) {
+    for (uint32_t i = error_start; i < error_start + kRegionSizeToOutput && i < guard_region_size_;
+         i++) {
       bad_str += fbl::StringPrintf(" 0x%x", guard_region_copy_[i]).c_str();
       good_str += fbl::StringPrintf(" 0x%x", guard_region_data_[i]).c_str();
     }
@@ -407,12 +468,12 @@ void ContiguousPooledMemoryAllocator::CheckGuardRegion(const char* region_name, 
 }
 
 void ContiguousPooledMemoryAllocator::CheckGuardRegionData(const RegionData& region) {
-  const uint64_t guard_region_size = guard_region_data_.size();
+  const uint64_t guard_region_size = guard_region_size_;
   if (guard_region_size == 0 || !has_internal_guard_regions_)
     return;
   uint64_t size = region.ptr->size;
   uint64_t vmo_size = size - guard_region_size * 2;
-  ZX_DEBUG_ASSERT(guard_region_data_.size() == guard_region_copy_.size());
+  ZX_DEBUG_ASSERT(guard_region_size_ == guard_region_copy_.size());
   for (uint32_t i = 0; i < 2; i++) {
     uint64_t start_offset = region.ptr->base;
     if (i == 1) {
@@ -424,7 +485,7 @@ void ContiguousPooledMemoryAllocator::CheckGuardRegionData(const RegionData& reg
 }
 
 void ContiguousPooledMemoryAllocator::CheckExternalGuardRegions() {
-  size_t guard_region_size = guard_region_data_.size();
+  size_t guard_region_size = guard_region_size_;
   if (!guard_region_size)
     return;
   ralloc_region_t regions[] = {{.base = 0, .size = guard_region_size},
@@ -432,7 +493,7 @@ void ContiguousPooledMemoryAllocator::CheckExternalGuardRegions() {
   for (size_t i = 0; i < std::size(regions); i++) {
     auto& region = regions[i];
     ZX_DEBUG_ASSERT(i < 2);
-    ZX_DEBUG_ASSERT(region.size == guard_region_data_.size());
+    ZX_DEBUG_ASSERT(region.size == guard_region_size_);
     CheckGuardRegion("External", 0, (i == 0), region.base);
   }
 }
@@ -471,6 +532,91 @@ void ContiguousPooledMemoryAllocator::CheckGuardPageCallback(async_dispatcher_t*
     auto& region = region_data.second;
     CheckGuardRegionData(region);
   }
+}
+
+void ContiguousPooledMemoryAllocator::CheckUnusedPagesCallback(async_dispatcher_t* dispatcher,
+                                                               async::TaskBase* task,
+                                                               zx_status_t status) {
+  if (status != ZX_OK) {
+    return;
+  }
+  uint64_t page_size = zx_system_get_page_size();
+  uint64_t start =
+      fbl::round_down(unused_check_phase_ * size_ / kUnusedCheckPartialCount, page_size);
+  uint64_t end =
+      fbl::round_down((unused_check_phase_ + 1) * size_ / kUnusedCheckPartialCount, page_size);
+  CheckAnyUnusedPages(start, end);
+  unused_check_phase_ = (unused_check_phase_ + 1) % kUnusedCheckPartialCount;
+  // Ignore status - if the post fails, that means the driver is being shut down.
+  unused_checker_.PostDelayed(dispatcher,
+                              unused_page_check_cycle_period_ / kUnusedCheckPartialCount);
+}
+
+void ContiguousPooledMemoryAllocator::CheckAnyUnusedPages(uint64_t start_offset,
+                                                          uint64_t end_offset) {
+  // This is a list of non-zero-size portions of unused regions within [start_offset, end_offset).
+  std::vector<ralloc_region_t> todo;
+  region_allocator_.WalkAvailableRegions(
+      [&todo, start_offset, end_offset](const ralloc_region_t* region) {
+        // struct copy
+        ralloc_region_t r = *region;
+        if (r.base + r.size <= start_offset) {
+          return true;
+        }
+        if (r.base >= end_offset) {
+          return true;
+        }
+        ZX_DEBUG_ASSERT((r.base < end_offset) && (r.base + r.size > start_offset));
+
+        // make r be the intersection of r and [start, end)
+        if (r.base + r.size > end_offset) {
+          r.size = end_offset - r.base;
+        }
+        if (r.base < start_offset) {
+          uint64_t delta = start_offset - r.base;
+          r.base += delta;
+          r.size -= delta;
+        }
+
+        todo.push_back(r);
+        return true;
+      });
+  for (auto& r : todo) {
+    CheckUnusedRange(r.base, r.size, /*and_also_zero=*/false);
+  }
+}
+
+void ContiguousPooledMemoryAllocator::CheckUnusedRange(uint64_t offset, uint64_t size,
+                                                       bool and_also_zero) {
+  ZX_DEBUG_ASSERT(unused_check_mapping_);
+  uint32_t succeeded_count = 0;
+  uint32_t failed_count = 0;
+  uint32_t page_size = zx_system_get_page_size();
+  uint64_t iter = offset;
+  uint64_t end = offset + size;
+  zx_cache_flush(&unused_check_mapping_[offset], size,
+                 ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+  uint64_t todo_size;
+  for (iter = offset; iter < end; iter += todo_size) {
+    todo_size = std::min(unused_guard_data_size_, end - iter);
+    ZX_DEBUG_ASSERT(todo_size % page_size == 0);
+    if (unlikely(memcmp(guard_region_data_.data(), &unused_check_mapping_[iter], todo_size))) {
+      ++failed_count;
+      ++failed_guard_region_checks_;
+      // So we don't keep finding the same corruption over and over.
+      if (!and_also_zero) {
+        FillUnusedRangeWithGuard(iter, todo_size);
+      }
+    } else {
+      ++succeeded_count;
+    }
+    // We zero here because it's faster than zeroing later after we've checked the whole range.  We
+    // don't have to flush here becuase the logical_buffer_collection.cc caller does that.
+    if (and_also_zero) {
+      memset(&unused_check_mapping_[iter], 0x00, todo_size);
+    }
+  }
+  metrics_.LogUnusedPageCheckCounts(succeeded_count, failed_count);
 }
 
 uint64_t ContiguousPooledMemoryAllocator::CalculateLargeContiguousRegionSize() {
@@ -555,7 +701,11 @@ void ContiguousPooledMemoryAllocator::TracePoolSize(bool initial_trace) {
 }
 
 uint64_t ContiguousPooledMemoryAllocator::GetVmoRegionOffsetForTest(const zx::vmo& vmo) {
-  return regions_[vmo.get()].ptr->base + guard_region_data_.size();
+  return regions_[vmo.get()].ptr->base + guard_region_size_;
+}
+
+bool ContiguousPooledMemoryAllocator::is_already_cleared_on_allocate() {
+  return unused_pages_guarded_;
 }
 
 }  // namespace sysmem_driver
