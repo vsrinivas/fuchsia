@@ -15,13 +15,15 @@ use {
     cm_rust::{
         CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, CollectionDecl,
         ComponentDecl, ExposeDecl, ExposeDeclCommon, OfferDecl, ProgramDecl, RegistrationSource,
-        ResolverRegistration, UseDecl,
+        ResolverRegistration, UseDecl, UseStorageDecl,
     },
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon_status as zx_status,
+    futures::FutureExt,
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, PartialChildMoniker,
+        RelativeMoniker,
     },
     routing::{
         capability_source::{
@@ -118,7 +120,7 @@ impl ModelBuilderForAnalyzer {
         Self { default_root_url: default_root_url.into() }
     }
 
-    pub async fn build(
+    pub fn build(
         self,
         decls_by_url: HashMap<String, ComponentDecl>,
         runtime_config: Arc<RuntimeConfig>,
@@ -439,7 +441,7 @@ impl ComponentModelForAnalyzer {
         }
     }
 
-    pub async fn check_routes_for_instance(
+    pub fn check_routes_for_instance(
         self: &Arc<Self>,
         target: &Arc<ComponentInstanceForAnalyzer>,
         capability_types: &HashSet<CapabilityTypeName>,
@@ -453,7 +455,7 @@ impl ComponentModelForAnalyzer {
             let type_results = results
                 .get_mut(&CapabilityTypeName::from(use_decl))
                 .expect("expected results for capability type");
-            for result in self.check_use_capability(use_decl, &target).await {
+            for result in self.check_use_capability(use_decl, &target) {
                 type_results.push(result);
             }
         }
@@ -464,7 +466,7 @@ impl ComponentModelForAnalyzer {
             let type_results = results
                 .get_mut(&CapabilityTypeName::from(expose_decl))
                 .expect("expected results for capability type");
-            if let Some(result) = self.check_use_exposed_capability(expose_decl, &target).await {
+            if let Some(result) = self.check_use_exposed_capability(expose_decl, &target) {
                 type_results.push(result);
             }
         }
@@ -474,7 +476,7 @@ impl ComponentModelForAnalyzer {
                 let type_results = results
                     .get_mut(&CapabilityTypeName::Runner)
                     .expect("expected results for capability type");
-                if let Some(result) = self.check_program_runner(program, &target).await {
+                if let Some(result) = self.check_program_runner(program, &target) {
                     type_results.push(result);
                 }
             }
@@ -484,7 +486,7 @@ impl ComponentModelForAnalyzer {
             let type_results = results
                 .get_mut(&CapabilityTypeName::Resolver)
                 .expect("expected results for capability type");
-            for result in self.check_child_resolvers(&target).await.into_iter() {
+            for result in self.check_child_resolvers(&target).into_iter() {
                 {
                     type_results.push(result);
                 }
@@ -496,7 +498,7 @@ impl ComponentModelForAnalyzer {
 
     /// Given a `UseDecl` for a capability at an instance `target`, first routes the capability
     /// to its source and then validates the source.
-    pub async fn check_use_capability(
+    pub fn check_use_capability(
         self: &Arc<Self>,
         use_decl: &UseDecl,
         target: &Arc<ComponentInstanceForAnalyzer>,
@@ -505,8 +507,10 @@ impl ComponentModelForAnalyzer {
         let route_result = match use_decl.clone() {
             UseDecl::Directory(use_directory_decl) => {
                 let capability = use_directory_decl.source_name.clone();
-                match route_capability(RouteRequest::UseDirectory(use_directory_decl), target).await
-                {
+                match Self::route_capability_sync(
+                    RouteRequest::UseDirectory(use_directory_decl),
+                    target,
+                ) {
                     Ok((source, route)) => (Ok((source, vec![route])), capability),
                     Err(err) => (Err(err.into()), capability),
                 }
@@ -515,8 +519,10 @@ impl ComponentModelForAnalyzer {
                 let capability = use_event_decl.target_name.clone();
                 match self.uses_event_source_protocol(&target.decl) {
                     true => {
-                        match route_capability(RouteRequest::UseEvent(use_event_decl), target).await
-                        {
+                        match Self::route_capability_sync(
+                            RouteRequest::UseEvent(use_event_decl),
+                            target,
+                        ) {
                             Ok((source, route)) => (Ok((source, vec![route])), capability),
                             Err(err) => (Err(err.into()), capability),
                         }
@@ -529,23 +535,27 @@ impl ComponentModelForAnalyzer {
             }
             UseDecl::Protocol(use_protocol_decl) => {
                 let capability = use_protocol_decl.source_name.clone();
-                match route_capability(RouteRequest::UseProtocol(use_protocol_decl), target).await {
+                match Self::route_capability_sync(
+                    RouteRequest::UseProtocol(use_protocol_decl),
+                    target,
+                ) {
                     Ok((source, route)) => (Ok((source, vec![route])), capability),
                     Err(err) => (Err(err.into()), capability),
                 }
             }
             UseDecl::Service(use_service_decl) => {
                 let capability = use_service_decl.source_name.clone();
-                match route_capability(RouteRequest::UseService(use_service_decl.clone()), target)
-                    .await
-                {
+                match Self::route_capability_sync(
+                    RouteRequest::UseService(use_service_decl.clone()),
+                    target,
+                ) {
                     Ok((source, route)) => (Ok((source, vec![route])), capability),
                     Err(err) => (Err(err.into()), capability),
                 }
             }
             UseDecl::Storage(use_storage_decl) => {
                 let capability = use_storage_decl.source_name.clone();
-                match route_storage_and_backing_directory(use_storage_decl, target).await {
+                match Self::route_storage_and_backing_directory_sync(use_storage_decl, target) {
                     Ok((storage_source, _relative_moniker, storage_route, dir_route)) => (
                         Ok((
                             RouteSource::StorageBackingDirectory(storage_source),
@@ -559,7 +569,7 @@ impl ComponentModelForAnalyzer {
             _ => unimplemented![],
         };
         match route_result {
-            (Ok((source, routes)), capability) => match self.check_use_source(&source).await {
+            (Ok((source, routes)), capability) => match self.check_use_source(&source) {
                 Ok(()) => {
                     for route in routes.into_iter() {
                         results.push(VerifyRouteResult {
@@ -589,21 +599,20 @@ impl ComponentModelForAnalyzer {
     /// Given a `ExposeDecl` for a capability at an instance `target`, checks whether the capability
     /// can be used from an expose declaration. If so, routes the capability to its source and then
     /// validates the source.
-    pub async fn check_use_exposed_capability(
+    pub fn check_use_exposed_capability(
         self: &Arc<Self>,
         expose_decl: &ExposeDecl,
         target: &Arc<ComponentInstanceForAnalyzer>,
     ) -> Option<VerifyRouteResult> {
         match self.request_from_expose(expose_decl) {
             Some(request) => {
-                let result =
-                    match route_capability::<ComponentInstanceForAnalyzer>(request, target).await {
-                        Ok((source, route)) => match self.check_use_source(&source).await {
-                            Ok(()) => Ok(route.into()),
-                            Err(err) => Err(err.into()),
-                        },
-                        Err(err) => Err(AnalyzerModelError::from(err).into()),
-                    };
+                let result = match Self::route_capability_sync(request, target) {
+                    Ok((source, route)) => match self.check_use_source(&source) {
+                        Ok(()) => Ok(route.into()),
+                        Err(err) => Err(err.into()),
+                    },
+                    Err(err) => Err(AnalyzerModelError::from(err).into()),
+                };
                 Some(VerifyRouteResult {
                     using_node: target.node_path(),
                     capability: expose_decl.target_name().clone(),
@@ -616,7 +625,7 @@ impl ComponentModelForAnalyzer {
 
     /// Given a `ProgramDecl` for a component instance, checks whether the specified runner has
     /// a valid capability route.
-    pub async fn check_program_runner(
+    pub fn check_program_runner(
         self: &Arc<Self>,
         program_decl: &ProgramDecl,
         target: &Arc<ComponentInstanceForAnalyzer>,
@@ -627,12 +636,7 @@ impl ComponentModelForAnalyzer {
                     node_path: target.node_path(),
                     runner: runner.clone(),
                 }]);
-                match route_capability::<ComponentInstanceForAnalyzer>(
-                    RouteRequest::Runner(runner.clone()),
-                    target,
-                )
-                .await
-                {
+                match Self::route_capability_sync(RouteRequest::Runner(runner.clone()), target) {
                     Ok((_source, mut segments)) => {
                         route.append(&mut segments);
                         Some(VerifyRouteResult {
@@ -657,7 +661,7 @@ impl ComponentModelForAnalyzer {
     /// checks that each resolver has a valid capability route. Returns the results of those checks
     /// in sorted order by URL scheme name. If any URL parsing errors occurred, they appear at the
     /// beginning of the vector of results.
-    pub async fn check_child_resolvers(
+    pub fn check_child_resolvers(
         self: &Arc<Self>,
         target: &Arc<ComponentInstanceForAnalyzer>,
     ) -> Vec<VerifyRouteResult> {
@@ -673,9 +677,8 @@ impl ComponentModelForAnalyzer {
                             node_path: target.node_path(),
                             scheme: scheme.to_string(),
                         }];
-                        let check_scheme = self
-                            .check_resolver_for_scheme(scheme, &child.environment, target)
-                            .await;
+                        let check_scheme =
+                            self.check_resolver_for_scheme(scheme, &child.environment, target);
                         let check_result = match check_scheme.result {
                             Ok(mut segments) => {
                                 route.append(&mut segments);
@@ -715,7 +718,7 @@ impl ComponentModelForAnalyzer {
     /// looks for the resolver in the environment offered to `target`.
     ///
     /// After finding a resolver, checks that it is routed correctly.
-    async fn check_resolver_for_scheme(
+    fn check_resolver_for_scheme(
         self: &Arc<Self>,
         scheme: &str,
         environment: &Option<String>,
@@ -726,12 +729,10 @@ impl ComponentModelForAnalyzer {
         if let Some(env_name) = environment {
             if let Some(env) = target.decl.environments.iter().find(|e| &e.name == env_name) {
                 if let Some(resolver) = env.resolvers.iter().find(|r| r.scheme == scheme) {
-                    match route_capability::<ComponentInstanceForAnalyzer>(
+                    match Self::route_capability_sync(
                         RouteRequest::Resolver(resolver.clone()),
                         target,
-                    )
-                    .await
-                    {
+                    ) {
                         Ok((_source, route)) => {
                             return VerifyRouteResult {
                                 using_node: target.node_path(),
@@ -755,12 +756,10 @@ impl ComponentModelForAnalyzer {
         // `target`'s own environment.
         match target.environment.get_registered_resolver(scheme) {
             Ok(Some((ExtendedInstanceInterface::Component(instance), ref resolver))) => {
-                match route_capability::<ComponentInstanceForAnalyzer>(
+                match Self::route_capability_sync(
                     RouteRequest::Resolver(resolver.clone()),
                     &instance,
-                )
-                .await
-                {
+                ) {
                     Ok((_source, route)) => VerifyRouteResult {
                         using_node: target.node_path(),
                         capability: resolver.resolver.clone(),
@@ -854,29 +853,29 @@ impl ComponentModelForAnalyzer {
 
     /// Checks properties of a capability source that are necessary to use the capability
     /// and that are possible to verify statically.
-    async fn check_use_source(
+    fn check_use_source(
         &self,
         route_source: &RouteSource<ComponentInstanceForAnalyzer>,
     ) -> Result<(), AnalyzerModelError> {
         match route_source {
-            RouteSource::Directory(source, _) => self.check_directory_source(source).await,
+            RouteSource::Directory(source, _) => self.check_directory_source(source),
             RouteSource::Event(_) => Ok(()),
-            RouteSource::Protocol(source) => self.check_protocol_source(source).await,
-            RouteSource::Service(source) => self.check_service_source(source).await,
-            RouteSource::StorageBackingDirectory(source) => self.check_storage_source(source).await,
+            RouteSource::Protocol(source) => self.check_protocol_source(source),
+            RouteSource::Service(source) => self.check_service_source(source),
+            RouteSource::StorageBackingDirectory(source) => self.check_storage_source(source),
             _ => unimplemented![],
         }
     }
 
     /// If the source of a directory capability is a component instance, checks that that
     /// instance is executable.
-    async fn check_directory_source(
+    fn check_directory_source(
         &self,
         source: &CapabilitySourceInterface<ComponentInstanceForAnalyzer>,
     ) -> Result<(), AnalyzerModelError> {
         match source {
             CapabilitySourceInterface::Component { component: weak, .. } => {
-                self.check_executable(&weak.upgrade()?).await
+                self.check_executable(&weak.upgrade()?)
             }
             CapabilitySourceInterface::Namespace { .. } => Ok(()),
             CapabilitySourceInterface::Builtin { .. } => Ok(()),
@@ -890,17 +889,17 @@ impl ComponentModelForAnalyzer {
     ///
     /// If the source is a capability, checks that the protocol is the `StorageAdmin`
     /// protocol and that the source is a valid storage capability.
-    async fn check_protocol_source(
+    fn check_protocol_source(
         &self,
         source: &CapabilitySourceInterface<ComponentInstanceForAnalyzer>,
     ) -> Result<(), AnalyzerModelError> {
         match source {
             CapabilitySourceInterface::Component { component: weak, .. } => {
-                self.check_executable(&weak.upgrade()?).await
+                self.check_executable(&weak.upgrade()?)
             }
             CapabilitySourceInterface::Namespace { .. } => Ok(()),
             CapabilitySourceInterface::Capability { source_capability, component: weak } => {
-                self.check_protocol_capability_source(&weak.upgrade()?, &source_capability).await
+                self.check_protocol_capability_source(&weak.upgrade()?, &source_capability)
             }
             CapabilitySourceInterface::Builtin { .. } => Ok(()),
             CapabilitySourceInterface::Framework { .. } => Ok(()),
@@ -909,7 +908,7 @@ impl ComponentModelForAnalyzer {
     }
 
     // A helper function validating a source of type `Capability` for a protocol capability.
-    async fn check_protocol_capability_source(
+    fn check_protocol_capability_source(
         &self,
         source_component: &Arc<ComponentInstanceForAnalyzer>,
         source_capability: &ComponentCapability,
@@ -939,13 +938,13 @@ impl ComponentModelForAnalyzer {
 
     /// If the source of a service capability is a component instance, checks that that
     /// instance is executable.
-    async fn check_service_source(
+    fn check_service_source(
         &self,
         source: &CapabilitySourceInterface<ComponentInstanceForAnalyzer>,
     ) -> Result<(), AnalyzerModelError> {
         match source {
             CapabilitySourceInterface::Component { component: weak, .. } => {
-                self.check_executable(&weak.upgrade()?).await
+                self.check_executable(&weak.upgrade()?)
             }
             CapabilitySourceInterface::Namespace { .. } => Ok(()),
             _ => unimplemented![],
@@ -954,12 +953,12 @@ impl ComponentModelForAnalyzer {
 
     /// If the source of a storage backing directory is a component instance, checks that that
     /// instance is executable.
-    async fn check_storage_source(
+    fn check_storage_source(
         &self,
         source: &StorageCapabilitySource<ComponentInstanceForAnalyzer>,
     ) -> Result<(), AnalyzerModelError> {
         if let Some(provider) = &source.storage_provider {
-            self.check_executable(provider).await?
+            self.check_executable(provider)?
         }
         Ok(())
     }
@@ -983,7 +982,7 @@ impl ComponentModelForAnalyzer {
     }
 
     // A helper function checking whether a component instance is executable.
-    async fn check_executable(
+    fn check_executable(
         &self,
         component: &Arc<ComponentInstanceForAnalyzer>,
     ) -> Result<(), AnalyzerModelError> {
@@ -1006,6 +1005,46 @@ impl ComponentModelForAnalyzer {
             }
             _ => false,
         })
+    }
+
+    // Routes a capability from a `ComponentInstanceForAnalyzer` and panics if the future returned by
+    // `route_capability` is not ready immediately.
+    //
+    // TODO(fxbug.dev/87204): Remove this function and use `route_capability` directly when Scrutiny's
+    // `DataController`s allow async function calls.
+    fn route_capability_sync(
+        request: RouteRequest,
+        target: &Arc<ComponentInstanceForAnalyzer>,
+    ) -> Result<
+        (
+            RouteSource<ComponentInstanceForAnalyzer>,
+            <<ComponentInstanceForAnalyzer as ComponentInstanceInterface>::DebugRouteMapper as DebugRouteMapper>::RouteMap,
+        ),
+        RoutingError>
+    {
+        route_capability(request, target).now_or_never().expect("future was not ready immediately")
+    }
+
+    // Routes a storage capability and its backing directory from a `ComponentInstanceForAnalyzer` and
+    // panics if the future returned by `route_storage_and_backing_directory` is not ready immediately.
+    //
+    // TODO(fxbug.dev/87204): Remove this function and use `route_capability` directly when Scrutiny's
+    // `DataController`s allow async function calls.
+    fn route_storage_and_backing_directory_sync(
+        use_decl: UseStorageDecl,
+        target: &Arc<ComponentInstanceForAnalyzer>,
+    ) -> Result<
+            (
+                StorageCapabilitySource<ComponentInstanceForAnalyzer>,
+                RelativeMoniker,
+                <<ComponentInstanceForAnalyzer as ComponentInstanceInterface>::DebugRouteMapper as DebugRouteMapper>::RouteMap,
+                <<ComponentInstanceForAnalyzer as ComponentInstanceInterface>::DebugRouteMapper as DebugRouteMapper>::RouteMap,
+            ),
+        RoutingError>
+    {
+        route_storage_and_backing_directory(use_decl, target)
+            .now_or_never()
+            .expect("future was not ready immediately")
     }
 }
 
@@ -1042,6 +1081,15 @@ impl ComponentInstanceForAnalyzer {
             .values()
             .map(|c| Arc::clone(c))
             .collect()
+    }
+
+    fn resolve<'a>(
+        self: &'a Arc<Self>,
+    ) -> Result<
+        Box<dyn ResolvedInstanceInterface<Component = ComponentInstanceForAnalyzer> + 'a>,
+        ComponentInstanceError,
+    > {
+        Ok(Box::new(&**self))
     }
 }
 
@@ -1180,13 +1228,20 @@ impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
         Ok(Arc::clone(&self.component_id_index))
     }
 
+    // The trait definition requires this function to be async, but `ComponentInstanceForAnalyzer`'s
+    // implementation must not await. This method is called by `route_capability`, which must
+    // return immediately for `ComponentInstanceForAnalyzer` (see
+    // `ComponentModelForAnalyzer::route_capability_sync()`).
+    //
+    // TODO(fxbug.dev/87204): Remove this comment when Scrutiny's `DataController` can make async
+    // function calls.
     async fn lock_resolved_state<'a>(
         self: &'a Arc<Self>,
     ) -> Result<
         Box<dyn ResolvedInstanceInterface<Component = ComponentInstanceForAnalyzer> + 'a>,
         ComponentInstanceError,
     > {
-        Ok(Box::new(&**self))
+        self.resolve()
     }
 
     fn new_route_mapper() -> RouteMapper {
@@ -1270,7 +1325,6 @@ impl EnvironmentForAnalyzer {
 
     /// Returns the resolver registered for `scheme` and the component that created the environment the
     /// resolver was registered to. Returns `None` if there was no match.
-    #[allow(dead_code)]
     fn get_registered_resolver(
         &self,
         scheme: &str,
@@ -1297,7 +1351,6 @@ impl EnvironmentForAnalyzer {
         }
     }
 
-    #[allow(dead_code)]
     fn resolver_registry(&self) -> &ResolverRegistry {
         &self.environment.resolver_registry()
     }
@@ -1330,10 +1383,14 @@ mod tests {
     use {
         super::*,
         anyhow::Result,
-        cm_rust::{RegistrationSource, RunnerRegistration},
+        cm_rust::{
+            DependencyType, RegistrationSource, RunnerRegistration, UseProtocolDecl, UseSource,
+        },
         cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
-        futures::executor::block_on,
-        std::iter::FromIterator,
+        std::{
+            convert::{TryFrom, TryInto},
+            iter::FromIterator,
+        },
     };
 
     const TEST_URL_PREFIX: &str = "test:///";
@@ -1358,19 +1415,15 @@ mod tests {
         ];
 
         let config = Arc::new(RuntimeConfig::default());
-        let build_model_result = block_on(async {
-            ModelBuilderForAnalyzer::new(
-                cm_types::Url::new(make_test_url("root"))
-                    .expect("failed to parse root component url"),
-            )
-            .build(
-                make_decl_map(components),
-                config,
-                Arc::new(ComponentIdIndex::default()),
-                RunnerRegistry::default(),
-            )
-            .await
-        });
+        let build_model_result = ModelBuilderForAnalyzer::new(
+            cm_types::Url::new(make_test_url("root")).expect("failed to parse root component url"),
+        )
+        .build(
+            make_decl_map(components),
+            config,
+            Arc::new(ComponentIdIndex::default()),
+            RunnerRegistry::default(),
+        );
         assert_eq!(build_model_result.errors.len(), 0);
         assert!(build_model_result.model.is_some());
         let model = build_model_result.model.unwrap();
@@ -1412,10 +1465,8 @@ mod tests {
             _ => panic!("child instance's parent should be root component"),
         }
 
-        let get_child = block_on(async {
-            root_instance.lock_resolved_state().await.map(|locked| {
-                locked.get_live_child(&PartialChildMoniker::new("child".to_string(), None))
-            })
+        let get_child = root_instance.resolve().map(|locked| {
+            locked.get_live_child(&PartialChildMoniker::new("child".to_string(), None))
         })?;
         assert!(get_child.is_some());
         assert_eq!(get_child.unwrap().abs_moniker(), child_instance.abs_moniker());
@@ -1443,12 +1494,114 @@ mod tests {
         child_instance.try_get_policy_checker()?;
         child_instance.try_get_component_id_index()?;
 
-        block_on(async {
-            assert!(root_instance.lock_resolved_state().await.is_ok());
-            assert!(child_instance.lock_resolved_state().await.is_ok());
-        });
+        assert!(root_instance.resolve().is_ok());
+        assert!(child_instance.resolve().is_ok());
 
         Ok(())
+    }
+
+    // Spot-checks that `ComponentInstanceForAnalyzer`'s implementation of the `ComponentInstanceInterface`
+    // trait method `lock_resolved_state()` returns immediately. In addition, updates to that method should
+    // be reviewed to make sure that this property holds; otherwise, `ComponentModelForAnalyzer`'s sync
+    // methods may panic.
+    #[test]
+    fn lock_resolved_state_is_sync() {
+        let components = vec![("root", ComponentDeclBuilder::new().build())];
+
+        let config = Arc::new(RuntimeConfig::default());
+        let build_model_result = ModelBuilderForAnalyzer::new(
+            cm_types::Url::new(make_test_url("root")).expect("failed to parse root component url"),
+        )
+        .build(
+            make_decl_map(components),
+            config,
+            Arc::new(ComponentIdIndex::default()),
+            RunnerRegistry::default(),
+        );
+        assert_eq!(build_model_result.errors.len(), 0);
+        assert!(build_model_result.model.is_some());
+        let model = build_model_result.model.unwrap();
+        assert_eq!(model.len(), 1);
+
+        let root_instance =
+            model.get_instance(&NodePath::absolute_from_vec(vec![])).expect("root instance");
+        assert!(root_instance.lock_resolved_state().now_or_never().is_some())
+    }
+
+    // Spot-checks that `route_capability` returns immediately when routing a capability from a
+    // `ComponentInstanceForAnalyzer`. In addition, updates to that method should
+    // be reviewed to make sure that this property holds; otherwise, `ComponentModelForAnalyzer`'s
+    // sync methods may panic.
+    #[test]
+    fn route_capability_is_sync() {
+        let components = vec![("root", ComponentDeclBuilder::new().build())];
+
+        let config = Arc::new(RuntimeConfig::default());
+        let build_model_result = ModelBuilderForAnalyzer::new(
+            cm_types::Url::new(make_test_url("root")).expect("failed to parse root component url"),
+        )
+        .build(
+            make_decl_map(components),
+            config,
+            Arc::new(ComponentIdIndex::default()),
+            RunnerRegistry::default(),
+        );
+        assert_eq!(build_model_result.errors.len(), 0);
+        assert!(build_model_result.model.is_some());
+        let model = build_model_result.model.unwrap();
+        assert_eq!(model.len(), 1);
+
+        let root_instance =
+            model.get_instance(&NodePath::absolute_from_vec(vec![])).expect("root instance");
+
+        // Panics if the future returned by `route_capability` was not ready immediately.
+        // If no panic, discard the result.
+        let _ = ComponentModelForAnalyzer::route_capability_sync(
+            RouteRequest::UseProtocol(UseProtocolDecl {
+                source: UseSource::Parent,
+                source_name: "bar_svc".into(),
+                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                dependency_type: DependencyType::Strong,
+            }),
+            &root_instance,
+        );
+    }
+
+    // Checks that `route_capability` returns immediately when routing a capability from a
+    // `ComponentInstanceForAnalyzer`. In addition, updates to that method should
+    // be reviewed to make sure that this property holds; otherwise, `ComponentModelForAnalyzer`'s
+    // sync methods may panic.
+    #[test]
+    fn route_storage_and_backing_directory_is_sync() {
+        let components = vec![("root", ComponentDeclBuilder::new().build())];
+
+        let config = Arc::new(RuntimeConfig::default());
+        let build_model_result = ModelBuilderForAnalyzer::new(
+            cm_types::Url::new(make_test_url("root")).expect("failed to parse root component url"),
+        )
+        .build(
+            make_decl_map(components),
+            config,
+            Arc::new(ComponentIdIndex::default()),
+            RunnerRegistry::default(),
+        );
+        assert_eq!(build_model_result.errors.len(), 0);
+        assert!(build_model_result.model.is_some());
+        let model = build_model_result.model.unwrap();
+        assert_eq!(model.len(), 1);
+
+        let root_instance =
+            model.get_instance(&NodePath::absolute_from_vec(vec![])).expect("root instance");
+
+        // Panics if the future returned by `route_storage_and_backing_directory` was not ready immediately.
+        // If no panic, discard the result.
+        let _ = ComponentModelForAnalyzer::route_storage_and_backing_directory_sync(
+            UseStorageDecl {
+                source_name: "cache".into(),
+                target_path: "/storage".try_into().unwrap(),
+            },
+            &root_instance,
+        );
     }
 
     // Builds a model with structure `root -- child` in which the child environment extends the root's.
@@ -1500,19 +1653,15 @@ mod tests {
             target_name: builtin_runner_name.clone(),
         };
 
-        let build_model_result = block_on(async {
-            ModelBuilderForAnalyzer::new(
-                cm_types::Url::new(make_test_url("root"))
-                    .expect("failed to parse root component url"),
-            )
-            .build(
-                make_decl_map(components),
-                Arc::new(config),
-                Arc::new(ComponentIdIndex::default()),
-                RunnerRegistry::from_decl(&vec![builtin_runner_registration]),
-            )
-            .await
-        });
+        let build_model_result = ModelBuilderForAnalyzer::new(
+            cm_types::Url::new(make_test_url("root")).expect("failed to parse root component url"),
+        )
+        .build(
+            make_decl_map(components),
+            Arc::new(config),
+            Arc::new(ComponentIdIndex::default()),
+            RunnerRegistry::from_decl(&vec![builtin_runner_registration]),
+        );
         assert_eq!(build_model_result.errors.len(), 0);
         assert!(build_model_result.model.is_some());
         let model = build_model_result.model.unwrap();
@@ -1592,18 +1741,15 @@ mod tests {
         let d_url = make_test_url("d");
 
         let config = Arc::new(RuntimeConfig::default());
-        let build_model_result = block_on(async {
-            ModelBuilderForAnalyzer::new(
-                cm_types::Url::new(a_url.clone()).expect("failed to parse root component url"),
-            )
-            .build(
-                make_decl_map(components),
-                config,
-                Arc::new(ComponentIdIndex::default()),
-                RunnerRegistry::default(),
-            )
-            .await
-        });
+        let build_model_result = ModelBuilderForAnalyzer::new(
+            cm_types::Url::new(a_url.clone()).expect("failed to parse root component url"),
+        )
+        .build(
+            make_decl_map(components),
+            config,
+            Arc::new(ComponentIdIndex::default()),
+            RunnerRegistry::default(),
+        );
         assert_eq!(build_model_result.errors.len(), 0);
         assert!(build_model_result.model.is_some());
         let model = build_model_result.model.unwrap();

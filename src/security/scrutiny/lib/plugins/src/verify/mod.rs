@@ -127,7 +127,6 @@ mod tests {
         fidl_fuchsia_component_internal as component_internal,
         fidl_fuchsia_io2::Operations,
         fidl_fuchsia_sys2 as fsys2,
-        futures_executor::block_on,
         maplit::hashset,
         moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
         routing::{
@@ -401,18 +400,15 @@ mod tests {
             ),
         );
 
-        let build_model_result = block_on(async {
-            ModelBuilderForAnalyzer::new(
-                cm_types::Url::new(root_url).expect("failed to parse root component url"),
-            )
-            .build(
-                decls,
-                Arc::new(RuntimeConfig::default()),
-                Arc::new(ComponentIdIndex::default()),
-                RunnerRegistry::default(),
-            )
-            .await
-        });
+        let build_model_result = ModelBuilderForAnalyzer::new(
+            cm_types::Url::new(root_url).expect("failed to parse root component url"),
+        )
+        .build(
+            decls,
+            Arc::new(RuntimeConfig::default()),
+            Arc::new(ComponentIdIndex::default()),
+            RunnerRegistry::default(),
+        );
         assert!(build_model_result.errors.is_empty());
         assert!(build_model_result.model.is_some());
         let component_model = build_model_result.model.unwrap();

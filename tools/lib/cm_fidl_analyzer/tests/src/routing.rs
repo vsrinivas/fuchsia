@@ -162,14 +162,12 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
         };
         config.builtin_boot_resolver = self.builtin_boot_resolver;
 
-        let build_model_result = ModelBuilderForAnalyzer::new(self.root_url)
-            .build(
-                self.decls_by_url,
-                Arc::new(config),
-                Arc::new(component_id_index),
-                RunnerRegistry::from_decl(&self.builtin_runner_registrations),
-            )
-            .await;
+        let build_model_result = ModelBuilderForAnalyzer::new(self.root_url).build(
+            self.decls_by_url,
+            Arc::new(config),
+            Arc::new(component_id_index),
+            RunnerRegistry::from_decl(&self.builtin_runner_registrations),
+        );
         let model = build_model_result.model.expect("failed to build ComponentModelForAnalyzer");
         RoutingTestForAnalyzer { model }
     }
@@ -317,7 +315,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
                 return;
             }
             Ok(use_decl) => {
-                for result in self.model.check_use_capability(use_decl, &target).await.iter() {
+                for result in self.model.check_use_capability(use_decl, &target).iter() {
                     match result.result {
                         Err(ref err) => match expected {
                             ExpectedResult::Ok => {
@@ -361,7 +359,6 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
                 match self
                     .model
                     .check_use_exposed_capability(expose_decl, &target)
-                    .await
                     .expect("expected result for exposed directory")
                     .result
                 {
@@ -698,7 +695,6 @@ mod tests {
                 c_component.decl_for_testing().program.as_ref().expect("missing program decl"),
                 &c_component
             )
-            .await
             .expect("expected results of program runner check")
             .result
             .is_ok());
@@ -746,7 +742,6 @@ mod tests {
                 &b_component.decl_for_testing().program.as_ref().expect("missing program decl"),
                 &b_component,
             )
-            .await
             .expect("expected result of program runner check");
 
         assert_matches!(
@@ -810,7 +805,7 @@ mod tests {
         let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
 
         // Expect only one result, since both children of "b" have the same URL scheme.
-        let results = test.model.check_child_resolvers(&b_component).await;
+        let results = test.model.check_child_resolvers(&b_component);
         assert_eq!(results.len(), 1);
         assert!(results[0].result.is_ok());
     }
@@ -841,7 +836,7 @@ mod tests {
         let test = builder.build().await;
         let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
 
-        let route_maps = test.model.check_child_resolvers(&a_component).await;
+        let route_maps = test.model.check_child_resolvers(&a_component);
         assert_eq!(route_maps.len(), 1);
         assert!(route_maps[0].result.is_ok(),);
     }
@@ -867,7 +862,7 @@ mod tests {
         let test = builder.build().await;
         let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
 
-        let route_maps = test.model.check_child_resolvers(&a_component).await;
+        let route_maps = test.model.check_child_resolvers(&a_component);
         assert_eq!(route_maps.len(), 1);
 
         assert_matches!(
@@ -916,7 +911,7 @@ mod tests {
         ];
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
-        let route_result = test.model.check_use_capability(&use_decl, &b_component).await;
+        let route_result = test.model.check_use_capability(&use_decl, &b_component);
         assert_eq!(route_result.len(), 1);
         let route_map = route_result[0].result.clone().expect("expected OK route");
 
@@ -972,7 +967,7 @@ mod tests {
         ];
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
-        let route_results = test.model.check_use_capability(&use_decl, &a_component).await;
+        let route_results = test.model.check_use_capability(&use_decl, &a_component);
         assert_eq!(route_results.len(), 1);
         let route_map = route_results[0].result.clone().expect("expected OK route");
 
@@ -1015,7 +1010,7 @@ mod tests {
 
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
-        let route_results = test.model.check_use_capability(&use_decl, &a_component).await;
+        let route_results = test.model.check_use_capability(&use_decl, &a_component);
         assert_eq!(route_results.len(), 1);
         let route_map = route_results[0].result.clone().expect("expected OK route");
 
@@ -1109,7 +1104,7 @@ mod tests {
 
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         let c_component = test.look_up_instance(&vec!["c"].into()).await.expect("c instance");
-        let route_results = test.model.check_use_capability(&use_decl, &c_component).await;
+        let route_results = test.model.check_use_capability(&use_decl, &c_component);
         assert_eq!(route_results.len(), 1);
         let route_map = route_results[0].result.clone().expect("expected OK route");
 
@@ -1188,7 +1183,6 @@ mod tests {
                     .expect("expected ProgramDecl for b"),
                 &b_component,
             )
-            .await
             .expect("expected result of program runner route")
             .result
             .expect("expected OK program runner route");
@@ -1260,7 +1254,7 @@ mod tests {
 
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
-        let route_results = test.model.check_use_capability(&use_storage_decl, &b_component).await;
+        let route_results = test.model.check_use_capability(&use_storage_decl, &b_component);
         assert_eq!(route_results.len(), 2);
         let storage_route_map =
             route_results[0].result.clone().expect("expected OK route for storage capability");
@@ -1369,8 +1363,7 @@ mod tests {
         let test = builder.build().await;
 
         let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
-        let event_route_results =
-            test.model.check_use_capability(&use_event_decl, &b_component).await;
+        let event_route_results = test.model.check_use_capability(&use_event_decl, &b_component);
         assert_eq!(event_route_results.len(), 1);
         let event_route_map = event_route_results[0].result.clone().expect("expected OK route");
 
@@ -1390,7 +1383,7 @@ mod tests {
         );
 
         let event_source_route_results =
-            test.model.check_use_capability(&use_event_source_decl, &b_component).await;
+            test.model.check_use_capability(&use_event_source_decl, &b_component);
         assert_eq!(event_source_route_results.len(), 1);
         let event_source_route_map =
             event_source_route_results[0].result.clone().expect("expected OK route");
@@ -1452,7 +1445,7 @@ mod tests {
         test.install_namespace_directory("/offer_from_cm_namespace");
 
         let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
-        let route_results = test.model.check_use_capability(&use_decl, &b_component).await;
+        let route_results = test.model.check_use_capability(&use_decl, &b_component);
         assert_eq!(route_results.len(), 1);
         let route_map = route_results[0].result.clone().expect("expected OK route");
 
@@ -1523,7 +1516,7 @@ mod tests {
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
 
-        let route_maps = test.model.check_child_resolvers(&a_component).await;
+        let route_maps = test.model.check_child_resolvers(&a_component);
         assert_eq!(route_maps.len(), 2);
 
         assert_eq!(
@@ -1603,7 +1596,7 @@ mod tests {
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
 
-        let route_maps = test.model.check_child_resolvers(&b_component).await;
+        let route_maps = test.model.check_child_resolvers(&b_component);
         assert_eq!(route_maps.len(), 1);
 
         assert_eq!(
@@ -1651,7 +1644,7 @@ mod tests {
         let test = builder.build().await;
         let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
 
-        let route_maps = test.model.check_child_resolvers(&a_component).await;
+        let route_maps = test.model.check_child_resolvers(&a_component);
         assert_eq!(route_maps.len(), 1);
 
         assert_eq!(
@@ -1700,7 +1693,7 @@ mod tests {
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
 
-        let route_maps = test.model.check_child_resolvers(&a_component).await;
+        let route_maps = test.model.check_child_resolvers(&a_component);
 
         assert_eq!(route_maps.len(), 1);
         assert_eq!(
@@ -1746,7 +1739,6 @@ mod tests {
                 &component_decl.program.expect("expected ProgramDecl for a"),
                 &a_component,
             )
-            .await
             .expect("expected program runner route")
             .result
             .expect("expected OK route");
@@ -1867,21 +1859,18 @@ mod tests {
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
 
-        let route_maps = test
-            .model
-            .check_routes_for_instance(
-                &b_component,
-                &HashSet::from_iter(
-                    vec![
-                        CapabilityTypeName::Resolver,
-                        CapabilityTypeName::Runner,
-                        CapabilityTypeName::Directory,
-                        CapabilityTypeName::Protocol,
-                    ]
-                    .into_iter(),
-                ),
-            )
-            .await;
+        let route_maps = test.model.check_routes_for_instance(
+            &b_component,
+            &HashSet::from_iter(
+                vec![
+                    CapabilityTypeName::Resolver,
+                    CapabilityTypeName::Runner,
+                    CapabilityTypeName::Directory,
+                    CapabilityTypeName::Protocol,
+                ]
+                .into_iter(),
+            ),
+        );
         assert_eq!(route_maps.len(), 4);
 
         let directories =

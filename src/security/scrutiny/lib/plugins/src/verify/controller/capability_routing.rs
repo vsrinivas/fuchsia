@@ -17,7 +17,6 @@ use {
         ModelMappingVisitor,
     },
     cm_rust::CapabilityTypeName,
-    futures_executor::block_on,
     routing::error::{ComponentInstanceError, RoutingError},
     scrutiny::{model::controller::DataController, model::model::*},
     serde::{Deserialize, Serialize},
@@ -238,9 +237,7 @@ impl CapabilityRouteVisitor {
 
 impl ComponentInstanceVisitor for CapabilityRouteVisitor {
     fn visit_instance(&mut self, instance: &Arc<ComponentInstanceForAnalyzer>) -> Result<()> {
-        let check_results = block_on(async {
-            self.model.check_routes_for_instance(instance, &self.capability_types).await
-        });
+        let check_results = self.model.check_routes_for_instance(instance, &self.capability_types);
         for (type_name, results) in check_results.into_iter() {
             let type_results =
                 self.results.get_mut(&type_name).expect("expected results for capability type");

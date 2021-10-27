@@ -16,7 +16,6 @@ use {
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys2,
     fuchsia_url::boot_url::BootUrl,
-    futures_executor::block_on,
     lazy_static::lazy_static,
     log::{error, info, warn},
     routing::{
@@ -180,16 +179,12 @@ impl DataCollector for V2ComponentModelDataCollector {
         );
 
         let runner_registry = self.make_builtin_runner_registry(&runtime_config);
-        let build_result = block_on(async {
-            builder
-                .build(
-                    decls_by_url,
-                    Arc::new(runtime_config),
-                    Arc::new(component_id_index),
-                    runner_registry,
-                )
-                .await
-        });
+        let build_result = builder.build(
+            decls_by_url,
+            Arc::new(runtime_config),
+            Arc::new(component_id_index),
+            runner_registry,
+        );
 
         for error in build_result.errors.iter() {
             warn!("V2ComponentModelDataCollector: {}", error);
