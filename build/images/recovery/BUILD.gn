@@ -61,22 +61,31 @@ recovery_eng_packages =
       # So components can be launched:
       "//src/sys/tools/run",
 
+      # Use eng allowlists:
+      "//src/security/policy:appmgr_policy_eng",
+
+      # Allow recovery to be discoverable via mDNS:
+      "//src/connectivity/network/mdns/bundles:services",
+      "//src/connectivity/network/mdns/service:mdns_config",
+      "//src/connectivity/network/mdns/service:mdns_fuchsia_udp_config",
+
+      # Enable SSH (for engineering builds):
+      "//garnet/bin/sshd-host",
+      "//garnet/bin/sshd-host:config",
+      "//src/sys/sysmgr:sshd_host_config",
+
       # Basic command-line tools:
       "//garnet/packages/prod:sbase",
+      "//src/diagnostics/log_listener:log_listener_shell",
 
       # Command-line interface to wlan stack:
       "//src/connectivity/wlan/wlancfg/tool:donut",
 
-      # Device side of zxdb & fidlcat, including required policies:
+      # Device side of zxdb & fidlcat:
       "//src/developer/debug/debug_agent",
-      "//src/security/policy:appmgr_root_job_allowlist_eng",
 
       # The SWD stack for OTAs.
       "//src/sys/pkg/lib/isolated-swd:isolated-swd-components",
-
-      # Eng allowlists for SWD (for OTAs):
-      "//src/security/policy:appmgr_package_cache_allowlist_eng",
-      "//src/security/policy:appmgr_package_resolver_allowlist_eng",
     ]
 
 assemble_system("recovery-eng") {

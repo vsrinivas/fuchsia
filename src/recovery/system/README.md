@@ -37,6 +37,23 @@ where `device-name` can be found with `fx list-devices`.
 **NB** If you only have one device or have used the `fx set-device` command
 you can omit the `--board-name` argument.
 
+## Flash and shell into the recovery image
+
+After building the recovery image, you can flash it via the following commands:
+
+```sh
+fastboot erase vbmeta_a && \
+  fastboot erase vbmeta_b && \
+  fastboot flash vbmeta_r recovery-eng.vbmeta && \
+  fastboot flash zircon_r recovery-eng.zbi && \
+  fastboot stage /home/fuchsia/.ssh/authorized_keys oem add-staged-bootloader-file ssh.authorized_keys && \
+  fastboot continue
+```
+
+The above block will disable the A/B slots so that we default into recovery,
+provisions the R slot with recovery-eng, then stages the SSH authorized keys for
+recovery-eng to enable SSH access. The device can then be accessed via the
+standard ssh-based fx commands like `fx shell`.
 
 ## Testing
 

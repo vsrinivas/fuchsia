@@ -1,11 +1,19 @@
 {
     "apps": [
         "fuchsia-pkg://fuchsia.com/system_recovery#meta/system_recovery.cmx",
-        "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx"
+        "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx",
+        "fuchsia-pkg://fuchsia.com/sshd-host#meta/sshd-host.cmx"
     ],
     "services": {
+        "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
+        "fuchsia.net.mdns.Resolver": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
+        "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
         "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
     },
+    "startup_services": [
+        "fuchsia.net.mdns.Resolver",
+        "fuchsia.net.mdns.Publisher"
+    ],
     "update_dependencies": [
         "fuchsia.bogus.DoesNotExist"
     ]
