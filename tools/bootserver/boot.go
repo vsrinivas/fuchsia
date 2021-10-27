@@ -22,6 +22,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	constants "go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
+	botanistconstants "go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
@@ -218,7 +219,7 @@ func downloadAndOpenImage(ctx context.Context, dest string, img Image) (*os.File
 
 	if _, err := io.Copy(f, iomisc.ReaderAtToReader(img.Reader)); err != nil {
 		f.Close()
-		return nil, fmt.Errorf("failed to copy image %q to %q: %w", img.Name, dest, err)
+		return nil, fmt.Errorf("%s (%q to %q): %w", botanistconstants.FailedToCopyImageMsg, img.Name, dest, err)
 	}
 	if err := f.Close(); err != nil {
 		return nil, err
