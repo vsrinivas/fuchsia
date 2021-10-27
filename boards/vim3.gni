@@ -6,6 +6,8 @@ import("//boards/arm64.gni")
 
 board_name = "vim3"
 
+board_configs += [ "//build/config/arm64:cortex-a53" ]
+
 _common_bootfs_deps = [
   "//boards/kernel_cmdline:vim3",
   "//src/connectivity/ethernet/drivers/aml-ethernet-s912",

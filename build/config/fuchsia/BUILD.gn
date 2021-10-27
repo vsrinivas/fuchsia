@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/board.gni")
 import("//build/config/build_id.gni")
 import("//build/config/clang/clang.gni")
 import("//build/config/current_target_tuple.gni")
@@ -41,20 +42,26 @@ config("ccache") {
 }
 
 config("compiler") {
-  cflags = []
-  cflags_c = []
-  cflags_cc = []
-  ldflags = []
   configs = [
     ":compiler_sysroot",
     ":compiler_target",
-    ":compiler_cpu",
     ":compiler_fuchsia_api_level",
   ]
+
+  # TODO(fxbug.dev/87244): delete the below after a soft transition
+  # to configure all boards correctly.
+  if (board_configs == []) {
+    if (current_cpu == "arm64") {
+      board_configs += [ "//build/config/arm64:cortex-a53" ]
+    } else if (current_cpu == "x64") {
+      board_configs += [ "//build/config/x64:x86-64" ]
+    }
+  }
+  configs += board_configs
+
   if (use_ccache) {
     configs += [ ":ccache" ]
   }
-  asmflags = cflags + cflags_c
 
   rustflags = [
     "-L",
@@ -89,53 +96,10 @@ config("compiler_target") {
   ldflags = cflags
 }
 
-config("compiler_cpu") {
-  cflags = []
-  if (current_cpu == "arm64") {
-    cflags += [ "-mcpu=cortex-a53" ]
-  } else if (current_cpu == "x64") {
-    if (!is_gcc) {
-      # TODO(fxrev.dev/485257): Enable for GCC when it supports march=x86-64-v2
-      cflags += [ "-march=x86-64-v2" ]
-    } else {
-      cflags += [ "-march=x86-64" ]
-      cflags += [ "-mcx16" ]
-    }
-  }
-  ldflags = cflags
-  asmflags = cflags
-  configs = [
-    ":skylake_jcc",
-    ":cortex_a53_843419",
-  ]
-}
-
 config("compiler_fuchsia_api_level") {
   cflags = [ "-ffuchsia-api-level=$current_fuchsia_api_level" ]
   asmflags = cflags
   ldflags = cflags
-}
-
-# Mitigate Jump Conditional Code erratum.
-# See: fxbug.dev/44204
-config("skylake_jcc") {
-  visibility = [ ":*" ]
-  if (current_cpu == "x64") {
-    if (is_gcc) {
-      cflags = [ "-Wa,-mbranches-within-32B-boundaries" ]
-    } else {
-      cflags = [ "-mbranches-within-32B-boundaries" ]
-    }
-    ldflags = cflags
-  }
-}
-
-# Mitigate Cortex-A53 erratum.
-config("cortex_a53_843419") {
-  visibility = [ ":*" ]
-  if (current_cpu == "arm64") {
-    ldflags = [ "-Wl,--fix-cortex-a53-843419" ]
-  }
 }
 
 config("shared_library_config") {

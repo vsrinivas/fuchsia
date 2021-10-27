@@ -9,8 +9,6 @@ import("common/x64-common.gni")
 platform_enable_user_pci = false
 userspace_pci_enable_msi_x = false
 
-target_cpu = "x64"
-
 board_name = "chromebook-x64"
 
 update_kernels = [ "zbi.signed" ]

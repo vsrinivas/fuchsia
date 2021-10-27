@@ -9,6 +9,9 @@ declare_args() {
   # Human readable board description corresponding to the board name.
   board_description = ""
 
+  # Configs that are added when targeting this board.
+  board_configs = []
+
   # A list of driver package labels to include in the 'base' package set. Used
   # by the board definition rather than the product definition.
   board_driver_package_labels = []

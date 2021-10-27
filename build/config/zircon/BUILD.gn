@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/board.gni")
 import("//build/config/build_id.gni")
 import("//build/config/clang/clang.gni")
 import("//build/config/clang/crash_diagnostics.gni")
@@ -79,9 +80,20 @@ config("clang_defaults") {
 }
 
 config("compiler") {
+  # TODO(fxbug.dev/87244): delete the below after a soft transition
+  # to configure all boards correctly.
+  if (board_configs == []) {
+    if (current_cpu == "arm64") {
+      board_configs += [ "//build/config/arm64:cortex-a53" ]
+    } else if (current_cpu == "x64") {
+      board_configs += [ "//build/config/x64:x86-64" ]
+    }
+  }
+
   compiler_flags = []
   defines = []
   ldflags = []
+  configs = board_configs
 
   # NOTE: This config should only be used with Zircon-specific toolchains
   # but this BUILD.gn file is also included from non-Zircon ones. To
@@ -118,7 +130,7 @@ config("compiler") {
   # This is the default already on Fuchsia and maybe others, but never hurts.
   cflags = [ "-fno-common" ]
 
-  configs = [
+  configs += [
     "//build/config:color_diagnostics",
     # TODO: "$current_os:compiler",
   ]
@@ -165,32 +177,6 @@ config("compiler") {
 
       # TODO(mcgrathr): This should be default in the compiler driver.
       ldflags += [ "-Wl,--pack-dyn-relocs=relr" ]
-    }
-
-    if (current_cpu == "arm64") {
-      # Generate code for the fairly generic cortex-a53.
-      compiler_flags += [ "-mcpu=cortex-a53" ]
-
-      if (is_gcc) {
-        # By default GCC 10 will generate outcalls to libgcc functions that can
-        # do runtime switching between old and new atomic insns.  We want just
-        # old atomic insns inline instead.  Eventually we'll have builds using
-        # -march=armv8.1-a or better, which should get new atomic insns inline
-        # regardless of this switch.
-        cflags += [ "-mno-outline-atomics" ]
-      }
-    } else if (current_cpu == "x64") {
-      if (!is_gcc) {
-        # TODO(fxrev.dev/485257): Enable for GCC when it supports march=x86-64-v2
-        compiler_flags += [ "-march=x86-64-v2" ]
-      } else {
-        compiler_flags += [ "-march=x86-64" ]
-
-        # Add the interesting features that march=x86-64-v2 enables above
-        compiler_flags += [ "-mcx16" ]
-        compiler_flags += [ "-mpopcnt" ]
-        compiler_flags += [ "-msahf" ]
-      }
     }
   } else if (current_os == "win") {
     # This enables build ID-like PDB UUIDs without timestamp.
@@ -402,15 +388,10 @@ config("no_maybe_uninitialized") {
 }
 
 config("machine") {
-  ldflags = []
-  if (current_cpu == "arm64" && current_os != "win") {
-    # The linker rewrites instructions to work around a CPU bug.
-    ldflags += [ "-Wl,--fix-cortex-a53-843419" ]
-  }
   if (is_fuchsia) {
     # TODO(fxbug.dev/32157): Really need to get this nailed down once and for all
     # and set by default in the compiler driver (Clang at least).
-    ldflags += [ "-Wl,-z,max-page-size=4096" ]
+    ldflags = [ "-Wl,-z,max-page-size=4096" ]
   }
 }
 

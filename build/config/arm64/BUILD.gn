@@ -1,0 +1,25 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("cortex-a53") {
+  cflags = [ "-mcpu=cortex-a53" ]
+  ldflags = cflags
+  asmflags = cflags
+
+  if (is_gcc) {
+    # By default GCC 10 will generate outcalls to libgcc functions that can
+    # do runtime switching between old and new atomic insns.  We want just
+    # old atomic insns inline instead.  Eventually we'll have builds using
+    # -march=armv8.1-a or better, which should get new atomic insns inline
+    # regardless of this switch.
+    # TODO(fxbug.dev/87242): reconsider this.
+    cflags += [ "-mno-outline-atomics" ]
+  }
+
+  # Mitigate Cortex-A53 erratum.
+  ldflags += [ "-Wl,--fix-cortex-a53-843419" ]
+
+  # TODO(fxbug.dev/87243): consider the below.
+  #rustflags = [ "-Ctarget-cpu=cortex-a53" ]
+}

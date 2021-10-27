@@ -1,0 +1,31 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("x86-64") {
+  if (is_gcc) {
+    cflags = [
+      "-march=x86-64",
+      "-mcx16",
+      "-mpopcnt",
+      "-msahf",
+    ]
+  } else {
+    # TODO(fxbug.dev/87241): Unify the branches, use x86-64-v2 everywhere
+    cflags = [ "-march=x86-64-v2" ]
+  }
+
+  # TODO(fxbug.dev/87237): the below is for Skylake through Cascade Lake.
+  # Not all x86-64 builds need this.
+  configs = [ ":mitigate_skylake_jcc" ]
+}
+
+# Mitigate Jump Conditional Code erratum.
+# See: fxbug.dev/44204
+config("mitigate_skylake_jcc") {
+  if (is_gcc) {
+    cflags = [ "-Wa,-mbranches-within-32B-boundaries" ]
+  } else {
+    cflags = [ "-mbranches-within-32B-boundaries" ]
+  }
+}
