@@ -394,6 +394,7 @@
             protocol: [
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.device.manager.DebugDumper",
+                "fuchsia.hardware.usb.DeviceWatcher",
             ],
             from: "#driver_manager",
             to: [
@@ -893,6 +894,7 @@
                 "fuchsia.device.manager.DebugDumper",
                 "fuchsia.device.manager.SystemStateTransition",
                 "fuchsia.driver.registrar.DriverRegistrar",
+                "fuchsia.hardware.usb.DeviceWatcher",
             ],
             from: "#driver_manager",
         },

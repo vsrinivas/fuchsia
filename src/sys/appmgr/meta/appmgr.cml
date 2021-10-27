@@ -327,6 +327,10 @@
             path: "/svc_for_sys/fuchsia.hardware.power.statecontrol.Admin",
         },
         {
+            protocol: "fuchsia.hardware.usb.DeviceWatcher",
+            path: "/svc_for_sys/fuchsia.hardware.usb.DeviceWatcher",
+        },
+        {
             protocol: "fuchsia.kernel.Counter",
             path: "/svc_for_sys/fuchsia.kernel.Counter",
         },
