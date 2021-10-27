@@ -8,7 +8,7 @@
 
 use {
     super::archivist_server::{AccessorServer, ServerError},
-    anyhow::{bail, format_err, Error},
+    anyhow::{bail, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_diagnostics as diagnostics,
     fidl_fuchsia_diagnostics::{
@@ -32,13 +32,7 @@ fn validate_and_parse_inspect_selectors(
     }
 
     for selector_arg in selector_args {
-        let selector = match selector_arg {
-            SelectorArgument::StructuredSelector(s) => selectors::validate_selector(&s).map(|_| s),
-            SelectorArgument::RawSelector(r) => selectors::parse_selector(&r),
-            _ => Err(format_err!("unrecognized selector configuration")),
-        }
-        .map_err(ServerError::ParseSelectors)?;
-
+        let selector = selectors::take_from_argument(selector_arg)?;
         selectors.push(selector);
     }
 

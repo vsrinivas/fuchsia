@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/55118): remove.
-#![allow(dead_code)]
-
 use crate::types::*;
 use nom::{
     self,
@@ -15,8 +12,8 @@ use nom::{
         all_consuming, complete, cond, map, map_opt, map_res, opt, peek, recognize, verify,
     },
     error::{ErrorKind, ParseError},
-    multi::{many0, many1, separated_nonempty_list},
-    sequence::{delimited, preceded, tuple},
+    multi::{many0, separated_nonempty_list},
+    sequence::{delimited, pair, preceded, tuple},
     IResult,
 };
 
@@ -351,7 +348,7 @@ fn metadata_selector(input: &str) -> IResult<&str, MetadataSelector<'_>> {
 
 /// Parses a tree selector, which is a node selector and an optional property selector.
 fn tree_selector(input: &str) -> IResult<&str, TreeSelector<'_>> {
-    let esc = escaped(none_of(":/\\ \t\n"), '\\', one_of(" \t/:\\"));
+    let esc = escaped(none_of(":/\\ \t\n"), '\\', one_of("* \t/:\\"));
     let (rest, node_segments) =
         verify(separated_nonempty_list(tag("/"), &esc), |segments: &Vec<&str>| {
             !segments.iter().any(|s| s.contains("**"))
@@ -374,20 +371,13 @@ fn tree_selector(input: &str) -> IResult<&str, TreeSelector<'_>> {
     ))
 }
 
-impl<'a> Into<Segment<'a>> for &'a str {
-    fn into(self) -> Segment<'a> {
-        if self.contains('*') {
-            Segment::Pattern(self)
-        } else {
-            Segment::Exact(self)
-        }
-    }
-}
-
 /// Parses a component selector.
 fn component_selector(input: &str) -> IResult<&str, ComponentSelector<'_>> {
-    let accepted_characters =
-        escaped(alt((alphanumeric1, tag("*"), tag("."), tag("-"), tag("_"))), '\\', tag(":"));
+    let accepted_characters = escaped(
+        alt((alphanumeric1, tag("*"), tag("."), tag("-"), tag("_"), tag(">"), tag("<"))),
+        '\\',
+        tag(":"),
+    );
     let (rest, segments) = verify(
         separated_nonempty_list(tag("/"), recognize(accepted_characters)),
         |segments: &Vec<&str>| {
@@ -451,15 +441,28 @@ pub fn selector(input: &str) -> Result<Selector<'_>, (&str, ErrorKind)> {
     }
 }
 
-/// Parses a newline-separated list of selectors. Each line might contain comments and selectors
-/// are allowed to contain inline comments as well.
-pub fn selector_list(input: &str) -> Result<Vec<Selector<'_>>, (&str, ErrorKind)> {
-    let result = complete(all_consuming(many1(alt((
+/// Parses the input into a `ComponentSelector` ignoring any whitespace around the component
+/// selector.
+pub fn consuming_component_selector(
+    input: &str,
+) -> Result<ComponentSelector<'_>, (&str, ErrorKind)> {
+    let result =
+        nom::combinator::all_consuming(pair(spaced(component_selector), multispace0))(input);
+    match result {
+        Ok((_, (selector, _))) => Ok(selector),
+        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(e),
+        _ => unreachable!("through the complete combinator we get rid of Incomplete"),
+    }
+}
+
+/// Parses the given input line into a Selector or None.
+pub fn selector_or_comment(input: &str) -> Result<Option<Selector<'_>>, (&str, ErrorKind)> {
+    let result = complete(all_consuming(alt((
         map(comment, |_| None),
         map(do_parse_selector(/*allow_inline_comment=*/ true), |s| Some(s)),
-    )))))(input);
+    ))))(input);
     match result {
-        Ok((_, matches)) => Ok(matches.into_iter().filter_map(|s| s).collect()),
+        Ok((_, maybe_selector)) => Ok(maybe_selector),
         Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(e),
         _ => unreachable!("through the complete combinator we get rid of Incomplete"),
     }
@@ -474,22 +477,23 @@ mod tests {
     #[test]
     fn canonical_component_selector_test() {
         let test_vector = vec![
-            ("a/b/c", vec![Segment::Exact("a"), Segment::Exact("b"), Segment::Exact("c")]),
-            ("a/*/c", vec![Segment::Exact("a"), Segment::Pattern("*"), Segment::Exact("c")]),
-            ("a/b*/c", vec![Segment::Exact("a"), Segment::Pattern("b*"), Segment::Exact("c")]),
-            ("a/b/**", vec![Segment::Exact("a"), Segment::Exact("b"), Segment::Pattern("**")]),
+            ("a/b/c", vec![StringPattern("a"), StringPattern("b"), StringPattern("c")]),
+            ("a/*/c", vec![StringPattern("a"), StringPattern("*"), StringPattern("c")]),
+            ("a/b*/c", vec![StringPattern("a"), StringPattern("b*"), StringPattern("c")]),
+            ("a/b/**", vec![StringPattern("a"), StringPattern("b"), StringPattern("**")]),
             (
                 "core/session\\:id/foo",
-                vec![Segment::Exact("core"), Segment::Exact("session\\:id"), Segment::Exact("foo")],
+                vec![StringPattern("core"), StringPattern("session\\:id"), StringPattern("foo")],
             ),
-            ("c", vec![Segment::Exact("c")]),
+            ("c", vec![StringPattern("c")]),
+            ("<component_manager>", vec![StringPattern("<component_manager>")]),
             (
                 r#"a/*/b/**"#,
                 vec![
-                    Segment::Exact("a"),
-                    Segment::Pattern("*"),
-                    Segment::Exact("b"),
-                    Segment::Pattern("**"),
+                    StringPattern("a"),
+                    StringPattern("*"),
+                    StringPattern("b"),
+                    StringPattern("**"),
                 ],
             ),
         ];
@@ -510,7 +514,7 @@ mod tests {
         let component_selector_string = "c";
         let (_, component_selector) = component_selector(component_selector_string).unwrap();
         let mut path_vec = component_selector.segments;
-        assert_eq!(path_vec.pop(), Some(Segment::Exact("c")));
+        assert_eq!(path_vec.pop(), Some(StringPattern("c")));
         assert!(path_vec.is_empty());
     }
 
@@ -541,11 +545,11 @@ mod tests {
     #[test]
     fn canonical_tree_selector_test() {
         let test_vector = vec![
-            ("a/b:c", vec![Segment::Exact("a"), Segment::Exact("b")], Some(Segment::Exact("c"))),
-            ("a/*:c", vec![Segment::Exact("a"), Segment::Pattern("*")], Some(Segment::Exact("c"))),
-            ("a/b:*", vec![Segment::Exact("a"), Segment::Exact("b")], Some(Segment::Pattern("*"))),
-            ("a/b", vec![Segment::Exact("a"), Segment::Exact("b")], None),
-            (r#"a/b\:c"#, vec![Segment::Exact("a"), Segment::Exact(r#"b\:c"#)], None),
+            ("a/b:c", vec![StringPattern("a"), StringPattern("b")], Some(StringPattern("c"))),
+            ("a/*:c", vec![StringPattern("a"), StringPattern("*")], Some(StringPattern("c"))),
+            ("a/b:*", vec![StringPattern("a"), StringPattern("b")], Some(StringPattern("*"))),
+            ("a/b", vec![StringPattern("a"), StringPattern("b")], None),
+            (r#"a/b\:\*c"#, vec![StringPattern("a"), StringPattern(r#"b\:\*c"#)], None),
         ];
 
         for (string, expected_path, expected_property) in test_vector {
@@ -585,14 +589,14 @@ mod tests {
     #[test]
     fn tree_selector_with_spaces() {
         let with_spaces = vec![
-            (r#"a\ b:c"#, vec![Segment::Exact("a\\ b")], Some(Segment::Exact("c"))),
+            (r#"a\ b:c"#, vec![StringPattern("a\\ b")], Some(StringPattern("c"))),
             (
                 r#"ab/\ d:c\ "#,
-                vec![Segment::Exact("ab"), Segment::Exact("\\ d")],
-                Some(Segment::Exact("c\\ ")),
+                vec![StringPattern("ab"), StringPattern("\\ d")],
+                Some(StringPattern("c\\ ")),
             ),
-            ("a\\\t*b:c", vec![Segment::Pattern("a\\\t*b")], Some(Segment::Exact("c"))),
-            (r#"a\ "x":c"#, vec![Segment::Exact(r#"a\ "x""#)], Some(Segment::Exact("c"))),
+            ("a\\\t*b:c", vec![StringPattern("a\\\t*b")], Some(StringPattern("c"))),
+            (r#"a\ "x":c"#, vec![StringPattern(r#"a\ "x""#)], Some(StringPattern("c"))),
         ];
         for (string, node, property) in with_spaces {
             assert_eq!(
@@ -614,11 +618,11 @@ mod tests {
             .unwrap(),
             Selector {
                 component: ComponentSelector {
-                    segments: vec![Segment::Exact("core"), Segment::Pattern("**"),],
+                    segments: vec![StringPattern("core"), StringPattern("**"),],
                 },
                 tree: TreeSelector {
-                    node: vec![Segment::Exact("some-node"), Segment::Pattern("he*re"),],
-                    property: Some(Segment::Exact("prop")),
+                    node: vec![StringPattern("some-node"), StringPattern("he*re"),],
+                    property: Some(StringPattern("prop")),
                 },
                 metadata: Some(MetadataSelector::new(vec![
                     FilterExpression {
@@ -643,8 +647,8 @@ mod tests {
         assert_eq!(
             selector("   foo:bar  ").unwrap(),
             Selector {
-                component: ComponentSelector { segments: vec![Segment::Exact("foo")] },
-                tree: TreeSelector { node: vec![Segment::Exact("bar")], property: None },
+                component: ComponentSelector { segments: vec![StringPattern("foo")] },
+                tree: TreeSelector { node: vec![StringPattern("bar")], property: None },
                 metadata: None,
             }
         );
@@ -659,69 +663,17 @@ mod tests {
             selector(r#"core/foo:some\ node/*:prop where pid = 123"#).unwrap(),
             Selector {
                 component: ComponentSelector {
-                    segments: vec![Segment::Exact("core"), Segment::Exact("foo"),],
+                    segments: vec![StringPattern("core"), StringPattern("foo"),],
                 },
                 tree: TreeSelector {
-                    node: vec![Segment::Exact("some\\ node"), Segment::Pattern("*"),],
-                    property: Some(Segment::Exact("prop")),
+                    node: vec![StringPattern("some\\ node"), StringPattern("*"),],
+                    property: Some(StringPattern("prop")),
                 },
                 metadata: Some(MetadataSelector::new(vec![FilterExpression {
                     identifier: Identifier::Pid,
                     op: Operation::Comparison(ComparisonOperator::Equal, Value::Number(123)),
                 },])),
             }
-        );
-    }
-
-    #[test]
-    fn parse_selector_list() {
-        let input = "// this is a comment
-          foo/bar:baz where pid = 123  // inline comment for a selector starting with whitespace
-          //this is a comment starting with whitespace
-core/**:quux:rust\t// another inline comment
-      core/foo:bar\\ baz:quux where severity in [info, error]
-        ";
-        let selectors = selector_list(input).unwrap();
-        assert_eq!(
-            selectors,
-            vec![
-                Selector {
-                    component: ComponentSelector {
-                        segments: vec![Segment::Exact("foo"), Segment::Exact("bar"),],
-                    },
-                    tree: TreeSelector { node: vec![Segment::Exact("baz")], property: None },
-                    metadata: Some(MetadataSelector::new(vec![FilterExpression {
-                        identifier: Identifier::Pid,
-                        op: Operation::Comparison(ComparisonOperator::Equal, Value::Number(123)),
-                    },])),
-                },
-                Selector {
-                    component: ComponentSelector {
-                        segments: vec![Segment::Exact("core"), Segment::Pattern("**"),],
-                    },
-                    tree: TreeSelector {
-                        node: vec![Segment::Exact("quux")],
-                        property: Some(Segment::Exact("rust")),
-                    },
-                    metadata: None,
-                },
-                Selector {
-                    component: ComponentSelector {
-                        segments: vec![Segment::Exact("core"), Segment::Exact("foo"),],
-                    },
-                    tree: TreeSelector {
-                        node: vec![Segment::Exact("bar\\ baz")],
-                        property: Some(Segment::Exact("quux"))
-                    },
-                    metadata: Some(MetadataSelector::new(vec![FilterExpression {
-                        identifier: Identifier::Severity,
-                        op: Operation::Inclusion(
-                            InclusionOperator::In,
-                            vec![Value::Severity(Severity::Info), Value::Severity(Severity::Error),]
-                        ),
-                    }])),
-                },
-            ]
         );
     }
 

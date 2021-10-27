@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/55118): remove.
-#![allow(dead_code)]
+use fidl_fuchsia_diagnostics as fdiagnostics;
 
 /// Severity
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -113,27 +112,26 @@ impl<'a> MetadataSelector<'a> {
     pub fn new(filters: Vec<FilterExpression<'a>>) -> Self {
         Self(filters)
     }
+}
 
-    pub fn filters(&self) -> &[FilterExpression<'a>] {
-        &self.0
+#[derive(Debug, Eq, PartialEq)]
+pub struct StringPattern<'a>(pub(crate) &'a str);
+
+impl<'a> Into<StringPattern<'a>> for &'a str {
+    fn into(self) -> StringPattern<'a> {
+        StringPattern(self)
     }
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum Segment<'a> {
-    Exact(&'a str),
-    Pattern(&'a str),
-}
-
-#[derive(Debug, Eq, PartialEq)]
 pub struct TreeSelector<'a> {
-    pub node: Vec<Segment<'a>>,
-    pub property: Option<Segment<'a>>,
+    pub node: Vec<StringPattern<'a>>,
+    pub property: Option<StringPattern<'a>>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ComponentSelector<'a> {
-    pub segments: Vec<Segment<'a>>,
+    pub segments: Vec<StringPattern<'a>>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -141,4 +139,48 @@ pub struct Selector<'a> {
     pub component: ComponentSelector<'a>,
     pub tree: TreeSelector<'a>,
     pub metadata: Option<MetadataSelector<'a>>,
+}
+
+impl Into<fdiagnostics::Selector> for Selector<'_> {
+    fn into(self) -> fdiagnostics::Selector {
+        fdiagnostics::Selector {
+            component_selector: Some(self.component.into()),
+            tree_selector: Some(self.tree.into()),
+            ..fdiagnostics::Selector::EMPTY // TODO(fxbug.dev/55118): add metadata.
+        }
+    }
+}
+
+impl Into<fdiagnostics::ComponentSelector> for ComponentSelector<'_> {
+    fn into(self) -> fdiagnostics::ComponentSelector {
+        fdiagnostics::ComponentSelector {
+            moniker_segments: Some(
+                self.segments.into_iter().map(|segment| segment.into()).collect(),
+            ),
+            ..fdiagnostics::ComponentSelector::EMPTY
+        }
+    }
+}
+
+impl Into<fdiagnostics::TreeSelector> for TreeSelector<'_> {
+    fn into(self) -> fdiagnostics::TreeSelector {
+        let node_path = self.node.into_iter().map(|s| s.into()).collect();
+        match self.property {
+            None => fdiagnostics::TreeSelector::SubtreeSelector(fdiagnostics::SubtreeSelector {
+                node_path,
+            }),
+            Some(property) => {
+                fdiagnostics::TreeSelector::PropertySelector(fdiagnostics::PropertySelector {
+                    node_path,
+                    target_properties: property.into(),
+                })
+            }
+        }
+    }
+}
+
+impl Into<fdiagnostics::StringSelector> for StringPattern<'_> {
+    fn into(self) -> fdiagnostics::StringSelector {
+        fdiagnostics::StringSelector::StringPattern(self.0.to_owned())
+    }
 }

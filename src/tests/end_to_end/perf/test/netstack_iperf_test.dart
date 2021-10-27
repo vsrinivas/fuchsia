@@ -165,7 +165,7 @@ void main(List<String> args) {
       await Future.delayed(Duration(seconds: 1));
       final inspect = Inspect(helper.sl4fDriver);
       final results = await inspect
-          .snapshot(['core/network/netstack:Socket Info/*:LocalAddress']);
+          .snapshot(['core/network/netstack:Socket\\ Info/*:LocalAddress']);
       if (results != null && results.isNotEmpty) {
         for (var j = 0; j < results.length; j++) {
           if (results[j]['payload'] != null &&

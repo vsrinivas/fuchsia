@@ -26,6 +26,7 @@ rustc_library("selectors") {
   ]
 
   sources = [
+    "src/error.rs",
     "src/lib.rs",
     "src/parser.rs",
     "src/selector_evaluator.rs",

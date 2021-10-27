@@ -14,7 +14,6 @@ use {
         pipeline::Pipeline,
         ImmutableString,
     },
-    anyhow::format_err,
     diagnostics_data::{Data, DiagnosticsData},
     fidl_fuchsia_diagnostics::{
         self, ArchiveAccessorRequest, ArchiveAccessorRequestStream, BatchIteratorRequest,
@@ -55,13 +54,7 @@ fn validate_and_parse_selectors(
     }
 
     for selector_arg in selector_args {
-        let selector = match selector_arg {
-            SelectorArgument::StructuredSelector(s) => selectors::validate_selector(&s).map(|_| s),
-            SelectorArgument::RawSelector(r) => selectors::parse_selector(&r),
-            _ => Err(format_err!("unrecognized selector configuration")),
-        }
-        .map_err(AccessorError::ParseSelectors)?;
-
+        let selector = selectors::take_from_argument(selector_arg)?;
         selectors.push(selector);
     }
 

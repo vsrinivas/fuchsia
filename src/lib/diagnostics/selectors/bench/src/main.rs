@@ -78,7 +78,7 @@ fn bench_parse_selector() -> criterion::Benchmark {
         .into_iter()
         .chain(make_selector_cases("no_wildcard", "abcd", vec![2, 64]).into_iter())
         .chain(make_selector_cases("with_wildcard", "*ab*", vec![2, 64]).into_iter())
-        .chain(make_selector_cases("with_escaped", "ab\\*", vec![2, 64]).into_iter())
+        .chain(make_selector_cases("with_escaped", "ab\\:", vec![2, 64]).into_iter())
         .collect();
 
     let mut bench = criterion::Benchmark::new("parse_selector/empty", move |b| {

@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{format_err, Error},
-    fidl_fuchsia_diagnostics::{
-        self, ComponentSelector, PropertySelector, Selector, StringSelector, StringSelectorUnknown,
-        SubtreeSelector, TreeSelector,
-    },
-    lazy_static::lazy_static,
-    regex::{Regex, RegexSet},
-    regex_syntax,
-    std::borrow::Borrow,
-    std::fs,
-    std::io::{BufRead, BufReader},
-    std::path::{Path, PathBuf},
+use crate::{error::*, parser};
+use anyhow::{self, format_err};
+use fidl_fuchsia_diagnostics::{
+    self, ComponentSelector, PropertySelector, Selector, SelectorArgument, StringSelector,
+    StringSelectorUnknown, SubtreeSelector, TreeSelector,
 };
+use lazy_static::lazy_static;
+use regex::{Regex, RegexSet};
+use regex_syntax;
+use std::borrow::Borrow;
+use std::fs;
+use std::io::{BufRead, BufReader};
+use std::path::{Path, PathBuf};
+
 // Character used to delimit the different sections of an inspect selector,
 // the component selector, the tree selector, and the property selector.
 pub static SELECTOR_DELIMITER: char = ':';
@@ -51,6 +51,19 @@ static WILDCARD_REGEX_EQUIVALENT: &str = r#"(\\/|[^/])*"#;
 // It is OK for a recursive wildcard to match nothing when appearing in a pattern match.
 static RECURSIVE_WILDCARD_REGEX_EQUIVALENT: &str = ".*";
 
+/// Returns true iff a component selector uses the recursive glob.
+/// Assumes the selector has already been validated.
+pub fn contains_recursive_glob(component_selector: &ComponentSelector) -> bool {
+    // Unwrap as a valid selector must contain these fields.
+    let last_segment = component_selector.moniker_segments.as_ref().unwrap().last().unwrap();
+    match last_segment {
+        StringSelector::StringPattern(pattern) if pattern == RECURSIVE_WILDCARD_SYMBOL_STR => true,
+        StringSelector::StringPattern(_) => false,
+        StringSelector::ExactMatch(_) => false,
+        StringSelectorUnknown!() => false,
+    }
+}
+
 /// Validates a string pattern used in either a PropertySelector or a
 /// PathSelectorNode.
 /// string patterns:
@@ -73,28 +86,24 @@ fn validate_string_pattern(string_pattern: &str) -> Result<(), Error> {
         ]).unwrap();
     }
     if string_pattern.is_empty() {
-        return Err(format_err!("String patterns cannot be empty."));
+        return Err(Error::EmptyStringPattern);
     }
 
     let validator_matches = STRING_PATTERN_VALIDATOR.matches(string_pattern);
-    if !validator_matches.matched_any() {
-        return Ok(());
-    } else {
-        let mut error_string =
-            format!("String pattern {} failed verification: ", string_pattern).to_string();
+    if validator_matches.matched_any() {
+        let mut errors = vec![];
         if validator_matches.matched(0) {
-            error_string.push_str("\n A string pattern cannot contain unescaped glob patterns.");
+            errors.push(StringPatternError::UnescapedGlob);
         }
         if validator_matches.matched(1) {
-            error_string
-                .push_str("\n A string pattern cannot contain unescaped selector delimiters, `:`.");
+            errors.push(StringPatternError::UnescapedColon);
         }
         if validator_matches.matched(2) {
-            error_string
-                .push_str("\n A string pattern cannot contain unescaped path delimiters, `/`.");
+            errors.push(StringPatternError::UnescapedForwardSlash);
         }
-        return Err(format_err!("{}", error_string));
+        return Err(Error::InvalidStringPattern(string_pattern.to_string(), errors));
     }
+    Ok(())
 }
 
 fn validate_string_selector_allow_recursive_glob(
@@ -113,7 +122,7 @@ fn validate_string_selector(string_selector: &StringSelector) -> Result<(), Erro
         StringSelector::StringPattern(pattern) => validate_string_pattern(pattern),
         //TODO(fxbug.dev/4601): What do we need to validate against exact matches?
         StringSelector::ExactMatch(_) => Ok(()),
-        _ => Err(format_err!("PathSelectionNodes must be string patterns or pattern matches")),
+        _ => Err(Error::InvalidStringSelector),
     }
 }
 
@@ -152,15 +161,13 @@ fn validate_tree_selector(tree_selector: &TreeSelector) -> Result<(), Error> {
     match tree_selector {
         TreeSelector::SubtreeSelector(subtree_selector) => {
             if subtree_selector.node_path.is_empty() {
-                return Err(format_err!("Subtree selectors must have non-empty node_path vector."));
+                return Err(Error::EmptySubtreeSelector);
             }
             validate_tree_path_selection_vector(&subtree_selector.node_path)?;
         }
         TreeSelector::PropertySelector(property_selector) => {
             if property_selector.node_path.is_empty() {
-                return Err(format_err!(
-                    "Property selectors must have non-empty node_path vector."
-                ));
+                return Err(Error::EmptyPropertySelectorNodePath);
             }
 
             validate_tree_path_selection_vector(&property_selector.node_path)?;
@@ -176,13 +183,11 @@ fn validate_tree_selector(tree_selector: &TreeSelector) -> Result<(), Error> {
                     // TODO(fxbug.dev/4601): What do we need to validate for exact match strings?
                 }
                 _ => {
-                    return Err(format_err!(
-                        "target_properties must be either string patterns or exact matches."
-                    ))
+                    return Err(Error::InvalidStringSelector);
                 }
             }
         }
-        _ => return Err(format_err!("TreeSelector only supports property and subtree selection.")),
+        _ => return Err(Error::InvalidTreeSelector),
     }
 
     Ok(())
@@ -197,27 +202,24 @@ fn validate_component_selector(component_selector: &ComponentSelector) -> Result
     match &component_selector.moniker_segments {
         Some(moniker) => {
             if moniker.is_empty() {
-                return Err(format_err!(
-                    "Component selectors must have non-empty moniker segment vector."
-                ));
+                return Err(Error::EmptyComponentSelector);
             }
 
             validate_component_path_selection_vector(moniker)
         }
-        None => Err(format_err!("Component selectors must have a moniker_segment.")),
+        None => Err(Error::EmptyComponentSelector),
     }
 }
 
-/// Returns true iff a component selector uses the recursive glob.
-/// Assumes the selector has already been validated.
-pub fn contains_recursive_glob(component_selector: &ComponentSelector) -> bool {
-    // Unwrap as a valid selector must contain these fields.
-    let last_segment = component_selector.moniker_segments.as_ref().unwrap().last().unwrap();
-    match last_segment {
-        StringSelector::StringPattern(pattern) if pattern == RECURSIVE_WILDCARD_SYMBOL_STR => true,
-        StringSelector::StringPattern(_) => false,
-        StringSelector::ExactMatch(_) => false,
-        StringSelectorUnknown!() => false,
+/// Extracts and validates or parses a selector from a `SelectorArgument`.
+pub fn take_from_argument(arg: SelectorArgument) -> Result<Selector, Error> {
+    match arg {
+        SelectorArgument::StructuredSelector(s) => {
+            validate_selector(&s)?;
+            Ok(s)
+        }
+        SelectorArgument::RawSelector(r) => parse_selector(&r),
+        _ => Err(Error::InvalidSelectorArgument),
     }
 }
 
@@ -228,14 +230,9 @@ pub fn validate_selector(selector: &Selector) -> Result<(), Error> {
             validate_tree_selector(tree_selector)?;
             Ok(())
         }
-        _ => Err(format_err!("Selectors require a component and tree selector.")),
+        (None, _) => Err(Error::MissingComponentSelector),
+        (_, None) => Err(Error::MissingTreeSelector),
     }
-}
-
-/// Parse a string into a FIDL StringSelector structure.
-fn convert_string_to_string_selector(string_to_convert: &str) -> StringSelector {
-    // TODO(fxbug.dev/4601): Expose the ability to parse selectors from string into "exact_match" mode.
-    StringSelector::StringPattern(string_to_convert.to_string())
 }
 
 /// Increments the CharIndices iterator and updates the token builder
@@ -243,7 +240,7 @@ fn convert_string_to_string_selector(string_to_convert: &str) -> StringSelector 
 fn handle_escaped_char(
     token_builder: &mut String,
     selection_iter: &mut std::str::CharIndices<'_>,
-) -> Result<(), Error> {
+) -> Result<(), anyhow::Error> {
     token_builder.push(ESCAPE_CHARACTER);
     let escaped_char_option: Option<(usize, char)> = selection_iter.next();
     match escaped_char_option {
@@ -259,7 +256,10 @@ fn handle_escaped_char(
 
 /// Converts a string into a vector of string tokens representing the unparsed
 /// string delimited by the provided delimiter, excluded escaped delimiters.
-pub fn tokenize_string(untokenized_selector: &str, delimiter: char) -> Result<Vec<String>, Error> {
+pub fn tokenize_string(
+    untokenized_selector: &str,
+    delimiter: char,
+) -> Result<Vec<String>, anyhow::Error> {
     let mut token_aggregator = Vec::new();
     let mut curr_token_builder: String = String::new();
     let mut unparsed_selector_iter = untokenized_selector.char_indices();
@@ -301,156 +301,41 @@ pub fn tokenize_string(untokenized_selector: &str, delimiter: char) -> Result<Ve
 pub fn parse_component_selector(
     unparsed_component_selector: &str,
 ) -> Result<ComponentSelector, Error> {
-    if unparsed_component_selector.is_empty() {
-        return Err(format_err!("ComponentSelector must have atleast one path node.",));
-    }
-
-    let tokenized_component_selector =
-        tokenize_string(unparsed_component_selector, PATH_NODE_DELIMITER)?;
-
-    let mut component_selector: ComponentSelector = ComponentSelector::EMPTY;
-
-    // Convert every token of the component hierarchy into a PathSelectionNode.
-    let path_node_vector = tokenized_component_selector
-        .iter()
-        .map(|node_string| convert_string_to_string_selector(node_string))
-        .collect::<Vec<_>>();
-
-    validate_component_path_selection_vector(&path_node_vector)?;
-
-    component_selector.moniker_segments = Some(path_node_vector);
-    return Ok(component_selector);
-}
-
-/// Converts an unparsed node path selector and an unparsed property selector into
-/// a TreeSelector.
-fn parse_tree_selector(
-    unparsed_node_path: &str,
-    unparsed_property_selector: Option<&str>,
-) -> Result<TreeSelector, Error> {
-    let node_path_option = if unparsed_node_path.is_empty() {
-        None
-    } else {
-        Some(
-            tokenize_string(unparsed_node_path, PATH_NODE_DELIMITER)?
-                .iter()
-                .map(|node_string| convert_string_to_string_selector(node_string))
-                .collect::<Vec<_>>(),
-        )
-    };
-
-    let property_option = match unparsed_property_selector {
-        Some(unparsed_string) => Some(convert_string_to_string_selector(unparsed_string)),
-        None => None,
-    };
-
-    let tree_selector = match (node_path_option, property_option) {
-        (Some(node_path), Some(property)) => TreeSelector::PropertySelector(PropertySelector {
-            node_path: node_path,
-            target_properties: property,
-        }),
-        (Some(node_path), None) => {
-            TreeSelector::SubtreeSelector(SubtreeSelector { node_path: node_path })
-        }
-        _ => {
-            return Err(format_err!(
-                "The provided selector is neither a subtree selector nor a property selector.",
-            ))
-        }
-    };
-
-    validate_tree_selector(&tree_selector)?;
-    return Ok(tree_selector);
+    let result = parser::consuming_component_selector(&unparsed_component_selector)?;
+    Ok(result.into())
 }
 
 /// Converts an unparsed Inspect selector into a ComponentSelector and TreeSelector.
 pub fn parse_selector(unparsed_selector: &str) -> Result<Selector, Error> {
-    // Tokenize the selector by `:` char in order to process each subselector separately.
-    let selector_sections = tokenize_string(unparsed_selector, SELECTOR_DELIMITER)?;
-
-    match selector_sections.as_slice() {
-        [component_selector, inspect_node_selector, property_selector] => Ok(Selector {
-            component_selector: Some(parse_component_selector(component_selector)?),
-            tree_selector: Some(parse_tree_selector(
-                inspect_node_selector,
-                Some(property_selector),
-            )?),
-            ..Selector::EMPTY
-        }),
-        [component_selector, inspect_node_selector] => Ok(Selector {
-            component_selector: Some(parse_component_selector(component_selector)?),
-            tree_selector: Some(parse_tree_selector(inspect_node_selector, None)?),
-            ..Selector::EMPTY
-        }),
-        _ => Err(format_err!(
-            "Selector format requires at least 2 subselectors delimited by a `:`.",
-        )),
-    }
-}
-
-/// Slice off the end of the input, starting with the first '/' in "//".
-fn remove_comments(line: &str) -> Option<&str> {
-    const COMMENT: char = '/';
-
-    let mut it = line.chars().enumerate().peekable();
-    loop {
-        match (it.next(), it.peek()) {
-            (Some((start_idx, COMMENT)), Some((_, COMMENT))) => {
-                return line.get(0..start_idx);
-            }
-            (None, _) => return Some(line),
-            _ => continue,
-        }
-    }
-}
-
-/// If `line`'s first non-whitespace character is a `"`, then return the substring
-/// enclosed by the first " up to the rightmost closing ". If there is no leading ",
-/// return `line` unchange. If there is no closing ", return None.
-fn remove_quotes(line: &str) -> Option<&str> {
-    const QUOTE: char = '"';
-    if !line.trim().starts_with(QUOTE) {
-        return Some(line);
-    }
-
-    line.trim().get(1..line.rfind(QUOTE)?)
-}
-
-fn preprocess_line_for_file(line: &str) -> Option<&str> {
-    remove_comments(line).map(|line| line.trim()).and_then(remove_quotes)
+    let result = parser::selector(&unparsed_selector)?;
+    Ok(result.into())
 }
 
 /// Remove any comments process a quoted line.
 pub fn parse_selector_file(selector_file: &Path) -> Result<Vec<Selector>, Error> {
-    let err = || format_err!("Failed to read line of selector file at configured path.",);
-    let selector_file = match fs::File::open(selector_file) {
-        Ok(file) => file,
-        Err(_) => return Err(format_err!("Failed to open selector file at configured path.")),
-    };
-    let mut selector_vec = Vec::new();
+    let selector_file = fs::File::open(selector_file)?;
+    let mut result = Vec::new();
     let reader = BufReader::new(selector_file);
     for line in reader.lines() {
-        match line {
-            Ok(line) => {
-                let line = preprocess_line_for_file(&line).ok_or(err())?;
-                if line.is_empty() {
-                    continue;
-                }
-                selector_vec.push(parse_selector(&line)?);
-            }
-            Err(_) => return Err(err()),
+        let line = line?;
+        if line.is_empty() {
+            continue;
+        }
+        if let Some(selector) = parser::selector_or_comment(&line)? {
+            result.push(selector.into());
         }
     }
-    Ok(selector_vec)
+    Ok(result)
 }
 
-pub fn parse_selectors(selector_path: impl Into<PathBuf>) -> Result<Vec<Selector>, Error> {
-    let selector_directory_path: PathBuf = selector_path.into();
+/// Loads all the selectors in the given directory.
+pub fn parse_selectors(directory: impl Into<PathBuf>) -> Result<Vec<Selector>, Error> {
+    let path: PathBuf = directory.into();
     let mut selector_vec: Vec<Selector> = Vec::new();
-    for entry in fs::read_dir(selector_directory_path)? {
+    for entry in fs::read_dir(path)? {
         let entry = entry?;
         if entry.path().is_dir() {
-            return Err(format_err!("Static selector directories are expected to be flat.",));
+            return Err(Error::NonFlatDirectory);
         } else {
             selector_vec.append(&mut parse_selector_file(&entry.path())?);
         }
@@ -505,7 +390,7 @@ fn convert_escaped_char_to_regex(
     token_builder.push(ESCAPE_CHARACTER);
     escaped_char_option
         .map(|(_, escaped_char)| convert_single_character_to_regex(token_builder, escaped_char))
-        .ok_or(format_err!("Selecter fails verification due to unmatched escape character"))
+        .ok_or(Error::UnmatchedEscapeCharacter)
 }
 
 /// Converts a single StringSelector into a regular expression.
@@ -530,7 +415,7 @@ fn convert_string_selector_to_regex(
             } else if string_pattern == RECURSIVE_WILDCARD_SYMBOL_STR {
                 match recursive_wildcard_symbol_replacement {
                     Some(replacement) => Ok(replacement.to_string()),
-                    None => Err(format_err!("Recursive wildcards are not supported")),
+                    None => Err(Error::RecursiveWildcardNotAllowed),
                 }
             } else {
                 let mut node_regex_builder = "(".to_string();
@@ -663,7 +548,7 @@ pub fn sanitize_moniker_for_selectors(moniker: &str) -> String {
 pub fn match_moniker_against_component_selector(
     moniker: &[impl AsRef<str> + std::string::ToString],
     component_selector: &ComponentSelector,
-) -> Result<bool, Error> {
+) -> Result<bool, anyhow::Error> {
     let moniker_selector: &Vec<StringSelector> = match &component_selector.moniker_segments {
         Some(path_vec) => &path_vec,
         None => return Err(format_err!("Component selectors require moniker segments.")),
@@ -695,7 +580,7 @@ pub fn match_moniker_against_component_selector(
 pub fn match_component_moniker_against_selector<T>(
     moniker: &[T],
     selector: &Selector,
-) -> Result<bool, Error>
+) -> Result<bool, anyhow::Error>
 where
     T: AsRef<str> + std::string::ToString,
 {
@@ -721,7 +606,7 @@ where
 pub fn match_component_moniker_against_selectors<'a, T>(
     moniker: &[String],
     selectors: &'a [T],
-) -> Result<Vec<&'a Selector>, Error>
+) -> Result<Vec<&'a Selector>, anyhow::Error>
 where
     T: Borrow<Selector>,
 {
@@ -738,7 +623,7 @@ where
             validate_selector(component_selector)?;
             Ok(component_selector)
         })
-        .collect::<Result<Vec<&Selector>, Error>>();
+        .collect::<Result<Vec<&Selector>, anyhow::Error>>();
 
     selectors?
         .iter()
@@ -747,7 +632,7 @@ where
                 .map(|is_match| if is_match { Some(*selector) } else { None })
                 .transpose()
         })
-        .collect::<Result<Vec<&Selector>, Error>>()
+        .collect::<Result<Vec<&Selector>, anyhow::Error>>()
 }
 
 /// Evaluates a component moniker against a list of component selectors, returning
@@ -758,7 +643,7 @@ where
 pub fn match_moniker_against_component_selectors<'a, T>(
     moniker: &[String],
     selectors: &'a [T],
-) -> Result<Vec<&'a ComponentSelector>, Error>
+) -> Result<Vec<&'a ComponentSelector>, anyhow::Error>
 where
     T: Borrow<ComponentSelector> + 'a,
 {
@@ -775,7 +660,7 @@ where
             validate_component_selector(component_selector)?;
             Ok(component_selector)
         })
-        .collect::<Result<Vec<&ComponentSelector>, Error>>();
+        .collect::<Result<Vec<&ComponentSelector>, anyhow::Error>>();
 
     component_selectors?
         .iter()
@@ -784,7 +669,7 @@ where
                 .map(|is_match| if is_match { Some(selector.clone()) } else { None })
                 .transpose()
         })
-        .collect::<Result<Vec<&ComponentSelector>, Error>>()
+        .collect::<Result<Vec<&ComponentSelector>, anyhow::Error>>()
 }
 
 /// Format a |Selector| as a string.
@@ -794,7 +679,7 @@ where
 /// Note that the output will always include both a component and tree selector. If your input is
 /// simply "moniker" you will likely see "moniker:root" as many clients implicitly append "root" if
 /// it is not present (e.g. iquery).
-pub fn selector_to_string(selector: Selector) -> Result<String, Error> {
+pub fn selector_to_string(selector: Selector) -> Result<String, anyhow::Error> {
     validate_selector(&selector)?;
 
     let component_selector =
@@ -823,7 +708,7 @@ pub fn selector_to_string(selector: Selector) -> Result<String, Error> {
         ret
     };
 
-    let process_string_selector_vector = |v: Vec<StringSelector>| -> Result<String, Error> {
+    let process_string_selector_vector = |v: Vec<StringSelector>| -> Result<String, anyhow::Error> {
         Ok(v.into_iter()
             .map(|segment| match segment {
                 StringSelector::StringPattern(s) => Ok(s),
@@ -832,7 +717,7 @@ pub fn selector_to_string(selector: Selector) -> Result<String, Error> {
                     return Err(format_err!("Unknown string selector type"));
                 }
             })
-            .collect::<Result<Vec<_>, Error>>()?
+            .collect::<Result<Vec<_>, anyhow::Error>>()?
             .join("/"))
     };
 
@@ -858,7 +743,7 @@ pub fn selector_to_string(selector: Selector) -> Result<String, Error> {
 pub fn match_selector_against_single_node(
     node: &impl AsRef<str>,
     selector: &StringSelector,
-) -> Result<bool, Error> {
+) -> Result<bool, anyhow::Error> {
     let regex = Regex::new(&format!(
         "^{}$",
         convert_string_selector_to_regex(selector, WILDCARD_REGEX_EQUIVALENT, None)?
@@ -873,271 +758,6 @@ mod tests {
     use std::fs::File;
     use std::io::prelude::*;
     use tempfile::TempDir;
-
-    // TODO(fxbug.dev/55118): REMOVE. When updating this test, please make sure the one of the same
-    // name in parser.rs is updated.
-    #[test]
-    fn canonical_component_selector_test() {
-        let test_vector = vec![
-            (
-                "a/b/c",
-                StringSelector::StringPattern("a".to_string()),
-                StringSelector::StringPattern("b".to_string()),
-                StringSelector::StringPattern("c".to_string()),
-            ),
-            (
-                "a/*/c",
-                StringSelector::StringPattern("a".to_string()),
-                StringSelector::StringPattern("*".to_string()),
-                StringSelector::StringPattern("c".to_string()),
-            ),
-            (
-                "a/b*/c",
-                StringSelector::StringPattern("a".to_string()),
-                StringSelector::StringPattern("b*".to_string()),
-                StringSelector::StringPattern("c".to_string()),
-            ),
-            (
-                r#"a/b\*/c"#,
-                StringSelector::StringPattern("a".to_string()),
-                StringSelector::StringPattern(r#"b\*"#.to_string()),
-                StringSelector::StringPattern("c".to_string()),
-            ),
-            (
-                r#"a/\*/c"#,
-                StringSelector::StringPattern("a".to_string()),
-                StringSelector::StringPattern(r#"\*"#.to_string()),
-                StringSelector::StringPattern("c".to_string()),
-            ),
-            (
-                "a/b/**",
-                StringSelector::StringPattern("a".to_string()),
-                StringSelector::StringPattern("b".to_string()),
-                StringSelector::StringPattern("**".to_string()),
-            ),
-        ];
-
-        for (test_string, first_path_node, second_path_node, target_component) in test_vector {
-            let component_selector = parse_component_selector(&test_string).unwrap();
-
-            match component_selector.moniker_segments.as_ref().unwrap().as_slice() {
-                [first, second, third] => {
-                    assert_eq!(*first, first_path_node);
-                    assert_eq!(*second, second_path_node);
-                    assert_eq!(*third, target_component);
-                }
-                _ => unreachable!(),
-            }
-        }
-    }
-
-    #[test]
-    fn try_remove_comments() {
-        let test_cases = vec![
-            (Some(r"a:\/\/b:\/c"), r"a:\/\/b:\/c"),
-            (Some(r"a/b/c"), r"a/b/c"),
-            (Some(""), "// a comment"),
-            (Some("a:b:c "), "a:b:c // inline comment"),
-            (Some("   "), "   // leading whitespace is not trimmed"),
-            (Some("\t\t "), "\t\t // including tabs"),
-        ];
-
-        for (case, (expected, actual_input)) in test_cases.into_iter().enumerate() {
-            assert_eq!(
-                expected,
-                remove_comments(actual_input),
-                "test case number: {}, raw data: <{}>",
-                case,
-                actual_input
-            );
-        }
-    }
-
-    #[test]
-    fn try_remove_quotes() {
-        let test_cases = vec![
-            (Some("a:b:c"), r#""a:b:c""#),
-            (None, r#""a:b:c"#),
-            (Some(r#"a:b":c"#), r#"a:b":c"#),
-            (Some("a:b:c  "), r#""a:b:c  ""#),
-            (Some(r#"a:"b":"c "#), r##""a:"b":"c ""##),
-            (Some("a:b:c"), "a:b:c"),
-            (Some("  a:b:c  "), "  a:b:c  "),
-            (Some("a: b:c "), "a: b:c "),
-        ];
-
-        for (case, (expected, actual_input)) in test_cases.into_iter().enumerate() {
-            assert_eq!(
-                expected,
-                remove_quotes(actual_input),
-                "test case number: {}, raw data: <{}>",
-                case,
-                actual_input
-            );
-        }
-    }
-
-    #[test]
-    fn try_preprocess_file_lines() {
-        let test_cases = vec![
-            (Some("a/b/c"), "a/b/c"),
-            (Some("a/b/c"), "a/b/c // a comment"),
-            (Some("  hello:world/a/b  "), r#""  hello:world/a/b  ""#),
-            (Some(r#"a:/b"c"#), r#"a:/b"c"#),
-            (Some(r#"a:b"c:d"#), r#""a:b"c:d"  // a comment"#),
-            (Some(""), "//"),
-            (None, r#"""#),
-        ];
-
-        for (case, (expected, actual_input)) in test_cases.into_iter().enumerate() {
-            assert_eq!(
-                expected,
-                preprocess_line_for_file(actual_input),
-                "test case number: {}, raw data: <{}>",
-                case,
-                actual_input
-            );
-        }
-    }
-
-    // TODO(fxbug.dev/55118): REMOVE. When updating this test, please make sure the one of the same
-    // name in parser.rs is updated.
-    #[test]
-    fn missing_path_component_selector_test() {
-        let component_selector_string = "c";
-        let component_selector =
-            parse_component_selector(&component_selector_string.to_string()).unwrap();
-        let mut path_vec = component_selector.moniker_segments.unwrap();
-        assert_eq!(path_vec.pop(), Some(StringSelector::StringPattern("c".to_string())));
-
-        assert!(path_vec.is_empty());
-    }
-
-    // TODO(fxbug.dev/55118): REMOVE. When updating this test, please make sure the one of the same
-    // name in parser.rs is updated.
-    #[test]
-    fn path_components_have_spaces_as_names_selector_test() {
-        let component_selector_string = " ";
-        let component_selector =
-            parse_component_selector(&component_selector_string.to_string()).unwrap();
-        let mut path_vec = component_selector.moniker_segments.unwrap();
-        assert_eq!(path_vec.pop(), Some(StringSelector::StringPattern(" ".to_string())));
-
-        assert!(path_vec.is_empty());
-    }
-
-    // TODO(fxbug.dev/55118): REMOVE. When updating this test, please make sure the one of the same
-    // name in parser.rs is updated.
-    #[test]
-    fn errorful_component_selector_test() {
-        let test_vector: Vec<String> = vec![
-            "".to_string(),
-            "a\\".to_string(),
-            r#"a/b***/c"#.to_string(),
-            r#"a/***/c"#.to_string(),
-            r#"a/**/c"#.to_string(),
-            // supported? r#"a/*/b/**"#.to_string(),
-        ];
-        for test_string in test_vector {
-            let component_selector_result = parse_component_selector(&test_string);
-            assert!(component_selector_result.is_err());
-        }
-    }
-
-    // TODO(fxbug.dev/55118): REMOVE. When updating this test, please make sure the one of the same
-    // name in parser.rs is updated.
-    #[test]
-    fn canonical_tree_selector_test() {
-        let test_vector = vec![
-            (
-                "a/b",
-                Some("c"),
-                StringSelector::StringPattern("a".to_string()),
-                StringSelector::StringPattern("b".to_string()),
-                Some(StringSelector::StringPattern("c".to_string())),
-            ),
-            (
-                "a/*",
-                Some("c"),
-                StringSelector::StringPattern("a".to_string()),
-                StringSelector::StringPattern("*".to_string()),
-                Some(StringSelector::StringPattern("c".to_string())),
-            ),
-            (
-                "a/b",
-                Some("*"),
-                StringSelector::StringPattern("a".to_string()),
-                StringSelector::StringPattern("b".to_string()),
-                Some(StringSelector::StringPattern("*".to_string())),
-            ),
-            (
-                "a/b",
-                None,
-                StringSelector::StringPattern("a".to_string()),
-                StringSelector::StringPattern("b".to_string()),
-                None,
-            ),
-        ];
-
-        for (
-            test_node_path,
-            test_target_property,
-            first_path_node,
-            second_path_node,
-            parsed_property,
-        ) in test_vector
-        {
-            let tree_selector = parse_tree_selector(test_node_path, test_target_property).unwrap();
-            match tree_selector {
-                TreeSelector::SubtreeSelector(tree_selector) => {
-                    match tree_selector.node_path.as_slice() {
-                        [first, second] => {
-                            assert_eq!(*first, first_path_node);
-                            assert_eq!(*second, second_path_node);
-                        }
-                        _ => unreachable!(),
-                    }
-                }
-                TreeSelector::PropertySelector(tree_selector) => {
-                    assert_eq!(tree_selector.target_properties, parsed_property.unwrap());
-                    match tree_selector.node_path.as_slice() {
-                        [first, second] => {
-                            assert_eq!(*first, first_path_node);
-                            assert_eq!(*second, second_path_node);
-                        }
-                        _ => unreachable!(),
-                    }
-                }
-                _ => unreachable!(),
-            }
-        }
-    }
-
-    // TODO(fxbug.dev/55118): REMOVE. When updating this test, please make sure the one of the same
-    // name in parser.rs is updated.
-    #[test]
-    fn errorful_tree_selector_test() {
-        let test_vector = vec![
-            // Not allowed due to empty property selector.
-            ("a/b", Some("")),
-            // Not allowed due to glob property selector.
-            ("a/b", Some("**")),
-            // Not allowed due to escape-char without a thing to escape.
-            (r#"a/b\"#, Some("c")),
-            // String literals can't have globs.
-            (r#"a/b**"#, Some("c")),
-            // Property selector string literals cant have globs.
-            (r#"a/b"#, Some("c**")),
-            ("a/b", Some("**")),
-            // Node path cant have globs.
-            ("a/**", Some("c")),
-            ("", Some("c")),
-        ];
-        for (test_nodepath, test_target_property) in test_vector {
-            let tree_selector_result = parse_tree_selector(test_nodepath, test_target_property);
-            assert!(tree_selector_result.is_err());
-        }
-    }
 
     #[test]
     fn successful_selector_parsing() {
@@ -1305,7 +925,6 @@ a:b:c
             (r#"echo.cmx:a:b*"#, r#"bob"#),
             (r#"echo.cmx:a:\*"#, r#"*"#),
             (r#"echo.cmx:a:b\ c"#, r#"b c"#),
-            (r#"echo.cmx:a:b c"#, r#"b c"#),
         ];
         for (selector, string_to_match) in test_cases {
             let parsed_selector = parse_selector(selector).unwrap();
@@ -1478,7 +1097,6 @@ a:b:c
             (r#"ab*/echo.cmx:*:*"#, vec!["abc", "echo.cmx"]),
             (r#"ab*/echo.cmx:*:*"#, vec!["abcde", "echo.cmx"]),
             (r#"*/ab*/echo.cmx:*:*"#, vec!["123", "abcde", "echo.cmx"]),
-            (r#"a\/\*/echo.cmx:*:*"#, vec!["a/*", "echo.cmx"]),
             (r#"echo.cmx*:*:*"#, vec!["echo.cmx"]),
             (r#"a/echo*.cmx:*:*"#, vec!["a", "echo1.cmx"]),
             (r#"a/echo*.cmx:*:*"#, vec!["a", "echo.cmx"]),
@@ -1541,7 +1159,7 @@ a:b:c
             r#"moniker:root"#,
             r#"my/component:root"#,
             r#"my/component:root:a"#,
-            r#"a/b/c\*ff:root:a"#,
+            r#"a/b/c*ff:root:a"#,
             r#"a/child*:root:a"#,
             r#"a/child:root/a/b/c"#,
             r#"a/child:root/a/b/c:d"#,
@@ -1567,7 +1185,7 @@ a:b:c
     fn exact_match_selector_to_string() {
         let selector = Selector {
             component_selector: Some(ComponentSelector {
-                moniker_segments: Some(vec![StringSelector::ExactMatch("a*:".to_string())]),
+                moniker_segments: Some(vec![StringSelector::ExactMatch("a".to_string())]),
                 ..ComponentSelector::EMPTY
             }),
             tree_selector: Some(TreeSelector::SubtreeSelector(SubtreeSelector {
@@ -1578,12 +1196,12 @@ a:b:c
 
         // Check we generate the expected string with escaping.
         let selector_string = selector_to_string(selector).unwrap();
-        assert_eq!(r#"a\*\::a\*\:"#, selector_string);
+        assert_eq!(r#"a:a\*\:"#, selector_string);
 
         // Parse the resultant selector, and check that it matches a moniker it is supposed to.
         let parsed = parse_selector(&selector_string).unwrap();
         assert!(match_moniker_against_component_selector(
-            &["a*:"],
+            &["a"],
             parsed.component_selector.as_ref().unwrap()
         )
         .unwrap());

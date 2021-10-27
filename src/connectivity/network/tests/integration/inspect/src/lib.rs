@@ -604,7 +604,12 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
         let data = get_inspect_data(
             &realm,
             "netstack",
-            std::iter::once(DISCARD_STATS_NAME).chain(path).into_iter().rev().join("/"),
+            std::iter::once(DISCARD_STATS_NAME)
+                .chain(path)
+                .into_iter()
+                .map(selectors::sanitize_string_for_selectors)
+                .rev()
+                .join("/"),
             "interfaces",
         )
         .await
@@ -638,7 +643,7 @@ async fn inspect_stat_counters() {
         .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
         .expect("failed to connect to fuchsia.netstack/Netstack");
 
-    let data = get_inspect_data(&realm, "netstack", "Networking Stat Counters", "counters")
+    let data = get_inspect_data(&realm, "netstack", r#"Networking\ Stat\ Counters"#, "counters")
         .await
         .expect("get_inspect_data failed");
     // TODO(https://fxbug.dev/62447): change AnyProperty to AnyUintProperty when available.

@@ -77,7 +77,7 @@ pub enum ServerError {
     InvalidSelectors(&'static str),
 
     #[error("couldn't parse/validate the provided selectors")]
-    ParseSelectors(#[source] anyhow::Error),
+    ParseSelectors(#[from] selectors::Error),
 
     #[error("format must be set")]
     MissingFormat,

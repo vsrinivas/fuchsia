@@ -9,7 +9,6 @@
 
 use {
     crate::trie::*,
-    anyhow,
     base64::display::Base64Display,
     core::marker::PhantomData,
     fidl_fuchsia_diagnostics::{Selector, StringSelector, TreeSelector},
@@ -534,9 +533,8 @@ pub enum Error {
     #[error("Invalid regex")]
     Regex(#[source] regex::Error),
 
-    // TODO: the selectors library should expose typed errors.
-    #[error("Selectors error")]
-    Selectors(#[source] anyhow::Error),
+    #[error(transparent)]
+    Selectors(#[from] selectors::Error),
 }
 
 impl Error {
@@ -720,12 +718,10 @@ impl<T: Borrow<Selector>> TryFrom<&[T]> for InspectHierarchyMatcher {
                             selectors::convert_path_selector_to_regex(
                                 &subtree_selector.node_path,
                                 /*is_subtree_selector=*/ true,
-                            )
-                            .map_err(Error::Selectors)?,
+                            )?,
                             selectors::convert_property_selector_to_regex(
                                 &StringSelector::StringPattern("*".to_string()),
-                            )
-                            .map_err(Error::Selectors)?,
+                            )?,
                         ))
                     }
                     TreeSelector::PropertySelector(property_selector) => {
@@ -733,12 +729,10 @@ impl<T: Borrow<Selector>> TryFrom<&[T]> for InspectHierarchyMatcher {
                             selectors::convert_path_selector_to_regex(
                                 &property_selector.node_path,
                                 /*is_subtree_selector=*/ false,
-                            )
-                            .map_err(Error::Selectors)?,
+                            )?,
                             selectors::convert_property_selector_to_regex(
                                 &property_selector.target_properties,
-                            )
-                            .map_err(Error::Selectors)?,
+                            )?,
                         ))
                     }
                     _ => Err(Error::InvalidTreeSelector),

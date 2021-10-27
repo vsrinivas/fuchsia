@@ -23,7 +23,7 @@ pub enum AccessorError {
     InvalidSelectors(&'static str),
 
     #[error("couldn't parse/validate the provided selectors: {}", .0)]
-    ParseSelectors(#[source] anyhow::Error),
+    ParseSelectors(#[from] selectors::Error),
 
     #[error("only selectors of type `component:root` are supported for logs at the moment")]
     InvalidLogSelector,

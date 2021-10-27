@@ -741,7 +741,7 @@ mod test {
                 "Missing: No component found matching selector */fo/*:root.dataInt"
             );
             assert_wrong!("INSPECT:*/foo/*:root:data:Int",
-                "SyntaxError: Fetch SelectorString { full_selector: \"INSPECT:*/foo/*:root:data:Int\", selector_type: Inspect, body: \"*/foo/*:root:data:Int\" } -> Selector format requires at least 2 subselectors delimited by a `:`.");
+                "SyntaxError: Fetch SelectorString { full_selector: \"INSPECT:*/foo/*:root:data:Int\", selector_type: Inspect, body: \"*/foo/*:root:data:Int\" } -> Failed to parse the input. Failed at: \":Int\" with: Eof");
             assert_eq!(inspect.fetch_str("INSPECT:*/foo/*:root/kid:dataInt"), vec![]);
             assert_eq!(inspect.fetch_str("INSPECT:*/bar/*:base/array:dataInt"), vec![]);
             assert_eq!(
