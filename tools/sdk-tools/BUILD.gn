@@ -24,5 +24,8 @@ group("tests") {
     "//tools/sdk-tools/fserve:fserve-test($host_toolchain)",
     "//tools/sdk-tools/fssh:fssh-test($host_toolchain)",
     "//tools/sdk-tools/sdkcommon:sdkcommon-test($host_toolchain)",
+
+    # TODO(fxbug.dev/87398): Enable fstar_integration_test once ffx daemon is fully isolated.
+    # "//tools/sdk-tools/fstar_integration:tests($host_toolchain)",
   ]
 }
