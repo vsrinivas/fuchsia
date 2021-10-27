@@ -857,9 +857,9 @@ where
                     let partial = PartialChildMoniker::new(name.clone(), None);
                     target.lock_resolved_state().await?.get_live_child(&partial).ok_or_else(
                         || {
-                            RoutingError::use_from_child_not_found(
+                            RoutingError::use_from_child_instance_not_found(
+                                &partial,
                                 &moniker,
-                                use_.source_name().clone(),
                                 name.clone(),
                             )
                         },

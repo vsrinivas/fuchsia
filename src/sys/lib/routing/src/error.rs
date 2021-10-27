@@ -177,13 +177,17 @@ pub enum RoutingError {
     UseFromParentNotFound { moniker: PartialAbsoluteMoniker, capability_id: String },
 
     #[error(
-        "A `use from child` declaration was found at `{}` for `{}`, but no matching \
-        `expose` declaration was found in child `#{}`>",
+        "A `use from #{}` declaration was found at `{}` for `{}`, but no matching child was \
+        found",
+        child_moniker,
         moniker,
-        capability_id,
-        child
+        capability_id
     )]
-    UseFromChildNotFound { moniker: PartialAbsoluteMoniker, capability_id: String, child: String },
+    UseFromChildInstanceNotFound {
+        child_moniker: PartialChildMoniker,
+        moniker: PartialAbsoluteMoniker,
+        capability_id: String,
+    },
 
     #[error(
         "A `use` declaration was found at `{}` for {} `{}`, but no matching \
@@ -510,15 +514,15 @@ impl RoutingError {
         }
     }
 
-    pub fn use_from_child_not_found(
+    pub fn use_from_child_instance_not_found(
+        child_moniker: &PartialChildMoniker,
         moniker: &PartialAbsoluteMoniker,
         capability_id: impl Into<String>,
-        child: String,
     ) -> Self {
-        Self::UseFromChildNotFound {
+        Self::UseFromChildInstanceNotFound {
+            child_moniker: child_moniker.clone(),
             moniker: moniker.clone(),
             capability_id: capability_id.into(),
-            child,
         }
     }
 

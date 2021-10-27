@@ -63,6 +63,9 @@ impl From<VerifyRouteResult> for ResultBySeverity {
                     ))
                     | CapabilityRouteError::AnalyzerModelError(AnalyzerModelError::RoutingError(
                         RoutingError::OfferFromChildInstanceNotFound { .. },
+                    ))
+                    | CapabilityRouteError::AnalyzerModelError(AnalyzerModelError::RoutingError(
+                        RoutingError::UseFromChildInstanceNotFound { .. },
                     )) => WarningResult {
                         using_node: verify_route_result.using_node,
                         capability: verify_route_result.capability,
