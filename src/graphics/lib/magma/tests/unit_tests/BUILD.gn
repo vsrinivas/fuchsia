@@ -85,7 +85,6 @@ source_set("magma_util_tests") {
     "test_address_space_allocator.cc",
     "test_macros.cc",
     "test_mapped_batch.cc",
-    "test_register_bitfields.cc",
     "test_register_io.cc",
     "test_ringbuffer.cc",
     "test_semaphore_port.cc",

@@ -134,7 +134,6 @@ source_set("registers") {
   ]
 
   sources = [
-    "register_bitfields.h",
     "register_io.cc",
     "register_io.h",
   ]
