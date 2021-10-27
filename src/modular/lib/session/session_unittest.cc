@@ -152,9 +152,9 @@ class TestLauncher : fuchsia::modular::session::Launcher {
       return;
     }
 
-    is_launched_ = true;
     config_ =
         std::make_unique<fuchsia::modular::session::ModularConfig>(config_result.take_value());
+    is_launched_ = true;
   }
 
   // |Launcher|
