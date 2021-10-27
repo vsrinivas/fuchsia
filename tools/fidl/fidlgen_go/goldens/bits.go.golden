@@ -3,6 +3,7 @@
 package bits
 
 import (
+	_strings "strings"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -48,15 +49,29 @@ func (x MyBits) ClearBits(mask MyBits) MyBits {
 }
 
 func (x MyBits) String() string {
-	switch x {
-	case 1:
-		return "MyFirstBit"
-	case 2:
-		return "MyOtherBit"
-	case 4:
-		return "Mask"
+	var buf _strings.Builder
+	if 1&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("MyFirstBit")
 	}
-	return "Unknown"
+	if 2&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("MyOtherBit")
+	}
+	if 4&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("Mask")
+	}
+	if buf.Len() == 0 {
+		buf.WriteString("<empty bits>")
+	}
+	return buf.String()
 }
 
 var _ _bindings.Bits = StrictBits(0)
@@ -100,13 +115,23 @@ func (x StrictBits) ClearBits(mask StrictBits) StrictBits {
 }
 
 func (x StrictBits) String() string {
-	switch x {
-	case 1:
-		return "Smallest"
-	case 9223372036854775808:
-		return "Biggest"
+	var buf _strings.Builder
+	if 1&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("Smallest")
 	}
-	return "Unknown"
+	if 9223372036854775808&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("Biggest")
+	}
+	if buf.Len() == 0 {
+		buf.WriteString("<empty bits>")
+	}
+	return buf.String()
 }
 
 var _ _bindings.Bits = FlexibleBits(0)
@@ -150,11 +175,21 @@ func (x FlexibleBits) ClearBits(mask FlexibleBits) FlexibleBits {
 }
 
 func (x FlexibleBits) String() string {
-	switch x {
-	case 1:
-		return "Smallest"
-	case 9223372036854775808:
-		return "Biggest"
+	var buf _strings.Builder
+	if 1&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("Smallest")
 	}
-	return "Unknown"
+	if 9223372036854775808&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("Biggest")
+	}
+	if buf.Len() == 0 {
+		buf.WriteString("<empty bits>")
+	}
+	return buf.String()
 }

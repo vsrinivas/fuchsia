@@ -19,7 +19,7 @@ func ExampleFileMode() {
 
 	// Output:
 	// Read
-	// Unknown
+	// Write|Execute
 }
 
 // [END bits]

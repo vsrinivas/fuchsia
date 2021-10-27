@@ -3,6 +3,7 @@
 package anonymous
 
 import (
+	_strings "strings"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -139,13 +140,23 @@ func (x BitsMember) ClearBits(mask BitsMember) BitsMember {
 }
 
 func (x BitsMember) String() string {
-	switch x {
-	case 1:
-		return "BitOne"
-	case 2:
-		return "BitTwo"
+	var buf _strings.Builder
+	if 1&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("BitOne")
 	}
-	return "Unknown"
+	if 2&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("BitTwo")
+	}
+	if buf.Len() == 0 {
+		buf.WriteString("<empty bits>")
+	}
+	return buf.String()
 }
 
 var _ _bindings.Bits = Flags(0)
@@ -188,11 +199,17 @@ func (x Flags) ClearBits(mask Flags) Flags {
 }
 
 func (x Flags) String() string {
-	switch x {
-	case 1:
-		return "Inline"
+	var buf _strings.Builder
+	if 1&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("Inline")
 	}
-	return "Unknown"
+	if buf.Len() == 0 {
+		buf.WriteString("<empty bits>")
+	}
+	return buf.String()
 }
 
 type TableData struct {

@@ -4,4 +4,55 @@
 
 library fidl.go.types;
 
+type StrictBits = strict bits {
+    MEMBER_A = 1;
+    MEMBER_B = 2;
+    MEMBER_C = 4;
+};
+
+type FlexibleBits = flexible bits {
+    MEMBER_A = 8;
+    MEMBER_B = 16;
+    MEMBER_C = 32;
+};
+
+type StrictEnum = strict enum {
+    MEMBER_A = 23;
+    MEMBER_B = 34;
+    MEMBER_C = 45;
+};
+
+type FlexibleEnum = flexible enum {
+    MEMBER_A = 23;
+    MEMBER_B = 34;
+    MEMBER_C = 45;
+    @unknown
+    MEMBER_CUSTOM_UNKNOWN = 89;
+};
+
 type EmptyFlexibleEnum = flexible enum :uint32 {};
+
+type SimpleTable = table {
+    1: x int64;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: y int64;
+};
+
+type ExampleStrictUnion = strict union {
+    1: foo string;
+    2: bar int32;
+    3: baz vector<uint8>;
+};
+
+type ExampleFlexibleUnion = flexible union {
+    1: reserved;
+    2: reserved;
+    3: reserved;
+    4: foo string;
+    5: bar int32;
+    6: baz vector<uint8>;
+    7: a array<int8, 3>;
+    8: d float32;
+};

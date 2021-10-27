@@ -10,8 +10,17 @@ import("//build/go/toolchain.gni")
 
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/src/tests/fidl/go_bindings_test"
-  deps = [ ":fidl.go.types($go_toolchain)" ]
-  sources = [ "enums_test.go" ]
+  deps = [
+    ":fidl.go.types($go_toolchain)",
+    "//third_party/golibs:github.com/google/go-cmp",
+  ]
+  sources = [
+    "bits_test.go",
+    "enums_test.go",
+    "stringer_test.go",
+    "tables_test.go",
+    "unions_test.go",
+  ]
 }
 
 go_test("fidl-go-bindings-test") {

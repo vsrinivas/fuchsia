@@ -49,7 +49,7 @@ if (is_host) {
   }
 }
 
-test("tests") {
+test("fostr-test-bin") {
   output_name = "fostr_unittests"
 
   sources = [
@@ -77,8 +77,13 @@ test("tests") {
   ]
 }
 
-fuchsia_unittest_package("tests_package") {
+fuchsia_unittest_package("fostr-tests") {
   package_name = "fostr_unittests"
   manifest = "meta/fostr_unittests.cmx"
-  deps = [ ":tests" ]
+  deps = [ ":fostr-test-bin" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fostr-tests" ]
 }

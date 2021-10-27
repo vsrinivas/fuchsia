@@ -777,6 +777,7 @@ TEST(FidlTypes, InterfaceRequest) {
 TEST(FidlTypes, BitsFormatting) {
   using namespace fuchsia::example::fostr;
 
+  EXPECT_FIDL_TO_FORMAT_AS(static_cast<ExampleBits>(0), "<empty bits>");
   EXPECT_FIDL_TO_FORMAT_AS(ExampleBits::A, "a");
   EXPECT_FIDL_TO_FORMAT_AS(ExampleBits::B, "b");
   EXPECT_FIDL_TO_FORMAT_AS(ExampleBits::C, "c");

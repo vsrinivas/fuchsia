@@ -4,6 +4,7 @@ package placementofattributes
 
 import (
 	exampleusing "fidl/exampleusing"
+	_strings "strings"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -85,11 +86,17 @@ func (x ExampleBits) ClearBits(mask ExampleBits) ExampleBits {
 }
 
 func (x ExampleBits) String() string {
-	switch x {
-	case 1:
-		return "Member"
+	var buf _strings.Builder
+	if 1&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("Member")
 	}
-	return "Unknown"
+	if buf.Len() == 0 {
+		buf.WriteString("<empty bits>")
+	}
+	return buf.String()
 }
 
 type ExampleStruct struct {

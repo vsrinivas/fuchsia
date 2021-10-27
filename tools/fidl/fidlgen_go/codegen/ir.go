@@ -29,6 +29,9 @@ const (
 
 	BindingsPackage = "syscall/zx/fidl"
 	BindingsAlias   = "_bindings"
+
+	StringsPackage = "strings"
+	StringsAlias   = "_strings"
 )
 
 // Type represents a golang type.
@@ -765,6 +768,8 @@ func (c *compiler) compileBitsMember(val fidlgen.BitsMember) BitsMember {
 func (c *compiler) compileBits(val fidlgen.Bits) Bits {
 	// all bits must implement fidl.Bits
 	c.usedLibraryDeps[BindingsPackage] = BindingsAlias
+	// bits implementation uses bytes package
+	c.usedLibraryDeps[StringsPackage] = StringsAlias
 
 	t, _ := c.compileType(val.Type)
 	r := Bits{

@@ -3,6 +3,7 @@
 package protocols
 
 import (
+	_strings "strings"
 	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
@@ -128,13 +129,23 @@ func (x Rights) ClearBits(mask Rights) Rights {
 }
 
 func (x Rights) String() string {
-	switch x {
-	case 1:
-		return "Transfer"
-	case 2:
-		return "Duplicate"
+	var buf _strings.Builder
+	if 1&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("Transfer")
 	}
-	return "Unknown"
+	if 2&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("Duplicate")
+	}
+	if buf.Len() == 0 {
+		buf.WriteString("<empty bits>")
+	}
+	return buf.String()
 }
 
 type WithErrorSyntaxResponseAsStructResponse struct {

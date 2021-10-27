@@ -3,6 +3,7 @@
 package doccomments
 
 import (
+	_strings "strings"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -162,13 +163,23 @@ func (x MyStrictBits) ClearBits(mask MyStrictBits) MyStrictBits {
 }
 
 func (x MyStrictBits) String() string {
-	switch x {
-	case 1:
-		return "MyFirstBit"
-	case 2:
-		return "MyOtherBit"
+	var buf _strings.Builder
+	if 1&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("MyFirstBit")
 	}
-	return "Unknown"
+	if 2&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("MyOtherBit")
+	}
+	if buf.Len() == 0 {
+		buf.WriteString("<empty bits>")
+	}
+	return buf.String()
 }
 
 var _ _bindings.Bits = MyFlexibleBits(0)
@@ -215,13 +226,23 @@ func (x MyFlexibleBits) ClearBits(mask MyFlexibleBits) MyFlexibleBits {
 }
 
 func (x MyFlexibleBits) String() string {
-	switch x {
-	case 1:
-		return "MyFirstBit"
-	case 2:
-		return "MyOtherBit"
+	var buf _strings.Builder
+	if 1&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("MyFirstBit")
 	}
-	return "Unknown"
+	if 2&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("MyOtherBit")
+	}
+	if buf.Len() == 0 {
+		buf.WriteString("<empty bits>")
+	}
+	return buf.String()
 }
 
 // struct comment #1

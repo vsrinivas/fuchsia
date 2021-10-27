@@ -3,6 +3,7 @@
 package bitsconstants
 
 import (
+	_strings "strings"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -54,13 +55,27 @@ func (x BitsType) ClearBits(mask BitsType) BitsType {
 }
 
 func (x BitsType) String() string {
-	switch x {
-	case 1:
-		return "A"
-	case 128:
-		return "B"
-	case 2:
-		return "C"
+	var buf _strings.Builder
+	if 1&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("A")
 	}
-	return "Unknown"
+	if 128&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("B")
+	}
+	if 2&x != 0 {
+		if buf.Len() != 0 {
+			buf.WriteRune('|')
+		}
+		buf.WriteString("C")
+	}
+	if buf.Len() == 0 {
+		buf.WriteString("<empty bits>")
+	}
+	return buf.String()
 }

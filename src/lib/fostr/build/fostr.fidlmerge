@@ -174,7 +174,9 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
     os << "{{ toFriendlyCase .Name }}";
   }
         {{- end }}
-
+  if (is_first) {
+    os << "<empty bits>";
+  }
   return os;
 }
     {{- end }}
