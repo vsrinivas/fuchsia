@@ -80,7 +80,7 @@ func testLockupWithCommand(t *testing.T, i *emulatortest.Instance, arch emulator
 	// the context of the unresponsive CPU.  Then look for the "welcome to
 	// Zircon" message as our indication that the system has rebooted.
 	i.RunCommand(command)
-	i.WaitForLogMessage("cpu context follows")
+	i.WaitForLogMessage("context follows")
 	i.WaitForLogMessage("{{{bt:0:")
 	i.WaitForLogMessage("welcome to Zircon")
 

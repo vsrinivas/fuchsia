@@ -136,17 +136,21 @@ void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target) {
     return;
   }
 
-  CpuContext context;
-  zx_status_t status = g_cpu_context_exchange.RequestContext(cpu, timeout, context);
-  if (status != ZX_OK) {
-    fprintf(output_target, "failed to get context of CPU-%u: %d\n", cpu, status);
-    return;
-  }
-
-  printf("cpu context follows\n");
-  context.backtrace.Print(output_target);
-  PrintFrame(output_target, context.frame);
-  printf("end of cpu context\n");
+  // First, dump the context for the unresponsive CPU.  Then, dump the contexts of the other CPUs.
+  cpu_num_t target_cpu = cpu;
+  cpu_mask_t remaining_cpus = mp_get_active_mask() & ~cpu_num_to_mask(target_cpu);
+  do {
+    CpuContext context;
+    zx_status_t status = g_cpu_context_exchange.RequestContext(target_cpu, timeout, context);
+    if (status != ZX_OK) {
+      fprintf(output_target, "failed to get context of CPU-%u: %d\n", target_cpu, status);
+    } else {
+      printf("CPU-%u context follows\n", target_cpu);
+      context.backtrace.PrintWithoutVersion(output_target);
+      PrintFrame(output_target, context.frame);
+      printf("end of CPU-%u context\n", target_cpu);
+    }
+  } while ((target_cpu = remove_cpu_from_mask(remaining_cpus)) != INVALID_CPU);
 }
 #else
 #error "Unknown architecture! Neither __aarch64__ nor __x86_64__ are defined"
