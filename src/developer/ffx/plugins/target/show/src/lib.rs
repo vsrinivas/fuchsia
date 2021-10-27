@@ -25,10 +25,10 @@ mod show;
 /// Main entry point for the `show` subcommand.
 #[ffx_plugin(
     ChannelControlProxy = "core/appmgr:out:fuchsia.update.channelcontrol.ChannelControl",
-    BoardProxy = "core/appmgr:out:fuchsia.hwinfo.Board",
-    DeviceProxy = "core/appmgr:out:fuchsia.hwinfo.Device",
-    ProductProxy = "core/appmgr:out:fuchsia.hwinfo.Product",
-    ProviderProxy = "core/appmgr:out:fuchsia.buildinfo.Provider",
+    BoardProxy = "core/hwinfo:expose:fuchsia.hwinfo.Board",
+    DeviceProxy = "core/hwinfo:expose:fuchsia.hwinfo.Device",
+    ProductProxy = "core/hwinfo:expose:fuchsia.hwinfo.Product",
+    ProviderProxy = "core/build-info:expose:fuchsia.buildinfo.Provider",
     DeviceIdProviderProxy = "core/appmgr:out:fuchsia.feedback.DeviceIdProvider"
     LastRebootInfoProviderProxy = "core/appmgr:out:fuchsia.feedback.LastRebootInfoProvider"
 )]
