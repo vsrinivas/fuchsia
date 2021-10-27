@@ -168,11 +168,6 @@ protocol BaseNetworkSocket {
     Shutdown(struct {
         mode ShutdownMode;
     }) -> (struct {}) error fuchsia.posix.Errno;
-    // TODO(https://fxbug.dev/78129): Remove after ABI transition.
-    @deprecated("Use Shutdown instead")
-    Shutdown2(struct {
-        mode ShutdownMode;
-    }) -> (struct {}) error fuchsia.posix.Errno;
 
     /// Set `SOL_IP` -> `IP_TOS`.
     SetIpTypeOfService(struct {
@@ -355,12 +350,6 @@ protocol BaseNetworkSocket {
     @deprecated("Use Shutdown instead")
     @selector("fuchsia.posix.socket/BaseSocket.Shutdown")
     BaseSocketShutdown(struct {
-        mode ShutdownMode;
-    }) -> (struct {}) error fuchsia.posix.Errno;
-
-    @deprecated("Use Shutdown instead")
-    @selector("fuchsia.posix.socket/BaseSocket.Shutdown2")
-    BaseSocketShutdown2(struct {
         mode ShutdownMode;
     }) -> (struct {}) error fuchsia.posix.Errno;
 

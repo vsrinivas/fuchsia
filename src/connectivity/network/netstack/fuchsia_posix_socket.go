@@ -1133,16 +1133,6 @@ func (epe *endpointWithEvent) Shutdown(_ fidl.Context, how socket.ShutdownMode) 
 	return socket.BaseNetworkSocketShutdownResultWithResponse(socket.BaseNetworkSocketShutdownResponse{}), nil
 }
 
-// TODO(https://fxbug.dev/78129): Remove after ABI transition.
-func (epe *endpointWithEvent) Shutdown2(_ fidl.Context, how socket.ShutdownMode) (socket.BaseNetworkSocketShutdown2Result, error) {
-	if errno, err := epe.shutdown(how); err != nil {
-		return socket.BaseNetworkSocketShutdown2Result{}, err
-	} else if errno != 0 {
-		return socket.BaseNetworkSocketShutdown2ResultWithErr(errno), nil
-	}
-	return socket.BaseNetworkSocketShutdown2ResultWithResponse(socket.BaseNetworkSocketShutdown2Response{}), nil
-}
-
 const localSignalClosing = zx.SignalUser1
 
 // close destroys the endpoint and releases associated resources.
@@ -1657,16 +1647,6 @@ func (eps *endpointWithSocket) Shutdown(_ fidl.Context, how socket.ShutdownMode)
 		return socket.BaseNetworkSocketShutdownResultWithErr(errno), nil
 	}
 	return socket.BaseNetworkSocketShutdownResultWithResponse(socket.BaseNetworkSocketShutdownResponse{}), nil
-}
-
-// TODO(https://fxbug.dev/78129): Remove after ABI transition.
-func (eps *endpointWithSocket) Shutdown2(_ fidl.Context, how socket.ShutdownMode) (socket.BaseNetworkSocketShutdown2Result, error) {
-	if errno, err := eps.shutdown(how); err != nil {
-		return socket.BaseNetworkSocketShutdown2Result{}, err
-	} else if errno != 0 {
-		return socket.BaseNetworkSocketShutdown2ResultWithErr(errno), nil
-	}
-	return socket.BaseNetworkSocketShutdown2ResultWithResponse(socket.BaseNetworkSocketShutdown2Response{}), nil
 }
 
 type datagramSocket struct {
@@ -3490,20 +3470,6 @@ func (epe *endpointWithEvent) BaseSocketShutdown(ctx fidl.Context, mode socket.S
 		panic(fmt.Sprintf("unhandled variant = %d", w))
 	}
 }
-func (epe *endpointWithEvent) BaseSocketShutdown2(ctx fidl.Context, mode socket.ShutdownMode) (socket.BaseNetworkSocketBaseSocketShutdown2Result, error) {
-	res, err := epe.Shutdown2(ctx, mode)
-	if err != nil {
-		return socket.BaseNetworkSocketBaseSocketShutdown2Result{}, err
-	}
-	switch w := res.Which(); w {
-	case socket.BaseNetworkSocketBaseSocketShutdown2ResultResponse:
-		return socket.BaseNetworkSocketBaseSocketShutdown2ResultWithResponse(socket.BaseNetworkSocketBaseSocketShutdown2Response{}), nil
-	case socket.BaseNetworkSocketBaseSocketShutdown2ResultErr:
-		return socket.BaseNetworkSocketBaseSocketShutdown2ResultWithErr(res.Err), nil
-	default:
-		panic(fmt.Sprintf("unhandled variant = %d", w))
-	}
-}
 func (eps *endpointWithSocket) BaseSocketShutdown(ctx fidl.Context, mode socket.ShutdownMode) (socket.BaseNetworkSocketBaseSocketShutdownResult, error) {
 	res, err := eps.Shutdown(ctx, mode)
 	if err != nil {
@@ -3514,20 +3480,6 @@ func (eps *endpointWithSocket) BaseSocketShutdown(ctx fidl.Context, mode socket.
 		return socket.BaseNetworkSocketBaseSocketShutdownResultWithResponse(socket.BaseNetworkSocketBaseSocketShutdownResponse{}), nil
 	case socket.BaseNetworkSocketBaseSocketShutdownResultErr:
 		return socket.BaseNetworkSocketBaseSocketShutdownResultWithErr(res.Err), nil
-	default:
-		panic(fmt.Sprintf("unhandled variant = %d", w))
-	}
-}
-func (eps *endpointWithSocket) BaseSocketShutdown2(ctx fidl.Context, mode socket.ShutdownMode) (socket.BaseNetworkSocketBaseSocketShutdown2Result, error) {
-	res, err := eps.Shutdown2(ctx, mode)
-	if err != nil {
-		return socket.BaseNetworkSocketBaseSocketShutdown2Result{}, err
-	}
-	switch w := res.Which(); w {
-	case socket.BaseNetworkSocketBaseSocketShutdown2ResultResponse:
-		return socket.BaseNetworkSocketBaseSocketShutdown2ResultWithResponse(socket.BaseNetworkSocketBaseSocketShutdown2Response{}), nil
-	case socket.BaseNetworkSocketBaseSocketShutdown2ResultErr:
-		return socket.BaseNetworkSocketBaseSocketShutdown2ResultWithErr(res.Err), nil
 	default:
 		panic(fmt.Sprintf("unhandled variant = %d", w))
 	}

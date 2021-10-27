@@ -31,21 +31,6 @@ namespace fnet = fuchsia_net;
 
 namespace {
 
-// TODO(https://fxbug.dev/78129): Remove after ABI transition.
-bool use_legacy_shutdown2_fidl() {
-  static std::once_flag once;
-  static bool legacy;
-
-  std::call_once(once, [&]() {
-    legacy = []() {
-      constexpr char kLegacyShutdown2Fidl[] = "LEGACY_SHUTDOWN2_FIDL";
-      const char* const legacy_env = getenv(kLegacyShutdown2Fidl);
-      return legacy_env && strcmp(legacy_env, "1") == 0;
-    }();
-  });
-  return legacy;
-}
-
 // TODO(https://fxbug.dev/82723): Remove after ABI transition.
 bool use_legacy_base_socket_methods() {
   static std::once_flag once;
@@ -1488,23 +1473,6 @@ struct BaseNetworkSocket : public BaseSocket<T> {
         break;
       default:
         return ZX_ERR_INVALID_ARGS;
-    }
-
-    if (use_legacy_shutdown2_fidl()) {
-      return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
-          client(), Shutdown2, (mode), [&](auto response) {
-            zx_status_t status = response.status();
-            if (status != ZX_OK) {
-              return status;
-            }
-            auto const& result = response.Unwrap()->result;
-            if (result.is_err()) {
-              *out_code = static_cast<int16_t>(result.err());
-              return ZX_OK;
-            }
-            *out_code = 0;
-            return ZX_OK;
-          });
     }
 
     return MAYBE_USE_LEGACY_BASE_SOCKET_METHOD_WITH_HANDLER(
