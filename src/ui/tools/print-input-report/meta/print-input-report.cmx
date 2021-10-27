@@ -1,6 +1,9 @@
 {
+    "include": [
+        "//sdk/lib/syslog/client.shard.cmx"
+    ],
     "program": {
-        "binary": "bin/print_input_report"
+        "binary": "bin/print-input-report"
     },
     "sandbox": {
         "dev": [
