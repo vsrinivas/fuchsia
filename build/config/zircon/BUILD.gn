@@ -151,6 +151,12 @@ config("compiler") {
       # In the Clang toolchain assembly files with no explicit marker don't
       # cause the presumption of executable stack as they do in GCC.
       ldflags += [ "-Wl,-z,noexecstack" ]
+
+      if (current_cpu == "arm64") {
+        # x18 is reserved in the Fuchsia ABI so it can be used
+        # for things like -fsanitize=shadow-call-stack.
+        cflags += [ "-ffixed-x18" ]
+      }
     } else {
       # gcc defaults to enabling sized deallocation >= c++14; clang does not.
       # Enable sized-deallocation for the kernel, so the heap implementation can
@@ -164,10 +170,6 @@ config("compiler") {
     if (current_cpu == "arm64") {
       # Generate code for the fairly generic cortex-a53.
       compiler_flags += [ "-mcpu=cortex-a53" ]
-
-      # x18 is reserved in the Fuchsia ABI so it can be used
-      # for things like -fsanitize=shadow-call-stack.
-      compiler_flags += [ "-ffixed-x18" ]
 
       if (is_gcc) {
         # By default GCC 10 will generate outcalls to libgcc functions that can
