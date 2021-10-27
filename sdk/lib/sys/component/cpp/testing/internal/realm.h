@@ -10,6 +10,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 
+#include <memory>
 #include <string>
 
 namespace sys {
@@ -17,6 +18,7 @@ namespace testing {
 namespace internal {
 
 fuchsia::component::RealmSyncPtr CreateRealmPtr(const sys::ComponentContext* context);
+fuchsia::component::RealmSyncPtr CreateRealmPtr(std::shared_ptr<sys::ServiceDirectory> svc);
 ServiceDirectory OpenExposedDir(fuchsia::component::Realm_Sync* realm,
                                 const fuchsia::component::decl::ChildRef& child_ref);
 

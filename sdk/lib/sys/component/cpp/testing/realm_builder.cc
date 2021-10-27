@@ -204,10 +204,9 @@ Realm Realm::Builder::Build(async_dispatcher_t* dispatcher) {
                std::move(mock_runner_));
 }
 
-Realm::Builder Realm::Builder::New(const sys::ComponentContext* context) {
-  ZX_ASSERT_MSG(context != nullptr, "context passed to RealmBuilder::New() must not be nullptr");
+Realm::Builder Realm::Builder::Create(std::shared_ptr<sys::ServiceDirectory> svc) {
   fuchsia::component::test::RealmBuilderSyncPtr realm_builder_proxy;
-  auto realm_proxy = internal::CreateRealmPtr(context);
+  auto realm_proxy = internal::CreateRealmPtr(std::move(svc));
   auto child_ref = fuchsia::component::decl::ChildRef{.name = kFrameworkIntermediaryChildName};
   auto exposed_dir = internal::OpenExposedDir(realm_proxy.get(), child_ref);
   exposed_dir.Connect(realm_builder_proxy.NewRequest());
@@ -216,6 +215,11 @@ Realm::Builder Realm::Builder::New(const sys::ComponentContext* context) {
       "RealmBuilder/Init", realm_builder_proxy->Init(CreatePkgDirHandle(), &result), result);
   return Builder(std::move(realm_proxy), std::move(realm_builder_proxy), std::move(exposed_dir),
                  std::make_unique<internal::MockRunner>());
+}
+
+Realm::Builder Realm::Builder::New(const sys::ComponentContext* context) {
+  ZX_ASSERT_MSG(context != nullptr, "context passed to RealmBuilder::New() must not be nullptr");
+  return Create(context->svc());
 }
 
 }  // namespace testing

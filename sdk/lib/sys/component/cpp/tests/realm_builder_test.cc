@@ -221,6 +221,26 @@ TEST_F(RealmBuilderTest, ConnectsToChannelDirectly) {
   EXPECT_EQ(response, fidl::StringPtr("hello"));
 }
 
+// This test is nearly identicaly to the RealmBuilderTest.RoutesProtocolFromChild
+// test case above. The only difference is that it doesn't provide a sys::Context
+// object to the Realm::Builder::New method. If the test passes, it must follow that
+// Realm::Builder supplied a Context object internally, otherwise the test
+// component wouldn't be able to connect to fuchsia.sys2.Realm protocol.
+TEST_F(RealmBuilderTest, SuppliesContextIfNoneProvided) {
+  static constexpr auto kEchoServer = Moniker{"echo_server"};
+
+  auto realm_builder = Realm::Builder::Create();
+  realm_builder.AddComponent(kEchoServer, Component{.source = ComponentUrl{kEchoServerUrl}});
+  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{test::placeholders::Echo::Name_},
+                                         .source = kEchoServer,
+                                         .targets = {AboveRoot()}});
+  auto realm = realm_builder.Build(dispatcher());
+  auto echo = realm.ConnectSync<test::placeholders::Echo>();
+  fidl::StringPtr response;
+  ASSERT_EQ(echo->EchoString("hello", &response), ZX_OK);
+  EXPECT_EQ(response, fidl::StringPtr("hello"));
+}
+
 TEST_F(RealmBuilderTest, UsesRandomChildName) {
   std::string child_name_1 = "";
   {

@@ -7,14 +7,27 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 
+#include <cstddef>
+
 namespace sys {
 namespace testing {
 namespace internal {
 
 fuchsia::component::RealmSyncPtr CreateRealmPtr(const sys::ComponentContext* context) {
-  ZX_SYS_ASSERT_NOT_NULL(context);
+  if (context) {
+    return CreateRealmPtr(context->svc());
+  }
+
+  return CreateRealmPtr(nullptr);
+}
+
+fuchsia::component::RealmSyncPtr CreateRealmPtr(std::shared_ptr<sys::ServiceDirectory> svc) {
+  if (svc == nullptr) {
+    svc = sys::ServiceDirectory::CreateFromNamespace();
+  }
+
   fuchsia::component::RealmSyncPtr realm;
-  context->svc()->Connect(realm.NewRequest());
+  svc->Connect(realm.NewRequest());
   return realm;
 }
 

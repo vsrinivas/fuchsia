@@ -15,6 +15,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
@@ -94,6 +95,11 @@ class Realm final {
 // A builder class for a Realm object. Use this class to construct a Realm.
 class Realm::Builder final {
  public:
+  // Factory method to create a new RealmBuilder object.
+  // |svc| must outlive the RealmBuilder object and created Realm object.
+  // If it's nullptr, then the current process' "/svc" namespace entry is used.
+  static Builder Create(std::shared_ptr<sys::ServiceDirectory> svc = nullptr);
+
   // Factory method to create a new RealmBuilder object.
   // |context| must not be NULL and must outlive the RealmBuilder object and
   // created Realm object.
