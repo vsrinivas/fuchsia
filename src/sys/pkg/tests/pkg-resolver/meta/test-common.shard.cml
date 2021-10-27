@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 {
     include: [
+        "//sdk/lib/driver_test_realm/meta/client.shard.cml",
+        "//sdk/lib/driver_test_realm/platform/meta/client.shard.cml",
         "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "//src/sys/test_runners/tmp_storage.shard.cml",
@@ -10,10 +12,6 @@
         "syslog/client.shard.cml",
     ],
     children: [
-        {
-            name: "isolated_devmgr",
-            url: "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/isolated-devmgr.cm",
-        },
         {
             name: "netstack",
             url: "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/netstack.cm",
@@ -40,12 +38,6 @@
             protocol: [ "fuchsia.posix.socket.Provider" ],
             from: "#netstack",
         },
-        {
-            directory: "dev",
-            from: "#isolated_devmgr",
-            rights: [ "rw*" ],
-            path: "/dev",
-        },
     ],
     offer: [
         {
@@ -53,17 +45,8 @@
             from: "parent",
             to: [
                 "#dns_resolver",
-                "#isolated_devmgr",
                 "#netstack",
             ],
-        },
-        {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
-            ],
-            from: "parent",
-            to: "#isolated_devmgr",
         },
         {
             storage: "cache",

@@ -721,13 +721,6 @@ resource("ca.cert-resource") {
   outputs = [ "data/ssl/cert.pem" ]
 }
 
-isolated_devmgr_v2_component("isolated-devmgr-component") {
-  deps = [
-    "//src/devices/bus/drivers/platform",
-    "//src/storage/testing:storage_drivers",
-  ]
-}
-
 fuchsia_test_package("pkg-resolver-integration-tests") {
   test_components = [
     ":base_pinning-component",
@@ -750,7 +743,7 @@ fuchsia_test_package("pkg-resolver-integration-tests") {
     ":empty-repo",
 
     # For ramdisk devices, needed to back blobfs (which in turn backs pkgfs and pkg-cache)
-    ":isolated-devmgr-component",
+    "//src/storage/testing:driver_test_realm",
     "//src/sys/pkg/bin/pkg-cache:component",
     "//src/sys/pkg/bin/pkg-local-mirror",
 
