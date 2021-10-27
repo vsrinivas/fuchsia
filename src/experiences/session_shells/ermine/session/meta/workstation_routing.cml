@@ -121,6 +121,20 @@
             ],
         },
         {
+            protocol: [
+                "fuchsia.fonts.Provider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
+        },
+        {
             directory: "config-data",
             from: "parent",
             to: [
