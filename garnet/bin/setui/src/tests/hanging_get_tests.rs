@@ -2,78 +2,56 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::do_not_disturb::types::DoNotDisturbInfo;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::ingress::fidl::Interface;
-use crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo};
-use crate::tests::fakes::hardware_power_statecontrol_service::HardwarePowerStatecontrolService;
-use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::EnvironmentBuilder;
-use fidl_fuchsia_settings::SetupMarker;
+use fidl_fuchsia_settings::{DoNotDisturbMarker, DoNotDisturbSettings};
 use fuchsia_component::server::NestedEnvironment;
-use futures::lock::Mutex;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "hanging_get_test_environment";
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_multiple_watches() {
-    let initial_interfaces =
-        ConfigurationInterfaceFlags::WIFI | ConfigurationInterfaceFlags::ETHERNET;
-
     // Prepopulate initial value
-    let initial_data = SetupInfo { configuration_interfaces: initial_interfaces };
+    let initial_data = DoNotDisturbInfo::new(true, false);
     let storage_factory = InMemoryStorageFactory::with_initial_data(&initial_data);
 
-    let service_registry = ServiceRegistry::create();
-    let hardware_power_statecontrol_service_handle =
-        Arc::new(Mutex::new(HardwarePowerStatecontrolService::new()));
-    service_registry
-        .lock()
-        .await
-        .register_service(hardware_power_statecontrol_service_handle.clone());
-
     let env = EnvironmentBuilder::new(Arc::new(storage_factory))
-        .service(ServiceRegistry::serve(service_registry.clone()))
-        .fidl_interfaces(&[Interface::Setup])
+        .fidl_interfaces(&[Interface::DoNotDisturb])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
 
-    let setup_service = env.connect_to_protocol::<SetupMarker>().unwrap();
+    let dnd_proxy = env.connect_to_protocol::<DoNotDisturbMarker>().unwrap();
 
-    // This should return immediately with value.
-    verify(
-        setup_service.watch().await,
-        Some(
-            fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet
-                | fidl_fuchsia_settings::ConfigurationInterfaces::Wifi,
-        ),
-    );
+    verify(dnd_proxy.watch().await, DoNotDisturbInfo::new(true, false));
 
     // The following calls should succeed but not return as no value is available.
-    let second_watch = setup_service.watch();
-    let third_watch = setup_service.watch();
+    let second_watch = dnd_proxy.watch();
+    let third_watch = dnd_proxy.watch();
 
-    set_interfaces(env, Some(fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet)).await;
+    set_dnd(env, None, Some(true)).await;
 
-    verify(second_watch.await, Some(fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet));
-    verify(third_watch.await, Some(fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet));
+    verify(second_watch.await, DoNotDisturbInfo::new(true, true));
+    verify(third_watch.await, DoNotDisturbInfo::new(true, true));
 }
 
 fn verify(
-    watch_result: Result<fidl_fuchsia_settings::SetupSettings, fidl::Error>,
-    expected_configuration: Option<fidl_fuchsia_settings::ConfigurationInterfaces>,
+    watch_result: Result<fidl_fuchsia_settings::DoNotDisturbSettings, fidl::Error>,
+    expected_dnd: DoNotDisturbInfo,
 ) {
-    let setup_values = watch_result.expect("watch completed");
-    assert_eq!(setup_values.enabled_configuration_interfaces, expected_configuration);
+    let dnd_values = watch_result.expect("watch completed");
+    assert_eq!(dnd_values.user_initiated_do_not_disturb, expected_dnd.user_dnd);
+    assert_eq!(dnd_values.night_mode_initiated_do_not_disturb, expected_dnd.night_mode_dnd);
 }
 
-async fn set_interfaces(
-    env: NestedEnvironment,
-    interfaces: Option<fidl_fuchsia_settings::ConfigurationInterfaces>,
-) {
-    let mut setup_settings = fidl_fuchsia_settings::SetupSettings::EMPTY;
-    setup_settings.enabled_configuration_interfaces = interfaces;
-    let setup_service = env.connect_to_protocol::<SetupMarker>().unwrap();
-    let _ = setup_service.set(setup_settings).await;
+async fn set_dnd(env: NestedEnvironment, user_dnd: Option<bool>, night_mode_dnd: Option<bool>) {
+    let mut dnd_settings = DoNotDisturbSettings::EMPTY;
+    dnd_settings.user_initiated_do_not_disturb = user_dnd;
+    dnd_settings.night_mode_initiated_do_not_disturb = night_mode_dnd;
+
+    let dnd_proxy = env.connect_to_protocol::<DoNotDisturbMarker>().unwrap();
+    dnd_proxy.set(dnd_settings).await.expect("set completed").expect("set successful");
 }

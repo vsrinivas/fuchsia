@@ -4,16 +4,42 @@
 
 use crate::base::{SettingInfo, SettingType};
 use crate::fidl_hanging_get_responder;
-use crate::fidl_process;
-use crate::fidl_processor::settings::RequestContext;
 use crate::handler::base::Request;
+use crate::ingress::{request, watch, Scoped};
+use crate::job::source::{Error as JobError, ErrorResponder};
+use crate::job::Job;
 use crate::setup::types::{
     ConfigurationInterfaceFlags, SetConfigurationInterfacesParams, SetupInfo,
 };
-use fidl_fuchsia_settings::{Error, SetupMarker, SetupRequest, SetupSettings, SetupWatchResponder};
+use fidl::prelude::*;
+use fidl_fuchsia_settings::{
+    SetupMarker, SetupRequest, SetupSet2Responder, SetupSet2Result, SetupSetResponder,
+    SetupSetResult, SetupSettings, SetupWatchResponder,
+};
 use fuchsia_syslog::fx_log_warn;
+use std::convert::TryFrom;
 
 fidl_hanging_get_responder!(SetupMarker, SetupSettings, SetupWatchResponder);
+
+impl ErrorResponder for SetupSetResponder {
+    fn id(&self) -> &'static str {
+        "Setup_Set"
+    }
+
+    fn respond(self: Box<Self>, error: fidl_fuchsia_settings::Error) -> Result<(), fidl::Error> {
+        self.send(&mut Err(error))
+    }
+}
+
+impl ErrorResponder for SetupSet2Responder {
+    fn id(&self) -> &'static str {
+        "Setup_Set2"
+    }
+
+    fn respond(self: Box<Self>, error: fidl_fuchsia_settings::Error) -> Result<(), fidl::Error> {
+        self.send(&mut Err(error))
+    }
+}
 
 impl From<SettingInfo> for SetupSettings {
     fn from(response: SettingInfo) -> Self {
@@ -70,64 +96,169 @@ impl From<SetupInfo> for SetupSettings {
     }
 }
 
-fn to_request(value: SetupSettings, should_reboot: bool) -> Result<Request, &'static str> {
-    if let Some(configuration_interfaces) = value.enabled_configuration_interfaces {
-        return Ok(Request::SetConfigurationInterfaces(SetConfigurationInterfacesParams {
+impl request::Responder<Scoped<SetupSetResult>> for SetupSetResponder {
+    fn respond(self, Scoped(mut response): Scoped<SetupSetResult>) {
+        let _ = self.send(&mut response).ok();
+    }
+}
+
+impl request::Responder<Scoped<SetupSet2Result>> for SetupSet2Responder {
+    fn respond(self, Scoped(mut response): Scoped<SetupSet2Result>) {
+        let _ = self.send(&mut response).ok();
+    }
+}
+
+impl watch::Responder<SetupSettings, fuchsia_zircon::Status> for SetupWatchResponder {
+    fn respond(self, response: Result<SetupSettings, fuchsia_zircon::Status>) {
+        match response {
+            Ok(settings) => {
+                let _ = self.send(settings);
+            }
+            Err(error) => {
+                self.control_handle().shutdown_with_epitaph(error);
+            }
+        }
+    }
+}
+
+impl TryFrom<SetupRequest> for Job {
+    type Error = JobError;
+    fn try_from(item: SetupRequest) -> Result<Self, Self::Error> {
+        #[allow(unreachable_patterns)]
+        match item {
+            SetupRequest::Set { settings, responder } => match to_request(settings, true) {
+                Some(request) => {
+                    Ok(request::Work::new(SettingType::Setup, request, responder).into())
+                }
+                None => Err(JobError::InvalidInput(Box::new(responder))),
+            },
+            SetupRequest::Set2 { settings, reboot_device, responder } => {
+                match to_request(settings, reboot_device) {
+                    Some(request) => {
+                        Ok(request::Work::new(SettingType::Setup, request, responder).into())
+                    }
+                    None => Err(JobError::InvalidInput(Box::new(responder))),
+                }
+            }
+            SetupRequest::Watch { responder } => {
+                Ok(watch::Work::new_job(SettingType::Setup, responder))
+            }
+            _ => {
+                fx_log_warn!("Received a call to an unsupported API: {:?}", item);
+                Err(JobError::Unsupported)
+            }
+        }
+    }
+}
+
+fn to_request(settings: SetupSettings, should_reboot: bool) -> Option<Request> {
+    if let Some(configuration_interfaces) = settings.enabled_configuration_interfaces {
+        return Some(Request::SetConfigurationInterfaces(SetConfigurationInterfacesParams {
             config_interfaces_flags: ConfigurationInterfaceFlags::from(configuration_interfaces),
             should_reboot,
         }));
     }
 
-    Err("Ineligible change")
+    None
 }
 
-async fn set(
-    context: RequestContext<SetupSettings, SetupWatchResponder>,
-    settings: SetupSettings,
-    should_reboot: bool,
-) -> Result<(), Error> {
-    let request =
-        to_request(settings, should_reboot).map_err(|_| fidl_fuchsia_settings::Error::Failed)?;
-    context
-        .request(SettingType::Setup, request)
-        .await
-        .map(|_| ())
-        .map_err(|_| fidl_fuchsia_settings::Error::Failed)
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::job::{execution, work};
+    use fidl_fuchsia_settings::SetupRequestStream;
+    use futures::StreamExt;
+    use matches::assert_matches;
 
-async fn process_request(
-    context: RequestContext<SetupSettings, SetupWatchResponder>,
-    req: SetupRequest,
-) -> Result<Option<SetupRequest>, anyhow::Error> {
-    // Support future expansion of FIDL
-    #[allow(unreachable_patterns)]
-    match req {
-        // TODO(fxb/79644): Clean up Set interface.
-        SetupRequest::Set { settings, responder } => {
-            let send_result = match set(context, settings, true).await {
-                Ok(_) => responder.send(&mut Ok(())),
-                Err(e) => responder.send(&mut Err(e)),
-            };
-            if let Err(e) = send_result {
-                fx_log_warn!("Failed to send response to SetupRequest::Set: {:?}", e);
-            }
-        }
-        SetupRequest::Set2 { settings, reboot_device, responder } => {
-            let send_result = match set(context, settings, reboot_device).await {
-                Ok(_) => responder.send(&mut Ok(())),
-                Err(e) => responder.send(&mut Err(e)),
-            };
-            if let Err(e) = send_result {
-                fx_log_warn!("Failed to send response to SetupRequest::Set2: {:?}", e);
-            }
-        }
-        SetupRequest::Watch { responder } => {
-            context.watch(responder, true).await;
-        }
-        _ => return Ok(Some(req)),
+    #[test]
+    fn test_request_from_settings() {
+        const CONFIGURATION_INTERFACES: Option<fidl_fuchsia_settings::ConfigurationInterfaces> =
+            Some(fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet);
+        const CONFIGURATION_INTERFACE_FLAG: ConfigurationInterfaceFlags =
+            ConfigurationInterfaceFlags::ETHERNET;
+        const SHOULD_REBOOT: bool = true;
+
+        let mut setup_settings = SetupSettings::EMPTY;
+        setup_settings.enabled_configuration_interfaces = CONFIGURATION_INTERFACES;
+
+        let request = to_request(setup_settings, SHOULD_REBOOT);
+
+        assert_eq!(
+            request,
+            Some(Request::SetConfigurationInterfaces(SetConfigurationInterfacesParams {
+                config_interfaces_flags: CONFIGURATION_INTERFACE_FLAG,
+                should_reboot: SHOULD_REBOOT,
+            }))
+        );
     }
 
-    Ok(None)
-}
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn try_from_set_converts_supplied_params() {
+        const CONFIGURATION_INTERFACES: Option<fidl_fuchsia_settings::ConfigurationInterfaces> =
+            Some(fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet);
 
-fidl_process!(Setup, SettingType::Setup, process_request);
+        let (proxy, server) =
+            fidl::endpoints::create_proxy::<SetupMarker>().expect("should be able to create proxy");
+        let _fut = proxy.set(SetupSettings {
+            enabled_configuration_interfaces: CONFIGURATION_INTERFACES,
+            ..SetupSettings::EMPTY
+        });
+        let mut request_stream: SetupRequestStream =
+            server.into_stream().expect("should be able to convert to stream");
+        let request = request_stream
+            .next()
+            .await
+            .expect("should have on request before stream is closed")
+            .expect("should have gotten a request");
+        let job = Job::try_from(request);
+        let job = job.as_ref();
+        assert_matches!(job.map(|j| j.workload()), Ok(work::Load::Independent(_)));
+        assert_matches!(job.map(|j| j.execution_type()), Ok(execution::Type::Independent));
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn try_from_set2_converts_supplied_params() {
+        const CONFIGURATION_INTERFACES: Option<fidl_fuchsia_settings::ConfigurationInterfaces> =
+            Some(fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet);
+        const SHOULD_REBOOT: bool = true;
+
+        let (proxy, server) =
+            fidl::endpoints::create_proxy::<SetupMarker>().expect("should be able to create proxy");
+        let _fut = proxy.set2(
+            SetupSettings {
+                enabled_configuration_interfaces: CONFIGURATION_INTERFACES,
+                ..SetupSettings::EMPTY
+            },
+            SHOULD_REBOOT,
+        );
+        let mut request_stream: SetupRequestStream =
+            server.into_stream().expect("should be able to convert to stream");
+        let request = request_stream
+            .next()
+            .await
+            .expect("should have on request before stream is closed")
+            .expect("should have gotten a request");
+        let job = Job::try_from(request);
+        let job = job.as_ref();
+        assert_matches!(job.map(|j| j.workload()), Ok(work::Load::Independent(_)));
+        assert_matches!(job.map(|j| j.execution_type()), Ok(execution::Type::Independent));
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn try_from_watch_converts_supplied_params() {
+        let (proxy, server) =
+            fidl::endpoints::create_proxy::<SetupMarker>().expect("should be able to create proxy");
+        let _fut = proxy.watch();
+        let mut request_stream: SetupRequestStream =
+            server.into_stream().expect("should be able to convert to stream");
+        let request = request_stream
+            .next()
+            .await
+            .expect("should have on request before stream is closed")
+            .expect("should have gotten a request");
+        let job = Job::try_from(request);
+        let job = job.as_ref();
+        assert_matches!(job.map(|j| j.workload()), Ok(work::Load::Sequential(_, _)));
+        assert_matches!(job.map(|j| j.execution_type()), Ok(execution::Type::Sequential(_)));
+    }
+}

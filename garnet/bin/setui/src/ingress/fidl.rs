@@ -241,8 +241,9 @@ impl Interface {
                             });
                     }
                     Interface::Setup => {
+                        let seeder = seeder.clone();
                         let _ = service_dir.add_fidl_service(move |stream: SetupRequestStream| {
-                            crate::setup::fidl_io::spawn(delegate.clone(), stream);
+                            seeder.seed(stream);
                         });
                     }
                 }
@@ -266,7 +267,7 @@ impl Interface {
 
 #[cfg(test)]
 mod tests {
-    use fidl_fuchsia_settings::{PrivacyMarker, SetupMarker};
+    use fidl_fuchsia_settings::{DoNotDisturbMarker, PrivacyMarker};
     use fuchsia_async as fasync;
     use fuchsia_component::server::ServiceFs;
     use futures::StreamExt;
@@ -297,9 +298,9 @@ mod tests {
             .get_signature();
         let job_seeder = Seeder::new(&delegate, job_manager_signature).await;
 
-        let setting_type = SettingType::Setup;
+        let setting_type = SettingType::DoNotDisturb;
 
-        let registrant: Registrant = Interface::Setup.registrant();
+        let registrant: Registrant = Interface::DoNotDisturb.registrant();
 
         // Verify dependencies properly derived from the interface.
         assert!(registrant
@@ -321,12 +322,12 @@ mod tests {
             fs.create_salted_nested_environment(ENV_NAME).expect("should create environment");
         fasync::Task::spawn(fs.collect()).detach();
 
-        // Connect to the Setup interface and request watching.
-        let setup_proxy = nested_environment
-            .connect_to_protocol::<SetupMarker>()
+        // Connect to the DoNotDisturb interface and request watching.
+        let do_not_disturb_proxy = nested_environment
+            .connect_to_protocol::<DoNotDisturbMarker>()
             .expect("should connect to protocol");
         fasync::Task::spawn(async move {
-            let _ = setup_proxy.watch().await;
+            let _ = do_not_disturb_proxy.watch().await;
         })
         .detach();
 
