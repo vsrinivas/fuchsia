@@ -20,15 +20,16 @@ namespace {
 // | 0  0  1  0 |
 // | 0  0  0  1  |
 // Where: Tx and Ty come from |offset|.
-fuchsia::ui::gfx::mat4 MakeTranslationTransform(const fuchsia::ui::gfx::vec2& offset) {
+fuchsia::ui::gfx::mat4 MakeTranslationTransform(const fuchsia::ui::gfx::vec3& translation) {
   fuchsia::ui::gfx::mat4 transform;
   transform.matrix[0] = 1;
   transform.matrix[5] = 1;
   transform.matrix[10] = 1;
   transform.matrix[15] = 1;
 
-  transform.matrix[12] = -offset.x;
-  transform.matrix[13] = -offset.y;
+  transform.matrix[12] = translation.x;
+  transform.matrix[13] = translation.y;
+  transform.matrix[14] = translation.z;
   return transform;
 }
 
@@ -169,16 +170,23 @@ std::optional<SemanticTransform> ViewWrapper::GetNodeToRootTransform(uint32_t no
   while (true) {
     auto current_node = tree_weak_ptr->GetNode(current_node_id);
     FX_DCHECK(current_node);
+
     // Don't apply scrolling that's on the target node, since scrolling affects
     // the location of its children rather than it.  Apply scrolling before the
     // node's transform, since the scrolling moves its children within it and
     // then the transform moves the result to the parent's space.
     if (current_node_id != node_id && current_node->has_states() &&
         current_node->states().has_viewport_offset()) {
-      auto translation_matrix = MakeTranslationTransform(current_node->states().viewport_offset());
+      auto translation_matrix =
+          MakeTranslationTransform({-current_node->states().viewport_offset().x,
+                                    -current_node->states().viewport_offset().y});
       node_to_root_transform.ChainLocalTransform(translation_matrix);
     }
-    if (current_node->has_transform()) {
+
+    if (current_node->has_node_to_container_transform()) {
+      // Apply explicit transform.
+      node_to_root_transform.ChainLocalTransform(current_node->node_to_container_transform());
+    } else if (current_node->has_transform()) {
       node_to_root_transform.ChainLocalTransform(current_node->transform());
     }
 
@@ -199,6 +207,51 @@ std::optional<SemanticTransform> ViewWrapper::GetNodeToRootTransform(uint32_t no
       // "root" space, so we should terminate the loop here.
       if (container_id == current_node_id) {
         break;
+      }
+
+      // The `node_to_container_transform` does NOT account for the implied
+      // translation with respect to the offset container's bounds, so we must
+      // apply that translation explicitly here.
+      //
+      // NOTE: We do NOT want to apply this translation if:
+      //   (1) This node is the root node, OR
+      //   (2) This node is its own offset container.
+      //
+      // We check that the `transform` (deprecated) field is NOT set, as
+      // opposed to checking that `node_to_container_transform` IS set, in
+      // order to support the transition from `transform` to
+      // `node_to_container_transform`. Once the transition is complete,
+      // we can remove this condition. There are four cases we need to
+      // accommodate:
+      //
+      //   (1) The client node has an explicit transform AND uses the
+      //   `transform` field. In this case, we should not apply the implied
+      //   translation here.
+      //   (2) The client node does NOT have an explicit trasnform AND uses the
+      //   `transform` field.
+      //   (3) The client node has an explicit transform AND uses the
+      //   `node_to_container_transform` field.
+      //   (4) The client node does NOT have an explicit transform AND uses the
+      //   `node_to_container_transform` field.
+      //
+      //   We should only apply the implicit offset in cases (3) and (4). In
+      //   in case 4, `node_to_container_transform` will NOT be set, so we can't
+      //   simply check that this field is set. Rather, since `transform` will
+      //   be unset in both cases (3) and (4), we can use the !has_transform()
+      //   condition. Notice that `transform` will always be set in case (1).
+      //   It's possible that `transform` is unset in case (2). however, since
+      //   the transform only accounts for the translation with respect to the
+      //   offset container's bounds in case (2), the only way this field could
+      //   be unset is if the offset container's bounds.min is at (0, 0), in
+      //   which case applying the implied translation is a NOOP.
+      //
+      // TODO(fxb.dev/87181): Remove uses of `transform` field.
+      if (!current_node->has_transform()) {
+        auto container_node = tree_weak_ptr->GetNode(container_id);
+        FX_DCHECK(container_node);
+
+        auto translation_matrix = MakeTranslationTransform(container_node->location().min);
+        node_to_root_transform.ChainLocalTransform(translation_matrix);
       }
 
       current_node_id = container_id;

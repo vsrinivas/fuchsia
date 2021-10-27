@@ -47,8 +47,6 @@ fuchsia::accessibility::semantics::Node CreateTestNode(uint32_t node_id, std::st
   node.mutable_attributes()->set_label(std::move(label));
   fuchsia::ui::gfx::BoundingBox box;
   node.set_location(box);
-  fuchsia::ui::gfx::mat4 transform;
-  node.set_transform(transform);
   return node;
 }
 
