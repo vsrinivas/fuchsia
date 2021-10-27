@@ -243,6 +243,6 @@
   "include/zircon/threads.h": "26b09160d793d4669ea2fa3d10d2f150",
   "include/zircon/time.h": "61c8aac18e1c19c1b8fa58a4e67b9468",
   "include/zircon/tls.h": "1375b46d719742354e0636195789af9f",
-  "include/zircon/types.h": "7637be316d5c8deb2470ec72a053155a",
+  "include/zircon/types.h": "72c2c2a269a379aae27680f01e4280d8",
   "include/zircon/utc.h": "febff051fa44aebb4ad7950d9ecd9a74"
 }

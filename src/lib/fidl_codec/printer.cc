@@ -153,7 +153,6 @@ void PrettyPrinter::DisplayClock(zx_clock_t clock) {
   switch (clock) {
     ClockCase(ZX_CLOCK_MONOTONIC);
     ClockCase(ZX_CLOCK_UTC);
-    ClockCase(ZX_CLOCK_THREAD);
     default:
       *this << Red << clock << ResetColor;
       return;

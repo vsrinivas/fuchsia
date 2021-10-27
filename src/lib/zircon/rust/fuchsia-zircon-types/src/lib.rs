@@ -415,7 +415,6 @@ pub const ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET: usize = 1;
 multiconst!(zx_clock_t, [
     ZX_CLOCK_MONOTONIC    = 0;
     ZX_CLOCK_UTC          = 1;
-    ZX_CLOCK_THREAD       = 2;
 ]);
 
 // from //src/zircon/system/public/zircon/syscalls/clock.h
