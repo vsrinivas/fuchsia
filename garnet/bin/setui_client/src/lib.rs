@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use anyhow::{Context as _, Error};
+use argh::FromArgs;
 use fidl_fuchsia_settings::{ConfigurationInterfaces, LightState, LightValue, Theme};
 use fuchsia_component::client::connect_to_protocol;
-use structopt::StructOpt;
 
 pub mod accessibility;
 pub mod audio;
@@ -21,308 +21,348 @@ pub mod setup;
 pub mod utils;
 pub mod volume_policy;
 
-/// SettingClient exercises the functionality found in SetUI service. Currently,
-/// action parameters are specified at as individual arguments, but the goal is
-/// to eventually parse details from a JSON file input.
-#[derive(StructOpt, Debug)]
-#[structopt(name = "setui_client", about = "set setting values")]
-pub enum SettingClient {
+// SettingClient exercises the functionality found in SetUI service. Currently,
+// action parameters are specified at as individual arguments, but the goal is
+// to eventually parse details from a JSON file input.
+#[derive(FromArgs, Debug)]
+/// Get or set setting values. Pass --help to each subcommand for additional info. Calling the
+/// subcommands without any parameters treats it as a get.
+pub struct SettingClient {
+    #[argh(subcommand)]
+    pub nested: SettingClientSubcommands,
+}
+
+#[derive(FromArgs, Debug)]
+#[argh(subcommand)]
+pub enum SettingClientSubcommands {
     // Operations that use the new interfaces.
-    #[structopt(name = "accessibility")]
-    Accessibility(AccessibilityOptions),
-
-    #[structopt(name = "audio")]
-    Audio {
-        #[structopt(flatten)]
-        streams: AudioStreams,
-
-        #[structopt(flatten)]
-        input: AudioInput,
-    },
-
-    #[structopt(name = "display")]
-    Display {
-        #[structopt(short = "b", long = "brightness")]
-        brightness: Option<f32>,
-
-        #[structopt(short = "o", long = "auto_brightness_level")]
-        auto_brightness_level: Option<f32>,
-
-        #[structopt(short = "a", long = "auto_brightness")]
-        auto_brightness: Option<bool>,
-
-        #[structopt(short = "l", long = "light_sensor")]
-        light_sensor: bool,
-
-        #[structopt(
-            short = "m",
-            long = "low_light_mode",
-            parse(try_from_str = "str_to_low_light_mode")
-        )]
-        low_light_mode: Option<fidl_fuchsia_settings::LowLightMode>,
-
-        #[structopt(short = "t", long = "theme", parse(try_from_str = "str_to_theme"))]
-        theme: Option<fidl_fuchsia_settings::Theme>,
-
-        #[structopt(short = "s", long = "screen_enabled")]
-        screen_enabled: Option<bool>,
-    },
-
-    #[structopt(name = "do_not_disturb")]
-    DoNotDisturb {
-        #[structopt(short = "u", long = "user_dnd")]
-        user_dnd: Option<bool>,
-
-        #[structopt(short = "n", long = "night_mode_dnd")]
-        night_mode_dnd: Option<bool>,
-    },
-
-    #[structopt(name = "factory_reset")]
-    FactoryReset {
-        #[structopt(short = "l", long = "is_local_reset_allowed")]
-        is_local_reset_allowed: Option<bool>,
-    },
-
-    #[structopt(name = "input")]
-    Input {
-        #[structopt(short = "m", long = "mic_muted")]
-        mic_muted: Option<bool>,
-    },
-
+    Accessibility(Accessibility),
+    Audio(Audio),
+    Display(Display),
+    DoNotDisturb(DoNotDisturb),
+    FactoryReset(FactoryReset),
+    Input(Input),
     // TODO(fxbug.dev/65686): Move back into input when the clients are migrated over.
     // TODO(fxbug.dev/66186): Support multiple input devices to be set.
     // For simplicity, currently only supports setting one input device at a time.
-    #[structopt(name = "input2")]
-    Input2 {
-        #[structopt(flatten)]
-        input_device: InputDeviceOptions,
-    },
-
-    #[structopt(name = "intl")]
-    Intl {
-        #[structopt(short = "z", long, parse(from_str = "str_to_time_zone"))]
-        time_zone: Option<fidl_fuchsia_intl::TimeZoneId>,
-
-        #[structopt(short = "u", long, parse(try_from_str = "str_to_temperature_unit"))]
-        // Valid options are Celsius and Fahrenheit, or just "c" and "f".
-        temperature_unit: Option<fidl_fuchsia_intl::TemperatureUnit>,
-
-        #[structopt(short, long, parse(from_str = "str_to_locale"))]
-        /// List of locales, separated by spaces.
-        locales: Vec<fidl_fuchsia_intl::LocaleId>,
-
-        #[structopt(short = "h", long, parse(try_from_str = "str_to_hour_cycle"))]
-        hour_cycle: Option<fidl_fuchsia_settings::HourCycle>,
-
-        #[structopt(long)]
-        /// If set, this flag will set locales as an empty list. Overrides the locales arguments.
-        clear_locales: bool,
-    },
-
-    #[structopt(name = "light")]
-    /// Reads and modifies the hardware light state. To get the value of all light types, omit all
-    /// arguments. If setting the value for a light group, name is required, then only one type of
-    /// value between simple, brightness, or rgb should be specified.
-    Light {
-        #[structopt(flatten)]
-        light_group: LightGroup,
-    },
-
-    #[structopt(name = "night_mode")]
-    NightMode {
-        #[structopt(short, long)]
-        night_mode_enabled: Option<bool>,
-    },
-
-    #[structopt(name = "privacy")]
-    Privacy {
-        #[structopt(short, long)]
-        user_data_sharing_consent: Option<bool>,
-    },
-
-    #[structopt(name = "setup")]
-    Setup {
-        #[structopt(short = "i", long = "interfaces", parse(from_str = "str_to_interfaces"))]
-        configuration_interfaces: Option<ConfigurationInterfaces>,
-    },
-
-    /// Reads and modifies volume policies that affect the behavior of the fuchsia.settings.audio.
-    /// To list the policies, run the subcommand without any arguments.
-    #[structopt(name = "volume_policy")]
-    VolumePolicy {
-        /// Adds a policy transform.
-        #[structopt(subcommand)]
-        add: Option<VolumePolicyCommands>,
-
-        /// Removes a policy transform by its policy ID.
-        #[structopt(short, long)]
-        remove: Option<u32>,
-    },
+    Input2(InputDeviceOptions),
+    Intl(Intl),
+    Light(LightGroup),
+    NightMode(NightMode),
+    Privacy(Privacy),
+    Setup(Setup),
+    VolumePolicy(VolumePolicy),
 }
 
-#[derive(StructOpt, Debug, Clone, Copy, Default)]
-pub struct AccessibilityOptions {
-    #[structopt(short = "a", long)]
+#[derive(FromArgs, Debug, Clone, Default)]
+#[argh(subcommand, name = "accessibility")]
+/// pass no options to get current settings
+pub struct Accessibility {
+    #[argh(option, short = 'a')]
+    /// when set to 'true', will turn on an audio track for videos that includes a description
+    /// of what is occurring in the video
     pub audio_description: Option<bool>,
 
-    #[structopt(short = "s", long)]
+    #[argh(option, short = 's')]
+    /// when set to 'true', will read aloud elements of the screen selected by the user
     pub screen_reader: Option<bool>,
 
-    #[structopt(short = "i", long)]
+    #[argh(option, short = 'i')]
+    /// when set to 'true', will invert the colors on the screen
     pub color_inversion: Option<bool>,
 
-    #[structopt(short = "m", long)]
+    #[argh(option, short = 'm')]
+    /// when set to 'true', will interpret triple-taps on the touchscreen as a command to zoom in
     pub enable_magnification: Option<bool>,
 
-    #[structopt(short = "c", long, parse(try_from_str = "str_to_color_blindness_type"))]
+    #[argh(option, short = 'c', from_str_fn(str_to_color_blindness_type))]
+    /// configures the type of color-blindness to correct for. Valid options are none, protanomaly,
+    /// deuteranomaly, and tritanomaly
     pub color_correction: Option<fidl_fuchsia_settings::ColorBlindnessType>,
 
-    #[structopt(subcommand)]
+    #[argh(subcommand)]
     pub caption_options: Option<CaptionCommands>,
 }
 
-#[derive(StructOpt, Debug, Clone, Copy)]
+#[derive(FromArgs, Debug, Clone)]
+#[argh(subcommand)]
 pub enum CaptionCommands {
-    #[structopt(name = "captions")]
     CaptionOptions(CaptionOptions),
 }
 
-#[derive(StructOpt, Debug, Clone, Copy)]
+#[derive(FromArgs, Debug, Clone)]
+#[argh(subcommand, name = "caption_options")]
+/// configuration for which sources get closed caption and how they look
 pub struct CaptionOptions {
-    #[structopt(short = "m", long)]
-    /// Enable closed captions for media sources of audio.
+    #[argh(option, short = 'm')]
+    /// enable closed captions for media sources of audio
     pub for_media: Option<bool>,
 
-    #[structopt(short = "t", long)]
-    /// Enable closed captions for Text-To-Speech sources of audio.
+    #[argh(option, short = 't')]
+    /// enable closed captions for Text-To-Speech sources of audio
     pub for_tts: Option<bool>,
 
-    #[structopt(short, long, parse(try_from_str = "str_to_color"))]
-    /// Border color used around the closed captions window. Valid options are red, green, or blue,
-    /// or just the first letter of each color (r, g, b).
+    #[argh(option, short = 'w', from_str_fn(str_to_color))]
+    /// border color used around the closed captions window. Valid options are red, green, and blue
     pub window_color: Option<fidl_fuchsia_ui_types::ColorRgba>,
 
-    #[structopt(short, long, parse(try_from_str = "str_to_color"))]
-    /// Border color used around the closed captions window. Valid options are red, green, or blue,
-    /// or just the first letter of each color (r, g, b).
+    #[argh(option, short = 'b', from_str_fn(str_to_color))]
+    /// border color used around the closed captions window. Valid options are red, green, and blue
     pub background_color: Option<fidl_fuchsia_ui_types::ColorRgba>,
 
-    #[structopt(flatten)]
-    pub style: CaptionFontStyle,
-}
-
-#[derive(StructOpt, Debug, Clone, Copy)]
-pub enum VolumePolicyCommands {
-    #[structopt(name = "add")]
-    AddPolicy(VolumePolicyOptions),
-}
-
-#[derive(StructOpt, Debug, Clone, Copy)]
-pub struct VolumePolicyOptions {
-    /// Target to apply the policy transform to.
-    #[structopt(parse(try_from_str = "str_to_audio_stream"))]
-    pub target: fidl_fuchsia_media::AudioRenderUsage,
-
-    #[structopt(long)]
-    pub min: Option<f32>,
-
-    #[structopt(long)]
-    pub max: Option<f32>,
-}
-
-#[derive(StructOpt, Debug, Clone, Copy)]
-pub struct CaptionFontStyle {
-    #[structopt(short, long, parse(try_from_str = "str_to_font_family"))]
-    /// Font family for captions, specified by 47 CFR §79.102(k). Valid options are unknown,
+    // CaptionFontStyle options below
+    #[argh(option, short = 'f', from_str_fn(str_to_font_family))]
+    /// font family for captions as specified by 47 CFR §79.102(k). Valid options are unknown,
     /// monospaced_serif, proportional_serif, monospaced_sans_serif, proportional_sans_serif,
-    /// casual, cursive, and small_capitals,
+    /// casual, cursive, and small_capitals
     pub font_family: Option<fidl_fuchsia_settings::CaptionFontFamily>,
 
-    #[structopt(short = "c", long, parse(try_from_str = "str_to_color"))]
-    /// Color of the closed cpation text. Valid options are red, green, or blue, or just the first
-    /// letter of each color (r, g, b).
+    #[argh(option, short = 'c', from_str_fn(str_to_color))]
+    /// color of the closed caption text. Valid options are red, green, and blue
     pub font_color: Option<fidl_fuchsia_ui_types::ColorRgba>,
 
-    #[structopt(short, long)]
-    /// Size of closed captions text relative to the default captions size. A range of [0.5, 2] is
-    /// guaranteed to be supported (as 47 CFR §79.103(c)(4) establishes).
+    #[argh(option, short = 'r')]
+    /// size of closed captions text relative to the default captions size, specified in the
+    /// range [0.5, 2] as per 47 CFR §79.103(c)(4)
     pub relative_size: Option<f32>,
 
-    #[structopt(short = "e", long, parse(try_from_str = "str_to_edge_style"))]
-    /// Edge style for fonts as specified in 47 CFR §79.103(c)(7), valid options are none,
-    /// drop_shadow, raised, depressed, and outline.
+    #[argh(option, short = 'e', from_str_fn(str_to_edge_style))]
+    /// edge style for fonts as specified in 47 CFR §79.103(c)(7). Valid options are none,
+    /// drop_shadow, raised, depressed, outline
     pub char_edge_style: Option<fidl_fuchsia_settings::EdgeStyle>,
 }
 
-#[derive(StructOpt, Debug, Clone)]
-pub struct InputDeviceOptions {
-    #[structopt(short = "t", long = "type", parse(try_from_str = "str_to_device_type"))]
-    /// The type of input device, e.g. camera or microphone.
-    device_type: Option<fidl_fuchsia_settings::DeviceType>,
-
-    #[structopt(short = "n", long = "name")]
-    /// The name of the device. Must be unique within a device type.
-    device_name: Option<String>,
-
-    #[structopt(short = "s", long = "state", parse(try_from_str = "str_to_device_state"))]
-    /// The device state flags, represented by the integer value of the bitwise flags.
-    ///
-    /// Available = 1
-    /// Active = 2
-    /// Muted = 4
-    /// Disabled = 8
-    /// Error = 16
-    ///
-    /// For combinations of states, add these values together.
-    /// Ex: Available && Active -> 1 + 2 -> 3
-    device_state: Option<fidl_fuchsia_settings::DeviceState>,
-}
-
-#[derive(StructOpt, Debug)]
-pub struct AudioStreams {
-    #[structopt(short = "t", long = "stream", parse(try_from_str = "str_to_audio_stream"))]
+#[derive(FromArgs, Debug)]
+#[argh(subcommand, name = "audio")]
+/// get or set audio settings
+pub struct Audio {
+    // AudioStreams
+    /// which stream should be modified. Valid options are background, media, interruption,
+    /// system_agent, and communication
+    #[argh(option, short = 't', from_str_fn(str_to_audio_stream))]
     stream: Option<fidl_fuchsia_media::AudioRenderUsage>,
-    #[structopt(short = "s", long = "source", parse(try_from_str = "str_to_audio_source"))]
-    source: Option<fidl_fuchsia_settings::AudioStreamSettingSource>,
-    #[structopt(flatten)]
-    user_volume: UserVolume,
-}
 
-#[derive(StructOpt, Debug)]
-struct UserVolume {
-    #[structopt(short = "l", long = "level")]
+    /// which source is changing the stream. Valid options are user, system, and
+    /// system_with_feedback
+    #[argh(option, short = 's', from_str_fn(str_to_audio_source))]
+    source: Option<fidl_fuchsia_settings::AudioStreamSettingSource>,
+
+    // UserVolume
+    /// the volume level specified as a float in the range [0, 1]
+    #[argh(option, short = 'l')]
     level: Option<f32>,
 
-    #[structopt(short = "v", long = "volume_muted")]
+    /// whether or not the volume is muted
+    #[argh(option, short = 'v')]
     volume_muted: Option<bool>,
-}
 
-#[derive(StructOpt, Debug)]
-pub struct AudioInput {
-    #[structopt(short = "m", long = "input_muted")]
+    // AudioInput
+    /// whether or not the input, e.g. microphone, is muted
+    #[argh(option, short = 'm')]
     input_muted: Option<bool>,
 }
 
-#[derive(StructOpt, Debug, Clone)]
+#[derive(FromArgs, Debug)]
+#[argh(subcommand, name = "display")]
+/// get or set display settings
+pub struct Display {
+    /// the brightness value specified as a float in the range [0, 1]
+    #[argh(option, short = 'b')]
+    brightness: Option<f32>,
+
+    /// the brightness values used to control auto brightness as a float in the range [0, 1]
+    #[argh(option, short = 'o')]
+    auto_brightness_level: Option<f32>,
+
+    /// when set to 'true', enables auto brightness
+    #[argh(option, short = 'a')]
+    auto_brightness: Option<bool>,
+
+    /// when passed, reads values from the light sensor rather than display brightness
+    #[argh(switch, short = 'l')]
+    light_sensor: bool,
+
+    /// which low light mode setting to enable. Valid options are enable, disable, and
+    /// disable_immediately
+    #[argh(option, short = 'm', from_str_fn(str_to_low_light_mode))]
+    low_light_mode: Option<fidl_fuchsia_settings::LowLightMode>,
+
+    /// which theme to set for the device. Valid options are default, dark, light, darkauto, and
+    /// lightauto
+    #[argh(option, short = 't', from_str_fn(str_to_theme))]
+    theme: Option<fidl_fuchsia_settings::Theme>,
+
+    /// when set to 'true' the screen is enabled
+    #[argh(option, short = 's')]
+    screen_enabled: Option<bool>,
+}
+
+#[derive(FromArgs, Debug)]
+#[argh(subcommand, name = "do_not_disturb")]
+/// get or set DnD settings
+pub struct DoNotDisturb {
+    /// when set to 'true', allows the device to enter do not disturb mode
+    #[argh(option, short = 'u')]
+    user_dnd: Option<bool>,
+
+    /// when set to 'true', forces the device into do not disturb mode
+    #[argh(option, short = 'n')]
+    night_mode_dnd: Option<bool>,
+}
+
+#[derive(FromArgs, Debug)]
+#[argh(subcommand, name = "factory_reset")]
+/// get or set factory reset settings
+pub struct FactoryReset {
+    /// when set to 'true', factory reset can be performed on the device
+    #[argh(option, short = 'l')]
+    is_local_reset_allowed: Option<bool>,
+}
+
+#[derive(FromArgs, Debug)]
+#[argh(subcommand, name = "input")]
+/// get or set input settings
+pub struct Input {
+    /// when set to 'true', mutes the mic and prevents it from being accessed
+    #[argh(option, short = 'm')]
+    mic_muted: Option<bool>,
+}
+
+#[derive(FromArgs, Debug, Clone)]
+#[argh(subcommand, name = "input_device")]
+/// get or set input device settings
+pub struct InputDeviceOptions {
+    #[argh(option, short = 't', from_str_fn(str_to_device_type))]
+    /// the type of input device. Valid options are camera and microphone
+    device_type: Option<fidl_fuchsia_settings::DeviceType>,
+
+    #[argh(option, short = 'n', long = "name")]
+    /// the name of the device. Must be unique within a device type
+    device_name: Option<String>,
+
+    #[argh(option, short = 's', long = "state", from_str_fn(str_to_device_state))]
+    /// the device state flags, pass a comma separated string of the values available, active,
+    /// muted, disabled and error. E.g. "-s available,active"
+    device_state: Option<fidl_fuchsia_settings::DeviceState>,
+}
+
+#[derive(FromArgs, Debug)]
+#[argh(subcommand, name = "intl")]
+/// get or set internationalization settings
+pub struct Intl {
+    /// a valid timezone matching the data available at https://www.iana.org/time-zones
+    #[argh(option, short = 'z', from_str_fn(str_to_time_zone))]
+    time_zone: Option<fidl_fuchsia_intl::TimeZoneId>,
+
+    #[argh(option, short = 'u', from_str_fn(str_to_temperature_unit))]
+    /// the unit to use for temperature. Valid options are celsius and fahrenheit
+    temperature_unit: Option<fidl_fuchsia_intl::TemperatureUnit>,
+
+    #[argh(option, short = 'l', from_str_fn(str_to_locale))]
+    /// list of locales, separated by spaces, formatted by Unicode BCP-47 Locale Identifier, e.g.
+    /// en-us
+    locales: Vec<fidl_fuchsia_intl::LocaleId>,
+
+    /// the hour cycle to use. Valid options are h11 for 12-hour clock with 0:10 am after midnight,
+    /// h12 for 12-hour clock with 12:10am after midnight, h23 for 24-hour clock with 0:10 after
+    /// midnight, and h24 for 24-hour clock with 24:10 after midnight
+    #[argh(option, short = 'h', from_str_fn(str_to_hour_cycle))]
+    hour_cycle: Option<fidl_fuchsia_settings::HourCycle>,
+
+    #[argh(switch)]
+    /// if set, this flag will set locales as an empty list. Overrides the locales arguments
+    clear_locales: bool,
+}
+
+#[derive(FromArgs, Debug, Clone)]
+#[argh(subcommand, name = "light")]
+/// get or set light settings
 pub struct LightGroup {
-    #[structopt(short, long)]
-    /// Name of a light group to set values for. Required if setting the value of a light group.
+    #[argh(option, short = 'n')]
+    /// name of a light group to set values for. Required if setting the value of a light group
     pub name: Option<String>,
 
-    #[structopt(short, long)]
-    /// Repeated parameter for a list of simple on/off values to set for a light group.
+    #[argh(option, short = 's')]
+    /// repeated parameter for a list of simple on/off values to set for a light group.
     pub simple: Vec<bool>,
 
-    #[structopt(short, long)]
-    /// Repeated parameter for a list of floating point brightness values from 0.0-1.0 inclusive
-    /// to set for a light group, where 0.0 is minimum brightness and 1.0 is maximum.
+    #[argh(option, short = 'b')]
+    /// repeated parameter for a list of floating point brightness values in the range [0, 1] for a
+    /// light group
     pub brightness: Vec<f64>,
 
-    #[structopt(short, long, parse(try_from_str = "str_to_rgb"))]
-    /// Repeated parameter for a list of RGB values to set for a light group. Values should be in
-    /// the range of 0.0-1.0 inclusive and should be specified as a comma-separated list of the red,
-    /// green, and blue components. Ex. 0.1,0.4,0.23
+    #[argh(option, short = 'r', from_str_fn(str_to_rgb))]
+    /// repeated parameter for a list of RGB values to set for a light group. Values should be in
+    /// the range [0, 1] and specified as a comma-separated list of the red, green, and blue
+    /// components. Ex. 0.1,0.4,0.23
     pub rgb: Vec<fidl_fuchsia_ui_types::ColorRgb>,
+}
+
+#[derive(FromArgs, Debug)]
+#[argh(subcommand, name = "night_mode")]
+/// get or set night mode settings
+pub struct NightMode {
+    /// when 'true', enables night mode
+    #[argh(option, short = 'n')]
+    night_mode_enabled: Option<bool>,
+}
+
+#[derive(FromArgs, Debug)]
+#[argh(subcommand, name = "privacy")]
+/// get or set privacy settings
+pub struct Privacy {
+    /// when 'true', is considered to be user giving consent to have their data shared with product
+    /// owner, e.g. for metrics collection and crash reporting
+    #[argh(option, short = 'u')]
+    user_data_sharing_consent: Option<bool>,
+}
+
+#[derive(FromArgs, Debug)]
+#[argh(subcommand, name = "setup")]
+/// get or set setup settings
+pub struct Setup {
+    /// a supported group of interfaces, specified as a comma-delimited string of the valid values
+    /// eth and wifi, e.g. "-i eth,wifi" or "-i wifi"
+    #[argh(option, short = 'i', long = "interfaces", from_str_fn(str_to_interfaces))]
+    configuration_interfaces: Option<ConfigurationInterfaces>,
+}
+#[derive(FromArgs, Debug)]
+#[argh(subcommand, name = "volume_policy")]
+/// configure volume policy
+// Reads and modifies volume policies that affect the behavior of the fuchsia.settings.audio.
+// To list the policies, run the subcommand without any arguments.
+pub struct VolumePolicy {
+    /// adds a policy transform.
+    #[argh(subcommand)]
+    add: Option<VolumePolicyCommands>,
+
+    /// removes a policy transform by its policy ID.
+    #[argh(option, short = 'r')]
+    remove: Option<u32>,
+}
+
+#[derive(FromArgs, Debug, Clone)]
+#[argh(subcommand)]
+pub enum VolumePolicyCommands {
+    AddPolicy(VolumePolicyOptions),
+}
+
+#[derive(FromArgs, Debug, Clone)]
+#[argh(subcommand, name = "add")]
+/// adds a new volume policy
+pub struct VolumePolicyOptions {
+    /// target stream to apply the policy transform to. Valid options are background, media,
+    /// interruption, system_agent, and communication
+    #[argh(positional, from_str_fn(str_to_audio_stream))]
+    pub target: fidl_fuchsia_media::AudioRenderUsage,
+
+    /// the minimum allowed value for the target
+    #[argh(option)]
+    pub min: Option<f32>,
+
+    /// the maximum allowed value for the target
+    #[argh(option)]
+    pub max: Option<f32>,
 }
 
 impl Into<Vec<LightState>> for LightGroup {
@@ -362,8 +402,8 @@ impl Into<Vec<LightState>> for LightGroup {
 }
 
 pub async fn run_command(command: SettingClient) -> Result<(), Error> {
-    match command {
-        SettingClient::Display {
+    match command.nested {
+        SettingClientSubcommands::Display(Display {
             brightness,
             auto_brightness_level,
             auto_brightness,
@@ -371,7 +411,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             low_light_mode,
             theme,
             screen_enabled,
-        } => {
+        }) => {
             let display_service = connect_to_protocol::<fidl_fuchsia_settings::DisplayMarker>()
                 .context("Failed to connect to display service")?;
             utils::handle_mixed_result(
@@ -390,7 +430,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             )
             .await?;
         }
-        SettingClient::DoNotDisturb { user_dnd, night_mode_dnd } => {
+        SettingClientSubcommands::DoNotDisturb(DoNotDisturb { user_dnd, night_mode_dnd }) => {
             let dnd_service = connect_to_protocol::<fidl_fuchsia_settings::DoNotDisturbMarker>()
                 .context("Failed to connect to do_not_disturb service")?;
             utils::handle_mixed_result(
@@ -399,7 +439,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             )
             .await?;
         }
-        SettingClient::FactoryReset { is_local_reset_allowed } => {
+        SettingClientSubcommands::FactoryReset(FactoryReset { is_local_reset_allowed }) => {
             let factory_reset_service =
                 connect_to_protocol::<fidl_fuchsia_settings::FactoryResetMarker>()
                     .context("Failed to connect to factory_reset service")?;
@@ -409,7 +449,13 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             )
             .await?;
         }
-        SettingClient::Intl { time_zone, temperature_unit, locales, hour_cycle, clear_locales } => {
+        SettingClientSubcommands::Intl(Intl {
+            time_zone,
+            temperature_unit,
+            locales,
+            hour_cycle,
+            clear_locales,
+        }) => {
             let intl_service = connect_to_protocol::<fidl_fuchsia_settings::IntlMarker>()
                 .context("Failed to connect to intl service")?;
             utils::handle_mixed_result(
@@ -426,7 +472,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             )
             .await?;
         }
-        SettingClient::Light { light_group } => {
+        SettingClientSubcommands::Light(light_group) => {
             let light_mode_service = connect_to_protocol::<fidl_fuchsia_settings::LightMarker>()
                 .context("Failed to connect to light service")?;
             utils::handle_mixed_result(
@@ -435,7 +481,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             )
             .await?;
         }
-        SettingClient::NightMode { night_mode_enabled } => {
+        SettingClientSubcommands::NightMode(NightMode { night_mode_enabled }) => {
             let night_mode_service =
                 connect_to_protocol::<fidl_fuchsia_settings::NightModeMarker>()
                     .context("Failed to connect to night mode service")?;
@@ -445,7 +491,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             )
             .await?;
         }
-        SettingClient::Accessibility(accessibility_options) => {
+        SettingClientSubcommands::Accessibility(accessibility_options) => {
             let accessibility_service =
                 connect_to_protocol::<fidl_fuchsia_settings::AccessibilityMarker>()
                     .context("Failed to connect to accessibility service")?;
@@ -456,7 +502,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             )
             .await?;
         }
-        SettingClient::Privacy { user_data_sharing_consent } => {
+        SettingClientSubcommands::Privacy(Privacy { user_data_sharing_consent }) => {
             let privacy_service = connect_to_protocol::<fidl_fuchsia_settings::PrivacyMarker>()
                 .context("Failed to connect to privacy service")?;
             utils::handle_mixed_result(
@@ -465,14 +511,15 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             )
             .await?;
         }
-        SettingClient::Audio { streams, input } => {
+        SettingClientSubcommands::Audio(Audio {
+            stream,
+            source,
+            level,
+            volume_muted,
+            input_muted,
+        }) => {
             let audio_service = connect_to_protocol::<fidl_fuchsia_settings::AudioMarker>()
                 .context("Failed to connect to audio service")?;
-            let stream = streams.stream;
-            let source = streams.source;
-            let level = streams.user_volume.level;
-            let volume_muted = streams.user_volume.volume_muted;
-            let input_muted = input.input_muted;
             utils::handle_mixed_result(
                 "Audio",
                 audio::command(audio_service, stream, source, level, volume_muted, input_muted)
@@ -480,25 +527,26 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             )
             .await?;
         }
-        SettingClient::Input { mic_muted } => {
+        SettingClientSubcommands::Input(Input { mic_muted }) => {
             let input_service = connect_to_protocol::<fidl_fuchsia_settings::InputMarker>()
                 .context("Failed to connect to input service")?;
             utils::handle_mixed_result("Input", input::command(input_service, mic_muted).await)
                 .await?;
         }
-        SettingClient::Input2 { input_device } => {
+        SettingClientSubcommands::Input2(InputDeviceOptions {
+            device_type,
+            device_name,
+            device_state,
+        }) => {
             let input_service = connect_to_protocol::<fidl_fuchsia_settings::InputMarker>()
                 .context("Failed to connect to input2 service")?;
-            let device_type = input_device.device_type;
-            let device_name = input_device.device_name;
-            let device_state = input_device.device_state;
             utils::handle_mixed_result(
                 "Input2",
                 input::command2(input_service, device_type, device_name, device_state).await,
             )
             .await?;
         }
-        SettingClient::Setup { configuration_interfaces } => {
+        SettingClientSubcommands::Setup(Setup { configuration_interfaces }) => {
             let setup_service = connect_to_protocol::<fidl_fuchsia_settings::SetupMarker>()
                 .context("Failed to connect to setup service")?;
             utils::handle_mixed_result(
@@ -507,7 +555,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             )
             .await?;
         }
-        SettingClient::VolumePolicy { add, remove } => {
+        SettingClientSubcommands::VolumePolicy(VolumePolicy { add, remove }) => {
             let setup_service =
                 connect_to_protocol::<fidl_fuchsia_settings_policy::VolumePolicyControllerMarker>()
                     .context("Failed to connect to volume policy service")?;
@@ -521,45 +569,58 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
     Ok(())
 }
 
-fn str_to_time_zone(src: &&str) -> fidl_fuchsia_intl::TimeZoneId {
-    fidl_fuchsia_intl::TimeZoneId { id: src.to_string() }
+fn str_to_time_zone(src: &str) -> Result<fidl_fuchsia_intl::TimeZoneId, String> {
+    Ok(fidl_fuchsia_intl::TimeZoneId { id: src.to_string() })
 }
 
-fn str_to_locale(src: &str) -> fidl_fuchsia_intl::LocaleId {
-    fidl_fuchsia_intl::LocaleId { id: src.to_string() }
+fn str_to_locale(src: &str) -> Result<fidl_fuchsia_intl::LocaleId, String> {
+    Ok(fidl_fuchsia_intl::LocaleId { id: src.to_string() })
 }
 
-fn str_to_device_type(src: &str) -> Result<fidl_fuchsia_settings::DeviceType, &str> {
+fn str_to_device_type(src: &str) -> Result<fidl_fuchsia_settings::DeviceType, String> {
     let device_type = src.to_lowercase();
-    if device_type.contains("microphone") {
-        Ok(fidl_fuchsia_settings::DeviceType::Microphone)
-    } else if device_type.contains("camera") {
-        Ok(fidl_fuchsia_settings::DeviceType::Camera)
-    } else {
-        Err("Unidentified device type")
+    match device_type.as_ref() {
+        "microphone" | "m" => Ok(fidl_fuchsia_settings::DeviceType::Microphone),
+        "camera" | "c" => Ok(fidl_fuchsia_settings::DeviceType::Camera),
+        _ => Err(String::from("Unidentified device type")),
     }
 }
 
-fn str_to_device_state(src: &str) -> Result<fidl_fuchsia_settings::DeviceState, &str> {
-    let bits = src.parse::<u64>().map_err(|_| "Failed to parse device state")?;
-    let mut device_state = fidl_fuchsia_settings::DeviceState::EMPTY;
-    device_state.toggle_flags = fidl_fuchsia_settings::ToggleStateFlags::from_bits(bits);
-    Ok(device_state)
+fn str_to_device_state(src: &str) -> Result<fidl_fuchsia_settings::DeviceState, String> {
+    use fidl_fuchsia_settings::ToggleStateFlags;
+
+    Ok(fidl_fuchsia_settings::DeviceState {
+        toggle_flags: Some(src.to_lowercase().split(",").fold(
+            Ok(fidl_fuchsia_settings::ToggleStateFlags::empty()),
+            |acc, flag| {
+                acc.and_then(|acc| {
+                    Ok(match flag {
+                        "available" | "v" => ToggleStateFlags::Available,
+                        "active" | "a" => ToggleStateFlags::Active,
+                        "muted" | "m" => ToggleStateFlags::Muted,
+                        "disabled" | "d" => ToggleStateFlags::Disabled,
+                        "error" | "e" => ToggleStateFlags::Error,
+                        flag => {
+                            return Err(format!("Unrecognized ToggleStateFlags value {:?}", flag))
+                        }
+                    } | acc)
+                })
+            },
+        )?),
+        ..fidl_fuchsia_settings::DeviceState::EMPTY
+    })
 }
 
-fn str_to_low_light_mode(src: &str) -> Result<fidl_fuchsia_settings::LowLightMode, &str> {
-    if src.contains("enable") {
-        Ok(fidl_fuchsia_settings::LowLightMode::Enable)
-    } else if src.contains("disable") {
-        Ok(fidl_fuchsia_settings::LowLightMode::Disable)
-    } else if src.contains("disableimmediately") {
-        Ok(fidl_fuchsia_settings::LowLightMode::DisableImmediately)
-    } else {
-        Err("Couldn't parse low light mode")
+fn str_to_low_light_mode(src: &str) -> Result<fidl_fuchsia_settings::LowLightMode, String> {
+    match src {
+        "enable" | "e" => Ok(fidl_fuchsia_settings::LowLightMode::Enable),
+        "disable" | "d" => Ok(fidl_fuchsia_settings::LowLightMode::Disable),
+        "disable_immediately" | "i" => Ok(fidl_fuchsia_settings::LowLightMode::DisableImmediately),
+        _ => Err(String::from("Couldn't parse low light mode")),
     }
 }
 
-fn str_to_theme(src: &str) -> Result<fidl_fuchsia_settings::Theme, &str> {
+fn str_to_theme(src: &str) -> Result<fidl_fuchsia_settings::Theme, String> {
     match src {
         "default" => Ok(Theme {
             theme_type: Some(fidl_fuchsia_settings::ThemeType::Default),
@@ -581,29 +642,23 @@ fn str_to_theme(src: &str) -> Result<fidl_fuchsia_settings::Theme, &str> {
             theme_mode: Some(fidl_fuchsia_settings::ThemeMode::Auto),
             ..Theme::EMPTY
         }),
-        _ => Err("Couldn't parse theme."),
+        _ => Err(String::from("Couldn't parse theme.")),
     }
 }
 
-fn str_to_interfaces(src: &&str) -> ConfigurationInterfaces {
-    let mut interfaces = ConfigurationInterfaces::empty();
-
-    for interface in src.split(",") {
-        match interface.to_lowercase().as_str() {
-            "eth" | "ethernet" => {
-                interfaces = interfaces | ConfigurationInterfaces::Ethernet;
-            }
-            "wireless" | "wifi" => {
-                interfaces = interfaces | ConfigurationInterfaces::Wifi;
-            }
-            _ => {}
-        }
-    }
-
-    return interfaces;
+fn str_to_interfaces(src: &str) -> Result<ConfigurationInterfaces, String> {
+    src.to_lowercase().split(",").fold(Ok(ConfigurationInterfaces::empty()), |acc, flag| {
+        acc.and_then(|acc| {
+            Ok(match flag {
+                "eth" | "ethernet" => ConfigurationInterfaces::Ethernet,
+                "wireless" | "wifi" => ConfigurationInterfaces::Wifi,
+                bad_ifc => return Err(format!("Unknown interface: {:?}", bad_ifc)),
+            } | acc)
+        })
+    })
 }
 
-fn str_to_color(src: &str) -> Result<fidl_fuchsia_ui_types::ColorRgba, &str> {
+fn str_to_color(src: &str) -> Result<fidl_fuchsia_ui_types::ColorRgba, String> {
     Ok(match src.to_lowercase().as_str() {
         "red" | "r" => {
             fidl_fuchsia_ui_types::ColorRgba { red: 255.0, green: 0.0, blue: 0.0, alpha: 255.0 }
@@ -614,25 +669,49 @@ fn str_to_color(src: &str) -> Result<fidl_fuchsia_ui_types::ColorRgba, &str> {
         "blue" | "b" => {
             fidl_fuchsia_ui_types::ColorRgba { red: 0.0, green: 0.0, blue: 255.0, alpha: 255.0 }
         }
-        _ => return Err("Couldn't parse color"),
+        _ => return Err(String::from("Couldn't parse color")),
     })
 }
 
 /// Converts a comma-separated string of RGB values into a fidl_fuchsia_ui_types::ColorRgb.
-fn str_to_rgb(src: &str) -> Result<fidl_fuchsia_ui_types::ColorRgb, &str> {
+fn str_to_rgb(src: &str) -> Result<fidl_fuchsia_ui_types::ColorRgb, String> {
     let mut part_iter =
         src.split(',').map(|p| p.parse::<f32>().map_err(|_| "failed to parse color value"));
 
-    const WRONG_COUNT: &str = "wrong number of values";
-    let color = fidl_fuchsia_ui_types::ColorRgb {
-        red: part_iter.next().unwrap_or_else(|| Err(WRONG_COUNT))?,
-        green: part_iter.next().unwrap_or_else(|| Err(WRONG_COUNT))?,
-        blue: part_iter.next().unwrap_or_else(|| Err(WRONG_COUNT))?,
+    let color = {
+        let local_ref = &mut part_iter;
+        color_from_parts(local_ref)
     };
-    part_iter.next().map(|_| Err(WRONG_COUNT)).unwrap_or(Ok(color))
+    match (color, part_iter.next()) {
+        (Some(Ok(color)), None) => Ok(color),
+        (Some(Err(err)), _) => Err(err),
+        _ => Err(String::from("wrong number of values")),
+    }
 }
 
-fn str_to_font_family(src: &str) -> Result<fidl_fuchsia_settings::CaptionFontFamily, &str> {
+fn color_from_parts<'a, T>(
+    part_iter: &mut T,
+) -> Option<Result<fidl_fuchsia_ui_types::ColorRgb, String>>
+where
+    T: Iterator<Item = Result<f32, &'a str>>,
+{
+    Some(Ok(fidl_fuchsia_ui_types::ColorRgb {
+        red: match part_iter.next()? {
+            Ok(c) => c,
+            Err(e) => return Some(Err(e.to_string())),
+        },
+        green: match part_iter.next()? {
+            Ok(c) => c,
+            Err(e) => return Some(Err(e.to_string())),
+        },
+        blue: match part_iter.next()? {
+            Ok(c) => c,
+            Err(e) => return Some(Err(e.to_string())),
+        },
+    }))
+}
+
+fn str_to_font_family(src: &str) -> Result<fidl_fuchsia_settings::CaptionFontFamily, String> {
     Ok(match src.to_lowercase().as_str() {
         "unknown" => fidl_fuchsia_settings::CaptionFontFamily::Unknown,
         "monospaced_serif" => fidl_fuchsia_settings::CaptionFontFamily::MonospacedSerif,
@@ -644,53 +723,53 @@ fn str_to_font_family(src: &str) -> Result<fidl_fuchsia_settings::CaptionFontFam
         "casual" => fidl_fuchsia_settings::CaptionFontFamily::Casual,
         "cursive" => fidl_fuchsia_settings::CaptionFontFamily::Cursive,
         "small_capitals" => fidl_fuchsia_settings::CaptionFontFamily::SmallCapitals,
-        _ => return Err("Couldn't parse font family"),
+        _ => return Err(String::from("Couldn't parse font family")),
     })
 }
 
-fn str_to_edge_style(src: &str) -> Result<fidl_fuchsia_settings::EdgeStyle, &str> {
+fn str_to_edge_style(src: &str) -> Result<fidl_fuchsia_settings::EdgeStyle, String> {
     Ok(match src.to_lowercase().as_str() {
         "none" => fidl_fuchsia_settings::EdgeStyle::None,
         "drop_shadow" => fidl_fuchsia_settings::EdgeStyle::DropShadow,
         "raised" => fidl_fuchsia_settings::EdgeStyle::Raised,
         "depressed" => fidl_fuchsia_settings::EdgeStyle::Depressed,
         "outline" => fidl_fuchsia_settings::EdgeStyle::Outline,
-        _ => return Err("Couldn't parse edge style"),
+        _ => return Err(String::from("Couldn't parse edge style")),
     })
 }
 
-fn str_to_temperature_unit(src: &str) -> Result<fidl_fuchsia_intl::TemperatureUnit, &str> {
+fn str_to_temperature_unit(src: &str) -> Result<fidl_fuchsia_intl::TemperatureUnit, String> {
     match src.to_lowercase().as_str() {
         "c" | "celsius" => Ok(fidl_fuchsia_intl::TemperatureUnit::Celsius),
         "f" | "fahrenheit" => Ok(fidl_fuchsia_intl::TemperatureUnit::Fahrenheit),
-        _ => Err("Couldn't parse temperature"),
+        _ => Err(String::from("Couldn't parse temperature")),
     }
 }
 
-fn str_to_hour_cycle(src: &str) -> Result<fidl_fuchsia_settings::HourCycle, &str> {
+fn str_to_hour_cycle(src: &str) -> Result<fidl_fuchsia_settings::HourCycle, String> {
     match src.to_lowercase().as_str() {
         "unknown" => Ok(fidl_fuchsia_settings::HourCycle::Unknown),
         "h11" => Ok(fidl_fuchsia_settings::HourCycle::H11),
         "h12" => Ok(fidl_fuchsia_settings::HourCycle::H12),
         "h23" => Ok(fidl_fuchsia_settings::HourCycle::H23),
         "h24" => Ok(fidl_fuchsia_settings::HourCycle::H24),
-        _ => Err("Couldn't parse hour cycle"),
+        _ => Err(String::from("Couldn't parse hour cycle")),
     }
 }
 
 fn str_to_color_blindness_type(
     src: &str,
-) -> Result<fidl_fuchsia_settings::ColorBlindnessType, &str> {
+) -> Result<fidl_fuchsia_settings::ColorBlindnessType, String> {
     match src.to_lowercase().as_str() {
         "none" | "n" => Ok(fidl_fuchsia_settings::ColorBlindnessType::None),
         "protanomaly" | "p" => Ok(fidl_fuchsia_settings::ColorBlindnessType::Protanomaly),
         "deuteranomaly" | "d" => Ok(fidl_fuchsia_settings::ColorBlindnessType::Deuteranomaly),
         "tritanomaly" | "t" => Ok(fidl_fuchsia_settings::ColorBlindnessType::Tritanomaly),
-        _ => Err("Couldn't parse color blindness type"),
+        _ => Err(String::from("Couldn't parse color blindness type")),
     }
 }
 
-fn str_to_audio_stream(src: &str) -> Result<fidl_fuchsia_media::AudioRenderUsage, &str> {
+fn str_to_audio_stream(src: &str) -> Result<fidl_fuchsia_media::AudioRenderUsage, String> {
     match src.to_lowercase().as_str() {
         "background" | "b" => Ok(fidl_fuchsia_media::AudioRenderUsage::Background),
         "media" | "m" => Ok(fidl_fuchsia_media::AudioRenderUsage::Media),
@@ -699,15 +778,20 @@ fn str_to_audio_stream(src: &str) -> Result<fidl_fuchsia_media::AudioRenderUsage
             Ok(fidl_fuchsia_media::AudioRenderUsage::SystemAgent)
         }
         "communication" | "c" => Ok(fidl_fuchsia_media::AudioRenderUsage::Communication),
-        _ => Err("Couldn't parse audio stream type"),
+        _ => Err(String::from("Couldn't parse audio stream type")),
     }
 }
 
-fn str_to_audio_source(src: &str) -> Result<fidl_fuchsia_settings::AudioStreamSettingSource, &str> {
+fn str_to_audio_source(
+    src: &str,
+) -> Result<fidl_fuchsia_settings::AudioStreamSettingSource, String> {
     match src.to_lowercase().as_str() {
         "user" | "u" => Ok(fidl_fuchsia_settings::AudioStreamSettingSource::User),
         "system" | "s" => Ok(fidl_fuchsia_settings::AudioStreamSettingSource::System),
-        _ => Err("Couldn't parse audio source type"),
+        "system_with_feedback" | "f" => {
+            Ok(fidl_fuchsia_settings::AudioStreamSettingSource::SystemWithFeedback)
+        }
+        _ => Err(String::from("Couldn't parse audio source type")),
     }
 }
 
@@ -737,7 +821,7 @@ mod tests {
             Ok(fidl_fuchsia_media::AudioRenderUsage::SystemAgent),
             Ok(fidl_fuchsia_media::AudioRenderUsage::SystemAgent),
             Ok(fidl_fuchsia_media::AudioRenderUsage::Communication),
-            Err("Couldn't parse audio stream type"),
+            Err(String::from("Couldn't parse audio stream type")),
         ];
         let mut results = vec![];
         for test_case in test_cases {
@@ -756,7 +840,7 @@ mod tests {
         let expected = vec![
             Ok(fidl_fuchsia_settings::AudioStreamSettingSource::User),
             Ok(fidl_fuchsia_settings::AudioStreamSettingSource::System),
-            Err("Couldn't parse audio source type"),
+            Err(String::from("Couldn't parse audio source type")),
         ];
         let mut results = vec![];
         for test_case in test_cases {

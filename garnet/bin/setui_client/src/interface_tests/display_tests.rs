@@ -98,7 +98,7 @@ async fn validate_light_sensor() -> Result<(), Error> {
     fasync::Task::spawn(async move {
         while let Some(request) = stream.try_next().await.unwrap() {
             match request {
-                DisplayRequest::WatchLightSensor2 { delta: _, responder } => {
+                DisplayRequest::WatchLightSensor { delta: _, responder } => {
                     *watch_called_clone.write() = true;
                     responder
                         .send(LightSensorData {

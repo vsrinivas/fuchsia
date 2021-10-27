@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use crate::utils::{self, Either, WatchOrSetResult};
-use crate::{AccessibilityOptions, CaptionCommands};
+use crate::{Accessibility, CaptionCommands};
 use fidl_fuchsia_settings::{
     AccessibilityProxy, AccessibilitySettings, CaptionFontStyle, CaptionsSettings,
 };
 
-pub async fn command(proxy: AccessibilityProxy, options: AccessibilityOptions) -> WatchOrSetResult {
+pub async fn command(proxy: AccessibilityProxy, options: Accessibility) -> WatchOrSetResult {
     let mut settings = AccessibilitySettings::EMPTY;
     settings.audio_description = options.audio_description;
     settings.screen_reader = options.screen_reader;
@@ -19,19 +19,22 @@ pub async fn command(proxy: AccessibilityProxy, options: AccessibilityOptions) -
     if let Some(caption_settings_enum) = options.caption_options {
         let CaptionCommands::CaptionOptions(input) = caption_settings_enum;
 
-        let style = input.style;
-        let mut font_style = CaptionFontStyle::EMPTY;
-        font_style.family = style.font_family;
-        font_style.color = style.font_color;
-        font_style.relative_size = style.relative_size;
-        font_style.char_edge_style = style.char_edge_style;
+        let font_style = CaptionFontStyle {
+            family: input.font_family,
+            color: input.font_color,
+            relative_size: input.relative_size,
+            char_edge_style: input.char_edge_style,
+            ..CaptionFontStyle::EMPTY
+        };
 
-        let mut captions_settings = CaptionsSettings::EMPTY;
-        captions_settings.for_media = input.for_media;
-        captions_settings.for_tts = input.for_tts;
-        captions_settings.window_color = input.window_color;
-        captions_settings.background_color = input.background_color;
-        captions_settings.font_style = Some(font_style);
+        let captions_settings = CaptionsSettings {
+            for_media: input.for_media,
+            for_tts: input.for_tts,
+            window_color: input.window_color,
+            background_color: input.background_color,
+            font_style: Some(font_style),
+            ..CaptionsSettings::EMPTY
+        };
 
         settings.captions_settings = Some(captions_settings);
     }

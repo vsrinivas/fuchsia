@@ -4,9 +4,7 @@
 
 use crate::interface_tests::Services;
 use crate::interface_tests::ENV_NAME;
-use crate::{
-    accessibility, AccessibilityOptions, CaptionCommands, CaptionFontStyle, CaptionOptions,
-};
+use crate::{accessibility, Accessibility, CaptionCommands, CaptionOptions};
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_settings::{
     AccessibilityMarker, AccessibilityRequest, AccessibilitySettings, CaptionFontFamily,
@@ -15,12 +13,13 @@ use fidl_fuchsia_settings::{
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
+use uuid::Uuid;
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn validate_accessibility_set() -> Result<(), Error> {
     const TEST_COLOR: fidl_fuchsia_ui_types::ColorRgba =
         fidl_fuchsia_ui_types::ColorRgba { red: 238.0, green: 23.0, blue: 128.0, alpha: 255.0 };
-    let expected_options: AccessibilityOptions = AccessibilityOptions {
+    let expected_options: Accessibility = Accessibility {
         audio_description: Some(true),
         screen_reader: Some(true),
         color_inversion: Some(false),
@@ -31,17 +30,16 @@ async fn validate_accessibility_set() -> Result<(), Error> {
             for_tts: Some(false),
             window_color: Some(TEST_COLOR),
             background_color: Some(TEST_COLOR),
-            style: CaptionFontStyle {
-                font_family: Some(CaptionFontFamily::Cursive),
-                font_color: Some(TEST_COLOR),
-                relative_size: Some(1.0),
-                char_edge_style: Some(EdgeStyle::Raised),
-            },
+            font_family: Some(CaptionFontFamily::Cursive),
+            font_color: Some(TEST_COLOR),
+            relative_size: Some(1.0),
+            char_edge_style: Some(EdgeStyle::Raised),
         })),
     };
 
-    let env = create_service!(
-        Services::Accessibility, AccessibilityRequest::Set { settings, responder } => {
+    let test_assertions = {
+        let expected_options = expected_options.clone();
+        move |settings: AccessibilitySettings| {
             assert_eq!(expected_options.audio_description, settings.audio_description);
             assert_eq!(expected_options.screen_reader, settings.screen_reader);
             assert_eq!(expected_options.color_inversion, settings.color_inversion);
@@ -50,7 +48,10 @@ async fn validate_accessibility_set() -> Result<(), Error> {
 
             // If no caption options are provided, then captions_settings field in service should
             // also be None. The inverse of this should also be true.
-            assert_eq!(expected_options.caption_options.is_some(), settings.captions_settings.is_some());
+            assert_eq!(
+                expected_options.caption_options.is_some(),
+                settings.captions_settings.is_some()
+            );
             match (settings.captions_settings, expected_options.caption_options) {
                 (Some(captions_settings), Some(caption_settings_enum)) => {
                     let CaptionCommands::CaptionOptions(input) = caption_settings_enum;
@@ -61,20 +62,54 @@ async fn validate_accessibility_set() -> Result<(), Error> {
                     assert_eq!(input.background_color, captions_settings.background_color);
 
                     if let Some(font_style) = captions_settings.font_style {
-                        let input_style = input.style;
-
-                        assert_eq!(input_style.font_family, font_style.family);
-                        assert_eq!(input_style.font_color, font_style.color);
-                        assert_eq!(input_style.relative_size, font_style.relative_size);
-                        assert_eq!(input_style.char_edge_style, font_style.char_edge_style);
+                        assert_eq!(input.font_family, font_style.family);
+                        assert_eq!(input.font_color, font_style.color);
+                        assert_eq!(input.relative_size, font_style.relative_size);
+                        assert_eq!(input.char_edge_style, font_style.char_edge_style);
                     }
                 }
                 _ => {}
             }
-
-            responder.send(&mut Ok(()))?;
         }
-    );
+    };
+
+    let mut fs = ServiceFs::new();
+    fs.add_fidl_service(Services::Accessibility);
+
+    let mut uuid = Uuid::new_v4().to_string();
+    uuid.push_str(ENV_NAME);
+    let env = fs.create_nested_environment(&uuid)?;
+
+    fasync::Task::spawn(fs.for_each_concurrent(None, {
+        let test_assertions = test_assertions.clone();
+        move |connection| {
+            let test_assertions = test_assertions.clone();
+            async move {
+                if let Services::Accessibility(stream) = connection {
+                    stream
+                        .err_into::<anyhow::Error>()
+                        .try_for_each(|req| {
+                            let test_assertions = test_assertions.clone();
+                            async move {
+                                match req {
+                                    AccessibilityRequest::Set { settings, responder } => {
+                                        test_assertions(settings);
+                                        responder.send(&mut Ok(()))?;
+                                    }
+                                    _ => panic!("Incorrect command to service"),
+                                }
+                                Ok(())
+                            }
+                        })
+                        .unwrap_or_else(|e: anyhow::Error| {
+                            panic!("error running setui server: {:?}", e)
+                        })
+                        .await;
+                }
+            }
+        }
+    }))
+    .detach();
 
     let accessibility_service = env
         .connect_to_protocol::<AccessibilityMarker>()
@@ -98,10 +133,8 @@ async fn validate_accessibility_watch() -> Result<(), Error> {
         .connect_to_protocol::<AccessibilityMarker>()
         .context("Failed to connect to accessibility service")?;
 
-    let output = assert_watch!(accessibility::command(
-        accessibility_service,
-        AccessibilityOptions::default()
-    ));
+    let output =
+        assert_watch!(accessibility::command(accessibility_service, Accessibility::default()));
     assert_eq!(output, format!("{:#?}", AccessibilitySettings::EMPTY));
     Ok(())
 }

@@ -7,7 +7,7 @@ use fuchsia_component::client::{launcher, AppBuilder};
 
 const SETUI_CLIENT_PATH: &str = "fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx";
 const EXPECTED_OUT_NAME: &str = "setui_client";
-const EXPECTED_OUT_HELP: &str = "Prints this message or the help of the given subcommand(s)";
+const EXPECTED_OUT_HELP: &str = "display usage information";
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn run() -> Result<(), Error> {

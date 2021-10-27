@@ -17,7 +17,7 @@ pub async fn command(
 ) -> WatchOrSetResult {
     // Light sensor Watch.
     if light_sensor {
-        return Ok(Either::Watch(utils::watch_to_stream(proxy, |p| p.watch_light_sensor2(0.0))));
+        return Ok(Either::Watch(utils::watch_to_stream(proxy, |p| p.watch_light_sensor(0.0))));
     }
 
     // Set call.

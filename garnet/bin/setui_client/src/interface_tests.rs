@@ -35,11 +35,29 @@ struct ExpectedStreamSettingsStruct {
 
 const ENV_NAME: &str = "setui_client_test_environment";
 
-// Creates a service in an environment for a given setting type.
-// Usage: create_service!(service_enum_name,
-//          request_name => {code block},
-//          request2_name => {code_block}
-//          ... );
+/// Creates a service in an environment for a given setting type.
+///
+/// # Example:
+///
+/// ```
+/// # struct ServiceEnumName {}
+/// # enum Request{Watch{responder: ()}, Set{value: (), responder}}
+/// setui_client::create_service!(ServiceEnumName,
+///     Request::Watch { responder } => {
+/// # /*
+///         ...
+/// # */
+///     },
+///     Request::Set { value, responder } => {
+/// # /*
+///         ...
+/// # */
+///     },
+/// # /*
+///     ...
+/// # */
+/// );
+/// ```
 #[macro_export]
 macro_rules! create_service  {
     ($setting_type:path, $( $request:pat => $callback:block ),*) => {{
@@ -54,7 +72,7 @@ macro_rules! create_service  {
 
         fasync::Task::spawn(fs.for_each_concurrent(None, move |connection| {
             async move {
-                #![allow(unreachable_patterns)]
+                #[allow(unreachable_patterns)]
                 match connection {
                     $setting_type(stream) => {
                         stream
