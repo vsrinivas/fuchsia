@@ -5,6 +5,7 @@
 use {
     anyhow::{format_err, Result},
     errors::ffx_bail,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_net as net,
     std::thread::sleep,
     std::time::Duration,
@@ -18,7 +19,14 @@ pub async fn add_target(daemon_proxy: &bridge::DaemonProxy, ssh_port: u16) -> Re
         port: ssh_port,
         scope_id: 0,
     });
-    if let Err(e) = daemon_proxy.add_target(&mut addr).await? {
+    let (tc_proxy, tc_server) = fidl::endpoints::create_proxy::<bridge::TargetCollectionMarker>()?;
+    if let Err(e) = daemon_proxy
+        .connect_to_service(bridge::TargetCollectionMarker::NAME, tc_server.into_channel())
+        .await?
+    {
+        ffx_bail!("Error opening target collection service: {:?}", e)
+    }
+    if let Err(e) = tc_proxy.add_target(&mut addr).await {
         ffx_bail!("Error adding target: {:?}", e)
     }
     Ok(())
@@ -29,8 +37,15 @@ pub async fn remove_target(
     target_id: &mut String,
     retries: &mut i32,
 ) -> Result<()> {
+    let (tc_proxy, tc_server) = fidl::endpoints::create_proxy::<bridge::TargetCollectionMarker>()?;
+    if let Err(e) = daemon_proxy
+        .connect_to_service(bridge::TargetCollectionMarker::NAME, tc_server.into_channel())
+        .await?
+    {
+        ffx_bail!("Error opening target collection service: {:?}", e)
+    }
     while *retries > 0 {
-        match daemon_proxy.remove_target(target_id).await? {
+        match tc_proxy.remove_target(target_id).await {
             Ok(removed) => {
                 if removed {
                     println!("[fvdl] removed target {:?}", target_id);
@@ -52,19 +67,21 @@ pub async fn remove_target(
     Err(format_err!("[fvdl] Error removing target"))
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// tests
-
 #[cfg(test)]
 mod test {
-    use super::*;
-    use fidl_fuchsia_developer_bridge::{DaemonError, DaemonProxy, DaemonRequest};
+    use {
+        super::*,
+        fidl::{endpoints::RequestStream, AsyncChannel},
+        fidl_fuchsia_developer_bridge::{
+            DaemonProxy, DaemonRequest, TargetCollectionRequest, TargetCollectionRequestStream,
+        },
+        fuchsia_async::futures::TryStreamExt,
+    };
 
     fn setup_fake_daemon_proxy<R: 'static>(mut handle_request: R) -> DaemonProxy
     where
         R: FnMut(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Protocol>),
     {
-        use futures::TryStreamExt;
         let (proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<
             <DaemonProxy as fidl::endpoints::Proxy>::Protocol,
         >()
@@ -78,46 +95,97 @@ mod test {
         proxy
     }
 
-    fn setup_fake_daemon_server_add<T: 'static + Fn(bridge::TargetAddrInfo) + Send>(
+    fn setup_fake_daemon_server_add<T: 'static + Fn(bridge::TargetAddrInfo) + Send + Copy>(
         test: T,
     ) -> bridge::DaemonProxy {
         setup_fake_daemon_proxy(move |req| match req {
-            DaemonRequest::AddTarget { ip, responder } => {
-                test(ip);
+            DaemonRequest::ConnectToService { name: _, server_channel, responder } => {
+                fuchsia_async::Task::spawn(async move {
+                    let channel = AsyncChannel::from_channel(server_channel).unwrap();
+                    let mut stream = TargetCollectionRequestStream::from_channel(channel);
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        match req {
+                            TargetCollectionRequest::AddTarget { ip, responder } => {
+                                (test)(ip);
+                                responder.send().unwrap();
+                            }
+                            r => panic!("unexpected request: {:?}", r),
+                        }
+                    }
+                })
+                .detach();
                 responder.send(&mut Ok(())).unwrap();
             }
-            _ => assert!(false),
+            r => panic!("unexpected request: {:?}", r),
         })
     }
 
-    fn setup_fake_daemon_server_remove<T: 'static + Fn(String) + Send>(
+    fn setup_fake_daemon_server_remove<T: 'static + Fn(String) + Send + Copy>(
         test: T,
     ) -> bridge::DaemonProxy {
         setup_fake_daemon_proxy(move |req| match req {
-            DaemonRequest::RemoveTarget { target_id, responder } => {
-                test(target_id);
-                responder.send(&mut Ok(true)).unwrap();
+            DaemonRequest::ConnectToService { name: _, server_channel, responder } => {
+                fuchsia_async::Task::spawn(async move {
+                    let channel = AsyncChannel::from_channel(server_channel).unwrap();
+                    let mut stream = TargetCollectionRequestStream::from_channel(channel);
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        match req {
+                            TargetCollectionRequest::RemoveTarget { target_id, responder } => {
+                                (test)(target_id);
+                                responder.send(true).unwrap();
+                            }
+                            r => panic!("unexpected request: {:?}", r),
+                        }
+                    }
+                })
+                .detach();
+                responder.send(&mut Ok(())).unwrap();
             }
-            DaemonRequest::Quit { responder } => {
-                responder.send(true).unwrap();
-            }
-            _ => assert!(false),
+            r => panic!("unexpected request: {:?}", r),
         })
     }
 
     fn setup_fake_daemon_server_remove_with_err<T: 'static + Fn(String) + Send>(
-        test: T,
+        _test: T,
     ) -> bridge::DaemonProxy {
         setup_fake_daemon_proxy(move |req| match req {
-            DaemonRequest::RemoveTarget { target_id, responder } => {
-                test(target_id);
-                responder.send(&mut Err(DaemonError::RcsConnectionError)).unwrap();
+            DaemonRequest::ConnectToService { name: _, server_channel, responder } => {
+                fuchsia_async::Task::spawn(async move {
+                    let channel = AsyncChannel::from_channel(server_channel).unwrap();
+                    let mut stream = TargetCollectionRequestStream::from_channel(channel);
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        match req {
+                            TargetCollectionRequest::RemoveTarget {
+                                target_id: _,
+                                responder: _,
+                            } => {}
+                            r => panic!("unexpected request: {:?}", r),
+                        }
+                    }
+                })
+                .detach();
+                responder.send(&mut Ok(())).unwrap();
             }
-            DaemonRequest::Quit { responder } => {
-                responder.send(true).unwrap();
-            }
-            _ => assert!(false),
+            r => panic!("unexpected request: {:?}", r),
         })
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add() {
+        let ssh_port = 12345;
+        let server = setup_fake_daemon_server_add(move |addr| {
+            assert_eq!(
+                addr,
+                bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
+                    ip: net::IpAddress::Ipv4(net::Ipv4Address {
+                        addr: "127.0.0.1".parse::<std::net::Ipv4Addr>().unwrap().octets().into(),
+                    }),
+                    port: ssh_port,
+                    scope_id: 0,
+                }),
+            )
+        });
+        add_target(&server, ssh_port).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -137,23 +205,5 @@ mod test {
             Ok(()) => assert!(false),
             Err(_) => assert_eq!(retries, 0),
         }
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_add() {
-        let ssh_port = 12345;
-        let server = setup_fake_daemon_server_add(move |addr| {
-            assert_eq!(
-                addr,
-                bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
-                    ip: net::IpAddress::Ipv4(net::Ipv4Address {
-                        addr: "127.0.0.1".parse::<std::net::Ipv4Addr>().unwrap().octets().into(),
-                    }),
-                    port: ssh_port,
-                    scope_id: 0,
-                }),
-            )
-        });
-        add_target(&server, ssh_port).await.unwrap();
     }
 }

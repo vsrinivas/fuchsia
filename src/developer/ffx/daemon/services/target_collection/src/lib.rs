@@ -9,6 +9,7 @@ use {
     chrono::Utc,
     ffx_core::TryStreamUtilExt,
     ffx_daemon_events::{FastbootInterface, TargetConnectionState, TargetInfo},
+    ffx_daemon_target::manual_targets,
     ffx_daemon_target::target::{
         target_addr_info_to_socketaddr, Target, TargetAddrEntry, TargetAddrType,
     },
@@ -27,9 +28,55 @@ mod reboot;
 mod target_handle;
 
 #[ffx_service]
-#[derive(Default)]
 pub struct TargetCollectionService {
     tasks: TaskManager,
+
+    // An online cache of configured target entries (the non-discoverable targets represented in the
+    // ffx configuration).
+    // The cache can be updated by calls to AddTarget and RemoveTarget.
+    // With manual_targets, we have access to the targets.manual field of the configuration (a
+    // vector of strings). Each target is defined by an IP address and a port.
+    manual_targets: Rc<dyn manual_targets::ManualTargets>,
+}
+
+impl Default for TargetCollectionService {
+    fn default() -> Self {
+        #[cfg(not(test))]
+        let manual_targets = manual_targets::Config::default();
+        #[cfg(test)]
+        let manual_targets = manual_targets::Mock::default();
+
+        Self { tasks: Default::default(), manual_targets: Rc::new(manual_targets) }
+    }
+}
+
+impl TargetCollectionService {
+    async fn add_manual_target(&self, tc: &TargetCollection, addr: SocketAddr) {
+        let tae = TargetAddrEntry::new(addr.into(), Utc::now(), TargetAddrType::Manual);
+        let _ = self.manual_targets.add(format!("{}", addr)).await.map_err(|e| {
+            log::error!("Unable to persist manual target: {:?}", e);
+        });
+        let target = Target::new_with_addr_entries(Option::<String>::None, Some(tae).into_iter());
+        if addr.port() != 0 {
+            target.set_ssh_port(Some(addr.port()));
+        }
+        target.update_connection_state(|_| TargetConnectionState::Manual);
+        let target = tc.merge_insert(target);
+        target.run_host_pipe();
+    }
+
+    async fn load_manual_targets(&self, tc: &TargetCollection) {
+        for str in self.manual_targets.get_or_default().await {
+            let sa = match str.parse::<std::net::SocketAddr>() {
+                Ok(sa) => sa,
+                Err(e) => {
+                    log::error!("Parse of manual target config failed: {}", e);
+                    continue;
+                }
+            };
+            self.add_manual_target(tc, sa).await;
+        }
+    }
 }
 
 #[async_trait(?Send)]
@@ -111,31 +158,20 @@ impl FidlService for TargetCollectionService {
                 // b.) All references to manual_targets are moved here instead
                 //     of in the daemon.
                 let addr = target_addr_info_to_socketaddr(ip);
-                let tae = TargetAddrEntry::new(addr.into(), Utc::now(), TargetAddrType::Manual);
-                let manual_targets = cx.get_manual_targets().await?;
-                let _ = manual_targets.add(format!("{}", addr)).await.map_err(|e| {
-                    log::error!("Unable to persist manual target: {:?}", e);
-                });
-                let target =
-                    Target::new_with_addr_entries(Option::<String>::None, Some(tae).into_iter());
-                if addr.port() != 0 {
-                    target.set_ssh_port(Some(addr.port()));
-                }
-                target.update_connection_state(|_| TargetConnectionState::Manual);
-                let target = target_collection.merge_insert(target);
-                target.run_host_pipe();
+                self.add_manual_target(&target_collection, addr).await;
                 responder.send().map_err(Into::into)
             }
             bridge::TargetCollectionRequest::RemoveTarget { target_id, responder } => {
-                let manual_targets = cx.get_manual_targets().await?;
                 if let Some(target) = target_collection.get(target_id.clone()) {
                     let ssh_port = target.ssh_port();
                     for addr in target.manual_addrs() {
                         let mut sockaddr = SocketAddr::from(addr);
                         ssh_port.map(|p| sockaddr.set_port(p));
-                        let _ = manual_targets.remove(format!("{}", sockaddr)).await.map_err(|e| {
-                            log::error!("Unable to persist target removal: {}", e);
-                        });
+                        let _ = self.manual_targets.remove(format!("{}", sockaddr)).await.map_err(
+                            |e| {
+                                log::error!("Unable to persist target removal: {}", e);
+                            },
+                        );
                     }
                 }
                 let result = target_collection.remove_target(target_id.clone());
@@ -163,6 +199,8 @@ impl FidlService for TargetCollectionService {
     }
 
     async fn start(&mut self, cx: &Context) -> Result<()> {
+        let target_collection = cx.get_target_collection().await?;
+        self.load_manual_targets(&target_collection).await;
         let mdns = cx.open_service_proxy::<bridge::MdnsMarker>().await?;
         let fastboot = cx.open_service_proxy::<bridge::FastbootTargetStreamMarker>().await?;
         let tc = cx.get_target_collection().await?;
@@ -255,7 +293,9 @@ fn handle_mdns_event(tc: &Rc<TargetCollection>, t: bridge::Target) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use addr::TargetAddr;
     use async_channel::{Receiver, Sender};
+    use fidl_fuchsia_net::{IpAddress, Ipv6Address};
     use matches::assert_matches;
     use services::testing::FakeDaemonBuilder;
     use std::cell::RefCell;
@@ -295,7 +335,7 @@ mod tests {
         assert_matches!(t.get_connection_state(), TargetConnectionState::Fastboot(t) if t > before_update);
     }
 
-    struct FakeMdns {
+    struct TestMdns {
         /// Lets the test know that a call to `GetNextEvent` has started. This
         /// is just a hack to avoid using timers for races. This is dependent
         /// on the executor running in a single thread.
@@ -303,14 +343,14 @@ mod tests {
         next_event: Receiver<bridge::MdnsEventType>,
     }
 
-    impl Default for FakeMdns {
+    impl Default for TestMdns {
         fn default() -> Self {
             unimplemented!()
         }
     }
 
     #[async_trait(?Send)]
-    impl FidlService for FakeMdns {
+    impl FidlService for TestMdns {
         type Service = bridge::MdnsMarker;
         type StreamHandler = FidlStreamHandler<Self>;
 
@@ -372,7 +412,7 @@ mod tests {
         let (call_started_sender, call_started_receiver) = async_channel::unbounded::<()>();
         let (target_sender, r) = async_channel::unbounded::<bridge::MdnsEventType>();
         let mdns_service =
-            Rc::new(RefCell::new(FakeMdns { call_started: call_started_sender, next_event: r }));
+            Rc::new(RefCell::new(TestMdns { call_started: call_started_sender, next_event: r }));
         let fake_daemon = FakeDaemonBuilder::new()
             .inject_fidl_service(mdns_service)
             .register_fidl_service::<FakeFastboot>()
@@ -454,5 +494,114 @@ mod tests {
             },
         );
         assert_eq!(tc.targets()[0].serial().as_deref(), Some("12345"));
+    }
+
+    #[derive(Default)]
+    struct FakeMdns {}
+
+    #[async_trait(?Send)]
+    impl FidlService for FakeMdns {
+        type Service = bridge::MdnsMarker;
+        type StreamHandler = FidlStreamHandler<Self>;
+
+        async fn handle(&self, _cx: &Context, _req: bridge::MdnsRequest) -> Result<()> {
+            fuchsia_async::futures::future::pending::<()>().await;
+            Ok(())
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_persisted_manual_target_remove() {
+        let tc_impl = Rc::new(RefCell::new(TargetCollectionService::default()));
+        let fake_daemon = FakeDaemonBuilder::new()
+            .register_fidl_service::<FakeMdns>()
+            .register_fidl_service::<FakeFastboot>()
+            .inject_fidl_service(tc_impl.clone())
+            .build();
+        tc_impl.borrow().manual_targets.add("127.0.0.1:8022".to_string()).await.unwrap();
+        let target_collection =
+            Context::new(fake_daemon.clone()).get_target_collection().await.unwrap();
+        tc_impl.borrow().load_manual_targets(&target_collection).await;
+        let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
+        let res = list_targets(None, &proxy).await;
+        assert_eq!(1, res.len());
+        assert!(proxy.remove_target("127.0.0.1:8022").await.unwrap());
+        assert_eq!(0, list_targets(None, &proxy).await.len());
+        assert_eq!(tc_impl.borrow().manual_targets.get_or_default().await, Vec::<String>::new());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add_target() {
+        let fake_daemon = FakeDaemonBuilder::new()
+            .register_fidl_service::<FakeMdns>()
+            .register_fidl_service::<FakeFastboot>()
+            .register_fidl_service::<TargetCollectionService>()
+            .build();
+        let target_addr = TargetAddr::new("[::1]:0").unwrap();
+        let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
+        proxy.add_target(&mut target_addr.into()).await.unwrap();
+        let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
+        let target = target_collection.get(target_addr.to_string()).unwrap();
+        assert_eq!(target.addrs().len(), 1);
+        assert_eq!(target.addrs().into_iter().next(), Some(target_addr));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add_target_with_port() {
+        let fake_daemon = FakeDaemonBuilder::new()
+            .register_fidl_service::<FakeMdns>()
+            .register_fidl_service::<FakeFastboot>()
+            .register_fidl_service::<TargetCollectionService>()
+            .build();
+        let target_addr = TargetAddr::new("[::1]:8022").unwrap();
+        let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
+        proxy.add_target(&mut target_addr.into()).await.unwrap();
+        let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
+        let target = target_collection.get(target_addr.to_string()).unwrap();
+        assert_eq!(target.addrs().len(), 1);
+        assert_eq!(target.addrs().into_iter().next(), Some(target_addr));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_persisted_manual_target_add() {
+        let tc_impl = Rc::new(RefCell::new(TargetCollectionService::default()));
+        let fake_daemon = FakeDaemonBuilder::new()
+            .register_fidl_service::<FakeMdns>()
+            .register_fidl_service::<FakeFastboot>()
+            .inject_fidl_service(tc_impl.clone())
+            .build();
+        let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
+        proxy
+            .add_target(&mut bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
+                ip: IpAddress::Ipv6(Ipv6Address {
+                    addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                }),
+                port: 8022,
+                scope_id: 1,
+            }))
+            .await
+            .unwrap();
+        let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
+        assert_eq!(1, target_collection.targets().len());
+        assert_eq!(tc_impl.borrow().manual_targets.get().await.unwrap(), vec!["[fe80::1%1]:8022"]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_persisted_manual_target_load() {
+        let tc_impl = Rc::new(RefCell::new(TargetCollectionService::default()));
+        let fake_daemon = FakeDaemonBuilder::new()
+            .register_fidl_service::<FakeMdns>()
+            .register_fidl_service::<FakeFastboot>()
+            .inject_fidl_service(tc_impl.clone())
+            .build();
+        tc_impl.borrow().manual_targets.add("127.0.0.1:8022".to_string()).await.unwrap();
+
+        let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
+        // This happens in FidlService::start(), but we want to avoid binding the
+        // network sockets in unit tests, thus not calling start.
+        tc_impl.borrow().load_manual_targets(&target_collection).await;
+
+        let target = target_collection.get("127.0.0.1:8022".to_string()).unwrap();
+        assert_eq!(target.ssh_address(), Some("127.0.0.1:8022".parse::<SocketAddr>().unwrap()));
     }
 }
