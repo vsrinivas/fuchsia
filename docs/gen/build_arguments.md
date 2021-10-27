@@ -767,12 +767,11 @@ primarily for external tools that use bitcode for analysis.
 From //build/config/clang/clang.gni:17
 
 ### clang_ml_inliner
-Controls whether to use the ML inliner in Clang to reduce size. Note that
-the option only takes effect when `clang_use_oz` is set to `true`.
+Controls whether to use the ML inliner in Clang to reduce size.
 
 **Current value (from the default):** `false`
 
-From //build/config/compiler.gni:46
+From //build/config/BUILD.gn:32
 
 ### clang_prefix
 The default clang toolchain provided by the prebuilt. This variable is
@@ -790,13 +789,6 @@ This toolchain is expected to support both Fuchsia targets and the host.
 **Current value (from the default):** `""`
 
 From //build/toolchain/zircon/clang.gni:11
-
-### clang_use_oz
-Controls whether to use -Oz when `optimize` is set to `"size"`.
-
-**Current value (from the default):** `false`
-
-From //build/config/compiler.gni:42
 
 ### clippy_warn
 By default clippy is set to allow all lints, this flag will change it to
@@ -874,19 +866,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/0062f453c08980e94c4174ee640c3735908b3e86/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/7bccfbf512b941609a37680517ce8a71867a9322/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/0062f453c08980e94c4174ee640c3735908b3e86/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/7bccfbf512b941609a37680517ce8a71867a9322/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/0062f453c08980e94c4174ee640c3735908b3e86/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/7bccfbf512b941609a37680517ce8a71867a9322/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -991,7 +983,7 @@ From //src/virtualization/packages/debian_guest/BUILD.gn:9
 
 **Current value (from the default):** `"debug"`
 
-From //build/config/compiler.gni:62
+From //build/config/compiler.gni:54
 
 ### dev_bootfs_labels
 List of labels for objects to include in the ZBI.
@@ -1078,7 +1070,7 @@ Explicitly specify DWARF version used.
 
 **Current value (from the default):** `5`
 
-From //build/config/compiler.gni:76
+From //build/config/compiler.gni:68
 
 ### enable_api_diff
 Detect dart API changes
@@ -4037,6 +4029,13 @@ This argument will affect all vulkan_{executable/test} build targets.
 **Current value (from the default):** `false`
 
 From //src/lib/vulkan/build/config.gni:40
+
+### use_oz
+Controls whether to use -Oz when `optimize` is set to `"size"`.
+
+**Current value (from the default):** `false`
+
+From //build/config/compiler.gni:42
 
 ### use_prebuilt_ffmpeg
 Use a prebuilt ffmpeg binary rather than building it locally.  See
