@@ -5,10 +5,15 @@
 package testsharder
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
 	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
@@ -28,10 +33,68 @@ type Shard struct {
 	// build directory.
 	Deps []string `json:"deps,omitempty"`
 
+	// PkgRepo is the path to the shard-specific package repository. It is
+	// relative to the fuchsia build directory, and is a directory itself.
+	PkgRepo string `json:"pkg_repo,omitempty"`
+
 	// TimeoutSecs is the execution timeout, in seconds, that should be set for
 	// the task that runs the shard. It's computed dynamically based on the
 	// expected runtime of the tests.
 	TimeoutSecs int `json:"timeout_secs"`
+}
+
+// CreatePackageRepo creates a package repository for the given shard.
+func (s *Shard) CreatePackageRepo() error {
+	// Aggregate the package manifests used by the shard. We do this first
+	// as we can early exit for shards with no such manifests.
+	var pkgManifests []string
+	for _, t := range s.Tests {
+		if t.PackageManifest != "" {
+			pkgManifests = append(pkgManifests, t.PackageManifest)
+		}
+	}
+	if len(pkgManifests) == 0 {
+		return nil
+	}
+
+	// The path to the package repository should be unique so as to not
+	// conflict with other shards' repositories. Ideally we'd just use
+	// the shard name, but that can include nonstandard characters, so
+	// we use the base64 encoding just in case.
+	repoPath := fmt.Sprintf("repo_%s", base64.StdEncoding.EncodeToString([]byte(s.Name)))
+
+	// Clean out any existing repositories for this shard. Theoretically,
+	// we could build on top of previous repositories, but this seems a
+	// bit unsafe and prone to monotonically increasing repo sizes.
+	if err := os.RemoveAll(repoPath); err != nil {
+		return err
+	}
+
+	// Initialize the empty repository.
+	r, err := repo.New(repoPath, filepath.Join(repoPath, "repository", "blobs"))
+	if err != nil {
+		return err
+	}
+	if err := r.Init(); err != nil {
+		return err
+	}
+
+	// While this looks like a no-op, the underlying pm library uses it to
+	// generate targets/snapshot/timestamp metadata.
+	if err := r.AddTargets([]string{}, json.RawMessage{}); err != nil {
+		return err
+	}
+
+	// Publish the package manifests to the new repository.
+	if _, err := r.PublishManifests(pkgManifests); err != nil {
+		return err
+	}
+	if err := r.CommitUpdates(true); err != nil {
+		return err
+	}
+	s.PkgRepo = repoPath
+	s.AddDeps([]string{repoPath})
+	return nil
 }
 
 // AddDeps adds a set of runtime dependencies to the shard. It ensures no

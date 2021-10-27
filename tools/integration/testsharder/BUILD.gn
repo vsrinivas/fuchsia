@@ -24,6 +24,7 @@ go_library("testsharder_lib") {
   ]
 
   deps = [
+    "//src/sys/pkg/bin/pm:pm_lib",
     "//tools/build",
     "//tools/lib/color",
     "//tools/lib/logger",
