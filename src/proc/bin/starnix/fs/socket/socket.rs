@@ -457,7 +457,7 @@ impl SocketInner {
     ) -> Result<MessageReadInfo, Errno> {
         let info = if socket_type == SocketType::Stream {
             if flags.contains(SocketMessageFlags::PEEK) {
-                return error!(ENOSYS);
+                self.messages.peek_stream(task, user_buffers)?
             } else {
                 self.messages.read_stream(task, user_buffers)?
             }
@@ -482,7 +482,8 @@ impl SocketInner {
     ///
     /// If no data is available, or this socket is not readable, then an empty vector is returned.
     pub fn read_kernel(&mut self) -> Vec<Message> {
-        let (messages, bytes_read) = self.messages.read_bytes(&mut None, usize::MAX);
+        let bytes_read = self.messages.len();
+        let messages = self.messages.take_messages();
 
         if bytes_read > 0 {
             self.waiters.notify_events(FdEvents::POLLOUT);

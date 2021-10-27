@@ -102,8 +102,27 @@ impl MessageQueue {
         self.peer_closed_with_unread_data = true;
     }
 
+    fn is_closed_for_reading(&self) -> Result<bool, Errno> {
+        if self.closed && self.peer_closed_with_unread_data {
+            return error!(ECONNRESET);
+        }
+        Ok(self.closed)
+    }
+
+    fn update_address(message: &Message, address: &mut Option<SocketAddress>) -> bool {
+        if message.address.is_some() && *address != message.address {
+            if address.is_some() {
+                return false;
+            }
+            *address = message.address.clone();
+        }
+        return true;
+    }
+
     /// Reads messages until there are no more messages, a message with ancillary data is
     /// encountered, or `user_buffers` are full.
+    ///
+    /// To read data from the queue without consuming the messages, see `peek_stream`.
     ///
     /// # Parameters
     /// - `task`: The task to read memory from.
@@ -116,10 +135,7 @@ impl MessageQueue {
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
     ) -> Result<MessageReadInfo, Errno> {
-        if self.closed {
-            if self.peer_closed_with_unread_data {
-                return error!(ECONNRESET);
-            }
+        if self.is_closed_for_reading()? {
             return Ok(MessageReadInfo::default());
         }
 
@@ -127,28 +143,83 @@ impl MessageQueue {
         let mut address = None;
         let mut ancillary_data = None;
 
-        while !self.is_empty() {
-            if let Some(mut user_buffer) = user_buffers.next(self.length) {
-                // Try to read enough bytes to fill the current user buffer.
-                let (messages, bytes_read) = self.read_bytes(&mut address, user_buffer.length);
+        while let Some(mut message) = self.read_message() {
+            if !Self::update_address(&message, &mut address) {
+                // We've already locked onto an address for this batch of messages, but we
+                // have found a message that doesn't match. We put it back for now and
+                // return the messages we have so far.
+                self.write_front(message);
+                break;
+            }
 
-                for message in messages {
-                    task.mm.write_memory(user_buffer.address, message.data.bytes())?;
-                    // Update the user address to write to.
-                    user_buffer.address += message.len();
-                    total_bytes_read += message.len();
-                    if message.ancillary_data.is_some() {
-                        ancillary_data = message.ancillary_data;
-                        break;
-                    }
-                }
+            let bytes_read = message.data.copy_to_user(task, user_buffers)?;
+            total_bytes_read += bytes_read;
 
-                if bytes_read < user_buffer.length {
-                    // If the buffer was not filled, break out of the loop.
-                    break;
-                }
-            } else {
-                // Break out of the loop if there is no more space in the user buffers.
+            if let Some(remaining_data) = message.data.split_off(bytes_read) {
+                // If not all the message data could fit move the ancillary data to the split off
+                // message, so that the ancillary data is returned with the "last" message.
+                self.write_front(Message::new(
+                    remaining_data,
+                    message.address.clone(),
+                    message.ancillary_data.take(),
+                ));
+                break;
+            }
+
+            if message.ancillary_data.is_some() {
+                ancillary_data = message.ancillary_data;
+                break;
+            }
+        }
+
+        Ok(MessageReadInfo {
+            bytes_read: total_bytes_read,
+            message_length: total_bytes_read,
+            address,
+            ancillary_data,
+        })
+    }
+
+    /// Peeks messages until there are no more messages, a message with ancillary data is
+    /// encountered, or `user_buffers` are full.
+    ///
+    /// Unlike `read_stream`, this function does not remove the messages from the queue.
+    ///
+    /// Used to implement MSG_PEEK.
+    ///
+    /// # Parameters
+    /// - `task`: The task to read memory from.
+    /// - `user_buffers`: The `UserBufferIterator` to write the data to.
+    ///
+    /// Returns the number of bytes that were read into the buffer, and any ancillary data that was
+    /// read.
+    pub fn peek_stream(
+        &self,
+        task: &Task,
+        user_buffers: &mut UserBufferIterator<'_>,
+    ) -> Result<MessageReadInfo, Errno> {
+        if self.is_closed_for_reading()? {
+            return Ok(MessageReadInfo::default());
+        }
+
+        let mut total_bytes_read = 0;
+        let mut address = None;
+        let mut ancillary_data = None;
+
+        for message in self.messages.iter() {
+            if !Self::update_address(message, &mut address) {
+                break;
+            }
+
+            let bytes_read = message.data.copy_to_user(task, user_buffers)?;
+            total_bytes_read += bytes_read;
+
+            if bytes_read < message.len() {
+                break;
+            }
+
+            if message.ancillary_data.is_some() {
+                ancillary_data = message.ancillary_data.clone();
                 break;
             }
         }
@@ -168,7 +239,7 @@ impl MessageQueue {
     ) -> Result<MessageReadInfo, Errno> {
         if let Some(message) = self.read_message() {
             Ok(MessageReadInfo {
-                bytes_read: message.data.read(task, user_buffers)?,
+                bytes_read: message.data.copy_to_user(task, user_buffers)?,
                 message_length: message.len(),
                 address: message.address,
                 ancillary_data: message.ancillary_data,
@@ -185,7 +256,7 @@ impl MessageQueue {
     ) -> Result<MessageReadInfo, Errno> {
         if let Some(message) = self.peek_message() {
             Ok(MessageReadInfo {
-                bytes_read: message.data.read(task, user_buffers)?,
+                bytes_read: message.data.copy_to_user(task, user_buffers)?,
                 message_length: message.len(),
                 address: message.address.clone(),
                 ancillary_data: message.ancillary_data.clone(),
@@ -193,69 +264,6 @@ impl MessageQueue {
         } else {
             error!(EAGAIN)
         }
-    }
-
-    /// Reads messages, where the total length of the returned messages is less than `max_bytes`.
-    ///
-    /// Messages with ancillary data serve as dividers, and if such a message is encountered no more
-    /// messages will be read, even if less than `max_bytes` have been read.
-    ///
-    /// Messages will be treated as streams, so messages may be split if the entire message does not
-    /// fit within the remaining bytes.
-    ///
-    /// Returns a vector of read messages, where the sum of the message lengths is guaranteed to be
-    /// less than `max_bytes`. The returned `usize` indicates the exact number of bytes read.
-    pub fn read_bytes(
-        &mut self,
-        address: &mut Option<SocketAddress>,
-        max_bytes: usize,
-    ) -> (Vec<Message>, usize) {
-        let mut number_of_bytes_read = 0;
-        let mut messages = vec![];
-        while let Some(mut message) = self.read_message() {
-            if message.address.is_some() && *address != message.address {
-                if address.is_some() {
-                    // We've already locked onto an address for this batch of messages, but we
-                    // have found a message that doesn't match. We put it back for now and
-                    // return the messages we have so far.
-                    self.write_front(message);
-                    break;
-                }
-                *address = message.address.clone();
-            }
-
-            // The split_packet contains any bytes that did not fit within the bounds.
-            let split_packet = message.data.split_off(max_bytes - number_of_bytes_read);
-            number_of_bytes_read += message.len();
-
-            if !split_packet.is_empty() {
-                // If not all the message data could fit move the ancillary data to the split off
-                // message, so that the ancillary data is returned with the "last" message.
-                self.write_front(Message::new(
-                    split_packet,
-                    message.address.clone(),
-                    message.ancillary_data.take(),
-                ));
-            }
-
-            // Whether or not the message has ancillary data. Note that this needs to be computed
-            // after the split of message is pushed, since it might take ownership of the ancillary
-            // data.
-            let message_has_ancillary_data = message.ancillary_data.is_some();
-
-            if !message.data.is_empty() {
-                // If the message data is not empty (i.e., there were still some bytes that could
-                // fit), push the message to the result.
-                messages.push(message.into());
-            }
-
-            if number_of_bytes_read == max_bytes || message_has_ancillary_data {
-                // If max_bytes have been read, or there is ancillary data, break the loop.
-                break;
-            }
-        }
-
-        (messages, number_of_bytes_read)
     }
 
     /// Reads the next message in the buffer, if such a message exists.
@@ -295,7 +303,7 @@ impl MessageQueue {
             return error!(EPIPE);
         }
         let actual = std::cmp::min(self.available_capacity(), user_buffers.remaining());
-        let data = MessageData::new_from_user(task, user_buffers, actual)?;
+        let data = MessageData::copy_from_user(task, user_buffers, actual)?;
         self.write_message(Message::new(data, address, ancillary_data.take()));
         Ok(actual)
     }
@@ -325,7 +333,7 @@ impl MessageQueue {
         if actual > self.available_capacity() {
             return error!(EAGAIN);
         }
-        let data = MessageData::new_from_user(task, user_buffers, actual)?;
+        let data = MessageData::copy_from_user(task, user_buffers, actual)?;
         self.write_message(Message::new(data, address, ancillary_data.take()));
         Ok(actual)
     }
@@ -340,6 +348,13 @@ impl MessageQueue {
     pub fn write_message(&mut self, message: Message) {
         self.length += message.len();
         self.messages.push_back(message);
+    }
+
+    pub fn take_messages(&mut self) -> Vec<Message> {
+        let mut messages = VecDeque::default();
+        std::mem::swap(&mut messages, &mut self.messages);
+        self.length = 0;
+        messages.into()
     }
 
     pub fn query_events(&self) -> FdEvents {
@@ -398,184 +413,5 @@ mod tests {
         assert_eq!(message_queue.len(), second_bytes.len());
         assert_eq!(message_queue.read_message(), Some(second_bytes.into()));
         assert_eq!(message_queue.read_message(), None);
-    }
-
-    /// Tests that reading 0 bytes returns an empty vector.
-    #[test]
-    fn test_read_bytes_zero() {
-        let mut message_queue = MessageQueue::new(usize::MAX);
-        let bytes: Vec<u8> = vec![1, 2, 3];
-        message_queue.write_message(bytes.clone().into());
-
-        assert_eq!(message_queue.len(), bytes.len());
-        assert_eq!(message_queue.read_bytes(&mut None, 0), (vec![], 0));
-        assert_eq!(message_queue.len(), bytes.len());
-    }
-
-    /// Tests that reading a specific number of bytes that coincides with a message "end" returns
-    /// the correct bytes.
-    #[test]
-    fn test_read_bytes_message_boundary() {
-        let mut message_queue = MessageQueue::new(usize::MAX);
-        let first_bytes: Vec<u8> = vec![1, 2];
-        let second_bytes: Vec<u8> = vec![3, 4];
-
-        for message in vec![first_bytes.clone().into(), second_bytes.clone().into()] {
-            message_queue.write_message(message);
-        }
-
-        let expected_first_message = first_bytes.into();
-        let expected_second_message = second_bytes.into();
-
-        assert_eq!(message_queue.read_bytes(&mut None, 2), (vec![expected_first_message], 2));
-        assert_eq!(message_queue.read_bytes(&mut None, 2), (vec![expected_second_message], 2));
-    }
-
-    /// Tests that reading a specific number of bytes that ends in the middle of a message returns
-    /// the expected number of bytes.
-    #[test]
-    fn test_read_bytes_message_break() {
-        let mut message_queue = MessageQueue::new(usize::MAX);
-        let first_bytes: Vec<u8> = vec![1, 2, 3];
-        let second_bytes: Vec<u8> = vec![4];
-
-        for message in vec![first_bytes.clone().into(), second_bytes.clone().into()] {
-            message_queue.write_message(message);
-        }
-
-        let expected_first_messages = vec![vec![1, 2].into()];
-        let expected_second_messages = vec![vec![3].into(), vec![4].into()];
-
-        assert_eq!(message_queue.len(), first_bytes.len() + second_bytes.len());
-        assert_eq!(message_queue.read_bytes(&mut None, 2), (expected_first_messages, 2));
-        // The first message was split, so verify that the length took the split into account.
-        assert_eq!(message_queue.len(), 2);
-        assert_eq!(message_queue.read_bytes(&mut None, 2), (expected_second_messages, 2));
-    }
-
-    /// Tests that attempting to read more bytes than exist in the message queue returns all the
-    /// pending messages.
-    #[test]
-    fn test_read_bytes_all() {
-        let mut message_queue = MessageQueue::new(usize::MAX);
-        let first_bytes: Vec<u8> = vec![1, 2, 3];
-        let second_bytes: Vec<u8> = vec![4, 5];
-        let third_bytes: Vec<u8> = vec![9, 3];
-
-        for message in vec![
-            first_bytes.clone().into(),
-            second_bytes.clone().into(),
-            third_bytes.clone().into(),
-        ] {
-            message_queue.write_message(message);
-        }
-
-        let expected_messages = vec![first_bytes.into(), second_bytes.into(), third_bytes.into()];
-
-        assert_eq!(message_queue.read_bytes(&mut None, 100), (expected_messages, 7));
-    }
-
-    /// Tests that reading a control message interrupts the byte read, even if more bytes could
-    /// have been returned.
-    #[test]
-    fn test_read_bytes_control_fits() {
-        let mut message_queue = MessageQueue::new(usize::MAX);
-        let first_bytes: Vec<u8> = vec![1, 2, 3];
-        let control_bytes: Vec<u8> = vec![7, 7, 7];
-        let second_bytes: Vec<u8> = vec![4, 5];
-
-        for message in vec![
-            Message::new(first_bytes.clone().into(), None, Some(control_bytes.clone().into())),
-            second_bytes.clone().into(),
-        ] {
-            message_queue.write_message(message);
-        }
-
-        let (messages, bytes) = message_queue.read_bytes(&mut None, 20);
-        assert_eq!(
-            messages,
-            vec![Message::new(first_bytes.into(), None, Some(control_bytes.into()))]
-        );
-        assert_eq!(bytes, 3);
-        assert_eq!(message_queue.read_bytes(&mut None, 2), (vec![second_bytes.into()], 2));
-    }
-
-    /// Tests that the length of the control message is not counted towards the amount of read
-    /// bytes.
-    #[test]
-    fn test_read_bytes_control_does_not_fit() {
-        let mut message_queue = MessageQueue::new(usize::MAX);
-        let first_bytes: Vec<u8> = vec![1, 2, 3];
-        let control_bytes: Vec<u8> = vec![7, 7, 7];
-        let second_bytes: Vec<u8> = vec![4, 5];
-
-        for message in vec![
-            Message::new(first_bytes.clone().into(), None, Some(control_bytes.clone().into())),
-            second_bytes.clone().into(),
-        ] {
-            message_queue.write_message(message);
-        }
-
-        let (messages, bytes) = message_queue.read_bytes(&mut None, 5);
-        assert_eq!(
-            messages,
-            vec![Message::new(first_bytes.into(), None, Some(control_bytes.into()))]
-        );
-        assert_eq!(bytes, 3);
-        assert_eq!(message_queue.read_bytes(&mut None, 2), (vec![second_bytes.into()], 2));
-    }
-
-    /// Tests that ancillary data is returned with the "second" part of a split message.
-    #[test]
-    fn test_read_bytes_control_split() {
-        let mut message_queue = MessageQueue::new(usize::MAX);
-        let first_bytes: Vec<u8> = vec![1, 2, 3];
-        let control_bytes: Vec<u8> = vec![7, 7, 7];
-        let second_bytes: Vec<u8> = vec![4, 5];
-
-        for message in vec![
-            Message::new(first_bytes.clone().into(), None, Some(control_bytes.clone().into())),
-            second_bytes.clone().into(),
-        ] {
-            message_queue.write_message(message);
-        }
-
-        // The first_bytes won't fit here, so the ancillary data should not have been returned.
-        assert_eq!(message_queue.read_bytes(&mut None, 2), (vec![vec![1, 2].into()], 2));
-        // One byte remains from the first message, and the ancillary data should be included.
-        assert_eq!(
-            message_queue.read_bytes(&mut None, 2),
-            (vec![Message::new(vec![3].into(), None, Some(control_bytes.into()))], 1)
-        );
-        assert_eq!(message_queue.read_bytes(&mut None, 2), (vec![second_bytes.into()], 2));
-    }
-
-    #[test]
-    fn test_read_bytes_address_boundary() {
-        let mut message_queue = MessageQueue::new(usize::MAX);
-        let messages = vec![
-            Message::new(vec![1, 2, 3].into(), Some(SocketAddress::Unix(b"/foo".to_vec())), None),
-            Message::new(vec![4, 5].into(), None, None),
-            Message::new(vec![6, 7, 8].into(), Some(SocketAddress::Unix(b"/foo".to_vec())), None),
-            Message::new(vec![9, 10, 11].into(), Some(SocketAddress::Unix(b"/bar".to_vec())), None),
-            Message::new(vec![12].into(), Some(SocketAddress::Unix(b"/bar".to_vec())), None),
-        ];
-
-        for message in messages.clone().into_iter() {
-            message_queue.write_message(message);
-        }
-
-        let mut address = None;
-        assert_eq!(
-            message_queue.read_bytes(&mut address, 20),
-            (vec![messages[0].clone(), messages[1].clone(), messages[2].clone()], 8)
-        );
-        assert_eq!(address, Some(SocketAddress::Unix(b"/foo".to_vec())));
-        let mut address = None;
-        assert_eq!(
-            message_queue.read_bytes(&mut address, 20),
-            (vec![messages[3].clone(), messages[4].clone()], 4)
-        );
-        assert_eq!(address, Some(SocketAddress::Unix(b"/bar".to_vec())));
     }
 }

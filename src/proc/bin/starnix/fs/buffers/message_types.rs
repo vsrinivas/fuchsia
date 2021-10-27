@@ -287,7 +287,7 @@ pub struct MessageData {
 
 impl MessageData {
     /// Copies data from user memory into a new MessageData object.
-    pub fn new_from_user(
+    pub fn copy_from_user(
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
         limit: usize,
@@ -301,11 +301,6 @@ impl MessageData {
         Ok(bytes.into())
     }
 
-    /// Returns true if data is empty.
-    pub fn is_empty(&self) -> bool {
-        self.bytes.is_empty()
-    }
-
     /// Returns the number of bytes in the message.
     pub fn len(&self) -> usize {
         self.bytes.len()
@@ -315,12 +310,14 @@ impl MessageData {
     ///
     /// After this call returns, at most `at` bytes will be stored in this `MessageData`, and any
     /// remaining bytes will be moved to the returned `MessageData`.
-    pub fn split_off(&mut self, index: usize) -> Self {
-        let mut message_data = MessageData::default();
+    pub fn split_off(&mut self, index: usize) -> Option<Self> {
         if index < self.len() {
+            let mut message_data = MessageData::default();
             message_data.bytes = self.bytes.split_off(index);
+            Some(message_data)
+        } else {
+            None
         }
-        message_data
     }
 
     /// Returns a reference to the bytes in the packet.
@@ -331,7 +328,7 @@ impl MessageData {
     /// Copies the message out to the user buffers in the given task.
     ///
     /// Returns the number of bytes that were read into the buffer.
-    pub fn read(
+    pub fn copy_to_user(
         &self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
