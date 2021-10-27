@@ -408,8 +408,10 @@ void ProcessDispatcher::FinishDeadTransition() {
   LTRACEF_LEVEL(2, "done cleaning up handle table on proc %p\n", this);
 
   // Tear down the address space. It may not exist if Initialize() failed.
-  if (aspace_)
-    aspace_->Destroy();
+  if (aspace_) {
+    zx_status_t result = aspace_->Destroy();
+    ASSERT_MSG(result == ZX_OK, "%d\n", result);
+  }
 
   // signal waiter
   LTRACEF_LEVEL(2, "signaling waiters\n");
