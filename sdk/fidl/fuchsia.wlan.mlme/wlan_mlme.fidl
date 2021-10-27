@@ -41,6 +41,8 @@ type ScanRequest = struct {
     /// returned.
     ssid_list vector<ieee80211.Ssid>:MAX;
     probe_delay uint32; // in TimeUnits
+    // TODO(fxbug.dev/89933): A TimeUnit is generally limited to 2 octets, but this field
+    // is 4 octets wide.
     min_channel_time uint32; // in TimeUnits
     max_channel_time uint32; // in TimeUnits
 };

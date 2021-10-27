@@ -119,12 +119,11 @@ impl crate::MlmeImpl for ClientMlme {
         Self::on_eth_frame_tx(self, bytes).map_err(|e| e.into())
     }
     fn handle_hw_indication(&mut self, ind: banjo_wlan_mac::WlanIndication) {
-        let hw_scan_status = match ind {
-            banjo_wlan_mac::WlanIndication::HW_SCAN_COMPLETE => banjo_wlan_mac::WlanHwScan::SUCCESS,
-            banjo_wlan_mac::WlanIndication::HW_SCAN_ABORTED => banjo_wlan_mac::WlanHwScan::ABORTED,
-            _ => return,
-        };
-        Self::handle_hw_scan_complete(self, hw_scan_status);
+        warn!("Unexpected HwIndication {:?} received in Client MLME.", ind);
+        return;
+    }
+    fn handle_scan_complete(&mut self, status: zx::Status, scan_id: u64) {
+        Self::handle_scan_complete(self, status, scan_id);
     }
     fn handle_timeout(&mut self, event_id: EventId, event: TimedEvent) {
         Self::handle_timed_event(self, event_id, event)
@@ -249,16 +248,33 @@ impl ClientMlme {
     fn on_sme_scan(&mut self, req: fidl_mlme::ScanRequest) {
         let channel_state = &mut self.channel_state;
         let sta = self.sta.as_mut();
-        // No need to handle result because scanner already send ScanEnd if it errors out
-        let _result = self.scanner.bind(&mut self.ctx).on_sme_scan(
-            req,
-            |ctx, scanner| channel_state.bind(ctx, scanner, sta),
-            &mut self.chan_sched,
-        );
+        let txn_id = req.txn_id;
+        let _ = self
+            .scanner
+            .bind(&mut self.ctx)
+            .on_sme_scan(
+                req,
+                |ctx, scanner| channel_state.bind(ctx, scanner, sta),
+                &mut self.chan_sched,
+            )
+            .map_err(|e| {
+                let code = match e {
+                    Error::ScanError(scan_error) => scan_error.into(),
+                    _ => fidl_mlme::ScanResultCode::InternalError,
+                };
+                let _ = self
+                    .ctx
+                    .device
+                    .mlme_control_handle()
+                    .send_on_scan_end(&mut fidl_mlme::ScanEnd { txn_id, code })
+                    .map_err(|e| {
+                        error!("error sending MLME ScanEnd: {}", e);
+                    });
+            });
     }
 
-    pub fn handle_hw_scan_complete(&mut self, status: banjo_wlan_mac::WlanHwScan) {
-        self.scanner.bind(&mut self.ctx).handle_hw_scan_complete(status);
+    pub fn handle_scan_complete(&mut self, status: zx::Status, scan_id: u64) {
+        self.scanner.bind(&mut self.ctx).handle_scan_complete(status, scan_id);
     }
 
     fn on_sme_join(&mut self, req: fidl_mlme::JoinRequest) -> Result<(), Error> {
@@ -1152,6 +1168,7 @@ mod tests {
             device::FakeDevice,
             test_utils::{fake_control_handle, MockWlanRxInfo},
         },
+        banjo_fuchsia_hardware_wlanphyinfo as banjo_ddk_wlanphyinfo,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
         futures::{task::Poll, StreamExt},
@@ -2409,6 +2426,131 @@ mod tests {
                 ht_cap: None,
                 vht_cap: None,
             }
+        );
+    }
+
+    #[test]
+    fn client_send_scan_end_on_mlme_scan_busy() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut me = m.make_mlme();
+        me.make_client_station();
+
+        // Issue a second scan before the first finishes
+        me.on_sme_scan(scan_req());
+        me.on_sme_scan(fidl_mlme::ScanRequest { txn_id: 1338, ..scan_req() });
+
+        let scan_end = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect("error reading MLME ScanEnd");
+        assert_eq!(
+            scan_end,
+            fidl_mlme::ScanEnd { txn_id: 1338, code: fidl_mlme::ScanResultCode::NotSupported }
+        );
+    }
+
+    #[test]
+    fn client_send_scan_end_on_offload_scan_busy() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+
+        // Configure the fake device to offload scan
+        m.fake_device.info.driver_features |=
+            banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
+        let mut me = m.make_mlme();
+        me.make_client_station();
+
+        // Issue a second scan before the first finishes
+        me.on_sme_scan(scan_req());
+        me.on_sme_scan(fidl_mlme::ScanRequest { txn_id: 1338, ..scan_req() });
+
+        let scan_end = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect("error reading MLME ScanEnd");
+        assert_eq!(
+            scan_end,
+            fidl_mlme::ScanEnd { txn_id: 1338, code: fidl_mlme::ScanResultCode::NotSupported }
+        );
+    }
+
+    #[test]
+    fn client_send_scan_end_on_mlme_scan_invalid_args() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut me = m.make_mlme();
+
+        me.make_client_station();
+        me.on_sme_scan(fidl_mlme::ScanRequest {
+            txn_id: 1337,
+            scan_type: fidl_mlme::ScanTypes::Passive,
+            channel_list: vec![], // empty channel list
+            ssid_list: vec![Ssid::try_from("ssid").unwrap().into()],
+            probe_delay: 0,
+            min_channel_time: 100,
+            max_channel_time: 300,
+        });
+        let scan_end = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect("error reading MLME ScanEnd");
+        assert_eq!(
+            scan_end,
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::InvalidArgs }
+        );
+    }
+
+    #[test]
+    fn client_send_scan_end_on_offload_scan_invalid_args() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+
+        // Configure the fake device to offload scan
+        m.fake_device.info.driver_features |=
+            banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
+        let mut me = m.make_mlme();
+
+        me.make_client_station();
+        me.on_sme_scan(fidl_mlme::ScanRequest {
+            txn_id: 1337,
+            scan_type: fidl_mlme::ScanTypes::Passive,
+            channel_list: vec![6],
+            ssid_list: vec![Ssid::try_from("ssid").unwrap().into()],
+            probe_delay: 0,
+            min_channel_time: 300, // min > max
+            max_channel_time: 100,
+        });
+        let scan_end = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect("error reading MLME ScanEnd");
+        assert_eq!(
+            scan_end,
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::InvalidArgs }
+        );
+    }
+
+    #[test]
+    fn client_send_scan_end_on_offload_scan_fails() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+
+        // Configure the fake device to offload scan and fail on passive scans
+        m.fake_device.info.driver_features |=
+            banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
+        let device = m.fake_device.as_device_fail_start_passive_scan();
+        let mut me = m.make_mlme_with_device(device);
+
+        me.make_client_station();
+        me.on_sme_scan(scan_req());
+        let scan_end = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect("error reading MLME ScanEnd");
+        assert_eq!(
+            scan_end,
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::NotSupported }
         );
     }
 

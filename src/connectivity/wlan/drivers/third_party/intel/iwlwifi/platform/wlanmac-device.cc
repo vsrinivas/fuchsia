@@ -62,8 +62,14 @@ zx_status_t WlanmacDevice::WlanmacClearAssoc(
   return mac_clear_assoc(mvmvif_, options, peer_addr_list);
 }
 
-zx_status_t WlanmacDevice::WlanmacStartHwScan(const wlan_hw_scan_config_t* scan_config) {
-  return mac_start_hw_scan(mvmvif_, scan_config);
+zx_status_t WlanmacDevice::WlanmacStartPassiveScan(
+    const wlanmac_passive_scan_args_t* passive_scan_args, uint64_t* out_scan_id) {
+  return mac_start_passive_scan(mvmvif_, passive_scan_args, out_scan_id);
+}
+
+zx_status_t WlanmacDevice::WlanmacStartActiveScan(
+    const wlanmac_active_scan_args_t* active_scan_args, uint64_t* out_scan_id) {
+  return mac_start_active_scan(mvmvif_, active_scan_args, out_scan_id);
 }
 
 zx_status_t WlanmacDevice::WlanmacUpdateWmmParams(wlan_ac_t ac, const wlan_wmm_params_t* params) {

@@ -2507,22 +2507,30 @@ static void iwl_mvm_bss_info_changed(struct ieee80211_hw* hw, struct ieee80211_v
 }
 #endif  // NEEDS_PORTING
 
-zx_status_t iwl_mvm_mac_hw_scan(struct iwl_mvm_vif* mvmvif,
-                                const wlan_hw_scan_config_t* scan_config) {
+// Modified from original iwl_mvm_mac_hw_scan() to split call path for active and passive.
+zx_status_t iwl_mvm_mac_hw_scan_passive(struct iwl_mvm_vif* mvmvif,
+                                        const wlanmac_passive_scan_args_t* passive_scan_args,
+                                        uint64_t* out_scan_id) {
   struct iwl_mvm* mvm = mvmvif->mvm;
   zx_status_t ret;
 
-  if (scan_config->num_channels == 0 ||
-      scan_config->num_channels > mvm->fw->ucode_capa.n_scan_channels) {
-    IWL_WARN(mvmvif, "Cannot scan: invalid #channel (%d). FW's cap (%d)\n",
-             scan_config->num_channels, mvm->fw->ucode_capa.n_scan_channels);
+  if (passive_scan_args->channels_count == 0 ||
+      passive_scan_args->channels_count > mvm->fw->ucode_capa.n_scan_channels) {
+    IWL_WARN(mvmvif, "Cannot scan: invalid #channel (%zu). FW's cap (%d)\n",
+             passive_scan_args->channels_count, mvm->fw->ucode_capa.n_scan_channels);
     return ZX_ERR_INVALID_ARGS;
   }
 
   mtx_lock(&mvm->mutex);
-  ret = iwl_mvm_reg_scan_start(mvmvif, scan_config);
+  ret = iwl_mvm_reg_scan_start_passive(mvmvif, passive_scan_args);
   mtx_unlock(&mvm->mutex);
 
+  if (ret != ZX_OK) {
+    return ret;
+  }
+
+  // TODO(fxbug.dev/88934): scan_id is always 0
+  *out_scan_id = 0;
   return ret;
 }
 

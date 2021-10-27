@@ -20,6 +20,20 @@ type CSsid = struct {
     data array<uint8, MAX_SSID_BYTE_LEN>;
 };
 
+/// The limit on the number of SSIDs is 84 because an SSID List IE can contain no
+/// more than 84 one byte SSIDs. (Specifying 0 byte SSID is an SSID List is valid
+/// but unnecessary since it is the wildcard SSID.)
+@namespaced
+const SSID_LIST_MAX uint8 = 84;
+
+/// The limit on the number of channels in a list of unique channel numbers is 255
+/// since a channel number in IEEE 802.11-2016 cannot exceed one octet and channel
+/// numbers must be non-zero. See IEEE 802.11-2016 9.4.2.18 Supported Channels
+/// element for an example element that assumes a channel number does not exceed
+/// one octet.
+@namespaced
+const MAX_UNIQUE_CHANNEL_NUMBERS uint8 = 255;
+
 @namespaced
 const MAC_ADDR_LEN uint8 = 6;
 alias MacAddr = array<uint8, MAC_ADDR_LEN>;
@@ -27,3 +41,17 @@ alias MacAddr = array<uint8, MAC_ADDR_LEN>;
 /// IEEE Std 802.11-2016, 9.4.2.99
 @namespaced
 const MAX_MESH_ID_BYTE_LEN uint8 = 32;
+
+/// IEEE Std 802.11-2016, 9.2.4.7
+@namespaced
+const MAX_MMPDU_BYTE_LEN uint16 = 2304;
+@namespaced
+const MAX_VHT_MPDU_BYTE_LEN_0 uint16 = 3895;
+@namespaced
+const MAX_VHT_MPDU_BYTE_LEN_1 uint16 = 7991;
+@namespaced
+const MAX_VHT_MPDU_BYTE_LEN_2 uint16 = 11454;
+
+/// IEEE Std 802.11-2016, 9.3.3.2
+@namespaced
+const MAX_MGMT_FRAME_MAC_HEADER_BYTE_LEN uint8 = 28;

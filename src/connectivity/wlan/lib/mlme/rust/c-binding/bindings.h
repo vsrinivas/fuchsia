@@ -11,6 +11,7 @@
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlan/mac/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -45,7 +46,7 @@ typedef struct {
   void (*complete_tx)(void *ctx, const wlan_tx_packet_t *packet, int32_t status);
   void (*indication)(void *ctx, uint32_t ind);
   void (*report_tx_status)(void *ctx, const wlan_tx_status_t *tx_status);
-  void (*hw_scan_complete)(void *ctx, const wlan_hw_scan_result_t *result);
+  void (*scan_complete)(void *ctx, int32_t status, uint64_t scan_id);
 } rust_wlanmac_ifc_protocol_ops_copy_t;
 
 /**
@@ -112,9 +113,15 @@ typedef struct {
    */
   int32_t (*set_key)(void *device, wlan_key_config_t *key);
   /**
-   * Make scan request to the driver
+   * Make passive scan request to the driver
    */
-  int32_t (*start_hw_scan)(void *device, const wlan_hw_scan_config_t *config);
+  int32_t (*start_passive_scan)(void *device, const wlanmac_passive_scan_args_t *passive_scan_args,
+                                uint64_t *out_scan_id);
+  /**
+   * Make active scan request to the driver
+   */
+  int32_t (*start_active_scan)(void *device, const wlanmac_active_scan_args_t *active_scan_args,
+                               uint64_t *out_scan_id);
   /**
    * Get information and capabilities of this WLAN interface
    */

@@ -281,7 +281,7 @@ zx_status_t Device::Start(const rust_wlanmac_ifc_protocol_copy_t* ifc,
       .complete_tx = ifc->ops->complete_tx,
       .indication = ifc->ops->indication,
       .report_tx_status = ifc->ops->report_tx_status,
-      .hw_scan_complete = ifc->ops->hw_scan_complete,
+      .scan_complete = ifc->ops->scan_complete,
   });
 
   return wlanmac_proxy_.Start(ifc->ctx, wlanmac_ifc_protocol_ops_.get(), out_sme_channel);
@@ -376,8 +376,14 @@ zx_status_t Device::SetKey(wlan_key_config_t* key_config) {
   return wlanmac_proxy_.SetKey(0u, key_config);
 }
 
-zx_status_t Device::StartHwScan(const wlan_hw_scan_config_t* scan_config) {
-  return wlanmac_proxy_.StartHwScan(scan_config);
+zx_status_t Device::StartPassiveScan(const wlanmac_passive_scan_args_t* passive_scan_args,
+                                     uint64_t* out_scan_id) {
+  return wlanmac_proxy_.StartPassiveScan(passive_scan_args, out_scan_id);
+}
+
+zx_status_t Device::StartActiveScan(const wlanmac_active_scan_args_t* active_scan_args,
+                                    uint64_t* out_scan_id) {
+  return wlanmac_proxy_.StartActiveScan(active_scan_args, out_scan_id);
 }
 
 zx_status_t Device::ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) {

@@ -11,6 +11,7 @@ use {
             convert_beacon::construct_bss_description,
             Context, TimedEvent,
         },
+        ddk_converter::cssid_from_ssid_unchecked,
         device::{Device, TxFlags},
         error::Error,
     },
@@ -18,8 +19,8 @@ use {
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
     banjo_fuchsia_hardware_wlanphyinfo as banjo_hw_wlaninfo,
     banjo_fuchsia_wlan_common as banjo_common, banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     ieee80211::{Bssid, MacAddr},
     log::{error, warn},
     thiserror::Error,
@@ -32,6 +33,11 @@ use {
     wlan_frame_writer::write_frame,
 };
 
+// TODO(fxbug.dev/89992): Currently hardcoded until parameters supported.
+const MIN_HOME_TIME: zx::Duration = zx::Duration::from_millis(0);
+const MIN_PROBES_PER_CHANNEL: u8 = 0;
+const MAX_PROBES_PER_CHANNEL: u8 = 0;
+
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum ScanError {
     #[error("scanner is busy")]
@@ -40,10 +46,8 @@ pub enum ScanError {
     EmptyChannelList,
     #[error("invalid arg: max_channel_time < min_channel_time")]
     MaxChannelTimeLtMin,
-    #[error("fail starting hw scan: {}", _0)]
-    StartHwScanFails(zx::Status),
-    #[error("hw scan aborted")]
-    HwScanAborted,
+    #[error("fail starting device scan: {}", _0)]
+    StartOffloadScanFails(zx::Status),
 }
 
 impl From<ScanError> for zx::Status {
@@ -53,8 +57,7 @@ impl From<ScanError> for zx::Status {
             ScanError::EmptyChannelList | ScanError::MaxChannelTimeLtMin => {
                 zx::Status::INVALID_ARGS
             }
-            ScanError::StartHwScanFails(status) => status,
-            ScanError::HwScanAborted => zx::Status::INTERNAL,
+            ScanError::StartOffloadScanFails(status) => status,
         }
     }
 }
@@ -66,9 +69,10 @@ impl From<ScanError> for fidl_mlme::ScanResultCode {
             ScanError::EmptyChannelList | ScanError::MaxChannelTimeLtMin => {
                 fidl_mlme::ScanResultCode::InvalidArgs
             }
-            ScanError::StartHwScanFails(..) | ScanError::HwScanAborted => {
-                fidl_mlme::ScanResultCode::InternalError
+            ScanError::StartOffloadScanFails(zx::Status::NOT_SUPPORTED) => {
+                fidl_mlme::ScanResultCode::NotSupported
             }
+            ScanError::StartOffloadScanFails(..) => fidl_mlme::ScanResultCode::InternalError,
         }
     }
 }
@@ -95,8 +99,8 @@ impl Scanner {
     #[cfg(test)]
     pub fn probe_delay_timeout_id(&self) -> Option<EventId> {
         match self.ongoing_scan {
-            Some(OngoingScan { probe_delay_timeout_id: id, .. }) => id,
-            None => None,
+            Some(OngoingScan::MlmeScan { probe_delay_timeout_id: id, .. }) => id,
+            _ => None,
         }
     }
 }
@@ -106,12 +110,20 @@ pub struct BoundScanner<'a> {
     ctx: &'a mut Context,
 }
 
-struct OngoingScan {
-    /// Scan request that's currently being serviced.
-    req: fidl_mlme::ScanRequest,
-    /// ID of timeout event scheduled for active scan at beginning of each channel switch. At
-    /// end of timeout, a probe request is sent.
-    probe_delay_timeout_id: Option<EventId>,
+enum OngoingScan {
+    MlmeScan {
+        /// Scan request that's currently being serviced.
+        req: fidl_mlme::ScanRequest,
+        /// ID of timeout event scheduled for active scan at beginning of each channel switch. At
+        /// end of timeout, a probe request is sent.
+        probe_delay_timeout_id: Option<EventId>,
+    },
+    OffloadScan {
+        /// Scan request that's currently being serviced.
+        req: fidl_mlme::ScanRequest,
+        /// Unique identifier returned from the device driver when the scan began.
+        device_scan_id: u64,
+    },
 }
 
 impl<'a> BoundScanner<'a> {
@@ -124,68 +136,45 @@ impl<'a> BoundScanner<'a> {
         req: fidl_mlme::ScanRequest,
         build_channel_listener: F,
         chan_sched: &mut ChannelScheduler,
-    ) -> Result<(), ScanError>
+    ) -> Result<(), Error>
     where
         F: FnOnce(&'a mut Context, &'a mut Scanner) -> CL,
         CL: ChannelListener,
     {
-        macro_rules! send_scan_end_and_return {
-            ($txn_id:expr, $scan_error:expr, $self:expr) => {{
-                let error = $scan_error;
-                send_scan_end($txn_id, error.into(), &mut $self.ctx.device);
-                return Err($scan_error);
-            }};
-        }
-
         if self.scanner.ongoing_scan.is_some() {
-            send_scan_end_and_return!(req.txn_id, ScanError::Busy, self);
+            return Err(Error::ScanError(ScanError::Busy));
         }
         if req.channel_list.is_empty() {
-            send_scan_end_and_return!(req.txn_id, ScanError::EmptyChannelList, self);
+            return Err(Error::ScanError(ScanError::EmptyChannelList));
         }
         if req.max_channel_time < req.min_channel_time {
-            send_scan_end_and_return!(req.txn_id, ScanError::MaxChannelTimeLtMin, self);
+            return Err(Error::ScanError(ScanError::MaxChannelTimeLtMin));
         }
 
         let wlanmac_info = self.ctx.device.wlanmac_info();
-        let hw_scan = (wlanmac_info.driver_features
+
+        // The else of this branch is an "MLME scan" which is implemented by calling SetChannel
+        // multiple times to visit each channel. It's only used in hw-sim tests and is not supported
+        // by any SoftMAC device drivers.
+        let offload_scan = (wlanmac_info.driver_features
             & banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD)
             .0
             > 0;
-        if hw_scan {
-            let scan_type = if req.scan_type == fidl_mlme::ScanTypes::Active {
-                banjo_wlan_mac::WlanHwScanType::ACTIVE
-            } else {
-                banjo_wlan_mac::WlanHwScanType::PASSIVE
+        if offload_scan {
+            let result = match req.scan_type {
+                fidl_mlme::ScanTypes::Passive => self.start_passive_scan(&req),
+                fidl_mlme::ScanTypes::Active => self.start_active_scan(&req),
             };
-            let mut channels = [0; banjo_hw_wlaninfo::WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize];
-            channels[..req.channel_list.len()].copy_from_slice(&req.channel_list[..]);
-
-            // TODO(fxbug.dev/88651): Fix hw_scan to support scanning for multiple SSIDs.
-            if req.ssid_list.len() > 1 {
-                error!("Only using the first SSID specified for hw_scan");
+            match result {
+                Ok(device_scan_id) => {
+                    self.scanner.ongoing_scan =
+                        Some(OngoingScan::OffloadScan { req, device_scan_id });
+                }
+                Err(status) => {
+                    self.scanner.ongoing_scan.take();
+                    return Err(Error::ScanError(ScanError::StartOffloadScanFails(status)));
+                }
             }
-            // fuchsia.wlan.mlme/ScanRequest.ssid is always at most fidl_ieee80211::MAX_SSID_BYTE_LEN bytes
-            let mut data = [0; fidl_ieee80211::MAX_SSID_BYTE_LEN as usize];
-            let len = if req.ssid_list.len() > 0 {
-                data[..req.ssid_list[0].len()].copy_from_slice(&req.ssid_list[0][..]);
-                req.ssid_list[0].len() as u8
-            } else {
-                0 as u8
-            };
-            let first_ssid = banjo_ieee80211::CSsid { len, data };
-
-            let config = banjo_wlan_mac::WlanHwScanConfig {
-                scan_type,
-                num_channels: req.channel_list.len() as u8,
-                channels,
-                ssid: first_ssid,
-            };
-            if let Err(status) = self.ctx.device.start_hw_scan(&config) {
-                self.scanner.ongoing_scan.take();
-                send_scan_end_and_return!(req.txn_id, ScanError::StartHwScanFails(status), self);
-            }
-            self.scanner.ongoing_scan = Some(OngoingScan { req, probe_delay_timeout_id: None });
         } else {
             let channels = req
                 .channel_list
@@ -197,10 +186,11 @@ impl<'a> BoundScanner<'a> {
                 })
                 .collect();
             let max_channel_time = req.max_channel_time;
-            // Note: for software scanning case, it's important to populate this beforehand because
+            // Note: For MLME scanning case, it's important to populate this beforehand because
             //       channel scheduler may `begin_requested_channel_time` immediately, and scanner
             //       needs these information to determine whether to send probe request.
-            self.scanner.ongoing_scan = Some(OngoingScan { req, probe_delay_timeout_id: None });
+            self.scanner.ongoing_scan =
+                Some(OngoingScan::MlmeScan { req, probe_delay_timeout_id: None });
             let mut listener = build_channel_listener(self.ctx, self.scanner);
             let dwell_time = TimeUnit(max_channel_time as u16).into();
             chan_sched
@@ -208,6 +198,72 @@ impl<'a> BoundScanner<'a> {
                 .queue_channels(channels, dwell_time);
         }
         Ok(())
+    }
+
+    fn start_passive_scan(&mut self, req: &fidl_mlme::ScanRequest) -> Result<u64, zx::Status> {
+        // Note: WlanmacPassiveScanArgs contains raw pointers and the memory pointed
+        // to must remain in scope for the duration of the call to Device::start_passive_scan().
+        self.ctx.device.start_passive_scan(&banjo_wlan_mac::WlanmacPassiveScanArgs {
+            channels_list: req.channel_list.as_ptr(),
+            channels_count: req.channel_list.len(),
+            // TODO(fxbug.dev/89933): A TimeUnit is generally limited to 2 octets. Conversion here
+            // is required since fuchsia.wlan.mlme/ScanRequest.min_channel_time has a width of
+            // four octets.
+            min_channel_time: zx::Duration::from(TimeUnit(req.min_channel_time as u16))
+                .into_nanos(),
+            max_channel_time: zx::Duration::from(TimeUnit(req.max_channel_time as u16))
+                .into_nanos(),
+            min_home_time: MIN_HOME_TIME.into_nanos(),
+        })
+    }
+
+    fn start_active_scan(&mut self, req: &fidl_mlme::ScanRequest) -> Result<u64, zx::Status> {
+        let ssids_list = req
+            .ssid_list
+            .iter()
+            .map(cssid_from_ssid_unchecked)
+            .collect::<Vec<banjo_ieee80211::CSsid>>();
+
+        let (mac_header_in_buf, mac_header_size) = write_frame!(&mut self.ctx.buf_provider, {
+            headers: {
+                mac::MgmtHdr: &self.probe_request_mac_header(),
+            },
+        })?;
+        let mac_header_buffer = mac_header_in_buf.as_slice().as_ptr();
+
+        // TODO(fxbug.dev/89695): Hardcoded channel 1 for initial change and to allow
+        // driver bringup work to proceed.
+        let rates = self.probe_request_rates(1)?;
+        let (ies_in_buf, ies_size) = write_frame!(&mut self.ctx.buf_provider, {
+            ies: {
+                supported_rates: rates,
+                extended_supported_rates: {/* continue rates */},
+            }
+        })?;
+        let ies_buffer = ies_in_buf.as_slice().as_ptr();
+
+        // Note: WlanmacActiveScanArgs contains raw pointers and the memory pointed
+        // to must remain in scope for the duration of the call to Device::start_active_scan().
+        self.ctx.device.start_active_scan(&banjo_wlan_mac::WlanmacActiveScanArgs {
+            channels_list: req.channel_list.as_ptr(),
+            channels_count: req.channel_list.len(),
+            ssids_list: ssids_list.as_ptr(),
+            ssids_count: ssids_list.len(),
+            mac_header_buffer,
+            mac_header_size,
+            ies_buffer,
+            ies_size,
+            // TODO(fxbug.dev/89933): A TimeUnit is generally limited to 2 octets. Conversion here
+            // is required since fuchsia.wlan.mlme/ScanRequest.min_channel_time has a width of
+            // four octets.
+            min_channel_time: zx::Duration::from(TimeUnit(req.min_channel_time as u16))
+                .into_nanos(),
+            max_channel_time: zx::Duration::from(TimeUnit(req.max_channel_time as u16))
+                .into_nanos(),
+            min_home_time: MIN_HOME_TIME.into_nanos(),
+            min_probes_per_channel: MIN_PROBES_PER_CHANNEL,
+            max_probes_per_channel: MAX_PROBES_PER_CHANNEL,
+        })
     }
 
     /// Called when MLME receives a beacon or probe response so that scanner saves it in a BSS map.
@@ -221,8 +277,13 @@ impl<'a> BoundScanner<'a> {
         ies: &[u8],
         rx_info: banjo_wlan_mac::WlanRxInfo,
     ) {
-        let txn_id = match &self.scanner.ongoing_scan {
-            Some(req) => req.req.txn_id,
+        let txn_id = match self.scanner.ongoing_scan {
+            Some(OngoingScan::MlmeScan { req: fidl_mlme::ScanRequest { txn_id, .. }, .. }) => {
+                txn_id
+            }
+            Some(OngoingScan::OffloadScan {
+                req: fidl_mlme::ScanRequest { txn_id, .. }, ..
+            }) => txn_id,
             None => return,
         };
         let bss_description =
@@ -240,8 +301,15 @@ impl<'a> BoundScanner<'a> {
     /// Notify scanner about end of probe-delay timeout so that it sends out probe request.
     pub fn handle_probe_delay_timeout(&mut self, channel: banjo_common::WlanChannel) {
         let ssid_list = match &self.scanner.ongoing_scan {
-            Some(OngoingScan { req, .. }) => req.ssid_list.clone(),
-            None => return,
+            Some(OngoingScan::MlmeScan { req, .. }) => req.ssid_list.clone(),
+            Some(OngoingScan::OffloadScan { .. }) => {
+                warn!("Unexpected probe_delay_timeout during OffloadScan.");
+                return;
+            }
+            None => {
+                warn!("Unexpected probe_delay_timeout when no scan in progress.");
+                return;
+            }
         };
         for ssid in ssid_list {
             if let Err(e) = self.send_probe_req(&ssid[..], channel) {
@@ -250,28 +318,57 @@ impl<'a> BoundScanner<'a> {
         }
     }
 
-    pub fn handle_hw_scan_complete(&mut self, status: banjo_wlan_mac::WlanHwScan) {
-        let req = match self.scanner.ongoing_scan.take() {
-            Some(req) => req,
+    pub fn handle_scan_complete(&mut self, status: zx::Status, scan_id: u64) {
+        let (req, device_scan_id) = match self.scanner.ongoing_scan.take() {
+            Some(OngoingScan::OffloadScan { req, device_scan_id }) => (req, device_scan_id),
+            Some(OngoingScan::MlmeScan { .. }) => {
+                warn!("Unexpected ScanComplete with status {:?} during MlmeScan.", status);
+                return;
+            }
             None => {
-                warn!("Received HwScanComplete with status {:?} while no req in progress", status);
+                warn!("Unexpected ScanComplete when no scan in progress.");
                 return;
             }
         };
-        let result_code = if status == banjo_wlan_mac::WlanHwScan::SUCCESS {
+        if device_scan_id != scan_id {
+            warn!(
+                "Unexpected scan ID upon scan completion. expected: {}, returned: {}",
+                device_scan_id, scan_id
+            );
+            self.scanner.ongoing_scan.replace(OngoingScan::OffloadScan { req, device_scan_id });
+            return;
+        }
+        let code = if status == zx::Status::OK {
             fidl_mlme::ScanResultCode::Success
         } else {
+            error!("Failed to succesfully complete OffloadScan: status {}", status);
             fidl_mlme::ScanResultCode::InternalError
         };
-        send_scan_end(req.req.txn_id, result_code, &mut self.ctx.device);
+        let _ = self
+            .ctx
+            .device
+            .mlme_control_handle()
+            .send_on_scan_end(&mut fidl_mlme::ScanEnd { txn_id: req.txn_id, code })
+            .map_err(|e| {
+                error!("error sending MLME ScanEnd: {}", e);
+            });
     }
 
     /// Called after switching to a requested channel from a scan request. It's primarily to
     /// send out, or schedule to send out, a probe request in an active scan.
     pub fn begin_requested_channel_time(&mut self, channel: banjo_common::WlanChannel) {
         let (req, probe_delay_timeout_id) = match &mut self.scanner.ongoing_scan {
-            Some(req) => (&req.req, &mut req.probe_delay_timeout_id),
-            None => return,
+            Some(OngoingScan::MlmeScan { req, probe_delay_timeout_id }) => {
+                (req, probe_delay_timeout_id)
+            }
+            Some(OngoingScan::OffloadScan { .. }) => {
+                warn!("Unexpected begin_requested_channel_time during OffloadScan.");
+                return;
+            }
+            None => {
+                warn!("Unexpected begin_requested_channel_time when no scan in progress.");
+                return;
+            }
         };
         if req.scan_type == fidl_mlme::ScanTypes::Active {
             if req.probe_delay == 0 {
@@ -290,26 +387,34 @@ impl<'a> BoundScanner<'a> {
         }
     }
 
+    fn probe_request_mac_header(&mut self) -> mac::MgmtHdr {
+        mgmt_writer::mgmt_hdr_to_ap(
+            mac::FrameControl(0)
+                .with_frame_type(mac::FrameType::MGMT)
+                .with_mgmt_subtype(mac::MgmtSubtype::PROBE_REQ),
+            Bssid(mac::BCAST_ADDR),
+            self.scanner.iface_mac,
+            mac::SequenceControl(0)
+                .with_seq_num(self.ctx.seq_mgr.next_sns1(&mac::BCAST_ADDR) as u16),
+        )
+    }
+
+    fn probe_request_rates(&mut self, primary_channel_number: u8) -> Result<Vec<u8>, Error> {
+        let iface_info = self.ctx.device.wlanmac_info();
+        let band_info = get_band_info(&iface_info, primary_channel_number)
+            .ok_or(format_err!("no band found for channel {:?}", primary_channel_number))?;
+        Ok(band_info.rates.iter().cloned().filter(|r| *r > 0).collect())
+    }
+
     fn send_probe_req(
         &mut self,
         ssid: &[u8],
         channel: banjo_common::WlanChannel,
     ) -> Result<(), Error> {
-        let iface_info = self.ctx.device.wlanmac_info();
-        let band_info = get_band_info(&iface_info, channel)
-            .ok_or(format_err!("no band found for channel {:?}", channel.primary))?;
-        let rates: Vec<u8> = band_info.rates.iter().cloned().filter(|r| *r > 0).collect();
-
+        let rates = self.probe_request_rates(channel.primary)?;
         let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
             headers: {
-                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_to_ap(
-                    mac::FrameControl(0)
-                        .with_frame_type(mac::FrameType::MGMT)
-                        .with_mgmt_subtype(mac::MgmtSubtype::PROBE_REQ),
-                    Bssid(mac::BCAST_ADDR),
-                    self.scanner.iface_mac,
-                    mac::SequenceControl(0)
-                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&mac::BCAST_ADDR) as u16)),
+                mac::MgmtHdr: &self.probe_request_mac_header(),
             },
             ies: {
                 ssid: ssid,
@@ -327,20 +432,40 @@ impl<'a> BoundScanner<'a> {
     /// Called when channel scheduler has gone through all the requested channels from a scan
     /// request. The scanner submits scan results to SME.
     pub fn handle_channel_req_complete(&mut self) {
-        if let Some(req) = self.scanner.ongoing_scan.take() {
-            send_scan_end(req.req.txn_id, fidl_mlme::ScanResultCode::Success, &mut self.ctx.device);
+        match self.scanner.ongoing_scan.take() {
+            Some(OngoingScan::MlmeScan { req, .. }) => {
+                let _ = self
+                    .ctx
+                    .device
+                    .mlme_control_handle()
+                    .send_on_scan_end(&mut fidl_mlme::ScanEnd {
+                        txn_id: req.txn_id,
+                        code: fidl_mlme::ScanResultCode::Success,
+                    })
+                    .map_err(|e| {
+                        error!("error sending MLME ScanEnd: {}", e);
+                    });
+            }
+            Some(OngoingScan::OffloadScan { .. }) => {
+                warn!("Unexpected channel_req_complete during OffloadScan.");
+                return;
+            }
+            None => {
+                warn!("Unexpected channel_req_complete when no scan in progress.");
+                return;
+            }
         }
     }
 }
 
 fn get_band_info(
     iface_info: &banjo_wlan_mac::WlanmacInfo,
-    channel: banjo_common::WlanChannel,
+    primary_channel: u8,
 ) -> Option<&banjo_hw_wlaninfo::WlanInfoBandInfo> {
     const _2GHZ_BAND_HIGHEST_CHANNEL: u8 = 14;
     iface_info.bands[..iface_info.bands_count as usize]
         .iter()
-        .filter(|b| match channel.primary {
+        .filter(|b| match primary_channel {
             x if x > _2GHZ_BAND_HIGHEST_CHANNEL => {
                 b.band == banjo_hw_wlaninfo::WlanInfoBand::FIVE_GHZ
             }
@@ -360,13 +485,6 @@ fn send_scan_result(txn_id: u64, bss: fidl_internal::BssDescription, device: &mu
     }
 }
 
-fn send_scan_end(txn_id: u64, code: fidl_mlme::ScanResultCode, device: &mut Device) {
-    let result =
-        device.mlme_control_handle().send_on_scan_end(&mut fidl_mlme::ScanEnd { txn_id, code });
-    if let Err(e) = result {
-        error!("error sending MLME ScanEnd: {}", e);
-    }
-}
 #[cfg(test)]
 mod tests {
     use {
@@ -391,25 +509,96 @@ mod tests {
         },
     };
 
-    const BSSID: Bssid = Bssid([6u8; 6]);
+    const BSSID_FOO: Bssid = Bssid([6u8; 6]);
+    const CAPABILITY_INFO_FOO: CapabilityInfo = CapabilityInfo(1);
+    const BEACON_INTERVAL_FOO: u16 = 100;
+    #[rustfmt::skip]
+    static BEACON_IES_FOO: &'static [u8] = &[
+        // SSID: "ssid"
+        0x00, 0x03, b'f', b'o', b'o',
+        // Supported rates: 24(B), 36, 48, 54
+        0x01, 0x04, 0xb0, 0x48, 0x60, 0x6c,
+        // TIM - DTIM count: 0, DTIM period: 1, PVB: 2
+        0x05, 0x04, 0x00, 0x01, 0x00, 0x02,
+    ];
+    lazy_static! {
+        static ref RX_INFO_FOO: banjo_wlan_mac::WlanRxInfo =
+            MockWlanRxInfo { rssi_dbm: -30, ..Default::default() }.into();
+        static ref BSS_DESCRIPTION_FOO: fidl_internal::BssDescription =
+            fidl_internal::BssDescription {
+                bssid: BSSID_FOO.0,
+                bss_type: fidl_internal::BssType::Infrastructure,
+                beacon_period: BEACON_INTERVAL_FOO,
+                capability_info: CAPABILITY_INFO_FOO.0,
+                ies: BEACON_IES_FOO.to_vec(),
+                rssi_dbm: RX_INFO_FOO.rssi_dbm,
+                channel: fidl_common::WlanChannel {
+                    primary: RX_INFO_FOO.channel.primary,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
+                    secondary80: 0,
+                },
+                snr_db: 0,
+            };
+    }
+
+    const BSSID_BAR: Bssid = Bssid([1u8; 6]);
+    const CAPABILITY_INFO_BAR: CapabilityInfo = CapabilityInfo(33);
+    const BEACON_INTERVAL_BAR: u16 = 150;
+    #[rustfmt::skip]
+    static BEACON_IES_BAR: &'static [u8] = &[
+        // SSID: "ss"
+        0x00, 0x03, b'b', b'a', b'r',
+        // Supported rates: 24(B), 36, 48, 54
+        0x01, 0x04, 0xb0, 0x48, 0x60, 0x6c,
+        // TIM - DTIM count: 0, DTIM period: 1, PVB: 2
+        0x05, 0x04, 0x00, 0x01, 0x00, 0x02,
+    ];
+    lazy_static! {
+        static ref RX_INFO_BAR: banjo_wlan_mac::WlanRxInfo =
+            MockWlanRxInfo { rssi_dbm: -60, ..Default::default() }.into();
+        static ref BSS_DESCRIPTION_BAR: fidl_internal::BssDescription =
+            fidl_internal::BssDescription {
+                bssid: BSSID_BAR.0,
+                bss_type: fidl_internal::BssType::Infrastructure,
+                beacon_period: BEACON_INTERVAL_BAR,
+                capability_info: CAPABILITY_INFO_BAR.0,
+                ies: BEACON_IES_BAR.to_vec(),
+                rssi_dbm: RX_INFO_BAR.rssi_dbm,
+                channel: fidl_common::WlanChannel {
+                    primary: RX_INFO_BAR.channel.primary,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
+                    secondary80: 0,
+                },
+                snr_db: 0,
+            };
+    }
+
     const IFACE_MAC: MacAddr = [7u8; 6];
     // Original channel set by FakeDevice
     const ORIGINAL_CHAN: banjo_common::WlanChannel = channel(0);
 
-    // Capability information: ESS
-    const CAPABILITY_INFO: CapabilityInfo = CapabilityInfo(1);
-    const BEACON_INTERVAL: u16 = 100;
-    lazy_static! {
-        pub static ref RX_INFO: banjo_wlan_mac::WlanRxInfo = MockWlanRxInfo::default().into();
-    }
-
-    fn scan_req() -> fidl_mlme::ScanRequest {
+    fn passive_scan_req() -> fidl_mlme::ScanRequest {
         fidl_mlme::ScanRequest {
             txn_id: 1337,
             scan_type: fidl_mlme::ScanTypes::Passive,
             channel_list: vec![6],
-            ssid_list: vec![Ssid::try_from("ssid").unwrap().into()],
+            ssid_list: vec![],
             probe_delay: 0,
+            min_channel_time: 100,
+            max_channel_time: 300,
+        }
+    }
+
+    fn active_scan_req() -> fidl_mlme::ScanRequest {
+        fidl_mlme::ScanRequest {
+            txn_id: 1337,
+            scan_type: fidl_mlme::ScanTypes::Active,
+            channel_list: vec![6],
+            ssid_list: vec![
+                Ssid::try_from("foo").unwrap().into(),
+                Ssid::try_from("bar").unwrap().into(),
+            ],
+            probe_delay: 3,
             min_channel_time: 100,
             max_channel_time: 300,
         }
@@ -425,7 +614,7 @@ mod tests {
         scanner
             .bind(&mut ctx)
             .on_sme_scan(
-                scan_req(),
+                passive_scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
             )
@@ -447,11 +636,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
-        let scan_req = fidl_mlme::ScanRequest {
-            scan_type: fidl_mlme::ScanTypes::Active,
-            probe_delay: 0,
-            ..scan_req()
-        };
+        let scan_req = fidl_mlme::ScanRequest { probe_delay: 0, ..active_scan_req() };
         scanner
             .bind(&mut ctx)
             .on_sme_scan(scan_req, m.listener_state.create_channel_listener_fn(), &mut m.chan_sched)
@@ -467,7 +652,7 @@ mod tests {
 
         // On post-switch announcement, the listener would call `begin_requested_channel_time`
         scanner.bind(&mut ctx).begin_requested_channel_time(channel(6));
-        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        assert_eq!(m.fake_device.wlan_queue.len(), 2);
         #[rustfmt::skip]
         assert_eq!(&m.fake_device.wlan_queue[0].0[..], &[
             // Mgmt header:
@@ -478,8 +663,23 @@ mod tests {
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr3
             0x10, 0, // Sequence Control
             // IEs
-            0, 4, // SSID id and length
-            115, 115, 105, 100, // SSID
+            0, 3, // SSID id and length
+            b'f', b'o', b'o', // SSID
+            1, 6, // supp_rates id and length
+            12, 24, 48, 54, 96, 108, // supp_rates
+        ][..]);
+        #[rustfmt::skip]
+        assert_eq!(&m.fake_device.wlan_queue[1].0[..], &[
+            // Mgmt header:
+            0b0100_00_00, 0b00000000, // FC
+            0, 0, // Duration
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr1
+            7, 7, 7, 7, 7, 7, // addr2
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr3
+            0x20, 0, // Sequence Control
+            // IEs
+            0, 3, // SSID id and length
+            b'b', b'a', b'r', // SSID
             1, 6, // supp_rates id and length
             12, 24, 48, 54, 96, 108, // supp_rates
         ][..]);
@@ -501,11 +701,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
-        let scan_req = fidl_mlme::ScanRequest {
-            scan_type: fidl_mlme::ScanTypes::Active,
-            probe_delay: 5,
-            ..scan_req()
-        };
+        let scan_req = fidl_mlme::ScanRequest { probe_delay: 5, ..active_scan_req() };
         scanner
             .bind(&mut ctx)
             .on_sme_scan(scan_req, m.listener_state.create_channel_listener_fn(), &mut m.chan_sched)
@@ -524,7 +720,7 @@ mod tests {
 
         // Check that telling scanner to handle timeout would send probe request frame
         scanner.bind(&mut ctx).handle_probe_delay_timeout(channel(6));
-        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        assert_eq!(m.fake_device.wlan_queue.len(), 2);
         #[rustfmt::skip]
         assert_eq!(&m.fake_device.wlan_queue[0].0[..], &[
             // Mgmt header:
@@ -535,8 +731,23 @@ mod tests {
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr3
             0x10, 0, // Sequence Control
             // IEs
-            0, 4, // SSID id and length
-            115, 115, 105, 100, // SSID
+            0, 3, // SSID id and length
+            b'f', b'o', b'o', // SSID
+            1, 6, // supp_rates id and length
+            12, 24, 48, 54, 96, 108, // supp_rates
+        ][..]);
+        #[rustfmt::skip]
+        assert_eq!(&m.fake_device.wlan_queue[1].0[..], &[
+            // Mgmt header:
+            0b0100_00_00, 0b00000000, // FC
+            0, 0, // Duration
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr1
+            7, 7, 7, 7, 7, 7, // addr2
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr3
+            0x20, 0, // Sequence Control
+            // IEs
+            0, 3, // SSID id and length
+            b'b', b'a', b'r', // SSID
             1, 6, // supp_rates id and length
             12, 24, 48, 54, 96, 108, // supp_rates
         ][..]);
@@ -552,26 +763,21 @@ mod tests {
         scanner
             .bind(&mut ctx)
             .on_sme_scan(
-                scan_req(),
+                passive_scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
             )
             .expect("expect scan req accepted");
-        let scan_req = fidl_mlme::ScanRequest { txn_id: 1338, ..scan_req() };
+        let scan_req = fidl_mlme::ScanRequest { txn_id: 1338, ..passive_scan_req() };
         let result = scanner.bind(&mut ctx).on_sme_scan(
             scan_req,
             m.listener_state.create_channel_listener_fn(),
             &mut m.chan_sched,
         );
-        assert_variant!(result, Err(ScanError::Busy));
-        let scan_end = m
-            .fake_device
+        assert_variant!(result, Err(Error::ScanError(ScanError::Busy)));
+        m.fake_device
             .next_mlme_msg::<fidl_mlme::ScanEnd>()
-            .expect("error reading MLME ScanEnd");
-        assert_eq!(
-            scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1338, code: fidl_mlme::ScanResultCode::NotSupported }
-        );
+            .expect_err("unexpected MLME ScanEnd from BoundScanner");
     }
 
     #[test]
@@ -581,21 +787,16 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
-        let scan_req = fidl_mlme::ScanRequest { channel_list: vec![], ..scan_req() };
+        let scan_req = fidl_mlme::ScanRequest { channel_list: vec![], ..passive_scan_req() };
         let result = scanner.bind(&mut ctx).on_sme_scan(
             scan_req,
             m.listener_state.create_channel_listener_fn(),
             &mut m.chan_sched,
         );
-        assert_variant!(result, Err(ScanError::EmptyChannelList));
-        let scan_end = m
-            .fake_device
+        assert_variant!(result, Err(Error::ScanError(ScanError::EmptyChannelList)));
+        m.fake_device
             .next_mlme_msg::<fidl_mlme::ScanEnd>()
-            .expect("error reading MLME ScanEnd");
-        assert_eq!(
-            scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::InvalidArgs }
-        );
+            .expect_err("unexpected MLME ScanEnd from BoundScanner");
     }
 
     #[test]
@@ -605,62 +806,67 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
-        let scan_req =
-            fidl_mlme::ScanRequest { min_channel_time: 101, max_channel_time: 100, ..scan_req() };
+        let scan_req = fidl_mlme::ScanRequest {
+            min_channel_time: 101,
+            max_channel_time: 100,
+            ..passive_scan_req()
+        };
         let result = scanner.bind(&mut ctx).on_sme_scan(
             scan_req,
             m.listener_state.create_channel_listener_fn(),
             &mut m.chan_sched,
         );
-        assert_variant!(result, Err(ScanError::MaxChannelTimeLtMin));
-        let scan_end = m
-            .fake_device
+        assert_variant!(result, Err(Error::ScanError(ScanError::MaxChannelTimeLtMin)));
+        m.fake_device
             .next_mlme_msg::<fidl_mlme::ScanEnd>()
-            .expect("error reading MLME ScanEnd");
-        assert_eq!(
-            scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::InvalidArgs }
-        );
+            .expect_err("unexpected MLME ScanEnd from BoundScanner");
     }
 
     #[test]
-    fn test_start_hw_scan_success() {
+    fn test_start_passive_scan_success() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         m.fake_device.info.driver_features |=
             banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
         let mut scanner = Scanner::new(IFACE_MAC);
+        let test_start_timestamp_nanos = zx::Time::get_monotonic().into_nanos();
 
         scanner
             .bind(&mut ctx)
             .on_sme_scan(
-                scan_req(),
+                passive_scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
             )
             .expect("expect scan req accepted");
 
-        // Verify that hw-scan is requested
-        assert_variant!(m.fake_device.hw_scan_req, Some(config) => {
-            assert_eq!(config.scan_type, banjo_wlan_mac::WlanHwScanType::PASSIVE);
-            assert_eq!(config.num_channels, 1);
-
-            let mut channels = [0u8; banjo_hw_wlaninfo::WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize];
-            channels[..1].copy_from_slice(&[6]);
-            assert_eq!(&config.channels[..], &channels[..]);
-
-            let mut ssid = [0; fidl_ieee80211::MAX_SSID_BYTE_LEN as usize];
-            ssid[..4].copy_from_slice(b"ssid");
-            assert_eq!(config.ssid, banjo_ieee80211::CSsid { len: 4, data: ssid });
-        }, "HW scan not initiated");
+        // Verify that passive offload scan is requested
+        assert_variant!(
+            m.fake_device.captured_passive_scan_args,
+            Some(ref passive_scan_args) => {
+                assert_eq!(passive_scan_args.channels.len(), 1);
+                assert_eq!(passive_scan_args.channels, vec![6]);
+                assert_eq!(passive_scan_args.min_channel_time, 102_400_000);
+                assert_eq!(passive_scan_args.max_channel_time, 307_200_000);
+                assert_eq!(passive_scan_args.min_home_time, 0);
+            },
+            "passive offload scan not initiated"
+        );
+        let expected_scan_id = m.fake_device.next_scan_id - 1;
 
         // Mock receiving a beacon
-        handle_beacon(&mut scanner, &mut ctx, &beacon_ies()[..]);
-        m.fake_device.next_mlme_msg::<fidl_mlme::ScanResult>().expect("error reading ScanResult");
+        handle_beacon_foo(&mut scanner, &mut ctx);
+        let scan_result = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanResult>()
+            .expect("error reading ScanResult");
+        assert_eq!(scan_result.txn_id, 1337);
+        assert!(scan_result.timestamp_nanos > test_start_timestamp_nanos);
+        assert_eq!(scan_result.bss, *BSS_DESCRIPTION_FOO);
 
-        // Verify scan results are sent on hw scan complete
-        scanner.bind(&mut ctx).handle_hw_scan_complete(banjo_wlan_mac::WlanHwScan::SUCCESS);
+        // Verify ScanEnd sent after handle_scan_complete
+        scanner.bind(&mut ctx).handle_scan_complete(zx::Status::OK, expected_scan_id);
         let scan_end = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::ScanEnd>()
@@ -672,21 +878,183 @@ mod tests {
     }
 
     #[test]
-    fn test_start_hw_scan_fails() {
+    fn test_start_active_scan_success() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let device = m.fake_device.as_device_fail_start_hw_scan();
+        let mut ctx = m.make_ctx();
+        m.fake_device.info.driver_features |=
+            banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
+        let mut scanner = Scanner::new(IFACE_MAC);
+        let test_start_timestamp_nanos = zx::Time::get_monotonic().into_nanos();
+
+        scanner
+            .bind(&mut ctx)
+            .on_sme_scan(
+                active_scan_req(),
+                m.listener_state.create_channel_listener_fn(),
+                &mut m.chan_sched,
+            )
+            .expect("expect scan req accepted");
+
+        // Verify that active offload scan is requested
+        assert_variant!(
+            m.fake_device.captured_active_scan_args,
+            Some(ref active_scan_args) => {
+                assert_eq!(active_scan_args.channels.len(), 1);
+                assert_eq!(active_scan_args.channels, vec![6]);
+                assert_eq!(active_scan_args.ssids.len(), 2);
+                assert_eq!(active_scan_args.ssids,
+                           vec![
+                               cssid_from_ssid_unchecked(&Ssid::try_from("foo").unwrap().into()),
+                               cssid_from_ssid_unchecked(&Ssid::try_from("bar").unwrap().into()),
+                           ]);
+                assert_eq!(active_scan_args.mac_header_buffer.len(), 24);
+                assert_eq!(active_scan_args.mac_header_buffer,
+                           vec![
+                               0x40, 0x00, // Frame Control
+                               0x00, 0x00, // Duration
+                               0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // Address 1
+                               0x07, 0x07, 0x07, 0x07, 0x07, 0x07, // Address 2
+                               0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // Address 3
+                               0x10, 0x00, // Sequence Control
+                           ]);
+                assert_eq!(active_scan_args.ies_buffer.len(), 8);
+                assert_eq!(active_scan_args.ies_buffer,
+                           vec![
+                               0x01, // Element ID for Supported Rates
+                               0x06, // Length
+                               // TODO(fxbug.dev/89695): Hardcoded channel 1 for initial change
+                               // and to allow driver bringup work to proceed.
+                               0x0C, 0x18, 0x30, 0x36, 0x60, 0x6C // Supported Rates
+                           ][..]);
+                assert_eq!(active_scan_args.min_channel_time, 102_400_000);
+                assert_eq!(active_scan_args.max_channel_time, 307_200_000);
+                assert_eq!(active_scan_args.min_home_time, 0);
+                assert_eq!(active_scan_args.min_probes_per_channel, 0);
+                assert_eq!(active_scan_args.max_probes_per_channel, 0);
+            },
+            "active offload scan not initiated"
+        );
+        let expected_scan_id = m.fake_device.next_scan_id - 1;
+
+        // Mock receiving beacons
+        handle_beacon_foo(&mut scanner, &mut ctx);
+        let scan_result = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanResult>()
+            .expect("error reading ScanResult");
+        assert_eq!(scan_result.txn_id, 1337);
+        assert!(scan_result.timestamp_nanos > test_start_timestamp_nanos);
+        assert_eq!(scan_result.bss, *BSS_DESCRIPTION_FOO);
+
+        handle_beacon_bar(&mut scanner, &mut ctx);
+        let scan_result = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanResult>()
+            .expect("error reading ScanResult");
+        assert_eq!(scan_result.txn_id, 1337);
+        assert!(scan_result.timestamp_nanos > test_start_timestamp_nanos);
+        assert_eq!(scan_result.bss, *BSS_DESCRIPTION_BAR);
+
+        // Verify ScanEnd sent after handle_scan_complete
+        scanner.bind(&mut ctx).handle_scan_complete(zx::Status::OK, expected_scan_id);
+        let scan_end = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect("error reading MLME ScanEnd");
+        assert_eq!(
+            scan_end,
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::Success }
+        );
+    }
+
+    #[test]
+    fn test_start_passive_scan_fails() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let device = m.fake_device.as_device_fail_start_passive_scan();
         let mut ctx = m.make_ctx_with_device(device);
         m.fake_device.info.driver_features |=
             banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
         let mut scanner = Scanner::new(IFACE_MAC);
 
         let result = scanner.bind(&mut ctx).on_sme_scan(
-            scan_req(),
+            passive_scan_req(),
             m.listener_state.create_channel_listener_fn(),
             &mut m.chan_sched,
         );
-        assert_variant!(result, Err(ScanError::StartHwScanFails(zx::Status::NOT_SUPPORTED)));
+        assert_variant!(
+            result,
+            Err(Error::ScanError(ScanError::StartOffloadScanFails(zx::Status::NOT_SUPPORTED)))
+        );
+        m.fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect_err("unexpected MLME ScanEnd from BoundScanner");
+    }
+
+    #[test]
+    fn test_start_active_scan_fails() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let device = m.fake_device.as_device_fail_start_active_scan();
+        let mut ctx = m.make_ctx_with_device(device);
+        m.fake_device.info.driver_features |=
+            banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
+        let mut scanner = Scanner::new(IFACE_MAC);
+
+        let result = scanner.bind(&mut ctx).on_sme_scan(
+            active_scan_req(),
+            m.listener_state.create_channel_listener_fn(),
+            &mut m.chan_sched,
+        );
+        assert_variant!(
+            result,
+            Err(Error::ScanError(ScanError::StartOffloadScanFails(zx::Status::NOT_SUPPORTED)))
+        );
+        m.fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect_err("unexpected MLME ScanEnd from BoundScanner");
+    }
+
+    #[test]
+    fn test_start_passive_scan_canceled() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut ctx = m.make_ctx();
+        m.fake_device.info.driver_features |=
+            banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
+        let mut scanner = Scanner::new(IFACE_MAC);
+        let test_start_timestamp_nanos = zx::Time::get_monotonic().into_nanos();
+
+        scanner
+            .bind(&mut ctx)
+            .on_sme_scan(
+                passive_scan_req(),
+                m.listener_state.create_channel_listener_fn(),
+                &mut m.chan_sched,
+            )
+            .expect("expect scan req accepted");
+
+        // Verify that passive offload scan is requested
+        assert_variant!(
+            m.fake_device.captured_passive_scan_args,
+            Some(_),
+            "passive offload scan not initiated"
+        );
+        let expected_scan_id = m.fake_device.next_scan_id - 1;
+
+        // Mock receiving a beacon
+        handle_beacon_foo(&mut scanner, &mut ctx);
+        let scan_result = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanResult>()
+            .expect("error reading ScanResult");
+        assert_eq!(scan_result.txn_id, 1337);
+        assert!(scan_result.timestamp_nanos > test_start_timestamp_nanos);
+        assert_eq!(scan_result.bss, *BSS_DESCRIPTION_FOO);
+
+        // Verify ScanEnd sent after handle_scan_complete
+        scanner.bind(&mut ctx).handle_scan_complete(zx::Status::CANCELED, expected_scan_id);
         let scan_end = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::ScanEnd>()
@@ -698,32 +1066,44 @@ mod tests {
     }
 
     #[test]
-    fn test_start_hw_scan_aborted() {
+    fn test_start_active_scan_canceled() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         m.fake_device.info.driver_features |=
             banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
         let mut scanner = Scanner::new(IFACE_MAC);
+        let test_start_timestamp_nanos = zx::Time::get_monotonic().into_nanos();
 
         scanner
             .bind(&mut ctx)
             .on_sme_scan(
-                scan_req(),
+                active_scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
             )
             .expect("expect scan req accepted");
 
-        // Verify that hw-scan is requested
-        assert_variant!(m.fake_device.hw_scan_req, Some(_), "HW scan not initiated");
+        // Verify that active offload scan is requested
+        assert_variant!(
+            m.fake_device.captured_active_scan_args,
+            Some(_),
+            "active offload scan not initiated"
+        );
+        let expected_scan_id = m.fake_device.next_scan_id - 1;
 
         // Mock receiving a beacon
-        handle_beacon(&mut scanner, &mut ctx, &beacon_ies()[..]);
-        m.fake_device.next_mlme_msg::<fidl_mlme::ScanResult>().expect("error reading ScanResult");
+        handle_beacon_foo(&mut scanner, &mut ctx);
+        let scan_result = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanResult>()
+            .expect("error reading ScanResult");
+        assert_eq!(scan_result.txn_id, 1337);
+        assert!(scan_result.timestamp_nanos > test_start_timestamp_nanos);
+        assert_eq!(scan_result.bss, *BSS_DESCRIPTION_FOO);
 
-        // Verify scan results are sent on hw scan complete
-        scanner.bind(&mut ctx).handle_hw_scan_complete(banjo_wlan_mac::WlanHwScan::ABORTED);
+        // Verify ScanEnd sent after handle_scan_complete
+        scanner.bind(&mut ctx).handle_scan_complete(zx::Status::CANCELED, expected_scan_id);
         let scan_end = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::ScanEnd>()
@@ -745,12 +1125,12 @@ mod tests {
         scanner
             .bind(&mut ctx)
             .on_sme_scan(
-                scan_req(),
+                passive_scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
             )
             .expect("expect scan req accepted");
-        handle_beacon(&mut scanner, &mut ctx, &beacon_ies()[..]);
+        handle_beacon_foo(&mut scanner, &mut ctx);
         scanner.bind(&mut ctx).handle_channel_req_complete();
 
         let scan_result = m
@@ -759,23 +1139,7 @@ mod tests {
             .expect("error reading MLME ScanResult");
         assert_eq!(scan_result.txn_id, 1337);
         assert!(scan_result.timestamp_nanos > test_start_timestamp_nanos);
-        assert_eq!(
-            scan_result.bss,
-            fidl_internal::BssDescription {
-                bssid: BSSID.0,
-                bss_type: fidl_internal::BssType::Infrastructure,
-                beacon_period: BEACON_INTERVAL,
-                capability_info: CAPABILITY_INFO.0,
-                ies: beacon_ies(),
-                rssi_dbm: RX_INFO.rssi_dbm,
-                channel: fidl_common::WlanChannel {
-                    primary: RX_INFO.channel.primary,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
-                snr_db: 0,
-            }
-        );
+        assert_eq!(scan_result.bss, *BSS_DESCRIPTION_FOO);
 
         let scan_end = m
             .fake_device
@@ -793,32 +1157,37 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
+        let test_start_timestamp_nanos = zx::Time::get_monotonic().into_nanos();
 
         scanner
             .bind(&mut ctx)
             .on_sme_scan(
-                scan_req(),
+                passive_scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
             )
             .expect("expect scan req accepted");
-        handle_beacon(&mut scanner, &mut ctx, &beacon_ies()[..]);
-        // Replace with beacon that has different SSID
-        handle_beacon(&mut scanner, &mut ctx, &beacon_ies_2()[..]);
+
+        handle_beacon_foo(&mut scanner, &mut ctx);
+        handle_beacon_bar(&mut scanner, &mut ctx);
         scanner.bind(&mut ctx).handle_channel_req_complete();
 
         // Verify that one scan result is sent for each beacon
-        let scan_result = m
+        let foo_scan_result = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::ScanResult>()
             .expect("error reading MLME ScanResult");
-        assert_eq!(scan_result.bss.ies, beacon_ies());
+        assert_eq!(foo_scan_result.txn_id, 1337);
+        assert!(foo_scan_result.timestamp_nanos > test_start_timestamp_nanos);
+        assert_eq!(foo_scan_result.bss, *BSS_DESCRIPTION_FOO);
 
-        let scan_result = m
+        let bar_scan_result = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::ScanResult>()
             .expect("error reading MLME ScanResult");
-        assert_eq!(scan_result.bss.ies, beacon_ies_2());
+        assert_eq!(bar_scan_result.txn_id, 1337);
+        assert!(bar_scan_result.timestamp_nanos > foo_scan_result.timestamp_nanos);
+        assert_eq!(bar_scan_result.bss, *BSS_DESCRIPTION_BAR);
 
         let scan_end = m
             .fake_device
@@ -841,7 +1210,7 @@ mod tests {
         scanner
             .bind(&mut ctx)
             .on_sme_scan(
-                scan_req(),
+                passive_scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
             )
@@ -849,13 +1218,23 @@ mod tests {
         assert_eq!(true, scanner.is_scanning());
     }
 
-    fn handle_beacon(scanner: &mut Scanner, ctx: &mut Context, ies: &[u8]) {
+    fn handle_beacon_foo(scanner: &mut Scanner, ctx: &mut Context) {
         scanner.bind(ctx).handle_beacon_or_probe_response(
-            BSSID,
-            TimeUnit(BEACON_INTERVAL),
-            CAPABILITY_INFO,
-            ies,
-            RX_INFO.clone(),
+            BSSID_FOO,
+            TimeUnit(BEACON_INTERVAL_FOO),
+            CAPABILITY_INFO_FOO,
+            BEACON_IES_FOO,
+            RX_INFO_FOO.clone(),
+        );
+    }
+
+    fn handle_beacon_bar(scanner: &mut Scanner, ctx: &mut Context) {
+        scanner.bind(ctx).handle_beacon_or_probe_response(
+            BSSID_BAR,
+            TimeUnit(BEACON_INTERVAL_BAR),
+            CAPABILITY_INFO_BAR,
+            BEACON_IES_BAR,
+            RX_INFO_BAR.clone(),
         );
     }
 
@@ -865,32 +1244,6 @@ mod tests {
             cbw: banjo_common::ChannelBandwidth::CBW20,
             secondary80: 0,
         }
-    }
-
-    fn beacon_ies() -> Vec<u8> {
-        #[rustfmt::skip]
-        let ies = vec![
-            // SSID: "ssid"
-            0x00, 0x04, 115, 115, 105, 100,
-            // Supported rates: 24(B), 36, 48, 54
-            0x01, 0x04, 0xb0, 0x48, 0x60, 0x6c,
-            // TIM - DTIM count: 0, DTIM period: 1, PVB: 2
-            0x05, 0x04, 0x00, 0x01, 0x00, 0x02,
-        ];
-        ies
-    }
-
-    fn beacon_ies_2() -> Vec<u8> {
-        #[rustfmt::skip]
-        let ies = vec![
-            // SSID: "ss"
-            0x00, 0x02, 115, 115,
-            // Supported rates: 24(B), 36, 48, 54
-            0x01, 0x04, 0xb0, 0x48, 0x60, 0x6c,
-            // TIM - DTIM count: 0, DTIM period: 1, PVB: 2
-            0x05, 0x04, 0x00, 0x01, 0x00, 0x02,
-        ];
-        ies
     }
 
     struct MockObjects {

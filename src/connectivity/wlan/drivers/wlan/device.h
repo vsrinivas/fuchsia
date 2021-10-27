@@ -65,7 +65,10 @@ class Device : public DeviceInterface {
   zx_status_t SetKey(wlan_key_config_t* key_config) final;
   zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) final;
   zx_status_t ClearAssoc(const common::MacAddr& peer_addr) final;
-  zx_status_t StartHwScan(const wlan_hw_scan_config_t* scan_config) final;
+  zx_status_t StartPassiveScan(const wlanmac_passive_scan_args_t* passive_scan_args,
+                               uint64_t* out_scan_id) final;
+  zx_status_t StartActiveScan(const wlanmac_active_scan_args_t* active_scan_args,
+                              uint64_t* out_scan_id) final;
   fbl::RefPtr<DeviceState> GetState() final;
   const wlanmac_info_t& GetWlanMacInfo() const final;
 
