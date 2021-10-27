@@ -467,63 +467,67 @@ impl InputDispatcher {
         Ok(())
     }
 
-    /// Reads the set of Scenic `events` sent to a surface, converts them into
-    /// as set of 0 or more wayland events, and sends those messages to the
-    /// client.
+    /// Returns the location of pointer events.
+    pub fn get_input_event_location(event: &InputEvent) -> Option<(f32, f32)> {
+        match event {
+            InputEvent::Pointer(pointer) => Some((pointer.x, pointer.y)),
+            _ => None,
+        }
+    }
+
+    /// Reads a Scenic `event` sent to a surface, converts it into 0 or more
+    /// wayland events, and sends those messages to the client.
     ///
     /// If a `pointer_translation` is provided, this value will be added to the
-    /// pointer events. This can be used if the Scenic coordinates do not match
+    /// pointer event. This can be used if the Scenic coordinates do not match
     /// the client coordinates (as is the case with xdg_surface's
     /// set_window_geometry request).
     ///
     /// The `pixel_scale` is also applied to transform the Scenic coordinate
     /// space into the pixel space exposed to the client.
-    pub fn handle_input_events(
+    pub fn handle_input_event(
         &mut self,
         surface: ObjectRef<Surface>,
-        events: &[InputEvent],
-        pointer_translation: (i32, i32),
+        event: &InputEvent,
+        pointer_translation: (f32, f32),
         pixel_scale: (f32, f32),
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "InputDispatcher::handle_input_events");
-        let pointer_translation = (pointer_translation.0 as f32, pointer_translation.1 as f32);
-        for event in events {
-            match event {
-                InputEvent::Pointer(pointer) if pointer.type_ == PointerEventType::Mouse => {
-                    ftrace::flow_end!(
-                        "input",
-                        "dispatch_event_to_client",
-                        pointer_trace_hack(pointer.radius_major, pointer.radius_minor)
-                    );
-                    // We send pointer focus here since pointer events will be
-                    // delivered to whatever view the mouse cursor is over
-                    // regardless of if a scenic Focus event has been sent.
-                    self.update_pointer_focus(
-                        Some(surface),
-                        pointer,
-                        pointer_translation,
-                        pixel_scale,
-                    )?;
-                    self.handle_mouse_event(pointer, pointer_translation, pixel_scale)?;
-                    self.send_pointer_frame()?;
-                }
-                InputEvent::Pointer(pointer) if pointer.type_ == PointerEventType::Touch => {
-                    ftrace::flow_end!(
-                        "input",
-                        "dispatch_event_to_client",
-                        pointer_trace_hack(pointer.radius_major, pointer.radius_minor)
-                    );
-                    self.handle_touch_event(surface, pointer, pointer_translation, pixel_scale)?;
-                    self.send_touch_frame()?;
-                }
-                InputEvent::Focus(focus) => {
-                    self.handle_focus_event(surface, focus)?;
-                }
-                // TODO: Implement these.
-                InputEvent::Pointer(_pointer) => {}
-                // Deprecated, keyboard used fuchsia.ui.input3 instead.
-                InputEvent::Keyboard(_) => {}
+        match event {
+            InputEvent::Pointer(pointer) if pointer.type_ == PointerEventType::Mouse => {
+                ftrace::flow_end!(
+                    "input",
+                    "dispatch_event_to_client",
+                    pointer_trace_hack(pointer.radius_major, pointer.radius_minor)
+                );
+                // We send pointer focus here since pointer events will be
+                // delivered to whatever view the mouse cursor is over
+                // regardless of if a scenic Focus event has been sent.
+                self.update_pointer_focus(
+                    Some(surface),
+                    pointer,
+                    pointer_translation,
+                    pixel_scale,
+                )?;
+                self.handle_mouse_event(pointer, pointer_translation, pixel_scale)?;
+                self.send_pointer_frame()?;
             }
+            InputEvent::Pointer(pointer) if pointer.type_ == PointerEventType::Touch => {
+                ftrace::flow_end!(
+                    "input",
+                    "dispatch_event_to_client",
+                    pointer_trace_hack(pointer.radius_major, pointer.radius_minor)
+                );
+                self.handle_touch_event(surface, pointer, pointer_translation, pixel_scale)?;
+                self.send_touch_frame()?;
+            }
+            InputEvent::Focus(focus) => {
+                self.handle_focus_event(surface, focus)?;
+            }
+            // TODO: Implement these.
+            InputEvent::Pointer(_pointer) => {}
+            // Deprecated, keyboard used fuchsia.ui.input3 instead.
+            InputEvent::Keyboard(_) => {}
         }
         Ok(())
     }
@@ -584,6 +588,9 @@ impl RequestReceiver<WlPointer> for Pointer {
     }
 }
 
+const KEY_REPEAT_RATE: i32 = 30;
+const KEY_REPEAT_DELAY: i32 = 225;
+
 pub struct Keyboard {
     seat: ObjectRef<Seat>,
 }
@@ -609,9 +616,10 @@ impl Keyboard {
             },
         )?;
         if this.get(client)?.seat.get(client)?.client_version >= 4 {
-            client
-                .event_queue()
-                .post(this.id(), WlKeyboardEvent::RepeatInfo { rate: 1, delay: 10000 })?;
+            client.event_queue().post(
+                this.id(),
+                WlKeyboardEvent::RepeatInfo { rate: KEY_REPEAT_RATE, delay: KEY_REPEAT_DELAY },
+            )?;
         }
         Ok(())
     }

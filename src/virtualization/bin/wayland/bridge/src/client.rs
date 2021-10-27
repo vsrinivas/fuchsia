@@ -4,12 +4,11 @@
 
 use {
     crate::display::{Display, DISPLAY_SINGLETON_OBJECT_ID},
-    crate::object::{
-        MessageReceiver, ObjectLookupError, ObjectMap, ObjectRef, ObjectRefSet, RequestReceiver,
-    },
+    crate::object::{MessageReceiver, ObjectLookupError, ObjectMap, ObjectRef, RequestReceiver},
     crate::seat::InputDispatcher,
-    crate::xdg_shell::XdgToplevel,
+    crate::xdg_shell::XdgSurface,
     anyhow::Error,
+    fidl_fuchsia_ui_gfx::DisplayInfo,
     fuchsia_async as fasync, fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
     fuchsia_zircon as zx,
     futures::channel::mpsc,
@@ -49,10 +48,17 @@ pub struct Client {
     /// If `true`, all requests and events will be logged.
     protocol_logging: Rc<Cell<bool>>,
 
+    /// The current display info.
+    display_info: DisplayInfo,
+
     /// Decode and dispatch Scenic input events.
     pub input_dispatcher: InputDispatcher,
 
-    pub xdg_toplevels: ObjectRefSet<XdgToplevel>,
+    /// Root XDG surface for this client.
+    pub xdg_root_surface: Option<ObjectRef<XdgSurface>>,
+
+    /// XDG surfaces. Last surface created at the back.
+    pub xdg_surfaces: Vec<ObjectRef<XdgSurface>>,
 }
 
 impl Client {
@@ -73,9 +79,11 @@ impl Client {
             tasks: receiver,
             task_queue: TaskQueue(sender),
             protocol_logging: log_flag,
+            display_info: DisplayInfo { width_in_px: 1920, height_in_px: 1080 },
             input_dispatcher: InputDispatcher::new(event_queue.clone()),
             event_queue,
-            xdg_toplevels: ObjectRefSet::new(),
+            xdg_root_surface: None,
+            xdg_surfaces: vec![],
         }
     }
 
@@ -140,10 +148,10 @@ impl Client {
                     },
                 }
             }
-            // We need to shutdown the client. This includes tearning down
+            // We need to shutdown the client. This includes tearing down
             // all views associated with this client.
-            self.xdg_toplevels.iter().for_each(|toplevel| {
-                if let Ok(t) = toplevel.get(&self) {
+            self.xdg_surfaces.iter().for_each(|surface| {
+                if let Ok(t) = surface.get(&self) {
                     t.shutdown(&self);
                 }
             });
@@ -153,6 +161,16 @@ impl Client {
     /// The `Display` for this client.
     pub fn display(&self) -> &Display {
         &self.display
+    }
+
+    /// The current display info for this client.
+    pub fn display_info(&mut self) -> DisplayInfo {
+        self.display_info
+    }
+
+    /// Set the current display info.
+    pub fn set_display_info(&mut self, display_info: &DisplayInfo) {
+        self.display_info = *display_info;
     }
 
     /// Looks up an object in the map and returns a downcasted reference to

@@ -23,8 +23,12 @@ const DRM_FORMAT_XRGB8888: u32 = 0x34325258;
 const DRM_FORMAT_XBGR8888: u32 = 0x34324258;
 
 /// The set of pixel formats that will be announced to clients.
-const SUPPORTED_PIXEL_FORMATS: &[u32] =
-    &[DRM_FORMAT_ARGB8888, DRM_FORMAT_ABGR8888, DRM_FORMAT_XRGB8888, DRM_FORMAT_XBGR8888];
+const SUPPORTED_PIXEL_FORMATS: &[(u32, bool)] = &[
+    (DRM_FORMAT_ARGB8888, true),
+    (DRM_FORMAT_ABGR8888, true),
+    (DRM_FORMAT_XRGB8888, false),
+    (DRM_FORMAT_XBGR8888, false),
+];
 
 /// The zwp_linux_dmabuf_v1 global.
 pub struct LinuxDmabuf;
@@ -37,7 +41,7 @@ impl LinuxDmabuf {
 
     /// Posts an event back to the client for each supported pixel format.
     pub fn post_formats(&self, this: wl::ObjectId, client: &Client) -> Result<(), Error> {
-        for format in SUPPORTED_PIXEL_FORMATS.iter() {
+        for (format, _) in SUPPORTED_PIXEL_FORMATS.iter() {
             client.event_queue().post(this, ZwpLinuxDmabufV1Event::Format { format: *format })?;
         }
         Ok(())
@@ -74,12 +78,24 @@ impl LinuxBufferParams {
     }
 
     /// Creates a new wl_buffer object backed by memory from params.
-    pub fn create(&mut self, width: i32, height: i32) -> Result<Buffer, Error> {
+    pub fn create(&mut self, width: i32, height: i32, format: u32) -> Result<Buffer, Error> {
         let image_size = Size { width, height };
+        let has_alpha = SUPPORTED_PIXEL_FORMATS
+            .iter()
+            .find_map(
+                |&(supported_format, has_alpha)| {
+                    if supported_format == format {
+                        Some(has_alpha)
+                    } else {
+                        None
+                    }
+                },
+            )
+            .unwrap_or(false);
         let raw_import_token = self.token.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
         let import_token = composition::BufferCollectionImportToken { value: raw_import_token };
 
-        Ok(Buffer::from_import_token(Rc::new(import_token), image_size))
+        Ok(Buffer::from_import_token(Rc::new(import_token), image_size, has_alpha))
     }
 
     pub fn set_plane(&mut self, token: EventPair) {
@@ -101,8 +117,10 @@ impl RequestReceiver<ZwpLinuxBufferParamsV1> for LinuxBufferParams {
                 this.get_mut(client)?.set_plane(fd.into());
             }
             ZwpLinuxBufferParamsV1Request::Create { .. } => {}
-            ZwpLinuxBufferParamsV1Request::CreateImmed { buffer_id, width, height, .. } => {
-                let buffer = this.get_mut(client)?.create(width, height)?;
+            ZwpLinuxBufferParamsV1Request::CreateImmed {
+                buffer_id, width, height, format, ..
+            } => {
+                let buffer = this.get_mut(client)?.create(width, height, format)?;
                 buffer_id.implement(client, buffer)?;
             }
         }

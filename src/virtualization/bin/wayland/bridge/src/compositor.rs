@@ -248,6 +248,7 @@ pub struct Surface {
 
     /// The scaling factor between the logical pixel space used by Scenic, and
     /// the physical pixels we expose to the client.
+    #[cfg(not(feature = "flatland"))]
     pixel_scale: (f32, f32),
 
     /// The set of commands that have been queued up, pending the next commit.
@@ -261,6 +262,10 @@ pub struct Surface {
     /// ref, which enables this vector to track the current subsurface ordering
     /// of all subsurfaces and the parent.
     subsurfaces: Vec<(ObjectRef<Surface>, Option<ObjectRef<Subsurface>>)>,
+
+    /// Parent and offset that can be set using aura shell interface.
+    parent: Option<ObjectRef<Surface>>,
+    offset: Option<(i32, i32)>,
 
     /// Queue of frame callbacks.
     ///
@@ -315,8 +320,21 @@ impl Surface {
         }
     }
 
-    pub fn pixel_scale(&self) -> (f32, f32) {
-        self.pixel_scale
+    pub fn set_parent_and_offset(&mut self, parent: Option<ObjectRef<Surface>>, x: i32, y: i32) {
+        self.parent = parent;
+        self.offset = Some((x, y));
+    }
+
+    pub fn window_geometry(&self) -> Rect {
+        if let Some(window_geometry) = self.window_geometry.as_ref() {
+            Rect { ..*window_geometry }
+        } else {
+            Rect { x: 0, y: 0, width: self.size.width, height: self.size.height }
+        }
+    }
+
+    pub fn offset(&self) -> Option<(i32, i32)> {
+        self.offset
     }
 
     // TODO: Determine correct error handling.
@@ -360,7 +378,8 @@ impl Surface {
             frame: None,
             node: None,
             window_geometry: None,
-            pixel_scale: (1.0, 1.0),
+            parent: None,
+            offset: None,
             pending_commands: Vec::new(),
             subsurfaces: vec![(id.into(), None)],
             callbacks: VecDeque::new(),
@@ -621,6 +640,8 @@ impl Surface {
             node: None,
             window_geometry: None,
             pixel_scale: (1.0, 1.0),
+            parent: None,
+            offset: None,
             pending_commands: Vec::new(),
             subsurfaces: vec![(id.into(), None)],
         }
@@ -628,14 +649,12 @@ impl Surface {
 
     pub fn set_pixel_scale(&mut self, scale_x: f32, scale_y: f32) {
         self.pixel_scale = (scale_x, scale_y);
+        // Reset size to trigger a re-layout.
+        self.size = Size { width: 0, height: 0 };
     }
 
-    pub fn window_geometry(&self) -> Rect {
-        if let Some(window_geometry) = self.window_geometry.as_ref() {
-            Rect { ..*window_geometry }
-        } else {
-            Rect { x: 0, y: 0, width: self.size.width, height: self.size.height }
-        }
+    pub fn pixel_scale(&self) -> (f32, f32) {
+        self.pixel_scale
     }
 
     /// Assigns the scenic session for this surface.
@@ -697,6 +716,12 @@ impl Surface {
                 let buffer = attachment.buffer.clone();
                 let material = scenic::Material::new(node.scenic.as_inner().clone());
                 let image3 = buffer.image_resource(&node.scenic.as_inner());
+                // Set translucent color to enable alpha blending if the buffer has
+                // an alpha channel.
+                let alpha = if buffer.has_alpha() { 254 } else { 255 };
+                let color =
+                    fidl_fuchsia_ui_gfx::ColorRgba { red: 255, green: 255, blue: 255, alpha };
+                material.set_color(color);
                 material.set_texture_resource(Some(&image3));
                 node.surface_node.set_material(&material);
                 let previous_size = mem::replace(&mut self.size, buffer.image_size());
@@ -921,39 +946,40 @@ impl Surface {
         callbacks: Vec<ObjectRef<Callback>>,
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "Surface::present");
-        let task_queue = client.task_queue();
-        let session = this
-            .get(client)?
-            .session()
-            .ok_or(format_err!("Unable to present surface without a session."))?;
-        fasync::Task::local(
-            session
-                .present(0)
-                .map_ok(move |info| {
-                    ftrace::duration!("wayland", "XdgToplevelView::present_callback");
-                    ftrace::flow_end!("gfx", "present_callback", info.presentation_time);
-                    if !callbacks.is_empty() {
-                        // If we have a frame callback, invoke it and provide
-                        // the presentation time received in the present
-                        // callback.
-                        task_queue.post(move |client| {
-                            // If the underlying surface has been destroyed then
-                            // skip sending the done event.
-                            if this.get(client).is_ok() {
-                                callbacks.iter().try_for_each(|callback| {
-                                    let time_ms = (info.presentation_time / 1_000_000) as u32;
-                                    Callback::done(*callback, client, time_ms)
-                                })?;
-                            }
-                            callbacks
-                                .iter()
-                                .try_for_each(|callback| client.delete_id(callback.id()))
-                        });
-                    }
-                })
-                .unwrap_or_else(|e| eprintln!("present error: {:?}", e)),
-        )
-        .detach();
+        if let Ok(surface) = this.get(client) {
+            let task_queue = client.task_queue();
+            let session = surface
+                .session()
+                .ok_or(format_err!("Unable to present surface without a session."))?;
+            fasync::Task::local(
+                session
+                    .present(0)
+                    .map_ok(move |info| {
+                        ftrace::duration!("wayland", "XdgToplevelView::present_callback");
+                        ftrace::flow_end!("gfx", "present_callback", info.presentation_time);
+                        if !callbacks.is_empty() {
+                            // If we have a frame callback, invoke it and provide
+                            // the presentation time received in the present
+                            // callback.
+                            task_queue.post(move |client| {
+                                // If the underlying surface has been destroyed then
+                                // skip sending the done event.
+                                if this.get(client).is_ok() {
+                                    callbacks.iter().try_for_each(|callback| {
+                                        let time_ms = (info.presentation_time / 1_000_000) as u32;
+                                        Callback::done(*callback, client, time_ms)
+                                    })?;
+                                }
+                                callbacks
+                                    .iter()
+                                    .try_for_each(|callback| client.delete_id(callback.id()))
+                            });
+                        }
+                    })
+                    .unwrap_or_else(|e| eprintln!("present error: {:?}", e)),
+            )
+            .detach();
+        }
         Ok(())
     }
 }
@@ -1077,7 +1103,7 @@ impl SurfaceRole {
         ftrace::duration!("wayland", "SurfaceRole::commit");
         match self {
             SurfaceRole::XdgSurface(xdg_surface_ref) => {
-                XdgSurface::finalize_commit(xdg_surface_ref, client)
+                XdgSurface::finalize_commit(*xdg_surface_ref, client)
             }
             SurfaceRole::Subsurface(subsurface_ref) => {
                 Ok(subsurface_ref.get_mut(client)?.finalize_commit(callbacks))

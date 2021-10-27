@@ -264,6 +264,7 @@ impl<ObjectType> ObjectRefSet<ObjectType> {
         self.0.remove(&id)
     }
 
+    #[cfg(not(feature = "flatland"))]
     pub fn iter(&self) -> impl Iterator<Item = &ObjectRef<ObjectType>> {
         self.0.iter()
     }

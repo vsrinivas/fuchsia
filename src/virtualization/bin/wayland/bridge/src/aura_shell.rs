@@ -60,7 +60,17 @@ impl RequestReceiver<ZauraSurface> for AuraSurface {
     ) -> Result<(), Error> {
         match request {
             ZauraSurfaceRequest::SetFrame { .. } => {}
-            ZauraSurfaceRequest::SetParent { .. } => {}
+            ZauraSurfaceRequest::SetParent { parent, x, y } => {
+                let maybe_parent_ref = if parent != 0 {
+                    let parent_ref: ObjectRef<AuraSurface> = parent.into();
+                    Some(parent_ref.get(client)?.surface_ref)
+                } else {
+                    None
+                };
+                let surface_ref = this.get(client)?.surface_ref;
+                let surface = surface_ref.get_mut(client)?;
+                surface.set_parent_and_offset(maybe_parent_ref, x, y);
+            }
             ZauraSurfaceRequest::SetFrameColors { .. } => {}
             ZauraSurfaceRequest::SetStartupId { startup_id } => {
                 let surface_id = this.get(client)?.surface_ref.id();

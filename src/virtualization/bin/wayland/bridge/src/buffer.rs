@@ -156,17 +156,13 @@ impl Image {
 pub struct Buffer {
     // The scenic `Image` object that will back this buffer.
     image: Rc<Image>,
+    // Set to true if buffer contains an alpha channel.
+    // TODO(fxbug.dev/87437): Use this when Flatland has blending control support.
+    #[cfg(not(feature = "flatland"))]
+    has_alpha: bool,
 }
 
 impl Buffer {
-    pub fn from_import_token(
-        import_token: Rc<composition::BufferCollectionImportToken>,
-        image_size: Size,
-    ) -> Self {
-        let image = Image::new(import_token, image_size);
-        Buffer { image: Rc::new(image) }
-    }
-
     pub fn image_size(&self) -> Size {
         self.image.size()
     }
@@ -174,6 +170,15 @@ impl Buffer {
 
 #[cfg(feature = "flatland")]
 impl Buffer {
+    pub fn from_import_token(
+        import_token: Rc<composition::BufferCollectionImportToken>,
+        image_size: Size,
+        _has_alpha: bool,
+    ) -> Self {
+        let image = Image::new(import_token, image_size);
+        Buffer { image: Rc::new(image) }
+    }
+
     pub fn image_content(&self, instance_id: ImageInstanceId, flatland: &Flatland) -> Rc<Content> {
         ftrace::duration!("wayland", "Buffer::image_content");
         self.image.scenic_content(instance_id, flatland)
@@ -182,9 +187,22 @@ impl Buffer {
 
 #[cfg(not(feature = "flatland"))]
 impl Buffer {
+    pub fn from_import_token(
+        import_token: Rc<composition::BufferCollectionImportToken>,
+        image_size: Size,
+        has_alpha: bool,
+    ) -> Self {
+        let image = Image::new(import_token, image_size);
+        Buffer { image: Rc::new(image), has_alpha }
+    }
+
     pub fn image_resource(&self, session: &scenic::SessionPtr) -> Rc<scenic::Image3> {
         ftrace::duration!("wayland", "Buffer::image_resource");
         self.image.scenic_resource(session)
+    }
+
+    pub fn has_alpha(&self) -> bool {
+        self.has_alpha
     }
 }
 

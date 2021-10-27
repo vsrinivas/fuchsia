@@ -29,6 +29,7 @@ impl Output {
             if let Ok(display_info) = result {
                 let display_info = DisplayInfo { ..display_info };
                 task_queue.post(move |client| {
+                    client.set_display_info(&display_info);
                     Self::post_display_info(this.into(), client, &display_info)?;
                     Ok(())
                 });
