@@ -1,0 +1,20 @@
+{
+	"audio": true,
+	"pointing_device": "touch",
+	"window_width": 1280,
+	"window_height": 800,
+	"ram_mb": 8192,
+	"image_size": "2G",
+	"port_map": {
+		"ports": [
+			{
+				"guest_port": 22,
+				"host_port": 8022
+			},
+			{
+				"guest_port": 2345,
+				"host_port": 2345
+			}
+		]
+	}
+}
