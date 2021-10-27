@@ -546,7 +546,7 @@ successive scans are candidates for eviction.
 This option only has an effect if `kernel.page-scanner.page-table-eviction-policy=always`.
 
 ### kernel.page-scanner.min-aging-interval=\<uint32_t>
-**Default:** `0x2`
+**Default:** `0x5`
 
 Sets the minimum time, in seconds, between successive aging events. Higher values here will provide
 a more stable active set with less chance of thrashing like behavior and less time spent harvesting
@@ -556,7 +556,7 @@ for eviction.
 This value should be less than or equal to `kernel.page-scanner.max-aging-interval`.
 
 ### kernel.page-scanner.max-aging-interval=\<uint32_t>
-**Default:** `0xf`
+**Default:** `0x5`
 
 Sets the maximum time, in seconds, between successive aging events. This time is the potential worst
 case coarseness of page age information, and higher values can result in not having sufficient age
@@ -567,7 +567,7 @@ eviction happens a sub-optimal page is chosen.
 This value should be greater than or equal to `kernel.page-scanner.min-aging-interval`.
 
 ### kernel.page-scanner.active-ratio-multiplier=\<uint32_t>
-**Default:** `0x4`
+**Default:** `0x0`
 
 Controls the allowable ratio of active pages, compared to inactive pages, before aging is triggered.
 The ratio is represented as a multiplier to simplify the kernel algorithm which is
