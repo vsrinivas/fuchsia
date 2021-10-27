@@ -205,21 +205,21 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  fidl::Arena allocator;
-  auto capabilities = node.CreateCapabilities(allocator);
+  fidl::Arena arena;
+  auto capabilities = node.CreateCapabilities(arena);
   if (capabilities.is_error()) {
     return capabilities.take_error();
   }
   auto binary = driver::ProgramValue(start_info.program(), "binary").value_or("");
-  fdf::wire::DriverStartArgs args(allocator);
-  args.set_node(allocator, std::move(client_end))
-      .set_symbols(allocator, node.symbols())
-      .set_url(allocator, start_info.resolved_url())
-      .set_program(allocator, start_info.program())
-      .set_ns(allocator, start_info.ns())
-      .set_outgoing_dir(allocator, std::move(start_info.outgoing_dir()))
+  fdf::wire::DriverStartArgs args(arena);
+  args.set_node(arena, std::move(client_end))
+      .set_symbols(arena, node.symbols())
+      .set_url(arena, start_info.resolved_url())
+      .set_program(arena, start_info.program())
+      .set_ns(arena, start_info.ns())
+      .set_outgoing_dir(arena, std::move(start_info.outgoing_dir()))
       .set_capabilities(
-          allocator, fidl::VectorView<fdf::wire::DriverCapabilities>::FromExternal(*capabilities));
+          arena, fidl::VectorView<fdf::wire::DriverCapabilities>::FromExternal(*capabilities));
   auto start = driver_host_->Start(args, std::move(endpoints->server));
   if (!start.ok()) {
     LOGF(ERROR, "Failed to start driver '%s' in driver host: %s", binary.data(),
@@ -295,7 +295,7 @@ std::string Node::TopoName() const {
 }
 
 zx::status<std::vector<fdf::wire::DriverCapabilities>> Node::CreateCapabilities(
-    fidl::AnyArena& allocator) const {
+    fidl::AnyArena& arena) const {
   std::vector<fdf::wire::DriverCapabilities> capabilities;
   capabilities.reserve(parents_.size());
   for (const Node* parent : parents_) {
@@ -312,10 +312,10 @@ zx::status<std::vector<fdf::wire::DriverCapabilities>> Node::CreateCapabilities(
     }
     // If this is a composite node, then the offers come from the parent nodes.
     auto parent_offers = parents_.size() == 1 ? offers() : parent->offers();
-    capabilities.emplace_back(allocator)
-        .set_node_name(allocator, fidl::StringView::FromExternal(parent->name()))
-        .set_offers(allocator, std::move(parent_offers))
-        .set_exposed_dir(allocator, std::move(*dir));
+    capabilities.emplace_back(arena)
+        .set_node_name(arena, fidl::StringView::FromExternal(parent->name()))
+        .set_offers(arena, std::move(parent_offers))
+        .set_exposed_dir(arena, std::move(*dir));
   }
   return zx::ok(std::move(capabilities));
 }
@@ -449,7 +449,7 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
         completer.ReplyError(fdf::wire::NodeError::kOfferAlreadyExists);
         return;
       }
-      child->offers_.emplace_back(child->allocator_, offer.get());
+      child->offers_.emplace_back(child->arena_, offer.get());
     }
   }
 
@@ -478,9 +478,9 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
         completer.ReplyError(fdf::wire::NodeError::kSymbolAlreadyExists);
         return;
       }
-      fdf::wire::NodeSymbol node_symbol(child->allocator_);
-      node_symbol.set_name(child->allocator_, child->allocator_, symbol.name().get());
-      node_symbol.set_address(child->allocator_, symbol.address());
+      fdf::wire::NodeSymbol node_symbol(child->arena_);
+      node_symbol.set_name(child->arena_, child->arena_, symbol.name().get());
+      node_symbol.set_address(child->arena_, symbol.address());
       child->symbols_.emplace_back(std::move(node_symbol));
     }
   }
@@ -831,12 +831,12 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
                                   .collection = fidl::StringView::FromExternal(collection)},
             std::move(server_end), std::move(open_callback));
       };
-  fidl::Arena allocator;
-  fdecl::wire::Child child_decl(allocator);
-  child_decl.set_name(allocator, fidl::StringView::FromExternal(name))
-      .set_url(allocator, fidl::StringView::FromExternal(url))
-      .set_startup(allocator, fdecl::wire::StartupMode::kLazy);
-  fcomponent::wire::CreateChildArgs child_args(allocator);
+  fidl::Arena arena;
+  fdecl::wire::Child child_decl(arena);
+  child_decl.set_name(arena, fidl::StringView::FromExternal(name))
+      .set_url(arena, fidl::StringView::FromExternal(url))
+      .set_startup(arena, fdecl::wire::StartupMode::kLazy);
+  fcomponent::wire::CreateChildArgs child_args(arena);
   fprocess::wire::HandleInfo handle_info;
   if (token) {
     handle_info = {
@@ -844,7 +844,7 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
         .id = kTokenId,
     };
     child_args.set_numbered_handles(
-        allocator, fidl::VectorView<fprocess::wire::HandleInfo>::FromExternal(&handle_info, 1));
+        arena, fidl::VectorView<fprocess::wire::HandleInfo>::FromExternal(&handle_info, 1));
   }
   realm_->CreateChild(
       fdecl::wire::CollectionRef{.name = fidl::StringView::FromExternal(collection)}, child_decl,

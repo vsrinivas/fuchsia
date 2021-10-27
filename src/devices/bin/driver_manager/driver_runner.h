@@ -96,7 +96,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
 
   std::string TopoName() const;
   zx::status<std::vector<fuchsia_driver_framework::wire::DriverCapabilities>> CreateCapabilities(
-      fidl::AnyArena& allocator) const;
+      fidl::AnyArena& arena) const;
   void OnBind() const;
   bool Unbind(std::unique_ptr<AsyncRemove>& async_remove);
   void Remove();
@@ -114,7 +114,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   fit::nullable<DriverBinder*> driver_binder_;
   async_dispatcher_t* const dispatcher_;
 
-  fidl::Arena<128> allocator_;
+  fidl::Arena<128> arena_;
   std::vector<fidl::StringView> offers_;
   std::vector<fuchsia_driver_framework::wire::NodeSymbol> symbols_;
 

@@ -20,10 +20,10 @@ TEST(NamespaceTest, CreateAndConnect) {
 
   auto pkg = fidl::CreateEndpoints<fuchsia_io::Directory>();
   EXPECT_EQ(ZX_OK, pkg.status_value());
-  fidl::Arena allocator;
-  fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 1);
-  ns_entries[0].Allocate(allocator);
-  ns_entries[0].set_path(allocator, "/pkg").set_directory(allocator, std::move(pkg->client));
+  fidl::Arena arena;
+  fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 1);
+  ns_entries[0].Allocate(arena);
+  ns_entries[0].set_path(arena, "/pkg").set_directory(arena, std::move(pkg->client));
   auto ns = driver::Namespace::Create(ns_entries);
   ASSERT_TRUE(ns.is_ok());
 
@@ -53,10 +53,10 @@ TEST(NamespaceTest, CreateAndConnect) {
 TEST(NamespaceTest, CreateFailed) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
-  fidl::Arena allocator;
-  fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 1);
-  ns_entries[0].Allocate(allocator);
-  ns_entries[0].set_path(allocator, "/pkg").set_directory(allocator);
+  fidl::Arena arena;
+  fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 1);
+  ns_entries[0].Allocate(arena);
+  ns_entries[0].set_path(arena, "/pkg").set_directory(arena);
   auto ns = driver::Namespace::Create(ns_entries);
   ASSERT_TRUE(ns.is_error());
 }

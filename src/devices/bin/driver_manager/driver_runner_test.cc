@@ -258,26 +258,26 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
 
   fidl::ClientEnd<frunner::ComponentController> StartDriver(DriverRunner& driver_runner,
                                                             Driver driver) {
-    fidl::Arena allocator;
+    fidl::Arena arena;
 
-    fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(allocator, 2);
-    program_entries[0].key.Set(allocator, "binary");
-    program_entries[0].value.set_str(allocator, allocator, driver.binary);
-    program_entries[1].key.Set(allocator, "colocate");
-    program_entries[1].value.set_str(allocator, allocator, driver.colocate ? "true" : "false");
+    fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(arena, 2);
+    program_entries[0].key.Set(arena, "binary");
+    program_entries[0].value.set_str(arena, arena, driver.binary);
+    program_entries[1].key.Set(arena, "colocate");
+    program_entries[1].value.set_str(arena, arena, driver.colocate ? "true" : "false");
 
-    fdata::wire::Dictionary program(allocator);
-    program.set_entries(allocator, std::move(program_entries));
+    fdata::wire::Dictionary program(arena);
+    program.set_entries(arena, std::move(program_entries));
 
     auto outgoing_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     EXPECT_EQ(ZX_OK, outgoing_endpoints.status_value());
 
-    frunner::wire::ComponentStartInfo start_info(allocator);
-    start_info.set_resolved_url(allocator, allocator, driver.url)
-        .set_program(allocator, std::move(program))
-        .set_ns(allocator)
-        .set_outgoing_dir(allocator, std::move(outgoing_endpoints->server))
-        .set_numbered_handles(allocator, realm().GetHandles());
+    frunner::wire::ComponentStartInfo start_info(arena);
+    start_info.set_resolved_url(arena, arena, driver.url)
+        .set_program(arena, std::move(program))
+        .set_ns(arena)
+        .set_outgoing_dir(arena, std::move(outgoing_endpoints->server))
+        .set_numbered_handles(arena, realm().GetHandles());
 
     auto controller_endpoints = fidl::CreateEndpoints<frunner::ComponentController>();
     EXPECT_EQ(ZX_OK, controller_endpoints.status_value());

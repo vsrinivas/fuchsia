@@ -7,11 +7,10 @@
 namespace driver::testing {
 
 zx::status<Namespace> CreateNamespace(fidl::ClientEnd<fuchsia_io::Directory> client_end) {
-  fidl::Arena allocator;
-  fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry> ns_entries(allocator,
-                                                                                       1);
-  ns_entries[0].Allocate(allocator);
-  ns_entries[0].set_path(allocator, "/svc").set_directory(allocator, std::move(client_end));
+  fidl::Arena arena;
+  fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry> ns_entries(arena, 1);
+  ns_entries[0].Allocate(arena);
+  ns_entries[0].set_path(arena, "/svc").set_directory(arena, std::move(client_end));
   return Namespace::Create(ns_entries);
 }
 

@@ -11,10 +11,10 @@ namespace fdf = fuchsia_driver_framework;
 namespace frunner = fuchsia_component_runner;
 
 TEST(StartArgsTest, SymbolValue) {
-  fidl::Arena allocator;
-  fidl::VectorView<fdf::wire::NodeSymbol> symbol_entries(allocator, 1);
-  symbol_entries[0].Allocate(allocator);
-  symbol_entries[0].set_name(allocator, "sym").set_address(allocator, 0xfeed);
+  fidl::Arena arena;
+  fidl::VectorView<fdf::wire::NodeSymbol> symbol_entries(arena, 1);
+  symbol_entries[0].Allocate(arena);
+  symbol_entries[0].set_name(arena, "sym").set_address(arena, 0xfeed);
 
   EXPECT_EQ(0xfeedu, *driver::SymbolValue<zx_vaddr_t>(symbol_entries, "sym"));
   EXPECT_EQ(ZX_ERR_NOT_FOUND,
@@ -22,14 +22,14 @@ TEST(StartArgsTest, SymbolValue) {
 }
 
 TEST(StartArgsTest, ProgramValue) {
-  fidl::Arena allocator;
-  fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(allocator, 2);
-  program_entries[0].key.Set(allocator, "key-for-str");
-  program_entries[0].value.set_str(allocator, "value-for-str");
-  program_entries[1].key.Set(allocator, "key-for-strvec");
-  program_entries[1].value.set_str_vec(allocator);
-  fdata::wire::Dictionary program(allocator);
-  program.set_entries(allocator, std::move(program_entries));
+  fidl::Arena arena;
+  fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(arena, 2);
+  program_entries[0].key.Set(arena, "key-for-str");
+  program_entries[0].value.set_str(arena, "value-for-str");
+  program_entries[1].key.Set(arena, "key-for-strvec");
+  program_entries[1].value.set_str_vec(arena);
+  fdata::wire::Dictionary program(arena);
+  program.set_entries(arena, std::move(program_entries));
 
   EXPECT_EQ("value-for-str", *driver::ProgramValue(program, "key-for-str"));
   EXPECT_EQ(ZX_ERR_WRONG_TYPE, driver::ProgramValue(program, "key-for-strvec").error_value());
@@ -42,10 +42,10 @@ TEST(StartArgsTest, ProgramValue) {
 TEST(StartArgsTest, NsValue) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(ZX_OK, endpoints.status_value());
-  fidl::Arena allocator;
-  fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 1);
-  ns_entries[0].Allocate(allocator);
-  ns_entries[0].set_path(allocator, "/svc").set_directory(allocator, std::move(endpoints->client));
+  fidl::Arena arena;
+  fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 1);
+  ns_entries[0].Allocate(arena);
+  ns_entries[0].set_path(arena, "/svc").set_directory(arena, std::move(endpoints->client));
 
   auto svc = driver::NsValue(ns_entries, "/svc");
   zx_info_handle_basic_t client_info = {}, server_info = {};
