@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env fuchsia-vendored-python
 
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -157,7 +157,7 @@ def main():
         gn_binary, os.path.join(fuchsia_root, args.out))
 
     disallowed_dependencies = {}
-    for label, target in targets.iteritems():
+    for label, target in targets.items():
         if target['type'] not in target_types_to_check:
             continue
         label_area = area_for_label(fuchsia_root, label)
@@ -171,20 +171,20 @@ def main():
     total_count = 0
     for area in sorted(disallowed_dependencies.keys()):
         disallowed_deps = disallowed_dependencies[area]
-        print 'Area %s has %d disallowed dependencies:' % (
-            area, disallowed_deps.count)
+        print('Area %s has %d disallowed dependencies:' % (
+            area, disallowed_deps.count))
         total_count = total_count + disallowed_deps.count
 
         for label in sorted(disallowed_deps.labels.keys()):
             bad_deps = disallowed_deps.labels[label]
-            print '  Target %s has %d disallowed dependencies:' % (
-                label, len(bad_deps))
+            print('  Target %s has %d disallowed dependencies:' % (
+                label, len(bad_deps)))
             for dep in sorted(bad_deps):
-                print '    %s' % dep
-            print
-        print
+                print('    %s' % dep)
+            print()
+        print()
 
-    print 'Found %d dependency errors' % total_count
+    print('Found %d dependency errors' % total_count)
     if total_count != 0:
         return 1
     return 0

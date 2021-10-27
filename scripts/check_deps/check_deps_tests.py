@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env fuchsia-vendored-python
 
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -73,7 +73,7 @@ class TestCheckdepsMethods(unittest.TestCase):
     def test_area_for_label(self):
         for test in area_for_label_cases:
             label_area = check_deps.area_for_label(self.test_dir, test[0])
-            self.assertEquals(label_area, test[1])
+            self.assertEqual(label_area, test[1])
 
     def test_dep_allowed(self):
         ignore_exclusions = False
