@@ -63,7 +63,8 @@ config("incremental") {
 # Best practices for Rust binaries that go into size-constrained bootfs.
 config("bootfs") {
   # Optimize for size.
-  rustflags = [ "-Copt-level=z" ]
+  # TODO(fxbug.dev/84386): consider "z" instead of "s"
+  rustflags = [ "-Copt-level=s" ]
 
   # Fewer codegen units produce smaller binaries at the cost of slower
   # incremental builds.
