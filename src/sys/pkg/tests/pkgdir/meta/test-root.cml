@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [
+        "//sdk/lib/driver_test_realm/meta/client.shard.cml",
+        "//sdk/lib/driver_test_realm/platform/meta/client.shard.cml",
+    ],
     children: [
-        {
-            name: "isolated_devmgr",
-            url: "fuchsia-pkg://fuchsia.com/pkgdir-integration-tests#meta/isolated-devmgr.cm",
-        },
         {
             name: "pkg_harness",
             url: "fuchsia-pkg://fuchsia.com/pkgdir-integration-tests#meta/pkg-harness.cm",
@@ -17,6 +17,11 @@
         },
     ],
     offer: [
+        {
+            directory: "dev",
+            from: "#driver_test_realm",
+            to: [ "#pkg_harness" ],
+        },
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
@@ -31,19 +36,11 @@
                 "fuchsia.sys.Launcher",
             ],
             from: "parent",
-            to: [
-                "#isolated_devmgr",
-                "#pkg_harness",
-            ],
+            to: [ "#pkg_harness" ],
         },
         {
             storage: "tmp",
             from: "parent",
-            to: [ "#pkg_harness" ],
-        },
-        {
-            directory: "dev",
-            from: "#isolated_devmgr",
             to: [ "#pkg_harness" ],
         },
         {

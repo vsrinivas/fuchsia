@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
-import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 
 rustc_test("driver") {
   name = "pkgdir_integration_test"
@@ -42,16 +41,10 @@ fuchsia_component("pkgdir-integration-test") {
   deps = [ ":driver" ]
 }
 
-isolated_devmgr_v2_component("isolated-devmgr") {
-  deps = [
-    "//src/devices/bus/drivers/platform",
-    "//src/storage/testing:storage_drivers",
-  ]
-}
-
 fuchsia_component("test-root") {
   testonly = true
   manifest = "meta/test-root.cml"
+  deps = [ "//src/storage/testing:driver_test_realm" ]
 }
 
 fuchsia_test_package("pkgdir-integration-tests") {
@@ -62,7 +55,6 @@ fuchsia_test_package("pkgdir-integration-tests") {
   }
   test_components = [ ":test-root" ]
   deps = [
-    ":isolated-devmgr",
     ":pkgdir-integration-test",
     "pkg-harness",
   ]
