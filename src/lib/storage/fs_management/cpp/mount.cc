@@ -221,6 +221,10 @@ disk_format_t detect_disk_format_impl(int fd, DiskFormatLogVerbosity verbosity) 
     return DISK_FORMAT_F2FS;
   }
 
+  if (!memcmp(data, fxfs_magic, sizeof(fxfs_magic))) {
+    return DISK_FORMAT_FXFS;
+  }
+
   if (verbosity == DiskFormatLogVerbosity::Verbose) {
     // Log a hexdump of the bytes we looked at and didn't find any magic in.
     fprintf(stderr, "detect_disk_format: did not recognize format.  Looked at:\n");

@@ -73,6 +73,18 @@ int parse_args(int argc, char** argv, MountOptions* options, char** devicepath, 
   return 0;
 }
 
+bool should_use_admin_protocol(disk_format_t df) {
+  // Newer filesystems (esp. written in rust) don't support the admin protocol, so we won't open it
+  // with O_ADMIN.
+  switch (df) {
+    case DISK_FORMAT_FXFS:
+    case DISK_FORMAT_FAT:
+      return false;
+    default:
+      return true;
+  }
+}
+
 int main(int argc, char** argv) {
   char* devicepath;
   char* mountpath;
@@ -91,6 +103,7 @@ int main(int argc, char** argv) {
     return -1;
   }
   disk_format_t df = detect_disk_format(fd);
+  options.admin = should_use_admin_protocol(df);
   zx_status_t status = mount(fd, mountpath, df, options, launch_logs_async);
   if (status != ZX_OK) {
     fprintf(stderr, "fs_mount: Error while mounting: %d\n", status);

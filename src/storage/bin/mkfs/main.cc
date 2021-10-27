@@ -27,10 +27,9 @@ namespace {
 struct {
   const char* name;
   disk_format_t df;
-} FILESYSTEMS[] = {
-    {"blobfs", DISK_FORMAT_BLOBFS},       {"minfs", DISK_FORMAT_MINFS}, {"fat", DISK_FORMAT_FAT},
-    {"factoryfs", DISK_FORMAT_FACTORYFS}, {"f2fs", DISK_FORMAT_F2FS},
-};
+} FILESYSTEMS[] = {{"blobfs", DISK_FORMAT_BLOBFS}, {"minfs", DISK_FORMAT_MINFS},
+                   {"fat", DISK_FORMAT_FAT},       {"factoryfs", DISK_FORMAT_FACTORYFS},
+                   {"f2fs", DISK_FORMAT_F2FS},     {"fxfs", DISK_FORMAT_FXFS}};
 
 int usage(void) {
   fprintf(stderr, "usage: mkfs [ <option>* ] devicepath filesystem\n");

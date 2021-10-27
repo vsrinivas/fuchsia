@@ -72,6 +72,8 @@ static const uint8_t f2fs_magic[4] = {
     0xf2,
 };
 
+static const uint8_t fxfs_magic[8] = {0xf5, 0x20, 0x2d, 0x52, 0xc7, 0x41, 0x47, 0x51};
+
 disk_format_t detect_disk_format(int fd);
 disk_format_t detect_disk_format_log_unknown(int fd);
 
