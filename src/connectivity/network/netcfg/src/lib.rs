@@ -48,6 +48,7 @@ use fuchsia_zircon::{self as zx, DurationNum as _};
 
 use anyhow::{anyhow, Context as _};
 use async_trait::async_trait;
+use async_utils::stream::TryFlattenUnorderedExt as _;
 use dns_server_watcher::{DnsServers, DnsServersUpdateSource, DEFAULT_DNS_PORT};
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
@@ -55,7 +56,7 @@ use log::{debug, error, info, trace, warn};
 use net_declare::fidl_ip_v4;
 use serde::Deserialize;
 
-use self::devices::{Device as _, DeviceInfo};
+use self::devices::DeviceInfo;
 use self::errors::ContextExt as _;
 
 /// Interface metrics.
@@ -99,9 +100,6 @@ impl From<Metric> for u32 {
         u
     }
 }
-
-/// Path to devfs.
-const DEV_PATH: &str = "/dev";
 
 /// File that stores persistent interface configurations.
 const PERSISTED_INTERFACE_CONFIG_FILEPATH: &str = "/data/net_interfaces.cfg.json";
@@ -269,6 +267,12 @@ impl Config {
     }
 }
 
+#[derive(Clone, Debug)]
+struct InterfaceConfig {
+    name: String,
+    metric: u32,
+}
+
 // We use Compare-And-Swap (CAS) protocol to update filter rules. $get_rules returns the current
 // generation number. $update_rules will send it with new rules to make sure we are updating the
 // intended generation. If the generation number doesn't match, $update_rules will return a
@@ -401,6 +405,7 @@ pub struct NetCfg<'a> {
     lookup_admin: fnet_name::LookupAdminProxy,
     filter: fnet_filter::FilterProxy,
     interface_state: fnet_interfaces::StateProxy,
+    installer: fidl_fuchsia_net_interfaces_admin::InstallerProxy,
     dhcp_server: Option<fnet_dhcp::Server_Proxy>,
     dhcpv6_client_provider: Option<fnet_dhcpv6::ClientProviderProxy>,
 
@@ -410,10 +415,11 @@ pub struct NetCfg<'a> {
 
     filter_enabled_interface_types: HashSet<InterfaceType>,
 
-    // TODO(fxbug.dev/67407) These two hashmaps are both indexed by interface ID and store
-    // per-interface state, and should be merged.
+    // TODO(https://fxbug.dev/67407): These hashmaps are all indexed by
+    // interface ID and store per-interface state, and should be merged.
     interface_states: HashMap<u64, InterfaceState>,
     interface_properties: HashMap<u64, fnet_interfaces_ext::Properties>,
+    interface_control: HashMap<u64, fidl_fuchsia_net_interfaces_ext::admin::Control>,
     interface_metrics: InterfaceMetrics,
 
     dns_servers: DnsServers,
@@ -539,6 +545,9 @@ impl<'a> NetCfg<'a> {
             optional_svc_connect::<fnet_dhcpv6::ClientProviderMarker>(&svc_dir)
                 .await
                 .context("could not connect to DHCPv6 client provider")?;
+        let installer = svc_connect::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>(&svc_dir)
+            .await
+            .context("could not connect to installer")?;
         let persisted_interface_config =
             interface::FileBackedConfig::load(&PERSISTED_INTERFACE_CONFIG_FILEPATH)
                 .context("error loading persistent interface configurations")?;
@@ -550,12 +559,14 @@ impl<'a> NetCfg<'a> {
             filter,
             interface_state,
             dhcp_server,
+            installer,
             dhcpv6_client_provider,
             allow_virtual_devices,
             persisted_interface_config,
             filter_enabled_interface_types,
             interface_properties: HashMap::new(),
             interface_states: HashMap::new(),
+            interface_control: HashMap::new(),
             interface_metrics,
             dns_servers: Default::default(),
         })
@@ -675,23 +686,19 @@ impl<'a> NetCfg<'a> {
     /// The device directory will be monitored for device events and the netstack will be
     /// configured with a new interface on new device discovery.
     async fn run(&mut self) -> Result<(), anyhow::Error> {
-        let ethdev_dir_path = &format!("{}/{}", DEV_PATH, devices::EthernetDevice::PATH);
-        let mut ethdev_dir_watcher_stream = fvfs_watcher::Watcher::new(
-            open_directory_in_namespace(ethdev_dir_path, OPEN_RIGHT_READABLE)
-                .context("error opening ethdev directory")?,
-        )
-        .await
-        .with_context(|| format!("creating watcher for ethdevs {}", ethdev_dir_path))?
-        .fuse();
+        let ethdev_stream = self
+            .create_device_stream::<devices::EthernetDevice>()
+            .await
+            .context("create ethernet device stream")?
+            .fuse();
+        futures::pin_mut!(ethdev_stream);
 
-        let netdev_dir_path = &format!("{}/{}", DEV_PATH, devices::NetworkDevice::PATH);
-        let mut netdev_dir_watcher_stream = fvfs_watcher::Watcher::new(
-            open_directory_in_namespace(netdev_dir_path, OPEN_RIGHT_READABLE)
-                .context("error opening netdev directory")?,
-        )
-        .await
-        .with_context(|| format!("error creating watcher for netdevs {}", netdev_dir_path))?
-        .fuse();
+        let netdev_stream = self
+            .create_device_stream::<devices::NetworkDevice>()
+            .await
+            .context("create netdevice stream")?
+            .fuse();
+        futures::pin_mut!(netdev_stream);
 
         let if_watcher_event_stream =
             fnet_interfaces_ext::event_stream_from_state(&self.interface_state)
@@ -747,29 +754,23 @@ impl<'a> NetCfg<'a> {
 
         loop {
             let () = futures::select! {
-                ethdev_dir_watcher_res = ethdev_dir_watcher_stream.try_next() => {
-                    let event = ethdev_dir_watcher_res
-                        .with_context(|| format!("error watching ethdevs at {}", ethdev_dir_path))?
-                        .ok_or_else(|| anyhow::anyhow!(
-                            "ethdev directory {} watcher stream ended unexpectedly",
-                            ethdev_dir_path
-                        ))?;
+                ethdev_res = ethdev_stream.try_next() => {
+                    let instance = ethdev_res
+                        .context("error retrieving ethernet instance")?
+                        .ok_or_else(|| anyhow::anyhow!("ethdev instance watcher stream ended unexpectedly"))?;
                     self
-                        .handle_dev_event::<devices::EthernetDevice>(ethdev_dir_path, event)
+                        .handle_device_instance::<devices::EthernetDevice>(instance)
                         .await
-                        .context("handle ethdev event")?
+                        .context("handle ethdev instance")?
                 }
-                netdev_dir_watcher_res = netdev_dir_watcher_stream.try_next() => {
-                    let event = netdev_dir_watcher_res
-                        .with_context(|| format!("error watching netdevs at {}", netdev_dir_path))?
-                        .ok_or_else(|| anyhow::anyhow!(
-                            "netdev directory {} watcher stream ended unexpectedly",
-                            netdev_dir_path
-                        ))?;
+                netdev_res = netdev_stream.try_next() => {
+                    let instance = netdev_res
+                        .context("error retrieving netdev instance")?
+                        .ok_or_else(|| anyhow::anyhow!("netdev instance watcher stream ended unexpectedly"))?;
                     self
-                        .handle_dev_event::<devices::NetworkDevice>(netdev_dir_path, event)
+                        .handle_device_instance::<devices::NetworkDevice>(instance)
                         .await
-                        .context("handle netdev event")?
+                        .context("handle netdev instance")?
                 }
                 if_watcher_res = if_watcher_event_stream.try_next() => {
                     let event = if_watcher_res
@@ -1083,108 +1084,139 @@ impl<'a> NetCfg<'a> {
     }
 
     /// Handle an event from `D`'s device directory.
-    async fn handle_dev_event<D: devices::Device>(
-        &mut self,
-        dev_dir_path: &str,
-        event: fvfs_watcher::WatchMessage,
-    ) -> Result<(), anyhow::Error> {
-        let fvfs_watcher::WatchMessage { event, filename } = event;
-        trace!("got {:?} {} event for {}", event, D::NAME, filename.display());
+    async fn create_device_stream<D: devices::Device>(
+        &self,
+    ) -> Result<impl futures::Stream<Item = Result<D::DeviceInstance, anyhow::Error>>, anyhow::Error>
+    {
+        let installer = self.installer.clone();
+        let stream_of_streams = fvfs_watcher::Watcher::new(
+            open_directory_in_namespace(D::PATH, OPEN_RIGHT_READABLE)
+                .with_context(|| format!("error opening {} directory", D::NAME))?,
+        )
+        .await
+        .with_context(|| format!("creating watcher for {}", D::PATH))?
+        .err_into()
+        .try_filter_map(move |fvfs_watcher::WatchMessage { event, filename }| {
+            let installer = installer.clone();
+            async move {
+                trace!("got {:?} {} event for {}", event, D::NAME, filename.display());
 
-        if filename == path::PathBuf::from(THIS_DIRECTORY) {
-            debug!("skipping {} w/ filename = {}", D::NAME, filename.display());
-            return Ok(());
-        }
+                if filename == path::PathBuf::from(THIS_DIRECTORY) {
+                    debug!("skipping {} w/ filename = {}", D::NAME, filename.display());
+                    return Ok(None);
+                }
 
-        match event {
-            fvfs_watcher::WatchEvent::ADD_FILE | fvfs_watcher::WatchEvent::EXISTING => {
-                let filepath = path::Path::new(dev_dir_path).join(filename);
-
-                info!("found new {} at {}", D::NAME, filepath.display());
-
-                let mut i = 0;
-                loop {
-                    // TODO(fxbug.dev/56559): The same interface may flap so instead of using a
-                    // temporary name, try to determine if the interface flapped and wait
-                    // for the teardown to complete.
-                    match self.add_new_device::<D>(&filepath, i == 0 /* stable_name */).await {
-                        Ok(()) => {
-                            break;
-                        }
-                        Err(devices::AddDeviceError::AlreadyExists) => {
-                            i += 1;
-                            if i == MAX_ADD_DEVICE_ATTEMPTS {
+                match event {
+                    fvfs_watcher::WatchEvent::ADD_FILE | fvfs_watcher::WatchEvent::EXISTING => {
+                        let filepath = path::Path::new(D::PATH).join(filename);
+                        info!("found new {} at {:?}", D::NAME, filepath);
+                        match D::get_instance_stream(&installer, &filepath)
+                            .await
+                            .context("create instance stream")
+                        {
+                            Ok(stream) => Ok(Some(stream.filter_map(move |r| {
+                                futures::future::ready(match r {
+                                    Ok(instance) => Some(Ok(instance)),
+                                    Err(errors::Error::NonFatal(nonfatal)) => {
+                                        error!(
+                                        "non-fatal error operating device stream {} for {:?}: {:?}",
+                                        D::NAME,
+                                        filepath,
+                                        nonfatal
+                                    );
+                                        None
+                                    }
+                                    Err(errors::Error::Fatal(fatal)) => Some(Err(fatal)),
+                                })
+                            }))),
+                            Err(errors::Error::NonFatal(nonfatal)) => {
                                 error!(
-                                    "failed to add {} at {} after {} attempts due to already exists error",
+                                    "non-fatal error fetching device stream {} for {:?}: {:?}",
                                     D::NAME,
-                                    filepath.display(),
-                                    MAX_ADD_DEVICE_ATTEMPTS,
+                                    filepath,
+                                    nonfatal
                                 );
-
-                                break;
+                                Ok(None)
                             }
-
-                            warn!(
-                                "got already exists error on attempt {} of adding {} at {}, trying again...",
-                                i,
-                                D::NAME,
-                                filepath.display()
-                            );
-                        }
-                        Err(devices::AddDeviceError::Other(errors::Error::NonFatal(e))) => {
-                            error!(
-                                "non-fatal error adding {} at {}: {:?}",
-                                D::NAME,
-                                filepath.display(),
-                                e
-                            );
-
-                            break;
-                        }
-                        Err(devices::AddDeviceError::Other(errors::Error::Fatal(e))) => {
-                            return Err(e.context(format!(
-                                "error adding new {} at {}",
-                                D::NAME,
-                                filepath.display()
-                            )));
+                            Err(errors::Error::Fatal(fatal)) => Err(fatal),
                         }
                     }
+                    fvfs_watcher::WatchEvent::IDLE | fvfs_watcher::WatchEvent::REMOVE_FILE => {
+                        Ok(None)
+                    }
+                    event => Err(anyhow::anyhow!(
+                        "unrecognized event {:?} for {} filename {}",
+                        event,
+                        D::NAME,
+                        filename.display()
+                    )),
                 }
             }
-            fvfs_watcher::WatchEvent::IDLE | fvfs_watcher::WatchEvent::REMOVE_FILE => {}
-            event => {
-                debug!(
-                    "unrecognized event {:?} for {} filename {}",
-                    event,
-                    D::NAME,
-                    filename.display()
-                );
+        })
+        .fuse()
+        .try_flatten_unordered();
+        Ok(stream_of_streams)
+    }
+
+    async fn handle_device_instance<D: devices::Device>(
+        &mut self,
+        instance: D::DeviceInstance,
+    ) -> Result<(), anyhow::Error> {
+        let mut i = 0;
+        loop {
+            // TODO(fxbug.dev/56559): The same interface may flap so instead of using a
+            // temporary name, try to determine if the interface flapped and wait
+            // for the teardown to complete.
+            match self.add_new_device::<D>(&instance, i == 0 /* stable_name */).await {
+                Ok(()) => {
+                    break Ok(());
+                }
+                Err(devices::AddDeviceError::AlreadyExists) => {
+                    i += 1;
+                    if i == MAX_ADD_DEVICE_ATTEMPTS {
+                        error!(
+                            "failed to add {} {:?} after {} attempts due to already exists error",
+                            D::NAME,
+                            instance,
+                            MAX_ADD_DEVICE_ATTEMPTS,
+                        );
+
+                        break Ok(());
+                    }
+
+                    warn!(
+                        "got already exists error on attempt {} of adding {} {:?}, trying again...",
+                        i,
+                        D::NAME,
+                        instance,
+                    );
+                }
+                Err(devices::AddDeviceError::Other(errors::Error::NonFatal(e))) => {
+                    error!("non-fatal error adding {} {:?}: {:?}", D::NAME, instance, e);
+
+                    break Ok(());
+                }
+                Err(devices::AddDeviceError::Other(errors::Error::Fatal(e))) => {
+                    break Err(e.context(format!("error adding new {} {:?}", D::NAME, instance)));
+                }
             }
         }
-
-        Ok(())
     }
 
     /// Add a device at `filepath` to the netstack.
     async fn add_new_device<D: devices::Device>(
         &mut self,
-        filepath: &path::PathBuf,
+        device_instance: &D::DeviceInstance,
         stable_name: bool,
     ) -> Result<(), devices::AddDeviceError> {
-        let (topological_path, device_instance) = D::get_topo_path_and_device(filepath)
-            .await
-            .context("error getting topological path and device")?;
-
-        info!("{} {} has topological path {}", D::NAME, filepath.display(), topological_path);
-
         let info = D::get_device_info(&device_instance)
             .await
             .context("error getting device info and MAC")?;
 
-        let DeviceInfo { mac, is_synthetic, device_class: _ } = &info;
+        let DeviceInfo { mac, is_synthetic, device_class: _, topological_path } = &info;
 
         if !self.allow_virtual_devices && *is_synthetic {
-            warn!("{} at {} is not a physical device, skipping", D::NAME, filepath.display());
+            warn!("{} {:?} is not a physical device, skipping", D::NAME, device_instance);
             return Ok(());
         }
 
@@ -1223,25 +1255,17 @@ impl<'a> NetCfg<'a> {
             self.persisted_interface_config.generate_temporary_name(interface_type)
         };
 
-        info!(
-            "adding {} at {} to stack with name = {}",
-            D::NAME,
-            filepath.display(),
-            interface_name
-        );
+        info!("adding {} {:?} to stack with name = {}", D::NAME, device_instance, interface_name);
 
-        let mut interface_config = fidl_fuchsia_netstack::InterfaceConfig {
-            name: interface_name.clone(),
-            filepath: format!("{:?}", filepath),
-            metric,
-        };
+        let interface_id = D::add_to_stack(
+            self,
+            InterfaceConfig { name: interface_name.clone(), metric },
+            device_instance,
+        )
+        .await
+        .context("error adding to stack")?;
 
-        let interface_id =
-            D::add_to_stack(self, topological_path.clone(), &mut interface_config, device_instance)
-                .await
-                .context("error adding to stack")?;
-
-        self.configure_eth_interface(interface_id, &topological_path, interface_name, &info)
+        self.configure_eth_interface(interface_id, interface_name, &info)
             .await
             .context("error configuring ethernet interface")
             .map_err(devices::AddDeviceError::Other)
@@ -1255,13 +1279,12 @@ impl<'a> NetCfg<'a> {
     async fn configure_eth_interface(
         &mut self,
         interface_id: u64,
-        topological_path: &str,
         interface_name: String,
         info: &DeviceInfo,
     ) -> Result<(), errors::Error> {
         let interface_id_u32: u32 = interface_id.try_into().expect("NIC ID should fit in a u32");
 
-        if info.is_wlan_ap(topological_path) {
+        if info.is_wlan_ap() {
             if let Some(id) = self.interface_states.iter().find_map(|(id, state)| {
                 if state.is_wlan_ap() {
                     Some(id)
@@ -1308,10 +1331,17 @@ impl<'a> NetCfg<'a> {
                 .context("error configuring host")?;
         }
 
-        self.netstack
-            .set_interface_status(interface_id_u32, true)
-            .context("error sending set interface status request")
-            .map_err(errors::Error::Fatal)
+        let () = self
+            .stack
+            .enable_interface(interface_id)
+            .await
+            .context("enabling interface")
+            .map_err(errors::Error::Fatal)?
+            .map_err(|e: fidl_fuchsia_net_stack::Error| {
+                errors::Error::NonFatal(anyhow::anyhow!("stack error enabling interface: {:?}", e))
+            })?;
+
+        Ok(())
     }
 
     /// Configure host interface.
@@ -1673,6 +1703,9 @@ mod tests {
         let (dhcpv6_client_provider, dhcpv6_client_provider_server) =
             fidl::endpoints::create_proxy::<fnet_dhcpv6::ClientProviderMarker>()
                 .context("error creating dhcpv6_client_provider endpoints")?;
+        let (installer, _installer_server) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
+                .context("error creating installer endpoints")?;
         let persisted_interface_config =
             interface::FileBackedConfig::load(&PERSISTED_INTERFACE_CONFIG_FILEPATH)
                 .context("error loading persistent interface configurations")?;
@@ -1684,6 +1717,7 @@ mod tests {
                 lookup_admin,
                 filter,
                 interface_state,
+                installer,
                 dhcp_server: Some(dhcp_server),
                 dhcpv6_client_provider: Some(dhcpv6_client_provider),
                 persisted_interface_config,
@@ -1691,6 +1725,7 @@ mod tests {
                 filter_enabled_interface_types: Default::default(),
                 interface_properties: Default::default(),
                 interface_states: Default::default(),
+                interface_control: Default::default(),
                 interface_metrics: Default::default(),
                 dns_servers: Default::default(),
             },
@@ -2313,32 +2348,27 @@ mod tests {
             [InterfaceType::Ethernet].iter().cloned().collect();
         let types_wlan: HashSet<InterfaceType> = [InterfaceType::Wlan].iter().cloned().collect();
 
-        const WLAN_INFO: DeviceInfo = DeviceInfo {
-            is_synthetic: false,
+        let make_info = |device_class| DeviceInfo {
+            device_class,
             mac: None,
-            device_class: fidl_fuchsia_hardware_network::DeviceClass::Wlan,
-        };
-        const WLAN_AP_INFO: DeviceInfo = DeviceInfo {
             is_synthetic: false,
-            mac: None,
-            device_class: fidl_fuchsia_hardware_network::DeviceClass::WlanAp,
-        };
-        const ETHERNET_INFO: DeviceInfo = DeviceInfo {
-            is_synthetic: false,
-            mac: None,
-            device_class: fidl_fuchsia_hardware_network::DeviceClass::Ethernet,
+            topological_path: "".to_string(),
         };
 
-        assert_eq!(should_enable_filter(&types_empty, &WLAN_INFO), false);
-        assert_eq!(should_enable_filter(&types_empty, &WLAN_AP_INFO), false);
-        assert_eq!(should_enable_filter(&types_empty, &ETHERNET_INFO), false);
+        let wlan_info = make_info(fidl_fuchsia_hardware_network::DeviceClass::Wlan);
+        let wlan_ap_info = make_info(fidl_fuchsia_hardware_network::DeviceClass::WlanAp);
+        let ethernet_info = make_info(fidl_fuchsia_hardware_network::DeviceClass::Ethernet);
 
-        assert_eq!(should_enable_filter(&types_ethernet, &WLAN_INFO), false);
-        assert_eq!(should_enable_filter(&types_ethernet, &WLAN_AP_INFO), false);
-        assert_eq!(should_enable_filter(&types_ethernet, &ETHERNET_INFO), true);
+        assert_eq!(should_enable_filter(&types_empty, &wlan_info), false);
+        assert_eq!(should_enable_filter(&types_empty, &wlan_ap_info), false);
+        assert_eq!(should_enable_filter(&types_empty, &ethernet_info), false);
 
-        assert_eq!(should_enable_filter(&types_wlan, &WLAN_INFO), true);
-        assert_eq!(should_enable_filter(&types_wlan, &WLAN_AP_INFO), true);
-        assert_eq!(should_enable_filter(&types_wlan, &ETHERNET_INFO), false);
+        assert_eq!(should_enable_filter(&types_ethernet, &wlan_info), false);
+        assert_eq!(should_enable_filter(&types_ethernet, &wlan_ap_info), false);
+        assert_eq!(should_enable_filter(&types_ethernet, &ethernet_info), true);
+
+        assert_eq!(should_enable_filter(&types_wlan, &wlan_info), true);
+        assert_eq!(should_enable_filter(&types_wlan, &wlan_ap_info), true);
+        assert_eq!(should_enable_filter(&types_wlan, &ethernet_info), false);
     }
 }

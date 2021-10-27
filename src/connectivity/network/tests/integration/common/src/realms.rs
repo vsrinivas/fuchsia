@@ -186,6 +186,11 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                     fnetemul::Capability::ChildDep(protocol_dep::<fnet_interfaces::StateMarker>(
                         constants::netstack::COMPONENT_NAME,
                     )),
+                    fnetemul::Capability::ChildDep(protocol_dep::<
+                        fnet_interfaces_admin::InstallerMarker,
+                    >(
+                        constants::netstack::COMPONENT_NAME
+                    )),
                     fnetemul::Capability::ChildDep(protocol_dep::<fnet_stack::StackMarker>(
                         constants::netstack::COMPONENT_NAME,
                     )),

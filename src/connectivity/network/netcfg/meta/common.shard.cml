@@ -13,6 +13,7 @@
                 "fuchsia.net.dhcp.Server",
                 "fuchsia.net.dhcpv6.ClientProvider",
                 "fuchsia.net.filter.Filter",
+                "fuchsia.net.interfaces.admin.Installer",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.name.LookupAdmin",
                 "fuchsia.net.stack.Stack",

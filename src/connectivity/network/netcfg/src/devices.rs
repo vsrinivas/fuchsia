@@ -9,18 +9,14 @@ use fidl_fuchsia_device as fdev;
 use fidl_fuchsia_hardware_ethernet as feth;
 use fidl_fuchsia_hardware_ethernet_ext as feth_ext;
 use fidl_fuchsia_hardware_network as fhwnet;
-use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 use async_trait::async_trait;
+use futures::StreamExt as _;
 
 use crate::errors::{self, ContextExt as _};
-
-// TODO(http://fxbug.dev/64310): Do not automatically connect to port 0 once Netstack exposes FIDL
-// that is port-aware.
-const PORT0: u8 = 0;
 
 /// An error when adding a device.
 pub(super) enum AddDeviceError {
@@ -57,15 +53,17 @@ impl errors::ContextExt for AddDeviceError {
     }
 }
 
+#[derive(Debug, Clone)]
 pub(super) struct DeviceInfo {
     pub(super) device_class: fhwnet::DeviceClass,
     pub(super) mac: Option<fidl_fuchsia_net_ext::MacAddress>,
     pub(super) is_synthetic: bool,
+    pub(super) topological_path: String,
 }
 
 impl DeviceInfo {
     pub(super) fn interface_type(&self) -> crate::InterfaceType {
-        let Self { device_class, mac: _, is_synthetic: _ } = self;
+        let Self { device_class, mac: _, is_synthetic: _, topological_path: _ } = self;
         match device_class {
             fhwnet::DeviceClass::Wlan | fhwnet::DeviceClass::WlanAp => crate::InterfaceType::Wlan,
             fhwnet::DeviceClass::Ethernet
@@ -75,11 +73,11 @@ impl DeviceInfo {
         }
     }
 
-    pub(super) fn is_wlan_ap(&self, topological_path: &str) -> bool {
+    pub(super) fn is_wlan_ap(&self) -> bool {
         /// The string present in the topological path of a WLAN AP interface.
         const WLAN_AP_TOPO_PATH_CONTAINS: &str = "wlanif-ap";
 
-        let Self { device_class, mac: _, is_synthetic: _ } = self;
+        let Self { device_class, mac: _, is_synthetic: _, topological_path } = self;
         match device_class {
             fhwnet::DeviceClass::WlanAp => true,
             fhwnet::DeviceClass::Wlan
@@ -101,20 +99,17 @@ pub(super) trait Device {
     /// devices.
     const PATH: &'static str;
 
-    /// The protocol this device implements.
-    type ProtocolMarker: fidl::endpoints::ProtocolMarker;
+    /// The type of an instantiable interface from the device.
+    type DeviceInstance: std::fmt::Debug + 'static + Send;
 
-    /// The type returned by [`get_topo_path_and_device`].
-    type DeviceInstance;
-
-    /// Returns the topological path for a device located at `filepath` and an instance
-    /// of the device.
-    ///
-    /// It is expected that the node at `filepath` implements `fuchsia.device/Controller`
-    /// and `Self::ProtocolMarker`.
-    async fn get_topo_path_and_device(
-        filepath: &std::path::PathBuf,
-    ) -> Result<(String, Self::DeviceInstance), errors::Error>;
+    type InstanceStream: futures::Stream<Item = Result<Self::DeviceInstance, errors::Error>>
+        + 'static
+        + Send
+        + Unpin;
+    async fn get_instance_stream(
+        installer: &fidl_fuchsia_net_interfaces_admin::InstallerProxy,
+        path: &std::path::PathBuf,
+    ) -> Result<Self::InstanceStream, errors::Error>;
 
     /// Get the device's information.
     async fn get_device_info(
@@ -124,33 +119,60 @@ pub(super) trait Device {
     /// Adds the device to the netstack.
     async fn add_to_stack(
         netcfg: &mut super::NetCfg<'_>,
-        topological_path: String,
-        config: &mut fnetstack::InterfaceConfig,
-        device_instance: Self::DeviceInstance,
+        config: crate::InterfaceConfig,
+        device_instance: &Self::DeviceInstance,
     ) -> Result<u64, AddDeviceError>;
 }
 
 /// An implementation of [`Device`] for ethernet devices.
 pub(super) enum EthernetDevice {}
 
+pub(super) struct EthernetInstance {
+    device: feth::DeviceProxy,
+    topological_path: String,
+    file_path: String,
+}
+
+impl std::fmt::Debug for EthernetInstance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let EthernetInstance { device: _, topological_path, file_path } = self;
+        write!(
+            f,
+            "EthernetInstance{{topological_path={}, file_path={}}}",
+            topological_path, file_path
+        )
+    }
+}
+
 #[async_trait]
 impl Device for EthernetDevice {
     const NAME: &'static str = "ethdev";
-    const PATH: &'static str = "class/ethernet";
-    type ProtocolMarker = feth::DeviceMarker;
-    type DeviceInstance = feth::DeviceProxy;
+    const PATH: &'static str = "/dev/class/ethernet";
+    type DeviceInstance = EthernetInstance;
 
-    async fn get_topo_path_and_device(
-        filepath: &std::path::PathBuf,
-    ) -> Result<(String, feth::DeviceProxy), errors::Error> {
-        get_topo_path_and_device::<feth::DeviceMarker>(filepath).await
+    type InstanceStream =
+        futures::stream::Once<futures::future::Ready<Result<Self::DeviceInstance, errors::Error>>>;
+    async fn get_instance_stream(
+        _installer: &fidl_fuchsia_net_interfaces_admin::InstallerProxy,
+        path: &std::path::PathBuf,
+    ) -> Result<Self::InstanceStream, errors::Error> {
+        let (topological_path, file_path, device) =
+            get_topo_path_and_device::<feth::DeviceMarker>(path)
+                .await
+                .context("error getting topological path and device")?;
+        Ok(futures::stream::once(futures::future::ok(EthernetInstance {
+            device,
+            topological_path,
+            file_path,
+        })))
     }
 
     async fn get_device_info(
-        device_instance: &feth::DeviceProxy,
+        device_instance: &self::EthernetInstance,
     ) -> Result<DeviceInfo, errors::Error> {
+        let EthernetInstance { device, topological_path, file_path: _ } = device_instance;
         let feth_ext::EthernetInfo { features, mac: feth_ext::MacAddress { octets }, mtu: _ } =
-            device_instance
+            device
                 .get_info()
                 .await
                 .map(Into::into)
@@ -166,28 +188,40 @@ impl Device for EthernetDevice {
             device_class,
             mac: Some(fidl_fuchsia_net_ext::MacAddress { octets }),
             is_synthetic,
+            topological_path: topological_path.clone(),
         })
     }
 
     async fn add_to_stack(
         netcfg: &mut super::NetCfg<'_>,
-        topological_path: String,
-        config: &mut fnetstack::InterfaceConfig,
-        device_instance: feth::DeviceProxy,
+        config: crate::InterfaceConfig,
+        device_instance: &Self::DeviceInstance,
     ) -> Result<u64, AddDeviceError> {
-        let client = device_instance
-            .into_channel()
-            .map_err(|_: feth::DeviceProxy| {
-                errors::Error::Fatal(anyhow::anyhow!("failed to convert device proxy into channel"))
-            })?
-            .into_zx_channel();
+        let EthernetInstance { device: _, topological_path, file_path } = device_instance;
+        let crate::InterfaceConfig { name, metric } = config;
+
+        // NB: We have to reach out into devfs again to get a new instance of
+        // the Ethernet device because:
+        // - We can't `Clone` the instance, that's not supported by the FIDL
+        // protocol.
+        // - We can't hand out our instance, since this method is retried on
+        // name collisions.
+        let (client_end, server_end) = fidl::endpoints::create_endpoints::<feth::DeviceMarker>()
+            .context("create ethdev endpoints")
+            .map_err(errors::Error::NonFatal)?;
+        let () = fuchsia_component::client::connect_channel_to_protocol_at_path(
+            server_end.into_channel(),
+            file_path,
+        )
+        .with_context(|| format!("connect ethdev at {}", file_path))
+        .map_err(errors::Error::NonFatal)?;
 
         let res = netcfg
             .netstack
             .add_ethernet_device(
-                &topological_path,
-                config,
-                fidl::endpoints::ClientEnd::<feth::DeviceMarker>::new(client),
+                topological_path,
+                &mut fnetstack::InterfaceConfig { name, filepath: file_path.to_string(), metric },
+                client_end,
             )
             .await
             .context("error sending add_ethernet_device request")
@@ -210,62 +244,132 @@ pub(super) enum NetworkDevice {}
 
 /// An instance of a network device.
 pub(super) struct NetworkDeviceInstance {
-    device: fhwnet::DeviceProxy,
-    mac_addressing: fhwnet::MacAddressingProxy,
+    port: fhwnet::PortProxy,
+    port_id: u8,
+    device_control: fidl_fuchsia_net_interfaces_admin::DeviceControlProxy,
+    topological_path: String,
+}
+
+impl std::fmt::Debug for NetworkDeviceInstance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let NetworkDeviceInstance { port: _, port_id, device_control: _, topological_path } = self;
+        write!(
+            f,
+            "NetworkDeviceInstance{{topological_path={}, port={}}}",
+            topological_path, port_id
+        )
+    }
 }
 
 #[async_trait]
 impl Device for NetworkDevice {
     const NAME: &'static str = "netdev";
-    const PATH: &'static str = "class/network";
-    type ProtocolMarker = fhwnet::DeviceInstanceMarker;
+    const PATH: &'static str = "/dev/class/network";
     type DeviceInstance = NetworkDeviceInstance;
 
-    async fn get_topo_path_and_device(
-        filepath: &std::path::PathBuf,
-    ) -> Result<(String, NetworkDeviceInstance), errors::Error> {
-        let (path, device_instance) =
-            get_topo_path_and_device::<fhwnet::DeviceInstanceMarker>(filepath)
+    type InstanceStream =
+        futures::stream::BoxStream<'static, Result<Self::DeviceInstance, errors::Error>>;
+    async fn get_instance_stream(
+        installer: &fidl_fuchsia_net_interfaces_admin::InstallerProxy,
+        path: &std::path::PathBuf,
+    ) -> Result<Self::InstanceStream, errors::Error> {
+        let (topological_path, _file_path, device_instance) =
+            get_topo_path_and_device::<fhwnet::DeviceInstanceMarker>(path)
                 .await
-                .context("error getting topological path and device instance")?;
-        let (device, req) = fidl::endpoints::create_proxy()
-            .context("error creating device proxy")
-            .map_err(errors::Error::Fatal)?;
-        let () = device_instance
-            .get_device(req)
-            .context("error geting device")
-            .map_err(errors::Error::NonFatal)?;
+                .with_context(|| format!("open netdevice at {:?}", path))?;
 
-        let (port, port_server_end) = fidl::endpoints::create_proxy()
-            .context("error creating port proxy")
+        let get_device = || {
+            let (device, device_server_end) =
+                fidl::endpoints::create_endpoints::<fhwnet::DeviceMarker>()
+                    .context("create device endpoints")
+                    .map_err(errors::Error::NonFatal)?;
+            let () = device_instance
+                .get_device(device_server_end)
+                .context("calling DeviceInstance get_device")
+                .map_err(errors::Error::NonFatal)?;
+            Ok(device)
+        };
+
+        let device = get_device()?
+            .into_proxy()
+            .context("create device proxy")
             .map_err(errors::Error::Fatal)?;
+
+        let (port_watcher, port_watcher_server_end) =
+            fidl::endpoints::create_proxy::<fhwnet::PortWatcherMarker>()
+                .context("create port watcher endpoints")
+                .map_err(errors::Error::NonFatal)?;
         let () = device
-            .get_port(PORT0, port_server_end)
-            .context("error getting port")
+            .get_port_watcher(port_watcher_server_end)
+            .context("calling Device get_port_watcher")
             .map_err(errors::Error::NonFatal)?;
 
-        let (mac_addressing, req) = fidl::endpoints::create_proxy()
-            .context("error creating mac addressing proxy")
+        let (device_control, device_control_server_end) = fidl::endpoints::create_proxy::<
+            fidl_fuchsia_net_interfaces_admin::DeviceControlMarker,
+        >()
+        .context("create device control endpoints")
+        .map_err(errors::Error::NonFatal)?;
+
+        let device_for_netstack = get_device()?;
+        let () = installer
+            .install_device(device_for_netstack, device_control_server_end)
+            .context("calling Installer install_device")
+            // NB: Failing to communicate with installer is a fatal error, that
+            // means the Netstack is gone, which we don't tolerate.
             .map_err(errors::Error::Fatal)?;
-        let () = port
-            .get_mac(req)
-            .context("error getting MAC addressing client")
-            .map_err(errors::Error::NonFatal)?;
 
-        Ok((path, NetworkDeviceInstance { device, mac_addressing }))
+        Ok(futures::stream::try_unfold(
+            (port_watcher, device_control, device, topological_path),
+            |(port_watcher, device_control, device, topological_path)| async move {
+                loop {
+                    let port_event = match port_watcher.watch().await {
+                        Ok(port_event) => port_event,
+                        Err(err) => {
+                            break if err.is_closed() {
+                                Ok(None)
+                            } else {
+                                Err(errors::Error::Fatal(err.into()))
+                                    .context("calling PortWatcher watch")
+                            };
+                        }
+                    };
+                    match port_event {
+                        fhwnet::DevicePortEvent::Idle(fhwnet::Empty {}) => {}
+                        fhwnet::DevicePortEvent::Removed(port_id) => {
+                            let _: u8 = port_id;
+                        }
+                        fhwnet::DevicePortEvent::Added(port_id)
+                        | fhwnet::DevicePortEvent::Existing(port_id) => {
+                            let (port, port_server_end) =
+                                fidl::endpoints::create_proxy::<fhwnet::PortMarker>()
+                                    .context("create port endpoints")
+                                    .map_err(errors::Error::NonFatal)?;
+                            let () = device
+                                .get_port(port_id, port_server_end)
+                                .context("calling Device get_port")
+                                .map_err(errors::Error::NonFatal)?;
+                            break Ok(Some((
+                                NetworkDeviceInstance {
+                                    port,
+                                    port_id,
+                                    device_control: device_control.clone(),
+                                    topological_path: topological_path.clone(),
+                                },
+                                (port_watcher, device_control, device, topological_path),
+                            )));
+                        }
+                    }
+                }
+            },
+        )
+        .boxed())
     }
 
     async fn get_device_info(
         device_instance: &NetworkDeviceInstance,
     ) -> Result<DeviceInfo, errors::Error> {
-        let NetworkDeviceInstance { device, mac_addressing } = device_instance;
-        let (port, port_server_end) = fidl::endpoints::create_proxy()
-            .context("error creating port proxy")
-            .map_err(errors::Error::Fatal)?;
-        let () = device
-            .get_port(PORT0, port_server_end)
-            .context("error getting port")
-            .map_err(errors::Error::NonFatal)?;
+        let NetworkDeviceInstance { port, port_id: _, device_control: _, topological_path } =
+            device_instance;
         let fhwnet::PortInfo { id: _, class: device_class, rx_types: _, tx_types: _, .. } = port
             .get_info()
             .await
@@ -274,6 +378,16 @@ impl Device for NetworkDevice {
         let device_class = device_class.ok_or_else(|| {
             errors::Error::Fatal(anyhow::anyhow!("missing device class in port info"))
         })?;
+
+        let (mac_addressing, mac_addressing_server_end) =
+            fidl::endpoints::create_proxy::<fhwnet::MacAddressingMarker>()
+                .context("create MacAddressing proxy")
+                .map_err(errors::Error::NonFatal)?;
+        let () = port
+            .get_mac(mac_addressing_server_end)
+            .context("calling Port get_mac")
+            .map_err(errors::Error::NonFatal)?;
+
         let mac = mac_addressing
             .get_unicast_address()
             .await
@@ -286,75 +400,83 @@ impl Device for NetworkDevice {
                 }
             })
             .map_err(errors::Error::NonFatal)?;
-        Ok(DeviceInfo { device_class, mac: mac.map(Into::into), is_synthetic: false })
+        Ok(DeviceInfo {
+            device_class,
+            mac: mac.map(Into::into),
+            is_synthetic: false,
+            topological_path: topological_path.clone(),
+        })
     }
 
     async fn add_to_stack(
         netcfg: &mut super::NetCfg<'_>,
-        topological_path: String,
-        config: &mut fnetstack::InterfaceConfig,
-        device_instance: NetworkDeviceInstance,
+        config: crate::InterfaceConfig,
+        device_instance: &Self::DeviceInstance,
     ) -> Result<u64, AddDeviceError> {
-        let NetworkDeviceInstance { device, mac_addressing } = device_instance;
+        let NetworkDeviceInstance { port: _, port_id, device_control, topological_path: _ } =
+            device_instance;
+        let crate::InterfaceConfig { name, metric } = config;
 
-        netcfg
-            .stack
-            .add_interface(
-                fnet_stack::InterfaceConfig {
-                    name: Some(config.name.clone()),
-                    topopath: Some(topological_path.clone()),
-                    metric: Some(config.metric),
-                    ..fnet_stack::InterfaceConfig::EMPTY
+        let (control, control_server_end) =
+            fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+                .context("create Control proxy")
+                .map_err(errors::Error::NonFatal)?;
+
+        let () = device_control
+            .create_interface(
+                *port_id,
+                control_server_end,
+                fidl_fuchsia_net_interfaces_admin::Options {
+                    name: Some(name),
+                    metric: Some(metric),
+                    ..fidl_fuchsia_net_interfaces_admin::Options::EMPTY
                 },
-                &mut fnet_stack::DeviceDefinition::Ethernet(fnet_stack::EthernetDeviceDefinition {
-                    network_device: fidl::endpoints::ClientEnd::new(
-                        device
-                            .into_channel()
-                            .map_err(|_: fhwnet::DeviceProxy| {
-                                errors::Error::Fatal(anyhow::anyhow!(
-                                    "failed to retrieve network device ClientEnd"
-                                ))
-                            })?
-                            .into(),
-                    ),
-                    mac: fidl::endpoints::ClientEnd::new(
-                        mac_addressing
-                            .into_channel()
-                            .map_err(|_: fhwnet::MacAddressingProxy| {
-                                errors::Error::Fatal(anyhow::anyhow!(
-                                    "failed to retrieve mac addressing ClientEnd"
-                                ))
-                            })?
-                            .into(),
-                    ),
-                }),
             )
-            .await
-            .context("error sending stack add interface request")
-            .map_err(errors::Error::Fatal)?
-            .map_err(|e: fnet_stack::Error| {
-                if e == fnet_stack::Error::AlreadyExists {
-                    AddDeviceError::AlreadyExists
-                } else {
-                    AddDeviceError::Other(errors::Error::NonFatal(anyhow::anyhow!(
-                        "error adding netdev interface: {:?}",
-                        e
-                    )))
+            .context("calling DeviceControl create_interface")
+            .map_err(errors::Error::NonFatal)?;
+
+        let interface_id = control.get_id().await.map_err(|err| {
+            let other = match err {
+                fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Fidl(err) => err.into(),
+                fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(terminal_error) => {
+                    match terminal_error {
+                        fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::DuplicateName => {
+                            return AddDeviceError::AlreadyExists;
+                        }
+                        reason => {
+                            anyhow::anyhow!("received terminal event {:?}", reason)
+                        }
+                    }
                 }
-            })
+            };
+            AddDeviceError::Other(
+                errors::Error::NonFatal(other).context("calling Control get_id"),
+            )
+        })?;
+
+        if let Some(fidl_fuchsia_net_interfaces_ext::admin::Control { .. }) =
+            netcfg.interface_control.insert(interface_id, control)
+        {
+            return Err(AddDeviceError::Other(errors::Error::Fatal(anyhow::anyhow!(
+                "unexpected existing interface with id {} in map",
+                interface_id
+            ))));
+        }
+        Ok(interface_id)
     }
 }
 
-/// Returns the topological path for a device located at `filepath` and a proxy to `S`.
+/// Returns the topological path for a device located at `filepath`, `filepath`
+/// converted to `String`, and a proxy to `S`.
 ///
 /// It is expected that the node at `filepath` implements `fuchsia.device/Controller`
 /// and `S`.
 async fn get_topo_path_and_device<S: fidl::endpoints::ProtocolMarker>(
     filepath: &std::path::PathBuf,
-) -> Result<(String, S::Proxy), errors::Error> {
+) -> Result<(String, String, S::Proxy), errors::Error> {
     let filepath = filepath
         .to_str()
-        .ok_or_else(|| anyhow::anyhow!("failed to convert {} to str", filepath.display()))
+        .ok_or_else(|| anyhow::anyhow!("failed to convert {:?} to str", filepath))
         .map_err(errors::Error::NonFatal)?;
 
     // Get the topological path using `fuchsia.device/Controller`.
@@ -364,7 +486,7 @@ async fn get_topo_path_and_device<S: fidl::endpoints::ProtocolMarker>(
     fdio::service_connect(filepath, req.into_channel().into())
         .with_context(|| format!("error calling fdio::service_connect({})", filepath))
         .map_err(errors::Error::NonFatal)?;
-    let path = controller
+    let topological_path = controller
         .get_topological_path()
         .await
         .context("error sending get topological path request")
@@ -384,5 +506,5 @@ async fn get_topo_path_and_device<S: fidl::endpoints::ProtocolMarker>(
         .context("error getting client end proxy")
         .map_err(errors::Error::Fatal)?;
 
-    Ok((path, device))
+    Ok((topological_path, filepath.to_string(), device))
 }
