@@ -3,6 +3,10 @@
 // found in the LICENSE file.
 {
     include: [ "syslog/elf_stdio.shard.cml" ],
+    program: {
+        // Subscribe to component lifecycle events
+        lifecycle: { stop_event: "notify" },
+    },
     use: [
         {
             protocol: [

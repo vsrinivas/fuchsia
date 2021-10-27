@@ -26,6 +26,7 @@ use std::path;
 use std::pin::Pin;
 use std::str::FromStr;
 
+use fidl::endpoints::RequestStream as _;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_dhcp as fnet_dhcp;
@@ -48,10 +49,7 @@ use fuchsia_zircon::{self as zx, DurationNum as _};
 use anyhow::{anyhow, Context as _};
 use async_trait::async_trait;
 use dns_server_watcher::{DnsServers, DnsServersUpdateSource, DEFAULT_DNS_PORT};
-use futures::{
-    stream::{self, StreamExt as _, TryStreamExt as _},
-    FutureExt as _,
-};
+use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
 use log::{debug, error, info, trace, warn};
 use net_declare::fidl_ip_v4;
@@ -134,7 +132,7 @@ const MAX_ADD_DEVICE_ATTEMPTS: u8 = 3;
 /// are started or stopped.
 type DnsServerWatchers<'a> = async_utils::stream::StreamMap<
     DnsServersUpdateSource,
-    stream::BoxStream<
+    futures::stream::BoxStream<
         'a,
         (DnsServersUpdateSource, Result<Vec<fnet_name::DnsServer_>, anyhow::Error>),
     >,
@@ -667,7 +665,7 @@ impl<'a> NetCfg<'a> {
         // The watcher stream may have already been removed if it was exhausted so we don't
         // care what the return value is. At the end of this function, it is guaranteed that
         // `dns_watchers` will not have a stream for `source` anyways.
-        let _: Option<Pin<Box<stream::BoxStream<'_, _>>>> = dns_watchers.remove(&source);
+        let _: Option<Pin<Box<futures::stream::BoxStream<'_, _>>>> = dns_watchers.remove(&source);
 
         Ok(())
     }
@@ -676,7 +674,7 @@ impl<'a> NetCfg<'a> {
     ///
     /// The device directory will be monitored for device events and the netstack will be
     /// configured with a new interface on new device discovery.
-    async fn run(&mut self) -> Result<Never, anyhow::Error> {
+    async fn run(&mut self) -> Result<(), anyhow::Error> {
         let ethdev_dir_path = &format!("{}/{}", DEV_PATH, devices::EthernetDevice::PATH);
         let mut ethdev_dir_watcher_stream = fvfs_watcher::Watcher::new(
             open_directory_in_namespace(ethdev_dir_path, OPEN_RIGHT_READABLE)
@@ -729,6 +727,20 @@ impl<'a> NetCfg<'a> {
                 .insert(DnsServersUpdateSource::Netstack, netstack_dns_server_stream)
                 .is_none(),
             "dns watchers should be empty"
+        );
+
+        // Lifecycle handle takes no args, must be set to zero.
+        // See zircon/processargs.h.
+        const LIFECYCLE_HANDLE_ARG: u16 = 0;
+        let lifecycle = fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleInfo::new(
+            fuchsia_runtime::HandleType::Lifecycle,
+            LIFECYCLE_HANDLE_ARG,
+        ))
+        .ok_or_else(|| anyhow::anyhow!("lifecycle handle not present"))?;
+        let lifecycle = fuchsia_async::Channel::from_channel(lifecycle.into())
+            .context("lifecycle async channel")?;
+        let mut lifecycle = fidl_fuchsia_process_lifecycle::LifecycleRequestStream::from_channel(
+            fidl::AsyncChannel::from(lifecycle),
         );
 
         debug!("starting eventloop...");
@@ -810,6 +822,38 @@ impl<'a> NetCfg<'a> {
                         }
                         errors::Error::Fatal(e) => Err(e),
                     })?
+                }
+                req = lifecycle.try_next() => {
+                    let req = req
+                        .context("lifecycle request")?
+                        .ok_or_else(
+                            || anyhow::anyhow!("LifecycleRequestStream ended unexpectedly")
+                        )?;
+                    match req {
+                        fidl_fuchsia_process_lifecycle::LifecycleRequest::Stop {
+                            control_handle
+                        } => {
+                            info!("received shutdown request");
+                            // Shutdown request is acknowledged by the lifecycle
+                            // channel shutting down. Intentionally leak the
+                            // channel so it'll only be closed on process
+                            // termination, allowing clean process termination
+                            // to always be observed.
+
+                            // Must drop the control_handle to unwrap the
+                            // lifecycle channel.
+                            std::mem::drop(control_handle);
+                            let (inner, _terminated): (_, bool) = lifecycle.into_inner();
+                            let inner = std::sync::Arc::try_unwrap(inner)
+                                .map_err(|_: std::sync::Arc<_>| {
+                                    anyhow::anyhow!("failed to retrieve lifecycle channel")
+                                })?;
+                            let inner: zx::Channel = inner.into_channel().into_zx_channel();
+                            std::mem::forget(inner);
+
+                            return Ok(());
+                        }
+                    }
                 }
                 complete => break,
             };
@@ -1479,9 +1523,7 @@ pub async fn handle_virtualization_control(
     Ok(())
 }
 
-pub type Never = std::convert::Infallible;
-
-pub async fn run<M: Mode>() -> Result<Never, anyhow::Error> {
+pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
     let opt: Opt = argh::from_env();
     let Opt { allow_virtual_devices, min_severity, config_data } = &opt;
 
@@ -1519,14 +1561,13 @@ pub async fn run<M: Mode>() -> Result<Never, anyhow::Error> {
             errors::Error::Fatal(e) => Err(e),
         })?;
 
-    match M::run(netcfg).await {
-        Ok(result) => match result {},
-        Err(e) => {
+    M::run(netcfg)
+        .map_err(|e| {
             let err_str = format!("fatal error running main: {:?}", e);
             error!("{}", err_str);
-            Err(anyhow!(err_str))
-        }
-    }
+            anyhow!(err_str)
+        })
+        .await
 }
 
 /// Allows callers of `netcfg::run` to configure at compile time which features
@@ -1536,7 +1577,7 @@ pub async fn run<M: Mode>() -> Result<Never, anyhow::Error> {
 /// assembled together for specific netcfg builds.
 #[async_trait(?Send)]
 pub trait Mode {
-    async fn run(netcfg: NetCfg<'_>) -> Result<Never, anyhow::Error>;
+    async fn run(netcfg: NetCfg<'_>) -> Result<(), anyhow::Error>;
 }
 
 /// In this configuration, netcfg acts as the policy manager for netstack,
@@ -1546,7 +1587,7 @@ pub enum BasicMode {}
 
 #[async_trait(?Send)]
 impl Mode for BasicMode {
-    async fn run(mut netcfg: NetCfg<'_>) -> Result<Never, anyhow::Error> {
+    async fn run(mut netcfg: NetCfg<'_>) -> Result<(), anyhow::Error> {
         netcfg.run().await.context("event loop")
     }
 }
@@ -1558,7 +1599,7 @@ pub enum VirtualizationEnabled {}
 
 #[async_trait(?Send)]
 impl Mode for VirtualizationEnabled {
-    async fn run(mut netcfg: NetCfg<'_>) -> Result<Never, anyhow::Error> {
+    async fn run(mut netcfg: NetCfg<'_>) -> Result<(), anyhow::Error> {
         let mut fs = ServiceFs::new_local();
         let _: &mut ServiceFsDir<'_, _> =
             fs.dir("svc").add_fidl_service(|s: fnet_virtualization::ControlRequestStream| s);

@@ -490,3 +490,60 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
         };
     }
 }
+
+/// Tests that netcfg observes component stop events and exits cleanly.
+#[variants_test]
+async fn observes_stop_events<M: Manager>(name: &str) {
+    use component_events::events::{self, Event as _};
+
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
+            name,
+            &[
+                KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
+                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::DhcpServer { persistent: false },
+                KnownServiceProvider::Dhcpv6Client,
+                KnownServiceProvider::SecureStash,
+            ],
+        )
+        .expect("create netstack realm");
+    let event_source = events::EventSource::new().expect("create event source");
+    let mut event_stream = event_source
+        .subscribe(vec![events::EventSubscription::new(
+            vec![events::Started::NAME, events::Stopped::NAME],
+            // Event mode async means the framework doesn't wait for us to
+            // observe and acknowledge the event to move forward. We don't need
+            // for the framework to wait for us to acknowledge events, it is
+            // sufficient for this test that we're passive observers.
+            events::EventMode::Async,
+        )])
+        .await
+        .expect("subscribe to events");
+
+    let event_matcher = netstack_testing_common::get_child_component_event_matcher(
+        &realm,
+        constants::netcfg::COMPONENT_NAME,
+    )
+    .await
+    .expect("get child moniker");
+
+    // Wait for netcfg to start.
+    let events::StartedPayload {} = event_matcher
+        .clone()
+        .wait::<events::Started>(&mut event_stream)
+        .await
+        .expect("got started event")
+        .result()
+        .expect("error event on started");
+
+    let () = realm.shutdown().await.expect("shutdown");
+
+    let event =
+        event_matcher.wait::<events::Stopped>(&mut event_stream).await.expect("got stopped event");
+    // NB: event::result below borrows from event, it needs to be in a different
+    // statement.
+    let events::StoppedPayload { status } = event.result().expect("error event on stopped");
+    matches::assert_matches!(status, events::ExitStatus::Clean);
+}

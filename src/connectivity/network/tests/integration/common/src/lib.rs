@@ -117,10 +117,7 @@ pub async fn wait_for_component_stopped(
     component_moniker: &str,
     status_matcher: Option<component_events::matcher::ExitStatusMatcher>,
 ) -> Result<component_events::events::Stopped> {
-    use component_events::{
-        events::{self, Event as _, EventMode, EventSource, EventSubscription},
-        matcher::EventMatcher,
-    };
+    use component_events::events::{self, Event as _, EventMode, EventSource, EventSubscription};
 
     let event_source = EventSource::from_proxy(
         fuchsia_component::client::connect_to_protocol::<fsys2::EventSourceMarker>()
@@ -130,16 +127,24 @@ pub async fn wait_for_component_stopped(
         .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Async)])
         .await
         .context("failed to subscribe to `Stopped` events")?;
+
+    let matcher = get_child_component_event_matcher(realm, component_moniker)
+        .await
+        .context("get child component matcher")?;
+    matcher.stop(status_matcher).wait::<events::Stopped>(&mut event_stream).await
+}
+
+/// Gets an event matcher for `component_moniker` in `realm`.
+pub async fn get_child_component_event_matcher(
+    realm: &netemul::TestRealm<'_>,
+    component_moniker: &str,
+) -> Result<component_events::matcher::EventMatcher> {
     let realm_moniker = &realm.get_moniker().await.context("calling get moniker")?;
     let moniker_for_match = format!(
         "{}:\\d+/{}:\\d+/{}:\\d+",
         NETEMUL_SANDBOX_MONIKER, realm_moniker, component_moniker
     );
-    EventMatcher::ok()
-        .stop(status_matcher)
-        .moniker(moniker_for_match)
-        .wait::<events::Stopped>(&mut event_stream)
-        .await
+    Ok(component_events::matcher::EventMatcher::ok().moniker(moniker_for_match))
 }
 
 /// Waits for a non-loopback interface to come up with an ID not in `exclude_ids`.
