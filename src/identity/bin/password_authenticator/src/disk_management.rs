@@ -3,65 +3,33 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context, Error},
     async_trait::async_trait,
-    fidl::endpoints::ServerEnd,
+    fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_hardware_block::BlockMarker,
     fidl_fuchsia_hardware_block_partition::{PartitionMarker, PartitionProxyInterface},
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, FileMarker, NodeMarker, NodeProxy, MODE_TYPE_DIRECTORY,
-        MODE_TYPE_SERVICE, OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryProxy, FileMarker, NodeProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon as zx,
-    log::warn,
-    std::marker::PhantomData,
+    log::{error, warn},
+    thiserror::Error,
 };
 
-/// A trait for interacting with the universe of partitions available
-#[async_trait]
-pub trait PartitionManager<T>
-where
-    T: BlockDevice + Partition,
-{
-    /// Opens each block device known to this partition manager.
-    async fn partitions(&self) -> Result<Vec<T>, Error>;
-}
-
-/// A PartitionManager implementation backed by a device_manager tree rooted at `dev_root_dir`.
-pub struct DevPartitionManager<T> {
-    /// An open fuchsia.io.Directory client for the root of the device manager tree "/dev"
-    dev_root_dir: DirectoryProxy,
-
-    /// Additional type information to allow the compiler to better handle trait implementations
-    block_device_type: PhantomData<T>,
-}
-
-/// A trait abstracting over interactions with a single block device
-#[async_trait]
-pub trait BlockDevice {
-    /// Read the first `block_size` bytes from the block device
-    async fn read_first_block(&self, block_size: u64) -> Result<Vec<u8>, Error>;
-
-    /// Query the block device for its block size, since block reads must be block-aligned
-    async fn block_size(&self) -> Result<u64, Error>;
-}
-
-/// A trait abstracting over interactions with a partition.
-#[async_trait]
-pub trait Partition {
-    /// Returns true if the partition has type GUID `desired_guid`
-    async fn has_guid(&self, desired_guid: [u8; 16]) -> Result<bool, Error>;
-
-    /// Returns true if the partition has label `desired_label`
-    async fn has_label(&self, desired_label: &str) -> Result<bool, Error>;
-}
-
-/// A concrete implementation of both BlockDevice and Partition, backed by an open channel to that
-/// block device from the device tree.
-pub struct DevBlockDevice {
-    /// A fuchsia.io.Node client backed by an open channel to the specific block device e.g.
-    /// "/dev/class/block/001"
-    node: NodeProxy,
+#[derive(Error, Debug)]
+pub enum DiskError {
+    #[error("Failed to open: {0}")]
+    OpenError(#[from] io_util::node::OpenError),
+    #[error("Failed to readdir: {0}")]
+    ReaddirError(#[from] files_async::Error),
+    #[error("Failed during FIDL call: {0}")]
+    FidlError(#[from] fidl::Error),
+    #[error("Failed to read first block of partition: {0}")]
+    ReadBlockHeaderFailed(zx::Status),
+    #[error("Failed to get block info: {0}")]
+    GetBlockInfoFailed(zx::Status),
+    #[error("Block size too small for zxcrypt header")]
+    BlockTooSmallForZxcryptHeader,
 }
 
 const OPEN_RW: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
@@ -73,89 +41,13 @@ const ZXCRYPT_MAGIC: [u8; 16] = [
     0x5f, 0xe8, 0xf8, 0x00, 0xb3, 0x6d, 0x11, 0xe7, 0x80, 0x7a, 0x78, 0x63, 0x72, 0x79, 0x70, 0x74,
 ];
 
-#[async_trait]
-impl BlockDevice for DevBlockDevice {
-    async fn read_first_block(&self, block_size: u64) -> Result<Vec<u8>, Error> {
-        let (file_proxy, file_proxy_server) =
-            fidl::endpoints::create_proxy::<FileMarker>().context("Create file client proxy")?;
-        self.node
-            .clone(OPEN_RIGHT_READABLE, ServerEnd::new(file_proxy_server.into_channel()))
-            .context("open cloned file client channel")?;
-
-        // Issue a read of block_size bytes, since block devices only like being read along block
-        // boundaries.
-        let res = file_proxy.read_at(block_size, 0).await.context("send read")?;
-        zx::Status::ok(res.0).context("read header")?;
-        Ok(res.1)
-    }
-
-    async fn block_size(&self) -> Result<u64, Error> {
-        let (block_proxy, block_proxy_server) =
-            fidl::endpoints::create_proxy::<BlockMarker>().context("Create block client proxy")?;
-        self.node
-            .clone(OPEN_RIGHT_READABLE, ServerEnd::new(block_proxy_server.into_channel()))
-            .context("open cloned block client channel")?;
-        let resp = block_proxy.get_info().await?;
-        zx::Status::ok(resp.0).context("get block info")?;
-        let block_size = resp.1.context("block info")?.block_size as u64;
-        Ok(block_size)
-    }
-}
-
-#[async_trait]
-impl Partition for DevBlockDevice {
-    async fn has_guid(&self, desired_guid: [u8; 16]) -> Result<bool, Error> {
-        let (partition_proxy, partition_proxy_server) =
-            fidl::endpoints::create_proxy::<PartitionMarker>()
-                .context("Create partition client proxy")?;
-        self.node
-            .clone(OPEN_RIGHT_READABLE, ServerEnd::new(partition_proxy_server.into_channel()))
-            .context("open cloned partition client channel")?;
-
-        Ok(partition_has_guid(&partition_proxy, desired_guid).await)
-    }
-
-    async fn has_label(&self, desired_label: &str) -> Result<bool, Error> {
-        let (partition_proxy, partition_proxy_server) =
-            fidl::endpoints::create_proxy::<PartitionMarker>()
-                .context("Create partition client proxy")?;
-        self.node
-            .clone(OPEN_RIGHT_READABLE, ServerEnd::new(partition_proxy_server.into_channel()))
-            .context("open cloned partition client channel")?;
-
-        Ok(partition_has_label(&partition_proxy, desired_label).await)
-    }
-}
-
 /// Given a slice representing the first block of a device, return true if this block has the
 /// zxcrypt_magic as the first 16 bytes.
-fn is_zxcrypt_superblock(block: &[u8]) -> Result<bool, Error> {
+fn is_zxcrypt_superblock(block: &[u8]) -> Result<bool, DiskError> {
     if block.len() < 16 {
-        return Err(anyhow!("block too small to contain superblock"));
+        return Err(DiskError::BlockTooSmallForZxcryptHeader);
     }
     Ok(block[0..16] == ZXCRYPT_MAGIC)
-}
-
-/// Given a block device, query the block size, and return if the contents of the first block
-/// contain the zxcrypt magic bytes
-pub async fn has_zxcrypt_header<T>(block_device: &T) -> Result<bool, Error>
-where
-    T: BlockDevice,
-{
-    let block_size = block_device.block_size().await?;
-    let superblock = block_device.read_first_block(block_size).await?;
-    is_zxcrypt_superblock(&superblock)
-}
-
-impl<T> DevPartitionManager<T> {
-    pub fn new_from_namespace() -> Result<Self, anyhow::Error> {
-        let dev_root_dir = io_util::open_directory_in_namespace("/dev", OPEN_RW)?;
-        Ok(Self::new(dev_root_dir))
-    }
-
-    pub fn new(dev_root_dir: DirectoryProxy) -> Self {
-        DevPartitionManager { dev_root_dir, block_device_type: PhantomData }
-    }
 }
 
 /// Given a partition, return true if the partition has the desired GUID
@@ -195,52 +87,150 @@ where
 }
 
 /// Given a directory handle representing the root of a device tree (i.e. open handle to "/dev"),
-/// open all block devices in `/dev/class/block/*` and return them as DevBlockDevice instances.
-async fn all_block_devices(dev_root_dir: &DirectoryProxy) -> Result<Vec<DevBlockDevice>, Error> {
-    let (block_dir_client, block_dir_server) =
-        fidl::endpoints::create_proxy::<DirectoryMarker>().context("create channel pair")?;
-
-    dev_root_dir
-        .open(
-            OPEN_FLAG_DIRECTORY | OPEN_RW, // flags
-            MODE_TYPE_DIRECTORY,           // mode
-            "class/block",                 // path
-            ServerEnd::new(block_dir_server.into_channel()),
-        )
-        .context("open() error")?;
-
-    let dirents = files_async::readdir(&block_dir_client)
-        .await
-        .context("list children of block device dir")?;
-
-    let mut block_devs = Vec::new();
+/// open all block devices in `/dev/class/block/*` and return them as Partition instances.
+async fn all_partitions(
+    dev_root_dir: &DirectoryProxy,
+) -> Result<Vec<DevBlockPartition>, DiskError> {
+    let block_dir =
+        io_util::directory::open_directory(dev_root_dir, "class/block", OPEN_RW).await?;
+    let dirents = files_async::readdir(&block_dir).await?;
+    let mut partitions = Vec::new();
     for child in dirents {
-        let (block_client, block_server) =
-            fidl::endpoints::create_proxy::<NodeMarker>().context("create Node channel pair")?;
-        let open_result = block_dir_client
-            .open(
-                OPEN_RW,
-                MODE_TYPE_SERVICE,
-                &child.name,
-                ServerEnd::new(block_server.into_channel()),
-            )
-            .with_context(|| format!("Couldn't open block device {}", &child.name));
-        if let Err(err) = open_result {
-            // Ignore failures to open any particular block device and just omit it from the
-            // listing.
-            warn!("{}", err);
-            continue;
+        match io_util::directory::open_node_no_describe(
+            &block_dir,
+            &child.name,
+            OPEN_RW,
+            MODE_TYPE_SERVICE,
+        ) {
+            Ok(node_proxy) => partitions.push(DevBlockPartition(Node(node_proxy))),
+            Err(err) => {
+                // Ignore failures to open any particular block device and just omit it from the
+                // listing.
+                warn!("{}", err);
+            }
         }
-
-        block_devs.push(DevBlockDevice { node: block_client });
     }
-    Ok(block_devs)
+    Ok(partitions)
+}
+
+/// The `DiskManager` trait allows for operating on block devices and partitions.
+///
+/// This trait exists as a way to abstract disk operations for easy mocking/testing.
+/// There is only one production implementation, [`DevDiskManager`].
+#[async_trait]
+pub trait DiskManager {
+    type BlockDevice;
+    type Partition: Partition<BlockDevice = Self::BlockDevice>;
+
+    /// Returns a list of all block devices that are valid partitions.
+    async fn partitions(&self) -> Result<Vec<Self::Partition>, DiskError>;
+
+    /// Given a block device, query the block size, and return if the contents of the first block
+    /// contain the zxcrypt magic bytes
+    async fn has_zxcrypt_header(&self, block_dev: &Self::BlockDevice) -> Result<bool, DiskError>;
+}
+
+/// The `Partition` trait provides a narrow interface for
+/// [`Partition`][fidl_fuchsia_hardware_block_partition::PartitionProxy] operations.
+#[async_trait]
+pub trait Partition {
+    type BlockDevice;
+
+    /// Checks if the partition has the desired GUID.
+    async fn has_guid(&self, desired_guid: [u8; 16]) -> Result<bool, DiskError>;
+
+    /// Checks if the partition has the desired label.
+    async fn has_label(&self, desired_label: &str) -> Result<bool, DiskError>;
+
+    /// Consumes the `Partition` and returns the underlying block device.
+    fn into_block_device(self) -> Self::BlockDevice;
+}
+
+/// The production implementation of [`DiskManager`].
+pub struct DevDiskManager {
+    /// The /dev directory to use as the root for all device paths.
+    dev_root: DirectoryProxy,
+}
+
+impl DevDiskManager {
+    /// Creates a new [`DevDiskManager`] with `dev_root` as the root for
+    /// all device paths. Typically this is the "/dev" directory.
+    pub fn new(dev_root: DirectoryProxy) -> Self {
+        Self { dev_root }
+    }
 }
 
 #[async_trait]
-impl PartitionManager<DevBlockDevice> for DevPartitionManager<DevBlockDevice> {
-    async fn partitions(&self) -> Result<Vec<DevBlockDevice>, Error> {
-        all_block_devices(&self.dev_root_dir).await
+impl DiskManager for DevDiskManager {
+    type BlockDevice = DevBlockDevice;
+    type Partition = DevBlockPartition;
+
+    async fn partitions(&self) -> Result<Vec<Self::Partition>, DiskError> {
+        all_partitions(&self.dev_root).await
+    }
+
+    async fn has_zxcrypt_header(&self, block_dev: &Self::BlockDevice) -> Result<bool, DiskError> {
+        let superblock = block_dev.read_first_block().await?;
+        is_zxcrypt_superblock(&superblock)
+    }
+}
+
+/// A convenience wrapper around a NodeProxy.
+struct Node(NodeProxy);
+
+impl Node {
+    /// Clones the connection to the node and casts it as the protocol `T`.
+    pub fn clone_as<T: ProtocolMarker>(&self) -> Result<T::Proxy, DiskError> {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<T>()?;
+        self.0.clone(OPEN_RW, ServerEnd::new(server_end.into_channel()))?;
+        Ok(proxy)
+    }
+}
+
+/// A production device block.
+pub struct DevBlockDevice(Node);
+
+impl DevBlockDevice {
+    async fn read_first_block(&self) -> Result<Vec<u8>, DiskError> {
+        let block_size = self.block_size().await?;
+        let file_proxy = self.0.clone_as::<FileMarker>()?;
+        // Issue a read of block_size bytes, since block devices only like being read along block
+        // boundaries.
+        let res = file_proxy.read_at(block_size, 0).await?;
+        zx::Status::ok(res.0).map_err(DiskError::ReadBlockHeaderFailed)?;
+        Ok(res.1)
+    }
+
+    async fn block_size(&self) -> Result<u64, DiskError> {
+        let block_proxy = self.0.clone_as::<BlockMarker>()?;
+        let resp = block_proxy.get_info().await?;
+        zx::Status::ok(resp.0).map_err(DiskError::GetBlockInfoFailed)?;
+        let block_size =
+            resp.1.ok_or_else(|| DiskError::GetBlockInfoFailed(zx::Status::NOT_FOUND))?.block_size
+                as u64;
+        Ok(block_size)
+    }
+}
+
+/// The production implementation of [`Partition`].
+pub struct DevBlockPartition(Node);
+
+#[async_trait]
+impl Partition for DevBlockPartition {
+    type BlockDevice = DevBlockDevice;
+
+    async fn has_guid(&self, desired_guid: [u8; 16]) -> Result<bool, DiskError> {
+        let partition_proxy = self.0.clone_as::<PartitionMarker>()?;
+        Ok(partition_has_guid(&partition_proxy, desired_guid).await)
+    }
+
+    async fn has_label(&self, desired_label: &str) -> Result<bool, DiskError> {
+        let partition_proxy = self.0.clone_as::<PartitionMarker>()?;
+        Ok(partition_has_label(&partition_proxy, desired_label).await)
+    }
+
+    fn into_block_device(self) -> Self::BlockDevice {
+        DevBlockDevice(self.0)
     }
 }
 
@@ -249,123 +239,24 @@ pub mod test {
     use {
         super::*,
         crate::constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
+        fidl_fuchsia_hardware_block::{BlockInfo, MAX_TRANSFER_UNBOUNDED},
         fidl_fuchsia_hardware_block_partition::Guid,
-        fuchsia_async as fasync,
-        futures::future,
+        fidl_fuchsia_io::{DirectoryMarker, MODE_TYPE_DIRECTORY},
+        fidl_test_identity::{
+            MockPartitionMarker, MockPartitionRequest, MockPartitionRequestStream,
+        },
+        futures::{future::BoxFuture, prelude::*},
         matches::assert_matches,
-        std::convert::TryInto,
+        std::sync::Arc,
+        vfs::{
+            directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+            path::Path as VfsPath, pseudo_directory,
+        },
     };
 
-    #[derive(Clone, Debug)]
-    pub struct MockPartition {
-        // The guid or zx_status error to return to get_type_guid requests
-        pub guid: Result<Guid, i32>,
-
-        // The label or zx_status error to return to get_name requests
-        pub label: Result<String, i32>,
-
-        // If present, the first block of the partition.  If absent, attempts
-        // to read or request the block size will return an error.
-        pub first_block: Option<Vec<u8>>,
-    }
-
-    #[async_trait]
-    impl BlockDevice for MockPartition {
-        async fn read_first_block(&self, block_size: u64) -> Result<Vec<u8>, Error> {
-            match &self.first_block {
-                Some(block) => {
-                    if block.len() == block_size as usize {
-                        Ok(block.to_vec())
-                    } else {
-                        Err(anyhow!("wrong block size"))
-                    }
-                }
-                None => Err(anyhow!("no block")),
-            }
-        }
-
-        async fn block_size(&self) -> Result<u64, Error> {
-            match &self.first_block {
-                Some(block) => Ok(block.len().try_into()?),
-                None => Err(anyhow!("no block")),
-            }
-        }
-    }
-
-    #[async_trait]
-    impl Partition for MockPartition {
-        async fn has_guid(&self, desired_guid: [u8; 16]) -> Result<bool, Error> {
-            Ok(partition_has_guid(self, desired_guid).await)
-        }
-
-        async fn has_label(&self, desired_label: &str) -> Result<bool, Error> {
-            Ok(partition_has_label(self, desired_label).await)
-        }
-    }
-
-    impl PartitionProxyInterface for MockPartition {
-        type GetTypeGuidResponseFut = future::Ready<Result<(i32, Option<Box<Guid>>), fidl::Error>>;
-        fn get_type_guid(&self) -> Self::GetTypeGuidResponseFut {
-            match self.guid {
-                Ok(guid) => future::ok((0, Some(Box::new(guid)))),
-                Err(status) => future::ok((status, None)),
-            }
-        }
-
-        type GetNameResponseFut = future::Ready<Result<(i32, Option<String>), fidl::Error>>;
-        fn get_name(&self) -> Self::GetNameResponseFut {
-            match &self.label {
-                Ok(label) => future::ok((0, Some(label.clone()))),
-                Err(status) => future::ok((*status, None)),
-            }
-        }
-
-        // The rest of these methods aren't called
-        type GetInfoResponseFut = future::Ready<
-            Result<(i32, Option<Box<fidl_fuchsia_hardware_block::BlockInfo>>), fidl::Error>,
-        >;
-        fn get_info(&self) -> Self::GetInfoResponseFut {
-            unimplemented!()
-        }
-
-        type GetStatsResponseFut = future::Ready<
-            Result<(i32, Option<Box<fidl_fuchsia_hardware_block::BlockStats>>), fidl::Error>,
-        >;
-        fn get_stats(&self, _clear: bool) -> Self::GetStatsResponseFut {
-            unimplemented!()
-        }
-
-        type GetFifoResponseFut = future::Ready<Result<(i32, Option<fidl::Fifo>), fidl::Error>>;
-        fn get_fifo(&self) -> Self::GetFifoResponseFut {
-            unimplemented!()
-        }
-
-        type AttachVmoResponseFut = future::Ready<
-            Result<(i32, Option<Box<fidl_fuchsia_hardware_block::VmoId>>), fidl::Error>,
-        >;
-        fn attach_vmo(&self, _vmo: fidl::Vmo) -> Self::AttachVmoResponseFut {
-            unimplemented!()
-        }
-
-        type CloseFifoResponseFut = future::Ready<Result<i32, fidl::Error>>;
-        fn close_fifo(&self) -> Self::CloseFifoResponseFut {
-            unimplemented!()
-        }
-
-        type RebindDeviceResponseFut = future::Ready<Result<i32, fidl::Error>>;
-        fn rebind_device(&self) -> Self::RebindDeviceResponseFut {
-            unimplemented!()
-        }
-
-        type GetInstanceGuidResponseFut =
-            future::Ready<Result<(i32, Option<Box<Guid>>), fidl::Error>>;
-        fn get_instance_guid(&self) -> Self::GetInstanceGuidResponseFut {
-            unimplemented!()
-        }
-    }
-
-    pub const DATA_GUID: Guid = Guid { value: FUCHSIA_DATA_GUID };
-    pub const BLOB_GUID: Guid = Guid {
+    const BLOCK_SIZE: usize = 4096;
+    const DATA_GUID: Guid = Guid { value: FUCHSIA_DATA_GUID };
+    const BLOB_GUID: Guid = Guid {
         value: [
             0x0e, 0x38, 0x67, 0x29, 0x4c, 0x13, 0xbb, 0x4c, 0xb6, 0xda, 0x17, 0xe7, 0xce, 0x1c,
             0xa4, 0x5d,
@@ -378,99 +269,225 @@ pub mod test {
         [ZXCRYPT_MAGIC.to_vec(), [0].repeat(block_size - ZXCRYPT_MAGIC.len())].concat()
     }
 
-    // A partition manager implementation backed by an optional fixed static list of partitions.
-    // If no partition list is given, partitions() (from the PartitionManager trait) will return
-    // an error.
-    pub struct MockPartitionManager {
-        // The partitions backing the mock partition manager
-        pub maybe_partitions: Option<Vec<MockPartition>>,
+    /// A mock [`Partition`] that can control the result of certain operations.
+    pub struct MockPartition {
+        /// Controls whether the `get_type_guid` call succeeds.
+        guid: Result<Guid, i32>,
+        /// Controls whether the `get_name` call succeeds.
+        label: Result<String, i32>,
+        /// Controls whether reading the first block of data succeeds.
+        first_block: Result<Vec<u8>, i32>,
     }
 
-    #[async_trait]
-    impl PartitionManager<MockPartition> for MockPartitionManager {
-        async fn partitions(&self) -> Result<Vec<MockPartition>, Error> {
-            match &self.maybe_partitions {
-                Some(partitions) => Ok(partitions.to_vec()),
-                None => Err(anyhow!("listing partitions failed")),
-            }
+    impl MockPartition {
+        /// Handles the requests for a given RequestStream. In order to simulate the devhost
+        /// block device's ability to multiplex fuchsia.io protocols with block protocols,
+        /// we use a custom FIDL protocol that composes all the relevant protocols.
+        pub fn handle_requests_for_stream(
+            self: Arc<Self>,
+            scope: ExecutionScope,
+            mut stream: MockPartitionRequestStream,
+        ) -> BoxFuture<'static, ()> {
+            Box::pin(async move {
+                while let Some(request) = stream.try_next().await.expect("failed to read request") {
+                    match request {
+                        // fuchsia.hardware.block.partition.Partition methods
+                        MockPartitionRequest::GetTypeGuid { responder } => {
+                            match &self.guid {
+                                Ok(guid) => responder.send(0, Some(&mut guid.clone())),
+                                Err(raw_status) => responder.send(*raw_status, None),
+                            }
+                            .expect("failed to send Partition.GetTypeGuid response");
+                        }
+                        MockPartitionRequest::GetName { responder } => {
+                            match &self.label {
+                                Ok(label) => responder.send(0, Some(label)),
+                                Err(raw_status) => responder.send(*raw_status, None),
+                            }
+                            .expect("failed to send Partition.GetName response");
+                        }
+
+                        // fuchsia.hardware.block.Block methods
+                        MockPartitionRequest::GetInfo { responder } => {
+                            responder
+                                .send(
+                                    0,
+                                    Some(&mut BlockInfo {
+                                        block_count: 1,
+                                        block_size: BLOCK_SIZE as u32,
+                                        max_transfer_size: MAX_TRANSFER_UNBOUNDED,
+                                        flags: 0,
+                                        reserved: 0,
+                                    }),
+                                )
+                                .expect("failed to send Block.GetInfo response");
+                        }
+
+                        // fuchsia.io.File methods
+                        MockPartitionRequest::ReadAt { count, offset, responder } => {
+                            // All reads should be of block size.
+                            assert_eq!(
+                                count as usize, BLOCK_SIZE,
+                                "all reads must be of block size"
+                            );
+
+                            // Only the first
+                            assert_eq!(offset, 0, "only the first block should be read");
+
+                            match &self.first_block {
+                                Ok(data) => {
+                                    assert_eq!(
+                                        data.len(),
+                                        BLOCK_SIZE,
+                                        "mock block data must be of size BLOCK_SIZE"
+                                    );
+                                    responder.send(0, data)
+                                }
+                                Err(s) => responder.send(*s, &[0; 0]),
+                            }
+                            .expect("failed to send File.ReadAt response");
+                        }
+
+                        // fuchsia.io.Node methods
+                        MockPartitionRequest::Clone { flags, object, control_handle: _ } => {
+                            assert_eq!(flags, OPEN_RW);
+                            let stream =
+                                ServerEnd::<MockPartitionMarker>::new(object.into_channel())
+                                    .into_stream()
+                                    .unwrap();
+                            scope.spawn(
+                                Arc::clone(&self).handle_requests_for_stream(scope.clone(), stream),
+                            );
+                        }
+                        req => {
+                            error!("{:?} is not implemented for this mock", req);
+                            unimplemented!(
+                                "MockPartition request is not implemented for this mock"
+                            );
+                        }
+                    }
+                }
+            })
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_partition_methods() {
-        let p1 = MockPartition {
-            guid: Ok(DATA_GUID),
-            label: Ok(ACCOUNT_LABEL.to_string()),
-            first_block: Some(make_zxcrypt_superblock(4096)),
-        };
-        let p2 = MockPartition {
-            guid: Ok(BLOB_GUID),
-            label: Ok("fuchsia-blob".to_string()),
-            first_block: None,
-        };
-
-        let desired_guid = FUCHSIA_DATA_GUID;
-        let desired_label = "account";
-
-        assert!(partition_has_guid(&p1, desired_guid).await);
-        assert!(partition_has_label(&p1, desired_label).await);
-
-        assert!(!partition_has_guid(&p2, desired_guid).await);
-        assert!(!partition_has_label(&p2, desired_label).await);
-
-        assert_matches!(p1.has_guid(desired_guid).await, Ok(true));
-        assert_matches!(p2.has_guid(desired_guid).await, Ok(false));
-
-        assert_matches!(p1.has_label(desired_label).await, Ok(true));
-        assert_matches!(p2.has_label(desired_label).await, Ok(false));
+    fn host_mock_partition(
+        scope: &ExecutionScope,
+        mock: MockPartition,
+    ) -> Arc<vfs::service::Service> {
+        let scope = scope.clone();
+        let mock = Arc::new(mock);
+        vfs::service::host(move |stream| {
+            mock.clone().handle_requests_for_stream(scope.clone(), stream)
+        })
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_has_zxcrypt_header() {
-        let zxcrypt_partition = MockPartition {
-            guid: Ok(DATA_GUID),
-            label: Ok(ACCOUNT_LABEL.to_string()),
-            first_block: Some(make_zxcrypt_superblock(4096)),
-        };
-        assert_matches!(has_zxcrypt_header(&zxcrypt_partition).await, Ok(true));
-
-        let not_zxcrypt_partition = MockPartition {
-            guid: Ok(DATA_GUID),
-            label: Ok(ACCOUNT_LABEL.to_string()),
-            first_block: Some([0u8; 4096].to_vec()),
-        };
-        assert_matches!(has_zxcrypt_header(&not_zxcrypt_partition).await, Ok(false));
-
-        let unreadable_partition = MockPartition {
-            guid: Ok(DATA_GUID),
-            label: Ok(ACCOUNT_LABEL.to_string()),
-            first_block: None,
-        };
-        assert_matches!(has_zxcrypt_header(&unreadable_partition).await, Err(_));
+    /// Serves the pseudo-directory `mock_devfs` asynchronously and returns a proxy to it.
+    fn serve_mock_devfs(
+        scope: &ExecutionScope,
+        mock_devfs: Arc<dyn DirectoryEntry>,
+    ) -> DirectoryProxy {
+        let (dev_root, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        mock_devfs.open(
+            scope.clone(),
+            OPEN_RW,
+            MODE_TYPE_DIRECTORY,
+            VfsPath::dot(),
+            ServerEnd::new(server_end.into_channel()),
+        );
+        dev_root
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_partition_manager() {
-        let inner_partitions = vec![
-            MockPartition {
-                guid: Ok(BLOB_GUID),
-                label: Ok("fuchsia-blob".to_string()),
-                first_block: None,
-            },
-            MockPartition {
-                guid: Ok(DATA_GUID),
-                label: Ok(ACCOUNT_LABEL.to_string()),
-                first_block: Some(make_zxcrypt_superblock(4096)),
-            },
-        ];
+    #[fuchsia::test]
+    async fn lists_partitions() {
+        let scope = ExecutionScope::new();
+        let mock_devfs = pseudo_directory! {
+            "class" => pseudo_directory! {
+                "block" => pseudo_directory! {
+                    "000" => host_mock_partition(&scope, MockPartition {
+                            guid: Ok(BLOB_GUID),
+                            label: Ok("other".to_string()),
+                            first_block: Ok(make_zxcrypt_superblock(BLOCK_SIZE)),
+                    }),
+                    "001" => host_mock_partition(&scope, MockPartition {
+                            guid: Ok(DATA_GUID),
+                            label: Ok(ACCOUNT_LABEL.to_string()),
+                            first_block: Ok(make_zxcrypt_superblock(BLOCK_SIZE)),
+                    }),
+                }
+            }
+        };
+        let disk_manager = DevDiskManager::new(serve_mock_devfs(&scope, mock_devfs));
+        let partitions = disk_manager.partitions().await.expect("list partitions");
 
-        let pm_ok = MockPartitionManager { maybe_partitions: Some(inner_partitions) };
-        let partitions_ok = pm_ok.partitions().await;
-        assert_matches!(partitions_ok, Ok(_));
-        assert_eq!(partitions_ok.unwrap().len(), 2);
+        assert_eq!(partitions.len(), 2);
+        assert!(partitions[0].has_guid(BLOB_GUID.value).await.expect("has_guid"));
+        assert!(partitions[0].has_label("other").await.expect("has_label"));
 
-        let pm_fail = MockPartitionManager { maybe_partitions: None };
-        let partitions_fail = pm_fail.partitions().await;
-        assert_matches!(partitions_fail, Err(_));
+        assert!(partitions[1].has_guid(DATA_GUID.value).await.expect("has_guid"));
+        assert!(partitions[1].has_label(ACCOUNT_LABEL).await.expect("has_label"));
+
+        scope.shutdown();
+        scope.wait().await;
+    }
+
+    #[fuchsia::test]
+    async fn lists_partitions_empty() {
+        let scope = ExecutionScope::new();
+        let mock_devfs = pseudo_directory! {
+            "class" => pseudo_directory! {
+                "block" => pseudo_directory! {},
+            }
+        };
+        let disk_manager = DevDiskManager::new(serve_mock_devfs(&scope, mock_devfs));
+        let partitions = disk_manager.partitions().await.expect("list partitions");
+        assert_eq!(partitions.len(), 0);
+
+        scope.shutdown();
+        scope.wait().await;
+    }
+
+    #[fuchsia::test]
+    async fn has_zxcrypt_header() {
+        let scope = ExecutionScope::new();
+        let mock_devfs = pseudo_directory! {
+            "class" => pseudo_directory! {
+                "block" => pseudo_directory! {
+                    "000" => host_mock_partition(&scope, MockPartition {
+                        guid: Ok(BLOB_GUID),
+                        label: Ok("other".to_string()),
+                        first_block: Ok([0].repeat(BLOCK_SIZE)),
+                    }),
+                    "001" => host_mock_partition(&scope, MockPartition {
+                        guid: Ok(DATA_GUID),
+                        label: Ok(ACCOUNT_LABEL.to_string()),
+                        first_block: Ok(make_zxcrypt_superblock(BLOCK_SIZE)),
+                    }),
+                    "002" => host_mock_partition(&scope, MockPartition {
+                        guid: Ok(DATA_GUID),
+                        label: Ok(ACCOUNT_LABEL.to_string()),
+                        first_block: Err(zx::Status::NOT_FOUND.into_raw()),
+                    }),
+                }
+            }
+        };
+        let disk_manager = DevDiskManager::new(serve_mock_devfs(&scope, mock_devfs));
+        let partitions = disk_manager.partitions().await.expect("list partitions");
+        let mut partition_iter = partitions.into_iter();
+
+        let non_zxcrypt_block =
+            partition_iter.next().expect("expected first partition").into_block_device();
+        assert_matches!(disk_manager.has_zxcrypt_header(&non_zxcrypt_block).await, Ok(false));
+
+        let zxcrypt_block =
+            partition_iter.next().expect("expected second partition").into_block_device();
+        assert_matches!(disk_manager.has_zxcrypt_header(&zxcrypt_block).await, Ok(true));
+
+        let bad_block =
+            partition_iter.next().expect("expected third partition").into_block_device();
+        assert_matches!(disk_manager.has_zxcrypt_header(&bad_block).await, Err(_));
+
+        scope.shutdown();
+        scope.wait().await;
     }
 }

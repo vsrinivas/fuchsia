@@ -4,7 +4,7 @@
 
 use crate::{
     constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
-    disk_management::{has_zxcrypt_header, BlockDevice, Partition, PartitionManager},
+    disk_management::{DiskManager, Partition},
 };
 use anyhow::{anyhow, Context, Error};
 use fidl::endpoints::ServerEnd;
@@ -15,7 +15,7 @@ use fidl_fuchsia_identity_account::{
 use futures::{lock::Mutex, prelude::*, select};
 use identity_common::{TaskGroup, TaskGroupCancel};
 use log::{error, warn};
-use std::{collections::HashMap, marker::PhantomData};
+use std::collections::HashMap;
 
 // For now, we only support a single AccountId (as in the fuchsia.identity protocol).  The local
 // account, if it exists, will have AccountId value 1.
@@ -23,30 +23,20 @@ const GLOBAL_ACCOUNT_ID: AccountId = 1;
 
 pub type AccountId = u64;
 
-pub struct AccountManager<PMT, BDT>
-where
-    PMT: PartitionManager<BDT>,
-    BDT: BlockDevice + Partition,
-{
-    partition_manager: PMT,
-    block_dev_type: PhantomData<BDT>,
+pub struct AccountManager<DM> {
+    disk_manager: DM,
 
     // Maps a TaskGroup to each account, allowing for the cancelation of all tasks running for a
     // particular account.
     account_tasks: Mutex<HashMap<AccountId, TaskGroup>>,
 }
 
-impl<PMT, BDT> AccountManager<PMT, BDT>
+impl<DM> AccountManager<DM>
 where
-    PMT: PartitionManager<BDT>,
-    BDT: BlockDevice + Partition,
+    DM: DiskManager,
 {
-    pub fn new(partition_manager: PMT) -> Self {
-        Self {
-            partition_manager,
-            block_dev_type: PhantomData,
-            account_tasks: Mutex::new(HashMap::new()),
-        }
+    pub fn new(disk_manager: DM) -> Self {
+        Self { disk_manager, account_tasks: Mutex::new(HashMap::new()) }
     }
 
     /// Serially process a stream of incoming AccountManager FIDL requests.
@@ -140,19 +130,20 @@ where
     async fn get_account_ids(&self) -> Result<Vec<u64>, Error> {
         let mut account_ids = Vec::new();
 
-        let block_devices = self.partition_manager.partitions().await?;
-        for block_dev in block_devices {
-            match block_dev.has_guid(FUCHSIA_DATA_GUID).await {
+        let partitions = self.disk_manager.partitions().await?;
+        for partition in partitions {
+            match partition.has_guid(FUCHSIA_DATA_GUID).await {
                 Ok(true) => {}
                 _ => continue,
             }
 
-            match block_dev.has_label(ACCOUNT_LABEL).await {
+            match partition.has_label(ACCOUNT_LABEL).await {
                 Ok(true) => (),
                 _ => continue,
             }
 
-            match has_zxcrypt_header(&block_dev).await {
+            let block_device = partition.into_block_device();
+            match self.disk_manager.has_zxcrypt_header(&block_device).await {
                 Ok(true) => {
                     account_ids.push(GLOBAL_ACCOUNT_ID);
                     // Only bother with the first matching block device for now.
@@ -311,100 +302,186 @@ impl Account {
 #[cfg(test)]
 mod test {
     use {
-        super::*,
-        crate::disk_management::test::{
-            make_zxcrypt_superblock, MockPartition, MockPartitionManager, BLOB_GUID, DATA_GUID,
-        },
-        fidl_fuchsia_io::DirectoryMarker,
-        fuchsia_async as fasync,
+        super::*, crate::disk_management::DiskError, async_trait::async_trait,
+        fidl_fuchsia_io::DirectoryMarker, fuchsia_zircon::Status,
     };
 
-    fn make_account_partition() -> MockPartition {
-        MockPartition {
-            guid: Ok(DATA_GUID),
-            label: Ok(ACCOUNT_LABEL.to_string()),
-            first_block: Some(make_zxcrypt_superblock(4096)),
+    /// Mock implementation of [`DiskManager`].
+    struct MockDiskManager {
+        // If no partition list is given, partitions() (from the DiskManager trait) will return
+        // an error.
+        maybe_partitions: Option<Vec<MockPartition>>,
+    }
+
+    #[async_trait]
+    impl DiskManager for MockDiskManager {
+        type BlockDevice = MockBlockDevice;
+        type Partition = MockPartition;
+
+        async fn partitions(&self) -> Result<Vec<MockPartition>, DiskError> {
+            self.maybe_partitions
+                .clone()
+                .ok_or_else(|| DiskError::GetBlockInfoFailed(Status::NOT_FOUND))
+        }
+
+        async fn has_zxcrypt_header(&self, block_dev: &MockBlockDevice) -> Result<bool, DiskError> {
+            match &block_dev.zxcrypt_header {
+                Ok(Match::Any) => Ok(true),
+                Ok(Match::None) => Ok(false),
+                Err(err_factory) => Err(err_factory()),
+            }
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    impl MockDiskManager {
+        fn new() -> Self {
+            Self { maybe_partitions: None }
+        }
+
+        fn with_partition(self, partition: MockPartition) -> Self {
+            let mut partitions = self.maybe_partitions.unwrap_or_else(Vec::new);
+            partitions.push(partition);
+            MockDiskManager { maybe_partitions: Some(partitions) }
+        }
+    }
+
+    /// Whether a mock's input should be considered a match for the test case.
+    #[derive(Debug, Clone, Copy)]
+    enum Match {
+        /// Any input is considered a match.
+        Any,
+        /// Regardless of input, there is no match.
+        None,
+    }
+
+    /// A mock implementation of [`Partition`].
+    #[derive(Debug, Clone)]
+    struct MockPartition {
+        // Whether the mock's `has_guid` method will match any given GUID, or produce an error.
+        guid: Result<Match, fn() -> DiskError>,
+
+        // Whether the mock's `has_label` method will match any given label, or produce an error.
+        label: Result<Match, fn() -> DiskError>,
+
+        // BlockDevice representing the partition data.
+        block: MockBlockDevice,
+    }
+
+    #[async_trait]
+    impl Partition for MockPartition {
+        type BlockDevice = MockBlockDevice;
+
+        async fn has_guid(&self, _desired_guid: [u8; 16]) -> Result<bool, DiskError> {
+            match &self.guid {
+                Ok(Match::Any) => Ok(true),
+                Ok(Match::None) => Ok(false),
+                Err(err_factory) => Err(err_factory()),
+            }
+        }
+
+        async fn has_label(&self, _desired_label: &str) -> Result<bool, DiskError> {
+            match &self.label {
+                Ok(Match::Any) => Ok(true),
+                Ok(Match::None) => Ok(false),
+                Err(err_factory) => Err(err_factory()),
+            }
+        }
+
+        fn into_block_device(self) -> MockBlockDevice {
+            self.block
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct MockBlockDevice {
+        // Whether or not the block device has a zxcrypt header in the first block.
+        zxcrypt_header: Result<Match, fn() -> DiskError>,
+    }
+
+    // Create a partition whose GUID and label match the account partition,
+    // and whose block device has a zxcrypt header.
+    fn make_formatted_account_partition() -> MockPartition {
+        MockPartition {
+            guid: Ok(Match::Any),
+            label: Ok(Match::Any),
+            block: MockBlockDevice { zxcrypt_header: Ok(Match::Any) },
+        }
+    }
+
+    #[fuchsia::test]
     async fn test_get_account_ids_wrong_guid() {
-        let partitions = vec![MockPartition {
-            guid: Ok(BLOB_GUID),
-            label: Ok(ACCOUNT_LABEL.to_string()),
-            first_block: Some(make_zxcrypt_superblock(4096)),
-        }];
-        let account_manager =
-            AccountManager::new(MockPartitionManager { maybe_partitions: Some(partitions) });
+        let disk_manager = MockDiskManager::new().with_partition(MockPartition {
+            guid: Ok(Match::None),
+            label: Ok(Match::Any),
+            block: MockBlockDevice { zxcrypt_header: Ok(Match::Any) },
+        });
+        let account_manager = AccountManager::new(disk_manager);
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, Vec::<u64>::new());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_account_ids_wrong_label() {
-        let partitions = vec![MockPartition {
-            guid: Ok(DATA_GUID),
-            label: Ok("wrong-label".to_string()),
-            first_block: Some(make_zxcrypt_superblock(4096)),
-        }];
-        let account_manager =
-            AccountManager::new(MockPartitionManager { maybe_partitions: Some(partitions) });
+        let disk_manager = MockDiskManager::new().with_partition(MockPartition {
+            guid: Ok(Match::Any),
+            label: Ok(Match::None),
+            block: MockBlockDevice { zxcrypt_header: Ok(Match::Any) },
+        });
+        let account_manager = AccountManager::new(disk_manager);
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, Vec::<u64>::new());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_account_ids_no_zxcrypt_header() {
-        let partitions = vec![MockPartition {
-            guid: Ok(DATA_GUID),
-            label: Ok(ACCOUNT_LABEL.to_string()),
-            first_block: Some([0u8; 4096].to_vec()),
-        }];
-        let account_manager =
-            AccountManager::new(MockPartitionManager { maybe_partitions: Some(partitions) });
+        let disk_manager = MockDiskManager::new().with_partition(MockPartition {
+            guid: Ok(Match::Any),
+            label: Ok(Match::Any),
+            block: MockBlockDevice { zxcrypt_header: Ok(Match::None) },
+        });
+        let account_manager = AccountManager::new(disk_manager);
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, Vec::<u64>::new());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_account_ids_found() {
-        let partitions = vec![make_account_partition()];
-        let account_manager =
-            AccountManager::new(MockPartitionManager { maybe_partitions: Some(partitions) });
+        let disk_manager =
+            MockDiskManager::new().with_partition(make_formatted_account_partition());
+        let account_manager = AccountManager::new(disk_manager);
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, vec![GLOBAL_ACCOUNT_ID]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_account_ids_just_one_match() {
-        let partitions = vec![make_account_partition(), make_account_partition()];
-        let account_manager =
-            AccountManager::new(MockPartitionManager { maybe_partitions: Some(partitions) });
+        let disk_manager = MockDiskManager::new()
+            .with_partition(make_formatted_account_partition())
+            .with_partition(make_formatted_account_partition());
+        let account_manager = AccountManager::new(disk_manager);
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         // Even if two partitions would match our criteria, we only return one account for now.
         assert_eq!(account_ids, vec![GLOBAL_ACCOUNT_ID]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_account_ids_not_first_partition() {
         // Expect to ignore the first partition, but notice the second
-        let partitions = vec![
-            MockPartition {
-                guid: Ok(DATA_GUID),
-                label: Ok("wrong-label".to_string()),
-                first_block: Some(make_zxcrypt_superblock(4096)),
-            },
-            make_account_partition(),
-        ];
-        let account_manager =
-            AccountManager::new(MockPartitionManager { maybe_partitions: Some(partitions) });
+        let disk_manager = MockDiskManager::new()
+            .with_partition(MockPartition {
+                guid: Ok(Match::Any),
+                label: Ok(Match::None),
+                block: MockBlockDevice { zxcrypt_header: Ok(Match::Any) },
+            })
+            .with_partition(make_formatted_account_partition());
+        let account_manager = AccountManager::new(disk_manager);
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, vec![GLOBAL_ACCOUNT_ID]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_account_no_accounts() {
-        let account_manager = AccountManager::new(MockPartitionManager { maybe_partitions: None });
+        let account_manager = AccountManager::new(MockDiskManager::new());
         let (_, server) = fidl::endpoints::create_endpoints::<AccountMarker>().unwrap();
         assert_eq!(
             account_manager.get_account(GLOBAL_ACCOUNT_ID, "".to_string(), server).await,
@@ -412,12 +489,12 @@ mod test {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_account_not_found() {
         const NON_EXISTENT_ACCOUNT_ID: u64 = 42;
-        let partitions = vec![make_account_partition()];
-        let account_manager =
-            AccountManager::new(MockPartitionManager { maybe_partitions: Some(partitions) });
+        let disk_manager =
+            MockDiskManager::new().with_partition(make_formatted_account_partition());
+        let account_manager = AccountManager::new(disk_manager);
         let (_, server) = fidl::endpoints::create_endpoints::<AccountMarker>().unwrap();
         assert_eq!(
             account_manager.get_account(NON_EXISTENT_ACCOUNT_ID, "".to_string(), server).await,
@@ -425,12 +502,12 @@ mod test {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_account_bad_password() {
         const BAD_PASSWORD: &str = "passwd";
-        let partitions = vec![make_account_partition()];
-        let account_manager =
-            AccountManager::new(MockPartitionManager { maybe_partitions: Some(partitions) });
+        let disk_manager =
+            MockDiskManager::new().with_partition(make_formatted_account_partition());
+        let account_manager = AccountManager::new(disk_manager);
         let (_, server) = fidl::endpoints::create_endpoints::<AccountMarker>().unwrap();
         assert_eq!(
             account_manager.get_account(GLOBAL_ACCOUNT_ID, BAD_PASSWORD.to_string(), server).await,
@@ -438,11 +515,11 @@ mod test {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_account_found() {
-        let partitions = vec![make_account_partition()];
-        let account_manager =
-            AccountManager::new(MockPartitionManager { maybe_partitions: Some(partitions) });
+        let disk_manager =
+            MockDiskManager::new().with_partition(make_formatted_account_partition());
+        let account_manager = AccountManager::new(disk_manager);
         let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
             .get_account(GLOBAL_ACCOUNT_ID, "".to_string(), server)
@@ -455,11 +532,11 @@ mod test {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_multiple_get_account_channels_concurrent() {
-        let partitions = vec![make_account_partition()];
-        let account_manager =
-            AccountManager::new(MockPartitionManager { maybe_partitions: Some(partitions) });
+        let disk_manager =
+            MockDiskManager::new().with_partition(make_formatted_account_partition());
+        let account_manager = AccountManager::new(disk_manager);
         let (client1, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
             .get_account(GLOBAL_ACCOUNT_ID, "".to_string(), server)
@@ -482,11 +559,11 @@ mod test {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_multiple_get_account_channels_serial() {
-        let partitions = vec![make_account_partition()];
-        let account_manager =
-            AccountManager::new(MockPartitionManager { maybe_partitions: Some(partitions) });
+        let disk_manager =
+            MockDiskManager::new().with_partition(make_formatted_account_partition());
+        let account_manager = AccountManager::new(disk_manager);
         let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
             .get_account(GLOBAL_ACCOUNT_ID, "".to_string(), server)
@@ -511,11 +588,11 @@ mod test {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_account_shutdown() {
-        let partitions = vec![make_account_partition()];
-        let account_manager =
-            AccountManager::new(MockPartitionManager { maybe_partitions: Some(partitions) });
+        let disk_manager =
+            MockDiskManager::new().with_partition(make_formatted_account_partition());
+        let account_manager = AccountManager::new(disk_manager);
         let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
             .get_account(GLOBAL_ACCOUNT_ID, "".to_string(), server)

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
@@ -19,6 +20,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/identity/lib/identity_common",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
@@ -27,9 +29,14 @@ rustc_binary("bin") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [
+    ":test.identity-rustc",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//third_party/rust_crates:matches",
+  ]
 
   sources = [
     "src/account_manager.rs",
@@ -52,6 +59,17 @@ fuchsia_package("password_authenticator") {
 fuchsia_unittest_package("password-authenticator-tests") {
   manifest = "meta/password-authenticator-test.cml"
   deps = [ ":bin_test" ]
+}
+
+fidl("test.identity") {
+  sources = [ "block.test.fidl" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.block",
+    "//sdk/fidl/fuchsia.hardware.block.partition",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io2",
+    "//sdk/fidl/fuchsia.mem",
+  ]
 }
 
 group("tests") {
