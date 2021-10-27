@@ -283,3 +283,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0134_software_updates_time_dependency.md
 - title: "RFC-0136: Fxfs"
   path: /docs/contribute/governance/rfcs/0136_fxfs.md
+- title: "RFC-0138: Handling unknown interactions"
+  path: /docs/contribute/governance/rfcs/0138_handling_unknown_interactions.md

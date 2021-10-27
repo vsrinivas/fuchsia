@@ -158,7 +158,7 @@ FIDL is geared towards being used in [low-level](#low-level-first) layers, a
 corollary is that such validation must be done efficiently, and designed to fit
 in a [single pass](#single-pass-no-heap).
 
-### No reflective functionality out of the box
+### No reflective functionality out of the box {#avoid-reflection}
 
 > Without explicit opt-in, a peer must not be allowed to perform reflection on a
 > protocol, be it exposed methods, or exposed types.

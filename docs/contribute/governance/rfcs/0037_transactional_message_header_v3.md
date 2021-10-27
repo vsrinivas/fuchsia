@@ -82,7 +82,7 @@ syscall has stabilized, and this requirement is no longer needed.
 <!-- xrefs -->
 [zx_channel_call]: /docs/reference/syscalls/channel_call.md
 
-### Version 3
+### Version 3 {#version-3}
 
 We stabilize the transactional message header ("v3") to be:
 
@@ -100,7 +100,7 @@ As a [wire format diagram][wire-format] we have:
 
 ![drawing](resources/0037_transactional_message_header_v3/transaction-header.png)
 
-### When should a new magic number be assigned
+### When should a new magic number be assigned {#new-magic-number}
 
 The initial magic number will be `0x01`. We reserve funnier numbers for later.
 

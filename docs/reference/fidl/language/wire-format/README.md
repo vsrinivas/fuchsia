@@ -7,7 +7,7 @@ see the [concepts overview][concepts].
 
 ## Core Concepts
 
-### Message
+### Message {#message}
 
 A FIDL **message** is a collection of data.
 

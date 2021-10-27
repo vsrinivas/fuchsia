@@ -1759,3 +1759,16 @@
   reviewers: ['abarth@google.com', 'brettw@google.com', 'palmer@google.com']
   submitted: '2021-09-30'
   reviewed: '2021-10-13'
+
+- name: 'RFC-0138'
+  title: 'Handling unknown interactions'
+  short_description: 'We expand the FIDL semantics to allow peers to handle unknown interactions.'
+  authors: ['pascallouis@google.com']
+  file: '0138_handling_unknown_interactions.md'
+  area: ['FIDL']
+  issue: ['']
+  gerrit_change_id: ['534921']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com','ianloic@google.com','yifeit@google.com']
+  submitted: '2021-05-25'
+  reviewed: '2021-10-27'
