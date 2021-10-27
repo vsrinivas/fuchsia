@@ -6,7 +6,7 @@
 #### CATEGORY=Documentation
 ### create markdown docs for fx subcommands
 
-## usage: fx helpdoc [OPTIONS] OUTPUT_DIR
+## usage: fx helpdoc [OPTIONS] OUTPUT_PATH
 ##
 ## Create markdown documentation for fx and its subcommands, based on
 ## the same metadata that is used to create the output of `fx help`
@@ -21,6 +21,9 @@
 ##                                 parsing errors in fuchsia.dev.
 ##     --no-deprecated           do not create docs for deprecated subcommands
 ##     --no-contrib              do not create docs for contrib scripts in //tools/devshell/contrib/*
+##     --archive                 creates a compressed archive at OUTPUT_PATH.
+##                                 If specified, output will be compressed
+##                                 and OUTPUT_PATH must end with .tgz or .tar.gz.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
@@ -32,6 +35,8 @@ function main {
   show_contrib=1
   escape_jinja=0
   show_deprecated=1
+  archive_output=0
+  archive_path=
   toc_prefix="/reference/tools/fx"
   while [[ $# -ne 0 ]]; do
     case $1 in
@@ -56,6 +61,9 @@ function main {
       --no-contrib)
         show_contrib=0
         ;;
+      --archive)
+        archive_output=1
+        ;;
       -*)
         fx-error "Unknown argument $1"
         fx-command-help
@@ -75,6 +83,21 @@ function main {
   fi
 
   base_out="$1"
+  if [[ "${archive_output}" -eq 1 ]]; then
+    if [[ $base_out != *.tgz ]] && [[ $base_out != *.tar.gz ]]; then
+          fx-error "OUTPUT_PATH must end with .tgz or .tar.gz if the archive flag is specified: ${base_out}"
+          fx-command-help
+          exit 1
+    fi
+    archive_path="$base_out"
+    base_out="$(mktemp -d)"
+
+    temp_dir="$base_out"
+    base_out="${base_out}/helpdoc"
+    mkdir "$base_out"
+    trap 'cleanup' ERR INT TERM EXIT
+  fi
+
   mkdir -p "${base_out}/cmd"
 
   # initializes the main index.md
@@ -146,6 +169,16 @@ function main {
     fi
   fi
   create-main-toc
+  if [[ "${archive_output}" -eq 1 ]]; then
+    tar -C "$temp_dir" -czvf "$archive_path" .
+  fi
+
+}
+
+function cleanup {
+  if [[ -d "$temp_dir" ]]; then
+    rm -Rf "$temp_dir"
+  fi
 }
 
 function _md_main_table_header {

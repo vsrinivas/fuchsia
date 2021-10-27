@@ -15,6 +15,7 @@ group("docsgen") {
     ":dart_sdk_docs($host_toolchain)",
     ":invoke_clidoc($host_toolchain)",
     ":invoke_fidldoc($host_toolchain)",
+    ":invoke_helpdoc($host_toolchain)",
     "//bundles:create_all_drivers_doc",
   ]
 }
@@ -27,7 +28,6 @@ python_binary(_dartdoc_transforms_script_target) {
   deps = [ "//third_party/pyyaml:yaml" ]
 }
 
-# Runs one time python fidl generation script.
 # See dartdoc_transforms.py for more information
 action("dart_sdk_docs") {
   script_output = get_target_outputs(":${_dartdoc_transforms_script_target}")
@@ -129,4 +129,41 @@ compiled_action("invoke_clidoc") {
     "--tarball-dir",
     rebase_path("$target_out_dir/clidoc_out.tar.gz", root_build_dir),
   ]
+}
+
+_helpdoc_script_target = "helpdoc_generation"
+helpdoc_tarfile = "helpdoc_out.tar.gz"
+python_binary(_helpdoc_script_target) {
+  main_source = "//tools/docsgen/gen_helpdocs.py"
+  output_name = "gen_helpdocs.pyz"
+  sources = []
+  deps = []
+}
+
+python_host_test("gen_helpdocs_test") {
+  main_source = "gen_helpdocs_test.py"
+  sources = [ "gen_helpdocs.py" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":gen_helpdocs_test($host_toolchain)" ]
+}
+
+# Runs one time python helpdoc generation script.
+action("invoke_helpdoc") {
+  script_output = get_target_outputs(":${_helpdoc_script_target}")
+  script = script_output[0]
+
+  outputs = [ "$target_out_dir/$helpdoc_tarfile" ]
+  depfile = "$target_out_dir/$target_name.d"
+
+  args = [
+    "--out-path",
+    rebase_path("$target_out_dir/$helpdoc_tarfile", root_build_dir),
+    "--src-dir",
+    rebase_path("//", root_build_dir),
+  ]
+
+  deps = [ ":${_helpdoc_script_target}" ]
 }
