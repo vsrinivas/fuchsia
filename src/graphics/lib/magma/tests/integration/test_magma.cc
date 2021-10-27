@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <poll.h>
+#include <time.h>
 
 #include <array>
 #include <thread>
@@ -36,6 +37,8 @@
 #include "magma.h"
 #include "magma_common_defs.h"
 #include "magma_intel_gen_defs.h"
+#include "src/graphics/drivers/msd-arm-mali/include/magma_arm_mali_types.h"
+#include "src/graphics/drivers/msd-arm-mali/include/magma_vendor_queries.h"
 
 extern "C" {
 #include "test_magma.h"
@@ -50,6 +53,14 @@ inline constexpr int64_t ms_to_ns(int64_t ms) { return ms * 1000000ull; }
 static inline uint32_t to_uint32(uint64_t val) {
   assert(val <= std::numeric_limits<uint32_t>::max());
   return static_cast<uint32_t>(val);
+}
+
+static uint64_t clock_gettime_monotonic_raw() {
+  struct timespec ts;
+
+  clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+
+  return 1000000000ull * ts.tv_sec + ts.tv_nsec;
 }
 
 }  // namespace
@@ -755,53 +766,92 @@ class TestConnection {
     EXPECT_NE(0u, vendor_id);
   }
 
-  void QueryReturnsBufferImported(bool leaky) {
+  void QueryReturnsBufferImported(bool leaky = false, bool check_clock = false) {
     ASSERT_TRUE(device_);
     ASSERT_TRUE(connection_);
 
+    constexpr uint32_t kVendorIdIntel = 0x8086;
+    constexpr uint32_t kVendorIdArm = 0x13B5;
+
     uint64_t query_id = 0;
-    {
-      uint64_t vendor_id;
-      ASSERT_EQ(MAGMA_STATUS_OK, magma_query2(device_, MAGMA_QUERY_VENDOR_ID, &vendor_id));
-      switch (vendor_id) {
-        case 0x8086:
-          query_id = kMagmaIntelGenQueryTimestamp;
-          break;
-        default:
-          GTEST_SKIP();
-      }
+    uint64_t vendor_id;
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_query2(device_, MAGMA_QUERY_VENDOR_ID, &vendor_id));
+    switch (vendor_id) {
+      case kVendorIdIntel:
+        query_id = kMagmaIntelGenQueryTimestamp;
+        break;
+      case kVendorIdArm:
+        query_id = kMsdArmVendorQueryDeviceTimestamp;
+        break;
+      default:
+        GTEST_SKIP();
     }
+
+    uint64_t before_ns = clock_gettime_monotonic_raw();
 
     uint32_t buffer_handle = 0;
     EXPECT_EQ(MAGMA_STATUS_OK, magma_query_returns_buffer2(device_, query_id, &buffer_handle));
+
+    uint64_t after_ns = clock_gettime_monotonic_raw();
+
     ASSERT_NE(0u, buffer_handle);
 
+    struct magma_intel_gen_timestamp_query intel_timestamp_query;
+    struct magma_arm_mali_device_timestamp_return arm_timestamp_return;
+
 #if defined(__Fuchsia__)
-    zx::vmo vmo(buffer_handle);
-
     zx_vaddr_t zx_vaddr;
-    EXPECT_EQ(ZX_OK, zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                                                0,  // vmar_offset,
-                                                vmo, 0 /*offset*/, page_size(), &zx_vaddr));
+    {
+      zx::vmo vmo(buffer_handle);
 
-    zx_handle_close(buffer_handle);
+      ASSERT_EQ(ZX_OK, zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                                  0,  // vmar_offset,
+                                                  vmo, 0 /*offset*/, page_size(), &zx_vaddr));
+    }
+
+    memcpy(&intel_timestamp_query, reinterpret_cast<void*>(zx_vaddr),
+           sizeof(intel_timestamp_query));
+    memcpy(&arm_timestamp_return, reinterpret_cast<void*>(zx_vaddr), sizeof(arm_timestamp_return));
 
     if (!leaky) {
       EXPECT_EQ(ZX_OK, zx::vmar::root_self()->unmap(zx_vaddr, page_size()));
     }
+
 #elif defined(__linux__)
-    int fd = buffer_handle;
+    void* addr;
+    {
+      int fd = buffer_handle;
 
-    void* addr = mmap(nullptr, page_size(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0 /*offset*/);
-    EXPECT_NE(MAP_FAILED, addr);
+      addr = mmap(nullptr, page_size(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0 /*offset*/);
+      ASSERT_NE(MAP_FAILED, addr);
 
-    close(fd);
+      close(fd);
+    }
+
+    memcpy(&intel_timestamp_query, addr, sizeof(intel_timestamp_query));
+    memcpy(&arm_timestamp_return, addr, sizeof(arm_timestamp_return));
 
     if (!leaky) {
-      if (addr != MAP_FAILED)
-        munmap(addr, page_size());
+      munmap(addr, page_size());
     }
 #endif
+
+    if (!check_clock)
+      return;
+
+    // Check that clock_gettime is synchronized between client and driver.
+    // Required for clients using VK_EXT_calibrated_timestamps.
+    if (vendor_id == kVendorIdIntel) {
+      EXPECT_LT(before_ns, intel_timestamp_query.monotonic_raw_timestamp[0]);
+      EXPECT_LT(intel_timestamp_query.monotonic_raw_timestamp[0],
+                intel_timestamp_query.monotonic_raw_timestamp[1]);
+      EXPECT_LT(intel_timestamp_query.monotonic_raw_timestamp[1], after_ns);
+    } else if (vendor_id == kVendorIdArm) {
+      EXPECT_LT(before_ns, arm_timestamp_return.monotonic_raw_timestamp_before);
+      EXPECT_LT(arm_timestamp_return.monotonic_raw_timestamp_before,
+                arm_timestamp_return.monotonic_raw_timestamp_after);
+      EXPECT_LT(arm_timestamp_return.monotonic_raw_timestamp_after, after_ns);
+    }
   }
 
   void QueryTestRestartSupported() {
@@ -953,12 +1003,21 @@ TEST(Magma, VendorId) {
 
 TEST(Magma, QueryReturnsBuffer) {
   TestConnection test;
-  test.QueryReturnsBufferImported(/*leaky*/ false);
+  test.QueryReturnsBufferImported();
 }
 
+// Test for cleanup of leaked mapping
 TEST(Magma, QueryReturnsBufferLeaky) {
+  constexpr bool kLeaky = true;
   TestConnection test;
-  test.QueryReturnsBufferImported(/*leaky*/ true);
+  test.QueryReturnsBufferImported(kLeaky);
+}
+
+TEST(Magma, QueryReturnsBufferCalibratedTimestamps) {
+  constexpr bool kLeaky = false;
+  constexpr bool kCheckClock = true;
+  TestConnection test;
+  test.QueryReturnsBufferImported(kLeaky, kCheckClock);
 }
 
 TEST(Magma, QueryTestRestartSupported) {
