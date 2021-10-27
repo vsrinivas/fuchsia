@@ -12,8 +12,8 @@
 
 #include "magma_util/macros.h"
 #include "msd.h"
-#include "msd_arm_buffer.h"
-#include "performance_counters.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_buffer.h"
+#include "src/graphics/drivers/msd-arm-mali/src/performance_counters.h"
 
 // All interaction with this class must happen on the device thread.
 class MsdArmPerfCountPool : public PerformanceCounters::Client {

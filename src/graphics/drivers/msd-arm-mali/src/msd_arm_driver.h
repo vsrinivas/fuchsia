@@ -11,7 +11,7 @@
 
 #include "magma_util/macros.h"
 #include "msd.h"
-#include "msd_arm_device.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_device.h"
 
 class MsdArmDriver : public msd_driver_t {
  public:

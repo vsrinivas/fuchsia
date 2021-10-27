@@ -11,7 +11,7 @@
 #include "msd.h"
 #include "platform_buffer.h"
 #include "platform_event.h"
-#include "region.h"
+#include "src/graphics/drivers/msd-arm-mali/src/region.h"
 
 class GpuMapping;
 

@@ -10,8 +10,8 @@
 #include <fbl/string_printf.h>
 
 #include "magma_util/register_io.h"
-#include "mali_register_io.h"
-#include "registers.h"
+#include "src/graphics/drivers/msd-arm-mali/src/mali_register_io.h"
+#include "src/graphics/drivers/msd-arm-mali/src/registers.h"
 
 struct GpuFeatures {
   static constexpr uint32_t kSuspendSizeOffset = 0x8;

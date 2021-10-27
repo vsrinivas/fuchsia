@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "msd_arm_device.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_device.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
@@ -17,16 +17,16 @@
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
 
-#include "job_scheduler.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
-#include "magma_vendor_queries.h"
 #include "msd_defs.h"
 #include "platform_barriers.h"
 #include "platform_logger.h"
 #include "platform_port.h"
 #include "platform_trace.h"
-#include "registers.h"
+#include "src/graphics/drivers/msd-arm-mali/include/magma_vendor_queries.h"
+#include "src/graphics/drivers/msd-arm-mali/src/job_scheduler.h"
+#include "src/graphics/drivers/msd-arm-mali/src/registers.h"
 
 using std::chrono_literals::operator""ms;
 using std::chrono_literals::operator""us;

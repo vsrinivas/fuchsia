@@ -17,7 +17,7 @@
 #include "lib/fidl/llcpp/client_end.h"
 #include "magma.h"
 #include "magma_util/macros.h"
-#include "magma_vendor_queries.h"
+#include "src/graphics/drivers/msd-arm-mali/include/magma_vendor_queries.h"
 
 namespace {
 

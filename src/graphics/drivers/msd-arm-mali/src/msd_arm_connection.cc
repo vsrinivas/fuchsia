@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "msd_arm_connection.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_connection.h"
 
 #include <zircon/compiler.h>
 
@@ -12,22 +12,22 @@
 
 #include <fbl/string_printf.h>
 
-#include "address_space.h"
-#include "gpu_mapping.h"
-#include "magma_arm_mali_types.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "magma_util/simple_allocator.h"
-#include "msd_arm_buffer.h"
-#include "msd_arm_context.h"
-#include "msd_arm_device.h"
-#include "msd_arm_perf_count_pool.h"
-#include "msd_arm_semaphore.h"
 #include "msd_defs.h"
 #include "platform_barriers.h"
 #include "platform_logger.h"
 #include "platform_semaphore.h"
 #include "platform_trace.h"
+#include "src/graphics/drivers/msd-arm-mali/include/magma_arm_mali_types.h"
+#include "src/graphics/drivers/msd-arm-mali/src/address_space.h"
+#include "src/graphics/drivers/msd-arm-mali/src/gpu_mapping.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_buffer.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_context.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_device.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_perf_count_pool.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_semaphore.h"
 
 // This definition of arraysize was stolen from fxl in order to avoid
 // a dynamic library dependency on it.

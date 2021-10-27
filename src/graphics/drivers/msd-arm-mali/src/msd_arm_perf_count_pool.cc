@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "msd_arm_perf_count_pool.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_perf_count_pool.h"
 
 #include <lib/zx/clock.h>
 

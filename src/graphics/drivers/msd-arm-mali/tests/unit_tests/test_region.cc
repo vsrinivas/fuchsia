@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "region.h"
+#include "src/graphics/drivers/msd-arm-mali/src/region.h"
 
 namespace {
 

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "power_manager.h"
+#include "src/graphics/drivers/msd-arm-mali/src/power_manager.h"
 
 #include "platform_buffer.h"
 #include "platform_trace.h"
-#include "registers.h"
+#include "src/graphics/drivers/msd-arm-mali/src/registers.h"
 
 PowerManager::PowerManager(mali::RegisterIo* io) {
   power_state_semaphore_ = magma::PlatformSemaphore::Create();

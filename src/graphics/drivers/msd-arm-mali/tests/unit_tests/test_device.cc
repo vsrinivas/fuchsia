@@ -9,8 +9,8 @@
 
 #include "helper/platform_device_helper.h"
 #include "mock/mock_mmio.h"
-#include "msd_arm_device.h"
-#include "registers.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_device.h"
+#include "src/graphics/drivers/msd-arm-mali/src/registers.h"
 
 namespace {
 bool IsStringInDump(const std::vector<std::string>& dump, const std::string& str) {

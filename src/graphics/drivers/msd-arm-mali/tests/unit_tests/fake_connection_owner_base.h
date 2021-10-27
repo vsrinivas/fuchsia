@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MSD_ARM_MALI_TESTS_UNIT_TESTS_FAKE_CONNECTION_OWNER_BASE_H_
 #define SRC_GRAPHICS_DRIVERS_MSD_ARM_MALI_TESTS_UNIT_TESTS_FAKE_CONNECTION_OWNER_BASE_H_
 
-#include "msd_arm_connection.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_connection.h"
 
 class FakeConnectionOwnerBase : public MsdArmConnection::Owner {
  public:

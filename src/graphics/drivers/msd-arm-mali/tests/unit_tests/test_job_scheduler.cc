@@ -8,11 +8,11 @@
 
 #include <gtest/gtest.h>
 
-#include "fake_connection_owner_base.h"
-#include "job_scheduler.h"
 #include "mock/mock_bus_mapper.h"
-#include "msd_arm_connection.h"
 #include "platform_port.h"
+#include "src/graphics/drivers/msd-arm-mali/src/job_scheduler.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_connection.h"
+#include "src/graphics/drivers/msd-arm-mali/tests/unit_tests/fake_connection_owner_base.h"
 
 namespace {
 

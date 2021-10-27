@@ -11,11 +11,11 @@
 #include <thread>
 #include <unordered_set>
 
-#include "address_manager.h"
-#include "gpu_features.h"
 #include "magma_util/macros.h"
 #include "msd_arm_buffer.h"
-#include "performance_counters_manager.h"
+#include "src/graphics/drivers/msd-arm-mali/src/address_manager.h"
+#include "src/graphics/drivers/msd-arm-mali/src/gpu_features.h"
+#include "src/graphics/drivers/msd-arm-mali/src/performance_counters_manager.h"
 
 class MsdArmConnection;
 

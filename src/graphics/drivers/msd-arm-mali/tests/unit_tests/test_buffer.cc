@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "msd_arm_buffer.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_buffer.h"
 
 class TestMsdArmBuffer {
  public:

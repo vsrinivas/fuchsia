@@ -6,11 +6,11 @@
 
 #include <gtest/gtest.h>
 
-#include "address_manager.h"
-#include "fake_connection_owner_base.h"
 #include "mock/mock_bus_mapper.h"
 #include "mock/mock_mmio.h"
-#include "performance_counters.h"
+#include "src/graphics/drivers/msd-arm-mali/src/address_manager.h"
+#include "src/graphics/drivers/msd-arm-mali/src/performance_counters.h"
+#include "src/graphics/drivers/msd-arm-mali/tests/unit_tests/fake_connection_owner_base.h"
 
 namespace {
 class FakeOwner : public AddressManager::Owner {

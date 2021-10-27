@@ -4,12 +4,12 @@
 
 #include <gtest/gtest.h>
 
-#include "address_manager.h"
-#include "address_space.h"
 #include "mock/mock_bus_mapper.h"
 #include "mock/mock_mmio.h"
 #include "platform_mmio.h"
-#include "registers.h"
+#include "src/graphics/drivers/msd-arm-mali/src/address_manager.h"
+#include "src/graphics/drivers/msd-arm-mali/src/address_space.h"
+#include "src/graphics/drivers/msd-arm-mali/src/registers.h"
 
 class FakeAddressSpaceOwner : public std::enable_shared_from_this<FakeAddressSpaceOwner>,
                               public AddressSpace::Owner {

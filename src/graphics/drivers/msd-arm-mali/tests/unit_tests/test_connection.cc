@@ -6,15 +6,15 @@
 
 #include <gtest/gtest.h>
 
-#include "address_manager.h"
-#include "fake_connection_owner_base.h"
-#include "gpu_mapping.h"
-#include "magma_arm_mali_types.h"
 #include "mock/mock_bus_mapper.h"
-#include "msd_arm_buffer.h"
-#include "msd_arm_connection.h"
-#include "msd_arm_context.h"
 #include "msd_defs.h"
+#include "src/graphics/drivers/msd-arm-mali/include/magma_arm_mali_types.h"
+#include "src/graphics/drivers/msd-arm-mali/src/address_manager.h"
+#include "src/graphics/drivers/msd-arm-mali/src/gpu_mapping.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_buffer.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_connection.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_context.h"
+#include "src/graphics/drivers/msd-arm-mali/tests/unit_tests/fake_connection_owner_base.h"
 
 namespace {
 

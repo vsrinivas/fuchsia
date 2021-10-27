@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "address_manager.h"
+#include "src/graphics/drivers/msd-arm-mali/src/address_manager.h"
 
 #include <chrono>
 #include <thread>
 
-#include "address_space.h"
-#include "msd_arm_connection.h"
 #include "platform_barriers.h"
 #include "platform_logger.h"
+#include "src/graphics/drivers/msd-arm-mali/src/address_space.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_connection.h"
 
 // Normal memory, outer non-cacheable, inner cacheable with
 // implementation-defined allocation. The definition of this is similar to

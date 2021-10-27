@@ -11,10 +11,10 @@
 #include <mutex>
 #include <vector>
 
-#include "address_space.h"
-#include "msd_arm_atom.h"
-#include "msd_arm_connection.h"
-#include "registers.h"
+#include "src/graphics/drivers/msd-arm-mali/src/address_space.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_atom.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_connection.h"
+#include "src/graphics/drivers/msd-arm-mali/src/registers.h"
 
 // The address manager can be modified by the device thread (to assign and
 // unassign address spaces from registers before mapping and unmapping them)

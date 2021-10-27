@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "msd_arm_buffer.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_buffer.h"
 
-#include "gpu_mapping.h"
 #include "msd.h"
-#include "msd_arm_connection.h"
+#include "src/graphics/drivers/msd-arm-mali/src/gpu_mapping.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_connection.h"
 
 MsdArmBuffer::MsdArmBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf)
     : platform_buf_(std::move(platform_buf)) {}

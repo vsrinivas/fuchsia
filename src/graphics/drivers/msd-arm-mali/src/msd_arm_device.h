@@ -16,22 +16,22 @@
 #include <thread>
 #include <vector>
 
-#include "address_manager.h"
-#include "device_request.h"
-#include "gpu_features.h"
-#include "job_scheduler.h"
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
 #include "magma_util/thread.h"
 #include "mali_register_io.h"
 #include "msd.h"
-#include "msd_arm_connection.h"
 #include "msd_defs.h"
-#include "performance_counters.h"
 #include "platform_device.h"
 #include "platform_interrupt.h"
 #include "platform_semaphore.h"
-#include "power_manager.h"
+#include "src/graphics/drivers/msd-arm-mali/src/address_manager.h"
+#include "src/graphics/drivers/msd-arm-mali/src/device_request.h"
+#include "src/graphics/drivers/msd-arm-mali/src/gpu_features.h"
+#include "src/graphics/drivers/msd-arm-mali/src/job_scheduler.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_connection.h"
+#include "src/graphics/drivers/msd-arm-mali/src/performance_counters.h"
+#include "src/graphics/drivers/msd-arm-mali/src/power_manager.h"
 
 class MsdArmDevice : public msd_device_t,
                      public JobScheduler::Owner,

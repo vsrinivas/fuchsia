@@ -17,18 +17,18 @@
 #include <thread>
 #include <unordered_map>
 
-#include "address_space.h"
-#include "device_request.h"
-#include "gpu_mapping.h"
-#include "magma_arm_mali_types.h"
 #include "magma_util/address_space_allocator.h"
 #include "magma_util/macros.h"
 #include "msd.h"
-#include "msd_arm_atom.h"
-#include "msd_arm_buffer.h"
-#include "msd_arm_semaphore.h"
 #include "msd_defs.h"
-#include "performance_counters_manager.h"
+#include "src/graphics/drivers/msd-arm-mali/include/magma_arm_mali_types.h"
+#include "src/graphics/drivers/msd-arm-mali/src/address_space.h"
+#include "src/graphics/drivers/msd-arm-mali/src/device_request.h"
+#include "src/graphics/drivers/msd-arm-mali/src/gpu_mapping.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_atom.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_buffer.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_semaphore.h"
+#include "src/graphics/drivers/msd-arm-mali/src/performance_counters_manager.h"
 
 struct magma_arm_mali_atom;
 

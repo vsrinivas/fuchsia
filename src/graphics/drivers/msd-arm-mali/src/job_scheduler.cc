@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "job_scheduler.h"
+#include "src/graphics/drivers/msd-arm-mali/src/job_scheduler.h"
 
 #include <fbl/string_printf.h>
 
 #include "magma_util/dlog.h"
-#include "msd_arm_connection.h"
 #include "msd_defs.h"
 #include "platform_logger.h"
 #include "platform_trace.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_connection.h"
 
 JobScheduler::JobScheduler(Owner* owner, uint32_t job_slots)
     : owner_(owner),

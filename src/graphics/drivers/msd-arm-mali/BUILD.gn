@@ -78,14 +78,6 @@ group("tests") {
   ]
 }
 
-config("msd_tests_include_config") {
-  include_dirs = [ "tests" ]
-}
-
-config("msd_src_include_config") {
-  include_dirs = [ "src" ]
-}
-
 group("msd-system") {
   deps = [ ":msd-arm-mali" ]
 }

@@ -12,7 +12,7 @@
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
 #include "platform_bus_mapper.h"
-#include "types.h"
+#include "src/graphics/drivers/msd-arm-mali/src/types.h"
 
 // This is the standard page size for Mali when using LPAE page tables. The CPU page size must be a
 // multiple of this size.

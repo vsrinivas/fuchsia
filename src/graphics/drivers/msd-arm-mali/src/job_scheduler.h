@@ -12,7 +12,7 @@
 
 #include "magma_util/macros.h"
 #include "msd.h"
-#include "msd_arm_atom.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_atom.h"
 
 class JobScheduler {
  public:

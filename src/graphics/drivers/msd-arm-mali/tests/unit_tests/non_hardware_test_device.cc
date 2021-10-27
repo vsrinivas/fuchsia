@@ -14,9 +14,9 @@
 
 #include "mock/mock_bus_mapper.h"
 #include "mock/mock_mmio.h"
-#include "msd_arm_device.h"
-#include "msd_arm_driver.h"
-#include "registers.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_device.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_driver.h"
+#include "src/graphics/drivers/msd-arm-mali/src/registers.h"
 
 namespace {
 class MaliMockMmioBase : public magma::PlatformMmio {

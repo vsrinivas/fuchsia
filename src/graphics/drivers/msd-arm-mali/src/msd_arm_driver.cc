@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "msd_arm_driver.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_driver.h"
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
-#include "msd_arm_device.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_device.h"
 
 MsdArmDriver::MsdArmDriver() {
   magic_ = kMagic;

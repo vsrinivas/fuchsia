@@ -6,7 +6,7 @@
 #include <mock/mock_mmio.h>
 
 #include "magma_util/register_io.h"
-#include "registers.h"
+#include "src/graphics/drivers/msd-arm-mali/src/registers.h"
 
 class Hook : public mali::RegisterIo::Hook {
  public:

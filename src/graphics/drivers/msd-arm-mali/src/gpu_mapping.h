@@ -12,7 +12,7 @@
 
 #include "magma_util/macros.h"
 #include "platform_bus_mapper.h"
-#include "region.h"
+#include "src/graphics/drivers/msd-arm-mali/src/region.h"
 
 class MsdArmBuffer;
 class MsdArmConnection;

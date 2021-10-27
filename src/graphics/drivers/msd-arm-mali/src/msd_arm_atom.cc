@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "msd_arm_atom.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_atom.h"
 
 #include <fbl/string_printf.h>
 
 #include "magma_util/macros.h"
-#include "msd_arm_connection.h"
 #include "platform_trace.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_connection.h"
 
 MsdArmAtom::MsdArmAtom(std::weak_ptr<MsdArmConnection> connection, uint64_t gpu_address,
                        uint32_t slot, uint8_t atom_number, magma_arm_mali_user_data user_data,

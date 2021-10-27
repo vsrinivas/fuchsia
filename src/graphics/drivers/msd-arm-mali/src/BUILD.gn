@@ -24,7 +24,6 @@ declare_args() {
 }
 
 source_set("src") {
-  public_configs = [ "..:msd_src_include_config" ]
   sources = [
     "address_manager.cc",
     "address_manager.h",

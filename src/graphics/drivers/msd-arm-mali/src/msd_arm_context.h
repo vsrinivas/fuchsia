@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MSD_ARM_MALI_SRC_MSD_ARM_CONTEXT_H_
 #define SRC_GRAPHICS_DRIVERS_MSD_ARM_MALI_SRC_MSD_ARM_CONTEXT_H_
 
-#include "msd_arm_connection.h"
+#include "src/graphics/drivers/msd-arm-mali/src/msd_arm_connection.h"
 
 class MsdArmContext : public msd_context_t {
  public:

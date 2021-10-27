@@ -16,7 +16,7 @@
 #include "magma_arm_mali_types.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
-#include "magma_vendor_queries.h"
+#include "src/graphics/drivers/msd-arm-mali/include/magma_vendor_queries.h"
 
 namespace {
 class TestConnection : public magma::TestDeviceBase {

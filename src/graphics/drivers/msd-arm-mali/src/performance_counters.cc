@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "performance_counters.h"
+#include "src/graphics/drivers/msd-arm-mali/src/performance_counters.h"
 
 #include "platform_barriers.h"
 #include "platform_logger.h"
-#include "registers.h"
+#include "src/graphics/drivers/msd-arm-mali/src/registers.h"
 
 namespace {
 constexpr uint32_t kPerfBufferSize = PAGE_SIZE * 4;
