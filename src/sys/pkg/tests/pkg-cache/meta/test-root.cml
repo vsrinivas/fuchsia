@@ -4,10 +4,6 @@
 {
     children: [
         {
-            name: "isolated_devmgr",
-            url: "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/isolated-devmgr.cm",
-        },
-        {
             name: "pkg_cache_integration_test",
             url: "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache-integration-test.cm",
         },
@@ -19,18 +15,7 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: [
-                "#isolated_devmgr",
-                "#pkg_cache_integration_test",
-            ],
-        },
-        {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
-            ],
-            from: "parent",
-            to: "#isolated_devmgr",
+            to: [ "#pkg_cache_integration_test" ],
         },
         {
             protocol: [
@@ -43,11 +28,6 @@
         {
             storage: "tmp",
             from: "parent",
-            to: "#pkg_cache_integration_test",
-        },
-        {
-            directory: "dev",
-            from: "#isolated_devmgr",
             to: "#pkg_cache_integration_test",
         },
         {
