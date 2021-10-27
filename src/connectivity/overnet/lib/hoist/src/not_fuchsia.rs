@@ -121,14 +121,21 @@ impl Hoist {
         let uds = loop {
             match async_net::unix::UnixStream::connect(path.clone())
                 .on_timeout(Duration::from_millis(100), || {
-                    Err(std::io::Error::new(TimedOut, format_err!("connecting to ascendd socket")))
+                    Err(std::io::Error::new(
+                        TimedOut,
+                        format_err!("connecting to ascendd socket at {:#?}", path),
+                    ))
                 })
                 .await
             {
                 Ok(uds) => break uds,
                 Err(e) => {
                     if now.elapsed()?.as_secs() > MAX_SINGLE_CONNECT_TIME {
-                        bail!(e);
+                        bail!(
+                            "took too long connecting to ascendd socket at {:#?}: {:#?}",
+                            path,
+                            e
+                        );
                     }
                 }
             }
