@@ -567,6 +567,23 @@ where
     Part: Partition,
     P: Product<Part>,
 {
+    flash_bootloader(writer, file_resolver, product, fastboot_proxy, &cmd).await?;
+    flash_product(writer, file_resolver, product, fastboot_proxy, &cmd).await
+}
+
+pub(crate) async fn flash_bootloader<W, F, Part, P>(
+    writer: &mut W,
+    file_resolver: &mut F,
+    product: &P,
+    fastboot_proxy: &FastbootProxy,
+    cmd: &FlashCommand,
+) -> Result<()>
+where
+    W: Write,
+    F: FileResolver + Sync,
+    Part: Partition,
+    P: Product<Part>,
+{
     flash_partitions(writer, file_resolver, product.bootloader_partitions(), fastboot_proxy)
         .await?;
     if product.bootloader_partitions().len() > 0 && !cmd.no_bootloader_reboot {
@@ -574,6 +591,22 @@ where
             .await
             .map_err(|_| ffx_error!("{}", REBOOT_ERR))?;
     }
+    Ok(())
+}
+
+pub(crate) async fn flash_product<W, F, Part, P>(
+    writer: &mut W,
+    file_resolver: &mut F,
+    product: &P,
+    fastboot_proxy: &FastbootProxy,
+    cmd: &FlashCommand,
+) -> Result<()>
+where
+    W: Write,
+    F: FileResolver + Sync,
+    Part: Partition,
+    P: Product<Part>,
+{
     stage_oem_files(writer, file_resolver, false, &cmd.oem_stage, fastboot_proxy).await?;
     flash_partitions(writer, file_resolver, product.partitions(), fastboot_proxy).await?;
     stage_oem_files(writer, file_resolver, true, product.oem_files(), fastboot_proxy).await

@@ -6,7 +6,7 @@ use {
     crate::{
         file::FileResolver,
         manifest::{
-            crypto::unlock_device, finish, flash, is_locked, lock_device,
+            crypto::unlock_device, finish, flash_bootloader, flash_product, is_locked, lock_device,
             v1::FlashManifest as FlashManifestV1, verify_hardware, Flash, MISSING_PRODUCT,
         },
     },
@@ -59,10 +59,11 @@ impl Flash for FlashManifest {
                 unlock_device(writer, file_resolver, &self.credentials, &fastboot_proxy).await?;
             }
         }
-        flash(writer, file_resolver, product, &fastboot_proxy, cmd).await?;
+        flash_bootloader(writer, file_resolver, product, &fastboot_proxy, &cmd).await?;
         if product.requires_unlock && !is_locked(&fastboot_proxy).await? {
             lock_device(&fastboot_proxy).await?;
         }
+        flash_product(writer, file_resolver, product, &fastboot_proxy, &cmd).await?;
         finish(writer, &fastboot_proxy).await
     }
 }
