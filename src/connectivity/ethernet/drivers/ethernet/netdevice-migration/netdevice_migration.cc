@@ -160,7 +160,7 @@ void NetdeviceMigration::NetworkDeviceImplStop(network_device_impl_stop_callback
   callback(cookie);
 }
 
-void NetdeviceMigration::NetworkDeviceImplGetInfo(device_info_t* out_info) {}
+void NetdeviceMigration::NetworkDeviceImplGetInfo(device_info_t* out_info) { *out_info = info_; }
 
 void NetdeviceMigration::NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_list,
                                                   size_t buffers_count) {}

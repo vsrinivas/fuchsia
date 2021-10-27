@@ -80,12 +80,28 @@ class NetdeviceMigration : public DeviceType,
   }
 
  private:
+  // Equivalent to generic ethernet driver FIFO depth; see
+  // eth::EthDev::kFifoDepth in //src/connectivity/ethernet/drivers/ethernet/ethernet.h.
+  static constexpr uint32_t kFifoDepth = 256;
+
   NetdeviceMigration(zx_device_t* parent, ddk::EthernetImplProtocolClient ethernet, zx::bti eth_bti,
                      vmo_store::Options opts)
       : DeviceType(parent),
         ethernet_(ethernet),
         ethernet_ifc_proto_({&ethernet_ifc_protocol_ops_, this}),
         eth_bti_(std::move(eth_bti)),
+        info_({
+            .tx_depth = kFifoDepth,
+            .rx_depth = kFifoDepth,
+            .rx_threshold = kFifoDepth / 2,
+            // Ensures clients do not use scatter-gather.
+            .max_buffer_parts = 1,
+            // Per fuchsia.hardware.network.device banjo API:
+            // "Devices that do not support scatter-gather DMA may set this to a value smaller than
+            // a page size to guarantee compatibility."
+            .max_buffer_length = ZX_PAGE_SIZE / 2,
+            .buffer_alignment = ZX_PAGE_SIZE,
+        }),
         vmo_store_(opts) {}
 
   ddk::NetworkDeviceIfcProtocolClient netdevice_;
@@ -93,6 +109,7 @@ class NetdeviceMigration : public DeviceType,
   const ddk::EthernetImplProtocolClient ethernet_;
   const ethernet_ifc_protocol_t ethernet_ifc_proto_;
   const zx::bti eth_bti_;
+  const device_info_t info_;
 
   fbl::Mutex lock_;
   bool started_ __TA_GUARDED(lock_) = false;
