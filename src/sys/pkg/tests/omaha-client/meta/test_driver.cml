@@ -36,7 +36,6 @@
                 "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.process.Launcher",
-                "fuchsia.stash.Store2",
             ],
             from: "parent",
             to: "#fuchsia_component_test_collection",

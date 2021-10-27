@@ -17,10 +17,6 @@
             url: "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/dns_resolver.cm",
         },
         {
-            name: "stash2",
-            url: "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/stash2.cm",
-        },
-        {
             name: "mock_cobalt",
             url: "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/mock_cobalt.cm",
         },
@@ -29,28 +25,19 @@
         {
             storage: "data",
             from: "parent",
-            to: [
-                "#stash2",
-                "#test_driver",
-            ],
+            to: [ "#test_driver" ],
         },
         {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [
                 "#mock_cobalt",
-                "#stash2",
                 "#test_driver",
             ],
         },
         {
             protocol: [ "fuchsia.posix.socket.Provider" ],
             from: "#netstack",
-            to: "#test_driver",
-        },
-        {
-            protocol: [ "fuchsia.stash.Store2" ],
-            from: "#stash2",
             to: "#test_driver",
         },
         {

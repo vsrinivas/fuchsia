@@ -60,6 +60,7 @@ const SYSTEM_UPDATER_CML: &str =
     "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/system-updater.cm";
 const SYSTEM_UPDATE_COMMITTER_CML: &str =
     "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/system-update-committer.cm";
+const STASH_CML: &str = "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/stash2.cm";
 
 struct Mounts {
     _test_dir: TempDir,
@@ -280,6 +281,15 @@ impl TestEnvBuilder {
             )
             .await
             .unwrap()
+            .add_component("stash2", ComponentSource::url(STASH_CML))
+            .await
+            .unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::storage("data", "/data"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::component("stash2")],
+            })
+            .unwrap()
             .add_route(CapabilityRoute {
                 capability: Capability::directory("config-data", "/config/data", fio2::R_STAR_DIR),
                 source: RouteEndpoint::component("fake_capabilities"),
@@ -315,6 +325,7 @@ impl TestEnvBuilder {
                 targets: vec![
                     RouteEndpoint::component("omaha_client_service"),
                     RouteEndpoint::component("system_update_committer"),
+                    RouteEndpoint::component("stash2"),
                 ],
             })
             .unwrap()
@@ -359,7 +370,7 @@ impl TestEnvBuilder {
             .unwrap()
             .add_route(CapabilityRoute {
                 capability: Capability::protocol("fuchsia.stash.Store2"),
-                source: RouteEndpoint::AboveRoot,
+                source: RouteEndpoint::component("stash2"),
                 targets: vec![RouteEndpoint::component("omaha_client_service")],
             })
             .unwrap()
