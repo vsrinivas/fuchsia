@@ -49,19 +49,26 @@ type TraceOptions = table {
 protocol Tracing {
     /// Starts a trace recording. If the target behind the query is already
     /// running a trace, or some trace is actively writing to the output file,
-    /// this will
-    // TODO(fxbug.dev/85098): Should return some information about what trace is actually
-    // running: the resolved target, the resolved output file being used, etc.
+    /// this will return a [RecordingAlreadyStarted] error.
+    ///
+    /// On success, returns the target on which the trace is running.
     StartRecording(struct {
         target_query string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
         output_file string:255;
         options TraceOptions;
         target_config fuchsia.tracing.controller.TraceConfig;
-    }) -> (struct {}) error RecordingError;
+    }) -> (struct {
+        target Target;
+    }) error RecordingError;
 
     /// Stops the trace recording, flushing the remaining contents to the output
     /// file.
+    ///
+    /// Returns:
+    /// - the resolved target for which the trace was running.
     StopRecording(struct {
         output_file string:255;
-    }) -> (struct {}) error RecordingError;
+    }) -> (struct {
+        target Target;
+    }) error RecordingError;
 };

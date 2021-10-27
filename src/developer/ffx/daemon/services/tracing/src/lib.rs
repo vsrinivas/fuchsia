@@ -22,7 +22,7 @@ use {
 
 #[derive(Debug)]
 struct TraceTask {
-    target_query: Option<String>,
+    target_info: bridge::Target,
     output_file: String,
     // TODO(fxbug.dev/84729)
     #[allow(unused)]
@@ -74,7 +74,7 @@ async fn trace_shutdown(proxy: &trace::ControllerProxy) -> Result<(), bridge::Re
 impl TraceTask {
     async fn new(
         map: Weak<Mutex<TraceMap>>,
-        target_query: Option<String>,
+        target_info: bridge::Target,
         output_file: String,
         duration: Option<f64>,
         config: trace::TraceConfig,
@@ -90,16 +90,16 @@ impl TraceTask {
             .await?
             .map_err(TraceTaskStartError::TracingStartError)?;
         let output_file_clone = output_file.clone();
-        let target_query_clone = target_query.clone();
+        let target_info_clone = target_info.clone();
         let pipe_fut = async move {
-            log::debug!("{:?} -> {} starting trace.", target_query_clone, output_file_clone);
+            log::debug!("{:?} -> {} starting trace.", target_info_clone, output_file_clone);
             let mut out_file = f;
             let res = futures::io::copy(client, &mut out_file)
                 .await
                 .map_err(|e| log::warn!("file error: {:#?}", e));
             log::debug!(
                 "{:?} -> {} trace complete, result: {:#?}",
-                target_query_clone,
+                target_info_clone,
                 output_file_clone,
                 res
             );
@@ -111,7 +111,7 @@ impl TraceTask {
         };
         let shutdown_proxy = proxy.clone();
         Ok(Self {
-            target_query,
+            target_info,
             config,
             proxy,
             output_file: output_file.clone(),
@@ -149,13 +149,17 @@ impl TraceTask {
         trace_shutdown(&self.proxy).await?;
         log::trace!(
             "trace task {:?} -> {} shutdown await start",
-            self.target_query,
+            self.target_info,
             self.output_file
         );
-        let query = self.target_query.clone();
+        let target_info_clone = self.target_info.clone();
         let output_file = self.output_file.clone();
         self.await;
-        log::trace!("trace task {:?} -> {} shutdown await completed", query, output_file);
+        log::trace!(
+            "trace task {:?} -> {} shutdown await completed",
+            target_info_clone,
+            output_file
+        );
         Ok(())
     }
 }
@@ -172,12 +176,14 @@ pub struct TracingService {
 async fn get_controller_proxy(
     target_query: Option<&String>,
     cx: &Context,
-) -> Result<trace::ControllerProxy> {
-    cx.open_target_proxy::<trace::ControllerMarker>(
-        target_query.cloned(),
-        "core/appmgr:out:fuchsia.tracing.controller.Controller",
-    )
-    .await
+) -> Result<(bridge::Target, trace::ControllerProxy)> {
+    let (target, proxy) = cx
+        .open_target_proxy_with_info::<trace::ControllerMarker>(
+            target_query.cloned(),
+            "core/appmgr:out:fuchsia.tracing.controller.Controller",
+        )
+        .await?;
+    Ok((target, proxy))
 }
 
 #[async_trait(?Send)]
@@ -195,15 +201,16 @@ impl FidlService for TracingService {
                 responder,
             } => {
                 let mut tasks = self.tasks.lock().await;
-                let proxy = match get_controller_proxy(target_query.as_ref(), cx).await {
-                    Ok(p) => p,
-                    Err(e) => {
-                        log::warn!("getting target controller proxy: {:?}", e);
-                        return responder
-                            .send(&mut Err(bridge::RecordingError::TargetProxyOpen))
-                            .map_err(Into::into);
-                    }
-                };
+                let (target_info, proxy) =
+                    match get_controller_proxy(target_query.as_ref(), cx).await {
+                        Ok(p) => p,
+                        Err(e) => {
+                            log::warn!("getting target controller proxy: {:?}", e);
+                            return responder
+                                .send(&mut Err(bridge::RecordingError::TargetProxyOpen))
+                                .map_err(Into::into);
+                        }
+                    };
                 match tasks.entry(output_file.clone()) {
                     Entry::Occupied(_) => {
                         return responder
@@ -213,7 +220,7 @@ impl FidlService for TracingService {
                     Entry::Vacant(e) => {
                         let task = match TraceTask::new(
                             Rc::downgrade(&self.tasks),
-                            target_query,
+                            target_info.clone(),
                             output_file,
                             options.duration,
                             target_config,
@@ -245,7 +252,7 @@ impl FidlService for TracingService {
                         e.insert(task);
                     }
                 }
-                responder.send(&mut Ok(())).map_err(Into::into)
+                responder.send(&mut Ok(target_info)).map_err(Into::into)
             }
             bridge::TracingRequest::StopRecording { output_file, responder } => {
                 let task = {
@@ -253,13 +260,15 @@ impl FidlService for TracingService {
                     if let Some(task) = tasks.remove(&output_file) {
                         task
                     } else {
+                        // TODO(fxbug.dev/86410)
                         log::warn!("no task associated with trace file '{}'", output_file);
                         return responder
                             .send(&mut Err(bridge::RecordingError::NoSuchTraceFile))
                             .map_err(Into::into);
                     }
                 };
-                responder.send(&mut task.shutdown().await).map_err(Into::into)
+                let target_info = task.target_info.clone();
+                responder.send(&mut task.shutdown().await.map(|_| target_info)).map_err(Into::into)
             }
         }
     }

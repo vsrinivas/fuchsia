@@ -131,25 +131,36 @@ pub async fn trace(
                     trace_config,
                 )
                 .await?;
-            handle_recording_result(res, &output).await?;
-            writer.line(format!("Tracing started successfully. Writing to {}", output))?;
+            let target = handle_recording_result(res, &output).await?;
+            writer.line(format!(
+                "Tracing started successfully on \"{}\".\nWriting to {}",
+                target.nodename.or(target.serial_number).as_deref().unwrap_or("<UNKNOWN>"),
+                output
+            ))?;
         }
         TraceSubCommand::Stop(opts) => {
             let output = canonical_path(opts.output)?;
             let res = proxy.stop_recording(&output).await?;
-            handle_recording_result(res, &output).await?;
+            let target = handle_recording_result(res, &output).await?;
             // TODO(awdavies): Make a clickable link that auto-uploads the trace file if possible.
-            writer.line(format!("Tracing stopped successfully. Results written to {}", output))?;
-            writer.line("Upload to https://ui.perfetto.dev/#!/ to view.")?;
+            writer.line(format!(
+                "Tracing stopped successfully on \"{}\".\nResults written to {}",
+                target.nodename.or(target.serial_number).as_deref().unwrap_or("<UNKNOWN>"),
+                output
+            ))?;
+            writer.line(format!("Upload to https://ui.perfetto.dev/#!/ to view."))?;
         }
     }
     Ok(())
 }
 
-async fn handle_recording_result(res: Result<(), RecordingError>, output: &String) -> Result<()> {
+async fn handle_recording_result(
+    res: Result<bridge::Target, RecordingError>,
+    output: &String,
+) -> Result<bridge::Target> {
     let default: Option<String> = ffx_config::get("target.default").await.ok();
     match res {
-        Ok(_) => Ok(()),
+        Ok(t) => Ok(t),
         Err(e) => match e {
             RecordingError::TargetProxyOpen => {
                 ffx_bail!("Trace unable to open target proxy.");
@@ -268,12 +279,18 @@ mod tests {
 
     fn setup_fake_service() -> TracingProxy {
         setup_fake_proxy(|req| match req {
-            bridge::TracingRequest::StartRecording { responder, .. } => {
-                responder.send(&mut Ok(())).expect("responder err")
-            }
-            bridge::TracingRequest::StopRecording { responder, .. } => {
-                responder.send(&mut Ok(())).expect("responder err")
-            }
+            bridge::TracingRequest::StartRecording { responder, .. } => responder
+                .send(&mut Ok(bridge::Target {
+                    nodename: Some("foo".to_owned()),
+                    ..bridge::Target::EMPTY
+                }))
+                .expect("responder err"),
+            bridge::TracingRequest::StopRecording { responder, .. } => responder
+                .send(&mut Ok(bridge::Target {
+                    nodename: Some("foo".to_owned()),
+                    ..bridge::Target::EMPTY
+                }))
+                .expect("responder err"),
         })
     }
 
@@ -456,7 +473,7 @@ mod tests {
         )
         .await;
         let output = writer.test_output().unwrap();
-        let regex_str = "Tracing started successfully. Writing to /([^/]+/)+?foo.txt";
+        let regex_str = "Tracing started successfully on \"foo\".\nWriting to /([^/]+/)+?foo.txt";
         let want = Regex::new(regex_str).unwrap();
         assert!(want.is_match(&output), "\"{}\" didn't match regex /{}/", output, regex_str);
     }
@@ -470,7 +487,7 @@ mod tests {
         )
         .await;
         let output = writer.test_output().unwrap();
-        let regex_str = "Tracing stopped successfully. Results written to /([^/]+/)+?foo.txt\nUpload to https://ui.perfetto.dev/#!/ to view.";
+        let regex_str = "Tracing stopped successfully on \"foo\".\nResults written to /([^/]+/)+?foo.txt\nUpload to https://ui.perfetto.dev/#!/ to view.";
         let want = Regex::new(regex_str).unwrap();
         assert!(want.is_match(&output), "\"{}\" didn't match regex /{}/", output, regex_str);
     }
