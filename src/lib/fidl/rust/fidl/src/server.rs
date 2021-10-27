@@ -35,6 +35,14 @@ impl ServeInner {
         &self.channel
     }
 
+    /// Converts the [`ServerInner`] back into a channel.
+    ///
+    /// **Warning**: This operation is dangerous, since the returned channel
+    /// could have unread messages intended for this server. Use it carefully.
+    pub fn into_channel(self) -> AsyncChannel {
+        self.channel
+    }
+
     /// Set the server to shutdown the next time the stream is polled.
     pub fn shutdown(&self) {
         self.shutdown.store(true, atomic::Ordering::Relaxed);
