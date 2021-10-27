@@ -56,15 +56,6 @@ protocol Daemon {
     /// Hang the daemon. Primarily used for testing.
     Hang() -> ();
 
-    /// Lists targets by nodename.
-    /// TODO(fxbug.dev/52798): Use an iterator instead of a limited vector.
-    @deprecated("Use target collection service. See `target list` plugin.")
-    ListTargets(struct {
-        value string:fuchsia.device.DEVICE_NAME_MAX;
-    }) -> (struct {
-        response vector<Target>:512;
-    });
-
     /// Make the daemon exit.
     Quit() -> (struct {
         success bool;
@@ -82,20 +73,6 @@ protocol Daemon {
     GetRemoteControl(resource struct {
         target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
         remote server_end:rc.RemoteControl;
-    }) -> (struct {}) error DaemonError;
-
-    /// Gets a fastboot proxy for the given target.
-    /// The target param expects an exact match with a target's
-    /// nodename.
-    ///
-    /// If the target nodename is not included, this will return the fastboot
-    /// control instance for the target iff there is only one target in the
-    /// cache, else will return an error. If there are no targets in the cache,
-    /// will wait until the client chooses to time out.
-    @deprecated("Use target_collection_service -> open_target -> open_fastboot instead")
-    GetFastboot(resource struct {
-        target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
-        fastboot server_end:Fastboot;
     }) -> (struct {}) error DaemonError;
 
     /// Attempts to get the SSH address for a given target.

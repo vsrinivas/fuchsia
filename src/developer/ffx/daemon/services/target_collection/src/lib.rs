@@ -55,7 +55,7 @@ impl FidlService for TargetCollectionService {
                         None => vec![],
                     },
                 };
-                fuchsia_async::Task::local(async move {
+                self.tasks.spawn(async move {
                     // This was chosen arbitrarily. It's possible to determine a
                     // better chunk size using some FIDL constant math.
                     const TARGET_CHUNK_SIZE: usize = 20;
@@ -76,8 +76,7 @@ impl FidlService for TargetCollectionService {
                                 log::warn!("responding to target collection iterator: {:?}", e)
                             });
                     }
-                })
-                .detach();
+                });
                 responder.send().map_err(Into::into)
             }
             bridge::TargetCollectionRequest::OpenTarget { query, responder, target_handle } => {
@@ -326,10 +325,13 @@ mod tests {
         }
     }
 
-    async fn list_targets(tc: &bridge::TargetCollectionProxy) -> Vec<bridge::Target> {
+    async fn list_targets(
+        query: Option<&str>,
+        tc: &bridge::TargetCollectionProxy,
+    ) -> Vec<bridge::Target> {
         let (iterator_proxy, server) =
             fidl::endpoints::create_proxy::<bridge::TargetCollectionIteratorMarker>().unwrap();
-        tc.list_targets(None, server).await.unwrap();
+        tc.list_targets(query, server).await.unwrap();
         let mut res = Vec::new();
         loop {
             let r = iterator_proxy.get_next().await.unwrap();
@@ -362,7 +364,11 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_service_integration() {
-        const NAME: &'static str = "foooooo";
+        const NAME: &'static str = "foo";
+        const NAME2: &'static str = "bar";
+        const NAME3: &'static str = "baz";
+        const NON_MATCHING_NAME: &'static str = "mlorp";
+        const PARTIAL_NAME_MATCH: &'static str = "ba";
         let (call_started_sender, call_started_receiver) = async_channel::unbounded::<()>();
         let (target_sender, r) = async_channel::unbounded::<bridge::MdnsEventType>();
         let mdns_service =
@@ -373,7 +379,7 @@ mod tests {
             .register_fidl_service::<TargetCollectionService>()
             .build();
         let tc = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
-        let res = list_targets(&tc).await;
+        let res = list_targets(None, &tc).await;
         assert_eq!(res.len(), 0);
         call_started_receiver.recv().await.unwrap();
         target_sender
@@ -383,10 +389,51 @@ mod tests {
             }))
             .await
             .unwrap();
+        target_sender
+            .send(bridge::MdnsEventType::TargetFound(bridge::Target {
+                nodename: Some(NAME2.to_owned()),
+                ..bridge::Target::EMPTY
+            }))
+            .await
+            .unwrap();
+        target_sender
+            .send(bridge::MdnsEventType::TargetFound(bridge::Target {
+                nodename: Some(NAME3.to_owned()),
+                ..bridge::Target::EMPTY
+            }))
+            .await
+            .unwrap();
         call_started_receiver.recv().await.unwrap();
-        let res = list_targets(&tc).await;
+        let res = list_targets(None, &tc).await;
+        assert_eq!(res.len(), 3, "received: {:?}", res);
+        assert!(res.iter().any(|t| t.nodename.as_ref().unwrap() == NAME));
+        assert!(res.iter().any(|t| t.nodename.as_ref().unwrap() == NAME2));
+        assert!(res.iter().any(|t| t.nodename.as_ref().unwrap() == NAME3));
+
+        let res = list_targets(Some(NON_MATCHING_NAME), &tc).await;
+        assert_eq!(res.len(), 0, "received: {:?}", res);
+
+        let res = list_targets(Some(NAME), &tc).await;
         assert_eq!(res.len(), 1, "received: {:?}", res);
         assert_eq!(res[0].nodename.as_ref().unwrap(), NAME);
+
+        let res = list_targets(Some(NAME2), &tc).await;
+        assert_eq!(res.len(), 1, "received: {:?}", res);
+        assert_eq!(res[0].nodename.as_ref().unwrap(), NAME2);
+
+        let res = list_targets(Some(NAME3), &tc).await;
+        assert_eq!(res.len(), 1, "received: {:?}", res);
+        assert_eq!(res[0].nodename.as_ref().unwrap(), NAME3);
+
+        let res = list_targets(Some(PARTIAL_NAME_MATCH), &tc).await;
+        assert_eq!(res.len(), 1, "received: {:?}", res);
+        assert!(res.iter().any(|t| {
+            let name = t.nodename.as_ref().unwrap();
+            // Check either partial match just in case the backing impl
+            // changes ordering. Possible todo here would be to return multiple
+            // targets when there is a partial match.
+            name == NAME3 || name == NAME2
+        }));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

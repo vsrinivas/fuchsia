@@ -14,7 +14,11 @@ use {
     ffx_core::ffx_plugin,
     ffx_doctor_args::DoctorCommand,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_bridge::{DaemonProxy, Target, TargetState, VersionInfo},
+    fidl::endpoints::ProtocolMarker,
+    fidl_fuchsia_developer_bridge::{
+        DaemonProxy, Target, TargetCollectionIteratorMarker, TargetCollectionMarker,
+        TargetCollectionProxy, TargetState, VersionInfo,
+    },
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     itertools::Itertools,
     serde_json::json,
@@ -41,7 +45,7 @@ const USER_CONFIG_FILENAME: &str = "user_config.txt";
 const RECORD_CONFIG_SETTING: &str = "doctor.record_config";
 
 macro_rules! success_or_continue {
-    ($fut:expr, $handler:ident, $v:ident, $e:expr) => {
+    ($fut:expr, $handler:ident, $v:ident, $e:expr $(,)?) => {
         match $fut.await {
             Ok(Ok(s)) => {
                 $handler.result(StepResult::Success).await?;
@@ -470,6 +474,22 @@ fn get_kernel_name() -> Result<String> {
     Ok(String::from_utf8(Command::new("uname").output()?.stdout)?)
 }
 
+async fn list_targets(query: Option<&str>, tc: &TargetCollectionProxy) -> Result<Vec<Target>> {
+    let (iterator_proxy, server) =
+        fidl::endpoints::create_proxy::<TargetCollectionIteratorMarker>()?;
+    tc.list_targets(query, server).await?;
+    let mut res = Vec::new();
+    loop {
+        let r = iterator_proxy.get_next().await?;
+        if r.len() > 0 {
+            res.extend(r);
+        } else {
+            break;
+        }
+    }
+    Ok(res)
+}
+
 fn get_platform_info() -> Result<String> {
     let kernel_name = match get_kernel_name() {
         Ok(s) => s,
@@ -652,12 +672,25 @@ async fn execute_steps(
             }
         };
 
+        let (tc_proxy, tc_server) = fidl::endpoints::create_proxy::<TargetCollectionMarker>()?;
+        success_or_continue!(
+            timeout(
+                retry_delay,
+                proxy_opt
+                    .as_ref()
+                    .unwrap()
+                    .connect_to_service(TargetCollectionMarker::NAME, tc_server.into_channel())
+            ),
+            step_handler,
+            _r,
+            {},
+        );
         step_handler.step(StepType::ListingTargets(target_str.to_string())).await?;
         targets_opt = success_or_continue!(
-            timeout(retry_delay, proxy_opt.as_ref().unwrap().list_targets(target_str),),
+            timeout(retry_delay, list_targets(Some(target_str), &tc_proxy)),
             step_handler,
             t,
-            Some(t)
+            Some(t),
         );
 
         if targets_opt.is_some() && targets_opt.as_ref().unwrap().len() == 0 {
@@ -760,12 +793,14 @@ mod test {
     use {
         super::*,
         crate::recorder::Recorder,
-        anyhow::anyhow,
         async_lock::Mutex,
         async_trait::async_trait,
+        fidl::endpoints::RequestStream,
         fidl::endpoints::{spawn_local_stream_handler, ProtocolMarker, Request, ServerEnd},
+        fidl::Channel,
         fidl_fuchsia_developer_bridge::{
-            DaemonRequest, RemoteControlState, Target, TargetState, TargetType,
+            DaemonRequest, RemoteControlState, TargetCollectionIteratorRequest,
+            TargetCollectionRequest, TargetCollectionRequestStream, TargetType,
         },
         fidl_fuchsia_developer_remotecontrol::{
             IdentifyHostResponse, RemoteControlMarker, RemoteControlRequest,
@@ -1056,6 +1091,43 @@ mod test {
         .detach();
     }
 
+    /// Helper function to list targets. Accepts a closure that will be run
+    /// inside a fake target collection.
+    fn handle_list_targets<F>(server_channel: Channel, closure: F)
+    where
+        F: Fn(Option<String>) -> Vec<Target> + Clone + 'static,
+    {
+        let channel = fidl::AsyncChannel::from_channel(server_channel).unwrap();
+        let mut stream = TargetCollectionRequestStream::from_channel(channel);
+        fuchsia_async::Task::local(async move {
+            while let Ok(Some(req)) = stream.try_next().await {
+                match req {
+                    TargetCollectionRequest::ListTargets { query, iterator, responder } => {
+                        let mut stream = iterator.into_stream().unwrap();
+                        let closure = closure.clone();
+                        fuchsia_async::Task::local(async move {
+                            let TargetCollectionIteratorRequest::GetNext { responder } =
+                                stream.try_next().await.unwrap().unwrap();
+                            let results = (closure)(query);
+                            if !results.is_empty() {
+                                responder.send(&mut results.into_iter()).unwrap();
+                                let TargetCollectionIteratorRequest::GetNext { responder } =
+                                    stream.try_next().await.unwrap().unwrap();
+                                responder.send(&mut vec![].into_iter()).unwrap();
+                            } else {
+                                responder.send(&mut vec![].into_iter()).unwrap();
+                            }
+                        })
+                        .detach();
+                        responder.send().unwrap();
+                    }
+                    _ => {}
+                }
+            }
+        })
+        .detach();
+    }
+
     fn setup_responsive_daemon_server() -> DaemonProxy {
         spawn_local_stream_handler(move |req| async move {
             match req {
@@ -1065,8 +1137,9 @@ mod test {
                 DaemonRequest::GetVersionInfo { responder } => {
                     responder.send(daemon_version_info()).unwrap();
                 }
-                DaemonRequest::ListTargets { value: _, responder } => {
-                    responder.send(&mut vec![].drain(..)).unwrap();
+                DaemonRequest::ConnectToService { responder, name: _, server_channel } => {
+                    handle_list_targets(server_channel, |_| vec![]);
+                    responder.send(&mut Ok(())).unwrap();
                 }
                 _ => {
                     assert!(false, "got unexpected request: {:?}", req);
@@ -1120,21 +1193,19 @@ mod test {
                 DaemonRequest::GetVersionInfo { responder } => {
                     responder.send(daemon_version_info()).unwrap();
                 }
-                DaemonRequest::ListTargets { value: _, responder } => {
-                    responder
-                        .send(
-                            &mut vec![Target {
-                                nodename: Some(FASTBOOT_NODENAME.to_string()),
-                                addresses: Some(vec![]),
-                                age_ms: Some(0),
-                                rcs_state: Some(RemoteControlState::Unknown),
-                                target_type: Some(TargetType::Unknown),
-                                target_state: Some(TargetState::Fastboot),
-                                ..Target::EMPTY
-                            }]
-                            .drain(..),
-                        )
-                        .unwrap();
+                DaemonRequest::ConnectToService { name: _, server_channel, responder } => {
+                    handle_list_targets(server_channel, |_| {
+                        vec![Target {
+                            nodename: Some(FASTBOOT_NODENAME.to_string()),
+                            addresses: Some(vec![]),
+                            age_ms: Some(0),
+                            rcs_state: Some(RemoteControlState::Unknown),
+                            target_type: Some(TargetType::Unknown),
+                            target_state: Some(TargetState::Fastboot),
+                            ..Target::EMPTY
+                        }]
+                    });
+                    responder.send(&mut Ok(())).unwrap();
                 }
                 _ => {
                     assert!(false, "got unexpected request: {:?}", req);
@@ -1167,53 +1238,51 @@ mod test {
                     DaemonRequest::GetVersionInfo { responder } => {
                         responder.send(daemon_version_info()).unwrap();
                     }
-                    DaemonRequest::ListTargets { value, responder } => {
-                        if !value.is_empty() && value != NODENAME && value != UNRESPONSIVE_NODENAME
-                        {
-                            responder.send(&mut vec![].drain(..)).unwrap();
-                        } else if value == NODENAME {
-                            responder
-                                .send(
-                                    &mut vec![Target {
-                                        nodename: nodename,
+                    DaemonRequest::ConnectToService { name: _, server_channel, responder } => {
+                        let nodename = nodename.clone();
+                        handle_list_targets(server_channel, move |query| {
+                            let query = query.as_deref().unwrap_or("");
+                            if !query.is_empty()
+                                && query != NODENAME
+                                && query != UNRESPONSIVE_NODENAME
+                            {
+                                vec![]
+                            } else if query == NODENAME {
+                                vec![Target {
+                                    nodename: nodename.clone(),
+                                    addresses: Some(vec![]),
+                                    age_ms: Some(0),
+                                    rcs_state: Some(RemoteControlState::Unknown),
+                                    target_type: Some(TargetType::Unknown),
+                                    target_state: Some(TargetState::Unknown),
+                                    ..Target::EMPTY
+                                }]
+                            } else {
+                                vec![
+                                    Target {
+                                        nodename: nodename.clone(),
                                         addresses: Some(vec![]),
                                         age_ms: Some(0),
                                         rcs_state: Some(RemoteControlState::Unknown),
                                         target_type: Some(TargetType::Unknown),
                                         target_state: Some(TargetState::Unknown),
                                         ..Target::EMPTY
-                                    }]
-                                    .drain(..),
-                                )
-                                .unwrap();
-                        } else {
-                            responder
-                                .send(
-                                    &mut vec![
-                                        Target {
-                                            nodename: nodename,
-                                            addresses: Some(vec![]),
-                                            age_ms: Some(0),
-                                            rcs_state: Some(RemoteControlState::Unknown),
-                                            target_type: Some(TargetType::Unknown),
-                                            target_state: Some(TargetState::Unknown),
-                                            ..Target::EMPTY
-                                        },
-                                        Target {
-                                            nodename: Some(UNRESPONSIVE_NODENAME.to_string()),
-                                            addresses: Some(vec![]),
-                                            age_ms: Some(0),
-                                            rcs_state: Some(RemoteControlState::Unknown),
-                                            target_type: Some(TargetType::Unknown),
-                                            target_state: Some(TargetState::Unknown),
-                                            ..Target::EMPTY
-                                        },
-                                    ]
-                                    .drain(..),
-                                )
-                                .unwrap();
-                        }
+                                    },
+                                    Target {
+                                        nodename: Some(UNRESPONSIVE_NODENAME.to_string()),
+                                        addresses: Some(vec![]),
+                                        age_ms: Some(0),
+                                        rcs_state: Some(RemoteControlState::Unknown),
+                                        target_type: Some(TargetType::Unknown),
+                                        target_state: Some(TargetState::Unknown),
+                                        ..Target::EMPTY
+                                    },
+                                ]
+                            }
+                        });
+                        responder.send(&mut Ok(())).unwrap();
                     }
+
                     _ => {
                         assert!(false, "got unexpected request: {:?}", req);
                     }
@@ -1224,21 +1293,20 @@ mod test {
     }
 
     fn setup_daemon_server_list_fails() -> DaemonProxy {
-        spawn_local_stream_handler(move |req| {
-            async move {
-                match req {
-                    DaemonRequest::GetRemoteControl { remote: _, target: _, responder: _ } => {
-                        panic!("unexpected daemon call");
-                    }
-                    DaemonRequest::GetVersionInfo { responder } => {
-                        responder.send(daemon_version_info()).unwrap();
-                    }
-                    DaemonRequest::ListTargets { value: _, responder: _ } => {
-                        // Do nothing
-                    }
-                    _ => {
-                        assert!(false, "got unexpected request: {:?}", req);
-                    }
+        spawn_local_stream_handler(move |req| async move {
+            match req {
+                DaemonRequest::GetRemoteControl { remote: _, target: _, responder: _ } => {
+                    panic!("unexpected daemon call");
+                }
+                DaemonRequest::GetVersionInfo { responder } => {
+                    responder.send(daemon_version_info()).unwrap();
+                }
+                DaemonRequest::ConnectToService { name: _, server_channel: _, responder } => {
+                    // Do nothing with the server_channel.
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                _ => {
+                    assert!(false, "got unexpected request: {:?}", req);
                 }
             }
         })
@@ -1256,9 +1324,6 @@ mod test {
                     DaemonRequest::GetVersionInfo { responder: _ } => {
                         waiter.await.unwrap();
                     }
-                    DaemonRequest::ListTargets { value: _, responder: _ } => {
-                        panic!("unexpected daemon call");
-                    }
                     _ => {
                         assert!(false, "got unexpected request: {:?}", req);
                     }
@@ -1270,13 +1335,18 @@ mod test {
 
     fn default_results_map() -> HashMap<TargetCheckResult, Vec<Option<String>>> {
         let mut map = HashMap::new();
+
         map.insert(TargetCheckResult::Success, vec![Some(NODENAME.to_string())]);
         map.insert(TargetCheckResult::Failed, vec![Some(UNRESPONSIVE_NODENAME.to_string())]);
         map
     }
 
-    fn empty_error() -> Error {
-        anyhow!("")
+    fn peer_closed() -> Error {
+        fidl::Error::ClientChannelClosed {
+            protocol_name: TargetCollectionMarker::NAME,
+            status: fidl::handle::Status::PEER_CLOSED,
+        }
+        .into()
     }
 
     fn version_str() -> Option<String> {
@@ -1364,6 +1434,7 @@ mod test {
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::NoTargetsFound),
@@ -1408,6 +1479,7 @@ mod test {
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::NoTargetsFound),
@@ -1451,8 +1523,9 @@ mod test {
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
-                TestStepEntry::result(StepResult::Error(empty_error())),
+                TestStepEntry::result(StepResult::Error(peer_closed())),
                 TestStepEntry::output_step(StepType::AttemptStarted(1, 2)),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
@@ -1465,8 +1538,9 @@ mod test {
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
-                TestStepEntry::result(StepResult::Error(empty_error())),
+                TestStepEntry::result(StepResult::Error(peer_closed())),
                 TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
             ])
             .await;
@@ -1523,6 +1597,7 @@ mod test {
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::NoTargetsFound),
@@ -1569,6 +1644,7 @@ mod test {
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::CheckingTarget(Some(NODENAME.to_string()))),
@@ -1630,6 +1706,7 @@ mod test {
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ListingTargets(NODENAME.to_string())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::CheckingTarget(Some(NODENAME.to_string()))),
@@ -1681,6 +1758,7 @@ mod test {
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ListingTargets(NON_EXISTENT_NODENAME.to_string())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::NoTargetsFound),
@@ -1729,6 +1807,7 @@ mod test {
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::NoTargetsFound),
@@ -1776,6 +1855,7 @@ mod test {
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::NoTargetsFound),
@@ -1826,6 +1906,7 @@ mod test {
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::NoTargetsFound),
@@ -1894,6 +1975,7 @@ mod test {
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::CheckingTarget(None)),
@@ -1952,6 +2034,7 @@ mod test {
                 TestStepEntry::step(StepType::CommunicatingWithDaemon),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::ListingTargets(String::default())),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::SkippedFastboot(Some(

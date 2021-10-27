@@ -17,7 +17,6 @@ use {
         DaemonEvent, TargetConnectionState, TargetEvent, TargetInfo, WireTrafficType,
     },
     ffx_daemon_services::create_service_register_map,
-    ffx_daemon_target::fastboot::Fastboot,
     ffx_daemon_target::logger::streamer::{DiagnosticsStreamer, GenericDiagnosticsStreamer},
     ffx_daemon_target::manual_targets,
     ffx_daemon_target::target::{
@@ -588,32 +587,6 @@ impl Daemon {
             DaemonRequest::Hang { .. } => loop {
                 std::thread::park()
             },
-            DaemonRequest::ListTargets { value, responder } => {
-                log::info!("Received list target request for '{:?}'", value);
-                responder
-                    .send(
-                        &mut match value.as_ref() {
-                            "" => self
-                                .target_collection
-                                .targets()
-                                .drain(..)
-                                .filter_map(|t| {
-                                    if t.is_connected() {
-                                        Some(t.as_ref().into())
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect(),
-                            _ => match self.target_collection.get_connected(value) {
-                                Some(t) => vec![t.as_ref().into()],
-                                None => vec![],
-                            },
-                        }
-                        .into_iter(),
-                    )
-                    .context("error sending response")?;
-            }
             DaemonRequest::GetRemoteControl { target, remote, responder } => {
                 let target = match self.get_target(target).await {
                     Ok(t) => t,
@@ -665,27 +638,6 @@ impl Daemon {
                     .copy_to_channel(remote.into_channel())
                     .map_err(|_| DaemonError::RcsConnectionError);
                 responder.send(&mut response).context("error sending response")?;
-            }
-            DaemonRequest::GetFastboot { target, fastboot, responder } => {
-                let target = match self.get_target(target).await {
-                    Ok(t) => t,
-                    Err(e) => {
-                        responder.send(&mut Err(e)).context("sending error response")?;
-                        return Ok(());
-                    }
-                };
-                let mut fastboot_manager = Fastboot::new(target);
-                let stream = fastboot.into_stream()?;
-                fuchsia_async::Task::local(async move {
-                    match fastboot_manager.handle_fastboot_requests_from_stream(stream).await {
-                        Ok(_) => log::debug!("Fastboot proxy finished - client disconnected"),
-                        Err(e) => {
-                            log::error!("There was an error handling fastboot requests: {:?}", e)
-                        }
-                    }
-                })
-                .detach();
-                responder.send(&mut Ok(())).context("error sending response")?;
             }
             DaemonRequest::Quit { responder } => {
                 log::info!("Received quit request.");
@@ -1071,9 +1023,7 @@ mod test {
     use {
         super::*,
         addr::TargetAddr,
-        fidl_fuchsia_developer_bridge::{
-            self as bridge, DaemonMarker, DaemonProxy, TargetAddrInfo, TargetIpPort,
-        },
+        fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy, TargetAddrInfo, TargetIpPort},
         fidl_fuchsia_developer_remotecontrol::{
             self as rcs, RemoteControlMarker, RemoteControlProxy,
         },
@@ -1199,45 +1149,6 @@ mod test {
             proxy.get_remote_control(Some("doesnotexist"), server_end).await.unwrap(),
             Err(DaemonError::TargetNotFound)
         );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_list_targets_mdns_discovery() {
-        let (proxy, daemon, _task) = spawn_test_daemon();
-        daemon.target_collection.merge_insert(Target::new_autoconnected("foobar"));
-        daemon.target_collection.merge_insert(Target::new_autoconnected("baz"));
-        daemon.target_collection.merge_insert(Target::new_autoconnected("quux"));
-
-        let res = proxy.list_targets("").await.unwrap();
-
-        // Daemon server contains one fake target plus these two.
-        assert_eq!(res.len(), 3);
-
-        let has_nodename =
-            |v: &Vec<bridge::Target>, s: &str| v.iter().any(|x| x.nodename.as_ref().unwrap() == s);
-        assert!(has_nodename(&res, "foobar"));
-        assert!(has_nodename(&res, "baz"));
-        assert!(has_nodename(&res, "quux"));
-
-        let res = proxy.list_targets("mlorp").await.unwrap();
-        assert!(!has_nodename(&res, "foobar"));
-        assert!(!has_nodename(&res, "baz"));
-        assert!(!has_nodename(&res, "quux"));
-
-        let res = proxy.list_targets("foobar").await.unwrap();
-        assert!(has_nodename(&res, "foobar"));
-        assert!(!has_nodename(&res, "baz"));
-        assert!(!has_nodename(&res, "quux"));
-
-        let res = proxy.list_targets("baz").await.unwrap();
-        assert!(!has_nodename(&res, "foobar"));
-        assert!(has_nodename(&res, "baz"));
-        assert!(!has_nodename(&res, "quux"));
-
-        let res = proxy.list_targets("quux").await.unwrap();
-        assert!(!has_nodename(&res, "foobar"));
-        assert!(!has_nodename(&res, "baz"));
-        assert!(has_nodename(&res, "quux"));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
