@@ -198,7 +198,18 @@ test "$dry_run" = 0 || {
 
 # Exit normally on success.
 status="$?"
-test "$status" != 0 || exit "$status"
+
+case "$status" in
+  137) # SIGKILL'd (signal 9) by OS.
+    # Reasons may include segmentation fault, or out of memory.
+    echo "[$script]:" "${full_command[@]}"
+    echo "[$script] First attempt exited $status.  Retrying once."
+    "${full_command[@]}"
+    status="$?"
+    echo "[$script] Retry exited $status."
+    ;;
+  0) exit "$status" ;;
+esac
 
 # Diagnostics: Suggest where to look, and possible actions.
 # Look for symptoms inside reproxy's log, where most of the action is.
