@@ -30,6 +30,8 @@ source_set("test_harness_fixture") {
     "fake_settings_intl.h",
     "fake_story_shell.cc",
     "fake_story_shell.h",
+    "launch_counter.cc",
+    "launch_counter.h",
     "test_harness_fixture.cc",
     "test_harness_fixture.h",
   ]
@@ -49,6 +51,7 @@ source_set("test_harness_fixture") {
     "//sdk/lib/modular/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
     "//src/modular/bin/sessionmgr/story_runner:story_runner",
     "//src/modular/lib/testing:session_shell_impl",
     "//third_party/googletest:gtest",

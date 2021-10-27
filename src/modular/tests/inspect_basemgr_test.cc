@@ -15,6 +15,7 @@
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
+#include "src/modular/lib/modular_test_harness/cpp/launch_counter.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_impl.h"
 
@@ -35,7 +36,8 @@ class InspectBasemgrTest : public modular_testing::TestHarnessFixture {
     fuchsia::modular::testing::TestHarnessSpec spec;
     spec.set_environment_suffix("inspect");
     modular_testing::TestHarnessBuilder builder(std::move(spec));
-    builder.InterceptSessionShell(fake_session_shell_->BuildInterceptOptions());
+    builder.InterceptSessionShell(session_shell_launch_counter_.WrapInterceptOptions(
+        fake_session_shell_->BuildInterceptOptions()));
     builder.BuildAndRun(test_harness());
 
     // Wait for our session shell to start.
@@ -67,6 +69,7 @@ class InspectBasemgrTest : public modular_testing::TestHarnessFixture {
   }
 
   std::unique_ptr<modular_testing::FakeSessionShell> fake_session_shell_;
+  modular_testing::LaunchCounter session_shell_launch_counter_;
   async::Executor executor_;
 };
 
@@ -130,9 +133,8 @@ TEST_F(InspectBasemgrTest, SessionStartedAtRestart) {
   // Restart the session.
   fake_session_shell_->session_shell_context()->Restart();
 
-  // Wait for the session shell to die (indicating a restart), then wait for it to come back.
-  RunLoopUntil([&] { return !fake_session_shell_->is_running(); });
-  RunLoopUntil([&] { return fake_session_shell_->is_running(); });
+  // Wait for the session shell to start again.
+  RunLoopUntil([&] { return session_shell_launch_counter_.launch_count() >= 2; });
 
   {
     // Read the inspect data again.
