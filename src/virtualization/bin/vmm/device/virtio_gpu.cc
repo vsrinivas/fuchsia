@@ -201,8 +201,7 @@ class ControlStream : public StreamBase {
   void TransferToHost2d(const virtio_gpu_transfer_to_host_2d_t* request,
                         virtio_gpu_ctrl_hdr_t* response) {
     GET_RESOURCE_OR_RETURN(resource);
-    resource.TransferToHost2d(request->r, request->offset);
-    response->type = VIRTIO_GPU_RESP_OK_NODATA;
+    response->type = resource.TransferToHost2d(request->r, request->offset);
   }
 
   void ResourceAttachBacking(const virtio_gpu_resource_attach_backing_t* request,

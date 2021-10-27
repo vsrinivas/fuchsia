@@ -15,6 +15,7 @@ static constexpr uint16_t kNumQueues = 2;
 static constexpr uint16_t kQueueSize = 16;
 
 static constexpr uint32_t kPixelFormat = VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM;
+static constexpr size_t kPixelSizeInBytes = 4;
 static constexpr uint32_t kResourceId = 0;
 static constexpr uint32_t kScanoutId = 0;
 
@@ -173,4 +174,32 @@ TEST_F(VirtioGpuTest, CreateLargeResource) {
                 &response),
             ZX_OK);
   EXPECT_EQ(response->type, VIRTIO_GPU_RESP_ERR_OUT_OF_MEMORY);
+}
+
+TEST_F(VirtioGpuTest, InvalidTransferToHostParams) {
+  ResourceCreate2d();
+
+  // Select a x/y/width/height values that overflow in a way that (x+width)
+  // and (y+height) are within the buffer, but other calculations will not be.
+  constexpr virtio_gpu_rect_t kBadRectangle = {
+      .x = 0x0004'c000,
+      .y = 0x0000'0008,
+      .width = 0xfffb'4500,
+      .height = 0x0000'02c8,
+  };
+  static_assert(kBadRectangle.width + kBadRectangle.x <= kGpuStartupWidth);
+  static_assert(kBadRectangle.height + kBadRectangle.y <= kGpuStartupHeight);
+
+  virtio_gpu_ctrl_hdr_t* response;
+  ASSERT_EQ(
+      SendRequest(
+          virtio_gpu_transfer_to_host_2d_t{
+              .hdr = {.type = VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D},
+              .r = kBadRectangle,
+              .offset = (kBadRectangle.y * kGpuStartupWidth + kBadRectangle.x) * kPixelSizeInBytes,
+              .resource_id = kResourceId,
+          },
+          &response),
+      ZX_OK);
+  EXPECT_EQ(response->type, VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER);
 }

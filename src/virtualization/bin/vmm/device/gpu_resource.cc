@@ -14,8 +14,18 @@
 
 namespace {
 
+using safemath::CheckAdd;
+using safemath::CheckedNumeric;
+using safemath::CheckMul;
+
 // Maximum size buffer we are willing to allocate for a user.
 constexpr size_t kMaxBufferSize = 256ul * 1024 * 1024;  // 256 MiB
+
+// Shorthand for creating a safemath::CheckedNumeric.
+template <typename T>
+auto Checked(T n) -> auto {
+  return safemath::MakeCheckedNum(n);
+}
 
 // Return a subspan of the given fbl::Array.
 //
@@ -44,7 +54,7 @@ zx::status<GpuResource> GpuResource::Create(const PhysMem& phys_mem, uint32_t fo
                                             uint32_t width, uint32_t height) {
   // Ensure the created buffer is not too large.
   uint64_t buffer_size;
-  if (!safemath::CheckMul(width, height, kPixelSizeInBytes).AssignIfValid(&buffer_size) ||
+  if (!CheckMul(width, height, kPixelSizeInBytes).AssignIfValid(&buffer_size) ||
       buffer_size > kMaxBufferSize) {
     return zx::error(ZX_ERR_NO_RESOURCES);
   }
@@ -75,13 +85,27 @@ void GpuResource::AttachBacking(const virtio_gpu_mem_entry_t* mem_entries, uint3
 void GpuResource::DetachBacking() { guest_backing_.clear(); }
 
 virtio_gpu_ctrl_type GpuResource::TransferToHost2d(const virtio_gpu_rect_t& rect, uint64_t off) {
-  if (rect.x + rect.width > width_ || rect.y + rect.height > height_ ||
-      (rect.y * width_ + rect.x) * kPixelSizeInBytes != off) {
-    FX_LOGS(WARNING) << "Driver requested transfer of invalid resource region";
+  // Ensure that the requested coordinates are in range.
+  uint64_t x_end, y_end;
+  if (!CheckAdd(rect.x, rect.width).AssignIfValid(&x_end)) {
     return VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER;
   }
-  const size_t rect_row_bytes = rect.width * kPixelSizeInBytes;
-  const size_t image_row_bytes = width_ * kPixelSizeInBytes;
+  if (!CheckAdd(rect.y, rect.height).AssignIfValid(&y_end)) {
+    return VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER;
+  }
+  if (x_end > width_ || y_end > height_) {
+    return VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER;
+  }
+
+  // Ensure the requested offset is valid.
+  CheckedNumeric expected_offset =
+      ((Checked(rect.y) * Checked(width_)) + Checked(rect.x)) * kPixelSizeInBytes;
+  if (!expected_offset.IsValid() || expected_offset.ValueOrDie() != off) {
+    return VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER;
+  }
+
+  const size_t rect_row_bytes = static_cast<uint64_t>(rect.width) * kPixelSizeInBytes;
+  const size_t image_row_bytes = static_cast<uint64_t>(width_) * kPixelSizeInBytes;
   size_t transfer_bytes_remaining = rect_row_bytes * rect.height;
   size_t rect_row_bytes_remaining = rect_row_bytes;
   uint64_t entry_off = 0;
