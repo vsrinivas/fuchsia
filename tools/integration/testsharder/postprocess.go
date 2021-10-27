@@ -75,9 +75,7 @@ func extractDepsFromShard(shard *Shard, fuchsiaBuildDir string) error {
 		}
 		shardDeps = append(shardDeps, deps...)
 	}
-	shardDeps = dedupe(shardDeps)
-	sort.Strings(shardDeps)
-	shard.Deps = shardDeps
+	shard.AddDeps(shardDeps)
 	return nil
 }
 
@@ -96,18 +94,6 @@ func extractDepsFromTest(test Test, fuchsiaBuildDir string) (Test, []string, err
 	var deps []string
 	err = json.NewDecoder(f).Decode(&deps)
 	return test, deps, err
-}
-
-func dedupe(l []string) []string {
-	var deduped []string
-	m := make(map[string]struct{})
-	for _, s := range l {
-		m[s] = struct{}{}
-	}
-	for s := range m {
-		deduped = append(deduped, s)
-	}
-	return deduped
 }
 
 // MultiplyShards appends new shards to shards where each new shard contains one test

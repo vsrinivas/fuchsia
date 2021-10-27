@@ -10,6 +10,7 @@ go_library("testsharder_lib") {
   sources = [
     "doc.go",
     "durations.go",
+    "images.go",
     "mode.go",
     "postprocess.go",
     "postprocess_test.go",

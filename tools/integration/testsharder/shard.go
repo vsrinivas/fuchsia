@@ -34,6 +34,26 @@ type Shard struct {
 	TimeoutSecs int `json:"timeout_secs"`
 }
 
+// AddDeps adds a set of runtime dependencies to the shard. It ensures no
+// duplicates and a stable ordering.
+func (s *Shard) AddDeps(deps []string) {
+	s.Deps = append(s.Deps, deps...)
+	s.Deps = dedupe(s.Deps)
+	sort.Strings(s.Deps)
+}
+
+func dedupe(l []string) []string {
+	var deduped []string
+	m := make(map[string]struct{})
+	for _, s := range l {
+		m[s] = struct{}{}
+	}
+	for s := range m {
+		deduped = append(deduped, s)
+	}
+	return deduped
+}
+
 // ShardOptions parametrize sharding behavior.
 type ShardOptions struct {
 	// Mode is a general mode in which the testsharder will be run. See mode.go
