@@ -580,11 +580,25 @@ type OptionalUint32 = strict union {
 
 type Empty = struct {};
 
-/// Ancillary data for sending datagram sockets.
-type SendControlData = table {};
+/// Socket level ancillary data that can be received.
+///
+/// These match the POSIX `SOL_SOCKET` options.
+type SocketRecvControlData = table {
+    /// The time in nanoseconds since epoch (January 1 1970 GMT) at which a
+    /// packet was received.
+    ///
+    /// Present if the `SOL_SOCKET` -> `SO_TIMESTAMP` option is enabled.
+    1: timestamp_ns int64;
+};
 
-/// Ancillary data for received datagram sockets.
-type RecvControlData = table {};
+/// Network socket (L3) ancillary data that can be sent.
+type NetworkSocketSendControlData = table {};
+
+/// Network socket (L3) ancillary data that can be received.
+type NetworkSocketRecvControlData = table {
+    /// Socket level ancillary data.
+    1: socket SocketRecvControlData;
+};
 
 /// Flags controlling RecvMsg behavior.
 type RecvMsgFlags = strict bits : uint16 {
@@ -596,7 +610,8 @@ type RecvMsgFlags = strict bits : uint16 {
 
 // Flags controlling SendMsg behavior.
 type SendMsgFlags = strict bits : uint16 {
-    // NOTE We don't currently support any flags, but we need at least one definition.
+    // NOTE We don't currently support any flags, but we need at least one
+    // definition.
     RESERVED = 0x8000;
 };
 
@@ -638,7 +653,10 @@ protocol DatagramSocket {
     }) -> (struct {
         addr fuchsia.net.SocketAddress:optional;
         data bytes;
-        control RecvControlData;
+        control @generated_name("DatagramSocketRecvControlData") table {
+            /// Network socket ancillary data.
+            1: network NetworkSocketRecvControlData;
+        };
         truncated uint32;
     }) error fuchsia.posix.Errno;
 
@@ -654,7 +672,10 @@ protocol DatagramSocket {
     SendMsg(struct {
         addr fuchsia.net.SocketAddress:optional;
         data bytes:MAX;
-        control SendControlData;
+        control @generated_name("DatagramSocketSendControlData") table {
+            /// Network socket ancillary data.
+            1: network NetworkSocketSendControlData;
+        };
         flags SendMsgFlags;
     }) -> (struct {
         len int64;

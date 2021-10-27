@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/stdcompat/span.h>
 #include <lib/zx/socket.h>
 #include <lib/zxio/cpp/create_with_type.h>
 #include <lib/zxio/cpp/inception.h>
@@ -167,6 +168,83 @@ struct PacketInfo {
  private:
   fpacketsocket::wire::PacketInfo packet_info_;
   fnet::wire::MacAddress eui48_storage_;
+};
+
+class FidlControlDataProcessor {
+ public:
+  FidlControlDataProcessor(void* buf, socklen_t len)
+      : buffer_(cpp20::span{reinterpret_cast<unsigned char*>(buf), len}) {}
+
+  socklen_t Store(fsocket::wire::DatagramSocketRecvControlData const& control_data) {
+    socklen_t total = 0;
+    if (control_data.has_network()) {
+      total += Store(control_data.network());
+    }
+    return total;
+  }
+
+  socklen_t Store(fsocket::wire::NetworkSocketRecvControlData const& control_data) {
+    socklen_t total = 0;
+    if (control_data.has_socket()) {
+      total += Store(control_data.socket());
+    }
+    return total;
+  }
+
+  socklen_t Store(fpacketsocket::wire::RecvControlData const& control_data) {
+    socklen_t total = 0;
+    if (control_data.has_socket()) {
+      total += Store(control_data.socket());
+    }
+    return total;
+  }
+
+ private:
+  socklen_t Store(fsocket::wire::SocketRecvControlData const& control_data) {
+    socklen_t total = 0;
+    if (control_data.has_timestamp_ns()) {
+      std::chrono::nanoseconds ns(control_data.timestamp_ns());
+      const struct timeval tv = {
+          .tv_sec = std::chrono::duration_cast<std::chrono::seconds>(ns).count(),
+          .tv_usec =
+              std::chrono::duration_cast<std::chrono::microseconds>(ns % std::chrono::seconds(1))
+                  .count(),
+      };
+      total += StoreControlMessage(SOL_SOCKET, SO_TIMESTAMP, &tv, sizeof(tv));
+    }
+    return total;
+  }
+
+  socklen_t StoreControlMessage(int level, int type, const void* data, socklen_t len) {
+    socklen_t cmsg_len = CMSG_LEN(len);
+    size_t bytes_left = buffer_.size();
+    if (bytes_left < cmsg_len) {
+      // Not enough space to store the entire control message.
+      // TODO(https://fxbug.dev/86146): Add support for truncated control messages (MSG_CTRUNC).
+      return 0;
+    }
+
+    // The user-provided pointer is not guaranteed to be aligned. So instead of casting it into a
+    // struct cmsghdr and writing to it directly, stack-allocate one and then memcpy it.
+    struct cmsghdr cmsg = {
+        .cmsg_len = cmsg_len,
+        .cmsg_level = level,
+        .cmsg_type = type,
+    };
+    unsigned char* buf = buffer_.data();
+    ZX_ASSERT_MSG(CMSG_DATA(buf) + len <= buf + bytes_left,
+                  "buffer would overflow, %p + %x > %p + %zx", CMSG_DATA(buf), len, buf,
+                  bytes_left);
+    memcpy(buf, &cmsg, sizeof(cmsg));
+    memcpy(CMSG_DATA(buf), data, len);
+    size_t bytes_consumed = std::min(CMSG_SPACE(len), bytes_left);
+    buffer_ = buffer_.subspan(bytes_consumed);
+
+    return socklen_t(bytes_consumed);
+  }
+
+ private:
+  cpp20::span<unsigned char> buffer_;
 };
 
 fsocket::wire::RecvMsgFlags to_recvmsg_flags(int flags) {
@@ -1658,8 +1736,8 @@ struct DatagramSocket {
   using FidlSockAddr = SocketAddress;
   using zxio_type = zxio_datagram_socket_t;
 
-  static fsocket::wire::SendControlData empty_control_data() {
-    return fsocket::wire::SendControlData();
+  static fsocket::wire::DatagramSocketSendControlData empty_control_data() {
+    return fsocket::wire::DatagramSocketSendControlData();
   }
 
   static void recvmsg_populate_msgname(const fsocket::wire::DatagramSocketRecvMsgResponse& response,
@@ -1680,8 +1758,8 @@ struct RawSocket {
   using FidlSockAddr = SocketAddress;
   using zxio_type = zxio_raw_socket_t;
 
-  static frawsocket::wire::SendControlData empty_control_data() {
-    return frawsocket::wire::SendControlData();
+  static fsocket::wire::NetworkSocketSendControlData empty_control_data() {
+    return fsocket::wire::NetworkSocketSendControlData();
   }
 
   static void recvmsg_populate_msgname(const frawsocket::wire::SocketRecvMsgResponse& response,
@@ -1796,8 +1874,9 @@ struct base_socket_with_event : public zxio {
     }
 
     bool want_addr = msg->msg_namelen != 0 && msg->msg_name != nullptr;
+    bool want_cmsg = msg->msg_controllen != 0 && msg->msg_control != nullptr;
     auto response = zxio_socket_with_event().client.RecvMsg(
-        want_addr, static_cast<uint32_t>(datalen), false, to_recvmsg_flags(flags));
+        want_addr, static_cast<uint32_t>(datalen), want_cmsg, to_recvmsg_flags(flags));
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -1839,8 +1918,13 @@ struct base_socket_with_event : public zxio {
       }
       *out_actual = actual;
     }
-    // TODO(https://fxbug.dev/21106): Support control messages.
-    msg->msg_controllen = 0;
+
+    if (want_cmsg) {
+      FidlControlDataProcessor proc(msg->msg_control, msg->msg_controllen);
+      msg->msg_controllen = proc.Store(result.response().control);
+    } else {
+      msg->msg_controllen = 0;
+    }
 
     return ZX_OK;
   }

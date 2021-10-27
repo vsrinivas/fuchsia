@@ -1693,6 +1693,33 @@ func (s *datagramSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	return fidlio.NodeInfoWithDatagramSocket(fidlio.DatagramSocket{Event: event}), nil
 }
 
+func (s *datagramSocket) socketControlMessagesToFIDL(cmsg tcpip.ControlMessages) socket.SocketRecvControlData {
+	s.mu.Lock()
+	timestampEnabled := s.endpoint.mu.sockOptTimestamp
+	s.mu.Unlock()
+	var controlData socket.SocketRecvControlData
+	if timestampEnabled {
+		controlData.SetTimestampNs(cmsg.Timestamp.UnixNano())
+	}
+	return controlData
+}
+
+func (s *datagramSocket) networkSocketControlMessagesToFIDL(cmsg tcpip.ControlMessages) socket.NetworkSocketRecvControlData {
+	var controlData socket.NetworkSocketRecvControlData
+	if socketControlData := s.socketControlMessagesToFIDL(cmsg); socketControlData != (socket.SocketRecvControlData{}) {
+		controlData.SetSocket(socketControlData)
+	}
+	return controlData
+}
+
+func (s *datagramSocketImpl) controlMessagesToFIDL(cmsg tcpip.ControlMessages) socket.DatagramSocketRecvControlData {
+	var controlData socket.DatagramSocketRecvControlData
+	if networkSocketControlData := s.networkSocketControlMessagesToFIDL(cmsg); networkSocketControlData != (socket.NetworkSocketRecvControlData{}) {
+		controlData.SetNetwork(networkSocketControlData)
+	}
+	return controlData
+}
+
 func (s *datagramSocket) close() {
 	if s.endpoint.decRef() {
 		s.wq.EventUnregister(&s.entry)
@@ -1785,13 +1812,13 @@ func (s *datagramSocket) recvMsg(opts tcpip.ReadOptions, dataLen uint32) ([]byte
 	return b.Bytes(), res, err
 }
 
-func (s *networkDatagramSocket) recvMsg(wantAddr bool, dataLen uint32, peek bool) (fidlnet.SocketAddress, []byte, uint32, tcpip.Error) {
+func (s *networkDatagramSocket) recvMsg(wantAddr bool, dataLen uint32, peek bool) (fidlnet.SocketAddress, []byte, uint32, tcpip.ControlMessages, tcpip.Error) {
 	bytes, res, err := s.datagramSocket.recvMsg(tcpip.ReadOptions{
 		Peek:           peek,
 		NeedRemoteAddr: wantAddr,
 	}, dataLen)
 	if err != nil {
-		return fidlnet.SocketAddress{}, nil, 0, err
+		return fidlnet.SocketAddress{}, nil, 0, tcpip.ControlMessages{}, err
 	}
 
 	var addr fidlnet.SocketAddress
@@ -1799,14 +1826,11 @@ func (s *networkDatagramSocket) recvMsg(wantAddr bool, dataLen uint32, peek bool
 		sockaddr := toNetSocketAddress(s.netProto, res.RemoteAddr)
 		addr = sockaddr
 	}
-	return addr, bytes, uint32(res.Total - res.Count), nil
+	return addr, bytes, uint32(res.Total - res.Count), res.ControlMessages, nil
 }
 
 func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (socket.DatagramSocketRecvMsgResult, error) {
-	// TODO(https://fxbug.dev/21106): do something with control messages.
-	_ = wantControl
-
-	addr, data, truncated, err := s.recvMsg(wantAddr, dataLen, flags&socket.RecvMsgFlagsPeek != 0)
+	addr, data, truncated, cmsg, err := s.recvMsg(wantAddr, dataLen, flags&socket.RecvMsgFlagsPeek != 0)
 	if err != nil {
 		return socket.DatagramSocketRecvMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}
@@ -1815,9 +1839,15 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint
 		pAddr = &addr
 	}
 
+	var controlData socket.DatagramSocketRecvControlData
+	if wantControl {
+		controlData = s.controlMessagesToFIDL(cmsg)
+	}
+
 	return socket.DatagramSocketRecvMsgResultWithResponse(socket.DatagramSocketRecvMsgResponse{
 		Addr:      pAddr,
 		Data:      data,
+		Control:   controlData,
 		Truncated: truncated,
 	}), nil
 }
@@ -1853,7 +1883,7 @@ func (s *networkDatagramSocket) sendMsg(addr *fidlnet.SocketAddress, data []uint
 	return s.datagramSocket.sendMsg(to, data)
 }
 
-func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control socket.SendControlData, _ socket.SendMsgFlags) (socket.DatagramSocketSendMsgResult, error) {
+func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control socket.DatagramSocketSendControlData, _ socket.SendMsgFlags) (socket.DatagramSocketSendMsgResult, error) {
 	// TODO(https://fxbug.dev/21106): do something with control.
 	_ = control
 
@@ -2695,10 +2725,7 @@ func (s *rawSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.Node
 }
 
 func (s *rawSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (rawsocket.SocketRecvMsgResult, error) {
-	// TODO(https://fxbug.dev/21106): do something with control messages.
-	_ = wantControl
-
-	addr, data, truncated, err := s.recvMsg(wantAddr, dataLen, flags&socket.RecvMsgFlagsPeek != 0)
+	addr, data, truncated, cmsg, err := s.recvMsg(wantAddr, dataLen, flags&socket.RecvMsgFlagsPeek != 0)
 	if err != nil {
 		return rawsocket.SocketRecvMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}
@@ -2707,14 +2734,20 @@ func (s *rawSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, w
 		pAddr = &addr
 	}
 
+	var controlData socket.NetworkSocketRecvControlData
+	if wantControl {
+		controlData = s.networkSocketControlMessagesToFIDL(cmsg)
+	}
+
 	return rawsocket.SocketRecvMsgResultWithResponse(rawsocket.SocketRecvMsgResponse{
 		Addr:      pAddr,
 		Data:      data,
+		Control:   controlData,
 		Truncated: truncated,
 	}), nil
 }
 
-func (s *rawSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control rawsocket.SendControlData, _ socket.SendMsgFlags) (rawsocket.SocketSendMsgResult, error) {
+func (s *rawSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control socket.NetworkSocketSendControlData, _ socket.SendMsgFlags) (rawsocket.SocketSendMsgResult, error) {
 	// TODO(https://fxbug.dev/21106): do something with control.
 	_ = control
 
@@ -3650,6 +3683,14 @@ func tcpipLinkAddressToFidlHWAddr(v tcpip.LinkAddress) packetsocket.HardwareAddr
 	}
 }
 
+func (s *packetSocketImpl) controlMessagesToFIDL(cmsg tcpip.ControlMessages) packetsocket.RecvControlData {
+	var controlData packetsocket.RecvControlData
+	if socketControlData := s.socketControlMessagesToFIDL(cmsg); socketControlData != (socket.SocketRecvControlData{}) {
+		controlData.SetSocket(socketControlData)
+	}
+	return controlData
+}
+
 func (s *packetSocketImpl) RecvMsg(_ fidl.Context, wantPacketInfo bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (packetsocket.SocketRecvMsgResult, error) {
 	// TODO(https://fxbug.dev/21106): do something with control messages.
 	_ = wantControl
@@ -3677,6 +3718,10 @@ func (s *packetSocketImpl) RecvMsg(_ fidl.Context, wantPacketInfo bool, dataLen 
 			PacketType:    tcpipPacketTypeToFidl(res.LinkPacketInfo.PktType),
 			InterfaceType: packetsocket.HardwareTypeEthernet,
 		}
+	}
+
+	if wantControl {
+		resp.Control = s.controlMessagesToFIDL(res.ControlMessages)
 	}
 
 	return packetsocket.SocketRecvMsgResultWithResponse(resp), nil

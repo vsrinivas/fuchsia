@@ -15,6 +15,7 @@
 #include <poll.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/uio.h>
 #include <zircon/compiler.h>
 
@@ -2105,13 +2106,6 @@ class NetStreamSocketsTest : public ::testing::Test {
     ASSERT_TRUE(server_ = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
         << strerror(errno);
     ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
-  }
-
-  void TearDown() override {
-    if (client_.is_valid())
-      EXPECT_EQ(close(client_.release()), 0) << strerror(errno);
-    if (server_.is_valid())
-      EXPECT_EQ(close(server_.release()), 0) << strerror(errno);
   }
 
   fbl::unique_fd& client() { return client_; }
@@ -5298,5 +5292,296 @@ TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
     }
   }
 }
+
+class NetDatagramSocketsTest : public ::testing::TestWithParam<sa_family_t> {
+ protected:
+  void SetUp() override {
+    const sa_family_t domain = GetParam();
+    ASSERT_TRUE(bound_ = fbl::unique_fd(socket(domain, SOCK_DGRAM, 0))) << strerror(errno);
+
+    auto addr_info = [domain]() -> std::optional<std::pair<sockaddr_storage, unsigned int>> {
+      sockaddr_storage addr{
+          .ss_family = domain,
+      };
+      switch (domain) {
+        case AF_INET: {
+          auto sin = reinterpret_cast<sockaddr_in*>(&addr);
+          sin->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+          sin->sin_port = 0;  // Automatically pick a port.
+          return std::make_pair(addr, socklen_t(sizeof(sockaddr_in)));
+        }
+        case AF_INET6: {
+          auto sin6 = reinterpret_cast<sockaddr_in6*>(&addr);
+          sin6->sin6_addr = IN6ADDR_LOOPBACK_INIT;
+          sin6->sin6_port = 0;  // Automatically pick a port.
+          return std::make_pair(addr, socklen_t(sizeof(sockaddr_in6)));
+        }
+        default: {
+          return std::nullopt;
+        }
+      }
+    }();
+    if (!addr_info.has_value()) {
+      FAIL() << "unexpected test variant";
+    }
+    auto [addr, addrlen] = addr_info.value();
+
+    ASSERT_EQ(bind(bound_.get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), 0)
+        << strerror(errno);
+
+    {
+      socklen_t bound_addrlen = addrlen;
+      ASSERT_EQ(getsockname(bound_.get(), reinterpret_cast<sockaddr*>(&addr), &bound_addrlen), 0)
+          << strerror(errno);
+      ASSERT_EQ(addrlen, bound_addrlen);
+    }
+
+    ASSERT_TRUE(connected_ = fbl::unique_fd(socket(domain, SOCK_DGRAM, 0))) << strerror(errno);
+    ASSERT_EQ(connect(connected_.get(), reinterpret_cast<sockaddr*>(&addr), addrlen), 0)
+        << strerror(errno);
+  }
+
+  fbl::unique_fd const& bound() const { return bound_; }
+
+  fbl::unique_fd const& connected() const { return connected_; }
+
+  template <typename F>
+  void SendAndCheckReceivedMessage(void* control, socklen_t control_len, F check) const {
+    const char sendbuf[] = "hello";
+    ASSERT_EQ(send(connected().get(), sendbuf, sizeof(sendbuf), 0), ssize_t(sizeof(sendbuf)))
+        << strerror(errno);
+
+    char recvbuf[sizeof(sendbuf) + 1];
+    iovec iovec = {
+        .iov_base = recvbuf,
+        .iov_len = sizeof(recvbuf),
+    };
+    msghdr msghdr = {
+        .msg_name = nullptr,
+        .msg_namelen = 0,
+        .msg_iov = &iovec,
+        .msg_iovlen = 1,
+        .msg_control = control,
+        .msg_controllen = control_len,
+    };
+    ASSERT_EQ(recvmsg(bound().get(), &msghdr, 0), ssize_t(sizeof(sendbuf))) << strerror(errno);
+    ASSERT_EQ(memcmp(recvbuf, sendbuf, sizeof(sendbuf)), 0);
+    check(msghdr);
+  }
+
+ private:
+  fbl::unique_fd bound_;
+  fbl::unique_fd connected_;
+};
+
+TEST_P(NetDatagramSocketsTest, RecvMsgNullPtrNoControlMessages) {
+  SendAndCheckReceivedMessage(nullptr, 1337, [](msghdr& msghdr) {
+    // The msg_controllen field should be reset when the control buffer is null, even when no
+    // control messages are enabled.
+    EXPECT_EQ(msghdr.msg_controllen, 0u);
+    cmsghdr* cmsg;
+    EXPECT_FALSE(cmsg = CMSG_FIRSTHDR(&msghdr));
+  });
+}
+
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsTests, NetDatagramSocketsTest,
+                         ::testing::Values(AF_INET, AF_INET6));
+
+class NetDatagramSocketsTimestampTest : public NetDatagramSocketsTest {
+ protected:
+  void SetUp() override {
+    ASSERT_NO_FATAL_FAILURE(NetDatagramSocketsTest::SetUp());
+
+    // Enable receiving timestamp via recvmsg(2).
+    const int optval = 1;
+    ASSERT_EQ(setsockopt(bound().get(), SOL_SOCKET, SO_TIMESTAMP, &optval, sizeof(optval)), 0)
+        << strerror(errno);
+  }
+};
+
+TEST_P(NetDatagramSocketsTimestampTest, RecvMsg) {
+  std::chrono::duration before = std::chrono::system_clock::now().time_since_epoch();
+  char control[CMSG_SPACE(sizeof(timeval)) + 1];
+  SendAndCheckReceivedMessage(control, sizeof(control), [before](msghdr& msghdr) {
+    ASSERT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(timeval)));
+    cmsghdr* cmsg;
+    ASSERT_TRUE(cmsg = CMSG_FIRSTHDR(&msghdr));
+    EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(timeval)));
+    EXPECT_EQ(cmsg->cmsg_level, SOL_SOCKET);
+    EXPECT_EQ(cmsg->cmsg_type, SO_TIMESTAMP);
+
+    timeval received_tv;
+    memcpy(&received_tv, CMSG_DATA(cmsg), sizeof(received_tv));
+    std::chrono::duration received =
+        std::chrono::seconds(received_tv.tv_sec) + std::chrono::microseconds(received_tv.tv_usec);
+    std::chrono::duration after = std::chrono::system_clock::now().time_since_epoch();
+    // It is possible for the clock to 'jump'. To avoid flakiness, do not check the received
+    // timestamp if the clock jumped back in time.
+    if (before <= after) {
+      ASSERT_GE(received, before);
+      ASSERT_LE(received, after);
+    }
+
+    EXPECT_FALSE(CMSG_NXTHDR(&msghdr, cmsg));
+  });
+}
+
+TEST_P(NetDatagramSocketsTimestampTest, RecvMsgTruncatedMessage) {
+  // A control message can be truncated if there is at least enough space to store the cmsghdr.
+  char control[sizeof(cmsghdr)];
+  SendAndCheckReceivedMessage(control, sizeof(cmsghdr), [](msghdr& msghdr) {
+#if !defined(__Fuchsia__)
+    ASSERT_EQ(msghdr.msg_controllen, sizeof(cmsghdr));
+    cmsghdr* cmsg;
+    ASSERT_TRUE(cmsg = CMSG_FIRSTHDR(&msghdr));
+    EXPECT_EQ(cmsg->cmsg_len, sizeof(cmsghdr));
+    EXPECT_EQ(cmsg->cmsg_level, SOL_SOCKET);
+    EXPECT_EQ(cmsg->cmsg_type, SO_TIMESTAMP);
+#else
+    // TODO(https://fxbug.dev/86146): Add support for truncated control messages (MSG_CTRUNC).
+    EXPECT_FALSE(CMSG_FIRSTHDR(&msghdr));
+    EXPECT_EQ(msghdr.msg_controllen, 0u);
+#endif
+  });
+}
+
+TEST_P(NetDatagramSocketsTimestampTest, RecvMsgNullControlBuffer) {
+  SendAndCheckReceivedMessage(nullptr, 1337, [](msghdr& msghdr) {
+    // The msg_controllen field should be reset when the control buffer is null.
+    EXPECT_EQ(msghdr.msg_controllen, 0u);
+    cmsghdr* cmsg;
+    EXPECT_FALSE(cmsg = CMSG_FIRSTHDR(&msghdr));
+  });
+}
+
+TEST_P(NetDatagramSocketsTimestampTest, RecvMsgOneByteControlLength) {
+  char control[1];
+  SendAndCheckReceivedMessage(control, sizeof(control), [](msghdr& msghdr) {
+    // If there is not enough space to store the cmsghdr, then nothing is stored.
+    EXPECT_EQ(msghdr.msg_controllen, 0u);
+    cmsghdr* cmsg;
+    EXPECT_FALSE(cmsg = CMSG_FIRSTHDR(&msghdr));
+  });
+}
+
+TEST_P(NetDatagramSocketsTimestampTest, RecvMsgZeroControlLength) {
+  char control[1];
+  SendAndCheckReceivedMessage(control, 0, [](msghdr& msghdr) {
+    // The msg_controllen field should remain zero when no messages were written.
+    EXPECT_EQ(msghdr.msg_controllen, 0u);
+    cmsghdr* cmsg;
+    EXPECT_FALSE(cmsg = CMSG_FIRSTHDR(&msghdr));
+  });
+}
+
+TEST_P(NetDatagramSocketsTimestampTest, RecvMsgUnalignedControlBuffer) {
+  char control[CMSG_SPACE(sizeof(timeval)) + 1];
+  // Pass an unaligned control buffer.
+  SendAndCheckReceivedMessage(control + 1, CMSG_LEN(sizeof(timeval)), [](msghdr& msghdr) {
+    ASSERT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(timeval)));
+
+    // Fetch back the control buffer and confirm it is unaligned.
+    cmsghdr* unaligned_cmsg;
+    ASSERT_TRUE(unaligned_cmsg = CMSG_FIRSTHDR(&msghdr));
+    ASSERT_TRUE(reinterpret_cast<uintptr_t>(unaligned_cmsg) % alignof(cmsghdr) != 0);
+
+    // Do not access the unaligned control header directly as that would be an undefined behavior.
+    // Copy the content to a properly aligned variable first.
+    cmsghdr cmsg;
+    memcpy(&cmsg, unaligned_cmsg, sizeof(cmsghdr));
+    EXPECT_EQ(cmsg.cmsg_len, CMSG_LEN(sizeof(timeval)));
+    EXPECT_EQ(cmsg.cmsg_level, SOL_SOCKET);
+    EXPECT_EQ(cmsg.cmsg_type, SO_TIMESTAMP);
+  });
+}
+
+TEST_P(NetDatagramSocketsTimestampTest, RecvMsgFailureDoesNotResetControlLength) {
+  char recvbuf[1];
+  iovec iovec = {
+      .iov_base = recvbuf,
+      .iov_len = sizeof(recvbuf),
+  };
+  char control[1337];
+  msghdr msghdr = {
+      .msg_name = nullptr,
+      .msg_namelen = 0,
+      .msg_iov = &iovec,
+      .msg_iovlen = 1,
+      .msg_control = control,
+      .msg_controllen = sizeof(control),
+  };
+  ASSERT_EQ(recvmsg(bound().get(), &msghdr, MSG_DONTWAIT), -1);
+  EXPECT_EQ(errno, EWOULDBLOCK);
+  // The msg_controllen field should be left unchanged when recvmsg(2) fails for any reason.
+  EXPECT_EQ(msghdr.msg_controllen, sizeof(control));
+}
+
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsTimestampTests, NetDatagramSocketsTimestampTest,
+                         ::testing::Values(AF_INET, AF_INET6));
+
+class NetDatagramSocketsIpRecvTosTest : public NetDatagramSocketsTest {
+ protected:
+  void SetUp() override {
+#if defined(__Fuchsia__)
+    // TODO(https://fxbug.dev/86524): Support receiving SOL_IP -> IP_TOS control message.
+    GTEST_SKIP() << "SOL_IP -> IP_TOS control message not supported in Netstack";
+#endif
+
+    sa_family_t domain = GetParam();
+    if (domain != AF_INET) {
+      FAIL() << "unexpected domain = " << domain << ", IP_RECVTOS tests must use AF_INET sockets";
+    }
+
+    ASSERT_NO_FATAL_FAILURE(NetDatagramSocketsTest::SetUp());
+
+    // Enable SOL_IP -> IP_RECVTOS option, so that responses from recvmsg(2) include the
+    // SOL_IP -> IP_TOS control message.
+    const int optval = 1;
+    ASSERT_EQ(setsockopt(bound().get(), IPPROTO_IP, IP_RECVTOS, &optval, sizeof(optval)), 0)
+        << strerror(errno);
+  }
+};
+
+TEST_P(NetDatagramSocketsIpRecvTosTest, RecvMsgTOS) {
+  constexpr uint8_t tos = 42;
+  ASSERT_EQ(setsockopt(connected().get(), IPPROTO_IP, IP_TOS, &tos, sizeof(tos)), 0)
+      << strerror(errno);
+
+  char control[CMSG_SPACE(sizeof(uint8_t)) + 1];
+  SendAndCheckReceivedMessage(control, sizeof(control), [tos](msghdr& msghdr) {
+    EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(uint8_t)));
+    cmsghdr* cmsg;
+    ASSERT_TRUE(cmsg = CMSG_FIRSTHDR(&msghdr));
+    EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(uint8_t)));
+    EXPECT_EQ(cmsg->cmsg_level, SOL_IP);
+    EXPECT_EQ(cmsg->cmsg_type, IP_TOS);
+    uint8_t recv_tos;
+    memcpy(&recv_tos, CMSG_DATA(cmsg), sizeof(tos));
+    EXPECT_EQ(recv_tos, tos);
+    EXPECT_FALSE(CMSG_NXTHDR(&msghdr, cmsg));
+  });
+}
+
+TEST_P(NetDatagramSocketsIpRecvTosTest, RecvMsgTOSControlBufferTooSmallToBePadded) {
+  // This test is only meaningful if the length of the data is not aligned.
+  ASSERT_NE(CMSG_ALIGN(sizeof(uint8_t)), sizeof(uint8_t));
+  // Add an extra byte in the control buffer. It will be reported in the msghdr controllen field.
+  char control[CMSG_LEN(sizeof(uint8_t)) + 1];
+  SendAndCheckReceivedMessage(control, sizeof(control), [](msghdr& msghdr) {
+    // There is not enough space in the control buffer for it to be padded by CMSG_SPACE. So we
+    // expect the size of the input control buffer in controllen instead. It indicates that every
+    // bytes from the control buffer were used.
+    EXPECT_EQ(msghdr.msg_controllen, CMSG_LEN(sizeof(uint8_t)) + 1);
+    cmsghdr* cmsg;
+    ASSERT_TRUE(cmsg = CMSG_FIRSTHDR(&msghdr));
+    EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(uint8_t)));
+    EXPECT_EQ(cmsg->cmsg_level, SOL_IP);
+    EXPECT_EQ(cmsg->cmsg_type, IP_TOS);
+    EXPECT_FALSE(CMSG_NXTHDR(&msghdr, cmsg));
+  });
+}
+
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsIpRecvTosTests, NetDatagramSocketsIpRecvTosTest,
+                         ::testing::Values(AF_INET));
 
 }  // namespace

@@ -168,7 +168,7 @@ protocol Socket {
     /// + request `flags` flags for the receive request.
     /// - response `packet_info` information about the packet, if requested.
     /// - response `data` the message.
-    /// - response `control_data` control messages, if requested.
+    /// - response `control` control messages, if requested.
     /// - response `truncated` indicates whether or not the returned message
     ///   was truncated.
     RecvMsg(struct {
@@ -183,7 +183,10 @@ protocol Socket {
             interface_type HardwareType;
         } :optional;
         data bytes;
-        control_data @generated_name("RecvControlData") table {};
+        control @generated_name("RecvControlData") table {
+            /// Socket level ancillary data.
+            1: socket fuchsia.posix.socket.SocketRecvControlData;
+        };
         truncated uint32;
     }) error fuchsia.posix.Errno;
 
@@ -191,12 +194,12 @@ protocol Socket {
     ///
     /// + request `packet_info` information about the packet.
     /// + request `data` the message.
-    /// + request `control_data` ancillary data.
+    /// + request `control` ancillary data.
     /// + request `flags` flags for the send request.
     SendMsg(struct {
         packet_info PacketInfo:optional;
         data bytes:MAX;
-        control_data @generated_name("SendControlData") table {};
+        control @generated_name("SendControlData") table {};
         flags fuchsia.posix.socket.SendMsgFlags;
     }) -> (struct {}) error fuchsia.posix.Errno;
 };

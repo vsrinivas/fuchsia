@@ -39,24 +39,6 @@ protocol Provider {
     }) error fuchsia.posix.Errno;
 };
 
-/// Ancillary data for sending raw packets.
-// Separate from `fuchsia.posix.socket/SendControlData` as raw sockets support
-// different control data.
-//
-// E.g. The `SOL_UDP` -> `UDP_SEGMENT` control message will never be supported
-// on raw sockets as raw sockets are never UDP sockets.
-// https://github.com/torvalds/linux/commit/2e8de8576343ab540856082916bfb84d17288b08
-type SendControlData = table {};
-
-/// Ancillary data for received raw packets.
-// Separate from `fuchsia.posix.socket/RecvControlData` as raw sockets support
-// different control data.
-//
-// E.g. The `SOL_UDP` -> `UDP_GRO` control message will never be supported on
-// raw sockets as raw sockets are never UDP sockets.
-// https://github.com/torvalds/linux/commit/bcd1665e3569b0a6f569514f023a41fc7df0b4a3
-type RecvControlData = table {};
-
 /// A raw network socket.
 ///
 /// Once a socket has been retrieved from a provider, this interface is then
@@ -95,7 +77,7 @@ protocol Socket {
     }) -> (struct {
         addr fuchsia.net.SocketAddress:optional;
         data bytes;
-        control RecvControlData;
+        control fuchsia.posix.socket.NetworkSocketRecvControlData;
         truncated uint32;
     }) error fuchsia.posix.Errno;
 
@@ -109,7 +91,7 @@ protocol Socket {
     SendMsg(struct {
         addr fuchsia.net.SocketAddress:optional;
         data bytes:MAX;
-        control SendControlData;
+        control fuchsia.posix.socket.NetworkSocketSendControlData;
         flags fuchsia.posix.socket.SendMsgFlags;
     }) -> (struct {}) error fuchsia.posix.Errno;
 

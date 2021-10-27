@@ -1121,7 +1121,12 @@ where
         want_addr: bool,
         data_len: usize,
     ) -> Result<
-        (Option<Box<fidl_fuchsia_net::SocketAddress>>, Vec<u8>, psocket::RecvControlData, u32),
+        (
+            Option<Box<fidl_fuchsia_net::SocketAddress>>,
+            Vec<u8>,
+            psocket::DatagramSocketRecvControlData,
+            u32,
+        ),
         Errno,
     > {
         let () = self.need_rights(fio::OPEN_RIGHT_READABLE)?;
@@ -1132,7 +1137,12 @@ where
             if let SocketState::BoundConnect { shutdown_read, .. } = state.info.state {
                 if shutdown_read {
                     // Return empty data to signal EOF.
-                    return Ok((None, Vec::new(), psocket::RecvControlData::EMPTY, 0));
+                    return Ok((
+                        None,
+                        Vec::new(),
+                        psocket::DatagramSocketRecvControlData::EMPTY,
+                        0,
+                    ));
                 }
             }
             return Err(Errno::Eagain);
@@ -1155,7 +1165,12 @@ where
                 error!("UDP socket failed to signal peer: {:?}", e);
             }
         }
-        Ok((addr, data, psocket::RecvControlData::EMPTY, truncated.try_into().unwrap_or(u32::MAX)))
+        Ok((
+            addr,
+            data,
+            psocket::DatagramSocketRecvControlData::EMPTY,
+            truncated.try_into().unwrap_or(u32::MAX),
+        ))
     }
 
     fn send_msg(&mut self, addr: Option<fnet::SocketAddress>, data: Vec<u8>) -> Result<i64, Errno> {
@@ -1575,7 +1590,7 @@ mod tests {
                 .send_msg(
                     None,
                     &body,
-                    psocket::SendControlData::EMPTY,
+                    psocket::DatagramSocketSendControlData::EMPTY,
                     psocket::SendMsgFlags::empty()
                 )
                 .await
@@ -1736,7 +1751,7 @@ mod tests {
                 .send_msg(
                     Some(&mut A::create(A::REMOTE_ADDR, 200)),
                     &body,
-                    psocket::SendControlData::EMPTY,
+                    psocket::DatagramSocketSendControlData::EMPTY,
                     psocket::SendMsgFlags::empty()
                 )
                 .await
@@ -1782,7 +1797,7 @@ mod tests {
                     .send_msg(
                         Some(&mut A::create(A::LOCAL_ADDR, 200)),
                         &body,
-                        psocket::SendControlData::EMPTY,
+                        psocket::DatagramSocketSendControlData::EMPTY,
                         psocket::SendMsgFlags::empty()
                     )
                     .await
@@ -1805,7 +1820,7 @@ mod tests {
                     .send_msg(
                         Some(&mut A::create(A::LOCAL_ADDR, 200)),
                         &body,
-                        psocket::SendControlData::EMPTY,
+                        psocket::DatagramSocketSendControlData::EMPTY,
                         psocket::SendMsgFlags::empty()
                     )
                     .await
@@ -1847,7 +1862,7 @@ mod tests {
                 .send_msg(
                     Some(&mut A::create(A::LOCAL_ADDR, 200)),
                     &body,
-                    psocket::SendControlData::EMPTY,
+                    psocket::DatagramSocketSendControlData::EMPTY,
                     psocket::SendMsgFlags::empty()
                 )
                 .await
@@ -2123,7 +2138,7 @@ mod tests {
                 .send_msg(
                     None,
                     &body,
-                    psocket::SendControlData::EMPTY,
+                    psocket::DatagramSocketSendControlData::EMPTY,
                     psocket::SendMsgFlags::empty()
                 )
                 .await
@@ -2133,7 +2148,7 @@ mod tests {
         );
         let mut invalid_addr = A::create(A::REMOTE_ADDR, 0);
         assert_eq!(
-            socket.send_msg(Some(&mut invalid_addr), &body, psocket::SendControlData::EMPTY, psocket::SendMsgFlags::empty()).await.unwrap().expect_err(
+            socket.send_msg(Some(&mut invalid_addr), &body, psocket::DatagramSocketSendControlData::EMPTY, psocket::SendMsgFlags::empty()).await.unwrap().expect_err(
                 "writing to an invalid address (port 0) should fail with EINVAL instead of EPIPE"
             ),
             Errno::Einval,
