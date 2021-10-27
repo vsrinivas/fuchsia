@@ -150,13 +150,10 @@ resource("static") {
 }
 
 fuchsia_test_package("semantics-integration-tests") {
-  test_components = [ ":web_semantics_tests" ]
-
-  # TODO(https://fxbug.dev/73200): Re-enable this test in coverage build when it
-  # passes consistently.
-  if (!is_coverage) {
-    test_components += [ ":flutter_semantics_tests" ]
-  }
+  test_components = [
+    ":flutter_semantics_tests",
+    ":web_semantics_tests",
+  ]
 
   deps = [
     ":dynamic_button",
