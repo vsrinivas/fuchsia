@@ -35,6 +35,11 @@ class FileEventHandler : public fidl::WireAsyncEventHandler<fio::File> {
   std::string url_;
 };
 
+std::string_view GetManifest(std::string_view url) {
+  auto i = url.rfind('/');
+  return i == std::string_view::npos ? url : url.substr(i + 1);
+}
+
 }  // namespace
 
 zx::status<std::unique_ptr<Driver>> Driver::Load(std::string url, zx::vmo vmo) {
@@ -202,7 +207,11 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       completer.Close(response->s);
       return;
     }
-    zx_status_t status = response->buffer->vmo.set_property(ZX_PROP_NAME, url.data(), url.size());
+    // Give the driver's VMO a name. We can't fit the entire URL in the name, so
+    // use the name of the manifest from the URL.
+    auto manifest = GetManifest(url);
+    zx_status_t status =
+        response->buffer->vmo.set_property(ZX_PROP_NAME, manifest.data(), manifest.size());
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to start driver '%s', could not name library VMO: %s", url.data(),
            zx_status_get_string(status));
