@@ -26,7 +26,7 @@ pub struct PortMap {
     pub ports: Vec<MappedPort>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct MappedPort {
     protocol: Option<Protocol>,
     version: Option<IPVersion>,
@@ -182,15 +182,15 @@ impl PortMap {
                     Some(Protocol::UDP) => "udp",
                     Some(Protocol::TCP) | None => "tcp",
                 },
-                match &mapped_port.host {
-                    Some(address) => format!("{}{}{}", open_bracket, address, close_bracket),
-                    None => "".to_string(),
-                },
+                mapped_port
+                    .host
+                    .as_ref()
+                    .map_or("".to_string(), |v| format!("{}{}{}", open_bracket, v, close_bracket)),
                 mapped_port.host_port,
-                match &mapped_port.guest {
-                    Some(address) => format!("{}{}{}", open_bracket, address, close_bracket),
-                    None => "".to_string(),
-                },
+                mapped_port
+                    .guest
+                    .as_ref()
+                    .map_or("".to_string(), |v| format!("{}{}{}", open_bracket, v, close_bracket)),
                 mapped_port.guest_port,
             );
             optional_comma = ",";
@@ -202,6 +202,7 @@ impl PortMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use regex::Regex;
 
     #[test]
     fn test_convert_start_cmd_to_device_spec() {
@@ -229,5 +230,109 @@ mod tests {
         assert_eq!(device_spec.ram_mb, 16392);
         assert_eq!(device_spec.window_height, 480);
         assert_eq!(device_spec.window_width, 640);
+    }
+
+    #[test]
+    fn test_to_string() {
+        let mut portmap = PortMap { ..Default::default() };
+        // No ports => no output
+        assert_eq!(portmap.to_string(), "");
+
+        // test default v4 syntax
+        portmap.add_ssh_port(23456);
+        assert_eq!(portmap.to_string(), "hostfwd=tcp::23456-:22");
+        // switch to udp
+        portmap.ports[0].protocol = Some(Protocol::UDP);
+        assert_eq!(portmap.to_string(), "hostfwd=udp::23456-:22");
+        // with host addresses
+        portmap.ports[0].host = Some("127.0.0.1".to_string());
+        portmap.ports[0].guest = Some("192.168.1.15".to_string());
+        assert_eq!(portmap.to_string(), "hostfwd=udp:127.0.0.1:23456-192.168.1.15:22");
+
+        // test v6 syntax
+        let mut portmap = PortMap {
+            ports: {
+                vec![MappedPort {
+                    protocol: Some(Protocol::TCP),
+                    version: Some(IPVersion::V6),
+                    host: None,
+                    host_port: 123,
+                    guest: None,
+                    guest_port: 234,
+                }]
+            },
+        };
+        assert_eq!(portmap.to_string(), "ipv6-hostfwd=tcp::123-:234");
+        // with host addresses
+        portmap.ports[0].host = Some("::1".to_string());
+        portmap.ports[0].guest = Some("fe80::abc:1230:4567:aaaa%en0".to_string());
+        assert_eq!(
+            portmap.to_string(),
+            "ipv6-hostfwd=tcp:[::1]:123-[fe80::abc:1230:4567:aaaa%en0]:234"
+        );
+        // switch to udp
+        portmap.ports[0].protocol = Some(Protocol::UDP);
+        assert_eq!(
+            portmap.to_string(),
+            "ipv6-hostfwd=udp:[::1]:123-[fe80::abc:1230:4567:aaaa%en0]:234"
+        );
+
+        // test multiple ports
+        let portmap = PortMap {
+            ports: {
+                vec![
+                    MappedPort { host_port: 123, guest_port: 234, ..Default::default() },
+                    MappedPort { host_port: 456, guest_port: 567, ..Default::default() },
+                    MappedPort { host_port: 789, guest_port: 890, ..Default::default() },
+                ]
+            },
+        };
+        // order doesn't matter, but they should all be present
+        let re1 = Regex::new(r"^|,hostfwd=tcp::123-:234,|$").unwrap();
+        let re2 = Regex::new(r"^|,hostfwd=tcp::456-:567,|$").unwrap();
+        let re3 = Regex::new(r"^|,hostfwd=tcp::789-:890,|$").unwrap();
+        let port_map = portmap.to_string();
+        assert!(re1.is_match(&port_map));
+        assert!(re2.is_match(&port_map));
+        assert!(re3.is_match(&port_map));
+
+        // test mixed cases
+        let portmap = PortMap {
+            ports: {
+                vec![
+                    MappedPort {
+                        version: Some(IPVersion::V4),
+                        protocol: Some(Protocol::TCP),
+                        host_port: 123,
+                        guest: Some("10.0.2.15".to_string()),
+                        guest_port: 234,
+                        ..Default::default()
+                    },
+                    MappedPort {
+                        version: Some(IPVersion::V6),
+                        protocol: Some(Protocol::TCP),
+                        host: Some("::1".to_string()),
+                        host_port: 456,
+                        guest_port: 567,
+                        ..Default::default()
+                    },
+                    MappedPort {
+                        version: Some(IPVersion::V4),
+                        protocol: Some(Protocol::UDP),
+                        host_port: 789,
+                        guest_port: 890,
+                        ..Default::default()
+                    },
+                ]
+            },
+        };
+        // order doesn't matter, but they should all be present
+        let re1 = Regex::new(r"^|,hostfwd=tcp::123-10.0.2.15:234,|$").unwrap();
+        let re2 = Regex::new(r"^|,ipv6-hostfwd=tcp:[::1]:456-:567,|$").unwrap();
+        let re3 = Regex::new(r"^|,hostfwd=udp::789-:890,|$").unwrap();
+        let port_map = portmap.to_string();
+        assert!(re1.is_match(&port_map));
+        assert!(re2.is_match(&port_map));
+        assert!(re3.is_match(&port_map));
     }
 }
