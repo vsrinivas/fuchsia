@@ -1148,6 +1148,16 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 
 From //build/images/args.gni:69
 
+### enable_one_codegen_unit_for_rust_bootfs
+Whether to force 1 codegen unit in Rust bootfs binaries.
+Fewer codegen units lead to smaller code, at the expense of slower
+incremental rebuild times. Disable this behavior when you are iterating
+on a bootfs Rust binary for faster builds.
+
+**Current value (from the default):** `true`
+
+From //build/config/rust/BUILD.gn:23
+
 ### enable_rbe
 Set to true to enable distributed compilation using RBE.
 
@@ -3343,7 +3353,7 @@ as the cache.
 
 **Current value (from the default):** `""`
 
-From //build/config/rust/BUILD.gn:19
+From //build/config/rust/BUILD.gn:17
 
 ### rust_lto
 Sets the default LTO type for rustc bulids.
@@ -3376,7 +3386,7 @@ TODO(fxbug.dev/57302): Enable v0 mangling by default.
 
 **Current value (from the default):** `false`
 
-From //build/config/rust/BUILD.gn:15
+From //build/config/rust/BUILD.gn:13
 
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
@@ -4336,7 +4346,7 @@ From //build/images/args.gni:91
 
 **Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:149
+From //build/config/fuchsia/BUILD.gn:144
 
 ### zircon_b_partition
 
