@@ -403,6 +403,10 @@
             path: "/svc_for_sys/fuchsia.power.test.BatterySimulator",
         },
         {
+            protocol: "fuchsia.fshost.BlockWatcher",
+            path: "/svc_for_sys/fuchsia.fshost.BlockWatcher",
+        },
+        {
             protocol: "fuchsia.fonts.Provider",
             path: "/svc_for_sys/fuchsia.fonts.Provider",
         },
