@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_BUS_H_
 #define SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_BUS_H_
 
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
@@ -18,6 +19,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/resource.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
 #include <threads.h>
@@ -92,8 +94,13 @@ class PlatformBus : public PlatformBusType,
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::unowned_resource GetResource() const { return zx::unowned_resource(get_root_resource()); }
 
-  zx_status_t GetBootItem(uint32_t type, uint32_t extra, zx::vmo* vmo, uint32_t* length);
-  zx_status_t GetBootItem(uint32_t type, uint32_t extra, fbl::Array<uint8_t>* out);
+  struct BootItemResult {
+    zx::vmo vmo;
+    uint32_t length;
+  };
+  // Returns ZX_ERR_NOT_FOUND when boot item wasn't found.
+  zx::status<BootItemResult> GetBootItem(uint32_t type, uint32_t extra);
+  zx::status<fbl::Array<uint8_t>> GetBootItemArray(uint32_t type, uint32_t extra);
 
   inline ddk::GpioImplProtocolClient* gpio() { return &*gpio_; }
 
@@ -104,10 +111,10 @@ class PlatformBus : public PlatformBusType,
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(PlatformBus);
 
-  zx_status_t GetBoardInfo(zbi_board_info_t* board_info);
+  zx::status<zbi_board_info_t> GetBoardInfo();
   zx_status_t Init();
 
-  zx::channel items_svc_;
+  fidl::ClientEnd<fuchsia_boot::Items> items_svc_;
 
   // Protects board_name_completer_.
   fbl::Mutex board_info_lock_;

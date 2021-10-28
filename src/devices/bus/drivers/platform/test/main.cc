@@ -49,6 +49,7 @@ zx_status_t GetBootItem(const zbi_platform_id_t* platform_id, uint32_t type, uin
       if (status != ZX_OK) {
         return status;
       }
+      *length = sizeof(*platform_id);
       break;
     }
     case ZBI_TYPE_DRV_BOARD_INFO: {

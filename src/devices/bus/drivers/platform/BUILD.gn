@@ -77,6 +77,7 @@ fuchsia_driver("platform-bus.proxy-driver") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxc",
   ]
 }
 
@@ -118,6 +119,7 @@ test("platform-bus-unittest") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]
 

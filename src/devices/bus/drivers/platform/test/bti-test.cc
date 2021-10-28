@@ -49,6 +49,7 @@ zx_status_t GetBootItem(uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* l
       if (status != ZX_OK) {
         return status;
       }
+      *length = sizeof(kPlatformId);
       break;
     }
     case ZBI_TYPE_DRV_BOARD_INFO: {

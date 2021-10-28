@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/boot/driver-config.h>
+#include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/syscalls/iommu.h>
 
@@ -341,7 +342,7 @@ zx_status_t PlatformBus::PBusAddComposite(const pbus_dev_t* dev,
       .metadata_count = 0,
   };
 
-  auto status = DdkAddComposite(dev->name, &comp_desc);
+  zx_status_t status = DdkAddComposite(dev->name, &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s DdkAddComposite failed %d", __FUNCTION__, status);
     return status;
@@ -408,32 +409,32 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t PlatformBus::GetBootItem(uint32_t type, uint32_t extra, zx::vmo* vmo,
-                                     uint32_t* length) {
-  auto result = fidl::WireCall<fuchsia_boot::Items>(zx::unowned(items_svc_))->Get(type, extra);
-  if (result.ok()) {
-    *vmo = std::move(result->payload);
-    *length = result->length;
+zx::status<PlatformBus::BootItemResult> PlatformBus::GetBootItem(uint32_t type, uint32_t extra) {
+  auto result = fidl::WireCall(items_svc_)->Get(type, extra);
+  if (!result.ok()) {
+    return zx::error(result.status());
   }
-  return result.status();
+  if (!result->payload.is_valid()) {
+    return zx::error(ZX_ERR_NOT_FOUND);
+  }
+  return zx::ok(PlatformBus::BootItemResult{
+      .vmo = std::move(result->payload),
+      .length = result->length,
+  });
 }
 
-zx_status_t PlatformBus::GetBootItem(uint32_t type, uint32_t extra, fbl::Array<uint8_t>* out) {
-  zx::vmo vmo;
-  uint32_t length;
-  zx_status_t status = GetBootItem(type, extra, &vmo, &length);
+zx::status<fbl::Array<uint8_t>> PlatformBus::GetBootItemArray(uint32_t type, uint32_t extra) {
+  zx::status result = GetBootItem(type, extra);
+  if (result.is_error()) {
+    return result.take_error();
+  }
+  auto& [vmo, length] = *result;
+  fbl::Array<uint8_t> data(new uint8_t[length], length);
+  zx_status_t status = vmo.read(data.data(), 0, data.size());
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
-  if (vmo.is_valid()) {
-    fbl::Array<uint8_t> data(new uint8_t[length], length);
-    status = vmo.read(data.data(), 0, data.size());
-    if (status != ZX_OK) {
-      return status;
-    }
-    *out = std::move(data);
-  }
-  return ZX_OK;
+  return zx::ok(std::move(data));
 }
 
 void PlatformBus::DdkRelease() { delete this; }
@@ -549,27 +550,29 @@ zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::chann
 }
 
 PlatformBus::PlatformBus(zx_device_t* parent, zx::channel items_svc)
-    : PlatformBusType(parent), items_svc_(std::move(items_svc)) {
+    : PlatformBusType(parent),
+      items_svc_(fidl::ClientEnd<fuchsia_boot::Items>(std::move(items_svc))) {
   sync_completion_reset(&proto_completion_);
 }
 
-zx_status_t PlatformBus::GetBoardInfo(zbi_board_info_t* board_info) {
-  zx::vmo vmo;
-  uint32_t len;
-  zx_status_t status = GetBootItem(ZBI_TYPE_DRV_BOARD_INFO, 0, &vmo, &len);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Boot Item ZBI_TYPE_DRV_BOARD_INFO not found");
-    return status;
+zx::status<zbi_board_info_t> PlatformBus::GetBoardInfo() {
+  zx::status result = GetBootItem(ZBI_TYPE_DRV_BOARD_INFO, 0);
+  if (result.is_error()) {
+    // This is expected on some boards.
+    zxlogf(INFO, "Boot Item ZBI_TYPE_DRV_BOARD_INFO not found");
+    return result.take_error();
   }
-  if (!vmo.is_valid()) {
-    zxlogf(ERROR, "Invalid zbi_board_info_t VMO");
-    return ZX_ERR_UNAVAILABLE;
+  auto& [vmo, length] = *result;
+  if (length != sizeof(zbi_board_info_t)) {
+    return zx::error(ZX_ERR_INTERNAL);
   }
-  status = vmo.read(board_info, 0, std::min<uint64_t>(len, sizeof(*board_info)));
+  zbi_board_info_t board_info;
+  zx_status_t status = vmo.read(&board_info, 0, length);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to read zbi_board_info_t VMO");
+    return zx::error(status);
   }
-  return status;
+  return zx::ok(board_info);
 }
 
 zx_status_t PlatformBus::Init() {
@@ -588,31 +591,29 @@ zx_status_t PlatformBus::Init() {
   }
 
   // Read kernel driver.
-  zx::vmo vmo;
-  uint32_t length;
 #if __x86_64__
   interrupt_controller_type_ = fuchsia_sysinfo::wire::InterruptControllerType::kApic;
 #else
-  status = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, &vmo, &length);
-  if (status != ZX_OK) {
-    return status;
+  auto boot_item = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2);
+  if (boot_item.is_error() && boot_item.status_value() != ZX_ERR_NOT_FOUND) {
+    return boot_item.status_value();
   }
-  if (vmo.is_valid()) {
+  if (boot_item.is_ok()) {
     interrupt_controller_type_ = fuchsia_sysinfo::wire::InterruptControllerType::kGicV2;
   }
-  status = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, &vmo, &length);
-  if (status != ZX_OK) {
-    return status;
+  boot_item = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3);
+  if (boot_item.is_error() && boot_item.status_value() != ZX_ERR_NOT_FOUND) {
+    return boot_item.status_value();
   }
-  if (vmo.is_valid()) {
+  if (boot_item.is_ok()) {
     interrupt_controller_type_ = fuchsia_sysinfo::wire::InterruptControllerType::kGicV3;
   }
 #endif
 
   // Read platform ID.
-  status = GetBootItem(ZBI_TYPE_PLATFORM_ID, 0, &vmo, &length);
-  if (status != ZX_OK) {
-    return status;
+  zx::status platform_id_result = GetBootItem(ZBI_TYPE_PLATFORM_ID, 0);
+  if (platform_id_result.is_error() && platform_id_result.status_value() != ZX_ERR_NOT_FOUND) {
+    return platform_id_result.status_value();
   }
 
 #if __aarch64__
@@ -625,9 +626,12 @@ zx_status_t PlatformBus::Init() {
 #endif
 
   fbl::AutoLock lock(&board_info_lock_);
-  if (vmo.is_valid()) {
+  if (platform_id_result.is_ok()) {
+    if (platform_id_result->length != sizeof(zbi_platform_id_t)) {
+      return ZX_ERR_INTERNAL;
+    }
     zbi_platform_id_t platform_id;
-    status = vmo.read(&platform_id, 0, sizeof(platform_id));
+    status = platform_id_result->vmo.read(&platform_id, 0, sizeof(platform_id));
     if (status != ZX_OK) {
       return status;
     }
@@ -650,9 +654,10 @@ zx_status_t PlatformBus::Init() {
   }
 
   // Set default board_revision.
-  zbi_board_info_t zbi_board_info = {};
-  GetBoardInfo(&zbi_board_info);
-  board_info_.board_revision = zbi_board_info.revision;
+  zx::status zbi_board_info = GetBoardInfo();
+  if (zbi_board_info.is_ok()) {
+    board_info_.board_revision = zbi_board_info->revision;
+  }
 
   // Then we attach the platform-bus device below it.
   zx_device_prop_t props[] = {
@@ -663,13 +668,13 @@ zx_status_t PlatformBus::Init() {
 }
 
 void PlatformBus::DdkInit(ddk::InitTxn txn) {
-  fbl::Array<uint8_t> board_data;
-  zx_status_t status = GetBootItem(ZBI_TYPE_DRV_BOARD_PRIVATE, 0, &board_data);
-  if (status != ZX_OK) {
-    return txn.Reply(status);
+  zx::status board_data = GetBootItemArray(ZBI_TYPE_DRV_BOARD_PRIVATE, 0);
+  if (board_data.is_error() && board_data.status_value() != ZX_ERR_NOT_FOUND) {
+    return txn.Reply(board_data.status_value());
   }
-  if (board_data) {
-    status = DdkAddMetadata(DEVICE_METADATA_BOARD_PRIVATE, board_data.data(), board_data.size());
+  if (board_data.is_ok()) {
+    zx_status_t status =
+        DdkAddMetadata(DEVICE_METADATA_BOARD_PRIVATE, board_data->data(), board_data->size());
     if (status != ZX_OK) {
       return txn.Reply(status);
     }
@@ -679,7 +684,7 @@ void PlatformBus::DdkInit(ddk::InitTxn txn) {
   device.vid = PDEV_VID_GENERIC;
   device.pid = PDEV_PID_GENERIC;
   device.did = PDEV_DID_RAM_DISK;
-  status = PBusDeviceAdd(&device);
+  zx_status_t status = PBusDeviceAdd(&device);
   if (status != ZX_OK) {
     return txn.Reply(status);
   }

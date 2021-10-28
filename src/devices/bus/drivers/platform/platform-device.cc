@@ -347,16 +347,15 @@ zx_status_t PlatformDevice::RpcGetMetadata(uint32_t index, uint32_t* out_type, u
   index -= static_cast<uint32_t>(resources_.metadata_count());
 
   auto& metadata = resources_.boot_metadata(index);
-  zx::vmo vmo;
-  uint32_t length;
-  zx_status_t status = bus_->GetBootItem(metadata.zbi_type, metadata.zbi_extra, &vmo, &length);
-  if (status != ZX_OK) {
-    return status;
-  } else if (length > buf_size) {
+  zx::status metadata_bi = bus_->GetBootItem(metadata.zbi_type, metadata.zbi_extra);
+  if (metadata_bi.is_error()) {
+    return metadata_bi.status_value();
+  } else if (metadata_bi->length > buf_size) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  status = vmo.read(buf, 0, length);
+  auto& [vmo, length] = *metadata_bi;
+  auto status = vmo.read(buf, 0, length);
   if (status != ZX_OK) {
     return status;
   }
@@ -520,10 +519,10 @@ void PlatformDevice::DdkInit(ddk::InitTxn txn) {
 
     for (size_t i = 0; i < boot_metadata_count; i++) {
       const auto& metadata = resources_.boot_metadata(i);
-      fbl::Array<uint8_t> data;
-      zx_status_t status = bus_->GetBootItem(metadata.zbi_type, metadata.zbi_extra, &data);
-      if (status == ZX_OK) {
-        status = DdkAddMetadata(metadata.zbi_type, data.data(), data.size());
+      zx::status data = bus_->GetBootItemArray(metadata.zbi_type, metadata.zbi_extra);
+      zx_status_t status = data.status_value();
+      if (data.is_ok()) {
+        status = DdkAddMetadata(metadata.zbi_type, data->data(), data->size());
       }
       if (status != ZX_OK) {
         zxlogf(WARNING, "%s failed to add metadata for new device", __func__);
