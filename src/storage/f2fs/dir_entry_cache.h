@@ -99,8 +99,6 @@ class DirEntryCache {
   void OnCacheHit(ElementRefPtr &element) __TA_REQUIRES(lock_);
   void Evict() __TA_REQUIRES(lock_);
 
-  bool IsDotOrDotDot(std::string_view child_name) const;
-
   static EntryKey GenerateKey(ino_t parent_ino, std::string_view child_name) {
     return EntryKey(parent_ino, std::string(child_name));
   }

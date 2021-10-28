@@ -183,6 +183,8 @@ inline void ZeroUserSegment(Page *page, uint32_t start, uint32_t end) {
   }
 }
 
+inline bool IsDotOrDotDot(std::string_view name) { return (name == "." || name == ".."); }
+
 }  // namespace f2fs
 
 #endif  // SRC_STORAGE_F2FS_F2FS_LIB_H_

@@ -81,10 +81,6 @@ void DirEntryCache::Evict() {
   }
 }
 
-bool DirEntryCache::IsDotOrDotDot(std::string_view child_name) const {
-  return (child_name == "." || child_name == "..");
-}
-
 zx::status<DirEntry> DirEntryCache::LookupDirEntry(ino_t parent_ino, std::string_view child_name) {
   if (IsDotOrDotDot(child_name)) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);

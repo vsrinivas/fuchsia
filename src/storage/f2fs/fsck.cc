@@ -478,7 +478,7 @@ void FsckWorker::CheckDentries(uint32_t &child_count, uint32_t &child_files, con
     // Becareful. 'dentry.file_type' is not imode
     if (ftype == FileType::kFtDir) {
       ++child_count;
-      if (name.compare("..") == 0 || name.compare(".") == 0) {
+      if (IsDotOrDotDot(name)) {
         ++i;
         continue;
       }
