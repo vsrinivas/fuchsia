@@ -9,11 +9,9 @@ use {
     },
     anyhow::{anyhow, Context, Error, Result},
     cm_fidl_analyzer::{
-        capability_routing::{
-            error::CapabilityRouteError, route::RouteSegment, verifier::VerifyRouteResult,
-        },
         component_model::ComponentModelForAnalyzer,
         component_tree::NodePath,
+        route::{CapabilityRouteError, RouteSegment, VerifyRouteResult},
     },
     cm_rust::{
         CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ComponentDecl,
@@ -617,8 +615,7 @@ mod tests {
         },
         anyhow::Result,
         cm_fidl_analyzer::{
-            capability_routing::route::RouteSegment, component_model::ModelBuilderForAnalyzer,
-            component_tree::NodePath,
+            component_model::ModelBuilderForAnalyzer, component_tree::NodePath, route::RouteSegment,
         },
         cm_rust::{
             CapabilityName, CapabilityPath, CapabilityTypeName, ChildDecl, ComponentDecl,

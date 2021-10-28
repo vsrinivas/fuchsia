@@ -8,13 +8,13 @@ use {
         ResultsBySeverity, ResultsForCapabilityType, WarningResult,
     },
     anyhow::{anyhow, Context, Result},
-    cm_fidl_analyzer::capability_routing::{
-        error::CapabilityRouteError, verifier::VerifyRouteResult,
-    },
-    cm_fidl_analyzer::component_model::{
-        AnalyzerModelError, BreadthFirstModelWalker, ComponentInstanceForAnalyzer,
-        ComponentInstanceVisitor, ComponentModelForAnalyzer, ComponentModelWalker,
-        ModelMappingVisitor,
+    cm_fidl_analyzer::{
+        component_model::{
+            AnalyzerModelError, BreadthFirstModelWalker, ComponentInstanceForAnalyzer,
+            ComponentInstanceVisitor, ComponentModelForAnalyzer, ComponentModelWalker,
+            ModelMappingVisitor,
+        },
+        route::{CapabilityRouteError, VerifyRouteResult},
     },
     cm_rust::CapabilityTypeName,
     routing::error::{ComponentInstanceError, RoutingError},

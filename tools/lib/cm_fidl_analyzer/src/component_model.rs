@@ -4,11 +4,11 @@
 
 use {
     crate::{
-        capability_routing::{route::RouteSegment, verifier::VerifyRouteResult},
         component_tree::{
             ComponentNode, ComponentTree, ComponentTreeBuilder, NodeEnvironment, NodePath,
             ResolverRegistry,
         },
+        route::{RouteSegment, VerifyRouteResult},
     },
     anyhow::anyhow,
     async_trait::async_trait,

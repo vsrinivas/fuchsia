@@ -16,8 +16,8 @@ use {
         },
     },
     cm_fidl_analyzer::{
-        capability_routing::{error::CapabilityRouteError, route::RouteSegment},
         component_tree::NodePath,
+        route::{CapabilityRouteError, RouteSegment},
         serde_ext::ErrorWithMessage,
     },
     cm_rust::{CapabilityName, CapabilityTypeName},

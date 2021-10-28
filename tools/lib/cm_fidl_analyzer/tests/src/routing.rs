@@ -6,14 +6,12 @@ use {
     anyhow::anyhow,
     async_trait::async_trait,
     cm_fidl_analyzer::{
-        capability_routing::{
-            error::CapabilityRouteError, route::RouteSegment, verifier::VerifyRouteResult,
-        },
         component_model::{
             AnalyzerModelError, ComponentInstanceForAnalyzer, ComponentModelForAnalyzer,
             ModelBuilderForAnalyzer, BOOT_RESOLVER_NAME, BOOT_SCHEME,
         },
         component_tree::NodePath,
+        route::{CapabilityRouteError, RouteSegment, VerifyRouteResult},
     },
     cm_rust::{
         CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ChildRef,

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod capability_routing;
 pub mod component_model;
 pub mod component_tree;
+pub mod route;
 pub mod serde_ext;
 
 use {cm_rust::ComponentDecl, thiserror::Error};

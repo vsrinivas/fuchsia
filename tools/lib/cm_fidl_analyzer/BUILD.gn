@@ -28,17 +28,10 @@ rustc_library("cm_fidl_analyzer") {
     "//third_party/rust_crates:url",
   ]
   sources = [
-    "src/capability_routing/directory.rs",
-    "src/capability_routing/error.rs",
-    "src/capability_routing/mod.rs",
-    "src/capability_routing/protocol.rs",
-    "src/capability_routing/route.rs",
-    "src/capability_routing/source.rs",
-    "src/capability_routing/testing.rs",
-    "src/capability_routing/verifier.rs",
     "src/component_model.rs",
     "src/component_tree.rs",
     "src/lib.rs",
+    "src/route.rs",
     "src/serde_ext.rs",
   ]
   test_deps = [
