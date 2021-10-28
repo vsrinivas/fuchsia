@@ -326,7 +326,7 @@ impl PackageDataCollector {
                         let base64_bytes = base64::encode(&decl_bytes);
 
                         if let Ok(cm_decl) = decode_persistent::<fsys::ComponentDecl>(&decl_bytes) {
-                            if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
+                            if let Err(err) = cm_fidl_validator::fsys::validate(&cm_decl) {
                                 warn!("Invalid cm {} {}", url, err);
                             } else {
                                 if let Some(uses) = cm_decl.uses {
@@ -441,7 +441,7 @@ impl PackageDataCollector {
                 let url = BootUrl::new_resource("/".to_string(), file_name.to_string())?;
                 let base64_bytes = base64::encode(&file_data);
                 if let Ok(cm_decl) = decode_persistent::<fsys::ComponentDecl>(&file_data) {
-                    if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
+                    if let Err(err) = cm_fidl_validator::fsys::validate(&cm_decl) {
                         warn!("Invalid cm {} {}", file_name, err);
                     } else {
                         let mut cap_uses = Vec::new();

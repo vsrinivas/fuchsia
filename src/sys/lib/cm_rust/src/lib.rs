@@ -1663,7 +1663,7 @@ impl TryFrom<fsys::ComponentDecl> for ComponentDecl {
     type Error = Error;
 
     fn try_from(decl: fsys::ComponentDecl) -> Result<Self, Self::Error> {
-        cm_fidl_validator::validate(&decl).map_err(|err| Error::Validate { err })?;
+        cm_fidl_validator::fsys::validate(&decl).map_err(|err| Error::Validate { err })?;
         Ok(decl.fidl_into_native())
     }
 }
@@ -1682,7 +1682,7 @@ pub enum Error {
     #[error("Fidl validation failed: {}", err)]
     Validate {
         #[source]
-        err: cm_fidl_validator::ErrorList,
+        err: cm_fidl_validator::error::ErrorList,
     },
     #[error("Invalid capability path: {}", raw)]
     InvalidCapabilityPath { raw: String },

@@ -196,7 +196,7 @@ enum Error {
     InvalidCapabilityFromDebug(Moniker),
 
     #[error("the component decl for {0} failed validation: {1:?}")]
-    ValidationError(Moniker, cm_fidl_validator::ErrorList),
+    ValidationError(Moniker, cm_fidl_validator::error::ErrorList),
 
     #[error("{0} capabilities cannot be exposed")]
     UnableToExpose(&'static str),
@@ -297,12 +297,13 @@ impl RealmNode {
     /// point. These decls are re-validated (without filtering out errors) during `commit()`.
     /// `moniker` is used for error reporting.
     fn validate(&self, moniker: &Moniker) -> Result<(), Error> {
-        if let Err(mut e) = cm_fidl_validator::validate(&self.decl.clone().native_into_fidl()) {
+        if let Err(mut e) = cm_fidl_validator::fsys::validate(&self.decl.clone().native_into_fidl())
+        {
             e.errs = e
                 .errs
                 .into_iter()
                 .filter(|e| match e {
-                    cm_fidl_validator::Error::InvalidChild(_, _) => false,
+                    cm_fidl_validator::error::Error::InvalidChild(_, _) => false,
                     _ => true,
                 })
                 .collect();
@@ -1747,9 +1748,9 @@ mod tests {
                 Err(Error::ValidationError(_, e)) => {
                     assert_eq!(
                         e,
-                        cm_fidl_validator::ErrorList {
-                            errs: vec![cm_fidl_validator::Error::DuplicateField(
-                                cm_fidl_validator::DeclField {
+                        cm_fidl_validator::error::ErrorList {
+                            errs: vec![cm_fidl_validator::error::Error::DuplicateField(
+                                cm_fidl_validator::error::DeclField {
                                     decl: "ExposeProtocolDecl".to_string(),
                                     field: "target_name".to_string()
                                 },

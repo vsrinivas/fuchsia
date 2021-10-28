@@ -186,7 +186,8 @@ pub async fn read_and_validate_manifest(
     };
     let component_decl: fsys::ComponentDecl = fidl::encoding::decode_persistent(&bytes)
         .map_err(|err| ResolverError::manifest_invalid(err))?;
-    cm_fidl_validator::validate(&component_decl).map_err(|e| ResolverError::manifest_invalid(e))?;
+    cm_fidl_validator::fsys::validate(&component_decl)
+        .map_err(|e| ResolverError::manifest_invalid(e))?;
     Ok(component_decl)
 }
 

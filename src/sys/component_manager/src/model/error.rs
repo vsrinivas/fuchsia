@@ -37,7 +37,7 @@ pub enum ModelError {
     #[error("dynamic offer not valid: {}", err)]
     DynamicOfferInvalid {
         #[source]
-        err: cm_fidl_validator::ErrorList,
+        err: cm_fidl_validator::error::ErrorList,
     },
     #[error("context not found")]
     ContextNotFound,
@@ -184,7 +184,7 @@ impl ModelError {
         ModelError::DynamicOffersNotAllowed { collection_name: collection_name.into() }
     }
 
-    pub fn dynamic_offer_invalid(err: cm_fidl_validator::ErrorList) -> ModelError {
+    pub fn dynamic_offer_invalid(err: cm_fidl_validator::error::ErrorList) -> ModelError {
         ModelError::DynamicOfferInvalid { err }
     }
 

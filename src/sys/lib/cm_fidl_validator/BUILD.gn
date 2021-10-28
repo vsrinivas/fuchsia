@@ -9,12 +9,14 @@ rustc_library("cm_fidl_validator") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/directed_graph",
     "//src/sys/lib/cm_types",
     "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:paste",
     "//third_party/rust_crates:thiserror",
   ]
   test_deps = [
@@ -24,7 +26,13 @@ rustc_library("cm_fidl_validator") {
     "//third_party/rust_crates:test-case",
   ]
 
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/convert.rs",
+    "src/error.rs",
+    "src/lib.rs",
+    "src/tests.rs",
+    "src/util.rs",
+  ]
 }
 
 fuchsia_unittest_package("cm_fidl_validator_tests") {

@@ -243,7 +243,7 @@ impl RuntimeConfig {
         }) {
             return Err(format_err!("Type unsupported for namespace capability: {:?}", c));
         }
-        cm_fidl_validator::validate_capabilities(&capabilities, false)?;
+        cm_fidl_validator::fsys::validate_capabilities(&capabilities, false)?;
         Ok(capabilities.into_iter().map(FidlIntoNative::fidl_into_native).collect())
     }
 
@@ -251,7 +251,7 @@ impl RuntimeConfig {
         capabilities: Option<Vec<fsys::CapabilityDecl>>,
     ) -> Result<Vec<cm_rust::CapabilityDecl>, Error> {
         let capabilities = capabilities.unwrap_or(vec![]);
-        cm_fidl_validator::validate_capabilities(&capabilities, true)?;
+        cm_fidl_validator::fsys::validate_capabilities(&capabilities, true)?;
         Ok(capabilities.into_iter().map(FidlIntoNative::fidl_into_native).collect())
     }
 }

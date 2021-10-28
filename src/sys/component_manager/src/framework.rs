@@ -343,7 +343,7 @@ impl RealmCapabilityHost {
         child_args: fsys::CreateChildArgs,
     ) -> Result<(), fcomponent::Error> {
         let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
-        cm_fidl_validator::validate_child(&child_decl).map_err(|e| {
+        cm_fidl_validator::fsys::validate_child(&child_decl).map_err(|e| {
             debug!("validate_child() failed: {}", e);
             fcomponent::Error::InvalidArguments
         })?;

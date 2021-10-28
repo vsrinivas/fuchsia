@@ -576,7 +576,7 @@ impl ComponentInstance {
                 {
                     return Err(ModelError::dynamic_offers_not_allowed(&collection_name));
                 }
-                if let Err(err) = cm_fidl_validator::validate_dynamic_offers(dynamic_offers) {
+                if let Err(err) = cm_fidl_validator::fsys::validate_dynamic_offers(dynamic_offers) {
                     return Err(ModelError::dynamic_offer_invalid(err));
                 }
                 // TODO(fxbug.dev/84678): We need to check to make sure the
