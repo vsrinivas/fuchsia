@@ -77,6 +77,11 @@ config("compiler") {
     "-Clink-arg=--pack-dyn-relocs=relr",
     "-Clink-arg=-dynamic-linker=ld.so.1",
     "-Clink-arg=--icf=all",
+
+    # Disable codegen parallelism.
+    # Trades incremental rebuild speed for smaller code size.
+    # See: fxbug.dev/74435, fxbug.dev/80514
+    "-Ccodegen-units=1",
   ]
 
   if (build_id_format != "") {
