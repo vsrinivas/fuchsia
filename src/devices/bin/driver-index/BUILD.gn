@@ -30,6 +30,13 @@ rustc_binary("bin") {
   # Can't dynamically link libstd and libtest for ZBI binaries
   configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 
+  # TODO(fxbug.dev/80514): Remove the below
+  if (is_debug) {
+    configs += [ "//build/config/lto:thinlto" ]
+    configs -= [ "//build/config/lto:thinlto" ]
+    configs += [ "//build/config/lto:thinlto" ]
+  }
+
   # Generates a GN target for unit-tests with the label `bin_test`, and
   # a binary named `driver_index_bin_test`.
   with_unit_tests = true

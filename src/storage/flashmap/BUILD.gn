@@ -21,6 +21,13 @@ rustc_binary("bin") {
   # Can't dynamically link libstd and libtest for ZBI binaries
   configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 
+  # TODO(fxbug.dev/80514): Remove the below
+  if (is_debug) {
+    configs += [ "//build/config/lto:thinlto" ]
+    configs -= [ "//build/config/lto:thinlto" ]
+    configs += [ "//build/config/lto:thinlto" ]
+  }
+
   deps = [
     "//sdk/fidl/fuchsia.acpi.chromeos:fuchsia.acpi.chromeos-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
