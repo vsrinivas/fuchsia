@@ -759,7 +759,7 @@ mod tests {
     use std::io::prelude::*;
     use tempfile::TempDir;
 
-    #[test]
+    #[fuchsia::test]
     fn successful_selector_parsing() {
         let tempdir = TempDir::new().expect("failed to create tmp dir");
         File::create(tempdir.path().join("a.txt"))
@@ -787,7 +787,7 @@ a:b:c
         assert!(parse_selectors(tempdir.path()).is_ok());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn unsuccessful_selector_parsing_bad_selector() {
         let tempdir = TempDir::new().expect("failed to create tmp dir");
         File::create(tempdir.path().join("a.txt"))
@@ -802,7 +802,7 @@ a:b:c
         assert!(parse_selectors(tempdir.path()).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn unsuccessful_selector_parsing_nonflat_dir() {
         let tempdir = TempDir::new().expect("failed to create tmp dir");
         File::create(tempdir.path().join("a.txt"))
@@ -822,7 +822,7 @@ a:b:c
         assert!(parse_selectors(tempdir.path()).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn canonical_path_regex_transpilation_test() {
         // Note: We provide the full selector syntax but this test is only transpiling
         // the node-path of the selector, and validating against that.
@@ -870,7 +870,7 @@ a:b:c
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn failing_path_regex_transpilation_test() {
         // Note: We provide the full selector syntax but this test is only transpiling
         // the node-path of the tree selector, and valdating against that.
@@ -915,7 +915,7 @@ a:b:c
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn canonical_property_regex_transpilation_test() {
         // Note: We provide the full selector syntax but this test is only transpiling
         // the property of the selector, and validating against that.
@@ -952,7 +952,7 @@ a:b:c
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn failing_property_regex_transpilation_test() {
         // Note: We provide the full selector syntax but this test is only transpiling
         // the node-path of the tree selector, and valdating against that.
@@ -1015,7 +1015,7 @@ a:b:c
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn tree_selector_validator_test() {
         let unique_failing_test_cases = vec![
             // All failing validators due to property selectors are
@@ -1057,7 +1057,7 @@ a:b:c
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn component_selector_validator_test() {
         fn create_component_selector(component_moniker: &Vec<&str>) -> ComponentSelector {
             let mut component_selector = ComponentSelector::EMPTY;
@@ -1087,7 +1087,7 @@ a:b:c
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn component_selector_match_test() {
         // Note: We provide the full selector syntax but this test is only validating it
         // against the provided moniker
@@ -1135,7 +1135,7 @@ a:b:c
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn multiple_component_selectors_match_test() {
         let selectors = vec![r#"*/echo.cmx"#, r#"ab*/echo.cmx"#, r#"abc/m*"#];
         let moniker = vec!["abc".to_string(), "echo.cmx".to_string()];
@@ -1151,7 +1151,7 @@ a:b:c
         assert_eq!(match_res.unwrap().len(), 2);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn selector_to_string_test() {
         // Check that parsing and formatting these selectors results in output identical to the
         // original selector.
@@ -1181,7 +1181,7 @@ a:b:c
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn exact_match_selector_to_string() {
         let selector = Selector {
             component_selector: Some(ComponentSelector {
@@ -1207,7 +1207,7 @@ a:b:c
         .unwrap());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn sanitize_moniker_for_selectors_result_is_usable() {
         let selector =
             parse_selector(&format!("{}:root", sanitize_moniker_for_selectors("foo/coll:bar/baz")))
@@ -1217,20 +1217,23 @@ a:b:c
         assert!(match_moniker_against_component_selector(&moniker, &component_selector).unwrap());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn escaped_spaces() {
-        let selector_str = "foo:bar\\ baz:quux";
+        let selector_str = "foo:bar\\ baz/a*\\ b:quux";
         let selector = parse_selector(selector_str).unwrap();
         assert_eq!(
             selector,
             Selector {
                 component_selector: Some(ComponentSelector {
-                    moniker_segments: Some(vec![StringSelector::StringPattern("foo".into()),]),
+                    moniker_segments: Some(vec![StringSelector::ExactMatch("foo".into()),]),
                     ..ComponentSelector::EMPTY
                 }),
                 tree_selector: Some(TreeSelector::PropertySelector(PropertySelector {
-                    node_path: vec![StringSelector::StringPattern("bar\\ baz".into()),],
-                    target_properties: StringSelector::StringPattern("quux".into())
+                    node_path: vec![
+                        StringSelector::ExactMatch("bar baz".into()),
+                        StringSelector::StringPattern("a*\\ b".into()),
+                    ],
+                    target_properties: StringSelector::ExactMatch("quux".into())
                 })),
                 ..Selector::EMPTY
             }

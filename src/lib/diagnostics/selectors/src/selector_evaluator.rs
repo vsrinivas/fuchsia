@@ -142,7 +142,7 @@ fn evaluate_single_generation(
 mod tests {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn canonical_automata_simulator_test() {
         let test_vector: Vec<(Vec<String>, Vec<StringSelector>, bool)> = vec![
             (

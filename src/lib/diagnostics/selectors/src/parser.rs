@@ -474,26 +474,58 @@ mod tests {
     use nom::combinator::all_consuming;
     use rand::distributions::Distribution;
 
-    #[test]
+    #[fuchsia::test]
     fn canonical_component_selector_test() {
         let test_vector = vec![
-            ("a/b/c", vec![StringPattern("a"), StringPattern("b"), StringPattern("c")]),
-            ("a/*/c", vec![StringPattern("a"), StringPattern("*"), StringPattern("c")]),
-            ("a/b*/c", vec![StringPattern("a"), StringPattern("b*"), StringPattern("c")]),
-            ("a/b/**", vec![StringPattern("a"), StringPattern("b"), StringPattern("**")]),
+            (
+                "a/b/c",
+                vec![
+                    Segment::ExactMatch("a".into()),
+                    Segment::ExactMatch("b".into()),
+                    Segment::ExactMatch("c".into()),
+                ],
+            ),
+            (
+                "a/*/c",
+                vec![
+                    Segment::ExactMatch("a".into()),
+                    Segment::Pattern("*"),
+                    Segment::ExactMatch("c".into()),
+                ],
+            ),
+            (
+                "a/b*/c",
+                vec![
+                    Segment::ExactMatch("a".into()),
+                    Segment::Pattern("b*"),
+                    Segment::ExactMatch("c".into()),
+                ],
+            ),
+            (
+                "a/b/**",
+                vec![
+                    Segment::ExactMatch("a".into()),
+                    Segment::ExactMatch("b".into()),
+                    Segment::Pattern("**"),
+                ],
+            ),
             (
                 "core/session\\:id/foo",
-                vec![StringPattern("core"), StringPattern("session\\:id"), StringPattern("foo")],
+                vec![
+                    Segment::ExactMatch("core".into()),
+                    Segment::ExactMatch("session:id".into()),
+                    Segment::ExactMatch("foo".into()),
+                ],
             ),
-            ("c", vec![StringPattern("c")]),
-            ("<component_manager>", vec![StringPattern("<component_manager>")]),
+            ("c", vec![Segment::ExactMatch("c".into())]),
+            ("<component_manager>", vec![Segment::ExactMatch("<component_manager>".into())]),
             (
                 r#"a/*/b/**"#,
                 vec![
-                    StringPattern("a"),
-                    StringPattern("*"),
-                    StringPattern("b"),
-                    StringPattern("**"),
+                    Segment::ExactMatch("a".into()),
+                    Segment::Pattern("*"),
+                    Segment::ExactMatch("b".into()),
+                    Segment::Pattern("**"),
                 ],
             ),
         ];
@@ -509,16 +541,16 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn missing_path_component_selector_test() {
         let component_selector_string = "c";
         let (_, component_selector) = component_selector(component_selector_string).unwrap();
         let mut path_vec = component_selector.segments;
-        assert_eq!(path_vec.pop(), Some(StringPattern("c")));
+        assert_eq!(path_vec.pop(), Some(Segment::ExactMatch("c".into())));
         assert!(path_vec.is_empty());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn errorful_component_selector_test() {
         let test_vector: Vec<&str> = vec![
             "",
@@ -542,14 +574,30 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn canonical_tree_selector_test() {
         let test_vector = vec![
-            ("a/b:c", vec![StringPattern("a"), StringPattern("b")], Some(StringPattern("c"))),
-            ("a/*:c", vec![StringPattern("a"), StringPattern("*")], Some(StringPattern("c"))),
-            ("a/b:*", vec![StringPattern("a"), StringPattern("b")], Some(StringPattern("*"))),
-            ("a/b", vec![StringPattern("a"), StringPattern("b")], None),
-            (r#"a/b\:\*c"#, vec![StringPattern("a"), StringPattern(r#"b\:\*c"#)], None),
+            (
+                "a/b:c",
+                vec![Segment::ExactMatch("a".into()), Segment::ExactMatch("b".into())],
+                Some(Segment::ExactMatch("c".into())),
+            ),
+            (
+                "a/*:c",
+                vec![Segment::ExactMatch("a".into()), Segment::Pattern("*")],
+                Some(Segment::ExactMatch("c".into())),
+            ),
+            (
+                "a/b:*",
+                vec![Segment::ExactMatch("a".into()), Segment::ExactMatch("b".into())],
+                Some(Segment::Pattern("*")),
+            ),
+            ("a/b", vec![Segment::ExactMatch("a".into()), Segment::ExactMatch("b".into())], None),
+            (
+                r#"a/b\:\*c"#,
+                vec![Segment::ExactMatch("a".into()), Segment::ExactMatch("b:*c".into())],
+                None,
+            ),
         ];
 
         for (string, expected_path, expected_property) in test_vector {
@@ -561,7 +609,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn errorful_tree_selector_test() {
         let test_vector = vec![
             // Not allowed due to empty property selector.
@@ -586,17 +634,25 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn tree_selector_with_spaces() {
         let with_spaces = vec![
-            (r#"a\ b:c"#, vec![StringPattern("a\\ b")], Some(StringPattern("c"))),
+            (
+                r#"a\ b:c"#,
+                vec![Segment::ExactMatch("a b".into())],
+                Some(Segment::ExactMatch("c".into())),
+            ),
             (
                 r#"ab/\ d:c\ "#,
-                vec![StringPattern("ab"), StringPattern("\\ d")],
-                Some(StringPattern("c\\ ")),
+                vec![Segment::ExactMatch("ab".into()), Segment::ExactMatch(" d".into())],
+                Some(Segment::ExactMatch("c ".into())),
             ),
-            ("a\\\t*b:c", vec![StringPattern("a\\\t*b")], Some(StringPattern("c"))),
-            (r#"a\ "x":c"#, vec![StringPattern(r#"a\ "x""#)], Some(StringPattern("c"))),
+            ("a\\\t*b:c", vec![Segment::Pattern("a\\\t*b")], Some(Segment::ExactMatch("c".into()))),
+            (
+                r#"a\ "x":c"#,
+                vec![Segment::ExactMatch(r#"a "x""#.into())],
+                Some(Segment::ExactMatch("c".into())),
+            ),
         ];
         for (string, node, property) in with_spaces {
             assert_eq!(
@@ -609,7 +665,7 @@ mod tests {
         assert!(all_consuming(tree_selector)(r#"a/b:"xc"/d"#).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_full_selector() {
         assert_eq!(
             selector(
@@ -618,11 +674,11 @@ mod tests {
             .unwrap(),
             Selector {
                 component: ComponentSelector {
-                    segments: vec![StringPattern("core"), StringPattern("**"),],
+                    segments: vec![Segment::ExactMatch("core".into()), Segment::Pattern("**"),],
                 },
                 tree: TreeSelector {
-                    node: vec![StringPattern("some-node"), StringPattern("he*re"),],
-                    property: Some(StringPattern("prop")),
+                    node: vec![Segment::ExactMatch("some-node".into()), Segment::Pattern("he*re"),],
+                    property: Some(Segment::ExactMatch("prop".into())),
                 },
                 metadata: Some(MetadataSelector::new(vec![
                     FilterExpression {
@@ -647,8 +703,11 @@ mod tests {
         assert_eq!(
             selector("   foo:bar  ").unwrap(),
             Selector {
-                component: ComponentSelector { segments: vec![StringPattern("foo")] },
-                tree: TreeSelector { node: vec![StringPattern("bar")], property: None },
+                component: ComponentSelector { segments: vec![Segment::ExactMatch("foo".into())] },
+                tree: TreeSelector {
+                    node: vec![Segment::ExactMatch("bar".into())],
+                    property: None
+                },
                 metadata: None,
             }
         );
@@ -657,17 +716,25 @@ mod tests {
         assert!(selector("foo:bar where").is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
+    fn assert_no_trailing_backward_slash() {
+        assert!(selector(r#"foo:bar:baz\"#).is_err());
+    }
+
+    #[fuchsia::test]
     fn parse_full_selector_with_spaces() {
         assert_eq!(
             selector(r#"core/foo:some\ node/*:prop where pid = 123"#).unwrap(),
             Selector {
                 component: ComponentSelector {
-                    segments: vec![StringPattern("core"), StringPattern("foo"),],
+                    segments: vec![
+                        Segment::ExactMatch("core".into()),
+                        Segment::ExactMatch("foo".into()),
+                    ],
                 },
                 tree: TreeSelector {
-                    node: vec![StringPattern("some\\ node"), StringPattern("*"),],
-                    property: Some(StringPattern("prop")),
+                    node: vec![Segment::ExactMatch("some node".into()), Segment::Pattern("*"),],
+                    property: Some(Segment::ExactMatch("prop".into())),
                 },
                 metadata: Some(MetadataSelector::new(vec![FilterExpression {
                     identifier: Identifier::Pid,
@@ -722,7 +789,7 @@ mod tests {
         }};
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_identifier() {
         test_sym_parser! {
             parser: identifier,
@@ -744,7 +811,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_operator() {
         test_sym_parser! {
             parser: operator,
@@ -762,7 +829,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_severity() {
         test_sym_parser! {
             parser: severity_sym,
@@ -776,7 +843,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_string_literal() {
         // Only strings within quotes are accepted
         assert_eq!(Ok(("", "foo")), string_literal("\"foo\""));
@@ -792,7 +859,7 @@ mod tests {
         assert!(string_literal("foo").is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_number() {
         // Unsigned 64 bit integers are accepted.
         assert_eq!(Ok(("", 0)), number("0"));
@@ -816,7 +883,7 @@ mod tests {
         assert!(all_consuming(number)("0xffffffffffffffffff").is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_list_of_values() {
         // Accepts values of the same type.
         let expected = vec![0, 25, 149].into_iter().map(|n| Value::Number(n)).collect();
@@ -840,7 +907,7 @@ mod tests {
         assert!(list_of_values("[]").is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_filter_expression() {
         let expected = FilterExpression {
             identifier: Identifier::Pid,
@@ -892,7 +959,7 @@ mod tests {
         assert!(filter_expression("pid in 123").is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn filename_operations() {
         let expected = FilterExpression {
             identifier: Identifier::Filename,
@@ -920,7 +987,7 @@ mod tests {
         assert!(filter_expression("filename has all [\"foo.rs\"]").is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn lifecycle_event_type_operations() {
         let expected = FilterExpression {
             identifier: Identifier::LifecycleEventType,
@@ -952,7 +1019,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn line_number_pid_tid_operations() {
         for (identifier, identifier_str) in vec![
             (Identifier::Pid, "pid"),
@@ -995,7 +1062,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn tags_operations() {
         for (operator, operator_str) in
             vec![(InclusionOperator::HasAny, "has any"), (InclusionOperator::HasAll, "has all")]
@@ -1022,7 +1089,7 @@ mod tests {
         assert!(filter_expression("tags in [\"g\", \"h\"]").is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn timestamp_operations() {
         for (operator, operator_str) in vec![
             (ComparisonOperator::Equal, "="),
@@ -1046,7 +1113,7 @@ mod tests {
         assert!(filter_expression("timestamp has all [5, 6]").is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn severity_operations() {
         for (operator, operator_str) in vec![
             (ComparisonOperator::Equal, "="),
@@ -1079,7 +1146,7 @@ mod tests {
         assert!(filter_expression("severity has all [warn]").is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn allowed_severity_types() {
         let expected = FilterExpression {
             identifier: Identifier::Severity,
@@ -1090,7 +1157,7 @@ mod tests {
         assert!(filter_expression("severity = \"info\"").is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn allowed_numeric_identifiers() {
         for (identifier, name) in vec![
             (Identifier::Pid, "pid"),
@@ -1108,7 +1175,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn allowed_string_identifiers() {
         for (identifier, name) in vec![
             (Identifier::Filename, "filename"),
@@ -1135,7 +1202,7 @@ mod tests {
         assert!(filter_expression("tags has any [2, 3]").is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_metadata_selector() {
         let expected = MetadataSelector::new(vec![
             FilterExpression {

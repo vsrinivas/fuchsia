@@ -115,22 +115,22 @@ mod test {
         assert_eq!(
             extract_moniker!(rewritten_legacy),
             &vec![
-                StringSelector::StringPattern("core".to_string()),
-                StringSelector::StringPattern("memory_monitor".to_string())
+                StringSelector::ExactMatch("core".to_string()),
+                StringSelector::ExactMatch("memory_monitor".to_string())
             ]
         );
         assert_eq!(
             extract_moniker!(rewritten_new),
             &vec![
-                StringSelector::StringPattern("core".to_string()),
-                StringSelector::StringPattern("memory_monitor".to_string())
+                StringSelector::ExactMatch("core".to_string()),
+                StringSelector::ExactMatch("memory_monitor".to_string())
             ]
         );
         assert_eq!(
             extract_moniker!(rewritten_irrelevant),
             &vec![
-                StringSelector::StringPattern("foo".to_string()),
-                StringSelector::StringPattern("bar.baz".to_string())
+                StringSelector::ExactMatch("foo".to_string()),
+                StringSelector::ExactMatch("bar.baz".to_string())
             ]
         );
         assert!(new_rewriter.is_none());
@@ -169,19 +169,19 @@ mod test {
 
         assert_eq!(
             extract_moniker!(rewritten_1_i, 0),
-            &vec![StringSelector::StringPattern("modern1".to_string()),]
+            &vec![StringSelector::ExactMatch("modern1".to_string()),]
         );
         assert_eq!(
             extract_moniker!(rewritten_1_i, 1),
-            &vec![StringSelector::StringPattern("irrelevant".to_string()),]
+            &vec![StringSelector::ExactMatch("irrelevant".to_string()),]
         );
         assert_eq!(
             extract_moniker!(rewritten_2_1, 0),
-            &vec![StringSelector::StringPattern("modern2".to_string()),]
+            &vec![StringSelector::ExactMatch("modern2".to_string()),]
         );
         assert_eq!(
             extract_moniker!(rewritten_2_1, 1),
-            &vec![StringSelector::StringPattern("modern1".to_string()),]
+            &vec![StringSelector::ExactMatch("modern1".to_string()),]
         );
 
         assert_eq!(rewriter_1_i.rewrite_moniker("modern1".to_string()), "legacy1".to_string());

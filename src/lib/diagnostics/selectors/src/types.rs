@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_diagnostics as fdiagnostics;
+use std::borrow::Cow;
 
 /// Severity
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -115,23 +116,60 @@ impl<'a> MetadataSelector<'a> {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct StringPattern<'a>(pub(crate) &'a str);
+pub enum Segment<'a> {
+    ExactMatch(Cow<'a, str>),
+    Pattern(&'a str),
+}
 
-impl<'a> Into<StringPattern<'a>> for &'a str {
-    fn into(self) -> StringPattern<'a> {
-        StringPattern(self)
+fn contains_unescaped_wildcard(s: &str) -> bool {
+    let mut iter = s.chars();
+    while let Some(c) = iter.next() {
+        match c {
+            '*' => return true,
+            '\\' => {
+                // skip escaped characters
+                let _ = iter.next();
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
+impl<'a> Into<Segment<'a>> for &'a str {
+    fn into(self) -> Segment<'a> {
+        if contains_unescaped_wildcard(self) {
+            return Segment::Pattern(self);
+        }
+        if !self.contains('\\') {
+            return Segment::ExactMatch(Cow::from(self));
+        }
+        let mut result = String::with_capacity(self.len());
+        let mut iter = self.chars();
+        while let Some(c) = iter.next() {
+            match c {
+                '\\' => {
+                    // push unescaped character since we are constructing an exact match.
+                    if let Some(c) = iter.next() {
+                        result.push(c);
+                    }
+                }
+                c => result.push(c),
+            }
+        }
+        Segment::ExactMatch(Cow::from(result))
     }
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct TreeSelector<'a> {
-    pub node: Vec<StringPattern<'a>>,
-    pub property: Option<StringPattern<'a>>,
+    pub node: Vec<Segment<'a>>,
+    pub property: Option<Segment<'a>>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ComponentSelector<'a> {
-    pub segments: Vec<StringPattern<'a>>,
+    pub segments: Vec<Segment<'a>>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -179,8 +217,24 @@ impl Into<fdiagnostics::TreeSelector> for TreeSelector<'_> {
     }
 }
 
-impl Into<fdiagnostics::StringSelector> for StringPattern<'_> {
+impl Into<fdiagnostics::StringSelector> for Segment<'_> {
     fn into(self) -> fdiagnostics::StringSelector {
-        fdiagnostics::StringSelector::StringPattern(self.0.to_owned())
+        match self {
+            Segment::ExactMatch(s) => fdiagnostics::StringSelector::ExactMatch(s.into_owned()),
+            Segment::Pattern(s) => fdiagnostics::StringSelector::StringPattern(s.to_owned()),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[fuchsia::test]
+    fn convert_string_to_segment() {
+        assert_eq!(Segment::ExactMatch(Cow::Borrowed("abc")), "abc".into());
+        assert_eq!(Segment::Pattern("a*c"), "a*c".into());
+        assert_eq!(Segment::ExactMatch(Cow::Owned("ac*".into())), "ac\\*".into());
+        assert_eq!(Segment::Pattern("a\\*c*"), "a\\*c*".into());
     }
 }
