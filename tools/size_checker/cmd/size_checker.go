@@ -1114,6 +1114,9 @@ See //tools/size_checker for more details.`)
 	}
 	// If there are no components, then there are no work to do. We are done.
 	if len(sizeLimits.Components) == 0 && len(sizeLimits.NonBlobFSComponents) == 0 {
+		fmt.Fprintln(os.Stderr, "No size limit found.")
+		fmt.Fprintln(os.Stderr, "Make sure size_checker_input is set in the product definition.")
+		fmt.Fprintln(os.Stderr, "Use the product variation ending in \"_size_limits\" if one is available (e.g. core_size_limits).")
 		os.Exit(0)
 	}
 
