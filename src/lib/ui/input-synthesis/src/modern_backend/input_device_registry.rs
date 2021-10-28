@@ -4,12 +4,13 @@
 
 use {
     crate::{modern_backend::input_device::InputDevice, synthesizer},
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{Context as _, Error},
     fidl::endpoints,
     fidl_fuchsia_input::Key,
     fidl_fuchsia_input_injection::InputDeviceRegistryProxy,
     fidl_fuchsia_input_report::{
-        Axis, ContactInputDescriptor, DeviceDescriptor, InputDeviceMarker, KeyboardDescriptor,
+        Axis, ConsumerControlButton, ConsumerControlDescriptor, ConsumerControlInputDescriptor,
+        ContactInputDescriptor, DeviceDescriptor, InputDeviceMarker, KeyboardDescriptor,
         KeyboardInputDescriptor, Range, TouchDescriptor, TouchInputDescriptor, TouchType, Unit,
         UnitType,
     },
@@ -90,7 +91,24 @@ impl synthesizer::InputDeviceRegistry for self::InputDeviceRegistry {
     }
 
     fn add_media_buttons_device(&mut self) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
-        Err(format_err!("TODO: implement media buttons support"))
+        self.add_device(DeviceDescriptor {
+            consumer_control: Some(ConsumerControlDescriptor {
+                input: Some(ConsumerControlInputDescriptor {
+                    buttons: Some(vec![
+                        ConsumerControlButton::VolumeUp,
+                        ConsumerControlButton::VolumeDown,
+                        ConsumerControlButton::Pause,
+                        ConsumerControlButton::FactoryReset,
+                        ConsumerControlButton::MicMute,
+                        ConsumerControlButton::Reboot,
+                        ConsumerControlButton::CameraDisable,
+                    ]),
+                    ..ConsumerControlInputDescriptor::EMPTY
+                }),
+                ..ConsumerControlDescriptor::EMPTY
+            }),
+            ..DeviceDescriptor::EMPTY
+        })
     }
 }
 
@@ -120,6 +138,7 @@ impl InputDeviceRegistry {
 mod tests {
     use {
         super::{synthesizer::InputDeviceRegistry as _, *},
+        anyhow::format_err,
         fidl_fuchsia_input_injection::{InputDeviceRegistryMarker, InputDeviceRegistryRequest},
         fuchsia_async as fasync,
         futures::{pin_mut, task::Poll, StreamExt},
@@ -127,6 +146,7 @@ mod tests {
     };
 
     #[test_case(&super::InputDeviceRegistry::add_keyboard_device; "keyboard_device")]
+    #[test_case(&super::InputDeviceRegistry::add_media_buttons_device; "media_button_device")]
     #[test_case(&|registry| InputDeviceRegistry::add_touchscreen_device(registry, 640, 480);
                 "touchscreen_device")]
     fn add_device_invokes_fidl_register_method_exactly_once(
@@ -155,6 +175,9 @@ mod tests {
     #[test_case(&super::InputDeviceRegistry::add_keyboard_device =>
                 matches Ok(DeviceDescriptor { keyboard: Some(_), .. });
                 "keyboard_device")]
+    #[test_case(&super::InputDeviceRegistry::add_media_buttons_device =>
+                matches Ok(DeviceDescriptor { consumer_control: Some(_), .. });
+                "media_button_device")]
     #[test_case(&|registry| InputDeviceRegistry::add_touchscreen_device(registry, 640, 480) =>
                 matches Ok(DeviceDescriptor {
                     touch: Some(TouchDescriptor {
@@ -208,22 +231,6 @@ mod tests {
         match executor.run_until_stalled(&mut test_fut) {
             Poll::Ready(r) => r,
             Poll::Pending => Err(format_err!("test did not complete")),
-        }
-    }
-
-    // Because `input_synthesis` is a library, unimplemented features should yield `Error`s,
-    // rather than panic!()-ing.
-    mod unimplemented_methods {
-        use super::*;
-
-        #[test]
-        fn add_media_buttons_device_yields_error() -> Result<(), Error> {
-            let _executor = fuchsia_async::TestExecutor::new(); // Create TLS executor used by `endpoints`.
-            let (proxy, _request_stream) =
-                endpoints::create_proxy_and_stream::<InputDeviceRegistryMarker>()
-                    .context("internal error creating InputDevice proxy and stream")?;
-            assert!(InputDeviceRegistry { proxy }.add_media_buttons_device().is_err());
-            Ok(())
         }
     }
 }

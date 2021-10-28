@@ -32,16 +32,8 @@ pub trait InputDeviceRegistry {
 // deliberately send events that do not match the expected event type for a device.
 #[async_trait(?Send)]
 pub trait InputDevice {
-    fn media_buttons(
-        &mut self,
-        volume_up: bool,
-        volume_down: bool,
-        mic_mute: bool,
-        reset: bool,
-        pause: bool,
-        camera_disable: bool,
-        time: u64,
-    ) -> Result<(), Error>;
+    /// Sends a media buttons report with the specified buttons pressed.
+    fn media_buttons(&mut self, pressed_buttons: Vec<MediaButton>, time: u64) -> Result<(), Error>;
 
     /// Sends a keyboard report with keys defined mostly in terms of USB HID usage
     /// page 7. This is sufficient for keyboard keys, but does not cover the full
@@ -75,6 +67,17 @@ pub trait InputDevice {
     async fn serve_reports(self: Box<Self>) -> Result<(), Error>;
 }
 
+/// The buttons supported by `media_button_event()`.
+#[derive(PartialOrd, PartialEq, Ord, Eq)]
+pub enum MediaButton {
+    VolumeUp,
+    VolumeDown,
+    MicMute,
+    FactoryReset,
+    Pause,
+    CameraDisable,
+}
+
 fn monotonic_nanos() -> Result<u64, Error> {
     u64::try_from(zx::Time::get_monotonic().into_nanos()).map_err(Into::into)
 }
@@ -95,25 +98,13 @@ fn repeat_with_delay(
     Ok(())
 }
 
-pub(crate) async fn media_button_event(
-    volume_up: bool,
-    volume_down: bool,
-    mic_mute: bool,
-    reset: bool,
-    pause: bool,
-    camera_disable: bool,
+/// Sends a media buttons report with the specified buttons pressed.
+pub async fn media_button_event<I: IntoIterator<Item = MediaButton>>(
+    pressed_buttons: I,
     registry: &mut dyn InputDeviceRegistry,
 ) -> Result<(), Error> {
     let mut input_device = registry.add_media_buttons_device()?;
-    input_device.media_buttons(
-        volume_up,
-        volume_down,
-        mic_mute,
-        reset,
-        pause,
-        camera_disable,
-        monotonic_nanos()?,
-    )?;
+    input_device.media_buttons(pressed_buttons.into_iter().collect(), monotonic_nanos()?)?;
     input_device.serve_reports().await
 }
 
@@ -556,8 +547,7 @@ pub(crate) async fn multi_finger_swipe(
 
 #[cfg(test)]
 mod tests {
-    use serde::Deserialize;
-    use {super::*, fuchsia_async as fasync};
+    use {super::*, anyhow::Context as _, fuchsia_async as fasync, serde::Deserialize};
 
     #[derive(Deserialize, Debug, Eq, PartialEq)]
     struct KeyEventsRequest {
@@ -650,7 +640,6 @@ mod tests {
     mod event_synthesis {
         use {
             super::*,
-            anyhow::Context as _,
             fidl::endpoints,
             fidl_fuchsia_ui_input::{
                 InputDeviceMarker, InputDeviceProxy as FidlInputDeviceProxy, InputDeviceRequest,
@@ -746,12 +735,7 @@ mod tests {
         impl InputDevice for FakeInputDevice {
             fn media_buttons(
                 &mut self,
-                volume_up: bool,
-                volume_down: bool,
-                mic_mute: bool,
-                reset: bool,
-                pause: bool,
-                camera_disable: bool,
+                pressed_buttons: Vec<MediaButton>,
                 time: u64,
             ) -> Result<(), Error> {
                 self.fidl_proxy
@@ -759,12 +743,12 @@ mod tests {
                         event_time: time,
                         keyboard: None,
                         media_buttons: Some(Box::new(MediaButtonsReport {
-                            volume_up,
-                            volume_down,
-                            mic_mute,
-                            reset,
-                            camera_disable,
-                            pause,
+                            volume_up: pressed_buttons.contains(&MediaButton::VolumeUp),
+                            volume_down: pressed_buttons.contains(&MediaButton::VolumeDown),
+                            mic_mute: pressed_buttons.contains(&MediaButton::MicMute),
+                            reset: pressed_buttons.contains(&MediaButton::FactoryReset),
+                            pause: pressed_buttons.contains(&MediaButton::Pause),
+                            camera_disable: pressed_buttons.contains(&MediaButton::CameraDisable),
                         })),
                         mouse: None,
                         stylus: None,
@@ -874,8 +858,16 @@ mod tests {
         #[fasync::run_singlethreaded(test)]
         async fn media_event_report() -> Result<(), Error> {
             let mut fake_event_listener = FakeInputDeviceRegistry::new();
-            media_button_event(true, false, true, false, true, true, &mut fake_event_listener)
-                .await?;
+            media_button_event(
+                vec![
+                    MediaButton::VolumeUp,
+                    MediaButton::MicMute,
+                    MediaButton::Pause,
+                    MediaButton::CameraDisable,
+                ],
+                &mut fake_event_listener,
+            )
+            .await?;
             assert_eq!(
                 project!(fake_event_listener.get_events().await, media_buttons),
                 [Ok(Some(MediaButtonsReport {
@@ -1257,8 +1249,16 @@ mod tests {
         async fn events_use_monotonic_time() -> Result<(), Error> {
             let mut fake_event_listener = FakeInputDeviceRegistry::new();
             let synthesis_start_time = monotonic_nanos()?;
-            media_button_event(true, false, true, false, true, true, &mut fake_event_listener)
-                .await?;
+            media_button_event(
+                vec![
+                    MediaButton::VolumeUp,
+                    MediaButton::MicMute,
+                    MediaButton::Pause,
+                    MediaButton::CameraDisable,
+                ],
+                &mut fake_event_listener,
+            )
+            .await?;
 
             let synthesis_end_time = monotonic_nanos()?;
             let fidl_result = fake_event_listener
@@ -1355,12 +1355,7 @@ mod tests {
         impl InputDevice for FakeInputDevice {
             fn media_buttons(
                 &mut self,
-                _volume_up: bool,
-                _volume_down: bool,
-                _mic_mute: bool,
-                _reset: bool,
-                _pause: bool,
-                _camera_disable: bool,
+                _pressed_buttons: Vec<MediaButton>,
                 _time: u64,
             ) -> Result<(), Error> {
                 Ok(())
@@ -1402,7 +1397,7 @@ mod tests {
         #[fasync::run_until_stalled(test)]
         async fn media_button_event_registers_media_buttons_device() -> Result<(), Error> {
             let mut registry = FakeInputDeviceRegistry::new();
-            media_button_event(false, false, false, false, false, false, &mut registry).await?;
+            media_button_event(vec![], &mut registry).await?;
             assert_matches!(registry.device_types.as_slice(), [DeviceType::MediaButtons]);
             Ok(())
         }

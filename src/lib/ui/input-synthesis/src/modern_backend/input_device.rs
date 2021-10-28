@@ -15,13 +15,13 @@ use {
     fidl::Error as FidlError,
     fidl_fuchsia_input::Key,
     fidl_fuchsia_input_report::{
-        ContactInputReport, DeviceDescriptor, InputDeviceRequest, InputDeviceRequestStream,
-        InputReport, InputReportsReaderMarker, KeyboardInputReport, TouchInputReport,
-        TOUCH_MAX_CONTACTS,
+        ConsumerControlButton, ConsumerControlInputReport, ContactInputReport, DeviceDescriptor,
+        InputDeviceRequest, InputDeviceRequestStream, InputReport, InputReportsReaderMarker,
+        KeyboardInputReport, TouchInputReport, TOUCH_MAX_CONTACTS,
     },
     fidl_fuchsia_ui_input::{KeyboardReport, Touch},
     futures::{future, pin_mut, StreamExt, TryFutureExt},
-    std::convert::TryFrom as _,
+    std::convert::{Into, TryFrom as _},
 };
 
 /// Implements the `synthesizer::InputDevice` trait, and the server side of the
@@ -51,19 +51,35 @@ pub(super) struct InputDevice {
     reports: Vec<InputReport>,
 }
 
+impl std::convert::From<synthesizer::MediaButton> for ConsumerControlButton {
+    fn from(synthesizer_button: synthesizer::MediaButton) -> Self {
+        match synthesizer_button {
+            synthesizer::MediaButton::VolumeUp => Self::VolumeUp,
+            synthesizer::MediaButton::VolumeDown => Self::VolumeDown,
+            synthesizer::MediaButton::MicMute => Self::MicMute,
+            synthesizer::MediaButton::FactoryReset => Self::FactoryReset,
+            synthesizer::MediaButton::Pause => Self::Pause,
+            synthesizer::MediaButton::CameraDisable => Self::CameraDisable,
+        }
+    }
+}
+
 #[async_trait(?Send)]
 impl synthesizer::InputDevice for self::InputDevice {
     fn media_buttons(
         &mut self,
-        _volume_up: bool,
-        _volume_down: bool,
-        _mic_mute: bool,
-        _reset: bool,
-        _pause: bool,
-        _camera_disable: bool,
-        _time: u64,
+        pressed_buttons: Vec<synthesizer::MediaButton>,
+        time: u64,
     ) -> Result<(), Error> {
-        Err(format_err!("TODO: implement media_buttons()"))
+        self.reports.push(InputReport {
+            event_time: Some(i64::try_from(time).context("converting time to i64")?),
+            consumer_control: Some(ConsumerControlInputReport {
+                pressed_buttons: Some(pressed_buttons.into_iter().map(Into::into).collect()),
+                ..ConsumerControlInputReport::EMPTY
+            }),
+            ..InputReport::EMPTY
+        });
+        Ok(())
     }
 
     // TODO(fxbug.dev/63973): remove dependency on HID usage codes.
@@ -428,6 +444,103 @@ mod tests {
             matches::assert_matches,
             std::convert::TryInto as _,
         };
+
+        #[fasync::run_until_stalled(test)]
+        async fn media_buttons_generates_empty_consumer_controls_input_report() -> Result<(), Error>
+        {
+            let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device.media_buttons(vec![], DEFAULT_REPORT_TIMESTAMP)?;
+
+            let input_reports = get_input_reports(input_device, input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    consumer_control: Some(ConsumerControlInputReport {
+                        pressed_buttons: Some(vec![]),
+                        ..ConsumerControlInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn media_buttons_generates_full_consumer_controls_input_report() -> Result<(), Error>
+        {
+            let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device.media_buttons(
+                vec![
+                    synthesizer::MediaButton::VolumeUp,
+                    synthesizer::MediaButton::VolumeDown,
+                    synthesizer::MediaButton::MicMute,
+                    synthesizer::MediaButton::FactoryReset,
+                    synthesizer::MediaButton::Pause,
+                    synthesizer::MediaButton::CameraDisable,
+                ],
+                DEFAULT_REPORT_TIMESTAMP,
+            )?;
+
+            let input_reports = get_input_reports(input_device, input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    consumer_control: Some(ConsumerControlInputReport {
+                        pressed_buttons: Some(vec![
+                            ConsumerControlButton::VolumeUp,
+                            ConsumerControlButton::VolumeDown,
+                            ConsumerControlButton::MicMute,
+                            ConsumerControlButton::FactoryReset,
+                            ConsumerControlButton::Pause,
+                            ConsumerControlButton::CameraDisable,
+                        ]),
+                        ..ConsumerControlInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn media_buttons_generates_partial_consumer_controls_input_report(
+        ) -> Result<(), Error> {
+            let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device.media_buttons(
+                vec![
+                    synthesizer::MediaButton::VolumeUp,
+                    synthesizer::MediaButton::MicMute,
+                    synthesizer::MediaButton::Pause,
+                ],
+                DEFAULT_REPORT_TIMESTAMP,
+            )?;
+
+            let input_reports = get_input_reports(input_device, input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    consumer_control: Some(ConsumerControlInputReport {
+                        pressed_buttons: Some(vec![
+                            ConsumerControlButton::VolumeUp,
+                            ConsumerControlButton::MicMute,
+                            ConsumerControlButton::Pause,
+                        ]),
+                        ..ConsumerControlInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
+        }
 
         #[fasync::run_until_stalled(test)]
         async fn key_press_generates_expected_keyboard_input_report() -> Result<(), Error> {
@@ -1016,23 +1129,6 @@ mod tests {
                 future::join(input_device_server_fut, set_feature_report_fut).await,
                 (_, Err(_))
             );
-            Ok(())
-        }
-    }
-
-    // Because `input_synthesis` is a library, unimplemented features should yield `Error`s,
-    // rather than panic!()-ing.
-    mod unimplemented_trait_methods {
-        use super::{utils::make_input_device_proxy_and_struct, *};
-        use matches::assert_matches;
-
-        #[test]
-        fn media_buttons_yields_error() -> Result<(), Error> {
-            let _executor = fuchsia_async::TestExecutor::new(); // Create TLS executor used by `endpoints`.
-            let (_proxy, mut input_device) = make_input_device_proxy_and_struct();
-            let media_buttons_result =
-                input_device.media_buttons(false, false, false, false, false, false, 0);
-            assert_matches!(media_buttons_result, Err(_));
             Ok(())
         }
     }

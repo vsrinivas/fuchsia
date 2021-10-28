@@ -15,9 +15,8 @@ use {
 };
 
 pub mod legacy_backend;
+pub mod modern_backend;
 pub mod synthesizer;
-
-mod modern_backend;
 
 /// Simulates a media button event.
 pub async fn media_button_event_command(
@@ -28,16 +27,26 @@ pub async fn media_button_event_command(
     pause: bool,
     camera_disable: bool,
 ) -> Result<(), Error> {
-    media_button_event(
-        volume_up,
-        volume_down,
-        mic_mute,
-        reset,
-        pause,
-        camera_disable,
-        get_backend().await?.as_mut(),
-    )
-    .await
+    let mut pressed_buttons = vec![];
+    if volume_up {
+        pressed_buttons.push(synthesizer::MediaButton::VolumeUp)
+    };
+    if volume_down {
+        pressed_buttons.push(synthesizer::MediaButton::VolumeDown)
+    };
+    if mic_mute {
+        pressed_buttons.push(synthesizer::MediaButton::MicMute)
+    };
+    if reset {
+        pressed_buttons.push(synthesizer::MediaButton::FactoryReset)
+    };
+    if pause {
+        pressed_buttons.push(synthesizer::MediaButton::Pause)
+    };
+    if camera_disable {
+        pressed_buttons.push(synthesizer::MediaButton::CameraDisable)
+    };
+    media_button_event(pressed_buttons, get_backend().await?.as_mut()).await
 }
 
 /// Simulates a key press of specified `usage`.

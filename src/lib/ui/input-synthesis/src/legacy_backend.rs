@@ -128,24 +128,11 @@ struct InputDevice {
 impl synthesizer::InputDevice for self::InputDevice {
     fn media_buttons(
         &mut self,
-        volume_up: bool,
-        volume_down: bool,
-        mic_mute: bool,
-        reset: bool,
-        pause: bool,
-        camera_disable: bool,
+        pressed_buttons: Vec<synthesizer::MediaButton>,
         time: u64,
     ) -> Result<(), Error> {
         self.fidl_proxy
-            .dispatch_report(&mut self::media_buttons(
-                volume_up,
-                volume_down,
-                mic_mute,
-                reset,
-                pause,
-                camera_disable,
-                time,
-            ))
+            .dispatch_report(&mut self::media_buttons(pressed_buttons, time))
             .map_err(Into::into)
     }
 
@@ -183,25 +170,18 @@ impl InputDevice {
     }
 }
 
-fn media_buttons(
-    volume_up: bool,
-    volume_down: bool,
-    mic_mute: bool,
-    reset: bool,
-    pause: bool,
-    camera_disable: bool,
-    time: u64,
-) -> InputReport {
+fn media_buttons(pressed_buttons: Vec<synthesizer::MediaButton>, time: u64) -> InputReport {
+    let pressed_buttons: std::collections::BTreeSet<_> = pressed_buttons.into_iter().collect();
     InputReport {
         event_time: time,
         keyboard: None,
         media_buttons: Some(Box::new(MediaButtonsReport {
-            volume_up,
-            volume_down,
-            mic_mute,
-            reset,
-            pause,
-            camera_disable,
+            volume_up: pressed_buttons.contains(&synthesizer::MediaButton::VolumeUp),
+            volume_down: pressed_buttons.contains(&synthesizer::MediaButton::VolumeDown),
+            mic_mute: pressed_buttons.contains(&synthesizer::MediaButton::MicMute),
+            reset: pressed_buttons.contains(&synthesizer::MediaButton::FactoryReset),
+            pause: pressed_buttons.contains(&synthesizer::MediaButton::Pause),
+            camera_disable: pressed_buttons.contains(&synthesizer::MediaButton::CameraDisable),
         })),
         mouse: None,
         stylus: None,
@@ -267,76 +247,125 @@ fn multi_finger_tap(fingers: Option<Vec<Touch>>, time: u64) -> InputReport {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        fidl::endpoints,
-        fidl_fuchsia_ui_input::InputDeviceRequest,
-        fuchsia_async as fasync,
-        futures::{pin_mut, StreamExt},
-        matches::{assert_matches, matches},
-        proptest::prelude::*,
-        std::task::Poll,
+        super::*, fidl::endpoints, fidl_fuchsia_ui_input::InputDeviceRequest,
+        fuchsia_async as fasync, futures::StreamExt, matches::assert_matches, std::task::Poll,
         synthesizer::InputDevice as _,
     };
 
-    proptest! {
-        #[test]
-        fn media_buttons_populates_report_correctly(
-            volume_up: bool,
-            volume_down: bool,
-            mic_mute: bool,
-            reset: bool,
-            pause: bool,
-            camera_disable: bool,
-            event_time: u64
-        ) {
-            let test_fut = async {
-                let (fidl_proxy, request_stream) =
-                    match endpoints::create_proxy_and_stream::<InputDeviceMarker>() {
-                        Ok(r) => r,
-                        Err(e) => return Err(anyhow::Error::from(e)) as Result<(), Error>,
-                    };
-                let mut input_device = InputDevice { fidl_proxy };
-                input_device
-                    .media_buttons(volume_up, volume_down, mic_mute, reset, pause, camera_disable, event_time)?;
-                std::mem::drop(input_device);  // Close channel to terminate stream.
+    #[fasync::run_until_stalled(test)]
+    async fn media_buttons_populates_empty_report_correctly() -> Result<(), Error> {
+        let (fidl_proxy, request_stream) =
+            endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+        let mut input_device = InputDevice { fidl_proxy };
+        input_device.media_buttons(vec![], 100)?;
+        std::mem::drop(input_device); // Close channel to terminate stream.
 
-                let reports = request_stream.collect::<Vec<_>>().await;
-                let expected_report = InputReport {
-                        event_time,
-                        keyboard: None,
-                        media_buttons: Some(Box::new(MediaButtonsReport {
-                            volume_up,
-                            volume_down,
-                            mic_mute,
-                            reset,
-                            pause,
-                            camera_disable,
-                        })),
-                        mouse: None,
-                        stylus: None,
-                        touchscreen: None,
-                        sensor: None,
-                        trace_id: 0
-                };
-                assert!(
-                    matches!(
-                        reports.as_slice(),
-                        [Ok(InputDeviceRequest::DispatchReport { report, .. })]
-                        if *report == expected_report
-                    ), "got {:#?} but expected [Ok(DispatchReport {{\nreport: {:#?},\n ..}})]",
-                    reports,
-                    expected_report
-                );
-                Ok(())
-            };
-            pin_mut!(test_fut);
-            assert_matches!(
-                fasync::TestExecutor::new()
-                    .expect("internal error: failed to create executor")
-                    .run_until_stalled(&mut test_fut),
-                Poll::Ready(_)
-            );
-        }
+        let reports = request_stream.collect::<Vec<_>>().await;
+        let expected_report = InputReport {
+            event_time: 100,
+            keyboard: None,
+            media_buttons: Some(Box::new(MediaButtonsReport {
+                volume_up: false,
+                volume_down: false,
+                mic_mute: false,
+                reset: false,
+                pause: false,
+                camera_disable: false,
+            })),
+            mouse: None,
+            stylus: None,
+            touchscreen: None,
+            sensor: None,
+            trace_id: 0,
+        };
+        assert_matches!(
+            reports.as_slice(),
+            [Ok(InputDeviceRequest::DispatchReport { report, .. })] if *report == expected_report
+        );
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn media_buttons_populates_full_report_correctly() -> Result<(), Error> {
+        let (fidl_proxy, request_stream) =
+            endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+        let mut input_device = InputDevice { fidl_proxy };
+        input_device.media_buttons(
+            vec![
+                synthesizer::MediaButton::VolumeUp,
+                synthesizer::MediaButton::VolumeDown,
+                synthesizer::MediaButton::MicMute,
+                synthesizer::MediaButton::FactoryReset,
+                synthesizer::MediaButton::Pause,
+                synthesizer::MediaButton::CameraDisable,
+            ],
+            100,
+        )?;
+        std::mem::drop(input_device); // Close channel to terminate stream.
+
+        let reports = request_stream.collect::<Vec<_>>().await;
+        let expected_report = InputReport {
+            event_time: 100,
+            keyboard: None,
+            media_buttons: Some(Box::new(MediaButtonsReport {
+                volume_up: true,
+                volume_down: true,
+                mic_mute: true,
+                reset: true,
+                pause: true,
+                camera_disable: true,
+            })),
+            mouse: None,
+            stylus: None,
+            touchscreen: None,
+            sensor: None,
+            trace_id: 0,
+        };
+        assert_matches!(
+            reports.as_slice(),
+            [Ok(InputDeviceRequest::DispatchReport { report, .. })] if *report == expected_report
+        );
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn media_buttons_populates_partial_report_correctly() -> Result<(), Error> {
+        let (fidl_proxy, request_stream) =
+            endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+        let mut input_device = InputDevice { fidl_proxy };
+        input_device.media_buttons(
+            vec![
+                synthesizer::MediaButton::VolumeUp,
+                synthesizer::MediaButton::MicMute,
+                synthesizer::MediaButton::Pause,
+            ],
+            100,
+        )?;
+        std::mem::drop(input_device); // Close channel to terminate stream.
+
+        let reports = request_stream.collect::<Vec<_>>().await;
+        let expected_report = InputReport {
+            event_time: 100,
+            keyboard: None,
+            media_buttons: Some(Box::new(MediaButtonsReport {
+                volume_up: true,
+                volume_down: false,
+                mic_mute: true,
+                reset: false,
+                pause: true,
+                camera_disable: false,
+            })),
+            mouse: None,
+            stylus: None,
+            touchscreen: None,
+            sensor: None,
+            trace_id: 0,
+        };
+        assert_matches!(
+            reports.as_slice(),
+            [Ok(InputDeviceRequest::DispatchReport { report, .. })] if *report == expected_report
+        );
+        Ok(())
     }
 
     #[fasync::run_until_stalled(test)]
