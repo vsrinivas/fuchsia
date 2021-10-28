@@ -26,12 +26,9 @@ namespace wlanif {
 namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
-namespace wlan_stats = ::fuchsia::wlan::stats;
 
 Device::Device(zx_device_t* device, wlanif_impl_protocol_t wlanif_impl_proto)
-    : parent_(device),
-      wlanif_impl_(wlanif_impl_proto),
-      loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+    : parent_(device), wlanif_impl_(wlanif_impl_proto) {
   ltrace_fn();
 }
 
@@ -1097,7 +1094,7 @@ zx_status_t Device::EthStart(const ethernet_ifc_protocol_t* ifc) {
 void Device::EthStop() {
   std::lock_guard<std::mutex> lock(lock_);
   eth_started_ = false;
-  std::memset(&ethernet_ifc_, 0, sizeof(ethernet_ifc_));
+  ethernet_ifc_ = {};
 }
 
 zx_status_t Device::EthQuery(uint32_t options, ethernet_info_t* info) {
@@ -1165,6 +1162,9 @@ void Device::SetEthernetStatusLocked(bool online) {
     eth_online_ = online;
     if (eth_started_) {
       ethernet_ifc_status(&ethernet_ifc_, online ? ETHERNET_STATUS_ONLINE : 0);
+    }
+    if (wlanif_impl_.ops->on_link_state_changed) {
+      wlanif_impl_on_link_state_changed(&wlanif_impl_, online);
     }
   }
 }

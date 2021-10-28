@@ -120,11 +120,11 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
 
   bool eth_started_ __TA_GUARDED(lock_) = false;
   bool eth_online_ __TA_GUARDED(lock_) = false;
-  ethernet_ifc_protocol_t ethernet_ifc_ __TA_GUARDED(lock_);
+  ethernet_ifc_protocol_t ethernet_ifc_ __TA_GUARDED(lock_) = {};
 
   wlanif_query_info query_info_;
 
-  async::Loop loop_;
+  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<fidl::Binding<::fuchsia::wlan::mlme::MLME>> binding_ __TA_GUARDED(lock_);
 };
 

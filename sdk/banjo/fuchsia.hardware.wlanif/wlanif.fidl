@@ -793,4 +793,23 @@ protocol WlanifImpl {
         @mutable
         netbuf fuchsia.hardware.ethernet.EthernetNetbuf;
     });
+
+    // Notify the interface whether it's online or offline. For client interfaces the online status
+    // changes based on such things as being associated/disassociated with an AP. For encrypted
+    // connections this will be regulated by MLME calls to SetControlledPort, for open connections
+    // the interface is considered online as soon as association is confirmed.
+    //
+    // A SoftAP interface is set to online when:
+    // 1) The driver confirms that a request to start a SoftAP succeeded.
+    // A SoftAP interface is set to offline when:
+    // 1) A request to stop a SoftAP is received.
+    // 2) The driver indicates that the SoftAP has stopped (possibly already offline because of 1).
+    //
+    // The call will ONLY be made when the state actually changes. For example in the situation
+    // above where a call to stop an AP has been made there will be a call to OnLinkStateChanged.
+    // However when the driver confirms this there will be no additional call to OnLinkStateChanged
+    // because it was already offline.
+    OnLinkStateChanged(struct {
+        online bool;
+    }) -> ();
 };

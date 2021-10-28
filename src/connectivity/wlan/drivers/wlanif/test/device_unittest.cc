@@ -316,6 +316,12 @@ struct EthernetTestFixture : public ::gtest::TestLoopFixture {
         .state = ::fuchsia::wlan::mlme::ControlledPortState::OPEN});
     ASSERT_EQ(ethernet_status_, expected_status);
   }
+  void SetEthernetOffline(uint32_t expected_status = 0) {
+    device_->SetControlledPort(::fuchsia::wlan::mlme::SetControlledPortRequest{
+        .state = ::fuchsia::wlan::mlme::ControlledPortState::CLOSED});
+    ASSERT_EQ(ethernet_status_, expected_status);
+  }
+
   void TearDown() override {
     device_->Unbind();
     TestLoopFixture::TearDown();
@@ -345,6 +351,7 @@ struct EthernetTestFixture : public ::gtest::TestLoopFixture {
   wlan_info_mac_role_t role_ = WLAN_INFO_MAC_ROLE_CLIENT;
   uint32_t ethernet_status_{0};
   uint32_t driver_features_{0};
+  std::optional<bool> link_state_;
   std::function<void(const wlanif_start_req_t*)> start_req_cb_;
 
   fuchsia::wlan::mlme::MLMEPtr mlme_;
@@ -538,4 +545,36 @@ TEST_F(EthernetTestFixture, ApSecondStartDoesNotCallImpl) {
   ASSERT_EQ(start_results.size(), 2u);
   ASSERT_EQ(start_results[0], wlan_mlme::StartResultCode::SUCCESS);
   ASSERT_EQ(start_results[1], wlan_mlme::StartResultCode::BSS_ALREADY_STARTED_OR_JOINED);
+}
+
+TEST_F(EthernetTestFixture, NotifyOnline) {
+  proto_ops_.on_link_state_changed = [](void* ctx, bool online) {
+    reinterpret_cast<EthernetTestFixture*>(ctx)->link_state_ = online;
+  };
+
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  device_->EthStart(&eth_proto_);
+
+  // Setting the device to online should result in a link state change.
+  SetEthernetOnline();
+  ASSERT_TRUE(link_state_.has_value());
+  EXPECT_TRUE(link_state_.value());
+
+  // Clear the optional and then set the status to online again, another link state event should NOT
+  // be sent.
+  link_state_.reset();
+  SetEthernetOnline();
+  EXPECT_FALSE(link_state_.has_value());
+
+  // Now set it to offline and verify we get a link state change.
+  link_state_.reset();
+  SetEthernetOffline();
+  ASSERT_TRUE(link_state_.has_value());
+  EXPECT_FALSE(link_state_.value());
+
+  // And similarly setting it to offline when it's already offline should NOT send a link state
+  // event.
+  link_state_.reset();
+  SetEthernetOffline();
+  EXPECT_FALSE(link_state_.has_value());
 }
