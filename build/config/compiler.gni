@@ -5,7 +5,6 @@
 if (is_debug) {
   default_optimize = "debug"
 } else {
-  # TODO(phosek): consider using "size" in release mode to reduce size.
   default_optimize = "size"
 }
 
