@@ -97,6 +97,47 @@ std::mem::drop(foo());
 let _: Foo = foo();
 ```
 
+## Tests
+
+### Declaration
+
+Name tests after what they're testing without the `test_` prefix. That's the
+adopted pattern in the [Rust standard library][std_addr_tests].
+
+If the test name is not sufficient to encode the objective of the test, add a
+short non doc comment before it or at the top of the function's body explaining
+what this test is exercising. We use non-doc comments because we expect the
+target audience to be readers of the code, and not of the public API.
+
+Tests should always be in a module called `tests` or one of its descendents.
+Crates that contain only integration tests do not need a `tests` module, e.g.
+[network/tests/integration], [network/tests/fidl].
+
+Example:
+
+```rust
+// Tests Controller::do_work error returns.
+#[test]
+fn controller_do_work_errors() { /* ... */ }
+```
+
+Test support functions should be in a module named `testutil`. If the module is
+meant for use in-crate only, it should be declared `pub(crate)` and
+`#[cfg(test)]`. This module should not contain any `#[test]` functions. If tests
+are needed for the functionality in the `testutil` module, a sub-module called
+`tests` should be created (i.e., `testutil::tests`).
+
+### Prefer panics
+
+Do **not** use Rust's support for [**tests which return
+Result**][rust_test_result]; such tests do not automatically emit backtraces,
+relying on the errors themselves to carry a backtrace. Test failures that don't
+emit backtraces are typically much harder to interpret. At the time of writing,
+the [backtrace feature in Rust is unstable][rust_backtrace_stabilize] and
+[disabled in the Fuchsia Rust build configuration][rust_backtrace_disabled], but
+even if enabled not all errors contain a backtrace; best to panic to avoid
+relying on external factors for backtraces.
+
 ## Process for changes to this page
 
 All are invited and welcome to propose changes to the patterns adopted by the
@@ -142,3 +183,9 @@ Things to keep in mind:
 [unused-results-explanation]: https://doc.rust-lang.org/rustc/lints/listing/allowed-by-default.html#explanation-31
 [Netstack team]: /src/connectivity/network/OWNERS
 [discussion groups]: /docs/contribute/community/get-involved.md#join_a_discussion_group
+[rust_test_result]: https://doc.rust-lang.org/edition-guide/rust-2018/error-handling-and-panics/question-mark-in-main-and-tests.html
+[rust_backtrace_stabilize]: https://github.com/rust-lang/rust/pull/72981
+[rust_backtrace_disabled]: https://cs.opensource.google/fuchsia/fuchsia/+/main:third_party/rust_crates/Cargo.toml;l=308-309;drc=fb9288396656bf5c9174d39238acc183fa0c4882
+[std_addr_tests]: https://github.com/rust-lang/rust/blob/1.49.0/library/std/src/net/addr/tests.rs
+[network/tests/integration]: /src/connectivity/network/tests/integration
+[network/tests/fidl]: /src/connectivity/network/tests/fidl
