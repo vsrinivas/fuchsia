@@ -155,6 +155,12 @@ protocol TargetCollection {
 /// for use with the target collection service.
 @discoverable
 protocol TargetHandle {
+    /// Returns:
+    /// * As much information identifying the target as is currently available.
+    Identity() -> (struct {
+        target_info Target;
+    });
+
     /// Waits for an SSH address to become available on the target.
     ///
     /// Returns:

@@ -107,6 +107,10 @@ impl TargetHandleInner {
             bridge::TargetHandleRequest::Reboot { state, responder } => {
                 self.reboot_controller.reboot(state, responder).await
             }
+            bridge::TargetHandleRequest::Identity { responder } => {
+                let target_info = bridge::Target::from(&*self.target);
+                responder.send(target_info).map_err(Into::into)
+            }
         }
     }
 }
