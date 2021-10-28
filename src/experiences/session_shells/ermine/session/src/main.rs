@@ -78,12 +78,18 @@ async fn expose_services(
     graphical_presenter: GraphicalPresenterProxy,
     element_manager: ElementManagerProxy,
     ermine_services_server_end: zx::Channel,
+    account_dir: Option<DirectoryProxy>,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 
     // Add services for component outgoing directory.
     fs.dir("svc").add_fidl_service(ExposedServices::GraphicalPresenter);
     fs.take_and_serve_directory_handle()?;
+
+    // Add the account directory if we were able to acquire it.
+    if let Some(proxy) = account_dir {
+        fs.add_remote("account_data", proxy);
+    }
 
     // Add services served to Ermine over `ermine_services_server_end`.
     fs.add_fidl_service_at(ElementManagerMarker::PROTOCOL_NAME, ExposedServices::ElementManager);
@@ -252,15 +258,16 @@ async fn main() -> Result<(), Error> {
 
     // Attempt to retrieve a data directory for the account from AccountManager. If this fails
     // just continue without the directory.
-    match get_account_directory(EMPTY_PASSWORD).await {
-        Ok(_dir) => {
-            // TODO(jsankey): Bind this directory to a storage capability.
+    let maybe_account_dir = match get_account_directory(EMPTY_PASSWORD).await {
+        Ok(dir) => {
             info!("Successfully acquired an account directory");
+            Some(dir)
         }
         Err(err) => {
-            warn!("Error getting account directory: {:?}", err)
+            warn!("Error getting account directory: {:?}", err);
+            None
         }
-    }
+    };
 
     let scene_manager = Arc::new(connect_to_protocol::<SceneManagerMarker>().unwrap());
 
@@ -276,8 +283,12 @@ async fn main() -> Result<(), Error> {
 
     let graphical_presenter = app.connect_to_protocol::<GraphicalPresenterMarker>()?;
     let element_manager = connect_to_protocol::<ElementManagerMarker>()?;
-    let services_fut =
-        expose_services(graphical_presenter, element_manager, ermine_services_server_end);
+    let services_fut = expose_services(
+        graphical_presenter,
+        element_manager,
+        ermine_services_server_end,
+        maybe_account_dir,
+    );
 
     //TODO(fxbug.dev/47080) monitor the futures to see if they complete in an error.
     let _ = try_join!(focus_fut, set_focus_fut, services_fut);

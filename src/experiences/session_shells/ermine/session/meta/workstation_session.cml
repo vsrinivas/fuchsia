@@ -11,6 +11,17 @@
         {
             protocol: [ "fuchsia.element.GraphicalPresenter" ],
         },
+        {
+            directory: "account_dir",
+            rights: [ "rw*" ],
+            path: "/account_data",
+        },
+        {
+            storage: "account",
+            from: "self",
+            backing_dir: "account_dir",
+            storage_id: "static_instance_id_or_moniker",
+        },
     ],
     use: [
         {
