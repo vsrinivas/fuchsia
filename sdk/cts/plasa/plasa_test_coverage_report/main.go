@@ -44,6 +44,37 @@ type PlasaFragment struct {
 	Path string `json:"path"`
 }
 
+// TestCoverageReport is the data model for test coverage reporting.  It is
+// written out in JSON output encoding.
+type TestCoverageReport struct {
+	// Items contains all the test coverage report items added to this report.
+	Items []TestCoverageReportItem `json:"items"`
+	// seen contains the elements that have already been inserted. No duplication
+	// is allowed.
+	seen map[string]struct{} `json:",ignore"`
+}
+
+/// NewTestCoverageReport initializes a new test coverage report type.
+func NewTestCoverageReport() TestCoverageReport {
+	return TestCoverageReport{
+		Items: nil,
+		seen:  map[string]struct{}{},
+	}
+}
+
+// TestCoverageReportItem is a single item reported to the test coverage.
+type TestCoverageReportItem struct {
+	// Name is the fully qualified name of the report item, such as "::ns::Foo".
+	// The exact format depends on Kind.   It is assumed that the Name is unique within a Kind.
+	Name string `json:"name"`
+	// The Kind of the fully qualified name.  For example, it could be "cc_api"
+	// or "fidl_api".
+	Kind string `json:"kind"`
+}
+
+// KindCCAPI denotes a C++ API element.
+const KindCCAPI = "cc_api"
+
 func readManifest(r io.Reader) (PlasaManifest, error) {
 	var m PlasaManifest
 	d := json.NewDecoder(r)
@@ -63,19 +94,33 @@ func paths(m PlasaManifest) []string {
 	return ret
 }
 
-func addTo(m *map[string]struct{}, r model.Report) {
+func (m *TestCoverageReport) add(r model.Report) {
 	for _, i := range r.Items {
-		(*m)[i.Name] = struct{}{}
+		n := i.Name
+		if _, ok := m.seen[n]; ok {
+			// Skip seen elements.
+			continue
+		}
+		ci := TestCoverageReportItem{
+			Name: i.Name,
+			Kind: KindCCAPI,
+		}
+		m.Items = append(m.Items, ci)
+		m.seen[n] = struct{}{}
 	}
 }
 
-func mapKeys(m map[string]struct{}) []string {
-	var s []string
-	for k := range m {
-		s = append(s, k)
+func (m TestCoverageReport) writeTo(w io.Writer) error {
+	sort.SliceStable(m.Items, func(i, j int) bool {
+		return m.Items[i].Name < m.Items[j].Name
+	})
+	e := json.NewEncoder(w)
+	e.SetEscapeHTML(false)
+	e.SetIndent("", "    ")
+	if err := e.Encode(m); err != nil {
+		return fmt.Errorf("could not encode as JSON: %w", err)
 	}
-	sort.Strings(s)
-	return s
+	return nil
 }
 
 func filter(m io.Reader, w io.Writer) error {
@@ -84,7 +129,7 @@ func filter(m io.Reader, w io.Writer) error {
 		return fmt.Errorf("could not read manifest: %v: %w", plasaManifestFile, err)
 	}
 	paths := paths(p)
-	out := map[string]struct{}{}
+	out := NewTestCoverageReport()
 	for _, p := range paths {
 		pf, err := os.Open(p)
 		if err != nil {
@@ -95,11 +140,10 @@ func filter(m io.Reader, w io.Writer) error {
 		if err != nil {
 			return fmt.Errorf("could not parse report: %v: %w", p, err)
 		}
-		addTo(&out, r)
+		out.add(r)
 	}
-	k := mapKeys(out)
-	for _, v := range k {
-		fmt.Fprintf(w, "%v\n", v)
+	if err := out.writeTo(w); err != nil {
+		return fmt.Errorf("while writing test coverage report: %w", err)
 	}
 	return nil
 }

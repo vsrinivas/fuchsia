@@ -66,7 +66,7 @@ action("filter_compdb") {
 compiled_action("api_coverage_report") {
   testonly = true
   _plasa_input = "$root_build_dir/plasa.manifest.json"
-  _plasa_output = "$root_build_dir/test_coverage_report.plasa.txt"
+  _plasa_output = "$root_build_dir/test_coverage_report.plasa.json"
   tool = "//sdk/cts/plasa/plasa_test_coverage_report"
   outputs = [ _plasa_output ]
   inputs = [ _plasa_input ]

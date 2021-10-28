@@ -48,33 +48,32 @@ and options you may want to add.
 ```bash
 fx set ... --args='generate_plasa_artifacts=true' --with=//sdk/cts/plasa
 fx build sdk/cts/plasa:api_coverage_report
-cat $(fx get-build-dir)/test_coverage_report.plasa.txt
+cat $(fx get-build-dir)/test_coverage_report.plasa.json
 ```
 
 ## Example output
 
-The following is an excerpt of the output:
+The following is an excerpt of the output. The output conforms to
+the [data schema][sch].
+
+[sch]: schema/test_coverage_report.schema.json
 
 ```
-::FidlCodedArray::FidlCodedArray
-::FidlCodedBits::FidlCodedBits
-::FidlCodedEnum::FidlCodedEnum
-::FidlCodedHandle::FidlCodedHandle
-::FidlCodedPrimitive::FidlCodedPrimitive
-::FidlCodedString::FidlCodedString
-::FidlCodedStruct::FidlCodedStruct
-::FidlCodedStructPointer::FidlCodedStructPointer
-::FidlCodedTable::FidlCodedTable
-::FidlCodedVector::FidlCodedVector
-::FidlCodedXUnion::FidlCodedXUnion
-::FidlHasTypeTag::FidlHasTypeTag
-::FidlStructElement::Field
-::FidlStructElement::Padding16
-::FidlStructElement::Padding32
-::FidlStructElement::Padding64
-::fidl_type::coded_array
-::fidl_type::coded_bits
-::fidl_type::coded_enum
-::fidl_type::coded_handle
-... (elided) ...
+{
+    "items": [
+        {
+            "name": "::FidlCodedArray::FidlCodedArray",
+            "kind": "cc_api"
+        },
+        {
+            "name": "::FidlCodedBits::FidlCodedBits",
+            "kind": "cc_api"
+        },
+        {
+            "name": "::FidlCodedEnum::FidlCodedEnum",
+            "kind": "cc_api"
+        },
+        ...
+    ]
+}
 ```

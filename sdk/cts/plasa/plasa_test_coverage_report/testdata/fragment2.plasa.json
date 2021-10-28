@@ -1,10 +1,10 @@
 {
     "items": [
         {
-            "name": "foo1"
+            "name": "::ns::foo1"
         },
         {
-            "name": "foo2"
+            "name": "::ns::foo2"
         }
     ]
 }

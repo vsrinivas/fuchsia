@@ -1,7 +1,7 @@
 {
     "items": [
         {
-            "name": "foo1"
+            "name": "::ns::foo1"
         }
     ]
 }

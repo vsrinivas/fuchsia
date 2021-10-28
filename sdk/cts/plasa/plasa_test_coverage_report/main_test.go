@@ -29,8 +29,18 @@ func TestTestDir(t *testing.T) {
 }
 
 func TestPlasaManifestRead(t *testing.T) {
-	expected := `foo1
-foo2
+	expected := `{
+    "items": [
+        {
+            "name": "::ns::foo1",
+            "kind": "cc_api"
+        },
+        {
+            "name": "::ns::foo2",
+            "kind": "cc_api"
+        }
+    ]
+}
 `
 	manifest := path.Join(*testDir, "plasa.manifest.json")
 	m, err := os.Open(manifest)
@@ -41,8 +51,10 @@ foo2
 	if err := filter(m, &s); err != nil {
 		t.Errorf("while running manifest check: %v", err)
 	}
-	if !cmp.Equal(s.String(), expected) {
-		t.Errorf("want: %v, got: %v, diff: %v",
-			expected, s.String(), cmp.Diff(expected, s.String()))
+	la := strings.Split(s.String(), "\n")
+	le := strings.Split(expected, "\n")
+	if !cmp.Equal(la, le) {
+		t.Errorf("want:\n%v,\n\ngot:\n%v\n\ndiff:\n%v",
+			strings.Join(le, "\n"), strings.Join(la, "\n"), cmp.Diff(le, la))
 	}
 }
