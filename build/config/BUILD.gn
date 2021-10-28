@@ -978,6 +978,7 @@ config("Wno-conversion") {
     "//third_party/acpica/*",
     "//third_party/cobalt/*",
     "//third_party/crashpad/*",
+    "//third_party/ffmpeg/*",
     "//third_party/glfw/*",
     "//third_party/googletest:*",
     "//third_party/iperf/*",
