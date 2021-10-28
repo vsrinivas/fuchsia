@@ -613,7 +613,7 @@ mod tests {
         },
         crate::{
             core::collection::{Component, ComponentSource, Components},
-            verify::{collection::V2ComponentModel, collector::component_tree::DEFAULT_ROOT_URL},
+            verify::{collection::V2ComponentModel, collector::component_model::DEFAULT_ROOT_URL},
         },
         anyhow::Result,
         cm_fidl_analyzer::{

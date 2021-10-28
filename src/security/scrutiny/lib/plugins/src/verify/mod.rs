@@ -8,10 +8,7 @@ mod controller;
 
 use {
     crate::verify::{
-        collector::{
-            component_model::V2ComponentModelDataCollector,
-            component_tree::V2ComponentTreeDataCollector,
-        },
+        collector::component_model::V2ComponentModelDataCollector,
         controller::{
             build::VerifyBuildController,
             capability_routing::{CapabilityRouteController, V2ComponentModelMappingController},
@@ -37,7 +34,6 @@ plugin!(
     VerifyPlugin,
     PluginHooks::new(
         collectors! {
-            "V2ComponentTreeDataCollector" => V2ComponentTreeDataCollector::new(),
             "V2ComponentModelDataCollector" => V2ComponentModelDataCollector::new(),
         },
         controllers! {
@@ -112,7 +108,7 @@ mod tests {
             },
             verify::{
                 collection::V2ComponentModel,
-                collector::component_tree::{DEFAULT_CONFIG_PATH, DEFAULT_ROOT_URL},
+                collector::component_model::{DEFAULT_CONFIG_PATH, DEFAULT_ROOT_URL},
             },
         },
         anyhow::Result,

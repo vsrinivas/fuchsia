@@ -3,4 +3,3 @@
 // found in the LICENSE file.
 
 pub mod component_model;
-pub mod component_tree;

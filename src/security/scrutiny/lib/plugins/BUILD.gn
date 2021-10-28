@@ -108,7 +108,6 @@ if (is_host) {
       "src/toolkit/mod.rs",
       "src/verify/collection.rs",
       "src/verify/collector/component_model.rs",
-      "src/verify/collector/component_tree.rs",
       "src/verify/collector/mod.rs",
       "src/verify/controller/build.rs",
       "src/verify/controller/capability_routing.rs",
