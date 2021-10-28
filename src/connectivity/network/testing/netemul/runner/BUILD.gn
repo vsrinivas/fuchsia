@@ -195,7 +195,6 @@ fuchsia_package("netemul-sandbox") {
   testonly = true
 
   deps = [
-    ":mock-device-settings",
     ":netemul-devmgr",
     ":netemul-sandbox-component",
     ":netstack-intermediary",

@@ -4,6 +4,6 @@
 {
     include: [ "//src/sys/test_runners/legacy_test/default.shard.cml" ],
     program: {
-        legacy_manifest: "meta/sandbox-service.cmx",
+        legacy_manifest: "meta/sandbox-service-test.cmx",
     },
 }

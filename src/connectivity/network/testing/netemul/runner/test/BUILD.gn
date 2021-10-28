@@ -45,8 +45,8 @@ fuchsia_test_component("netstack-intermediary-multi-interface-test") {
   deps = [ "netstack_intermediary" ]
 }
 
-fuchsia_test_component("netstack-intermediary-test") {
-  manifest = "meta/netstack-intermediary-test.cmx"
+fuchsia_test_component("netstack-intermediary-single-interface-test") {
+  manifest = "meta/netstack-intermediary-single-interface-test.cmx"
   deps = [ "netstack_intermediary" ]
 }
 
@@ -70,20 +70,20 @@ fuchsia_test_component("network-device-test") {
   deps = [ "network_device" ]
 }
 
-fuchsia_test_component("sandbox-service-legacy") {
-  manifest = "meta/sandbox-service.cmx"
-  component_name = "sandbox-service"
+fuchsia_test_component("sandbox-service-test-legacy") {
+  manifest = "meta/sandbox-service-test.cmx"
+  component_name = "sandbox-service-test"
   deps = [ "sandbox_service" ]
 }
 
-fuchsia_test_component("sandbox-service") {
-  manifest = "meta/sandbox-service.cml"
-  deps = [ ":sandbox-service-legacy" ]
+fuchsia_test_component("sandbox-service-test") {
+  manifest = "meta/sandbox-service-test.cml"
+  deps = [ ":sandbox-service-test-legacy" ]
 }
 
 fuchsia_test("sandbox-service_spec") {
   package = ":netemul-sandbox-test"
-  component = ":sandbox-service"
+  component = ":sandbox-service-test"
 
   log_settings = {
     max_severity = "ERROR"
@@ -111,8 +111,8 @@ fuchsia_test("sandbox-unittest_spec") {
   }
 }
 
-fuchsia_test_component("mock-device-settings") {
-  manifest = "meta/mock-device-settings.cmx"
+fuchsia_test_component("mock-device-settings-test") {
+  manifest = "meta/mock-device-settings-test.cmx"
   deps = [ "//src/connectivity/network/testing/netemul/runner/helpers/mock_device_settings:mock_device_settings_test" ]
 }
 
@@ -130,22 +130,25 @@ fuchsia_test_package("netemul-sandbox-test") {
     ":easy-netstack-cfg-test",
     ":env-build-test",
     ":inheritance-test",
-    ":mock-device-settings",
+    ":mock-device-settings-test",
     ":model-unittest",
     ":netstack-intermediary-multi-interface-test",
-    ":netstack-intermediary-test",
+    ":netstack-intermediary-single-interface-test",
     ":netstack-socks-test",
     ":network-device-test",
     ":svc-list-test",
     ":virtual-device-directory-test",
   ]
   deps = [
-    ":sandbox-service",
+    ":sandbox-service-test",
     ":sandbox-unittest",
     "dummy_proc",
     "dummy_proc:dummy_proc_with_dev",
     "//src/connectivity/network/netstack:component-legacy",
+    "//src/connectivity/network/testing/netemul/runner:mock-device-settings",
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
     "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
+    "//src/connectivity/network/testing/netemul/runner:netstack-intermediary",
   ]
 }
 

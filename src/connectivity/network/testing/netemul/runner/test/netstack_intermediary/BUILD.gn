@@ -33,7 +33,7 @@ rustc_binary("bin") {
 }
 
 fuchsia_component("netstack_intermediary") {
-  component_name = "netstack-intermediary"
+  component_name = "netstack-intermediary-test"
   manifest = "meta/netstack-intermediary.cmx"
   testonly = true
   deps = [ ":bin" ]

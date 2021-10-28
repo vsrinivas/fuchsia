@@ -3,7 +3,7 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.devicesettings.DeviceSettingsManager": [
-                    "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/mock-device-settings.cmx",
+                    "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/mock-device-settings.cmx",
                     "-s",
                     "StringKey=bla",
                     "-i",

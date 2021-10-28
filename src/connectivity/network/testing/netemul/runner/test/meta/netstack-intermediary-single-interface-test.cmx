@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.netemul": {
             "capture": true,
-            "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack-intermediary.cmx",
+            "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack-intermediary-test.cmx",
             "environment": {
                 "children": [
                     {
@@ -26,7 +26,7 @@
                                 "arguments": [
                                     "--interface=02:1a:11:00:01:00=net"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-intermediary.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack-intermediary.cmx"
                             }
                         },
                         "test": [
