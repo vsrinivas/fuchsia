@@ -40,6 +40,7 @@ zx_library("devmgr-integration-test") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
     "//sdk/fidl/fuchsia.exception:fuchsia.exception_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
@@ -47,7 +48,6 @@ zx_library("devmgr-integration-test") {
     "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager_llcpp",
     "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/devices/bin/driver-index:component",

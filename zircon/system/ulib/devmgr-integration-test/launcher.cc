@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.component.decl/cpp/wire.h>
+#include <fidl/fuchsia.component/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.exception/cpp/wire.h>
 #include <fidl/fuchsia.power.manager/cpp/wire.h>
-#include <fidl/fuchsia.sys2/cpp/wire.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/kernel/c/fidl.h>
 #include <fuchsia/scheduler/c/fidl.h>
@@ -50,7 +51,7 @@ namespace {
 using GetBootItemFunction = devmgr_launcher::GetBootItemFunction;
 
 // TODO(http://fxbug.dev/33183): Replace this with a test component_manager.
-class FakeRealm : public fidl::WireServer<fuchsia_sys2::Realm> {
+class FakeRealm : public fidl::WireServer<fuchsia_component::Realm> {
  public:
   void CreateChild(CreateChildRequestView request, CreateChildCompleter::Sync& completer) override {
     completer.ReplySuccess();
@@ -339,7 +340,7 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(
       svc_loop_state_->root, svc_loop_state_->loop.dispatcher(),
       std::make_unique<FakePowerRegistration>());
 
-  CreateFakeCppService<fuchsia_sys2::Realm>(
+  CreateFakeCppService<fuchsia_component::Realm>(
       svc_loop_state_->root, svc_loop_state_->loop.dispatcher(), std::make_unique<FakeRealm>());
 
   // Serve VFS on channel.
