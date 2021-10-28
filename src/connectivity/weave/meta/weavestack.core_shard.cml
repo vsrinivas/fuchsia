@@ -1,0 +1,94 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "weavestack",
+            url: "fuchsia-pkg://fuchsia.com/weavestack#meta/weavestack.cm",
+            environment: "#full-resolver-env",
+        },
+        {
+            name: "network-tun",
+            url: "fuchsia-pkg://fuchsia.com/weavestack#meta/network-tun.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+    offer: [
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#weavestack",
+            subdir: "weavestack",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#weavestack" ],
+        },
+        {
+            protocol: [
+                "fuchsia.bluetooth.gatt.Server",
+                "fuchsia.bluetooth.le.Peripheral",
+                "fuchsia.factory.WeaveFactoryStoreProvider",
+                "fuchsia.lowpan.device.Lookup",
+                "fuchsia.weave.FactoryDataManager",
+                "fuchsia.weave.Signer",
+            ],
+            from: "#appmgr",
+            to: [ "#weavestack" ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.hwinfo.Device",
+                "fuchsia.hwinfo.Product",
+            ],
+            from: "#hwinfo",
+            to: [ "#weavestack" ],
+        },
+        {
+            protocol: [
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.net.routes.State",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#network",
+            to: [ "#weavestack" ],
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#weavestack" ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.buildinfo.Provider" ],
+            from: "#build-info",
+            to: [ "#weavestack" ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.weave.Bootstrap",
+                "fuchsia.weave.Stack",
+                "fuchsia.weave.StackProvider",
+            ],
+            from: "#weavestack",
+            to: [ "#appmgr" ],
+        },
+        {
+            protocol: [ "fuchsia.net.tun.Control" ],
+            from: "#network-tun",
+            to: [ "#weavestack" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#network-tun" ],
+        },
+    ],
+}

@@ -1012,6 +1012,96 @@
             },
             "message": "A `use from parent` declaration was found at `/core/vulkan_loader` for `fuchsia.memorypressure.Provider`, but no matching `offer` declaration was found in the parent"
           }
+        },
+        {
+          "using_node": "/core/appmgr",
+          "capability": "fuchsia.weave.Bootstrap",
+          "error": {
+            "error": {
+              "analyzer_model_error": {
+                "routing_error": {
+                  "use_from_parent_not_found": {
+                    "moniker": {
+                      "path": [
+                        {
+                          "name": "core",
+                          "collection": null,
+                          "rep": "core"
+                        },
+                        {
+                          "name": "appmgr",
+                          "collection": null,
+                          "rep": "appmgr"
+                        }
+                      ]
+                    },
+                    "capability_id": "fuchsia.weave.Bootstrap"
+                  }
+                }
+              }
+            },
+            "message": "A `use from parent` declaration was found at `/core/appmgr` for `fuchsia.weave.Bootstrap`, but no matching `offer` declaration was found in the parent"
+          }
+        },
+        {
+          "using_node": "/core/appmgr",
+          "capability": "fuchsia.weave.Stack",
+          "error": {
+            "error": {
+              "analyzer_model_error": {
+                "routing_error": {
+                  "use_from_parent_not_found": {
+                    "moniker": {
+                      "path": [
+                        {
+                          "name": "core",
+                          "collection": null,
+                          "rep": "core"
+                        },
+                        {
+                          "name": "appmgr",
+                          "collection": null,
+                          "rep": "appmgr"
+                        }
+                      ]
+                    },
+                    "capability_id": "fuchsia.weave.Stack"
+                  }
+                }
+              }
+            },
+            "message": "A `use from parent` declaration was found at `/core/appmgr` for `fuchsia.weave.Stack`, but no matching `offer` declaration was found in the parent"
+          }
+        },
+        {
+          "using_node": "/core/appmgr",
+          "capability": "fuchsia.weave.StackProvider",
+          "error": {
+            "error": {
+              "analyzer_model_error": {
+                "routing_error": {
+                  "use_from_parent_not_found": {
+                    "moniker": {
+                      "path": [
+                        {
+                          "name": "core",
+                          "collection": null,
+                          "rep": "core"
+                        },
+                        {
+                          "name": "appmgr",
+                          "collection": null,
+                          "rep": "appmgr"
+                        }
+                      ]
+                    },
+                    "capability_id": "fuchsia.weave.StackProvider"
+                  }
+                }
+              }
+            },
+            "message": "A `use from parent` declaration was found at `/core/appmgr` for `fuchsia.weave.StackProvider`, but no matching `offer` declaration was found in the parent"
+          }
         }
       ]
     }

@@ -6,7 +6,7 @@ import("//build/config.gni")
 import("//build/dist/resource.gni")
 import("//build/drivers.gni")
 
-import("//src/connectivity/weave/weavestack/weavestack_package.gni")
+import("//src/connectivity/weave/weavestack/weavestack_package_v2.gni")
 
 template("weavestack_lib") {
   source_set(target_name) {
@@ -70,7 +70,9 @@ resource("default_environment_schema") {
 }
 
 # The default weavestack package contains no applets.
-weavestack_package("weavestack") {
+weavestack_package_v2("weavestack") {
+  component_shard_file =
+      "//src/connectivity/weave/meta/weavestack.core_shard.cml"
 }
 
 config_data("config") {

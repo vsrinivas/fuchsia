@@ -745,6 +745,20 @@
             protocol: "fuchsia.update.Manager",
             path: "/svc_for_sys/fuchsia.update.Manager",
         },
+
+        // From weavestack
+        {
+            protocol: "fuchsia.weave.Bootstrap",
+            path: "/svc_for_sys/fuchsia.weave.Bootstrap",
+        },
+        {
+            protocol: "fuchsia.weave.Stack",
+            path: "/svc_for_sys/fuchsia.weave.Stack",
+        },
+        {
+            protocol: "fuchsia.weave.StackProvider",
+            path: "/svc_for_sys/fuchsia.weave.StackProvider",
+        },
     ],
     expose: [
         {
