@@ -414,6 +414,16 @@ PagerErrorStatus PageLoader::Worker::TransferChunkedPages(PageLoader::PageSuppli
     zx_status_t decompress_status;
     if (decompressor_client_) {
       ZX_DEBUG_ASSERT(sandbox_buffer_.is_valid());
+      // Try to commit all of the pages ahead of time to avoid page faulting on each one while
+      // decompressing.
+      if (zx_status_t status = sandbox_buffer_.op_range(
+              ZX_VMO_OP_COMMIT, 0, fbl::round_up(mapping.decompressed_length, kBlobfsBlockSize),
+              nullptr, 0);
+          status != ZX_OK) {
+        FX_LOGS(INFO) << "Failed to pre-commit sanboxed buffer pages: "
+                      << zx_status_get_string(status);
+        ZX_DEBUG_ASSERT(false);
+      }
       auto decommit_sandbox = fit::defer([this, length = mapping.decompressed_length]() {
         // Decommit pages in the sandbox buffer that might have been populated. All blobs share
         // the same sandbox buffer - this prevents data leaks between different blobs.
