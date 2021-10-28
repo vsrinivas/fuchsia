@@ -38,7 +38,7 @@ From [RFC-0131: Design principles of the FIDL wire format][rfc-0131]:
 > the expense of high level programming (or the reverse), we typically opt for
 > enabling low level programming.
 
-## Fewest features
+## Fewest features {#fewest-features}
 
 From [RFC-0050: Syntax revamp][rfc-0050-fewest-features]:
 
@@ -68,7 +68,7 @@ opposite decision of replacing static unions with extensible unions, but only
 after a careful analysis of the tradeoffs. Unlike with tables, the extra cost
 imposed by extensible unions is marginal or nonexistent in most cases.
 
-## Solve real problems
+## Solve real problems {#solve-real-problems}
 
 We design FIDL to solve real problems and address real needs, not imagined ones.
 We avoid designing a "solution in search of a problem".

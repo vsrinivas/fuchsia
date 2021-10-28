@@ -191,7 +191,7 @@ The following tasks need to be done:
     and resource types, and provide instructions for transitioning between them
     (if possible).
 
-## Backwards Compatibility
+## Backwards Compatibility {#backwards-compatibility}
 
 This proposal has no impact on ABI compatibility.
 
@@ -201,6 +201,11 @@ This proposal has no impact on ABI compatibility.
 > tables and flexible unions; this is not possible for value types if the
 > unknown member contains handles, so decoding must fail in this case. See the
 > [compatibility guide][compat-resource] for more details.
+>
+> *Amendment (Oct 2021).* After [RFC-0137: Discard unknown data in
+> FIDL][rfc-0137], bindings no longer store unknown data, so there is no more
+> edge case. The value/resource distinction thus has no impact on ABI
+> compatibility.
 
 Adding or removing a `resource` modifier is **neither source-compatible nor
 transitionable**,[^2] in the sense of
@@ -342,3 +347,4 @@ and Rust have this behaviour, as well as the IO monad in Haskell.
 [rfc-0033]: /docs/contribute/governance/rfcs/0033_handling_unknown_fields_strictness.md
 [rfc-0052]: /docs/contribute/governance/rfcs/0052_type_aliasing_named_types.md
 [rfc-0058]: /docs/contribute/governance/rfcs/0058_deprecated_attribute.md
+[rfc-0137]: /docs/contribute/governance/rfcs/0137_discard_unknown_data_in_fidl.md

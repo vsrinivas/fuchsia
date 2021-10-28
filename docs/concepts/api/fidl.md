@@ -1287,7 +1287,7 @@ object, but the server can use the `ZX_CHANNEL_PEER_CLOSED` signal on the
 protocol to trigger destruction of the object.  In the future, the protocol
 could potentially be extended with methods for controlling the created object.
 
-### Controlling settings-like data
+### Controlling settings-like data {#controlling-settings}
 
 Often, servers will expose settings that the client can modify. Prefer using a
 `table` to represent such settings. For instance, the `fuchsia.accessibility`

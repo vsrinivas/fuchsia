@@ -1760,6 +1760,19 @@
   submitted: '2021-09-30'
   reviewed: '2021-10-13'
 
+- name: 'RFC-0137'
+  title: 'Discard unknown data in FIDL'
+  short_description: 'Make FIDL bindings discard unknown data instead of preserving and proxying it.'
+  authors: ['mkember@google.com']
+  file: '0137_discard_unknown_data_in_fidl.md'
+  area: ['FIDL']
+  issue: ['85383']
+  gerrit_change_id: ['574045']
+  status: 'Accepted'
+  reviewers: ['pascallouis@google.com', 'yifeit@google.com']
+  submitted: '2021-08-25'
+  reviewed: '2021-10-13'
+
 - name: 'RFC-0138'
   title: 'Handling unknown interactions'
   short_description: 'We expand the FIDL semantics to allow peers to handle unknown interactions.'
@@ -1769,6 +1782,6 @@
   issue: ['']
   gerrit_change_id: ['534921']
   status: 'Accepted'
-  reviewers: ['abarth@google.com','ianloic@google.com','yifeit@google.com']
+  reviewers: ['abarth@google.com', 'ianloic@google.com', 'yifeit@google.com']
   submitted: '2021-05-25'
   reviewed: '2021-10-27'

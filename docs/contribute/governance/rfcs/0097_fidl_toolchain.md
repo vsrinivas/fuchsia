@@ -18,7 +18,7 @@ align to the requirements listed here. (This RFC has no authority beyond
 Fuchsia, and we therefore cannot mandate compliance, but can certainly strongly
 recommend it.)
 
-## Terminology
+## Terminology {#terminology}
 
 Before we start, let's define a few terms. A simplified view of the FIDL
 toolchain can be summarized as follows:

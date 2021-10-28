@@ -180,7 +180,7 @@ two representations of values - inline and out-of-line, depending on the type,
 and it might be surprising that there is a 4-byte threshold for switching
 behavior.
 
-### Alternative: 8-byte inline values
+### Alternative: 8-byte inline values {#alternative-8-byte}
 
 This RFC proposes inlining values that are 4-bytes or less.
 The reason for this is that it does not appear to be possible to inline
