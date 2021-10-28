@@ -175,6 +175,7 @@ int GetContext(int argc, const cmd_args* argv, uint32_t flags) {
     return 1;
   }
   context.backtrace.Print();
+  PrintFrame(stdout, context.frame);
 
   return 0;
 }
