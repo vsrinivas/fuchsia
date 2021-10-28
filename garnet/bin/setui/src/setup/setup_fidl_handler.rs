@@ -126,12 +126,14 @@ impl TryFrom<SetupRequest> for Job {
     fn try_from(item: SetupRequest) -> Result<Self, Self::Error> {
         #[allow(unreachable_patterns)]
         match item {
-            SetupRequest::Set { settings, responder } => match to_request(settings, true) {
-                Some(request) => {
-                    Ok(request::Work::new(SettingType::Setup, request, responder).into())
+            SetupRequest::Set { settings, reboot_device, responder } => {
+                match to_request(settings, reboot_device) {
+                    Some(request) => {
+                        Ok(request::Work::new(SettingType::Setup, request, responder).into())
+                    }
+                    None => Err(JobError::InvalidInput(Box::new(responder))),
                 }
-                None => Err(JobError::InvalidInput(Box::new(responder))),
-            },
+            }
             SetupRequest::Set2 { settings, reboot_device, responder } => {
                 match to_request(settings, reboot_device) {
                     Some(request) => {
@@ -196,13 +198,17 @@ mod tests {
     async fn try_from_set_converts_supplied_params() {
         const CONFIGURATION_INTERFACES: Option<fidl_fuchsia_settings::ConfigurationInterfaces> =
             Some(fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet);
+        const SHOULD_REBOOT: bool = true;
 
         let (proxy, server) =
             fidl::endpoints::create_proxy::<SetupMarker>().expect("should be able to create proxy");
-        let _fut = proxy.set(SetupSettings {
-            enabled_configuration_interfaces: CONFIGURATION_INTERFACES,
-            ..SetupSettings::EMPTY
-        });
+        let _fut = proxy.set(
+            SetupSettings {
+                enabled_configuration_interfaces: CONFIGURATION_INTERFACES,
+                ..SetupSettings::EMPTY
+            },
+            SHOULD_REBOOT,
+        );
         let mut request_stream: SetupRequestStream =
             server.into_stream().expect("should be able to convert to stream");
         let request = request_stream
