@@ -11,6 +11,9 @@ use {
     moniker::{AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
 };
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 static SPACER: &str = "  ";
 static CAPABILITY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
 
@@ -209,6 +212,7 @@ async fn get_capabilities(capability_dir: Directory) -> Result<Vec<String>> {
 }
 
 /// Additional information about components that are using the ELF runner
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Eq, PartialEq)]
 pub struct ElfRuntime {
     pub job_id: u32,
@@ -284,6 +288,7 @@ impl std::fmt::Display for ElfRuntime {
 }
 
 /// Additional information about components that are running
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Eq, PartialEq)]
 pub struct Execution {
     pub elf_runtime: Option<ElfRuntime>,
@@ -394,6 +399,7 @@ impl std::fmt::Display for Execution {
 }
 
 /// Additional information about components that are resolved
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Resolved {
     pub incoming_capabilities: Vec<String>,
     pub exposed_capabilities: Vec<String>,
@@ -440,6 +446,7 @@ impl std::fmt::Display for Resolved {
 }
 
 /// Basic information about a component for the `show` command.
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Component {
     pub moniker: PartialAbsoluteMoniker,
     pub url: String,

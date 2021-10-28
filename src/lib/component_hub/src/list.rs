@@ -9,6 +9,9 @@ use {
     std::str::FromStr,
 };
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 static SPACER: &str = "  ";
 static WIDTH_CS_TREE: usize = 19;
 
@@ -37,6 +40,7 @@ impl FromStr for ListFilter {
 }
 
 /// Basic information about a component for the `list` command.
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Component {
     // Name of the component. This gets printed out.
     pub name: String,
