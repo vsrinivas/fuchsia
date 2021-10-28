@@ -39,7 +39,7 @@ template("build_id_dir") {
   assert(defined(invoker.deps) || defined(invoker.public_deps),
          "deps or public_deps are required")
 
-  _all_ids_txt_path = "$target_gen_dir/all_ids_txt.txt"
+  _all_ids_txt_path = "$target_gen_dir/${target_name}/all_ids_txt.txt"
   _all_ids_txt_target_name = "${target_name}_ids_txt"
   _target_name_label = ":${target_name}"
 
