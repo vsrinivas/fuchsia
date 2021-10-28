@@ -269,4 +269,4 @@ parent offering these capabilities. Currently these are:
 [namespaces]: /docs/concepts/process/namespaces.md
 [ns-construction]: #constructing-a-components-namespace
 [protocol-open]: #a-component-opens-a-protocol
-[realm.fidl]: /sdk/fidl/fuchsia.sys2/realm.fidl
+[realm.fidl]: /sdk/fidl/fuchsia.component/realm.fidl

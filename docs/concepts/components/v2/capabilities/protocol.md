@@ -162,7 +162,7 @@ Fuchsia supports the following framework protocols:
 [capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
 [expose]: /docs/concepts/components/v2/component_manifests.md#expose
 [fidl-binder]: /sdk/fidl/fuchsia.component/binder.fidl
-[fidl-realm]: /sdk/fidl/fuchsia.sys2/realm.fidl
+[fidl-realm]: /sdk/fidl/fuchsia.component/realm.fidl
 [life-of-a-protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
 [offer]: /docs/concepts/components/v2/component_manifests.md#offer
 [routing-example]: /examples/components/routing
