@@ -24,7 +24,7 @@ Usage of symbolize:
   -symbol-cache string
     	path to directory to store cached debug binaries in
   -symbol-index string
-    	path to the symbol-index file (default "/usr/local/google/home/kasiahayden/.fuchsia/debug/symbol-index")
+    	path to the symbol-index file (default "~/.fuchsia/debug/symbol-index")
   -symbol-server value
     	a GCS URL or bucket name that contains debug binaries indexed by build ID
   -symbol-server-timeout duration
