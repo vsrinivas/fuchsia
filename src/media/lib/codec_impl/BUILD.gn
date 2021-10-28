@@ -52,6 +52,7 @@ source_set("codec_impl") {
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/cobalt/cpp:cobalt_logger",
     "//src/lib/fsl",
+    "//src/lib/metrics_buffer",
     "//src/media/lib/metrics",
     "//src/media/lib/mpsc_queue",
     "//zircon/public/lib/async-cpp",
