@@ -138,6 +138,82 @@ the [backtrace feature in Rust is unstable][rust_backtrace_stabilize] and
 even if enabled not all errors contain a backtrace; best to panic to avoid
 relying on external factors for backtraces.
 
+## Imports
+
+The following rules apply to styling imports.
+
+Employ one `use` statement per crate or direct child module. Combine children of
+those into the same use statement.
+
+```rust
+use child_mod::{Foo, Bar};
+use futures::{
+    stream::{self, futures_unordered::FuturesUnordered},
+    Future, Stream,
+};
+```
+
+Always alias imported-but-not-referenced traits to `_`. It avoids cluttering the
+namespace and informs the reader that the identifier is not referenced.
+
+```rust
+use futures::FutureExt as _;
+```
+
+Avoid bringing symbols from other crates into the scope. Especially if things
+all have similar names. Exceptions apply for widely used, self-explanatory `std`
+types like `HashMap`, `HashSet`, etc.
+
+Importing symbols from the same crate is always allowed, including to follow the
+pattern of declaring crate-local `Error` and `Result` types.
+
+Some crates rely heavily on external types. If usage is expected to be
+ubiquitous throughout the crate, it's acceptable to import those types as a
+means to reduce verbosity, as long as it doesn't introduce ambiguity.
+
+```rust
+// DON'T. Parsing this module quickly grows out of hand since it's hard to make
+// sense where types are coming from.
+mod confusing_mod {
+    use packet_formats::IpAddress;
+    use crate::IpAddr;
+    use fidl_fuchsia_net::Ipv4Address;
+}
+
+// DO. Import only types from this crate.
+mod happy_mod {
+    use crate::IpAddress;
+
+    fn foo() -> packet_formats::IpAddress { /* .. */ }
+    fn bar() -> IpAddress { /* .. */ }
+    fn baz() -> fidl_fuchsia_net::Ipv4Address { /* .. */ }
+}
+```
+
+Some well-known crates have adopted aliases or alias formation rules. Those are:
+
+- `fuchsia_async` may be aliased to `fasync`.
+- `fuchsia_zircon` may be aliased to `zx`.
+- `fidl_fuchsia_*` prefixes may be aliased to `f*`, e.g.:
+  - `use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;`
+  - `use fidl_fuchsia_net_routes as fnet_routes;`
+
+Importing `*` is strongly discouraged. Tests modules that import from `super`
+are acceptable exceptions; it is assumed that a test module will use most if not
+all symbols declared in its parent.
+
+Importing types in function bodies is always allowed, since it's easy to reason
+locally about where the types come from.
+
+```rust
+fn do_stuff() {
+    use some::deeply::nested::{Foo, bar::Bar};
+    let x = Foo::new();
+    let y = Bar::new();
+    /* ... */
+}
+```
+
 ## Process for changes to this page
 
 All are invited and welcome to propose changes to the patterns adopted by the
