@@ -181,7 +181,7 @@ fn run(opt: Opt) -> Result<()> {
         let tar_gz = File::create(tardir)?;
         let enc = GzEncoder::new(tar_gz, Compression::default());
         let mut tar = Builder::new(enc);
-        tar.append_dir_all(".", output_path.to_str().expect("Get file name of outdir"))?;
+        tar.append_dir_all("clidoc/", output_path.to_str().expect("Get file name of outdir"))?;
 
         info!("Cleaning up {:?}", output_path);
         fs::remove_dir_all(output_path)?
@@ -424,6 +424,6 @@ mod tests {
         let mut archive = Archive::new(tar);
         archive.unpack(".").expect("extract tar");
 
-        assert!(Path::new("tool_with_subcommands.md").exists());
+        assert!(Path::new("clidoc/tool_with_subcommands.md").exists());
     }
 }
