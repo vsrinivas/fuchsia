@@ -139,17 +139,6 @@ declare_args() {
   # Example value: "//build/images/recovery"
   recovery_label = "//build/images/zedboot"
 
-  # List of paths to board-specific tools to include in the build output.
-  #
-  # Most development tools can just be used in-tree and do not need to be
-  # included here. This arg is only meant for tools which may need to be
-  # distributed along with the build files, for example tools for flashing
-  # from SoC recovery mode.
-  #
-  # Assets included in this way are included best-effort only and do not form
-  # any kind of stable contract for users of the archive.
-  board_tools = []
-
   # Enable verbose output from `ffx assembly image`, this creates non-silent
   # build output and therefore should never be 'true' in checked-in configs, and
   # is meant solely for developer debugging.
