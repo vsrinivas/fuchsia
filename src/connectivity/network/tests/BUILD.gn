@@ -42,6 +42,7 @@ test("netstack_bsdsocket_c_api_test") {
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
     "//zircon/system/ulib/fbl",
   ]
 }

@@ -25,6 +25,7 @@
 #include <thread>
 
 #include <fbl/unique_fd.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "util.h"
@@ -3686,13 +3687,33 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
     auto [fd, expected_errno] = sockets[i];
     pollfd pfd = {
         .fd = fd,
-        .events = POLLIN,
+        // POLLOUT is masked because otherwise the `poll()` will return immediately,
+        // before shutdown is complete. POLLWRNORM and POLLRDNORM are masked because
+        // we do not yet support them on Fuchsia.
+        //
+        // TODO(https://fxbug.dev/73258): Support POLLWRNORM and POLLRDNORM on Fuchsia.
+        .events =
+            std::numeric_limits<decltype(pfd.events)>::max() & ~(POLLOUT | POLLWRNORM | POLLRDNORM),
     };
+
     // When the listening socket is closed, the peer would reset the connection.
     int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
     EXPECT_GE(n, 0) << strerror(errno);
     EXPECT_EQ(n, 1);
-    EXPECT_EQ(pfd.revents, POLLIN | POLLHUP | POLLERR);
+
+#if defined(__Fuchsia__)
+    EXPECT_EQ(pfd.revents, POLLERR | POLLHUP | POLLRDHUP | POLLIN);
+#else
+    // Prior to this commit[1], Linux sometimes returns a subset of the expected `revents`
+    // when the client `poll`s after the receipt of a TCP RST message.
+    //
+    // TODO(https://fxbug.dev/87541): Match Fuchsia after Linux version is >= 4.12.
+    //
+    // [1]: https://github.com/torvalds/linux/commit/3d4762639dd36a5f0f433f0c9d82e9743dc21a33
+    EXPECT_THAT(pfd.revents,
+                testing::AnyOf(testing::Eq(POLLERR), testing::Eq(POLLERR | POLLHUP | POLLRDHUP),
+                               testing::Eq(POLLERR | POLLHUP | POLLRDHUP | POLLIN)));
+#endif
 
     char c;
     EXPECT_EQ(ioMethod.executeIO(fd, &c, sizeof(c)), -1);
