@@ -48,3 +48,16 @@ sdk_source_set("driver_runtime_cpp") {
   ]
   deps = [ ":driver_runtime" ]
 }
+
+sdk_source_set("driver_runtime_internal") {
+  category = "partner"
+  sdk_name = "driver_runtime_internal"
+  sources = [ "include/lib/fdf/internal.h" ]
+  visibility = [
+    "//sdk/lib/driver_runtime/*",
+    "//src/devices/bin/driver_host/*",
+    "//src/devices/bin/driver_runtime/*",
+  ]
+  public_configs = [ ":include" ]
+  deps = [ "//zircon/system/ulib/zx" ]
+}

@@ -34,9 +34,6 @@ __BEGIN_CDECLS
 //
 typedef struct fdf_dispatcher fdf_dispatcher_t;
 
-// Defined in <lib/ddk/driver.h>
-struct zx_driver;
-
 // This flag allows parallel calls into callbacks set in the dispatcher.
 // Cannot be set in conjunction with FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS.
 #define FDF_DISPATCHER_OPTION_UNSYNCHRONIZED (1 << 0)

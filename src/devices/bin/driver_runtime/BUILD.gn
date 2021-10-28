@@ -21,12 +21,14 @@ source_set("driver_runtime_impl") {
     "arena.cc",
     "channel.cc",
     "dispatcher.cc",
+    "driver_context.cc",
     "handle.cc",
     "message_packet.cc",
   ]
   public_configs = [ ":include" ]
   public_deps = [ "//sdk/lib/driver_runtime" ]
   deps = [
+    "//sdk/lib/driver_runtime:driver_runtime_internal",
     "//src/devices/lib/log",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",
@@ -44,6 +46,7 @@ test("driver_runtime_test") {
   sources = [
     "arena_test.cc",
     "channel_test.cc",
+    "driver_context_test.cc",
     "handle_test.cc",
   ]
   deps = [

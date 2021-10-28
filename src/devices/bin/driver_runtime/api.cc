@@ -4,9 +4,11 @@
 
 #include <lib/fdf/arena.h>
 #include <lib/fdf/channel.h>
+#include <lib/fdf/internal.h>
 
 #include "src/devices/bin/driver_runtime/arena.h"
 #include "src/devices/bin/driver_runtime/channel.h"
+#include "src/devices/bin/driver_runtime/driver_context.h"
 #include "src/devices/bin/driver_runtime/handle.h"
 
 // fdf_arena_t interface
@@ -90,3 +92,7 @@ __EXPORT void fdf_handle_close(fdf_handle_t channel_handle) {
   // Drop the handle.
   handle->TakeOwnership();
 }
+
+__EXPORT void fdf_internal_push_driver(const void* driver) { driver_context::PushDriver(driver); }
+
+__EXPORT void fdf_internal_pop_driver() { driver_context::PopDriver(); }
