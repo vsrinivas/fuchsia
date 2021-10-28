@@ -40,7 +40,6 @@ fidl("fuchsia.sys2") {
     "decls/use_decl.fidl",
     "events.fidl",
     "lifecycle_controller.fidl",
-    "realm.fidl",
     "runtime/component.fidl",
     "runtime/component_resolver.fidl",
     "runtime/package.fidl",

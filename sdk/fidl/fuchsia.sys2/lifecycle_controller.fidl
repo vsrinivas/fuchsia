@@ -28,7 +28,7 @@ protocol LifecycleController {
         parent_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
         collection CollectionRef;
         decl ChildDecl;
-        args CreateChildArgs;
+        args fuchsia.component.CreateChildArgs;
     }) -> (struct {}) error fuchsia.component.Error;
 
     /// Destroys a dynamically-created component instance. This method is equivalent to

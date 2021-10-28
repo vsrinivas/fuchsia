@@ -54,7 +54,7 @@ async fn run_impl<W: std::io::Write>(
         ..fsys::ChildDecl::EMPTY
     };
     let create_result = lifecycle_controller
-        .create_child("./core", &mut collection, decl.clone(), fsys::CreateChildArgs::EMPTY)
+        .create_child("./core", &mut collection, decl.clone(), fcomponent::CreateChildArgs::EMPTY)
         .await
         .map_err(|e| ffx_error!("FIDL error while creating component instance: {:?}", e))?;
 
@@ -81,7 +81,7 @@ async fn run_impl<W: std::io::Write>(
                         "./core",
                         &mut collection,
                         decl.clone(),
-                        fsys::CreateChildArgs::EMPTY,
+                        fcomponent::CreateChildArgs::EMPTY,
                     )
                     .await
                     .map_err(|e| {

@@ -699,7 +699,7 @@ pub struct ScopedInstance {
     destroy_channel: Option<
         futures::channel::oneshot::Sender<
             Result<
-                fidl::client::QueryResponseFut<fidl_fuchsia_sys2::RealmDestroyChildResult>,
+                fidl::client::QueryResponseFut<fcomponent::RealmDestroyChildResult>,
                 anyhow::Error,
             >,
         >,

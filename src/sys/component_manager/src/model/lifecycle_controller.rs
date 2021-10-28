@@ -125,7 +125,7 @@ impl LifecycleController {
         parent_moniker: String,
         collection: fsys::CollectionRef,
         child_decl: fsys::ChildDecl,
-        child_args: fsys::CreateChildArgs,
+        child_args: fcomponent::CreateChildArgs,
     ) -> Result<(), fcomponent::Error> {
         let parent_component = self.resolve_component(&parent_moniker).await?;
         let parent_component = WeakComponentInstance::new(&parent_component);

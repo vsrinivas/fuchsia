@@ -7,9 +7,7 @@ use {
         capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         config::RuntimeConfig,
-        convert::{
-            child_args_to_fsys, child_decl_to_fsys, child_ref_to_fsys, collection_ref_to_fsys,
-        },
+        convert::{child_decl_to_fsys, child_ref_to_fsys, collection_ref_to_fsys},
         model::{
             component::{BindReason, ComponentInstance, WeakComponentInstance},
             error::ModelError,
@@ -40,18 +38,12 @@ use {
 };
 
 lazy_static! {
-    // Path for in-tree clients.
-    pub static ref INTERNAL_REALM_SERVICE: CapabilityName = "fuchsia.sys2.Realm".into();
-
     // Path for SDK clients.
     pub static ref SDK_REALM_SERVICE: CapabilityName = "fuchsia.component.Realm".into();
 }
 
 // Path in which to serve the implementation of the protocol.
 pub enum RequestPath {
-    // Serve protocol for in-tree clients, fuchsia.sys2.Realm.
-    Internal,
-
     // Serve protocol for SDK clients, fuchsia.sys2.Component.
     Sdk,
 }
@@ -96,15 +88,6 @@ impl CapabilityProvider for RealmCapabilityProvider {
         task_scope
             .add_task(async move {
                 let serve_result = match &self.path {
-                    RequestPath::Internal => {
-                        host.serve_for_internal_namespace(
-                            component,
-                            ServerEnd::<fsys::RealmMarker>::new(server_end)
-                                .into_stream()
-                                .expect("could not convert channel into stream"),
-                        )
-                        .await
-                    }
                     RequestPath::Sdk => {
                         host.serve_for_sdk_namespace(
                             component,
@@ -251,10 +234,8 @@ impl RealmCapabilityHost {
         )]
     }
 
-    serve_request_stream_fn!(internal, fsys);
     serve_request_stream_fn!(sdk, fcomponent);
 
-    list_children_fn!(internal, fsys, fsys);
     list_children_fn!(sdk, fcomponent, fdecl);
 
     async fn handle_sdk_request(
@@ -265,16 +246,11 @@ impl RealmCapabilityHost {
         match request {
             fcomponent::RealmRequest::CreateChild { responder, collection, decl, args } => {
                 let mut res = async {
-                    let child_args = child_args_to_fsys(args).map_err(|err| {
-                        log::warn!("Received invalid CreateChildArgs: {:?}", err);
-                        fcomponent::Error::InvalidArguments
-                    })?;
-
                     Self::create_child(
                         component,
                         collection_ref_to_fsys(collection),
                         child_decl_to_fsys(decl),
-                        child_args,
+                        args,
                     )
                     .await
                 }
@@ -304,43 +280,11 @@ impl RealmCapabilityHost {
         Ok(())
     }
 
-    async fn handle_internal_request(
-        &self,
-        request: fsys::RealmRequest,
-        component: &WeakComponentInstance,
-    ) -> Result<(), fidl::Error> {
-        match request {
-            fsys::RealmRequest::CreateChild { responder, collection, decl, args } => {
-                let mut res = Self::create_child(component, collection, decl, args).await;
-                responder.send(&mut res)?;
-            }
-            fsys::RealmRequest::DestroyChild { responder, child } => {
-                let mut res = Self::destroy_child(component, child).await;
-                responder.send(&mut res)?;
-            }
-            fsys::RealmRequest::ListChildren { responder, collection, iter } => {
-                let mut res = Self::list_internal_children(
-                    component,
-                    self.config.list_children_batch_size,
-                    collection,
-                    iter,
-                )
-                .await;
-                responder.send(&mut res)?;
-            }
-            fsys::RealmRequest::OpenExposedDir { responder, child, exposed_dir } => {
-                let mut res = Self::open_exposed_dir(component, child, exposed_dir).await;
-                responder.send(&mut res)?;
-            }
-        }
-        Ok(())
-    }
-
     pub async fn create_child(
         component: &WeakComponentInstance,
         collection: fsys::CollectionRef,
         child_decl: fsys::ChildDecl,
-        child_args: fsys::CreateChildArgs,
+        child_args: fcomponent::CreateChildArgs,
     ) -> Result<(), fcomponent::Error> {
         let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
         cm_fidl_validator::fsys::validate_child(&child_decl).map_err(|e| {
@@ -493,13 +437,7 @@ impl RealmCapabilityHost {
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         // If some other capability has already been installed, then there's nothing to
         // do here.
-        if capability_provider.is_none() && capability.matches_protocol(&INTERNAL_REALM_SERVICE) {
-            Ok(Some(Box::new(RealmCapabilityProvider::new(
-                scope_moniker,
-                self.clone(),
-                RequestPath::Internal,
-            )) as Box<dyn CapabilityProvider>))
-        } else if capability_provider.is_none() && capability.matches_protocol(&SDK_REALM_SERVICE) {
+        if capability_provider.is_none() && capability.matches_protocol(&SDK_REALM_SERVICE) {
             Ok(Some(Box::new(RealmCapabilityProvider::new(
                 scope_moniker,
                 self.clone(),
@@ -1425,6 +1363,5 @@ mod tests {
 
     }}}
 
-    realm_test_suite!(internal, fsys, fsys);
     realm_test_suite!(sdk, fcomponent, fdecl);
 }

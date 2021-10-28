@@ -60,7 +60,7 @@ async fn create_impl<W: std::io::Write>(
     let parent_moniker = format!(".{}", parent.to_string_without_instances());
 
     let result = lifecycle_controller
-        .create_child(&parent_moniker, &mut collection, decl, fsys::CreateChildArgs::EMPTY)
+        .create_child(&parent_moniker, &mut collection, decl, fcomponent::CreateChildArgs::EMPTY)
         .await
         .map_err(|e| ffx_error!("FIDL error while creating component instance: {:?}", e))?;
 

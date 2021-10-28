@@ -184,6 +184,7 @@ mod tests {
         cm_rust_testing::{
             ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
         },
+        fidl_fuchsia_component as fcomponent,
         maplit::hashmap,
         matches::assert_matches,
         moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
@@ -496,7 +497,7 @@ mod tests {
             let parent = model.bind(&vec!["a"].into(), &BindReason::Eager).await?;
             let child_decl = ChildDeclBuilder::new_lazy_child("b").build();
             parent
-                .add_dynamic_child("coll".into(), &child_decl, fsys::CreateChildArgs::EMPTY)
+                .add_dynamic_child("coll".into(), &child_decl, fcomponent::CreateChildArgs::EMPTY)
                 .await
                 .expect("failed to add child");
         }

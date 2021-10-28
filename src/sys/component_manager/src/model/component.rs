@@ -45,6 +45,7 @@ use {
     clonable_error::ClonableError,
     cm_rust::{self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl},
     fidl::endpoints::{self, Proxy, ServerEnd},
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol,
     fidl_fuchsia_io::{
@@ -545,7 +546,7 @@ impl ComponentInstance {
         self: &Arc<Self>,
         collection_name: String,
         child_decl: &ChildDecl,
-        child_args: fsys::CreateChildArgs,
+        child_args: fcomponent::CreateChildArgs,
     ) -> Result<fsys::Durability, ModelError> {
         let res = {
             match child_decl.startup {
@@ -576,7 +577,8 @@ impl ComponentInstance {
                 {
                     return Err(ModelError::dynamic_offers_not_allowed(&collection_name));
                 }
-                if let Err(err) = cm_fidl_validator::fsys::validate_dynamic_offers(dynamic_offers) {
+                if let Err(err) = cm_fidl_validator::fdecl::validate_dynamic_offers(dynamic_offers)
+                {
                     return Err(ModelError::dynamic_offer_invalid(err));
                 }
                 // TODO(fxbug.dev/84678): We need to check to make sure the
@@ -595,7 +597,7 @@ impl ComponentInstance {
                         // `target` to be set.
                         *offer_target_mut(&mut offer)
                             .expect("validation should have found unknown enum type") =
-                            Some(fsys::Ref::Child(fsys::ChildRef {
+                            Some(fdecl::Ref::Child(fdecl::ChildRef {
                                 name: child_decl.name.clone(),
                                 collection: Some(collection_name.clone()),
                             }));
@@ -1057,16 +1059,16 @@ impl ComponentInstance {
 
 /// Extracts a mutable reference to the `target` field of an `OfferDecl`, or
 /// `None` if the offer type is unknown.
-fn offer_target_mut(offer: &mut fsys::OfferDecl) -> Option<&mut Option<fsys::Ref>> {
+fn offer_target_mut(offer: &mut fdecl::Offer) -> Option<&mut Option<fdecl::Ref>> {
     match offer {
-        fsys::OfferDecl::Service(fsys::OfferServiceDecl { target, .. })
-        | fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl { target, .. })
-        | fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl { target, .. })
-        | fsys::OfferDecl::Storage(fsys::OfferStorageDecl { target, .. })
-        | fsys::OfferDecl::Runner(fsys::OfferRunnerDecl { target, .. })
-        | fsys::OfferDecl::Resolver(fsys::OfferResolverDecl { target, .. })
-        | fsys::OfferDecl::Event(fsys::OfferEventDecl { target, .. }) => Some(target),
-        fsys::OfferDeclUnknown!() => None,
+        fdecl::Offer::Service(fdecl::OfferService { target, .. })
+        | fdecl::Offer::Protocol(fdecl::OfferProtocol { target, .. })
+        | fdecl::Offer::Directory(fdecl::OfferDirectory { target, .. })
+        | fdecl::Offer::Storage(fdecl::OfferStorage { target, .. })
+        | fdecl::Offer::Runner(fdecl::OfferRunner { target, .. })
+        | fdecl::Offer::Resolver(fdecl::OfferResolver { target, .. })
+        | fdecl::Offer::Event(fdecl::OfferEvent { target, .. }) => Some(target),
+        fdecl::OfferUnknown!() => None,
     }
 }
 
