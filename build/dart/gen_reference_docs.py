@@ -176,7 +176,7 @@ def generate_docs(
             print(process.stderr)
             return 1
         # Clear the docdir first.
-        docs_dir = os.path.join(out_dir, "docs")
+        docs_dir = os.path.join(out_dir, "dartdoc")
         pkg_to_docs_path = os.path.join(package_dir, docs_dir)
         if os.path.exists(pkg_to_docs_path):
             walk_rmtree(pkg_to_docs_path)
@@ -221,7 +221,7 @@ def generate_docs(
             os.path.join(pkg_to_out, 'dartdoc_out'),
             'zip',
             root_dir=pkg_to_out,
-            base_dir='docs')
+            base_dir='dartdoc')
         walk_rmtree(pkg_to_docs_path)
     return 0
 

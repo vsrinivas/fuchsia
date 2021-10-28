@@ -186,7 +186,7 @@ import 'package:foo/foo.dart';
                                     '--exclude-packages', 'Dart,logging',
                                     '--output',
                                     os.path.join(out_dir,
-                                                 'docs'), '--format', 'md'
+                                                 'dartdoc'), '--format', 'md'
                                 ],
                                 cwd=package_dir,
                                 env={"PUB_CACHE": "fakedir"},
