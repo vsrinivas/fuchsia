@@ -40,14 +40,12 @@ constexpr zx_sched_deadline_params_t kTestThreadDeadlineParams = {
 constexpr uint32_t kTestThreadCpu = 1;
 static_assert(kTestThreadCpu < ZX_CPU_SET_MAX_CPUS);
 
-[[maybe_unused]]
 constexpr zx_cpu_set_t CpuNumToCpuSet(size_t cpu_num) {
   zx_cpu_set_t cpu_set{};
   cpu_set.mask[cpu_num / ZX_CPU_SET_BITS_PER_WORD] = 1 << (cpu_num % ZX_CPU_SET_BITS_PER_WORD);
   return cpu_set;
 }
 
-[[maybe_unused]]
 zx::status<zx_info_thread_stats_t> GetThreadStats(const zx::thread& thread) {
   zx_info_thread_stats_t info;
   const zx_status_t status =
@@ -367,11 +365,11 @@ TEST(SystemCpu, TargetPreemptionTimeAssert) {
   EXPECT_EQ(count, original_performance_info.size());
 
   const auto spin = [](const zx::duration spin_duration) {
-      const zx::time time_end = zx::clock::get_monotonic() + spin_duration;
-      zx::time now;
-      do {
-        now = zx::clock::get_monotonic();
-      } while (now < time_end);
+    const zx::time time_end = zx::clock::get_monotonic() + spin_duration;
+    zx::time now;
+    do {
+      now = zx::clock::get_monotonic();
+    } while (now < time_end);
   };
 
   ASSERT_OK(RunThread([&] {
@@ -402,8 +400,6 @@ TEST(SystemCpu, TargetPreemptionTimeAssert) {
                                            original_performance_info.size()));
 }
 
-// TODO(fxbug.dev/85846): Re-enable when we can limit the test to HW trybots.
-#if 0
 TEST(SystemCpu, ScaleBandwidth) {
   if (GetCpuCount() < kTestThreadCpu + 1) {
     return;
@@ -456,11 +452,10 @@ TEST(SystemCpu, ScaleBandwidth) {
 
     const zx::duration delta_runtime = total_runtime - expected_runtime;
 
-    // Accept +/-20% variation from the expected runtime.
-    const zx::duration max_delta = expected_runtime * 20 / 100;
-    const zx::duration min_delta = expected_runtime * -20 / 100;
-
-    EXPECT_LE(delta_runtime, max_delta);
+    // Accept at most -5% variation from the expected runtime. Emulated environments may produce
+    // much larger apparent runtimes than expected, however, this is acceptable since this test's
+    // goal is to detect receiving too little runtime.
+    const zx::duration min_delta = expected_runtime * -5 / 100;
     EXPECT_GE(delta_runtime, min_delta);
 
     // Restore the original performance scale.
@@ -470,4 +465,3 @@ TEST(SystemCpu, ScaleBandwidth) {
   });
   EXPECT_OK(run_thread_result);
 }
-#endif
