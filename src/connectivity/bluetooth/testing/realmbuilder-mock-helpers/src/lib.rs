@@ -4,8 +4,11 @@
 
 use {
     anyhow::Error,
-    fidl::endpoints::{create_proxy, DiscoverableProtocolMarker, ProtocolMarker, ServerEnd},
+    fdio,
+    fidl::endpoints::{create_proxy, DiscoverableProtocolMarker, ProtocolMarker, Proxy, ServerEnd},
+    fidl_fuchsia_device::{NameProviderMarker, NameProviderRequestStream},
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy},
+    fidl_fuchsia_stash::SecureStoreMarker,
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_component_test::mock::MockHandles,
@@ -138,5 +141,43 @@ where
     );
     let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
+    Ok(())
+}
+
+/// Exposes implementations of the the services used by bt-gap in the provided `ServiceFs`.
+pub fn provide_bt_gap_uses<Event>(
+    fs: &mut ServiceFs<ServiceObj<'_, ()>>,
+    sender: &mpsc::Sender<Event>,
+    handles: &MockHandles,
+) -> Result<(), Error>
+where
+    Event: From<SecureStoreMarker> + From<NameProviderRequestStream> + Send + 'static,
+{
+    let svc_dir = handles.clone_from_namespace("svc")?;
+    let sender_clone = Some(sender.clone());
+    let _ = fs.dir("svc").add_service_at(SecureStoreMarker::PROTOCOL_NAME, move |chan| {
+        let mut s = sender_clone.clone();
+        let svc_dir = Clone::clone(&svc_dir);
+        fasync::Task::local(async move {
+            info!(
+                "Proxying {} connection to real implementation",
+                SecureStoreMarker::PROTOCOL_NAME
+            );
+            fdio::service_connect_at(
+                svc_dir.as_channel().as_ref(),
+                SecureStoreMarker::PROTOCOL_NAME,
+                chan,
+            )
+            .expect("unable to forward secure store");
+            // We only care that the Secure Store is routed correctly, so if a client connects
+            // to it more than once, we only want to report it the first time.
+            if let Some(mut sender) = s.take() {
+                sender.send(Event::from(SecureStoreMarker)).await.expect("should send");
+            }
+        })
+        .detach();
+        None
+    });
+    add_fidl_service_handler::<NameProviderMarker, _>(fs, sender.clone());
     Ok(())
 }
