@@ -1,2 +1,42 @@
-// intentionally empty for soft migration
-{}
+{
+    children: [
+        {
+            name: "emergency",
+            url: "fuchsia-pkg://fuchsia.com/emergency#meta/emergency.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.location.position.EmergencyProvider",
+            from: "#emergency",
+            to: "#appmgr",
+        },
+        {
+            protocol: "fuchsia.location.sensor.WlanBaseStationWatcher",
+            from: "#emergency",
+            to: "#wlancfg",
+        },
+        {
+            protocol: "fuchsia.net.http.Loader",
+            from: "#network",
+            to: "#emergency",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#emergency" ],
+            subdir: "emergency",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#emergency",
+        },
+        {
+            protocol: "fuchsia.cobalt.LoggerFactory",
+            from: "#cobalt",
+            to: "#emergency",
+        },
+    ],
+}

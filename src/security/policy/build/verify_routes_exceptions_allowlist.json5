@@ -1102,7 +1102,69 @@
             },
             "message": "A `use from parent` declaration was found at `/core/appmgr` for `fuchsia.weave.StackProvider`, but no matching `offer` declaration was found in the parent"
           }
-        }
+        },
+        {
+          // Emergency location is not present in all products.
+          "using_node": "/core/appmgr",
+          "capability": "fuchsia.location.position.EmergencyProvider",
+          "error": {
+            "error": {
+              "analyzer_model_error": {
+                "routing_error": {
+                  "use_from_parent_not_found": {
+                    "moniker": {
+                      "path": [
+                        {
+                          "name": "core",
+                          "collection": null,
+                          "rep": "core"
+                        },
+                        {
+                          "name": "appmgr",
+                          "collection": null,
+                          "rep": "appmgr"
+                        }
+                      ]
+                    },
+                    "capability_id": "fuchsia.location.position.EmergencyProvider"
+                  }
+                }
+              }
+            },
+            "message": "A `use from parent` declaration was found at `/core/appmgr` for `fuchsia.location.position.EmergencyProvider`, but no matching `offer` declaration was found in the parent"
+          }
+        },
+        {
+          // Emergency location is not present in all products.
+          "using_node": "/core/wlancfg",
+          "capability": "fuchsia.location.sensor.WlanBaseStationWatcher",
+          "error": {
+            "error": {
+              "analyzer_model_error": {
+                "routing_error": {
+                  "use_from_parent_not_found": {
+                    "moniker": {
+                      "path": [
+                        {
+                          "name": "core",
+                          "collection": null,
+                          "rep": "core"
+                        },
+                        {
+                          "name": "wlancfg",
+                          "collection": null,
+                          "rep": "wlancfg"
+                        }
+                      ]
+                    },
+                    "capability_id": "fuchsia.location.sensor.WlanBaseStationWatcher"
+                  }
+                }
+              }
+            },
+            "message": "A `use from parent` declaration was found at `/core/wlancfg` for `fuchsia.location.sensor.WlanBaseStationWatcher`, but no matching `offer` declaration was found in the parent"
+          }
+        },
       ]
     }
   },

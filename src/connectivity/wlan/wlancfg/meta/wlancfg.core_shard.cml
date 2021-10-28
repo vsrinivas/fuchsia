@@ -29,11 +29,6 @@
             to: "#wlancfg",
         },
         {
-            protocol: [ "fuchsia.location.sensor.WlanBaseStationWatcher" ],
-            from: "#emergency",
-            to: "#wlancfg",
-        },
-        {
             protocol: [ "fuchsia.location.namedplace.RegulatoryRegionWatcher" ],
             from: "#regulatory_region",
             to: "#wlancfg",

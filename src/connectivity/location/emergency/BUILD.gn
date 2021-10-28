@@ -77,11 +77,6 @@ rustc_library("lib") {
   ]
 }
 
-# TODO: Remove. This is currently needed by vendor packages.
-group("pkg") {
-  deps = [ ":emergency" ]
-}
-
 core_shard("emergency-core-shard") {
   shard_file = "meta/emergency.core_shard.cml"
 }

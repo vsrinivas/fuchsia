@@ -93,10 +93,6 @@
             url: "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cm",
         },
         {
-            name: "emergency",
-            url: "fuchsia-pkg://fuchsia.com/emergency#meta/emergency.cm",
-        },
-        {
             name: "regulatory_region",
             url: "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cm",
         },
@@ -226,14 +222,6 @@
             as: "dev-light",
             to: "#setui_service",
             subdir: "class/light",
-        },
-        {
-            protocol: [
-                "fuchsia.location.position.EmergencyProvider",
-                "fuchsia.location.sensor.WlanBaseStationWatcher",
-            ],
-            from: "#emergency",
-            to: "#appmgr",
         },
         {
             protocol: [
@@ -370,7 +358,6 @@
             to: [
                 "#appmgr",
                 "#cobalt",
-                "#emergency",
             ],
         },
         {
@@ -502,12 +489,6 @@
             subdir: "forensics",
         },
         {
-            directory: "config-data",
-            from: "parent",
-            to: [ "#emergency" ],
-            subdir: "emergency",
-        },
-        {
             directory: "dev",
             from: "parent",
             as: "skip-block",
@@ -578,7 +559,6 @@
                 "#device_settings",
                 "#diagnostics-kcounter",
                 "#diagnostics-persistence",
-                "#emergency",
                 "#exceptions",
                 "#font_provider",
                 "#full-resolver",
@@ -1057,7 +1037,6 @@
             from: "#cobalt",
             to: [
                 "#appmgr",
-                "#emergency",
                 "#pkg-cache",
                 "#pkg-resolver",
                 "#sampler",

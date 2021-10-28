@@ -659,10 +659,6 @@
             path: "/svc_for_sys/fuchsia.location.position.EmergencyProvider",
         },
         {
-            protocol: "fuchsia.location.sensor.WlanBaseStationWatcher",
-            path: "/svc_for_sys/fuchsia.location.sensor.WlanBaseStationWatcher",
-        },
-        {
             protocol: "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
             path: "/svc_for_sys/fuchsia.location.namedplace.RegulatoryRegionConfigurator",
         },
