@@ -63,7 +63,7 @@ cobalt::CobaltConfig cfg = {
     .local_aggregation_backfill_days = 4,
 };
 
-cobalt::CobaltService cobalt_service(std::move(cfg));
+std::unique_ptr<cobalt::CobaltService> cobalt_service;
 
 cobalt::TimerManager timer_manager(nullptr);
 
@@ -79,7 +79,11 @@ zx_status_t fuzzer_init() {
         ::fidl::fuzzing::ServerProviderDispatcherMode::kFromCaller);
   }
 
-  return fuzzer_server_provider->Init(&timer_manager, &cobalt_service);
+  if (cobalt_service == nullptr) {
+    cobalt_service = std::make_unique<cobalt::CobaltService>(std::move(cfg));
+  }
+
+  return fuzzer_server_provider->Init(&timer_manager, cobalt_service.get());
 }
 
 zx_status_t fuzzer_connect(zx_handle_t channel_handle, async_dispatcher_t* dispatcher) {
