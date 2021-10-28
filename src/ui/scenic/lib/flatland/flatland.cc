@@ -386,7 +386,7 @@ void Flatland::RegisterViewBoundProtocols(fuchsia::ui::composition::ViewBoundPro
   }
 }
 
-void Flatland::ReleaseView(std::function<void(fuchsia::ui::views::ViewCreationToken)> callback) {
+void Flatland::ReleaseView() {
   if (!parent_link_) {
     error_reporter_->ERROR() << "ReleaseView failed, no existing parent Link";
     ReportBadOperationError();
@@ -411,7 +411,7 @@ void Flatland::ReleaseView(std::function<void(fuchsia::ui::views::ViewCreationTo
 
   // Delay the actual destruction of the Link until the next Present().
   pending_link_operations_.push_back(
-      [local_link = std::move(local_link), callback = std::move(callback)]() mutable {
+      [local_link = std::move(local_link), error_reporter = error_reporter_]() mutable {
         ViewCreationToken return_token;
 
         // If the link is still valid, return the original token. If not, create an orphaned
@@ -420,12 +420,13 @@ void Flatland::ReleaseView(std::function<void(fuchsia::ui::views::ViewCreationTo
         if (link_token.has_value()) {
           return_token.value = zx::channel(std::move(link_token.value()));
         } else {
+          error_reporter->ERROR() << "No valid ViewCreationToken found.";
           // |peer_token| immediately falls out of scope, orphaning |return_token|.
           zx::channel peer_token;
           zx::channel::create(0, &return_token.value, &peer_token);
         }
 
-        callback(std::move(return_token));
+        // TODO(fxbug.dev/81576): Consider returning |return_token| for re-linking..
       });
 }
 

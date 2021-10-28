@@ -33,6 +33,7 @@ protocol/member fuchsia.ui.composition/Flatland.OnNextFrameBegin -> (fuchsia.ui.
 protocol/member fuchsia.ui.composition/Flatland.Present(fuchsia.ui.composition/PresentArgs args)
 protocol/member fuchsia.ui.composition/Flatland.ReleaseImage(fuchsia.ui.composition/ContentId image_id)
 protocol/member fuchsia.ui.composition/Flatland.ReleaseTransform(fuchsia.ui.composition/TransformId transform_id)
+protocol/member fuchsia.ui.composition/Flatland.ReleaseView()
 protocol/member fuchsia.ui.composition/Flatland.ReleaseViewport(fuchsia.ui.composition/ContentId viewport_id) -> (fuchsia.ui.views/ViewportCreationToken token)
 protocol/member fuchsia.ui.composition/Flatland.RemoveChild(fuchsia.ui.composition/TransformId parent_transform_id,fuchsia.ui.composition/TransformId child_transform_id)
 protocol/member fuchsia.ui.composition/Flatland.SetClipBounds(fuchsia.ui.composition/TransformId transform_id,fuchsia.math/Rect rect)

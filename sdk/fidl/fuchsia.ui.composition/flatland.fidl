@@ -450,25 +450,6 @@ protocol Flatland {
         parent_viewport_watcher server_end:ParentViewportWatcher;
     });
 
-    // Releases the View, which disconnects this Flatland instance from its parent Flatland
-    // instance. It also returns the ViewCreationToken used to establish the View. This token can
-    // then be used to establish a new View with the Parent Viewport.
-    //
-    // To clear the existing content from the screen without releasing the current View, use
-    // SetRootTransform(0) instead.
-    //
-    // Despite having a return type, this function is still feed-forward Like [`CreateView`] and
-    // requires a call to [`Present`] to be executed. The ViewCreationToken will be returned after
-    // the presented operations have been executed.
-    // TODO(fxbug.dev/81576): Re-enable this method.
-    // ReleaseView() -> (resource struct {
-    //     token ViewCreationToken;
-    // });
-
-    /// This function will reset all state on this interface. This includes destroying all existing
-    /// View and Viewports without returning the associated Token to the caller.
-    Clear();
-
     // ***** Transforms *****
 
     /// Creates a new Transform node. Transforms are a hierarchical piece of a Flatland graph. They
@@ -637,7 +618,7 @@ protocol Flatland {
     /// The logical_size must have positive X and Y components.
     ///
     /// Zero is not a valid ContentId. All other values are valid, assuming they are not already
-    /// in use for another piece of Content (see [`RemoveViewport`] for more details).
+    /// in use for another piece of Content (see [`ReleaseViewport`] for more details).
     ///
     /// Lifecycle note. The lifetime of the ChildViewWatcher channel is bound by the peer
     /// ViewCreationToken. When the ViewCreationToken dies, this ChildViewWatcher channel is
@@ -736,6 +717,20 @@ protocol Flatland {
         transform_id TransformId;
     });
 
+    // Releases the View, which disconnects this Flatland instance from its parent Flatland
+    // instance.
+    //
+    // To clear the existing content from the screen without releasing the current View, use
+    // SetRootTransform(0) instead.
+    //
+    // Despite having a return type, this function is still feed-forward Like [`CreateView`] and
+    // requires a call to [`Present`] to be executed. The ViewCreationToken will be returned after
+    // the presented operations have been executed.
+    // TODO(fxbug.dev/81576): Consider re-linking. We can return the ViewCreationToken used to
+    // establish the View. This token can then be used to establish a new View with the parent
+    // Viewport.
+    ReleaseView();
+
     /// Releases a Viewport from the scene, even if the Viewport is still connected to a Transform.
     /// Unlike other resources, Viewports are garbage collected by the system during the next
     /// [`Present`] because a removed Viewport is guaranteed to provide no renderable content.
@@ -765,6 +760,12 @@ protocol Flatland {
     ReleaseImage(struct {
         image_id ContentId;
     });
+
+    /// This function will reset all state on this interface. This includes destroying all existing
+    /// View and Viewports without returning the associated Token to the caller.
+    Clear();
+
+    // ***** Debug operations *****
 
     /// Set debug name of the current client that can be used by Flatland to print as a prefix to
     /// logs to help client distinguish what is theirs. [`name`] can be an arbitrary string, but the

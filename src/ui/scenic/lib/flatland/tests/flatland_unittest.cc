@@ -1400,7 +1400,7 @@ TEST_F(FlatlandTest, MatrixReleasesWhenTransformNotReferenced) {
   EXPECT_TRUE(uber_struct->local_matrices.empty());
 }
 
-TEST_F(FlatlandTest, ParentViewportWatcherReplaceWithoutConnection) {
+TEST_F(FlatlandTest, CreateViewReplaceWithoutConnection) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   ViewportCreationToken parent_token;
@@ -1499,13 +1499,54 @@ TEST_F(FlatlandTest, ParentViewportWatcherUnbindsImmediatelyWithInvalidToken) {
   PRESENT(flatland, false);
 }
 
-// TODO(fxb/81576): Reenable.
-TEST_F(FlatlandTest, DISABLED_GraphUnlinkFailsWithoutLink) {
+TEST_F(FlatlandTest, ReleaseViewFailsWithoutLink) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  flatland->ReleaseView([](ViewCreationToken token) { EXPECT_TRUE(false); });
+  flatland->ReleaseView();
 
   PRESENT(flatland, false);
+}
+
+TEST_F(FlatlandTest, ReleaseViewSucceedsWithLink) {
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
+
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
+
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  flatland->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  PRESENT(flatland, true);
+
+  // Killing the peer token does not prevent the instance from releasing view.
+  parent_token.value.reset();
+  RunLoopUntilIdle();
+
+  flatland->ReleaseView();
+  PRESENT(flatland, true);
+}
+
+TEST_F(FlatlandTest, CreateViewSuccceedsAfterReleaseView) {
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
+
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
+
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  flatland->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  PRESENT(flatland, true);
+
+  // Killing the peer token does not prevent the instance from releasing view.
+  parent_token.value.reset();
+  RunLoopUntilIdle();
+
+  ViewportCreationToken parent_token2;
+  ViewCreationToken child_token2;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token2.value, &child_token2.value));
+
+  flatland->CreateView(std::move(child_token2), parent_viewport_watcher.NewRequest());
+  PRESENT(flatland, true);
 }
 
 // TODO(fxb/81576): Reenable.
@@ -1525,8 +1566,8 @@ TEST_F(FlatlandTest, DISABLED_GraphUnlinkReturnsOrphanedTokenOnParentDeath) {
   RunLoopUntilIdle();
 
   ViewCreationToken graph_token;
-  flatland->ReleaseView(
-      [&graph_token](ViewCreationToken token) { graph_token = std::move(token); });
+  // flatland->ReleaseView(
+  //     [&graph_token](ViewCreationToken token) { graph_token = std::move(token); });
   PRESENT(flatland, true);
 
   EXPECT_TRUE(graph_token.value.is_valid());
@@ -1554,8 +1595,8 @@ TEST_F(FlatlandTest, DISABLED_GraphUnlinkReturnsOriginalToken) {
   PRESENT(flatland, true);
 
   ViewCreationToken graph_token;
-  flatland->ReleaseView(
-      [&graph_token](ViewCreationToken token) { graph_token = std::move(token); });
+  // flatland->ReleaseView(
+  //     [&graph_token](ViewCreationToken token) { graph_token = std::move(token); });
 
   RunLoopUntilIdle();
 
@@ -2928,7 +2969,8 @@ TEST_F(FlatlandTest, DISABLED_RelinkUnlinkedParentSameToken) {
 
   // Unlink the parent on child.
   ViewCreationToken graph_token;
-  child->ReleaseView([&graph_token](ViewCreationToken token) { graph_token = std::move(token); });
+  // child->ReleaseView([&graph_token](ViewCreationToken token) { graph_token = std::move(token);
+  // });
   PRESENT(child, true);
   EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
