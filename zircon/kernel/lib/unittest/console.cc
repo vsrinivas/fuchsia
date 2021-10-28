@@ -24,6 +24,7 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <vm/vm_aspace.h>
@@ -161,6 +162,9 @@ bool run_testcase_in_thread(const unittest_testcase_registration_t* testcase) {
   }
   aspace->AttachToThread(t);
 
+  const cpu_mask_t online_mask_before = mp_get_online_mask();
+  const cpu_mask_t active_mask_before = mp_get_active_mask();
+
   t->Resume();
   int success = 0;
   zx_status_t status = t->Join(&success, ZX_TIME_INFINITE);
@@ -168,6 +172,15 @@ bool run_testcase_in_thread(const unittest_testcase_registration_t* testcase) {
     unittest_printf("failed to join unittest thread: %d\n", status);
     return false;
   }
+
+  // Make sure that |testcase| didn't change the online or active state of any CPUs.
+  const cpu_mask_t online_mask_after = mp_get_online_mask();
+  const cpu_mask_t active_mask_after = mp_get_active_mask();
+  ASSERT_MSG(online_mask_after == online_mask_before, "name=%s after=0x%08x before=0x%08x\n",
+             testcase->name, online_mask_after, online_mask_after);
+  ASSERT_MSG(active_mask_after == active_mask_before, "name=%s after=0x%08x before=0x%08x\n",
+             testcase->name, active_mask_after, active_mask_after);
+
   return success;
 }
 
