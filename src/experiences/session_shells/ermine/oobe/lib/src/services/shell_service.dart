@@ -69,6 +69,37 @@ class ShellService {
       ..connectToService(viewProvider)
       ..connectToService(_graphicalPresenter);
 
+    // TODO(fxbug.dev/86450): Flip this to use Flatland instead of legacy Scenic
+    // Gfx API.
+    const useFlatland = false;
+
+    // ignore: dead_code
+    if (useFlatland) {
+      final viewTokens = ChannelPair();
+      assert(viewTokens.status == ZX.OK);
+      final viewportCreationToken =
+          ViewportCreationToken(value: viewTokens.first!);
+      final viewCreationToken = ViewCreationToken(value: viewTokens.second!);
+
+      final createViewArgs =
+          CreateView2Args(viewCreationToken: viewCreationToken);
+      viewProvider.createView2(createViewArgs);
+      viewProvider.ctrl.close();
+
+      // TODO(fxbug.dev/86649): We should let the child send us the one they
+      // minted for Flatland. Once that is available, we can call requestFocus()
+      // on onViewStateChanged.
+      return _fuchsiaViewConnection = FuchsiaViewConnection.flatland(
+        viewportCreationToken,
+        onViewStateChanged: (_, state) {
+          // Wait until ermine shell has rendered before focusing it.
+          if (state == true && !_focusRequested) {
+            _focusRequested = true;
+          }
+        },
+      );
+    }
+
     final viewTokens = EventPairPair();
     assert(viewTokens.status == ZX.OK);
     final viewHolderToken = ViewHolderToken(value: viewTokens.first!);
