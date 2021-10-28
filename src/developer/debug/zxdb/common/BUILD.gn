@@ -85,6 +85,7 @@ source_set("tests") {
     "address_ranges_unittest.cc",
     "cache_dir_unittest.cc",
     "completion_callback_unittest.cc",
+    "curl_unittest.cc",
     "data_extractor_unittest.cc",
     "err_or_unittest.cc",
     "file_util_unittest.cc",

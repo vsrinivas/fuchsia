@@ -260,7 +260,7 @@ Curl::Curl() {
 }
 
 Curl::~Curl() {
-  FX_DCHECK(!multi_cb_);
+  // multi_cb_ is allowed to be not null here, e.g., a perform is in progress.
   curl_easy_cleanup(curl_);
 }
 

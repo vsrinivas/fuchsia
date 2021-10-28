@@ -56,16 +56,18 @@ void MessageLoopPoll::Cleanup() {
   // Force unregister our watch before cleaning up current MessageLoop.
   wakeup_pipe_watch_ = WatchHandle();
 
-  // Destruct the FDWatcher first, because they may call StopWatching and expect the key is still
-  // there.
+  // Delay calling watches_.clear() until the very end, because the destructors of the FDWatchers,
+  // timers and tasks may call StopWatching() and expect the key is still there.
   std::vector<FDWatcher> to_delete;
   to_delete.reserve(watches_.size());
   for (auto& [key, info] : watches_) {
     to_delete.push_back(std::move(info.watcher));
   }
   to_delete.clear();
-  watches_.clear();
   MessageLoop::Cleanup();
+
+  // Do this at last.
+  watches_.clear();
 }
 
 MessageLoop::WatchHandle MessageLoopPoll::WatchFD(WatchMode mode, int fd, FDWatcher watcher) {
