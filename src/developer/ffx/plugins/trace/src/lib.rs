@@ -6,11 +6,12 @@ use {
     anyhow::{anyhow, Result},
     errors::ffx_bail,
     ffx_core::ffx_plugin,
-    ffx_trace_args::{TraceCommand, TraceSubCommand},
+    ffx_trace_args::{TraceCommand, TraceSubCommand, DEFAULT_CATEGORIES},
     ffx_writer::Writer,
     fidl_fuchsia_developer_bridge::{self as bridge, RecordingError, TracingProxy},
     fidl_fuchsia_tracing_controller::{ControllerProxy, KnownCategory, ProviderInfo, TraceConfig},
     serde::{Deserialize, Serialize},
+    std::collections::HashSet,
     std::path::{Component, PathBuf},
 };
 
@@ -24,15 +25,29 @@ enum TraceOutput {
     ListProviders(Vec<TraceProviderInfo>),
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+// These fields are arranged this way because deriving Ord uses field declaration order.
+#[derive(Debug, Deserialize, Serialize, PartialOrd, Ord, PartialEq, Eq)]
 struct TraceKnownCategory {
+    /// The name of the category.
     name: String,
+    /// Whether this category is returned by the GetKnownCategories FIDL call.
+    known: bool,
+    /// Whether this category is a default category used when starting a trace.
+    default: bool,
+    /// A short, possibly empty description of this category.
     description: String,
 }
 
 impl From<KnownCategory> for TraceKnownCategory {
     fn from(category: KnownCategory) -> Self {
-        Self { name: category.name, description: category.description }
+        let default = DEFAULT_CATEGORIES.iter().any(|&c| c == category.name);
+        Self { name: category.name, description: category.description, default, known: true }
+    }
+}
+
+impl From<&'static str> for TraceKnownCategory {
+    fn from(name: &'static str) -> Self {
+        Self { name: name.to_string(), description: String::new(), known: false, default: true }
     }
 }
 
@@ -84,15 +99,28 @@ pub async fn trace(
         TraceSubCommand::ListCategories(_) => {
             let categories = handle_fidl_error(controller.get_known_categories().await)?;
             if writer.is_machine() {
-                let categories = categories
+                let mut categories = categories
                     .into_iter()
                     .map(TraceKnownCategory::from)
                     .collect::<Vec<TraceKnownCategory>>();
+
+                let names = categories.iter().map(|c| c.name.as_str()).collect::<HashSet<&str>>();
+                let mut extra_categories = DEFAULT_CATEGORIES
+                    .iter()
+                    .filter_map(|&c| if !names.contains(c) { Some(c.into()) } else { None })
+                    .collect::<Vec<_>>();
+                categories.append(&mut extra_categories);
+                categories.sort();
+
                 writer.machine(&TraceOutput::ListCategories(categories))?;
             } else {
                 writer.line("Known Categories:")?;
                 for category in &categories {
-                    writer.line(format!("- {} - {}", category.name, category.description,))?;
+                    writer.line(format!("- {} - {}", category.name, category.description))?;
+                }
+                writer.line("\nDefault Categories:")?;
+                for category in DEFAULT_CATEGORIES {
+                    writer.line(format!("- {}", category))?;
                 }
             }
         }
@@ -330,7 +358,24 @@ mod tests {
     }
 
     fn fake_trace_known_categories() -> Vec<TraceKnownCategory> {
-        fake_known_categories().into_iter().map(TraceKnownCategory::from).collect()
+        let mut categories =
+            DEFAULT_CATEGORIES.iter().cloned().map(TraceKnownCategory::from).collect::<Vec<_>>();
+        categories.sort();
+
+        let mut fake_known =
+            fake_known_categories().into_iter().map(TraceKnownCategory::from).collect::<Vec<_>>();
+        // This inserts the data from fake_known_categories above into the vector of
+        // DEFAULT_CATEGORIES in the right places to make the final output sorted by name.
+        // fake_known[0] is input which is in the list already so we replace it
+        let i = categories.iter().position(|c| c.name == fake_known[0].name).unwrap();
+        categories[i] = fake_known.remove(0);
+        // These three go before kernel:meta which is in the list, so we find the insertion point
+        // and then put these three in place.
+        let j = categories.iter().position(|c| c.name == "kernel:meta").unwrap();
+        categories.insert(j, fake_known.remove(0));
+        categories.insert(j + 1, fake_known.remove(0));
+        categories.insert(j + 2, fake_known.remove(0));
+        categories
     }
 
     fn fake_provider_infos() -> Vec<trace::ProviderInfo> {
@@ -372,6 +417,13 @@ mod tests {
         trace(proxy, controller, writer, cmd).await.unwrap();
     }
 
+    fn default_categories_expected_output() -> String {
+        std::iter::once("Default Categories:".to_string())
+            .chain(DEFAULT_CATEGORIES.iter().map(|&c| format!("- {}", c)))
+            .collect::<Vec<String>>()
+            .join("\n")
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_categories() {
         let writer = Writer::new_test(None);
@@ -381,12 +433,16 @@ mod tests {
         )
         .await;
         let output = writer.test_output().unwrap();
-        let want = "Known Categories:\n\
+        let known_categories_expected_output = "Known Categories:\n\
                    - input - Input system\n\
                    - kernel - All kernel trace events\n\
                    - kernel:arch - Kernel arch events\n\
-                   - kernel:ipc - Kernel ipc events\n"
-            .to_string();
+                   - kernel:ipc - Kernel ipc events";
+        let want = format!(
+            "{}\n\n{}\n",
+            known_categories_expected_output,
+            default_categories_expected_output()
+        );
         assert_eq!(want, output);
     }
 

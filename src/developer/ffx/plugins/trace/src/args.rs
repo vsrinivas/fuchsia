@@ -40,7 +40,31 @@ pub type TraceCategories = Vec<String>;
 
 // This list should be kept in sync with DEFAULT_CATEGORIES in
 // //src/testing/sl4f/src/tracing/facade.rs as well as the help text below
-static DEFAULT_CATEGORIES: &str = "app,audio,benchmark,blobfs,gfx,input,kernel:meta,kernel:sched,ledger,magma,minfs,modular,view,flutter,dart,dart:compiler,dart:dart,dart:debugger,dart:embedder,dart:gc,dart:isolate,dart:profiler,dart:vm";
+pub const DEFAULT_CATEGORIES: &[&'static str] = &[
+    "app",
+    "audio",
+    "benchmark",
+    "blobfs",
+    "gfx",
+    "input",
+    "kernel:meta",
+    "kernel:sched",
+    "ledger",
+    "magma",
+    "minfs",
+    "modular",
+    "view",
+    "flutter",
+    "dart",
+    "dart:compiler",
+    "dart:dart",
+    "dart:debugger",
+    "dart:embedder",
+    "dart:gc",
+    "dart:isolate",
+    "dart:profiler",
+    "dart:vm",
+];
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Record a trace
@@ -66,7 +90,7 @@ pub struct Start {
     /// dart:gc,dart:isolate,dart:profiler,dart:vm"
     #[argh(
         option,
-        default = "parse_categories(DEFAULT_CATEGORIES).unwrap()",
+        default = "DEFAULT_CATEGORIES.into_iter().cloned().map(String::from).collect()",
         from_str_fn(parse_categories)
     )]
     pub categories: TraceCategories,
@@ -100,6 +124,7 @@ fn parse_categories(value: &str) -> Result<TraceCategories, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    const START_CMD_NAME: &'static [&'static str] = &["start"];
 
     #[test]
     fn test_parse_categories() {
@@ -112,5 +137,16 @@ mod tests {
 
         assert_eq!(parse_categories(&""), Err("no categories specified".to_string()));
         assert_eq!(parse_categories(&"a,,b"), Err("empty category specified".to_string()));
+    }
+
+    #[test]
+    fn test_default_categories() {
+        // This tests the code in a string that is passed as a default to argh. It is compile
+        // checked because of the generated code, but this ensures that it is functionally correct.
+        let cmd = Start::from_args(START_CMD_NAME, &[]).unwrap();
+        assert_eq!(cmd.categories.len(), DEFAULT_CATEGORIES.len());
+        for category in DEFAULT_CATEGORIES {
+            assert!(cmd.categories.iter().any(|c| c == category));
+        }
     }
 }
