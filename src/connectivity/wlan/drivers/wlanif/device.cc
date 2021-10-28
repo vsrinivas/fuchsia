@@ -466,7 +466,13 @@ void Device::ResetReq(wlan_mlme::ResetRequest req) {
 }
 
 void Device::StartReq(wlan_mlme::StartRequest req) {
-  SetEthernetStatusUnlocked(true);
+  {
+    std::lock_guard<std::mutex> lock(lock_);
+    if (eth_online_) {
+      SendStartConfLocked(WLAN_START_RESULT_BSS_ALREADY_STARTED_OR_JOINED);
+      return;
+    }
+  }
 
   wlanif_start_req_t impl_req = {};
 
@@ -928,16 +934,7 @@ void Device::StartConf(const wlanif_start_confirm_t* resp) {
     SetEthernetStatusLocked(true);
   }
 
-  if (binding_ == nullptr) {
-    return;
-  }
-
-  wlan_mlme::StartConfirm fidl_resp;
-
-  // result_code
-  fidl_resp.result_code = ConvertStartResultCode(resp->result_code);
-
-  binding_->events().StartConf(std::move(fidl_resp));
+  SendStartConfLocked(resp->result_code);
 }
 
 void Device::StopConf(const wlanif_stop_confirm_t* resp) {
@@ -1182,6 +1179,19 @@ void Device::EthRecv(const uint8_t* data, size_t length, uint32_t flags) {
   if (eth_started_) {
     ethernet_ifc_recv(&ethernet_ifc_, data, length, flags);
   }
+}
+
+void Device::SendStartConfLocked(wlan_start_result_t result_code) {
+  if (binding_ == nullptr) {
+    return;
+  }
+
+  wlan_mlme::StartConfirm fidl_resp;
+
+  // result_code
+  fidl_resp.result_code = ConvertStartResultCode(result_code);
+
+  binding_->events().StartConf(fidl_resp);
 }
 
 }  // namespace wlanif

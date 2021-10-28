@@ -7,8 +7,12 @@
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl_test_base.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/decoder.h>
 #include <lib/fidl/cpp/message.h>
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <functional>
 #include <memory>
@@ -304,7 +308,7 @@ TEST(AssocReqHandling, MultipleAssocReq) {
   device->Unbind();
 }
 
-struct EthernetTestFixture : public ::testing::Test {
+struct EthernetTestFixture : public ::gtest::TestLoopFixture {
   void TestEthernetAgainstRole(wlan_info_mac_role_t role);
   void InitDeviceWithRole(wlan_info_mac_role_t role);
   void SetEthernetOnline(uint32_t expected_status = ETHERNET_STATUS_ONLINE) {
@@ -312,7 +316,23 @@ struct EthernetTestFixture : public ::testing::Test {
         .state = ::fuchsia::wlan::mlme::ControlledPortState::OPEN});
     ASSERT_EQ(ethernet_status_, expected_status);
   }
-  void TearDown() override { device_->Unbind(); }
+  void TearDown() override {
+    device_->Unbind();
+    TestLoopFixture::TearDown();
+  }
+
+  zx_status_t HookStart(const wlanif_impl_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel) {
+    auto [new_sme, new_mlme] = make_channel();
+
+    zx_status_t status = mlme_.Bind(std::move(new_sme), dispatcher());
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    wlanif_impl_ifc_ = *ifc;
+    *out_mlme_channel = new_mlme.release();
+    return ZX_OK;
+  }
 
   std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
   wlanif_impl_protocol_ops_t proto_ops_ = EmptyProtoOps();
@@ -321,32 +341,39 @@ struct EthernetTestFixture : public ::testing::Test {
   wlanif::Device* device_{new wlanif::Device(parent_.get(), proto_)};
   ethernet_ifc_protocol_ops_t eth_ops_{};
   ethernet_ifc_protocol_t eth_proto_ = {.ops = &eth_ops_, .ctx = this};
+  wlanif_impl_ifc_protocol_t wlanif_impl_ifc_{};
   wlan_info_mac_role_t role_ = WLAN_INFO_MAC_ROLE_CLIENT;
   uint32_t ethernet_status_{0};
   uint32_t driver_features_{0};
+  std::function<void(const wlanif_start_req_t*)> start_req_cb_;
 
-  zx::channel mlme_;
+  fuchsia::wlan::mlme::MLMEPtr mlme_;
 };
 
 #define ETH_DEV(c) static_cast<EthernetTestFixture*>(c)
 static zx_status_t hook_start(void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
                               zx_handle_t* out_mlme_channel) {
-  auto [new_sme, new_mlme] = make_channel();
-  ETH_DEV(ctx)->mlme_ = std::move(new_mlme);
-  *out_mlme_channel = new_sme.release();
-  return ZX_OK;
+  return ETH_DEV(ctx)->HookStart(ifc, out_mlme_channel);
 }
+
 static void hook_query(void* ctx, wlanif_query_info_t* info) {
   info->role = ETH_DEV(ctx)->role_;
   info->driver_features = ETH_DEV(ctx)->driver_features_;
 }
 static void hook_eth_status(void* ctx, uint32_t status) { ETH_DEV(ctx)->ethernet_status_ = status; }
+
+static void hook_start_req(void* ctx, const wlanif_start_req_t* req) {
+  if (ETH_DEV(ctx)->start_req_cb_) {
+    ETH_DEV(ctx)->start_req_cb_(req);
+  }
+}
 #undef ETH_DEV
 
 void EthernetTestFixture::InitDeviceWithRole(wlan_info_mac_role_t role) {
   role_ = role;
   proto_ops_.start = hook_start;
   proto_ops_.query = hook_query;
+  proto_ops_.start_req = hook_start_req;
   eth_proto_.ops->status = hook_eth_status;
   ASSERT_EQ(device_->Bind(), ZX_OK);
 }
@@ -421,4 +448,94 @@ TEST_F(EthernetTestFixture, SeparateDataPlane) {
   ethernet_impl_protocol_t eth_impl_proto;
   EXPECT_NE(device_get_protocol(children.front().get(), ZX_PROTOCOL_ETHERNET_IMPL, &eth_impl_proto),
             ZX_OK);
+}
+
+TEST_F(EthernetTestFixture, ApOfflineUntilStartConf) {
+  start_req_cb_ = [this](const wlanif_start_req_t* req) {
+    // Interface should not be online until start has been confirmed.
+    ASSERT_EQ(ethernet_status_, 0u);
+    wlanif_start_confirm_t response{.result_code = WLAN_START_RESULT_SUCCESS};
+    wlanif_impl_ifc_start_conf(&wlanif_impl_ifc_, &response);
+  };
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_AP);
+  device_->EthStart(&eth_proto_);
+
+  // Provide our own callback for StartConf to verify the result.
+  std::optional<wlan_mlme::StartResultCode> start_result;
+  mlme_.events().StartConf = [&](::fuchsia::wlan::mlme::StartConfirm start_conf) {
+    start_result = start_conf.result_code;
+  };
+
+  ::fuchsia::wlan::mlme::StartRequest req;
+  device_->StartReq(req);
+  // Now that the StartConf is received the interface should be online.
+  ASSERT_EQ(ethernet_status_, ETHERNET_STATUS_ONLINE);
+
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(start_result.has_value());
+  ASSERT_EQ(start_result.value(), wlan_mlme::StartResultCode::SUCCESS);
+}
+
+TEST_F(EthernetTestFixture, ApOfflineOnFailedStartConf) {
+  start_req_cb_ = [this](const wlanif_start_req_t* req) {
+    // Send a failed start confirm.
+    wlanif_start_confirm_t response{.result_code = WLAN_START_RESULT_NOT_SUPPORTED};
+    wlanif_impl_ifc_start_conf(&wlanif_impl_ifc_, &response);
+  };
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_AP);
+  device_->EthStart(&eth_proto_);
+
+  // Provide our own callback for StartConf to verify  theresult.
+  std::optional<wlan_mlme::StartResultCode> start_result;
+  mlme_.events().StartConf = [&](::fuchsia::wlan::mlme::StartConfirm start_conf) {
+    start_result = start_conf.result_code;
+  };
+
+  ::fuchsia::wlan::mlme::StartRequest req;
+  device_->StartReq(req);
+  ASSERT_EQ(ethernet_status_, 0u);
+
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(start_result.has_value());
+  ASSERT_EQ(start_result.value(), wlan_mlme::StartResultCode::NOT_SUPPORTED);
+}
+
+TEST_F(EthernetTestFixture, ApSecondStartDoesNotCallImpl) {
+  int ap_start_reqs = 0;
+  // Verify that if a request is made to start an AP while an AP is already running then the
+  // wlanif driver will not forward that request to the wlanif_impl.
+  start_req_cb_ = [&](const wlanif_start_req_t* req) {
+    ++ap_start_reqs;
+    wlanif_start_confirm_t response{.result_code = WLAN_START_RESULT_SUCCESS};
+    wlanif_impl_ifc_start_conf(&wlanif_impl_ifc_, &response);
+  };
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_AP);
+  device_->EthStart(&eth_proto_);
+
+  // Provide our own callback for StartConf to verify results.
+  std::vector<wlan_mlme::StartResultCode> start_results;
+  mlme_.events().StartConf = [&](::fuchsia::wlan::mlme::StartConfirm start_conf) {
+    start_results.push_back(start_conf.result_code);
+  };
+
+  ::fuchsia::wlan::mlme::StartRequest req;
+  device_->StartReq(req);
+  ASSERT_EQ(ap_start_reqs, 1);
+  ASSERT_EQ(ethernet_status_, ETHERNET_STATUS_ONLINE);
+
+  // Make a second request, the start request should not propagate to our protocol implementation.
+  device_->StartReq(req);
+  // The number of requests should stay at one and the interface should remain online.
+  ASSERT_EQ(ap_start_reqs, 1);
+  ASSERT_EQ(ethernet_status_, ETHERNET_STATUS_ONLINE);
+
+  RunLoopUntilIdle();
+
+  // Verify that StartConf was called twice and that the first time succeeded and the second time
+  // indicated that the AP was already started.
+  ASSERT_EQ(start_results.size(), 2u);
+  ASSERT_EQ(start_results[0], wlan_mlme::StartResultCode::SUCCESS);
+  ASSERT_EQ(start_results[1], wlan_mlme::StartResultCode::BSS_ALREADY_STARTED_OR_JOINED);
 }

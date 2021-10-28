@@ -105,7 +105,9 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
  private:
   zx_status_t AddDevice();
   void SetEthernetStatusLocked(bool online) __TA_REQUIRES(lock_);
-  void SetEthernetStatusUnlocked(bool online);
+  void SetEthernetStatusUnlocked(bool online) __TA_EXCLUDES(lock_);
+
+  void SendStartConfLocked(wlan_start_result_t result_code) __TA_REQUIRES(lock_);
 
   std::mutex lock_;
 
