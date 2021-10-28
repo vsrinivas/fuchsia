@@ -19,6 +19,8 @@ rustc_library("surpass") {
   # TODO(fxbug.dev/56138): Fix the leaks and remove this.
   test_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
+  configs += [ ":surpass-performance" ]
+
   sources = [
     "src/extend.rs",
     "src/layer.rs",
@@ -36,6 +38,18 @@ rustc_library("surpass") {
     "src/simd/mod.rs",
     "src/uninitialized.rs",
   ]
+}
+
+config("surpass-performance") {
+  rustflags = [ "-Copt-level=3" ]
+
+  if (target_cpu == "x64") {
+    rustflags += [ "-Ctarget-cpu=haswell" ]
+  }
+
+  if (target_cpu == "arm64") {
+    rustflags += [ "-Ctarget-cpu=cortex-a53" ]
+  }
 }
 
 fuchsia_unittest_package("surpass-tests") {
