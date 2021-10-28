@@ -20,6 +20,8 @@ fdf_status_t fdf_arena::Create(uint32_t options, const char* tag, size_t tag_len
 void* fdf_arena::Allocate(size_t bytes) {
   fbl::AutoLock lock(&lock_);
 
+  bytes = FIDL_ALIGN(bytes);
+
   if (available_size_ < bytes) {
     // The data doesn't fit within the current block => allocate a new block.
     // Note: the data available at the end of the current block is lost forever (until the

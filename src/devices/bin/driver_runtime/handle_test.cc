@@ -18,26 +18,33 @@ class FakeObject : public Object {
   ~FakeObject() {}
 };
 
-TEST(HandleTest, MapValueToHandle) {
+class HandleTest : public zxtest::Test {
+ protected:
+  HandleTest() {}
+
+  void TearDown() override { ASSERT_EQ(0, driver_runtime::gHandleTableArena.num_allocated()); }
+};
+
+TEST_F(HandleTest, MapValueToHandle) {
   auto object = fbl::AdoptRef(new FakeObject());
   auto handle_owner = Handle::Create(std::move(object));
   ASSERT_NOT_NULL(handle_owner);
 
-  fdf_handle_t handle_value = handle_owner->value();
+  fdf_handle_t handle_value = handle_owner->handle_value();
   EXPECT_NE(handle_value, ZX_HANDLE_INVALID);
 
   Handle* handle = Handle::MapValueToHandle(handle_value);
   EXPECT_EQ(handle, handle_owner.get());
 }
 
-TEST(HandleTest, GetObject) {
+TEST_F(HandleTest, GetObject) {
   auto object = fbl::AdoptRef(new FakeObject());
   FakeObject* object_ptr = object.get();
 
   auto handle_owner = Handle::Create(std::move(object));
   ASSERT_NOT_NULL(handle_owner);
 
-  fdf_handle_t handle_value = handle_owner->value();
+  fdf_handle_t handle_value = handle_owner->handle_value();
   EXPECT_NE(handle_value, ZX_HANDLE_INVALID);
 
   Handle* handle = Handle::MapValueToHandle(handle_value);
@@ -48,14 +55,14 @@ TEST(HandleTest, GetObject) {
   EXPECT_EQ(downcasted_object.get(), object_ptr);
 }
 
-TEST(HandleTest, GetObjectTakeHandleOwnership) {
+TEST_F(HandleTest, GetObjectTakeHandleOwnership) {
   auto object = fbl::AdoptRef(new FakeObject());
   FakeObject* object_ptr = object.get();
 
   auto handle_owner = Handle::Create(std::move(object));
   ASSERT_NOT_NULL(handle_owner);
 
-  fdf_handle_t handle_value = handle_owner->value();
+  fdf_handle_t handle_value = handle_owner->handle_value();
   EXPECT_NE(handle_value, ZX_HANDLE_INVALID);
 
   // Drop ownership of the handle without deleting it.
@@ -72,13 +79,13 @@ TEST(HandleTest, GetObjectTakeHandleOwnership) {
   handle_owner = handle->TakeOwnership();
 }
 
-TEST(HandleTest, GetDeletedHandle) {
+TEST_F(HandleTest, GetDeletedHandle) {
   auto object = fbl::AdoptRef(new FakeObject());
 
   auto handle_owner = Handle::Create(std::move(object));
   ASSERT_NOT_NULL(handle_owner);
 
-  fdf_handle_t handle_value = handle_owner->value();
+  fdf_handle_t handle_value = handle_owner->handle_value();
   EXPECT_NE(handle_value, ZX_HANDLE_INVALID);
 
   // Drop the handle.
@@ -91,7 +98,7 @@ TEST(HandleTest, GetDeletedHandle) {
   auto handle_owner2 = Handle::Create(std::move(object2));
   ASSERT_NOT_NULL(handle_owner2);
 
-  fdf_handle_t handle_value2 = handle_owner2->value();
+  fdf_handle_t handle_value2 = handle_owner2->handle_value();
   EXPECT_NE(handle_value2, ZX_HANDLE_INVALID);
   EXPECT_NE(handle_value2, handle_value);
 
@@ -101,13 +108,13 @@ TEST(HandleTest, GetDeletedHandle) {
   EXPECT_NOT_NULL(Handle::MapValueToHandle(handle_value2));
 }
 
-TEST(HandleTest, IsFdfHandle) {
+TEST_F(HandleTest, IsFdfHandle) {
   auto object = fbl::AdoptRef(new FakeObject());
 
   auto handle_owner = Handle::Create(std::move(object));
   ASSERT_NOT_NULL(handle_owner);
 
-  fdf_handle_t handle_value = handle_owner->value();
+  fdf_handle_t handle_value = handle_owner->handle_value();
   EXPECT_NE(handle_value, FDF_HANDLE_INVALID);
 
   EXPECT_TRUE(Handle::IsFdfHandle(handle_value));
@@ -120,7 +127,7 @@ TEST(HandleTest, IsFdfHandle) {
   EXPECT_FALSE(Handle::IsFdfHandle(event.get()));
 }
 
-TEST(HandleTest, AllocateMax) {
+TEST_F(HandleTest, AllocateMax) {
   std::set<fdf_handle_t> allocated_handles;
   std::vector<HandleOwner> handles;
   for (size_t i = 0; i < HandleTableArena::kMaxNumHandles; i++) {
@@ -128,7 +135,7 @@ TEST(HandleTest, AllocateMax) {
     auto handle_owner = Handle::Create(std::move(object));
     ASSERT_NOT_NULL(handle_owner);
 
-    fdf_handle_t handle_value = handle_owner->value();
+    fdf_handle_t handle_value = handle_owner->handle_value();
     EXPECT_EQ(allocated_handles.find(handle_value), allocated_handles.end());
     allocated_handles.insert(handle_value);
 
@@ -145,7 +152,7 @@ TEST(HandleTest, AllocateMax) {
   handle_owner = Handle::Create(std::move(object));
   ASSERT_NOT_NULL(handle_owner);
   // The handle value should be different.
-  fdf_handle_t handle_value = handle_owner->value();
+  fdf_handle_t handle_value = handle_owner->handle_value();
   EXPECT_EQ(allocated_handles.find(handle_value), allocated_handles.end());
 }
 

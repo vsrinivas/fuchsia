@@ -60,7 +60,6 @@ __BEGIN_CDECLS
 //   free(read);
 // }
 //
-typedef struct fdf_channel fdf_channel_t;
 
 // Defined in <lib/fdf/channel_read.h>
 struct fdf_channel_read;
@@ -76,9 +75,13 @@ fdf_status_t fdf_channel_create(uint32_t options, fdf_handle_t* out0, fdf_handle
 // It is okay to destroy the arena as soon as the write call returns as the lifetime of
 // the arena is extended until the data is read.
 //
+// Handles with a pending callback registered via |fdf_channel_wait_async| cannot be transferred.
+// All handles are consumed and are no longer available to the caller, on success or failure.
+//
 // Returns |ZX_OK| if the write was successful.
 // Returns |ZX_ERR_BAD_HANDLE| if |channel| is not a valid handle.
-// Returns |ZX_ERR_INVALID_ARGS| if |data| or |handles| are not pointers managed by |arena|.
+// Returns |ZX_ERR_INVALID_ARGS| if |data| or |handles| are not pointers managed by |arena|,
+// or at least one of |handles| has a pending callback registered via |fdf_channel_wait_async|.
 // Returns |ZX_ERR_PEER_CLOSED| if the other side of the channel is closed.
 //
 // This operation is thread-safe.
@@ -96,7 +99,7 @@ fdf_status_t fdf_channel_write(fdf_handle_t channel, uint32_t options, fdf_arena
 //
 // Returns |ZX_OK| if the read was successful.
 // Returns |ZX_ERR_BAD_HANDLE| if |channel| is not a valid handle.
-// Returns |ZX_ERR_INVALID_ARGS| if |arena| is NULL.
+// Returns |ZX_ERR_INVALID_ARGS| if |arena| is NULL when |data| or |handles| are non-NULL.
 // Returns |ZX_ERR_SHOULD_WAIT| if the channel contained no messages to read.
 // Returns |ZX_ERR_PEER_CLOSED| if there are no available messages and the other
 // side of the channel is closed.
@@ -121,7 +124,8 @@ fdf_status_t fdf_channel_read(fdf_handle_t channel, uint32_t options, fdf_arena_
 // may be invoked with a status of |ZX_ERR_CANCELED|.
 //
 // Returns |ZX_OK| if the wait was successfully begun.
-// Returns |ZX_ERR_PEER_CLOSED| if the peer channel is closed.
+// Returns |ZX_ERR_PEER_CLOSED| if there are no available messages and the other
+// side of the channel is closed.
 // Returns |ZX_ERR_BAD_STATE| if there is already a dispatcher waiting
 // on this channel, or if the dispatcher is shutting down.
 //
@@ -129,6 +133,12 @@ fdf_status_t fdf_channel_read(fdf_handle_t channel, uint32_t options, fdf_arena_
 fdf_status_t fdf_channel_wait_async(struct fdf_dispatcher* dispatcher,
                                     struct fdf_channel_read* channel_read, uint32_t options);
 
+// If there is a pending callback registered via |fdf_channel_wait_async|,
+// how it is handled depends on whether the dispatcher it was registered with is
+// synchronized.
+// If the dispatcher is synchronized, this must only be called from a dispatcher
+// thread, and any pending callback will be canceled synchronously.
+// If the dispatcher is unsynchronized, the callback will be scheduled to be called.
 void fdf_handle_close(fdf_handle_t handle);
 
 __END_CDECLS

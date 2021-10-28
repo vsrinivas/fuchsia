@@ -54,7 +54,8 @@ class ChannelReadBase {
   // may be invoked with a status of |ZX_ERR_CANCELED|.
   //
   // Returns |ZX_OK| if the wait was successfully begun.
-  // Returns |ZX_ERR_PEER_CLOSED| if the peer channel is closed.
+  // Returns |ZX_ERR_PEER_CLOSED| if there are no available messages and the other
+  // side of the channel is closed.
   // Returns |ZX_ERR_BAD_STATE| if there is already a dispatcher waiting
   // on this channel, or if the dispatcher is shutting down.
   zx_status_t Begin(fdf_dispatcher_t* dispatcher);

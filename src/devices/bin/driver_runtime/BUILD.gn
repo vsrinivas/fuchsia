@@ -19,7 +19,10 @@ source_set("driver_runtime_impl") {
   sources = [
     "api.cc",
     "arena.cc",
+    "channel.cc",
+    "dispatcher.cc",
     "handle.cc",
+    "message_packet.cc",
   ]
   public_configs = [ ":include" ]
   public_deps = [ "//sdk/lib/driver_runtime" ]
@@ -40,11 +43,13 @@ shared_library("driver_runtime") {
 test("driver_runtime_test") {
   sources = [
     "arena_test.cc",
+    "channel_test.cc",
     "handle_test.cc",
   ]
   deps = [
     ":driver_runtime_impl",
     "//sdk/lib/driver_runtime",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",

@@ -46,6 +46,9 @@ class Handle : public fbl::SinglyLinkedListable<Handle*> {
   // referring to the same handle object.
   void Reset() { object_ = nullptr; }
 
+  // Returns whether the handle exists in the handle table.
+  static bool HandleExists(fdf_handle_t value) { return MapValueToHandle(value); }
+
   // Maps |value| to the runtime's Handle object.
   // The Handle must have previously been created with |Create|.
   // This does not provide ownership to the Handle. To destroy the Handle,
@@ -56,7 +59,7 @@ class Handle : public fbl::SinglyLinkedListable<Handle*> {
   // Does not do any validation on whether it is a valid fdf handle.
   static bool IsFdfHandle(zx_handle_t handle_value);
 
-  // Returns the object corresponding to |handle_value|.
+  // Returns the object corresponding to |value_|.
   template <typename T>
   zx_status_t GetObject(fbl::RefPtr<T>* out_object) {
     // TODO(fxbug.dev/86542): we should add some type checking once we support more object types.
@@ -67,13 +70,23 @@ class Handle : public fbl::SinglyLinkedListable<Handle*> {
     return ZX_OK;
   }
 
+  // Returns the object corresponding to |handle_value|.
+  template <typename T>
+  static zx_status_t GetObject(fdf_handle_t handle_value, fbl::RefPtr<T>* out_object) {
+    Handle* handle = Handle::MapValueToHandle(handle_value);
+    if (!handle) {
+      return ZX_ERR_BAD_HANDLE;
+    }
+    return handle->GetObject<T>(out_object);
+  }
+
   HandleOwner TakeOwnership() { return HandleOwner(this); }
 
   // Returns the object this handle refers to.
   fbl::RefPtr<Object> object() { return object_; }
 
   // Returns the handle value which refers to this object.
-  fdf_handle_t value() const { return value_; }
+  fdf_handle_t handle_value() const { return value_; }
 
  private:
   fbl::RefPtr<Object> object_;
@@ -118,11 +131,18 @@ class HandleTableArena {
 
     fbl::AutoLock lock(&lock_);
     free_handles_.push_front(handle);
+    num_allocated_--;
   }
 
   // Returns the handle located in the handle table pointed to by |table|, at |index|.
   // Returns nullptr if the indexes are invalid, or do not point to an allocated handle.
   fit::nullable<Handle*> GetExistingHandle(uint32_t table, uint32_t index);
+
+  // Returns the number of handles currently allocated (does not include freed handles).
+  uint32_t num_allocated() {
+    fbl::AutoLock lock(&lock_);
+    return num_allocated_;
+  }
 
  private:
   // Returns a pointer to memory that can be used to construct a Handle object.
@@ -145,6 +165,9 @@ class HandleTableArena {
 
   // Handles that have been freed are recycled into |free_handles_|.
   fbl::SinglyLinkedList<Handle*> free_handles_ __TA_GUARDED(&lock_);
+
+  // Number of handles currently allocated (does not include freed handles).
+  uint32_t num_allocated_ __TA_GUARDED(&lock_) = 0;
 };
 
 extern HandleTableArena gHandleTableArena;

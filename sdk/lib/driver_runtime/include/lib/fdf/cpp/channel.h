@@ -71,11 +71,15 @@ class Channel {
   // of scope. It is okay to destroy the arena as soon as the write call returns as
   // the lifetime of the arena is extended until the data is read.
   //
+  // Handles with a pending callback registered via a ChannelRead cannot be transferred.
+  // All handles are consumed and are no longer available to the caller, on success or failure.
+  //
   // Returns |ZX_OK| if the write was successful.
   // Returns |ZX_ERR_BAD_HANDLE| if the channel is not a valid handle.
-  // Returns |ZX_ERR_INVALID_ARGS| if |data| or the handles contained in
-  // |handles| are not managed by |arena|.
-  // Returns |ZX_ERR_PEER_CLOSED| if the other side of the channel is closed
+  // Returns |ZX_ERR_INVALID_ARGS| if |data| or the handles contained in |handles|
+  // are not managed by |arena|, or at least one of |handles| has a pending callback registered
+  // via a ChannelRead.
+  // Returns |ZX_ERR_PEER_CLOSED| if the other side of the channel is closed.
   //
   // This operation is thread-safe.
   zx::status<> Write(uint32_t options, Arena& arena, void* data, uint32_t num_bytes,
@@ -99,10 +103,10 @@ class Channel {
   //
   // Returns |ZX_OK| if the read was successful.
   // Returns |ZX_ERR_BAD_HANDLE| if the channel is not a valid handle.
-  // Returns |ZX_ERR_INVALID_ARGS| if |arena| is NULL.
+  // Returns |ZX_ERR_INVALID_ARGS| if |arena| is NULL when |data| or |handles| are non-NULL.
   // Returns |ZX_ERR_SHOULD_WAIT| if the channel contained no messages to read.
   // Returns |ZX_ERR_PEER_CLOSED| if there are no available messages and the other
-  // side of the channel is closed
+  // side of the channel is closed.
   //
   // This operation is thread-safe.
   zx::status<ReadReturn> Read(uint32_t options) {

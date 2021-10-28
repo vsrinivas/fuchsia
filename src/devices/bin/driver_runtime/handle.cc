@@ -118,8 +118,8 @@ Handle* HandleTableArena::AllocHandleMemoryLocked(uint32_t* out_dir_index, uint3
   // The handle internals will be initialized later.
   if (!free_handles_.is_empty()) {
     auto handle = free_handles_.pop_front();
-    *out_dir_index = handle_value_to_dir_index(handle->value());
-    *out_index = handle_value_to_index(handle->value());
+    *out_dir_index = handle_value_to_dir_index(handle->handle_value());
+    *out_index = handle_value_to_index(handle->handle_value());
     return handle;
   }
   // No handles left to allocate.
@@ -159,7 +159,8 @@ Handle* HandleTableArena::Alloc(fdf_handle_t* out_value) {
   // The handle should be newly allocated or previously destructed.
   ZX_ASSERT(!handle->object());
 
-  *out_value = new_handle_value(dir_index, index, handle->value());
+  *out_value = new_handle_value(dir_index, index, handle->handle_value());
+  num_allocated_++;
   return handle;
 }
 
@@ -186,7 +187,7 @@ Handle* Handle::MapValueToHandle(fdf_handle_t handle_value) {
   }
   // Check that the handle value matches the stored value.
   // If it is different it likely means an already deleted handle is being accessed.
-  return handle_value == (*handle)->value() ? *handle : nullptr;
+  return handle_value == (*handle)->handle_value() ? *handle : nullptr;
 }
 
 // static

@@ -11,7 +11,10 @@ ChannelReadBase::ChannelReadBase(fdf_handle_t channel, uint32_t options,
                                  fdf_channel_read_handler_t* handler)
     : channel_read_{{ASYNC_STATE_INIT}, handler, channel, options} {}
 
-ChannelReadBase::~ChannelReadBase() { ZX_DEBUG_ASSERT(!dispatcher_); }
+ChannelReadBase::~ChannelReadBase() {
+  // TODO(fxbug.dev/87387) Re-enable this check once we implement cancelling of requests.
+  // ZX_DEBUG_ASSERT(!dispatcher_);
+}
 
 zx_status_t ChannelReadBase::Begin(fdf_dispatcher_t* dispatcher) {
   if (dispatcher_) {
@@ -29,7 +32,10 @@ zx_status_t ChannelReadBase::Begin(fdf_dispatcher_t* dispatcher) {
 ChannelRead::ChannelRead(fdf_handle_t channel, uint32_t options, Handler handler)
     : ChannelReadBase(channel, options, &ChannelRead::CallHandler), handler_(std::move(handler)) {}
 
-ChannelRead::~ChannelRead() { ZX_DEBUG_ASSERT(!is_pending()); }
+ChannelRead::~ChannelRead() {
+  // TODO(fxbug.dev/87387) Re-enable this check once we implement cancelling of requests.
+  // ZX_DEBUG_ASSERT(!is_pending());
+}
 
 void ChannelRead::CallHandler(fdf_dispatcher_t* dispatcher, fdf_channel_read_t* read,
                               fdf_status_t status) {
