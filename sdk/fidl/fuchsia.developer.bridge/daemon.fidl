@@ -61,27 +61,6 @@ protocol Daemon {
         success bool;
     });
 
-    /// Attempts to get the SSH address for a given target.
-    ///
-    /// Waits for:
-    /// 1.) A target of the given nodename to appear (if it hasn't already).
-    /// 2.) For the target to have an SSH-friendly address.
-    ///
-    /// Returns:
-    /// * First address found for the target that satisfies step 2.
-    ///
-    /// Errors:
-    /// * Timeout error if steps 1 and 2 don't happen in time.
-    /// * Cache error if a target has appeared but suddenly disappears before
-    ///   running the function to completion.
-    @deprecated("Use target collection service. See get-ssh-address plugin.")
-    GetSshAddress(struct {
-        target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
-        timeout zx.duration;
-    }) -> (struct {
-        ip TargetAddrInfo;
-    }) error DaemonError;
-
     // Retrieves version information about this daemon instance.
     GetVersionInfo() -> (struct {
         info VersionInfo;

@@ -9,8 +9,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_target_show_args as args,
     fidl_fuchsia_buildinfo::ProviderProxy,
-    fidl_fuchsia_developer_bridge::{DaemonProxy, TargetAddrInfo},
-    fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
+    fidl_fuchsia_developer_bridge::{TargetAddrInfo, TargetHandleProxy},
     fidl_fuchsia_feedback::{DeviceIdProviderProxy, LastRebootInfoProviderProxy},
     fidl_fuchsia_hwinfo::{Architecture, BoardProxy, DeviceProxy, ProductProxy},
     fidl_fuchsia_intl::RegulatoryDomain,
@@ -18,6 +17,7 @@ use {
     std::io::{stdout, Write},
     std::net::SocketAddr,
     std::time::Duration,
+    timeout::timeout,
 };
 
 mod show;
@@ -40,8 +40,7 @@ pub async fn show_cmd(
     build_info_proxy: ProviderProxy,
     device_id_proxy: Option<DeviceIdProviderProxy>,
     last_reboot_info_proxy: LastRebootInfoProviderProxy,
-    remote_proxy: RemoteControlProxy,
-    daemon_proxy: DaemonProxy,
+    target_proxy: TargetHandleProxy,
     target_show_args: args::TargetShow,
 ) -> Result<()> {
     show_cmd_impl(
@@ -52,8 +51,7 @@ pub async fn show_cmd(
         build_info_proxy,
         device_id_proxy,
         last_reboot_info_proxy,
-        remote_proxy,
-        daemon_proxy,
+        target_proxy,
         target_show_args,
         &mut stdout(),
     )
@@ -69,8 +67,7 @@ async fn show_cmd_impl<W: Write>(
     build_info_proxy: ProviderProxy,
     device_id_proxy: Option<DeviceIdProviderProxy>,
     last_reboot_info_proxy: LastRebootInfoProviderProxy,
-    remote_proxy: RemoteControlProxy,
-    daemon_proxy: DaemonProxy,
+    target_proxy: TargetHandleProxy,
     target_show_args: args::TargetShow,
     writer: &mut W,
 ) -> Result<()> {
@@ -81,7 +78,7 @@ async fn show_cmd_impl<W: Write>(
     // To add more show information, add a `gather_*_show(*) call to this
     // list, as well as the labels in the Ok() and vec![] just below.
     let show = match futures::try_join!(
-        gather_target_show(remote_proxy, daemon_proxy),
+        gather_target_show(target_proxy),
         gather_board_show(board_proxy),
         gather_device_show(device_proxy),
         gather_product_show(product_proxy),
@@ -107,16 +104,10 @@ async fn show_cmd_impl<W: Write>(
 }
 
 /// Determine target information.
-async fn gather_target_show(
-    remote_proxy: RemoteControlProxy,
-    daemon_proxy: DaemonProxy,
-) -> Result<ShowEntry> {
-    let host =
-        remote_proxy.identify_host().await?.map_err(|_| anyhow!("Could not identify host"))?;
+async fn gather_target_show(target_proxy: TargetHandleProxy) -> Result<ShowEntry> {
+    let host = target_proxy.identity().await?;
     let name = host.nodename;
-    let timeout = Duration::from_secs(1);
-    let addr_info = daemon_proxy
-        .get_ssh_address(name.as_deref(), timeout.as_nanos() as i64)
+    let addr_info = timeout(Duration::from_secs(1), target_proxy.get_ssh_address())
         .await?
         .map_err(|e| anyhow!("Failed to get ssh address: {:?}", e))?;
     let ifaces_str = {
@@ -386,8 +377,7 @@ async fn gather_last_reboot_info_show(
 mod tests {
     use super::*;
     use fidl_fuchsia_buildinfo::{BuildInfo, ProviderRequest};
-    use fidl_fuchsia_developer_bridge::{DaemonRequest, TargetAddrInfo, TargetIp};
-    use fidl_fuchsia_developer_remotecontrol::{IdentifyHostResponse, RemoteControlRequest};
+    use fidl_fuchsia_developer_bridge::{Target, TargetAddrInfo, TargetHandleRequest, TargetIp};
     use fidl_fuchsia_feedback::{
         DeviceIdProviderRequest, LastReboot, LastRebootInfoProviderRequest, RebootReason,
     };
@@ -395,7 +385,7 @@ mod tests {
         Architecture, BoardInfo, BoardRequest, DeviceInfo, DeviceRequest, ProductInfo,
         ProductRequest,
     };
-    use fidl_fuchsia_net::{IpAddress, Ipv4Address, Subnet};
+    use fidl_fuchsia_net::{IpAddress, Ipv4Address};
     use fidl_fuchsia_update_channelcontrol::ChannelControlRequest;
     use serde_json::Value;
 
@@ -446,31 +436,24 @@ mod tests {
         \n    Uptime (ns): \"65000\"\
         \n";
 
-    fn setup_fake_daemon_server() -> DaemonProxy {
-        setup_fake_daemon_proxy(move |req| match req {
-            DaemonRequest::GetSshAddress { responder, .. } => {
+    fn setup_fake_target_server() -> TargetHandleProxy {
+        setup_fake_target_proxy(move |req| match req {
+            TargetHandleRequest::GetSshAddress { responder, .. } => {
                 responder
-                    .send(&mut Ok(TargetAddrInfo::Ip(TargetIp {
+                    .send(&mut TargetAddrInfo::Ip(TargetIp {
                         ip: IpAddress::Ipv4(Ipv4Address { addr: IPV4_ADDR }),
                         scope_id: 1,
-                    })))
+                    }))
                     .expect("fake ssh address");
             }
-            _ => assert!(false),
-        })
-    }
-
-    fn setup_fake_remote_control_server() -> RemoteControlProxy {
-        setup_fake_remote_proxy(move |req| match req {
-            RemoteControlRequest::IdentifyHost { responder } => {
-                let result: Vec<Subnet> = vec![];
+            TargetHandleRequest::Identity { responder, .. } => {
+                let addrs = vec![TargetAddrInfo::Ip(TargetIp {
+                    ip: IpAddress::Ipv4(Ipv4Address { addr: IPV4_ADDR }),
+                    scope_id: 1,
+                })];
                 let nodename = Some("fake_fuchsia_device".to_string());
                 responder
-                    .send(&mut Ok(IdentifyHostResponse {
-                        nodename,
-                        addresses: Some(result),
-                        ..IdentifyHostResponse::EMPTY
-                    }))
+                    .send(Target { nodename, addresses: Some(addrs), ..Target::EMPTY })
                     .unwrap();
             }
             _ => assert!(false),
@@ -543,8 +526,7 @@ mod tests {
             setup_fake_build_info_server(),
             Some(setup_fake_device_id_server()),
             setup_fake_last_reboot_info_server(),
-            setup_fake_remote_control_server(),
-            setup_fake_daemon_server(),
+            setup_fake_target_server(),
             args::TargetShow::default(),
             &mut output,
         )
@@ -567,8 +549,7 @@ mod tests {
             setup_fake_build_info_server(),
             Some(setup_fake_device_id_server()),
             setup_fake_last_reboot_info_server(),
-            setup_fake_remote_control_server(),
-            setup_fake_daemon_server(),
+            setup_fake_target_server(),
             args::TargetShow { json: true, ..Default::default() },
             &mut output,
         )

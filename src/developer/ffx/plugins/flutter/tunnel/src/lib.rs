@@ -10,7 +10,7 @@ use {
     ffx_flutter_tunnel_args::TunnelCommand,
     ffx_flutter_tunnel_ctrlc::wait_for_kill,
     ffx_inspect_common::DiagnosticsBridgeProvider,
-    fidl_fuchsia_developer_bridge::{DaemonProxy, TargetAddrInfo},
+    fidl_fuchsia_developer_bridge::{DaemonError, TargetAddrInfo, TargetHandleProxy},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlProxy, RemoteDiagnosticsBridgeProxy},
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
     iquery::commands::Command as iq_cmd,
@@ -18,6 +18,7 @@ use {
     std::net::{IpAddr, Ipv4Addr, SocketAddr},
     std::process::Command,
     std::time::Duration,
+    timeout::timeout,
 };
 
 pub use ffx_emulator_common::portpicker::{pick_unused_port, Port};
@@ -42,16 +43,16 @@ static DEFAULT_SSH_OPTIONS: &'static [&str] = &[
     RemoteDiagnosticsBridgeProxy = "core/remote-diagnostics-bridge:expose:fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge"
 )]
 pub async fn tunnel(
-    daemon_proxy: DaemonProxy,
+    target_proxy: TargetHandleProxy,
     rcs_proxy: RemoteControlProxy,
     diagnostics_proxy: RemoteDiagnosticsBridgeProxy,
     cmd: TunnelCommand,
 ) -> Result<()> {
-    tunnel_impl(daemon_proxy, rcs_proxy, diagnostics_proxy, cmd, &mut std::io::stdout()).await
+    tunnel_impl(target_proxy, rcs_proxy, diagnostics_proxy, cmd, &mut std::io::stdout()).await
 }
 
 pub async fn tunnel_impl<W: std::io::Write>(
-    daemon_proxy: DaemonProxy,
+    target_proxy: TargetHandleProxy,
     rcs_proxy: RemoteControlProxy,
     diagnostics_proxy: RemoteDiagnosticsBridgeProxy,
     _cmd: TunnelCommand,
@@ -87,18 +88,17 @@ pub async fn tunnel_impl<W: std::io::Write>(
         }
     }
 
-    // Timeout value is 1.0 second for now.
-    let timeout = Duration::from_secs(1);
-
     // TODO(fxb/80802): Keep ssh address resolution in sync with get_ssh_address_impl
     // in src/developer/ffx/plugins/target/get-ssh-address until extracted out to shared
     // location.
     let target: Option<String> = ffx_config::get("target.default").await?;
-    let res =
-        daemon_proxy.get_ssh_address(target.as_deref(), timeout.as_nanos() as i64).await?.map_err(
-            |e| FfxError::DaemonError { err: e, target, is_default_target: ffx.target.is_none() },
-        )?;
-
+    let res = timeout(Duration::from_secs(1), target_proxy.get_ssh_address()).await.map_err(
+        |_timeout_err| FfxError::DaemonError {
+            err: DaemonError::Timeout,
+            target,
+            is_default_target: ffx.target.is_none(),
+        },
+    )??;
     let (ip, scope, port) = match res {
         TargetAddrInfo::Ip(info) => {
             let ip = match info.ip {

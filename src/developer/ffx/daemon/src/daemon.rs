@@ -566,44 +566,6 @@ impl Daemon {
 
                 responder.send(true).context("error sending response")?;
             }
-            DaemonRequest::GetSshAddress { responder, target, timeout } => {
-                use std::convert::TryInto;
-                let timeout_time = Instant::now()
-                    + Duration::from_nanos(timeout.try_into().context("invalid timeout")?);
-
-                loop {
-                    match self
-                        .target_collection
-                        .wait_for_match(target.clone())
-                        .on_timeout(timeout_time, || Err(DaemonError::Timeout))
-                        .await
-                    {
-                        Ok(t) => match t.get_connection_state() {
-                            TargetConnectionState::Zedboot(_) => {
-                                return responder
-                                    .send(&mut Err(DaemonError::TargetInZedboot))
-                                    .context("error sending response");
-                            }
-                            TargetConnectionState::Fastboot(_) => {
-                                return responder
-                                    .send(&mut Err(DaemonError::TargetInFastboot))
-                                    .context("error sending response");
-                            }
-                            _ => {
-                                if let Some(addr_info) = t.ssh_address_info() {
-                                    log::info!("Responding to {:?} with {:?}", target, t);
-                                    return responder
-                                        .send(&mut Ok(addr_info))
-                                        .context("error sending response");
-                                }
-                            }
-                        },
-                        Err(e) => {
-                            return responder.send(&mut Err(e)).context("error sending response");
-                        }
-                    }
-                }
-            }
             DaemonRequest::GetVersionInfo { responder } => {
                 return responder.send(build_info()).context("sending GetVersionInfo response");
             }
@@ -912,46 +874,6 @@ mod test {
         daemon.target_collection.merge_insert(target);
         let result = daemon.open_remote_control(None).await;
         assert!(result.is_err());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_ssh_address() {
-        let (proxy, daemon, _task) = spawn_test_daemon();
-
-        let target = Target::new_autoconnected("foobar");
-        target.addrs_insert(TargetAddr::new("[fe80::1%1]:0").unwrap());
-        let addr_info = target.ssh_address_info().unwrap();
-
-        daemon.target_collection.merge_insert(target);
-
-        assert_eq!(daemon.target_collection.targets().len(), 1);
-        assert!(daemon.target_collection.get("foobar").is_some());
-
-        let r = proxy.get_ssh_address(Some("foobar"), std::i64::MAX).await.unwrap();
-        assert_eq!(r, Ok(addr_info));
-
-        let r = proxy.get_ssh_address(Some("toothpaste"), 1).await.unwrap();
-        assert_eq!(r, Err(DaemonError::Timeout));
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_ssh_address_target_ambiguous() {
-        let (proxy, daemon, _task) = spawn_test_daemon();
-
-        let target = Target::new_autoconnected("foobar");
-        target.addrs_insert(TargetAddr::new("[fe80::1%1]:0").unwrap());
-        daemon.target_collection.merge_insert(target);
-
-        let target = Target::new_autoconnected("whoistarget");
-        target.addrs_insert(TargetAddr::new("[fe80::2%1]:0").unwrap());
-        daemon.target_collection.merge_insert(target);
-
-        assert_eq!(daemon.target_collection.targets().len(), 2);
-        assert!(daemon.target_collection.get("foobar").is_some());
-        assert!(daemon.target_collection.get("whoistarget").is_some());
-
-        let r = proxy.get_ssh_address(None, std::i64::MAX).await.unwrap();
-        assert_eq!(r, Err(DaemonError::TargetAmbiguous));
     }
 
     struct FakeConfigReader {

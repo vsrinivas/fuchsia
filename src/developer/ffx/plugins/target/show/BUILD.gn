@@ -17,6 +17,7 @@ ffx_plugin("ffx_target_show") {
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
     "//src/developer/ffx/lib/addr:lib",
+    "//src/developer/ffx/lib/timeout:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/sys/pkg/lib/fidl-fuchsia-update-ext",
