@@ -425,15 +425,19 @@ class TestPlatformBuffer {
 
   static void CheckAddressRegionSize() {
     auto range = magma::PlatformBuffer::MappingAddressRange::CreateDefault();
+    size_t region_top = range->Base() + range->Length();
 #if __x86_64__
+    // GPUs or drivers may misbehave if an allocation is mapped to 0.
+    EXPECT_GT(range->Base(), 0ull);
+    // Ensure the base is small enough for any GPU driver.
+    EXPECT_LE(range->Base(), 0x1000000ull);
     // Almost 1 << 47 - see USER_ASPACE_SIZE.
-    EXPECT_EQ(range->Base(), 0x1000000ull);
-    EXPECT_EQ(range->Length(), 0x7ffffefff000ull);
+    EXPECT_EQ(region_top, 0x7ffffefff000ull + 0x1000000ull);
 #else
     // Assume platform is 64-bit and has 48-bit usermode virtual addresses.
     // A little at the top may be inaccessible - see USER_ASPACE_SIZE.
-    EXPECT_GE((1ul << 48), range->Base() + range->Length());
-    EXPECT_LE((1ul << 48) - 1024 * 1024 * 1024, range->Base() + range->Length());
+    EXPECT_GE((1ul << 48), region_top);
+    EXPECT_LE((1ul << 48) - 1024 * 1024 * 1024, region_top);
 #endif
   }
 
