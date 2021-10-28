@@ -28,6 +28,25 @@ use {
 /// that the client can immediately interact with.
 pub const DISPLAY_SINGLETON_OBJECT_ID: u32 = 1;
 
+trait LocalViewProducerClient: Send + Sync {
+    /// Notifes the view producer client that a new view has been created.
+    ///
+    /// # Parameters
+    /// - `view_provider`: The view provider associated with the new view.
+    /// - `view_id`: The identifier for the view that was created.
+    fn new_view(&mut self, view_provider: ClientEnd<ViewProviderMarker>, view_id: u32);
+
+    /// Notifies the ViewProducer client that the view with `view_id` is being shut down.
+    fn shutdown_view(&mut self, view_id: u32);
+}
+
+#[derive(Clone)]
+enum ViewProducerClient {
+    #[allow(dead_code)]
+    Local(Arc<Mutex<Box<dyn LocalViewProducerClient>>>),
+    Remote(Arc<Mutex<Option<ViewProducerRequestStream>>>),
+}
+
 /// |Display| is the global object used to manage a wayland server.
 ///
 /// The |Display| has a |Registry| that will hold the set of global
@@ -41,7 +60,7 @@ pub struct Display {
     /// new views to the consumer.
     ///
     /// This must be bound before any views are created.
-    view_producer_binding: Arc<Mutex<Option<ViewProducerRequestStream>>>,
+    view_producer_client: ViewProducerClient,
 }
 
 impl Display {
@@ -50,7 +69,7 @@ impl Display {
         Ok(Display {
             registry: Arc::new(Mutex::new(registry)),
             scenic: Arc::new(scenic),
-            view_producer_binding: Arc::new(Mutex::new(None)),
+            view_producer_client: ViewProducerClient::Remote(Arc::new(Mutex::new(None))),
         })
     }
 
@@ -65,7 +84,7 @@ impl Display {
         Ok(Display {
             registry: Arc::new(Mutex::new(registry)),
             scenic: Arc::new(scenic),
-            view_producer_binding: Arc::new(Mutex::new(None)),
+            view_producer_client: ViewProducerClient::Remote(Arc::new(Mutex::new(None))),
         })
     }
 
@@ -81,30 +100,49 @@ impl Display {
 
     /// Publish a new view back to the client for presentation.
     pub fn new_view_provider(&self, view_provider: ClientEnd<ViewProviderMarker>, view_id: u32) {
-        self.view_producer_binding
-            .lock()
-            .as_ref()
-            .expect(
-                "\
+        match &self.view_producer_client {
+            ViewProducerClient::Local(view_producer_client) => {
+                view_producer_client.lock().new_view(view_provider, view_id);
+            }
+            ViewProducerClient::Remote(view_producer_binding) => {
+                view_producer_binding
+                    .lock()
+                    .as_ref()
+                    .expect(
+                        "\
                  A new view has been created without a ViewProducer connection. \
                  The ViewProducer must be bound before issuing any new channels \
                  into the bridge.",
-            )
-            .control_handle()
-            .send_on_new_view(view_provider, view_id)
-            .expect("Failed to emit OnNewView event");
+                    )
+                    .control_handle()
+                    .send_on_new_view(view_provider, view_id)
+                    .expect("Failed to emit OnNewView event");
+            }
+        }
     }
 
     /// Notify client that presentation of view should stop.
     pub fn delete_view_provider(&self, view_id: u32) {
-        if let Some(view_producer_ref) = self.view_producer_binding.lock().as_ref() {
-            let _ = view_producer_ref.control_handle().send_on_shutdown_view(view_id);
+        match &self.view_producer_client {
+            ViewProducerClient::Local(view_producer_client) => {
+                view_producer_client.lock().shutdown_view(view_id);
+            }
+            ViewProducerClient::Remote(view_producer_binding) => {
+                if let Some(view_producer_ref) = view_producer_binding.lock().as_ref() {
+                    let _ = view_producer_ref.control_handle().send_on_shutdown_view(view_id);
+                }
+            }
         }
     }
 
     pub fn bind_view_producer(&self, stream: ViewProducerRequestStream) {
-        let mut binding = self.view_producer_binding.lock();
-        *binding = Some(stream);
+        match &self.view_producer_client {
+            ViewProducerClient::Local(_view_producer_client) => {}
+            ViewProducerClient::Remote(view_producer_binding) => {
+                let mut binding = view_producer_binding.lock();
+                *binding = Some(stream);
+            }
+        }
     }
 
     /// Create a new client and begin polling `chan` for requests.
