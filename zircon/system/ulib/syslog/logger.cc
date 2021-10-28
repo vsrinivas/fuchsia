@@ -107,7 +107,16 @@ void fx_logger_activate_fallback(fx_logger_t* logger, int fallback_fd) {
 
 SYSLOG_EXPORT
 zx_status_t fx_logger_reconfigure(fx_logger_t* logger, const fx_logger_config_t* config) {
-  return logger->Reconfigure(config);
+  if (!config) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return logger->Reconfigure(config, false);
+}
+
+SYSLOG_EXPORT
+zx_status_t fx_logger_reconfigure_structured(fx_logger_t* logger,
+                                             const fx_logger_config_t* config) {
+  return logger->Reconfigure(config, true);
 }
 
 SYSLOG_EXPORT
@@ -142,26 +151,28 @@ zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logge
     }
     return ZX_ERR_INVALID_ARGS;
   }
-
-  fx_logger_config_t c = *config;
+  bool is_structured = false;
+  auto c = *config;
   // In the SYSLOG_STATIC mode, we cannot connect to the logging service. We
   // should continue to instantiate the logger (which defaults to using stderr)
   // and the client can provide the appropriate channel / fd later.
 #ifndef SYSLOG_STATIC
   if (connect && config->console_fd == -1 && config->log_sink_channel == ZX_HANDLE_INVALID &&
       log_sink_socket == ZX_HANDLE_INVALID) {
-    zx::socket sock = connect_to_logger();
+    zx::socket sock = connect_to_logger(true);
+
     if (sock.is_valid()) {
       c.log_sink_socket = sock.release();
       // For simplicity, the line above sets the value to the new name regardless of where it came
       // from. Ensure that the old name is invalid in case the value came from it.
       // TODO(fxbug.dev/63529): Rename all |log_service_channel| uses and remove this line, which
       // ensures only one of these is set.
+      is_structured = true;
       c.log_service_channel = ZX_HANDLE_INVALID;
     }
   }
 #endif
-  *out_logger = new fx_logger(&c);
+  *out_logger = new fx_logger(&c, is_structured);
   return ZX_OK;
 }
 

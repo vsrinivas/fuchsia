@@ -11,13 +11,7 @@ sdk_source_set("structured_backend") {
 
   include_base = "//sdk"
 
-  deps = [
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger",
-    "//sdk/lib/fdio",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/sync",
-  ]
+  deps = []
 
   public_deps = [
     "//sdk/lib/stdcompat",

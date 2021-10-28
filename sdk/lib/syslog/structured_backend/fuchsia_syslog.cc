@@ -4,18 +4,11 @@
 
 #include <assert.h>
 #include <fcntl.h>
-#include <fuchsia/logger/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/loop.h>
-#include <lib/async/cpp/executor.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
 #include <lib/stdcompat/variant.h>
-#include <lib/sync/completion.h>
 #include <lib/syslog/structured_backend/cpp/fuchsia_syslog.h>
 #include <lib/syslog/structured_backend/fuchsia_syslog.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/time.h>
@@ -263,8 +256,13 @@ struct RecordState final {
             ByteOffset::FromBuffer(0, sizeof(fuchsia_syslog_log_buffer_t::data)))) {}
   // Header of the record itself
   uint64_t* header;
-  FuchsiaLogSeverity log_severity;
-  ::fuchsia::diagnostics::Severity severity;
+  // The corrected severity -- FIDL doesn't permit sending
+  // arbitrary values for enums, and the Rust side decodes this
+  // into a FIDL type, because of this we need to correct the severity
+  // to a valid FIDL severity and encode the raw severity separately
+  // so that Rust can decode it properly.
+  FuchsiaLogSeverity corrected_severity;
+  FuchsiaLogSeverity raw_severity;
   // arg_size in words
   WordOffset<log_word_t> arg_size;
   zx::unowned_socket socket;
@@ -355,8 +353,8 @@ class Encoder final {
   explicit Encoder(T& buffer) { buffer_ = &buffer; }
 
   // Begins the log record.
-  void Begin(RecordState& state, zx::time timestamp, ::fuchsia::diagnostics::Severity severity) {
-    state.severity = severity;
+  void Begin(RecordState& state, zx::time timestamp, FuchsiaLogSeverity severity) {
+    state.raw_severity = severity;
     state.header = buffer_->data();
     log_word_t empty_header = 0;
     state.encode_success &= buffer_->Write(empty_header);
@@ -437,7 +435,7 @@ class Encoder final {
     uint64_t header =
         HeaderFields::Type::Make(kTracingFormatLogRecordType) |
         HeaderFields::SizeWords::Make(static_cast<size_t>(buffer_->data() - state.header)) |
-        HeaderFields::Reserved::Make(0) | HeaderFields::Severity::Make(state.severity);
+        HeaderFields::Reserved::Make(0) | HeaderFields::Severity::Make(state.raw_severity);
     *state.header = header;
   }
 
@@ -479,10 +477,10 @@ void BeginRecordInternal(fuchsia_syslog_log_buffer_t* buffer, FuchsiaLogSeverity
   if (severity == FUCHSIA_LOG_FATAL) {
     state->msg_string = msg;
   }
-  state->log_severity = severity;
+  state->corrected_severity = severity;
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
-  encoder.Begin(*state, time, ::fuchsia::diagnostics::Severity(severity));
+  encoder.Begin(*state, time, severity);
   if (is_printf) {
     encoder.AppendArgumentKey(record, SliceFromArray(kPrintfFieldName));
     encoder.AppendArgumentValue(record, static_cast<uint64_t>(0));

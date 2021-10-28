@@ -108,7 +108,10 @@ macro_rules! fx_log {
         let lvl = $lvl;
         $crate::log_helper(format_args!($($arg)+), lvl, $tag);
     });
-    ($lvl:expr, $($arg:tt)+) => ($crate::fx_log!(tag: "", $lvl, $($arg)+))
+    ($lvl:expr, $($arg:tt)+) => ({
+        let lvl = $lvl;
+        $crate::log_helper_null(format_args!($($arg)+), lvl);
+    });
 }
 
 /// Convenience macro to log error.
@@ -123,10 +126,11 @@ macro_rules! fx_log {
 macro_rules! fx_log_err {
     (tag: $tag:expr, $($arg:tt)*) => (
         $crate::fx_log!(tag: $tag, $crate::levels::ERROR, "[{}({})] {}",
-        file!().trim_start_matches("../"), line!(), format_args!($($arg)*));
+            file!().trim_start_matches("../"), line!(), format_args!($($arg)*));
     );
     ($($arg:tt)*) => (
-        $crate::fx_log_err!(tag: "", $($arg)*);
+        $crate::fx_log!($crate::levels::ERROR, "[{}({})] {}",
+            file!().trim_start_matches("../"), line!(), format_args!($($arg)*));
     )
 }
 
@@ -144,7 +148,7 @@ macro_rules! fx_log_warn {
         $crate::fx_log!(tag: $tag, $crate::levels::WARN, $($arg)*);
     );
     ($($arg:tt)*) => (
-        $crate::fx_log_warn!(tag: "", $($arg)*);
+        $crate::fx_log!($crate::levels::WARN, $($arg)*);
     )
 }
 
@@ -162,7 +166,7 @@ macro_rules! fx_log_info {
         $crate::fx_log!(tag: $tag, $crate::levels::INFO, $($arg)*);
     );
     ($($arg:tt)*) => (
-        $crate::fx_log_info!(tag: "", $($arg)*);
+        $crate::fx_log!($crate::levels::INFO, $($arg)*);
     )
 }
 
@@ -180,7 +184,7 @@ macro_rules! fx_log_debug {
         $crate::fx_log!(tag: $tag, $crate::levels::DEBUG, $($arg)*);
     );
     ($($arg:tt)*) => (
-        $crate::fx_log_debug!(tag: "", $($arg)*);
+        $crate::fx_log!($crate::levels::DEBUG, $($arg)*);
     )
 }
 
@@ -198,7 +202,7 @@ macro_rules! fx_log_trace {
         $crate::fx_log!(tag: $tag, $crate::levels::TRACE, $($arg)*);
     );
     ($($arg:tt)*) => (
-        $crate::fx_log_trace!(tag: "", $($arg)*);
+        $crate::fx_log!($crate::levels::TRACE, $($arg)*);
     )
 }
 
@@ -216,7 +220,7 @@ macro_rules! fx_vlog {
         $crate::fx_log!(tag: $tag, $crate::get_severity_from_verbosity($verbosity), $($arg)*);
     );
     ($verbosity:expr, $($arg:tt)*) => (
-         $crate::fx_vlog!(tag: "", $verbosity, $($arg)*);
+        $crate::fx_log!($crate::get_severity_from_verbosity($verbosity), $($arg)*);
     )
 }
 
@@ -304,6 +308,11 @@ lazy_static! {
 /// macro helper function to convert strings and call log
 pub fn log_helper(args: Arguments<'_>, lvl: i32, tag: &str) {
     LOGGER.log_f(lvl, args, Some(tag));
+}
+
+/// macro helper function to convert strings and call log with null tag
+pub fn log_helper_null(args: Arguments<'_>, lvl: i32) {
+    LOGGER.log_f(lvl, args, None);
 }
 
 /// Gets default logger.
@@ -422,7 +431,7 @@ fn install_panic_hook() {
             },
         };
 
-        fx_log!(tag: "", levels::ERROR, "{}", format_args!("PANIC: {}", msg));
+        fx_log!(levels::ERROR, "{}", format_args!("PANIC: {}", msg));
 
         default_hook(panic_info);
     }));

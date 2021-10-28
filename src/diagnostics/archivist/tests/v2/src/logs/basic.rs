@@ -59,11 +59,12 @@ async fn listen_for_syslog() {
     // sort logs to account for out-of-order arrival
     logs.sort_by(|a, b| a.time.cmp(&b.time));
     assert_eq!(2, logs.len());
+    assert_eq!(logs[1].tags.len(), 2);
     assert_eq!(logs[0].tags, vec![tag.clone()]);
     assert_eq!(logs[0].severity, LogLevelFilter::Info as i32);
     assert_eq!(logs[0].msg, "my msg: 10");
-
-    assert_eq!(logs[1].tags[0], tag.clone());
+    assert_eq!(logs[1].tags[1], tag);
+    assert_eq!(logs[1].tags[0], "archivist_integration_tests::logs::basic");
     assert_eq!(logs[1].severity, LogLevelFilter::Warn as i32);
     assert_eq!(logs[1].msg, "log crate: 20 ");
 }

@@ -150,6 +150,17 @@ void fx_logger_activate_fallback(fx_logger_t* logger, int fallback_fd);
 // - ZX_OK if the reconfiguration succeeds
 zx_status_t fx_logger_reconfigure(fx_logger_t* logger, const fx_logger_config_t* config);
 
+// Reconfigures the given logger with the specified configuration.
+// If |console_fd|, |log_sink_channel|, and |log_sink_socket| are invalid in |config|,
+// this function doesn't change the currently used file descriptor or channel.
+// Any passed in socket is assumed to be structured.
+//
+// Returns:
+// - ZX_ERR_INVALID_ARGS if config is invalid (i.e. is null or has more than
+//   FX_LOG_MAX_TAGS tags),
+// - ZX_OK if the reconfiguration succeeds
+zx_status_t fx_logger_reconfigure_structured(fx_logger_t* logger, const fx_logger_config_t* config);
+
 // Writes formatted message to a logger.
 // The message will be discarded if |severity| is less than the logger's
 // minimum log severity.

@@ -14,7 +14,7 @@
 
 #include "fx_logger.h"
 
-zx::socket connect_to_logger() {
+zx::socket connect_to_logger(bool structured) {
   zx::socket invalid;
   zx::channel logger, logger_request;
   if (zx::channel::create(0, &logger, &logger_request) != ZX_OK) {
@@ -29,7 +29,7 @@ zx::socket connect_to_logger() {
   if (zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote) != ZX_OK) {
     return invalid;
   }
-  if (syslog_backend::HasStructuredBackend()) {
+  if (syslog_backend::HasStructuredBackend() || structured) {
     auto result = logger_client.ConnectStructured(std::move(remote));
     if (result.status() != ZX_OK) {
       return invalid;

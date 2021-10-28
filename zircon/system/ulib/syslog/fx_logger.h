@@ -39,10 +39,10 @@ struct fx_logger {
   // If tags or ntags are out of bound, this constructor will not fail but it
   // will not store all the tags and global tag behaviour would be undefined.
   // So they should be validated before calling this constructor.
-  fx_logger(const fx_logger_config_t* config) {
+  explicit fx_logger(const fx_logger_config_t* config, bool structured) {
     pid_ = GetCurrentProcessKoid();
     dropped_logs_.store(0, std::memory_order_relaxed);
-    Reconfigure(config);
+    Reconfigure(config, structured);
     if (GetLogConnectionStatus() == ZX_ERR_BAD_STATE) {
       ActivateFallback(-1);
     }
@@ -73,7 +73,7 @@ struct fx_logger {
 
   void ActivateFallback(int fallback_fd);
 
-  zx_status_t Reconfigure(const fx_logger_config_t* config);
+  zx_status_t Reconfigure(const fx_logger_config_t* config, bool is_structured);
 
   zx_status_t GetLogConnectionStatus();
 
@@ -109,6 +109,12 @@ struct fx_logger {
   fbl::String tagstr_;
 
   fbl::Mutex logger_mutex_;
+
+  // True if structured logging was requested by the user,
+  // false otherwise. Note that this may be false,
+  // and we could still be using structured logs
+  // like in the case of drivers.
+  bool is_structured_ = false;
 };
 
 #endif  // ZIRCON_SYSTEM_ULIB_SYSLOG_FX_LOGGER_H_

@@ -6,10 +6,10 @@
             "dropped": 0,
             "errors": null,
             "file": null,
-            "line": null,
+            "line": 0,
             "pid": "PID",
             "severity": "INFO",
-            "size_bytes": 132,
+            "size_bytes": 240,
             "tags": [
                 "fuchsia_component_test_framework_intermediary",
                 "fuchsia_component_test_framework_intermediary"

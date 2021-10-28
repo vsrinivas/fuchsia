@@ -13,5 +13,6 @@ fx_logger_logf_with_source
 fx_logger_logvf
 fx_logger_logvf_with_source
 fx_logger_reconfigure
+fx_logger_reconfigure_structured
 fx_logger_set_connection
 fx_logger_set_min_severity

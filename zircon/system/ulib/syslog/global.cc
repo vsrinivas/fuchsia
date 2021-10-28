@@ -9,6 +9,7 @@
 
 #include "export.h"
 #include "fx_logger.h"
+#include "lib/syslog/logger.h"
 
 namespace syslog_internal {
 
@@ -56,7 +57,9 @@ SYSLOG_EXPORT
 zx_status_t fx_log_reconfigure(const fx_logger_config_t* config) {
   fx_logger_t* logger = get_or_create_global_logger(
       config->console_fd == -1 && config->log_service_channel == ZX_HANDLE_INVALID);
-  return logger->Reconfigure(config);
+  return logger->Reconfigure(
+      config, (config->console_fd == -1 && config->log_service_channel == ZX_HANDLE_INVALID &&
+               config->log_sink_socket == ZX_HANDLE_INVALID));
 }
 
 // This is here to force a definition to be included here for C99.

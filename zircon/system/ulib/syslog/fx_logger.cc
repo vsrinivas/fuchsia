@@ -9,7 +9,8 @@
 
 #ifndef SYSLOG_STATIC
 #include <fidl/fuchsia.logger/cpp/wire.h>
-#include <lib/syslog/cpp/macros.h>
+#include <lib/syslog/cpp/macros.h>  //nogncheck
+#include <lib/syslog/structured_backend/cpp/fuchsia_syslog.h>
 #endif
 
 #include <lib/syslog/logger.h>
@@ -66,11 +67,7 @@ void fx_logger::ActivateFallback(int fallback_fd) {
   socket_.reset();
 }
 
-zx_status_t fx_logger::Reconfigure(const fx_logger_config_t* config) {
-  if (!config) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
+zx_status_t fx_logger::Reconfigure(const fx_logger_config_t* config, bool is_structured) {
   // TODO(fxbug.dev/63529): Rename all |log_service_channel| uses and remove.
   ZX_ASSERT(config->log_sink_socket == ZX_HANDLE_INVALID ||
             config->log_service_channel == ZX_HANDLE_INVALID);
@@ -97,6 +94,7 @@ zx_status_t fx_logger::Reconfigure(const fx_logger_config_t* config) {
 
   zx::socket socket;
   if (log_sink_socket != ZX_HANDLE_INVALID) {
+    is_structured_ = is_structured;
     socket.reset(log_sink_socket);
 #ifndef SYSLOG_STATIC
   } else if (config->log_sink_channel != ZX_HANDLE_INVALID) {
@@ -109,7 +107,8 @@ zx_status_t fx_logger::Reconfigure(const fx_logger_config_t* config) {
     fidl::WireSyncClient<fuchsia_logger::LogSink> logger_client(
         zx::channel(config->log_sink_channel));
 
-    auto result = logger_client.Connect(std::move(remote));
+    auto result = logger_client.ConnectStructured(std::move(remote));
+    is_structured_ = true;
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -147,9 +146,18 @@ void fx_logger::SetLogConnection(zx_handle_t handle) {
   }
 }
 
+#ifndef SYSLOG_STATIC
+cpp17::optional<cpp17::string_view> ViewFromC(const char* c_str) {
+  if (c_str) {
+    return c_str;
+  }
+  return std::nullopt;
+}
+#endif
+
 zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char* tag,
                                          const char* file, uint32_t line, const char* msg,
-                                         va_list args, bool perform_format) {
+                                         va_list args, bool format_args) {
 #ifndef SYSLOG_STATIC
   if (syslog_backend::HasStructuredBackend() && this->socket_.is_valid()) {
     std::unique_ptr<syslog_backend::LogBuffer> buf_ptr =
@@ -162,13 +170,13 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
     // Format
     // Number of bytes written not including null terminator
     int count = 0;
-    if (!perform_format) {
-      count = snprintf(fmt_string, kFormatStringLength, "%s", msg);
-    } else {
+    if (format_args) {
       count = vsnprintf(fmt_string, n, msg, args) + 1;
       if (count < 0) {
         return ZX_ERR_INVALID_ARGS;
       }
+    } else {
+      count = snprintf(fmt_string, kFormatStringLength, "%s", msg);
     }
 
     if (count >= n) {
@@ -199,6 +207,54 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
     }
     return ZX_OK;
   }
+  if (is_structured_ && !syslog_backend::HasStructuredBackend() && this->socket_.is_valid()) {
+    std::unique_ptr<fuchsia_syslog::LogBuffer> buf_ptr =
+        std::make_unique<fuchsia_syslog::LogBuffer>();
+    constexpr size_t kFormatStringLength = 1024;
+    char fmt_string[kFormatStringLength];
+    fmt_string[kFormatStringLength - 1] = 0;
+    int n = kFormatStringLength;
+    // Format
+    // Number of bytes written not including null terminator
+    int count = 0;
+    if (format_args) {
+      count = vsnprintf(fmt_string, n, msg, args) + 1;
+      if (count < 0) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+    } else {
+      count = snprintf(fmt_string, kFormatStringLength, "%s", msg);
+    }
+
+    if (count >= n) {
+      // truncated
+      constexpr char kEllipsis[] = "...";
+      constexpr size_t kEllipsisSize = sizeof(kEllipsis);
+      snprintf(fmt_string + kFormatStringLength - 1 - kEllipsisSize, kEllipsisSize, kEllipsis);
+    }
+
+    // TODO(fxbug.dev/72675): Pass file/line info regardless of severity in all cases.
+    // This is currently only enabled for drivers.
+    if (file) {
+      file = syslog::internal::StripFile(file, severity);
+    }
+    buf_ptr->BeginRecord(severity, ViewFromC(file), line, ViewFromC(fmt_string), cpp17::nullopt,
+                         false, this->socket_.borrow(), 0, pid_, GetCurrentThreadKoid());
+    if (tag) {
+      buf_ptr->WriteKeyValue("tag", tag);
+    }
+    for (size_t i = 0; i < tags_.size(); i++) {
+      size_t len = tags_[i].length();
+      ZX_DEBUG_ASSERT(len < 128);
+      buf_ptr->WriteKeyValue("tag", tags_[i].data());
+    }
+    if (buf_ptr->FlushRecord()) {
+      return ZX_OK;
+    }
+    ActivateFallback(-1);
+    return ZX_ERR_ASYNC;
+  }
+
 #endif
   zx_time_t time = zx_clock_get_monotonic();
   fx_log_packet_t packet;
@@ -249,7 +305,7 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
   int n = static_cast<int>(kDataSize - pos);
   int count = 0;
   size_t msg_pos = pos;
-  if (!perform_format) {
+  if (!format_args) {
     size_t write_len = std::min(strlen(msg), static_cast<size_t>(n - 1));
     memcpy(packet.data + pos, msg, write_len);
     pos += write_len;
@@ -372,6 +428,10 @@ zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag, co
     status = VLogWriteToFd(fd, severity, tag, file, line, msg, args, perform_format);
   } else if (socket_.is_valid()) {
     status = VLogWriteToSocket(severity, tag, file, line, msg, args, perform_format);
+    if (status == ZX_ERR_ASYNC) {
+      fd = logger_fd_.load(std::memory_order_relaxed);
+      status = VLogWriteToFd(fd, severity, tag, file, line, msg, args, perform_format);
+    }
   } else {
     return ZX_ERR_BAD_STATE;
   }
