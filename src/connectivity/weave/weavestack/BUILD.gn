@@ -82,9 +82,3 @@ config_data("config") {
     "config/device_info.json",
   ]
 }
-
-config_data("sysmgr_config") {
-  for_pkg = "sysmgr"
-  sources = [ "config/weavestack_sysmgr.config" ]
-  outputs = [ "weavestack.config" ]
-}

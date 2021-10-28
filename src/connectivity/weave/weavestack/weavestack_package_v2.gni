@@ -7,37 +7,6 @@ import("//src/sys/core/build/core_shard.gni")
 import("//tools/cmc/build/cmc.gni")
 
 template("_weavestack_package_v2") {
-  invoker_manifest = invoker.manifest
-  cmx_name = get_path_info(invoker_manifest, "name")
-  if (defined(invoker.extra_cmx)) {
-    manifest_merge_target = "${target_name}_${cmx_name}_merge"
-    cmc_merge(manifest_merge_target) {
-      sources = [ invoker_manifest ] + invoker.extra_cmx
-      output_name = "$manifest_merge_target.cmx"
-    }
-    invoker_manifest = get_target_outputs(":$manifest_merge_target")
-    invoker_manifest = invoker_manifest[0]
-  }
-
-  component_target = "${target_name}_${cmx_name}_component"
-  fuchsia_component(component_target) {
-    forward_variables_from(invoker, [ "testonly" ])
-    component_name = cmx_name
-    manifest = invoker_manifest
-    visibility = [ ":*" ]
-
-    if (!defined(deps)) {
-      deps = []
-    }
-    deps += [
-      "//src/connectivity/weave/weavestack:bin",
-      "//src/connectivity/weave/weavestack:default_environment_schema",
-    ]
-    if (defined(manifest_merge_target)) {
-      deps += [ ":$manifest_merge_target" ]
-    }
-  }
-
   invoker_manifest_v2 = invoker.manifest_v2
   cml_name = get_path_info(invoker_manifest_v2, "name")
   if (defined(invoker.extra_cml)) {
@@ -78,10 +47,7 @@ template("_weavestack_package_v2") {
                              "testonly",
                              "visibility",
                            ])
-    deps = [
-      ":$component_target",
-      ":$component_target_v2",
-    ]
+    deps = [ ":$component_target_v2" ]
 
     if (defined(applets)) {
       deps += [ applets.target ]
@@ -135,12 +101,6 @@ template("_weavestack_package_v2") {
 #       weave applets.
 #       Type: list(path)
 #
-#     extra_cmx (optional)
-#       Additional CMX manifests that will be merged with the base weavestack.cmx manifest.
-#       This can be used to add additional services or features that may be needed by different
-#       weave applets.
-#       Type: list(path)
-#
 #     component_shard_file (required)
 #       Manifest shards that will be merged with weavestack_common.core_shard.cml. One of the
 #       manifest shard should define this component as child to be included in core's manifest.
@@ -154,10 +114,8 @@ template("weavestack_package_v2") {
                              "applets",
                              "component_shard_file",
                              "extra_cml",
-                             "extra_cmx",
                              "package_name",
                            ])
-    manifest = "//src/connectivity/weave/meta/weavestack.cmx"
     manifest_v2 = "//src/connectivity/weave/meta/weavestack.cml"
   }
 }
