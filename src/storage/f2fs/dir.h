@@ -19,7 +19,10 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   // Lookup
   zx_status_t Lookup(std::string_view name, fbl::RefPtr<fs::Vnode> *out) final;
   zx_status_t DoLookup(std::string_view name, fbl::RefPtr<fs::Vnode> *out);
+  DirEntry *FindEntryOnDevice(std::string_view name, Page **res_page)
+      __TA_REQUIRES_SHARED(io_lock_);
   DirEntry *FindEntry(std::string_view name, Page **res_page) __TA_EXCLUDES(io_lock_);
+  zx::status<DirEntry> FindEntry(std::string_view name) __TA_EXCLUDES(io_lock_);
   DirEntry *FindInInlineDir(const std::string_view &name, Page **res_page);
   DirEntry *FindInBlock(Page *dentry_page, const char *name, int namelen, int *max_slots,
                         f2fs_hash_t namehash, Page **res_page);
@@ -32,8 +35,7 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   // delete & set link
   zx_status_t Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname,
                      std::string_view newname, bool src_must_be_dir, bool dst_must_be_dir);
-  void SetLink(DirEntry *de, Page *page, VnodeF2fs *inode) __TA_EXCLUDES(io_lock_)
-      __TA_EXCLUDES(io_lock_);
+  void SetLink(DirEntry *de, Page *page, VnodeF2fs *inode) __TA_EXCLUDES(io_lock_);
   DirEntry *ParentDir(Page **p);
   DirEntry *ParentInlineDir(Page **p);
   bool IsEmptyDir();

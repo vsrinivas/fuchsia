@@ -31,8 +31,6 @@ zx_status_t F2fs::RecoverDentry(Page *ipage, VnodeF2fs *vnode) {
   Inode *raw_inode = &(raw_node->i);
   fbl::RefPtr<VnodeF2fs> dir_refptr;
   Dir *dir;
-  DirEntry *de;
-  Page *page = nullptr;
   zx_status_t err = ZX_OK;
 
   if (!GetNodeManager().IsDentDnode(*ipage))
@@ -52,13 +50,7 @@ zx_status_t F2fs::RecoverDentry(Page *ipage, VnodeF2fs *vnode) {
   // dent.d_name.name = raw_inode->i_name;
 #endif
 
-  de = dir->FindEntry(vnode->GetNameView(), &page);
-  if (de) {
-#if 0  // porting needed
-    // kunmap(page);
-#endif
-    F2fsPutPage(page, 0);
-  } else {
+  if (auto dir_entry = dir->FindEntry(vnode->GetNameView()); dir_entry.is_error()) {
     dir->AddLink(vnode->GetNameView(), vnode);
   }
 out:

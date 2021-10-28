@@ -19,6 +19,10 @@ void F2fs::PutSuper() {
   WriteCheckpoint(false, true);
   GetVCache().Reset();
 
+#ifdef __Fuchsia__
+  GetDirEntryCache().Reset();
+#endif  // __Fuchsia__
+
   // destroy f2fs internal modules
   node_manager_->DestroyNodeManager();
   segment_manager_->DestroySegmentManager();

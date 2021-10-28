@@ -42,6 +42,14 @@ DirEntry *Dir::FindInInlineDir(const std::string_view &name, Page **res_page) {
 #if 0  // porting needed
        // unlock_page(node_page);
 #endif
+
+#ifdef __Fuchsia__
+        if (de != nullptr) {
+          Vfs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de,
+                                                   kCachedInlineDirEntryPageIndex);
+        }
+#endif  // __Fuchsia__
+
         return de;
       }
     }
@@ -264,6 +272,12 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
   FlushDirtyNodePage(Vfs(), ipage);
 #endif
 
+#ifdef __Fuchsia__
+  if (de != nullptr) {
+    Vfs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de, kCachedInlineDirEntryPageIndex);
+  }
+#endif  // __Fuchsia__
+
   UpdateParentMetadata(vnode, 0);
   UpdateInode(ipage);
 
@@ -298,6 +312,13 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
 #else
   FlushDirtyNodePage(Vfs(), page);
 #endif
+
+#ifdef __Fuchsia__
+  std::string_view remove_name(reinterpret_cast<char *>(inline_dentry->filename[bit_pos]),
+                               LeToCpu(dentry->name_len));
+
+  Vfs()->GetDirEntryCache().RemoveDirEntry(Ino(), remove_name);
+#endif  // __Fuchsia__
 
   timespec cur_time;
   clock_gettime(CLOCK_REALTIME, &cur_time);

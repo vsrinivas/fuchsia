@@ -67,6 +67,7 @@
 #include "src/storage/f2fs/mount.h"
 #include "src/storage/f2fs/fsck.h"
 #include "src/storage/f2fs/admin.h"
+#include "src/storage/f2fs/dir_entry_cache.h"
 // clang-format on
 
 namespace f2fs {
@@ -143,6 +144,10 @@ class F2fs : public fs::Vfs {
   inline zx_status_t LookupVnode(ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
     return vnode_cache_.Lookup(ino, out);
   }
+
+#ifdef __Fuchsia__
+  DirEntryCache &GetDirEntryCache() { return dir_entry_cache_; };
+#endif  // __Fuchsia__
 
   void ResetBc(std::unique_ptr<f2fs::Bcache> *out = nullptr) {
     if (out == nullptr) {
@@ -252,21 +257,23 @@ class F2fs : public fs::Vfs {
   std::unique_ptr<f2fs::Bcache> bc_;
 
   fbl::RefPtr<VnodeF2fs> root_vnode_;
-  fbl::Closure on_unmount_{};
-  MountOptions mount_options_{};
+  fbl::Closure on_unmount_;
+  MountOptions mount_options_;
 
   std::shared_ptr<Superblock> raw_sb_;
   std::unique_ptr<SuperblockInfo> superblock_info_;
   std::unique_ptr<SegmentManager> segment_manager_;
   std::unique_ptr<NodeManager> node_manager_;
 
-  VnodeCache vnode_cache_{};
+  VnodeCache vnode_cache_;
 
 #ifdef __Fuchsia__
+  DirEntryCache dir_entry_cache_;
+
   fbl::RefPtr<fs::QueryService> query_svc_;
   fbl::RefPtr<AdminService> admin_svc_;
 
-  zx::event fs_id_{};
+  zx::event fs_id_;
 #endif  // __Fuchsia__
 };
 

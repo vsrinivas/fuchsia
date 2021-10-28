@@ -166,14 +166,14 @@ DirEntry *Dir::FindInLevel(unsigned int level, std::string_view name, int namele
  * and the entry itself. Page is returned mapped and unlocked.
  * Entry is guaranteed to be valid.
  */
-DirEntry *Dir::FindEntry(std::string_view name, Page **res_page) {
+DirEntry *Dir::FindEntryOnDevice(std::string_view name, Page **res_page) {
   uint64_t npages = DirBlocks();
   DirEntry *de = nullptr;
   f2fs_hash_t name_hash;
+  int namelen = static_cast<int>(name.length());
   unsigned int max_depth;
   unsigned int level;
 
-  fs::SharedLock read_lock(io_lock_);
   if (TestFlag(InodeInfoFlag::kInlineDentry)) {
     return FindInInlineDir(name, res_page);
   }
@@ -183,18 +183,74 @@ DirEntry *Dir::FindEntry(std::string_view name, Page **res_page) {
 
   *res_page = nullptr;
 
-  name_hash = DentryHash(name.data(), static_cast<int>(name.length()));
+  name_hash = DentryHash(name.data(), namelen);
   max_depth = static_cast<unsigned int>(GetCurDirDepth());
 
   for (level = 0; level < max_depth; level++) {
-    if (de = FindInLevel(level, name, static_cast<int>(name.length()), name_hash, res_page);
-        de != nullptr)
+    if (de = FindInLevel(level, name, namelen, name_hash, res_page); de != nullptr)
       break;
   }
   if (!de && !IsSameDirHash(name_hash)) {
     SetDirHash(name_hash, level - 1);
   }
+
+#ifdef __Fuchsia__
+  if (de != nullptr) {
+    Vfs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de, (*res_page)->index);
+  }
+#endif  // __Fuchsia__
+
   return de;
+}
+
+DirEntry *Dir::FindEntry(std::string_view name, Page **res_page) {
+  fs::SharedLock read_lock(io_lock_);
+
+#ifdef __Fuchsia__
+  if (auto cache_page_index = Vfs()->GetDirEntryCache().LookupDataPageIndex(Ino(), name);
+      !cache_page_index.is_error()) {
+    if (TestFlag(InodeInfoFlag::kInlineDentry)) {
+      return FindInInlineDir(name, res_page);
+    }
+
+    Page *dentry_page = nullptr;
+    if (FindDataPage(*cache_page_index, &dentry_page) != ZX_OK) {
+      return nullptr;
+    }
+
+    int max_slots = 0;
+    int namelen = static_cast<int>(name.length());
+    f2fs_hash_t name_hash = DentryHash(name.data(), namelen);
+    return FindInBlock(dentry_page, name.data(), namelen, &max_slots, name_hash, res_page);
+  }
+#endif  // __Fuchsia__
+
+  return FindEntryOnDevice(name, res_page);
+}
+
+zx::status<DirEntry> Dir::FindEntry(std::string_view name) {
+  DirEntry *de = nullptr;
+
+  fs::SharedLock read_lock(io_lock_);
+
+#ifdef __Fuchsia__
+  auto element = Vfs()->GetDirEntryCache().LookupDirEntry(Ino(), name);
+  if (!element.is_error()) {
+    return zx::ok(*element);
+  }
+#endif  // __Fuchsia__
+
+  Page *page = nullptr;
+
+  de = FindEntryOnDevice(name, &page);
+
+  if (de != nullptr) {
+    DirEntry ret = *de;
+    F2fsPutPage(page, 0);
+    return zx::ok(ret);
+  }
+
+  return zx::error(ZX_ERR_NOT_FOUND);
 }
 
 DirEntry *Dir::ParentDir(Page **p) {
@@ -221,20 +277,11 @@ DirEntry *Dir::ParentDir(Page **p) {
 }
 
 ino_t Dir::InodeByName(std::string_view name) {
-  ino_t res = 0;
-  DirEntry *de;
-  Page *page = nullptr;
-
-  if (de = FindEntry(name, &page); de != nullptr) {
-    res = LeToCpu(de->ino);
-#if 0  // porting needed
-    // if (!TestFlag(InodeInfoFlag::kInlineDentry))
-    //   kunmap(page);
-#endif
-    F2fsPutPage(page, 0);
+  if (auto dir_entry = FindEntry(name); !dir_entry.is_error()) {
+    return LeToCpu((*dir_entry).ino);
   }
 
-  return res;
+  return 0;
 }
 
 void Dir::SetLink(DirEntry *de, Page *page, VnodeF2fs *vnode) {
@@ -261,6 +308,10 @@ void Dir::SetLink(DirEntry *de, Page *page, VnodeF2fs *vnode) {
     FlushDirtyNodePage(Vfs(), page);
   }
 #endif
+
+#ifdef __Fuchsia__
+  Vfs()->GetDirEntryCache().UpdateDirEntry(Ino(), vnode->GetName(), *de, page->index);
+#endif  // __Fuchsia__
 
   timespec cur_time;
   clock_gettime(CLOCK_REALTIME, &cur_time);
@@ -465,6 +516,12 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
 #else
           FlushDirtyDataPage(Vfs(), dentry_page);
 #endif
+
+#ifdef __Fuchsia__
+          if (de != nullptr) {
+            Vfs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de, dentry_page->index);
+          }
+#endif  // __Fuchsia__
           UpdateParentMetadata(vnode, current_depth);
         }
 
@@ -522,14 +579,19 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
   for (i = 0; i < slots; i++)
     TestAndClearBit(bit_pos + i, dentry_blk->dentry_bitmap);
 
-  /* Let's check and deallocate this dentry page */
-  bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, 0);
 #if 0  // porting needed
   // kunmap(page); /* kunmap - pair of f2fs_find_entry */
   // set_page_dirty(page);
 #else
   FlushDirtyDataPage(Vfs(), page);
 #endif
+
+#ifdef __Fuchsia__
+  std::string_view remove_name(reinterpret_cast<char *>(dentry_blk->filename[bit_pos]),
+                               LeToCpu(dentry->name_len));
+
+  Vfs()->GetDirEntryCache().RemoveDirEntry(Ino(), remove_name);
+#endif  // __Fuchsia__
 
   timespec cur_time;
   clock_gettime(CLOCK_REALTIME, &cur_time);
@@ -558,6 +620,9 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
       Vfs()->AddOrphanInode(vnode);
     }
   }
+
+  // check and deallocate dentry page if all dentries of the page are freed
+  bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, 0);
 
   if (bit_pos == kNrDentryInBlock) {
     __UNUSED loff_t page_offset;

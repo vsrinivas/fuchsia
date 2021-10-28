@@ -140,11 +140,9 @@ zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> new_child) {
   if (target->IsDir())
     return ZX_ERR_NOT_FILE;
 
-  Page *old_entry_page = nullptr;
-  DirEntry *old_entry = FindEntry(name, &old_entry_page);
-  if (old_entry != nullptr) {
-    nid_t old_ino = LeToCpu(old_entry->ino);
-    F2fsPutPage(old_entry_page, 0);
+  auto old_entry = FindEntry(name);
+  if (!old_entry.is_error()) {
+    nid_t old_ino = LeToCpu((*old_entry).ino);
     if (old_ino == target->Ino())
       return ZX_ERR_ALREADY_EXISTS;
   }
@@ -186,21 +184,17 @@ zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> new_child) {
 
 zx_status_t Dir::DoLookup(std::string_view name, fbl::RefPtr<fs::Vnode> *out) {
   fbl::RefPtr<VnodeF2fs> vn;
-  DirEntry *de;
-  Page *page = nullptr;
 
   if (!fs::IsValidName(name)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  de = FindEntry(name, &page);
-  if (de) {
-    nid_t ino = LeToCpu(de->ino);
+  if (auto dir_entry = FindEntry(name); !dir_entry.is_error()) {
+    nid_t ino = LeToCpu((*dir_entry).ino);
 #if 0  // porting needed
     // if (!f2fs_has_inline_dentry(dir))
     //   kunmap(page);
 #endif
-    F2fsPutPage(page, 0);
 
     if (zx_status_t ret = VnodeF2fs::Vget(Vfs(), ino, &vn); ret != ZX_OK)
       return ret;
@@ -592,7 +586,6 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
 }
 
 zx_status_t Dir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode> *out) {
-  Page *page = nullptr;
   zx_status_t status = ZX_OK;
 
   if (!fs::IsValidName(name)) {
@@ -602,8 +595,7 @@ zx_status_t Dir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vn
   if (GetNlink() == 0)
     return ZX_ERR_NOT_FOUND;
 
-  if (FindEntry(name, &page) != nullptr) {
-    F2fsPutPage(page, 0);
+  if (auto ret = FindEntry(name); !ret.is_error()) {
     return ZX_ERR_ALREADY_EXISTS;
   }
 
