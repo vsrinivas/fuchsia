@@ -22,7 +22,6 @@ group("drivers") {
     "drivers/simple:simple.nv",
     "drivers/simple:simple.vmware",
     "drivers/ssd1306:ssd1306_driver",
-    "drivers/vim-display",
   ]
 }
 

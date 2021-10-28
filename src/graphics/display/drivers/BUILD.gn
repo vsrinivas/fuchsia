@@ -16,6 +16,5 @@ group("tests") {
     "intel-i915:tests",
     "simple:tests",
     "ssd1306:tests",
-    "vim-display:tests",
   ]
 }

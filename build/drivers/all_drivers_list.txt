@@ -246,7 +246,6 @@
 //src/graphics/display/drivers/simple:simple.nv-driver
 //src/graphics/display/drivers/simple:simple.vmware-driver
 //src/graphics/display/drivers/ssd1306:ssd1306_driver-driver
-//src/graphics/display/drivers/vim-display:vim-display-driver
 //src/graphics/drivers/aml-gpu:aml-gpu-driver
 //src/graphics/drivers/misc/goldfish:goldfish_driver-driver
 //src/graphics/drivers/misc/goldfish_address_space:address_space_driver-driver

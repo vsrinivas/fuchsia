@@ -26,7 +26,6 @@ _common_bootfs_deps = [
   "//src/devices/serial/drivers/aml-uart",
   "//src/devices/thermal/drivers/aml-thermal-s912",
   "//src/graphics/display/drivers/aml-canvas",
-  "//src/graphics/display/drivers/vim-display",
   "//src/graphics/drivers/aml-gpu",
   "//src/ui/light/drivers/aml-light",
   "//src/ui/light/drivers/gpio-light",

@@ -121,7 +121,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/graphics/display/drivers/display/tests:display-core-unittests",
     "//src/graphics/display/drivers/fake:fake-display-device-tree",
     "//src/graphics/display/drivers/intel-i915:intel-i915-test",
-    "//src/graphics/display/drivers/vim-display:vim-display-test",
     "//src/graphics/display/testing:testing",
     "//src/graphics/drivers/aml-gpu:aml-gpu-test-bin",
     "//src/graphics/drivers/aml-gpu:sources",

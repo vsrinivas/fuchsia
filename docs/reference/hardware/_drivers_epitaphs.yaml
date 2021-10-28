@@ -308,3 +308,10 @@
   gerrit_change_id: '591524'
   available_in_git: '9a9b43d4dd24828fc77c76cd13cddbd8cf6d6a70'
   path: '/src/devices/spi/drivers/dw-spi'
+- short_description: 'Khadas VIM2 display and HDMI audio driver'
+  deletion_reason: 'Hardware is not actively supported'
+  tracking_bug: '56931'
+  gerrit_change_id: '591375'
+  available_in_git: 'ebfc0c4a453fbbc0762542e37cdd188db8798c7e'
+  areas: ['Audio', 'Display']
+  path: '/src/graphics/display/drivers/vim-display'

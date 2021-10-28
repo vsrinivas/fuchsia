@@ -92,7 +92,7 @@ fuchsia_driver("fancy-display") {
 
 1. Add `//src/graphics/display/drivers/fancy-display` as a dependency for the
 board(s) that you are using as test products. For example, if your device is
-part of a [Khadas VIM2 board][vim2-board], modify `//boards/vim2.gni` by adding
+part of a [Khadas VIM3 board][vim3-board], modify `//boards/vim3.gni` by adding
 your driver to the `_common_bootfs_deps` list.
 
 <!-- TODO: describe this in more detail, including how to build the `core` image
@@ -125,7 +125,7 @@ accept fuchsia.BIND_PCI_DID {
 ```
 
 For PC devices, the [intel-i915 bind rules][intel-bind] are a good example. For
-fixed-hardware SoCs, see the [VIM2 rules][vim2-bind].
+fixed-hardware SoCs, see the [Amlogic display rules][amlogic-display-bind].
 
 
 #### Minimal driver
@@ -293,5 +293,5 @@ basic bootloader driver. In most cases, your roadmap will be:
 [license-policies]: /docs/contribute/governance/policy/open-source-licensing-policies.md
 [sysmem]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem
 [tearing]: https://en.wikipedia.org/wiki/Screen_tearing
-[vim2-bind]: /src/graphics/display/drivers/vim-display/vim-display.bind
-[vim2-board]: /boards/vim2.gni
+[amlogic-display-bind]: /src/graphics/display/drivers/amlogic-display/amlogic-display.bind
+[vim3-board]: /boards/vim3.gni
