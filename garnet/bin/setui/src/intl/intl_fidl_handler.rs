@@ -1,15 +1,21 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use fidl_fuchsia_settings::{IntlMarker, IntlRequest, IntlSettings, IntlWatchResponder};
-use fuchsia_async as fasync;
 
 use crate::base::{SettingInfo, SettingType};
 use crate::fidl_hanging_get_responder;
-use crate::fidl_process;
-use crate::fidl_processor::settings::RequestContext;
 use crate::handler::base::Request;
-use crate::request_respond;
+use crate::ingress::Scoped;
+use crate::ingress::{request, watch};
+use crate::job::source::{Error as JobError, ErrorResponder};
+use crate::job::Job;
+
+use fidl::endpoints::{ControlHandle, Responder};
+use fidl_fuchsia_settings::{
+    IntlMarker, IntlRequest, IntlSetResponder, IntlSetResult, IntlSettings, IntlWatchResponder,
+};
+use fuchsia_syslog::fx_log_warn;
+use std::convert::TryFrom;
 
 fidl_hanging_get_responder!(IntlMarker, IntlSettings, IntlWatchResponder,);
 
@@ -29,36 +35,55 @@ impl From<IntlSettings> for Request {
     }
 }
 
-fidl_process!(Intl, SettingType::Intl, process_request,);
-
-async fn process_request(
-    context: RequestContext<IntlSettings, IntlWatchResponder>,
-    req: IntlRequest,
-) -> Result<Option<IntlRequest>, anyhow::Error> {
-    // Support future expansion of FIDL
-    #[allow(unreachable_patterns)]
-    match req {
-        IntlRequest::Set { settings, responder } => {
-            fasync::Task::spawn(async move {
-                request_respond!(
-                    context,
-                    responder,
-                    SettingType::Intl,
-                    settings.into(),
-                    Ok(()),
-                    Err(fidl_fuchsia_settings::Error::Failed),
-                    IntlMarker
-                );
-            })
-            .detach();
-        }
-        IntlRequest::Watch { responder } => context.watch(responder, true).await,
-        _ => {
-            return Ok(Some(req));
+impl TryFrom<IntlRequest> for Job {
+    type Error = JobError;
+    fn try_from(item: IntlRequest) -> Result<Self, Self::Error> {
+        #[allow(unreachable_patterns)]
+        match item {
+            IntlRequest::Set { settings, responder } => Ok(request::Work::new(
+                SettingType::Intl,
+                Request::SetIntlInfo(settings.into()),
+                responder,
+            )
+            .into()),
+            IntlRequest::Watch { responder } => {
+                Ok(watch::Work::new_job(SettingType::Intl, responder))
+            }
+            _ => {
+                fx_log_warn!("Received a call to an unsupported API: {:?}", item);
+                Err(JobError::Unsupported)
+            }
         }
     }
+}
 
-    Ok(None)
+impl ErrorResponder for IntlSetResponder {
+    fn id(&self) -> &'static str {
+        "Intl_Set"
+    }
+
+    fn respond(self: Box<Self>, error: fidl_fuchsia_settings::Error) -> Result<(), fidl::Error> {
+        self.send(&mut Err(error))
+    }
+}
+
+impl watch::Responder<IntlSettings, fuchsia_zircon::Status> for IntlWatchResponder {
+    fn respond(self, response: Result<IntlSettings, fuchsia_zircon::Status>) {
+        match response {
+            Ok(settings) => {
+                let _ = self.send(settings).ok();
+            }
+            Err(error) => {
+                self.control_handle().shutdown_with_epitaph(error);
+            }
+        }
+    }
+}
+
+impl request::Responder<Scoped<IntlSetResult>> for IntlSetResponder {
+    fn respond(self, Scoped(mut response): Scoped<IntlSetResult>) {
+        let _ = self.send(&mut response).ok();
+    }
 }
 
 #[cfg(test)]

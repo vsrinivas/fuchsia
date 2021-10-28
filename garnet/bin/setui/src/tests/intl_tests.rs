@@ -3,8 +3,12 @@
 // found in the LICENSE file.
 
 use crate::base::SettingType;
+use crate::handler::base::Request;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::handler::setting_handler::ControllerError;
 use crate::ingress::fidl::Interface;
+use crate::tests::fakes::base::create_setting_handler;
+use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::tests::test_failure_utils::create_test_env_with_failures;
 use crate::EnvironmentBuilder;
 use anyhow::format_err;
@@ -235,4 +239,39 @@ async fn test_channel_failure_watch() {
         create_intl_test_env_with_failures(Arc::new(InMemoryStorageFactory::new())).await;
     let result = intl_service.watch().await;
     assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
+}
+
+// Tests that the FIDL calls for the intl setting result in appropriate
+// commands sent to the service.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_error_propagation() {
+    let service_registry = ServiceRegistry::create();
+    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
+        .service(Box::new(ServiceRegistry::serve(service_registry)))
+        .handler(
+            SettingType::Intl,
+            create_setting_handler(Box::new(move |request| {
+                if request == Request::Get {
+                    return Box::pin(async {
+                        Err(ControllerError::UnhandledType(SettingType::Intl))
+                    });
+                } else {
+                    return Box::pin(async { Ok(None) });
+                }
+            })),
+        )
+        .fidl_interfaces(&[Interface::Intl])
+        .spawn_and_get_nested_environment(ENV_NAME)
+        .await
+        .expect("env should be available");
+
+    // Connect to the proxy.
+    let intl_service =
+        env.connect_to_protocol::<IntlMarker>().expect("Intl service should be available");
+
+    // Validate that an unavailable error is returned.
+    assert_matches!(
+        intl_service.watch().await,
+        Err(fidl::Error::ClientChannelClosed { status: fuchsia_zircon::Status::UNAVAILABLE, .. })
+    );
 }
