@@ -62,6 +62,10 @@ group("non_hermetic_deps") {
   # See: fxrev.dev/528291
   visibility += [ "//build/rust/*" ]
 
+  # TODO(http://fxbug.dev/77290): Remove entry when
+  # //build/images/assemble_system.gni no longer needs `hermetic_deps = false`.
+  visibility += [ "//third_party/network-conformance/images/*" ]
+
   non_default_checkout_users = [
     # This git repo is only checked out when the vulkan-cts attribute is set.
     "//third_party/vulkan-cts/fuchsia/*",
