@@ -154,7 +154,7 @@ TEST(Vmar, MapInCompactTest) {
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
 }
 
-TEST(Vmar, MapInUppderLimitTest) {
+TEST(Vmar, MapInUpperLimitTest) {
   const size_t kRegionPages = 100;
   const size_t kSubRegions = kRegionPages / 2;
 
@@ -299,6 +299,31 @@ TEST(Vmar, AllocateUnsatisfiableTest) {
   EXPECT_EQ(zx_handle_close(region1), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
+}
+
+// Test that virtual address space beginning at 0x200000 is accessible
+TEST(Vmar, AllocateAtLowAddressTest) {
+  zx_handle_t process;
+  zx_handle_t vmar;
+  zx_handle_t vmo;
+
+  ASSERT_EQ(zx_process_create(zx_job_default(), kProcessName, sizeof(kProcessName) - 1, 0, &process,
+                              &vmar),
+            ZX_OK);
+
+  ASSERT_EQ(zx_vmo_create(zx_system_get_page_size(), 0, &vmo), ZX_OK);
+
+  zx_info_vmar_t info;
+  ASSERT_EQ(zx_object_get_info(vmar, ZX_INFO_VMAR, &info, sizeof(info), NULL, NULL), ZX_OK);
+  ASSERT_LE(info.base, 0x200000);
+
+  zx_vaddr_t addr;
+  ASSERT_EQ(zx_vmar_map(vmar, 0, 0x200000 - info.base, vmo, 0, zx_system_get_page_size(), &addr),
+            ZX_OK);
+
+  EXPECT_EQ(zx_handle_close(process), ZX_OK);
+  EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
+  EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
 }
 
 // Validate that when we destroy a VMAR, all operations on it

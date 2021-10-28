@@ -17,7 +17,7 @@
 
 // Virtual address where the user-accessible address space begins.
 // Below this is wholly inaccessible.
-#define USER_ASPACE_BASE 0x0000000001000000UL
+#define USER_ASPACE_BASE 0x0000000000200000UL
 #define USER_ASPACE_SIZE (0xffffff000000UL - USER_ASPACE_BASE)
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_KERNEL_ASPACE_H_

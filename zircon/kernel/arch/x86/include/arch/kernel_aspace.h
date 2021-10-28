@@ -17,7 +17,7 @@
 
 // Virtual address where the user-accessible address space begins.
 // Below this is wholly inaccessible.
-#define USER_ASPACE_BASE 0x0000000001000000UL  // 16MB
+#define USER_ASPACE_BASE 0x0000000000200000UL  // 2MB
 
 // We set the top of user address space to be (1 << 47) - 4k.
 // See //docs/concepts/kernel/sysret_problem.md for why we subtract 4k here.
