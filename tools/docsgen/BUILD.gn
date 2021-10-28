@@ -151,12 +151,13 @@ group("tests") {
 }
 
 # Runs one time python helpdoc generation script.
+# TODO (https://fxbug.dev/87512) to add depsfile.
 action("invoke_helpdoc") {
   script_output = get_target_outputs(":${_helpdoc_script_target}")
   script = script_output[0]
+  testonly = true
 
   outputs = [ "$target_out_dir/$helpdoc_tarfile" ]
-  depfile = "$target_out_dir/$target_name.d"
 
   args = [
     "--out-path",
