@@ -13,6 +13,8 @@ use {
     fidl_fuchsia_wayland::ViewProducerRequestStream,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
+    fuchsia_zircon as zx,
+    futures::channel::mpsc,
     parking_lot::Mutex,
     std::sync::Arc,
     wayland::*,
@@ -28,7 +30,7 @@ use {
 /// that the client can immediately interact with.
 pub const DISPLAY_SINGLETON_OBJECT_ID: u32 = 1;
 
-trait LocalViewProducerClient: Send + Sync {
+pub trait LocalViewProducerClient: Send + Sync {
     /// Notifes the view producer client that a new view has been created.
     ///
     /// # Parameters
@@ -77,8 +79,6 @@ impl Display {
     /// for unit testing purposes only.
     #[cfg(test)]
     pub fn new_no_scenic(registry: Registry) -> Result<Self, Error> {
-        use fuchsia_zircon as zx;
-
         let (c1, _c2) = zx::Channel::create()?;
         let scenic = ScenicProxy::new(fasync::Channel::from_channel(c1)?);
         Ok(Display {
@@ -137,17 +137,40 @@ impl Display {
 
     pub fn bind_view_producer(&self, stream: ViewProducerRequestStream) {
         match &self.view_producer_client {
-            ViewProducerClient::Local(_view_producer_client) => {}
+            ViewProducerClient::Local(_view_producer_client) => {
+                panic!("Attempting to bind remote view producer when display has local view producer client.");
+            }
             ViewProducerClient::Remote(view_producer_binding) => {
-                let mut binding = view_producer_binding.lock();
-                *binding = Some(stream);
+                *view_producer_binding.lock() = Some(stream);
+            }
+        }
+    }
+
+    pub fn bind_local_view_producer(&self, view_producer_client: Box<dyn LocalViewProducerClient>) {
+        match &self.view_producer_client {
+            ViewProducerClient::Local(client) => {
+                *client.lock() = view_producer_client;
+            }
+            ViewProducerClient::Remote(_view_producer_binding) => {
+                panic!("Attempting to bind local view producer when display has remote view producer client.");
             }
         }
     }
 
     /// Create a new client and begin polling `chan` for requests.
     pub fn spawn_new_client(self, chan: fasync::Channel) {
-        let mut client = Client::new(chan, self);
+        Display::spawn_client(Client::new(chan, self));
+    }
+
+    pub fn spawn_new_local_client(
+        self,
+        sender: mpsc::UnboundedSender<zx::MessageBuf>,
+        receiver: mpsc::UnboundedReceiver<zx::MessageBuf>,
+    ) {
+        Display::spawn_client(Client::new_local(sender, receiver, self));
+    }
+
+    fn spawn_client(mut client: Client) {
         client.set_protocol_logging(false);
 
         // Add the global wl_display object. We unwrap here since the object map

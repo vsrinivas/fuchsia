@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
-bin_deps = [
+base_deps = [
   "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
   "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
   "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
@@ -44,7 +44,7 @@ bin_deps = [
   "//third_party/rust_crates:thiserror",
 ]
 
-bin_sources = [
+base_sources = [
   "src/alpha_compositing.rs",
   "src/aura_shell.rs",
   "src/buffer.rs",
@@ -54,7 +54,6 @@ bin_sources = [
   "src/dispatcher.rs",
   "src/display.rs",
   "src/linux_dmabuf.rs",
-  "src/main.rs",
   "src/object.rs",
   "src/output.rs",
   "src/registry.rs",
@@ -68,11 +67,15 @@ bin_sources = [
   "src/xdg_shell.rs",
 ]
 
+bin_sources = base_sources + [ "src/main.rs" ]
+
+lib_sources = base_sources + [ "src/lib.rs" ]
+
 rustc_binary("bin") {
   output_name = "wayland_bridge"
   edition = "2018"
   with_unit_tests = true
-  deps = bin_deps
+  deps = base_deps
   sources = bin_sources
   features = [ "flatland" ]
 }
@@ -81,8 +84,18 @@ rustc_binary("legacy_bin") {
   output_name = "legacy_wayland_bridge"
   edition = "2018"
   with_unit_tests = true
-  deps = bin_deps
+  deps = base_deps
   sources = bin_sources
+}
+
+rustc_library("lib") {
+  name = "wayland_bridge"
+  with_unit_tests = true
+  edition = "2018"
+
+  source_root = "src/lib.rs"
+  deps = base_deps
+  sources = lib_sources
 }
 
 resource("keymap") {
