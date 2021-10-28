@@ -10,21 +10,23 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
-    "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap-rustc",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun-rustc",
+    "//sdk/fidl/fuchsia.net.virtualization:fuchsia.net.virtualization-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
-    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/network/ethernet",
-    "//src/lib/storage/fuchsia-vfs-watcher",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:structopt",
-    "//third_party/rust_crates:thiserror",
   ]
 
   sources = [ "src/main.rs" ]

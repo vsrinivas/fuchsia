@@ -5,6 +5,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     ethernet,
+    fidl::endpoints::Proxy as _,
     fidl_fuchsia_netemul_network::{
         EndpointManagerMarker, FakeEndpointMarker, NetworkContextMarker, NetworkManagerMarker,
     },
@@ -13,7 +14,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon as zx,
-    futures::{self, TryStreamExt},
+    futures::{self, FutureExt as _, TryStreamExt as _},
     std::{str, task::Poll},
     structopt::StructOpt,
 };
@@ -34,6 +35,8 @@ struct Opt {
 
 const DEFAULT_METRIC: u32 = 100;
 const BUS_NAME: &'static str = "netstack-itm-bus";
+const NETSTACK_STRING: &str = "netstack is live!";
+const VIRTUALIZATION_STRING: &str = "virtualization is live!";
 
 fn open_bus(cli_name: &str) -> Result<BusProxy, Error> {
     let syncm = client::connect_to_protocol::<SyncManagerMarker>()?;
@@ -42,33 +45,67 @@ fn open_bus(cli_name: &str) -> Result<BusProxy, Error> {
     Ok(bus)
 }
 
-async fn run_mock_guest(
-    network_name: String,
-    ep_name: String,
-    server_name: String,
-) -> Result<(), Error> {
+async fn run_mock_guest(network_name: String, ep_name: String, server_name: String) {
     // Create an ethertap client and an associated ethernet device.
-    let ctx = client::connect_to_protocol::<NetworkContextMarker>()?;
-    let (epm, epm_server_end) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()?;
-    ctx.get_endpoint_manager(epm_server_end)?;
-    let (netm, netm_server_end) = fidl::endpoints::create_proxy::<NetworkManagerMarker>()?;
-    ctx.get_network_manager(netm_server_end)?;
+    let ctx =
+        client::connect_to_protocol::<NetworkContextMarker>().expect("connect network context");
+    let (epm, epm_server_end) =
+        fidl::endpoints::create_proxy::<EndpointManagerMarker>().expect("create proxy");
+    let () = ctx.get_endpoint_manager(epm_server_end).expect("get endpoint manager");
+    let (netm, netm_server_end) =
+        fidl::endpoints::create_proxy::<NetworkManagerMarker>().expect("create proxy");
+    let () = ctx.get_network_manager(netm_server_end).expect("get network manager");
 
-    let ep = epm.get_endpoint(&ep_name).await?.unwrap().into_proxy()?;
-    let net = netm.get_network(&network_name).await?.unwrap().into_proxy()?;
-    let (fake_ep, fake_ep_server_end) = fidl::endpoints::create_proxy::<FakeEndpointMarker>()?;
-    net.create_fake_endpoint(fake_ep_server_end)?;
+    let ep = epm
+        .get_endpoint(&ep_name)
+        .await
+        .expect("get endpoint (transport)")
+        .expect("get endpoint (application)")
+        .into_proxy()
+        .expect("into proxy");
+    let net = netm
+        .get_network(&network_name)
+        .await
+        .expect("get network (transport)")
+        .expect("get network (application)")
+        .into_proxy()
+        .expect("into proxy");
+    let (fake_ep, fake_ep_server_end) =
+        fidl::endpoints::create_proxy::<FakeEndpointMarker>().expect("create proxy");
+    let () = net.create_fake_endpoint(fake_ep_server_end).expect("create fake endpoint");
 
-    let netstack = client::connect_to_protocol::<NetstackMarker>()?;
+    let netstack = client::connect_to_protocol::<NetstackMarker>().expect("connect netstack");
     let mut cfg = InterfaceConfig {
         name: "eth-test".to_string(),
         filepath: "[TBD]".to_string(),
         metric: DEFAULT_METRIC,
     };
 
-    let _nicid = match ep.get_device().await? {
+    let octets = match ep.get_device().await.expect("get device") {
         fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(eth_device) => {
-            netstack.add_ethernet_device(&format!("/{}", ep_name), &mut cfg, eth_device).await?
+            let eth_device = eth_device.into_proxy().expect("into proxy");
+            let fidl_fuchsia_hardware_ethernet::Info {
+                features: _,
+                mtu: _,
+                mac: fidl_fuchsia_hardware_ethernet::MacAddress { octets },
+            } = eth_device.get_info().await.expect("get info (transport)");
+            let eth_device = eth_device
+                .into_channel()
+                .map_err(|fidl_fuchsia_hardware_ethernet::DeviceProxy { .. }| {
+                    format_err!("failed to convert proxy back to channel")
+                })
+                .expect("into channel");
+            let _nicid: u32 = netstack
+                .add_ethernet_device(
+                    &format!("/{}", ep_name),
+                    &mut cfg,
+                    fidl::endpoints::ClientEnd::new(eth_device.into_zx_channel()),
+                )
+                .await
+                .expect("add ethernet device (transport)")
+                .map_err(zx::Status::from_raw)
+                .expect("add ethernet device (application)");
+            octets
         }
         fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(netdevice) => {
             panic!(
@@ -78,31 +115,168 @@ async fn run_mock_guest(
         }
     };
 
-    // Send a message to the server and expect it to be echoed back.
-    let echo_string = String::from("hello");
+    let tun_ctl = client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
+        .expect("connect tun control");
+    let tun_device = {
+        let (client, server) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
+                .expect("create proxy");
+        let () = tun_ctl
+            .create_device(
+                fidl_fuchsia_net_tun::DeviceConfig {
+                    blocking: Some(true),
+                    ..fidl_fuchsia_net_tun::DeviceConfig::EMPTY
+                },
+                server,
+            )
+            .expect("create tun device");
+        client
+    };
+    const PORT_ID: u8 = 7;
+    let tun_port = {
+        let (client, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::PortMarker>()
+            .expect("create proxy");
+        tun_device
+            .add_port(
+                fidl_fuchsia_net_tun::DevicePortConfig {
+                    base: Some(fidl_fuchsia_net_tun::BasePortConfig {
+                        id: Some(PORT_ID),
+                        rx_types: Some(vec![fidl_fuchsia_hardware_network::FrameType::Ethernet]),
+                        tx_types: Some(vec![fidl_fuchsia_hardware_network::FrameTypeSupport {
+                            type_: fidl_fuchsia_hardware_network::FrameType::Ethernet,
+                            features: 0,
+                            supported_flags: fidl_fuchsia_hardware_network::TxFlags::empty(),
+                        }]),
+                        ..fidl_fuchsia_net_tun::BasePortConfig::EMPTY
+                    }),
+                    online: Some(true),
+                    mac: Some(fidl_fuchsia_net::MacAddress { octets }),
+                    ..fidl_fuchsia_net_tun::DevicePortConfig::EMPTY
+                },
+                server,
+            )
+            .expect("add tun port");
+        client
+    };
+    let virtualization_interface = {
+        let virtualization_ctl =
+            client::connect_to_protocol::<fidl_fuchsia_net_virtualization::ControlMarker>()
+                .expect("connect virtualization control");
+        let virtualization_network = {
+            let (client, server) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_net_virtualization::NetworkMarker>()
+                    .expect("create proxy");
+            let () = virtualization_ctl
+                .create_network(
+                    &mut fidl_fuchsia_net_virtualization::Config::Bridged(
+                        fidl_fuchsia_net_virtualization::Bridged::EMPTY,
+                    ),
+                    server,
+                )
+                .expect("create network");
+            client
+        };
+        let network_device = {
+            let (client, server) =
+                fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
+                    .expect("create endpoints");
+            let () = tun_device.get_device(server).expect("get device");
+            client
+        };
+        let virtualization_interface = {
+            let (client, server) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_net_virtualization::InterfaceMarker>()
+                    .expect("create proxy");
+            let () = virtualization_network
+                .add_device(PORT_ID, network_device, server)
+                .expect("add device");
+            client
+        };
+        virtualization_interface
+    };
 
-    let bus = open_bus(&ep_name)?;
-    let (success, absent) =
-        bus.wait_for_clients(&mut vec![server_name.as_str()].drain(..), 0).await?;
+    let mut on_closed = virtualization_interface.on_closed().fuse();
+    loop {
+        futures::select! {
+            state = tun_port.watch_state() => {
+                let fidl_fuchsia_net_tun::InternalState { mac: _, has_session, .. } =
+                    state.expect("watch state");
+                if has_session.expect("session") {
+                    break;
+                }
+            },
+            signals = on_closed => {
+                let signals = signals.expect("closed signals");
+                panic!("virtualization interface closed with {:?}", signals);
+            }
+        }
+    }
+
+    // Send a message to the server and expect it to be echoed back.
+
+    let bus = open_bus(&ep_name).expect("open bus");
+    let (success, absent) = bus
+        .wait_for_clients(&mut vec![server_name.as_str()].drain(..), 0)
+        .await
+        .expect("wait for clients");
     assert!(success);
     assert_eq!(absent, None);
 
-    fake_ep.write(echo_string.as_bytes()).await.context("write failed")?;
+    let () = fake_ep.write(NETSTACK_STRING.as_bytes()).await.expect("write failed");
 
-    println!("To Server: {}", echo_string);
+    let () = tun_device
+        .write_frame(fidl_fuchsia_net_tun::Frame {
+            frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ethernet),
+            data: Some(VIRTUALIZATION_STRING.as_bytes().to_owned()),
+            port: Some(PORT_ID),
+            ..fidl_fuchsia_net_tun::Frame::EMPTY
+        })
+        .await
+        .expect("write frame (transport)")
+        .map_err(zx::Status::from_raw)
+        .expect("write frame (application)");
 
-    let (data, dropped_frames) = fake_ep.read().await.context("read failed")?;
-    assert_eq!(dropped_frames, 0);
-    let server_string = str::from_utf8(&data)?;
-    assert!(
-        echo_string == server_string,
-        "Server reply ({}) did not match client message ({})",
-        server_string,
-        echo_string
-    );
-    println!("From Server: {}", server_string);
+    let netstack_fut = async {
+        let mut netstack_seen = false;
+        let mut virtualization_seen = false;
+        while !(netstack_seen && virtualization_seen) {
+            let (data, dropped_frames) = fake_ep.read().await.expect("read failed");
+            assert_eq!(dropped_frames, 0);
+            match str::from_utf8(&data).expect("invalid utf8") {
+                NETSTACK_STRING => netstack_seen = true,
+                VIRTUALIZATION_STRING => virtualization_seen = true,
+                reply => panic!("Server reply ({}) did not match client messages", reply),
+            }
+        }
+    };
 
-    Ok(())
+    let virtualization_fut = async {
+        let mut netstack_seen = false;
+        let mut virtualization_seen = false;
+        while !(netstack_seen && virtualization_seen) {
+            let fidl_fuchsia_net_tun::Frame { frame_type, data, port, .. } = tun_device
+                .read_frame()
+                .await
+                .expect("read frame (transport)")
+                .map_err(zx::Status::from_raw)
+                .expect("read frame (application)");
+            assert_eq!(frame_type, Some(fidl_fuchsia_hardware_network::FrameType::Ethernet));
+            assert_eq!(port, Some(PORT_ID));
+            match str::from_utf8(data.unwrap().as_slice()).expect("invalid utf8") {
+                NETSTACK_STRING => netstack_seen = true,
+                VIRTUALIZATION_STRING => virtualization_seen = true,
+                reply => panic!("Server reply ({}) did not match client messages", reply),
+            }
+        }
+    };
+
+    futures::select! {
+        ((), ()) = futures::future::join(netstack_fut, virtualization_fut).fuse() => {},
+        signals = on_closed => {
+            let signals = signals.expect("closed signals");
+            panic!("virtualization interface closed with {:?}", signals);
+        }
+    }
 }
 
 async fn run_echo_server_ethernet(
@@ -125,7 +299,6 @@ async fn run_echo_server_ethernet(
     // Listen for a receive event from the client, echo back the client's
     // message, and then exit.
     let mut eth_events = eth_client.get_stream();
-    let mut sent_response = false;
 
     // Before connecting to the message bus to notify the client of the server's existence, poll
     // for events.  Buffers will not be allocated until polling is performed so this ensures that
@@ -146,24 +319,40 @@ async fn run_echo_server_ethernet(
     // get on bus to unlock mock_guest part of test
     let _bus = open_bus(&ep_name)?;
 
+    // Start listening for the server's response to be
+    // transmitted to the guest.
+    let () = eth_client.tx_listen_start().await?;
+
+    let mut netstack_echo_seen = false;
+    let mut virtualization_echo_seen = false;
     while let Some(event) = eth_events.try_next().await? {
         match event {
-            ethernet::Event::Receive(rx, _flags) => {
-                if !sent_response {
-                    let mut data: [u8; 100] = [0; 100];
-                    let sz = rx.read(&mut data);
-                    let user_message =
-                        str::from_utf8(&data[0..sz]).expect("failed to parse string");
-                    println!("From client: {}", user_message);
-                    let () = eth_client.send(&data[0..sz]);
-                    sent_response = true;
+            ethernet::Event::Receive(rx, flags) => {
+                let mut data: [u8; 100] = [0; 100];
+                let sz = rx.read(&mut data);
+                if flags.contains(ethernet::EthernetQueueFlags::TX_ECHO) {
+                    match str::from_utf8(&data[0..sz]).expect("failed to parse string") {
+                        NETSTACK_STRING => {
+                            if netstack_echo_seen {
+                                continue;
+                            }
+                            netstack_echo_seen = true;
+                        }
+                        VIRTUALIZATION_STRING => {
+                            if virtualization_echo_seen {
+                                continue;
+                            }
+                            virtualization_echo_seen = true;
+                        }
+                        message => panic!("Client message ({}) did not match expectation", message),
+                    }
+                }
 
-                    // Start listening for the server's response to be
-                    // transmitted to the guest.
-                    eth_client.tx_listen_start().await?;
-                } else {
+                let () = eth_client.send(&data[0..sz]);
+
+                if netstack_echo_seen && virtualization_echo_seen {
                     // The mock guest will not send anything to the server
-                    // beyond its initial request.  After the server has echoed
+                    // beyond its initial requests. After the server has echoed
                     // the response, the next received message will be the
                     // server's own output since it is listening for its own
                     // Tx messages.
@@ -207,6 +396,9 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    let () = fuchsia_syslog::init().context("cannot init logger")?;
+    log::info!("starting...");
+
     let opt = Opt::from_args();
 
     if opt.is_mock_guest {
@@ -220,7 +412,7 @@ async fn main() -> Result<(), Error> {
             opt.endpoint_name.unwrap(),
             opt.server_name.unwrap(),
         )
-        .await?;
+        .await;
     } else if opt.is_server {
         match opt.endpoint_name {
             Some(endpoint_name) => {

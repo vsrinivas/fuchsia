@@ -25,7 +25,8 @@ NetstackIntermediary::NetstackIntermediary(NetworkMap mac_network_mapping,
       context_(std::move(context)),
       executor_(async_get_default_dispatcher()),
       pending_writes_(0) {
-  context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
+  context_->outgoing()->AddPublicService(netstack_.GetHandler(this));
+  context_->outgoing()->AddPublicService(control_.GetHandler(this));
 }
 
 void NetstackIntermediary::SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr,
@@ -36,6 +37,66 @@ void NetstackIntermediary::SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpA
       .message = "",
   };
   callback(err);
+}
+
+void NetstackIntermediary::CreateNetwork(
+    fuchsia::net::virtualization::Config config,
+    fidl::InterfaceRequest<fuchsia::net::virtualization::Network> network) {
+  switch (config.Which()) {
+    case fuchsia::net::virtualization::Config::Tag::Invalid:
+      network.Close(ZX_ERR_INTERNAL);
+      return;
+    case fuchsia::net::virtualization::Config::Tag::kBridged:
+      if (!config.bridged().IsEmpty()) {
+        network.Close(ZX_ERR_INTERNAL);
+        return;
+      }
+      break;
+    default:
+      network.Close(ZX_ERR_INTERNAL);
+      return;
+  }
+  network_.AddBinding(this, std::move(network), async_get_default_dispatcher());
+};
+
+void NetstackIntermediary::AddDevice(
+    uint8_t port_id, fidl::InterfaceHandle<fuchsia::hardware::network::Device> device,
+    fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface) {
+  fpromise::bridge<MacAddr, zx_status_t> bridge;
+  std::shared_ptr completer =
+      std::make_shared<decltype(bridge.completer)>(std::move(bridge.completer));
+  auto cb = [completer](zx_status_t status) { completer->complete_error(status); };
+
+  fidl::InterfacePtr device_proxy = device.Bind();
+  device_proxy.set_error_handler(cb);
+  fidl::InterfacePtr<fuchsia::hardware::network::Port> port;
+  port.set_error_handler(cb);
+  device_proxy->GetPort(port_id, port.NewRequest());
+  fidl::InterfacePtr<fuchsia::hardware::network::MacAddressing> mac_addressing;
+  mac_addressing.set_error_handler(cb);
+  port->GetMac(mac_addressing.NewRequest());
+  mac_addressing->GetUnicastAddress(
+      [completer](fuchsia::net::MacAddress mac) { completer->complete_ok(mac.octets); });
+  fpromise::promise<void> task =
+      bridge.consumer.promise()
+          .and_then(fit::bind_member(this, &NetstackIntermediary::GetNetwork))
+          .then([port_id, device = device_proxy.Unbind(), interface = std::move(interface)](
+                    fpromise::result<fidl::InterfaceHandle<fuchsia::netemul::network::Network>,
+                                     zx_status_t>& network) mutable {
+            if (network.is_error()) {
+              interface.Close(network.error());
+            } else {
+              fidl::InterfacePtr network_proxy = network.value().Bind();
+              network_proxy.set_error_handler([](zx_status_t status) {
+                /* nothing can be done, |interface| is passed off to network */
+              });
+              network_proxy->AddDevice(port_id, std::move(device), std::move(interface));
+            }
+          })
+          // Keep |mac_addressing| alive; otherwise the callback won't fire.
+          .inspect([mac_addressing = std::move(mac_addressing)](const fpromise::result<>&) {})
+          .wrap_with(scope_);
+  executor_.schedule_task(std::move(task));
 }
 
 void NetstackIntermediary::AddEthernetDevice(

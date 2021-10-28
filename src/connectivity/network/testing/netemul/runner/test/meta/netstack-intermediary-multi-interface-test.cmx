@@ -36,6 +36,16 @@
                     {
                         "name": "client",
                         "services": {
+                            "fuchsia.net.tun.Control": {
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/network-tun.cmx"
+                            },
+                            "fuchsia.net.virtualization.Control": {
+                                "arguments": [
+                                    "--interface=72:00:0a:0b:0c:0d=net-1",
+                                    "--interface=72:00:01:02:03:04=net-2"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack-intermediary.cmx"
+                            },
                             "fuchsia.netstack.Netstack": {
                                 "arguments": [
                                     "--interface=72:00:0a:0b:0c:0d=net-1",

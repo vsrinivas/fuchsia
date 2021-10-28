@@ -436,10 +436,13 @@ bool Sandbox::CreateGuestOptions(const std::vector<config::Guest>& guests,
   }
 
   if (!netstack_args.empty()) {
-    auto& ls = services->emplace_back();
-    ls.name = fuchsia::netstack::Netstack::Name_;
-    ls.url = kNetstackIntermediaryUrl;
-    ls.arguments = std::move(netstack_args);
+    for (const std::string& name :
+         {fuchsia::netstack::Netstack::Name_, fuchsia::net::virtualization::Control::Name_}) {
+      auto& ls = services->emplace_back();
+      ls.name = name;
+      ls.url = kNetstackIntermediaryUrl;
+      ls.arguments = netstack_args;
+    }
   }
 
   return true;

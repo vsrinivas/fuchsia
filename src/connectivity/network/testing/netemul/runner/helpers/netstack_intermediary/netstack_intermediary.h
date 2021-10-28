@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_HELPERS_NETSTACK_INTERMEDIARY_NETSTACK_INTERMEDIARY_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_HELPERS_NETSTACK_INTERMEDIARY_NETSTACK_INTERMEDIARY_H_
 
+#include <fuchsia/net/virtualization/cpp/fidl.h>
 #include <fuchsia/netemul/network/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -28,7 +29,9 @@ constexpr size_t kMacAddrStringLength = 17;
 // Machina guests. Rather than creating an ethernet device and associating it
 // with an instance of Netstack, NetstackIntermediary bridges guests into the
 // Netemul virtual network under test.
-class NetstackIntermediary : public fuchsia::netstack::Netstack {
+class NetstackIntermediary : public fuchsia::netstack::Netstack,
+                             public fuchsia::net::virtualization::Control,
+                             public fuchsia::net::virtualization::Network {
  public:
   using MacAddr = std::array<uint8_t, 6>;
   using NetworkMap = std::map<MacAddr, std::string>;
@@ -38,6 +41,14 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
   explicit NetstackIntermediary(NetworkMap mac_network_mapping);
 
   // The following methods are required by the Machina guest's VirtioNet.
+  void CreateNetwork(
+      fuchsia::net::virtualization::Config config,
+      fidl::InterfaceRequest<fuchsia::net::virtualization::Network> network) override;
+
+  void AddDevice(
+      uint8_t port_id, fidl::InterfaceHandle<::fuchsia::hardware::network::Device> device,
+      fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface) override;
+
   void AddEthernetDevice(std::string topological_path,
                          fuchsia::netstack::InterfaceConfig interfaceConfig,
                          ::fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
@@ -83,7 +94,9 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
   async::Executor executor_;
   fpromise::scope scope_;
 
-  fidl::BindingSet<fuchsia::netstack::Netstack> bindings_;
+  fidl::BindingSet<fuchsia::netstack::Netstack> netstack_;
+  fidl::BindingSet<fuchsia::net::virtualization::Control> control_;
+  fidl::BindingSet<fuchsia::net::virtualization::Network> network_;
   uint64_t pending_writes_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(NetstackIntermediary);

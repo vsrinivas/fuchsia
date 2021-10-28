@@ -149,6 +149,7 @@ fuchsia_test_package("netemul-sandbox-test") {
     "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
     "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
     "//src/connectivity/network/testing/netemul/runner:netstack-intermediary",
+    "//src/connectivity/network/tun/network-tun:component",
   ]
 }
 
