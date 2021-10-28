@@ -42,127 +42,122 @@ void NetstackIntermediary::AddEthernetDevice(
     std::string topological_path, fuchsia::netstack::InterfaceConfig interfaceConfig,
     fidl::InterfaceHandle<fuchsia::hardware::ethernet::Device> device,
     AddEthernetDeviceCallback callback) {
-  fuchsia::netemul::network::EndpointConfig config;
-  config.mtu = 1500;
-  config.backing = fuchsia::netemul::network::EndpointBacking::ETHERTAP;
+  fpromise::bridge<MacAddr, zx_status_t> bridge;
+  std::shared_ptr completer =
+      std::make_shared<decltype(bridge.completer)>(std::move(bridge.completer));
+  fidl::InterfacePtr device_proxy = device.Bind();
+  device_proxy.set_error_handler(
+      [completer](zx_status_t status) { completer->complete_error(status); });
+  device_proxy->GetInfo([completer](fuchsia::hardware::ethernet::Info info) mutable {
+    completer->complete_ok(info.mac.octets);
+  });
+  fpromise::promise<> task =
+      bridge.consumer.promise()
+          .and_then(fit::bind_member(this, &NetstackIntermediary::GetNetwork))
+          // Nesting callbacks here to keep |device| alive.
+          .and_then([this, device_proxy = std::move(device_proxy)](
+                        fidl::InterfaceHandle<fuchsia::netemul::network::Network>& net) mutable {
+            // Create a FakeEndpoint and an EthernetClient.  The EthernetClient serves
+            // as an interface between the guest's ethernet device and the FakeEndpoint
+            // which is linked into the netemul virtual network.
+            std::unique_ptr eth_client = std::make_unique<netemul::EthernetClient>(
+                async_get_default_dispatcher(), std::move(device_proxy));
+            fpromise::bridge<void, zx_status_t> bridge;
+            eth_client->Setup(
+                eth_config, [completer = std::move(bridge.completer)](zx_status_t status) mutable {
+                  if (status == ZX_OK) {
+                    completer.complete_ok();
+                  } else {
+                    completer.complete_error(status);
+                  }
+                });
+            // Nesting callbacks here to keep |net| alive.
+            return bridge.consumer.promise().and_then([this, net = net.Bind(),
+                                                       eth_client =
+                                                           std::move(eth_client)]() mutable {
+              const size_t index = guest_client_endpoints_.size();
 
-  NetworkBinding network_binding;
-  network_binding.first =
-      std::make_unique<netemul::EthernetClient>(async_get_default_dispatcher(), device.Bind());
+              NetworkBinding& network_binding = guest_client_endpoints_.emplace_back(
+                  std::move(eth_client),
+                  fidl::InterfacePtr<fuchsia::netemul::network::FakeEndpoint>{});
+              network_binding.first->SetDataCallback([this, index](const void* data, size_t len) {
+                std::vector<uint8_t> input_data(static_cast<const uint8_t*>(data),
+                                                static_cast<const uint8_t*>(data) + len);
+                // Don't enqueue too many write requests.
+                if (pending_writes_ < kMaxPendingWrites) {
+                  pending_writes_++;
+                  guest_client_endpoints_[index].second->Write(std::move(input_data),
+                                                               [this]() { pending_writes_--; });
+                }
+              });
+              network_binding.first->SetPeerClosedCallback(
+                  [] { FX_LOGS(INFO) << "EthernetClient peer closed"; });
+              network_binding.second.set_error_handler([](zx_status_t status) {
+                FX_LOGS(INFO) << "FakeEndpoint encountered error: " << zx_status_get_string(status);
+              });
 
-  size_t index = guest_client_endpoints_.size();
-  guest_client_endpoints_.push_back(std::move(network_binding));
+              net->CreateFakeEndpoint(network_binding.second.NewRequest());
 
-  // Create a FakeEndpoint and an EthernetClient.  The EthernetClient serves
-  // as an interface between the guest's ethernet device and the FakeEndpoint
-  // which is linked into the netemul virtual network.
-  executor_.schedule_task(
-      fpromise::make_promise([this, index]() mutable {
-        // Get the MAC address from the ethernet device and determine which ethertap network it
-        // should be connected to.
-        fpromise::bridge<std::string> bridge;
-        auto& [eth_client, fake_ep] = guest_client_endpoints_[index];
-        eth_client->device()->GetInfo([this, completer = std::move(bridge.completer)](
-                                          fuchsia::hardware::ethernet::Info info) mutable {
-          NetworkMap::iterator iterator = mac_network_mapping_.find(info.mac.octets);
-          if (iterator != mac_network_mapping_.end()) {
-            completer.complete_ok(iterator->second);
-            return;
-          }
+              ReadGuestEp(index);
 
-          char buffer[kMacAddrStringLength + 1];
-          for (uint8_t i = 0; i < info.mac.octets.size(); i++) {
-            sprintf(&buffer[3 * i], "%02X:", info.mac.octets[i]);
-          }
-          buffer[kMacAddrStringLength] = '\0';
-
-          FX_LOGS(ERROR) << "No network specified for " << buffer;
-          completer.complete_error();
-        });
-        return bridge.consumer.promise();
-      })
-          .and_then([this](const std::string& network_name) { return GetNetwork(network_name); })
-          .and_then([this, index](fidl::InterfaceHandle<fuchsia::netemul::network::Network>& net) {
-            auto& [eth_client, fake_ep] = guest_client_endpoints_[index];
-            net.Bind()->CreateFakeEndpoint(fake_ep.NewRequest());
-            return SetupEthClient(eth_client);
-          })
-          .and_then([this, index, callback = std::move(callback)]() mutable {
-            // The FakeEndpoint's OnData method fires when new data is observed
-            // on the netemul virtual network.
-            auto& [eth_client, fake_ep] = guest_client_endpoints_[index];
-            fake_ep.set_error_handler([](zx_status_t status) {
-              FX_LOGS(INFO) << "FakeEndpoint encountered error: " << zx_status_get_string(status);
+              return fpromise::ok(index);
             });
-            ReadGuestEp(index);
-
-            // EthernetClient's DataCallback fires when the guest is trying to
-            // write to the netemul virtual network.
-            eth_client->SetDataCallback([this, index](const void* data, size_t len) {
-              auto& [eth_client, fake_ep] = guest_client_endpoints_[index];
-              std::vector<uint8_t> input_data(static_cast<const uint8_t*>(data),
-                                              static_cast<const uint8_t*>(data) + len);
-              // Don't enqueue too many write requests.
-              if (pending_writes_ < kMaxPendingWrites) {
-                pending_writes_++;
-                fake_ep->Write(std::move(input_data), [this]() { pending_writes_--; });
-              }
-            });
-            eth_client->SetPeerClosedCallback(
-                [] { FX_LOGS(INFO) << "EthernetClient peer closed."; });
-
-            callback(fuchsia::netstack::Netstack_AddEthernetDevice_Result::WithResponse(
-                fuchsia::netstack::Netstack_AddEthernetDevice_Response{1}));
           })
-          .or_else([]() mutable { FX_CHECK(false) << "Failed to add ethernet device."; })
-          .wrap_with(scope_));
+          .then([callback = std::move(callback)](fpromise::result<size_t, zx_status_t>& index) {
+            if (index.is_error()) {
+              callback(fuchsia::netstack::Netstack_AddEthernetDevice_Result::WithErr(
+                  int32_t(index.error())));
+            } else {
+              callback(fuchsia::netstack::Netstack_AddEthernetDevice_Result::WithResponse(
+                  fuchsia::netstack::Netstack_AddEthernetDevice_Response(
+                      static_cast<uint32_t>(index.value()))));
+            }
+          })
+          .wrap_with(scope_);
+
+  executor_.schedule_task(std::move(task));
 }
 
-fpromise::promise<fidl::InterfaceHandle<fuchsia::netemul::network::Network>>
-NetstackIntermediary::GetNetwork(const std::string& network_name) {
-  fpromise::bridge<fidl::InterfaceHandle<fuchsia::netemul::network::Network>> bridge;
+fpromise::promise<fidl::InterfaceHandle<fuchsia::netemul::network::Network>, zx_status_t>
+NetstackIntermediary::GetNetwork(const MacAddr& octets) {
+  NetworkMap::iterator iterator = mac_network_mapping_.find(octets);
+  if (iterator == mac_network_mapping_.end()) {
+    return fpromise::make_result_promise<fidl::InterfaceHandle<fuchsia::netemul::network::Network>,
+                                         zx_status_t>(fpromise::error(ZX_ERR_NOT_FOUND));
+  }
+  fpromise::bridge<fidl::InterfaceHandle<fuchsia::netemul::network::Network>, zx_status_t> bridge;
+  std::shared_ptr completer =
+      std::make_shared<decltype(bridge.completer)>(std::move(bridge.completer));
+  auto cb = [completer](zx_status_t status) { completer->complete_error(status); };
 
-  auto netc = std::make_shared<fidl::InterfacePtr<fuchsia::netemul::network::NetworkContext>>();
-  auto net_mgr = std::make_shared<fuchsia::netemul::network::NetworkManagerPtr>();
+  fidl::InterfacePtr<fuchsia::netemul::network::NetworkContext> network_context;
+  network_context.set_error_handler(cb);
+  if (zx_status_t status = context_->svc()->Connect(network_context.NewRequest());
+      status != ZX_OK) {
+    return fpromise::make_result_promise<fidl::InterfaceHandle<fuchsia::netemul::network::Network>,
+                                         zx_status_t>(fpromise::error(status));
+  }
 
-  context_->svc()->Connect(netc->NewRequest());
+  fidl::InterfacePtr<fuchsia::netemul::network::NetworkManager> network_manager;
+  network_manager.set_error_handler(cb);
+  network_context->GetNetworkManager(network_manager.NewRequest());
 
-  (*netc)->GetNetworkManager(net_mgr->NewRequest());
-  (*net_mgr)->GetNetwork(
-      network_name, [completer = std::move(bridge.completer), network_name, netc, net_mgr](
-                        fidl::InterfaceHandle<fuchsia::netemul::network::Network> net) mutable {
-        if (net.is_valid()) {
-          completer.complete_ok(std::move(net));
-        } else {
-          FX_LOGS(ERROR) << "No such network: \"" << network_name << "\"";
-          completer.complete_error();
-        }
+  network_manager->GetNetwork(
+      iterator->second,
+      [completer](fidl::InterfaceHandle<fuchsia::netemul::network::Network> net) mutable {
+        completer->complete_ok(std::move(net));
       });
-
-  return bridge.consumer.promise();
-}
-
-fpromise::promise<> NetstackIntermediary::SetupEthClient(
-    const std::unique_ptr<netemul::EthernetClient>& eth_client) {
-  fpromise::bridge<> bridge;
-  eth_client->Setup(eth_config,
-                    [completer = std::move(bridge.completer)](zx_status_t status) mutable {
-                      if (status == ZX_OK) {
-                        completer.complete_ok();
-                      } else {
-                        FX_LOGS(ERROR) << "EthernetClient setup failed with " << status;
-                        completer.complete_error();
-                      }
-                    });
-
-  return bridge.consumer.promise();
+  // Keep |network_manager| alive; otherwise the callback won't fire.
+  return bridge.consumer.promise().inspect(
+      [network_manager = std::move(network_manager)](
+          const fpromise::result<fidl::InterfaceHandle<fuchsia::netemul::network::Network>,
+                                 zx_status_t>&) {});
 }
 
 void NetstackIntermediary::ReadGuestEp(size_t index) {
-  auto& [eth_client, fake_ep] = guest_client_endpoints_[index];
-  fake_ep->Read([this, index](std::vector<uint8_t> data, uint64_t _dropped) {
-    auto& [eth_client, fake_ep] = guest_client_endpoints_[index];
-    eth_client->Send(data.data(), static_cast<uint16_t>(data.size()));
-    ReadGuestEp(index);
-  });
+  guest_client_endpoints_[index].second->Read(
+      [this, index](std::vector<uint8_t> data, uint64_t _dropped) {
+        guest_client_endpoints_[index].first->Send(data.data(), static_cast<uint16_t>(data.size()));
+        ReadGuestEp(index);
+      });
 }

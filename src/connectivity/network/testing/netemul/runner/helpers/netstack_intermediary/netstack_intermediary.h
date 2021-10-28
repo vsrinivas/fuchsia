@@ -71,10 +71,8 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
                        std::unique_ptr<sys::ComponentContext> context);
 
  private:
-  fpromise::promise<fidl::InterfaceHandle<fuchsia::netemul::network::Network>> GetNetwork(
-      const std::string& network_name);
-  static fpromise::promise<> SetupEthClient(
-      const std::unique_ptr<netemul::EthernetClient>& eth_client);
+  fpromise::promise<fidl::InterfaceHandle<fuchsia::netemul::network::Network>, zx_status_t>
+  GetNetwork(const MacAddr& octets);
 
   void ReadGuestEp(size_t index);
 
