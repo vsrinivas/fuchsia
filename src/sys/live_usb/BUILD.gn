@@ -7,7 +7,7 @@ import("//build/dist/component_manifest_resources.gni")
 import("//build/dist/resource.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/zbi/kernel_cmdline.gni")
-import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/storage/testing/driver_test_realm.gni")
 import("//tools/cmc/build/cml.gni")
 
 declare_args() {
@@ -96,7 +96,7 @@ rustc_binary("bin") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("live-usb-test") {
+storage_driver_test_realm_v2_component("live-usb-test") {
   deps = [ ":bin_test" ]
 }
 
@@ -107,5 +107,4 @@ fuchsia_test_package("live-usb-unittests") {
     }
   }
   test_components = [ ":live-usb-test" ]
-  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }

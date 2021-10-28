@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 {
     include: [
+        "//sdk/lib/driver_test_realm/meta/client.shard.cml",
+        "//sdk/lib/driver_test_realm/platform/meta/client.shard.cml",
         "//sdk/lib/inspect/client.shard.cml",
         "//sdk/lib/syslog/client.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
@@ -10,30 +12,7 @@
     program: {
         binary: "test/fs-management-test",
     },
-    children: [
-        {
-            name: "isolated-devmgr",
-            url: "#meta/isolated-devmgr.cm",
-        },
-    ],
     use: [
         { protocol: "fuchsia.process.Launcher" },
-        {
-            directory: "dev",
-            from: "#isolated-devmgr",
-            rights: [ "r*" ],
-            path: "/dev",
-        },
-    ],
-    offer: [
-        {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
-            ],
-            from: "parent",
-            to: "#isolated-devmgr",
-        },
     ],
 }

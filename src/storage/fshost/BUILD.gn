@@ -5,7 +5,7 @@
 import("//build/components.gni")
 import("//build/dist/component_manifest_resources.gni")
 import("//build/test.gni")
-import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/storage/testing/driver_test_realm.gni")
 import("//tools/cmc/build/cmc.gni")
 
 declare_args() {
@@ -52,7 +52,7 @@ group("tests") {
   testonly = true
   deps = [
     ":fshost-tests",
-    "//src/storage/testing:isolated-devmgr",
+    "//src/storage/testing:storage_driver_test_realm",
   ]
 }
 
@@ -520,7 +520,7 @@ fuchsia_test_package("fshost-tests") {
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
     "//src/storage/blobfs:decompressor-sandbox",
-    "//src/storage/testing:isolated-devmgr",
+    "//src/storage/testing:storage_driver_test_realm",
   ]
 }
 

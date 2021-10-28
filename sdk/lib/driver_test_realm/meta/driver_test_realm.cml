@@ -9,12 +9,12 @@
     children: [
         {
             name: "driver_manager",
-            url: "#meta/driver-manager-test.cm",
+            url: "#meta/driver_manager_test.cm",
             environment: "#driver_manager-env",
         },
         {
             name: "driver-manager-support",
-            url: "#meta/driver-manager-support.cm",
+            url: "#meta/driver_manager_support.cm",
         },
         {
             name: "driver-index",

@@ -3,7 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
+
+expect_includes("storage_test_includes") {
+  includes = [ "meta/storage_test.shard.cml" ]
+}
 
 group("storage_drivers") {
   testonly = true
@@ -16,18 +19,6 @@ group("storage_drivers") {
     "//src/devices/nand/drivers/ram-nand",
     "//src/storage/fvm/driver",
   ]
-}
-
-isolated_devmgr_v2_component("isolated-devmgr-component") {
-  deps = [
-    ":storage_drivers",
-    "//src/devices/bus/drivers/platform",
-  ]
-}
-
-fuchsia_package("storage-isolated-devmgr") {
-  testonly = true
-  deps = [ ":isolated-devmgr-component" ]
 }
 
 group("driver_test_realm") {
@@ -76,13 +67,5 @@ source_set("storage_driver_test_support") {
   public_deps = [
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zxc",
-  ]
-}
-
-group("isolated-devmgr") {
-  testonly = true
-  deps = [
-    ":storage-isolated-devmgr",
-    ":storage_driver_test_realm",
   ]
 }

@@ -121,7 +121,7 @@ test("fat_filename_tests") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("fatfs-fat-filename-tests") {
+storage_driver_test_realm_v2_component("fatfs-fat-filename-tests") {
   deps = [ ":fat_filename_tests" ]
 }
 

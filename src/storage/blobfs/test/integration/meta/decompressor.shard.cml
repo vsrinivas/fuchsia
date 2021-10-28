@@ -1,0 +1,8 @@
+{
+    use: [
+        {
+            protocol: "fuchsia.blobfs.internal.DecompressorCreator",
+            path: "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator",
+        },
+    ],
+}

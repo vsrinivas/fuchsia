@@ -59,7 +59,8 @@ fuchsia_component("disk-extractor-unit-test-component") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("fvm-extractor-unit-test") {
+fuchsia_component("fvm-extractor-unit-test") {
+  testonly = true
   manifest = "meta/fvm_extractor_tests.cml"
   deps = [ ":fvm_extractor_unit_test" ]
 }

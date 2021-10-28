@@ -1,0 +1,14 @@
+{
+    use: [
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+}

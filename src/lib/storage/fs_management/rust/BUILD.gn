@@ -4,7 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
-import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/storage/testing/driver_test_realm.gni")
 
 rustc_library("fs_management") {
   with_unit_tests = true
@@ -31,8 +31,7 @@ rustc_library("fs_management") {
   sources = [ "src/lib.rs" ]
 }
 
-storage_isolated_devmgr_unittest_v2_component(
-    "fs-management-rust-tests-component") {
+storage_driver_test_realm_v2_component("fs-management-rust-tests-component") {
   component_name = "fs-management-rust-tests"
   deps = [ ":fs_management_test" ]
 }
@@ -44,7 +43,6 @@ fuchsia_test_package("fs-management-rust-tests") {
     }
   }
   test_components = [ ":fs-management-rust-tests-component" ]
-  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }
 
 group("tests") {

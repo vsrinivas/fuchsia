@@ -4,7 +4,6 @@
 
 import("//build/dist/renamed_binary.gni")
 import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
-import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 
 group("wlan_devmgr_deps") {
   deps = [

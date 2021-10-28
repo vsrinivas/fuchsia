@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//src/storage/fs_test/suite.gni")
-import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/storage/testing/driver_test_realm.gni")
 
 test("minfs_unit") {
   sources = [
@@ -208,7 +208,7 @@ test("fs_tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("minfs-integration-fs-tests") {
+storage_driver_test_realm_v2_component("minfs-integration-fs-tests") {
   deps = [ ":fs_tests" ]
 }
 
@@ -232,16 +232,15 @@ fuzzers_package("minfs-fuzzers") {
   cpp_fuzzers = [ ":minfs-fuzzer" ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("minfs-integration-test") {
+storage_driver_test_realm_v2_component("minfs-integration-test") {
   deps = [ ":minfs-integration" ]
 }
 
-storage_isolated_devmgr_unittest_v2_component(
-    "minfs-dirty-cache-integration-test") {
+storage_driver_test_realm_v2_component("minfs-dirty-cache-integration-test") {
   deps = [ ":minfs_dirty_cache_integration" ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("minfs-power-test") {
+storage_driver_test_realm_v2_component("minfs-power-test") {
   deps = [ ":minfs-power" ]
 }
 
@@ -250,7 +249,7 @@ fuchsia_unittest_component("minfs-unit-test") {
   manifest = "meta/minfs_unit_test.cml"
 }
 
-storage_isolated_devmgr_unittest_v2_component("minfs-micro-benchmark-test") {
+storage_driver_test_realm_v2_component("minfs-micro-benchmark-test") {
   deps = [ ":minfs_micro_benchmark" ]
 }
 

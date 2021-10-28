@@ -4,7 +4,7 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
-import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/storage/testing/driver_test_realm.gni")
 
 source_set("options") {
   public = [ "adapter_options.h" ]
@@ -377,8 +377,7 @@ test("adapter-integration-test") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component(
-    "adapter-integration-test-component") {
+storage_driver_test_realm_v2_component("adapter-integration-test-component") {
   component_name = "adapter-integration-test"
   deps = [
     ":adapter-integration-test",
@@ -396,7 +395,6 @@ fuchsia_test_package("storage-volume-image-adapter-integration-tests") {
   deps = [
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
-    "//src/storage/testing:isolated-devmgr-component",
   ]
 }
 

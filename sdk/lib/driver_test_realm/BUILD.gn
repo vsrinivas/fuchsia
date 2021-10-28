@@ -60,13 +60,13 @@ fuchsia_component("driver_test_realm_component") {
   testonly = true
   manifest = "meta/driver_test_realm.cml"
   deps = [
-    ":driver-manager-support",
-    ":driver-manager-test",
+    ":driver_manager_support",
+    ":driver_manager_test",
     "//src/devices/bin/driver-index:component",
   ]
 }
 
-fuchsia_component("driver-manager-test") {
+fuchsia_component("driver_manager_test") {
   testonly = true
   manifest = "meta/driver_manager_test.cml"
   deps = [
@@ -75,7 +75,7 @@ fuchsia_component("driver-manager-test") {
   ]
 }
 
-fuchsia_component("driver-manager-support") {
+fuchsia_component("driver_manager_support") {
   testonly = true
   manifest = "meta/support.cml"
   deps = [ ":bin" ]

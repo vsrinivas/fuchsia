@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//src/storage/fs_test/suite.gni")
-import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/storage/testing/driver_test_realm.gni")
 
 group("test") {
   testonly = true
@@ -88,7 +88,7 @@ test("f2fs_query_service") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("f2fs-query-service") {
+storage_driver_test_realm_v2_component("f2fs-query-service") {
   deps = [ ":f2fs_query_service" ]
 }
 

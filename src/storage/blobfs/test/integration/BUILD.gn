@@ -5,7 +5,8 @@
 import("//build/components.gni")
 import("//build/test.gni")
 import("//src/storage/testing/decompressor_wrapper.gni")
-import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/storage/testing/driver_test_realm.gni")
+import("//tools/cmc/build/expect_includes.gni")
 
 group("tests") {
   testonly = true
@@ -14,6 +15,10 @@ group("tests") {
     # TODO(https://fxbug.dev/81190): Re-enable this test once it passes on coverage builders
     deps += [ ":blobfs-integration-package" ]
   }
+}
+
+expect_includes("decompressor_includes") {
+  includes = [ "meta/decompressor.shard.cml" ]
 }
 
 static_library("blobfs_integration_fixtures") {
@@ -109,13 +114,10 @@ test("blobfs_integration") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("blobfs-integration-component") {
-  deps = [ ":blobfs_integration" ]
-  additional_services = [
-    {
-      protocol = "fuchsia.blobfs.internal.DecompressorCreator"
-      path = "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator"
-    },
+storage_driver_test_realm_v2_component("blobfs-integration-component") {
+  deps = [
+    ":blobfs_integration",
+    ":decompressor_includes",
   ]
 }
 
@@ -151,13 +153,10 @@ test("blobfs_mount") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("blobfs-mount-component") {
-  deps = [ ":blobfs_mount" ]
-  additional_services = [
-    {
-      protocol = "fuchsia.blobfs.internal.DecompressorCreator"
-      path = "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator"
-    },
+storage_driver_test_realm_v2_component("blobfs-mount-component") {
+  deps = [
+    ":blobfs_mount",
+    ":decompressor_includes",
   ]
 }
 
@@ -191,14 +190,10 @@ test("blobfs_query_service") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component(
-    "blobfs-query-service-component") {
-  deps = [ ":blobfs_query_service" ]
-  additional_services = [
-    {
-      protocol = "fuchsia.blobfs.internal.DecompressorCreator"
-      path = "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator"
-    },
+storage_driver_test_realm_v2_component("blobfs-query-service-component") {
+  deps = [
+    ":blobfs_query_service",
+    ":decompressor_includes",
   ]
 }
 
@@ -230,13 +225,10 @@ test("blobfs_sync") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("blobfs-sync-component") {
-  deps = [ ":blobfs_sync" ]
-  additional_services = [
-    {
-      protocol = "fuchsia.blobfs.internal.DecompressorCreator"
-      path = "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator"
-    },
+storage_driver_test_realm_v2_component("blobfs-sync-component") {
+  deps = [
+    ":blobfs_sync",
+    ":decompressor_includes",
   ]
 }
 
@@ -264,13 +256,10 @@ test("blobfs_superblock") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("blobfs-superblock-component") {
-  deps = [ ":blobfs_superblock" ]
-  additional_services = [
-    {
-      protocol = "fuchsia.blobfs.internal.DecompressorCreator"
-      path = "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator"
-    },
+storage_driver_test_realm_v2_component("blobfs-superblock-component") {
+  deps = [
+    ":blobfs_superblock",
+    ":decompressor_includes",
   ]
 }
 
@@ -300,14 +289,10 @@ test("blobfs_verifier_service") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component(
-    "blobfs-verifier-service-component") {
-  deps = [ ":blobfs_verifier_service" ]
-  additional_services = [
-    {
-      protocol = "fuchsia.blobfs.internal.DecompressorCreator"
-      path = "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator"
-    },
+storage_driver_test_realm_v2_component("blobfs-verifier-service-component") {
+  deps = [
+    ":blobfs_verifier_service",
+    ":decompressor_includes",
   ]
 }
 
@@ -378,14 +363,11 @@ template("blobfs_large_integration_test") {
     }
   }
 
-  storage_isolated_devmgr_unittest_v2_component(component_name) {
-    additional_services = [
-      {
-        protocol = "fuchsia.blobfs.internal.DecompressorCreator"
-        path = "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator"
-      },
+  storage_driver_test_realm_v2_component(component_name) {
+    deps = [
+      ":$bin_name",
+      ":decompressor_includes",
     ]
-    deps = [ ":$bin_name" ]
   }
 }
 
@@ -460,7 +442,6 @@ fuchsia_test_package("blobfs-large-integration-package") {
     ":blobfs-no-space-component",
     ":blobfs-use-second-bitmap-component",
     "//src/storage/bin/blobfs",
-    "//src/storage/testing:isolated-devmgr-component",
   ]
 }
 
@@ -492,6 +473,5 @@ fuchsia_test_package("blobfs-integration-package") {
     ":external-decompressor-integration",
     "//src/storage/bin/blobfs",
     "//src/storage/blobfs:decompressor-sandbox",
-    "//src/storage/testing:isolated-devmgr-component",
   ]
 }

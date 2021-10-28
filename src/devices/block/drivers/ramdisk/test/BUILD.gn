@@ -4,7 +4,7 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
-import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/storage/testing/driver_test_realm.gni")
 
 test("ramdisk") {
   output_name = "ramdisk-test"
@@ -28,7 +28,7 @@ test("ramdisk") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("ramdisk-test") {
+storage_driver_test_realm_v2_component("ramdisk-test") {
   deps = [ ":ramdisk" ]
 }
 
@@ -39,8 +39,6 @@ fuchsia_test_package("ramdisk-tests") {
     }
   }
   test_components = [ ":ramdisk-test" ]
-
-  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }
 
 group("tests") {

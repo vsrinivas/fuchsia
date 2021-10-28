@@ -4,7 +4,7 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
-import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/storage/testing/driver_test_realm.gni")
 
 config("headers_config") {
   include_dirs = [ "include" ]
@@ -99,6 +99,7 @@ test("fs-management-test") {
     "//src/storage/gpt",
     "//src/storage/memfs",
     "//src/storage/memfs:memfs-cpp",
+    "//src/storage/testing:driver_test_realm",
     "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async",
@@ -131,7 +132,8 @@ test("fs-management-test") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-storage_isolated_devmgr_unittest_v2_component("fs-management-test-component") {
+fuchsia_component("fs-management-test-component") {
+  testonly = true
   manifest = "meta/fs_management_tests.cml"
   deps = [ ":fs-management-test" ]
 }
@@ -144,7 +146,6 @@ fuchsia_test_package("fs-management-tests") {
       max_severity = "ERROR"
     }
   }
-  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }
 
 group("tests") {

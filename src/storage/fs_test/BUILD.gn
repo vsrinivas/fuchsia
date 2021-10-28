@@ -5,7 +5,7 @@
 import("//build/components.gni")
 import("//build/test.gni")
 import("//src/storage/fs_test/suite.gni")
-import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/storage/testing/driver_test_realm.gni")
 
 static_library("fs_test") {
   testonly = true

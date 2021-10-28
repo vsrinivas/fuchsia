@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/dist/generated_resource.gni")
 import("//build/json/validate_json.gni")
 import("//build/test.gni")
-import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/storage/testing/driver_test_realm.gni")
 
 # Generates config that will work with the filesystem test framework.
 #
@@ -67,142 +67,134 @@ template("fs_test_suite") {
     }
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-access-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-access-tests") {
     deps = [ "//src/storage/fs_test:access_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-append-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-append-tests") {
     deps = [ "//src/storage/fs_test:append_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-attr-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-attr-tests") {
     deps = [ "//src/storage/fs_test:attr_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-basic-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-basic-tests") {
     deps = [ "//src/storage/fs_test:basic_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component(
+  storage_driver_test_realm_v2_component(
       "${suite_name}-case-sensitivity-tests") {
     deps = [ "//src/storage/fs_test:case_sensitivity_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-clone-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-clone-tests") {
     deps = [ "//src/storage/fs_test:clone_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-corrupt-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-corrupt-tests") {
     deps = [ "//src/storage/fs_test:corrupt_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component(
-      "${suite_name}-directory-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-directory-tests") {
     deps = [ "//src/storage/fs_test:directory_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-dot-dot-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-dot-dot-tests") {
     deps = [ "//src/storage/fs_test:dot_dot_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-fcntl-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-fcntl-tests") {
     deps = [ "//src/storage/fs_test:fcntl_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component(
-      "${suite_name}-filename-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-filename-tests") {
     deps = [ "//src/storage/fs_test:filename_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-link-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-link-tests") {
     deps = [ "//src/storage/fs_test:link_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-lseek-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-lseek-tests") {
     deps = [ "//src/storage/fs_test:lseek_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-mmap-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-mmap-tests") {
     deps = [ "//src/storage/fs_test:mmap_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-open-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-open-tests") {
     deps = [ "//src/storage/fs_test:open_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component(
-      "${suite_name}-overflow-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-overflow-tests") {
     deps = [ "//src/storage/fs_test:overflow_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-persist-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-persist-tests") {
     deps = [ "//src/storage/fs_test:persist_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component(
+  storage_driver_test_realm_v2_component(
       "${suite_name}-query-filesystem-tests") {
     deps = [ "//src/storage/fs_test:query_filesystem_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component(
-      "${suite_name}-random-op-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-random-op-tests") {
     deps = [ "//src/storage/fs_test:random_op_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component(
-      "${suite_name}-realpath-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-realpath-tests") {
     deps = [ "//src/storage/fs_test:realpath_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-rename-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-rename-tests") {
     deps = [ "//src/storage/fs_test:rename_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-resize-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-resize-tests") {
     deps = [ "//src/storage/fs_test:resize_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-rw-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-rw-tests") {
     deps = [ "//src/storage/fs_test:rw_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component(
-      "${suite_name}-rw-workers-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-rw-workers-tests") {
     deps = [ "//src/storage/fs_test:rw_workers_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-sparse-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-sparse-tests") {
     deps = [ "//src/storage/fs_test:sparse_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-sync-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-sync-tests") {
     deps = [ "//src/storage/fs_test:sync_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component(
-      "${suite_name}-threading-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-threading-tests") {
     deps = [ "//src/storage/fs_test:threading_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component(
-      "${suite_name}-truncate-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-truncate-tests") {
     deps = [ "//src/storage/fs_test:truncate_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-unicode-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-unicode-tests") {
     deps = [ "//src/storage/fs_test:unicode_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-unlink-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-unlink-tests") {
     deps = [ "//src/storage/fs_test:unlink_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component("${suite_name}-watcher-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-watcher-tests") {
     deps = [ "//src/storage/fs_test:watcher_tests" ]
   }
 
   fuchsia_test_package("${suite_name}-fs-tests") {
-    deps = [ "//src/storage/testing:isolated-devmgr-component" ]
+    deps = []
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
@@ -272,28 +264,25 @@ template("slow_fs_test_suite") {
     }
   }
 
-  storage_isolated_devmgr_unittest_v2_component(
+  storage_driver_test_realm_v2_component(
       "${suite_name}-directory-large-tests") {
     deps = [ "//src/storage/fs_test:directory_large_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component(
-      "${suite_name}-max-file-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-max-file-tests") {
     deps = [ "//src/storage/fs_test:max_file_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component(
-      "${suite_name}-sparse-large-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-sparse-large-tests") {
     deps = [ "//src/storage/fs_test:sparse_large_tests" ]
   }
 
-  storage_isolated_devmgr_unittest_v2_component(
-      "${suite_name}-truncate-large-tests") {
+  storage_driver_test_realm_v2_component("${suite_name}-truncate-large-tests") {
     deps = [ "//src/storage/fs_test:truncate_large_tests" ]
   }
 
   fuchsia_test_package("${suite_name}-slow-fs-tests") {
-    deps = [ "//src/storage/testing:isolated-devmgr-component" ]
+    deps = []
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }

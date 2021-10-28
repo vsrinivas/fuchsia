@@ -5,7 +5,7 @@
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/storage/testing/driver_test_realm.gni")
 
 rustc_library("blackout-target") {
   edition = "2018"
@@ -47,8 +47,7 @@ rustc_test("blackout-target-lib-test") {
   ]
 }
 
-storage_isolated_devmgr_unittest_v2_component(
-    "blackout-target-test-component") {
+storage_driver_test_realm_v2_component("blackout-target-test-component") {
   component_name = "blackout-target-test"
   deps = [ ":blackout-target-lib-test" ]
 }
@@ -61,7 +60,6 @@ fuchsia_test_package("blackout-target-test") {
       max_severity = "ERROR"
     }
   }
-  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }
 
 group("tests") {

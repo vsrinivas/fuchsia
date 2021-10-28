@@ -54,6 +54,6 @@ group("tests") {
   testonly = true
   deps = [
     ":storage-device-tests",
-    "//src/storage/testing:isolated-devmgr",
+    "//src/storage/testing:storage_driver_test_realm",
   ]
 }

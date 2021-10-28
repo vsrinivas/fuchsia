@@ -5,7 +5,7 @@
 import("//build/components.gni")
 import("//build/images/fvm.gni")
 import("//build/test.gni")
-import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/storage/testing/driver_test_realm.gni")
 import("//src/storage/volume_image/fvm/generate_fvm.gni")
 
 source_set("options") {
@@ -222,7 +222,7 @@ test("fvm_sparse_image_reader_test") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-storage_isolated_devmgr_unittest_v2_component(
+storage_driver_test_realm_v2_component(
     "fvm-sparse-image-reader-tests-component") {
   component_name = "fvm-sparse-image-reader-tests"
   deps = [
@@ -238,13 +238,12 @@ fuchsia_test_package("fvm-sparse-image-reader-tests") {
     }
   }
   test_components = [ ":fvm-sparse-image-reader-tests-component" ]
-  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }
 
 group("tests") {
   testonly = true
   deps = [
     ":fvm-sparse-image-reader-tests",
-    "//src/storage/testing:isolated-devmgr",
+    "//src/storage/testing:storage_driver_test_realm",
   ]
 }

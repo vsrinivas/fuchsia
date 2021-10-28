@@ -4,7 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
-import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/storage/testing/driver_test_realm.gni")
 
 rustc_binary("bin") {
   name = "fatfs_mounter"
@@ -46,7 +46,7 @@ fuchsia_component("fatfs-mounter") {
   manifest = "meta/fatfs_mounter.cml"
 }
 
-storage_isolated_devmgr_unittest_v2_component("fatfs-mounter-test") {
+storage_driver_test_realm_v2_component("fatfs-mounter-test") {
   deps = [ ":bin_test" ]
 }
 
@@ -59,7 +59,6 @@ fuchsia_test_package("fatfs-mounter-tests") {
     }
   }
   test_components = [ ":fatfs-mounter-test" ]
-  deps = [ "//src/storage/testing:isolated-devmgr-component" ]
 }
 
 group("tests") {
