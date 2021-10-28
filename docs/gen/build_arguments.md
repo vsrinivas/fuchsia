@@ -284,15 +284,22 @@ From //boards/arm64.gni:19
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:25
+From //build/board.gni:28
 
 **Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/uart16550", "//src/devices/spi/drivers/intel-gspi", "//src/devices/tpm/drivers/tpm", "//src/devices/usb/drivers/xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/codecs/max98373", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.gga", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy", "//src/storage/fshost:gpt_all"]`
 
-From //boards/x64.gni:20
+From //boards/x64.gni:19
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:25
+From //build/board.gni:28
+
+### board_configs
+Configs that are added when targeting this board.
+
+**Current value (from the default):** `[]`
+
+From //build/board.gni:13
 
 ### board_core_realm_shards
 Core realm shards specific to this board. See //src/sys/core for more
@@ -300,7 +307,7 @@ context.
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:43
+From //build/board.gni:46
 
 ### board_description
 Human readable board description corresponding to the board name.
@@ -315,7 +322,7 @@ From //build/board.gni:10
 
 **Current value for `target_cpu = "x64"`:** `"A generic x64 device"`
 
-From //boards/x64.gni:9
+From //boards/x64.gni:8
 
 **Overridden from the default:** `""`
 
@@ -327,7 +334,7 @@ by the board definition rather than the product definition.
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:14
+From //build/board.gni:17
 
 ### board_extra_vbmeta_descriptors
 Board level extra vbmeta descriptors to be combined into the top-level
@@ -371,7 +378,7 @@ board's fastboot protocol.
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:47
+From //build/board.gni:50
 
 ### board_has_libvulkan_arm_mali
 Board files can set this to true if they have a package with a mali libvulkan VCD.
@@ -393,7 +400,7 @@ From //build/board.gni:7
 
 **Current value for `target_cpu = "x64"`:** `"x64"`
 
-From //boards/x64.gni:8
+From //boards/x64.gni:7
 
 **Overridden from the default:** `""`
 
@@ -409,15 +416,15 @@ From //boards/arm64.gni:31
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:18
+From //build/board.gni:21
 
 **Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//src/media/audio/drivers/configurator", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config", "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan"]`
 
-From //boards/common/x64-common.gni:73
+From //boards/common/x64-common.gni:77
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:18
+From //build/board.gni:21
 
 ### board_recovery_bootfs_labels
 A list of binary labels to include in the recovery ZBI.
@@ -428,15 +435,15 @@ From //boards/arm64.gni:23
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:36
+From //build/board.gni:39
 
 **Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/uart16550", "//src/devices/spi/drivers/intel-gspi", "//src/devices/tpm/drivers/tpm", "//src/devices/usb/drivers/xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/codecs/max98373", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.gga", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy"]`
 
-From //boards/x64.gni:14
+From //boards/x64.gni:13
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:36
+From //build/board.gni:39
 
 ### board_recovery_package_labels
 A list of package labels to include in the recovery package set. Used by the
@@ -444,7 +451,7 @@ board definition rather than the product definition.
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:22
+From //build/board.gni:25
 
 ### board_system_image_deps
 A list of binary labels to include in the system_image package.
@@ -455,15 +462,15 @@ From //boards/arm64.gni:25
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:39
+From //build/board.gni:42
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers-system", "//src/graphics/drivers/msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
 
-From //boards/common/x64-common.gni:67
+From //boards/common/x64-common.gni:71
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:39
+From //build/board.gni:42
 
 ### board_tools
 List of paths to board-specific tools to include in the build output.
@@ -478,7 +485,7 @@ any kind of stable contract for users of the archive.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:151
+From //build/board.gni:61
 
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
@@ -489,15 +496,15 @@ From //boards/arm64.gni:21
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:33
+From //build/board.gni:36
 
 **Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/uart16550", "//src/devices/spi/drivers/intel-gspi", "//src/devices/tpm/drivers/tpm", "//src/devices/usb/drivers/xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/codecs/max98373", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.gga", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy"]`
 
-From //boards/x64.gni:15
+From //boards/x64.gni:14
 
 **Overridden from the default:** `[]`
 
-From //build/board.gni:33
+From //build/board.gni:36
 
 ### board_zedboot_cmdline_args
 List of kernel command line arguments to bake into the zedboot image that are
@@ -506,7 +513,7 @@ required by this board. See also zedboot_cmdline_args in
 
 **Current value (from the default):** `[]`
 
-From //build/board.gni:30
+From //build/board.gni:33
 
 ### bootfs_only
 Put the "system image" package in the BOOTFS.  Hence what would
@@ -983,7 +990,7 @@ From //src/virtualization/packages/debian_guest/BUILD.gn:9
 
 **Current value (from the default):** `"debug"`
 
-From //build/config/compiler.gni:54
+From //build/config/compiler.gni:53
 
 ### dev_bootfs_labels
 List of labels for objects to include in the ZBI.
@@ -1070,7 +1077,7 @@ Explicitly specify DWARF version used.
 
 **Current value (from the default):** `5`
 
-From //build/config/compiler.gni:68
+From //build/config/compiler.gni:67
 
 ### enable_api_diff
 Detect dart API changes
@@ -1140,16 +1147,6 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 **Current value (from the default):** `false`
 
 From //build/images/args.gni:69
-
-### enable_one_codegen_unit_for_rust_bootfs
-Whether to force 1 codegen unit in Rust bootfs binaries.
-Fewer codegen units lead to smaller code, at the expense of slower
-incremental rebuild times. Disable this behavior when you are iterating
-on a bootfs Rust binary for faster builds.
-
-**Current value (from the default):** `true`
-
-From //build/config/rust/BUILD.gn:23
 
 ### enable_rbe
 Set to true to enable distributed compilation using RBE.
@@ -3033,7 +3030,7 @@ From [//third_party/openthread/etc/gn/openthread.gni:196](https://fuchsia.google
 
 **Current value (from the default):** `"size"`
 
-From //build/config/compiler.gni:23
+From //build/config/compiler.gni:22
 
 ### output_breakpad_syms
 Sets if we should output breakpad symbols for Fuchsia binaries.
@@ -3346,7 +3343,7 @@ as the cache.
 
 **Current value (from the default):** `""`
 
-From //build/config/rust/BUILD.gn:17
+From //build/config/rust/BUILD.gn:19
 
 ### rust_lto
 Sets the default LTO type for rustc bulids.
@@ -3379,7 +3376,7 @@ TODO(fxbug.dev/57302): Enable v0 mangling by default.
 
 **Current value (from the default):** `false`
 
-From //build/config/rust/BUILD.gn:13
+From //build/config/rust/BUILD.gn:15
 
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
@@ -4035,7 +4032,7 @@ Controls whether to use -Oz when `optimize` is set to `"size"`.
 
 **Current value (from the default):** `false`
 
-From //build/config/compiler.gni:42
+From //build/config/compiler.gni:41
 
 ### use_prebuilt_ffmpeg
 Use a prebuilt ffmpeg binary rather than building it locally.  See
@@ -4165,7 +4162,7 @@ is meant solely for developer debugging.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:156
+From //build/images/args.gni:145
 
 ### virtcon_boot_animation_path
 
@@ -4339,7 +4336,7 @@ From //build/images/args.gni:91
 
 **Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:180
+From //build/config/fuchsia/BUILD.gn:149
 
 ### zircon_b_partition
 
