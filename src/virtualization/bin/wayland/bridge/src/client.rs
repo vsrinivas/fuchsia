@@ -7,26 +7,54 @@ use {
     crate::object::{MessageReceiver, ObjectLookupError, ObjectMap, ObjectRef, RequestReceiver},
     crate::seat::InputDispatcher,
     crate::xdg_shell::XdgSurface,
-    anyhow::Error,
+    anyhow::{anyhow, Error},
     fidl_fuchsia_ui_gfx::DisplayInfo,
     fuchsia_async as fasync, fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
     fuchsia_zircon as zx,
     futures::channel::mpsc,
     futures::prelude::*,
     futures::select,
-    std::{any::Any, cell::Cell, rc::Rc},
+    std::{
+        any::Any,
+        cell::{Cell, RefCell},
+        rc::Rc,
+    },
     wayland::WlDisplayEvent,
 };
 
 type Task = Box<dyn FnMut(&mut Client) -> Result<(), Error> + 'static>;
+
+#[derive(Clone)]
+enum ClientChannel {
+    Local(Rc<RefCell<mpsc::UnboundedReceiver<zx::MessageBuf>>>),
+    Remote(Rc<fasync::Channel>),
+}
+
+impl ClientChannel {
+    async fn recv_msg(&mut self, buffer: &mut zx::MessageBuf) -> Result<(), Error> {
+        match self {
+            ClientChannel::Local(receiver) => {
+                let buf = receiver
+                    .borrow_mut()
+                    .next()
+                    .await
+                    .ok_or(anyhow!("Error receiving message."))?;
+                *buffer = buf;
+                Ok(())
+            }
+            ClientChannel::Remote(chan) => {
+                chan.recv_msg(buffer).await.map_err(|e| anyhow!("Error receiving message: {:?}", e))
+            }
+        }
+    }
+}
 
 /// The state of a single client connection. Each client connection will have
 /// have its own zircon channel and its own set of protocol objects. The
 /// |Display| is the only piece of global state that is shared between
 /// clients.
 pub struct Client {
-    /// The zircon channel used to communicate with this client.
-    chan: Rc<fasync::Channel>,
+    client_channel: ClientChannel,
 
     /// The display for this client.
     display: Display,
@@ -68,16 +96,43 @@ impl Client {
         let log_flag = Rc::new(Cell::new(false));
         let chan = Rc::new(chan);
         let event_queue = EventQueue {
-            chan: chan.clone(),
+            chan: EventQueueChannel::Remote(chan.clone()),
             log_flag: log_flag.clone(),
             next_serial: Rc::new(Cell::new(0)),
         };
         Client {
             display,
-            chan,
+            client_channel: ClientChannel::Remote(chan),
             objects: ObjectMap::new(),
             tasks: receiver,
             task_queue: TaskQueue(sender),
+            protocol_logging: log_flag,
+            display_info: DisplayInfo { width_in_px: 1920, height_in_px: 1080 },
+            input_dispatcher: InputDispatcher::new(event_queue.clone()),
+            event_queue,
+            xdg_root_surface: None,
+            xdg_surfaces: vec![],
+        }
+    }
+
+    pub fn new_local(
+        sender: mpsc::UnboundedSender<zx::MessageBuf>,
+        receiver: mpsc::UnboundedReceiver<zx::MessageBuf>,
+        display: Display,
+    ) -> Self {
+        let (task_sender, tasks) = mpsc::unbounded();
+        let log_flag = Rc::new(Cell::new(false));
+        let event_queue = EventQueue {
+            chan: EventQueueChannel::Local(Rc::new(RefCell::new(sender))),
+            log_flag: log_flag.clone(),
+            next_serial: Rc::new(Cell::new(0)),
+        };
+        Client {
+            display,
+            client_channel: ClientChannel::Local(Rc::new(RefCell::new(receiver))),
+            objects: ObjectMap::new(),
+            tasks,
+            task_queue: TaskQueue(task_sender),
             protocol_logging: log_flag,
             display_info: DisplayInfo { width_in_px: 1920, height_in_px: 1080 },
             input_dispatcher: InputDispatcher::new(event_queue.clone()),
@@ -118,7 +173,7 @@ impl Client {
                     // Fusing: we exit when `recv_msg` fails, so we don't
                     // need to worry about fast-looping when the channel is
                     // closed.
-                    message = self.chan.recv_msg(&mut buffer).fuse() => {
+                    message = self.client_channel.recv_msg(&mut buffer).fuse() => {
                         // We got a new message over the zircon channel.
                         if let Err(e) = message {
                             println!("Failed to receive message on the channel {}", e);
@@ -246,10 +301,33 @@ impl Client {
     }
 }
 
+#[derive(Clone)]
+enum EventQueueChannel {
+    Local(Rc<RefCell<mpsc::UnboundedSender<zx::MessageBuf>>>),
+    Remote(Rc<fasync::Channel>),
+}
+
+impl EventQueueChannel {
+    fn write(&self, message: wl::Message) -> Result<(), Error> {
+        ftrace::duration!("wayland", "EventQueue::write_to_chan");
+        let (bytes, mut handles) = message.take();
+        match self {
+            EventQueueChannel::Local(sender) => {
+                let buf = zx::MessageBuf::new_with(bytes, handles);
+                sender.borrow_mut().unbounded_send(buf)?;
+                Ok(())
+            }
+            EventQueueChannel::Remote(chan) => chan
+                .write(&bytes, &mut handles)
+                .map_err(|e| anyhow!("Error writing to channel {:?}", e)),
+        }
+    }
+}
+
 /// An `EventQueue` enables protocol events to be sent back to the client.
 #[derive(Clone)]
 pub struct EventQueue {
-    chan: Rc<fasync::Channel>,
+    chan: EventQueueChannel,
     log_flag: Rc<Cell<bool>>,
     next_serial: Rc<Cell<u32>>,
 }
@@ -257,7 +335,7 @@ pub struct EventQueue {
 impl EventQueue {
     /// Serializes `event` and writes it to the client channel.
     ///
-    /// The 'sender' will be embedded in the meesage header indicating what
+    /// The 'sender' will be embedded in the message header indicating what
     /// protocol object dispatched the event.
     pub fn post<E: wl::IntoMessage + std::marker::Send>(
         &self,
@@ -272,7 +350,7 @@ impl EventQueue {
             println!("<-e-- {}", event.log(sender));
         }
         let message = Self::serialize(sender, event)?;
-        self.write_to_chan(message)
+        self.chan.write(message)
     }
 
     fn serialize<E: wl::IntoMessage>(sender: wl::ObjectId, event: E) -> Result<wl::Message, Error>
@@ -281,13 +359,6 @@ impl EventQueue {
     {
         ftrace::duration!("wayland", "EventQueue::serialize");
         Ok(event.into_message(sender).unwrap())
-    }
-
-    fn write_to_chan(&self, message: wl::Message) -> Result<(), Error> {
-        ftrace::duration!("wayland", "EventQueue::write_to_chan");
-        let (bytes, mut handles) = message.take();
-        self.chan.write(&bytes, &mut handles)?;
-        Ok(())
     }
 
     /// Returns a monotonically increasing value. Many protocol events rely
