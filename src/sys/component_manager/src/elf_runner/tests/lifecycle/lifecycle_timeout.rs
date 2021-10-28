@@ -18,9 +18,28 @@ use {
 #[fuchsia::test]
 async fn test_stop_timeouts() {
     let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
+
+    let mut event_stream_start = event_source
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
+        .await
+        .unwrap();
+    let event_stream_1 = event_source
         .subscribe(vec![EventSubscription::new(
-            vec![Started::NAME, Stopped::NAME, Purged::NAME],
+            vec![Stopped::NAME, Purged::NAME],
+            EventMode::Async,
+        )])
+        .await
+        .unwrap();
+    let event_stream_2 = event_source
+        .subscribe(vec![EventSubscription::new(
+            vec![Stopped::NAME, Purged::NAME],
+            EventMode::Async,
+        )])
+        .await
+        .unwrap();
+    let event_stream_3 = event_source
+        .subscribe(vec![EventSubscription::new(
+            vec![Stopped::NAME, Purged::NAME],
             EventMode::Async,
         )])
         .await
@@ -29,7 +48,8 @@ async fn test_stop_timeouts() {
     let collection_name = String::from("test-collection");
     // What is going on here? A scoped dynamic instance is created and then
     // dropped. When a the instance is dropped it stops the instance.
-    let target_monikers = {
+
+    let (parent, custom_timeout_child, inherited_timeout_child) = {
         let instance = ScopedInstance::new(
             collection_name.clone(),
             String::from(
@@ -52,34 +72,63 @@ async fn test_stop_timeouts() {
         let moniker_stem = format!("./{}:{}:", collection_name, child_name);
         let custom_timeout_child = format!("{}\\d+/custom-timeout-child:\\d+$", moniker_stem);
         let inherited_timeout_child = format!("{}\\d+/inherited-timeout-child:\\d+$", moniker_stem);
-        let target_monikers = [moniker_stem, custom_timeout_child, inherited_timeout_child];
+        let target_monikers =
+            [moniker_stem.clone(), custom_timeout_child.clone(), inherited_timeout_child.clone()];
 
         for _ in 0..target_monikers.len() {
             let _ = EventMatcher::ok()
                 .monikers(&target_monikers)
-                .wait::<Started>(&mut event_stream)
+                .wait::<Started>(&mut event_stream_start)
                 .await
                 .expect("failed to observe events");
         }
 
-        target_monikers
+        (moniker_stem, custom_timeout_child, inherited_timeout_child)
     };
 
     EventSequence::new()
-        .all_of(
+        .has_subset(
             vec![
-                EventMatcher::ok().monikers(&target_monikers).stop(Some(ExitStatusMatcher::Clean)),
-                EventMatcher::ok().monikers(&target_monikers).stop(Some(ExitStatusMatcher::Clean)),
                 EventMatcher::ok()
-                    .monikers(&target_monikers)
-                    .stop(Some(ExitStatusMatcher::AnyCrash)),
-                EventMatcher::ok().r#type(Purged::TYPE).monikers(&target_monikers),
-                EventMatcher::ok().r#type(Purged::TYPE).monikers(&target_monikers),
-                EventMatcher::ok().r#type(Purged::TYPE).monikers(&target_monikers),
+                    .monikers(vec![custom_timeout_child.clone()])
+                    .stop(Some(ExitStatusMatcher::Clean)),
+                EventMatcher::ok()
+                    .r#type(Purged::TYPE)
+                    .monikers(vec![custom_timeout_child.clone()]),
             ],
             Ordering::Ordered,
         )
-        .expect(event_stream)
+        .expect(event_stream_1)
+        .await
+        .unwrap();
+
+    EventSequence::new()
+        .has_subset(
+            vec![
+                EventMatcher::ok()
+                    .monikers(vec![inherited_timeout_child.clone()])
+                    .stop(Some(ExitStatusMatcher::Clean)),
+                EventMatcher::ok()
+                    .r#type(Purged::TYPE)
+                    .monikers(vec![inherited_timeout_child.clone()]),
+            ],
+            Ordering::Ordered,
+        )
+        .expect(event_stream_2)
+        .await
+        .unwrap();
+
+    EventSequence::new()
+        .has_subset(
+            vec![
+                EventMatcher::ok()
+                    .monikers(vec![parent.clone()])
+                    .stop(Some(ExitStatusMatcher::AnyCrash)),
+                EventMatcher::ok().r#type(Purged::TYPE).monikers(vec![parent.clone()]),
+            ],
+            Ordering::Ordered,
+        )
+        .expect(event_stream_3)
         .await
         .unwrap();
 }
