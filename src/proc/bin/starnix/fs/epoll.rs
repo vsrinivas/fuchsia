@@ -174,12 +174,21 @@ impl EpollFileObject {
             //the next wait.
             let mut trigger_list = self.trigger_list.lock();
             if let Some(pending) = trigger_list.pop_front() {
-                pending_list.push(pending);
-                if pending_list.len() == max_events as usize {
-                    break;
+                let wait_objects = self.wait_objects.read();
+                if let Some(wait) = wait_objects.get(&pending.key) {
+                    let observed = wait.target.query_events();
+                    if observed & wait.events {
+                        let ready = ReadyObject { key: pending.key, observed };
+                        pending_list.push(ready);
+                        if pending_list.len() == max_events as usize {
+                            break;
+                        }
+                        wait_deadline = zx::Time::ZERO;
+                    } else {
+                        self.wait_on_file(pending.key, wait)?;
+                    }
                 }
             }
-            wait_deadline = zx::Time::ZERO;
         }
 
         // Process the pening list and add processed ReadyObject
