@@ -5,14 +5,20 @@
 use {
     async_trait::async_trait,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
+    fidl_fuchsia_device::ControllerMarker,
     fidl_fuchsia_hardware_block::BlockMarker,
+    fidl_fuchsia_hardware_block_encrypted::DeviceManagerMarker,
     fidl_fuchsia_hardware_block_partition::{PartitionMarker, PartitionProxyInterface},
+    fidl_fuchsia_identity_account as faccount,
     fidl_fuchsia_io::{
         DirectoryProxy, FileMarker, NodeProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
+    fuchsia_vfs_watcher::{WatchEvent, WatchMessage, Watcher},
     fuchsia_zircon as zx,
+    futures::prelude::*,
     log::{error, warn},
+    std::path::Path,
     thiserror::Error,
 };
 
@@ -25,11 +31,31 @@ pub enum DiskError {
     #[error("Failed during FIDL call: {0}")]
     FidlError(#[from] fidl::Error),
     #[error("Failed to read first block of partition: {0}")]
-    ReadBlockHeaderFailed(zx::Status),
+    ReadBlockHeaderFailed(#[source] zx::Status),
     #[error("Failed to get block info: {0}")]
-    GetBlockInfoFailed(zx::Status),
+    GetBlockInfoFailed(#[source] zx::Status),
     #[error("Block size too small for zxcrypt header")]
     BlockTooSmallForZxcryptHeader,
+    #[error("Creating Watcher failed: {0}")]
+    WatcherError(#[source] anyhow::Error),
+    #[error("Reading from Watcher stream failed: {0}")]
+    WatcherStreamError(#[source] std::io::Error),
+    #[error("Failed to bind zxcrypt driver to block device: {0}")]
+    BindZxcryptDriverFailed(#[source] zx::Status),
+    #[error("Failed to get topological path of device: {0}")]
+    GetTopologicalPathFailed(#[source] zx::Status),
+    #[error("Failed to format block device with zxcrypt: {0}")]
+    FailedToFormatZxcrypt(#[source] zx::Status),
+    #[error("Failed to unseal zxcrypt block device: {0}")]
+    FailedToUnsealZxcrypt(#[source] zx::Status),
+    #[error("Key size must be 256 bits")]
+    KeySizeError,
+}
+
+impl From<DiskError> for faccount::Error {
+    fn from(_: DiskError) -> Self {
+        faccount::Error::Resource
+    }
 }
 
 const OPEN_RW: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
@@ -113,6 +139,23 @@ async fn all_partitions(
     Ok(partitions)
 }
 
+/// Blocks until an entry with the name `filename` is present in `directory_proxy`.
+/// If a timeout is desired, use the [`fuchsia_async::TimeoutExt::on_timeout()`] method.
+async fn wait_for_node(directory_proxy: &DirectoryProxy, filename: &str) -> Result<(), DiskError> {
+    let needle = Path::new(filename);
+    let mut watcher =
+        Watcher::new(Clone::clone(directory_proxy)).await.map_err(DiskError::WatcherError)?;
+    while let Some(WatchMessage { event, filename }) =
+        watcher.try_next().await.map_err(DiskError::WatcherStreamError)?
+    {
+        match event {
+            WatchEvent::ADD_FILE | WatchEvent::EXISTING if filename == needle => return Ok(()),
+            _ => {}
+        }
+    }
+    unreachable!("Watcher never ends")
+}
+
 /// The `DiskManager` trait allows for operating on block devices and partitions.
 ///
 /// This trait exists as a way to abstract disk operations for easy mocking/testing.
@@ -121,6 +164,7 @@ async fn all_partitions(
 pub trait DiskManager {
     type BlockDevice;
     type Partition: Partition<BlockDevice = Self::BlockDevice>;
+    type EncryptedBlockDevice: EncryptedBlockDevice<BlockDevice = Self::BlockDevice>;
 
     /// Returns a list of all block devices that are valid partitions.
     async fn partitions(&self) -> Result<Vec<Self::Partition>, DiskError>;
@@ -128,6 +172,15 @@ pub trait DiskManager {
     /// Given a block device, query the block size, and return if the contents of the first block
     /// contain the zxcrypt magic bytes
     async fn has_zxcrypt_header(&self, block_dev: &Self::BlockDevice) -> Result<bool, DiskError>;
+
+    /// Bind the zxcrypt driver to the given block device, returning an encrypted block device.
+    async fn bind_to_encrypted_block(
+        &self,
+        block_dev: Self::BlockDevice,
+    ) -> Result<Self::EncryptedBlockDevice, DiskError>;
+
+    /// Format the minfs filesystem onto a block device.
+    async fn format_minfs(&self, block_dev: &Self::BlockDevice) -> Result<(), DiskError>;
 }
 
 /// The `Partition` trait provides a narrow interface for
@@ -144,6 +197,21 @@ pub trait Partition {
 
     /// Consumes the `Partition` and returns the underlying block device.
     fn into_block_device(self) -> Self::BlockDevice;
+}
+
+/// The `EncryptedBlockDevice` trait provides a narrow interface for
+/// [`DeviceManager`][fidl_fuchsia_hardware_block_encrypted::DeviceManagerProxy].
+#[async_trait]
+pub trait EncryptedBlockDevice {
+    type BlockDevice;
+
+    /// Unseals the block device using the given key. The key must be 256 bits long.
+    /// Returns a decrypted block device on success.
+    async fn unseal(&self, key: &[u8]) -> Result<Self::BlockDevice, DiskError>;
+
+    /// Re-encrypts the block device using the given key, wiping out any previous zxcrypt volumes.
+    /// The key must be 256 bits long.
+    async fn format(&self, key: &[u8]) -> Result<(), DiskError>;
 }
 
 /// The production implementation of [`DiskManager`].
@@ -164,6 +232,7 @@ impl DevDiskManager {
 impl DiskManager for DevDiskManager {
     type BlockDevice = DevBlockDevice;
     type Partition = DevBlockPartition;
+    type EncryptedBlockDevice = EncryptedDevBlockDevice;
 
     async fn partitions(&self) -> Result<Vec<Self::Partition>, DiskError> {
         all_partitions(&self.dev_root).await
@@ -172,6 +241,51 @@ impl DiskManager for DevDiskManager {
     async fn has_zxcrypt_header(&self, block_dev: &Self::BlockDevice) -> Result<bool, DiskError> {
         let superblock = block_dev.read_first_block().await?;
         is_zxcrypt_superblock(&superblock)
+    }
+
+    async fn bind_to_encrypted_block(
+        &self,
+        block_dev: Self::BlockDevice,
+    ) -> Result<Self::EncryptedBlockDevice, DiskError> {
+        let node = block_dev.0;
+        let block_path = {
+            let controller = node.clone_as::<ControllerMarker>()?;
+            // Bind the zxcrypt driver to the block device, which will result in
+            // a zxcrypt subdirectory appearing under the block.
+            match controller.bind("zxcrypt.so").await?.map_err(zx::Status::from_raw) {
+                Ok(()) | Err(zx::Status::ALREADY_BOUND) => {}
+                Err(s) => return Err(DiskError::BindZxcryptDriverFailed(s)),
+            }
+            // The block device appears in /dev/class/block as a convenience. Find the actual
+            // location of the device in the device topology.
+            let full_path = controller
+                .get_topological_path()
+                .await?
+                .map_err(|s| DiskError::GetTopologicalPathFailed(zx::Status::from_raw(s)))?;
+            // Strip the '/dev/' prefix, as the disk_manager always opens paths relative to a
+            // `dev_root` (/dev on production, a fake VFS in test).
+            full_path
+                .strip_prefix("/dev/")
+                .expect("block topological path has /dev/ prefix")
+                .to_string()
+        };
+
+        // Open the block device at its topological path. We always open rw because services are
+        // opened with rw.
+        let block_dir =
+            io_util::directory::open_directory_no_describe(&self.dev_root, &block_path, OPEN_RW)?;
+
+        // Wait for the zxcrypt subdirectory to appear, meaning the zxcrypt driver is loaded.
+        wait_for_node(&block_dir, "zxcrypt").await?;
+
+        // In order to open the zxcrypt directory as either a directory or a service,
+        // the EncryptedDevBlockDevice needs to operate on its parent directory (block_dir).
+        Ok(EncryptedDevBlockDevice(block_dir))
+    }
+
+    async fn format_minfs(&self, _block_dev: &Self::BlockDevice) -> Result<(), DiskError> {
+        // TODO(fxbug.dev/86859): Implement minfs formatting.
+        Ok(())
     }
 }
 
@@ -234,23 +348,95 @@ impl Partition for DevBlockPartition {
     }
 }
 
+/// The production implementation of [`EncryptedBlockDevice`].
+pub struct EncryptedDevBlockDevice(DirectoryProxy);
+
+#[async_trait]
+impl EncryptedBlockDevice for EncryptedDevBlockDevice {
+    type BlockDevice = DevBlockDevice;
+
+    async fn unseal(&self, key: &[u8]) -> Result<Self::BlockDevice, DiskError> {
+        check_key_size(key)?;
+        let (device_manager_proxy, server_end) =
+            fidl::endpoints::create_proxy::<DeviceManagerMarker>()?;
+        self.0.open(
+            OPEN_RW,
+            MODE_TYPE_SERVICE,
+            "zxcrypt",
+            ServerEnd::new(server_end.into_channel()),
+        )?;
+        zx::Status::ok(device_manager_proxy.unseal(key, 0).await?)
+            .map_err(DiskError::FailedToUnsealZxcrypt)?;
+
+        let zxcrypt_dir = io_util::directory::open_directory(&self.0, "zxcrypt", OPEN_RW).await?;
+
+        wait_for_node(&zxcrypt_dir, "unsealed").await?;
+        let unsealed_dir =
+            io_util::directory::open_directory(&zxcrypt_dir, "unsealed", OPEN_RW).await?;
+
+        wait_for_node(&unsealed_dir, "block").await?;
+        let unsealed_block_node = io_util::directory::open_node_no_describe(
+            &unsealed_dir,
+            "block",
+            OPEN_RW,
+            MODE_TYPE_SERVICE,
+        )?;
+        Ok(DevBlockDevice(Node(unsealed_block_node)))
+    }
+
+    async fn format(&self, key: &[u8]) -> Result<(), DiskError> {
+        check_key_size(key)?;
+        let (device_manager_proxy, server_end) =
+            fidl::endpoints::create_proxy::<DeviceManagerMarker>()?;
+        self.0.open(
+            OPEN_RW,
+            MODE_TYPE_SERVICE,
+            "zxcrypt",
+            ServerEnd::new(server_end.into_channel()),
+        )?;
+        zx::Status::ok(device_manager_proxy.format(key, 0).await?)
+            .map_err(DiskError::FailedToFormatZxcrypt)?;
+        Ok(())
+    }
+}
+
+fn check_key_size(key: &[u8]) -> Result<(), DiskError> {
+    if key.len() != 32 {
+        Err(DiskError::KeySizeError)
+    } else {
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 pub mod test {
     use {
         super::*,
-        crate::constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
+        crate::{
+            constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
+            prototype::GLOBAL_ZXCRYPT_KEY,
+        },
         fidl_fuchsia_hardware_block::{BlockInfo, MAX_TRANSFER_UNBOUNDED},
+        fidl_fuchsia_hardware_block_encrypted::{DeviceManagerRequest, DeviceManagerRequestStream},
         fidl_fuchsia_hardware_block_partition::Guid,
-        fidl_fuchsia_io::{DirectoryMarker, MODE_TYPE_DIRECTORY},
+        fidl_fuchsia_io::{
+            DirectoryMarker, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
+        },
         fidl_test_identity::{
             MockPartitionMarker, MockPartitionRequest, MockPartitionRequestStream,
         },
-        futures::{future::BoxFuture, prelude::*},
+        futures::future::BoxFuture,
         matches::assert_matches,
         std::sync::Arc,
         vfs::{
-            directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-            path::Path as VfsPath, pseudo_directory,
+            directory::{
+                entry::{DirectoryEntry, EntryInfo},
+                helper::DirectlyMutable,
+                immutable::simple,
+            },
+            execution_scope::ExecutionScope,
+            path::Path as VfsPath,
+            pseudo_directory,
         },
     };
 
@@ -277,6 +463,11 @@ pub mod test {
         label: Result<String, i32>,
         /// Controls whether reading the first block of data succeeds.
         first_block: Result<Vec<u8>, i32>,
+        /// A reference to the block device directory hosted at the
+        /// topological path of the block device. This is used to append
+        /// the "zxcrypt" directory to simulate the zxcrypt driver being
+        /// bound.
+        block_dir: Arc<simple::Simple>,
     }
 
     impl MockPartition {
@@ -286,6 +477,7 @@ pub mod test {
         pub fn handle_requests_for_stream(
             self: Arc<Self>,
             scope: ExecutionScope,
+            id: u64,
             mut stream: MockPartitionRequestStream,
         ) -> BoxFuture<'static, ()> {
             Box::pin(async move {
@@ -323,6 +515,39 @@ pub mod test {
                                 .expect("failed to send Block.GetInfo response");
                         }
 
+                        // fuchsia.device.Controller methods
+                        MockPartitionRequest::GetTopologicalPath { responder } => {
+                            responder
+                                .send(&mut Ok(format!("/dev/mocks/{}", id)))
+                                .expect("failed to send Controller.GetTopologicalPath response");
+                        }
+
+                        MockPartitionRequest::Bind { driver, responder } => {
+                            assert_eq!(driver, "zxcrypt.so");
+                            let zxcrypt_dir = simple::simple();
+                            let mut resp = self
+                                .block_dir
+                                .add_entry(
+                                    "zxcrypt",
+                                    DirectoryOrService::new(
+                                        zxcrypt_dir.clone(),
+                                        vfs::service::host(move |stream| {
+                                            let zxcrypt_dir = zxcrypt_dir.clone();
+                                            async move {
+                                                Arc::new(MockZxcryptBlock(zxcrypt_dir))
+                                                    .handle_requests_for_stream(stream)
+                                                    .await
+                                            }
+                                        }),
+                                    ),
+                                )
+                                .map_err(|_| zx::Status::ALREADY_BOUND.into_raw());
+
+                            responder
+                                .send(&mut resp)
+                                .expect("failed to send Controller.Bind response");
+                        }
+
                         // fuchsia.io.File methods
                         MockPartitionRequest::ReadAt { count, offset, responder } => {
                             // All reads should be of block size.
@@ -355,9 +580,11 @@ pub mod test {
                                 ServerEnd::<MockPartitionMarker>::new(object.into_channel())
                                     .into_stream()
                                     .unwrap();
-                            scope.spawn(
-                                Arc::clone(&self).handle_requests_for_stream(scope.clone(), stream),
-                            );
+                            scope.spawn(Arc::clone(&self).handle_requests_for_stream(
+                                scope.clone(),
+                                id,
+                                stream,
+                            ));
                         }
                         req => {
                             error!("{:?} is not implemented for this mock", req);
@@ -371,14 +598,91 @@ pub mod test {
         }
     }
 
+    /// A mock zxcrypt block device, serving a stream of [`DeviceManagerRequest`].
+    /// The block device takes a pseudo-directory in which it populates the "unsealed" entry
+    /// when the device is unsealed.
+    struct MockZxcryptBlock(Arc<simple::Simple>);
+
+    impl MockZxcryptBlock {
+        async fn handle_requests_for_stream(
+            self: Arc<Self>,
+            mut stream: DeviceManagerRequestStream,
+        ) {
+            while let Some(request) =
+                stream.try_next().await.expect("failed to read DeviceManager request")
+            {
+                match request {
+                    DeviceManagerRequest::Format { key, slot, responder } => {
+                        assert_eq!(key, &GLOBAL_ZXCRYPT_KEY, "key must be null key");
+                        assert_eq!(slot, 0, "key slot must be 0");
+                        responder.send(0).expect("failed to send DeviceManager.Format response");
+                    }
+
+                    DeviceManagerRequest::Unseal { key, slot, responder } => {
+                        assert_eq!(key, &GLOBAL_ZXCRYPT_KEY, "key must be null key");
+                        assert_eq!(slot, 0, "key slot must be 0");
+
+                        let unsealed_dir = pseudo_directory! {
+                            "block" => pseudo_directory! {},
+                        };
+                        self.0
+                            .add_entry("unsealed", unsealed_dir)
+                            .expect("failed to add unsealed dir");
+                        responder.send(0).expect("failed to send DeviceManager.Unseal response");
+                    }
+                    req => {
+                        error!("{:?} is not implemented for this mock", req);
+                        unimplemented!("DeviceManager request is not implemented for this mock");
+                    }
+                }
+            }
+        }
+    }
+
+    /// A [`DirectoryEntry`] implementation that serves `directory` when opened with
+    /// `MODE_TYPE_DIRECTORY`, and `service` otherwise. This is useful for mocking the behavior of
+    /// block devices in devhost.
+    struct DirectoryOrService {
+        directory: Arc<dyn DirectoryEntry>,
+        service: Arc<dyn DirectoryEntry>,
+    }
+
+    impl DirectoryOrService {
+        fn new(directory: Arc<dyn DirectoryEntry>, service: Arc<dyn DirectoryEntry>) -> Arc<Self> {
+            Arc::new(Self { directory, service })
+        }
+    }
+
+    impl DirectoryEntry for DirectoryOrService {
+        fn open(
+            self: Arc<Self>,
+            scope: ExecutionScope,
+            flags: u32,
+            mode: u32,
+            path: VfsPath,
+            server_end: ServerEnd<NodeMarker>,
+        ) {
+            if mode & MODE_TYPE_DIRECTORY != 0 {
+                self.directory.clone().open(scope, flags, mode, path, server_end);
+            } else {
+                self.service.clone().open(scope, flags, mode, path, server_end);
+            }
+        }
+
+        fn entry_info(&self) -> EntryInfo {
+            EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
+        }
+    }
+
     fn host_mock_partition(
         scope: &ExecutionScope,
+        id: u64,
         mock: MockPartition,
     ) -> Arc<vfs::service::Service> {
         let scope = scope.clone();
         let mock = Arc::new(mock);
         vfs::service::host(move |stream| {
-            mock.clone().handle_requests_for_stream(scope.clone(), stream)
+            mock.clone().handle_requests_for_stream(scope.clone(), id, stream)
         })
     }
 
@@ -404,15 +708,17 @@ pub mod test {
         let mock_devfs = pseudo_directory! {
             "class" => pseudo_directory! {
                 "block" => pseudo_directory! {
-                    "000" => host_mock_partition(&scope, MockPartition {
+                    "000" => host_mock_partition(&scope, 0, MockPartition {
                             guid: Ok(BLOB_GUID),
                             label: Ok("other".to_string()),
                             first_block: Ok(make_zxcrypt_superblock(BLOCK_SIZE)),
+                            block_dir: simple::simple(),
                     }),
-                    "001" => host_mock_partition(&scope, MockPartition {
+                    "001" => host_mock_partition(&scope, 1, MockPartition {
                             guid: Ok(DATA_GUID),
                             label: Ok(ACCOUNT_LABEL.to_string()),
                             first_block: Ok(make_zxcrypt_superblock(BLOCK_SIZE)),
+                            block_dir: simple::simple(),
                     }),
                 }
             }
@@ -453,20 +759,24 @@ pub mod test {
         let mock_devfs = pseudo_directory! {
             "class" => pseudo_directory! {
                 "block" => pseudo_directory! {
-                    "000" => host_mock_partition(&scope, MockPartition {
+                    "000" => host_mock_partition(&scope, 0, MockPartition {
                         guid: Ok(BLOB_GUID),
                         label: Ok("other".to_string()),
                         first_block: Ok([0].repeat(BLOCK_SIZE)),
+                        block_dir: simple::simple(),
                     }),
-                    "001" => host_mock_partition(&scope, MockPartition {
+                    "001" => host_mock_partition(&scope, 1, MockPartition {
                         guid: Ok(DATA_GUID),
                         label: Ok(ACCOUNT_LABEL.to_string()),
                         first_block: Ok(make_zxcrypt_superblock(BLOCK_SIZE)),
+                        block_dir: simple::simple(),
                     }),
-                    "002" => host_mock_partition(&scope, MockPartition {
+                    "002" => host_mock_partition(&scope, 2, MockPartition {
                         guid: Ok(DATA_GUID),
                         label: Ok(ACCOUNT_LABEL.to_string()),
                         first_block: Err(zx::Status::NOT_FOUND.into_raw()),
+                        block_dir: simple::simple(),
+
                     }),
                 }
             }
@@ -486,6 +796,104 @@ pub mod test {
         let bad_block =
             partition_iter.next().expect("expected third partition").into_block_device();
         assert_matches!(disk_manager.has_zxcrypt_header(&bad_block).await, Err(_));
+
+        scope.shutdown();
+        scope.wait().await;
+    }
+
+    #[fuchsia::test]
+    async fn binds_zxcrypt_to_block_device() {
+        let scope = ExecutionScope::new();
+        let block_dir = simple::simple();
+        let mock_devfs = pseudo_directory! {
+            "class" => pseudo_directory! {
+                "block" => pseudo_directory! {
+                    "000" => host_mock_partition(&scope, 0, MockPartition {
+                        guid: Ok(DATA_GUID),
+                        label: Ok(ACCOUNT_LABEL.to_string()),
+                        first_block: Ok(make_zxcrypt_superblock(BLOCK_SIZE)),
+                        block_dir: block_dir.clone(),
+                    }),
+                }
+            },
+            "mocks" => pseudo_directory! {
+                "0" => block_dir,
+            }
+        };
+        let disk_manager = DevDiskManager::new(serve_mock_devfs(&scope, mock_devfs));
+        let mut partitions = disk_manager.partitions().await.expect("list partitions");
+        let block_device = partitions.remove(0).into_block_device();
+        let _ = disk_manager
+            .bind_to_encrypted_block(block_device)
+            .await
+            .expect("bind_to_encrypted_block");
+
+        scope.shutdown();
+        scope.wait().await;
+    }
+
+    #[fuchsia::test]
+    async fn binds_zxcrypt_to_block_device_twice() {
+        let scope = ExecutionScope::new();
+        let block_dir = simple::simple();
+        let mock_devfs = pseudo_directory! {
+            "class" => pseudo_directory! {
+                "block" => pseudo_directory! {
+                    "000" => host_mock_partition(&scope, 0, MockPartition {
+                        guid: Ok(DATA_GUID),
+                        label: Ok(ACCOUNT_LABEL.to_string()),
+                        first_block: Ok(make_zxcrypt_superblock(BLOCK_SIZE)),
+                        block_dir: block_dir.clone(),
+                    }),
+                }
+            },
+            "mocks" => pseudo_directory! {
+                "0" => block_dir,
+            }
+        };
+        let disk_manager = DevDiskManager::new(serve_mock_devfs(&scope, mock_devfs));
+        let mut partitions = disk_manager.partitions().await.expect("list partitions");
+        let block_device = partitions.remove(0).into_block_device();
+        let cloned_block =
+            DevBlockDevice(Node(block_device.0.clone_as::<NodeMarker>().expect("clone")));
+        let _ = disk_manager
+            .bind_to_encrypted_block(block_device)
+            .await
+            .expect("bind_to_encrypted_block");
+
+        let _ = disk_manager
+            .bind_to_encrypted_block(cloned_block)
+            .await
+            .expect("bind_to_encrypted_block");
+
+        scope.shutdown();
+        scope.wait().await;
+    }
+
+    #[fuchsia::test]
+    async fn format_zxcrypt_device() {
+        let scope = ExecutionScope::new();
+        let zxcrypt_dir = simple::simple();
+        // We only need to serve the relevant zxcrypt directories for this test.
+        let mock_encrypted_block_dir = pseudo_directory! {
+            "zxcrypt" => DirectoryOrService::new(
+                zxcrypt_dir.clone(),
+                vfs::service::host(move |stream| {
+                    let zxcrypt_dir = zxcrypt_dir.clone();
+                    async move {
+                        Arc::new(MockZxcryptBlock(zxcrypt_dir))
+                            .handle_requests_for_stream(stream).await
+                    }
+                })
+            ),
+        };
+
+        // Build a zxcrypt block device that points to our mock zxcrypt driver node, emulating
+        // bind_to_encrypted_block.
+        let encrypted_block_device =
+            EncryptedDevBlockDevice(serve_mock_devfs(&scope, mock_encrypted_block_dir));
+        encrypted_block_device.format(&GLOBAL_ZXCRYPT_KEY).await.expect("format");
+        let _ = encrypted_block_device.unseal(&GLOBAL_ZXCRYPT_KEY).await.expect("unseal");
 
         scope.shutdown();
         scope.wait().await;

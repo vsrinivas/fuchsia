@@ -5,6 +5,8 @@
 mod account_manager;
 mod constants;
 mod disk_management;
+mod keys;
+mod prototype;
 
 use anyhow::{Context, Error};
 use fidl_fuchsia_identity_account::AccountManagerRequestStream;
@@ -16,6 +18,7 @@ use log::info;
 
 use crate::account_manager::AccountManager;
 use crate::disk_management::DevDiskManager;
+use crate::prototype::NullKeyDerivation;
 
 enum Services {
     AccountManager(AccountManagerRequestStream),
@@ -28,7 +31,9 @@ async fn main() -> Result<(), Error> {
 
     let dev_root = open_in_namespace("/dev", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)?;
     let disk_manager = DevDiskManager::new(dev_root);
-    let account_manager = AccountManager::new(disk_manager);
+    // This will be replaced with a proper key derivation implementation.
+    let key_derivation = NullKeyDerivation;
+    let account_manager = AccountManager::new(disk_manager, key_derivation);
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(Services::AccountManager);

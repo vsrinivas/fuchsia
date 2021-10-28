@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_hardware_block_encrypted::{DeviceManagerMarker, DeviceManagerProxy},
     fidl_fuchsia_hardware_block_partition::Guid,
     fidl_fuchsia_hardware_block_volume::VolumeManagerMarker,
-    fidl_fuchsia_identity_account::{AccountManagerMarker, AccountManagerProxy},
+    fidl_fuchsia_identity_account::{AccountManagerMarker, AccountManagerProxy, AccountMetadata},
     fuchsia_async as fasync,
     fuchsia_component_test::{
         builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
@@ -39,6 +39,7 @@ const FVM_SLICE_SIZE: usize = 8192;
 // For whatever reason, using `Duration::MAX` seems to trigger immediate ZX_ERR_TIMED_OUT in the
 // wait_for_device_at calls, so we just set a quite large timeout here.
 const DEVICE_WAIT_TIMEOUT: Duration = Duration::from_secs(20);
+const EMPTY_PASSWORD: &'static str = "";
 
 #[link(name = "fs-management")]
 extern "C" {
@@ -317,4 +318,60 @@ async fn get_account_ids_with_zxcrypt_header() {
 
     let account_ids = account_manager.get_account_ids().await.expect("get account ids");
     assert_eq!(account_ids, vec![1]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn deprecated_provision_new_account_on_unformatted_partition() {
+    let env = TestEnv::build().await;
+    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+
+    let account_manager = env
+        .realm_instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<AccountManagerMarker>()
+        .expect("connect to account manager");
+
+    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+    assert_eq!(account_ids, vec![]);
+
+    let (_account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_manager
+        .deprecated_provision_new_account(
+            EMPTY_PASSWORD,
+            AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
+            server_end,
+        )
+        .await
+        .expect("deprecated_new_provision FIDL")
+        .expect("deprecated provision new account");
+
+    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+    assert_eq!(account_ids, vec![1]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn deprecated_provision_new_account_on_formatted_partition() {
+    let env = TestEnv::build().await;
+    let ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+    env.format_zxcrypt(&ramdisk, ACCOUNT_LABEL).await;
+
+    let account_manager = env
+        .realm_instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<AccountManagerMarker>()
+        .expect("connect to account manager");
+
+    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+    assert_eq!(account_ids, vec![1]);
+
+    let (_account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_manager
+        .deprecated_provision_new_account(
+            EMPTY_PASSWORD,
+            AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
+            server_end,
+        )
+        .await
+        .expect("deprecated_new_provision FIDL")
+        .expect_err("deprecated provision new account should fail");
 }
