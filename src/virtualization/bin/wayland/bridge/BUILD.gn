@@ -51,6 +51,7 @@ bin_sources = [
   "src/client.rs",
   "src/compositor.rs",
   "src/data_device_manager.rs",
+  "src/dispatcher.rs",
   "src/display.rs",
   "src/linux_dmabuf.rs",
   "src/main.rs",

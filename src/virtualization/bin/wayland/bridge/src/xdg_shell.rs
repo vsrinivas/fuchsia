@@ -50,7 +50,7 @@ use {
 #[cfg(not(feature = "flatland"))]
 use {
     crate::scenic::ScenicSession,
-    crate::InputDispatcher,
+    crate::seat::InputDispatcher,
     fidl::endpoints::{create_request_stream, ServerEnd},
     fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba},
     fidl_fuchsia_ui_scenic::{
