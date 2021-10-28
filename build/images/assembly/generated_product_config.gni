@@ -290,5 +290,13 @@ template("generated_product_config") {
       "--output",
       rebase_path(invoker.output_path, root_build_dir),
     ]
+
+    metadata = {
+      # We insert these barriers to prevent the dependencies from including
+      # files "higher up" in the dependency chain.
+      package_barrier = []
+      config_package_barrier = []
+      distribution_entries_barrier = []
+    }
   }
 }

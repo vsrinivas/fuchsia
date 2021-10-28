@@ -5,6 +5,7 @@
 import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/drivers/driver_manifest.gni")
+import("//build/images/assembly/generated_assembly_inputs.gni")
 import("//build/images/assembly/generated_board_config.gni")
 import("//build/images/assembly/generated_partitions_config.gni")
 import("//build/images/assembly/generated_product_config.gni")
@@ -206,6 +207,7 @@ template("assemble_system") {
     copy_images = "${image_name}_copy_images"
     config_data = "${image_name}_config-data"
     shell_commands = "${image_name}_shell_commands"
+    assembly_inputs = "${image_name}_assembly_inputs"
   }
 
   # Intermediate files produced for Image Assembly.
@@ -240,6 +242,7 @@ template("assemble_system") {
     update_meta_package = "${gendir}/update/meta/package"
     packages = "${gendir}/packages.json"
     images_manifest = "${outdir}/images.json"
+    assembly_inputs = "${outdir}/assembly_inputs.json"
 
     # Determine which ZBI we are shipping.
     zbi_final = zbi
@@ -482,6 +485,22 @@ template("assemble_system") {
   check_production_tag = false
   if (defined(invoker.check_production_tag)) {
     check_production_tag = invoker.check_production_tag
+  }
+
+  generated_assembly_inputs(labels.assembly_inputs) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    product_config = files.product_config
+    board_config = files.board_config
+    output_path = files.assembly_inputs
+
+    deps = [
+      ":${labels.board_config}",
+      ":${labels.product_config}",
+    ]
   }
 
   ffx_action(labels.image_assembler) {
@@ -757,6 +776,7 @@ template("assemble_system") {
     # public_deps is used, so that the outputs of these dependencies are
     # available to external targets.
     public_deps = [
+      ":${labels.assembly_inputs}",
       ":${labels.image_assembler}",
       ":${labels.partitions_config}",
     ]

@@ -1,0 +1,51 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Generates a list of the files included in a product that must be uploaded by
+# infrastructure.
+#
+# Arguments
+#   product_config (required)
+#     [path] The path to the product config.
+#
+#   board_config (required)
+#     [path] The path to the board config.
+#
+#   output_path (required)
+#     [path] Where to write the output list.
+#
+template("generated_assembly_inputs") {
+  assert(defined(invoker.product_config), "Need to define product_config")
+  assert(defined(invoker.board_config), "Need to define board_config")
+  assert(defined(invoker.output_path), "Need to define output_path")
+
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    script = "//build/images/assembly/make_assembly_inputs.py"
+    depfile_path = "${target_out_dir}/${target_name}.d"
+    depfile = depfile_path
+
+    outputs = [ invoker.output_path ]
+    inputs = [
+      invoker.product_config,
+      invoker.board_config,
+    ]
+
+    args = [
+      "--product-config",
+      rebase_path(invoker.product_config, root_build_dir),
+      "--board-config",
+      rebase_path(invoker.board_config, root_build_dir),
+      "--output",
+      rebase_path(invoker.output_path, root_build_dir),
+      "--depfile",
+      rebase_path(depfile_path, root_build_dir),
+    ]
+  }
+}
