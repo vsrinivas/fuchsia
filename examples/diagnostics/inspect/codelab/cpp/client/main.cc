@@ -8,9 +8,10 @@
 // In addition to launching the codelab, this component also launches the fizzbuzz component that
 // the codelab depends on.
 
+#include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/component/decl/cpp/fidl.h>
 #include <fuchsia/examples/inspect/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
-#include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
@@ -33,8 +34,8 @@ int main(int argc, char** argv) {
     Usage(argc >= 1 ? argv[0] : nullptr);
   }
 
-  fidl::SynchronousInterfacePtr<fuchsia::sys2::Realm> realm;
-  std::string realm_service = std::string("/svc/") + fuchsia::sys2::Realm::Name_;
+  fidl::SynchronousInterfacePtr<fuchsia::component::Realm> realm;
+  std::string realm_service = std::string("/svc/") + fuchsia::component::Realm::Name_;
   auto status = zx::make_status(
       fdio_service_connect(realm_service.c_str(), realm.NewRequest().TakeChannel().get()));
   if (status.is_error()) {
@@ -43,9 +44,9 @@ int main(int argc, char** argv) {
   }
 
   fuchsia::io::DirectorySyncPtr exposed_dir;
-  fuchsia::sys2::Realm_OpenExposedDir_Result result;
-  status = zx::make_status(realm->OpenExposedDir(fuchsia::sys2::ChildRef{.name = "reverser"},
-                                                 exposed_dir.NewRequest(), &result));
+  fuchsia::component::Realm_OpenExposedDir_Result result;
+  status = zx::make_status(realm->OpenExposedDir(
+      fuchsia::component::decl::ChildRef{.name = "reverser"}, exposed_dir.NewRequest(), &result));
   zx::channel handle, request;
   status = zx::make_status(zx::channel::create(0, &handle, &request));
   if (status.is_error()) {
