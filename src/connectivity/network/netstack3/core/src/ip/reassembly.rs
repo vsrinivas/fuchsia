@@ -908,7 +908,7 @@ mod tests {
         let body_offset = fragment_id as u8 % 43;
 
         let mut builder = get_ipv4_builder();
-        builder.id(fragment_id);
+        builder.maybe_set_id(|| fragment_id);
         builder.fragment_offset(fragment_offset as u16);
         builder.mf_flag(m_flag);
         let mut body: Vec<u8> = Vec::new();
@@ -1228,7 +1228,7 @@ mod tests {
         // Process fragment #1 (body size is not a multiple of
         // `FRAGMENT_BLOCK_SIZE` and more flag is `true`).
         let mut builder = get_ipv4_builder();
-        builder.id(fragment_id);
+        builder.maybe_set_id(|| fragment_id);
         builder.fragment_offset(1);
         builder.mf_flag(true);
         // Body with 1 byte less than `FRAGMENT_BLOCK_SIZE` so it is not a
@@ -1243,7 +1243,7 @@ mod tests {
         // `FRAGMENT_BLOCK_SIZE` but more flag is `false`). The last fragment is
         // allowed to not be a multiple of `FRAGMENT_BLOCK_SIZE`.
         let mut builder = get_ipv4_builder();
-        builder.id(fragment_id);
+        builder.maybe_set_id(|| fragment_id);
         builder.fragment_offset(1);
         builder.mf_flag(false);
         // Body with 1 byte less than `FRAGMENT_BLOCK_SIZE` so it is not a

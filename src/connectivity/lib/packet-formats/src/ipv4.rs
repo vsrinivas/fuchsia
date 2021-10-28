@@ -203,6 +203,12 @@ pub trait Ipv4Header {
     }
 }
 
+/// Packet metadata which is present only in the IPv4 protocol's packet format.
+pub struct Ipv4OnlyMeta {
+    /// The packet's ID field.
+    pub id: u16,
+}
+
 /// An IPv4 packet.
 ///
 /// An `Ipv4Packet` shares its underlying memory with the byte slice it was
@@ -587,9 +593,28 @@ impl Ipv4PacketBuilder {
         self.ecn = ecn;
     }
 
-    /// Set the identification.
-    pub fn id(&mut self, id: u16) {
-        self.id = id;
+    /// Sets the ID field using the callback if it needs to be set.
+    ///
+    /// As Per [RFC 6864 Section 2]:
+    ///
+    ///   > The IPv4 ID field is thus meaningful only for non-atomic datagrams --
+    ///   > either those datagrams that have already been fragmented or those for
+    ///   > which fragmentation remains permitted...
+    ///   >
+    ///   > ...Non-atomic datagrams: (DF==0)||(MF==1)||(frag_offset>0)
+    ///
+    /// This method checks whether the packet represented by the builder qualifies
+    /// as a non-atomic datagram. If so, it invokes `f` to generate an ID and sets
+    /// the ID field to the value returned.
+    ///
+    /// [RFC 6864 Section 2]: https://tools.ietf.org/html/rfc6864#section-2
+    pub fn maybe_set_id<F: FnOnce() -> u16>(&mut self, f: F) {
+        if ((self.flags & (1 << DF_FLAG_OFFSET)) == 0)
+            || ((self.flags & (1 << MF_FLAG_OFFSET)) == 1)
+            || (self.frag_off > 0)
+        {
+            self.id = f()
+        }
     }
 
     /// Set the Don't Fragment (DF) flag.
@@ -1108,7 +1133,7 @@ mod tests {
         let mut builder = new_builder();
         builder.dscp(0x12);
         builder.ecn(3);
-        builder.id(0x0405);
+        builder.maybe_set_id(|| 0x0405);
         builder.df_flag(true);
         builder.mf_flag(true);
         builder.fragment_offset(0x0607);

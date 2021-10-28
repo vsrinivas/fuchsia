@@ -34,9 +34,9 @@ use nonzero_ext::nonzero;
 use packet::{Buf, BufferMut, Either, ParseMetadata, Serializer};
 use packet_formats::error::IpParseError;
 use packet_formats::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
-use packet_formats::ip::{IpPacket, IpPacketBuilder, IpProto, Ipv4Proto, Ipv6Proto};
-use packet_formats::ipv4::{Ipv4FragmentType, Ipv4Packet};
-use packet_formats::ipv6::Ipv6Packet;
+use packet_formats::ip::{IpPacket, IpProto, Ipv4Proto, Ipv6Proto};
+use packet_formats::ipv4::{Ipv4FragmentType, Ipv4Packet, Ipv4PacketBuilder};
+use packet_formats::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::context::{CounterContext, FrameContext, StateContext, TimerContext, TimerHandler};
@@ -408,6 +408,7 @@ impl Ipv4StateBuilder {
                 path_mtu: IpLayerPathMtuCache::new(),
             },
             icmp: self.icmp.build(),
+            next_packet_id: 0,
         }
     }
 }
@@ -459,6 +460,15 @@ impl Ipv6StateBuilder {
 pub(crate) struct Ipv4State<Instant: crate::Instant, D> {
     inner: IpStateInner<Ipv4, Instant>,
     icmp: Icmpv4State<Instant, IpSock<Ipv4, D>>,
+    next_packet_id: u16,
+}
+
+impl<Instant: crate::Instant, D> Ipv4State<Instant, D> {
+    // TODO(https://fxbug.dev/87588): Generate IPv4 IDs unpredictably
+    fn gen_next_packet_id(&mut self) -> u16 {
+        self.next_packet_id = self.next_packet_id.wrapping_add(1);
+        self.next_packet_id
+    }
 }
 
 pub(crate) struct Ipv6State<Instant: crate::Instant, D> {
@@ -1795,7 +1805,13 @@ pub(crate) fn send_ipv6_packet<
 /// Since `send_ip_packet_from_device` specifies a physical device, it cannot
 /// send to or from a loopback IP address. If either `src_ip` or `dst_ip` are in
 /// the loopback subnet, `send_ip_packet_from_device` will panic.
-pub(crate) fn send_ip_packet_from_device<B: BufferMut, D: BufferDispatcher<B>, A, S>(
+#[specialize_ip_address]
+pub(crate) fn send_ip_packet_from_device<
+    B: BufferMut,
+    D: BufferDispatcher<B>,
+    A: IpAddress,
+    S: Serializer<Buffer = B>,
+>(
     ctx: &mut Ctx<D>,
     device: DeviceId,
     src_ip: A,
@@ -1804,14 +1820,7 @@ pub(crate) fn send_ip_packet_from_device<B: BufferMut, D: BufferDispatcher<B>, A
     proto: <A::Version as packet_formats::ip::IpExt>::Proto,
     body: S,
     mtu: Option<u32>,
-) -> Result<(), S>
-where
-    A: IpAddress,
-    S: Serializer<Buffer = B>,
-{
-    assert!(!A::Version::LOOPBACK_SUBNET.contains(&src_ip));
-    assert!(!A::Version::LOOPBACK_SUBNET.contains(&dst_ip));
-
+) -> Result<(), S> {
     // Tentative addresses are not considered bound to an interface in the
     // traditional sense, therefore, no packet should have a source IP set to a
     // tentative address.
@@ -1819,12 +1828,27 @@ where
         crate::device::is_addr_tentative_on_device(ctx, &src_ip, device)
     }));
 
-    let builder = <A::Version as packet_formats::ip::IpExt>::PacketBuilder::new(
-        src_ip,
-        dst_ip,
-        get_hop_limit::<_, A::Version>(ctx, device),
-        proto,
-    );
+    #[ipv4addr]
+    let builder = {
+        assert!(!Ipv4::LOOPBACK_SUBNET.contains(&src_ip));
+        assert!(!Ipv4::LOOPBACK_SUBNET.contains(&dst_ip));
+        let mut builder = Ipv4PacketBuilder::new(
+            src_ip,
+            dst_ip,
+            get_hop_limit::<_, A::Version>(ctx, device),
+            proto,
+        );
+        builder.maybe_set_id(|| ctx.state.ipv4.gen_next_packet_id());
+        builder
+    };
+
+    #[ipv6addr]
+    let builder = {
+        assert!(!Ipv6::LOOPBACK_SUBNET.contains(&src_ip));
+        assert!(!Ipv6::LOOPBACK_SUBNET.contains(&dst_ip));
+        Ipv6PacketBuilder::new(src_ip, dst_ip, get_hop_limit::<_, A::Version>(ctx, device), proto)
+    };
+
     let body = body.encapsulate(builder);
 
     if let Some(mtu) = mtu {
@@ -2156,7 +2180,7 @@ mod tests {
         Icmpv4DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblemCode,
         MessageBody,
     };
-    use packet_formats::ip::{IpExtByteSlice, Ipv6ExtHdrType};
+    use packet_formats::ip::{IpExtByteSlice, IpPacketBuilder, Ipv6ExtHdrType};
     use packet_formats::ipv4::Ipv4PacketBuilder;
     use packet_formats::ipv6::ext_hdrs::ExtensionHeaderOptionAction;
     use packet_formats::ipv6::Ipv6PacketBuilder;
@@ -2301,7 +2325,7 @@ mod tests {
         let m_flag = fragment_offset < (fragment_count - 1);
 
         let mut builder = get_ipv4_builder();
-        builder.id(fragment_id);
+        builder.maybe_set_id(|| fragment_id);
         builder.fragment_offset(fragment_offset as u16);
         builder.mf_flag(m_flag);
         let mut body: Vec<u8> = Vec::new();

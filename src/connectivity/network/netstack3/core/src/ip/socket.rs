@@ -578,6 +578,9 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv4, B> for Ct
                     *device
                 ));
 
+                let mut builder = builder.clone();
+                builder.maybe_set_id(|| self.state.ipv4.gen_next_packet_id());
+
                 crate::device::send_ip_frame(self, *device, *next_hop, body.encapsulate(builder))
                     .map_err(|ser| (ser.into_inner(), IpSockSendError::Mtu))
             }
@@ -1113,8 +1116,12 @@ mod tests {
     use alloc::vec;
 
     use net_types::Witness;
-    use packet::InnerPacketBuilder;
-    use packet_formats::testutil::parse_ip_packet_in_ethernet_frame;
+    use packet::{InnerPacketBuilder, ParseBuffer};
+    use packet_formats::{
+        ip::IpPacket,
+        ipv4::{Ipv4OnlyMeta, Ipv4Packet},
+        testutil::{parse_ethernet_frame, parse_ip_packet_in_ethernet_frame},
+    };
 
     use super::*;
     use crate::testutil::*;
@@ -1371,6 +1378,8 @@ mod tests {
         )
         .unwrap();
 
+        let curr_id = ctx.state.ipv4.gen_next_packet_id();
+
         // Send a packet on the socket and make sure that the right contents
         // are sent.
         BufferIpSocketContext::<Ipv4, _>::send_ip_packet(
@@ -1384,15 +1393,17 @@ mod tests {
 
         let (dev, frame) = &ctx.dispatcher().frames_sent()[0];
         assert_eq!(dev, &DeviceId::new_ethernet(0));
-        let (body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl) =
-            parse_ip_packet_in_ethernet_frame::<Ipv4>(&frame).unwrap();
-        assert_eq!(body, [0]);
+        let (mut body, src_mac, dst_mac, _ethertype) = parse_ethernet_frame(&frame).unwrap();
+        let packet = (&mut body).parse::<Ipv4Packet<&[u8]>>().unwrap();
         assert_eq!(src_mac, DUMMY_CONFIG_V4.local_mac);
         assert_eq!(dst_mac, DUMMY_CONFIG_V4.remote_mac);
-        assert_eq!(src_ip, DUMMY_CONFIG_V4.local_ip.get());
-        assert_eq!(dst_ip, DUMMY_CONFIG_V4.remote_ip.get());
-        assert_eq!(proto, Ipv4Proto::Icmp);
-        assert_eq!(ttl, 1);
+        assert_eq!(packet.src_ip(), DUMMY_CONFIG_V4.local_ip.get());
+        assert_eq!(packet.dst_ip(), DUMMY_CONFIG_V4.remote_ip.get());
+        assert_eq!(packet.proto(), Ipv4Proto::Icmp);
+        assert_eq!(packet.ttl(), 1);
+        let Ipv4OnlyMeta { id } = packet.version_specific_meta();
+        assert_eq!(id, curr_id + 1);
+        assert_eq!(body, [0]);
 
         // Try sending a packet which will be larger than the device's MTU,
         // and make sure it fails.
