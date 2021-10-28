@@ -16,13 +16,17 @@
 // sysmem_connector's app
 class App {
  public:
-  App();
+  explicit App(async_dispatcher_t* dispatcher);
   ~App();
 
  private:
+  async_dispatcher_t* dispatcher_ = nullptr;
   std::unique_ptr<sys::ComponentContext> component_context_;
 
   sysmem_connector_t* sysmem_connector_ = nullptr;
+
+  sys::OutgoingDirectory outgoing_aux_service_directory_parent_;
+  vfs::PseudoDir* outgoing_aux_service_directory_ = nullptr;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

@@ -20,4 +20,5 @@ zx_library("sysmem-connector") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
   ]
+  public_deps = [ "//sdk/fidl/fuchsia.cobalt" ]
 }

@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 library fuchsia.sysmem;
 
+using fuchsia.io;
+
 //
 // Needs ForDeprecatedCBindings because used with "FIDL Simple C Bindings".
 /// Once a channel with this interface is established to a driver (typically in
@@ -30,5 +32,9 @@ protocol DriverConnector {
     /// will close).
     Connect(resource struct {
         allocator_request server_end:Allocator;
+    });
+
+    SetAuxServiceDirectory(resource struct {
+        service_directory client_end:fuchsia.io.Directory;
     });
 };
