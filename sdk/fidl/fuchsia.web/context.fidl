@@ -122,9 +122,12 @@ type CreateContextParams = resource table {
     /// - [`fuchsia.sysmem/Allocator`]
     ///
     /// The following services must be present in order to render web content in a Scenic view
-    /// using [`Frame.CreateView`] or [`Frame.CreateViewWithViewRef`]:
+    /// using [`Frame.CreateView`], [`Frame.CreateViewWithViewRef`] or [`Frame.CreateView2`]]:
     /// - [`fuchsia.accessibility.semantics/SemanticsManager`]
+    /// - [`fuchsia.ui.composition/Allocator`]
+    /// - [`fuchsia.ui.composition/Flatland`]
     /// - [`fuchsia.ui.scenic/Scenic`]
+    // TODO(fxbug.dev/64204): Remove gfx references after Flatland migration is completed.
     1: service_directory client_end:fuchsia.io.Directory;
 
     /// Handle to the directory that will contain the [`Context`]'s persistent data. If it is left
