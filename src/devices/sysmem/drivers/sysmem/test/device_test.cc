@@ -109,46 +109,86 @@ TEST(Device, OverrideCommandLine) {
 
 TEST(Device, GuardPageCommandLine) {
   uint64_t guard_bytes = 1;
+  bool unused_pages_guarded = true;
+  zx::duration unused_page_check_cycle_period;
   bool internal_guard_pages = true;
   bool crash_on_fail = true;
   const char* kName = "driver.sysmem.contiguous_guard_page_count";
   const char* kInternalName = "driver.sysmem.contiguous_guard_pages_internal";
 
   setenv(kInternalName, "", true);
-  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
-                                                        &crash_on_fail));
-  EXPECT_EQ(ZX_PAGE_SIZE, guard_bytes);
+  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &unused_pages_guarded,
+                                                        &unused_page_check_cycle_period,
+                                                        &internal_guard_pages, &crash_on_fail));
+  EXPECT_EQ(zx_system_get_page_size(), guard_bytes);
+  EXPECT_TRUE(unused_pages_guarded);
+  EXPECT_EQ(zx::sec(600), unused_page_check_cycle_period);
   EXPECT_TRUE(internal_guard_pages);
   EXPECT_FALSE(crash_on_fail);
   unsetenv(kInternalName);
 
   setenv(kName, "fasfas", true);
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, Device::GetContiguousGuardParameters(
-                                     &guard_bytes, &internal_guard_pages, &crash_on_fail));
-  EXPECT_EQ(ZX_PAGE_SIZE, guard_bytes);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            Device::GetContiguousGuardParameters(&guard_bytes, &unused_pages_guarded,
+                                                 &unused_page_check_cycle_period,
+                                                 &internal_guard_pages, &crash_on_fail));
+  EXPECT_EQ(zx_system_get_page_size(), guard_bytes);
+  EXPECT_TRUE(unused_pages_guarded);
+  EXPECT_EQ(zx::sec(600), unused_page_check_cycle_period);
   EXPECT_FALSE(internal_guard_pages);
   EXPECT_FALSE(crash_on_fail);
 
   setenv(kName, "", true);
-  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
-                                                        &crash_on_fail));
-  EXPECT_EQ(ZX_PAGE_SIZE, guard_bytes);
+  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &unused_pages_guarded,
+                                                        &unused_page_check_cycle_period,
+                                                        &internal_guard_pages, &crash_on_fail));
+  EXPECT_EQ(zx_system_get_page_size(), guard_bytes);
+  EXPECT_TRUE(unused_pages_guarded);
+  EXPECT_EQ(zx::sec(600), unused_page_check_cycle_period);
   EXPECT_FALSE(internal_guard_pages);
   EXPECT_FALSE(crash_on_fail);
 
   setenv(kName, "2", true);
   setenv(kInternalName, "", true);
-  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
-                                                        &crash_on_fail));
-  EXPECT_EQ(ZX_PAGE_SIZE * 2, guard_bytes);
+  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &unused_pages_guarded,
+                                                        &unused_page_check_cycle_period,
+                                                        &internal_guard_pages, &crash_on_fail));
+  EXPECT_EQ(zx_system_get_page_size() * 2, guard_bytes);
+  EXPECT_TRUE(unused_pages_guarded);
+  EXPECT_EQ(zx::sec(600), unused_page_check_cycle_period);
   EXPECT_TRUE(internal_guard_pages);
   EXPECT_FALSE(crash_on_fail);
 
   const char* kFatalName = "driver.sysmem.contiguous_guard_pages_fatal";
   setenv(kFatalName, "", true);
-  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
-                                                        &crash_on_fail));
-  EXPECT_EQ(ZX_PAGE_SIZE * 2, guard_bytes);
+  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &unused_pages_guarded,
+                                                        &unused_page_check_cycle_period,
+                                                        &internal_guard_pages, &crash_on_fail));
+  EXPECT_EQ(zx_system_get_page_size() * 2, guard_bytes);
+  EXPECT_TRUE(unused_pages_guarded);
+  EXPECT_EQ(zx::sec(600), unused_page_check_cycle_period);
+  EXPECT_TRUE(internal_guard_pages);
+  EXPECT_TRUE(crash_on_fail);
+
+  const char* kUnusedDisabledName = "driver.sysmem.contiguous_guard_pages_unused_disabled";
+  setenv(kUnusedDisabledName, "", true);
+  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &unused_pages_guarded,
+                                                        &unused_page_check_cycle_period,
+                                                        &internal_guard_pages, &crash_on_fail));
+  EXPECT_EQ(zx_system_get_page_size() * 2, guard_bytes);
+  EXPECT_FALSE(unused_pages_guarded);
+  EXPECT_EQ(zx::sec(600), unused_page_check_cycle_period);
+  EXPECT_TRUE(internal_guard_pages);
+  EXPECT_TRUE(crash_on_fail);
+
+  const char* kUnusedCycleSecondsName = "driver.sysmem.contiguous_guard_pages_unused_cycle_seconds";
+  setenv(kUnusedCycleSecondsName, "42", true);
+  EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &unused_pages_guarded,
+                                                        &unused_page_check_cycle_period,
+                                                        &internal_guard_pages, &crash_on_fail));
+  EXPECT_EQ(zx_system_get_page_size() * 2, guard_bytes);
+  EXPECT_FALSE(unused_pages_guarded);
+  EXPECT_EQ(zx::sec(42), unused_page_check_cycle_period);
   EXPECT_TRUE(internal_guard_pages);
   EXPECT_TRUE(crash_on_fail);
 

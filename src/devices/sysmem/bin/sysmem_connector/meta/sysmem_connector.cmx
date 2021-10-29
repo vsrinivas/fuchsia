@@ -10,6 +10,7 @@
             "class/sysmem"
         ],
         "services": [
+            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.tracing.provider.Registry"
         ]
     }

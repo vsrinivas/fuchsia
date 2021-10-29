@@ -47,7 +47,16 @@ SysmemProxyDevice::SysmemProxyDevice(zx_device_t* parent_device,
 }
 
 void SysmemProxyDevice::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
-  SysmemConnect(request->allocator_request.TakeChannel());
+  zx_status_t status = SysmemConnect(request->allocator_request.TakeChannel());
+  if (status != ZX_OK) {
+    LOG(INFO, "SysmemConnect() failed");
+    return;
+  }
+}
+
+void SysmemProxyDevice::SetAuxServiceDirectory(SetAuxServiceDirectoryRequestView request,
+                                               SetAuxServiceDirectoryCompleter::Sync& completer) {
+  LOG(INFO, "SysmemProxyDevice::SetAuxServiceDirectory() not supported");
 }
 
 zx_status_t SysmemProxyDevice::SysmemConnect(zx::channel allocator_request) {

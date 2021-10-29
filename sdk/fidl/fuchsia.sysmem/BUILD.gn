@@ -20,5 +20,7 @@ fidl("fuchsia.sysmem") {
     "secure_mem.fidl",
     "usages.fidl",
   ]
-  public_deps = [ "//zircon/vdso/zx" ]
+  public_deps = [
+    "//zircon/vdso/zx",
+  ]
 }

@@ -17,6 +17,8 @@
 #include "table_holder.h"
 #include "table_set.h"
 
+class SysmemMetrics;
+
 namespace sysmem_driver {
 
 class MemoryAllocator {
@@ -31,6 +33,7 @@ class MemoryAllocator {
     // Should be called after every delete that makes the allocator empty.
     virtual void CheckForUnbind() {}
     virtual TableSet& table_set() = 0;
+    virtual SysmemMetrics& metrics() = 0;
   };
 
   explicit MemoryAllocator(TableSet& table_set, fuchsia_sysmem2::wire::HeapProperties properties);
@@ -88,6 +91,8 @@ class MemoryAllocator {
   virtual bool is_empty() = 0;
 
   uint64_t id() const { return id_; }
+
+  virtual bool is_already_cleared_on_allocate() { return false; }
 
  public:
   std::map<intptr_t, fit::callback<void()>> destroy_callbacks_;

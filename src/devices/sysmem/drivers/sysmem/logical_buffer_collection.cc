@@ -45,8 +45,8 @@ const uint64_t kMaxTotalSizeBytesPerCollection = 1ull * 1024 * 1024 * 1024;
 const uint64_t kMaxSizeBytesPerBuffer = 256ull * 1024 * 1024;
 
 // Zero-initialized, so it shouldn't take up space on-disk.
-constexpr uint64_t kFlushThroughBytes = 8192;
-const uint8_t kZeroes[kFlushThroughBytes] = {};
+constexpr uint64_t kZeroBytes = 8192;
+const uint8_t kZeroes[kZeroBytes] = {};
 
 constexpr uint32_t kNeedAuxVmoAlso = 1;
 
@@ -2739,7 +2739,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   const auto& heap_properties = allocator->heap_properties();
   ZX_DEBUG_ASSERT(heap_properties.has_coherency_domain_support());
   ZX_DEBUG_ASSERT(heap_properties.has_need_clear());
-  if (heap_properties.need_clear()) {
+  if (heap_properties.need_clear() && !allocator->is_already_cleared_on_allocate()) {
     uint64_t offset = 0;
     while (offset < info.size_bytes) {
       uint64_t bytes_to_write = std::min(sizeof(kZeroes), info.size_bytes - offset);
@@ -2758,6 +2758,8 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
                status);
       return fit::error();
     }
+    // We don't need a BarrierAfterFlush() here because Zircon takes care of that in the
+    // zx_vmo_op_range(ZX_VMO_OP_CACHE_CLEAN).
   }
 
   // We immediately create the ParentVmo instance so it can take care of calling allocator.Delete()
