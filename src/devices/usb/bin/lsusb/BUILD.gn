@@ -3,13 +3,18 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/test.gni")
 import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
 
-  deps = [ ":lsusb-test" ]
+  deps = [
+    ":lsusb-lib-tests",
+    ":lsusb-test",
+  ]
 }
 
 test("lsusb-test-bin") {
@@ -27,17 +32,59 @@ test("lsusb-test-bin") {
   ]
 }
 
-executable("lsusb") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "lsusb.c" ]
+rustc_library("lib") {
+  name = "lsusb"
+  with_unit_tests = true
   deps = [
-    "//sdk/fidl/fuchsia.hardware.usb.device:fuchsia.hardware.usb.device_c",
-    "//sdk/lib/fdio",
-    "//zircon/system/ulib/pretty",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
+    "//sdk/fidl/fuchsia.hardware.usb.device:fuchsia.hardware.usb.device-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/zerocopy",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
+  ]
+  sources = [
+    "src/args.rs",
+    "src/descriptors.rs",
+    "src/lib.rs",
+  ]
+}
+
+rustc_binary("lsusb") {
+  configs += [ "//build/config/rust:bootfs" ]
+
+  if (is_fuchsia) {
+    # Can't dynamically link libstd and libtest for ZBI binaries
+    configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
+
+    # TODO(fxbug.dev/80514): Remove the below
+    if (is_debug) {
+      configs += [ "//build/config/lto:thinlto" ]
+      configs -= [ "//build/config/lto:thinlto" ]
+      configs += [ "//build/config/lto:thinlto" ]
+    }
+  }
+
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
   ]
 
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_unittest_package("lsusb-lib-tests") {
+  deps = [ ":lib_test" ]
 }
 
 # A simple test utility that returns the integer value provided to it in its first argument.
