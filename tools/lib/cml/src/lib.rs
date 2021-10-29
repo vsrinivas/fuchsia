@@ -4,6 +4,10 @@
 
 //! A library of common utilities used by `cmc` and related tools.
 
+// TODO(fxb/87635): Fix this.
+// This crate doesn't comply with all 2018 idioms
+#![allow(elided_lifetimes_in_paths)]
+
 pub mod error;
 pub mod one_or_many;
 pub mod reference_doc;
@@ -31,6 +35,8 @@ pub use cm_types::{
     AllowedOffers, DependencyType, Durability, Name, OnTerminate, ParseError, Path, RelativePath,
     StartupMode, StorageId, Url,
 };
+
+pub use translate::compile;
 
 lazy_static! {
     static ref DEFAULT_EVENT_STREAM_NAME: Name = "EventStream".parse().unwrap();
@@ -520,6 +526,13 @@ impl<'de> de::Deserialize<'de> for StopTimeoutMs {
                     ));
                 }
                 Ok(StopTimeoutMs(v as u32))
+            }
+
+            fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                self.visit_i64(value as i64)
             }
         }
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![warn(missing_docs)]
+// TODO(fxb/87635): Fix this.
 // This crate doesn't comply with all 2018 idioms
 #![allow(elided_lifetimes_in_paths)]
 

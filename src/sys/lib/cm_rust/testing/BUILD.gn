@@ -22,6 +22,9 @@ rustc_library("testing") {
     "//src/sys/lib/cm_rust",
     "//src/sys/lib/cm_types",
     "//src/sys/lib/routing",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:serde_json",
+    "//tools/lib/cml",
   ]
 
   visibility = [

@@ -3,14 +3,31 @@
 // found in the LICENSE file.
 
 use {
-    cm_rust::ComponentDecl, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2,
-    fidl_fuchsia_sys2 as fsys, routing::rights::READ_RIGHTS,
+    anyhow::{Context, Error},
+    cm_rust::{ComponentDecl, FidlIntoNative},
+    cml, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
+    routing::rights::READ_RIGHTS,
+    serde_json,
 };
 
 /// Name of the test runner.
 ///
 /// Several functions assume the existence of a runner with this name.
 pub const TEST_RUNNER_NAME: &str = "test_runner";
+
+/// Translates cml::Document to ComponentDecl.
+pub fn new_decl_from_cml(doc: cml::Document) -> Result<ComponentDecl, Error> {
+    let cm = cml::compile(&doc).context("failed to compile manifest")?;
+    Ok(cm.fidl_into_native())
+}
+
+/// Deserialized `object` into cml::Document and then translates result
+/// to ComponentDecl.
+pub fn new_decl_from_json(object: serde_json::Value) -> Result<ComponentDecl, Error> {
+    return new_decl_from_cml(
+        serde_json::from_value(object).context("failed to deserialize manifest")?,
+    );
+}
 
 /// Builder for constructing a ComponentDecl.
 #[derive(Debug, Clone)]
