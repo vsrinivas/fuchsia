@@ -7,6 +7,7 @@ group("integration_input_tests") {
 
   deps = [
     "factory-reset:tests",
+    "factory-reset-handler:tests",
     "focus:tests",
     "media-buttons:tests",
     "pointerinjector_config:tests",

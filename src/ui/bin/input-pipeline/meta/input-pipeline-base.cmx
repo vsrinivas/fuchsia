@@ -10,9 +10,9 @@
             "config-data"
         ],
         "services": [
-            "fuchisa.recovery.policy",
-            "fuchisa.recovery.ui",
             "fuchsia.input.injection.InputDeviceRegistry",
+            "fuchsia.media.sounds.Player",
+            "fuchsia.recovery.FactoryReset",
             "fuchsia.ui.pointerinjector.Registry",
             "fuchsia.ui.pointerinjector.configuration.Setup",
             "fuchsia.ui.scenic.Scenic"

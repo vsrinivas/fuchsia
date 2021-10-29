@@ -30,7 +30,7 @@ use {
     },
 };
 
-/// FacotryResetState tracks the state of the device through the factory reset
+/// FactoryResetState tracks the state of the device through the factory reset
 /// process.
 ///
 /// # Values
@@ -322,16 +322,15 @@ impl FactoryResetHandler {
 
     /// Performs the actual factory reset.
     async fn reset(self: &Rc<Self>) -> Result<(), Error> {
-        self.set_factory_reset_state(FactoryResetState::Resetting);
         if let Err(error) = self.play_reset_sound().await {
             tracing::info!("Failed to play reset sound: {:?}", error);
         }
 
         // Trigger reset
+        self.set_factory_reset_state(FactoryResetState::Resetting);
         tracing::info!("Triggering factory reset");
         let factory_reset = fuchsia_component::client::connect_to_protocol::<FactoryResetMarker>()?;
         factory_reset.reset().await?;
-
         Ok(())
     }
 }
