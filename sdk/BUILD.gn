@@ -94,7 +94,8 @@ group("tests") {
 validate_json("validate_version_history") {
   visibility = [ ":*" ]
   data = "version_history.json"
-  schema = "//build/sdk/meta/version_history.json"
+  schema = "//build/sdk/meta/version_history-038fa854.json"
+  sources = [ "//build/sdk/meta/common.json" ]
 }
 
 # License/rights related information for the SDK.

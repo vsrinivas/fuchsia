@@ -25,7 +25,7 @@ schemas = [
   "product_bundle-6320eef1.json",
   "product_bundle_container-76a5c104.json",
   "sysroot.json",
-  "version_history.json",
+  "version_history-038fa854.json",
   "virtual_device-93A41932.json",
 ]
 

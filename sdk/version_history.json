@@ -1,5 +1,7 @@
 {
-    "contents": {
+    "data": {
+        "name": "Platform version map",
+        "type": "version_history",
         "versions": [
             {
                 "abi_revision": "0x02160C9D",
@@ -23,5 +25,5 @@
             }
         ]
     },
-    "version": "1"
+    "schema_id": "https://fuchsia.dev/schema/version_history-038fa854.json"
 }
