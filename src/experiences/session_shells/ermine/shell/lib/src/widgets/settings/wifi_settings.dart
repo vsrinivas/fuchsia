@@ -18,38 +18,98 @@ class WiFiSettings extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Observer(builder: (_) {
-      final networks = state.availableNetworks;
+      final availableNetworks = state.availableNetworks;
+      final savedNetworks = state.savedNetworks;
       return Column(
         children: [
           Expanded(
             child: SettingDetails(
               title: Strings.wifi,
               onBack: state.showAllSettings,
-              child: ListView.builder(
-                  itemCount: networks.length,
-                  itemBuilder: (context, index) {
-                    final networkName = networks[index].name;
-                    final networkIcon = networks[index].icon;
-                    final networkCompatible = networks[index].compatible;
-                    return ListTile(
-                      title: Text(networkName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: networkCompatible
-                              ? null
-                              : TextStyle(
-                                  color: Theme.of(context).disabledColor)),
-                      leading: Icon(networkIcon,
-                          color: networkCompatible
-                              ? null
-                              : Theme.of(context).disabledColor),
-                      onTap: () => onChange(networks[index].name),
-                      trailing: ((state.targetNetwork != '') &&
-                              (state.targetNetwork == networkName))
-                          ? Icon(Icons.check_outlined)
-                          : null,
-                    );
-                  }),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      child: Text(Strings.savedNetworks),
+                    ),
+                    if (savedNetworks.isEmpty)
+                      ListTile(
+                        title: Text(Strings.loading.toLowerCase()),
+                      ),
+                    ListView.builder(
+                        shrinkWrap: true,
+                        primary: false,
+                        itemCount: savedNetworks.length,
+                        itemBuilder: (context, index) {
+                          final networkName = savedNetworks[index].name;
+                          final networkIcon = savedNetworks[index].icon;
+                          final networkCompatible =
+                              savedNetworks[index].compatible;
+                          return ListTile(
+                            title: Text(networkName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: networkCompatible
+                                    ? null
+                                    : TextStyle(
+                                        color:
+                                            Theme.of(context).disabledColor)),
+                            leading: Icon(networkIcon,
+                                color: networkCompatible
+                                    ? null
+                                    : Theme.of(context).disabledColor),
+                            onTap: () => onChange(savedNetworks[index].name),
+                            trailing: ((state.targetNetwork != '') &&
+                                    (state.targetNetwork == networkName))
+                                ? Icon(Icons.check_outlined)
+                                : null,
+                          );
+                        }),
+                    Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      child: Text(Strings.otherNetworks),
+                    ),
+                    if (availableNetworks.isEmpty)
+                      ListTile(
+                        title: Text(Strings.loading.toLowerCase()),
+                      ),
+                    ListView.builder(
+                        shrinkWrap: true,
+                        primary: false,
+                        itemCount: availableNetworks.length,
+                        itemBuilder: (context, index) {
+                          final networkName = availableNetworks[index].name;
+                          final networkIcon = availableNetworks[index].icon;
+                          final networkCompatible =
+                              availableNetworks[index].compatible;
+                          return ListTile(
+                            title: Text(networkName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: networkCompatible
+                                    ? null
+                                    : TextStyle(
+                                        color:
+                                            Theme.of(context).disabledColor)),
+                            leading: Icon(networkIcon,
+                                color: networkCompatible
+                                    ? null
+                                    : Theme.of(context).disabledColor),
+                            onTap: () =>
+                                onChange(availableNetworks[index].name),
+                            trailing: ((state.targetNetwork != '') &&
+                                    (state.targetNetwork == networkName))
+                                ? Icon(Icons.check_outlined)
+                                : null,
+                          );
+                        }),
+                  ],
+                ),
+              ),
             ),
           ),
           _buildPasswordPrompt(context),

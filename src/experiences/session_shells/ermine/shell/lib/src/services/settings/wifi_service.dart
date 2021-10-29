@@ -163,7 +163,7 @@ class WiFiService implements TaskService {
     }
   }
 
-  String? get currentNetwork => _monitor.currentNetwork();
+  String get currentNetwork => _monitor.currentNetwork();
 
   bool get connectionsEnabled => _monitor.connectionsEnabled();
 
@@ -210,6 +210,23 @@ class WiFiService implements TaskService {
       log.warning('Removing $network failed: $e');
     }
   }
+
+  List<NetworkInformation> get savedNetworks => _savedNetworks
+      .map((network) => NetworkInformation(
+          name: nameFromNetworkConfig(network),
+          compatible: true,
+          icon: iconFromNetworkConfig(network)))
+      .toList();
+
+  String nameFromNetworkConfig(policy.NetworkConfig network) {
+    return utf8.decode(network.id!.ssid.toList());
+  }
+
+  IconData iconFromNetworkConfig(policy.NetworkConfig network) {
+    return network.id!.type == policy.SecurityType.none
+        ? Icons.signal_wifi_4_bar
+        : Icons.wifi_lock;
+  }
 }
 
 class ClientStateUpdatesMonitor extends policy.ClientStateUpdates {
@@ -229,14 +246,14 @@ class ClientStateUpdatesMonitor extends policy.ClientStateUpdates {
 
   // Returns first found connected network.
   // TODO(fxb/79885): expand to return multiple connected networks.
-  String? currentNetwork() {
+  String currentNetwork() {
     final foundNetwork = _summary?.networks
         ?.firstWhereOrNull(
             (network) => network.state == policy.ConnectionState.connected)
         ?.id!
         .ssid
         .toList();
-    return foundNetwork == null ? null : utf8.decode(foundNetwork);
+    return foundNetwork == null ? '' : utf8.decode(foundNetwork);
   }
 
   // TODO(fxb/79855): ensure that failed password status is for target network

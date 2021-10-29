@@ -1072,6 +1072,16 @@ class Strings {
         name: 'Show password',
         desc: 'The label for "Show password" checkbox.',
       );
+  static String get savedNetworks => Intl.message(
+        'Saved Networks',
+        name: 'Saved networks',
+        desc: 'The label for "Saved Networks" checkbox.',
+      );
+  static String get otherNetworks => Intl.message(
+        'Other Networks',
+        name: 'Other networks',
+        desc: 'The label for "Other Networks" checkbox.',
+      );
 
   static String get factoryDataReset => Intl.message(
         'Factory Data Reset',

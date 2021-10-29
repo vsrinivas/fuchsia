@@ -81,6 +81,7 @@ abstract class SettingsState implements TaskService {
   bool? get volumeMuted;
   List<NetworkInformation> get availableNetworks;
   String get targetNetwork;
+  List<NetworkInformation> get savedNetworks;
 
   factory SettingsState.from({required ShortcutsService shortcutsService}) {
     return SettingsStateImpl(

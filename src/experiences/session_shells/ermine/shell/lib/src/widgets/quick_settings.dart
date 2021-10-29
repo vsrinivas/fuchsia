@@ -212,8 +212,6 @@ class _ListSettings extends StatelessWidget {
                 // Wi-Fi
                 Observer(builder: (_) {
                   return ListTile(
-                    enabled:
-                        appState.settingsState.availableNetworks.isNotEmpty,
                     contentPadding: EdgeInsets.symmetric(horizontal: 24),
                     leading: Icon(Icons.wifi),
                     title: Text(Strings.wifi),
@@ -222,8 +220,6 @@ class _ListSettings extends StatelessWidget {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       spacing: 8,
                       children: [
-                        if (appState.settingsState.availableNetworks.isEmpty)
-                          Text(Strings.loading.toLowerCase()),
                         Icon(Icons.arrow_right),
                       ],
                     ),
