@@ -4,14 +4,13 @@
 
 use {
     anyhow::{Context, Result},
+    daemonize::daemonize,
     errors::{ffx_error, FfxError},
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy},
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::prelude::*,
     hoist::OvernetInstance,
-    libc,
-    std::os::unix::process::CommandExt,
     std::pin::Pin,
     std::process::Command,
     std::time::Duration,
@@ -180,52 +179,5 @@ pub fn is_daemon_running_at_path(path: String) -> bool {
             log::info!("failed to connect to daemon at {}: {}", &path, err);
             false
         }
-    }
-}
-
-// daemonize adds a pre_exec to call daemon(3) causing the spawned
-// process to be forked again and detached from the controlling
-// terminal.
-fn daemonize(c: &mut Command) -> &mut Command {
-    unsafe {
-        c.pre_exec(|| {
-            // daemonize(3) is deprecated on macOS 10.15. The replacement is not
-            // yet clear, we may want to replace this with a manual double fork
-            // setsid, etc.
-            #[allow(deprecated)]
-            // First argument: chdir(/)
-            // Second argument: do not close stdio (we use stdio to write to the daemon log file)
-            match libc::daemon(0, 1) {
-                0 => Ok(()),
-                x => Err(std::io::Error::from_raw_os_error(x)),
-            }
-        })
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_daemonize() -> Result<()> {
-        let started = std::time::Instant::now();
-        // TODO(raggi): this technically leaks a sleep process, which is
-        // not ideal, but the much better approach would be a
-        // significant amount of work, as we'd really want a program
-        // that will wait for a signal on some other channel (such as a
-        // unix socket) and otherwise linger as a daemon. If we had
-        // that, we could then check the ppid and assert that daemon(3)
-        // really did the work we're expecting it to. As that would
-        // involve specific subprograms, finding those, and so on, it is
-        // likely beyond ROI for this test coverage, which aims to just
-        // prove that the immediate spawn() succeeded was detached from
-        // the program in question. There is a risk that this
-        // implementation passes if sleep(1) is not found, which is also
-        // not ideal.
-        let mut child = daemonize(Command::new("sleep").arg("10")).spawn()?;
-        child.wait()?;
-        assert!(started.elapsed() < std::time::Duration::from_secs(10));
-        Ok(())
     }
 }

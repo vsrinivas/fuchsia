@@ -30,6 +30,7 @@ if (is_host) {
       "//src/developer/ffx/daemon/services:ffx_daemon_services_lib",
       "//src/developer/ffx/daemon/target:lib",
       "//src/developer/ffx/lib/addr:lib",
+      "//src/developer/ffx/lib/daemonize:lib",
       "//src/developer/ffx/lib/errors:lib",
       "//src/developer/ffx/lib/rcs:lib",
       "//src/developer/ffx/lib/services:lib",
