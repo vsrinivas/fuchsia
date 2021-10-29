@@ -30,9 +30,9 @@ class WiFiService implements TaskService {
 
   Timer? _timer;
   int scanIntervalInSeconds = 20;
-  late List<policy.ScanResult> _scannedNetworks;
+  final _scannedNetworks = <policy.ScanResult>{};
   String _targetNetwork = '';
-  late List<policy.NetworkConfig> _savedNetworks;
+  final _savedNetworks = <policy.NetworkConfig>{};
 
   WiFiService();
 
@@ -91,18 +91,19 @@ class WiFiService implements TaskService {
       _scanResultIteratorProvider = policy.ScanResultIteratorProxy();
       await _clientController?.scanForNetworks(InterfaceRequest(
           _scanResultIteratorProvider?.ctrl.request().passChannel()));
-      List<policy.ScanResult> aggregateScanResults = [];
+
+      _scannedNetworks.clear();
       List<policy.ScanResult>? scanResults;
       try {
         scanResults = await _scanResultIteratorProvider?.getNext();
         while (scanResults != null && scanResults.isNotEmpty) {
-          aggregateScanResults = aggregateScanResults + scanResults;
+          _scannedNetworks.addAll(scanResults);
           scanResults = await _scanResultIteratorProvider?.getNext();
         }
       } on Exception catch (e) {
         log.warning('Error encountered during scan: $e');
+        return;
       }
-      _scannedNetworks = aggregateScanResults.toSet().toList();
       onChanged();
     }()
         .asStream()
@@ -174,14 +175,12 @@ class WiFiService implements TaskService {
       await _clientController?.getSavedNetworks(
           InterfaceRequest(iterator.ctrl.request().passChannel()));
 
-      var aggregateNetworkResults = <policy.NetworkConfig>[];
+      _savedNetworks.clear();
       var savedNetworkResults = await iterator.getNext();
       while (savedNetworkResults.isNotEmpty) {
-        aggregateNetworkResults.addAll(savedNetworkResults);
+        _savedNetworks.addAll(savedNetworkResults);
         savedNetworkResults = await iterator.getNext();
       }
-
-      _savedNetworks = aggregateNetworkResults.toSet().toList();
       onChanged();
     }()
         .asStream()
