@@ -8,11 +8,11 @@ use {
     fidl_fuchsia_fxfs::{CryptRequest, CryptRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_zircon as zx,
     futures::{
         stream::{StreamExt, TryStreamExt},
         TryFutureExt,
     },
-    rand::RngCore,
 };
 
 enum Services {
@@ -31,9 +31,8 @@ async fn handle_request(stream: Services) -> Result<(), Error> {
                             wrapping_key_id, 0,
                             "Support for multiple key IDs not implemented yet. Key ID must be 0."
                         );
-                        let mut rng = rand::thread_rng();
                         let mut key = [0; 32];
-                        rng.fill_bytes(&mut key);
+                        zx::cprng_draw(&mut key);
                         let mut wrapped = [0; 32];
                         for (i, chunk) in key.chunks_exact(8).enumerate() {
                             LittleEndian::write_u64(
