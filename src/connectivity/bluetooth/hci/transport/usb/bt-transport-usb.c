@@ -225,8 +225,10 @@ static void hci_event_complete(void* ctx, usb_request_t* req) {
   mtx_lock(&hci->mutex);
 
   if (req->response.status != ZX_OK) {
-    zxlogf(ERROR, "bt-transport-usb: request completed with error status %d (%s). Removing device",
-           req->response.status, zx_status_get_string(req->response.status));
+    zxlogf(
+        ERROR,
+        "bt-transport-usb: hci event request completed with error status %d (%s). Removing device",
+        req->response.status, zx_status_get_string(req->response.status));
     instrumented_request_release(ctx, req);
     remove_device_locked(hci);
     goto out2;
@@ -313,8 +315,10 @@ static void hci_acl_read_complete(void* ctx, usb_request_t* req) {
     goto finish;
   }
   if (req->response.status != ZX_OK) {
-    zxlogf(ERROR, "bt-transport-usb: request completed with error status %d (%s). Removing device",
-           req->response.status, zx_status_get_string(req->response.status));
+    zxlogf(
+        ERROR,
+        "bt-transport-usb: acl read request completed with error status %d (%s). Removing device",
+        req->response.status, zx_status_get_string(req->response.status));
     instrumented_request_release(ctx, req);
     remove_device_locked(hci);
     mtx_unlock(&hci->mutex);
@@ -357,8 +361,10 @@ static void hci_acl_write_complete(void* ctx, usb_request_t* req) {
   mtx_lock(&hci->mutex);
 
   if (req->response.status != ZX_OK) {
-    zxlogf(ERROR, "bt-transport-usb: request completed with error status %d (%s). Removing device",
-           req->response.status, zx_status_get_string(req->response.status));
+    zxlogf(
+        ERROR,
+        "bt-transport-usb: acl write request completed with error status %d (%s). Removing device",
+        req->response.status, zx_status_get_string(req->response.status));
     remove_device_locked(hci);
     instrumented_request_release(ctx, req);
     mtx_unlock(&hci->mutex);
