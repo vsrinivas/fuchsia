@@ -2,16 +2,96 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context, Error};
-use fidl_fuchsia_wlan_policy as wlan_policy;
-use fuchsia_async as fasync;
-use structopt::StructOpt;
+use {
+    anyhow::{format_err, Context, Error},
+    fidl::endpoints::{create_endpoints, create_proxy, Proxy},
+    fidl_fuchsia_wlan_policy as wlan_policy,
+    fidl_fuchsia_wlan_product_deprecatedconfiguration as wlan_deprecated,
+    fuchsia_async::{self as fasync, DurationExt},
+    fuchsia_component::client::connect_to_protocol,
+    fuchsia_zircon as zx,
+    structopt::StructOpt,
+};
 
 mod opts;
 use crate::opts::*;
 
 mod policy;
 use crate::policy::*;
+
+/// Communicates with the client policy provider to get the components required to get a client
+/// controller.
+pub async fn get_client_controller(
+) -> Result<(wlan_policy::ClientControllerProxy, wlan_policy::ClientStateUpdatesRequestStream), Error>
+{
+    let policy_provider = connect_to_protocol::<wlan_policy::ClientProviderMarker>()?;
+    let (client_controller, server_end) =
+        create_proxy::<wlan_policy::ClientControllerMarker>().unwrap();
+    let (update_client_end, update_server_end) =
+        create_endpoints::<wlan_policy::ClientStateUpdatesMarker>().unwrap();
+    let () = policy_provider.get_controller(server_end, update_client_end)?;
+    let update_stream = update_server_end.into_stream()?;
+
+    // Sleep very briefly to introduce a yield point (with the await) so that in case the other
+    // end of the channel is closed, its status is correctly propagated by the kernel and we can
+    // accurately check it using `is_closed()`.
+    let sleep_duration = zx::Duration::from_millis(10);
+    fasync::Timer::new(sleep_duration.after_now()).await;
+    if client_controller.is_closed() {
+        return Err(format_err!(
+            "Failed to obtain a WLAN client controller. Your command was not executed.\n\n\
+            Help: Only one component may hold a client controller at once. You can try killing\n\
+            other holders with 'killall basemgr.cmx'.\n"
+        ));
+    }
+
+    Ok((client_controller, update_stream))
+}
+
+/// Communicates with the AP policy provider to get the components required to get an AP
+/// controller.
+pub fn get_ap_controller() -> Result<
+    (wlan_policy::AccessPointControllerProxy, wlan_policy::AccessPointStateUpdatesRequestStream),
+    Error,
+> {
+    let policy_provider = connect_to_protocol::<wlan_policy::AccessPointProviderMarker>()?;
+    let (ap_controller, server_end) =
+        create_proxy::<wlan_policy::AccessPointControllerMarker>().unwrap();
+    let (update_client_end, update_server_end) =
+        create_endpoints::<wlan_policy::AccessPointStateUpdatesMarker>().unwrap();
+    let () = policy_provider.get_controller(server_end, update_client_end)?;
+    let update_stream = update_server_end.into_stream()?;
+
+    Ok((ap_controller, update_stream))
+}
+
+/// Communicates with the client listener service to get a stream of client state updates.
+pub fn get_listener_stream() -> Result<wlan_policy::ClientStateUpdatesRequestStream, Error> {
+    let listener = connect_to_protocol::<wlan_policy::ClientListenerMarker>()?;
+    let (client_end, server_end) =
+        create_endpoints::<wlan_policy::ClientStateUpdatesMarker>().unwrap();
+    listener.get_listener(client_end)?;
+    let server_stream = server_end.into_stream()?;
+    Ok(server_stream)
+}
+
+/// Communicates with the AP listener service to get a stream of AP state updates.
+pub fn get_ap_listener_stream() -> Result<wlan_policy::AccessPointStateUpdatesRequestStream, Error>
+{
+    let listener = connect_to_protocol::<wlan_policy::AccessPointListenerMarker>()?;
+    let (client_end, server_end) =
+        create_endpoints::<wlan_policy::AccessPointStateUpdatesMarker>().unwrap();
+    listener.get_listener(client_end)?;
+    let server_stream = server_end.into_stream()?;
+    Ok(server_stream)
+}
+
+/// Creates a channel to interact with the DeprecatedConfigurator service.
+pub fn get_deprecated_configurator() -> Result<wlan_deprecated::DeprecatedConfiguratorProxy, Error>
+{
+    let configurator = connect_to_protocol::<wlan_deprecated::DeprecatedConfiguratorMarker>()?;
+    Ok(configurator)
+}
 
 fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
