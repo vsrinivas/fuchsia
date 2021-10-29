@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::cipd::Cipd;
 use crate::device::DeviceSpec;
 use crate::portpicker::{is_free_tcp_port, pick_unused_port, Port};
 use crate::target;
@@ -229,6 +230,7 @@ impl VDLFiles {
                     .download_and_extract(
                         aemu_cipd_version.to_string(),
                         "third_party/aemu".to_string(),
+                        &Cipd {},
                     )?
                     .join("emulator"))
             }
@@ -256,6 +258,7 @@ impl VDLFiles {
                     .download_and_extract(
                         grpcwebproxy_cipd_version.to_string(),
                         "third_party/grpcwebproxy".to_string(),
+                        &Cipd {},
                     )?
                     .join("grpcwebproxy"))
             }
@@ -280,7 +283,11 @@ impl VDLFiles {
                 };
                 Ok(self
                     .host_tools
-                    .download_and_extract(vdl_cipd_version.to_string(), "vdl".to_string())?
+                    .download_and_extract(
+                        vdl_cipd_version.to_string(),
+                        "vdl".to_string(),
+                        &Cipd {},
+                    )?
                     .join("device_launcher"))
             }
         }

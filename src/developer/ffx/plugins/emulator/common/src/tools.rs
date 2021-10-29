@@ -1,7 +1,7 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::cipd;
+use crate::cipd::CipdMethods;
 use crate::types::{
     get_fuchsia_sdk_dir, get_fuchsia_sdk_tools_dir, get_sdk_data_dir, read_env_path, FuchsiaPaths,
 };
@@ -226,8 +226,13 @@ impl HostTools {
     /// # Arguments
     ///
     /// * `label` - cipd label that specified a particular aemu version
-    /// * `cipd_pkg` - this is appeneded to cipd url https://chrome-infra-packages.appspot.com/dl/fuchsia/third_party/.
-    pub fn download_and_extract(&self, label: String, cipd_pkg: String) -> Result<PathBuf> {
+    /// * `cipd_pkg` - this is appended to cipd url https://chrome-infra-packages.appspot.com/dl/fuchsia/third_party/.
+    pub fn download_and_extract(
+        &self,
+        label: String,
+        cipd_pkg: String,
+        cipd: &impl CipdMethods,
+    ) -> Result<PathBuf> {
         let mut executor = LocalExecutor::new().unwrap();
         executor.run_singlethreaded(async move {
             let root_path = match read_env_path("FEMU_DOWNLOAD_DIR") {
@@ -274,9 +279,9 @@ impl HostTools {
                     }
                 }
             };
-            let status = cipd::download(url.clone(), &cipd_zip).await?;
+            let status = cipd.download(url.clone(), &cipd_zip).await?;
             if status == StatusCode::OK {
-                cipd::extract_zip(&cipd_zip, &unzipped_root, false /* debug */)?;
+                cipd.extract_zip(&cipd_zip, &unzipped_root, false /* debug */)?;
                 Ok(unzipped_root)
             } else {
                 Err(format_err!(
@@ -292,10 +297,12 @@ impl HostTools {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::cipd::MockCipdMethods;
     use crate::types::InTreePaths;
     use crate::types::MockFuchsiaPaths;
+    use hyper::StatusCode;
     use serial_test::serial;
-    use std::fs::{read_dir, File};
+    use std::fs::File;
     use std::io::Write;
     use tempfile::Builder;
 
@@ -431,32 +438,41 @@ mod test {
         let tmp_dir = Builder::new().prefix("fvdl_test_download_").tempdir()?;
         env::set_var("FEMU_DOWNLOAD_DIR", tmp_dir.path());
         let host_tools = HostTools::from_sdk_env()?;
-        let mut unzipped_root =
-            host_tools.download_and_extract("latest".to_string(), "vdl".to_string())?;
 
-        let mut has_extract = false;
-        for path in read_dir(&unzipped_root)? {
-            let entry = path?;
-            let p = entry.path();
-            println!("Found path {}", p.display());
-            if p.ends_with("device_launcher") {
-                has_extract = true;
-            }
-        }
-        assert!(has_extract);
+        let mut mock_cipd = MockCipdMethods::new();
+        mock_cipd.expect_download().times(2).returning(|_, _| Ok(StatusCode::OK));
+        mock_cipd.expect_extract_zip().times(2).returning(|_, _, _| Ok(()));
 
-        // Download "latest" again should trigger a cleanup and re-download
-        unzipped_root = host_tools.download_and_extract("latest".to_string(), "vdl".to_string())?;
-        has_extract = false;
-        for path in read_dir(&unzipped_root)? {
-            let entry = path?;
-            let p = entry.path();
-            println!("Found path {}", p.display());
-            if p.ends_with("device_launcher") {
-                has_extract = true;
-            }
-        }
-        assert!(has_extract);
+        let mut result =
+            host_tools.download_and_extract("latest".to_string(), "vdl".to_string(), &mock_cipd);
+        let mut unzipped_root = result.expect("failed to download and extract 'vdl-latest'");
+        assert_eq!(
+            unzipped_root
+                .to_str()
+                .expect("couldn't convert download_and_extract return value into string"),
+            format!("{}/vdl-latest", tmp_dir.path().display()).as_str()
+        );
+
+        // Download "latest" again should trigger a cleanup and re-download.
+        result =
+            host_tools.download_and_extract("latest".to_string(), "vdl".to_string(), &mock_cipd);
+        unzipped_root =
+            result.expect("failed to re-download 'vdl-latest' after succeeding the first time");
+        assert_eq!(
+            unzipped_root
+                .to_str()
+                .expect("couldn't convert download_and_extract return value into string"),
+            format!("{}/vdl-latest", tmp_dir.path().display()).as_str()
+        );
+        mock_cipd.checkpoint();
+
+        // Now if the download fails, the extract shouldn't happen.
+        mock_cipd.expect_download().times(1).returning(|_, _| Ok(StatusCode::NOT_FOUND));
+        mock_cipd.expect_extract_zip().times(0);
+        result =
+            host_tools.download_and_extract("latest".to_string(), "vdl".to_string(), &mock_cipd);
+        assert!(result.is_err());
+        mock_cipd.checkpoint();
         Ok(())
     }
 }
