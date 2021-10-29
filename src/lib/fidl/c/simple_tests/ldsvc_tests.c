@@ -86,16 +86,24 @@ static void ldsvc_server(zx_handle_t channel_handle) {
     if ((observed & ZX_CHANNEL_READABLE) != 0) {
       ASSERT_EQ(ZX_OK, status, "");
       char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-      zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+      zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+      fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
+      zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
       fidl_incoming_msg_t msg = {
           .bytes = bytes,
           .handles = handles,
+          .handle_metadata = handle_metadata,
           .num_bytes = 0u,
           .num_handles = 0u,
       };
-      status = zx_channel_read_etc(conn.channel, 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
+      status = zx_channel_read_etc(conn.channel, 0, bytes, handle_infos, ZX_CHANNEL_MAX_MSG_BYTES,
                                    ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
       ASSERT_EQ(ZX_OK, status, "");
+      for (uint32_t i = 0; i < msg.num_handles; i++) {
+        handles[i] = handle_infos[i].handle;
+        handle_metadata[i].obj_type = handle_infos[i].type;
+        handle_metadata[i].rights = handle_infos[i].rights;
+      }
       ASSERT_GE(msg.num_bytes, sizeof(fidl_message_header_t), "");
       fidl_message_header_t* hdr = (fidl_message_header_t*)msg.bytes;
       conn.txid = hdr->txid;

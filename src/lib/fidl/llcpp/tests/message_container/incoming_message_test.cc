@@ -41,17 +41,15 @@ class IncomingMessageWithHandlesTest : public ::testing::Test {
     ASSERT_EQ(ZX_OK, zx_event_create(0, &event2_));
     checker_.AddEvent(event2_);
 
-    handles_[0] = zx_handle_info_t{
-        .handle = event1_,
-        .type = ZX_OBJ_TYPE_EVENT,
+    handles_[0] = event1_;
+    handles_[1] = event2_;
+    handle_metadata_[0] = fidl_channel_handle_metadata_t{
+        .obj_type = ZX_OBJ_TYPE_EVENT,
         .rights = ZX_RIGHTS_BASIC,
-        .unused = 0,
     };
-    handles_[1] = zx_handle_info_t{
-        .handle = event2_,
-        .type = ZX_OBJ_TYPE_EVENT,
+    handle_metadata_[1] = fidl_channel_handle_metadata_t{
+        .obj_type = ZX_OBJ_TYPE_EVENT,
         .rights = ZX_RIGHTS_BASIC,
-        .unused = 0,
     };
   }
 
@@ -61,7 +59,8 @@ class IncomingMessageWithHandlesTest : public ::testing::Test {
   uint8_t bytes_[sizeof(fidl_message_header_t)] = {};
   zx_handle_t event1_;
   zx_handle_t event2_;
-  zx_handle_info_t handles_[2];
+  zx_handle_t handles_[2];
+  fidl_channel_handle_metadata_t handle_metadata_[2];
 };
 
 TEST_F(IncomingMessageWithHandlesTest, AdoptHandlesFromC) {
@@ -77,6 +76,7 @@ TEST_F(IncomingMessageWithHandlesTest, AdoptHandlesFromC) {
 
 TEST_F(IncomingMessageWithHandlesTest, AdoptHandlesWithRegularConstructor) {
   auto incoming = fidl::IncomingMessage(bytes_, static_cast<uint32_t>(std::size(bytes_)), handles_,
+                                        FIDL_TRANSPORT_TYPE_CHANNEL, handle_metadata_,
                                         static_cast<uint32_t>(std::size(handles_)));
   EXPECT_EQ(ZX_OK, incoming.status());
 }
@@ -86,16 +86,17 @@ TEST_F(IncomingMessageWithHandlesTest, ReleaseHandles) {
 
   {
     auto incoming = fidl::IncomingMessage(bytes_, static_cast<uint32_t>(std::size(bytes_)),
-                                          handles_, static_cast<uint32_t>(std::size(handles_)));
+                                          handles_, FIDL_TRANSPORT_TYPE_CHANNEL, handle_metadata_,
+                                          static_cast<uint32_t>(std::size(handles_)));
     ASSERT_EQ(ZX_OK, incoming.status());
     c_msg = std::move(incoming).ReleaseToEncodedCMessage();
     // At this point, |incoming| will not close the handles.
   }
 
-  for (zx_handle_info_t event : handles_) {
+  for (zx_handle_t event : handles_) {
     zx_info_handle_count_t info = {};
-    zx_status_t status = zx_object_get_info(event.handle, ZX_INFO_HANDLE_COUNT, &info, sizeof(info),
-                                            nullptr, nullptr);
+    zx_status_t status =
+        zx_object_get_info(event, ZX_INFO_HANDLE_COUNT, &info, sizeof(info), nullptr, nullptr);
     ASSERT_EQ(ZX_OK, status);
     EXPECT_GT(info.handle_count, 1U);
   }
@@ -106,6 +107,7 @@ TEST_F(IncomingMessageWithHandlesTest, ReleaseHandles) {
 
 TEST_F(IncomingMessageWithHandlesTest, MoveConstructorHandleOwnership) {
   auto incoming = fidl::IncomingMessage(bytes_, static_cast<uint32_t>(std::size(bytes_)), handles_,
+                                        FIDL_TRANSPORT_TYPE_CHANNEL, handle_metadata_,
                                         static_cast<uint32_t>(std::size(handles_)));
   fidl::IncomingMessage another{std::move(incoming)};
   EXPECT_EQ(incoming.handle_actual(), 0u);
@@ -121,15 +123,16 @@ TEST(IncomingMessage, ValidateTransactionalMessageHeader) {
   hdr->magic_number = 42;
 
   {
-    auto incoming =
-        fidl::IncomingMessage(bytes, static_cast<uint32_t>(std::size(bytes)), nullptr, 0);
+    auto incoming = fidl::IncomingMessage(bytes, static_cast<uint32_t>(std::size(bytes)), nullptr,
+                                          FIDL_TRANSPORT_TYPE_INVALID, nullptr, 0);
     EXPECT_EQ(ZX_ERR_PROTOCOL_NOT_SUPPORTED, incoming.status());
     EXPECT_FALSE(incoming.ok());
   }
 
   {
     auto incoming = fidl::IncomingMessage(bytes, static_cast<uint32_t>(std::size(bytes)), nullptr,
-                                          0, fidl::IncomingMessage::kSkipMessageHeaderValidation);
+                                          FIDL_TRANSPORT_TYPE_INVALID, nullptr, 0,
+                                          fidl::IncomingMessage::kSkipMessageHeaderValidation);
     EXPECT_EQ(ZX_OK, incoming.status());
     EXPECT_TRUE(incoming.ok());
   }
@@ -139,18 +142,24 @@ class IncomingMessageChannelReadEtcTest : public ::testing::Test {
  protected:
   void SetUp() override {
     byte_buffer_ = std::make_unique<std::array<uint8_t, ZX_CHANNEL_MAX_MSG_BYTES>>();
-    handle_buffer_ = std::make_unique<std::array<zx_handle_info_t, ZX_CHANNEL_MAX_MSG_HANDLES>>();
+    handle_buffer_ = std::make_unique<std::array<zx_handle_t, ZX_CHANNEL_MAX_MSG_HANDLES>>();
+    handle_metadata_buffer_ =
+        std::make_unique<std::array<fidl_channel_handle_metadata_t, ZX_CHANNEL_MAX_MSG_HANDLES>>();
   }
 
   fidl::BufferSpan byte_buffer_view() {
     return fidl::BufferSpan(byte_buffer_->data(), ZX_CHANNEL_MAX_MSG_HANDLES);
   }
 
-  cpp20::span<zx_handle_info_t> handle_buffer_view() { return cpp20::span(*handle_buffer_); }
+  zx_handle_t* handle_data() { return handle_buffer_->data(); }
+  fidl_channel_handle_metadata_t* handle_metadata_data() { return handle_metadata_buffer_->data(); }
+  uint32_t handle_buffer_size() { return static_cast<uint32_t>(handle_buffer_->size()); }
 
  private:
   std::unique_ptr<std::array<uint8_t, ZX_CHANNEL_MAX_MSG_BYTES>> byte_buffer_;
-  std::unique_ptr<std::array<zx_handle_info_t, ZX_CHANNEL_MAX_MSG_HANDLES>> handle_buffer_;
+  std::unique_ptr<std::array<zx_handle_t, ZX_CHANNEL_MAX_MSG_HANDLES>> handle_buffer_;
+  std::unique_ptr<std::array<fidl_channel_handle_metadata_t, ZX_CHANNEL_MAX_MSG_HANDLES>>
+      handle_metadata_buffer_;
 };
 
 TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannel) {
@@ -162,13 +171,15 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannel) {
   fidl_init_txn_header(hdr, /* txid */ 1, /* ordinal */ 1);
   sink.write(0, bytes, std::size(bytes), nullptr, 0);
 
-  auto incoming = fidl::MessageRead(source, 0, byte_buffer_view(), handle_buffer_view());
+  auto incoming = fidl::MessageRead(source, 0, byte_buffer_view(), handle_data(),
+                                    handle_metadata_data(), handle_buffer_size());
   EXPECT_EQ(ZX_OK, incoming.status());
   EXPECT_EQ(incoming.byte_actual(), sizeof(fidl_message_header_t));
   EXPECT_EQ(0, memcmp(incoming.bytes(), bytes, incoming.byte_actual()));
   EXPECT_EQ(0u, incoming.handle_actual());
 
-  auto incoming2 = fidl::MessageRead(source, 0, byte_buffer_view(), handle_buffer_view());
+  auto incoming2 = fidl::MessageRead(source, 0, byte_buffer_view(), handle_data(),
+                                     handle_metadata_data(), handle_buffer_size());
   EXPECT_EQ(ZX_ERR_SHOULD_WAIT, incoming2.status());
   EXPECT_EQ(fidl::Reason::kTransportError, incoming2.reason());
   EXPECT_EQ(
@@ -182,7 +193,8 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromClosedChannel) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &source, &sink));
 
   sink.reset();
-  auto incoming = fidl::MessageRead(source, 0, byte_buffer_view(), handle_buffer_view());
+  auto incoming = fidl::MessageRead(source, 0, byte_buffer_view(), handle_data(),
+                                    handle_metadata_data(), handle_buffer_size());
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, incoming.status());
   EXPECT_EQ(fidl::Reason::kPeerClosed, incoming.reason());
 }
@@ -197,7 +209,8 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannelInvalidMessage) {
   fidl_init_txn_header(hdr, /* txid */ 42, /* ordinal */ kFidlOrdinalEpitaph);
   sink.write(0, bytes, std::size(bytes), nullptr, 0);
 
-  auto incoming = fidl::MessageRead(source, 0, byte_buffer_view(), handle_buffer_view());
+  auto incoming = fidl::MessageRead(source, 0, byte_buffer_view(), handle_data(),
+                                    handle_metadata_data(), handle_buffer_size());
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, incoming.status());
   EXPECT_EQ(fidl::Reason::kUnexpectedMessage, incoming.reason());
   EXPECT_EQ(

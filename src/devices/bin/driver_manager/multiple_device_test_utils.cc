@@ -89,10 +89,11 @@ void MultipleDeviceTestCase::CheckCreateDeviceReceived(
     fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client,
     fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server) {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl::IncomingMessage msg =
       fidl::MessageRead(devhost_controller.channel(), 0, fidl::BufferSpan(bytes, std::size(bytes)),
-                        cpp20::span(handles));
+                        handles, handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
   ASSERT_TRUE(msg.ok());
 
   auto* header = msg.header();
@@ -111,10 +112,11 @@ bool DeviceState::HasPendingMessages() {
 
 void DeviceState::Dispatch() {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl::IncomingMessage msg =
       fidl::MessageRead(controller_server.channel(), 0, fidl::BufferSpan(bytes, std::size(bytes)),
-                        cpp20::span(handles));
+                        handles, handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
   ASSERT_TRUE(msg.ok());
 
   auto* header = msg.header();

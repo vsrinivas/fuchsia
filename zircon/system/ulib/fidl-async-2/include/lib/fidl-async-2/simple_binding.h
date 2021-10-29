@@ -481,13 +481,23 @@ class SimpleBinding {
         fidl_incoming_msg_t msg = {
             .bytes = bytes_,
             .handles = handles_,
+            .handle_metadata = handle_metadata_,
             .num_bytes = 0u,
             .num_handles = 0u,
         };
-        status = zx_channel_read_etc(wait_.object, 0, bytes_, handles_, ZX_CHANNEL_MAX_MSG_BYTES,
-                                     ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
+        zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
+        status =
+            zx_channel_read_etc(wait_.object, 0, bytes_, handle_infos, ZX_CHANNEL_MAX_MSG_BYTES,
+                                ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
         if (status != ZX_OK) {
           goto error;
+        }
+        for (uint32_t i = 0; i < msg.num_handles; i++) {
+          msg.handles[i] = handle_infos[i].handle;
+          handle_metadata_[i] = {
+              .obj_type = handle_infos[i].type,
+              .rights = handle_infos[i].rights,
+          };
         }
         if (msg.num_bytes < sizeof(fidl_message_header_t)) {
           status = ZX_ERR_BUFFER_TOO_SMALL;
@@ -625,7 +635,8 @@ class SimpleBinding {
   // each zx_channel_read() for this connection.  Note that each _reply()
   // function will still put similarly-sized arrays on the stack.
   char bytes_[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_info_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_channel_handle_metadata_t handle_metadata_[ZX_CHANNEL_MAX_MSG_HANDLES];
 };
 
 #endif  // LIB_FIDL_ASYNC_2_SIMPLE_BINDING_H_

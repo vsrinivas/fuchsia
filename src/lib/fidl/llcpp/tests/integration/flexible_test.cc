@@ -250,9 +250,10 @@ class Server : fidl::WireServer<test::ReceiveFlexibleEnvelope>, private async_wa
     }
     if (signal->observed & ZX_CHANNEL_READABLE) {
       for (uint64_t i = 0; i < signal->count; i++) {
-        fidl::IncomingMessage msg = fidl::MessageRead(
-            zx::unowned_channel(async_wait_t::object), 0,
-            fidl::BufferSpan(bytes_->data(), bytes_->size()), cpp20::span(*handles_));
+        fidl::IncomingMessage msg =
+            fidl::MessageRead(zx::unowned_channel(async_wait_t::object), 0,
+                              fidl::BufferSpan(bytes_->data(), bytes_->size()), handles_->data(),
+                              handle_metadata_->data(), handles_->size());
         if (!msg.ok()) {
           return;
         }
@@ -279,8 +280,11 @@ class Server : fidl::WireServer<test::ReceiveFlexibleEnvelope>, private async_wa
   async_dispatcher_t* dispatcher_;
   std::unique_ptr<std::array<uint8_t, ZX_CHANNEL_MAX_MSG_BYTES>> bytes_ =
       std::make_unique<std::array<uint8_t, ZX_CHANNEL_MAX_MSG_BYTES>>();
-  std::unique_ptr<std::array<zx_handle_info_t, ZX_CHANNEL_MAX_MSG_HANDLES>> handles_ =
-      std::make_unique<std::array<zx_handle_info_t, ZX_CHANNEL_MAX_MSG_HANDLES>>();
+  std::unique_ptr<std::array<zx_handle_t, ZX_CHANNEL_MAX_MSG_HANDLES>> handles_ =
+      std::make_unique<std::array<zx_handle_t, ZX_CHANNEL_MAX_MSG_HANDLES>>();
+  std::unique_ptr<std::array<fidl_channel_handle_metadata_t, ZX_CHANNEL_MAX_MSG_HANDLES>>
+      handle_metadata_ = std::make_unique<
+          std::array<fidl_channel_handle_metadata_t, ZX_CHANNEL_MAX_MSG_HANDLES>>();
 };
 
 }  // namespace

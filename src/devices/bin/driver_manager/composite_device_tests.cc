@@ -94,9 +94,11 @@ void CheckCreateCompositeDeviceReceived(
     const fidl::ServerEnd<fdm::DriverHostController>& controller, const char* expected_name,
     size_t expected_fragments_count, DeviceState* composite) {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl::IncomingMessage msg = fidl::MessageRead(
-      controller.channel(), 0, fidl::BufferSpan(bytes, std::size(bytes)), cpp20::span(handles));
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl::IncomingMessage msg =
+      fidl::MessageRead(controller.channel(), 0, fidl::BufferSpan(bytes, std::size(bytes)), handles,
+                        handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
   ASSERT_TRUE(msg.ok());
 
   auto* header = msg.header();

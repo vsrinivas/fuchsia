@@ -397,10 +397,14 @@ fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
   })();
   static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
   ::fidl::internal::InlineMessageBuffer<24> read_storage;
-  std::array<zx_handle_info_t, kHandleAllocSize> read_handles;
+  std::array<zx_handle_t, kHandleAllocSize> read_handles;
+  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
+  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
+      read_handle_metadata;
   ::fidl::IncomingMessage msg = ::fidl::MessageRead(
       zx::unowned_channel(client_end.handle()), ZX_CHANNEL_READ_MAY_DISCARD,
-      read_storage.view(), cpp20::span(read_handles));
+      read_storage.view(), read_handles.data(), read_handle_metadata.data(),
+      kHandleAllocSize);
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new

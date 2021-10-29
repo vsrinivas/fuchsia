@@ -135,16 +135,15 @@ TEST(MagicNumberTest, RequestWrite) {
   std::string s = "hi";
   fidl::WireCall(local)->Frob(fidl::StringView::FromExternal(s));
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
 
   fidl_incoming_msg_t msg = {
       .bytes = bytes,
-      .handles = handles,
       .num_bytes = 0u,
       .num_handles = 0u,
   };
   auto status =
-      remote.channel().read_etc(0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
+      remote.channel().read_etc(0, bytes, handle_infos, ZX_CHANNEL_MAX_MSG_BYTES,
                                 ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
   ASSERT_EQ(status, ZX_OK);
   ASSERT_GE(msg.num_bytes, sizeof(fidl_message_header_t));
@@ -160,17 +159,16 @@ TEST(MagicNumberTest, EventWrite) {
   fidl::WireEventSender<test::Frobinator> event_sender(std::move(endpoints->server));
   event_sender.Hrob(fidl::StringView::FromExternal(s));
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
 
   fidl_incoming_msg_t msg = {
       .bytes = bytes,
-      .handles = handles,
       .num_bytes = 0u,
       .num_handles = 0u,
   };
-  auto status = endpoints->client.channel().read_etc(0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
-                                                     ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes,
-                                                     &msg.num_handles);
+  auto status = endpoints->client.channel().read_etc(
+      0, bytes, handle_infos, ZX_CHANNEL_MAX_MSG_BYTES, ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes,
+      &msg.num_handles);
   ASSERT_EQ(status, ZX_OK);
   ASSERT_GE(msg.num_bytes, sizeof(fidl_message_header_t));
 

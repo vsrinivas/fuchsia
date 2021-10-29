@@ -191,11 +191,13 @@ class ::fidl::WireRequest<
   using DecodedMessageBase<::fidl::WireRequest<
       ::fidl_test_emptystruct::EmptyProtocol::Send>>::DecodedMessageBase;
 
-  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual, handles,
-                                                   handle_actual)) {}
+  DecodedMessage(
+      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
+      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_INVALID,
+      void* handle_metadata = nullptr, uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::IncomingMessage(bytes, byte_actual, handles, transport_type,
+                                    handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>*
   PrimaryObject() {
@@ -343,11 +345,13 @@ class ::fidl::WireResponse<
   using DecodedMessageBase<::fidl::WireResponse<
       ::fidl_test_emptystruct::EmptyProtocol::Receive>>::DecodedMessageBase;
 
-  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual, handles,
-                                                   handle_actual)) {}
+  DecodedMessage(
+      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
+      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_INVALID,
+      void* handle_metadata = nullptr, uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::IncomingMessage(bytes, byte_actual, handles, transport_type,
+                                    handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>*
   PrimaryObject() {
@@ -494,11 +498,13 @@ class ::fidl::WireRequest<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>::
       DecodedMessageBase;
 
-  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual, handles,
-                                                   handle_actual)) {}
+  DecodedMessage(
+      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
+      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_INVALID,
+      void* handle_metadata = nullptr, uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::IncomingMessage(bytes, byte_actual, handles, transport_type,
+                                    handle_metadata, handle_actual)) {}
 
   ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*
   PrimaryObject() {
@@ -647,11 +653,13 @@ class ::fidl::WireResponse<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>::
       DecodedMessageBase;
 
-  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual, handles,
-                                                   handle_actual)) {}
+  DecodedMessage(
+      uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
+      fidl_transport_type transport_type = FIDL_TRANSPORT_TYPE_INVALID,
+      void* handle_metadata = nullptr, uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::IncomingMessage(bytes, byte_actual, handles, transport_type,
+                                    handle_metadata, handle_actual)) {}
 
   ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*
   PrimaryObject() {

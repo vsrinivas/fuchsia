@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/test/echo/c/fidl.h>
 #include <lib/fidl/txn_header.h>
 #include <string.h>
 #include <threads.h>
@@ -9,7 +10,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <fidl/test/echo/c/fidl.h>
 #include <zxtest/zxtest.h>
 
 static void echo_server(zx_handle_t server) {
@@ -86,14 +86,13 @@ TEST(ClientTests, magic_number_request_test) {
   ASSERT_EQ(ZX_OK, status, "");
 
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_incoming_msg_t msg = {
       .bytes = bytes,
-      .handles = handles,
       .num_bytes = 0u,
       .num_handles = 0u,
   };
-  status = zx_channel_read_etc(server, 0, bytes, handles, ZX_CHANNEL_MAX_MSG_BYTES,
+  status = zx_channel_read_etc(server, 0, bytes, handle_infos, ZX_CHANNEL_MAX_MSG_BYTES,
                                ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
   ASSERT_EQ(ZX_OK, status, "");
   ASSERT_EQ(msg.num_bytes, sizeof(fidl_message_header_t), "");

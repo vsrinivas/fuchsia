@@ -136,3 +136,47 @@ zx_status_t FidlHandleDispositionsToHandleInfos(zx_handle_disposition_t* handle_
   }
   return ZX_OK;
 }
+
+zx_status_t FidlZirconHandleDispositionsToChannelsWithMetadata(
+    zx_handle_disposition_t* handle_dispositions, zx_handle_t* handles,
+    fidl_channel_handle_metadata_t* metadata, uint32_t num_handles) {
+  for (size_t i = 0; i < num_handles; i++) {
+    zx_handle_disposition_t* handle_disposition = &handle_dispositions[i];
+    if (handle_disposition->operation != ZX_HANDLE_OP_MOVE) {
+      FidlHandleDispositionCloseMany(handle_dispositions, num_handles);
+      FidlHandleCloseMany(handles, i);
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (handle_disposition->result != ZX_OK) {
+      FidlHandleDispositionCloseMany(handle_dispositions, num_handles);
+      FidlHandleCloseMany(handles, i);
+      return ZX_ERR_INVALID_ARGS;
+    }
+#ifdef __Fuchsia__
+    zx_info_handle_basic_t info;
+    zx_status_t status = zx_object_get_info(handle_disposition->handle, ZX_INFO_HANDLE_BASIC, &info,
+                                            sizeof(info), NULL, NULL);
+    if (status != ZX_OK) {
+      FidlHandleDispositionCloseMany(handle_dispositions, num_handles);
+      FidlHandleCloseMany(handles, i);
+      return status;
+    }
+
+    zx_handle_t handle = handle_disposition->handle;
+    handle_disposition->handle = ZX_HANDLE_INVALID;
+    status = FidlEnsureHandleRights(&handle, info.type, info.rights, handle_disposition->type,
+                                    handle_disposition->rights, NULL);
+    if (status != ZX_OK) {
+      FidlHandleDispositionCloseMany(handle_dispositions, num_handles);
+      FidlHandleCloseMany(handles, i);
+      return status;
+    }
+    handles[i] = handle;
+    metadata[i].obj_type = info.type;
+    metadata[i].rights = info.rights;
+#else
+    ZX_PANIC("zx_object_get_info unsupported on host");
+#endif
+  }
+  return ZX_OK;
+}

@@ -73,7 +73,11 @@ struct DecoderEncoderStatus {
 // Note that a function pointer is used instead of `::std::function` to facilitate header-only
 // constexpr globals of type `::std::array<DecoderEncoder, n>`.
 using DecoderEncoder = DecoderEncoderStatus (*)(uint8_t* bytes, uint32_t num_bytes,
-                                                zx_handle_info_t* handles, uint32_t handle_actual);
+                                                zx_handle_t* handles,
+                                                // handle type and rights. The ith index corresponds
+                                                // to the ith handle in |handles|.
+                                                fidl_channel_handle_metadata_t* handle_metadata,
+                                                uint32_t num_handles);
 
 struct DecoderEncoderForType {
   const char* const fidl_type_name;
@@ -92,8 +96,9 @@ namespace fidl {
 namespace fuzzing {
 
 template <typename T>
-DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes,
-                                        zx_handle_info_t* handles, uint32_t num_handles) {
+DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_handle_t* handles,
+                                        fidl_channel_handle_metadata_t* handle_metadata,
+                                        uint32_t num_handles) {
   DecoderEncoderStatus status = {
       .progress = DecoderEncoderProgress::NoProgress,
       .status = ZX_OK,
@@ -102,11 +107,12 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes,
   std::optional<fidl::IncomingMessage> incoming_initialize_later;
   constexpr bool kTransactionalMessage = fidl::IsFidlMessage<T>::value;
   if (kTransactionalMessage) {
-    incoming_initialize_later = fidl::IncomingMessage(bytes, num_bytes, handles, num_handles);
+    incoming_initialize_later = fidl::IncomingMessage(
+        bytes, num_bytes, handles, FIDL_TRANSPORT_TYPE_CHANNEL, handle_metadata, num_handles);
   } else {
-    incoming_initialize_later =
-        fidl::IncomingMessage(bytes, num_bytes, handles, num_handles,
-                              fidl::IncomingMessage::kSkipMessageHeaderValidation);
+    incoming_initialize_later = fidl::IncomingMessage(
+        bytes, num_bytes, handles, FIDL_TRANSPORT_TYPE_CHANNEL, handle_metadata, num_handles,
+        fidl::IncomingMessage::kSkipMessageHeaderValidation);
   }
   fidl::IncomingMessage& incoming = incoming_initialize_later.value();
 

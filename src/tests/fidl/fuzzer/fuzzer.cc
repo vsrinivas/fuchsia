@@ -211,20 +211,22 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   if (remaining_size < num_handles * sizeof(zx_obj_type_t))
     return 0;
 
-  std::vector<zx_handle_info_t> handle_infos;
+  std::vector<zx_handle_t> handles;
+  std::vector<fidl_channel_handle_metadata_t> handle_metadata;
   for (uint64_t i = 0; i < num_handles; i++) {
-    zx_handle_info_t handle_info;
+    zx_obj_type_t obj_type;
 
     // Consume data: Handles.
     // Note: Data (non-length-encodings) drawn from head.
     // 1. Handle type.
-    FirstAs(&remaining_data, &remaining_size, &handle_info.type);
+    FirstAs(&remaining_data, &remaining_size, &obj_type);
     // TODO(markdittmer): Use interesting handle rights and values. This may require a change in
     // corpus data format.
-    handle_info.rights = 0;
-    handle_info.handle = ZX_HANDLE_INVALID;
-
-    handle_infos.push_back(handle_info);
+    handles.push_back(ZX_HANDLE_INVALID);
+    handle_metadata.push_back(fidl_channel_handle_metadata_t{
+        .obj_type = obj_type,
+        .rights = 0,
+    });
   }
 
   // Remaining data goes into `message`, and `message.size()` later cast as `uint32_t`.
@@ -240,8 +242,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
     // Result is unused on builds with assertions disabled.
     [[maybe_unused]] auto decode_encode_status = decoder_encoder_for_type.decoder_encoder(
-        message.data(), static_cast<uint32_t>(message.size()), handle_infos.data(),
-        static_cast<uint32_t>(handle_infos.size()));
+        message.data(), static_cast<uint32_t>(message.size()), handles.data(),
+        handle_metadata.data(), static_cast<uint32_t>(handles.size()));
 
     CheckDecoderEncoderResult(decoder_encoder_input, decoder_encoder_for_type,
                               decode_encode_status);

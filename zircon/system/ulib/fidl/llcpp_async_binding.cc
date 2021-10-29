@@ -9,6 +9,7 @@
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/async_transaction.h>
 #include <lib/fidl/llcpp/client_base.h>
+#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/fidl/trace.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
@@ -65,11 +66,13 @@ void AsyncBinding::MessageHandler(zx_status_t dispatcher_status, const zx_packet
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT InlineMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes;
-    FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT fidl_channel_handle_metadata_t
+        handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
     for (uint64_t i = 0; i < signal->count; i++) {
       fidl_trace(WillLLCPPAsyncChannelRead);
-      IncomingMessage msg =
-          fidl::MessageRead(zx::unowned_channel(handle()), 0, bytes.view(), cpp20::span(handles));
+      IncomingMessage msg = fidl::MessageRead(zx::unowned_channel(handle()), 0, bytes.view(),
+                                              handles, handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
       if (!msg.ok()) {
         return PerformTeardown(fidl::UnbindInfo{msg});
       }

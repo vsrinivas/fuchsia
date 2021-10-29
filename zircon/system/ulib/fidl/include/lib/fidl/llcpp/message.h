@@ -15,6 +15,7 @@
 #include <zircon/fidl.h>
 
 #include <memory>
+#include <type_traits>
 #include <vector>
 
 #ifdef __Fuchsia__
@@ -267,7 +268,8 @@ class IncomingMessage : public ::fidl::Result {
   //
   // The bytes must represent a transactional message. See
   // https://fuchsia.dev/fuchsia-src/reference/fidl/language/wire-format?hl=en#transactional-messages
-  IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles,
+  IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
+                  fidl_transport_type transport_type, void* handle_metadata,
                   uint32_t handle_actual);
 
   // Creates an |IncomingMessage| from a C |fidl_incoming_msg_t| already in
@@ -290,8 +292,9 @@ class IncomingMessage : public ::fidl::Result {
   // FIDL types that are not transactional messages (e.g. tables), consider
   // using the constructor in |FidlType::DecodedMessage|, which delegates
   // here appropriately.
-  IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles,
-                  uint32_t handle_actual, SkipMessageHeaderValidationTag);
+  IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
+                  fidl_transport_type transport_type, void* handle_metadata, uint32_t handle_actual,
+                  SkipMessageHeaderValidationTag);
 
   // Creates an empty incoming message representing an error (e.g. failed to read from
   // a channel).
@@ -333,7 +336,8 @@ class IncomingMessage : public ::fidl::Result {
   uint8_t* bytes() const { return reinterpret_cast<uint8_t*>(message_.bytes); }
   uint32_t byte_actual() const { return message_.num_bytes; }
 
-  zx_handle_info_t* handles() const { return message_.handles; }
+  zx_handle_t* handles() const { return message_.handles; }
+  void* handle_metadata() const { return message_.handle_metadata; }
   uint32_t handle_actual() const { return message_.num_handles; }
 
   // Convert the incoming message to its C API counterpart, releasing the
@@ -433,24 +437,31 @@ class IncomingMessage : public ::fidl::Result {
 
 #ifdef __Fuchsia__
 
+namespace internal {
 // Reads a message from |transport| using the |bytes_storage| and |handles_storage|
 // buffers as needed.
 //
 // Error information is embedded in the returned |IncomingMessage| when applicable.
 IncomingMessage MessageRead(internal::AnyUnownedTransport transport, uint32_t options,
-                            ::fidl::BufferSpan bytes_storage,
-                            cpp20::span<zx_handle_info_t> handles_storage);
+                            fidl::BufferSpan bytes_storage, zx_handle_t* handle_storage,
+                            fidl_transport_type transport_type, void* handle_metadata_storage,
+                            uint32_t handle_capacity);
+}  // namespace internal
 
 // Reads a message from |transport| using the |bytes_storage| and |handles_storage|
 // buffers as needed.
 //
 // Error information is embedded in the returned |IncomingMessage| when applicable.
-template <typename Transport>
-IncomingMessage MessageRead(Transport&& transport, uint32_t options,
-                            ::fidl::BufferSpan bytes_storage,
-                            cpp20::span<zx_handle_info_t> handles_storage) {
-  return MessageRead(internal::MakeAnyUnownedTransport(std::forward<Transport>(transport)), options,
-                     bytes_storage, handles_storage);
+template <typename TransportObject>
+IncomingMessage MessageRead(TransportObject&& transport, uint32_t options,
+                            ::fidl::BufferSpan bytes_storage, zx_handle_t* handle_storage,
+                            typename internal::AssociatedTransport<TransportObject>::HandleMetadata*
+                                handle_metadata_storage,
+                            uint32_t handle_capacity) {
+  return MessageRead(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
+                     options, bytes_storage, handle_storage,
+                     internal::AssociatedTransport<TransportObject>::VTable.type,
+                     static_cast<void*>(handle_metadata_storage), handle_capacity);
 }
 
 #endif  // __Fuchsia__
@@ -565,12 +576,14 @@ class OutgoingToIncomingMessage {
   [[nodiscard]] std::string FormatDescription() const;
 
  private:
-  static fidl::IncomingMessage ConversionImpl(OutgoingMessage& input,
-                                              OutgoingMessage::CopiedBytes& buf_bytes,
-                                              std::unique_ptr<zx_handle_info_t[]>& buf_handles);
+  static fidl::IncomingMessage ConversionImpl(
+      OutgoingMessage& input, OutgoingMessage::CopiedBytes& buf_bytes,
+      std::unique_ptr<zx_handle_t[]>& buf_handles,
+      std::unique_ptr<fidl_channel_handle_metadata_t[]>& buf_handle_metadata);
 
   OutgoingMessage::CopiedBytes buf_bytes_;
-  std::unique_ptr<zx_handle_info_t[]> buf_handles_ = {};
+  std::unique_ptr<zx_handle_t[]> buf_handles_ = {};
+  std::unique_ptr<fidl_channel_handle_metadata_t[]> buf_handle_metadata_ = {};
   fidl::IncomingMessage incoming_message_;
 };
 

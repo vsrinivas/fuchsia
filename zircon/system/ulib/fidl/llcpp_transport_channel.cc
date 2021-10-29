@@ -12,16 +12,12 @@ namespace internal {
 
 namespace {
 
-struct obj_type_and_rights {
-  zx_obj_type_t obj_type;
-  zx_rights_t rights;
-};
-
 zx_status_t channel_write(Handle handle, EncodeFlags encode_flags, const void* data,
                           uint32_t data_count, const Handle* handles, const void* handle_metadata,
                           uint32_t handles_count) {
   zx_handle_disposition_t hds[ZX_CHANNEL_MAX_MSG_HANDLES];
-  const obj_type_and_rights* metadata = static_cast<const obj_type_and_rights*>(handle_metadata);
+  const fidl_channel_handle_metadata_t* metadata =
+      static_cast<const fidl_channel_handle_metadata_t*>(handle_metadata);
   for (uint32_t i = 0; i < handles_count; i++) {
     hds[i] = zx_handle_disposition_t{
         .operation = ZX_HANDLE_OP_MOVE,
@@ -46,10 +42,11 @@ zx_status_t channel_read(Handle handle, void* data, uint32_t data_capacity, Hand
   zx_status_t status =
       zx_channel_read_etc(handle.value(), 0, data, his, data_capacity, handles_capacity,
                           out_data_actual_count, out_handles_actual_count);
-  obj_type_and_rights* metadata = static_cast<obj_type_and_rights*>(handle_metadata);
+  fidl_channel_handle_metadata_t* metadata =
+      static_cast<fidl_channel_handle_metadata_t*>(handle_metadata);
   for (uint32_t i = 0; i < *out_handles_actual_count; i++) {
     handles[i] = Handle(his[i].handle);
-    metadata[i] = obj_type_and_rights{
+    metadata[i] = fidl_channel_handle_metadata_t{
         .obj_type = his[i].type,
         .rights = his[i].rights,
     };
@@ -62,8 +59,8 @@ zx_status_t channel_call(Handle handle, EncodeFlags encode_flags, zx_time_t dead
                          uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) {
   *out_decode_flags = {};
   zx_handle_disposition_t hds[ZX_CHANNEL_MAX_MSG_HANDLES];
-  const obj_type_and_rights* wr_metadata =
-      static_cast<const obj_type_and_rights*>(cargs.wr_handle_metadata);
+  const fidl_channel_handle_metadata_t* wr_metadata =
+      static_cast<const fidl_channel_handle_metadata_t*>(cargs.wr_handle_metadata);
   for (uint32_t i = 0; i < cargs.wr_handles_count; i++) {
     hds[i] = zx_handle_disposition_t{
         .operation = ZX_HANDLE_OP_MOVE,
@@ -86,10 +83,11 @@ zx_status_t channel_call(Handle handle, EncodeFlags encode_flags, zx_time_t dead
   };
   zx_status_t status = zx_channel_call_etc(handle.value(), ZX_CHANNEL_WRITE_USE_IOVEC, deadline,
                                            &args, out_data_actual_count, out_handles_actual_count);
-  obj_type_and_rights* rd_metadata = static_cast<obj_type_and_rights*>(cargs.rd_handle_metadata);
+  fidl_channel_handle_metadata_t* rd_metadata =
+      static_cast<fidl_channel_handle_metadata_t*>(cargs.rd_handle_metadata);
   for (uint32_t i = 0; i < *out_handles_actual_count; i++) {
     cargs.rd_handles[i] = Handle(his[i].handle);
-    rd_metadata[i] = obj_type_and_rights{
+    rd_metadata[i] = fidl_channel_handle_metadata_t{
         .obj_type = his[i].type,
         .rights = his[i].rights,
     };
@@ -101,7 +99,7 @@ void channel_close(Handle handle) { zx_handle_close(handle.value()); }
 }  // namespace
 
 const TransportVTable ChannelTransport::VTable = {
-    .type = TransportType::Channel,
+    .type = FIDL_TRANSPORT_TYPE_CHANNEL,
     .encoding_configuration = &ChannelTransport::EncodingConfiguration,
     .write = channel_write,
     .read = channel_read,
@@ -113,15 +111,15 @@ namespace {
 
 zx_status_t channel_encode_process_handle(HandleAttributes attr, uint32_t metadata_index,
                                           void* out_metadata_array, const char** out_error) {
-  reinterpret_cast<obj_type_and_rights*>(out_metadata_array)[metadata_index] = {
+  reinterpret_cast<fidl_channel_handle_metadata_t*>(out_metadata_array)[metadata_index] = {
       .obj_type = attr.obj_type, .rights = attr.rights};
   return ZX_OK;
 }
 zx_status_t channel_decode_process_handle(Handle* handle, HandleAttributes attr,
                                           uint32_t metadata_index, const void* metadata_array,
                                           const char** error) {
-  obj_type_and_rights v =
-      reinterpret_cast<const obj_type_and_rights*>(metadata_array)[metadata_index];
+  fidl_channel_handle_metadata_t v =
+      reinterpret_cast<const fidl_channel_handle_metadata_t*>(metadata_array)[metadata_index];
   return FidlEnsureHandleRights(&handle->value(), v.obj_type, v.rights, attr.obj_type, attr.rights,
                                 error);
 }

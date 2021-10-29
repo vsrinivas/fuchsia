@@ -61,7 +61,7 @@ void FidlMessenger::Dispatch(fidl::IncomingMessage&& msg, ::fidl::Transaction* t
   auto status = message_op_(op_ctx_, &c_msg, ddk_txn.Txn());
   const bool found = status == ZX_OK || status == ZX_ERR_ASYNC;
   if (!found) {
-    FidlHandleInfoCloseMany(c_msg.handles, c_msg.num_handles);
+    FidlHandleCloseMany(c_msg.handles, c_msg.num_handles);
     txn->Close(status);
   }
 }

@@ -68,9 +68,11 @@ TEST(OutgoingToIncomingMessage, Handles) {
   EXPECT_EQ(output.byte_actual(), std::size(bytes));
   EXPECT_EQ(0, memcmp(output.bytes(), bytes, output.byte_actual()));
   EXPECT_EQ(output.handle_actual(), std::size(iovecs));
-  EXPECT_EQ(output.handles()[0].handle, ev.get());
-  EXPECT_EQ(output.handles()[0].type, ZX_OBJ_TYPE_EVENT);
-  EXPECT_EQ(output.handles()[0].rights, ZX_DEFAULT_EVENT_RIGHTS);
+  EXPECT_EQ(output.handles()[0], ev.get());
+  auto handle_metadata =
+      reinterpret_cast<fidl_channel_handle_metadata_t*>(output.handle_metadata());
+  EXPECT_EQ(handle_metadata[0].obj_type, ZX_OBJ_TYPE_EVENT);
+  EXPECT_EQ(handle_metadata[0].rights, ZX_DEFAULT_EVENT_RIGHTS);
 }
 
 TEST(OutgoingToIncomingMessage, HandlesWrongType) {

@@ -241,8 +241,18 @@ bool DecodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
                    std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> handle_infos,
                    EqualityCheck equality_check) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
+  std::vector<zx_handle_t> handles;
+  std::vector<fidl_channel_handle_metadata_t> handle_metadata;
+  for (zx_handle_info_t handle_info : handle_infos) {
+    handles.push_back(handle_info.handle);
+    handle_metadata.push_back(fidl_channel_handle_metadata_t{
+        .obj_type = handle_info.type,
+        .rights = handle_info.rights,
+    });
+  }
   fidl::DecodedMessage<FidlType> decoded(wire_format_version, bytes.data(),
-                                         static_cast<uint32_t>(bytes.size()), handle_infos.data(),
+                                         static_cast<uint32_t>(bytes.size()), handles.data(),
+                                         FIDL_TRANSPORT_TYPE_CHANNEL, handle_metadata.data(),
                                          static_cast<uint32_t>(handle_infos.size()));
   if (!decoded.ok()) {
     std::cout << "Decoding failed: " << decoded.error() << std::endl;
@@ -258,8 +268,18 @@ bool DecodeFailure(fidl::internal::WireFormatVersion wire_format_version,
                    std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> handle_infos,
                    zx_status_t expected_error_code) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
+  std::vector<zx_handle_t> handles;
+  std::vector<fidl_channel_handle_metadata_t> handle_metadata;
+  for (zx_handle_info_t handle_info : handle_infos) {
+    handles.push_back(handle_info.handle);
+    handle_metadata.push_back(fidl_channel_handle_metadata_t{
+        .obj_type = handle_info.type,
+        .rights = handle_info.rights,
+    });
+  }
   fidl::DecodedMessage<FidlType> decoded(wire_format_version, bytes.data(),
-                                         static_cast<uint32_t>(bytes.size()), handle_infos.data(),
+                                         static_cast<uint32_t>(bytes.size()), handles.data(),
+                                         FIDL_TRANSPORT_TYPE_CHANNEL, handle_metadata.data(),
                                          static_cast<uint32_t>(handle_infos.size()));
   if (decoded.ok()) {
     std::cout << "Decoding unexpectedly succeeded" << std::endl;

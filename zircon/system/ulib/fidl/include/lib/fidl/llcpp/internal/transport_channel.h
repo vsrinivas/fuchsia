@@ -14,6 +14,7 @@ namespace fidl::internal {
 struct ChannelTransport {
   using OwnedType = zx::channel;
   using UnownedType = zx::unowned_channel;
+  using HandleMetadata = fidl_channel_handle_metadata_t;
   static const TransportVTable VTable;
   static const EncodingConfiguration EncodingConfiguration;
 };
@@ -21,6 +22,15 @@ struct ChannelTransport {
 AnyTransport MakeAnyTransport(zx::channel channel);
 AnyUnownedTransport MakeAnyUnownedTransport(const zx::channel& channel);
 AnyUnownedTransport MakeAnyUnownedTransport(const zx::unowned_channel& channel);
+
+template <>
+struct AssociatedTransportImpl<zx::channel> {
+  using type = ChannelTransport;
+};
+template <>
+struct AssociatedTransportImpl<zx::unowned_channel> {
+  using type = ChannelTransport;
+};
 
 }  // namespace fidl::internal
 

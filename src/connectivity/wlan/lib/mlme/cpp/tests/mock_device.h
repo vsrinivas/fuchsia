@@ -50,11 +50,19 @@ std::pair<zx::channel, zx::channel> make_channel() {
 struct FidlMessage {
   static std::optional<FidlMessage> ReadFromChannel(const zx::channel* endpoint) {
     FidlMessage msg = {};
+    zx_handle_info_t handle_infos[256];
     auto status =
-        endpoint->read_etc(ZX_CHANNEL_READ_MAY_DISCARD, msg.bytes, msg.handles, sizeof(msg.bytes),
-                           sizeof(msg.handles), &msg.actual_bytes, &msg.actual_handles);
+        endpoint->read_etc(ZX_CHANNEL_READ_MAY_DISCARD, msg.bytes, handle_infos, sizeof(msg.bytes),
+                           sizeof(handle_infos), &msg.actual_bytes, &msg.actual_handles);
     if (status != ZX_OK) {
       return {std::nullopt};
+    }
+    for (uint32_t i = 0; i < msg.actual_handles; i++) {
+      msg.handles[i] = handle_infos[i].handle;
+      msg.handle_metadata[i] = fidl_channel_handle_metadata_t{
+          .obj_type = handle_infos[i].type,
+          .rights = handle_infos[i].rights,
+      };
     }
     return {std::move(msg)};
   }
@@ -69,7 +77,8 @@ struct FidlMessage {
   cpp20::span<uint8_t> data() { return {bytes, actual_bytes}; }
 
   FIDL_ALIGNDECL uint8_t bytes[256];
-  zx_handle_info_t handles[256];
+  zx_handle_t handles[256];
+  fidl_channel_handle_metadata_t handle_metadata[256];
   uint32_t actual_bytes;
   uint32_t actual_handles;
 };

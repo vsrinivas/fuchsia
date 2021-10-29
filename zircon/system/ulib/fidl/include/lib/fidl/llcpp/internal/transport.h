@@ -9,6 +9,7 @@
 #include <zircon/fidl.h>
 
 #include <cstdint>
+#include <type_traits>
 
 namespace fidl {
 
@@ -86,12 +87,10 @@ struct CallMethodArgs {
   uint32_t rd_handles_capacity;
 };
 
-enum class TransportType { Channel };
-
 // An instance of TransportVTable contains function definitions to implement transport-specific
 // functionality.
 struct TransportVTable {
-  TransportType type;
+  fidl_transport_type type;
   const EncodingConfiguration* encoding_configuration;
 
   // Write to the transport.
@@ -252,7 +251,14 @@ class AnyTransport {
 
 AnyUnownedTransport MakeAnyUnownedTransport(const AnyTransport& transport);
 
+template <typename TransportObject>
+struct AssociatedTransportImpl;
+
+template <typename TransportObject>
+using AssociatedTransport = typename AssociatedTransportImpl<std::decay_t<TransportObject>>::type;
+
 }  // namespace internal
+
 }  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_INTERNAL_TRANSPORT_H_

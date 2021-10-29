@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/test/echo/c/fidl.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/txn_header.h>
 #include <string.h>
@@ -10,7 +11,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <fidl/test/echo/c/fidl.h>
 #include <zxtest/zxtest.h>
 
 static int kContext = 42;
@@ -39,21 +39,25 @@ TEST(ServerTests, dispatch_test) {
   request.process = FIDL_HANDLE_PRESENT;
   request.thread = FIDL_HANDLE_PRESENT;
 
-  zx_handle_info_t handles[2] = {
+  zx_handle_t handles[2] = {
+      ZX_HANDLE_INVALID,
+      ZX_HANDLE_INVALID,
+  };
+  fidl_channel_handle_metadata_t handle_metadata[2] = {
       {
-          .handle = ZX_HANDLE_INVALID,
-          .type = ZX_OBJ_TYPE_EVENTPAIR,
+          .obj_type = ZX_OBJ_TYPE_EVENTPAIR,
           .rights = ZX_RIGHT_SAME_RIGHTS,
       },
       {
-          .handle = ZX_HANDLE_INVALID,
-          .type = ZX_OBJ_TYPE_EVENTPAIR,
+          .obj_type = ZX_OBJ_TYPE_EVENTPAIR,
           .rights = ZX_RIGHT_SAME_RIGHTS,
       },
   };
+
   fidl_incoming_msg_t msg = {
       .bytes = &request,
       .handles = handles,
+      .handle_metadata = handle_metadata,
       .num_bytes = sizeof(request),
       .num_handles = 2,
   };
@@ -63,7 +67,7 @@ TEST(ServerTests, dispatch_test) {
 
   // Success
 
-  zx_status_t status = zx_eventpair_create(0, &handles[0].handle, &handles[1].handle);
+  zx_status_t status = zx_eventpair_create(0, &handles[0], &handles[1]);
   ASSERT_EQ(ZX_OK, status, "");
   EXPECT_EQ(0u, g_echo_call_count, "");
   status = fidl_test_echo_Echo_dispatch(&kContext, &txn, &msg, &ops);
@@ -75,11 +79,11 @@ TEST(ServerTests, dispatch_test) {
 
   request.hdr.ordinal = 8949;
   zx_handle_t canary0 = ZX_HANDLE_INVALID;
-  status = zx_eventpair_create(0, &handles[0].handle, &canary0);
+  status = zx_eventpair_create(0, &handles[0], &canary0);
   ASSERT_EQ(ZX_OK, status, "");
 
   zx_handle_t canary1 = ZX_HANDLE_INVALID;
-  status = zx_eventpair_create(0, &handles[1].handle, &canary1);
+  status = zx_eventpair_create(0, &handles[1], &canary1);
   ASSERT_EQ(ZX_OK, status, "");
 
   EXPECT_EQ(0u, g_echo_call_count, "");
@@ -98,11 +102,11 @@ TEST(ServerTests, dispatch_test) {
 
   request.hdr.ordinal = 8949;
   canary0 = ZX_HANDLE_INVALID;
-  status = zx_eventpair_create(0, &handles[0].handle, &canary0);
+  status = zx_eventpair_create(0, &handles[0], &canary0);
   ASSERT_EQ(ZX_OK, status, "");
 
   canary1 = ZX_HANDLE_INVALID;
-  status = zx_eventpair_create(0, &handles[1].handle, &canary1);
+  status = zx_eventpair_create(0, &handles[1], &canary1);
   ASSERT_EQ(ZX_OK, status, "");
 
   EXPECT_EQ(0u, g_echo_call_count, "");
@@ -114,7 +118,7 @@ TEST(ServerTests, dispatch_test) {
   ASSERT_EQ(ZX_OK, status, "");
   status = zx_object_signal_peer(canary1, 0, ZX_USER_SIGNAL_0);
   ASSERT_EQ(ZX_OK, status, "");
-  FidlHandleInfoCloseMany(handles, 2);
+  FidlHandleCloseMany(handles, 2);
   zx_handle_close(canary0);
   zx_handle_close(canary1);
 }
@@ -165,21 +169,24 @@ TEST(ServerTests, error_test) {
   request.process = FIDL_HANDLE_PRESENT;
   request.thread = FIDL_HANDLE_PRESENT;
 
-  zx_handle_info_t handles[2] = {
+  zx_handle_t handles[2] = {
+      ZX_HANDLE_INVALID,
+      ZX_HANDLE_INVALID,
+  };
+  fidl_channel_handle_metadata_t handle_metadata[2] = {
       {
-          .handle = ZX_HANDLE_INVALID,
-          .type = ZX_OBJ_TYPE_EVENTPAIR,
+          .obj_type = ZX_OBJ_TYPE_EVENTPAIR,
           .rights = ZX_RIGHT_SAME_RIGHTS,
       },
       {
-          .handle = ZX_HANDLE_INVALID,
-          .type = ZX_OBJ_TYPE_EVENTPAIR,
+          .obj_type = ZX_OBJ_TYPE_EVENTPAIR,
           .rights = ZX_RIGHT_SAME_RIGHTS,
       },
   };
   fidl_incoming_msg_t msg = {
       .bytes = &request,
       .handles = handles,
+      .handle_metadata = handle_metadata,
       .num_bytes = sizeof(request),
       .num_handles = 2,
   };
@@ -187,7 +194,7 @@ TEST(ServerTests, error_test) {
   fidl_txn_t txn;
   memset(&txn, 0, sizeof(txn));
 
-  zx_status_t status = zx_eventpair_create(0, &handles[0].handle, &handles[1].handle);
+  zx_status_t status = zx_eventpair_create(0, &handles[0], &handles[1]);
   ASSERT_EQ(ZX_OK, status, "");
   status = fidl_test_echo_Echo_try_dispatch(NULL, &txn, &msg, &ops);
   ASSERT_EQ(ZX_ERR_ASYNC, status, "");
@@ -206,21 +213,24 @@ TEST(ServerTests, incompatible_magic_test) {
   request.process = FIDL_HANDLE_PRESENT;
   request.thread = FIDL_HANDLE_PRESENT;
 
-  zx_handle_info_t handles[2] = {
+  zx_handle_t handles[2] = {
+      ZX_HANDLE_INVALID,
+      ZX_HANDLE_INVALID,
+  };
+  fidl_channel_handle_metadata_t handle_metadata[2] = {
       {
-          .handle = ZX_HANDLE_INVALID,
-          .type = ZX_OBJ_TYPE_EVENTPAIR,
+          .obj_type = ZX_OBJ_TYPE_EVENTPAIR,
           .rights = ZX_RIGHT_SAME_RIGHTS,
       },
       {
-          .handle = ZX_HANDLE_INVALID,
-          .type = ZX_OBJ_TYPE_EVENTPAIR,
+          .obj_type = ZX_OBJ_TYPE_EVENTPAIR,
           .rights = ZX_RIGHT_SAME_RIGHTS,
       },
   };
   fidl_incoming_msg_t msg = {
       .bytes = &request,
       .handles = handles,
+      .handle_metadata = handle_metadata,
       .num_bytes = sizeof(request),
       .num_handles = 2,
   };
@@ -228,7 +238,7 @@ TEST(ServerTests, incompatible_magic_test) {
   fidl_txn_t txn;
   memset(&txn, 0, sizeof(txn));
 
-  zx_status_t status = zx_eventpair_create(0, &handles[0].handle, &handles[1].handle);
+  zx_status_t status = zx_eventpair_create(0, &handles[0], &handles[1]);
   ASSERT_EQ(ZX_OK, status, "");
   status = fidl_test_echo_Echo_try_dispatch(NULL, &txn, &msg, &ops);
   ASSERT_EQ(ZX_ERR_PROTOCOL_NOT_SUPPORTED, status, "");

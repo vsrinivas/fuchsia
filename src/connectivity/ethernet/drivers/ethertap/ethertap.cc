@@ -343,11 +343,13 @@ int TapDevice::Thread() {
   const uint32_t buff_size = 2 * mtu_;
   constexpr uint32_t handle_count = 8;
   std::unique_ptr<uint8_t[]> data_buff(new uint8_t[buff_size]);
-  zx_handle_info_t handles_buff[handle_count];
+  zx_handle_t handles_buff[handle_count];
+  fidl_channel_handle_metadata_t handle_metadata_buff[handle_count];
 
   fidl_incoming_msg_t msg = {
       .bytes = data_buff.get(),
       .handles = handles_buff,
+      .handle_metadata = handle_metadata_buff,
       .num_bytes = buff_size,
       .num_handles = handle_count,
   };
@@ -368,11 +370,19 @@ int TapDevice::Thread() {
     }
 
     if (pending & ZX_CHANNEL_READABLE) {
-      status = channel_.read_etc(0, msg.bytes, msg.handles, buff_size, handle_count, &msg.num_bytes,
-                                 &msg.num_handles);
+      zx_handle_info_t handle_infos[handle_count];
+      status = channel_.read_etc(0, msg.bytes, handle_infos, buff_size, handle_count,
+                                 &msg.num_bytes, &msg.num_handles);
       if (status != ZX_OK) {
         ethertap_trace("message read failed: %d\n", status);
         break;
+      }
+      for (uint32_t i = 0; i < msg.num_handles; i++) {
+        handles_buff[i] = handle_infos[i].handle;
+        handle_metadata_buff[i] = fidl_channel_handle_metadata_t{
+            .obj_type = handle_infos[i].type,
+            .rights = handle_infos[i].rights,
+        };
       }
 
       txn.txid = reinterpret_cast<const fidl_message_header_t*>(msg.bytes)->txid;
