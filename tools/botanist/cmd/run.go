@@ -18,6 +18,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -70,6 +71,11 @@ type RunCommand struct {
 	// BlobURL optionally specifies the URL of where a package repository's blobs may be served from.
 	// Defaults to $repoURL/blobs.
 	blobURL string
+
+	// localRepo specifies the path to a local package repository. If set,
+	// botanist will spin up a package server to serve packages from this
+	// repository.
+	localRepo string
 }
 
 func (*RunCommand) Name() string {
@@ -99,6 +105,7 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.serialLogFile, "serial-log", "", "file to write the serial logs to.")
 	f.StringVar(&r.repoURL, "repo", "", "URL at which to configure a package repository; if the placeholder of \"localhost\" will be resolved and scoped as appropriate")
 	f.StringVar(&r.blobURL, "blobs", "", "URL at which to serve a package repository's blobs; if the placeholder of \"localhost\" will be resolved and scoped as appropriate")
+	f.StringVar(&r.localRepo, "local-repo", "", "path to a local package repository; the repo and blobs flags are ignored when this is set")
 }
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
@@ -209,6 +216,30 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			return nil
 		})
 	}
+
+	if r.localRepo != "" {
+		var port int
+		pkgSrvPort := os.Getenv(constants.PkgSrvPortKey)
+		if pkgSrvPort == "" {
+			logger.Warningf(ctx, "%s is empty, using default port %d", constants.PkgSrvPortKey, botanist.DefaultPkgSrvPort)
+			port = botanist.DefaultPkgSrvPort
+		} else {
+			var err error
+			port, err = strconv.Atoi(pkgSrvPort)
+			if err != nil {
+				return err
+			}
+		}
+		repoURL, blobURL, err := botanist.NewPackageServer(ctx, r.localRepo, port)
+		if err != nil {
+			return err
+		}
+		// TODO(rudymathu): Once gcsproxy and remote package serving are deprecated, remove
+		// the repoURL and blobURL from the command line flags.
+		r.repoURL = repoURL
+		r.blobURL = blobURL
+	}
+
 	eg.Go(func() error {
 		// Signal other goroutines to exit.
 		defer cancel()

@@ -14,6 +14,7 @@ go_library("botanist_lib") {
   ]
   deps = [
     ":constants",
+    "//src/sys/pkg/bin/pm:pm_lib",
     "//src/sys/pkg/lib/repo",
     "//third_party/golibs:github.com/kr/pretty",
     "//tools/build",
