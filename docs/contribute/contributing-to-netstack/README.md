@@ -269,7 +269,7 @@ but that's not mandatory. One of the goals is to spread out.
 assigning themselves as a reviewer and sending out comments and/or approving
 within **two working hours**.
 
-Be mindful that his scheme can increase latency for reviews, which is a side
+Be mindful that this scheme can increase latency for reviews, which is a side
 effect we'd like to minimize. Try to decrease your latency when asked for review
 and when addressing comments as well. Gerrit notification settings and smart
 e-mail filters can be a big help to drive those interrupts. Also, don't be
