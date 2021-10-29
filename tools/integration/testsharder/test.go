@@ -4,7 +4,11 @@
 
 package testsharder
 
-import "go.fuchsia.dev/fuchsia/tools/build"
+import (
+	"time"
+
+	"go.fuchsia.dev/fuchsia/tools/build"
+)
 
 // RunAlgorithm describes how to run a test using the test's `Runs` field.
 type RunAlgorithm string
@@ -38,6 +42,9 @@ type Test struct {
 	// StopRepeatingAfterSecs is the duration for which to repeatedly run a
 	// test.
 	StopRepeatingAfterSecs int `json:"stop_repeating_after_secs,omitempty"`
+
+	// Timeout is the timeout that should be set for each run of this test.
+	Timeout time.Duration `json:"timeout_nanos,omitempty"`
 }
 
 func (t *Test) applyModifier(m TestModifier) {

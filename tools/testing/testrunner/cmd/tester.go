@@ -128,7 +128,6 @@ type serialClient interface {
 type subprocessTester struct {
 	env               []string
 	dir               string
-	perTestTimeout    time.Duration
 	localOutputDir    string
 	getModuleBuildIDs func(string) ([]string, error)
 }
@@ -151,11 +150,10 @@ func getModuleBuildIDs(test string) ([]string, error) {
 
 // NewSubprocessTester returns a SubprocessTester that can execute tests
 // locally with a given working directory and environment.
-func newSubprocessTester(dir string, env []string, localOutputDir string, perTestTimeout time.Duration) tester {
+func newSubprocessTester(dir string, env []string, localOutputDir string) tester {
 	return &subprocessTester{
 		dir:               dir,
 		env:               env,
-		perTestTimeout:    perTestTimeout,
 		localOutputDir:    localOutputDir,
 		getModuleBuildIDs: getModuleBuildIDs,
 	}
@@ -191,14 +189,14 @@ func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 		// them will write a profile to the location under this environment variable.
 		fmt.Sprintf("%s=%s", llvmProfileEnvKey, profileAbs),
 	))
-	if t.perTestTimeout > 0 {
+	if test.Timeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, t.perTestTimeout)
+		ctx, cancel = context.WithTimeout(ctx, test.Timeout)
 		defer cancel()
 	}
 	err := r.Run(ctx, []string{test.Path}, stdout, stderr)
-	if err == context.DeadlineExceeded {
-		err = &timeoutError{t.perTestTimeout}
+	if errors.Is(err, context.DeadlineExceeded) {
+		err = &timeoutError{test.Timeout}
 	}
 
 	if exists, profileErr := osmisc.FileExists(profileAbs); profileErr != nil {
@@ -291,7 +289,6 @@ type fuchsiaSSHTester struct {
 	copier                      dataSinkCopier
 	useRuntests                 bool
 	localOutputDir              string
-	perTestTimeout              time.Duration
 	connectionErrorRetryBackoff retry.Backoff
 	serialSocket                serialClient
 	ffx                         ffxTester
@@ -300,7 +297,7 @@ type fuchsiaSSHTester struct {
 // newFuchsiaSSHTester returns a fuchsiaSSHTester associated to a fuchsia
 // instance of given nodename, the private key paired with an authorized one
 // and the directive of whether `runtests` should be used to execute the test.
-func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, localOutputDir, serialSocketPath string, useRuntests bool, perTestTimeout time.Duration, ffx ffxTester) (tester, error) {
+func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, localOutputDir, serialSocketPath string, useRuntests bool, ffx ffxTester) (tester, error) {
 	if ffx != nil {
 		if err := ffx.List(ctx); err != nil {
 			return nil, err
@@ -345,7 +342,6 @@ func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, local
 		copier:                      copier,
 		useRuntests:                 useRuntests,
 		localOutputDir:              localOutputDir,
-		perTestTimeout:              perTestTimeout,
 		connectionErrorRetryBackoff: retry.NewConstantBackoff(time.Second),
 		serialSocket:                &serialSocket{serialSocketPath},
 		ffx:                         ffx,
@@ -362,8 +358,8 @@ func (t *fuchsiaSSHTester) reconnect(ctx context.Context) error {
 	return nil
 }
 
-func (t *fuchsiaSSHTester) isTimeoutError(err error) bool {
-	if t.perTestTimeout <= 0 {
+func (t *fuchsiaSSHTester) isTimeoutError(test testsharder.Test, err error) bool {
+	if test.Timeout <= 0 {
 		return false
 	}
 	if exitErr, ok := err.(*ssh.ExitError); ok {
@@ -408,9 +404,9 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 	if isComponentV2 && t.ffx != nil {
 		t.ffx.SetStdoutStderr(stdout, stderr)
 		defer t.ffx.SetStdoutStderr(os.Stdout, os.Stderr)
-		return sinks, t.ffx.Test(ctx, test.Name, "-t", fmt.Sprintf("%d", int(t.perTestTimeout.Seconds())))
+		return sinks, t.ffx.Test(ctx, test.Name, "-t", fmt.Sprintf("%d", int(test.Timeout.Seconds())))
 	}
-	command, err := commandForTest(&test, t.useRuntests, dataOutputDir, t.perTestTimeout)
+	command, err := commandForTest(&test, t.useRuntests, dataOutputDir, test.Timeout)
 	if err != nil {
 		return sinks, err
 	}
@@ -426,8 +422,8 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 		return sinks, fatalError{testErr}
 	}
 
-	if t.isTimeoutError(testErr) {
-		testErr = &timeoutError{t.perTestTimeout}
+	if t.isTimeoutError(test, testErr) {
+		testErr = &timeoutError{test.Timeout}
 	}
 
 	var sinkErr error
@@ -526,23 +522,15 @@ type socketConn interface {
 // FuchsiaSerialTester executes fuchsia tests over serial.
 type fuchsiaSerialTester struct {
 	socket         socketConn
-	perTestTimeout time.Duration
 	localOutputDir string
 }
 
-func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTestTimeout time.Duration) (tester, error) {
-	// We set the socket IO timeout to a slightly longer timeout than the test
-	// timeout so that runtests has time to enforce its own timeout. The IO timeout
-	// will then act as a fallback timeout in case the serial socket hangs.
-	socket, err := serial.NewSocketWithIOTimeout(ctx, serialSocketPath, perTestTimeout+10*time.Second)
+func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string) (tester, error) {
+	socket, err := serial.NewSocket(ctx, serialSocketPath)
 	if err != nil {
 		return nil, err
 	}
-
-	return &fuchsiaSerialTester{
-		socket:         socket,
-		perTestTimeout: perTestTimeout,
-	}, nil
+	return &fuchsiaSerialTester{socket: socket}, nil
 }
 
 // Exposed for testability.
@@ -701,7 +689,7 @@ func (r *parseOutKernelReader) lineWithoutKernelLog(line []byte, isTruncated boo
 func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, stdout, _ io.Writer, _ string) (runtests.DataSinkReference, error) {
 	// We don't collect data sinks for serial tests. Just return an empty DataSinkReference.
 	sinks := runtests.DataSinkReference{}
-	command, err := commandForTest(&test, true, "", t.perTestTimeout)
+	command, err := commandForTest(&test, true, "", test.Timeout)
 	if err != nil {
 		return sinks, err
 	}
@@ -739,7 +727,7 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 		return sinks, fatalError{err}
 	}
 
-	t.socket.SetIOTimeout(t.perTestTimeout + 30*time.Second)
+	t.socket.SetIOTimeout(test.Timeout + 30*time.Second)
 	testOutputReader := io.TeeReader(
 		// See comment above lastWrite declaration.
 		&parseOutKernelReader{ctx: ctx, reader: io.MultiReader(bytes.NewReader(lastWrite.buf), t.socket)},

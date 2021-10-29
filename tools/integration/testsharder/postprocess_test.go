@@ -1053,3 +1053,29 @@ func TestComputeShardTimeout(t *testing.T) {
 		})
 	}
 }
+
+func TestApplyTestTimeouts(t *testing.T) {
+	shards := []*Shard{
+		{
+			Name: "foo", Tests: []Test{
+				{Test: build.Test{Name: "test1", OS: linux, CPU: "arm64"}},
+				{Test: build.Test{Name: "test2", OS: linux, CPU: "arm64"}},
+			},
+		},
+		{
+			Name: "foo", Tests: []Test{
+				{Test: build.Test{Name: "test3", OS: linux, CPU: x64}},
+				{Test: build.Test{Name: "test4", OS: linux, CPU: x64}},
+			},
+		},
+	}
+	timeout := 37 * time.Minute
+	ApplyTestTimeouts(shards, timeout)
+	for _, shard := range shards {
+		for _, test := range shard.Tests {
+			if test.Timeout != timeout {
+				t.Errorf("Test %s has wrong timeout %s, wanted %s", test.Name, test.Timeout, timeout)
+			}
+		}
+	}
+}

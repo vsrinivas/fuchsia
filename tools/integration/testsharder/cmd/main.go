@@ -29,6 +29,7 @@ var (
 	modifiersPath                  string
 	targetTestCount                int
 	targetDurationSecs             int
+	perTestTimeoutSecs             int
 	maxShardsPerEnvironment        int
 	affectedTestsPath              string
 	affectedTestsMaxAttempts       int
@@ -44,7 +45,7 @@ func usage() {
 
 Shards tests produced by a build.
 For more information on the modes in which the testsharder may be run, see
-See https://go.fuchsia.dev/fuchsia/tools/+/HEAD/testsharder/mode.go.
+https://pkg.go.dev/go.fuchsia.dev/fuchsia/tools/integration/testsharder#Mode.
 `)
 }
 
@@ -56,6 +57,8 @@ func init() {
 	flag.StringVar(&modifiersPath, "modifiers", "", "path to the json manifest containing tests to modify")
 	flag.IntVar(&targetDurationSecs, "target-duration-secs", 0, "approximate duration that each shard should run in")
 	flag.IntVar(&maxShardsPerEnvironment, "max-shards-per-env", 8, "maximum shards allowed per environment. If <= 0, no max will be set")
+	// TODO(fxbug.dev/10456): Support different timeouts for different tests.
+	flag.IntVar(&perTestTimeoutSecs, "per-test-timeout-secs", 0, "per-test timeout, applied to all tests. If <= 0, no timeout will be set")
 	// Despite being a misnomer, this argument is still called -max-shard-size
 	// for legacy reasons. If it becomes confusing, we can create a new
 	// target_test_count fuchsia.proto field and do a soft transition with the
@@ -107,6 +110,8 @@ func execute(ctx context.Context) error {
 	if targetTestCount > 0 && targetDuration > 0 {
 		return fmt.Errorf("max-shard-size and target-duration-secs cannot both be set")
 	}
+
+	perTestTimeout := time.Duration(perTestTimeoutSecs) * time.Second
 
 	m, err := build.NewModules(buildDir)
 	if err != nil {
@@ -168,6 +173,10 @@ func execute(ctx context.Context) error {
 
 	if realmLabel != "" {
 		testsharder.ApplyRealmLabel(shards, realmLabel)
+	}
+
+	if perTestTimeout > 0 {
+		testsharder.ApplyTestTimeouts(shards, perTestTimeout)
 	}
 
 	f := os.Stdout

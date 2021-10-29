@@ -344,6 +344,7 @@ func TestRunAndOutputTests(t *testing.T) {
 					Test:         build.Test{Name: "foo"},
 					RunAlgorithm: testsharder.StopOnFailure,
 					Runs:         1,
+					Timeout:      -1,
 				},
 			},
 			behavior: map[string]testBehavior{
@@ -703,7 +704,10 @@ func TestRunAndOutputTests(t *testing.T) {
 			// validation; there's not much point in testing bogus inputs since
 			// it would fail validation before testrunner even started running
 			// any tests.
-			for _, test := range tc.tests {
+			for i, test := range tc.tests {
+				if test.Timeout == 0 {
+					test.Timeout = perTestTimeout
+				}
 				// These fields aren't important for the purpose of this
 				// function so we don't require that they be set by each test
 				// case.
@@ -712,6 +716,7 @@ func TestRunAndOutputTests(t *testing.T) {
 				if err := validateTest(test); err != nil {
 					t.Fatal(err)
 				}
+				tc.tests[i] = test
 			}
 
 			timeout := perTestTimeout
@@ -764,7 +769,7 @@ func TestRunAndOutputTests(t *testing.T) {
 			resultsDir := mkdtemp(t, "results")
 			outputs := createTestOutputs(tap.NewProducer(io.Discard), resultsDir)
 
-			err := runAndOutputTests(ctx, tc.tests, testerForTest, timeout, outputs, mkdtemp(t, "outputs"))
+			err := runAndOutputTests(ctx, tc.tests, testerForTest, outputs, mkdtemp(t, "outputs"))
 			if !errors.Is(err, tc.expectedErr) {
 				t.Errorf("Wrong error; expected %s, got %s", err, tc.expectedErr)
 			}
@@ -867,13 +872,13 @@ func TestExecute(t *testing.T) {
 				ffxInstance = oldFFXInstance
 			}()
 			fuchsiaTester := &fakeTester{}
-			sshTester = func(_ context.Context, _ net.IPAddr, _, _, _ string, _ bool, _ time.Duration, _ ffxTester) (tester, error) {
+			sshTester = func(_ context.Context, _ net.IPAddr, _, _, _ string, _ bool, _ ffxTester) (tester, error) {
 				if c.wantErr {
 					return nil, fmt.Errorf("failed to get tester")
 				}
 				return fuchsiaTester, nil
 			}
-			serialTester = func(_ context.Context, _ string, _ time.Duration) (tester, error) {
+			serialTester = func(_ context.Context, _ string) (tester, error) {
 				if c.wantErr {
 					return nil, fmt.Errorf("failed to get tester")
 				}

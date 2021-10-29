@@ -575,3 +575,13 @@ func ApplyRealmLabel(shards []*Shard, realmLabel string) {
 		}
 	}
 }
+
+// ApplyTestTimeouts sets the timeout field on every test to the specified
+// duration.
+func ApplyTestTimeouts(shards []*Shard, perTestTimeout time.Duration) {
+	for _, shard := range shards {
+		for i := range shard.Tests {
+			shard.Tests[i].Timeout = perTestTimeout
+		}
+	}
+}

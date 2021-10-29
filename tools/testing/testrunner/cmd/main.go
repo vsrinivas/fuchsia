@@ -95,7 +95,7 @@ func main() {
 	flag.StringVar(&flags.localWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
 	flag.BoolVar(&flags.useRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
 	flag.StringVar(&flags.snapshotFile, "snapshot-output", "", "The output filename for the snapshot. This will be created in the output directory.")
-	// TODO(fxbug.dev/10456): Support different timeouts for different tests.
+	// TODO(fxbug.dev/87527): Delete, as this flag has been moved to testsharder.
 	flag.DurationVar(&flags.perTestTimeout, "per-test-timeout", 0, "Per-test timeout, applied to all tests. Ignored if <= 0.")
 	flag.Var(&flags.logLevel, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
 	flag.StringVar(&flags.ffxPath, "ffx", "", "Path to the ffx tool.")
@@ -130,6 +130,13 @@ func setupAndExecute(ctx context.Context, flags testrunnerFlags) error {
 	tests, err := loadTests(testsPath)
 	if err != nil {
 		return fmt.Errorf("failed to load tests from %q: %w", testsPath, err)
+	}
+
+	// TODO(fxbug.dev/87527): Delete.
+	for i := range tests {
+		if tests[i].Timeout == 0 {
+			tests[i].Timeout = flags.perTestTimeout
+		}
 	}
 
 	// Configure a test outputs object, responsible for producing TAP output,
@@ -283,13 +290,12 @@ func execute(
 						return nil, nil, err
 					}
 					fuchsiaTester, err = sshTester(
-						ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, flags.useRuntests,
-						flags.perTestTimeout, ffx)
+						ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, flags.useRuntests, ffx)
 				} else {
 					if serialSocketPath == "" {
 						return nil, nil, fmt.Errorf("%q must be set if %q is not set", constants.SerialSocketEnvKey, constants.SSHKeyEnvKey)
 					}
-					fuchsiaTester, err = serialTester(ctx, serialSocketPath, flags.perTestTimeout)
+					fuchsiaTester, err = serialTester(ctx, serialSocketPath)
 				}
 				if err != nil {
 					return nil, nil, fmt.Errorf("failed to initialize fuchsia tester: %w", err)
@@ -314,14 +320,13 @@ func execute(
 					logger.Errorf(ctx, "failed to initialize fuchsia tester: %s", err)
 				}
 				fuchsiaTester, err = sshTester(
-					ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, flags.useRuntests,
-					flags.perTestTimeout, ffx)
+					ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, flags.useRuntests, ffx)
 				if err != nil {
 					logger.Errorf(ctx, "failed to initialize fuchsia tester: %s", err)
 				}
 			}
 			if localTester == nil {
-				localTester = newSubprocessTester(flags.localWD, localEnv, outputs.outDir, flags.perTestTimeout)
+				localTester = newSubprocessTester(flags.localWD, localEnv, outputs.outDir)
 			}
 			return localTester, &localSinks, nil
 		default:
@@ -330,7 +335,7 @@ func execute(
 	}
 
 	var finalError error
-	if err := runAndOutputTests(ctx, tests, testerForTest, flags.perTestTimeout, outputs, outDir); err != nil {
+	if err := runAndOutputTests(ctx, tests, testerForTest, outputs, outDir); err != nil {
 		finalError = err
 	}
 
@@ -388,7 +393,6 @@ func runAndOutputTests(
 	ctx context.Context,
 	tests []testsharder.Test,
 	testerForTest func(testsharder.Test) (tester, *[]runtests.DataSinkReference, error),
-	timeout time.Duration,
 	outputs *testOutputs,
 	globalOutDir string,
 ) error {
@@ -426,7 +430,7 @@ func runAndOutputTests(
 
 		runIndex := test.previousRuns
 		outDir := filepath.Join(globalOutDir, url.PathEscape(strings.ReplaceAll(test.Name, ":", "")), strconv.Itoa(runIndex))
-		result, err := runTestOnce(ctx, test.Test, t, outDir, timeout)
+		result, err := runTestOnce(ctx, test.Test, t, outDir)
 		if err != nil {
 			return err
 		}
@@ -470,7 +474,6 @@ func runTestOnce(
 	test testsharder.Test,
 	t tester,
 	outDir string,
-	timeout time.Duration,
 ) (*testrunner.TestResult, error) {
 	// The test case parser specifically uses stdout, so we need to have a
 	// dedicated stdout buffer.
@@ -497,12 +500,12 @@ func runTestOnce(
 	// Set the outer timeout to a slightly higher value in order to give the tester
 	// time to handle the timeout itself.  Other steps such as retrying tests over
 	// serial or fetching data sink references may also cause the Test() method to
-	// exceed the perTestTimeout, so we give enough time for the tester to complete
-	// those steps as well.
-	outerTestTimeout := timeout + testTimeoutGracePeriod
+	// exceed the test's timeout, so we give enough time for the tester to
+	// complete those steps as well.
+	outerTestTimeout := test.Timeout + testTimeoutGracePeriod
 
 	var timeoutCh <-chan time.Time
-	if timeout > 0 {
+	if test.Timeout > 0 {
 		// Intentionally call After(), thereby resolving a completion deadline,
 		// *before* starting to run the test. This helps avoid race conditions
 		// in this function's unit tests that advance the fake clock's time
