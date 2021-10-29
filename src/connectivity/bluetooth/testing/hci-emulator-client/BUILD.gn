@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
-import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 
 rustc_library("hci-emulator-client") {
   with_unit_tests = true

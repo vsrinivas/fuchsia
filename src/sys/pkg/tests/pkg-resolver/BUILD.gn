@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/dist/renamed_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 
 rustc_library("lib") {
   name = "lib"

@@ -11,21 +11,6 @@ driver_bind_rules("test-parent-bind") {
   disable_autobind = true
 }
 
-# TODO(https://fxbug.dev/77388): enable tests to select only 1 of the 3
-# root device drivers (test, misc, and sys).
-#
-# This is a workaround to include the test-parent driver as the sys root
-# device driver. It would be better to do this by specifying the
-# `--sys-device-driver` flag to `driver-manager-test`, but this is
-# currently not possible to do at build time with the v2 isolated_devmgr
-# template. With this flag unspecified, `driver-manager-test` falls back to
-# looking for driver/platform-bus.so, so we rename this sys driver to that.
-renamed_binary("renamed-sys-binary") {
-  source = "$root_out_dir/test-parent-sys.so"
-  source_deps = [ ":test-parent-sys" ]
-  dest = "driver/platform-bus.so"
-}
-
 fuchsia_driver("test-parent-sys_driver") {
   output_name = "test-parent-sys"
   sources = [ "test-parent.cc" ]
