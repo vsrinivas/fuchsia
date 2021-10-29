@@ -21,10 +21,8 @@ mod tests;
 use crate::avrcp_handler::process_avrcp_requests;
 use crate::media::media_sessions::MediaSessions;
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging_tags = ["avrcp-tg"])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["avrcp-tg"]).expect("unable to initialize logger");
-
     let mut fs = ServiceFs::new();
     let lifecycle = ComponentLifecycleServer::spawn();
     let _ = fs.dir("svc").add_fidl_service(lifecycle.fidl_service());
