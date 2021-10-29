@@ -215,8 +215,20 @@ impl InformationRequesting {
                     information_refresh_time = Duration::from_secs(u64::from(refresh_time))
                 }
                 v6::ParsedDhcpOption::DnsServers(server_addrs) => dns_servers = Some(server_addrs),
-                // TODO(https://fxbug.dev/48867): emit more actions for other options received.
-                _ => (),
+                v6::ParsedDhcpOption::DomainList(_) => {
+                    // TODO(https://fxbug.dev/87176) implement domain list.
+                }
+                v6::ParsedDhcpOption::ClientId(_)
+                | v6::ParsedDhcpOption::ServerId(_)
+                | v6::ParsedDhcpOption::SolMaxRt(_)
+                | v6::ParsedDhcpOption::Preference(_)
+                | v6::ParsedDhcpOption::Iana(_)
+                | v6::ParsedDhcpOption::IaAddr(_)
+                | v6::ParsedDhcpOption::Oro(_)
+                | v6::ParsedDhcpOption::ElapsedTime(_)
+                | v6::ParsedDhcpOption::StatusCode(_, _) => {
+                    // TODO(https://fxbug.dev/48867): emit more actions for other options received.
+                }
             }
         }
 
@@ -409,7 +421,9 @@ impl ClientState {
     fn reply_message_received<B: ByteSlice>(self, msg: v6::Message<'_, B>) -> Transition {
         match self {
             ClientState::InformationRequesting(s) => s.reply_message_received(msg),
-            state => Transition { state, actions: Vec::new() },
+            ClientState::InformationReceived(_) | ClientState::ServerDiscovery(_) => {
+                Transition { state: self, actions: Vec::new() }
+            }
         }
     }
 
@@ -426,7 +440,9 @@ impl ClientState {
             ClientState::InformationRequesting(s) => {
                 s.retransmission_timer_expired(transaction_id, options_to_request, rng)
             }
-            state => Transition { state, actions: Vec::new() },
+            ClientState::InformationReceived(_) | ClientState::ServerDiscovery(_) => {
+                Transition { state: self, actions: Vec::new() }
+            }
         }
     }
 
@@ -443,14 +459,16 @@ impl ClientState {
             ClientState::InformationReceived(s) => {
                 s.refresh_timer_expired(transaction_id, options_to_request, rng)
             }
-            state => Transition { state, actions: Vec::new() },
+            ClientState::InformationRequesting(_) | ClientState::ServerDiscovery(_) => {
+                Transition { state: self, actions: Vec::new() }
+            }
         }
     }
 
     fn get_dns_servers(&self) -> Vec<Ipv6Addr> {
         match self {
             ClientState::InformationReceived(s) => s.dns_servers.clone(),
-            _ => Vec::new(),
+            ClientState::InformationRequesting(_) | ClientState::ServerDiscovery(_) => Vec::new(),
         }
     }
 }
@@ -575,7 +593,16 @@ impl<R: Rng> ClientStateMachine<R> {
                     // https://tools.ietf.org/html/rfc8415#section-18.2.11
                     Vec::new()
                 }
-                _ => {
+                v6::MessageType::Solicit
+                | v6::MessageType::Request
+                | v6::MessageType::Confirm
+                | v6::MessageType::Renew
+                | v6::MessageType::Rebind
+                | v6::MessageType::Release
+                | v6::MessageType::Decline
+                | v6::MessageType::InformationRequest
+                | v6::MessageType::RelayForw
+                | v6::MessageType::RelayRepl => {
                     // Ignore unexpected message types.
                     Vec::new()
                 }
