@@ -33,6 +33,7 @@ config("compiler") {
   rustflags = [
     "-Clinker=$rebased_clang_prefix/clang++",
     "-Cdefault-linker-libraries",
+    "-Clink-arg=-mmacosx-version-min=" + mac_sdk_min,
   ]
   foreach(flag, ldflags) {
     rustflags += [ "-Clink-arg=$flag" ]
