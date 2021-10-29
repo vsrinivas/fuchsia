@@ -134,11 +134,11 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	// when the build failed.
 	if contextSpec.ArtifactDir != "" {
 		artifacts.NinjaGraphPath, err = ninjaGraph(ctx, runner, targets)
-		if err != nil {
+		if err != nil && ninjaErr == nil {
 			return nil, err
 		}
 		artifacts.NinjaCompdbPath, err = ninjaCompdb(ctx, runner)
-		if err != nil {
+		if err != nil && ninjaErr == nil {
 			return nil, err
 		}
 	}
