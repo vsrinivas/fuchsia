@@ -676,14 +676,8 @@ mod tests {
         // configurations.
         for (address_count, preferred_addresses) in vec![
             (1, Vec::new()),
-            (2, vec![Ipv6Addr::new(0, 0, 0, 0, 0, 0xffff, 0xc00a, 0x2ff)]),
-            (
-                2,
-                vec![
-                    Ipv6Addr::new(0, 0, 0, 0, 0, 0xffff, 0xc00a, 0x2ff),
-                    Ipv6Addr::new(0, 0, 0, 0, 0, 0xffff, 0xc00a, 0x3ff),
-                ],
-            ),
+            (2, vec![std_ip_v6!("::ffff:c00a:2ff")]),
+            (2, vec![std_ip_v6!("::ffff:c00a:2ff"), std_ip_v6!("::ffff:c00a:3ff")]),
         ] {
             let client_id = v6::duid_uuid();
             let mut configured_addresses: HashMap<u32, Option<Ipv6Addr>> = HashMap::new();
