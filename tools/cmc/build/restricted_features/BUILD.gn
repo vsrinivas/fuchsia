@@ -14,5 +14,8 @@ group("services") {
 
 # The allowlist of components that can use the "dynamic_offers" feature in CML.
 group("dynamic_offers") {
-  visibility = [ "//tools/cmc:*" ]
+  visibility = [
+    "//src/sys/bootstrap:*",
+    "//tools/cmc:*",
+  ]
 }
