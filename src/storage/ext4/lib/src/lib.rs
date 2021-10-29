@@ -5,14 +5,22 @@
 use {
     ext4_read_only::{
         parser::Parser,
-        readers::VmoReader,
+        readers::{BlockDeviceReader, Reader, VmoReader},
         structs::{self, MIN_EXT4_SIZE},
     },
+    fidl::endpoints::ClientEnd,
+    fidl_fuchsia_hardware_block::BlockMarker,
     fidl_fuchsia_mem::Buffer,
+    fuchsia_syslog::fx_log_err,
     fuchsia_zircon::Status,
     std::sync::Arc,
     vfs::directory::entry::DirectoryEntry,
 };
+
+pub enum FsSourceType {
+    BlockDevice(ClientEnd<BlockMarker>),
+    Vmo(Buffer),
+}
 
 #[derive(Debug, PartialEq)]
 pub enum ConstructFsError {
@@ -20,13 +28,25 @@ pub enum ConstructFsError {
     ParsingError(structs::ParsingError),
 }
 
-pub fn construct_fs(source: Buffer) -> Result<Arc<dyn DirectoryEntry>, ConstructFsError> {
-    if source.size < MIN_EXT4_SIZE as u64 {
-        // Too small to even fit the first copy of the ext4 Super Block.
-        ConstructFsError::VmoReadError(Status::NO_SPACE);
-    }
+pub fn construct_fs(source: FsSourceType) -> Result<Arc<dyn DirectoryEntry>, ConstructFsError> {
+    let reader: Box<dyn Reader> = match source {
+        FsSourceType::BlockDevice(block_device) => {
+            Box::new(BlockDeviceReader::from_client_end(block_device).map_err(|e| {
+                fx_log_err!("Error constructing file system: {}", e);
+                ConstructFsError::VmoReadError(Status::IO_INVALID)
+            })?)
+        }
+        FsSourceType::Vmo(source) => {
+            if source.size < MIN_EXT4_SIZE as u64 {
+                // Too small to even fit the first copy of the ext4 Super Block.
+                ConstructFsError::VmoReadError(Status::NO_SPACE);
+            }
 
-    let parser = Parser::new(VmoReader::new(Arc::new(source)));
+            Box::new(VmoReader::new(Arc::new(source)))
+        }
+    };
+
+    let parser = Parser::new(reader);
 
     match parser.build_fuchsia_tree() {
         Ok(tree) => Ok(tree),
@@ -36,7 +56,7 @@ pub fn construct_fs(source: Buffer) -> Result<Arc<dyn DirectoryEntry>, Construct
 
 #[cfg(test)]
 mod tests {
-    use super::construct_fs;
+    use super::{construct_fs, FsSourceType};
 
     // macros
     use vfs::{
@@ -59,7 +79,7 @@ mod tests {
     fn image_too_small() {
         let vmo = Vmo::create(10).expect("VMO is created");
         vmo.write(b"too small", 0).expect("VMO write() succeeds");
-        let buffer = fidl_fuchsia_mem::Buffer { vmo: vmo, size: 10 };
+        let buffer = FsSourceType::Vmo(fidl_fuchsia_mem::Buffer { vmo: vmo, size: 10 });
 
         assert!(construct_fs(buffer).is_err(), "Expected failed parsing of VMO.");
     }
@@ -68,7 +88,8 @@ mod tests {
     fn invalid_fs() {
         let vmo = Vmo::create(MIN_EXT4_SIZE as u64).expect("VMO is created");
         vmo.write(b"not ext4", 0).expect("VMO write() succeeds");
-        let buffer = fidl_fuchsia_mem::Buffer { vmo: vmo, size: MIN_EXT4_SIZE as u64 };
+        let buffer =
+            FsSourceType::Vmo(fidl_fuchsia_mem::Buffer { vmo: vmo, size: MIN_EXT4_SIZE as u64 });
 
         assert!(construct_fs(buffer).is_err(), "Expected failed parsing of VMO.");
     }
@@ -78,7 +99,8 @@ mod tests {
         let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
         let vmo = Vmo::create(data.len() as u64).expect("VMO is created");
         vmo.write(data.as_slice(), 0).expect("VMO write() succeeds");
-        let buffer = fidl_fuchsia_mem::Buffer { vmo: vmo, size: data.len() as u64 };
+        let buffer =
+            FsSourceType::Vmo(fidl_fuchsia_mem::Buffer { vmo: vmo, size: data.len() as u64 });
 
         let tree = construct_fs(buffer).expect("construct_fs parses the vmo");
 

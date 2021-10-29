@@ -2,12 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! ext4_readonly reads and exposes read-only ext4 file systems to clients.
+//!
+//! This binary supports two modes of operation:
+//! - If a handle to a block device is given to the process, the file system contained within is
+//!   served over the directory request channel. The block device handle is expected to be passed as
+//!   `PA_USER0` arg 1 for compatibility with the existing `fs_management` library. The process
+//!   continues to run until the directory request channel is closed.
+//! - Otherwise, the binary implements the `fuchsia.storage.ext4.Server` protocol and runs
+//!   indefinitely to process FIDL messages.
+
 use {
-    anyhow::{Context as _, Error},
-    ext4_parser::{construct_fs, ConstructFsError},
+    anyhow::{format_err, Context as _, Error},
+    ext4_parser::{construct_fs, ConstructFsError, FsSourceType},
     ext4_read_only::structs::{InvalidAddressErrorType, ParsingError},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE},
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_storage_ext4::{
         BadDirectory, BadEntryType, BadFile, BannedFeatureIncompat, BlockNumberOutOfBounds,
@@ -19,6 +29,9 @@ use {
         ServiceRequest, Success,
     },
     fuchsia_component::server::ServiceFs,
+    fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
+    fuchsia_syslog::fx_log_info,
+    fuchsia_zircon::Channel,
     futures::{
         future::TryFutureExt,
         stream::{StreamExt, TryStreamExt},
@@ -141,7 +154,7 @@ fn serve_vmo(
     flags: u32,
     root: ServerEnd<DirectoryMarker>,
 ) -> MountVmoResult {
-    let tree = match construct_fs(source) {
+    let tree = match construct_fs(FsSourceType::Vmo(source)) {
         Ok(tree) => tree,
         Err(err) => return construct_fs_error_to_mount_vmo_result(err),
     };
@@ -159,6 +172,39 @@ enum IncomingService {
 // `run` argument is the number of thread to use for the server.
 #[fuchsia_async::run(10)]
 async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init().unwrap();
+    fx_log_info!("Starting ext4_readonly");
+
+    let block_device_handle_info = HandleInfo::new(HandleType::User0, 1);
+    let directory_handle_info = HandleType::DirectoryRequest.into();
+
+    if let Some(block_device_handle) = take_startup_handle(block_device_handle_info) {
+        fx_log_info!("Opening block device");
+        let directory_handle = take_startup_handle(directory_handle_info).unwrap();
+
+        let tree = match construct_fs(FsSourceType::BlockDevice(
+            Channel::from(block_device_handle).into(),
+        )) {
+            Ok(tree) => tree,
+            Err(err) => return Err(format_err!("Failed to construct file system: {:?}", err)),
+        };
+
+        let scope = ExecutionScope::new();
+        tree.open(
+            scope.clone(),
+            OPEN_RIGHT_READABLE,
+            0,
+            Path::dot(),
+            Channel::from(directory_handle).into(),
+        );
+
+        // Wait until the directory connection is closed by the client before exiting.
+        scope.wait().await;
+        fx_log_info!("ext4 directory connection dropped, exiting");
+        return Ok(());
+    }
+
+    fx_log_info!("Starting ext4 server");
     let mut fs = ServiceFs::new();
     fs.dir("svc")
         .add_fidl_service(IncomingService::Server)

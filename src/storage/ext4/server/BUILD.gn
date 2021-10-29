@@ -20,7 +20,9 @@ rustc_binary("bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
     "//src/lib/storage/vfs/rust:vfs",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/storage/ext4/lib:parser",
     "//src/storage/ext4/read-only:ext4-read-only",
@@ -41,14 +43,24 @@ rustc_test("ext4_server_integration_test") {
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/scoped_task",
+    "//src/lib/storage/block_client/rust:remote-block-device",
+    "//src/lib/storage/ramdevice_client/rust:ramdevice_client",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/storage/ext4/server/fidl:ext4_readonly-rustc",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:rust-crypto",
+    "//third_party/rust_crates:test-case",
   ]
+
+  data_deps = [ ":bin" ]
 
   sources = [ "tests/ext4_server_test.rs" ]
 }
@@ -75,13 +87,17 @@ fuchsia_component("ext4_server_integration_test_comp") {
   testonly = true
   component_name = "ext4_server_integration_test"
   manifest = "meta/ext4_server_integration_test.cmx"
-  deps = [ ":ext4_server_integration_test" ]
+  deps = [
+    ":ext4_server_integration_test",
+    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr-component",
+  ]
 }
 
 resource("ext4_server_integration_test_data") {
   testonly = true
   sources = [
     "../read-only/test_files/1file.img",
+    "../read-only/test_files/extents.img",
     "../read-only/test_files/nest.img",
   ]
   outputs = [ "data/{{source_file_part}}" ]

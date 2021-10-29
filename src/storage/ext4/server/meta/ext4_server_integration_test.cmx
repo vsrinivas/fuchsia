@@ -2,7 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.storage.ext4.Server": "fuchsia-pkg://fuchsia.com/ext4_server_integration_tests#meta/ext4_readonly.cmx"
+                "fuchsia.storage.ext4.Server": "fuchsia-pkg://fuchsia.com/ext4_server_integration_tests#meta/ext4_readonly.cmx",
+                "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ext4_server_integration_tests#meta/ramdisk-isolated-devmgr.cmx"
             }
         }
     },
@@ -15,7 +16,8 @@
     "sandbox": {
         "services": [
             "fuchsia.storage.ext4.Server",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.test.IsolatedDevmgr"
         ]
     }
 }

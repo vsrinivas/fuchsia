@@ -2,8 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Error;
+use fidl::endpoints::ClientEnd;
+use fidl_fuchsia_hardware_block::BlockMarker;
 use fidl_fuchsia_mem::Buffer;
-use std::{convert::TryInto, sync::Arc};
+use fuchsia_syslog::fx_log_err;
+use remote_block_device::{Cache, RemoteBlockClientSync};
+use std::{
+    convert::TryInto,
+    sync::{Arc, Mutex},
+};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -14,8 +22,24 @@ pub enum ReaderError {
     OutOfBounds(u64, u64),
 }
 
-pub trait Reader {
+pub trait Reader: Send + Sync {
     fn read(&self, offset: u64, data: &mut [u8]) -> Result<(), ReaderError>;
+}
+
+// For simpler usage of Reader trait objects with Parser, we also implement the Reader trait
+// for Arc and Box. This allows callers of Parser::new to pass trait objects or real objects
+// without having to create custom wrappers or duplicate implementations.
+
+impl Reader for Box<dyn Reader> {
+    fn read(&self, offset: u64, data: &mut [u8]) -> Result<(), ReaderError> {
+        self.as_ref().read(offset, data)
+    }
+}
+
+impl Reader for Arc<dyn Reader> {
+    fn read(&self, offset: u64, data: &mut [u8]) -> Result<(), ReaderError> {
+        self.as_ref().read(offset, data)
+    }
 }
 
 pub struct VmoReader {
@@ -38,6 +62,29 @@ impl Reader for VmoReader {
 impl VmoReader {
     pub fn new(filesystem: Arc<Buffer>) -> Self {
         VmoReader { buffer: filesystem }
+    }
+}
+
+pub struct BlockDeviceReader {
+    block_cache: Mutex<Cache>,
+}
+
+impl Reader for BlockDeviceReader {
+    fn read(&self, offset: u64, data: &mut [u8]) -> Result<(), ReaderError> {
+        self.block_cache.lock().unwrap().read_at(data, offset).map_err(|e| {
+            fx_log_err!("Encountered error while reading block device: {}", e);
+            ReaderError::Read(offset)
+        })
+    }
+}
+
+impl BlockDeviceReader {
+    pub fn from_client_end(client_end: ClientEnd<BlockMarker>) -> Result<Self, Error> {
+        Ok(Self {
+            block_cache: Mutex::new(Cache::new(RemoteBlockClientSync::new(
+                client_end.into_channel(),
+            )?)?),
+        })
     }
 }
 
