@@ -198,10 +198,8 @@ if (current_os == "fuchsia") {
   }
 }
 
-if (current_os == "fuchsia") {
-  group("eui48") {
-    deps = [ ":eui48-v0_4_6" ]
-  }
+group("eui48") {
+  deps = [ ":eui48-v0_4_6" ]
 }
 
 group("event-listener") {

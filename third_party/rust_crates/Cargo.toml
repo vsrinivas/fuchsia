@@ -58,6 +58,7 @@ deepsize = { version = "0.2.0", features = ["chrono", "slab", "smallvec"] }
 derivative = "2.1.1"
 derp = "0.0.13"
 difference = "2.0.0"
+eui48 = { version = "0.4.6", features = ["serde", "disp_hexstring"] }
 event-listener = "2.5.1"
 fatfs = { path = "forks/fatfs" }
 flate2 = { version = "1.0.14", default-features = false, features = ["rust_backend"] }
@@ -189,7 +190,6 @@ features = ["chrono", "registry", "tracing-log"]
 # do not add back without verifying certificate transparency is ready to use - see fxbug.dev/25100
 # ct-logs = "0.6"
 euclid = { version = "0.22.1", features = [ "serde" ] }
-eui48 = { version = "0.4.6", features = ["serde", "disp_hexstring"] }
 getopts = "0.2"
 hyper-rustls = { version = "0.20.0", default-features = false }
 lipsum = "0.6.0"
