@@ -4,9 +4,6 @@
 """This module implements helpers for GN SDK e2e tests.
 """
 
-# Note, this is run on bots, which only support python2.7.
-# Be sure to only use python2.7 features in this module.
-
 import os
 import signal
 import sys
@@ -34,8 +31,17 @@ class popen:
     self._process = None
 
   def __enter__(self):
-    self._process = Popen(self._command, stdout=PIPE, stderr=PIPE,
-                          close_fds=True, preexec_fn=os.setsid)
+    kwargs = dict(
+        stdout=PIPE,
+        stderr=PIPE,
+        close_fds=True,
+        preexec_fn=os.setsid)
+
+    # Soft-transition between Python2->3, this kwarg doesn't exist in Python2.
+    if sys.version_info.major == 3:
+      kwargs['text'] = True
+
+    self._process = Popen(self._command, **kwargs)
     return self._process
 
   def __exit__(self, type, value, traceback):
