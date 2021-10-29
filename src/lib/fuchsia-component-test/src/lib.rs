@@ -7,7 +7,7 @@ use {
     anyhow::{format_err, Context as _},
     cm_rust::{self, FidlIntoNative, NativeIntoFidl},
     component_events::{
-        events::{Event, EventMode, EventSource, EventSubscription, Started},
+        events::{Event as CeEvent, EventMode, EventSource, EventSubscription, Started},
         matcher::EventMatcher,
     },
     fidl::endpoints::{self, ClientEnd, DiscoverableProtocolMarker, Proxy, ServerEnd},
@@ -16,10 +16,14 @@ use {
     fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
     fuchsia_component::client as fclient,
     fuchsia_zircon as zx,
-    futures::{FutureExt, TryFutureExt},
+    futures::{future::BoxFuture, FutureExt, TryFutureExt},
     log::*,
+    maplit::hashmap,
     rand::Rng,
-    std::fmt::{self, Display},
+    std::{
+        collections::HashMap,
+        fmt::{self, Display},
+    },
 };
 
 /// The default name of the child component collection that contains built topologies.
@@ -29,8 +33,25 @@ const FRAMEWORK_INTERMEDIARY_CHILD_NAME: &'static str =
 
 pub mod builder;
 pub mod error;
+mod event;
 pub mod mock;
 
+/// The path from the root component in a constructed realm to a component. For example, given the
+/// following realm:
+///
+/// ```
+/// <root>
+///   |
+///  foo
+///   |
+///  bar
+/// ```
+///
+/// the monikers for each of three components in the realm is as follows:
+///
+/// - "" (the root)
+/// - "foo"
+/// - "foo/bar"
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Moniker {
     path: Vec<String>,
@@ -131,7 +152,7 @@ impl Moniker {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RouteEndpoint {
     /// One end of this capability route is a component in our custom realms. The value of this
-    /// should be a moniker that was used in a prior [`RealmBuilder::add_component`] call.
+    /// should be a moniker that was used in a prior [`RealmBuilder::add_child`] call.
     Component(String),
 
     /// One end of this capability route is above the root component in the generated realms
@@ -183,65 +204,155 @@ impl RouteEndpoint {
     }
 }
 
-/// `RouteBuilder` can be used to construct a new route, for use with [`Realm::add_route`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Event {
+    Started,
+    Stopped,
+    Running,
+    // Filter.name
+    CapabilityRequested(String),
+    // Filter.name
+    DirectoryReady(String),
+}
+
+impl Event {
+    pub fn started() -> Self {
+        Self::Started
+    }
+
+    pub fn stopped() -> Self {
+        Self::Stopped
+    }
+
+    pub fn running() -> Self {
+        Self::Running
+    }
+    pub fn capability_requested(filter_name: impl Into<String>) -> Self {
+        Self::CapabilityRequested(filter_name.into())
+    }
+
+    pub fn directory_ready(filter_name: impl Into<String>) -> Self {
+        Self::DirectoryReady(filter_name.into())
+    }
+
+    fn name(&self) -> &'static str {
+        match self {
+            Event::Started => "started",
+            Event::Stopped => "stopped",
+            Event::Running => "running",
+            Event::CapabilityRequested(_) => "capability_requested",
+            Event::DirectoryReady(_) => "directory_ready",
+        }
+    }
+
+    /// Returns the Event Filter that some events (like DirectoryReady and CapabilityRequested)
+    /// have.
+    fn filter(&self) -> Option<HashMap<String, cm_rust::DictionaryValue>> {
+        match self {
+            Event::CapabilityRequested(name) | Event::DirectoryReady(name) => Some(
+                hashmap!("name".to_string() => cm_rust::DictionaryValue::Str(name.to_string())),
+            ),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+enum CapabilityOrEvent {
+    Capability(ftest::Capability),
+    Event(Event, cm_rust::EventMode),
+}
+
+/// `RouteBuilder` can be used to construct a new route, for use with `Realm::add_route`.
+#[derive(Clone, Debug)]
 pub struct RouteBuilder {
-    capability: ftest::Capability,
+    capability: CapabilityOrEvent,
     source: Option<ftest::RouteEndpoint>,
     targets: Vec<ftest::RouteEndpoint>,
     force_route: bool,
 }
 
 impl RouteBuilder {
+    /// Creates a new RouteBuilder that routes the given protocol capability
     pub fn protocol(name: impl Into<String>) -> Self {
-        RouteBuilder::from_capability(ftest::Capability::Protocol(ftest::ProtocolCapability {
+        ftest::Capability::Protocol(ftest::ProtocolCapability {
             name: Some(name.into()),
             ..ftest::ProtocolCapability::EMPTY
-        }))
+        })
+        .into()
     }
 
+    /// Creates a new RouteBuilder that routes the given protocol capability based on its marker
+    pub fn protocol_marker<P: DiscoverableProtocolMarker>() -> Self {
+        ftest::Capability::Protocol(ftest::ProtocolCapability {
+            name: Some(P::PROTOCOL_NAME.into()),
+            ..ftest::ProtocolCapability::EMPTY
+        })
+        .into()
+    }
+
+    /// Creates a new RouteBuilder that routes the given directory capability
     pub fn directory(
         name: impl Into<String>,
         path: impl Into<String>,
         rights: fio2::Operations,
     ) -> Self {
-        RouteBuilder::from_capability(ftest::Capability::Directory(ftest::DirectoryCapability {
+        ftest::Capability::Directory(ftest::DirectoryCapability {
             name: Some(name.into()),
             path: Some(path.into()),
             rights: Some(rights),
             ..ftest::DirectoryCapability::EMPTY
-        }))
+        })
+        .into()
     }
 
+    /// Creates a new RouteBuilder that routes the given storage capability
     pub fn storage(name: impl Into<String>, path: impl Into<String>) -> Self {
-        RouteBuilder::from_capability(ftest::Capability::Storage(ftest::StorageCapability {
+        ftest::Capability::Storage(ftest::StorageCapability {
             name: Some(name.into()),
             path: Some(path.into()),
             ..ftest::StorageCapability::EMPTY
-        }))
+        })
+        .into()
     }
 
-    fn from_capability(capability: impl Into<ftest::Capability>) -> Self {
-        RouteBuilder {
-            capability: capability.into(),
+    /// Creates a new RouteBuilder that routes the given event capability
+    pub fn event(event: Event, mode: cm_rust::EventMode) -> Self {
+        Self {
+            capability: CapabilityOrEvent::Event(event, mode),
             source: None,
             targets: vec![],
             force_route: false,
         }
     }
 
+    /// Routes the capability from the given source
     pub fn source(mut self, source: impl Into<ftest::RouteEndpoint>) -> Self {
         self.source = Some(source.into());
         self
     }
 
+    /// Routes the capability to the given target
     pub fn targets(mut self, targets: Vec<impl Into<ftest::RouteEndpoint>>) -> Self {
         self.targets = targets.into_iter().map(Into::into).collect();
         self
     }
 
+    /// Causes this route to update components that were loaded from the test's package
     pub fn force(mut self) -> Self {
         self.force_route = true;
         self
+    }
+}
+
+impl From<ftest::Capability> for RouteBuilder {
+    fn from(capability: ftest::Capability) -> Self {
+        Self {
+            capability: CapabilityOrEvent::Capability(capability),
+            source: None,
+            targets: vec![],
+            force_route: false,
+        }
     }
 }
 
@@ -250,12 +361,60 @@ impl Into<ftest::CapabilityRoute> for RouteBuilder {
         if self.targets.is_empty() {
             panic!("targets was not specified for route");
         }
-        ftest::CapabilityRoute {
-            capability: Some(self.capability),
-            source: Some(self.source.expect("source wsa not specified for route")),
-            targets: Some(self.targets),
-            force_route: Some(self.force_route),
-            ..ftest::CapabilityRoute::EMPTY
+        match self.capability {
+            CapabilityOrEvent::Capability(capability) => ftest::CapabilityRoute {
+                capability: Some(capability),
+                source: Some(self.source.expect("source wsa not specified for route")),
+                targets: Some(self.targets),
+                force_route: Some(self.force_route),
+                ..ftest::CapabilityRoute::EMPTY
+            },
+            CapabilityOrEvent::Event(_, _) => panic!("cannot convert event route into FIDL"),
+        }
+    }
+}
+
+impl Into<ftest::Capability> for RouteBuilder {
+    fn into(self) -> ftest::Capability {
+        match self.capability {
+            CapabilityOrEvent::Capability(capability) => capability,
+            CapabilityOrEvent::Event(_, _) => panic!("cannot convert event capability into FIDL"),
+        }
+    }
+}
+
+pub trait IntoFidlOrEventRoute {
+    fn into_fidl_or_event_route(
+        self,
+    ) -> (Option<ftest::CapabilityRoute>, Option<event::CapabilityRoute>);
+}
+
+impl IntoFidlOrEventRoute for ftest::CapabilityRoute {
+    fn into_fidl_or_event_route(
+        self,
+    ) -> (Option<ftest::CapabilityRoute>, Option<event::CapabilityRoute>) {
+        (Some(self), None)
+    }
+}
+
+impl IntoFidlOrEventRoute for RouteBuilder {
+    fn into_fidl_or_event_route(
+        self,
+    ) -> (Option<ftest::CapabilityRoute>, Option<event::CapabilityRoute>) {
+        if let CapabilityOrEvent::Event(event, mode) = &self.capability {
+            if self.targets.is_empty() {
+                panic!("targets was not specified for route");
+            }
+            (
+                None,
+                Some(event::CapabilityRoute {
+                    capability: event::Capability::Event(event.clone(), mode.clone()),
+                    source: self.source.expect("source wsa not specified for route").into(),
+                    targets: self.targets.into_iter().map(Into::into).collect(),
+                }),
+            )
+        } else {
+            (Some(self.into()), None)
         }
     }
 }
@@ -312,7 +471,411 @@ impl RealmInstance {
     }
 }
 
-/// A custom built realm, which can be created at runtime in a component collection
+/// The properties for a child being added to a realm
+#[derive(Debug, Clone)]
+pub struct ChildProperties {
+    startup: fdecl::StartupMode,
+}
+
+impl ChildProperties {
+    pub fn new() -> Self {
+        Self { startup: fdecl::StartupMode::Lazy }
+    }
+
+    pub fn eager(mut self) -> Self {
+        self.startup = fdecl::StartupMode::Eager;
+        self
+    }
+}
+
+/// `RealmBuilder` takes as input a set of component definitions and routes between them and
+/// produces a `RealmInstance`.
+///
+/// The source for a developer-component may be either a URL or a local component mock. See
+/// [`Mock`] for more information on component mocks.
+///
+/// For an example of using a `RealmBuilder`, imagine following structure:
+///
+/// ```
+///   a
+///  / \
+/// b   c
+/// ```
+///
+/// Where `c` is a URL component and `b` is a mock component, `c` accesses the `fuchsia.foobar`
+/// protocol from `b`, and the `artifacts` directory is exposed from `b` up through `a`. This
+/// structure can be built with the following:
+///
+/// ```
+/// let mut builder = RealmBuilder::new().await?;
+/// builder
+///     .add_child(
+///         "c",
+///         "fuchsia-pkg://fuchsia.com/d#meta/d.cm",
+///         ChildProperties::new(),
+///     ).await?
+///     .add_mock_child(
+///         "b",
+///         move |h: MockHandles| { Box::pin(implementation_for_b(h)) },
+///         ChildProperties::new(),
+///     ).await?
+///     .add_route(
+///         RouteBuilder::protocol("fuchsia.foobar")
+///             .source(RouteEndpoint::component("b"))
+///             .targets(vec![RouteEndpoint::component("c/d")])
+///     ).await?
+///     .add_route(
+///         RouteBuilder::directory("artifacts", "/path-for-artifacts", fio2::RW_STAR_DIR)
+///             .source(RouteEndpoint::component("b"))
+///             .targets(vec![RouteEndpoint::above_root()])
+///     ).await?;
+/// let realm_instance = builder.build().await?;
+/// ```
+///
+/// Note that the root component in our imagined structure is actually unnamed when working with
+/// `RealmBuilder`. The name is generated when the component is created in a collection.
+pub struct RealmBuilder {
+    realm_builder_proxy: ftest::RealmBuilderProxy,
+    mocks_runner: mock::MocksRunner,
+    collection_name: String,
+}
+
+impl RealmBuilder {
+    pub async fn new() -> Result<Self, Error> {
+        let realm_proxy = fclient::connect_to_protocol::<fcomponent::RealmMarker>()
+            .map_err(RealmError::ConnectToRealmService)?;
+        let (exposed_dir_proxy, exposed_dir_server_end) =
+            endpoints::create_proxy::<fio::DirectoryMarker>().map_err(RealmError::CreateProxy)?;
+        realm_proxy
+            .open_exposed_dir(
+                &mut fdecl::ChildRef {
+                    name: FRAMEWORK_INTERMEDIARY_CHILD_NAME.to_string(),
+                    collection: None,
+                },
+                exposed_dir_server_end,
+            )
+            .await
+            .map_err(RealmError::FailedToUseRealm)?
+            .map_err(RealmError::FailedBindToRealmBuilder)?;
+        let realm_builder_proxy = fclient::connect_to_protocol_at_dir_root::<
+            ftest::RealmBuilderMarker,
+        >(&exposed_dir_proxy)
+        .map_err(RealmError::ConnectToRealmBuilderService)?;
+
+        let pkg_dir_proxy = io_util::open_directory_in_namespace(
+            "/pkg",
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
+        )
+        .map_err(Error::FailedToOpenPkgDir)?;
+        realm_builder_proxy
+            .init(ClientEnd::from(pkg_dir_proxy.into_channel().unwrap().into_zx_channel()))
+            .await?
+            .map_err(Error::FailedToSetPkgDir)?;
+
+        Self::new_with_realm_builder_proxy(realm_builder_proxy)
+    }
+
+    fn new_with_realm_builder_proxy(
+        realm_builder_proxy: ftest::RealmBuilderProxy,
+    ) -> Result<Self, Error> {
+        let mocks_runner = mock::MocksRunner::new(realm_builder_proxy.take_event_stream());
+        Ok(Self {
+            realm_builder_proxy,
+            mocks_runner,
+            collection_name: DEFAULT_COLLECTION_NAME.to_string(),
+        })
+    }
+
+    /// Returns `true` if the given moniker is present in the realm being built.
+    pub async fn contains(&self, moniker: impl Into<Moniker>) -> Result<bool, Error> {
+        let moniker: Moniker = moniker.into();
+        self.realm_builder_proxy.contains(&moniker.to_string()).await.map_err(Error::FidlError)
+    }
+
+    /// Adds a new mock component to the realm
+    pub async fn add_mock_child<M>(
+        &self,
+        moniker: impl Into<Moniker>,
+        mock_fn: M,
+        properties: ChildProperties,
+    ) -> Result<&Self, Error>
+    where
+        M: Fn(mock::MockHandles) -> BoxFuture<'static, Result<(), anyhow::Error>>
+            + Sync
+            + Send
+            + 'static,
+    {
+        let moniker = moniker.into();
+        let mock_id = self
+            .realm_builder_proxy
+            .set_mock_component(&moniker.to_string())
+            .await
+            .map_err(RealmError::FailedToUseRealmBuilder)?
+            .map_err(|s| RealmError::FailedToSetMock(moniker.clone(), s))?;
+        self.mocks_runner.register_mock(mock_id, mock::Mock::new(mock_fn)).await;
+
+        if properties.startup == fdecl::StartupMode::Eager {
+            self.realm_builder_proxy
+                .mark_as_eager(&moniker.to_string())
+                .await?
+                .map_err(|s| Error::FailedToMarkAsEager(moniker.clone(), s))?;
+        }
+        Ok(&self)
+    }
+
+    /// Adds a new component to the realm by URL
+    pub async fn add_child(
+        &self,
+        moniker: impl Into<Moniker>,
+        url: impl Into<String>,
+        properties: ChildProperties,
+    ) -> Result<&Self, Error> {
+        let moniker: Moniker = moniker.into();
+        self.realm_builder_proxy
+            .set_component(&moniker.to_string(), &mut ftest::Component::Url(url.into()))
+            .await?
+            .map_err(|s| Error::FailedToSetDecl(moniker.clone(), s))?;
+
+        if properties.startup == fdecl::StartupMode::Eager {
+            self.realm_builder_proxy
+                .mark_as_eager(&moniker.to_string())
+                .await?
+                .map_err(|s| Error::FailedToMarkAsEager(moniker.clone(), s))?;
+        }
+        Ok(&self)
+    }
+
+    /// Adds a new legacy component to the realm
+    pub async fn add_legacy_child(
+        &self,
+        moniker: impl Into<Moniker>,
+        legacy_url: impl Into<String>,
+        properties: ChildProperties,
+    ) -> Result<&Self, Error> {
+        let moniker: Moniker = moniker.into();
+        self.realm_builder_proxy
+            .set_component(
+                &moniker.to_string(),
+                &mut ftest::Component::LegacyUrl(legacy_url.into()),
+            )
+            .await?
+            .map_err(|s| Error::FailedToSetDecl(moniker.clone(), s))?;
+
+        if properties.startup == fdecl::StartupMode::Eager {
+            self.realm_builder_proxy
+                .mark_as_eager(&moniker.to_string())
+                .await?
+                .map_err(|s| Error::FailedToMarkAsEager(moniker.clone(), s))?;
+        }
+        Ok(&self)
+    }
+
+    /// Adds a new component to the realm with the given component declaration
+    pub async fn add_child_from_decl(
+        &self,
+        moniker: impl Into<Moniker>,
+        decl: cm_rust::ComponentDecl,
+        properties: ChildProperties,
+    ) -> Result<&Self, Error> {
+        let moniker: Moniker = moniker.into();
+        self.realm_builder_proxy
+            .set_component(
+                &moniker.to_string(),
+                &mut ftest::Component::Decl(decl.native_into_fidl()),
+            )
+            .await?
+            .map_err(|s| Error::FailedToSetDecl(moniker.clone(), s))?;
+
+        if properties.startup == fdecl::StartupMode::Eager {
+            self.realm_builder_proxy
+                .mark_as_eager(&moniker.to_string())
+                .await?
+                .map_err(|s| Error::FailedToMarkAsEager(moniker.clone(), s))?;
+        }
+        Ok(&self)
+    }
+
+    /// Marks a component in the realm as eager
+    pub async fn mark_as_eager(&self, moniker: impl Into<Moniker>) -> Result<&Self, Error> {
+        let moniker: Moniker = moniker.into();
+        self.realm_builder_proxy
+            .mark_as_eager(&moniker.to_string())
+            .await?
+            .map_err(|s| Error::FailedToMarkAsEager(moniker.clone(), s))?;
+        Ok(&self)
+    }
+
+    /// Returns a copy of a component decl in the realm.
+    pub async fn get_decl(
+        &self,
+        moniker: impl Into<Moniker>,
+    ) -> Result<cm_rust::ComponentDecl, Error> {
+        let moniker: Moniker = moniker.into();
+        let decl = self
+            .realm_builder_proxy
+            .get_component_decl(&moniker.to_string())
+            .await?
+            .map_err(|s| Error::FailedToGetDecl(moniker.clone(), s))?;
+        Ok(decl.fidl_into_native())
+    }
+
+    /// Sets the component decl for a component in the realm.
+    pub async fn set_decl(
+        &self,
+        moniker: impl Into<Moniker>,
+        decl: cm_rust::ComponentDecl,
+    ) -> Result<(), Error> {
+        let moniker: Moniker = moniker.into();
+        if !self.contains(moniker.clone()).await? {
+            return Err(BuilderError::ComponentDoesNotExist(moniker).into());
+        }
+        let decl = decl.native_into_fidl();
+        self.realm_builder_proxy
+            .set_component(&moniker.to_string(), &mut ftest::Component::Decl(decl))
+            .await?
+            .map_err(|s| Error::FailedToSetDecl(moniker.clone(), s))
+    }
+
+    /// Sets the name of the collection that this realm will be created in
+    pub fn set_collection_name(&mut self, collection_name: impl Into<String>) {
+        self.collection_name = collection_name.into();
+    }
+
+    /// Adds a route between components within the realm
+    pub async fn add_route(&self, route: impl IntoFidlOrEventRoute) -> Result<&Self, Error> {
+        match route.into_fidl_or_event_route() {
+            (Some(fidl_route), None) => self
+                .realm_builder_proxy
+                .route_capability(fidl_route)
+                .await?
+                .map_err(|s| Error::FailedToRoute(s))?,
+            (None, Some(event_route)) => event::add_event_route(&self, event_route).await?,
+            r => panic!("unexpected result from into_fidl_or_event_route: {:?}", r),
+        }
+        Ok(&self)
+    }
+
+    /// Initializes the realm, but doesn't create it. Returns the root URL, the collection name,
+    /// and the mocks runner. The caller should pass the URL and collection name into
+    /// `fuchsia.component.Realm#CreateChild`, and keep the mocks runner alive until after
+    /// `fuchsia.component.Realm#DestroyChild` has been called.
+    pub async fn initialize(self) -> Result<(String, String, mock::MocksRunner), Error> {
+        let root_url =
+            self.realm_builder_proxy.commit().await?.map_err(|s| Error::FailedToCommit(s))?;
+        Ok((root_url, self.collection_name, self.mocks_runner))
+    }
+
+    /// Creates this realm in a child component collection, using an autogenerated name for the
+    /// instance. By default this happens in the [`DEFAULT_COLLECTION_NAME`] collection.
+    ///
+    /// After creation it connects to the fuchsia.component.Binder protocol exposed from the root
+    /// realm, which gets added automatically by the server.
+    pub async fn build(self) -> Result<RealmInstance, Error> {
+        let (root_url, collection_name, mocks_runner) = self.initialize().await?;
+        let root = ScopedInstance::new(collection_name, root_url)
+            .await
+            .map_err(RealmError::FailedToCreateChild)?;
+        root.connect_to_binder().map_err(Error::FailedToBind)?;
+        Ok(RealmInstance { root, mocks_runner })
+    }
+
+    /// Creates this realm in a child component collection. By default this happens in the
+    /// [`DEFAULT_COLLECTION_NAME`] collection.
+    pub async fn build_with_name(self, child_name: String) -> Result<RealmInstance, Error> {
+        let (root_url, collection_name, mocks_runner) = self.initialize().await?;
+        let root = ScopedInstance::new_with_name(child_name, collection_name, root_url)
+            .await
+            .map_err(RealmError::FailedToCreateChild)?;
+        root.connect_to_binder().map_err(Error::FailedToBind)?;
+        Ok(RealmInstance { root, mocks_runner })
+    }
+
+    /// Launches a nested component manager which will run the created realm (along with any mocks
+    /// in the realm). This component manager _must_ be referenced by a relative URL.
+    ///
+    /// Note that any routes with a source of `above_root` will need to also be used in component
+    /// manager's manifest and listed as a namespace capability in its config.
+    ///
+    /// Note that any routes with a target of `above_root` will result in exposing the capability
+    /// to component manager, which is rather useless by itself. Component manager does expose the
+    /// hub though, which could be traversed to find an exposed capability.
+    pub async fn build_in_nested_component_manager(
+        self,
+        component_manager_relative_url: &str,
+    ) -> Result<RealmInstance, Error> {
+        let (root_url, collection_name, mocks_runner) = self.initialize().await?;
+
+        // We now have a root URL we could create in a collection, but instead we want to launch a
+        // component manager and give that component manager this root URL. That flag is set with
+        // command line arguments, so we can't just launch an unmodified component manager.
+        //
+        // Open a new connection to the framework intermediary to begin creating a new realm. This
+        // new realm will hold a single component: component manager. We will modify its manifest
+        // such that the root component URL is set to the root_url we just obtained, and the nested
+        // component manager will then fetch the manifest from realm builder itself.
+        //
+        // Note this presumes that component manager is pointed to a config with following line:
+        //
+        //     realm_builder_resolver_and_runner: "namespace",
+
+        let component_manager_realm = Self::new().await?;
+        component_manager_realm
+            .add_child(
+                Moniker::root(),
+                component_manager_relative_url.to_string(),
+                ChildProperties::new(),
+            )
+            .await?;
+        let mut component_manager_decl = component_manager_realm.get_decl(Moniker::root()).await?;
+        match **component_manager_decl
+            .program
+            .as_mut()
+            .expect("component manager's manifest is lacking a program section")
+            .info
+            .entries
+            .get_or_insert(vec![])
+            .iter_mut()
+            .find(|e| e.key == "args")
+            .expect("component manager's manifest doesn't specify a config")
+            .value
+            .as_mut()
+            .expect("component manager's manifest has a malformed 'args' section") {
+                fdata::DictionaryValue::StrVec(ref mut v) => v.push(root_url),
+                _ => panic!("component manager's manifest has a single value for 'args', but we were expecting a vector"),
+        }
+        component_manager_realm.set_decl(Moniker::root(), component_manager_decl).await?;
+
+        for protocol_name in
+            vec!["fuchsia.sys2.ComponentResolver", "fuchsia.component.runner.ComponentRunner"]
+        {
+            component_manager_realm
+                .add_route(
+                    RouteBuilder::protocol(protocol_name)
+                        .source(RouteEndpoint::above_root())
+                        .targets(vec![RouteEndpoint::component("")])
+                        .force(),
+                )
+                .await?;
+        }
+        component_manager_realm
+            .add_route(
+                RouteBuilder::directory("hub", "/hub", fio2::RW_STAR_DIR)
+                    .source(RouteEndpoint::component(""))
+                    .targets(vec![RouteEndpoint::above_root()])
+                    .force(),
+            )
+            .await?;
+
+        let (component_manager_url, _, _) = component_manager_realm.initialize().await?;
+        let root = ScopedInstance::new(collection_name, component_manager_url)
+            .await
+            .map_err(RealmError::FailedToCreateChild)?;
+        root.connect_to_binder().map_err(Error::FailedToBind)?;
+        Ok(RealmInstance { root, mocks_runner })
+    }
+}
+
+/// Deprecated. Use `fuchsia_component_test::RealmBuilder` instead.
 pub struct Realm {
     realm_builder_proxy: ftest::RealmBuilderProxy,
     mocks_runner: mock::MocksRunner,
@@ -485,8 +1048,8 @@ impl Realm {
 
     /// Initializes the realm, but doesn't create it. Returns the root URL, the collection name,
     /// and the mocks runner. The caller should pass the URL and collection name into
-    /// `fuchsial.component.Realm#CreateChild`, and keep the mocks runner alive until after
-    /// `fuchsia.component.Realm#DestroyChild` has been called.
+    /// `fuchsial.sys2.Realm#CreateChild`, and keep the mocks runner alive until after
+    /// `fuchsia.sys2.Realm#DestroyChild` has been called.
     pub async fn initialize(mut self) -> Result<(String, String, mock::MocksRunner), Error> {
         self.flush_routes().await?;
         let root_url =
@@ -868,7 +1431,6 @@ impl Drop for ScopedInstance {
 mod tests {
     use {
         super::*,
-        crate::builder::*,
         fidl_fuchsia_component as fcomponent,
         futures::{channel::oneshot, future::pending, lock::Mutex, select},
         std::sync::Arc,
@@ -903,11 +1465,11 @@ mod tests {
         let component_1_start_sender = Arc::new(Mutex::new(Some(component_1_start_sender)));
         let component_2_start_sender = Arc::new(Mutex::new(Some(component_2_start_sender)));
 
-        let mut builder = RealmBuilder::new().await.unwrap();
+        let builder = RealmBuilder::new().await.unwrap();
         builder
-            .add_eager_component(
+            .add_mock_child(
                 "component_1",
-                ComponentSource::mock(move |_mh: mock::MockHandles| {
+                move |_mh: mock::MockHandles| {
                     let component_1_start_sender = component_1_start_sender.clone();
                     let component_1_sends_on_drop = component_1_sends_on_drop.clone();
                     Box::pin(async move {
@@ -916,13 +1478,14 @@ mod tests {
                         let () = pending().await;
                         Ok(())
                     })
-                }),
+                },
+                ChildProperties::new().eager(),
             )
             .await
             .expect("failed to add component_1")
-            .add_eager_component(
+            .add_mock_child(
                 "component_2",
-                ComponentSource::mock(move |_mh: mock::MockHandles| {
+                move |_mh: mock::MockHandles| {
                     let component_2_start_sender = component_2_start_sender.clone();
                     let component_2_sends_on_drop = component_2_sends_on_drop.clone();
                     Box::pin(async move {
@@ -931,12 +1494,13 @@ mod tests {
                         let () = pending().await;
                         Ok(())
                     })
-                }),
+                },
+                ChildProperties::new().eager(),
             )
             .await
             .expect("failed to add component_2");
 
-        let realm_instance = builder.build().create().await.expect("failed to create the realm");
+        let realm_instance = builder.build().await.expect("failed to create the realm");
 
         let _ = realm_instance
             .root
@@ -975,21 +1539,22 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn out_of_band_child_destruction_doesnt_panic_on_destroy() {
-        let mut builder = RealmBuilder::new().await.unwrap();
+        let builder = RealmBuilder::new().await.unwrap();
         builder
-            .add_component(
+            .add_mock_child(
                 "component_1",
-                ComponentSource::mock(move |_mh: mock::MockHandles| {
+                move |_mh: mock::MockHandles| {
                     Box::pin(async move {
                         std::future::pending::<()>().await;
                         Ok(())
                     })
-                }),
+                },
+                ChildProperties::new().eager(),
             )
             .await
             .expect("failed to add component_1");
 
-        let realm_instance = builder.build().create().await.expect("failed to make realm");
+        let realm_instance = builder.build().await.expect("failed to make realm");
 
         let realm_proxy = fclient::realm().expect("failed to connect to realm");
         realm_proxy
@@ -1010,21 +1575,22 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn out_of_band_child_destruction_doesnt_panic_on_drop() {
-        let mut builder = RealmBuilder::new().await.unwrap();
+        let builder = RealmBuilder::new().await.unwrap();
         builder
-            .add_component(
+            .add_mock_child(
                 "component_1",
-                ComponentSource::mock(move |_mh: mock::MockHandles| {
+                move |_mh: mock::MockHandles| {
                     Box::pin(async move {
                         std::future::pending::<()>().await;
                         Ok(())
                     })
-                }),
+                },
+                ChildProperties::new(),
             )
             .await
             .expect("failed to add component_1");
 
-        let realm_instance = builder.build().create().await.expect("failed to make realm");
+        let realm_instance = builder.build().await.expect("failed to make realm");
 
         let realm_proxy = fclient::realm().expect("failed to connect to realm");
         realm_proxy

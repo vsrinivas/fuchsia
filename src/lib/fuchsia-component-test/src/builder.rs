@@ -249,59 +249,7 @@ struct Component {
     eager: bool,
 }
 
-/// `RealmBuilder` takes as input a set of component definitions and routes between them and
-/// produces a `Realm` which can be run in a [component
-/// collection](https://fuchsia.dev/fuchsia-src/concepts/components/v2/realms#collections).
-///
-/// The source for a developer-component may be either a URL or a local component mock. See
-/// [`Mock`] for more information on component mocks.
-///
-/// For an example of using a `RealmBuilder`, imagine following structure:
-///
-/// ```
-///   a
-///  / \
-/// b   c
-///     |
-///     d
-/// ```
-///
-/// Where `d` is a URL component and `b` is a mock component, `d` accesses the `fuchsia.foobar`
-/// protocol from `b`, and the `artifacts` directory is exposed from `d` up through `a`. This
-/// structure can be built with the following:
-///
-/// ```
-/// let mut builder = RealmBuilder::new().await?;
-/// builder.add_component("c/d", ComponentSource::url("fuchsia-pkg://fuchsia.com/d#meta/d.cm"))?
-///        .add_component("b", ComponentSource::mock(move |h: MockHandles| {
-///            Box::pin(implementation_for_b(h))
-///        }))?
-///        .add_route(CapabilityRoute {
-///            capability: Capability::protocol("fuchsia.foobar"),
-///            source: RouteEndpoint::component("b"),
-///            targets: vec![RouteEndpoint::component("c/d")],
-///        })?
-///        .add_route(CapabilityRoute {
-///            capability: Capability::Directory(
-///                "artifacts",
-///                "/path-for-artifacts",
-///                fio2::RW_STAR_DIR
-///            ),
-///            source: RouteEndpoint::component("c/d"),
-///            targets: vec![RouteEndpoint::AboveRoot],
-///        })?;
-/// let realm = builder.build().await?;
-/// ```
-///
-/// Note that the root component in our imagined structure is actually unnamed when working with
-/// the [`Realm`] and `RealmBuilder`. The name is generated when the component is created in a
-/// collection.
-///
-/// Due to the approach taken here of generating the non-executable components, only leaf nodes in
-/// the generated component tree may be developer-provided. This means, for example, that a mock
-/// component may not be a parent of another component, offering its capabilities to the child. The
-/// realms should instead have the mock component as a sibling, with the mock's generated
-/// non-executable parent offering the mock's capabilities to the child.
+/// Deprecated. Use `fuchsia_component_test::RealmBuilder` instead.
 pub struct RealmBuilder {
     realm: Realm,
 }
@@ -387,7 +335,7 @@ impl RealmBuilder {
     {
         let moniker = moniker.into();
         if !self.realm.contains(&moniker).await? {
-            return Err(BuilderError::ComponentDoesNotExists(moniker).into());
+            return Err(BuilderError::ComponentDoesNotExist(moniker).into());
         }
 
         match source {
@@ -465,7 +413,7 @@ impl RealmBuilder {
             }
             for target in &route.targets {
                 if &route.source == target {
-                    return Err(EventError::RouteSourceAndTargetMatch(route.clone()).into());
+                    return Err(BuilderError::RouteSourceAndTargetMatch(route.clone()).into());
                 }
                 if let RouteEndpoint::Component(moniker) = target {
                     let moniker = moniker.clone().into();
@@ -496,8 +444,8 @@ impl RealmBuilder {
         _realm: &mut Realm,
         route: CapabilityRoute,
     ) -> Result<(), Error> {
-        if let Capability::Event(event, _) = &route.capability {
-            return Err(EventError::EventsCannotBeExposed(event.name().to_string()).into());
+        if let Capability::Event(_, _) = &route.capability {
+            return Err(EventError::EventsCannotBeExposed.into());
         } else {
             panic!("non-event capability given to add_event_route: {:?}", &route.capability);
         }
@@ -560,8 +508,8 @@ impl RealmBuilder {
         let target_moniker = target.unwrap_component_moniker();
 
         if !source_moniker.is_ancestor_of(&target_moniker) {
-            if let Capability::Event(event, _) = &route.capability {
-                return Err(EventError::EventsCannotBeExposed(event.name().to_string()).into());
+            if let Capability::Event(_, _) = &route.capability {
+                return Err(EventError::EventsCannotBeExposed.into());
             } else {
                 panic!("non-event capability given to add_event_route: {:?}", &route.capability);
             }
@@ -639,7 +587,7 @@ impl RealmBuilder {
                     {
                         if event.name() == target_name.str() && *target == offer_target {
                             if *source != offer_source {
-                                return Err(EventError::ConflictingOffers(
+                                return Err(BuilderError::ConflictingOffers(
                                     route.clone(),
                                     moniker.clone(),
                                     target.clone(),
@@ -1019,7 +967,7 @@ mod tests {
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::Event(error::EventError::EventsCannotBeExposed(_))) => (),
+            Err(error::Error::Event(error::EventError::EventsCannotBeExposed)) => (),
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }
@@ -1046,7 +994,7 @@ mod tests {
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::Event(error::EventError::EventsCannotBeExposed(_))) => (),
+            Err(error::Error::Event(error::EventError::EventsCannotBeExposed)) => (),
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{builder, Moniker},
+    crate::{builder, event, Moniker},
     anyhow, cm_rust, fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_test as ftest,
     thiserror::{self, Error},
 };
@@ -59,7 +59,13 @@ pub enum BuilderError {
     ComponentAlreadyExists(Moniker),
 
     #[error("can't override {} in the realm because that component doesn't exist", _0)]
-    ComponentDoesNotExists(Moniker),
+    ComponentDoesNotExist(Moniker),
+
+    #[error("can't route a capability to the same place it comes from: {:?}", _0)]
+    RouteSourceAndTargetMatch(builder::CapabilityRoute),
+
+    #[error("failed to add route because {:?} is already being offered by {:?} to {:?} from {:?}", _0.capability, _1, _2, _3)]
+    ConflictingOffers(builder::CapabilityRoute, Moniker, cm_rust::OfferTarget, String),
 }
 
 #[derive(Debug, Error)]
@@ -101,7 +107,7 @@ pub enum EventError {
     EmptyRouteTargets,
 
     #[error("can't route a capability to the same place it comes from: {:?}", _0)]
-    RouteSourceAndTargetMatch(builder::CapabilityRoute),
+    RouteSourceAndTargetMatch(event::CapabilityRoute),
 
     #[error("route target {} doesn't exist", _0)]
     MissingRouteTarget(Moniker),
@@ -109,13 +115,13 @@ pub enum EventError {
     #[error(
         "failed to add event route because an event {0} cannot be offered from a child: {0:?}"
     )]
-    EventCannotBeOfferedFromChild(String, builder::CapabilityRoute),
+    EventCannotBeOfferedFromChild(String, event::CapabilityRoute),
 
     #[error("failed to add route because {:?} is already being offered by {:?} to {:?} from {:?}", _0.capability, _1, _2, _3)]
-    ConflictingOffers(builder::CapabilityRoute, Moniker, cm_rust::OfferTarget, String),
+    ConflictingOffers(event::CapabilityRoute, Moniker, cm_rust::OfferTarget, String),
 
-    #[error("failed to add route because an event ({0}) cannot be exposed")]
-    EventsCannotBeExposed(String),
+    #[error("failed to add route because event capabilities cannot be exposed")]
+    EventsCannotBeExposed,
 }
 
 // TODO: Define an error type for ScopedInstance
