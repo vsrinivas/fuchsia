@@ -7,12 +7,10 @@
             "config-data",
             "isolated-persistent-storage"
         ],
-        "pkgfs": [
-            "packages"
-        ],
         "services": [
             "fuchsia.accessibility.semantics.SemanticsManager",
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.device.manager.Administrator",
             "fuchsia.element.Manager",
             "fuchsia.fonts.Provider",
             "fuchsia.intl.PropertyProvider",

@@ -20,6 +20,7 @@ dart_library("lib") {
 
   services = [
     "src/services/channel_service.dart",
+    "src/services/device_service.dart",
     "src/services/privacy_consent_service.dart",
     "src/services/shell_service.dart",
     "src/services/ssh_keys_service.dart",
@@ -33,9 +34,13 @@ dart_library("lib") {
   widgets = [
     "src/widgets/app.dart",
     "src/widgets/ermine.dart",
+    "src/widgets/header.dart",
     "src/widgets/oobe.dart",
     "src/widgets/channels.dart",
     "src/widgets/data_sharing.dart",
+    "src/widgets/login.dart",
+    "src/widgets/password.dart",
+    "src/widgets/ready.dart",
     "src/widgets/ssh_keys.dart",
   ]
 
@@ -48,6 +53,7 @@ dart_library("lib") {
     "//sdk/dart/fuchsia_scenic_flutter",
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
+    "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.element",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.intl",
@@ -82,7 +88,10 @@ flutter_component("component") {
 }
 
 fuchsia_package("oobe") {
-  deps = [ ":component" ]
+  deps = [
+    ":component",
+    ":images",
+  ]
 
   if (start_oobe) {
     deps += [ ":oobe_config" ]
@@ -115,4 +124,12 @@ config_data("oobe_config") {
 
   sources = [ "config/oobe_config.json" ]
   outputs = [ "startup_config.json" ]
+}
+
+config_data("images") {
+  for_pkg = "oobe"
+
+  sources = rebase_path([ "images/Fuchsia-logo-2x.png" ])
+
+  outputs = [ "{{source_file_part}}" ]
 }

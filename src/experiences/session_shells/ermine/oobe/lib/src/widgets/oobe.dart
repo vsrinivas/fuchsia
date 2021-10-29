@@ -6,8 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
 import 'package:oobe/src/states/oobe_state.dart';
+import 'package:oobe/src/widgets/password.dart';
 import 'package:oobe/src/widgets/channels.dart';
-import 'package:oobe/src/widgets/data_sharing.dart';
+import 'package:oobe/src/widgets/ready.dart';
+// TODO(fxbug.dev/73407): Skip data sharing screen until privacy policy is
+// finalized.
+// import 'package:oobe/src/widgets/data_sharing.dart';
 import 'package:oobe/src/widgets/ssh_keys.dart';
 
 /// Defines a widget that handles the OOBE flow.
@@ -41,7 +45,7 @@ class Oobe extends StatelessWidget {
                 SizedBox(width: 16),
                 // Welcome text.
                 Text(
-                  Strings.fuchsiaWelcome.toUpperCase(),
+                  Strings.fuchsiaWelcome,
                   style: Theme.of(context).textTheme.headline6,
                 ),
               ],
@@ -54,12 +58,16 @@ class Oobe extends StatelessWidget {
               switch (oobe.screen) {
                 case OobeScreen.channel:
                   return Channels(oobe);
-                case OobeScreen.dataSharing:
-                  return DataSharing(oobe);
+                // TODO(fxbug.dev/73407): Skip data sharing screen until privacy
+                // policy is finalized.
+                // case OobeScreen.dataSharing:
+                //   return DataSharing(oobe);
                 case OobeScreen.sshKeys:
-                  return SshKeys(oobe, onFinish: onFinish);
+                  return SshKeys(oobe);
+                case OobeScreen.password:
+                  return Password(oobe);
                 case OobeScreen.done:
-                  return Offstage();
+                  return Ready(oobe);
               }
             }),
           ),
@@ -72,7 +80,7 @@ class Oobe extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 for (var index = OobeScreen.channel.index;
-                    index < OobeScreen.done.index;
+                    index <= OobeScreen.done.index;
                     index++)
                   Padding(
                     padding: EdgeInsets.all(6.0),

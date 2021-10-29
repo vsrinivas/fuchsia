@@ -7,12 +7,14 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:ermine_utils/ermine_utils.dart';
+import 'package:flutter/services.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:internationalization/strings.dart';
 import 'package:mobx/mobx.dart';
 import 'package:oobe/src/services/channel_service.dart';
+import 'package:oobe/src/services/device_service.dart';
 import 'package:oobe/src/services/privacy_consent_service.dart';
 import 'package:oobe/src/services/shell_service.dart';
 import 'package:oobe/src/services/ssh_keys_service.dart';
@@ -25,11 +27,13 @@ class OobeStateImpl with Disposable implements OobeState {
 
   final ComponentContext componentContext;
   final ChannelService channelService;
+  final DeviceService deviceService;
   final SshKeysService sshKeysService;
   final ShellService shellService;
   final PrivacyConsentService privacyConsentService;
 
   OobeStateImpl({
+    required this.deviceService,
     required this.shellService,
     required this.channelService,
     required this.sshKeysService,
@@ -49,6 +53,18 @@ class OobeStateImpl with Disposable implements OobeState {
         });
     shellService.advertise(componentContext.outgoing);
     componentContext.outgoing.serveFromStartupInfo();
+
+    // We cannot load MaterialIcons font file from pubspec.yaml. So load it
+    // explicitly.
+    File file = File('/pkg/data/MaterialIcons-Regular.otf');
+    if (file.existsSync()) {
+      FontLoader('MaterialIcons')
+        ..addFont(() async {
+          final bytes = await file.readAsBytes();
+          return bytes.buffer.asByteData();
+        }())
+        ..load();
+    }
   }
 
   @override
@@ -77,6 +93,10 @@ class OobeStateImpl with Disposable implements OobeState {
     final data = json.decode(config.readAsStringSync()) ?? {};
     return data['launch_oobe'] == true;
   }());
+
+  @override
+  bool get loginDone => _loginDone.value;
+  final _loginDone = false.asObservable();
 
   @override
   Locale? get locale => _localeStream.value;
@@ -168,26 +188,14 @@ class OobeStateImpl with Disposable implements OobeState {
   @override
   void prevScreen() => runInAction(() {
         if (screen.index > 0) {
-          // TODO(fxbug.dev/73407): Skip data sharing screen until privacy policy is
-          // finalized.
-          if (screen == OobeScreen.sshKeys) {
-            _screen.value = OobeScreen.values[screen.index - 2];
-          } else {
-            _screen.value = OobeScreen.values[screen.index - 1];
-          }
+          _screen.value = OobeScreen.values[screen.index - 1];
         }
       });
 
   @override
   void nextScreen() => runInAction(() {
-        if (screen.index + 1 < OobeScreen.done.index) {
-          // TODO(fxbug.dev/73407): Skip data sharing screen until privacy policy is
-          // finalized.
-          if (screen == OobeScreen.channel) {
-            _screen.value = OobeScreen.values[screen.index + 2];
-          } else {
-            _screen.value = OobeScreen.values[screen.index + 1];
-          }
+        if (screen.index + 1 <= OobeScreen.done.index) {
+          _screen.value = OobeScreen.values[screen.index + 1];
         }
       });
 
@@ -274,10 +282,24 @@ class OobeStateImpl with Disposable implements OobeState {
         // Dismiss OOBE UX.
         launchOobe = false;
 
+        // Mark login step as done.
+        _loginDone.value = true;
+
         // Persistently record OOBE done.
         File(kStartupConfigJson).writeAsStringSync('{"launch_oobe":false}');
 
         // Clean up.
         dispose();
       });
+
+  @override
+  // TODO(http://fxb/81598): Implement create password functionality.
+  void setPassword(String password) => nextScreen();
+
+  @override
+  // TODO(http://fxb/81598): Implement login functionality.
+  void login(String password) => finish();
+
+  @override
+  void shutdown() => deviceService.shutdown();
 }

@@ -14,6 +14,9 @@ import 'package:internationalization/supported_locales.dart'
     as supported_locales;
 import 'package:intl/intl.dart';
 import 'package:oobe/src/states/oobe_state.dart';
+import 'package:oobe/src/widgets/ermine.dart';
+// TODO(http://fxb/81598): Uncomment once login  is ready.
+// import 'package:oobe/src/widgets/login.dart';
 import 'package:oobe/src/widgets/oobe.dart';
 
 class OobeApp extends StatelessWidget {
@@ -49,10 +52,11 @@ class OobeApp extends StatelessWidget {
           return Material(
             type: MaterialType.canvas,
             child: Observer(builder: (_) {
-              return WidgetFactory.create(() => Oobe(
-                    oobe,
-                    onFinish: oobe.finish,
-                  ));
+              return WidgetFactory.create(() => oobe.launchOobe
+                  ? Oobe(oobe, onFinish: oobe.finish)
+                  // TODO(http://fxb/81598): Uncomment once login  is ready.
+                  // : Login(oobe));
+                  : ErmineApp(oobe));
             }),
           );
         }),

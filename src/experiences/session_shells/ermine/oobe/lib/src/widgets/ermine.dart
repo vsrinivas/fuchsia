@@ -4,15 +4,16 @@
 
 import 'package:flutter/material.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
+import 'package:oobe/src/states/oobe_state.dart';
 
 /// Defines a widget that hosts Ermine shell's root view.
 class ErmineApp extends StatelessWidget {
-  final FuchsiaViewConnection viewConnection;
+  final OobeState oobe;
 
-  const ErmineApp(this.viewConnection);
+  const ErmineApp(this.oobe);
 
   @override
   Widget build(BuildContext context) {
-    return FuchsiaView(controller: viewConnection);
+    return FuchsiaView(controller: oobe.ermineViewConnection);
   }
 }

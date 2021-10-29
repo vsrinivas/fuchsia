@@ -363,6 +363,12 @@ class Strings {
         desc: 'The label for the bluetooth settings widget',
       );
 
+  static String get login => Intl.message(
+        'Login',
+        name: 'login',
+        desc: 'The text for login prompt.',
+      );
+
   static String get logout => Intl.message(
         'Logout',
         name: 'logout',
@@ -442,10 +448,44 @@ class Strings {
       );
 
   static String get fuchsiaWelcome => Intl.message(
-        'Welcome to Fuchsia',
+        'Welcome to Fuchsia Workstation',
         name: 'fuchsiaWelcome',
         desc:
             'A welcome to Fuchsia message shown during the setup of a newly installed system',
+      );
+
+  static String get startWorkstation => Intl.message(
+        'Start Workstation',
+        name: 'startWorkstation',
+        desc: 'The button label to launch the workstation application',
+      );
+
+  static String get accountPasswordTitle => Intl.message(
+        'Set your login password',
+        name: 'accountPasswordTitle',
+        desc: 'The title for the creation of account password during OOBE',
+      );
+
+  static String get accountPasswordInvalid => Intl.message(
+        'The password does not meet the requirements.',
+        name: 'accountPasswordInvalid',
+        desc: 'The error text when password does not meet requirements',
+      );
+
+  static String get accountPasswordMismatch => Intl.message(
+        'The passwords do not match.',
+        name: 'accountPasswordMismatch',
+        desc: 'The error text when password and confirm password do not match',
+      );
+
+  static String accountPasswordDesc(int passwordLength) => Intl.message(
+        'Enter a password to protect your data on Workstation.\n'
+        'The length should be at least $passwordLength characters.\n'
+        '\n'
+        'This can be done only once and you cannot change it until you factory-reset the device.',
+        name: 'accountPasswordDesc',
+        desc:
+            'The description for the creation of account password during OOBE',
       );
 
   static String get oobeChannelTitle => Intl.message(
@@ -595,7 +635,7 @@ class Strings {
       );
 
   static String get oobeSshKeysSuccessDesc => Intl.message(
-        'Your SSH key has been successfully added.\nYou are now ready to use Fuchsia Workstation. Enjoy!',
+        'Your SSH key has been successfully added.',
         name: 'oobeSshKeysSuccessDesc',
         desc:
             'The description displayed when an SSH key was successfully added in the OOBE',
@@ -617,6 +657,36 @@ class Strings {
         'Next',
         name: 'next',
         desc: 'The label for the "next" button.',
+      );
+
+  static String get setPassword => Intl.message(
+        'Set Password',
+        name: 'setPassword',
+        desc: 'The label for the "set password" button.',
+      );
+
+  static String get passwordHint => Intl.message(
+        'Password',
+        name: 'passwordHint',
+        desc: 'The label for the entering password in a text edit field.',
+      );
+
+  static String get passwordIsSet => Intl.message(
+        'Your password has been set',
+        name: 'passwordIsSet',
+        desc: 'The label for when the password was successfully set.',
+      );
+
+  static String get readyToUse => Intl.message(
+        'Fuchsia Workstation is ready to use.',
+        name: 'readyToUse',
+        desc: 'The label for when oobe is complete and workstation is ready.',
+      );
+
+  static String get confirmPasswordHint => Intl.message(
+        'Re-enter password',
+        name: 'confirmPasswordHint',
+        desc: 'The label for the re-entering password in a text edit field.',
       );
 
   static String get agree => Intl.message(
@@ -1003,6 +1073,12 @@ class Strings {
         desc: 'The label for "Show password" checkbox.',
       );
 
+  static String get factoryDataReset => Intl.message(
+        'Factory Data Reset',
+        name: 'factoryDataReset',
+        desc: 'The label of button to factory data reset a device.',
+      );
+
   /// Lookup message given it's name.
   static String? lookup(String name) {
     final _messages = <String, String>{
@@ -1014,6 +1090,16 @@ class Strings {
       'screenSaverKeyboardShortcut': screenSaverKeyboardShortcut,
       'switchNextKeyboardShortcut': switchNextKeyboardShortcut,
       'switchPrevKeyboardShortcut': switchPrevKeyboardShortcut,
+      'navigateBackKeyboardShortcut': navigateBackKeyboardShortcut,
+      'refreshKeyboardShortcut': refreshKeyboardShortcut,
+      'fullscreenToggleKeyboardShortcut': fullscreenToggleKeyboardShortcut,
+      'arrangeWindowsKeyboardShortcut': arrangeWindowsKeyboardShortcut,
+      'decreaseBrightnessKeyboardShortcut': decreaseBrightnessKeyboardShortcut,
+      'increaseBrightnessKeyboardShortcut': increaseBrightnessKeyboardShortcut,
+      'playPauseMediaKeyboardShortcut': playPauseMediaKeyboardShortcut,
+      'muteVolumeKeyboardShortcut': muteVolumeKeyboardShortcut,
+      'decreaseVolumeKeyboardShortcut': decreaseVolumeKeyboardShortcut,
+      'increaseVolumeKeyboardShortcut': increaseVolumeKeyboardShortcut,
     };
     return _messages[name];
   }

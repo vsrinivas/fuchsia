@@ -7,13 +7,13 @@ import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
 import 'package:mobx/mobx.dart';
 import 'package:oobe/src/states/oobe_state.dart';
+import 'package:oobe/src/widgets/header.dart';
 
 /// Defines a widget to configure software update channels.
 class SshKeys extends StatelessWidget {
   final OobeState oobe;
-  final VoidCallback onFinish;
 
-  const SshKeys(this.oobe, {required this.onFinish});
+  const SshKeys(this.oobe);
 
   @override
   Widget build(BuildContext context) {
@@ -25,28 +25,10 @@ class SshKeys extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Title.
-              Text(
-                oobe.sshKeyTitle,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headline3,
-              ),
-
-              // Description.
-              Container(
-                alignment: Alignment.center,
-                padding: EdgeInsets.all(24),
-                child: SizedBox(
-                  width: 600,
-                  child: Text(
-                    oobe.sshKeyDescription,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyText1!
-                        .copyWith(height: 1.55),
-                  ),
-                ),
+              // Title and description.
+              Header(
+                title: oobe.sshKeyTitle,
+                description: oobe.sshKeyDescription,
               ),
 
               Expanded(
@@ -83,7 +65,7 @@ class SshKeys extends StatelessWidget {
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 12),
                         child: OutlinedButton(
-                          onPressed: oobe.skip,
+                          onPressed: oobe.nextScreen,
                           child: Text(Strings.skip.toUpperCase()),
                         ),
                       ),
@@ -99,13 +81,13 @@ class SshKeys extends StatelessWidget {
                         ),
                       ),
 
-                    // Ok button.
+                    // Next button.
                     if (oobe.sshScreen == SshScreen.exit)
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 12),
                         child: OutlinedButton(
-                          onPressed: onFinish,
-                          child: Text(Strings.ok.toUpperCase()),
+                          onPressed: oobe.nextScreen,
+                          child: Text(Strings.next.toUpperCase()),
                         ),
                       ),
                   ],

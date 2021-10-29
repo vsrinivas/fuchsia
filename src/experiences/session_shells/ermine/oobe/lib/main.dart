@@ -16,9 +16,7 @@ Future<void> main() async {
     setupLogger(name: 'oobe');
     final oobe = OobeState.fromEnv();
     final app = Observer(builder: (_) {
-      return oobe.launchOobe
-          ? OobeApp(oobe)
-          : ErmineApp(oobe.ermineViewConnection);
+      return oobe.loginDone ? ErmineApp(oobe) : OobeApp(oobe);
     });
     runApp(app);
   });

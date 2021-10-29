@@ -6,13 +6,16 @@ import 'dart:ui';
 
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:oobe/src/services/channel_service.dart';
+import 'package:oobe/src/services/device_service.dart';
 import 'package:oobe/src/services/privacy_consent_service.dart';
 import 'package:oobe/src/services/shell_service.dart';
 import 'package:oobe/src/services/ssh_keys_service.dart';
 import 'package:oobe/src/states/oobe_state_impl.dart';
 
 /// The oobe screens the user navigates through.
-enum OobeScreen { channel, dataSharing, sshKeys, done }
+// TODO(fxbug.dev/73407): Skip data sharing screen until privacy policy is
+// finalized.
+enum OobeScreen { channel, /* dataSharing, */ sshKeys, password, done }
 
 /// The screens the user navigates through to add SSH keys.
 enum SshScreen { add, confirm, error, exit }
@@ -36,6 +39,7 @@ abstract class OobeState {
   abstract int sshKeyIndex;
   bool get privacyVisible;
   bool get launchOobe;
+  bool get loginDone;
 
   FuchsiaViewConnection get ermineViewConnection;
   String get privacyPolicy;
@@ -50,11 +54,15 @@ abstract class OobeState {
   void sshImportMethod(SshImport? method);
   void sshBackScreen();
   void sshAdd(String userNameOrKey);
+  void setPassword(String password);
+  void login(String password);
   void skip();
   void finish();
+  void shutdown();
 
   factory OobeState.fromEnv() {
     return OobeStateImpl(
+      deviceService: DeviceService(),
       shellService: ShellService(),
       channelService: ChannelService(),
       sshKeysService: SshKeysService(),

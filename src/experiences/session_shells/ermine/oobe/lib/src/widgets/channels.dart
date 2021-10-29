@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
 import 'package:oobe/src/states/oobe_state.dart';
+import 'package:oobe/src/widgets/header.dart';
 
 /// Defines a widget to configure software update channels.
 class Channels extends StatelessWidget {
@@ -20,28 +21,10 @@ class Channels extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Title.
-          Text(
-            Strings.oobeChannelTitle,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headline3,
-          ),
-
-          // Description.
-          Container(
-            alignment: Alignment.center,
-            padding: EdgeInsets.all(24),
-            child: SizedBox(
-              width: 600,
-              child: Text(
-                Strings.oobeChannelDesc,
-                textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyText1!
-                    .copyWith(height: 1.55),
-              ),
-            ),
+          // Title and description.
+          Header(
+            title: Strings.oobeChannelTitle,
+            description: Strings.oobeChannelDesc,
           ),
 
           // Channel list.
