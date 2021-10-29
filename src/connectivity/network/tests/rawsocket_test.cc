@@ -434,7 +434,7 @@ TEST(RawSocketTest, SendtoRecvfrom) {
 }
 
 // Fixture for tests parameterized by family and protocol.
-class RawSocketTest : public ::testing::TestWithParam<std::tuple<int, int>> {
+class RawSocketTest : public testing::TestWithParam<std::tuple<int, int>> {
  protected:
   // Creates a socket to be used in tests.
   void SetUp() override {
@@ -470,8 +470,7 @@ TEST_P(RawSocketTest, SockOptSoType) {
 }
 
 INSTANTIATE_TEST_SUITE_P(AllRawSocketTests, RawSocketTest,
-                         ::testing::Combine(::testing::Values(AF_INET, AF_INET6),
-                                            ::testing::Values(IPPROTO_TCP, IPPROTO_UDP,
-                                                              IPPROTO_RAW)));
+                         testing::Combine(testing::Values(AF_INET, AF_INET6),
+                                          testing::Values(IPPROTO_TCP, IPPROTO_UDP, IPPROTO_RAW)));
 
 };  // namespace

@@ -36,7 +36,7 @@ namespace {
 using ::testing::Combine;
 using ::testing::Values;
 
-class PacketSocketTest : public ::testing::Test {
+class PacketSocketTest : public testing::Test {
  protected:
   static void SetUpTestSuite() {
 #ifdef __linux__
@@ -243,7 +243,7 @@ TEST_F(PacketSocketTest, SendAndReceiveAddrLenMoreThanSockaddrLLSize) {
 
 // Fixture for tests parameterized by type and protocol.
 class GenericPacketSocketTest : public PacketSocketTest,
-                                public ::testing::WithParamInterface<std::tuple<int, uint16_t>> {
+                                public testing::WithParamInterface<std::tuple<int, uint16_t>> {
  protected:
   // Creates a socket to be used in tests.
   void SetUp() override {

@@ -249,7 +249,7 @@ std::string socketTypeToString(const int type) {
 
 using SocketKind = std::tuple<int, int>;
 
-std::string socketKindToString(const ::testing::TestParamInfo<SocketKind>& info) {
+std::string socketKindToString(const testing::TestParamInfo<SocketKind>& info) {
   auto const& [domain, type] = info.param;
 
   std::string domain_str;
@@ -268,7 +268,7 @@ std::string socketKindToString(const ::testing::TestParamInfo<SocketKind>& info)
 }
 
 // Share common functions for SocketKind based tests.
-class SocketKindTest : public ::testing::TestWithParam<SocketKind> {
+class SocketKindTest : public testing::TestWithParam<SocketKind> {
  protected:
   static fbl::unique_fd NewSocket() {
     auto const& [domain, type] = GetParam();
@@ -1309,13 +1309,13 @@ TEST_P(SocketOptsTest, SetNoChecksum) {
 }
 
 INSTANTIATE_TEST_SUITE_P(LocalhostTest, SocketOptsTest,
-                         ::testing::Combine(::testing::Values(AF_INET, AF_INET6),
-                                            ::testing::Values(SOCK_DGRAM, SOCK_STREAM)),
+                         testing::Combine(testing::Values(AF_INET, AF_INET6),
+                                          testing::Values(SOCK_DGRAM, SOCK_STREAM)),
                          socketKindToString);
 
 using typeMulticast = std::tuple<int, bool>;
 
-std::string typeMulticastToString(const ::testing::TestParamInfo<typeMulticast>& info) {
+std::string typeMulticastToString(const testing::TestParamInfo<typeMulticast>& info) {
   auto const& [type, multicast] = info.param;
   std::string addr;
   if (multicast) {
@@ -1326,7 +1326,7 @@ std::string typeMulticastToString(const ::testing::TestParamInfo<typeMulticast>&
   return socketTypeToString(type) + addr;
 }
 
-class ReuseTest : public ::testing::TestWithParam<typeMulticast> {};
+class ReuseTest : public testing::TestWithParam<typeMulticast> {};
 
 TEST_P(ReuseTest, AllowsAddressReuse) {
   const int on = true;
@@ -1392,8 +1392,8 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
 }
 
 INSTANTIATE_TEST_SUITE_P(LocalhostTest, ReuseTest,
-                         ::testing::Combine(::testing::Values(SOCK_DGRAM, SOCK_STREAM),
-                                            ::testing::Values(false, true)),
+                         testing::Combine(testing::Values(SOCK_DGRAM, SOCK_STREAM),
+                                          testing::Values(false, true)),
                          typeMulticastToString);
 
 TEST(LocalhostTest, Accept) {
@@ -1702,7 +1702,7 @@ constexpr const char* HangupMethodToString(const HangupMethod s) {
 
 using hangupParams = std::tuple<CloseTarget, HangupMethod>;
 
-class HangupTest : public ::testing::TestWithParam<hangupParams> {};
+class HangupTest : public testing::TestWithParam<hangupParams> {};
 
 TEST_P(HangupTest, DuringConnect) {
   auto const& [closeTarget, hangupMethod] = GetParam();
@@ -1935,7 +1935,7 @@ TEST_P(HangupTest, DuringConnect) {
   }
 }
 
-std::string hangupParamsToString(const ::testing::TestParamInfo<hangupParams> info) {
+std::string hangupParamsToString(const testing::TestParamInfo<hangupParams> info) {
   auto const& [closeTarget, hangupMethod] = info.param;
   std::stringstream s;
   s << HangupMethodToString(hangupMethod);
@@ -1943,11 +1943,11 @@ std::string hangupParamsToString(const ::testing::TestParamInfo<hangupParams> in
   return s.str();
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    NetStreamTest, HangupTest,
-    ::testing::Combine(::testing::Values(CloseTarget::CLIENT, CloseTarget::SERVER),
-                       ::testing::Values(HangupMethod::kClose, HangupMethod::kShutdown)),
-    hangupParamsToString);
+INSTANTIATE_TEST_SUITE_P(NetStreamTest, HangupTest,
+                         testing::Combine(testing::Values(CloseTarget::CLIENT, CloseTarget::SERVER),
+                                          testing::Values(HangupMethod::kClose,
+                                                          HangupMethod::kShutdown)),
+                         hangupParamsToString);
 
 TEST(LocalhostTest, RaceLocalPeerClose) {
   fbl::unique_fd listener;
@@ -2075,7 +2075,7 @@ TEST(LocalhostTest, GetAddrInfo) {
   freeaddrinfo(result);
 }
 
-class NetStreamSocketsTest : public ::testing::Test {
+class NetStreamSocketsTest : public testing::Test {
  protected:
   void SetUp() override {
     fbl::unique_fd listener;
@@ -2267,7 +2267,7 @@ TEST_F(NetStreamSocketsTest, Recvmmsg) {
 #endif  // __Fuchsia__
 }
 
-class TimeoutSockoptsTest : public ::testing::TestWithParam<int /* optname */> {};
+class TimeoutSockoptsTest : public testing::TestWithParam<int /* optname */> {};
 
 TEST_P(TimeoutSockoptsTest, TimeoutSockopts) {
   int optname = GetParam();
@@ -2366,7 +2366,7 @@ TEST_P(TimeoutSockoptsTest, TimeoutSockopts) {
 }
 
 INSTANTIATE_TEST_SUITE_P(NetStreamTest, TimeoutSockoptsTest,
-                         ::testing::Values(SO_RCVTIMEO, SO_SNDTIMEO));
+                         testing::Values(SO_RCVTIMEO, SO_SNDTIMEO));
 
 const int32_t kConnections = 100;
 
@@ -2683,7 +2683,7 @@ class AddrKind {
 };
 
 template <int socktype>
-class SocketTest : public ::testing::TestWithParam<AddrKind> {
+class SocketTest : public testing::TestWithParam<AddrKind> {
  protected:
   void SetUp() override {
     ASSERT_TRUE(sock_ = fbl::unique_fd(socket(Domain(), socktype, 0))) << strerror(errno);
@@ -2774,12 +2774,12 @@ TEST_P(AnyAddrDatagramSocketTest, Connect) {
 }
 
 INSTANTIATE_TEST_SUITE_P(NetStreamTest, AnyAddrStreamSocketTest,
-                         ::testing::Values(AddrKind::Kind::V4, AddrKind::Kind::V6,
-                                           AddrKind::Kind::V4MAPPEDV6),
+                         testing::Values(AddrKind::Kind::V4, AddrKind::Kind::V6,
+                                         AddrKind::Kind::V4MAPPEDV6),
                          [](const auto info) { return info.param.AddrKindToString(); });
 INSTANTIATE_TEST_SUITE_P(NetDatagramTest, AnyAddrDatagramSocketTest,
-                         ::testing::Values(AddrKind::Kind::V4, AddrKind::Kind::V6,
-                                           AddrKind::Kind::V4MAPPEDV6),
+                         testing::Values(AddrKind::Kind::V4, AddrKind::Kind::V6,
+                                         AddrKind::Kind::V4MAPPEDV6),
                          [](const auto info) { return info.param.AddrKindToString(); });
 
 class IOMethod {
@@ -2903,7 +2903,7 @@ auto disableSIGPIPE(bool isWrite) {
 }
 #endif
 
-class IOMethodTest : public ::testing::TestWithParam<IOMethod> {};
+class IOMethodTest : public testing::TestWithParam<IOMethod> {};
 
 void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod ioMethod,
                  bool datagram) {
@@ -3244,14 +3244,14 @@ TEST_P(IOMethodTest, NullptrFaultSTREAM) {
 }
 
 INSTANTIATE_TEST_SUITE_P(IOMethodTests, IOMethodTest,
-                         ::testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
-                                           IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
-                                           IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,
-                                           IOMethod::Op::WRITEV, IOMethod::Op::SEND,
-                                           IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
+                         testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
+                                         IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
+                                         IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,
+                                         IOMethod::Op::WRITEV, IOMethod::Op::SEND,
+                                         IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
                          [](const auto info) { return info.param.IOMethodToString(); });
 
-class IOReadingMethodTest : public ::testing::TestWithParam<IOMethod> {};
+class IOReadingMethodTest : public testing::TestWithParam<IOMethod> {};
 
 TEST_P(IOReadingMethodTest, DatagramSocketErrorWhileBlocked) {
   fbl::unique_fd fd;
@@ -3314,10 +3314,10 @@ TEST_P(IOReadingMethodTest, DatagramSocketErrorWhileBlocked) {
 }
 
 INSTANTIATE_TEST_SUITE_P(IOReadingMethodTests, IOReadingMethodTest,
-                         ::testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
-                                           IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
-                                           IOMethod::Op::RECVMSG),
-                         [](const ::testing::TestParamInfo<IOMethod>& info) {
+                         testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
+                                         IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
+                                         IOMethod::Op::RECVMSG),
+                         [](const testing::TestParamInfo<IOMethod>& info) {
                            return info.param.IOMethodToString();
                          });
 
@@ -3394,7 +3394,7 @@ std::string nonBlockingToString(bool nonblocking) {
   return "Blocking";
 }
 
-class NonBlockingOptionTest : public ::testing::TestWithParam<bool> {};
+class NonBlockingOptionTest : public testing::TestWithParam<bool> {};
 
 TEST_P(NonBlockingOptionTest, DatagramSocketClearErrorWithGetSockOpt) {
   bool nonblocking = GetParam();
@@ -3408,14 +3408,14 @@ TEST_P(NonBlockingOptionTest, DatagramSocketClearErrorWithGetSockOpt) {
   });
 }
 
-INSTANTIATE_TEST_SUITE_P(NetDatagramTest, NonBlockingOptionTest, ::testing::Values(false, true),
-                         [](const ::testing::TestParamInfo<bool>& info) {
+INSTANTIATE_TEST_SUITE_P(NetDatagramTest, NonBlockingOptionTest, testing::Values(false, true),
+                         [](const testing::TestParamInfo<bool>& info) {
                            return nonBlockingToString(info.param);
                          });
 
 using nonBlockingOptionIOParams = std::tuple<IOMethod, bool>;
 
-class NonBlockingOptionIOTest : public ::testing::TestWithParam<nonBlockingOptionIOParams> {};
+class NonBlockingOptionIOTest : public testing::TestWithParam<nonBlockingOptionIOParams> {};
 
 TEST_P(NonBlockingOptionIOTest, DatagramSocketClearErrorWithIO) {
   auto const& [ioMethod, nonblocking] = GetParam();
@@ -3428,7 +3428,7 @@ TEST_P(NonBlockingOptionIOTest, DatagramSocketClearErrorWithIO) {
 }
 
 std::string nonBlockingOptionIOParamsToString(
-    const ::testing::TestParamInfo<nonBlockingOptionIOParams> info) {
+    const testing::TestParamInfo<nonBlockingOptionIOParams> info) {
   auto const& [ioMethod, nonblocking] = info.param;
   std::stringstream s;
   s << nonBlockingToString(nonblocking);
@@ -3438,17 +3438,16 @@ std::string nonBlockingOptionIOParamsToString(
 
 INSTANTIATE_TEST_SUITE_P(
     NetDatagramTest, NonBlockingOptionIOTest,
-    ::testing::Combine(::testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
-                                         IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
-                                         IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,
-                                         IOMethod::Op::WRITEV, IOMethod::Op::SEND,
-                                         IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
-                       ::testing::Values(false, true)),
+    testing::Combine(testing::Values(IOMethod::Op::READ, IOMethod::Op::READV, IOMethod::Op::RECV,
+                                     IOMethod::Op::RECVFROM, IOMethod::Op::RECVMSG,
+                                     IOMethod::Op::WRITE, IOMethod::Op::WRITEV, IOMethod::Op::SEND,
+                                     IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
+                     testing::Values(false, true)),
     nonBlockingOptionIOParamsToString);
 
 using connectingIOParams = std::tuple<IOMethod, bool>;
 
-class ConnectingIOTest : public ::testing::TestWithParam<connectingIOParams> {};
+class ConnectingIOTest : public testing::TestWithParam<connectingIOParams> {};
 
 // Tests the application behavior when we start to read and write from a stream socket that is not
 // yet connected.
@@ -3602,7 +3601,7 @@ TEST_P(ConnectingIOTest, BlockedIO) {
   EXPECT_EQ(fut.wait_for(kTimeout), std::future_status::ready);
 }
 
-std::string connectingIOParamsToString(const ::testing::TestParamInfo<connectingIOParams> info) {
+std::string connectingIOParamsToString(const testing::TestParamInfo<connectingIOParams> info) {
   auto const& [ioMethod, closeListener] = info.param;
   std::stringstream s;
   if (closeListener) {
@@ -3617,12 +3616,11 @@ std::string connectingIOParamsToString(const ::testing::TestParamInfo<connecting
 
 INSTANTIATE_TEST_SUITE_P(
     NetStreamTest, ConnectingIOTest,
-    ::testing::Combine(::testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
-                                         IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
-                                         IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,
-                                         IOMethod::Op::WRITEV, IOMethod::Op::SEND,
-                                         IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
-                       ::testing::Values(false, true)),
+    testing::Combine(testing::Values(IOMethod::Op::READ, IOMethod::Op::READV, IOMethod::Op::RECV,
+                                     IOMethod::Op::RECVFROM, IOMethod::Op::RECVMSG,
+                                     IOMethod::Op::WRITE, IOMethod::Op::WRITEV, IOMethod::Op::SEND,
+                                     IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
+                     testing::Values(false, true)),
     connectingIOParamsToString);
 
 // Test close/shutdown of listening socket with multiple non-blocking connects.
@@ -3749,7 +3747,7 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
   }
 }
 
-class StopListenWhileConnect : public ::testing::TestWithParam<IOMethod> {};
+class StopListenWhileConnect : public testing::TestWithParam<IOMethod> {};
 
 TEST_P(StopListenWhileConnect, Close) {
   TestListenWhileConnect(
@@ -3763,12 +3761,12 @@ TEST_P(StopListenWhileConnect, Shutdown) {
 }
 
 INSTANTIATE_TEST_SUITE_P(NetStreamTest, StopListenWhileConnect,
-                         ::testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
-                                           IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
-                                           IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,
-                                           IOMethod::Op::WRITEV, IOMethod::Op::SEND,
-                                           IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
-                         [](const ::testing::TestParamInfo<IOMethod>& info) {
+                         testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
+                                         IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
+                                         IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,
+                                         IOMethod::Op::WRITEV, IOMethod::Op::SEND,
+                                         IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
+                         [](const testing::TestParamInfo<IOMethod>& info) {
                            return info.param.IOMethodToString();
                          });
 
@@ -4098,7 +4096,7 @@ TEST_F(NetStreamSocketsTest, ShutdownPendingWrite) {
 using blockedIOParams = std::tuple<IOMethod, CloseTarget, bool>;
 
 class BlockedIOTest : public NetStreamSocketsTest,
-                      public ::testing::WithParamInterface<blockedIOParams> {};
+                      public testing::WithParamInterface<blockedIOParams> {};
 
 TEST_P(BlockedIOTest, CloseWhileBlocked) {
   auto const& [ioMethod, closeTarget, lingerEnabled] = GetParam();
@@ -4195,7 +4193,7 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
   }
 }
 
-std::string blockedIOParamsToString(const ::testing::TestParamInfo<blockedIOParams> info) {
+std::string blockedIOParamsToString(const testing::TestParamInfo<blockedIOParams> info) {
   // NB: this is a freestanding function because structured binding declarations are not allowed in
   // lambdas.
   auto const& [ioMethod, closeTarget, lingerEnabled] = info.param;
@@ -4213,13 +4211,12 @@ std::string blockedIOParamsToString(const ::testing::TestParamInfo<blockedIOPara
 
 INSTANTIATE_TEST_SUITE_P(
     NetStreamTest, BlockedIOTest,
-    ::testing::Combine(::testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
-                                         IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
-                                         IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,
-                                         IOMethod::Op::WRITEV, IOMethod::Op::SEND,
-                                         IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
-                       ::testing::Values(CloseTarget::CLIENT, CloseTarget::SERVER),
-                       ::testing::Values(false, true)),
+    testing::Combine(testing::Values(IOMethod::Op::READ, IOMethod::Op::READV, IOMethod::Op::RECV,
+                                     IOMethod::Op::RECVFROM, IOMethod::Op::RECVMSG,
+                                     IOMethod::Op::WRITE, IOMethod::Op::WRITEV, IOMethod::Op::SEND,
+                                     IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
+                     testing::Values(CloseTarget::CLIENT, CloseTarget::SERVER),
+                     testing::Values(false, true)),
     blockedIOParamsToString);
 
 // Use this routine to test blocking socket reads. On failure, this attempts to recover the blocked
@@ -4275,7 +4272,7 @@ ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flag
   return 0;
 }
 
-class DatagramSendTest : public ::testing::TestWithParam<IOMethod> {};
+class DatagramSendTest : public testing::TestWithParam<IOMethod> {};
 
 TEST_P(DatagramSendTest, SendToIPv4MappedIPv6FromIPv4) {
   auto ioMethod = GetParam();
@@ -4472,8 +4469,8 @@ TEST_P(DatagramSendTest, DatagramSend) {
 }
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramTest, DatagramSendTest,
-                         ::testing::Values(IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
-                         [](const ::testing::TestParamInfo<IOMethod>& info) {
+                         testing::Values(IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
+                         [](const testing::TestParamInfo<IOMethod>& info) {
                            return info.param.IOMethodToString();
                          });
 
@@ -4809,7 +4806,7 @@ TEST(NetStreamTest, MultipleListeningSockets) {
 }
 
 // Socket tests across multiple socket-types, SOCK_DGRAM, SOCK_STREAM.
-class NetSocketTest : public ::testing::TestWithParam<int> {};
+class NetSocketTest : public testing::TestWithParam<int> {};
 
 // Test MSG_PEEK
 // MSG_PEEK : Peek into the socket receive queue without moving the contents from it.
@@ -4935,7 +4932,7 @@ TEST_P(NetSocketTest, SocketPeekTest) {
   EXPECT_EQ(close(sendfd.release()), 0) << strerror(errno);
 }
 
-INSTANTIATE_TEST_SUITE_P(NetSocket, NetSocketTest, ::testing::Values(SOCK_DGRAM, SOCK_STREAM));
+INSTANTIATE_TEST_SUITE_P(NetSocket, NetSocketTest, testing::Values(SOCK_DGRAM, SOCK_STREAM));
 
 TEST_P(SocketKindTest, IoctlInterfaceLookupRoundTrip) {
   fbl::unique_fd fd;
@@ -5218,12 +5215,12 @@ TEST(IoctlTest, IoctlGetInterfaceAddressesPartialRecord) {
 }
 
 INSTANTIATE_TEST_SUITE_P(NetSocket, SocketKindTest,
-                         ::testing::Combine(::testing::Values(AF_INET, AF_INET6),
-                                            ::testing::Values(SOCK_DGRAM, SOCK_STREAM)),
+                         testing::Combine(testing::Values(AF_INET, AF_INET6),
+                                          testing::Values(SOCK_DGRAM, SOCK_STREAM)),
                          socketKindToString);
 
 using DomainProtocol = std::tuple<int, int>;
-class IcmpSocketTest : public ::testing::TestWithParam<DomainProtocol> {};
+class IcmpSocketTest : public testing::TestWithParam<DomainProtocol> {};
 
 TEST_P(IcmpSocketTest, GetSockoptSoProtocol) {
 #if !defined(__Fuchsia__)
@@ -5244,8 +5241,8 @@ TEST_P(IcmpSocketTest, GetSockoptSoProtocol) {
 }
 
 INSTANTIATE_TEST_SUITE_P(NetSocket, IcmpSocketTest,
-                         ::testing::Values(std::make_pair(AF_INET, IPPROTO_ICMP),
-                                           std::make_pair(AF_INET6, IPPROTO_ICMPV6)));
+                         testing::Values(std::make_pair(AF_INET, IPPROTO_ICMP),
+                                         std::make_pair(AF_INET6, IPPROTO_ICMPV6)));
 
 TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
   const char msg[] = "hello";
@@ -5314,7 +5311,7 @@ TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
   }
 }
 
-class NetDatagramSocketsTest : public ::testing::TestWithParam<sa_family_t> {
+class NetDatagramSocketsTest : public testing::TestWithParam<sa_family_t> {
  protected:
   void SetUp() override {
     const sa_family_t domain = GetParam();
@@ -5406,7 +5403,7 @@ TEST_P(NetDatagramSocketsTest, RecvMsgNullPtrNoControlMessages) {
 }
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsTests, NetDatagramSocketsTest,
-                         ::testing::Values(AF_INET, AF_INET6));
+                         testing::Values(AF_INET, AF_INET6));
 
 class NetDatagramSocketsTimestampTest : public NetDatagramSocketsTest {
  protected:
@@ -5538,7 +5535,7 @@ TEST_P(NetDatagramSocketsTimestampTest, RecvMsgFailureDoesNotResetControlLength)
 }
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsTimestampTests, NetDatagramSocketsTimestampTest,
-                         ::testing::Values(AF_INET, AF_INET6));
+                         testing::Values(AF_INET, AF_INET6));
 
 class NetDatagramSocketsIpRecvTosTest : public NetDatagramSocketsTest {
  protected:
@@ -5603,6 +5600,6 @@ TEST_P(NetDatagramSocketsIpRecvTosTest, RecvMsgTOSControlBufferTooSmallToBePadde
 }
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsIpRecvTosTests, NetDatagramSocketsIpRecvTosTest,
-                         ::testing::Values(AF_INET));
+                         testing::Values(AF_INET));
 
 }  // namespace
