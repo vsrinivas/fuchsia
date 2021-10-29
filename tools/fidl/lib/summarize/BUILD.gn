@@ -45,8 +45,13 @@ if (is_host) {
     ]
     deps = [ "//tools/fidl/lib/fidlgen" ]
 
-    # This library is FIDL internal only.
-    visibility = [ "//tools/fidl/*" ]
+    visibility = [
+      # Producing API coverage reports.
+      "//sdk/cts/plasa/*",
+
+      # FIDL internal use.
+      "//tools/fidl/*",
+    ]
   }
 }  # is_host
 
