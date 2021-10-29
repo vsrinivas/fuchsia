@@ -1,5 +1,5 @@
 
-{% import "fuchsia-src/glossary/_common/_glossary_macros.md" as macro %}
+{% import "docs/glossary/_common/_glossary_macros.md" as macro %}
 <!-- The header above is automatically added to this file. Do not modify anything above this line. -->
 <li>
   {{ macro.pencil_edit_macro(item.term) }}

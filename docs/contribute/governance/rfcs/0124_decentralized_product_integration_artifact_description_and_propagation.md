@@ -2,7 +2,7 @@
 {% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- *** DO NOT EDIT ABOVE THIS LINE -->
-{% import 'fuchsia-src/_common/_doc_widgets.md' as widgets %}
+{% import 'docs/_common/_doc_widgets.md' as widgets %}
 
 <!--
 *** This should begin with an H2 element (for example, ## Summary).

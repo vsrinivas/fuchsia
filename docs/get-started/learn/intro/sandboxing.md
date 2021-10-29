@@ -1,3 +1,4 @@
+{% import 'docs/_common/_doc_widgets.md' as widgets %}
 # Software isolation model
 
 In this section, you will learn how the Zircon kernel objects enable Fuchsia to
