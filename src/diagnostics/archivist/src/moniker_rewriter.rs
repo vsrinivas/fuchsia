@@ -100,7 +100,7 @@ mod test {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn moniker_rewriter_works() {
         let rewriter = MonikerRewriter::new();
         let legacy_selector = selectors::parse_selector("memory_monitor.cmx:path/to:data").unwrap();
@@ -148,7 +148,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn array_logic_works() {
         let rewriter = MonikerRewriter {
             monikers: vec![

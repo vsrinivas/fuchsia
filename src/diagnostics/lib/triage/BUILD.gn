@@ -54,7 +54,10 @@ rustc_library("triage") {
 }
 
 rustc_test("triage-lib-unittests") {
-  deps = [ ":triage" ] + lib_deps
+  deps = [
+           ":triage",
+           "//src/lib/fuchsia",
+         ] + lib_deps
 
   sources = library_sources
 }

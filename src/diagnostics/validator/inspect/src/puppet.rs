@@ -250,7 +250,7 @@ pub(crate) mod tests {
         std::collections::HashMap,
     };
 
-    #[test]
+    #[fuchsia::test]
     fn puppet_name_derivation() -> Result<(), Error> {
         assert_eq!(
             Puppet::derive_my_name("fuchsia-pkg://path.com/name#meta/my_name.cmx")?,

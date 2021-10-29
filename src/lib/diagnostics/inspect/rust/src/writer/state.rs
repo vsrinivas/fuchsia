@@ -925,7 +925,7 @@ mod tests {
     use futures::prelude::*;
     use std::convert::TryFrom;
 
-    #[test]
+    #[fuchsia::test]
     fn test_create() {
         let state = get_state(4096);
         let snapshot = Snapshot::try_from(state.copy_vmo_bytes()).unwrap();
@@ -935,7 +935,7 @@ mod tests {
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_load_string() {
         let outer = get_state(4096);
         let mut state = outer.try_lock().expect("lock state");
@@ -943,7 +943,7 @@ mod tests {
         assert_eq!(state.load_string(block.index()).unwrap(), "a value");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_node() {
         let core_state = get_state(4096);
         let block = {
@@ -1008,7 +1008,7 @@ mod tests {
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_int_metric() {
         let core_state = get_state(4096);
         let block = {
@@ -1064,7 +1064,7 @@ mod tests {
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_uint_metric() {
         let core_state = get_state(4096);
         let block = {
@@ -1120,7 +1120,7 @@ mod tests {
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_double_metric() {
         let core_state = get_state(4096);
 
@@ -1169,7 +1169,7 @@ mod tests {
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_string_reference_allocations() {
         let core_state = get_state(4096); // allocates HEADER
         {
@@ -1207,7 +1207,7 @@ mod tests {
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_string_reference_data() {
         let core_state = get_state(4096); // allocates HEADER
         let mut state = core_state.try_lock().expect("lock state");
@@ -1260,7 +1260,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_string_property() {
         let core_state = get_state(4096);
         let block = {
@@ -1311,7 +1311,7 @@ mod tests {
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_bytevector_property() {
         let core_state = get_state(4096);
 
@@ -1363,7 +1363,7 @@ mod tests {
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_bool() {
         let core_state = get_state(4096);
         let block = {
@@ -1402,7 +1402,7 @@ mod tests {
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_int_array() {
         let core_state = get_state(4096);
         let block = {
@@ -1449,7 +1449,7 @@ mod tests {
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_multi_extent_property() {
         let core_state = get_state(10000);
         let block = {
@@ -1523,7 +1523,7 @@ mod tests {
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_freeing_string_references() {
         let core_state = get_state(4096);
         {
@@ -1580,7 +1580,7 @@ mod tests {
         assert!(blocks[3..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_tombstone() {
         let core_state = get_state(4096);
         let child_block = {
@@ -1628,7 +1628,7 @@ mod tests {
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_with_header_lock() {
         let state = get_state(4096);
         // Initial generation count is 0
@@ -1765,7 +1765,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn transaction_locking() {
         let state = get_state(4096);
         // Initial generation count is 0

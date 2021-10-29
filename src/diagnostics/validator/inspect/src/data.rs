@@ -1210,7 +1210,7 @@ mod tests {
         inspect_format::BlockType,
     };
 
-    #[test]
+    #[fuchsia::test]
     fn test_basic_data_strings() -> Result<(), Error> {
         let mut info = Data::new();
         assert_eq!(info.to_string(), "root ->");
@@ -1242,7 +1242,7 @@ mod tests {
 > > > uint_eh: GenericHistogram(["1", "2", "3"])
 > > > uint_lh: GenericHistogram(["1", "2", "3"])"#;
 
-    #[test]
+    #[fuchsia::test]
     fn test_parse_hierarchy() -> Result<(), Error> {
         let hierarchy = DiagnosticsHierarchy {
             name: "root".to_string(),
@@ -1331,7 +1331,7 @@ mod tests {
     }
 
     // Make sure every action correctly modifies the string representation of the data tree.
-    #[test]
+    #[fuchsia::test]
     fn test_creation_deletion() -> Result<(), Error> {
         let mut info = Data::new();
         assert!(!info.to_string().contains("child ->"));
@@ -1453,7 +1453,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_basic_int_ops() -> Result<(), Error> {
         let mut info = Data::new();
         info.apply(&create_numeric_property!(parent: ROOT_ID, id: 3, name: "value",
@@ -1476,7 +1476,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_array_int_ops() -> Result<(), Error> {
         let mut info = Data::new();
         info.apply(&create_array_property!(parent: ROOT_ID, id: 3, name: "value", slots: 3,
@@ -1502,7 +1502,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_linear_int_ops() -> Result<(), Error> {
         let mut info = Data::new();
         info.apply(&create_linear_histogram!(parent: ROOT_ID, id: 3, name: "value",
@@ -1531,7 +1531,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_exponential_int_ops() -> Result<(), Error> {
         let mut info = Data::new();
         // Bucket boundaries are 5, 7, 13
@@ -1582,7 +1582,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_array_out_of_bounds_nop() -> Result<(), Error> {
         // Accesses to indexes beyond the array are legal and should have no effect on the data.
         let mut info = Data::new();
@@ -1597,7 +1597,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_basic_uint_ops() -> Result<(), Error> {
         let mut info = Data::new();
         info.apply(&create_numeric_property!(parent: ROOT_ID, id: 3, name: "value",
@@ -1620,7 +1620,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_array_uint_ops() -> Result<(), Error> {
         let mut info = Data::new();
         info.apply(&create_array_property!(parent: ROOT_ID, id: 3, name: "value", slots: 3,
@@ -1645,7 +1645,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_linear_uint_ops() -> Result<(), Error> {
         let mut info = Data::new();
         info.apply(&create_linear_histogram!(parent: ROOT_ID, id: 3, name: "value",
@@ -1672,7 +1672,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_exponential_uint_ops() -> Result<(), Error> {
         let mut info = Data::new();
         // Bucket boundaries are 5, 7, 13
@@ -1719,7 +1719,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_basic_double_ops() -> Result<(), Error> {
         let mut info = Data::new();
         info.apply(&create_numeric_property!(parent: ROOT_ID, id: 3, name: "value",
@@ -1742,7 +1742,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_array_double_ops() -> Result<(), Error> {
         let mut info = Data::new();
         info.apply(&create_array_property!(parent: ROOT_ID, id: 3, name: "value", slots: 3,
@@ -1765,7 +1765,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_linear_double_ops() -> Result<(), Error> {
         let mut info = Data::new();
         info.apply(&create_linear_histogram!(parent: ROOT_ID, id: 3, name: "value",
@@ -1822,7 +1822,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_exponential_double_ops() -> Result<(), Error> {
         let mut info = Data::new();
         // Bucket boundaries are 5, 7, 13, 37
@@ -1889,7 +1889,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_basic_vector_ops() -> Result<(), Error> {
         let mut info = Data::new();
         info.apply(&create_string_property!(parent: ROOT_ID, id: 3, name: "value",
@@ -1909,7 +1909,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_basic_lazy_node_ops() -> Result<(), Error> {
         let mut info = Data::new();
         info.apply_lazy(&create_lazy_node!(parent: ROOT_ID, id: 1, name: "child", disposition: validate::LinkDisposition::Child, actions: vec![create_bytes_property!(parent: ROOT_ID, id: 1, name: "child_bytes",value: vec!(3u8, 4u8))]))?;
@@ -1928,7 +1928,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_illegal_node_actions() -> Result<(), Error> {
         let mut info = Data::new();
         // Parent must exist
@@ -1946,7 +1946,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_illegal_property_actions() -> Result<(), Error> {
         let mut info = Data::new();
         // Parent must exist
@@ -1995,7 +1995,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_enum_values() {
         assert_eq!(BlockType::IntValue.to_isize().unwrap(), ArrayType::Int.to_isize().unwrap());
         assert_eq!(BlockType::UintValue.to_isize().unwrap(), ArrayType::Uint.to_isize().unwrap());
@@ -2005,7 +2005,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_create_node_checks() {
         let mut data = Data::new();
         assert!(data.apply(&create_node!(parent: 0, id: 1, name: "first")).is_ok());
@@ -2016,7 +2016,7 @@ mod tests {
         assert!(data.apply(&create_node!(parent: 1, id: 2, name: "orphan")).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_delete_node_checks() {
         let mut data = Data::new();
         assert!(data.apply(&delete_node!(id: 0)).is_err());
@@ -2026,7 +2026,7 @@ mod tests {
         assert!(data.apply(&delete_node!(id: 1)).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     // Make sure tombstoning works correctly (tracking implicitly deleted descendants).
     fn test_node_tombstoning() {
         // Can delete, but not double-delete, a tombstoned node.
@@ -2066,7 +2066,7 @@ mod tests {
             .is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_property_tombstoning() {
         // Make sure tombstoning works correctly (tracking implicitly deleted descendants).
         // Can delete, but not double-delete, a tombstoned property.
@@ -2106,7 +2106,7 @@ root ->
 > node ->
 > > prop1: String("bar")"#;
 
-    #[test]
+    #[fuchsia::test]
     fn diff_modes_work() -> Result<(), Error> {
         let mut local = Data::new();
         let mut remote = Data::new();

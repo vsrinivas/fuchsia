@@ -90,7 +90,7 @@ mod tests {
     use diagnostics_hierarchy::assert_data_tree;
     use lazy_static::lazy_static;
 
-    #[test]
+    #[fuchsia::test]
     fn string_references_as_names() {
         lazy_static! {
             static ref FOO: StringReference<'static> = "foo".into();
@@ -162,7 +162,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn owned_method_argument_properties() {
         let state = get_state(4096);
         let root = Node::new_root(state);

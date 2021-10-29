@@ -85,7 +85,7 @@ mod tests {
     use super::*;
     use crate::{writer::Inspector, LinearHistogramParams};
 
-    #[test]
+    #[fuchsia::test]
     fn int_linear_histogram() {
         let inspector = Inspector::new();
         let root = inspector.root();

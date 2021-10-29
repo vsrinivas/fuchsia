@@ -1009,7 +1009,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_simple_log() {
         let mut local_options = LocalOptions::default();
         local_options.hide_metadata = true;
@@ -1049,7 +1049,7 @@ mod tests {
         assert_eq!(content, expected);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_log_fn() {
         let _executor =
             fasync::TestExecutor::new().expect("log_listener: unable to create executor");
@@ -1134,7 +1134,7 @@ mod tests {
         assert_eq!(content, expected);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_only_and_suppress() {
         let _executor = fasync::TestExecutor::new().expect("unable to create executor");
         let tmp_dir = TempDir::new().expect("should have created tempdir");
@@ -1179,7 +1179,7 @@ mod tests {
         assert_eq!(content, expected);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_begin_end() {
         let _executor = fasync::TestExecutor::new().expect("unable to create executor");
         let tmp_dir = TempDir::new().expect("should have created tempdir");
@@ -1233,7 +1233,7 @@ mod tests {
         assert_eq!(content, expected);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_since_now() {
         let _executor = fasync::TestExecutor::new().expect("unable to create executor");
         let tmp_dir = TempDir::new().expect("should have created tempdir");
@@ -1279,7 +1279,7 @@ mod tests {
         assert_eq!(content, expected);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_max_capacity_file_write() {
         struct TestCase {
             file_cap: u64,
@@ -1389,7 +1389,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_format_monotonic_time() {
         let mut local_options = LocalOptions::default();
         let timestamp = 636253000631621;
@@ -1401,7 +1401,7 @@ mod tests {
         assert_eq!(formatted, "636253.000631");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_format_utc_time() {
         let mut local_options = LocalOptions::default();
         let timestamp = 636253000631621;
@@ -1443,25 +1443,25 @@ mod tests {
             }
         }
 
-        #[test]
+        #[fuchsia::test]
         fn invalid_options() {
             let args = vec!["--tag".to_string()];
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn invalid_options2() {
             let args = vec!["--tag".to_string(), "--severity".to_string()];
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn invalid_flag() {
             let args = vec!["--tag".to_string(), "tag".to_string(), "--invalid".to_string()];
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn one_tag() {
             let args = vec!["--tag".to_string(), "tag".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -1469,7 +1469,7 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn multiple_tags() {
             let args = vec![
                 "--tag".to_string(),
@@ -1483,7 +1483,7 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn one_ignore_tag() {
             let args = vec!["--ignore-tag".to_string(), "tag".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -1491,7 +1491,7 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn multiple_ignore_tags() {
             let args = vec![
                 "--ignore-tag".to_string(),
@@ -1505,7 +1505,7 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn only() {
             let args = vec!["--only".to_string(), "x,yz,abc".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -1513,13 +1513,13 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn only_error() {
             let args = vec!["--only".to_string()];
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn pid() {
             let args = vec!["--pid".to_string(), "123".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -1528,13 +1528,13 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn pid_error() {
             let args = vec!["--pid".to_string(), "123a".to_string()];
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn pretty() {
             let args = vec!["--pretty".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -1542,7 +1542,7 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn pretty_yes() {
             let args = vec!["--pretty".to_string(), "yes".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -1550,13 +1550,13 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn pretty_error() {
             let args = vec!["--pretty".to_string(), "123a".to_string()];
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn dump_logs() {
             let args = vec!["--dump_logs".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -1564,13 +1564,13 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn dump_logs_error() {
             let args = vec!["--dump_logs".to_string(), "123a".to_string()];
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn pretty_and_hide_metadata() {
             let args = vec!["--hide_metadata".to_string(), "--pretty".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -1579,7 +1579,7 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn verbosity_and_hide_metadata() {
             let args =
                 vec!["--verbosity".to_string(), "1".to_string(), "--hide_metadata".to_string()];
@@ -1590,7 +1590,7 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn hide_metadata() {
             let args = vec!["--hide_metadata".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -1598,13 +1598,13 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn hide_metadata_error() {
             let args = vec!["--hide_metadata".to_string(), "123a".to_string()];
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn tid() {
             let args = vec!["--tid".to_string(), "123".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -1613,13 +1613,13 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn tid_error() {
             let args = vec!["--tid".to_string(), "123a".to_string()];
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn suppress() {
             let args = vec!["--suppress".to_string(), "x,yz,abc".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -1627,13 +1627,13 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn suppress_error() {
             let args = vec!["--suppress".to_string()];
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn severity() {
             let mut expected = LogListenerOptions::default();
             expected.filter.min_severity = LogLevelFilter::Trace;
@@ -1652,13 +1652,13 @@ mod tests {
             }
         }
 
-        #[test]
+        #[fuchsia::test]
         fn severity_error() {
             let args = vec!["--severity".to_string(), "NONE".to_string()];
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn verbosity() {
             let args = vec!["--verbosity".to_string(), "1".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -1667,7 +1667,7 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn legacy_verbosity() {
             // handling legacy expectations
             let args = vec!["--verbosity".to_string(), "10".to_string()];
@@ -1677,7 +1677,7 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn severity_verbosity_together() {
             let args = vec![
                 "--verbosity".to_string(),
@@ -1696,7 +1696,7 @@ mod tests {
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn verbosity_error() {
             let mut args = vec!["--verbosity".to_string(), "-2".to_string()];
             parse_flag_test_helper(&args, None);
@@ -1708,7 +1708,7 @@ mod tests {
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn file_test() {
             let mut expected = LogListenerOptions::default();
             expected.local.file = Some("/data/test".to_string());
@@ -1716,14 +1716,14 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn file_empty() {
             let args = Vec::new();
             let expected = LogListenerOptions::default();
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn clock() {
             let args = vec!["--clock".to_string(), "UTC".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -1731,13 +1731,13 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn clock_error() {
             let args = vec!["--clock".to_string(), "CLUCK!!".to_string()];
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn time_format() {
             let args = vec!["--time_format".to_string(), "%H:%M:%S".to_string()];
             let mut expected = LogListenerOptions::default();
@@ -1745,7 +1745,7 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn tag_edge_case() {
             let mut args = vec!["--tag".to_string()];
             let mut tag = "a".to_string();
@@ -1767,7 +1767,7 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn tag_error() {
             let mut args = vec!["--tag".to_string()];
             let mut tag = "a".to_string();
@@ -1785,7 +1785,7 @@ mod tests {
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn select_single_loglevel() {
             let mut args = vec!["--select".to_string()];
             args.push("foo.cmx#DEBUG".to_string());
@@ -1799,7 +1799,7 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn select_customer_is_always_right() {
             let mut args =
                 vec!["--severity".to_string(), "INFO".to_string(), "--select".to_string()];
@@ -1814,7 +1814,7 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn select_multiple_loglevel() {
             let mut args = vec!["--select".to_string()];
             args.push("foo.cmx#DEBUG,core/bar#WARN".to_string());
@@ -1832,7 +1832,7 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn select_loglevel_noseverity() {
             let mut args = vec!["--select".to_string()];
             args.push("foo.cmx#".to_string());
@@ -1845,7 +1845,7 @@ mod tests {
             parse_flag_test_helper(&args, Some(&expected));
         }
 
-        #[test]
+        #[fuchsia::test]
         fn select_loglevel_format_error() {
             let mut args = vec!["--select".to_string()];
             args.push("foo.cmx##DEBUG".to_string());
@@ -1853,7 +1853,7 @@ mod tests {
             parse_flag_test_helper(&args, None);
         }
 
-        #[test]
+        #[fuchsia::test]
         fn select_exceed_max_error() {
             let mut args = vec!["--select".to_string()];
             args.push(
@@ -1864,7 +1864,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_complex_decorate() {
         let syslog = "
             [00051.028569][1051][1054][klog] INFO: bootsvc: Creating bootfs service...

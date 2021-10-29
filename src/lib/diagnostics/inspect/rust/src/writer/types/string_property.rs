@@ -74,7 +74,7 @@ mod tests {
     use crate::writer::{testing_utils::get_state, Node};
     use inspect_format::{BlockType, PropertyFormat};
 
-    #[test]
+    #[fuchsia::test]
     fn string_property() {
         // Create and use a default value.
         let default = StringProperty::default();

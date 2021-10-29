@@ -951,7 +951,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_new_free() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         assert!(Block::new_free(&container[..], 3, constants::NUM_ORDERS, 1).is_err());
@@ -967,7 +967,7 @@ mod tests {
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_block_type_or() {
         let mut container = [0u8; constants::MIN_ORDER_SIZE];
         container[1] = 0x02;
@@ -979,7 +979,7 @@ mod tests {
         assert!(block.block_type_or().is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_swap() {
         let container = [0u8; constants::MIN_ORDER_SIZE * 3];
         let mut block1 = Block::new_free(&container[..], 0, 1, 2).unwrap();
@@ -1012,7 +1012,7 @@ mod tests {
         assert_eq!(container[40..48], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_set_order() {
         test_error_types(move |b| b.set_order(1), &BTreeSet::new());
         let container = [0u8; constants::MIN_ORDER_SIZE];
@@ -1021,7 +1021,7 @@ mod tests {
         assert_eq!(block.order(), 3);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_become_reserved() {
         test_ok_types(move |b| b.become_reserved(), &BTreeSet::from_iter(vec![BlockType::Free]));
         let container = [0u8; constants::MIN_ORDER_SIZE];
@@ -1032,7 +1032,7 @@ mod tests {
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_become_string_reference() {
         test_ok_types(
             move |b| b.become_string_reference(),
@@ -1050,7 +1050,7 @@ mod tests {
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_inline_string_reference() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let block = get_reserved(&container);
@@ -1089,7 +1089,7 @@ mod tests {
         assert_eq!(block.inline_string_reference().unwrap(), "abcd".as_bytes());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_string_reference_count() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let block = get_reserved(&container);
@@ -1107,7 +1107,7 @@ mod tests {
         assert_eq!(block.string_reference_count().unwrap(), 0);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_become_header() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let mut block = get_reserved(&container);
@@ -1125,7 +1125,7 @@ mod tests {
         test_ok_types(move |b| b.header_version(), &BTreeSet::from_iter(vec![BlockType::Header]));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_freeze_thaw_header() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let mut block = get_reserved(&container);
@@ -1144,7 +1144,7 @@ mod tests {
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_lock_unlock_header() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let block = get_header(&container);
@@ -1182,7 +1182,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_become_tombstone() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let block = get_reserved(&container);
@@ -1199,7 +1199,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_child_count() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let block = get_reserved(&container);
@@ -1215,7 +1215,7 @@ mod tests {
         test_ok_types(move |b| b.set_child_count(3), &types);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_free() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let block = Block::new_free(&container[..], 0, 1, 1).unwrap();
@@ -1232,7 +1232,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_extent() {
         let container = [0u8; constants::MIN_ORDER_SIZE * 2];
         let block = get_reserved(&container);
@@ -1268,7 +1268,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_any_value() {
         let any_value = &BTreeSet::from_iter(vec![
             BlockType::DoubleValue,
@@ -1284,7 +1284,7 @@ mod tests {
         test_ok_types(move |b| b.parent_index(), &any_value);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_double_value() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let block = get_reserved(&container);
@@ -1310,7 +1310,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_int_value() {
         test_ok_types(
             move |b| b.become_int_value(1, 1, 2),
@@ -1336,7 +1336,7 @@ mod tests {
         test_ok_types(move |b| b.set_int_value(3), &types);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_uint_value() {
         test_ok_types(
             move |b| b.become_uint_value(1, 1, 2),
@@ -1363,7 +1363,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_bool_value() {
         test_ok_types(
             move |b| b.become_bool_value(true, 1, 2),
@@ -1390,7 +1390,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_become_node() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let block = get_reserved(&container);
@@ -1406,7 +1406,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_property() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let block = get_reserved(&container);
@@ -1447,7 +1447,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_name() {
         let container = [0u8; constants::MIN_ORDER_SIZE * 2];
         let block = get_reserved(&container);
@@ -1488,7 +1488,7 @@ mod tests {
         assert_eq!(container[31], 0);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn uint_array_value() {
         let container = [0u8; constants::MIN_ORDER_SIZE * 4];
         let block = Block::new_free(&container[..], 0, 2, 0).unwrap();
@@ -1549,7 +1549,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn array_slots_bigger_than_block_order() {
         let container = [0u8; constants::MIN_ORDER_SIZE * 8];
         // A block of size 7 (max) can hold 254 values: 2048B - 8B (header) - 8B (array metadata)
@@ -1575,7 +1575,7 @@ mod tests {
             .is_ok());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn array_clear() {
         let mut container = [0u8; constants::MIN_ORDER_SIZE * 4];
 
@@ -1609,7 +1609,7 @@ mod tests {
         assert_eq!(&container[48..51], &dummy[..]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn become_link() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let block = get_reserved(&container);

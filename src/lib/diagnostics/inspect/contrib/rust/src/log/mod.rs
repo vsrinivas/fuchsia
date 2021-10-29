@@ -228,7 +228,7 @@ mod tests {
     use fuchsia_inspect::{assert_data_tree, Inspector};
     use parking_lot::Mutex;
 
-    #[test]
+    #[fuchsia::test]
     fn test_inspect_log_basic() {
         let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fasync::Time::from_nanos(0));
@@ -262,7 +262,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_inspect_log_nested() {
         let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fasync::Time::from_nanos(12345));
@@ -295,7 +295,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_inspect_log_var_key_syntax() {
         let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fasync::Time::from_nanos(12345));
@@ -313,7 +313,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_inspect_log_parsing() {
         let _executor = fasync::TestExecutor::new();
         // if this test compiles, it's considered as succeeded
@@ -338,7 +338,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_inspect_log_allows_mutex_guard_temporary() {
         // if this test compiles, it's considered as succeeded
         let _executor = fasync::TestExecutor::new();
@@ -347,7 +347,7 @@ mod tests {
         inspect_log!(node.lock(), k1: "v1");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_inspect_log_macro_does_not_move_value() {
         // if this test compiles, it's considered as succeeded
         let _executor = fasync::TestExecutor::new();
@@ -359,7 +359,7 @@ mod tests {
         println!("{}", s);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_log_option() {
         let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fasync::Time::from_nanos(12345));
@@ -377,7 +377,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_log_inspect_bytes() {
         let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fasync::Time::from_nanos(12345));
@@ -397,7 +397,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_log_inspect_list() {
         let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fasync::Time::from_nanos(12345));
@@ -420,7 +420,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_log_inspect_list_closure() {
         let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fasync::Time::from_nanos(12345));
@@ -446,7 +446,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_inspect_insert_parsing() {
         // if this test compiles, it's considered as succeeded
         let _executor = fasync::TestExecutor::new();
@@ -472,7 +472,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_make_inspect_loggable() {
         let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fasync::Time::from_nanos(12345));

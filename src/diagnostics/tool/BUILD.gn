@@ -42,7 +42,10 @@ rustc_binary("bin") {
 }
 
 rustc_test("diag-tool-unittests") {
-  deps = [ ":bin" ] + bin_deps
+  deps = [
+           ":bin",
+           "//src/lib/fuchsia",
+         ] + bin_deps
   source_root = "src/main.rs"
   sources = bin_sources
 }

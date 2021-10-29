@@ -86,7 +86,7 @@ mod tests {
     use crate::writer::Inspector;
     use diagnostics_hierarchy::LinearHistogramParams;
 
-    #[test]
+    #[fuchsia::test]
     fn uint_linear_histogram() {
         let inspector = Inspector::new();
         let root = inspector.root();

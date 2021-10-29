@@ -23,7 +23,7 @@ mod tests {
     use crate::writer::Inspector;
     use diagnostics_hierarchy::assert_data_tree;
 
-    #[test]
+    #[fuchsia::test]
     fn test_unique_name() {
         let inspector = Inspector::new();
 

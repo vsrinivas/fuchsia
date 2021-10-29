@@ -119,7 +119,7 @@ mod tests {
     use super::*;
     use crate::writer::Inspector;
 
-    #[test]
+    #[fuchsia::test]
     fn test_uint_array() {
         // Create and use a default value.
         let default = UintArrayProperty::default();

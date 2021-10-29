@@ -54,7 +54,7 @@ mod tests {
 
     use fuchsia_inspect::{assert_data_tree, Inspector};
 
-    #[test]
+    #[fuchsia::test]
     fn test_bounded_list_node_basic() {
         let inspector = Inspector::new();
         let list_node = inspector.root().create_child("list_node");
@@ -65,7 +65,7 @@ mod tests {
         assert_data_tree!(inspector, root: { list_node: { "0": {}, "1": {} } });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_bounded_list_node_eviction() {
         let inspector = Inspector::new();
         let list_node = inspector.root().create_child("list_node");
@@ -83,7 +83,7 @@ mod tests {
         assert_data_tree!(inspector, root: { list_node: { "2": {}, "3": {}, "4": {} } });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_bounded_list_node_specified_zero_capacity() {
         let inspector = Inspector::new();
         let list_node = inspector.root().create_child("list_node");
@@ -94,7 +94,7 @@ mod tests {
         assert_data_tree!(inspector, root: { list_node: { "1": {} } });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_bounded_list_node_holds_its_values() {
         let inspector = Inspector::new();
         let list_node = inspector.root().create_child("list_node");

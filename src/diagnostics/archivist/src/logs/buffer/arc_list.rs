@@ -346,7 +346,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn list_is_empty() {
         let list = ArcList::default();
         assert!(list.is_empty());
@@ -356,7 +356,7 @@ mod tests {
         assert!(list.is_empty());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn list_peek_front() {
         let list = ArcList::default();
         assert!(list.peek_front().is_none());

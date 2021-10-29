@@ -117,7 +117,7 @@ mod tests {
     use crate::{assert_data_tree, health::Reporter, testing::AnyProperty};
     use futures::FutureExt;
 
-    #[test]
+    #[fuchsia::test]
     fn health_checker_lifecycle() {
         let inspector = super::inspector();
         // In the beginning, the inspector has no stats.
@@ -173,7 +173,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn record_on_inspector() {
         let inspector = super::inspector();
         assert_eq!(
@@ -186,13 +186,13 @@ mod tests {
         })
     }
 
-    #[test]
+    #[fuchsia::test]
     fn init_inspector_with_size() {
         super::init_inspector_with_size(8192);
         assert_eq!(super::inspector().vmo.as_ref().unwrap().get_size().unwrap(), 8192);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn inspect_stats() {
         let inspector = super::inspector();
         super::serve_inspect_stats();

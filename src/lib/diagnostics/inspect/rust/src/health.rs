@@ -170,7 +170,7 @@ mod tests {
         crate::{assert_data_tree, Inspector},
     };
 
-    #[test]
+    #[fuchsia::test]
     fn health_checker_lifecycle() {
         let inspector = Inspector::new();
         let root = inspector.root();

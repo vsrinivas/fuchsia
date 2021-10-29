@@ -89,7 +89,7 @@ mod tests {
     use fuchsia_async as fasync;
     use fuchsia_inspect::{assert_data_tree, Inspector};
 
-    #[test]
+    #[fuchsia::test]
     fn test_time_metadata_format() {
         let inspector = Inspector::new();
         let time_property =
@@ -101,7 +101,7 @@ mod tests {
         assert_data_tree!(inspector, root: { time: 333_444000000i64 });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_create_time_and_update() {
         let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fasync::Time::from_nanos(0));
@@ -116,7 +116,7 @@ mod tests {
         assert_data_tree!(inspector, root: { time: 10i64 });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_record_time() {
         let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fasync::Time::from_nanos(55));
@@ -125,14 +125,14 @@ mod tests {
         assert_data_tree!(inspector, root: { time: 55i64 });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic(expected = "Fuchsia Executor must be created first")]
     fn test_create_time_no_executor() {
         let inspector = Inspector::new();
         inspector.root().create_time("time");
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic(expected = "Fuchsia Executor must be created first")]
     fn test_record_time_no_executor() {
         let inspector = Inspector::new();

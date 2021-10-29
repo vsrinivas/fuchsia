@@ -61,7 +61,7 @@ mod test {
         option: u32,
     }
 
-    #[test]
+    #[fuchsia::test]
     fn args_work() -> Result<(), Error> {
         let arg_strings = vec![
             "program_name".to_string(),

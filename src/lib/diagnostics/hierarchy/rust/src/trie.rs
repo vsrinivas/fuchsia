@@ -431,7 +431,7 @@ where
 mod tests {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn test_sequence_trie() {
         type TestTrie = Trie<char, String>;
         let mut test_trie: TestTrie = TestTrie::new();
@@ -464,7 +464,7 @@ mod tests {
         assert_eq!(test1_node.unwrap().get_values()[0 as usize], "b".to_string());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_sequence_trie_removal() {
         type TestTrie = Trie<char, String>;
         let mut test_trie: TestTrie = TestTrie::new();
@@ -499,7 +499,7 @@ mod tests {
         assert!(text1_node.is_none());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_sequence_trie_iter() {
         type TestTrie = Trie<char, String>;
         let mut test_trie: TestTrie = TestTrie::new();
@@ -528,7 +528,7 @@ mod tests {
         assert_eq!(num_iterations, 8);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_empty_trie_iters() {
         type TestTrie = Trie<char, String>;
         let empty_trie: TestTrie = TestTrie::new();

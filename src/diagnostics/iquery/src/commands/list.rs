@@ -166,7 +166,7 @@ mod tests {
     use super::*;
     use diagnostics_data::Timestamp;
 
-    #[test]
+    #[fuchsia::test]
     fn components_from_lifecycle_data_uses_diagnostics_ready() {
         let lifecycle_data = vec![
             LifecycleData::for_lifecycle_event(

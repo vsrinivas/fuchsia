@@ -217,7 +217,7 @@ mod tests {
         file.sync_all().expect("failed to sync file");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_valid_config() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");
@@ -238,7 +238,7 @@ mod tests {
         assert_eq!(parsed_config.num_threads, 4);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_valid_config_missing_optional() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");
@@ -259,7 +259,7 @@ mod tests {
         assert_eq!(parsed_config.num_threads, 1);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_invalid_config() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");
@@ -277,7 +277,7 @@ mod tests {
         assert!(parsed_config_result.is_err(), "Config had a missing field, and invalid field.");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_valid_services_config() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");
@@ -298,7 +298,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_invalid_services_config() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");
@@ -314,7 +314,7 @@ mod tests {
         assert!(parse_service_config(&test_config_file_name).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_missing_pipeline() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");
@@ -339,7 +339,7 @@ mod tests {
         assert!(!config.disable_filtering);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_partially_valid_pipeline() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");
@@ -373,7 +373,7 @@ mod tests {
         assert_eq!(1, config.take_inspect_selectors().unwrap_or_default().len());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_valid_pipeline() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");
@@ -409,7 +409,7 @@ mod tests {
         assert_eq!(3, config.take_inspect_selectors().unwrap_or_default().len());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_allow_empty_pipeline() {
         // If a pipeline is left unconfigured, do not filter results for the pipeline.
         let dir = tempfile::tempdir().unwrap();
@@ -433,7 +433,7 @@ mod tests {
         assert_eq!(None, config.take_inspect_selectors());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_disabled_valid_pipeline() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");
@@ -471,7 +471,7 @@ mod tests {
         assert_eq!(3, config.take_inspect_selectors().unwrap_or_default().len());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_pipeline_disallow_recursive_glob() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");

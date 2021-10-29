@@ -1017,7 +1017,7 @@ mod tests {
     use diagnostics_hierarchy::{hierarchy, Bucket};
     use futures::executor;
 
-    #[test]
+    #[fuchsia::test]
     fn test_process_payload_with_escapes() {
         // Inserting a string into the hierarchy that requires escaping.
         let unescaped: String = "path/to".to_string();
@@ -1145,7 +1145,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_normal_process_occurence() {
         process_occurence_tester(EventCountTesterParams {
             new_val: Property::Int("count".to_string(), 1),
@@ -1172,7 +1172,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_data_type_changing_process_occurence() {
         process_occurence_tester(EventCountTesterParams {
             new_val: Property::Int("count".to_string(), 1),
@@ -1207,7 +1207,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_event_count_negatives_and_overflows() {
         process_occurence_tester(EventCountTesterParams {
             new_val: Property::Int("count".to_string(), -11),
@@ -1287,7 +1287,7 @@ mod tests {
             _ => panic!("Expecting count events."),
         }
     }
-    #[test]
+    #[fuchsia::test]
     fn test_normal_process_int() {
         process_int_tester(IntTesterParams {
             new_val: Property::Int("count".to_string(), 13),
@@ -1320,7 +1320,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_int_edge_cases() {
         process_int_tester(IntTesterParams {
             new_val: Property::Int("count".to_string(), std::i64::MAX),
@@ -1441,7 +1441,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_normal_process_int_histogram() {
         // Test that simple in-bounds first-samples of both types of Inspect histograms
         // produce correct event types.
@@ -1527,7 +1527,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_errorful_process_int_histogram() {
         // Test that changing the histogram length is an error.
         let new_u64_sample = convert_vector_to_uint_histogram(vec![1, 1, 1, 1]);

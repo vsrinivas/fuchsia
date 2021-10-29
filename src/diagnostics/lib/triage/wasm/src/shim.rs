@@ -225,7 +225,7 @@ mod test {
     const OK_PLUGINS_PREFIX: &str =
         "Process Crashes Plugin - OK\nSandbox Errors Plugin - OK\nRouting Errors Plugin - OK\nMemory Summary Plugin - OK\n";
 
-    #[test]
+    #[fuchsia::test]
     fn analyze() {
         let mut manager = TriageManager::new();
         let inspect_configs = map! {
@@ -288,7 +288,7 @@ mod test {
         manager.build_context(HashMap::new()).unwrap()
     }
 
-    #[test]
+    #[fuchsia::test]
     fn analyze_all_files() {
         // Make sure everything works properly with and without previous-bootlog.
         // We need to rebuild targets and context each time because analyze()
@@ -371,7 +371,7 @@ Warnings
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn unique_ids_are_generated_for_every_call_to_build_fns() {
         let mut manager = TriageManager::new();
         let configs = map! {
@@ -406,7 +406,7 @@ Warnings
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn returns_error_on_bad_input() {
         let mut manager = TriageManager::new();
 
@@ -424,7 +424,7 @@ Warnings
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn analyze_returns_error_on_unknown_input() {
         let mut manager = TriageManager::new();
 

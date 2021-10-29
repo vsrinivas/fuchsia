@@ -107,7 +107,7 @@ impl<'a> ActionResultFormatter<'a> {
 mod test {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn action_result_formatter_to_warnings_when_no_actions_triggered() {
         let action_results = ActionResults::new();
         let formatter = ActionResultFormatter::new(&action_results);
@@ -115,7 +115,7 @@ mod test {
         assert_eq!(String::from("No actions were triggered. All targets OK."), formatter.to_text());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn action_result_formatter_to_text_when_actions_triggered() {
         let warnings = String::from(
             "Warnings\n\
@@ -133,7 +133,7 @@ mod test {
         assert_eq!(warnings, formatter.to_text());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn action_result_formatter_to_text_with_gauges() {
         let warnings = String::from(
             "Gauges\n\
@@ -156,7 +156,7 @@ mod test {
         assert_eq!(warnings, formatter.to_text());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn action_result_formatter_sorts_output() {
         let warnings = String::from(
             "Gauges\n\

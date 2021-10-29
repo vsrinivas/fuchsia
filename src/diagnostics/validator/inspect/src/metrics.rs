@@ -299,7 +299,7 @@ mod tests {
         put_header!(name_header, NAME_INDEX as usize, &mut buffer);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn header_metrics() -> Result<(), Error> {
         let mut buffer = [0u8; 256];
         init_vmo_contents(&mut buffer);
@@ -309,7 +309,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn reserved_metrics() -> Result<(), Error> {
         let mut buffer = [0u8; 256];
         init_vmo_contents(&mut buffer);
@@ -321,7 +321,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn node_metrics() -> Result<(), Error> {
         let mut buffer = [0u8; 256];
         init_vmo_contents(&mut buffer);
@@ -342,7 +342,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn number_metrics() -> Result<(), Error> {
         let mut buffer = [0u8; 256];
         init_vmo_contents(&mut buffer);
@@ -365,7 +365,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn property_metrics() -> Result<(), Error> {
         let mut buffer = [0u8; 256];
         init_vmo_contents(&mut buffer);
@@ -398,7 +398,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn array_metrics() -> Result<(), Error> {
         let mut buffer = [0u8; 256];
         init_vmo_contents(&mut buffer);

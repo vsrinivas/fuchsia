@@ -493,7 +493,7 @@ mod tests {
     use super::*;
     use tempfile;
 
-    #[test]
+    #[fuchsia::test]
     fn generate_selectors_test() {
         let schemas: Vec<InspectData> =
             serde_json::from_value(get_v1_json_dump()).expect("schemas");
@@ -561,7 +561,7 @@ mod tests {
         assert_eq!(filtered_json_value, golden_json);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn trailing_comma_diff_test() {
         let trailing_comma_hierarchy = serde_json::json!(
             [
@@ -619,7 +619,7 @@ mod tests {
         assert!(removed_lines.contains(&r#"          "c": 1"#.to_string()));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn v1_filter_data_to_lines_test() {
         let full_tree_selector = "*/realm2/session5/account_manager.cmx:root/accounts:active
 realm1/realm*/sessio*/account_manager.cmx:root/accounts:total

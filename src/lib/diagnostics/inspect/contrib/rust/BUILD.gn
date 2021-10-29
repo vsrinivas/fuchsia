@@ -35,6 +35,8 @@ rustc_library("fuchsia-inspect-contrib") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [ "//src/lib/fuchsia" ]
+
   sources = [
     "src/auto_persist.rs",
     "src/inspectable/mod.rs",
@@ -49,6 +51,12 @@ rustc_library("fuchsia-inspect-contrib") {
 
 fuchsia_unittest_package("fuchsia-inspect-contrib-tests") {
   deps = [ ":fuchsia-inspect-contrib_test" ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("rust") {

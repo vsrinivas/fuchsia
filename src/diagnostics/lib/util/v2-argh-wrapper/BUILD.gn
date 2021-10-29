@@ -18,6 +18,8 @@ rustc_library("v2-argh-wrapper") {
     "//third_party/rust_crates:log",
   ]
 
+  test_deps = [ "//src/lib/fuchsia" ]
+
   sources = [ "src/lib.rs" ]
 }
 

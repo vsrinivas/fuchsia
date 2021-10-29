@@ -130,27 +130,27 @@ fn verify_output(output: Output, status_code: i32, expected_text: StringMatch) {
     };
 }
 
-#[test]
+#[fuchsia::test]
 fn config_file_path_should_find_file() {
     assert!(config_file_path("sample.triage").is_ok(), "should be able to find sample.triage file");
 }
 
-#[test]
+#[fuchsia::test]
 fn snapshot_path_should_find_snapshot() {
     assert!(snapshot_path().is_ok(), "should be able to find the snapshot path");
 }
 
-#[test]
+#[fuchsia::test]
 fn inspect_file_path_should_find_file() {
     assert!(inspect_file_path().is_ok(), "should be able to find the inspect.json file");
 }
 
-#[test]
+#[fuchsia::test]
 fn annotations_file_path_should_find_file() {
     assert!(annotations_file_path().is_ok(), "should be able to find the annotations.json file");
 }
 
-#[test]
+#[fuchsia::test]
 fn binary_path_should_find_binary() {
     assert!(binary_path().is_ok(), "should be able to find the triage binary");
 }
@@ -201,7 +201,7 @@ macro_rules! integration_test {
     };
 }
 
-#[test]
+#[fuchsia::test]
 fn report_missing_inspect() -> Result<(), Error> {
     //note: we do not use the macro here because we want to not fail on the
     // file conversion logic
@@ -219,7 +219,7 @@ fn report_missing_inspect() -> Result<(), Error> {
     Ok(())
 }
 
-#[test]
+#[fuchsia::test]
 fn report_missing_config_file() -> Result<(), Error> {
     //note: we do not use the macro here because we want to not fail on the
     // file conversion logic

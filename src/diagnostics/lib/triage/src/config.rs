@@ -286,7 +286,7 @@ mod test {
     // initialize() will be tested in the integration test: "fx test triage_lib_test"
     // TODO(cphoenix) - set up dirs under test/ and test initialize() here.
 
-    #[test]
+    #[fuchsia::test]
     fn inspect_data_from_works() -> Result<(), Error> {
         assert!(InspectFetcher::try_from("foo").is_err(), "'foo' isn't valid JSON");
         assert!(InspectFetcher::try_from(r#"{"a":5}"#).is_err(), "Needed an array");
@@ -294,7 +294,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn action_tag_directive_from_tags_allow_all() {
         let result = ActionTagDirective::from_tags(vec![], vec![]);
         match result {
@@ -303,7 +303,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn action_tag_directive_from_tags_include() {
         let result =
             ActionTagDirective::from_tags(vec!["t1".to_string(), "t2".to_string()], vec![]);
@@ -315,7 +315,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn action_tag_directive_from_tags_include_override_exclude() {
         let result = ActionTagDirective::from_tags(
             vec!["t1".to_string(), "t2".to_string()],
@@ -329,7 +329,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn action_tag_directive_from_tags_exclude() {
         let result =
             ActionTagDirective::from_tags(vec![], vec!["t1".to_string(), "t2".to_string()]);
@@ -382,7 +382,7 @@ mod test {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn filter_actions_allow_all() {
         let result = filter_actions(
             actions_schema! {
@@ -394,7 +394,7 @@ mod test {
         assert_eq!(result.len(), 2);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn filter_actions_include_one_tag() {
         let result = filter_actions(
             actions_schema! {
@@ -409,7 +409,7 @@ mod test {
         assert_has_action!(result, "3", "t3", "p3");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn filter_actions_include_many_tags() {
         let result = filter_actions(
             actions_schema! {
@@ -426,7 +426,7 @@ mod test {
         assert_has_action!(result, "4", "t4", "p4");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn filter_actions_exclude_one_tag() {
         let result = filter_actions(
             actions_schema! {
@@ -440,7 +440,7 @@ mod test {
         assert_has_action!(result, "1", "t1", "p1");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn filter_actions_exclude_many() {
         let result = filter_actions(
             actions_schema! {
@@ -455,7 +455,7 @@ mod test {
         assert_has_action!(result, "1", "t1", "p1");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn filter_actions_include_does_not_include_empty_tag() {
         let result = filter_actions(
             actions_schema! {
@@ -468,7 +468,7 @@ mod test {
         assert_has_action!(result, "2", "t2", "p2");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn filter_actions_exclude_does_include_empty_tag() {
         let result = filter_actions(
             actions_schema! {
@@ -481,7 +481,7 @@ mod test {
         assert_has_action!(result, "1", "t1", "p1");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn select_section_parsing() {
         let config_result = ConfigFileSchema::try_from(
             r#"
@@ -529,7 +529,7 @@ mod test {
             .contains("expected at least one selector"));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn all_selectors_works() {
         macro_rules! s {
             ($s:expr) => {

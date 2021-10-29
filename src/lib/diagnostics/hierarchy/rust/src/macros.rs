@@ -166,13 +166,13 @@ mod tests {
     use super::*;
     use crate::{assert_data_tree, DiagnosticsHierarchy};
 
-    #[test]
+    #[fuchsia::test]
     fn test_empty_hierarchy() {
         let h: DiagnosticsHierarchy = hierarchy! { root: {} };
         assert_data_tree!(h, root: {});
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_all_types() {
         let string_list = vec!["foo".to_string(), "bar".to_string()];
         let result = hierarchy! {
@@ -227,7 +227,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_nested_hierarchy() {
         let result = hierarchy! {
             root: {
@@ -265,7 +265,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_var_key_syntax() {
         let some_key = "foo".to_string();
         let another_key = "bar".to_string();
@@ -294,7 +294,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_custom_key_type_for_properties() {
         let result = hierarchy! {
             root: {

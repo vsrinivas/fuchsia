@@ -1016,7 +1016,7 @@ pub(crate) mod test {
             FileDataFetcher::new(&BAD_PAYLOAD_F);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn logs_work() -> Result<(), Error> {
         let syslog_text = "line 1\nline 2\nsyslog".to_string();
         let klog_text = "first line\nsecond line\nklog\n".to_string();
@@ -1063,7 +1063,7 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn annotations_work() -> Result<(), Error> {
         let annotation_text = r#"{ "build.board": "chromebook-x64", "answer": 42 }"#.to_string();
         let annotations =
@@ -1092,7 +1092,7 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_fetch_errors() {
         // Do not show errors when there is simply no payload.
         assert_eq!(0, NO_PAYLOAD_FETCHER.errors().len());
@@ -1103,7 +1103,7 @@ pub(crate) mod test {
     // in the integration test via log_tests.triage.
 
     // Test evaluation on static values.
-    #[test]
+    #[fuchsia::test]
     fn test_evaluation() {
         let metrics: Metrics = [(
             "root".to_string(),
@@ -1301,7 +1301,7 @@ pub(crate) mod test {
     }
 
     // TODO(fxbug.dev/58922): Modify or probably delete this function after better error design.
-    #[test]
+    #[fuchsia::test]
     fn test_missing_hacks() -> Result<(), Error> {
         macro_rules! eval {
             ($e:expr) => {
@@ -1317,7 +1317,7 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_time() -> Result<(), Error> {
         let metrics = Metrics::new();
         let files = vec![];

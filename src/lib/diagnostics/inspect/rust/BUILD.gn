@@ -85,6 +85,11 @@ rustc_library("fuchsia-inspect") {
 
 fuchsia_unittest_package("fuchsia-inspect-tests") {
   deps = [ ":fuchsia-inspect_test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("rust") {

@@ -184,7 +184,7 @@ pub(crate) mod test {
         serde_json::{json, Number as JsonNumber},
     };
 
-    #[test]
+    #[fuchsia::test]
     fn test_equality() {
         // Equal Value, Equal Type
         assert_eq!(MetricValue::Int(1), MetricValue::Int(1));
@@ -245,7 +245,7 @@ pub(crate) mod test {
         // We don't have a contract for Lambda equality. We probably don't need one.
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_inequality() {
         // Different Value, Equal Type
         assert_ne!(MetricValue::Int(1), MetricValue::Int(2));
@@ -276,7 +276,7 @@ pub(crate) mod test {
         assert_ne!(MetricValue::String("A".to_string()), MetricValue::Bool(true));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_fmt() {
         assert_eq!(format!("{}", MetricValue::Int(3)), "Int(3)");
         assert_eq!(format!("{}", MetricValue::Float(3.5)), "Float(3.5)");
@@ -323,7 +323,7 @@ pub(crate) mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn metric_value_from_json() {
         /*
             JSON subtypes:
@@ -374,7 +374,7 @@ pub(crate) mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn metric_value_from_diagnostic_property() {
         /*
             DiagnosticProperty subtypes:

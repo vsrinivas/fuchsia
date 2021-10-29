@@ -356,7 +356,7 @@ mod test {
     macro_rules! test_redaction {
         ($($test_name:ident: $input:expr => $output:expr,)+) => {
         paste::paste!{$(
-            #[test]
+            #[fuchsia::test]
             fn [<redact_ $test_name>] () {
                 let noop = Redactor::noop();
                 let real = Redactor::with_static_patterns();
@@ -364,7 +364,7 @@ mod test {
                 assert_eq!(real.redact_text($input), $output);
             }
 
-            #[test]
+            #[fuchsia::test]
             fn [<redact_json_ $test_name>] () {
                 let input = test_message($input);
                 let output = test_message($output);

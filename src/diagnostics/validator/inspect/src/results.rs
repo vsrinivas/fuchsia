@@ -209,7 +209,7 @@ impl Results {
 mod tests {
     use {super::*, crate::*};
 
-    #[test]
+    #[fuchsia::test]
     fn error_result_fails_and_outputs() {
         let mut results = Results::new();
         assert!(!results.failed());
@@ -218,7 +218,7 @@ mod tests {
         assert!(results.to_json().contains("Oops!"));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn log_result_does_not_fail_and_outputs() {
         let mut results = Results::new();
         assert!(!results.failed());
@@ -227,14 +227,14 @@ mod tests {
         assert!(results.to_json().contains("Harmless message!"));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn unimplemented_does_not_error() {
         let mut results = Results::new();
         results.unimplemented("foo", &delete_node!(id:17));
         assert!(!results.failed());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn unimplemented_does_not_duplicate() {
         let mut results = Results::new();
         results.unimplemented("foo", &delete_node!(id:17));
@@ -247,7 +247,7 @@ mod tests {
         assert!(results.to_json().split("DeleteNode").collect::<Vec<_>>().len() == 3);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn unimplemented_renders_everything() {
         let mut results = Results::new();
         results.unimplemented("foo", &create_node!(parent: 42, id:42, name: "bar"));
@@ -332,7 +332,7 @@ mod tests {
         assert!(!results.to_json().contains("Unknown"));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn metric_remembering() {
         let mut results = Results::new();
         let mut metrics = metrics::Metrics::new();

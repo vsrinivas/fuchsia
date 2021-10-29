@@ -252,7 +252,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn new_heap() {
         let (mapping, _) = Mapping::allocate(4096).unwrap();
         let heap = Heap::new(Arc::new(mapping)).unwrap();
@@ -270,7 +270,7 @@ mod tests {
         assert_eq!(heap.failed_allocations, 0);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn allocate_and_free() {
         let (mapping, _) = Mapping::allocate(4096).unwrap();
         let mut heap = Heap::new(Arc::new(mapping)).unwrap();
@@ -370,7 +370,7 @@ mod tests {
         assert_eq!(heap.failed_allocations, 0);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn allocatation_counters_work() {
         let (mapping, _) = Mapping::allocate(4096).unwrap();
         let mut heap = Heap::new(Arc::new(mapping)).unwrap();
@@ -398,7 +398,7 @@ mod tests {
         assert_eq!(heap.total_deallocated_blocks(), block_count_to_allocate);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn allocate_merge() {
         let (mapping, _) = Mapping::allocate(4096).unwrap();
         let mut heap = Heap::new(Arc::new(mapping)).unwrap();
@@ -442,7 +442,7 @@ mod tests {
         assert_eq!(heap.get_block(128).unwrap().free_next_index().unwrap(), 0);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn extend() {
         let (mapping, _) = Mapping::allocate(8 * 2048).unwrap();
         let mut heap = Heap::new(Arc::new(mapping)).unwrap();
@@ -495,7 +495,7 @@ mod tests {
         assert_eq!(heap.failed_allocations, 0);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn extend_error() {
         let (mapping, _) = Mapping::allocate(4 * 2048).unwrap();
         let mut heap = Heap::new(Arc::new(mapping)).unwrap();
@@ -537,7 +537,7 @@ mod tests {
         validate(&expected, &heap);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn dont_reinterpret_upper_block_contents() {
         let (mapping, _) = Mapping::allocate(4096).unwrap();
         let mapping_arc = Arc::new(mapping);

@@ -959,7 +959,7 @@ mod tests {
         assert_eq!(num_entries, expected_num_entries);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_diagnostics_hierarchy_iteration() {
         let double_array_data = vec![-1.2, 2.3, 3.4, 4.5, -5.6];
         let chars = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
@@ -1059,7 +1059,7 @@ mod tests {
         validate_hierarchy_iteration(results_vec, test_hierarchy);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_getters() {
         let a_prop = Property::Int("a".to_string(), 1);
         let b_prop = Property::Uint("b".to_string(), 2);
@@ -1082,7 +1082,7 @@ mod tests {
                         Some(prop) if *prop == b_prop);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_edge_case_hierarchy_iteration() {
         let root_only_with_one_property_hierarchy = DiagnosticsHierarchy::new(
             "root".to_string(),
@@ -1135,14 +1135,14 @@ mod tests {
         validate_hierarchy_iteration(results_vec, empty_root_empty_child);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn array_value() {
         let values = vec![1, 2, 5, 7, 9, 11, 13];
         let array = ArrayContent::<u64>::new(values.clone(), ArrayFormat::Default);
         assert_matches!(array, Ok(ArrayContent::Values(vals)) if vals == values);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn linear_histogram_array_value() {
         let values = vec![1, 2, 5, 7, 9, 11, 13];
         let array = ArrayContent::<i64>::new(values, ArrayFormat::LinearHistogram);
@@ -1155,7 +1155,7 @@ mod tests {
         ]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn exponential_histogram_array_value() {
         let values = vec![1.0, 2.0, 5.0, 7.0, 9.0, 11.0, 15.0];
         let array = ArrayContent::<f64>::new(values, ArrayFormat::ExponentialHistogram);
@@ -1167,7 +1167,7 @@ mod tests {
         ]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn deserialize_buckets() -> Result<(), serde_json::Error> {
         let json_string = r#"{
             "root": {
@@ -1260,7 +1260,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn exponential_histogram_buckets() {
         let values = vec![0, 2, 4, 0, 1, 2, 3, 4, 5];
         let array = ArrayContent::new(values, ArrayFormat::ExponentialHistogram);
@@ -1274,7 +1274,7 @@ mod tests {
         ]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn add_to_hierarchy() {
         let mut hierarchy = DiagnosticsHierarchy::new_root();
         let prop_1 = Property::String("x".to_string(), "foo".to_string());
@@ -1310,7 +1310,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn string_lists() {
         let mut hierarchy = DiagnosticsHierarchy::new_root();
         let prop_1 =
@@ -1334,7 +1334,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     // Empty paths are meaningless on insertion and break the method invariant.
     fn no_empty_paths_allowed() {
@@ -1343,7 +1343,7 @@ mod tests {
         hierarchy.get_or_add_node(&path_1);
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     // Paths provided to add must begin at the node we're calling
     // add() on.
@@ -1353,7 +1353,7 @@ mod tests {
         hierarchy.get_or_add_node(&path_1);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn sort_hierarchy() {
         let mut hierarchy = DiagnosticsHierarchy::new(
             "root",
@@ -1471,7 +1471,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_filter_hierarchy() {
         let test_selectors = vec!["*:root/foo:11", "*:root:z", r#"*:root/bar/zed:13\/\:"#];
 
@@ -1508,7 +1508,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_filter_includes_empty_node() {
         let test_selectors = vec!["*:root/foo:blorg"];
 
@@ -1522,7 +1522,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_subtree_selection_includes_empty_nodes() {
         let test_selectors = vec!["*:root"];
         let mut empty_hierarchy = DiagnosticsHierarchy::new(
@@ -1550,7 +1550,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_empty_tree_filtering() {
         // Subtree selection on the empty tree should produce the empty tree.
         let mut empty_hierarchy = DiagnosticsHierarchy::new("root", vec![], vec![]);
@@ -1570,7 +1570,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_select_from_hierarchy() {
         let test_cases = vec![
             (
@@ -1640,7 +1640,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn sort_numerical_value() {
         let mut diagnostics_hierarchy = DiagnosticsHierarchy::new(
             "root",

@@ -166,7 +166,7 @@ mod tests {
     use fuchsia_zircon::AsHandleRef;
     use std::ffi::CString;
 
-    #[test]
+    #[fuchsia::test]
     fn inspector_new() {
         let test_object = Inspector::new();
         assert_eq!(
@@ -175,7 +175,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn inspector_duplicate_vmo() {
         let test_object = Inspector::new();
         assert_eq!(
@@ -188,7 +188,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn inspector_copy_data() {
         let test_object = Inspector::new();
 
@@ -200,7 +200,7 @@ mod tests {
         assert_eq!(test_object.copy_vmo_data().unwrap().len(), 4096);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn no_op() {
         let inspector = Inspector::new_with_size(4096);
         // Make the VMO full.
@@ -211,7 +211,7 @@ mod tests {
         assert!(!no_op_node.is_valid());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn inspector_new_with_size() {
         let test_object = Inspector::new_with_size(8192);
         assert_eq!(test_object.vmo.as_ref().unwrap().get_size().unwrap(), 8192);
@@ -229,7 +229,7 @@ mod tests {
         assert_eq!(test_object.vmo.unwrap().get_size().unwrap(), 4096);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn inspector_new_root() {
         // Note, the small size we request should be rounded up to a full 4kB page.
         let (vmo, root_node) = Inspector::new_root(100).unwrap();

@@ -269,21 +269,21 @@ mod test {
         (inspectable, inspector)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_inspectable_deref() {
         let inspectable = make_inspectable(1).0;
 
         assert_eq!(*inspectable, 1);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_guard_deref() {
         let mut inspectable = make_inspectable(1).0;
 
         assert_eq!(*inspectable.get_mut(), 1);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_guard_deref_mut() {
         let mut inspectable = make_inspectable(1).0;
 
@@ -292,7 +292,7 @@ mod test {
         assert_eq!(*inspectable, 2);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_guard_drop_calls_callback() {
         let (mut inspectable, inspector) = make_inspectable(1);
 
@@ -308,7 +308,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_partial_eq() {
         let inspectable0 = make_inspectable(1).0;
         let inspectable1 = make_inspectable(1).0;
@@ -316,7 +316,7 @@ mod test {
         assert_eq!(inspectable0, inspectable1);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_partial_eq_not() {
         let inspectable0 = make_inspectable(1).0;
         let inspectable1 = make_inspectable(2).0;
@@ -324,14 +324,14 @@ mod test {
         assert_ne!(inspectable0, inspectable1);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_borrow() {
         let inspectable = make_inspectable(1).0;
 
         assert_eq!(Borrow::<i64>::borrow(&inspectable), &1);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_inspectable_in_hash_set() {
         let inspectable = make_inspectable(1).0;
         let mut set = HashSet::new();
@@ -349,7 +349,7 @@ mod test_inspectable_len {
     use super::*;
     use fuchsia_inspect::assert_data_tree;
 
-    #[test]
+    #[fuchsia::test]
     fn test_initialization() {
         let inspector = fuchsia_inspect::Inspector::new();
         let _inspectable = InspectableLen::new(vec![0], inspector.root(), "test-property");
@@ -362,7 +362,7 @@ mod test_inspectable_len {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_watcher() {
         let inspector = fuchsia_inspect::Inspector::new();
         let mut inspectable = InspectableLen::new(vec![0], inspector.root(), "test-property");
@@ -383,7 +383,7 @@ mod test_inspectable_debug_string {
     use super::*;
     use fuchsia_inspect::assert_data_tree;
 
-    #[test]
+    #[fuchsia::test]
     fn test_initialization() {
         let inspector = fuchsia_inspect::Inspector::new();
         let _inspectable = InspectableDebugString::new(vec![0], inspector.root(), "test-property");
@@ -396,7 +396,7 @@ mod test_inspectable_debug_string {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_watcher() {
         let inspector = fuchsia_inspect::Inspector::new();
         let mut inspectable =
@@ -418,7 +418,7 @@ mod test_inspectable_u64 {
     use super::*;
     use fuchsia_inspect::assert_data_tree;
 
-    #[test]
+    #[fuchsia::test]
     fn test_initialization() {
         let inspector = fuchsia_inspect::Inspector::new();
         let _inspectable = InspectableU64::new(0, inspector.root(), "test-property");
@@ -431,7 +431,7 @@ mod test_inspectable_u64 {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_watcher() {
         let inspector = fuchsia_inspect::Inspector::new();
         let mut inspectable = InspectableU64::new(0, inspector.root(), "test-property");

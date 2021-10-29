@@ -32,12 +32,12 @@ mod bindings {
 mod tests {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn my_function_test() {
         assert_eq!(11, my_function());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn set_args_test() {
         assert_eq!(None, set_args(None));
         assert_eq!(Some("".to_string()), set_args(Some("hello".to_string())));

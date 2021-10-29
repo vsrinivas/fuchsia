@@ -54,7 +54,7 @@ pub fn initialize(options: Options) -> Result<ProgramStateHolder, Error> {
 mod test {
     use {super::*, anyhow::Error};
 
-    #[test]
+    #[fuchsia::test]
     fn output_format_from_string() -> Result<(), Error> {
         assert_eq!(OutputFormat::from_str("text")?, OutputFormat::Text);
         assert!(OutputFormat::from_str("").is_err(), "Should have returned 'Err' on ''");

@@ -332,7 +332,7 @@ mod test {
         return false;
     }
 
-    #[test]
+    #[fuchsia::test]
     fn actions_fire_correctly() {
         let mut eval_file = HashMap::new();
         eval_file.insert("true".to_string(), Metric::Eval("0==0".to_string()));
@@ -400,7 +400,7 @@ mod test {
         assert!(!includes(results.get_warnings(), "False array was fired"));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn gauges_fire_correctly() {
         let mut eval_file = HashMap::new();
         eval_file.insert("gauge_f1".to_string(), Metric::Eval("2 / 5".to_string()));
@@ -454,7 +454,7 @@ mod test {
         assert!(includes(results.get_gauges(), "gauge_s9: String(\"foo\")"));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn action_context_errors() {
         let metrics = Metrics::new();
         let actions = Actions::new();
@@ -490,7 +490,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn time_propagates_correctly() {
         let metrics = Metrics::new();
         let mut actions = Actions::new();
@@ -527,7 +527,7 @@ mod test {
         assert!(results_no_time.get_warnings().contains(&"[WARNING] missing.".to_string()));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn snapshots_update_correctly() -> Result<(), Error> {
         let metrics = Metrics::new();
         let actions = Actions::new();

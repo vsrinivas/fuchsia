@@ -67,7 +67,7 @@ mod tests {
         },
     };
 
-    #[test]
+    #[fuchsia::test]
     fn test_routing_errors() {
         let expected_output = vec![
             "[WARNING]: Error routing capability \
@@ -100,7 +100,7 @@ mod tests {
         assert_eq!(RoutingErrorsPlugin {}.run(&plugin_input).get_warnings(), &expected_output);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_no_match_routing_error() {
         let expected_output: Vec<String> = vec![];
 

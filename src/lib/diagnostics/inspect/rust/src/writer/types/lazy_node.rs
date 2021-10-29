@@ -71,7 +71,7 @@ mod tests {
     use futures::FutureExt;
     use inspect_format::{BlockType, LinkNodeDisposition};
 
-    #[test]
+    #[fuchsia::test]
     fn lazy_values() {
         let inspector = Inspector::new();
         let node = inspector.root().create_child("node");
@@ -91,7 +91,7 @@ mod tests {
         assert_eq!(node_block.child_count().unwrap(), 0);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn lazy_node() {
         let inspector = Inspector::new();
         let node = inspector.root().create_child("node");

@@ -35,12 +35,12 @@ fn run_tests(config_files: Vec<String>) -> Result<(), Error> {
 mod test {
     use super::run_tests;
 
-    #[test]
+    #[fuchsia::test]
     fn run_tests_fails_for_empty_file_list() {
         assert!(run_tests(vec![]).is_err(), "Should fail on empty vec");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn run_tests_fails_for_failing_validate() {
         assert!(run_tests(vec!["foo.triage".to_string()]).is_err(), "run_tests should have failed");
     }

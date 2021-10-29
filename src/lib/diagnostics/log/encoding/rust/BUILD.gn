@@ -36,6 +36,7 @@ rustc_library("rust") {
   ]
 
   test_deps = [
+    "//src/lib/fuchsia",
     "//third_party/rust_crates:once_cell",
     "//third_party/rust_crates:tracing-subscriber",
   ]
@@ -49,6 +50,11 @@ rustc_library("rust") {
 
 fuchsia_unittest_package("diagnostics-stream-tests") {
   deps = [ ":rust_test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 rustc_fuzzer("parse_record_fuzzer") {

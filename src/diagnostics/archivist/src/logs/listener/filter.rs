@@ -125,7 +125,7 @@ mod tests {
         .build()
     }
 
-    #[test]
+    #[fuchsia::test]
     fn should_send_verbose() {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
@@ -141,7 +141,7 @@ mod tests {
         assert_eq!(filter.should_send(&message), true);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn should_reject_verbose() {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
@@ -157,7 +157,7 @@ mod tests {
         assert_eq!(filter.should_send(&message), false);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn should_send_info() {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
@@ -171,7 +171,7 @@ mod tests {
         assert_eq!(filter.should_send(&message), true);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn should_reject_info() {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
@@ -181,7 +181,7 @@ mod tests {
         assert_eq!(filter.should_send(&message), false);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn should_send_warn() {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
@@ -195,7 +195,7 @@ mod tests {
         assert_eq!(filter.should_send(&message), true);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn should_reject_warn() {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
@@ -205,7 +205,7 @@ mod tests {
         assert_eq!(filter.should_send(&message), false);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn should_send_error() {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
@@ -219,7 +219,7 @@ mod tests {
         assert_eq!(filter.should_send(&message), true);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn should_reject_error() {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
@@ -229,7 +229,7 @@ mod tests {
         assert_eq!(filter.should_send(&message), false);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn should_send_debug() {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
@@ -243,7 +243,7 @@ mod tests {
         assert_eq!(filter.should_send(&message), true);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn should_reject_debug() {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
@@ -253,7 +253,7 @@ mod tests {
         assert_eq!(filter.should_send(&message), false);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn should_send_trace() {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
@@ -263,7 +263,7 @@ mod tests {
         assert_eq!(filter.should_send(&message), true);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn should_reject_trace() {
         let mut message = test_message();
         let mut filter = MessageFilter::default();
@@ -273,7 +273,7 @@ mod tests {
         assert_eq!(filter.should_send(&message), false);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn should_send_attributed_tag() {
         let message = test_message();
         let mut filter = MessageFilter::default();

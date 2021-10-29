@@ -73,7 +73,7 @@ impl RunResult {
 mod tests {
     use {super::*, triage::ActionResults};
 
-    #[test]
+    #[fuchsia::test]
     fn test_output_text_no_warnings() -> Result<(), Error> {
         let action_results = ActionResults::new();
         let run_result = RunResult::new(OutputFormat::Text, action_results);
@@ -87,7 +87,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_output_text_with_warnings() -> Result<(), Error> {
         let mut action_results = ActionResults::new();
         action_results.add_warning("fail".to_string());
@@ -103,7 +103,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_output_text_with_gauges() -> Result<(), Error> {
         let mut action_results = ActionResults::new();
         action_results.add_gauge("gauge".to_string());

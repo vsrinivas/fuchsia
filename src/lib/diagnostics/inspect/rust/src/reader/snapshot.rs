@@ -265,7 +265,7 @@ mod tests {
         std::sync::Arc,
     };
 
-    #[test]
+    #[fuchsia::test]
     fn scan() -> Result<(), Error> {
         let (mapping, vmo) = Mapping::allocate(4096)?;
         let mapping_ref = Arc::new(mapping);
@@ -314,7 +314,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn scan_bad_header() -> Result<(), Error> {
         let (mapping, vmo) = Mapping::allocate(4096)?;
         let mapping_ref = Arc::new(mapping);
@@ -334,7 +334,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn invalid_type() -> Result<(), Error> {
         let (mapping, vmo) = Mapping::allocate(4096)?;
         let mapping_ref = Arc::new(mapping);
@@ -343,7 +343,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn invalid_order() -> Result<(), Error> {
         let (mapping, vmo) = Mapping::allocate(4096)?;
         let mapping_ref = Arc::new(mapping);
@@ -352,7 +352,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn invalid_pending_write() -> Result<(), Error> {
         let (mapping, vmo) = Mapping::allocate(4096)?;
         let mapping_ref = Arc::new(mapping);
@@ -364,7 +364,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn invalid_magic_number() -> Result<(), Error> {
         let (mapping, vmo) = Mapping::allocate(4096)?;
         let mapping_ref = Arc::new(mapping);
@@ -376,7 +376,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn invalid_generation_count() -> Result<(), Error> {
         let (mapping, vmo) = Mapping::allocate(4096)?;
         let mapping_ref = Arc::new(mapping);
@@ -391,7 +391,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn snapshot_from_few_bytes() {
         let values = (0u8..16).collect::<Vec<u8>>();
         assert!(Snapshot::try_from(&values[..]).is_err());
@@ -400,7 +400,7 @@ mod tests {
         assert!(Snapshot::try_from(vec![0u8, 1, 2, 3, 4]).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn snapshot_frozen_vmo() -> Result<(), Error> {
         let (mapping, vmo) = Mapping::allocate(4096)?;
         let mapping_ref = Arc::new(mapping);

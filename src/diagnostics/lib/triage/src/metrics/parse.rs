@@ -493,7 +493,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_vectors() {
         fn v(i: i64) -> Expression {
             Expression::Value(MetricValue::Int(i))
@@ -530,7 +530,7 @@ mod test {
         assert!(get_parse!(expression_primitive, "[").is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_numbers() {
         // No leading extraneous characters allowed in number, not even whitespace.
         assert!(get_parse!(number, "f5").is_err());
@@ -602,7 +602,7 @@ mod test {
         assert!(get_parse!(number, "1.e").is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_string() {
         // needs to have quotes
         assert!(get_parse!(string, "OK").is_err());
@@ -660,7 +660,7 @@ mod test {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_names_no_namespace() {
         assert_eq!(get_parse!(name_no_namespace, "abc"), Res::Ok("", variable_expression!("abc")));
         assert_eq!(get_parse!(name_no_namespace, "bc."), Res::Ok(".", variable_expression!("bc")));
@@ -684,7 +684,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_names_with_namespace() {
         assert_eq!(
             get_parse!(name_with_namespace, "_bc42_::abc"),
@@ -697,7 +697,7 @@ mod test {
         assert!(get_parse!(name_with_namespace, "_bc42_:abc::def").is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_names() {
         assert_eq!(
             get_parse!(name, "_bc42_::abc"),
@@ -719,7 +719,7 @@ mod test {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_number_types() -> Result<(), Error> {
         assert_eq!(eval!("2"), MetricValue::Int(2));
         assert_eq!(eval!("2+3"), MetricValue::Int(5));
@@ -730,7 +730,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_div_operations() -> Result<(), Error> {
         assert_eq!(eval!("5.0/2"), MetricValue::Float(2.5));
         assert_eq!(eval!("-5.0/2"), MetricValue::Float(-2.5));
@@ -752,7 +752,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_operator_precedence() -> Result<(), Error> {
         assert_eq!(eval!("2+3*4"), MetricValue::Int(14));
         assert_eq!(eval!("2+3*4>14-1*1"), MetricValue::Bool(true));
@@ -768,13 +768,13 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parser_accepts_whitespace() -> Result<(), Error> {
         assert_eq!(eval!(" 2 + +3 * 4 - 5 // ( -2 + Min ( -2 , 3 ) ) "), MetricValue::Int(15));
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parser_comparisons() -> Result<(), Error> {
         assert_eq!(
             format!("{:?}", parse_expression("2>1")),
@@ -801,7 +801,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parser_boolean_functions_value() -> Result<(), Error> {
         assert_eq!(
             format!("{:?}", parse_expression("Not(2>1)")),
@@ -820,7 +820,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parser_boolean_functions_args() -> Result<(), Error> {
         assert_eq!(eval!("And(2>1)"), MetricValue::Bool(true));
         assert_eq!(eval!("And(2>1, 2>1, 2>1)"), MetricValue::Bool(true));
@@ -839,7 +839,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parser_maxmin_functions() -> Result<(), Error> {
         assert_eq!(eval!("Max(2, 5, 3, -1)"), MetricValue::Int(5));
         assert_eq!(eval!("Min(2, 5, 3, -1)"), MetricValue::Int(-1));
@@ -850,7 +850,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parser_time_functions() -> Result<(), Error> {
         assert_eq!(eval!("Nanos(5)"), MetricValue::Int(5));
         assert_eq!(eval!("Micros(4)"), MetricValue::Int(4_000));
@@ -878,14 +878,14 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parser_nested_function() -> Result<(), Error> {
         assert_eq!(eval!("Max(2, Min(4-1, 5))"), MetricValue::Int(3));
         assert_eq!(eval!("And(Max(1, 2+3)>1, Or(1>2, 2>1))"), MetricValue::Bool(true));
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn singleton_vecs_promote() -> Result<(), Error> {
         assert_eq!(eval!("Max([1+1], Min([4]-1, 4+[1]))"), MetricValue::Int(3));
         assert_eq!(eval!("And(Max(1, 2+[3])>1, Or([1]>2, [1>2], 2>[1]))"), MetricValue::Bool(true));
@@ -899,7 +899,7 @@ mod test {
         MetricValue::Vector(v.to_vec())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn functional_programming() -> Result<(), Error> {
         assert_eq!(eval!("Apply(Fn([], 5), [])"), i(5));
         assert_eq!(eval!("Apply(Fn([a], a+5), [2])"), i(7));
@@ -921,7 +921,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_now() -> Result<(), Error> {
         let now_expression = parse_expression("Now()")?;
         let values = HashMap::new();
@@ -936,7 +936,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_option() {
         // Should "Every value was missing" be a ValueError or a Missing?
         assert_problem!(eval!("Option()"), "Missing: Every value was missing");

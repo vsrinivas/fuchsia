@@ -184,7 +184,7 @@ mod tests {
     use fidl_fuchsia_logger::LogMessage;
     use futures::stream::{StreamExt, TryStreamExt};
 
-    #[test]
+    #[fuchsia::test]
     fn convert_debuglog_to_log_message_test() {
         let klog = TestDebugEntry::new("test log".as_bytes());
         let data = convert_debuglog_to_log_message(&klog.record).unwrap();

@@ -33,6 +33,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [ "//src/lib/fuchsia" ]
+
   sources = [ "src/main.rs" ]
 }
 

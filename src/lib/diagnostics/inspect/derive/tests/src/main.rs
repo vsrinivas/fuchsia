@@ -202,7 +202,7 @@ struct GenericYak<'a, T: Unit> {
     inspect_node: Node,
 }
 
-#[test]
+#[fuchsia::test]
 fn unit_primitive() {
     let inspector = Inspector::new();
     let root = inspector.root();
@@ -216,7 +216,7 @@ fn unit_primitive() {
     assert_data_tree!(inspector, root: {});
 }
 
-#[test]
+#[fuchsia::test]
 fn unit_flat() {
     let inspector = Inspector::new();
     let root = inspector.root();
@@ -235,7 +235,7 @@ fn unit_flat() {
     assert_data_tree!(inspector, root: {});
 }
 
-#[test]
+#[fuchsia::test]
 fn unit_nested() {
     let inspector = Inspector::new();
     let root = inspector.root();
@@ -274,7 +274,7 @@ fn unit_nested() {
     assert_data_tree!(inspector, root: {});
 }
 
-#[test]
+#[fuchsia::test]
 fn unit_basic_types() {
     let inspector = Inspector::new();
     let root = inspector.root();
@@ -327,7 +327,7 @@ fn unit_basic_types() {
     assert_data_tree!(inspector, root: {});
 }
 
-#[test]
+#[fuchsia::test]
 fn unit_generic() {
     let inspector = Inspector::new();
     let root = inspector.root();
@@ -346,7 +346,7 @@ fn unit_generic() {
     assert_data_tree!(inspector, root: {});
 }
 
-#[test]
+#[fuchsia::test]
 fn unit_option() -> Result<(), AttachError> {
     let inspector = Inspector::new();
     let mut option_yakling: Option<Yakling> = None;
@@ -392,7 +392,7 @@ fn unit_option() -> Result<(), AttachError> {
     Ok(())
 }
 
-#[test]
+#[fuchsia::test]
 fn ivalue_primitive() {
     let inspector = Inspector::new();
     let root = inspector.root();
@@ -416,7 +416,7 @@ fn ivalue_primitive() {
     assert_data_tree!(inspector, root: {});
 }
 
-#[test]
+#[fuchsia::test]
 fn ivalue_nested() {
     let inspector = Inspector::new();
     let root = inspector.root();
@@ -457,7 +457,7 @@ fn ivalue_nested() {
     assert_data_tree!(inspector, root: {});
 }
 
-#[test]
+#[fuchsia::test]
 fn idebug_enum() {
     let inspector = Inspector::new();
     let root = inspector.root();
@@ -469,7 +469,7 @@ fn idebug_enum() {
     assert_data_tree!(inspector, root: {});
 }
 
-#[test]
+#[fuchsia::test]
 fn iowned_new() {
     let mut v = IValue::new(1u64);
     assert_eq!(*v, 1u64);
@@ -481,7 +481,7 @@ fn iowned_new() {
     assert_eq!(*d, 2u64);
 }
 
-#[test]
+#[fuchsia::test]
 fn iowned_default() {
     let v: IValue<u16> = IValue::default();
     assert_eq!(*v, 0u16);
@@ -489,7 +489,7 @@ fn iowned_default() {
     assert_eq!(d.as_str(), "");
 }
 
-#[test]
+#[fuchsia::test]
 fn iowned_from() {
     let v = IValue::from(17u16);
     assert_eq!(*v, 17u16);
@@ -497,7 +497,7 @@ fn iowned_from() {
     assert_eq!(d.as_str(), "hello");
 }
 
-#[test]
+#[fuchsia::test]
 fn iowned_into() {
     let v: IValue<_> = 17u16.into();
     assert_eq!(*v, 17u16);
@@ -505,7 +505,7 @@ fn iowned_into() {
     assert_eq!(d.as_str(), "hello");
 }
 
-#[test]
+#[fuchsia::test]
 fn iowned_into_inner() {
     let v = IValue::new(17u16);
     assert_eq!(v.into_inner(), 17u16);
@@ -513,7 +513,7 @@ fn iowned_into_inner() {
     assert_eq!(d.into_inner(), "hello".to_string());
 }
 
-#[test]
+#[fuchsia::test]
 fn iowned_debug() {
     let mut v = IValue::new(1337u64);
     assert_eq!(format!("{:?}", v).as_str(), "1337");
@@ -525,7 +525,7 @@ fn iowned_debug() {
     assert_eq!(format!("{:?}", d).as_str(), "\"hello, world\"");
 }
 
-#[test]
+#[fuchsia::test]
 fn iowned_display() {
     let mut v = IValue::new(1337u64);
     assert_eq!(format!("{}", v).as_str(), "1337");
@@ -631,7 +631,7 @@ async fn derive_inspect_nodeless() -> Result<(), AttachError> {
     Ok(())
 }
 
-#[test]
+#[fuchsia::test]
 fn derive_inspect_generic() -> Result<(), AttachError> {
     let inspector = Inspector::new();
     let age = 4u16;

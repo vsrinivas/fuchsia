@@ -115,7 +115,7 @@ mod tests {
     use super::*;
     use crate::Inspector;
 
-    #[test]
+    #[fuchsia::test]
     fn test_int_array() {
         // Create and use a default value.
         let default = IntArrayProperty::default();

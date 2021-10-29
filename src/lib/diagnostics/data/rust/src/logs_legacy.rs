@@ -236,72 +236,72 @@ mod test {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn verbosity_roundtrip_legacy_v10() {
         severity_roundtrip_test!(-10, INFO - 10);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn verbosity_roundtrip_legacy_v5() {
         severity_roundtrip_test!(-5, INFO - 5);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn verbosity_roundtrip_legacy_v4() {
         severity_roundtrip_test!(-4, INFO - 4);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn verbosity_roundtrip_legacy_v3() {
         severity_roundtrip_test!(-3, INFO - 3);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn verbosity_roundtrip_legacy_v2() {
         severity_roundtrip_test!(-2, TRACE);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn severity_roundtrip_legacy_v1() {
         severity_roundtrip_test!(-1, DEBUG);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn verbosity_roundtrip_legacy_v0() {
         severity_roundtrip_test!(0, INFO);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn severity_roundtrip_legacy_warn() {
         severity_roundtrip_test!(1, WARN);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn verbosity_roundtrip_legacy_error() {
         severity_roundtrip_test!(2, ERROR);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn severity_roundtrip_trace() {
         severity_roundtrip_test!(TRACE, TRACE);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn severity_roundtrip_debug() {
         severity_roundtrip_test!(DEBUG, DEBUG);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn severity_roundtrip_info() {
         severity_roundtrip_test!(INFO, INFO);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn severity_roundtrip_warn() {
         severity_roundtrip_test!(WARN, WARN);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn severity_roundtrip_error() {
         severity_roundtrip_test!(ERROR, ERROR);
     }

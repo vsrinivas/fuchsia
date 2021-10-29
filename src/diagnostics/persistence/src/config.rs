@@ -76,7 +76,7 @@ pub fn load_configuration_files() -> Result<Config, Error> {
 mod test {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn verify_insert_logic() {
         let mut config = HashMap::new();
         let taga_servab = "[{tag: 'tag-a', service_name: 'serv-a', max_bytes: 10, \

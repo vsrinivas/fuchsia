@@ -471,7 +471,7 @@ mod tests {
     use crate::logs::testing::create_log_sink_requested_event;
     use std::convert::TryInto;
 
-    #[test]
+    #[fuchsia::test]
     fn convert_v2_moniker_for_diagnostics() {
         let identifier = ComponentIdentifier::parse_from_moniker("./a:0").unwrap();
         assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a"].into());

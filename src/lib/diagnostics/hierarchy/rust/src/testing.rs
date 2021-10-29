@@ -625,7 +625,7 @@ impl<T: MulAssign + AddAssign + PartialOrd + Add<Output = T> + Copy + Default + 
 mod tests {
     use {super::*, crate::Bucket};
 
-    #[test]
+    #[fuchsia::test]
     fn test_exact_match_simple() {
         let diagnostics_hierarchy = simple_tree();
         assert_data_tree!(diagnostics_hierarchy, key: {
@@ -634,7 +634,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_exact_match_complex() {
         let diagnostics_hierarchy = complex_tree();
         assert_data_tree!(diagnostics_hierarchy, key: {
@@ -649,7 +649,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_exact_match_mismatched_property_name() {
         let diagnostics_hierarchy = simple_tree();
@@ -659,7 +659,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_exact_match_mismatched_child_name() {
         let diagnostics_hierarchy = complex_tree();
@@ -675,7 +675,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_exact_match_mismatched_property_name_in_child() {
         let diagnostics_hierarchy = complex_tree();
@@ -691,7 +691,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_exact_match_mismatched_property_value() {
         let diagnostics_hierarchy = simple_tree();
@@ -701,7 +701,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_exact_match_missing_property() {
         let diagnostics_hierarchy = simple_tree();
@@ -710,7 +710,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_exact_match_missing_child() {
         let diagnostics_hierarchy = complex_tree();
@@ -723,7 +723,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_partial_match_success() {
         let diagnostics_hierarchy = complex_tree();
 
@@ -737,7 +737,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_partial_match_nonexistent_property() {
         let diagnostics_hierarchy = simple_tree();
@@ -746,7 +746,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_ignore_property_value() {
         let diagnostics_hierarchy = simple_tree();
         assert_data_tree!(diagnostics_hierarchy, key: {
@@ -755,7 +755,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_ignore_property_value_property_name_is_still_checked() {
         let diagnostics_hierarchy = simple_tree();
@@ -765,7 +765,7 @@ mod tests {
         })
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_expr_key_syntax() {
         let diagnostics_hierarchy = DiagnosticsHierarchy::new(
             "key",
@@ -777,7 +777,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_var_key_syntax() {
         let diagnostics_hierarchy = DiagnosticsHierarchy::new(
             "key",
@@ -790,7 +790,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_arrays() {
         let diagnostics_hierarchy = DiagnosticsHierarchy::new(
             "key",
@@ -811,7 +811,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_histograms() {
         let diagnostics_hierarchy = DiagnosticsHierarchy::new(
             "key",
@@ -892,7 +892,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_matching_tree_assertion_expression() {
         let diagnostics_hierarchy = complex_tree();
         let child1 = tree_assertion!(
@@ -912,21 +912,21 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_matching_non_unique_property_fails() {
         let diagnostics_hierarchy = non_unique_prop_tree();
         assert_data_tree!(diagnostics_hierarchy, key: { prop: "prop_value#0" });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_matching_non_unique_property_fails_2() {
         let diagnostics_hierarchy = non_unique_prop_tree();
         assert_data_tree!(diagnostics_hierarchy, key: { prop: "prop_value#1" });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_matching_non_unique_property_fails_3() {
         let diagnostics_hierarchy = non_unique_prop_tree();
@@ -936,7 +936,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_matching_non_unique_child_fails() {
         let diagnostics_hierarchy = non_unique_child_tree();
@@ -947,7 +947,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_matching_non_unique_child_fails_2() {
         let diagnostics_hierarchy = non_unique_child_tree();
@@ -958,7 +958,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_matching_non_unique_child_fails_3() {
         let diagnostics_hierarchy = non_unique_child_tree();
@@ -972,7 +972,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_nonzero_uint_property_passes() {
         let diagnostics_hierarchy = DiagnosticsHierarchy::new(
             "key",
@@ -988,7 +988,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_nonzero_uint_property_fails() {
         let diagnostics_hierarchy = DiagnosticsHierarchy::new(
@@ -1007,7 +1007,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_string_list() {
         let diagnostics_hierarchy = DiagnosticsHierarchy::new(
             "key",
@@ -1023,7 +1023,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_string_list_failure() {
         let diagnostics_hierarchy = DiagnosticsHierarchy::new(

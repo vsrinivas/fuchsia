@@ -90,7 +90,7 @@ mod tests {
     use crate::assert_data_tree;
     use inspect_format::constants;
 
-    #[test]
+    #[fuchsia::test]
     fn inspect_stats() {
         let inspector = Inspector::new();
         let snapshot_parent = inspector.root().create_child("snapshot");

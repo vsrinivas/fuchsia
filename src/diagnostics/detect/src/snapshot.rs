@@ -250,7 +250,7 @@ mod tests {
     }
 
     /// Tests that the number of pending crash reports is correctly bounded.
-    #[test]
+    #[fuchsia::test]
     fn test_crash_report_pending_reports() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 

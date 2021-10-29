@@ -46,7 +46,7 @@ struct fx_log_packet_t_packed {
     data: [c_char; MAX_DATAGRAM_LEN - METADATA_SIZE],
 }
 
-#[test]
+#[fuchsia::test]
 fn abi_test() {
     assert_eq!(METADATA_SIZE, 32);
     assert_eq!(MAX_TAGS, 5);
@@ -73,7 +73,7 @@ fn get_test_identity() -> MonikerWithUrl {
     (**TEST_IDENTITY).clone()
 }
 
-#[test]
+#[fuchsia::test]
 fn short_reads() {
     let packet = test_packet();
     let one_short = &packet.as_bytes()[..METADATA_SIZE];
@@ -84,7 +84,7 @@ fn short_reads() {
     assert_eq!(LoggerMessage::try_from(two_short), Err(MessageError::ShortRead { len: 31 }));
 }
 
-#[test]
+#[fuchsia::test]
 fn unterminated() {
     let mut packet = test_packet();
     let end = 9;
@@ -96,7 +96,7 @@ fn unterminated() {
     assert_eq!(parsed, Err(MessageError::NotNullTerminated { terminator: 1 }));
 }
 
-#[test]
+#[fuchsia::test]
 fn tags_no_message() {
     let mut packet = test_packet();
     let end = 12;
@@ -110,7 +110,7 @@ fn tags_no_message() {
     assert_eq!(parsed, Err(MessageError::OutOfBounds));
 }
 
-#[test]
+#[fuchsia::test]
 fn tags_with_message() {
     let mut packet = test_packet();
     let a_start = 1;
@@ -149,7 +149,7 @@ fn tags_with_message() {
     assert_eq!(parsed, expected);
 }
 
-#[test]
+#[fuchsia::test]
 fn placeholder_tag_replaced_with_attributed_name() {
     let mut packet = test_packet();
 
@@ -192,7 +192,7 @@ fn placeholder_tag_replaced_with_attributed_name() {
     assert_eq!(parsed, expected);
 }
 
-#[test]
+#[fuchsia::test]
 fn two_tags_no_message() {
     let mut packet = test_packet();
     let a_start = 1;
@@ -215,7 +215,7 @@ fn two_tags_no_message() {
     assert_eq!(parsed, Err(MessageError::OutOfBounds));
 }
 
-#[test]
+#[fuchsia::test]
 fn two_tags_with_message() {
     let mut packet = test_packet();
     let a_start = 1;
@@ -261,7 +261,7 @@ fn two_tags_with_message() {
     assert_eq!(parsed, expected);
 }
 
-#[test]
+#[fuchsia::test]
 fn max_tags_with_message() {
     let mut packet = test_packet();
 
@@ -318,7 +318,7 @@ fn max_tags_with_message() {
     assert_eq!(full_parsed, expected_message);
 }
 
-#[test]
+#[fuchsia::test]
 fn max_tags() {
     let mut packet = test_packet();
     let tags_start = 1;
@@ -364,7 +364,7 @@ fn max_tags() {
     assert_eq!(parsed, builder.build());
 }
 
-#[test]
+#[fuchsia::test]
 fn no_tags_with_message() {
     let mut packet = test_packet();
     packet.data[0] = 0;
@@ -394,7 +394,7 @@ fn no_tags_with_message() {
     );
 }
 
-#[test]
+#[fuchsia::test]
 fn message_severity() {
     let mut packet = test_packet();
     packet.metadata.severity = LogLevelFilter::Info as i32;
@@ -450,7 +450,7 @@ fn message_severity() {
     assert_eq!(parsed, expected_message);
 }
 
-#[test]
+#[fuchsia::test]
 fn legacy_message_severity() {
     let mut packet = test_packet();
     // legacy verbosity where v=10
@@ -527,7 +527,7 @@ fn legacy_message_severity() {
     assert_eq!(parsed, expected_message);
 }
 
-#[test]
+#[fuchsia::test]
 fn test_from_structured() {
     let record = Record {
         timestamp: 72,
@@ -642,7 +642,7 @@ fn test_from_structured() {
     );
 }
 
-#[test]
+#[fuchsia::test]
 fn basic_structured_info() {
     let expected_timestamp = 72;
     let record = Record {

@@ -328,7 +328,7 @@ pub async fn main(args: CommandLine) -> Result<(), Error> {
 mod test {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn verify_appropriate_check_interval() -> Result<(), Error> {
         let error_a = Some("a".to_string());
         let error_empty = Some("".to_string());
@@ -363,7 +363,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn verify_build_signature() {
         fn sig(signature: &str) -> triage::SnapshotTrigger {
             triage::SnapshotTrigger { interval: 0, signature: signature.to_string() }

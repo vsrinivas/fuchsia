@@ -90,7 +90,7 @@ pub fn evaluate_int_math(expression: &str) -> Result<i64, Error> {
 mod test {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn time_parses_correctly() {
         fn file(name: &str, source: Source, contents: &str) -> DiagnosticData {
             DiagnosticData::new(name.to_string(), source, contents.to_string()).unwrap()

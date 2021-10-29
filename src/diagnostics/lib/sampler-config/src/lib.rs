@@ -140,7 +140,7 @@ mod tests {
     use super::SamplerConfig;
     use std::fs;
 
-    #[test]
+    #[fuchsia::test]
     fn parse_valid_configs() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");
@@ -183,7 +183,7 @@ mod tests {
         assert_eq!(config.unwrap().project_configs.len(), 2);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_one_valid_one_invalid_config() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");
@@ -218,7 +218,7 @@ mod tests {
         assert!(config.is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_optional_args() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");
@@ -260,14 +260,13 @@ mod tests {
         assert!(config.is_ok());
         assert_eq!(config.unwrap().project_configs.len(), 2);
     }
-}
 
-#[test]
-fn default_customer_id() {
-    let dir = tempfile::tempdir().unwrap();
-    let config_path = dir.path().join("config");
-    fs::create_dir(&config_path).unwrap();
-    fs::write(config_path.join("1default.json"), r#"{
+    #[fuchsia::test]
+    fn default_customer_id() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config");
+        fs::create_dir(&config_path).unwrap();
+        fs::write(config_path.join("1default.json"), r#"{
   "project_id": 5,
   "poll_rate_sec": 60,
   "metrics": [
@@ -280,9 +279,9 @@ fn default_customer_id() {
   ]
 }
 "#).unwrap();
-    fs::write(
-        config_path.join("2with_customer_id.json"),
-        r#"{
+        fs::write(
+            config_path.join("2with_customer_id.json"),
+            r#"{
   "customer_id": 6,
   "project_id": 5,
   "poll_rate_sec": 3,
@@ -296,12 +295,13 @@ fn default_customer_id() {
   ]
 }
 "#,
-    )
-    .unwrap();
+        )
+        .unwrap();
 
-    let config = SamplerConfig::from_directory(10, &config_path);
-    assert!(config.is_ok());
-    assert_eq!(config.as_ref().unwrap().project_configs.len(), 2);
-    assert_eq!(config.as_ref().unwrap().project_configs[0].customer_id, 1);
-    assert_eq!(config.as_ref().unwrap().project_configs[1].customer_id, 6);
+        let config = SamplerConfig::from_directory(10, &config_path);
+        assert!(config.is_ok());
+        assert_eq!(config.as_ref().unwrap().project_configs.len(), 2);
+        assert_eq!(config.as_ref().unwrap().project_configs[0].customer_id, 1);
+        assert_eq!(config.as_ref().unwrap().project_configs[1].customer_id, 6);
+    }
 }

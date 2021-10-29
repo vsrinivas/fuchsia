@@ -96,7 +96,7 @@ mod tests {
     use super::*;
     use crate::{writer::Inspector, ExponentialHistogramParams};
 
-    #[test]
+    #[fuchsia::test]
     fn test_double_exp_histogram() {
         let inspector = Inspector::new();
         let root = inspector.root();

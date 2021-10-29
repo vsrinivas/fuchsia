@@ -110,7 +110,7 @@ fn base_name(path: &String) -> Result<String, Error> {
 mod test {
     use {super::*, anyhow::Error};
 
-    #[test]
+    #[fuchsia::test]
     fn base_name_works() -> Result<(), Error> {
         assert_eq!(base_name(&"foo/bar/baz.ext".to_string())?, "baz".to_string());
         Ok(())

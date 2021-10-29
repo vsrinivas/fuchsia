@@ -30,7 +30,7 @@ struct Yakling {
     age: u16,
 }
 
-#[test]
+#[fuchsia::test]
 fn initialize() -> Result<(), AttachError> {
     let parent = InspectNode::default();
     Yak::default().with_inspect(&parent, "my_yak").map(|_| ())

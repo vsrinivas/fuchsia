@@ -396,7 +396,7 @@ impl<'de> Visitor<'de> for NumericValueVisitor {
 mod tests {
     use {super::*, crate::ArrayFormat};
 
-    #[test]
+    #[fuchsia::test]
     fn deserialize_json() {
         let json_string = get_single_json_hierarchy();
         let mut parsed_hierarchy: DiagnosticsHierarchy =
@@ -407,7 +407,7 @@ mod tests {
         assert_eq!(expected_hierarchy, parsed_hierarchy);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn reversible_deserialize() {
         let mut original_hierarchy = get_unambigious_deserializable_hierarchy();
         let result =
@@ -419,7 +419,7 @@ mod tests {
         assert_eq!(original_hierarchy, parsed_hierarchy);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_exp_histogram() {
         let mut hierarchy = DiagnosticsHierarchy::new(
             "root".to_string(),

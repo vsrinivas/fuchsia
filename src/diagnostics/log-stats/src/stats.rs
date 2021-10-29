@@ -346,7 +346,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn granular_stats() -> Result<(), anyhow::Error> {
         let mut state = GranularTestState::new()?;
 
@@ -534,7 +534,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn different_severities() -> Result<(), anyhow::Error> {
         let mut state = GranularTestState::new()?;
 
@@ -618,7 +618,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn negative_edge_cases() -> Result<(), anyhow::Error> {
         // File and line not at the beginning
         verify_message_ignored("ERROR: [abc/xyz.cc(10)] dsafq")?;
@@ -660,7 +660,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn positive_edge_cases() -> Result<(), anyhow::Error> {
         // Message is unicode.
         verify_file_and_line("[dir/file.cc(34)] 𜌼:ع鱆髦頄", "dir/file.cc", 34)?;
@@ -671,7 +671,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn too_many_logs() -> Result<(), anyhow::Error> {
         let mut state = GranularTestState::new()?;
 
@@ -750,7 +750,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn structured_log() -> Result<(), anyhow::Error> {
         let mut state = GranularTestState::new()?;
 
@@ -904,7 +904,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn component_stats_retained_then_dropped() -> Result<(), anyhow::Error> {
         // Setup clean state with predictable executor.
         let mut state = ComponentTestState::new(1000)?;

@@ -92,7 +92,7 @@ mod tests {
     use crate::metrics::fetch::InspectFetcher;
     use std::convert::TryInto;
 
-    #[test]
+    #[fuchsia::test]
     fn test_crashes() {
         let expected_gauges: Vec<String> =
             vec!["TestCmx: 2G", "Other: 7M", "Abcd: 10.3k", "Bbb: 9999"]

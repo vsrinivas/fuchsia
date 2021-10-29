@@ -512,7 +512,7 @@ mod tests {
         Registry,
     };
 
-    #[test]
+    #[fuchsia::test]
     fn build_basic_record() {
         let builder = RecordBuilder::new(Severity::Info, 0, 0, None, None, 0);
         assert_eq!(
@@ -528,7 +528,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn build_records_with_location() {
         let info = RecordBuilder::new(Severity::Info, 0, 0, Some("foo.rs"), Some(10), 0);
         assert_eq!(
@@ -559,7 +559,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn build_record_with_dropped_count() {
         let builder = RecordBuilder::new(Severity::Info, 0, 0, None, None, 7);
         assert_eq!(

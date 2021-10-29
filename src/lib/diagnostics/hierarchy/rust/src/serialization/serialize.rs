@@ -141,7 +141,7 @@ mod tests {
         crate::{hierarchy, ArrayFormat},
     };
 
-    #[test]
+    #[fuchsia::test]
     fn serialize_json() {
         let mut hierarchy = test_hierarchy();
         hierarchy.sort();
@@ -150,7 +150,7 @@ mod tests {
         assert_eq!(result, expected);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn serialize_doubles() {
         let hierarchy = hierarchy! {
             root: {

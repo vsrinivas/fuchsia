@@ -124,7 +124,7 @@ bitfield! {
 mod tests {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn test_header() {
         let mut header = BlockHeader(0);
         let magic = 0x494e5350;
@@ -138,7 +138,7 @@ mod tests {
         assert_eq!(header.value(), 0x494e53500001030d);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_payload() {
         let mut payload = Payload(0);
         payload.set_total_length(0xab);

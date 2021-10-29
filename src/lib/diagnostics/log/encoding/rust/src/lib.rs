@@ -190,7 +190,7 @@ mod tests {
     /// one timestamp.
     const MINIMAL_LOG_HEADER: u64 = 0x3000000000000029;
 
-    #[test]
+    #[fuchsia::test]
     fn minimal_header() {
         let mut poked = Header(0);
         poked.set_type(TRACING_FORMAT_LOG_RECORD_TYPE);
@@ -203,7 +203,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn no_args_roundtrip() {
         let mut expected_record = MINIMAL_LOG_HEADER.to_le_bytes().to_vec();
         let timestamp = 5_000_000i64;
@@ -217,7 +217,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn signed_arg_roundtrip() {
         assert_roundtrips(
             Argument { name: String::from("signed"), value: Value::SignedInt(-1999) },
@@ -227,7 +227,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn unsigned_arg_roundtrip() {
         assert_roundtrips(
             Argument { name: String::from("unsigned"), value: Value::UnsignedInt(42) },
@@ -237,7 +237,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn text_arg_roundtrip() {
         assert_roundtrips(
             Argument { name: String::from("stringarg"), value: Value::Text(String::from("owo")) },
@@ -247,7 +247,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn float_arg_roundtrip() {
         assert_roundtrips(
             Argument { name: String::from("float"), value: Value::Floating(3.14159) },
@@ -257,7 +257,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn arg_of_each_type_roundtrips() {
         assert_roundtrips(
             Record {
@@ -279,7 +279,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn multiple_string_args() {
         assert_roundtrips(
             Record {
@@ -306,7 +306,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn invalid_records() {
         // invalid word size
         let mut encoder = Encoder::new(Cursor::new(vec![0; BUF_LEN]));

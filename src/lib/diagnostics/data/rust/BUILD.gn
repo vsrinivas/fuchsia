@@ -27,6 +27,7 @@ rustc_library("lib") {
   ]
 
   test_deps = [
+    "//src/lib/fuchsia",
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:serde_json",
   ]

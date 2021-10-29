@@ -25,6 +25,7 @@ group("tests") {
     "kcounter:tests",
     "lib:tests",
     "log-stats:tests",
+    "log_listener:tests",
     "persistence:tests",
     "sampler:tests",
     "tool:host_tests",

@@ -115,7 +115,7 @@ mod tests {
     use crate::writer::{testing_utils::get_state, Node};
     use inspect_format::BlockType;
 
-    #[test]
+    #[fuchsia::test]
     fn int_property() {
         // Create and use a default value.
         let default = IntProperty::default();

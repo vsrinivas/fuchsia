@@ -789,7 +789,7 @@ mod tests {
         copy_into(&payload.value().to_le_bytes(), buffer, index * 16 + 8);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_scanning_string_reference() {
         let mut buffer = [0u8; 4096];
         const HEADER: usize = 0;
@@ -829,7 +829,7 @@ mod tests {
         try_byte(&mut buffer, (16, 0), 0, Some("root ->\n> number ->"));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_scanning_logic() {
         let mut buffer = [0u8; 4096];
         // VMO Header block (index 0)
@@ -1013,7 +1013,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_bit_ops() -> Result<(), Error> {
         assert_eq!(low_bits(0xff, 3), 7);
         assert_eq!(low_bits(0x04, 3), 4);
@@ -1028,7 +1028,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_zero_bits() -> Result<(), Error> {
         let mut buffer = [0u8; 48];
         for byte in 0..16 {
@@ -1127,7 +1127,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_reserved_fields() {
         let mut buffer = [0u8; 4096];
         // VMO Header block (index 0)

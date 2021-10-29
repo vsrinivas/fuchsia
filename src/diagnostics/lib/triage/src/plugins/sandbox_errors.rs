@@ -50,7 +50,7 @@ mod tests {
     use super::*;
     use crate::metrics::fetch::TextFetcher;
 
-    #[test]
+    #[fuchsia::test]
     fn test_sandbox_errors() {
         let expected_warnings: Vec<String> = vec![
             "[WARNING]: my_component.cmx tried to use fuchsia.example.Id, which was not declared in its sandbox",

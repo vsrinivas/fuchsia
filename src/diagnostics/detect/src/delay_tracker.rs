@@ -60,7 +60,7 @@ mod test {
     use super::*;
     use injectable_time::FakeTime;
 
-    #[test]
+    #[fuchsia::test]
     fn verify_test_mode() {
         let time = FakeTime::new();
         let mut tracker = DelayTracker::new(&time, &Mode::Test);
@@ -82,7 +82,7 @@ mod test {
         assert_eq!(ok_fast_2, true);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn verify_appropriate_report_interval() {
         assert!(MINIMUM_SIGNATURE_INTERVAL_NANOS > 1);
         let time = FakeTime::new();

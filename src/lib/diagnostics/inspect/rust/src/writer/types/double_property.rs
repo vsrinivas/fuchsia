@@ -118,7 +118,7 @@ mod tests {
     use crate::writer::{testing_utils::get_state, Node};
     use inspect_format::BlockType;
 
-    #[test]
+    #[fuchsia::test]
     fn double_property() {
         // Create and use a default value.
         let default = DoubleProperty::default();

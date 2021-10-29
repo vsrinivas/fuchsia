@@ -43,6 +43,8 @@ rustc_test("example_lib_tests") {
   edition = "2018"
 
   sources = [ "src/lib.rs" ]
+
+  deps = [ "//src/lib/fuchsia" ]
 }
 
 fuchsia_unittest_package("wasm-example-unittests") {

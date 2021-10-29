@@ -63,6 +63,7 @@ rustc_library("lib") {
 
   test_deps = [
     "//src/lib/diagnostics/log/message/rust",
+    "//src/lib/fuchsia",
     "//third_party/rust_crates:proptest",
   ]
 

@@ -593,7 +593,7 @@ mod tests {
     use inspect_format::BlockType;
     use std::convert::TryFrom;
 
-    #[test]
+    #[fuchsia::test]
     fn node() {
         // Create and use a default value.
         let default = Node::default();
@@ -669,7 +669,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn node_no_op_clone_weak() {
         let default = Node::default();
         assert!(!default.is_valid());
@@ -681,7 +681,7 @@ mod tests {
         assert!(!weak.is_valid());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn node_clone_weak() {
         let state = get_state(4096);
         let root = Node::new_root(state);
@@ -716,7 +716,7 @@ mod tests {
         let _ = child_2.create_child("orphan");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn dummy_partialeq() {
         let inspector = Inspector::new();
         let root = inspector.root();
@@ -738,7 +738,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn inspector_lazy_from_vmo() {
         let inspector = Inspector::new();
         inspector.root().record_uint("test", 3);
@@ -756,7 +756,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn record() {
         let inspector = Inspector::new();
         let property = inspector.root().create_uint("a", 1);
@@ -780,7 +780,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn record_child() {
         let inspector = Inspector::new();
         inspector.root().record_child("test", |node| {
@@ -793,7 +793,7 @@ mod tests {
         })
     }
 
-    #[test]
+    #[fuchsia::test]
     fn record_weak() {
         let inspector = Inspector::new();
         let main = inspector.root().create_child("main");

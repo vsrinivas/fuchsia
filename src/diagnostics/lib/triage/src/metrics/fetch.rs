@@ -508,7 +508,7 @@ mod test {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_file_fetch() {
         assert_eq!(
             BAR_99_FILE_FETCHER.fetch(&BAR_SELECTOR),
@@ -517,7 +517,7 @@ mod test {
         assert_eq!(BAR_99_FILE_FETCHER.fetch(&WRONG_SELECTOR), MetricValue::Vector(vec![]),);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_duplicate_file_fetch() {
         assert_eq!(
             LOCAL_DUPLICATES_FETCHER.fetch(&DUPLICATE_SELECTOR),
@@ -525,7 +525,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_trial_fetch() {
         assert!(FOO_42_AB_7_TRIAL_FETCHER.has_entry("foo"));
         assert!(FOO_42_AB_7_TRIAL_FETCHER.has_entry("a::b"));
@@ -538,7 +538,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_eval_with_file() {
         let mut file_map = HashMap::new();
         file_map.insert("bar".to_owned(), Metric::Selector(vec![BAR_SELECTOR.clone()]));
@@ -626,7 +626,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_eval_with_trial() {
         let mut trial_map = HashMap::new();
         // The (broken) "foo" selector should be ignored in favor of the "foo" fetched value.
@@ -674,7 +674,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn inspect_fetcher_new_works() -> Result<(), Error> {
         assert!(InspectFetcher::try_from("foo").is_err(), "'foo' isn't valid JSON");
         assert!(InspectFetcher::try_from(r#"{"a":5}"#).is_err(), "Needed an array");
@@ -682,7 +682,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_fetch() -> Result<(), Error> {
         // This tests both the moniker/payload and path/content (old-style) Inspect formats.
         let json_options = vec![
@@ -756,7 +756,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn inspect_ref_empty() -> Result<(), Error> {
         // Make sure it doesn't crash, can be called multiple times and they both work right.
         let fetcher1 = InspectFetcher::ref_empty();
@@ -780,7 +780,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn text_fetcher_works() {
         let fetcher = TextFetcher::from("abcfoo\ndefgfoo");
         assert!(fetcher.contains("d*g"));

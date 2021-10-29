@@ -46,7 +46,7 @@ mod tests {
     use super::*;
     use crate::writer::types::Inspector;
 
-    #[test]
+    #[fuchsia::test]
     fn value_list_record() {
         let inspector = Inspector::new();
         let child = inspector.root().create_child("test");

@@ -13,6 +13,7 @@ rustc_library("diagnostics-hierarchy") {
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//src/lib/diagnostics/selectors",
+    "//src/lib/fuchsia",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:base64",
     "//third_party/rust_crates:difference",
@@ -41,6 +42,12 @@ rustc_library("diagnostics-hierarchy") {
 
 fuchsia_unittest_package("diagnostics-hierarchy-test") {
   deps = [ ":diagnostics-hierarchy_test" ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("rust") {

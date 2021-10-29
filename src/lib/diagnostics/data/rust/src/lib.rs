@@ -1211,7 +1211,7 @@ mod tests {
 
     const TEST_URL: &'static str = "fuchsia-pkg://test";
 
-    #[test]
+    #[fuchsia::test]
     fn test_canonical_json_inspect_formatting() {
         let mut hierarchy = hierarchy! {
             root: {
@@ -1251,7 +1251,7 @@ mod tests {
         pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_errorful_json_inspect_formatting() {
         let json_schema = Data::for_inspect(
             "a/b/c/d",
@@ -1281,7 +1281,7 @@ mod tests {
         pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn default_builder_test() {
         let builder = LogsDataBuilder::new(BuilderArgs {
             component_url: Some("url".to_string()),
@@ -1316,7 +1316,7 @@ mod tests {
         pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn regular_message_test() {
         let builder = LogsDataBuilder::new(BuilderArgs {
             component_url: Some("url".to_string()),
@@ -1371,7 +1371,7 @@ mod tests {
         pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn printf_test() {
         let builder = LogsDataBuilder::new(BuilderArgs {
             component_url: Some("url".to_string()),
@@ -1428,7 +1428,7 @@ mod tests {
         pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_canonical_json_lifecycle_event_formatting() {
         let json_schema = Data::for_lifecycle_event(
             "a/b/c/d",
@@ -1457,7 +1457,7 @@ mod tests {
         pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_errorful_json_lifecycle_event_formatting() {
         let json_schema = Data::for_lifecycle_event(
             "a/b/c/d",
@@ -1487,7 +1487,7 @@ mod tests {
         pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn display_for_logs() {
         let data = LogsDataBuilder::new(BuilderArgs {
             timestamp_nanos: Timestamp::from(12345678000i64).into(),
@@ -1512,7 +1512,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn display_for_logs_no_tags() {
         let data = LogsDataBuilder::new(BuilderArgs {
             timestamp_nanos: Timestamp::from(12345678000i64).into(),
@@ -1533,7 +1533,7 @@ mod tests {
     // of ffx are using a version that includes this changes. We'll make size_bytes=None the
     // default. At that point, we can refactor this test to instead test backwards compatibility --
     // deserializing a json value with size_bytes.
-    #[test]
+    #[fuchsia::test]
     fn deserialize_no_size_bytes() {
         let original_json = json!({
           "moniker": "a/b",

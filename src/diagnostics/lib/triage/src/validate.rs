@@ -180,7 +180,7 @@ mod test {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn validate_works() -> Result<(), Error> {
         let metrics = build_map!((
             "foo",
@@ -276,7 +276,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn validate_time() -> Result<(), Error> {
         let metrics = HashMap::new();
         let actions = build_map!((

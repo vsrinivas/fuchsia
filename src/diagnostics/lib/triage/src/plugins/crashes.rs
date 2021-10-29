@@ -53,7 +53,7 @@ mod tests {
     use super::*;
     use crate::metrics::fetch::TextFetcher;
 
-    #[test]
+    #[fuchsia::test]
     fn test_crashes() {
         let expected_warnings: Vec<String> = vec![
             "[WARNING]: my_component.cmx crashed at 1h1m1.123s [3661.123]",

@@ -163,7 +163,7 @@ mod tests {
         fuchsia_inspect::Inspector, futures::task::Poll, pin_utils::pin_mut, std::cell::RefCell,
     };
 
-    #[test]
+    #[fuchsia::test]
     fn test_auto_persist() {
         let (sender, mut receiver) = mpsc::channel::<String>(100);
         let inspector = Inspector::new();
@@ -183,7 +183,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_create_persistence_req_sender() {
         let mut exec = fasync::TestExecutor::new().expect("creating executor should succeed");
         let (persistence_proxy, mut persistence_stream) =
@@ -229,7 +229,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_log_at_most_once_per_min_factory() {
         let log_count = Arc::new(RefCell::new(0));
         let now = Arc::new(RefCell::new(zx::Time::from_nanos(0)));

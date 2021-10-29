@@ -41,7 +41,7 @@ impl<'a> VariableName {
 mod test {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn name_with_namespace() {
         let name = VariableName::new("a::b".to_string());
         assert_eq!(name.original_name(), "a::b".to_string());
@@ -49,7 +49,7 @@ mod test {
         assert_eq!(name.name_parts("c"), Some(("a", "b")));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn name_without_namespace() {
         let name = VariableName::new("b".to_string());
         assert_eq!(name.original_name(), "b".to_string());
@@ -57,7 +57,7 @@ mod test {
         assert_eq!(name.name_parts("c"), Some(("c", "b")));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn too_many_namespaces() {
         let name = VariableName::new("a::b::c".to_string());
         assert_eq!(name.original_name(), "a::b::c".to_string());

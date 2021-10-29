@@ -663,7 +663,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn tombstone_reads() {
         let inspector = Inspector::new();
         let node1 = inspector.root().create_child("child1");
@@ -757,7 +757,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn from_invalid_utf8_string() {
         // Creates a perfectly normal Inspector with a perfectly normal string
         // property with a perfectly normal value.
@@ -794,7 +794,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_invalid_array_slots() -> Result<(), Error> {
         let inspector = Inspector::new();
         let root = inspector.root();
@@ -905,13 +905,13 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_matching_with_inspector() {
         let inspector = Inspector::new();
         assert_data_tree!(inspector, root: {});
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_matching_with_partial() {
         let propreties = vec![Property::String("sub".to_string(), "sub_value".to_string())];
         let partial = PartialNodeHierarchy::new("root", propreties, vec![]);
@@ -920,7 +920,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic]
     fn test_missing_values_with_partial() {
         let mut partial = PartialNodeHierarchy::new("root", vec![], vec![]);
@@ -932,7 +932,7 @@ mod tests {
         assert_data_tree!(partial, root: {});
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_matching_with_expression_as_key() {
         let properties = vec![Property::String("sub".to_string(), "sub_value".to_string())];
         let partial = PartialNodeHierarchy::new("root", properties, vec![]);
