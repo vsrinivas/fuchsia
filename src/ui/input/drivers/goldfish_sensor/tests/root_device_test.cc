@@ -4,8 +4,8 @@
 
 #include "src/ui/input/drivers/goldfish_sensor/root_device.h"
 
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <fidl/fuchsia.input.report/cpp/wire.h>
+#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/ddk/driver.h>
 
 #include <string>
@@ -24,12 +24,12 @@ namespace {
 
 class FakeInputDevice : public InputDevice {
  public:
-  static fit::result<InputDevice*, zx_status_t> Create(RootDevice* rootdevice,
-                                                       async_dispatcher_t* dispatcher,
-                                                       const std::string& name) {
+  static fpromise::result<InputDevice*, zx_status_t> Create(RootDevice* rootdevice,
+                                                            async_dispatcher_t* dispatcher,
+                                                            const std::string& name) {
     auto val = new FakeInputDevice(rootdevice, dispatcher, name);
     g_devices_[name] = val;
-    return fit::ok(val);
+    return fpromise::ok(val);
   }
 
   FakeInputDevice(RootDevice* rootdevice, async_dispatcher_t* dispatcher, const std::string& name)
@@ -85,13 +85,13 @@ class FakeInputDevice : public InputDevice {
   std::string name_;
 };
 
-fit::result<InputDevice*, zx_status_t> CreateFakeDevice1(RootDevice* rootdevice,
-                                                         async_dispatcher_t* dispatcher) {
+fpromise::result<InputDevice*, zx_status_t> CreateFakeDevice1(RootDevice* rootdevice,
+                                                              async_dispatcher_t* dispatcher) {
   return FakeInputDevice::Create(rootdevice, dispatcher, "fake1");
 }
 
-fit::result<InputDevice*, zx_status_t> CreateFakeDevice2(RootDevice* rootdevice,
-                                                         async_dispatcher_t* dispatcher) {
+fpromise::result<InputDevice*, zx_status_t> CreateFakeDevice2(RootDevice* rootdevice,
+                                                              async_dispatcher_t* dispatcher) {
   return FakeInputDevice::Create(rootdevice, dispatcher, "fake2");
 }
 
@@ -218,7 +218,7 @@ TEST_F(RootDeviceTest, DispatchSensorReports) {
 
   const char* kFake1Report = "fake1:0.1:0.2";
   PipeIo::ReadResult read_result =
-      fit::ok(std::vector<uint8_t>(kFake1Report, kFake1Report + strlen(kFake1Report)));
+      fpromise::ok(std::vector<uint8_t>(kFake1Report, kFake1Report + strlen(kFake1Report)));
   dut_->OnReadSensor(std::move(read_result));
 
   EXPECT_EQ(fake1->report_id(), fake1_report_id + 1);
@@ -228,7 +228,8 @@ TEST_F(RootDeviceTest, DispatchSensorReports) {
   EXPECT_EQ(fake1->report()[1], 0.2);
 
   const char* kFake2Report = "fake2:0:0.2:0.3";
-  read_result = fit::ok(std::vector<uint8_t>(kFake2Report, kFake2Report + strlen(kFake2Report)));
+  read_result =
+      fpromise::ok(std::vector<uint8_t>(kFake2Report, kFake2Report + strlen(kFake2Report)));
   dut_->OnReadSensor(std::move(read_result));
 
   EXPECT_EQ(fake1->report_id(), fake1_report_id + 1);
@@ -239,7 +240,8 @@ TEST_F(RootDeviceTest, DispatchSensorReports) {
   EXPECT_EQ(fake2->report()[2], 0.3);
 
   const char* kFake3Report = "fake3:1:2:3:4";
-  read_result = fit::ok(std::vector<uint8_t>(kFake3Report, kFake3Report + strlen(kFake3Report)));
+  read_result =
+      fpromise::ok(std::vector<uint8_t>(kFake3Report, kFake3Report + strlen(kFake3Report)));
   dut_->OnReadSensor(std::move(read_result));
 
   EXPECT_EQ(fake1->report_id(), fake1_report_id + 1);

@@ -75,7 +75,7 @@ struct DpCapabilities final {
   DpCapabilities& operator=(DpCapabilities&&) = default;
 
   // Read and parse DPCD capabilities. Clears any previously initialized content
-  static fit::result<DpCapabilities> Read(DpcdChannel* dp_aux, inspect::Node* parent_node);
+  static fpromise::result<DpCapabilities> Read(DpcdChannel* dp_aux, inspect::Node* parent_node);
 
   // Get the cached value of a DPCD register using its DPCD address.
   uint8_t dpcd_at(dpcd::Register address) const {

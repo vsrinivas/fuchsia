@@ -123,17 +123,17 @@ namespace {
   auto get_v1_info = GetV1Info(dispatcher, services, fit::Timeout(timeout), thread_koid);
   auto get_v2_info = GetV2Info(dispatcher, services, fit::Timeout(timeout), thread_koid);
   return ::fpromise::join_promises(std::move(get_v1_info), std::move(get_v2_info))
-      .and_then([](std::tuple<::fit::result<ComponentInfo>, ::fit::result<ComponentInfo>>& results)
-                    -> ::fpromise::result<ComponentInfo> {
+      .and_then([](std::tuple<::fpromise::result<ComponentInfo>, ::fpromise::result<ComponentInfo>>&
+                       results) -> ::fpromise::result<ComponentInfo> {
         auto& v1_result = std::get<0>(results);
         auto& v2_result = std::get<1>(results);
 
         if (v1_result.is_error() && v2_result.is_error()) {
-          return ::fit::error();
+          return ::fpromise::error();
         }
 
         ComponentInfo info = (v1_result.is_ok()) ? v1_result.take_value() : v2_result.take_value();
-        return ::fit::ok(std::move(info));
+        return ::fpromise::ok(std::move(info));
       });
 }
 

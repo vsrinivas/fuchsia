@@ -6,7 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_EFFECTS_STAGE_V2_H_
 
 #include <fidl/fuchsia.audio.effects/cpp/wire.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/service/llcpp/service.h>
 
 #include <memory>
@@ -21,7 +21,7 @@ namespace media::audio {
 // EffectsStageV2 produces frames by passing a source stream through a FIDL effects processor.
 class EffectsStageV2 : public ReadableStream {
  public:
-  static fit::result<std::shared_ptr<EffectsStageV2>, zx_status_t> Create(
+  static fpromise::result<std::shared_ptr<EffectsStageV2>, zx_status_t> Create(
       fuchsia_audio_effects::wire::ProcessorConfiguration config,
       std::shared_ptr<ReadableStream> source);
 

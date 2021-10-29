@@ -8,7 +8,7 @@
 #include <fuchsia/component/runner/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
@@ -35,19 +35,19 @@ struct ComponentArgs {
   std::vector<fuchsia::component::runner::ComponentNamespaceEntry> ns;
 };
 
-fit::result<ComponentArgs, fuchsia::component::Error> GetComponentArgs(
+fpromise::result<ComponentArgs, fuchsia::component::Error> GetComponentArgs(
     fuchsia::component::runner::ComponentStartInfo& start_info) {
   component::FuchsiaPkgUrl url;
   if (!url.Parse(start_info.resolved_url())) {
     FX_LOGS(WARNING) << "cannot run test: " << start_info.resolved_url()
                      << ", as we cannot parse url.";
-    return fit::error(fuchsia::component::Error::INVALID_ARGUMENTS);
+    return fpromise::error(fuchsia::component::Error::INVALID_ARGUMENTS);
   }
 
   if (!start_info.program().has_entries()) {
     FX_LOGS(WARNING) << "cannot run test: " << start_info.resolved_url()
                      << ", as it has no program entry.";
-    return fit::error(fuchsia::component::Error::INVALID_ARGUMENTS);
+    return fpromise::error(fuchsia::component::Error::INVALID_ARGUMENTS);
   }
   auto& program_entries = start_info.program().entries();
   auto it = std::find_if(
@@ -56,7 +56,7 @@ fit::result<ComponentArgs, fuchsia::component::Error> GetComponentArgs(
   if (it == program_entries.end()) {
     FX_LOGS(WARNING) << "cannot run test: " << start_info.resolved_url()
                      << ", as it has no legacy_manifest entry.";
-    return fit::error(fuchsia::component::Error::INVALID_ARGUMENTS);
+    return fpromise::error(fuchsia::component::Error::INVALID_ARGUMENTS);
   }
 
   auto ns = std::move(*start_info.mutable_ns());
@@ -74,7 +74,7 @@ fit::result<ComponentArgs, fuchsia::component::Error> GetComponentArgs(
   if (!fsl::VmoFromFilenameAt(fd.get(), legacy_manifest, &vmo)) {
     FX_LOGS(WARNING) << "cannot run test: " << start_info.resolved_url()
                      << ", as cannot read legacy manifest file.";
-    return fit::error(fuchsia::component::Error::INSTANCE_CANNOT_START);
+    return fpromise::error(fuchsia::component::Error::INSTANCE_CANNOT_START);
   }
 
   const uint64_t size = vmo.size();
@@ -84,7 +84,7 @@ fit::result<ComponentArgs, fuchsia::component::Error> GetComponentArgs(
     FX_LOGS(WARNING) << "cannot run test: " << start_info.resolved_url()
                      << ", as cannot read legacy manifest file: " << zx_status_get_string(status)
                      << ".";
-    return fit::error(fuchsia::component::Error::INSTANCE_CANNOT_START);
+    return fpromise::error(fuchsia::component::Error::INSTANCE_CANNOT_START);
   }
   auto legacy_url = url.package_path() + "#" + legacy_manifest;
   auto test_metadata = std::make_shared<run::TestMetadata>();
@@ -92,7 +92,7 @@ fit::result<ComponentArgs, fuchsia::component::Error> GetComponentArgs(
     FX_LOGS(WARNING) << "cannot run test: " << start_info.resolved_url()
                      << ".\nError parsing cmx: " << legacy_manifest << ", "
                      << test_metadata->error_str();
-    return fit::error(fuchsia::component::Error::INSTANCE_CANNOT_START);
+    return fpromise::error(fuchsia::component::Error::INSTANCE_CANNOT_START);
   }
 
   auto svc_it = std::find_if(ns.begin(), ns.end(),
@@ -103,11 +103,11 @@ fit::result<ComponentArgs, fuchsia::component::Error> GetComponentArgs(
   auto component_svc =
       std::make_shared<sys::ServiceDirectory>(std::move(*svc_it->mutable_directory()));
 
-  return fit::ok(ComponentArgs{.legacy_url = std::move(legacy_url),
-                               .test_metadata = std::move(test_metadata),
-                               .test_component_svc = std::move(component_svc),
-                               .component_pkg = std::move(component_pkg),
-                               .ns = std::move(ns)});
+  return fpromise::ok(ComponentArgs{.legacy_url = std::move(legacy_url),
+                                    .test_metadata = std::move(test_metadata),
+                                    .test_component_svc = std::move(component_svc),
+                                    .component_pkg = std::move(component_pkg),
+                                    .ns = std::move(ns)});
 }
 
 }  // namespace

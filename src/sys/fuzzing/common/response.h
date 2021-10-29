@@ -8,7 +8,7 @@
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <tuple>
 #include <variant>
@@ -30,9 +30,10 @@ class Response final {
   using InputCallback = fit::function<void(FidlInput)>;
   using ResultAndInputCallback = fit::function<void(Result, FidlInput)>;
   using StatusCallback = fit::function<void(zx_status_t)>;
-  using ResultAndStatusCallback = fit::function<void(fit::result<Result, zx_status_t>)>;
-  using InputAndStatusCallback = fit::function<void(fit::result<FidlInput, zx_status_t>)>;
-  using FullCallback = fit::function<void(fit::result<std::tuple<Result, FidlInput>, zx_status_t>)>;
+  using ResultAndStatusCallback = fit::function<void(fpromise::result<Result, zx_status_t>)>;
+  using InputAndStatusCallback = fit::function<void(fpromise::result<FidlInput, zx_status_t>)>;
+  using FullCallback =
+      fit::function<void(fpromise::result<std::tuple<Result, FidlInput>, zx_status_t>)>;
 
   Response() = default;
   Response(Response&& other) noexcept { *this = std::move(other); }
@@ -50,8 +51,8 @@ class Response final {
     callback_ = std::move(callback);
   }
 
-  // Respond with a |status|.If this response uses a |fit::result| the status will be sent as a
-  // |fit::error|. It is an error to call either version of |send| after calling this method.
+  // Respond with a |status|.If this response uses a |fpromise::result| the status will be sent as a
+  // |fpromise::error|. It is an error to call either version of |send| after calling this method.
   void Send(zx_status_t status);
 
   // Respond with the appropriate combination of |status|, |result|, and |input|, depending on

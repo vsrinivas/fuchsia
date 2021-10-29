@@ -8,7 +8,7 @@
 #include <fuchsia/component/runner/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <map>

@@ -20,7 +20,7 @@ TEST(TransceiverTest, Receive) {
   sync_completion_t sync;
   EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &sender, &fidl_input1.socket), ZX_OK);
   fidl_input1.size = input.size();
-  fit::result<Input, zx_status_t> receive_result;
+  fpromise::result<Input, zx_status_t> receive_result;
   transceiver.Receive(std::move(fidl_input1), [&](zx_status_t result, Input received) {
     rx_result = result;
     rx_input = std::move(received);

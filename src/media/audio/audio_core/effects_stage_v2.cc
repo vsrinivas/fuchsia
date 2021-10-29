@@ -267,7 +267,7 @@ EffectsStageV2::Buffers EffectsStageV2::Buffers::Create(
 }
 
 // static
-fit::result<std::shared_ptr<EffectsStageV2>, zx_status_t> EffectsStageV2::Create(
+fpromise::result<std::shared_ptr<EffectsStageV2>, zx_status_t> EffectsStageV2::Create(
     fuchsia_audio_effects::wire::ProcessorConfiguration config,
     std::shared_ptr<ReadableStream> source) {
   TRACE_DURATION("audio", "EffectsStageV2::Create");
@@ -281,15 +281,15 @@ fit::result<std::shared_ptr<EffectsStageV2>, zx_status_t> EffectsStageV2::Create
   // NOTE: This implementation supports exactly one FLOAT input and one FLOAT output.
   if (!config.has_processor() || !config.processor().is_valid()) {
     FX_LOGS(ERROR) << "ProcessorConfiguration missing field 'processor'";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
   if (!config.has_inputs() || config.inputs().count() != 1) {
     FX_LOGS(ERROR) << "ProcessorConfiguration must have exactly one input stream";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
   if (!config.has_outputs() || config.outputs().count() != 1) {
     FX_LOGS(ERROR) << "ProcessorConfiguration must have exactly one input stream";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   auto& input = config.inputs()[0];
@@ -300,26 +300,26 @@ fit::result<std::shared_ptr<EffectsStageV2>, zx_status_t> EffectsStageV2::Create
   // Validate input/output format.
   if (!input.has_format() || input.format().sample_format != ASF::kFloat) {
     FX_LOGS(ERROR) << "ProcessorConfiguration.inputs[0].format must use FLOAT";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
   if (!output.has_format() || output.format().sample_format != ASF::kFloat) {
     FX_LOGS(ERROR) << "ProcessorConfiguration.outputs[0].format must use FLOAT";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
   if (input.format().frames_per_second != output.format().frames_per_second) {
     FX_LOGS(ERROR) << "ProcessorConfiguration input and output have different frame rates: "
                    << input.format().frames_per_second
                    << " != " << output.format().frames_per_second;
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   if (!input.has_buffer()) {
     FX_LOGS(ERROR) << "ProcessorConfiguration.inputs[0] missing field 'buffer'";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
   if (!output.has_buffer()) {
     FX_LOGS(ERROR) << "ProcessorConfiguration.outputs[0] missing field 'buffer'";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   // Set defaults.
@@ -343,7 +343,7 @@ fit::result<std::shared_ptr<EffectsStageV2>, zx_status_t> EffectsStageV2::Create
   if (config.block_size_frames() > config.max_frames_per_call()) {
     FX_LOGS(ERROR) << "ProcessorConfiguration max_frames_per_call (" << config.max_frames_per_call()
                    << ") < block_size_frames (" << config.block_size_frames() << ")";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   // Now round down max_frames_per_call so it satisfies the requested block size.
@@ -354,21 +354,21 @@ fit::result<std::shared_ptr<EffectsStageV2>, zx_status_t> EffectsStageV2::Create
   if (config.max_frames_per_call() > default_max_frames_per_call) {
     FX_LOGS(ERROR) << "ProcessorConfiguration max_frames_per_call (" << config.max_frames_per_call()
                    << ") > input buffer size (" << default_max_frames_per_call << " frames)";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   // Validate that we won't crash when trying to access the input and output buffers.
   if (auto status = ValidateMemRange(true, input.buffer(), config); status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
   if (auto status = ValidateMemRange(false, output.buffer(), config); status != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   // Validate that the memory ranges do not overlap.
   if (PartialOverlap(input.buffer(), output.buffer())) {
     FX_LOGS(ERROR) << "ProcessorConfiguration: input and output buffers partially overlap";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   // Validate that the configured format matches the source stream's format.
@@ -383,7 +383,7 @@ fit::result<std::shared_ptr<EffectsStageV2>, zx_status_t> EffectsStageV2::Create
                    << "}, expected {sample_format=FLOAT"
                    << ", channels=" << input.format().channel_count
                    << ", fps=" << input.format().frames_per_second << "}";
-    return fit::error(ZX_ERR_INVALID_ARGS);
+    return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
   class MakeSharedEnabler : public EffectsStageV2 {
@@ -393,7 +393,7 @@ fit::result<std::shared_ptr<EffectsStageV2>, zx_status_t> EffectsStageV2::Create
         : EffectsStageV2(std::move(config), std::move(source)) {}
   };
 
-  return fit::ok(std::make_shared<MakeSharedEnabler>(std::move(config), std::move(source)));
+  return fpromise::ok(std::make_shared<MakeSharedEnabler>(std::move(config), std::move(source)));
 }
 
 EffectsStageV2::EffectsStageV2(fuchsia_audio_effects::wire::ProcessorConfiguration config,

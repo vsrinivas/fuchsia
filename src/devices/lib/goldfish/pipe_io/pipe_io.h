@@ -9,7 +9,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/fit/function.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/status.h>
@@ -31,7 +31,7 @@ class PipeIo {
   PipeIo(const ddk::GoldfishPipeProtocolClient* pipe, const char* pipe_name);
   ~PipeIo();
 
-  using ReadResult = fit::result<std::vector<uint8_t>, zx_status_t>;
+  using ReadResult = fpromise::result<std::vector<uint8_t>, zx_status_t>;
 
   // Read |size| bytes from the pipe.
   // Returns:

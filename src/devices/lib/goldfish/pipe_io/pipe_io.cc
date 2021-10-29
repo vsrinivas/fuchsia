@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/fit/defer.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
 
@@ -211,23 +211,23 @@ PipeIo::ReadResult PipeIo::Read(size_t size, bool blocking) {
         break;
       case ZX_ERR_SHOULD_WAIT: {
         if (!blocking) {
-          return fit::error(status);
+          return fpromise::error(status);
         }
         auto wait_status =
             pipe_event_.wait_one(fuchsia_hardware_goldfish::wire::kSignalHangup |
                                      fuchsia_hardware_goldfish::wire::kSignalReadable,
                                  zx::time::infinite(), nullptr);
         if (wait_status != ZX_OK) {
-          return fit::error(status);
+          return fpromise::error(status);
         }
         break;
       }
       default:
-        return fit::error(status);
+        return fpromise::error(status);
     }
   }
   result.push_back(0u);
-  return fit::ok(std::move(result));
+  return fpromise::ok(std::move(result));
 }
 
 PipeIo::ReadResult PipeIo::ReadWithHeader(bool blocking) {

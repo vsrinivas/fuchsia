@@ -4,7 +4,7 @@
 
 #include <fcntl.h>
 #include <lib/fit/defer.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -48,9 +48,9 @@ fpromise::result<struct stat, std::string> GetBlockInfo(std::string_view path) {
 
 }  // namespace
 
-fit::result<void, std::string> Extend(const ExtendParams& params) {
+fpromise::result<void, std::string> Extend(const ExtendParams& params) {
   if (params.image_path.empty()) {
-    return fit::error("Must provide a non empty |image_path| for extend.");
+    return fpromise::error("Must provide a non empty |image_path| for extend.");
   }
 
   auto block_info_or = GetBlockInfo(params.image_path);
@@ -59,9 +59,9 @@ fit::result<void, std::string> Extend(const ExtendParams& params) {
   }
 
   if (params.length.value() < static_cast<uint64_t>(block_info_or.value().st_size)) {
-    return fit::error("|length|(" + std::to_string(params.length.value()) +
-                      ") must be greater or equal than |disk_size|(" +
-                      std::to_string(block_info_or.value().st_size) + " bytes)");
+    return fpromise::error("|length|(" + std::to_string(params.length.value()) +
+                           ") must be greater or equal than |disk_size|(" +
+                           std::to_string(block_info_or.value().st_size) + " bytes)");
   }
 
   auto reader_or = FdReader::Create(params.image_path);
@@ -118,18 +118,18 @@ fit::result<void, std::string> Extend(const ExtendParams& params) {
   // slices.
   if (truncate(base.data(), static_cast<off_t>(truncate_size)) != 0) {
     std::string err(strerror(errno));
-    return fit::error("Failed to trim image to " + std::to_string(truncate_size) +
-                      ". More specifically " + err + ".");
+    return fpromise::error("Failed to trim image to " + std::to_string(truncate_size) +
+                           ". More specifically " + err + ".");
   }
 
   if (rename(base.data(), params.image_path.c_str()) != 0) {
     std::string err(strerror(errno));
-    return fit::error("Failed to move temporary image(working copy at " + base +
-                      ") to final location(source image at " + params.image_path +
-                      ". More specifically: " + err + ".");
+    return fpromise::error("Failed to move temporary image(working copy at " + base +
+                           ") to final location(source image at " + params.image_path +
+                           ". More specifically: " + err + ".");
   }
 
-  return fit::ok();
+  return fpromise::ok();
 }
 
 }  // namespace storage::volume_image

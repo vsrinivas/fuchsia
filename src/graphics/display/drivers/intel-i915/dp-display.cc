@@ -171,46 +171,46 @@ enum {
 // Only a limited set of discrete |link_lock| values are supported. Returns an error result if the
 // value is not supported.
 
-fit::result<registers::DpllControl1::LinkRate> LinkClockToDpllLinkRate(uint32_t link_clock) {
+fpromise::result<registers::DpllControl1::LinkRate> LinkClockToDpllLinkRate(uint32_t link_clock) {
   using LinkRate = registers::DpllControl1::LinkRate;
   switch (link_clock) {
     case 5400:
-      return fit::ok(LinkRate::k2700Mhz);
+      return fpromise::ok(LinkRate::k2700Mhz);
     case 2700:
-      return fit::ok(LinkRate::k1350Mhz);
+      return fpromise::ok(LinkRate::k1350Mhz);
     case 1620:
-      return fit::ok(LinkRate::k810Mhz);
+      return fpromise::ok(LinkRate::k810Mhz);
     case 3240:
-      return fit::ok(LinkRate::k1620Mhz);
+      return fpromise::ok(LinkRate::k1620Mhz);
     case 2160:
-      return fit::ok(LinkRate::k1080Mhz);
+      return fpromise::ok(LinkRate::k1080Mhz);
     case 4320:
-      return fit::ok(LinkRate::k2160Mhz);
+      return fpromise::ok(LinkRate::k2160Mhz);
     default:
       break;
   }
-  return fit::error();
+  return fpromise::error();
 }
 
-fit::result<uint32_t> DpllLinkRateToLinkClock(registers::DpllControl1::LinkRate link_rate) {
+fpromise::result<uint32_t> DpllLinkRateToLinkClock(registers::DpllControl1::LinkRate link_rate) {
   using LinkRate = registers::DpllControl1::LinkRate;
   switch (link_rate) {
     case LinkRate::k2700Mhz:
-      return fit::ok(5400);
+      return fpromise::ok(5400);
     case LinkRate::k1350Mhz:
-      return fit::ok(2700);
+      return fpromise::ok(2700);
     case LinkRate::k810Mhz:
-      return fit::ok(1620);
+      return fpromise::ok(1620);
     case LinkRate::k1620Mhz:
-      return fit::ok(3240);
+      return fpromise::ok(3240);
     case LinkRate::k1080Mhz:
-      return fit::ok(2160);
+      return fpromise::ok(2160);
     case LinkRate::k2160Mhz:
-      return fit::ok(4320);
+      return fpromise::ok(4320);
     default:
       break;
   }
-  return fit::error();
+  return fpromise::error();
 }
 
 std::string DpcdRevisionToString(dpcd::Revision rev) {
@@ -539,12 +539,13 @@ DpCapabilities::DpCapabilities(inspect::Node* parent_node) {
 }
 
 // static
-fit::result<DpCapabilities> DpCapabilities::Read(DpcdChannel* dp_aux, inspect::Node* parent_node) {
+fpromise::result<DpCapabilities> DpCapabilities::Read(DpcdChannel* dp_aux,
+                                                      inspect::Node* parent_node) {
   DpCapabilities caps(parent_node);
 
   if (!dp_aux->DpcdRead(dpcd::DPCD_CAP_START, caps.dpcd_.data(), caps.dpcd_.size())) {
     zxlogf(TRACE, "Failed to read dpcd capabilities");
-    return fit::error();
+    return fpromise::error();
   }
 
   auto dsp_present =
@@ -556,27 +557,27 @@ fit::result<DpCapabilities> DpCapabilities::Read(DpcdChannel* dp_aux, inspect::N
 
   if (!dp_aux->DpcdRead(dpcd::DPCD_SINK_COUNT, caps.sink_count_.reg_value_ptr(), 1)) {
     zxlogf(ERROR, "Failed to read DisplayPort sink count");
-    return fit::error();
+    return fpromise::error();
   }
 
   caps.max_lane_count_ = caps.dpcd_reg<dpcd::LaneCount, dpcd::DPCD_MAX_LANE_COUNT>();
   if (caps.max_lane_count() != 1 && caps.max_lane_count() != 2 && caps.max_lane_count() != 4) {
     zxlogf(ERROR, "Unsupported DisplayPort lane count: %u", caps.max_lane_count());
-    return fit::error();
+    return fpromise::error();
   }
 
   if (!caps.ProcessEdp(dp_aux)) {
-    return fit::error();
+    return fpromise::error();
   }
 
   if (!caps.ProcessSupportedLinkRates(dp_aux)) {
-    return fit::error();
+    return fpromise::error();
   }
 
   ZX_ASSERT(!caps.supported_link_rates_mbps_.empty());
   caps.PublishInspect();
 
-  return fit::ok(std::move(caps));
+  return fpromise::ok(std::move(caps));
 }
 
 bool DpCapabilities::ProcessEdp(DpcdChannel* dp_aux) {
@@ -1275,7 +1276,7 @@ void DpDisplay::InitWithDpllState(struct dpll_state* dpll_state) {
   // Some display (e.g. eDP) may have already been configured by the bootloader with a
   // link clock. Assign the link rate based on the already enabled DPLL.
   if (dp_link_rate_mhz_ == 0) {
-    fit::result<uint32_t> link_rate = DpllLinkRateToLinkClock(dpll_state->dp_rate);
+    fpromise::result<uint32_t> link_rate = DpllLinkRateToLinkClock(dpll_state->dp_rate);
     if (link_rate.is_ok()) {
       zxlogf(INFO, "Selected pre-configured DisplayPort link rate: %u Mbps/lane",
              link_rate.value());

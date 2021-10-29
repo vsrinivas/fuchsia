@@ -6,7 +6,7 @@
 #define SRC_UI_INPUT_DRIVERS_GOLDFISH_SENSOR_INPUT_DEVICE_H_
 #include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fit/result.h>
+#include <lib/fpromise/result.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -24,8 +24,8 @@ using InputDeviceType =
 
 class RootDevice;
 
-using InputDeviceCreateFunc =
-    fit::result<InputDevice*, zx_status_t> (*)(RootDevice* parent, async_dispatcher_t* dispatcher);
+using InputDeviceCreateFunc = fpromise::result<InputDevice*, zx_status_t> (*)(
+    RootDevice* parent, async_dispatcher_t* dispatcher);
 
 struct InputDeviceInfo {
   std::string name;
@@ -100,8 +100,8 @@ class AccelerationInputDevice : public InputDevice {
 
   // Creates an AccelerationInputDevice. Takes an unowned pointer to |parent|.
   // |parent| must outlive the device that's created.
-  static fit::result<InputDevice*, zx_status_t> Create(RootDevice* parent,
-                                                       async_dispatcher_t* dispatcher);
+  static fpromise::result<InputDevice*, zx_status_t> Create(RootDevice* parent,
+                                                            async_dispatcher_t* dispatcher);
 
   AccelerationInputDevice(zx_device_t* parent, async_dispatcher_t* dispatcher,
                           OnDestroyCallback on_destroy)
@@ -128,8 +128,8 @@ class GyroscopeInputDevice : public InputDevice {
                            fidl::AnyArena& allocator);
   };
 
-  static fit::result<InputDevice*, zx_status_t> Create(RootDevice* parent,
-                                                       async_dispatcher_t* dispatcher);
+  static fpromise::result<InputDevice*, zx_status_t> Create(RootDevice* parent,
+                                                            async_dispatcher_t* dispatcher);
 
   // Creates an GyroscopeInputDevice. Takes an unowned pointer to |parent|.
   // |parent| must outlive the device that's created.
@@ -159,8 +159,8 @@ class RgbcLightInputDevice : public InputDevice {
                            fidl::AnyArena& allocator);
   };
 
-  static fit::result<InputDevice*, zx_status_t> Create(RootDevice* parent,
-                                                       async_dispatcher_t* dispatcher);
+  static fpromise::result<InputDevice*, zx_status_t> Create(RootDevice* parent,
+                                                            async_dispatcher_t* dispatcher);
 
   // Creates a RgbcLightInputDevice. Takes an unowned pointer to |parent|.
   // |parent| must outlive the device that's created.

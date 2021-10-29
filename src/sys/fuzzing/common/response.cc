@@ -50,11 +50,11 @@ struct CallbackVisitor {
   void operator()(Response::ResultAndStatusCallback& callback) {
     if (status == ZX_OK) {
       async::PostTask(dispatcher, [callback = std::move(callback), result = result]() {
-        callback(fit::ok(result));
+        callback(fpromise::ok(result));
       });
     } else {
       async::PostTask(dispatcher, [callback = std::move(callback), status = status]() {
-        callback(fit::error(status));
+        callback(fpromise::error(status));
       });
     }
   }
@@ -63,11 +63,11 @@ struct CallbackVisitor {
     if (status == ZX_OK) {
       async::PostTask(dispatcher, [callback = std::move(callback),
                                    fidl_input = std::move(fidl_input)]() mutable {
-        callback(fit::ok(std::move(fidl_input)));
+        callback(fpromise::ok(std::move(fidl_input)));
       });
     } else {
       async::PostTask(dispatcher, [callback = std::move(callback), status = status]() {
-        callback(fit::error(status));
+        callback(fpromise::error(status));
       });
     }
   }
@@ -76,11 +76,11 @@ struct CallbackVisitor {
     if (status == ZX_OK) {
       async::PostTask(dispatcher, [callback = std::move(callback), result = result,
                                    fidl_input = std::move(fidl_input)]() mutable {
-        callback(fit::ok(std::make_tuple(result, std::move(fidl_input))));
+        callback(fpromise::ok(std::make_tuple(result, std::move(fidl_input))));
       });
     } else {
       async::PostTask(dispatcher, [callback = std::move(callback), status = status]() {
-        callback(fit::error(status));
+        callback(fpromise::error(status));
       });
     }
   }

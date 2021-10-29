@@ -51,7 +51,7 @@ void AccelerationInputDevice::InputReport::ToFidlInputReport(fir_fidl::InputRepo
   input_report.set_sensor(allocator, std::move(sensor_report));
 }
 
-fit::result<InputDevice*, zx_status_t> AccelerationInputDevice::Create(
+fpromise::result<InputDevice*, zx_status_t> AccelerationInputDevice::Create(
     RootDevice* sensor, async_dispatcher_t* dispatcher) {
   // Parent device (sensor) is guaranteed to outlive the child input device
   // (dev), so it's safe to use raw pointers here.
@@ -61,11 +61,11 @@ fit::result<InputDevice*, zx_status_t> AccelerationInputDevice::Create(
   zx_status_t status;
 
   if ((status = device->DdkAdd("goldfish-sensor-accel")) != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   // Device will be owned by devmgr.
-  return fit::ok(device.release());
+  return fpromise::ok(device.release());
 }
 
 zx_status_t AccelerationInputDevice::OnReport(const SensorReport& rpt) {
@@ -165,7 +165,7 @@ void GyroscopeInputDevice::InputReport::ToFidlInputReport(fir_fidl::InputReport&
   input_report.set_sensor(allocator, std::move(sensor_report));
 }
 
-fit::result<InputDevice*, zx_status_t> GyroscopeInputDevice::Create(
+fpromise::result<InputDevice*, zx_status_t> GyroscopeInputDevice::Create(
     RootDevice* sensor, async_dispatcher_t* dispatcher) {
   // Parent device (sensor) is guaranteed to outlive the child input device
   // (dev), so it's safe to use raw pointers here.
@@ -175,11 +175,11 @@ fit::result<InputDevice*, zx_status_t> GyroscopeInputDevice::Create(
   zx_status_t status;
 
   if ((status = device->DdkAdd("goldfish-sensor-gyroscope")) != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   // Device will be owned by devmgr.
-  return fit::ok(device.release());
+  return fpromise::ok(device.release());
 }
 
 zx_status_t GyroscopeInputDevice::OnReport(const SensorReport& rpt) {
@@ -274,7 +274,7 @@ void RgbcLightInputDevice::InputReport::ToFidlInputReport(fir_fidl::InputReport&
   input_report.set_sensor(allocator, std::move(sensor_report));
 }
 
-fit::result<InputDevice*, zx_status_t> RgbcLightInputDevice::Create(
+fpromise::result<InputDevice*, zx_status_t> RgbcLightInputDevice::Create(
     RootDevice* sensor, async_dispatcher_t* dispatcher) {
   // Parent device (sensor) is guaranteed to outlive the child input device
   // (dev), so it's safe to use raw pointers here.
@@ -284,11 +284,11 @@ fit::result<InputDevice*, zx_status_t> RgbcLightInputDevice::Create(
   zx_status_t status;
 
   if ((status = device->DdkAdd("goldfish-sensor-rgbclight")) != ZX_OK) {
-    return fit::error(status);
+    return fpromise::error(status);
   }
 
   // Device will be owned by devmgr.
-  return fit::ok(device.release());
+  return fpromise::ok(device.release());
 }
 
 zx_status_t RgbcLightInputDevice::OnReport(const SensorReport& rpt) {

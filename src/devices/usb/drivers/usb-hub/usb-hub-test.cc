@@ -30,7 +30,7 @@
 #include <zxtest/zxtest.h>
 
 #include "fake-device.h"
-#include "lib/fit/promise.h"
+#include "lib/fpromise/promise.h"
 
 namespace {
 template <EmulationMode mode>
@@ -151,7 +151,7 @@ class SyntheticHarness : public zxtest::Test {
  private:
   std::optional<FakeDevice> device_;
   async::Loop loop_;
-  fit::executor* executor_;
+  fpromise::executor* executor_;
 };
 
 class SmaysHarness : public UsbHarness<EmulationMode::Smays> {

@@ -8,7 +8,7 @@
 
 #include <optional>
 
-#include "lib/fit/promise.h"
+#include "lib/fpromise/promise.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -67,7 +67,7 @@ LocalDeviceIdProvider::LocalDeviceIdProvider(const std::string& path)
     : device_id_(InitializeDeviceId(path)) {}
 
 ::fpromise::promise<std::string, Error> LocalDeviceIdProvider::GetId(zx::duration timeout) {
-  return ::fpromise::make_result_promise<std::string, Error>(::fit::ok(device_id_));
+  return ::fpromise::make_result_promise<std::string, Error>(::fpromise::ok(device_id_));
 }
 
 }  // namespace forensics::feedback
