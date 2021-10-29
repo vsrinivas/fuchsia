@@ -27,7 +27,7 @@
 //! When allocations and deallocations can occur concurrently across threads,
 //! they must synchronize accesses to the free list; either by putting the
 //! entire allocator state inside of a lock, or by using atomic operations to
-//! treat the free list as a lock-free structure (such as a Treiber stack). In
+//! treat the free list as a lock-free structure (such as a [Treiber stack]). In
 //! both cases, there is a significant performance cost — even when the free
 //! list is lock-free, it is likely that a noticeable amount of time will be
 //! spent in compare-and-swap loops. Ideally, the global synchronzation point
@@ -57,6 +57,7 @@
 //!
 //! [mimalloc]: https://www.microsoft.com/en-us/research/uploads/prod/2019/06/mimalloc-tr-v1.pdf
 //! [freelist]: https://en.wikipedia.org/wiki/Free_list
+//! [Treiber stack]: https://en.wikipedia.org/wiki/Treiber_stack
 //!
 //! # Implementation
 //!
@@ -64,6 +65,7 @@
 //! consists of a vector of one or more _pages_ plus associated metadata.
 //! Finally, a page consists of an array of _slots_, head indices for the local
 //! and remote free lists.
+//!
 //! ```text
 //! ┌─────────────┐
 //! │ shard 1     │
@@ -75,7 +77,7 @@
 //! │ shard 3     │    │ local_head──┼──┘     ├────────┤ │
 //! └─────────────┘    │ remote_head─┼──┐     │        │◀┘
 //!       ...          ├─────────────┤  │     │  next──┼─┐
-//! ┌─────────────┐    │   page 3    │  │     ├────────┤ │
+//! ┌─────────────┐    │ page 3      │  │     ├────────┤ │
 //! │ shard n     │    └─────────────┘  │     │XXXXXXXX│ │
 //! └─────────────┘          ...        │     ├────────┤ │
 //!                    ┌─────────────┐  │     │XXXXXXXX│ │
@@ -87,12 +89,14 @@
 //!                                           └────────┘
 //! ```
 //!
+//!
 //! The size of the first page in a shard is always a power of two, and every
 //! subsequent page added after the first is twice as large as the page that
 //! preceeds it.
+//!
 //! ```text
 //!
-//!  pg.
+//! pg.
 //! ┌───┐   ┌─┬─┐
 //! │ 0 │───▶ │ │
 //! ├───┤   ├─┼─┼─┬─┐
@@ -103,6 +107,7 @@
 //! │ 3 │───▶ │ │ │ │ │ │ │ │ │ │ │ │ │ │ │ │
 //! └───┘   └─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┴─┘
 //! ```
+//!
 //! When searching for a free slot, the smallest page is searched first, and if
 //! it is full, the search proceeds to the next page until either a free slot is
 //! found or all available pages have been searched. If all available pages have
@@ -119,11 +124,15 @@
 //! subtracting that count from the total number of bits in a word.
 //!
 //! The formula for determining the page number that contains an offset is thus:
+//!
 //! ```rust,ignore
 //! WIDTH - ((offset + INITIAL_PAGE_SIZE) >> INDEX_SHIFT).leading_zeros()
 //! ```
+//!
 //! where `WIDTH` is the number of bits in a `usize`, and `INDEX_SHIFT` is
+//!
 //! ```rust,ignore
 //! INITIAL_PAGE_SIZE.trailing_zeros() + 1;
-//!```
-//![`MAX_THREADS`]: ../trait.Config.html#associatedconstant.MAX_THREADS
+//! ```
+//!
+//! [`MAX_THREADS`]: https://docs.rs/sharded-slab/latest/sharded_slab/trait.Config.html#associatedconstant.MAX_THREADS

@@ -69,7 +69,7 @@ impl<C> fmt::Debug for TransferStack<C> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(loom, test))]
 mod test {
     use super::*;
     use crate::{sync::UnsafeCell, test_util};

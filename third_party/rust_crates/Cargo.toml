@@ -155,8 +155,8 @@ timebomb = "0.1.2"
 tokio = { version = "0.2.16", default-features = false }
 toml = "0.5"
 toml_edit = "0.2.1"
-tracing = { version = "0.1.25", features = ["log"] }
-tracing-core = "0.1.17"
+tracing = { version = "0.1.29", features = ["log"] }
+tracing-core = "0.1.21"
 tracing-futures = "0.2.5"
 tracing-log = "0.1.2"
 unicase = "2.2.0"
@@ -181,9 +181,9 @@ zstd = "0.8.0+zstd.1.4.9"
 zstd-safe = "4.0.0+zstd.1.4.9"
 
 [dependencies.tracing-subscriber]
-version = "0.2.7"
+version = "0.3.1"
 default-features = false
-features = ["chrono", "registry", "tracing-log"]
+features = ["registry", "tracing-log"]
 
 # Target-side only dependencies
 [target.'cfg(target_os = "fuchsia")'.dependencies]

@@ -19,7 +19,6 @@
 //! The `tracing` crate provides the APIs necessary for instrumenting libraries
 //! and applications to emit trace data.
 //!
-//! *Compiler support: [requires `rustc` 1.42+][msrv]*
 //!
 //! [msrv]: #supported-rust-versions
 //! # Core Concepts
@@ -52,15 +51,13 @@
 //! The [`span` module][span]'s documentation provides further details on how to
 //! use spans.
 //!
-//! <div class="information">
-//!     <div class="tooltip compile_fail" style="">&#x26a0; &#xfe0f;<span class="tooltiptext">Warning</span></div>
-//! </div><div class="example-wrap" style="display:inline-block"><pre class="compile_fail" style="white-space:normal;font:inherit;">
+//! <pre class="compile_fail" style="white-space:normal;font:inherit;">
 //!     <strong>Warning</strong>: In asynchronous code that uses async/await syntax,
 //!     <code>Span::enter</code> may produce incorrect traces if the returned drop
 //!     guard is held across an await point. See
 //!     <a href="span/struct.Span.html#in-asynchronous-code">the method documentation</a>
 //!     for details.
-//! </pre></div>
+//! </pre>
 //!
 //! ## Events
 //!
@@ -120,7 +117,7 @@
 //! tracing = "0.1"
 //! ```
 //!
-//! *Compiler support: requires rustc 1.39+*
+//! *Compiler support: [requires `rustc` 1.42+][msrv]*
 //!
 //! ## Recording Spans and Events
 //!
@@ -173,10 +170,29 @@
 //! # fn main() {}
 //! ```
 //!
+//! For functions which don't have built-in tracing support and can't have
+//! the `#[instrument]` attribute applied (such as from an external crate),
+//! the [`Span` struct][`Span`] has a [`in_scope()` method][`in_scope`]
+//! which can be used to easily wrap synchonous code in a span.
+//!
+//! For example:
+//! ```rust
+//! use tracing::info_span;
+//!
+//! # fn doc() -> Result<(), ()> {
+//! # mod serde_json {
+//! #    pub(crate) fn from_slice(buf: &[u8]) -> Result<(), ()> { Ok(()) }
+//! # }
+//! # let buf: [u8; 0] = [];
+//! let json = info_span!("json.parse").in_scope(|| serde_json::from_slice(&buf))?;
+//! # let _ = json; // suppress unused variable warning
+//! # Ok(())
+//! # }
+//! ```
 //!
 //! You can find more examples showing how to use this crate [here][examples].
 //!
-//! [RAII]: https://github.com/rust-unofficial/patterns/blob/master/patterns/RAII.md
+//! [RAII]: https://github.com/rust-unofficial/patterns/blob/master/patterns/behavioural/RAII.md
 //! [examples]: https://github.com/tokio-rs/tracing/tree/master/examples
 //!
 //! ### Events
@@ -560,13 +576,11 @@
 //! # }
 //! ```
 //!
-//! <div class="information">
-//!     <div class="tooltip compile_fail" style="">&#x26a0; &#xfe0f;<span class="tooltiptext">Warning</span></div>
-//! </div><div class="example-wrap" style="display:inline-block"><pre class="compile_fail" style="white-space:normal;font:inherit;">
-//! <strong>Warning</strong>: In general, libraries should <em>not</em> call
-//! <code>set_global_default()</code>! Doing so will cause conflicts when
-//! executables that depend on the library try to set the default later.
-//! </pre></div>
+//! <pre class="compile_fail" style="white-space:normal;font:inherit;">
+//!     <strong>Warning</strong>: In general, libraries should <em>not</em> call
+//!     <code>set_global_default()</code>! Doing so will cause conflicts when
+//!     executables that depend on the library try to set the default later.
+//! </pre>
 //!
 //! This subscriber will be used as the default in all threads for the
 //! remainder of the duration of the program, similar to setting the logger
@@ -703,6 +717,7 @@
 //!    [OpenTelemetry]-compatible distributed tracing systems.
 //!  - [`tracing-honeycomb`] Provides a layer that reports traces spanning multiple machines to [honeycomb.io]. Backed by [`tracing-distributed`].
 //!  - [`tracing-distributed`] Provides a generic implementation of a layer that reports traces spanning multiple machines to some backend.
+//!  - [`tracing-actix-web`] provides `tracing` integration for the `actix-web` web framework.
 //!  - [`tracing-actix`] provides `tracing` integration for the `actix` actor
 //!    framework.
 //!  - [`tracing-gelf`] implements a subscriber for exporting traces in Greylog
@@ -731,6 +746,7 @@
 //! [`tracing-honeycomb`]: https://crates.io/crates/tracing-honeycomb
 //! [`tracing-distributed`]: https://crates.io/crates/tracing-distributed
 //! [honeycomb.io]: https://www.honeycomb.io/
+//! [`tracing-actix-web`]: https://crates.io/crates/tracing-actix-web
 //! [`tracing-actix`]: https://crates.io/crates/tracing-actix
 //! [`tracing-gelf`]: https://crates.io/crates/tracing-gelf
 //! [`tracing-coz`]: https://crates.io/crates/tracing-coz
@@ -750,15 +766,11 @@
 //! [`tracing-elastic-apm`]: https://crates.io/crates/tracing-elastic-apm
 //! [Elastic APM]: https://www.elastic.co/apm
 //!
-//! <div class="information">
-//!     <div class="tooltip ignore" style="">ⓘ<span class="tooltiptext">Note</span></div>
-//! </div>
-//! <div class="example-wrap" style="display:inline-block">
 //! <pre class="ignore" style="white-space:normal;font:inherit;">
-//! <strong>Note</strong>: Some of these ecosystem crates are currently
-//! unreleased and/or in earlier stages of development. They may be less stable
-//! than <code>tracing</code> and <code>tracing-core</code>.
-//! </pre></div>
+//!     <strong>Note</strong>: Some of these ecosystem crates are currently
+//!     unreleased and/or in earlier stages of development. They may be less stable
+//!     than <code>tracing</code> and <code>tracing-core</code>.
+//! </pre>
 //!
 //! ## Crate Feature Flags
 //!
@@ -783,17 +795,13 @@
 //!
 //!   ```toml
 //!   [dependencies]
-//!   tracing = { version = "0.1.25", default-features = false }
+//!   tracing = { version = "0.1.29", default-features = false }
 //!   ```
 //!
-//! <div class="information">
-//!     <div class="tooltip ignore" style="">ⓘ<span class="tooltiptext">Note</span></div>
-//! </div>
-//! <div class="example-wrap" style="display:inline-block">
 //! <pre class="ignore" style="white-space:normal;font:inherit;">
-//! <strong>Note</strong>: <code>tracing</code>'s <code>no_std</code> support
-//! requires <code>liballoc</code>.
-//! </pre></div>
+//!     <strong>Note</strong>: <code>tracing</code>'s <code>no_std</code> support
+//!     requires <code>liballoc</code>.
+//! </pre>
 //!
 //! ## Supported Rust Versions
 //!
@@ -838,8 +846,8 @@
 //! [instrument]: https://docs.rs/tracing-attributes/latest/tracing_attributes/attr.instrument.html
 //! [flags]: #crate-feature-flags
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(docsrs, feature(doc_cfg), deny(broken_intra_doc_links))]
-#![doc(html_root_url = "https://docs.rs/tracing/0.1.25")]
+#![cfg_attr(docsrs, feature(doc_cfg), deny(rustdoc::broken_intra_doc_links))]
+#![doc(html_root_url = "https://docs.rs/tracing/0.1.29")]
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/tokio-rs/tracing/master/assets/logo-type.png",
     issue_tracker_base_url = "https://github.com/tokio-rs/tracing/issues/"
@@ -919,7 +927,10 @@ pub mod subscriber;
 #[doc(hidden)]
 pub mod __macro_support {
     pub use crate::callsite::Callsite;
-    use crate::stdlib::sync::atomic::{AtomicUsize, Ordering};
+    use crate::stdlib::{
+        fmt,
+        sync::atomic::{AtomicUsize, Ordering},
+    };
     use crate::{subscriber::Interest, Metadata};
     use tracing_core::Once;
 
@@ -931,7 +942,6 @@ pub mod __macro_support {
     /// by the `tracing` macros, but it is not part of the stable versioned API.
     /// Breaking changes to this module may occur in small-numbered versions
     /// without warning.
-    #[derive(Debug)]
     pub struct MacroCallsite {
         interest: AtomicUsize,
         meta: &'static Metadata<'static>,
@@ -1027,7 +1037,17 @@ pub mod __macro_support {
 
         #[inline(always)]
         fn metadata(&self) -> &Metadata<'static> {
-            &self.meta
+            self.meta
+        }
+    }
+
+    impl fmt::Debug for MacroCallsite {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.debug_struct("MacroCallsite")
+                .field("interest", &self.interest)
+                .field("meta", &self.meta)
+                .field("registration", &self.registration)
+                .finish()
         }
     }
 }

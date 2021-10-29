@@ -1,3 +1,135 @@
+# 0.1.29 (October 5th, 2021
+
+This release adds support for recording `Option<T> where T: Value` as typed
+`tracing` field values. It also includes significant performance improvements
+for functions annotated with the `#[instrument]` attribute when the generated
+span is disabled.
+
+### Changed
+
+- `tracing-core`: updated to v0.1.21
+- `tracing-attributes`: updated to v0.1.19
+
+### Added
+
+- **field**: `Value` impl for `Option<T> where T: Value` ([#1585])
+- **attributes**: - improved performance when skipping `#[instrument]`-generated
+  spans below the max level ([#1600], [#1605], [#1614], [#1616], [#1617])
+
+### Fixed
+
+- **instrument**: added missing `Future` implementation for `WithSubscriber`,
+  making the `WithDispatch` extension trait actually useable ([#1602])
+- Documentation fixes and improvements ([#1595], [#1601], [#1597])
+
+Thanks to @brianburgers, @mattiast, @DCjanus, @oli-obk, and @matklad for
+contributing to this release!
+
+[#1585]: https://github.com/tokio-rs/tracing/pull/1585
+[#1595]: https://github.com/tokio-rs/tracing/pull/1596
+[#1597]: https://github.com/tokio-rs/tracing/pull/1597
+[#1600]: https://github.com/tokio-rs/tracing/pull/1600
+[#1601]: https://github.com/tokio-rs/tracing/pull/1601
+[#1602]: https://github.com/tokio-rs/tracing/pull/1602
+[#1605]: https://github.com/tokio-rs/tracing/pull/1605
+[#1614]: https://github.com/tokio-rs/tracing/pull/1614
+[#1616]: https://github.com/tokio-rs/tracing/pull/1616
+[#1617]: https://github.com/tokio-rs/tracing/pull/1617
+
+# 0.1.28 (September 17th, 2021)
+
+This release fixes an issue where the RustDoc documentation was rendered
+incorrectly. It doesn't include any actual code changes, and is very boring and
+can be ignored.
+
+### Fixed
+
+- **docs**: Incorrect documentation rendering due to unclosed `<div>` tag
+  ([#1572])
+
+[#1572]: https://github.com/tokio-rs/tracing/pull/1572
+
+# 0.1.27 (September 13, 2021)
+
+This release adds a new [`Span::or_current`] method to aid in efficiently
+propagating span contexts to spawned threads or tasks. Additionally, it updates
+the [`tracing-core`] version to [0.1.20] and the [`tracing-attributes`] version to
+[0.1.16], ensuring that a number of new features in those crates are present.
+
+### Fixed
+
+- **instrument**: Added missing `WithSubscriber` implementations for futures and
+  other types ([#1424])
+
+### Added
+
+- `Span::or_current` method, to help with efficient span context propagation
+  ([#1538])
+- **attributes**: add `skip_all` option to `#[instrument]` ([#1548])
+- **attributes**: record primitive types as primitive values rather than as
+  `fmt::Debug` ([#1378])
+- **core**: `NoSubscriber`, a no-op `Subscriber` implementation
+  ([#1549])
+- **core**: Added `Visit::record_f64` and support for recording floating-point
+  values ([#1507], [#1522])
+- A large number of documentation improvements and fixes ([#1369], [#1398],
+  [#1435], [#1442], [#1524], [#1556])
+
+Thanks to new contributors @dzvon and @mbergkvist, as well as @teozkr,
+@maxburke, @LukeMathWalker, and @jsgf, for contributing to this
+release!
+
+[`Span::or_current`]: https://docs.rs/tracing/0.1.27/tracing/struct.Span.html#method.or_current
+[`tracing-core`]: https://crates.io/crates/tracing-core
+[`tracing-attributes`]: https://crates.io/crates/tracing-attributes
+[`tracing-core`]: https://crates.io/crates/tracing-core
+[0.1.20]: https://github.com/tokio-rs/tracing/releases/tag/tracing-core-0.1.20
+[0.1.16]: https://github.com/tokio-rs/tracing/releases/tag/tracing-attributes-0.1.16
+[#1424]: https://github.com/tokio-rs/tracing/pull/1424
+[#1538]: https://github.com/tokio-rs/tracing/pull/1538
+[#1548]: https://github.com/tokio-rs/tracing/pull/1548
+[#1378]: https://github.com/tokio-rs/tracing/pull/1378
+[#1507]: https://github.com/tokio-rs/tracing/pull/1507
+[#1522]: https://github.com/tokio-rs/tracing/pull/1522
+[#1369]: https://github.com/tokio-rs/tracing/pull/1369
+[#1398]: https://github.com/tokio-rs/tracing/pull/1398
+[#1435]: https://github.com/tokio-rs/tracing/pull/1435
+[#1442]: https://github.com/tokio-rs/tracing/pull/1442
+[#1524]: https://github.com/tokio-rs/tracing/pull/1524
+[#1556]: https://github.com/tokio-rs/tracing/pull/1556
+
+# 0.1.26 (April 30, 2021)
+
+### Fixed
+
+- **attributes**: Compatibility between `#[instrument]` and `async-trait`
+  v0.1.43 and newer ([#1228])
+- Several documentation fixes ([#1305], [#1344])
+### Added
+
+- `Subscriber` impl for `Box<dyn Subscriber + Send + Sync + 'static>` ([#1358])
+- `Subscriber` impl for `Arc<dyn Subscriber + Send + Sync + 'static>` ([#1374])
+- Symmetric `From` impls for existing `Into` impls on `span::Current`, `Span`,
+  and `Option<Id>` ([#1335], [#1338])
+- `From<EnteredSpan>` implementation for `Option<Id>`, allowing `EnteredSpan` to
+  be used in a `span!` macro's `parent:` field ([#1325])
+- `Attributes::fields` accessor that returns the set of fields defined on a
+  span's `Attributes` ([#1331])
+
+
+Thanks to @Folyd, @nightmared, and new contributors @rmsc and @Fishrock123 for
+contributing to this release!
+
+[#1227]: https://github.com/tokio-rs/tracing/pull/1228
+[#1305]: https://github.com/tokio-rs/tracing/pull/1305
+[#1325]: https://github.com/tokio-rs/tracing/pull/1325
+[#1338]: https://github.com/tokio-rs/tracing/pull/1338
+[#1344]: https://github.com/tokio-rs/tracing/pull/1344
+[#1358]: https://github.com/tokio-rs/tracing/pull/1358
+[#1374]: https://github.com/tokio-rs/tracing/pull/1374
+[#1335]: https://github.com/tokio-rs/tracing/pull/1335
+[#1331]: https://github.com/tokio-rs/tracing/pull/1331
+
 # 0.1.25 (February 23, 2021)
 
 ### Added

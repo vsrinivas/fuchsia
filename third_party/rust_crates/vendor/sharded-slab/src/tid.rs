@@ -1,19 +1,19 @@
 use crate::{
     cfg::{self, CfgPrivate},
-    page, Pack,
+    page,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        lazy_static, thread_local, Mutex,
+    },
+    Pack,
 };
 use std::{
     cell::{Cell, UnsafeCell},
     collections::VecDeque,
     fmt,
     marker::PhantomData,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Mutex,
-    },
+    sync::PoisonError,
 };
-
-use lazy_static::lazy_static;
 
 /// Uniquely identifies a thread.
 pub(crate) struct Tid<C> {
@@ -36,6 +36,7 @@ lazy_static! {
         free: Mutex::new(VecDeque::new()),
     };
 }
+
 thread_local! {
     static REGISTRATION: Registration = Registration::new();
 }
@@ -138,10 +139,10 @@ impl Registration {
     #[inline(always)]
     fn current<C: cfg::Config>(&self) -> Tid<C> {
         if let Some(tid) = self.0.get().map(Tid::new) {
-            tid
-        } else {
-            self.register()
+            return tid;
         }
+
+        self.register()
     }
 
     #[cold]
@@ -157,19 +158,37 @@ impl Registration {
                     None
                 }
             })
-            .unwrap_or_else(|| REGISTRY.next.fetch_add(1, Ordering::AcqRel));
-        debug_assert!(id <= Tid::<C>::BITS, "thread ID overflow!");
+            .unwrap_or_else(|| {
+                let id = REGISTRY.next.fetch_add(1, Ordering::AcqRel);
+                if id > Tid::<C>::BITS {
+                    panic_in_drop!(
+                        "creating a new thread ID ({}) would exceed the \
+                        maximum number of thread ID bits specified in {} \
+                        ({})",
+                        id,
+                        std::any::type_name::<C>(),
+                        Tid::<C>::BITS,
+                    );
+                }
+                id
+            });
+
         self.0.set(Some(id));
         Tid::new(id)
     }
 }
 
+// Reusing thread IDs doesn't work under loom, since this `Drop` impl results in
+// an access to a `loom` lazy_static while the test is shutting down, which
+// panics. T_T
+// Just skip TID reuse and use loom's lazy_static macro to ensure we have a
+// clean initial TID on every iteration, instead.
+#[cfg(not(all(loom, any(feature = "loom", test))))]
 impl Drop for Registration {
     fn drop(&mut self) {
         if let Some(id) = self.0.get() {
-            if let Ok(mut free) = REGISTRY.free.lock() {
-                free.push_back(id);
-            }
+            let mut free_list = REGISTRY.free.lock().unwrap_or_else(PoisonError::into_inner);
+            free_list.push_back(id);
         }
     }
 }

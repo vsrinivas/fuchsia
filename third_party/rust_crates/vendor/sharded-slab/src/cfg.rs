@@ -132,6 +132,7 @@ pub(crate) const fn next_pow2(n: usize) -> usize {
 }
 
 // === impl DefaultConfig ===
+
 impl Config for DefaultConfig {
     const INITIAL_PAGE_SIZE: usize = 32;
 
@@ -144,9 +145,15 @@ impl Config for DefaultConfig {
     const MAX_PAGES: usize = WIDTH / 2;
 }
 
+impl fmt::Debug for DefaultConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Self::debug().fmt(f)
+    }
+}
+
 impl<C: Config> fmt::Debug for DebugConfig<C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Config")
+        f.debug_struct(std::any::type_name::<C>())
             .field("initial_page_size", &C::INITIAL_SZ)
             .field("max_shards", &C::MAX_SHARDS)
             .field("max_pages", &C::MAX_PAGES)
@@ -161,9 +168,11 @@ impl<C: Config> fmt::Debug for DebugConfig<C> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{test_util::*, Slab};
+    use crate::test_util;
+    use crate::Slab;
 
     #[test]
+    #[cfg_attr(loom, ignore)]
     #[should_panic]
     fn validates_max_refs() {
         struct GiantGenConfig;
@@ -177,8 +186,30 @@ mod tests {
             const MAX_PAGES: usize = 1;
         }
 
-        run_model("validates_max_refs", || {
-            let _slab = Slab::<usize>::new_with_config::<GiantGenConfig>();
-        })
+        let _slab = Slab::<usize>::new_with_config::<GiantGenConfig>();
+    }
+
+    #[test]
+    #[cfg_attr(loom, ignore)]
+    fn big() {
+        let slab = Slab::new();
+
+        for i in 0..10000 {
+            println!("{:?}", i);
+            let k = slab.insert(i).expect("insert");
+            assert_eq!(slab.get(k).expect("get"), i);
+        }
+    }
+
+    #[test]
+    #[cfg_attr(loom, ignore)]
+    fn custom_page_sz() {
+        let slab = Slab::new_with_config::<test_util::TinyConfig>();
+
+        for i in 0..4096 {
+            println!("{}", i);
+            let k = slab.insert(i).expect("insert");
+            assert_eq!(slab.get(k).expect("get"), i);
+        }
     }
 }

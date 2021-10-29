@@ -62,6 +62,10 @@ where
     L: crate::Layer<S> + 'static,
     S: Subscriber,
 {
+    fn on_layer(&mut self, subscriber: &mut S) {
+        try_lock!(self.inner.write(), else return).on_layer(subscriber);
+    }
+
     #[inline]
     fn register_callsite(&self, metadata: &'static Metadata<'static>) -> Interest {
         try_lock!(self.inner.read(), else return Interest::sometimes()).register_callsite(metadata)
@@ -73,8 +77,8 @@ where
     }
 
     #[inline]
-    fn new_span(&self, attrs: &span::Attributes<'_>, id: &span::Id, ctx: layer::Context<'_, S>) {
-        try_lock!(self.inner.read()).new_span(attrs, id, ctx)
+    fn on_new_span(&self, attrs: &span::Attributes<'_>, id: &span::Id, ctx: layer::Context<'_, S>) {
+        try_lock!(self.inner.read()).on_new_span(attrs, id, ctx)
     }
 
     #[inline]
@@ -210,19 +214,13 @@ impl Error {
     /// Returns `true` if this error occurred because the layer was poisoned by
     /// a panic on another thread.
     pub fn is_poisoned(&self) -> bool {
-        match self.kind {
-            ErrorKind::Poisoned => true,
-            _ => false,
-        }
+        matches!(self.kind, ErrorKind::Poisoned)
     }
 
     /// Returns `true` if this error occurred because the `Subscriber`
     /// containing the reloadable layer was dropped.
     pub fn is_dropped(&self) -> bool {
-        match self.kind {
-            ErrorKind::SubscriberGone => true,
-            _ => false,
-        }
+        matches!(self.kind, ErrorKind::SubscriberGone)
     }
 }
 

@@ -16,9 +16,9 @@
 //! will contain any fields attached to each event.
 //!
 //! `tracing` represents values as either one of a set of Rust primitives
-//! (`i64`, `u64`, `bool`, and `&str`) or using a `fmt::Display` or `fmt::Debug`
-//! implementation. `Subscriber`s are provided these primitive value types as
-//! `dyn Value` trait objects.
+//! (`i64`, `u64`, `f64`, `bool`, and `&str`) or using a `fmt::Display` or
+//! `fmt::Debug` implementation. `Subscriber`s are provided these primitive
+//! value types as `dyn Value` trait objects.
 //!
 //! These trait objects can be formatted using `fmt::Debug`, but may also be
 //! recorded as typed data by calling the [`Value::record`] method on these
@@ -118,7 +118,7 @@ pub struct Iter {
 /// }
 ///
 /// impl<'a> Visit for StringVisitor<'a> {
-///     fn record_debug(&mut self, field: &Field, value: &fmt::Debug) {
+///     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
 ///         write!(self.string, "{} = {:?}; ", field.name(), value).unwrap();
 ///     }
 /// }
@@ -169,9 +169,6 @@ pub struct Iter {
 /// `examples/counters.rs`, which demonstrates a very simple metrics system
 /// implemented using `tracing`.
 ///
-/// <div class="information">
-///     <div class="tooltip ignore" style="">ⓘ<span class="tooltiptext">Note</span></div>
-/// </div>
 /// <div class="example-wrap" style="display:inline-block">
 /// <pre class="ignore" style="white-space:normal;font:inherit;">
 /// <strong>Note</strong>: The <code>record_error</code> trait method is only
@@ -187,6 +184,11 @@ pub struct Iter {
 /// [`Event`]: ../event/struct.Event.html
 /// [`ValueSet`]: struct.ValueSet.html
 pub trait Visit {
+    /// Visit a double-precision floating point value.
+    fn record_f64(&mut self, field: &Field, value: f64) {
+        self.record_debug(field, &value)
+    }
+
     /// Visit a signed 64-bit integer value.
     fn record_i64(&mut self, field: &Field, value: i64) {
         self.record_debug(field, &value)
@@ -209,9 +211,6 @@ pub trait Visit {
 
     /// Records a type implementing `Error`.
     ///
-    /// <div class="information">
-    ///     <div class="tooltip ignore" style="">ⓘ<span class="tooltiptext">Note</span></div>
-    /// </div>
     /// <div class="example-wrap" style="display:inline-block">
     /// <pre class="ignore" style="white-space:normal;font:inherit;">
     /// <strong>Note</strong>: This is only enabled when the Rust standard library is
@@ -341,6 +340,12 @@ macro_rules! ty_to_nonzero {
 }
 
 macro_rules! impl_one_value {
+    (f32, $op:expr, $record:ident) => {
+        impl_one_value!(normal, f32, $op, $record);
+    };
+    (f64, $op:expr, $record:ident) => {
+        impl_one_value!(normal, f64, $op, $record);
+    };
     (bool, $op:expr, $record:ident) => {
         impl_one_value!(normal, bool, $op, $record);
     };
@@ -393,7 +398,8 @@ impl_values! {
     record_u64(usize, u32, u16, u8 as u64),
     record_i64(i64),
     record_i64(isize, i32, i16, i8 as i64),
-    record_bool(bool)
+    record_bool(bool),
+    record_f64(f64, f32 as f64)
 }
 
 impl<T: crate::sealed::Sealed> crate::sealed::Sealed for Wrapping<T> {}
@@ -407,7 +413,7 @@ impl crate::sealed::Sealed for str {}
 
 impl Value for str {
     fn record(&self, key: &Field, visitor: &mut dyn Visit) {
-        visitor.record_str(key, &self)
+        visitor.record_str(key, self)
     }
 }
 
@@ -430,6 +436,19 @@ where
 {
     fn record(&self, key: &Field, visitor: &mut dyn Visit) {
         (*self).record(key, visitor)
+    }
+}
+
+impl<'a, T: ?Sized> crate::sealed::Sealed for &'a mut T where T: Value + crate::sealed::Sealed + 'a {}
+
+impl<'a, T: ?Sized> Value for &'a mut T
+where
+    T: Value + 'a,
+{
+    fn record(&self, key: &Field, visitor: &mut dyn Visit) {
+        // Don't use `(*self).record(key, visitor)`, otherwise would
+        // cause stack overflow due to `unconditional_recursion`.
+        T::record(self, key, visitor)
     }
 }
 
@@ -457,8 +476,10 @@ impl fmt::Debug for dyn Value {
             }
         }
 
-        static FIELD: Field =
-            Field { i: 0, fields: FieldSet::new(&[], crate::identify_callsite!(&NULL_CALLSITE)) };
+        static FIELD: Field = Field {
+            i: 0,
+            fields: FieldSet::new(&[], crate::identify_callsite!(&NULL_CALLSITE)),
+        };
 
         let mut res = Ok(());
         self.record(&FIELD, &mut |_: &Field, val: &dyn fmt::Debug| {
@@ -503,7 +524,7 @@ impl<T: fmt::Display> fmt::Display for DisplayValue<T> {
 
 impl<T: fmt::Debug> crate::sealed::Sealed for DebugValue<T> {}
 
-impl<T: fmt::Debug> Value for DebugValue<T>
+impl<T> Value for DebugValue<T>
 where
     T: fmt::Debug,
 {
@@ -522,6 +543,16 @@ impl crate::sealed::Sealed for Empty {}
 impl Value for Empty {
     #[inline]
     fn record(&self, _: &Field, _: &mut dyn Visit) {}
+}
+
+impl<T: Value> crate::sealed::Sealed for Option<T> {}
+
+impl<T: Value> Value for Option<T> {
+    fn record(&self, key: &Field, visitor: &mut dyn Visit) {
+        if let Some(v) = &self {
+            v.record(key, visitor)
+        }
+    }
 }
 
 // ===== impl Field =====
@@ -577,7 +608,10 @@ impl Clone for Field {
     fn clone(&self) -> Self {
         Field {
             i: self.i,
-            fields: FieldSet { names: self.fields.names, callsite: self.fields.callsite() },
+            fields: FieldSet {
+                names: self.fields.names,
+                callsite: self.fields.callsite(),
+            },
         }
     }
 }
@@ -607,17 +641,17 @@ impl FieldSet {
         Q: Borrow<str>,
     {
         let name = &name.borrow();
-        self.names
-            .iter()
-            .position(|f| f == name)
-            .map(|i| Field { i, fields: FieldSet { names: self.names, callsite: self.callsite() } })
+        self.names.iter().position(|f| f == name).map(|i| Field {
+            i,
+            fields: FieldSet {
+                names: self.names,
+                callsite: self.callsite(),
+            },
+        })
     }
 
     /// Returns `true` if `self` contains the given `field`.
     ///
-    /// <div class="information">
-    ///     <div class="tooltip ignore" style="">ⓘ<span class="tooltiptext">Note</span></div>
-    /// </div>
     /// <div class="example-wrap" style="display:inline-block">
     /// <pre class="ignore" style="white-space:normal;font:inherit;">
     /// <strong>Note</strong>: If <code>field</code> shares a name with a field
@@ -634,7 +668,13 @@ impl FieldSet {
     /// Returns an iterator over the `Field`s in this `FieldSet`.
     pub fn iter(&self) -> Iter {
         let idxs = 0..self.len();
-        Iter { idxs, fields: FieldSet { names: self.names, callsite: self.callsite() } }
+        Iter {
+            idxs,
+            fields: FieldSet {
+                names: self.names,
+                callsite: self.callsite(),
+            },
+        }
     }
 
     /// Returns a new `ValueSet` with entries for this `FieldSet`'s values.
@@ -646,7 +686,10 @@ impl FieldSet {
     where
         V: ValidLen<'v>,
     {
-        ValueSet { fields: self, values: &values.borrow()[..] }
+        ValueSet {
+            fields: self,
+            values: values.borrow(),
+        }
     }
 
     /// Returns the number of fields in this `FieldSet`.
@@ -682,7 +725,9 @@ impl fmt::Debug for FieldSet {
 
 impl fmt::Display for FieldSet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_set().entries(self.names.iter().map(display)).finish()
+        f.debug_set()
+            .entries(self.names.iter().map(display))
+            .finish()
     }
 }
 
@@ -694,7 +739,10 @@ impl Iterator for Iter {
         let i = self.idxs.next()?;
         Some(Field {
             i,
-            fields: FieldSet { names: self.fields.names, callsite: self.fields.callsite() },
+            fields: FieldSet {
+                names: self.fields.names,
+                callsite: self.fields.callsite(),
+            },
         })
     }
 }
@@ -730,13 +778,18 @@ impl<'a> ValueSet<'a> {
     /// Returns `true` if this `ValueSet` contains a value for the given `Field`.
     pub(crate) fn contains(&self, field: &Field) -> bool {
         field.callsite() == self.callsite()
-            && self.values.iter().any(|(key, val)| *key == field && val.is_some())
+            && self
+                .values
+                .iter()
+                .any(|(key, val)| *key == field && val.is_some())
     }
 
     /// Returns true if this `ValueSet` contains _no_ values.
     pub(crate) fn is_empty(&self) -> bool {
         let my_callsite = self.callsite();
-        self.values.iter().all(|(key, val)| val.is_none() || key.callsite() != my_callsite)
+        self.values
+            .iter()
+            .all(|(key, val)| val.is_none() || key.callsite() != my_callsite)
     }
 
     pub(crate) fn field_set(&self) -> &FieldSet {
@@ -898,7 +951,10 @@ mod test {
         let fields = TEST_META_1.fields();
         let values = &[
             (&fields.field("foo").unwrap(), None),
-            (&TEST_META_2.fields().field("bar").unwrap(), Some(&57 as &dyn Value)),
+            (
+                &TEST_META_2.fields().field("bar").unwrap(),
+                Some(&57 as &dyn Value),
+            ),
             (&fields.field("baz").unwrap(), None),
         ];
 

@@ -40,7 +40,7 @@ impl<T: Send + Sync + 'static> MultithreadedBench<T> {
     }
 }
 
-const N_INSERTIONS: &'static [usize] = &[100, 300, 500, 700, 1000, 3000, 5000];
+const N_INSERTIONS: &[usize] = &[100, 300, 500, 700, 1000, 3000, 5000];
 
 fn insert_remove_local(c: &mut Criterion) {
     // the 10000-insertion benchmark takes the `slab` crate about an hour to

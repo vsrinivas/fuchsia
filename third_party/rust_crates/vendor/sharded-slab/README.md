@@ -11,7 +11,7 @@ A lock-free concurrent slab.
 [crates-badge]: https://img.shields.io/crates/v/sharded-slab.svg
 [crates-url]: https://crates.io/crates/sharded-slab
 [docs-badge]: https://docs.rs/sharded-slab/badge.svg
-[docs-url]: https://docs.rs/sharded-slab/0.0.9/sharded_slab
+[docs-url]: https://docs.rs/sharded-slab/0.1.4/sharded_slab
 [ci-badge]: https://github.com/hawkw/sharded-slab/workflows/CI/badge.svg
 [ci-url]: https://github.com/hawkw/sharded-slab/actions?workflow=CI
 [license-badge]: https://img.shields.io/crates/l/sharded-slab
@@ -35,10 +35,10 @@ optimization, and there may still be some lurking bugs.
 First, add this to your `Cargo.toml`:
 
 ```toml
-sharded-slab = "0.0.9"
+sharded-slab = "0.1.1"
 ```
 
-This crate provides two  types, [`Slab`] and [`Pool`], which provide slightly
+This crate provides two types, [`Slab`] and [`Pool`], which provide slightly
 different APIs for using a sharded slab. 
 
 [`Slab`] implements a slab for _storing_ small types, sharing them between
@@ -57,12 +57,12 @@ _data_ they store, but retaining any previously-allocated capacity. This
 means that a [`Pool`] may be used to reuse a set of existing heap
 allocations, reducing allocator load.
 
-[`Slab`]: https://docs.rs/sharded-slab/0.0.9/sharded_slab/struct.Slab.html
-[inserting]: https://docs.rs/sharded-slab/0.0.9/sharded_slab/struct.Slab.html#method.insert
-[taking]: https://docs.rs/sharded-slab/0.0.9/sharded_slab/struct.Slab.html#method.take
-[`Pool`]: https://docs.rs/sharded-slab/0.0.9/sharded_slab/struct.Pool.html
-[create]: https://docs.rs/sharded-slab/0.0.9/sharded_slab/struct.Pool.html#method.create
-[cleared]: https://docs.rs/sharded-slab/0.0.9/sharded_slab/trait.Clear.html
+[`Slab`]: https://docs.rs/sharded-slab/0.1.4/sharded_slab/struct.Slab.html
+[inserting]: https://docs.rs/sharded-slab/0.1.4/sharded_slab/struct.Slab.html#method.insert
+[taking]: https://docs.rs/sharded-slab/0.1.4/sharded_slab/struct.Slab.html#method.take
+[`Pool`]: https://docs.rs/sharded-slab/0.1.4/sharded_slab/struct.Pool.html
+[create]: https://docs.rs/sharded-slab/0.1.4/sharded_slab/struct.Pool.html#method.create
+[cleared]: https://docs.rs/sharded-slab/0.1.4/sharded_slab/trait.Clear.html
 [object pool]: https://en.wikipedia.org/wiki/Object_pool_pattern
 
 ### Examples

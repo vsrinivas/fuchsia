@@ -13,8 +13,10 @@ use crate::{
 };
 
 lazy_static! {
-    static ref REGISTRY: Mutex<Registry> =
-        Mutex::new(Registry { callsites: Vec::new(), dispatchers: Vec::new() });
+    static ref REGISTRY: Mutex<Registry> = Mutex::new(Registry {
+        callsites: Vec::new(),
+        dispatchers: Vec::new(),
+    });
 }
 
 struct Registry {
@@ -28,8 +30,10 @@ impl Registry {
 
         // Iterate over the subscribers in the registry, and — if they are
         // active — register the callsite with them.
-        let mut interests =
-            self.dispatchers.iter().filter_map(|registrar| registrar.try_register(meta));
+        let mut interests = self
+            .dispatchers
+            .iter()
+            .filter_map(|registrar| registrar.try_register(meta));
 
         // Use the first subscriber's `Interest` as the base value.
         let interest = if let Some(interest) = interests.next() {
@@ -145,7 +149,10 @@ pub(crate) fn register_dispatch(dispatch: &Dispatch) {
 
 impl PartialEq for Identifier {
     fn eq(&self, other: &Identifier) -> bool {
-        self.0 as *const _ as *const () == other.0 as *const _ as *const ()
+        core::ptr::eq(
+            self.0 as *const _ as *const (),
+            other.0 as *const _ as *const (),
+        )
     }
 }
 

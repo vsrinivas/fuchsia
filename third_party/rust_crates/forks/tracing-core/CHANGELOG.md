@@ -1,3 +1,82 @@
+# 0.1.21 (October 1, 2021)
+
+This release adds support for recording `Option<T> where T: Value` as typed
+`tracing` field values.
+
+### Added
+
+- **field**: `Value` impl for `Option<T> where T: Value` ([#1585])
+
+### Fixed
+
+- Fixed deprecation warnings when building with `default-features` disabled
+  ([#1603], [#1606])
+- Documentation fixes and improvements ([#1595], [#1601])
+
+Thanks to @brianburgers, @DCjanus, and @matklad for contributing to this
+release!
+
+[#1585]: https://github.com/tokio-rs/tracing/pull/1585
+[#1595]: https://github.com/tokio-rs/tracing/pull/1595
+[#1601]: https://github.com/tokio-rs/tracing/pull/1601
+[#1603]: https://github.com/tokio-rs/tracing/pull/1603
+[#1606]: https://github.com/tokio-rs/tracing/pull/1606
+
+# 0.1.20 (September 12, 2021)
+
+This release adds support for `f64` as one of the `tracing-core`
+primitive field values, allowing floating-point values to be recorded as
+typed values rather than with `fmt::Debug`. Additionally, it adds
+`NoSubscriber`, a `Subscriber` implementation that does nothing.
+
+### Added
+
+- **subscriber**: `NoSubscriber`, a no-op `Subscriber` implementation
+  ([#1549])
+- **field**: Added `Visit::record_f64` and support for recording
+  floating-point values ([#1507])
+
+Thanks to new contributors @jsgf and @maxburke for contributing to this
+release!
+
+[#1549]: https://github.com/tokio-rs/tracing/pull/1549 
+[#1507]: https://github.com/tokio-rs/tracing/pull/1507
+
+# 0.1.19 (August 17, 2021)
+### Added
+
+- `Level::as_str` ([#1413])
+- `Hash` implementation for `Level` and `LevelFilter` ([#1456])
+- `Value` implementation for `&mut T where T: Value` ([#1385])
+- Multiple documentation fixes and improvements ([#1435], [#1446])
+
+Thanks to @Folyd, @teozkr, and @dvdplm for contributing to this release!
+
+[#1413]: https://github.com/tokio-rs/tracing/pull/1413
+[#1456]: https://github.com/tokio-rs/tracing/pull/1456
+[#1385]: https://github.com/tokio-rs/tracing/pull/1385
+[#1435]: https://github.com/tokio-rs/tracing/pull/1435
+[#1446]: https://github.com/tokio-rs/tracing/pull/1446
+
+# 0.1.19 (April 30, 2021)
+
+### Added
+
+- `Subscriber` impl for `Box<dyn Subscriber + Send + Sync + 'static>` ([#1358])
+- `Subscriber` impl for `Arc<dyn Subscriber + Send + Sync + 'static>` ([#1374])
+- Symmetric `From` impls for existing `Into` impls on `Current` and `Option<Id>`
+  ([#1335])
+- `Attributes::fields` accessor that returns the set of fields defined on a
+  span's `Attributes` ([#1331])
+
+
+Thanks to @Folyd for contributing to this release!
+
+[#1358]: https://github.com/tokio-rs/tracing/pull/1358
+[#1374]: https://github.com/tokio-rs/tracing/pull/1374
+[#1335]: https://github.com/tokio-rs/tracing/pull/1335
+[#1331]: https://github.com/tokio-rs/tracing/pull/1331
+
 # 0.1.17 (September 28, 2020)
 
 ### Fixed

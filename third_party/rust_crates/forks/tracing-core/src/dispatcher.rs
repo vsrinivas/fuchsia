@@ -108,17 +108,13 @@
 //! // `my_subscriber` is now the default
 //! ```
 //!
-//! <div class="information">
-//!     <div class="tooltip ignore" style="">ⓘ<span class="tooltiptext">Note</span></div>
-//! </div>
-//! <div class="example-wrap" style="display:inline-block">
 //! <pre class="ignore" style="white-space:normal;font:inherit;">
-//! <strong>Note</strong>:the thread-local scoped dispatcher
-//! (<a href="#fn.with_default"><code>with_default</code></a>) requires the
-//! Rust standard library. <code>no_std</code> users should use
-//! <a href="#fn.set_global_default"><code>set_global_default</code></a>
-//! instead.
-//! </pre></div>
+//!     <strong>Note</strong>:the thread-local scoped dispatcher
+//!     (<a href="#fn.with_default"><code>with_default</code></a>) requires the
+//!     Rust standard library. <code>no_std</code> users should use
+//!     <a href="#fn.set_global_default"><code>set_global_default</code></a>
+//!     instead.
+//! </pre>
 //!
 //! ## Accessing the Default Subscriber
 //!
@@ -134,7 +130,7 @@
 //! [`Dispatch`]: struct.Dispatch.html
 use crate::{
     callsite, span,
-    subscriber::{self, Subscriber},
+    subscriber::{self, NoSubscriber, Subscriber},
     Event, LevelFilter, Metadata,
 };
 
@@ -211,15 +207,11 @@ pub struct DefaultGuard(Option<Dispatch>);
 /// The default dispatcher is used when creating a new [span] or
 /// [`Event`].
 ///
-/// <div class="information">
-///     <div class="tooltip ignore" style="">ⓘ<span class="tooltiptext">Note</span></div>
-/// </div>
-/// <div class="example-wrap" style="display:inline-block">
 /// <pre class="ignore" style="white-space:normal;font:inherit;">
-/// <strong>Note</strong>: This function required the Rust standard library.
-/// <code>no_std</code> users should use <a href="../fn.set_global_default.html">
-/// <code>set_global_default</code></a> instead.
-/// </pre></div>
+///     <strong>Note</strong>: This function required the Rust standard library.
+///     <code>no_std</code> users should use <a href="../fn.set_global_default.html">
+///     <code>set_global_default</code></a> instead.
+/// </pre>
 ///
 /// [span]: ../span/index.html
 /// [`Subscriber`]: ../subscriber/trait.Subscriber.html
@@ -239,15 +231,11 @@ pub fn with_default<T>(dispatcher: &Dispatch, f: impl FnOnce() -> T) -> T {
 /// Sets the dispatch as the default dispatch for the duration of the lifetime
 /// of the returned DefaultGuard
 ///
-/// <div class="information">
-///     <div class="tooltip ignore" style="">ⓘ<span class="tooltiptext">Note</span></div>
-/// </div>
-/// <div class="example-wrap" style="display:inline-block">
 /// <pre class="ignore" style="white-space:normal;font:inherit;">
-/// <strong>Note</strong>: This function required the Rust standard library.
-/// <code>no_std</code> users should use <a href="../fn.set_global_default.html">
-/// <code>set_global_default</code></a> instead.
-/// </pre></div>
+///     <strong>Note</strong>: This function required the Rust standard library.
+///     <code>no_std</code> users should use <a href="../fn.set_global_default.html">
+///     <code>set_global_default</code></a> instead.
+/// </pre>
 ///
 /// [`set_global_default`]: ../fn.set_global_default.html
 #[cfg(feature = "std")]
@@ -267,21 +255,26 @@ pub fn set_default(dispatcher: &Dispatch) -> DefaultGuard {
 /// Can only be set once; subsequent attempts to set the global default will fail.
 /// Returns `Err` if the global default has already been set.
 ///
-///
-/// <div class="information">
-///     <div class="tooltip compile_fail" style="">&#x26a0; &#xfe0f;<span class="tooltiptext">Warning</span></div>
-/// </div><div class="example-wrap" style="display:inline-block"><pre class="compile_fail" style="white-space:normal;font:inherit;">
-/// <strong>Warning</strong>: In general, libraries should <em>not</em> call
-/// <code>set_global_default()</code>! Doing so will cause conflicts when
-/// executables that depend on the library try to set the default later.
-/// </pre></div>
+/// <pre class="compile_fail" style="white-space:normal;font:inherit;">
+///     <strong>Warning</strong>: In general, libraries should <em>not</em> call
+///     <code>set_global_default()</code>! Doing so will cause conflicts when
+///     executables that depend on the library try to set the default later.
+/// </pre>
 ///
 /// [span]: ../span/index.html
 /// [`Subscriber`]: ../subscriber/trait.Subscriber.html
 /// [`Event`]: ../event/struct.Event.html
 pub fn set_global_default(dispatcher: Dispatch) -> Result<(), SetGlobalDefaultError> {
-    #[allow(deprecated)]
-    if GLOBAL_INIT.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) == UNINITIALIZED
+    // if `compare_exchange` returns Result::Ok(_), then `new` has been set and
+    // `current`—now the prior value—has been returned in the `Ok()` branch.
+    if GLOBAL_INIT
+        .compare_exchange(
+            UNINITIALIZED,
+            INITIALIZING,
+            Ordering::SeqCst,
+            Ordering::SeqCst,
+        )
+        .is_ok()
     {
         unsafe {
             GLOBAL_DISPATCH = Some(dispatcher);
@@ -406,7 +399,9 @@ impl Dispatch {
     /// Returns a new `Dispatch` that discards events and spans.
     #[inline]
     pub fn none() -> Self {
-        Dispatch { subscriber: Arc::new(NoSubscriber) }
+        Dispatch {
+            subscriber: Arc::new(NoSubscriber::default()),
+        }
     }
 
     /// Returns a `Dispatch` that forwards to the given [`Subscriber`].
@@ -416,7 +411,9 @@ impl Dispatch {
     where
         S: Subscriber + Send + Sync + 'static,
     {
-        let me = Dispatch { subscriber: Arc::new(subscriber) };
+        let me = Dispatch {
+            subscriber: Arc::new(subscriber),
+        };
         callsite::register_dispatch(&me);
         me
     }
@@ -560,7 +557,7 @@ impl Dispatch {
     /// [`new_span`]: ../subscriber/trait.Subscriber.html#method.new_span
     #[inline]
     pub fn clone_span(&self, id: &span::Id) -> span::Id {
-        self.subscriber.clone_span(&id)
+        self.subscriber.clone_span(id)
     }
 
     /// Notifies the subscriber that a [span ID] has been dropped.
@@ -571,16 +568,14 @@ impl Dispatch {
     /// must as well.
     ///
     /// This calls the [`drop_span`] function on the [`Subscriber`] that this
-    ///  `Dispatch` forwards to.
+    /// `Dispatch` forwards to.
     ///
-    /// <div class="information">
-    ///     <div class="tooltip compile_fail" style="">&#x26a0; &#xfe0f;<span class="tooltiptext">Warning</span></div>
-    /// </div>
-    /// <div class="example-wrap" style="display:inline-block"><pre class="compile_fail" style="white-space:normal;font:inherit;">
-    /// <strong>Deprecated</strong>: The <a href="#method.try_close"><code>try_close</code></a>
-    /// method is functionally identical, but returns <code>true</code> if the span is now closed.
-    /// It should be used instead of this method.
-    /// </pre></div>
+    /// <pre class="compile_fail" style="white-space:normal;font:inherit;">
+    ///     <strong>Deprecated</strong>: The <a href="#method.try_close"><code>
+    ///     try_close</code></a> method is functionally identical, but returns
+    ///     <code>true</code> if the span is now closed. It should be used
+    ///     instead of this method.
+    /// </pre>
     ///
     /// [span ID]: ../span/struct.Id.html
     /// [`Subscriber`]: ../subscriber/trait.Subscriber.html
@@ -629,16 +624,14 @@ impl Dispatch {
     /// `T`.
     #[inline]
     pub fn is<T: Any>(&self) -> bool {
-        #[allow(bare_trait_objects)]
-        Subscriber::is::<T>(&*self.subscriber)
+        <dyn Subscriber>::is::<T>(&*self.subscriber)
     }
 
     /// Returns some reference to the `Subscriber` this `Dispatch` forwards to
     /// if it is of type `T`, or `None` if it isn't.
     #[inline]
     pub fn downcast_ref<T: Any>(&self) -> Option<&T> {
-        #[allow(bare_trait_objects)]
-        Subscriber::downcast_ref(&*self.subscriber)
+        <dyn Subscriber>::downcast_ref(&*self.subscriber)
     }
 }
 
@@ -663,32 +656,6 @@ where
     fn from(subscriber: S) -> Self {
         Dispatch::new(subscriber)
     }
-}
-
-struct NoSubscriber;
-impl Subscriber for NoSubscriber {
-    #[inline]
-    fn register_callsite(&self, _: &'static Metadata<'static>) -> subscriber::Interest {
-        subscriber::Interest::never()
-    }
-
-    fn new_span(&self, _: &span::Attributes<'_>) -> span::Id {
-        span::Id::from_u64(0xDEAD)
-    }
-
-    fn event(&self, _event: &Event<'_>) {}
-
-    fn record(&self, _span: &span::Id, _values: &span::Record<'_>) {}
-
-    fn record_follows_from(&self, _span: &span::Id, _follows: &span::Id) {}
-
-    #[inline]
-    fn enabled(&self, _metadata: &Metadata<'_>) -> bool {
-        false
-    }
-
-    fn enter(&self, _span: &span::Id) {}
-    fn exit(&self, _span: &span::Id) {}
 }
 
 impl Registrar {
@@ -728,7 +695,7 @@ impl State {
     #[inline]
     fn enter(&self) -> Option<Entered<'_>> {
         if self.can_enter.replace(false) {
-            Some(Entered(&self))
+            Some(Entered(self))
         } else {
             None
         }
@@ -793,13 +760,13 @@ mod test {
 
     #[test]
     fn dispatch_is() {
-        let dispatcher = Dispatch::new(NoSubscriber);
+        let dispatcher = Dispatch::new(NoSubscriber::default());
         assert!(dispatcher.is::<NoSubscriber>());
     }
 
     #[test]
     fn dispatch_downcasts() {
-        let dispatcher = Dispatch::new(NoSubscriber);
+        let dispatcher = Dispatch::new(NoSubscriber::default());
         assert!(dispatcher.downcast_ref::<NoSubscriber>().is_some());
     }
 
@@ -842,7 +809,11 @@ mod test {
 
             fn event(&self, _: &Event<'_>) {
                 static EVENTS: AtomicUsize = AtomicUsize::new(0);
-                assert_eq!(EVENTS.fetch_add(1, Ordering::Relaxed), 0, "event method called twice!");
+                assert_eq!(
+                    EVENTS.fetch_add(1, Ordering::Relaxed),
+                    0,
+                    "event method called twice!"
+                );
                 Event::dispatch(&TEST_META, &TEST_META.fields().value_set(&[]))
             }
 

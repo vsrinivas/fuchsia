@@ -59,8 +59,8 @@ fn fields() {
         .new_span(
             span.clone().with_field(
                 field::mock("arg1")
-                    .with_value(&format_args!("2"))
-                    .and(field::mock("arg2").with_value(&format_args!("false")))
+                    .with_value(&2usize)
+                    .and(field::mock("arg2").with_value(&false))
                     .only(),
             ),
         )
@@ -70,8 +70,8 @@ fn fields() {
         .new_span(
             span2.clone().with_field(
                 field::mock("arg1")
-                    .with_value(&format_args!("3"))
-                    .and(field::mock("arg2").with_value(&format_args!("true")))
+                    .with_value(&3usize)
+                    .and(field::mock("arg2").with_value(&true))
                     .only(),
             ),
         )
@@ -96,6 +96,9 @@ fn skip() {
     #[instrument(target = "my_target", level = "debug", skip(_arg2, _arg3))]
     fn my_fn(arg1: usize, _arg2: UnDebug, _arg3: UnDebug) {}
 
+    #[instrument(target = "my_target", level = "debug", skip_all)]
+    fn my_fn2(_arg1: usize, _arg2: UnDebug, _arg3: UnDebug) {}
+
     let span = span::mock()
         .named("my_fn")
         .at_level(Level::DEBUG)
@@ -105,10 +108,16 @@ fn skip() {
         .named("my_fn")
         .at_level(Level::DEBUG)
         .with_target("my_target");
+
+    let span3 = span::mock()
+        .named("my_fn2")
+        .at_level(Level::DEBUG)
+        .with_target("my_target");
+
     let (subscriber, handle) = subscriber::mock()
         .new_span(
             span.clone()
-                .with_field(field::mock("arg1").with_value(&format_args!("2")).only()),
+                .with_field(field::mock("arg1").with_value(&2usize).only()),
         )
         .enter(span.clone())
         .exit(span.clone())
@@ -116,17 +125,22 @@ fn skip() {
         .new_span(
             span2
                 .clone()
-                .with_field(field::mock("arg1").with_value(&format_args!("3")).only()),
+                .with_field(field::mock("arg1").with_value(&3usize).only()),
         )
         .enter(span2.clone())
         .exit(span2.clone())
         .drop_span(span2)
+        .new_span(span3.clone())
+        .enter(span3.clone())
+        .exit(span3.clone())
+        .drop_span(span3)
         .done()
         .run_with_handle();
 
     with_default(subscriber, || {
         my_fn(2, UnDebug(0), UnDebug(1));
         my_fn(3, UnDebug(0), UnDebug(1));
+        my_fn2(2, UnDebug(0), UnDebug(1));
     });
 
     handle.assert_finished();
@@ -184,7 +198,7 @@ fn methods() {
             span.clone().with_field(
                 field::mock("self")
                     .with_value(&format_args!("Foo"))
-                    .and(field::mock("arg1").with_value(&format_args!("42"))),
+                    .and(field::mock("arg1").with_value(&42usize)),
             ),
         )
         .enter(span.clone())
@@ -213,7 +227,7 @@ fn impl_trait_return_type() {
     let (subscriber, handle) = subscriber::mock()
         .new_span(
             span.clone()
-                .with_field(field::mock("x").with_value(&format_args!("10")).only()),
+                .with_field(field::mock("x").with_value(&10usize).only()),
         )
         .enter(span.clone())
         .exit(span.clone())

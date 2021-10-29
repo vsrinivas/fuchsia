@@ -5,7 +5,7 @@ use crate::Pack;
 
 pub(crate) mod slot;
 mod stack;
-use self::slot::Slot;
+pub(crate) use self::slot::Slot;
 use std::{fmt, marker::PhantomData};
 
 /// A page address encodes the location of a slot within a shard (the page
@@ -175,21 +175,18 @@ where
     }
 
     #[inline]
-    pub(crate) fn get<U>(
-        &self,
+    pub(crate) fn with_slot<'a, U>(
+        &'a self,
         addr: Addr<C>,
-        idx: usize,
-        f: impl FnOnce(&T) -> &U,
-    ) -> Option<slot::Guard<'_, U, C>> {
+        f: impl FnOnce(&'a Slot<T, C>) -> Option<U>,
+    ) -> Option<U> {
         let poff = addr.offset() - self.prev_sz;
 
         test_println!("-> offset {:?}", poff);
 
         self.slab.with(|slab| {
-            unsafe { &*slab }
-                .as_ref()?
-                .get(poff)?
-                .get(C::unpack_gen(idx), f)
+            let slot = unsafe { &*slab }.as_ref()?.get(poff)?;
+            f(slot)
         })
     }
 
@@ -236,8 +233,7 @@ where
         self.slab.with(|slab| {
             let slab = unsafe { &*slab }.as_ref();
             if let Some(slot) = slab.and_then(|slab| slab.get(offset)) {
-                slot.try_remove_value(gen, offset, free_list);
-                true
+                slot.try_remove_value(gen, offset, free_list)
             } else {
                 false
             }
@@ -264,15 +260,11 @@ where
     T: Clear + Default,
     C: cfg::Config,
 {
-    /// Allocate and initialize a new slot.
-    ///
-    /// It does this via the provided initializatin function `func`. Once it get's the generation
-    /// number for the new slot, it performs the operations required to return the key to the
-    /// caller.]
-    pub(crate) fn init_with<F>(&self, local: &Local, func: F) -> Option<usize>
-    where
-        F: FnOnce(&Slot<T, C>) -> Option<slot::Generation<C>>,
-    {
+    pub(crate) fn init_with<U>(
+        &self,
+        local: &Local,
+        init: impl FnOnce(usize, &Slot<T, C>) -> Option<U>,
+    ) -> Option<U> {
         let head = self.pop(local)?;
 
         // do we need to allocate storage for this page?
@@ -280,19 +272,20 @@ where
             self.allocate();
         }
 
-        let gen = self.slab.with(|slab| {
+        let index = head + self.prev_sz;
+
+        let result = self.slab.with(|slab| {
             let slab = unsafe { &*(slab) }
                 .as_ref()
                 .expect("page must have been allocated to insert!");
             let slot = &slab[head];
+            let result = init(index, slot)?;
             local.set_head(slot.next());
-            func(slot)
+            Some(result)
         })?;
 
-        let index = head + self.prev_sz;
-
-        test_println!("-> initialize_new_slot: insert at offset: {}", index);
-        Some(gen.pack(index))
+        test_println!("-> init_with: insert at offset: {}", index);
+        Some(result)
     }
 
     /// Allocates storage for the page's slots.
@@ -328,6 +321,26 @@ where
             let slab = unsafe { &*slab }.as_ref();
             if let Some(slot) = slab.and_then(|slab| slab.get(offset)) {
                 slot.try_clear_storage(gen, offset, free_list)
+            } else {
+                false
+            }
+        })
+    }
+
+    pub(crate) fn clear<F: FreeList<C>>(
+        &self,
+        addr: Addr<C>,
+        gen: slot::Generation<C>,
+        free_list: &F,
+    ) -> bool {
+        let offset = addr.offset() - self.prev_sz;
+
+        test_println!("-> offset {:?}", offset);
+
+        self.slab.with(|slab| {
+            let slab = unsafe { &*slab }.as_ref();
+            if let Some(slot) = slab.and_then(|slab| slab.get(offset)) {
+                slot.clear_storage(gen, offset, free_list)
             } else {
                 false
             }

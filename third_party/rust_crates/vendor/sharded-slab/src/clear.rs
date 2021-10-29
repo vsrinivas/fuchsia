@@ -91,3 +91,10 @@ impl<T: Clear> Clear for sync::RwLock<T> {
         self.write().unwrap().clear();
     }
 }
+
+#[cfg(all(loom, test))]
+impl<T: Clear> Clear for crate::sync::alloc::Track<T> {
+    fn clear(&mut self) {
+        self.get_mut().clear()
+    }
+}

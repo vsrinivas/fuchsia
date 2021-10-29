@@ -40,7 +40,11 @@ impl<'a> Event<'a> {
     /// and set of values.
     #[inline]
     pub fn new(metadata: &'static Metadata<'static>, fields: &'a field::ValueSet<'a>) -> Self {
-        Event { metadata, fields, parent: Parent::Current }
+        Event {
+            fields,
+            metadata,
+            parent: Parent::Current,
+        }
     }
 
     /// Returns a new `Event` as a child of the specified span, with the
@@ -55,7 +59,11 @@ impl<'a> Event<'a> {
             Some(p) => Parent::Explicit(p),
             None => Parent::Root,
         };
-        Event { metadata, fields, parent }
+        Event {
+            fields,
+            metadata,
+            parent,
+        }
     }
 
     /// Constructs a new `Event` with the specified metadata and set of values,
@@ -93,10 +101,7 @@ impl<'a> Event<'a> {
 
     /// Returns true if the new event should be a root.
     pub fn is_root(&self) -> bool {
-        match self.parent {
-            Parent::Root => true,
-            _ => false,
-        }
+        matches!(self.parent, Parent::Root)
     }
 
     /// Returns true if the new event's parent should be determined based on the
@@ -107,10 +112,7 @@ impl<'a> Event<'a> {
     /// thread is _not_ inside a span, then the new event will be the root of its
     /// own trace tree.
     pub fn is_contextual(&self) -> bool {
-        match self.parent {
-            Parent::Current => true,
-            _ => false,
-        }
+        matches!(self.parent, Parent::Current)
     }
 
     /// Returns the new event's explicitly-specified parent, if there is one.

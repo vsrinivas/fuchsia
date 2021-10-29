@@ -12,3 +12,8 @@ pub use crate::layer::{
 };
 
 pub use crate::util::SubscriberInitExt as _;
+
+feature! {
+    #![all(feature = "fmt", feature = "std")]
+    pub use crate::fmt::writer::MakeWriterExt as _;
+}

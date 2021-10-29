@@ -1,3 +1,76 @@
+# 0.1.18 (October 5, 2021)
+
+This release fixes issues introduced in v0.1.17.
+
+### Fixed
+
+- fixed mismatched types compiler error that may occur when using
+  `#[instrument]` on an `async fn` that returns an `impl Trait` value that
+  includes a closure ([#1616])
+- fixed false positives for `clippy::suspicious_else_formatting` warnings due to
+  rust-lang/rust-clippy#7760 and rust-lang/rust-clippy#6249 ([#1617])
+- fixed `clippy::let_unit_value` lints when using `#[instrument]` ([#1614])
+
+[#1617]: https://github.com/tokio-rs/tracing/pull/1617
+[#1616]: https://github.com/tokio-rs/tracing/pull/1616
+[#1614]: https://github.com/tokio-rs/tracing/pull/1614
+
+# 0.1.17 (YANKED) (October 1, 2021)
+
+This release significantly improves performance when `#[instrument]`-generated
+spans are below the maximum enabled level.
+
+### Added
+
+- improve performance when skipping `#[instrument]`-generated spans below the
+  max level ([#1600], [#1605])
+
+Thanks to @oli-obk for contributing to this release!
+
+[#1600]: https://github.com/tokio-rs/tracing/pull/1600
+[#1605]: https://github.com/tokio-rs/tracing/pull/1605
+
+# 0.1.16 (September 13, 2021)
+
+This release adds a new `#[instrument(skip_all)]` option to skip recording *all*
+arguments to an instrumented function as fields. Additionally, it adds support
+for recording arguments that are `tracing` primitive types as typed values,
+rather than as `fmt::Debug`.
+
+### Added
+
+- add `skip_all` option to `#[instrument]` ([#1548])
+- record primitive types as primitive values rather than as `fmt::Debug`
+  ([#1378])
+- added support for `f64`s as typed values ([#1522])
+
+Thanks to @Folyd and @jsgf for contributing to this release!
+
+[#1548]: https://github.com/tokio-rs/tracing/pull/1548
+[#1378]: https://github.com/tokio-rs/tracing/pull/1378
+[#1522]: https://github.com/tokio-rs/tracing/pull/1524
+
+# 0.1.15 (March 12, 2021)
+
+### Fixed
+
+- `#[instrument]` on functions returning `Box::pin`ned futures incorrectly
+  skipping function bodies prior to returning a future ([#1297])
+
+Thanks to @nightmared for contributing to this release!
+
+[#1297]: https://github.com/tokio-rs/tracing/pull/1297
+
+# 0.1.14 (March 10, 2021)
+
+### Fixed
+
+- Compatibility between `#[instrument]` and `async-trait` v0.1.43 and newer
+  ([#1228])
+
+Thanks to @nightmared for lots of hard work on this fix!
+
+[#1228]: https://github.com/tokio-rs/tracing/pull/1228
 
 # 0.1.13 (February 17, 2021)
 

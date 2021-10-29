@@ -1,7 +1,11 @@
 //! Subscribers collect and record trace data.
 use crate::{span, Event, LevelFilter, Metadata};
 
-use crate::stdlib::any::{Any, TypeId};
+use crate::stdlib::{
+    any::{Any, TypeId},
+    boxed::Box,
+    sync::Arc,
+};
 
 /// Trait representing the functions required to collect trace data.
 ///
@@ -97,7 +101,7 @@ pub trait Subscriber: 'static {
     ///
     /// `Subscriber`s which require their filters to be run every time an event
     /// occurs or a span is entered/exited should return `Interest::sometimes`.
-    /// If a subscriber returns `Interest::sometimes`, then its' [`enabled`] method
+    /// If a subscriber returns `Interest::sometimes`, then its [`enabled`] method
     /// will be called every time an event or span is created from that callsite.
     ///
     /// For example, suppose a sampling subscriber is implemented by
@@ -359,7 +363,7 @@ pub trait Subscriber: 'static {
     #[deprecated(since = "0.1.2", note = "use `Subscriber::try_close` instead")]
     fn drop_span(&self, _id: span::Id) {}
 
-    /// Notifies the subscriber that a [`span ID`] has been dropped, and returns
+    /// Notifies the subscriber that a [span ID] has been dropped, and returns
     /// `true` if there are now 0 IDs that refer to that span.
     ///
     /// Higher-level libraries providing functionality for composing multiple
@@ -528,30 +532,21 @@ impl Interest {
     /// about this callsite.
     #[inline]
     pub fn is_never(&self) -> bool {
-        match self.0 {
-            InterestKind::Never => true,
-            _ => false,
-        }
+        matches!(self.0, InterestKind::Never)
     }
 
     /// Returns `true` if the subscriber is sometimes interested in being notified
     /// about this callsite.
     #[inline]
     pub fn is_sometimes(&self) -> bool {
-        match self.0 {
-            InterestKind::Sometimes => true,
-            _ => false,
-        }
+        matches!(self.0, InterestKind::Sometimes)
     }
 
     /// Returns `true` if the subscriber is always interested in being notified
     /// about this callsite.
     #[inline]
     pub fn is_always(&self) -> bool {
-        match self.0 {
-            InterestKind::Always => true,
-            _ => false,
-        }
+        matches!(self.0, InterestKind::Always)
     }
 
     /// Returns the common interest between these two Interests.
@@ -566,5 +561,197 @@ impl Interest {
         } else {
             Interest::sometimes()
         }
+    }
+}
+
+/// A no-op [`Subscriber`].
+///
+/// [`NoSubscriber`] implements the [`Subscriber`] trait by never being enabled,
+/// never being interested in any callsite, and dropping all spans and events.
+#[derive(Debug, Copy, Clone)]
+pub struct NoSubscriber(());
+
+impl Default for NoSubscriber {
+    fn default() -> Self {
+        NoSubscriber(())
+    }
+}
+
+impl Subscriber for NoSubscriber {
+    #[inline]
+    fn register_callsite(&self, _: &'static Metadata<'static>) -> Interest {
+        Interest::never()
+    }
+
+    fn new_span(&self, _: &span::Attributes<'_>) -> span::Id {
+        span::Id::from_u64(0xDEAD)
+    }
+
+    fn event(&self, _event: &Event<'_>) {}
+
+    fn record(&self, _span: &span::Id, _values: &span::Record<'_>) {}
+
+    fn record_follows_from(&self, _span: &span::Id, _follows: &span::Id) {}
+
+    #[inline]
+    fn enabled(&self, _metadata: &Metadata<'_>) -> bool {
+        false
+    }
+
+    fn enter(&self, _span: &span::Id) {}
+    fn exit(&self, _span: &span::Id) {}
+}
+
+impl Subscriber for Box<dyn Subscriber + Send + Sync + 'static> {
+    #[inline]
+    fn register_callsite(&self, metadata: &'static Metadata<'static>) -> Interest {
+        self.as_ref().register_callsite(metadata)
+    }
+
+    #[inline]
+    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
+        self.as_ref().enabled(metadata)
+    }
+
+    #[inline]
+    fn max_level_hint(&self) -> Option<LevelFilter> {
+        self.as_ref().max_level_hint()
+    }
+
+    #[inline]
+    fn new_span(&self, span: &span::Attributes<'_>) -> span::Id {
+        self.as_ref().new_span(span)
+    }
+
+    #[inline]
+    fn record(&self, span: &span::Id, values: &span::Record<'_>) {
+        self.as_ref().record(span, values)
+    }
+
+    #[inline]
+    fn record_follows_from(&self, span: &span::Id, follows: &span::Id) {
+        self.as_ref().record_follows_from(span, follows)
+    }
+
+    #[inline]
+    fn event(&self, event: &Event<'_>) {
+        self.as_ref().event(event)
+    }
+
+    #[inline]
+    fn enter(&self, span: &span::Id) {
+        self.as_ref().enter(span)
+    }
+
+    #[inline]
+    fn exit(&self, span: &span::Id) {
+        self.as_ref().exit(span)
+    }
+
+    #[inline]
+    fn clone_span(&self, id: &span::Id) -> span::Id {
+        self.as_ref().clone_span(id)
+    }
+
+    #[inline]
+    fn try_close(&self, id: span::Id) -> bool {
+        self.as_ref().try_close(id)
+    }
+
+    #[inline]
+    #[allow(deprecated)]
+    fn drop_span(&self, id: span::Id) {
+        self.as_ref().try_close(id);
+    }
+
+    #[inline]
+    fn current_span(&self) -> span::Current {
+        self.as_ref().current_span()
+    }
+
+    #[inline]
+    unsafe fn downcast_raw(&self, id: TypeId) -> Option<*const ()> {
+        if id == TypeId::of::<Self>() {
+            return Some(self as *const Self as *const _);
+        }
+
+        self.as_ref().downcast_raw(id)
+    }
+}
+
+impl Subscriber for Arc<dyn Subscriber + Send + Sync + 'static> {
+    #[inline]
+    fn register_callsite(&self, metadata: &'static Metadata<'static>) -> Interest {
+        self.as_ref().register_callsite(metadata)
+    }
+
+    #[inline]
+    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
+        self.as_ref().enabled(metadata)
+    }
+
+    #[inline]
+    fn max_level_hint(&self) -> Option<LevelFilter> {
+        self.as_ref().max_level_hint()
+    }
+
+    #[inline]
+    fn new_span(&self, span: &span::Attributes<'_>) -> span::Id {
+        self.as_ref().new_span(span)
+    }
+
+    #[inline]
+    fn record(&self, span: &span::Id, values: &span::Record<'_>) {
+        self.as_ref().record(span, values)
+    }
+
+    #[inline]
+    fn record_follows_from(&self, span: &span::Id, follows: &span::Id) {
+        self.as_ref().record_follows_from(span, follows)
+    }
+
+    #[inline]
+    fn event(&self, event: &Event<'_>) {
+        self.as_ref().event(event)
+    }
+
+    #[inline]
+    fn enter(&self, span: &span::Id) {
+        self.as_ref().enter(span)
+    }
+
+    #[inline]
+    fn exit(&self, span: &span::Id) {
+        self.as_ref().exit(span)
+    }
+
+    #[inline]
+    fn clone_span(&self, id: &span::Id) -> span::Id {
+        self.as_ref().clone_span(id)
+    }
+
+    #[inline]
+    fn try_close(&self, id: span::Id) -> bool {
+        self.as_ref().try_close(id)
+    }
+
+    #[inline]
+    #[allow(deprecated)]
+    fn drop_span(&self, id: span::Id) {
+        self.as_ref().try_close(id);
+    }
+
+    #[inline]
+    fn current_span(&self) -> span::Current {
+        self.as_ref().current_span()
+    }
+
+    #[inline]
+    unsafe fn downcast_raw(&self, id: TypeId) -> Option<*const ()> {
+        if id == TypeId::of::<Self>() {
+            return Some(self as *const Self as *const _);
+        }
+
+        self.as_ref().downcast_raw(id)
     }
 }
