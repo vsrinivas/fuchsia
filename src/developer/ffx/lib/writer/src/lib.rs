@@ -84,6 +84,16 @@ impl Writer {
         self.format.is_some()
     }
 
+    /// Writes the value to standard output without a newline.
+    ///
+    /// This is a no-op if `is_machine` returns true.
+    pub fn write(&self, value: impl std::fmt::Display) -> Result<()> {
+        if self.is_machine() {
+            return Ok(());
+        }
+        write!(self.inner(), "{}", value).with_context(|| format!("writing: {}", value))
+    }
+
     /// Writes the value to standard output with a newline.
     ///
     /// This is a no-op if `is_machine` returns true.
@@ -217,6 +227,22 @@ mod test {
         writer.line("hello").unwrap();
 
         assert_eq!(writer.test_output().unwrap(), "");
+        assert_eq!(writer.test_error().unwrap(), "");
+    }
+
+    #[test]
+    fn writer_write_for_machine_is_ok() {
+        let writer = Writer::new_test(Some(Format::Json));
+        writer.write("foobar").unwrap();
+        assert_eq!(writer.test_output().unwrap(), "");
+        assert_eq!(writer.test_error().unwrap(), "");
+    }
+
+    #[test]
+    fn writer_write_output_has_no_newline() {
+        let writer = Writer::new_test(None);
+        writer.write("foobar").unwrap();
+        assert_eq!(writer.test_output().unwrap(), "foobar");
         assert_eq!(writer.test_error().unwrap(), "");
     }
 

@@ -102,6 +102,11 @@ pub struct Start {
     /// name of output trace file.  Defaults to trace.fxt.
     #[argh(option, default = "String::from(\"trace.fxt\")")]
     pub output: String,
+
+    /// whether to run the trace in the background. Defaults to false,
+    /// which means the trace will run in "interactive" mode.
+    #[argh(switch)]
+    pub background: bool,
 }
 
 fn parse_categories(value: &str) -> Result<TraceCategories, String> {

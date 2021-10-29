@@ -10,9 +10,13 @@ use {
     ffx_writer::Writer,
     fidl_fuchsia_developer_bridge::{self as bridge, RecordingError, TracingProxy},
     fidl_fuchsia_tracing_controller::{ControllerProxy, KnownCategory, ProviderInfo, TraceConfig},
+    fuchsia_async::futures::future::{BoxFuture, FutureExt},
     serde::{Deserialize, Serialize},
     std::collections::HashSet,
+    std::future::Future,
+    std::io::{stdin, Stdin},
     std::path::{Component, PathBuf},
+    std::time::Duration,
 };
 
 // This is to make the schema make sense as this plugin can output one of these based on the
@@ -81,6 +85,34 @@ This can happen if tracing is not supported on the product configuration you are
         _ => {
             errors::ffx_error!("Accessing the tracing controller failed: {:#?}", err)
         }
+    }
+}
+
+// LineWaiter abstracts waiting for the user to press enter.  It is needed
+// to unit test interactive mode.
+trait LineWaiter<'a> {
+    type LineWaiterFut: 'a + Future<Output = ()>;
+    fn wait(&'a mut self) -> Self::LineWaiterFut;
+}
+
+impl<'a> LineWaiter<'a> for Stdin {
+    type LineWaiterFut = BoxFuture<'a, ()>;
+
+    fn wait(&'a mut self) -> Self::LineWaiterFut {
+        #[cfg(not(test))]
+        {
+            use std::io::BufRead;
+            blocking::unblock(|| {
+                let mut line = String::new();
+                let stdin = stdin();
+                let mut locked = stdin.lock();
+                // Ignoring error, though maybe Ack would want to bubble up errors instead?
+                let _ = locked.read_line(&mut line);
+            })
+            .boxed()
+        }
+        #[cfg(test)]
+        async move {}.boxed()
     }
 }
 
@@ -160,25 +192,48 @@ pub async fn trace(
                 )
                 .await?;
             let target = handle_recording_result(res, &output).await?;
-            writer.line(format!(
+            writer.write(format!(
                 "Tracing started successfully on \"{}\".\nWriting to {}",
                 target.nodename.or(target.serial_number).as_deref().unwrap_or("<UNKNOWN>"),
                 output
             ))?;
+            if let Some(duration) = &opts.duration {
+                writer.line(format!(" for {} seconds.", duration))?;
+            } else {
+                writer.line("")?;
+            }
+            if opts.background {
+                return Ok(());
+            }
+
+            let waiter = &mut stdin();
+            if let Some(duration) = &opts.duration {
+                writer.line(format!("Waiting for {} seconds.", duration))?;
+                fuchsia_async::Timer::new(Duration::from_secs_f64(*duration)).await;
+            } else {
+                writer.line("Press <enter> to stop trace.")?;
+                waiter.wait().await;
+            }
+            stop_tracing(&proxy, output, writer).await?;
         }
         TraceSubCommand::Stop(opts) => {
             let output = canonical_path(opts.output)?;
-            let res = proxy.stop_recording(&output).await?;
-            let target = handle_recording_result(res, &output).await?;
-            // TODO(awdavies): Make a clickable link that auto-uploads the trace file if possible.
-            writer.line(format!(
-                "Tracing stopped successfully on \"{}\".\nResults written to {}",
-                target.nodename.or(target.serial_number).as_deref().unwrap_or("<UNKNOWN>"),
-                output
-            ))?;
-            writer.line(format!("Upload to https://ui.perfetto.dev/#!/ to view."))?;
+            stop_tracing(&proxy, output, writer).await?;
         }
     }
+    Ok(())
+}
+
+async fn stop_tracing(proxy: &TracingProxy, output: String, writer: Writer) -> Result<()> {
+    let res = proxy.stop_recording(&output).await?;
+    let target = handle_recording_result(res, &output).await?;
+    // TODO(awdavies): Make a clickable link that auto-uploads the trace file if possible.
+    writer.line(format!(
+        "Tracing stopped successfully on \"{}\".\nResults written to {}",
+        target.nodename.or(target.serial_number).as_deref().unwrap_or("<UNKNOWN>"),
+        output
+    ))?;
+    writer.line("Upload to https://ui.perfetto.dev/#!/ to view.")?;
     Ok(())
 }
 
@@ -523,6 +578,7 @@ mod tests {
                     categories: vec![],
                     duration: None,
                     output: "foo.txt".to_string(),
+                    background: true,
                 }),
             },
             writer.clone(),
@@ -544,6 +600,81 @@ mod tests {
         .await;
         let output = writer.test_output().unwrap();
         let regex_str = "Tracing stopped successfully on \"foo\".\nResults written to /([^/]+/)+?foo.txt\nUpload to https://ui.perfetto.dev/#!/ to view.";
+        let want = Regex::new(regex_str).unwrap();
+        assert!(want.is_match(&output), "\"{}\" didn't match regex /{}/", output, regex_str);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_with_duration() {
+        let writer = Writer::new_test(None);
+        run_trace_test(
+            TraceCommand {
+                sub_cmd: TraceSubCommand::Start(Start {
+                    buffer_size: 2,
+                    categories: vec![],
+                    duration: Some(5.2),
+                    output: "foober.fxt".to_owned(),
+                    background: true,
+                }),
+            },
+            writer.clone(),
+        )
+        .await;
+        let output = writer.test_output().unwrap();
+        let regex_str =
+            "Tracing started successfully on \"foo\".\nWriting to /([^/]+/)+?foober.fxt for 5.2 seconds.";
+        let want = Regex::new(regex_str).unwrap();
+        assert!(want.is_match(&output), "\"{}\" didn't match regex /{}/", output, regex_str);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_with_duration_foreground() {
+        let writer = Writer::new_test(None);
+        run_trace_test(
+            TraceCommand {
+                sub_cmd: TraceSubCommand::Start(Start {
+                    buffer_size: 2,
+                    categories: vec![],
+                    duration: Some(0.8),
+                    output: "foober.fxt".to_owned(),
+                    background: false,
+                }),
+            },
+            writer.clone(),
+        )
+        .await;
+        let output = writer.test_output().unwrap();
+        let regex_str =
+            "Tracing started successfully on \"foo\".\nWriting to /([^/]+/)+?foober.fxt for 0.8 seconds.\n\
+            Waiting for 0.8 seconds.\n\
+            Tracing stopped successfully on \"foo\".\nResults written to /([^/]+/)+?foober.fxt\n\
+            Upload to https://ui.perfetto.dev/#!/ to view.";
+        let want = Regex::new(regex_str).unwrap();
+        assert!(want.is_match(&output), "\"{}\" didn't match regex /{}/", output, regex_str);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_foreground() {
+        let writer = Writer::new_test(None);
+        run_trace_test(
+            TraceCommand {
+                sub_cmd: TraceSubCommand::Start(Start {
+                    buffer_size: 2,
+                    categories: vec![],
+                    duration: None,
+                    output: "foober.fxt".to_owned(),
+                    background: false,
+                }),
+            },
+            writer.clone(),
+        )
+        .await;
+        let output = writer.test_output().unwrap();
+        let regex_str =
+            "Tracing started successfully on \"foo\".\nWriting to /([^/]+/)+?foober.fxt\n\
+            Press <enter> to stop trace.\n\
+            Tracing stopped successfully on \"foo\".\nResults written to /([^/]+/)+?foober.fxt\n\
+            Upload to https://ui.perfetto.dev/#!/ to view.";
         let want = Regex::new(regex_str).unwrap();
         assert!(want.is_match(&output), "\"{}\" didn't match regex /{}/", output, regex_str);
     }

@@ -19,6 +19,8 @@ ffx_plugin("ffx_trace") {
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/writer:lib",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-fs",
+    "//third_party/rust_crates:blocking",
     "//third_party/rust_crates:serde",
   ]
 

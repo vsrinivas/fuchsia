@@ -16,6 +16,7 @@ if (is_host) {
     "schema",
     "tasks",
     "timeout",
+    "writer",
   ]
 
   group("tests") {
