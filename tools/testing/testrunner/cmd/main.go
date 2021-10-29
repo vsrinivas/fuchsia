@@ -66,9 +66,6 @@ type testrunnerFlags struct {
 	// The output filename for the snapshot. This will be created in the outDir.
 	snapshotFile string
 
-	// Per-test timeout.
-	perTestTimeout time.Duration
-
 	// Logger level.
 	logLevel logger.LogLevel
 
@@ -95,8 +92,6 @@ func main() {
 	flag.StringVar(&flags.localWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
 	flag.BoolVar(&flags.useRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
 	flag.StringVar(&flags.snapshotFile, "snapshot-output", "", "The output filename for the snapshot. This will be created in the output directory.")
-	// TODO(fxbug.dev/87527): Delete, as this flag has been moved to testsharder.
-	flag.DurationVar(&flags.perTestTimeout, "per-test-timeout", 0, "Per-test timeout, applied to all tests. Ignored if <= 0.")
 	flag.Var(&flags.logLevel, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
 	flag.StringVar(&flags.ffxPath, "ffx", "", "Path to the ffx tool.")
 
@@ -130,13 +125,6 @@ func setupAndExecute(ctx context.Context, flags testrunnerFlags) error {
 	tests, err := loadTests(testsPath)
 	if err != nil {
 		return fmt.Errorf("failed to load tests from %q: %w", testsPath, err)
-	}
-
-	// TODO(fxbug.dev/87527): Delete.
-	for i := range tests {
-		if tests[i].Timeout == 0 {
-			tests[i].Timeout = flags.perTestTimeout
-		}
 	}
 
 	// Configure a test outputs object, responsible for producing TAP output,
