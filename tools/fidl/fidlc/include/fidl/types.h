@@ -7,8 +7,7 @@
 
 #include <stdint.h>
 
-namespace fidl {
-namespace types {
+namespace fidl::types {
 
 // TODO(fxbug.dev/51002): zircon/types.h's zx_rights_t needs to be kept in sync with
 // this. Eventually, zx_rights_t will be generated from a fidl
@@ -92,7 +91,6 @@ enum struct MessageKind {
   kEvent,
 };
 
-}  // namespace types
-}  // namespace fidl
+}  // namespace fidl::types
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_TYPES_H_

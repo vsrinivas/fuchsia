@@ -8,8 +8,7 @@
 #include "flat_ast.h"
 #include "raw_ast.h"
 
-namespace fidl {
-namespace ordinals {
+namespace fidl::ordinals {
 
 // Returns the Selector. If the Selector attribute is present, the
 // function returns its value; otherwise, it returns the name parameter.
@@ -30,7 +29,6 @@ raw::Ordinal64 GetGeneratedOrdinal64(const std::vector<std::string_view>& librar
                                      const std::string_view& selector_name,
                                      const raw::SourceElement& source_element);
 
-}  // namespace ordinals
-}  // namespace fidl
+}  // namespace fidl::ordinals
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_ORDINALS_H_

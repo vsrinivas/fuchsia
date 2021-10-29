@@ -7,8 +7,7 @@
 
 #include "../type_shape.h"
 
-namespace fidl {
-namespace flat {
+namespace fidl::flat {
 
 // An |Object| is anything that can be encoded in the FIDL wire format. Thus, all objects have
 // information such as as their size, alignment, and depth (how many levels of sub-objects are
@@ -56,7 +55,6 @@ struct Object {
   virtual std::any AcceptAny(VisitorAny* visitor) const = 0;
 };
 
-}  // namespace flat
-}  // namespace fidl
+}  // namespace fidl::flat
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_OBJECT_H_

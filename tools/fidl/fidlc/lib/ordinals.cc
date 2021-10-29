@@ -11,8 +11,7 @@
 #define BORINGSSL_NO_CXX
 #include <openssl/sha.h>
 
-namespace fidl {
-namespace ordinals {
+namespace fidl::ordinals {
 
 std::string GetSelector(const flat::AttributeList* attributes, SourceSpan name) {
   const flat::Attribute* maybe_selector_attr = attributes->Get("selector");
@@ -79,5 +78,4 @@ raw::Ordinal64 GetGeneratedOrdinal64(const std::vector<std::string_view>& librar
   return raw::Ordinal64(source_element, CalcOrdinal(full_name));
 }
 
-}  // namespace ordinals
-}  // namespace fidl
+}  // namespace fidl::ordinals

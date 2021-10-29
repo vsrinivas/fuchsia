@@ -7,8 +7,7 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_TREE_VISITOR_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_TREE_VISITOR_H_
 
-namespace fidl {
-namespace raw {
+namespace fidl::raw {
 
 // A TreeVisitor is an API that walks a FIDL AST.  The default implementation
 // does nothing but walk the AST.  To make it interesting, subclass TreeVisitor
@@ -268,7 +267,6 @@ class DeclarationOrderTreeVisitor : public TreeVisitor {
   virtual void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) override;
 };
 
-}  // namespace raw
-}  // namespace fidl
+}  // namespace fidl::raw
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_TREE_VISITOR_H_

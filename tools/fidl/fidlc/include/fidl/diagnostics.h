@@ -7,8 +7,7 @@
 
 #include "diagnostic_types.h"
 
-namespace fidl {
-namespace diagnostics {
+namespace fidl::diagnostics {
 
 // ---------------------------------------------------------------------------
 // Lexer
@@ -384,7 +383,6 @@ constexpr ErrorDef<std::vector<std::string_view>, std::vector<std::string_view>,
                    std::vector<std::string_view>>
     ErrUnusedImport("Library {} imports {} but does not use it. Either use {}, or remove import.");
 
-}  // namespace diagnostics
-}  // namespace fidl
+}  // namespace fidl::diagnostics
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_DIAGNOSTICS_H_

@@ -17,8 +17,7 @@
 #include "source_span.h"
 #include "token.h"
 
-namespace fidl {
-namespace reporter {
+namespace fidl::reporter {
 
 using diagnostics::Diagnostic;
 using diagnostics::DiagnosticKind;
@@ -194,7 +193,6 @@ class Reporter {
   std::vector<std::unique_ptr<Diagnostic>> warnings_;
 };
 
-}  // namespace reporter
-}  // namespace fidl
+}  // namespace fidl::reporter
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_REPORTER_H_

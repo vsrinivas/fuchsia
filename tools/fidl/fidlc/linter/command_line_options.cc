@@ -8,8 +8,7 @@
 
 #include <iostream>
 
-namespace fidl {
-namespace linter {
+namespace fidl::linter {
 
 namespace help {
 
@@ -112,5 +111,4 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   return cmdline::Status::Ok();
 }
 
-}  // namespace linter
-}  // namespace fidl
+}  // namespace fidl::linter

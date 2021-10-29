@@ -37,8 +37,7 @@
 // A raw::File is produced by parsing a token stream. All of the
 // Files in a library are then flattened out into a Library.
 
-namespace fidl {
-namespace raw {
+namespace fidl::raw {
 
 // In order to be able to associate AST nodes with their original source, each
 // node is a SourceElement, which contains information about the original
@@ -830,7 +829,6 @@ class File final : public SourceElement {
   Token end_;
 };
 
-}  // namespace raw
-}  // namespace fidl
+}  // namespace fidl::raw
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_RAW_AST_H_

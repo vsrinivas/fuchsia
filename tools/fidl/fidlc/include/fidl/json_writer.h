@@ -11,8 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace fidl {
-namespace utils {
+namespace fidl::utils {
 
 // Methods or functions named "Emit..." are the actual protocol to
 // the JSON output.
@@ -237,7 +236,6 @@ class JsonWriter {
   int indent_level_;
 };
 
-}  // namespace utils
-}  // namespace fidl
+}  // namespace fidl::utils
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_JSON_WRITER_H_

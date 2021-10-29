@@ -10,8 +10,7 @@
 #include <cassert>
 #include <sstream>
 
-namespace fidl {
-namespace reporter {
+namespace fidl::reporter {
 
 std::string MakeSquiggle(const std::string& surrounding_line, int column) {
   std::string squiggle;
@@ -131,5 +130,4 @@ void Reporter::PrintReportsJson() {
   fprintf(stderr, "%s", fidl::DiagnosticsJson(diagnostics()).Produce().str().c_str());
 }
 
-}  // namespace reporter
-}  // namespace fidl
+}  // namespace fidl::reporter

@@ -30,8 +30,7 @@
 // https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#c_family_runtime
 // for additional context
 
-namespace fidl {
-namespace coded {
+namespace fidl::coded {
 
 enum struct CodingContext {
   // The coding table of this type will be used to represent data within
@@ -375,7 +374,6 @@ struct VectorType : public Type {
   const MemcpyCompatibility element_memcpy_compatibility;
 };
 
-}  // namespace coded
-}  // namespace fidl
+}  // namespace fidl::coded
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_CODED_AST_H_

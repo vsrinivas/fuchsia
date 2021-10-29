@@ -26,8 +26,7 @@
 #include "fidl/types.h"
 #include "fidl/utils.h"
 
-namespace fidl {
-namespace flat {
+namespace fidl::flat {
 
 using namespace diagnostics;
 
@@ -5152,5 +5151,4 @@ Constant* IdentifierLayoutParameter::AsConstant() const {
 
 bool LibraryMediator::CompileDecl(Decl* decl) const { return library_->CompileDecl(decl); }
 
-}  // namespace flat
-}  // namespace fidl
+}  // namespace fidl::flat

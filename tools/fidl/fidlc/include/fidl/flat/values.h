@@ -8,8 +8,7 @@
 #include "../types.h"
 #include "../utils.h"
 
-namespace fidl {
-namespace flat {
+namespace fidl::flat {
 
 // ConstantValue represents the concrete _value_ of a constant. (For the
 // _declaration_, see Const. For the _use_, see Constant.) ConstantValue has
@@ -446,7 +445,6 @@ struct BinaryOperatorConstant final : Constant {
   const Operator op;
 };
 
-}  // namespace flat
-}  // namespace fidl
+}  // namespace fidl::flat
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VALUES_H_

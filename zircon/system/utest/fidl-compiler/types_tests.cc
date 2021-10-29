@@ -5,13 +5,13 @@
 #include <fidl/flat_ast.h>
 #include <fidl/types.h>
 #include <fidl/virtual_source_file.h>
+
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
 #include "test_library.h"
 
-namespace fidl {
-namespace flat {
+namespace fidl::flat {
 
 namespace {
 
@@ -668,5 +668,4 @@ type Foo = resource struct {
                                       fidl::ErrUnexpectedConstraint);
 }
 
-}  // namespace flat
-}  // namespace fidl
+}  // namespace fidl::flat

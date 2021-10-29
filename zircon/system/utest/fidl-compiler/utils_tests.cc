@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/function.h>
-
 #include <fidl/utils.h>
+#include <lib/fit/function.h>
 
 #include "unittest_helpers.h"
 
-namespace fidl {
-namespace utils {
+namespace fidl::utils {
 
 namespace {
 
@@ -741,5 +739,4 @@ TEST(UtilsTests, StringStripping) {
 
 }  // namespace
 
-}  // namespace utils
-}  // namespace fidl
+}  // namespace fidl::utils

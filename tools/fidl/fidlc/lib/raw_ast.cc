@@ -12,8 +12,7 @@
 
 #include "fidl/tree_visitor.h"
 
-namespace fidl {
-namespace raw {
+namespace fidl::raw {
 
 SourceElementMark::SourceElementMark(TreeVisitor* tv, const SourceElement& element)
     : tv_(tv), element_(element) {
@@ -348,5 +347,4 @@ void File::Accept(TreeVisitor* visitor) const {
   }
 }
 
-}  // namespace raw
-}  // namespace fidl
+}  // namespace fidl::raw

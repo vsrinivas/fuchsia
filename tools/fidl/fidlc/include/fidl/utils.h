@@ -16,8 +16,7 @@
 #include <string>
 #include <string_view>
 
-namespace fidl {
-namespace utils {
+namespace fidl::utils {
 
 template <class>
 inline constexpr bool always_false_v = false;
@@ -201,7 +200,6 @@ std::vector<std::string> FormatFindings(const Findings& findings, bool enable_co
 bool OnlyWhitespaceChanged(const std::string& unformatted_input,
                            const std::string& formatted_output);
 
-}  // namespace utils
-}  // namespace fidl
+}  // namespace fidl::utils
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_UTILS_H_

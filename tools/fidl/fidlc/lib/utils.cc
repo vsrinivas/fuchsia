@@ -7,8 +7,7 @@
 #include <cassert>
 #include <regex>
 
-namespace fidl {
-namespace utils {
+namespace fidl::utils {
 
 const std::string kLibraryComponentPattern = "[a-z][a-z0-9]*";
 const std::string kIdentifierComponentPattern = "[A-Za-z]([A-Za-z0-9_]*[A-Za-z0-9])?";
@@ -293,5 +292,4 @@ bool OnlyWhitespaceChanged(const std::string& unformatted_input,
   return formatted == unformatted;
 }
 
-}  // namespace utils
-}  // namespace fidl
+}  // namespace fidl::utils

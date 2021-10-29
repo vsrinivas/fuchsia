@@ -9,8 +9,7 @@
 #include "object.h"
 #include "values.h"
 
-namespace fidl {
-namespace flat {
+namespace fidl::flat {
 
 struct Decl;
 struct TypeDecl;
@@ -325,7 +324,6 @@ struct BoxType final : public Type {
                         LayoutInvocation* out_params) const override;
 };
 
-}  // namespace flat
-}  // namespace fidl
+}  // namespace fidl::flat
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_TYPES_H_

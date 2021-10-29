@@ -40,8 +40,7 @@
 #include "types.h"
 #include "virtual_source_file.h"
 
-namespace fidl {
-namespace flat {
+namespace fidl::flat {
 
 constexpr uint32_t kHandleSameRights = 0x80000000;  // ZX_HANDLE_SAME_RIGHTS
 
@@ -1608,7 +1607,6 @@ inline std::any Union::Member::Used::AcceptAny(VisitorAny* visitor) const {
 
 inline std::any Protocol::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 
-}  // namespace flat
-}  // namespace fidl
+}  // namespace fidl::flat
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_AST_H_
