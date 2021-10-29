@@ -28,119 +28,110 @@ pub enum DescriptorType {
     SsIsochEpCompanion = 0x31,
 }
 
-#[allow(non_snake_case)]
 #[repr(C, packed)]
 #[derive(AsBytes, FromBytes)]
 pub struct DeviceDescriptor {
-    pub bLength: u8,
-    pub bDescriptorType: u8,
-    pub bcdUSB: u16,
-    pub bDeviceClass: u8,
-    pub bDeviceSubClass: u8,
-    pub bDeviceProtocol: u8,
-    pub bMaxPacketSize0: u8,
-    pub idVendor: u16,
-    pub idProduct: u16,
-    pub bcdDevice: u16,
-    pub iManufacturer: u8,
-    pub iProduct: u8,
-    pub iSerialNumber: u8,
-    pub bNumConfigurations: u8,
+    pub b_length: u8,
+    pub b_descriptor_type: u8,
+    pub bcd_usb: u16,
+    pub b_device_class: u8,
+    pub b_device_sub_class: u8,
+    pub b_device_protocol: u8,
+    pub b_max_packet_size0: u8,
+    pub id_vendor: u16,
+    pub id_product: u16,
+    pub bcd_device: u16,
+    pub i_manufacturer: u8,
+    pub i_product: u8,
+    pub i_serial_number: u8,
+    pub b_num_configurations: u8,
 }
 
-#[allow(non_snake_case)]
 #[repr(C, packed)]
 #[derive(AsBytes, FromBytes)]
 pub struct ConfigurationDescriptor {
-    pub bLength: u8,
-    pub bDescriptorType: u8,
-    pub wTotalLength: u16,
-    pub bNumInterfaces: u8,
-    pub bConfigurationValue: u8,
-    pub iConfiguration: u8,
-    pub bmAttributes: u8,
-    pub bMaxPower: u8,
+    pub b_length: u8,
+    pub b_descriptor_type: u8,
+    pub w_total_length: u16,
+    pub b_num_interfaces: u8,
+    pub b_configuration_value: u8,
+    pub i_configuration: u8,
+    pub bm_attributes: u8,
+    pub b_max_power: u8,
 }
 
-#[allow(non_snake_case)]
 #[repr(C, packed)]
 #[derive(AsBytes, FromBytes)]
 pub struct InterfaceInfoDescriptor {
-    pub bLength: u8,
-    pub bDescriptorType: u8,
-    pub bInterfaceNumber: u8,
-    pub bAlternateSetting: u8,
-    pub bNumEndpoints: u8,
-    pub bInterfaceClass: u8,
-    pub bInterfaceSubClass: u8,
-    pub bInterfaceProtocol: u8,
-    pub iInterface: u8,
+    pub b_length: u8,
+    pub b_descriptor_type: u8,
+    pub b_interface_number: u8,
+    pub b_alternate_setting: u8,
+    pub b_num_endpoints: u8,
+    pub b_interface_class: u8,
+    pub b_interface_sub_class: u8,
+    pub b_interface_protocol: u8,
+    pub i_interface: u8,
 }
 
-#[allow(non_snake_case)]
 #[repr(C, packed)]
 #[derive(AsBytes, FromBytes)]
 pub struct EndpointInfoDescriptor {
-    pub bLength: u8,
-    pub bDescriptorType: u8,
-    pub bEndpointAddress: u8,
-    pub bmAttributes: u8,
-    pub wMaxPacketSize: u8,
-    pub bInterval: u8,
+    pub b_length: u8,
+    pub b_descriptor_type: u8,
+    pub b_endpoint_address: u8,
+    pub bm_attributes: u8,
+    pub w_max_packet_size: u8,
+    pub b_interval: u8,
 }
 
-#[allow(non_snake_case)]
 #[repr(C, packed)]
 #[derive(AsBytes, FromBytes)]
 pub struct HidDescriptor {
-    pub bLength: u8,
-    pub bDescriptorType: u8,
-    pub bcdHID: u16,
-    pub bCountryCode: u8,
-    pub bNumDescriptors: u8,
+    pub b_length: u8,
+    pub b_descriptor_type: u8,
+    pub bcd_hid: u16,
+    pub b_country_code: u8,
+    pub b_num_descriptors: u8,
 }
 
-#[allow(non_snake_case)]
 #[repr(C, packed)]
 #[derive(AsBytes, FromBytes)]
 pub struct SsEpCompDescriptorInfo {
-    pub bLength: u8,
-    pub bDescriptorType: u8,
-    pub bMaxBurst: u8,
-    pub bmAttributes: u8,
-    pub wBytesPerInterval: u8,
+    pub b_length: u8,
+    pub b_descriptor_type: u8,
+    pub b_max_burst: u8,
+    pub bm_attributes: u8,
+    pub w_bytes_per_interval: u8,
 }
 
-#[allow(non_snake_case)]
 #[repr(C, packed)]
 #[derive(AsBytes, FromBytes)]
 pub struct SsIsochEpCompDescriptor {
-    pub bLength: u8,
-    pub bDescriptorType: u8,
-    pub wReserved: u16,
-    pub dwBytesPerInterval: u32,
+    pub b_length: u8,
+    pub b_descriptor_type: u8,
+    pub w_reserved: u16,
+    pub dw_bytes_per_interval: u32,
 }
 
-#[allow(non_snake_case)]
 #[repr(C, packed)]
 #[derive(AsBytes, FromBytes)]
 pub struct InterfaceAssocDescriptor {
-    pub bLength: u8,
-    pub bDescriptorType: u8,
-    pub bFirstInterface: u8,
-    pub bInterfaceCount: u8,
-    pub bFunctionClass: u8,
-    pub bFunctionSubClass: u8,
-    pub bFunctionProtocol: u8,
-    pub iFunction: u8,
+    pub b_length: u8,
+    pub b_descriptor_type: u8,
+    pub b_first_interface: u8,
+    pub b_interface_count: u8,
+    pub b_function_class: u8,
+    pub b_function_sub_class: u8,
+    pub b_function_protocol: u8,
+    pub i_function: u8,
 }
 
-#[allow(non_snake_case)]
 #[repr(C, packed)]
 #[derive(AsBytes, FromBytes)]
 pub struct HidDescriptorEntry {
-    pub bDescriptorType: u8,
-    pub wDescriptorLength: u16,
+    pub b_descriptor_type: u8,
+    pub w_descriptor_length: u16,
 }
 
 pub struct DescriptorIterator<'a> {
