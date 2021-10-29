@@ -160,8 +160,8 @@ class MinfsManipulatorTest : public testing::Test {
 
     watcher_.emplace(manager_, &config_);
     zx::channel dir_request, lifecycle_request;
-    EXPECT_OK(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request),
-                                  nullptr, *watcher_));
+    EXPECT_OK(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr,
+                                  *watcher_));
   }
 
   zx::channel device() { return zx::channel(fdio_service_clone(device_.get())); }
@@ -566,7 +566,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsResizeInProgressIsCorrectlyDetected
   EXPECT_FALSE(is_resize_in_progress.value());
 }
 
-TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithLargeDataDoesNotResize) {
+TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithLargeDataShredsZxcrypt) {
   // Put a 1MiB file in minfs and restrict the data size to 512KiB.
   const std::string kFilename = "file";
   constexpr ssize_t kFileSize = 1024l * 1024;
@@ -581,20 +581,10 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithLargeDataDoesNotResize) {
   MaybeResizeMinfsResult result =
       MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kForceResizeInodeCount,
                        kMinfsLimitedDataSize, kNoExcludedPaths, manager());
-  ASSERT_EQ(result, MaybeResizeMinfsResult::kMinfsMountable);
-
-  zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
-  ASSERT_OK(minfs.status_value());
-  zx::status<fbl::unique_fd> root = minfs->GetRootFd();
-  ASSERT_OK(root.status_value());
-
-  // The data exceeded the minfs data limit so minfs was not resized.
-  std::string contents;
-  EXPECT_TRUE(files::ReadFileToStringAt(root->get(), kFilename, &contents));
-  EXPECT_THAT(contents, SizeIs(kFileSize));
+  ASSERT_EQ(result, MaybeResizeMinfsResult::kRebootRequired);
+  ExpectThatZxcrypWasShredded();
   ExpectLoggedStates({
       MinfsUpgradeState::kReadOldPartition,
-      MinfsUpgradeState::kSkipped,
   });
 }
 

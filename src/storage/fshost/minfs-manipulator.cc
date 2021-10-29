@@ -265,10 +265,11 @@ MaybeResizeMinfsResult MaybeResizeMinfs(zx::channel device, uint64_t partition_s
         << "minfs will likely require " << required_space_estimate
         << " bytes to hold all of the data after resizing which is greater than the limit of "
         << data_size_limit << " bytes";
-    manager.FileReport(FsManager::ReportReason::kMinfsNotUpgradeable);
-    manager.inspect_manager().LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kSkipped);
-    // Minfs hasn't been modified. Continue as normal and try again at next reboot.
-    return MaybeResizeMinfsResult::kMinfsMountable;
+    // minfs will likely require more space than will be available after resizing. Although we lose
+    // data it's safer to start from scratch than to have partially written data and potentially put
+    // components in unknown and untested states.
+    [[maybe_unused]] auto unused = ShredZxcrypt(device.borrow());
+    return MaybeResizeMinfsResult::kRebootRequired;
   }
   FX_LOGS(INFO)
       << "minfs will likely require " << required_space_estimate
