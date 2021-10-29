@@ -4,6 +4,7 @@
 library fuchsia.driver.framework;
 
 using fuchsia.component;
+using fuchsia.component.decl;
 
 using zx;
 
@@ -14,7 +15,7 @@ alias NodePropertyValueString = string:256;
 alias NodePropertyValueBool = bool;
 alias NodePropertyValueEnum = string:256;
 
-const MAX_OFFER_COUNT uint8 = 64;
+const MAX_OFFER_COUNT uint32 = fuchsia.component.MAX_DYNAMIC_OFFER_COUNT;
 const MAX_SYMBOL_COUNT uint8 = 64;
 const MAX_PROPERTY_COUNT uint8 = 64;
 
@@ -57,8 +58,8 @@ type NodeAddArgs = table {
     /// Name of the node.
     1: name string:MAX_NODE_NAME_LENGTH;
 
-    /// FIDL services to offer to the driver that is bound to this node.
-    2: offers vector<fuchsia.component.name>:MAX_OFFER_COUNT;
+    /// Capabilities to offer to the driver that is bound to this node.
+    2: offers vector<fuchsia.component.decl.Offer>:MAX_OFFER_COUNT;
 
     /// Functions to provide to the driver that is bound to this node.
     3: symbols vector<NodeSymbol>:MAX_SYMBOL_COUNT;
@@ -87,14 +88,16 @@ type NodeError = strict enum {
     NAME_INVALID = 3;
     /// A sibling Node exists with the same name.
     NAME_ALREADY_EXISTS = 4;
-    /// There is another offer for this Node with the same name.
-    OFFER_ALREADY_EXISTS = 5;
+    /// An offer for this Node is missing a source name.
+    OFFER_SOURCE_NAME_MISSING = 5;
+    /// An offer for this Node should not have a source or target.
+    OFFER_REF_EXISTS = 6;
     /// A symbol for this Node is missing a name.
-    SYMBOL_NAME_MISSING = 6;
+    SYMBOL_NAME_MISSING = 7;
     /// A symbol for this Node is missing an address.
-    SYMBOL_ADDRESS_MISSING = 7;
+    SYMBOL_ADDRESS_MISSING = 8;
     /// There is another symbol for this Node with the same name.
-    SYMBOL_ALREADY_EXISTS = 8;
+    SYMBOL_ALREADY_EXISTS = 9;
 };
 
 /// Protocol through which a driver manages a node that it is bound to.

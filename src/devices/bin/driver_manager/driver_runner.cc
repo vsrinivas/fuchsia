@@ -36,8 +36,43 @@ using InspectStack = std::stack<std::pair<inspect::Node*, const Node*>>;
 namespace {
 
 constexpr uint32_t kTokenId = PA_HND(PA_USER0, 0);
+constexpr auto kBootScheme = "fuchsia-boot://";
+
+template <typename R, typename F>
+std::optional<R> VisitOffer(fdecl::wire::Offer& offer, F apply) {
+  // Note, we access each field of the union as mutable, so that `apply` can
+  // modify the field if necessary.
+  switch (offer.which()) {
+    case fdecl::wire::Offer::Tag::kService:
+      return apply(offer.mutable_service());
+    case fdecl::wire::Offer::Tag::kProtocol:
+      return apply(offer.mutable_protocol());
+    case fdecl::wire::Offer::Tag::kDirectory:
+      return apply(offer.mutable_directory());
+    case fdecl::wire::Offer::Tag::kStorage:
+      return apply(offer.mutable_storage());
+    case fdecl::wire::Offer::Tag::kRunner:
+      return apply(offer.mutable_runner());
+    case fdecl::wire::Offer::Tag::kResolver:
+      return apply(offer.mutable_resolver());
+    case fdecl::wire::Offer::Tag::kEvent:
+      return apply(offer.mutable_event());
+    case fdecl::wire::Offer::Tag::kUnknown:
+      return {};
+  }
+}
 
 void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
+  const auto inspect_decl = [](auto& decl) -> std::string_view {
+    if (decl.has_target_name()) {
+      return decl.target_name().get();
+    }
+    if (decl.has_source_name()) {
+      return decl.source_name().get();
+    }
+    return "<missing>";
+  };
+
   std::forward_list<inspect::Node> roots;
   std::unordered_set<const Node*> unique_nodes;
   while (!stack.empty()) {
@@ -52,10 +87,11 @@ void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
     }
 
     // Populate root with data from node.
-    if (auto offers = node->offers(); !offers.empty()) {
+    if (auto& offers = node->offers(); !offers.empty()) {
       std::vector<std::string_view> strings;
       for (auto& offer : offers) {
-        strings.push_back(offer.get());
+        auto string = VisitOffer<std::string_view>(*offer->PrimaryObject(), inspect_decl);
+        strings.push_back(string.value_or("unknown"));
       }
       root->CreateString("offers", fxl::JoinStrings(strings, ", "), &inspector);
     }
@@ -83,9 +119,17 @@ void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
   }
 }
 
-std::string DriverCollection(std::string_view url) {
-  constexpr auto scheme = "fuchsia-boot://";
-  return url.compare(0, strlen(scheme), scheme) == 0 ? "boot-drivers" : "pkg-drivers";
+fidl::StringView CollectionName(Collection collection) {
+  switch (collection) {
+    case Collection::kNone:
+      return {};
+    case Collection::kHost:
+      return "driver-hosts";
+    case Collection::kBoot:
+      return "boot-drivers";
+    case Collection::kPackage:
+      return "pkg-drivers";
+  }
 }
 
 Node* PrimaryParent(const std::vector<Node*>& parents) {
@@ -205,21 +249,15 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  fidl::Arena arena;
-  auto capabilities = node.CreateCapabilities(arena);
-  if (capabilities.is_error()) {
-    return capabilities.take_error();
-  }
   auto binary = driver::ProgramValue(start_info.program(), "binary").value_or("");
+  fidl::Arena arena;
   fdf::wire::DriverStartArgs args(arena);
   args.set_node(arena, std::move(client_end))
       .set_symbols(arena, node.symbols())
       .set_url(arena, start_info.resolved_url())
       .set_program(arena, start_info.program())
       .set_ns(arena, start_info.ns())
-      .set_outgoing_dir(arena, std::move(start_info.outgoing_dir()))
-      .set_capabilities(
-          arena, fidl::VectorView<fdf::wire::DriverCapabilities>::FromExternal(*capabilities));
+      .set_outgoing_dir(arena, std::move(start_info.outgoing_dir()));
   auto start = driver_host_->Start(args, std::move(endpoints->server));
   if (!start.ok()) {
     LOGF(ERROR, "Failed to start driver '%s' in driver host: %s", binary.data(),
@@ -249,10 +287,11 @@ const std::string& Node::name() const { return name_; }
 
 const std::vector<std::shared_ptr<Node>>& Node::children() const { return children_; }
 
-fidl::VectorView<fidl::StringView> Node::offers() const {
-  // TODO(fxbug.dev/7999): Remove const_cast once VectorView supports const.
-  return fidl::VectorView<fidl::StringView>::FromExternal(
-      const_cast<std::remove_const<decltype(offers_)>::type&>(offers_));
+std::vector<std::unique_ptr<fuchsia_component_decl::wire::Offer::DecodedMessage>>& Node::offers()
+    const {
+  // TODO(fxbug.dev/66150): Once FIDL wire types support a Clone() method,
+  // remove the const_cast.
+  return const_cast<decltype(offers_)&>(offers_);
 }
 
 fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() const {
@@ -261,16 +300,14 @@ fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() const {
     // If this node is colocated with its parent, then provide the symbols.
     // TODO(fxbug.dev/7999): Remove const_cast once VectorView supports const.
     return fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(
-        const_cast<std::remove_const<decltype(symbols_)>::type&>(symbols_));
+        const_cast<decltype(symbols_)&>(symbols_));
   }
   return {};
 }
 
 DriverHostComponent* Node::driver_host() const { return *driver_host_; }
 
-void Node::set_driver_dir(fidl::ClientEnd<fio::Directory> driver_dir) {
-  driver_dir_ = std::move(driver_dir);
-}
+void Node::set_collection(Collection collection) { collection_ = collection; }
 
 void Node::set_driver_host(DriverHostComponent* driver_host) { driver_host_ = driver_host; }
 
@@ -294,30 +331,41 @@ std::string Node::TopoName() const {
   return fxl::JoinStrings(names, ".");
 }
 
-zx::status<std::vector<fdf::wire::DriverCapabilities>> Node::CreateCapabilities(
-    fidl::AnyArena& arena) const {
-  std::vector<fdf::wire::DriverCapabilities> capabilities;
-  capabilities.reserve(parents_.size());
+fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) const {
+  std::vector<fdecl::wire::Offer> node_offers;
   for (const Node* parent : parents_) {
-    // Find a parent node with a driver bound to it, and get its driver_dir.
-    fidl::UnownedClientEnd<fio::Directory> driver_dir(ZX_HANDLE_INVALID);
-    for (auto driver_node = parent; !driver_dir && driver_node != nullptr;
-         driver_node = PrimaryParent(driver_node->parents_)) {
-      driver_dir = driver_node->driver_dir_;
-    }
-    // Clone the driver_dir.
-    auto dir = service::Clone(driver_dir);
-    if (dir.is_error()) {
-      return dir.take_error();
+    // Find a parent node with a collection. This indicates that a driver has
+    // been bound to the node, and the driver is running within the collection.
+    auto source_node = parent;
+    for (; source_node->collection_ == Collection::kNone && source_node != nullptr;
+         source_node = PrimaryParent(source_node->parents_)) {
     }
     // If this is a composite node, then the offers come from the parent nodes.
-    auto parent_offers = parents_.size() == 1 ? offers() : parent->offers();
-    capabilities.emplace_back(arena)
-        .set_node_name(arena, fidl::StringView::FromExternal(parent->name()))
-        .set_offers(arena, std::move(parent_offers))
-        .set_exposed_dir(arena, std::move(*dir));
+    auto& parent_offers = parents_.size() == 1 ? offers() : parent->offers();
+    node_offers.reserve(node_offers.size() + parent_offers.size());
+    for (auto& parent_offer : parent_offers) {
+      auto& offer = *parent_offer->PrimaryObject();
+      VisitOffer<bool>(offer, [this, &arena, source_node](auto& decl) mutable {
+        // Assign the source of the offer.
+        fdecl::wire::ChildRef source_ref{
+            .name = {arena, source_node->TopoName()},
+            .collection = CollectionName(source_node->collection_),
+        };
+        decl.set_source(arena, fdecl::wire::Ref::WithChild(arena, source_ref));
+        // Assign the target of the offer.
+        fdecl::wire::ChildRef target_ref{
+            .name = {arena, TopoName()},
+            .collection = CollectionName(collection_),
+        };
+        decl.set_target(arena, fdecl::wire::Ref::WithChild(arena, target_ref));
+        return true;
+      });
+      node_offers.push_back(offer);
+    }
   }
-  return zx::ok(std::move(capabilities));
+  fidl::VectorView<fdecl::wire::Offer> out(arena, node_offers.size());
+  std::copy(node_offers.begin(), node_offers.end(), out.begin());
+  return out;
 }
 
 void Node::OnBind() const {
@@ -439,17 +487,34 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
 
   if (request->args.has_offers()) {
     child->offers_.reserve(request->args.offers().count());
-    std::unordered_set<std::string_view> names;
     for (auto& offer : request->args.offers()) {
-      auto inserted = names.emplace(offer.data(), offer.size()).second;
-      if (!inserted) {
-        LOGF(ERROR, "Failed to add Node '%.*s', offer '%.*s' already exists",
-             static_cast<int>(name.size()), name.data(), static_cast<int>(offer.size()),
-             offer.data());
-        completer.ReplyError(fdf::wire::NodeError::kOfferAlreadyExists);
+      auto has_source_name =
+          VisitOffer<bool>(offer, [](auto& decl) { return decl.has_source_name(); });
+      if (!has_source_name.value_or(false)) {
+        LOGF(ERROR, "Failed to add Node '%.*s', an offer must have a source name",
+             static_cast<int>(name.size()), name.data());
+        completer.ReplyError(fdf::wire::NodeError::kOfferSourceNameMissing);
         return;
       }
-      child->offers_.emplace_back(child->arena_, offer.get());
+      auto has_ref = VisitOffer<bool>(
+          offer, [](auto& decl) { return decl.has_source() || decl.has_target(); });
+      if (has_ref.value_or(false)) {
+        LOGF(ERROR, "Failed to add Node '%.*s', an offer must not have a source or target",
+             static_cast<int>(name.size()), name.data());
+        completer.ReplyError(fdf::wire::NodeError::kOfferRefExists);
+        return;
+      }
+
+      // TODO(fxbug.dev/66150): Once FIDL wire types support a Clone() method,
+      // stop encoding and decoding messages as a workaround.
+      fdecl::wire::Offer::OwnedEncodedMessage encoded_message(&offer);
+      ZX_ASSERT_MSG(
+          encoded_message.ok(), "Failed to add Node '%.*s', an offer failed to encode: %s",
+          static_cast<int>(name.size()), name.data(), encoded_message.FormatDescription().data());
+      fidl::OutgoingToIncomingMessage converted_message(encoded_message.GetOutgoingMessage());
+      auto c_message = std::move(converted_message.incoming_message()).ReleaseToEncodedCMessage();
+      auto decoded_message = std::make_unique<fdecl::wire::Offer::DecodedMessage>(&c_message);
+      child->offers_.push_back(std::move(decoded_message));
     }
   }
 
@@ -481,7 +546,7 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
       fdf::wire::NodeSymbol node_symbol(child->arena_);
       node_symbol.set_name(child->arena_, child->arena_, symbol.name().get());
       node_symbol.set_address(child->arena_, symbol.address());
-      child->symbols_.emplace_back(std::move(node_symbol));
+      child->symbols_.push_back(std::move(node_symbol));
     }
   }
 
@@ -553,12 +618,13 @@ zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url) {
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  auto create =
-      CreateComponent(node.TopoName(), std::string(url), DriverCollection(url), std::move(token));
+  auto collection = cpp20::starts_with(url, kBootScheme) ? Collection::kBoot : Collection::kPackage;
+  node.set_collection(collection);
+  auto create = CreateComponent(node.TopoName(), collection, std::string(url),
+                                {.node = &node, .token = std::move(token)});
   if (create.is_error()) {
     return create.take_error();
   }
-  node.set_driver_dir(std::move(*create));
   driver_args_.emplace(info.koid, node);
   return zx::ok();
 }
@@ -601,7 +667,6 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   }
   auto& [_, node] = *it;
   driver_args_.erase(it);
-  auto symbols = node.symbols();
 
   // Launch a driver host, or use an existing driver host.
   if (driver::ProgramValue(request->start_info.program(), "colocate").value_or("") == "true") {
@@ -612,9 +677,6 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
       return;
     }
   } else {
-    // Do not pass symbols across driver hosts.
-    symbols.set_count(0);
-
     auto result = StartDriverHost();
     if (result.is_error()) {
       completer.Close(result.error_value());
@@ -774,13 +836,18 @@ zx::status<DriverRunner::CompositeArgsIterator> DriverRunner::AddToCompositeArgs
 }
 
 zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost() {
+  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
   auto name = "driver-host-" + std::to_string(next_driver_host_id_++);
-  auto create = CreateComponent(name, "#meta/driver_host2.cm", "driver-hosts");
+  auto create = CreateComponent(name, Collection::kHost, "#meta/driver_host2.cm",
+                                {.exposed_dir = std::move(endpoints->server)});
   if (create.is_error()) {
     return create.take_error();
   }
 
-  auto client_end = service::ConnectAt<fdf::DriverHost>(*create);
+  auto client_end = service::ConnectAt<fdf::DriverHost>(endpoints->client);
   if (client_end.is_error()) {
     LOGF(ERROR, "Failed to connect to service '%s': %s",
          fidl::DiscoverableProtocolName<fdf::DriverHost>, client_end.status_string());
@@ -792,13 +859,25 @@ zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost()
   return zx::ok(std::move(driver_host));
 }
 
-zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::string name,
-                                                                          std::string url,
-                                                                          std::string collection,
-                                                                          zx::handle token) {
-  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
-  if (endpoints.is_error()) {
-    return endpoints.take_error();
+zx::status<> DriverRunner::CreateComponent(std::string name, Collection collection, std::string url,
+                                           CreateComponentOpts opts) {
+  fidl::Arena arena;
+  fdecl::wire::Child child_decl(arena);
+  child_decl.set_name(arena, fidl::StringView::FromExternal(name))
+      .set_url(arena, fidl::StringView::FromExternal(url))
+      .set_startup(arena, fdecl::wire::StartupMode::kLazy);
+  fcomponent::wire::CreateChildArgs child_args(arena);
+  if (opts.node != nullptr) {
+    child_args.set_dynamic_offers(arena, opts.node->CreateOffers(arena));
+  }
+  fprocess::wire::HandleInfo handle_info;
+  if (opts.token) {
+    handle_info = {
+        .handle = std::move(opts.token),
+        .id = kTokenId,
+    };
+    child_args.set_numbered_handles(
+        arena, fidl::VectorView<fprocess::wire::HandleInfo>::FromExternal(&handle_info, 1));
   }
   auto open_callback = [name,
                         url](fidl::WireUnownedResult<fcomponent::Realm::OpenExposedDir>& result) {
@@ -813,7 +892,7 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
     }
   };
   auto create_callback =
-      [this, name, url, collection, server_end = std::move(endpoints->server),
+      [this, name, url, collection, exposed_dir = std::move(opts.exposed_dir),
        open_callback = std::move(open_callback)](
           fidl::WireUnownedResult<fcomponent::Realm::CreateChild>& result) mutable {
         if (!result.ok()) {
@@ -826,28 +905,15 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
                result->result.err());
           return;
         }
-        realm_->OpenExposedDir(
-            fdecl::wire::ChildRef{.name = fidl::StringView::FromExternal(name),
-                                  .collection = fidl::StringView::FromExternal(collection)},
-            std::move(server_end), std::move(open_callback));
+        if (exposed_dir) {
+          fdecl::wire::ChildRef child_ref{
+              .name = fidl::StringView::FromExternal(name),
+              .collection = CollectionName(collection),
+          };
+          realm_->OpenExposedDir(child_ref, std::move(exposed_dir), std::move(open_callback));
+        }
       };
-  fidl::Arena arena;
-  fdecl::wire::Child child_decl(arena);
-  child_decl.set_name(arena, fidl::StringView::FromExternal(name))
-      .set_url(arena, fidl::StringView::FromExternal(url))
-      .set_startup(arena, fdecl::wire::StartupMode::kLazy);
-  fcomponent::wire::CreateChildArgs child_args(arena);
-  fprocess::wire::HandleInfo handle_info;
-  if (token) {
-    handle_info = {
-        .handle = std::move(token),
-        .id = kTokenId,
-    };
-    child_args.set_numbered_handles(
-        arena, fidl::VectorView<fprocess::wire::HandleInfo>::FromExternal(&handle_info, 1));
-  }
-  realm_->CreateChild(
-      fdecl::wire::CollectionRef{.name = fidl::StringView::FromExternal(collection)}, child_decl,
-      child_args, std::move(create_callback));
-  return zx::ok(std::move(endpoints->client));
+  realm_->CreateChild(fdecl::wire::CollectionRef{.name = CollectionName(collection)}, child_decl,
+                      child_args, std::move(create_callback));
+  return zx::ok();
 }

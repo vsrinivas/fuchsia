@@ -64,6 +64,16 @@ class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<Dri
   fidl::WireSharedClient<fuchsia_driver_framework::DriverHost> driver_host_;
 };
 
+enum class Collection {
+  kNone,
+  // Collection for driver hosts.
+  kHost,
+  // Collection for boot drivers.
+  kBoot,
+  // Collection for package drivers.
+  kPackage,
+};
+
 class DriverBinder {
  public:
   virtual ~DriverBinder() = default;
@@ -82,11 +92,11 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
 
   const std::string& name() const;
   const std::vector<std::shared_ptr<Node>>& children() const;
-  fidl::VectorView<fidl::StringView> offers() const;
+  std::vector<std::unique_ptr<fuchsia_component_decl::wire::Offer::DecodedMessage>>& offers() const;
   fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols() const;
   DriverHostComponent* driver_host() const;
 
-  void set_driver_dir(fidl::ClientEnd<fuchsia_io::Directory> driver_dir);
+  void set_collection(Collection collection);
   void set_driver_host(DriverHostComponent* driver_host);
   void set_driver_ref(
       fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> driver_ref);
@@ -95,8 +105,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
       fidl::ServerBindingRef<fuchsia_driver_framework::NodeController> controller_ref);
 
   std::string TopoName() const;
-  zx::status<std::vector<fuchsia_driver_framework::wire::DriverCapabilities>> CreateCapabilities(
-      fidl::AnyArena& arena) const;
+  fidl::VectorView<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::AnyArena& arena) const;
   void OnBind() const;
   bool Unbind(std::unique_ptr<AsyncRemove>& async_remove);
   void Remove();
@@ -115,10 +124,10 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   async_dispatcher_t* const dispatcher_;
 
   fidl::Arena<128> arena_;
-  std::vector<fidl::StringView> offers_;
+  std::vector<std::unique_ptr<fuchsia_component_decl::wire::Offer::DecodedMessage>> offers_;
   std::vector<fuchsia_driver_framework::wire::NodeSymbol> symbols_;
 
-  fidl::ClientEnd<fuchsia_io::Directory> driver_dir_;
+  Collection collection_ = Collection::kNone;
   fit::nullable<DriverHostComponent*> driver_host_;
   std::optional<fidl::ServerBindingRef<fuchsia_component_runner::ComponentController>> driver_ref_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;
@@ -159,12 +168,18 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   zx::status<> StartDriver(Node& node, std::string_view url);
 
   zx::status<std::unique_ptr<DriverHostComponent>> StartDriverHost();
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> CreateComponent(
-      std::string name, std::string url, std::string collection, zx::handle token = zx::handle());
+
+  struct CreateComponentOpts {
+    const Node* node = nullptr;
+    zx::handle token;
+    fidl::ServerEnd<fuchsia_io::Directory> exposed_dir;
+  };
+  zx::status<> CreateComponent(std::string name, Collection collection, std::string url,
+                               CreateComponentOpts opts);
 
   uint64_t next_driver_host_id_ = 0;
-  fidl::WireSharedClient<fuchsia_component::Realm> realm_;
-  fidl::WireSharedClient<fuchsia_driver_framework::DriverIndex> driver_index_;
+  fidl::WireClient<fuchsia_component::Realm> realm_;
+  fidl::WireClient<fuchsia_driver_framework::DriverIndex> driver_index_;
   async_dispatcher_t* const dispatcher_;
   std::shared_ptr<Node> root_node_;
 
