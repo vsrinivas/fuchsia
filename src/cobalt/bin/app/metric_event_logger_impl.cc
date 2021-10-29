@@ -10,7 +10,7 @@
 
 namespace cobalt {
 
-using fuchsia::metrics::Status;
+using FuchsiaStatus = fuchsia::metrics::Status;
 
 MetricEventLoggerImpl::MetricEventLoggerImpl(std::unique_ptr<logger::LoggerInterface> logger)
     : logger_(std::move(logger)) {}
@@ -67,8 +67,8 @@ void MetricEventLoggerImpl::LogMetricEvents(
   auto end = std::make_move_iterator(events.end());
 
   for (auto it = std::make_move_iterator(events.begin()); it != end; it++) {
-    Status status = LogMetricEvent(std::move(*it));
-    if (status != Status::OK) {
+    FuchsiaStatus status = LogMetricEvent(std::move(*it));
+    if (status != FuchsiaStatus::OK) {
       failures += 1;
     }
   }
@@ -76,9 +76,9 @@ void MetricEventLoggerImpl::LogMetricEvents(
   logger_->ResumeInternalLogging();
 
   if (failures == 0) {
-    callback(Status::OK);
+    callback(FuchsiaStatus::OK);
   } else {
-    callback(Status::INTERNAL_ERROR);
+    callback(FuchsiaStatus::INTERNAL_ERROR);
   }
 }
 
@@ -107,7 +107,7 @@ void MetricEventLoggerImpl::LogCustomEvent(
 }
 
 using fuchsia::metrics::MetricEventPayload;
-Status MetricEventLoggerImpl::LogMetricEvent(fuchsia::metrics::MetricEvent event) {
+FuchsiaStatus MetricEventLoggerImpl::LogMetricEvent(fuchsia::metrics::MetricEvent event) {
   TRACE_DURATION("cobalt_fidl", "MetricEventLoggerImpl::LogMetricEvent");
 
   switch (event.payload.Which()) {
@@ -128,7 +128,7 @@ Status MetricEventLoggerImpl::LogMetricEvent(fuchsia::metrics::MetricEvent event
         bucket->set_count((*it).count);
       }
       return ToMetricsStatus(logger_->LogIntegerHistogram(event.metric_id, std::move(histogram_ptr),
-                                                         event.event_codes));
+                                                          event.event_codes));
     }
 
     case MetricEventPayload::Tag::kStringValue:
@@ -136,7 +136,7 @@ Status MetricEventLoggerImpl::LogMetricEvent(fuchsia::metrics::MetricEvent event
           logger_->LogString(event.metric_id, event.payload.string_value(), event.event_codes));
 
     default:
-      return Status::INVALID_ARGUMENTS;
+      return FuchsiaStatus::INVALID_ARGUMENTS;
   }
 }
 

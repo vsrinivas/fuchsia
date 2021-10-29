@@ -10,7 +10,7 @@
 namespace cobalt {
 
 using config::ProjectConfigs;
-using fuchsia::metrics::Status;
+using FuchsiaStatus = fuchsia::metrics::Status;
 
 constexpr uint32_t kFuchsiaCustomerId = 1;
 
@@ -24,7 +24,7 @@ void MetricEventLoggerFactoryImpl::CreateMetricEventLogger(
   if (shut_down_) {
     FX_LOGS(ERROR) << "The LoggerFactory received a ShutDown signal and can not "
                       "create a new Logger.";
-    callback(Status::SHUT_DOWN);
+    callback(FuchsiaStatus::SHUT_DOWN);
     return;
   }
   uint32_t customer_id =
@@ -34,12 +34,12 @@ void MetricEventLoggerFactoryImpl::CreateMetricEventLogger(
     FX_LOGS(ERROR) << "The CobaltRegistry bundled with this release does not "
                       "include a project with customer ID "
                    << customer_id << " and project ID " << project_spec.project_id();
-    callback(Status::INVALID_ARGUMENTS);
+    callback(FuchsiaStatus::INVALID_ARGUMENTS);
     return;
   }
   logger_bindings_.AddBinding(std::make_unique<MetricEventLoggerImpl>(std::move(logger)),
                               std::move(request));
-  callback(Status::OK);
+  callback(FuchsiaStatus::OK);
 }
 
 void MetricEventLoggerFactoryImpl::ShutDown() {

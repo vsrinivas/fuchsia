@@ -13,7 +13,7 @@
 
 namespace cobalt {
 
-using fuchsia::cobalt::Status;
+using FuchsiaStatus = fuchsia::cobalt::Status;
 
 class LoggerImplTest : public ::testing::Test {
  public:
@@ -35,7 +35,7 @@ TEST_F(LoggerImplTest, PauseDuringBatch) {
   events.push_back(CobaltEventBuilder(1).as_event());
   events.push_back(CobaltEventBuilder(1).as_event());
   events.push_back(CobaltEventBuilder(1).as_event());
-  logger_->LogCobaltEvents(std::move(events), [](Status status) {});
+  logger_->LogCobaltEvents(std::move(events), [](FuchsiaStatus status) {});
   std::map<logger::PerProjectLoggerCallsMadeMetricDimensionLoggerMethod, uint32_t>
       internal_logger_calls = fake_logger_->internal_logger_calls();
   // Only the LogCobaltEvents call should be recorded.
@@ -49,12 +49,12 @@ TEST_F(LoggerImplTest, PauseDuringBatch) {
 // was constructed without a TimerManager, then instead of crashing we
 // return an error.
 TEST_F(LoggerImplTest, NoTimerPresent) {
-  Status status = Status::OK;
-  logger_->StartTimer(0u, 0u, "", "", 0u, 0u, [&status](Status s) { status = s; });
-  EXPECT_EQ(status, Status::INTERNAL_ERROR);
-  status = Status::OK;
-  logger_->EndTimer("", 0u, 0u, [&status](Status s) { status = s; });
-  EXPECT_EQ(status, Status::INTERNAL_ERROR);
+  FuchsiaStatus status = FuchsiaStatus::OK;
+  logger_->StartTimer(0u, 0u, "", "", 0u, 0u, [&status](FuchsiaStatus s) { status = s; });
+  EXPECT_EQ(status, FuchsiaStatus::INTERNAL_ERROR);
+  status = FuchsiaStatus::OK;
+  logger_->EndTimer("", 0u, 0u, [&status](FuchsiaStatus s) { status = s; });
+  EXPECT_EQ(status, FuchsiaStatus::INTERNAL_ERROR);
 }
 
 }  // namespace cobalt

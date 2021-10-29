@@ -11,7 +11,6 @@
 
 #include <string>
 
-#include "third_party/cobalt/src/lib/util/status.h"
 #include "third_party/cobalt/src/logger/status.h"
 
 namespace cobalt {

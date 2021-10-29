@@ -11,7 +11,7 @@
 
 namespace cobalt {
 
-using fuchsia::cobalt::Status;
+using FuchsiaStatus = fuchsia::cobalt::Status;
 
 constexpr char kChannelCacheFilenameSuffix[] = "last_reported_channel";
 constexpr char kRealmCacheFilenameSuffix[] = "last_reported_realm";
@@ -39,7 +39,7 @@ void SystemDataUpdaterImpl::SetExperimentState(std::vector<fuchsia::cobalt::Expe
   }
 
   system_data_->SetExperimentState(std::move(experiment_proto_vector));
-  callback(Status::OK);
+  callback(FuchsiaStatus::OK);
 }
 
 void SystemDataUpdaterImpl::RestoreData() {
@@ -109,7 +109,7 @@ void SystemDataUpdaterImpl::SetSoftwareDistributionInfo(
   system_data_->SetSoftwareDistributionInfo(info);
   channel_.Set(system_data_->channel());
   realm_.Set(system_data_->realm());
-  callback(Status::OK);
+  callback(FuchsiaStatus::OK);
 }  // namespace cobalt
 
 }  // namespace cobalt

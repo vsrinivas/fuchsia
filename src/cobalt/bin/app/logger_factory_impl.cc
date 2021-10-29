@@ -11,7 +11,7 @@ namespace cobalt {
 
 using cobalt::TimerManager;
 using config::ProjectConfigs;
-using fuchsia::cobalt::Status;
+using FuchsiaStatus = fuchsia::cobalt::Status;
 
 constexpr uint32_t kFuchsiaCustomerId = 1;
 
@@ -27,7 +27,7 @@ void LoggerFactoryImpl::CreateAndBindLoggerFromProjectId(
   if (shut_down_) {
     FX_LOGS(ERROR) << "The LoggerFactory received a ShutDown signal and can not "
                       "create a new Logger.";
-    callback(Status::SHUT_DOWN);
+    callback(FuchsiaStatus::SHUT_DOWN);
     return;
   }
   auto logger = cobalt_service_->NewLogger(customer_id, project_id);
@@ -35,12 +35,12 @@ void LoggerFactoryImpl::CreateAndBindLoggerFromProjectId(
     FX_LOGS(ERROR) << "The CobaltRegistry bundled with this release does not "
                       "include a Fuchsia project with ID "
                    << project_id << " for customer with ID " << customer_id;
-    callback(Status::INVALID_ARGUMENTS);
+    callback(FuchsiaStatus::INVALID_ARGUMENTS);
     return;
   }
   binding_set->AddBinding(std::make_unique<LoggerImpl>(std::move(logger), timer_manager_),
                           std::move(request));
-  callback(Status::OK);
+  callback(FuchsiaStatus::OK);
 }
 
 void LoggerFactoryImpl::CreateLoggerFromProjectId(

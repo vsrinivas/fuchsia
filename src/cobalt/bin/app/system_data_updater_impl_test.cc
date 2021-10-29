@@ -22,7 +22,7 @@ using encoder::SystemData;
 using fidl::VectorPtr;
 using fuchsia::cobalt::ExperimentPtr;
 using fuchsia::cobalt::SoftwareDistributionInfo;
-using fuchsia::cobalt::Status;
+using FuchsiaStatus = fuchsia::cobalt::Status;
 using fuchsia::cobalt::SystemDataUpdaterPtr;
 using inspect::testing::ChildrenMatch;
 using inspect::testing::IntIs;
@@ -119,7 +119,7 @@ TEST_F(SystemDataUpdaterImplTests, SetExperimentStateFromNull) {
   EXPECT_TRUE(experiments().empty());
 
   system_data_updater->SetExperimentState(ExperimentVectorWithIdAndArmId(kExperimentId, kArmId),
-                                          [&](Status s) {});
+                                          [&](FuchsiaStatus s) {});
 
   RunLoopUntilIdle();
 
@@ -136,7 +136,7 @@ TEST_F(SystemDataUpdaterImplTests, UpdateExperimentState) {
   SystemDataUpdaterPtr system_data_updater = GetSystemDataUpdater();
 
   system_data_updater->SetExperimentState(
-      ExperimentVectorWithIdAndArmId(kInitialExperimentId, kInitialArmId), [&](Status s) {});
+      ExperimentVectorWithIdAndArmId(kInitialExperimentId, kInitialArmId), [&](FuchsiaStatus s) {});
   RunLoopUntilIdle();
 
   EXPECT_FALSE(experiments().empty());
@@ -144,7 +144,7 @@ TEST_F(SystemDataUpdaterImplTests, UpdateExperimentState) {
   EXPECT_EQ(experiments().front().arm_id(), kInitialArmId);
 
   system_data_updater->SetExperimentState(
-      ExperimentVectorWithIdAndArmId(kUpdatedExperimentId, kUpdatedArmId), [&](Status s) {});
+      ExperimentVectorWithIdAndArmId(kUpdatedExperimentId, kUpdatedArmId), [&](FuchsiaStatus s) {});
   RunLoopUntilIdle();
 
   EXPECT_FALSE(experiments().empty());
@@ -167,7 +167,7 @@ TEST_F(SystemDataUpdaterImplTests, SetSoftwareDistributionInfo) {
 
   SoftwareDistributionInfo info = SoftwareDistributionInfo();
   info.set_current_realm("");
-  system_data_updater->SetSoftwareDistributionInfo(std::move(info), [](Status s) {});
+  system_data_updater->SetSoftwareDistributionInfo(std::move(info), [](FuchsiaStatus s) {});
   RunLoopUntilIdle();
 
   EXPECT_EQ(channel(), "<unset>");
@@ -183,7 +183,7 @@ TEST_F(SystemDataUpdaterImplTests, SetSoftwareDistributionInfo) {
   info = SoftwareDistributionInfo();
   info.set_current_realm("dogfood");
   info.set_current_channel("fishfood_release");
-  system_data_updater->SetSoftwareDistributionInfo(std::move(info), [](Status s) {});
+  system_data_updater->SetSoftwareDistributionInfo(std::move(info), [](FuchsiaStatus s) {});
   RunLoopUntilIdle();
 
   EXPECT_EQ(channel(), "fishfood_release");
@@ -199,7 +199,7 @@ TEST_F(SystemDataUpdaterImplTests, SetSoftwareDistributionInfo) {
   // Set one software distribution field without overriding the other.
   info = SoftwareDistributionInfo();
   info.set_current_channel("test_channel");
-  system_data_updater->SetSoftwareDistributionInfo(std::move(info), [](Status s) {});
+  system_data_updater->SetSoftwareDistributionInfo(std::move(info), [](FuchsiaStatus s) {});
   RunLoopUntilIdle();
 
   EXPECT_EQ(channel(), "test_channel");
@@ -243,7 +243,7 @@ TEST(SystemDataUpdaterImpl, TestSoftwareDistributionInfoPersistence) {
   SoftwareDistributionInfo info = SoftwareDistributionInfo();
   info.set_current_realm("dogfood");
   info.set_current_channel("fishfood_release");
-  updater->SetSoftwareDistributionInfo(std::move(info), [](Status s) {});
+  updater->SetSoftwareDistributionInfo(std::move(info), [](FuchsiaStatus s) {});
   EXPECT_EQ(system_data->system_profile().realm(), "dogfood");
   EXPECT_EQ(system_data->system_profile().channel(), "fishfood_release");
   EXPECT_THAT(inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value(),

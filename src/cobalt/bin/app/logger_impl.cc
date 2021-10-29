@@ -10,7 +10,7 @@
 
 namespace cobalt {
 
-using fuchsia::cobalt::Status;
+using FuchsiaStatus = fuchsia::cobalt::Status;
 
 LoggerImpl::LoggerImpl(std::unique_ptr<logger::LoggerInterface> logger, TimerManager* timer_manager)
     : logger_(std::move(logger)), timer_manager_(timer_manager) {}
@@ -72,7 +72,7 @@ void LoggerImpl::LogIntHistogram(uint32_t metric_id, uint32_t event_code, std::s
   TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogIntHistogram");
   if (bucket_indices.size() != bucket_counts.size()) {
     FX_LOGS(ERROR) << "[" << metric_id << "]: bucket_indices.size() != bucket_counts.size().";
-    callback(Status::INVALID_ARGUMENTS);
+    callback(FuchsiaStatus::INVALID_ARGUMENTS);
     return;
   }
   logger::HistogramPtr histogram_ptr(new google::protobuf::RepeatedPtrField<HistogramBucket>());
@@ -115,7 +115,7 @@ void LoggerImpl::AddTimerObservationIfReady(std::unique_ptr<TimerVal> timer_val_
   if (!TimerManager::isReady(timer_val_ptr)) {
     // TimerManager has not received both StartTimer and EndTimer calls. Return
     // OK status and wait for the other call.
-    callback(Status::OK);
+    callback(FuchsiaStatus::OK);
     return;
   }
 
@@ -129,14 +129,14 @@ void LoggerImpl::StartTimer(uint32_t metric_id, uint32_t event_code, std::string
                             fuchsia::cobalt::LoggerBase::StartTimerCallback callback) {
   if (!timer_manager_) {
     FX_LOGS(ERROR) << "Cobalt internal error: StartTimer() invoked but there is no TimerManager";
-    callback(Status::INTERNAL_ERROR);
+    callback(FuchsiaStatus::INTERNAL_ERROR);
     return;
   }
   std::unique_ptr<TimerVal> timer_val_ptr;
   auto status = timer_manager_->GetTimerValWithStart(metric_id, event_code, component, 0, timer_id,
                                                      timestamp, timeout_s, &timer_val_ptr);
 
-  if (status != Status::OK) {
+  if (status != FuchsiaStatus::OK) {
     callback(status);
     return;
   }
@@ -148,13 +148,13 @@ void LoggerImpl::EndTimer(std::string timer_id, uint64_t timestamp, uint32_t tim
                           fuchsia::cobalt::LoggerBase::EndTimerCallback callback) {
   if (!timer_manager_) {
     FX_LOGS(ERROR) << "Cobalt internal error: EndTimer() invoked but there is no TimerManager";
-    callback(Status::INTERNAL_ERROR);
+    callback(FuchsiaStatus::INTERNAL_ERROR);
     return;
   }
   std::unique_ptr<TimerVal> timer_val_ptr;
   auto status = timer_manager_->GetTimerValWithEnd(timer_id, timestamp, timeout_s, &timer_val_ptr);
 
-  if (status != Status::OK) {
+  if (status != FuchsiaStatus::OK) {
     callback(status);
     return;
   }
@@ -170,7 +170,7 @@ void LoggerImpl::LogCobaltEvent(fuchsia::cobalt::CobaltEvent event,
   switch (event.payload.Which()) {
     case EventPayload::Tag::kEvent:
       if (event.event_codes.size() != 1) {
-        callback(Status::INVALID_ARGUMENTS);
+        callback(FuchsiaStatus::INVALID_ARGUMENTS);
       } else {
         callback(ToCobaltStatus(logger_->LogEvent(event.metric_id, event.event_codes[0])));
       }
@@ -214,7 +214,7 @@ void LoggerImpl::LogCobaltEvent(fuchsia::cobalt::CobaltEvent event,
     }
 
     default:
-      callback(Status::INVALID_ARGUMENTS);
+      callback(FuchsiaStatus::INVALID_ARGUMENTS);
       return;
   }
 }
@@ -234,8 +234,8 @@ void LoggerImpl::LogCobaltEvents(std::vector<fuchsia::cobalt::CobaltEvent> event
   auto end = std::make_move_iterator(events.end());
 
   for (auto it = std::make_move_iterator(events.begin()); it != end; it++) {
-    LogCobaltEvent(std::move(*it), [failures](Status status) mutable {
-      if (status != Status::OK) {
+    LogCobaltEvent(std::move(*it), [failures](FuchsiaStatus status) mutable {
+      if (status != FuchsiaStatus::OK) {
         failures += 1;
       }
     });
@@ -244,9 +244,9 @@ void LoggerImpl::LogCobaltEvents(std::vector<fuchsia::cobalt::CobaltEvent> event
   logger_->ResumeInternalLogging();
 
   if (failures == 0) {
-    callback(Status::OK);
+    callback(FuchsiaStatus::OK);
   } else {
-    callback(Status::INTERNAL_ERROR);
+    callback(FuchsiaStatus::INTERNAL_ERROR);
   }
 }
 
