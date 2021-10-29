@@ -6,7 +6,7 @@ Fuchsia emulator (FEMU) on your machine.
 The steps are:
 
 1. [Prerequisites](#prerequisites).
-1. [Build Fuchisa for FEMU](#build-fuchsia-for-femu).
+1. [Build Fuchsia for FEMU](#build-fuchsia-for-femu).
 1. [Enable VM acceleration (Optional)](#enable-vm-acceleration).
 1. [Start FEMU](#start-femu).
 1. [Discover FEMU](#discover-femu).
