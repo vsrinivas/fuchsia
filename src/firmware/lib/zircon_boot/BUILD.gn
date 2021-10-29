@@ -28,7 +28,7 @@ common_vars = {
 # SDK library.
 zx_library("zircon_boot") {
   forward_variables_from(common_vars, "*")
-  sdk_publishable = true
+  sdk_publishable = "experimental"
 }
 
 # In-tree library.

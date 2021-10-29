@@ -520,6 +520,7 @@ sdk("firmware") {
     "//sdk/docs:firmware",
     "//src/firmware/lib/abr:abr_sdk",
     "//src/firmware/lib/zbi:zbi_sdk",
+    "//src/firmware/lib/zircon_boot:zircon_boot_sdk",
     "//third_party/android/platform/external/avb:avb_sdk",
     "//zircon/public/sysroot/sdk:sysroot_sdk",
   ]
