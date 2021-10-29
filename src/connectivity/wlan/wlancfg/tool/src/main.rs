@@ -3,13 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Context, Error},
-    fidl::endpoints::{create_endpoints, create_proxy, Proxy},
+    anyhow::{Context, Error},
+    fidl::endpoints::{create_endpoints, create_proxy},
     fidl_fuchsia_wlan_policy as wlan_policy,
-    fidl_fuchsia_wlan_product_deprecatedconfiguration as wlan_deprecated,
-    fuchsia_async::{self as fasync, DurationExt},
+    fidl_fuchsia_wlan_product_deprecatedconfiguration as wlan_deprecated, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_zircon as zx,
     structopt::StructOpt,
 };
 
@@ -31,19 +29,6 @@ pub async fn get_client_controller(
         create_endpoints::<wlan_policy::ClientStateUpdatesMarker>().unwrap();
     let () = policy_provider.get_controller(server_end, update_client_end)?;
     let update_stream = update_server_end.into_stream()?;
-
-    // Sleep very briefly to introduce a yield point (with the await) so that in case the other
-    // end of the channel is closed, its status is correctly propagated by the kernel and we can
-    // accurately check it using `is_closed()`.
-    let sleep_duration = zx::Duration::from_millis(10);
-    fasync::Timer::new(sleep_duration.after_now()).await;
-    if client_controller.is_closed() {
-        return Err(format_err!(
-            "Failed to obtain a WLAN client controller. Your command was not executed.\n\n\
-            Help: Only one component may hold a client controller at once. You can try killing\n\
-            other holders with 'killall basemgr.cmx'.\n"
-        ));
-    }
 
     Ok((client_controller, update_stream))
 }

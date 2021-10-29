@@ -8,7 +8,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_wlan_common as fidl_wlan_common, fidl_fuchsia_wlan_policy as wlan_policy,
     fidl_fuchsia_wlan_product_deprecatedconfiguration as wlan_deprecated,
-    futures::TryStreamExt,
+    futures::{future::BoxFuture, TryStreamExt},
 };
 
 mod serialize;
@@ -152,6 +152,24 @@ fn handle_request_status(status: fidl_wlan_common::RequestStatus) -> Result<(), 
     }
 }
 
+/// When a client or AP controller is created, the policy layer may close the serving end with an
+/// epitaph if another component already holds a controller.  This macro wraps proxy API calls
+/// and provides context to the caller.
+async fn run_proxy_command<'a, T>(fut: BoxFuture<'a, Result<T, fidl::Error>>) -> Result<T, Error> {
+    fut.await.map_err(|e| {
+        match e {
+            fidl::Error::ClientChannelClosed{ .. } => format_err!(
+                "Failed to obtain a WLAN policy controller. Your command was not executed.\n\n\
+                Help: Only one component may hold a policy controller at once. You can try killing\n\
+                other holders with one of the following:\n\
+                * killall basemgr.cmx\n\
+                * ffx component destroy /core/session-manager/session:session\n"
+            ),
+            e => format_err!("{}", e)
+        }
+    })
+}
+
 // Policy client helper functions
 
 /// Issues a connect call to the client policy layer and waits for the connection process to
@@ -161,7 +179,7 @@ pub async fn handle_connect(
     mut server_stream: wlan_policy::ClientStateUpdatesRequestStream,
     mut network_id: wlan_policy::NetworkIdentifier,
 ) -> Result<(), Error> {
-    let result = client_controller.connect(&mut network_id).await?;
+    let result = run_proxy_command(Box::pin(client_controller.connect(&mut network_id))).await?;
     handle_request_status(result)?;
 
     while let Some(update_request) = server_stream.try_next().await? {
@@ -217,23 +235,16 @@ pub async fn handle_get_saved_networks(
 ) -> Result<Vec<wlan_policy::NetworkConfig>, Error> {
     let (client_proxy, server_end) =
         create_proxy::<wlan_policy::NetworkConfigIteratorMarker>().unwrap();
-    match client_controller.get_saved_networks(server_end) {
-        Ok(_) => (),
-        Err(e) => return Err(format_err!("failed to get saved networks with {:?}", e)),
-    }
+    let fut = async { client_controller.get_saved_networks(server_end) };
+    run_proxy_command(Box::pin(fut)).await?;
 
     let mut saved_networks = Vec::new();
-
     loop {
-        match client_proxy.get_next().await {
-            Ok(mut new_configs) => {
-                if new_configs.is_empty() {
-                    break;
-                }
-                saved_networks.append(&mut new_configs);
-            }
-            Err(e) => return Err(format_err!("failed while retrieving saved networks: {:?}", e)),
+        let mut new_configs = run_proxy_command(Box::pin(client_proxy.get_next())).await?;
+        if new_configs.is_empty() {
+            break;
         }
+        saved_networks.append(&mut new_configs);
     }
     Ok(saved_networks)
 }
@@ -305,8 +316,7 @@ pub async fn handle_remove_network(
 ) -> Result<(), Error> {
     let id = config.id.clone();
     let (ssid, _) = extract_network_id(id).expect("Failed to convert network ssid.");
-    client_controller
-        .remove_network(config)
+    run_proxy_command(Box::pin(client_controller.remove_network(config)))
         .await?
         .map_err(|e| format_err!("failed to remove network with {:?}", e))?;
     println!("Successfully removed network '{}'", ssid);
@@ -325,8 +335,7 @@ async fn save_network(
     client_controller: wlan_policy::ClientControllerProxy,
     network_config: wlan_policy::NetworkConfig,
 ) -> Result<(), Error> {
-    client_controller
-        .save_network(network_config.clone())
+    run_proxy_command(Box::pin(client_controller.save_network(network_config.clone())))
         .await?
         .map_err(|e| format_err!("failed to save network with {:?}", e))?;
     println!(
@@ -342,11 +351,12 @@ pub async fn handle_scan(
 ) -> Result<Vec<wlan_policy::ScanResult>, Error> {
     let (client_proxy, server_end) =
         create_proxy::<wlan_policy::ScanResultIteratorMarker>().unwrap();
-    client_controller.scan_for_networks(server_end)?;
+    let fut = async { client_controller.scan_for_networks(server_end) };
+    run_proxy_command(Box::pin(fut)).await?;
 
     let mut scanned_networks = Vec::<wlan_policy::ScanResult>::new();
     loop {
-        match client_proxy.get_next().await? {
+        match run_proxy_command(Box::pin(client_proxy.get_next())).await? {
             Ok(mut new_networks) => {
                 if new_networks.is_empty() {
                     break;
@@ -364,7 +374,7 @@ pub async fn handle_scan(
 pub async fn handle_start_client_connections(
     client_controller: wlan_policy::ClientControllerProxy,
 ) -> Result<(), Error> {
-    let status = client_controller.start_client_connections().await?;
+    let status = run_proxy_command(Box::pin(client_controller.start_client_connections())).await?;
     return handle_request_status(status);
 }
 
@@ -372,7 +382,7 @@ pub async fn handle_start_client_connections(
 pub async fn handle_stop_client_connections(
     client_controller: wlan_policy::ClientControllerProxy,
 ) -> Result<(), Error> {
-    let status = client_controller.stop_client_connections().await?;
+    let status = run_proxy_command(Box::pin(client_controller.stop_client_connections())).await?;
     return handle_request_status(status);
 }
 
@@ -384,8 +394,12 @@ pub async fn handle_start_ap(
 ) -> Result<(), Error> {
     let connectivity_mode = wlan_policy::ConnectivityMode::Unrestricted;
     let operating_band = wlan_policy::OperatingBand::Any;
-    let result =
-        ap_controller.start_access_point(config, connectivity_mode, operating_band).await?;
+    let result = run_proxy_command(Box::pin(ap_controller.start_access_point(
+        config,
+        connectivity_mode,
+        operating_band,
+    )))
+    .await?;
     handle_request_status(result)?;
 
     // Listen for state updates until the service indicates that there is an active AP.
@@ -421,7 +435,7 @@ pub async fn handle_stop_ap(
     ap_controller: wlan_policy::AccessPointControllerProxy,
     config: wlan_policy::NetworkConfig,
 ) -> Result<(), Error> {
-    let result = ap_controller.stop_access_point(config).await?;
+    let result = run_proxy_command(Box::pin(ap_controller.stop_access_point(config))).await?;
     handle_request_status(result)
 }
 
@@ -429,7 +443,8 @@ pub async fn handle_stop_ap(
 pub async fn handle_stop_all_aps(
     ap_controller: wlan_policy::AccessPointControllerProxy,
 ) -> Result<(), Error> {
-    ap_controller.stop_all_access_points()?;
+    let fut = async { ap_controller.stop_all_access_points() };
+    run_proxy_command(Box::pin(fut)).await?;
     Ok(())
 }
 
@@ -526,6 +541,7 @@ mod tests {
         fidl::endpoints,
         fidl_fuchsia_wlan_common as fidl_wlan_common, fidl_fuchsia_wlan_policy as wlan_policy,
         fuchsia_async::TestExecutor,
+        fuchsia_zircon_status as zx_status,
         futures::{stream::StreamExt, task::Poll},
         pin_utils::pin_mut,
         wlan_common::assert_variant,
@@ -1420,5 +1436,44 @@ mod tests {
         );
 
         assert_variant!(exec.run_until_stalled(&mut suggest_fut), Poll::Ready(Err(_)));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_proxy_command_succeeds() {
+        match run_proxy_command(Box::pin(async { Ok(zx_status::Status::OK) })).await {
+            Ok(status) => {
+                assert_eq!(status, zx_status::Status::OK)
+            }
+            Err(e) => panic!("Test unexpectedly failed with {}", e),
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_proxy_command_already_bound() {
+        let result: Result<(), Error> = run_proxy_command(Box::pin(async {
+            Err(fidl::Error::ClientChannelClosed {
+                status: zx_status::Status::ALREADY_BOUND,
+                protocol_name: "test",
+            })
+        }))
+        .await;
+        match result {
+            Ok(status) => panic!("Test unexpectedly succeeded with {:?}", status),
+            Err(e) => {
+                assert!(e.to_string().contains("Failed to obtain a WLAN policy controller"));
+            }
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_proxy_command_generic_failure() {
+        let result: Result<(), Error> =
+            run_proxy_command(Box::pin(async { Err(fidl::Error::Invalid) })).await;
+        match result {
+            Ok(status) => panic!("Test unexpectedly succeeded with {:?}", status),
+            Err(e) => {
+                assert!(!e.to_string().contains("Failed to obtain a WLAN policy controller"));
+            }
+        }
     }
 }
