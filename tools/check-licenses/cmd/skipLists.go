@@ -145,7 +145,6 @@ var additionalSkipFiles = []string{
 	"third_party/rust_crates/README.md",
 	"third_party/dart-pkg/pub/README.md",
 	"prebuilt/third_party/rust/linux-x64/share/doc/rust/LICENSE-THIRD-PARTY",
-	"prebuilt/third_party/rust_tools/linux-x64/share/doc/rust/LICENSE-THIRD-PARTY",
 	"third_party/crashpad/third_party/glibc/elf/elf.h",
 	"third_party/dart-pkg/pub/devtools/build/assets/NOTICES",
 	"zircon/prebuilt/config.gni",                                                                                   // b/178734726
