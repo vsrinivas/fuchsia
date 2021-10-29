@@ -49,9 +49,15 @@ rustc_library("bt-test-harness") {
 
   # Add components used by core_realm to the library
   deps += [
-    ":isolated-devmgr-component",
     ":test-bt-init",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/connectivity/bluetooth/core/bt-gap:test-stash-secure",
+    "//src/connectivity/bluetooth/core/bt-host:driver",
+    "//src/connectivity/bluetooth/hci/emulator:driver",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
   ]
 
   sources = [
@@ -71,16 +77,6 @@ rustc_library("bt-test-harness") {
   ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
-}
-
-isolated_devmgr_v2_component("isolated-devmgr-component") {
-  deps = [
-    "//src/connectivity/bluetooth/core/bt-host:driver",
-    "//src/connectivity/bluetooth/hci/emulator:driver",
-    "//src/devices/bus/drivers/platform",
-    "//src/devices/misc/drivers/test",
-    "//src/devices/tests/sysdev",
-  ]
 }
 
 fuchsia_component("test-bt-init") {

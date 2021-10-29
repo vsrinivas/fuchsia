@@ -9,15 +9,14 @@ use {
     fidl_fuchsia_bluetooth_snoop::SnoopMarker,
     fidl_fuchsia_bluetooth_sys as fbsys,
     fidl_fuchsia_device::NameProviderMarker,
-    fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_driver_test as fdt, fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_logger::LogSinkMarker,
-    fidl_fuchsia_process,
     fidl_fuchsia_stash::SecureStoreMarker,
-    fidl_fuchsia_sys,
     fuchsia_component_test::{
         builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
         RealmInstance, ScopedInstance,
     },
+    fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     futures::FutureExt,
     realmbuilder_mock_helpers::stateless_mock_responder,
 };
@@ -37,10 +36,6 @@ mod constants {
         pub const URL: &str = "#meta/test-stash-secure.cm";
         pub const MONIKER: &str = "secure-stash";
     }
-    pub mod isolated_devmgr {
-        pub const URL: &str = "#meta/isolated-devmgr.cm";
-        pub const MONIKER: &str = "isolated-devmgr";
-    }
     pub mod mock_name_provider {
         pub const MONIKER: &str = "mock-name-provider";
     }
@@ -55,16 +50,11 @@ pub struct CoreRealm {
 impl CoreRealm {
     pub async fn create() -> Result<Self, Error> {
         let mut builder = RealmBuilder::new().await?;
+        let _ = builder.driver_test_realm_setup().await?;
         let _ = builder
             .add_component(
                 constants::bt_init::MONIKER,
                 ComponentSource::url(constants::bt_init::URL),
-            )
-            .await?
-            // Used to launch bt-emulator and bt-host devices.
-            .add_component(
-                constants::isolated_devmgr::MONIKER,
-                ComponentSource::url(constants::isolated_devmgr::URL),
             )
             .await?
             // Required by bt-init/bt-gap.
@@ -106,7 +96,6 @@ impl CoreRealm {
                 RouteEndpoint::AboveRoot,
                 vec![
                     RouteEndpoint::component(constants::bt_init::MONIKER),
-                    RouteEndpoint::component(constants::isolated_devmgr::MONIKER),
                     RouteEndpoint::component(constants::secure_stash::MONIKER),
                 ],
             )?
@@ -115,14 +104,6 @@ impl CoreRealm {
                 source: RouteEndpoint::AboveRoot,
                 targets: vec![RouteEndpoint::component(constants::secure_stash::MONIKER)],
             })?
-            .add_protocol_route::<fidl_fuchsia_process::LauncherMarker>(
-                RouteEndpoint::AboveRoot,
-                vec![RouteEndpoint::component(constants::isolated_devmgr::MONIKER)],
-            )?
-            .add_protocol_route::<fidl_fuchsia_sys::LauncherMarker>(
-                RouteEndpoint::AboveRoot,
-                vec![RouteEndpoint::component(constants::isolated_devmgr::MONIKER)],
-            )?
             // Route bt-init/bt-gap requirements to bt-init.
             .add_protocol_route::<SecureStoreMarker>(
                 RouteEndpoint::component(constants::secure_stash::MONIKER),
@@ -136,16 +117,11 @@ impl CoreRealm {
                 RouteEndpoint::component(constants::mock_snoop::MONIKER),
                 vec![RouteEndpoint::component(constants::bt_init::MONIKER)],
             )?
-            // We also expose `/dev` AboveRoot so that test code can launch and manipulate the
-            // bt-hci-emulator driver.
             // TODO(fxbug.dev/78757): Route /dev/class/bt-host to bt-init upon RealmBuilder support.
             .add_route(CapabilityRoute {
                 capability: Capability::directory("dev", "/dev", fio2::RW_STAR_DIR),
-                source: RouteEndpoint::component(constants::isolated_devmgr::MONIKER),
-                targets: vec![
-                    RouteEndpoint::component(constants::bt_init::MONIKER),
-                    RouteEndpoint::AboveRoot,
-                ],
+                source: RouteEndpoint::component(fuchsia_driver_test::COMPONENT_NAME),
+                targets: vec![RouteEndpoint::component(constants::bt_init::MONIKER)],
             })?
             // Route capabilities used by test code AboveRoot.
             .add_protocol_route::<fbgatt::Server_Marker>(
@@ -173,6 +149,13 @@ impl CoreRealm {
                 vec![RouteEndpoint::AboveRoot],
             )?;
         let instance = builder.build().create().await?;
+
+        // Start DriverTestRealm
+        let args = fdt::RealmArgs {
+            root_driver: Some("fuchsia-boot:///#driver/platform-bus.so".to_string()),
+            ..fdt::RealmArgs::EMPTY
+        };
+        instance.driver_test_realm_start(args).await?;
         Ok(Self { realm: instance })
     }
 

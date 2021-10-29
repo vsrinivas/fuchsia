@@ -267,11 +267,9 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_bluetooth_test::EmulatorError,
-        fidl_fuchsia_io2 as fio2, fidl_fuchsia_logger, fidl_fuchsia_process, fidl_fuchsia_sys,
-        fuchsia,
-        fuchsia_component_test::builder::{
-            Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint,
-        },
+        fidl_fuchsia_driver_test as fdt, fuchsia,
+        fuchsia_component_test::builder::RealmBuilder,
+        fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     };
 
     fn default_settings() -> EmulatorSettings {
@@ -350,37 +348,14 @@ mod tests {
 
     #[fuchsia::test]
     async fn publish_lifecycle_with_realm() {
-        const ISOLATED_DEVMGR_MONIKER: &'static str = "isolated-devmgr";
-        const ISOLATED_DEVMGR_URL: &'static str = "#meta/isolated-devmgr.cm";
-
         let mut realm = RealmBuilder::new().await.unwrap();
-        let _ = realm
-            .add_component(ISOLATED_DEVMGR_MONIKER, ComponentSource::url(ISOLATED_DEVMGR_URL))
-            .await
-            .unwrap();
-        let _ = realm
-            .add_route(CapabilityRoute {
-                capability: Capability::directory("dev", "/dev", fio2::RW_STAR_DIR),
-                source: RouteEndpoint::component(ISOLATED_DEVMGR_MONIKER),
-                targets: vec![RouteEndpoint::AboveRoot],
-            })
-            .expect("failed to add route")
-            .add_protocol_route::<fidl_fuchsia_logger::LogSinkMarker>(
-                RouteEndpoint::AboveRoot,
-                vec![RouteEndpoint::component(ISOLATED_DEVMGR_MONIKER)],
-            )
-            .expect("failed to add logsink route")
-            .add_protocol_route::<fidl_fuchsia_process::LauncherMarker>(
-                RouteEndpoint::AboveRoot,
-                vec![RouteEndpoint::component(ISOLATED_DEVMGR_MONIKER)],
-            )
-            .expect("failed to add launcher route")
-            .add_protocol_route::<fidl_fuchsia_sys::LauncherMarker>(
-                RouteEndpoint::AboveRoot,
-                vec![RouteEndpoint::component(ISOLATED_DEVMGR_MONIKER)],
-            )
-            .expect("failed to add loader route");
+        realm.driver_test_realm_setup().await.unwrap();
         let realm = realm.build().create().await.expect("failed to build realm");
+        let args = fdt::RealmArgs {
+            root_driver: Some("fuchsia-boot:///#driver/platform-bus.so".to_string()),
+            ..fdt::RealmArgs::EMPTY
+        };
+        realm.driver_test_realm_start(args).await.unwrap();
         let dev_dir = io_util::directory::open_directory(
             realm.root.get_exposed_dir(),
             "dev",

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
+        "//sdk/lib/driver_test_realm/meta/realm_builder.shard.cml",
         "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
     ],
@@ -10,14 +11,6 @@
         binary: "bin/bt_profile_integration_tests",
     },
     offer: [
-        {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
-            ],
-            from: "parent",
-            to: [ "#fuchsia_component_test_collection" ],
-        },
         {
             storage: "tmp",
             from: "parent",
