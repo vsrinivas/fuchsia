@@ -90,6 +90,10 @@ class Analytics {
   static void InitBotAware(AnalyticsOption analytics_option, bool enable_on_bots = false) {
     BotInfo bot = GetBotInfo();
     if (bot.IsRunByBot()) {
+      if (enable_on_bots && (internal::PersistentStatus::IsFirstLaunchOfFirstTool() ||
+                             !internal::PersistentStatus::IsEnabled())) {
+        internal::PersistentStatus::Enable();
+      }
       T::SetRuntimeAnalyticsStatus(enable_on_bots ? AnalyticsStatus::kEnabled
                                                   : AnalyticsStatus::kDisabled);
     } else {

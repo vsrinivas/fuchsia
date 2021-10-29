@@ -14,11 +14,7 @@ namespace analytics::core_dev_tools::internal {
 void PrepareGoogleAnalyticsClient(google_analytics::Client& client, std::string_view tool_name,
                                   std::string_view tracking_id, std::optional<BotInfo> bot) {
   client.SetUserAgent(GenerateUserAgent(tool_name));
-  if (bot.has_value() && bot->IsRunByBot()) {
-    client.SetClientId(bot->name);
-  } else {
-    client.SetClientId(internal::PersistentStatus::GetUuid());
-  }
+  client.SetClientId(internal::PersistentStatus::GetUuid());
   client.SetTrackingId(tracking_id);
 
   if (bot.has_value()) {
