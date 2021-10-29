@@ -42,11 +42,6 @@ executable("bin") {
 
   include_dirs += [ "//src/graphics/examples/vkproto/fuchsia" ]
 
-  # Disable ShadowCallStack, since there seem to be some issues with the call
-  # stack after exceptions are caught.
-  # TODO(fxbug.dev/41627): Re-enable.
-  cflags = [ "-fno-sanitize=shadow-call-stack" ]
-
   # HWCPipe uses exceptions to report errors, so they must be left enabled.
   configs -= [ "//build/config:no_exceptions" ]
 }

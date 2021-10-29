@@ -20,7 +20,6 @@ source_set("sources") {
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 
-  cflags = [ "-fno-sanitize=shadow-call-stack" ]
   configs -= [ "//build/config:no_exceptions" ]
 }
 
@@ -30,7 +29,6 @@ executable("mali-performance-counters-bin") {
 
   deps = [ ":sources" ]
 
-  cflags = [ "-fno-sanitize=shadow-call-stack" ]
   configs -= [ "//build/config:no_exceptions" ]
 }
 
@@ -46,7 +44,6 @@ executable("mali-performance-counters-test-bin") {
     "//zircon/system/ulib/fbl",
   ]
 
-  cflags = [ "-fno-sanitize=shadow-call-stack" ]
   configs -= [ "//build/config:no_exceptions" ]
 }
 
