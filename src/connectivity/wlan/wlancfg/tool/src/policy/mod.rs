@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::opts::*,
     anyhow::{format_err, Error},
     eui48::MacAddress,
     fidl::endpoints::{create_endpoints, create_proxy, Proxy},
@@ -148,51 +147,6 @@ fn extract_compatibility(compatibility: Option<wlan_policy::Compatibility>) -> S
     return "compatilibity unknown".to_string();
 }
 
-/// Translates command line input into a network configuration.
-fn construct_network_config(
-    config: PolicyNetworkConfig,
-) -> Result<wlan_policy::NetworkConfig, Error> {
-    let security_type = wlan_policy::SecurityType::from(config.security_type);
-    if (config.credential_type == CredentialTypeArg::r#None
-        && security_type != wlan_policy::SecurityType::None)
-        || (config.credential_type != CredentialTypeArg::r#None
-            && security_type == wlan_policy::SecurityType::None)
-    {
-        return Err(format_err!(
-            "Invalid credential type {:?} for security type {:?}",
-            config.credential_type,
-            security_type
-        ));
-    }
-
-    let credential = match config.credential_type {
-        CredentialTypeArg::r#None => wlan_policy::Credential::None(wlan_policy::Empty),
-        CredentialTypeArg::Psk => {
-            // The PSK is given in a 64 character hexadecimal string. Config args are safe to
-            // unwrap because the tool requires them to be present in the command.
-            let psk_arg = config.credential.unwrap().as_bytes().to_vec();
-            let psk = hex::decode(psk_arg).expect(
-                "Error: PSK must be 64 hexadecimal characters.\
-                Example: \"123456789ABCDEF123456789ABCDEF123456789ABCDEF123456789ABCDEF1234\"",
-            );
-            wlan_policy::Credential::Psk(psk)
-        }
-        CredentialTypeArg::Password => {
-            wlan_policy::Credential::Password(config.credential.unwrap().as_bytes().to_vec())
-        }
-    };
-
-    let network_id = wlan_policy::NetworkIdentifier {
-        ssid: config.ssid.as_bytes().to_vec(),
-        type_: security_type,
-    };
-    Ok(wlan_policy::NetworkConfig {
-        id: Some(network_id),
-        credential: Some(credential),
-        ..wlan_policy::NetworkConfig::EMPTY
-    })
-}
-
 /// Iterates through a vector of network configurations and prints their contents.
 pub fn print_saved_networks(saved_networks: Vec<wlan_policy::NetworkConfig>) -> Result<(), Error> {
     for config in saved_networks {
@@ -282,14 +236,8 @@ fn handle_request_status(status: fidl_wlan_common::RequestStatus) -> Result<(), 
 pub async fn handle_connect(
     client_controller: wlan_policy::ClientControllerProxy,
     mut server_stream: wlan_policy::ClientStateUpdatesRequestStream,
-    network_id: PolicyNetworkId,
+    mut network_id: wlan_policy::NetworkIdentifier,
 ) -> Result<(), Error> {
-    let security_type = wlan_policy::SecurityType::from(network_id.security_type);
-    let mut network_id = wlan_policy::NetworkIdentifier {
-        ssid: network_id.ssid.as_bytes().to_vec(),
-        type_: security_type,
-    };
-
     let result = client_controller.connect(&mut network_id).await?;
     handle_request_status(result)?;
 
@@ -430,24 +378,24 @@ pub async fn handle_listen(
 /// Communicates with the client policy layer to remove a network.
 pub async fn handle_remove_network(
     client_controller: wlan_policy::ClientControllerProxy,
-    config: PolicyNetworkConfig,
+    config: wlan_policy::NetworkConfig,
 ) -> Result<(), Error> {
-    let network_config = construct_network_config(config.clone())?;
+    let id = config.id.clone();
+    let (ssid, _) = extract_network_id(id).expect("Failed to convert network ssid.");
     client_controller
-        .remove_network(network_config)
+        .remove_network(config)
         .await?
         .map_err(|e| format_err!("failed to remove network with {:?}", e))?;
-    println!("Successfully removed network '{}'", config.ssid);
+    println!("Successfully removed network '{}'", ssid);
     Ok(())
 }
 
 /// Communicates with the client policy layer to save a network configuration.
 pub async fn handle_save_network(
     client_controller: wlan_policy::ClientControllerProxy,
-    config: PolicyNetworkConfig,
+    config: wlan_policy::NetworkConfig,
 ) -> Result<(), Error> {
-    let network_config = construct_network_config(config.clone())?;
-    save_network(client_controller, network_config).await
+    save_network(client_controller, config).await
 }
 
 async fn save_network(
@@ -509,13 +457,12 @@ pub async fn handle_stop_client_connections(
 pub async fn handle_start_ap(
     ap_controller: wlan_policy::AccessPointControllerProxy,
     mut server_stream: wlan_policy::AccessPointStateUpdatesRequestStream,
-    config: PolicyNetworkConfig,
+    config: wlan_policy::NetworkConfig,
 ) -> Result<(), Error> {
-    let network_config = construct_network_config(config)?;
     let connectivity_mode = wlan_policy::ConnectivityMode::Unrestricted;
     let operating_band = wlan_policy::OperatingBand::Any;
     let result =
-        ap_controller.start_access_point(network_config, connectivity_mode, operating_band).await?;
+        ap_controller.start_access_point(config, connectivity_mode, operating_band).await?;
     handle_request_status(result)?;
 
     // Listen for state updates until the service indicates that there is an active AP.
@@ -549,10 +496,9 @@ pub async fn handle_start_ap(
 /// Requests that the policy layer stop the AP associated with the given network configuration.
 pub async fn handle_stop_ap(
     ap_controller: wlan_policy::AccessPointControllerProxy,
-    config: PolicyNetworkConfig,
+    config: wlan_policy::NetworkConfig,
 ) -> Result<(), Error> {
-    let network_config = construct_network_config(config)?;
-    let result = ap_controller.stop_access_point(network_config).await?;
+    let result = ap_controller.stop_access_point(config).await?;
     handle_request_status(result)
 }
 
@@ -654,7 +600,6 @@ pub async fn handle_suggest_ap_mac(
 mod tests {
     use {
         super::*,
-        crate::opts,
         fidl::endpoints,
         fidl_fuchsia_wlan_common as fidl_wlan_common, fidl_fuchsia_wlan_policy as wlan_policy,
         fuchsia_async::TestExecutor,
@@ -863,23 +808,6 @@ mod tests {
         }
     }
 
-    /// Creates a structure equivalent to what would be generated by the argument parsing to
-    /// represent a NetworkIdentifier.
-    fn create_network_id_arg(ssid: &str) -> opts::PolicyNetworkId {
-        PolicyNetworkId { ssid: ssid.to_string(), security_type: SecurityTypeArg::Wpa2 }
-    }
-
-    /// Creates a structure equivalent to what would be generated by the argument parsing to
-    /// represent a NetworkConfig.
-    fn create_network_config_arg(ssid: &str) -> opts::PolicyNetworkConfig {
-        PolicyNetworkConfig {
-            ssid: ssid.to_string(),
-            security_type: SecurityTypeArg::Wpa2,
-            credential_type: CredentialTypeArg::Password,
-            credential: Some("some_password_here".to_string()),
-        }
-    }
-
     /// Create a scan result to be sent as a response to a scan request.
     fn create_scan_result(ssid: &str) -> wlan_policy::ScanResult {
         wlan_policy::ScanResult {
@@ -1069,7 +997,7 @@ mod tests {
     fn test_save_network_pass() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = client_test_setup();
-        let config = create_network_config_arg(TEST_SSID);
+        let config = create_network_config(TEST_SSID);
         let fut = handle_save_network(test_values.client_proxy, config);
         pin_mut!(fut);
 
@@ -1087,7 +1015,7 @@ mod tests {
     fn test_save_network_fail() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = client_test_setup();
-        let config = create_network_config_arg(TEST_SSID);
+        let config = create_network_config(TEST_SSID);
         let fut = handle_save_network(test_values.client_proxy, config);
         pin_mut!(fut);
 
@@ -1105,7 +1033,7 @@ mod tests {
     fn test_remove_network_pass() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = client_test_setup();
-        let config = create_network_config_arg(TEST_SSID);
+        let config = create_network_config(TEST_SSID);
         let fut = handle_remove_network(test_values.client_proxy, config);
         pin_mut!(fut);
 
@@ -1123,7 +1051,7 @@ mod tests {
     fn test_remove_network_fail() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = client_test_setup();
-        let config = create_network_config_arg(TEST_SSID);
+        let config = create_network_config(TEST_SSID);
         let fut = handle_remove_network(test_values.client_proxy, config);
         pin_mut!(fut);
 
@@ -1136,133 +1064,6 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
     }
 
-    /// Tests that a WEP network config will be correctly translated for save and remove network.
-    #[fuchsia::test]
-    fn test_construct_config_wep() {
-        test_construct_config_security(wlan_policy::SecurityType::Wep, SecurityTypeArg::Wep);
-    }
-
-    /// Tests that a WPA network config will be correctly translated for save and remove network.
-    #[fuchsia::test]
-    fn test_construct_config_wpa() {
-        test_construct_config_security(wlan_policy::SecurityType::Wpa, SecurityTypeArg::Wpa);
-    }
-
-    /// Tests that a WPA2 network config will be correctly translated for save and remove network.
-    #[fuchsia::test]
-    fn test_construct_config_wpa2() {
-        test_construct_config_security(wlan_policy::SecurityType::Wpa2, SecurityTypeArg::Wpa2);
-    }
-
-    /// Tests that a WPA3 network config will be correctly translated for save and remove network.
-    #[fuchsia::test]
-    fn test_construct_config_wpa3() {
-        test_construct_config_security(wlan_policy::SecurityType::Wpa3, SecurityTypeArg::Wpa3);
-    }
-
-    /// Tests that a config for an open netowrk will be correctly translated to FIDL values for
-    /// save and remove network.
-    #[fuchsia::test]
-    fn test_construct_config_open() {
-        let open_config = PolicyNetworkConfig {
-            ssid: "some_ssid".to_string(),
-            security_type: SecurityTypeArg::None,
-            credential_type: CredentialTypeArg::None,
-            credential: Some("".to_string()),
-        };
-        let expected_cfg = wlan_policy::NetworkConfig {
-            id: Some(wlan_policy::NetworkIdentifier {
-                ssid: "some_ssid".as_bytes().to_vec(),
-                type_: wlan_policy::SecurityType::None,
-            }),
-            credential: Some(wlan_policy::Credential::None(wlan_policy::Empty {})),
-            ..wlan_policy::NetworkConfig::EMPTY
-        };
-        let result_cfg =
-            construct_network_config(open_config).expect("unable to construct network config");
-        assert_eq!(expected_cfg, result_cfg);
-    }
-
-    /// Tests that a config for an open network with a password will fail gracefully.
-    #[fuchsia::test]
-    fn test_construct_config_open_with_password() {
-        let malformed_open_config = PolicyNetworkConfig {
-            ssid: "some_ssid".to_string(),
-            security_type: SecurityTypeArg::None,
-            credential_type: CredentialTypeArg::Password,
-            credential: Some("".to_string()),
-        };
-        let _errmsg = construct_network_config(malformed_open_config)
-            .expect_err("network config constructed for malformed PolicyNetworkConfig");
-    }
-
-    /// Tests that a config for a protected network without a password will fail gracefully.
-    #[fuchsia::test]
-    fn test_construct_config_protected_without_password() {
-        let malformed_wpa2_config = PolicyNetworkConfig {
-            ssid: "some_ssid".to_string(),
-            security_type: SecurityTypeArg::Wpa2,
-            credential_type: CredentialTypeArg::None,
-            credential: Some("".to_string()),
-        };
-        let _errmsg = construct_network_config(malformed_wpa2_config)
-            .expect_err("network config constructed for malformed PolicyNetworkConfig");
-    }
-
-    /// Test that a config with a PSK will be translated correctly, including a transfer from a
-    /// hex string to bytes.
-    #[fuchsia::test]
-    fn test_construct_config_psk() {
-        // Test PSK separately since it has a unique credential
-        const ASCII_ZERO: u8 = 49;
-        let psk =
-            String::from_utf8([ASCII_ZERO; 64].to_vec()).expect("Failed to create PSK test value");
-        let wpa_config = PolicyNetworkConfig {
-            ssid: "some_ssid".to_string(),
-            security_type: SecurityTypeArg::Wpa2,
-            credential_type: CredentialTypeArg::Psk,
-            credential: Some(psk),
-        };
-        let expected_cfg = wlan_policy::NetworkConfig {
-            id: Some(wlan_policy::NetworkIdentifier {
-                ssid: "some_ssid".as_bytes().to_vec(),
-                type_: wlan_policy::SecurityType::Wpa2,
-            }),
-            credential: Some(wlan_policy::Credential::Psk([17; 32].to_vec())),
-            ..wlan_policy::NetworkConfig::EMPTY
-        };
-        let result_cfg =
-            construct_network_config(wpa_config).expect("unable to construct network config");
-        assert_eq!(expected_cfg, result_cfg);
-    }
-
-    /// Test that the given variant of security type with a password works when constructing
-    /// network configs as used by save and remove network.
-    fn test_construct_config_security(
-        fidl_type: wlan_policy::SecurityType,
-        tool_type: SecurityTypeArg,
-    ) {
-        let wpa_config = PolicyNetworkConfig {
-            ssid: "some_ssid".to_string(),
-            security_type: tool_type,
-            credential_type: CredentialTypeArg::Password,
-            credential: Some("some_password_here".to_string()),
-        };
-        let expected_cfg = wlan_policy::NetworkConfig {
-            id: Some(wlan_policy::NetworkIdentifier {
-                ssid: "some_ssid".as_bytes().to_vec(),
-                type_: fidl_type,
-            }),
-            credential: Some(wlan_policy::Credential::Password(
-                "some_password_here".as_bytes().to_vec(),
-            )),
-            ..wlan_policy::NetworkConfig::EMPTY
-        };
-        let result_cfg =
-            construct_network_config(wpa_config).expect("unable to construct network config");
-        assert_eq!(expected_cfg, result_cfg);
-    }
-
     /// Tests the case where the client successfully connects.
     #[fuchsia::test]
     fn test_connect_pass() {
@@ -1270,7 +1071,7 @@ mod tests {
         let mut test_values = client_test_setup();
 
         // Start the connect routine.
-        let config = create_network_id_arg(TEST_SSID);
+        let config = create_network_id(TEST_SSID);
         let fut = handle_connect(test_values.client_proxy, test_values.update_stream, config);
         pin_mut!(fut);
 
@@ -1309,7 +1110,7 @@ mod tests {
         let mut test_values = client_test_setup();
 
         // Start the connect routine.
-        let config = create_network_id_arg(TEST_SSID);
+        let config = create_network_id(TEST_SSID);
         let fut = handle_connect(test_values.client_proxy, test_values.update_stream, config);
         pin_mut!(fut);
 
@@ -1454,7 +1255,7 @@ mod tests {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = ap_test_setup();
 
-        let network_config = create_network_config_arg(&TEST_SSID);
+        let network_config = create_network_config(&TEST_SSID);
         let fut = handle_stop_ap(test_values.ap_proxy, network_config);
         pin_mut!(fut);
 
@@ -1478,7 +1279,7 @@ mod tests {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = ap_test_setup();
 
-        let network_config = create_network_config_arg(&TEST_SSID);
+        let network_config = create_network_config(&TEST_SSID);
         let fut = handle_stop_ap(test_values.ap_proxy, network_config);
         pin_mut!(fut);
 
@@ -1502,7 +1303,7 @@ mod tests {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = ap_test_setup();
 
-        let network_config = create_network_config_arg(&TEST_SSID);
+        let network_config = create_network_config(&TEST_SSID);
         let fut = handle_start_ap(test_values.ap_proxy, test_values.update_stream, network_config);
         pin_mut!(fut);
 
@@ -1527,7 +1328,7 @@ mod tests {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = ap_test_setup();
 
-        let network_config = create_network_config_arg(&TEST_SSID);
+        let network_config = create_network_config(&TEST_SSID);
         let fut = handle_start_ap(test_values.ap_proxy, test_values.update_stream, network_config);
         pin_mut!(fut);
 
@@ -1569,7 +1370,7 @@ mod tests {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = ap_test_setup();
 
-        let network_config = create_network_config_arg(&TEST_SSID);
+        let network_config = create_network_config(&TEST_SSID);
         let fut = handle_start_ap(test_values.ap_proxy, test_values.update_stream, network_config);
         pin_mut!(fut);
 

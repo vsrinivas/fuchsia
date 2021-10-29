@@ -51,4 +51,10 @@ fuchsia_shell_package("donut") {
 
 fuchsia_unittest_package("donut-tests") {
   deps = [ ":bin_test" ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

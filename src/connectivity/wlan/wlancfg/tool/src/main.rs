@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{Context, Error};
+use fidl_fuchsia_wlan_policy as wlan_policy;
 use fuchsia_async as fasync;
 use structopt::StructOpt;
 
@@ -31,6 +32,7 @@ async fn do_policy_client_cmd(cmd: opts::PolicyClientCmd) -> Result<(), Error> {
     match cmd {
         opts::PolicyClientCmd::Connect(network_id) => {
             let (client_controller, updates_server_end) = get_client_controller().await?;
+            let network_id = wlan_policy::NetworkIdentifier::from(network_id);
             handle_connect(client_controller, updates_server_end, network_id).await?;
         }
         opts::PolicyClientCmd::GetSavedNetworks => {
@@ -44,10 +46,12 @@ async fn do_policy_client_cmd(cmd: opts::PolicyClientCmd) -> Result<(), Error> {
         }
         opts::PolicyClientCmd::RemoveNetwork(network_config) => {
             let (client_controller, _) = get_client_controller().await?;
+            let network_config = wlan_policy::NetworkConfig::from(network_config);
             handle_remove_network(client_controller, network_config).await?;
         }
         opts::PolicyClientCmd::SaveNetwork(network_config) => {
             let (client_controller, _) = get_client_controller().await?;
+            let network_config = wlan_policy::NetworkConfig::from(network_config);
             handle_save_network(client_controller, network_config).await?;
         }
         opts::PolicyClientCmd::ScanForNetworks => {
@@ -80,10 +84,12 @@ async fn do_policy_ap_cmd(cmd: opts::PolicyAccessPointCmd) -> Result<(), Error> 
     match cmd {
         opts::PolicyAccessPointCmd::Start(network_config) => {
             let (ap_controller, updates_server_end) = get_ap_controller()?;
+            let network_config = wlan_policy::NetworkConfig::from(network_config);
             handle_start_ap(ap_controller, updates_server_end, network_config).await?;
         }
         opts::PolicyAccessPointCmd::Stop(network_config) => {
             let (ap_controller, _) = get_ap_controller()?;
+            let network_config = wlan_policy::NetworkConfig::from(network_config);
             handle_stop_ap(ap_controller, network_config).await?;
         }
         opts::PolicyAccessPointCmd::StopAllAccessPoints => {
