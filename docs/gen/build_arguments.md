@@ -873,19 +873,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/7bccfbf512b941609a37680517ce8a71867a9322/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/e28f31ea4f66fd820f47b66fd50cb57b15daf1e0/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/7bccfbf512b941609a37680517ce8a71867a9322/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/e28f31ea4f66fd820f47b66fd50cb57b15daf1e0/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/7bccfbf512b941609a37680517ce8a71867a9322/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/e28f31ea4f66fd820f47b66fd50cb57b15daf1e0/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -3414,7 +3414,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"dJexSuyWWTvAoabObVcLk5fBr-cRK_Wg2Ds7xsO4MqIC"`
+**Current value (from the default):** `"OZaOVXP21h__FDoOH26fDhPjbNH9i9Is96DF22U9cMUC"`
 
 From //build/rust/config.gni:30
 
