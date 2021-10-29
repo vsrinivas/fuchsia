@@ -315,8 +315,10 @@ static zx_status_t iwl_mvm_rx_crypto(struct iwl_mvm* mvm, struct ieee80211_frame
         return 0;
 #endif  // NEEDS_PORTING
     default:
-        /* Expected in monitor (not having the keys) */
-        if (!mvm->monitor_on) { IWL_ERR(mvm, "Unhandled alg: 0x%x\n", status); }
+      /* Expected in monitor (not having the keys) */
+      if (!mvm->monitor_on) {
+        IWL_ERR(mvm, "Unhandled alg: 0x%x\n", status);
+      }
   }
 
   return 0;
