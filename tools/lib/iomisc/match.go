@@ -23,7 +23,7 @@ type MatchingReader struct {
 }
 
 // NewMatchingReader returns a MatchingReader that matches any of toMatch.
-func NewMatchingReader(reader io.Reader, toMatch [][]byte) *MatchingReader {
+func NewMatchingReader(reader io.Reader, toMatch ...[]byte) *MatchingReader {
 	return &MatchingReader{
 		r:        reader,
 		toMatch:  toMatch,
@@ -71,12 +71,13 @@ func (m *MatchingReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-// ReadUntilMatch reads from a MatchingReader until a match has been read
-// and returns the match.
+// ReadUntilMatch reads from a Reader until it encounters an occurrence of one
+// of the byte slices specified in toMatch.
 // Checks ctx for cancellation only between calls to m.Read(), so cancellation
 // will not be noticed if m.Read() blocks.
 // See https://github.com/golang/go/issues/20280 for discussion of similar issues.
-func ReadUntilMatch(ctx context.Context, m *MatchingReader) ([]byte, error) {
+func ReadUntilMatch(ctx context.Context, reader io.Reader, toMatch ...[]byte) ([]byte, error) {
+	m := NewMatchingReader(reader, toMatch...)
 	// buf size considerations: smaller => more responsive to ctx cancellation,
 	// larger => less CPU overhead.
 	buf := make([]byte, 1024)
@@ -99,6 +100,17 @@ func ReadUntilMatch(ctx context.Context, m *MatchingReader) ([]byte, error) {
 	logger.Debugf(ctx, "ReadUntilMatch: last %d bytes read before cancellation: %q", lastReadSize, buf[:lastReadSize])
 
 	return nil, ctx.Err()
+}
+
+// ReadUntilMatchString has identical behavior to ReadUntilMatch, but accepts
+// and returns strings instead of byte slices.
+func ReadUntilMatchString(ctx context.Context, reader io.Reader, strings ...string) (string, error) {
+	var toMatch [][]byte
+	for _, s := range strings {
+		toMatch = append(toMatch, []byte(s))
+	}
+	b, err := ReadUntilMatch(ctx, reader, toMatch...)
+	return string(b), err
 }
 
 func min(a, b int) int {

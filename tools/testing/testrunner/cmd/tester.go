@@ -700,7 +700,7 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 	// completion. Thus we save the last read from the socket and replay it when searching for completion.
 	lastWrite := &lastWriteSaver{}
 	t.socket.SetIOTimeout(testStartedTimeout)
-	startedReader := iomisc.NewMatchingReader(io.TeeReader(t.socket, lastWrite), [][]byte{[]byte(runtests.StartedSignature + test.Name)})
+	reader := io.TeeReader(t.socket, lastWrite)
 	commandStarted := false
 	var readErr error
 	for i := 0; i < startSerialCommandMaxAttempts; i++ {
@@ -708,7 +708,8 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 			return sinks, fmt.Errorf("failed to write to serial socket: %w", err)
 		}
 		startedCtx, cancel := newTestStartedContext(ctx)
-		_, readErr = iomisc.ReadUntilMatch(startedCtx, startedReader)
+		startedStr := runtests.StartedSignature + test.Name
+		_, readErr = iomisc.ReadUntilMatchString(startedCtx, reader, startedStr)
 		cancel()
 		if readErr == nil {
 			commandStarted = true

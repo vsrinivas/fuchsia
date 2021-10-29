@@ -220,7 +220,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 				return
 			}
 			defer socket.Close()
-			_, err = iomisc.ReadUntilMatch(ctx, iomisc.NewMatchingReader(socket, [][]byte{[]byte(bootedLogSignature)}))
+			_, err = iomisc.ReadUntilMatchString(ctx, socket, bootedLogSignature)
 			bootedLogChan <- err
 		}()
 	}

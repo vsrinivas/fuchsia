@@ -15,8 +15,9 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"golang.org/x/sync/errgroup"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 )
 
 type fakeSerialServer struct {
@@ -43,7 +44,7 @@ func (s *fakeSerialServer) Serve() error {
 	if _, err := conn.Write([]byte(consoleCursor)); err != nil {
 		return fmt.Errorf("conn.Write() failed: %v", err)
 	}
-	reader := iomisc.NewMatchingReader(conn, [][]byte{[]byte(s.shutdownString)})
+	reader := iomisc.NewMatchingReader(conn, []byte(s.shutdownString))
 	for {
 		buf := make([]byte, 1024)
 		bytesRead, err := reader.Read(buf)

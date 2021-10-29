@@ -117,8 +117,7 @@ func NewSocketWithIOTimeout(ctx context.Context, socketPath string, ioTimeout ti
 	// Look for the cursor, which should indicate that the console is ready for input.
 	ctx, cancel := context.WithTimeout(ctx, 45*time.Second)
 	defer cancel()
-	m := iomisc.NewMatchingReader(socket, [][]byte{[]byte(consoleCursor)})
-	if _, err = iomisc.ReadUntilMatch(ctx, m); err != nil {
+	if _, err = iomisc.ReadUntilMatchString(ctx, socket, consoleCursor); err != nil {
 		return nil, fmt.Errorf("failed to find cursor: %v", err)
 	}
 	return socket, nil
