@@ -23,6 +23,7 @@ schemas = [
   "manifest.json",
   "physical_device-0bd5d21f.json",
   "product_bundle-6320eef1.json",
+  "product_bundle_container-76a5c104.json",
   "sysroot.json",
   "version_history.json",
   "virtual_device-93A41932.json",

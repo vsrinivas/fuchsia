@@ -5,6 +5,11 @@
             "$ref": "common.json#/definitions/versioned_sdk_element"
         },
         {
+            "$ref": "#/definitions/product_bundle"
+        }
+    ],
+    "definitions": {
+        "product_bundle": {
             "properties": {
                 "data": {
                     "properties": {
@@ -72,10 +77,11 @@
                     "type": "object"
                 }
             },
+            "required": [
+                "data"
+            ],
             "type": "object"
-        }
-    ],
-    "definitions": {
+        },
         "bundle_uri": {
             "description": "Allowed system image and package bundle URIs.",
             "format": "uri",
