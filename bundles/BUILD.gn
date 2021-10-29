@@ -87,6 +87,7 @@ group("tests") {
     "//sdk:tests",
     "//src:tests",
     "//third_party/go:tests",
+    "//third_party/re2:tests",
     "//tools:tests",
   ]
 }

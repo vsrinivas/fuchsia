@@ -1,0 +1,201 @@
+# Copyright 2021 The Fuchsia Authors.  All Rights Reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+import("//build/components/fuchsia_unittest_package.gni")
+
+config("re2_config") {
+  include_dirs = [ "src" ]
+}
+
+config("re2_skipped_warnings") {
+  visibility = [ ":*" ]
+  cflags = [
+    "-Wno-conversion",
+    "-Wno-missing-field-initializers",
+    "-Wno-tautological-unsigned-enum-zero-compare",
+    "-Wno-tautological-unsigned-zero-compare",
+    "-Wno-unused",
+    "-Wno-unused-parameter",
+  ]
+}
+
+# Tests depend on this target instead of ":re2" because the .so exports a
+# limited set of symbols and tests need access to the full symbol list.
+source_set("re2_source") {
+  visibility = [ ":*" ]
+  sources = [
+    "src/re2/bitmap256.h",
+    "src/re2/bitstate.cc",
+    "src/re2/compile.cc",
+    "src/re2/dfa.cc",
+    "src/re2/filtered_re2.cc",
+    "src/re2/filtered_re2.h",
+    "src/re2/mimics_pcre.cc",
+    "src/re2/nfa.cc",
+    "src/re2/onepass.cc",
+    "src/re2/parse.cc",
+    "src/re2/perl_groups.cc",
+    "src/re2/prefilter.cc",
+    "src/re2/prefilter.h",
+    "src/re2/prefilter_tree.cc",
+    "src/re2/prefilter_tree.h",
+    "src/re2/prog.cc",
+    "src/re2/prog.h",
+    "src/re2/re2.cc",
+    "src/re2/re2.h",
+    "src/re2/regexp.cc",
+    "src/re2/regexp.h",
+    "src/re2/set.cc",
+    "src/re2/set.h",
+    "src/re2/simplify.cc",
+    "src/re2/sparse_array.h",
+    "src/re2/sparse_set.h",
+    "src/re2/stringpiece.cc",
+    "src/re2/stringpiece.h",
+    "src/re2/tostring.cc",
+    "src/re2/unicode_casefold.cc",
+    "src/re2/unicode_casefold.h",
+    "src/re2/unicode_groups.cc",
+    "src/re2/unicode_groups.h",
+    "src/re2/walker-inl.h",
+    "src/util/flags.h",
+    "src/util/logging.h",
+    "src/util/mutex.h",
+    "src/util/rune.cc",
+    "src/util/strutil.cc",
+    "src/util/utf.h",
+    "src/util/util.h",
+  ]
+  public = [ "src/re2/re2.h" ]
+  public_configs = [ ":re2_config" ]
+  configs += [ ":re2_skipped_warnings" ]
+
+  # Ensure the symbols are not hidden else the .so won't have any exported
+  # symbols. When we build the .so (below) we supply a linker script which
+  # limits the set of public symbols.
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
+}
+
+# Building as a shared library to reduce space usage in production images.
+# See space analysis in fxrev.dev/532721.
+shared_library("re2") {
+  deps = [ ":re2_source" ]
+  public = [ "src/re2/re2.h" ]
+  public_configs = [ ":re2_config" ]
+  configs += [ ":re2_skipped_warnings" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
+
+  if (is_mac) {
+    version_script = "src/libre2.symbols.darwin"
+  } else {
+    version_script = "src/libre2.symbols"
+  }
+  inputs = [ version_script ]
+  if (is_mac) {
+    ldflags = [ "-Wl,-exported_symbols_list=" +
+                rebase_path(version_script, root_build_dir) ]
+  } else {
+    ldflags = [ "-Wl,--version-script=" +
+                rebase_path(version_script, root_build_dir) ]
+  }
+}
+
+source_set("testing") {
+  testonly = true
+  visibility = [ ":*" ]
+  sources = [
+    "src/re2/testing/backtrack.cc",
+    "src/re2/testing/dump.cc",
+    "src/re2/testing/exhaustive_tester.cc",
+    "src/re2/testing/exhaustive_tester.h",
+    "src/re2/testing/null_walker.cc",
+    "src/re2/testing/regexp_generator.cc",
+    "src/re2/testing/regexp_generator.h",
+    "src/re2/testing/string_generator.cc",
+    "src/re2/testing/string_generator.h",
+    "src/re2/testing/tester.cc",
+    "src/re2/testing/tester.h",
+    "src/util/benchmark.h",
+    "src/util/pcre.cc",
+    "src/util/pcre.h",
+    "src/util/test.h",
+  ]
+  public_deps = [ ":re2_source" ]
+  configs += [ ":re2_skipped_warnings" ]
+}
+
+executable("re2_fast_tests_bin") {
+  testonly = true
+  sources = [
+    "src/re2/testing/charclass_test.cc",
+    "src/re2/testing/compile_test.cc",
+    "src/re2/testing/filtered_re2_test.cc",
+    "src/re2/testing/mimics_pcre_test.cc",
+    "src/re2/testing/parse_test.cc",
+    "src/re2/testing/possible_match_test.cc",
+    "src/re2/testing/re2_arg_test.cc",
+    "src/re2/testing/re2_test.cc",
+    "src/re2/testing/regexp_test.cc",
+    "src/re2/testing/required_prefix_test.cc",
+    "src/re2/testing/search_test.cc",
+    "src/re2/testing/set_test.cc",
+    "src/re2/testing/simplify_test.cc",
+    "src/re2/testing/string_generator_test.cc",
+    "src/util/test.cc",
+  ]
+  deps = [ ":testing" ]
+  configs += [ ":re2_skipped_warnings" ]
+}
+
+executable("re2_slow_tests_bin") {
+  testonly = true
+  sources = [
+    "src/re2/testing/dfa_test.cc",
+    "src/re2/testing/exhaustive1_test.cc",
+    "src/re2/testing/exhaustive2_test.cc",
+    "src/re2/testing/exhaustive3_test.cc",
+    "src/re2/testing/exhaustive_test.cc",
+    "src/re2/testing/random_test.cc",
+    "src/util/test.cc",
+  ]
+  deps = [ ":testing" ]
+  configs += [ ":re2_skipped_warnings" ]
+}
+
+executable("re2_benchmarks") {
+  testonly = true
+  sources = [
+    "src/re2/testing/regexp_benchmark.cc",
+    "src/util/benchmark.cc",
+  ]
+  deps = [ ":re2_source" ]
+  public_deps = [ ":testing" ]
+  configs += [ ":re2_skipped_warnings" ]
+}
+
+fuchsia_unittest_package("re2_fast_tests") {
+  deps = [
+    ":re2_fast_tests_bin",
+    "//src/sys/testing/elftest",
+  ]
+}
+
+fuchsia_unittest_package("re2_slow_tests") {
+  deps = [
+    ":re2_slow_tests_bin",
+    "//src/sys/testing/elftest",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":re2_fast_tests",
+
+    # Ensure these build, but don't run them by default: benchmarks don't have
+    # a pass/fail status and the slow tests take hours to run.
+    ":re2_benchmarks",
+    ":re2_slow_tests_bin",
+  ]
+}

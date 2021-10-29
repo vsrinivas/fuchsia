@@ -96,6 +96,8 @@ tables_generator_tests_*.txt
 /third_party/zstd/src
 !/third_party/parameterized
 /third_party/parameterized/src
+!/third_party/re2/
+/third_party/re2/src
 /tmp/
 /topaz/
 /vendor/
