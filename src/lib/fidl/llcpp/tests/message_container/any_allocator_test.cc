@@ -70,3 +70,41 @@ TEST(AnyBufferAllocator, WrapArena) {
     addresses.insert(addr);
   }
 }
+
+// Test that the user could extend `.buffer(...)` calls with their custom memory
+// resource by defining a |MakeFidlAnyMemoryResource| function.
+namespace my_fancy_memory_resource {
+
+// A simple allocator that delegates to `new` and `delete`.
+struct HeapAllocator {
+  ~HeapAllocator() {
+    for (const auto& allocation : allocations_) {
+      delete[] allocation;
+    }
+  }
+
+ private:
+  friend fidl::AnyMemoryResource MakeFidlAnyMemoryResource(HeapAllocator& a) {
+    return [&a](uint32_t num_bytes) {
+      uint8_t* allocation = new uint8_t[num_bytes];
+      a.allocations_.push_back(allocation);
+      return allocation;
+    };
+  }
+
+  std::vector<uint8_t*> allocations_;
+};
+
+}  // namespace my_fancy_memory_resource
+
+TEST(AnyBufferAllocator, WrapCustomMemoryResource) {
+  my_fancy_memory_resource::HeapAllocator custom_allocator{};
+  AnyBufferAllocator allocator = ::fidl::internal::MakeAnyBufferAllocator(custom_allocator);
+  constexpr uint32_t kAllocSize = 10;
+  uint8_t* bytes = allocator.Allocate(kAllocSize);
+  ASSERT_NOT_NULL(bytes);
+  memset(bytes, 0xFF, kAllocSize);
+  for (size_t i = 0; i < kAllocSize; i++) {
+    EXPECT_EQ(0xFF, bytes[i]);
+  }
+}

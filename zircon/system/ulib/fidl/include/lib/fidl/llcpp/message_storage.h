@@ -29,6 +29,21 @@
 
 namespace fidl {
 
+// An |AnyMemoryResource| is a type-erased object that responds to allocation
+// commands and updates the state of the underlying memory resource referenced
+// by it. It is similar to a reducer in functional-reactive programming.
+//
+// If the memory resource cannot satisfy the allocation, it should return
+// nullptr, and preserve its original state before the allocation.
+//
+// Using |inline_function| ensures that there is no heap allocation, which would
+// otherwise defeat the purpose of caller-allocating flavors.
+//
+// |num_bytes| represents the size of the allocation request.
+//
+// See |AnyBufferAllocator|.
+using AnyMemoryResource = fit::inline_function<uint8_t*(uint32_t num_bytes)>;
+
 // Holds a reference to any storage buffer. This is independent of the allocation.
 struct BufferSpan {
   BufferSpan() = default;
@@ -36,6 +51,11 @@ struct BufferSpan {
 
   uint8_t* data = nullptr;
   uint32_t capacity = 0;
+
+ private:
+  // Type erasing adaptor from |BufferSpan| to |AnyBufferAllocator|.
+  // See |AnyBufferAllocator|.
+  friend AnyMemoryResource MakeFidlAnyMemoryResource(fidl::BufferSpan buffer_span);
 };
 
 namespace internal {
@@ -94,7 +114,7 @@ struct BoxedMessageBuffer {
 
 // |AnyBufferAllocator| is a type-erasing buffer allocator. Its main purpose is
 // to extend the caller-allocating call/reply flavors to work with a flexible
-// range of buffer-like types ("upstream allocators").
+// range of buffer-like types ("memory resources").
 //
 // This class is similar in spirit to a |std::pmr::polymorphic_allocator|,
 // except that it is specialized to allocating buffers (ranges of bytes).
@@ -106,45 +126,43 @@ struct BoxedMessageBuffer {
 // initialized with a reference to some arena, allocates in that arena.
 //
 // To extend |AnyBufferAllocator| to work with future buffer-like types,
-// declare a function overload for a user type |U| in the |::fidl::internal|
-// namespace:
+// declare this function for a user type |R| in the same namespace as the
+// user type:
 //
-//     AnyBufferAllocator MakeAnyBufferAllocator(U upstream_allocator);
+//     fidl::AnyMemoryResource MakeFidlAnyMemoryResource(R memory_resource);
 //
+// If possible, it is recommended to only declare this function as a friend of
+// the user type (i.e. declare it within the user type definition, the "hidden
+// member friend pattern"), such that it is hidden from qualified calls and only
+// findable by ADL.
 class AnyBufferAllocator {
  public:
-  // An upstream allocator is an object that responds to allocation commands and
-  // updates the state of the underlying memory resource referenced by the
-  // function. It is similar to a reducer in functional-reactive programming.
-  //
-  // If the allocator cannot satisfy the allocation, it should return nullptr,
-  // and preserve its original state before the allocation.
-  //
-  // Using |inline_function| ensures that there is no heap allocation, which
-  // would otherwise defeat the purpose of caller-allocating flavors.
-  //
-  // |num_bytes| represents the size of the allocation request.
-  using UpstreamAllocator = fit::inline_function<uint8_t*(uint32_t num_bytes)>;
-
-  // This constructor should only be used by |MakeAnyBufferAllocator|.
-  explicit AnyBufferAllocator(UpstreamAllocator&& upstream_allocator)
-      : resource_(std::move(upstream_allocator)) {}
-
   // Allocates a buffer of size |num_bytes|.
-  uint8_t* Allocate(uint32_t num_bytes) { return resource_(num_bytes); }
+  uint8_t* Allocate(uint32_t num_bytes) { return memory_resource_(num_bytes); }
 
  private:
-  UpstreamAllocator resource_;
+  template <typename MemoryResource>
+  friend AnyBufferAllocator MakeAnyBufferAllocator(MemoryResource&& resource);
+
+  // This constructor should only be used by |MakeAnyBufferAllocator|.
+  explicit AnyBufferAllocator(AnyMemoryResource&& memory_resource)
+      : memory_resource_(std::move(memory_resource)) {}
+
+  AnyMemoryResource memory_resource_;
 };
 
 static_assert(sizeof(AnyBufferAllocator) <= 4 * sizeof(void*),
               "AnyBufferAllocator should be reasonably small");
 
-// Type erasing adaptor from |BufferSpan| to |AnyBufferAllocator|.
-// See |AnyBufferAllocator|.
-AnyBufferAllocator MakeAnyBufferAllocator(fidl::BufferSpan buffer_span);
+template <typename MemoryResource>
+AnyBufferAllocator MakeAnyBufferAllocator(MemoryResource&& resource) {
+  // The |MakeFidlAnyMemoryResource| function will be found via
+  // argument-dependent-lookup.
+  return AnyBufferAllocator(MakeFidlAnyMemoryResource(std::forward<MemoryResource>(resource)));
+}
 
 }  // namespace internal
+
 }  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_MESSAGE_STORAGE_H_

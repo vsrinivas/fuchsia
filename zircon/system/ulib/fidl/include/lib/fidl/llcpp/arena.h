@@ -19,16 +19,6 @@ class ArenaChecker;
 
 namespace fidl {
 
-class AnyArena;
-
-namespace internal {
-
-// Type-erasing adaptor from |AnyArena&| to |AnyBufferAllocator|.
-// See |AnyBufferAllocator|.
-AnyBufferAllocator MakeAnyBufferAllocator(AnyArena& arena);
-
-}  // namespace internal
-
 // |AnyArena| is the base class of all of the |Arena| classes. It is independent
 // of the initial buffer size. All the implementation is done here. The |Arena|
 // specializations only exist to define the initial buffer size.
@@ -200,7 +190,10 @@ class AnyArena {
   template <size_t>
   friend class Arena;
 
-  friend internal::AnyBufferAllocator internal::MakeAnyBufferAllocator(AnyArena& arena);
+  // Type-erasing adaptor from |AnyArena&| to |AnyBufferAllocator|.
+  // See |AnyBufferAllocator|.
+  friend AnyMemoryResource MakeFidlAnyMemoryResource(AnyArena& arena);
+
   friend ::fidl_testing::ArenaChecker;
 };
 

@@ -7,14 +7,13 @@
 #include <zircon/compiler.h>
 
 namespace fidl {
-namespace internal {
 
-AnyBufferAllocator MakeAnyBufferAllocator(fidl::BufferSpan buffer_span) {
+AnyMemoryResource MakeFidlAnyMemoryResource(fidl::BufferSpan buffer_span) {
   uint8_t* data = buffer_span.data;
   uint32_t capacity = buffer_span.capacity;
   uint32_t used = 0;
 
-  return AnyBufferAllocator([data, capacity, used](uint32_t num_bytes) mutable -> uint8_t* {
+  return [data, capacity, used](uint32_t num_bytes) mutable -> uint8_t* {
     uint32_t used_original = used;
     if (unlikely(add_overflow(used, num_bytes, &used))) {
       // Allocation overflowed, revert to previous state.
@@ -27,8 +26,7 @@ AnyBufferAllocator MakeAnyBufferAllocator(fidl::BufferSpan buffer_span) {
       return nullptr;
     }
     return &data[used_original];
-  });
+  };
 }
 
-}  // namespace internal
 }  // namespace fidl

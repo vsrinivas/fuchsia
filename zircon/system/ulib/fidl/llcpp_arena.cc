@@ -60,14 +60,10 @@ uint8_t* AnyArena::Allocate(size_t size, size_t count,
   return data;
 }
 
-namespace internal {
-
-AnyBufferAllocator MakeAnyBufferAllocator(AnyArena& arena) {
-  return AnyBufferAllocator([&arena](uint32_t num_bytes) mutable -> uint8_t* {
+AnyMemoryResource MakeFidlAnyMemoryResource(AnyArena& arena) {
+  return [&arena](uint32_t num_bytes) mutable -> uint8_t* {
     return arena.AllocateVector<uint8_t>(num_bytes);
-  });
+  };
 }
-
-}  // namespace internal
 
 }  // namespace fidl
