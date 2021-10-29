@@ -52,6 +52,7 @@ fuchsia_test_package("focus-input-test") {
     environments = [
       {
         dimensions = {
+          # Ensure the device has Vulkan.
           device_type = "AEMU"
         }
       },

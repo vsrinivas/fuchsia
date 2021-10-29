@@ -10,8 +10,10 @@ group("tests") {
   deps = [
     ":pointerinjector-config-test",
     "//src/cobalt/bin/testing/mock_cobalt",
-    "//src/graphics/bin/vulkan_loader",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
+
+    # The deps below are necessary on minimal product configs.
+    "//src/graphics/bin/vulkan_loader",
   ]
 }
 
@@ -52,6 +54,7 @@ fuchsia_unittest_package("pointerinjector-config-test") {
     environments = [
       {
         dimensions = {
+          # Ensure the device has Vulkan.
           device_type = "AEMU"
         }
       },

@@ -164,6 +164,7 @@ fuchsia_test_package("touch-input-test-ip") {
     environments = [
       {
         dimensions = {
+          # Ensure the device has Vulkan.
           device_type = "AEMU"
         }
       },

@@ -10,6 +10,9 @@ group("tests") {
   deps = [
     ":mediabuttons-integration-tests",
     ":mediabuttons-integration-tests-ip",
+
+    # The deps below are necessary on minimal product configs.
+    "//src/graphics/bin/vulkan_loader",
   ]
 }
 
@@ -97,6 +100,7 @@ fuchsia_unittest_package("mediabuttons-integration-tests-ip") {
     environments = [
       {
         dimensions = {
+          # Ensure the device has Vulkan.
           device_type = "AEMU"
         }
       },

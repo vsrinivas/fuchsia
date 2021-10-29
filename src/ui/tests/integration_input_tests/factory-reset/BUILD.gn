@@ -8,7 +8,12 @@ import("//build/config.gni")
 group("tests") {
   testonly = true
 
-  deps = [ ":factory-reset-test" ]
+  deps = [
+    ":factory-reset-test",
+
+    # The deps below are necessary on minimal product configs.
+    "//src/graphics/bin/vulkan_loader",
+  ]
 }
 
 executable("factory_reset_test") {
@@ -50,5 +55,13 @@ fuchsia_unittest_package("factory-reset-test") {
     log_settings = {
       max_severity = "ERROR"
     }
+    environments = [
+      {
+        dimensions = {
+          # Ensure the device has Vulkan.
+          device_type = "AEMU"
+        }
+      },
+    ]
   }
 }

@@ -68,6 +68,7 @@ fuchsia_test_package("virtual-keyboard-test") {
     environments = [
       {
         dimensions = {
+          # Ensure the device has Vulkan.
           device_type = "AEMU"
         }
         tags = [ "flaky" ]
