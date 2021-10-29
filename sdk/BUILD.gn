@@ -53,7 +53,7 @@ generated_file("all_fidl_sdk_json") {
 generated_file("plasa") {
   testonly = true
   data_keys = [ "plasa" ]
-  outputs = [ "$root_build_dir/plasa.manifest.json" ]
+  outputs = [ "$root_build_dir/manifest.plasa.json" ]
   output_conversion = "json"
   deps = _sdk_public_deps
 }
