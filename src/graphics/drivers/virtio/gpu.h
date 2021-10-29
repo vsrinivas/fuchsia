@@ -125,8 +125,10 @@ class GpuDevice : public Device,
   display_controller_interface_protocol_t dc_intf_ = {};
   sysmem_protocol_t sysmem_ = {};
 
-  struct imported_image* current_fb_ = nullptr;
+  struct imported_image* latest_fb_ = nullptr;
   struct imported_image* displayed_fb_ = nullptr;
+  config_stamp_t latest_config_stamp_ = {.value = INVALID_CONFIG_STAMP};
+  config_stamp_t displayed_config_stamp_ = {.value = INVALID_CONFIG_STAMP};
 
   zx_pixel_format_t supported_formats_ = ZX_PIXEL_FORMAT_RGB_x888;
 };

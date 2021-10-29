@@ -229,13 +229,15 @@ uint32_t GpuDevice::DisplayControllerImplCheckConfiguration(
 void GpuDevice::DisplayControllerImplApplyConfiguration(const display_config_t** display_configs,
                                                         size_t display_count,
                                                         const config_stamp_t* config_stamp) {
+  ZX_DEBUG_ASSERT(config_stamp);
   uint64_t handle = display_count == 0 || display_configs[0]->layer_count == 0
                         ? 0
                         : display_configs[0]->layer_list[0]->cfg.primary.image.handle;
 
   {
     fbl::AutoLock al(&flush_lock_);
-    current_fb_ = reinterpret_cast<imported_image_t*>(handle);
+    latest_fb_ = reinterpret_cast<imported_image_t*>(handle);
+    latest_config_stamp_ = *config_stamp;
   }
 
   Flush();
@@ -519,8 +521,9 @@ void GpuDevice::virtio_gpu_flusher() {
     bool fb_change;
     {
       fbl::AutoLock al(&flush_lock_);
-      fb_change = displayed_fb_ != current_fb_;
-      displayed_fb_ = current_fb_;
+      fb_change = displayed_fb_ != latest_fb_;
+      displayed_fb_ = latest_fb_;
+      displayed_config_stamp_ = latest_config_stamp_;
     }
 
     LTRACEF("flushing\n");
@@ -552,9 +555,8 @@ void GpuDevice::virtio_gpu_flusher() {
     {
       fbl::AutoLock al(&flush_lock_);
       if (dc_intf_.ops) {
-        uint64_t handles[] = {reinterpret_cast<uint64_t>(displayed_fb_)};
-        display_controller_interface_on_display_vsync(&dc_intf_, kDisplayId, next_deadline, handles,
-                                                      displayed_fb_ != nullptr);
+        display_controller_interface_on_display_vsync2(&dc_intf_, kDisplayId, next_deadline,
+                                                       &displayed_config_stamp_);
       }
     }
     next_deadline = zx_time_add_duration(next_deadline, period);
