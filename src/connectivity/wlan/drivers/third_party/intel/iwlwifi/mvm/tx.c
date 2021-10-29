@@ -411,7 +411,7 @@ static zx_status_t iwl_mvm_set_tx_cmd_crypto(struct iwl_mvm* mvm, struct iwl_mvm
       pkt->headroom_used_size += 8;
       break;
     default:
-        tx_cmd->sec_ctl |= TX_CMD_SEC_EXT;
+      tx_cmd->sec_ctl |= TX_CMD_SEC_EXT;
   }
   return ZX_OK;
 }
@@ -512,7 +512,8 @@ static zx_status_t iwl_mvm_set_tx_params(struct iwl_mvm* mvm, struct ieee80211_m
   tx_cmd = (struct iwl_tx_cmd*)dev_cmd->payload;
   iwl_mvm_set_tx_cmd(mvm, pkt, tx_cmd, sta_id);
 
-  if (mvmsta->key_conf) {
+  // Setup crypto only if protection bit is set in the Mac Header
+  if (mvmsta->key_conf && ieee80211_pkt_is_protected(pkt->common_header)) {
     if ((ret = iwl_mvm_set_tx_cmd_crypto(mvm, mvmsta->key_conf, tx_cmd, pkt)) != ZX_OK) {
       return ret;
     }

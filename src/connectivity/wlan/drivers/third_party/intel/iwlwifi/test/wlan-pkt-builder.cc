@@ -51,9 +51,11 @@ WlanPktBuilder::WlanPktBuilder() = default;
 
 WlanPktBuilder::~WlanPktBuilder() = default;
 
-std::shared_ptr<WlanPktBuilder::WlanPkt> WlanPktBuilder::build() {
-  static constexpr uint8_t kMacPkt[] = {
-      0x08, 0x01,                          // frame_ctrl
+std::shared_ptr<WlanPktBuilder::WlanPkt> WlanPktBuilder::build(uint16_t fc) {
+  const uint8_t fc0 = (uint8_t)fc & 0xff;
+  const uint8_t fc1 = (uint8_t)(fc >> 8);
+  const uint8_t kMacPkt[] = {
+      fc0,  fc1,                           // frame_ctrl
       0x00, 0x00,                          // duration
       0x11, 0x22, 0x33, 0x44, 0x55, 0x66,  // MAC1
       0x01, 0x02, 0x03, 0x04, 0x05, 0x06,  // MAC2

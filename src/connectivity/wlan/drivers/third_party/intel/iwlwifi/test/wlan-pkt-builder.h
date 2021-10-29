@@ -64,7 +64,7 @@ class WlanPktBuilder {
   WlanPktBuilder& operator=(const WlanPktBuilder&) = delete;  // copy assignment
   WlanPktBuilder& operator=(WlanPktBuilder&&) = delete;       // move assignment
 
-  std::shared_ptr<WlanPkt> build();
+  std::shared_ptr<WlanPkt> build(uint16_t fc = 0x0801);
 };
 
 }  // namespace wlan::testing
