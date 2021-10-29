@@ -111,9 +111,10 @@ template("plasa_artifacts") {
     metadata = {
       plasa = [
         {
-          # 'kind' specifies the type of the file. Knowing 'kind' should be
-          # enough to know which data schema to use to read and interpret it.
-          kind = "fragment_api_cc"
+          # 'kind' specifies the type of the data in the file. Knowing 'kind'
+          # should be enough to know which data schema to use to read and
+          # interpret it.
+          kind = "api_cc"
 
           # 'file' is the label of the file, i.e. a string starting with '//'.
           file = _plasa_api_output_file

@@ -1,8 +1,14 @@
 [
     {
-        "path": "fragment1.plasa.json"
+        "path": "fragment1.plasa.json",
+        "kind": "api_cc"
     },
     {
-        "path": "fragment2.plasa.json"
+        "path": "fragment2.plasa.json",
+        "kind": "api_cc"
+    },
+    {
+        "path": "fragment-fidl.plasa.json",
+        "kind": "api_fidl"
     }
 ]

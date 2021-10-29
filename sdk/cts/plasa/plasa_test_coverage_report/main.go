@@ -20,6 +20,7 @@ import (
 	"sort"
 
 	"go.fuchsia.dev/fuchsia/sdk/cts/plasa/model"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/summarize"
 )
 
 var (
@@ -72,8 +73,14 @@ type TestCoverageReportItem struct {
 	Kind string `json:"kind"`
 }
 
-// KindCCAPI denotes a C++ API element.
-const KindCCAPI = "cc_api"
+const (
+	// kindCCAPI denotes a C++ API element.
+	kindCCAPI = "api_cc"
+	// kindFIDLAPI denotes a FIDL API element.
+	kindFIDLAPI = "api_fidl"
+	// kindFIDLProtocolMember is a kind of a FIDL API element, which is in itself a method on a protocol.
+	kindFIDLProtocolMember = "protocol/member"
+)
 
 func readManifest(r io.Reader) (PlasaManifest, error) {
 	var m PlasaManifest
@@ -85,16 +92,23 @@ func readManifest(r io.Reader) (PlasaManifest, error) {
 	return m, nil
 }
 
-func paths(m PlasaManifest) []string {
-	var ret []string
+// pathKind is a pair of path and kind.
+type pathKind struct {
+	path string
+	kind string
+}
+
+func pathKinds(m PlasaManifest) []pathKind {
+	var ret []pathKind
 	for _, f := range m {
 		s := path.Join(*fragmentPrefix, f.Path)
-		ret = append(ret, s)
+		ret = append(ret, pathKind{path: s, kind: f.Kind})
 	}
 	return ret
 }
 
-func (m *TestCoverageReport) add(r model.Report) {
+// addCCAPIReport adds a C++ API report to the test coverage report.
+func (m *TestCoverageReport) addCCAPIReport(r model.Report) {
 	for _, i := range r.Items {
 		n := i.Name
 		if _, ok := m.seen[n]; ok {
@@ -102,8 +116,29 @@ func (m *TestCoverageReport) add(r model.Report) {
 			continue
 		}
 		ci := TestCoverageReportItem{
-			Name: i.Name,
-			Kind: KindCCAPI,
+			Name: n,
+			Kind: kindCCAPI,
+		}
+		m.Items = append(m.Items, ci)
+		m.seen[n] = struct{}{}
+	}
+}
+
+// addCCAPIReport adds a C++ API report to the test coverage report.
+func (m *TestCoverageReport) addFIDLAPIReport(r []summarize.ElementStr) {
+	for _, i := range r {
+		n := string(i.Name)
+		if _, ok := m.seen[n]; ok {
+			// Skip seen elements.
+			continue
+		}
+		if i.Kind != kindFIDLProtocolMember {
+			// Skip non-methods
+			continue
+		}
+		ci := TestCoverageReportItem{
+			Name: n,
+			Kind: kindFIDLAPI,
 		}
 		m.Items = append(m.Items, ci)
 		m.seen[n] = struct{}{}
@@ -128,19 +163,29 @@ func filter(m io.Reader, w io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("could not read manifest: %v: %w", plasaManifestFile, err)
 	}
-	paths := paths(p)
+	pks := pathKinds(p)
 	out := NewTestCoverageReport()
-	for _, p := range paths {
-		pf, err := os.Open(p)
+	for _, pk := range pks {
+		pf, err := os.Open(pk.path)
 		if err != nil {
-			return fmt.Errorf("could not read fragment: %v: %w", p, err)
+			return fmt.Errorf("could not read fragment: %v: %w", pk.path, err)
 		}
-
-		r, err := model.ReadReportJSON(pf)
-		if err != nil {
-			return fmt.Errorf("could not parse report: %v: %w", p, err)
+		switch pk.kind {
+		case kindCCAPI:
+			r, err := model.ReadReportJSON(pf)
+			if err != nil {
+				return fmt.Errorf("could not parse C++ API fragment: %+v: %w", pk.path, err)
+			}
+			out.addCCAPIReport(r)
+		case kindFIDLAPI:
+			m, err := summarize.LoadSummariesJSON(pf)
+			if err != nil {
+				return fmt.Errorf("could not parse FIDL API fragment: %+v: %w", pk.path, err)
+			}
+			out.addFIDLAPIReport(m[0])
+		default:
+			panic(fmt.Sprintf("unsupported API kind: %v", pk.kind))
 		}
-		out.add(r)
 	}
 	if err := out.writeTo(w); err != nil {
 		return fmt.Errorf("while writing test coverage report: %w", err)

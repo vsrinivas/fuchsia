@@ -63,15 +63,19 @@ the [data schema][sch].
     "items": [
         {
             "name": "::FidlCodedArray::FidlCodedArray",
-            "kind": "cc_api"
+            "kind": "api_cc"
         },
         {
             "name": "::FidlCodedBits::FidlCodedBits",
-            "kind": "cc_api"
+            "kind": "api_cc"
+        },
+        {
+            "name": "fuchsia.library/Protocol.member",
+            "kind": "api_fidl"
         },
         {
             "name": "::FidlCodedEnum::FidlCodedEnum",
-            "kind": "cc_api"
+            "kind": "api_cc"
         },
         ...
     ]

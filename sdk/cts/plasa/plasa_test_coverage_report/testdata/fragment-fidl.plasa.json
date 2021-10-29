@@ -1,0 +1,13 @@
+[
+    {
+        "declaration": "string",
+        "kind": "const",
+        "name": "fuchsia.logger/COMPONENT_NAME_PLACEHOLDER_TAG",
+        "value": "COMPONENT_NAME"
+    },
+    {
+        "declaration": "",
+        "kind": "protocol/member",
+        "name": "fuchsia.library/Protocol.member"
+    }
+]

@@ -33,11 +33,15 @@ func TestPlasaManifestRead(t *testing.T) {
     "items": [
         {
             "name": "::ns::foo1",
-            "kind": "cc_api"
+            "kind": "api_cc"
         },
         {
             "name": "::ns::foo2",
-            "kind": "cc_api"
+            "kind": "api_cc"
+        },
+        {
+            "name": "fuchsia.library/Protocol.member",
+            "kind": "api_fidl"
         }
     ]
 }
@@ -49,7 +53,7 @@ func TestPlasaManifestRead(t *testing.T) {
 	}
 	var s strings.Builder
 	if err := filter(m, &s); err != nil {
-		t.Errorf("while running manifest check: %v", err)
+		t.Fatalf("while running manifest check: %v", err)
 	}
 	la := strings.Split(s.String(), "\n")
 	le := strings.Split(expected, "\n")
