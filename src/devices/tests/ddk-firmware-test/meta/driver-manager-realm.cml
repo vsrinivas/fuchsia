@@ -5,11 +5,11 @@
     children: [
         {
             name: "driver-manager",
-            url: "#meta/driver-manager-test.cm",
+            url: "#meta/driver_manager_test.cm",
         },
         {
             name: "driver-manager-support",
-            url: "#meta/driver-manager-support.cm",
+            url: "#meta/driver_manager_support.cm",
         },
         {
             name: "driver-index",
@@ -80,6 +80,10 @@
         {
             protocol: [ "fuchsia.device.manager.Administrator" ],
             from: "#driver-manager",
+        },
+        {
+            protocol: [ "fuchsia.driver.test.Realm" ],
+            from: "#driver-manager-support",
         },
     ],
 }

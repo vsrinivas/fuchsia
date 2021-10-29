@@ -7,11 +7,12 @@ use vfs::directory::entry::DirectoryEntry;
 use {
     anyhow::Error,
     fidl::endpoints::{Proxy, ServerEnd},
-    fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_driver_test as fdt, fidl_fuchsia_io2 as fio2,
     fuchsia_component_test::builder::{
         Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint,
     },
     fuchsia_component_test::mock::MockHandles,
+    fuchsia_driver_test::DriverTestRealmInstance,
 };
 
 type Directory = std::sync::Arc<
@@ -99,6 +100,11 @@ async fn create_realm(
         source: driver_manager.clone(),
         targets: vec![RouteEndpoint::AboveRoot],
     })?;
+    builder.add_route(CapabilityRoute {
+        capability: Capability::protocol("fuchsia.driver.test.Realm"),
+        source: driver_manager.clone(),
+        targets: vec![RouteEndpoint::AboveRoot],
+    })?;
 
     builder.add_route(CapabilityRoute {
         capability: Capability::protocol("fuchsia.device.manager.Administrator"),
@@ -122,7 +128,9 @@ async fn create_realm(
         targets: vec![driver_manager.clone()],
     })?;
 
-    Ok(builder.build().create().await?)
+    let realm = builder.build().create().await?;
+    realm.driver_test_realm_start(fdt::RealmArgs::EMPTY).await?;
+    Ok(realm)
 }
 
 #[fuchsia::test]
