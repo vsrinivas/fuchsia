@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/zircon/levels.gni")
 import("//build/zircon/migrated_targets.gni")
-optimize = zircon_optimize
 
 zx_library("ngunwind") {
   # This library is very crufty and should not be used in general.  It's
@@ -120,12 +118,6 @@ zx_library("ngunwind") {
       [ "//build/config:default_frame_pointers" ] != configs) {
     configs -= [ "//build/config:default_frame_pointers" ]
     configs += [ "//build/config:frame_pointers" ]
-  }
-
-  if (optimize == "none" || optimize == "debug") {
-    # Force -O2 since the library doesn't build with -Og.
-    configs -= [ "//build/config:default_optimize" ]
-    configs += [ "//build/config/zircon:optimize_default" ]
   }
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
