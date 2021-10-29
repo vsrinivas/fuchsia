@@ -418,7 +418,7 @@ impl ActionsTest {
                     .lock()
                     .await
                     .realm_capability_host
-                    .serve_for_sdk_namespace(component, stream)
+                    .serve(component, stream)
                     .await
                     .expect("failed serving realm service");
             })
