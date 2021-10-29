@@ -4,8 +4,6 @@
         "metadata": {
             "component_url": "#meta/framework-intermediary.cm",
             "dropped": 0,
-            "errors": null,
-            "file": null,
             "line": 0,
             "pid": "PID",
             "severity": "INFO",
@@ -32,9 +30,6 @@
         "metadata": {
             "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component_with_logs.cm",
             "dropped": 0,
-            "errors": null,
-            "file": null,
-            "line": null,
             "pid": "PID",
             "severity": "INFO",
             "size_bytes": 144,

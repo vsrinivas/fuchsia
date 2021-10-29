@@ -3,7 +3,6 @@
         "data_source": "Inspect",
         "metadata": {
             "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/test_component.cm",
-            "errors": null,
             "filename": "fuchsia.inspect.Tree",
             "timestamp": 0
         },
@@ -17,7 +16,6 @@
         "data_source": "Inspect",
         "metadata": {
             "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/test_component.cm",
-            "errors": null,
             "filename": "fuchsia.inspect.deprecated.Inspect",
             "timestamp": 0
         },
@@ -31,7 +29,6 @@
         "data_source": "Inspect",
         "metadata": {
             "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/test_component.cm",
-            "errors": null,
             "filename": "root.inspect",
             "timestamp": 0
         },

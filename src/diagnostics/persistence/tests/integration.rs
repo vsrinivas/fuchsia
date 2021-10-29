@@ -502,7 +502,6 @@ fn expected_diagnostics_persistence_inspect(published: Published) -> String {
     "data_source": "Inspect",
     "metadata": {
       "component_url": "fuchsia-pkg://fuchsia.com/diagnostics-persistence-integration-tests#meta/diagnostics-persistence.cmx",
-      "errors": null,
       "filename": "fuchsia.inspect.Tree",
       "timestamp": 0
     },

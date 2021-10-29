@@ -32,7 +32,6 @@ const char CMX1_EXPECTED_DATA[] = R"JSON({
     "data_source": "Inspect",
     "metadata": {
         "component_url": "fuchsia-pkg://fuchsia.com/archive_reader_integration_tests#meta/archive_reader_test_app.cmx",
-        "errors": null,
         "filename": "fuchsia.inspect.Tree",
         "timestamp": TIMESTAMP
     },
@@ -54,7 +53,6 @@ const char CMX2_EXPECTED_DATA[] = R"JSON({
     "data_source": "Inspect",
     "metadata": {
         "component_url": "fuchsia-pkg://fuchsia.com/archive_reader_integration_tests#meta/archive_reader_test_app_2.cmx",
-        "errors": null,
         "filename": "fuchsia.inspect.Tree",
         "timestamp": TIMESTAMP
     },

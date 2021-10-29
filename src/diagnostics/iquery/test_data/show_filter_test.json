@@ -3,7 +3,6 @@
         "data_source": "Inspect",
         "metadata": {
             "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cm",
-            "errors": null,
             "filename": "fuchsia.inspect.Tree",
             "timestamp": "TIMESTAMP"
         },

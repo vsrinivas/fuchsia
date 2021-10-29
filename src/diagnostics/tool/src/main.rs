@@ -568,7 +568,6 @@ mod tests {
                 {
                     "data_source": "Inspect",
                     "metadata": {
-                        "errors": null,
                         "filename": "fuchsia.inspect.Tree",
                         "component_url": "fuchsia-pkg://fuchsia.com/blooper#meta/blooper.cmx",
                         "timestamp": 0
@@ -674,7 +673,6 @@ realm1/realm2/session5/account_manager.cmx:root/listeners:total_opened";
                 {
                     "data_source":"Inspect",
                     "metadata":{
-                        "errors":null,
                         "filename":"fuchsia.inspect.Tree",
                         "component_url": "fuchsia-pkg://fuchsia.com/account#meta/account_manager.cmx",
                         "timestamp":0
@@ -708,7 +706,6 @@ realm1/realm2/session5/account_manager.cmx:root/listeners:total_opened";
                 {
                     "data_source":"Inspect",
                     "metadata":{
-                        "errors":null,
                         "filename":"fuchsia.inspect.Tree",
                         "component_url": "fuchsia-pkg://fuchsia.com/account#meta/account_manager.cmx",
                         "timestamp":0

@@ -284,6 +284,7 @@ impl DerefMut for Timestamp {
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct LifecycleEventMetadata {
     /// Optional vector of errors encountered by platform.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub errors: Option<Vec<Error>>,
 
     /// Type of lifecycle event being encoded in the payload.
@@ -302,11 +303,12 @@ pub struct LifecycleEventMetadata {
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct InspectMetadata {
     /// Optional vector of errors encountered by platform.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub errors: Option<Vec<Error>>,
     /// Name of diagnostics file producing data.
     pub filename: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     /// The url with which the component was launched.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub component_url: Option<String>,
     /// Monotonic time in nanos.
     pub timestamp: Timestamp,
@@ -318,6 +320,7 @@ pub struct InspectMetadata {
 pub struct LogsMetadata {
     // TODO(fxbug.dev/58369) figure out exact spelling of pid/tid context and severity
     /// Optional vector of errors encountered by platform.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub errors: Option<Vec<LogError>>,
 
     /// The url with which the component was launched.
@@ -331,21 +334,27 @@ pub struct LogsMetadata {
     pub severity: Severity,
 
     /// Tags to add at the beginning of the message
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
 
     /// The process ID
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub pid: Option<u64>,
 
     /// The thread ID
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tid: Option<u64>,
 
     /// The file name
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub file: Option<String>,
 
     /// The line number
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub line: Option<u64>,
 
     /// Number of dropped messages
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dropped: Option<u64>,
 
     /// Size of the original message on the wire, in bytes.
@@ -1234,7 +1243,6 @@ mod tests {
           },
           "metadata": {
             "component_url": TEST_URL,
-            "errors": null,
             "filename": "test_file_plz_ignore.inspect",
             "timestamp": 123456,
           }
@@ -1294,17 +1302,11 @@ mod tests {
               }
           },
           "metadata": {
-            "errors": [],
             "component_url": "url",
               "dropped": 0,
-              "errors": null,
-              "file": null,
-              "line": null,
-              "pid": null,
               "severity": "INFO",
               "size_bytes": 0,
               "tags": [],
-              "tid": null,
 
             "timestamp": 0,
           }
@@ -1447,7 +1449,6 @@ mod tests {
           "payload": null,
           "metadata": {
             "component_url": TEST_URL,
-            "errors": null,
             "lifecycle_event_type": "DiagnosticsReady",
             "timestamp": 123456,
           }
@@ -1544,16 +1545,10 @@ mod tests {
             }
           },
           "metadata": {
-            "errors": [],
             "component_url": "url",
               "dropped": 0,
-              "errors": null,
-              "file": null,
-              "line": null,
-              "pid": null,
               "severity": "INFO",
               "tags": [],
-              "tid": null,
 
             "timestamp": 123,
           }
