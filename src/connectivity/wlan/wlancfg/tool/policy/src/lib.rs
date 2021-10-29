@@ -11,7 +11,7 @@ use {
     futures::{future::BoxFuture, TryStreamExt},
 };
 
-mod serialize;
+pub mod serialize;
 
 // String formatting, printing, and general boilerplate helpers.
 
@@ -539,7 +539,6 @@ mod tests {
     use {
         super::*,
         fidl::endpoints,
-        fidl_fuchsia_wlan_common as fidl_wlan_common, fidl_fuchsia_wlan_policy as wlan_policy,
         fuchsia_async::TestExecutor,
         fuchsia_zircon_status as zx_status,
         futures::{stream::StreamExt, task::Poll},

@@ -5,57 +5,14 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("bin") {
-  name = "donut"
-  with_unit_tests = true
-  edition = "2018"
-
+group("donut-tests") {
+  testonly = true
   deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
-    "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
-    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
-    "//sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration:fuchsia.wlan.product.deprecatedconfiguration-rustc",
-    "//src/connectivity/wlan/lib/common/rust/:wlan-common",
-    "//src/connectivity/wlan/lib/ieee80211",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/lib/zircon/rust:fuchsia-zircon-status",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:clap",
-    "//third_party/rust_crates:eui48",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:hex",
-    "//third_party/rust_crates:percent-encoding",
-    "//third_party/rust_crates:pin-utils",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:structopt",
+    "cli:donut-arg-tests",
+    "policy:donut-lib-tests",
   ]
-
-  sources = [
-    "src/main.rs",
-    "src/opts.rs",
-    "src/policy/mod.rs",
-    "src/policy/serialize.rs",
-  ]
-
-  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_shell_package("donut") {
-  deps = [ ":bin" ]
-}
-
-fuchsia_unittest_package("donut-tests") {
-  deps = [ ":bin_test" ]
-
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
+  deps = [ "cli:bin" ]
 }

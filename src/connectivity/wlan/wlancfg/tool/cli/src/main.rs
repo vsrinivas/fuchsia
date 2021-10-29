@@ -4,6 +4,7 @@
 
 use {
     anyhow::{Context, Error},
+    donut_lib::*,
     fidl::endpoints::{create_endpoints, create_proxy},
     fidl_fuchsia_wlan_policy as wlan_policy,
     fidl_fuchsia_wlan_product_deprecatedconfiguration as wlan_deprecated, fuchsia_async as fasync,
@@ -13,9 +14,6 @@ use {
 
 mod opts;
 use crate::opts::*;
-
-mod policy;
-use crate::policy::*;
 
 /// Communicates with the client policy provider to get the components required to get a client
 /// controller.
