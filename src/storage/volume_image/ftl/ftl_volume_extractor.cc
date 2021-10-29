@@ -24,8 +24,17 @@ class FakeFtl : public ftl::FtlInstance {
  public:
   FakeFtl() = default;
   ~FakeFtl() override = default;
-  bool OnVolumeAdded(uint32_t page_size, uint32_t num_pages) override { return true; }
+  bool OnVolumeAdded(uint32_t unused_page_size, uint32_t num_pages) override;
+  uint32_t num_pages() { return num_pages_; }
+
+ private:
+  uint32_t num_pages_ = 0;
 };
+
+bool FakeFtl::OnVolumeAdded(uint32_t unused_page_size, uint32_t num_pages) {
+  num_pages_ = num_pages;
+  return true;
+}
 
 enum BlockStatus { kOk, kBadBlock, kReadFailure };
 
@@ -82,11 +91,14 @@ bool LoadData(InMemoryRawNand* nand, FILE* data) {
         break;
       }
       case BlockStatus::kBadBlock: {
-        fprintf(stderr, "WARN: Page %u bad\n", page_count);
+        // Zero out bad block contents, this will cause them to be read as bad blocks rather than
+        // unmapped data.
+        nand->page_data[page_count] = std::vector<uint8_t>(nand->options.page_size, 0);
+        nand->page_data[page_count] = std::vector<uint8_t>(nand->options.oob_bytes_size, 0);
         break;
       }
       case BlockStatus::kReadFailure: {
-        fprintf(stderr, "WARN: Page %u read fail\n", page_count);
+        fprintf(stderr, "ERROR: Page %u read failed, likely ECC Failure\n", page_count);
         break;
       }
     }
@@ -109,19 +121,24 @@ bool WriteVolume(InMemoryRawNand* nand, uint32_t bad_blocks, FILE* out) {
                                            nand->options.oob_bytes_size, bad_blocks);
   const char* err = volume.Init(std::move(ndm));
   if (err != nullptr) {
-    fprintf(stderr, "Failed to init volume: %s\n", err);
+    fprintf(stderr, "ERROR: Failed to init volume: %s\n", err);
     return false;
+  }
+
+  std::string issues = volume.DiagnoseKnownIssues();
+  if (!issues.empty()) {
+    fprintf(stderr, "ERROR: Identified common symptoms:\n%s", issues.c_str());
   }
 
   std::vector<uint8_t> buf(nand->options.page_size);
   uint32_t page;
-  for (page = 0; volume.Read(page, 1, &buf[0]) == ZX_OK; ++page) {
-    if (fwrite(&buf[0], 1, nand->options.page_size, out) != nand->options.page_size) {
-      fprintf(stderr, "Failed to write out page number: %u\n", page);
+  for (page = 0; page < ftl.num_pages() && volume.Read(page, 1, buf.data()) == ZX_OK; ++page) {
+    if (fwrite(buf.data(), 1, nand->options.page_size, out) != nand->options.page_size) {
+      fprintf(stderr, "ERROR: Failed to write out page number: %u\n", page);
       return false;
     }
   }
-  fprintf(stderr, "Successfully recovered %u pages from volume.\n", page);
+  fprintf(stderr, "INFO: Successfully recovered %u pages from volume.\n", page);
 
   return true;
 }

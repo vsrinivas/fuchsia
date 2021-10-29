@@ -276,6 +276,8 @@ void FtlnStats(FTLN ftl);
 void FtlnShowBlks(void);
 void FtlnCheckBlank(FTLN ftl, ui32 b);
 
+char* FtlnDiagnoseIssues(FTLN ftl);
+
 __END_CDECLS
 
 #endif  // ZIRCON_SYSTEM_ULIB_FTL_FTLN_FTLNP_H_

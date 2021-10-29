@@ -7,6 +7,7 @@
 
 #include "ftl.h"
 #include "ftl_private.h"
+#include "ftln/ftlnp.h"
 
 namespace ftl {
 
@@ -133,6 +134,17 @@ bool VolumeImpl::OnVolumeAdded(const XfsVol* ftl) {
   read_pages_ = ftl->read_pages;
 
   return owner_->OnVolumeAdded(ftl->page_size, ftl->num_pages);
+}
+
+std::string VolumeImpl::DiagnoseKnownIssues() {
+  char* result = FtlnDiagnoseIssues(static_cast<FTLN>(vol_));
+  if (result == nullptr) {
+    return "";
+  }
+
+  std::string result_copy(result);
+  free(result);
+  return result_copy;
 }
 
 bool VolumeImpl::Created() const { return name_; }

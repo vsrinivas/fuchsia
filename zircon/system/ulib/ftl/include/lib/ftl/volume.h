@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 
 #include <fbl/macros.h>
 
@@ -125,6 +126,10 @@ class __EXPORT VolumeImpl final : public Volume {
   // Internal notification of added volumes. This is forwarded to
   // FtlInstance::OnVolumeAdded.
   bool OnVolumeAdded(const XfsVol* ftl);
+
+  // Returns empty string if no analysis is given, otherwise the string will
+  // contain analysis of the FTL for known issues.
+  std::string DiagnoseKnownIssues();
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(VolumeImpl);
 

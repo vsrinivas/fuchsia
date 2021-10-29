@@ -346,8 +346,9 @@ static int build_map(FTLN ftl) {
         bc = GET_SA_BC(ftl->spare_buf);
       } else if (bc != GET_SA_BC(ftl->spare_buf)) {
         if (ftln_debug() > 1) {
-          ftl->logger.debug(__FILE__, __LINE__, "build_map: b = %u, po = %u, i_bc = %u vs 0_bc = %u",
-                            b, po, GET_SA_BC(ftl->spare_buf), bc);
+          ftl->logger.debug(__FILE__, __LINE__,
+                            "build_map: b = %u, po = %u, i_bc = %u vs 0_bc = %u", b, po,
+                            GET_SA_BC(ftl->spare_buf), bc);
         }
 
         // Should not be, but page is invalid. Break to skip block.
@@ -393,8 +394,8 @@ static int build_map(FTLN ftl) {
           INC_USED(ftl->bdata[b]);
         }
         if (ftln_debug() > 1) {
-          ftl->logger.debug(__FILE__, __LINE__, "build_map: mpn = %u, old_pn = %d, new_pn = %u", mpn,
-                            ftl->mpns[mpn], b * ftl->pgs_per_blk + po);
+          ftl->logger.debug(__FILE__, __LINE__, "build_map: mpn = %u, old_pn = %d, new_pn = %u",
+                            mpn, ftl->mpns[mpn], b * ftl->pgs_per_blk + po);
         }
 
         // Save the map page number and (temporarily) the block count.
@@ -450,7 +451,7 @@ static int build_map(FTLN ftl) {
         ftl->logger.error(
             __FILE__, __LINE__,
             "Map Page %u at %u contains maping offset %u mapped to physical %u. But physical block "
-            "%u looks free.",
+            "%u looks free. This could be a result of premature block recycle. fxbug.dev/87653",
             mpn, map_block, mpn * ftl->mappings_per_mpg + n, pn, b);
         return -1;
       }
@@ -459,7 +460,8 @@ static int build_map(FTLN ftl) {
         ftl->logger.error(
             __FILE__, __LINE__,
             "Map Page %u at %u contains maping offset %u mapped to physical %u. But physical block "
-            "%u looks like a map block.",
+            "%u looks like a map block. This could be a result of premature block recycle. "
+            "fxbug.dev/87653",
             mpn, map_block, mpn * ftl->mappings_per_mpg + n, pn, b);
         return -1;
       }
