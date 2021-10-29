@@ -158,7 +158,7 @@ async fn sme_scan(
 pub(crate) async fn perform_scan(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     saved_networks_manager: Arc<dyn SavedNetworksManagerApi>,
-    mut output_iterator: Option<fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>>,
+    output_iterator: Option<fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>>,
     mut network_selector: impl ScanResultUpdate,
     mut location_sensor_updater: impl ScanResultUpdate,
     scan_reason: ScanReason,
@@ -167,6 +167,7 @@ pub(crate) async fn perform_scan(
     cobalt_api: Option<Arc<Mutex<CobaltSender>>>,
 ) {
     let mut bss_by_network: HashMap<SmeNetworkIdentifier, Vec<types::Bss>> = HashMap::new();
+    let mut non_fatal_scan_error_for_fidl_consumers = None;
 
     let sme_proxy = match iface_manager.lock().await.get_sme_proxy_for_scan().await {
         Ok(proxy) => proxy,
@@ -174,9 +175,10 @@ pub(crate) async fn perform_scan(
             // The attempt to get an SME proxy failed. Send an error to the requester, return early.
             warn!("Failed to get an SME proxy for scan: {:?}", e);
             if let Some(output_iterator) = output_iterator {
-                send_scan_error_over_fidl(
+                send_scan_results_over_fidl(
                     output_iterator,
-                    fidl_policy::ScanErrorCode::GeneralError,
+                    &vec![],
+                    Some(fidl_policy::ScanErrorCode::GeneralError),
                 )
                 .await
                 .unwrap_or_else(|e| error!("Failed to send scan error: {}", e));
@@ -196,7 +198,7 @@ pub(crate) async fn perform_scan(
         Err(scan_err) => {
             // The passive scan failed. Send an error to the requester and return early.
             if let Some(output_iterator) = output_iterator {
-                send_scan_error_over_fidl(output_iterator, scan_err)
+                send_scan_results_over_fidl(output_iterator, &vec![], Some(scan_err))
                     .await
                     .unwrap_or_else(|e| error!("Failed to send scan error: {}", e));
             }
@@ -254,14 +256,8 @@ pub(crate) async fn perform_scan(
                 insert_bss_to_network_bss_map(&mut bss_by_network, results, false);
             }
             Err(scan_err) => {
-                // There was an error in the active scan. For the FIDL interface, send an error. We
-                // `.take()` the output_iterator here, so it won't be used for sending results below.
-                if let Some(output_iterator) = output_iterator.take() {
-                    send_scan_error_over_fidl(output_iterator, scan_err)
-                        .await
-                        .unwrap_or_else(|e| error!("Failed to send scan error: {}", e));
-                };
-                info!("Proceeding with passive scan results for non-FIDL scan consumers");
+                non_fatal_scan_error_for_fidl_consumers = Some(scan_err);
+                info!("Proceeding with passive scan results.");
             }
         }
     };
@@ -277,10 +273,14 @@ pub(crate) async fn perform_scan(
     scan_result_consumers.push(network_selector.update_scan_results(&scan_results));
     // If the requester provided a channel, send the results to them
     if let Some(output_iterator) = output_iterator {
-        let requester_fut = send_scan_results_over_fidl(output_iterator, &fidl_scan_results)
-            .unwrap_or_else(|e| {
-                error!("Failed to send scan results to requester: {:?}", e);
-            });
+        let requester_fut = send_scan_results_over_fidl(
+            output_iterator,
+            &fidl_scan_results,
+            non_fatal_scan_error_for_fidl_consumers,
+        )
+        .unwrap_or_else(|e| {
+            error!("Failed to send scan results to requester: {:?}", e);
+        });
         scan_result_consumers.push(Box::pin(requester_fut));
     }
 
@@ -366,7 +366,7 @@ impl ScanResultUpdate for LocationSensorUpdater {
                 .map_err(|err| format_err!("failed to call location sensor service: {:?}", err))?;
 
             // Send results to the iterator
-            send_scan_results_over_fidl(server, &scan_results).await
+            send_scan_results_over_fidl(server, &scan_results, None).await
         }
 
         let scan_results = scan_result_to_policy_scan_result(scan_results, self.wpa3_supported);
@@ -522,6 +522,7 @@ fn scan_result_to_policy_scan_result(
 async fn send_scan_results_over_fidl(
     output_iterator: fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>,
     scan_results: &Vec<fidl_policy::ScanResult>,
+    error_code: Option<fidl_policy::ScanErrorCode>,
 ) -> Result<(), Error> {
     // Wait to get a request for a chunk of scan results
     let (mut stream, ctrl) = output_iterator.into_stream_and_control_handle()?;
@@ -554,13 +555,21 @@ async fn send_scan_results_over_fidl(
                     batch_size += result_size;
                 }
             }
-            let close_channel = batch.is_empty();
-            responder.send(&mut Ok(batch))?;
 
-            // Guarantees empty batch is sent before channel is closed.
-            if close_channel {
+            if batch.is_empty() {
+                // No more results to send
+                if let Some(error_code) = error_code {
+                    // Finish with the error
+                    let mut err: fidl_policy::ScanResultIteratorGetNextResult = Err(error_code);
+                    responder.send(&mut err)?;
+                } else {
+                    // Finish with the empty vec, indicating no more results
+                    responder.send(&mut Ok(batch))?;
+                }
                 ctrl.shutdown();
                 return Ok(());
+            } else {
+                responder.send(&mut Ok(batch))?;
             }
         } else {
             // This will happen if the iterator request stream was closed and we expected to send
@@ -575,27 +584,6 @@ async fn send_scan_results_over_fidl(
             }
         }
     }
-}
-
-/// On the next request for results, send an error to the output iterator and
-/// shut it down.
-async fn send_scan_error_over_fidl(
-    output_iterator: fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>,
-    error_code: fidl_policy::ScanErrorCode,
-) -> Result<(), fidl::Error> {
-    // Wait to get a request for a chunk of scan results
-    let (mut stream, ctrl) = output_iterator.into_stream_and_control_handle()?;
-    if let Some(req) = stream.try_next().await? {
-        let fidl_policy::ScanResultIteratorRequest::GetNext { responder } = req;
-        let mut err: fidl_policy::ScanResultIteratorGetNextResult = Err(error_code);
-        responder.send(&mut err)?;
-        ctrl.shutdown();
-    } else {
-        // This will happen if the iterator request stream was closed and we expected to send
-        // another response.
-        info!("Peer closed channel for getting scan results unexpectedly");
-    }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -1967,7 +1955,7 @@ mod tests {
         let MockScanData {
             passive_input_aps,
             passive_internal_aps,
-            passive_fidl_aps: _,
+            passive_fidl_aps,
             active_input_aps: _,
             combined_internal_aps: _,
             combined_fidl_aps: _,
@@ -2051,11 +2039,22 @@ mod tests {
         );
 
         // Process scan handler
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+        // Check the FIDL result. We should first get all the available scan results, then an error.
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
+            let result = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(result, passive_fidl_aps);
+        });
+
+        // Request a chunk of scan results. Progress until waiting on response from server side of
+        // the iterator.
+        let mut output_iter_fut = iter.get_next();
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
+        // Progress scan handler forward so that it will respond to the iterator get next request.
         // Note: this will be Poll::Ready because the scan handler will exit after sending the final
         // scan results.
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(()));
-
-        // Check the FIDL result -- this should be an error, since the active scan failed
+        // Now we should have the error available
         assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
             let result = result.expect("Failed to get next scan results").unwrap_err();
             assert_eq!(result, fidl_policy::ScanErrorCode::GeneralError);
@@ -2610,7 +2609,7 @@ mod tests {
         // Create an iterator and send scan results
         let (iter, iter_server) =
             fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let send_fut = send_scan_results_over_fidl(iter_server, &combined_fidl_aps);
+        let send_fut = send_scan_results_over_fidl(iter_server, &combined_fidl_aps, None);
         pin_mut!(send_fut);
 
         // Request a chunk of scan results.
@@ -2652,7 +2651,7 @@ mod tests {
         // Create an iterator and send scan results
         let (iter, iter_server) =
             fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let send_fut = send_scan_results_over_fidl(iter_server, &combined_fidl_aps);
+        let send_fut = send_scan_results_over_fidl(iter_server, &combined_fidl_aps, None);
         pin_mut!(send_fut);
 
         // Close the channel without getting results
@@ -2809,7 +2808,7 @@ mod tests {
                 - FIDL_HEADER_AND_ERR_WRAPPED_VEC_HEADER_SIZE,
         ]);
 
-        let send_fut = send_scan_results_over_fidl(iter_server, &fidl_scan_results);
+        let send_fut = send_scan_results_over_fidl(iter_server, &fidl_scan_results, None);
         pin_mut!(send_fut);
 
         let mut output_iter_fut = iter.get_next();
@@ -2836,7 +2835,7 @@ mod tests {
                 + 8,
         ]);
 
-        let send_fut = send_scan_results_over_fidl(iter_server, &fidl_scan_results);
+        let send_fut = send_scan_results_over_fidl(iter_server, &fidl_scan_results, None);
         pin_mut!(send_fut);
 
         let _ = iter.get_next();
@@ -2858,7 +2857,7 @@ mod tests {
                 3
             ]);
 
-        let send_fut = send_scan_results_over_fidl(iter_server, &fidl_scan_results);
+        let send_fut = send_scan_results_over_fidl(iter_server, &fidl_scan_results, None);
         pin_mut!(send_fut);
 
         let mut output_iter_fut = iter.get_next();
@@ -2885,7 +2884,7 @@ mod tests {
                 8
             ]);
 
-        let send_fut = send_scan_results_over_fidl(iter_server, &fidl_scan_results);
+        let send_fut = send_scan_results_over_fidl(iter_server, &fidl_scan_results, None);
         pin_mut!(send_fut);
 
         let mut output_iter_fut = iter.get_next();
