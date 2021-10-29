@@ -116,11 +116,49 @@ struct CallerAllocatingImpl<WireSyncClientImpl, FidlProtocol> {
 };
 
 // A veneer interface object for client/server messaging implementations that
+// operate on a borrowed client/server endpoint, and where the implementation
+// automatically manages the buffer for message encoding/decoding. Those
+// implementations should inherit from this class following CRTP. Example uses
+// of this veneer:
+//
+//   * Making synchronous one-way or two-way calls.
+//   * Sending events.
+//
+// |Derived| implementations must not add any state, only behavior.
+template <typename Derived>
+struct SyncEndpointManagedVeneer {
+ public:
+  explicit SyncEndpointManagedVeneer(zx::unowned_channel channel) : channel_(std::move(channel)) {}
+
+  // Returns a pointer to the concrete messaging implementation.
+  Derived* operator->() && {
+    // Required for the static_cast in to work: we are aliasing the base class
+    // into |Derived|.
+    static_assert(sizeof(Derived) == sizeof(SyncEndpointManagedVeneer),
+                  "Derived implementations must not add any state");
+
+    return static_cast<Derived*>(this);
+  }
+
+ protected:
+  // Used by implementations to access the transport, hence prefixed with an
+  // underscore to avoid the unlikely event of a name collision.
+  zx::unowned_channel _channel() const { return zx::unowned_channel(channel_->get()); }
+
+ private:
+  zx::unowned_channel channel_;
+};
+
+// A veneer interface object for client/server messaging implementations that
 // operate on a borrowed client/server endpoint, and where the caller provides
 // the buffer for message encoding/decoding. Those implementations should
 // inherit from this class following CRTP. Example uses of this veneer:
+//
 //   * Making synchronous one-way or two-way calls.
 //   * Sending events.
+//
+// Compared to |SyncEndpointManagedVeneer|, this class additionally stores an
+// allocator, such that subclasses maybe use it during encoding/decoding.
 //
 // |Derived| implementations must not add any state, only behavior.
 template <typename Derived>
@@ -128,6 +166,7 @@ struct SyncEndpointBufferVeneer {
   explicit SyncEndpointBufferVeneer(zx::unowned_channel channel, AnyBufferAllocator&& allocator)
       : channel_(std::move(channel)), allocator_(std::move(allocator)) {}
 
+  // Returns a pointer to the concrete messaging implementation.
   Derived* operator->() {
     // Required for the static_cast in to work: we are aliasing the base class
     // into |Derived|.
@@ -152,35 +191,28 @@ struct SyncEndpointBufferVeneer {
 };
 
 // A veneer interface object for client/server messaging implementations that
-// operate on a borrowed client/server endpoint. Those implementations should
-// inherit from this class following CRTP. Example uses of this veneer:
-//   * Making synchronous one-way or two-way calls.
-//   * Sending events.
+// operate on a borrowed client/server endpoint. This class exposes both
+// managed and caller-allocating flavors, and delegates to
+// |SyncEndpointManagedVeneer| and |SyncEndpointBufferVeneer| respectively.
 //
 // |SyncImpl| should be the template messaging class,
 // e.g. |WireSyncClientImpl| (without passing template parameters).
 // |FidlProtocol| should be the protocol marker.
-// |Derived| implementations must not add any state, only behavior.
 //
 // It must not outlive the borrowed endpoint.
 template <template <typename FidlProtocol> class SyncImpl, typename FidlProtocol>
-class SyncEndpointVeneer {
+class SyncEndpointVeneer final {
  private:
-  using Derived = SyncImpl<FidlProtocol>;
   using CallerAllocatingImpl =
       typename ::fidl::internal::CallerAllocatingImpl<SyncImpl, FidlProtocol>::Type;
 
  public:
   explicit SyncEndpointVeneer(zx::unowned_channel channel) : channel_(std::move(channel)) {}
 
-  // Returns a pointer to the concrete messaging implementation.
-  Derived* operator->() && {
-    // Required for the static_cast in to work: we are aliasing the base class
-    // into |Derived|.
-    static_assert(sizeof(Derived) == sizeof(SyncEndpointVeneer),
-                  "Derived implementations must not add any state");
-
-    return static_cast<Derived*>(this);
+  // Returns a veneer object for the concrete messaging implementation.
+  internal::SyncEndpointManagedVeneer<internal::WireSyncClientImpl<FidlProtocol>> operator->() && {
+    return internal::SyncEndpointManagedVeneer<internal::WireSyncClientImpl<FidlProtocol>>(
+        channel_->borrow());
   }
 
   // Returns a veneer object which exposes the caller-allocating API, using
@@ -226,13 +258,106 @@ class SyncEndpointVeneer {
         channel_->borrow(), MakeAnyBufferAllocator(std::forward<MemoryResource>(resource))};
   }
 
- protected:
-  // Used by implementations to access the transport, hence prefixed with an
-  // underscore to avoid the unlikely event of a name collision.
-  zx::unowned_channel _channel() const { return zx::unowned_channel(channel_->get()); }
-
  private:
   zx::unowned_channel channel_;
+};
+
+// |WireSyncClientBase| supplies the common methods and fields in a
+// |fidl::WireSyncClient<P>|.
+//
+// TODO(fxbug.dev/85688): After migrating calls to the arrow syntax, this class
+// can be renamed to |fidl::WireSyncClient|, such that we don't need to generate
+// separate sync client classes anymore - similar to |fidl::WireClient|.
+template <typename FidlProtocol>
+class WireSyncClientBase {
+ public:
+  // Creates an uninitialized client that is not bound to a client endpoint.
+  //
+  // Prefer using the constructor overload that initializes the client
+  // atomically during construction. Use this default constructor only when the
+  // client must be constructed first before an endpoint could be obtained (for
+  // example, if the client is an instance variable).
+  //
+  // The client may be initialized later via |Bind|.
+  WireSyncClientBase() = default;
+
+  // Creates an initialized client. FIDL calls will be made on |client_end|.
+  //
+  // Similar to |fidl::WireClient|, the client endpoint must be valid.
+  //
+  // To just make a FIDL call uniformly on a client endpoint that may or may not
+  // be valid, use the |fidl::WireCall(client_end)| helper. We may extend
+  // |fidl::WireSyncClient<P>| with richer features hinging on having a valid
+  // endpoint in the future.
+  explicit WireSyncClientBase(::fidl::ClientEnd<FidlProtocol> client_end)
+      : client_end_(std::move(client_end)) {
+    ZX_ASSERT(is_valid());
+  }
+
+  ~WireSyncClientBase() = default;
+  WireSyncClientBase(WireSyncClientBase&&) noexcept = default;
+  WireSyncClientBase& operator=(WireSyncClientBase&&) noexcept = default;
+
+  // TODO(fxbug.dev/85688): exposing a mutable reference to the endpoint is deprecated.
+  ::fidl::ClientEnd<FidlProtocol>& client_end() { return client_end_; }
+  // TODO(fxbug.dev/85688): exposing a direct reference to the channel is deprecated.
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  // TODO(fxbug.dev/85688): exposing a mutable reference to the channel is deprecated.
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+  // Whether the client is initialized.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
+  // Borrows the underlying client endpoint. The client must have been
+  // initialized.
+  const ::fidl::ClientEnd<FidlProtocol>& client_end() const {
+    ZX_ASSERT(is_valid());
+    return client_end_;
+  }
+
+  // Initializes the client with a |client_end|. FIDL calls will be made on this
+  // endpoint.
+  //
+  // It is not allowed to call |Bind| on an initialized client. To rebind a
+  // |WireSyncClient| to a different endpoint, simply replace the
+  // |WireSyncClient| variable with a new instance.
+  void Bind(::fidl::ClientEnd<FidlProtocol> client_end) {
+    ZX_ASSERT(!is_valid());
+    client_end_ = std::move(client_end);
+    ZX_ASSERT(is_valid());
+  }
+
+  // Extracts the underlying endpoint from the client. After this operation, the
+  // client goes back to an uninitialized state.
+  //
+  // It is not safe to invoke this method while there are ongoing FIDL calls.
+  ::fidl::ClientEnd<FidlProtocol> TakeClientEnd() {
+    ZX_ASSERT(is_valid());
+    return std::move(client_end_);
+  }
+
+  // Returns a veneer object for making FIDL calls with managed memory.
+  internal::SyncEndpointManagedVeneer<internal::WireSyncClientImpl<FidlProtocol>> operator->()
+      const {
+    ZX_ASSERT(is_valid());
+    return internal::SyncEndpointManagedVeneer<internal::WireSyncClientImpl<FidlProtocol>>(
+        client_end_.borrow().channel());
+  }
+
+  // Returns a veneer object which exposes the caller-allocating API, using
+  // the provided |resource| to allocate buffers necessary for each call.
+  // See documentation on |SyncEndpointVeneer::buffer| for detailed behavior.
+  template <typename MemoryResource>
+  auto buffer(MemoryResource&& resource) const {
+    ZX_ASSERT(is_valid());
+    return internal::SyncEndpointBufferVeneer<internal::WireSyncBufferClientImpl<FidlProtocol>>{
+        client_end_.borrow().channel(),
+        internal::MakeAnyBufferAllocator(std::forward<MemoryResource>(resource))};
+  }
+
+ private:
+  ::fidl::ClientEnd<FidlProtocol> client_end_;
 };
 
 }  // namespace internal

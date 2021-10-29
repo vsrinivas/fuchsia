@@ -474,8 +474,9 @@ class ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo> final
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::fidl_test_inheritance::Super> final
-    : public ::fidl::internal::SyncEndpointVeneer<
-          WireSyncClientImpl, ::fidl_test_inheritance::Super> {
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireSyncClientImpl<
+              ::fidl_test_inheritance::Super>> {
  public:
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
@@ -547,41 +548,19 @@ class ::fidl::WireSyncEventHandler<::fidl_test_inheritance::Super>
       ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super> client_end);
 };
 template <>
-class ::fidl::WireSyncClient<::fidl_test_inheritance::Super> final {
+class ::fidl::WireSyncClient<::fidl_test_inheritance::Super> final
+    : public ::fidl::internal::WireSyncClientBase<
+          ::fidl_test_inheritance::Super> {
  public:
-  // Creates an invalid client that is not bound to a client endpoint. Use
-  // this default constructor only when the client must be constructed first
-  // before a channel could be obtained (for example, if the client is an
-  // instance variable).
-  WireSyncClient() = default;
-
-  explicit WireSyncClient(
-      ::fidl::ClientEnd<::fidl_test_inheritance::Super> client_end)
-      : client_end_(std::move(client_end)) {}
-
-  ~WireSyncClient() = default;
-  WireSyncClient(WireSyncClient&&) = default;
-  WireSyncClient& operator=(WireSyncClient&&) = default;
-
-  const ::fidl::ClientEnd<::fidl_test_inheritance::Super>& client_end() const {
-    return client_end_;
-  }
-  ::fidl::ClientEnd<::fidl_test_inheritance::Super>& client_end() {
-    return client_end_;
-  }
-
-  const ::zx::channel& channel() const { return client_end_.channel(); }
-  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return client_end_.is_valid(); }
-  explicit operator bool() const { return is_valid(); }
+  using ::fidl::internal::WireSyncClientBase<
+      ::fidl_test_inheritance::Super>::WireSyncClientBase;
+  using ::fidl::internal::WireSyncClientBase<
+      ::fidl_test_inheritance::Super>::Bind;
 
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_inheritance::Super::Foo> Foo(
       ::fidl::StringView s) const {
-    ZX_ASSERT(client_end_.is_valid());
     ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> _request{s};
     return ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>(
         this->client_end(), &_request);
@@ -591,15 +570,11 @@ class ::fidl::WireSyncClient<::fidl_test_inheritance::Super> final {
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo> Foo(
       ::fidl::BufferSpan _buffer_span, ::fidl::StringView s) const {
-    ZX_ASSERT(client_end_.is_valid());
     auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> _request{s};
     return ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>(
         this->client_end(), _allocator, &_request);
   }
-
- private:
-  ::fidl::ClientEnd<::fidl_test_inheritance::Super> client_end_;
 };
 
 template <>
@@ -1104,8 +1079,8 @@ class ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo> final
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::fidl_test_inheritance::Sub> final
-    : public ::fidl::internal::SyncEndpointVeneer<
-          WireSyncClientImpl, ::fidl_test_inheritance::Sub> {
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireSyncClientImpl<::fidl_test_inheritance::Sub>> {
  public:
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
@@ -1177,41 +1152,19 @@ class ::fidl::WireSyncEventHandler<::fidl_test_inheritance::Sub>
       ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub> client_end);
 };
 template <>
-class ::fidl::WireSyncClient<::fidl_test_inheritance::Sub> final {
+class ::fidl::WireSyncClient<::fidl_test_inheritance::Sub> final
+    : public ::fidl::internal::WireSyncClientBase<
+          ::fidl_test_inheritance::Sub> {
  public:
-  // Creates an invalid client that is not bound to a client endpoint. Use
-  // this default constructor only when the client must be constructed first
-  // before a channel could be obtained (for example, if the client is an
-  // instance variable).
-  WireSyncClient() = default;
-
-  explicit WireSyncClient(
-      ::fidl::ClientEnd<::fidl_test_inheritance::Sub> client_end)
-      : client_end_(std::move(client_end)) {}
-
-  ~WireSyncClient() = default;
-  WireSyncClient(WireSyncClient&&) = default;
-  WireSyncClient& operator=(WireSyncClient&&) = default;
-
-  const ::fidl::ClientEnd<::fidl_test_inheritance::Sub>& client_end() const {
-    return client_end_;
-  }
-  ::fidl::ClientEnd<::fidl_test_inheritance::Sub>& client_end() {
-    return client_end_;
-  }
-
-  const ::zx::channel& channel() const { return client_end_.channel(); }
-  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return client_end_.is_valid(); }
-  explicit operator bool() const { return is_valid(); }
+  using ::fidl::internal::WireSyncClientBase<
+      ::fidl_test_inheritance::Sub>::WireSyncClientBase;
+  using ::fidl::internal::WireSyncClientBase<
+      ::fidl_test_inheritance::Sub>::Bind;
 
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo> Foo(
       ::fidl::StringView s) const {
-    ZX_ASSERT(client_end_.is_valid());
     ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> _request{s};
     return ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>(
         this->client_end(), &_request);
@@ -1221,15 +1174,11 @@ class ::fidl::WireSyncClient<::fidl_test_inheritance::Sub> final {
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo> Foo(
       ::fidl::BufferSpan _buffer_span, ::fidl::StringView s) const {
-    ZX_ASSERT(client_end_.is_valid());
     auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> _request{s};
     return ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>(
         this->client_end(), _allocator, &_request);
   }
-
- private:
-  ::fidl::ClientEnd<::fidl_test_inheritance::Sub> client_end_;
 };
 
 template <>

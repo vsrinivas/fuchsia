@@ -7,47 +7,31 @@
 {{- define "Protocol:SyncClient:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 template<>
-class {{ .WireSyncClient }} final {
+class {{ .WireSyncClient }} final : public ::fidl::internal::WireSyncClientBase<{{ . }}> {
  public:
-  // Creates an invalid client that is not bound to a client endpoint. Use
-  // this default constructor only when the client must be constructed first
-  // before a channel could be obtained (for example, if the client is an
-  // instance variable).
-  WireSyncClient() = default;
+  using ::fidl::internal::WireSyncClientBase<{{ . }}>::WireSyncClientBase;
 
-  explicit WireSyncClient(::fidl::ClientEnd<{{ . }}> client_end)
-      : client_end_(std::move(client_end)) {}
+  {{- /* TODO(fxbug.dev/85688): This is to disambiguate FIDL methods named "Bind".
+         Delete them after all users switch to "->" to make calls. */}}
+  using ::fidl::internal::WireSyncClientBase<{{ . }}>::Bind;
 
-  ~WireSyncClient() = default;
-  WireSyncClient(WireSyncClient&&) = default;
-  WireSyncClient& operator=(WireSyncClient&&) = default;
-
-  const ::fidl::ClientEnd<{{ . }}>& client_end() const { return client_end_; }
-  ::fidl::ClientEnd<{{ . }}>& client_end() { return client_end_; }
-
-  const ::zx::channel& channel() const { return client_end_.channel(); }
-  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return client_end_.is_valid(); }
-  explicit operator bool() const { return is_valid(); }
-
-  {{- /* Client-calling functions do not apply to events. */}}
+  {{- /* TODO(fxbug.dev/85688): These methods are preserved for soft migration only.
+         Delete them after all users switch to "->" to make calls. */}}
   {{- range .ClientMethods }}
   {{ .Docs }}
   //{{ template "Method:ClientAllocationComment:Helper" . }}
   {{ .WireResult }} {{ .Name }}({{ RenderParams .RequestArgs }}) const {
-    ZX_ASSERT(client_end_.is_valid());
     {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
     return {{ .WireResult }}(this->client_end(), &_request);
   }
 
+  {{- /* TODO(fxbug.dev/85688): These methods are preserved for soft migration only.
+         Delete them after all users switch to "->" to make calls. */}}
   {{- if or .RequestArgs .ResponseArgs }}
   {{ .Docs }}
   // Caller provides the backing storage for FIDL message via request and response buffers.
   {{ .WireUnownedResult }} {{ .Name }}(
       {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) const {
-    ZX_ASSERT(client_end_.is_valid());
     auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
     return {{ .WireUnownedResult }}(this->client_end(), _allocator, &_request);
@@ -60,12 +44,9 @@ class {{ .WireSyncClient }} final {
   // Blocks to consume exactly one message from the channel, then call the corresponding virtual
   // method defined in |SyncEventHandler|. The return status of the handler function is folded with
   // any transport-level errors and returned.
-  ::fidl::Result HandleOneEvent({{ .WireSyncEventHandler  }}& event_handler) const {
-    return event_handler.HandleOneEvent(client_end_);
+  ::fidl::Result HandleOneEvent({{ .WireSyncEventHandler }}& event_handler) const {
+    return event_handler.HandleOneEvent(client_end());
   }
   {{- end }}
- private:
-  ::fidl::ClientEnd<{{ . }}> client_end_;
 };
 {{- end }}
-

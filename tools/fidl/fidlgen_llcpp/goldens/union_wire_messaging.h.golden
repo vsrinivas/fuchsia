@@ -1036,8 +1036,9 @@ class ::fidl::WireUnownedResult<
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::fidl_test_union::TestProtocol>
-    final : public ::fidl::internal::SyncEndpointVeneer<
-                WireSyncClientImpl, ::fidl_test_union::TestProtocol> {
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::fidl_test_union::TestProtocol>> {
  public:
   // Allocates 80 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -1151,42 +1152,20 @@ class ::fidl::WireSyncEventHandler<::fidl_test_union::TestProtocol>
       ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> client_end);
 };
 template <>
-class ::fidl::WireSyncClient<::fidl_test_union::TestProtocol> final {
+class ::fidl::WireSyncClient<::fidl_test_union::TestProtocol> final
+    : public ::fidl::internal::WireSyncClientBase<
+          ::fidl_test_union::TestProtocol> {
  public:
-  // Creates an invalid client that is not bound to a client endpoint. Use
-  // this default constructor only when the client must be constructed first
-  // before a channel could be obtained (for example, if the client is an
-  // instance variable).
-  WireSyncClient() = default;
-
-  explicit WireSyncClient(
-      ::fidl::ClientEnd<::fidl_test_union::TestProtocol> client_end)
-      : client_end_(std::move(client_end)) {}
-
-  ~WireSyncClient() = default;
-  WireSyncClient(WireSyncClient&&) = default;
-  WireSyncClient& operator=(WireSyncClient&&) = default;
-
-  const ::fidl::ClientEnd<::fidl_test_union::TestProtocol>& client_end() const {
-    return client_end_;
-  }
-  ::fidl::ClientEnd<::fidl_test_union::TestProtocol>& client_end() {
-    return client_end_;
-  }
-
-  const ::zx::channel& channel() const { return client_end_.channel(); }
-  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return client_end_.is_valid(); }
-  explicit operator bool() const { return is_valid(); }
+  using ::fidl::internal::WireSyncClientBase<
+      ::fidl_test_union::TestProtocol>::WireSyncClientBase;
+  using ::fidl::internal::WireSyncClientBase<
+      ::fidl_test_union::TestProtocol>::Bind;
 
   // Allocates 80 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_union::TestProtocol::
                          StrictXUnionHenceResponseMayBeStackAllocated>
   StrictXUnionHenceResponseMayBeStackAllocated() const {
-    ZX_ASSERT(client_end_.is_valid());
     ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                             StrictXUnionHenceResponseMayBeStackAllocated>
         _request{};
@@ -1201,7 +1180,6 @@ class ::fidl::WireSyncClient<::fidl_test_union::TestProtocol> final {
                                 StrictXUnionHenceResponseMayBeStackAllocated>
   StrictXUnionHenceResponseMayBeStackAllocated(
       ::fidl::BufferSpan _buffer_span) const {
-    ZX_ASSERT(client_end_.is_valid());
     auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                             StrictXUnionHenceResponseMayBeStackAllocated>
@@ -1217,7 +1195,6 @@ class ::fidl::WireSyncClient<::fidl_test_union::TestProtocol> final {
   ::fidl::WireResult<::fidl_test_union::TestProtocol::
                          FlexibleXUnionHenceResponseMustBeHeapAllocated>
   FlexibleXUnionHenceResponseMustBeHeapAllocated() const {
-    ZX_ASSERT(client_end_.is_valid());
     ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                             FlexibleXUnionHenceResponseMustBeHeapAllocated>
         _request{};
@@ -1233,7 +1210,6 @@ class ::fidl::WireSyncClient<::fidl_test_union::TestProtocol> final {
                                 FlexibleXUnionHenceResponseMustBeHeapAllocated>
   FlexibleXUnionHenceResponseMustBeHeapAllocated(
       ::fidl::BufferSpan _buffer_span) const {
-    ZX_ASSERT(client_end_.is_valid());
     auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                             FlexibleXUnionHenceResponseMustBeHeapAllocated>
@@ -1243,9 +1219,6 @@ class ::fidl::WireSyncClient<::fidl_test_union::TestProtocol> final {
             FlexibleXUnionHenceResponseMustBeHeapAllocated>(
         this->client_end(), _allocator, &_request);
   }
-
- private:
-  ::fidl::ClientEnd<::fidl_test_union::TestProtocol> client_end_;
 };
 
 template <>

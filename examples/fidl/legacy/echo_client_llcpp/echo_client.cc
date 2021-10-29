@@ -49,7 +49,7 @@ int main(int argc, const char** argv) {
   // Using low-level C++ bindings to perform a call
   ::fidl::WireSyncClient<fidl_examples_echo::Echo> client(
       fidl::ClientEnd<::fidl_examples_echo::Echo>(std::move(client_end)));
-  auto result = client.EchoString(fidl::StringView::FromExternal(msg));
+  auto result = client->EchoString(fidl::StringView::FromExternal(msg));
   if (result.status() != ZX_OK) {
     std::cerr << "Failed to call server: " << result.error() << std::endl;
     return result.status();

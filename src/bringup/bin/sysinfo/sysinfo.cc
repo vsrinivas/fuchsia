@@ -50,7 +50,7 @@ void SysInfo::GetInterruptControllerInfo(GetInterruptControllerInfoRequestView r
 }
 
 zx_status_t SysInfo::GetBoardName(std::string *board_name) {
-  fidl::WireSyncClient<fuchsia_sysinfo::SysInfo> client{zx::channel()};
+  fidl::WireSyncClient<fuchsia_sysinfo::SysInfo> client;
   zx_status_t status = ConnectToPBus(&client);
   if (status != ZX_OK) {
     return status;
@@ -68,7 +68,7 @@ zx_status_t SysInfo::GetBoardName(std::string *board_name) {
 }
 
 zx_status_t SysInfo::GetBoardRevision(uint32_t *board_revision) {
-  fidl::WireSyncClient<fuchsia_sysinfo::SysInfo> client{zx::channel()};
+  fidl::WireSyncClient<fuchsia_sysinfo::SysInfo> client;
   zx_status_t status = ConnectToPBus(&client);
   if (status != ZX_OK) {
     return status;
@@ -86,7 +86,7 @@ zx_status_t SysInfo::GetBoardRevision(uint32_t *board_revision) {
 }
 
 zx_status_t SysInfo::GetBootloaderVendor(std::string *bootloader_vendor) {
-  fidl::WireSyncClient<fuchsia_sysinfo::SysInfo> client{zx::channel()};
+  fidl::WireSyncClient<fuchsia_sysinfo::SysInfo> client;
   zx_status_t status = ConnectToPBus(&client);
   if (status != ZX_OK) {
     return status;
@@ -105,7 +105,7 @@ zx_status_t SysInfo::GetBootloaderVendor(std::string *bootloader_vendor) {
 
 zx_status_t SysInfo::GetInterruptControllerInfo(
     fuchsia_sysinfo::wire::InterruptControllerInfo *info) {
-  fidl::WireSyncClient<fuchsia_sysinfo::SysInfo> client{zx::channel()};
+  fidl::WireSyncClient<fuchsia_sysinfo::SysInfo> client;
   zx_status_t status = ConnectToPBus(&client);
   if (status != ZX_OK) {
     return status;

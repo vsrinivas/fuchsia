@@ -62,7 +62,7 @@ class TransitionalTest : public ::testing::Test {
 // The implemented call should succeed.
 TEST_F(TransitionalTest, CallImplementedMethod) {
   auto client = TakeClient();
-  auto result = client.ImplementedMethod();
+  auto result = client->ImplementedMethod();
   EXPECT_TRUE(result.ok());
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
 }
@@ -73,7 +73,7 @@ TEST_F(TransitionalTest, CallImplementedMethod) {
 // connection closed error instead.
 TEST_F(TransitionalTest, CallUnimplementedMethod) {
   auto client = TakeClient();
-  auto result = client.UnimplementedMethod();
+  auto result = client->UnimplementedMethod();
   EXPECT_FALSE(result.ok());
   EXPECT_EQ("FIDL operation failed due to peer closed, status: ZX_ERR_PEER_CLOSED (-24)",
             result.FormatDescription());

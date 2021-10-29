@@ -239,7 +239,7 @@ TEST(BasicTypesTest, SyncCallStruct) {
     }
   }
   // perform call
-  auto result = test.ConsumeSimpleStruct(std::move(simple_struct));
+  auto result = test->ConsumeSimpleStruct(std::move(simple_struct));
   ASSERT_OK(result.status());
   ASSERT_OK(result.Unwrap()->status);
   ASSERT_EQ(result.Unwrap()->field, 123);
@@ -285,8 +285,8 @@ TEST(BasicTypesTest, SyncCallerAllocateCallStruct) {
 
   // perform call
   FIDL_ALIGNDECL uint8_t buf[1024] = {};
-  auto result =
-      test.ConsumeSimpleStruct(fidl::BufferSpan(buf, sizeof(buf)), std::move(simple_struct));
+  auto result = test.buffer(fidl::BufferSpan(buf, sizeof(buf)))
+                    ->ConsumeSimpleStruct(std::move(simple_struct));
   ASSERT_OK(result.status());
   ASSERT_OK(result.Unwrap()->status);
   ASSERT_EQ(result.Unwrap()->field, 123);

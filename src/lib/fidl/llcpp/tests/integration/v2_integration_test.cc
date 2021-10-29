@@ -58,7 +58,7 @@ TEST(V2Integration, SyncCallResponseDecode) {
   fidl::ClientEnd<TestProtocol> client_end(std::move(ch1));
   fidl::WireSyncClient<TestProtocol> client(std::move(client_end));
 
-  auto result = client.MethodWithResponse();
+  auto result = client->MethodWithResponse();
   ASSERT_TRUE(result.ok());
   ASSERT_EQ(123u, result->u.v());
 

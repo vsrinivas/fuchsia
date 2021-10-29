@@ -215,7 +215,7 @@ void Client::ImportBufferCollection(ImportBufferCollectionRequestView request,
     return;
   }
 
-  zx::channel vc_collection;
+  fidl::WireSyncClient<sysmem::BufferCollection> vc_collection;
 
   // Make a second handle to represent the kernel's usage of the buffer as a
   // framebuffer, so we can set constraints and get VMOs for zx_framebuffer_set_range.
@@ -235,14 +235,15 @@ void Client::ImportBufferCollection(ImportBufferCollectionRequestView request,
       return;
     }
 
-    zx::channel collection_server;
-    zx::channel::create(0, &collection_server, &vc_collection);
+    zx::channel collection_server, collection_client;
+    zx::channel::create(0, &collection_server, &collection_client);
     if (!sysmem_allocator_
              .BindSharedCollection(std::move(vc_token_client), std::move(collection_server))
              .ok()) {
       _completer.Reply(ZX_ERR_INTERNAL);
       return;
     }
+    vc_collection.Bind(std::move(collection_client));
   }
 
   zx::channel collection_server, collection_client;
@@ -257,7 +258,7 @@ void Client::ImportBufferCollection(ImportBufferCollectionRequestView request,
 
   collection_map_[request->collection_id] =
       Collections{fidl::WireSyncClient<sysmem::BufferCollection>(std::move(collection_client)),
-                  fidl::WireSyncClient<sysmem::BufferCollection>(std::move(vc_collection))};
+                  std::move(vc_collection)};
   _completer.Reply(ZX_OK);
 }
 

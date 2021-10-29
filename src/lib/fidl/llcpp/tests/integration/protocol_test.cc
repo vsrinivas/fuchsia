@@ -87,7 +87,7 @@ class ResultTest : public ::zxtest::Test {
 
 TEST_F(ResultTest, OwnedPrimitiveError) {
   auto client = TakeClient();
-  auto resp = client.NoArgsPrimitiveError(true);
+  auto resp = client->NoArgsPrimitiveError(true);
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->result.is_err());
   EXPECT_EQ(resp->result.err(), kErrorStatus);
@@ -95,7 +95,7 @@ TEST_F(ResultTest, OwnedPrimitiveError) {
 
 TEST_F(ResultTest, OwnedCustomError) {
   auto client = TakeClient();
-  auto resp = client.ManyArgsCustomError(true);
+  auto resp = client->ManyArgsCustomError(true);
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->result.is_err());
   EXPECT_EQ(resp->result.err(), test::wire::MyError::kReallyBadError);
@@ -103,14 +103,14 @@ TEST_F(ResultTest, OwnedCustomError) {
 
 TEST_F(ResultTest, OwnedSuccessNoArgs) {
   auto client = TakeClient();
-  auto resp = client.NoArgsPrimitiveError(false);
+  auto resp = client->NoArgsPrimitiveError(false);
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->result.is_response());
 }
 
 TEST_F(ResultTest, OwnedSuccessManyArgs) {
   auto client = TakeClient();
-  auto resp = client.ManyArgsCustomError(false);
+  auto resp = client->ManyArgsCustomError(false);
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->result.is_response());
   const auto& success = resp->result.response();
@@ -228,8 +228,8 @@ TEST(MagicNumberTest, EventRead) {
 
 TEST(SyncClientTest, DefaultInitializationError) {
   fidl::WireSyncClient<test::ErrorMethods> client;
-  ASSERT_FALSE(client.channel().is_valid());
-  ASSERT_DEATH([&] { client.NoArgsPrimitiveError(false); });
+  ASSERT_FALSE(client.is_valid());
+  ASSERT_DEATH([&] { client->NoArgsPrimitiveError(false); });
 }
 
 TEST(EventSenderTest, SendEvent) {
@@ -319,7 +319,7 @@ class HandleTest : public ::zxtest::Test {
 
 TEST_F(HandleTest, HandleClosedAfterHandleStructMove) {
   auto client = TakeClient();
-  auto result = client.GetHandle();
+  auto result = client->GetHandle();
 
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->value.h.is_valid());
@@ -342,7 +342,7 @@ TEST_F(HandleTest, HandleClosedOnResultOfDestructorAfterVectorMove) {
   std::vector<zx::event> dupes(kNumHandles);
 
   {
-    auto result = client.GetHandleVector(kNumHandles);
+    auto result = client->GetHandleVector(kNumHandles);
 
     ASSERT_OK(result.status());
     ASSERT_EQ(result->value.count(), kNumHandles);
@@ -368,7 +368,7 @@ TEST_F(HandleTest, HandleClosedOnResultOfDestructorAfterVectorMove) {
 
 TEST_F(HandleTest, HandleUnion) {
   auto client = TakeClient();
-  auto result = client.GetHandleUnion();
+  auto result = client->GetHandleUnion();
 
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->value.u.h().is_valid());

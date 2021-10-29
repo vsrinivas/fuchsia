@@ -44,6 +44,9 @@ struct WireResponse;
 template <typename FidlProtocol>
 class WireSyncClient;
 
+template <typename FidlProtocol>
+WireSyncClient(fidl::ClientEnd<FidlProtocol>) -> WireSyncClient<FidlProtocol>;
+
 // WireClient implements a client and exposes both synchronous and asynchronous
 // calls.
 template <typename FidlProtocol>

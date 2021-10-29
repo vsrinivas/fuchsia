@@ -23,7 +23,7 @@ TEST(SyncClientErrorTest, PeerClosed) {
   ASSERT_OK(endpoints.status_value());
   auto client = fidl::BindSyncClient(std::move(endpoints->client));
   endpoints->server.reset();
-  auto result = client.SendEnum(test::wire::MyError::kBadError);
+  auto result = client->SendEnum(test::wire::MyError::kBadError);
   EXPECT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
   EXPECT_EQ(fidl::Reason::kPeerClosed, result.reason());
 }
@@ -36,7 +36,7 @@ TEST(SyncClientErrorTest, EncodeError) {
   // Send the number 42 as |MyError|, will fail validation at send time.
   uint32_t bad_error = 42;
   static_assert(sizeof(bad_error) == sizeof(test::wire::MyError));
-  auto result = client.SendEnum(static_cast<test::wire::MyError>(bad_error));
+  auto result = client->SendEnum(static_cast<test::wire::MyError>(bad_error));
   EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.status());
   EXPECT_EQ(fidl::Reason::kEncodeError, result.reason());
   EXPECT_EQ(
@@ -66,7 +66,7 @@ TEST(SyncClientErrorTest, DecodeError) {
                                                 sizeof(message), nullptr, 0));
   }};
   auto client = fidl::BindSyncClient(std::move(endpoints->client));
-  auto result = client.GetEnum();
+  auto result = client->GetEnum();
   replier.join();
   EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.status());
   EXPECT_EQ(fidl::Reason::kDecodeError, result.reason());

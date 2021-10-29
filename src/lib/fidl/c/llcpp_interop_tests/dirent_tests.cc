@@ -411,7 +411,7 @@ void SimpleCountNumDirectories() {
   for (uint64_t iter = 0; iter < kNumIterations; iter++) {
     auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
     auto result =
-        client.CountNumDirectories(fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));
+        client->CountNumDirectories(fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));
     int64_t expected_num_dir = 0;
     for (const auto& dirent : dirents) {
       if (dirent.is_dir) {
@@ -444,8 +444,9 @@ void CallerAllocateCountNumDirectories() {
   for (uint64_t iter = 0; iter < kNumIterations; iter++) {
     auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
     fidl::SyncClientBuffer<gen::DirEntTestInterface::CountNumDirectories> fidl_buffer;
-    auto result = client.CountNumDirectories(
-        fidl_buffer.view(), fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));
+    auto result =
+        client.buffer(fidl_buffer.view())
+            ->CountNumDirectories(fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));
     int64_t expected_num_dir = 0;
     for (const auto& dirent : dirents) {
       if (dirent.is_dir) {
@@ -471,7 +472,7 @@ void CallerAllocateReadDir() {
   // Stress test server-linearizing dirents
   for (uint64_t iter = 0; iter < kNumIterations; iter++) {
     fidl::SyncClientBuffer<gen::DirEntTestInterface::ReadDir> buffer;
-    auto result = client.ReadDir(buffer.view());
+    auto result = client.buffer(buffer.view())->ReadDir();
     ASSERT_OK(result.status());
     const auto& dirents = result.Unwrap()->dirents;
     ASSERT_EQ(dirents.count(), golden_dirents().count());
@@ -498,7 +499,7 @@ void SimpleConsumeDirectories() {
   fidl::WireSyncClient<gen::DirEntTestInterface> client(std::move(client_chan));
 
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 0);
-  ASSERT_OK(client.ConsumeDirectories(golden_dirents()).status());
+  ASSERT_OK(client->ConsumeDirectories(golden_dirents()).status());
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
 }
 
@@ -512,7 +513,7 @@ void CallerAllocateConsumeDirectories() {
 
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 0);
   fidl::SyncClientBuffer<gen::DirEntTestInterface::ConsumeDirectories> fidl_buffer;
-  auto result = client.ConsumeDirectories(fidl_buffer.view(), golden_dirents());
+  auto result = client.buffer(fidl_buffer.view())->ConsumeDirectories(golden_dirents());
   ASSERT_OK(result.status());
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
 }
@@ -528,7 +529,7 @@ void SimpleOneWayDirents() {
   zx::eventpair client_ep, server_ep;
   ASSERT_OK(zx::eventpair::create(0, &client_ep, &server_ep));
   ASSERT_EQ(server.OneWayDirentsNumCalls(), 0);
-  ASSERT_OK(client.OneWayDirents(golden_dirents(), std::move(server_ep)).status());
+  ASSERT_OK(client->OneWayDirents(golden_dirents(), std::move(server_ep)).status());
   zx_signals_t signals = 0;
   client_ep.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &signals);
   ASSERT_EQ(signals & ZX_EVENTPAIR_SIGNALED, ZX_EVENTPAIR_SIGNALED);
@@ -547,7 +548,8 @@ void CallerAllocateOneWayDirents() {
   ASSERT_OK(zx::eventpair::create(0, &client_ep, &server_ep));
   ASSERT_EQ(server.OneWayDirentsNumCalls(), 0);
   fidl::SyncClientBuffer<gen::DirEntTestInterface::OneWayDirents> buffer;
-  ASSERT_OK(client.OneWayDirents(buffer.view(), golden_dirents(), std::move(server_ep)).status());
+  ASSERT_OK(
+      client.buffer(buffer.view())->OneWayDirents(golden_dirents(), std::move(server_ep)).status());
   zx_signals_t signals = 0;
   client_ep.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &signals);
   ASSERT_EQ(signals & ZX_EVENTPAIR_SIGNALED, ZX_EVENTPAIR_SIGNALED);

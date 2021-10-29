@@ -27,7 +27,7 @@ int main(int argc, const char** argv) {
 
   {
     // Make an EchoString request, then print out the response.
-    auto result = client.EchoString("hello");
+    auto result = client->EchoString("hello");
     ZX_ASSERT(result.ok());
     std::string reply_string(result->response.data(), result->response.size());
     std::cout << "Got response: " << reply_string << std::endl;
@@ -35,7 +35,7 @@ int main(int argc, const char** argv) {
 
   {
     // Make a SendString request
-    auto result = client.SendString("hi");
+    auto result = client->SendString("hi");
     // Check that the request was sent successfully.
     ZX_ASSERT(result.ok());
 

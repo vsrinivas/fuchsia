@@ -1396,8 +1396,9 @@ class ::fidl::WireUnownedResult<
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::fidl_test_protocolrequest::Parent>
-    final : public ::fidl::internal::SyncEndpointVeneer<
-                WireSyncClientImpl, ::fidl_test_protocolrequest::Parent> {
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::fidl_test_protocolrequest::Parent>> {
  public:
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -1543,42 +1544,19 @@ class ::fidl::WireSyncEventHandler<::fidl_test_protocolrequest::Parent>
       ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client_end);
 };
 template <>
-class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final {
+class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final
+    : public ::fidl::internal::WireSyncClientBase<
+          ::fidl_test_protocolrequest::Parent> {
  public:
-  // Creates an invalid client that is not bound to a client endpoint. Use
-  // this default constructor only when the client must be constructed first
-  // before a channel could be obtained (for example, if the client is an
-  // instance variable).
-  WireSyncClient() = default;
-
-  explicit WireSyncClient(
-      ::fidl::ClientEnd<::fidl_test_protocolrequest::Parent> client_end)
-      : client_end_(std::move(client_end)) {}
-
-  ~WireSyncClient() = default;
-  WireSyncClient(WireSyncClient&&) = default;
-  WireSyncClient& operator=(WireSyncClient&&) = default;
-
-  const ::fidl::ClientEnd<::fidl_test_protocolrequest::Parent>& client_end()
-      const {
-    return client_end_;
-  }
-  ::fidl::ClientEnd<::fidl_test_protocolrequest::Parent>& client_end() {
-    return client_end_;
-  }
-
-  const ::zx::channel& channel() const { return client_end_.channel(); }
-  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return client_end_.is_valid(); }
-  explicit operator bool() const { return is_valid(); }
+  using ::fidl::internal::WireSyncClientBase<
+      ::fidl_test_protocolrequest::Parent>::WireSyncClientBase;
+  using ::fidl::internal::WireSyncClientBase<
+      ::fidl_test_protocolrequest::Parent>::Bind;
 
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild> GetChild()
       const {
-    ZX_ASSERT(client_end_.is_valid());
     ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>
         _request{};
     return ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>(
@@ -1589,7 +1567,6 @@ class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final {
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChild>
   GetChild(::fidl::BufferSpan _buffer_span) const {
-    ZX_ASSERT(client_end_.is_valid());
     auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>
         _request{};
@@ -1602,7 +1579,6 @@ class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final {
   // necessary.
   ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChildRequest>
   GetChildRequest() const {
-    ZX_ASSERT(client_end_.is_valid());
     ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>
         _request{};
     return ::fidl::WireResult<
@@ -1615,7 +1591,6 @@ class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final {
   ::fidl::WireUnownedResult<
       ::fidl_test_protocolrequest::Parent::GetChildRequest>
   GetChildRequest(::fidl::BufferSpan _buffer_span) const {
-    ZX_ASSERT(client_end_.is_valid());
     auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>
         _request{};
@@ -1628,7 +1603,6 @@ class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final {
   // necessary.
   ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChild> TakeChild(
       ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) const {
-    ZX_ASSERT(client_end_.is_valid());
     ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>
         _request{std::move(c)};
     return ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChild>(
@@ -1640,7 +1614,6 @@ class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final {
   ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::TakeChild>
   TakeChild(::fidl::BufferSpan _buffer_span,
             ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) const {
-    ZX_ASSERT(client_end_.is_valid());
     auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>
         _request{std::move(c)};
@@ -1654,7 +1627,6 @@ class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final {
   ::fidl::WireResult<::fidl_test_protocolrequest::Parent::TakeChildRequest>
   TakeChildRequest(
       ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) const {
-    ZX_ASSERT(client_end_.is_valid());
     ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChildRequest>
         _request{std::move(r)};
     return ::fidl::WireResult<
@@ -1669,7 +1641,6 @@ class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final {
   TakeChildRequest(
       ::fidl::BufferSpan _buffer_span,
       ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) const {
-    ZX_ASSERT(client_end_.is_valid());
     auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChildRequest>
         _request{std::move(r)};
@@ -1677,9 +1648,6 @@ class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final {
         ::fidl_test_protocolrequest::Parent::TakeChildRequest>(
         this->client_end(), _allocator, &_request);
   }
-
- private:
-  ::fidl::ClientEnd<::fidl_test_protocolrequest::Parent> client_end_;
 };
 
 template <>
@@ -1832,8 +1800,9 @@ struct ::fidl::internal::WireServerDispatcher<
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::fidl_test_protocolrequest::Child>
-    final : public ::fidl::internal::SyncEndpointVeneer<
-                WireSyncClientImpl, ::fidl_test_protocolrequest::Child> {
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::fidl_test_protocolrequest::Child>> {
  public:
  private:
   ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Child> _client_end()
@@ -1892,39 +1861,14 @@ class ::fidl::WireSyncEventHandler<::fidl_test_protocolrequest::Child>
       ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Child> client_end);
 };
 template <>
-class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Child> final {
+class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Child> final
+    : public ::fidl::internal::WireSyncClientBase<
+          ::fidl_test_protocolrequest::Child> {
  public:
-  // Creates an invalid client that is not bound to a client endpoint. Use
-  // this default constructor only when the client must be constructed first
-  // before a channel could be obtained (for example, if the client is an
-  // instance variable).
-  WireSyncClient() = default;
-
-  explicit WireSyncClient(
-      ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> client_end)
-      : client_end_(std::move(client_end)) {}
-
-  ~WireSyncClient() = default;
-  WireSyncClient(WireSyncClient&&) = default;
-  WireSyncClient& operator=(WireSyncClient&&) = default;
-
-  const ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>& client_end()
-      const {
-    return client_end_;
-  }
-  ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>& client_end() {
-    return client_end_;
-  }
-
-  const ::zx::channel& channel() const { return client_end_.channel(); }
-  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return client_end_.is_valid(); }
-  explicit operator bool() const { return is_valid(); }
-
- private:
-  ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> client_end_;
+  using ::fidl::internal::WireSyncClientBase<
+      ::fidl_test_protocolrequest::Child>::WireSyncClientBase;
+  using ::fidl::internal::WireSyncClientBase<
+      ::fidl_test_protocolrequest::Child>::Bind;
 };
 
 // Pure-virtual interface to be implemented by a server.

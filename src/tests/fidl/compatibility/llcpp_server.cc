@@ -31,17 +31,17 @@ class EchoClientApp {
   // Half the methods are testing the managed flavor; the other half are testing caller-allocate.
 
   fidl::WireResult<Echo::EchoMinimal> EchoMinimal(::fidl::StringView forward_to_server) {
-    return client_.EchoMinimal(std::move(forward_to_server));
+    return client_->EchoMinimal(std::move(forward_to_server));
   }
 
   fidl::WireResult<Echo::EchoMinimalWithError> EchoMinimalWithError(
       ::fidl::StringView forward_to_server, wire::RespondWith result_variant) {
-    return client_.EchoMinimalWithError(std::move(forward_to_server), result_variant);
+    return client_->EchoMinimalWithError(std::move(forward_to_server), result_variant);
   }
 
   zx_status_t EchoMinimalNoRetVal(::fidl::StringView forward_to_server,
                                   fidl::WireSyncEventHandler<Echo>& event_handler) {
-    auto result = client_.EchoMinimalNoRetVal(std::move(forward_to_server));
+    auto result = client_->EchoMinimalNoRetVal(std::move(forward_to_server));
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -50,19 +50,19 @@ class EchoClientApp {
 
   fidl::WireResult<Echo::EchoStruct> EchoStruct(wire::Struct value,
                                                 ::fidl::StringView forward_to_server) {
-    return client_.EchoStruct(std::move(value), std::move(forward_to_server));
+    return client_->EchoStruct(std::move(value), std::move(forward_to_server));
   }
 
   fidl::WireResult<Echo::EchoStructWithError> EchoStructWithError(
       wire::Struct value, wire::DefaultEnum err, ::fidl::StringView forward_to_server,
       wire::RespondWith result_variant) {
-    return client_.EchoStructWithError(std::move(value), err, std::move(forward_to_server),
-                                       result_variant);
+    return client_->EchoStructWithError(std::move(value), err, std::move(forward_to_server),
+                                        result_variant);
   }
 
   zx_status_t EchoStructNoRetVal(wire::Struct value, ::fidl::StringView forward_to_server,
                                  fidl::WireSyncEventHandler<Echo>& event_handler) {
-    auto result = client_.EchoStructNoRetVal(std::move(value), std::move(forward_to_server));
+    auto result = client_->EchoStructNoRetVal(std::move(value), std::move(forward_to_server));
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -72,50 +72,51 @@ class EchoClientApp {
   fidl::WireUnownedResult<Echo::EchoArrays> EchoArrays(::fidl::BufferSpan buffer,
                                                        wire::ArraysStruct value,
                                                        ::fidl::StringView forward_to_server) {
-    return client_.EchoArrays(buffer, std::move(value), forward_to_server);
+    return client_.buffer(buffer)->EchoArrays(std::move(value), forward_to_server);
   }
 
   fidl::WireResult<Echo::EchoArraysWithError> EchoArraysWithError(
       wire::ArraysStruct value, wire::DefaultEnum err, ::fidl::StringView forward_to_server,
       wire::RespondWith result_variant) {
-    return client_.EchoArraysWithError(std::move(value), err, std::move(forward_to_server),
-                                       result_variant);
+    return client_->EchoArraysWithError(std::move(value), err, std::move(forward_to_server),
+                                        result_variant);
   }
 
   fidl::WireResult<Echo::EchoVectors> EchoVectors(wire::VectorsStruct value,
                                                   ::fidl::StringView forward_to_server) {
-    return client_.EchoVectors(std::move(value), std::move(forward_to_server));
+    return client_->EchoVectors(std::move(value), std::move(forward_to_server));
   }
 
   fidl::WireResult<Echo::EchoVectorsWithError> EchoVectorsWithError(
       wire::VectorsStruct value, wire::DefaultEnum err, ::fidl::StringView forward_to_server,
       wire::RespondWith result_variant) {
-    return client_.EchoVectorsWithError(std::move(value), err, std::move(forward_to_server),
-                                        result_variant);
+    return client_->EchoVectorsWithError(std::move(value), err, std::move(forward_to_server),
+                                         result_variant);
   }
 
   fidl::WireUnownedResult<Echo::EchoTable> EchoTable(::fidl::BufferSpan buffer,
                                                      wire::AllTypesTable value,
                                                      ::fidl::StringView forward_to_server) {
-    return client_.EchoTable(buffer, value, forward_to_server);
+    return client_.buffer(buffer)->EchoTable(value, forward_to_server);
   }
 
   fidl::WireUnownedResult<Echo::EchoTableWithError> EchoTableWithError(
       ::fidl::BufferSpan buffer, wire::AllTypesTable value, wire::DefaultEnum err,
       ::fidl::StringView forward_to_server, wire::RespondWith result_variant) {
-    return client_.EchoTableWithError(buffer, value, err, forward_to_server, result_variant);
+    return client_.buffer(buffer)->EchoTableWithError(value, err, forward_to_server,
+                                                      result_variant);
   }
 
   fidl::WireResult<Echo::EchoXunions> EchoXunions(::fidl::VectorView<wire::AllTypesXunion> value,
                                                   ::fidl::StringView forward_to_server) {
-    return client_.EchoXunions(std::move(value), std::move(forward_to_server));
+    return client_->EchoXunions(std::move(value), std::move(forward_to_server));
   }
 
   fidl::WireResult<Echo::EchoXunionsWithError> EchoXunionsWithError(
       ::fidl::VectorView<wire::AllTypesXunion> value, wire::DefaultEnum err,
       ::fidl::StringView forward_to_server, wire::RespondWith result_variant) {
-    return client_.EchoXunionsWithError(std::move(value), err, std::move(forward_to_server),
-                                        result_variant);
+    return client_->EchoXunionsWithError(std::move(value), err, std::move(forward_to_server),
+                                         result_variant);
   }
 
   EchoClientApp(const EchoClientApp&) = delete;

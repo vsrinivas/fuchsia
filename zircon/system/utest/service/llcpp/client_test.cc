@@ -128,7 +128,7 @@ TEST_F(ClientTest, ConnectsToDefault) {
   ASSERT_TRUE(connect_result.is_ok());
 
   fidl::WireSyncClient<Echo> client = fidl::BindSyncClient(std::move(connect_result.value()));
-  fidl::WireResult<Echo::EchoString> echo_result = client.EchoString(fidl::StringView("hello"));
+  fidl::WireResult<Echo::EchoString> echo_result = client->EchoString(fidl::StringView("hello"));
   ASSERT_TRUE(echo_result.ok());
 
   auto response = echo_result.Unwrap();
@@ -149,7 +149,7 @@ TEST_F(ClientTest, ConnectsToOther) {
   ASSERT_TRUE(connect_result.is_ok());
 
   fidl::WireSyncClient<Echo> client = fidl::BindSyncClient(std::move(connect_result.value()));
-  fidl::WireResult<Echo::EchoString> echo_result = client.EchoString(fidl::StringView("hello"));
+  fidl::WireResult<Echo::EchoString> echo_result = client->EchoString(fidl::StringView("hello"));
   ASSERT_TRUE(echo_result.ok());
 
   auto response = echo_result.Unwrap();
@@ -243,7 +243,7 @@ TEST_F(ClientTest, CloneServiceDirectory) {
       *svc_clone, (std::string(EchoService::Name) + "/default/foo").c_str());
   ASSERT_OK(client_end.status_value());
   auto echo = fidl::BindSyncClient(std::move(*client_end));
-  auto result = echo.EchoString("foo");
+  auto result = echo->EchoString("foo");
   ASSERT_OK(result.status());
   ASSERT_STR_EQ(std::string(result->response.data(), result->response.size()).c_str(),
                 "default-foo: foo");

@@ -12,7 +12,7 @@
 // avoiding setting up a client.
 template<>
 class {{ .WireSyncClientImpl }} final :
-    public ::fidl::internal::SyncEndpointVeneer<{{ .WireSyncClientImpl.Self }}, {{ . }}> {
+    public ::fidl::internal::SyncEndpointManagedVeneer<{{ .WireSyncClientImpl }}> {
  public:
   {{/* Client-calling functions do not apply to events. */}}
   {{ range .ClientMethods }}
@@ -45,6 +45,7 @@ class {{ .WireSyncBufferClientImpl }} final :
     }
 {{ "" }}
   {{- end }}
+
  private:
   ::fidl::UnownedClientEnd<{{ . }}> _client_end() const {
     return ::fidl::UnownedClientEnd<{{ . }}>(_channel());

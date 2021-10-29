@@ -257,9 +257,9 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::internal::WireSyncClientImpl<
     ::fidl_test_placementofattributes::ExampleProtocol>
-    final : public ::fidl::internal::SyncEndpointVeneer<
-                WireSyncClientImpl,
-                ::fidl_test_placementofattributes::ExampleProtocol> {
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::fidl_test_placementofattributes::ExampleProtocol>> {
  public:
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -348,44 +348,18 @@ class ::fidl::WireSyncEventHandler<
 };
 template <>
 class ::fidl::WireSyncClient<::fidl_test_placementofattributes::ExampleProtocol>
-    final {
+    final : public ::fidl::internal::WireSyncClientBase<
+                ::fidl_test_placementofattributes::ExampleProtocol> {
  public:
-  // Creates an invalid client that is not bound to a client endpoint. Use
-  // this default constructor only when the client must be constructed first
-  // before a channel could be obtained (for example, if the client is an
-  // instance variable).
-  WireSyncClient() = default;
-
-  explicit WireSyncClient(
-      ::fidl::ClientEnd<::fidl_test_placementofattributes::ExampleProtocol>
-          client_end)
-      : client_end_(std::move(client_end)) {}
-
-  ~WireSyncClient() = default;
-  WireSyncClient(WireSyncClient&&) = default;
-  WireSyncClient& operator=(WireSyncClient&&) = default;
-
-  const ::fidl::ClientEnd<::fidl_test_placementofattributes::ExampleProtocol>&
-  client_end() const {
-    return client_end_;
-  }
-  ::fidl::ClientEnd<::fidl_test_placementofattributes::ExampleProtocol>&
-  client_end() {
-    return client_end_;
-  }
-
-  const ::zx::channel& channel() const { return client_end_.channel(); }
-  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return client_end_.is_valid(); }
-  explicit operator bool() const { return is_valid(); }
+  using ::fidl::internal::WireSyncClientBase<
+      ::fidl_test_placementofattributes::ExampleProtocol>::WireSyncClientBase;
+  using ::fidl::internal::WireSyncClientBase<
+      ::fidl_test_placementofattributes::ExampleProtocol>::Bind;
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_placementofattributes::ExampleProtocol::Method>
   Method(const ::exampleusing::wire::Empty& arg) const {
-    ZX_ASSERT(client_end_.is_valid());
     ::fidl::WireRequest<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>
         _request{arg};
@@ -400,7 +374,6 @@ class ::fidl::WireSyncClient<::fidl_test_placementofattributes::ExampleProtocol>
       ::fidl_test_placementofattributes::ExampleProtocol::Method>
   Method(::fidl::BufferSpan _buffer_span,
          const ::exampleusing::wire::Empty& arg) const {
-    ZX_ASSERT(client_end_.is_valid());
     auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<
         ::fidl_test_placementofattributes::ExampleProtocol::Method>
@@ -409,10 +382,6 @@ class ::fidl::WireSyncClient<::fidl_test_placementofattributes::ExampleProtocol>
         ::fidl_test_placementofattributes::ExampleProtocol::Method>(
         this->client_end(), _allocator, &_request);
   }
-
- private:
-  ::fidl::ClientEnd<::fidl_test_placementofattributes::ExampleProtocol>
-      client_end_;
 };
 
 // Pure-virtual interface to be implemented by a server.

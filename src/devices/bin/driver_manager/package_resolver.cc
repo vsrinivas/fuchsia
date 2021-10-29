@@ -47,7 +47,7 @@ zx::status<std::unique_ptr<Driver>> PackageResolver::FetchDriver(const std::stri
   }
 
   fbl::unique_fd package_dir_fd;
-  status = fdio_fd_create(package_dir_result->client_end().TakeChannel().release(),
+  status = fdio_fd_create(package_dir_result.value().client_end().TakeChannel().release(),
                           package_dir_fd.reset_and_get_address());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to create package_dir_fd: %sd", zx_status_get_string(status));

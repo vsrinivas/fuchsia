@@ -47,7 +47,7 @@ bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
     state->NextStep();  // End: Setup. Begin: EchoCall.
 
-    auto result = client.Echo(std::move(aligned_value));
+    auto result = client->Echo(std::move(aligned_value));
 
     state->NextStep();  // End: EchoCall. Begin: Teardown
 

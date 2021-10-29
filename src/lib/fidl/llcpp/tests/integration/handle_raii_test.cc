@@ -423,7 +423,7 @@ TEST_F(HandleCloseTest, Handle) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandle();
+    auto result = client->GetHandle();
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -438,7 +438,7 @@ TEST_F(HandleCloseTest, HandleStruct) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandleStruct();
+    auto result = client->GetHandleStruct();
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -453,7 +453,7 @@ TEST_F(HandleCloseTest, HandleStructStruct) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandleStructStruct();
+    auto result = client->GetHandleStructStruct();
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -468,7 +468,7 @@ TEST_F(HandleCloseTest, MultiFieldStruct) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetMultiFieldStruct();
+    auto result = client->GetMultiFieldStruct();
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -485,7 +485,7 @@ TEST_F(HandleCloseTest, MultiArgs) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetMultiArgs();
+    auto result = client->GetMultiArgs();
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -502,7 +502,7 @@ TEST_F(HandleCloseTest, VectorStruct) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetVectorStruct(4);
+    auto result = client->GetVectorStruct(4);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -519,7 +519,7 @@ TEST_F(HandleCloseTest, ArrayStruct) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetArrayStruct();
+    auto result = client->GetArrayStruct();
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -536,7 +536,7 @@ TEST_F(HandleCloseTest, HandleUnion1) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandleUnion(1);
+    auto result = client->GetHandleUnion(1);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -552,7 +552,7 @@ TEST_F(HandleCloseTest, HandleUnion2) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandleUnion(2);
+    auto result = client->GetHandleUnion(2);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -568,7 +568,7 @@ TEST_F(HandleCloseTest, HandleUnionStruct1) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandleUnionStruct(1);
+    auto result = client->GetHandleUnionStruct(1);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -584,7 +584,7 @@ TEST_F(HandleCloseTest, HandleUnionStruct2) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandleUnionStruct(2);
+    auto result = client->GetHandleUnionStruct(2);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -600,7 +600,7 @@ TEST_F(HandleCloseTest, HandleTableNone) {
   // Only checks that the destructions won't crash.
   auto client = TakeClient();
   {
-    auto result = client.GetHandleTable(0);
+    auto result = client->GetHandleTable(0);
 
     ASSERT_TRUE(result.ok()) << result.error();
   }
@@ -610,7 +610,7 @@ TEST_F(HandleCloseTest, HandleTableEvent) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandleTable(1);
+    auto result = client->GetHandleTable(1);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -625,7 +625,7 @@ TEST_F(HandleCloseTest, HandleTableHandleStruct) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandleTable(2);
+    auto result = client->GetHandleTable(2);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -640,7 +640,7 @@ TEST_F(HandleCloseTest, HandleTableAll) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandleTable(3);
+    auto result = client->GetHandleTable(3);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -656,7 +656,7 @@ TEST_F(HandleCloseTest, HandleTableStructNone) {
   // Only checks that the destructions won't crash.
   auto client = TakeClient();
   {
-    auto result = client.GetHandleTableStruct(0);
+    auto result = client->GetHandleTableStruct(0);
 
     ASSERT_TRUE(result.ok()) << result.error();
   }
@@ -666,7 +666,7 @@ TEST_F(HandleCloseTest, HandleTableStructEvent) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandleTableStruct(1);
+    auto result = client->GetHandleTableStruct(1);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -681,7 +681,7 @@ TEST_F(HandleCloseTest, HandleTableStructHandleStruct) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandleTableStruct(2);
+    auto result = client->GetHandleTableStruct(2);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -696,7 +696,7 @@ TEST_F(HandleCloseTest, HandleTableStructAll) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandleTableStruct(3);
+    auto result = client->GetHandleTableStruct(3);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -712,7 +712,7 @@ TEST_F(HandleCloseTest, OptionalHandleStructNotDefined) {
   // Only checks that the destructions won't crash.
   auto client = TakeClient();
   {
-    auto result = client.GetOptionalHandleStruct(false);
+    auto result = client->GetOptionalHandleStruct(false);
 
     ASSERT_TRUE(result.ok()) << result.error();
   }
@@ -722,7 +722,7 @@ TEST_F(HandleCloseTest, OptionalHandleStructDefined) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetOptionalHandleStruct(true);
+    auto result = client->GetOptionalHandleStruct(true);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -737,7 +737,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnionNone) {
   // Only checks that the destructions won't crash.
   auto client = TakeClient();
   {
-    auto result = client.GetOptionalHandleUnion(0);
+    auto result = client->GetOptionalHandleUnion(0);
 
     ASSERT_TRUE(result.ok()) << result.error();
   }
@@ -747,7 +747,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnion1) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetOptionalHandleUnion(1);
+    auto result = client->GetOptionalHandleUnion(1);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -763,7 +763,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnion2) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetOptionalHandleUnion(2);
+    auto result = client->GetOptionalHandleUnion(2);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -779,7 +779,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnionStructNotDefined) {
   // Only checks that the destructions won't crash.
   auto client = TakeClient();
   {
-    auto result = client.GetOptionalHandleUnionStruct(false, 0);
+    auto result = client->GetOptionalHandleUnionStruct(false, 0);
 
     ASSERT_TRUE(result.ok()) << result.error();
   }
@@ -789,7 +789,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnionStruct1) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetOptionalHandleUnionStruct(true, 1);
+    auto result = client->GetOptionalHandleUnionStruct(true, 1);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -805,7 +805,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnionStruct2) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetOptionalHandleUnionStruct(true, 2);
+    auto result = client->GetOptionalHandleUnionStruct(true, 2);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -821,7 +821,7 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructNotDefined) {
   // Only checks that the destructions won't crash.
   auto client = TakeClient();
   {
-    auto result = client.GetOptionalHandleTableStruct(false, 0);
+    auto result = client->GetOptionalHandleTableStruct(false, 0);
 
     ASSERT_TRUE(result.ok()) << result.error();
   }
@@ -831,7 +831,7 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructNone) {
   // Only checks that the destructions won't crash.
   auto client = TakeClient();
   {
-    auto result = client.GetOptionalHandleTableStruct(true, 0);
+    auto result = client->GetOptionalHandleTableStruct(true, 0);
 
     ASSERT_TRUE(result.ok()) << result.error();
   }
@@ -841,7 +841,7 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructEvent) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetOptionalHandleTableStruct(true, 1);
+    auto result = client->GetOptionalHandleTableStruct(true, 1);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -856,7 +856,7 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructHandleStruct) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetOptionalHandleTableStruct(true, 2);
+    auto result = client->GetOptionalHandleTableStruct(true, 2);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -871,7 +871,7 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructAll) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetOptionalHandleTableStruct(true, 3);
+    auto result = client->GetOptionalHandleTableStruct(true, 3);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -887,7 +887,7 @@ TEST_F(HandleCloseTest, HandleStructOptionalStructNotDefined) {
   // Only checks that the destructions won't crash.
   auto client = TakeClient();
   {
-    auto result = client.GetHandleStructOptionalStruct(false);
+    auto result = client->GetHandleStructOptionalStruct(false);
 
     ASSERT_TRUE(result.ok()) << result.error();
   }
@@ -897,7 +897,7 @@ TEST_F(HandleCloseTest, HandleStructOptionalStructDefined) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandleStructOptionalStruct(true);
+    auto result = client->GetHandleStructOptionalStruct(true);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -912,7 +912,7 @@ TEST_F(HandleCloseTest, HandleUnionOptionalStructNotDefined) {
   // Only checks that the destructions won't crash.
   auto client = TakeClient();
   {
-    auto result = client.GetHandleUnionOptionalStruct(false, 0);
+    auto result = client->GetHandleUnionOptionalStruct(false, 0);
 
     ASSERT_TRUE(result.ok()) << result.error();
   }
@@ -922,7 +922,7 @@ TEST_F(HandleCloseTest, HandleUnionOptionalStruct1) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandleUnionOptionalStruct(true, 1);
+    auto result = client->GetHandleUnionOptionalStruct(true, 1);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -938,7 +938,7 @@ TEST_F(HandleCloseTest, HandleUnionOptionalStruct2) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetHandleUnionOptionalStruct(true, 2);
+    auto result = client->GetHandleUnionOptionalStruct(true, 2);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -955,7 +955,7 @@ TEST_F(HandleCloseTest, VectorOfHandle) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetVectorOfHandle(kNumHandle);
+    auto result = client->GetVectorOfHandle(kNumHandle);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -975,7 +975,7 @@ TEST_F(HandleCloseTest, VectorOfVectorOfHandle) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetVectorOfVectorOfHandle(kNumVector, kNumHandle);
+    auto result = client->GetVectorOfVectorOfHandle(kNumVector, kNumHandle);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -998,7 +998,7 @@ TEST_F(HandleCloseTest, VectorOfVectorOfVectorOfHandle) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetVectorOfVectorOfVectorOfHandle(kNumVector1, kNumVector2, kNumHandle);
+    auto result = client->GetVectorOfVectorOfVectorOfHandle(kNumVector1, kNumVector2, kNumHandle);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -1021,7 +1021,7 @@ TEST_F(HandleCloseTest, VectorOfHandleStruct) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetVectorOfHandleStruct(kNumHandle);
+    auto result = client->GetVectorOfHandleStruct(kNumHandle);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -1041,7 +1041,7 @@ TEST_F(HandleCloseTest, VectorOfVectorOfHandleStruct) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetVectorOfVectorOfHandleStruct(kNumVector, kNumHandle);
+    auto result = client->GetVectorOfVectorOfHandleStruct(kNumVector, kNumHandle);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -1065,7 +1065,7 @@ TEST_F(HandleCloseTest, VectorOfVectorOfVectorOfHandleStruct) {
   auto client = TakeClient();
   {
     auto result =
-        client.GetVectorOfVectorOfVectorOfHandleStruct(kNumVector1, kNumVector2, kNumHandle);
+        client->GetVectorOfVectorOfVectorOfHandleStruct(kNumVector1, kNumVector2, kNumHandle);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -1087,7 +1087,7 @@ TEST_F(HandleCloseTest, ArrayOfHandle) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetArrayOfHandle();
+    auto result = client->GetArrayOfHandle();
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -1104,7 +1104,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfHandle) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetArrayOfArrayOfHandle();
+    auto result = client->GetArrayOfArrayOfHandle();
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -1123,7 +1123,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfArrayOfHandle) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetArrayOfArrayOfArrayOfHandle();
+    auto result = client->GetArrayOfArrayOfArrayOfHandle();
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -1144,7 +1144,7 @@ TEST_F(HandleCloseTest, ArrayOfHandleStruct) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetArrayOfHandleStruct();
+    auto result = client->GetArrayOfHandleStruct();
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -1161,7 +1161,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfHandleStruct) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetArrayOfArrayOfHandleStruct();
+    auto result = client->GetArrayOfArrayOfHandleStruct();
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -1180,7 +1180,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfArrayOfHandleStruct) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetArrayOfArrayOfArrayOfHandleStruct();
+    auto result = client->GetArrayOfArrayOfArrayOfHandleStruct();
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -1202,7 +1202,7 @@ TEST_F(HandleCloseTest, Mixed1) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetMixed1(kNumHandle);
+    auto result = client->GetMixed1(kNumHandle);
 
     ASSERT_TRUE(result.ok()) << result.error();
 
@@ -1223,7 +1223,7 @@ TEST_F(HandleCloseTest, Mixed2) {
   llcpp_types_test_utils::HandleChecker checker;
   auto client = TakeClient();
   {
-    auto result = client.GetMixed2(kNumHandle);
+    auto result = client->GetMixed2(kNumHandle);
 
     ASSERT_TRUE(result.ok()) << result.error();
 

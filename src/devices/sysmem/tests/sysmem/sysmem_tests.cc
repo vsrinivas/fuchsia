@@ -609,7 +609,7 @@ bool AttachTokenSucceeds(
 
   auto collection_client_3_set_constraints = [&allocator_2, &token_client_3, &constraints_3,
                                               &collection_3] {
-    EXPECT_NE(allocator_2->client_end().channel().get(), ZX_HANDLE_INVALID, "");
+    EXPECT_NE(allocator_2.value().client_end().channel().get(), ZX_HANDLE_INVALID, "");
     EXPECT_NE(token_client_3.channel().get(), ZX_HANDLE_INVALID, "");
     IF_FAILURES_RETURN();
     collection_3.client_end().reset();
@@ -1088,7 +1088,7 @@ TEST(Sysmem, AttachLifetimeTracking) {
   ASSERT_OK(status, "");
   ASSERT_TRUE(attached_pending_signals & ZX_EVENTPAIR_PEER_CLOSED, "");
 
-  collection->client_end().reset();
+  collection.value().client_end().reset();
 
   // ZX_EVENTPAIR_PEER_CLOSED should be seen for eventpair(s) >= kNumBuffers.
   for (uint32_t i = 0; i < kNumEventpairs; ++i) {
@@ -1860,8 +1860,8 @@ TEST(Sysmem, DuplicateSync) {
 
   auto token_2 = fidl::BindSyncClient(std::move(token_client_2));
   // Remove write from last token
-  zx::wire::Rights rights_attenuation_masks_2[] = {
-      zx::wire::Rights::kSameRights, ~zx::wire::Rights::kWrite};
+  zx::wire::Rights rights_attenuation_masks_2[] = {zx::wire::Rights::kSameRights,
+                                                   ~zx::wire::Rights::kWrite};
   auto duplicate_result_2 = token_2.DuplicateSync(
       fidl::VectorView<zx::wire::Rights>::FromExternal(rights_attenuation_masks_2));
   ASSERT_OK(duplicate_result_2);

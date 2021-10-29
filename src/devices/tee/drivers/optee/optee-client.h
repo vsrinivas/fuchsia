@@ -35,9 +35,10 @@ class OpteeClient : public fidl::WireServer<fuchsia_tee::Application> {
  public:
   OpteeClient(OpteeControllerBase* controller,
               fidl::ClientEnd<fuchsia_tee_manager::Provider> provider, Uuid application_uuid)
-      : controller_(controller),
-        provider_(std::move(provider)),
-        application_uuid_(std::move(application_uuid)) {}
+      : controller_(controller), application_uuid_(application_uuid) {
+    if (provider)
+      provider_.Bind(std::move(provider));
+  }
 
   ~OpteeClient() override;
 
@@ -238,8 +239,8 @@ class OpteeClient : public fidl::WireServer<fuchsia_tee::Application> {
   std::unordered_map<uint64_t, fidl::ClientEnd<fuchsia_io::File>> open_file_system_objects_;
   std::unordered_set<uint32_t> open_sessions_;
 
-  // A client implementing the `fuchsia.tee.manager.Provider` protocol. The underlying channel may
-  // be invalid which indicates the optee client has no provider support.
+  // A client implementing the `fuchsia.tee.manager.Provider` protocol. The client may be
+  // uninitialized which indicates the optee client has no provider support.
   fidl::WireSyncClient<fuchsia_tee_manager::Provider> provider_;
 
   // A lazily-initialized, cached channel to the root storage channel.

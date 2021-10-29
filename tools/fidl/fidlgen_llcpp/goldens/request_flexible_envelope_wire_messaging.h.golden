@@ -1046,9 +1046,9 @@ class ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
 template <>
 class ::fidl::internal::WireSyncClientImpl<
     ::fidl_test_requestflexibleenvelope::Protocol>
-    final
-    : public ::fidl::internal::SyncEndpointVeneer<
-          WireSyncClientImpl, ::fidl_test_requestflexibleenvelope::Protocol> {
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::fidl_test_requestflexibleenvelope::Protocol>> {
  public:
   // Request is heap-allocated. Response is heap-allocated.
   ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
@@ -1167,45 +1167,19 @@ class ::fidl::WireSyncEventHandler<
 };
 template <>
 class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
-    final {
+    final : public ::fidl::internal::WireSyncClientBase<
+                ::fidl_test_requestflexibleenvelope::Protocol> {
  public:
-  // Creates an invalid client that is not bound to a client endpoint. Use
-  // this default constructor only when the client must be constructed first
-  // before a channel could be obtained (for example, if the client is an
-  // instance variable).
-  WireSyncClient() = default;
-
-  explicit WireSyncClient(
-      ::fidl::ClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
-          client_end)
-      : client_end_(std::move(client_end)) {}
-
-  ~WireSyncClient() = default;
-  WireSyncClient(WireSyncClient&&) = default;
-  WireSyncClient& operator=(WireSyncClient&&) = default;
-
-  const ::fidl::ClientEnd<::fidl_test_requestflexibleenvelope::Protocol>&
-  client_end() const {
-    return client_end_;
-  }
-  ::fidl::ClientEnd<::fidl_test_requestflexibleenvelope::Protocol>&
-  client_end() {
-    return client_end_;
-  }
-
-  const ::zx::channel& channel() const { return client_end_.channel(); }
-  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return client_end_.is_valid(); }
-  explicit operator bool() const { return is_valid(); }
+  using ::fidl::internal::WireSyncClientBase<
+      ::fidl_test_requestflexibleenvelope::Protocol>::WireSyncClientBase;
+  using ::fidl::internal::WireSyncClientBase<
+      ::fidl_test_requestflexibleenvelope::Protocol>::Bind;
 
   // Request is heap-allocated. Response is heap-allocated.
   ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                          RequestStrictResponseFlexible>
   RequestStrictResponseFlexible(
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s) const {
-    ZX_ASSERT(client_end_.is_valid());
     ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                             RequestStrictResponseFlexible>
         _request{s};
@@ -1221,7 +1195,6 @@ class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
   RequestStrictResponseFlexible(
       ::fidl::BufferSpan _buffer_span,
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s) const {
-    ZX_ASSERT(client_end_.is_valid());
     auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                             RequestStrictResponseFlexible>
@@ -1237,7 +1210,6 @@ class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
                          RequestFlexibleResponseStrict>
   RequestFlexibleResponseStrict(
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s) const {
-    ZX_ASSERT(client_end_.is_valid());
     ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                             RequestFlexibleResponseStrict>
         _request{s};
@@ -1253,7 +1225,6 @@ class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
   RequestFlexibleResponseStrict(
       ::fidl::BufferSpan _buffer_span,
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s) const {
-    ZX_ASSERT(client_end_.is_valid());
     auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                             RequestFlexibleResponseStrict>
@@ -1263,9 +1234,6 @@ class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
             RequestFlexibleResponseStrict>(this->client_end(), _allocator,
                                            &_request);
   }
-
- private:
-  ::fidl::ClientEnd<::fidl_test_requestflexibleenvelope::Protocol> client_end_;
 };
 
 template <>

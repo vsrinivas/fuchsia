@@ -112,14 +112,14 @@ class HandleRightsTest : public ::testing::Test {
 
 TEST_F(HandleRightsTest, SyncGetTooFewRights) {
   auto client = SyncClient();
-  auto resp = client.SyncGetHandleWithTooFewRights();
+  auto resp = client->SyncGetHandleWithTooFewRights();
   // The channel is closed after a rights error on the sending side.
   ASSERT_EQ(resp.status(), ZX_ERR_PEER_CLOSED);
 }
 
 TEST_F(HandleRightsTest, SyncGetTooManyRights) {
   auto client = SyncClient();
-  auto resp = client.SyncGetHandleWithTooManyRights();
+  auto resp = client->SyncGetHandleWithTooManyRights();
   ASSERT_TRUE(resp.ok());
   zx_info_handle_basic_t info;
   ASSERT_EQ(ZX_OK, resp->h.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
@@ -129,7 +129,7 @@ TEST_F(HandleRightsTest, SyncGetTooManyRights) {
 
 TEST_F(HandleRightsTest, SyncGetWrongType) {
   auto client = SyncClient();
-  auto resp = client.SyncGetHandleWithWrongType();
+  auto resp = client->SyncGetHandleWithWrongType();
   // The channel is closed after a object type error on the sending side.
   ASSERT_EQ(resp.status(), ZX_ERR_PEER_CLOSED);
 }
@@ -139,7 +139,7 @@ TEST_F(HandleRightsTest, SyncSendTooFewRights) {
   zx::event ev;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
   ASSERT_EQ(ZX_OK, ev.replace(ZX_RIGHT_TRANSFER, &ev));
-  auto resp = client.SendEventWithTransferAndSignal(std::move(ev));
+  auto resp = client->SendEventWithTransferAndSignal(std::move(ev));
   // The channel is closed after a rights error on the sending side.
   ASSERT_EQ(resp.status(), ZX_ERR_INVALID_ARGS);
   ASSERT_EQ(resp.reason(), ::fidl::Reason::kTransportError);
@@ -149,7 +149,7 @@ TEST_F(HandleRightsTest, SyncSendTooManyRights) {
   auto client = SyncClient();
   zx::event ev;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
-  auto resp = client.SendEventWithTransferAndSignal(std::move(ev));
+  auto resp = client->SendEventWithTransferAndSignal(std::move(ev));
   ASSERT_TRUE(resp.ok());
 }
 
@@ -158,7 +158,7 @@ TEST_F(HandleRightsTest, SyncSendWrongType) {
   zx::event ev;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
   // Send the event as a channel (type error).
-  auto resp = client.SendChannel(zx::channel(ev.release()));
+  auto resp = client->SendChannel(zx::channel(ev.release()));
   // The channel is closed after a type error on the sending side.
   ASSERT_EQ(resp.status(), ZX_ERR_WRONG_TYPE);
   ASSERT_EQ(resp.reason(), ::fidl::Reason::kTransportError);

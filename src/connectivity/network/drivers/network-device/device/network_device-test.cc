@@ -1875,7 +1875,7 @@ TEST_F(NetworkDeviceTest, NonExistentPort) {
     SCOPED_TRACE(t.name);
     zx::status port = OpenPort(t.port_id);
     ASSERT_OK(port.status_value());
-    zx::status epitaph = WaitClosedAndReadEpitaph(port->channel());
+    zx::status epitaph = WaitClosedAndReadEpitaph(port.value().channel());
     ASSERT_OK(epitaph.status_value());
     ASSERT_STATUS(epitaph.value(), ZX_ERR_NOT_FOUND);
     ASSERT_STATUS(session.AttachPort(t.port_id, {}), t.session_error);
