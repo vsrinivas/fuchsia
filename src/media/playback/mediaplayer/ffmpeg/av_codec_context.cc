@@ -44,7 +44,12 @@ void Deposit(T t, uint8_t** p_in_out) {
 // Creates a PSSH box as raw bytes from encryption init data on a stream, if there is any, otherwise
 // returns nullptr.
 std::unique_ptr<Bytes> EncryptionParametersFromStream(const AVStream& from) {
+// TODO(fxr/87639): remove once we're committed to the new version.
+#if LIBAVFORMAT_VERSION_MAJOR == 58
   int encryption_side_data_size;
+#else
+  size_t encryption_side_data_size;
+#endif
   uint8_t* encryption_side_data =
       av_stream_get_side_data(&from, AV_PKT_DATA_ENCRYPTION_INIT_INFO, &encryption_side_data_size);
   if (encryption_side_data == nullptr) {

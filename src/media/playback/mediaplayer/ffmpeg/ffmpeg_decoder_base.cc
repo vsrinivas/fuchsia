@@ -22,7 +22,10 @@ FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
 
   av_codec_context_->opaque = this;
   av_codec_context_->get_buffer2 = AllocateBufferForAvFrame;
+// TODO(fxr/87639): remove once we're committed to the new version.
+#if LIBAVCODEC_VERSION_MAJOR == 58
   av_codec_context_->refcounted_frames = 1;
+#endif
 }
 
 FfmpegDecoderBase::~FfmpegDecoderBase() {}
@@ -144,16 +147,19 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input, 
 int FfmpegDecoderBase::SendPacket(const PacketPtr& input) {
   FX_DCHECK(input);
 
-  AVPacket av_packet;
-  av_init_packet(&av_packet);
-  av_packet.data = reinterpret_cast<uint8_t*>(input->payload());
-  av_packet.size = input->size();
-  av_packet.pts = input->pts();
+  AVPacket* av_packet = av_packet_alloc();
+  FX_DCHECK(av_packet);
+
+  av_packet->data = reinterpret_cast<uint8_t*>(input->payload());
+  av_packet->size = input->size();
+  av_packet->pts = input->pts();
   if (input->keyframe()) {
-    av_packet.flags |= AV_PKT_FLAG_KEY;
+    av_packet->flags |= AV_PKT_FLAG_KEY;
   }
 
-  int result = avcodec_send_packet(av_codec_context_.get(), &av_packet);
+  int result = avcodec_send_packet(av_codec_context_.get(), av_packet);
+
+  av_packet_free(&av_packet);
 
   if (result != 0) {
     FX_LOGS(WARNING) << "avcodec_send_packet failed " << result;

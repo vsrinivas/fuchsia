@@ -262,18 +262,24 @@ std::ostream& operator<<(std::ostream& os, AVFMTFlags value) {
   if (value.flags_ & AVFMT_FLAG_BITEXACT) {
     os << fostr::NewLine << "AVFMT_FLAG_BITEXACT";
   }
+// TODO(fxr/87639): remove once we're committed to the new version.
+#if LIBAVFORMAT_VERSION_MAJOR == 58
   if (value.flags_ & AVFMT_FLAG_MP4A_LATM) {
     os << fostr::NewLine << "AVFMT_FLAG_MP4A_LATM";
   }
+#endif
   if (value.flags_ & AVFMT_FLAG_SORT_DTS) {
     os << fostr::NewLine << "AVFMT_FLAG_SORT_DTS";
   }
   if (value.flags_ & AVFMT_FLAG_PRIV_OPT) {
     os << fostr::NewLine << "AVFMT_FLAG_PRIV_OPT";
   }
+// TODO(fxr/87639): remove once we're committed to the new version.
+#if LIBAVFORMAT_VERSION_MAJOR == 58
   if (value.flags_ & AVFMT_FLAG_KEEP_SIDE_DATA) {
     os << fostr::NewLine << "AVFMT_FLAG_KEEP_SIDE_DATA";
   }
+#endif
   if (value.flags_ & AVFMT_FLAG_FAST_SEEK) {
     os << fostr::NewLine << "AVFMT_FLAG_FAST_SEEK";
   }
@@ -667,7 +673,10 @@ std::ostream& operator<<(std::ostream& os, const AVFormatContext* value) {
   os << fostr::NewLine << "unsigned int nb_streams: " << value->nb_streams;
   os << fostr::NewLine
      << "AVStream **streams: " << AVStreamArray(value->streams, value->nb_streams);
+// TODO(fxr/87639): remove once we're committed to the new version.
+#if LIBAVCODEC_VERSION_MAJOR == 58
   os << fostr::NewLine << "char filename[1024]: " << value->filename;
+#endif
   os << fostr::NewLine << "int64_t start_time: " << value->start_time;
   os << fostr::NewLine << "int64_t duration: " << value->duration;
   os << fostr::NewLine << "int64_t bit_rate: " << value->bit_rate;

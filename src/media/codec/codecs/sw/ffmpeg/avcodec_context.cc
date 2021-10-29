@@ -23,7 +23,10 @@ static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c, ui
 
 std::optional<std::unique_ptr<AvCodecContext>> AvCodecContext::CreateDecoder(
     const fuchsia::media::FormatDetails& format_details, GetBufferCallback get_buffer_callback) {
+// TODO(fxr/87639): remove once we're committed to the new version.
+#if LIBAVFORMAT_VERSION_MAJOR == 58
   avcodec_register_all();
+#endif
   if (!format_details.has_mime_type()) {
     return std::nullopt;
   }
@@ -32,7 +35,7 @@ std::optional<std::unique_ptr<AvCodecContext>> AvCodecContext::CreateDecoder(
     return std::nullopt;
   }
 
-  AVCodec* codec = avcodec_find_decoder(codec_id->second);
+  const AVCodec* codec = avcodec_find_decoder(codec_id->second);
   ZX_DEBUG_ASSERT(codec);
   ZX_DEBUG_ASSERT(av_codec_is_decoder(codec));
   auto avcodec_context = std::unique_ptr<AVCodecContext, fit::function<void(AVCodecContext*)>>(
@@ -78,16 +81,21 @@ int AvCodecContext::SendPacket(const CodecPacket* codec_packet) {
   ZX_DEBUG_ASSERT(codec_packet->has_valid_length_bytes());
   ZX_DEBUG_ASSERT(codec_packet->buffer());
 
-  AVPacket packet;
-  av_init_packet(&packet);
-  packet.data = codec_packet->buffer()->base() + codec_packet->start_offset();
-  packet.size = codec_packet->valid_length_bytes();
+  AVPacket* packet = av_packet_alloc();
+  ZX_ASSERT(packet);
+
+  packet->data = codec_packet->buffer()->base() + codec_packet->start_offset();
+  packet->size = codec_packet->valid_length_bytes();
 
   if (codec_packet->has_timestamp_ish()) {
-    packet.pts = codec_packet->timestamp_ish();
+    packet->pts = codec_packet->timestamp_ish();
   }
 
-  return avcodec_send_packet(avcodec_context_.get(), &packet);
+  auto result = avcodec_send_packet(avcodec_context_.get(), packet);
+
+  av_packet_free(&packet);
+
+  return result;
 }
 
 std::pair<int, AvCodecContext::AVFramePtr> AvCodecContext::ReceiveFrame() {

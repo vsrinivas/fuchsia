@@ -8,6 +8,7 @@
 #include "src/media/playback/mediaplayer/graph/types/stream_type.h"
 #include "src/media/playback/mediaplayer/graph/types/video_stream_type.h"
 extern "C" {
+#include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 }
 
