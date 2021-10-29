@@ -49,7 +49,7 @@ zx_status_t WlanphyImplDevice::WlanphyImplCreateIface(const wlanphy_impl_create_
 
   fbl::AllocChecker ac;
   auto wlanmac_device =
-      fbl::make_unique_checked<WlanmacDevice>(&ac, zxdev(), drvdata(), *out_iface_id, mvmvif);
+      fbl::make_unique_checked<WlanmacDevice>(&ac, parent(), drvdata(), *out_iface_id, mvmvif);
   if (!ac.check()) {
     IWL_ERR(this, "%s() failed to allocate wlanmac_device (%zu bytes)", __func__,
             sizeof(*wlanmac_device));
