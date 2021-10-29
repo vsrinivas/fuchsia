@@ -68,7 +68,8 @@ TEST_F(DiagnosticsTest, SentObservationResultError) {
                     PropertyList(UnorderedElementsAre(
                         IntIs("successes", 0), IntIs("errors", 1), IntIs("last_success_time", 0),
                         IntIs("last_error_time", testing::Gt(0)),
-                        IntIs("last_error_code", util::StatusCode::DEADLINE_EXCEEDED),
+                        IntIs("last_error_code",
+                              static_cast<int64_t>(util::StatusCode::DEADLINE_EXCEEDED)),
                         StringIs("last_error_message", "error_message"),
                         StringIs("last_error_details", "error_details")))))))))))));
 }

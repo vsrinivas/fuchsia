@@ -36,7 +36,7 @@ void DiagnosticsImpl::SentObservationResult(const cobalt::util::Status& status) 
   } else {
     send_observations_errors_.Add(1);
     last_send_error_time_.Set(current_time);
-    last_send_error_code_.Set(status.error_code());
+    last_send_error_code_.Set(static_cast<int64_t>(status.error_code()));
     last_send_error_message_.Set(status.error_message());
     last_send_error_details_.Set(status.error_details());
   }
