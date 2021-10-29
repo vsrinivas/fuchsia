@@ -23,7 +23,7 @@ go_library("serial") {
 
 go_test("tests") {
   output_name = "serial_tests"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/serial" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/serial" ]
   deps = [
     ":serial",
     "//third_party/golibs:github.com/google/go-cmp",

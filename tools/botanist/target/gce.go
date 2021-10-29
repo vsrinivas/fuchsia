@@ -25,7 +25,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
-	"go.fuchsia.dev/fuchsia/tools/serial"
+	"go.fuchsia.dev/fuchsia/tools/lib/serial"
 
 	"golang.org/x/crypto/ssh"
 )

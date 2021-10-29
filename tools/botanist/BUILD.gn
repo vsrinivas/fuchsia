@@ -51,10 +51,10 @@ go_library("target") {
     "//tools/lib/logger",
     "//tools/lib/osmisc",
     "//tools/lib/retry",
+    "//tools/lib/serial",
     "//tools/net/netutil",
     "//tools/net/sshutil",
     "//tools/qemu",
-    "//tools/serial",
   ]
 }
 

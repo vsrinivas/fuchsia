@@ -28,10 +28,10 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/serial"
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 	"go.fuchsia.dev/fuchsia/tools/lib/syslog"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
-	"go.fuchsia.dev/fuchsia/tools/serial"
 
 	"github.com/google/subcommands"
 	"golang.org/x/sync/errgroup"
