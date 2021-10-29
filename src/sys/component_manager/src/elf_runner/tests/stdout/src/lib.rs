@@ -33,9 +33,11 @@ struct MessageAssertion {
     severity: Severity,
 }
 
+// TODO(fxbug.dev/87499): Fix flake.
 // TODO(fxbug.dev/69684): Refactor this to receive puppet components
 // through argv once ArchiveAccesor is exposed from Test Runner.
 #[fuchsia::test]
+#[ignore]
 async fn test_components_logs_to_stdout() {
     let realm = client::realm().expect("failed to connect to fuchsia.component.Realm");
 
