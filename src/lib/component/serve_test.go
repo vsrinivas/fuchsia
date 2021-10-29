@@ -480,3 +480,59 @@ func TestServeExclusiveConcurrent(t *testing.T) {
 		}
 	}
 }
+
+func TestKeepChannelAlive(t *testing.T) {
+	tests := []struct {
+		name      string
+		keepAlive bool
+	}{
+		{
+			name:      "keep alive",
+			keepAlive: true,
+		},
+		{
+			name:      "close",
+			keepAlive: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			client, server, err := zx.NewChannel(0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				if err := client.Close(); err != nil {
+					t.Errorf("client.Close() = %s", err)
+				}
+			}()
+
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			component.Serve(ctx, &bindingstest.Test1WithCtxStub{
+				Impl: &test1Impl{},
+			}, server, component.ServeOptions{
+				KeepChannelAlive: testCase.keepAlive,
+				OnError: func(err error) {
+					t.Error(err)
+				},
+			})
+
+			err = server.Close()
+			if testCase.keepAlive {
+				if err != nil {
+					t.Fatalf("server.Close() = %s", err)
+				}
+			} else {
+				var zxErr *zx.Error
+				if !errors.As(err, &zxErr) {
+					t.Fatalf("expected %s to be %T", err, zxErr)
+				}
+				if got, want := zxErr.Status, zx.ErrBadHandle; got != want {
+					t.Fatalf("zxErr.status = %s, want %s", got, want)
+				}
+			}
+		})
+	}
+
+}

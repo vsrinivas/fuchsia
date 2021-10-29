@@ -31,7 +31,36 @@ var (
 //
 // onError is a logging hook that will be called with errors that cannot be propagated.
 func ServeExclusive(ctx context.Context, stub fidl.Stub, req zx.Channel, onError func(error)) {
-	serveExclusive(nil, ctx, stub, req, onError)
+	Serve(ctx, stub, req, ServeOptions{
+		OnError: onError,
+	})
+}
+
+// ServeOptions contains options for Serve.
+type ServeOptions struct {
+	// Concurrent controls if requests on the channel are handled concurrently or
+	// serially.
+	Concurrent bool
+	// KeepChannelAlive controls if the channel is closed when Serve returns.
+	KeepChannelAlive bool
+	// OnError is a logging hook that will be called with errors that cannot be
+	// propagated. Must be non-nil.
+	OnError func(error)
+}
+
+// Serve serves requests from req using stub.
+//
+// opts contains behavior-modifying options.
+func Serve(ctx context.Context, stub fidl.Stub, req zx.Channel, opts ServeOptions) {
+	if opts.Concurrent {
+		g, ctx := errgroup.WithContext(ctx)
+		serveExclusive(g, ctx, stub, req, opts)
+		if err := g.Wait(); err != nil {
+			opts.handleServeError(ctx, err)
+		}
+		return
+	}
+	serveExclusive(nil, ctx, stub, req, opts)
 }
 
 // ServeExclusiveConcurrent assumes ownership of req and concurrently serves
@@ -40,11 +69,10 @@ func ServeExclusive(ctx context.Context, stub fidl.Stub, req zx.Channel, onError
 //
 // onError is a logging hook that will be called with errors that cannot be propagated.
 func ServeExclusiveConcurrent(ctx context.Context, stub fidl.Stub, req zx.Channel, onError func(error)) {
-	g, ctx := errgroup.WithContext(ctx)
-	serveExclusive(g, ctx, stub, req, onError)
-	if err := g.Wait(); err != nil {
-		handleServeError(ctx, err, onError)
-	}
+	Serve(ctx, stub, req, ServeOptions{
+		OnError:    onError,
+		Concurrent: true,
+	})
 }
 
 var bytesPool = sync.Pool{
@@ -205,27 +233,31 @@ func serve(g *errgroup.Group, ctx context.Context, stub fidl.Stub, req zx.Channe
 	}
 }
 
-func serveExclusive(g *errgroup.Group, ctx context.Context, stub fidl.Stub, req zx.Channel, onError func(error)) {
-	defer func() {
-		if err := req.Close(); err != nil {
-			onError(fmt.Errorf("failed to close request channel: %w", err))
-		}
-	}()
+func serveExclusive(g *errgroup.Group, ctx context.Context, stub fidl.Stub, req zx.Channel, opts ServeOptions) {
+	if !opts.KeepChannelAlive {
+		defer func() {
+			if err := req.Close(); err != nil {
+				opts.handleServeError(ctx, fmt.Errorf("failed to close request channel: %w", err))
+			}
+		}()
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	if err := serve(g, ctx, stub, req, onError); err != nil {
-		handleServeError(ctx, err, onError)
+	if err := serve(g, ctx, stub, req, func(err error) {
+		opts.handleServeError(ctx, err)
+	}); err != nil {
+		opts.handleServeError(ctx, err)
 	}
 }
 
-func handleServeError(ctx context.Context, err error, onError func(error)) {
+func (o *ServeOptions) handleServeError(ctx context.Context, err error) {
 	if err == ctx.Err() {
 		return
 	}
 	if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrPeerClosed {
 		return
 	}
-	onError(fmt.Errorf("serving terminated: %w", err))
+	o.OnError(fmt.Errorf("serving terminated: %w", err))
 }
