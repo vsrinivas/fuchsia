@@ -35,20 +35,8 @@ typedef char* acpi_string;
 
 #define iwl_assert_lock_held(x) ZX_DEBUG_ASSERT(mtx_trylock(x) == thrd_busy)
 
-// NEEDS_TYPES: need protection while accessing the variable.
-#define rcu_dereference(p) (p)
-#define rcu_dereference_protected(p, c) (p)
-
 // NEEDS_TYPES: how to guarantee this?
 #define READ_ONCE(x) (x)
-
-// NEEDS_TYPES: implement this
-#define rcu_read_lock() \
-  do {                  \
-  } while (0);
-#define rcu_read_unlock() \
-  do {                    \
-  } while (0);
 
 #define DMA_BIT_MASK(n) (((n) >= 64) ? ~0ULL : ((1ULL << (n)) - 1))
 
@@ -62,6 +50,7 @@ typedef char* acpi_string;
 struct zx_device;
 struct async_dispatcher;
 struct driver_inspector;
+struct rcu_manager;
 
 // This struct is analogous to the Linux device struct, and contains all the Fuchsia-specific data
 // fields relevant to generic device functionality.
@@ -82,6 +71,9 @@ struct device {
   // Fuchsia has no separate interrupt context, but to maintain similar performance characteristics
   // we will maintain a dedicated IRQ dispatcher here.
   struct async_dispatcher* irq_dispatcher;
+
+  // The RCU manager instance used to manage RCU-based synchronization.
+  struct rcu_manager* rcu_manager;
 
   // The inspector used to publish the component inspection tree from the driver.
   struct driver_inspector* inspector;

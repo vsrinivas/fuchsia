@@ -6,6 +6,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
@@ -20,6 +21,7 @@ extern "C" {
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/driver-inspector.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu-manager.h"
 
 #if !CPTCFG_IWLMVM
 #error "PcieDevice requires support for MVM firmwares."
@@ -77,11 +79,16 @@ void PcieDevice::DdkInit(::ddk::InitTxn txn) {
               zx_status_get_string(status));
       return status;
     }
+    rcu_manager_ = std::make_unique<RcuManager>(task_loop_->dispatcher());
+    rcu_manager_->InitForThread();
+    ::async::PostTask(task_loop_->dispatcher(), [this]() { rcu_manager_->InitForThread(); });
+    ::async::PostTask(irq_loop_->dispatcher(), [this]() { rcu_manager_->InitForThread(); });
 
     // Fill in the relevant Fuchsia-specific fields in our driver interface struct.
     pci_dev_.dev.zxdev = zxdev();
     pci_dev_.dev.task_dispatcher = task_loop_->dispatcher();
     pci_dev_.dev.irq_dispatcher = irq_loop_->dispatcher();
+    pci_dev_.dev.rcu_manager = static_cast<struct rcu_manager*>(rcu_manager_.get());
     pci_dev_.dev.inspector = static_cast<struct driver_inspector*>(driver_inspector_.get());
 
     if ((status = device_get_fragment_protocol(parent(), "pci", ZX_PROTOCOL_PCI,

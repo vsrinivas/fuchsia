@@ -43,6 +43,7 @@ source_set("sim_library") {
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw:api",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_device",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:rcu_manager",
     "//src/devices/testing/fake-bti",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -293,6 +294,18 @@ executable("platform_test") {
   ]
 }
 
+executable("rcu_manager_test") {
+  output_name = "rcu_manager_test"
+  testonly = true
+  sources = [ "rcu-manager-test.cc" ]
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:rcu_manager",
+    "//zircon/system/ulib/async-testing",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
 executable("sta_test") {
   output_name = "sta_test"
   testonly = true
@@ -351,6 +364,7 @@ _tests = [
   "pcie_test",
   "phy_ctxt_test",
   "platform_test",
+  "rcu_manager_test",
   "sta_test",
   "task_test",
   "utils_test",

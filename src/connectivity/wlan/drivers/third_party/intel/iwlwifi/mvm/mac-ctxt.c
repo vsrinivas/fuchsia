@@ -39,6 +39,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
 
 const uint8_t iwl_mvm_ac_to_tx_fifo[] = {
     IWL_MVM_TX_FIFO_VO,
@@ -542,9 +543,9 @@ static void iwl_mvm_mac_ctxt_cmd_common(struct iwl_mvm_vif* mvmvif, wlan_info_ba
     eth_broadcast_addr(cmd->bssid_addr);
   }
 
-  rcu_read_lock();
+  iwl_rcu_read_lock(mvm->dev);
   iwl_mvm_ack_rates(mvmvif, band, &cck_ack_rates, &ofdm_ack_rates);
-  rcu_read_unlock();
+  iwl_rcu_read_unlock(mvm->dev);
 
   cmd->cck_rates = cpu_to_le32((uint32_t)cck_ack_rates);
   cmd->ofdm_rates = cpu_to_le32((uint32_t)ofdm_ack_rates);

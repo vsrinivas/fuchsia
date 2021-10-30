@@ -28,6 +28,7 @@ class Loop;
 namespace wlan {
 namespace iwlwifi {
 
+class RcuManager;
 class WlanphyImplDevice;
 
 }  // namespace iwlwifi
@@ -58,12 +59,13 @@ class SimTransport : public SimMvm {
   // Member accessors.
   struct iwl_trans* iwl_trans();
   const struct iwl_trans* iwl_trans() const;
-  wlan::iwlwifi::WlanphyImplDevice* sim_device();
-  const wlan::iwlwifi::WlanphyImplDevice* sim_device() const;
+  ::wlan::iwlwifi::WlanphyImplDevice* sim_device();
+  const ::wlan::iwlwifi::WlanphyImplDevice* sim_device() const;
 
  private:
   std::unique_ptr<::async::Loop> task_loop_;
   std::unique_ptr<::async::Loop> irq_loop_;
+  std::unique_ptr<::wlan::iwlwifi::RcuManager> rcu_manager_;
   struct device device_;
   struct iwl_trans* iwl_trans_;
   wlan::iwlwifi::WlanphyImplDevice* sim_device_;

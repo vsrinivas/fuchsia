@@ -437,7 +437,6 @@ struct iwl_mvm_sta {
   } lq_sta;
   struct iwl_mvm_vif* mvmvif;
   struct iwl_mvm_sta_key_conf* key_conf;
-  mtx_t ptk_pn_mutex;
   struct iwl_mvm_key_pn __rcu* ptk_pn[4];
   struct iwl_mvm_rxq_dup_data* dup_data;
 

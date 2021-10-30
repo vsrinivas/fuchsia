@@ -63,6 +63,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/rs.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dnt-cfg.h"
@@ -1303,9 +1304,9 @@ static void iwl_mvm_queue_state_change(struct iwl_op_mode* op_mode, int hw_queue
     return;
   }
 
-  rcu_read_lock();
+  iwl_rcu_read_lock(mvm->dev);
 
-  mvmsta = rcu_dereference(mvm->fw_id_to_mac_id[sta_id]);
+  mvmsta = iwl_rcu_load(mvm->fw_id_to_mac_id[sta_id]);
   if (IS_ERR_OR_NULL(mvmsta)) {
     goto out;
   }
@@ -1338,7 +1339,7 @@ static void iwl_mvm_queue_state_change(struct iwl_op_mode* op_mode, int hw_queue
   }
 
 out:
-  rcu_read_unlock();
+  iwl_rcu_read_unlock(mvm->dev);
 }
 
 static void iwl_mvm_stop_sw_queue(struct iwl_op_mode* op_mode, int hw_queue) {
@@ -1623,9 +1624,9 @@ static void iwl_mvm_set_wowlan_data(struct iwl_mvm* mvm, struct iwl_wowlan_confi
     return;
   }
 
-  rcu_read_lock();
+  iwl_rcu_read_lock(mvm->dev);
 
-  ap_sta = rcu_dereference(mvm->fw_id_to_mac_id[iter_data->ap_sta_id]);
+  ap_sta = iwl_rcu_load(mvm->fw_id_to_mac_id[iter_data->ap_sta_id]);
   if (IS_ERR_OR_NULL(ap_sta)) {
     goto out;
   }
@@ -1641,7 +1642,7 @@ static void iwl_mvm_set_wowlan_data(struct iwl_mvm* mvm, struct iwl_wowlan_confi
    */
   iwl_mvm_set_wowlan_qos_seq(mvm_ap_sta, cmd);
 out:
-  rcu_read_unlock();
+  iwl_rcu_read_unlock(mvm->dev);
 }
 
 int iwl_mvm_enter_d0i3(struct iwl_op_mode* op_mode) {

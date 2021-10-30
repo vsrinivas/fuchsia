@@ -5,7 +5,6 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/module.h"
 
 #include <lib/ddk/driver.h>
-#include <lib/sync/completion.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <zircon/process.h>

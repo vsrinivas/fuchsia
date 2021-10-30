@@ -19,6 +19,7 @@ class Loop;
 namespace wlan::iwlwifi {
 
 class DriverInspector;
+class RcuManager;
 
 // This class contains the Fuchsia-specific PCIE bus initialization logic, using the DDKTL classes
 // to manage the lifetime of a iwlwifi driver instance.
@@ -44,6 +45,7 @@ class PcieDevice : public WlanphyImplDevice {
   std::unique_ptr<DriverInspector> driver_inspector_;
   std::unique_ptr<::async::Loop> task_loop_;
   std::unique_ptr<::async::Loop> irq_loop_;
+  std::unique_ptr<RcuManager> rcu_manager_;
   iwl_pci_dev pci_dev_;
 };
 

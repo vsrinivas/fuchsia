@@ -69,6 +69,7 @@ extern "C" {
 }  // extern "C"
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
 
 namespace {
 
@@ -166,7 +167,8 @@ static struct iwl_mvm_sta* alloc_ap_mvm_sta(const uint8_t bssid[]) {
   return mvm_sta;
 }
 
-static void free_ap_mvm_sta(struct iwl_mvm_sta* mvm_sta) {
+static void free_ap_mvm_sta(void* data) {
+  struct iwl_mvm_sta* mvm_sta = (struct iwl_mvm_sta*)(data);
   if (!mvm_sta) {
     return;
   }
@@ -178,13 +180,6 @@ static void free_ap_mvm_sta(struct iwl_mvm_sta* mvm_sta) {
     free(mvm_sta->key_conf);
   }
   free(mvm_sta);
-}
-
-static void reset_sta_mapping(struct iwl_mvm_vif* mvmvif) {
-  if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
-    mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id] = NULL;
-    mvmvif->ap_sta_id = IWL_MVM_INVALID_STA;
-  }
 }
 
 /////////////////////////////////////       MAC       //////////////////////////////////////////////
@@ -258,6 +253,8 @@ void mac_stop(void* ctx) {
 
   // Change the sta state linking to the AP.
   if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
+    // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
+    // RCU-synchronized below.
     struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
     if (!mvm_sta) {
       IWL_ERR(mvmvif, "sta info is not set before stop.\n");
@@ -266,6 +263,7 @@ void mac_stop(void* ctx) {
       if (ret != ZX_OK) {
         IWL_ERR(mvmvif, "Cannot set station state to NOT EXIST: %s\n", zx_status_get_string(ret));
       }
+      iwl_rcu_call_sync(mvmvif->mvm->dev, &free_ap_mvm_sta, mvm_sta);
     }
   }
 
@@ -280,9 +278,11 @@ void mac_stop(void* ctx) {
 
   // Clean up other sta info.
   for (size_t i = 0; i < ARRAY_SIZE(mvmvif->mvm->fw_id_to_mac_id); i++) {
+    // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
+    // RCU-synchronized below.
     struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[i];
     if (mvm_sta) {
-      free_ap_mvm_sta(mvm_sta);
+      iwl_rcu_call_sync(mvmvif->mvm->dev, &free_ap_mvm_sta, mvm_sta);
       mvmvif->mvm->fw_id_to_mac_id[i] = NULL;
     }
   }
@@ -374,6 +374,8 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
       return ret;
     }
 
+    // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
+    // RCU-synchronized from API calls to mac_stop() in this same thread.
     auto mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
     if (mvm_sta) {
       ret = mac_unconfigure_bss(mvmvif, mvm_sta);
@@ -474,8 +476,11 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* c
 exit:
   // If it is successful, the ownership has been transferred. If not, free the resource.
   if (ret != ZX_OK) {
-    free_ap_mvm_sta(mvm_sta);
-    reset_sta_mapping(mvmvif);
+    if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
+      iwl_rcu_store(mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id], NULL);
+      mvmvif->ap_sta_id = IWL_MVM_INVALID_STA;
+    }
+    iwl_rcu_call_sync(mvmvif->mvm->dev, &free_ap_mvm_sta, mvm_sta);
   }
   return ret;
 }
@@ -529,6 +534,8 @@ zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* ke
   key_conf->rx_seq = key_config->rsc;
   memcpy(key_conf->key, key_config->key, key_conf->keylen);
 
+  // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
+  // RCU-synchronized from API calls to mac_stop() in this same thread.
   struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
   if ((status = iwl_mvm_mac_set_key(mvmvif, mvm_sta, key_conf)) != ZX_OK) {
     free(key_conf);
@@ -560,6 +567,8 @@ zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ct
 
   IWL_INFO(ctx, "Associating ...\n");
 
+  // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
+  // RCU-synchronized from API calls to mac_stop() in this same thread.
   struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
   if (!mvm_sta) {
     IWL_ERR(mvmvif, "sta info is not set before association.\n");
@@ -629,6 +638,8 @@ zx_status_t mac_clear_assoc(void* ctx, uint32_t options,
   // iwl_mvm_rm_sta() will reset the ap_sta_id value so that we have to keep it.
   uint8_t ap_sta_id = mvmvif->ap_sta_id;
 
+  // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
+  // RCU-synchronized from API calls to mac_stop() in this same thread.
   struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[ap_sta_id];
   if (!mvm_sta) {
     IWL_ERR(mvmvif, "sta info is not set before disassociation.\n");
@@ -687,9 +698,6 @@ zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
   // context ID for removing.
   auto phy_ctxt_id = mvmvif->phy_ctxt->id;
 
-  // The 'ap_sta_id' will be reset in iwl_mvm_rm_sta() (via NONE --> NOTEXIST), back it up.
-  auto ap_sta_id = mvmvif->ap_sta_id;
-
   // REMOVE_STA will be issued to remove the station entry in the firmware.
   zx_status_t ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_NOTEXIST);
   if (ret != ZX_OK) {
@@ -724,7 +732,6 @@ zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
 
 out:
   free_ap_mvm_sta(mvm_sta);
-  mvmvif->mvm->fw_id_to_mac_id[ap_sta_id] = NULL;
 
   return ret;
 }

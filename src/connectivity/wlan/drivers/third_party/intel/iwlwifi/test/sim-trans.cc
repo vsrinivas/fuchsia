@@ -35,6 +35,7 @@ extern "C" {
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu-manager.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/wlanphy-impl-device.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
@@ -316,10 +317,12 @@ SimTransport::SimTransport(::wlan::simulation::Environment* env, zx_device_t* pa
   task_loop_->StartThread("iwlwifi-test-task-worker", nullptr);
   irq_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   irq_loop_->StartThread("iwlwifi-test-irq-worker", nullptr);
+  rcu_manager_ = std::make_unique<::wlan::iwlwifi::RcuManager>(task_loop_->dispatcher());
 
   device_.zxdev = parent;
   device_.task_dispatcher = task_loop_->dispatcher();
   device_.irq_dispatcher = irq_loop_->dispatcher();
+  device_.rcu_manager = static_cast<struct rcu_manager*>(rcu_manager_.get());
   fake_bti_create(&device_.bti);
 }
 
@@ -341,8 +344,8 @@ struct iwl_trans* SimTransport::iwl_trans() {
 
 const struct iwl_trans* SimTransport::iwl_trans() const { return iwl_trans_; }
 
-wlan::iwlwifi::WlanphyImplDevice* SimTransport::sim_device() { return sim_device_; }
+::wlan::iwlwifi::WlanphyImplDevice* SimTransport::sim_device() { return sim_device_; }
 
-const wlan::iwlwifi::WlanphyImplDevice* SimTransport::sim_device() const { return sim_device_; }
+const ::wlan::iwlwifi::WlanphyImplDevice* SimTransport::sim_device() const { return sim_device_; }
 
 }  // namespace wlan::testing

@@ -55,6 +55,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/tof.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dnt-cfg.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dnt-dispatch.h"
@@ -1452,6 +1453,7 @@ static void iwl_mvm_prepare_mac_removal(struct iwl_mvm* mvm, struct ieee80211_vi
 
 zx_status_t iwl_mvm_mac_remove_interface(struct iwl_mvm_vif* mvmvif) {
   struct iwl_mvm* mvm = mvmvif->mvm;
+  struct iwl_probe_resp_data* probe_data;
 
 #if 0   // NEEDS_PORTING
     iwl_mvm_prepare_mac_removal(mvm, vif);
@@ -1471,8 +1473,10 @@ zx_status_t iwl_mvm_mac_remove_interface(struct iwl_mvm_vif* mvmvif) {
 
   mtx_lock(&mvm->mutex);
 
-  free(mvmvif->probe_resp_data);
-  mvmvif->probe_resp_data = NULL;
+  probe_data = iwl_rcu_exchange(mvmvif->probe_resp_data, NULL);
+  if (probe_data) {
+    iwl_rcu_free_sync(mvm->dev, probe_data);
+  }
 
 #if 0  // NEEDS_PORTING
     if (mvm->bf_allowed_vif == mvmvif) {
@@ -3108,15 +3112,9 @@ zx_status_t iwl_mvm_mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
       }
     }
 
-    struct iwl_mvm_key_pn* old_ptk_pn = NULL;
-
-    mtx_lock(&mvmsta->ptk_pn_mutex);
-    old_ptk_pn = mvmsta->ptk_pn[key->keyidx];
-    mvmsta->ptk_pn[key->keyidx] = ptk_pn;
-    mtx_unlock(&mvmsta->ptk_pn_mutex);
-
+    struct iwl_mvm_key_pn* old_ptk_pn = iwl_rcu_exchange(mvmsta->ptk_pn[key->keyidx], ptk_pn);
     if (old_ptk_pn) {
-      free(old_ptk_pn);
+      iwl_rcu_free_sync(mvm->dev, old_ptk_pn);
     }
   }
 

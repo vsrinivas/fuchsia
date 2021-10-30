@@ -27,7 +27,10 @@ extern "C++" {
 #include <atomic>
 }  // extern "C++"
 #define _Atomic(T) std::atomic<T>
+using std::memory_order_acq_rel;
+using std::memory_order_acquire;
 using std::memory_order_relaxed;
+using std::memory_order_release;
 using std::memory_order_seq_cst;
 #else  // defined(__cplusplus)
 #include <stdatomic.h>

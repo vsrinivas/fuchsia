@@ -17,6 +17,7 @@ source_set("platform") {
     "irq.cc",
     "memory.cc",
     "module.cc",
+    "rcu.cc",
     "task-internal.cc",
     "task.cc",
     "time.cc",
@@ -31,15 +32,17 @@ source_set("platform") {
     "memory.h",
     "module.h",
     "pci.h",
+    "rcu.h",
     "task-internal.h",
     "task.h",
     "time.h",
   ]
   deps = [
     ":driver_inspector",
+    ":rcu_manager",
     "//sdk/lib/stdcompat",
     "//src/connectivity/wlan/lib/common/cpp:common",
-    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/async:async-cpp",
   ]
   public_deps = [
     "//garnet/lib/wlan/protocol:protocol",
@@ -66,6 +69,17 @@ source_set("driver_inspector") {
   ]
 }
 
+# Support for RCU synchronization.
+source_set("rcu_manager") {
+  sources = [ "rcu-manager.cc" ]
+  public = [ "rcu-manager.h" ]
+  deps = [
+    "//zircon/system/public",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+  public_deps = [ "//zircon/system/ulib/async" ]
+}
+
 driver_bind_rules("fuchsia_bind") {
   rules = "iwlwifi.bind"
   header_output = "iwlwifi-bind.h"
@@ -90,6 +104,7 @@ source_set("fuchsia_device") {
     ":driver_inspector",
     ":fuchsia_bind",
     ":platform",
+    ":rcu_manager",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlan.mac:fuchsia.hardware.wlan.mac_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",

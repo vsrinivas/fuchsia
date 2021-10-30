@@ -37,6 +37,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
 
 static bool is_multicast_ether_addr(uint8_t addr[6]) { return (addr[0] & 0x1) != 0; }
 
@@ -77,10 +78,8 @@ static inline zx_status_t iwl_mvm_check_pn(struct iwl_mvm* mvm, struct ieee80211
 
   keyidx = stats->extiv[3] >> 6;
 
-  mtx_lock(&mvmsta->ptk_pn_mutex);
-  ptk_pn = rcu_dereference(mvmsta->ptk_pn[keyidx]);
+  ptk_pn = iwl_rcu_load(mvmsta->ptk_pn[keyidx]);
   if (!ptk_pn) {
-    mtx_unlock(&mvmsta->ptk_pn_mutex);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -92,7 +91,6 @@ static inline zx_status_t iwl_mvm_check_pn(struct iwl_mvm* mvm, struct ieee80211
 
   /* we don't use HCCA/802.11 QoS TSPECs, so drop such frames */
   if (tid >= IWL_MAX_TID_COUNT) {
-    mtx_unlock(&mvmsta->ptk_pn_mutex);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -106,16 +104,13 @@ static inline zx_status_t iwl_mvm_check_pn(struct iwl_mvm* mvm, struct ieee80211
 
   res = memcmp(pn, ptk_pn->q[queue].pn[tid], IEEE80211_CCMP_PN_LEN);
   if (res < 0) {
-    mtx_unlock(&mvmsta->ptk_pn_mutex);
     return ZX_ERR_INVALID_ARGS;
   }
   if (!res && !(stats->flag & RX_FLAG_ALLOW_SAME_PN)) {
-    mtx_unlock(&mvmsta->ptk_pn_mutex);
     return ZX_ERR_INVALID_ARGS;
   }
 
   memcpy(ptk_pn->q[queue].pn[tid], pn, IEEE80211_CCMP_PN_LEN);
-  mtx_unlock(&mvmsta->ptk_pn_mutex);
 
   stats->flag |= RX_FLAG_PN_VALIDATED;
 
@@ -1381,22 +1376,20 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     }
   }
 
-  rcu_read_lock();
+  iwl_rcu_read_lock(mvm->dev);
 
   if (desc->status & cpu_to_le16(IWL_RX_MPDU_STATUS_SRC_STA_FOUND)) {
     uint8_t id = desc->sta_id_flags & IWL_RX_MPDU_SIF_STA_ID_MASK;
 
     if (!WARN_ON_ONCE(id >= ARRAY_SIZE(mvm->fw_id_to_mac_id))) {
-      sta = rcu_dereference(mvm->fw_id_to_mac_id[id]);
+      sta = iwl_rcu_load(mvm->fw_id_to_mac_id[id]);
     }
   } else if (!is_multicast_ether_addr(hdr->addr2)) {
     /*
      * This is fine since we prevent two stations with the same
      * address from being added.
      */
-    mtx_lock(&mvm->mutex);
     sta = iwl_mvm_find_sta_by_addr(mvm, hdr->addr2);
-    mtx_unlock(&mvm->mutex);
   }
 
 #if 0  // NEEDS_PORTING
@@ -1557,7 +1550,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     iwl_mvm_pass_packet_to_mac80211(mvm, hdr, len, &rx_status, queue, sta);
   }
 out:
-  rcu_read_unlock();
+  iwl_rcu_read_unlock(mvm->dev);
 }
 
 void iwl_mvm_rx_monitor_ndp(struct iwl_mvm* mvm, struct napi_struct* napi,

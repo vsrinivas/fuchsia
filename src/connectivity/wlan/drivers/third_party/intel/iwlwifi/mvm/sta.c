@@ -40,6 +40,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/rs.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
 
 static zx_status_t iwl_mvm_set_fw_key_idx(struct iwl_mvm* mvm);
 
@@ -79,13 +80,13 @@ static int iwl_mvm_find_free_sta_id(struct iwl_mvm* mvm, wlan_info_mac_role_t ma
     reserved_ids = BIT(0);
   }
 
-  // find an empty slot in mvm->fw_id_to_mac_id array.
+  /* Don't take rcu_read_lock() since we are protected by mvm->mutex */
   for (size_t sta_id = 0; sta_id < ARRAY_SIZE(mvm->fw_id_to_mac_id); sta_id++) {
     if (BIT(sta_id) & reserved_ids) {
       continue;
     }
 
-    if (!mvm->fw_id_to_mac_id[sta_id]) {
+    if (!iwl_rcu_load(mvm->fw_id_to_mac_id[sta_id])) {
       return sta_id;
     }
   }
@@ -1681,7 +1682,7 @@ update_fw:
     }
   }
 
-  mvmvif->mvm->fw_id_to_mac_id[sta_id] = mvm_sta;
+  iwl_rcu_store(mvmvif->mvm->fw_id_to_mac_id[sta_id], mvm_sta);
   ret = ZX_OK;
 
 err:
@@ -1690,10 +1691,9 @@ err:
 
 struct iwl_mvm_sta* iwl_mvm_find_sta_by_addr(struct iwl_mvm* mvm, uint8_t addr[ETH_ALEN]) {
   struct iwl_mvm_sta* sta = NULL;
-  iwl_assert_lock_held(&mvm->mutex);
 
   for (size_t sta_id = 0; sta_id < ARRAY_SIZE(mvm->fw_id_to_mac_id); sta_id++) {
-    sta = mvm->fw_id_to_mac_id[sta_id];
+    sta = iwl_rcu_load(mvm->fw_id_to_mac_id[sta_id]);
     if (sta == NULL) {
       continue;
     }
@@ -1750,7 +1750,7 @@ static zx_status_t iwl_mvm_rm_sta_common(struct iwl_mvm* mvm, uint8_t sta_id) {
 
   iwl_assert_lock_held(&mvm->mutex);
 
-  struct iwl_mvm_sta* mvm_sta = mvm->fw_id_to_mac_id[sta_id];
+  struct iwl_mvm_sta* mvm_sta = iwl_rcu_load(mvm->fw_id_to_mac_id[sta_id]);
 
   /* Note: internal stations are marked as error values */
   if (!mvm_sta) {
@@ -1905,6 +1905,7 @@ zx_status_t iwl_mvm_rm_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_s
 #endif  // NEEDS_PORTING
 
   ret = iwl_mvm_rm_sta_common(mvm, mvm_sta->sta_id);
+  iwl_rcu_store(mvm->fw_id_to_mac_id[mvm_sta->sta_id], NULL);
 
   return ret;
 }
