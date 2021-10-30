@@ -22,7 +22,6 @@ use {
     fuchsia_zircon as zx,
     futures::{channel::oneshot, future::join_all, select, stream::FuturesUnordered},
     itertools::Itertools,
-    log::{error, info, warn},
     sampler_config::{DataType, MetricConfig, ProjectConfig, SamplerConfig},
     selectors,
     std::{
@@ -30,6 +29,7 @@ use {
         convert::{TryFrom, TryInto},
         sync::Arc,
     },
+    tracing::{error, info, warn},
 };
 
 pub struct TaskCancellation {

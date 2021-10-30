@@ -4,11 +4,11 @@
 
 use {
     fuchsia_criterion::criterion::{Bencher, Criterion, ParameterizedBenchmark, Throughput},
-    log::info,
     rand::{
         distributions::{Alphanumeric, Distribution},
         thread_rng,
     },
+    tracing::info,
 };
 
 const PREFIX: &str = "bogus";

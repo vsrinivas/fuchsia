@@ -5,7 +5,7 @@
 use {
     anyhow::{bail, Error},
     diagnostics_reader::{ArchiveReader, Inspect},
-    log::*,
+    tracing::*,
 };
 
 // Selectors for Inspect data must start with this exact string.

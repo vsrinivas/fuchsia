@@ -369,7 +369,7 @@ mod tests {
         assert!(list.peek_front().is_none());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn subscription_delivered_without_drops() {
         let list = ArcList::default();
         let mut early_sub = list.cursor(StreamMode::Subscribe);
@@ -425,7 +425,7 @@ mod tests {
         assert_eq!(fourth_from_nop_sub.await, None);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn snapshot_delivered_without_drops() {
         let list = ArcList::default();
         let mut dead_cursor = list.cursor(StreamMode::Snapshot);
@@ -460,7 +460,7 @@ mod tests {
         assert_eq!(middle_cursor.next().await, None, "no items left in list at snapshot");
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn snapshot_then_subscribe_gets_before_and_after() {
         let list: ArcList<i32> = ArcList::default();
 
@@ -486,7 +486,7 @@ mod tests {
         assert_eq!(middle_cursor.next().await, None);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn subscription_drops_are_counted() {
         let list: ArcList<i32> = ArcList::default();
         let mut early_cursor = list.cursor(StreamMode::Subscribe);
@@ -518,7 +518,7 @@ mod tests {
         assert_eq!(middle_cursor.next().await, None);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn snapshot_drops_are_counted() {
         let list: ArcList<i32> = ArcList::default();
         let mut dead_cursor = list.cursor(StreamMode::Snapshot);
@@ -551,7 +551,7 @@ mod tests {
         assert!(middle_cursor.next().await.is_none(), "no items left in list at snapshot");
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn post_termination_cursors() {
         let list: ArcList<i32> = ArcList::default();
         list.push_back(1);
@@ -573,7 +573,7 @@ mod tests {
         assert_eq!(both, vec![1, 2, 3, 4, 5]);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn empty_post_termination_cursors() {
         let list: ArcList<i32> = ArcList::default();
         list.terminate();
@@ -590,7 +590,7 @@ mod tests {
         assert!(both.is_empty());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn drained_post_termination_cursors() {
         let list: ArcList<i32> = ArcList::default();
         list.push_back(1);
@@ -619,7 +619,7 @@ mod tests {
         assert!(both.is_empty());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn snapshot_does_not_hang_when_nothing_is_left() {
         let list: ArcList<i32> = ArcList::default();
         list.push_back(1);
@@ -642,7 +642,7 @@ mod tests {
         assert!(snapshot.is_empty());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn snapshot_does_not_hang_when_values_are_popped_before_start() {
         let list: ArcList<i32> = ArcList::default();
         list.push_back(1);
@@ -662,7 +662,7 @@ mod tests {
         assert_eq!(2, snapshot.len());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn popping_more_elements_than_exist_does_not_break_readers() {
         let list: ArcList<i32> = ArcList::default();
         list.push_back(1);
@@ -688,7 +688,7 @@ mod tests {
         assert_eq!(*cursor.next().await.unwrap().unwrap(), 4);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn snapshot_then_subscribe_works_when_only_dropped_notifications_are_returned() {
         let list: ArcList<i32> = ArcList::default();
         list.push_back(1);

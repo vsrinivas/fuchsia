@@ -17,8 +17,9 @@ rustc_binary("bin") {
     "//src/diagnostics/log-stats:lib",
     "//src/diagnostics/persistence:lib",
     "//src/diagnostics/sampler:lib",
+    "//src/lib/diagnostics/log/rust",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
-    "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
   ]

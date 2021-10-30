@@ -5,8 +5,8 @@
 use {
     crate::file_handler,
     anyhow::Error,
-    log::*,
     serde_json::{json, Value as JsonValue},
+    tracing::*,
 };
 
 // Make sure extremely deep-tree data doesn't overflow a stack.

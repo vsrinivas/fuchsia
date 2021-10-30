@@ -20,7 +20,7 @@ pub struct Args {
     with_logs: bool,
 }
 
-#[fuchsia::component(logging_tags = ["iquery_basic_component"])]
+#[fuchsia::component(logging_tags = [ "iquery_basic_component" ])]
 async fn main() -> Result<(), Error> {
     let opt: Args = argh::from_env();
     let inspector = component::inspector();

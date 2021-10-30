@@ -5,8 +5,8 @@
 use {
     anyhow::{format_err, Error},
     glob::glob,
-    log::{info, warn},
     std::fs,
+    tracing::{info, warn},
 };
 
 const CURRENT_PATH: &str = "/cache/current";
