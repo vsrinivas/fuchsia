@@ -7,10 +7,12 @@ use {
     simplelog::{CombinedLogger, Config, ConfigBuilder, LevelFilter, SimpleLogger, WriteLogger},
     std::fs::{create_dir_all, File, OpenOptions},
     std::path::PathBuf,
+    std::str::FromStr,
 };
 
 const LOG_DIR: &str = "log.dir";
 const LOG_ENABLED: &str = "log.enabled";
+const LOG_LEVEL: &str = "log.level";
 pub const LOG_PREFIX: &str = "ffx";
 const TIME_FORMAT: &str = "%b %d %H:%M:%S";
 
@@ -40,6 +42,13 @@ pub async fn is_enabled() -> bool {
     super::get(LOG_ENABLED).await.unwrap_or(false)
 }
 
+pub async fn filter_level() -> LevelFilter {
+    super::get::<String, _>(LOG_LEVEL).await.ok().map(|str| {
+        // Ideally we could log here, but there may be no log sink, so fall back to a default
+        LevelFilter::from_str(&str).unwrap_or(LevelFilter::Debug)
+    }).unwrap_or(LevelFilter::Debug)
+}
+
 pub async fn init(stdio: bool) -> Result<()> {
     let mut file: Option<File> = None;
 
@@ -51,21 +60,23 @@ pub async fn init(stdio: bool) -> Result<()> {
         file = Some(log_file(LOG_PREFIX).await?);
     }
 
-    CombinedLogger::init(get_loggers(stdio, file)).context("initializing logger")
+    let level = filter_level().await;
+
+    CombinedLogger::init(get_loggers(stdio, file, level)).context("initializing logger")
 }
 
-fn get_loggers(stdio: bool, file: Option<File>) -> Vec<Box<dyn simplelog::SharedLogger>> {
+fn get_loggers(stdio: bool, file: Option<File>, level: LevelFilter) -> Vec<Box<dyn simplelog::SharedLogger>> {
     let mut loggers: Vec<Box<dyn simplelog::SharedLogger>> = vec![];
 
     // The daemon logs to stdio, and is redirected to file by spawn_daemon, which enables
     // panics and backtraces to also be included.
     if stdio {
-        loggers.push(SimpleLogger::new(LevelFilter::Debug, config()));
+        loggers.push(SimpleLogger::new(level, config()));
     }
 
     if let Some(file) = file {
         let writer = std::io::LineWriter::new(file);
-        loggers.push(WriteLogger::new(LevelFilter::Debug, config(), writer));
+        loggers.push(WriteLogger::new(level, config(), writer));
     }
 
     loggers
@@ -77,19 +88,19 @@ mod test {
 
     #[test]
     fn test_get_loggers() {
-        let loggers = get_loggers(false, None);
+        let loggers = get_loggers(false, None, LevelFilter::Debug);
         assert!(loggers.len() == 0);
 
         // SimpleLogger (error logs to stderr, all other levels to stdout)
-        let loggers = get_loggers(true, None);
+        let loggers = get_loggers(true, None, LevelFilter::Debug);
         assert!(loggers.len() == 1);
 
         // WriteLogger (error logs to stderr, all other logs to file)
-        let loggers = get_loggers(false, Some(tempfile::tempfile().unwrap()));
+        let loggers = get_loggers(false, Some(tempfile::tempfile().unwrap()), LevelFilter::Debug);
         assert!(loggers.len() == 1);
 
         // SimpleLogger & WriteLogger (error logs to stderr, all other levels to stdout and file)
-        let loggers = get_loggers(true, Some(tempfile::tempfile().unwrap()));
+        let loggers = get_loggers(true, Some(tempfile::tempfile().unwrap()), LevelFilter::Debug);
         assert!(loggers.len() == 2);
     }
 }
