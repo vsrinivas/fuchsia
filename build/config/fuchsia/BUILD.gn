@@ -46,6 +46,7 @@ config("compiler") {
     ":compiler_sysroot",
     ":compiler_target",
     ":compiler_fuchsia_api_level",
+    "//build/config/rust:one_codegen_unit",
   ]
 
   # TODO(fxbug.dev/87244): delete the below after a soft transition

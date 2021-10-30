@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/images/args.gni")
+import("//build/images/filesystem_limits.gni")
 import("//build/rust/config.gni")
 
 declare_args() {
@@ -15,12 +17,6 @@ declare_args() {
   # Enable incremental rust compilation. Takes a path to the directory to use
   # as the cache.
   rust_incremental = ""
-
-  # Whether to force 1 codegen unit in Rust bootfs binaries.
-  # Fewer codegen units lead to smaller code, at the expense of slower
-  # incremental rebuild times. Disable this behavior when you are iterating
-  # on a bootfs Rust binary for faster builds.
-  enable_one_codegen_unit_for_rust_bootfs = true
 }
 
 # Defines a Rust cfg flag with the value of the rust_panic build arg.
@@ -60,17 +56,29 @@ config("incremental") {
   }
 }
 
+config("one_codegen_unit") {
+  # Disable codegen parallelism.
+  # Trades incremental rebuild speed for smaller code size.
+  # See: fxbug.dev/74435, fxbug.dev/80514
+  rustflags = [ "-Ccodegen-units=1" ]
+}
+
 # Best practices for Rust binaries that go into size-constrained bootfs.
 config("bootfs") {
   # Optimize for size.
-  # TODO(fxbug.dev/84386): consider "z" instead of "s"
+  # TODO(fxbug.dev/63313): use "z" when resolved.
   rustflags = [ "-Copt-level=s" ]
 
-  # Fewer codegen units produce smaller binaries at the cost of slower
-  # incremental builds.
-  # See: https://fxbug.dev/80514#c31
-  if (enable_one_codegen_unit_for_rust_bootfs) {
-    rustflags += [ "-Ccodegen-units=1" ]
+  if (is_debug &&  # Debug builds produce very large Rust binaries
+      ((max_fuchsia_zbi_size >
+        0 &&  # Some configurations have limited ZBI space
+        max_fuchsia_zbi_size <= 16777216) ||  # 16 MiB is too tight
+       bootfs_only ||  # System packages go into bootfs, adding pressure
+       build_uefi_disk)) {  # EFI System Partition size is limited
+    # Force ThinLTO to squeeze Rust binaries further so the ZBI doesn't overflow
+    # under any of the extraneous circumstances defined above.
+    # See: fxbug.dev/80514
+    configs = [ "//build/config/lto:thinlto" ]
   }
 
   # Can't dynamically link libstd and libtest for ZBI binaries.
