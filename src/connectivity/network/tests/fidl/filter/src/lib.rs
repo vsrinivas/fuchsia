@@ -16,7 +16,7 @@ use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _};
 use netfilter::FidlReturn as _;
 use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
 use netstack_testing_common::{
-    Result, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+    ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
 
@@ -50,7 +50,7 @@ async fn run_udp_socket_test(
     client_addr: fidl_fuchsia_net::IpAddress,
     client_port: u16,
     expected_traffic: ExpectedTraffic,
-) -> Result {
+) {
     let fidl_fuchsia_net_ext::IpAddress(client_addr) =
         fidl_fuchsia_net_ext::IpAddress::from(client_addr);
     let client_addr = std::net::SocketAddr::new(client_addr, client_port);
@@ -61,33 +61,32 @@ async fn run_udp_socket_test(
 
     let client_sock = fuchsia_async::net::UdpSocket::bind_in_realm(client, client_addr)
         .await
-        .context("failed to create client socket")?;
+        .expect("failed to create client socket");
     let client_addr =
-        client_sock.local_addr().context("failed to get local address from client socket")?;
+        client_sock.local_addr().expect("failed to get local address from client socket");
 
     let server_sock = fuchsia_async::net::UdpSocket::bind_in_realm(server, server_addr)
         .await
-        .context("failed to create server socket")?;
+        .expect("failed to create server socket");
 
     let server_fut = async move {
         let mut buf = [0u8; 1024];
-        let (r, from) = server_sock.recv_from(&mut buf[..]).await.context("recvfrom failed")?;
+        let (r, from) = server_sock.recv_from(&mut buf[..]).await.expect("recvfrom failed");
         assert_eq!(r, CLIENT_PAYLOAD.as_bytes().len());
         assert_eq!(&buf[..r], CLIENT_PAYLOAD.as_bytes());
         assert_eq!(from, client_addr);
         let r = server_sock
             .send_to(SERVER_PAYLOAD.as_bytes(), client_addr)
             .await
-            .context("send to failed")?;
+            .expect("send to failed");
         assert_eq!(r, SERVER_PAYLOAD.as_bytes().len());
-        Result::Ok(())
     };
 
     let client_fut = async move {
         let r = client_sock
             .send_to(CLIENT_PAYLOAD.as_bytes(), server_addr)
             .await
-            .context("sendto failed")?;
+            .expect("sendto failed");
         assert_eq!(r, CLIENT_PAYLOAD.as_bytes().len());
 
         let mut buf = [0u8; 1024];
@@ -98,41 +97,32 @@ async fn run_udp_socket_test(
                     .map_ok(Some)
                     .on_timeout(ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT.after_now(), || Ok(None))
                     .await
-                    .context("recvfrom failed")?
+                    .expect("recvfrom failed")
                 {
-                    Some((r, from)) => Result::Err(anyhow::anyhow!(
-                        "unexpectedly received packet {:?} from {:?}",
-                        &buf[..r],
-                        from
-                    )),
-                    None => Result::Ok(()),
+                    Some((r, from)) => {
+                        panic!("unexpectedly received packet {:?} from {:?}", &buf[..r], from)
+                    }
+                    None => (),
                 }
             }
             ExpectedTraffic::TwoWay => {
                 let (r, from) = client_sock
                     .recv_from(&mut buf[..])
-                    .map(|r| r.context("recvfrom failed"))
+                    .map(|r| r.expect("recvfrom failed"))
                     .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
-                        Err(anyhow::anyhow!(
+                        panic!(
                             "timed out waiting for packet from server after {:?}",
                             ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT
-                        ))
+                        );
                     })
-                    .await?;
+                    .await;
                 assert_eq!(r, SERVER_PAYLOAD.as_bytes().len());
                 assert_eq!(&buf[..r], SERVER_PAYLOAD.as_bytes());
                 assert_eq!(from, server_addr);
-                Result::Ok(())
             }
         }
     };
-
-    let ((), ()) = futures::future::try_join(
-        server_fut.map(|r| r.context("server-side error")),
-        client_fut.map(|r| r.context("client-side error")),
-    )
-    .await?;
-    Ok(())
+    let ((), ()) = futures::future::join(server_fut, client_fut).await;
 }
 
 async fn run_tcp_socket_test(
@@ -143,7 +133,7 @@ async fn run_tcp_socket_test(
     client_addr: fidl_fuchsia_net::IpAddress,
     client_port: u16,
     expected_traffic: ExpectedTraffic,
-) -> Result {
+) {
     let fidl_fuchsia_net_ext::IpAddress(client_addr) =
         fidl_fuchsia_net_ext::IpAddress::from(client_addr);
     let client_addr = std::net::SocketAddr::new(client_addr, client_port);
@@ -157,7 +147,7 @@ async fn run_tcp_socket_test(
             sock.set_reuse_port(true).context("failed to set reuse port")
         })
         .await
-        .context("failed to create server socket")?;
+        .expect("failed to create server socket");
 
     let server_fut = async move {
         match expected_traffic {
@@ -167,27 +157,27 @@ async fn run_tcp_socket_test(
                     .map_ok(Some)
                     .on_timeout(ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT.after_now(), || Ok(None))
                     .await
-                    .context("failed to accept a connection")?
+                    .expect("failed to accept a connection")
                 {
-                    Some(_) => Result::Err(anyhow::anyhow!("unexpectedly connected successfully")),
-                    None => Result::Ok(()),
+                    Some(_stream) => panic!("unexpectedly connected successfully"),
+                    None => (),
                 }
             }
             ExpectedTraffic::TwoWay => {
                 let (_listener, mut stream, from) = listener
                     .accept()
-                    .map(|r| r.context("accept failed"))
+                    .map(|r| r.expect("accept failed"))
                     .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
-                        Err(anyhow::anyhow!(
+                        panic!(
                             "timed out waiting for a connection after {:?}",
                             ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT
-                        ))
+                        );
                     })
-                    .await?;
+                    .await;
 
                 let mut buf = [0u8; 1024];
                 let read_count =
-                    stream.read(&mut buf).await.context("read from tcp server stream failed")?;
+                    stream.read(&mut buf).await.expect("read from tcp server stream failed");
 
                 assert_eq!(from.ip(), client_addr.ip());
                 assert_eq!(read_count, CLIENT_PAYLOAD.as_bytes().len());
@@ -196,9 +186,8 @@ async fn run_tcp_socket_test(
                 let write_count = stream
                     .write(SERVER_PAYLOAD.as_bytes())
                     .await
-                    .context("write to tcp server stream failed")?;
+                    .expect("write to tcp server stream failed");
                 assert_eq!(write_count, SERVER_PAYLOAD.as_bytes().len());
-                Result::Ok(())
             }
         }
     };
@@ -210,50 +199,42 @@ async fn run_tcp_socket_test(
                     .map_ok(Some)
                     .on_timeout(ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT.after_now(), || Ok(None))
                     .await
-                    .context("failed to create client socket")?
+                    .expect("failed to create client socket")
                 {
-                    Some(_stream) => {
-                        Result::Err(anyhow::anyhow!("unexpectedly connected successfully"))
-                    }
-                    None => Result::Ok(()),
+                    Some(_stream) => panic!("unexpectedly connected successfully"),
+                    None => (),
                 }
             }
             ExpectedTraffic::TwoWay => {
                 let mut stream =
                     fuchsia_async::net::TcpStream::connect_in_realm(client, server_addr)
-                        .map(|r| r.context("connect_in_realm failed"))
+                        .map(|r| r.expect("connect_in_realm failed"))
                         .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
-                            Err(anyhow::anyhow!(
+                            panic!(
                                 "timed out waiting for a connection after {:?}",
                                 ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT
-                            ))
+                            );
                         })
-                        .await?;
+                        .await;
 
                 let write_count = stream
                     .write(CLIENT_PAYLOAD.as_bytes())
                     .await
-                    .context("write to tcp client stream failed")?;
+                    .expect("write to tcp client stream failed");
 
                 assert_eq!(write_count, CLIENT_PAYLOAD.as_bytes().len());
 
                 let mut buf = [0u8; 1024];
                 let read_count =
-                    stream.read(&mut buf).await.context("read from tcp client stream failed")?;
+                    stream.read(&mut buf).await.expect("read from tcp client stream failed");
 
                 assert_eq!(read_count, SERVER_PAYLOAD.as_bytes().len());
                 assert_eq!(&buf[..read_count], SERVER_PAYLOAD.as_bytes());
-                Result::Ok(())
             }
         }
     };
 
-    let ((), ()) = futures::future::try_join(
-        client_fut.map(|r| r.context("client-side error")),
-        server_fut.map(|r| r.context("server-side error")),
-    )
-    .await?;
-    Ok(())
+    let ((), ()) = futures::future::join(client_fut, server_fut).await;
 }
 
 async fn run_socket_test(
@@ -265,7 +246,7 @@ async fn run_socket_test(
     client_addr: fidl_fuchsia_net::IpAddress,
     client_port: u16,
     expected_traffic: ExpectedTraffic,
-) -> Result {
+) {
     match proto {
         fnetfilter::SocketProtocol::Udp => {
             run_udp_socket_test(
@@ -277,7 +258,7 @@ async fn run_socket_test(
                 client_port,
                 expected_traffic,
             )
-            .await
+            .await;
         }
         fnetfilter::SocketProtocol::Tcp => {
             run_tcp_socket_test(
@@ -289,19 +270,19 @@ async fn run_socket_test(
                 client_port,
                 expected_traffic,
             )
-            .await
+            .await;
         }
-        proto => Result::Err(anyhow::anyhow!("unexpected protocol {:?}", proto)),
+        proto => panic!("unexpected protocol {:?}", proto),
     }
 }
 
-async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let net = sandbox.create_network("net").await.context("failed to create network")?;
+async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let net = sandbox.create_network("net").await.expect("failed to create network");
 
     let client = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
-        .context("failed to create client realm")?;
+        .expect("failed to create client realm");
     let client_ep = client
         .join_network::<E, _>(
             &net,
@@ -309,14 +290,14 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
             &netemul::InterfaceConfig::StaticIp(CLIENT_IPV4_SUBNET),
         )
         .await
-        .context("client failed to join network")?;
+        .expect("client failed to join network");
     let client_filter = client
         .connect_to_protocol::<fnetfilter::FilterMarker>()
-        .context("client failed to connect to filter service")?;
+        .expect("client failed to connect to filter service");
 
     let server = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_server", name))
-        .context("failed to create server realm")?;
+        .expect("failed to create server realm");
     let server_ep = server
         .join_network::<E, _>(
             &net,
@@ -324,10 +305,10 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
             &netemul::InterfaceConfig::StaticIp(SERVER_IPV4_SUBNET),
         )
         .await
-        .context("server failed to join network")?;
+        .expect("server failed to join network");
     let server_filter = server
         .connect_to_protocol::<fnetfilter::FilterMarker>()
-        .context("server failed to connect to filter service")?;
+        .expect("server failed to connect to filter service");
 
     let Test { proto, client_updates, server_updates, expected_traffic } = test;
 
@@ -336,12 +317,12 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
         .enable_interface(client_ep.id())
         .await
         .transform_result()
-        .context("error enabling filter on client")?;
+        .expect("error enabling filter on client");
     let () = server_filter
         .enable_interface(server_ep.id())
         .await
         .transform_result()
-        .context("error enabling filter on server")?;
+        .expect("error enabling filter on server");
     let () = run_socket_test(
         proto,
         &server,
@@ -352,26 +333,25 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
         CLIENT_PORT,
         ExpectedTraffic::TwoWay,
     )
-    .await
-    .context("error testing initial connection without filters")?;
+    .await;
 
     // Set the filters and do the test.
     let (_rules, mut server_generation) = server_filter
         .get_rules()
         .await
         .transform_result()
-        .context("failed to get server's filter rules")?;
+        .expect("failed to get server's filter rules");
     let (_rules, mut client_generation) = client_filter
         .get_rules()
         .await
         .transform_result()
-        .context("failed to get client's filter rules")?;
+        .expect("failed to get client's filter rules");
     if let Some(mut updates) = client_updates {
         let () = client_filter
             .update_rules(&mut updates.iter_mut(), client_generation)
             .await
             .transform_result()
-            .context("failed to update client's filter rules")?;
+            .expect("failed to update client's filter rules");
         client_generation += 1;
     }
     if let Some(mut updates) = server_updates {
@@ -379,7 +359,7 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
             .update_rules(&mut updates.iter_mut(), server_generation)
             .await
             .transform_result()
-            .context("failed to update server's filter rules")?;
+            .expect("failed to update server's filter rules");
         server_generation += 1;
     }
     let () = run_socket_test(
@@ -392,20 +372,19 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
         CLIENT_PORT,
         expected_traffic,
     )
-    .await
-    .context("error running socket test after updating filters")?;
+    .await;
 
     // Disable the filters on the interface and expect full connectivity.
     let () = client_filter
         .disable_interface(client_ep.id())
         .await
         .transform_result()
-        .context("error disabling filter on client")?;
+        .expect("error disabling filter on client");
     let () = server_filter
         .disable_interface(server_ep.id())
         .await
         .transform_result()
-        .context("error disabling filter on server")?;
+        .expect("error disabling filter on server");
     let () = run_socket_test(
         proto,
         &server,
@@ -416,30 +395,29 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
         CLIENT_PORT,
         ExpectedTraffic::TwoWay,
     )
-    .await
-    .context("error running socket test after disabling filters")?;
+    .await;
 
     // Reset and enable filters and expect full connectivity.
     let () = client_filter
         .enable_interface(client_ep.id())
         .await
         .transform_result()
-        .context("error re-enabling filter on client")?;
+        .expect("error re-enabling filter on client");
     let () = server_filter
         .enable_interface(server_ep.id())
         .await
         .transform_result()
-        .context("error re-enabling filter on server")?;
+        .expect("error re-enabling filter on server");
     let () = server_filter
         .update_rules(&mut Vec::new().iter_mut(), server_generation)
         .await
         .transform_result()
-        .context("failed to reset client's filter rules")?;
+        .expect("failed to reset client's filter rules");
     let () = client_filter
         .update_rules(&mut Vec::new().iter_mut(), client_generation)
         .await
         .transform_result()
-        .context("failed to reset client's filter rules")?;
+        .expect("failed to reset client's filter rules");
     run_socket_test(
         proto,
         &server,
@@ -450,8 +428,7 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
         CLIENT_PORT,
         ExpectedTraffic::TwoWay,
     )
-    .await
-    .context("error running socket test after resetting filters")
+    .await;
 }
 
 /// Tests how the filter on server drops the outgoing traffic from server.
@@ -531,7 +508,7 @@ fn client_incoming_drop_test(
 }
 
 #[variants_test]
-async fn test_drop_udp_incoming<E: netemul::Endpoint>(name: &str) -> Result {
+async fn drop_udp_incoming<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         client_incoming_drop_test(
@@ -549,7 +526,7 @@ async fn test_drop_udp_incoming<E: netemul::Endpoint>(name: &str) -> Result {
 }
 
 #[variants_test]
-async fn test_drop_tcp_incoming<E: netemul::Endpoint>(name: &str) -> Result {
+async fn drop_tcp_incoming<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         client_incoming_drop_test(
@@ -567,7 +544,7 @@ async fn test_drop_tcp_incoming<E: netemul::Endpoint>(name: &str) -> Result {
 }
 
 #[variants_test]
-async fn test_drop_udp_outgoing<E: netemul::Endpoint>(name: &str) -> Result {
+async fn drop_udp_outgoing<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         server_outgoing_drop_test(
@@ -585,7 +562,7 @@ async fn test_drop_udp_outgoing<E: netemul::Endpoint>(name: &str) -> Result {
 }
 
 #[variants_test]
-async fn test_drop_tcp_outgoing<E: netemul::Endpoint>(name: &str) -> Result {
+async fn drop_tcp_outgoing<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         server_outgoing_drop_test(
@@ -603,46 +580,10 @@ async fn test_drop_tcp_outgoing<E: netemul::Endpoint>(name: &str) -> Result {
 }
 
 #[variants_test]
-async fn test_drop_udp_incoming_within_port_range<E: netemul::Endpoint>(name: &str) -> Result {
+async fn drop_udp_incoming_within_port_range<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         client_incoming_drop_test(
-            fnetfilter::SocketProtocol::Udp,
-            None,                                /* src_subnet */
-            false,                               /* src_subnet_invert_match */
-            None,                                /* dst_subnet */
-            false,                               /* dst_subnet_invert_match */
-            SERVER_PORT - 1..=SERVER_PORT + 1,   /* src_port_range */
-            CLIENT_PORT..=CLIENT_PORT,           /* dst_port_range */
-            ExpectedTraffic::ClientToServerOnly, /* expected_traffic */
-        ),
-    )
-    .await
-}
-
-#[variants_test]
-async fn test_drop_tcp_incoming_within_port_range<E: netemul::Endpoint>(name: &str) -> Result {
-    test_filter::<E>(
-        name,
-        client_incoming_drop_test(
-            fnetfilter::SocketProtocol::Tcp,
-            None,                                /* src_subnet */
-            false,                               /* src_subnet_invert_match */
-            None,                                /* dst_subnet */
-            false,                               /* dst_subnet_invert_match */
-            SERVER_PORT - 1..=SERVER_PORT + 1,   /* src_port_range */
-            0..=0,                               /* dst_port_range */
-            ExpectedTraffic::ClientToServerOnly, /* expected_traffic */
-        ),
-    )
-    .await
-}
-
-#[variants_test]
-async fn test_drop_udp_outgoing_within_port_range<E: netemul::Endpoint>(name: &str) -> Result {
-    test_filter::<E>(
-        name,
-        server_outgoing_drop_test(
             fnetfilter::SocketProtocol::Udp,
             None,                                /* src_subnet */
             false,                               /* src_subnet_invert_match */
@@ -657,7 +598,43 @@ async fn test_drop_udp_outgoing_within_port_range<E: netemul::Endpoint>(name: &s
 }
 
 #[variants_test]
-async fn test_drop_tcp_outgoing_within_port_range<E: netemul::Endpoint>(name: &str) -> Result {
+async fn drop_tcp_incoming_within_port_range<E: netemul::Endpoint>(name: &str) {
+    test_filter::<E>(
+        name,
+        client_incoming_drop_test(
+            fnetfilter::SocketProtocol::Tcp,
+            None,                                /* src_subnet */
+            false,                               /* src_subnet_invert_match */
+            None,                                /* dst_subnet */
+            false,                               /* dst_subnet_invert_match */
+            SERVER_PORT - 1..=SERVER_PORT + 1,   /* src_port_range */
+            0..=0,                               /* dst_port_range */
+            ExpectedTraffic::ClientToServerOnly, /* expected_traffic */
+        ),
+    )
+    .await
+}
+
+#[variants_test]
+async fn drop_udp_outgoing_within_port_range<E: netemul::Endpoint>(name: &str) {
+    test_filter::<E>(
+        name,
+        server_outgoing_drop_test(
+            fnetfilter::SocketProtocol::Udp,
+            None,                                /* src_subnet */
+            false,                               /* src_subnet_invert_match */
+            None,                                /* dst_subnet */
+            false,                               /* dst_subnet_invert_match */
+            SERVER_PORT - 1..=SERVER_PORT + 1,   /* src_port_range */
+            CLIENT_PORT..=CLIENT_PORT,           /* dst_port_range */
+            ExpectedTraffic::ClientToServerOnly, /* expected_traffic */
+        ),
+    )
+    .await
+}
+
+#[variants_test]
+async fn drop_tcp_outgoing_within_port_range<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         server_outgoing_drop_test(
@@ -675,7 +652,7 @@ async fn test_drop_tcp_outgoing_within_port_range<E: netemul::Endpoint>(name: &s
 }
 
 #[variants_test]
-async fn test_drop_udp_incoming_outside_port_range<E: netemul::Endpoint>(name: &str) -> Result {
+async fn drop_udp_incoming_outside_port_range<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         client_incoming_drop_test(
@@ -693,7 +670,7 @@ async fn test_drop_udp_incoming_outside_port_range<E: netemul::Endpoint>(name: &
 }
 
 #[variants_test]
-async fn test_drop_tcp_incoming_outside_port_range<E: netemul::Endpoint>(name: &str) -> Result {
+async fn drop_tcp_incoming_outside_port_range<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         client_incoming_drop_test(
@@ -711,7 +688,7 @@ async fn test_drop_tcp_incoming_outside_port_range<E: netemul::Endpoint>(name: &
 }
 
 #[variants_test]
-async fn test_drop_udp_outgoing_outside_port_range<E: netemul::Endpoint>(name: &str) -> Result {
+async fn drop_udp_outgoing_outside_port_range<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         server_outgoing_drop_test(
@@ -729,7 +706,7 @@ async fn test_drop_udp_outgoing_outside_port_range<E: netemul::Endpoint>(name: &
 }
 
 #[variants_test]
-async fn test_drop_tcp_outgoing_outside_port_range<E: netemul::Endpoint>(name: &str) -> Result {
+async fn drop_tcp_outgoing_outside_port_range<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         server_outgoing_drop_test(
@@ -747,7 +724,7 @@ async fn test_drop_tcp_outgoing_outside_port_range<E: netemul::Endpoint>(name: &
 }
 
 #[variants_test]
-async fn test_drop_udp_incoming_with_address_range<E: netemul::Endpoint>(name: &str) -> Result {
+async fn drop_udp_incoming_with_address_range<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         client_incoming_drop_test(
@@ -765,7 +742,7 @@ async fn test_drop_udp_incoming_with_address_range<E: netemul::Endpoint>(name: &
 }
 
 #[variants_test]
-async fn test_drop_tcp_incoming_with_address_range<E: netemul::Endpoint>(name: &str) -> Result {
+async fn drop_tcp_incoming_with_address_range<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         client_incoming_drop_test(
@@ -783,7 +760,7 @@ async fn test_drop_tcp_incoming_with_address_range<E: netemul::Endpoint>(name: &
 }
 
 #[variants_test]
-async fn test_drop_udp_outgoing_with_address_range<E: netemul::Endpoint>(name: &str) -> Result {
+async fn drop_udp_outgoing_with_address_range<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         server_outgoing_drop_test(
@@ -801,7 +778,7 @@ async fn test_drop_udp_outgoing_with_address_range<E: netemul::Endpoint>(name: &
 }
 
 #[variants_test]
-async fn test_drop_tcp_outgoing_with_address_range<E: netemul::Endpoint>(name: &str) -> Result {
+async fn drop_tcp_outgoing_with_address_range<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         server_outgoing_drop_test(
@@ -819,9 +796,7 @@ async fn test_drop_tcp_outgoing_with_address_range<E: netemul::Endpoint>(name: &
 }
 
 #[variants_test]
-async fn test_drop_udp_incoming_with_src_address_invert<E: netemul::Endpoint>(
-    name: &str,
-) -> Result {
+async fn drop_udp_incoming_with_src_address_invert<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         client_incoming_drop_test(
@@ -839,9 +814,7 @@ async fn test_drop_udp_incoming_with_src_address_invert<E: netemul::Endpoint>(
 }
 
 #[variants_test]
-async fn test_drop_tcp_incoming_with_src_address_invert<E: netemul::Endpoint>(
-    name: &str,
-) -> Result {
+async fn drop_tcp_incoming_with_src_address_invert<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         client_incoming_drop_test(
@@ -859,9 +832,7 @@ async fn test_drop_tcp_incoming_with_src_address_invert<E: netemul::Endpoint>(
 }
 
 #[variants_test]
-async fn test_drop_udp_outgoing_with_src_address_invert<E: netemul::Endpoint>(
-    name: &str,
-) -> Result {
+async fn drop_udp_outgoing_with_src_address_invert<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         server_outgoing_drop_test(
@@ -879,9 +850,7 @@ async fn test_drop_udp_outgoing_with_src_address_invert<E: netemul::Endpoint>(
 }
 
 #[variants_test]
-async fn test_drop_tcp_outgoing_with_src_address_invert<E: netemul::Endpoint>(
-    name: &str,
-) -> Result {
+async fn drop_tcp_outgoing_with_src_address_invert<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         server_outgoing_drop_test(
@@ -899,9 +868,7 @@ async fn test_drop_tcp_outgoing_with_src_address_invert<E: netemul::Endpoint>(
 }
 
 #[variants_test]
-async fn test_drop_udp_incoming_with_dst_address_invert<E: netemul::Endpoint>(
-    name: &str,
-) -> Result {
+async fn drop_udp_incoming_with_dst_address_invert<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         client_incoming_drop_test(
@@ -919,9 +886,7 @@ async fn test_drop_udp_incoming_with_dst_address_invert<E: netemul::Endpoint>(
 }
 
 #[variants_test]
-async fn test_drop_tcp_incoming_with_dst_address_invert<E: netemul::Endpoint>(
-    name: &str,
-) -> Result {
+async fn drop_tcp_incoming_with_dst_address_invert<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         client_incoming_drop_test(
@@ -939,9 +904,7 @@ async fn test_drop_tcp_incoming_with_dst_address_invert<E: netemul::Endpoint>(
 }
 
 #[variants_test]
-async fn test_drop_udp_outgoing_with_dst_address_invert<E: netemul::Endpoint>(
-    name: &str,
-) -> Result {
+async fn drop_udp_outgoing_with_dst_address_invert<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         server_outgoing_drop_test(
@@ -959,9 +922,7 @@ async fn test_drop_udp_outgoing_with_dst_address_invert<E: netemul::Endpoint>(
 }
 
 #[variants_test]
-async fn test_drop_tcp_outgoing_with_dst_address_invert<E: netemul::Endpoint>(
-    name: &str,
-) -> Result {
+async fn drop_tcp_outgoing_with_dst_address_invert<E: netemul::Endpoint>(name: &str) {
     test_filter::<E>(
         name,
         server_outgoing_drop_test(
