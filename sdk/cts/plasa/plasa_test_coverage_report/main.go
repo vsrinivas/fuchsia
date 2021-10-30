@@ -124,7 +124,7 @@ func (m *TestCoverageReport) addCCAPIReport(r model.Report) {
 	}
 }
 
-// addCCAPIReport adds a C++ API report to the test coverage report.
+// addFIDLAPIReport adds a FIDL API report to the test coverage report.
 func (m *TestCoverageReport) addFIDLAPIReport(r []summarize.ElementStr) {
 	for _, i := range r {
 		n := string(i.Name)
