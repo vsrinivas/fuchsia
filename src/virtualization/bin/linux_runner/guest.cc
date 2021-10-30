@@ -38,6 +38,8 @@ static constexpr const char* kContainerImageServer =
     "https://storage.googleapis.com/cros-containers/%d";
 static constexpr const char* kDefaultContainerUser = "machina";
 static constexpr const char* kLinuxUriScheme = "linux://";
+static constexpr const char* kVshTerminalComponent =
+    "fuchsia-pkg://fuchsia.com/terminal#meta/vsh-terminal.cmx";
 
 #ifdef USE_PREBUILT_STATEFUL_IMAGE
 static constexpr const char* kStatefulImagePath = "/pkg/data/stateful.img";
@@ -145,6 +147,7 @@ Guest::Guest(sys::ComponentContext* context, GuestConfig config,
                           fit::bind_member(this, &Guest::OnShutdownView)) {
   guest_env_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
   executor_.schedule_task(Start());
+  context->svc()->Connect(launcher_.NewRequest());
 }
 
 Guest::~Guest() {
@@ -713,6 +716,23 @@ grpc::Status Guest::OpenTerminal(grpc::ServerContext* context,
                                  vm_tools::EmptyMessage* response) {
   TRACE_DURATION("linux_runner", "Guest::OpenTerminal");
   FX_LOGS(INFO) << "Open Terminal";
+
+  if (request->params_size() != 0) {
+    FX_LOGS(WARNING) << "OpenTerminal with args not yet supported";
+    return grpc::Status::OK;
+  }
+
+  executor_.schedule_task(fpromise::make_promise([this]() {
+    auto it = dispatched_requests_.begin();
+    if (it == dispatched_requests_.end()) {
+      FX_LOGS(WARNING) << "Guest-initiated OpenTerminal not yet supported";
+      return;
+    }
+
+    CreateTerminalComponent(std::move(*it));
+    dispatched_requests_.erase(it);
+  }));
+
   return grpc::Status::OK;
 }
 
@@ -841,13 +861,40 @@ void Guest::CreateComponent(AppLaunchRequest request,
                             fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view_provider,
                             uint32_t id) {
   TRACE_DURATION("linux_runner", "Guest::CreateComponent");
-  auto component =
-      LinuxComponent::Create(fit::bind_member(this, &Guest::OnComponentTerminated),
-                             std::move(request.application), std::move(request.startup_info),
-                             std::move(request.controller_request), view_provider.Bind(), id);
+  auto component = LinuxComponent::Create(
+      fit::bind_member(this, &Guest::OnComponentTerminated), std::move(request.application),
+      std::move(request.startup_info.launch_info.directory_request),
+      std::move(request.controller_request),
+      {},  // Wayland components are not managed by a ComponentController.
+      view_provider.Bind(), id);
   components_.insert({id, std::move(component)});
 }
 
 void Guest::OnComponentTerminated(uint32_t id) { components_.erase(id); }
+
+void Guest::CreateTerminalComponent(AppLaunchRequest app) {
+  TRACE_DURATION("linux_runner", "Guest::CreateTerminalComponent");
+  static uint32_t next_term_id = 1;
+  const auto term_id = next_term_id++;
+
+  fidl::InterfaceHandle<fuchsia::io::Directory> vsh_svc_dir;
+  fuchsia::sys::ComponentControllerPtr vsh_controller;
+
+  // Transfer most of the launch info except we replace the url, args and directory_request handle.
+  // The original directory_request is extracted first for use by the LinuxComponent.
+  zx::channel app_dir_request = std::move(app.startup_info.launch_info.directory_request);
+  fuchsia::sys::LaunchInfo launch_info = std::move(app.startup_info.launch_info);
+  launch_info.url = kVshTerminalComponent;
+  launch_info.arguments = std::vector<std::string>{};
+  launch_info.directory_request = vsh_svc_dir.NewRequest().TakeChannel();
+  launcher_->CreateComponent(std::move(launch_info), vsh_controller.NewRequest());
+
+  auto svc = sys::ServiceDirectory(std::move(vsh_svc_dir));
+  auto component = LinuxComponent::Create(
+      [this](uint32_t id) { terminals_.erase(id); }, std::move(app.application),
+      std::move(app_dir_request), std::move(app.controller_request), std::move(vsh_controller),
+      svc.Connect<fuchsia::ui::app::ViewProvider>(), term_id);
+  terminals_.insert({term_id, std::move(component)});
+}
 
 }  // namespace linux_runner

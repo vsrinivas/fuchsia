@@ -23,8 +23,9 @@ class LinuxComponent : public fuchsia::sys::ComponentController,
   using TerminationCallback = fit::function<void(uint32_t)>;
   static std::unique_ptr<LinuxComponent> Create(
       TerminationCallback termination_callback, fuchsia::sys::Package package,
-      fuchsia::sys::StartupInfo startup_info,
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
+      zx::channel directory_request,
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> app_controller,
+      fuchsia::sys::ComponentControllerPtr remote_controller,
       fuchsia::ui::app::ViewProviderPtr remote_view_provider, uint32_t id);
 
   ~LinuxComponent();
@@ -32,6 +33,7 @@ class LinuxComponent : public fuchsia::sys::ComponentController,
  private:
   TerminationCallback termination_callback_;
   fidl::Binding<fuchsia::sys::ComponentController> application_controller_;
+  fuchsia::sys::ComponentControllerPtr remote_controller_;
   fidl::InterfaceRequest<fuchsia::io::Directory> directory_request_;
   sys::OutgoingDirectory outgoing_;
   fidl::BindingSet<fuchsia::ui::app::ViewProvider> view_bindings_;
@@ -39,9 +41,12 @@ class LinuxComponent : public fuchsia::sys::ComponentController,
   const uint32_t id_;
 
   LinuxComponent(TerminationCallback termination_callback, fuchsia::sys::Package package,
-                 fuchsia::sys::StartupInfo startup_info,
-                 fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
+                 zx::channel directory_request,
+                 fidl::InterfaceRequest<fuchsia::sys::ComponentController> app_controller,
+                 fuchsia::sys::ComponentControllerPtr remote_controller,
                  fuchsia::ui::app::ViewProviderPtr remote_view_provider, uint32_t id);
+
+  void HandleOnTerminated(int64_t return_code, fuchsia::sys::TerminationReason reason);
 
   // |fuchsia::sys::ComponentController|
   void Kill() override;
