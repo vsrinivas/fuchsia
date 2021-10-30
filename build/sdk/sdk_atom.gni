@@ -151,10 +151,15 @@ template("sdk_atom") {
     }
   }
 
-  assert(defined(invoker.files), "An atom must specify some files")
+  # Some elements contain only the metadata.
+  if (!defined(invoker.files)) {
+    files = []
+  } else {
+    files = invoker.files
+  }
   file_args = []
   file_inputs = []
-  foreach(file, invoker.files) {
+  foreach(file, files) {
     assert(defined(file.source), "File $file does not specify a source.")
     assert(defined(file.dest), "File $file does not specify a destination.")
     file_inputs += [ file.source ]
@@ -326,7 +331,7 @@ template("sdk_atom") {
     }
 
     cts_artifacts = []
-    foreach(f, invoker.files) {
+    foreach(f, files) {
       cts_artifacts += [ "cts/" + f.dest ]
     }
 
