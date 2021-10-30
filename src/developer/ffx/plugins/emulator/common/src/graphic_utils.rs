@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub fn get_default_graphics() -> String {
+    return get_default_graphics_for_os();
+}
+
 #[cfg(target_os = "linux")]
 use {std::env, std::process::Command, std::str};
 
@@ -23,7 +27,7 @@ pub fn read_vga() -> String {
 }
 
 #[cfg(target_os = "linux")]
-pub fn get_default_graphics() -> String {
+fn get_default_graphics_for_os() -> String {
     match env::var_os("DISPLAY") {
         Some(port) => {
             // Running on chrome remote desktop
@@ -47,7 +51,7 @@ pub fn get_default_graphics() -> String {
 }
 
 #[cfg(target_os = "macos")]
-pub fn get_default_graphics() -> String {
+fn get_default_graphics_for_os() -> String {
     return "host".to_string();
 }
 
