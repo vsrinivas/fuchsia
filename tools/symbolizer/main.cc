@@ -41,6 +41,7 @@ int AuthMode() {
     std::cout << "You have already authenticated. To use another credential, please remove "
               << "~/.fuchsia/debug/googleapi_auth and sign out gcloud using "
               << "`gcloud auth application-default revoke`\n";
+    loop.Cleanup();
     return EXIT_SUCCESS;
   }
 
