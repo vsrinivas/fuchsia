@@ -529,9 +529,9 @@ impl<T> DerefMut for Chained<T> {
 
 impl<T> Drop for Chained<T> {
     fn drop(&mut self) {
-        // Safety: `self.storage[..self.len]` is already initialized.
+        // Safety: `self.deref_mut()` is a slice of all initialized elements.
         unsafe {
-            std::ptr::drop_in_place(&mut self.storage[..self.len.into()]);
+            std::ptr::drop_in_place(self.deref_mut());
         }
     }
 }
@@ -626,10 +626,11 @@ impl<T> ExactSizeIterator for ChainedIter<T> {}
 
 impl<T> Drop for ChainedIter<T> {
     fn drop(&mut self) {
-        for i in self.consumed..self.len.get() {
-            unsafe {
-                std::ptr::drop_in_place(self.storage[usize::from(i)].as_mut_ptr());
-            }
+        // Safety: `self.storage[self.consumed..self.len]` is initialized.
+        unsafe {
+            std::ptr::drop_in_place(std::mem::transmute::<_, &mut [T]>(
+                &mut self.storage[self.consumed.into()..self.len.into()],
+            ));
         }
     }
 }
