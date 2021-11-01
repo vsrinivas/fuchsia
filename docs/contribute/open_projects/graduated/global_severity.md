@@ -1,6 +1,6 @@
 # Dismantle the global log severity file
 
-This project is complete! This page is left as a historical artifact.
+<<_banner.md>>
 
 ## Goal & motivation
 
