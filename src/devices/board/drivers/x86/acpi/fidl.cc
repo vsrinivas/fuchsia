@@ -274,14 +274,16 @@ acpi::status<fuchsia_hardware_acpi::wire::Resource> EvaluateObjectFidlHelper::En
 
 acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult>
 EvaluateObjectFidlHelper::EncodeReturnValue(fidl::AnyArena& alloc, ACPI_OBJECT* value) {
-  auto result = EncodeObject(alloc, value);
-  if (result.is_error()) {
-    return result.take_error();
-  }
-
   // TODO(fxbug.dev/79172): put the data in a VMO if it's too big.
   fuchsia_hardware_acpi::wire::EncodedObject encoded;
-  encoded.set_object(alloc, result.value());
+  if (value != nullptr) {
+    auto result = EncodeObject(alloc, value);
+    if (result.is_error()) {
+      return result.take_error();
+    }
+
+    encoded.set_object(alloc, result.value());
+  }
 
   fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResponse response;
   response.result = std::move(encoded);

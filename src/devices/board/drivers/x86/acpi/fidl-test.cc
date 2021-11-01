@@ -670,3 +670,14 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeMmioResource) {
   ASSERT_EQ(fidl[0].mmio().offset, 32);
   ASSERT_EQ(fidl[0].mmio().size, zx_system_get_page_size());
 }
+
+TEST_F(FidlEvaluateObjectTest, TestMethodReturnsNothing) {
+  acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot(), "\\",
+                                        EvaluateObjectMode::kPlainObject,
+                                        fidl::VectorView<facpi::Object>());
+
+  fidl::Arena<> arena;
+  auto result = helper.EncodeReturnValue(arena, nullptr);
+  ASSERT_EQ(result.status_value(), AE_OK);
+  ASSERT_TRUE(result->response().result.has_invalid_tag());
+}
