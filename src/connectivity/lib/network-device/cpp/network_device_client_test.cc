@@ -236,7 +236,7 @@ TEST_F(NetDeviceTest, TestRxTx) {
   ASSERT_OK(tun_device_result.status_value());
   auto& [tun_device, tun_port] = tun_device_result.value();
   std::unique_ptr<NetworkDeviceClient> client;
-  tun_device->GetDevice(CreateClientRequest(&client));
+  ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
 
   ASSERT_OK(StartSession(*client));
   ASSERT_OK(AttachPort(*client));
@@ -308,7 +308,7 @@ TEST_F(NetDeviceTest, TestEcho) {
   // Move into variable so we can capture in lambdas.
   auto tun_device = std::move(tun_device_bind);
   std::unique_ptr<NetworkDeviceClient> client;
-  tun_device->GetDevice(CreateClientRequest(&client));
+  ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
 
   ASSERT_OK(StartSession(*client));
   ASSERT_OK(AttachPort(*client));
@@ -484,7 +484,7 @@ TEST_F(NetDeviceTest, StatusWatcher) {
   ASSERT_OK(tun_device_result.status_value());
   auto& [tun_device, tun_port] = tun_device_result.value();
   std::unique_ptr<NetworkDeviceClient> client;
-  tun_device->GetDevice(CreateClientRequest(&client));
+  ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
   uint32_t call_count1 = 0;
   uint32_t call_count2 = 0;
   bool expect_online = true;
@@ -535,7 +535,7 @@ TEST_F(NetDeviceTest, ErrorCallback) {
   ASSERT_OK(tun_device_result.status_value());
   auto& [tun_device, tun_port] = tun_device_result.value();
   std::unique_ptr<NetworkDeviceClient> client;
-  tun_device->GetDevice(CreateClientRequest(&client));
+  ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
 
   ASSERT_OK(StartSession(*client));
   ASSERT_OK(AttachPort(*client));
@@ -577,7 +577,7 @@ TEST_F(NetDeviceTest, PadTxFrames) {
   auto& [tun_device, tun_port] = tun_device_result.value();
 
   std::unique_ptr<NetworkDeviceClient> client;
-  tun_device->GetDevice(CreateClientRequest(&client));
+  ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
 
   ASSERT_OK(StartSession(*client));
   ASSERT_OK(AttachPort(*client));
