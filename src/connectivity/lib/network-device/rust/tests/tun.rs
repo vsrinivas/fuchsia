@@ -253,7 +253,7 @@ async fn test_status_stream() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_port_stream() {
-    let mut stream = {
+    let (_tun, mut stream) = {
         let (tun, _port) = create_tun_device_and_port();
         let client = create_netdev_client(&tun);
         let mut stream = client.device_port_event_stream().expect("failed to create port stream");
@@ -265,7 +265,7 @@ async fn test_port_stream() {
             stream.try_next().await.expect("failed to get next event"),
             Some(netdev::DevicePortEvent::Idle(netdev::Empty { .. }))
         );
-        stream
+        (tun, stream)
     };
     assert_matches!(
         stream.try_next().await.expect("failed to get next event"),
