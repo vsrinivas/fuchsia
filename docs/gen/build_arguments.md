@@ -3343,7 +3343,7 @@ as the cache.
 
 **Current value (from the default):** `""`
 
-From //build/config/rust/BUILD.gn:19
+From //build/config/rust/BUILD.gn:17
 
 ### rust_lto
 Sets the default LTO type for rustc bulids.
@@ -3376,7 +3376,7 @@ TODO(fxbug.dev/57302): Enable v0 mangling by default.
 
 **Current value (from the default):** `false`
 
-From //build/config/rust/BUILD.gn:15
+From //build/config/rust/BUILD.gn:13
 
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
