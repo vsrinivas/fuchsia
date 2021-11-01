@@ -13,7 +13,6 @@
 #include <trace.h>
 #include <zircon/errors.h>
 
-#include <kernel/percpu.h>
 #include <pretty/hexdump.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
@@ -33,19 +32,6 @@ void vm_page::dump() const {
   }
 }
 
-void vm_page::set_state(vm_page_state new_state) {
-  const vm_page_state old_state = state();
-  state_priv.store(new_state, ktl::memory_order_relaxed);
-
-  // By only modifying the counters for the current CPU with preemption disabled, we can ensure
-  // the values are not modified concurrently. See comment at the definition of |vm_page_counts|.
-  percpu::WithCurrentPreemptDisable([&old_state, &new_state](percpu* p) {
-    // Be sure to not block, else we lose the protection provided by disabling preemption.
-    p->vm_page_counts.by_state[VmPageStateIndex(old_state)] -= 1;
-    p->vm_page_counts.by_state[VmPageStateIndex(new_state)] += 1;
-  });
-}
-
 uint64_t vm_page::get_count(vm_page_state state) {
   int64_t result = 0;
   percpu::ForEachPreemptDisable([&state, &result](percpu* p) {
@@ -60,6 +46,40 @@ uint64_t vm_page::get_count(vm_page_state state) {
 void vm_page::add_to_initial_count(vm_page_state state, uint64_t n) {
   percpu::WithCurrentPreemptDisable(
       [&state, &n](percpu* p) { p->vm_page_counts.by_state[VmPageStateIndex(state)] += n; });
+}
+
+ktl::optional<vm_page::object_t::TrySetHasWaiterResult> vm_page::object_t::try_set_has_waiter() {
+  TrySetHasWaiterResult result;
+  uintptr_t value = object_or_stack_owner.get().load(ktl::memory_order_acquire);
+  while (true) {
+    if (!(value & kObjectOrStackOwnerIsStackOwnerFlag)) {
+      return ktl::nullopt;
+    }
+    if (value & kObjectOrStackOwnerHasWaiter) {
+      // We rely on the current thread holding the thread_lock to know that the first thread which
+      // set kObjectOrStackOwnerHasWaiter on this page has also already returned from
+      // PrepareForWaiter() and released thread_lock.
+      result.first_setter = false;
+      result.stack_owner = &stack_owner();
+      return result;
+    }
+    if (!object_or_stack_owner.get().compare_exchange_weak(
+            value, value | kObjectOrStackOwnerHasWaiter, ktl::memory_order_acq_rel,
+            ktl::memory_order_acquire)) {
+      continue;
+    }
+    break;
+  }
+  // We now know that we hold the thread_lock, and kObjectOrStackOwnerHasWaiter is set, which means
+  // the StackOwnedLoanedPagesInterval can't be removed from the page or start deleting until
+  // the thread_lock is released.  We know this is the first thread to set
+  // kObjectOrStackOwnerHasWaiter on this page, and we know that other threads trying to call
+  // try_set_has_waiter() on this page will block until this thread releases thread_lock, so we
+  // know that those threads won't return from this method until after this thread returns from
+  // PrepareForWaiter() and releases thread_lock.
+  result.first_setter = true;
+  result.stack_owner = &stack_owner();
+  return result;
 }
 
 static int cmd_vm_page(int argc, const cmd_args* argv, uint32_t flags) {

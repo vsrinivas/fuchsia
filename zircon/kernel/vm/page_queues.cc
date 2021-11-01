@@ -8,8 +8,13 @@
 #include <lib/fit/defer.h>
 
 #include <fbl/ref_counted_upgradeable.h>
+#include <kernel/auto_preempt_disabler.h>
+#include <object/thread_dispatcher.h>
+#include <vm/page.h>
 #include <vm/page_queues.h>
+#include <vm/pmm.h>
 #include <vm/scanner.h>
+#include <vm/stack_owned_loaned_pages_interval.h>
 #include <vm/vm_cow_pages.h>
 
 namespace {
@@ -666,8 +671,18 @@ void PageQueues::SetQueueBacklinkLocked(vm_page_t* page, void* object, uintptr_t
   DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(!list_in_list(&page->queue_node));
-  page->object.set_object(object);
-  page->object.set_page_offset(page_offset);
+  if (object) {
+    DEBUG_ASSERT(!page->object.get_object() || page->object.get_object() == object);
+    DEBUG_ASSERT(!page->object.get_object() || page->object.get_page_offset() == page_offset);
+    page->object.set_object(object);
+    page->object.set_page_offset(page_offset);
+  } else {
+    // Currently SetQueueBacklinkLocked() can be used to clear the backlink in cases where the page
+    // isn't being removed from a VmCowPages.  This won't work for loaned pages, but we don't have
+    // any loaned pages yet.
+    page->object.clear_object();
+    page->object.set_page_offset(0);
+  }
   DEBUG_ASSERT(page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) == PageQueueNone);
   page->object.get_page_queue_ref().store(queue, ktl::memory_order_relaxed);
   list_add_head(&page_queues_[queue], &page->queue_node);
@@ -686,8 +701,18 @@ void PageQueues::MoveToQueueBacklinkLocked(vm_page_t* page, void* object, uintpt
   DEBUG_ASSERT(list_in_list(&page->queue_node));
   uint32_t old_queue = page->object.get_page_queue_ref().exchange(queue, ktl::memory_order_relaxed);
   DEBUG_ASSERT(old_queue != PageQueueNone);
-  page->object.set_object(object);
-  page->object.set_page_offset(page_offset);
+  if (object) {
+    DEBUG_ASSERT(!page->object.get_object() || page->object.get_object() == object);
+    DEBUG_ASSERT(!page->object.get_object() || page->object.get_page_offset() == page_offset);
+    page->object.set_object(object);
+    page->object.set_page_offset(page_offset);
+  } else {
+    // Currently MoveToQueueBacklinkLocked() can be used to clear the backlink in cases where the
+    // page isn't being removed from a VmCowPages.  This won't work for loaned pages, but we don't
+    // have any loaned pages yet.
+    page->object.clear_object();
+    page->object.set_page_offset(0);
+  }
   list_delete(&page->queue_node);
   list_add_head(&page_queues_[queue], &page->queue_node);
   page_queue_counts_[old_queue].fetch_sub(1, ktl::memory_order_relaxed);
@@ -721,11 +746,13 @@ void PageQueues::MoveToUnswappable(vm_page_t* page) {
 
 void PageQueues::SetPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
   Guard<CriticalMutex> guard{&lock_};
+  DEBUG_ASSERT(object);
   SetQueueBacklinkLocked(page, object, page_offset, mru_gen_to_queue());
 }
 
 void PageQueues::MoveToPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
   Guard<CriticalMutex> guard{&lock_};
+  DEBUG_ASSERT(object);
   MoveToQueueBacklinkLocked(page, object, page_offset, mru_gen_to_queue());
 }
 
@@ -743,6 +770,7 @@ void PageQueues::SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uin
 void PageQueues::MoveToUnswappableZeroFork(vm_page_t* page, VmCowPages* object,
                                            uint64_t page_offset) {
   Guard<CriticalMutex> guard{&lock_};
+  DEBUG_ASSERT(object);
   MoveToQueueBacklinkLocked(page, object, page_offset, PageQueueUnswappableZeroFork);
 }
 
@@ -753,7 +781,7 @@ void PageQueues::RemoveLocked(vm_page_t* page) {
   DEBUG_ASSERT(old_queue != PageQueueNone);
   page_queue_counts_[old_queue].fetch_sub(1, ktl::memory_order_relaxed);
   UpdateActiveInactiveLocked((PageQueue)old_queue, PageQueueNone);
-  page->object.set_object(nullptr);
+  page->object.clear_object();
   page->object.set_page_offset(0);
   list_delete(&page->queue_node);
 }

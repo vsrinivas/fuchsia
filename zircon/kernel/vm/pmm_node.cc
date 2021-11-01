@@ -14,6 +14,7 @@
 
 #include <new>
 
+#include <fbl/algorithm.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
@@ -21,9 +22,10 @@
 #include <vm/bootalloc.h>
 #include <vm/page_request.h>
 #include <vm/physmap.h>
+#include <vm/pmm.h>
 #include <vm/pmm_checker.h>
+#include <vm/stack_owned_loaned_pages_interval.h>
 
-#include "fbl/algorithm.h"
 #include "vm_priv.h"
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
@@ -230,6 +232,14 @@ void PmmNode::AllocPageHelperLocked(vm_page_t* page) {
   AsanUnpoisonPage(page);
 
   DEBUG_ASSERT(page->is_free());
+  DEBUG_ASSERT(!page->object.is_stack_owned());
+
+  if (page->is_loaned()) {
+    page->object.set_stack_owner(&StackOwnedLoanedPagesInterval::current());
+    // We want the set_stack_owner() to be visible before set_state(), but we don't need to make
+    // set_state() a release just for the benefit of loaned pages, so we use this fence.
+    ktl::atomic_thread_fence(ktl::memory_order_release);
+  }
 
   page->set_state(vm_page_state::ALLOC);
 
@@ -435,6 +445,28 @@ void PmmNode::FreePageHelperLocked(vm_page* page) {
 
   // mark it free
   page->set_state(vm_page_state::FREE);
+
+  // Coming from OBJECT or ALLOC, this will only be true if the page was loaned (and may still be
+  // loaned, but doesn't have to be currently loaned if the contiguous VMO the page was loaned from
+  // was deleted during stack ownership).
+  //
+  // Coming from a state other than OBJECT or ALLOC, this currently won't be true, but if it were
+  // true in future, it would only be because a state other than OBJECT or ALLOC has a (future)
+  // field overlapping, in which case we do want to clear the invalid stack owner pointer value.
+  // We'll be ok to clear this invalid stack owner after setting FREE previously (instead of
+  // clearing before) because the stack owner is only read elsewhere for pages with an underlying
+  // contiguous VMO owner (whether actually loaned at the time or not), and pages with an underlying
+  // contiguous VMO owner can only be in FREE, ALLOC, OBJECT states, which all have this field, so
+  // reading an invalid stack owner pointer elsewhere won't happen (there's a magic number canary
+  // just in case though).  We could instead clear out any invalid stack owner pointer before
+  // setting FREE above and have a shorter comment here, but there's no actual need for the extra
+  // "if", so we just let this "if" handle it (especially since this whole paragraph is a
+  // hypothetical future since there aren't any overlapping fields yet as of this comment).
+  if (unlikely(page->object.is_stack_owned())) {
+    // Make FREE visible before lack of stack owner.
+    ktl::atomic_thread_fence(ktl::memory_order_release);
+    page->object.clear_stack_owner();
+  }
 
   if (unlikely(free_fill_enabled_)) {
     checker_.FillPattern(page);

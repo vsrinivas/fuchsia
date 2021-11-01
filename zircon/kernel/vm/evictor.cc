@@ -17,6 +17,7 @@
 #include <vm/evictor.h>
 #include <vm/pmm.h>
 #include <vm/scanner.h>
+#include <vm/stack_owned_loaned_pages_interval.h>
 #include <vm/vm_cow_pages.h>
 
 #include "pmm_node.h"

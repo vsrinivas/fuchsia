@@ -44,6 +44,7 @@
 class Dpc;
 struct Thread;
 class OwnedWaitQueue;
+class StackOwnedLoanedPagesInterval;
 class ThreadDispatcher;
 class WaitQueue;
 class VmAspace;
@@ -1034,6 +1035,10 @@ struct Thread {
   // obtained, it will be left empty.
   void GetBacktrace(Backtrace& out_bt) TA_EXCL(thread_lock);
 
+  StackOwnedLoanedPagesInterval* stack_owned_loaned_pages_interval() {
+    return stack_owned_loaned_pages_interval_;
+  }
+
  private:
   // The architecture-specific methods for getting and setting the
   // current thread may need to see Thread's arch_ member via offsetof.
@@ -1046,6 +1051,10 @@ struct Thread {
   // ScopedThreadExceptionContext is the only public way to call
   // SaveUserStateLocked and RestoreUserStateLocked.
   friend class ScopedThreadExceptionContext;
+
+  // StackOwnedLoanedPagesInterval is the only public way to set/clear the
+  // stack_owned_loaned_pages_interval().
+  friend class StackOwnedLoanedPagesInterval;
 
   // Dumping routines are allowed to see inside us.
   friend void dump_thread_locked(Thread* t, bool full_dump);
@@ -1087,6 +1096,9 @@ struct Thread {
   TaskState task_state_;
   PreemptionState preemption_state_;
   MemoryAllocationState memory_allocation_state_;
+  // This is part of ensuring that all stack ownership of loaned pages can be boosted in priority
+  // via priority inheritance if a higher priority thread is trying to reclaim the loaned pages.
+  StackOwnedLoanedPagesInterval* stack_owned_loaned_pages_interval_ = nullptr;
 
 #if WITH_LOCK_DEP
   // state for runtime lock validation when in thread context

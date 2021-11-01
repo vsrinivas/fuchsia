@@ -2163,6 +2163,124 @@ static bool vmo_write_does_not_commit_test() {
   END_TEST;
 }
 
+static bool vmo_stack_owned_loaned_pages_interval_test() {
+  BEGIN_TEST;
+
+  // So far it doesn't seem like we have any way to directly observe priority inheritance happening.
+  // Really that's more of an OwnedWaitQueue concern, but it might be nice to double check here that
+  // a page owning thread can be boosted while there's a higher priority waiter.
+
+  // This test isn't stress, but have a few threads to check on multiple waiters per page and
+  // multiple waiters per stack_owner.
+  constexpr uint32_t kFakePageCount = 8;
+  constexpr uint32_t kWaitingThreadsPerPage = 2;
+  constexpr uint32_t kWaitingThreadCount = kFakePageCount * kWaitingThreadsPerPage;
+  struct OwningThread {
+    Thread* thread = nullptr;
+    vm_page_t pages[kFakePageCount] = {};
+    ktl::atomic<bool> ownership_acquired = false;
+    ktl::atomic<bool> release_stack_ownership = false;
+  } ot;
+  for (auto& page : ot.pages) {
+    EXPECT_EQ(vm_page_state::FREE, page.state());
+    // Normally this would be under PmmLock; only for testing.
+    page.loaned = true;
+  }
+
+  // Test no pages stack owned in a given interval.
+  {  // scope raii_interval
+    StackOwnedLoanedPagesInterval raii_interval;
+    DEBUG_ASSERT(&StackOwnedLoanedPagesInterval::current() == &raii_interval);
+  }  // ~raii_interval
+
+  // Test page stack owned but never waited on.  Hold thread_lock for this to get a failure if the
+  // thread_lock is ever acquired for this scenario.  Normally the thread_lock would not be held
+  // for these steps.
+  {  // scope thread_lock_guard, raii_interval
+    Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
+    StackOwnedLoanedPagesInterval raii_interval;
+    DEBUG_ASSERT(&StackOwnedLoanedPagesInterval::current() == &raii_interval);
+    ot.pages[0].object.set_stack_owner(&StackOwnedLoanedPagesInterval::current());
+    ot.pages[0].object.clear_stack_owner();
+  }  // ~raii_interval, ~thread_lock_guard
+
+  // Test pages stack owned each with multiple waiters.
+  ot.thread = Thread::Create(
+      "owning_thread",
+      [](void* arg) -> int {
+        OwningThread& ot = *reinterpret_cast<OwningThread*>(arg);
+        StackOwnedLoanedPagesInterval raii_interval;
+        for (auto& page : ot.pages) {
+          DEBUG_ASSERT(&StackOwnedLoanedPagesInterval::current() == &raii_interval);
+          page.object.set_stack_owner(&StackOwnedLoanedPagesInterval::current());
+        }
+        ot.ownership_acquired.store(true);
+        // We spin here on purpose instead of waiting or sleeping.  We want to see the owning
+        // thread's priority reflect the waiting thread's priority.
+        while (!ot.release_stack_ownership) {
+        }
+        for (auto& page : ot.pages) {
+          page.object.clear_stack_owner();
+        }
+        // ~raii_interval
+        return 0;
+      },
+      &ot, LOWEST_PRIORITY);
+  ot.thread->Resume();
+  while (!ot.ownership_acquired.load()) {
+  }
+
+  struct WaitingThread {
+    OwningThread* ot = nullptr;
+    uint32_t i = 0;
+    Thread* thread = nullptr;
+    ktl::atomic<bool> waiting_thread_started = false;
+    ktl::atomic<bool> waiting_thread_wait_done = false;
+  } waiting_threads[kWaitingThreadCount] = {};
+  for (uint32_t i = 0; i < kWaitingThreadCount; ++i) {
+    auto& wt = waiting_threads[i];
+    wt.ot = &ot;
+    wt.i = i;
+    wt.thread = Thread::Create(
+        "waiting_thread",
+        [](void* arg) -> int {
+          WaitingThread& wt = *reinterpret_cast<WaitingThread*>(arg);
+          wt.waiting_thread_started.store(true);
+          StackOwnedLoanedPagesInterval::WaitUntilContiguousPageNotStackOwned(
+              &wt.ot->pages[wt.i / kWaitingThreadsPerPage]);
+          wt.waiting_thread_wait_done.store(true);
+          return 0;
+        },
+        &wt, DEFAULT_PRIORITY);
+  }
+  for (auto& wt : waiting_threads) {
+    wt.thread->Resume();
+  }
+  for (auto& wt : waiting_threads) {
+    while (!wt.waiting_thread_started.load()) {
+    }
+  }
+  Thread::Current::SleepRelative(ZX_MSEC(100));
+  for (auto& wt : waiting_threads) {
+    EXPECT_FALSE(wt.waiting_thread_wait_done.load());
+  }
+  ot.release_stack_ownership.store(true);
+  for (auto& wt : waiting_threads) {
+    while (!wt.waiting_thread_wait_done.load()) {
+    }
+  }
+
+  int ret;
+  ot.thread->Join(&ret, ZX_TIME_INFINITE);
+  EXPECT_EQ(0, ret);
+  for (auto& wt : waiting_threads) {
+    wt.thread->Join(&ret, ZX_TIME_INFINITE);
+    EXPECT_EQ(0, ret);
+  }
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(vmo_tests)
 VM_UNITTEST(vmo_create_test)
 VM_UNITTEST(vmo_create_maximum_size)
@@ -2203,6 +2321,7 @@ VM_UNITTEST(vmo_discard_failure_test)
 VM_UNITTEST(vmo_discardable_counts_test)
 VM_UNITTEST(vmo_lookup_pages_test)
 VM_UNITTEST(vmo_write_does_not_commit_test)
+VM_UNITTEST(vmo_stack_owned_loaned_pages_interval_test)
 UNITTEST_END_TESTCASE(vmo_tests, "vmo", "VmObject tests")
 
 }  // namespace vm_unittest

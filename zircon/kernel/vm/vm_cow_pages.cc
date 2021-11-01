@@ -14,7 +14,12 @@
 #include <ktl/move.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>
+#include <vm/pmm.h>
+#include <vm/stack_owned_loaned_pages_interval.h>
+#include <vm/vm_cow_pages.h>
+#include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
+#include <vm/vm_page_list.h>
 
 #include "vm_priv.h"
 
