@@ -61,7 +61,7 @@ bool connect_to_logger(zx::socket* socket) {
   if (zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote) != ZX_OK) {
     return false;
   }
-  auto result = logger_client.Connect(std::move(remote));
+  auto result = logger_client->Connect(std::move(remote));
   if (result.status() != ZX_OK) {
     return false;
   }
