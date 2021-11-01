@@ -281,7 +281,7 @@ async fn dynamic_index_needed_blobs() {
     );
 
     let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
-    env.wait_for_inspect_state(tree_assertion!(
+    env.wait_for_and_return_inspect_state(tree_assertion!(
         "root": contains {
             "index": contains {
                 "dynamic": contains {
@@ -415,7 +415,24 @@ async fn dynamic_index_package_hash_update() {
 
 #[fasync::run_singlethreaded(test)]
 async fn package_cache_get() {
-    fn contains_state_and_common_properties(hierarchy: &DiagnosticsHierarchy, state: &'static str) {
+    async fn expect_and_return_inspect(
+        env: &TestEnv,
+        state: &'static str,
+    ) -> DiagnosticsHierarchy {
+        let hierarchy = env
+            .wait_for_and_return_inspect_state(tree_assertion!(
+                "root": contains {
+                    "fuchsia.pkg.PackageCache": contains {
+                        "get": contains {
+                            "0": contains {
+                                "state": state
+                            }
+                        }
+                    }
+                }
+            ))
+            .await;
+
         assert_data_tree!(
             &hierarchy,
             root: contains {
@@ -432,6 +449,8 @@ async fn package_cache_get() {
                 }
             }
         );
+
+        hierarchy
     }
 
     fn contains_missing_blob_stats(
@@ -483,8 +502,7 @@ async fn package_cache_get() {
 
     // Request received, expect client requesting meta far.
 
-    let hierarchy = env.inspect_hierarchy().await;
-    contains_state_and_common_properties(&hierarchy, "need-meta-far");
+    expect_and_return_inspect(&env, "need-meta-far").await;
 
     // Expect client fulfilling meta far.
 
@@ -493,15 +511,13 @@ async fn package_cache_get() {
 
     // Meta far done, expect client requesting missing blobs.
 
-    let hierarchy = env.inspect_hierarchy().await;
-    contains_state_and_common_properties(&hierarchy, "enumerate-missing-blobs");
+    expect_and_return_inspect(&env, "enumerate-missing-blobs").await;
 
     let missing_blobs = get_missing_blobs(&needed_blobs).await;
 
     // Missing blobs requested, expect client writing content blobs.
 
-    let hierarchy = env.inspect_hierarchy().await;
-    contains_state_and_common_properties(&hierarchy, "need-content-blobs");
+    let hierarchy = expect_and_return_inspect(&env, "need-content-blobs").await;
     contains_missing_blob_stats(&hierarchy, 2, 0, 0);
 
     let mut contents = contents
@@ -523,16 +539,14 @@ async fn package_cache_get() {
 
     // Content blob open for writing.
 
-    let hierarchy = env.inspect_hierarchy().await;
-    contains_state_and_common_properties(&hierarchy, "need-content-blobs");
+    let hierarchy = expect_and_return_inspect(&env, "need-content-blobs").await;
     contains_missing_blob_stats(&hierarchy, 1, 1, 0);
 
     let () = write_blob(&buf, content_blob).await.unwrap();
 
     // Content blob written.
 
-    let hierarchy = env.inspect_hierarchy().await;
-    contains_state_and_common_properties(&hierarchy, "need-content-blobs");
+    let hierarchy = expect_and_return_inspect(&env, "need-content-blobs").await;
     contains_missing_blob_stats(&hierarchy, 1, 0, 1);
 
     let mut blob = missing_blobs_iter.next().unwrap();
@@ -548,8 +562,7 @@ async fn package_cache_get() {
 
     // Last content blob open for writing.
 
-    let hierarchy = env.inspect_hierarchy().await;
-    contains_state_and_common_properties(&hierarchy, "need-content-blobs");
+    let hierarchy = expect_and_return_inspect(&env, "need-content-blobs").await;
     contains_missing_blob_stats(&hierarchy, 0, 1, 1);
 
     let () = write_blob(&buf, content_blob).await.unwrap();
@@ -619,7 +632,22 @@ async fn package_cache_concurrent_gets() {
         )
         .map_ok(|res| res.map_err(zx::Status::from_raw));
 
-    let hierarchy = env.inspect_hierarchy().await;
+    let hierarchy = env
+        .wait_for_and_return_inspect_state(tree_assertion!(
+            "root": contains {
+                "fuchsia.pkg.PackageCache": contains {
+                    "get": contains {
+                        "0": contains {
+                            "state": AnyProperty,
+                        },
+                        "1": contains {
+                            "state": AnyProperty,
+                        }
+                    }
+                }
+            }
+        ))
+        .await;
     assert_data_tree!(
         &hierarchy,
         root: contains {
@@ -750,7 +778,7 @@ async fn retained_index_updated_and_persisted() {
     // Writing meta far triggers index update, however that's done concurrently
     // with the test, and there's no clear signal available through FIDL API.
 
-    env.wait_for_inspect_state(tree_assertion!(
+    env.wait_for_and_return_inspect_state(tree_assertion!(
         root: contains {
             "index": contains {
                 "retained" : {
@@ -792,7 +820,7 @@ async fn retained_index_updated_and_persisted() {
     // Writing meta far triggers index update, however that's done concurrently
     // with the test, and there's no clear signal available through FIDL API.
 
-    env.wait_for_inspect_state(tree_assertion!(
+    env.wait_for_and_return_inspect_state(tree_assertion!(
         root: contains {
             "index": contains {
                 "retained" : {
@@ -877,7 +905,7 @@ async fn index_updated_mid_package_write() {
     // Writing meta far triggers index update, however that's done concurrently
     // with the test, and there's no clear signal available through FIDL API.
 
-    env.wait_for_inspect_state(tree_assertion!(
+    env.wait_for_and_return_inspect_state(tree_assertion!(
         root: contains {
             "index": contains {
                 "retained" : {

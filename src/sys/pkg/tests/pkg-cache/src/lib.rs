@@ -554,9 +554,16 @@ impl<P: PkgFs> TestEnv<P> {
         let _ = self.proxies.commit_status_provider.is_current_system_committed().await.unwrap();
     }
 
-    /// Wait until pkg-cache inspect state satisfies `desired_state`.
-    pub async fn wait_for_inspect_state(&self, desired_state: TreeAssertion<String>) {
-        while desired_state.run(&self.inspect_hierarchy().await).is_err() {
+    /// Wait until pkg-cache inspect state satisfies `desired_state`, return the satisfying state.
+    pub async fn wait_for_and_return_inspect_state(
+        &self,
+        desired_state: TreeAssertion<String>,
+    ) -> DiagnosticsHierarchy {
+        loop {
+            let hierarchy = self.inspect_hierarchy().await;
+            if desired_state.run(&hierarchy).is_ok() {
+                break hierarchy;
+            }
             fasync::Timer::new(Duration::from_millis(10)).await;
         }
     }
