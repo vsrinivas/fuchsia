@@ -97,7 +97,7 @@ class GnTester(object):
 
         # Soft-transition between Python2->3. This kwarg doesn't exist in Python2.
         if sys.version_info.major == 3:
-          kargs['text'] = True
+            kwargs['text'] = True
 
         job = Popen(args, **kwargs)
         (stdoutdata, stderrdata) = job.communicate()
