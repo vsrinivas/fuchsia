@@ -57,6 +57,12 @@ This section covers Fuchsia development hardware targets.
  - [Intel NUC][intel-nuc]
  - [Khadas VIM3][khadas-vim3]
 
+## Boards
+
+This section covers how to add support for a new board.
+
+ - [Adding support for new boards][boards-start]
+
 ## Drivers
 
 This section covers developing drivers on Fuchsia.
@@ -104,3 +110,4 @@ This section covers Fuchsia-wide conventions and best practices.
 [fidl-style]: /docs/development/languages/fidl/guides/style.md
 [fidl-api]: /docs/concepts/api/fidl.md
 [drivers-start]: /docs/development/drivers/developer_guide/driver-development.md
+[boards-start]: /docs/development/boards/bringup.md

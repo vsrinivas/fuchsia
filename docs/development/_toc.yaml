@@ -32,6 +32,9 @@ toc:
 - title: "Modify the kernel"
   section:
   - include: /docs/development/kernel/_toc.yaml
+- title: "Boards"
+  section:
+  - include: /docs/development/boards/_toc.yaml
 - title: "Drivers"
   section:
   - include: /docs/development/drivers/_toc.yaml
