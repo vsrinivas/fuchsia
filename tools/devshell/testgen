@@ -8,7 +8,8 @@
 ## Usage: fx testgen -l <path/to/.cm> -o <path/to/test/root/dir>
 ## See 'fx testgen --help' for more help
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/image_build_vars.sh || exit $?
+DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+source "${DEVSHELL_DIR}/lib/image_build_vars.sh" || exit $?
 
 fx-config-read
 fx-command-exec host-tool testgen "$@"
