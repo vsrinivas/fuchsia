@@ -148,7 +148,7 @@ class Binding final {
 
   // Binds the previously specified implementation to the given |channel|.
   //
-  // If the |Binding| was prevously bound to another channel, that channel is
+  // If the |Binding| was previously bound to another channel, that channel is
   // closed.
   //
   // Uses the given async_dispatcher_t (e.g., a message loop) in order to read
@@ -165,7 +165,7 @@ class Binding final {
   // Binds the previously specified implementation to the given
   // |InterfaceRequest|.
   //
-  // If the |Binding| was prevously bound to another channel, that channel is
+  // If the |Binding| was previously bound to another channel, that channel is
   // closed.
   //
   // Uses the given async_dispatcher_t (e.g., a message loop) in order to read
