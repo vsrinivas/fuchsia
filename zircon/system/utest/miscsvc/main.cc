@@ -28,7 +28,7 @@ TEST(MiscSvcTest, PaverSvccEnumeratesSuccessfully) {
   ASSERT_OK(zx::channel::create(0, &local2, &remote2));
 
   fidl::WireSyncClient<Paver> paver(std::move(local));
-  auto result = paver.FindDataSink(std::move(local2));
+  auto result = paver->FindDataSink(std::move(local2));
   ASSERT_OK(result.status());
 }
 
