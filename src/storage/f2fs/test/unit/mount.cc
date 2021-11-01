@@ -75,7 +75,7 @@ void MountTestDisableExt(F2fs *fs, uint32_t expectation) {
   root = nullptr;
 }
 
-void TestSegmentType(F2fs *fs, Dir *root_dir, const std::string_view name, bool is_dir,
+void TestSegmentType(F2fs *fs, Dir *root_dir, std::string_view name, bool is_dir,
                      std::vector<CursegType> &out) {
   fbl::RefPtr<fs::Vnode> vnode;
   uint32_t flag = (is_dir ? S_IFDIR : S_IFREG);

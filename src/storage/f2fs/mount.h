@@ -43,9 +43,9 @@ class MountOptions {
   MountOptions(const MountOptions &) = default;
 
   zx_status_t GetValue(const uint32_t opt_id, uint32_t *out);
-  uint32_t GetOptionID(const std::string_view &opt);
-  zx_status_t SetValue(const std::string_view &opt, const uint32_t value);
-  const std::string_view GetNameView(const uint32_t opt_id) {
+  uint32_t GetOptionID(std::string_view opt);
+  zx_status_t SetValue(std::string_view opt, const uint32_t value);
+  std::string_view GetNameView(const uint32_t opt_id) {
     ZX_ASSERT(opt_id < kOptMaxNum);
     return opt_[opt_id].name;
   }

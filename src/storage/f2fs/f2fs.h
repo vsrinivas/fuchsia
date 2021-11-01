@@ -277,7 +277,7 @@ class F2fs : public fs::Vfs {
 #endif  // __Fuchsia__
 };
 
-f2fs_hash_t DentryHash(const char *name, int len);
+f2fs_hash_t DentryHash(std::string_view name);
 
 zx_status_t FlushDirtyNodePage(F2fs *fs, Page *page);
 zx_status_t FlushDirtyMetaPage(F2fs *fs, Page *page);

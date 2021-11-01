@@ -70,17 +70,17 @@ uint64_t Dir::DirBlockIndex(uint32_t level, uint8_t dir_level, uint32_t idx) {
   return bidx;
 }
 
-bool Dir::EarlyMatchName(const char *name, int namelen, f2fs_hash_t namehash, DirEntry *de) {
-  if (LeToCpu(de->name_len) != namelen)
+bool Dir::EarlyMatchName(std::string_view name, f2fs_hash_t namehash, const DirEntry &de) {
+  if (LeToCpu(de.name_len) != name.length())
     return false;
 
-  if (LeToCpu(de->hash_code) != namehash)
+  if (LeToCpu(de.hash_code) != namehash)
     return false;
 
   return true;
 }
 
-DirEntry *Dir::FindInBlock(Page *dentry_page, const char *name, int namelen, int *max_slots,
+DirEntry *Dir::FindInBlock(Page *dentry_page, std::string_view name, uint64_t *max_slots,
                            f2fs_hash_t namehash, Page **res_page) {
   DirEntry *de;
   uint32_t bit_pos, end_pos, next_pos;
@@ -96,8 +96,8 @@ DirEntry *Dir::FindInBlock(Page *dentry_page, const char *name, int namelen, int
     de = &dentry_blk->dentry[bit_pos];
     slots = (LeToCpu(de->name_len) + kNameLen - 1) / kNameLen;
 
-    if (EarlyMatchName(name, namelen, namehash, de)) {
-      if (!memcmp(dentry_blk->filename[bit_pos], name, namelen)) {
+    if (EarlyMatchName(name, namehash, *de)) {
+      if (!memcmp(dentry_blk->filename[bit_pos], name.data(), name.length())) {
         *res_page = dentry_page;
         return de;
       }
@@ -108,7 +108,7 @@ DirEntry *Dir::FindInBlock(Page *dentry_page, const char *name, int namelen, int
       end_pos = kNrDentryInBlock;
     else
       end_pos = bit_pos;
-    if (static_cast<uint64_t>(*max_slots) < end_pos - next_pos)
+    if (*max_slots < end_pos - next_pos)
       *max_slots = end_pos - next_pos;
   }
 
@@ -119,15 +119,15 @@ DirEntry *Dir::FindInBlock(Page *dentry_page, const char *name, int namelen, int
   return de;
 }
 
-DirEntry *Dir::FindInLevel(unsigned int level, std::string_view name, int namelen,
-                           f2fs_hash_t namehash, Page **res_page) {
-  int s = (namelen + kNameLen - 1) / kNameLen;
+DirEntry *Dir::FindInLevel(unsigned int level, std::string_view name, f2fs_hash_t namehash,
+                           Page **res_page) {
+  uint64_t slot = (name.length() + kNameLen - 1) / kNameLen;
   unsigned int nbucket, nblock;
   uint64_t bidx, end_block;
   Page *dentry_page = nullptr;
   DirEntry *de = nullptr;
   bool room = false;
-  int max_slots = 0;
+  uint64_t max_slots = 0;
 
   ZX_ASSERT(level <= kMaxDirHashDepth);
 
@@ -144,11 +144,10 @@ DirEntry *Dir::FindInLevel(unsigned int level, std::string_view name, int namele
       continue;
     }
 
-    if (de = FindInBlock(dentry_page, name.data(), namelen, &max_slots, namehash, res_page);
-        de != nullptr)
+    if (de = FindInBlock(dentry_page, name, &max_slots, namehash, res_page); de != nullptr)
       break;
 
-    if (max_slots >= s)
+    if (max_slots >= slot)
       room = true;
     F2fsPutPage(dentry_page, 0);
   }
@@ -170,7 +169,6 @@ DirEntry *Dir::FindEntryOnDevice(std::string_view name, Page **res_page) {
   uint64_t npages = DirBlocks();
   DirEntry *de = nullptr;
   f2fs_hash_t name_hash;
-  int namelen = static_cast<int>(name.length());
   unsigned int max_depth;
   unsigned int level;
 
@@ -183,11 +181,11 @@ DirEntry *Dir::FindEntryOnDevice(std::string_view name, Page **res_page) {
 
   *res_page = nullptr;
 
-  name_hash = DentryHash(name.data(), namelen);
+  name_hash = DentryHash(name);
   max_depth = static_cast<unsigned int>(GetCurDirDepth());
 
   for (level = 0; level < max_depth; level++) {
-    if (de = FindInLevel(level, name, namelen, name_hash, res_page); de != nullptr)
+    if (de = FindInLevel(level, name, name_hash, res_page); de != nullptr)
       break;
   }
   if (!de && !IsSameDirHash(name_hash)) {
@@ -218,10 +216,9 @@ DirEntry *Dir::FindEntry(std::string_view name, Page **res_page) {
       return nullptr;
     }
 
-    int max_slots = 0;
-    int namelen = static_cast<int>(name.length());
-    f2fs_hash_t name_hash = DentryHash(name.data(), namelen);
-    return FindInBlock(dentry_page, name.data(), namelen, &max_slots, name_hash, res_page);
+    uint64_t max_slots = 0;
+    f2fs_hash_t name_hash = DentryHash(name);
+    return FindInBlock(dentry_page, name, &max_slots, name_hash, res_page);
   }
 #endif  // __Fuchsia__
 
@@ -464,7 +461,7 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
       return ZX_OK;
   }
 
-  dentry_hash = DentryHash(name.data(), namelen);
+  dentry_hash = DentryHash(name);
   level = 0;
   current_depth = static_cast<unsigned int>(GetCurDirDepth());
   if (IsSameDirHash(dentry_hash)) {

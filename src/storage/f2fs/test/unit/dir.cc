@@ -118,7 +118,7 @@ TEST_F(DirectoryTest, DentryBucket) {
     std::string name(std::to_string(child_count));
     FileTester::CreateChild(test_dir_ptr, S_IFDIR, name);
 
-    auto bucket_id = DentryHash(name.data(), static_cast<int>(name.length())) % 2;
+    auto bucket_id = DentryHash(name) % 2;
 
     if (bucket_id == 0) {
       first_bucket_child.insert(name);
@@ -256,7 +256,7 @@ TEST_F(DirectoryTest, SetDentryLevel1DoWriteAndRead) {
     std::string name(std::to_string(child_count));
     FileTester::CreateChild(test_dir_ptr, S_IFDIR, name);
 
-    auto bucket_id = DentryHash(name.data(), static_cast<int>(name.length())) % 2;
+    auto bucket_id = DentryHash(name) % 2;
 
     if (bucket_id == 0) {
       first_bucket_child.insert(name);

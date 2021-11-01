@@ -101,7 +101,7 @@ zx_status_t MountOptions::GetValue(const uint32_t opt_id, uint32_t *out) {
   return ZX_OK;
 }
 
-uint32_t MountOptions::GetOptionID(const std::string_view &opt) {
+uint32_t MountOptions::GetOptionID(std::string_view opt) {
   uint32_t i;
   for (i = 0; i < kOptMaxNum; i++) {
     if (opt_[i].name.compare(opt) == 0) {
@@ -111,7 +111,7 @@ uint32_t MountOptions::GetOptionID(const std::string_view &opt) {
   return i;
 }
 
-zx_status_t MountOptions::SetValue(const std::string_view &opt, const uint32_t value) {
+zx_status_t MountOptions::SetValue(std::string_view opt, const uint32_t value) {
   zx_status_t ret = ZX_ERR_INVALID_ARGS;
   uint32_t id = GetOptionID(opt);
   if (id < kOptMaxNum && !opt_[id].configurable) {

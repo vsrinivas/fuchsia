@@ -12,7 +12,7 @@
 namespace f2fs {
 
 template <typename T>
-static inline void DisplayMember(uint32_t typesize, T value, std::string name) {
+static inline void DisplayMember(uint32_t typesize, T value, std::string_view name) {
   if (typesize == sizeof(char)) {
     std::cout << name << " [" << value << "]" << std::endl;
   } else {
@@ -411,7 +411,7 @@ void FsckWorker::CheckDoubleIndirectNodeBlock(Inode *inode, nid_t nid, FileType 
 }
 
 template <size_t size>
-void FsckWorker::PrintDentry(const uint32_t depth, const std::string_view name,
+void FsckWorker::PrintDentry(const uint32_t depth, std::string_view name,
                              const uint8_t (&dentry_bitmap)[size], const DirEntry &dentries,
                              const int index, const int last_block, const int max_entries) {
   int last_de = 0;
@@ -471,7 +471,7 @@ void FsckWorker::CheckDentries(uint32_t &child_count, uint32_t &child_files, con
 
     std::string_view name(reinterpret_cast<const char *>(filename[i]),
                           LeToCpu(dentries[i].name_len));
-    hash_code = DentryHash(name.data(), static_cast<int>(name.length()));
+    hash_code = DentryHash(name);
 
     ftype = static_cast<FileType>(dentries[i].file_type);
 

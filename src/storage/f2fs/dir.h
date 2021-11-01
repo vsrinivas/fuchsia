@@ -23,11 +23,11 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
       __TA_REQUIRES_SHARED(io_lock_);
   DirEntry *FindEntry(std::string_view name, Page **res_page) __TA_EXCLUDES(io_lock_);
   zx::status<DirEntry> FindEntry(std::string_view name) __TA_EXCLUDES(io_lock_);
-  DirEntry *FindInInlineDir(const std::string_view &name, Page **res_page);
-  DirEntry *FindInBlock(Page *dentry_page, const char *name, int namelen, int *max_slots,
+  DirEntry *FindInInlineDir(std::string_view name, Page **res_page);
+  DirEntry *FindInBlock(Page *dentry_page, std::string_view name, uint64_t *max_slots,
                         f2fs_hash_t namehash, Page **res_page);
-  DirEntry *FindInLevel(unsigned int level, std::string_view name, int namelen,
-                        f2fs_hash_t namehash, Page **res_page);
+  DirEntry *FindInLevel(unsigned int level, std::string_view name, f2fs_hash_t namehash,
+                        Page **res_page);
   zx_status_t Readdir(fs::VdirCookie *cookie, void *dirents, size_t len, size_t *out_actual) final
       __TA_EXCLUDES(io_lock_);
   zx_status_t ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len, size_t *out_actual);
@@ -77,7 +77,7 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   static uint32_t BucketBlocks(uint32_t level);
   static uint64_t DirBlockIndex(uint32_t level, uint8_t dir_level, uint32_t idx);
   void SetDeType(DirEntry *de, VnodeF2fs *vnode);
-  bool EarlyMatchName(const char *name, int namelen, f2fs_hash_t namehash, DirEntry *de);
+  bool EarlyMatchName(std::string_view name, f2fs_hash_t namehash, const DirEntry &de);
 
   uint32_t MaxInlineDentry() const {
     return MaxInlineData() * kBitsPerByte / ((kSizeOfDirEntry + kDentrySlotLen) * kBitsPerByte + 1);

@@ -17,13 +17,13 @@ inline InlineDentry *GetInlineDentryAddr(Page *page) {
 
 }  // namespace
 
-DirEntry *Dir::FindInInlineDir(const std::string_view &name, Page **res_page) {
+DirEntry *Dir::FindInInlineDir(std::string_view name, Page **res_page) {
   Page *node_page = nullptr;
 
   if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &node_page); ret != ZX_OK)
     return nullptr;
 
-  f2fs_hash_t namehash = DentryHash(name.data(), static_cast<int>(name.length()));
+  f2fs_hash_t namehash = DentryHash(name);
 
   InlineDentry *dentry_blk = GetInlineDentryAddr(node_page);
 
@@ -36,7 +36,7 @@ DirEntry *Dir::FindInInlineDir(const std::string_view &name, Page **res_page) {
     }
 
     de = &dentry_blk->dentry[bit_pos];
-    if (EarlyMatchName(name.data(), static_cast<int>(name.length()), namehash, de)) {
+    if (EarlyMatchName(name, namehash, *de)) {
       if (!memcmp(dentry_blk->filename[bit_pos], name.data(), name.length())) {
         *res_page = node_page;
 #if 0  // porting needed
@@ -221,7 +221,7 @@ zx_status_t Dir::ConvertInlineDir(InlineDentry *inline_dentry) {
 zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *is_converted) {
   *is_converted = false;
 
-  f2fs_hash_t name_hash = DentryHash(name.data(), static_cast<int>(name.length()));
+  f2fs_hash_t name_hash = DentryHash(name);
 
   Page *ipage = nullptr;
   if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK)

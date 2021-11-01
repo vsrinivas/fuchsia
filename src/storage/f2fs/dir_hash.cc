@@ -2,17 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <safemath/checked_math.h>
+
 #include "src/storage/f2fs/f2fs.h"
 #include "src/storage/f2fs/third_party/ext2_hash/hash.h"
 
 namespace f2fs {
 
-f2fs_hash_t DentryHash(const char *name, int len) {
+f2fs_hash_t DentryHash(std::string_view name) {
   uint32_t hash;
   __UNUSED uint32_t minor_hash;
   f2fs_hash_t f2fs_hash;
-  const char *p;
   uint32_t in[8], buf[4];
+
+  int len = safemath::checked_cast<int>(name.length());
 
   if (len <= 2 &&
       ((len == 1 && name[0] == '.') || (len == 2 && name[1] == '.' && name[2] == '.'))) {
@@ -25,7 +28,7 @@ f2fs_hash_t DentryHash(const char *name, int len) {
   buf[2] = 0x98badcfe;
   buf[3] = 0x10325476;
 
-  p = name;
+  const char *p = name.data();
   while (len > 0) {
     Str2HashBuf(p, len, in, 4);
     TEATransform(buf, in);

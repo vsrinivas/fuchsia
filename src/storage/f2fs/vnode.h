@@ -191,8 +191,8 @@ class VnodeF2fs : public fs::Vnode,
   bool IsFifo() const;
   bool HasGid() const;
 
-  void SetName(const std::string_view &name) { name_ = name; }
-  bool IsSameName(const std::string_view &name) const {
+  void SetName(std::string_view name) { name_ = name; }
+  bool IsSameName(std::string_view name) const {
     return (name_.GetStringView().compare(name) == 0);
   }
   std::string_view GetNameView() const { return name_.GetStringView(); }
