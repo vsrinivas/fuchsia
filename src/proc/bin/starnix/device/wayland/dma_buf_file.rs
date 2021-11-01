@@ -115,7 +115,7 @@ impl DmaBufFile {
         let bytes_per_row = round_up_to_increment(
             actual_image_constraints.min_bytes_per_row as usize,
             actual_image_constraints.bytes_per_row_divisor as usize,
-        );
+        )?;
 
         let fd = self.create_buffer_collection_file(
             task,

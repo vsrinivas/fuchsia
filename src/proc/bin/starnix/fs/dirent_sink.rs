@@ -114,7 +114,7 @@ impl DirentSink for DirentSink64<'_> {
         name: &FsStr,
     ) -> Result<(), Errno> {
         let content_size = DIRENT64_HEADER_SIZE + name.len();
-        let entry_size = round_up_to_increment(content_size + 1, 8); // +1 for the null terminator.
+        let entry_size = round_up_to_increment(content_size + 1, 8)?; // +1 for the null terminator.
         if self.actual + entry_size > self.user_capacity {
             return error!(ENOSPC);
         }
@@ -172,7 +172,7 @@ impl DirentSink for DirentSink32<'_> {
         name: &FsStr,
     ) -> Result<(), Errno> {
         let content_size = DIRENT32_HEADER_SIZE + name.len();
-        let entry_size = round_up_to_increment(content_size + 2, 8); // +1 for the null terminator, +1 for the type.
+        let entry_size = round_up_to_increment(content_size + 2, 8)?; // +1 for the null terminator, +1 for the type.
         if self.actual + entry_size > self.user_capacity {
             return error!(ENOSPC);
         }

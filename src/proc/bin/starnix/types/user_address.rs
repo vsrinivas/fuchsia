@@ -10,8 +10,9 @@ use std::ops;
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::mm::vmo::round_up_to_increment;
+use crate::types::Errno;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd, AsBytes, FromBytes)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd, AsBytes, FromBytes)]
 #[repr(transparent)]
 pub struct UserAddress(u64);
 
@@ -30,12 +31,20 @@ impl UserAddress {
         self.0 as zx_vaddr_t
     }
 
-    pub fn round_up(&self, increment: u64) -> UserAddress {
-        UserAddress(round_up_to_increment(self.0 as usize, increment as usize) as u64)
+    pub fn round_up(&self, increment: u64) -> Result<UserAddress, Errno> {
+        Ok(UserAddress(round_up_to_increment(self.0 as usize, increment as usize)? as u64))
+    }
+
+    pub fn is_aligned(&self, alignment: u64) -> bool {
+        self.0 % alignment == 0
     }
 
     pub fn is_null(&self) -> bool {
         self.0 == UserAddress::NULL_PTR
+    }
+
+    pub fn checked_add(&self, rhs: usize) -> Option<UserAddress> {
+        self.0.checked_add(rhs as u64).map(UserAddress)
     }
 }
 
@@ -116,6 +125,12 @@ impl ops::Sub<UserAddress> for UserAddress {
 impl fmt::Display for UserAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:#x}", self.0)
+    }
+}
+
+impl fmt::Debug for UserAddress {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("UserAddress").field(&format_args!("{:#x}", self.0)).finish()
     }
 }
 

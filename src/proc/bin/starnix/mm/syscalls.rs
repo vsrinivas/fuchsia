@@ -92,11 +92,14 @@ pub fn sys_mmap(
 
     let mut filename = None;
     let vmo = if flags & MAP_ANONYMOUS != 0 {
-        let mut vmo = zx::Vmo::create(length as u64).map_err(|s| match s {
-            zx::Status::NO_MEMORY => errno!(ENOMEM),
-            zx::Status::OUT_OF_RANGE => errno!(ENOMEM),
-            _ => impossible_error(s),
-        })?;
+        // mremap can grow memory regions, so make sure the VMO is resizable.
+        let mut vmo = zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, length as u64).map_err(
+            |s| match s {
+                zx::Status::NO_MEMORY => errno!(ENOMEM),
+                zx::Status::OUT_OF_RANGE => errno!(ENOMEM),
+                _ => impossible_error(s),
+            },
+        )?;
         vmo.set_name(CStr::from_bytes_with_nul(b"starnix-anon\0").unwrap())
             .map_err(impossible_error)?;
         if zx_flags.contains(zx::VmarFlags::PERM_EXECUTE) {
@@ -128,6 +131,9 @@ pub fn sys_mmap(
     let mut options = MappingOptions::empty();
     if flags & MAP_SHARED != 0 {
         options |= MappingOptions::SHARED;
+    }
+    if flags & MAP_ANONYMOUS != 0 {
+        options |= MappingOptions::ANONYMOUS;
     }
 
     let try_map = |addr, flags| {
@@ -431,5 +437,52 @@ mod tests {
             current_task.mm.read_memory(mapped_address + *PAGE_SIZE + 1u64, &mut data),
             Ok(())
         );
+    }
+
+    /// Unmap the middle page of a mapping.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_munmap_middle_page() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
+        let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 3);
+        assert_eq!(
+            sys_munmap(&current_task, mapped_address + *PAGE_SIZE, *PAGE_SIZE as usize),
+            Ok(SUCCESS)
+        );
+
+        // Verify that the first and third pages are still readable.
+        let mut data: [u8; 5] = [0; 5];
+        assert_eq!(current_task.mm.read_memory(mapped_address, &mut data), Ok(()));
+        assert_eq!(
+            current_task.mm.read_memory(mapped_address + *PAGE_SIZE, &mut data),
+            error!(EFAULT)
+        );
+        assert_eq!(
+            current_task.mm.read_memory(mapped_address + (*PAGE_SIZE * 2), &mut data),
+            Ok(())
+        );
+    }
+
+    /// Unmap a range of pages that includes disjoint mappings.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_munmap_many_mappings() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
+        let mapped_addresses: Vec<_> = std::iter::repeat_with(|| {
+            map_memory(&current_task, UserAddress::default(), *PAGE_SIZE)
+        })
+        .take(3)
+        .collect();
+        let min_address = *mapped_addresses.iter().min().unwrap();
+        let max_address = *mapped_addresses.iter().max().unwrap();
+        let unmap_length = (max_address - min_address) + *PAGE_SIZE as usize;
+
+        assert_eq!(sys_munmap(&current_task, min_address, unmap_length), Ok(SUCCESS));
+
+        // Verify that none of the mapped pages are readable.
+        let mut data: [u8; 5] = [0; 5];
+        for mapped_address in mapped_addresses {
+            assert_eq!(current_task.mm.read_memory(mapped_address, &mut data), error!(EFAULT));
+        }
     }
 }

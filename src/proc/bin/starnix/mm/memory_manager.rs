@@ -16,6 +16,7 @@ use zerocopy::{AsBytes, FromBytes};
 use crate::collections::*;
 use crate::fs::*;
 use crate::logging::*;
+use crate::mm::vmo::round_up_to_system_page_size;
 use crate::mm::FutexTable;
 use crate::task::{EventHandler, Task, Waiter};
 use crate::types::*;
@@ -29,6 +30,7 @@ lazy_static! {
 bitflags! {
     pub struct MappingOptions: u32 {
       const SHARED = 1;
+      const ANONYMOUS = 2;
     }
 }
 
@@ -155,31 +157,114 @@ impl MemoryManagerState {
         flags: zx::VmarFlags,
         options: MappingOptions,
         filename: Option<NamespaceNode>,
-    ) -> Result<UserAddress, zx::Status> {
-        let addr = UserAddress::from_ptr(self.user_vmar.map(
-            vmar_offset,
-            &vmo,
-            vmo_offset,
-            length,
-            flags,
-        )?);
+    ) -> Result<UserAddress, Errno> {
+        let addr = UserAddress::from_ptr(
+            self.user_vmar
+                .map(vmar_offset, &vmo, vmo_offset, length, flags)
+                .map_err(MemoryManager::get_errno_for_map_err)?,
+        );
         let mut mapping = Mapping::new(addr, vmo, vmo_offset, flags, options);
         mapping.filename = filename;
-        let end = (addr + length).round_up(*PAGE_SIZE);
+        let end = (addr + length).round_up(*PAGE_SIZE)?;
         self.mappings.insert(addr..end, mapping);
         Ok(addr)
     }
 
+    // The range to unmap can span multiple mappings, and can split mappings if
+    // the range start or end falls in the middle of a mapping.
+    //
+    // For example, with this set of mappings and unmap range `R`:
+    //
+    //   [  A  ][ B ] [    C    ]     <- mappings
+    //      |-------------|           <- unmap range R
+    //
+    // Assuming the mappings are all MAP_ANONYMOUS:
+    // - the pages of A, B, and C that fall in range R are unmapped; the VMO backing B is dropped.
+    // - the VMO backing A is shrunk.
+    // - a COW child VMO is created from C, which is mapped in the range of C that falls outside R.
+    //
+    // File-backed mappings don't need to have their VMOs modified.
     fn unmap(&mut self, addr: UserAddress, length: usize) -> Result<(), Errno> {
+        if !addr.is_aligned(*PAGE_SIZE) {
+            return error!(EINVAL);
+        }
+        let length = round_up_to_system_page_size(length)?;
+        if length == 0 {
+            return error!(EINVAL);
+        }
+        let end_addr = addr.checked_add(length).ok_or(errno!(EINVAL))?;
+        let mut unmap_length = length;
+
+        // Find the ANONYMOUS mapping that will get its tail cut off by this unmap call.
+        let truncated_head = match self.mappings.get(&addr) {
+            Some((range, mapping))
+                if range.start != addr && mapping.options.contains(MappingOptions::ANONYMOUS) =>
+            {
+                Some((range.start..addr, mapping.clone()))
+            }
+            _ => None,
+        };
+
+        // Find the mapping that will get its head cut off by this unmap call.
+        let truncated_tail = match self.mappings.get(&end_addr) {
+            Some((range, mapping))
+                if range.end != end_addr && mapping.options.contains(MappingOptions::ANONYMOUS) =>
+            {
+                // We are going to make a child VMO of the remaining mapping and remap
+                // it, so we increase the range of the unmap call to include the tail.
+                unmap_length = range.end - addr;
+                Some((end_addr..range.end, mapping.clone()))
+            }
+            _ => None,
+        };
+
+        // Actually unmap the range, including the the tail of any range that would have been split.
         // This operation is safe because we're operating on another process.
-        match unsafe { self.user_vmar.unmap(addr.ptr(), length) } {
+        match unsafe { self.user_vmar.unmap(addr.ptr(), unmap_length) } {
             Ok(_) => Ok(()),
             Err(zx::Status::NOT_FOUND) => Ok(()),
             Err(zx::Status::INVALID_ARGS) => error!(EINVAL),
             Err(status) => Err(impossible_error(status)),
         }?;
-        let end = (addr + length).round_up(*PAGE_SIZE);
-        self.mappings.remove(&(addr..end));
+
+        // Remove the original range of mappings from our map.
+        self.mappings.remove(&(addr..end_addr));
+
+        if let Some((range, mapping)) = truncated_tail {
+            // Create and map a child COW VMO mapping that represents the truncated tail.
+            let vmo_info = mapping.vmo.basic_info().map_err(impossible_error)?;
+            let child_vmo_offset = (range.start - mapping.base) as u64 + mapping.vmo_offset;
+            let child_length = range.end - range.start;
+            let mut child_vmo = mapping
+                .vmo
+                .create_child(
+                    zx::VmoChildOptions::SNAPSHOT | zx::VmoChildOptions::RESIZABLE,
+                    child_vmo_offset,
+                    child_length as u64,
+                )
+                .map_err(MemoryManager::get_errno_for_map_err)?;
+            if vmo_info.rights.contains(zx::Rights::EXECUTE) {
+                child_vmo =
+                    child_vmo.replace_as_executable(&VMEX_RESOURCE).map_err(impossible_error)?;
+            }
+            self.map(
+                (range.start - self.user_vmar_info.base).ptr(),
+                Arc::new(child_vmo),
+                0,
+                child_length,
+                mapping.permissions | zx::VmarFlags::SPECIFIC,
+                mapping.options,
+                mapping.filename,
+            )?;
+        }
+
+        if let Some((range, mapping)) = truncated_head {
+            // Resize the VMO of the head mapping, whose tail was cut off.
+            let new_mapping_size = (range.end - range.start) as u64;
+            let new_vmo_size = mapping.vmo_offset + new_mapping_size;
+            mapping.vmo.set_size(new_vmo_size).map_err(MemoryManager::get_errno_for_map_err)?;
+        }
+
         Ok(())
     }
 
@@ -201,7 +286,7 @@ impl MemoryManagerState {
             _ => impossible_error(s),
         })?;
 
-        let end = (addr + length).round_up(*PAGE_SIZE);
+        let end = (addr + length).round_up(*PAGE_SIZE)?;
         self.mappings.insert(addr..end, mapping);
         Ok(())
     }
@@ -279,19 +364,17 @@ impl MemoryManager {
                 vmo.set_name(CStr::from_bytes_with_nul(b"starnix-brk\0").unwrap())
                     .map_err(impossible_error)?;
                 let length = *PAGE_SIZE as usize;
-                let addr = state
-                    .map(
-                        0,
-                        Arc::new(vmo),
-                        0,
-                        length,
-                        zx::VmarFlags::PERM_READ
-                            | zx::VmarFlags::PERM_WRITE
-                            | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
-                        MappingOptions::empty(),
-                        None,
-                    )
-                    .map_err(Self::get_errno_for_map_err)?;
+                let addr = state.map(
+                    0,
+                    Arc::new(vmo),
+                    0,
+                    length,
+                    zx::VmarFlags::PERM_READ
+                        | zx::VmarFlags::PERM_WRITE
+                        | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
+                    MappingOptions::empty(),
+                    None,
+                )?;
                 let brk = ProgramBreak { base: addr, current: addr };
                 state.brk = Some(brk);
                 brk
@@ -310,7 +393,7 @@ impl MemoryManager {
         brk.current = addr;
 
         let old_end = range.end;
-        let new_end = (brk.current + 1u64).round_up(*PAGE_SIZE);
+        let new_end = (brk.current + 1u64).round_up(*PAGE_SIZE)?;
 
         if new_end < old_end {
             // We've been asked to free memory.
@@ -373,7 +456,11 @@ impl MemoryManager {
                     } else {
                         let mut vmo = mapping
                             .vmo
-                            .create_child(zx::VmoChildOptions::SNAPSHOT, 0, vmo_info.size_bytes)
+                            .create_child(
+                                zx::VmoChildOptions::SNAPSHOT | zx::VmoChildOptions::RESIZABLE,
+                                0,
+                                vmo_info.size_bytes,
+                            )
                             .map_err(Self::get_errno_for_map_err)?;
                         // We can't use mapping.permissions for this check because it's possible
                         // that the current mapping doesn't need execute rights, but some other
@@ -391,17 +478,15 @@ impl MemoryManager {
             };
             let vmo_offset = mapping.vmo_offset + (range.start - mapping.base) as u64;
             let length = range.end - range.start;
-            target_state
-                .map(
-                    range.start - target.base_addr,
-                    target_vmo.clone(),
-                    vmo_offset,
-                    length,
-                    mapping.permissions | zx::VmarFlags::SPECIFIC,
-                    mapping.options,
-                    mapping.filename.clone(),
-                )
-                .map_err(Self::get_errno_for_map_err)?;
+            target_state.map(
+                range.start - target.base_addr,
+                target_vmo.clone(),
+                vmo_offset,
+                length,
+                mapping.permissions | zx::VmarFlags::SPECIFIC,
+                mapping.options,
+                mapping.filename.clone(),
+            )?;
         }
 
         target_state.brk = state.brk;
@@ -447,9 +532,7 @@ impl MemoryManager {
     ) -> Result<UserAddress, Errno> {
         let vmar_offset = if addr.is_null() { 0 } else { addr - self.base_addr };
         let mut state = self.state.write();
-        state
-            .map(vmar_offset, vmo, vmo_offset, length, flags, options, filename)
-            .map_err(Self::get_errno_for_map_err)
+        state.map(vmar_offset, vmo, vmo_offset, length, flags, options, filename)
     }
 
     pub fn unmap(&self, addr: UserAddress, length: usize) -> Result<(), Errno> {
@@ -761,21 +844,21 @@ mod tests {
         assert_eq!(addr2, base_addr + 24893u64);
         let range2 = get_range(&base_addr);
         assert_eq!(range2.start, base_addr);
-        assert_eq!(range2.end, addr2.round_up(*PAGE_SIZE));
+        assert_eq!(range2.end, addr2.round_up(*PAGE_SIZE).unwrap());
 
         // Shrink the program break and observe the smaller mapping.
         let addr3 = mm.set_brk(base_addr + 14832u64).expect("failed to shrink brk");
         assert_eq!(addr3, base_addr + 14832u64);
         let range3 = get_range(&base_addr);
         assert_eq!(range3.start, base_addr);
-        assert_eq!(range3.end, addr3.round_up(*PAGE_SIZE));
+        assert_eq!(range3.end, addr3.round_up(*PAGE_SIZE).unwrap());
 
         // Shrink the program break close to zero and observe the smaller mapping.
         let addr4 = mm.set_brk(base_addr + 3u64).expect("failed to drastically shrink brk");
         assert_eq!(addr4, base_addr + 3u64);
         let range4 = get_range(&base_addr);
         assert_eq!(range4.start, base_addr);
-        assert_eq!(range4.end, addr4.round_up(*PAGE_SIZE));
+        assert_eq!(range4.end, addr4.round_up(*PAGE_SIZE).unwrap());
 
         // Shrink the program break close to zero and observe that the mapping is not entirely gone.
         let addr5 = mm.set_brk(base_addr).expect("failed to drastically shrink brk to zero");
@@ -963,5 +1046,132 @@ mod tests {
         assert_eq!(&written[64..66], &data[25..27]);
 
         assert_eq!(Ok(37), mm.write_all(&iovec, &data[..42]));
+    }
+
+    /// Maps two pages, then unmaps the first page.
+    /// The second page should be re-mapped with a new child COW VMO.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unmap_beginning() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
+
+        let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 2);
+
+        let original_vmo = {
+            let state = mm.state.read();
+            let (range, mapping) = state.mappings.get(&addr).expect("mapping");
+            assert_eq!(range.start, addr);
+            assert_eq!(range.end, addr + (*PAGE_SIZE * 2));
+            assert_eq!(mapping.base, addr);
+            assert_eq!(mapping.vmo_offset, 0);
+            assert_eq!(mapping.vmo.get_size().unwrap(), *PAGE_SIZE * 2);
+            mapping.vmo.clone()
+        };
+
+        assert_eq!(mm.unmap(addr, *PAGE_SIZE as usize), Ok(()));
+
+        {
+            let state = mm.state.read();
+
+            // The first page should be unmapped.
+            assert!(state.mappings.get(&addr).is_none());
+
+            // The second page should be a new child COW VMO.
+            let (range, mapping) = state.mappings.get(&(addr + *PAGE_SIZE)).expect("second page");
+            assert_eq!(range.start, addr + *PAGE_SIZE);
+            assert_eq!(range.end, addr + *PAGE_SIZE * 2);
+            assert_eq!(mapping.base, addr + *PAGE_SIZE);
+            assert_eq!(mapping.vmo_offset, 0);
+            assert_eq!(mapping.vmo.get_size().unwrap(), *PAGE_SIZE);
+            assert_ne!(original_vmo.get_koid().unwrap(), mapping.vmo.get_koid().unwrap());
+        }
+    }
+
+    /// Maps two pages, then unmaps the second page.
+    /// The first page's VMO should be shrunk.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unmap_end() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
+
+        let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 2);
+
+        let original_vmo = {
+            let state = mm.state.read();
+            let (range, mapping) = state.mappings.get(&addr).expect("mapping");
+            assert_eq!(range.start, addr);
+            assert_eq!(range.end, addr + (*PAGE_SIZE * 2));
+            assert_eq!(mapping.base, addr);
+            assert_eq!(mapping.vmo_offset, 0);
+            assert_eq!(mapping.vmo.get_size().unwrap(), *PAGE_SIZE * 2);
+            mapping.vmo.clone()
+        };
+
+        assert_eq!(mm.unmap(addr + *PAGE_SIZE, *PAGE_SIZE as usize), Ok(()));
+
+        {
+            let state = mm.state.read();
+
+            // The second page should be unmapped.
+            assert!(state.mappings.get(&(addr + *PAGE_SIZE)).is_none());
+
+            // The first page's VMO should be the same as the original, only shrunk.
+            let (range, mapping) = state.mappings.get(&addr).expect("first page");
+            assert_eq!(range.start, addr);
+            assert_eq!(range.end, addr + *PAGE_SIZE);
+            assert_eq!(mapping.base, addr);
+            assert_eq!(mapping.vmo_offset, 0);
+            assert_eq!(mapping.vmo.get_size().unwrap(), *PAGE_SIZE);
+            assert_eq!(original_vmo.get_koid().unwrap(), mapping.vmo.get_koid().unwrap());
+        }
+    }
+
+    /// Maps three pages, then unmaps the middle page.
+    /// The last page should be re-mapped with a new COW child VMO.
+    /// The first page's VMO should be shrunk,
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unmap_middle() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
+
+        let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE * 3);
+
+        let original_vmo = {
+            let state = mm.state.read();
+            let (range, mapping) = state.mappings.get(&addr).expect("mapping");
+            assert_eq!(range.start, addr);
+            assert_eq!(range.end, addr + (*PAGE_SIZE * 3));
+            assert_eq!(mapping.base, addr);
+            assert_eq!(mapping.vmo_offset, 0);
+            assert_eq!(mapping.vmo.get_size().unwrap(), *PAGE_SIZE * 3);
+            mapping.vmo.clone()
+        };
+
+        assert_eq!(mm.unmap(addr + *PAGE_SIZE, *PAGE_SIZE as usize), Ok(()));
+
+        {
+            let state = mm.state.read();
+
+            // The middle page should be unmapped.
+            assert!(state.mappings.get(&(addr + *PAGE_SIZE)).is_none());
+
+            // The first page's VMO should be the same as the original, only shrunk.
+            let (range, mapping) = state.mappings.get(&addr).expect("first page");
+            assert_eq!(range.start, addr);
+            assert_eq!(range.end, addr + *PAGE_SIZE);
+            assert_eq!(mapping.base, addr);
+            assert_eq!(mapping.vmo_offset, 0);
+            assert_eq!(mapping.vmo.get_size().unwrap(), *PAGE_SIZE);
+            assert_eq!(original_vmo.get_koid().unwrap(), mapping.vmo.get_koid().unwrap());
+
+            // The last page should be a new child COW VMO.
+            let (range, mapping) = state.mappings.get(&(addr + *PAGE_SIZE * 2)).expect("last page");
+            assert_eq!(range.start, addr + *PAGE_SIZE * 2);
+            assert_eq!(range.end, addr + *PAGE_SIZE * 3);
+            assert_eq!(mapping.base, addr + *PAGE_SIZE * 2);
+            assert_eq!(mapping.vmo_offset, 0);
+            assert_eq!(mapping.vmo.get_size().unwrap(), *PAGE_SIZE);
+            assert_ne!(original_vmo.get_koid().unwrap(), mapping.vmo.get_koid().unwrap());
+        }
     }
 }

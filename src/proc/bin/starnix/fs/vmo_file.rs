@@ -130,7 +130,7 @@ impl VmoFileObject {
         let mut update_content_size = false;
         if write_end > info.size {
             if write_end > info.storage_size {
-                let new_size = round_up_to_system_page_size(write_end);
+                let new_size = round_up_to_system_page_size(write_end)?;
                 vmo.set_size(new_size as u64).map_err(|_| errno!(ENOMEM))?;
                 info.storage_size = new_size as usize;
             }
