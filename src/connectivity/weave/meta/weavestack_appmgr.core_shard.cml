@@ -1,0 +1,29 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    offer: [
+        {
+            protocol: [
+                "fuchsia.bluetooth.gatt.Server",
+                "fuchsia.bluetooth.le.Peripheral",
+                "fuchsia.factory.WeaveFactoryStoreProvider",
+                "fuchsia.lowpan.device.Lookup",
+                "fuchsia.weave.FactoryDataManager",
+                "fuchsia.weave.Signer",
+            ],
+            from: "#appmgr",
+            to: [ "#weavestack" ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.weave.Bootstrap",
+                "fuchsia.weave.Stack",
+                "fuchsia.weave.StackProvider",
+            ],
+            from: "#weavestack",
+            to: [ "#appmgr" ],
+        },
+    ],
+}

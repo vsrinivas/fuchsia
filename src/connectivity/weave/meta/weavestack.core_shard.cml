@@ -28,19 +28,6 @@
         },
         {
             protocol: [
-                "fuchsia.bluetooth.gatt.Server",
-                "fuchsia.bluetooth.le.Peripheral",
-                "fuchsia.factory.WeaveFactoryStoreProvider",
-                "fuchsia.lowpan.device.Lookup",
-                "fuchsia.weave.FactoryDataManager",
-                "fuchsia.weave.Signer",
-            ],
-            from: "#appmgr",
-            to: [ "#weavestack" ],
-            dependency: "weak_for_migration",
-        },
-        {
-            protocol: [
                 "fuchsia.hwinfo.Device",
                 "fuchsia.hwinfo.Product",
             ],
@@ -70,15 +57,6 @@
             from: "#build-info",
             to: [ "#weavestack" ],
             dependency: "weak_for_migration",
-        },
-        {
-            protocol: [
-                "fuchsia.weave.Bootstrap",
-                "fuchsia.weave.Stack",
-                "fuchsia.weave.StackProvider",
-            ],
-            from: "#weavestack",
-            to: [ "#appmgr" ],
         },
         {
             protocol: [ "fuchsia.net.tun.Control" ],
