@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/images/args.gni")
-import("//build/images/filesystem_limits.gni")
 import("//build/rust/config.gni")
 
 declare_args() {
@@ -69,12 +67,7 @@ config("bootfs") {
   # TODO(fxbug.dev/63313): use "z" when resolved.
   rustflags = [ "-Copt-level=s" ]
 
-  if (is_debug &&  # Debug builds produce very large Rust binaries
-      ((max_fuchsia_zbi_size >
-        0 &&  # Some configurations have limited ZBI space
-        max_fuchsia_zbi_size <= 16777216) ||  # 16 MiB is too tight
-       bootfs_only ||  # System packages go into bootfs, adding pressure
-       build_uefi_disk)) {  # EFI System Partition size is limited
+  if (is_debug) {  # Debug builds produce very large Rust binaries
     # Force ThinLTO to squeeze Rust binaries further so the ZBI doesn't overflow
     # under any of the extraneous circumstances defined above.
     # See: fxbug.dev/80514
