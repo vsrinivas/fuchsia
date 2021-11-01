@@ -6,6 +6,7 @@
 
 #include "phys/symbolize.h"
 
+#include <inttypes.h>
 #include <lib/boot-options/boot-options.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -16,6 +17,12 @@
 #include <phys/frame-pointer.h>
 #include <phys/stack.h>
 #include <pretty/hexdump.h>
+
+// The zx_*_t types used in the exception stuff aren't defined for 32-bit.
+// There is no exception handling implementation for 32-bit.
+#ifndef __i386__
+#include <phys/exception.h>
+#endif
 
 namespace {
 
@@ -90,6 +97,12 @@ class BuildId {
 
 BuildId BuildId::gInstance;
 
+#if defined(__aarch64__)
+
+#elif defined(__x86_64__)
+
+#endif
+
 }  // namespace
 
 Symbolize Symbolize::instance_;
@@ -128,9 +141,10 @@ void Symbolize::Context() {
   }
 }
 
-void Symbolize::BackTraceFrame(unsigned int n, uintptr_t pc) {
+void Symbolize::BackTraceFrame(unsigned int n, uintptr_t pc, bool interrupt) {
   // Just print the line in markup format.  Context() was called earlier.
-  Printf("%s: {{{bt:%u:%#zx}}}\n", kProgramName_, n, pc);
+  const char* kind = interrupt ? "pc" : "ra";
+  Printf("%s: {{{bt:%u:%#zx:%s}}}\n", kProgramName_, n, pc, kind);
 }
 
 void Symbolize::DumpFile(ktl::string_view type, ktl::string_view name) {
@@ -139,13 +153,13 @@ void Symbolize::DumpFile(ktl::string_view type, ktl::string_view name) {
 }
 
 void Symbolize::PrintBacktraces(const FramePointer& frame_pointers,
-                                const ShadowCallStackBacktrace& shadow_call_stack) {
+                                const ShadowCallStackBacktrace& shadow_call_stack, unsigned int n) {
   Context();
   if (frame_pointers.empty()) {
     Printf("%s: Frame pointer backtrace is empty!\n", kProgramName_);
   } else {
     Printf("%s: Backtrace (via frame pointers):\n", kProgramName_);
-    BackTrace(frame_pointers);
+    BackTrace(frame_pointers, n);
   }
   if (BootShadowCallStack::kEnabled) {
     if (shadow_call_stack.empty()) {
@@ -153,7 +167,7 @@ void Symbolize::PrintBacktraces(const FramePointer& frame_pointers,
     } else {
       Printf("%s: Backtrace (via shadow call stack):\n", kProgramName_);
     }
-    BackTrace(shadow_call_stack);
+    BackTrace(shadow_call_stack, n);
   }
 }
 
@@ -171,8 +185,96 @@ void Symbolize::PrintStack(uintptr_t sp, ktl::optional<size_t> max_size_bytes) {
 
   if (boot_stack.IsOnStack(sp)) {
     dump_stack(boot_stack, "boot");
+  } else if (phys_exception_stack.IsOnStack(sp)) {
+    dump_stack(phys_exception_stack, "exception");
   } else {
-    Printf("%s: Stack pointer is outside expected bounds [%p, %p)\n", kProgramName_, &boot_stack,
-           &boot_stack + 1);
+    Printf("%s: Stack pointer is outside expected bounds [%p, %p) or [%p, %p)\n", kProgramName_,
+           &boot_stack, &boot_stack + 1, &phys_exception_stack, &phys_exception_stack + 1);
   }
 }
+
+#ifndef __i386__
+
+void Symbolize::PrintRegisters(const PhysExceptionState& exc) {
+  Printf("%s: Registers stored at %p: {{{hexdump:", kProgramName_, &exc);
+
+#if defined(__aarch64__)
+
+  for (size_t i = 0; i < ktl::size(exc.regs.r); ++i) {
+    if (i % 4 == 0) {
+      Printf("\n%s: ", kProgramName_);
+    }
+    Printf("  %sX%zu: 0x%016" PRIx64, i < 10 ? " " : "", i, exc.regs.r[i]);
+  }
+  Printf("  X30: 0x%016" PRIx64 "\n", exc.regs.lr);
+  Printf("%s:    SP: 0x%016" PRIx64 "   PC: 0x%016" PRIx64 " SPSR: 0x%016" PRIx64 "\n",
+         kProgramName_, exc.regs.sp, exc.regs.pc, exc.regs.cpsr);
+  Printf("%s:   ESR: 0x%016" PRIx64 "  FAR: 0x%016" PRIx64 "\n", kProgramName_,
+         exc.exc.arch.u.arm_64.esr, exc.exc.arch.u.arm_64.far);
+
+#elif defined(__x86_64__)
+
+  Printf("%s:  RAX: 0x%016" PRIx64 " RBX: 0x%016" PRIx64 " RCX: 0x%016" PRIx64 " RDX: 0x%016" PRIx64
+         "\n",
+         kProgramName_, exc.regs.rax, exc.regs.rbx, exc.regs.rcx, exc.regs.rdx);
+  Printf("%s:  RSI: 0x%016" PRIx64 " RDI: 0x%016" PRIx64 " RBP: 0x%016" PRIx64 " RSP: 0x%016" PRIx64
+         "\n",
+         kProgramName_, exc.regs.rsi, exc.regs.rdi, exc.regs.rbp, exc.regs.rsp);
+  Printf("%s:   R8: 0x%016" PRIx64 "  R9: 0x%016" PRIx64 " R10: 0x%016" PRIx64 " R11: 0x%016" PRIx64
+         "\n",
+         kProgramName_, exc.regs.r8, exc.regs.r9, exc.regs.r10, exc.regs.r11);
+  Printf("%s:  R12: 0x%016" PRIx64 " R13: 0x%016" PRIx64 " R14: 0x%016" PRIx64 " R15: 0x%016" PRIx64
+         "\n",
+         kProgramName_, exc.regs.r12, exc.regs.r13, exc.regs.r14, exc.regs.r15);
+  Printf("%s:  RIP: 0x%016" PRIx64 " RFLAGS: 0x%08" PRIx64 " FS.BASE: 0x%016" PRIx64
+         " GS.BASE: 0x%016" PRIx64 "\n",
+         kProgramName_, exc.regs.rip, exc.regs.rflags, exc.regs.fs_base, exc.regs.gs_base);
+  Printf("%s:   V#: " PRIu64 "  ERR: %#" PRIx64 "  CR2: %016" PRIx64 "\n", kProgramName_,
+         exc.exc.arch.u.x86_64.vector, exc.exc.arch.u.x86_64.err_code, exc.exc.arch.u.x86_64.cr2);
+
+#endif
+
+  Printf("%s: }}}\n", kProgramName_);
+}
+
+void Symbolize::PrintException(uint64_t vector, const char* vector_name,
+                               const PhysExceptionState& exc) {
+  Printf("%s: exception vector %s (%#" PRIx64 ")\n", Symbolize::kProgramName_, vector_name, vector);
+
+  // Always print the context, even if it was printed earlier.
+  context_done_ = false;
+  Context();
+
+  PrintRegisters(exc);
+
+  BackTraceFrame(0, exc.pc(), true);
+
+  // Collect each kind of backtrace if possible.
+  FramePointer fp_backtrace;
+  ShadowCallStackBacktrace scs_backtrace;
+
+  const uint64_t fp = exc.fp();
+  auto fp_on = [fp](const BootStack& stack) {
+    return stack.IsOnStack(fp) && stack.IsOnStack(fp + sizeof(FramePointer));
+  };
+  if (fp % sizeof(uintptr_t) == 0 && (fp_on(boot_stack) || fp_on(phys_exception_stack))) {
+    fp_backtrace = *reinterpret_cast<FramePointer*>(fp);
+  }
+
+  uint64_t scsp = exc.shadow_call_sp();
+  scs_backtrace = boot_shadow_call_stack.BackTrace(scsp);
+  if (scs_backtrace.empty()) {
+    scs_backtrace = phys_exception_shadow_call_stack.BackTrace(scsp);
+  }
+
+  // Print whatever we have.
+  PrintBacktraces(fp_backtrace, scs_backtrace);
+
+  PrintStack(exc.sp());
+}
+
+void PrintPhysException(uint64_t vector, const char* vector_name, const PhysExceptionState& regs) {
+  Symbolize::GetInstance()->PrintException(vector, vector_name, regs);
+}
+
+#endif  // !__i386__

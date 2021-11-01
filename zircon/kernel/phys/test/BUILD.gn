@@ -373,6 +373,14 @@ if (current_toolchain != default_toolchain) {
     kernel = ":turducken-test"
   }
 
+  phys_zbi_test("zbi-phys-exception-test") {
+    sources = [ "phys-exception-test.cc" ]
+    deps = [
+      ":test-main",
+      "//zircon/kernel/lib/libc",
+    ]
+  }
+
   group("test") {
     testonly = true
     deps = [
@@ -388,6 +396,9 @@ if (current_toolchain != default_toolchain) {
     ]
     if (current_cpu == "x64") {
       deps += [ ":qemu-memory-test" ]
+    }
+    if (current_cpu == "arm64") {  # TODO(mcgrathr): support on x86
+      deps += [ ":zbi-phys-exception-test" ]
     }
   }
 } else {  # current_toolchain == default_toolchain

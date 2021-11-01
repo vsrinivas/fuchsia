@@ -24,6 +24,5 @@ void ZbiMain(void* zbi, arch::EarlyTicks ticks) {
     printf("\n*** Test FAILED: status %d ***\n\n", status);
   }
 
-  // No way to shut down.
-  abort();
+  ArchPanicReset();
 }

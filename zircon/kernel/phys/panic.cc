@@ -26,6 +26,9 @@ PHYS_SINGLETHREAD void __zx_panic(const char* format, ...) {
 
   uintptr_t scsp = GetShadowCallStackPointer();
   ShadowCallStackBacktrace shadow_call_stack_backtrace = boot_shadow_call_stack.BackTrace(scsp);
+  if (shadow_call_stack_backtrace.empty()) {
+    shadow_call_stack_backtrace = phys_exception_shadow_call_stack.BackTrace(scsp);
+  }
 
   Symbolize& symbolize = *Symbolize::GetInstance();
   symbolize.PrintBacktraces(frame_pointer_backtrace, shadow_call_stack_backtrace);
@@ -34,5 +37,5 @@ PHYS_SINGLETHREAD void __zx_panic(const char* format, ...) {
   symbolize.PrintStack(sp);
 
   // Now crash.
-  __builtin_trap();
+  ArchPanicReset();
 }

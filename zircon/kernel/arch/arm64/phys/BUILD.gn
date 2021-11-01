@@ -31,8 +31,10 @@ if (toolchain_environment == "kernel.phys") {
     configs += [ "//build/config:Wno-conversion" ]
   }
 
-  source_set("phys") {
+  static_library("phys") {
     sources = [
+      "exception.S",
+      "reset.cc",
       "setup.cc",
       "shadow-call-stack.S",
       "start.S",

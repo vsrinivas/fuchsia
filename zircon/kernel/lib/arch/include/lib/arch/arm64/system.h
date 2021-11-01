@@ -9,6 +9,7 @@
 #include <lib/arch/internal/bits.h>
 #include <lib/arch/sysreg.h>
 
+#include <functional>
 #include <optional>
 
 #include <hwreg/bitfields.h>
@@ -26,9 +27,44 @@ namespace arch {
 
 // [arm/sysreg]/currentel: CurrentEL, Current Exception Level
 struct ArmCurrentEl : public SysRegBase<ArmCurrentEl, uint64_t, hwreg::EnablePrinter> {
+  // This returns call(el1) or call(el2) or call(el3) depending on current EL.
+  // It uses perfect forwarding.  All three overloads of call must all have the
+  // same return type, which may be void.
+  template <typename El1, typename El2, typename El3, typename Call>
+  constexpr decltype(auto) ForThisEl(El1&& el1, El2&& el2, El3&& el3, Call&& call) {
+    switch (el()) {
+      default:
+      case 1:
+        return std::forward<Call>(call)(std::forward<El1>(el1));
+      case 2:
+        return std::forward<Call>(call)(std::forward<El2>(el2));
+      case 3:
+        return std::forward<Call>(call)(std::forward<El3>(el3));
+    }
+  }
+
+  // This does each of call(el3), call(el2), and call(el1) in turn going from
+  // the current EL to each lower EL (with no call for EL0).  It uses perfect
+  // forwarding for elx objects.
+  template <typename El1, typename El2, typename El3, typename Call>
+  constexpr void ForEachEl(El1&& el1, El2&& el2, El3&& el3, Call&& call) {
+    switch (el()) {
+      case 3:
+        call(std::forward<El3>(el3));
+        [[fallthrough]];
+      case 2:
+        call(std::forward<El2>(el2));
+        [[fallthrough]];
+      case 1:
+        call(std::forward<El1>(el1));
+        [[fallthrough]];
+      default:
+        break;
+    }
+  }
+
   DEF_FIELD(3, 2, el);
 };
-
 ARCH_ARM64_SYSREG(ArmCurrentEl, "CurrentEL");
 
 // This type covers three register formats:
@@ -369,6 +405,111 @@ struct ArmDaifSetClr : public SysRegBase<ArmDaifSetClr, uint64_t, hwreg::EnableP
   DEF_BIT(1, i);
   DEF_BIT(0, f);
 };
+
+// [arm/sysreg]/vbar_el1: Vector Base Address Register (EL1)
+// [arm/sysreg]/vbar_el2: Vector Base Address Register (EL2)
+// [arm/sysreg]/vbar_el3: Vector Base Address Register (EL3)
+struct ArmVectorBaseAddressRegister : public SysRegDerivedBase<ArmVectorBaseAddressRegister> {
+  DEF_UNSHIFTED_FIELD(63, 11, addr);
+  DEF_RSVDZ_FIELD(10, 0);
+};
+
+struct ArmVbarEl1 : public arch::SysRegDerived<ArmVbarEl1, ArmVectorBaseAddressRegister> {};
+ARCH_ARM64_SYSREG(ArmVbarEl1, "vbar_el1");
+
+struct ArmVbarEl2 : public arch::SysRegDerived<ArmVbarEl2, ArmVectorBaseAddressRegister> {};
+ARCH_ARM64_SYSREG(ArmVbarEl2, "vbar_el2");
+
+struct ArmVbarEl3 : public arch::SysRegDerived<ArmVbarEl3, ArmVectorBaseAddressRegister> {};
+ARCH_ARM64_SYSREG(ArmVbarEl3, "vbar_el3");
+
+// [arm/sysreg]/elr_el1: Vector Base Address Register (EL1)
+// [arm/sysreg]/elr_el2: Vector Base Address Register (EL2)
+// [arm/sysreg]/elr_el3: Vector Base Address Register (EL3)
+struct ArmVectorExceptionLinkRegister : public SysRegDerivedBase<ArmVectorExceptionLinkRegister> {
+  DEF_FIELD(63, 0, pc);
+};
+
+struct ArmElrEl1 : public arch::SysRegDerived<ArmElrEl1, ArmVectorExceptionLinkRegister> {};
+ARCH_ARM64_SYSREG(ArmElrEl1, "elr_el1");
+
+struct ArmElrEl2 : public arch::SysRegDerived<ArmElrEl2, ArmVectorExceptionLinkRegister> {};
+ARCH_ARM64_SYSREG(ArmElrEl2, "elr_el2");
+
+struct ArmElrEl3 : public arch::SysRegDerived<ArmElrEl3, ArmVectorExceptionLinkRegister> {};
+ARCH_ARM64_SYSREG(ArmElrEl3, "elr_el3");
+
+// [arm/sysreg]/sp_el0: Stack Pointer (EL0)
+// [arm/sysreg]/sp_el1: Stack Pointer (EL1)
+// [arm/sysreg]/sp_el2: Stack Pointer (EL2)
+struct ArmStackPointerRegister : public SysRegDerivedBase<ArmStackPointerRegister> {
+  DEF_FIELD(63, 0, sp);
+};
+
+struct ArmSpEl0 : public arch::SysRegDerived<ArmSpEl0, ArmStackPointerRegister> {};
+ARCH_ARM64_SYSREG(ArmSpEl0, "sp_el0");
+
+struct ArmSpEl1 : public arch::SysRegDerived<ArmSpEl1, ArmStackPointerRegister> {};
+ARCH_ARM64_SYSREG(ArmSpEl1, "sp_el1");
+
+struct ArmSpEl2 : public arch::SysRegDerived<ArmSpEl2, ArmStackPointerRegister> {};
+ARCH_ARM64_SYSREG(ArmSpEl2, "sp_el2");
+
+// [arm/sysreg]/spsr_el1: Saved Program Status Register (El1)
+// [arm/sysreg]/spsr_el2: Saved Program Status Register (El2)
+// [arm/sysreg]/spsr_el3: Saved Program Status Register (El3)
+//
+// These are the assignments when an exception is taken from AArch64 state.
+struct ArmSavedProgramStatusRegister : public SysRegDerivedBase<ArmSavedProgramStatusRegister> {
+  enum class ExceptionLevel : uint32_t {
+    kEl0t = 0b0000,  // EL0 using SP_EL0
+    kEl1t = 0b0100,  // EL1 using SP_EL0
+    kEl1h = 0b0101,  // EL1 using SP_EL1
+    kEl2t = 0b1000,  // EL2 using SP_EL0
+    kEl2h = 0b1001,  // EL2 using SP_EL2
+    kEl3t = 0b1100,  // EL3 using SP_EL0
+    kEl3h = 0b1101,  // EL3 using SP_EL3
+  };
+
+  // EL this exception was taken from.
+  ArmCurrentEl el() const { return ArmCurrentEl::Get().FromValue(static_cast<uint64_t>(m())); }
+
+  // SPSel state at the exception, i.e. true if it used SP_ELx.
+  bool spsel() const { return static_cast<uint32_t>(m()) & 1; }
+
+  DEF_RSVDZ_FIELD(63, 32);
+
+  DEF_BIT(31, n);
+  DEF_BIT(30, z);
+  DEF_BIT(29, c);
+  DEF_BIT(28, v);
+  DEF_RSVDZ_FIELD(27, 26);
+  DEF_BIT(25, tco);
+  DEF_BIT(24, dit);
+  DEF_BIT(23, uao);
+  DEF_BIT(22, pan);
+  DEF_BIT(21, ss);
+  DEF_BIT(20, il);
+  DEF_RSVDZ_FIELD(19, 13);
+  DEF_BIT(12, ssbs);
+  DEF_FIELD(11, 10, btype);
+  DEF_BIT(9, d);
+  DEF_BIT(8, a);
+  DEF_BIT(7, i);
+  DEF_BIT(6, f);
+  DEF_RSVDZ_BIT(5);
+  DEF_BIT(4, a32);  // Always zero in this format.
+  DEF_ENUM_FIELD(ExceptionLevel, 3, 0, m);
+};
+
+struct ArmSpsrEl1 : public arch::SysRegDerived<ArmSpsrEl1, ArmSavedProgramStatusRegister> {};
+ARCH_ARM64_SYSREG(ArmSpsrEl1, "spsr_el1");
+
+struct ArmSpsrEl2 : public arch::SysRegDerived<ArmSpsrEl2, ArmSavedProgramStatusRegister> {};
+ARCH_ARM64_SYSREG(ArmSpsrEl2, "spsr_el2");
+
+struct ArmSpsrEl3 : public arch::SysRegDerived<ArmSpsrEl3, ArmSavedProgramStatusRegister> {};
+ARCH_ARM64_SYSREG(ArmSpsrEl3, "spsr_el3");
 
 }  // namespace arch
 

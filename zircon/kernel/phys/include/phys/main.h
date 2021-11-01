@@ -78,4 +78,7 @@ void ZbiInitMemory(void* zbi, ktl::span<zbi_mem_range_t> mem_config);
 // Perform any architecture-specific set-up.
 void ArchSetUp();
 
+// Try to reboot or shut down the machine in a panic situation.
+[[noreturn]] void ArchPanicReset();
+
 #endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_MAIN_H_

@@ -90,11 +90,11 @@ using BootShadowCallStack = NoStack;
 
 #endif  // __has_feature(shadow_call_stack)
 
-extern BootStack boot_stack;
-extern BootUnsafeStack boot_unsafe_stack;
-extern BootShadowCallStack boot_shadow_call_stack;
+extern BootStack boot_stack, phys_exception_stack;
+extern BootUnsafeStack boot_unsafe_stack, phys_exception_unsafe_stack;
+extern BootShadowCallStack boot_shadow_call_stack, phys_exception_shadow_call_stack;
 
-// Returns true iff SP falls on the boot stack.
+// Returns true iff SP falls on the boot stack or the phys exception stack.
 bool IsOnStack(uintptr_t sp);
 
 #endif  // __ASSEMBLER__

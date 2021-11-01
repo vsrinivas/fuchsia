@@ -16,6 +16,7 @@
 
 class FramePointer;
 class ShadowCallStackBacktrace;
+struct PhysExceptionState;
 
 class Symbolize {
  public:
@@ -47,14 +48,13 @@ class Symbolize {
   PHYS_SINGLETHREAD void Context();
 
   // Print the presentation markup element for one frame of a backtrace.
-  void BackTraceFrame(unsigned int n, uintptr_t pc);
+  void BackTraceFrame(unsigned int n, uintptr_t pc, bool interrupt = false);
 
   // Print a backtrace, ensuring context has been printed beforehand.
   // This takes any container of uintptr_t, so FramePointer works.
   template <typename T>
-  PHYS_SINGLETHREAD void BackTrace(const T& pcs) {
+  PHYS_SINGLETHREAD void BackTrace(const T& pcs, unsigned int n = 0) {
     Context();
-    unsigned int n = 0;
     for (uintptr_t pc : pcs) {
       BackTraceFrame(n++, pc);
     }
@@ -62,7 +62,8 @@ class Symbolize {
 
   // Print both flavors of backtrace together.
   PHYS_SINGLETHREAD void PrintBacktraces(const FramePointer& frame_pointers,
-                                         const ShadowCallStackBacktrace& shadow_call_stack);
+                                         const ShadowCallStackBacktrace& shadow_call_stack,
+                                         unsigned int n = 0);
 
   // Print the trigger markup element for a dumpfile.
   // TODO(mcgrathr): corresponds to a ZBI item
@@ -71,6 +72,13 @@ class Symbolize {
   // Dump some stack up to the SP.
   PHYS_SINGLETHREAD void PrintStack(uintptr_t sp,
                                     ktl::optional<size_t> max_size_bytes = ktl::nullopt);
+
+  // Print out register values.
+  PHYS_SINGLETHREAD void PrintRegisters(const PhysExceptionState& regs);
+
+  // Print out useful details at an exception.
+  PHYS_SINGLETHREAD void PrintException(uint64_t vector, const char* vector_name,
+                                        const PhysExceptionState& regs);
 
  private:
   static Symbolize instance_;

@@ -6,9 +6,9 @@
 
 #include <phys/stack.h>
 
-BootStack boot_stack;
-BootUnsafeStack boot_unsafe_stack;
-BootShadowCallStack boot_shadow_call_stack;
+BootStack boot_stack, phys_exception_stack;
+BootUnsafeStack boot_unsafe_stack, phys_exception_unsafe_stack;
+BootShadowCallStack boot_shadow_call_stack, phys_exception_shadow_call_stack;
 
 // This considers the limit to be "on".
 bool BootStack::IsOnStack(uintptr_t sp) const {
@@ -35,4 +35,6 @@ ShadowCallStackBacktrace BootShadowCallStack::BackTrace(uintptr_t scsp) const {
 
 #endif  // __has_feature(shadow_call_stack)
 
-bool IsOnStack(uintptr_t sp) { return boot_stack.IsOnStack(sp); }
+bool IsOnStack(uintptr_t sp) {
+  return boot_stack.IsOnStack(sp) || phys_exception_stack.IsOnStack(sp);
+}

@@ -98,9 +98,6 @@
 .macro .function name, scope=local, cfi=abi, align=, nosection=
   // Validate the \cfi argument.  The valid values correspond to
   // the `_.function.cfi.{start,end}.\cfi` subroutine macros.
-  .ifnc foo, foo
-    .error "fmh"
-  .endif
   .ifnc \cfi, abi
     .ifnc \cfi, custom
       .ifnc \cfi, none

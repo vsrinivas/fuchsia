@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/arch/arm64/sysreg-asm.h>
+#include <lib/arch/arm64/exception-asm.h>
 #include <lib/arch/asm.h>
 #include <lib/arch/ticks.h>
 #include <zircon/tls.h>
@@ -40,17 +41,7 @@
   // Reset the exception vector base address registers in case the boot loader
   // left an old table in place (which we might already be clobbering, and
   // almost certainly will be violating the assumptions of).
-  mrs x16, CurrentEL
-  cmp x16, #CURRENT_EL_EL_FIELD(1)
-  beq .Lel1
-  cmp x16, #CURRENT_EL_EL_FIELD(2)
-  beq .Lel2
-.Lel3:
-  msr VBAR_EL3, xzr
-.Lel2:
-  msr VBAR_EL2, xzr
-.Lel1:
-  msr VBAR_EL1, xzr
+  msr_vbar_elx x16, xzr  // x16 is clobbered as a scratch register (CurrentEL).
 
   // Clear .bss.  Note this assumes it's aligned to 16, which is ensured
   // by BOOT_STACK_ALIGN (and other alignments in .bss) and the linker script.
@@ -123,5 +114,12 @@
 #if ZX_TLS_UNSAFE_SP_OFFSET < ZX_TLS_STACK_GUARD_OFFSET
   .error "TLS ABI layout??"
 #endif
-boot_thread_pointer:
+.label boot_thread_pointer, global
 .end_object
+
+// extern "C" void ArmSetVbar(const void* table);
+// x0 = table
+.function ArmSetVbar, global
+  msr_vbar_elx x1, x0
+  ret
+.end_function

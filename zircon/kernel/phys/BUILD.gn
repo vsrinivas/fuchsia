@@ -133,6 +133,7 @@ if (toolchain_environment == "kernel.phys" ||
   # This is used implicitly by zbi_executable() targets.
   source_set("zbi_executable.deps") {
     sources = [
+      "exception.cc",
       "zbi-header.S",
       "zbi-main.cc",
     ]
@@ -176,6 +177,7 @@ if (toolchain_environment == "kernel.phys" ||
   # Transitive dependencies for the <phys/main.h> header.
   source_set("main") {
     public = [
+      "include/phys/exception.h",
       "include/phys/main.h",
       "include/phys/stack.h",
     ]
