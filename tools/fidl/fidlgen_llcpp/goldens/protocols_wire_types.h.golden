@@ -187,11 +187,12 @@ class WithErrorSyntaxHandleInResultResponse::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         WithErrorSyntaxHandleInResultResponse* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+            .handle_metadata = handle_metadata_,
+            .handle_capacity = kHandleCapacity,
             .backing_buffer = backing_buffer,
             .backing_buffer_capacity = backing_buffer_size,
         }) {
@@ -214,8 +215,10 @@ class WithErrorSyntaxHandleInResultResponse::UnownedEncodedMessage final {
 
  private:
   ::fidl::internal::IovecBuffer iovecs_;
-  zx_handle_disposition_t
-      handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+  static constexpr size_t kHandleCapacity =
+      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles);
+  zx_handle_t handles_[kHandleCapacity];
+  fidl_channel_handle_metadata_t handle_metadata_[kHandleCapacity];
   ::fidl::OutgoingMessage message_;
 };
 
@@ -340,6 +343,7 @@ class WithErrorSyntaxErrorAsPrimitiveResponse::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         WithErrorSyntaxErrorAsPrimitiveResponse* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -486,6 +490,7 @@ class WithErrorSyntaxErrorAsEnumResponse::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         WithErrorSyntaxErrorAsEnumResponse* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -759,11 +764,12 @@ class WithErrorSyntaxHandleInResultResult::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         WithErrorSyntaxHandleInResultResult* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+            .handle_metadata = handle_metadata_,
+            .handle_capacity = kHandleCapacity,
             .backing_buffer = backing_buffer,
             .backing_buffer_capacity = backing_buffer_size,
         }) {
@@ -786,8 +792,10 @@ class WithErrorSyntaxHandleInResultResult::UnownedEncodedMessage final {
 
  private:
   ::fidl::internal::IovecBuffer iovecs_;
-  zx_handle_disposition_t
-      handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+  static constexpr size_t kHandleCapacity =
+      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles);
+  zx_handle_t handles_[kHandleCapacity];
+  fidl_channel_handle_metadata_t handle_metadata_[kHandleCapacity];
   ::fidl::OutgoingMessage message_;
 };
 
@@ -1058,6 +1066,7 @@ class WithErrorSyntaxResponseAsStructResult::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         WithErrorSyntaxResponseAsStructResult* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1327,6 +1336,7 @@ class WithErrorSyntaxErrorAsPrimitiveResult::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         WithErrorSyntaxErrorAsPrimitiveResult* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1524,6 +1534,7 @@ class TheUnion::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, TheUnion* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1783,6 +1794,7 @@ class WithErrorSyntaxErrorAsEnumResult::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         WithErrorSyntaxErrorAsEnumResult* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1935,6 +1947,7 @@ class WithErrorSyntaxResponseAsStructResponse::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         WithErrorSyntaxResponseAsStructResponse* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -2091,11 +2104,12 @@ class ProtocolEnds::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, ProtocolEnds* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+            .handle_metadata = handle_metadata_,
+            .handle_capacity = kHandleCapacity,
             .backing_buffer = backing_buffer,
             .backing_buffer_capacity = backing_buffer_size,
         }) {
@@ -2118,8 +2132,10 @@ class ProtocolEnds::UnownedEncodedMessage final {
 
  private:
   ::fidl::internal::IovecBuffer iovecs_;
-  zx_handle_disposition_t
-      handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+  static constexpr size_t kHandleCapacity =
+      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles);
+  zx_handle_t handles_[kHandleCapacity];
+  fidl_channel_handle_metadata_t handle_metadata_[kHandleCapacity];
   ::fidl::OutgoingMessage message_;
 };
 

@@ -115,6 +115,7 @@ class ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>::
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = _iovec_capacity,
             .backing_buffer = _backing_buffer,
@@ -269,11 +270,12 @@ class ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>::
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = _iovec_capacity,
             .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+            .handle_metadata = handle_metadata_,
+            .handle_capacity = kHandleCapacity,
             .backing_buffer = _backing_buffer,
             .backing_buffer_capacity = _backing_buffer_size,
         }) {
@@ -302,8 +304,10 @@ class ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>::
 
  private:
   ::fidl::internal::IovecBuffer iovecs_;
-  zx_handle_disposition_t
-      handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+  static constexpr size_t kHandleCapacity =
+      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles);
+  zx_handle_t handles_[kHandleCapacity];
+  fidl_channel_handle_metadata_t handle_metadata_[kHandleCapacity];
   ::fidl::OutgoingMessage message_;
 };
 
@@ -426,6 +430,7 @@ class ::fidl::WireRequest<
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = _iovec_capacity,
             .backing_buffer = _backing_buffer,
@@ -583,11 +588,12 @@ class ::fidl::WireResponse<
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = _iovec_capacity,
             .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+            .handle_metadata = handle_metadata_,
+            .handle_capacity = kHandleCapacity,
             .backing_buffer = _backing_buffer,
             .backing_buffer_capacity = _backing_buffer_size,
         }) {
@@ -615,8 +621,10 @@ class ::fidl::WireResponse<
 
  private:
   ::fidl::internal::IovecBuffer iovecs_;
-  zx_handle_disposition_t
-      handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+  static constexpr size_t kHandleCapacity =
+      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles);
+  zx_handle_t handles_[kHandleCapacity];
+  fidl_channel_handle_metadata_t handle_metadata_[kHandleCapacity];
   ::fidl::OutgoingMessage message_;
 };
 
@@ -747,11 +755,12 @@ class ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>::
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = _iovec_capacity,
             .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+            .handle_metadata = handle_metadata_,
+            .handle_capacity = kHandleCapacity,
             .backing_buffer = _backing_buffer,
             .backing_buffer_capacity = _backing_buffer_size,
         }) {
@@ -778,8 +787,10 @@ class ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>::
 
  private:
   ::fidl::internal::IovecBuffer iovecs_;
-  zx_handle_disposition_t
-      handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+  static constexpr size_t kHandleCapacity =
+      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles);
+  zx_handle_t handles_[kHandleCapacity];
+  fidl_channel_handle_metadata_t handle_metadata_[kHandleCapacity];
   ::fidl::OutgoingMessage message_;
 };
 
@@ -907,11 +918,12 @@ class ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = _iovec_capacity,
             .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+            .handle_metadata = handle_metadata_,
+            .handle_capacity = kHandleCapacity,
             .backing_buffer = _backing_buffer,
             .backing_buffer_capacity = _backing_buffer_size,
         }) {
@@ -938,8 +950,10 @@ class ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::
 
  private:
   ::fidl::internal::IovecBuffer iovecs_;
-  zx_handle_disposition_t
-      handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+  static constexpr size_t kHandleCapacity =
+      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles);
+  zx_handle_t handles_[kHandleCapacity];
+  fidl_channel_handle_metadata_t handle_metadata_[kHandleCapacity];
   ::fidl::OutgoingMessage message_;
 };
 

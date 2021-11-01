@@ -159,6 +159,7 @@ class TableSmallArray::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, TableSmallArray* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -403,6 +404,7 @@ class TableLargeArray::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, TableLargeArray* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -621,6 +623,7 @@ class UnionSmallArray::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, UnionSmallArray* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -839,6 +842,7 @@ class UnionLargeArray::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, UnionLargeArray* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -983,6 +987,7 @@ class StructSmallArray::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, StructSmallArray* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1125,6 +1130,7 @@ class StructLargeArray::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, StructLargeArray* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,

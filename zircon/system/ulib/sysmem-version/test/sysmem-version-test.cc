@@ -47,9 +47,13 @@ class LinearSnap {
     return fidl::BytePart(const_cast<uint8_t*>(snap_data_), snap_data_size_, snap_data_size_);
   }
 
-  const fidl::HandleDispositionPart snap_handles() const {
-    return fidl::HandleDispositionPart(const_cast<zx_handle_disposition_t*>(snap_handles_),
-                                       snap_handles_count_, snap_handles_count_);
+  const fidl::HandlePart snap_handles() const {
+    return fidl::HandlePart(const_cast<zx_handle_t*>(snap_handles_), snap_handles_count_,
+                            snap_handles_count_);
+  }
+
+  const fidl_channel_handle_metadata_t* snap_handle_metadata() const {
+    return snap_handle_metadata_;
   }
 
  private:
@@ -62,10 +66,13 @@ class LinearSnap {
     ZX_ASSERT(outgoing_message_bytes_.size() <= sizeof(snap_data_));
     memcpy(snap_data_, outgoing_message_bytes_.data(), outgoing_message_bytes_.size());
     snap_data_size_ = outgoing_message_bytes_.size();
-    ZX_ASSERT(outgoing_message.handle_actual() * sizeof(zx_handle_disposition_t) <=
-              sizeof(snap_handles_));
+    ZX_ASSERT(outgoing_message.handle_actual() * sizeof(zx_handle_t) <= sizeof(snap_handles_));
     memcpy(snap_handles_, outgoing_message.handles(),
-           outgoing_message.handle_actual() * sizeof(zx_handle_disposition_t));
+           outgoing_message.handle_actual() * sizeof(zx_handle_t));
+    ZX_ASSERT(outgoing_message.handle_actual() * sizeof(fidl_channel_handle_metadata_t) <=
+              sizeof(snap_handle_metadata_));
+    memcpy(snap_handle_metadata_, outgoing_message.handle_metadata(),
+           outgoing_message.handle_actual() * sizeof(fidl_channel_handle_metadata_t));
     snap_handles_count_ = outgoing_message.handle_actual();
     outgoing_to_incoming_result_.emplace(encoded.GetOutgoingMessage());
     ZX_ASSERT(outgoing_to_incoming_result_.value().ok());
@@ -78,7 +85,8 @@ class LinearSnap {
   alignas(FIDL_ALIGNMENT) uint8_t linear_data_[kMaxDataSize] = {};
 
   alignas(FIDL_ALIGNMENT) uint8_t snap_data_[kMaxDataSize] = {};
-  zx_handle_disposition_t snap_handles_[kMaxHandleCount] = {};
+  zx_handle_t snap_handles_[kMaxHandleCount] = {};
+  fidl_channel_handle_metadata_t snap_handle_metadata_[kMaxHandleCount] = {};
   uint32_t snap_data_size_ = {};
   uint32_t snap_handles_count_ = {};
 
@@ -104,16 +112,20 @@ bool IsEqualImpl(const LinearSnap<FidlType>& a, const LinearSnap<FidlType>& b, b
   }
   if (!by_koid) {
     if (0 != memcmp(a.snap_handles().data(), b.snap_handles().data(),
-                    a.snap_handles().actual() * sizeof(zx_handle_disposition_t))) {
+                    a.snap_handles().actual() * sizeof(zx_handle_t))) {
+      return false;
+    }
+    if (0 != memcmp(a.snap_handle_metadata(), b.snap_handle_metadata(),
+                    a.snap_handles().actual() * sizeof(fidl_channel_handle_metadata_t))) {
       return false;
     }
   } else {
     for (uint32_t i = 0; i < a.snap_handles().actual(); ++i) {
       zx_info_handle_basic_t a_info{};
       zx_info_handle_basic_t b_info{};
-      ZX_ASSERT(ZX_OK == zx_object_get_info(a.snap_handles().data()[i].handle, ZX_INFO_HANDLE_BASIC,
+      ZX_ASSERT(ZX_OK == zx_object_get_info(a.snap_handles().data()[i], ZX_INFO_HANDLE_BASIC,
                                             &a_info, sizeof(a_info), nullptr, nullptr));
-      ZX_ASSERT(ZX_OK == zx_object_get_info(b.snap_handles().data()[i].handle, ZX_INFO_HANDLE_BASIC,
+      ZX_ASSERT(ZX_OK == zx_object_get_info(b.snap_handles().data()[i], ZX_INFO_HANDLE_BASIC,
                                             &b_info, sizeof(a_info), nullptr, nullptr));
       if (a_info.koid != b_info.koid) {
         return false;

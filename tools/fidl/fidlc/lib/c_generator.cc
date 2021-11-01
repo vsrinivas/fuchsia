@@ -1588,15 +1588,21 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
     EmitTxnHeader(&file_, "_response", method_info.ordinal_name);
     EmitLinearizeMessage(&file_, "_response", "_wr_bytes", response);
     const char* handle_value = "NULL";
+    const char* handle_metadata_value = "NULL";
     if (hcount > 0) {
-      file_ << kIndent << "zx_handle_disposition_t _handles[" << hcount << "];\n";
+      file_ << kIndent << "zx_handle_t _handles[" << hcount << "];\n";
+      file_ << kIndent << "fidl_channel_handle_metadata_t _handle_metadata[" << hcount << "];\n";
       handle_value = "_handles";
+      handle_metadata_value = "_handle_metadata";
     }
     file_ << kIndent << "fidl_outgoing_msg_t _msg = {\n";
     file_ << kIndent << kIndent << ".type = FIDL_OUTGOING_MSG_TYPE_BYTE,\n";
     file_ << kIndent << kIndent << ".byte = {\n";
     file_ << kIndent << kIndent << kIndent << ".bytes = _wr_bytes,\n";
     file_ << kIndent << kIndent << kIndent << ".handles = " << handle_value << ",\n";
+    file_ << kIndent << kIndent << kIndent << ".transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,\n";
+    file_ << kIndent << kIndent << kIndent << ".handle_metadata = " << handle_metadata_value
+          << ",\n";
     file_ << kIndent << kIndent << kIndent << ".num_bytes = _wr_num_bytes,\n";
     file_ << kIndent << kIndent << kIndent << ".num_handles = " << hcount << ",\n";
     file_ << kIndent << kIndent << "},\n";

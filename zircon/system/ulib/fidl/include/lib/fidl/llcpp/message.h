@@ -50,9 +50,11 @@ struct AllowUnownedInputRef {};
 class OutgoingMessage : public ::fidl::Result {
  public:
   struct ConstructorArgs {
+    fidl_transport_type transport_type;
     zx_channel_iovec_t* iovecs;
     uint32_t iovec_capacity;
-    zx_handle_disposition_t* handles;
+    zx_handle_t* handles;
+    void* handle_metadata;
     uint32_t handle_capacity;
     uint8_t* backing_buffer;
     uint32_t backing_buffer_capacity;
@@ -95,7 +97,9 @@ class OutgoingMessage : public ::fidl::Result {
 
   zx_channel_iovec_t* iovecs() const { return iovec_message().iovecs; }
   uint32_t iovec_actual() const { return iovec_message().num_iovecs; }
-  zx_handle_disposition_t* handles() const { return iovec_message().handles; }
+  zx_handle_t* handles() const { return iovec_message().handles; }
+  fidl_transport_type transport_type() const { return iovec_message().transport_type; }
+  void* handle_metadata() const { return iovec_message().handle_metadata; }
   uint32_t handle_actual() const { return iovec_message().num_handles; }
   fidl_outgoing_msg_t* message() { return &message_; }
   const fidl_outgoing_msg_t* message() const { return &message_; }
@@ -144,13 +148,17 @@ class OutgoingMessage : public ::fidl::Result {
 
 #ifdef __Fuchsia__
   void Write(internal::AnyUnownedTransport transport) {
+    if (!ok()) {
+      return;
+    }
+    ZX_ASSERT(message_.iovec.transport_type == transport.type());
     // TODO(fxbug.dev/85734) Support abitrary transports.
     WriteImpl(transport.get<internal::ChannelTransport>()->get());
   }
 
-  template <typename Transport>
-  void Write(Transport&& transport) {
-    Write(internal::MakeAnyUnownedTransport(std::forward<Transport>(transport)));
+  template <typename TransportObject>
+  void Write(TransportObject&& transport) {
+    Write(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)));
   }
 
   // For requests with a response, uses zx_channel_call_etc to write the message.
@@ -159,15 +167,19 @@ class OutgoingMessage : public ::fidl::Result {
   template <typename FidlType>
   void Call(internal::AnyUnownedTransport transport, uint8_t* result_bytes,
             uint32_t result_capacity, zx_time_t deadline = ZX_TIME_INFINITE) {
+    if (!ok()) {
+      return;
+    }
+    ZX_ASSERT(message_.iovec.transport_type == transport.type());
     // TODO(fxbug.dev/85734) Support abitrary transports.
     CallImpl(FidlType::Type, transport.get<internal::ChannelTransport>()->get(), result_bytes,
              result_capacity, deadline);
   }
 
-  template <typename FidlType, typename Transport>
-  void Call(Transport&& transport, uint8_t* result_bytes, uint32_t result_capacity,
+  template <typename FidlType, typename TransportObject>
+  void Call(TransportObject&& transport, uint8_t* result_bytes, uint32_t result_capacity,
             zx_time_t deadline = ZX_TIME_INFINITE) {
-    Call<FidlType>(internal::MakeAnyUnownedTransport(std::forward<Transport>(transport)),
+    Call<FidlType>(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
                    result_bytes, result_capacity, deadline);
   }
 

@@ -372,8 +372,7 @@ class SimpleBinding {
       // This method ensures that the handles sent in here are closed
       // unless successfully transferred into the channel.
       auto close_handles = fit::defer([msg] {
-        zx_status_t close_status =
-            FidlHandleDispositionCloseMany(msg->byte.handles, msg->byte.num_handles);
+        zx_status_t close_status = FidlHandleCloseMany(msg->byte.handles, msg->byte.num_handles);
         ZX_DEBUG_ASSERT(close_status == ZX_OK);
       });
 

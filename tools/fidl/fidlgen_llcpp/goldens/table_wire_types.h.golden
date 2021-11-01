@@ -166,6 +166,7 @@ class TableWithAttributes::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         TableWithAttributes* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -448,6 +449,7 @@ class SimpleTable::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, SimpleTable* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -767,6 +769,7 @@ class ReverseOrdinalTable::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         ReverseOrdinalTable* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1010,6 +1013,7 @@ class OlderSimpleTable::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, OlderSimpleTable* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1330,6 +1334,7 @@ class NewerSimpleTable::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, NewerSimpleTable* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1533,6 +1538,7 @@ class ExtensionTable::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, ExtensionTable* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -4240,6 +4246,7 @@ class SixtyFourOrdinalTable::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         SixtyFourOrdinalTable* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -4443,6 +4450,7 @@ class EmptyTable::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, EmptyTable* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,

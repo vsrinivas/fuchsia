@@ -21,6 +21,7 @@ TEST(OutgoingToIncomingMessage, IovecMessage) {
       .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
       .iovec =
           {
+              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .iovecs = iovecs,
               .num_iovecs = std::size(iovecs),
           },
@@ -41,13 +42,11 @@ TEST(OutgoingToIncomingMessage, Handles) {
   memcpy(bytes, &header, sizeof(header));
   zx::event ev;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
-  zx_handle_disposition_t hd[1] = {zx_handle_disposition_t{
-      .operation = ZX_HANDLE_OP_MOVE,
-      .handle = ev.get(),
-      .type = ZX_OBJ_TYPE_EVENT,
+  zx_handle_t handle = ev.get();
+  fidl_channel_handle_metadata_t handle_metadata = {
+      .obj_type = ZX_OBJ_TYPE_EVENT,
       .rights = ZX_DEFAULT_EVENT_RIGHTS,
-      .result = ZX_OK,
-  }};
+  };
   zx_channel_iovec_t iovecs[1] = {
       {.buffer = bytes, .capacity = std::size(bytes), .reserved = 0},
   };
@@ -55,9 +54,11 @@ TEST(OutgoingToIncomingMessage, Handles) {
       .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
       .iovec =
           {
+              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .iovecs = iovecs,
               .num_iovecs = std::size(iovecs),
-              .handles = hd,
+              .handles = &handle,
+              .handle_metadata = &handle_metadata,
               .num_handles = 1,
           },
   };
@@ -69,23 +70,21 @@ TEST(OutgoingToIncomingMessage, Handles) {
   EXPECT_EQ(0, memcmp(output.bytes(), bytes, output.byte_actual()));
   EXPECT_EQ(output.handle_actual(), std::size(iovecs));
   EXPECT_EQ(output.handles()[0], ev.get());
-  auto handle_metadata =
+  fidl_channel_handle_metadata_t* out_handle_metadata =
       reinterpret_cast<fidl_channel_handle_metadata_t*>(output.handle_metadata());
-  EXPECT_EQ(handle_metadata[0].obj_type, ZX_OBJ_TYPE_EVENT);
-  EXPECT_EQ(handle_metadata[0].rights, ZX_DEFAULT_EVENT_RIGHTS);
+  EXPECT_EQ(out_handle_metadata[0].obj_type, handle_metadata.obj_type);
+  EXPECT_EQ(out_handle_metadata[0].rights, handle_metadata.rights);
 }
 
 TEST(OutgoingToIncomingMessage, HandlesWrongType) {
   uint8_t bytes[16];
   zx::event ev;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
-  zx_handle_disposition_t hd[] = {zx_handle_disposition_t{
-      .operation = ZX_HANDLE_OP_MOVE,
-      .handle = ev.get(),
-      .type = ZX_OBJ_TYPE_CHANNEL,
+  zx_handle_t handle = ev.get();
+  fidl_channel_handle_metadata_t handle_metadata = {
+      .obj_type = ZX_OBJ_TYPE_CHANNEL,
       .rights = ZX_RIGHT_SAME_RIGHTS,
-      .result = ZX_OK,
-  }};
+  };
   zx_channel_iovec_t iovecs[] = {
       {.buffer = bytes, .capacity = std::size(bytes), .reserved = 0},
   };
@@ -93,9 +92,11 @@ TEST(OutgoingToIncomingMessage, HandlesWrongType) {
       .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
       .iovec =
           {
+              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .iovecs = iovecs,
               .num_iovecs = std::size(iovecs),
-              .handles = hd,
+              .handles = &handle,
+              .handle_metadata = &handle_metadata,
               .num_handles = 1,
           },
   };
@@ -108,13 +109,11 @@ TEST(OutgoingToIncomingMessage, HandlesWrongRights) {
   uint8_t bytes[16];
   zx::event ev;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
-  zx_handle_disposition_t hd[1] = {zx_handle_disposition_t{
-      .operation = ZX_HANDLE_OP_MOVE,
-      .handle = ev.get(),
-      .type = ZX_OBJ_TYPE_EVENT,
+  zx_handle_t handle = ev.get();
+  fidl_channel_handle_metadata_t handle_metadata = {
+      .obj_type = ZX_OBJ_TYPE_EVENT,
       .rights = ZX_RIGHT_DESTROY,
-      .result = ZX_OK,
-  }};
+  };
   zx_channel_iovec_t iovecs[1] = {
       {.buffer = bytes, .capacity = std::size(bytes), .reserved = 0},
   };
@@ -122,10 +121,12 @@ TEST(OutgoingToIncomingMessage, HandlesWrongRights) {
       .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
       .iovec =
           {
+              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .iovecs = iovecs,
               .num_iovecs = std::size(iovecs),
-              .handles = hd,
-              .num_handles = std::size(hd),
+              .handles = &handle,
+              .handle_metadata = &handle_metadata,
+              .num_handles = 1,
           },
   };
   auto msg = fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);

@@ -6,6 +6,7 @@
 
 #ifdef __Fuchsia__
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 #endif
 
 // Coding tables for primitives are predefined and interned here.
@@ -93,6 +94,26 @@ zx_status_t FidlEnsureHandleRights(zx_handle_t* handle_ptr, zx_obj_type_t actual
   return ZX_OK;
 }
 
+zx_status_t FidlEnsureActualHandleRights(zx_handle_t* handle_ptr,
+                                         zx_obj_type_t required_object_type,
+                                         zx_rights_t required_rights, const char** error) {
+#ifdef __Fuchsia__
+  zx_info_handle_basic_t info;
+  zx_status_t status =
+      zx_object_get_info(*handle_ptr, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
+  if (status != ZX_OK) {
+    zx_handle_close(*handle_ptr);
+    *handle_ptr = ZX_HANDLE_INVALID;
+    *error = "zx_object_get_info failed";
+    return status;
+  }
+  return FidlEnsureHandleRights(handle_ptr, info.type, info.rights, required_object_type,
+                                required_rights, error);
+#else
+  ZX_PANIC("FidlEnsureActualHandleRights only supported on Fuchsia");
+#endif
+}
+
 zx_status_t FidlHandleDispositionsToHandleInfos(zx_handle_disposition_t* handle_dispositions,
                                                 zx_handle_info_t* handle_infos,
                                                 uint32_t num_handles) {
@@ -109,71 +130,17 @@ zx_status_t FidlHandleDispositionsToHandleInfos(zx_handle_disposition_t* handle_
       return ZX_ERR_INVALID_ARGS;
     }
 #ifdef __Fuchsia__
-    zx_info_handle_basic_t info;
-    zx_status_t status = zx_object_get_info(handle_disposition->handle, ZX_INFO_HANDLE_BASIC, &info,
-                                            sizeof(info), NULL, NULL);
+    zx_status_t status = FidlEnsureActualHandleRights(
+        &handle_disposition->handle, handle_disposition->type, handle_disposition->rights, NULL);
     if (status != ZX_OK) {
       FidlHandleDispositionCloseMany(handle_dispositions, num_handles);
       FidlHandleInfoCloseMany(handle_infos, i);
       return status;
     }
-
-    zx_handle_t handle = handle_disposition->handle;
+    handle_infos[i].handle = handle_disposition->handle;
+    handle_infos[i].type = handle_disposition->type;
+    handle_infos[i].rights = handle_disposition->rights;
     handle_disposition->handle = ZX_HANDLE_INVALID;
-    status = FidlEnsureHandleRights(&handle, info.type, info.rights, handle_disposition->type,
-                                    handle_disposition->rights, NULL);
-    if (status != ZX_OK) {
-      FidlHandleDispositionCloseMany(handle_dispositions, num_handles);
-      FidlHandleInfoCloseMany(handle_infos, i);
-      return status;
-    }
-    handle_infos[i].handle = handle;
-    handle_infos[i].type = info.type;
-    handle_infos[i].rights = info.rights;
-#else
-    ZX_PANIC("zx_object_get_info unsupported on host");
-#endif
-  }
-  return ZX_OK;
-}
-
-zx_status_t FidlZirconHandleDispositionsToChannelsWithMetadata(
-    zx_handle_disposition_t* handle_dispositions, zx_handle_t* handles,
-    fidl_channel_handle_metadata_t* metadata, uint32_t num_handles) {
-  for (size_t i = 0; i < num_handles; i++) {
-    zx_handle_disposition_t* handle_disposition = &handle_dispositions[i];
-    if (handle_disposition->operation != ZX_HANDLE_OP_MOVE) {
-      FidlHandleDispositionCloseMany(handle_dispositions, num_handles);
-      FidlHandleCloseMany(handles, i);
-      return ZX_ERR_INVALID_ARGS;
-    }
-    if (handle_disposition->result != ZX_OK) {
-      FidlHandleDispositionCloseMany(handle_dispositions, num_handles);
-      FidlHandleCloseMany(handles, i);
-      return ZX_ERR_INVALID_ARGS;
-    }
-#ifdef __Fuchsia__
-    zx_info_handle_basic_t info;
-    zx_status_t status = zx_object_get_info(handle_disposition->handle, ZX_INFO_HANDLE_BASIC, &info,
-                                            sizeof(info), NULL, NULL);
-    if (status != ZX_OK) {
-      FidlHandleDispositionCloseMany(handle_dispositions, num_handles);
-      FidlHandleCloseMany(handles, i);
-      return status;
-    }
-
-    zx_handle_t handle = handle_disposition->handle;
-    handle_disposition->handle = ZX_HANDLE_INVALID;
-    status = FidlEnsureHandleRights(&handle, info.type, info.rights, handle_disposition->type,
-                                    handle_disposition->rights, NULL);
-    if (status != ZX_OK) {
-      FidlHandleDispositionCloseMany(handle_dispositions, num_handles);
-      FidlHandleCloseMany(handles, i);
-      return status;
-    }
-    handles[i] = handle;
-    metadata[i].obj_type = info.type;
-    metadata[i].rights = info.rights;
 #else
     ZX_PANIC("zx_object_get_info unsupported on host");
 #endif

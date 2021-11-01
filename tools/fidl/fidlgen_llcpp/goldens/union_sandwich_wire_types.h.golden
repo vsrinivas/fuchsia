@@ -128,6 +128,7 @@ class UnionSize8Alignment4::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         UnionSize8Alignment4* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -352,6 +353,7 @@ class UnionSize36Alignment4::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         UnionSize36Alignment4* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -576,6 +578,7 @@ class UnionSize12Alignment4::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         UnionSize12Alignment4* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -812,6 +815,7 @@ class UnionSize24Alignment8::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         UnionSize24Alignment8* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -962,6 +966,7 @@ class SandwichUnionSize8Alignment4::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         SandwichUnionSize8Alignment4* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1111,6 +1116,7 @@ class SandwichUnionSize36Alignment4::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         SandwichUnionSize36Alignment4* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1260,6 +1266,7 @@ class SandwichUnionSize12Alignment4::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         SandwichUnionSize12Alignment4* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1407,6 +1414,7 @@ class StructSize16Alignment8::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         StructSize16Alignment8* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1555,6 +1563,7 @@ class SandwichUnionSize24Alignment8::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         SandwichUnionSize24Alignment8* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,

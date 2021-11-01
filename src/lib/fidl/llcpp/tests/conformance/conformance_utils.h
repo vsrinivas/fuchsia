@@ -110,7 +110,8 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
   std::unique_ptr<uint8_t[]> transformer_buffer;
   std::unique_ptr<zx_channel_iovec_t[]> iovec_buffer;
   std::unique_ptr<uint8_t[]> backing_buffer;
-  std::unique_ptr<zx_handle_disposition_t[]> handle_disposition_buffer;
+  std::unique_ptr<zx_handle_t[]> handle_buffer;
+  std::unique_ptr<fidl_channel_handle_metadata_t[]> handle_metadata_buffer;
   switch (wire_format_version) {
     case fidl::internal::WireFormatVersion::kV1: {
       memcpy(&c_msg, outgoing_v1.message(), sizeof(c_msg));
@@ -119,12 +120,13 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
     case fidl::internal::WireFormatVersion::kV2: {
       auto copied_bytes = outgoing_v1.CopyBytes();
       std::vector<zx_handle_info_t> handle_infos;
+      fidl_channel_handle_metadata_t* handle_metadata =
+          static_cast<fidl_channel_handle_metadata_t*>(outgoing_v1.handle_metadata());
       for (uint32_t i = 0; i < outgoing_v1.handle_actual(); i++) {
-        zx_handle_disposition_t handle_disposition = outgoing_v1.handles()[i];
         handle_infos.push_back({
-            .handle = handle_disposition.handle,
-            .type = handle_disposition.type,
-            .rights = handle_disposition.rights,
+            .handle = outgoing_v1.handles()[i],
+            .type = handle_metadata[i].obj_type,
+            .rights = handle_metadata[i].rights,
         });
       }
 
@@ -152,7 +154,10 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
 
       iovec_buffer = std::make_unique<zx_channel_iovec_t[]>(ZX_CHANNEL_MAX_MSG_IOVECS);
       backing_buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
-      handle_disposition_buffer =
+      handle_buffer = std::make_unique<zx_handle_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
+      handle_metadata_buffer =
+          std::make_unique<fidl_channel_handle_metadata_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
+      std::unique_ptr<zx_handle_disposition_t[]> handle_disposition_buffer =
           std::make_unique<zx_handle_disposition_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
       uint32_t actual_iovecs;
       uint32_t actual_handles;
@@ -165,11 +170,20 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
                   << std::endl;
         return false;
       }
+      for (uint32_t i = 0; i < actual_handles; i++) {
+        handle_buffer[i] = handle_disposition_buffer[i].handle;
+        handle_metadata_buffer[i] = fidl_channel_handle_metadata_t{
+            .obj_type = handle_disposition_buffer[i].type,
+            .rights = handle_disposition_buffer[i].rights,
+        };
+      }
 
       c_msg.type = FIDL_OUTGOING_MSG_TYPE_IOVEC;
       c_msg.iovec.iovecs = iovec_buffer.get();
       c_msg.iovec.num_iovecs = actual_iovecs;
-      c_msg.iovec.handles = handle_disposition_buffer.get();
+      c_msg.iovec.handles = handle_buffer.get();
+      c_msg.iovec.transport_type = FIDL_TRANSPORT_TYPE_CHANNEL;
+      c_msg.iovec.handle_metadata = handle_metadata_buffer.get();
       c_msg.iovec.num_handles = actual_handles;
 
       break;
@@ -196,13 +210,25 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
       ComparePayload(encoded_bytes.data(), encoded_bytes.size(), bytes.data(), bytes.size());
   bool handles_match = false;
   if (check_handle_rights) {
-    handles_match = ComparePayload(outgoing.handles(), outgoing.handle_actual(),
+    std::unique_ptr<zx_handle_disposition_t[]> outgoing_handle_dispositions =
+        std::make_unique<zx_handle_disposition_t[]>(outgoing.handle_actual());
+    fidl_channel_handle_metadata_t* handle_metadata =
+        static_cast<fidl_channel_handle_metadata_t*>(outgoing.handle_metadata());
+    for (uint32_t i = 0; i < outgoing.handle_actual(); i++) {
+      outgoing_handle_dispositions[i] = zx_handle_disposition_t{
+          .operation = ZX_HANDLE_OP_MOVE,
+          .handle = outgoing.handles()[i],
+          .type = handle_metadata[i].obj_type,
+          .rights = handle_metadata[i].rights,
+      };
+    }
+    handles_match = ComparePayload(outgoing_handle_dispositions.get(), outgoing.handle_actual(),
                                    handle_dispositions.data(), handle_dispositions.size());
   } else {
     std::vector<zx_handle_t> outgoing_msg_handles;
     std::vector<zx_handle_t> expected_handles;
     for (size_t i = 0; i < outgoing.handle_actual(); i++) {
-      outgoing_msg_handles.push_back(outgoing.handles()[i].handle);
+      outgoing_msg_handles.push_back(outgoing.handles()[i]);
     }
     for (const auto& handle_disposition : handle_dispositions) {
       expected_handles.push_back(handle_disposition.handle);

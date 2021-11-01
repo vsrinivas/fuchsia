@@ -40,6 +40,7 @@ TEST(FidlTransaction, Reply) {
       .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
       .iovec =
           {
+              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .iovecs = &iovec,
               .num_iovecs = 1,
           },

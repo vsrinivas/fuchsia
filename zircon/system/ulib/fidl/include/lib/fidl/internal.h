@@ -123,6 +123,17 @@ zx_status_t FidlEnsureHandleRights(zx_handle_t* handle_ptr, zx_rights_t actual_t
                                    zx_obj_type_t actual_rights, zx_obj_type_t required_object_type,
                                    zx_rights_t required_rights, const char** error);
 
+// Checks that the handle's actual rights meet specified type and rights requirements.
+// If the handle has execess rights, the rights will be reduced to the required rights.
+//
+// The handle pointed to by |handle_ptr| may be overwritten. If it is overwritten,
+// the original handle will be closed.
+//
+// For details on rules used for these checks, see the implementation.
+zx_status_t FidlEnsureActualHandleRights(zx_handle_t* handle_ptr,
+                                         zx_obj_type_t required_object_type,
+                                         zx_rights_t required_rights, const char** error);
+
 // Converts an array of |zx_handle_disposition_t| to an array of |zx_handle_info_t|.
 //
 // This behaves similarly to what happens when a handle is written using
@@ -134,19 +145,6 @@ zx_status_t FidlEnsureHandleRights(zx_handle_t* handle_ptr, zx_rights_t actual_t
 zx_status_t FidlHandleDispositionsToHandleInfos(zx_handle_disposition_t* handle_dispositions,
                                                 zx_handle_info_t* handle_infos,
                                                 uint32_t num_handles);
-
-// Converts an array of |zx_handle_disposition_t| to an array of |zx_handle_t| and
-// |fidl_channel_handle_metadata_t|.
-//
-// This behaves similarly to what happens when a handle is written using
-// zx_channel_write_etc and then read using zx_channel_read_etc.
-// The handle type and rights are checked and the output handle may have reduced
-// rights if the input has excess rights.
-//
-// This takes ownership of the input handles.
-zx_status_t FidlZirconHandleDispositionsToChannelsWithMetadata(
-    zx_handle_disposition_t* handle_dispositions, zx_handle_t* channels,
-    fidl_channel_handle_metadata_t* handle_metadata, uint32_t num_handles);
 
 typedef uint8_t FidlStructElementType;
 static const FidlStructElementType kFidlStructElementType_Field = (uint8_t)1u;

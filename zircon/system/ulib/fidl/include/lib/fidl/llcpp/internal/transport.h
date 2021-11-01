@@ -144,6 +144,8 @@ class AnyUnownedTransport {
     return vtable_->encoding_configuration;
   }
 
+  fidl_transport_type type() const { return vtable_->type; }
+
   zx_status_t write(EncodeFlags encode_flags, const void* data, uint32_t data_count,
                     const Handle* handles, const void* handle_metadata, uint32_t handles_count) {
     return vtable_->write(handle_, encode_flags, data, data_count, handles, handle_metadata,
@@ -220,6 +222,8 @@ class AnyTransport {
   const EncodingConfiguration* get_encoding_configuration() {
     return vtable_->encoding_configuration;
   }
+
+  fidl_transport_type type() const { return vtable_->type; }
 
   zx_status_t write(EncodeFlags encode_flags, const void* data, uint32_t data_count,
                     const Handle* handles, const void* handle_metadata, uint32_t handles_count) {

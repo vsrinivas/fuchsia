@@ -338,6 +338,7 @@ class TableData::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, TableData* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -482,6 +483,7 @@ class SomeProtocolSomeMethodResponse::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         SomeProtocolSomeMethodResponse* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -733,6 +735,7 @@ class TableMember::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, TableMember* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1065,6 +1068,7 @@ class FunctionApplication::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         FunctionApplication* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1266,6 +1270,7 @@ class UnionMember::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, UnionMember* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1587,6 +1592,7 @@ class Expression::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, Expression* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1844,6 +1850,7 @@ class SomeProtocolSomeMethodResult::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         SomeProtocolSomeMethodResult* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1994,6 +2001,7 @@ class OverrideTest::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, OverrideTest* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,

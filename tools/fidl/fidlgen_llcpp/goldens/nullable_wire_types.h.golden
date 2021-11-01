@@ -74,11 +74,12 @@ class StructWithNullableRequest::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         StructWithNullableRequest* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+            .handle_metadata = handle_metadata_,
+            .handle_capacity = kHandleCapacity,
             .backing_buffer = backing_buffer,
             .backing_buffer_capacity = backing_buffer_size,
         }) {
@@ -101,8 +102,10 @@ class StructWithNullableRequest::UnownedEncodedMessage final {
 
  private:
   ::fidl::internal::IovecBuffer iovecs_;
-  zx_handle_disposition_t
-      handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+  static constexpr size_t kHandleCapacity =
+      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles);
+  zx_handle_t handles_[kHandleCapacity];
+  fidl_channel_handle_metadata_t handle_metadata_[kHandleCapacity];
   ::fidl::OutgoingMessage message_;
 };
 
@@ -228,11 +231,12 @@ class StructWithNullableProtocol::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         StructWithNullableProtocol* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+            .handle_metadata = handle_metadata_,
+            .handle_capacity = kHandleCapacity,
             .backing_buffer = backing_buffer,
             .backing_buffer_capacity = backing_buffer_size,
         }) {
@@ -255,8 +259,10 @@ class StructWithNullableProtocol::UnownedEncodedMessage final {
 
  private:
   ::fidl::internal::IovecBuffer iovecs_;
-  zx_handle_disposition_t
-      handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+  static constexpr size_t kHandleCapacity =
+      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles);
+  zx_handle_t handles_[kHandleCapacity];
+  fidl_channel_handle_metadata_t handle_metadata_[kHandleCapacity];
   ::fidl::OutgoingMessage message_;
 };
 
@@ -382,11 +388,12 @@ class StructWithNullableHandle::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         StructWithNullableHandle* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .handles = handles_,
-            .handle_capacity =
-                std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+            .handle_metadata = handle_metadata_,
+            .handle_capacity = kHandleCapacity,
             .backing_buffer = backing_buffer,
             .backing_buffer_capacity = backing_buffer_size,
         }) {
@@ -409,8 +416,10 @@ class StructWithNullableHandle::UnownedEncodedMessage final {
 
  private:
   ::fidl::internal::IovecBuffer iovecs_;
-  zx_handle_disposition_t
-      handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+  static constexpr size_t kHandleCapacity =
+      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles);
+  zx_handle_t handles_[kHandleCapacity];
+  fidl_channel_handle_metadata_t handle_metadata_[kHandleCapacity];
   ::fidl::OutgoingMessage message_;
 };
 
@@ -531,6 +540,7 @@ class Int32Wrapper::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, Int32Wrapper* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -752,6 +762,7 @@ class SimpleUnion::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, SimpleUnion* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -896,6 +907,7 @@ class StructWithNullableVector::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         StructWithNullableVector* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1040,6 +1052,7 @@ class StructWithNullableUnion::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         StructWithNullableUnion* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1183,6 +1196,7 @@ class StructWithNullableStruct::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         StructWithNullableStruct* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -1326,6 +1340,7 @@ class StructWithNullableString::UnownedEncodedMessage final {
                         uint32_t backing_buffer_size,
                         StructWithNullableString* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,

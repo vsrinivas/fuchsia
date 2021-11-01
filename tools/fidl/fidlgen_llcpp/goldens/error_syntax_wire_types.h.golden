@@ -208,6 +208,7 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult::UnownedEncodedMessage
                         uint32_t backing_buffer_size,
                         ExampleUseOfErrorSyntaxCallWhichMayFailResult* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,
@@ -359,6 +360,7 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResponse::UnownedEncodedMessage
                         uint32_t backing_buffer_size,
                         ExampleUseOfErrorSyntaxCallWhichMayFailResponse* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .backing_buffer = backing_buffer,

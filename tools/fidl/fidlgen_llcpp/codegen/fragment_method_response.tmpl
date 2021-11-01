@@ -70,11 +70,13 @@ class {{ .WireResponse }}::UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         {{ .WireResponse.Self }}* response)
     : message_(::fidl::OutgoingMessage::ConstructorArgs{
+        .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
         .iovecs = iovecs_,
         .iovec_capacity = _iovec_capacity,
   {{- if gt .Response.TypeShapeV2.MaxHandles 0 }}
         .handles = handles_,
-        .handle_capacity = std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
+        .handle_metadata = handle_metadata_,
+        .handle_capacity = kHandleCapacity,
   {{- end }}
         .backing_buffer = _backing_buffer,
         .backing_buffer_capacity = _backing_buffer_size,
@@ -108,7 +110,9 @@ class {{ .WireResponse }}::UnownedEncodedMessage final {
  private:
   ::fidl::internal::IovecBuffer iovecs_;
   {{- if gt .Response.TypeShapeV2.MaxHandles 0 }}
-    zx_handle_disposition_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+    static constexpr size_t kHandleCapacity = std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles);
+    zx_handle_t handles_[kHandleCapacity];
+    fidl_channel_handle_metadata_t handle_metadata_[kHandleCapacity];
   {{- end }}
   ::fidl::OutgoingMessage message_;
 };

@@ -376,6 +376,20 @@ zx_status_t fidl_encode_etc(const fidl_type_t* type, void* bytes, uint32_t num_b
 
 zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_byte_t* msg,
                             uint32_t* out_actual_handles, const char** out_error_msg) {
-  return fidl_encode_etc(type, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles,
-                         out_actual_handles, out_error_msg);
+  zx_handle_disposition_t handle_dispositions[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_status_t status = fidl_encode_etc(type, msg->bytes, msg->num_bytes, handle_dispositions,
+                                       msg->num_handles, out_actual_handles, out_error_msg);
+  if (status != ZX_OK) {
+    return status;
+  }
+  fidl_channel_handle_metadata_t* handle_metadata =
+      static_cast<fidl_channel_handle_metadata_t*>(msg->handle_metadata);
+  for (uint32_t i = 0; i < *out_actual_handles; i++) {
+    msg->handles[i] = handle_dispositions[i].handle;
+    handle_metadata[i] = {
+        .obj_type = handle_dispositions[i].type,
+        .rights = handle_dispositions[i].rights,
+    };
+  }
+  return ZX_OK;
 }

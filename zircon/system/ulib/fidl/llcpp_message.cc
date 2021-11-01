@@ -47,9 +47,11 @@ OutgoingMessage::OutgoingMessage(const fidl_outgoing_msg_t* c_msg)
           .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
           .iovec =
               {
+                  .transport_type = c_msg->byte.transport_type,
                   .iovecs = &converted_byte_message_iovec_,
                   .num_iovecs = 1,
                   .handles = c_msg->byte.handles,
+                  .handle_metadata = c_msg->byte.handle_metadata,
                   .num_handles = c_msg->byte.num_handles,
               },
       };
@@ -67,9 +69,11 @@ OutgoingMessage::OutgoingMessage(const ::fidl::Result& failure)
     : fidl::Result(failure),
       message_({.type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
                 .iovec = {
+                    .transport_type = FIDL_TRANSPORT_TYPE_INVALID,
                     .iovecs = nullptr,
                     .num_iovecs = 0,
                     .handles = nullptr,
+                    .handle_metadata = nullptr,
                     .num_handles = 0,
                 }}) {
   ZX_DEBUG_ASSERT(failure.status() != ZX_OK);
@@ -79,8 +83,12 @@ OutgoingMessage::OutgoingMessage(ConstructorArgs args)
     : fidl::Result(fidl::Result::Ok()),
       message_({
           .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
-          .iovec =
-              {.iovecs = args.iovecs, .num_iovecs = 0, .handles = args.handles, .num_handles = 0},
+          .iovec = {.transport_type = args.transport_type,
+                    .iovecs = args.iovecs,
+                    .num_iovecs = 0,
+                    .handles = args.handles,
+                    .handle_metadata = args.handle_metadata,
+                    .num_handles = 0},
       }),
       iovec_capacity_(args.iovec_capacity),
       handle_capacity_(args.handle_capacity),
@@ -90,7 +98,7 @@ OutgoingMessage::OutgoingMessage(ConstructorArgs args)
 OutgoingMessage::~OutgoingMessage() {
 #ifdef __Fuchsia__
   if (handle_actual() > 0) {
-    FidlHandleDispositionCloseMany(handles(), handle_actual());
+    FidlHandleCloseMany(handles(), handle_actual());
   }
 #else
   ZX_ASSERT(handle_actual() == 0);
@@ -131,11 +139,12 @@ void OutgoingMessage::EncodeImpl(const fidl_type_t* message_type, void* data) {
   if (!ok()) {
     return;
   }
+  zx_handle_disposition_t handle_dispositions[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t num_iovecs_actual;
   uint32_t num_handles_actual;
   zx_status_t status;
   status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-      message_type, data, iovecs(), iovec_capacity(), handles(), handle_capacity(),
+      message_type, data, iovecs(), iovec_capacity(), handle_dispositions, handle_capacity(),
       backing_buffer(), backing_buffer_capacity(), &num_iovecs_actual, &num_handles_actual,
       error_address());
   if (status != ZX_OK) {
@@ -144,6 +153,15 @@ void OutgoingMessage::EncodeImpl(const fidl_type_t* message_type, void* data) {
   }
   iovec_message().num_iovecs = num_iovecs_actual;
   iovec_message().num_handles = num_handles_actual;
+  fidl_channel_handle_metadata_t* metadata =
+      static_cast<fidl_channel_handle_metadata_t*>(iovec_message().handle_metadata);
+  for (uint32_t i = 0; i < num_handles_actual; i++) {
+    iovec_message().handles[i] = handle_dispositions[i].handle;
+    metadata[i] = {
+        .obj_type = handle_dispositions[i].type,
+        .rights = handle_dispositions[i].rights,
+    };
+  }
 
   auto linearized_bytes = CopyBytes();
   uint32_t actual_num_bytes;
@@ -169,8 +187,20 @@ void OutgoingMessage::WriteImpl(zx_handle_t channel) {
   if (!ok()) {
     return;
   }
+  zx_handle_disposition_t input_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_channel_handle_metadata_t* metadata =
+      static_cast<fidl_channel_handle_metadata_t*>(handle_metadata());
+  for (uint32_t i = 0; i < handle_actual(); i++) {
+    input_handles[i] = {
+        .operation = ZX_HANDLE_OP_MOVE,
+        .handle = handles()[i],
+        .type = metadata[i].obj_type,
+        .rights = metadata[i].rights,
+        .result = ZX_OK,
+    };
+  }
   zx_status_t status = zx_channel_write_etc(channel, ZX_CHANNEL_WRITE_USE_IOVEC, iovecs(),
-                                            iovec_actual(), handles(), handle_actual());
+                                            iovec_actual(), input_handles, handle_actual());
   ReleaseHandles();
   if (status != ZX_OK) {
     SetResult(fidl::Result::TransportError(status));
@@ -183,12 +213,25 @@ void OutgoingMessage::CallImpl(const fidl_type_t* response_type, zx_handle_t cha
   if (status() != ZX_OK) {
     return;
   }
+  zx_handle_disposition_t input_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_channel_handle_metadata_t* metadata =
+      static_cast<fidl_channel_handle_metadata_t*>(handle_metadata());
+  for (uint32_t i = 0; i < handle_actual(); i++) {
+    input_handles[i] = {
+        .operation = ZX_HANDLE_OP_MOVE,
+        .handle = handles()[i],
+        .type = metadata[i].obj_type,
+        .rights = metadata[i].rights,
+        .result = ZX_OK,
+    };
+  }
+
   zx_handle_info_t result_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_num_bytes = 0u;
   uint32_t actual_num_handles = 0u;
   zx_channel_call_etc_args_t args = {
       .wr_bytes = iovecs(),
-      .wr_handles = handles(),
+      .wr_handles = input_handles,
       .rd_bytes = result_bytes,
       .rd_handles = result_handles,
       .wr_num_bytes = iovec_actual(),
@@ -437,30 +480,39 @@ IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
     // TODO(fxbug.dev/85734) Remove channel-specific logic.
     std::unique_ptr<fidl_channel_handle_metadata_t[]>& buf_handle_metadata) {
   constexpr fidl_transport_type conversion_transport_type = FIDL_TRANSPORT_TYPE_CHANNEL;
-  zx_handle_disposition_t* handles = input.handles();
+  zx_handle_t* handles = input.handles();
+  fidl_channel_handle_metadata_t* handle_metadata =
+      static_cast<fidl_channel_handle_metadata_t*>(input.handle_metadata());
   uint32_t num_handles = input.handle_actual();
   input.ReleaseHandles();
 
   if (num_handles > ZX_CHANNEL_MAX_MSG_HANDLES) {
-    FidlHandleDispositionCloseMany(handles, num_handles);
+    FidlHandleCloseMany(handles, num_handles);
     return fidl::IncomingMessage(fidl::Result::EncodeError(ZX_ERR_OUT_OF_RANGE));
   }
 
-  auto converted_handles = std::make_unique<zx_handle_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
-  auto converted_handle_metadata =
+  // Note: it may be possible to remove these allocations.
+  buf_handles = std::make_unique<zx_handle_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
+  buf_handle_metadata =
       std::make_unique<fidl_channel_handle_metadata_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
-  zx_status_t status = FidlZirconHandleDispositionsToChannelsWithMetadata(
-      handles, converted_handles.get(), converted_handle_metadata.get(), num_handles);
-  if (status != ZX_OK) {
-    return fidl::IncomingMessage(fidl::Result::EncodeError(status));
+  for (uint32_t i = 0; i < num_handles; i++) {
+    const char* error;
+    zx_status_t status = FidlEnsureActualHandleRights(&handles[i], handle_metadata[i].obj_type,
+                                                      handle_metadata[i].rights, &error);
+    if (status != ZX_OK) {
+      FidlHandleCloseMany(handles, num_handles);
+      FidlHandleCloseMany(buf_handles.get(), num_handles);
+      return fidl::IncomingMessage(fidl::Result::EncodeError(status));
+    }
+    buf_handles[i] = handles[i];
+    buf_handle_metadata[i] = handle_metadata[i];
   }
-  buf_handles = std::move(converted_handles);
-  buf_handle_metadata = std::move(converted_handle_metadata);
 
   buf_bytes = input.CopyBytes();
   if (buf_bytes.size() > ZX_CHANNEL_MAX_MSG_BYTES) {
-    FidlHandleDispositionCloseMany(handles, num_handles);
-    return fidl::IncomingMessage(fidl::Result::EncodeError(status));
+    FidlHandleCloseMany(handles, num_handles);
+    FidlHandleCloseMany(buf_handles.get(), num_handles);
+    return fidl::IncomingMessage(fidl::Result::EncodeError(ZX_ERR_INVALID_ARGS));
   }
 
   if (input.is_transactional()) {

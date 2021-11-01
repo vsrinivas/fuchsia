@@ -109,6 +109,7 @@ class ::fidl::WireRequest<
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = _iovec_capacity,
             .backing_buffer = _backing_buffer,
@@ -258,6 +259,7 @@ class ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>::
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = _iovec_capacity,
             .backing_buffer = _backing_buffer,
@@ -414,6 +416,7 @@ class ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireRequest* request)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = _iovec_capacity,
             .backing_buffer = _backing_buffer,
@@ -565,6 +568,7 @@ class ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::
   UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
                         uint32_t _backing_buffer_size, WireResponse* response)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
             .iovecs = iovecs_,
             .iovec_capacity = _iovec_capacity,
             .backing_buffer = _backing_buffer,

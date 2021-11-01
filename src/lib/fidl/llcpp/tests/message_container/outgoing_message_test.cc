@@ -10,12 +10,15 @@
 
 TEST(OutgoingMessage, ConstructWithConstructorArgs) {
   zx_channel_iovec_t iovecs[1];
-  zx_handle_disposition_t handles[2];
+  zx_handle_t handles[2];
+  fidl_channel_handle_metadata_t handle_metadata[2];
   uint8_t backing_buffer[1];
   fidl::OutgoingMessage msg(fidl::OutgoingMessage::ConstructorArgs{
+      .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
       .iovecs = iovecs,
       .iovec_capacity = std::size(iovecs),
       .handles = handles,
+      .handle_metadata = handle_metadata,
       .handle_capacity = std::size(handles),
       .backing_buffer = backing_buffer,
       .backing_buffer_capacity = std::size(backing_buffer),
@@ -25,6 +28,8 @@ TEST(OutgoingMessage, ConstructWithConstructorArgs) {
   EXPECT_EQ(iovecs, msg.iovecs());
   EXPECT_EQ(0u, msg.handle_actual());
   EXPECT_EQ(handles, msg.handles());
+  EXPECT_EQ(FIDL_TRANSPORT_TYPE_CHANNEL, msg.transport_type());
+  EXPECT_EQ(handle_metadata, msg.handle_metadata());
 }
 
 TEST(OutgoingMessage, ConstructFromCIovecMessage) {
@@ -33,20 +38,20 @@ TEST(OutgoingMessage, ConstructFromCIovecMessage) {
       .capacity = 0,
       .reserved = 0,
   };
-  zx_handle_disposition_t handle = {
-      .operation = ZX_HANDLE_OP_MOVE,
-      .handle = ZX_HANDLE_INVALID,
-      .type = ZX_OBJ_TYPE_CHANNEL,
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  fidl_channel_handle_metadata_t handle_metadata = {
+      .obj_type = ZX_OBJ_TYPE_CHANNEL,
       .rights = ZX_RIGHT_SAME_RIGHTS,
-      .result = ZX_OK,
   };
   fidl_outgoing_msg_t c_msg = {
       .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
       .iovec =
           {
+              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .iovecs = &iovec,
               .num_iovecs = 1,
               .handles = &handle,
+              .handle_metadata = &handle_metadata,
               .num_handles = 1,
           },
   };
@@ -55,24 +60,26 @@ TEST(OutgoingMessage, ConstructFromCIovecMessage) {
   ASSERT_EQ(&iovec, msg.iovecs());
   ASSERT_EQ(1u, msg.iovec_actual());
   ASSERT_EQ(&handle, msg.handles());
+  ASSERT_EQ(FIDL_TRANSPORT_TYPE_CHANNEL, msg.transport_type());
+  ASSERT_EQ(&handle_metadata, msg.handle_metadata());
   ASSERT_EQ(1u, msg.handle_actual());
 }
 
 TEST(OutgoingMessage, ConstructFromCByteMessage) {
   uint8_t bytes[] = {1, 2, 3, 4};
-  zx_handle_disposition_t handle = {
-      .operation = ZX_HANDLE_OP_MOVE,
-      .handle = ZX_HANDLE_INVALID,
-      .type = ZX_OBJ_TYPE_CHANNEL,
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  fidl_channel_handle_metadata_t handle_metadata = {
+      .obj_type = ZX_OBJ_TYPE_CHANNEL,
       .rights = ZX_RIGHT_SAME_RIGHTS,
-      .result = ZX_OK,
   };
   fidl_outgoing_msg_t c_msg = {
       .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
       .byte =
           {
+              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .bytes = bytes,
               .handles = &handle,
+              .handle_metadata = &handle_metadata,
               .num_bytes = std::size(bytes),
               .num_handles = 1,
           },
@@ -170,15 +177,18 @@ TEST(OutgoingMessage, OutgoingMessageBytesMatchIgnoreHandles) {
   auto msg_without_handles = fidl::OutgoingMessage::FromEncodedCMessage(&c_msg_without_handles);
 
   // Bytes should match even if one has handles and the other doesn't.
-  zx_handle_disposition_t hd;
-  ASSERT_EQ(ZX_OK, zx_event_create(0, &hd.handle));
+  zx_handle_t handle;
+  fidl_channel_handle_metadata_t handle_metadata;
+  ASSERT_EQ(ZX_OK, zx_event_create(0, &handle));
   fidl_outgoing_msg_t c_msg_with_handles = {
       .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
       .iovec =
           {
+              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .iovecs = iovecs,
               .num_iovecs = std::size(iovecs),
-              .handles = &hd,
+              .handles = &handle,
+              .handle_metadata = &handle_metadata,
               .num_handles = 1,
           },
   };
@@ -270,6 +280,7 @@ TEST(OutgoingMessage, OutgoingMessageBytesMismatchIovecLength) {
       .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
       .iovec =
           {
+              .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
               .iovecs = iovecs_b,
               .num_iovecs = std::size(iovecs_b),
           },

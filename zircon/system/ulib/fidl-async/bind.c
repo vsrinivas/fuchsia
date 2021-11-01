@@ -37,11 +37,23 @@ static zx_status_t fidl_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
       fidl_message_header_t* hdr = (fidl_message_header_t*)msg->byte.bytes;
       hdr->txid = conn->txid;
       conn->txid = 0u;
+      ZX_ASSERT(msg->byte.num_handles == 0 ||
+                msg->byte.transport_type == FIDL_TRANSPORT_TYPE_CHANNEL);
+      zx_handle_disposition_t handle_dispositions[ZX_CHANNEL_MAX_MSG_HANDLES];
+      fidl_channel_handle_metadata_t* metadata =
+          (fidl_channel_handle_metadata_t*)(msg->byte.handle_metadata);
+      for (uint32_t i = 0; i < msg->byte.num_handles; i++) {
+        handle_dispositions[i].operation = ZX_HANDLE_OP_MOVE;
+        handle_dispositions[i].handle = msg->byte.handles[i];
+        handle_dispositions[i].type = metadata[i].obj_type;
+        handle_dispositions[i].rights = metadata[i].rights;
+        handle_dispositions[i].result = ZX_OK;
+      }
       fidl_trace(WillCChannelWrite, NULL /* type */, msg->byte.bytes, msg->byte.num_bytes,
                  msg->byte.num_handles);
       const zx_status_t status =
           zx_channel_write_etc(conn->channel, 0, msg->byte.bytes, msg->byte.num_bytes,
-                               msg->byte.handles, msg->byte.num_handles);
+                               handle_dispositions, msg->byte.num_handles);
       fidl_trace(DidCChannelWrite);
       return status;
     }
@@ -54,10 +66,22 @@ static zx_status_t fidl_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
       fidl_message_header_t* hdr = (fidl_message_header_t*)msg->iovec.iovecs[0].buffer;
       hdr->txid = conn->txid;
       conn->txid = 0u;
+      ZX_ASSERT(msg->byte.num_handles == 0 ||
+                msg->iovec.transport_type == FIDL_TRANSPORT_TYPE_CHANNEL);
+      zx_handle_disposition_t handle_dispositions[ZX_CHANNEL_MAX_MSG_HANDLES];
+      fidl_channel_handle_metadata_t* metadata =
+          (fidl_channel_handle_metadata_t*)(msg->iovec.handle_metadata);
+      for (uint32_t i = 0; i < msg->iovec.num_handles; i++) {
+        handle_dispositions[i].operation = ZX_HANDLE_OP_MOVE;
+        handle_dispositions[i].handle = msg->iovec.handles[i];
+        handle_dispositions[i].type = metadata[i].obj_type;
+        handle_dispositions[i].rights = metadata[i].rights;
+        handle_dispositions[i].result = ZX_OK;
+      }
       fidl_trace(WillCChannelWrite);
       const zx_status_t status =
           zx_channel_write_etc(conn->channel, ZX_CHANNEL_WRITE_USE_IOVEC, msg->iovec.iovecs,
-                               msg->iovec.num_iovecs, msg->iovec.handles, msg->iovec.num_handles);
+                               msg->iovec.num_iovecs, handle_dispositions, msg->iovec.num_handles);
       fidl_trace(DidCChannelWrite);
       return status;
     }

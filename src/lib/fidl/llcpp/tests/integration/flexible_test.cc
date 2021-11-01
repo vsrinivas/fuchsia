@@ -53,14 +53,17 @@ class RewriteTransaction : public fidl::Transaction {
         sizeof(fidl::WireResponse<test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandles>));
 
     char real_msg_bytes[ZX_CHANNEL_MAX_MSG_BYTES] = {};
-    zx_handle_disposition_t real_msg_handles[ZX_CHANNEL_MAX_MSG_HANDLES] = {};
+    zx_handle_t real_msg_handles[ZX_CHANNEL_MAX_MSG_HANDLES] = {};
+    fidl_channel_handle_metadata_t real_msg_handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES] = {};
     reinterpret_cast<fidl_message_header_t*>(&real_msg_bytes[0])->txid = txid_;
     fidl_outgoing_msg_t real_msg = {
         .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
         .byte =
             {
-                .bytes = &real_msg_bytes[0],
-                .handles = &real_msg_handles[0],
+                .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
+                .bytes = real_msg_bytes,
+                .handles = real_msg_handles,
+                .handle_metadata = real_msg_handle_metadata,
                 .num_bytes = 0u,
                 .num_handles = 0u,
             },
@@ -102,7 +105,7 @@ class RewriteTransaction : public fidl::Transaction {
         constexpr uint32_t kUnknownBytes = 16;
         constexpr uint32_t kUnknownHandles = ZX_CHANNEL_MAX_MSG_HANDLES;
         for (uint32_t i = 0; i < kUnknownHandles; i++) {
-          ZX_ASSERT(zx_event_create(0, &real_msg_handles[i].handle) == ZX_OK);
+          ZX_ASSERT(zx_event_create(0, &real_msg_handles[i]) == ZX_OK);
         }
         real_response->envelopes.count = 4;
         const auto envelope_header_offset =
@@ -156,7 +159,7 @@ class RewriteTransaction : public fidl::Transaction {
           constexpr uint32_t kUnknownBytes = 16;
           constexpr uint32_t kUnknownHandles = ZX_CHANNEL_MAX_MSG_HANDLES;
           for (uint32_t i = 0; i < kUnknownHandles; i++) {
-            ZX_ASSERT(zx_event_create(0, &real_msg_handles[i].handle) == ZX_OK);
+            ZX_ASSERT(zx_event_create(0, &real_msg_handles[i]) == ZX_OK);
           }
           real_response->envelope = fidl_envelope_t{
               .num_bytes = kUnknownBytes,
@@ -176,8 +179,20 @@ class RewriteTransaction : public fidl::Transaction {
       }
     }
     ZX_ASSERT(real_msg.type == FIDL_OUTGOING_MSG_TYPE_BYTE);
+    zx_handle_disposition_t handle_dispositions[ZX_CHANNEL_MAX_MSG_HANDLES];
+    fidl_channel_handle_metadata_t* metadata =
+        static_cast<fidl_channel_handle_metadata_t*>(real_msg.byte.handle_metadata);
+    for (uint32_t i = 0; i < real_msg.byte.num_handles; i++) {
+      handle_dispositions[i] = {
+          .operation = ZX_HANDLE_OP_MOVE,
+          .handle = real_msg.byte.handles[i],
+          .type = metadata[i].obj_type,
+          .rights = metadata[i].rights,
+          .result = ZX_OK,
+      };
+    }
     zx_status_t status = channel_->write_etc(0, real_msg.byte.bytes, real_msg.byte.num_bytes,
-                                             real_msg.byte.handles, real_msg.byte.num_handles);
+                                             handle_dispositions, real_msg.byte.num_handles);
     ZX_ASSERT(status == ZX_OK);
     return ZX_OK;
   }

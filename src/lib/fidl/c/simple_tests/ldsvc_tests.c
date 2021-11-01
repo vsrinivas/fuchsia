@@ -66,8 +66,18 @@ static zx_status_t ldsvc_server_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t
   hdr->txid = conn->txid;
   conn->txid = 0;
   ++conn->reply_count;
+  zx_handle_disposition_t handle_dispositions[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_channel_handle_metadata_t* metadata =
+      (fidl_channel_handle_metadata_t*)(msg->byte.handle_metadata);
+  for (uint32_t i = 0; i < msg->byte.num_handles; i++) {
+    handle_dispositions[i].operation = ZX_HANDLE_OP_MOVE;
+    handle_dispositions[i].handle = msg->byte.handles[i];
+    handle_dispositions[i].type = metadata[i].obj_type;
+    handle_dispositions[i].rights = metadata[i].rights;
+    handle_dispositions[i].result = ZX_OK;
+  }
   return zx_channel_write_etc(conn->channel, 0, msg->byte.bytes, msg->byte.num_bytes,
-                              msg->byte.handles, msg->byte.num_handles);
+                              handle_dispositions, msg->byte.num_handles);
 }
 
 static void ldsvc_server(zx_handle_t channel_handle) {
@@ -88,16 +98,18 @@ static void ldsvc_server(zx_handle_t channel_handle) {
       char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
       zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
       fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
-      zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
       fidl_incoming_msg_t msg = {
           .bytes = bytes,
           .handles = handles,
+          .transport_type = FIDL_TRANSPORT_TYPE_CHANNEL,
           .handle_metadata = handle_metadata,
           .num_bytes = 0u,
           .num_handles = 0u,
       };
-      status = zx_channel_read_etc(conn.channel, 0, bytes, handle_infos, ZX_CHANNEL_MAX_MSG_BYTES,
-                                   ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
+      zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
+      status =
+          zx_channel_read_etc(conn.channel, 0, msg.bytes, handle_infos, ZX_CHANNEL_MAX_MSG_BYTES,
+                              ZX_CHANNEL_MAX_MSG_HANDLES, &msg.num_bytes, &msg.num_handles);
       ASSERT_EQ(ZX_OK, status, "");
       for (uint32_t i = 0; i < msg.num_handles; i++) {
         handles[i] = handle_infos[i].handle;
