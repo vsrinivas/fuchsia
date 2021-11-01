@@ -118,24 +118,23 @@ class EventRing {
   Control AdvanceErdp() {
     fbl::AutoLock _(&segment_mutex_);
     erdp_ = (erdp_ + 1) % segments_.TrbCount();
-    if (unlikely(!erdp_)) {
-      erdp_virt_ = reinterpret_cast<TRB*>(buffers_.front().virt());
-      erdp_phys_ = buffers_.front().phys();
-      ccs_ = !ccs_;
-      buffers_it_ = buffers_.begin();
+    if (unlikely((reinterpret_cast<size_t>(erdp_virt_ + 1) / 4096) !=
+                 (reinterpret_cast<size_t>(erdp_virt_) / 4096))) {
+      // Page transition -- next buffer
+      if (unlikely(!erdp_)) {
+        // Wrap around
+        ccs_ = !ccs_;
+        buffers_it_ = buffers_.begin();
+      } else {
+        buffers_it_++;
+      }
+      erdp_virt_ = reinterpret_cast<TRB*>((*buffers_it_).virt());
+      erdp_phys_ = (*buffers_it_).phys();
       segment_index_ =
           static_cast<uint8_t>((segment_index_ + 1) % segments_.SegmentCount()) & 0b111;
     } else {
-      if (unlikely((reinterpret_cast<size_t>(erdp_virt_ + 1) / 4096) !=
-                   (reinterpret_cast<size_t>(erdp_virt_) / 4096))) {
-        // Page transition -- next buffer
-        buffers_it_++;
-        erdp_virt_ = reinterpret_cast<TRB*>((*buffers_it_).virt());
-        erdp_phys_ = (*buffers_it_).phys();
-      } else {
-        erdp_virt_++;
-        erdp_phys_ += sizeof(TRB);
-      }
+      erdp_virt_++;
+      erdp_phys_ += sizeof(TRB);
     }
     return Control::FromTRB(erdp_virt_);
   }
