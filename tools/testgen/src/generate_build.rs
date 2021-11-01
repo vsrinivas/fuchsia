@@ -22,7 +22,7 @@ impl CodeGenerator for RustBuildGenerator {
         // TODO(yuanzhi) We should also figure out how to auto-generate COMPONENT_FIDL_BUILD_TARGET
         let content = RUST_TEMPLATE
             .replace("BINARY_NAME", &self.test_program_name)
-            .replace("COMPONENT_NAME", &self.component_name)
+            .replace("TEST_PACKAGE_NAME", &self.test_program_name)
             .replace("CURRENT_YEAR", &year.to_string());
 
         writer.write_all(&content.as_bytes())?;
@@ -42,7 +42,7 @@ impl CodeGenerator for CppBuildGenerator {
         // TODO(yuanzhi) We should also figure out how to auto-generate COMPONENT_FIDL_BUILD_TARGET
         let content = CPP_TEMPLATE
             .replace("BINARY_NAME", &self.test_program_name)
-            .replace("COMPONENT_NAME", &self.component_name)
+            .replace("TEST_PACKAGE_NAME", &self.test_program_name)
             .replace("CURRENT_YEAR", &year.to_string());
 
         writer.write_all(&content.as_bytes())?;

@@ -1,7 +1,7 @@
 use fidl_fidl_examples_routing_echo::*;
 use fuchsia_component_test::{builder::*,  RealmInstance};
 
-const COMPONENT_URL: &str = "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cm";
+const COMPONENT_URL: &str = "fuchsia-pkg://fuchsia.com/echo_server_test#meta/echo_server.cm";
 
 pub async fn create_realm() -> Result<RealmInstance, Error> {
     let mut builder = RealmBuilder::new().await?;

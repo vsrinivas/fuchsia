@@ -30,7 +30,7 @@ fuchsia_component("echo_server_test") {
 }
 
 fuchsia_test_package("integration_test_pkg") {
- package_name = "echo_server"
+ package_name = "echo_server_test"
  test_components = [ ":echo_server_test" ]
  deps = [
    ":echo_server_test",

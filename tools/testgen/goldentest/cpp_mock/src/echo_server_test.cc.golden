@@ -3,7 +3,7 @@
 #include <lib/gtest/real_loop_fixture.h>;
 #include <lib/sys/component/cpp/testing/realm_builder.h>;
 
-constexpr char COMPONENT_URL[] = "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cm";
+constexpr char COMPONENT_URL[] = "fuchsia-pkg://fuchsia.com/echo_server_test#meta/echo_server.cm";
 
 
 class EchoServerTest: public ::gtest::RealLoopFixture {

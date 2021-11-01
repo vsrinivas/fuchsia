@@ -44,19 +44,19 @@ fn main() -> Result<()> {
     let cm_decl = read_cm(&input.cm_location)
         .map_err(|e| format_err!("parsing .cm file '{}' errored: {:?}", &input.cm_location, e))?;
 
-    // component_url is either what user specified via --component-url or default to the format
-    // 'fuchsia-pkg://fuchsia.com/{component_name}#meta/{component_neame}.cm'
-    let component_url: &str = &input.component_url.clone().unwrap_or(format!(
-        "fuchsia-pkg://fuchsia.com/{}#meta/{}.cm",
-        component_name, component_name
-    ));
-
     // test_program_name defaults to {component_name}_test, this name will be used to generate
     // source code filename, and build rules.
     // ex: if component_name = echo_server
     //   rust code => echo_server_test.rs
     //   manifest  => meta/echo_server_test.cml
     let test_program_name = &format!("{}_test", &component_name);
+
+    // component_url is either what user specified via --component-url or default to the format
+    // 'fuchsia-pkg://fuchsia.com/{test_program_name}#meta/{component_neame}.cm'
+    let component_url: &str = &input.component_url.clone().unwrap_or(format!(
+        "fuchsia-pkg://fuchsia.com/{}#meta/{}.cm",
+        test_program_name, component_name
+    ));
 
     if input.cpp {
         write_cpp(&cm_decl, component_name, component_url, &test_program_name, &input)?;

@@ -30,7 +30,7 @@ fuchsia_component("BINARY_NAME") {
 }
 
 fuchsia_test_package("integration_test_pkg") {
- package_name = "COMPONENT_NAME"
+ package_name = "TEST_PACKAGE_NAME"
  test_components = [ ":BINARY_NAME" ]
  deps = [
    ":BINARY_NAME",
