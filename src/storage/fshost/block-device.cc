@@ -303,7 +303,7 @@ const std::string& BlockDevice::partition_name() const {
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
   fidl::ClientEnd<fuchsia_hardware_block_partition::Partition> channel(
       zx::channel(fdio_service_clone(connection.borrow_channel())));
-  auto resp = fidl::BindSyncClient(std::move(channel)).GetName();
+  auto resp = fidl::BindSyncClient(std::move(channel))->GetName();
   if (resp.status() != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to get partiton name (fidl error): "
                    << zx_status_get_string(resp.status());

@@ -68,7 +68,7 @@ TEST_F(FsRecoveryTest, EmptyPartitionRecoveryTest) {
   auto client_end = service::Connect<fuchsia_feedback_testing::FakeCrashReporterQuerier>();
   ASSERT_EQ(client_end.status_value(), ZX_OK);
   auto client = fidl::BindSyncClient(std::move(*client_end));
-  auto res = client.WatchFile();
+  auto res = client->WatchFile();
   ASSERT_EQ(res.status(), ZX_OK);
   ASSERT_EQ(res->num_filed, 0ul);
 }
@@ -129,7 +129,7 @@ TEST_F(FsRecoveryTest, CorruptMinfsRecoveryTest) {
   auto client_end = service::Connect<fuchsia_feedback_testing::FakeCrashReporterQuerier>();
   ASSERT_EQ(client_end.status_value(), ZX_OK);
   auto client = fidl::BindSyncClient(std::move(*client_end));
-  auto res = client.WatchFile();
+  auto res = client->WatchFile();
   ASSERT_EQ(res.status(), ZX_OK);
   ASSERT_EQ(res->num_filed, 0ul);
 
@@ -143,7 +143,7 @@ TEST_F(FsRecoveryTest, CorruptMinfsRecoveryTest) {
   EXPECT_TRUE(fs_type == VFS_TYPE_MINFS || fs_type == VFS_TYPE_FXFS);
 
   // A crash report should have been filed with the crash reporting service.
-  auto res2 = client.WatchFile();
+  auto res2 = client->WatchFile();
   ASSERT_EQ(res2.status(), ZX_OK);
   ASSERT_EQ(res2->num_filed, 1ul);
 }

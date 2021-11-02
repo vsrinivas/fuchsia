@@ -140,11 +140,11 @@ class MinfsManipulatorTest : public testing::Test {
     auto client_end = service::Connect<fuchsia_feedback_testing::FakeCrashReporterQuerier>();
     ASSERT_EQ(client_end.status_value(), ZX_OK);
     auto client = fidl::BindSyncClient(std::move(*client_end));
-    auto res = client.WatchFile();
+    auto res = client->WatchFile();
     ASSERT_EQ(res.status(), ZX_OK);
     auto num_filed = res->num_filed;
     while (num_filed < num) {
-      auto res = client.WatchFile();
+      auto res = client->WatchFile();
       ASSERT_EQ(res.status(), ZX_OK);
       num_filed = res->num_filed;
     }

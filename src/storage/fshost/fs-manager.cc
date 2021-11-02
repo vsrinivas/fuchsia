@@ -427,7 +427,7 @@ void FsManager::FileReport(ReportReason reason) {
     report.set_crash_signature(allocator, allocator, ReportReasonStr(reason));
     report.set_is_fatal(allocator, false);
 
-    auto res = client.File(report);
+    auto res = client->File(report);
     if (!res.ok()) {
       FX_LOGS(WARNING) << "Unable to send crash report (fidl error): " << res.status_string();
     }

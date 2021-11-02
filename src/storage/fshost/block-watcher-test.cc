@@ -777,7 +777,7 @@ class BlockWatcherTest : public FshostIntegrationTest {
     ASSERT_EQ(fdio_get_service_handle(fd.release(), controller.channel().reset_and_get_address()),
               ZX_OK);
     // Get the actual topological path of the block device.
-    auto result = fidl::BindSyncClient(std::move(controller)).GetTopologicalPath();
+    auto result = fidl::BindSyncClient(std::move(controller))->GetTopologicalPath();
     ASSERT_EQ(result.status(), ZX_OK);
     ASSERT_FALSE(result->result.is_err());
 

@@ -126,12 +126,13 @@ TEST(FsManagerTestCase, LifecycleStop) {
 
   // Call stop on the lifecycle channel
   fidl::WireSyncClient<fuchsia_process_lifecycle::Lifecycle> client(std::move(lifecycle));
-  auto result = client.Stop();
+  auto result = client->Stop();
   ASSERT_OK(result.status());
 
   // the lifecycle channel should be closed now
   zx_signals_t pending;
-  EXPECT_OK(client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &pending));
+  EXPECT_OK(client.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
+                                                   &pending));
   EXPECT_TRUE(pending & ZX_CHANNEL_PEER_CLOSED);
 
   // Now we expect a shutdown signal.
