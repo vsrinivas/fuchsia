@@ -8,6 +8,7 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
@@ -35,16 +36,16 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
       devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &root_fd);
   ASSERT_OK(status);
 
-  fidl::WireSyncClient<fuchsia_device_test::RootDevice> test_root;
-  status = fdio_get_service_handle(root_fd.release(),
-                                   test_root.mutable_channel()->reset_and_get_address());
-  ASSERT_OK(status);
+  zx::status test_client_end =
+      fdio_cpp::FdioCaller(std::move(root_fd)).take_as<fuchsia_device_test::RootDevice>();
+  ASSERT_OK(test_client_end.status_value());
+  fidl::WireSyncClient test_root{std::move(*test_client_end)};
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
   auto result =
-      test_root.CreateDevice(fidl::StringView::FromExternal(driver_name), std::move(remote));
+      test_root->CreateDevice(fidl::StringView::FromExternal(driver_name), std::move(remote));
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
   *dev_channel = std::move(local);
