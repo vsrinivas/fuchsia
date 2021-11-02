@@ -98,7 +98,7 @@ bool inspector_get_gwp_asan_info(const zx::process& process,
   }
 
   if (!__gwp_asan_error_is_mine(&state, faulting_addr)) {
-    info->error_type = "";
+    info->error_type = nullptr;
     return true;
   }
 
