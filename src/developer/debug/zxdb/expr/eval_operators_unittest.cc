@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/expr/mock_expr_node.h"
+#include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
@@ -657,6 +658,42 @@ TEST_F(EvalOperators, InPlace) {
   out = SyncEvalBinaryOperator(int_zero, ExprTokenType::kStarEquals, int_zero);
   ASSERT_TRUE(out.has_error());
   EXPECT_EQ(kUnimplementedMsg, out.err().msg());
+}
+
+TEST_F(EvalOperators, ArrayResize) {
+  // Static array holds 2 uint16_t.
+  auto elt_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 2, "uint16_t");
+  auto array2_type = fxl::MakeRefCounted<ArrayType>(elt_type, 2);
+  ExprValue array2(array2_type, {0x22, 0x11, 0x44, 0x33});
+
+  // Resize to size 1.
+  ExprValue int_one(1);
+  auto out = SyncEvalBinaryOperator(array2, ExprTokenType::kAt, int_one);
+  EXPECT_EQ(0x1122, out.value().GetAs<uint16_t>());
+
+  // Resize to size 0.
+  ExprValue int_zero(0);
+  out = SyncEvalBinaryOperator(array2, ExprTokenType::kAt, int_zero);
+  EXPECT_TRUE(out.value().data().empty());
+  EXPECT_EQ("uint16_t[0]", out.value().type()->GetFullName());
+
+  // Resize to size -1.
+  int32_t minus_one = -1;
+  ExprValue int_minus_1(minus_one);
+  out = SyncEvalBinaryOperator(array2, ExprTokenType::kAt, int_minus_1);
+  EXPECT_TRUE(out.has_error());
+  EXPECT_EQ("Can not resize an array to a negative size.", out.err().msg());
+
+  // Resize to a non-integer.
+  ExprValue double_pi(3.14159265358979);
+  out = SyncEvalBinaryOperator(array2, ExprTokenType::kAt, double_pi);
+  EXPECT_TRUE(out.has_error());
+  EXPECT_EQ("Value on right of '@' must be an integer.", out.err().msg());
+
+  // Do a non-array type on the left.
+  out = SyncEvalBinaryOperator(int_one, ExprTokenType::kAt, int_one);
+  EXPECT_TRUE(out.has_error());
+  EXPECT_EQ("Not an array type.", out.err().msg());
 }
 
 }  // namespace zxdb

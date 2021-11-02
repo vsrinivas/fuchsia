@@ -67,6 +67,18 @@ Casting
 
   In Rust, use normal "as" syntax for casting.
 
+Arrays
+
+  In C/C++, you can specify the size of an array using the syntax "array@size".
+  This allows printing the array values corresponding to a pointer or for a
+  flexible array member at the end of a structure.
+
+    [zxdb] print argv           # Normal pointer interpretation of char**.
+    (*)0x1e88d07bfc0 ➔ "/pkg/bin/foo"
+
+    [zxdb] print argv@3         # Declare array of size 3.
+    {"/pkg/bin/foo", "--bar", "baz"}
+
 Special names
 
   Special names begin with '$'. There are different forms:

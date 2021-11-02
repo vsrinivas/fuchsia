@@ -89,6 +89,7 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     {ExprTokenType::kPlus,             kLangAll,  "+"},
     {ExprTokenType::kPlusPlus,         kLangC,    "++"},
     {ExprTokenType::kSlash,            kLangAll,  "/"},
+    {ExprTokenType::kAt,               kLangC,    "@"},
     {ExprTokenType::kCaret,            kLangAll,  "^"},
     {ExprTokenType::kPercent,          kLangAll,  "%"},
     {ExprTokenType::kQuestion,         kLangAll,  "?"},

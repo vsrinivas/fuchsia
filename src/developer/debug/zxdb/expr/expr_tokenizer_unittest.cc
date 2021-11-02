@@ -31,14 +31,14 @@ TEST(ExprTokenizer, InvalidChar) {
 }
 
 TEST(ExprTokenizer, Punctuation) {
-  // Char offsets: 0 12345678901234567890123456789012
-  // Token #'s:      0 1 2  3 45 67 8 9  0  1 2 3 4 5
-  ExprTokenizer t("\n. * -> & () [] - :: == = % + ^ /");
+  // Char offsets: 0 123456789012345678901234567890123
+  // Token #'s:      0 1 2  3 45 67 8 9  0  1 2 3 4 56
+  ExprTokenizer t("\n. * -> & () [] - :: == = % + ^ /@");
 
   EXPECT_TRUE(t.Tokenize());
   EXPECT_FALSE(t.err().has_error()) << t.err().msg();
   const auto& tokens = t.tokens();
-  ASSERT_EQ(16u, tokens.size());
+  ASSERT_EQ(17u, tokens.size());
 
   EXPECT_EQ(ExprTokenType::kDot, tokens[0].type());
   EXPECT_EQ(".", tokens[0].value());
@@ -103,6 +103,10 @@ TEST(ExprTokenizer, Punctuation) {
   EXPECT_EQ(ExprTokenType::kSlash, tokens[15].type());
   EXPECT_EQ("/", tokens[15].value());
   EXPECT_EQ(32u, tokens[15].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kAt, tokens[16].type());
+  EXPECT_EQ("@", tokens[16].value());
+  EXPECT_EQ(33u, tokens[16].byte_offset());
 }
 
 TEST(ExprTokenizer, LessGreater) {

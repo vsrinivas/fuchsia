@@ -725,6 +725,27 @@ TEST_F(ExprParserTest, BinaryOp) {
       GetParseString("a = 23 + j * (a + 1)"));
 }
 
+TEST_F(ExprParserTest, ArraySize) {
+  // This is converting something to an array of size 3, getting a value out, and adding to it.
+  EXPECT_EQ(
+      "BINARY_OP(+)\n"
+      " BINARY_OP(@)\n"
+      "  IDENTIFIER(\"a\")\n"
+      "  ARRAY_ACCESS\n"
+      "   LITERAL(3)\n"
+      "   LITERAL(1)\n"
+      " LITERAL(2)\n",
+      GetParseString("a@3[1] + 2"));
+
+  EXPECT_EQ(
+      "BINARY_OP(@)\n"
+      " IDENTIFIER(\"a\")\n"
+      " BINARY_OP(+)\n"
+      "  IDENTIFIER(\"m\")\n"
+      "  LITERAL(2)\n",
+      GetParseString("a@(m+2)"));
+}
+
 TEST_F(ExprParserTest, Comparison) {
   EXPECT_EQ(
       "BINARY_OP(!=)\n"

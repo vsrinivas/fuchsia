@@ -52,6 +52,7 @@ enum class ExprTokenType : size_t {
   kPlus,             // +
   kPlusPlus,         // ++
   kSlash,            // /
+  kAt,               // @
   kCaret,            // ^
   kPercent,          // %
   kQuestion,         // ?

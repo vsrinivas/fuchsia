@@ -469,7 +469,7 @@ bool TryFormatArrayOrString(FormatNode* node, const Type* type, const FormatOpti
 
     if (!array->num_elts()) {
       // Unknown array size, see ArrayType header for what this means. Nothing to do in this case.
-      node->SetDescribedError(Err("Array with unknown size."));
+      node->SetDescribedError(Err("Array with unknown size, use syntax 'array@size' to specify."));
       return true;
     }
 

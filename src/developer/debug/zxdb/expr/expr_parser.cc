@@ -134,6 +134,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAddition},            // kPlus
     {nullptr,                        nullptr,                      -1},                             // kPlusPlus (unsupported)
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kSlash
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceUnary},               // kAt
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseXor},          // kCaret
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kPercent
     {nullptr,                        &ExprParser::QuestionInfix,   kPrecedenceAssignment},          // kQuestion

@@ -16,6 +16,7 @@
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_token.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/resolve_array.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
@@ -583,10 +584,37 @@ ErrOrValue DoLogicalBinaryOp(const fxl::RefPtr<EvalContext>& context, const OpVa
   return Err("Internal error.");
 }
 
+// This is called for an expression like "x@20" which means "interpret x as an array of length 20".
+// This syntax matches GDB.
+void DoSetArrayLength(const fxl::RefPtr<EvalContext>& context, const ExprValue& array_value,
+                      const ExprValue& length_value, EvalCallback cb) {
+  OpValue length_op_value;
+  if (Err err = FillOpValue(context.get(), length_value, &length_op_value); err.has_error())
+    return cb(err);
+  if (!IsIntegerRealm(length_op_value.realm))
+    return cb(Err("Value on right of '@' must be an integer."));
+
+  int64_t new_length = 0;
+  if (Err err = length_value.PromoteTo64(&new_length); err.has_error())
+    return cb(err);
+  if (new_length < 0)
+    return cb(Err("Can not resize an array to a negative size."));
+
+  CoerceArraySize(context, array_value, new_length, std::move(cb));
+}
+
 }  // namespace
 
 void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprValue& left_value,
                         const ExprToken& op, const ExprValue& right_value, EvalCallback cb) {
+  // Handle array resize specially (this can handle 0-length arrays on the left so must be done
+  // before FillOpValue() which errors on that case.
+  if (op.type() == ExprTokenType::kAt) {
+    // This is not a standard C operator, we use it to declare array sizes like GDB. This will
+    // complete asynchronously since it may involve a memory fetch.
+    return DoSetArrayLength(context, left_value, right_value, std::move(cb));
+  }
+
   if (!left_value.type() || !right_value.type())
     return cb(Err("No type information."));
   if (!left_value.data().all_valid() || !right_value.data().all_valid())
