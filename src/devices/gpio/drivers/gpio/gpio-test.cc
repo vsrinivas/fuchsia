@@ -65,24 +65,24 @@ TEST_F(GpioTest, TestFidlAll) {
   fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client(std::move(client_));
 
   gpio_impl_.ExpectRead(ZX_OK, 0, 20);
-  auto result_read = client.Read();
+  auto result_read = client->Read();
   EXPECT_OK(result_read.status());
   EXPECT_EQ(result_read->result.response().value, 20);
 
   gpio_impl_.ExpectWrite(ZX_OK, 0, 11);
-  auto result_write = client.Write(11);
+  auto result_write = client->Write(11);
   EXPECT_OK(result_write.status());
 
   gpio_impl_.ExpectConfigIn(ZX_OK, 0, 0);
-  auto result_in = client.ConfigIn(GpioFlags::kPullDown);
+  auto result_in = client->ConfigIn(GpioFlags::kPullDown);
   EXPECT_OK(result_in.status());
 
   gpio_impl_.ExpectConfigOut(ZX_OK, 0, 5);
-  auto result_out = client.ConfigOut(5);
+  auto result_out = client->ConfigOut(5);
   EXPECT_OK(result_out.status());
 
   gpio_impl_.ExpectSetDriveStrength(ZX_OK, 0, 2000, 2000);
-  auto result_drivestrength = client.SetDriveStrength(2000);
+  auto result_drivestrength = client->SetDriveStrength(2000);
   EXPECT_OK(result_drivestrength.status());
   EXPECT_EQ(result_drivestrength->result.response().actual_ds_ua, 2000);
 }
