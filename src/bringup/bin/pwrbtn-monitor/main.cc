@@ -119,7 +119,7 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
   auto client = fidl::WireSyncClient<fuchsia_hardware_input::Device>(std::move(chan));
 
   // Get the report descriptor.
-  auto result = client.GetReportDesc();
+  auto result = client->GetReportDesc();
   if (result.status() != ZX_OK) {
     return ZX_OK;
   }
@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
   // Get the report event.
   zx::event report_event;
   {
-    auto result = client.GetReportsEvent();
+    auto result = client->GetReportsEvent();
     if (result.status() != ZX_OK) {
       printf("pwrbtn-monitor: failed to get report event: %d\n", result.status());
       return 1;
@@ -216,7 +216,7 @@ int main(int argc, char** argv) {
         if (status == ZX_ERR_CANCELED) {
           return;
         }
-        auto result = client.ReadReport();
+        auto result = client->ReadReport();
         if (result.status() != ZX_OK) {
           printf("pwrbtn-monitor: failed to read report: %d\n", result.status());
           loop.Quit();

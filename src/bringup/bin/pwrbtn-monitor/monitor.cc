@@ -41,7 +41,7 @@ zx_status_t PowerButtonMonitor::SendPoweroff() {
     return connect_result.status_value();
   }
   auto admin_client = fidl::BindSyncClient(std::move(connect_result.value()));
-  auto resp = admin_client.Poweroff();
+  auto resp = admin_client->Poweroff();
   if (!resp.ok()) {
     printf("pwrbtn-monitor: Call to statecontrol failed: %s\n", resp.FormatDescription().c_str());
     return resp.status();

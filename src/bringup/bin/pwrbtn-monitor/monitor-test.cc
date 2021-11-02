@@ -30,8 +30,8 @@ class MonitorTest : public zxtest::Test {
 };
 
 TEST_F(MonitorTest, TestSetAction) {
-  client_.SetAction(PwrAction::kIgnore);
-  auto resp = client_.GetAction();
+  client_->SetAction(PwrAction::kIgnore);
+  auto resp = client_->GetAction();
   ASSERT_OK(resp.status());
   ASSERT_EQ(resp->action, PwrAction::kIgnore);
 
@@ -39,7 +39,7 @@ TEST_F(MonitorTest, TestSetAction) {
 }
 
 TEST_F(MonitorTest, TestGetActionDefault) {
-  auto resp = client_.GetAction();
+  auto resp = client_->GetAction();
   ASSERT_OK(resp.status());
   ASSERT_EQ(resp->action, PwrAction::kShutdown);
 }
