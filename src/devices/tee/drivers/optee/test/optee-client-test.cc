@@ -185,7 +185,7 @@ TEST_F(OpteeClientTest, OpenSessionsClosedOnClientUnbind) {
   {
     fidl::WireSyncClient<fuchsia_tee::Application> fidl_client(std::move(client_end));
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    auto res = fidl_client.OpenSession2(std::move(parameter_set));
+    auto res = fidl_client->OpenSession2(std::move(parameter_set));
     EXPECT_OK(res.status());
     ASSERT_FALSE(open_sessions().empty());
   }  // ~WireSyncClient will close the channel, so just wait until it has been unbound and then we
@@ -329,13 +329,13 @@ class OpteeClientTestRpmb : public OpteeClientTestBase {
 
   void SetUp() override {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    auto res = optee_client_fidl_.OpenSession2(std::move(parameter_set));
+    auto res = optee_client_fidl_->OpenSession2(std::move(parameter_set));
     EXPECT_OK(res.status());
     EXPECT_EQ(res->session_id, kDefaultSessionId);
   }
 
   void TearDown() override {
-    auto res = optee_client_fidl_.CloseSession(kDefaultSessionId);
+    auto res = optee_client_fidl_->CloseSession(kDefaultSessionId);
     EXPECT_OK(res.status());
 
     message_paddr_ = 0;
@@ -384,8 +384,8 @@ TEST_F(OpteeClientTestRpmb, InvalidRequestCommand) {
   rpmb_req->cmd = 5;
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-  auto res = optee_client_fidl_.InvokeCommand(kDefaultSessionId, kDefaultCommand,
-                                              std::move(parameter_set));
+  auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
+                                               std::move(parameter_set));
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
 }
@@ -405,8 +405,8 @@ TEST_F(OpteeClientTestRpmb, RpmbError) {
   });
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-  auto res = optee_client_fidl_.InvokeCommand(kDefaultSessionId, kDefaultCommand,
-                                              std::move(parameter_set));
+  auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
+                                               std::move(parameter_set));
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_ERROR_ITEM_NOT_FOUND);
   EXPECT_EQ(req_cnt, 1);
@@ -424,8 +424,8 @@ TEST_F(OpteeClientTestRpmb, RpmbCommunicationError) {
       [&](auto &request, auto &completer) { completer.Close(ZX_ERR_NOT_SUPPORTED); });
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-  auto res = optee_client_fidl_.InvokeCommand(kDefaultSessionId, kDefaultCommand,
-                                              std::move(parameter_set));
+  auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
+                                               std::move(parameter_set));
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_ERROR_COMMUNICATION);
 }
@@ -451,8 +451,8 @@ TEST_F(OpteeClientTestRpmb, GetDeviceInfo) {
   });
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-  auto res = optee_client_fidl_.InvokeCommand(kDefaultSessionId, kDefaultCommand,
-                                              std::move(parameter_set));
+  auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
+                                               std::move(parameter_set));
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_SUCCESS);
 
@@ -471,8 +471,8 @@ TEST_F(OpteeClientTestRpmb, GetDeviceInfoWrongFrameSize) {
   printf("Size of RpmbReq %zu, RpmbFrame %zu\n", sizeof(RpmbReq), sizeof(RpmbFrame));
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-  auto res = optee_client_fidl_.InvokeCommand(kDefaultSessionId, kDefaultCommand,
-                                              std::move(parameter_set));
+  auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
+                                               std::move(parameter_set));
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
 }
@@ -486,8 +486,8 @@ TEST_F(OpteeClientTestRpmb, InvalidDataRequest) {
   rpmb_req->frames->request = 10;
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-  auto res = optee_client_fidl_.InvokeCommand(kDefaultSessionId, kDefaultCommand,
-                                              std::move(parameter_set));
+  auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
+                                               std::move(parameter_set));
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
 }
@@ -501,8 +501,8 @@ TEST_F(OpteeClientTestRpmb, InvalidDataRequestFrameSize) {
   rpmb_req->frames->request = 10;
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-  auto res = optee_client_fidl_.InvokeCommand(kDefaultSessionId, kDefaultCommand,
-                                              std::move(parameter_set));
+  auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
+                                               std::move(parameter_set));
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
 }
@@ -543,8 +543,8 @@ TEST_F(OpteeClientTestRpmb, RequestKeyOk) {
   });
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-  auto res = optee_client_fidl_.InvokeCommand(kDefaultSessionId, kDefaultCommand,
-                                              std::move(parameter_set));
+  auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
+                                               std::move(parameter_set));
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_SUCCESS);
   EXPECT_EQ(req_cnt, 2);
@@ -566,8 +566,8 @@ TEST_F(OpteeClientTestRpmb, RequestKeyInvalid) {
   });
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-  auto res = optee_client_fidl_.InvokeCommand(kDefaultSessionId, kDefaultCommand,
-                                              std::move(parameter_set));
+  auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
+                                               std::move(parameter_set));
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
   EXPECT_EQ(req_cnt, 0);
@@ -599,8 +599,8 @@ TEST_F(OpteeClientTestRpmb, RequestWCounterOk) {
   });
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-  auto res = optee_client_fidl_.InvokeCommand(kDefaultSessionId, kDefaultCommand,
-                                              std::move(parameter_set));
+  auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
+                                               std::move(parameter_set));
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_SUCCESS);
   EXPECT_EQ(req_cnt, 1);
@@ -623,8 +623,8 @@ TEST_F(OpteeClientTestRpmb, RequestWCounterInvalid) {
   });
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-  auto res = optee_client_fidl_.InvokeCommand(kDefaultSessionId, kDefaultCommand,
-                                              std::move(parameter_set));
+  auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
+                                               std::move(parameter_set));
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
   EXPECT_EQ(req_cnt, 0);
@@ -655,8 +655,8 @@ TEST_F(OpteeClientTestRpmb, ReadDataOk) {
   });
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-  auto res = optee_client_fidl_.InvokeCommand(kDefaultSessionId, kDefaultCommand,
-                                              std::move(parameter_set));
+  auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
+                                               std::move(parameter_set));
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_SUCCESS);
   EXPECT_EQ(req_cnt, 1);
@@ -679,8 +679,8 @@ TEST_F(OpteeClientTestRpmb, RequestReadInvalid) {
   });
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-  auto res = optee_client_fidl_.InvokeCommand(kDefaultSessionId, kDefaultCommand,
-                                              std::move(parameter_set));
+  auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
+                                               std::move(parameter_set));
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
   EXPECT_EQ(req_cnt, 0);
@@ -722,8 +722,8 @@ TEST_F(OpteeClientTestRpmb, WriteDataOk) {
   });
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-  auto res = optee_client_fidl_.InvokeCommand(kDefaultSessionId, kDefaultCommand,
-                                              std::move(parameter_set));
+  auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
+                                               std::move(parameter_set));
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_SUCCESS);
   EXPECT_EQ(req_cnt, 2);
@@ -746,8 +746,8 @@ TEST_F(OpteeClientTestRpmb, RequestWriteInvalid) {
   });
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-  auto res = optee_client_fidl_.InvokeCommand(kDefaultSessionId, kDefaultCommand,
-                                              std::move(parameter_set));
+  auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
+                                               std::move(parameter_set));
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
   EXPECT_EQ(req_cnt, 0);
@@ -888,7 +888,7 @@ TEST_F(OpteeClientTestWaitQueue, WakeUpBeforeSleep) {
 
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    auto res = fidl_client2.OpenSession2(std::move(parameter_set));
+    auto res = fidl_client2->OpenSession2(std::move(parameter_set));
     EXPECT_OK(res.status());
     EXPECT_EQ(res->session_id, cur_sid_);
     sid2 = res->session_id;
@@ -898,7 +898,7 @@ TEST_F(OpteeClientTestWaitQueue, WakeUpBeforeSleep) {
 
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    auto res = fidl_client2.InvokeCommand(sid2, kWakeUpCommand, std::move(parameter_set));
+    auto res = fidl_client2->InvokeCommand(sid2, kWakeUpCommand, std::move(parameter_set));
     EXPECT_OK(res.status());
     EXPECT_EQ(res->op_result.return_code(), TEEC_SUCCESS);
   }
@@ -908,7 +908,7 @@ TEST_F(OpteeClientTestWaitQueue, WakeUpBeforeSleep) {
 
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    auto res = fidl_client2.InvokeCommand(sid2, kWakeUpCommand, std::move(parameter_set));
+    auto res = fidl_client2->InvokeCommand(sid2, kWakeUpCommand, std::move(parameter_set));
     EXPECT_OK(res.status());
     EXPECT_EQ(res->op_result.return_code(), TEEC_SUCCESS);
   }
@@ -918,7 +918,7 @@ TEST_F(OpteeClientTestWaitQueue, WakeUpBeforeSleep) {
 
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    auto res = fidl_client2.InvokeCommand(sid2, kNopeCommand, std::move(parameter_set));
+    auto res = fidl_client2->InvokeCommand(sid2, kNopeCommand, std::move(parameter_set));
     EXPECT_OK(res.status());
     EXPECT_EQ(res->op_result.return_code(), TEEC_SUCCESS);
   }
@@ -977,7 +977,7 @@ TEST_F(OpteeClientTestWaitQueue, SleepWakeup) {
 
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    auto res = fidl_client2.OpenSession2(std::move(parameter_set));
+    auto res = fidl_client2->OpenSession2(std::move(parameter_set));
     EXPECT_OK(res.status());
     EXPECT_EQ(res->session_id, cur_sid_);
     sid2 = res->session_id;
@@ -998,7 +998,7 @@ TEST_F(OpteeClientTestWaitQueue, SleepWakeup) {
 
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    auto res = fidl_client2.InvokeCommand(sid2, kNopeCommand, std::move(parameter_set));
+    auto res = fidl_client2->InvokeCommand(sid2, kNopeCommand, std::move(parameter_set));
     EXPECT_OK(res.status());
     EXPECT_EQ(res->op_result.return_code(), TEEC_SUCCESS);
   }
@@ -1008,7 +1008,7 @@ TEST_F(OpteeClientTestWaitQueue, SleepWakeup) {
 
   {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    auto res = fidl_client2.InvokeCommand(sid2, kWakeUpCommand, std::move(parameter_set));
+    auto res = fidl_client2->InvokeCommand(sid2, kWakeUpCommand, std::move(parameter_set));
     EXPECT_OK(res.status());
     EXPECT_EQ(res->op_result.return_code(), TEEC_SUCCESS);
   }

@@ -508,7 +508,7 @@ std::optional<SharedMemoryView> OpteeClient::GetMemoryReference(SharedMemoryList
 }
 
 zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> OpteeClient::GetRootStorage() {
-  if (!provider_.channel().is_valid()) {
+  if (!provider_.is_valid()) {
     return zx::error(ZX_ERR_UNAVAILABLE);
   }
 
@@ -521,7 +521,7 @@ zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> OpteeClient::GetRootSt
     return server_end.take_error();
   }
 
-  auto result = provider_.RequestPersistentStorage(std::move(server_end.value()));
+  auto result = provider_->RequestPersistentStorage(std::move(server_end.value()));
   if (!result.ok()) {
     root_storage_.reset();
     return zx::error(result.status());
@@ -920,7 +920,7 @@ zx_status_t OpteeClient::RpmbGetDevInfo(std::optional<SharedMemoryView> tx_frame
     return status;
   }
 
-  auto result = rpmb_client_.GetDeviceInfo();
+  auto result = rpmb_client_->GetDeviceInfo();
   status = result.status();
   if (status != ZX_OK) {
     LOG(ERROR, "Failed to get RPMB Device Info (status: %d)", status);
@@ -1083,7 +1083,7 @@ zx_status_t OpteeClient::RpmbSendRequest(std::optional<SharedMemoryView>& req,
         fidl::ObjectView<fuchsia_mem::wire::Range>::FromExternal(&rx_frames_range);
   }
 
-  auto res = rpmb_client_.Request(std::move(rpmb_request));
+  auto res = rpmb_client_->Request(std::move(rpmb_request));
   status = res.status();
   if ((status == ZX_OK) && (res->result.is_err())) {
     status = res->result.err();
@@ -1178,7 +1178,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage&& messa
   // Mark that the return code will originate from driver
   message.set_return_origin(TEEC_ORIGIN_COMMS);
 
-  if (!provider_.channel().is_valid()) {
+  if (!provider_.is_valid()) {
     LOG(ERROR, "Filesystem RPC received with !provider_.is_valid()");
     // Client did not connect with a Provider so none of these RPCs can be serviced
     message.set_return_code(TEEC_ERROR_BAD_STATE);
@@ -1259,7 +1259,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage&& messa
 
 zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
-  ZX_DEBUG_ASSERT(provider_.channel().is_valid());
+  ZX_DEBUG_ASSERT(provider_.is_valid());
 
   LOG(TRACE, "received RPC to open file");
 
