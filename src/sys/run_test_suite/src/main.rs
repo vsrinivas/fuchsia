@@ -2,12 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    argh::FromArgs,
-    async_trait::async_trait,
-    diagnostics_data::Severity,
-    fidl_fuchsia_test_manager::{RunBuilderMarker, RunBuilderProxy},
-};
+use {argh::FromArgs, diagnostics_data::Severity, fidl_fuchsia_test_manager::RunBuilderMarker};
 
 #[derive(FromArgs, Default, PartialEq, Eq, Debug)]
 /// Entry point for executing tests.
@@ -58,22 +53,6 @@ struct Args {
     test_args: Vec<String>,
 }
 
-struct RunBuilderConnector {}
-
-#[async_trait]
-impl run_test_suite_lib::BuilderConnector for RunBuilderConnector {
-    async fn connect(&self) -> RunBuilderProxy {
-        fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
-            .expect("connecting to RunBuilderProxy")
-    }
-}
-
-impl RunBuilderConnector {
-    fn new() -> Box<Self> {
-        Box::new(Self {})
-    }
-}
-
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
     fuchsia_syslog::init().expect("initializing syslog");
@@ -109,17 +88,20 @@ async fn main() {
     let test_filters = if test_filter.len() == 0 { None } else { Some(test_filter) };
 
     match run_test_suite_lib::run_tests_and_get_outcome(
-        run_test_suite_lib::TestParams {
-            test_url,
-            timeout: timeout.and_then(std::num::NonZeroU32::new),
-            test_filters,
-            also_run_disabled_tests,
-            parallel,
-            test_args: test_args,
-            builder_connector: RunBuilderConnector::new(),
-        },
+        fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+            .expect("connecting to RunBuilderProxy"),
+        vec![
+            run_test_suite_lib::TestParams {
+                test_url,
+                timeout: timeout.and_then(std::num::NonZeroU32::new),
+                test_filters,
+                also_run_disabled_tests,
+                parallel,
+                test_args: test_args,
+            };
+            count as usize
+        ],
         log_opts,
-        std::num::NonZeroU16::new(count).unwrap(),
         filter_ansi,
         None,
     )

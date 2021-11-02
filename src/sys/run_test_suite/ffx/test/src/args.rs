@@ -25,12 +25,22 @@ pub enum TestSubcommand {
     Result(ResultCommand),
 }
 
-#[derive(FromArgs, Debug, PartialEq)]
+#[derive(FromArgs, Debug, PartialEq, Clone)]
 #[argh(
     subcommand,
     name = "run",
     description = "Entry point for executing tests",
-    note = "Runs a test or suite implementing the `fuchsia.test.Suite` protocol.
+    note = "Runs test suites implementing the `fuchsia.test.Suite` protocol.
+
+Tests are specified either as a command line argument, or via JSON file.
+
+For example, when specifying a test via command line:
+    ffx test run fuchsia-pkg://fuchsia.com/my_test#meta/my_test.cm
+When specifying a test via command line and passing arguments to the test:
+    ffx test run fuchsia-pkg://fuchsia.com/my_test#meta/my_test.cm -- arg1 arg2
+
+Specifying tests via JSON file is currently unstable, but may be done with the
+--test-file option.
 
 Note that if running multiple iterations of a test and an iteration times
 out, no further iterations will be executed."
@@ -40,9 +50,19 @@ pub struct RunCommand {
     #[argh(option, short = 't')]
     pub timeout: Option<u32>,
 
-    /// test url
+    /// test url, and any arguments passed to tests, following `--`.
+    /// When --test-file is specified test_args should not be specified.
     #[argh(positional)]
-    pub test_url: String,
+    pub test_args: Vec<String>,
+
+    // TODO(satsukiu): once stable, document the format
+    /// read test url and options from the specified file instead of from the command line.
+    /// Stdin may be specified by passing `--test-file -`.
+    /// May not be used in conjunction with `test_args`, `--test-file`, `--test-filter`,
+    /// `--run-disabled`, `--parallel`, `--max-severity-logs`
+    /// This option is currently unstable and the format of the file is subject to change.
+    #[argh(option)]
+    pub test_file: Option<String>,
 
     /// test filter. Glob pattern for matching tests. Can be
     /// specified multiple times to pass in multiple patterns.
@@ -84,10 +104,6 @@ pub struct RunCommand {
     /// when set, disables structured output to a directory.
     #[argh(switch)]
     pub disable_output_directory: bool,
-
-    /// arguments passed to tests, following `--`.
-    #[argh(positional)]
-    pub test_args: Vec<String>,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]

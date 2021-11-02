@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    async_trait::async_trait,
     fidl::Peered,
     fidl_fuchsia_test_manager::{
         self as ftest_manager, CaseArtifact, CaseFinished, CaseFound, CaseStarted, CaseStopped,
@@ -66,6 +65,9 @@ impl fmt::Display for Outcome {
 
 #[derive(PartialEq, Debug)]
 pub struct SuiteRunResult {
+    /// URL of the executed test suite.
+    pub url: String,
+
     /// Test outcome.
     pub outcome: Outcome,
 
@@ -85,12 +87,8 @@ pub struct SuiteRunResult {
     pub restricted_logs: Vec<String>,
 }
 
-#[async_trait]
-pub trait BuilderConnector {
-    async fn connect(&self) -> RunBuilderProxy;
-}
-
 // Parameters for test.
+#[derive(Clone, Debug, PartialEq)]
 pub struct TestParams {
     /// Test URL.
     pub test_url: String,
@@ -109,9 +107,6 @@ pub struct TestParams {
 
     /// Arguments to pass to test using command line.
     pub test_args: Vec<String>,
-
-    /// RunBuilderProxy connector that manages running the tests.
-    pub builder_connector: Box<dyn BuilderConnector>,
 }
 
 async fn collect_results_for_suite(
@@ -597,6 +592,7 @@ async fn collect_results_for_suite(
     suite_reporter.stopped(&outcome.into(), suite_finish_timestamp)?;
 
     Ok(SuiteRunResult {
+        url: running_suite.url().to_string(),
         outcome,
         executed: test_cases_executed,
         passed: test_cases_passed,
@@ -653,12 +649,13 @@ struct RunningSuite {
     proxy: ftest_manager::SuiteControllerProxy,
     unreturned_events: VecDeque<Result<ftest_manager::SuiteEvent, RunTestSuiteError>>,
     events_done: bool,
+    url: String,
 }
 
 impl RunningSuite {
-    async fn wait_for_start(proxy: ftest_manager::SuiteControllerProxy) -> Self {
+    async fn wait_for_start(proxy: ftest_manager::SuiteControllerProxy, url: String) -> Self {
         let unreturned_events = Self::query_events(&proxy).await;
-        Self { proxy, unreturned_events, events_done: false }
+        Self { proxy, unreturned_events, events_done: false, url }
     }
 
     async fn query_events(
@@ -678,45 +675,45 @@ impl RunningSuite {
         self.events_done = self.unreturned_events.is_empty();
         self.unreturned_events.pop_front()
     }
+
+    fn url(&self) -> &str {
+        &self.url
+    }
 }
 
 /// Runs the test `count` number of times, and writes logs to writer.
 pub async fn run_test<'a, Out: Write>(
-    test_params: TestParams,
-    count: u16,
+    builder_proxy: RunBuilderProxy,
+    test_params: Vec<TestParams>,
     log_opts: diagnostics::LogCollectionOptions,
     stdout_writer: &'a mut Out,
     run_reporter: &'a mut RunReporter,
 ) -> Result<SuiteResults<'a>, RunTestSuiteError> {
-    let timeout: Option<i64> = match test_params.timeout {
-        Some(t) => {
-            const NANOS_IN_SEC: u64 = 1_000_000_000;
-            let secs: u32 = t.get();
-            let nanos: u64 = (secs as u64) * NANOS_IN_SEC;
-            // Unwrap okay here as max value (u32::MAX * 1_000_000_000) is 62 bits
-            Some(nanos.try_into().unwrap())
-        }
-        None => None,
-    };
-    let run_options = SuiteRunOptions {
-        parallel: test_params.parallel,
-        arguments: Some(test_params.test_args.clone()),
-        run_disabled_tests: Some(test_params.also_run_disabled_tests),
-        timeout: timeout,
-        test_filters: test_params.test_filters,
-        log_iterator: Some(diagnostics::get_type()),
-    };
-
     let mut suite_start_futs = vec![];
-    let builder_proxy = test_params.builder_connector.connect().await;
-    for _ in 0..count {
+    for params in test_params.into_iter() {
+        let timeout: Option<i64> = match params.timeout {
+            Some(t) => {
+                const NANOS_IN_SEC: u64 = 1_000_000_000;
+                let secs: u32 = t.get();
+                let nanos: u64 = (secs as u64) * NANOS_IN_SEC;
+                // Unwrap okay here as max value (u32::MAX * 1_000_000_000) is 62 bits
+                Some(nanos.try_into().unwrap())
+            }
+            None => None,
+        };
+        let run_options = SuiteRunOptions {
+            parallel: params.parallel,
+            arguments: Some(params.test_args),
+            run_disabled_tests: Some(params.also_run_disabled_tests),
+            timeout,
+            test_filters: params.test_filters,
+            log_iterator: Some(diagnostics::get_type()),
+        };
+
         let (suite_controller, suite_server_end) = fidl::endpoints::create_proxy()?;
-        suite_start_futs.push(RunningSuite::wait_for_start(suite_controller).boxed());
-        builder_proxy.add_suite(
-            &test_params.test_url,
-            run_options.clone().into(),
-            suite_server_end,
-        )?;
+        suite_start_futs
+            .push(RunningSuite::wait_for_start(suite_controller, params.test_url.clone()).boxed());
+        builder_proxy.add_suite(&params.test_url, run_options.into(), suite_server_end)?;
     }
     let (run_controller, run_server_end) = fidl::endpoints::create_proxy()?;
     builder_proxy.build(run_server_end)?;
@@ -725,7 +722,6 @@ pub async fn run_test<'a, Out: Write>(
         suite_start_futs: Vec<BoxFuture<'a, RunningSuite>>,
         run_controller: ftest_manager::RunControllerProxy,
         next_suite_id: u32,
-        url: String,
         stdout_writer: &'a mut Out,
         run_reporter: &'a mut RunReporter,
         log_opts: diagnostics::LogCollectionOptions,
@@ -735,7 +731,6 @@ pub async fn run_test<'a, Out: Write>(
         suite_start_futs,
         run_controller,
         next_suite_id: 0,
-        url: test_params.test_url,
         stdout_writer,
         run_reporter,
         log_opts,
@@ -749,8 +744,9 @@ pub async fn run_test<'a, Out: Write>(
                 let (started_suite_controller, _idx, mut unstarted_suites) =
                     futures::future::select_all(args.suite_start_futs).await;
 
-                let suite_reporter =
-                    args.run_reporter.new_suite(&args.url, &SuiteId(args.next_suite_id))?;
+                let suite_reporter = args
+                    .run_reporter
+                    .new_suite(started_suite_controller.url(), &SuiteId(args.next_suite_id))?;
 
                 let result = run_suite_and_collect_logs(
                     started_suite_controller,
@@ -797,11 +793,7 @@ pub async fn run_test<'a, Out: Write>(
     Ok(stream.boxed_local())
 }
 
-async fn collect_results(
-    test_url: &str,
-    count: std::num::NonZeroU16,
-    mut stream: SuiteResults<'_>,
-) -> Outcome {
+async fn collect_results(mut stream: SuiteResults<'_>) -> Outcome {
     let mut i: u16 = 1;
     let mut final_outcome = Outcome::Passed;
 
@@ -812,6 +804,7 @@ async fn collect_results(
                 return Outcome::error(e);
             }
             Ok(Some(SuiteRunResult {
+                url,
                 mut outcome,
                 executed,
                 passed,
@@ -819,26 +812,23 @@ async fn collect_results(
                 successful_completion,
                 restricted_logs,
             })) => {
-                if count.get() > 1 {
-                    println!("\nTest run count {}/{}", i, count);
-                }
                 println!("\n");
                 if !failed.is_empty() {
                     println!("Failed tests: {}", failed.join(", "))
                 }
                 println!("{} out of {} tests passed...", passed.len(), executed.len());
-                println!("{} completed with result: {}", &test_url, outcome);
+                println!("{} completed with result: {}", &url, outcome);
                 if executed.is_empty() {
                     println!("WARN: No test cases were executed!");
                 }
                 if !successful_completion {
-                    println!("{} did not complete successfully.", &test_url);
+                    println!("{} did not complete successfully.", &url);
                 }
                 if restricted_logs.len() > 0 {
                     if outcome == Outcome::Passed {
                         outcome = Outcome::Failed;
                     }
-                    println!("\nTest {} produced unexpected high-severity logs:", &test_url);
+                    println!("\nTest {} produced unexpected high-severity logs:", &url);
                     println!("----------------xxxxx----------------");
                     for log in restricted_logs {
                         println!("{}", log);
@@ -848,7 +838,7 @@ async fn collect_results(
                 }
 
                 i = i + 1;
-                if count.get() > 1 {
+                if i > 2 {
                     if outcome != Outcome::Passed {
                         final_outcome = Outcome::Failed;
                     }
@@ -867,15 +857,12 @@ async fn collect_results(
 /// |count|: Number of times to run this test.
 /// |filter_ansi|: Whether or not to filter out ANSI escape sequences from stdout.
 pub async fn run_tests_and_get_outcome(
-    test_params: TestParams,
+    builder_proxy: RunBuilderProxy,
+    test_params: Vec<TestParams>,
     log_opts: diagnostics::LogCollectionOptions,
-    count: std::num::NonZeroU16,
     filter_ansi: bool,
     record_directory: Option<PathBuf>,
 ) -> Outcome {
-    let test_url = test_params.test_url.clone();
-    println!("\nRunning test '{}'", &test_url);
-
     let mut stdout_for_results: Box<dyn Write + Send + Sync> = match filter_ansi {
         true => Box::new(AnsiFilterWriter::new(io::stdout())),
         false => Box::new(io::stdout()),
@@ -894,20 +881,25 @@ pub async fn run_tests_and_get_outcome(
         }
     };
 
-    let result_stream =
-        match run_test(test_params, count.get(), log_opts, &mut stdout_for_results, &mut reporter)
-            .await
-        {
-            Ok(s) => s,
-            Err(e) => {
-                println!("Test suite '{}' encountered error trying to run tests: {}", test_url, e);
-                return Outcome::error(e);
-            }
-        };
+    let result_stream = match run_test(
+        builder_proxy,
+        test_params,
+        log_opts,
+        &mut stdout_for_results,
+        &mut reporter,
+    )
+    .await
+    {
+        Ok(s) => s,
+        Err(e) => {
+            println!("Encountered error trying to run tests: {}", e);
+            return Outcome::error(e);
+        }
+    };
 
-    let test_outcome = collect_results(&test_url, count, result_stream).await;
+    let test_outcome = collect_results(result_stream).await;
 
-    if count.get() > 1 && test_outcome != Outcome::Passed {
+    if test_outcome != Outcome::Passed {
         println!("One or more test runs failed.");
     }
 

@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 mod output_directory;
+mod suite_definition;
 
 use {
     anyhow::{anyhow, format_err, Context, Result},
-    async_trait::async_trait,
-    errors::ffx_bail,
+    errors::{ffx_bail, ffx_error, FfxError},
     ffx_core::ffx_plugin,
     ffx_test_args::{
         DeleteResultCommand, ListCommand, ResultCommand, ResultSubCommand, RunCommand,
@@ -31,8 +31,7 @@ struct RunBuilderConnector {
     remote_control: fremotecontrol::RemoteControlProxy,
 }
 
-#[async_trait]
-impl run_test_suite_lib::BuilderConnector for RunBuilderConnector {
+impl RunBuilderConnector {
     async fn connect(&self) -> RunBuilderProxy {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<RunBuilderMarker>()
             .expect(&format!("failed to create proxy to {}", RunBuilderMarker::DEBUG_NAME));
@@ -51,9 +50,7 @@ impl run_test_suite_lib::BuilderConnector for RunBuilderConnector {
             ));
         proxy
     }
-}
 
-impl RunBuilderConnector {
     fn new(remote_control: fremotecontrol::RemoteControlProxy) -> Box<Self> {
         Box::new(Self { remote_control })
     }
@@ -87,10 +84,6 @@ async fn get_directory_manager() -> Result<DirectoryManager> {
 }
 
 async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) -> Result<()> {
-    let count = cmd.count.unwrap_or(1);
-    let count = std::num::NonZeroU16::new(count)
-        .ok_or_else(|| anyhow!("--count should be greater than zero."))?;
-
     // Whether or not the experimental structured output is enabled.
     // When the experiment is disabled and the user attempts to use a strucutured output option,
     // we bail.
@@ -100,9 +93,9 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
             Ok(false) | Err(_) => false,
         };
     let output_directory =
-        match (cmd.disable_output_directory, cmd.output_directory, structured_output_experiment) {
+        match (cmd.disable_output_directory, &cmd.output_directory, structured_output_experiment) {
             (true, _, _) => None, // user explicitly disabled output.
-            (false, Some(directory), true) => Some(directory.into()), // an override directory is specified.
+            (false, Some(directory), true) => Some(directory.clone().into()), // an override directory is specified.
             // user specified an override, but output is disabled by experiment flag.
             (false, Some(_), false) => {
                 ffx_bail!(
@@ -120,22 +113,23 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
             (false, None, false) => None,
         };
 
+    let log_collection_options = diagnostics::LogCollectionOptions {
+        min_severity: cmd.min_severity_logs,
+        max_severity: cmd.max_severity_logs,
+    };
+    let filter_ansi = cmd.filter_ansi;
+
+    let json_input_experiment = match ffx_config::get("test.experimental_json_input").await {
+        Ok(true) => true,
+        Ok(false) | Err(_) => false,
+    };
+    let test_definitions = test_params_from_args(cmd, std::io::stdin, json_input_experiment)?;
+
     match run_test_suite_lib::run_tests_and_get_outcome(
-        run_test_suite_lib::TestParams {
-            test_url: cmd.test_url,
-            timeout: cmd.timeout.and_then(std::num::NonZeroU32::new),
-            test_filters: if cmd.test_filter.len() == 0 { None } else { Some(cmd.test_filter) },
-            also_run_disabled_tests: cmd.run_disabled,
-            parallel: cmd.parallel,
-            test_args: cmd.test_args,
-            builder_connector: builder_connector,
-        },
-        diagnostics::LogCollectionOptions {
-            min_severity: cmd.min_severity_logs,
-            max_severity: cmd.max_severity_logs,
-        },
-        count,
-        cmd.filter_ansi,
+        builder_connector.connect().await,
+        test_definitions,
+        log_collection_options,
+        filter_ansi,
         output_directory,
     )
     .await
@@ -149,6 +143,71 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
             true => Err(anyhow!("There was an internal error running tests.")),
             false => ffx_bail!("There was an error running tests."),
         },
+    }
+}
+
+/// Generate TestParams from |cmd|.
+/// |stdin_handle_fn| is a function that generates a handle to stdin and is a parameter to enable
+/// testing.
+fn test_params_from_args<F, R>(
+    cmd: RunCommand,
+    stdin_handle_fn: F,
+    json_input_experiment_enabled: bool,
+) -> Result<Vec<run_test_suite_lib::TestParams>, FfxError>
+where
+    F: Fn() -> R,
+    R: std::io::Read,
+{
+    match &cmd.test_file {
+        Some(_) if !json_input_experiment_enabled => {
+            return Err(ffx_error!(
+                "The --test-file option is experimental, and the input format is \
+                subject to breaking changes. To enable using --test-file, run \
+                'ffx config set test.experimental_json_input true'"
+            ))
+        }
+        Some(filename) => {
+            if !cmd.test_args.is_empty() {
+                return Err(ffx_error!("Tests may not be specified in both args and by file"));
+            }
+            if filename == "-" {
+                suite_definition::test_params_from_reader(stdin_handle_fn())
+                    .map_err(|e| ffx_error!("Failed to read test definitions: {:?}", e))
+            } else {
+                let file = std::fs::File::open(filename)
+                    .map_err(|e| ffx_error!("Failed to open file {}: {:?}", filename, e))?;
+                suite_definition::test_params_from_reader(file)
+                    .map_err(|e| ffx_error!("Failed to read test definitions: {:?}", e))
+            }
+        }
+        None => {
+            let mut test_args_iter = cmd.test_args.iter();
+            let (test_url, test_args) = match test_args_iter.next() {
+                None => return Err(ffx_error!("No tests specified!")),
+                Some(test_url) => {
+                    (test_url.clone(), test_args_iter.map(String::clone).collect::<Vec<_>>())
+                }
+            };
+
+            let count = cmd.count.unwrap_or(1);
+            let count = std::num::NonZeroU16::new(count)
+                .ok_or_else(|| ffx_error!("--count should be greater than zero."))?;
+            Ok(vec![
+                run_test_suite_lib::TestParams {
+                    test_url,
+                    timeout: cmd.timeout.and_then(std::num::NonZeroU32::new),
+                    test_filters: if cmd.test_filter.len() == 0 {
+                        None
+                    } else {
+                        Some(cmd.test_filter)
+                    },
+                    also_run_disabled_tests: cmd.run_disabled,
+                    parallel: cmd.parallel,
+                    test_args,
+                };
+                count.get() as usize
+            ])
+        }
     }
 }
 
@@ -347,5 +406,287 @@ async fn result_delete_command<W: Write>(
             Ok(())
         }
         Err(e) => Err(e.into()),
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use lazy_static::lazy_static;
+    use std::num::NonZeroU32;
+
+    const VALID_INPUT_FILENAME: &str = "valid_defs.json";
+    const INVALID_INPUT_FILENAME: &str = "invalid_defs.json";
+
+    lazy_static! {
+        static ref VALID_STDIN_INPUT: Vec<u8> = serde_json::to_vec(&serde_json::json!([
+            {
+                "test_url": "stdin-test-url-1",
+            },
+            {
+                "test_url": "stdin-test-url-2",
+                "timeout": 60,
+            }
+        ]))
+        .expect("serialize json");
+        static ref VALID_FILE_INPUT: Vec<u8> = serde_json::to_vec(&serde_json::json!([
+            {
+                "test_url": "file-test-url-1",
+            },
+            {
+                "test_url": "file-test-url-2",
+                "timeout": 60,
+            }
+        ]))
+        .expect("serialize json");
+        static ref INVALID_INPUT: Vec<u8> = vec![1u8; 64];
+    }
+
+    #[test]
+    fn test_get_test_params() {
+        let dir = tempfile::tempdir().expect("Create temp dir");
+        std::fs::write(dir.path().join("test_defs.json"), &*VALID_FILE_INPUT).expect("write file");
+
+        let cases = vec![
+            (
+                RunCommand {
+                    timeout: None,
+                    test_args: vec!["my-test-url".to_string()],
+                    test_file: None,
+                    test_filter: vec![],
+                    run_disabled: false,
+                    filter_ansi: false,
+                    parallel: None,
+                    count: None,
+                    min_severity_logs: None,
+                    max_severity_logs: None,
+                    output_directory: None,
+                    disable_output_directory: false,
+                },
+                vec![run_test_suite_lib::TestParams {
+                    test_url: "my-test-url".to_string(),
+                    timeout: None,
+                    test_filters: None,
+                    also_run_disabled_tests: false,
+                    parallel: None,
+                    test_args: vec![],
+                }],
+            ),
+            (
+                RunCommand {
+                    timeout: None,
+                    test_args: vec!["my-test-url".to_string()],
+                    test_file: None,
+                    test_filter: vec![],
+                    run_disabled: false,
+                    filter_ansi: false,
+                    parallel: None,
+                    count: Some(10),
+                    min_severity_logs: None,
+                    max_severity_logs: None,
+                    output_directory: None,
+                    disable_output_directory: false,
+                },
+                vec![
+                    run_test_suite_lib::TestParams {
+                        test_url: "my-test-url".to_string(),
+                        timeout: None,
+                        test_filters: None,
+                        also_run_disabled_tests: false,
+                        parallel: None,
+                        test_args: vec![],
+                    };
+                    10
+                ],
+            ),
+            (
+                RunCommand {
+                    timeout: Some(10),
+                    test_args: vec!["my-test-url".to_string(), "--".to_string(), "arg".to_string()],
+                    test_file: None,
+                    test_filter: vec!["filter".to_string()],
+                    run_disabled: true,
+                    filter_ansi: false,
+                    parallel: Some(20),
+                    count: None,
+                    min_severity_logs: None,
+                    max_severity_logs: None,
+                    output_directory: None,
+                    disable_output_directory: false,
+                },
+                vec![run_test_suite_lib::TestParams {
+                    test_url: "my-test-url".to_string(),
+                    timeout: Some(NonZeroU32::new(10).unwrap()),
+                    test_filters: Some(vec!["filter".to_string()]),
+                    also_run_disabled_tests: true,
+                    parallel: Some(20),
+                    test_args: vec!["--".to_string(), "arg".to_string()],
+                }],
+            ),
+            (
+                RunCommand {
+                    timeout: None,
+                    test_args: vec![],
+                    test_file: Some("-".to_string()),
+                    test_filter: vec![],
+                    run_disabled: false,
+                    filter_ansi: false,
+                    parallel: None,
+                    count: None,
+                    min_severity_logs: None,
+                    max_severity_logs: None,
+                    output_directory: None,
+                    disable_output_directory: false,
+                },
+                vec![
+                    run_test_suite_lib::TestParams {
+                        test_url: "stdin-test-url-1".to_string(),
+                        timeout: None,
+                        test_filters: None,
+                        also_run_disabled_tests: false,
+                        parallel: None,
+                        test_args: vec![],
+                    },
+                    run_test_suite_lib::TestParams {
+                        test_url: "stdin-test-url-2".to_string(),
+                        timeout: Some(NonZeroU32::new(60).unwrap()),
+                        test_filters: None,
+                        also_run_disabled_tests: false,
+                        parallel: None,
+                        test_args: vec![],
+                    },
+                ],
+            ),
+            (
+                RunCommand {
+                    timeout: None,
+                    test_args: vec![],
+                    test_file: Some(
+                        dir.path().join("test_defs.json").to_str().unwrap().to_string(),
+                    ),
+                    test_filter: vec![],
+                    run_disabled: false,
+                    filter_ansi: false,
+                    parallel: None,
+                    count: None,
+                    min_severity_logs: None,
+                    max_severity_logs: None,
+                    output_directory: None,
+                    disable_output_directory: false,
+                },
+                vec![
+                    run_test_suite_lib::TestParams {
+                        test_url: "file-test-url-1".to_string(),
+                        timeout: None,
+                        test_filters: None,
+                        also_run_disabled_tests: false,
+                        parallel: None,
+                        test_args: vec![],
+                    },
+                    run_test_suite_lib::TestParams {
+                        test_url: "file-test-url-2".to_string(),
+                        timeout: Some(NonZeroU32::new(60).unwrap()),
+                        test_filters: None,
+                        also_run_disabled_tests: false,
+                        parallel: None,
+                        test_args: vec![],
+                    },
+                ],
+            ),
+        ];
+
+        for (run_command, expected_test_params) in cases.into_iter() {
+            let result = test_params_from_args(
+                run_command.clone(),
+                || std::io::Cursor::new(&*VALID_STDIN_INPUT),
+                true,
+            );
+            assert!(
+                result.is_ok(),
+                "Error getting test params from {:?}: {:?}",
+                run_command,
+                result.unwrap_err()
+            );
+            assert_eq!(result.unwrap(), expected_test_params);
+        }
+    }
+
+    #[test]
+    fn test_get_test_params_invalid_args() {
+        let dir = tempfile::tempdir().expect("Create temp dir");
+        std::fs::write(dir.path().join(VALID_INPUT_FILENAME), &*VALID_FILE_INPUT)
+            .expect("write file");
+        std::fs::write(dir.path().join(INVALID_INPUT_FILENAME), &*INVALID_INPUT)
+            .expect("write file");
+        let cases = vec![
+            (
+                "no tests specified",
+                RunCommand {
+                    timeout: None,
+                    test_args: vec![],
+                    test_file: None,
+                    test_filter: vec![],
+                    run_disabled: false,
+                    filter_ansi: false,
+                    parallel: None,
+                    count: None,
+                    min_severity_logs: None,
+                    max_severity_logs: None,
+                    output_directory: None,
+                    disable_output_directory: false,
+                },
+            ),
+            (
+                "tests specified in both args and file",
+                RunCommand {
+                    timeout: None,
+                    test_args: vec!["my-test".to_string()],
+                    test_file: Some(
+                        dir.path().join(VALID_INPUT_FILENAME).to_str().unwrap().to_string(),
+                    ),
+                    test_filter: vec![],
+                    run_disabled: false,
+                    filter_ansi: false,
+                    parallel: None,
+                    count: None,
+                    min_severity_logs: None,
+                    max_severity_logs: None,
+                    output_directory: None,
+                    disable_output_directory: false,
+                },
+            ),
+            (
+                "read invalid input from file",
+                RunCommand {
+                    timeout: None,
+                    test_args: vec![],
+                    test_file: Some(
+                        dir.path().join(INVALID_INPUT_FILENAME).to_str().unwrap().to_string(),
+                    ),
+                    test_filter: vec![],
+                    run_disabled: false,
+                    filter_ansi: false,
+                    parallel: None,
+                    count: None,
+                    min_severity_logs: None,
+                    max_severity_logs: None,
+                    output_directory: None,
+                    disable_output_directory: false,
+                },
+            ),
+        ];
+
+        for (case_name, invalid_run_command) in cases.into_iter() {
+            let result = test_params_from_args(
+                invalid_run_command,
+                || std::io::Cursor::new(&*VALID_STDIN_INPUT),
+                true,
+            );
+            assert!(
+                result.is_err(),
+                "Getting test params for case '{}' unexpectedly succeeded",
+                case_name
+            );
+        }
     }
 }
