@@ -18,6 +18,7 @@ rustc_test("bin") {
    "//src/lib/fidl/rust/fidl",
    "//src/lib/fuchsia",
    "//src/lib/fuchsia-component",
+   "//src/lib/fuchsia-component-test",
    "//third_party/rust_crates:anyhow",
    "//third_party/rust_crates:futures",
   ]

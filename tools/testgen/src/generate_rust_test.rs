@@ -6,6 +6,7 @@ use anyhow::Result;
 use std::io::Write;
 
 use crate::test_code::{CodeGenerator, TestCodeBuilder};
+use std::collections::BTreeSet;
 
 const MOCK_FUNC_TEMPLATE: &'static str = include_str!("templates/template_rust_mock_function");
 const TEST_FUNC_TEMPLATE: &'static str = include_str!("templates/template_rust_test_function");
@@ -29,8 +30,7 @@ impl CodeGenerator for RustTestCodeGenerator<'_> {
 
 "#;
         // Add import statements
-        let mut all_imports = self.code.imports.clone();
-        all_imports.sort();
+        let all_imports = self.code.imports.clone().into_iter().collect::<Vec<_>>();
         let mut imports = all_imports.join("\n");
         imports.push_str("\n\n");
         writer.write_all(&imports.as_bytes())?;
@@ -63,7 +63,7 @@ impl CodeGenerator for RustTestCodeGenerator<'_> {
 
 pub struct RustTestCode {
     /// library import strings
-    pub imports: Vec<String>,
+    pub imports: BTreeSet<String>,
     /// constant strings
     constants: Vec<String>,
     /// RealmBuilder compatibility routing code
@@ -81,14 +81,14 @@ impl TestCodeBuilder for RustTestCode {
         RustTestCode {
             realm_builder_snippets: Vec::new(),
             constants: Vec::new(),
-            imports: Vec::new(),
+            imports: BTreeSet::new(),
             test_case: Vec::new(),
             mock_functions: Vec::new(),
             component_under_test: component_name.to_string(),
         }
     }
     fn add_import<'a>(&'a mut self, import_library: &str) -> &'a dyn TestCodeBuilder {
-        self.imports.push(format!(r#"use {};"#, import_library));
+        self.imports.insert(format!(r#"use {};"#, import_library));
         self
     }
 
@@ -257,5 +257,29 @@ impl TestCodeBuilder for RustTestCode {
                 .replace("PROTOCOL", &protocol),
         );
         self
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn deduplicate_imports() {
+        let mut output: Vec<u8> = vec![];
+        let mut code = RustTestCode::new("test-component");
+        code.add_import("example::Value");
+        code.add_import("example::Value");
+        code.add_import("example::Value2");
+        RustTestCodeGenerator { code: &code }.write_file(&mut output).expect("write output");
+
+        let lines = std::str::from_utf8(&output)
+            .expect("output must be UTF-8")
+            .split("\n")
+            .collect::<Vec<_>>();
+        assert!(lines.len() > 3);
+        assert_eq!(lines[0], "use example::Value2;");
+        assert_eq!(lines[1], "use example::Value;");
+        assert_ne!(lines[2], "use example::Value;");
     }
 }

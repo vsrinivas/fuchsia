@@ -154,8 +154,10 @@ fn write_rust(
 
     match input.generate_mocks {
         true => code.add_import("fuchsia_component_test::{builder::*, mock::*, RealmInstance}"),
-        false => code.add_import("fuchsia_component_test::{builder::*,  RealmInstance}"),
+        false => code.add_import("fuchsia_component_test::{builder::*, RealmInstance}"),
     };
+
+    code.add_import("anyhow::Error");
 
     update_code_for_use_declaration(
         &cm_decl.uses.as_ref().unwrap_or(&Vec::new()),
@@ -609,8 +611,7 @@ mod test {
         })?"#;
         assert_eq!(create_realm_impl, expect_realm_snippets);
 
-        let mut all_imports = code.imports.clone();
-        all_imports.sort();
+        let all_imports = code.imports.clone().into_iter().collect::<Vec<_>>();
         let imports = all_imports.join("\n");
         let expect_imports = r#"use fidl_fuchsia_diagnostics::*;
 use fidl_fuchsia_metrics::*;
