@@ -336,14 +336,17 @@ fn update_code_for_expose_declaration(
     }
 
     // Generate test case code for each protocol exposed
-    for (fidl_lib, markers) in protos_to_test.protocols.get("self").unwrap().iter() {
-        if cpp {
-            code.add_import(&format!("<{}>", fidl_lib));
-        } else {
-            code.add_import(&format!("{}::*", fidl_lib));
-        }
-        for i in 0..markers.len() {
-            code.add_test_case(&markers[i]);
+    let protocols = protos_to_test.protocols.get("self");
+    if let Some(protocols) = protocols {
+        for (fidl_lib, markers) in protocols.iter() {
+            if cpp {
+                code.add_import(&format!("<{}>", fidl_lib));
+            } else {
+                code.add_import(&format!("{}::*", fidl_lib));
+            }
+            for i in 0..markers.len() {
+                code.add_test_case(&markers[i]);
+            }
         }
     }
     Ok(())
@@ -615,5 +618,37 @@ use fuchsia_component::server::*;"#;
         assert_eq!(imports, expect_imports);
 
         Ok(())
+    }
+
+    #[test]
+    fn update_code_with_empty_decl_does_not_fail() {
+        struct Case {
+            name: &'static str,
+            cpp: bool,
+            generate_mocks: bool,
+        }
+
+        for case in vec![
+            Case { name: "cpp w/ mocks", cpp: true, generate_mocks: true },
+            Case { name: "cpp w/o mocks", cpp: true, generate_mocks: false },
+            Case { name: "rust w/ mocks", cpp: false, generate_mocks: true },
+            Case { name: "rust w/o mocks", cpp: false, generate_mocks: false },
+        ] {
+            let code = &mut CppTestCode::new("test");
+            let decl = ComponentDecl { ..ComponentDecl::EMPTY };
+            update_code_for_use_declaration(
+                &decl.uses.as_ref().unwrap_or(&Vec::new()),
+                code,
+                case.generate_mocks,
+                case.cpp,
+            )
+            .expect(&format!("use {}", case.name));
+            update_code_for_expose_declaration(
+                &decl.exposes.as_ref().unwrap_or(&Vec::new()),
+                code,
+                case.cpp,
+            )
+            .expect(&format!("expose {}", case.name));
+        }
     }
 }
