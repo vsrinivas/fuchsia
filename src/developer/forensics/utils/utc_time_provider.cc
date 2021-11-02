@@ -48,7 +48,7 @@ UtcTimeProvider::UtcTimeProvider(async_dispatcher_t* dispatcher, zx::unowned_clo
       zx::duration(strtoll(buf.c_str(), nullptr, /*base*/ 10));
 }
 
-std::optional<zx::time_utc> UtcTimeProvider::CurrentTime() const {
+std::optional<timekeeper::time_utc> UtcTimeProvider::CurrentTime() const {
   if (!is_utc_time_accurate_) {
     return std::nullopt;
   }
@@ -61,7 +61,7 @@ std::optional<zx::duration> UtcTimeProvider::CurrentUtcMonotonicDifference() con
     return std::nullopt;
   }
 
-  if (const std::optional<zx::time_utc> current_utc_time = CurrentUtcTimeRaw(clock_);
+  if (const std::optional<timekeeper::time_utc> current_utc_time = CurrentUtcTimeRaw(clock_);
       current_utc_time.has_value()) {
     const zx::duration utc_monotonic_difference(current_utc_time.value().get() -
                                                 clock_->Now().get());
@@ -84,7 +84,7 @@ void UtcTimeProvider::OnClockStart(async_dispatcher_t* dispatcher, async::WaitBa
                                    zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FX_PLOGS(WARNING, status) << "Wait for clock start completed with error, trying again";
-    
+
     // Attempt to wait for the clock to start again.
     wait->Begin(dispatcher);
     return;
@@ -93,7 +93,7 @@ void UtcTimeProvider::OnClockStart(async_dispatcher_t* dispatcher, async::WaitBa
   is_utc_time_accurate_ = true;
 
   // Write the current difference between the UTC and monotonic clocks.
-  if (const std::optional<zx::time_utc> current_utc_time = CurrentUtcTimeRaw(clock_);
+  if (const std::optional<timekeeper::time_utc> current_utc_time = CurrentUtcTimeRaw(clock_);
       current_utc_time.has_value() && utc_monotonic_difference_file_.has_value()) {
     const zx::duration utc_monotonic_difference(current_utc_time.value().get() -
                                                 clock_->Now().get());

@@ -33,7 +33,7 @@ class UtcTimeProvider {
                   timekeeper::Clock* clock, PreviousBootFile utc_monotonic_difference_file);
 
   // Returns the current UTC time if the device's UTC time is accurate, std::nullopt otherwise.
-  std::optional<zx::time_utc> CurrentTime() const;
+  std::optional<timekeeper::time_utc> CurrentTime() const;
 
   // Returns the difference between the UTC clock and the device's monotonic time if the device's
   // UTC time is accurate, std::nullopt otherwise.

@@ -35,8 +35,8 @@ std::optional<std::string> FormatDuration(zx::duration duration) {
   return fxl::StringPrintf("%ldd%ldh%ldm%lds", d, h, m, s);
 }
 
-std::optional<zx::time_utc> CurrentUtcTimeRaw(timekeeper::Clock* clock) {
-  zx::time_utc now_utc;
+std::optional<timekeeper::time_utc> CurrentUtcTimeRaw(timekeeper::Clock* clock) {
+  timekeeper::time_utc now_utc;
   if (const zx_status_t status = clock->UtcNow(&now_utc); status != ZX_OK) {
     return std::nullopt;
   }

@@ -8,9 +8,9 @@
 
 namespace harvester {
 
-std::optional<zx::time_utc> FuchsiaClock::now() {
+std::optional<timekeeper::time_utc> FuchsiaClock::now() {
   if (started_) {
-    zx::time_utc now_utc;
+    timekeeper::time_utc now_utc;
     zx_status_t status = clock_->UtcNow(&now_utc);
     if (status == ZX_OK) {
       return now_utc;

@@ -9,6 +9,10 @@
 
 namespace timekeeper {
 
+// The type used to measure UTC time. This is API compatible with the UTC
+// type previously defined by Zircon.
+using time_utc = zx::basic_time<1>;
+
 // Abstraction over the clock.
 //
 // This class allows to retrieve the current time for any supported clock id.
@@ -21,10 +25,10 @@ class Clock {
   Clock& operator=(const Clock&) = delete;
 
   // Returns the current UTC time.
-  zx_status_t UtcNow(zx::time_utc* result) const {
+  zx_status_t UtcNow(time_utc* result) const {
     zx_time_t time;
     zx_status_t status = GetUtcTime(&time);
-    *result = zx::time_utc(time);
+    *result = time_utc(time);
     return status;
   }
 

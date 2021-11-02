@@ -36,7 +36,7 @@ class FuchsiaClock {
 
   // Returns the current UTC time if the clock has started, otherwise
   // std::nullopt.
-  std::optional<zx::time_utc> now();
+  std::optional<timekeeper::time_utc> now();
 
   // Returns the number of nanoseconds since the epoch if the clock has started,
   // otherwise std::nullopt.

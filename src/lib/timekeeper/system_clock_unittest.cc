@@ -22,7 +22,7 @@ TEST(SystemClockTest, MonotonicClock) {
 TEST(SystemClockTest, UtcClock) {
   SystemClock clock;
 
-  zx::time_utc time1;
+  time_utc time1;
   ASSERT_EQ(ZX_OK, clock.UtcNow(&time1));
 
   EXPECT_GT(time1, zx::time_utc(0));

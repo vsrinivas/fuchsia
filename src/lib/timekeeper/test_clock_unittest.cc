@@ -20,7 +20,7 @@ TEST(TestClockTest, Assignment) {
 
   EXPECT_EQ(t1, t2);
 
-  zx::time_utc t3;
+  time_utc t3;
 
   EXPECT_EQ(ZX_OK, clock.UtcNow(&t3));
 
