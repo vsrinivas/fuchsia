@@ -109,7 +109,6 @@ library_headers("ddk-deprecated-binding-headers") {
     "//src/devices/board/drivers/nelson:*",
     "//src/devices/board/drivers/qemu-arm64:*",
     "//src/devices/board/drivers/sherlock:*",
-    "//src/devices/board/drivers/vim2:*",
     "//src/devices/board/drivers/vim3:*",
     "//src/devices/board/drivers/x86/*",
     "//src/devices/bus/drivers/pci:*",

@@ -7,7 +7,6 @@ group("tests") {
 
   deps = [
     "aml-axg-gpio:tests",
-    "aml-gxl-gpio:tests",
     "gpio:tests",
     "gpio-test:tests",
   ]

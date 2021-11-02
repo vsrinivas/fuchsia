@@ -286,8 +286,8 @@ Let's assume you want to produce four builds:
 
  * a "bringup" product for x64
  * a "workstation" product for x64
- * a "core" product for vim2
- * a "workstation" product for vim2
+ * a "core" product for vim3
+ * a "workstation" product for vim3
 
 First, one must build Zircon, as the Zircon build directory is shared across
 Fuchsia build targets. It doesn't matter at this stage which product/board
@@ -305,25 +305,25 @@ Now you have Zircon built, you can start building several other builds concurren
 $ fx --dir out/workstation.x64 set workstation.x64
 $ fx --dir out/workstation.x64 build > workstation.x64.build.log &
 
-$ fx --dir out/core.vim2 set core.arm64
-$ fx --dir out/core.vim2 build > core.vim2.build.log &
+$ fx --dir out/core.vim3 set core.arm64
+$ fx --dir out/core.vim3 build > core.vim3.build.log &
 
-$ fx --dir out/workstation.vim2 set workstation.arm64
-$ fx --dir out/workstation.vim2 build > workstation.vim2.build.log &
+$ fx --dir out/workstation.vim3 set workstation.arm64
+$ fx --dir out/workstation.vim3 build > workstation.vim3.build.log &
 ```
 
 You can reference each of these builds while running `fx` tools by passing
-`--dir` to your fx command, e.g. to run `fx serve` using the vim2 workstation
+`--dir` to your fx command, e.g. to run `fx serve` using the vim3 workstation
 product, you would use:
 
 ```shell
-$ fx --dir out/workstation.vim2 serve
+$ fx --dir out/workstation.vim3 serve
 ```
 
 You can also change which build directory is your current default by using `fx use`:
 
 ```shell
-$ fx use out/core.vim2
+$ fx use out/core.vim3
 ```
 
 ### Q: What if I want to build at a previous snapshot across the repos?

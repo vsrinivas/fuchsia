@@ -127,7 +127,6 @@ zx_library("fake_ddk") {
     "//src/devices/temperature/drivers/tmp112/*",
     "//src/devices/testing/*",
     "//src/devices/testing/fake_ddk/test/*",
-    "//src/devices/thermal/drivers/aml-thermal-s912/*",
     "//src/devices/thermal/drivers/aml-thermistor/test/*",
     "//src/devices/usb/drivers/aml-usb-phy-v2/*",
     "//src/devices/usb/drivers/usb-bus/*",

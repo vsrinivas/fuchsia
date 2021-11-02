@@ -10,7 +10,6 @@ group("tests") {
     "nelson:tests",
     "qemu-arm64:tests",
     "sherlock:tests",
-    "vim2:tests",
     "vim3:tests",
     "x86:tests",
   ]

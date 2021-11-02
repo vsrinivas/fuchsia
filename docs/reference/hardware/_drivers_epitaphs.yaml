@@ -315,3 +315,31 @@
   available_in_git: 'ebfc0c4a453fbbc0762542e37cdd188db8798c7e'
   areas: ['Audio', 'Display']
   path: '/src/graphics/display/drivers/vim-display'
+- short_description: 'AMLogic gxl GPIO driver'
+  deletion_reason: 'Hardware is not actively supported'
+  tracking_bug: '56931'
+  gerrit_change_id: '599201'
+  available_in_git: 'b1218b93f39358bef3c45cbbb32af7b431ce3c72'
+  areas: ['Gpio']
+  path: '/src/devices/gpio/drivers/aml-gxl-gpio'
+- short_description: 'AMLogic S912 thermal driver'
+  deletion_reason: 'Hardware is not actively supported'
+  tracking_bug: '56931'
+  gerrit_change_id: '599201'
+  available_in_git: 'b1218b93f39358bef3c45cbbb32af7b431ce3c72'
+  areas: ['Thermal']
+  path: '/src/devices/thermal/drivers/aml-thermal-s912'
+- short_description: 'AMLogic S912 SCPI driver'
+  deletion_reason: 'Hardware is not actively supported'
+  tracking_bug: '56931'
+  gerrit_change_id: '599201'
+  available_in_git: 'b1218b93f39358bef3c45cbbb32af7b431ce3c72'
+  areas: ['Scpi']
+  path: '/src/devices/scpi/drivers/aml-scpi-s912'
+- short_description: 'Khadas VIM2 board driver'
+  deletion_reason: 'Hardware is not actively supported'
+  tracking_bug: '56931'
+  gerrit_change_id: '599201'
+  available_in_git: 'b1218b93f39358bef3c45cbbb32af7b431ce3c72'
+  areas: ['Board']
+  path: '/src/devices/board/drivers/vim2'

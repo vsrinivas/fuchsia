@@ -97,8 +97,6 @@ fbl::String GetTestFilter() {
 
   if (!strcmp(board_name, "qemu")) {
     return "*QemuArm64*";
-  } else if (!strcmp(board_name, "vim2")) {
-    return "*Vim2*";
   } else if (!strcmp(board_name, "vim3")) {
     return "*Vim3*";
   } else if (!strcmp(board_name, "astro")) {
@@ -145,32 +143,6 @@ TEST_F(DeviceEnumerationTest, QemuArm64Test) {
       "sys/platform/qemu-bus",
       "sys/platform/00:00:6/rtc",
       "sys/platform/pci/00:00.0",
-  };
-
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
-}
-
-TEST_F(DeviceEnumerationTest, Vim2Test) {
-  static const char* kDevicePaths[] = {
-      "sys/platform/vim", "sys/platform/00:00:1b/sysmem", "sys/platform/05:02:1/aml-gxl-gpio",
-      "sys/platform/05:00:2/aml-i2c", "sys/platform/05:02:4/clocks",
-      "sys/platform/05:00:10/aml-canvas",
-      "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-000/block",
-      "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-001/block",
-      "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-002/block",
-      "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-003/block",
-      "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-004/block",
-      "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-005/block",
-      "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-006/block",
-      // "sys/platform/05:00:3/aml-uart/serial/bt-transport-uart/bcm-hci",
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-1-81/rtc", "sys/platform/00:00:2/xhci/usb-bus",
-      "mali/aml-gpu", "dwmac/dwmac/eth_phy/phy_null_device", "dwmac/dwmac/Designware-MAC/ethernet",
-      "display/vim2-display/display-controller", "vim-thermal/vim-thermal", "gpio-light/gpio-light",
-      "wifi/brcmfmac-wlanphy", "aml-sdio/aml-sd-emmc/sdmmc",
-      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio", "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
-      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2", "sys/platform/05:02:b/aml-mailbox",
-      "class/thermal/000", "aml-video",
-      "sys/platform/00:00:29",  // registers device
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

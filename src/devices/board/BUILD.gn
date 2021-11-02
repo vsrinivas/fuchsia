@@ -15,7 +15,6 @@ group("drivers") {
     "drivers/sherlock:sherlock",
     "drivers/sherlock:sherlock-factory",
     "drivers/sherlock:sherlock-factory-rndis",
-    "drivers/vim2",
     "drivers/vim3",
   ]
 

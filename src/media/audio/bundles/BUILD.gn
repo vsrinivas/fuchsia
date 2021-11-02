@@ -45,11 +45,6 @@ group("config") {
   deps = [ "//src/media/audio/config" ]
 }
 
-group("vim2_media_config") {
-  testonly = true
-  deps = [ "//src/media/audio/vim2_media_config" ]
-}
-
 group("virtual_audio_driver") {
   public_deps = [ "//src/media/audio/drivers/virtual_audio" ]
 }

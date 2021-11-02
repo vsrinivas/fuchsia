@@ -7,7 +7,6 @@ group("drivers") {
   deps = [
     "drivers/aml-thermal-s905d2g",
     "drivers/aml-thermal-s905d2g-legacy",
-    "drivers/aml-thermal-s912",
     "drivers/aml-thermistor",
   ]
 }

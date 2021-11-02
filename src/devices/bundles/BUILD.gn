@@ -34,7 +34,6 @@ group("drivers") {
     "//src/devices/ram:drivers",
     "//src/devices/registers:drivers",
     "//src/devices/rtc:drivers",
-    "//src/devices/scpi:drivers",
     "//src/devices/securemem:drivers",
     "//src/devices/serial:drivers",
     "//src/devices/spi:drivers",

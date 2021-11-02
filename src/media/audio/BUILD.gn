@@ -14,7 +14,6 @@ group("audio") {
     "drivers",
     "examples",
     "lib",
-    "vim2_media_config",
   ]
 }
 

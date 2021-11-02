@@ -761,7 +761,6 @@ config("Wno-conversion") {
     "//src/devices/temperature/drivers/shtv3:*",
     "//src/devices/testing/fake-msi:*",
     "//src/devices/testing/goldfish/fake_pipe:*",
-    "//src/devices/thermal/drivers/aml-thermal-s912:*",
     "//src/devices/tpm/drivers/cr50-spi:*",
     "//src/devices/tpm/drivers/tpm:*",
     "//src/devices/usb/bin/lsusb:*",

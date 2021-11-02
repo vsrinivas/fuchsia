@@ -82,7 +82,6 @@
 //src/devices/board/drivers/sherlock:sherlock-driver
 //src/devices/board/drivers/sherlock:sherlock-factory-driver
 //src/devices/board/drivers/sherlock:sherlock-factory-rndis-driver
-//src/devices/board/drivers/vim2:vim2-driver
 //src/devices/board/drivers/vim3:vim3-driver
 //src/devices/bus/drivers/pci/test:pci_fake-driver
 //src/devices/bus/drivers/pci/test:pci_protocol_test_driver-driver
@@ -116,7 +115,6 @@
 //src/devices/cpu/drivers/aml-cpu-legacy:aml-cpu-legacy-driver
 //src/devices/cpu/drivers/aml-cpu:aml-cpu-driver
 //src/devices/gpio/drivers/aml-axg-gpio:aml-axg-gpio-driver
-//src/devices/gpio/drivers/aml-gxl-gpio:aml-gxl-gpio-driver
 //src/devices/gpio/drivers/gpio-test:gpio-test-driver
 //src/devices/gpio/drivers/gpio:gpio-driver
 //src/devices/i2c/drivers/aml-i2c:aml-i2c-driver
@@ -164,8 +162,6 @@
 //src/devices/rtc/drivers/fallback:fallback-driver
 //src/devices/rtc/drivers/nxp:nxp-driver
 //src/devices/rtc/drivers/pl031-rtc:pl031-rtc-driver
-//src/devices/scpi/drivers/aml-scpi-s912:aml-scpi-s912.mailbox-driver
-//src/devices/scpi/drivers/aml-scpi-s912:scpi-driver
 //src/devices/securemem/drivers/aml-securemem:aml-securemem-driver
 //src/devices/serial/drivers/aml-uart:aml-uart-driver
 //src/devices/serial/drivers/ftdi:ftdi-driver
@@ -212,7 +208,6 @@
 //src/devices/tests/sysdev:sysdev-driver
 //src/devices/thermal/drivers/aml-thermal-s905d2g-legacy:aml-thermal-s905d2g-legacy-driver
 //src/devices/thermal/drivers/aml-thermal-s905d2g:aml-thermal-s905d2g-driver
-//src/devices/thermal/drivers/aml-thermal-s912:aml-thermal-s912-driver
 //src/devices/thermal/drivers/aml-thermistor:aml-thermistor-driver
 //src/devices/tpm/drivers/cr50-spi:fuchsia_driver
 //src/devices/tpm/drivers/tpm:fuchsia_driver
