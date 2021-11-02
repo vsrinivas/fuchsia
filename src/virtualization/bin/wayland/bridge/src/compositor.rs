@@ -982,6 +982,33 @@ impl Surface {
         }
         Ok(())
     }
+
+    pub fn hit_test(
+        &self,
+        x: f32,
+        y: f32,
+        client: &Client,
+    ) -> Option<(ObjectRef<Self>, (i32, i32))> {
+        // Iterate over subsurfaces, starting with the top-most surface.
+        for (surface_ref, _) in self.subsurfaces.iter().rev() {
+            if let Ok(surface) = surface_ref.get(client) {
+                let (x1, y1, x2, y2) = {
+                    let geometry = surface.window_geometry();
+                    (
+                        surface.position.0,
+                        surface.position.1,
+                        surface.position.0 + geometry.width,
+                        surface.position.1 + geometry.height,
+                    )
+                };
+                if x >= x1 as f32 && y >= y1 as f32 && x < x2 as f32 && y < y2 as f32 {
+                    return Some((*surface_ref, surface.position));
+                }
+            }
+        }
+
+        None
+    }
 }
 
 impl RequestReceiver<WlSurface> for Surface {

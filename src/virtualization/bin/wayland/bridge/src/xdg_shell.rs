@@ -732,35 +732,28 @@ impl XdgSurface {
         }
     }
 
-    fn find_event_target(
+    fn hit_test(
         this: ObjectRef<Self>,
         location_x: f32,
         location_y: f32,
         client: &Client,
-    ) -> Option<ObjectRef<Self>> {
+    ) -> Option<(ObjectRef<Self>, ObjectRef<Surface>, (i32, i32))> {
         let mut maybe_xdg_surface_ref = Some(this);
         while let Some(xdg_surface_ref) = maybe_xdg_surface_ref.take() {
             if let Ok(xdg_surface) = xdg_surface_ref.get(client) {
-                if let Some((parent_view, offset)) = xdg_surface.view.as_ref().map(|v| {
+                if let Some((parent_view, view_offset)) = xdg_surface.view.as_ref().map(|v| {
                     let view = v.lock();
                     (view.parent(), view.absolute_offset())
                 }) {
                     let surface_ref = xdg_surface.surface_ref;
                     if let Ok(surface) = surface_ref.get(client) {
-                        let (x1, y1, x2, y2) = {
-                            let geometry = surface.window_geometry();
-                            (
-                                offset.0,
-                                offset.1,
-                                offset.0 + geometry.width,
-                                offset.1 + geometry.height,
-                            )
-                        };
                         let pixel_scale = surface.pixel_scale();
-                        let x = location_x * pixel_scale.0;
-                        let y = location_y * pixel_scale.1;
-                        if x >= x1 as f32 && y >= y1 as f32 && x < x2 as f32 && y < y2 as f32 {
-                            return Some(xdg_surface_ref);
+                        let x = location_x * pixel_scale.0 - view_offset.0 as f32;
+                        let y = location_y * pixel_scale.1 - view_offset.1 as f32;
+                        if let Some((surface_ref, offset)) = surface.hit_test(x, y, client) {
+                            let offset_x = offset.0 + view_offset.0;
+                            let offset_y = offset.1 + view_offset.1;
+                            return Some((xdg_surface_ref, surface_ref, (offset_x, offset_y)));
                         }
                     }
                     maybe_xdg_surface_ref = parent_view.as_ref().map(|v| v.lock().xdg_surface());
@@ -779,18 +772,18 @@ impl XdgSurface {
             ftrace::duration!("wayland", "XdgSurface::handle_input_events");
             let source_xdg_surface = this.get(client)?;
             let source_surface_ref = source_xdg_surface.surface_ref;
+            let pixel_scale = source_surface_ref.get(client)?.pixel_scale();
             for event in &events {
                 // Hit-testing is used to determine the target for events with a location. Last
                 // XDG surface is used for all other events.
                 let target = if let Some((x, y)) = InputDispatcher::get_input_event_location(event)
                 {
-                    Self::find_event_target(this, x, y, client)
+                    Self::hit_test(this, x, y, client)
                 } else {
-                    Some(*client.xdg_surfaces.last().unwrap_or(&this))
+                    let xdg_surface_ref = *client.xdg_surfaces.last().unwrap_or(&this);
+                    Some((xdg_surface_ref, xdg_surface_ref.get(client)?.surface_ref, (0, 0)))
                 };
-                if let Some(xdg_surface_ref) = target {
-                    let xdg_surface = xdg_surface_ref.get(client)?;
-                    let surface_ref = xdg_surface.surface_ref;
+                if let Some((xdg_surface_ref, surface_ref, offset)) = target {
                     if let Ok(surface) = surface_ref.get(client) {
                         let had_focus = client.input_dispatcher.has_focus(surface_ref);
                         // If the client has set window geometry we'll place the scenic
@@ -799,11 +792,7 @@ impl XdgSurface {
                         // To compensate for this, we need to apply a translation to the
                         // pointer events received by scenic to adjust for this.
                         let (pointer_translation, pixel_scale) = {
-                            let pixel_scale = surface.pixel_scale();
                             let offset = {
-                                // Unwrap is safe as successful hit-test requires a view.
-                                let offset =
-                                    xdg_surface.view.as_ref().unwrap().lock().absolute_offset();
                                 (offset.0 as f32 / pixel_scale.0, offset.1 as f32 / pixel_scale.1)
                             };
                             let geometry = surface.window_geometry();
