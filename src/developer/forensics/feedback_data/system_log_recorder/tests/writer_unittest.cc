@@ -39,8 +39,6 @@ namespace {
 const auto kMaxLogLineSize =
     StorageSize::Bytes(Format(BuildLogMessage(FX_LOG_INFO, "line X").value()).size());
 
-constexpr auto kMinFsyncInterval = zx::duration::infinite();
-
 class EncoderStub : public Encoder {
  public:
   EncoderStub() {}
@@ -85,7 +83,7 @@ TEST(WriterTest, VerifyFileOrdering) {
 
   LogMessageStore store(kBlockSize, kBufferSize, MakeIdentityEncoder());
   store.TurnOnRateLimiting();
-  SystemLogWriter writer(temp_dir.path(), 4u, kMinFsyncInterval, &store);
+  SystemLogWriter writer(temp_dir.path(), 4u, &store);
 
   // Written to file 0
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
@@ -148,7 +146,7 @@ TEST(WriterTest, VerifyEncoderInput) {
   auto encoder_ptr = encoder.get();
   LogMessageStore store(kBlockSize, kBufferSize, std::move(encoder));
   store.TurnOnRateLimiting();
-  SystemLogWriter writer(temp_dir.path(), 2u, kMinFsyncInterval, &store);
+  SystemLogWriter writer(temp_dir.path(), 2u, &store);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
   writer.Write();
@@ -177,7 +175,7 @@ TEST(WriterTest, WritesMessages) {
   // string.
   LogMessageStore store(kMaxLogLineSize * 2, kMaxLogLineSize * 2, MakeIdentityEncoder());
   store.TurnOnRateLimiting();
-  SystemLogWriter writer(temp_dir.path(), 2u, kMinFsyncInterval, &store);
+  SystemLogWriter writer(temp_dir.path(), 2u, &store);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
@@ -218,7 +216,7 @@ TEST(WriterTest, VerifyCompressionRatio) {
 
   LogMessageStore store(kMaxLogLineSize * 4, kMaxLogLineSize * 4, MakeIdentityEncoder());
   store.TurnOnRateLimiting();
-  SystemLogWriter writer(temp_dir.path(), 2u, kMinFsyncInterval, &store);
+  SystemLogWriter writer(temp_dir.path(), 2u, &store);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
@@ -241,7 +239,7 @@ TEST(WriterTest, VerifyProductionEcoding) {
   auto encoder = std::unique_ptr<Encoder>(new ProductionEncoder());
   LogMessageStore store(kMaxLogLineSize * 5, kMaxLogLineSize * 5, std::move(encoder));
   store.TurnOnRateLimiting();
-  SystemLogWriter writer(temp_dir.path(), 2u, kMinFsyncInterval, &store);
+  SystemLogWriter writer(temp_dir.path(), 2u, &store);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
@@ -277,7 +275,7 @@ TEST(WriterTest, FilesAlreadyPresent) {
     LogMessageStore store(kMaxLogLineSize * 5, kMaxLogLineSize * 5, std::move(encoder));
     store.TurnOnRateLimiting();
 
-    SystemLogWriter writer(temp_dir.path(), 2u, kMinFsyncInterval, &store);
+    SystemLogWriter writer(temp_dir.path(), 2u, &store);
 
     EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
     EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
@@ -289,7 +287,7 @@ TEST(WriterTest, FilesAlreadyPresent) {
     LogMessageStore store(kMaxLogLineSize * 5, kMaxLogLineSize * 5, std::move(encoder));
     store.TurnOnRateLimiting();
 
-    SystemLogWriter writer(temp_dir.path(), 2u, kMinFsyncInterval, &store);
+    SystemLogWriter writer(temp_dir.path(), 2u, &store);
 
     EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2")));
     EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 3")));

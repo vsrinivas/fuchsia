@@ -210,20 +210,6 @@ source_set("product_info_provider") {
   deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
-source_set("memory_pressure") {
-  testonly = true
-
-  sources = [
-    "memory_pressure.cc",
-    "memory_pressure.h",
-  ]
-
-  public_deps = [
-    ":fidl_server",
-    "//sdk/fidl/fuchsia.memorypressure",
-  ]
-}
-
 source_set("network_reachability_provider") {
   testonly = true
 

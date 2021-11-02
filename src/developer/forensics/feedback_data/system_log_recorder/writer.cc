@@ -7,8 +7,6 @@
 #include <fcntl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
-#include <lib/zx/clock.h>
-#include <lib/zx/time.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -23,12 +21,8 @@ namespace feedback_data {
 namespace system_log_recorder {
 
 SystemLogWriter::SystemLogWriter(const std::string& logs_dir, size_t max_num_files,
-                                 zx::duration min_fsync_interval, LogMessageStore* store)
-    : logs_dir_(logs_dir),
-      max_num_files_(max_num_files),
-      file_queue_(),
-      min_fsync_interval_(min_fsync_interval),
-      store_(store) {
+                                 LogMessageStore* store)
+    : logs_dir_(logs_dir), max_num_files_(max_num_files), file_queue_(), store_(store) {
   FX_CHECK(max_num_files_ > 0);
   FX_CHECK(files::CreateDirectory(logs_dir));
 
@@ -74,11 +68,7 @@ void SystemLogWriter::Write() {
     // Overcommit, i.e. write everything we consumed before starting a new file for the next
     // block as we cannot have a block spanning multiple files.
     write(current_file_descriptor_.get(), str.c_str(), str.size());
-
-    const auto current_time = zx::clock::get_monotonic();
-    if (call_fsync_ && min_fsync_interval_ <= (current_time - last_fsync_time_)) {
-      last_fsync_time_ = current_time;
-      FX_LOGS(INFO) << "Calling fsync";
+    if (call_fsync_) {
       fsync(current_file_descriptor_.get());
     }
   }
@@ -88,14 +78,7 @@ void SystemLogWriter::Write() {
   }
 }
 
-void SystemLogWriter::SetFsyncOnWrite(const bool enable, const bool finalized) {
-  if (!call_fsync_finalized_ && call_fsync_ != enable) {
-    FX_LOGS(INFO) << std::boolalpha << "Changing fsync state: enable=" << enable
-                  << " finalized=" << finalized;
-    call_fsync_ = enable;
-    call_fsync_finalized_ = finalized;
-  }
-}
+void SystemLogWriter::EnableFsyncOnWrite() { call_fsync_ = true; }
 
 std::string SystemLogWriter::Path(const size_t file_num) const {
   return files::JoinPath(logs_dir_, std::to_string(file_num));

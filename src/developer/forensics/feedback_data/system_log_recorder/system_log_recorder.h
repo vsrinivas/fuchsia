@@ -12,7 +12,6 @@
 #include "src/developer/forensics/feedback_data/archive_accessor_ptr.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/encoder.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/log_message_store.h"
-#include "src/developer/forensics/feedback_data/system_log_recorder/pressure_watcher.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/writer.h"
 #include "src/developer/forensics/utils/storage_size.h"
 
@@ -28,7 +27,6 @@ class SystemLogRecorder {
     std::string logs_dir;
     size_t max_num_files;
     StorageSize total_log_size;
-    zx::duration min_fsync_interval;
   };
 
   SystemLogRecorder(async_dispatcher_t* archive_dispatcher, async_dispatcher_t* write_dispatcher,
@@ -41,7 +39,6 @@ class SystemLogRecorder {
 
  private:
   void PeriodicWriteTask();
-  void OnPressureLevelChanged(fuchsia::memorypressure::Level level);
 
   async_dispatcher_t* archive_dispatcher_;
   async_dispatcher_t* write_dispatcher_;
@@ -51,7 +48,6 @@ class SystemLogRecorder {
   LogMessageStore store_;
   ArchiveAccessor archive_accessor_;
   SystemLogWriter writer_;
-  PressureWatcher pressure_watcher_;
 
   async::TaskClosureMethod<SystemLogRecorder, &SystemLogRecorder::PeriodicWriteTask>
       periodic_write_task_{this};

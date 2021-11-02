@@ -5,7 +5,6 @@
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
 
 #include <lib/syslog/logger.h>
-#include <lib/zx/time.h>
 
 #include <memory>
 #include <vector>
@@ -38,8 +37,6 @@ namespace {
 // Only change "X" for one character. i.e. X -> 12 is not allowed.
 const StorageSize kMaxLogLineSize =
     StorageSize::Bytes(Format(BuildLogMessage(FX_LOG_INFO, "line X").value()).size());
-
-constexpr auto kMinFsyncInterval = zx::duration::infinite();
 
 std::unique_ptr<Encoder> MakeIdentityEncoder() {
   return std::unique_ptr<Encoder>(new IdentityEncoder());
@@ -147,7 +144,7 @@ TEST(ReaderTest, SortsMessages) {
 
   LogMessageStore store(StorageSize::Kilobytes(8), StorageSize::Kilobytes(8),
                         MakeIdentityEncoder());
-  SystemLogWriter writer(temp_dir.path(), 1u, kMinFsyncInterval, &store);
+  SystemLogWriter writer(temp_dir.path(), 1u, &store);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0", zx::msec(0))));
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 3", zx::msec(3))));
@@ -220,7 +217,7 @@ TEST(ReaderTest, SortsMessagesMultipleFiles) {
 
   // Set the block and buffer to both hold 4 log messages.
   LogMessageStore store(kMaxLogLineSize * 4, kMaxLogLineSize * 4, MakeIdentityEncoder());
-  SystemLogWriter writer(temp_dir.path(), 8u, kMinFsyncInterval, &store);
+  SystemLogWriter writer(temp_dir.path(), 8u, &store);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0", zx::msec(0))));
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 3", zx::msec(3))));

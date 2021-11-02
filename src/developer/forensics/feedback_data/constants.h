@@ -6,7 +6,6 @@
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_CONSTANTS_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <lib/zx/time.h>
 
 #include <cstdint>
 #include <set>
@@ -142,9 +141,6 @@ constexpr char kStopMessageStr[] =
 
 // One repeated message can occupy up to "kMaxRepeatedBuffers" buffers.
 constexpr size_t kMaxRepeatedBuffers = 30;
-
-// Minimum duration the writer should wait between calling fsync, if it's using it.
-constexpr zx::duration kMinFsyncInterval = zx::min(3);
 
 // The current version of the snapshot. Update these values together!
 struct SnapshotVersion {
