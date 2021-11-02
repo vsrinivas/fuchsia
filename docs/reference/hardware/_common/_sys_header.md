@@ -1,27 +1,27 @@
 {# This file is used to define the objects and css style for driver pages #}
-{% set gerrit_profile = "https://fuchsia-review.googlesource.com/q/owner:" %}
-{% set gerrit_change_url = "https://fuchsia-review.googlesource.com/c/fuchsia/+/" %}
-{% set fuchsia_source_tree = "https://fuchsia.googlesource.com/fuchsia/+/main/" %}
-{% set fuchsia_editor = "https://ci.android.com/edit?repo=fuchsia/fuchsia/main&file=" %}
-{% set issue_url = "https://fxbug.dev/" %}
-{% set cs_url = "https://cs.opensource.google/fuchsia/fuchsia/+/main:" %}
-{% set fuchsia_source_tree_change = "https://fuchsia.googlesource.com/fuchsia/+/" %}
-{% set system_config_dir = "docs/reference/hardware/" %}
-{% set system_config_yaml_file = "_supported_sys_config.yaml" %}
-{% set architecture_yaml_file = "_supported_cpu_architecture.yaml" %}
+{%- set gerrit_profile = "https://fuchsia-review.googlesource.com/q/owner:" %}
+{%- set gerrit_change_url = "https://fuchsia-review.googlesource.com/c/fuchsia/+/" %}
+{%- set fuchsia_source_tree = "https://fuchsia.googlesource.com/fuchsia/+/main/" %}
+{%- set fuchsia_editor = "https://ci.android.com/edit?repo=fuchsia/fuchsia/main&file=" %}
+{%- set issue_url = "https://fxbug.dev/" %}
+{%- set cs_url = "https://cs.opensource.google/fuchsia/fuchsia/+/main:" %}
+{%- set fuchsia_source_tree_change = "https://fuchsia.googlesource.com/fuchsia/+/" %}
+{%- set system_config_dir = "docs/reference/hardware/" %}
+{%- set system_config_yaml_file = "_supported_sys_config.yaml" %}
+{%- set architecture_yaml_file = "_supported_cpu_architecture.yaml" %}
 
-{% set sysconfig | yamlloads %}
+{%- set sysconfig | yamlloads %}
 {% include "docs/reference/hardware/_supported_sys_config.yaml" %}
-{% endset %}
+{%- endset %}
 
-{% set architecture | yamlloads %}
+{%- set architecture | yamlloads %}
 {% include "docs/reference/hardware/_supported_cpu_architecture.yaml" %}
-{% endset %}
+{%- endset %}
 
 {% comment %}
-{% set epitaphs | yamlloads %}
+{%- set epitaphs | yamlloads %}
 {% include "docs/reference/hardware/_supported_sys_config_epitaphs.yaml" %}
-{% endset %}
+{%- endset %}
 {% endcomment %}
 
 <style>

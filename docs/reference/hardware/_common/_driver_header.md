@@ -1,26 +1,26 @@
 {# This file is used to define the objects and css style for driver pages #}
-{% set gerrit_profile = "https://fuchsia-review.googlesource.com/q/owner:" %}
-{% set gerrit_change_url = "https://fuchsia-review.googlesource.com/c/fuchsia/+/" %}
-{% set fuchsia_source_tree = "https://fuchsia.googlesource.com/fuchsia/+/master/" %}
-{% set fuchsia_editor = "https://ci.android.com/edit?repo=fuchsia/fuchsia/master&file=" %}
-{% set issue_url = "https://fxbug.dev/" %}
-{% set cs_url = "https://cs.opensource.google/fuchsia/fuchsia/+/master:" %}
-{% set fuchsia_source_tree_change = "https://fuchsia.googlesource.com/fuchsia/+/" %}
-{% set drivers_dir = "docs/reference/hardware/" %}
-{% set drivers_metadata_file = "_drivers.yaml" %}
-{% set areas_yaml_file = "_drivers_areas.yaml" %}
+{%- set gerrit_profile = "https://fuchsia-review.googlesource.com/q/owner:" %}
+{%- set gerrit_change_url = "https://fuchsia-review.googlesource.com/c/fuchsia/+/" %}
+{%- set fuchsia_source_tree = "https://fuchsia.googlesource.com/fuchsia/+/main/" %}
+{%- set fuchsia_editor = "https://ci.android.com/edit?repo=fuchsia/fuchsia/main&file=" %}
+{%- set issue_url = "https://fxbug.dev/" %}
+{%- set cs_url = "https://cs.opensource.google/fuchsia/fuchsia/+/main:" %}
+{%- set fuchsia_source_tree_change = "https://fuchsia.googlesource.com/fuchsia/+/" %}
+{%- set drivers_dir = "docs/reference/hardware/" %}
+{%- set drivers_metadata_file = "_drivers.yaml" %}
+{%- set areas_yaml_file = "_drivers_areas.yaml" %}
 
-{% set drivers | yamlloads %}
+{%- set drivers | yamlloads %}
 {% include "docs/reference/hardware/_drivers.yaml" %}
-{% endset %}
+{%- endset %}
 
-{% set areas | yamlloads %}
+{%- set areas | yamlloads %}
 {% include "docs/reference/hardware/_drivers_areas.yaml" %}
-{% endset %}
+{%- endset %}
 
-{% set epitaphs | yamlloads %}
+{%- set epitaphs | yamlloads %}
 {% include "docs/reference/hardware/_drivers_epitaphs.yaml" %}
-{% endset %}
+{%- endset %}
 
 <style>
 .comma-list {

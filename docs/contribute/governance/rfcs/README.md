@@ -47,22 +47,22 @@ form](rfc_process.md). It is also summarized below.
 <devsite-expandable id="rfc-area">
   <h4 class="showalways">RFC area</h4>
 <form id="filter-checkboxes-reset">
-  {% for area in areas %}
-    {% set found=false %}
-    {% for rfc in rfcs %}
-        {% for rfca in rfc.area %}
-          {% if rfca == area %}
-            {% set found=true %}
-          {% endif %}
-        {% endfor %}
-    {% endfor %}
-    {% if found %}
+  {%- for area in areas %}
+    {%- set found=false %}
+    {%- for rfc in rfcs %}
+        {%- for rfca in rfc.area %}
+          {%- if rfca == area %}
+            {%- set found=true %}
+          {%- endif %}
+        {%- endfor %}
+    {%- endfor %}
+    {%- if found %}
       <div class="checkbox-div">
         <input type="checkbox" id="checkbox-reset-{{ area|replace(" ", "-")|replace(".", "-")  }}" checked>
         <label for="checkbox-reset-{{ area|replace(" ", "-")|replace(".", "-") }}">{{ area }}</label>
       </div>
-    {% endif %}
-  {% endfor %}
+    {%- endif %}
+  {%- endfor %}
   <br>
   <br>
   <button class="select-all">Select all</button>
@@ -81,20 +81,20 @@ form](rfc_process.md). It is also summarized below.
 
 <a name="accepted-rfc"><h3 class="hide-from-toc">Accepted</h3></a>
 {% include "docs/contribute/governance/rfcs/_common/_index_table_header.md" %}
-{% for rfc in rfcs %}
-    {% if rfc.status == "Accepted" %}
+{%- for rfc in rfcs | sort(attribute='name') %}
+    {%- if rfc.status == "Accepted" %}
         {% include "docs/contribute/governance/rfcs/_common/_index_table_body.md" %}
-    {% endif %}
-{% endfor %}
+    {%- endif %}
+{%- endfor %}
 {% include "docs/contribute/governance/rfcs/_common/_index_table_footer.md" %}
 
 <a name="rejected-rfc"><h3 class="hide-from-toc">Rejected</h3></a>
 {% include "docs/contribute/governance/rfcs/_common/_index_table_header.md" %}
-{% for rfc in rfcs %}
-    {% if rfc.status == "Rejected" %}
+{%- for rfc in rfcs | sort(attribute='name') %}
+    {%- if rfc.status == "Rejected" %}
         {% include "docs/contribute/governance/rfcs/_common/_index_table_body.md" %}
-    {% endif %}
-{% endfor %}
+    {%- endif %}
+{%- endfor %}
 {% include "docs/contribute/governance/rfcs/_common/_index_table_footer.md" %}
 
 {# This div is used to close the filter that is initialized above #}

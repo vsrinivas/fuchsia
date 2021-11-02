@@ -23,25 +23,25 @@ This page displays supported system configurations for running Fuchsia.
 <devsite-select id="filter-selection">
   <select>
   <option>Select a CPU architecture</option>
-  {% for arc in architecture %}
-    {% set found=false %}
-    {% for sys in sysconfig %}
-          {% if arc == sys.architecture %}
-            {% set found=true %}
-          {% endif %}
-    {% endfor %}
-    {% if found %}
+  {%- for arc in architecture %}
+    {%- set found=false %}
+    {%- for sys in sysconfig %}
+          {%- if arc == sys.architecture %}
+            {%- set found=true %}
+          {%- endif %}
+    {%- endfor %}
+    {%- if found %}
       <option>{{ arc }}</option>
-    {% endif %}
-  {% endfor %}
+    {%- endif %}
+  {%- endfor %}
   </select>
 </devsite-select>
   <devsite-filter match="all" select-el-container-id="filter-selection" sortable="0">
   <br>
   <input type="text" placeholder="Find a supported system configuration" column="all">
 {% include "docs/reference/hardware/_common/_sys_index_table_header.md" %}
-{% for sys in sysconfig | sort(attribute='name') %}
+{%- for sys in sysconfig | sort(attribute='name') %}
         {% include "docs/reference/hardware/_common/_sys_index_table_body.md" %}
-{% endfor %}
+{%- endfor %}
 {% include "docs/reference/hardware/_common/_index_table_footer.md" %}
 </div>

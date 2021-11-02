@@ -2,4 +2,3 @@
   <input type="text" placeholder="Filter the glossary">
   <div>
     <ul class="list">
-

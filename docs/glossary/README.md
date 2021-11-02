@@ -15,22 +15,22 @@ To add a glossary definition, see [Adding glossary entries](/docs/contribute/doc
 <div class="form-checkbox">
   <h4 class="showalways">Glossary area</h4>
 <form id="filter-checkboxes-reset">
-  {% for area in areas %}
-    {% set found=false %}
-    {% for item in glossary %}
-        {% for terma in item.area %}
-          {% if terma == area %}
-            {% set found=true %}
-          {% endif %}
-        {% endfor %}
-    {% endfor %}
-    {% if found %}
+  {%- for area in areas %}
+    {%- set found=false %}
+    {%- for item in glossary -%}
+        {%- for terma in item.area -%}
+          {%- if terma == area %}
+            {%- set found=true %}
+          {%- endif %}
+        {%- endfor %}
+    {%- endfor %}
+    {%- if found %}
       <div class="checkbox-div">
         <input type="checkbox" id="checkbox-reset-{{ area }}">
         <label for="checkbox-reset-{{ area }}">{{ area }}</label>
       </div>
-    {% endif %}
-  {% endfor %}
+    {%- endif %}
+  {%- endfor %}
   <br>
   <br>
   <button class="select-all">Select all</button>
@@ -39,9 +39,9 @@ To add a glossary definition, see [Adding glossary entries](/docs/contribute/doc
 </form>
 
 {% include "docs/glossary/_common/_glossary_list_header.md" %}
-{% for item in glossary %}
+{%- for item in glossary %}
   {% include "docs/glossary/_common/_glossary_list_body.md" %}
-{% endfor %}
+{%- endfor %}
 {% include "docs/glossary/_common/_glossary_list_footer.md" %}
 {# This div is used to close the filter that is initialized above #}
 </div>

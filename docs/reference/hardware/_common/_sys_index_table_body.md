@@ -6,42 +6,42 @@
         <col width="10%">
       </colgroup>
         <tbody class="list">
-          {% if sys.description|length %}
+          {%- if sys.description|length %}
           <tr>
             <td>Description</td>
             <td>{{ sys.description }}</td>
           </tr>
-          {% endif %}
-          {% if sys.manufacturer_link|length %}
+          {%- endif %}
+          {%- if sys.manufacturer_link|length %}
           <tr>
             <td>Manufacturer link</td>
             <td><a class= "external" href="{{ sys.manufacturer_link }}">{{ sys.name }}</a></td>
           </tr>
-          {% endif %}
-          {% if sys.architecture|length %}
+          {%- endif %}
+          {%- if sys.architecture|length %}
           <tr>
             <td>Architecture</td>
             <td>{{ sys.architecture }}</td>
           </tr>
-          {% endif %}
-          {% if sys.RAM|length %}
+          {%- endif %}
+          {%- if sys.RAM|length %}
           <tr>
             <td>RAM</td>
             <td>{{ sys.RAM }}</td>
           </tr>
-          {% endif %}
-          {% if sys.storage|length %}
+          {%- endif %}
+          {%- if sys.storage|length %}
           <tr>
             <td>Storage</td>
             <td>{{ sys.storage }}</td>
           </tr>
-          {% endif %}
-          {% if sys.board_driver_location|length %}
+          {%- endif %}
+          {%- if sys.board_driver_location|length %}
           <tr>
             <td>Board driver path</td>
             <td><a href="{{ cs_url }}{{ sys.board_driver_location}}"><code>/{{ sys.board_driver_location }}</code></a></td>
           </tr>
-          {% endif %}
+          {%- endif %}
         </tbody>
       </table>
     </td>
