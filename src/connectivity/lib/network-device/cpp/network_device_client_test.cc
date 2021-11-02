@@ -628,4 +628,85 @@ TEST_F(NetDeviceTest, PadTxFrames) {
   }
 }
 
+TEST_F(NetDeviceTest, TestPortInfoNoMac) {
+  // Create the tun device and client.
+  auto tun_device_result = OpenTunDeviceAndPort();
+  ASSERT_OK(tun_device_result.status_value());
+  auto& [tun_device, tun_port] = tun_device_result.value();
+  std::unique_ptr<NetworkDeviceClient> client;
+  ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
+
+  // Fetch the port's details.
+  std::optional<zx::status<network::client::PortInfoAndMac>> response;
+  client->GetPortInfoWithMac(kPortId,
+                             [&response](zx::status<network::client::PortInfoAndMac> result) {
+                               response = std::move(result);
+                             });
+  ASSERT_TRUE(RunLoopUntilOrFailure([&response]() { return response.has_value(); }));
+
+  // Ensure the values are correct.
+  ASSERT_OK(response->status_value());
+  const network::client::PortInfoAndMac& port_details = response->value();
+  EXPECT_EQ(port_details.id, kPortId);
+  ASSERT_EQ(port_details.rx_types.size(), 1u);
+  EXPECT_EQ(port_details.rx_types.at(0), netdev::wire::FrameType::kEthernet);
+  ASSERT_EQ(port_details.tx_types.size(), 1u);
+  EXPECT_EQ(port_details.tx_types.at(0).type, netdev::wire::FrameType::kEthernet);
+  EXPECT_EQ(port_details.unicast_address, std::nullopt);
+}
+
+TEST_F(NetDeviceTest, TestPortInfoWithMac) {
+  static constexpr fuchsia_net::wire::MacAddress kMacAddress = {
+      .octets = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66},
+  };
+
+  // Setup up the tun port's mac address.
+  tun::wire::DevicePortConfig config = DefaultDevicePortConfig();
+  config.set_mac(alloc_, kMacAddress);
+
+  // Create the tun device and client.
+  auto tun_device_result = OpenTunDeviceAndPort(DefaultDeviceConfig(), config);
+  ASSERT_OK(tun_device_result.status_value());
+  auto& [tun_device, tun_port] = tun_device_result.value();
+  std::unique_ptr<NetworkDeviceClient> client;
+  ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
+
+  // Fetch the port's details.
+  std::optional<zx::status<network::client::PortInfoAndMac>> response;
+  client->GetPortInfoWithMac(kPortId,
+                             [&response](zx::status<network::client::PortInfoAndMac> result) {
+                               response = std::move(result);
+                             });
+  ASSERT_TRUE(RunLoopUntilOrFailure([&response]() { return response.has_value(); }));
+
+  // Verify the unicast address was correctly fetched.
+  ASSERT_OK(response->status_value());
+  const network::client::PortInfoAndMac& port_details = response->value();
+  ASSERT_TRUE(port_details.unicast_address.has_value());
+  fidl::Array expected_mac = kMacAddress.octets;
+  fidl::Array actual_mac = port_details.unicast_address.value().octets;
+  EXPECT_EQ(std::basic_string_view(expected_mac.data(), expected_mac.size()),
+            std::basic_string_view(actual_mac.data(), actual_mac.size()));
+}
+
+TEST_F(NetDeviceTest, TestPortInfoInvalidPort) {
+  // Create the tun device and client.
+  auto tun_device_result = OpenTunDeviceAndPort();
+  ASSERT_OK(tun_device_result.status_value());
+  auto& [tun_device, tun_port] = tun_device_result.value();
+  std::unique_ptr<NetworkDeviceClient> client;
+  ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
+
+  // Query an invalid port.
+  std::optional<zx::status<network::client::PortInfoAndMac>> response;
+  client->GetPortInfoWithMac(/*port_id=*/17,
+                             [&response](zx::status<network::client::PortInfoAndMac> result) {
+                               response = std::move(result);
+                             });
+  ASSERT_TRUE(RunLoopUntilOrFailure([&response]() { return response.has_value(); }));
+
+  // Ensure we received the correct error.
+  EXPECT_EQ(response->status_value(), ZX_ERR_NOT_FOUND);
+}
+
 }  // namespace

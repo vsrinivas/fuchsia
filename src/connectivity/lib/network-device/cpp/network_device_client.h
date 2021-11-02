@@ -64,6 +64,22 @@ struct DeviceInfo {
   std::vector<fuchsia_hardware_network::wire::TxAcceleration> tx_accel;
 };
 
+// Port and Mac address information.
+//
+// Contains details about a single port derived from fuchsia.hardware.network/PortInfo
+// and from fuchsia.hardware.network/MacAddressing.
+struct PortInfoAndMac {
+  static zx::status<PortInfoAndMac> Create(
+      const netdev::wire::PortInfo& fidl,
+      const std::optional<fuchsia_net::wire::MacAddress>& unicast_address);
+
+  uint8_t id;
+  fuchsia_hardware_network::wire::DeviceClass port_class;
+  std::vector<fuchsia_hardware_network::wire::FrameType> rx_types;
+  std::vector<fuchsia_hardware_network::wire::FrameTypeSupport> tx_types;
+  std::optional<fuchsia_net::wire::MacAddress> unicast_address;
+};
+
 namespace internal {
 
 // Forwards FIDL errors in the |netdev::Device| client to |NetworkDeviceClient|,
@@ -109,6 +125,7 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
   using RxCallback = fit::function<void(Buffer buffer)>;
   using ErrorCallback = fit::function<void(zx_status_t)>;
   using StatusCallback = fit::function<void(netdev::wire::PortStatus)>;
+  using GetPortInfoWithMacCallback = fit::function<void(zx::status<PortInfoAndMac>)>;
 
   // Opens a new session with `name` and invokes `callback` when done.
   //
@@ -135,6 +152,11 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
   //
   // Calls callback with the operation's result.
   void DetachPort(uint8_t port_id, ErrorCallback callback);
+
+  // Gets information about the given port.
+  //
+  // Ports may be freely queried without being attached.
+  void GetPortInfoWithMac(uint8_t port_id, GetPortInfoWithMacCallback callback);
 
   // Kills the current session.
   //

@@ -6,8 +6,10 @@
 
 #include <fcntl.h>
 #include <lib/async/default.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/promise.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/device/network.h>
@@ -63,6 +65,31 @@ zx::status<DeviceInfo> DeviceInfo::Create(const netdev::wire::DeviceInfo& fidl) 
   if (fidl.has_tx_accel()) {
     auto& tx_accel = fidl.tx_accel();
     std::copy(tx_accel.begin(), tx_accel.end(), std::back_inserter(info.tx_accel));
+  }
+
+  return zx::ok(std::move(info));
+}
+
+zx::status<PortInfoAndMac> PortInfoAndMac::Create(
+    const netdev::wire::PortInfo& fidl,
+    const std::optional<fuchsia_net::wire::MacAddress>& unicast_address) {
+  if (!(fidl.has_id() && fidl.has_class())) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  PortInfoAndMac info = {
+      .id = fidl.id(),
+      .port_class = fidl.class_(),
+      .unicast_address = unicast_address,
+  };
+
+  if (fidl.has_rx_types()) {
+    auto& rx_types = fidl.rx_types();
+    std::copy(rx_types.begin(), rx_types.end(), std::back_inserter(info.rx_types));
+  }
+  if (fidl.has_tx_types()) {
+    auto& tx_types = fidl.tx_types();
+    std::copy(tx_types.begin(), tx_types.end(), std::back_inserter(info.tx_types));
   }
 
   return zx::ok(std::move(info));
@@ -326,6 +353,89 @@ void NetworkDeviceClient::DetachPort(uint8_t port_id, ErrorCallback callback) {
     return bridge.consumer.promise();
   }();
   ScheduleCallbackPromise(std::move(promise), std::move(callback));
+}
+
+void NetworkDeviceClient::GetPortInfoWithMac(uint8_t port_id, GetPortInfoWithMacCallback callback) {
+  struct State {
+    PortInfoAndMac result;
+    fidl::WireClient<netdev::Port> port_client;
+    fidl::WireClient<netdev::MacAddressing> mac_client;
+  };
+  auto state = std::make_unique<State>();
+
+  // Connect to the requested port.
+  zx::status port_endpoints = fidl::CreateEndpoints<netdev::Port>();
+  if (port_endpoints.is_error()) {
+    callback(zx::error(port_endpoints.error_value()));
+    return;
+  }
+  device_->GetPort(port_id, std::move(port_endpoints->server));
+  state->port_client.Bind(std::move(port_endpoints->client), dispatcher_);
+
+  // Connect to the port's MacAddressing interface.
+  zx::status mac_endpoints = fidl::CreateEndpoints<netdev::MacAddressing>();
+  if (mac_endpoints.is_error()) {
+    callback(zx::error(mac_endpoints.error_value()));
+    return;
+  }
+  state->port_client->GetMac(std::move(mac_endpoints->server));
+  state->mac_client.Bind(std::move(mac_endpoints->client), dispatcher_);
+
+  // Get the port's information.
+  fpromise::bridge<void, zx_status_t> bridge;
+  state->port_client->GetInfo([completer = std::move(bridge.completer), state = state.get()](
+                                  fidl::WireUnownedResult<netdev::Port::GetInfo>& result) mutable {
+    if (!result.ok()) {
+      completer.complete_error(result.status());
+      return;
+    }
+    zx::status<PortInfoAndMac> info =
+        PortInfoAndMac::Create(result.value().info, /*unicast_address=*/std::nullopt);
+    if (!info.is_ok()) {
+      completer.complete_error(info.error_value());
+      return;
+    }
+    state->result = std::move(info.value());
+    completer.complete_ok();
+  });
+
+  // Get the Mac address of the interface.
+  auto get_mac_address = [state = state.get()]() -> fpromise::promise<void, zx_status_t> {
+    fpromise::bridge<void, zx_status_t> bridge;
+    state->mac_client->GetUnicastAddress(
+        [completer = std::move(bridge.completer),
+         state](fidl::WireUnownedResult<netdev::MacAddressing::GetUnicastAddress>& result) mutable {
+          if (!result.ok()) {
+            // TODO(fxbug.dev/87788): Ideally we would distinguish between the
+            // channel being closed with a ZX_ERR_NOT_SUPPORTED epitaph
+            // (indicating the device doesn't have a unicast MAC address) versus
+            // some other error.
+            //
+            // For now, we just treat all errors as "no MAC address available".
+            completer.complete_ok();
+            return;
+          }
+
+          state->result.unicast_address = result.value().address;
+          completer.complete_ok();
+        });
+    return bridge.consumer.promise();
+  };
+
+  // Fetch results, and call the user's callback.
+  auto fetch_details = bridge.consumer.promise()
+                           .and_then(std::move(get_mac_address))
+                           .then([callback = std::move(callback), state = state.get()](
+                                     fpromise::result<void, zx_status_t>& result) {
+                             if (!result.is_ok()) {
+                               callback(zx::error(result.error()));
+                               return;
+                             }
+                             callback(zx::success(std::move(state->result)));
+                           })
+                           // Keep `state` alive until the promise completes.
+                           .inspect([state = std::move(state)](const fpromise::result<>&) {});
+  fpromise::schedule_for_consumer(executor_.get(), std::move(fetch_details));
 }
 
 void NetworkDeviceClient::ScheduleCallbackPromise(fpromise::promise<void, zx_status_t> promise,
