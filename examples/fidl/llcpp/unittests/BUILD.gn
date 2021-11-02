@@ -15,6 +15,9 @@ test("test") {
   output_name = "fidl_example_llcpp_test"
   sources = [ "main.cc" ]
   deps = [
+    # For a FIDL library named "fuchsia.examples", the corresponding
+    # GN target for the LLCPP generated bindings is suffixed with "_llcpp",
+    # i.e. "fuchsia.examples_llcpp".
     "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest_main",
