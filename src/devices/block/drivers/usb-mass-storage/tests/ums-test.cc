@@ -101,7 +101,7 @@ class BlockDeviceController {
     cachecontrol_ = {};
     ASSERT_NO_FATAL_FAILURES(bus_->ClearPeripheralDeviceFunctions());
 
-    auto result2 = virtual_bus().Disconnect();
+    auto result2 = virtual_bus()->Disconnect();
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result2));
   }
 
@@ -136,17 +136,17 @@ class BlockDeviceController {
   }
 
   void EnableWritebackCache() {
-    auto result = cachecontrol_.EnableWritebackCache();
+    auto result = cachecontrol_->EnableWritebackCache();
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
   }
 
   void DisableWritebackCache() {
-    auto result = cachecontrol_.DisableWritebackCache();
+    auto result = cachecontrol_->DisableWritebackCache();
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
   }
 
   void SetWritebackCacheReported(bool report) {
-    auto result = cachecontrol_.SetWritebackCacheReported(report);
+    auto result = cachecontrol_->SetWritebackCacheReported(report);
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
   }
 
@@ -211,7 +211,7 @@ void UmsTest::SetUp() { ASSERT_NO_FATAL_FAILURES(bus_.InitUMS(&devpath_)); }
 void UmsTest::TearDown() {
   ASSERT_NO_FATAL_FAILURES(bus_.ClearPeripheralDeviceFunctions());
 
-  auto result2 = bus_.virtual_bus().Disable();
+  auto result2 = bus_.virtual_bus()->Disable();
   ASSERT_NO_FATAL_FAILURES(ValidateResult(result2));
 }
 
