@@ -146,7 +146,7 @@ zx::status<std::unique_ptr<FlashmapPartitionClient>> FlashmapPartitionClient::Cr
   }
 
   // Start the flashmap service on this NAND device.
-  auto result2 = manager.Start(std::move(*broker), std::move(endpoints->server));
+  auto result2 = manager->Start(std::move(*broker), std::move(endpoints->server));
   if (!result2.ok()) {
     ERROR("Could not start manager\n");
     return zx::error(result2.status());
@@ -187,7 +187,7 @@ zx::status<std::unique_ptr<FlashmapPartitionClient>> FlashmapPartitionClient::Cr
 
 zx::status<> FlashmapPartitionClient::Init() {
   ZX_DEBUG_ASSERT(areas_.empty());
-  auto areas = flashmap_.GetAreas();
+  auto areas = flashmap_->GetAreas();
   if (!areas.ok()) {
     return zx::error(areas.status());
   }
@@ -196,7 +196,7 @@ zx::status<> FlashmapPartitionClient::Init() {
     areas_.emplace_back(FlashmapArea(area));
   }
 
-  auto erase_block_size = flashmap_.GetEraseBlockSize();
+  auto erase_block_size = flashmap_->GetEraseBlockSize();
   if (!erase_block_size.ok()) {
     return zx::error(erase_block_size.status());
   }
@@ -236,7 +236,7 @@ zx::status<> FlashmapPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size)
     ERROR("Could not find the GBB.\n");
     return zx::error(ZX_ERR_NOT_FOUND);
   }
-  auto current_gbb = flashmap_.Read(kGbbAreaName, 0, area->size);
+  auto current_gbb = flashmap_->Read(kGbbAreaName, 0, area->size);
   if (!current_gbb.ok()) {
     return zx::error(current_gbb.status());
   }
@@ -289,7 +289,7 @@ zx::status<> FlashmapPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size)
 
 zx::status<> FlashmapPartitionClient::ABUpdate(fzl::VmoMapper& new_image) {
   // First: determine which slot we booted from.
-  auto active_slot = cros_acpi_.GetActiveApFirmware();
+  auto active_slot = cros_acpi_->GetActiveApFirmware();
   if (!active_slot.ok() || active_slot->result.is_err()) {
     ERROR("Failed to send active firmware slot request: %s\n",
           active_slot.ok() ? zx_status_get_string(active_slot->result.err())
@@ -361,16 +361,16 @@ zx::status<> FlashmapPartitionClient::ABUpdate(fzl::VmoMapper& new_image) {
   // TODO(fxbug.dev/81685): don't erase so aggressively. The flashmap component should implement a
   // "EraseAndWrite" call that will erase only required blocks.
   auto erase_result =
-      flashmap_.Erase(fidl::StringView::FromExternal(install_area->name), 0, install_area->size);
+      flashmap_->Erase(fidl::StringView::FromExternal(install_area->name), 0, install_area->size);
   if (!erase_result.ok() || erase_result->result.is_err()) {
     ERROR("Erase failed\n");
     return zx::error(erase_result.ok() ? erase_result->result.err() : erase_result.status());
   }
-  auto write_result = flashmap_.Write(fidl::StringView::FromExternal(install_area->name), 0,
-                                      fuchsia_mem::wire::Buffer{
-                                          .vmo = std::move(to_install),
-                                          .size = install_area->size,
-                                      });
+  auto write_result = flashmap_->Write(fidl::StringView::FromExternal(install_area->name), 0,
+                                       fuchsia_mem::wire::Buffer{
+                                           .vmo = std::move(to_install),
+                                           .size = install_area->size,
+                                       });
   if (!write_result.ok() || write_result->result.is_err()) {
     ERROR("write failed\n");
     return zx::error(write_result.ok() ? write_result->result.err() : write_result.status());
@@ -387,7 +387,7 @@ zx::status<> FlashmapPartitionClient::ABUpdate(fzl::VmoMapper& new_image) {
     return zx::error(ZX_ERR_IO);
   }
 
-  auto set_result = fwparam_.Set(fuchsia_vboot::wire::Key::kTryNext, install_to_b);
+  auto set_result = fwparam_->Set(fuchsia_vboot::wire::Key::kTryNext, install_to_b);
   if (!set_result.ok() || set_result->result.is_err()) {
     ERROR("Failed while setting TryNext parameter: %s\n",
           set_result.ok() ? zx_status_get_string(set_result->result.err())
@@ -405,7 +405,7 @@ zx::status<> FlashmapPartitionClient::ABUpdate(fzl::VmoMapper& new_image) {
   // See
   // https://source.chromium.org/chromiumos/_/chromium/chromiumos/platform/vboot_reference/+/1a7c57ce7fa5aa1c8cdc6bffffbfe3f8dbece664:firmware/2lib/2misc.c;l=345;drc=51879dc24aea94851fc28ffc2f68cba1b58f3db8
   // for the vboot logic.
-  auto set_result2 = fwparam_.Set(fuchsia_vboot::wire::Key::kTryCount, 0);
+  auto set_result2 = fwparam_->Set(fuchsia_vboot::wire::Key::kTryCount, 0);
   if (!set_result2.ok() || set_result2->result.is_err()) {
     ERROR("Failed while setting TryCount parameter: %s\n",
           set_result2.ok() ? zx_status_get_string(set_result2->result.err())
@@ -464,7 +464,7 @@ std::optional<FlashmapArea> FlashmapPartitionClient::FindArea(const char* name) 
 
 zx::status<bool> FlashmapPartitionClient::NeedsUpdate(const fzl::VmoMapper& new_image,
                                                       const FlashmapArea& region) {
-  auto result = flashmap_.Read(fidl::StringView::FromExternal(region.name), 0, region.size);
+  auto result = flashmap_->Read(fidl::StringView::FromExternal(region.name), 0, region.size);
   if (!result.ok() || result->result.is_err()) {
     ERROR("Failed to read section '%s': %s\n", region.name.data(),
           result.ok() ? zx_status_get_string(result->result.err())

@@ -41,7 +41,7 @@ zx_duration_t g_wipe_timeout = ZX_SEC(3);
 
 BlockWatcherPauser::~BlockWatcherPauser() {
   if (valid_) {
-    auto result = watcher_.Resume();
+    auto result = watcher_->Resume();
     if (result.status() != ZX_OK) {
       ERROR("Failed to unpause the block watcher: %s\n", zx_status_get_string(result.status()));
     } else if (result->status != ZX_OK) {
@@ -66,7 +66,7 @@ zx::status<BlockWatcherPauser> BlockWatcherPauser::Create(
 }
 
 zx::status<> BlockWatcherPauser::Pause() {
-  auto result = watcher_.Pause();
+  auto result = watcher_->Pause();
   auto status = zx::make_status(result.ok() ? result->status : result.status());
 
   valid_ = status.is_ok();

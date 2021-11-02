@@ -35,7 +35,7 @@ zx::status<std::unique_ptr<StreamReader>> StreamReader::Create(zx::channel strea
 
 zx_status_t StreamReader::Read(void* buf, size_t buf_size, size_t* size_actual) {
   if (size_ == 0) {
-    auto call_result = stream_.ReadData();
+    auto call_result = stream_->ReadData();
     if (call_result.status() != ZX_OK) {
       return call_result.status();
     }

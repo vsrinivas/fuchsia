@@ -154,7 +154,7 @@ zx::status<Configuration> QueryBootConfig(const fbl::unique_fd& devfs_root,
       fidl::StringView{"zvb.current_slot"},
       fidl::StringView{"zvb.boot-partition-uuid"},
   };
-  auto result = client.GetStrings(fidl::VectorView<fidl::StringView>::FromExternal(arguments));
+  auto result = client->GetStrings(fidl::VectorView<fidl::StringView>::FromExternal(arguments));
   if (!result.ok()) {
     return zx::error(result.status());
   }

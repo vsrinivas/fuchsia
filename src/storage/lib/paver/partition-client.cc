@@ -28,13 +28,13 @@ namespace block = fuchsia_hardware_block;
 
 BlockPartitionClient::~BlockPartitionClient() {
   if (client_) {
-    partition_.CloseFifo();
+    partition_->CloseFifo();
   }
 }
 
 zx::status<> BlockPartitionClient::ReadBlockInfo() {
   if (!block_info_) {
-    auto result = partition_.GetInfo();
+    auto result = partition_->GetInfo();
     auto status = zx::make_status(result.ok() ? result->status : result.status());
     if (status.is_error()) {
       ERROR("Failed to get partition info with status: %s\n", status.status_string());
@@ -66,7 +66,7 @@ zx::status<> BlockPartitionClient::RegisterFastBlockIo() {
     return zx::ok();
   }
 
-  auto result = partition_.GetFifo();
+  auto result = partition_->GetFifo();
   auto status = zx::make_status(result.ok() ? result->status : result.status());
   if (status.is_error()) {
     return status.take_error();
@@ -89,7 +89,7 @@ zx::status<vmoid_t> BlockPartitionClient::RegisterVmo(const zx::vmo& vmo) {
     return zx::error(ZX_ERR_IO);
   }
 
-  auto result = partition_.AttachVmo(std::move(dup));
+  auto result = partition_->AttachVmo(std::move(dup));
   auto status = zx::make_status(result.ok() ? result->status : result.status());
   if (status.is_error()) {
     return status.take_error();
@@ -224,7 +224,7 @@ fidl::ClientEnd<fuchsia_hardware_block::Block> BlockPartitionClient::GetChannel(
 }
 
 fbl::unique_fd BlockPartitionClient::block_fd() {
-  zx::channel dup(fdio_service_clone(partition_.channel().get()));
+  zx::channel dup(fdio_service_clone(partition_.client_end().channel().get()));
 
   int block_fd;
   auto status = zx::make_status(fdio_fd_create(dup.release(), &block_fd));

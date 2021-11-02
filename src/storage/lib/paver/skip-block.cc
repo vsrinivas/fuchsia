@@ -64,7 +64,7 @@ zx::status<> SkipBlockDevicePartitioner::WipeFvm() const {
   fidl::WireSyncClient<device::Controller> block_client(
       fidl::ClientEnd<device::Controller>(status.value().TakeChannel()));
 
-  auto result = block_client.GetTopologicalPath();
+  auto result = block_client->GetTopologicalPath();
   if (!result.ok()) {
     ERROR("Warning: Could not get name for partition: %s\n", zx_status_get_string(result.status()));
     return zx::error(result.status());
@@ -117,14 +117,14 @@ zx::status<> SkipBlockDevicePartitioner::WipeFvm() const {
   }
 
   fidl::WireSyncClient<block::Ftl> client(std::move(local));
-  auto result2 = client.Format();
+  auto result2 = client->Format();
 
   return zx::make_status(result2.ok() ? result2.value().status : result2.status());
 }
 
 zx::status<> SkipBlockPartitionClient::ReadPartitionInfo() {
   if (!partition_info_) {
-    auto result = partition_.GetPartitionInfo();
+    auto result = partition_->GetPartitionInfo();
     auto status = zx::make_status(result.ok() ? result->status : result.status());
     if (status.is_error()) {
       ERROR("Failed to get partition info with status: %s\n", status.status_string());
@@ -171,7 +171,7 @@ zx::status<> SkipBlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
       .block_count = static_cast<uint32_t>(size / block_size),
   };
 
-  auto result = partition_.Read(std::move(operation));
+  auto result = partition_->Read(std::move(operation));
   {
     auto status = zx::make_status(result.ok() ? result->status : result.status());
     if (status.is_error()) {
@@ -202,7 +202,7 @@ zx::status<> SkipBlockPartitionClient::Write(const zx::vmo& vmo, size_t size) {
       .block_count = static_cast<uint32_t>(size / block_size),
   };
 
-  auto result = partition_.Write(std::move(operation));
+  auto result = partition_->Write(std::move(operation));
   {
     auto status = zx::make_status(result.ok() ? result->status : result.status());
     if (status.is_error()) {
@@ -229,7 +229,7 @@ zx::status<> SkipBlockPartitionClient::WriteBytes(const zx::vmo& vmo, zx_off_t o
       .mode = skipblock::wire::WriteBytesMode::kReadModifyEraseWrite,
   };
 
-  auto result = partition_.WriteBytes(std::move(operation));
+  auto result = partition_->WriteBytes(std::move(operation));
   auto status = zx::make_status(result.ok() ? result->status : result.status());
   if (status.is_error()) {
     ERROR("Error writing partition data: %s\n", status.status_string());

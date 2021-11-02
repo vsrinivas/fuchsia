@@ -40,7 +40,7 @@ fidl::WireSyncClient<fuchsia_boot::Arguments> OpenBootArgumentClient(
 bool GetBool(fidl::WireSyncClient<fuchsia_boot::Arguments>& client, ::fidl::StringView key,
              bool default_on_missing_or_failure) {
   auto key_data = key.data();
-  auto result = client.GetBool(std::move(key), default_on_missing_or_failure);
+  auto result = client->GetBool(std::move(key), default_on_missing_or_failure);
   if (!result.ok()) {
     ERROR("Failed to get boolean argument %s. Default to %d.\n", key_data,
           default_on_missing_or_failure);
