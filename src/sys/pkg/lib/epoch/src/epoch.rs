@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// Wrapper for serializing and deserializing the epoch.json file. For more context, see
 /// [RFC-0071](https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0071_ota_backstop).
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(tag = "version", deny_unknown_fields)]
 #[allow(missing_docs)]
 pub enum EpochFile {
