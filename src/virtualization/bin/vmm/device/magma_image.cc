@@ -194,8 +194,8 @@ zx_status_t VulkanImageCreator::InitSysmem() {
     sysmem_allocator_ = fidl::WireSyncClient<fuchsia_sysmem::Allocator>(std::move(*client_end));
   }
 
-  sysmem_allocator_.SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
-                                       fsl::GetCurrentProcessKoid());
+  sysmem_allocator_->SetDebugClientInfo(
+      fidl::StringView::FromExternal(fsl::GetCurrentProcessName()), fsl::GetCurrentProcessKoid());
 
   {
     auto endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
@@ -204,7 +204,7 @@ zx_status_t VulkanImageCreator::InitSysmem() {
       return endpoints.status_value();
     }
 
-    auto result = sysmem_allocator_.AllocateSharedCollection(std::move(endpoints->server));
+    auto result = sysmem_allocator_->AllocateSharedCollection(std::move(endpoints->server));
     if (!result.ok()) {
       LOG_VERBOSE("Failed to allocate shared collection: %d", result.status());
       return result.status();
@@ -222,7 +222,7 @@ zx_status_t VulkanImageCreator::InitSysmem() {
     }
 
     constexpr uint32_t kNoRightsAttentuation = ~0;
-    auto result = local_token_.Duplicate(kNoRightsAttentuation, std::move(endpoints->server));
+    auto result = local_token_->Duplicate(kNoRightsAttentuation, std::move(endpoints->server));
     if (!result.ok()) {
       LOG_VERBOSE("Failed to duplicate token: %d", result.status());
       return result.status();
@@ -239,7 +239,7 @@ zx_status_t VulkanImageCreator::InitSysmem() {
     }
 
     constexpr uint32_t kNoRightsAttentuation = ~0;
-    auto result = local_token_.Duplicate(kNoRightsAttentuation, std::move(endpoints->server));
+    auto result = local_token_->Duplicate(kNoRightsAttentuation, std::move(endpoints->server));
     if (!result.ok()) {
       LOG_VERBOSE("Failed to duplicate token: %d", result.status());
       return result.status();
@@ -251,7 +251,7 @@ zx_status_t VulkanImageCreator::InitSysmem() {
 
   {
     // Sync the local token that was used for Duplicating
-    auto result = local_token_.Sync();
+    auto result = local_token_->Sync();
     if (!result.ok()) {
       LOG_VERBOSE("Failed to sync token: %d", result.status());
       return result.status();
@@ -301,7 +301,7 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
     args.set_export_token(allocator, std::move(export_token));
     args.set_buffer_collection_token(allocator, std::move(scenic_token_endpoint_));
 
-    auto result = scenic_allocator_.RegisterBufferCollection(std::move(args));
+    auto result = scenic_allocator_->RegisterBufferCollection(std::move(args));
     if (!result.ok()) {
       LOG_VERBOSE("RegisterBufferCollection returned %d", result.status());
       return vk::Result::eErrorInitializationFailed;
@@ -318,7 +318,7 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
 
   {
     auto collection_create_info = vk::BufferCollectionCreateInfoFUCHSIAX().setCollectionToken(
-        vulkan_token_.mutable_channel()->release());
+        vulkan_token_.TakeClientEnd().TakeChannel().release());
 
     auto result = device_->createBufferCollectionFUCHSIAXUnique(collection_create_info,
                                                                 nullptr /*pAllocator*/, loader_);
@@ -357,8 +357,8 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
       return vk::Result::eErrorInitializationFailed;
     }
 
-    auto result = sysmem_allocator_.BindSharedCollection(std::move(local_token_.client_end()),
-                                                         std::move(endpoints->server));
+    auto result = sysmem_allocator_->BindSharedCollection(local_token_.TakeClientEnd(),
+                                                          std::move(endpoints->server));
     if (!result.ok()) {
       LOG_VERBOSE("Failed to bind shared collection: %d", result.status());
       return vk::Result::eErrorInitializationFailed;
