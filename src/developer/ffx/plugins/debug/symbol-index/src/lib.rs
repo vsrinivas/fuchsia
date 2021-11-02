@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod symbol_index;
-
 use {
     anyhow::Result, errors::ffx_bail, ffx_core::ffx_plugin, ffx_debug_symbol_index_args::*,
     std::path::Path, symbol_index::*,
@@ -11,14 +9,11 @@ use {
 
 #[ffx_plugin()]
 pub fn symbol_index(cmd: SymbolIndexCommand) -> Result<()> {
-    let global_symbol_index_path =
-        std::env::var("HOME").unwrap() + "/.fuchsia/debug/symbol-index.json";
-
     match cmd.sub_command {
-        SymbolIndexSubCommand::List(cmd) => list(cmd, &global_symbol_index_path),
-        SymbolIndexSubCommand::Add(cmd) => add(cmd, &global_symbol_index_path),
-        SymbolIndexSubCommand::Remove(cmd) => remove(cmd, &global_symbol_index_path),
-        SymbolIndexSubCommand::Clean(cmd) => clean(cmd, &global_symbol_index_path),
+        SymbolIndexSubCommand::List(cmd) => list(cmd, &global_symbol_index_path()?),
+        SymbolIndexSubCommand::Add(cmd) => add(cmd, &global_symbol_index_path()?),
+        SymbolIndexSubCommand::Remove(cmd) => remove(cmd, &global_symbol_index_path()?),
+        SymbolIndexSubCommand::Clean(cmd) => clean(cmd, &global_symbol_index_path()?),
         SymbolIndexSubCommand::Generate(cmd) => generate(cmd),
     }
 }

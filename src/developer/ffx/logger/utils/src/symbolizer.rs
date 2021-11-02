@@ -7,13 +7,13 @@ use {
     async_channel::{Receiver, Sender},
     async_io::Async,
     async_lock::Mutex,
-    ffx_config::{get, get_sdk},
+    ffx_config::get_sdk,
     fuchsia_async::Task,
     futures::{AsyncBufReadExt, AsyncWriteExt, FutureExt, StreamExt},
     futures_lite::io::BufReader,
-    std::path::PathBuf,
     std::process::{Child, Command, Stdio},
     std::sync::Arc,
+    symbol_index::ensure_symbol_index_registered,
 };
 
 const BARRIER: &str = "<ffx symbolizer>\n";
@@ -24,22 +24,6 @@ pub fn is_symbolizer_context_marker(s: &str) -> bool {
         || s.starts_with("{{{mmap")
         || s.starts_with("{{{dumpfile")
         || s.starts_with("{{{module");
-}
-
-fn symbol_list_contains(output: String, abs_path: PathBuf) -> bool {
-    output.lines().filter_map(|l| l.split("\t").nth(1)).any(|d| PathBuf::from(d) == abs_path)
-}
-
-pub async fn is_current_sdk_root_registered() -> Result<bool> {
-    let sdk_root: PathBuf = get("sdk.root").await?;
-
-    let path = get_sdk().await?.get_host_tool("symbol-index")?;
-    let c = Command::new(path).arg("list").output()?;
-    // Note: canonicalize here performs synchronous filesystem operations. This
-    // is likely not a significant issue, but it is noteworthy.
-    let abs_path = sdk_root.canonicalize().unwrap();
-
-    Ok(symbol_list_contains(String::from_utf8(c.stdout).unwrap(), abs_path))
 }
 
 #[async_trait::async_trait(?Send)]
@@ -74,6 +58,10 @@ impl<'a> Symbolizer for LogSymbolizer {
         tx: Sender<String>,
         extra_args: Vec<String>,
     ) -> Result<()> {
+        if let Err(e) = ensure_symbol_index_registered().await {
+            log::warn!("ensure_symbol_index_registered failed, error was: {:#?}", e);
+        }
+
         let path = get_sdk()
             .await?
             .get_host_tool("symbolizer")
@@ -229,18 +217,5 @@ mod test {
         in_tx.send("not_real\n".to_string()).await.unwrap();
         let out = out_rx.next().await.unwrap();
         assert_eq!(out, "not_real\n");
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_symbol_index_list() {
-        let input = "
-        /home/test/my-symbol-index/.build-id\t/home/test/my-symbol-index
-        /some/path
-        /some/other/path/.build-id\t/some/other/path"
-            .to_string();
-
-        assert!(symbol_list_contains(input.clone(), PathBuf::from("/home/test/my-symbol-index")));
-        assert!(symbol_list_contains(input.clone(), PathBuf::from("/some/other/path")));
-        assert!(!symbol_list_contains(input.clone(), PathBuf::from("/doesnt/exist")));
     }
 }

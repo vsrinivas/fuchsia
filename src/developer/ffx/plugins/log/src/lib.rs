@@ -14,7 +14,6 @@ use {
     ffx_log_args::{LogCommand, LogSubCommand, TimeFormat, WatchCommand},
     ffx_log_data::{EventType, LogData, LogEntry},
     ffx_log_frontend::{exec_log_cmd, LogCommandParameters, LogFormatter},
-    ffx_log_utils::symbolizer::is_current_sdk_root_registered,
     fidl_fuchsia_developer_bridge::{DaemonProxy, StreamMode},
     fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, RemoteControlProxy},
     fuchsia_async::futures::{AsyncWrite, AsyncWriteExt},
@@ -374,32 +373,10 @@ pub async fn log_impl<W: std::io::Write>(
     if get(SYMBOLIZE_ENABLED_CONFIG).await.unwrap_or(true) {
         match get_sdk().await {
             Ok(s) => match s.get_host_tool("symbolizer") {
-                Ok(_) => {
-                    let registered_result = is_current_sdk_root_registered().await;
-                    if let Ok(false) = registered_result {
-                        let sdk_type: Result<String, _> = get("sdk.type").await;
-                        eprintln!(
-                            "It looks like there is no symbol index for your sdk root registered."
-                        );
-
-                        if sdk_type.is_ok() && sdk_type.unwrap() == "in-tree".to_string() {
-                            eprintln!("If you want symbolization to work correctly, run the following from your checkout:");
-                            eprintln!("  fx symbol-index register");
-                        } else {
-                            eprintln!("Check the documentation for your environment for instructions on how to register symbols in the symbol index.");
-                        }
-
-                        eprintln!("\nSilence this message in the future by disabling the `proactive_log.symbolize.enabled` config setting.");
-                    } else if registered_result.is_err() {
-                        log::warn!(
-                            "checking the registration of the SDK root failed: {}",
-                            registered_result.as_ref().unwrap_err()
-                        )
-                    }
-                }
                 Err(e) => {
                     print_symbolizer_warning(e).await;
                 }
+                Ok(_) => {}
             },
             Err(e) => {
                 print_symbolizer_warning(e).await;

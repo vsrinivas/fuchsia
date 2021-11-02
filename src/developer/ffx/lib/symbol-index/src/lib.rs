@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
+    anyhow::{bail, Context, Result},
     errors::ffx_error,
+    ffx_config::get,
     glob::glob as _glob,
     serde::{Deserialize, Serialize},
     std::{
@@ -13,6 +14,36 @@ use {
         path::{Path, PathBuf},
     },
 };
+
+pub fn global_symbol_index_path() -> Result<String> {
+    Ok(std::env::var("HOME").context("getting $HOME")? + "/.fuchsia/debug/symbol-index.json")
+}
+
+// Ensures that symbols in sdk.root are registered in the global symbol index.
+pub async fn ensure_symbol_index_registered() -> Result<()> {
+    let sdk_root: PathBuf = get("sdk.root").await?;
+    let sdk_type: Option<String> = get("sdk.type").await?;
+
+    if let Some(s) = sdk_type {
+        if s == "in-tree" {
+            let path = sdk_root.join(".symbol-index.json");
+            if !path.exists() {
+                bail!("Required {:?} doesn't exist", path);
+            }
+            let path_str = path.display().to_string();
+            let symbol_index_path = global_symbol_index_path()?;
+            let mut index = SymbolIndex::load(&symbol_index_path).unwrap_or(SymbolIndex::new());
+            if !index.includes.contains(&path_str) {
+                index.includes.push(path_str);
+                index.save(&symbol_index_path)?;
+            }
+            return Ok(());
+        }
+    }
+
+    // TODO: handle the out-of-tree case once the SDK provides a symbol-index.json.
+    Ok(())
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct BuildIdDir {
