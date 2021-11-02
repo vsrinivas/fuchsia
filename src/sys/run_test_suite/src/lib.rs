@@ -452,7 +452,7 @@ async fn collect_results_for_suite(
                                             .boxed();
 
                                     /// Max number of bytes read at once from a file.
-                                    const READ_SIZE: u64 = 1024;
+                                    const READ_SIZE: u64 = fidl_fuchsia_io::MAX_BUF;
                                     let directory_artifact_ref = &directory_artifact;
                                     files_stream
                                         .try_for_each_concurrent(
@@ -460,9 +460,16 @@ async fn collect_results_for_suite(
                                             |(file_proxy, filepath)| async move {
                                                 let mut file =
                                                     directory_artifact_ref.new_file(&filepath)?;
+                                                let mut vector = VecDeque::new();
+                                                // Arbitrary number of reads to pipeline. Works for
+                                                // a bandwidth delay product of 800kB.
+                                                const PIPELINED_READ_COUNT: u64 = 100;
+                                                for _n in 0..PIPELINED_READ_COUNT {
+                                                    vector.push_back(file_proxy.read(READ_SIZE));
+                                                }
                                                 loop {
                                                     let (status, mut buf) =
-                                                        file_proxy.read(READ_SIZE).await.map_err(
+                                                        vector.pop_front().unwrap().await.map_err(
                                                             |e| io::Error::new(ErrorKind::Other, e),
                                                         )?;
                                                     if status != 0 {
@@ -478,6 +485,7 @@ async fn collect_results_for_suite(
                                                         break;
                                                     }
                                                     file.write_all(&mut buf)?;
+                                                    vector.push_back(file_proxy.read(READ_SIZE));
                                                 }
                                                 file.flush()
                                             },
