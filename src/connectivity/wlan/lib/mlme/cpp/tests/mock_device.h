@@ -208,12 +208,14 @@ struct MockDevice : public DeviceInterface {
 
   void SendWlanPacket(std::unique_ptr<Packet> packet) {
     ZX_ASSERT(protocol_.has_value());
-    auto flags = 0;
-    const wlan_rx_info_t* rx_info = nullptr;
+    wlan_rx_packet_t rx_packet = {
+        .mac_frame_buffer = packet->data(),
+        .mac_frame_size = packet->len(),
+    };
     if (packet->has_ctrl_data<wlan_rx_info_t>()) {
-      rx_info = packet->ctrl_data<wlan_rx_info_t>();
+      rx_packet.info = *packet->ctrl_data<wlan_rx_info_t>();
     }
-    protocol_->recv(protocol_ctx_, flags, packet->data(), packet->len(), rx_info);
+    protocol_->recv(protocol_ctx_, &rx_packet);
   }
 
   template <typename T>

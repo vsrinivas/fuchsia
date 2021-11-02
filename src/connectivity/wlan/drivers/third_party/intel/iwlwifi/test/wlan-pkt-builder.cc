@@ -29,8 +29,8 @@ WlanPktBuilder::WlanPkt::WlanPkt(const uint8_t* buf, size_t len)
   mac_pkt_->body_size = len - mac_pkt_->header_size;
 
   *wlan_pkt_ = {};
-  wlan_pkt_->packet_head.data_buffer = &*buf_;
-  wlan_pkt_->packet_head.data_size = len;
+  wlan_pkt_->mac_frame_buffer = &*buf_;
+  wlan_pkt_->mac_frame_size = len;
   wlan_pkt_->info.tx_flags = 0;
   wlan_pkt_->info.channel_bandwidth = CHANNEL_BANDWIDTH_CBW20;
 }

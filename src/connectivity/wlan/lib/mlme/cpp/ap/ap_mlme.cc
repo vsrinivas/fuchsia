@@ -73,13 +73,10 @@ zx_status_t ApMlme::Init() {
                              uint16_t beacon_interval) -> zx_status_t {
         auto pkt = FromRustOutBuf(buf);
         wlan_bcn_config_t bcn_cfg = {
-            .tmpl =
+            .packet_template =
                 {
-                    .packet_head =
-                        {
-                            .data_buffer = pkt->data(),
-                            .data_size = pkt->size(),
-                        },
+                    .mac_frame_buffer = pkt->data(),
+                    .mac_frame_size = pkt->size(),
                 },
             .tim_ele_offset = tim_ele_offset,
             .beacon_interval = beacon_interval,

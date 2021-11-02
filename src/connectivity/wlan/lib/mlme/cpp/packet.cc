@@ -30,12 +30,8 @@ zx_status_t Packet::CopyFrom(const void* src, size_t len, size_t offset) {
 wlan_tx_packet_t Packet::AsWlanTxPacket() {
   ZX_DEBUG_ASSERT(len() <= std::numeric_limits<uint16_t>::max());
   wlan_tx_packet_t tx_pkt = {};
-  tx_pkt.packet_head.data_buffer = data();
-  tx_pkt.packet_head.data_size = static_cast<uint16_t>(len());
-  if (has_ext_data()) {
-    tx_pkt.packet_tail_list = ext_data()->operation();
-    tx_pkt.tail_offset = ext_offset();
-  }
+  tx_pkt.mac_frame_buffer = data();
+  tx_pkt.mac_frame_size = static_cast<uint16_t>(len());
   if (has_ctrl_data<wlan_tx_info_t>()) {
     std::memcpy(&tx_pkt.info, ctrl_data<wlan_tx_info_t>(), sizeof(tx_pkt.info));
   }

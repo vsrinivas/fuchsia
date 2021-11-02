@@ -133,7 +133,7 @@ impl crate::MlmeImpl for Ap {
     fn handle_mac_frame_rx(
         &mut self,
         frame: &[u8],
-        rx_info: Option<banjo_fuchsia_hardware_wlan_mac::WlanRxInfo>,
+        rx_info: banjo_fuchsia_hardware_wlan_mac::WlanRxInfo,
     ) {
         Self::handle_mac_frame_rx(self, frame, rx_info)
     }
@@ -338,7 +338,7 @@ impl Ap {
     pub fn handle_mac_frame_rx<B: ByteSlice>(
         &mut self,
         bytes: B,
-        rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
+        rx_info: banjo_wlan_mac::WlanRxInfo,
     ) {
         let bss = match self.bss.as_mut() {
             Some(bss) => bss,
@@ -349,15 +349,12 @@ impl Ap {
         };
 
         // Rogue frames received from the wrong channel
-        if let Some(rx_info) = rx_info {
-            if rx_info.channel.primary != bss.channel {
-                return;
-            }
+        if rx_info.channel.primary != bss.channel {
+            return;
         }
 
-        let body_aligned = rx_info.map_or(false, |ri| {
-            (ri.rx_flags & banjo_wlan_mac::WlanRxInfoFlags::FRAME_BODY_PADDING_4.0) != 0
-        });
+        let body_aligned =
+            (rx_info.rx_flags & banjo_wlan_mac::WlanRxInfoFlags::FRAME_BODY_PADDING_4.0) != 0;
 
         let mac_frame = match mac::MacFrame::parse(bytes, body_aligned) {
             Some(mac_frame) => mac_frame,
@@ -414,7 +411,7 @@ mod tests {
             buffer::FakeBufferProvider,
             device::FakeDevice,
             key::{KeyConfig, KeyType, Protection},
-            test_utils::fake_control_handle,
+            test_utils::{fake_control_handle, MockWlanRxInfo},
         },
         banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_async as fasync,
@@ -577,7 +574,7 @@ mod tests {
                 1, 0, // Auth Txn Seq Number
                 0, 0, // Status code
             ][..],
-            None,
+            MockWlanRxInfo::default().into(),
         );
 
         assert_eq!(ap.bss.as_mut().unwrap().clients.contains_key(&CLIENT_ADDR), true);
@@ -641,7 +638,7 @@ mod tests {
                 2, 2, 2, 2, 2, 2, // BSSID.
                 0x10, 0, // Sequence control.
             ][..],
-            None,
+            MockWlanRxInfo::default().into(),
         );
 
         ap.handle_eth_frame_tx(&make_eth_frame(
@@ -661,7 +658,7 @@ mod tests {
                 2, 2, 2, 2, 2, 2, // addr1
                 4, 4, 4, 4, 4, 4, // addr2
             ][..],
-            None,
+            MockWlanRxInfo::default().into(),
         );
 
         assert_eq!(fake_device.wlan_queue.len(), 1);
@@ -714,7 +711,7 @@ mod tests {
                 // Disassoc header:
                 8, 0, // reason code
             ][..],
-            None,
+            MockWlanRxInfo::default().into(),
         );
 
         assert_eq!(ap.bss.as_mut().unwrap().clients.contains_key(&CLIENT_ADDR), false);
@@ -738,7 +735,23 @@ mod tests {
             )
             .expect("expected InfraBss::new ok"),
         );
-        ap.handle_mac_frame_rx(&[0][..], None);
+        ap.handle_mac_frame_rx(
+            &[0][..],
+            banjo_wlan_mac::WlanRxInfo {
+                rx_flags: 0,
+                valid_fields: 0,
+                phy: 0,
+                data_rate: 0,
+                channel: banjo_common::WlanChannel {
+                    primary: 0,
+                    cbw: banjo_common::ChannelBandwidth::CBW20,
+                    secondary80: 0,
+                },
+                mcs: 0,
+                rssi_dbm: 0,
+                snr_dbh: 0,
+            },
+        );
     }
 
     #[test]
@@ -784,14 +797,10 @@ mod tests {
             rssi_dbm: 0,
             snr_dbh: 0,
         };
-        ap.handle_mac_frame_rx(&probe_req[..], Some(rx_info_wrong_channel.clone()));
+        ap.handle_mac_frame_rx(&probe_req[..], rx_info_wrong_channel.clone());
 
         // Probe Request from the wrong channel should be dropped and no probe response sent.
         assert_eq!(fake_device.wlan_queue.len(), 0);
-
-        // Frame from unknown channel should be processed and a probe response sent.
-        ap.handle_mac_frame_rx(&probe_req[..], None);
-        assert_eq!(fake_device.wlan_queue.len(), 1);
 
         // Frame from the same channel must be processed and a probe response sent.
         let rx_info_same_channel = banjo_wlan_mac::WlanRxInfo {
@@ -803,7 +812,7 @@ mod tests {
             ..rx_info_wrong_channel
         };
         fake_device.wlan_queue.clear();
-        ap.handle_mac_frame_rx(&probe_req[..], Some(rx_info_same_channel));
+        ap.handle_mac_frame_rx(&probe_req[..], rx_info_same_channel);
         assert_eq!(fake_device.wlan_queue.len(), 1);
     }
 

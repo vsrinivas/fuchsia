@@ -100,9 +100,10 @@ exclude = [
 "WlanmacInfo" = "wlanmac_info_t"
 "WlanHwScanResult" = "wlan_hw_scan_result_t"
 "WlanIndication" = "wlan_indication_t"
+"WlanRxPacket" = "wlan_rx_packet_t"
 "WlanRxInfo" = "wlan_rx_info_t"
-"WlanTxInfo" = "wlan_tx_info_t"
 "WlanTxPacket" = "wlan_tx_packet_t"
+"WlanTxInfo" = "wlan_tx_info_t"
 "WlanTxStatus" = "wlan_tx_status_t"
 
 

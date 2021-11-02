@@ -77,9 +77,9 @@ struct WlantapMacImpl : WlantapMac {
     self.listener_->WlantapMacStop(self.id_);
   }
 
-  static zx_status_t WlanmacQueueTx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
+  static zx_status_t WlanmacQueueTx(void* ctx, uint32_t options, const wlan_tx_packet_t* packet) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    self.listener_->WlantapMacQueueTx(self.id_, pkt);
+    self.listener_->WlantapMacQueueTx(self.id_, packet);
     return ZX_OK;
   }
 
@@ -176,7 +176,9 @@ struct WlantapMacImpl : WlantapMac {
                                        .mcs = rx_info.mcs,
                                        .rssi_dbm = rx_info.rssi_dbm,
                                        .snr_dbh = rx_info.snr_dbh};
-      ifc_.Recv(0, data.data(), data.size(), &converted_info);
+      wlan_rx_packet_t rx_packet = {
+          .mac_frame_buffer = data.data(), .mac_frame_size = data.size(), .info = converted_info};
+      ifc_.Recv(&rx_packet);
     }
   }
 

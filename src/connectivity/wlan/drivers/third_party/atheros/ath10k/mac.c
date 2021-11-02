@@ -3633,7 +3633,7 @@ static enum ath10k_hw_txrx_mode ath10k_mac_tx_h_get_txmode(struct ath10k* ar,
 }
 
 static bool ath10k_tx_h_use_hwcrypto(struct ath10k* ar, struct ath10k_msg_buf* tx_buf,
-                                     wlan_tx_info_t* tx_info) {
+                                     const wlan_tx_info_t* tx_info) {
   if (!(tx_info->tx_flags & WLAN_TX_INFO_FLAGS_PROTECTED)) {
     return false;
   }
@@ -3734,7 +3734,7 @@ static void ath10k_tx_h_add_p2p_noa_ie(struct ath10k* ar,
 #endif  // NEEDS PORTING
 
 static void ath10k_mac_tx_h_tx_flags(struct ath10k* ar, struct ath10k_msg_buf* tx_buf,
-                                     wlan_tx_info_t* tx_info) {
+                                     const wlan_tx_info_t* tx_info) {
   struct ieee80211_frame_header* hdr = ath10k_msg_buf_get_payload(tx_buf);
 
   tx_buf->tx.flags = 0;
@@ -4194,7 +4194,8 @@ static zx_status_t ath10k_start_scan(struct ath10k* ar, const struct wmi_start_s
 /**********************/
 
 static zx_status_t ath10k_mac_build_tx_pkt(struct ath10k* ar, struct ath10k_msg_buf** tx_buf_ptr,
-                                           wlan_tx_packet_t* pkt, enum ath10k_mac_tx_path txpath) {
+                                           const wlan_tx_packet_t* pkt,
+                                           enum ath10k_mac_tx_path txpath) {
   enum ath10k_msg_type buf_type;
 
   switch (txpath) {
@@ -4208,11 +4209,9 @@ static zx_status_t ath10k_mac_build_tx_pkt(struct ath10k* ar, struct ath10k_msg_
   }
 
   struct ath10k_msg_buf* tx_buf;
-  size_t head_size = pkt->packet_head.data_size;
-  size_t tail_size =
-      pkt->packet_tail_list ? (pkt->packet_tail_list->data_size - pkt->tail_offset) : 0;
+  size_t head_size = pkt->mac_frame_size;
   // This 64 gives us headroom to add fields. It would be nice if we could be more specific...
-  size_t extra_bytes = head_size + tail_size + 64;
+  size_t extra_bytes = head_size + 64;
 
   zx_status_t ret = ath10k_msg_buf_alloc(ar, &tx_buf, buf_type, extra_bytes);
   if (ret != ZX_OK) {
@@ -4222,20 +4221,17 @@ static zx_status_t ath10k_mac_build_tx_pkt(struct ath10k* ar, struct ath10k_msg_
   tx_buf->used -= 64;
 
   uint8_t* next_data = ath10k_msg_buf_get_payload(tx_buf);
-  memcpy(next_data, pkt->packet_head.data_buffer, head_size);
+  memcpy(next_data, pkt->mac_frame_buffer, head_size);
   next_data += head_size;
-  if (tail_size > 0) {
-    memcpy(next_data, (pkt->packet_tail_list->data_buffer + pkt->tail_offset), tail_size);
-  }
 
   *tx_buf_ptr = tx_buf;
   return ZX_OK;
 }
 
-zx_status_t ath10k_mac_op_tx(struct ath10k* ar, wlan_tx_packet_t* pkt) {
+zx_status_t ath10k_mac_op_tx(struct ath10k* ar, const wlan_tx_packet_t* pkt) {
   struct ath10k_htt* htt = &ar->htt;
 
-  enum ath10k_hw_txrx_mode txmode = ath10k_mac_tx_h_get_txmode(ar, pkt->packet_head.data_buffer);
+  enum ath10k_hw_txrx_mode txmode = ath10k_mac_tx_h_get_txmode(ar, pkt->mac_frame_buffer);
   enum ath10k_mac_tx_path txpath = ath10k_mac_tx_h_get_txpath(ar, txmode);
 
   if (txpath == ATH10K_MAC_TX_UNKNOWN) {
@@ -4254,8 +4250,7 @@ zx_status_t ath10k_mac_op_tx(struct ath10k* ar, wlan_tx_packet_t* pkt) {
 
   ath10k_mac_tx_h_tx_flags(ar, tx_buf, &pkt->info);
 
-  const struct ieee80211_frame_header* hdr =
-      (struct ieee80211_frame_header*)pkt->packet_head.data_buffer;
+  const struct ieee80211_frame_header* hdr = (struct ieee80211_frame_header*)pkt->mac_frame_buffer;
 
   if (is_htt) {
     mtx_lock(&ar->htt.tx_lock);

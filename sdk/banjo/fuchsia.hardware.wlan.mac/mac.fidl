@@ -4,7 +4,6 @@
 library fuchsia.hardware.wlan.mac;
 
 using ddk.hw.wlan.wlaninfo;
-using fuchsia.hardware.ethernet;
 using fuchsia.hardware.wlan.info;
 using fuchsia.wlan.common;
 using fuchsia.wlan.internal;
@@ -167,17 +166,15 @@ type WlanKeyConfig = struct {
     rsc uint64;
 };
 
+type WlanRxPacket = struct {
+    @buffer
+    mac_frame vector<uint8>:MAX;
+    info WlanRxInfo;
+};
+
 type WlanTxPacket = struct {
-    /// Leading bytes of the packet to transmit. Any 802.11 frame headers must be in the packet_head.
-    packet_head fuchsia.hardware.ethernet.EthernetNetbuf;
-    /// Trailing bytes of the packet to transmit. May be NULL if all bytes to be transmitted are in
-    /// the packet_head. Typically used to transport ethernet frames from a higher layer.
-    @mutable
-    packet_tail vector<fuchsia.hardware.ethernet.EthernetNetbuf>:MAX;
-    /// If packet_tail is not NULL, the offset into the packet tail that should be used before
-    /// transmitting. The ethernet_netbuf_t len field will reflect the original packet length without
-    /// the offset.
-    tail_offset uint16;
+    @buffer
+    mac_frame vector<uint8>:MAX;
     /// Additional data needed to transmit the packet.
     info WlanTxInfo;
 };
@@ -220,7 +217,7 @@ type WlanBcnConfig = struct {
     /// contain only minimum valid info. They will be changed later by hardware/firmware or software.
     /// Note that the driver must copy the packet content into its own memory and cannot rely on
     /// the pointers in the struct.
-    tmpl WlanTxPacket;
+    packet_template WlanTxPacket;
 
     /// TIM offset (in bytes) to the start of |bcn_tmpl|. This points to the first byte of TIM IE,
     /// which is the tag ID.
@@ -238,12 +235,9 @@ protocol WlanmacIfc {
         status uint32;
     }) -> ();
 
-    /// Submit received data to the next driver. info must not be NULL.
+    /// Submit received data to the next driver.
     Recv(struct {
-        flags uint32;
-        @buffer
-        data vector<uint8>:MAX;
-        info WlanRxInfo;
+        packet WlanRxPacket;
     });
 
     /// complete_tx() is called to return ownership of a packet to the wlan driver.
@@ -254,7 +248,6 @@ protocol WlanmacIfc {
     /// Upon a return of ZX_OK, the packet has been enqueued, but no information is returned as to
     /// the completion state of the transmission itself.
     CompleteTx(struct {
-        @in_out
         packet WlanTxPacket;
         status zx.status;
     }) -> ();
@@ -315,8 +308,7 @@ protocol Wlanmac {
     /// simultaneously.
     QueueTx(struct {
         options uint32;
-        @in_out
-        pkt WlanTxPacket;
+        packet WlanTxPacket;
     }) -> (struct {
         status zx.status;
     });
@@ -347,11 +339,11 @@ protocol Wlanmac {
     });
 
     /// Configures a Beacon frame in hardware to announce the BSS' existence.
-    /// * pkt: Pass `nullptr` to disable hardware Beacons. Used by software generated beacon.
+    /// * |packet|: Pass `nullptr` to disable hardware Beacons. Used by software generated beacon.
     /// TODO(fxbug.dev/29298): Rename to update_beacon.
     ConfigureBeacon(struct {
         options uint32;
-        pkt WlanTxPacket;
+        packet WlanTxPacket;
     }) -> (struct {
         st zx.status;
     });

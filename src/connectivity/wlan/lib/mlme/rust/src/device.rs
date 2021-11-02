@@ -6,7 +6,7 @@ use {
     crate::{buffer::OutBuf, key},
     banjo_fuchsia_hardware_wlan_info::*,
     banjo_fuchsia_hardware_wlan_mac::{
-        self as banjo_wlan_mac, WlanHwScanConfig, WlanHwScanResult, WlanRxInfo, WlanTxPacket,
+        self as banjo_wlan_mac, WlanHwScanConfig, WlanHwScanResult, WlanRxPacket, WlanTxPacket,
         WlanTxStatus, WlanmacInfo,
     },
     banjo_fuchsia_wlan_common as banjo_common,
@@ -212,16 +212,10 @@ pub struct WlanmacIfcProtocol<'a> {
 #[repr(C)]
 pub struct WlanmacIfcProtocolOps {
     status: extern "C" fn(ctx: &mut crate::DriverEventSink, status: u32),
-    recv: extern "C" fn(
-        ctx: &mut crate::DriverEventSink,
-        flags: u32,
-        data_buffer: *const u8,
-        data_size: usize,
-        info: *const WlanRxInfo,
-    ),
+    recv: extern "C" fn(ctx: &mut crate::DriverEventSink, packet: *const WlanRxPacket),
     complete_tx: extern "C" fn(
         ctx: &'static mut crate::DriverEventSink,
-        packet: *mut WlanTxPacket,
+        packet: *const WlanTxPacket,
         status: i32,
     ),
     indication: extern "C" fn(ctx: &mut crate::DriverEventSink, ind: u32),
@@ -236,22 +230,18 @@ extern "C" fn handle_status(ctx: &mut crate::DriverEventSink, status: u32) {
     let _ = ctx.0.unbounded_send(crate::DriverEvent::Status { status });
 }
 #[no_mangle]
-extern "C" fn handle_recv(
-    ctx: &mut crate::DriverEventSink,
-    _flags: u32,
-    data_buffer: *const u8,
-    data_size: usize,
-    info: *const WlanRxInfo,
-) {
+extern "C" fn handle_recv(ctx: &mut crate::DriverEventSink, packet: *const WlanRxPacket) {
     // TODO(fxbug.dev/29063): C++ uses a buffer allocator for this, determine if we need one.
-    let bytes = unsafe { std::slice::from_raw_parts(data_buffer, data_size) }.into();
-    let rx_info = if !info.is_null() { Some(unsafe { *info }) } else { None };
+    let bytes =
+        unsafe { std::slice::from_raw_parts((*packet).mac_frame_buffer, (*packet).mac_frame_size) }
+            .into();
+    let rx_info = unsafe { (*packet).info };
     let _ = ctx.0.unbounded_send(crate::DriverEvent::MacFrameRx { bytes, rx_info });
 }
 #[no_mangle]
 extern "C" fn handle_complete_tx(
     _ctx: &mut crate::DriverEventSink,
-    _packet: *mut WlanTxPacket,
+    _packet: *const WlanTxPacket,
     _status: i32,
 ) {
     // TODO(fxbug.dev/85924): Implement this to support asynchronous packet delivery.

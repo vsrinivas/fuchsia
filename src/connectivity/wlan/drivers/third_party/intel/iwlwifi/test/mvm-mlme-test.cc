@@ -31,15 +31,12 @@ namespace {
 
 static constexpr size_t kListenInterval = 100;
 
-typedef mock_function::MockFunction<void, void*, uint32_t, const void*, size_t,
-                                    const wlan_rx_info_t*>
-    recv_cb_t;
+typedef mock_function::MockFunction<void, void*, const wlan_rx_packet_t*> recv_cb_t;
 
 // The wrapper used by wlanmac_ifc_t.recv() to call mock-up.
-void recv_wrapper(void* cookie, uint32_t flags, const uint8_t* data, size_t length,
-                  const wlan_rx_info_t* info) {
+void recv_wrapper(void* cookie, const wlan_rx_packet_t* packet) {
   auto recv = reinterpret_cast<recv_cb_t*>(cookie);
-  recv->Call(cookie, flags, data, length, info);
+  recv->Call(cookie, packet);
 }
 
 class WlanDeviceTest : public SingleApTest {
@@ -219,8 +216,8 @@ TEST_F(WlanDeviceTest, MacStart) {
   mvmvif_sta_.mlme_channel = mlme_channel_;
   ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &mlme_channel), ZX_OK);
   // Expect the above line would copy the 'ifc'. Then set expectation below and fire test.
-  mock_recv.ExpectCall(&mock_recv, 0, nullptr, 0, nullptr);
-  mvmvif_sta_.ifc.ops->recv(&mock_recv, 0, nullptr, 0, nullptr);
+  mock_recv.ExpectCall(&mock_recv, nullptr);
+  mvmvif_sta_.ifc.ops->recv(&mock_recv, nullptr);
   mock_recv.VerifyAndClear();
 }
 

@@ -111,7 +111,7 @@ impl crate::MlmeImpl for ClientMlme {
     fn handle_mac_frame_rx(
         &mut self,
         bytes: &[u8],
-        rx_info: Option<banjo_fuchsia_hardware_wlan_mac::WlanRxInfo>,
+        rx_info: banjo_fuchsia_hardware_wlan_mac::WlanRxInfo,
     ) {
         Self::on_mac_frame_rx(self, bytes, rx_info)
     }
@@ -171,7 +171,7 @@ impl ClientMlme {
         self.channel_state.main_channel.map(|c| c == channel).unwrap_or(false)
     }
 
-    pub fn on_mac_frame_rx(&mut self, frame: &[u8], rx_info: Option<banjo_wlan_mac::WlanRxInfo>) {
+    pub fn on_mac_frame_rx(&mut self, frame: &[u8], rx_info: banjo_wlan_mac::WlanRxInfo) {
         // TODO(fxbug.dev/44487): Send the entire frame to scanner.
         match mac::MacFrame::parse(frame, false) {
             Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
@@ -856,11 +856,7 @@ impl<'a> BoundClient<'a> {
     }
 
     /// Called when an arbitrary frame was received over the air.
-    pub fn on_mac_frame<B: ByteSlice>(
-        &mut self,
-        bytes: B,
-        rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
-    ) {
+    pub fn on_mac_frame<B: ByteSlice>(&mut self, bytes: B, rx_info: banjo_wlan_mac::WlanRxInfo) {
         // Safe: |state| is never None and always replaced with Some(..).
         self.sta.state = Some(self.sta.state.take().unwrap().on_mac_frame(self, bytes, rx_info));
     }
@@ -1130,7 +1126,7 @@ mod tests {
             buffer::FakeBufferProvider,
             client::lost_bss::LostBssCounter,
             device::FakeDevice,
-            test_utils::fake_control_handle,
+            test_utils::{fake_control_handle, MockWlanRxInfo},
         },
         fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
         std::convert::TryFrom,
@@ -1587,7 +1583,23 @@ mod tests {
 
         // Receive beacon midway, so lost bss countdown is reset.
         // If this beacon is not received, the next timeout will trigger auto deauth.
-        me.on_mac_frame_rx(BEACON_FRAME, None);
+        me.on_mac_frame_rx(
+            BEACON_FRAME,
+            banjo_wlan_mac::WlanRxInfo {
+                rx_flags: 0,
+                valid_fields: 0,
+                phy: 0,
+                data_rate: 0,
+                channel: banjo_common::WlanChannel {
+                    primary: 11,
+                    cbw: banjo_common::ChannelBandwidth::CBW20,
+                    secondary80: 0,
+                },
+                mcs: 0,
+                rssi_dbm: 0,
+                snr_dbh: 0,
+            },
+        );
 
         // Verify auto deauth is not triggered for the entire duration.
         advance_auto_deauth(&mut m, &mut me, DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT);
@@ -1914,7 +1926,7 @@ mod tests {
         let mut client = me.get_bound_client().expect("client should be present");
         client.move_to_associated_state();
 
-        client.on_mac_frame(&data_frame[..], None);
+        client.on_mac_frame(&data_frame[..], MockWlanRxInfo::default().into());
 
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
@@ -1948,7 +1960,7 @@ mod tests {
         let mut client = me.get_bound_client().expect("client should be present");
         client.move_to_associated_state();
 
-        client.on_mac_frame(&data_frame[..], None);
+        client.on_mac_frame(&data_frame[..], MockWlanRxInfo::default().into());
 
         assert_eq!(m.fake_device.eth_queue.len(), 1);
         #[rustfmt::skip]
@@ -1974,7 +1986,7 @@ mod tests {
         let mut client = me.get_bound_client().expect("client should be present");
         client.move_to_associated_state();
 
-        client.on_mac_frame(&data_frame[..], None);
+        client.on_mac_frame(&data_frame[..], MockWlanRxInfo::default().into());
 
         let queue = &m.fake_device.eth_queue;
         assert_eq!(queue.len(), 2);
@@ -2010,7 +2022,7 @@ mod tests {
         let mut client = me.get_bound_client().expect("client should be present");
         client.move_to_associated_state();
 
-        client.on_mac_frame(&data_frame[..], None);
+        client.on_mac_frame(&data_frame[..], MockWlanRxInfo::default().into());
 
         let queue = &m.fake_device.eth_queue;
         assert_eq!(queue.len(), 1);
@@ -2039,7 +2051,7 @@ mod tests {
         client.move_to_associated_state();
         client.close_controlled_port(&exec);
 
-        client.on_mac_frame(&data_frame[..], None);
+        client.on_mac_frame(&data_frame[..], MockWlanRxInfo::default().into());
 
         // Verify frame was not sent to netstack.
         assert_eq!(m.fake_device.eth_queue.len(), 0);
@@ -2060,7 +2072,7 @@ mod tests {
         client.move_to_associated_state();
         client.close_controlled_port(&exec);
 
-        client.on_mac_frame(&eapol_frame[..], None);
+        client.on_mac_frame(&eapol_frame[..], MockWlanRxInfo::default().into());
 
         // Verify EAPoL frame was not sent to netstack.
         assert_eq!(m.fake_device.eth_queue.len(), 0);
@@ -2090,7 +2102,7 @@ mod tests {
         let mut client = me.get_bound_client().expect("client should be present");
         client.move_to_associated_state();
 
-        client.on_mac_frame(&eapol_frame[..], None);
+        client.on_mac_frame(&eapol_frame[..], MockWlanRxInfo::default().into());
 
         // Verify EAPoL frame was not sent to netstack.
         assert_eq!(m.fake_device.eth_queue.len(), 0);

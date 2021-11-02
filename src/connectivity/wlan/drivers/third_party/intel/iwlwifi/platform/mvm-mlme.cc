@@ -293,26 +293,21 @@ void mac_stop(void* ctx) {
   }
 }
 
-zx_status_t mac_queue_tx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
+zx_status_t mac_queue_tx(void* ctx, uint32_t options, const wlan_tx_packet_t* tx_packet) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
-
-  if (pkt->packet_tail_count) {
-    IWL_ERR(mvmvif, "TX doesn't support tail packet yet\n");
-    return ZX_ERR_INVALID_ARGS;
-  }
 
   ieee80211_mac_packet packet = {};
   packet.common_header =
-      reinterpret_cast<const ieee80211_frame_header*>(pkt->packet_head.data_buffer);
+      reinterpret_cast<const ieee80211_frame_header*>(tx_packet->mac_frame_buffer);
   packet.header_size = ieee80211_get_header_len(packet.common_header);
-  if (packet.header_size > pkt->packet_head.data_size) {
+  if (packet.header_size > tx_packet->mac_frame_size) {
     IWL_ERR(mvmvif, "TX packet header size %zu too large for data size %zu\n", packet.header_size,
-            pkt->packet_head.data_size);
+            tx_packet->mac_frame_size);
     return ZX_ERR_INVALID_ARGS;
   }
 
-  packet.body = pkt->packet_head.data_buffer + packet.header_size;
-  packet.body_size = pkt->packet_head.data_size - packet.header_size;
+  packet.body = tx_packet->mac_frame_buffer + packet.header_size;
+  packet.body_size = tx_packet->mac_frame_size - packet.header_size;
 
   mtx_lock(&mvmvif->mvm->mutex);
   zx_status_t ret = iwl_mvm_mac_tx(mvmvif, &packet);
@@ -490,7 +485,8 @@ zx_status_t mac_enable_beaconing(void* ctx, uint32_t options, const wlan_bcn_con
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t mac_configure_beacon(void* ctx, uint32_t options, const wlan_tx_packet_t* pkt) {
+zx_status_t mac_configure_beacon(void* ctx, uint32_t options,
+                                 const wlan_tx_packet_t* packet_template) {
   IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }

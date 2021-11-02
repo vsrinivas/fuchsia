@@ -46,7 +46,7 @@ pub trait MlmeImpl {
         scheduler: common::timer::Timer<Self::TimerEvent>,
     ) -> Self;
     fn handle_mlme_message(&mut self, msg: fidl_mlme::MlmeRequest) -> Result<(), Error>;
-    fn handle_mac_frame_rx(&mut self, bytes: &[u8], rx_info: Option<banjo_wlan_mac::WlanRxInfo>);
+    fn handle_mac_frame_rx(&mut self, bytes: &[u8], rx_info: banjo_wlan_mac::WlanRxInfo);
     fn handle_eth_frame_tx(&mut self, bytes: &[u8]) -> Result<(), Error>;
     fn handle_hw_indication(&mut self, ind: banjo_wlan_mac::WlanIndication);
     fn handle_timeout(&mut self, event_id: common::timer::EventId, event: Self::TimerEvent);
@@ -152,7 +152,7 @@ pub enum DriverEvent {
     Stop,
     // TODO(fxbug.dev/43456): We need to keep stats for these events and respond to StatsQueryRequest.
     // Indicates receipt of a MAC frame from a peer.
-    MacFrameRx { bytes: Vec<u8>, rx_info: Option<banjo_wlan_mac::WlanRxInfo> },
+    MacFrameRx { bytes: Vec<u8>, rx_info: banjo_wlan_mac::WlanRxInfo },
     // Requests transmission of an ethernet frame over the air.
     EthFrameTx { bytes: Vec<u8> },
     // A notification of some event from the vendor driver.
@@ -406,7 +406,62 @@ impl<T: 'static + MlmeImpl> Mlme<T> {
 
 #[cfg(test)]
 mod test_utils {
-    use {super::*, fidl::endpoints::RequestStream};
+    use {
+        super::*, banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
+        banjo_fuchsia_wlan_common as banjo_common, fidl::endpoints::RequestStream,
+        std::default::Default,
+    };
+
+    #[derive(Copy, Clone, Debug)]
+    pub struct MockWlanRxInfo {
+        pub rx_flags: u32,
+        pub valid_fields: u32,
+        pub phy: u16,
+        pub data_rate: u32,
+        pub channel: banjo_common::WlanChannel,
+        pub mcs: u8,
+        pub rssi_dbm: i8,
+        pub snr_dbh: i16,
+    }
+
+    impl Default for MockWlanRxInfo {
+        fn default() -> Self {
+            Self {
+                valid_fields: banjo_wlan_info::WlanRxInfoValid::CHAN_WIDTH.0
+                    | banjo_wlan_info::WlanRxInfoValid::RSSI.0
+                    | banjo_wlan_info::WlanRxInfoValid::SNR.0,
+                channel: banjo_common::WlanChannel {
+                    primary: 1,
+                    cbw: banjo_common::ChannelBandwidth::CBW20,
+                    secondary80: 0,
+                },
+                rssi_dbm: -40,
+                snr_dbh: 35,
+
+                // Default to 0 for these fields since there are no
+                // other reasonable values to mock.
+                rx_flags: 0,
+                phy: 0,
+                data_rate: 0,
+                mcs: 0,
+            }
+        }
+    }
+
+    impl From<MockWlanRxInfo> for banjo_wlan_mac::WlanRxInfo {
+        fn from(mock_rx_info: MockWlanRxInfo) -> banjo_wlan_mac::WlanRxInfo {
+            banjo_wlan_mac::WlanRxInfo {
+                rx_flags: mock_rx_info.rx_flags,
+                valid_fields: mock_rx_info.valid_fields,
+                phy: mock_rx_info.phy,
+                data_rate: mock_rx_info.data_rate,
+                channel: mock_rx_info.channel,
+                mcs: mock_rx_info.mcs,
+                rssi_dbm: mock_rx_info.rssi_dbm,
+                snr_dbh: mock_rx_info.snr_dbh,
+            }
+        }
+    }
 
     pub(crate) fn fake_control_handle(
         // We use this unused parameter to ensure that an executor exists.

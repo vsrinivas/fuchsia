@@ -213,7 +213,12 @@ static void iwl_mvm_pass_packet_to_mac80211(struct iwl_mvm* mvm,
 
   // Send to MLME
   // TODO(fxbug.dev/43218) Need to revisit to handle multiple IFs
-  wlanmac_ifc_recv(&mvm->mvmvif[0]->ifc, 0, (uint8_t*)frame, frame_len, &rx_status->rx_info);
+  wlan_rx_packet_t rx_packet = {
+      .mac_frame_buffer = (uint8_t*)frame,
+      .mac_frame_size = frame_len,
+      .info = rx_status->rx_info,
+  };
+  wlanmac_ifc_recv(&mvm->mvmvif[0]->ifc, &rx_packet);
 }
 
 static int iwl_mvm_get_signal_strength(struct iwl_mvm* mvm, int energy_a, int energy_b) {

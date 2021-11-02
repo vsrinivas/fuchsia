@@ -20,7 +20,7 @@ class WlantapMac {
    public:
     virtual void WlantapMacStart(uint16_t id) = 0;
     virtual void WlantapMacStop(uint16_t id) = 0;
-    virtual void WlantapMacQueueTx(uint16_t id, wlan_tx_packet_t* pkt) = 0;
+    virtual void WlantapMacQueueTx(uint16_t id, const wlan_tx_packet_t* pkt) = 0;
     virtual void WlantapMacSetChannel(uint16_t id, const wlan_channel_t* channel) = 0;
     virtual void WlantapMacConfigureBss(uint16_t id, const bss_config_t* config) = 0;
     virtual void WlantapMacSetKey(uint16_t id, const wlan_key_config_t* key_config) = 0;

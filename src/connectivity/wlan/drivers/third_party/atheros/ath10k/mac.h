@@ -97,7 +97,7 @@ zx_status_t ath10k_start(struct ath10k* ar, const wlanmac_ifc_protocol_t* ifc,
 zx_status_t ath10k_mac_hw_scan(struct ath10k* ar, const wlan_hw_scan_config_t* scan_config);
 void __ath10k_scan_finish(struct ath10k* ar);
 void ath10k_scan_finish(struct ath10k* ar);
-zx_status_t ath10k_mac_op_tx(struct ath10k* ar, wlan_tx_packet_t* pkt);
+zx_status_t ath10k_mac_op_tx(struct ath10k* ar, const wlan_tx_packet_t* pkt);
 zx_status_t ath10k_mac_set_bss(struct ath10k* ar, const bss_config_t* config);
 zx_status_t ath10k_mac_bss_assoc(struct ath10k* ar, const wlan_assoc_ctx_t* assoc_ctx);
 zx_status_t ath10k_mac_set_key(struct ath10k* ar, const wlan_key_config_t* key_config);

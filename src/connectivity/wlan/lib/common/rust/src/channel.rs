@@ -343,11 +343,11 @@ impl From<&fidl_common::WlanChannel> for Channel {
 /// The channel bandwidth is derived based on IEEE 802.11-2016, Table 11-24
 /// Also see section 11.40.1 about VHT STA.
 pub fn derive_channel(
-    rx_primary_channel: Option<u8>,
+    rx_primary_channel: u8,
     dsss_channel: Option<u8>,
     ht_op: Option<ie::HtOperation>,
     vht_op: Option<ie::VhtOperation>,
-) -> Option<fidl_common::WlanChannel> {
+) -> fidl_common::WlanChannel {
     use ie::StaChanWidth as Scw;
     use ie::VhtChannelBandwidth as Vcb;
 
@@ -355,7 +355,7 @@ pub fn derive_channel(
         .as_ref()
         .map(|ht_op| ht_op.primary_channel)
         .or(dsss_channel)
-        .or(rx_primary_channel)?;
+        .unwrap_or(rx_primary_channel);
 
     let ht_op_cbw = ht_op.map(|ht_op| { ht_op.ht_op_info_head }.sta_chan_width());
     let vht_cbw_and_segs =
@@ -386,7 +386,7 @@ pub fn derive_channel(
         (Some(Scw::TWENTY_MHZ), _) | _ => (fidl_common::ChannelBandwidth::Cbw20, 0),
     };
 
-    Some(fidl_common::WlanChannel { primary, cbw, secondary80 })
+    fidl_common::WlanChannel { primary, cbw, secondary80 }
 }
 
 fn abs_sub(v1: u8, v2: u8) -> u8 {
@@ -574,37 +574,37 @@ mod tests {
 
     #[test]
     fn test_derive_channel_basic() {
-        let channel = derive_channel(Some(RX_PRIMARY_CHAN), None, None, None);
+        let channel = derive_channel(RX_PRIMARY_CHAN, None, None, None);
         assert_eq!(
             channel,
-            Some(fidl_common::WlanChannel {
+            fidl_common::WlanChannel {
                 primary: RX_PRIMARY_CHAN,
                 cbw: fidl_common::ChannelBandwidth::Cbw20,
                 secondary80: 0,
-            })
+            }
         );
     }
 
     #[test]
     fn test_derive_channel_with_dsss_param() {
-        let channel = derive_channel(Some(RX_PRIMARY_CHAN), Some(6), None, None);
+        let channel = derive_channel(RX_PRIMARY_CHAN, Some(6), None, None);
         assert_eq!(
             channel,
-            Some(fidl_common::WlanChannel {
+            fidl_common::WlanChannel {
                 primary: 6,
                 cbw: fidl_common::ChannelBandwidth::Cbw20,
                 secondary80: 0
-            })
+            }
         );
     }
 
     #[test]
     fn test_derive_channel_with_ht_20mhz() {
-        let expected_channel = Some(fidl_common::WlanChannel {
+        let expected_channel = fidl_common::WlanChannel {
             primary: HT_PRIMARY_CHAN,
             cbw: fidl_common::ChannelBandwidth::Cbw20,
             secondary80: 0,
-        });
+        };
 
         let test_params = [
             (ie::StaChanWidth::TWENTY_MHZ, ie::SecChanOffset::SECONDARY_NONE),
@@ -615,7 +615,7 @@ mod tests {
 
         for (ht_width, sec_chan_offset) in test_params.iter() {
             let ht_op = ht_op(HT_PRIMARY_CHAN, *ht_width, *sec_chan_offset);
-            let channel = derive_channel(Some(RX_PRIMARY_CHAN), Some(6), Some(ht_op), None);
+            let channel = derive_channel(RX_PRIMARY_CHAN, Some(6), Some(ht_op), None);
             assert_eq!(channel, expected_channel);
         }
     }
@@ -624,14 +624,14 @@ mod tests {
     fn test_derive_channel_with_ht_40mhz() {
         let ht_op =
             ht_op(HT_PRIMARY_CHAN, ie::StaChanWidth::ANY, ie::SecChanOffset::SECONDARY_ABOVE);
-        let channel = derive_channel(Some(RX_PRIMARY_CHAN), Some(6), Some(ht_op), None);
+        let channel = derive_channel(RX_PRIMARY_CHAN, Some(6), Some(ht_op), None);
         assert_eq!(
             channel,
-            Some(fidl_common::WlanChannel {
+            fidl_common::WlanChannel {
                 primary: HT_PRIMARY_CHAN,
                 cbw: fidl_common::ChannelBandwidth::Cbw40,
                 secondary80: 0,
-            })
+            }
         );
     }
 
@@ -639,14 +639,14 @@ mod tests {
     fn test_derive_channel_with_ht_40mhz_below() {
         let ht_op =
             ht_op(HT_PRIMARY_CHAN, ie::StaChanWidth::ANY, ie::SecChanOffset::SECONDARY_BELOW);
-        let channel = derive_channel(Some(RX_PRIMARY_CHAN), Some(6), Some(ht_op), None);
+        let channel = derive_channel(RX_PRIMARY_CHAN, Some(6), Some(ht_op), None);
         assert_eq!(
             channel,
-            Some(fidl_common::WlanChannel {
+            fidl_common::WlanChannel {
                 primary: HT_PRIMARY_CHAN,
                 cbw: fidl_common::ChannelBandwidth::Cbw40Below,
                 secondary80: 0,
-            })
+            }
         );
     }
 
@@ -655,14 +655,14 @@ mod tests {
         let ht_op =
             ht_op(HT_PRIMARY_CHAN, ie::StaChanWidth::ANY, ie::SecChanOffset::SECONDARY_ABOVE);
         let vht_op = vht_op(ie::VhtChannelBandwidth::CBW_80_160_80P80, 8, 0);
-        let channel = derive_channel(Some(RX_PRIMARY_CHAN), Some(6), Some(ht_op), Some(vht_op));
+        let channel = derive_channel(RX_PRIMARY_CHAN, Some(6), Some(ht_op), Some(vht_op));
         assert_eq!(
             channel,
-            Some(fidl_common::WlanChannel {
+            fidl_common::WlanChannel {
                 primary: HT_PRIMARY_CHAN,
                 cbw: fidl_common::ChannelBandwidth::Cbw80,
                 secondary80: 0,
-            })
+            }
         );
     }
 
@@ -671,14 +671,14 @@ mod tests {
         let ht_op =
             ht_op(HT_PRIMARY_CHAN, ie::StaChanWidth::ANY, ie::SecChanOffset::SECONDARY_ABOVE);
         let vht_op = vht_op(ie::VhtChannelBandwidth::CBW_80_160_80P80, 0, 8);
-        let channel = derive_channel(Some(RX_PRIMARY_CHAN), Some(6), Some(ht_op), Some(vht_op));
+        let channel = derive_channel(RX_PRIMARY_CHAN, Some(6), Some(ht_op), Some(vht_op));
         assert_eq!(
             channel,
-            Some(fidl_common::WlanChannel {
+            fidl_common::WlanChannel {
                 primary: HT_PRIMARY_CHAN,
                 cbw: fidl_common::ChannelBandwidth::Cbw160,
                 secondary80: 0,
-            })
+            }
         );
     }
 
@@ -687,33 +687,40 @@ mod tests {
         let ht_op =
             ht_op(HT_PRIMARY_CHAN, ie::StaChanWidth::ANY, ie::SecChanOffset::SECONDARY_ABOVE);
         let vht_op = vht_op(ie::VhtChannelBandwidth::CBW_80_160_80P80, 18, 1);
-        let channel = derive_channel(Some(RX_PRIMARY_CHAN), Some(6), Some(ht_op), Some(vht_op));
+        let channel = derive_channel(RX_PRIMARY_CHAN, Some(6), Some(ht_op), Some(vht_op));
         assert_eq!(
             channel,
-            Some(fidl_common::WlanChannel {
+            fidl_common::WlanChannel {
                 primary: HT_PRIMARY_CHAN,
                 cbw: fidl_common::ChannelBandwidth::Cbw80P80,
                 secondary80: 1,
-            })
+            }
         );
     }
 
     #[test]
     fn test_derive_channel_none() {
-        let channel = derive_channel(None, None, None, None);
-        assert_eq!(channel, None);
+        let channel = derive_channel(8, None, None, None);
+        assert_eq!(
+            channel,
+            fidl_common::WlanChannel {
+                primary: 8,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+                secondary80: 0,
+            }
+        );
     }
 
     #[test]
     fn test_derive_channel_no_rx_primary() {
-        let channel = derive_channel(None, Some(6), None, None);
+        let channel = derive_channel(8, Some(6), None, None);
         assert_eq!(
             channel,
-            Some(fidl_common::WlanChannel {
+            fidl_common::WlanChannel {
                 primary: 6,
                 cbw: fidl_common::ChannelBandwidth::Cbw20,
                 secondary80: 0,
-            })
+            }
         )
     }
 

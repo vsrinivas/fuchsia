@@ -228,7 +228,7 @@ impl<'a> BoundScanner<'a> {
         beacon_interval: TimeUnit,
         capability_info: CapabilityInfo,
         ies: &[u8],
-        rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
+        rx_info: banjo_wlan_mac::WlanRxInfo,
     ) {
         let txn_id = match &self.scanner.ongoing_scan {
             Some(req) => req.req.txn_id,
@@ -384,8 +384,10 @@ mod tests {
                 channel_scheduler, ClientConfig,
             },
             device::FakeDevice,
+            test_utils::MockWlanRxInfo,
         },
         fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
+        lazy_static::lazy_static,
         std::{cell::RefCell, rc::Rc},
         wlan_common::{
             assert_variant,
@@ -402,22 +404,9 @@ mod tests {
     // Capability information: ESS
     const CAPABILITY_INFO: CapabilityInfo = CapabilityInfo(1);
     const BEACON_INTERVAL: u16 = 100;
-    const RX_INFO: banjo_wlan_mac::WlanRxInfo = banjo_wlan_mac::WlanRxInfo {
-        channel: banjo_common::WlanChannel {
-            primary: 11,
-            cbw: banjo_common::ChannelBandwidth::CBW20,
-            secondary80: 0,
-        },
-        rssi_dbm: -40,
-        snr_dbh: 35,
-
-        // Unused fields
-        rx_flags: 0,
-        valid_fields: 0,
-        phy: 0,
-        data_rate: 0,
-        mcs: 0,
-    };
+    lazy_static! {
+        pub static ref RX_INFO: banjo_wlan_mac::WlanRxInfo = MockWlanRxInfo::default().into();
+    }
 
     fn scan_req() -> fidl_mlme::ScanRequest {
         fidl_mlme::ScanRequest {
@@ -937,7 +926,7 @@ mod tests {
             TimeUnit(BEACON_INTERVAL),
             CAPABILITY_INFO,
             ies,
-            Some(RX_INFO),
+            RX_INFO.clone(),
         );
     }
 

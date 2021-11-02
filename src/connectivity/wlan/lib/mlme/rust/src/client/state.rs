@@ -528,12 +528,9 @@ impl Associated {
         }
     }
 
-    fn extract_and_record_signal_dbm(&mut self, rx_info: Option<banjo_wlan_mac::WlanRxInfo>) {
-        let rssi_dbm = match rx_info.and_then(|rx_info| ddk::get_rssi_dbm(rx_info)) {
-            Some(dbm) => dbm,
-            None => return,
-        };
-        self.0.signal_strength_average.add(DecibelMilliWatt(rssi_dbm));
+    fn extract_and_record_signal_dbm(&mut self, rx_info: banjo_wlan_mac::WlanRxInfo) {
+        ddk::get_rssi_dbm(rx_info)
+            .map(|rssi_dbm| self.0.signal_strength_average.add(DecibelMilliWatt(rssi_dbm)));
     }
 
     /// Process and inbound beacon frame.
@@ -854,16 +851,15 @@ impl States {
         mut self,
         sta: &mut BoundClient<'_>,
         bytes: B,
-        rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
+        rx_info: banjo_wlan_mac::WlanRxInfo,
     ) -> States {
         // For now, silently drop all frames when we are off channel.
         if !sta.is_on_channel() {
             return self;
         }
 
-        let body_aligned = rx_info.map_or(false, |ri| {
-            (ri.rx_flags & banjo_wlan_mac::WlanRxInfoFlags::FRAME_BODY_PADDING_4.0) != 0
-        });
+        let body_aligned =
+            (rx_info.rx_flags & banjo_wlan_mac::WlanRxInfoFlags::FRAME_BODY_PADDING_4.0) != 0;
 
         // Parse mac frame. Drop corrupted ones.
         trace!("Parsing MAC frame:\n  {:02x?}", bytes.deref());
@@ -927,7 +923,7 @@ impl States {
         sta: &mut BoundClient<'_>,
         mgmt_hdr: &mac::MgmtHdr,
         body: B,
-        rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
+        rx_info: banjo_wlan_mac::WlanRxInfo,
     ) -> States {
         // Parse management frame. Drop corrupted ones.
         let mgmt_body = match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
@@ -1234,7 +1230,7 @@ mod tests {
                 scanner::Scanner, Client, ClientConfig, Context,
             },
             device::{Device, FakeDevice},
-            test_utils::fake_control_handle,
+            test_utils::{fake_control_handle, MockWlanRxInfo},
         },
         akm::AkmAlgorithm,
         banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
@@ -1886,7 +1882,7 @@ mod tests {
         let state = States::from(statemachine::testing::new_state(Associated(empty_association(
             &mut client,
         ))));
-        match state.on_mac_frame(&mut client, &frame[..], None) {
+        match state.on_mac_frame(&mut client, &frame[..], MockWlanRxInfo::default().into()) {
             States::Associated(state) => {
                 let (_, associated) = state.release_data();
                 match *associated.0.block_ack_state.as_ref() {
@@ -2215,7 +2211,7 @@ mod tests {
             0x10, 0, // Sequence Control
             // Omit IEs
         ];
-        state.on_mac_frame(&mut sta, &beacon[..], None);
+        state.on_mac_frame(&mut sta, &beacon[..], MockWlanRxInfo::default().into());
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
     }
 
@@ -2254,7 +2250,7 @@ mod tests {
             // Trailing bytes
             11, 11, 11,
         ];
-        state.on_mac_frame(&mut sta, &bytes[..], None);
+        state.on_mac_frame(&mut sta, &bytes[..], MockWlanRxInfo::default().into());
         assert_eq!(m.fake_device.eth_queue.len(), 0);
     }
 
@@ -2308,7 +2304,8 @@ mod tests {
             2, 0, // Txn Sequence Number
             0, 0, // Status Code
         ];
-        state = state.on_mac_frame(&mut sta, &auth_resp_success[..], None);
+        state =
+            state.on_mac_frame(&mut sta, &auth_resp_success[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Authenticated(_), "not in auth'ed state");
     }
 
@@ -2337,7 +2334,8 @@ mod tests {
             2, 0, // Txn Sequence Number
             42, 0, // Status Code
         ];
-        state = state.on_mac_frame(&mut sta, &auth_resp_failure[..], None);
+        state =
+            state.on_mac_frame(&mut sta, &auth_resp_failure[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Joined(_), "not in joined state");
     }
 
@@ -2392,7 +2390,7 @@ mod tests {
             // Deauth Header:
             5, 0, // Algorithm Number (Open)
         ];
-        state = state.on_mac_frame(&mut sta, &deauth[..], None);
+        state = state.on_mac_frame(&mut sta, &deauth[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Joined(_), "not in joined state");
     }
 
@@ -2418,7 +2416,7 @@ mod tests {
             // Deauth Header:
             5, 0, // Algorithm Number (Open)
         ];
-        state = state.on_mac_frame(&mut sta, &deauth[..], None);
+        state = state.on_mac_frame(&mut sta, &deauth[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Joined(_), "not in joined state");
     }
 
@@ -2447,7 +2445,8 @@ mod tests {
             2, 0, // Txn Sequence Number
             0, 0, // Status Code
         ];
-        state = state.on_mac_frame(&mut sta, &auth_resp_success[..], None);
+        state =
+            state.on_mac_frame(&mut sta, &auth_resp_success[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Authenticating(_), "not in auth'ing state");
 
         // Verify that an authentication response from the joined BSS still moves the Client
@@ -2466,7 +2465,8 @@ mod tests {
             2, 0, // Txn Sequence Number
             0, 0, // Status Code
         ];
-        state = state.on_mac_frame(&mut sta, &auth_resp_success[..], None);
+        state =
+            state.on_mac_frame(&mut sta, &auth_resp_success[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Authenticated(_), "not in auth'ed state");
     }
 
@@ -2495,7 +2495,8 @@ mod tests {
             0, 0, // Status Code
             0, 0, // AID
         ];
-        state = state.on_mac_frame(&mut sta, &assoc_resp_success[..], None);
+        state =
+            state.on_mac_frame(&mut sta, &assoc_resp_success[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Associated(_), "not in associated state");
     }
 
@@ -2524,7 +2525,8 @@ mod tests {
             2, 0, // Status Code (Failed)
             0, 0, // AID
         ];
-        state = state.on_mac_frame(&mut sta, &assoc_resp_success[..], None);
+        state =
+            state.on_mac_frame(&mut sta, &assoc_resp_success[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Authenticated(_), "not in authenticated state");
     }
 
@@ -2572,7 +2574,7 @@ mod tests {
             // Deauth Header:
             4, 0, // Reason Code
         ];
-        state = state.on_mac_frame(&mut sta, &deauth[..], None);
+        state = state.on_mac_frame(&mut sta, &deauth[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Joined(_), "not in joined state");
     }
 
@@ -2599,7 +2601,7 @@ mod tests {
             // Deauth Header:
             4, 0, // Reason Code
         ];
-        state = state.on_mac_frame(&mut sta, &disassoc[..], None);
+        state = state.on_mac_frame(&mut sta, &disassoc[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Authenticated(_), "not in authenticated state");
     }
 
@@ -2626,7 +2628,7 @@ mod tests {
             // Deauth Header:
             4, 0, // Reason Code
         ];
-        state = state.on_mac_frame(&mut sta, &deauth[..], None);
+        state = state.on_mac_frame(&mut sta, &deauth[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Joined(_), "not in joined state");
     }
 
@@ -3231,7 +3233,7 @@ mod tests {
             5, 4, 0, 0, 0, 0b00000010, // Tim IE: bit 1 in the last octet indicates AID 1
         ];
 
-        state.on_mac_frame(&mut sta, &beacon[..], None);
+        state.on_mac_frame(&mut sta, &beacon[..], MockWlanRxInfo::default().into());
 
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         assert_eq!(
@@ -3271,26 +3273,16 @@ mod tests {
             33, 0, // Capabilities
             5, 4, 0, 0, 0, 0, // Tim IE: No buffered frame for any client.
         ];
-        state.on_mac_frame(&mut sta, &beacon[..], None);
+        state.on_mac_frame(&mut sta, &beacon[..], MockWlanRxInfo::default().into());
 
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
     }
 
     fn rx_info_with_dbm(rssi_dbm: i8) -> banjo_wlan_mac::WlanRxInfo {
-        banjo_wlan_mac::WlanRxInfo {
-            rx_flags: 0,
-            valid_fields: banjo_wlan_info::WlanRxInfoValid::RSSI.0,
-            phy: 0,
-            data_rate: 0,
-            channel: banjo_common::WlanChannel {
-                primary: 0,
-                cbw: banjo_common::ChannelBandwidth::CBW20,
-                secondary80: 0,
-            },
-            mcs: 0,
-            rssi_dbm,
-            snr_dbh: 0,
-        }
+        let mut rx_info: banjo_wlan_mac::WlanRxInfo =
+            MockWlanRxInfo { rssi_dbm, ..Default::default() }.into();
+        rx_info.valid_fields |= banjo_wlan_info::WlanRxInfoValid::RSSI.0;
+        rx_info
     }
 
     #[test]
@@ -3332,7 +3324,7 @@ mod tests {
         ];
 
         const EXPECTED_DBM: i8 = -32;
-        let state = state.on_mac_frame(&mut sta, &beacon[..], Some(rx_info_with_dbm(EXPECTED_DBM)));
+        let state = state.on_mac_frame(&mut sta, &beacon[..], rx_info_with_dbm(EXPECTED_DBM));
 
         let (_, timed_event) =
             m.time_stream.try_next().unwrap().expect("Should have scheduled signal report timeout");

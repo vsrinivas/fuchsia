@@ -29,8 +29,8 @@ zx_status_t WlanmacDevice::WlanmacStart(const wlanmac_ifc_protocol_t* ifc,
 
 void WlanmacDevice::WlanmacStop() { mac_stop(mvmvif_); }
 
-zx_status_t WlanmacDevice::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
-  return mac_queue_tx(mvmvif_, options, pkt);
+zx_status_t WlanmacDevice::WlanmacQueueTx(uint32_t options, const wlan_tx_packet_t* packet) {
+  return mac_queue_tx(mvmvif_, options, packet);
 }
 
 zx_status_t WlanmacDevice::WlanmacSetChannel(uint32_t options, const wlan_channel_t* channel) {

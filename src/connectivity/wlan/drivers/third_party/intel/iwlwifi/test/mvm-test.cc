@@ -97,11 +97,10 @@ class MvmTest : public SingleApTest {
     // mvmvif.
     mvmvif_->ifc.ctx = ctx;  // 'ctx' was used as 'wlanmac_ifc_protocol_t*', but we override it
                              // with 'TestCtx*'.
-    mvmvif_->ifc.ops->recv = [](void* ctx, uint32_t flags, const uint8_t* data_buffer,
-                                size_t data_size, const wlan_rx_info_t* info) {
+    mvmvif_->ifc.ops->recv = [](void* ctx, const wlan_rx_packet_t* packet) {
       TestCtx* test_ctx = reinterpret_cast<TestCtx*>(ctx);
-      test_ctx->rx_info = *info;
-      test_ctx->frame_len = data_size;
+      test_ctx->rx_info = packet->info;
+      test_ctx->frame_len = packet->mac_frame_size;
     };
   }
 

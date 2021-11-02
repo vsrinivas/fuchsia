@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
+    anyhow::Error,
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
     ieee80211::Bssid,
     wlan_common::{channel::derive_channel, ie, mac::CapabilityInfo, TimeUnit},
@@ -15,7 +15,7 @@ pub fn construct_bss_description(
     beacon_interval: TimeUnit,
     capability_info: CapabilityInfo,
     ies: &[u8],
-    rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
+    rx_info: banjo_wlan_mac::WlanRxInfo,
 ) -> Result<fidl_internal::BssDescription, Error> {
     let mut dsss_channel = None;
     let mut parsed_ht_op = None;
@@ -39,13 +39,8 @@ pub fn construct_bss_description(
     }
 
     let bss_type = get_bss_type(capability_info);
-    let channel = derive_channel(
-        rx_info.map(|info| info.channel.primary),
-        dsss_channel,
-        parsed_ht_op,
-        parsed_vht_op,
-    )
-    .ok_or(format_err!("unable to derive channel"))?;
+    let channel =
+        derive_channel(rx_info.channel.primary, dsss_channel, parsed_ht_op, parsed_vht_op);
 
     Ok(fidl_internal::BssDescription {
         bssid: bssid.0,
@@ -54,7 +49,7 @@ pub fn construct_bss_description(
         capability_info: capability_info.raw(),
         ies: ies.to_vec(),
         channel,
-        rssi_dbm: rx_info.as_ref().map(|info| info.rssi_dbm).unwrap_or(0),
+        rssi_dbm: rx_info.rssi_dbm,
         snr_db: 0,
     })
 }
@@ -173,7 +168,7 @@ mod tests {
             TimeUnit(BEACON_INTERVAL),
             CAPABILITY_INFO,
             &ies[..],
-            Some(RX_INFO),
+            RX_INFO,
         )
         .expect("expect convert_beacon to succeed");
 

@@ -115,13 +115,8 @@ wlantap::TxArgs ToTxArgs(uint16_t wlanmac_id, const wlan_tx_packet_t* pkt) {
   };
   auto& data = tx_args.packet.data;
   data.clear();
-  auto head = static_cast<const uint8_t*>(pkt->packet_head.data_buffer);
-  std::copy_n(head, pkt->packet_head.data_size, std::back_inserter(data));
-  if (pkt->packet_tail_list != nullptr) {
-    auto tail = static_cast<const uint8_t*>(pkt->packet_tail_list->data_buffer);
-    std::copy_n(tail + pkt->tail_offset, pkt->packet_tail_list->data_size - pkt->tail_offset,
-                std::back_inserter(data));
-  }
+  auto head = static_cast<const uint8_t*>(pkt->mac_frame_buffer);
+  std::copy_n(head, pkt->mac_frame_size, std::back_inserter(data));
   return tx_args;
 }
 
@@ -342,11 +337,8 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     zxlogf(INFO, "%s: WlantapMacStop", name_.c_str());
   }
 
-  virtual void WlantapMacQueueTx(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) override {
-    size_t pkt_size = pkt->packet_head.data_size;
-    if (pkt->packet_tail_list != nullptr) {
-      pkt_size += pkt->packet_tail_list->data_size - pkt->tail_offset;
-    }
+  virtual void WlantapMacQueueTx(uint16_t wlanmac_id, const wlan_tx_packet_t* pkt) override {
+    size_t pkt_size = pkt->mac_frame_size;
     if (!phy_config_->quiet || report_tx_status_count_ < 32) {
       zxlogf(INFO, "%s: WlantapMacQueueTx id=%u, size=%zu, tx_report_count=%zu", name_.c_str(),
              wlanmac_id, pkt_size, report_tx_status_count_);

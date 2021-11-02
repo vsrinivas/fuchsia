@@ -29,7 +29,7 @@ static wlanmac_protocol_ops_t wlanmac_test_protocol_ops = {
     .start = [](void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel)
         -> zx_status_t { return DEV(ctx)->Start(ifc, out_mlme_channel); },
     .stop = [](void* ctx) { DEV(ctx)->Stop(); },
-    .queue_tx = [](void* ctx, uint32_t options, wlan_tx_packet_t* pkt) -> zx_status_t {
+    .queue_tx = [](void* ctx, uint32_t options, const wlan_tx_packet_t* pkt) -> zx_status_t {
       return ZX_OK;
     },
     .set_channel = [](void* ctx, uint32_t options, const wlan_channel_t* channel) -> zx_status_t {
@@ -89,8 +89,8 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
   zxlogf(INFO, "wlan::testing::IfaceDevice::Query()");
   memset(info, 0, sizeof(*info));
 
-  static uint8_t mac[ETH_MAC_SIZE] = {0x02, 0x02, 0x02, 0x03, 0x03, 0x03};
-  std::memcpy(info->sta_addr, mac, ETH_MAC_SIZE);
+  static uint8_t mac[fuchsia_wlan_ieee80211_MAC_ADDR_LEN] = {0x02, 0x02, 0x02, 0x03, 0x03, 0x03};
+  std::memcpy(info->sta_addr, mac, fuchsia_wlan_ieee80211_MAC_ADDR_LEN);
 
   // Fill out a minimal set of wlan device capabilities
   info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_CCK |

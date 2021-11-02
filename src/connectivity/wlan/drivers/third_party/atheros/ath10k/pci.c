@@ -3130,8 +3130,8 @@ void ath10k_pci_fill_wlanphy_impl_info(struct ath10k* ar, wlanphy_impl_info_t* p
 
 void ath10k_pci_fill_wlanmac_info(struct ath10k* ar, wlanmac_info_t* mac_info) {
   // eth_info
-  ZX_DEBUG_ASSERT(ETH_ALEN == ETH_MAC_SIZE);
-  memcpy(mac_info->sta_addr, ar->mac_addr, ETH_MAC_SIZE);
+  ZX_DEBUG_ASSERT(ETH_ALEN == fuchsia_wlan_ieee80211_MAC_ADDR_LEN);
+  memcpy(mac_info->sta_addr, ar->mac_addr, fuchsia_wlan_ieee80211_MAC_ADDR_LEN);
 
   // mac_role
   mac_info->mac_role = ar->mac_role;
@@ -3187,7 +3187,7 @@ static bool verify_started(struct ath10k* ar) {
   return result;
 }
 
-static zx_status_t ath10k_pci_queue_tx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
+static zx_status_t ath10k_pci_queue_tx(void* ctx, uint32_t options, const wlan_tx_packet_t* pkt) {
   struct ath10k* ar = ctx;
   return ath10k_mac_op_tx(ar, pkt);
 }
@@ -3244,9 +3244,9 @@ static zx_status_t ath10k_pci_enable_beaconing(void* ctx, uint32_t options,
     return ath10k_mac_stop_ap(arvif);
   }
 
-  if (bcn_cfg->tmpl.packet_head.data_size > ATH10K_MAX_BCN_TMPL_SIZE) {
+  if (bcn_cfg->packet_template.mac_frame_size > ATH10K_MAX_BCN_TMPL_SIZE) {
     ath10k_err("%s(): the given beacon template (%zu) cannot be larger than the buffer (%d)\n",
-               __func__, bcn_cfg->tmpl.packet_head.data_size, ATH10K_MAX_BCN_TMPL_SIZE);
+               __func__, bcn_cfg->packet_template.mac_frame_size, ATH10K_MAX_BCN_TMPL_SIZE);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -3256,8 +3256,8 @@ static zx_status_t ath10k_pci_enable_beaconing(void* ctx, uint32_t options,
 
   // Copy the beacon template content and ask the hardware to broadcast it.
   mtx_lock(&ar->data_lock);
-  arvif->bcn_tmpl_len = bcn_cfg->tmpl.packet_head.data_size;
-  memcpy(arvif->bcn_tmpl_data, bcn_cfg->tmpl.packet_head.data_buffer, arvif->bcn_tmpl_len);
+  arvif->bcn_tmpl_len = bcn_cfg->packet_template.mac_frame_buffer;
+  memcpy(arvif->bcn_tmpl_data, bcn_cfg->packet_template.mac_frame_size, arvif->bcn_tmpl_len);
   arvif->tim_ie_offset = bcn_cfg->tim_ele_offset;
   arvif->bcn_tmpl_changed = true;
   mtx_unlock(&ar->data_lock);

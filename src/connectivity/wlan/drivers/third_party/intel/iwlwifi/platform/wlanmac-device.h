@@ -36,7 +36,7 @@ class WlanmacDevice : public WlanmacDeviceType,
   zx_status_t WlanmacQuery(uint32_t options, wlanmac_info_t* out_info);
   zx_status_t WlanmacStart(const wlanmac_ifc_protocol_t* ifc, zx::channel* out_mlme_channel);
   void WlanmacStop();
-  zx_status_t WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt);
+  zx_status_t WlanmacQueueTx(uint32_t options, const wlan_tx_packet_t* packet);
   zx_status_t WlanmacSetChannel(uint32_t options, const wlan_channel_t* channel);
   zx_status_t WlanmacConfigureBss(uint32_t options, const bss_config_t* config);
   zx_status_t WlanmacEnableBeaconing(uint32_t options, const wlan_bcn_config_t* bcn_cfg);

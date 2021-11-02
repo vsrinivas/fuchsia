@@ -43,9 +43,8 @@ typedef struct mlme_sequence_manager_t mlme_sequence_manager_t;
 
 typedef struct {
   void (*status)(void *ctx, uint32_t status);
-  void (*recv)(void *ctx, uint32_t flags, const uint8_t *data_buffer, uintptr_t data_size,
-               const wlan_rx_info_t *info);
-  void (*complete_tx)(void *ctx, wlan_tx_packet_t *packet, int32_t status);
+  void (*recv)(void *ctx, const wlan_rx_packet_t *packet);
+  void (*complete_tx)(void *ctx, const wlan_tx_packet_t *packet, int32_t status);
   void (*indication)(void *ctx, uint32_t ind);
   void (*report_tx_status)(void *ctx, const wlan_tx_status_t *tx_status);
   void (*hw_scan_complete)(void *ctx, const wlan_hw_scan_result_t *result);

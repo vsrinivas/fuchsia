@@ -354,8 +354,8 @@ zx_status_t Device::EnableBeaconing(wlan_bcn_config_t* bcn_cfg) {
   if (bcn_cfg != nullptr) {
     ZX_DEBUG_ASSERT(
         ValidateFrame("Malformed beacon template",
-                      {reinterpret_cast<const uint8_t*>(bcn_cfg->tmpl.packet_head.data_buffer),
-                       bcn_cfg->tmpl.packet_head.data_size}));
+                      {reinterpret_cast<const uint8_t*>(bcn_cfg->packet_template.mac_frame_buffer),
+                       bcn_cfg->packet_template.mac_frame_size}));
   }
   return wlanmac_proxy_.EnableBeaconing(0u, bcn_cfg);
 }
