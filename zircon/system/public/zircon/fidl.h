@@ -462,6 +462,9 @@ typedef uint8_t fidl_transport_type;
 #define FIDL_TRANSPORT_TYPE_INVALID 0x00
 #define FIDL_TRANSPORT_TYPE_CHANNEL 0x01
 
+// Transport agnostic handle representation.
+typedef uint32_t fidl_handle_t;
+
 // Pair of object type and rights, used for handle metadata for the channel
 // transport.
 typedef struct fidl_channel_handle_metadata {
@@ -489,7 +492,7 @@ typedef struct fidl_outgoing_msg_byte {
   // The handles of the message.
   //
   // See |num_handles| for the number of handles in the message.
-  zx_handle_t* handles;
+  fidl_handle_t* handles;
 
   // Array of metadata providing additional information on the handles.
   // The type of data held in this array is determined by |transport_type|.
@@ -525,7 +528,7 @@ typedef struct fidl_outgoing_msg_iovec {
   // The handles of the message.
   //
   // See |num_handles| for the number of handles in the message.
-  zx_handle_t* handles;
+  fidl_handle_t* handles;
 
   // Array of metadata providing additional information on the handles.
   // The type of data held in this array is determined by |transport_type|.
@@ -570,7 +573,7 @@ typedef struct fidl_incoming_msg {
   // The handles of the message.
   //
   // See |num_handles| for the number of handles in the message.
-  zx_handle_t* handles;
+  fidl_handle_t* handles;
 
   // Type identifier for the FIDL transport.
   // This determines the type of the data in |handle_metadata|.

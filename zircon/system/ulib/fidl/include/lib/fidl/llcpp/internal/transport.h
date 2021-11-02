@@ -25,13 +25,17 @@ class Handle {
   Handle(Handle&&) noexcept = default;
   Handle& operator=(Handle&&) noexcept = default;
 
-  const uint32_t& value() const { return value_; }
-  uint32_t& value() { return value_; }
+  const fidl_handle_t& value() const { return value_; }
+  fidl_handle_t& value() { return value_; }
 
  private:
   uint32_t value_;
 };
+
+static_assert(sizeof(Handle) == sizeof(fidl_handle_t));
+
 constexpr Handle kInvalidHandle = Handle(0);
+
 
 // Attributes of a handle, as defined in FIDL files.
 // Intended to be extensible, for instance if a transport introduces a new object type.

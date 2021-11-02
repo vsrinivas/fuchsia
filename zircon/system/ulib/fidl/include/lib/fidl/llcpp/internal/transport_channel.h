@@ -32,6 +32,8 @@ struct AssociatedTransportImpl<zx::unowned_channel> {
   using type = ChannelTransport;
 };
 
+static_assert(sizeof(fidl_handle_t) == sizeof(zx_handle_t));
+
 }  // namespace fidl::internal
 
 #endif  // LIB_FIDL_LLCPP_INTERNAL_TRANSPORT_CHANNEL_H_
