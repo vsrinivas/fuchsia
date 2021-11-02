@@ -38,39 +38,6 @@ class TestPrettyArray : public PrettyType {
 
 }  // namespace
 
-TEST_F(ResolveArrayTest, ResolveStatic) {
-  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
-
-  // Request 3 elements from 1-4.
-  constexpr uint64_t kBaseAddress = 0x100000;
-  constexpr uint32_t kBeginIndex = 1;
-  constexpr uint32_t kEndIndex = 4;
-
-  // Array holds 3 uint16_t.
-  constexpr uint32_t kTypeSize = 2;
-  auto elt_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, kTypeSize, "uint16_t");
-  auto array_type = fxl::MakeRefCounted<ArrayType>(elt_type, 3);
-
-  // Values are 0x1122, 0x3344, 0x5566
-  std::vector<uint8_t> array_bytes = {0x22, 0x11, 0x44, 0x33, 0x66, 0x55};
-  ExprValue value(array_type, array_bytes, ExprValueSource(kBaseAddress));
-
-  ErrOrValueVector result = ResolveArray(eval_context, value, kBeginIndex, kEndIndex);
-  EXPECT_FALSE(result.has_error());
-
-  // Should have returned two values (the overlap of the array and the
-  // requested range).
-  ASSERT_EQ(2u, result.value().size());
-
-  EXPECT_EQ(elt_type.get(), result.value()[0].type());
-  EXPECT_EQ(0x3344, result.value()[0].GetAs<uint16_t>());
-  EXPECT_EQ(kBaseAddress + kTypeSize, result.value()[0].source().address());
-
-  EXPECT_EQ(elt_type.get(), result.value()[1].type());
-  EXPECT_EQ(0x5566, result.value()[1].GetAs<uint16_t>());
-  EXPECT_EQ(kBaseAddress + kTypeSize * 2, result.value()[1].source().address());
-}
-
 // Tests the static resolution case when the source is a vector register. The "source" of array
 // elements in this case is tricky.
 TEST_F(ResolveArrayTest, ResolveVectorRegister) {
@@ -89,7 +56,16 @@ TEST_F(ResolveArrayTest, ResolveVectorRegister) {
   ExprValue value(array_type, array_bytes, ExprValueSource(register_id));
 
   // Ask for all 4 values.
-  ErrOrValueVector result = ResolveArray(eval_context, value, 0, 4);
+  bool called = false;
+  ErrOrValueVector result((std::vector<ExprValue>()));
+  ResolveArray(eval_context, value, 0, 4, [&called, &result](ErrOrValueVector cb_result) {
+    called = true;
+    result = std::move(cb_result);
+    debug::MessageLoop::Current()->QuitNow();
+  });
+  loop().RunUntilNoTasks();
+  ASSERT_TRUE(called);
+
   EXPECT_FALSE(result.has_error());
   ASSERT_EQ(4u, result.value().size());
 
@@ -184,7 +160,7 @@ TEST_F(ResolveArrayTest, Invalid) {
   ResolveArrayItem(eval_context, ExprValue(), 1, [&called](ErrOrValue result) {
     called = true;
     EXPECT_TRUE(result.has_error());
-    EXPECT_EQ("No type information.", result.err().msg());
+    EXPECT_EQ("Can't resolve an array access on type '<Unknown>'.", result.err().msg());
   });
   EXPECT_TRUE(called);
 
@@ -230,6 +206,141 @@ TEST_F(ResolveArrayTest, PrettyArray) {
 
   // Result should be twice the input.
   EXPECT_EQ(kIndex * 2, result.value().GetAs<uint64_t>());
+}
+
+TEST_F(ResolveArrayTest, CoercePointerToArrayOfSize) {
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+
+  constexpr uint64_t kBaseAddress = 0x100000;
+
+  // Array holds 3 uint16_t.
+  constexpr uint32_t kTypeSize = 2;
+  auto elt_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, kTypeSize, "uint16_t");
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, elt_type);
+
+  // The full array in memory including 3 items. The values are 0x1122, 0x3344, 0x5566
+  std::vector<uint8_t> array_bytes = {0x22, 0x11, 0x44, 0x33, 0x66, 0x55};
+  eval_context->data_provider()->AddMemory(kBaseAddress, array_bytes);
+
+  ExprValue ptr_value(kBaseAddress, ptr_type);
+
+  // This callback is used for all examples below.
+  bool called = false;
+  ErrOrValue result((ExprValue()));
+  auto callback = [&called, &result](ErrOrValue value) {
+    called = true;
+    result = std::move(value);
+    debug::MessageLoop::Current()->QuitNow();
+  };
+
+  // Request an array of size 2. It should fetch the memory.
+  CoerceArraySize(eval_context, ptr_value, 2, callback);
+  loop().RunUntilNoTasks();
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(result.ok());
+  ASSERT_EQ(kTypeSize * 2, result.value().data().size());
+  std::vector<uint8_t> two_value_expected(array_bytes.begin(), array_bytes.begin() + kTypeSize * 2);
+  EXPECT_EQ(two_value_expected, result.value().data().bytes());
+  EXPECT_EQ("uint16_t[2]", result.value().type()->GetFullName());
+  EXPECT_EQ(kBaseAddress, result.value().source().address());
+
+  // Size 0 should also work.
+  called = false;
+  CoerceArraySize(eval_context, ptr_value, 0, callback);
+  loop().RunUntilNoTasks();
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result.value().data().empty());
+  EXPECT_EQ("uint16_t[0]", result.value().type()->GetFullName());
+  EXPECT_EQ(kBaseAddress, result.value().source().address());
+}
+
+TEST_F(ResolveArrayTest, CoerceStaticArraySize) {
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+
+  constexpr uint64_t kBaseAddress = 0x100000;
+  constexpr uint32_t kOriginalArraySize = 2;
+
+  // Array holds 3 uint16_t.
+  constexpr uint32_t kTypeSize = 2;
+  auto elt_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, kTypeSize, "uint16_t");
+  auto array_type = fxl::MakeRefCounted<ArrayType>(elt_type, kOriginalArraySize);
+
+  // The full array in memory including 3 items. The values are 0x1122, 0x3344, 0x5566
+  std::vector<uint8_t> array_bytes = {0x22, 0x11, 0x44, 0x33, 0x66, 0x55};
+  eval_context->data_provider()->AddMemory(kBaseAddress, array_bytes);
+  ExprValue value(array_type, array_bytes, ExprValueSource(kBaseAddress));
+
+  // Source array with 2 elts and a temporary source (not referencing the memory added).
+  std::vector<uint8_t> two_elt_bytes(array_bytes.begin(),
+                                     array_bytes.begin() + (kOriginalArraySize * kTypeSize));
+  ExprValue temp_value(array_type, two_elt_bytes);
+
+  // This callback is used for all examples below.
+  bool called = false;
+  ErrOrValue result((ExprValue()));
+  auto callback = [&called, &result](ErrOrValue value) {
+    called = true;
+    result = std::move(value);
+    debug::MessageLoop::Current()->QuitNow();
+  };
+
+  // Shrinking the temporary value should succeed.
+  CoerceArraySize(eval_context, temp_value, 1, callback);
+  loop().RunUntilNoTasks();
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(result.ok());
+  ASSERT_EQ(2u, result.value().data().size());
+  EXPECT_EQ(0x1122, result.value().GetAs<uint16_t>());
+  EXPECT_EQ("uint16_t[1]", result.value().type()->GetFullName());
+
+  // Expanding to the same size should work.
+  called = false;
+  CoerceArraySize(eval_context, temp_value, kOriginalArraySize, callback);
+  loop().RunUntilNoTasks();
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(temp_value, result.value());
+  EXPECT_EQ("uint16_t[2]", result.value().type()->GetFullName());
+
+  // Expanding the temp value should fail (it references no memory).
+  called = false;
+  CoerceArraySize(eval_context, temp_value, kOriginalArraySize + 1, callback);
+  loop().RunUntilNoTasks();
+  ASSERT_TRUE(called);
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ("Can not expand array that is not in memory.", result.err().msg());
+
+  // Make an identical value that references the source memory.
+  ExprValue mem_value(array_type, two_elt_bytes, ExprValueSource(kBaseAddress));
+
+  // Expanding to the same size should work.
+  called = false;
+  CoerceArraySize(eval_context, mem_value, kOriginalArraySize + 1, callback);
+  loop().RunUntilNoTasks();
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(array_bytes, result.value().data().bytes());
+  EXPECT_EQ("uint16_t[3]", result.value().type()->GetFullName());
+  EXPECT_EQ(kBaseAddress, result.value().source().address());
+
+  // Expanding beyond the valid memory should fail.
+  called = false;
+  CoerceArraySize(eval_context, mem_value, kOriginalArraySize + 2, callback);
+  loop().RunUntilNoTasks();
+  ASSERT_TRUE(called);
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ("Array memory not valid.", result.err().msg());
+
+  // Shrinking to empty should also work and it should preserve the source.
+  called = false;
+  CoerceArraySize(eval_context, mem_value, 0, callback);
+  loop().RunUntilNoTasks();
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result.value().data().empty());
+  EXPECT_EQ("uint16_t[0]", result.value().type()->GetFullName());
+  EXPECT_EQ(kBaseAddress, result.value().source().address());
 }
 
 }  // namespace zxdb

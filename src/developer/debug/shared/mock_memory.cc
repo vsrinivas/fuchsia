@@ -20,10 +20,11 @@ std::vector<uint8_t> MockMemory::ReadMemory(uint64_t address, uint32_t size) con
   size_t offset = address - found->first;
 
   uint32_t size_to_return = std::min(size, static_cast<uint32_t>(found->second.size() - offset));
-
   std::vector<uint8_t> subset;
-  subset.resize(size_to_return);
-  memcpy(subset.data(), &found->second[offset], size_to_return);
+  if (size_to_return) {
+    subset.resize(size_to_return);
+    memcpy(subset.data(), &found->second[offset], size_to_return);
+  }
   return subset;
 }
 

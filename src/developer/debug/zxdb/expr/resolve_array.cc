@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/pretty_type.h"
 #include "src/developer/debug/zxdb/expr/pretty_type_manager.h"
+#include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
@@ -19,18 +20,89 @@ namespace zxdb {
 
 namespace {
 
-// Handles the "Foo[4]" case.
-ErrOrValueVector ResolveStaticArray(const ExprValue& array, const ArrayType* array_type,
+enum class ArrayKind {
+  kError,
+  kStatic,   // int[4]
+  kPointer,  // int*
+};
+
+struct ArrayInfo {
+  ArrayKind kind = ArrayKind::kError;
+
+  // Guaranteed for kind != kError.
+  fxl::RefPtr<Type> original_value_type;  // Use for error messages.
+  fxl::RefPtr<Type> concrete_value_type;  // Use to get the size, etc.
+
+  // Valid when kind == kStatic.
+  fxl::RefPtr<ArrayType> static_type;
+};
+
+// On success, the ArrayInfo will have kind != kError.
+ErrOr<ArrayInfo> ClassifyArray(const fxl::RefPtr<EvalContext>& eval_context,
+                               const ExprValue& array) {
+  if (!array.type())
+    return Err("No type information.");
+
+  ArrayInfo info;
+  fxl::RefPtr<Type> concrete = eval_context->GetConcreteType(array.type());
+  if (const ArrayType* array_type = concrete->As<ArrayType>()) {
+    info.kind = ArrayKind::kStatic;
+    info.static_type = RefPtrTo(array_type);
+
+    info.original_value_type = RefPtrTo(array_type->value_type());
+    info.concrete_value_type = eval_context->GetConcreteType(info.original_value_type);
+    if (!info.concrete_value_type)
+      return Err("Bad type information for '%s'.", array.type()->GetFullName().c_str());
+
+    return info;
+  } else if (const ModifiedType* modified_type = concrete->As<ModifiedType>()) {
+    if (modified_type->tag() == DwarfTag::kPointerType) {
+      info.kind = ArrayKind::kPointer;
+
+      info.original_value_type = RefPtrTo(modified_type->modified().Get()->As<Type>());
+      info.concrete_value_type = eval_context->GetConcreteType(info.original_value_type);
+      if (!info.concrete_value_type)
+        return Err("Bad type information for '%s'.", array.type()->GetFullName().c_str());
+
+      return info;
+    }
+  }
+  return Err("Not an array type.");
+}
+
+void ArrayFromPointer(const fxl::RefPtr<EvalContext>& eval_context, uint64_t begin_address,
+                      fxl::RefPtr<Type> element_type, size_t element_count, EvalCallback cb) {
+  fxl::RefPtr<Type> concrete_element_type = eval_context->GetConcreteType(element_type);
+  if (!concrete_element_type)
+    return cb(Err("Bad type information."));
+
+  auto array_type = fxl::MakeRefCounted<ArrayType>(element_type, element_count);
+
+  eval_context->GetDataProvider()->GetMemoryAsync(
+      begin_address, array_type->byte_size(),
+      [array_type, begin_address, cb = std::move(cb)](const Err& err,
+                                                      std::vector<uint8_t> data) mutable {
+        if (err.has_error())
+          return cb(err);
+        if (data.size() < array_type->byte_size())
+          return cb(Err("Array memory not valid."));  // A short read indicates invalid memory.
+        FX_DCHECK(data.size() == array_type->byte_size());
+
+        cb(ExprValue(array_type, std::move(data), ExprValueSource(begin_address)));
+      });
+}
+
+// Handles the "int[4]" case.
+ErrOrValueVector ResolveStaticArray(const ExprValue& array, const ArrayInfo& info,
                                     size_t begin_index, size_t end_index) {
-  if (array.data().size() < array_type->byte_size()) {
+  if (array.data().size() < info.static_type->byte_size()) {
     return Err(
         "Array data (%zu bytes) is too small for the expected size "
         "(%u bytes).",
-        array.data().size(), array_type->byte_size());
+        array.data().size(), info.static_type->byte_size());
   }
 
-  const Type* value_type = array_type->value_type();
-  uint32_t type_size = value_type->byte_size();
+  uint32_t type_size = info.concrete_value_type->byte_size();
 
   std::vector<ExprValue> result;
   result.reserve(end_index - begin_index);
@@ -55,37 +127,34 @@ ErrOrValueVector ResolveStaticArray(const ExprValue& array, const ArrayType* arr
     std::optional<TaggedData> data = array.data().Extract(begin_offset, type_size);
     if (!data)
       return Err("Array data out of range.");
-    result.emplace_back(RefPtrTo(value_type), std::move(*data), source);
+    result.emplace_back(info.original_value_type, std::move(*data), source);
   }
   return result;
 }
 
 // Handles the "Foo*" case.
 void ResolvePointerArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
-                         const ModifiedType* ptr_type, size_t begin_index, size_t end_index,
+                         const ArrayInfo& info, size_t begin_index, size_t end_index,
                          fit::callback<void(ErrOrValueVector)> cb) {
-  fxl::RefPtr<Type> value_type = eval_context->GetConcreteType(ptr_type->modified());
-  if (!value_type)
-    return cb(Err("Bad type information."));
-
   // The address is stored in the contents of the array value.
-  if (Err err = array.EnsureSizeIs(kTargetPointerSize); err.has_error())
-    return cb(err);
-  TargetPointer base_address = array.GetAs<TargetPointer>();
+  auto pointer_value_or = ExtractPointerValue(array);
+  if (pointer_value_or.has_error())
+    return cb(pointer_value_or.err());
+  TargetPointer base_address = pointer_value_or.value();
 
-  uint32_t type_size = value_type->byte_size();
+  uint32_t type_size = info.concrete_value_type->byte_size();
   TargetPointer begin_address = base_address + type_size * begin_index;
   TargetPointer end_address = base_address + type_size * end_index;
 
   eval_context->GetDataProvider()->GetMemoryAsync(
       begin_address, end_address - begin_address,
-      [value_type, begin_address, count = end_index - begin_index, cb = std::move(cb)](
+      [info, begin_address, count = end_index - begin_index, cb = std::move(cb)](
           const Err& err, std::vector<uint8_t> data) mutable {
         if (err.has_error())
           return cb(err);
 
         // Convert returned raw memory to ExprValues.
-        uint32_t type_size = value_type->byte_size();
+        uint32_t type_size = info.concrete_value_type->byte_size();
         std::vector<ExprValue> result;
         result.reserve(count);
         for (size_t i = 0; i < count; i++) {
@@ -94,7 +163,7 @@ void ResolvePointerArray(const fxl::RefPtr<EvalContext>& eval_context, const Exp
             break;  // Ran out of data, leave remaining results uninitialized.
 
           std::vector<uint8_t> item_data(&data[begin_offset], &data[begin_offset + type_size]);
-          result.emplace_back(value_type, std::move(item_data),
+          result.emplace_back(info.original_value_type, std::move(item_data),
                               ExprValueSource(begin_address + begin_offset));
         }
         cb(std::move(result));
@@ -102,77 +171,104 @@ void ResolvePointerArray(const fxl::RefPtr<EvalContext>& eval_context, const Exp
 }
 
 // Backend for the single-item and async multiple item array resolution.
-//
-// Returns true if the callback was consumed. This means the item was an array or pointer that can
-// be handled (in which case the callback will have been either issued or will be pending). False
-// means that the item wasn't an array and the callback was not used.
-bool DoResolveArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
-                    size_t begin_index, size_t end_index,
+void DoResolveArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
+                    const ArrayInfo& info, size_t begin_index, size_t end_index,
                     fit::callback<void(ErrOrValueVector)> cb) {
-  if (!array.type()) {
-    cb(Err("No type information."));
-    return true;  // Invalid but the callback was issued.
+  switch (info.kind) {
+    case ArrayKind::kStatic:
+      cb(ResolveStaticArray(array, info, begin_index, end_index));
+      break;
+    case ArrayKind::kPointer:
+      ResolvePointerArray(eval_context, array, info, begin_index, end_index, std::move(cb));
+      break;
+    default:
+      FX_NOTREACHED();
+      break;
   }
-
-  fxl::RefPtr<Type> concrete = eval_context->GetConcreteType(array.type());
-  if (const ArrayType* array_type = concrete->As<ArrayType>()) {
-    std::vector<ExprValue> result;
-    cb(ResolveStaticArray(array, array_type, begin_index, end_index));
-    return true;
-  } else if (const ModifiedType* modified_type = concrete->As<ModifiedType>()) {
-    if (modified_type->tag() == DwarfTag::kPointerType) {
-      ResolvePointerArray(eval_context, array, modified_type, begin_index, end_index,
-                          std::move(cb));
-      return true;
-    }
-  }
-
-  // Not an array.
-  return false;
 }
 
 }  // namespace
 
-ErrOrValueVector ResolveArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
-                              size_t begin_index, size_t end_index) {
-  if (fxl::RefPtr<ArrayType> array_type = eval_context->GetConcreteTypeAs<ArrayType>(array.type()))
-    return ResolveStaticArray(array, array_type.get(), begin_index, end_index);
-  return Err("Can't dereference a non-array type.");
-}
-
 void ResolveArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
                   size_t begin_index, size_t end_index, fit::callback<void(ErrOrValueVector)> cb) {
-  if (!DoResolveArray(eval_context, array, begin_index, end_index, std::move(cb)))
-    cb(Err("Can't dereference a non-pointer or array type."));
+  auto info_or = ClassifyArray(eval_context, array);
+  if (info_or.has_error())
+    return cb(info_or.err());
+
+  DoResolveArray(eval_context, array, info_or.value(), begin_index, end_index, std::move(cb));
 }
 
 void ResolveArrayItem(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
                       size_t index, EvalCallback cb) {
-  // This callback might possibly be bound to the regular array access function and we won't know
-  // if it was needed until the function returns. We want to try regular resolution first to avoid
-  // over-triggering pretty-printing if something is configured incorrectly. This case is not
-  // performance sensitive so this extra allocation doesn't matter much.
-  auto shared_cb = std::make_shared<EvalCallback>(std::move(cb));
+  auto info_or = ClassifyArray(eval_context, array);
+  if (info_or.ok()) {
+    // Do regular array access.
+    DoResolveArray(eval_context, array, info_or.value(), index, index + 1,
+                   [cb = std::move(cb)](ErrOrValueVector result) mutable {
+                     if (result.has_error()) {
+                       cb(result.err());
+                     } else if (result.value().empty()) {
+                       // Short read.
+                       cb(Err("Invalid array index."));
+                     } else {
+                       cb(std::move(result.value()[0]));  // Should have only one value.
+                     }
+                   });
+  } else {
+    // Not an array, check for pretty types that support array access.
+    if (const PrettyType* pretty = eval_context->GetPrettyTypeManager().GetForType(array.type())) {
+      if (auto array_access = pretty->GetArrayAccess())
+        return array_access(eval_context, array, index, std::move(cb));
+    }
 
-  // Try a regular access first.
-  if (DoResolveArray(eval_context, array, index, index + 1, [shared_cb](ErrOrValueVector result) {
-        if (result.has_error())
-          (*shared_cb)(result.err());
-        else if (result.value().empty())  // Short read.
-          (*shared_cb)(Err("Invalid array index."));
-        else
-          (*shared_cb)(std::move(result.value()[0]));  // Should have only one value.
-      }))
-    return;  // Handled by the regular array access.
-
-  // Check for pretty types that support array access, shared_cb is our responsibility.
-  if (const PrettyType* pretty = eval_context->GetPrettyTypeManager().GetForType(array.type())) {
-    if (auto array_access = pretty->GetArrayAccess())
-      return array_access(eval_context, array, index, std::move(*shared_cb));
+    cb(Err("Can't resolve an array access on type '%s'.",
+           array.type() ? array.type()->GetFullName().c_str() : "<Unknown>"));
   }
+}
 
-  (*shared_cb)(Err("Can't resolve an array access on type '%s'.",
-                   array.type() ? array.type()->GetFullName().c_str() : "<Unknown>"));
+void CoerceArraySize(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
+                     size_t new_size, EvalCallback cb) {
+  auto info_or = ClassifyArray(eval_context, array);
+  if (info_or.has_error())
+    return cb(info_or.err());
+  ArrayInfo& info = info_or.value();
+
+  switch (info.kind) {
+    case ArrayKind::kError:
+      FX_NOTREACHED();  // Errors should be caught above.
+      break;
+
+    case ArrayKind::kStatic: {
+      if (info.static_type->num_elts() && new_size <= *info.static_type->num_elts()) {
+        // Shrinking a static array, can just extract the subrange.
+        auto new_array_type = fxl::MakeRefCounted<ArrayType>(info.original_value_type, new_size);
+
+        auto extracted = array.data().Extract(0, new_array_type->byte_size());
+        if (!extracted)
+          return cb(Err("Array contains less data than expected."));
+
+        cb(ExprValue(std::move(new_array_type), std::move(*extracted), array.source()));
+      } else {
+        // Expanding a static array. This requires the memory be re-fetched.
+        if (array.source().type() != ExprValueSource::Type::kMemory)
+          return cb(Err("Can not expand array that is not in memory."));
+        ArrayFromPointer(eval_context, array.source().address(), info.original_value_type, new_size,
+                         std::move(cb));
+      }
+      break;
+    }
+
+    case ArrayKind::kPointer: {
+      // Fetch the memory to convert to an array.
+      auto pointer_value_or = ExtractPointerValue(array);
+      if (pointer_value_or.has_error())
+        return cb(pointer_value_or.err());
+
+      ArrayFromPointer(eval_context, pointer_value_or.value(), info.original_value_type, new_size,
+                       std::move(cb));
+      break;
+    }
+  }
 }
 
 }  // namespace zxdb

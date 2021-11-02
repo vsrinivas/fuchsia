@@ -6,8 +6,10 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_RESOLVE_PTR_REF_H_
 
 #include "lib/fit/function.h"
+#include "src/developer/debug/zxdb/common/err_or.h"
 #include "src/developer/debug/zxdb/expr/eval_callback.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
@@ -15,6 +17,9 @@ namespace zxdb {
 class Err;
 class EvalContext;
 class Type;
+
+// Extracts the address value from the ExprValue, assuming it's a pointer or reference.
+ErrOr<TargetPointer> ExtractPointerValue(const ExprValue& value);
 
 // Creates an ExprValue of the given type from the data at the given address. Issues the callback on
 // completion. The type can be null (it will immediately call the callback with an error).

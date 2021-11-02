@@ -18,20 +18,8 @@ class Err;
 class Type;
 class EvalContext;
 
-// Gets the values from a range given an array of a given type. The end index is the index of
-// one-past-the-end of the desired data.
-//
-// The input will be clipped to the array size so the result may be empty or smaller than requested.
-//
-// This variant works only for static array types ("foo[5]") where the size is known constant at
-// compile time and therefor the entire array is contained in the ExprValue's data.
-//
-// This does not apply pretty types for item resolution.
-ErrOrValueVector ResolveArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
-                              size_t begin_index, size_t end_index);
-
-// This variant handles both the static array version above and also dereferencing pointers using
-// array indexing. Since this requires memory fetches is must be asynchronous.
+// Converts the given array type (could be a pointer or a static array type like "int[4]") to
+// a vector of ExprValues. Since this requires memory fetches is must be asynchronous.
 //
 // The input will be clipped to the array size so the result may be empty or smaller than requested.
 //
@@ -43,6 +31,17 @@ void ResolveArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue&
 // backend for array access [ <number> ] in expressions.
 void ResolveArrayItem(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
                       size_t index, EvalCallback cb);
+
+// Forces an array to one of a different size.
+//
+// Converts a pointer to a static array of the given size by fetching the corresponding memory.
+//
+// Converts a static array's type to represent the new size. For example, resizing an array of
+// type "double[16]" to length 8 will copy the data and the new type will be "double[8]". To
+// support expanding the length of a static array, the memory will be fetched according to the
+// source of the static array (if there is no memory as the source of the array it will fail).
+void CoerceArraySize(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
+                     size_t new_size, EvalCallback cb);
 
 }  // namespace zxdb
 

@@ -18,16 +18,6 @@ namespace zxdb {
 
 namespace {
 
-// Extracts the value from the ExprValue, assuming it's a pointer. If not,
-// return the error, otherwise fill in *pointer_value.
-Err GetPointerValue(const ExprValue& value, TargetPointer* pointer_value) {
-  Err err = value.EnsureSizeIs(kTargetPointerSize);
-  if (err.has_error())
-    return err;
-  *pointer_value = value.GetAs<TargetPointer>();
-  return Err();
-}
-
 // Backend for the higher-level variant of ResolvePointer that does not handle upcasting to derived
 // types.
 void DoResolvePointer(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& pointer,
@@ -36,12 +26,13 @@ void DoResolvePointer(const fxl::RefPtr<EvalContext>& eval_context, const ExprVa
   if (Err err = GetPointedToType(eval_context, pointer.type(), &pointed_to); err.has_error())
     return cb(err);
 
-  TargetPointer pointer_value = 0;
-  if (Err err = GetPointerValue(pointer, &pointer_value); err.has_error())
-    return cb(err);
+  auto pointer_value_or = ExtractPointerValue(pointer);
+  if (pointer_value_or.has_error())
+    return cb(pointer_value_or.err());
 
   // Forward to low-level pointer resolution.
-  ResolvePointer(std::move(eval_context), pointer_value, std::move(pointed_to), std::move(cb));
+  ResolvePointer(std::move(eval_context), pointer_value_or.value(), std::move(pointed_to),
+                 std::move(cb));
 }
 
 // Backend for EnsureResolveReference that does not handle upcasting to derived types.
@@ -67,15 +58,25 @@ void DoEnsureResolveReference(const fxl::RefPtr<EvalContext>& eval_context, Expr
   FX_DCHECK(reference);
   const Type* underlying_type = reference->modified().Get()->As<Type>();
 
-  TargetPointer pointer_value = 0;
-  if (Err err = GetPointerValue(value, &pointer_value); err.has_error()) {
-    cb(err);
+  auto pointer_value_or = ExtractPointerValue(value);
+  if (pointer_value_or.has_error()) {
+    cb(pointer_value_or.err());
   } else {
-    ResolvePointer(eval_context, pointer_value, RefPtrTo(underlying_type), std::move(cb));
+    ResolvePointer(eval_context, pointer_value_or.value(), RefPtrTo(underlying_type),
+                   std::move(cb));
   }
 }
 
 }  // namespace
+
+// Extracts the pointer value from the ExprValue, assuming it's a pointer. If not, return the error,
+// otherwise fill in *pointer_value.
+ErrOr<TargetPointer> ExtractPointerValue(const ExprValue& value) {
+  Err err = value.EnsureSizeIs(kTargetPointerSize);
+  if (err.has_error())
+    return err;
+  return value.GetAs<TargetPointer>();
+}
 
 void ResolvePointer(const fxl::RefPtr<EvalContext>& eval_context, uint64_t address,
                     fxl::RefPtr<Type> type, EvalCallback cb) {
