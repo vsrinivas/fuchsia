@@ -86,6 +86,7 @@
       "-Wno-implicit-int-float-conversion",
       "-Wno-shorten-64-to-32",
       "-Wno-sign-compare",
+      "-Wno-strict-prototypes",
       "-Wno-string-concatenation",
     ]
   }
