@@ -205,7 +205,7 @@ zx_status_t RadarUtil::ConnectToDevice(fidl::ClientEnd<BurstReaderProvider> devi
   client_.Bind(std::move(client_end), loop_.dispatcher(), this, teardown_observer());
 
   fidl::WireSyncClient<BurstReaderProvider> provider_client(std::move(device));
-  auto result = provider_client.Connect(std::move(server_end));
+  auto result = provider_client->Connect(std::move(server_end));
   if (!result.ok()) {
     fprintf(stderr, "Failed to connect to radar device: %s\n",
             zx_status_get_string(result.status()));

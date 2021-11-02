@@ -74,15 +74,16 @@ class RadarIntegrationTest : public zxtest::Test {
     fbl::unique_fd device(open(kRadarDevicePath, O_RDWR));
     ASSERT_TRUE(device.is_valid());
 
-    fidl::WireSyncClient<BurstReaderProvider> provider_client;
+    fidl::ClientEnd<BurstReaderProvider> provider_client_end;
     ASSERT_OK(fdio_get_service_handle(device.release(),
-                                      provider_client.mutable_channel()->reset_and_get_address()));
+                                      provider_client_end.channel().reset_and_get_address()));
+    fidl::WireSyncClient<BurstReaderProvider> provider_client(std::move(provider_client_end));
 
     zx::status endpoints = fidl::CreateEndpoints<BurstReader>();
     ASSERT_OK(endpoints.status_value());
     auto [client_end, server_end] = std::move(*endpoints);
 
-    const auto result = provider_client.Connect(std::move(server_end));
+    const auto result = provider_client->Connect(std::move(server_end));
     ASSERT_TRUE(result.ok());
     ASSERT_TRUE(result->result.is_response());
 
