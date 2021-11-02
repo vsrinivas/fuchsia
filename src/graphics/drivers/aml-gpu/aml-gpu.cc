@@ -140,32 +140,32 @@ zx_status_t AmlGpu::Gp0Init() {
 
 void AmlGpu::InitClock() {
   {
-    auto result = reset_register_.WriteRegister32(gpu_block_->reset0_mask_offset,
-                                                  aml_registers::MALI_RESET0_MASK, 0);
+    auto result = reset_register_->WriteRegister32(gpu_block_->reset0_mask_offset,
+                                                   aml_registers::MALI_RESET0_MASK, 0);
     if ((result.status() != ZX_OK) || result->result.is_err()) {
       zxlogf(ERROR, "Reset0 Mask Clear failed\n");
     }
   }
 
   {
-    auto result = reset_register_.WriteRegister32(gpu_block_->reset0_level_offset,
-                                                  aml_registers::MALI_RESET0_MASK, 0);
+    auto result = reset_register_->WriteRegister32(gpu_block_->reset0_level_offset,
+                                                   aml_registers::MALI_RESET0_MASK, 0);
     if ((result.status() != ZX_OK) || result->result.is_err()) {
       zxlogf(ERROR, "Reset0 Level Clear failed\n");
     }
   }
 
   {
-    auto result = reset_register_.WriteRegister32(gpu_block_->reset2_mask_offset,
-                                                  aml_registers::MALI_RESET2_MASK, 0);
+    auto result = reset_register_->WriteRegister32(gpu_block_->reset2_mask_offset,
+                                                   aml_registers::MALI_RESET2_MASK, 0);
     if ((result.status() != ZX_OK) || result->result.is_err()) {
       zxlogf(ERROR, "Reset2 Mask Clear failed\n");
     }
   }
 
   {
-    auto result = reset_register_.WriteRegister32(gpu_block_->reset2_level_offset,
-                                                  aml_registers::MALI_RESET2_MASK, 0);
+    auto result = reset_register_->WriteRegister32(gpu_block_->reset2_level_offset,
+                                                   aml_registers::MALI_RESET2_MASK, 0);
     if ((result.status() != ZX_OK) || result->result.is_err()) {
       zxlogf(ERROR, "Reset2 Level Clear failed\n");
     }
@@ -174,18 +174,18 @@ void AmlGpu::InitClock() {
   SetInitialClkFreqSource(gpu_block_->initial_clock_index);
 
   {
-    auto result = reset_register_.WriteRegister32(gpu_block_->reset0_level_offset,
-                                                  aml_registers::MALI_RESET0_MASK,
-                                                  aml_registers::MALI_RESET0_MASK);
+    auto result = reset_register_->WriteRegister32(gpu_block_->reset0_level_offset,
+                                                   aml_registers::MALI_RESET0_MASK,
+                                                   aml_registers::MALI_RESET0_MASK);
     if ((result.status() != ZX_OK) || result->result.is_err()) {
       zxlogf(ERROR, "Reset2 Level Set failed\n");
     }
   }
 
   {
-    auto result = reset_register_.WriteRegister32(gpu_block_->reset2_level_offset,
-                                                  aml_registers::MALI_RESET2_MASK,
-                                                  aml_registers::MALI_RESET2_MASK);
+    auto result = reset_register_->WriteRegister32(gpu_block_->reset2_level_offset,
+                                                   aml_registers::MALI_RESET2_MASK,
+                                                   aml_registers::MALI_RESET2_MASK);
     if ((result.status() != ZX_OK) || result->result.is_err()) {
       zxlogf(ERROR, "Reset2 Level Set failed\n");
     }
