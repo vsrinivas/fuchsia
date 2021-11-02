@@ -1725,7 +1725,39 @@ impl<'a> ParseBuffer for &'a [u8] {
         &'b mut self,
         args: ParseArgs,
     ) -> Result<P, P::Error> {
-        P::parse(self, args)
+        // A `&'b mut &'a [u8]` wrapper which implements `BufferView<&'b [u8]>`
+        // instead of `BufferView<&'a [u8]>`. This is needed thanks to fact that
+        // `P: ParsablePacket` has the lifetime `'b`, not `'a`.
+        struct ByteSlice<'a, 'b>(&'b mut &'a [u8]);
+
+        impl<'a, 'b> AsRef<[u8]> for ByteSlice<'a, 'b> {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+
+        impl<'b, 'a: 'b> BufferView<&'b [u8]> for ByteSlice<'a, 'b> {
+            fn len(&self) -> usize {
+                <[u8]>::len(self.0)
+            }
+            fn take_front(&mut self, n: usize) -> Option<&'b [u8]> {
+                if self.0.len() < n {
+                    return None;
+                }
+                Some(take_front(self.0, n))
+            }
+            fn take_back(&mut self, n: usize) -> Option<&'b [u8]> {
+                if self.0.len() < n {
+                    return None;
+                }
+                Some(take_back(self.0, n))
+            }
+            fn into_rest(self) -> &'b [u8] {
+                self.0
+            }
+        }
+
+        P::parse(ByteSlice(self), args)
     }
 }
 impl<'a> ContiguousBufferImpl for &'a mut [u8] {}
@@ -1756,23 +1788,23 @@ impl<'a> ParseBufferMut for &'a mut [u8] {
     }
 }
 
-impl<'b, 'a: 'b> BufferView<&'b [u8]> for &'b mut &'a [u8] {
+impl<'b, 'a: 'b> BufferView<&'a [u8]> for &'b mut &'a [u8] {
     fn len(&self) -> usize {
         <[u8]>::len(self)
     }
-    fn take_front(&mut self, n: usize) -> Option<&'b [u8]> {
+    fn take_front(&mut self, n: usize) -> Option<&'a [u8]> {
         if self.len() < n {
             return None;
         }
         Some(take_front(self, n))
     }
-    fn take_back(&mut self, n: usize) -> Option<&'b [u8]> {
+    fn take_back(&mut self, n: usize) -> Option<&'a [u8]> {
         if self.len() < n {
             return None;
         }
         Some(take_back(self, n))
     }
-    fn into_rest(self) -> &'b [u8] {
+    fn into_rest(self) -> &'a [u8] {
         self
     }
 }
