@@ -71,4 +71,36 @@ protocol Tracing {
     }) -> (struct {
         target Target;
     }) error RecordingError;
+
+    /// Reports the current status of all running traces.
+    Status(resource struct {
+        iterator server_end:TracingStatusIterator;
+    }) -> ();
 };
+
+type TraceInfo = table {
+    /// The target on which the trace is running.
+    1: target Target;
+
+    /// Path to the output file.
+    2: output_file string:255;
+
+    /// The total duration of the command in fractional seconds. This will not
+    /// be set if the command is supposed to run indefinitely.
+    3: duration float64;
+
+    /// The amount of time remaining before the trace terminates. This will not
+    /// be set if the command is supposed to run indefinitely.
+    4: remaining_runtime float64;
+
+    /// The original config sent to the `StartRecording` command.
+    5: config fuchsia.tracing.controller.TraceConfig;
+};
+
+protocol TracingStatusIterator {
+    /// Gets the next block of trace info entries.
+    GetNext() -> (struct {
+        entries vector<TraceInfo>:MAX;
+    });
+};
+

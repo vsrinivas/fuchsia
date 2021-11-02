@@ -203,7 +203,8 @@ pub async fn trace(
                 writer.line("")?;
             }
             if opts.background {
-                return Ok(());
+                writer.line("Current tracing status:")?;
+                return status(&proxy, writer).await;
             }
 
             let waiter = &mut stdin();
@@ -219,6 +220,63 @@ pub async fn trace(
         TraceSubCommand::Stop(opts) => {
             let output = canonical_path(opts.output)?;
             stop_tracing(&proxy, output, writer).await?;
+        }
+        TraceSubCommand::Status(_opts) => status(&proxy, writer).await?,
+    }
+    Ok(())
+}
+
+async fn status(proxy: &TracingProxy, writer: Writer) -> Result<()> {
+    let (iter_proxy, server) =
+        fidl::endpoints::create_proxy::<bridge::TracingStatusIteratorMarker>()?;
+    proxy.status(server).await?;
+    let mut res = Vec::new();
+    loop {
+        let r = iter_proxy.get_next().await?;
+        if r.len() > 0 {
+            res.extend(r);
+        } else {
+            break;
+        }
+    }
+    if res.is_empty() {
+        writer.line("No active traces running.")?;
+    } else {
+        let mut unknown_target_counter = 1;
+        for trace in res.into_iter() {
+            // TODO(awdavies): Fall back to SSH address, or return SSH
+            // address from the protocol.
+            let target_string =
+                trace.target.and_then(|t| t.nodename.or(t.serial_number)).unwrap_or_else(|| {
+                    let res = format!("Unknown Target {}", unknown_target_counter);
+                    unknown_target_counter += 1;
+                    res
+                });
+            writer.line(format!("- {}:", target_string))?;
+            writer.line(format!(
+                "  - Output file: {}",
+                trace
+                    .output_file
+                    .ok_or(anyhow!("Trace status response contained no output file"))?,
+            ))?;
+            if let Some(duration) = trace.duration {
+                writer.line(format!("  - Duration:  {} seconds", duration))?;
+                writer.line(format!(
+                    "  - Remaining: {} seconds",
+                    trace.remaining_runtime.ok_or(anyhow!(
+                        "Malformed status. Contained duration but not remaining runtime"
+                    ))?
+                ))?;
+            } else {
+                writer.line("  - Duration: indefinite")?;
+            }
+            if let Some(config) = trace.config {
+                writer.line("  - Config:")?;
+                if let Some(categories) = config.categories {
+                    writer.line("    - Categories:")?;
+                    writer.line(format!("      - {}", categories.join(",")))?;
+                }
+            }
         }
     }
     Ok(())
@@ -324,10 +382,11 @@ mod tests {
     use {
         super::*,
         errors::ResultExt as _,
-        ffx_trace_args::{ListCategories, ListProviders, Start, Stop},
+        ffx_trace_args::{ListCategories, ListProviders, Start, Status, Stop},
         ffx_writer::Format,
         fidl::endpoints::{ControlHandle, Responder},
         fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_tracing_controller as trace,
+        futures::TryStreamExt,
         regex::Regex,
         std::matches,
     };
@@ -374,6 +433,41 @@ mod tests {
                     ..bridge::Target::EMPTY
                 }))
                 .expect("responder err"),
+            bridge::TracingRequest::Status { responder, iterator } => {
+                let mut stream = iterator.into_stream().unwrap();
+                fuchsia_async::Task::local(async move {
+                    let bridge::TracingStatusIteratorRequest::GetNext { responder, .. } =
+                        stream.try_next().await.unwrap().unwrap();
+                    responder
+                        .send(
+                            &mut vec![
+                                bridge::TraceInfo {
+                                    target: Some(bridge::Target {
+                                        nodename: Some("foo".to_string()),
+                                        ..bridge::Target::EMPTY
+                                    }),
+                                    output_file: Some("/foo/bar.fxt".to_string()),
+                                    ..bridge::TraceInfo::EMPTY
+                                },
+                                bridge::TraceInfo {
+                                    output_file: Some("/foo/bar/baz.fxt".to_string()),
+                                    ..bridge::TraceInfo::EMPTY
+                                },
+                                bridge::TraceInfo {
+                                    output_file: Some("/florp/o/matic.txt".to_string()),
+                                    ..bridge::TraceInfo::EMPTY
+                                },
+                            ]
+                            .into_iter(),
+                        )
+                        .unwrap();
+                    let bridge::TracingStatusIteratorRequest::GetNext { responder, .. } =
+                        stream.try_next().await.unwrap().unwrap();
+                    responder.send(&mut vec![].into_iter()).unwrap();
+                })
+                .detach();
+                responder.send().expect("responder err")
+            }
         })
     }
 
@@ -585,9 +679,42 @@ mod tests {
         )
         .await;
         let output = writer.test_output().unwrap();
-        let regex_str = "Tracing started successfully on \"foo\".\nWriting to /([^/]+/)+?foo.txt";
+        // This doesn't find `/.../foo.txt` for the tracing status, since the faked
+        // proxy has no state.
+        let regex_str = "Tracing started successfully on \"foo\".\nWriting to /([^/]+/)+?foo.txt
+Current tracing status:
+- foo:
+  - Output file: /foo/bar.fxt
+  - Duration: indefinite
+- Unknown Target 1:
+  - Output file: /foo/bar/baz.fxt
+  - Duration: indefinite
+- Unknown Target 2:
+  - Output file: /florp/o/matic.txt
+  - Duration: indefinite";
         let want = Regex::new(regex_str).unwrap();
         assert!(want.is_match(&output), "\"{}\" didn't match regex /{}/", output, regex_str);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_status() {
+        let writer = Writer::new_test(None);
+        run_trace_test(
+            TraceCommand { sub_cmd: TraceSubCommand::Status(Status {}) },
+            writer.clone(),
+        )
+        .await;
+        let output = writer.test_output().unwrap();
+        let want = "- foo:
+  - Output file: /foo/bar.fxt
+  - Duration: indefinite
+- Unknown Target 1:
+  - Output file: /foo/bar/baz.fxt
+  - Duration: indefinite
+- Unknown Target 2:
+  - Output file: /florp/o/matic.txt
+  - Duration: indefinite\n";
+        assert_eq!(want, output);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

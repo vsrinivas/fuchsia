@@ -16,7 +16,8 @@ use {
     std::collections::HashMap,
     std::pin::Pin,
     std::rc::{Rc, Weak},
-    std::time::Duration,
+    std::time::{Duration, Instant},
+    tasks::TaskManager,
     thiserror::Error,
 };
 
@@ -24,10 +25,11 @@ use {
 struct TraceTask {
     target_info: bridge::Target,
     output_file: String,
-    // TODO(fxbug.dev/84729)
-    #[allow(unused)]
     config: trace::TraceConfig,
     proxy: trace::ControllerProxy,
+    /// Duration in fractional seconds. None if indefinite.
+    duration: Option<f64>,
+    start_time: Instant,
     task: Task<()>,
 }
 
@@ -114,6 +116,8 @@ impl TraceTask {
             target_info,
             config,
             proxy,
+            duration: duration.clone(),
+            start_time: Instant::now(),
             output_file: output_file.clone(),
             task: Task::local(async move {
                 if let Some(duration) = duration {
@@ -171,6 +175,7 @@ type TraceMap = HashMap<String, TraceTask>;
 #[derive(Default)]
 pub struct TracingService {
     tasks: Rc<Mutex<TraceMap>>,
+    iter_tasks: TaskManager,
 }
 
 async fn get_controller_proxy(
@@ -269,6 +274,45 @@ impl FidlService for TracingService {
                 };
                 let target_info = task.target_info.clone();
                 responder.send(&mut task.shutdown().await.map(|_| target_info)).map_err(Into::into)
+            }
+            bridge::TracingRequest::Status { iterator, responder } => {
+                let mut stream = iterator.into_stream()?;
+                let res = self
+                    .tasks
+                    .lock()
+                    .await
+                    .values()
+                    .map(|t| bridge::TraceInfo {
+                        target: Some(t.target_info.clone()),
+                        output_file: Some(t.output_file.clone()),
+                        duration: t.duration.clone(),
+                        remaining_runtime: t.duration.clone().map(|d| {
+                            Duration::from_secs_f64(d)
+                                .checked_sub(t.start_time.elapsed())
+                                .unwrap_or(Duration::from_secs(0))
+                                .as_secs_f64()
+                        }),
+                        config: Some(t.config.clone()),
+                        ..bridge::TraceInfo::EMPTY
+                    })
+                    .collect::<Vec<_>>();
+                self.iter_tasks.spawn(async move {
+                    const CHUNK_SIZE: usize = 20;
+                    let mut iter = res.into_iter();
+                    while let Ok(Some(bridge::TracingStatusIteratorRequest::GetNext {
+                        responder,
+                    })) = stream.try_next().await
+                    {
+                        let _ = responder
+                            .send(
+                                &mut iter.by_ref().take(CHUNK_SIZE).collect::<Vec<_>>().into_iter(),
+                            )
+                            .map_err(|e| {
+                                log::warn!("responding to tracing status iterator: {:?}", e);
+                            });
+                    }
+                });
+                responder.send().map_err(Into::into)
             }
         }
     }

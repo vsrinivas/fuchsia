@@ -14,6 +14,7 @@ if (is_host) {
       "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
       "//sdk/fidl/fuchsia.tracing.controller:fuchsia.tracing.controller-rustc",
       "//src/developer/ffx/lib/services:lib",
+      "//src/developer/ffx/lib/tasks:lib",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",

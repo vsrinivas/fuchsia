@@ -20,6 +20,7 @@ pub enum TraceSubCommand {
     ListProviders(ListProviders),
     Start(Start),
     Stop(Stop),
+    Status(Status),
     // More commands including `record` and `convert` to follow.
 }
 
@@ -65,6 +66,11 @@ pub const DEFAULT_CATEGORIES: &[&'static str] = &[
     "dart:profiler",
     "dart:vm",
 ];
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Gets status of all running traces.
+#[argh(subcommand, name = "status")]
+pub struct Status {}
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Record a trace
