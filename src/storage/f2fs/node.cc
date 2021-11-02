@@ -214,7 +214,7 @@ void NodeManager::SetNid(Page &p, int off, nid_t nid, bool i) {
 #if 0  // porting needed
   // set_page_dirty(p);
 #endif
-  FlushDirtyNodePage(fs_, &p);
+  FlushDirtyNodePage(fs_, p);
 }
 
 nid_t NodeManager::GetNid(Page &p, int off, bool i) {
@@ -1018,7 +1018,7 @@ zx_status_t NodeManager::TruncateInodeBlocks(VnodeF2fs &vnode, pgoff_t from) {
 #if 0  // porting needed
       // set_page_dirty(page);
 #endif
-      FlushDirtyNodePage(fs_, page);
+      FlushDirtyNodePage(fs_, *page);
 #if 0  // porting needed
       // unlock_page(page);
 #endif
@@ -1124,7 +1124,7 @@ zx_status_t NodeManager::NewNodePage(DnodeOfData &dn, uint32_t ofs, Page **out) 
   //   set_page_dirty(page);
 #endif
   SetColdNode(*dn.vnode, *page);
-  FlushDirtyNodePage(fs_, page);
+  FlushDirtyNodePage(fs_, *page);
   if (ofs == 0)
     fs_->IncValidInodeCount();
 
@@ -1823,7 +1823,7 @@ void NodeManager::FlushNatEntries() {
 #if 0  // porting needed
        // set_page_dirty(page, fs_);
 #endif
-            FlushDirtyMetaPage(fs_, page);
+            FlushDirtyMetaPage(fs_, *page);
             F2fsPutPage(page, 1);
             page = nullptr;
           }
@@ -1864,15 +1864,15 @@ void NodeManager::FlushNatEntries() {
       }
     }
   }
-#if 0  // porting needed
-  //	if (!flushed)
-#endif
 
+  // Write out last modified NAT block
+  if (page != nullptr) {
 #if 0  // porting needed
-  // set_page_dirty(page, fs_);
+  //    set_page_dirty(page, fs_);
 #endif
-  FlushDirtyMetaPage(fs_, page);
-  F2fsPutPage(page, 1);
+    FlushDirtyMetaPage(fs_, *page);
+    F2fsPutPage(page, 1);
+  }
 
   // 2) shrink nat caches if necessary
   TryToFreeNats(nat_entries_count_ - kNmWoutThreshold);

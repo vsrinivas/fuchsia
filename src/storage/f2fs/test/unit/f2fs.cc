@@ -202,8 +202,7 @@ TEST(F2fsTest, FlushDirtyMetaPage) {
   void *kaddr = PageAddress(checkpoint_page);
   memcpy(kaddr, &checkpoint, (1 << fs->GetSuperblockInfo().GetLogBlocksize()));
 
-  ASSERT_EQ(FlushDirtyMetaPage(fs.get(), checkpoint_page), ZX_OK);
-  ASSERT_EQ(FlushDirtyMetaPage(fs.get(), nullptr), ZX_OK);
+  ASSERT_EQ(FlushDirtyMetaPage(fs.get(), *checkpoint_page), ZX_OK);
 
   ASSERT_EQ(fs->GetSuperblockInfo().GetPageCount(CountType::kDirtyMeta), 0);
 
@@ -227,7 +226,7 @@ TEST(F2fsTest, FlushDirtyNodePage) {
   fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
   ASSERT_NE(root_node_page, nullptr);
 
-  ASSERT_EQ(FlushDirtyNodePage(fs.get(), root_node_page), ZX_OK);
+  ASSERT_EQ(FlushDirtyNodePage(fs.get(), *root_node_page), ZX_OK);
 
   ASSERT_EQ(fs->GetSuperblockInfo().GetPageCount(CountType::kDirtyNodes), 0);
 
@@ -253,7 +252,7 @@ TEST(F2fsTest, FlushDirtyDataPage) {
 
   Page *data_page = GrabCachePage(vn, vn->Ino(), 100);
 
-  ASSERT_EQ(FlushDirtyDataPage(fs.get(), data_page), ZX_OK);
+  ASSERT_EQ(FlushDirtyDataPage(fs.get(), *data_page), ZX_OK);
 
   F2fsPutPage(data_page, 0);
 

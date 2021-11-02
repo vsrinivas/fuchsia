@@ -28,7 +28,7 @@ void VnodeF2fs::SetDataBlkaddr(DnodeOfData *dn, block_t new_addr) {
 #if 0  // porting needed
   // set_page_dirty(node_page);
 #else
-  FlushDirtyNodePage(Vfs(), node_page);
+  FlushDirtyNodePage(Vfs(), *node_page);
 #endif
 }
 
@@ -495,7 +495,7 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
     // wbc->pages_skipped++;
     // set_page_dirty(page);
 #else
-    FlushDirtyDataPage(Vfs(), page);
+    FlushDirtyDataPage(Vfs(), *page);
 #endif
     return kAopWritepageActivate;
   }
@@ -664,7 +664,7 @@ zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, Page **pagep) {
 //   SetPageUptodate(page);
 //   if (!PageDirty(page)) {
 //     // __set_page_dirty_nobuffers(page);
-//     FlushDirtyDataPage(Vfs(), page);
+//     FlushDirtyDataPage(Vfs(), *page);
 //     Vfs()->SetDirtyDirPage(this, page);
 //     return 1;
 //   }

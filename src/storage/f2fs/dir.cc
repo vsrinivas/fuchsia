@@ -299,10 +299,10 @@ void Dir::SetLink(DirEntry *de, Page *page, VnodeF2fs *vnode) {
   // If |de| is an inline dentry, the inode block should be flushed.
   // Otherwise, it writes out the data block.
   if (page->host == this) {
-    FlushDirtyDataPage(Vfs(), page);
+    FlushDirtyDataPage(Vfs(), *page);
   } else {
     ZX_ASSERT(page->host == nullptr);
-    FlushDirtyNodePage(Vfs(), page);
+    FlushDirtyNodePage(Vfs(), *page);
   }
 #endif
 
@@ -337,7 +337,7 @@ void Dir::InitDentInode(VnodeF2fs *vnode, Page *ipage) {
 #if 0  // porting needed
   // set_page_dirty(ipage);
 #else
-  FlushDirtyNodePage(Vfs(), ipage);
+  FlushDirtyNodePage(Vfs(), *ipage);
 #endif
 }
 
@@ -511,7 +511,7 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
 #if 0  // porting needed
        // set_page_dirty(dentry_page);
 #else
-          FlushDirtyDataPage(Vfs(), dentry_page);
+          FlushDirtyDataPage(Vfs(), *dentry_page);
 #endif
 
 #ifdef __Fuchsia__
@@ -580,7 +580,7 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
   // kunmap(page); /* kunmap - pair of f2fs_find_entry */
   // set_page_dirty(page);
 #else
-  FlushDirtyDataPage(Vfs(), page);
+  FlushDirtyDataPage(Vfs(), *page);
 #endif
 
 #ifdef __Fuchsia__
@@ -671,7 +671,7 @@ zx_status_t Dir::MakeEmpty(VnodeF2fs *vnode) {
   // kunmap_atomic(kaddr);
   // set_page_dirty(dentry_page);
 #else
-  FlushDirtyDataPage(Vfs(), dentry_page);
+  FlushDirtyDataPage(Vfs(), *dentry_page);
 #endif
   F2fsPutPage(dentry_page, 1);
   return 0;

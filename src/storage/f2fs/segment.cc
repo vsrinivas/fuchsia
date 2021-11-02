@@ -581,7 +581,7 @@ void SegmentManager::WriteSumPage(SummaryBlock *sum_blk, block_t blk_addr) {
 #if 0  // porting needed
   // set_page_dirty(page);
 #endif
-  FlushDirtyMetaPage(fs_, page);
+  FlushDirtyMetaPage(fs_, *page);
   F2fsPutPage(page, 1);
 }
 
@@ -1346,7 +1346,7 @@ void SegmentManager::WriteCompactedSummaries(block_t blkaddr) {
   written_size += kSumJournalSize;
 
   // set_page_dirty(page);
-  FlushDirtyMetaPage(fs_, page);
+  FlushDirtyMetaPage(fs_, *page);
 
   // Step 3: write summary entries
   for (i = static_cast<int>(CursegType::kCursegHotData);
@@ -1371,7 +1371,7 @@ void SegmentManager::WriteCompactedSummaries(block_t blkaddr) {
 #if 0  // porting needed
       // set_page_dirty(page);
 #endif
-      FlushDirtyMetaPage(fs_, page);
+      FlushDirtyMetaPage(fs_, *page);
 
       if (written_size + kSummarySize <= kPageCacheSize - kSumFooterSize)
         continue;
@@ -1536,7 +1536,7 @@ void SegmentManager::FlushSitEntries() {
         if (!page || (start > segno) || (segno > end)) {
           if (page) {
             // set_page_dirty(page, fs_);
-            FlushDirtyMetaPage(fs_, page);
+            FlushDirtyMetaPage(fs_, *page);
             F2fsPutPage(page, 1);
             page = nullptr;
           }
@@ -1556,12 +1556,15 @@ void SegmentManager::FlushSitEntries() {
       --sit_info_->dirty_sentries;
     }
   }
-  // writeout last modified SIT block
+
+  // Write out last modified SIT block
+  if (page != nullptr) {
 #if 0  // porting needed
   // set_page_dirty(page, fs_);
 #endif
-  FlushDirtyMetaPage(fs_, page);
-  F2fsPutPage(page, 1);
+    FlushDirtyMetaPage(fs_, *page);
+    F2fsPutPage(page, 1);
+  }
 
   SetPrefreeAsFreeSegments();
 }

@@ -285,7 +285,7 @@ void F2fs::DoRecoverData(VnodeF2fs *vnode, Page *page, block_t blkaddr) {
 #if 0  // porting needed
   // set_page_dirty(dn.node_page, this);
 #else
-  FlushDirtyNodePage(this, dn.node_page);
+  FlushDirtyNodePage(this, *dn.node_page);
 #endif
 
   GetNodeManager().RecoverNodePage(*dn.node_page, sum, ni, blkaddr);

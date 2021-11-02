@@ -59,7 +59,7 @@ zx_status_t F2fs::F2fsWriteMetaPage(Page *page, WritebackControl *wbc) {
     // wbc->pages_skipped++;
     // set_page_dirty(page, this);
 #else
-    FlushDirtyMetaPage(this, page);
+    FlushDirtyMetaPage(this, *page);
 #endif
   }
 
@@ -141,7 +141,7 @@ int64_t F2fs::SyncMetaPages(PageType type, int64_t nr_to_write) {
 //   SetPageUptodate(page);
 //   if (!PageDirty(page)) {
 //     // __set_page_dirty_nobuffers(page);
-//     FlushDirtyMetaPage(this, page);
+//     FlushDirtyMetaPage(this, *page);
 //     GetSuperblockInfo().AddPageCount(CountType::kDirtyMeta);
 //     GetSuperblockInfo().SetDirty();
 //     return 1;
@@ -321,7 +321,7 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
 #if 0  // porting needed
       // set_page_dirty(page, this);
 #else
-      FlushDirtyMetaPage(this, page);
+      FlushDirtyMetaPage(this, *page);
 #endif
       F2fsPutPage(page, 1);
       index++;
@@ -343,7 +343,7 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
 #if 0  // porting needed
   // set_page_dirty(page, this);
 #else
-    FlushDirtyMetaPage(this, page);
+    FlushDirtyMetaPage(this, *page);
 #endif
     F2fsPutPage(page, 1);
   }
@@ -713,7 +713,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
 #if 0  // porting needed
   // set_page_dirty(cp_page, this);
 #else
-  FlushDirtyMetaPage(this, cp_page);
+  FlushDirtyMetaPage(this, *cp_page);
 #endif
   F2fsPutPage(cp_page, 1);
 
@@ -736,7 +736,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
 #if 0  // porting needed
   // set_page_dirty(cp_page, this);
 #else
-  FlushDirtyMetaPage(this, cp_page);
+  FlushDirtyMetaPage(this, *cp_page);
 #endif
   F2fsPutPage(cp_page, 1);
 

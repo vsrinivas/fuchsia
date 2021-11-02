@@ -75,7 +75,7 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 //   //     ZeroUserSegment(page, offset, kPageCacheSize);
 //   //   }
 //   //   // set_page_dirty(page);
-//   //   FlushDirtyDataPage(Vfs(), page);
+//   //   FlushDirtyDataPage(Vfs(), *page);
 //   //   SetPageUptodate(page);
 
 //   //   file_update_time(vma->vm_file);
@@ -107,7 +107,7 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 // #if 0  // porting needed
 //     // set_page_dirty(page);
 // #else
-//     FlushDirtyDataPage(Vfs(), page);
+//     FlushDirtyDataPage(Vfs(), *page);
 // #endif
 //     F2fsPutPage(page, 1);
 //   }
@@ -436,7 +436,7 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
 #if 0  // porting needed
     // set_page_dirty(data_page, Vfs());
 #else
-    FlushDirtyDataPage(Vfs(), data_page);
+    FlushDirtyDataPage(Vfs(), *data_page);
 #endif
     F2fsPutPage(data_page, 1);
     data_pages[index] = nullptr;

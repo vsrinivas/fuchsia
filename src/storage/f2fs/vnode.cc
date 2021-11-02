@@ -344,7 +344,7 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
 #if 0  // porting needed
   // set_page_dirty(node_page);
 #else
-  FlushDirtyNodePage(Vfs(), node_page);
+  FlushDirtyNodePage(Vfs(), *node_page);
 #endif
 }
 
@@ -413,7 +413,7 @@ int VnodeF2fs::TruncateDataBlocksRange(DnodeOfData *dn, int count) {
 #if 0  // porting needed
     // set_page_dirty(dn->node_page);
 #else
-    FlushDirtyNodePage(Vfs(), dn->node_page);
+    FlushDirtyNodePage(Vfs(), *dn->node_page);
 #endif
     Vfs()->GetNodeManager().SyncInodePage(*dn);
   }
@@ -441,7 +441,7 @@ void VnodeF2fs::TruncatePartialDataPage(uint64_t from) {
 #if 0  // porting needed
   // set_page_dirty(page);
 #else
-  FlushDirtyDataPage(Vfs(), page);
+  FlushDirtyDataPage(Vfs(), *page);
 #endif
   F2fsPutPage(page, 1);
 }

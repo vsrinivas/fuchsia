@@ -256,12 +256,11 @@ uint32_t F2fs::ValidInodeCount() {
   return superblock_info_->GetTotalValidInodeCount();
 }
 
-zx_status_t FlushDirtyNodePage(F2fs* fs, Page* page) {
-  ZX_ASSERT(page != nullptr);
-  ZX_ASSERT(page->host == nullptr);
-  ZX_ASSERT(page->host_nid == fs->GetSuperblockInfo().GetNodeIno());
+zx_status_t FlushDirtyNodePage(F2fs* fs, Page& page) {
+  ZX_ASSERT(page.host == nullptr);
+  ZX_ASSERT(page.host_nid == fs->GetSuperblockInfo().GetNodeIno());
 
-  if (zx_status_t ret = fs->GetNodeManager().F2fsWriteNodePage(*page, nullptr); ret != ZX_OK) {
+  if (zx_status_t ret = fs->GetNodeManager().F2fsWriteNodePage(page, nullptr); ret != ZX_OK) {
     FX_LOGS(ERROR) << "Node page write error " << ret;
     return ret;
   }
@@ -315,15 +314,11 @@ bool F2fs::IsValid() const {
   return true;
 }
 
-zx_status_t FlushDirtyMetaPage(F2fs* fs, Page* page) {
-  if (page == nullptr) {
-    return ZX_OK;
-  }
+zx_status_t FlushDirtyMetaPage(F2fs* fs, Page& page) {
+  ZX_ASSERT(page.host == nullptr);
+  ZX_ASSERT(page.host_nid == fs->GetSuperblockInfo().GetMetaIno());
 
-  ZX_ASSERT(page->host == nullptr);
-  ZX_ASSERT(page->host_nid == fs->GetSuperblockInfo().GetMetaIno());
-
-  if (zx_status_t ret = fs->F2fsWriteMetaPage(page, nullptr); ret != ZX_OK) {
+  if (zx_status_t ret = fs->F2fsWriteMetaPage(&page, nullptr); ret != ZX_OK) {
     FX_LOGS(ERROR) << "Meta page write error " << ret;
     return ret;
   }
@@ -331,13 +326,12 @@ zx_status_t FlushDirtyMetaPage(F2fs* fs, Page* page) {
   return ZX_OK;
 }
 
-zx_status_t FlushDirtyDataPage(F2fs* fs, Page* page) {
-  ZX_ASSERT(page != nullptr);
-  ZX_ASSERT(page->host != nullptr);
+zx_status_t FlushDirtyDataPage(F2fs* fs, Page& page) {
+  ZX_ASSERT(page.host != nullptr);
 
-  VnodeF2fs* vnode = static_cast<VnodeF2fs*>(page->host);
+  VnodeF2fs* vnode = static_cast<VnodeF2fs*>(page.host);
 
-  if (zx_status_t ret = vnode->WriteDataPageReq(page, nullptr); ret != ZX_OK) {
+  if (zx_status_t ret = vnode->WriteDataPageReq(&page, nullptr); ret != ZX_OK) {
     FX_LOGS(ERROR) << "Data page write error " << ret;
     return ret;
   }

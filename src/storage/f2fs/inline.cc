@@ -116,7 +116,7 @@ zx_status_t Dir::MakeEmptyInlineDir(VnodeF2fs *vnode) {
 #if 0  // porting needed
   // set_page_dirty(ipage);
 #else
-  FlushDirtyNodePage(Vfs(), ipage);
+  FlushDirtyNodePage(Vfs(), *ipage);
 #endif
 
   if (vnode->GetSize() < vnode->MaxInlineData()) {
@@ -206,7 +206,7 @@ zx_status_t Dir::ConvertInlineDir(InlineDentry *inline_dentry) {
 #if 0  // porting needed
     // set_page_dirty(page);
 #else
-  FlushDirtyDataPage(Vfs(), page);
+  FlushDirtyDataPage(Vfs(), *page);
 #endif
 
 #if 0  // porting needed
@@ -269,7 +269,7 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
 #if 0  // porting needed
   // set_page_dirty(ipage);
 #else
-  FlushDirtyNodePage(Vfs(), ipage);
+  FlushDirtyNodePage(Vfs(), *ipage);
 #endif
 
 #ifdef __Fuchsia__
@@ -310,7 +310,7 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
 #if 0  // porting needed
   // set_page_dirty(page);
 #else
-  FlushDirtyNodePage(Vfs(), page);
+  FlushDirtyNodePage(Vfs(), *page);
 #endif
 
 #ifdef __Fuchsia__
