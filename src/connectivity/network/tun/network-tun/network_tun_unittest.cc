@@ -27,7 +27,8 @@ constexpr zx::duration kTimeout = zx::duration::infinite();
 constexpr uint8_t kDefaultTestPort = 2;
 
 zx::status<fidl::ClientEnd<fuchsia_hardware_network::StatusWatcher>> GetStatusWatcher(
-    fidl::ClientEnd<fuchsia_hardware_network::Device>& device, uint8_t port, uint32_t buffer) {
+    const fidl::ClientEnd<fuchsia_hardware_network::Device>& device, uint8_t port,
+    uint32_t buffer) {
   zx::status port_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
   if (port_endpoints.is_error()) {
     return port_endpoints.take_error();
@@ -72,7 +73,7 @@ zx::status<fidl::ClientEnd<fuchsia_hardware_network::MacAddressing>> GetMacAddre
   if (port.is_error()) {
     return port.take_error();
   }
-  if (zx_status_t status = tun.GetDevice(std::move(device->server)).status(); status != ZX_OK) {
+  if (zx_status_t status = tun->GetDevice(std::move(device->server)).status(); status != ZX_OK) {
     return zx::error(status);
   }
   if (zx_status_t status =
@@ -150,7 +151,7 @@ struct OwnedPortEvent {
 
 zx::status<OwnedPortEvent> WatchPorts(
     fidl::WireSyncClient<fuchsia_hardware_network::PortWatcher>& port_watcher) {
-  fidl::WireResult result = port_watcher.Watch();
+  fidl::WireResult result = port_watcher->Watch();
   if (!result.ok()) {
     return zx::error(result.status());
   }
@@ -170,11 +171,16 @@ class SimpleClient {
   SimpleClient() = default;
 
   zx::status<fidl::ServerEnd<fuchsia_hardware_network::Device>> NewRequest() {
-    return fidl::CreateEndpoints(&device_.client_end());
+    zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
+    if (!endpoints.is_ok()) {
+      return endpoints.take_error();
+    }
+    device_ = fidl::BindSyncClient(std::move(endpoints->client));
+    return zx::ok(std::move(endpoints->server));
   }
 
   zx_status_t OpenSession() {
-    fidl::WireResult info_result = device().GetInfo();
+    fidl::WireResult info_result = device()->GetInfo();
     if (!info_result.ok()) {
       return info_result.status();
     }
@@ -218,7 +224,7 @@ class SimpleClient {
     }
     session_info.set_descriptors(alloc_, std::move(descriptors));
 
-    fidl::WireResult session_result = device().OpenSession("tun-test", std::move(session_info));
+    fidl::WireResult session_result = device()->OpenSession("tun-test", std::move(session_info));
     if (!session_result.ok()) {
       return session_result.status();
     }
@@ -239,7 +245,7 @@ class SimpleClient {
   zx_status_t AttachPort(uint8_t port_id,
                          std::vector<fuchsia_hardware_network::wire::FrameType> frames = {
                              fuchsia_hardware_network::wire::FrameType::kEthernet}) {
-    fidl::WireResult wire_result = session_.Attach(
+    fidl::WireResult wire_result = session_->Attach(
         port_id, fidl::VectorView<fuchsia_hardware_network::wire::FrameType>::FromExternal(frames));
     if (!wire_result.ok()) {
       return wire_result.status();
@@ -508,7 +514,7 @@ class TunTest : public gtest::RealLoopFixture {
       return tun.take_error();
     }
     fidl::WireResult result =
-        tun.value().CreateDevice(std::move(config), std::move(endpoints->server));
+        tun.value()->CreateDevice(std::move(config), std::move(endpoints->server));
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -530,13 +536,12 @@ class TunTest : public gtest::RealLoopFixture {
       return port_endpoints.take_error();
     }
     if (zx_status_t status =
-            client.AddPort(std::move(port_config), std::move(port_endpoints->server)).status();
+            client->AddPort(std::move(port_config), std::move(port_endpoints->server)).status();
         status != ZX_OK) {
       return zx::error(status);
     };
 
-    return zx::ok(
-        std::make_pair(std::move(client.client_end()), std::move(port_endpoints->client)));
+    return zx::ok(std::make_pair(client.TakeClientEnd(), std::move(port_endpoints->client)));
   }
 
   zx::status<fidl::ClientEnd<fuchsia_net_tun::DevicePair>> CreatePair(
@@ -550,7 +555,7 @@ class TunTest : public gtest::RealLoopFixture {
       return tun.take_error();
     }
     fidl::WireResult result =
-        tun.value().CreatePair(std::move(config), std::move(endpoints->server));
+        tun.value()->CreatePair(std::move(config), std::move(endpoints->server));
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -608,7 +613,7 @@ TEST_F(TunTest, InvalidPortConfigs) {
       return port_endpoints.status_value();
     }
 
-    fidl::WireResult result = device.AddPort(config, std::move(port_endpoints->server));
+    fidl::WireResult result = device->AddPort(config, std::move(port_endpoints->server));
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -672,10 +677,10 @@ TEST_F(TunTest, ConnectNetworkDevice) {
   zx::status client_end = CreateDevice(DefaultDeviceConfig());
   ASSERT_OK(client_end.status_value());
   fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(client_end.value()));
-  ASSERT_OK(tun.GetDevice(std::move(device_endpoints->server)).status());
+  ASSERT_OK(tun->GetDevice(std::move(device_endpoints->server)).status());
 
   fidl::WireSyncClient device = fidl::BindSyncClient(std::move(device_endpoints->client));
-  fidl::WireResult info_result = device.GetInfo();
+  fidl::WireResult info_result = device->GetInfo();
   ASSERT_OK(info_result.status());
 }
 
@@ -693,7 +698,7 @@ TEST_F(TunTest, Teardown) {
   auto& [device_client_end, port_client_end] = *device_and_port;
   fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(device_client_end));
 
-  ASSERT_OK(tun.GetDevice(std::move(device_endpoints->server)).status());
+  ASSERT_OK(tun->GetDevice(std::move(device_endpoints->server)).status());
 
   ASSERT_OK(fidl::WireCall(device_endpoints->client)
                 ->GetPort(kDefaultTestPort, std::move(port_endpoints->server))
@@ -712,7 +717,7 @@ TEST_F(TunTest, Teardown) {
   fidl::WireClient mac(std::move(mac_endpoints->client), dispatcher(), &mac_handler);
 
   // get rid of tun.
-  tun.client_end().reset();
+  tun = {};
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&device_handler, &mac_handler, &port_handler]() {
         return device_handler.info_.has_value() && mac_handler.info_.has_value() &&
@@ -738,18 +743,18 @@ TEST_F(TunTest, Status) {
   fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(device_client_end));
   fidl::WireSyncClient tun_port = fidl::BindSyncClient(std::move(port_client_end));
 
-  ASSERT_OK(tun.GetDevice(std::move(device_endpoints->server)).status());
+  ASSERT_OK(tun->GetDevice(std::move(device_endpoints->server)).status());
   fidl::WireSyncClient device = fidl::BindSyncClient(std::move(device_endpoints->client));
 
   zx::status port_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
   ASSERT_OK(port_endpoints.status_value());
   {
-    fidl::WireResult result = device.GetPort(kDefaultTestPort, std::move(port_endpoints->server));
+    fidl::WireResult result = device->GetPort(kDefaultTestPort, std::move(port_endpoints->server));
     ASSERT_OK(result.status());
   }
   fidl::WireSyncClient port = fidl::BindSyncClient(std::move(port_endpoints->client));
 
-  fidl::WireResult status_result = port.GetStatus();
+  fidl::WireResult status_result = port->GetStatus();
   ASSERT_OK(status_result.status());
   {
     fuchsia_hardware_network::wire::PortStatus port_status = status_result.value().status;
@@ -761,7 +766,7 @@ TEST_F(TunTest, Status) {
   ASSERT_OK(watcher_status.status_value());
   fidl::WireSyncClient watcher = fidl::BindSyncClient(std::move(watcher_status.value()));
   {
-    fidl::WireResult watch_status_result = watcher.WatchStatus();
+    fidl::WireResult watch_status_result = watcher->WatchStatus();
     ASSERT_OK(watch_status_result.status());
     fuchsia_hardware_network::wire::PortStatus port_status =
         watch_status_result.value().port_status;
@@ -769,10 +774,10 @@ TEST_F(TunTest, Status) {
     ASSERT_EQ(port_status.flags(), fuchsia_hardware_network::wire::StatusFlags());
   }
 
-  ASSERT_OK(tun_port.SetOnline(true).status());
+  ASSERT_OK(tun_port->SetOnline(true).status());
 
   {
-    fidl::WireResult watch_status_result = watcher.WatchStatus();
+    fidl::WireResult watch_status_result = watcher->WatchStatus();
     ASSERT_OK(watch_status_result.status());
     fuchsia_hardware_network::wire::PortStatus port_status =
         watch_status_result.value().port_status;
@@ -806,12 +811,12 @@ TEST_F(TunTest, Mac) {
   ASSERT_OK(mac_status.status_value());
   fidl::WireSyncClient mac = fidl::BindSyncClient(std::move(mac_status.value()));
 
-  fidl::WireResult get_unicast_address_result = mac.GetUnicastAddress();
+  fidl::WireResult get_unicast_address_result = mac->GetUnicastAddress();
   ASSERT_OK(get_unicast_address_result.status());
   ASSERT_THAT(get_unicast_address_result.value().address, MacEq(unicast));
 
   {
-    fidl::WireResult watch_state_result = tun_port.WatchState();
+    fidl::WireResult watch_state_result = tun_port->WatchState();
     ASSERT_OK(watch_state_result.status());
     fuchsia_net_tun::wire::InternalState internal_state = watch_state_result.value().state;
     ASSERT_TRUE(internal_state.has_mac());
@@ -820,10 +825,10 @@ TEST_F(TunTest, Mac) {
   }
 
   fuchsia_net::wire::MacAddress multicast{1, 10, 20, 30, 40, 50};
-  ASSERT_OK(mac.AddMulticastAddress(multicast).status());
+  ASSERT_OK(mac->AddMulticastAddress(multicast).status());
 
   {
-    fidl::WireResult watch_state_result = tun_port.WatchState();
+    fidl::WireResult watch_state_result = tun_port->WatchState();
     ASSERT_OK(watch_state_result.status());
     fuchsia_net_tun::wire::InternalState internal_state = watch_state_result.value().state;
     ASSERT_TRUE(internal_state.has_mac());
@@ -836,10 +841,10 @@ TEST_F(TunTest, Mac) {
     ASSERT_THAT(multicast_filters, ::testing::Pointwise(MacEq(), {multicast}));
   }
 
-  ASSERT_OK(mac.SetMode(fuchsia_hardware_network::wire::MacFilterMode::kPromiscuous).status());
+  ASSERT_OK(mac->SetMode(fuchsia_hardware_network::wire::MacFilterMode::kPromiscuous).status());
 
   {
-    fidl::WireResult watch_state_result = tun_port.WatchState();
+    fidl::WireResult watch_state_result = tun_port->WatchState();
     ASSERT_OK(watch_state_result.status());
     fuchsia_net_tun::wire::InternalState internal_state = watch_state_result.value().state;
     ASSERT_TRUE(internal_state.has_mac());
@@ -875,7 +880,7 @@ TEST_F(TunTest, NoMac) {
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&mac_handler]() { return mac_handler.info_.has_value(); },
                                         kTimeout, zx::duration::infinite()));
 
-  fidl::WireResult get_state_result = tun_port.GetState();
+  fidl::WireResult get_state_result = tun_port->GetState();
   ASSERT_OK(get_state_result.status());
   ASSERT_FALSE(get_state_result.value().state.has_mac());
 }
@@ -894,18 +899,18 @@ TEST_F(TunTest, SimpleRxTx) {
   SimpleClient client;
   zx::status request = client.NewRequest();
   ASSERT_OK(request.status_value());
-  ASSERT_OK(tun.GetDevice(std::move(request.value())).status());
+  ASSERT_OK(tun->GetDevice(std::move(request.value())).status());
   ASSERT_OK(client.OpenSession());
   ASSERT_OK(client.AttachPort(kDefaultTestPort));
 
-  fidl::WireResult get_signals_result = tun.GetSignals();
+  fidl::WireResult get_signals_result = tun->GetSignals();
   ASSERT_OK(get_signals_result.status());
   zx::eventpair& signals = get_signals_result.value().signals;
 
   // Attempting to read frame without any available buffers should fail with should_wait and the
   // readable signal should not be set.
   {
-    fidl::WireResult read_frame_wire_result = tun.ReadFrame();
+    fidl::WireResult read_frame_wire_result = tun->ReadFrame();
     ASSERT_OK(read_frame_wire_result.status());
     fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
         read_frame_wire_result.value().result;
@@ -928,7 +933,7 @@ TEST_F(TunTest, SimpleRxTx) {
                              zx::deadline_after(kTimeout), nullptr));
 
   {
-    fidl::WireResult read_frame_wire_result = tun.ReadFrame();
+    fidl::WireResult read_frame_wire_result = tun->ReadFrame();
     ASSERT_OK(read_frame_wire_result.status());
     fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
         read_frame_wire_result.value().result;
@@ -961,7 +966,7 @@ TEST_F(TunTest, SimpleRxTx) {
     frame.set_port(alloc_, kDefaultTestPort);
     uint8_t data[] = {0xAA, 0xBB};
     frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(data));
-    fidl::WireResult write_frame_wire_result = tun.WriteFrame(std::move(frame));
+    fidl::WireResult write_frame_wire_result = tun->WriteFrame(std::move(frame));
     ASSERT_OK(write_frame_wire_result.status());
 
     fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result =
@@ -991,7 +996,7 @@ TEST_F(TunTest, SimpleRxTx) {
     frame.set_port(alloc_, kDefaultTestPort);
     uint8_t data[] = {0xAA, 0xBB};
     frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(data));
-    fidl::WireResult write_frame_wire_result = tun.WriteFrame(std::move(frame));
+    fidl::WireResult write_frame_wire_result = tun->WriteFrame(std::move(frame));
     ASSERT_OK(write_frame_wire_result.status());
 
     fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result =
@@ -1028,8 +1033,8 @@ TEST_F(TunTest, PairRxTx) {
       CreatePairAndPort(DefaultDevicePairConfig(), DefaultDevicePairPortConfig());
   ASSERT_OK(client_end.status_value());
   fidl::WireSyncClient device_pair = fidl::BindSyncClient(std::move(client_end.value()));
-  ASSERT_OK(device_pair.GetLeft(std::move(left_request.value())).status());
-  ASSERT_OK(device_pair.GetRight(std::move(right_request.value())).status());
+  ASSERT_OK(device_pair->GetLeft(std::move(left_request.value())).status());
+  ASSERT_OK(device_pair->GetRight(std::move(right_request.value())).status());
 
   ASSERT_OK(left.OpenSession());
   ASSERT_OK(right.OpenSession());
@@ -1071,8 +1076,8 @@ TEST_F(TunTest, PairOnlineSignal) {
       CreatePairAndPort(DefaultDevicePairConfig(), DefaultDevicePairPortConfig());
   ASSERT_OK(client_end.status_value());
   fidl::WireSyncClient device_pair = fidl::BindSyncClient(std::move(client_end.value()));
-  ASSERT_OK(device_pair.GetLeft(std::move(left_request.value())).status());
-  ASSERT_OK(device_pair.GetRight(std::move(right_request.value())).status());
+  ASSERT_OK(device_pair->GetLeft(std::move(left_request.value())).status());
+  ASSERT_OK(device_pair->GetRight(std::move(right_request.value())).status());
 
   ASSERT_OK(left.OpenSession());
   ASSERT_OK(right.OpenSession());
@@ -1091,14 +1096,14 @@ TEST_F(TunTest, PairOnlineSignal) {
       fidl::BindSyncClient(std::move(right_watcher_status.value()));
 
   {
-    fidl::WireResult left_watch_status_result = left_watcher.WatchStatus();
+    fidl::WireResult left_watch_status_result = left_watcher->WatchStatus();
     ASSERT_OK(left_watch_status_result.status());
     fuchsia_hardware_network::wire::PortStatus status_left =
         left_watch_status_result.value().port_status;
     EXPECT_EQ(status_left.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline,
               fuchsia_hardware_network::wire::StatusFlags());
 
-    fidl::WireResult right_watch_status_result = right_watcher.WatchStatus();
+    fidl::WireResult right_watch_status_result = right_watcher->WatchStatus();
     ASSERT_OK(right_watch_status_result.status());
     fuchsia_hardware_network::wire::PortStatus status_right =
         right_watch_status_result.value().port_status;
@@ -1111,14 +1116,14 @@ TEST_F(TunTest, PairOnlineSignal) {
   ASSERT_OK(right.AttachPort(kDefaultTestPort));
 
   {
-    fidl::WireResult left_watch_status_result = left_watcher.WatchStatus();
+    fidl::WireResult left_watch_status_result = left_watcher->WatchStatus();
     ASSERT_OK(left_watch_status_result.status());
     fuchsia_hardware_network::wire::PortStatus status_left =
         left_watch_status_result.value().port_status;
     EXPECT_EQ(status_left.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline,
               fuchsia_hardware_network::wire::StatusFlags::kOnline);
 
-    fidl::WireResult right_watch_status_result = right_watcher.WatchStatus();
+    fidl::WireResult right_watch_status_result = right_watcher->WatchStatus();
     ASSERT_OK(right_watch_status_result.status());
     fuchsia_hardware_network::wire::PortStatus status_right =
         right_watch_status_result.value().port_status;
@@ -1141,8 +1146,8 @@ TEST_F(TunTest, PairFallibleWrites) {
   zx::status client_end = CreatePairAndPort(std::move(config), DefaultDevicePairPortConfig());
   ASSERT_OK(client_end.status_value());
   fidl::WireSyncClient device_pair = fidl::BindSyncClient(std::move(client_end.value()));
-  ASSERT_OK(device_pair.GetLeft(std::move(left_request.value())).status());
-  ASSERT_OK(device_pair.GetRight(std::move(right_request.value())).status());
+  ASSERT_OK(device_pair->GetLeft(std::move(left_request.value())).status());
+  ASSERT_OK(device_pair->GetRight(std::move(right_request.value())).status());
 
   ASSERT_OK(left.OpenSession());
   ASSERT_OK(right.OpenSession());
@@ -1174,8 +1179,8 @@ TEST_F(TunTest, PairInfallibleWrites) {
       CreatePairAndPort(DefaultDevicePairConfig(), DefaultDevicePairPortConfig());
   ASSERT_OK(client_end.status_value());
   fidl::WireSyncClient device_pair = fidl::BindSyncClient(std::move(client_end.value()));
-  ASSERT_OK(device_pair.GetLeft(std::move(left_request.value())).status());
-  ASSERT_OK(device_pair.GetRight(std::move(right_request.value())).status());
+  ASSERT_OK(device_pair->GetLeft(std::move(left_request.value())).status());
+  ASSERT_OK(device_pair->GetRight(std::move(right_request.value())).status());
 
   ASSERT_OK(left.OpenSession());
   ASSERT_OK(right.OpenSession());
@@ -1264,7 +1269,7 @@ TEST_F(TunTest, RejectsMissingFrameFields) {
 
     test.update_frame(frame);
 
-    fidl::WireResult write_frame_wire_result = tun.WriteFrame(std::move(frame));
+    fidl::WireResult write_frame_wire_result = tun->WriteFrame(std::move(frame));
     ASSERT_OK(write_frame_wire_result.status());
 
     fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result =
@@ -1291,7 +1296,7 @@ TEST_F(TunTest, RejectsIfOffline) {
   SimpleClient client;
   zx::status request = client.NewRequest();
   ASSERT_OK(request.status_value());
-  ASSERT_OK(tun.GetDevice(std::move(request.value())).status());
+  ASSERT_OK(tun->GetDevice(std::move(request.value())).status());
   ASSERT_OK(client.OpenSession());
   ASSERT_OK(client.AttachPort(kDefaultTestPort));
 
@@ -1302,7 +1307,7 @@ TEST_F(TunTest, RejectsIfOffline) {
     uint8_t data[] = {0x01, 0x02, 0x03};
     frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(data));
     frame.set_port(alloc_, kDefaultTestPort);
-    fidl::WireResult write_frame_wire_result = tun.WriteFrame(std::move(frame));
+    fidl::WireResult write_frame_wire_result = tun->WriteFrame(std::move(frame));
     ASSERT_OK(write_frame_wire_result.status());
 
     fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result =
@@ -1329,13 +1334,13 @@ TEST_F(TunTest, RejectsIfOffline) {
         << "Bad return flags " << client.descriptor(desc)->return_flags;
   }
   // If we set online we'll be able to send.
-  ASSERT_OK(tun_port.SetOnline(true).status());
+  ASSERT_OK(tun_port->SetOnline(true).status());
 
   // Send from client end once more and read a single frame.
   {
     ASSERT_OK(client.SendTx({0x00, 0x01}, true));
 
-    fidl::WireResult read_frame_wire_result = tun.ReadFrame();
+    fidl::WireResult read_frame_wire_result = tun->ReadFrame();
     ASSERT_OK(read_frame_wire_result.status());
     fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
         read_frame_wire_result.value().result;
@@ -1353,7 +1358,7 @@ TEST_F(TunTest, RejectsIfOffline) {
     }
   }
   // Set offline and see if client received their tx buffers back.
-  ASSERT_OK(tun_port.SetOnline(false).status());
+  ASSERT_OK(tun_port->SetOnline(false).status());
 
   uint16_t desc;
   ASSERT_OK(client.WaitTx());
@@ -1384,8 +1389,8 @@ TEST_F(TunTest, PairEcho) {
       CreatePairAndPort(DefaultDevicePairConfig(), DefaultDevicePairPortConfig());
   ASSERT_OK(client_end.status_value());
   fidl::WireSyncClient device_pair = fidl::BindSyncClient(std::move(client_end.value()));
-  ASSERT_OK(device_pair.GetLeft(std::move(left_request.value())).status());
-  ASSERT_OK(device_pair.GetRight(std::move(right_request.value())).status());
+  ASSERT_OK(device_pair->GetLeft(std::move(left_request.value())).status());
+  ASSERT_OK(device_pair->GetRight(std::move(right_request.value())).status());
 
   ASSERT_OK(left.OpenSession());
   ASSERT_OK(right.OpenSession());
@@ -1473,14 +1478,14 @@ TEST_F(TunTest, ReportsInternalTxErrors) {
   SimpleClient client;
   zx::status request = client.NewRequest();
   ASSERT_OK(request.status_value());
-  ASSERT_OK(tun.GetDevice(std::move(request.value())).status());
+  ASSERT_OK(tun->GetDevice(std::move(request.value())).status());
   ASSERT_OK(client.OpenSession());
   ASSERT_OK(client.AttachPort(kDefaultTestPort));
 
   // Wait for the device to observe the online session. This guarantees the Session's VMO will be
   // installed by the time we're done waiting.
   for (;;) {
-    fidl::WireResult watch_state_result = tun_port.WatchState();
+    fidl::WireResult watch_state_result = tun_port->WatchState();
     ASSERT_OK(watch_state_result.status());
     fuchsia_net_tun::wire::InternalState internal_state = watch_state_result.value().state;
     if (internal_state.has_has_session() && internal_state.has_session()) {
@@ -1505,7 +1510,7 @@ TEST_F(TunTest, ReportsInternalTxErrors) {
       break;
     }
     ASSERT_STATUS(status, ZX_ERR_SHOULD_WAIT);
-    fidl::WireResult read_frame_wire_result = tun.ReadFrame();
+    fidl::WireResult read_frame_wire_result = tun->ReadFrame();
     ASSERT_OK(read_frame_wire_result.status());
     fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
         read_frame_wire_result.value().result;
@@ -1536,7 +1541,7 @@ TEST_F(TunTest, ChainsRxBuffers) {
   SimpleClient client;
   zx::status request = client.NewRequest();
   ASSERT_OK(request.status_value());
-  ASSERT_OK(tun.GetDevice(std::move(request.value())).status());
+  ASSERT_OK(tun->GetDevice(std::move(request.value())).status());
   ASSERT_OK(client.OpenSession());
   ASSERT_OK(client.AttachPort(kDefaultTestPort));
 
@@ -1556,7 +1561,7 @@ TEST_F(TunTest, ChainsRxBuffers) {
   frame.set_port(alloc_, kDefaultTestPort);
   frame.set_frame_type(alloc_, fuchsia_hardware_network::wire::FrameType::kEthernet);
   frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(send_data));
-  fidl::WireResult write_frame_wire_result = tun.WriteFrame(std::move(frame));
+  fidl::WireResult write_frame_wire_result = tun->WriteFrame(std::move(frame));
   ASSERT_OK(write_frame_wire_result.status());
   ASSERT_EQ(write_frame_wire_result.value().result.which(),
             fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kResponse)
@@ -1600,7 +1605,7 @@ TEST_F(TunTest, AddRemovePorts) {
   {
     zx::status server_end = fidl::CreateEndpoints(&device);
     ASSERT_OK(server_end.status_value());
-    ASSERT_OK(tun.GetDevice(std::move(*server_end)).status());
+    ASSERT_OK(tun->GetDevice(std::move(*server_end)).status());
   }
   zx::status port_watcher_result = GetPortWatcher(device);
   ASSERT_OK(port_watcher_result.status_value());
@@ -1633,7 +1638,7 @@ TEST_F(TunTest, AddRemovePorts) {
     ASSERT_OK(server_end.status_value());
     fuchsia_net_tun::wire::DevicePortConfig port_config = DefaultDevicePortConfig();
     port_config.base().set_id(alloc_, port.id);
-    ASSERT_OK(tun.AddPort(std::move(port_config), std::move(*server_end)).status());
+    ASSERT_OK(tun->AddPort(std::move(port_config), std::move(*server_end)).status());
 
     zx::status event = WatchPorts(port_watcher);
     ASSERT_OK(event.status_value());
@@ -1647,7 +1652,7 @@ TEST_F(TunTest, AddRemovePorts) {
     ASSERT_OK(server_end.status_value());
     fuchsia_net_tun::wire::DevicePortConfig port_config = DefaultDevicePortConfig();
     port_config.base().set_id(alloc_, ports[0].id);
-    ASSERT_OK(tun.AddPort(std::move(port_config), std::move(*server_end)).status());
+    ASSERT_OK(tun->AddPort(std::move(port_config), std::move(*server_end)).status());
 
     CapturingEventHandler<fuchsia_net_tun::Port> handler;
     fidl::WireClient client(std::move(client_end), dispatcher(), &handler);
@@ -1686,9 +1691,9 @@ TEST_F(TunTest, AddRemovePairPorts) {
     zx::status server_end = fidl::CreateEndpoints(&end.device);
     ASSERT_OK(server_end.status_value());
     if (end.left) {
-      ASSERT_OK(tun.GetLeft(std::move(*server_end)).status());
+      ASSERT_OK(tun->GetLeft(std::move(*server_end)).status());
     } else {
-      ASSERT_OK(tun.GetRight(std::move(*server_end)).status());
+      ASSERT_OK(tun->GetRight(std::move(*server_end)).status());
     }
     zx::status port_watcher_result = GetPortWatcher(end.device);
     ASSERT_OK(port_watcher_result.status_value());
@@ -1718,7 +1723,7 @@ TEST_F(TunTest, AddRemovePairPorts) {
     SCOPED_TRACE(port.name);
     fuchsia_net_tun::wire::DevicePairPortConfig port_config = DefaultDevicePairPortConfig();
     port_config.base().set_id(alloc_, port.id);
-    fidl::WireResult result = tun.AddPort(std::move(port_config));
+    fidl::WireResult result = tun->AddPort(std::move(port_config));
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().result.which(),
               fuchsia_net_tun::wire::DevicePairAddPortResult::Tag::kResponse)
@@ -1736,7 +1741,7 @@ TEST_F(TunTest, AddRemovePairPorts) {
   {
     fuchsia_net_tun::wire::DevicePairPortConfig port_config = DefaultDevicePairPortConfig();
     port_config.base().set_id(alloc_, ports[0].id);
-    fidl::WireResult result = tun.AddPort(std::move(port_config));
+    fidl::WireResult result = tun->AddPort(std::move(port_config));
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().result.which(),
               fuchsia_net_tun::wire::DevicePairAddPortResult::Tag::kErr);
@@ -1746,7 +1751,7 @@ TEST_F(TunTest, AddRemovePairPorts) {
   for (auto& port : ports) {
     SCOPED_TRACE(port.name);
 
-    fidl::WireResult result = tun.RemovePort(port.id);
+    fidl::WireResult result = tun->RemovePort(port.id);
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().result.which(),
               fuchsia_net_tun::wire::DevicePairRemovePortResult::Tag::kResponse)
@@ -1761,7 +1766,7 @@ TEST_F(TunTest, AddRemovePairPorts) {
   }
 
   // Removing a port that doesn't exist anymore returns the appropriate error.
-  fidl::WireResult result = tun.RemovePort(ports[0].id);
+  fidl::WireResult result = tun->RemovePort(ports[0].id);
   ASSERT_OK(result.status());
   ASSERT_EQ(result.value().result.which(),
             fuchsia_net_tun::wire::DevicePairRemovePortResult::Tag::kErr);
