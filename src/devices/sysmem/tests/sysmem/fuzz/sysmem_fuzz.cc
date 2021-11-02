@@ -50,15 +50,15 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   LOGRTN(token_endpoints.status_value(), "Failed token channel create.\n");
   auto [token_client_end, token_server_end] = std::move(*token_endpoints);
 
-  auto allocate_result = allocator.AllocateSharedCollection(std::move(token_server_end));
+  auto allocate_result = allocator->AllocateSharedCollection(std::move(token_server_end));
   LOGRTN(allocate_result.status(), "Failed to allocate shared collection.\n");
 
   zx::status collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   LOGRTN(collection_endpoints.status_value(), "Failed collection channel create.\n");
   auto [collection_client_end, collection_server_end] = std::move(*collection_endpoints);
 
-  auto bind_result =
-      allocator.BindSharedCollection(std::move(token_client_end), std::move(collection_server_end));
+  auto bind_result = allocator->BindSharedCollection(std::move(token_client_end),
+                                                     std::move(collection_server_end));
   LOGRTN(bind_result.status(), "Failed to bind shared collection.\n");
 
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
@@ -66,10 +66,10 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
 
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(
       std::move(collection_client_end));
-  auto set_constraints_result = collection.SetConstraints(true, std::move(constraints));
+  auto set_constraints_result = collection->SetConstraints(true, std::move(constraints));
   LOGRTN(set_constraints_result.status(), "Failed to set buffer collection constraints.\n");
 
-  fidl::WireResult result = collection.WaitForBuffersAllocated();
+  fidl::WireResult result = collection->WaitForBuffersAllocated();
   // This is the first round-trip to/from sysmem.  A failure here can be
   // due to any step above failing async.
   LOGRTN(result.status(), "Failed on WaitForBuffersAllocated.\n");

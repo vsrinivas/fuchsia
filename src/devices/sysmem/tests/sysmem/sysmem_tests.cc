@@ -105,14 +105,14 @@ zx::status<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_dr
     return zx::error(allocator_endpoints.status_value());
   }
 
-  auto connect_result = connector.Connect(std::move(allocator_endpoints->server));
+  auto connect_result = connector->Connect(std::move(allocator_endpoints->server));
   EXPECT_OK(connect_result);
   if (!connect_result.ok()) {
     return zx::error(connect_result.status());
   }
 
   auto allocator = fidl::BindSyncClient(std::move(allocator_endpoints->client));
-  allocator.SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
+  allocator->SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
   return zx::ok(std::move(allocator));
 }
 
@@ -123,7 +123,7 @@ zx::status<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_se
     return zx::error(client_end.status_value());
   }
   auto allocator = fidl::BindSyncClient(std::move(client_end.value()));
-  allocator.SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
+  allocator->SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
   return zx::ok(std::move(allocator));
 }
 
@@ -156,14 +156,14 @@ zx_status_t verify_connectivity(fidl::WireSyncClient<fuchsia_sysmem::Allocator>&
   }
   auto [collection_client_end, collection_server_end] = std::move(*collection_endpoints);
 
-  auto result = allocator.AllocateNonSharedCollection(std::move(collection_server_end));
+  auto result = allocator->AllocateNonSharedCollection(std::move(collection_server_end));
   EXPECT_OK(result);
   if (!result.ok()) {
     return result.status();
   }
 
   auto collection = fidl::BindSyncClient(std::move(collection_client_end));
-  auto sync_result = collection.Sync();
+  auto sync_result = collection->Sync();
   EXPECT_OK(sync_result);
   if (!sync_result.ok()) {
     return sync_result.status();
@@ -175,7 +175,7 @@ static void SetDefaultCollectionName(
     fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>& collection) {
   constexpr uint32_t kPriority = 1000000;
   const char* kName = "sysmem-test";
-  collection.SetName(kPriority, fidl::StringView::FromExternal(kName));
+  collection->SetName(kPriority, fidl::StringView::FromExternal(kName));
 }
 
 zx::status<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>>
@@ -232,7 +232,7 @@ const std::string& GetBoardName() {
     ZX_ASSERT(client_end.is_ok());
 
     auto sysinfo = fidl::BindSyncClient(std::move(client_end.value()));
-    auto result = sysinfo.GetBoardName();
+    auto result = sysinfo->GetBoardName();
     ZX_ASSERT(result.ok());
     ZX_ASSERT(result->status == ZX_OK);
 
@@ -448,7 +448,7 @@ bool AttachTokenSucceeds(
   // process - normally the two clients would be in separate processes with
   // token_client_2 transferred to another participant).
   auto token_1 = fidl::BindSyncClient(std::move(token_client_1));
-  EXPECT_OK(token_1.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
+  EXPECT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
   IF_FAILURES_RETURN_FALSE();
 
   // Client 3 is attached later.
@@ -460,8 +460,8 @@ bool AttachTokenSucceeds(
   auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
 
   EXPECT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
-  EXPECT_OK(allocator->BindSharedCollection(std::move(token_1.client_end()),
-                                            std::move(collection_server_1)));
+  EXPECT_OK(
+      allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
   IF_FAILURES_RETURN_FALSE();
 
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints_1;
@@ -531,7 +531,7 @@ bool AttachTokenSucceeds(
 
   modify_constraints_initiator(constraints_1);
 
-  EXPECT_OK(collection_1.SetConstraints(true, std::move(constraints_1)));
+  EXPECT_OK(collection_1->SetConstraints(true, std::move(constraints_1)));
   IF_FAILURES_RETURN_FALSE();
 
   // Client 2 connects to sysmem separately.
@@ -550,7 +550,7 @@ bool AttachTokenSucceeds(
   // the BindSharedCollection() might arrive at the server before the
   // Duplicate() that delivered the server end of token_client_2 to sysmem,
   // which would cause sysmem to not recognize the token.
-  EXPECT_OK(collection_1.Sync());
+  EXPECT_OK(collection_1->Sync());
   IF_FAILURES_RETURN_FALSE();
 
   EXPECT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID, "");
@@ -560,12 +560,12 @@ bool AttachTokenSucceeds(
 
   // Not all constraints have been input, so the buffers haven't been
   // allocated yet.
-  auto check_1_result = collection_1.CheckBuffersAllocated();
+  auto check_1_result = collection_1->CheckBuffersAllocated();
   EXPECT_OK(check_1_result);
   EXPECT_EQ(check_1_result->status, ZX_ERR_UNAVAILABLE);
   IF_FAILURES_RETURN_FALSE();
 
-  auto check_2_result = collection_2.CheckBuffersAllocated();
+  auto check_2_result = collection_2->CheckBuffersAllocated();
   EXPECT_OK(check_2_result);
   EXPECT_EQ(check_2_result->status, ZX_ERR_UNAVAILABLE);
   IF_FAILURES_RETURN_FALSE();
@@ -582,11 +582,11 @@ bool AttachTokenSucceeds(
     token_client_3 = std::move(token_endpoints_3->client);
     token_server_3 = std::move(token_endpoints_3->server);
 
-    EXPECT_OK(collection_2.AttachToken(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_3)));
+    EXPECT_OK(collection_2->AttachToken(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_3)));
     IF_FAILURES_RETURN();
     // Since we're not doing any Duplicate()s first or anything like that (which could allow us to
     // share the round trip), go ahead and Sync() the token creation to sysmem now.
-    EXPECT_OK(collection_2.Sync());
+    EXPECT_OK(collection_2->Sync());
     IF_FAILURES_RETURN();
   };
 
@@ -612,8 +612,8 @@ bool AttachTokenSucceeds(
     EXPECT_NE(allocator_2.value().client_end().channel().get(), ZX_HANDLE_INVALID, "");
     EXPECT_NE(token_client_3.channel().get(), ZX_HANDLE_INVALID, "");
     IF_FAILURES_RETURN();
-    collection_3.client_end().reset();
-    ZX_DEBUG_ASSERT(!collection_3.client_end());
+    collection_3 = {};
+    ZX_DEBUG_ASSERT(!collection_3.is_valid());
 
     zx::status collection_endpoints_3 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
     EXPECT_OK(collection_endpoints_3);
@@ -626,7 +626,7 @@ bool AttachTokenSucceeds(
     IF_FAILURES_RETURN();
     fuchsia_sysmem::wire::BufferCollectionConstraints constraints_3_copy(constraints_3);
 
-    EXPECT_OK(collection_3.SetConstraints(true, std::move(constraints_3_copy)));
+    EXPECT_OK(collection_3->SetConstraints(true, constraints_3_copy));
     IF_FAILURES_RETURN();
   };
 
@@ -635,7 +635,7 @@ bool AttachTokenSucceeds(
     IF_FAILURES_RETURN_FALSE();
     if (fail_attached_early) {
       // Also close the channel to simulate early client 3 failure before allocation.
-      collection_3.client_end().reset();
+      collection_3 = {};
     }
   }
 
@@ -646,10 +646,10 @@ bool AttachTokenSucceeds(
   //
 
   modify_constraints_participant(constraints_2);
-  EXPECT_OK(collection_2.SetConstraints(true, std::move(constraints_2)));
+  EXPECT_OK(collection_2->SetConstraints(true, std::move(constraints_2)));
   IF_FAILURES_RETURN_FALSE();
 
-  auto allocate_result_1 = collection_1.WaitForBuffersAllocated();
+  auto allocate_result_1 = collection_1->WaitForBuffersAllocated();
 
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
@@ -657,17 +657,17 @@ bool AttachTokenSucceeds(
   EXPECT_OK(allocate_result_1->status);
   IF_FAILURES_RETURN_FALSE();
 
-  auto check_result_good_1 = collection_1.CheckBuffersAllocated();
+  auto check_result_good_1 = collection_1->CheckBuffersAllocated();
   EXPECT_OK(check_result_good_1);
   EXPECT_OK(check_result_good_1->status);
   IF_FAILURES_RETURN_FALSE();
 
-  auto check_result_good_2 = collection_2.CheckBuffersAllocated();
+  auto check_result_good_2 = collection_2->CheckBuffersAllocated();
   EXPECT_OK(check_result_good_2);
   EXPECT_OK(check_result_good_2->status);
   IF_FAILURES_RETURN_FALSE();
 
-  auto allocate_result_2 = collection_2.WaitForBuffersAllocated();
+  auto allocate_result_2 = collection_2->WaitForBuffersAllocated();
   EXPECT_OK(allocate_result_2);
   EXPECT_OK(allocate_result_2->status);
   IF_FAILURES_RETURN_FALSE();
@@ -763,7 +763,7 @@ bool AttachTokenSucceeds(
   }
 
   if (attach_before_also) {
-    auto allocate_result_3 = collection_3.WaitForBuffersAllocated();
+    auto allocate_result_3 = collection_3->WaitForBuffersAllocated();
     if (!allocate_result_3.ok() || allocate_result_3->status != ZX_OK) {
       return false;
     }
@@ -782,11 +782,11 @@ bool AttachTokenSucceeds(
     //
     // Give some time to fail if it were going to (but it shouldn't).
     nanosleep_duration(zx::msec(250));
-    EXPECT_OK(collection_1.Sync());
+    EXPECT_OK(collection_1->Sync());
     // LogicalBufferCollection still ok.
     IF_FAILURES_RETURN_FALSE();
 
-    auto allocate_result_3 = collection_3.WaitForBuffersAllocated();
+    auto allocate_result_3 = collection_3->WaitForBuffersAllocated();
     if (!allocate_result_3.ok() || allocate_result_3->status != ZX_OK) {
       return false;
     }
@@ -871,14 +871,14 @@ TEST(Sysmem, VerifyBufferCollectionToken) {
   auto [token2_client, token2_server] = std::move(*token2_endpoints);
   auto token2 = fidl::BindSyncClient(std::move(token2_client));
 
-  ASSERT_OK(token.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token2_server)));
+  ASSERT_OK(token->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token2_server)));
 
   auto not_token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(not_token_endpoints);
   auto [not_token_client, not_token_server] = std::move(*not_token_endpoints);
 
-  ASSERT_OK(token.Sync());
-  ASSERT_OK(token2.Sync());
+  ASSERT_OK(token->Sync());
+  ASSERT_OK(token2->Sync());
 
   auto validate_result_1 = allocator->ValidateBufferCollectionToken(
       get_related_koid(token.client_end().channel().get()));
@@ -1048,7 +1048,7 @@ TEST(Sysmem, AttachLifetimeTracking) {
   auto bind_result = allocator->BindSharedCollection(std::move(attached_token_client),
                                                      std::move(attached_collection_server));
   ASSERT_OK(bind_result);
-  auto sync_result_3 = attached_collection.Sync();
+  auto sync_result_3 = attached_collection->Sync();
   ASSERT_OK(sync_result_3);
 
   zx::eventpair attached_lifetime_client, attached_lifetime_server;
@@ -1058,8 +1058,8 @@ TEST(Sysmem, AttachLifetimeTracking) {
   // logical allocation failure, it'll close as soon as we hit logical allocation failure for the
   // attached token.  The logical allocation failure of the attached token doesn't impact collection
   // in any way.
-  attached_collection.AttachLifetimeTracking(std::move(attached_lifetime_server),
-                                             /*buffers_remaining=*/0);
+  attached_collection->AttachLifetimeTracking(std::move(attached_lifetime_server),
+                                              /*buffers_remaining=*/0);
   fuchsia_sysmem::wire::BufferCollectionConstraints attached_constraints;
   attached_constraints.usage.cpu =
       fuchsia_sysmem::wire::kCpuUsageReadOften | fuchsia_sysmem::wire::kCpuUsageWriteOften;
@@ -1080,7 +1080,7 @@ TEST(Sysmem, AttachLifetimeTracking) {
   };
   ZX_DEBUG_ASSERT(attached_constraints.image_format_constraints_count == 0);
   auto attached_set_constraints_result =
-      attached_collection.SetConstraints(true, std::move(attached_constraints));
+      attached_collection->SetConstraints(true, std::move(attached_constraints));
   ASSERT_TRUE(attached_set_constraints_result.ok());
   zx_signals_t attached_pending_signals;
   zx_status_t status = attached_lifetime_client.wait_one(
@@ -1088,7 +1088,7 @@ TEST(Sysmem, AttachLifetimeTracking) {
   ASSERT_OK(status, "");
   ASSERT_TRUE(attached_pending_signals & ZX_EVENTPAIR_PEER_CLOSED, "");
 
-  collection.value().client_end().reset();
+  collection.value() = {};
 
   // ZX_EVENTPAIR_PEER_CLOSED should be seen for eventpair(s) >= kNumBuffers.
   for (uint32_t i = 0; i < kNumEventpairs; ++i) {
@@ -1318,9 +1318,9 @@ TEST(Sysmem, NoToken) {
       .heap_permitted = {},
   };
   ZX_DEBUG_ASSERT(constraints.image_format_constraints_count == 0);
-  ASSERT_OK(collection.SetConstraints(true, std::move(constraints)));
+  ASSERT_OK(collection->SetConstraints(true, std::move(constraints)));
 
-  auto allocation_result = collection.WaitForBuffersAllocated();
+  auto allocation_result = collection->WaitForBuffersAllocated();
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   ASSERT_OK(allocation_result);
@@ -1363,7 +1363,7 @@ TEST(Sysmem, NoSync) {
   allocator_1->SetDebugClientInfo(fidl::StringView::FromExternal(kAllocatorName), 1u);
 
   const char* kClientName = "TestClient";
-  token_1.SetDebugClientInfo(fidl::StringView::FromExternal(kClientName), 2u);
+  token_1->SetDebugClientInfo(fidl::StringView::FromExternal(kClientName), 2u);
 
   // Make another token so we can bind it and set a name on the collection.
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection_3;
@@ -1377,15 +1377,15 @@ TEST(Sysmem, NoSync) {
     ASSERT_OK(collection_endpoints_3);
     auto [collection_client_3, collection_server_3] = std::move(*collection_endpoints_3);
 
-    ASSERT_OK(token_1.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_3)));
-    ASSERT_OK(token_1.Sync());
+    ASSERT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_3)));
+    ASSERT_OK(token_1->Sync());
 
     ASSERT_OK(allocator_1->BindSharedCollection(std::move(token_client_3),
                                                 std::move(collection_server_3)));
     collection_3 = fidl::BindSyncClient(std::move(collection_client_3));
 
     const char* kCollectionName = "TestCollection";
-    collection_3.SetName(1u, fidl::StringView::FromExternal(kCollectionName));
+    collection_3->SetName(1u, fidl::StringView::FromExternal(kCollectionName));
   }
 
   auto token_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
@@ -1399,24 +1399,24 @@ TEST(Sysmem, NoSync) {
   auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
 
   const char* kClient2Name = "TestClient2";
-  token_2.SetDebugClientInfo(fidl::StringView::FromExternal(kClient2Name), 3u);
+  token_2->SetDebugClientInfo(fidl::StringView::FromExternal(kClient2Name), 3u);
 
   // Close to prevent Sync on token_client_1 from failing later due to LogicalBufferCollection
   // failure caused by the token handle closing.
-  token_2.Close();
+  token_2->Close();
 
-  ASSERT_OK(allocator_1->BindSharedCollection(std::move(token_2.client_end()),
-                                              std::move(collection_server_1)));
+  ASSERT_OK(
+      allocator_1->BindSharedCollection(token_2.TakeClientEnd(), std::move(collection_server_1)));
 
   // Duplicate has not been sent (or received) so this should fail.
-  auto sync_result = collection_1.Sync();
+  auto sync_result = collection_1->Sync();
   EXPECT_NE(sync_result.status(), ZX_OK, "");
 
   SetDefaultCollectionName(collection_1);
 
   // The duplicate/sync should print out an error message but succeed.
-  ASSERT_OK(token_1.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
-  ASSERT_OK(token_1.Sync());
+  ASSERT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
+  ASSERT_OK(token_1->Sync());
 }
 
 TEST(Sysmem, MultipleParticipants) {
@@ -1439,7 +1439,7 @@ TEST(Sysmem, MultipleParticipants) {
   // test is single proc, so both clients are coming from this client
   // process - normally the two clients would be in separate processes with
   // token_client_2 transferred to another participant).
-  ASSERT_OK(token_1.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
+  ASSERT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
 
   auto token_endpoints_3 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(token_endpoints_3);
@@ -1447,7 +1447,7 @@ TEST(Sysmem, MultipleParticipants) {
 
   // Client 3 is used to test a participant that doesn't set any constraints
   // and only wants a notification that the allocation is done.
-  ASSERT_OK(token_1.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_3)));
+  ASSERT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_3)));
 
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
@@ -1455,8 +1455,8 @@ TEST(Sysmem, MultipleParticipants) {
   auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
 
   ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
-  ASSERT_OK(allocator->BindSharedCollection(std::move(token_1.client_end()),
-                                            std::move(collection_server_1)));
+  ASSERT_OK(
+      allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
   SetDefaultCollectionName(collection_1);
 
@@ -1525,7 +1525,7 @@ TEST(Sysmem, MultipleParticipants) {
   }
 #endif  // SYSMEM_FUZZ_CORPUS
 
-  ASSERT_OK(collection_1.SetConstraints(true, std::move(constraints_1)));
+  ASSERT_OK(collection_1->SetConstraints(true, std::move(constraints_1)));
 
   // Client 2 connects to sysmem separately.
   auto allocator_2 = connect_to_sysmem_driver();
@@ -1541,7 +1541,7 @@ TEST(Sysmem, MultipleParticipants) {
   // the BindSharedCollection() might arrive at the server before the
   // Duplicate() that delivered the server end of token_client_2 to sysmem,
   // which would cause sysmem to not recognize the token.
-  ASSERT_OK(collection_1.Sync());
+  ASSERT_OK(collection_1->Sync());
 
   // For the moment, cause the server to count some fake churn, enough times to cause the server
   // to re-alloc all the server's held FIDL tables 4 times before we continue.  These are
@@ -1551,7 +1551,7 @@ TEST(Sysmem, MultipleParticipants) {
   // can create real churn.
   constexpr uint32_t kChurnCount = 256 * 2;  // 256 * 4;
   for (uint32_t i = 0; i < kChurnCount; ++i) {
-    ASSERT_OK(collection_1.Sync());
+    ASSERT_OK(collection_1->Sync());
   }
 
   ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID, "");
@@ -1568,42 +1568,42 @@ TEST(Sysmem, MultipleParticipants) {
       allocator_2->BindSharedCollection(std::move(token_client_3), std::move(collection_server_3)));
 
   fuchsia_sysmem::wire::BufferCollectionConstraints empty_constraints;
-  ASSERT_OK(collection_3.SetConstraints(false, std::move(empty_constraints)));
+  ASSERT_OK(collection_3->SetConstraints(false, std::move(empty_constraints)));
 
   // Not all constraints have been input, so the buffers haven't been
   // allocated yet.
-  auto check_result_1 = collection_1.CheckBuffersAllocated();
+  auto check_result_1 = collection_1->CheckBuffersAllocated();
   ASSERT_OK(check_result_1);
   EXPECT_EQ(check_result_1->status, ZX_ERR_UNAVAILABLE, "");
-  auto check_result_2 = collection_2.CheckBuffersAllocated();
+  auto check_result_2 = collection_2->CheckBuffersAllocated();
   ASSERT_OK(check_result_2);
   EXPECT_EQ(check_result_2->status, ZX_ERR_UNAVAILABLE, "");
 
-  ASSERT_OK(collection_2.SetConstraints(true, std::move(constraints_2)));
+  ASSERT_OK(collection_2->SetConstraints(true, std::move(constraints_2)));
 
   //
   // Only after both participants (both clients) have SetConstraints() will
   // the allocation be successful.
   //
 
-  auto allocate_result_1 = collection_1.WaitForBuffersAllocated();
+  auto allocate_result_1 = collection_1->WaitForBuffersAllocated();
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   ASSERT_OK(allocate_result_1);
   ASSERT_OK(allocate_result_1->status);
 
-  auto check_result_allocated_1 = collection_1.CheckBuffersAllocated();
+  auto check_result_allocated_1 = collection_1->CheckBuffersAllocated();
   ASSERT_OK(check_result_allocated_1);
   EXPECT_OK(check_result_allocated_1->status);
-  auto check_result_allocated_2 = collection_2.CheckBuffersAllocated();
+  auto check_result_allocated_2 = collection_2->CheckBuffersAllocated();
   ASSERT_OK(check_result_allocated_2);
   EXPECT_OK(check_result_allocated_2->status);
 
-  auto allocate_result_2 = collection_2.WaitForBuffersAllocated();
+  auto allocate_result_2 = collection_2->WaitForBuffersAllocated();
   ASSERT_OK(allocate_result_2);
   ASSERT_OK(allocate_result_2->status);
 
-  auto allocate_result_3 = collection_3.WaitForBuffersAllocated();
+  auto allocate_result_3 = collection_3->WaitForBuffersAllocated();
   ASSERT_OK(allocate_result_3);
   ASSERT_OK(allocate_result_3->status);
 
@@ -1701,7 +1701,7 @@ TEST(Sysmem, MultipleParticipants) {
 
   // Close to ensure grabbing null constraints from a closed collection
   // doesn't crash
-  EXPECT_OK(collection_3.Close());
+  EXPECT_OK(collection_3->Close());
 }
 
 // This test is mainly to have something in the fuzzer corpus using format modifiers.
@@ -1719,7 +1719,7 @@ TEST(Sysmem, ComplicatedFormatModifiers) {
   ASSERT_OK(token_endpoints_2);
   auto [token_client_2, token_server_2] = std::move(*token_endpoints_2);
 
-  ASSERT_OK(token_1.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
+  ASSERT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
 
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
@@ -1727,8 +1727,8 @@ TEST(Sysmem, ComplicatedFormatModifiers) {
   auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
 
   ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
-  ASSERT_OK(allocator->BindSharedCollection(std::move(token_1.client_end()),
-                                            std::move(collection_server_1)));
+  ASSERT_OK(
+      allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
   SetDefaultCollectionName(collection_1);
 
@@ -1782,26 +1782,26 @@ TEST(Sysmem, ComplicatedFormatModifiers) {
   }
 #endif  // SYSMEM_FUZZ_CORPUS
 
-  ASSERT_OK(collection_1.SetConstraints(true, std::move(constraints_1)));
+  ASSERT_OK(collection_1->SetConstraints(true, std::move(constraints_1)));
 
   auto collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_2);
   auto [collection_client_2, collection_server_2] = std::move(*collection_endpoints_2);
   auto collection_2 = fidl::BindSyncClient(std::move(collection_client_2));
 
-  ASSERT_OK(collection_1.Sync());
+  ASSERT_OK(collection_1->Sync());
 
   ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID, "");
   ASSERT_OK(
       allocator->BindSharedCollection(std::move(token_client_2), std::move(collection_server_2)));
 
-  ASSERT_OK(collection_2.SetConstraints(true, std::move(constraints_2)));
+  ASSERT_OK(collection_2->SetConstraints(true, std::move(constraints_2)));
 
   //
   // Only after both participants (both clients) have SetConstraints() will
   // the allocation be successful.
   //
-  auto allocate_result_1 = collection_1.WaitForBuffersAllocated();
+  auto allocate_result_1 = collection_1->WaitForBuffersAllocated();
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   ASSERT_OK(allocate_result_1);
@@ -1819,7 +1819,7 @@ TEST(Sysmem, DuplicateSync) {
   ASSERT_OK(allocator->AllocateSharedCollection(std::move(token_server_1)));
 
   zx::wire::Rights rights_attenuation_masks[] = {zx::wire::Rights::kSameRights};
-  auto duplicate_result = token_1.DuplicateSync(
+  auto duplicate_result = token_1->DuplicateSync(
       fidl::VectorView<zx::wire::Rights>::FromExternal(rights_attenuation_masks));
   ASSERT_OK(duplicate_result);
   ASSERT_EQ(duplicate_result->tokens.count(), 1);
@@ -1831,8 +1831,8 @@ TEST(Sysmem, DuplicateSync) {
   auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
 
   ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
-  ASSERT_OK(allocator->BindSharedCollection(std::move(token_1.client_end()),
-                                            std::move(collection_server_1)));
+  ASSERT_OK(
+      allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
   SetDefaultCollectionName(collection_1);
 
@@ -1852,7 +1852,7 @@ TEST(Sysmem, DuplicateSync) {
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints_3(constraints_1);
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints_4(constraints_1);
 
-  ASSERT_OK(collection_1.SetConstraints(true, std::move(constraints_1)));
+  ASSERT_OK(collection_1->SetConstraints(true, std::move(constraints_1)));
 
   auto collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_2);
@@ -1862,16 +1862,16 @@ TEST(Sysmem, DuplicateSync) {
   // Remove write from last token
   zx::wire::Rights rights_attenuation_masks_2[] = {zx::wire::Rights::kSameRights,
                                                    ~zx::wire::Rights::kWrite};
-  auto duplicate_result_2 = token_2.DuplicateSync(
+  auto duplicate_result_2 = token_2->DuplicateSync(
       fidl::VectorView<zx::wire::Rights>::FromExternal(rights_attenuation_masks_2));
   ASSERT_OK(duplicate_result_2);
   ASSERT_EQ(duplicate_result_2->tokens.count(), 2);
 
   ASSERT_NE(token_2.client_end().channel().get(), ZX_HANDLE_INVALID, "");
-  ASSERT_OK(allocator->BindSharedCollection(std::move(token_2.client_end()),
+  ASSERT_OK(allocator->BindSharedCollection(token_2.TakeClientEnd(),
                                             std::move(collection_endpoints_2->server)));
 
-  ASSERT_OK(collection_2.SetConstraints(true, std::move(constraints_2)));
+  ASSERT_OK(collection_2->SetConstraints(true, std::move(constraints_2)));
 
   auto collection_endpoints_3 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_3);
@@ -1889,24 +1889,24 @@ TEST(Sysmem, DuplicateSync) {
   ASSERT_OK(allocator->BindSharedCollection(std::move(duplicate_result_2->tokens[1]),
                                             std::move(collection_endpoints_4->server)));
 
-  ASSERT_OK(collection_3.SetConstraints(true, std::move(constraints_3)));
-  ASSERT_OK(collection_4.SetConstraints(true, std::move(constraints_4)));
+  ASSERT_OK(collection_3->SetConstraints(true, constraints_3));
+  ASSERT_OK(collection_4->SetConstraints(true, constraints_4));
 
   //
   // Only after all participants have SetConstraints() will
   // the allocation be successful.
   //
-  auto allocate_result_1 = collection_1.WaitForBuffersAllocated();
+  auto allocate_result_1 = collection_1->WaitForBuffersAllocated();
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   ASSERT_OK(allocate_result_1);
   ASSERT_OK(allocate_result_1->status);
 
-  auto allocate_result_3 = collection_3.WaitForBuffersAllocated();
+  auto allocate_result_3 = collection_3->WaitForBuffersAllocated();
   ASSERT_OK(allocate_result_3);
   ASSERT_OK(allocate_result_3->status);
 
-  auto allocate_result_4 = collection_4.WaitForBuffersAllocated();
+  auto allocate_result_4 = collection_4->WaitForBuffersAllocated();
   ASSERT_OK(allocate_result_4);
   ASSERT_OK(allocate_result_4->status);
 
@@ -1936,7 +1936,7 @@ TEST(Sysmem, CloseWithOutstandingWait) {
   ASSERT_OK(token_endpoints_2);
   auto [token_client_2, token_server_2] = std::move(*token_endpoints_2);
 
-  ASSERT_OK(token_1.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
+  ASSERT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
 
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
@@ -1944,8 +1944,8 @@ TEST(Sysmem, CloseWithOutstandingWait) {
   auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
 
   ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
-  ASSERT_OK(allocator_1->BindSharedCollection(std::move(token_1.client_end()),
-                                              std::move(collection_server_1)));
+  ASSERT_OK(
+      allocator_1->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints_1;
   constraints_1.usage.cpu =
@@ -1966,10 +1966,10 @@ TEST(Sysmem, CloseWithOutstandingWait) {
       .type = fuchsia_sysmem::wire::ColorSpaceType::kSrgb,
   };
 
-  ASSERT_OK(collection_1.SetConstraints(true, std::move(constraints_1)));
+  ASSERT_OK(collection_1->SetConstraints(true, std::move(constraints_1)));
 
   std::thread wait_thread([&collection_1]() {
-    auto allocate_result_1 = collection_1.WaitForBuffersAllocated();
+    auto allocate_result_1 = collection_1->WaitForBuffersAllocated();
     EXPECT_EQ(allocate_result_1.status(), ZX_ERR_PEER_CLOSED, "");
   });
 
@@ -1981,13 +1981,13 @@ TEST(Sysmem, CloseWithOutstandingWait) {
   auto [collection_client_2, collection_server_2] = std::move(*collection_endpoints_2);
   auto collection_2 = fidl::BindSyncClient(std::move(collection_client_2));
 
-  ASSERT_OK(collection_1.Sync());
+  ASSERT_OK(collection_1->Sync());
 
   ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID, "");
   ASSERT_OK(
       allocator_1->BindSharedCollection(std::move(token_client_2), std::move(collection_server_2)));
 
-  collection_2.client_end().reset();
+  collection_2 = {};
 
   wait_thread.join();
 
@@ -2014,7 +2014,7 @@ TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
   // test is single proc, so both clients are coming from this client
   // process - normally the two clients would be in separate processes with
   // token_client_2 transferred to another participant).
-  ASSERT_OK(token_1.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
+  ASSERT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
 
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
@@ -2022,8 +2022,8 @@ TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
   auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
 
   ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
-  ASSERT_OK(allocator->BindSharedCollection(std::move(token_1.client_end()),
-                                            std::move(collection_server_1)));
+  ASSERT_OK(
+      allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
   SetDefaultCollectionName(collection_1);
 
@@ -2051,7 +2051,7 @@ TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints_2(constraints_1);
   ASSERT_EQ(constraints_2.min_buffer_count_for_camping, 2, "");
 
-  ASSERT_OK(collection_1.SetConstraints(true, std::move(constraints_1)));
+  ASSERT_OK(collection_1->SetConstraints(true, constraints_1));
 
   // Client 2 connects to sysmem separately.
   auto allocator_2 = connect_to_sysmem_driver();
@@ -2067,13 +2067,13 @@ TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
   // the BindSharedCollection() might arrive at the server before the
   // Duplicate() that delivered the server end of token_client_2 to sysmem,
   // which would cause sysmem to not recognize the token.
-  ASSERT_OK(collection_1.Sync());
+  ASSERT_OK(collection_1->Sync());
 
   // client 1 will now do a clean Close(), but client 1's constraints will be
   // retained by the LogicalBufferCollection.
-  ASSERT_OK(collection_1.Close());
+  ASSERT_OK(collection_1->Close());
   // close client 1's channel.
-  collection_1.client_end().reset();
+  collection_1 = {};
 
   // Wait briefly so that LogicalBufferCollection will have seen the channel
   // closure of client 1 before client 2 sets constraints.  If we wanted to
@@ -2091,18 +2091,18 @@ TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
 
   // Not all constraints have been input (client 2 hasn't SetConstraints()
   // yet), so the buffers haven't been allocated yet.
-  auto check_result_2 = collection_2.CheckBuffersAllocated();
+  auto check_result_2 = collection_2->CheckBuffersAllocated();
   ASSERT_OK(check_result_2);
   EXPECT_EQ(check_result_2->status, ZX_ERR_UNAVAILABLE, "");
 
-  ASSERT_OK(collection_2.SetConstraints(true, std::move(constraints_2)));
+  ASSERT_OK(collection_2->SetConstraints(true, std::move(constraints_2)));
 
   //
   // Now that client 2 has SetConstraints(), the allocation will proceed, with
   // client 1's constraints included despite client 1 having done a clean
   // Close().
   //
-  auto allocate_result_2 = collection_2.WaitForBuffersAllocated();
+  auto allocate_result_2 = collection_2->WaitForBuffersAllocated();
   ASSERT_OK(allocate_result_2);
   ASSERT_OK(allocate_result_2->status);
 
@@ -2273,7 +2273,7 @@ TEST(Sysmem, CpuUsageAndNoBufferMemoryConstraints) {
   ASSERT_OK(token_endpoints_2);
   auto [token_client_2, token_server_2] = std::move(*token_endpoints_2);
 
-  ASSERT_OK(token_1.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
+  ASSERT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
 
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
@@ -2281,8 +2281,8 @@ TEST(Sysmem, CpuUsageAndNoBufferMemoryConstraints) {
   auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
 
   ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
-  ASSERT_OK(allocator_1->BindSharedCollection(std::move(token_1.client_end()),
-                                              std::move(collection_server_1)));
+  ASSERT_OK(
+      allocator_1->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
   SetDefaultCollectionName(collection_1);
 
@@ -2309,7 +2309,7 @@ TEST(Sysmem, CpuUsageAndNoBufferMemoryConstraints) {
       .heap_permitted = {},
   };
 
-  ASSERT_OK(collection_1.SetConstraints(true, std::move(constraints_1)));
+  ASSERT_OK(collection_1->SetConstraints(true, std::move(constraints_1)));
 
   auto allocator_2 = connect_to_sysmem_driver();
   ASSERT_OK(allocator_2);
@@ -2319,15 +2319,15 @@ TEST(Sysmem, CpuUsageAndNoBufferMemoryConstraints) {
   auto [collection_client_2, collection_server_2] = std::move(*collection_endpoints_2);
   auto collection_2 = fidl::BindSyncClient(std::move(collection_client_2));
 
-  ASSERT_OK(collection_1.Sync());
+  ASSERT_OK(collection_1->Sync());
 
   ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID, "");
   ASSERT_OK(
       allocator_2->BindSharedCollection(std::move(token_client_2), std::move(collection_server_2)));
 
-  ASSERT_OK(collection_2.SetConstraints(true, std::move(constraints_2)));
+  ASSERT_OK(collection_2->SetConstraints(true, std::move(constraints_2)));
 
-  auto allocate_result_1 = collection_1.WaitForBuffersAllocated();
+  auto allocate_result_1 = collection_1->WaitForBuffersAllocated();
   ASSERT_OK(allocate_result_1);
   ASSERT_OK(allocate_result_1->status);
   ASSERT_EQ(allocate_result_1->buffer_collection_info.settings.buffer_settings.coherency_domain,
@@ -2567,7 +2567,7 @@ TEST(Sysmem, NoneUsageWithSeparateOtherUsageSucceeds) {
   // test is single proc, so both clients are coming from this client
   // process - normally the two clients would be in separate processes with
   // token_client_2 transferred to another participant).
-  ASSERT_OK(token_1.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
+  ASSERT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
 
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
@@ -2575,8 +2575,8 @@ TEST(Sysmem, NoneUsageWithSeparateOtherUsageSucceeds) {
   auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
 
   ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
-  ASSERT_OK(allocator->BindSharedCollection(std::move(token_1.client_end()),
-                                            std::move(collection_server_1)));
+  ASSERT_OK(
+      allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
   SetDefaultCollectionName(collection_1);
 
@@ -2608,7 +2608,7 @@ TEST(Sysmem, NoneUsageWithSeparateOtherUsageSucceeds) {
   constraints_2.usage.none = 0;
   constraints_2.usage.vulkan = fuchsia_sysmem::wire::kVulkanUsageTransferDst;
 
-  ASSERT_OK(collection_1.SetConstraints(true, std::move(constraints_1)));
+  ASSERT_OK(collection_1->SetConstraints(true, std::move(constraints_1)));
 
   // Client 2 connects to sysmem separately.
   auto allocator_2 = connect_to_sysmem_driver();
@@ -2624,19 +2624,19 @@ TEST(Sysmem, NoneUsageWithSeparateOtherUsageSucceeds) {
   // the BindSharedCollection() might arrive at the server before the
   // Duplicate() that delivered the server end of token_client_2 to sysmem,
   // which would cause sysmem to not recognize the token.
-  ASSERT_OK(collection_1.Sync());
+  ASSERT_OK(collection_1->Sync());
 
   ASSERT_NE(token_client_2.channel().get(), ZX_HANDLE_INVALID, "");
   ASSERT_OK(
       allocator_2->BindSharedCollection(std::move(token_client_2), std::move(collection_server_2)));
 
-  ASSERT_OK(collection_2.SetConstraints(true, std::move(constraints_2)));
+  ASSERT_OK(collection_2->SetConstraints(true, std::move(constraints_2)));
 
   //
   // Only after both participants (both clients) have SetConstraints() will
   // the allocation be successful.
   //
-  auto allocate_result_1 = collection_1.WaitForBuffersAllocated();
+  auto allocate_result_1 = collection_1->WaitForBuffersAllocated();
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   ASSERT_OK(allocate_result_1);
@@ -2754,16 +2754,16 @@ TEST(Sysmem, CloseToken) {
   auto [token_client_2, token_server_2] = std::move(*token_endpoints_2);
   auto token_2 = fidl::BindSyncClient(std::move(token_client_2));
 
-  ASSERT_OK(token_1.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
+  ASSERT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
 
-  ASSERT_OK(token_1.Sync());
-  ASSERT_OK(token_1.Close());
-  token_1.client_end().reset();
+  ASSERT_OK(token_1->Sync());
+  ASSERT_OK(token_1->Close());
+  token_1 = {};
 
   // Try to ensure sysmem processes the token closure before the sync.
   zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
 
-  EXPECT_OK(token_2.Sync());
+  EXPECT_OK(token_2->Sync());
 }
 
 TEST(Sysmem, HeapAmlogicSecure) {
@@ -3213,9 +3213,9 @@ TEST(Sysmem, TooManyFormats) {
     image_constraints.required_max_coded_height = 1024;
   }
 
-  ASSERT_OK(collection.SetConstraints(true, std::move(constraints)));
+  ASSERT_OK(collection->SetConstraints(true, std::move(constraints)));
 
-  auto allocate_result = collection.WaitForBuffersAllocated();
+  auto allocate_result = collection->WaitForBuffersAllocated();
   EXPECT_NE(allocate_result.status(), ZX_OK, "");
 
   verify_connectivity(*allocator);
@@ -3241,9 +3241,9 @@ TEST(Sysmem, TooManyBuffers) {
       1024 * 1024 * 1024 / constraints.buffer_memory_constraints.min_size_bytes;
   constraints.buffer_memory_constraints.cpu_domain_supported = true;
   constraints.usage.cpu = fuchsia_sysmem::wire::kCpuUsageRead;
-  ASSERT_OK(collection.SetConstraints(true, std::move(constraints)));
+  ASSERT_OK(collection->SetConstraints(true, std::move(constraints)));
 
-  auto allocation_result = collection.WaitForBuffersAllocated();
+  auto allocation_result = collection->WaitForBuffersAllocated();
   EXPECT_NE(allocation_result.status(), ZX_OK, "");
 
   verify_connectivity(*allocator);
@@ -3615,12 +3615,12 @@ TEST(Sysmem, SetDispensable) {
     // test is single proc, so both clients are coming from this client
     // process - normally the two clients would be in separate processes with
     // token_client_2 transferred to another participant).
-    ASSERT_OK(token_1.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
+    ASSERT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
 
     // Client 1 calls SetDispensable() on token 2.  Client 2's constraints will be part of the
     // initial allocation, but post-allocation, client 2 failure won't cause failure of the
     // LogicalBufferCollection.
-    ASSERT_OK(token_2.SetDispensable());
+    ASSERT_OK(token_2->SetDispensable());
 
     auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
     ASSERT_OK(collection_endpoints_1);
@@ -3628,8 +3628,8 @@ TEST(Sysmem, SetDispensable) {
     auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
 
     ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
-    ASSERT_OK(allocator->BindSharedCollection(std::move(token_1.client_end()),
-                                              std::move(collection_server_1)));
+    ASSERT_OK(
+        allocator->BindSharedCollection(token_1.TakeClientEnd(), std::move(collection_server_1)));
 
     fuchsia_sysmem::wire::BufferCollectionConstraints constraints_1;
     constraints_1.usage.cpu =
@@ -3670,27 +3670,27 @@ TEST(Sysmem, SetDispensable) {
     // the BindSharedCollection() might arrive at the server before the
     // Duplicate() that delivered the server end of token_client_2 to sysmem,
     // which would cause sysmem to not recognize the token.
-    ASSERT_OK(collection_1.Sync());
+    ASSERT_OK(collection_1->Sync());
 
     ASSERT_NE(token_2.client_end().channel().get(), ZX_HANDLE_INVALID, "");
-    ASSERT_OK(allocator_2->BindSharedCollection(std::move(token_2.client_end()),
-                                                std::move(collection_server_2)));
+    ASSERT_OK(
+        allocator_2->BindSharedCollection(token_2.TakeClientEnd(), std::move(collection_server_2)));
 
-    ASSERT_OK(collection_1.SetConstraints(true, std::move(constraints_1)));
+    ASSERT_OK(collection_1->SetConstraints(true, constraints_1));
 
     if (variant == Variant::kDispensableFailureBeforeAllocation) {
       // Client 2 will now abruptly close its channel.  Since client 2 hasn't provided constraints
       // yet, the LogicalBufferCollection will fail.
-      collection_2.client_end().reset();
+      collection_2 = {};
     } else {
       // Client 2 SetConstraints().
 
-      ASSERT_OK(collection_2.SetConstraints(true, std::move(constraints_2)));
+      ASSERT_OK(collection_2->SetConstraints(true, constraints_2));
     }
 
     //
     // kDispensableFailureAfterAllocation - The LogicalBufferCollection won't fail.
-    auto allocate_result_1 = collection_1.WaitForBuffersAllocated();
+    auto allocate_result_1 = collection_1->WaitForBuffersAllocated();
 
     if (variant == Variant::kDispensableFailureBeforeAllocation) {
       // The LogicalBufferCollection will be failed, becuase client 2 failed before providing
@@ -3711,13 +3711,13 @@ TEST(Sysmem, SetDispensable) {
     // Now that we know allocation is done, client 2 will abruptly close its channel, which the
     // server treats as client 2 failure.  Since client 2 has already provided constraints, this
     // won't fail the LogicalBufferCollection.
-    collection_2.client_end().reset();
+    collection_2 = {};
 
     // Give the LogicalBufferCollection time to fail if it were going to fail, which it isn't.
     nanosleep_duration(zx::msec(250));
 
     // Verify LogicalBufferCollection still ok.
-    ASSERT_OK(collection_1.Sync());
+    ASSERT_OK(collection_1->Sync());
 
     // next variant, if any
   }

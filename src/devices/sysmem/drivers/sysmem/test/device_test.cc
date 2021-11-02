@@ -249,7 +249,7 @@ class FakeDdkSysmem : public zxtest::Test {
     EXPECT_OK(collection_endpoints);
     auto [collection_client_end, collection_server_end] = std::move(*collection_endpoints);
 
-    EXPECT_OK(allocator.AllocateNonSharedCollection(std::move(collection_server_end)));
+    EXPECT_OK(allocator->AllocateNonSharedCollection(std::move(collection_server_end)));
     return std::move(collection_client_end);
   }
 
@@ -302,21 +302,21 @@ TEST_F(FakeDdkSysmem, NamedToken) {
   EXPECT_OK(token_endpoints);
   auto [token_client_end, token_server_end] = std::move(*token_endpoints);
 
-  EXPECT_OK(allocator.AllocateSharedCollection(std::move(token_server_end)));
+  EXPECT_OK(allocator->AllocateSharedCollection(std::move(token_server_end)));
 
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> token(std::move(token_client_end));
 
   // The buffer collection should end up with a name of "a" because that's the highest priority.
-  EXPECT_OK(token.SetName(5u, "c"));
-  EXPECT_OK(token.SetName(100u, "a"));
-  EXPECT_OK(token.SetName(6u, "b"));
+  EXPECT_OK(token->SetName(5u, "c"));
+  EXPECT_OK(token->SetName(100u, "a"));
+  EXPECT_OK(token->SetName(6u, "b"));
 
   zx::status collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   EXPECT_OK(collection_endpoints);
   auto [collection_client_end, collection_server_end] = std::move(*collection_endpoints);
 
-  EXPECT_OK(allocator.BindSharedCollection(std::move(token.client_end()),
-                                           std::move(collection_server_end)));
+  EXPECT_OK(
+      allocator->BindSharedCollection(token.TakeClientEnd(), std::move(collection_server_end)));
 
   // Poll until a matching buffer collection is found.
   while (true) {
@@ -347,7 +347,7 @@ TEST_F(FakeDdkSysmem, NamedClient) {
 
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(
       std::move(collection_client_end));
-  EXPECT_OK(collection.SetDebugClientInfo("a", 5));
+  EXPECT_OK(collection->SetDebugClientInfo("a", 5));
 
   // Poll until a matching buffer collection is found.
   while (true) {
@@ -381,19 +381,19 @@ TEST_F(FakeDdkSysmem, NamedAllocatorToken) {
   EXPECT_OK(token_endpoints);
   auto [token_client_end, token_server_end] = std::move(*token_endpoints);
 
-  EXPECT_OK(allocator.AllocateSharedCollection(std::move(token_server_end)));
+  EXPECT_OK(allocator->AllocateSharedCollection(std::move(token_server_end)));
 
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> token(std::move(token_client_end));
 
-  EXPECT_OK(token.SetDebugClientInfo("bad", 6));
-  EXPECT_OK(allocator.SetDebugClientInfo("a", 5));
+  EXPECT_OK(token->SetDebugClientInfo("bad", 6));
+  EXPECT_OK(allocator->SetDebugClientInfo("a", 5));
 
   zx::status collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   EXPECT_OK(collection_endpoints);
   auto [collection_client_end, collection_server_end] = std::move(*collection_endpoints);
 
-  EXPECT_OK(allocator.BindSharedCollection(std::move(token.client_end()),
-                                           std::move(collection_server_end)));
+  EXPECT_OK(
+      allocator->BindSharedCollection(token.TakeClientEnd(), std::move(collection_server_end)));
 
   // Poll until a matching buffer collection is found.
   while (true) {
@@ -433,10 +433,10 @@ TEST_F(FakeDdkSysmem, MaxSize) {
   constraints.usage.cpu = fuchsia_sysmem_cpuUsageRead;
 
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
-  EXPECT_OK(collection.SetConstraints(true, std::move(constraints)));
+  EXPECT_OK(collection->SetConstraints(true, std::move(constraints)));
 
   // Sysmem should fail the collection and return an error.
-  fidl::WireResult result = collection.WaitForBuffersAllocated();
+  fidl::WireResult result = collection->WaitForBuffersAllocated();
   EXPECT_NE(result.status(), ZX_OK);
 }
 
@@ -452,9 +452,9 @@ TEST_F(FakeDdkSysmem, TeardownLeak) {
   constraints.usage.cpu = fuchsia_sysmem_cpuUsageRead;
 
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
-  EXPECT_OK(collection.SetConstraints(true, std::move(constraints)));
+  EXPECT_OK(collection->SetConstraints(true, constraints));
 
-  fidl::WireResult result = collection.WaitForBuffersAllocated();
+  fidl::WireResult result = collection->WaitForBuffersAllocated();
 
   EXPECT_OK(result);
   EXPECT_OK(result->status);
@@ -462,7 +462,7 @@ TEST_F(FakeDdkSysmem, TeardownLeak) {
   for (uint32_t i = 0; i < result->buffer_collection_info.buffer_count; i++) {
     result->buffer_collection_info.buffers[i].vmo.reset();
   }
-  collection.client_end().reset();
+  collection = {};
 }
 
 // Check that there are no circular references from a VMO to the logical buffer collection, even
@@ -478,9 +478,9 @@ TEST_F(FakeDdkSysmem, AuxBufferLeak) {
   constraints.usage.cpu = fuchsia_sysmem_cpuUsageRead;
 
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(collection_client));
-  EXPECT_OK(collection.SetConstraints(true, std::move(constraints)));
+  EXPECT_OK(collection->SetConstraints(true, std::move(constraints)));
 
-  fidl::WireResult result = collection.WaitForBuffersAllocated();
+  fidl::WireResult result = collection->WaitForBuffersAllocated();
 
   EXPECT_OK(result);
   EXPECT_OK(result->status);
@@ -489,13 +489,13 @@ TEST_F(FakeDdkSysmem, AuxBufferLeak) {
     result->buffer_collection_info.buffers[i].vmo.reset();
   }
 
-  fidl::WireResult aux_result = collection.GetAuxBuffers();
+  fidl::WireResult aux_result = collection->GetAuxBuffers();
 
   EXPECT_OK(aux_result);
   EXPECT_OK(aux_result->status);
   EXPECT_EQ(1u, aux_result->buffer_collection_info_aux_buffers.buffer_count);
   EXPECT_EQ(ZX_HANDLE_INVALID, aux_result->buffer_collection_info_aux_buffers.buffers[0].vmo);
-  collection.client_end().reset();
+  collection = {};
 
   // Poll until all buffer collections are deleted.
   while (true) {
