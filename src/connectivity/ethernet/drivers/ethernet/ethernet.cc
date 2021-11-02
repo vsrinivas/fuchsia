@@ -201,12 +201,12 @@ int EthDev::TransmitFifoWrite(eth_fifo_entry_t* entries, size_t count) {
 }
 
 std::optional<TransmitBuffer> EthDev::GetTransmitBuffer() {
-  auto tx_buffer = free_transmit_buffers_.pop();
-  if (!tx_buffer) {
+  std::optional tx_buffer = free_transmit_buffers_.pop();
+  if (!tx_buffer.has_value()) {
     zxlogf(ERROR, "eth [%s]: transmit_buffer pool empty", name_);
-    return std::nullopt;
+  } else {
+    new (tx_buffer.value().private_storage()) TransmitInfo(fbl::RefPtr<EthDev>(this));
   }
-  new (tx_buffer->private_storage()) TransmitInfo(fbl::RefPtr<EthDev>(this));
   return tx_buffer;
 }
 
@@ -853,11 +853,11 @@ zx_status_t EthDev::AddDevice(zx_device_t** out) {
   zx_status_t status;
 
   for (size_t ndx = 0; ndx < kFifoDepth; ndx++) {
-    auto buffer = TransmitBuffer::Alloc(edev0_->info_.netbuf_size);
-    if (!buffer) {
+    std::optional buffer = TransmitBuffer::Alloc(edev0_->info_.netbuf_size);
+    if (!buffer.has_value()) {
       return ZX_ERR_NO_MEMORY;
     }
-    free_transmit_buffers_.push(*std::move(buffer));
+    free_transmit_buffers_.push(std::move(buffer.value()));
   }
 
   if ((status = DdkAdd(ddk::DeviceAddArgs("ethernet")
