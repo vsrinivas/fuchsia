@@ -117,7 +117,7 @@ void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::S
   }
   fidl::WireSyncClient<sysmem::BufferCollection>& collection = it->second.driver;
 
-  auto check_status = collection.CheckBuffersAllocated();
+  auto check_status = collection->CheckBuffersAllocated();
   if (!check_status.ok() || check_status->status != ZX_OK) {
     _completer.Reply(ZX_ERR_SHOULD_WAIT, 0);
     return;
@@ -129,8 +129,8 @@ void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::S
   dc_image.pixel_format = request->image_config.pixel_format;
   dc_image.type = request->image_config.type;
 
-  zx_status_t status =
-      controller_->dc()->ImportImage(&dc_image, collection.channel().get(), request->index);
+  zx_status_t status = controller_->dc()->ImportImage(
+      &dc_image, collection.client_end().borrow().handle(), request->index);
   if (status != ZX_OK) {
     _completer.Reply(status, 0);
     return;
@@ -141,8 +141,8 @@ void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::S
   zx::vmo vmo;
   uint32_t stride = 0;
   if (use_kernel_framebuffer_) {
-    ZX_ASSERT(it->second.kernel.channel());
-    auto res = it->second.kernel.WaitForBuffersAllocated();
+    ZX_ASSERT(it->second.kernel.is_valid());
+    auto res = it->second.kernel->WaitForBuffersAllocated();
     if (!res.ok() || res->status != ZX_OK) {
       _completer.Reply(ZX_ERR_NO_MEMORY, 0);
       return;
@@ -204,7 +204,7 @@ void Client::ImportEvent(ImportEventRequestView request, ImportEventCompleter::S
 
 void Client::ImportBufferCollection(ImportBufferCollectionRequestView request,
                                     ImportBufferCollectionCompleter::Sync& _completer) {
-  if (!sysmem_allocator_.channel()) {
+  if (!sysmem_allocator_.is_valid()) {
     _completer.Reply(ZX_ERR_NOT_SUPPORTED);
     return;
   }
@@ -238,7 +238,7 @@ void Client::ImportBufferCollection(ImportBufferCollectionRequestView request,
     zx::channel collection_server, collection_client;
     zx::channel::create(0, &collection_server, &collection_client);
     if (!sysmem_allocator_
-             .BindSharedCollection(std::move(vc_token_client), std::move(collection_server))
+             ->BindSharedCollection(std::move(vc_token_client), std::move(collection_server))
              .ok()) {
       _completer.Reply(ZX_ERR_INTERNAL);
       return;
@@ -249,8 +249,8 @@ void Client::ImportBufferCollection(ImportBufferCollectionRequestView request,
   zx::channel collection_server, collection_client;
   zx::channel::create(0, &collection_server, &collection_client);
   if (!sysmem_allocator_
-           .BindSharedCollection(request->collection_token.TakeChannel(),
-                                 std::move(collection_server))
+           ->BindSharedCollection(request->collection_token.TakeChannel(),
+                                  std::move(collection_server))
            .ok()) {
     _completer.Reply(ZX_ERR_INTERNAL);
     return;
@@ -269,9 +269,9 @@ void Client::ReleaseBufferCollection(ReleaseBufferCollectionRequestView request,
     return;
   }
 
-  it->second.driver.Close();
-  if (it->second.kernel.channel()) {
-    it->second.kernel.Close();
+  it->second.driver->Close();
+  if (it->second.kernel.is_valid()) {
+    it->second.kernel->Close();
   }
   collection_map_.erase(it);
 }
@@ -291,10 +291,10 @@ void Client::SetBufferCollectionConstraints(
   dc_image.type = request->config.type;
 
   zx_status_t status = controller_->dc()->SetBufferCollectionConstraints(
-      &dc_image, it->second.driver.channel().get());
+      &dc_image, it->second.driver.client_end().borrow().handle());
 
   if (status == ZX_OK && use_kernel_framebuffer_) {
-    ZX_ASSERT(it->second.kernel.channel());
+    ZX_ASSERT(it->second.kernel.is_valid());
 
     // Constraints to be used with zx_framebuffer_set_range.
     sysmem::wire::BufferCollectionConstraints constraints;
@@ -336,7 +336,7 @@ void Client::SetBufferCollectionConstraints(
     image_constraints.display_height_divisor = 1;
 
     if (image_constraints.pixel_format.type != sysmem::wire::PixelFormatType::kInvalid) {
-      _completer.Reply(it->second.kernel.SetConstraints(true, constraints).status());
+      _completer.Reply(it->second.kernel->SetConstraints(true, constraints).status());
       return;
     }
   }
@@ -834,7 +834,7 @@ void Client::ImportImageForCapture(ImportImageForCaptureRequestView request,
 
   // Check whether buffer has already been allocated for the requested collection id.
   fidl::WireSyncClient<sysmem::BufferCollection>& collection = it->second.driver;
-  auto check_status = collection.CheckBuffersAllocated();
+  auto check_status = collection->CheckBuffersAllocated();
   if (!check_status.ok() || check_status->status != ZX_OK) {
     _completer.ReplyError(ZX_ERR_SHOULD_WAIT);
     return;
@@ -844,7 +844,7 @@ void Client::ImportImageForCapture(ImportImageForCaptureRequestView request,
   // capture start/release.
   image_t capture_image = {};
   zx_status_t status = controller_->dc_capture()->ImportImageForCapture(
-      collection.channel().get(), request->index, &capture_image.handle);
+      collection.client_end().borrow().handle(), request->index, &capture_image.handle);
   if (status == ZX_OK) {
     auto release_image = fit::defer([this, &capture_image]() {
       controller_->dc_capture()->ReleaseCapture(capture_image.handle);
@@ -1535,7 +1535,7 @@ Client::Init(zx::channel server_channel) {
     zxlogf(ERROR, "GetSysmemConnection failed (continuing) - status: %d", status);
   } else {
     sysmem_allocator_ = fidl::WireSyncClient<sysmem::Allocator>(std::move(sysmem_allocator_client));
-    sysmem_allocator_.SetDebugClientInfo(
+    sysmem_allocator_->SetDebugClientInfo(
         fidl::StringView::FromExternal(fsl::GetCurrentProcessName()), fsl::GetCurrentProcessKoid());
   }
 
