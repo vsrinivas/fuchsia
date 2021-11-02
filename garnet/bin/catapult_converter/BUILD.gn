@@ -24,15 +24,6 @@ executable("converter_bin") {
   ]
 }
 
-# TODO(fxbug.dev/70300): consider deleting this fuchsia_package if it's unused.
-fuchsia_package_with_single_component("catapult_converter") {
-  manifest = "meta/catapult_converter.cmx"
-  deps = [
-    ":converter_bin",
-    ":host_tools",
-  ]
-}
-
 test("catapult_converter_unittest") {
   sources = [ "converter_unittest.cc" ]
 
@@ -43,15 +34,19 @@ test("catapult_converter_unittest") {
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
   ]
-}
-
-fuchsia_unittest_package("catapult_converter_tests") {
-  manifest = "meta/catapult_converter_tests.cmx"
-  deps = [ ":catapult_converter_unittest" ]
+  data_deps = [ ":host_tools" ]
 }
 
 install_host_tools("host_tools") {
   deps = [ ":converter_bin" ]
 
   outputs = [ "catapult_converter" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":catapult_converter_unittest($host_toolchain)",
+    ":host_tools",
+  ]
 }

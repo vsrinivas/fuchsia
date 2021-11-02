@@ -16,7 +16,7 @@ group("all") {
     "//build/tools/json_merge:json_merge_test($host_toolchain)",
     "//examples/intl/tz_version_parrot:tests",
     "//examples/intl/wisdom:tests",
-    "//garnet/bin/catapult_converter:catapult_converter_tests($host_toolchain)",
+    "//garnet/bin/catapult_converter:tests",
     "//garnet/bin/cpuperf/print/tests",
     "//garnet/bin/cpuperf/tests",
     "//garnet/bin/cpuperf_provider:cpuperf_provider_tests",
