@@ -75,7 +75,7 @@ void SocketDevice::Start(StartRequestView request, StartCompleter::Sync& complet
     RemoveCallbacksLocked();
   }
   callbacks_ = fidl::BindSyncClient(std::move(request->cb));
-  callback_closed_handler_.set_object(callbacks_.channel().get());
+  callback_closed_handler_.set_object(callbacks_.client_end().borrow().handle());
   callback_closed_handler_.set_trigger(ZX_SOCKET_PEER_CLOSED);
   callback_closed_handler_.Begin(dispatch_loop_.dispatcher());
 
@@ -280,17 +280,17 @@ void SocketDevice::DdkRelease() {
 
 void SocketDevice::IrqRingUpdate() {
   fbl::AutoLock lock(&lock_);
-  tx_.ProcessDescriptors(
-      [this](const ConnectionKey& key, uint64_t payload) TA_NO_THREAD_SAFETY_ANALYSIS {
-        auto conn = connections_.find(key);
-        if (conn != connections_.end()) {
-          if (conn->NotifyVmoTxComplete(payload)) {
-            if (callbacks_.client_end().is_valid()) {
-              callbacks_.SendVmoComplete(conn->GetKey().addr);
-            }
-          }
-        }
-      });
+  tx_.ProcessDescriptors([this](const ConnectionKey& key, uint64_t payload)
+                             TA_NO_THREAD_SAFETY_ANALYSIS {
+                               auto conn = connections_.find(key);
+                               if (conn != connections_.end()) {
+                                 if (conn->NotifyVmoTxComplete(payload)) {
+                                   if (callbacks_.client_end().is_valid()) {
+                                     callbacks_->SendVmoComplete(conn->GetKey().addr);
+                                   }
+                                 }
+                               }
+                             });
   event_.ProcessDescriptors<virtio_vsock_event_t>(
       [this](virtio_vsock_event_t* event, void* data, uint32_t data_len)
           TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -373,7 +373,7 @@ void SocketDevice::RxOpLocked(ConnectionIterator conn, const ConnectionKey& key,
       // Don't care if we have a connection or not, just send it to the
       // service.
       if (callbacks_.client_end().is_valid()) {
-        callbacks_.Request(key.addr);
+        callbacks_->Request(key.addr);
       }
       break;
     case VIRTIO_VSOCK_OP_RESPONSE: {
@@ -387,7 +387,7 @@ void SocketDevice::RxOpLocked(ConnectionIterator conn, const ConnectionKey& key,
       // Upgrade the channel.
       conn->MakeActive(dispatch_loop_.dispatcher());
       if (callbacks_.client_end().is_valid()) {
-        callbacks_.Response(key.addr);
+        callbacks_->Response(key.addr);
       }
       break;
     }
@@ -396,7 +396,7 @@ void SocketDevice::RxOpLocked(ConnectionIterator conn, const ConnectionKey& key,
         CleanupConLocked(conn.CopyPointer());
       }
       if (callbacks_.client_end().is_valid()) {
-        callbacks_.Rst(key.addr);
+        callbacks_->Rst(key.addr);
       }
       break;
     case VIRTIO_VSOCK_OP_SHUTDOWN:
@@ -408,7 +408,7 @@ void SocketDevice::RxOpLocked(ConnectionIterator conn, const ConnectionKey& key,
         DequeueOpLocked(conn.CopyPointer());
       }
       if (callbacks_.client_end().is_valid()) {
-        callbacks_.Shutdown(key.addr);
+        callbacks_->Shutdown(key.addr);
       }
       break;
     case VIRTIO_VSOCK_OP_CREDIT_UPDATE:
@@ -505,7 +505,7 @@ void SocketDevice::CleanupConLocked(fbl::RefPtr<Connection> conn) {
 
 void SocketDevice::NotifyAndCleanupConLocked(fbl::RefPtr<Connection> conn) {
   if (callbacks_.client_end().is_valid()) {
-    callbacks_.Rst(conn->GetKey().addr);
+    callbacks_->Rst(conn->GetKey().addr);
   }
   CleanupConLocked(conn);
 }
@@ -527,7 +527,7 @@ void SocketDevice::RemoveCallbacksLocked() {
   }
   connections_.clear();
   callback_closed_handler_.Cancel();
-  callbacks_.client_end().reset();
+  callbacks_ = {};
   has_pending_tx_.clear();
   // We don't clear pending ops as we need our RST ops to finish sending.
 }
@@ -652,7 +652,7 @@ void SocketDevice::TransportResetLocked() {
   has_pending_op_.clear();
   UpdateCidLocked();
   if (callbacks_.client_end().is_valid()) {
-    callbacks_.TransportReset(cid_);
+    callbacks_->TransportReset(cid_);
   }
 }
 
