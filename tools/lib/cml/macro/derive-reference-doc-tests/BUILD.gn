@@ -18,6 +18,7 @@ rustc_test("derive-reference-doc_test") {
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_unittest_package("derive-reference-doc-tests") {
-  deps = [ ":derive-reference-doc_test($host_toolchain)" ]
+group("derive-reference-doc-tests") {
+  testonly = true
+  deps = [ ":derive-reference-doc_test" ]
 }
