@@ -60,7 +60,7 @@ void USBVirtualBusBase::InitPeripheral() {
   virtual_bus_ =
       fidl::BindSyncClient<fuchsia_hardware_usb_virtual_bus::Bus>(std::move(virtual_bus));
 
-  auto enable_result = virtual_bus_.Enable();
+  auto enable_result = virtual_bus_->Enable();
   ASSERT_EQ(enable_result.status(), ZX_OK);
   ASSERT_EQ(enable_result.value().status, ZX_OK);
 
@@ -136,11 +136,11 @@ void USBVirtualBusBase::SetupPeripheralDevice(DeviceDescriptor&& device_desc,
       ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
   zx::channel state_change_sender, state_change_receiver;
   ASSERT_EQ(zx::channel::create(0, &state_change_sender, &state_change_receiver), ZX_OK);
-  auto set_result = peripheral_.SetStateChangeListener(std::move(state_change_receiver));
+  auto set_result = peripheral_->SetStateChangeListener(std::move(state_change_receiver));
   ASSERT_EQ(set_result.status(), ZX_OK);
   std::vector<ConfigurationDescriptor> config_descs;
   config_descs.emplace_back(fidl::VectorView<FunctionDescriptor>::FromExternal(function_descs));
-  auto set_config = peripheral_.SetConfiguration(
+  auto set_config = peripheral_->SetConfiguration(
       std::move(device_desc),
       fidl::VectorView<ConfigurationDescriptor>::FromExternal(config_descs));
   ASSERT_EQ(set_config.status(), ZX_OK);
@@ -151,7 +151,7 @@ void USBVirtualBusBase::SetupPeripheralDevice(DeviceDescriptor&& device_desc,
   loop.Run();
   ASSERT_TRUE(watcher.all_functions_registered());
 
-  auto connect_result = virtual_bus_.Connect();
+  auto connect_result = virtual_bus_->Connect();
   ASSERT_EQ(connect_result.status(), ZX_OK);
   ASSERT_EQ(connect_result.value().status, ZX_OK);
 }
@@ -159,10 +159,10 @@ void USBVirtualBusBase::SetupPeripheralDevice(DeviceDescriptor&& device_desc,
 void USBVirtualBusBase::ClearPeripheralDeviceFunctions() {
   zx::channel handles[2];
   ASSERT_EQ(zx::channel::create(0, handles, handles + 1), ZX_OK);
-  auto set_result = peripheral_.SetStateChangeListener(std::move(handles[1]));
+  auto set_result = peripheral_->SetStateChangeListener(std::move(handles[1]));
   ASSERT_EQ(set_result.status(), ZX_OK);
 
-  auto clear_functions = peripheral_.ClearFunctions();
+  auto clear_functions = peripheral_->ClearFunctions();
   ASSERT_EQ(clear_functions.status(), ZX_OK);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
