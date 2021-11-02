@@ -53,7 +53,7 @@ func TestValidateIPAddressMask(t *testing.T) {
 func TestFuchsiaNetStack(t *testing.T) {
 	t.Run("Add and Delete Forwarding Entries", func(t *testing.T) {
 		ns, _ := newNetstack(t)
-		t.Cleanup(addNoopEndpoint(t, ns, "").Remove)
+		t.Cleanup(addNoopEndpoint(t, ns, "").RemoveByUser)
 		ni := stackImpl{ns: ns}
 
 		table, err := ni.GetForwardingTable(context.Background())
@@ -183,10 +183,10 @@ func TestFuchsiaNetStack(t *testing.T) {
 	t.Run("Enable and Disable IP Forwarding", func(t *testing.T) {
 		ns, _ := newNetstack(t)
 		ifs1 := addNoopEndpoint(t, ns, "")
-		t.Cleanup(ifs1.Remove)
+		t.Cleanup(ifs1.RemoveByUser)
 
 		ifs2 := addNoopEndpoint(t, ns, "")
-		t.Cleanup(ifs2.Remove)
+		t.Cleanup(ifs2.RemoveByUser)
 		ni := stackImpl{ns: ns}
 
 		protocols := [...]struct {

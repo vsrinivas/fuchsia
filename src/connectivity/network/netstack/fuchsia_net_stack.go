@@ -221,7 +221,7 @@ func (ns *Netstack) delInterface(id uint64) stack.StackDelEthernetInterfaceResul
 	var result stack.StackDelEthernetInterfaceResult
 
 	if nicInfo, ok := ns.stack.NICInfo()[tcpip.NICID(id)]; ok {
-		nicInfo.Context.(*ifState).Remove()
+		nicInfo.Context.(*ifState).RemoveByUser()
 		result.SetResponse(stack.StackDelEthernetInterfaceResponse{})
 	} else {
 		result.SetErr(stack.ErrorNotFound)

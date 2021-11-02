@@ -173,7 +173,7 @@ func TestInterfacesWatcher(t *testing.T) {
 
 	nicid := func() tcpip.NICID {
 		ifs := addNoopEndpoint(t, ns, "")
-		t.Cleanup(ifs.Remove)
+		t.Cleanup(ifs.RemoveByUser)
 		return ifs.nicid
 	}()
 
@@ -373,6 +373,6 @@ func TestInterfacesWatcher(t *testing.T) {
 
 	// Remove the interface.
 	blockingWatch()
-	ifs.Remove()
+	ifs.RemoveByUser()
 	verifyWatchResults(interfaces.EventWithRemoved(uint64(ifs.nicid)))
 }

@@ -253,15 +253,15 @@ type adminControlImpl struct {
 	ns          *Netstack
 	nicid       tcpip.NICID
 	cancelServe context.CancelFunc
+	doneChannel chan struct{}
 }
 
 func (ci *adminControlImpl) Enable(fidl.Context) (admin.ControlEnableResult, error) {
 	nicInfo, ok := ci.ns.stack.NICInfo()[ci.nicid]
 	if !ok {
-		// The NIC doesn't exist anymore, we're racing with shutdown.
-		// TODO(https://fxbug.dev/81579): This should be a panic once
-		// adminControlImpls are torn down before the NIC is removed from the stack.
-		return admin.ControlEnableResult{}, fmt.Errorf("nic %d removed", ci.nicid)
+		// All serving control channels must be canceled before removing NICs from
+		// the stack, this is a violation of that invariant.
+		panic(fmt.Sprintf("NIC %d not found", ci.nicid))
 	}
 
 	wasEnabled, err := nicInfo.Context.(*ifState).setState(true /* enabled */)
@@ -281,10 +281,9 @@ func (ci *adminControlImpl) Enable(fidl.Context) (admin.ControlEnableResult, err
 func (ci *adminControlImpl) Disable(fidl.Context) (admin.ControlDisableResult, error) {
 	nicInfo, ok := ci.ns.stack.NICInfo()[ci.nicid]
 	if !ok {
-		// The NIC doesn't exist anymore, we're racing with shutdown.
-		// TODO(https://fxbug.dev/81579): This should be a panic once
-		// adminControlImpls are torn down before the NIC is removed from the stack.
-		return admin.ControlDisableResult{}, fmt.Errorf("nic %d removed", ci.nicid)
+		// All serving control channels must be canceled before removing NICs from
+		// the stack, this is a violation of that invariant.
+		panic(fmt.Sprintf("NIC %d not found", ci.nicid))
 	}
 
 	wasEnabled, err := nicInfo.Context.(*ifState).setState(false /* enabled */)
@@ -307,9 +306,9 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 
 	nicInfo, ok := ci.ns.stack.NICInfo()[ci.nicid]
 	if !ok {
-		// TODO(https://fxbug.dev/81579): This should be a panic once
-		// adminControlImpls are torn down before the NIC is removed from the stack.
-		return fmt.Errorf("interface %d cannot be found", ci.nicid)
+		// All serving control channels must be canceled before removing NICs from
+		// the stack, this is a violation of that invariant.
+		panic(fmt.Sprintf("NIC %d not found", ci.nicid))
 	}
 	ifs := nicInfo.Context.(*ifState)
 
@@ -448,39 +447,140 @@ func (ci *adminControlImpl) GetId(fidl.Context) (uint64, error) {
 }
 
 type adminControlCollection struct {
-	ns *Netstack
-
 	mu struct {
 		sync.Mutex
-		controls map[*adminControlImpl]struct{}
+		removalReason  admin.InterfaceRemovedReason
+		controls       map[*adminControlImpl]struct{}
+		strongRefCount uint
 	}
 }
 
-func (c *adminControlCollection) onInterfaceRemove() {
+func (c *adminControlCollection) onInterfaceRemove(reason admin.InterfaceRemovedReason) {
 	c.mu.Lock()
 	controls := c.mu.controls
 	c.mu.controls = nil
+	c.mu.removalReason = reason
 	c.mu.Unlock()
 
 	for control := range controls {
 		control.cancelServe()
 	}
+	for control := range controls {
+		<-control.doneChannel
+	}
 }
 
-// TODO(https://fxbug.dev/81579): Tie the lifetime of admin collection to interface.
-func (c *adminControlCollection) addImpl(ctx context.Context, impl *adminControlImpl, request admin.ControlWithCtxInterfaceRequest) {
-	c.mu.Lock()
-	c.mu.controls[impl] = struct{}{}
-	c.mu.Unlock()
+func (ifs *ifState) addAdminConnection(request admin.ControlWithCtxInterfaceRequest, strong bool) {
+
+	impl, ctx := func() (*adminControlImpl, context.Context) {
+		ifs.adminControls.mu.Lock()
+		defer ifs.adminControls.mu.Unlock()
+
+		// Do not add more connections to an interface that is tearing down.
+		if ifs.adminControls.mu.removalReason != 0 {
+			if err := request.Channel.Close(); err != nil {
+				_ = syslog.ErrorTf(controlName, "request.channel.Close() = %s", err)
+			}
+			return nil, nil
+		}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		impl := &adminControlImpl{
+			ns:          ifs.ns,
+			nicid:       ifs.nicid,
+			cancelServe: cancel,
+			doneChannel: make(chan struct{}),
+		}
+
+		ifs.adminControls.mu.controls[impl] = struct{}{}
+		if strong {
+			ifs.adminControls.mu.strongRefCount++
+		}
+
+		return impl, ctx
+	}()
+	if impl == nil {
+		return
+	}
 
 	go func() {
-		component.ServeExclusive(ctx, &admin.ControlWithCtxStub{Impl: impl}, request.Channel, func(err error) {
-			_ = syslog.WarnTf(controlName, "%s", err)
+		defer close(impl.doneChannel)
+
+		requestChannel := request.Channel
+		defer func() {
+			if !requestChannel.Handle().IsValid() {
+				return
+			}
+			if err := requestChannel.Close(); err != nil {
+				_ = syslog.ErrorTf(controlName, "requestChannel.Close() = %s", err)
+			}
+		}()
+
+		component.Serve(ctx, &admin.ControlWithCtxStub{Impl: impl}, requestChannel, component.ServeOptions{
+			Concurrent:       false,
+			KeepChannelAlive: true,
+			OnError: func(err error) {
+				_ = syslog.WarnTf(controlName, "%s", err)
+			},
 		})
 
-		c.mu.Lock()
-		delete(c.mu.controls, impl)
-		c.mu.Unlock()
+		// NB: anonymous function is used to restrict section where the lock is
+		// held.
+		ifStateToRemove := func() *ifState {
+			ifs.adminControls.mu.Lock()
+			defer ifs.adminControls.mu.Unlock()
+			wasCanceled := errors.Is(ctx.Err(), context.Canceled)
+			if wasCanceled {
+				reason := ifs.adminControls.mu.removalReason
+				if reason == 0 {
+					panic("serve context canceled without storing a reason")
+				}
+				eventProxy := admin.ControlEventProxy{Channel: requestChannel}
+				if err := eventProxy.OnInterfaceRemoved(reason); err != nil {
+					_ = syslog.WarnTf(controlName, "failed to send interface close reason %s: %s", reason, err)
+				}
+				// Take the channel back from the proxy, since the proxy *may* have closed
+				// the channel, in which case we want to prevent a double close on
+				// the deferred cleanup.
+				requestChannel = eventProxy.Channel
+			}
+
+			delete(ifs.adminControls.mu.controls, impl)
+			// Don't consider destroying if not a strong ref.
+			if !strong {
+				return nil
+			}
+			ifs.adminControls.mu.strongRefCount--
+
+			// If serving was canceled, that means that removal happened due to
+			// outside cancelation already.
+			if wasCanceled {
+				return nil
+			}
+			// Don't destroy if there are any strong refs left.
+			if ifs.adminControls.mu.strongRefCount != 0 {
+				return nil
+			}
+
+			// We're good to remove this interface.
+			// Prevent new connections while we're holding the collection lock,
+			// avoiding races between here and removing the interface below.
+			ifs.adminControls.mu.removalReason = admin.InterfaceRemovedReasonUser
+
+			nicInfo, ok := impl.ns.stack.NICInfo()[impl.nicid]
+			if !ok {
+				panic(fmt.Sprintf("failed to find interface %d", impl.nicid))
+			}
+			// We can safely remove the interface now because we're certain that
+			// this control impl is not in the collection anymore, so it can't
+			// deadlock waiting for control interfaces to finish.
+			return nicInfo.Context.(*ifState)
+		}()
+
+		if ifStateToRemove != nil {
+			ifStateToRemove.RemoveByUser()
+		}
+
 	}()
 }
 
@@ -613,14 +713,7 @@ func (d *interfacesAdminDeviceControlImpl) CreateInterface(_ fidl.Context, portI
 		return nil
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	impl := adminControlImpl{
-		ns:          ifs.ns,
-		nicid:       ifs.nicid,
-		cancelServe: cancel,
-	}
-
-	ifs.adminControls.addImpl(ctx, &impl, control)
+	ifs.addAdminConnection(control, true /* strong */)
 
 	return nil
 }

@@ -129,7 +129,7 @@ func TestInterfacesChangeEvent(t *testing.T) {
 			ndpDisp.start(ctx)
 
 			ifs := addNoopEndpoint(t, ns, "")
-			t.Cleanup(ifs.Remove)
+			t.Cleanup(ifs.RemoveByUser)
 			if err := ifs.Up(); err != nil {
 				t.Fatalf("ifs.Up(): %s", err)
 			}
@@ -201,7 +201,7 @@ func TestNDPInvalidateUnknownOffLinkRoute(t *testing.T) {
 	ndpDisp.start(ctx)
 
 	ifs := addNoopEndpoint(t, ns, "")
-	t.Cleanup(ifs.Remove)
+	t.Cleanup(ifs.RemoveByUser)
 	if err := ifs.Up(); err != nil {
 		t.Fatalf("ifs.Up(): %s", err)
 	}
@@ -224,12 +224,12 @@ func TestNDPIPv6OffLinkRoutePreferences(t *testing.T) {
 	ndpDisp.start(ctx)
 
 	ifs1 := addNoopEndpoint(t, ns, "")
-	t.Cleanup(ifs1.Remove)
+	t.Cleanup(ifs1.RemoveByUser)
 	if err := ifs1.Up(); err != nil {
 		t.Fatalf("ifs1.Up(): %s", err)
 	}
 	ifs2 := addNoopEndpoint(t, ns, "")
-	t.Cleanup(ifs2.Remove)
+	t.Cleanup(ifs2.RemoveByUser)
 	if err := ifs2.Up(); err != nil {
 		t.Fatalf("ifs2.Up(): %s", err)
 	}
@@ -278,12 +278,12 @@ func TestNDPIPv6OffLinkRouteDiscovery(t *testing.T) {
 	ndpDisp.start(ctx)
 
 	ifs1 := addNoopEndpoint(t, ns, "")
-	t.Cleanup(ifs1.Remove)
+	t.Cleanup(ifs1.RemoveByUser)
 	if err := ifs1.Up(); err != nil {
 		t.Fatalf("ifs1.Up(): %s", err)
 	}
 	ifs2 := addNoopEndpoint(t, ns, "")
-	t.Cleanup(ifs2.Remove)
+	t.Cleanup(ifs2.RemoveByUser)
 	if err := ifs2.Up(); err != nil {
 		t.Fatalf("ifs2.Up(): %s", err)
 	}
@@ -414,7 +414,7 @@ func TestNDPInvalidateUnknownIPv6Prefix(t *testing.T) {
 	ndpDisp.start(ctx)
 
 	ifs := addNoopEndpoint(t, ns, "")
-	t.Cleanup(ifs.Remove)
+	t.Cleanup(ifs.RemoveByUser)
 	if err := ifs.Up(); err != nil {
 		t.Fatalf("ifs.Up(): %s", err)
 	}
@@ -439,12 +439,12 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	ndpDisp.start(ctx)
 
 	ifs1 := addNoopEndpoint(t, ns, "")
-	t.Cleanup(ifs1.Remove)
+	t.Cleanup(ifs1.RemoveByUser)
 	if err := ifs1.Up(); err != nil {
 		t.Fatalf("ifs1.Up(): %s", err)
 	}
 	ifs2 := addNoopEndpoint(t, ns, "")
-	t.Cleanup(ifs2.Remove)
+	t.Cleanup(ifs2.RemoveByUser)
 	if err := ifs2.Up(); err != nil {
 		t.Fatalf("ifs2.Up(): %s", err)
 	}
@@ -545,12 +545,12 @@ func TestLinkDown(t *testing.T) {
 	ndpDisp.start(ctx)
 
 	ifs1 := addNoopEndpoint(t, ns, "")
-	t.Cleanup(ifs1.Remove)
+	t.Cleanup(ifs1.RemoveByUser)
 	if err := ifs1.Up(); err != nil {
 		t.Fatalf("ifs1.Up(): %s", err)
 	}
 	ifs2 := addNoopEndpoint(t, ns, "")
-	t.Cleanup(ifs2.Remove)
+	t.Cleanup(ifs2.RemoveByUser)
 	if err := ifs2.Up(); err != nil {
 		t.Fatalf("ifs2.Up(): %s", err)
 	}
@@ -673,12 +673,12 @@ func TestRecursiveDNSServers(t *testing.T) {
 	ndpDisp.start(ctx)
 
 	ifs1 := addNoopEndpoint(t, ns, "")
-	t.Cleanup(ifs1.Remove)
+	t.Cleanup(ifs1.RemoveByUser)
 	if err := ifs1.Up(); err != nil {
 		t.Fatalf("ifs1.Up(): %s", err)
 	}
 	ifs2 := addNoopEndpoint(t, ns, "")
-	t.Cleanup(ifs2.Remove)
+	t.Cleanup(ifs2.RemoveByUser)
 	if err := ifs2.Up(); err != nil {
 		t.Fatalf("ifs2.Up(): %s", err)
 	}
@@ -771,7 +771,7 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	ndpDisp.start(ctx)
 
 	ifs := addNoopEndpoint(t, ns, "")
-	t.Cleanup(ifs.Remove)
+	t.Cleanup(ifs.RemoveByUser)
 	if err := ifs.Up(); err != nil {
 		t.Fatalf("ifs.Up(): %s", err)
 	}

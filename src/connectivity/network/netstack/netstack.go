@@ -26,6 +26,7 @@ import (
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	fidlethernet "fidl/fuchsia/hardware/ethernet"
+	"fidl/fuchsia/net/interfaces/admin"
 	"fidl/fuchsia/netstack"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -832,10 +833,22 @@ func (ifs *ifState) Down() error {
 	return err
 }
 
-func (ifs *ifState) Remove() {
+func (ifs *ifState) RemoveByUser() {
+	ifs.remove(admin.InterfaceRemovedReasonUser)
+}
+
+func (ifs *ifState) RemoveByLinkClose() {
+	ifs.remove(admin.InterfaceRemovedReasonPortClosed)
+}
+
+func (ifs *ifState) remove(reason admin.InterfaceRemovedReason) {
 	name := ifs.ns.name(ifs.nicid)
 
-	_ = syslog.Infof("NIC %s: removing...", name)
+	_ = syslog.Infof("NIC %s: removing, reason=%s", name, reason)
+
+	// Close all open control channels with the interface before removing it from
+	// the stack. That prevents any further administrative action from happening.
+	ifs.adminControls.onInterfaceRemove(reason)
 
 	ifs.mu.Lock()
 	ifs.onDownLocked(name, true)
@@ -848,7 +861,6 @@ func (ifs *ifState) Remove() {
 	_ = syslog.Infof("NIC %s: removed", name)
 
 	ifs.ns.interfaceWatchers.onInterfaceRemove(ifs.nicid)
-	ifs.adminControls.onInterfaceRemove()
 	ifs.addressStateProviders.onInterfaceRemove()
 }
 
@@ -1005,7 +1017,7 @@ func (ns *Netstack) addEndpoint(
 	ifs.adminControls.mu.controls = make(map[*adminControlImpl]struct{})
 	ifs.addressStateProviders.mu.providers = make(map[tcpip.Address]*adminAddressStateProviderImpl)
 	if observer != nil {
-		observer.SetOnLinkClosed(ifs.Remove)
+		observer.SetOnLinkClosed(ifs.RemoveByLinkClose)
 		observer.SetOnLinkOnlineChanged(ifs.onLinkOnlineChanged)
 	}
 

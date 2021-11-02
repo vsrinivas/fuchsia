@@ -350,12 +350,9 @@ async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
 
         matches::assert_matches!(
             control.wait_termination().await,
-            // TODO(https://fxbug.dev/81579): Should provide a proper terminal
-            // event once interface lifetimes are properly encoded in the
-            // channel.
-            fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Fidl(fidl::Error::ClientRead(
-                fuchsia_zircon::Status::PEER_CLOSED
-            ))
+            fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(
+                fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User
+            )
         );
     }
 }
@@ -849,10 +846,15 @@ async fn device_control_owns_interfaces_lifetimes() {
             }
         });
 
-    // TODO(https://fxbug.dev/81579): Once the lifetime is tied to the
-    // interfaces, check that control is closed here as well.
-    let control_closed_fut = futures::stream::iter(control_proxies.into_iter())
-        .for_each(|_: fidl_fuchsia_net_interfaces_ext::admin::Control| futures::future::ready(()));
+    let control_closed_fut =
+        futures::stream::iter(control_proxies).for_each(|control| async move {
+            matches::assert_matches!(
+                control.wait_termination().await,
+                fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(
+                    fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortClosed
+                )
+            )
+        });
 
     let ((), (), ()) =
         futures::future::join3(interfaces_removed_fut, ports_are_detached_fut, control_closed_fut)
@@ -869,6 +871,7 @@ fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortAlreadyBound;
 )]
 #[test_case(fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::BadPort; "BadPort")]
 #[test_case(fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortClosed; "PortClosed")]
+#[test_case(fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User; "User")]
 #[fuchsia_async::run_singlethreaded(test)]
 async fn control_terminal_events(
     reason: fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason,
@@ -1014,6 +1017,24 @@ async fn control_terminal_events(
             let control =
                 create_interface(BASE_PORT_ID, fidl_fuchsia_net_interfaces_admin::Options::EMPTY);
             (control, vec![])
+        }
+        fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User => {
+            let port = create_port(base_port_config).await;
+            let control =
+                create_interface(BASE_PORT_ID, fidl_fuchsia_net_interfaces_admin::Options::EMPTY);
+            let interface_id = control.get_id().await.expect("get id");
+
+            // Remove the interface using legacy API.
+            let stack = realm
+                .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+                .expect("connect to protocol");
+            let () = stack
+                .del_ethernet_interface(interface_id)
+                .await
+                .expect("calling del_ethernet_interface")
+                .expect("del_ethernet_interface failed");
+
+            (control, vec![KeepResource::Port(port)])
         }
         unknown_reason => panic!("unknown reason {:?}", unknown_reason),
     };
@@ -1319,4 +1340,89 @@ async fn control_enable_disable() {
         })
         .select_next_some()
         .await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn control_owns_interface_lifetime() {
+    let name = "control_owns_interface_lifetime";
+
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let endpoint =
+        sandbox.create_endpoint::<netemul::NetworkDevice, _>(name).await.expect("create endpoint");
+    let installer = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
+        .expect("connect to protocol");
+
+    let (device, _mac) = endpoint.get_netdevice().await.expect("get netdevice");
+    let (device_control, device_control_server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::DeviceControlMarker>()
+            .expect("create proxy");
+    let () = installer.install_device(device, device_control_server_end).expect("install device");
+
+    let (control, control_server_end) =
+        fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints().expect("create proxy");
+
+    let interfaces_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
+    let watcher = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+        .expect("create event stream")
+        .map(|r| r.expect("watcher error"))
+        .fuse();
+    futures::pin_mut!(watcher);
+
+    // Consume the watcher until we see the idle event.
+    let existing = fidl_fuchsia_net_interfaces_ext::existing(
+        watcher.by_ref().map(Result::<_, fidl::Error>::Ok),
+        HashMap::new(),
+    )
+    .await
+    .expect("existing");
+    // Only loopback should exist.
+    assert_eq!(existing.len(), 1, "unexpected interfaces in existing: {:?}", existing);
+
+    let () = device_control
+        .create_interface(
+            netemul::PORT_ID,
+            control_server_end,
+            fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
+        )
+        .expect("create interface");
+    let iface_id = control.get_id().await.expect("get id");
+
+    // Expect the added event.
+    let event = watcher.select_next_some().await;
+    matches::assert_matches!(event,
+        fidl_fuchsia_net_interfaces::Event::Added(
+                fidl_fuchsia_net_interfaces::Properties {
+                    id: Some(id), ..
+                },
+        ) if id == iface_id
+    );
+
+    let debug = realm
+        .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
+        .expect("connect to protocol");
+    let (debug_control, control_server_end) =
+        fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints().expect("create proxy");
+    let () = debug.get_admin(iface_id, control_server_end).expect("get admin");
+    let same_iface_id = debug_control.get_id().await.expect("get id");
+    assert_eq!(same_iface_id, iface_id);
+
+    // Drop control and expect the interface to be removed.
+    std::mem::drop(control);
+    let event = watcher.select_next_some().await;
+    matches::assert_matches!(event,
+        fidl_fuchsia_net_interfaces::Event::Removed(id) if id == iface_id
+    );
+
+    // The debug control channel is a weak ref, it didn't prevent destruction,
+    // but is closed now.
+    matches::assert_matches!(
+        debug_control.wait_termination().await,
+        fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(
+            fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User
+        )
+    );
 }

@@ -8,8 +8,6 @@ using fuchsia.net;
 using fuchsia.hardware.network;
 using fuchsia.net.interfaces;
 
-// TODO(https://fxbug.dev/81579): Tie the lifetime of this protocol to the
-// interface.
 /// Provides control over an interface.
 ///
 /// This protocol encodes the underlying interface's lifetime in both
@@ -89,6 +87,8 @@ protocol Control {
             BAD_PORT = 3;
             /// The device port backing this interface has been closed.
             PORT_CLOSED = 4;
+            /// Administrative user action removed the interface.
+            USER = 5;
         };
     });
 };

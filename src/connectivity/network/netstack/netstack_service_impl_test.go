@@ -44,7 +44,7 @@ func TestRouteTableTransactions(t *testing.T) {
 		// least one interface in order to add routes.
 		ns, _ := newNetstack(t)
 		ifs := addNoopEndpoint(t, ns, "")
-		t.Cleanup(ifs.Remove)
+		t.Cleanup(ifs.RemoveByUser)
 
 		netstackServiceImpl := netstackImpl{ns: ns}
 		originalTable, err := netstackServiceImpl.GetRouteTable(context.Background())

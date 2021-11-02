@@ -8,7 +8,6 @@
 package netstack
 
 import (
-	"context"
 	"syscall/zx/fidl"
 
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
@@ -30,22 +29,15 @@ func (ci *debugInterfacesImpl) GetAdmin(_ fidl.Context, nicid uint64, request ad
 		nicid := tcpip.NICID(nicid)
 		nicInfo, ok := ci.ns.stack.NICInfo()[nicid]
 		if !ok {
-			// TODO(https://fxbug.dev/76695): Sending epitaphs not supported in Go.
+			// Just close the channel without a terminal event.
 			if err := request.Close(); err != nil {
-				_ = syslog.WarnTf(debug.InterfacesName, "GetAdmin(%d) epitaph error: %s", nicid, err)
+				_ = syslog.WarnTf(debug.InterfacesName, "GetAdmin(%d) close error: %s", nicid, err)
 			}
 			return nil
 		}
 
 		ifs := nicInfo.Context.(*ifState)
-		ctx, cancel := context.WithCancel(context.Background())
-		impl := adminControlImpl{
-			ns:          ifs.ns,
-			nicid:       ifs.nicid,
-			cancelServe: cancel,
-		}
-
-		ifs.adminControls.addImpl(ctx, &impl, request)
+		ifs.addAdminConnection(request, false /* strong */)
 		return nil
 	}
 }
