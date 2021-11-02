@@ -284,6 +284,17 @@ impl<B: ByteSlice> TcpSegment<B> {
         &self.body
     }
 
+    /// Consumes this packet and returns the body.
+    ///
+    /// Note that the returned `B` has the same lifetime as the buffer from
+    /// which this segment was parsed. By contrast, the [`body`] method returns
+    /// a slice with the same lifetime as the receiver.
+    ///
+    /// [`body`]: TcpSegment::body
+    pub fn into_body(self) -> B {
+        self.body
+    }
+
     /// The source port.
     pub fn src_port(&self) -> NonZeroU16 {
         // Infallible because this was already validated in parse

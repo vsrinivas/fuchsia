@@ -129,6 +129,17 @@ impl<B: ByteSlice> UdpPacket<B> {
         self.body.deref()
     }
 
+    /// Consumes this packet and returns the body.
+    ///
+    /// Note that the returned `B` has the same lifetime as the buffer from
+    /// which this packet was parsed. By contrast, the [`body`] method returns a
+    /// slice with the same lifetime as the receiver.
+    ///
+    /// [`body`]: UdpPacket::body
+    pub fn into_body(self) -> B {
+        self.body
+    }
+
     /// The source UDP port, if any.
     ///
     /// The source port is optional, and may have been omitted by the sender.
