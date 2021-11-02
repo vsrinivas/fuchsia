@@ -12,7 +12,9 @@
 #endif
 
 #include <algorithm>
+#include <initializer_list>
 #include <iterator>
+#include <string_view>
 
 #include <gtest/gtest.h>
 
@@ -25,11 +27,13 @@ constexpr uint64_t kNoteGnuBuildId = 3;
 constexpr uint64_t kMeaninglessNoteType = 42;
 
 // The test files will be copied over to this specific location at build time.
-constexpr char kStrippedExampleFile[] = "stripped_example.elf";
-constexpr char kUnstrippedExampleFileBase[] = "unstripped_example";
-constexpr char kUnstrippedExampleFileStrippedBase[] = "unstripped_example_stripped";
+constexpr std::string_view kStrippedExampleFile = "stripped_example.elf";
+constexpr std::string_view kUnstrippedExampleFileBase = "unstripped_example";
+constexpr std::string_view kUnstrippedExampleFileStrippedBase = "unstripped_example_stripped";
 
-inline std::string GetTestBinaryPath(const std::string& bin) { return "/pkg/data/" + bin; }
+inline std::string GetTestBinaryPath(std::string_view bin) {
+  return std::string("/pkg/data/") + std::string(bin);
+}
 
 class TestData {
  public:
@@ -177,8 +181,6 @@ class TestData {
  private:
   std::vector<uint8_t> content_;
 };
-
-}  // namespace
 
 TEST(ElfLib, Create) {
   TestData t(/*with_symbols=*/true);
@@ -332,62 +334,55 @@ TEST(ElfLib, GetSymbolsFromStripped) {
   EXPECT_NE(it, syms->end());
 }
 
-TEST(ElfLib, GetPLTFromUnstripped) {
-  std::string suffixes[] = {".elf", ".arm64.elf"};
-  for (auto suffix : suffixes) {
-    std::unique_ptr<ElfLib> elf =
-        ElfLib::Create(GetTestBinaryPath(std::string(kUnstrippedExampleFileBase) + suffix));
+void GetPLTOffsetsTest(std::string_view elf_base, std::string_view rel_suffix,
+                       std::string_view debug_base = {}) {
+  ASSERT_FALSE(elf_base.empty());
 
-    ASSERT_NE(elf.get(), nullptr);
+  struct Case {
+    std::string_view machine_suffix;
+    uint64_t printf_plt, strlen_plt;
+  };
+  constexpr Case kCases[] = {
+      {".x64", 0x1080, 0x1070},
+      {".arm64", 0x10b0, 0x10a0},
+  };
+
+  for (auto [machine_suffix, printf_plt, strlen_plt] : kCases) {
+    const std::string suffix = std::string(machine_suffix) + std::string(rel_suffix) + ".elf";
+
+    std::unique_ptr<ElfLib> elf = ElfLib::Create(GetTestBinaryPath(std::string(elf_base) + suffix));
+    ASSERT_NE(elf.get(), nullptr) << suffix;
+
+    if (!debug_base.empty()) {
+      std::unique_ptr<ElfLib> debug =
+          ElfLib::Create(GetTestBinaryPath(std::string(debug_base) + suffix));
+      ASSERT_NE(debug.get(), nullptr) << suffix;
+      ASSERT_TRUE(elf->SetDebugData(std::move(debug)));
+    }
 
     auto plt = elf->GetPLTOffsets();
 
-    EXPECT_EQ(2U, plt.size());
-
-    if (suffix == ".elf") {
-      // x86
-      EXPECT_EQ(0x15d0U, plt["printf"]);
-      EXPECT_EQ(0x15e0U, plt["strlen"]);
-    } else {
-      // arm
-      EXPECT_EQ(0x107B0U, plt["printf"]);
-      EXPECT_EQ(0x107C0U, plt["strlen"]);
-    }
+    EXPECT_GE(plt.size(), 2u) << suffix;
+    EXPECT_EQ(printf_plt, plt["printf"]) << suffix;
+    EXPECT_EQ(strlen_plt, plt["strlen"]) << suffix;
   }
 }
 
-TEST(ElfLib, GetPLTFromStrippedDebug) {
-  std::string suffixes[] = {".elf", ".arm64.elf"};
-  for (auto& suffix : suffixes) {
-    std::unique_ptr<ElfLib> elf =
-        ElfLib::Create(GetTestBinaryPath(std::string(kUnstrippedExampleFileStrippedBase) + suffix));
-    std::unique_ptr<ElfLib> debug =
-        ElfLib::Create(GetTestBinaryPath(std::string(kUnstrippedExampleFileBase) + suffix));
+TEST(ElfLib, GetPLTFromUnstrippedRela) { GetPLTOffsetsTest(kUnstrippedExampleFileBase, ".rela"); }
 
-    ASSERT_NE(elf.get(), nullptr);
-    ASSERT_NE(debug.get(), nullptr);
+TEST(ElfLib, GetPLTFromStrippedDebugRela) {
+  GetPLTOffsetsTest(kUnstrippedExampleFileStrippedBase, ".rela", kUnstrippedExampleFileBase);
+}
 
-    ASSERT_TRUE(elf->SetDebugData(std::move(debug)));
+TEST(ElfLib, GetPLTFromUnstrippedRel) { GetPLTOffsetsTest(kUnstrippedExampleFileBase, ".rel"); }
 
-    auto plt = elf->GetPLTOffsets();
-
-    EXPECT_EQ(2U, plt.size());
-
-    if (suffix == ".elf") {
-      // x86
-      EXPECT_EQ(0x15d0U, plt["printf"]);
-      EXPECT_EQ(0x15e0U, plt["strlen"]);
-    } else {
-      // arm
-      EXPECT_EQ(0x107B0U, plt["printf"]);
-      EXPECT_EQ(0x107C0U, plt["strlen"]);
-    }
-  }
+TEST(ElfLib, GetPLTFromStrippedDebugRel) {
+  GetPLTOffsetsTest(kUnstrippedExampleFileStrippedBase, ".rel", kUnstrippedExampleFileBase);
 }
 
 TEST(ElfLib, DetectUnstripped) {
   std::unique_ptr<ElfLib> elf =
-      ElfLib::Create(GetTestBinaryPath(std::string(kUnstrippedExampleFileBase) + ".elf"));
+      ElfLib::Create(GetTestBinaryPath(std::string(kUnstrippedExampleFileBase) + ".x64.rela.elf"));
 
   ASSERT_NE(elf.get(), nullptr);
 
@@ -396,8 +391,8 @@ TEST(ElfLib, DetectUnstripped) {
 }
 
 TEST(ElfLib, DetectStripped) {
-  std::unique_ptr<ElfLib> elf =
-      ElfLib::Create(GetTestBinaryPath(std::string(kUnstrippedExampleFileStrippedBase) + ".elf"));
+  std::unique_ptr<ElfLib> elf = ElfLib::Create(
+      GetTestBinaryPath(std::string(kUnstrippedExampleFileStrippedBase) + ".x64.rela.elf"));
 
   ASSERT_NE(elf.get(), nullptr);
 
@@ -456,4 +451,5 @@ TEST(ElfLib, AArch64Plt) {
   ASSERT_TRUE(warnings.empty());
 }
 
+}  // namespace
 }  // namespace elflib

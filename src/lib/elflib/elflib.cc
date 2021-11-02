@@ -828,9 +828,7 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsCommon(PltEntryBuffer& buff
 
   if (!dynamic_plt_use_rela_) {
     Warn("Assuming Elf64_Rela PLT relocation format.");
-  } else if (!*dynamic_plt_use_rela_) {
-    Warn("Elf64_Rel style PLT Relocations unsupported.");
-    return {};
+    dynamic_plt_use_rela_ = true;
   }
 
   auto plt_section = section_names_.find(".plt");
@@ -852,14 +850,22 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsCommon(PltEntryBuffer& buff
 
   buffer.SetRegion(plt_memory.ptr, plt_memory.size);
 
-  auto reloc_memory = GetSectionData(".rela.plt");
+  auto reloc_memory = GetSectionData(*dynamic_plt_use_rela_ ? ".rela.plt" : ".rel.plt");
 
   if (!reloc_memory.ptr) {
     return {};
   }
 
-  auto reloc = reinterpret_cast<const Elf64_Rela*>(reloc_memory.ptr);
-  auto reloc_count = reloc_memory.size / sizeof(Elf64_Rela);
+  const Elf64_Rela* reloc_rela = nullptr;
+  const Elf64_Rel* reloc_rel = nullptr;
+  size_t reloc_count = reloc_memory.size;
+  if (*dynamic_plt_use_rela_) {
+    reloc_rela = reinterpret_cast<const Elf64_Rela*>(reloc_memory.ptr);
+    reloc_count /= sizeof(Elf64_Rela);
+  } else {
+    reloc_rel = reinterpret_cast<const Elf64_Rel*>(reloc_memory.ptr);
+    reloc_count /= sizeof(Elf64_Rel);
+  }
 
   ElfLib::MemoryRegion dynsym_mem = GetSectionData(".dynsym");
 
@@ -891,7 +897,7 @@ std::map<std::string, uint64_t> ElfLib::GetPLTOffsetsCommon(PltEntryBuffer& buff
       continue;
     }
 
-    auto sym_idx = reloc[index].getSymbol();
+    auto sym_idx = reloc_rela ? reloc_rela[index].getSymbol() : reloc_rel[index].getSymbol();
 
     if (sym_idx >= sym_count) {
       Warn("PLT reloc referenced symbol outside symbol table.");

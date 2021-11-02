@@ -22,15 +22,6 @@ static_library("elflib") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-# An example stripped binary. Originally copied from out/x64/cowsay.
-# ARM64 binary generated with:
-# fx set core.arm64 --with //examples/cowsay
-# fx build
-# cp out/default/exe.unstripped/cowsay \
-#   src/lib/elflib/test_data/unstripped_example.arm64.elf
-# ./prebuilt/third_party/clang/linux-x64/bin/llvm-objcopy \
-#     --strip-sections out/default/exe.unstripped/cowsay \
-#     src/lib/elflib/test_data/unstripped_example_stripped.arm64.elf
 test("elflib_unittest") {
   sources = [ "elflib_unittest.cc" ]
 
@@ -49,14 +40,43 @@ test("elflib_unittest") {
 
 resource("test_data") {
   testonly = true
+
   sources = [
     "test_data/6d4d8ac190ecc7.debug",
     "test_data/stripped_example.elf",
-    "test_data/unstripped_example.arm64.elf",
-    "test_data/unstripped_example.elf",
-    "test_data/unstripped_example_stripped.arm64.elf",
-    "test_data/unstripped_example_stripped.elf",
   ]
+
+  # An example stripped binary:
+  # ```
+  # #include <stdio.h>
+  # #include <string.h>
+  # int main(int argc, char** argv) {
+  #   printf("%zu\n", strlen(argv[0]));
+  #   return 0;
+  # }
+  # ```
+  # Built with:
+  # clang -Wl,-z,{rela,rel} --target={aarch64,x86_64}-fuchsia --sysroot=...
+  # llvm-objcopy --strip-sections \
+  #   unstripped_example.{arm64,x64}.{rela,rel}.elf \
+  #   unstripped_example_stripped.{arm64,x64}.{rela,rel}.elf
+  foreach(cpu,
+          [
+            "arm64",
+            "x64",
+          ]) {
+    foreach(rel,
+            [
+              "rela",
+              "rel",
+            ]) {
+      sources += [
+        "test_data/unstripped_example.$cpu.$rel.elf",
+        "test_data/unstripped_example_stripped.$cpu.$rel.elf",
+      ]
+    }
+  }
+
   outputs = [ "data/{{source_file_part}}" ]
 }
 
