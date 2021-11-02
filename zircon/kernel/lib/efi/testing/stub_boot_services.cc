@@ -15,6 +15,9 @@ using ::testing::DoAll;
 using ::testing::Return;
 using ::testing::SetArgPointee;
 
+// Defined by the EFI standard.
+constexpr size_t kMemoryPageSize = 4096;
+
 // We need to stash the global StubBootServices object here since there's
 // no "self" parameter to any of these functions.
 StubBootServices* active_stub = nullptr;
@@ -35,6 +38,9 @@ EFIAPI efi_status Wrap(Args... args) {
 
 StubBootServices::StubBootServices()
     : services_{
+          .AllocatePages = Wrap<&StubBootServices::AllocatePages>,
+          .FreePages = Wrap<&StubBootServices::FreePages>,
+          .GetMemoryMap = Wrap<&StubBootServices::GetMemoryMap>,
           .AllocatePool = Wrap<&StubBootServices::AllocatePool>,
           .FreePool = Wrap<&StubBootServices::FreePool>,
           .CreateEvent = Wrap<&StubBootServices::CreateEvent>,
@@ -59,6 +65,18 @@ StubBootServices::StubBootServices()
 
 StubBootServices::~StubBootServices() { active_stub = nullptr; }
 
+efi_status StubBootServices::AllocatePages(efi_allocate_type /*type*/,
+                                           efi_memory_type /*memory_type*/, size_t pages,
+                                           efi_physical_addr* memory) {
+  *memory = reinterpret_cast<efi_physical_addr>(malloc(pages * kMemoryPageSize));
+  return EFI_SUCCESS;
+}
+
+efi_status StubBootServices::FreePages(efi_physical_addr memory, size_t /*pages*/) {
+  free(reinterpret_cast<void*>(memory));
+  return EFI_SUCCESS;
+}
+
 efi_status StubBootServices::AllocatePool(efi_memory_type /*pool_type*/, size_t size, void** buf) {
   *buf = malloc(size);
   return EFI_SUCCESS;
@@ -76,6 +94,12 @@ void MockBootServices::ExpectOpenProtocol(efi_handle handle, efi_guid guid, void
 
 void MockBootServices::ExpectCloseProtocol(efi_handle handle, efi_guid guid) {
   EXPECT_CALL(*this, CloseProtocol(handle, MatchGuid(guid), _, _)).WillOnce(Return(EFI_SUCCESS));
+}
+
+void MockBootServices::SetDefaultProtocol(efi_handle handle, efi_guid guid, void* protocol) {
+  ON_CALL(*this, OpenProtocol(handle, MatchGuid(guid), _, _, _, _))
+      .WillByDefault(DoAll(SetArgPointee<2>(protocol), Return(EFI_SUCCESS)));
+  ON_CALL(*this, CloseProtocol(handle, MatchGuid(guid), _, _)).WillByDefault(Return(EFI_SUCCESS));
 }
 
 }  // namespace efi

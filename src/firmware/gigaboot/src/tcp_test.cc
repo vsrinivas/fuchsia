@@ -20,13 +20,20 @@
 using ::efi::MatchGuid;
 using ::testing::_;
 using ::testing::InSequence;
+using ::testing::IsEmpty;
 using ::testing::Return;
 using ::testing::Unused;
 
 const efi_handle MockTcp::kTcpBindingHandle = reinterpret_cast<efi_handle>(0x10);
 const efi_handle MockTcp::kTcpServerHandle = reinterpret_cast<efi_handle>(0x20);
 const efi_handle MockTcp::kTcpClientHandle = reinterpret_cast<efi_handle>(0x30);
-const efi_handle MockTcp::kTestEvent = reinterpret_cast<efi_event>(0x100);
+
+// Events are used heavily in the TCP API, give each one a unique value so that
+// we can more easily track events across multiple calls.
+efi_handle NewTestEvent() {
+  static uintptr_t start_value = 0x100;
+  return reinterpret_cast<efi_event>(start_value++);
+}
 
 MockTcp::MockTcp() {
   // For many functions, the default behavior of returning 0 (EFI_SUCCESS)
@@ -37,13 +44,12 @@ MockTcp::MockTcp() {
   // against null to determine if the event is pending or not.
   ON_CALL(mock_boot_services_, CreateEvent)
       .WillByDefault([this](Unused, Unused, Unused, Unused, efi_event* event) {
-        open_events_++;
-        *event = kTestEvent;
+        *event = NewTestEvent();
+        created_events_.insert(*event);
         return EFI_SUCCESS;
       });
-  ON_CALL(mock_boot_services_, CloseEvent(kTestEvent)).WillByDefault([this](Unused) {
-    EXPECT_GT(open_events_, 0);
-    open_events_--;
+  ON_CALL(mock_boot_services_, CloseEvent).WillByDefault([this](efi_event event) {
+    EXPECT_EQ(created_events_.erase(event), 1u);
     return EFI_SUCCESS;
   });
 
@@ -89,7 +95,7 @@ MockTcp::MockTcp() {
   // Read/Write/Disconnect/Close will work correctly using default behavior.
 }
 
-MockTcp::~MockTcp() { EXPECT_EQ(open_events_, 0); }
+MockTcp::~MockTcp() { EXPECT_THAT(created_events_, IsEmpty()); }
 
 // Adds expectations that the socket server and binding protocols are closed.
 //
@@ -293,7 +299,7 @@ TEST(TcpTest, AcceptPending) {
   MockTcp mock_tcp;
   tcp6_socket socket = {};
 
-  EXPECT_CALL(mock_tcp.boot_services(), CheckEvent(MockTcp::kTestEvent))
+  EXPECT_CALL(mock_tcp.boot_services(), CheckEvent)
       .WillOnce(Return(EFI_NOT_READY))  // Accept() #1
       .WillOnce(Return(EFI_SUCCESS));   // Accept() #2
 
@@ -404,7 +410,7 @@ TEST(TcpTest, ReadPending) {
   std::array<uint8_t, 8> data;
 
   // Read isn't ready the first time.
-  EXPECT_CALL(mock_tcp.boot_services(), CheckEvent(MockTcp::kTestEvent))
+  EXPECT_CALL(mock_tcp.boot_services(), CheckEvent)
       .WillOnce(Return(EFI_SUCCESS))    // Accept()
       .WillOnce(Return(EFI_NOT_READY))  // Receive() #1
       .WillOnce(Return(EFI_SUCCESS));   // Receive() #2
@@ -737,7 +743,7 @@ TEST(TcpTest, DisconnectPending) {
   tcp6_socket socket = {};
 
   // Accept is ready the first time, but disconnect isn't.
-  EXPECT_CALL(mock_tcp.boot_services(), CheckEvent(MockTcp::kTestEvent))
+  EXPECT_CALL(mock_tcp.boot_services(), CheckEvent)
       .WillOnce(Return(EFI_SUCCESS))    // Accept()
       .WillOnce(Return(EFI_NOT_READY))  // Close() #1
       .WillOnce(Return(EFI_SUCCESS));   // Close() #2
@@ -799,7 +805,7 @@ TEST(TcpTest, ClosePending) {
   tcp6_socket socket = {};
 
   // Have the close event not be ready on the first check.
-  EXPECT_CALL(mock_tcp.boot_services(), CheckEvent(MockTcp::kTestEvent))
+  EXPECT_CALL(mock_tcp.boot_services(), CheckEvent)
       .WillOnce(Return(EFI_NOT_READY))  // Close() #1
       .WillOnce(Return(EFI_SUCCESS));   // Close() #2
 

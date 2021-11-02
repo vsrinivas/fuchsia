@@ -25,6 +25,8 @@ namespace gigaboot {
 
 namespace {
 
+using testing::NiceMock;
+
 std::vector<gpt_entry_t> AbrTestPartitions() {
   return std::vector<gpt_entry_t>{
       kVbmetaAGptEntry,
@@ -43,7 +45,7 @@ zbi_result_t check_has_image_args(zbi_header_t* hdr, void* payload, void* cookie
 #define ZBI_SIZE (16 * 1024)
 static_assert(ZBI_SIZE % ZBI_ALIGNMENT == 0, "ZBI_SIZE must align to ZBI_ALIGNMENT");
 TEST(AvbTest, LoadsVbmeta) {
-  efi::MockBootServices mock_services;
+  NiceMock<efi::MockBootServices> mock_services;
   efi::FakeDiskIoProtocol fake_disk;
 
   // Set up an empty ZBI to use.
@@ -55,7 +57,7 @@ TEST(AvbTest, LoadsVbmeta) {
   zbi_for_each(zbi.data(), check_has_image_args, &found);
   ASSERT_EQ(found, false);
 
-  auto state = ExpectDiskFindBoot(mock_services, fake_disk.protocol());
+  auto state = SetupBootDisk(mock_services, fake_disk.protocol());
   ASSERT_NO_FATAL_FAILURE(SetupDiskPartitions(fake_disk, AbrTestPartitions()));
 
   // Populate the vbmeta_a partition on our fake disk.
@@ -71,7 +73,7 @@ TEST(AvbTest, LoadsVbmeta) {
 }
 
 TEST(AvbTest, DoesntCrashWithNoVbmeta) {
-  efi::MockBootServices mock_services;
+  NiceMock<efi::MockBootServices> mock_services;
   efi::FakeDiskIoProtocol fake_disk;
 
   // Set up an empty ZBI to use.
@@ -83,7 +85,7 @@ TEST(AvbTest, DoesntCrashWithNoVbmeta) {
   zbi_for_each(zbi.data(), check_has_image_args, &found);
   ASSERT_EQ(found, false);
 
-  auto state = ExpectDiskFindBoot(mock_services, fake_disk.protocol());
+  auto state = SetupBootDisk(mock_services, fake_disk.protocol());
   ASSERT_NO_FATAL_FAILURE(SetupDiskPartitions(fake_disk, AbrTestPartitions()));
   efi_system_table system_table = {.BootServices = mock_services.services()};
   append_avb_zbi_items(ImageHandle(), &system_table, zbi.data(), ZBI_SIZE, "-a");

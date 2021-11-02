@@ -29,6 +29,7 @@ source_set("src") {
     "pci.c",
     "tcp.c",
     "utf_conversion.c",
+    "util.c",
     "zircon.c",
   ]
   include_dirs = [ "." ]
@@ -81,6 +82,8 @@ if (!is_mac) {
       "tcp.c",
       "tcp_test.cc",
       "utf_conversion.c",
+      "util.c",
+      "util_test.cc",
     ]
     include_dirs = [ "." ]
     deps = [

@@ -309,6 +309,15 @@ void udp6_recv(ip6_hdr* ip, void* _data, size_t len) {
   }
 }
 
+// We don't want to actually implement TCP here, just check the port and if it
+// looks like a fastboot packet inform the fastboot loop.
+void tcp6_recv(ip6_hdr* ip, void* _data, size_t len) {
+  tcp_hdr* tcp = _data;
+  if (ntohs(tcp->dst_port) == FB_SERVER_PORT) {
+    fb_tcp_recv();
+  }
+}
+
 void icmp6_recv(ip6_hdr* ip, void* _data, size_t len) {
   icmp6_hdr* icmp = _data;
   uint16_t sum;
@@ -404,6 +413,11 @@ void eth_recv(void* _data, size_t len) {
 
   if (ip->next_header == HDR_UDP) {
     udp6_recv(ip, data, len);
+    return;
+  }
+
+  if (ip->next_header == HDR_TCP) {
+    tcp6_recv(ip, data, len);
     return;
   }
 

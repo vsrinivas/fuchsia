@@ -86,7 +86,7 @@ efi_status disk_read(const disk_t* disk, size_t offset, void* data, size_t lengt
     return EFI_VOLUME_CORRUPTED;
   }
 
-  uint64_t size = (disk->last - disk->first) * disk->blksz;
+  uint64_t size = (disk->last - disk->first + 1) * disk->blksz;
   if ((offset > size) || ((size - offset) < length)) {
     ELOG("Disk read invalid params. offset:%zu length:%zu disk: [%" PRIu64 " to %" PRIu64
          "] size:%" PRIu64 " blksz:%d",
@@ -102,7 +102,7 @@ efi_status disk_write(disk_t* disk, size_t offset, void* data, size_t length) {
     return EFI_VOLUME_CORRUPTED;
   }
 
-  uint64_t size = (disk->last - disk->first) * disk->blksz;
+  uint64_t size = (disk->last - disk->first + 1) * disk->blksz;
   if ((offset > size) || ((size - offset) < length)) {
     return EFI_INVALID_PARAMETER;
   }

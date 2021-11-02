@@ -35,8 +35,10 @@ using efi::MockBootServices;
 using testing::_;
 using testing::DoAll;
 using testing::ElementsAreArray;
+using testing::NiceMock;
 using testing::Return;
 using testing::SetArgPointee;
+using testing::Unused;
 
 disk_t TestBootDisk(efi_disk_io_protocol* disk_protocol, efi_boot_services* boot_services) {
   return disk_t{
@@ -86,25 +88,31 @@ void SetupDiskPartitions(efi::FakeDiskIoProtocol& fake_disk,
   ASSERT_LT(header->last, kBootMediaNumBlocks);
 }
 
-std::unique_ptr<DiskFindBootState> ExpectDiskFindBoot(MockBootServices& mock_services,
-                                                      efi_disk_io_protocol* disk_io_protocol) {
+std::unique_ptr<DiskFindBootState> SetupBootDisk(efi::MockBootServices& mock_services,
+                                                 efi_disk_io_protocol* disk_io_protocol) {
   auto state = std::make_unique<DiskFindBootState>();
 
-  mock_services.ExpectProtocol(ImageHandle(), EFI_LOADED_IMAGE_PROTOCOL_GUID, &state->loaded_image);
-  mock_services.ExpectProtocol(DeviceHandle(), EFI_DEVICE_PATH_PROTOCOL_GUID, &state->device_path);
+  mock_services.SetDefaultProtocol(ImageHandle(), EFI_LOADED_IMAGE_PROTOCOL_GUID,
+                                   &state->loaded_image);
+  mock_services.SetDefaultProtocol(DeviceHandle(), EFI_DEVICE_PATH_PROTOCOL_GUID,
+                                   &state->device_path);
 
-  // LocateHandleBuffer() dynamically allocates the list of handles, we need to
-  // do the same since the caller will try to free it when finished.
-  efi_handle* handle_buffer = reinterpret_cast<efi_handle*>(malloc(sizeof(efi_handle)));
-  handle_buffer[0] = BlockHandle();
-  EXPECT_CALL(mock_services, LocateHandleBuffer(_, MatchGuid(EFI_BLOCK_IO_PROTOCOL_GUID), _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(1), SetArgPointee<4>(handle_buffer), Return(EFI_SUCCESS)));
+  ON_CALL(mock_services, LocateHandleBuffer(_, MatchGuid(EFI_BLOCK_IO_PROTOCOL_GUID), _, _, _))
+      .WillByDefault([](Unused, Unused, Unused, size_t* num_handles, efi_handle** buf) {
+        // EFI LocateHandleBuffer() dynamically allocates the list of handles,
+        // we need to do the same since the caller will try to free it when
+        // finished.
+        *num_handles = 1;
+        *buf = reinterpret_cast<efi_handle*>(malloc(sizeof(efi_handle)));
+        **buf = BlockHandle();
+        return EFI_SUCCESS;
+      });
 
-  mock_services.ExpectProtocol(BlockHandle(), EFI_BLOCK_IO_PROTOCOL_GUID, &state->block_io);
-  mock_services.ExpectProtocol(BlockHandle(), EFI_DEVICE_PATH_PROTOCOL_GUID, &state->device_path);
+  mock_services.SetDefaultProtocol(BlockHandle(), EFI_BLOCK_IO_PROTOCOL_GUID, &state->block_io);
+  mock_services.SetDefaultProtocol(BlockHandle(), EFI_DEVICE_PATH_PROTOCOL_GUID,
+                                   &state->device_path);
 
-  // The disk I/O protocol shouldn't close since it's returned to the caller.
-  mock_services.ExpectOpenProtocol(BlockHandle(), EFI_DISK_IO_PROTOCOL_GUID, disk_io_protocol);
+  mock_services.SetDefaultProtocol(BlockHandle(), EFI_DISK_IO_PROTOCOL_GUID, disk_io_protocol);
 
   return state;
 }
@@ -124,9 +132,9 @@ std::vector<gpt_entry_t> TestPartitions() {
 const uint8_t kUnknownPartitionGuid[GPT_GUID_LEN] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0xFF};
 
 TEST(DiskFindBoot, Success) {
-  MockBootServices mock_services;
+  NiceMock<MockBootServices> mock_services;
   efi::FakeDiskIoProtocol fake_disk;
-  auto state = ExpectDiskFindBoot(mock_services, fake_disk.protocol());
+  auto state = SetupBootDisk(mock_services, fake_disk.protocol());
 
   efi_system_table system_table = {.BootServices = mock_services.services()};
   disk_t result = {};

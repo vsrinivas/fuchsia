@@ -26,7 +26,7 @@ namespace gigaboot {
 // The block size just has to be 8-byte aligned for easy casting.
 inline constexpr uint32_t kBootMediaId = 3;
 inline constexpr uint32_t kBootMediaBlockSize = 512;
-inline constexpr uint64_t kBootMediaNumBlocks = 141;
+inline constexpr uint64_t kBootMediaNumBlocks = 142;
 inline constexpr uint64_t kBootMediaSize = kBootMediaBlockSize * kBootMediaNumBlocks;
 static_assert(kBootMediaBlockSize % 8 == 0, "Block size must be 8-byte aligned");
 
@@ -78,6 +78,13 @@ const gpt_entry_t kVbmetaAGptEntry = {
     .last = 140,
     .name = "v\0b\0m\0e\0t\0a\0-\0a\0",
 };
+const gpt_entry_t kMiscGptEntry = {
+    .type = GUID_ABR_META_VALUE,
+    .guid = {0x06},
+    .first = 141,
+    .last = 141,
+    .name = "m\0i\0s\0c\0",
+};
 
 // The state necessary to set up mocks for disk_find_boot().
 // The default values will result in a successful execution.
@@ -128,8 +135,8 @@ void SetupDiskPartitions(efi::FakeDiskIoProtocol& fake_disk,
 //
 // The returned object holds the state necessary for the mocks and must be kept
 // in scope until disk_find_boot() is called, after which it can be released.
-std::unique_ptr<DiskFindBootState> ExpectDiskFindBoot(efi::MockBootServices& mock_services,
-                                                      efi_disk_io_protocol* disk_io_protocol);
+std::unique_ptr<DiskFindBootState> SetupBootDisk(efi::MockBootServices& mock_services,
+                                                 efi_disk_io_protocol* disk_io_protocol);
 
 }  // namespace gigaboot
 

@@ -45,11 +45,18 @@ class StubBootServices {
 
   //   efi_tpl (*RaiseTPL)(efi_tpl new_tpl);
   //   void (*RestoreTPL)(efi_tpl old_tpl);
-  //   efi_status (*AllocatePages)(efi_allocate_type type, efi_memory_type memory_type,
-  //               size_t pages, efi_physical_addr* memory);
-  //   efi_status (*FreePages)(efi_physical_addr memory, size_t pages);
-  //   efi_status (*GetMemoryMap)(size_t* memory_map_size, efi_memory_descriptor* memory_map,
-  //                              size_t* map_key, size_t* desc_size, uint32_t* desc_version);
+
+  // Default page allocation implementation is just to call malloc/free.
+  // |type| and |memory_type| are ignored, and freeing a different number of
+  // pages than were initially allocated is unsupported.
+  virtual efi_status AllocatePages(efi_allocate_type type, efi_memory_type memory_type,
+                                   size_t pages, efi_physical_addr* memory);
+  virtual efi_status FreePages(efi_physical_addr memory, size_t pages);
+
+  virtual efi_status GetMemoryMap(size_t* memory_map_size, efi_memory_descriptor* memory_map,
+                                  size_t* map_key, size_t* desc_size, uint32_t* desc_version) {
+    return EFI_UNSUPPORTED;
+  }
 
   // Default pool allocation implementation is just to call malloc/free.
   virtual efi_status AllocatePool(efi_memory_type pool_type, size_t size, void** buf);
@@ -161,6 +168,10 @@ constexpr auto MatchGuid = MatchGuidT<efi_guid>;
 // to avoid it, so the base class is still available for direct use.
 class MockBootServices : public StubBootServices {
  public:
+  MOCK_METHOD(efi_status, GetMemoryMap,
+              (size_t * memory_map_size, efi_memory_descriptor* memory_map, size_t* map_key,
+               size_t* desc_size, uint32_t* desc_version),
+              (override));
   MOCK_METHOD(efi_status, CreateEvent,
               (uint32_t type, efi_tpl notify_tpl, efi_event_notify notify_fn, void* notify_ctx,
                efi_event* event),
@@ -212,6 +223,14 @@ class MockBootServices : public StubBootServices {
   // but then returning it to the caller rather than closing it.
   void ExpectOpenProtocol(efi_handle handle, efi_guid guid, void* protocol);
   void ExpectCloseProtocol(efi_handle handle, efi_guid guid);
+
+  // Similar to ExpectProtocol(), but instead of using EXPECT_CALL to ensure
+  // that the protocol is opened and closed, just registers some default
+  // behavior using ON_CALL/WillByDefault.
+  //
+  // This is more useful if you want to inject a test protocol, but don't care
+  // how many times it's opened or closed.
+  void SetDefaultProtocol(efi_handle handle, efi_guid guid, void* protocol);
 };
 
 }  // namespace efi

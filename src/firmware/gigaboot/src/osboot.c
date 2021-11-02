@@ -184,6 +184,12 @@ void do_fastboot(efi_handle img, efi_system_table* sys, uint32_t namegen) {
     case CONTINUE_BOOT:
     case POLL:
       break;
+    case REBOOT: {
+      efi_status status = gSys->RuntimeServices->ResetSystem(EfiResetCold, EFI_SUCCESS, 0, NULL);
+      if (status != EFI_SUCCESS) {
+        ELOG_S(status, "Failed to reboot");
+      }
+    }
   }
   mdns_stop();
 }

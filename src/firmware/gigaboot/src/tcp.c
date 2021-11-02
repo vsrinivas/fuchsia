@@ -191,7 +191,15 @@ tcp6_result tcp6_open(tcp6_socket* socket, efi_boot_services* boot_services,
        ip6toa(ip_buffer, &config_data.AccessPoint.StationAddress), port);
   status = socket->server_protocol->Configure(socket->server_protocol, &config_data);
   if (status != EFI_SUCCESS) {
-    ELOG_S(status, "Failed to configure TCP protocol");
+    // Configure() will sometimes return EFI_INVALID_PARAMETER early on but
+    // then succeed with the same parameters later, I think because any given
+    // IP address will be invalid until the link is fully up. This is pretty
+    // normal, so only debug log in this case to avoid spamming the console.
+    if (status == EFI_INVALID_PARAMETER) {
+      DLOG_S(status, "TCP configure failed - link not up yet?");
+    } else {
+      ELOG_S(status, "Failed to configure TCP protocol");
+    }
     tcp6_close(socket);
     return TCP6_RESULT_ERROR;
   }
@@ -400,8 +408,12 @@ static tcp6_result close_protocol(efi_boot_services* boot_services, efi_tcp6_pro
     DLOG("Starting TCP6 close");
     status = protocol->Close(protocol, close_token);
     if (status != EFI_SUCCESS) {
-      ELOG_S(status, "TCP Close() failed");
       reset_token(boot_services, &close_token->CompletionToken);
+      if (status == EFI_NOT_STARTED) {
+        // NOT_STARTED is OK, means the protocol is already closed.
+        return TCP6_RESULT_SUCCESS;
+      }
+      ELOG_S(status, "TCP Close() failed");
       return TCP6_RESULT_ERROR;
     }
   }

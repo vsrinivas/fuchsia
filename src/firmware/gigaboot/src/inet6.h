@@ -15,6 +15,7 @@ typedef struct mac_addr_t mac_addr;
 typedef struct ip6_addr_t ip6_addr;
 typedef struct ip6_hdr_t ip6_hdr;
 typedef struct udp_hdr_t udp_hdr;
+typedef struct tcp_hdr_t tcp_hdr;
 typedef struct icmp6_hdr_t icmp6_hdr;
 typedef struct ndp_n_hdr_t ndp_n_hdr;
 
@@ -71,6 +72,12 @@ struct udp_hdr_t {
   uint16_t dst_port;
   uint16_t length;
   uint16_t checksum;
+} __attribute__((packed));
+
+// Incomplete, right now we only care about the ports.
+struct tcp_hdr_t {
+  uint16_t src_port;
+  uint16_t dst_port;
 } __attribute__((packed));
 
 #define ICMP6_DEST_UNREACHABLE 1

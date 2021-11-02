@@ -11,6 +11,8 @@
 #include <lib/efi/testing/mock_tcp6.h>
 #include <lib/efi/testing/stub_boot_services.h>
 
+#include <set>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -35,7 +37,6 @@ class MockTcp {
   static const efi_handle kTcpBindingHandle;
   static const efi_handle kTcpServerHandle;
   static const efi_handle kTcpClientHandle;
-  static const efi_handle kTestEvent;
 
   MockTcp();
   ~MockTcp();
@@ -71,9 +72,8 @@ class MockTcp {
   ::testing::NiceMock<efi::MockTcp6Protocol> mock_server_protocol_;
   ::testing::NiceMock<efi::MockTcp6Protocol> mock_client_protocol_;
 
-  // Track the number of created events so we can always make sure we close
-  // every event we create.
-  int open_events_ = 0;
+  // Track created events so we can make sure we close them all.
+  std::set<efi_event> created_events_;
 };
 
 #endif  // SRC_FIRMWARE_GIGABOOT_SRC_TCP_TEST_H_
