@@ -40,6 +40,8 @@ pub enum ParseError {
     InvalidOpCode(u16),
     #[error("invalid option length {} for option code {:?}", _1, _0)]
     InvalidOpLen(OptionCode, usize),
+    #[error("invalid status code: {}", _0)]
+    InvalidStatusCode(u16),
     #[error("buffer exhausted while more bytes are expected")]
     BufferExhausted,
     #[error("failed to parse domain {:?}", _0)]
@@ -81,6 +83,36 @@ impl TryFrom<u8> for MessageType {
 
     fn try_from(b: u8) -> Result<MessageType, ParseError> {
         <Self as num_traits::FromPrimitive>::from_u8(b).ok_or(ParseError::InvalidMessageType(b))
+    }
+}
+
+/// A DHCPv6 status code as defined in [RFC 8415, Section 21.13].
+///
+/// [RFC 8415, Section 21.13]: https://tools.ietf.org/html/rfc8415#section-21.13
+#[allow(missing_docs)]
+#[derive(Debug, PartialEq, FromPrimitive, AsBytes, Copy, Clone)]
+#[repr(u16)]
+pub enum StatusCode {
+    Success = 0,
+    UnspecFail = 1,
+    NoAddrsAvail = 2,
+    NoBinding = 3,
+    NotOnLink = 4,
+    UseMulticast = 5,
+    NoPrefixAvail = 6,
+}
+
+impl From<StatusCode> for u16 {
+    fn from(t: StatusCode) -> u16 {
+        t as u16
+    }
+}
+
+impl TryFrom<u16> for StatusCode {
+    type Error = ParseError;
+
+    fn try_from(b: u16) -> Result<StatusCode, ParseError> {
+        <Self as num_traits::FromPrimitive>::from_u16(b).ok_or(ParseError::InvalidStatusCode(b))
     }
 }
 
