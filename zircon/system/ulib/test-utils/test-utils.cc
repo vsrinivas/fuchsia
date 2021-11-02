@@ -145,7 +145,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
           reinterpret_cast<uint8_t*>(const_cast<char*>(argv[i])), strlen(argv[i]));
     }
     auto args = fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(data, argc);
-    fidl::WireResult<fprocess::Launcher::AddArgs> result = launcher.AddArgs(std::move(args));
+    fidl::WireResult<fprocess::Launcher::AddArgs> result = launcher->AddArgs(std::move(args));
     tu_check("sending arguments", result.status());
   }
 
@@ -158,7 +158,8 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
           reinterpret_cast<uint8_t*>(const_cast<char*>(envp[i])), strlen(envp[i]));
     }
     auto env = fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(data, envc);
-    fidl::WireResult<fprocess::Launcher::AddEnvirons> result = launcher.AddEnvirons(std::move(env));
+    fidl::WireResult<fprocess::Launcher::AddEnvirons> result =
+        launcher->AddEnvirons(std::move(env));
     tu_check("sending environment", result.status());
   }
 
@@ -176,7 +177,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
       data[i].directory = fidl::ClientEnd<fio::Directory>(zx::channel(flat->handle[i]));
     }
     auto names = fidl::VectorView<fprocess::wire::NameInfo>::FromExternal(data, count);
-    fidl::WireResult<fprocess::Launcher::AddNames> result = launcher.AddNames(std::move(names));
+    fidl::WireResult<fprocess::Launcher::AddNames> result = launcher->AddNames(std::move(names));
     tu_check("sending names", result.status());
     free(flat);
   }
@@ -205,7 +206,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
     auto handle_vector =
         fidl::VectorView<fprocess::wire::HandleInfo>::FromExternal(handle_infos, handle_count);
     fidl::WireResult<fprocess::Launcher::AddHandles> result =
-        launcher.AddHandles(std::move(handle_vector));
+        launcher->AddHandles(std::move(handle_vector));
     tu_check("sending handles", result.status());
   }
 
@@ -232,7 +233,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
   launch_info.name = fidl::StringView::FromExternal(process_name, process_name_size);
 
   fidl::WireResult<fprocess::Launcher::CreateWithoutStarting> result =
-      launcher.CreateWithoutStarting(std::move(launch_info));
+      launcher->CreateWithoutStarting(std::move(launch_info));
   tu_check("process creation", result.status());
 
   fidl::WireResponse<fprocess::Launcher::CreateWithoutStarting>* response = result.Unwrap();
