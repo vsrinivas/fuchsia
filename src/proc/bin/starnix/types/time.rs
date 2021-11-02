@@ -34,6 +34,9 @@ pub fn duration_from_timespec(ts: timespec) -> Result<zx::Duration, Errno> {
     if ts.tv_nsec >= NANOS_PER_SECOND {
         return error!(EINVAL);
     }
+    if ts.tv_sec < 0 || ts.tv_nsec < 0 {
+        return error!(EINVAL);
+    }
     return Ok(zx::Duration::from_seconds(ts.tv_sec) + zx::Duration::from_nanos(ts.tv_nsec));
 }
 
@@ -83,6 +86,12 @@ mod test {
     #[test]
     fn test_invalid_time_from_timespec() {
         let time_spec = timespec { tv_sec: 100, tv_nsec: NANOS_PER_SECOND * 2 };
+        assert_eq!(time_from_timespec(time_spec), Err(EINVAL));
+
+        let time_spec = timespec { tv_sec: 1, tv_nsec: -1 };
+        assert_eq!(time_from_timespec(time_spec), Err(EINVAL));
+
+        let time_spec = timespec { tv_sec: -1, tv_nsec: 1 };
         assert_eq!(time_from_timespec(time_spec), Err(EINVAL));
     }
 }
