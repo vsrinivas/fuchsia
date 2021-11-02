@@ -94,7 +94,7 @@ rustc_library("lib") {
   edition = "2018"
 
   source_root = "src/lib.rs"
-  deps = base_deps
+  deps = base_deps + [ ":keymap" ]
   sources = lib_sources
 }
 
