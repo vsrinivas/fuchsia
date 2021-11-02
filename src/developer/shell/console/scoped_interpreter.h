@@ -35,7 +35,7 @@ class ScopedInterpreter {
   }
 
   ~ScopedInterpreter() {
-    client_.Shutdown();
+    client_->Shutdown();
     loop_.Shutdown();
     loop_.JoinThreads();
   }
