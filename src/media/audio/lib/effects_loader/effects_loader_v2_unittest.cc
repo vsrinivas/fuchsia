@@ -81,7 +81,7 @@ TEST_F(EffectsLoaderV2Test, CreateEffect) {
   // Verify the effect works.
   fidl::Arena arena;
   auto processor = fidl::BindSyncClient(std::move(config.processor()));
-  auto result = processor.Process(kNumFrames, fuchsia_audio_effects::wire::ProcessOptions(arena));
+  auto result = processor->Process(kNumFrames, fuchsia_audio_effects::wire::ProcessOptions(arena));
   EXPECT_EQ(result.status(), ZX_OK);
   EXPECT_FALSE(result->result.is_err()) << "unexpected failure: " << result->result.err();
 

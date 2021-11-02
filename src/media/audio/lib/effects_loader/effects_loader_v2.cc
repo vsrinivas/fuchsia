@@ -34,7 +34,7 @@ fpromise::result<std::unique_ptr<EffectsLoaderV2>, zx_status_t> EffectsLoaderV2:
 
 fidl::WireResult<fuchsia_audio_effects::ProcessorCreator::Create>
 EffectsLoaderV2::GetProcessorConfiguration(std::string name) {
-  return creator_.Create(fidl::StringView::FromExternal(name));
+  return creator_->Create(fidl::StringView::FromExternal(name));
 }
 
 }  // namespace media::audio
