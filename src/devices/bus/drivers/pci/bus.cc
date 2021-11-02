@@ -62,9 +62,8 @@ zx_status_t pci_bus_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  if ((status = bus->DdkAdd(ddk::DeviceAddArgs("bus")
-                                .set_flags(DEVICE_ADD_NON_BINDABLE)
-                                .set_inspect_vmo(bus->GetInspectVmo()))) != ZX_OK) {
+  if ((status = bus->DdkAdd(ddk::DeviceAddArgs("bus").set_inspect_vmo(bus->GetInspectVmo()))) !=
+      ZX_OK) {
     zxlogf(ERROR, "failed to add bus driver: %s", zx_status_get_string(status));
     return status;
   }
