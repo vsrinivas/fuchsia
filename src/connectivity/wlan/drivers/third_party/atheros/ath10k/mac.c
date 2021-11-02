@@ -4193,7 +4193,7 @@ static zx_status_t ath10k_start_scan(struct ath10k* ar, const struct wmi_start_s
 /* mac80211 callbacks */
 /**********************/
 
-static zx_status_t ath10k_mac_build_tx_pkt(struct ath10k* ar, struct ath10k_msg_buf** tx_buf_ptr,
+static zx_status_t ath10k_mac_build_tx_pkt(struct ath10k* ar, struct ath10k_msg_buf** out_tx_buf,
                                            const wlan_tx_packet_t* pkt,
                                            enum ath10k_mac_tx_path txpath) {
   enum ath10k_msg_type buf_type;
@@ -4208,23 +4208,19 @@ static zx_status_t ath10k_mac_build_tx_pkt(struct ath10k* ar, struct ath10k_msg_
       return ZX_ERR_INVALID_ARGS;
   }
 
+  // TODO(fxbug.dev/87596): Hardcoded an additional allocation of 64 bytes to add fields. Since
+  // the `used` field is immediately decremented, it seems that the additional 64 bytes may be
+  // either leaking an internal detail of ath10k_msg_buf_alloc() or is unnecessary.
   struct ath10k_msg_buf* tx_buf;
-  size_t head_size = pkt->mac_frame_size;
-  // This 64 gives us headroom to add fields. It would be nice if we could be more specific...
-  size_t extra_bytes = head_size + 64;
-
-  zx_status_t ret = ath10k_msg_buf_alloc(ar, &tx_buf, buf_type, extra_bytes);
+  zx_status_t ret = ath10k_msg_buf_alloc(ar, &tx_buf, buf_type, pkt->mac_frame_size + 64);
   if (ret != ZX_OK) {
     ath10k_err("failed to allocate a tx buffer\n");
     return ret;
   }
   tx_buf->used -= 64;
 
-  uint8_t* next_data = ath10k_msg_buf_get_payload(tx_buf);
-  memcpy(next_data, pkt->mac_frame_buffer, head_size);
-  next_data += head_size;
-
-  *tx_buf_ptr = tx_buf;
+  memcpy(ath10k_msg_buf_get_payload(tx_buf), pkt->mac_frame_buffer, pkt->mac_frame_size);
+  *out_tx_buf = tx_buf;
   return ZX_OK;
 }
 
