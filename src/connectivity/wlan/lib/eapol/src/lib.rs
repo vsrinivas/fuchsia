@@ -395,6 +395,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use base64;
     use wlan_common::{assert_variant, buffer_writer::BufferWriter};
 
     #[cfg(feature = "benchmarks")]
@@ -621,6 +622,150 @@ mod tests {
         let left_over = buf.split_off(written);
         assert_eq!(&buf[..], expected);
         assert!(left_over.iter().all(|b| *b == 0));
+    }
+
+    fn print_annotated_eapol_pdus(partial_rsn_events_json: &str) {
+        let top_level_rsn_events_value: serde_json::Value =
+            serde_json::from_str(partial_rsn_events_json).unwrap();
+        let rsn_events_map =
+            if let serde_json::Value::Object(rsn_events_map) = top_level_rsn_events_value {
+                rsn_events_map
+            } else {
+                panic!("unexpected value: {:?}", top_level_rsn_events_value);
+            };
+        let mut rsn_event_values: Vec<&serde_json::Value> = rsn_events_map.values().collect();
+
+        // Sort the events by @time
+        rsn_event_values.sort_by(|a, b| match (a, b) {
+            (serde_json::Value::Object(a_map), serde_json::Value::Object(b_map)) => {
+                match (a_map.get("@time").unwrap(), b_map.get("@time").unwrap()) {
+                    (serde_json::Value::Number(a_number), serde_json::Value::Number(b_number)) => {
+                        a_number.as_i64().unwrap().partial_cmp(&b_number.as_i64().unwrap()).unwrap()
+                    }
+                    _ => panic!("unexpected values: ({:?}, {:?})", a_map, b_map),
+                }
+            }
+            _ => panic!("unexpected values: ({:?}, {:?})", a, b),
+        });
+
+        // Print each event
+        rsn_event_values
+            .iter()
+            .map(|event_value| {
+                let event_map = if let serde_json::Value::Object(event_map) = event_value {
+                    event_map
+                } else {
+                    panic!("unexpected value: {:?}", event_value);
+                };
+                println!(" --------------- ");
+                println!("@time: {}", event_map.get("@time").unwrap());
+                if let Some(serde_json::Value::String(b64_eapol_pdu)) =
+                    event_map.get("tx_eapol_frame")
+                {
+                    let _ = b64_eapol_pdu_to_string(&b64_eapol_pdu[4..])
+                        .map(|frame| println!("tx_eapol_frame: {:#?}", frame))
+                        .map_err(|e| println!("tx_eapol_frame: ERROR:\n{}", e));
+                }
+                if let Some(serde_json::Value::String(b64_eapol_pdu)) =
+                    event_map.get("rx_eapol_frame")
+                {
+                    let _ = b64_eapol_pdu_to_string(&b64_eapol_pdu[4..])
+                        .map(|frame| println!("rx_eapol_frame: {:#?}", frame))
+                        .map_err(|e| println!("rx_eapol_frame: ERROR:\n{}", e));
+                }
+                println!(" --------------- ");
+            })
+            .for_each(drop);
+    }
+
+    fn b64_eapol_pdu_to_string(b64_eapol_pdu: &str) -> Result<String, String> {
+        let frame: Vec<u8> = match base64::decode(b64_eapol_pdu) {
+            Ok(frame) => frame,
+            Err(e) => return Err(format!("  Unable to parse: {:?}\n  {:?}", b64_eapol_pdu, e)),
+        };
+        //println!("raw frame: {:02X?}", frame);
+        let keyframe = KeyFrameRx::parse(16, &frame[..]).expect("parsing keyframe failed");
+        Ok(format!("{:02X?}", keyframe))
+    }
+
+    #[test]
+    fn debug_eapol_pdu() {
+        print_annotated_eapol_pdus(
+            r#"
+        {
+            "5526": {
+              "rx_eapol_frame": "b64:AgMAXwIAigAQAAAAAAAAAAHnAp6GEuUmDLS/IgFxK7DnIsvRa7R8YD/1AK/bZPXS1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "status": "processed",
+              "@time": 11281078468750
+            },
+            "5527": {
+              "tx_eapol_frame": "b64:AgMAdQIBCgAAAAAAAAAAAAHquHrth8MMgNqeKd827W/lB9fcg4Bz8PqF5FMwXbPbXwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+UUlzSN8K8ioyWVPK7KIPAAWMBQBAAAPrAQBAAAPrAQBAAAPrAIMAA==",
+              "@time": 11281078503416
+            },
+            "5528": {
+              "rx_eapol_frame": "b64:AgMAXwIAigAQAAAAAAAAAALCIOMhu8Mk0ScA3ve+EfOlA6qqqP+RSP0kzqTs8PsjYQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "status": "processed",
+              "@time": 11281088330083
+            },
+            "5529": {
+              "@time": 11281088364333,
+              "tx_eapol_frame": "b64:AgMAdQIBCgAAAAAAAAAAAALruHrth8MMgNqeKd827W/lB9fcg4Bz8PqF5FMwXbPbXwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+oZru9qotsyIb35cPKsBwwAWMBQBAAAPrAQBAAAPrAQBAAAPrAIMAA=="
+            },
+            "5530": {
+              "@time": 11281288501791,
+              "tx_eapol_frame": "b64:AgMAdQIBCgAAAAAAAAAAAALruHrth8MMgNqeKd827W/lB9fcg4Bz8PqF5FMwXbPbXwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+oZru9qotsyIb35cPKsBwwAWMBQBAAAPrAQBAAAPrAQBAAAPrAIMAA=="
+            },
+            "5531": {
+              "@time": 11281488603666,
+              "tx_eapol_frame": "b64:AgMAdQIBCgAAAAAAAAAAAALruHrth8MMgNqeKd827W/lB9fcg4Bz8PqF5FMwXbPbXwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+oZru9qotsyIb35cPKsBwwAWMBQBAAAPrAQBAAAPrAQBAAAPrAIMAA=="
+            },
+                                               "5532": {
+              "rx_eapol_frame": "b64:AgMAXwIAigAQAAAAAAAAAAFMgl26zDnylTfYdiYo/lwuiOahr7NDAotpJ3aHNueBzgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "@time": 11297489415041,
+              "status": "processed"
+            },
+            "5533": {
+              "tx_eapol_frame": "b64:AgMAdQIBCgAAAAAAAAAAAAEkerUIa7Jz3WSNUJI6sj1RAea0f6+fMqQKQ/kFF9ejogAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAj3EMpTfHK9oys7lgqA+l7gAWMBQBAAAPrAQBAAAPrAQBAAAPrAIMAA==",
+              "@time": 11297489448833
+            },
+            "5534": {
+              "rx_eapol_frame": "b64:AgMAXwIAigAQAAAAAAAAAAJwOmCbPwbNkQoXf5QiGasjsU8tuGHF2brhc+qev+ECHQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "@time": 11297504407333,
+              "status": "processed"
+            },
+            "5535": {
+              "@time": 11297504441833,
+              "tx_eapol_frame": "b64:AgMAdQIBCgAAAAAAAAAAAAIlerUIa7Jz3WSNUJI6sj1RAea0f6+fMqQKQ/kFF9ejogAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADcAtK7G33x4UnUIXPFWRogAWMBQBAAAPrAQBAAAPrAQBAAAPrAIMAA=="
+            },
+            "5536": {
+              "status": "processed",
+              "@time": 11297568498000,
+              "rx_eapol_frame": "b64:AgMAXwIAigAQAAAAAAAAAANwOmCbPwbNkQoXf5QiGasjsU8tuGHF2brhc+qev+ECHQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+            },
+            "5537": {
+              "tx_eapol_frame": "b64:AgMAdQIBCgAAAAAAAAAAAAMlerUIa7Jz3WSNUJI6sj1RAea0f6+fMqQKQ/kFF9ejogAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVsm9xSZck+A2GwitQrMhhgAWMBQBAAAPrAQBAAAPrAQBAAAPrAIMAA==",
+              "@time": 11297568530250
+            },
+            "5538": {
+              "@time": 11297581466291,
+              "rx_eapol_frame": "b64:AgMAXwIAigAQAAAAAAAAAARwOmCbPwbNkQoXf5QiGasjsU8tuGHF2brhc+qev+ECHQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "status": "processed"
+            },
+            "5539": {
+              "@time": 11297581500541,
+              "tx_eapol_frame": "b64:AgMAdQIBCgAAAAAAAAAAAAQlerUIa7Jz3WSNUJI6sj1RAea0f6+fMqQKQ/kFF9ejogAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAXGm3rIkYx+E3VbGABRejpQAWMBQBAAAPrAQBAAAPrAQBAAAPrAIMAA=="
+            },
+            "5540": {
+              "status": "processed",
+              "@time": 11297597036458,
+              "rx_eapol_frame": "b64:AgMAlwITygAQAAAAAAAAAAVwOmCbPwbNkQoXf5QiGasjsU8tuGHF2brhc+qev+ECHQAAAAAAAAAAAAAAAAAAAAD83BUAAAAAAAAAAAAAAAAAwNNQHISZk6hCRfvHNKzTiQA4pZxvoSXZQQh0AgbbiYemglSnv4u7Ppb6Qy1ndQZjhozb0qpfuZKrJvNt6ZItx7Ux4ifHarF/pwM="
+            },
+            "5541": {
+              "tx_eapol_frame": "b64:AgMAXwIDCgAAAAAAAAAAAAUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqfCs4nhlAv4w+RjcNnk3TgAA",
+              "@time": 11297597070541
+            }
+        }"#,
+        );
     }
 
     #[test]
