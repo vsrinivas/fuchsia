@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 
   // Start the DriverTestRealm with correct arguments.
   fidl::Arena arena;
-  auto wire_result = client.Start(fuchsia_driver_test::wire::RealmArgs(arena));
+  auto wire_result = client->Start(fuchsia_driver_test::wire::RealmArgs(arena));
   if (wire_result.status() != ZX_OK) {
     FX_LOGF(ERROR, "driver_test_realm_test", "Failed to call to Realm:Start: %d",
             wire_result.status());

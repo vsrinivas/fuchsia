@@ -16,7 +16,7 @@ int main() {
   auto client = fidl::BindSyncClient(std::move(*client_end));
 
   fidl::Arena arena;
-  auto wire_result = client.Start(fuchsia_driver_test::wire::RealmArgs(arena));
+  auto wire_result = client->Start(fuchsia_driver_test::wire::RealmArgs(arena));
   if (wire_result.status() != ZX_OK) {
     FX_LOGF(ERROR, "simple_driver_test_realm", "Failed to call to Realm:Start: %d",
             wire_result.status());
