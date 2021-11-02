@@ -15,6 +15,11 @@ kernel_cmdline("serial-legacy") {
   deps = [ "//build/validate:non_production_tag" ]
 }
 
+kernel_cmdline("disable-blobfs-compression") {
+  args = [ "blobfs.write-compression-algorithm=UNCOMPRESSED" ]
+  deps = [ "//build/validate:non_production_tag" ]
+}
+
 kernel_cmdline("pmm-checker") {
   args = [
     # Enable PMM checker to detect certain kinds of buffer overrun and
