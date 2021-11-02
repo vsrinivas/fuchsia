@@ -727,7 +727,7 @@ func (n *nic) DeliverNetworkPacket(remote, local tcpip.LinkAddress, protocol tcp
 
 	networkEndpoint, ok := n.networkEndpoints[protocol]
 	if !ok {
-		n.stats.unknownL3ProtocolRcvdPackets.Increment()
+		n.stats.unknownL3ProtocolRcvdPacketCounts.Increment(uint64(protocol))
 		return
 	}
 
@@ -827,30 +827,15 @@ func (n *nic) deliverOutboundPacket(remote tcpip.LinkAddress, pkt *PacketBuffer)
 func (n *nic) DeliverTransportPacket(protocol tcpip.TransportProtocolNumber, pkt *PacketBuffer) TransportPacketDisposition {
 	state, ok := n.stack.transportProtocols[protocol]
 	if !ok {
-		n.stats.unknownL4ProtocolRcvdPackets.Increment()
+		n.stats.unknownL4ProtocolRcvdPacketCounts.Increment(uint64(protocol))
 		return TransportPacketProtocolUnreachable
 	}
 
 	transProto := state.proto
 
-	// TransportHeader is empty only when pkt is an ICMP packet or was reassembled
-	// from fragments.
 	if pkt.TransportHeader().View().IsEmpty() {
-		// ICMP packets don't have their TransportHeader fields set yet, parse it
-		// here. See icmp/protocol.go:protocol.Parse for a full explanation.
-		if protocol == header.ICMPv4ProtocolNumber || protocol == header.ICMPv6ProtocolNumber {
-			// ICMP packets may be longer, but until icmp.Parse is implemented, here
-			// we parse it using the minimum size.
-			if _, ok := pkt.TransportHeader().Consume(transProto.MinimumPacketSize()); !ok {
-				n.stats.malformedL4RcvdPackets.Increment()
-				// We consider a malformed transport packet handled because there is
-				// nothing the caller can do.
-				return TransportPacketHandled
-			}
-		} else if !transProto.Parse(pkt) {
-			n.stats.malformedL4RcvdPackets.Increment()
-			return TransportPacketHandled
-		}
+		n.stats.malformedL4RcvdPackets.Increment()
+		return TransportPacketHandled
 	}
 
 	srcPort, dstPort, err := transProto.ParsePorts(pkt.TransportHeader().View())

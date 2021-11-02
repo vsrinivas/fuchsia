@@ -177,15 +177,15 @@ func (impl *statCounterInspectImpl) ListChildren() []string {
 		if len(field.PkgPath) != 0 {
 			continue
 		}
-		// Avoid inspecting any field that implements statCounter.
-		if field.Type.Kind() == reflect.Struct && !field.Type.Implements(statCounterType) && !reflect.PtrTo(field.Type).Implements(statCounterType) {
+
+		if _, ok := extractIntegralStatCounterMap(impl.value.Field(i)); ok {
+			children = append(children, field.Name)
+		} else if field.Type.Kind() == reflect.Struct && !field.Type.Implements(statCounterType) && !reflect.PtrTo(field.Type).Implements(statCounterType) {
 			if field.Anonymous {
 				children = append(children, (&statCounterInspectImpl{value: impl.value.Field(i)}).ListChildren()...)
 			} else {
 				children = append(children, field.Name)
 			}
-		} else if impl.isIntegralStatCounterMap(impl.value.Field(i)) {
-			children = append(children, field.Name)
 		}
 	}
 	return children
@@ -198,15 +198,14 @@ func (impl *statCounterInspectImpl) GetChild(childName string) inspectInner {
 			return nil
 		}
 		if child := impl.value.FieldByName(childName); child.IsValid() {
-			if typ.Type.Kind() == reflect.Struct {
-				return &statCounterInspectImpl{
+			if counterMap, ok := extractIntegralStatCounterMap(child); ok {
+				return &integralStatCounterMapInspectImpl{
 					name:  childName,
-					value: child,
+					value: counterMap,
 				}
 			}
-
-			if impl.isIntegralStatCounterMap(child) {
-				return &integralStatCounterMapInspectImpl{
+			if typ.Type.Kind() == reflect.Struct {
+				return &statCounterInspectImpl{
 					name:  childName,
 					value: child,
 				}
@@ -216,19 +215,15 @@ func (impl *statCounterInspectImpl) GetChild(childName string) inspectInner {
 	return nil
 }
 
-func (*statCounterInspectImpl) isIntegralStatCounterMap(value reflect.Value) bool {
-	if value.Kind() != reflect.Map {
-		return false
-	}
-	if value.Type().Elem() != reflect.TypeOf((*tcpip.StatCounter)(nil)) {
-		return false
-	}
-	switch value.Type().Key().Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+func extractIntegralStatCounterMap(value reflect.Value) (*tcpip.IntegralStatCounterMap, bool) {
+	switch t := value.Interface().(type) {
+	case *tcpip.IntegralStatCounterMap:
+		return t, true
+	case tcpip.IntegralStatCounterMap:
+		return &t, true
 	default:
-		return false
+		return nil, false
 	}
-	return true
 }
 
 var _ inspectInner = (*logEntryInspectImpl)(nil)
@@ -304,8 +299,10 @@ var _ inspectInner = (*integralStatCounterMapInspectImpl)(nil)
 
 type integralStatCounterMapInspectImpl struct {
 	name  string
-	value reflect.Value
+	value *tcpip.IntegralStatCounterMap
 }
+
+const integralStatMapTotalFieldName = "Total"
 
 func (impl *integralStatCounterMapInspectImpl) ReadData() inspect.Object {
 	return inspect.Object{
@@ -315,82 +312,50 @@ func (impl *integralStatCounterMapInspectImpl) ReadData() inspect.Object {
 
 func (impl *integralStatCounterMapInspectImpl) ListChildren() []string {
 	var children []string
-	iter := impl.value.MapRange()
-	for iter.Next() {
-		var fmtKey string
-		switch key := iter.Key(); key.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			fmtKey = strconv.FormatInt(key.Int(), 10)
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			fmtKey = strconv.FormatUint(key.Uint(), 10)
-		default:
-			panic(fmt.Sprintf("stat counter map contained key with non-integral kind: %s", key.Kind()))
-		}
-		children = append(children, fmtKey)
+	children = append(children, integralStatMapTotalFieldName)
+	for _, key := range impl.value.Keys() {
+		children = append(children, strconv.FormatUint(key, 10))
 	}
 	return children
 }
 
 func (impl *integralStatCounterMapInspectImpl) GetChild(childName string) inspectInner {
-	if key, err := func() (reflect.Value, error) {
-		keyType := impl.value.Type().Key()
-		keyKind := keyType.Kind()
-		bitSize := func() int {
-			switch keyKind {
-			case reflect.Int8, reflect.Uint8:
-				return 8
-			case reflect.Int16, reflect.Uint16:
-				return 16
-			case reflect.Int32, reflect.Uint32:
-				return 32
-			case reflect.Int64, reflect.Uint64:
-				return 64
-			case reflect.Int, reflect.Uint:
-				return strconv.IntSize
-			default:
-				panic(fmt.Sprintf("stat counter map contained key with non-integral kind: %s", keyKind))
+	if childName == integralStatMapTotalFieldName {
+		var total uint64
+		for _, key := range impl.value.Keys() {
+			if counter, ok := impl.value.Get(key); ok {
+				total += counter.Value()
 			}
-		}()
-
-		keyValue := reflect.New(keyType)
-		switch keyKind {
-		case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
-			key, err := strconv.ParseInt(childName, 10, bitSize)
-			keyValue.Elem().SetInt(key)
-			return keyValue.Elem(), err
-		case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
-			key, err := strconv.ParseUint(childName, 10, bitSize)
-			keyValue.Elem().SetUint(key)
-			return keyValue.Elem(), err
-		default:
-			panic(fmt.Sprintf("stat counter map contained key with non-integral kind: %s", keyType.Kind()))
 		}
-	}(); err == nil {
-		if counter := impl.value.MapIndex(key); counter.IsValid() {
-			if typedCounter, ok := counter.Interface().(*tcpip.StatCounter); ok {
+		return &singleStatCounterInspectImpl{
+			name:  childName,
+			value: total,
+		}
+	} else {
+		if key, err := strconv.ParseUint(childName, 10, 64); err == nil {
+			if counter, ok := impl.value.Get(key); ok {
 				return &singleStatCounterInspectImpl{
 					name:  childName,
-					value: typedCounter,
+					value: counter.Value(),
 				}
 			}
 		}
+		return nil
 	}
-
-	return nil
 }
 
 var _ inspectInner = (*singleStatCounterInspectImpl)(nil)
 
 type singleStatCounterInspectImpl struct {
 	name  string
-	value *tcpip.StatCounter
+	value uint64
 }
 
 func (impl *singleStatCounterInspectImpl) ReadData() inspect.Object {
 	return inspect.Object{
 		Name: impl.name,
 		Properties: []inspect.Property{
-			{Key: "Count", Value: inspect.PropertyValueWithStr(strconv.FormatUint(impl.value.Value(), 10))},
+			{Key: "Count", Value: inspect.PropertyValueWithStr(strconv.FormatUint(impl.value, 10))},
 		},
 	}
 }

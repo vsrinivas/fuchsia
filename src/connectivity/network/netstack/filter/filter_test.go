@@ -37,10 +37,6 @@ func TestFilterUpdates(t *testing.T) {
 		cmpopts.IgnoreUnexported(filterDisabledNICMatcher{}),
 	}
 
-	defaultTables := stack.DefaultTables(0x5eed)
-	defaultV4Table := defaultTables.GetTable(stack.FilterID, false /* ipv6 */)
-	defaultV6Table := defaultTables.GetTable(stack.FilterID, true /* ipv6 */)
-
 	ipv4Addr1Bytes := [4]uint8{10}
 	const ipv4Addr1Prefix = 8
 	ipv4Subnet1 := net.Subnet{
@@ -88,12 +84,19 @@ func TestFilterUpdates(t *testing.T) {
 	var emptyFilterDisabledNICMatcher filterDisabledNICMatcher
 	emptyFilterDisabledNICMatcher.init()
 
+	defaultV4Table := func(defaultTables *stack.IPTables) stack.Table {
+		return defaultTables.GetTable(stack.FilterID, false /* ipv6 */)
+	}
+	defaultV6Table := func(defaultTables *stack.IPTables) stack.Table {
+		return defaultTables.GetTable(stack.FilterID, true /* ipv6 */)
+	}
+
 	tests := []struct {
 		name    string
 		rules   []filter.Rule
 		result  filter.FilterUpdateRulesResult
-		v4Table stack.Table
-		v6Table stack.Table
+		v4Table func(*stack.IPTables) stack.Table
+		v6Table func(*stack.IPTables) stack.Table
 	}{
 		{
 			name:    "empty",
@@ -145,143 +148,147 @@ func TestFilterUpdates(t *testing.T) {
 				},
 			},
 			result: filter.FilterUpdateRulesResultWithResponse(filter.FilterUpdateRulesResponse{}),
-			v4Table: stack.Table{
-				Rules: []stack.Rule{
-					// Initial Accept for non input/output hooks.
-					{
-						Target: &stack.AcceptTarget{},
-					},
+			v4Table: func(*stack.IPTables) stack.Table {
+				return stack.Table{
+					Rules: []stack.Rule{
+						// Initial Accept for non input/output hooks.
+						{
+							Target: &stack.AcceptTarget{},
+						},
 
-					// Input chain.
-					{
-						// Don't run filters on an interface with filters disabled.
-						Matchers: []stack.Matcher{
-							&emptyFilterDisabledNICMatcher,
+						// Input chain.
+						{
+							// Don't run filters on an interface with filters disabled.
+							Matchers: []stack.Matcher{
+								&emptyFilterDisabledNICMatcher,
+							},
+							Target: &stack.AcceptTarget{},
 						},
-						Target: &stack.AcceptTarget{},
-					},
-					{
-						Filter: stack.IPHeaderFilter{
-							Protocol:      tcp.ProtocolNumber,
-							CheckProtocol: true,
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:      tcp.ProtocolNumber,
+								CheckProtocol: true,
+							},
+							Matchers: []stack.Matcher{
+								NewTCPSourcePortMatcher(1, 2),
+								NewTCPDestinationPortMatcher(3, 4),
+							},
+							Target: &stack.DropTarget{},
 						},
-						Matchers: []stack.Matcher{
-							NewTCPSourcePortMatcher(1, 2),
-							NewTCPDestinationPortMatcher(3, 4),
+						{
+							Target: &stack.AcceptTarget{},
 						},
-						Target: &stack.DropTarget{},
-					},
-					{
-						Target: &stack.AcceptTarget{},
-					},
 
-					// Output chain.
-					{
-						// Don't run filters on an interface with filters disabled.
-						Matchers: []stack.Matcher{
-							&emptyFilterDisabledNICMatcher,
+						// Output chain.
+						{
+							// Don't run filters on an interface with filters disabled.
+							Matchers: []stack.Matcher{
+								&emptyFilterDisabledNICMatcher,
+							},
+							Target: &stack.AcceptTarget{},
 						},
-						Target: &stack.AcceptTarget{},
-					},
-					{
-						Filter: stack.IPHeaderFilter{
-							Protocol:      icmp.ProtocolNumber4,
-							CheckProtocol: true,
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:      icmp.ProtocolNumber4,
+								CheckProtocol: true,
+							},
+							Matchers: nil,
+							Target:   &stack.DropTarget{},
 						},
-						Matchers: nil,
-						Target:   &stack.DropTarget{},
-					},
-					{
-						Filter: stack.IPHeaderFilter{
-							Protocol:      udp.ProtocolNumber,
-							CheckProtocol: true,
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:      udp.ProtocolNumber,
+								CheckProtocol: true,
+							},
+							Matchers: []stack.Matcher{
+								NewUDPSourcePortMatcher(9, 10),
+								NewUDPDestinationPortMatcher(11, 12),
+							},
+							Target: &stack.AcceptTarget{},
 						},
-						Matchers: []stack.Matcher{
-							NewUDPSourcePortMatcher(9, 10),
-							NewUDPDestinationPortMatcher(11, 12),
+						{
+							Target: &stack.AcceptTarget{},
 						},
-						Target: &stack.AcceptTarget{},
 					},
-					{
-						Target: &stack.AcceptTarget{},
+					BuiltinChains: [stack.NumHooks]int{
+						stack.Prerouting:  0,
+						stack.Input:       1,
+						stack.Forward:     0,
+						stack.Output:      4,
+						stack.Postrouting: 0,
 					},
-				},
-				BuiltinChains: [stack.NumHooks]int{
-					stack.Prerouting:  0,
-					stack.Input:       1,
-					stack.Forward:     0,
-					stack.Output:      4,
-					stack.Postrouting: 0,
-				},
+				}
 			},
-			v6Table: stack.Table{
-				Rules: []stack.Rule{
-					// Initial Accept for non input/output hooks.
-					{
-						Target: &stack.AcceptTarget{},
-					},
+			v6Table: func(*stack.IPTables) stack.Table {
+				return stack.Table{
+					Rules: []stack.Rule{
+						// Initial Accept for non input/output hooks.
+						{
+							Target: &stack.AcceptTarget{},
+						},
 
-					// Input chain.
-					{
-						// Don't run filters on an interface with filters disabled.
-						Matchers: []stack.Matcher{
-							&emptyFilterDisabledNICMatcher,
+						// Input chain.
+						{
+							// Don't run filters on an interface with filters disabled.
+							Matchers: []stack.Matcher{
+								&emptyFilterDisabledNICMatcher,
+							},
+							Target: &stack.AcceptTarget{},
 						},
-						Target: &stack.AcceptTarget{},
-					},
-					{
-						Filter: stack.IPHeaderFilter{
-							Protocol:      tcp.ProtocolNumber,
-							CheckProtocol: true,
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:      tcp.ProtocolNumber,
+								CheckProtocol: true,
+							},
+							Matchers: []stack.Matcher{
+								NewTCPSourcePortMatcher(1, 2),
+								NewTCPDestinationPortMatcher(3, 4),
+							},
+							Target: &stack.DropTarget{},
 						},
-						Matchers: []stack.Matcher{
-							NewTCPSourcePortMatcher(1, 2),
-							NewTCPDestinationPortMatcher(3, 4),
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:      icmp.ProtocolNumber6,
+								CheckProtocol: true,
+							},
+							Matchers: nil,
+							Target:   &stack.AcceptTarget{},
 						},
-						Target: &stack.DropTarget{},
-					},
-					{
-						Filter: stack.IPHeaderFilter{
-							Protocol:      icmp.ProtocolNumber6,
-							CheckProtocol: true,
+						{
+							Target: &stack.AcceptTarget{},
 						},
-						Matchers: nil,
-						Target:   &stack.AcceptTarget{},
-					},
-					{
-						Target: &stack.AcceptTarget{},
-					},
 
-					// Output chain.
-					{
-						// Don't run filters on an interface with filters disabled.
-						Matchers: []stack.Matcher{
-							&emptyFilterDisabledNICMatcher,
+						// Output chain.
+						{
+							// Don't run filters on an interface with filters disabled.
+							Matchers: []stack.Matcher{
+								&emptyFilterDisabledNICMatcher,
+							},
+							Target: &stack.AcceptTarget{},
 						},
-						Target: &stack.AcceptTarget{},
-					},
-					{
-						Filter: stack.IPHeaderFilter{
-							Protocol:      udp.ProtocolNumber,
-							CheckProtocol: true,
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:      udp.ProtocolNumber,
+								CheckProtocol: true,
+							},
+							Matchers: []stack.Matcher{
+								NewUDPSourcePortMatcher(9, 10),
+								NewUDPDestinationPortMatcher(11, 12),
+							},
+							Target: &stack.AcceptTarget{},
 						},
-						Matchers: []stack.Matcher{
-							NewUDPSourcePortMatcher(9, 10),
-							NewUDPDestinationPortMatcher(11, 12),
+						{
+							Target: &stack.AcceptTarget{},
 						},
-						Target: &stack.AcceptTarget{},
 					},
-					{
-						Target: &stack.AcceptTarget{},
+					BuiltinChains: [stack.NumHooks]int{
+						stack.Prerouting:  0,
+						stack.Input:       1,
+						stack.Forward:     0,
+						stack.Output:      5,
+						stack.Postrouting: 0,
 					},
-				},
-				BuiltinChains: [stack.NumHooks]int{
-					stack.Prerouting:  0,
-					stack.Input:       1,
-					stack.Forward:     0,
-					stack.Output:      5,
-					stack.Postrouting: 0,
-				},
+				}
 			},
 		},
 		{
@@ -341,146 +348,150 @@ func TestFilterUpdates(t *testing.T) {
 				},
 			},
 			result: filter.FilterUpdateRulesResultWithResponse(filter.FilterUpdateRulesResponse{}),
-			v4Table: stack.Table{
-				Rules: []stack.Rule{
-					// Initial Accept for non input/output hooks.
-					{
-						Target: &stack.AcceptTarget{},
-					},
+			v4Table: func(*stack.IPTables) stack.Table {
+				return stack.Table{
+					Rules: []stack.Rule{
+						// Initial Accept for non input/output hooks.
+						{
+							Target: &stack.AcceptTarget{},
+						},
 
-					// Input chain.
-					{
-						// Don't run filters on an interface with filters disabled.
-						Matchers: []stack.Matcher{
-							&emptyFilterDisabledNICMatcher,
+						// Input chain.
+						{
+							// Don't run filters on an interface with filters disabled.
+							Matchers: []stack.Matcher{
+								&emptyFilterDisabledNICMatcher,
+							},
+							Target: &stack.AcceptTarget{},
 						},
-						Target: &stack.AcceptTarget{},
-					},
-					{
-						Filter: stack.IPHeaderFilter{
-							Protocol:      tcp.ProtocolNumber,
-							CheckProtocol: true,
-							Src:           ipv4TCPIPSubnet1.ID(),
-							SrcMask:       tcpip.Address(ipv4TCPIPSubnet1.Mask()),
-							SrcInvert:     false,
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:      tcp.ProtocolNumber,
+								CheckProtocol: true,
+								Src:           ipv4TCPIPSubnet1.ID(),
+								SrcMask:       tcpip.Address(ipv4TCPIPSubnet1.Mask()),
+								SrcInvert:     false,
+							},
+							Target: &stack.AcceptTarget{},
 						},
-						Target: &stack.AcceptTarget{},
-					},
-					{
-						Filter: stack.IPHeaderFilter{
-							Protocol:      icmp.ProtocolNumber4,
-							CheckProtocol: true,
-							Dst:           ipv4TCPIPSubnet2.ID(),
-							DstMask:       tcpip.Address(ipv4TCPIPSubnet2.Mask()),
-							DstInvert:     true,
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:      icmp.ProtocolNumber4,
+								CheckProtocol: true,
+								Dst:           ipv4TCPIPSubnet2.ID(),
+								DstMask:       tcpip.Address(ipv4TCPIPSubnet2.Mask()),
+								DstInvert:     true,
+							},
+							Target: &stack.DropTarget{},
 						},
-						Target: &stack.DropTarget{},
-					},
-					{
-						Target: &stack.AcceptTarget{},
-					},
+						{
+							Target: &stack.AcceptTarget{},
+						},
 
-					// Output chain.
-					{
-						// Don't run filters on an interface with filters disabled.
-						Matchers: []stack.Matcher{
-							&emptyFilterDisabledNICMatcher,
+						// Output chain.
+						{
+							// Don't run filters on an interface with filters disabled.
+							Matchers: []stack.Matcher{
+								&emptyFilterDisabledNICMatcher,
+							},
+							Target: &stack.AcceptTarget{},
 						},
-						Target: &stack.AcceptTarget{},
-					},
-					{
-						Filter: stack.IPHeaderFilter{
-							Src:       ipv4TCPIPSubnet1.ID(),
-							SrcMask:   tcpip.Address(ipv4TCPIPSubnet1.Mask()),
-							SrcInvert: false,
-							Dst:       ipv4TCPIPSubnet2.ID(),
-							DstMask:   tcpip.Address(ipv4TCPIPSubnet2.Mask()),
-							DstInvert: true,
+						{
+							Filter: stack.IPHeaderFilter{
+								Src:       ipv4TCPIPSubnet1.ID(),
+								SrcMask:   tcpip.Address(ipv4TCPIPSubnet1.Mask()),
+								SrcInvert: false,
+								Dst:       ipv4TCPIPSubnet2.ID(),
+								DstMask:   tcpip.Address(ipv4TCPIPSubnet2.Mask()),
+								DstInvert: true,
+							},
+							Target: &stack.DropTarget{},
 						},
-						Target: &stack.DropTarget{},
+						{
+							Target: &stack.AcceptTarget{},
+						},
 					},
-					{
-						Target: &stack.AcceptTarget{},
+					BuiltinChains: [stack.NumHooks]int{
+						stack.Prerouting:  0,
+						stack.Input:       1,
+						stack.Forward:     0,
+						stack.Output:      5,
+						stack.Postrouting: 0,
 					},
-				},
-				BuiltinChains: [stack.NumHooks]int{
-					stack.Prerouting:  0,
-					stack.Input:       1,
-					stack.Forward:     0,
-					stack.Output:      5,
-					stack.Postrouting: 0,
-				},
+				}
 			},
-			v6Table: stack.Table{
-				Rules: []stack.Rule{
-					// Initial Accept for non input/output hooks.
-					{
-						Target: &stack.AcceptTarget{},
-					},
+			v6Table: func(*stack.IPTables) stack.Table {
+				return stack.Table{
+					Rules: []stack.Rule{
+						// Initial Accept for non input/output hooks.
+						{
+							Target: &stack.AcceptTarget{},
+						},
 
-					// Input chain.
-					{
-						// Don't run filters on an interface with filters disabled.
-						Matchers: []stack.Matcher{
-							&emptyFilterDisabledNICMatcher,
+						// Input chain.
+						{
+							// Don't run filters on an interface with filters disabled.
+							Matchers: []stack.Matcher{
+								&emptyFilterDisabledNICMatcher,
+							},
+							Target: &stack.AcceptTarget{},
 						},
-						Target: &stack.AcceptTarget{},
-					},
-					{
-						Filter: stack.IPHeaderFilter{
-							Src:       ipv6TCPIPSubnet1.ID(),
-							SrcMask:   tcpip.Address(ipv6TCPIPSubnet1.Mask()),
-							SrcInvert: true,
-							Dst:       ipv6TCPIPSubnet2.ID(),
-							DstMask:   tcpip.Address(ipv6TCPIPSubnet2.Mask()),
-							DstInvert: false,
+						{
+							Filter: stack.IPHeaderFilter{
+								Src:       ipv6TCPIPSubnet1.ID(),
+								SrcMask:   tcpip.Address(ipv6TCPIPSubnet1.Mask()),
+								SrcInvert: true,
+								Dst:       ipv6TCPIPSubnet2.ID(),
+								DstMask:   tcpip.Address(ipv6TCPIPSubnet2.Mask()),
+								DstInvert: false,
+							},
+							Target: &stack.AcceptTarget{},
 						},
-						Target: &stack.AcceptTarget{},
-					},
-					{
-						Target: &stack.AcceptTarget{},
-					},
+						{
+							Target: &stack.AcceptTarget{},
+						},
 
-					// Output chain.
-					{
-						// Don't run filters on an interface with filters disabled.
-						Matchers: []stack.Matcher{
-							&emptyFilterDisabledNICMatcher,
+						// Output chain.
+						{
+							// Don't run filters on an interface with filters disabled.
+							Matchers: []stack.Matcher{
+								&emptyFilterDisabledNICMatcher,
+							},
+							Target: &stack.AcceptTarget{},
 						},
-						Target: &stack.AcceptTarget{},
-					},
-					{
-						Filter: stack.IPHeaderFilter{
-							Protocol:      udp.ProtocolNumber,
-							CheckProtocol: true,
-							Src:           ipv6TCPIPSubnet1.ID(),
-							SrcMask:       tcpip.Address(ipv6TCPIPSubnet1.Mask()),
-							SrcInvert:     true,
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:      udp.ProtocolNumber,
+								CheckProtocol: true,
+								Src:           ipv6TCPIPSubnet1.ID(),
+								SrcMask:       tcpip.Address(ipv6TCPIPSubnet1.Mask()),
+								SrcInvert:     true,
+							},
+							Matchers: nil,
+							Target:   &stack.DropTarget{},
 						},
-						Matchers: nil,
-						Target:   &stack.DropTarget{},
-					},
-					{
-						Filter: stack.IPHeaderFilter{
-							Protocol:      icmp.ProtocolNumber6,
-							CheckProtocol: true,
-							Dst:           ipv6TCPIPSubnet2.ID(),
-							DstMask:       tcpip.Address(ipv6TCPIPSubnet2.Mask()),
-							DstInvert:     false,
+						{
+							Filter: stack.IPHeaderFilter{
+								Protocol:      icmp.ProtocolNumber6,
+								CheckProtocol: true,
+								Dst:           ipv6TCPIPSubnet2.ID(),
+								DstMask:       tcpip.Address(ipv6TCPIPSubnet2.Mask()),
+								DstInvert:     false,
+							},
+							Target: &stack.AcceptTarget{},
 						},
-						Target: &stack.AcceptTarget{},
+						{
+							Target: &stack.AcceptTarget{},
+						},
 					},
-					{
-						Target: &stack.AcceptTarget{},
+					BuiltinChains: [stack.NumHooks]int{
+						stack.Prerouting:  0,
+						stack.Input:       1,
+						stack.Forward:     0,
+						stack.Output:      4,
+						stack.Postrouting: 0,
 					},
-				},
-				BuiltinChains: [stack.NumHooks]int{
-					stack.Prerouting:  0,
-					stack.Input:       1,
-					stack.Forward:     0,
-					stack.Output:      4,
-					stack.Postrouting: 0,
-				},
+				}
 			},
 		},
 		{
@@ -667,6 +678,11 @@ func TestFilterUpdates(t *testing.T) {
 				NetworkProtocols: []stack.NetworkProtocolFactory{ipv4.NewProtocol, ipv6.NewProtocol},
 			})
 
+			defaultTables := stack.DefaultTables(0x5eed, s.Clock())
+
+			expectedV4Table := test.v4Table(defaultTables)
+			expectedV6Table := test.v6Table(defaultTables)
+
 			f := New(s)
 			if got, want := f.updateRules(test.rules, 0), test.result; got != want {
 				t.Fatalf("got f.updateRules(_, 0) = %#v, want = %#v", got, want)
@@ -674,11 +690,11 @@ func TestFilterUpdates(t *testing.T) {
 
 			iptables := s.IPTables()
 			v4table := iptables.GetTable(stack.FilterID, false /* ipv6 */)
-			if diff := cmp.Diff(v4table, test.v4Table, cmpOpts...); diff != "" {
+			if diff := cmp.Diff(v4table, expectedV4Table, cmpOpts...); diff != "" {
 				t.Errorf("IPv4 filter table mispatch (-want +got):\n%s", diff)
 			}
 			v6table := iptables.GetTable(stack.FilterID, true /* ipv6 */)
-			if diff := cmp.Diff(v6table, test.v6Table, cmpOpts...); diff != "" {
+			if diff := cmp.Diff(v6table, expectedV6Table, cmpOpts...); diff != "" {
 				t.Errorf("IPv6 filter table mispatch (-want +got):\n%s", diff)
 			}
 		})

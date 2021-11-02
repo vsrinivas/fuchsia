@@ -91,9 +91,9 @@ type Client struct {
 }
 
 type PacketDiscardStats struct {
-	InvalidPort       map[uint16]*tcpip.StatCounter
-	InvalidTransProto map[tcpip.TransportProtocolNumber]*tcpip.StatCounter
-	InvalidPacketType map[tcpip.PacketType]*tcpip.StatCounter
+	InvalidPort       tcpip.IntegralStatCounterMap
+	InvalidTransProto tcpip.IntegralStatCounterMap
+	InvalidPacketType tcpip.IntegralStatCounterMap
 }
 
 // Stats collects DHCP statistics per client.
@@ -183,14 +183,10 @@ func NewClient(
 		acquire:            acquire,
 		now:                time.Now,
 		stateRecentHistory: util.MakeCircularLogs(stateRecentHistoryLength),
-		stats: Stats{
-			PacketDiscardStats: PacketDiscardStats{
-				InvalidPort:       make(map[uint16]*tcpip.StatCounter),
-				InvalidTransProto: make(map[tcpip.TransportProtocolNumber]*tcpip.StatCounter),
-				InvalidPacketType: make(map[tcpip.PacketType]*tcpip.StatCounter),
-			},
-		},
 	}
+	c.stats.PacketDiscardStats.InvalidPacketType.Init()
+	c.stats.PacketDiscardStats.InvalidTransProto.Init()
+	c.stats.PacketDiscardStats.InvalidPort.Init()
 	c.StoreInfo(&Info{
 		NICID:          nicid,
 		LinkAddr:       linkAddr,
@@ -1016,12 +1012,7 @@ func (c *Client) recv(
 		switch res.LinkPacketInfo.PktType {
 		case tcpip.PacketHost, tcpip.PacketBroadcast:
 		default:
-			counter, ok := c.stats.PacketDiscardStats.InvalidPacketType[res.LinkPacketInfo.PktType]
-			if !ok {
-				counter = new(tcpip.StatCounter)
-				c.stats.PacketDiscardStats.InvalidPacketType[res.LinkPacketInfo.PktType] = counter
-			}
-			counter.Increment()
+			c.stats.PacketDiscardStats.InvalidPacketType.Increment(uint64(res.LinkPacketInfo.PktType))
 			_ = syslog.DebugTf(
 				tag,
 				"PacketDiscardStats.InvalidPacketType[%d]++",
@@ -1063,12 +1054,7 @@ func (c *Client) recv(
 			continue
 		}
 		if ip.TransportProtocol() != header.UDPProtocolNumber {
-			counter, ok := c.stats.PacketDiscardStats.InvalidTransProto[ip.TransportProtocol()]
-			if !ok {
-				counter = new(tcpip.StatCounter)
-				c.stats.PacketDiscardStats.InvalidTransProto[ip.TransportProtocol()] = counter
-			}
-			counter.Increment()
+			c.stats.PacketDiscardStats.InvalidTransProto.Increment(uint64(ip.TransportProtocol()))
 			_ = syslog.DebugTf(
 				tag,
 				"PacketDiscardStats.InvalidTransProto[%d]++",
@@ -1091,12 +1077,7 @@ func (c *Client) recv(
 			continue
 		}
 		if udp.DestinationPort() != ClientPort {
-			counter, ok := c.stats.PacketDiscardStats.InvalidPort[udp.DestinationPort()]
-			if !ok {
-				counter = new(tcpip.StatCounter)
-				c.stats.PacketDiscardStats.InvalidPort[udp.DestinationPort()] = counter
-			}
-			counter.Increment()
+			c.stats.PacketDiscardStats.InvalidPort.Increment(uint64(udp.DestinationPort()))
 			_ = syslog.DebugTf(
 				tag,
 				"PacketDiscardStats.InvalidPort[%d]++",

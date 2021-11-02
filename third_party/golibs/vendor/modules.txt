@@ -341,7 +341,7 @@ google.golang.org/protobuf/types/pluginpb
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit
 gopkg.in/yaml.v2
-# gvisor.dev/gvisor v0.0.0-20211008004512-89e1ae16f759
+# gvisor.dev/gvisor v0.0.0-20211102011804-04d474e716e0
 ## explicit
 gvisor.dev/gvisor/pkg/atomicbitops
 gvisor.dev/gvisor/pkg/buffer
@@ -378,6 +378,7 @@ gvisor.dev/gvisor/pkg/tcpip/stack
 gvisor.dev/gvisor/pkg/tcpip/transport
 gvisor.dev/gvisor/pkg/tcpip/transport/icmp
 gvisor.dev/gvisor/pkg/tcpip/transport/internal/network
+gvisor.dev/gvisor/pkg/tcpip/transport/internal/noop
 gvisor.dev/gvisor/pkg/tcpip/transport/packet
 gvisor.dev/gvisor/pkg/tcpip/transport/raw
 gvisor.dev/gvisor/pkg/tcpip/transport/tcp

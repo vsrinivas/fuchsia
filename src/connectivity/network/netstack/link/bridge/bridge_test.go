@@ -661,11 +661,20 @@ func TestBridge(t *testing.T) {
 					}
 
 					for name, s := range stacks {
+						sumCounts := func(counterMap *tcpip.IntegralStatCounterMap) uint64 {
+							var sum uint64
+							for _, key := range counterMap.Keys() {
+								if counter, ok := counterMap.Get(key); ok {
+									sum += counter.Value()
+								}
+							}
+							return sum
+						}
 						stats := s.Stats()
-						if n := stats.NICs.UnknownL3ProtocolRcvdPackets.Value(); n != 0 {
+						if n := sumCounts(stats.NICs.UnknownL3ProtocolRcvdPacketCounts); n != 0 {
 							t.Errorf("stack %s received %d UnknownL3ProtocolRcvdPackets", name, n)
 						}
-						if n := stats.NICs.UnknownL4ProtocolRcvdPackets.Value(); n != 0 {
+						if n := sumCounts(stats.NICs.UnknownL4ProtocolRcvdPacketCounts); n != 0 {
 							t.Errorf("stack %s received %d UnknownL4ProtocolRcvdPackets", name, n)
 						}
 						if n := stats.NICs.MalformedL4RcvdPackets.Value(); n != 0 {

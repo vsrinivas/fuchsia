@@ -238,7 +238,7 @@ type Options struct {
 	// DefaultIPTables is an optional iptables rules constructor that is called
 	// if IPTables is nil. If both fields are nil, iptables will allow all
 	// traffic.
-	DefaultIPTables func(uint32) *IPTables
+	DefaultIPTables func(seed uint32, clock tcpip.Clock) *IPTables
 
 	// SecureRNG is a cryptographically secure random number generator.
 	SecureRNG io.Reader
@@ -358,7 +358,7 @@ func New(opts Options) *Stack {
 		if opts.DefaultIPTables == nil {
 			opts.DefaultIPTables = DefaultTables
 		}
-		opts.IPTables = opts.DefaultIPTables(seed)
+		opts.IPTables = opts.DefaultIPTables(seed, clock)
 	}
 
 	opts.NUDConfigs.resetInvalidFields()
@@ -1865,12 +1865,6 @@ const (
 // ParsePacketBufferTransport parses the provided packet buffer's transport
 // header.
 func (s *Stack) ParsePacketBufferTransport(protocol tcpip.TransportProtocolNumber, pkt *PacketBuffer) ParseResult {
-	// ICMP packets don't have their TransportHeader fields set yet, parse it
-	// here. See icmp/protocol.go:protocol.Parse for a full explanation.
-	if protocol == header.ICMPv4ProtocolNumber || protocol == header.ICMPv6ProtocolNumber {
-		return ParsedOK
-	}
-
 	pkt.TransportProtocolNumber = protocol
 	// Parse the transport header if present.
 	state, ok := s.transportProtocols[protocol]

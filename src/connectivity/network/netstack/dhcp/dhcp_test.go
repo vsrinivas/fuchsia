@@ -1254,21 +1254,24 @@ func TestClientDropsIrrelevantFrames(t *testing.T) {
 			return 0
 		}
 
-		nullableCounterValue := func(counter *tcpip.StatCounter) uint64 {
-			if counter == nil {
-				return 0
-			}
-			return counter.Value()
+		expectInvalidPort := tc.clientPort != ClientPort
+		var gotInvalidPortCount uint64
+		if got, ok := c.stats.PacketDiscardStats.InvalidPort.Get(uint64(tc.clientPort)); ok {
+			gotInvalidPortCount = got.Value()
 		}
 
-		expectInvalidPort := tc.clientPort != ClientPort
-		if got := c.stats.PacketDiscardStats.InvalidPort[tc.clientPort]; nullableCounterValue(got) != boolToInt(expectInvalidPort) {
-			t.Errorf("acquire(...) got discarded packet count (invalid port): %d, want: %d", nullableCounterValue(got), boolToInt(expectInvalidPort))
+		if gotInvalidPortCount != boolToInt(expectInvalidPort) {
+			t.Errorf("acquire(...) got discarded packet count (invalid port): %d, want: %d", gotInvalidPortCount, boolToInt(expectInvalidPort))
 		}
 
 		expectInvalidTransProto := tc.transportProto != header.UDPProtocolNumber
-		if got := c.stats.PacketDiscardStats.InvalidTransProto[tc.transportProto]; nullableCounterValue(got) != boolToInt(expectInvalidTransProto) {
-			t.Errorf("acquire(...) got discarded packet count (invalid transport protocol number): %d, want: %d", nullableCounterValue(got), boolToInt(expectInvalidTransProto))
+		var gotInvalidTransProtoCount uint64
+		if got, ok := c.stats.PacketDiscardStats.InvalidTransProto.Get(uint64(tc.transportProto)); ok {
+			gotInvalidTransProtoCount = got.Value()
+		}
+
+		if gotInvalidTransProtoCount != boolToInt(expectInvalidTransProto) {
+			t.Errorf("acquire(...) got discarded packet count (invalid transport protocol number): %d, want: %d", gotInvalidTransProtoCount, boolToInt(expectInvalidTransProto))
 		}
 
 		if got := c.stats.RecvOffers.Value(); got != 0 {

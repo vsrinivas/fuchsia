@@ -230,8 +230,16 @@ async fn inspect_nic() -> Result {
                     UnreachableEntryLookups: 0u64,
                 },
                 MalformedL4RcvdPackets: 0u64,
-                UnknownL3ProtocolRcvdPackets: 0u64,
-                UnknownL4ProtocolRcvdPackets: 0u64,
+                UnknownL3ProtocolRcvdPacketCounts: {
+                    Total: {
+                        Count: "0"
+                    },
+                },
+                UnknownL4ProtocolRcvdPacketCounts: {
+                    Total: {
+                        Count: "0"
+                    },
+                },
             },
             "Network Endpoint Stats": {
                 ARP: contains {},
@@ -272,8 +280,16 @@ async fn inspect_nic() -> Result {
                     UnreachableEntryLookups: AnyProperty,
                 },
                 MalformedL4RcvdPackets: 0u64,
-                UnknownL3ProtocolRcvdPackets: 0u64,
-                UnknownL4ProtocolRcvdPackets: 0u64,
+                UnknownL3ProtocolRcvdPacketCounts: {
+                    Total: {
+                        Count: "0"
+                    },
+                },
+                UnknownL4ProtocolRcvdPacketCounts: {
+                    Total: {
+                        Count: "0"
+                    },
+                },
             },
             "Ethernet Info": {
                 Filepath: "",
@@ -336,8 +352,16 @@ async fn inspect_nic() -> Result {
                     UnreachableEntryLookups: AnyProperty,
                 },
                 MalformedL4RcvdPackets: 0u64,
-                UnknownL3ProtocolRcvdPackets: 0u64,
-                UnknownL4ProtocolRcvdPackets: 0u64,
+                UnknownL3ProtocolRcvdPacketCounts: {
+                    Total: {
+                        Count: "0"
+                    },
+                },
+                UnknownL4ProtocolRcvdPacketCounts: {
+                    Total: {
+                        Count: "0"
+                    },
+                },
             },
             "Network Device Info": {
                 TxDrops: AnyProperty,
@@ -557,6 +581,7 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
     const INVALID_TRANS_PROTO_STAT_NAME: &str = "InvalidTransProto";
     const INVALID_PACKET_TYPE_STAT_NAME: &str = "InvalidPacketType";
     const COUNTER_PROPERTY_NAME: &str = "Count";
+    const TOTAL_COUNTER_NAME: &str = "Total";
     let path = ["Stats", "DHCP Info", &eth.id().to_string(), "NICs"];
 
     let mut invalid_ports = HashMap::<NonZeroU16, u64>::new();
@@ -573,21 +598,37 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
 
     let mut invalid_port_assertion = TreeAssertion::new(INVALID_PORT_STAT_NAME, true);
     let mut invalid_trans_proto_assertion = TreeAssertion::new(INVALID_TRANS_PROTO_STAT_NAME, true);
-    let invalid_packet_type_assertion = TreeAssertion::new(INVALID_PACKET_TYPE_STAT_NAME, true);
+    let mut invalid_packet_type_assertion = TreeAssertion::new(INVALID_PACKET_TYPE_STAT_NAME, true);
+    let mut total_packet_type_assertion = TreeAssertion::new(TOTAL_COUNTER_NAME, true);
+    let () = total_packet_type_assertion
+        .add_property_assertion(COUNTER_PROPERTY_NAME, Box::new(0.to_string()));
+    let () = invalid_packet_type_assertion.add_child_assertion(total_packet_type_assertion);
 
+    let mut total_port = 0;
     for (port, count) in invalid_ports {
         let mut port_assertion = TreeAssertion::new(&port.to_string(), true);
         let () = port_assertion
             .add_property_assertion(COUNTER_PROPERTY_NAME, Box::new(count.to_string()));
+        total_port += count;
         let () = invalid_port_assertion.add_child_assertion(port_assertion);
     }
+    let mut total_port_assertion = TreeAssertion::new(TOTAL_COUNTER_NAME, true);
+    let () = total_port_assertion
+        .add_property_assertion(COUNTER_PROPERTY_NAME, Box::new(total_port.to_string()));
+    let () = invalid_port_assertion.add_child_assertion(total_port_assertion);
 
+    let mut total_trans_proto = 0;
     for (proto, count) in invalid_trans_protos {
         let mut trans_proto_assertion = TreeAssertion::new(&proto.to_string(), true);
         let () = trans_proto_assertion
             .add_property_assertion(COUNTER_PROPERTY_NAME, Box::new(count.to_string()));
+        total_trans_proto += count;
         let () = invalid_trans_proto_assertion.add_child_assertion(trans_proto_assertion);
     }
+    let mut total_trans_proto_assertion = TreeAssertion::new(TOTAL_COUNTER_NAME, true);
+    let () = total_trans_proto_assertion
+        .add_property_assertion(COUNTER_PROPERTY_NAME, Box::new(total_trans_proto.to_string()));
+    let () = invalid_trans_proto_assertion.add_child_assertion(total_trans_proto_assertion);
 
     let mut discard_stats_assertion = TreeAssertion::new(DISCARD_STATS_NAME, true);
     let () = discard_stats_assertion.add_child_assertion(invalid_port_assertion);
@@ -801,8 +842,6 @@ async fn inspect_stat_counters() {
         },
         NICs: {
             MalformedL4RcvdPackets: AnyProperty,
-            UnknownL3ProtocolRcvdPackets: AnyProperty,
-            UnknownL4ProtocolRcvdPackets: AnyProperty,
             DisabledRx: {
                 Bytes: AnyProperty,
                 Packets: AnyProperty,
@@ -817,6 +856,16 @@ async fn inspect_stat_counters() {
             Tx: {
                 Bytes: AnyProperty,
                 Packets: AnyProperty,
+            },
+            UnknownL3ProtocolRcvdPacketCounts: {
+                Total: {
+                    Count: "0"
+                },
+            },
+            UnknownL4ProtocolRcvdPacketCounts: {
+                Total: {
+                    Count: "0"
+                },
             },
         },
         TCP: {

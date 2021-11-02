@@ -14,7 +14,7 @@ func (t *tuple) StateFields() []string {
 	return []string{
 		"tupleEntry",
 		"conn",
-		"direction",
+		"reply",
 		"tupleID",
 	}
 }
@@ -26,7 +26,7 @@ func (t *tuple) StateSave(stateSinkObject state.Sink) {
 	t.beforeSave()
 	stateSinkObject.Save(0, &t.tupleEntry)
 	stateSinkObject.Save(1, &t.conn)
-	stateSinkObject.Save(2, &t.direction)
+	stateSinkObject.Save(2, &t.reply)
 	stateSinkObject.Save(3, &t.tupleID)
 }
 
@@ -36,7 +36,7 @@ func (t *tuple) afterLoad() {}
 func (t *tuple) StateLoad(stateSourceObject state.Source) {
 	stateSourceObject.Load(0, &t.tupleEntry)
 	stateSourceObject.Load(1, &t.conn)
-	stateSourceObject.Load(2, &t.direction)
+	stateSourceObject.Load(2, &t.reply)
 	stateSourceObject.Load(3, &t.tupleID)
 }
 
@@ -90,7 +90,8 @@ func (cn *conn) StateFields() []string {
 		"original",
 		"reply",
 		"finalized",
-		"manip",
+		"sourceManip",
+		"destinationManip",
 		"tcb",
 		"lastUsed",
 	}
@@ -101,15 +102,14 @@ func (cn *conn) beforeSave() {}
 // +checklocksignore
 func (cn *conn) StateSave(stateSinkObject state.Sink) {
 	cn.beforeSave()
-	var lastUsedValue unixTime
-	lastUsedValue = cn.saveLastUsed()
-	stateSinkObject.SaveValue(6, lastUsedValue)
 	stateSinkObject.Save(0, &cn.ct)
 	stateSinkObject.Save(1, &cn.original)
 	stateSinkObject.Save(2, &cn.reply)
 	stateSinkObject.Save(3, &cn.finalized)
-	stateSinkObject.Save(4, &cn.manip)
-	stateSinkObject.Save(5, &cn.tcb)
+	stateSinkObject.Save(4, &cn.sourceManip)
+	stateSinkObject.Save(5, &cn.destinationManip)
+	stateSinkObject.Save(6, &cn.tcb)
+	stateSinkObject.Save(7, &cn.lastUsed)
 }
 
 func (cn *conn) afterLoad() {}
@@ -120,9 +120,10 @@ func (cn *conn) StateLoad(stateSourceObject state.Source) {
 	stateSourceObject.Load(1, &cn.original)
 	stateSourceObject.Load(2, &cn.reply)
 	stateSourceObject.Load(3, &cn.finalized)
-	stateSourceObject.Load(4, &cn.manip)
-	stateSourceObject.Load(5, &cn.tcb)
-	stateSourceObject.LoadValue(6, new(unixTime), func(y interface{}) { cn.loadLastUsed(y.(unixTime)) })
+	stateSourceObject.Load(4, &cn.sourceManip)
+	stateSourceObject.Load(5, &cn.destinationManip)
+	stateSourceObject.Load(6, &cn.tcb)
+	stateSourceObject.Load(7, &cn.lastUsed)
 }
 
 func (ct *ConnTrack) StateTypeName() string {
@@ -132,15 +133,19 @@ func (ct *ConnTrack) StateTypeName() string {
 func (ct *ConnTrack) StateFields() []string {
 	return []string{
 		"seed",
+		"clock",
 		"buckets",
 	}
 }
+
+func (ct *ConnTrack) beforeSave() {}
 
 // +checklocksignore
 func (ct *ConnTrack) StateSave(stateSinkObject state.Sink) {
 	ct.beforeSave()
 	stateSinkObject.Save(0, &ct.seed)
-	stateSinkObject.Save(1, &ct.buckets)
+	stateSinkObject.Save(1, &ct.clock)
+	stateSinkObject.Save(2, &ct.buckets)
 }
 
 func (ct *ConnTrack) afterLoad() {}
@@ -148,7 +153,8 @@ func (ct *ConnTrack) afterLoad() {}
 // +checklocksignore
 func (ct *ConnTrack) StateLoad(stateSourceObject state.Source) {
 	stateSourceObject.Load(0, &ct.seed)
-	stateSourceObject.Load(1, &ct.buckets)
+	stateSourceObject.Load(1, &ct.clock)
+	stateSourceObject.Load(2, &ct.buckets)
 }
 
 func (bkt *bucket) StateTypeName() string {
@@ -174,34 +180,6 @@ func (bkt *bucket) afterLoad() {}
 // +checklocksignore
 func (bkt *bucket) StateLoad(stateSourceObject state.Source) {
 	stateSourceObject.Load(0, &bkt.tuples)
-}
-
-func (u *unixTime) StateTypeName() string {
-	return "pkg/tcpip/stack.unixTime"
-}
-
-func (u *unixTime) StateFields() []string {
-	return []string{
-		"second",
-		"nano",
-	}
-}
-
-func (u *unixTime) beforeSave() {}
-
-// +checklocksignore
-func (u *unixTime) StateSave(stateSinkObject state.Sink) {
-	u.beforeSave()
-	stateSinkObject.Save(0, &u.second)
-	stateSinkObject.Save(1, &u.nano)
-}
-
-func (u *unixTime) afterLoad() {}
-
-// +checklocksignore
-func (u *unixTime) StateLoad(stateSourceObject state.Source) {
-	stateSourceObject.Load(0, &u.second)
-	stateSourceObject.Load(1, &u.nano)
 }
 
 func (it *IPTables) StateTypeName() string {
@@ -1265,7 +1243,6 @@ func init() {
 	state.Register((*conn)(nil))
 	state.Register((*ConnTrack)(nil))
 	state.Register((*bucket)(nil))
-	state.Register((*unixTime)(nil))
 	state.Register((*IPTables)(nil))
 	state.Register((*Table)(nil))
 	state.Register((*Rule)(nil))
