@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
   auto client = fidl::BindSyncClient(std::move(*client_end));
 
   fidl::Arena allocator;
-  auto response = client.Start(fdt::wire::RealmArgs(allocator));
+  auto response = client->Start(fdt::wire::RealmArgs(allocator));
   if (response.status() != ZX_OK) {
     return 1;
   }
