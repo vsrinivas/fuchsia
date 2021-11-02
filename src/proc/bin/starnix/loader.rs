@@ -7,13 +7,13 @@ use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
 use std::sync::Arc;
 
-use crate::errno;
 use crate::from_status_like_fdio;
 use crate::fs::FileHandle;
 use crate::logging::*;
 use crate::mm::*;
 use crate::task::*;
 use crate::types::*;
+use crate::{errno, error};
 
 fn populate_initial_stack(
     stack_vmo: &zx::Vmo,
@@ -89,8 +89,8 @@ fn populate_initial_stack(
 
 struct LoadedElf {
     headers: elf_parse::Elf64Headers,
-    base: usize,
-    bias: usize,
+    file_base: usize,
+    vaddr_bias: usize,
     vmo: zx::Vmo,
 }
 
@@ -143,12 +143,18 @@ fn load_elf(task: &Task, elf: &FileHandle, mm: &MemoryManager) -> Result<LoadedE
     let vmo = elf.get_vmo(task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
     let headers = elf_parse::Elf64Headers::from_vmo(&vmo).map_err(elf_parse_error_to_errno)?;
     let elf_info = elf_load::loaded_elf_info(&headers);
-    let base = mm.get_random_base(elf_info.high - elf_info.low).ptr();
-    let bias = base.wrapping_sub(elf_info.low);
+    let file_base = match headers.file_header().elf_type() {
+        Ok(elf_parse::ElfType::SharedObject) => {
+            mm.get_random_base(elf_info.high - elf_info.low).ptr()
+        }
+        Ok(elf_parse::ElfType::Executable) => elf_info.low,
+        _ => return error!(EINVAL),
+    };
+    let vaddr_bias = file_base.wrapping_sub(elf_info.low);
     let mapper = Mapper { file: &elf, mm };
-    elf_load::map_elf_segments(&vmo, &headers, &mapper, mm.base_addr.ptr(), bias)
+    elf_load::map_elf_segments(&vmo, &headers, &mapper, mm.base_addr.ptr(), vaddr_bias)
         .map_err(elf_load_error_to_errno)?;
-    Ok(LoadedElf { headers, base, bias, vmo })
+    Ok(LoadedElf { headers, file_base, vaddr_bias, vmo })
 }
 
 pub struct ThreadStartInfo {
@@ -193,8 +199,9 @@ pub fn load_executable(
     };
 
     let entry_elf = (&interp_elf).as_ref().unwrap_or(&main_elf);
-    let entry =
-        UserAddress::from_ptr(entry_elf.headers.file_header().entry.wrapping_add(entry_elf.bias));
+    let entry = UserAddress::from_ptr(
+        entry_elf.headers.file_header().entry.wrapping_add(entry_elf.vaddr_bias),
+    );
 
     // TODO(tbodt): implement MAP_GROWSDOWN and then reset this to 1 page. The current value of
     // this is based on adding 0x1000 each time a segfault appears.
@@ -221,11 +228,11 @@ pub fn load_executable(
         (AT_EUID, creds.euid as u64),
         (AT_GID, creds.gid as u64),
         (AT_EGID, creds.egid as u64),
-        (AT_BASE, interp_elf.map_or(0, |interp| interp.base as u64)),
+        (AT_BASE, interp_elf.map_or(0, |interp| interp.file_base as u64)),
         (AT_PAGESZ, *PAGE_SIZE),
-        (AT_PHDR, main_elf.bias.wrapping_add(main_elf.headers.file_header().phoff) as u64),
+        (AT_PHDR, main_elf.file_base.wrapping_add(main_elf.headers.file_header().phoff) as u64),
         (AT_PHNUM, main_elf.headers.file_header().phnum as u64),
-        (AT_ENTRY, main_elf.bias.wrapping_add(main_elf.headers.file_header().entry) as u64),
+        (AT_ENTRY, main_elf.vaddr_bias.wrapping_add(main_elf.headers.file_header().entry) as u64),
         (AT_SECURE, 0),
     ];
     let stack = populate_initial_stack(&stack_vmo, argv, environ, auxv, stack_base, stack)?;

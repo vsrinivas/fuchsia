@@ -228,7 +228,9 @@ impl Validate for Elf64FileHeader {
         if self.machine() != Ok(CURRENT_ARCH) {
             return Err(ElfParseError::InvalidFileHeader("Invalid ELF architecture"));
         }
-        if self.elf_type() != Ok(ElfType::SharedObject) {
+        if self.elf_type() != Ok(ElfType::SharedObject)
+            && self.elf_type() != Ok(ElfType::Executable)
+        {
             return Err(ElfParseError::InvalidFileHeader(
                 "Invalid or unsupported ELF type, only ET_DYN is supported",
             ));
