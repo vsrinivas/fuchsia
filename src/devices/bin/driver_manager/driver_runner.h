@@ -10,6 +10,7 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fit/function.h>
 #include <lib/fpromise/promise.h>
 #include <lib/inspect/cpp/inspect.h>
@@ -74,6 +75,34 @@ enum class Collection {
   kPackage,
 };
 
+// TODO(fxbug.dev/66150): Once FIDL wire types support a Clone() method,
+// stop encoding and decoding messages as a workaround.
+template <typename T>
+class OwnedMessage {
+ public:
+  static std::unique_ptr<OwnedMessage<T>> From(T& message) {
+    fidl::OwnedEncodedMessage<T> encoded(&message);
+    ZX_ASSERT_MSG(encoded.ok(), "Failed to encode: %s", encoded.FormatDescription().data());
+    return std::make_unique<OwnedMessage>(encoded);
+  }
+
+  T& get() { return *decoded_.PrimaryObject(); }
+
+ private:
+  friend std::unique_ptr<OwnedMessage<T>> std::make_unique<OwnedMessage<T>>(
+      fidl::OwnedEncodedMessage<T>&);
+
+  explicit OwnedMessage(fidl::OwnedEncodedMessage<T>& encoded)
+      : converted_(encoded.GetOutgoingMessage()),
+        decoded_(fidl::internal::kLLCPPEncodedWireFormatVersion,
+                 std::move(converted_.incoming_message())) {
+    ZX_ASSERT_MSG(decoded_.ok(), "Failed to decode: %s", decoded_.FormatDescription().c_str());
+  }
+
+  fidl::OutgoingToIncomingMessage converted_;
+  fidl::DecodedMessage<T> decoded_;
+};
+
 class DriverBinder {
  public:
   virtual ~DriverBinder() = default;
@@ -86,13 +115,15 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
              public fidl::WireServer<fuchsia_driver_framework::Node>,
              public std::enable_shared_from_this<Node> {
  public:
+  using OwnedOffer = std::unique_ptr<OwnedMessage<fuchsia_component_decl::wire::Offer>>;
+
   Node(std::string_view name, std::vector<Node*> parents, DriverBinder* driver_binder,
        async_dispatcher_t* dispatcher);
   ~Node() override;
 
   const std::string& name() const;
   const std::vector<std::shared_ptr<Node>>& children() const;
-  std::vector<std::unique_ptr<fuchsia_component_decl::wire::Offer::DecodedMessage>>& offers() const;
+  std::vector<OwnedOffer>& offers() const;
   fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols() const;
   DriverHostComponent* driver_host() const;
 
@@ -124,7 +155,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   async_dispatcher_t* const dispatcher_;
 
   fidl::Arena<128> arena_;
-  std::vector<std::unique_ptr<fuchsia_component_decl::wire::Offer::DecodedMessage>> offers_;
+  std::vector<OwnedOffer> offers_;
   std::vector<fuchsia_driver_framework::wire::NodeSymbol> symbols_;
 
   Collection collection_ = Collection::kNone;

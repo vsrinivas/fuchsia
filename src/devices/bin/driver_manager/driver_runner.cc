@@ -90,7 +90,7 @@ void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
     if (auto& offers = node->offers(); !offers.empty()) {
       std::vector<std::string_view> strings;
       for (auto& offer : offers) {
-        auto string = VisitOffer<std::string_view>(*offer->PrimaryObject(), inspect_decl);
+        auto string = VisitOffer<std::string_view>(offer->get(), inspect_decl);
         strings.push_back(string.value_or("unknown"));
       }
       root->CreateString("offers", fxl::JoinStrings(strings, ", "), &inspector);
@@ -287,8 +287,7 @@ const std::string& Node::name() const { return name_; }
 
 const std::vector<std::shared_ptr<Node>>& Node::children() const { return children_; }
 
-std::vector<std::unique_ptr<fuchsia_component_decl::wire::Offer::DecodedMessage>>& Node::offers()
-    const {
+std::vector<Node::OwnedOffer>& Node::offers() const {
   // TODO(fxbug.dev/66150): Once FIDL wire types support a Clone() method,
   // remove the const_cast.
   return const_cast<decltype(offers_)&>(offers_);
@@ -344,7 +343,7 @@ fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) c
     auto& parent_offers = parents_.size() == 1 ? offers() : parent->offers();
     node_offers.reserve(node_offers.size() + parent_offers.size());
     for (auto& parent_offer : parent_offers) {
-      auto& offer = *parent_offer->PrimaryObject();
+      fdecl::wire::Offer& offer = parent_offer->get();
       VisitOffer<bool>(offer, [this, &arena, source_node](auto& decl) mutable {
         // Assign the source of the offer.
         fdecl::wire::ChildRef source_ref{
@@ -505,16 +504,7 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
         return;
       }
 
-      // TODO(fxbug.dev/66150): Once FIDL wire types support a Clone() method,
-      // stop encoding and decoding messages as a workaround.
-      fdecl::wire::Offer::OwnedEncodedMessage encoded_message(&offer);
-      ZX_ASSERT_MSG(
-          encoded_message.ok(), "Failed to add Node '%.*s', an offer failed to encode: %s",
-          static_cast<int>(name.size()), name.data(), encoded_message.FormatDescription().data());
-      fidl::OutgoingToIncomingMessage converted_message(encoded_message.GetOutgoingMessage());
-      auto c_message = std::move(converted_message.incoming_message()).ReleaseToEncodedCMessage();
-      auto decoded_message = std::make_unique<fdecl::wire::Offer::DecodedMessage>(&c_message);
-      child->offers_.push_back(std::move(decoded_message));
+      child->offers_.push_back(OwnedMessage<fdecl::wire::Offer>::From(offer));
     }
   }
 
