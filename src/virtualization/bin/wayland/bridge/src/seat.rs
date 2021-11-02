@@ -58,7 +58,7 @@ impl Seat {
 
 pub struct InputDispatcher {
     // TODO(fxb/72068): Enable the 3 fields below for Flatland when we have proper
-    // input upport.
+    // input support.
     #[cfg(not(feature = "flatland"))]
     event_queue: EventQueue,
     #[cfg(not(feature = "flatland"))]
@@ -86,6 +86,13 @@ pub struct InputDispatcher {
 
     /// The current surface that has been advertised to have keyboard focus.
     pub keyboard_focus: Option<ObjectRef<Surface>>,
+
+    /// The current surface that is the source for incoming keyboard events.
+    /// This is the surface associated with the view that the native
+    /// input pipeline has given focus. This is different from the above
+    /// field as it will not change when we determine that a child view
+    /// should have focus.
+    pub keyboard_focus_source: Option<ObjectRef<Surface>>,
 }
 
 #[cfg(not(feature = "flatland"))]
@@ -143,6 +150,9 @@ impl InputDispatcher {
         if Some(surface) == self.keyboard_focus {
             self.keyboard_focus = None;
         }
+        if Some(surface) == self.keyboard_focus_source {
+            self.keyboard_focus_source = None;
+        }
     }
 }
 
@@ -155,6 +165,7 @@ impl InputDispatcher {
             touches: ObjectRefSet::new(),
             pointer_focus: None,
             keyboard_focus: None,
+            keyboard_focus_source: None,
         }
     }
 }
@@ -171,6 +182,7 @@ impl InputDispatcher {
             touches: ObjectRefSet::new(),
             pointer_focus: None,
             keyboard_focus: None,
+            keyboard_focus_source: None,
         }
     }
 
@@ -213,25 +225,19 @@ impl InputDispatcher {
 
     fn handle_focus_event(
         &mut self,
-        surface: ObjectRef<Surface>,
+        source: ObjectRef<Surface>,
+        target: ObjectRef<Surface>,
         focus: &FocusEvent,
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "InputDispatcher::handle_focus_event");
-        if focus.focused {
-            if let Some(current_focus) = self.keyboard_focus {
-                self.send_keyboard_leave(current_focus)?;
-            }
-            self.send_keyboard_enter(surface)?;
-            self.send_keyboard_modifiers(0)?;
-            self.keyboard_focus = Some(surface);
-            self.pressed_keys.clear();
-            self.modifiers = 0;
-        } else if self.keyboard_focus == Some(surface) {
-            // Send key leave on
-            self.send_keyboard_leave(surface)?;
-            self.keyboard_focus = None;
-        }
-        Ok(())
+        let keyboard_focus = if focus.focused {
+            self.keyboard_focus_source = Some(source);
+            Some(target)
+        } else {
+            self.keyboard_focus_source = None;
+            None
+        };
+        self.update_keyboard_focus(keyboard_focus)
     }
 
     fn handle_mouse_event(
@@ -360,13 +366,11 @@ impl InputDispatcher {
 
     pub fn handle_key_event(
         &mut self,
-        surface: ObjectRef<Surface>,
+        source: ObjectRef<Surface>,
         event: &KeyEvent,
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "InputDispatcher::handle_key_event");
-        // TODO(fxb/79741): Enable or remove this assert.
-        // assert!(self.has_focus(surface), "Received key event without focus!");
-        if self.has_focus(surface) {
+        if Some(source) == self.keyboard_focus_source && self.keyboard_focus.is_some() {
             let key = event.key.unwrap();
             let time = (event.timestamp.unwrap() / 1_000_000) as u32;
             match event.type_.unwrap() {
@@ -388,6 +392,40 @@ impl InputDispatcher {
                 self.send_keyboard_modifiers(modifiers)?;
                 self.modifiers = modifiers;
             }
+        }
+        Ok(())
+    }
+
+    fn update_keyboard_focus(
+        &mut self,
+        new_focus: Option<ObjectRef<Surface>>,
+    ) -> Result<(), Error> {
+        ftrace::duration!("wayland", "InputDispatcher::update_keyboard_focus");
+        if new_focus == self.keyboard_focus {
+            return Ok(());
+        }
+        if let Some(current_focus) = self.keyboard_focus {
+            self.send_keyboard_leave(current_focus)?;
+        }
+        if let Some(focus) = new_focus {
+            self.send_keyboard_enter(focus)?;
+            self.send_keyboard_modifiers(0)?;
+            self.keyboard_focus = Some(focus);
+            self.pressed_keys.clear();
+            self.modifiers = 0;
+        }
+        self.keyboard_focus = new_focus;
+        Ok(())
+    }
+
+    pub fn maybe_update_keyboard_focus(
+        &mut self,
+        source: ObjectRef<Surface>,
+        new_target: ObjectRef<Surface>,
+    ) -> Result<(), Error> {
+        ftrace::duration!("wayland", "InputDispatcher::maybe_update_keyboard_focus");
+        if Some(source) == self.keyboard_focus_source {
+            self.update_keyboard_focus(Some(new_target))?;
         }
         Ok(())
     }
@@ -487,7 +525,8 @@ impl InputDispatcher {
     /// space into the pixel space exposed to the client.
     pub fn handle_input_event(
         &mut self,
-        surface: ObjectRef<Surface>,
+        source_surface: ObjectRef<Surface>,
+        target_surface: ObjectRef<Surface>,
         event: &InputEvent,
         pointer_translation: (f32, f32),
         pixel_scale: (f32, f32),
@@ -504,7 +543,7 @@ impl InputDispatcher {
                 // delivered to whatever view the mouse cursor is over
                 // regardless of if a scenic Focus event has been sent.
                 self.update_pointer_focus(
-                    Some(surface),
+                    Some(target_surface),
                     pointer,
                     pointer_translation,
                     pixel_scale,
@@ -518,11 +557,11 @@ impl InputDispatcher {
                     "dispatch_event_to_client",
                     pointer_trace_hack(pointer.radius_major, pointer.radius_minor)
                 );
-                self.handle_touch_event(surface, pointer, pointer_translation, pixel_scale)?;
+                self.handle_touch_event(target_surface, pointer, pointer_translation, pixel_scale)?;
                 self.send_touch_frame()?;
             }
             InputEvent::Focus(focus) => {
-                self.handle_focus_event(surface, focus)?;
+                self.handle_focus_event(source_surface, target_surface, focus)?;
             }
             // TODO: Implement these.
             InputEvent::Pointer(_pointer) => {}

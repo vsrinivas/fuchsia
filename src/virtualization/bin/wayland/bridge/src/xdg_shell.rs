@@ -777,12 +777,16 @@ impl XdgSurface {
     ) {
         task_queue.post(move |client| {
             ftrace::duration!("wayland", "XdgSurface::handle_input_events");
+            let source_xdg_surface = this.get(client)?;
+            let source_surface_ref = source_xdg_surface.surface_ref;
             for event in &events {
+                // Hit-testing is used to determine the target for events with a location. Last
+                // XDG surface is used for all other events.
                 let target = if let Some((x, y)) = InputDispatcher::get_input_event_location(event)
                 {
                     Self::find_event_target(this, x, y, client)
                 } else {
-                    Some(this)
+                    Some(*client.xdg_surfaces.last().unwrap_or(&this))
                 };
                 if let Some(xdg_surface_ref) = target {
                     let xdg_surface = xdg_surface_ref.get(client)?;
@@ -808,6 +812,7 @@ impl XdgSurface {
                             (translation, pixel_scale)
                         };
                         client.input_dispatcher.handle_input_event(
+                            source_surface_ref,
                             surface_ref,
                             &event,
                             pointer_translation,
@@ -879,7 +884,6 @@ impl XdgSurface {
     }
 
     fn spawn_keyboard_listener(
-        this: ObjectRef<Self>,
         surface_ref: ObjectRef<Surface>,
         mut view_ref: ViewRef,
         task_queue: TaskQueue,
@@ -929,9 +933,15 @@ impl XdgSurface {
 
                         task_queue.post(move |client| {
                             if close {
-                                // Close the last added XDG surface.
-                                let xdg_surface_ref = client.xdg_surfaces.last().unwrap_or(&this);
-                                XdgSurface::close(*xdg_surface_ref, client)?;
+                                // Close focused XDG surface.
+                                for xdg_surface_ref in &client.xdg_surfaces {
+                                    let xdg_surface = xdg_surface_ref.get(client)?;
+                                    let surface_ref = xdg_surface.surface_ref;
+                                    if client.input_dispatcher.has_focus(surface_ref) {
+                                        XdgSurface::close(*xdg_surface_ref, client)?;
+                                        break;
+                                    }
+                                }
                             } else {
                                 client.input_dispatcher.handle_key_event(surface_ref, &event)?;
                             }
@@ -1119,7 +1129,6 @@ impl RequestReceiver<ZxdgPopupV6> for XdgPopup {
                     let popup = this.get(client)?;
                     (popup.surface_ref, popup.xdg_surface_ref)
                 };
-                client.xdg_surfaces.retain(|&x| x != xdg_surface_ref);
                 xdg_surface_ref.get(client)?.shutdown(client);
                 // We need to present here to commit the removal of our
                 // popup. This will inform our parent that our view has
@@ -1325,7 +1334,8 @@ impl XdgToplevel {
         if top_level.waiting_for_initial_commit {
             let xdg_surface_ref = top_level.xdg_surface_ref;
             let xdg_surface = xdg_surface_ref.get(client)?;
-            let surface = xdg_surface.surface_ref().get(client)?;
+            let surface_ref = xdg_surface.surface_ref();
+            let surface = surface_ref.get(client)?;
             let flatland = surface
                 .flatland()
                 .ok_or(format_err!("Unable to spawn view without a flatland instance"))?;
@@ -1442,7 +1452,6 @@ impl XdgToplevel {
                                 Some(String::from("Wayland View")),
                             );
                             XdgSurface::spawn_keyboard_listener(
-                                xdg_surface_ref,
                                 surface_ref,
                                 view_ref,
                                 task_queue.clone(),
@@ -1494,7 +1503,8 @@ impl XdgToplevel {
         if top_level.waiting_for_initial_commit {
             let xdg_surface_ref = top_level.xdg_surface_ref;
             let xdg_surface = xdg_surface_ref.get(client)?;
-            let surface = xdg_surface.surface_ref().get(client)?;
+            let surface_ref = xdg_surface.surface_ref();
+            let surface = surface_ref.get(client)?;
             let session =
                 surface.session().ok_or(format_err!("Unable to spawn view without a session."))?;
 
@@ -1529,7 +1539,15 @@ impl XdgToplevel {
             let top_level = this.get_mut(client)?;
             top_level.waiting_for_initial_commit = false;
             top_level.view_provider_controller = maybe_view_provider_control_handle;
-            XdgSurface::configure(top_level.xdg_surface_ref, client)?;
+            // Move keyboard focus to this XDG surface.
+            if let Some(xdg_root_surface_ref) = client.xdg_root_surface {
+                let xdg_root_surface = xdg_root_surface_ref.get(client)?;
+                let root_surface_ref = xdg_root_surface.surface_ref();
+                client
+                    .input_dispatcher
+                    .maybe_update_keyboard_focus(root_surface_ref, surface_ref)?;
+            }
+            XdgSurface::configure(xdg_surface_ref, client)?;
             client.xdg_surfaces.push(xdg_surface_ref);
         } else {
             let xdg_surface_ref = top_level.xdg_surface_ref;
@@ -1574,6 +1592,20 @@ impl RequestReceiver<ZxdgToplevelV6> for XdgToplevel {
                     (toplevel.surface_ref, toplevel.xdg_surface_ref)
                 };
                 client.xdg_surfaces.retain(|&x| x != xdg_surface_ref);
+                #[cfg(not(feature = "flatland"))]
+                if client.input_dispatcher.has_focus(surface_ref) {
+                    // Move keyboard focus to top-most XDG surface.
+                    if let Some(target_xdg_surface_ref) = client.xdg_surfaces.last() {
+                        // Safe to unwrap as root surface must be set if
+                        // we have an XDG surface.
+                        let source_xdg_surface_ref = client.xdg_root_surface.unwrap();
+                        let source_surface_ref = source_xdg_surface_ref.get(client)?.surface_ref;
+                        let target_surface_ref = target_xdg_surface_ref.get(client)?.surface_ref;
+                        client
+                            .input_dispatcher
+                            .maybe_update_keyboard_focus(source_surface_ref, target_surface_ref)?;
+                    }
+                }
                 xdg_surface_ref.get(client)?.shutdown(client);
                 // We need to present here to commit the removal of our
                 // toplevel. This will inform our parent that our view has
@@ -2115,7 +2147,7 @@ impl XdgSurfaceView {
                 max: gfx::Vec3 { x: self.logical_size.width, y: self.logical_size.height, z: 0.0 },
             },
             downward_input: true,
-            focus_change: true,
+            focus_change: false,
             inset_from_min: gfx::Vec3 { x: 0.0, y: 0.0, z: 0.0 },
             inset_from_max: gfx::Vec3 { x: 0.0, y: 0.0, z: 0.0 },
         };
