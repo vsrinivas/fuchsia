@@ -534,6 +534,7 @@ impl ChildProperties {
 ///
 /// Note that the root component in our imagined structure is actually unnamed when working with
 /// `RealmBuilder`. The name is generated when the component is created in a collection.
+#[derive(Debug)]
 pub struct RealmBuilder {
     realm_builder_proxy: ftest::RealmBuilderProxy,
     mocks_runner: mock::MocksRunner,
@@ -606,6 +607,9 @@ impl RealmBuilder {
             + 'static,
     {
         let moniker = moniker.into();
+        if self.contains(moniker.clone()).await? {
+            return Err(BuilderError::ComponentAlreadyExists(moniker).into());
+        }
         let mock_id = self
             .realm_builder_proxy
             .set_mock_component(&moniker.to_string())
@@ -631,6 +635,9 @@ impl RealmBuilder {
         properties: ChildProperties,
     ) -> Result<&Self, Error> {
         let moniker: Moniker = moniker.into();
+        if self.contains(moniker.clone()).await? {
+            return Err(BuilderError::ComponentAlreadyExists(moniker).into());
+        }
         self.realm_builder_proxy
             .set_component(&moniker.to_string(), &mut ftest::Component::Url(url.into()))
             .await?
@@ -653,6 +660,9 @@ impl RealmBuilder {
         properties: ChildProperties,
     ) -> Result<&Self, Error> {
         let moniker: Moniker = moniker.into();
+        if self.contains(moniker.clone()).await? {
+            return Err(BuilderError::ComponentAlreadyExists(moniker).into());
+        }
         self.realm_builder_proxy
             .set_component(
                 &moniker.to_string(),
@@ -678,6 +688,9 @@ impl RealmBuilder {
         properties: ChildProperties,
     ) -> Result<&Self, Error> {
         let moniker: Moniker = moniker.into();
+        if self.contains(moniker.clone()).await? {
+            return Err(BuilderError::ComponentAlreadyExists(moniker).into());
+        }
         self.realm_builder_proxy
             .set_component(
                 &moniker.to_string(),
@@ -1433,6 +1446,7 @@ mod tests {
         super::*,
         fidl_fuchsia_component as fcomponent,
         futures::{channel::oneshot, future::pending, lock::Mutex, select},
+        matches::assert_matches,
         std::sync::Arc,
     };
 
@@ -1451,6 +1465,42 @@ mod tests {
             let (sender, receiver) = oneshot::channel();
             (SendsOnDrop { sender: Some(sender) }, receiver)
         }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn double_add_a_component() {
+        let builder = RealmBuilder::new().await.unwrap();
+        builder
+            .add_child("a", "fuchsia-pkg://fuchsia.com/a#meta/a.cm", ChildProperties::new())
+            .await
+            .unwrap();
+
+        let res = builder
+            .add_child("a", "fuchsia-pkg://fuchsia.com/a#meta/a.cm", ChildProperties::new())
+            .await;
+        assert_matches!(
+            res,
+            Err(Error::Builder(BuilderError::ComponentAlreadyExists(m))) if m == "a".into()
+        );
+
+        let res = builder
+            .add_mock_child(
+                "a",
+                |_h: mock::MockHandles| async move { Ok(()) }.boxed(),
+                ChildProperties::new(),
+            )
+            .await;
+        assert_matches!(res, Err(Error::Builder(BuilderError::ComponentAlreadyExists(_))));
+
+        let res = builder
+            .add_legacy_child("a", "fuchsia-pkg://fuchsia.com/a#meta/a.cmx", ChildProperties::new())
+            .await;
+        assert_matches!(res, Err(Error::Builder(BuilderError::ComponentAlreadyExists(_))));
+
+        let res = builder
+            .add_child_from_decl("a", cm_rust::ComponentDecl::default(), ChildProperties::new())
+            .await;
+        assert_matches!(res, Err(Error::Builder(BuilderError::ComponentAlreadyExists(_))));
     }
 
     #[fasync::run_singlethreaded(test)]

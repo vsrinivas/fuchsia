@@ -112,6 +112,7 @@ impl From<ftest::MockComponentStartInfo> for MockHandles {
     }
 }
 
+#[derive(Debug)]
 pub struct MocksRunner {
     pub(crate) mocks: Arc<Mutex<HashMap<String, Mock>>>,
 

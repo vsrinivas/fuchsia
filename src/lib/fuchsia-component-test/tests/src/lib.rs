@@ -435,7 +435,7 @@ async fn altered_echo_client_args() -> Result<(), Error> {
 
     let builder = RealmBuilder::new().await?;
     builder
-        .add_child(Moniker::root(), "#meta/echo_realm.cm", ChildProperties::new())
+        .add_child("echo_client", V2_ECHO_CLIENT_RELATIVE_URL, ChildProperties::new())
         .await?
         .add_mock_child(
             "echo_server",
@@ -449,8 +449,6 @@ async fn altered_echo_client_args() -> Result<(), Error> {
             ChildProperties::new().eager(),
         )
         .await?;
-    // echo_realm already has the offer we need, but we still need to add this route so that
-    // the proper exposes are added to our mock component
     builder
         .add_route(
             RouteBuilder::protocol("fidl.examples.routing.echo.Echo")
