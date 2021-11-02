@@ -173,6 +173,10 @@ __EXPORT zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device,
   return device->ConnectToFidlProtocol(protocol_name, zx::channel(request), fragment_name);
 }
 
+__EXPORT async_dispatcher_t* device_get_dispatcher(zx_device_t* device) {
+  return device->dispatcher();
+}
+
 // Unsupported calls:
 __EXPORT
 zx_status_t device_open_protocol_session_multibindable(const zx_device_t* dev, uint32_t proto_id,
