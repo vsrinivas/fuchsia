@@ -106,7 +106,7 @@ TEST_F(PtyTestCase, Describe) {
 
   fidl::WireSyncClient<fuchsia_hardware_pty::Device> client;
   ASSERT_NO_FATAL_FAILURES(Connect(&client));
-  auto result = client.Describe();
+  auto result = client->Describe();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->info.is_tty());
 
@@ -137,7 +137,7 @@ TEST_F(PtyTestCase, Read) {
 
   fidl::WireSyncClient<fuchsia_hardware_pty::Device> client;
   ASSERT_NO_FATAL_FAILURES(Connect(&client));
-  auto result = client.Read(sizeof(kResponse));
+  auto result = client->Read(sizeof(kResponse));
   ASSERT_OK(result.status());
   ASSERT_EQ(result->data.count(), sizeof(kResponse));
   ASSERT_BYTES_EQ(result->data.data(), kResponse, sizeof(kResponse));
@@ -161,7 +161,7 @@ TEST_F(PtyTestCase, Write) {
 
   fidl::WireSyncClient<fuchsia_hardware_pty::Device> client;
   ASSERT_NO_FATAL_FAILURES(Connect(&client));
-  auto result = client.Write(fidl::VectorView<uint8_t>::FromExternal(kWrittenData));
+  auto result = client->Write(fidl::VectorView<uint8_t>::FromExternal(kWrittenData));
   ASSERT_OK(result.status());
   ASSERT_EQ(result->actual, sizeof(kWrittenData));
 
@@ -173,7 +173,7 @@ TEST_F(PtyTestCase, Write) {
 TEST_F(PtyTestCase, TtyOp) {
   fidl::WireSyncClient<fuchsia_hardware_pty::Device> client;
   ASSERT_NO_FATAL_FAILURES(Connect(&client));
-  auto result = client.GetWindowSize();
+  auto result = client->GetWindowSize();
   // Get peer closed, since our HandleFsSpecificMessage returned an error.
   ASSERT_STATUS(result.status(), ZX_ERR_PEER_CLOSED);
   // We should have seen an ordinal dispatch
