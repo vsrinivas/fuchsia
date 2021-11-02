@@ -116,7 +116,7 @@ int Info(SdioClient client) {
       {SdioDeviceCapabilities::kTypeD, "TYPE_D"},
   };
 
-  auto result = client.GetDevHwInfo();
+  auto result = client->GetDevHwInfo();
   if (!result.ok()) {
     fprintf(stderr, "FIDL call GetDevHwInfo failed: %d\n", result.status());
     return 1;
@@ -167,7 +167,7 @@ int Info(SdioClient client) {
 }
 
 int ReadByte(SdioClient client, uint32_t address, int argc, const char** argv) {
-  auto result = client.DoRwByte(false, address, 0);
+  auto result = client->DoRwByte(false, address, 0);
   if (!result.ok()) {
     fprintf(stderr, "FIDL call DoRwByte failed: %d\n", result.status());
     return 1;
@@ -193,7 +193,7 @@ int WriteByte(SdioClient client, uint32_t address, int argc, const char** argv) 
     return 1;
   }
 
-  auto result = client.DoRwByte(true, address, write_value);
+  auto result = client->DoRwByte(true, address, write_value);
   if (!result.ok()) {
     fprintf(stderr, "FIDL call DoRwByte failed: %d\n", result.status());
     return 1;
@@ -268,7 +268,7 @@ int ReadStress(SdioClient client, uint32_t address, int argc, const char** argv)
       txn.virt = fidl::VectorView<uint8_t>::FromExternal(buffer.get(), size);
     }
 
-    auto result = client.DoRwTxn(std::move(txn));
+    auto result = client->DoRwTxn(std::move(txn));
     if (!result.ok()) {
       fprintf(stderr, "FIDL call DoRwTxn failed: %d\n", result.status());
       return 1;
