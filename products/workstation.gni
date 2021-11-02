@@ -24,6 +24,7 @@ base_package_labels += [
   "//src/intl/intl_services:config",
   "//src/intl/intl_services:pkg",
   "//src/media/audio/bundles:services",
+  "//src/media/audio/drivers/configurator",
   "//src/power:battery",
   "//src/session/bundles:session_manager",
   "//src/sys/activity",
