@@ -139,17 +139,6 @@ async fn do_start(
         if let Some(res) =
             should_return_early(&state, &execution, &component.abs_moniker.to_partial())
         {
-            // Since we dispatched a start event, dispatch a stop event
-            // TODO(fxbug.dev/87507): It is possible this issues Stop after
-            // Destroyed is issued.
-            component
-                .hooks
-                .dispatch(&Event::new_with_timestamp(
-                    component,
-                    Ok(EventPayload::Stopped { status: zx::Status::OK }),
-                    start_context.pending_runtime.timestamp,
-                ))
-                .await?;
             return res;
         }
         start_context.pending_runtime.watch_for_exit(component.as_weak());
@@ -246,86 +235,4 @@ async fn make_execution_runtime(
     };
 
     Ok((runtime, start_info, controller_server))
-}
-
-#[cfg(test)]
-mod tests {
-    use {
-        crate::model::{
-            actions::{ActionSet, ShutdownAction, StartAction},
-            component::{BindReason, ComponentInstance},
-            error::ModelError,
-            hooks::{Event, EventType, Hook, HooksRegistration},
-            testing::{
-                test_helpers::{self, ActionsTest},
-                test_hook::Lifecycle,
-            },
-        },
-        async_trait::async_trait,
-        cm_rust_testing::ComponentDeclBuilder,
-        fuchsia,
-        moniker::PartialAbsoluteMoniker,
-        std::sync::{Arc, Weak},
-    };
-
-    struct StartHook {
-        component: Arc<ComponentInstance>,
-    }
-
-    #[async_trait]
-    impl Hook for StartHook {
-        async fn on(self: Arc<Self>, _event: &Event) -> Result<(), ModelError> {
-            ActionSet::register(self.component.clone(), ShutdownAction::new())
-                .await
-                .expect("shutdown failed");
-            Ok(())
-        }
-    }
-    #[fuchsia::test]
-    /// Validate that if a start action is issued and the component stops
-    /// the action completes we see a Stop event emitted.
-    async fn start_issues_stop() {
-        let child_name = "child";
-        let root_name = "root";
-        let components = vec![
-            (root_name, ComponentDeclBuilder::new().add_lazy_child(child_name).build()),
-            (child_name, test_helpers::component_decl_with_test_runner()),
-        ];
-        let test_topology = ActionsTest::new(components[0].0.clone(), components, None).await;
-
-        let child = test_topology.look_up(vec![child_name].into()).await;
-        let start_hook = Arc::new(StartHook { component: child.clone() });
-        child
-            .hooks
-            .install(vec![HooksRegistration::new(
-                "my_start_hook",
-                vec![EventType::Started],
-                Arc::downgrade(&start_hook) as Weak<dyn Hook>,
-            )])
-            .await;
-
-        match ActionSet::register(child.clone(), StartAction::new(BindReason::Unsupported)).await {
-            Err(ModelError::InstanceShutDown { moniker: m }) => {
-                assert_eq!(PartialAbsoluteMoniker::from(vec![child_name]), m);
-            }
-            e => panic!("Unexpected result from component start: {:?}", e),
-        }
-
-        let events: Vec<_> = test_topology
-            .test_hook
-            .lifecycle()
-            .into_iter()
-            .filter(|event| match event {
-                Lifecycle::Bind(_) | Lifecycle::Stop(_) => true,
-                _ => false,
-            })
-            .collect();
-        assert_eq!(
-            events,
-            vec![
-                Lifecycle::Bind(vec![format!("{}:0", child_name).as_str()].into()),
-                Lifecycle::Stop(vec![format!("{}:0", child_name).as_str()].into())
-            ]
-        );
-    }
 }
