@@ -113,7 +113,7 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
   uint64_t vendor_id() { return vendor_id_; }
 
   bool CheckForUnbind() {
-    primary_->Sync_Sync();
+    primary_->Flush_Sync();
     RunLoopUntilIdle();
     return async_handler_.unbind_info().has_value();
   }

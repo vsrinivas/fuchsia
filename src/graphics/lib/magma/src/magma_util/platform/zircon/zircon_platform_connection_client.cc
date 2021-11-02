@@ -443,11 +443,6 @@ void PrimaryWrapper::UpdateFlowControl(uint64_t new_bytes) {
   inflight_bytes_ += new_bytes;
 }
 
-magma_status_t PrimaryWrapper::Sync() {
-  auto result = client_->Sync_Sync();
-  return MagmaChannelStatus(result.status());
-}
-
 magma_status_t PrimaryWrapper::Flush() {
   auto result = client_->Flush_Sync();
   return MagmaChannelStatus(result.status());
@@ -638,11 +633,6 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
   magma_status_t Flush() override {
     DLOG("ZirconPlatformConnectionClient: Flush");
     return client_.Flush();
-  }
-
-  magma_status_t Sync() override {
-    DLOG("ZirconPlatformConnectionClient: Sync");
-    return client_.Sync();
   }
 
   magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,

@@ -994,19 +994,6 @@
         ]
       },
       {
-        "ordinal": 73,
-        "name": "magma_sync",
-        "type": "magma_status_t",
-        "description": "Incurs a round-trip to the system driver, used to ensure all previous messages are seen.",
-        "arguments": [
-          {
-            "name": "connection",
-            "type": "magma_connection_t",
-            "description": "An open connection."
-          }
-        ]
-      },
-      {
         "ordinal": 74,
         "name": "magma_execute_command_buffer_with_resources2",
         "type": "magma_status_t",

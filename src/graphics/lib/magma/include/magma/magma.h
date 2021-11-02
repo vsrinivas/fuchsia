@@ -546,13 +546,6 @@ magma_status_t magma_virt_get_image_info(
     magma_image_info_t* image_info_out);
 
 ///
-/// \brief Incurs a round-trip to the system driver, used to ensure all previous messages are seen.
-/// \param connection An open connection.
-///
-magma_status_t magma_sync(
-    magma_connection_t connection);
-
-///
 /// \brief Submits a command buffer for execution on the GPU, with associated resources.
 /// \param connection An open connection.
 /// \param context_id A valid context ID.

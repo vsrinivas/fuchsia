@@ -277,11 +277,6 @@ void ZirconPlatformConnection::Flush(FlushRequestView request, FlushCompleter::S
   completer.Reply();
 }
 
-void ZirconPlatformConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
-  DLOG("ZirconPlatformConnection: Sync");
-  completer.Reply();
-}
-
 void ZirconPlatformConnection::MapBufferGpu(MapBufferGpuRequestView request,
                                             MapBufferGpuCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: MapBufferGpuFIDL");

@@ -223,9 +223,6 @@ protocol Primary {
     /// observed, but not necessarily completed.
     Flush() -> ();
 
-    /// Deprecated.
-    Sync() -> ();
-
     /// Maps `page_count` pages of `buffer` from `page_offset` onto the GPU in the connection's
     /// address space at `gpu_va`.  `flags` is a set of flags from MapFlags that specify how the
     /// GPU can access the buffer.

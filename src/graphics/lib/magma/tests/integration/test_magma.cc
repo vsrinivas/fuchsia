@@ -1313,8 +1313,3 @@ TEST(Magma, Flush) {
   TestConnection connection;
   EXPECT_EQ(MAGMA_STATUS_OK, magma_flush(connection.connection()));
 }
-
-TEST(Magma, Sync) {
-  TestConnection connection;
-  EXPECT_EQ(MAGMA_STATUS_OK, magma_sync(connection.connection()));
-}

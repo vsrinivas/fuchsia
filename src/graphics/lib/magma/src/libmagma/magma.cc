@@ -85,11 +85,6 @@ magma_status_t magma_flush(magma_connection_t connection) {
   return magma::PlatformConnectionClient::cast(connection)->Flush();
 }
 
-// Deprecated.
-magma_status_t magma_sync(magma_connection_t connection) {
-  return magma::PlatformConnectionClient::cast(connection)->Sync();
-}
-
 magma_status_t magma_create_context(magma_connection_t connection, uint32_t* context_id_out) {
   return magma::PlatformConnectionClient::cast(connection)->CreateContext(context_id_out);
 }

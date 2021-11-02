@@ -49,8 +49,6 @@ magma_status_t magma_get_error(magma_connection_t connection) { return MAGMA_STA
 
 magma_status_t magma_flush(magma_connection_t connection) { return MAGMA_STATUS_OK; }
 
-magma_status_t magma_sync(magma_connection_t connection) { return MAGMA_STATUS_OK; }
-
 magma_status_t magma_query(int32_t fd, uint64_t id, uint64_t* value_out) {
   switch (id) {
     case MAGMA_QUERY_DEVICE_ID:
