@@ -559,12 +559,12 @@ TEST_F(AmlG12TdmDaiTest, ClientCloseDaiChannel) {
 
   auto endpoints2 = fidl::CreateEndpoints<fuchsia_hardware_audio::Dai>();
   auto client_wrap = fidl::BindSyncClient(std::move(endpoints->client));
-  ASSERT_OK(client_wrap.Connect(std::move(endpoints2->server)));
+  ASSERT_OK(client_wrap->Connect(std::move(endpoints2->server)));
   auto client = fidl::BindSyncClient(std::move(endpoints2->client));
 
-  auto supported_formats_ring_buffer = client.GetRingBufferFormats();
+  auto supported_formats_ring_buffer = client->GetRingBufferFormats();
   ASSERT_OK(supported_formats_ring_buffer.status());
-  auto supported_formats_dai = client.GetDaiFormats();
+  auto supported_formats_dai = client->GetDaiFormats();
   ASSERT_OK(supported_formats_dai.status());
   auto endpoints3 = fidl::CreateEndpoints<fuchsia_hardware_audio::RingBuffer>();
   ASSERT_OK(endpoints3.status_value());
@@ -572,7 +572,8 @@ TEST_F(AmlG12TdmDaiTest, ClientCloseDaiChannel) {
   fuchsia_hardware_audio::wire::Format ring_buffer_format(allocator);
   ring_buffer_format.set_pcm_format(allocator, GetDefaultPcmFormat());
   fuchsia_hardware_audio::wire::DaiFormat dai_format = GetDefaultDaiFormat();
-  ASSERT_OK(client.CreateRingBuffer(dai_format, ring_buffer_format, std::move(endpoints3->server)));
+  ASSERT_OK(
+      client->CreateRingBuffer(dai_format, ring_buffer_format, std::move(endpoints3->server)));
 
   auto vmo =
       fidl::WireCall<fuchsia_hardware_audio::RingBuffer>(endpoints3->client)->GetVmo(8192, 0);
@@ -582,7 +583,7 @@ TEST_F(AmlG12TdmDaiTest, ClientCloseDaiChannel) {
   ASSERT_OK(start_time.status());
 
   // Close DAI channel.
-  client.client_end().reset();
+  client = {};
 
   dai->WaitUntilStopped();
   dai.release();  // Managed by the DDK.
@@ -609,12 +610,12 @@ TEST_F(AmlG12TdmDaiTest, ClientCloseRingBufferChannel) {
 
   auto endpoints2 = fidl::CreateEndpoints<fuchsia_hardware_audio::Dai>();
   auto client_wrap = fidl::BindSyncClient(std::move(endpoints->client));
-  ASSERT_OK(client_wrap.Connect(std::move(endpoints2->server)));
+  ASSERT_OK(client_wrap->Connect(std::move(endpoints2->server)));
   auto client = fidl::BindSyncClient(std::move(endpoints2->client));
 
-  auto supported_formats_ring_buffer = client.GetRingBufferFormats();
+  auto supported_formats_ring_buffer = client->GetRingBufferFormats();
   ASSERT_OK(supported_formats_ring_buffer.status());
-  auto supported_formats_dai = client.GetDaiFormats();
+  auto supported_formats_dai = client->GetDaiFormats();
   ASSERT_OK(supported_formats_dai.status());
   auto endpoints3 = fidl::CreateEndpoints<fuchsia_hardware_audio::RingBuffer>();
   ASSERT_OK(endpoints3.status_value());
@@ -622,7 +623,8 @@ TEST_F(AmlG12TdmDaiTest, ClientCloseRingBufferChannel) {
   fuchsia_hardware_audio::wire::Format ring_buffer_format(allocator);
   ring_buffer_format.set_pcm_format(allocator, GetDefaultPcmFormat());
   fuchsia_hardware_audio::wire::DaiFormat dai_format = GetDefaultDaiFormat();
-  ASSERT_OK(client.CreateRingBuffer(dai_format, ring_buffer_format, std::move(endpoints3->server)));
+  ASSERT_OK(
+      client->CreateRingBuffer(dai_format, ring_buffer_format, std::move(endpoints3->server)));
 
   auto vmo =
       fidl::WireCall<fuchsia_hardware_audio::RingBuffer>(endpoints3->client)->GetVmo(8192, 0);
