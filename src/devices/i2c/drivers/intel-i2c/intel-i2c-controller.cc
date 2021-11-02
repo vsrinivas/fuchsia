@@ -265,7 +265,7 @@ zx_status_t IntelI2cController::I2cImplTransact(const uint32_t bus_id, const i2c
 }
 
 uint32_t IntelI2cController::I2cImplGetBusBase() {
-  auto result = acpi_.GetBusId();
+  auto result = acpi_->GetBusId();
   if (result.ok() && result->result.is_response()) {
     return result->result.response().bus_id;
   }
