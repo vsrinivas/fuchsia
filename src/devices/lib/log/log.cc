@@ -17,7 +17,7 @@ zx_status_t log_to_debuglog() {
     return local.error_value();
   }
   auto write_only_log = fidl::BindSyncClient(std::move(*local));
-  auto result = write_only_log.Get();
+  auto result = write_only_log->Get();
   if (result.status() != ZX_OK) {
     return result.status();
   }
