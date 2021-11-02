@@ -58,7 +58,7 @@ class CoreDisplayTest : public zxtest::Test {
   void SetUp() override;
   void TearDown() override;
   bool IsCaptureSupported() {
-    return (dc_client_.IsCaptureSupported().value().result.response().supported);
+    return (dc_client_->IsCaptureSupported().value().result.response().supported);
   }
   void ImportEvent();
   void CreateToken();
@@ -151,7 +151,7 @@ void CoreDisplayTest::SetUp() {
 
 void CoreDisplayTest::TearDown() {
   if (collection_) {
-    collection_.Close();
+    collection_->Close();
   }
   sysmem_allocator_ = {};
 }
@@ -163,7 +163,7 @@ void CoreDisplayTest::ImportEvent() {
   ASSERT_OK(status);
   status = client_event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &e2);
   ASSERT_OK(status);
-  auto event_status = dc_client_.ImportEvent(std::move(e2), kEventId);
+  auto event_status = dc_client_->ImportEvent(std::move(e2), kEventId);
   ASSERT_TRUE(event_status.ok());
 }
 
@@ -177,7 +177,7 @@ void CoreDisplayTest::CreateToken() {
   token_ = fidl::WireSyncClient<sysmem::BufferCollectionToken>(std::move(token_client));
 
   // Pass token server to sysmem allocator
-  auto alloc_status = sysmem_allocator_.AllocateSharedCollection(std::move(token_server));
+  auto alloc_status = sysmem_allocator_->AllocateSharedCollection(std::move(token_server));
   ASSERT_TRUE(alloc_status.ok());
 }
 
@@ -188,14 +188,14 @@ void CoreDisplayTest::DuplicateAndImportToken() {
   auto status = zx::channel::create(0, &token_dup_server, &token_dup_client);
   ASSERT_OK(status);
   fidl::WireSyncClient<sysmem::BufferCollectionToken> display_token(std::move(token_dup_client));
-  auto dup_res = token_.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_dup_server));
+  auto dup_res = token_->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_dup_server));
   ASSERT_TRUE(dup_res.ok());
   ASSERT_OK(dup_res.status());
   // sync token
-  token_.Sync();
+  token_->Sync();
 
-  auto import_resp =
-      dc_client_.ImportBufferCollection(kCollectionId, std::move(*display_token.mutable_channel()));
+  auto import_resp = dc_client_->ImportBufferCollection(
+      kCollectionId, display_token.TakeClientEnd().TakeChannel());
   ASSERT_TRUE(import_resp.ok());
   ASSERT_OK(import_resp.value().res);
 }
@@ -203,7 +203,7 @@ void CoreDisplayTest::DuplicateAndImportToken() {
 void CoreDisplayTest::SetBufferConstraints() {
   fhd::wire::ImageConfig image_config = {};
   image_config.type = IMAGE_TYPE_CAPTURE;
-  auto constraints_resp = dc_client_.SetBufferCollectionConstraints(kCollectionId, image_config);
+  auto constraints_resp = dc_client_->SetBufferCollectionConstraints(kCollectionId, image_config);
   ASSERT_TRUE(constraints_resp.ok());
   ASSERT_OK(constraints_resp.value().res);
 }
@@ -216,8 +216,8 @@ void CoreDisplayTest::FinalizeClientConstraints() {
   zx::channel collection_server;
   auto status = zx::channel::create(0, &collection_server, &collection_client);
   ASSERT_OK(status);
-  auto bind_resp = sysmem_allocator_.BindSharedCollection(std::move(*token_.mutable_channel()),
-                                                          std::move(collection_server));
+  auto bind_resp = sysmem_allocator_->BindSharedCollection(token_.TakeClientEnd().TakeChannel(),
+                                                           std::move(collection_server));
   ASSERT_OK(bind_resp.status());
 
   // token has been returned. Let's set contraints
@@ -248,18 +248,18 @@ void CoreDisplayTest::FinalizeClientConstraints() {
   image_constraints.display_height_divisor = 1;
 
   collection_ = fidl::WireSyncClient<sysmem::BufferCollection>(std::move(collection_client));
-  auto collection_resp = collection_.SetConstraints(true, constraints);
+  auto collection_resp = collection_->SetConstraints(true, constraints);
   ASSERT_OK(collection_resp.status());
 
   // Token return and constraints set. Wait for allocation
-  auto wait_resp = collection_.WaitForBuffersAllocated();
+  auto wait_resp = collection_->WaitForBuffersAllocated();
   ASSERT_OK(wait_resp.status());
 }
 
 uint64_t CoreDisplayTest::ImportCaptureImage() const {
   // Make the buffer available for capture
   fhd::wire::ImageConfig capture_cfg = {};  // will contain a handle
-  auto importcap_resp = dc_client_.ImportImageForCapture(capture_cfg, kCollectionId, 0);
+  auto importcap_resp = dc_client_->ImportImageForCapture(capture_cfg, kCollectionId, 0);
   if (importcap_resp.status() != ZX_OK) {
     return INVALID_ID;
   }
@@ -271,7 +271,7 @@ uint64_t CoreDisplayTest::ImportCaptureImage() const {
 }
 
 zx_status_t CoreDisplayTest::StartCapture(uint64_t id, uint64_t e) const {
-  auto startcap_resp = dc_client_.StartCapture(e, id);
+  auto startcap_resp = dc_client_->StartCapture(e, id);
   if (!startcap_resp.ok()) {
     return startcap_resp.status();
   }
@@ -282,7 +282,7 @@ zx_status_t CoreDisplayTest::StartCapture(uint64_t id, uint64_t e) const {
 }
 
 zx_status_t CoreDisplayTest::ReleaseCapture(uint64_t id) const {
-  auto releasecap_resp = dc_client_.ReleaseCapture(id);
+  auto releasecap_resp = dc_client_->ReleaseCapture(id);
   if (!releasecap_resp.ok()) {
     return releasecap_resp.status();
   }
@@ -334,7 +334,7 @@ TEST_F(CoreDisplayTest, CoreDisplayAlreadyBoundTest) {
 }
 
 TEST_F(CoreDisplayTest, CreateLayer) {
-  auto resp = dc_client_.CreateLayer();
+  auto resp = dc_client_->CreateLayer();
   EXPECT_TRUE(resp.ok());
   EXPECT_EQ(ZX_OK, resp.value().res);
   EXPECT_EQ(1, resp.value().layer_id);
@@ -355,7 +355,7 @@ TEST_F(CoreDisplayTest, CaptureClientDeadAfterStart) {
   ASSERT_OK(StartCapture(id));
 
   // close client before capture completes
-  dc_client_.mutable_channel()->reset();
+  dc_client_ = {};
 }
 
 TEST_F(CoreDisplayTest, CaptureFull) {
@@ -379,7 +379,7 @@ TEST_F(CoreDisplayTest, CaptureFull) {
   ASSERT_OK(ReleaseCapture(id));
 
   // done. Close sysmem
-  dc_client_.ReleaseBufferCollection(kCollectionId);
+  dc_client_->ReleaseBufferCollection(kCollectionId);
 }
 
 TEST_F(CoreDisplayTest, MultipleCaptureFull) {
@@ -405,7 +405,7 @@ TEST_F(CoreDisplayTest, MultipleCaptureFull) {
   ASSERT_OK(ReleaseCapture(id));
 
   // done. Close sysmem
-  dc_client_.ReleaseBufferCollection(kCollectionId);
+  dc_client_->ReleaseBufferCollection(kCollectionId);
 }
 
 TEST_F(CoreDisplayTest, CaptureReleaseAfterStart) {
@@ -427,7 +427,7 @@ TEST_F(CoreDisplayTest, CaptureReleaseAfterStart) {
   EXPECT_OK(WaitForEvent());
 
   // done. Close sysmem
-  dc_client_.ReleaseBufferCollection(kCollectionId);
+  dc_client_->ReleaseBufferCollection(kCollectionId);
 }
 
 TEST_F(CoreDisplayTest, InvalidStartCaptureId) {
@@ -441,7 +441,7 @@ TEST_F(CoreDisplayTest, InvalidStartCaptureId) {
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, StartCapture(kInvalidId));
 
   // done. Close sysmem
-  dc_client_.ReleaseBufferCollection(kCollectionId);
+  dc_client_->ReleaseBufferCollection(kCollectionId);
 }
 
 TEST_F(CoreDisplayTest, InvalidStartEventId) {
@@ -459,7 +459,7 @@ TEST_F(CoreDisplayTest, InvalidStartEventId) {
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, StartCapture(id, kInvalidId));
 
   // done. Close sysmem
-  dc_client_.ReleaseBufferCollection(kCollectionId);
+  dc_client_->ReleaseBufferCollection(kCollectionId);
 }
 
 TEST_F(CoreDisplayTest, MultipleCapture) {
@@ -477,7 +477,7 @@ TEST_F(CoreDisplayTest, MultipleCapture) {
   EXPECT_EQ(ZX_ERR_SHOULD_WAIT, StartCapture(id));
 
   // done. Close sysmem
-  dc_client_.ReleaseBufferCollection(kCollectionId);
+  dc_client_->ReleaseBufferCollection(kCollectionId);
 }
 
 TEST_F(CoreDisplayTest, InvalidReleaseCaptureId) {
@@ -491,7 +491,7 @@ TEST_F(CoreDisplayTest, InvalidReleaseCaptureId) {
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, ReleaseCapture(kInvalidId));
 
   // done. Close sysmem
-  dc_client_.ReleaseBufferCollection(kCollectionId);
+  dc_client_->ReleaseBufferCollection(kCollectionId);
 }
 
 TEST_F(CoreDisplayTest, CaptureNotSupported) {
@@ -500,28 +500,28 @@ TEST_F(CoreDisplayTest, CaptureNotSupported) {
     return;
   }
   fhd::wire::ImageConfig image_config = {};
-  auto import_resp = dc_client_.ImportImageForCapture(image_config, 0, 0);
+  auto import_resp = dc_client_->ImportImageForCapture(image_config, 0, 0);
   EXPECT_TRUE(import_resp.ok());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, import_resp.value().result.err());
 
-  auto start_resp = dc_client_.StartCapture(0, 0);
+  auto start_resp = dc_client_->StartCapture(0, 0);
   EXPECT_TRUE(start_resp.ok());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, start_resp.value().result.err());
 
-  auto release_resp = dc_client_.ReleaseCapture(0);
+  auto release_resp = dc_client_->ReleaseCapture(0);
   EXPECT_TRUE(release_resp.ok());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, release_resp.value().result.err());
 }
 
 TEST_F(CoreDisplayTest, CreateLayerNoResource) {
   for (int i = 0; i < 65536; i++) {
-    auto resp = dc_client_.CreateLayer();
+    auto resp = dc_client_->CreateLayer();
     EXPECT_TRUE(resp.ok());
     EXPECT_EQ(ZX_OK, resp.value().res);
     EXPECT_EQ(i + 1, resp.value().layer_id);
   }
 
-  auto resp = dc_client_.CreateLayer();
+  auto resp = dc_client_->CreateLayer();
   EXPECT_TRUE(resp.ok());
   EXPECT_EQ(ZX_ERR_NO_RESOURCES, resp.value().res);
 }
