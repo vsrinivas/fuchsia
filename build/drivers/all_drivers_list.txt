@@ -265,6 +265,7 @@
 //src/media/audio/drivers/codecs/tas5720:tas5720-driver
 //src/media/audio/drivers/codecs/tas5782:tas5782-driver
 //src/media/audio/drivers/codecs/tas58xx:tas58xx-driver
+//src/media/audio/drivers/codecs/test:codec-test-driver
 //src/media/audio/drivers/dai-test:dai-test-driver
 //src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec-driver
 //src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec-driver

@@ -12,6 +12,7 @@ group("tests") {
     "aml-g12-pdm:tests",
     "aml-g12-tdm:tests",
     "codecs:tests",
+    "configurator:tests",
     "dai-test:tests",
     "intel-hda:tests",
     "lib:tests",

@@ -17,5 +17,11 @@ for development purposes:
 ```
 $ ffx component run fuchsia-pkg://fuchsia.com/configurator#meta/configurator.cm
 ```
+## Testing
 
+Unit tests for configurator are available in the `configurator-unittests`
+package.
 
+```
+$ fx test configurator-unittests
+```

@@ -1,0 +1,39 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+
+driver_bind_rules("codec_test-bind") {
+  rules = "test.bind"
+  header_output = "codec_test-bind.h"
+  bind_output = "codec_test.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("codec-test-driver") {
+  output_name = "codec-test-driver"
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "test.cc" ]
+  deps = [
+    ":codec_test-bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//src/media/audio/lib/simple-codec",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_driver_component("test-codec") {
+  component_name = "test-codec"
+  deps = [ ":codec-test-driver" ]
+}

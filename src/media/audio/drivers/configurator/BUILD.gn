@@ -12,17 +12,31 @@ core_shard("configurator_provider_shard") {
 
 group("configurator") {
   testonly = true
-  deps = [ ":package" ]
+  deps = [
+    ":package",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":configurator-unittests" ]
 }
 
 rustc_binary("bin") {
   output_name = "configurator"
 
+  # Generates a GN target for unit-tests with the label `bin_test`, and
+  # a binary named `configurator_bin_test`.
+  with_unit_tests = true
+
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//src/devices/lib/device-watcher/rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
@@ -30,6 +44,7 @@ rustc_binary("bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -37,7 +52,20 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tracing",
   ]
 
-  sources = [ "src/main.rs" ]
+  sources = [
+    "src/discover.rs",
+    "src/main.rs",
+    "src/testing.rs",
+  ]
+  test_deps = [
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/devices/lib/device-watcher/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component-test",
+    "//third_party/rust_crates:anyhow",
+  ]
 }
 
 fuchsia_component("component") {
@@ -49,4 +77,13 @@ fuchsia_component("component") {
 fuchsia_package("package") {
   package_name = "configurator"
   deps = [ ":component" ]
+}
+
+# Run with `fx test configurator-unittests`.
+fuchsia_unittest_package("configurator-unittests") {
+  deps = [
+    ":bin_test",
+    "//src/devices/misc/drivers/test-parent",
+    "//src/media/audio/drivers/codecs/test:test-codec",
+  ]
 }
