@@ -4,7 +4,7 @@
 
 use crate::cipd::Cipd;
 use crate::device::DeviceSpec;
-use crate::portpicker::{is_free_tcp_port, pick_unused_port, Port};
+use crate::port_picker::{is_free_tcp_port, pick_unused_port, Port};
 use crate::target;
 use crate::tools::HostTools;
 use crate::types::{
@@ -40,7 +40,7 @@ static DEFAULT_SSH_PORT: u16 = 8022;
 
 /// Monitors a shared process for the interrupt signal. Only used for --monitor or --emu-only modes.
 ///
-/// If user runs with --montior or --emu-only, Fuchsia Emulator will be running in the foreground,
+/// If user runs with --monitor or --emu-only, Fuchsia Emulator will be running in the foreground,
 /// here we listen for the interrupt signal (ctrl+c), once detected, we'll wait for the emulator
 /// process to finish.
 fn monitored_child_process(child_arc: &Arc<SharedChild>) -> Result<()> {
@@ -218,7 +218,7 @@ impl VDLFiles {
                     None => {
                         if self.host_tools.aemu.as_os_str().is_empty() {
                             self.host_tools
-                                .read_prebuild_version("aemu.version")
+                                .read_prebuilt_version("aemu.version")
                                 .unwrap_or(String::from("integration"))
                         } else {
                             return Ok(self.host_tools.aemu.clone());
@@ -246,7 +246,7 @@ impl VDLFiles {
                     None => {
                         if self.host_tools.grpcwebproxy.as_os_str().is_empty() {
                             self.host_tools
-                                .read_prebuild_version("grpcwebproxy.version")
+                                .read_prebuilt_version("grpcwebproxy.version")
                                 .unwrap_or(String::from("latest"))
                         } else {
                             return Ok(self.host_tools.grpcwebproxy.clone());
@@ -274,7 +274,7 @@ impl VDLFiles {
                     None => {
                         if self.host_tools.vdl.as_os_str().is_empty() {
                             self.host_tools
-                                .read_prebuild_version("device_launcher.version")
+                                .read_prebuilt_version("device_launcher.version")
                                 .unwrap_or(String::from("latest"))
                         } else {
                             return Ok(self.host_tools.vdl.clone());
@@ -530,7 +530,7 @@ impl VDLFiles {
             .arg(format!("--enable_emu_controller={}", enable_emu_controller))
             .arg(format!("--hidpi_scaling={}", vdl_args.enable_hidpi_scaling))
             .arg(format!("--image_cache_path={}", vdl_args.cache_root.display()))
-            .arg(format!("--kernel_args={}", vdl_args.extra_kerel_args))
+            .arg(format!("--kernel_args={}", vdl_args.extra_kernel_args))
             .arg(format!("--accel={}", vdl_args.acceleration))
             .arg(format!("--image_architecture={}", vdl_args.image_architecture));
 
@@ -551,7 +551,7 @@ impl VDLFiles {
         let child_arc = Arc::new(shared_process);
         if start_command.emu_only || start_command.monitor {
             if !vdl_args.tuntap {
-                // Pre-emptively add device to ffx target before actually starting the emulator.
+                // Preemptively add device to ffx target before actually starting the emulator.
                 if let Some(proxy) = daemon_proxy {
                     println!("[fvdl] adding manual target at port: {} to ffx", ssh_port);
                     target::add_target(proxy, ssh_port).await?;
@@ -766,7 +766,7 @@ impl VDLFiles {
                     if self.host_tools.vdl.as_os_str().is_empty() {
                         let label = self
                             .host_tools
-                            .read_prebuild_version("device_launcher.version")
+                            .read_prebuilt_version("device_launcher.version")
                             .unwrap_or(String::from("latest"));
                         get_sdk_data_dir()?
                             .join("femu")
@@ -851,7 +851,7 @@ mod tests {
     }
     #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
-    async fn test_choosing_prebuild_with_path_specified() -> Result<()> {
+    async fn test_choosing_prebuilt_with_path_specified() -> Result<()> {
         setup();
 
         // Set up the config for the test.
@@ -876,7 +876,7 @@ mod tests {
     #[ignore]
     #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
-    async fn test_choosing_prebuild_with_cipd_label_specified() -> Result<()> {
+    async fn test_choosing_prebuilt_with_cipd_label_specified() -> Result<()> {
         setup();
 
         let tmp_dir = Builder::new().prefix("fvdl_test_cipd_label_").tempdir()?;
@@ -906,7 +906,7 @@ mod tests {
     #[ignore]
     #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
-    async fn test_choosing_prebuild_default() -> Result<()> {
+    async fn test_choosing_prebuilt_default() -> Result<()> {
         setup();
 
         // Set up the config

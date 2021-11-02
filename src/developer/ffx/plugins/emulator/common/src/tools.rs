@@ -40,12 +40,12 @@ impl Tools {
             .map_err(|e| ffx_error!("Cannot open file {:?} \nerror: {:?}", manifest_path, e))
             .map(BufReader::new)
             .map(serde_json::from_reader)?
-            .map_err(|e| anyhow!("json parsing errored {}", e))
+            .map_err(|e| anyhow!("json parsing error {}", e))
     }
 
     #[cfg(test)]
     pub fn from_string(content: &str) -> Result<Self> {
-        serde_json::from_str(content).map_err(|e| anyhow!("json parsing errored {}", e))
+        serde_json::from_str(content).map_err(|e| anyhow!("json parsing error {}", e))
     }
 
     pub fn find_path(&self, name: &str) -> Result<String> {
@@ -187,20 +187,20 @@ impl HostTools {
         })
     }
 
-    /// Reads the <prebuild>.version file stored in <sdk_root>/bin/<prebuild>.version
+    /// Reads the <prebuilt>.version file stored in <sdk_root>/bin/<prebuilt>.version
     ///
     /// # Arguments
     ///
-    /// * `file_name` - <prebuild>.version file name.
+    /// * `file_name` - <prebuilt>.version file name.
     ///     ex: 'aemu.version', this file is expected to be found under <sdk_root>/bin
-    pub fn read_prebuild_version(&self, file_name: &str) -> Result<String> {
+    pub fn read_prebuilt_version(&self, file_name: &str) -> Result<String> {
         if self.is_sdk {
             let version_file = get_fuchsia_sdk_dir()?.join("bin").join(file_name);
             if version_file.exists() {
                 println!(
                     "{}",
                     Yellow.paint(format!(
-                        "[fvdl] reading prebuild version file from: {}",
+                        "[fvdl] reading prebuilt version file from: {}",
                         version_file.display()
                     ))
                 );
@@ -209,16 +209,16 @@ impl HostTools {
             println!(
                 "{}",
                 Red.paint(format!(
-                    "[fvdl] prebuild version file: {} does not exist.",
+                    "[fvdl] prebuilt version file: {} does not exist.",
                     version_file.display()
                 ))
             );
             return Err(format_err!(
-                "reading prebuilt version errored: file {:?} does not exist.",
+                "reading prebuilt version error: file {:?} does not exist.",
                 version_file
             ));
         }
-        return Err(format_err!("reading prebuild version file is only support with --sdk flag."));
+        return Err(format_err!("reading prebuilt version file is only support with --sdk flag."));
     }
 
     /// Downloads & extract aemu.zip from CIPD, and returns the path containing the emulator executable.

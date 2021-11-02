@@ -45,12 +45,12 @@ impl Images {
             .map_err(|e| ffx_error!("Cannot open file {:?} \nerror: {:?}", manifest_path, e))
             .map(BufReader::new)
             .map(serde_json::from_reader)?
-            .map_err(|e| anyhow!("json parsing errored {}", e))
+            .map_err(|e| anyhow!("json parsing error {}", e))
     }
 
     #[cfg(test)]
     pub fn from_string(content: &str) -> Result<Self> {
-        serde_json::from_str(content).map_err(|e| anyhow!("json parsing errored {}", e))
+        serde_json::from_str(content).map_err(|e| anyhow!("json parsing error {}", e))
     }
 
     /// Finds the first matching artifact from images.json in the order of the values in names

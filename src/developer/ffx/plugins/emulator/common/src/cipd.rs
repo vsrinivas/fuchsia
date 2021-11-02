@@ -66,29 +66,29 @@ impl CipdMethods for Cipd {
 
         for i in 0..archive.len() {
             let mut file = archive.by_index(i)?;
-            let outpath = dest_root.join(file.sanitized_name());
+            let out_path = dest_root.join(file.sanitized_name());
 
             if file.name().ends_with('/') {
                 if debug {
-                    println!("File {} extracted to \"{}\"", i, outpath.display());
+                    println!("File {} extracted to \"{}\"", i, out_path.display());
                 }
-                create_dir_all(&outpath)?;
+                create_dir_all(&out_path)?;
             } else {
                 if debug {
                     println!(
                         "File {} extracted to \"{}\" ({} bytes)",
                         i,
-                        outpath.display(),
+                        out_path.display(),
                         file.size()
                     );
                 }
-                if let Some(p) = outpath.parent() {
+                if let Some(p) = out_path.parent() {
                     if !p.exists() {
                         create_dir_all(&p)?;
                     }
                 }
-                let mut outfile = File::create(&outpath)?;
-                copy(&mut file, &mut outfile)?;
+                let mut out_file = File::create(&out_path)?;
+                copy(&mut file, &mut out_file)?;
             }
 
             // Get and Set permissions
@@ -97,7 +97,7 @@ impl CipdMethods for Cipd {
                 use std::os::unix::fs::PermissionsExt;
 
                 if let Some(mode) = file.unix_mode() {
-                    set_permissions(&outpath, Permissions::from_mode(mode))?;
+                    set_permissions(&out_path, Permissions::from_mode(mode))?;
                 }
             }
         }

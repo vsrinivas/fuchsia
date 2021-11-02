@@ -17,7 +17,7 @@ if (is_host) {
       "src/graphic_utils.rs",
       "src/images.rs",
       "src/lib.rs",
-      "src/portpicker.rs",
+      "src/port_picker.rs",
       "src/target.rs",
       "src/tools.rs",
       "src/types.rs",

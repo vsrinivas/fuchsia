@@ -52,17 +52,17 @@ impl FuchsiaPaths for InTreePaths {
     /// that contains .jiri_root directory.
     fn find_fuchsia_root(&mut self) -> Result<PathBuf> {
         if self.root_dir.is_none() {
-            for ancester in std::env::current_exe()?.ancestors() {
-                if let Ok(entries) = read_dir(ancester) {
+            for ancestor in std::env::current_exe()?.ancestors() {
+                if let Ok(entries) = read_dir(ancestor) {
                     for entry in entries {
                         if let Ok(entry) = entry {
                             if entry.path().ends_with(".jiri_root") {
-                                self.root_dir.replace(ancester.to_path_buf());
+                                self.root_dir.replace(ancestor.to_path_buf());
                                 println!(
                                     "[fvdl] Found Fuchsia root directory {:?}",
                                     self.root_dir.as_ref().unwrap().display()
                                 );
-                                return Ok(ancester.to_path_buf());
+                                return Ok(ancestor.to_path_buf());
                             }
                         }
                     }
@@ -311,7 +311,7 @@ pub trait ConfigWrapper {
 /// FfxConfigWrapper is the implementation of ConfigWrapper trait that
 /// calls the running ffx_config methods.
 struct FfxConfigWrapper;
-const FFXCONFIG: FfxConfigWrapper = FfxConfigWrapper {};
+const FFX_CONFIG: FfxConfigWrapper = FfxConfigWrapper {};
 
 #[async_trait]
 impl ConfigWrapper for FfxConfigWrapper {
@@ -341,7 +341,7 @@ impl SshKeys {
     pub async fn from_ffx(test_config: Option<&dyn ConfigWrapper>) -> Result<Self> {
         let config = match test_config {
             Some(config) => config,
-            None => &FFXCONFIG,
+            None => &FFX_CONFIG,
         };
         Ok(Self {
             authorized_keys: config.get_filename_from_config(SSH_PUBLIC_KEY).await?,
@@ -390,7 +390,7 @@ pub struct VDLArgs {
     pub gcs_image_archive: String,
     pub sdk_version: String,
     pub cache_root: PathBuf,
-    pub extra_kerel_args: String,
+    pub extra_kernel_args: String,
     pub amber_unpack_root: String,
     pub package_server_port: String,
     pub acceleration: bool,
@@ -447,7 +447,7 @@ impl From<&StartCommand> for VDLArgs {
             gcs_image_archive: gcs_image,
             sdk_version: sdk_version,
             cache_root: cache_path,
-            extra_kerel_args: cmd.kernel_args.as_ref().unwrap_or(&String::from("")).to_string(),
+            extra_kernel_args: cmd.kernel_args.as_ref().unwrap_or(&String::from("")).to_string(),
             amber_unpack_root: cmd
                 .amber_unpack_root
                 .as_ref()
