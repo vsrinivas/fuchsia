@@ -44,7 +44,6 @@ pub trait LocalViewProducerClient: Send + Sync {
 
 #[derive(Clone)]
 enum ViewProducerClient {
-    #[allow(dead_code)]
     Local(Arc<Mutex<Box<dyn LocalViewProducerClient>>>),
     Remote(Arc<Mutex<Option<ViewProducerRequestStream>>>),
 }
@@ -72,6 +71,18 @@ impl Display {
             registry: Arc::new(Mutex::new(registry)),
             scenic: Arc::new(scenic),
             view_producer_client: ViewProducerClient::Remote(Arc::new(Mutex::new(None))),
+        })
+    }
+
+    pub fn new_local(
+        registry: Registry,
+        client: Arc<Mutex<Box<dyn LocalViewProducerClient>>>,
+    ) -> Result<Self, Error> {
+        let scenic = connect_to_protocol::<ScenicMarker>().unwrap();
+        Ok(Display {
+            registry: Arc::new(Mutex::new(registry)),
+            scenic: Arc::new(scenic),
+            view_producer_client: ViewProducerClient::Local(client),
         })
     }
 

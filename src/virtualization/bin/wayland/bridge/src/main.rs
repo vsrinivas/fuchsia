@@ -23,7 +23,7 @@ mod aura_shell;
 mod client;
 mod compositor;
 mod data_device_manager;
-mod dispatcher;
+pub mod dispatcher;
 pub mod display;
 mod object;
 mod registry;

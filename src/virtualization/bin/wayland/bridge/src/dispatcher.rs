@@ -10,7 +10,9 @@ use {
     },
     anyhow::Error,
     fuchsia_zircon::{self as zx, HandleBased},
+    parking_lot::Mutex,
     std::io::Read,
+    std::sync::Arc,
     wayland::{WlCompositor, WlDataDeviceManager, WlOutput, WlSeat, WlShm, WlSubcompositor},
     wp_viewporter::WpViewporter,
     zaura_shell::ZauraShell,
@@ -29,7 +31,19 @@ pub struct WaylandDispatcher {
 }
 
 impl WaylandDispatcher {
+    pub fn new_local(client: Arc<Mutex<Box<dyn LocalViewProducerClient>>>) -> Result<Self, Error> {
+        let registry = WaylandDispatcher::new_registry()?;
+        let display = Display::new_local(registry, client)?;
+        Ok(WaylandDispatcher { display })
+    }
+
     pub fn new() -> Result<Self, Error> {
+        let registry = WaylandDispatcher::new_registry()?;
+        let display = Display::new(registry)?;
+        Ok(WaylandDispatcher { display })
+    }
+
+    fn new_registry() -> Result<Registry, Error> {
         let mut registry = RegistryBuilder::new();
         registry.add_global(WlCompositor, move |_, _, _| {
             Ok(Box::new(RequestDispatcher::new(Compositor::new())))
@@ -91,7 +105,7 @@ impl WaylandDispatcher {
         registry.add_global(ZauraShell, move |_, _, _| {
             Ok(Box::new(RequestDispatcher::new(AuraShell::new())))
         });
-        let display = Display::new(registry.build())?;
-        Ok(WaylandDispatcher { display })
+
+        Ok(registry.build())
     }
 }
