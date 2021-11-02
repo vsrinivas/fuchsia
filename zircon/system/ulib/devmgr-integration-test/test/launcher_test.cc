@@ -63,7 +63,7 @@ TEST(LauncherTest, OutgoingServices) {
   ASSERT_OK(zx::vmo::create(vmo_size, 0, &debug_vmo));
   ASSERT_OK(debug_vmo.duplicate(ZX_RIGHTS_IO | ZX_RIGHT_TRANSFER, &vmo_dup));
 
-  auto result = fidl::BindSyncClient(std::move(*local)).DumpTree(std::move(vmo_dup));
+  auto result = fidl::BindSyncClient(std::move(*local))->DumpTree(std::move(vmo_dup));
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
 
