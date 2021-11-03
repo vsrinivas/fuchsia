@@ -429,6 +429,7 @@ async fn relative_echo_realm() -> Result<(), Error> {
     Ok(())
 }
 
+#[ignore]
 #[fasync::run_singlethreaded(test)]
 async fn altered_echo_client_args() -> Result<(), Error> {
     let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
