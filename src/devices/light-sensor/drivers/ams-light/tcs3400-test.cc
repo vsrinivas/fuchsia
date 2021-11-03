@@ -23,14 +23,18 @@ namespace tcs {
 
 class FakeLightSensor : public fake_i2c::FakeI2c {
  public:
-  uint8_t GetRegister(const uint8_t address) {
+  uint8_t GetRegisterLastWrite(const uint8_t address) {
     fbl::AutoLock lock(&registers_lock_);
-    return registers_[address];
+    return registers_[address].size() ? registers_[address].back() : 0;
+  }
+  uint8_t GetRegisterAtIndex(size_t index, const uint8_t address) {
+    fbl::AutoLock lock(&registers_lock_);
+    return registers_[address][index];
   }
 
   void SetRegister(const uint8_t address, const uint8_t value) {
     fbl::AutoLock lock(&registers_lock_);
-    registers_[address] = value;
+    registers_[address].push_back(value);
   }
 
   void WaitForLightDataRead() {
@@ -63,11 +67,10 @@ class FakeLightSensor : public fake_i2c::FakeI2c {
     {
       fbl::AutoLock lock(&registers_lock_);
       if (write_buffer_size == 1) {
-        registers_[address] = write_buffer[0];
+        registers_[address].push_back(write_buffer[0]);
       }
-
-      read_buffer[0] = registers_[address];
     }
+    read_buffer[0] = GetRegisterLastWrite(address);
 
     *read_buffer_size = 1;
 
@@ -86,7 +89,7 @@ class FakeLightSensor : public fake_i2c::FakeI2c {
 
  private:
   fbl::Mutex registers_lock_;
-  std::array<uint8_t, UINT8_MAX> registers_ TA_GUARDED(registers_lock_) = {};
+  std::array<std::vector<uint8_t>, UINT8_MAX> registers_ TA_GUARDED(registers_lock_) = {};
   sync_completion_t read_completion_;
   sync_completion_t configuration_completion_;
   bool enable_written_ = false;
@@ -125,8 +128,8 @@ class Tcs3400Test : public zxtest::Test {
 
     fake_i2c_.WaitForConfiguration();
 
-    EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_ATIME), 35);
-    EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_CONTROL), 0x02);
+    EXPECT_EQ(fake_i2c_.GetRegisterLastWrite(TCS_I2C_ATIME), 35);
+    EXPECT_EQ(fake_i2c_.GetRegisterLastWrite(TCS_I2C_CONTROL), 0x02);
   }
 
   void TearDown() override {
@@ -701,13 +704,14 @@ TEST_F(Tcs3400Test, FeatureReport) {
 
   fake_i2c_.WaitForConfiguration();
 
-  EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_ENABLE), 0b0001'0011);
-  EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_AILTL), 0x34);
-  EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_AILTH), 0x12);
-  EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_AIHTL), 0xcd);
-  EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_AIHTH), 0xab);
-  EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_CONTROL), 3);
-  EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_ATIME), 156);
+  EXPECT_EQ(fake_i2c_.GetRegisterAtIndex(0, TCS_I2C_ENABLE), 0b0001'0001);
+  EXPECT_EQ(fake_i2c_.GetRegisterLastWrite(TCS_I2C_AILTL), 0x34);
+  EXPECT_EQ(fake_i2c_.GetRegisterLastWrite(TCS_I2C_AILTH), 0x12);
+  EXPECT_EQ(fake_i2c_.GetRegisterLastWrite(TCS_I2C_AIHTL), 0xcd);
+  EXPECT_EQ(fake_i2c_.GetRegisterLastWrite(TCS_I2C_AIHTH), 0xab);
+  EXPECT_EQ(fake_i2c_.GetRegisterLastWrite(TCS_I2C_CONTROL), 3);
+  EXPECT_EQ(fake_i2c_.GetRegisterLastWrite(TCS_I2C_ATIME), 156);
+  EXPECT_EQ(fake_i2c_.GetRegisterAtIndex(1, TCS_I2C_ENABLE), 0b0001'0011);
 
   ASSERT_NO_FATAL_FAILURES(GetFeatureReport(client, &report));
   EXPECT_EQ(report.report_interval_us, 1'000);
@@ -852,8 +856,8 @@ class Tcs3400MetadataTest : public zxtest::Test {
 
     fake_i2c.WaitForConfiguration();
 
-    EXPECT_EQ(fake_i2c.GetRegister(TCS_I2C_ATIME), atime_register);
-    EXPECT_EQ(fake_i2c.GetRegister(TCS_I2C_CONTROL), again_register);
+    EXPECT_EQ(fake_i2c.GetRegisterLastWrite(TCS_I2C_ATIME), atime_register);
+    EXPECT_EQ(fake_i2c.GetRegisterLastWrite(TCS_I2C_CONTROL), again_register);
 
     device_async_remove(status.value()->zxdev());
     EXPECT_OK(mock_ddk::ReleaseFlaggedDevices(fake_parent.get()));

@@ -254,8 +254,8 @@ int Tcs3400Device::Thread() {
             uint8_t cmd;
             uint8_t val;
           } __PACKED setup[] = {
-              {TCS_I2C_ENABLE,
-               TCS_I2C_ENABLE_POWER_ON | TCS_I2C_ENABLE_ADC_ENABLE | TCS_I2C_ENABLE_INT_ENABLE},
+              // First we don't set TCS_I2C_ENABLE_ADC_ENABLE to disable the sensor.
+              {TCS_I2C_ENABLE, TCS_I2C_ENABLE_POWER_ON | TCS_I2C_ENABLE_INT_ENABLE},
               {TCS_I2C_AILTL, GET_BYTE(feature_report.threshold_low, 0)},
               {TCS_I2C_AILTH, GET_BYTE(feature_report.threshold_low, 8)},
               {TCS_I2C_AIHTL, GET_BYTE(feature_report.threshold_high, 0)},
@@ -263,6 +263,9 @@ int Tcs3400Device::Thread() {
               {TCS_I2C_PERS, SAMPLES_TO_TRIGGER},
               {TCS_I2C_CONTROL, control_reg},
               {TCS_I2C_ATIME, atime_},
+              // We now do set TCS_I2C_ENABLE_ADC_ENABLE to re-enable the sensor.
+              {TCS_I2C_ENABLE,
+               TCS_I2C_ENABLE_POWER_ON | TCS_I2C_ENABLE_ADC_ENABLE | TCS_I2C_ENABLE_INT_ENABLE},
           };
           for (const auto& i : setup) {
             status = WriteReg(i.cmd, i.val);
