@@ -1,0 +1,32 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("ffx-wlan-common") {
+  name = "ffx_wlan_common"
+  version = "0.1.0"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:pin-utils",
+  ]
+  sources = [ "src/lib.rs" ]
+
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+  ]
+}
+
+fuchsia_unittest_package("ffx-wlan-common-tests") {
+  deps = [ ":ffx_wlan_common_test" ]
+}

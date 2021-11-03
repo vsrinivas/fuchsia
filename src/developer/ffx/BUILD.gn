@@ -53,6 +53,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/target:ffx_target",
       "//src/developer/ffx/plugins/trace:ffx_trace",
       "//src/developer/ffx/plugins/version:ffx_version",
+      "//src/developer/ffx/plugins/wlan:ffx_wlan",
       "//src/sys/run_test_suite/ffx/test:ffx_test",
     ]
 
