@@ -481,7 +481,7 @@ TEST(HidButtonsTest, GetStateTest) {
 
     // Reconfigure Polarity due to interrupt.
     device.GetGpio(1).ExpectRead(ZX_OK, 1);  // Read value.
-    auto result = client.GetState(ButtonType::kMute);
+    auto result = client->GetState(ButtonType::kMute);
     EXPECT_EQ(result->pressed, true);
   }  // Close Client
 
@@ -528,7 +528,7 @@ TEST(HidButtonsTest, Notify1) {
     EXPECT_OK(zx::channel::create(0, &client_end, &server_end));
     device.GetButtonsFn()->ButtonsGetChannel(std::move(server_end));
     fidl::WireSyncClient<Buttons> client(std::move(client_end));
-    auto result1 = client.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::kMute));
+    auto result1 = client->RegisterNotify(1 << static_cast<uint8_t>(ButtonType::kMute));
     EXPECT_OK(result1.status());
 
     // Interrupts
@@ -580,7 +580,7 @@ TEST(HidButtonsTest, Notify1) {
       EventHandler event_handler;
       EXPECT_TRUE(client.HandleOneEvent(event_handler).ok() && event_handler.ok());
     }
-    auto result2 = client.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::kVolumeUp));
+    auto result2 = client->RegisterNotify(1 << static_cast<uint8_t>(ButtonType::kVolumeUp));
     EXPECT_OK(result2.status());
     device.FakeInterrupt(ButtonType::kVolumeUp);
     device.DebounceWait();
@@ -669,7 +669,7 @@ TEST(HidButtonsTest, Notify2) {
     EXPECT_OK(zx::channel::create(0, &client_end2, &server_end2));
     device.GetButtonsFn()->ButtonsGetChannel(std::move(server_end2));
     fidl::WireSyncClient<Buttons> client2(std::move(client_end2));
-    auto result2_1 = client2.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::kMute));
+    auto result2_1 = client2->RegisterNotify(1 << static_cast<uint8_t>(ButtonType::kMute));
     EXPECT_OK(result2_1.status());
 
     {  // Scoping for Client 1
@@ -678,7 +678,7 @@ TEST(HidButtonsTest, Notify2) {
       EXPECT_OK(zx::channel::create(0, &client_end1, &server_end1));
       device.GetButtonsFn()->ButtonsGetChannel(std::move(server_end1));
       fidl::WireSyncClient<Buttons> client1(std::move(client_end1));
-      auto result1_1 = client1.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::kMute));
+      auto result1_1 = client1->RegisterNotify(1 << static_cast<uint8_t>(ButtonType::kMute));
       EXPECT_OK(result1_1.status());
 
       // Interrupts
@@ -774,10 +774,10 @@ TEST(HidButtonsTest, Notify2) {
         EventHandler event_handler;
         EXPECT_TRUE(client2.HandleOneEvent(event_handler).ok() && event_handler.ok());
       }
-      auto result1_2 = client1.RegisterNotify((1 << static_cast<uint8_t>(ButtonType::kVolumeUp)) |
-                                              (1 << static_cast<uint8_t>(ButtonType::kMute)));
+      auto result1_2 = client1->RegisterNotify((1 << static_cast<uint8_t>(ButtonType::kVolumeUp)) |
+                                               (1 << static_cast<uint8_t>(ButtonType::kMute)));
       EXPECT_OK(result1_2.status());
-      auto result2_2 = client2.RegisterNotify(1 << static_cast<uint8_t>(ButtonType::kVolumeUp));
+      auto result2_2 = client2->RegisterNotify(1 << static_cast<uint8_t>(ButtonType::kVolumeUp));
       EXPECT_OK(result2_2.status());
       device.FakeInterrupt(ButtonType::kMute);
       device.DebounceWait();
@@ -1030,7 +1030,7 @@ TEST(HidButtonsTest, MicAndCamMute) {
   {
     uint8_t types = (1 << static_cast<uint8_t>(ButtonType::kMute)) |
                     (1 << static_cast<uint8_t>(ButtonType::kCamMute));
-    auto result = client.RegisterNotify(types);
+    auto result = client->RegisterNotify(types);
     EXPECT_OK(result.status());
   }
 
