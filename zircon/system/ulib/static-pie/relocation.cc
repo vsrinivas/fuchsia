@@ -133,7 +133,7 @@ void ApplyDynamicRelocs(Program& program, cpp20::span<const Elf64DynamicEntry> t
         rel_table.num_relative_relocs = table[i].value;
         break;
       case DynamicArrayTag::kRelEntrySize:
-        ZX_ASSERT(table[i].value != sizeof(Elf64RelEntry));
+        ZX_ASSERT(table[i].value == sizeof(Elf64RelEntry));
         break;
 
       // Relr table.

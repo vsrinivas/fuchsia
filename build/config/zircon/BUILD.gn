@@ -177,6 +177,9 @@ config("compiler") {
 
       # TODO(mcgrathr): This should be default in the compiler driver.
       ldflags += [ "-Wl,--pack-dyn-relocs=relr" ]
+
+      # TODO(fxbug.dev/53078): Eventually the default in the compler driver.
+      ldflags += [ "-Wl,-z,rel" ]
     }
   } else if (current_os == "win") {
     # This enables build ID-like PDB UUIDs without timestamp.

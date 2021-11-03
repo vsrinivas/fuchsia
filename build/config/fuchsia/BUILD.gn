@@ -64,6 +64,7 @@ config("compiler") {
     configs += [ ":ccache" ]
   }
 
+  ldflags = []
   rustflags = [
     "-L",
     rebase_path(rust_sysroot_dir, root_build_dir) + "/lib",
@@ -79,6 +80,10 @@ config("compiler") {
     "-Clink-arg=-dynamic-linker=ld.so.1",
     "-Clink-arg=--icf=all",
   ]
+
+  # TODO(fxbug.dev/53078): Eventually the default in the compler driver.
+  ldflags += [ "-Wl,-z,rel" ]
+  rustflags += [ "-Clink-arg=-zrel" ]
 
   if (build_id_format != "") {
     ldflags += [ "-Wl,--build-id=$build_id_format" ]

@@ -301,6 +301,9 @@ template("go_build") {
       # TODO(phosek): drop -Wl,--pack-dyn-relocs=relr once it's the default in Clang.
       extldflags = "-Wl,--pack-dyn-relocs=relr"
 
+      # TODO(fxbug.dev/53078): Eventually the default in the compler driver.
+      extldflags += ",-zrel"
+
       # When building with an instrumented variant, ensure the binary embeds a reference
       # to the right dynamic linker path.
       if (toolchain_variant.libprefix != "") {
