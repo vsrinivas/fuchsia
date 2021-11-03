@@ -11,61 +11,10 @@
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
+#include "src/ui/scenic/lib/view_tree/tests/utils.h"
 
 namespace view_tree {
 namespace snapshot_dump::test {
-enum : zx_koid_t { kNodeA = 1, kNodeB, kNodeC, kNodeD };
-
-// Creates a snapshot with the following two-node topology:
-//     A
-//     |
-//     B
-std::shared_ptr<view_tree::Snapshot> TwoNodeSnapshot() {
-  auto snapshot = std::make_shared<view_tree::Snapshot>();
-
-  snapshot->root = kNodeA;
-  auto& view_tree = snapshot->view_tree;
-  view_tree[kNodeA] = ViewNode{.parent = ZX_KOID_INVALID, .children = {kNodeB}};
-  view_tree[kNodeB] = ViewNode{.parent = kNodeA};
-
-  return snapshot;
-}
-// Creates a snapshot with the following three-node topology:
-//     A
-//     |
-//     B
-//     |
-//     C
-std::shared_ptr<const view_tree::Snapshot> ThreeNodeSnapshot() {
-  auto snapshot = std::make_shared<view_tree::Snapshot>();
-
-  snapshot->root = kNodeA;
-  auto& view_tree = snapshot->view_tree;
-  view_tree[kNodeA] = ViewNode{.parent = ZX_KOID_INVALID, .children = {kNodeB}};
-  view_tree[kNodeB] = ViewNode{.parent = kNodeA, .children = {kNodeC}};
-  view_tree[kNodeC] = ViewNode{.parent = kNodeB};
-
-  return snapshot;
-}
-
-// Creates a snapshot with the following four-node topology:
-//      A
-//    /   \
-//   B     C
-//   |
-//   D
-std::shared_ptr<const view_tree::Snapshot> FourNodeSnapshot() {
-  auto snapshot = std::make_shared<view_tree::Snapshot>();
-
-  snapshot->root = kNodeA;
-  auto& view_tree = snapshot->view_tree;
-  view_tree[kNodeA] = ViewNode{.parent = ZX_KOID_INVALID, .children = {kNodeB, kNodeC}};
-  view_tree[kNodeB] = ViewNode{.parent = kNodeA, .children = {kNodeD}};
-  view_tree[kNodeC] = ViewNode{.parent = kNodeA};
-  view_tree[kNodeD] = ViewNode{.parent = kNodeB};
-
-  return snapshot;
-}
 
 // Creates a snapshot with the invalid view tree. Node has not been added to the view tree
 // making it invalid
