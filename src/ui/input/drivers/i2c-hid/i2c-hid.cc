@@ -513,7 +513,7 @@ zx_status_t I2cHidbus::Bind(ddk::I2cChannel i2c) {
     fbl::AutoLock lock(&i2c_lock_);
     i2c_ = std::move(i2c);
   }
-  auto irq_result = acpi_client_.borrow().MapInterrupt(0);
+  auto irq_result = acpi_client_.borrow()->MapInterrupt(0);
   if (irq_result.ok() && irq_result->result.is_response()) {
     irq_ = std::move(irq_result->result.mutable_response().irq);
   } else {
