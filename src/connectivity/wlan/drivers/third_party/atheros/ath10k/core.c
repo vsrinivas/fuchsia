@@ -53,6 +53,8 @@ bool skip_otp = false;
 // Use raw 802.11 frame datapath
 bool rawmode = false;
 
+const char* device_name = "ath10k-wlanmac";
+
 static const struct ath10k_hw_params ath10k_hw_params_list[] = {
     {
         .id = QCA988X_HW_2_0_VERSION,
@@ -895,7 +897,7 @@ static zx_status_t ath10k_fetch_cal_file(struct ath10k* ar) {
 
   /* pre-cal-<bus>-<id>.bin */
   snprintf(filename, sizeof(filename), "pre-cal-%s-%s.bin", ath10k_bus_str(ar->hif.bus),
-           device_get_name(ar->zxdev));
+           device_name);
 
   ret = ath10k_fetch_fw_file(ar, ATH10K_FW_DIR, filename, &ar->pre_cal_file);
   if (ret == ZX_OK) {
@@ -903,8 +905,7 @@ static zx_status_t ath10k_fetch_cal_file(struct ath10k* ar) {
   }
 
   /* cal-<bus>-<id>.bin */
-  snprintf(filename, sizeof(filename), "cal-%s-%s.bin", ath10k_bus_str(ar->hif.bus),
-           device_get_name(ar->zxdev));
+  snprintf(filename, sizeof(filename), "cal-%s-%s.bin", ath10k_bus_str(ar->hif.bus), device_name);
 
   ret = ath10k_fetch_fw_file(ar, ATH10K_FW_DIR, filename, &ar->cal_file);
   if (ret != ZX_OK) {
@@ -2322,7 +2323,7 @@ static zx_status_t ath10k_core_create_iface(void* ctx, const wlanphy_impl_create
   // Add MAC interface
   device_add_args_t mac_args = {
       .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "ath10k-wlanmac",
+      .name = device_name,
       .ctx = ar,
       .ops = &device_mac_ops,
       .proto_id = ZX_PROTOCOL_WLANMAC,
