@@ -8,6 +8,11 @@ import("//build/zircon/migrated_targets.gni")
 # TODO(fxbug.dev/54322): Keep in sync with BUILD.gn until the bootloader
 # is fully migrated to the Fuchsia build.
 
+config("config") {
+  # Fastboot needs to provide the board name so `ffx flash` can verify it.
+  cflags = [ "-DBOARD_NAME=\"${board_name}\"" ]
+}
+
 source_set("src") {
   sources = [
     "abr.c",
@@ -48,7 +53,10 @@ source_set("src") {
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
+  configs += [
+    ":config",
+    "//build/config:Wno-conversion",
+  ]
 }
 
 # MacOS is missing <endian.h>, so we don't build the tests for it.
@@ -98,6 +106,7 @@ if (!is_mac) {
       "//zircon/third_party/ulib/cksum",
       "//zircon/third_party/ulib/lz4",
     ]
+    configs += [ ":config" ]
   }
 } else {
   group("gigaboot_test") {

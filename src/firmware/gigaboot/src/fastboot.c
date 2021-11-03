@@ -278,8 +278,9 @@ static fb_var_t varlist[NUM_VARIABLES] = {
         .func = get_current_slot,
     },
     {
+        // `ffx flash` requires that "hw-revision" matches the board name.
         .name = "hw-revision",
-        .value = "unimplemented",
+        .value = BOARD_NAME,
     },
     {
         .name = "product",
