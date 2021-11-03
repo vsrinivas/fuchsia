@@ -104,7 +104,7 @@ class HealthCheckServiceTest : public testing::Test {
 
 TEST_F(HealthCheckServiceTest, EmptyFilesystemPassesChecks) {
   fidl::WireSyncClient<fuv::BlobfsVerifier> client = Client();
-  auto result = client.Verify(fuv::wire::VerifyOptions{});
+  auto result = client->Verify(fuv::wire::VerifyOptions{});
   ASSERT_TRUE(result.ok()) << result.error();
 }
 
@@ -122,7 +122,7 @@ TEST_F(HealthCheckServiceTest, PopulatedFilesystemPassesChecks) {
   }
 
   fidl::WireSyncClient<fuv::BlobfsVerifier> client = Client();
-  auto result = client.Verify(fuv::wire::VerifyOptions{});
+  auto result = client->Verify(fuv::wire::VerifyOptions{});
   ASSERT_TRUE(result.ok()) << result.error();
   ASSERT_FALSE(result.value().result.is_err());
 
@@ -142,7 +142,7 @@ TEST_F(HealthCheckServiceTest, NullBlobPassesChecks) {
   ASSERT_EQ(file->OpenValidating(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
 
   fidl::WireSyncClient<fuv::BlobfsVerifier> client = Client();
-  auto result = client.Verify(fuv::wire::VerifyOptions{});
+  auto result = client->Verify(fuv::wire::VerifyOptions{});
   ASSERT_TRUE(result.ok()) << result.error();
   ASSERT_FALSE(result.value().result.is_err());
 
@@ -161,7 +161,7 @@ TEST_F(HealthCheckServiceTest, InvalidFileFailsChecks) {
   ASSERT_EQ(file->OpenValidating(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
 
   fidl::WireSyncClient<fuv::BlobfsVerifier> client = Client();
-  auto result = client.Verify(fuv::wire::VerifyOptions{});
+  auto result = client->Verify(fuv::wire::VerifyOptions{});
   ASSERT_TRUE(result.ok()) << result.error();
   ASSERT_TRUE(result.value().result.is_err());
 
@@ -175,7 +175,7 @@ TEST_F(HealthCheckServiceTest, InvalidButClosedFilePassesChecks) {
   CorruptBlob(*info);
 
   fidl::WireSyncClient<fuv::BlobfsVerifier> client = Client();
-  auto result = client.Verify(fuv::wire::VerifyOptions{});
+  auto result = client->Verify(fuv::wire::VerifyOptions{});
   ASSERT_TRUE(result.ok()) << result.error();
   ASSERT_FALSE(result.value().result.is_err());
 }

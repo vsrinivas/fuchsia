@@ -39,7 +39,7 @@ class VerifierServiceTest : public BlobfsTest {
 // exercised by other unit tests.
 TEST_F(VerifierServiceTest, EmptyFilesystemIsValid) {
   fuv::wire::VerifyOptions options;
-  auto status = ConnectToHealthCheckService().Verify(std::move(options));
+  auto status = ConnectToHealthCheckService()->Verify(std::move(options));
   ASSERT_EQ(status.status(), ZX_OK) << status.error();
 }
 
