@@ -90,8 +90,8 @@ class Control : public ControlType,
   // Used by heaps. Removes a specific heap from the linked list.
   void RemoveHeap(Heap* heap);
 
-  fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceChildDriver>* address_space_child() {
-    return &address_space_child_;
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceChildDriver>& address_space_child() {
+    return address_space_child_;
   }
 
  private:

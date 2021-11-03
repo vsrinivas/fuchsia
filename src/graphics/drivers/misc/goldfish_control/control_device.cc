@@ -663,7 +663,7 @@ zx_status_t Control::GoldfishControlCreateSyncFence(zx::eventpair event) {
     return ZX_ERR_INTERNAL;
   }
 
-  auto result = sync_timeline_.TriggerHostWait(glsync, syncthread, std::move(event));
+  auto result = sync_timeline_->TriggerHostWait(glsync, syncthread, std::move(event));
   if (!result.ok()) {
     zxlogf(ERROR, "TriggerHostWait: FIDL call failed, status=%d", result.status());
     return ZX_ERR_INTERNAL;

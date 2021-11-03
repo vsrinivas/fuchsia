@@ -403,7 +403,7 @@ TEST_P(BufferTest, TestCreate2) {
     create_params.set_physical_address(allocator, kPhysicalAddress);
   }
   auto create_buffer_result =
-      fidl_client_.CreateBuffer2(std::move(buffer_vmo), std::move(create_params));
+      fidl_client_->CreateBuffer2(std::move(buffer_vmo), std::move(create_params));
 
   ASSERT_TRUE(create_buffer_result.ok());
   ASSERT_TRUE(create_buffer_result.value().result.is_response());
@@ -476,7 +476,7 @@ TEST_F(ControlDeviceTest, CreateBuffer2_AlreadyExists) {
   create_params.set_size(allocator, kSize)
       .set_memory_property(allocator, fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
   auto create_buffer_result =
-      fidl_client_.CreateBuffer2(std::move(buffer_vmo), std::move(create_params));
+      fidl_client_->CreateBuffer2(std::move(buffer_vmo), std::move(create_params));
 
   ASSERT_TRUE(create_buffer_result.ok());
   ASSERT_TRUE(create_buffer_result.value().result.is_response());
@@ -485,7 +485,7 @@ TEST_F(ControlDeviceTest, CreateBuffer2_AlreadyExists) {
   create_params2.set_size(allocator, kSize)
       .set_memory_property(allocator, fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
   auto create_copy_buffer_result =
-      fidl_client_.CreateBuffer2(std::move(copy_vmo), std::move(create_params2));
+      fidl_client_->CreateBuffer2(std::move(copy_vmo), std::move(create_params2));
 
   ASSERT_TRUE(create_copy_buffer_result.ok());
   ASSERT_TRUE(create_copy_buffer_result.value().result.is_err());
@@ -509,7 +509,7 @@ TEST_F(ControlDeviceTest, CreateBuffer2_InvalidArgs) {
     create_params.set_memory_property(allocator,
                                       fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
-    auto result = fidl_client_.CreateBuffer2(std::move(buffer_vmo), std::move(create_params));
+    auto result = fidl_client_->CreateBuffer2(std::move(buffer_vmo), std::move(create_params));
     ASSERT_TRUE(result.ok());
     ASSERT_TRUE(result.value().result.is_err());
     ASSERT_EQ(result.value().result.err(), ZX_ERR_INVALID_ARGS);
@@ -531,7 +531,7 @@ TEST_F(ControlDeviceTest, CreateBuffer2_InvalidArgs) {
     // missing memory property
     create_params2.set_size(allocator, kSize);
 
-    auto result = fidl_client_.CreateBuffer2(std::move(buffer_vmo), std::move(create_params2));
+    auto result = fidl_client_->CreateBuffer2(std::move(buffer_vmo), std::move(create_params2));
     ASSERT_TRUE(result.ok());
     ASSERT_TRUE(result.value().result.is_err());
     ASSERT_EQ(result.value().result.err(), ZX_ERR_INVALID_ARGS);
@@ -551,7 +551,7 @@ TEST_F(ControlDeviceTest, CreateBuffer2_InvalidVmo) {
       .set_memory_property(allocator, fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
   auto create_unregistered_buffer_result =
-      fidl_client_.CreateBuffer2(std::move(buffer_vmo), std::move(create_params));
+      fidl_client_->CreateBuffer2(std::move(buffer_vmo), std::move(create_params));
 
   ASSERT_TRUE(create_unregistered_buffer_result.ok());
   ASSERT_TRUE(create_unregistered_buffer_result.value().result.is_err());
@@ -562,7 +562,7 @@ TEST_F(ControlDeviceTest, CreateBuffer2_InvalidVmo) {
       .set_memory_property(allocator, fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
   auto create_invalid_buffer_result =
-      fidl_client_.CreateBuffer2(zx::vmo(), std::move(create_params2));
+      fidl_client_->CreateBuffer2(zx::vmo(), std::move(create_params2));
 
   ASSERT_EQ(create_invalid_buffer_result.status(), ZX_ERR_INVALID_ARGS);
 }
@@ -599,7 +599,7 @@ TEST_P(ColorBufferTest, TestCreate) {
   }
 
   auto create_color_buffer_result =
-      fidl_client_.CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
+      fidl_client_->CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
 
   ASSERT_TRUE(create_color_buffer_result.ok());
   EXPECT_OK(create_color_buffer_result.value().res);
@@ -720,7 +720,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_AlreadyExists) {
         .set_memory_property(allocator, kMemoryProperty);
 
     auto create_color_buffer_result =
-        fidl_client_.CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
+        fidl_client_->CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
 
     ASSERT_TRUE(create_color_buffer_result.ok());
     EXPECT_OK(create_color_buffer_result.value().res);
@@ -735,7 +735,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_AlreadyExists) {
         .set_memory_property(allocator, kMemoryProperty);
 
     auto create_copy_buffer_result =
-        fidl_client_.CreateColorBuffer2(std::move(copy_vmo), std::move(create_params));
+        fidl_client_->CreateColorBuffer2(std::move(copy_vmo), std::move(create_params));
 
     ASSERT_TRUE(create_copy_buffer_result.ok());
     ASSERT_EQ(create_copy_buffer_result.value().res, ZX_ERR_ALREADY_EXISTS);
@@ -766,7 +766,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
         .set_memory_property(allocator, kMemoryProperty);
 
     auto create_color_buffer_result =
-        fidl_client_.CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
+        fidl_client_->CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
 
     ASSERT_TRUE(create_color_buffer_result.ok());
     EXPECT_EQ(create_color_buffer_result.value().res, ZX_ERR_INVALID_ARGS);
@@ -791,7 +791,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
         .set_memory_property(allocator, kMemoryProperty);
 
     auto create_color_buffer_result =
-        fidl_client_.CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
+        fidl_client_->CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
 
     ASSERT_TRUE(create_color_buffer_result.ok());
     EXPECT_EQ(create_color_buffer_result.value().res, ZX_ERR_INVALID_ARGS);
@@ -816,7 +816,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
         .set_memory_property(allocator, kMemoryProperty);
 
     auto create_color_buffer_result =
-        fidl_client_.CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
+        fidl_client_->CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
 
     ASSERT_TRUE(create_color_buffer_result.ok());
     EXPECT_EQ(create_color_buffer_result.value().res, ZX_ERR_INVALID_ARGS);
@@ -841,7 +841,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
         .set_format(allocator, kFormat);
 
     auto create_color_buffer_result =
-        fidl_client_.CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
+        fidl_client_->CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
 
     ASSERT_TRUE(create_color_buffer_result.ok());
     EXPECT_EQ(create_color_buffer_result.value().res, ZX_ERR_INVALID_ARGS);
@@ -868,7 +868,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
                              fuchsia_hardware_goldfish::wire::kMemoryPropertyHostVisible);
 
     auto create_color_buffer_result =
-        fidl_client_.CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
+        fidl_client_->CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
 
     ASSERT_TRUE(create_color_buffer_result.ok());
     EXPECT_EQ(create_color_buffer_result.value().res, ZX_ERR_INVALID_ARGS);
@@ -896,7 +896,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidVmo) {
         .set_memory_property(allocator, kMemoryProperty);
 
     auto create_unregistered_buffer_result =
-        fidl_client_.CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
+        fidl_client_->CreateColorBuffer2(std::move(buffer_vmo), std::move(create_params));
 
     ASSERT_TRUE(create_unregistered_buffer_result.ok());
     EXPECT_EQ(create_unregistered_buffer_result.value().res, ZX_ERR_INVALID_ARGS);
@@ -911,7 +911,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidVmo) {
         .set_memory_property(allocator, kMemoryProperty);
 
     auto create_invalid_buffer_result =
-        fidl_client_.CreateColorBuffer2(zx::vmo(), std::move(create_params));
+        fidl_client_->CreateColorBuffer2(zx::vmo(), std::move(create_params));
 
     ASSERT_EQ(create_invalid_buffer_result.status(), ZX_ERR_INVALID_ARGS);
   }
@@ -940,7 +940,7 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
                              fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
     auto create_buffer_result =
-        fidl_client_.CreateBuffer2(std::move(copy_vmo), std::move(create_params));
+        fidl_client_->CreateBuffer2(std::move(copy_vmo), std::move(create_params));
 
     ASSERT_TRUE(create_buffer_result.ok());
     EXPECT_TRUE(create_buffer_result.value().result.is_response());
@@ -970,21 +970,21 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
         .set_memory_property(allocator, kMemoryProperty);
 
     auto create_color_buffer_result =
-        fidl_client_.CreateColorBuffer2(std::move(copy_vmo), std::move(create_params));
+        fidl_client_->CreateColorBuffer2(std::move(copy_vmo), std::move(create_params));
 
     ASSERT_TRUE(create_color_buffer_result.ok());
     EXPECT_OK(create_color_buffer_result.value().res);
   }
 
   // Test GetBufferHandle() method.
-  auto get_buffer_handle_result = fidl_client_.GetBufferHandle(std::move(buffer_vmo));
+  auto get_buffer_handle_result = fidl_client_->GetBufferHandle(std::move(buffer_vmo));
   ASSERT_TRUE(get_buffer_handle_result.ok());
   EXPECT_OK(get_buffer_handle_result.value().res);
   EXPECT_NE(get_buffer_handle_result.value().id, 0u);
   EXPECT_EQ(get_buffer_handle_result.value().type,
             fuchsia_hardware_goldfish::wire::BufferHandleType::kBuffer);
 
-  auto get_color_buffer_handle_result = fidl_client_.GetBufferHandle(std::move(color_buffer_vmo));
+  auto get_color_buffer_handle_result = fidl_client_->GetBufferHandle(std::move(color_buffer_vmo));
   ASSERT_TRUE(get_color_buffer_handle_result.ok());
   EXPECT_OK(get_color_buffer_handle_result.value().res);
   EXPECT_NE(get_color_buffer_handle_result.value().id, 0u);
@@ -993,7 +993,7 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
             fuchsia_hardware_goldfish::wire::BufferHandleType::kColorBuffer);
 
   // Test GetBufferHandleInfo() method.
-  auto get_buffer_handle_info_result = fidl_client_.GetBufferHandleInfo(std::move(buffer_vmo_dup));
+  auto get_buffer_handle_info_result = fidl_client_->GetBufferHandleInfo(std::move(buffer_vmo_dup));
   ASSERT_TRUE(get_buffer_handle_info_result.ok());
   ASSERT_TRUE(get_buffer_handle_info_result.value().result.is_response());
 
@@ -1004,7 +1004,7 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
             fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
   auto get_color_buffer_handle_info_result =
-      fidl_client_.GetBufferHandleInfo(std::move(color_buffer_vmo_dup));
+      fidl_client_->GetBufferHandleInfo(std::move(color_buffer_vmo_dup));
   ASSERT_TRUE(get_color_buffer_handle_info_result.ok());
   ASSERT_TRUE(get_color_buffer_handle_info_result.value().result.is_response());
 
@@ -1029,7 +1029,7 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Invalid) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
 
-    auto get_buffer_handle_result = fidl_client_.GetBufferHandle(std::move(buffer_vmo));
+    auto get_buffer_handle_result = fidl_client_->GetBufferHandle(std::move(buffer_vmo));
     ASSERT_TRUE(get_buffer_handle_result.ok());
     EXPECT_EQ(get_buffer_handle_result.value().res, ZX_ERR_NOT_FOUND);
 
@@ -1042,14 +1042,14 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Invalid) {
     zx::vmo buffer_vmo;
     ASSERT_OK(zx::vmo::create(kSize, 0u, &buffer_vmo));
 
-    auto get_buffer_handle_result = fidl_client_.GetBufferHandle(std::move(buffer_vmo));
+    auto get_buffer_handle_result = fidl_client_->GetBufferHandle(std::move(buffer_vmo));
     ASSERT_TRUE(get_buffer_handle_result.ok());
     EXPECT_EQ(get_buffer_handle_result.value().res, ZX_ERR_INVALID_ARGS);
   }
 
   // Check invalid buffer VMO.
   {
-    auto get_buffer_handle_result = fidl_client_.GetBufferHandle(zx::vmo());
+    auto get_buffer_handle_result = fidl_client_->GetBufferHandle(zx::vmo());
     ASSERT_EQ(get_buffer_handle_result.status(), ZX_ERR_INVALID_ARGS);
   }
 }
@@ -1066,7 +1066,7 @@ TEST_F(ControlDeviceTest, GetBufferHandleInfo_Invalid) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
 
-    auto get_buffer_handle_info_result = fidl_client_.GetBufferHandleInfo(std::move(buffer_vmo));
+    auto get_buffer_handle_info_result = fidl_client_->GetBufferHandleInfo(std::move(buffer_vmo));
     ASSERT_TRUE(get_buffer_handle_info_result.ok());
     EXPECT_TRUE(get_buffer_handle_info_result.value().result.is_err());
     EXPECT_EQ(get_buffer_handle_info_result.value().result.err(), ZX_ERR_NOT_FOUND);
@@ -1080,7 +1080,7 @@ TEST_F(ControlDeviceTest, GetBufferHandleInfo_Invalid) {
     zx::vmo buffer_vmo;
     ASSERT_OK(zx::vmo::create(kSize, 0u, &buffer_vmo));
 
-    auto get_buffer_handle_info_result = fidl_client_.GetBufferHandleInfo(std::move(buffer_vmo));
+    auto get_buffer_handle_info_result = fidl_client_->GetBufferHandleInfo(std::move(buffer_vmo));
     ASSERT_TRUE(get_buffer_handle_info_result.ok());
     EXPECT_TRUE(get_buffer_handle_info_result.value().result.is_err());
     EXPECT_EQ(get_buffer_handle_info_result.value().result.err(), ZX_ERR_INVALID_ARGS);
@@ -1088,7 +1088,7 @@ TEST_F(ControlDeviceTest, GetBufferHandleInfo_Invalid) {
 
   // Check invalid buffer VMO.
   {
-    auto get_buffer_handle_info_result = fidl_client_.GetBufferHandleInfo(zx::vmo());
+    auto get_buffer_handle_info_result = fidl_client_->GetBufferHandleInfo(zx::vmo());
     ASSERT_EQ(get_buffer_handle_info_result.status(), ZX_ERR_INVALID_ARGS);
   }
 }
