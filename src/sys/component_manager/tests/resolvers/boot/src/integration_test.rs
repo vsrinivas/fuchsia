@@ -14,25 +14,26 @@
 
 use {
     fidl_fidl_test_components as ftest, fidl_fuchsia_io2 as fio2,
-    fuchsia_component::server::ServiceFs, fuchsia_component_test::builder::*, futures::prelude::*,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_component_test::{ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint},
+    futures::prelude::*,
 };
 
 #[fuchsia::test]
 async fn boot_resolver_can_be_routed_from_component_manager() {
-    let mut builder = RealmBuilder::new().await.unwrap();
+    let builder = RealmBuilder::new().await.unwrap();
     builder
-        .add_component(
+        .add_child(
             "component-manager",
-            ComponentSource::url(
-                "fuchsia-pkg://fuchsia.com/boot-resolver-routing-tests#meta/component_manager.cm",
-            ),
+            "fuchsia-pkg://fuchsia.com/boot-resolver-routing-tests#meta/component_manager.cm",
+            ChildProperties::new(),
         )
         .await
         .unwrap();
     builder
-        .add_component(
+        .add_mock_child(
             "mock-boot",
-            ComponentSource::mock(|mock_handles| {
+            |mock_handles| {
                 async move {
                     let pkg = io_util::directory::open_in_namespace(
                         "/pkg",
@@ -46,7 +47,8 @@ async fn boot_resolver_can_be_routed_from_component_manager() {
                     Ok::<(), anyhow::Error>(())
                 }
                 .boxed()
-            }),
+            },
+            ChildProperties::new(),
         )
         .await
         .unwrap();
@@ -54,41 +56,45 @@ async fn boot_resolver_can_be_routed_from_component_manager() {
     // Supply a fake boot directory which is really just an alias to this package's pkg directory.
     // TODO(fxbug.dev/37534): Add the execute bit when supported.
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::directory("boot", "/boot", fio2::R_STAR_DIR),
-            source: RouteEndpoint::component("mock-boot"),
-            targets: vec![RouteEndpoint::component("component-manager")],
-        })
+        .add_route(
+            RouteBuilder::directory("boot", "/boot", fio2::R_STAR_DIR)
+                .source(RouteEndpoint::component("mock-boot"))
+                .targets(vec![RouteEndpoint::component("component-manager")]),
+        )
+        .await
         .unwrap();
 
     // This is the test protocol that is expected to be callable.
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fidl.test.components.Trigger"),
-            source: RouteEndpoint::component("component-manager"),
-            targets: vec![RouteEndpoint::AboveRoot],
-        })
+        .add_route(
+            RouteBuilder::protocol("fidl.test.components.Trigger")
+                .source(RouteEndpoint::component("component-manager"))
+                .targets(vec![RouteEndpoint::AboveRoot]),
+        )
+        .await
         .unwrap();
 
     // Forward logging to debug test breakages.
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.logger.LogSink"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component("component-manager")],
-        })
+        .add_route(
+            RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![RouteEndpoint::component("component-manager")]),
+        )
+        .await
         .unwrap();
 
     // Component manager needs fuchsia.process.Launcher to spawn new processes.
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.process.Launcher"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component("component-manager")],
-        })
+        .add_route(
+            RouteBuilder::protocol("fuchsia.process.Launcher")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![RouteEndpoint::component("component-manager")]),
+        )
+        .await
         .unwrap();
 
-    let realm_instance = builder.build().create().await.unwrap();
+    let realm_instance = builder.build().await.unwrap();
     let trigger =
         realm_instance.root.connect_to_protocol_at_exposed_dir::<ftest::TriggerMarker>().unwrap();
     let out = trigger.run().await.expect("trigger failed");

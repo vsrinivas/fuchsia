@@ -6,12 +6,14 @@ use {
     anyhow::Error,
     fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
-    fuchsia_component_test::{builder::*, mock},
+    fuchsia_component_test::{
+        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+    },
     futures::{channel::mpsc, SinkExt, StreamExt, TryStreamExt},
 };
 
 async fn crash_receiver(
-    mock_handles: mock::MockHandles,
+    mock_handles: MockHandles,
     expected_crash_info: fsys::ComponentCrashInfo,
     mut success_reporter: mpsc::Sender<()>,
 ) -> Result<(), Error> {
@@ -76,29 +78,45 @@ async fn crashed_component_generates_a_record() -> Result<(), Error> {
         ..fsys::ComponentCrashInfo::EMPTY
     };
     let (success_sender, mut success_receiver) = mpsc::channel(1);
-    let mut builder = RealmBuilder::new().await?;
+    let builder = RealmBuilder::new().await?;
     builder
-        .add_component("crash_receiver", ComponentSource::mock(move |mh| Box::pin(crash_receiver(mh, expected_crash_info.clone(), success_sender.clone()))))
+        .add_mock_child(
+            "crash_receiver",
+            move |mh| {
+                Box::pin(crash_receiver(mh, expected_crash_info.clone(), success_sender.clone()))
+            },
+            ChildProperties::new(),
+        )
         .await?
-        .add_eager_component("report_then_panic_on_start", ComponentSource::url("fuchsia-pkg://fuchsia.com/crash-introspect-test#meta/report_then_panic_on_start.cm"))
+        .add_child(
+            "report_then_panic_on_start",
+            "fuchsia-pkg://fuchsia.com/crash-introspect-test#meta/report_then_panic_on_start.cm",
+            ChildProperties::new().eager(),
+        )
         .await?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.logger.LogSink"),
-            source: RouteEndpoint::above_root(),
-            targets: vec![RouteEndpoint::component("crash_receiver"),RouteEndpoint::component("report_then_panic_on_start") ],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.sys2.CrashIntrospect"),
-            source: RouteEndpoint::above_root(),
-            targets: vec![RouteEndpoint::component("crash_receiver")],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.test.ThreadKoidReporter"),
-            source: RouteEndpoint::component("crash_receiver"),
-            targets: vec![RouteEndpoint::component("report_then_panic_on_start")],
-        })?;
+        .add_route(
+            RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::above_root())
+                .targets(vec![
+                    RouteEndpoint::component("crash_receiver"),
+                    RouteEndpoint::component("report_then_panic_on_start"),
+                ]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol("fuchsia.sys2.CrashIntrospect")
+                .source(RouteEndpoint::above_root())
+                .targets(vec![RouteEndpoint::component("crash_receiver")]),
+        )
+        .await?
+        .add_route(
+            RouteBuilder::protocol("fuchsia.test.ThreadKoidReporter")
+                .source(RouteEndpoint::component("crash_receiver"))
+                .targets(vec![RouteEndpoint::component("report_then_panic_on_start")]),
+        )
+        .await?;
     let _realm_instance =
-        builder.build().create_in_nested_component_manager("#meta/component_manager.cm").await?;
+        builder.build_in_nested_component_manager("#meta/component_manager.cm").await?;
 
     assert!(success_receiver.next().await.is_some());
     Ok(())
