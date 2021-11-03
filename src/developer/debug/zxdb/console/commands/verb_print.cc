@@ -32,7 +32,6 @@ Arguments
 
 )" PRINT_COMMAND_SWITCH_HELP
     R"(
-
 Examples
 
   p foo

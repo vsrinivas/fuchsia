@@ -526,7 +526,6 @@ OutputBuffer DoFormatNodeOneWay(const FormatNode* node, const RecursiveState& st
       case FormatNode::kBaseType:
       case FormatNode::kFunctionPointer:
       case FormatNode::kOther:
-      case FormatNode::kString:
         // All these things just print the description only.
         out.Append(DoFormatStandardNode(node, state));
         break;
@@ -552,6 +551,15 @@ OutputBuffer DoFormatNodeOneWay(const FormatNode* node, const RecursiveState& st
         break;
       case FormatNode::kWrapper:
         out.Append(DoFormatWrapper(node, state));
+        break;
+      case FormatNode::kString:
+        // For strings, use the number format to determine if the output should be displayed
+        // as the string data or a numeric array.
+        if (state.options.num_format == FormatOptions::NumFormat::kDefault) {
+          out.Append(DoFormatStandardNode(node, state));
+        } else {
+          out.Append(DoFormatArrayOrTupleNode(node, state));
+        }
         break;
     }
   }

@@ -232,6 +232,34 @@ TEST(FormatNodeConsole, Array) {
   EXPECT_EQ("(int[2]) {42, 137, ...}", out.AsString());
 }
 
+// Strings are generated with a base node that's the overall string and a set of children, one for
+// each character. The number format toggles between these presentations in the console.
+TEST(FormatNodeConsole, String) {
+  FormatNode node;
+  node.set_state(FormatNode::kDescribed);
+  node.set_type("char[2]");
+  node.set_description_kind(FormatNode::kString);
+  node.set_description("\"a\"");
+
+  auto child = std::make_unique<FormatNode>("[0]");
+  FillBaseTypeNode("char", "0x61", child.get());
+  node.children().push_back(std::move(child));
+
+  child = std::make_unique<FormatNode>("[1]");
+  FillBaseTypeNode("char", "0x00", child.get());
+  node.children().push_back(std::move(child));
+
+  // Normal string presentation using the default number formatting.
+  ConsoleFormatOptions options;
+  OutputBuffer out = FormatNodeForConsole(node, options);
+  EXPECT_EQ("\"a\"", out.AsString());
+
+  // Now format using hex mode which should convert to an array.
+  options.num_format = FormatOptions::NumFormat::kHex;
+  out = FormatNodeForConsole(node, options);
+  EXPECT_EQ("(0x61, 0x00)", out.AsString());
+}
+
 TEST(FormatNodeConsole, Pointer) {
   FormatNode node;
   node.set_state(FormatNode::kDescribed);
