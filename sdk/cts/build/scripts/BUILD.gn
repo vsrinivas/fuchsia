@@ -48,5 +48,6 @@ group("tests") {
     ":fidl_api_mapper_test($host_toolchain)",
     ":gather_package_deps_test($host_toolchain)",
     ":verify_cts_deps_test($host_toolchain)",
+    "verify_release:tests",
   ]
 }

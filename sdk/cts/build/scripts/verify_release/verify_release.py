@@ -52,10 +52,11 @@ class CTS:
             output = subprocess.check_output(
                 cmd, stderr=subprocess.STDOUT, shell=True)
         except subprocess.CalledProcessError as exc:
-            print("FAILED!")
-            print(" -> {}\n".format(cmd))
-            print(exc.output.decode("utf-8"))
+            self._print("FAILED!")
+            self._print(" -> {}\n".format(cmd))
+            self._print(exc.output.decode("utf-8"))
             sys.exit(1)
+        return output.decode("utf-8")
 
     def _build_cts_from_workspace(self):
         """
@@ -109,7 +110,7 @@ class CTS:
 
         # Modify the BUILD.gn file template for the current CTS version.
         build_file_template = os.path.join(
-            self.fuchsia_dir, 'sdk', 'cts', 'release', '_BUILD.gn')
+            self.fuchsia_dir, 'sdk', 'cts', 'build', 'scripts', 'verify_release', '_BUILD.gn')
         with open(build_file_template, 'r') as f:
             build_file = f.read()
         build_file = build_file.replace("{cts_version}", self.cts_version)
@@ -123,6 +124,7 @@ class CTS:
         cmd = "fx set {}.{} --with //prebuilt/cts/{}:tests && fx build".format(
             self.product, self.board, self.cts_version)
 
+        self._print(cmd)
         self._check_output(cmd)
         self._print("Done.")
 
@@ -134,13 +136,16 @@ class CTS:
         """
         self._print("Running the released CTS tests....", end='')
 
-        # TODO(jcecil): Start an emulator or check for the existence of one.
-        cmd = "fx test"
-        self._check_output(cmd)
-
-        pass
+        self._print(self._check_output("fx is-package-server-running"))
+        self._print(self._check_output("fx test"))
 
     def run(self):
+        if self.run_tests:
+            # Error out early if the emulator isn't running.
+            self._print("Verifying that fx serve is running...", end='')
+            self._check_output("fx is-package-server-running")
+            self._print("Done.")
+
         self._build_cts_from_workspace()
         self._release_cts_to_prebuilt_directory()
         self._build_cts_release()
@@ -181,7 +186,7 @@ def main():
     parser.add_argument(
         "--cts_version", default="test", help="CTS version string.")
     parser.add_argument(
-        "--run_tests", default=False, help="Run the released CTS tests.")
+        "--run_tests", default=True, help="Run the released CTS tests.")
 
     args = parser.parse_args()
     args_dict = vars(args)

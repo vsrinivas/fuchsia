@@ -130,8 +130,6 @@ See the section about "Debugging tips" below.
 
 ### Step 6. Verify your test passes as part of the CTS release
 
-Note: TODO(http://fxbug.dev/84175): Automate these steps and update this section.
-
 This step involves building the CTS in the same way that our CI does when it is
 released, then running those CTS tests in your local checkout. It is necessary
 because upon release, we automatically rewrite each CTS test package's name to
@@ -139,22 +137,19 @@ deduplicate it from the same package's name at HEAD (the build does not allow
 duplicate names) and we must verify that the test still passes after this
 rewrite.
 
-To do this follow these steps:
+Follow the instructions in Step 4 to start an emulator and a package server,
+then launch a new terminal and run the following command:
 
 ```
-# Build the CTS.
-fx set core.x64 --with //sdk/cts:cts_artifacts --args cts_version=\"canary\"
-fx build
-
-# Overwrite your checkout's copy of CTS.
-# Optionally, backup the directory first or restore it later with `jiri update -gc`.
-sudo rm -rf prebuilt/cts/canary/linux-amd64/cts
-sudo cp -r out/default/cts prebuilt/cts/linux-amd64/cts
-
-# Run the tests.
-fx set core.64 --with //sdk/cts/canary:my_test_canary
-fx test //sdk/cts/canary:my_test_canary
+$FUCHSIA_DIR/sdk/cts/build/scripts/verify_release/verify_release.py
 ```
+
+This command will build the CTS archive, release it to your
+`//prebuilt/cts/test/*` directory, and run the tests contained therein. After
+a brief pause, the test results will be printed to the terminal window.
+
+To learn more about that script, or to run the commands manually, please see
+[//sdk/cts/build/scripts/verify_release/README.md](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/cts/build/scripts/verify_release/README.md).
 
 Some common causes of test failure at this stage include:
 
