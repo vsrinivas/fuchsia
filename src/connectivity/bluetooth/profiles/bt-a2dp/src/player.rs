@@ -26,7 +26,7 @@ use {
         ready,
         stream::FuturesUnordered,
         task::{Context, Poll},
-        Future, StreamExt, TryFutureExt,
+        Future, FutureExt, StreamExt, TryFutureExt,
     },
     std::collections::HashSet,
     std::{convert::TryInto, io, pin::Pin},
@@ -476,14 +476,11 @@ impl Player {
     ///
     /// This function should be always be polled when running
     pub fn next_event(&mut self) -> impl Future<Output = PlayerEvent> + '_ {
-        let next_fut = self.watch_status_stream.next();
-        async move {
-            match next_fut.await {
-                None => PlayerEvent::Closed,
-                Some(Err(_)) => PlayerEvent::Closed,
-                Some(Ok(s)) => PlayerEvent::Status(s),
-            }
-        }
+        self.watch_status_stream.next().map(|s| match s {
+            None => PlayerEvent::Closed,
+            Some(Err(_)) => PlayerEvent::Closed,
+            Some(Ok(s)) => PlayerEvent::Status(s),
+        })
     }
 }
 

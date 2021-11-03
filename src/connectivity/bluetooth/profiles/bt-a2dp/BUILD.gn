@@ -142,6 +142,7 @@ rustc_test("encoding_integration_bin") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/bluetooth/fidl:component-rustc",
     "//src/connectivity/bluetooth/lib/async-helpers",
+    "//src/connectivity/bluetooth/lib/async-helpers:async-test-helpers",
     "//src/connectivity/bluetooth/lib/bt-a2dp",
     "//src/connectivity/bluetooth/lib/bt-a2dp:bt_a2dp_metrics_rustlib",
     "//src/connectivity/bluetooth/lib/bt-avdtp",

@@ -272,10 +272,12 @@ mod tests {
         assert_data_tree!(inspect, root: {
             inbound_stream: {
                 bytes_per_second_current: 0u64,
+                streaming_secs: 0u64,
                 total_bytes: 0u64,
             },
             outbound_stream: {
                 bytes_per_second_current: 0u64,
+                streaming_secs: 0u64,
                 total_bytes: 0u64,
             },
         });
@@ -286,11 +288,13 @@ mod tests {
             inbound_stream: {
                 bytes_per_second_current: 0u64,
                 start_time: 1_234_567i64,
+                streaming_secs: 0u64,
                 total_bytes: 0u64,
             },
             outbound_stream: {
                 bytes_per_second_current: 0u64,
                 start_time: 1_234_567i64,
+                streaming_secs: 0u64,
                 total_bytes: 0u64,
             },
         });
@@ -302,11 +306,13 @@ mod tests {
             inbound_stream: {
                 bytes_per_second_current: 500u64,
                 start_time: 1_234_567i64,
+                streaming_secs: 1u64,
                 total_bytes: 500u64,
             },
             outbound_stream: {
                 bytes_per_second_current: 0u64,
                 start_time: 1_234_567i64,
+                streaming_secs: 0u64,
                 total_bytes: 0u64,
             },
         });
@@ -317,11 +323,13 @@ mod tests {
             inbound_stream: {
                 bytes_per_second_current: 500u64, // 500 bytes in 1 second
                 start_time: 1_234_567i64,
+                streaming_secs: 1u64,
                 total_bytes: 500u64,
             },
             outbound_stream: {
                 bytes_per_second_current: 125u64, // 250 bytes in 2 seconds
                 start_time: 1_234_567i64,
+                streaming_secs: 2u64,
                 total_bytes: 250u64,
             },
         });

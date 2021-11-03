@@ -8,6 +8,7 @@ use {
     fuchsia_inspect_contrib::nodes::NodeExt,
     fuchsia_inspect_derive::Inspect,
     fuchsia_zircon as zx,
+    std::convert::TryInto,
     std::fmt,
 };
 
@@ -180,7 +181,13 @@ pub struct DataStreamInspect {
     /// Time that this stream started.
     /// Managed manually.
     #[inspect(skip)]
-    start_time: Option<fuchsia_inspect_contrib::nodes::TimeProperty>,
+    start_time_prop: Option<fuchsia_inspect_contrib::nodes::TimeProperty>,
+    /// Time that we were last started.  Used to calculate seconds running.
+    #[inspect(skip)]
+    started: Option<fasync::Time>,
+    /// Seconds that this stream has been active, measured from the start time to the last
+    /// recorded transfer.
+    streaming_secs: inspect::UintProperty,
     /// Used to calculate instantaneous bytes_per_second.
     #[inspect(skip)]
     last_update: Option<DataTransferStats>,
@@ -190,11 +197,12 @@ pub struct DataStreamInspect {
 impl DataStreamInspect {
     pub fn start(&mut self) {
         let now = fasync::Time::now();
-        if let Some(prop) = &self.start_time {
+        if let Some(prop) = &self.start_time_prop {
             prop.set_at(now.into());
         } else {
-            self.start_time = Some(self.inspect_node.create_time_at("start_time", now.into()));
+            self.start_time_prop = Some(self.inspect_node.create_time_at("start_time", now.into()));
         }
+        self.started = Some(now);
         self.last_update = Some(DataTransferStats {
             time: now,
             elapsed: std::num::NonZeroU64::new(1).unwrap(), // Default smallest interval of 1 nano
@@ -226,6 +234,10 @@ impl DataStreamInspect {
         self.total_bytes.add(bytes as u64);
         self.bytes_per_second_current.set(transfer.calculate_throughput());
         self.last_update = Some(transfer);
+        if let Some(started) = &self.started {
+            let secs: u64 = (at - *started).into_seconds().try_into().unwrap_or(0);
+            self.streaming_secs.set(secs);
+        }
     }
 }
 
@@ -313,6 +325,7 @@ mod tests {
         assert_data_tree!(inspector, root: {
             data_stream: {
                 total_bytes: 0 as u64,
+                streaming_secs: 0 as u64,
                 bytes_per_second_current: 0 as u64,
             }
         });
@@ -322,6 +335,7 @@ mod tests {
         assert_data_tree!(inspector, root: {
             data_stream: {
                 total_bytes: 0 as u64,
+                streaming_secs: 0 as u64,
                 bytes_per_second_current: 0 as u64,
             }
         });
@@ -337,6 +351,7 @@ mod tests {
             data_stream: {
                 start_time: 5_678900000i64,
                 total_bytes: 0 as u64,
+                streaming_secs: 0 as u64,
                 bytes_per_second_current: 0 as u64,
             }
         });
@@ -348,6 +363,7 @@ mod tests {
             data_stream: {
                 start_time: 5_678900000i64,
                 total_bytes: 0 as u64,
+                streaming_secs: 0 as u64,
                 bytes_per_second_current: 0 as u64,
             }
         });
@@ -363,6 +379,7 @@ mod tests {
             data_stream: {
                 start_time: 5_678900000i64,
                 total_bytes: 0 as u64,
+                streaming_secs: 0 as u64,
                 bytes_per_second_current: 0 as u64,
             }
         });
@@ -374,6 +391,7 @@ mod tests {
             data_stream: {
                 start_time: 5_678900000i64,
                 total_bytes: 5 as u64,
+                streaming_secs: 0 as u64,
                 bytes_per_second_current: 5_000_000_000 as u64,
             }
         });
@@ -389,6 +407,7 @@ mod tests {
             data_stream: {
                 start_time: 5_678900000i64,
                 total_bytes: 0 as u64,
+                streaming_secs: 0 as u64,
                 bytes_per_second_current: 0 as u64,
             }
         });
@@ -402,6 +421,7 @@ mod tests {
             data_stream: {
                 start_time: 5_678900000i64,
                 total_bytes: 500 as u64,
+                streaming_secs: 0 as u64,
                 bytes_per_second_current: 1000 as u64,
             }
         });
@@ -413,6 +433,7 @@ mod tests {
             data_stream: {
                 start_time: 5_678900000i64,
                 total_bytes: 1000 as u64,
+                streaming_secs: 5 as u64,
                 bytes_per_second_current: 100 as u64,
             }
         });
@@ -423,6 +444,7 @@ mod tests {
             data_stream: {
                 start_time: 5_678900000i64,
                 total_bytes: 1900 as u64,
+                streaming_secs: 5 as u64,
                 bytes_per_second_current: 280 as u64,
             }
         });

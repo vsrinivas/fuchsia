@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use fuchsia_async as fasync;
-use futures::{future::Either, pin_mut, Future};
+use futures::{future::Either, pin_mut, task::Poll, Future};
 
 ///! Utilities for tests
 
@@ -23,8 +23,12 @@ where
     ResultFut: Future<Output = Out>,
 {
     pin_mut!(result_fut);
-    match exec.run_singlethreaded(&mut futures::future::select(background_fut, result_fut)) {
-        Either::Right(r) => r,
-        Either::Left(_) => panic!("Background future finished"),
+    let mut select_fut = futures::future::select(background_fut, result_fut);
+    loop {
+        match exec.run_until_stalled(&mut select_fut) {
+            Poll::Ready(Either::Right(r)) => return r,
+            Poll::Ready(Either::Left(_)) => panic!("Background future finished"),
+            Poll::Pending => {}
+        }
     }
 }
