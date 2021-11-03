@@ -178,7 +178,7 @@ void EthDev::RecvLocked(const void* data, size_t len, uint32_t extra) {
       }
     } else {
       // Fatal, should force teardown.
-      zxlogf(WARNING, "eth [%s]: rx_fifo write failed %d", name_, status);
+      zxlogf(WARNING, "eth [%s]: rx_fifo write failed %s", name_, zx_status_get_string(status));
     }
     return;
   }
@@ -190,7 +190,7 @@ int EthDev::TransmitFifoWrite(eth_fifo_entry_t* entries, size_t count) {
   // Writing should never fail, or fail to write all entries.
   status = transmit_fifo_.write(sizeof(eth_fifo_entry_t), entries, count, &actual);
   if (status < 0) {
-    zxlogf(WARNING, "eth [%s]: tx_fifo write failed %d", name_, status);
+    zxlogf(WARNING, "eth [%s]: tx_fifo write failed %s", name_, zx_status_get_string(status));
     return -1;
   }
   if (actual != count) {
@@ -317,7 +317,6 @@ zx_status_t EthDev::TransmitListenLocked(bool yes) {
 
 // The array of entries is invalidated after the call.
 int EthDev::Send(eth_fifo_entry_t* entries, size_t count) {
-  std::optional<TransmitBuffer> transmit_buffer = std::nullopt;
   // The entries that we can't send back to the fifo immediately are filtered
   // out in-place using a classic algorithm a-la "std::remove_if".
   // Once the loop finishes, the first 'to_write' entries in the array
@@ -329,31 +328,30 @@ int EthDev::Send(eth_fifo_entry_t* entries, size_t count) {
       e->flags = ETH_FIFO_INVALID;
       entries[to_write++] = *e;
     } else {
-      if (!transmit_buffer) {
-        transmit_buffer = GetTransmitBuffer();
-        if (!transmit_buffer) {
-          return -1;
-        }
+      std::optional transmit_buffer_opt = GetTransmitBuffer();
+      if (!transmit_buffer_opt.has_value()) {
+        return -1;
       }
+      TransmitBuffer& transmit_buffer = transmit_buffer_opt.value();
       uint32_t opts = count > 1 ? ETHERNET_TX_OPT_MORE : 0u;
       if (opts) {
         zxlogf(TRACE, "setting OPT_MORE (%lu packets to go)", count);
       }
-      transmit_buffer->operation()->data_buffer =
+      transmit_buffer.operation()->data_buffer =
           reinterpret_cast<uint8_t*>(io_buffer_.start()) + e->offset;
       if (edev0_->info_.features & ETHERNET_FEATURE_DMA) {
-        transmit_buffer->operation()->phys =
+        transmit_buffer.operation()->phys =
             paddr_map_[e->offset / PAGE_SIZE] + (e->offset & kPageMask);
       }
-      transmit_buffer->operation()->data_size = e->length;
-      transmit_buffer->private_storage()->fifo_cookie = e->cookie;
+      transmit_buffer.operation()->data_size = e->length;
+      transmit_buffer.private_storage()->fifo_cookie = e->cookie;
       edev0_->mac_.QueueTx(
-          opts, transmit_buffer->take(),
+          opts, transmit_buffer.take(),
           [](void* cookie, zx_status_t status, ethernet_netbuf_t* netbuf) {
+            // This returns the transmit buffer to the pool.
             reinterpret_cast<EthDev0*>(cookie)->CompleteTx(netbuf, status);
           },
           edev0_);
-      transmit_buffer.reset();
       if (state_ & kStateTransmissionLoopback) {
         edev0_->TransmitEcho(reinterpret_cast<char*>(io_buffer_.start()) + e->offset, e->length);
       }
@@ -361,9 +359,6 @@ int EthDev::Send(eth_fifo_entry_t* entries, size_t count) {
       ethernet_request_count_++;
     }
     count--;
-  }
-  if (transmit_buffer) {
-    PutTransmitBuffer(*std::move(transmit_buffer));
   }
   if (to_write) {
     TransmitFifoWrite(entries, to_write);
