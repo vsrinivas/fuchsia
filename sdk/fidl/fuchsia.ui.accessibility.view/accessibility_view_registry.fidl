@@ -5,8 +5,8 @@ library fuchsia.ui.accessibility.view;
 
 using fuchsia.ui.views;
 
-/// Registry allows a privileged client to create an accessibility ViewHolder
-/// as a child of the root view in the scene graph.
+/// Registry allows a privileged client to interpose an accessibility view between
+/// the root view of the scene graph and the view which embeds the system shell.
 @discoverable
 protocol Registry {
     /// Creates a new accessibility `ViewHolder` as a child of the root view
@@ -42,5 +42,36 @@ protocol Registry {
         a11y_view_token fuchsia.ui.views.ViewHolderToken;
     }) -> (resource struct {
         client_view_holder_token fuchsia.ui.views.ViewHolderToken;
+    });
+
+    /// Creates a new accessibility `Viewport` as a child of the root view in
+    /// the scene graph, implemented by passing [`viewport_creation_token`] to
+    /// [`fuchsia.ui.composition/Flatland.CreateViewport`]). The created
+    /// `Viewport` holds an accessibility view. The accessibility view does not
+    /// render any content; it's only used to vend capabilities to the
+    /// accessibility manager that a view confers, e.g. ability to request
+    /// focus, consume and respond to input events, annotate underlying views,
+    /// and apply coordinate transforms to its subtree.
+    ///
+    /// The protocol returns a client [`fuchsia.ui.views/ViewportCreationToken`],
+    /// which the caller MUST use to attach the corresponding client view holder
+    /// as a child of the accessibility view it created.
+    ///
+    /// Since creating a `Viewport` modifies the Flatland scene graph, this
+    /// function won't take effect until we schedule a new frame by calling
+    /// [`fuchsia.ui.composition/Flatland.Present`]) on the Flatland instance
+    /// which contains the view corresponding to [`viewport_creation_token`].
+    ///
+    /// EPITAPH
+    ///
+    /// This method may return the following epitaphs:
+    ///
+    /// - ZX_ERR_PEER_CLOSED, if Scenic fails creating the accessibility `Viewport`.
+    ///
+    @transitional
+    CreateAccessibilityViewport(resource struct {
+        viewport_creation_token fuchsia.ui.views.ViewportCreationToken;
+    }) -> (resource struct {
+        client_viewport_creation_token fuchsia.ui.views.ViewportCreationToken;
     });
 };

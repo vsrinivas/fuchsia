@@ -20,7 +20,7 @@ use {
     fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_inspect as inspect,
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::{StreamExt, TryFutureExt, TryStreamExt},
@@ -223,6 +223,14 @@ pub async fn handle_accessibility_view_registry_request_stream(
                         responder.control_handle().shutdown_with_epitaph(zx::Status::PEER_CLOSED);
                     }
                 };
+            }
+            A11yViewRegistryRequest::CreateAccessibilityViewport {
+                viewport_creation_token: _,
+                responder,
+                ..
+            } => {
+                fx_log_err!("A11yViewRegistry.CreateAccessibilityViewport not implemented!");
+                responder.control_handle().shutdown_with_epitaph(zx::Status::PEER_CLOSED);
             }
         };
     }

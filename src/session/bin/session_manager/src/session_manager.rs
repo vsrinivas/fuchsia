@@ -421,6 +421,17 @@ impl SessionManager {
 
                     let _ = responder.send(&mut proxy_view_holder_token);
                 }
+                RegistryRequest::CreateAccessibilityViewport {
+                    mut viewport_creation_token,
+                    responder,
+                    ..
+                } => {
+                    let mut proxy_viewport_creation_token = accessibility_view_registry_proxy
+                        .create_accessibility_viewport(&mut viewport_creation_token)
+                        .await?;
+
+                    let _ = responder.send(&mut proxy_viewport_creation_token);
+                }
             }
         }
         Ok(())
@@ -686,6 +697,7 @@ mod tests {
             create_proxy_and_stream::<RegistryMarker>()
                 .expect("Failed to create downstream AccessibilityViewRegistry proxy and stream");
         let mut num_create_view_holder_calls = 0;
+        let mut num_create_viewport_calls = 0;
 
         let local_server_fut = SessionManager::handle_accessibility_view_registry_request_stream(
             local_request_stream,
@@ -705,6 +717,18 @@ mod tests {
                             scenic::ViewTokenPair::new().expect("Failed to create view token pair");
                         let _ = responder.send(&mut proxy_view_token_pair.view_holder_token);
                     }
+                    RegistryRequest::CreateAccessibilityViewport {
+                        viewport_creation_token: _,
+                        responder,
+                        ..
+                    } => {
+                        num_create_viewport_calls += 1;
+                        let mut proxy_view_creation_token_pair =
+                            scenic::flatland::LinkTokenPair::new()
+                                .expect("Failed to create view/viewport token pair");
+                        let _ = responder
+                            .send(&mut proxy_view_creation_token_pair.viewport_creation_token);
+                    }
                 }
             }
         };
@@ -723,11 +747,21 @@ mod tests {
                 .await
                 .expect("Failed to create accessibility view holder");
 
+            let mut view_creation_token_pair = scenic::flatland::LinkTokenPair::new()
+                .expect("Failed to create view/viewport token pair");
+            let _ = local_proxy
+                .create_accessibility_viewport(
+                    &mut view_creation_token_pair.viewport_creation_token,
+                )
+                .await
+                .expect("Failed to create accessibility viewport");
+
             std::mem::drop(local_proxy); // Drop proxy to terminate `server_fut`.
         };
 
         let _ = future::join3(create_and_drop_fut, local_server_fut, downstream_server_fut).await;
         assert_eq!(num_create_view_holder_calls, 1);
+        assert_eq!(num_create_viewport_calls, 1);
     }
 
     #[fasync::run_until_stalled(test)]
