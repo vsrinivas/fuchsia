@@ -1,0 +1,8 @@
+Name: libpcap
+URL: https://github.com/the-tcpdump-group/libpcap
+Version: libpcap-1.10.1
+License: BSD
+License File: src/LICENSE
+Upstream Git: https://github.com/the-tcpdump-group/libpcap
+Description: A system-independent interface for user-level packet capture.
+Local Modifications: See https://fxbug.dev/84480.

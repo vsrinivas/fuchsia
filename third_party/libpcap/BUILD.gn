@@ -1,0 +1,70 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/library_headers.gni")
+
+shared_library("libpcap") {
+  output_name = "pcap"
+
+  sources = [
+    "src/bpf_dump.c",
+    "src/bpf_filter.c",
+    "src/bpf_image.c",
+    "src/etherent.c",
+    "src/fad-getad.c",
+    "src/fmtutils.c",
+    "src/gencode.c",
+    "src/grammar.c",
+    "src/nametoaddr.c",
+    "src/optimize.c",
+    "src/pcap-common.c",
+    "src/pcap-null.c",
+    "src/pcap.c",
+    "src/savefile.c",
+    "src/scanner.c",
+    "src/sf-pcap.c",
+    "src/sf-pcapng.c",
+  ]
+
+  defines = [
+    "HAVE_CONFIG_H",
+    "BUILDING_PCAP",
+    "pcap_EXPORTS",
+  ]
+
+  # For config.h.
+  include_dirs = [ "." ]
+
+  configs += [ ":suppress_warnings" ]
+
+  public_deps = [ ":headers" ]
+}
+
+library_headers("headers") {
+  headers = [
+    "pcap/bpf.h",
+    "pcap/can_socketcan.h",
+    "pcap/compiler-tests.h",
+    "pcap/dlt.h",
+    "pcap/funcattrs.h",
+    "pcap/ipnet.h",
+    "pcap/namedb.h",
+    "pcap/nflog.h",
+    "pcap/pcap.h",
+    "pcap/pcap-inttypes.h",
+    "pcap/sll.h",
+    "pcap/socket.h",
+    "pcap/usb.h",
+  ]
+
+  include_dir = "./src"
+}
+
+config("suppress_warnings") {
+  visibility = [ ":*" ]
+  cflags = [
+    "-Wno-implicit-fallthrough",
+    "-Wno-int-conversion",
+  ]
+}

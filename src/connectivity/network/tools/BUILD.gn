@@ -8,6 +8,7 @@ group("tools") {
     "nc",
     "network-speed-test",
     "sockscripter",
+    "//third_party/tcpdump",
   ]
 }
 
@@ -16,5 +17,6 @@ group("tests") {
   deps = [
     "network-speed-test:tests",
     "sockscripter:tests",
+    "//third_party/tcpdump/tests",
   ]
 }

@@ -1,0 +1,8 @@
+Name: tcpdump
+URL: https://github.com/the-tcpdump-group/tcpdump
+Version: tcpdump-4.99.0
+License: BSD
+License File: src/LICENSE
+Upstream Git: https://github.com/the-tcpdump-group/tcpdump
+Description: A tool for network monitoring.
+Local Modifications: See https://fxbug.dev/84481.
