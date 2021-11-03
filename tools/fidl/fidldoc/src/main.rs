@@ -14,8 +14,6 @@ use rayon::prelude::*;
 
 use serde_json::{json, Value};
 
-use libdoc::DocCompiler;
-
 mod fidljson;
 use fidljson::{to_lower_snake_case, FidlJson, FidlJsonPackageData, TableOfContentsItem};
 
@@ -74,10 +72,6 @@ struct Opt {
     #[argh(switch)]
     /// do not generate any output
     silent: bool,
-    #[argh(switch)]
-    /// experimental documentation checks (do not generate any output)
-    /// TODO(fxbug.dev/71688) Remove the flag when the checks will be fully developed.
-    experimental_checks: bool,
 }
 
 fn main() {
@@ -128,207 +122,47 @@ fn run(opt: Opt) -> Result<(), Error> {
     let FidlJsonPackageData { declarations, fidl_json_map } =
         process_fidl_json_files(input_files.to_vec());
 
-    if opt.experimental_checks {
-        // Only checks the documentation (no generation).
-        fidl_json_map
-            .par_iter()
-            .try_for_each(|(_package, package_fidl_json)| check_documentation(package_fidl_json))
-            .expect("Errors");
+    // The table of contents lists all packages in alphabetical order.
+    let table_of_contents = create_toc(&fidl_json_map);
 
-        if !opt.silent {
-            println!("documentation checked");
-        }
-    } else {
-        // The table of contents lists all packages in alphabetical order.
-        let table_of_contents = create_toc(&fidl_json_map);
+    // Modifications to the fidldoc object
+    let main_fidl_doc = json!({
+        "table_of_contents": table_of_contents,
+        "config": fidl_config,
+        "search": declarations,
+        "url_path": url_path,
+    });
 
-        // Modifications to the fidldoc object
-        let main_fidl_doc = json!({
-            "table_of_contents": table_of_contents,
-            "config": fidl_config,
-            "search": declarations,
-            "url_path": url_path,
-        });
+    // Copy static files
+    template.include_static_files().expect("Unable to copy static files");
 
-        // Copy static files
-        template.include_static_files().expect("Unable to copy static files");
+    // Create main page
+    template.render_main_page(&main_fidl_doc).expect("Unable to render main page");
 
-        // Create main page
-        template.render_main_page(&main_fidl_doc).expect("Unable to render main page");
+    let tag = &opt.tag;
+    let output_path_string = &output_path.display();
+    fidl_json_map
+        .par_iter()
+        .try_for_each(|(package, package_fidl_json)| {
+            render_fidl_interface(
+                package,
+                package_fidl_json,
+                &table_of_contents,
+                &fidl_config,
+                &tag,
+                &declarations,
+                &url_path,
+                &template_type,
+                &output_path,
+            )
+        })
+        .expect("Unable to write FIDL reference files");
 
-        let tag = &opt.tag;
-        let output_path_string = &output_path.display();
-        fidl_json_map
-            .par_iter()
-            .try_for_each(|(package, package_fidl_json)| {
-                render_fidl_interface(
-                    package,
-                    package_fidl_json,
-                    &table_of_contents,
-                    &fidl_config,
-                    &tag,
-                    &declarations,
-                    &url_path,
-                    &template_type,
-                    &output_path,
-                )
-            })
-            .expect("Unable to write FIDL reference files");
-
-        if !opt.silent {
-            println!("Generated documentation at {}", &output_path_string);
-        }
+    if !opt.silent {
+        println!("Generated documentation at {}", &output_path_string);
     }
     Ok(())
 }
-
-/// Checks all the documentation from the FIDL files.
-///
-/// FIDL documentation always starts with 3 slashes and a space. That means that, for a declaration
-/// which starts at column 1, the documentation starts 4 characters later at column 5.
-///
-/// Declarations which are indented 4 characters start at column 5. That means that, for these
-/// declarations, the documentation starts at column 9.
-///
-/// The indentation is enforced by the FIDL linter/formatter.
-fn check_documentation(package_fidl_json: &FidlJson) -> Result<(), String> {
-    let mut compiler = DocCompiler::new();
-    for bits_declaration in package_fidl_json.bits_declarations.iter() {
-        check_declaration_documentation(
-            &mut compiler,
-            &bits_declaration["maybe_attributes"],
-            &bits_declaration["location"],
-            /*column=*/ 5,
-        );
-        for members in bits_declaration["members"].as_array().iter() {
-            for member in members.iter() {
-                check_declaration_documentation(
-                    &mut compiler,
-                    &member["maybe_attributes"],
-                    &member["location"],
-                    /*column=*/ 9,
-                );
-            }
-        }
-    }
-    for const_declaration in package_fidl_json.const_declarations.iter() {
-        check_declaration_documentation(
-            &mut compiler,
-            &const_declaration["maybe_attributes"],
-            &const_declaration["location"],
-            /*column=*/ 5,
-        );
-    }
-    for enum_declaration in package_fidl_json.enum_declarations.iter() {
-        check_declaration_documentation(
-            &mut compiler,
-            &enum_declaration["maybe_attributes"],
-            &enum_declaration["location"],
-            /*column=*/ 5,
-        );
-        for members in enum_declaration["members"].as_array().iter() {
-            for member in members.iter() {
-                check_declaration_documentation(
-                    &mut compiler,
-                    &member["maybe_attributes"],
-                    &member["location"],
-                    /*column=*/ 9,
-                );
-            }
-        }
-    }
-    for interface_declaration in package_fidl_json.interface_declarations.iter() {
-        check_declaration_documentation(
-            &mut compiler,
-            &interface_declaration["maybe_attributes"],
-            &interface_declaration["location"],
-            /*column=*/ 5,
-        );
-        for methods in interface_declaration["methods"].as_array().iter() {
-            for method in methods.iter() {
-                check_declaration_documentation(
-                    &mut compiler,
-                    &method["maybe_attributes"],
-                    &method["location"],
-                    /*column=*/ 9,
-                );
-            }
-        }
-    }
-    for struct_declaration in package_fidl_json.struct_declarations.iter() {
-        check_declaration_documentation(
-            &mut compiler,
-            &struct_declaration["maybe_attributes"],
-            &struct_declaration["location"],
-            /*column=*/ 5,
-        );
-        for members in struct_declaration["members"].as_array().iter() {
-            for member in members.iter() {
-                check_declaration_documentation(
-                    &mut compiler,
-                    &member["maybe_attributes"],
-                    &member["location"],
-                    /*column=*/ 9,
-                );
-            }
-        }
-    }
-    for table_declaration in package_fidl_json.table_declarations.iter() {
-        check_declaration_documentation(
-            &mut compiler,
-            &table_declaration["maybe_attributes"],
-            &table_declaration["location"],
-            /*column=*/ 5,
-        );
-        for members in table_declaration["members"].as_array().iter() {
-            for member in members.iter() {
-                check_declaration_documentation(
-                    &mut compiler,
-                    &member["maybe_attributes"],
-                    &member["location"],
-                    /*column=*/ 9,
-                );
-            }
-        }
-    }
-    for union_declaration in package_fidl_json.union_declarations.iter() {
-        check_declaration_documentation(
-            &mut compiler,
-            &union_declaration["maybe_attributes"],
-            &union_declaration["location"],
-            /*column=*/ 5,
-        );
-        for members in union_declaration["members"].as_array().iter() {
-            for member in members.iter() {
-                check_declaration_documentation(
-                    &mut compiler,
-                    &member["maybe_attributes"],
-                    &member["location"],
-                    /*column=*/ 9,
-                );
-            }
-        }
-    }
-    for type_alias_declaration in package_fidl_json.type_alias_declarations.iter() {
-        check_declaration_documentation(
-            &mut compiler,
-            &type_alias_declaration["maybe_attributes"],
-            &type_alias_declaration["location"],
-            /*column=*/ 5,
-        );
-    }
-
-    if !compiler.errors.is_empty() {
-        // All the documentation has been parsed for a JSON file.
-        // We encounered errors.
-        // Prints the errors discovered.
-        print!("{}", compiler.errors);
-        Err("Documentation has errors".to_string())
-    } else {
-        Ok(())
-    }
-}
-
 /// If an attribute only has one argument, returns that argument's value.  If the number of
 /// arguments is not equal to 1, or the argument's value could not be resolved, error instead.
 // TODO(fxbug.dev/81390): Attribute values may only be string literals for now. Make sure to fix
@@ -353,56 +187,6 @@ fn get_attribute_standalone_arg_value(attribute: &Value) -> Result<String, Error
             }
         }
         _ => Err(anyhow!("attribute {} has multiple arguments", attribute["name"])),
-    }
-}
-
-/// Checks some documentation associated to a declaration.
-fn check_declaration_documentation(
-    compiler: &mut DocCompiler,
-    attributes_value: &Value,
-    location: &Value,
-    column: u32,
-) {
-    if let serde_json::Value::Object(location) = location {
-        for attributes in attributes_value.as_array().iter() {
-            for attribute in attributes.iter() {
-                if to_lower_snake_case(attribute["name"].as_str().unwrap_or("")) == ATTR_NAME_DOC {
-                    let text =
-                        get_attribute_standalone_arg_value(attribute).unwrap_or("".to_string());
-                    compiler.parse_doc(
-                        location["filename"].to_string(),
-                        infer_doc_line(
-                            location["line"].to_string().parse::<u32>().unwrap_or(0),
-                            &text,
-                        ),
-                        column,
-                        clean_doc(&text),
-                    );
-                }
-            }
-        }
-    }
-}
-
-/// Infers the line number for the first line of documentation.
-///
-/// This method assumes that the documentation is right before the declaration.
-/// The column is hard coded because, for a kind of declaration, the column is always the same.
-fn infer_doc_line(line: u32, text: &String) -> u32 {
-    line - (text.matches("\n").count() as u32)
-}
-
-/// Cleans the documentation.
-///
-/// This method removes the first character at the beginning of the first line (it should be a
-/// space) and the first space at the beginning of all the other lines.
-fn clean_doc(text: &String) -> String {
-    if text.len() == 0 {
-        "".to_owned()
-    } else {
-        // First removes the first character at the beginning of the text (the first line). Then
-        // removes all the spaces at the beginning of the other lines using replace.
-        text[1..].replace("\n ", "\n")
     }
 }
 
@@ -807,112 +591,5 @@ mod test {
             declarations: Map::new(),
         };
         assert_eq!(should_process_fidl_json(&fidl_json), false);
-    }
-
-    #[test]
-    fn check_documentation_ok() {
-        let fidl_json = FidlJson {
-            name: "fuchsia.camera.common".to_string(),
-            maybe_attributes: Vec::new(),
-            library_dependencies: Vec::new(),
-            bits_declarations: Vec::new(),
-            const_declarations: Vec::new(),
-            enum_declarations: vec![json!({
-            "name": "fuchsia.sysmem/HeapType",
-            "location": {
-              "filename": "../../sdk/fidl/fuchsia.sysmem/constraints.fidl",
-              "line": 216,
-              "column": 6,
-              "length": 8
-            },
-            "maybe_attributes": [
-              {
-                "name": ATTR_NAME_DOC,
-                "arguments": [
-                  {
-                    "location": {
-                      "filename": "../../sdk/fidl/fuchsia.sysmem/constraints.fidl",
-                      "line": 215,
-                      "column": 0,
-                      "length": 0
-                    },
-                    "name": "value",
-                    "value": {
-                      "expression": "Device specific types should have bit 60 set.",
-                      "kind": "literal",
-                      "literal": {
-                        "expression":"Device specific types should have bit 60 set.",
-                        "kind": "string",
-                        "value": "Device specific types should have bit 60 set.\n"
-                      },
-                      "value": "Device specific types should have bit 60 set.\n"
-                    }
-                  },
-                ],
-              }
-            ]})],
-            interface_declarations: Vec::new(),
-            table_declarations: Vec::new(),
-            type_alias_declarations: Vec::new(),
-            struct_declarations: Vec::new(),
-            union_declarations: Vec::new(),
-            declaration_order: Vec::new(),
-            declarations: Map::new(),
-        };
-        check_documentation(&fidl_json).expect("Errors");
-    }
-
-    #[test]
-    fn check_documentation_nok() {
-        let fidl_json = FidlJson {
-            name: "fuchsia.camera.common".to_string(),
-            maybe_attributes: Vec::new(),
-            library_dependencies: Vec::new(),
-            bits_declarations: Vec::new(),
-            const_declarations: Vec::new(),
-            enum_declarations: vec![json!({
-            "name": "fuchsia.sysmem/HeapType",
-            "location": {
-              "filename": "../../sdk/fidl/fuchsia.sysmem/constraints.fidl",
-              "line": 216,
-              "column": 6,
-              "length": 8
-            },
-            "maybe_attributes": [
-              {
-                "name": ATTR_NAME_DOC,
-                "arguments": [
-                  {
-                    "location": {
-                      "filename": "../../sdk/fidl/fuchsia.sysmem/constraints.fidl",
-                      "line": 215,
-                      "column": 0,
-                      "length": 0
-                    },
-                    "name": "value",
-                    "value": {
-                      "expression": "Device specific types should have bit '60 set.",
-                      "kind": "literal",
-                      "literal": {
-                        "expression":"Device specific types should have bit '60 set.",
-                        "kind": "string",
-                        "value": "Device specific types should have bit '60 set.\n"
-                      },
-                      "value": "Device specific types should have bit '60 set.\n"
-                    }
-                  },
-                ],
-              }
-            ]})],
-            interface_declarations: Vec::new(),
-            table_declarations: Vec::new(),
-            type_alias_declarations: Vec::new(),
-            struct_declarations: Vec::new(),
-            union_declarations: Vec::new(),
-            declaration_order: Vec::new(),
-            declarations: Map::new(),
-        };
-        let result = check_documentation(&fidl_json);
-        assert!(result.is_err());
     }
 }

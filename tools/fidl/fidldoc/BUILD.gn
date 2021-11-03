@@ -41,10 +41,7 @@ if (is_host) {
   rustc_binary("fidldoc_bin") {
     name = "fidldoc"
     edition = "2018"
-    deps = [
-      ":rust_crates",
-      "//src/lib/libdoc",
-    ]
+    deps = [ ":rust_crates" ]
     sources = common_sources
     inputs = common_inputs
   }
@@ -59,7 +56,6 @@ if (is_host) {
     deps = [
       ":fidldoc_bin",
       ":rust_crates",
-      "//src/lib/libdoc",
     ]
     sources = common_sources
     inputs = common_inputs + [
