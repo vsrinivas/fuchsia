@@ -155,11 +155,11 @@ pub async fn execute_debug(
     let (socket, _) = listener.accept().await?;
 
     let (mut zxdb_rx, mut zxdb_tx) = socket.split();
-    // TODO: fxbug.dev/86245
-    #[allow(must_not_suspend)]
+    // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
+    // If this is the case, it is an error. See fxbug.dev/87757 for more details
     let mut debug_agent_rx = rx.borrow_mut();
-    // TODO: fxbug.dev/86245
-    #[allow(must_not_suspend)]
+    // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
+    // If this is the case, it is an error. See fxbug.dev/87757 for more details
     let mut debug_agent_tx = tx.borrow_mut();
 
     // Reading from zxdb (using the Unix socket) and writing to the debug agent.

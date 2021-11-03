@@ -272,8 +272,8 @@ impl StreamEndpoint {
         if self.transport.is_none() {
             return Ok(());
         }
-        // TODO: fxbug.dev/86245
-        #[allow(must_not_suspend)]
+        // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
+        // If this is the case, it is an error. See fxbug.dev/87757 for more details
         let channel =
             self.transport.as_ref().unwrap().try_read().map_err(|_e| Status::BAD_STATE)?;
         let closed_fut = channel.closed();

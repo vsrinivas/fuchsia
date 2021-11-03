@@ -735,8 +735,8 @@ mod tests {
             .await
             .context(":bytes_written_are_processed_by_term after resize_if_needed")?;
 
-        // TODO: fxbug.dev/86245
-        #[allow(must_not_suspend)]
+        // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
+        // If this is the case, it is an error. See fxbug.dev/87757 for more details
         let term = view.term.borrow();
 
         let col_pos_before = term.cursor().point.col;

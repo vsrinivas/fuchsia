@@ -375,6 +375,9 @@ if (zircon_toolchain == false) {
     "//build/config/rust:target",
     "//build/config/rust:2018_idioms",
     "//build/config:werror",
+
+    # TODO(fxbug.dev/87730) remove this after rolling the toolchain
+    "//build/config/rust:escape_migration_trap",
   ]
 
   if (is_analysis) {

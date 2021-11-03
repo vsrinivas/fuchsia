@@ -112,8 +112,8 @@ impl MouseHandler {
             }
             _ => return,
         };
-        // TODO: fxbug.dev/86245
-        #[allow(must_not_suspend)]
+        // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
+        // If this is the case, it is an error. See fxbug.dev/87757 for more details
         let mut current_position = self.current_position.borrow_mut();
         *current_position = new_position;
 

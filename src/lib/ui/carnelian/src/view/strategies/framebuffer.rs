@@ -216,8 +216,8 @@ impl FrameBufferViewStrategy {
     ) -> Result<DisplayResources, Error> {
         let usage = if use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
         let unsize = size.floor().to_u32();
-        // TODO: fxbug.dev/86245
-        #[allow(must_not_suspend)]
+        // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
+        // If this is the case, it is an error. See fxbug.dev/87757 for more details
         let mut fb = frame_buffer.borrow_mut();
         let mut frame_collection_builder = FrameCollectionBuilder::new(
             unsize.width,
@@ -247,8 +247,8 @@ impl FrameBufferViewStrategy {
 
         let fb_pixel_format = if use_spinel { context.pixel_format() } else { pixel_format };
         let config_for_format = fb.get_config_for_format(fb_pixel_format);
-        // TODO: fxbug.dev/86245
-        #[allow(must_not_suspend)]
+        // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
+        // If this is the case, it is an error. See fxbug.dev/87757 for more details
         let frame_collection = frame_collection_builder
             .build(collection_id, &config_for_format, true, &mut fb)
             .await?;
