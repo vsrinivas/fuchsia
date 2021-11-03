@@ -1,4 +1,4 @@
-#!/usr/bin/env vpython
+#!/usr/bin/env python3
 # Copyright 2019 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -9,24 +9,24 @@ import os
 import sys
 import textwrap
 
-# The bash template passes the python script into vpython via stdin.
+# The bash template passes the python script into python3 via stdin.
 # The interpreter doesn't know about the script, so we have bash
 # inject the script location.
 BASH_TEMPLATE = textwrap.dedent(
     """\
-    #!/usr/bin/env vpython
+    #!/usr/bin/env python3
     _SCRIPT_LOCATION = __file__
     {script}
     """)
 
-# The batch template reruns the batch script with vpython, with the -x
+# The batch template reruns the batch script with python3, with the -x
 # flag instructing the interpreter to ignore the first line. The interpreter
 # knows about the (batch) script in this case, so it can get the file location
 # directly.
 BATCH_TEMPLATE = textwrap.dedent(
     """\
     @SETLOCAL ENABLEDELAYEDEXPANSION \
-      & vpython.bat -x "%~f0" %* \
+      & python3.bat -x "%~f0" %* \
       & EXIT /B !ERRORLEVEL!
     _SCRIPT_LOCATION = __file__
     {script}

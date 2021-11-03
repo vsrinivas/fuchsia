@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu
 
-# Checks that the vpython scripts used by Chromium are generated and have the correct
+# Checks that the python scripts used by Chromium are generated and have the correct
 # references to the package.
 #
 # The scripts appear in ${root_out_dir}/bin/
