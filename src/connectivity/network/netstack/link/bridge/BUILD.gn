@@ -14,6 +14,7 @@ go_library("bridge") {
     "//sdk/fidl/fuchsia.hardware.network($go_toolchain)",
     "//src/connectivity/network/netstack/link",
     "//src/connectivity/network/netstack/util",
+    "//src/lib/syslog/go",
     "//third_party/golibs:gvisor.dev/gvisor",
   ]
 

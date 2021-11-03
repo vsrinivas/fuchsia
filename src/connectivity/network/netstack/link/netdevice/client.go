@@ -185,7 +185,14 @@ func (p *Port) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList, prot
 	return p.client.write(p.portInfo.Id, pkts, proto)
 }
 
-func (*Port) WriteRawPacket(*stack.PacketBuffer) tcpip.Error { return &tcpip.ErrNotSupported{} }
+func (p *Port) WriteRawPacket(pkt *stack.PacketBuffer) tcpip.Error {
+	var pkts stack.PacketBufferList
+	pkts.PushBack(pkt)
+	// TODO(https://fxbug.dev/86725): Frame type detection may not work for implementing
+	// packet sockets.
+	_, err := p.client.write(p.portInfo.Id, pkts, pkt.NetworkProtocolNumber)
+	return err
+}
 
 func (p *Port) Attach(dispatcher stack.NetworkDispatcher) {
 	p.state.mu.Lock()

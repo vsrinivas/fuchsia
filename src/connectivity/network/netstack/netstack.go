@@ -196,6 +196,12 @@ type ifState struct {
 	endpoint stack.LinkEndpoint
 
 	bridgeable *bridge.BridgeableEndpoint
+
+	// TODO(https://fxbug.dev/86665): Bridged interfaces are disabled within
+	// gVisor upon creation and thus the bridge must keep track of them
+	// in order to re-enable them when the bridge is removed. This is a
+	// hack, and should be replaced with a proper bridging implementation.
+	bridgedInterfaces []tcpip.NICID
 }
 
 func (ifs *ifState) LinkOnlineLocked() bool {
@@ -685,6 +691,25 @@ func (ifs *ifState) onDownLocked(name string, closed bool) {
 		for _, h := range ifs.ns.nicRemovedHandlers {
 			h.RemovedNIC(ifs.nicid)
 		}
+		// TODO(https://fxbug.dev/86665): Re-enabling bridged interfaces on removal
+		// of the bridge is a hack, and needs a proper implementation.
+		for _, nicid := range ifs.bridgedInterfaces {
+			nicInfo, ok := ifs.ns.stack.NICInfo()[nicid]
+			if !ok {
+				continue
+			}
+
+			bridgedIfs := nicInfo.Context.(*ifState)
+			bridgedIfs.mu.Lock()
+			if bridgedIfs.IsUpLocked() {
+				switch err := ifs.ns.stack.EnableNIC(nicid); err.(type) {
+				case nil, *tcpip.ErrUnknownNICID:
+				default:
+					_ = syslog.Errorf("failed to enable bridged interface %d after removing bridge: %s", nicid, err)
+				}
+			}
+			bridgedIfs.mu.Unlock()
+		}
 	} else {
 		if err := ifs.ns.stack.DisableNIC(ifs.nicid); err != nil {
 			_ = syslog.Errorf("error disabling NIC %s in stack.Stack: %s", name, err)
@@ -698,7 +723,9 @@ func (ifs *ifState) stateChangeLocked(name string, adminUp, linkOnline bool) boo
 
 	if after != before {
 		if after {
-			if err := ifs.ns.stack.EnableNIC(ifs.nicid); err != nil {
+			if ifs.bridgeable.IsBridged() {
+				_ = syslog.Warnf("not enabling NIC %s in stack.Stack because it is attached to a bridge", name)
+			} else if err := ifs.ns.stack.EnableNIC(ifs.nicid); err != nil {
 				_ = syslog.Errorf("error enabling NIC %s in stack.Stack: %s", name, err)
 			}
 
@@ -951,22 +978,29 @@ func (ns *Netstack) addLoopback() error {
 
 func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 	links := make([]*bridge.BridgeableEndpoint, 0, len(nics))
+	ifStates := make([]*ifState, 0, len(nics))
 	for _, nicid := range nics {
 		nicInfo, ok := ns.stack.NICInfo()[nicid]
 		if !ok {
-			panic("NIC known by netstack not in interface table")
+			return nil, fmt.Errorf("failed to find NIC %d", nicid)
 		}
 		ifs := nicInfo.Context.(*ifState)
+		ifStates = append(ifStates, ifs)
+
 		if controller := ifs.controller; controller != nil {
 			if err := controller.SetPromiscuousMode(true); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("error enabling promiscuous mode for NIC %d in stack.Stack while bridging endpoint: %w", ifs.nicid, err)
 			}
 		}
 		links = append(links, ifs.bridgeable)
 	}
 
-	b := bridge.New(links)
-	return ns.addEndpoint(
+	b, err := bridge.New(links)
+	if err != nil {
+		return nil, err
+	}
+
+	ifs, err := ns.addEndpoint(
 		func(nicid tcpip.NICID) string {
 			return fmt.Sprintf("br%d", nicid)
 		},
@@ -975,6 +1009,35 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 		nil, /* observer */
 		defaultInterfaceMetric,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	ifs.bridgedInterfaces = nics
+
+	for _, ifs := range ifStates {
+		func() {
+			// Disabling the NIC and attaching interfaces to the bridge must be called
+			// under lock to avoid racing against admin/link status changes which may
+			// enable the NIC.
+			ifs.mu.Lock()
+			defer ifs.mu.Unlock()
+
+			// TODO(https://fxbug.dev/86665): Disabling bridged interfaces inside gVisor
+			// is a hack, and in need of a proper implementation.
+			switch err := ifs.ns.stack.DisableNIC(ifs.nicid); err.(type) {
+			case nil:
+			case *tcpip.ErrUnknownNICID:
+				// TODO(https://fxbug.dev/86959): Handle bridged interface removal.
+				_ = syslog.Warnf("NIC %d removed while attaching to bridge", ifs.nicid)
+			default:
+				panic(fmt.Sprintf("unexpected error disabling NIC %d while attaching to bridge: %s", ifs.nicid, err))
+			}
+
+			ifs.bridgeable.SetBridge(b)
+		}()
+	}
+	return ifs, err
 }
 
 func makeEndpointName(prefix, configName string) func(nicid tcpip.NICID) string {
@@ -1035,9 +1098,7 @@ func (ns *Netstack) addEndpoint(
 	// Put sniffer as close as the NIC.
 	// A wrapper LinkEndpoint should encapsulate the underlying
 	// one, and manifest itself to 3rd party netstack.
-	ep = sniffer.NewWithPrefix(ep, fmt.Sprintf("[%s(id=%d)] ", name, ifs.nicid))
-
-	ifs.bridgeable = bridge.NewEndpoint(ep)
+	ifs.bridgeable = bridge.NewEndpoint(sniffer.NewWithPrefix(ep, fmt.Sprintf("[%s(id=%d)] ", name, ifs.nicid)))
 	ep = ifs.bridgeable
 	ifs.endpoint = ep
 

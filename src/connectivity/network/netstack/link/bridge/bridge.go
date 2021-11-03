@@ -10,6 +10,7 @@
 package bridge
 
 import (
+	"fmt"
 	"hash/fnv"
 	"math"
 	"sort"
@@ -19,6 +20,7 @@ import (
 	"fidl/fuchsia/hardware/network"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
+	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -45,76 +47,70 @@ type Endpoint struct {
 // New creates a new link from a list of BridgeableEndpoints that bridges
 // packets written to it and received from any of its constituent links.
 //
-// The new link will have the minumum of the MTUs, the maximum of the max
-// header lengths, and minimum set of the capabilities. This function takes
-// ownership of `links`.
-func New(links []*BridgeableEndpoint) *Endpoint {
-	// TODO(fxbug.dev/57022): Make sure links are all using the same kind of link.
-	sort.Slice(links, func(i, j int) bool {
-		return strings.Compare(string(links[i].LinkAddress()), string(links[j].LinkAddress())) > 0
-	})
-	ep := &Endpoint{
-		links: make(map[tcpip.LinkAddress]*BridgeableEndpoint),
-		mtu:   math.MaxUint32,
+// `links` must be non-empty, as properties of the new link are derived from
+// the constituent links: it will have the minimum of the MTUs, the maximum
+// of the max header lengths, and the minimum set of capabilities.
+func New(links []*BridgeableEndpoint) (*Endpoint, error) {
+	if len(links) == 0 {
+		return nil, fmt.Errorf("creating bridge with no attached endpoints is invalid")
 	}
-	h := fnv.New64()
-	for _, l := range links {
-		linkAddress := l.LinkAddress()
-		ep.links[linkAddress] = l
-
-		// mtu is the maximum write size, which is the minimum of any link's mtu.
-		if mtu := l.MTU(); mtu < ep.mtu {
-			ep.mtu = mtu
+	{
+		// TODO(https://fxbug.dev/57022): Make sure links are all using the same kind of link.
+		links := append([]*BridgeableEndpoint(nil), links...)
+		sort.Slice(links, func(i, j int) bool {
+			return strings.Compare(string(links[i].LinkAddress()), string(links[j].LinkAddress())) > 0
+		})
+		ep := &Endpoint{
+			links: make(map[tcpip.LinkAddress]*BridgeableEndpoint),
+			mtu:   math.MaxUint32,
 		}
+		h := fnv.New64()
+		for _, l := range links {
+			linkAddress := l.LinkAddress()
+			ep.links[linkAddress] = l
 
-		// Resolution is required if any link requires it.
-		ep.capabilities |= l.Capabilities() & stack.CapabilityResolutionRequired
+			// mtu is the maximum write size, which is the minimum of any link's mtu.
+			if mtu := l.MTU(); mtu < ep.mtu {
+				ep.mtu = mtu
+			}
 
-		// maxHeaderLength is the space to reserve for possible addition
-		// headers. We want to reserve enough to suffice for all links.
-		if maxHeaderLength := l.MaxHeaderLength(); maxHeaderLength > ep.maxHeaderLength {
-			ep.maxHeaderLength = maxHeaderLength
+			// Resolution is required if any link requires it.
+			ep.capabilities |= l.Capabilities() & stack.CapabilityResolutionRequired
+
+			// maxHeaderLength is the space to reserve for possible addition
+			// headers. We want to reserve enough to suffice for all links.
+			if maxHeaderLength := l.MaxHeaderLength(); maxHeaderLength > ep.maxHeaderLength {
+				ep.maxHeaderLength = maxHeaderLength
+			}
+
+			if _, err := h.Write([]byte(linkAddress)); err != nil {
+				panic(err)
+			}
 		}
-
-		if _, err := h.Write([]byte(linkAddress)); err != nil {
-			panic(err)
-		}
+		b := h.Sum(nil)[:6]
+		// Set the second-least-significant bit of the first byte so the address is locally-administered.
+		b[0] |= 1 << 1
+		// Clear the least-significant bit of the first byte so the address is unicast.
+		b[0] &^= 1
+		ep.linkAddress = tcpip.LinkAddress(b)
+		return ep, nil
 	}
-	b := h.Sum(nil)[:6]
-	// The second bit of the first byte indicates "locally administered".
-	b[0] |= 1 << 1
-	ep.linkAddress = tcpip.LinkAddress(b)
-	return ep
 }
 
-// Up calls SetBridge(bridge) on all the constituent links of a bridge.
-//
-// This causes each constituent link to delegate dispatch to the bridge,
-// meaning that received packets will be written out of or dispatched back up
-// the stack for another constituent link.
-func (ep *Endpoint) Up() error {
-	for _, l := range ep.links {
-		l.SetBridge(ep)
-	}
+func (*Endpoint) Up() error {
 	return nil
 }
 
-// Down calls SetBridge(nil) on all the constituent links of a bridge.
-//
-// This causes each bridgeable endpoint to go back to its state before
-// bridging, dispatching up the stack to the default NetworkDispatcher
-// implementation directly.
-func (ep *Endpoint) Down() error {
-	for _, l := range ep.links {
-		l.SetBridge(nil)
-	}
+// TODO(https://fxbug.dev/86388): Implement disabling the bridge.
+func (*Endpoint) Down() error {
+	_ = syslog.Warnf("disabling bridges is unimplemented, the bridge will still be usable")
 	return nil
 }
 
 // SetPromiscuousMode on a bridge is a no-op, since all of the constituent
 // links on a bridge need to already be in promiscuous mode for bridging to
 // work.
-func (ep *Endpoint) SetPromiscuousMode(bool) error {
+func (*Endpoint) SetPromiscuousMode(bool) error {
 	return nil
 }
 
@@ -139,48 +135,46 @@ func (ep *Endpoint) LinkAddress() tcpip.LinkAddress {
 }
 
 func (ep *Endpoint) WritePacket(r stack.RouteInfo, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
-	for _, l := range ep.links {
-		// We need to clone the packet buffer because each bridged endpoint may try
-		// to set the packet buffer's link header, but the header may only be set
-		// once for the lifetime of a packet buffer.
-		if err := l.WritePacket(r, protocol, pkt.Clone()); err != nil {
-			return err
-		}
-	}
-	return nil
+	ep.AddHeader(ep.LinkAddress(), r.RemoteLinkAddress, protocol, pkt)
+	return ep.WriteRawPacket(pkt)
 }
 
 // WritePackets returns the number of packets in hdrs that were successfully
 // written to all links.
 func (ep *Endpoint) WritePackets(r stack.RouteInfo, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
-	if len(ep.links) == 0 {
-		return 0, nil
-	}
-
-	// Set the initial value to the maximum positive value for an unsized integer
-	// (all bits set to 1 excluding the most significant bit).
-	n := int(^uint(0) >> 1)
-	for _, l := range ep.links {
-		// We need to clone the packet buffers because each bridged endpoint may try
-		// to set the packet buffers' link header, but the header may only be set
-		// once for the lifetime of a packet buffer.
-		var pktsList stack.PacketBufferList
-		for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
-			pktsList.PushBack(pkt.Clone())
-		}
-		i, err := l.WritePackets(r, pktsList, protocol)
-		if err != nil {
-			return 0, err
-		}
-
-		if i < n {
-			n = i
+	cnt := 0
+	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
+		switch err := ep.WritePacket(r, protocol, pkt); err.(type) {
+		case nil:
+			cnt++
+		default:
+			return cnt, err
 		}
 	}
-	return n, nil
+	return cnt, nil
 }
 
-func (*Endpoint) WriteRawPacket(*stack.PacketBuffer) tcpip.Error { return &tcpip.ErrNotSupported{} }
+func (ep *Endpoint) WriteRawPacket(pkt *stack.PacketBuffer) tcpip.Error {
+	i := 0
+	for _, l := range ep.links {
+		i++
+		// Need to clone when writing to all but the last endpoint, since callee
+		// takes ownership.
+		pkt := pkt
+		if i != len(ep.links) {
+			pkt = pkt.Clone()
+		}
+		switch err := l.WriteRawPacket(pkt); err.(type) {
+		case nil:
+		case *tcpip.ErrClosedForSend:
+			// TODO(https://fxbug.dev/86959): Handle bridged interface removal.
+			_ = syslog.Warnf("WriteRawPacket on bridged endpoint returned ClosedForSend")
+		default:
+			return err
+		}
+	}
+	return nil
+}
 
 func (ep *Endpoint) Attach(d stack.NetworkDispatcher) {
 	ep.mu.Lock()
@@ -209,78 +203,64 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 	dispatcher := ep.mu.dispatcher
 	ep.mu.RUnlock()
 
-	// Is the destination link address a multicast/broadcast?
-	//
-	// If the least significant bit of the first octet is 1, then the address is a
-	// multicast address.
-	//
-	// See the IEEE Std 802-2001 document for more details. Specifically,
-	// section 9.2.1 of http://ieee802.org/secmail/pdfocSP2xXA6d.pdf:
-	// "A 48-bit universal address consists of two parts. The first 24 bits
-	// correspond to the OUI as assigned by the IEEE, except that the
-	// assignee may set the LSB of the first octet to 1 for group addresses
-	// or set it to 0 for individual addresses."
-	flood := len(dstLinkAddr) == header.EthernetAddressSize && dstLinkAddr[0]&1 == 1
+	if dstLinkAddr == ep.linkAddress {
+		if dispatcher != nil {
+			dispatcher.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt)
+		}
+		return
+	}
 
-	if !flood {
-		switch dstLinkAddr {
-		case ep.linkAddress:
-			if dispatcher != nil {
-				dispatcher.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt)
-			}
-			return
-		default:
-			if l, ok := ep.links[dstLinkAddr]; ok {
-				l.Endpoint.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt)
-				return
-			}
+	if len(dstLinkAddr) != header.EthernetAddressSize {
+		panic(fmt.Sprintf("DeliverNetworkPacket(%p, %s, %s, %d, _) called with non-MAC dst link addr", rxEP, srcLinkAddr, dstLinkAddr, protocol))
+	}
+
+	if header.IsMulticastEthernetAddress(dstLinkAddr) {
+		// The bridge `ep` isn't included in ep.links below.
+		//
+		// Need to clone as callee takes ownership and the packet still needs to be
+		// written to constituent links.
+		if dispatcher != nil {
+			dispatcher.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
 		}
 	}
 
-	// The bridge `ep` isn't included in ep.links below and we don't want to write
-	// out of rxEP, otherwise the rest of this function would just be
-	// "ep.WritePacket and if flood, also deliver to ep.links."
-	if flood && dispatcher != nil {
-		// We need to clone the packet buffer because the stack may attempt to set the
-		// network or transport headers which may only be done once for the lifetime
-		// of a packet buffer.
-		dispatcher.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
-	}
-
-	// NB: This isn't really a valid Route; Route is a public type but cannot
-	// be instantiated fully outside of the stack package, because its
-	// underlying referencedNetworkEndpoint cannot be accessed.
-	// This means that methods on Route that depend on accessing the
-	// underlying LinkEndpoint like MTU() will panic, but it would be
-	// extremely strange for the LinkEndpoint we're calling WritePacket on to
-	// access itself so indirectly.
-	var r stack.RouteInfo
-	r.LocalLinkAddress = srcLinkAddr
-	r.NetProto = protocol
-	r.RemoteLinkAddress = dstLinkAddr
-
-	// TODO(fxbug.dev/20778): Learn which destinations are on which links and restrict transmission, like a bridge.
+	// TODO(https://fxbug.dev/20778): Learn which destinations are on
+	// which links and restrict transmission, like a bridge.
+	i := 0
+	rxFound := false
 	for _, l := range ep.links {
-		if flood {
-			l.Endpoint.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
-		}
-		// Don't write back out interface from which the frame arrived
+		i++
+		// Don't write back out the interface from which the frame arrived
 		// because that causes interoperability issues with a router.
-		if l != rxEP {
-			// We need to clone the packet buffers because each bridged endpoint may try
-			// to set the packet buffers' link header, but the header may only be set
-			// once for the lifetime of a packet buffer.
-			l.WritePacket(r, protocol, pkt.Clone())
+		if l == rxEP {
+			rxFound = true
+		} else {
+			switch i {
+			case len(ep.links):
+				// The last call never needs cloning.
+			case len(ep.links) - 1:
+				// The second-to-last call needs cloning iff the last endpoint is not rxEP.
+				if !rxFound {
+					break
+				}
+				fallthrough
+			default:
+				pkt = pkt.Clone()
+			}
+
+			switch err := l.WriteRawPacket(pkt); err.(type) {
+			case nil:
+			case *tcpip.ErrClosedForSend:
+				// TODO(https://fxbug.dev/86959): Handle bridged interface removal.
+			default:
+				_ = syslog.Warnf("failed to write to bridged endpoint %p: %s", l, err)
+			}
 		}
 	}
 }
 
 // Wait implements stack.LinkEndpoint.
-func (ep *Endpoint) Wait() {
-	for _, e := range ep.links {
-		e.Wait()
-	}
-}
+func (*Endpoint) Wait() {}
 
 // ARPHardwareType implements stack.LinkEndpoint.
 func (e *Endpoint) ARPHardwareType() header.ARPHardwareType {
@@ -296,9 +276,6 @@ func (e *Endpoint) ARPHardwareType() header.ARPHardwareType {
 func (e *Endpoint) AddHeader(local, remote tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
 	// Use the first bridged endpoint.
 	for _, link := range e.links {
-		if len(local) == 0 {
-			local = e.LinkAddress()
-		}
 		link.AddHeader(local, remote, protocol, pkt)
 		return
 	}

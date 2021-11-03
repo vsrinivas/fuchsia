@@ -33,10 +33,18 @@ func NewEndpoint(lower stack.LinkEndpoint) *BridgeableEndpoint {
 	return ep
 }
 
+func (e *BridgeableEndpoint) IsBridged() bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	return e.mu.bridge != nil
+}
+
 func (e *BridgeableEndpoint) SetBridge(b *Endpoint) {
 	e.mu.Lock()
+	defer e.mu.Unlock()
+
 	e.mu.bridge = b
-	e.mu.Unlock()
 }
 
 func (e *BridgeableEndpoint) DeliverNetworkPacket(src, dst tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
