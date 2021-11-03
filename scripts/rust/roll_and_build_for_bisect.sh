@@ -19,4 +19,4 @@ fx roll-compiler --package rust --platforms "$PLATFORM" git_revision:$REV || exi
 echo 'fetching CIPD packages'
 set -xe
 jiri fetch-packages -local-manifest
-fx build "$@"
+"$@"

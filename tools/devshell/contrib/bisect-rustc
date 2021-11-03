@@ -21,13 +21,13 @@ def main():
     )
     parser.add_argument('--reset', help='resets bisect state before exiting', action='store_true')
     parser.add_argument(
-        '--rust', help='root directory of Rust checkout', required=True)
+        '--rust', help='root directory of a Rust checkout', required=True)
     parser.add_argument(
         '--bad', help='the earliest known-bad git ref', required=True)
     parser.add_argument(
         '--good', help='the latest known-good git ref', required=True)
     parser.add_argument(
-        'buildargs', nargs='*', help='arguments to pass to `fx build`')
+        'command', nargs='*', help='command to run (try `fx build TARGET` or `fx test NAME`)')
     args = parser.parse_args()
 
     rust = args.rust
@@ -36,7 +36,7 @@ def main():
 
     bisect = ['git', 'bisect']
     start = bisect + ['start', '--no-checkout', '--first-parent', args.bad, args.good]
-    run = bisect + ['run', ROLL_AND_BUILD, FUCHSIA_DIR, f"{host_os}-{host_cpu}"] + args.buildargs
+    run = bisect + ['run', ROLL_AND_BUILD, FUCHSIA_DIR, f"{host_os}-{host_cpu}"] + args.command
     reset = bisect + ['reset']
 
     try:
