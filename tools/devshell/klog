@@ -10,7 +10,7 @@
 ##
 ##    --raw                   do not attempt to symbolize the log
 ##
-##    --remote-symbols|-r     attemp to resolve symbols using predefined remote
+##    --remote-symbols|-r     attempt to resolve symbols using predefined remote
 ##                            symbol servers for symbols that cannot be resolved
 ##                            locally. See `fx help symbolize` for more
 ##                            information on remote symbol servers.

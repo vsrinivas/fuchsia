@@ -10,7 +10,7 @@
 ##
 ##    -i IDS_TXT_FILE         specify an ids.txt file to be used
 ##
-##    --remote-symbols|-r     attemp to resolve symbols using predefined remote
+##    --remote-symbols|-r     attempt to resolve symbols using predefined remote
 ##                            symbol servers for symbols that cannot be resolved
 ##                            locally.
 ##
