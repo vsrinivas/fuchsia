@@ -15,14 +15,14 @@
 // and expects don't.
 // Tests will fail because we are verifying they actually work as intended, though the
 // pass/fail behavior is decided based on Verify functions.
-TEST(ZxTestCAssertionsTest, Fail) {
+TEST(ZxTestCAssertionTest, Fail) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
                    "FAIL(...) macro did not abort test execution.");
   FAIL("Something bad happened");
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertTrueAndFalse) {
+TEST(ZxTestCAssertionTest, AssertTrueAndFalse) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "EXPECT/ASSERT_TRUE/FALSE returned on success.");
   EXPECT_TRUE(true, "EXPECT_TRUE failed.");
   EXPECT_FALSE(false, "EXPECT_FALSE failed.");
@@ -31,28 +31,28 @@ TEST(ZxTestCAssertionsTest, AssertTrueAndFalse) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertTrueAndFalseFailure) {
+TEST(ZxTestCAssertionTest, AssertTrueAndFalseFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT/ASSERT_TRUE/FALSE returned on success.");
   EXPECT_TRUE(false, "EXPECT_TRUE succeed");
   EXPECT_FALSE(true, "EXPECT_FALSE succeed.");
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertFalseFailureFatal) {
+TEST(ZxTestCAssertionTest, AssertFalseFailureFatal) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
                    "ASSERT_FALSE failed to abort test execution.");
   ASSERT_FALSE(true, "ASSERT_FALSE success.");
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertTrueFailureFatal) {
+TEST(ZxTestCAssertionTest, AssertTrueFailureFatal) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
                    "ASSERT_TRUE failed to abort test execution.");
   ASSERT_TRUE(false, "ASSERT_TRUE succeed.");
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertEQSuccess) {
+TEST(ZxTestCAssertionTest, AssertEQSuccess) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "ASSERT/EXPECT_EQ aborted test on success.");
   int a = 1;
   int b = 2;
@@ -66,7 +66,7 @@ TEST(ZxTestCAssertionsTest, AssertEQSuccess) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertEQFailure) {
+TEST(ZxTestCAssertionTest, AssertEQFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_EQ aborted execution.");
   int a = 1;
   int b = 2;
@@ -76,13 +76,13 @@ TEST(ZxTestCAssertionsTest, AssertEQFailure) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertEQFailureFatal) {
+TEST(ZxTestCAssertionTest, AssertEQFailureFatal) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "ASSERT_EQ did not abort test execution.");
   ASSERT_EQ(1, 2, "ASSERT_EQ inequality detection succeeded.");
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertNESuccess) {
+TEST(ZxTestCAssertionTest, AssertNESuccess) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "EXPECT_NE aborted test execution.");
   int a = 1;
   int b = 2;
@@ -93,7 +93,7 @@ TEST(ZxTestCAssertionsTest, AssertNESuccess) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertNEFailure) {
+TEST(ZxTestCAssertionTest, AssertNEFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_NE aborted test execution.");
   int a = 1;
 
@@ -102,7 +102,7 @@ TEST(ZxTestCAssertionsTest, AssertNEFailure) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertNEFailureFatal) {
+TEST(ZxTestCAssertionTest, AssertNEFailureFatal) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "ASSERT_NE  did not abort test execution.");
   int a = 1;
   int b = 1;
@@ -110,7 +110,7 @@ TEST(ZxTestCAssertionsTest, AssertNEFailureFatal) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertLT) {
+TEST(ZxTestCAssertionTest, AssertLT) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "ASSERT_LT did not abort test execution.");
   int a = 1;
   int b = 2;
@@ -121,7 +121,7 @@ TEST(ZxTestCAssertionsTest, AssertLT) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertLTFailure) {
+TEST(ZxTestCAssertionTest, AssertLTFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "ASSERT_LT  did not abort test execution.");
   int a = 1;
   int b = 2;
@@ -131,7 +131,7 @@ TEST(ZxTestCAssertionsTest, AssertLTFailure) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertLTFailureFatal) {
+TEST(ZxTestCAssertionTest, AssertLTFailureFatal) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "ASSERT_LT did not abort test execution.");
   int a = 1;
   int b = 2;
@@ -140,7 +140,7 @@ TEST(ZxTestCAssertionsTest, AssertLTFailureFatal) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertLE) {
+TEST(ZxTestCAssertionTest, AssertLE) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
                    "ASSERT/EXPECT_LE aborted test execution on success.");
   int a = 1;
@@ -155,7 +155,7 @@ TEST(ZxTestCAssertionsTest, AssertLE) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertLEFailure) {
+TEST(ZxTestCAssertionTest, AssertLEFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_LE aborted test execution.");
   int a = 1;
   int b = 2;
@@ -165,7 +165,7 @@ TEST(ZxTestCAssertionsTest, AssertLEFailure) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertLEFailureFatal) {
+TEST(ZxTestCAssertionTest, AssertLEFailureFatal) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "ASSERT_LE did not abort test execution.");
   int a = 1;
   int b = 2;
@@ -174,7 +174,7 @@ TEST(ZxTestCAssertionsTest, AssertLEFailureFatal) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertGT) {
+TEST(ZxTestCAssertionTest, AssertGT) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "EXPECT_GT aborted test execution on success.");
   int a = 1;
   int b = 2;
@@ -184,7 +184,7 @@ TEST(ZxTestCAssertionsTest, AssertGT) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertGTFailure) {
+TEST(ZxTestCAssertionTest, AssertGTFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_GT aborted test execution.");
   int a = 1;
   int b = 2;
@@ -193,7 +193,7 @@ TEST(ZxTestCAssertionsTest, AssertGTFailure) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertGTFatalFailure) {
+TEST(ZxTestCAssertionTest, AssertGTFatalFailure) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "EXPECT_GT did aborted test execution.");
   int a = 1;
   int b = 2;
@@ -202,7 +202,7 @@ TEST(ZxTestCAssertionsTest, AssertGTFatalFailure) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertGE) {
+TEST(ZxTestCAssertionTest, AssertGE) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
                    "ASSERT/EXPECT_GE aborted test execution on success.");
   int a = 1;
@@ -215,7 +215,7 @@ TEST(ZxTestCAssertionsTest, AssertGE) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertGEFailure) {
+TEST(ZxTestCAssertionTest, AssertGEFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS,
                    "ASSERT/EXPECT_GE aborted test execution on success.");
   int a = 1;
@@ -226,7 +226,7 @@ TEST(ZxTestCAssertionsTest, AssertGEFailure) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertGEFailureFatal) {
+TEST(ZxTestCAssertionTest, AssertGEFailureFatal) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
                    "ASSERT/EXPECT_GE aborted test execution on success.");
   int a = 1;
@@ -827,7 +827,7 @@ TEST(ZxTestCAssertionTest, AssertBytesEqVla) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertStatusSuccess) {
+TEST(ZxTestCAssertionTest, AssertStatusSuccess) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "ASSERT/EXPECT_STATUS aborted test on success.");
   zx_status_t a = ZX_ERR_BAD_STATE;
   zx_status_t b = ZX_ERR_BAD_STATE;
@@ -843,7 +843,7 @@ TEST(ZxTestCAssertionsTest, AssertStatusSuccess) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertStatusFailure) {
+TEST(ZxTestCAssertionTest, AssertStatusFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_STATUS aborted execution.");
   zx_status_t a = ZX_ERR_INVALID_ARGS;
   zx_status_t b = ZX_ERR_BAD_STATE;
@@ -853,14 +853,14 @@ TEST(ZxTestCAssertionsTest, AssertStatusFailure) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertStatusFailureFatal) {
+TEST(ZxTestCAssertionTest, AssertStatusFailureFatal) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
                    "ASSERT_STATUS did not abort test execution.");
   ASSERT_STATUS(ZX_OK, ZX_ERR_BAD_STATE, "ASSERT_STATUS inequality detection succeeded.");
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertNotStatusSuccess) {
+TEST(ZxTestCAssertionTest, AssertNotStatusSuccess) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "EXPECT_NOT_STATUS aborted test execution.");
   zx_status_t a = ZX_ERR_BAD_STATE;
   zx_status_t b = ZX_ERR_INVALID_ARGS;
@@ -871,7 +871,7 @@ TEST(ZxTestCAssertionsTest, AssertNotStatusSuccess) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertNotStatusFailure) {
+TEST(ZxTestCAssertionTest, AssertNotStatusFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_NOT_STATUS aborted test execution.");
   zx_status_t a = ZX_OK;
 
@@ -881,7 +881,7 @@ TEST(ZxTestCAssertionsTest, AssertNotStatusFailure) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertNotStatusFailureFatal) {
+TEST(ZxTestCAssertionTest, AssertNotStatusFailureFatal) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
                    "ASSERT_NOT_STATUS  did not abort test execution.");
   zx_status_t a = ZX_OK;
@@ -891,7 +891,7 @@ TEST(ZxTestCAssertionsTest, AssertNotStatusFailureFatal) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestCAssertionsTest, AssertSkip) {
+TEST(ZxTestCAssertionTest, AssertSkip) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, NO_ERRORS, "AssertSkip did not skip");
   ZXTEST_SKIP("Test skipped");
   FAIL("Skip test did not skip");

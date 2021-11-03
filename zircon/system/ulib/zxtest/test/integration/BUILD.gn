@@ -11,6 +11,7 @@ group("tests") {
     ":zxtest-context($host_toolchain)",
     ":zxtest-integration($host_toolchain)",
     ":zxtest-integration-stream-test-pkg",
+    ":zxtest-integration-streams($host_toolchain)",
     ":zxtest-integration-test-pkg",
   ]
 }

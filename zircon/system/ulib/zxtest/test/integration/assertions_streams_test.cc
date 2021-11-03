@@ -1005,7 +1005,7 @@ TEST(ZxTestAssertionStreamTest, AssertBytesEqVla) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsStreamTest, AssertStatusSuccess) {
+TEST(ZxTestAssertionStreamTest, AssertStatusSuccess) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "ASSERT/EXPECT_STATUS aborted test on success.");
   zx_status_t a = ZX_ERR_BAD_STATE;
   zx_status_t b = ZX_ERR_BAD_STATE;
@@ -1021,7 +1021,7 @@ TEST(ZxTestAssertionsStreamTest, AssertStatusSuccess) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsStreamTest, AssertStatusFailure) {
+TEST(ZxTestAssertionStreamTest, AssertStatusFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_STATUS aborted execution.");
   zx_status_t a = ZX_ERR_INVALID_ARGS;
   zx_status_t b = ZX_ERR_BAD_STATE;
@@ -1031,14 +1031,14 @@ TEST(ZxTestAssertionsStreamTest, AssertStatusFailure) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsStreamTest, AssertStatusFailureFatal) {
+TEST(ZxTestAssertionStreamTest, AssertStatusFailureFatal) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
                    "ASSERT_STATUS did not abort test execution.");
   ASSERT_STATUS(ZX_OK, ZX_ERR_BAD_STATE) << "ASSERT_STATUS inequality detection succeeded.";
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsStreamTest, AssertNotStatusSuccess) {
+TEST(ZxTestAssertionStreamTest, AssertNotStatusSuccess) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "EXPECT_NOT_STATUS aborted test execution.");
   zx_status_t a = ZX_ERR_BAD_STATE;
   zx_status_t b = ZX_ERR_INVALID_ARGS;
@@ -1049,7 +1049,7 @@ TEST(ZxTestAssertionsStreamTest, AssertNotStatusSuccess) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsStreamTest, AssertNotStatusFailure) {
+TEST(ZxTestAssertionStreamTest, AssertNotStatusFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_NOT_STATUS aborted test execution.");
   zx_status_t a = ZX_OK;
 
@@ -1059,7 +1059,7 @@ TEST(ZxTestAssertionsStreamTest, AssertNotStatusFailure) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsStreamTest, AssertNotStatusFailureFatal) {
+TEST(ZxTestAssertionStreamTest, AssertNotStatusFailureFatal) {
   TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
                    "ASSERT_NOT_STATUS  did not abort test execution.");
   zx_status_t a = ZX_OK;
@@ -1069,7 +1069,7 @@ TEST(ZxTestAssertionsStreamTest, AssertNotStatusFailureFatal) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsStreamTest, AssertStatusValueMethod) {
+TEST(ZxTestAssertionStreamTest, AssertStatusValueMethod) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "ASSERT/EXPECT_STATUS aborted test on success.");
   struct TestType {
     zx_status_t status_value() const { return ZX_OK; }
@@ -1080,7 +1080,7 @@ TEST(ZxTestAssertionsStreamTest, AssertStatusValueMethod) {
   TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsStreamTest, AssertStatusMethod) {
+TEST(ZxTestAssertionStreamTest, AssertStatusMethod) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "ASSERT/EXPECT_STATUS aborted test on success.");
   struct TestType {
     zx_status_t status() const { return ZX_OK; }
