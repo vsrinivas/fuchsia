@@ -27,7 +27,7 @@ async fn scoped_instances(root_component: &'static str) {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker(".")
+        .moniker_regex(".")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();

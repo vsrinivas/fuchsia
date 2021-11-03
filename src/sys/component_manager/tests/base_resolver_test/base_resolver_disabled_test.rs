@@ -36,11 +36,11 @@ async fn base_resolver_disabled_test() {
     event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    let _ = EventMatcher::ok().moniker(".").wait::<Started>(&mut event_stream).await.unwrap();
+    let _ = EventMatcher::ok().moniker_regex(".").wait::<Started>(&mut event_stream).await.unwrap();
 
     // // Expect start failure for echo_server because we shouldn't resolve the component
     EventMatcher::err()
-        .moniker("./echo_server:0")
+        .moniker_regex("./echo_server:0")
         .expect_match::<Resolved>(&mut event_stream)
         .await;
 }

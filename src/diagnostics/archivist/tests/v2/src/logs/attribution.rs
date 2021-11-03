@@ -75,8 +75,11 @@ async fn log_unattributed_stream() {
     let log_proxy = instance.root.connect_to_protocol_at_exposed_dir::<LogMarker>().unwrap();
 
     // Ensure that Archivist has started before continuing with tests.
-    let _ =
-        EventMatcher::ok().moniker("archivist").wait::<Started>(&mut event_stream).await.unwrap();
+    let _ = EventMatcher::ok()
+        .moniker_regex("archivist")
+        .wait::<Started>(&mut event_stream)
+        .await
+        .unwrap();
 
     // connect multiple identical log sinks
     for _ in 0..50 {

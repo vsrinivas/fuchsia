@@ -42,62 +42,62 @@ async fn verify_routing_failure_messages() {
     let expected = EventSequence::new()
         .all_of(
             vec![
-                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker("/routing-tests:0/child:0"),
-                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(
+                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker_regex("/routing-tests:0/child:0"),
+                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker_regex(
                     "/routing-tests:0/offers-to-children-unavailable:0/child-for-offer-from-parent:0",
                 ),
-                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(
+                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker_regex(
                     "/routing-tests:0/offers-to-children-unavailable:0/child-for-offer-from-sibling:0",
                 ),
-                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(
+                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker_regex(
                     "/routing-tests:0/offers-to-children-unavailable:0/child-open-unrequested:0",
                 ),
                 EventMatcher::ok()
                     .r#type(events::Stopped::TYPE)
-                    .moniker("/reader:0")
+                    .moniker_regex("/reader:0")
                     .stop(Some(ExitStatusMatcher::Clean)),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.diagnostics.ArchiveAccessor")
-                    .moniker("/reader:0"),
+                    .moniker_regex("/reader:0"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker("/routing-tests:0/child:0"),
+                    .moniker_regex("/routing-tests:0/child:0"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker(
+                    .moniker_regex(
                         "/routing-tests:0/offers-to-children-unavailable:0/child-for-offer-from-parent:0",
                     ),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker(
+                    .moniker_regex(
                         "/routing-tests:0/offers-to-children-unavailable:0/child-for-offer-from-sibling:0",
                     ),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker(
+                    .moniker_regex(
                         "/routing-tests:0/offers-to-children-unavailable:0/child-open-unrequested:0",
                     ),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker("/archivist:0"),
+                    .moniker_regex("/archivist:0"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.sys2.EventSource")
-                    .moniker("/archivist:0"),
+                    .moniker_regex("/archivist:0"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.sys2.EventSource")
-                    .moniker("/archivist:0"),
+                    .moniker_regex("/archivist:0"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker("/archivist:0"),
+                    .moniker_regex("/archivist:0"),
             ],
             sequence::Ordering::Unordered,
         )

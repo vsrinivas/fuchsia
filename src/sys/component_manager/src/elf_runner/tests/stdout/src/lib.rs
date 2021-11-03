@@ -183,7 +183,7 @@ async fn start_child_component(realm: &fcomponent::RealmProxy, component: &Compo
 async fn wait_for_stop(event_stream: &mut EventStream, component: &Component) {
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker(component.moniker.to_owned())
+        .moniker_regex(component.moniker.to_owned())
         .wait::<Stopped>(event_stream)
         .await
         .expect("failed to observe events");

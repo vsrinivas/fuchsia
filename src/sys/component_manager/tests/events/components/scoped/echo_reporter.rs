@@ -12,10 +12,14 @@ async fn main() {
     let event_source = EventSource::new().unwrap();
     let mut event_stream =
         event_source.take_static_event_stream("ScopedEventStream").await.unwrap();
-    EventMatcher::ok().moniker("./echo_server:0").wait::<Started>(&mut event_stream).await.unwrap();
+    EventMatcher::ok()
+        .moniker_regex("./echo_server:0")
+        .wait::<Started>(&mut event_stream)
+        .await
+        .unwrap();
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker("./echo_server:0")
+        .moniker_regex("./echo_server:0")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();

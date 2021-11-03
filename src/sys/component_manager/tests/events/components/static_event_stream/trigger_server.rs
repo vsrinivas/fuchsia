@@ -77,7 +77,10 @@ fn run_second_event_stream(mut event_stream: EventStream, mut tx: mpsc::Unbounde
 
 fn run_resolved_event_stream(mut event_stream: EventStream, mut tx: mpsc::UnboundedSender<()>) {
     fasync::Task::spawn(async move {
-        EventMatcher::ok().moniker("./stub:0").expect_match::<Resolved>(&mut event_stream).await;
+        EventMatcher::ok()
+            .moniker_regex("./stub:0")
+            .expect_match::<Resolved>(&mut event_stream)
+            .await;
         tx.send(()).await.expect("Could not send response");
     })
     .detach();

@@ -30,20 +30,28 @@ async fn destroy() {
     let expectation = EventSequence::new()
         .all_of(
             vec![
-                EventMatcher::ok().r#type(Stopped::TYPE).moniker("./coll:parent:1/trigger_a:0"),
-                EventMatcher::ok().r#type(Stopped::TYPE).moniker("./coll:parent:1/trigger_b:0"),
+                EventMatcher::ok()
+                    .r#type(Stopped::TYPE)
+                    .moniker_regex("./coll:parent:1/trigger_a:0"),
+                EventMatcher::ok()
+                    .r#type(Stopped::TYPE)
+                    .moniker_regex("./coll:parent:1/trigger_b:0"),
             ],
             Ordering::Unordered,
         )
-        .then(EventMatcher::ok().r#type(Stopped::TYPE).moniker("./coll:parent:1"))
+        .then(EventMatcher::ok().r#type(Stopped::TYPE).moniker_regex("./coll:parent:1"))
         .all_of(
             vec![
-                EventMatcher::ok().r#type(Purged::TYPE).moniker("./coll:parent:1/trigger_a:0"),
-                EventMatcher::ok().r#type(Purged::TYPE).moniker("./coll:parent:1/trigger_b:0"),
+                EventMatcher::ok()
+                    .r#type(Purged::TYPE)
+                    .moniker_regex("./coll:parent:1/trigger_a:0"),
+                EventMatcher::ok()
+                    .r#type(Purged::TYPE)
+                    .moniker_regex("./coll:parent:1/trigger_b:0"),
             ],
             Ordering::Unordered,
         )
-        .then(EventMatcher::ok().r#type(Purged::TYPE).moniker("./coll:parent:1"))
+        .then(EventMatcher::ok().r#type(Purged::TYPE).moniker_regex("./coll:parent:1"))
         .subscribe_and_expect(&mut event_source)
         .await
         .unwrap();
@@ -51,7 +59,7 @@ async fn destroy() {
 
     // Wait for `coll:parent` to be purged.
     let event = EventMatcher::ok()
-        .moniker("./coll:parent:1$")
+        .moniker_regex("./coll:parent:1$")
         .wait::<Purged>(&mut event_stream)
         .await
         .unwrap();

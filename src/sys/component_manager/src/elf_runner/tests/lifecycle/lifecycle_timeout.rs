@@ -77,7 +77,7 @@ async fn test_stop_timeouts() {
 
         for _ in 0..target_monikers.len() {
             let _ = EventMatcher::ok()
-                .monikers(&target_monikers)
+                .monikers_regex(&target_monikers)
                 .wait::<Started>(&mut event_stream_start)
                 .await
                 .expect("failed to observe events");
@@ -90,11 +90,11 @@ async fn test_stop_timeouts() {
         .has_subset(
             vec![
                 EventMatcher::ok()
-                    .monikers(vec![custom_timeout_child.clone()])
+                    .monikers_regex(vec![custom_timeout_child.clone()])
                     .stop(Some(ExitStatusMatcher::Clean)),
                 EventMatcher::ok()
                     .r#type(Purged::TYPE)
-                    .monikers(vec![custom_timeout_child.clone()]),
+                    .monikers_regex(vec![custom_timeout_child.clone()]),
             ],
             Ordering::Ordered,
         )
@@ -106,11 +106,11 @@ async fn test_stop_timeouts() {
         .has_subset(
             vec![
                 EventMatcher::ok()
-                    .monikers(vec![inherited_timeout_child.clone()])
+                    .monikers_regex(vec![inherited_timeout_child.clone()])
                     .stop(Some(ExitStatusMatcher::Clean)),
                 EventMatcher::ok()
                     .r#type(Purged::TYPE)
-                    .monikers(vec![inherited_timeout_child.clone()]),
+                    .monikers_regex(vec![inherited_timeout_child.clone()]),
             ],
             Ordering::Ordered,
         )
@@ -122,9 +122,9 @@ async fn test_stop_timeouts() {
         .has_subset(
             vec![
                 EventMatcher::ok()
-                    .monikers(vec![parent.clone()])
+                    .monikers_regex(vec![parent.clone()])
                     .stop(Some(ExitStatusMatcher::AnyCrash)),
-                EventMatcher::ok().r#type(Purged::TYPE).monikers(vec![parent.clone()]),
+                EventMatcher::ok().r#type(Purged::TYPE).monikers_regex(vec![parent.clone()]),
             ],
             Ordering::Ordered,
         )

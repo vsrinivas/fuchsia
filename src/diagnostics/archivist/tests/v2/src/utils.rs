@@ -38,7 +38,7 @@ pub async fn wait_for_component_stopped_event(
     );
     EventMatcher::ok()
         .stop(Some(status_match))
-        .moniker(moniker_for_match)
+        .moniker_regex(moniker_for_match)
         .wait::<Stopped>(event_stream)
         .await
         .unwrap();

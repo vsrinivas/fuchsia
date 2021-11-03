@@ -24,7 +24,7 @@ async fn basic_work_scheduler_test() {
     // Expect the root component to exit cleanly
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker(".")
+        .moniker_regex(".")
         .expect_match::<Stopped>(&mut event_stream)
         .await;
 }
@@ -49,8 +49,10 @@ async fn unbound_work_scheduler_test() {
             vec![
                 EventMatcher::ok()
                     .stop(Some(ExitStatusMatcher::Clean))
-                    .moniker("./worker_sibling:0"),
-                EventMatcher::ok().stop(Some(ExitStatusMatcher::Clean)).moniker("./worker_child:0"),
+                    .moniker_regex("./worker_sibling:0"),
+                EventMatcher::ok()
+                    .stop(Some(ExitStatusMatcher::Clean))
+                    .moniker_regex("./worker_child:0"),
             ],
             Ordering::Unordered,
         )

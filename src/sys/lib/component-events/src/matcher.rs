@@ -248,13 +248,13 @@ impl EventMatcher {
     }
 
     /// The expected target moniker as a regular expression.
-    pub fn moniker(self, moniker: impl Into<String>) -> Self {
-        self.monikers(&[moniker.into()])
+    pub fn moniker_regex(self, moniker: impl Into<String>) -> Self {
+        self.monikers_regex(&[moniker.into()])
     }
 
     /// The expected target monikers as regular expressions. This will match against
     /// regular expression in the iterator provided.
-    pub fn monikers<I, S>(mut self, monikers: I) -> Self
+    pub fn monikers_regex<I, S>(mut self, monikers: I) -> Self
     where
         S: AsRef<str>,
         I: IntoIterator<Item = S>,

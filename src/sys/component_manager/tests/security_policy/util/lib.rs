@@ -41,7 +41,7 @@ pub async fn start_policy_test(
 
     // Wait for the root component to be started so we can connect to its Realm service through the
     // hub.
-    EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
+    EventMatcher::ok().moniker_regex(".").expect_match::<Started>(&mut event_stream).await;
 
     let realm = connect_to_root_service::<fcomponent::RealmMarker>(&test)
         .context("failed to connect to root component.Realm")?;

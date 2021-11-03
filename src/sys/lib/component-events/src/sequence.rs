@@ -255,7 +255,7 @@ mod tests {
 
     // Returns a matcher for a successful Started event for the given moniker.
     fn make_matcher<M: Into<String>>(moniker: M) -> EventMatcher {
-        EventMatcher::ok().r#type(Started::TYPE).moniker(moniker)
+        EventMatcher::ok().r#type(Started::TYPE).moniker_regex(moniker)
     }
 
     #[fuchsia::test]

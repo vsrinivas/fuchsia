@@ -37,8 +37,11 @@ async fn base_resolver_appmgr_bridge_test() {
     event_source.start_component_tree().await;
 
     // Expect the root component to be bound to
-    EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
+    EventMatcher::ok().moniker_regex(".").expect_match::<Started>(&mut event_stream).await;
 
     // // Expect start to succeed because we're using the appmgr loader
-    EventMatcher::ok().moniker("./echo_server:0").expect_match::<Started>(&mut event_stream).await;
+    EventMatcher::ok()
+        .moniker_regex("./echo_server:0")
+        .expect_match::<Started>(&mut event_stream)
+        .await;
 }

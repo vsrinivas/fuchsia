@@ -1334,7 +1334,7 @@ impl ScopedInstance {
             .context("failed to connect to fuchsia.component.Binder")?;
 
         let _ = EventMatcher::ok()
-            .moniker(self.child_name.to_owned())
+            .moniker_regex(self.child_name.to_owned())
             .wait::<Started>(&mut event_stream)
             .await
             .context("failed to observe Started event")?;

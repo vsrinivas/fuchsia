@@ -109,18 +109,18 @@ async fn start_branch() -> Result<ScopedInstance, Error> {
     EventSequence::new()
         .has_subset(
             vec![
-                EventMatcher::ok().r#type(Started::TYPE).moniker(format!(
+                EventMatcher::ok().r#type(Started::TYPE).moniker_regex(format!(
                     "./{}:{}:\\d+",
                     BRANCHES_COLLECTION,
                     branch.child_name()
                 )),
-                EventMatcher::ok().r#type(Started::TYPE).moniker(format!(
+                EventMatcher::ok().r#type(Started::TYPE).moniker_regex(format!(
                     "./{}:{}:\\d+/{}:a:\\d+",
                     BRANCHES_COLLECTION,
                     branch.child_name(),
                     ACCOUNT_PROVIDERS_COLLECTION
                 )),
-                EventMatcher::ok().r#type(Started::TYPE).moniker(format!(
+                EventMatcher::ok().r#type(Started::TYPE).moniker_regex(format!(
                     "./{}:{}:\\d+/{}:b:\\d+",
                     BRANCHES_COLLECTION,
                     branch.child_name(),

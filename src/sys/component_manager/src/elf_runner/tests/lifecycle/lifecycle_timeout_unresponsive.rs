@@ -53,7 +53,7 @@ async fn test_stop_timeouts() {
         let target_monikers = [moniker_stem, custom_timeout_child, inherited_timeout_child];
         for _ in 0..target_monikers.len() {
             let _ = EventMatcher::ok()
-                .monikers(&target_monikers)
+                .monikers_regex(&target_monikers)
                 .wait::<Started>(&mut event_stream)
                 .await
                 .expect("failed to observe events");
@@ -67,17 +67,17 @@ async fn test_stop_timeouts() {
             vec![
                 EventMatcher::ok()
                     .r#type(Stopped::TYPE)
-                    .monikers(&target_monikers)
+                    .monikers_regex(&target_monikers)
                     .stop(Some(ExitStatusMatcher::AnyCrash)),
                 EventMatcher::ok()
-                    .monikers(&target_monikers)
+                    .monikers_regex(&target_monikers)
                     .stop(Some(ExitStatusMatcher::AnyCrash)),
                 EventMatcher::ok()
-                    .monikers(&target_monikers)
+                    .monikers_regex(&target_monikers)
                     .stop(Some(ExitStatusMatcher::AnyCrash)),
-                EventMatcher::ok().r#type(Purged::TYPE).monikers(&target_monikers),
-                EventMatcher::ok().r#type(Purged::TYPE).monikers(&target_monikers),
-                EventMatcher::ok().r#type(Purged::TYPE).monikers(&target_monikers),
+                EventMatcher::ok().r#type(Purged::TYPE).monikers_regex(&target_monikers),
+                EventMatcher::ok().r#type(Purged::TYPE).monikers_regex(&target_monikers),
+                EventMatcher::ok().r#type(Purged::TYPE).monikers_regex(&target_monikers),
             ],
             Ordering::Unordered,
         )

@@ -27,7 +27,7 @@ async fn test_component_starts_on_bind() {
 
     EventMatcher::ok()
         .r#type(fsys::EventType::Started)
-        .moniker(HELLO_WORLD_MONIKER.to_owned())
+        .moniker_regex(HELLO_WORLD_MONIKER.to_owned())
         .wait::<Started>(&mut event_stream)
         .await
         .expect("failed to observe events");

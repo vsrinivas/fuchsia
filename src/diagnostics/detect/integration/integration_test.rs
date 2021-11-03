@@ -317,7 +317,7 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
         let moniker = format!(".*{}.*detect:0", root_name);
         let exit_future = EventMatcher::ok()
             .stop(None)
-            .moniker(moniker)
+            .moniker_regex(moniker)
             .wait::<Stopped>(&mut exit_stream)
             .boxed();
 

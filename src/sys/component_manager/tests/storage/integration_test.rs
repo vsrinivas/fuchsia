@@ -27,7 +27,7 @@ async fn storage() {
     // Expect the static child to stop
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker("./storage_user:0")
+        .moniker_regex("./storage_user:0")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
@@ -52,7 +52,7 @@ async fn storage_from_collection() {
     // Expect the root to stop
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker("./")
+        .moniker_regex("./")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
@@ -79,7 +79,7 @@ async fn storage_from_collection_with_invalid_route() {
         .stop(Some(ExitStatusMatcher::Clean))
         // TODO(81348): use the same value here to reference the root moniker as the values used
         // elsewhere in this file.
-        .moniker(".")
+        .moniker_regex(".")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();

@@ -144,7 +144,7 @@ pub async fn get_child_component_event_matcher(
         "{}:\\d+/{}:\\d+/{}:\\d+",
         NETEMUL_SANDBOX_MONIKER, realm_moniker, component_moniker
     );
-    Ok(component_events::matcher::EventMatcher::ok().moniker(moniker_for_match))
+    Ok(component_events::matcher::EventMatcher::ok().moniker_regex(moniker_for_match))
 }
 
 /// Waits for a non-loopback interface to come up with an ID not in `exclude_ids`.

@@ -51,7 +51,7 @@ async fn main() {
     // Expect the dynamic child to stop
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker("./coll:storage_user:1")
+        .moniker_regex("./coll:storage_user:1")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
@@ -61,7 +61,7 @@ async fn main() {
 
     // Expect the dynamic child to be purged
     EventMatcher::ok()
-        .moniker("./coll:storage_user:1")
+        .moniker_regex("./coll:storage_user:1")
         .wait::<Purged>(&mut event_stream)
         .await
         .unwrap();

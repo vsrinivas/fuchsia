@@ -39,7 +39,7 @@ async fn test_normal_behavior() {
         let moniker = format!("^{}\\d+$", moniker_stem);
 
         let _ = EventMatcher::ok()
-            .moniker(moniker.clone())
+            .moniker_regex(moniker.clone())
             .wait::<Started>(&mut event_stream)
             .await
             .expect("failed to observe events");
@@ -49,7 +49,7 @@ async fn test_normal_behavior() {
     let () = destroy_waiter.await.expect("failed to destroy child");
 
     EventSequence::new()
-        .then(EventMatcher::ok().moniker(&moniker).stop(Some(ExitStatusMatcher::Clean)))
+        .then(EventMatcher::ok().moniker_regex(&moniker).stop(Some(ExitStatusMatcher::Clean)))
         .expect(event_stream)
         .await
         .unwrap();

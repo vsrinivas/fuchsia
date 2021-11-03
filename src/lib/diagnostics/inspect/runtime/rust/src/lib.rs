@@ -108,7 +108,7 @@ mod tests {
         app.connect_to_binder().expect("failed to connect to Binder protocol");
 
         let _ = EventMatcher::ok()
-            .moniker(app.child_name().to_owned())
+            .moniker_regex(app.child_name().to_owned())
             .wait::<Started>(&mut event_stream)
             .await
             .expect("failed to observe Started event");

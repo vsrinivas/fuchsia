@@ -28,7 +28,7 @@ async fn async_event_source_test() {
     // Expect the static child to stop
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker(".")
+        .moniker_regex(".")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
@@ -52,7 +52,7 @@ async fn scoped_events_test() {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker("./echo_reporter:0")
+        .moniker_regex("./echo_reporter:0")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
@@ -77,7 +77,7 @@ async fn realm_offered_event_source_test() {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker("./nested_realm:0/reporter:0")
+        .moniker_regex("./nested_realm:0/reporter:0")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
@@ -102,7 +102,7 @@ async fn nested_event_source_test() {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker(".")
+        .moniker_regex(".")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
@@ -112,7 +112,7 @@ async fn expect_and_get_timestamp<T: Event>(
     event_stream: &mut EventStream,
     moniker: &str,
 ) -> zx::Time {
-    let event = EventMatcher::ok().moniker(moniker).expect_match::<T>(event_stream).await;
+    let event = EventMatcher::ok().moniker_regex(moniker).expect_match::<T>(event_stream).await;
     event.timestamp()
 }
 
@@ -168,7 +168,7 @@ async fn event_directory_ready() {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker(".")
+        .moniker_regex(".")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
@@ -193,7 +193,7 @@ async fn resolved_error_test() {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker(".")
+        .moniker_regex(".")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
@@ -218,7 +218,7 @@ async fn synthesis_test() {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker(".")
+        .moniker_regex(".")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
@@ -243,7 +243,7 @@ async fn static_event_stream_capability_requested_test() {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker("./components:0/trigger_server:0")
+        .moniker_regex("./components:0/trigger_server:0")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
