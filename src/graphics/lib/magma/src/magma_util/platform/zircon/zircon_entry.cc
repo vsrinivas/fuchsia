@@ -194,7 +194,7 @@ class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::Device>,
       fuchsia_gpu_magma::wire::IcdFlags flags;
       if (item.support_flags & ICD_SUPPORT_FLAG_VULKAN)
         flags |= fuchsia_gpu_magma::wire::IcdFlags::kSupportsVulkan;
-      icd_info.set_flags(allocator, flags);
+      icd_info.set_flags(flags);
       icd_infos.push_back(std::move(icd_info));
     }
 

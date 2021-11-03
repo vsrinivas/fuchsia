@@ -26,13 +26,13 @@ static const char* kTag = "goldfish-device-local-heap";
 
 fuchsia_sysmem2::wire::HeapProperties GetHeapProperties(fidl::AnyArena& allocator) {
   fuchsia_sysmem2::wire::CoherencyDomainSupport coherency_domain_support(allocator);
-  coherency_domain_support.set_cpu_supported(allocator, false)
-      .set_ram_supported(allocator, false)
-      .set_inaccessible_supported(allocator, true);
+  coherency_domain_support.set_cpu_supported(false)
+      .set_ram_supported(false)
+      .set_inaccessible_supported(true);
 
   fuchsia_sysmem2::wire::HeapProperties heap_properties(allocator);
   heap_properties.set_coherency_domain_support(allocator, std::move(coherency_domain_support))
-      .set_need_clear(allocator, false);
+      .set_need_clear(false);
   return heap_properties;
 }
 

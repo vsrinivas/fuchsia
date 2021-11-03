@@ -44,12 +44,12 @@ static constexpr auto kVSyncInterval = zx::usec(1000000 / kRefreshRateHz);
 
 fuchsia_sysmem2::wire::HeapProperties GetHeapProperties(fidl::AnyArena& arena) {
   fuchsia_sysmem2::wire::CoherencyDomainSupport coherency_domain_support(arena);
-  coherency_domain_support.set_cpu_supported(arena, false)
-      .set_ram_supported(arena, true)
-      .set_inaccessible_supported(arena, false);
+  coherency_domain_support.set_cpu_supported(false)
+      .set_ram_supported(true)
+      .set_inaccessible_supported(false);
   fuchsia_sysmem2::wire::HeapProperties heap_properties(arena);
   heap_properties.set_coherency_domain_support(arena, std::move(coherency_domain_support))
-      .set_need_clear(arena, false);
+      .set_need_clear(false);
   return heap_properties;
 }
 

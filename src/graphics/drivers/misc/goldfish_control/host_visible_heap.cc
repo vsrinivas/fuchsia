@@ -35,9 +35,9 @@ static const char* kTag = "goldfish-host-visible-heap";
 
 fuchsia_sysmem2::wire::HeapProperties GetHeapProperties(fidl::AnyArena& allocator) {
   fuchsia_sysmem2::wire::CoherencyDomainSupport coherency_domain_support(allocator);
-  coherency_domain_support.set_cpu_supported(allocator, true)
-      .set_ram_supported(allocator, true)
-      .set_inaccessible_supported(allocator, false);
+  coherency_domain_support.set_cpu_supported(true)
+      .set_ram_supported(true)
+      .set_inaccessible_supported(false);
 
   fuchsia_sysmem2::wire::HeapProperties heap_properties(allocator);
   heap_properties
@@ -47,7 +47,7 @@ fuchsia_sysmem2::wire::HeapProperties GetHeapProperties(fidl::AnyArena& allocato
       // valid after |CreateColorBuffer()| render control call. Thus it doesn't
       // work for sysmem to clear the VMO contents, instead we do map-and-clear
       // in the end of |CreateResource()|.
-      .set_need_clear(allocator, false);
+      .set_need_clear(false);
   return heap_properties;
 }
 
@@ -136,11 +136,11 @@ GetCreateColorBuffer2Params(fidl::AnyArena& allocator,
                                      : 1);
 
   CreateColorBuffer2Params buffer2_params(allocator);
-  buffer2_params.set_width(allocator, width)
-      .set_height(allocator, height)
-      .set_memory_property(allocator, fuchsia_hardware_goldfish::wire::kMemoryPropertyHostVisible)
+  buffer2_params.set_width(width)
+      .set_height(height)
+      .set_memory_property(fuchsia_hardware_goldfish::wire::kMemoryPropertyHostVisible)
       .set_physical_address(allocator, paddr)
-      .set_format(allocator, color_buffer_format);
+      .set_format(color_buffer_format);
   return fpromise::ok(std::move(buffer2_params));
 }
 
@@ -158,7 +158,7 @@ fuchsia_hardware_goldfish::wire::CreateBuffer2Params GetCreateBuffer2Params(
   uint64_t size_bytes = buffer_settings.size_bytes();
   CreateBuffer2Params buffer2_params(allocator);
   buffer2_params.set_size(allocator, size_bytes)
-      .set_memory_property(allocator, fuchsia_hardware_goldfish::wire::kMemoryPropertyHostVisible)
+      .set_memory_property(fuchsia_hardware_goldfish::wire::kMemoryPropertyHostVisible)
       .set_physical_address(allocator, paddr);
   return buffer2_params;
 }

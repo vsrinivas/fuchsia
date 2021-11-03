@@ -610,9 +610,9 @@ void Control::GetBufferHandleInfo(GetBufferHandleInfoRequestView request,
 
   ControlDeviceGetBufferHandleInfoResponse response;
   response.info.Allocate(allocator);
-  response.info.set_id(allocator, handle)
-      .set_memory_property(allocator, it_types->second.memory_property)
-      .set_type(allocator, it_types->second.type);
+  response.info.set_id(handle)
+      .set_memory_property(it_types->second.memory_property)
+      .set_type(it_types->second.type);
   completer.Reply(
       ControlDeviceGetBufferHandleInfoResult::WithResponse(allocator, std::move(response)));
 }

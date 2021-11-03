@@ -49,7 +49,7 @@ void TranslateDisplayMode(fidl::AnyArena& allocator, const display_mode_t& in_mo
       .output_color_format = in_color.output_color_format,
       .color_depth = in_color.color_depth,
   };
-  out_mode->set_color(allocator, color);
+  out_mode->set_color(color);
 }
 
 }  // namespace

@@ -212,11 +212,10 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
   {
     fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
-    create_params.set_width(allocator, 64)
-        .set_height(allocator, 64)
-        .set_format(allocator, fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
-        .set_memory_property(allocator,
-                             fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
+    create_params.set_width(64)
+        .set_height(64)
+        .set_format(fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
+        .set_memory_property(fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
     auto result = control->CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
     ASSERT_TRUE(result.ok());
@@ -241,11 +240,10 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
   {
     fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
-    create_params.set_width(allocator, 64)
-        .set_height(allocator, 64)
-        .set_format(allocator, fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
-        .set_memory_property(allocator,
-                             fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
+    create_params.set_width(64)
+        .set_height(64)
+        .set_format(fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
+        .set_memory_property(fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
     auto result = control->CreateColorBuffer2(std::move(vmo_copy3), std::move(create_params));
     ASSERT_TRUE(result.ok());
@@ -644,8 +642,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
     fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params(allocator);
     create_params.set_size(allocator, kBufferSizeBytes)
-        .set_memory_property(allocator,
-                             fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
+        .set_memory_property(fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
     auto result = control->CreateBuffer2(std::move(vmo_copy), std::move(create_params));
     ASSERT_TRUE(result.ok());
@@ -669,11 +666,10 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
   {
     fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
-    create_params.set_width(allocator, 64)
-        .set_height(allocator, 64)
-        .set_format(allocator, fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
-        .set_memory_property(allocator,
-                             fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
+    create_params.set_width(64)
+        .set_height(64)
+        .set_format(fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
+        .set_memory_property(fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
     auto result = control->CreateColorBuffer2(std::move(vmo_copy3), std::move(create_params));
     ASSERT_TRUE(result.ok());
@@ -687,8 +683,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
     fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params(allocator);
     create_params.set_size(allocator, kBufferSizeBytes)
-        .set_memory_property(allocator,
-                             fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
+        .set_memory_property(fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
     auto result = control->CreateBuffer2(std::move(vmo_copy4), std::move(create_params));
     ASSERT_TRUE(result.ok());
@@ -721,11 +716,10 @@ TEST(GoldfishControlTests, GoldfishControlTest_InvalidVmo) {
   {
     fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
-    create_params.set_width(allocator, 16)
-        .set_height(allocator, 16)
-        .set_format(allocator, fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
-        .set_memory_property(allocator,
-                             fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
+    create_params.set_width(16)
+        .set_height(16)
+        .set_format(fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
+        .set_memory_property(fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
     auto result = control->CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
     ASSERT_TRUE(result.ok());
@@ -821,10 +815,9 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
     fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     // Without width
-    create_params.set_height(allocator, 64)
-        .set_format(allocator, fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
-        .set_memory_property(allocator,
-                             fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
+    create_params.set_height(64)
+        .set_format(fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
+        .set_memory_property(fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
     auto result = control->CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
 
@@ -839,10 +832,9 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
     fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     // Without height
-    create_params.set_width(allocator, 64)
-        .set_format(allocator, fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
-        .set_memory_property(allocator,
-                             fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
+    create_params.set_width(64)
+        .set_format(fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
+        .set_memory_property(fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
     auto result = control->CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
 
@@ -857,10 +849,8 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
     fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     // Without format
-    create_params.set_width(allocator, 64)
-        .set_height(allocator, 64)
-        .set_memory_property(allocator,
-                             fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
+    create_params.set_width(64).set_height(64).set_memory_property(
+        fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
     auto result = control->CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
 
@@ -875,9 +865,8 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
     fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     // Without memory property
-    create_params.set_width(allocator, 64)
-        .set_height(allocator, 64)
-        .set_format(allocator, fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra);
+    create_params.set_width(64).set_height(64).set_format(
+        fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra);
 
     auto result = control->CreateColorBuffer2(std::move(vmo_copy), std::move(create_params));
 
@@ -964,8 +953,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateBuffer2Args) {
     fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params(allocator);
     // Without size
-    create_params.set_memory_property(allocator,
-                                      fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
+    create_params.set_memory_property(fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
     auto result = control->CreateBuffer2(std::move(vmo_copy), std::move(create_params));
 
@@ -1328,11 +1316,10 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
     fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     // Without physical address
-    create_params.set_width(allocator, 64)
-        .set_height(allocator, 64)
-        .set_format(allocator, fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
-        .set_memory_property(allocator,
-                             fuchsia_hardware_goldfish::wire::kMemoryPropertyHostVisible);
+    create_params.set_width(64)
+        .set_height(64)
+        .set_format(fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
+        .set_memory_property(fuchsia_hardware_goldfish::wire::kMemoryPropertyHostVisible);
 
     auto result = control->CreateColorBuffer2(std::move(vmo_copy), create_params);
 
@@ -1345,10 +1332,10 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
   {
     fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
-    create_params.set_width(allocator, 64)
-        .set_height(allocator, 64)
-        .set_format(allocator, fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
-        .set_memory_property(allocator, 0x02u)
+    create_params.set_width(64)
+        .set_height(64)
+        .set_format(fuchsia_hardware_goldfish::wire::ColorBufferFormatType::kBgra)
+        .set_memory_property(0x02u)
         .set_physical_address(allocator, physical_addr);
 
     auto result = control->CreateColorBuffer2(std::move(vmo_copy), create_params);
@@ -1444,11 +1431,10 @@ TEST_P(GoldfishCreateColorBufferTest, CreateColorBufferWithFormat) {
   {
     fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
-    create_params.set_width(allocator, 64)
-        .set_height(allocator, 64)
-        .set_format(allocator, GetParam())
-        .set_memory_property(allocator,
-                             fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
+    create_params.set_width(64)
+        .set_height(64)
+        .set_format(GetParam())
+        .set_memory_property(fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
 
     auto result = control->CreateColorBuffer2(std::move(vmo_copy), create_params);
     ASSERT_TRUE(result.ok());

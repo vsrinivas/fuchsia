@@ -199,7 +199,7 @@ TEST_F(AmlHdmiTest, ModeSetTest) {
   };
   fuchsia_hardware_hdmi::wire::DisplayMode mode(allocator);
   mode.set_mode(allocator, standard_display_mode);
-  mode.set_color(allocator, color);
+  mode.set_color(color);
 
   (*mock_mmio_)[0x6 * 4 + 0x8000].ExpectWrite(1 << 12);  // HDMITX_TOP_BIST_CNTL
   ExpectHdmiDwConfigHdmitx();

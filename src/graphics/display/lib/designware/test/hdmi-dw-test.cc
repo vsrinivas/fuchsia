@@ -211,7 +211,7 @@ TEST_F(HdmiDwTest, ConfigHdmitxTest) {
   };
   DisplayMode mode(allocator);
   mode.set_mode(allocator, standard_display_mode);
-  mode.set_color(allocator, color);
+  mode.set_color(color);
 
   hdmi_param_tx p{
       .vic = 9,

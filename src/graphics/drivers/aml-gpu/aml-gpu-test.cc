@@ -100,7 +100,7 @@ class TestAmlGpu {
     {
       fidl::Arena allocator;
       Metadata metadata(allocator);
-      metadata.set_supports_protected_mode(allocator, false);
+      metadata.set_supports_protected_mode(false);
       {
         fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);
         ASSERT_TRUE(encoded_metadata.ok());
@@ -116,7 +116,7 @@ class TestAmlGpu {
     {
       fidl::Arena allocator;
       Metadata metadata(allocator);
-      metadata.set_supports_protected_mode(allocator, true);
+      metadata.set_supports_protected_mode(true);
       {
         fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);
         ASSERT_TRUE(encoded_metadata.ok());
