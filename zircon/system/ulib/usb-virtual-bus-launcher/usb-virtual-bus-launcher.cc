@@ -49,7 +49,7 @@ USBVirtualBusBase::USBVirtualBusBase() {
   virtual_bus_ =
       fidl::BindSyncClient<fuchsia_hardware_usb_virtual_bus::Bus>(std::move(virtual_bus));
 
-  auto enable_result = virtual_bus_.Enable();
+  auto enable_result = virtual_bus_->Enable();
   ASSERT_NO_FATAL_FAILURES(ValidateResult(enable_result));
 
   fd.reset(openat(devmgr_.devfs_root().get(), "class/usb-peripheral", O_RDONLY));
@@ -75,10 +75,10 @@ void USBVirtualBusBase::SetupPeripheralDevice(DeviceDescriptor&& device_desc,
                                               std::vector<ConfigurationDescriptor> config_descs) {
   zx::channel handles[2];
   ASSERT_OK(zx::channel::create(0, handles, handles + 1));
-  auto set_result = peripheral_.SetStateChangeListener(std::move(handles[1]));
+  auto set_result = peripheral_->SetStateChangeListener(std::move(handles[1]));
   ASSERT_OK(set_result.status());
 
-  auto set_config = peripheral_.SetConfiguration(
+  auto set_config = peripheral_->SetConfiguration(
       std::move(device_desc),
       fidl::VectorView<ConfigurationDescriptor>::FromExternal(config_descs));
   ASSERT_OK(set_config.status());
@@ -89,17 +89,17 @@ void USBVirtualBusBase::SetupPeripheralDevice(DeviceDescriptor&& device_desc,
   loop.Run();
   ASSERT_TRUE(watcher.all_functions_registered());
 
-  auto connect_result = virtual_bus_.Connect();
+  auto connect_result = virtual_bus_->Connect();
   ASSERT_NO_FATAL_FAILURES(ValidateResult(connect_result));
 }
 
 void USBVirtualBusBase::ClearPeripheralDeviceFunctions() {
   zx::channel handles[2];
   ASSERT_OK(zx::channel::create(0, handles, handles + 1));
-  auto set_result = peripheral_.SetStateChangeListener(std::move(handles[1]));
+  auto set_result = peripheral_->SetStateChangeListener(std::move(handles[1]));
   ASSERT_OK(set_result.status());
 
-  auto clear_functions = peripheral_.ClearFunctions();
+  auto clear_functions = peripheral_->ClearFunctions();
   ASSERT_OK(clear_functions.status());
 
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
