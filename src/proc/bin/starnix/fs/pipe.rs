@@ -171,10 +171,21 @@ impl Pipe {
         let mut events = FdEvents::empty();
 
         if self.is_readable() {
-            events |= FdEvents::POLLIN;
+            let writer_closed = self.writer_count == 0 && self.had_writer;
+            let has_data = self.messages.len() > 0;
+            if writer_closed {
+                events |= FdEvents::POLLHUP;
+            }
+            if (writer_closed && has_data) || !writer_closed {
+                events |= FdEvents::POLLIN;
+            }
         }
 
         if self.is_writable() {
+            if self.reader_count == 0 && self.had_reader {
+                events |= FdEvents::POLLERR;
+            }
+
             events |= FdEvents::POLLOUT;
         }
 
