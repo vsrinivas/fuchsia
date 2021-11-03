@@ -39,8 +39,8 @@ TEST_F(LoaderServiceTest, ConnectBindDone) {
     EXPECT_NO_FATAL_FAILURE(LoadObject(client, "libfoo.so", zx::ok("science")));
 
     // Done should cleanly shutdown connection from server side.
-    ASSERT_TRUE(client.Done().ok());
-    ASSERT_EQ(client.LoadObject("libfoo.so").status(), ZX_ERR_PEER_CLOSED);
+    ASSERT_TRUE(client->Done().ok());
+    ASSERT_EQ(client->LoadObject("libfoo.so").status(), ZX_ERR_PEER_CLOSED);
   }
 
   // Should be able to still make new connections.
@@ -88,7 +88,7 @@ TEST_F(LoaderServiceTest, OpenConnectionsKeepLoaderAlive) {
   // Should still be able to Clone any open connection.
   zx::channel client_chan, server_chan;
   ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
-  auto result = client2.Clone(std::move(server_chan));
+  auto result = client2->Clone(std::move(server_chan));
   ASSERT_TRUE(result.ok());
   ASSERT_OK(result.Unwrap()->rv);
   fidl::WireSyncClient<fldsvc::Loader> client3(std::move(client_chan));
@@ -205,7 +205,7 @@ TEST_F(LoaderServiceTest, ClonedConnectionHasDefaultConfig) {
 
   zx::channel client_chan, server_chan;
   ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
-  auto result = client.Clone(std::move(server_chan));
+  auto result = client->Clone(std::move(server_chan));
   ASSERT_TRUE(result.ok());
   ASSERT_OK(result.Unwrap()->rv);
   {
