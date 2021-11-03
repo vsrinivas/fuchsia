@@ -38,7 +38,7 @@ glm::ivec4 GetPixel(uint8_t* vmo_host, uint32_t width, uint32_t x, uint32_t y) {
   uint32_t b = vmo_host[y * width * 4 + x * 4 + 2];
   uint32_t a = vmo_host[y * width * 4 + x * 4 + 3];
   return glm::ivec4(r, g, b, a);
-};
+}
 
 }  // anonymous namespace
 

@@ -101,7 +101,7 @@ class DevStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::Stor
 
   // |fuchsia::modular::StoryShell|
   void UpdateSurface(fuchsia::modular::ViewConnection view_connection,
-                     fuchsia::modular::SurfaceInfo /*surface_info*/) override{};
+                     fuchsia::modular::SurfaceInfo /*surface_info*/) override {}
 
   void Connect() {
     if (story_shell_context_.is_bound() && view_token_.value) {

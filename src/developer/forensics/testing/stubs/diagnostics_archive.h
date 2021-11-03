@@ -55,7 +55,7 @@ class DiagnosticsArchiveClosesArchiveConnection : public DiagnosticsArchiveBase 
  public:
   // |fuchsia::diagnostics::ArchiveAccessor|
   STUB_METHOD_CLOSES_CONNECTION(StreamDiagnostics, fuchsia::diagnostics::StreamParameters,
-                                ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator>);
+                                ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator>)
 };
 
 class DiagnosticsArchiveClosesIteratorConnection : public DiagnosticsArchiveBase {

@@ -116,7 +116,7 @@ class MapTester {
 
 class MkfsTester {
  public:
-  static GlobalParameters &GetGlobalParameters(MkfsWorker &mkfs) { return mkfs.params_; };
+  static GlobalParameters &GetGlobalParameters(MkfsWorker &mkfs) { return mkfs.params_; }
 
   static zx_status_t InitAndGetDeviceInfo(MkfsWorker &mkfs);
   static zx::status<std::unique_ptr<Bcache>> FormatDevice(MkfsWorker &mkfs);

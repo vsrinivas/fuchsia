@@ -293,7 +293,7 @@ void DebugAgent::OnPause(const debug_ipc::PauseRequest& request, debug_ipc::Paus
 void DebugAgent::OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
                              debug_ipc::QuitAgentReply* reply) {
   debug::MessageLoop::Current()->QuitNow();
-};
+}
 
 void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request, debug_ipc::ResumeReply* reply) {
   DEBUG_LOG(Agent) << LogResumeRequest(request);

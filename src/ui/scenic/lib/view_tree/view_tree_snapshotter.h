@@ -51,14 +51,14 @@ class ViewTreeSnapshotter final : public scheduling::SessionUpdater {
       uint64_t trace_id) override {
     UpdateSnapshot();
     return {};
-  };
+  }
   // |scheduling::SessionUpdater|
-  void OnCpuWorkDone() override{};
+  void OnCpuWorkDone() override {}
   // |scheduling::SessionUpdater|
   void OnFramePresented(
       const std::unordered_map<scheduling::SessionId, std::map<scheduling::PresentId, zx::time>>&
           latched_times,
-      scheduling::PresentTimestamps present_times) override{};
+      scheduling::PresentTimestamps present_times) override {}
 
  private:
   // Calls each SubtreeSnapshotGenerator() in |subtree_generators_| in turn, combines the results

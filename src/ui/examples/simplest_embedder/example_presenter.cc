@@ -48,7 +48,7 @@ void ExamplePresenter::PresentOrReplaceView(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
   FX_CHECK(!presentation_) << "simplest_embedder: clobbering presentation is not supported";
   PresentView(std::move(view_holder_token), std::move(presentation_request));
-};
+}
 
 void ExamplePresenter::PresentOrReplaceView2(
     fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,

@@ -98,7 +98,7 @@ TEST(IntrusiveListTest, Iterators) {
   EXPECT_TRUE(std::equal(list.cbegin(), list.cend(), values.cbegin(), values.cend()));
   EXPECT_TRUE(std::equal(list.rbegin(), list.rend(), values.rbegin(), values.rend()));
   EXPECT_TRUE(std::equal(list.crbegin(), list.crend(), values.crbegin(), values.crend()));
-};
+}
 
 // Test list modification.
 TEST(IntrusiveListTest, ListModification) {

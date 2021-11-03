@@ -111,7 +111,7 @@ DEFINE_TEST_OBJECTS(WAVL);
 using UMTE   = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, Unmanaged);
 using UPDDTE = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, UniquePtrDefaultDeleter);
 using UPCDTE = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, UniquePtrCustomDeleter);
-VERIFY_CONTAINER_SIZES(WAVL, sizeof(void*) * 4);
+VERIFY_CONTAINER_SIZES(WAVL, sizeof(void*) * 4)
 
 // Versions of the test objects which support clear_unsafe.
 template <typename PtrType>

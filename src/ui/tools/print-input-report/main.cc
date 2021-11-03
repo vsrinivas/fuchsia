@@ -154,7 +154,7 @@ int ReadAllDescriptors(async::Loop* loop, Printer* printer) {
 
   loop->Run();
   return 0;
-};
+}
 
 }  // namespace print_input_report
 

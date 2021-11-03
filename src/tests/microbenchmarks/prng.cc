@@ -59,6 +59,6 @@ void RegisterTests() {
   perftest::RegisterTest("Prng/DoNotUse/LibC/Random", GetFrom<random>);
 }
 
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

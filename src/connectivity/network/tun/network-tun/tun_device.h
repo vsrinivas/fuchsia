@@ -49,7 +49,7 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
   void GetDevice(GetDeviceRequestView request, GetDeviceCompleter::Sync& _completer) override;
 
   // DeviceAdapterParent implementation:
-  const BaseDeviceConfig& config() const override { return config_; };
+  const BaseDeviceConfig& config() const override { return config_; }
   void OnTxAvail(DeviceAdapter* device) override;
   void OnRxAvail(DeviceAdapter* device) override;
 

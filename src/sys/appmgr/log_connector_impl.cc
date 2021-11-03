@@ -67,7 +67,7 @@ LogConnectorImpl::LogConnectorImpl(fxl::WeakPtr<LogConnectorImpl> parent, std::s
     : parent_(std::move(parent)),
       realm_label_(realm_label),
       consumer_request_(consumer_.NewRequest()),
-      weak_factory_(this){};
+      weak_factory_(this) {}
 
 LogConnectorImpl::LogConnectorImpl(std::string realm_label)
     : LogConnectorImpl(nullptr /* parent */, realm_label) {}

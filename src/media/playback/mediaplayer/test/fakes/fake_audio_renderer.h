@@ -110,7 +110,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
                        fuchsia::media::audio::RampType ramp_type) final {
     FX_NOTIMPLEMENTED();
-  };
+  }
   void SetMute(bool muted) override;
 
  private:

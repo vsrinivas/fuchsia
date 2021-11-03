@@ -168,7 +168,7 @@ class Status : public hwreg::RegisterBase<Status, uint32_t> {
   DEF_BIT(12, unaligned_access);
   DEF_BIT(13, incompatible_config);
 
-  static auto Get() { return hwreg::RegisterAddr<Status>(0x60); };
+  static auto Get() { return hwreg::RegisterAddr<Status>(0x60); }
 };
 
 class Config : public hwreg::RegisterBase<Config, uint32_t> {
@@ -176,7 +176,7 @@ class Config : public hwreg::RegisterBase<Config, uint32_t> {
   DEF_BIT(0, start);
   DEF_BIT(1, stop);
 
-  static auto Get() { return hwreg::RegisterAddr<Config>(0x64); };
+  static auto Get() { return hwreg::RegisterAddr<Config>(0x64); }
 };
 
 }  // namespace gdc

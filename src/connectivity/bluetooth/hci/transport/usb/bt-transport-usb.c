@@ -697,7 +697,7 @@ static zx_status_t hci_get_protocol(void* ctx, uint32_t proto_id, void* protocol
   hci_proto->ops = &hci_protocol_ops;
   hci_proto->ctx = ctx;
   return ZX_OK;
-};
+}
 
 static zx_protocol_device_t hci_device_proto = {
     .version = DEVICE_OPS_VERSION,

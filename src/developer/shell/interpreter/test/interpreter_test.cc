@@ -223,7 +223,7 @@ void InterpreterTest::Run(FinishAction action) {
     ::fidl::Result result = shell_.HandleOneEvent(event_handler);
     ASSERT_TRUE(result.ok() && event_handler.ok()) << event_handler.msg();
   }
-};
+}
 
 InterpreterTestContext* InterpreterTest::CreateContext() {
   uint64_t id = ++last_context_id_;

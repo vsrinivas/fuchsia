@@ -119,4 +119,4 @@ zx_status_t InStream::ResetToStart(zx::time just_fail_deadline) {
 
 zx_status_t InStream::ResetToStartInternal(zx::time just_fail_deadline) {
   return ZX_ERR_NOT_SUPPORTED;
-};
+}

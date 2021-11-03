@@ -42,7 +42,7 @@ class SimpleLogCollector : public fuchsia::logger::LogListenerSafe {
   virtual void Log(fuchsia::logger::LogMessage message, LogCallback received) override {
     messages_.emplace_back(message.msg);
     received();
-  };
+  }
 
   virtual void LogMany(std::vector<fuchsia::logger::LogMessage> messages,
                        LogManyCallback received) override {

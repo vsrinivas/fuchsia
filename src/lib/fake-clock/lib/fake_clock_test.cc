@@ -118,7 +118,7 @@ TEST_F(FakeClockTest, object_wait_many_timeout_small) {
   ASSERT_EQ(status, ZX_ERR_TIMED_OUT);
   ASSERT_EQ(wait[0].pending, ZX_SIGNAL_NONE);
   ASSERT_EQ(wait[1].pending, ZX_SIGNAL_NONE);
-};
+}
 
 TEST_F(FakeClockTest, object_wait_many_signal_small) {
   zx_status_t status;
@@ -139,7 +139,7 @@ TEST_F(FakeClockTest, object_wait_many_signal_small) {
   ASSERT_EQ(status, ZX_OK);
   ASSERT_EQ(wait[0].pending, ZX_EVENT_SIGNALED);
   ASSERT_EQ(wait[1].pending, ZX_SIGNAL_NONE);
-};
+}
 
 TEST_F(FakeClockTest, object_wait_many_timeout_large) {
   zx_status_t status;
@@ -165,7 +165,7 @@ TEST_F(FakeClockTest, object_wait_many_timeout_large) {
   for (auto& i : wait) {
     ASSERT_EQ(i.pending, ZX_SIGNAL_NONE);
   }
-};
+}
 
 TEST_F(FakeClockTest, object_wait_many_signal_large) {
   zx_status_t status;
@@ -196,7 +196,7 @@ TEST_F(FakeClockTest, object_wait_many_signal_large) {
   for (size_t i = 1; i < kEventCount - 1; i++) {
     ASSERT_EQ(wait[i].pending, ZX_SIGNAL_NONE);
   }
-};
+}
 
 TEST_F(FakeClockTest, port_wait_timeout) {
   zx_status_t status;

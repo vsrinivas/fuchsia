@@ -384,7 +384,7 @@ class GetSockOptProcessor {
   template <typename T>
   SockOptResult StoreOption(const T& value) {
     static_assert(sizeof(T) != sizeof(T), "function must be specialized");
-  };
+  }
 
  private:
   SockOptResult StoreRaw(const void* data, socklen_t data_len) {

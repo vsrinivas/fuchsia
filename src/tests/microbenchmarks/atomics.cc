@@ -51,6 +51,6 @@ void RegisterTests() {
   perftest::RegisterTest("Atomic/Cmpxchg/32bit", TestAtomicCmpxchg<uint32_t>);
   perftest::RegisterTest("Atomic/Cmpxchg/64bit", TestAtomicCmpxchg<uint64_t>);
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

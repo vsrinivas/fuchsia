@@ -104,7 +104,7 @@ zx_status_t ComponentLauncher::Prepare(std::vector<std::string> argv,
   handles->err = AddStdio(STDERR_FILENO, &launch_info_);
 
   return ZX_OK;
-};
+}
 
 fuchsia::sys::ComponentControllerPtr ComponentLauncher::Launch() {
   FX_DCHECK(services_);

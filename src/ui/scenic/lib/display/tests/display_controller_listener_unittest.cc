@@ -51,7 +51,7 @@ class DisplayControllerListenerTest : public gtest::TestLoopFixture {
 
   DisplayControllerListener* display_controller_listener() {
     return display_controller_listener_.get();
-  };
+  }
 
   void ResetMockDisplayController() { mock_display_controller_.reset(); }
   void ResetDisplayControllerListener() { display_controller_listener_.reset(); }

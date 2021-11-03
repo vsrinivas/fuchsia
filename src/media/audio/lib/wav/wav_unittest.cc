@@ -216,12 +216,12 @@ TEST_F(WavReaderTest, CanReadPadded24File) {
 }
 
 struct Format {
-  Format(){};
+  Format() {}
   Format(fuchsia::media::AudioSampleFormat format, int32_t rate, int32_t f_size, int32_t s_size)
       : sample_format(format),
         frame_rate(rate),
         file_sample_size(f_size),
-        stream_sample_size(s_size){};
+        stream_sample_size(s_size) {}
   fuchsia::media::AudioSampleFormat sample_format;
   int32_t frame_rate;
   int32_t file_sample_size;

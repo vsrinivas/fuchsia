@@ -11,7 +11,7 @@ template <typename T>
 class ComponentContainer {
  public:
   virtual std::shared_ptr<T> ExtractComponent(T* controller) = 0;
-  virtual ~ComponentContainer(){};
+  virtual ~ComponentContainer() {}
 };
 
 }  // namespace component

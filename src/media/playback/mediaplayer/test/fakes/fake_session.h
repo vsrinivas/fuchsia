@@ -81,20 +81,20 @@ class FakeSession : public fuchsia::ui::scenic::Session {
     bool is_material() const { return args_.is_material(); }
     bool is_texture() const {
       return args_.is_image() || args_.is_image_pipe() || args_.is_image_pipe2();
-    };
+    }
     bool is_shape() const {
       return args_.is_rectangle() || args_.is_rounded_rectangle() || args_.is_circle() ||
              args_.is_mesh();
-    };
-    bool is_node() const { return args_.is_shape_node() || args_.is_entity_node(); };
-    bool is_shape_node() const { return args_.is_shape_node(); };
+    }
+    bool is_node() const { return args_.is_shape_node() || args_.is_entity_node(); }
+    bool is_shape_node() const { return args_.is_shape_node(); }
 
     bool can_have_children() const {
       return args_.is_view() || args_.is_view3() || args_.is_view_holder() ||
              args_.is_entity_node();
-    };
-    bool can_have_parts() const { return args_.is_entity_node(); };
-    bool can_be_part() const { return args_.is_shape_node(); };
+    }
+    bool can_have_parts() const { return args_.is_entity_node(); }
+    bool can_be_part() const { return args_.is_shape_node(); }
     bool can_have_parent() const { return args_.is_shape_node() || args_.is_entity_node(); }
     bool can_have_material() const { return args_.is_shape_node(); }
     bool can_have_shape() const { return args_.is_shape_node(); }

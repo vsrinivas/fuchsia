@@ -115,7 +115,7 @@ class VirtioNetTest : public TestWithDevice,
   class InterfacesWatcherImpl : public fuchsia::net::interfaces::Watcher {
    public:
     InterfacesWatcherImpl(fidl::InterfaceRequest<fuchsia::net::interfaces::Watcher> watcher)
-        : binding_(this, std::move(watcher)){};
+        : binding_(this, std::move(watcher)) {}
 
     // Fake |fuchsia.net.interfaces/Watcher| implementation.
     void Watch(WatchCallback callback) override {

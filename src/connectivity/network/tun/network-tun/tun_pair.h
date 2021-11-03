@@ -30,7 +30,7 @@ class TunPair : public fbl::DoublyLinkedListable<std::unique_ptr<TunPair>>,
   ~TunPair() override;
 
   // DeviceAdapterParent implementation:
-  const BaseDeviceConfig& config() const override { return config_; };
+  const BaseDeviceConfig& config() const override { return config_; }
   void OnTxAvail(DeviceAdapter* device) override;
   void OnRxAvail(DeviceAdapter* device) override;
 

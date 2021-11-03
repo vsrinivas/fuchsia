@@ -210,7 +210,7 @@ class StubDisplayController : public fidl::WireServer<fhd::Controller> {
   void AcknowledgeVsync(AcknowledgeVsyncRequestView request,
                         AcknowledgeVsyncCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
-  };
+  }
 
   const std::list<uint64_t>& images() const { return images_; }
   const std::list<uint64_t>& layers() const { return layers_; }

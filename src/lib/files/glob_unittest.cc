@@ -75,7 +75,7 @@ TEST_F(TestGlob, AllFiles) {
   EXPECT_EQ(glob.size(), sorted_names_in_dir_.size());
   std::vector<std::string> globbed = {glob.begin(), glob.end()};
   EXPECT_THAT(globbed, ::testing::ElementsAreArray(PrependPath(sorted_names_in_dir_)));
-};
+}
 
 TEST_F(TestGlob, FilePrefix) {
   // Only "a*" files.

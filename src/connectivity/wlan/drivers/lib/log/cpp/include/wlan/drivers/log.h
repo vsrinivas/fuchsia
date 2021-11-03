@@ -36,7 +36,7 @@ class Log {
   static std::string SsidBytes2Str(uint8_t const ssid[], size_t len);
   static std::string SsidVect2Str(const std::vector<uint8_t>& ssid) {
     return SsidBytes2Str(ssid.data(), ssid.size());
-  };
+  }
 
  private:
   static Log& getInstance() {

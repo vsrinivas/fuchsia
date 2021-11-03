@@ -1127,7 +1127,7 @@ out:
   clear_bit(IWL_FWRT_STATUS_DUMPING, &fwrt->status);
   IWL_DEBUG_INFO(fwrt, "WRT dump done\n");
 }
-IWL_EXPORT_SYMBOL(iwl_fw_error_dump);
+IWL_EXPORT_SYMBOL(iwl_fw_error_dump)
 
 const struct iwl_fw_dump_desc iwl_dump_desc_assert = {
     .trig_desc =

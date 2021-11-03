@@ -48,7 +48,7 @@ void CreateFlowRingHandlerAndDependencies(FlowRingHandlerAndDependencies* handle
                                     handler_and_deps->fake_interfaces->GetControlSubmitRing(),
                                     handler_and_deps->tx_buffer_pool.get(),
                                     &handler_and_deps->flow_ring_handler));
-};
+}
 
 // Test creation of the FlowRingHandler using various creation parameters.
 TEST(FlowRingHandlerTest, CreationParameters) {

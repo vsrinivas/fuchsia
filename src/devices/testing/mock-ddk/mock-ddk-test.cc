@@ -189,8 +189,8 @@ class TestDevice : public DeviceType {
 
   // Methods required by the ddk mixins
   void DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
-  void DdkUnbind(::ddk::UnbindTxn txn) { txn.Reply(); };
-  void DdkSuspend(ddk::SuspendTxn txn) { txn.Reply(ZX_OK, 0); };
+  void DdkUnbind(::ddk::UnbindTxn txn) { txn.Reply(); }
+  void DdkSuspend(ddk::SuspendTxn txn) { txn.Reply(ZX_OK, 0); }
   void DdkRelease() {
     // DdkRelease must delete this before it returns.
     delete this;

@@ -57,7 +57,7 @@ void NetstackIntermediary::CreateNetwork(
       return;
   }
   network_.AddBinding(this, std::move(network), async_get_default_dispatcher());
-};
+}
 
 void NetstackIntermediary::AddDevice(
     uint8_t port_id, fidl::InterfaceHandle<fuchsia::hardware::network::Device> device,

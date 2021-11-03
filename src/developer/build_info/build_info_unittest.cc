@@ -46,7 +46,7 @@ class BuildInfoServiceInstance {
 
 class BuildInfoServiceTestFixture : public gtest::TestLoopFixture {
  public:
-  BuildInfoServiceTestFixture() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread){};
+  BuildInfoServiceTestFixture() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void SetUp() override {
     TestLoopFixture::SetUp();

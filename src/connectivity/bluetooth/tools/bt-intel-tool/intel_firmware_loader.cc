@@ -68,7 +68,7 @@ class MemoryFile {
     }
 
     view_ = BufferView(mapped, size);
-  };
+  }
 
   ~MemoryFile() {
     if (is_valid()) {

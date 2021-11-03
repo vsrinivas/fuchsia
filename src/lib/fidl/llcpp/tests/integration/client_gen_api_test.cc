@@ -210,7 +210,7 @@ TEST(GenAPITestCase, Epitaph) {
       EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
       EXPECT_EQ(ZX_ERR_BAD_STATE, info.status());
       sync_completion_signal(&unbound_);
-    };
+    }
 
    private:
     sync_completion_t& unbound_;
@@ -293,7 +293,7 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
     void on_fidl_error(fidl::UnbindInfo info) override {
       EXPECT_EQ(fidl::Reason::kDecodeError, info.reason());
       sync_completion_signal(&done_);
-    };
+    }
 
    private:
     sync_completion_t& done_;

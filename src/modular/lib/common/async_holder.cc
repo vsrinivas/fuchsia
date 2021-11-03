@@ -67,10 +67,8 @@ ClosureAsyncHolder::ClosureAsyncHolder(std::string name,
 
 ClosureAsyncHolder::~ClosureAsyncHolder() = default;
 
-void ClosureAsyncHolder::ImplTeardown(fit::function<void()> done) {
-  on_teardown_(std::move(done));
-};
+void ClosureAsyncHolder::ImplTeardown(fit::function<void()> done) { on_teardown_(std::move(done)); }
 
-void ClosureAsyncHolder::ImplReset() { on_reset_(); };
+void ClosureAsyncHolder::ImplReset() { on_reset_(); }
 
 }  // namespace modular

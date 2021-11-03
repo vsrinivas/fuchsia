@@ -41,7 +41,7 @@ class CmxFacetParserTest : public ::testing::Test {
     return facet_parser().ParseFromFileAt(dirfd, tmp_file, &json_parser);
   }
 
-  CmxFacetParser& facet_parser() { return facet_parser_; };
+  CmxFacetParser& facet_parser() { return facet_parser_; }
 
  private:
   CmxFacetParser facet_parser_;

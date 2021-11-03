@@ -62,6 +62,6 @@ class ScenicWaylandDispatcher : public fuchsia::virtualization::WaylandDispatche
   fuchsia::wayland::ViewProducerPtr view_producer_;
 };
 
-};  // namespace guest
+}  // namespace guest
 
 #endif  // LIB_VIRTUALIZATION_SCENIC_WAYLAND_DISPATCHER_H_

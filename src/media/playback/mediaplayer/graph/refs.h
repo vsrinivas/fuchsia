@@ -144,7 +144,7 @@ class OutputRef {
 
  private:
   // Returns the actual input referenced by this object.
-  Output* actual() const { return output_; };
+  Output* actual() const { return output_; }
 
   Output* output_ = nullptr;
 

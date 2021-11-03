@@ -56,7 +56,7 @@ TEST(ChannelConversion, ChannelToChanspec) {
   out_ch = {
       .chnum = 112, .band = BRCMU_CHAN_BAND_5G, .bw = BRCMU_CHAN_BW_40, .sb = BRCMU_CHAN_SB_L};
   verify_channel_to_chanspec(in_ch, out_ch);
-};
+}
 
 static void verify_chanspec_to_channel(const brcmu_chan& in_ch, const wlan_channel_t& expected) {
   brcmu_d11inf d11_inf = {.io_type = BRCMU_D11AC_IOTYPE};
@@ -91,6 +91,6 @@ TEST(ChannelConversion, ChanspecToChannel) {
   in_ch = {.chnum = 112, .band = BRCMU_CHAN_BAND_5G, .bw = BRCMU_CHAN_BW_40, .sb = BRCMU_CHAN_SB_L};
   out_ch = {.primary = 112, .cbw = CHANNEL_BANDWIDTH_CBW40BELOW, .secondary80 = 0};
   verify_chanspec_to_channel(in_ch, out_ch);
-};
+}
 
 }  // namespace

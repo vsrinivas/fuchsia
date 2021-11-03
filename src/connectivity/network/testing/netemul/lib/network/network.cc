@@ -74,7 +74,7 @@ class Guest : public fuchsia::net::virtualization::Interface, public data::Consu
     }
   }
 
-  fxl::WeakPtr<data::Consumer> GetPointer() { return weak_ptr_factory_.GetWeakPtr(); };
+  fxl::WeakPtr<data::Consumer> GetPointer() { return weak_ptr_factory_.GetWeakPtr(); }
 
  private:
   const uint8_t port_id_;

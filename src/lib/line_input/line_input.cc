@@ -415,7 +415,7 @@ void LineInputEditor::HandleReverseHistory(char c) {
   }
 
   LineChanged();
-};
+}
 
 void LineInputEditor::StartReverseHistoryMode() {
   FX_DCHECK(!reverse_history_mode_);

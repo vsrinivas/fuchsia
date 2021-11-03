@@ -36,7 +36,7 @@ std::string GenerateFakeUrl() {
       "fuchsia-pkg://example.com/GENERATED_URL_$0#meta/GENERATED_URL_$0.cmx";
   return fxl::Substitute(kFakeUrlSubstitutePattern, std::to_string(random_number));
 }
-};  // namespace
+}  // namespace
 
 class TestHarnessImplTest : public gtest::TestWithEnvironmentFixture {
  public:
@@ -44,7 +44,7 @@ class TestHarnessImplTest : public gtest::TestWithEnvironmentFixture {
     harness_impl_.Bind(harness_.NewRequest());
   }
 
-  fuchsia::modular::testing::TestHarnessPtr& test_harness() { return harness_; };
+  fuchsia::modular::testing::TestHarnessPtr& test_harness() { return harness_; }
 
   bool did_exit() { return did_exit_; }
 
@@ -202,7 +202,7 @@ TEST_F(TestHarnessImplTest, InterceptSessionShell) {
   test_harness()->Run(std::move(spec));
 
   RunLoopUntil([&] { return intercepted; });
-};
+}
 
 TEST_F(TestHarnessImplTest, InterceptStoryShellAndModule) {
   // Setup story shell interception.
@@ -265,7 +265,7 @@ TEST_F(TestHarnessImplTest, InterceptStoryShellAndModule) {
 
   RunLoopUntil([&] { return story_shell_intercepted; });
   RunLoopUntil([&] { return fake_module_intercepted; });
-};
+}
 
 // Tests that services in |TestHarnessSpec.env_services.service_dir| are
 // accessible in the test harness environment.

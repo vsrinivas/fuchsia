@@ -36,7 +36,7 @@ class StorageMetrics {
     // Adds the passed usage to the existing usage for a name. Creates a new entry if needed.
     void AddForKey(const std::string& name, const Usage& usage);
 
-    const std::unordered_map<std::string, Usage>& map() const { return map_; };
+    const std::unordered_map<std::string, Usage>& map() const { return map_; }
 
    private:
     std::unordered_map<std::string, Usage> map_;

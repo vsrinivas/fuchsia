@@ -33,7 +33,7 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
         &worker_thread_,
         [](void* ctx) { return reinterpret_cast<FakeRadarDevice*>(ctx)->WorkerThread(); }, this,
         "radarutil-test-burst-thread");
-  };
+  }
   ~FakeRadarDevice() override {
     run_ = false;
     thrd_join(worker_thread_, nullptr);
@@ -141,7 +141,7 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
     void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override {
       fidl::WireRequest<BurstReaderProvider::Connect> outgoing(std::move(request->server));
       parent_.Connect(&outgoing, completer);
-    };
+    }
 
    private:
     FakeRadarDevice& parent_;

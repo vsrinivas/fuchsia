@@ -88,7 +88,7 @@ std::pair<ViewCreationToken, ViewportCreationToken> NewViewCreationTokens() {
 class FlatlandFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
                                      public FocusChainListener {
  protected:
-  FlatlandFocusIntegrationTest() : focus_chain_listener_(this){};
+  FlatlandFocusIntegrationTest() : focus_chain_listener_(this) {}
 
   void SetUp() override {
     TestWithEnvironmentFixture::SetUp();

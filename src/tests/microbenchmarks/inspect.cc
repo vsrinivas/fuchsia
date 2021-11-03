@@ -359,6 +359,6 @@ void RegisterTests() {
   }
   perftest::RegisterTest("Inspect/Heap/Extend", TestHeapExtend);
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

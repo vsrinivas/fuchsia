@@ -46,8 +46,8 @@ static const char* kNetstackIntermediaryUrl =
   };                                  \
   const char* name::msg = msgv;
 
-STATIC_MSG_STRUCT(kMsgApp, "app");
-STATIC_MSG_STRUCT(kMsgTest, "test");
+STATIC_MSG_STRUCT(kMsgApp, "app")
+STATIC_MSG_STRUCT(kMsgTest, "test")
 
 // Sandbox uses two threads to operate:
 // a main thread (which it's initialized with)

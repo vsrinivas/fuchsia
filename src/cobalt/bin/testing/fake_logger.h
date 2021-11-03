@@ -70,9 +70,9 @@ class FakeLogger_Sync : public fuchsia::cobalt::Logger_Sync {
 
   void reset_event_count() { event_count_ = 0; }
 
-  const std::vector<fuchsia::cobalt::CobaltEvent>& logged_events() { return logged_events_; };
+  const std::vector<fuchsia::cobalt::CobaltEvent>& logged_events() { return logged_events_; }
 
-  void reset_logged_events() { logged_events_.clear(); };
+  void reset_logged_events() { logged_events_.clear(); }
 
   void reset() {
     reset_last_metric_id();

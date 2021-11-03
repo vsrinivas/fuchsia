@@ -126,7 +126,7 @@ class StubInterfaceTransceiver : public MdnsInterfaceTransceiver {
   bool Start(const MdnsAddresses& addresses, InboundMessageCallback callback) override {
     return true;
   }
-  void Stop() override{};
+  void Stop() override {}
 };
 
 class MdnsTransceiverTests : public gtest::TestLoopFixture {

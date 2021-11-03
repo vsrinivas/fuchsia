@@ -21,7 +21,7 @@ class ObjectFieldSchema : public Node {
       : Node(interpreter, file_id, node_id), name_(name), type_(std::move(type)) {}
 
   // Prints the expression.
-  virtual void Dump(std::ostream& os) const {};
+  virtual void Dump(std::ostream& os) const {}
 
   const Type* type() const { return type_.get(); }
 
@@ -48,7 +48,7 @@ class ObjectSchema : public Node {
   const std::vector<std::shared_ptr<ObjectFieldSchema>>& fields() const { return fields_; }
 
   // Prints the expression.
-  virtual void Dump(std::ostream& os) const {};
+  virtual void Dump(std::ostream& os) const {}
 
   static std::unique_ptr<Type> GetType(std::shared_ptr<ObjectSchema> schema);
 

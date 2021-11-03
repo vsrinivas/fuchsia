@@ -30,6 +30,6 @@ void RegisterTests() {
   perftest::RegisterTest("NoOpLoop/1000", NoOpLoop, 1000);
   perftest::RegisterTest("NoOpLoop/10000", NoOpLoop, 10000);
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

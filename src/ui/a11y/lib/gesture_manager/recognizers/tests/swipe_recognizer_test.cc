@@ -32,7 +32,7 @@ class TestSwipeRecognizer : public a11y::SwipeRecognizerBase {
 
   void set_valid(bool valid) { valid_ = valid; }
 
-  std::string DebugName() const override { return kSwipeRecognizerName; };
+  std::string DebugName() const override { return kSwipeRecognizerName; }
 
  private:
   bool SwipeHasValidSlopeAndDirection(float x_displacement, float y_displacement) const override {

@@ -30,7 +30,7 @@ static fuchsia::camera2::hal::StreamConfig FRDebugStreamConfig() {
   stream.set_frames_per_second(kFRStreamFrameRate);
   stream.set_buffer_count_for_camping(kStreamMinBufferForCamping);
   return stream.ConvertToStreamConfig();
-};
+}
 
 static std::vector<fuchsia::sysmem::ImageFormat_2> DSDebugStreamImageFormats() {
   return {
@@ -47,7 +47,7 @@ static fuchsia::camera2::hal::StreamConfig DSDebugStreamConfig() {
   stream.set_frames_per_second(kDSStreamFrameRate);
   stream.set_buffer_count_for_camping(kStreamMinBufferForCamping);
   return stream.ConvertToStreamConfig();
-};
+}
 
 /*****************************
  *  EXTERNAL CONFIGURATIONS  *

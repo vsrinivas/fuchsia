@@ -41,6 +41,6 @@ bool ThreadCreateAndJoinTest() {
 void RegisterTests() {
   perftest::RegisterSimpleTest<ThreadCreateAndJoinTest>("Thread/CreateAndJoin");
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

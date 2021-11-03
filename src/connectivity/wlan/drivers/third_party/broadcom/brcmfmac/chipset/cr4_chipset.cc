@@ -23,13 +23,13 @@ constexpr uint32_t kD11IoctlPhyReset = 0x0008;
 
 class ArmCr4CapRegister : public wlan::common::AddressableBitField<uint16_t, uint32_t, 0x0004> {
  public:
-  WLAN_BIT_FIELD(tcb_nab, 0, 4);
-  WLAN_BIT_FIELD(tcb_nbb, 4, 4);
+  WLAN_BIT_FIELD(tcb_nab, 0, 4)
+  WLAN_BIT_FIELD(tcb_nbb, 4, 4)
 };
 
 class ArmCr4BankIdxRegister : public wlan::common::AddressableBitField<uint16_t, uint32_t, 0x0040> {
  public:
-  WLAN_BIT_FIELD(idx, 0, 32);
+  WLAN_BIT_FIELD(idx, 0, 32)
 };
 
 constexpr uint32_t kArmCr4BankInfoBanksizeMultiplier = 8192;
@@ -37,12 +37,12 @@ constexpr uint32_t kArmCr4BankInfoBanksizeMultiplier = 8192;
 class ArmCr4BankInfoRegister
     : public wlan::common::AddressableBitField<uint16_t, uint32_t, 0x0044> {
  public:
-  WLAN_BIT_FIELD(bsize, 0, 6);
+  WLAN_BIT_FIELD(bsize, 0, 6)
 };
 
 class ArmCr4BankPdaRegister : public wlan::common::AddressableBitField<uint16_t, uint32_t, 0x004C> {
  public:
-  WLAN_BIT_FIELD(pda, 0, 32);
+  WLAN_BIT_FIELD(pda, 0, 32)
 };
 
 uint32_t GetTcmRambase(CommonCoreId core_id) {

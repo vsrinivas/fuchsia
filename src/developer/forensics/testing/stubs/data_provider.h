@@ -108,7 +108,7 @@ class DataProviderNeverReturning : public DataProviderBase {
  public:
   // |fuchsia::feedback::DataProvider|
   STUB_METHOD_DOES_NOT_RETURN(GetSnapshot, fuchsia::feedback::GetSnapshotParameters,
-                              GetSnapshotCallback);
+                              GetSnapshotCallback)
 };
 
 class DataProviderSnapshotOnly : public DataProviderBase {

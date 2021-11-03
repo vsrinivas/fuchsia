@@ -266,7 +266,7 @@ void ComponentControllerBase::SendOnTerminationEvent(
   on_terminated_event_sent_ = true;
 }
 
-ComponentControllerBase::~ComponentControllerBase() { ns_->FlushAndShutdown(ns_); };
+ComponentControllerBase::~ComponentControllerBase() { ns_->FlushAndShutdown(ns_); }
 
 HubInfo ComponentControllerBase::HubInfo() {
   return component::HubInfo(label_, hub_instance_id_, hub_.dir());

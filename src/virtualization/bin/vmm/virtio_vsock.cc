@@ -107,7 +107,7 @@ void VsockChain::Return(uint32_t used) {
 size_t ConnectionKey::Hash::operator()(const ConnectionKey& key) const {
   return ((static_cast<size_t>(key.local_cid) << 32) | key.local_port) ^
          (cpp20::rotl(static_cast<size_t>(key.remote_cid) << 32 | key.remote_port, 16));
-};
+}
 
 VsockSendQueue::VsockSendQueue(VirtioQueue* queue) : queue_(queue) {}
 

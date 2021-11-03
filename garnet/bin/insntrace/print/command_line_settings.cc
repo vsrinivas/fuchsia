@@ -10,7 +10,7 @@ RawPrinter::Config CommandLineSettings::ToRawPrinterConfig() const {
   RawPrinter::Config config;
   config.output_file_name = output_file_name;
   return config;
-};
+}
 
 CallPrinter::Config CommandLineSettings::ToCallPrinterConfig() const {
   CallPrinter::Config config;
@@ -20,6 +20,6 @@ CallPrinter::Config CommandLineSettings::ToCallPrinterConfig() const {
   config.dump_pc = dump_pc;
   config.dump_insn = dump_insn;
   return config;
-};
+}
 
 }  // namespace intel_processor_trace

@@ -47,7 +47,7 @@ class DebugAgentMockProcess : public MockProcess {
     debug_ipc::MessageWriter writer;
     debug_ipc::WriteNotifyModules(modules_to_send_, &writer);
     debug_agent()->stream()->Write(writer.MessageComplete());
-  };
+  }
 
   void set_modules_to_send(debug_ipc::NotifyModules m) { modules_to_send_ = std::move(m); }
 

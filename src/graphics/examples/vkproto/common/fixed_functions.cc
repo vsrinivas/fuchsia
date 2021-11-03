@@ -34,6 +34,6 @@ FixedFunctions::FixedFunctions(const vk::Extent2D &extent) : extent_(extent) {
   viewport_info_.pScissors = &scissor_;
   viewport_info_.viewportCount = 1;
   viewport_info_.pViewports = &viewport_;
-};
+}
 
 }  // namespace vkp

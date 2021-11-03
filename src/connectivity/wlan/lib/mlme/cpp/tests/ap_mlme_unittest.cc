@@ -36,7 +36,7 @@ struct Context {
   void SendClientAuthReqFrame() {
     device->SendWlanPacket(CreateAuthReqFrame(client_addr));
     ap->RunUntilStalled();
-  };
+  }
 
   void SendClientDeauthFrame() {
     device->SendWlanPacket(CreateDeauthFrame(client_addr));

@@ -25,7 +25,7 @@ class WlanmacDevice : public WlanmacDeviceType,
  public:
   WlanmacDevice(zx_device* parent, iwl_trans* drvdata, uint16_t iface_id,
                 struct iwl_mvm_vif* mvmvif)
-      : WlanmacDeviceType(parent), mvmvif_(mvmvif), drvdata_(drvdata), iface_id_(iface_id){};
+      : WlanmacDeviceType(parent), mvmvif_(mvmvif), drvdata_(drvdata), iface_id_(iface_id) {}
   ~WlanmacDevice() = default;
 
   void DdkInit(ddk::InitTxn txn);

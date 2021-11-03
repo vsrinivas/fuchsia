@@ -35,8 +35,8 @@ class GuestInteractionTest : public gtest::TestWithEnvironmentFixture {
 
   uint32_t cid() const { return cid_.value(); }
   const fuchsia::virtualization::RealmPtr& realm() const { return realm_; }
-  sys::testing::EnvironmentServices& services() { return *services_; };
-  sys::testing::EnclosingEnvironment& env() { return *env_; };
+  sys::testing::EnvironmentServices& services() { return *services_; }
+  sys::testing::EnclosingEnvironment& env() { return *env_; }
 
  private:
   std::optional<uint32_t> cid_;

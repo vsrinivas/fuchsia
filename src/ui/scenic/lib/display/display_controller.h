@@ -38,12 +38,12 @@ class Display2 {
            std::vector<zx_pixel_format_t> pixel_formats);
 
   // The display's ID in the context of DisplayManager's DisplayController.
-  uint64_t display_id() const { return display_id_; };
+  uint64_t display_id() const { return display_id_; }
 
   const std::vector<fuchsia::hardware::display::Mode>& display_modes() const {
     return display_modes_;
-  };
-  const std::vector<zx_pixel_format_t>& pixel_formats() const { return pixel_formats_; };
+  }
+  const std::vector<zx_pixel_format_t>& pixel_formats() const { return pixel_formats_; }
   void set_on_vsync_callback(OnVsyncCallback on_vsync_callback) {
     on_vsync_callback_ = std::move(on_vsync_callback);
   }

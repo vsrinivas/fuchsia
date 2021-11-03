@@ -178,7 +178,7 @@ int main(int argc, char** argv) {
     uint64_t iterations{0};
     std::chrono::nanoseconds runtime{0};
 
-    uint64_t AverageIterations() const { return iterations / count; };
+    uint64_t AverageIterations() const { return iterations / count; }
     double_seconds AverageRuntime() const { return double_seconds{runtime / count}; }
   };
 

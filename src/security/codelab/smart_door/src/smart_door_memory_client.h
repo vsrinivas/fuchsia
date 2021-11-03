@@ -24,7 +24,7 @@ class SmartDoorMemoryClientImpl : public SmartDoorMemoryClient {
       : memory_(std::move(memory)), token_(std::move(token)) {}
   bool write(const std::vector<uint8_t>& buffer) override;
   bool read(std::vector<uint8_t>& buffer) override;
-  ~SmartDoorMemoryClientImpl(){};
+  ~SmartDoorMemoryClientImpl() {}
 
  private:
   fuchsia::security::codelabsmartdoor::MemorySyncPtr memory_;

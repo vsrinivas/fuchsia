@@ -33,7 +33,7 @@ class WriteSummaryFileTest : public gtest::RealLoopFixture {
     return fbl::unique_fd(fd);
   }
 
-  std::unique_ptr<DataProcessor>& processor() { return processor_; };
+  std::unique_ptr<DataProcessor>& processor() { return processor_; }
 
  private:
   int tmp_fd_;

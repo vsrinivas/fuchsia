@@ -20,14 +20,14 @@ fuchsia::ui::activity::DiscreteActivity DiscreteActivity() {
   fuchsia::ui::activity::DiscreteActivity activity;
   activity.set_generic(std::move(generic));
   return activity;
-};
+}
 
 fuchsia::ui::activity::OngoingActivity OngoingActivity() {
   fuchsia::ui::activity::GenericActivity generic;
   fuchsia::ui::activity::OngoingActivity activity;
   activity.set_generic(std::move(generic));
   return activity;
-};
+}
 
 }  // namespace
 

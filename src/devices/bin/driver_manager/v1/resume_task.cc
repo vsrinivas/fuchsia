@@ -14,7 +14,7 @@ ResumeTask::ResumeTask(fbl::RefPtr<Device> device, uint32_t target_system_state,
       device_(std::move(device)),
       target_system_state_(target_system_state) {}
 
-ResumeTask::~ResumeTask(){};
+ResumeTask::~ResumeTask() {}
 
 fbl::RefPtr<ResumeTask> ResumeTask::Create(fbl::RefPtr<Device> device, uint32_t target_system_state,
                                            Completion completion) {

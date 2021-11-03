@@ -161,10 +161,10 @@ class AudioBufferSlice {
 
   typename std::vector<SampleT>::const_iterator begin() const {
     return buf_->samples().begin() + start_frame_ * format().channels();
-  };
+  }
   typename std::vector<SampleT>::const_iterator end() const {
     return buf_->samples().begin() + end_frame_ * format().channels();
-  };
+  }
 
   int64_t NumFrames() const { return end_frame_ - start_frame_; }
   int64_t NumSamples() const { return NumFrames() * format().channels(); }

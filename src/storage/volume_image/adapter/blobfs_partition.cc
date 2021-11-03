@@ -62,7 +62,7 @@ class BackupSuperblockReader final : public Reader {
     }
     // The first superblock does not need any adjustment.
     return reader_->Read(offset, buffer);
-  };
+  }
 
  private:
   std::unique_ptr<Reader> reader_;
@@ -94,7 +94,7 @@ class PatchedSuperblockReader final : public Reader {
       }
     }
     return fpromise::ok();
-  };
+  }
 
   blobfs::Superblock& superblock() { return superblock_; }
 

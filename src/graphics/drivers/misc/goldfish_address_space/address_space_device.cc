@@ -362,7 +362,7 @@ void AddressSpaceChildDriver::ClaimSharedBlock(ClaimSharedBlockRequestView reque
 
   claimed_blocks_.try_emplace(request->offset, request->offset, request->size, std::move(pmt));
   completer.Reply(ZX_OK, std::move(vmo));
-};
+}
 
 void AddressSpaceChildDriver::UnclaimSharedBlock(UnclaimSharedBlockRequestView request,
                                                  UnclaimSharedBlockCompleter::Sync& completer) {
@@ -377,7 +377,7 @@ void AddressSpaceChildDriver::UnclaimSharedBlock(UnclaimSharedBlockRequestView r
 
   claimed_blocks_.erase(request->offset);
   completer.Reply(ZX_OK);
-};
+}
 
 void AddressSpaceChildDriver::Ping(PingRequestView request, PingCompleter::Sync& completer) {
   using fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverPingMessage;

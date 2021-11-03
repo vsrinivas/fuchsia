@@ -95,7 +95,7 @@ class CodecTest : public SimpleCodecServer {
     sync_completion_wait(&set_gain_completion_, ZX_TIME_INFINITE);
     sync_completion_reset(&set_gain_completion_);
   }
-  uint32_t last_frame_rate() { return last_frame_rate_; };
+  uint32_t last_frame_rate() { return last_frame_rate_; }
   bool started() { return started_; }
   bool muted() { return muted_; }
   float gain() { return gain_; }

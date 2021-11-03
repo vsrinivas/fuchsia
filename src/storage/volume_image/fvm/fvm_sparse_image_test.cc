@@ -440,7 +440,7 @@ auto PartitionDescriptorMatchesEntry(
 MATCHER(ExtentDescriptorsAreEq, "Compares to Extent Descriptors") {
   auto [a, b] = arg;
   return testing::ExplainMatchResult(ExtentDescriptorEq(b), a, result_listener);
-};
+}
 
 auto ExtentDescriptorsMatchesEntry(const fvm_sparse_internal::PartitionEntry& expected_entry) {
   return testing::Pointwise(ExtentDescriptorsAreEq(), expected_entry.extents);

@@ -30,7 +30,7 @@ constexpr char kInvalidLabel2[] = "StillTheWrongLabel";
 class FakePartition : public fuchsia_hardware_block_partition::testing::Partition_TestBase {
  public:
   FakePartition(const uint8_t* type_guid, const uint8_t* instance_guid, const char* label)
-      : type_guid_(type_guid), instance_guid_(instance_guid), label_(label){};
+      : type_guid_(type_guid), instance_guid_(instance_guid), label_(label) {}
 
   void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) override {
     printf("'%s' was called unexpectedly", name.c_str());

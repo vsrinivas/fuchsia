@@ -232,7 +232,7 @@ class Analytics {
   static void CreateAndPrepareGoogleAnalyticsClient(std::optional<BotInfo> bot = std::nullopt) {
     client_ = new GoogleAnalyticsClient(T::kQuitTimeoutMs);
     internal::PrepareGoogleAnalyticsClient(*client_, T::kToolName, T::kTrackingId, bot);
-  };
+  }
 
   static void SendAnalyticsManualEnableEvent() {
     SendGoogleAnalyticsHit(google_analytics::Event(kEventCategoryAnalytics, kEventActionEnable));

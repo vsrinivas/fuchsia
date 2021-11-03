@@ -282,7 +282,7 @@ class FakeLoader : public fuchsia::sys::Loader {
     ASSERT_TRUE(!url.empty());
     component_urls_.push_back(url);
   }
-  std::vector<std::string>& component_urls() { return component_urls_; };
+  std::vector<std::string>& component_urls() { return component_urls_; }
 
   std::shared_ptr<vfs::Service> loader_service() { return loader_service_; }
 

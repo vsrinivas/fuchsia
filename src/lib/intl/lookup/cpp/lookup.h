@@ -130,6 +130,6 @@ class Lookup {
   Lookup() = delete;
 };
 
-};  // namespace intl
+}  // namespace intl
 
 #endif  // SRC_LIB_INTL_LOOKUP_CPP_LOOKUP_H_

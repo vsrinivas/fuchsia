@@ -45,5 +45,5 @@ TEST_F(SimTest, DeleteIfaceTwice) {
   sim->sim_fw->err_inj_.DelErrInjIovar("interface_remove");
 
   EXPECT_EQ(DeleteInterface(&softap_ifc), ZX_OK);
-};
+}
 }  // namespace wlan::brcmfmac

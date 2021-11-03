@@ -78,7 +78,7 @@ constexpr zx::duration kTestDuration = zx::sec(50);
 
 class AuthTest : public SimTest {
  public:
-  AuthTest() : ap_(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel){};
+  AuthTest() : ap_(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel) {}
   // This enum is to trigger different workflow
   enum SecurityType {
     SEC_TYPE_WEP_SHARED40,

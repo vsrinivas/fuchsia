@@ -137,7 +137,7 @@ class intrusive_list {
     ~iterator_t() = default;
     operator iterator_t<const U, kIsForwardIterator>() const noexcept {
       return iterator_t<const U, kIsForwardIterator>(link_);
-    };
+    }
 
     bool operator==(const iterator_t& other) const noexcept { return link_ == other.link_; }
     bool operator!=(const iterator_t& other) const noexcept { return link_ != other.link_; }
@@ -181,7 +181,7 @@ class intrusive_list {
   intrusive_list() {
     static_assert(std::is_base_of<link_type, T>::value,
                   "value type T must derive from intrusive_listable<TagType>");
-  };
+  }
   intrusive_list(const intrusive_list& other) = delete;
   intrusive_list(intrusive_list&& other) { link_ = std::move(other.link_); }
   intrusive_list& operator=(intrusive_list&& other) noexcept {

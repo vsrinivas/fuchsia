@@ -120,9 +120,9 @@ class AutoCleanableSet {
   bool IsDiscardable() const { return empty(); }
 
  private:
-  static bool Equals(const V& v1, const V& v2) { return v1 == v2; };
+  static bool Equals(const V& v1, const V& v2) { return v1 == v2; }
 
-  static std::size_t Hash(const V& v1) { return &v1; };
+  static std::size_t Hash(const V& v1) { return &v1; }
 
   void CheckDiscardable() {
     if (IsDiscardable() && on_discardable_)

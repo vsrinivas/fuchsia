@@ -141,7 +141,7 @@ void DmaPool::Buffer::Reset() {
 
 DmaPool::DmaPool() = default;
 
-DmaPool::DmaPool(DmaPool&& other) { swap(*this, other); };
+DmaPool::DmaPool(DmaPool&& other) { swap(*this, other); }
 
 DmaPool& DmaPool::operator=(DmaPool other) {
   swap(*this, other);

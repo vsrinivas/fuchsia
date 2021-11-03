@@ -54,15 +54,15 @@ class ChannelControlReturnsEmptyChannel : public ChannelControlBase {
 class ChannelControlClosesConnection : public ChannelControlBase {
  public:
   // |fuchsia::update::channelcontrol::ChannelControl|.
-  STUB_METHOD_CLOSES_ALL_CONNECTIONS(GetCurrent, GetCurrentCallback);
-  STUB_METHOD_CLOSES_ALL_CONNECTIONS(GetTarget, GetTargetCallback);
+  STUB_METHOD_CLOSES_ALL_CONNECTIONS(GetCurrent, GetCurrentCallback)
+  STUB_METHOD_CLOSES_ALL_CONNECTIONS(GetTarget, GetTargetCallback)
 };
 
 class ChannelControlNeverReturns : public ChannelControlBase {
  public:
   // |fuchsia::update::channelcontrol::ChannelControl|.
-  STUB_METHOD_DOES_NOT_RETURN(GetCurrent, GetCurrentCallback);
-  STUB_METHOD_DOES_NOT_RETURN(GetTarget, GetTargetCallback);
+  STUB_METHOD_DOES_NOT_RETURN(GetCurrent, GetCurrentCallback)
+  STUB_METHOD_DOES_NOT_RETURN(GetTarget, GetTargetCallback)
 };
 
 class ChannelControlClosesFirstConnection : public ChannelControlBase {

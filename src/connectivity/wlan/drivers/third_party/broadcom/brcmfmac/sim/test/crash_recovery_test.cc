@@ -27,7 +27,7 @@ constexpr cssid_t kDefaultSsid = {.len = 15, .data = "Fuchsia Fake AP"};
 
 class CrashRecoveryTest : public SimTest {
  public:
-  CrashRecoveryTest() : ap_(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel){};
+  CrashRecoveryTest() : ap_(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel) {}
 
   static constexpr zx::duration kTestDuration = zx::sec(50);
   void Init();

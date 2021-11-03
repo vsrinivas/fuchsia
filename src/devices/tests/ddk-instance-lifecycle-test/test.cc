@@ -77,7 +77,7 @@ void InstanceLifecycleTest::WaitForEvent(fidl::UnownedClientEnd<Lifecycle> lifec
 
     void OnClose(fidl::WireResponse<Lifecycle::OnClose>* event) override {
       ok_ = expected_event_ == Event::Close;
-    };
+    }
 
     void OnUnbind(fidl::WireResponse<Lifecycle::OnUnbind>* event) override {
       ok_ = expected_event_ == Event::Unbind;

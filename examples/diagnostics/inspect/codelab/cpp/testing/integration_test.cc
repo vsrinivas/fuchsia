@@ -17,7 +17,7 @@ constexpr char fizzbuzz_url[] =
 constexpr char reverser_url[] =
     "fuchsia-pkg://fuchsia.com/inspect_cpp_codelab_integration_tests#meta/"
     "part_5.cm";
-};  // namespace
+}  // namespace
 
 fuchsia::examples::inspect::ReverserPtr IntegrationTest::ConnectToReverser(TestOptions options) {
   auto context = sys::ComponentContext::Create();
@@ -61,4 +61,4 @@ std::string IntegrationTest::ReverserMonikerForSelectors() const {
   return "fuchsia_component_test_collection\\:" + root_name + "/reverser";
 }
 
-};  // namespace codelab::testing
+}  // namespace codelab::testing

@@ -34,17 +34,17 @@
     CHECK_RESULT(0, result);                                                                   \
   }
 
-EmitResultTest(EmitResultInt8, builder.TypeInt8(), 10, -30, "-20");
-EmitResultTest(EmitResultUint8, builder.TypeUint8(), 10, 30, "40");
+EmitResultTest(EmitResultInt8, builder.TypeInt8(), 10, -30, "-20")
+EmitResultTest(EmitResultUint8, builder.TypeUint8(), 10, 30, "40")
 
-EmitResultTest(EmitResultInt16, builder.TypeInt16(), 1000, -3000, "-2000");
-EmitResultTest(EmitResultUint16, builder.TypeUint16(), 1000, 3000, "4000");
+EmitResultTest(EmitResultInt16, builder.TypeInt16(), 1000, -3000, "-2000")
+EmitResultTest(EmitResultUint16, builder.TypeUint16(), 1000, 3000, "4000")
 
-EmitResultTest(EmitResultInt32, builder.TypeInt32(), 100000, -300000, "-200000");
-EmitResultTest(EmitResultUint32, builder.TypeUint32(), 100000, 300000, "400000");
+EmitResultTest(EmitResultInt32, builder.TypeInt32(), 100000, -300000, "-200000")
+EmitResultTest(EmitResultUint32, builder.TypeUint32(), 100000, 300000, "400000")
 
-EmitResultTest(EmitResultInt64, builder.TypeInt64(), 10000000000LL, -30000000000LL, "-20000000000");
-EmitResultTest(EmitResultUint64, builder.TypeUint64(), 10000000000LL, 30000000000LL, "40000000000");
+EmitResultTest(EmitResultInt64, builder.TypeInt64(), 10000000000LL, -30000000000LL, "-20000000000")
+EmitResultTest(EmitResultUint64, builder.TypeUint64(), 10000000000LL, 30000000000LL, "40000000000")
 
 TEST_F(InterpreterTest, EmitResultString) {
   constexpr uint64_t kFileId = 1;

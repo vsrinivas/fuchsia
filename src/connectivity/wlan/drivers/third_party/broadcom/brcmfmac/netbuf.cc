@@ -24,9 +24,9 @@ Netbuf::~Netbuf() {
   // size_.
   ZX_DEBUG_ASSERT(data_ == nullptr);
   ZX_DEBUG_ASSERT(size_ == 0);
-};
+}
 
-const void* Netbuf::data() const { return data_; };
+const void* Netbuf::data() const { return data_; }
 
 size_t Netbuf::size() const { return size_; }
 

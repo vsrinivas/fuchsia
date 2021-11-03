@@ -352,7 +352,7 @@ constexpr void CheckMachine() {
 
 template <elfldltl::ElfMachine... Machines>
 struct CheckMachines {
-  CheckMachines() { (CheckMachine<Machines>(), ...); };
+  CheckMachines() { (CheckMachine<Machines>(), ...); }
 };
 
 TEST(ElfldltlRelocationTests, Machines) { elfldltl::AllSupportedMachines<CheckMachines>(); }

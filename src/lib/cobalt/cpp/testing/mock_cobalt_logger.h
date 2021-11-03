@@ -30,8 +30,8 @@ class MockCobaltLogger : public cobalt::CobaltLogger {
   void LogMemoryUsage(uint32_t metric_id, uint32_t event_code, const std::string& component,
                       int64_t bytes) override;
   void StartTimer(uint32_t metric_id, uint32_t event_code, const std::string& component,
-                  const std::string& timer_id, zx::time timestamp, zx::duration timeout) override{};
-  void EndTimer(const std::string& timer_id, zx::time timestamp, zx::duration timeout) override{};
+                  const std::string& timer_id, zx::time timestamp, zx::duration timeout) override {}
+  void EndTimer(const std::string& timer_id, zx::time timestamp, zx::duration timeout) override {}
   void LogCustomEvent(uint32_t metric_id,
                       std::vector<fuchsia::cobalt::CustomEventValue> event_values) override;
   void LogCobaltEvent(fuchsia::cobalt::CobaltEvent event) override;

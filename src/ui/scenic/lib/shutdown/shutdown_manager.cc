@@ -114,7 +114,7 @@ void ShutdownManager::Shutdown(zx::duration timeout) {
     }
   });
   timeout_thread.detach();
-};
+}
 
 void ShutdownManager::set_clock_callback(fit::function<zx::time()> cb) {
   FX_DCHECK(state_ == State::kInit);

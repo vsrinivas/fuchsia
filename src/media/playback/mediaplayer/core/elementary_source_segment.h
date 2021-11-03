@@ -40,7 +40,7 @@ class ElementarySourceSegment : public SourceSegment {
 
   void WillDeprovision() override;
 
-  int64_t duration_ns() const override { return duration_ns_; };
+  int64_t duration_ns() const override { return duration_ns_; }
 
   bool can_pause() const override { return can_pause_; }
 

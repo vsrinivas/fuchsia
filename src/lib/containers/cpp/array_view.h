@@ -47,7 +47,7 @@ class __POINTER(T) array_view {
   const T& operator[](size_t i) const { return begin_[i]; }
   const T* data() const { return begin_; }
 
-  const T& front() const { return *begin_; };
+  const T& front() const { return *begin_; }
   const T& back() const { return *(end_ - 1); }
 
   const T* begin() const { return begin_; }

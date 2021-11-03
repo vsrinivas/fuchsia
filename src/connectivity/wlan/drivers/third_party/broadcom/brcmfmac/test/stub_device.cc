@@ -10,7 +10,7 @@
 namespace wlan {
 namespace brcmfmac {
 
-StubDevice::StubDevice() : Device(nullptr){};
+StubDevice::StubDevice() : Device(nullptr) {}
 
 StubDevice::~StubDevice() = default;
 

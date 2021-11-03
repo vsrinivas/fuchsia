@@ -61,7 +61,7 @@ class TestLifecycleDriverChildInstance : public InstanceDeviceType {
 
   zx_status_t DdkOpen(zx_device_t** out, uint32_t flags) {
     ZX_PANIC("DdkOpen reached in instance device\n");
-  };
+  }
   zx_status_t DdkClose(uint32_t flags);
 
   // Implementation of InstanceDevice protocol

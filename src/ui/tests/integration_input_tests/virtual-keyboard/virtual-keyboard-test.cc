@@ -207,7 +207,7 @@ class WebEngineTest : public gtest::TestWithEnvironmentFixture, public InputPosi
     inject_retry_task_.emplace(
         [this, x, y](auto dispatcher, auto task, auto status) { TryInject(x, y); });
     FX_CHECK(inject_retry_task_->PostDelayed(dispatcher(), kTapRetryInterval) == ZX_OK);
-  };
+  }
 
   void CancelInject() { inject_retry_task_.reset(); }
 

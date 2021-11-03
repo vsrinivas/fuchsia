@@ -51,7 +51,7 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
 
   void DisableStreaming() override;
 
-  void Shutdown() { pipeline_manager_.Shutdown(); };
+  void Shutdown() { pipeline_manager_.Shutdown(); }
 
  private:
   // Device FIDL implementation

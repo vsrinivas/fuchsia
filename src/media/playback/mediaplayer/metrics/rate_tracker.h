@@ -23,7 +23,7 @@ class RateTracker {
   void Reset();
 
   // Rate of progress samples.
-  double progress_samples_per_second() const { return kNsPerSecond / average_progress_interval(); };
+  double progress_samples_per_second() const { return kNsPerSecond / average_progress_interval(); }
 
   size_t progress_interval_count() const { return progress_intervals_.count(); }
 

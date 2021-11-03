@@ -28,11 +28,11 @@ class ChipIdRegister : public wlan::common::AddressableBitField<uint16_t, uint32
     kAxi = 1,  // AXI backplane.
   };
 
-  WLAN_BIT_FIELD(id, 0, 16);
-  WLAN_BIT_FIELD(rev, 16, 4);
-  WLAN_BIT_FIELD(pkg, 20, 4);
-  WLAN_BIT_FIELD(cc, 24, 4);
-  WLAN_BIT_FIELD(type, 28, 4);
+  WLAN_BIT_FIELD(id, 0, 16)
+  WLAN_BIT_FIELD(rev, 16, 4)
+  WLAN_BIT_FIELD(pkg, 20, 4)
+  WLAN_BIT_FIELD(cc, 24, 4)
+  WLAN_BIT_FIELD(type, 28, 4)
 };
 
 bool IsSupportedCore(CommonCoreId chip_id) {
@@ -47,7 +47,7 @@ bool IsSupportedCore(CommonCoreId chip_id) {
                             [](CommonCoreId lhs, CommonCoreId rhs) {
                               return static_cast<uint16_t>(lhs) < static_cast<uint16_t>(rhs);
                             });
-};
+}
 
 }  // namespace
 

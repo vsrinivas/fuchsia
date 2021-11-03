@@ -28,15 +28,15 @@ constexpr size_t kLiveAllocLimitBytes = 32u * 1024 * 1024;
 template <size_t Size>
 class DataBuf {
  public:
-  DataBuf(){
-      // We provide a user-defined default constructor that does nothing, to
-      // avoid the cost of zeroing out |data|.
-      //
-      // Rationale: in the absence of a user-defined constructor, expressions
-      // such as |DataBuf()| or |new DataBuf()| trigger value-initialization,
-      // which zeros out |data|. For details, see
-      // https://stackoverflow.com/a/2418195
-  };
+  DataBuf() {
+    // We provide a user-defined default constructor that does nothing, to
+    // avoid the cost of zeroing out |data|.
+    //
+    // Rationale: in the absence of a user-defined constructor, expressions
+    // such as |DataBuf()| or |new DataBuf()| trigger value-initialization,
+    // which zeros out |data|. For details, see
+    // https://stackoverflow.com/a/2418195
+  }
 
  private:
   char data[Size];
@@ -50,15 +50,15 @@ class SlabDataBuf : public fbl::SlabAllocated<AllocatorTraits>,
                     public fbl::RefCounted<SlabDataBuf<AllocatorTraits>>,
                     public fbl::SinglyLinkedListable<fbl::RefPtr<SlabDataBuf<AllocatorTraits>>> {
  public:
-  SlabDataBuf(){
-      // As with DataBuf, we provide a user-defined default constructor that
-      // does nothing, to avoid the cost of zeroing out |data|.
-      //
-      // CAUTION: For reasons that are unclear, inheriting DataBuf (rather than
-      // declaring our own |data|) does not avoid the cost of zeroing out
-      // DataBuf::data, even though DataBuf has a user-defined default
-      // constructor.
-  };
+  SlabDataBuf() {
+    // As with DataBuf, we provide a user-defined default constructor that
+    // does nothing, to avoid the cost of zeroing out |data|.
+    //
+    // CAUTION: For reasons that are unclear, inheriting DataBuf (rather than
+    // declaring our own |data|) does not avoid the cost of zeroing out
+    // DataBuf::data, even though DataBuf has a user-defined default
+    // constructor.
+  }
 
  private:
   char data[AllocatorTraits::kUserBufSize];
@@ -296,7 +296,7 @@ void RegisterTests() {
   REGISTER_PERF_TEST(RetainAndFreeRandom);
 }
 
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace
 
@@ -306,5 +306,5 @@ PERFTEST_CTOR(RegisterTests);
                                             SLAB_TRAITS::kUserBufSize)) +                    \
                        1 /* Round up */);
 
-DECLARE_STATIC_STORAGE(StaticSmallBlockAllocatorTraits);
-DECLARE_STATIC_STORAGE(StaticLargeBlockAllocatorTraits);
+DECLARE_STATIC_STORAGE(StaticSmallBlockAllocatorTraits)
+DECLARE_STATIC_STORAGE(StaticLargeBlockAllocatorTraits)

@@ -39,7 +39,7 @@ class MoveOnlyType {
   MoveOnlyType(MoveOnlyType&& other) {
     value_ = other.value_;
     other.value_ = UINT32_MAX;
-  };
+  }
 
   MoveOnlyType(const MoveOnlyType&) = delete;
   MoveOnlyType& operator=(const MoveOnlyType& other) = delete;

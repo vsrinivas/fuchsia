@@ -91,15 +91,15 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   // Presents a received question. This agent must not call |RemoveSelf| during
   // a call to this method.
   virtual void ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address,
-                               const ReplyAddress& sender_address){};
+                               const ReplyAddress& sender_address) {}
 
   // Presents a received resource. This agent must not call |RemoveSelf| during
   // a call to this method.
-  virtual void ReceiveResource(const DnsResource& resource, MdnsResourceSection section){};
+  virtual void ReceiveResource(const DnsResource& resource, MdnsResourceSection section) {}
 
   // Signals the end of a message. This agent must not call |RemoveSelf| during
   // a call to this method.
-  virtual void EndOfMessage(){};
+  virtual void EndOfMessage() {}
 
   // Tells the agent to quit. Any overrides should call this base implementation.
   virtual void Quit() {

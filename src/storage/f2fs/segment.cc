@@ -311,7 +311,7 @@ block_t SegmentManager::SumBlkAddr(int base, int type) {
          LeToCpu(superblock_info_->GetCheckpoint().cp_pack_total_block_count) - (base + 1) + type;
 }
 
-SegmentManager::SegmentManager(F2fs *fs) : fs_(fs) { superblock_info_ = &fs->GetSuperblockInfo(); };
+SegmentManager::SegmentManager(F2fs *fs) : fs_(fs) { superblock_info_ = &fs->GetSuperblockInfo(); }
 
 bool SegmentManager::NeedToFlush() {
   uint32_t pages_per_sec =

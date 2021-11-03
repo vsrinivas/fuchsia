@@ -34,7 +34,7 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnIdentifier(std::unique_ptr<raw::Identifier> const& element, bool ignore);
   void OnIdentifier(std::unique_ptr<raw::Identifier> const& element) override {
     OnIdentifier(element, false);
-  };
+  }
   void OnIdentifierConstant(std::unique_ptr<raw::IdentifierConstant> const& element) override;
   void OnLayout(std::unique_ptr<raw::Layout> const& element) override;
   void OnInlineLayoutReference(std::unique_ptr<raw::InlineLayoutReference> const& element) override;
@@ -142,12 +142,12 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
    public:
     Builder(SpanSequenceTreeVisitor* ftv, const Token& start, const Token& end, bool new_list);
     Builder(SpanSequenceTreeVisitor* ftv, const Token& start, bool new_list)
-        : Builder(ftv, start, start, new_list){};
+        : Builder(ftv, start, start, new_list) {}
 
     // Empty builder method ensures that all Builders live until the end of their scope, enabling
     // RAII usage.  Using ` = default` as clang suggests seems to cause the compiler to throw unused
     // variable warnings when the Builder is used as part of the RAII pattern.
-    ~Builder(){};
+    ~Builder() {}
 
    protected:
     SpanSequenceTreeVisitor* GetFormattingTreeVisitor() { return ftv_; }

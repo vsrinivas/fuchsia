@@ -34,7 +34,7 @@ class EventTest : public ::testing::Test, public simulation::StationIfc {
     if (env_) {
       env_->RemoveStation(this);
     }
-  };
+  }
 
   // StationIfc methods
   void Rx(std::shared_ptr<const simulation::SimFrame> frame,

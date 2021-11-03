@@ -58,14 +58,14 @@ class DefaultFlatlandPresenter final
 
   // |scheduling::SessionUpdater|
   // No-op; this is taken care of by FlatlandManager, which is also a SessionUpdater.
-  void OnCpuWorkDone() override{};
+  void OnCpuWorkDone() override {}
 
   // |scheduling::SessionUpdater|
   // No-op; this is taken care of by FlatlandManager, which is also a SessionUpdater.
   void OnFramePresented(
       const std::unordered_map<scheduling::SessionId, std::map<scheduling::PresentId, zx::time>>&
           latched_times,
-      scheduling::PresentTimestamps present_times) override{};
+      scheduling::PresentTimestamps present_times) override {}
 
  private:
   async_dispatcher_t* main_dispatcher_;

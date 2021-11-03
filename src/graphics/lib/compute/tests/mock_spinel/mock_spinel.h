@@ -276,7 +276,7 @@ static constexpr bool
 checkElementSize()
 {
   return sizeof(T) == 4u * (1u + Path::tagToCount(T::kTag));
-};
+}
 
 static_assert(checkElementSize<Path::MoveTo>(), "invalid element count");
 static_assert(checkElementSize<Path::LineTo>(), "invalid element count");

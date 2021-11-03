@@ -288,4 +288,6 @@ libc_test("gwp_asan-unittests") {
   ]
 
   deps += [ ":gwp_asan.testonly" ]
+
+  cflags = [ "-Wno-extra-semi" ]
 }

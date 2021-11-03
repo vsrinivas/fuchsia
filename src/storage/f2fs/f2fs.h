@@ -146,7 +146,7 @@ class F2fs : public fs::Vfs {
   }
 
 #ifdef __Fuchsia__
-  DirEntryCache &GetDirEntryCache() { return dir_entry_cache_; };
+  DirEntryCache &GetDirEntryCache() { return dir_entry_cache_; }
 #endif  // __Fuchsia__
 
   void ResetBc(std::unique_ptr<f2fs::Bcache> *out = nullptr) {
@@ -155,7 +155,7 @@ class F2fs : public fs::Vfs {
       return;
     }
     *out = std::move(bc_);
-  };
+  }
   Bcache &GetBc() { return *bc_; }
   Superblock &RawSb() { return *raw_sb_; }
   SuperblockInfo &GetSuperblockInfo() { return *superblock_info_; }

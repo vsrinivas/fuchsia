@@ -117,7 +117,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
   // update accordingly.
   //
   // The default implementation does nothing.
-  virtual void OnMetricsChanged(fuchsia::ui::gfx::Metrics old_metrics){};
+  virtual void OnMetricsChanged(fuchsia::ui::gfx::Metrics old_metrics) {}
 
   // Called to handle an input event.
   //

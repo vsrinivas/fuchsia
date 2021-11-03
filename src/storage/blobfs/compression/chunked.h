@@ -97,7 +97,7 @@ class SeekableChunkedDecompressor : public SeekableDecompressor {
   zx::status<CompressionMapping> MappingForDecompressedRange(size_t offset, size_t len,
                                                              size_t max_decompressed_len) final;
 
-  CompressionAlgorithm algorithm() const final { return CompressionAlgorithm::kChunked; };
+  CompressionAlgorithm algorithm() const final { return CompressionAlgorithm::kChunked; }
 
  private:
   const std::unique_ptr<chunked_compression::SeekTable> seek_table_;

@@ -34,28 +34,28 @@ const chanspec_t kChanspec5g80MhzCh42 = 0xe02a;
 
 TEST(BcmdhdCrossdriver, ChspecMalformedFalseForValid2GBand) {
   EXPECT_FALSE(chspec_malformed(kChanspec2g20MhzCh6));
-};
+}
 
 TEST(BcmdhdCrossdriver, ChspecMalformedFalseForValid5GBand) {
   EXPECT_FALSE(chspec_malformed(kChanspec5g80MhzCh42));
-};
+}
 
 TEST(BcmdhdCrossdriver, ChspecMalformedForInvalidBand) {
   // This chanspec does not match 2G or 5G bands.
   const chanspec_t invalid_chanspec = WL_CHANSPEC_BAND_3G;
   EXPECT_TRUE(chspec_malformed(invalid_chanspec));
-};
+}
 
 TEST(BcmdhdCrossdriver, ChspecMalformedForInvalid2GBandwidth) {
   // This band + bandwidth combination is invalid.
   const chanspec_t invalid_chanspec = WL_CHANSPEC_BAND_2G | WL_CHANSPEC_BW_80;
   EXPECT_TRUE(chspec_malformed(invalid_chanspec));
-};
+}
 
 TEST(BcmdhdCrossdriver, ChspecMalformedForInvalidChannel) {
   const chanspec_t invalid_chanspec = WL_CHANSPEC_BAND_5G | (MAXCHANNEL + 1);
   EXPECT_TRUE(chspec_malformed(invalid_chanspec));
-};
+}
 
 TEST(BcmdhdCrossdriver, ControlChannelFromBadChspec) {
   // This band + bandwidth combination is invalid.
@@ -67,7 +67,7 @@ TEST(BcmdhdCrossdriver, ControlChannelFromBadChspec) {
   invalid_chanspec = WL_CHANSPEC_BAND_5G | (MAXCHANNEL + 1);
   status = chspec_ctlchan(invalid_chanspec, &ctl_chan);
   EXPECT_NE(status, ZX_OK);
-};
+}
 
 TEST(BcmdhdCrossdriver, ControlChannelFromGoodChspec) {
   chanspec_t valid_chanspec = kChanspec5g80MhzCh42;

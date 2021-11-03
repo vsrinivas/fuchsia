@@ -96,6 +96,6 @@ void RegisterTests() {
     perftest::RegisterTest(name.c_str(), StreamReadAtTest, message_size, 64u);
   }
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

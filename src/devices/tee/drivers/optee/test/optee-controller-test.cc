@@ -194,7 +194,7 @@ class FakeDdkOptee : public zxtest::Test {
 
     EXPECT_OK(OpteeController::Create(nullptr, parent_.get()));
     optee_ = parent_->GetLatestChild()->GetDeviceContext<OpteeController>();
-  };
+  }
   void SetUp() override { call_with_args_count = 0; }
 
  protected:

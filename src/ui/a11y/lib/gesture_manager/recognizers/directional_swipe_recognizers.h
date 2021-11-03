@@ -33,7 +33,7 @@ class UpSwipeGestureRecognizer : public SwipeRecognizerBase {
             fxl::StringPrintf("%d Finger %s", number_of_finger, kUpSwipeRecognizerName)),
         debug_name_(fxl::StringPrintf("%d Finger %s", number_of_finger, kUpSwipeRecognizerName)) {}
 
-  std::string DebugName() const override { return debug_name_; };
+  std::string DebugName() const override { return debug_name_; }
 
  protected:
   // Verifies that the absolute value of the slope of the line containing the gesture start point
@@ -66,7 +66,7 @@ class DownSwipeGestureRecognizer : public SwipeRecognizerBase {
         debug_name_(fxl::StringPrintf("%d Finger %s", number_of_finger, kDownSwipeRecognizerName)) {
   }
 
-  std::string DebugName() const override { return debug_name_; };
+  std::string DebugName() const override { return debug_name_; }
 
  protected:
   // Verifies that the absolute value of the slope of the line containing the gesture start point
@@ -100,7 +100,7 @@ class RightSwipeGestureRecognizer : public SwipeRecognizerBase {
         debug_name_(
             fxl::StringPrintf("%d Finger %s", number_of_finger, kRightSwipeRecognizerName)) {}
 
-  std::string DebugName() const override { return debug_name_; };
+  std::string DebugName() const override { return debug_name_; }
 
  protected:
   // Verifies that the absolute value of the slope of the line containing the gesture start point
@@ -134,7 +134,7 @@ class LeftSwipeGestureRecognizer : public SwipeRecognizerBase {
         debug_name_(fxl::StringPrintf("%d Finger %s", number_of_finger, kLeftSwipeRecognizerName)) {
   }
 
-  std::string DebugName() const override { return debug_name_; };
+  std::string DebugName() const override { return debug_name_; }
 
  protected:
   // Verifies that the absolute value of the slope of the line containing the gesture start point

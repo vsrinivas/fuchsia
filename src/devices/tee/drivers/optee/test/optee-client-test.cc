@@ -86,9 +86,9 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
 
   zx_status_t RpmbConnectServer(fidl::ServerEnd<frpmb::Rpmb> server) const override {
     return ZX_ERR_UNAVAILABLE;
-  };
+  }
 
-  zx_device_t *GetDevice() const override { return parent_.get(); };
+  zx_device_t *GetDevice() const override { return parent_.get(); }
 
   void SetUp() override {}
 
@@ -158,7 +158,7 @@ class OpteeClientTest : public OpteeClientTestBase {
     }
 
     return CallResult{.return_code = kReturnOk};
-  };
+  }
 
   const std::set<uint32_t> &open_sessions() const { return open_sessions_; }
 
@@ -214,7 +214,7 @@ class FakeRpmb : public fidl::WireServer<frpmb::Rpmb> {
     } else {
       completer.Close(ZX_ERR_NOT_SUPPORTED);
     }
-  };
+  }
 
   void Request(RequestRequestView request, RequestCompleter::Sync &completer) override {
     if (request_callback_) {
@@ -222,7 +222,7 @@ class FakeRpmb : public fidl::WireServer<frpmb::Rpmb> {
     } else {
       completer.Close(ZX_ERR_NOT_SUPPORTED);
     }
-  };
+  }
 
   void Reset() {
     info_callback_ = nullptr;
@@ -320,12 +320,12 @@ class OpteeClientTestRpmb : public OpteeClientTestBase {
     }
 
     return CallResult{.return_code = kReturnOk};
-  };
+  }
 
   zx_status_t RpmbConnectServer(fidl::ServerEnd<frpmb::Rpmb> server) const override {
     fidl::BindServer(rpmb_loop_.dispatcher(), std::move(server), fake_rpmb_.get());
     return ZX_OK;
-  };
+  }
 
   void SetUp() override {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
@@ -762,7 +762,7 @@ class OpteeClientTestWaitQueue : public OpteeClientTestBase {
 
   OpteeClientTestWaitQueue() : clients_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     ASSERT_OK(clients_loop_.StartThread());
-  };
+  }
 
   CallResult CallWithMessage(const optee::Message &message, RpcHandler rpc_handler) override {
     size_t offset = message.paddr() - shared_memory_paddr_;
@@ -803,7 +803,7 @@ class OpteeClientTestWaitQueue : public OpteeClientTestBase {
     }
 
     return CallResult{.return_code = kReturnOk};
-  };
+  }
 
   uint32_t handle_wq_message(RpcHandler &rpc_handler, uint16_t cmd) {
     uint64_t message_paddr = 0;

@@ -36,7 +36,7 @@ class DirEntryCacheElement : public fbl::RefCounted<DirEntryCacheElement>,
  public:
   DirEntryCacheElement(ino_t parent_ino, std::string_view name) : parent_ino_(parent_ino) {
     name_ = name;
-  };
+  }
 
   ino_t GetParentIno() const { return parent_ino_; }
   std::string_view GetName() const { return name_.GetStringView(); }

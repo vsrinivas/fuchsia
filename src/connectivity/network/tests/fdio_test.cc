@@ -135,12 +135,12 @@ struct SocketImpl {
   using ClientEnd = fidl::ClientEnd<FidlProtocol>;
   using Handle = HandleType;
 
-  static int type() { return Type; };
+  static int type() { return Type; }
   static fuchsia_io::wire::NodeInfo::Tag tag() { return Tag; }
   static const Handle& handle(const fuchsia_io::wire::NodeInfo& node_info) {
     return GetHandle(node_info);
   }
-  static zx_signals_t peer_closed() { return PeerClosed; };
+  static zx_signals_t peer_closed() { return PeerClosed; }
 };
 
 template <typename Impl>

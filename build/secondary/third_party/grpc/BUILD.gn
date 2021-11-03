@@ -74,6 +74,7 @@ config("grpc_config") {
 
 config("grpc_config_private") {
   cflags = [
+    "-Wno-extra-semi",
     "-Wno-float-conversion",
     "-Wno-implicit-fallthrough",
     "-Wno-implicit-float-conversion",

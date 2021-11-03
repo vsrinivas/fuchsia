@@ -120,7 +120,7 @@ class ElfNoteSegment {
       }
       ZX_DEBUG_ASSERT(notes_.empty() || Check(notes_));
       return *this;
-    };
+    }
 
     iterator operator++(int) {  // postfix
       iterator result = *this;

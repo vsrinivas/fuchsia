@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_TESTING_LOOP_FIXTURE_INTERNAL_TEST_LOOP_FIXTURE_H_
-#define SRC_LIB_TESTING_LOOP_FIXTURE_INTERNAL_TEST_LOOP_FIXTURE_H_
+#ifndef SRC_LIB_TESTING_LOOP_FIXTURE_TEST_LOOP_H_
+#define SRC_LIB_TESTING_LOOP_FIXTURE_TEST_LOOP_H_
 
 #include <lib/async-testing/test_loop.h>
 #include <lib/fit/function.h>
@@ -33,7 +33,7 @@ class TestLoop {
   // deadlines up until |duration| from the current time, progressively
   // advancing the fake clock.
   // Returns true iff any tasks or waits were invoked during the run.
-  bool RunLoopFor(zx::duration duration) { return loop_.RunFor(duration); };
+  bool RunLoopFor(zx::duration duration) { return loop_.RunFor(duration); }
 
   // Dispatches all waits and all tasks posted to the message loop with
   // deadlines up until the current time, progressively advancing the fake
@@ -68,4 +68,4 @@ class TestLoop {
 
 }  // namespace loop_fixture
 
-#endif  // SRC_LIB_TESTING_LOOP_FIXTURE_INTERNAL_TEST_LOOP_FIXTURE_H_
+#endif  // SRC_LIB_TESTING_LOOP_FIXTURE_TEST_LOOP_H_

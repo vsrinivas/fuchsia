@@ -33,6 +33,6 @@ bool PortQueueWaitTest(perftest::RepeatState* state) {
 }
 
 void RegisterTests() { perftest::RegisterTest("Port/QueueWait", PortQueueWaitTest); }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

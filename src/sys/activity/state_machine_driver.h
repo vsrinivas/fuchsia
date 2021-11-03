@@ -44,7 +44,7 @@ class StateMachineDriver {
 
   fuchsia::ui::activity::State GetState() const;
 
-  const ActivityStateMachine& state_machine() const { return state_machine_; };
+  const ActivityStateMachine& state_machine() const { return state_machine_; }
 
   zx_status_t RegisterObserver(ObserverId id, StateChangedCallback callback);
   zx_status_t UnregisterObserver(ObserverId id);

@@ -146,7 +146,7 @@ class FakeBufferCollection : public fuchsia::sysmem::testing::BufferCollection_T
 
   ~FakeBufferCollection() override;
 
-  uint32_t id() const { return id_; };
+  uint32_t id() const { return id_; }
 
   // Whether expectations have been met. Returns true if |expectations| was null in the constructor.
   bool expected() const;

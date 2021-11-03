@@ -70,13 +70,13 @@ bool Guest::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parse
   return true;
 }
 
-const std::string& Guest::guest_image_url() const { return guest_image_url_; };
+const std::string& Guest::guest_image_url() const { return guest_image_url_; }
 
-const std::string& Guest::guest_label() const { return guest_label_; };
+const std::string& Guest::guest_label() const { return guest_label_; }
 
-const std::map<std::string, std::string>& Guest::files() const { return files_; };
+const std::map<std::string, std::string>& Guest::files() const { return files_; }
 
-const std::map<std::string, std::string>& Guest::macs() const { return macs_; };
+const std::map<std::string, std::string>& Guest::macs() const { return macs_; }
 
 }  // namespace config
 }  // namespace netemul

@@ -32,7 +32,7 @@ namespace {
 template <typename T>
 constexpr void test_tuple_size_v() {
   static_assert(cpp17::tuple_size_v<T> == std::tuple_size<T>::value, "");
-};
+}
 
 TEST(TupleTest, TupleSizeVMatchesStd) {
   static_assert(cpp17::tuple_size_v<liar> == 3, "");
@@ -58,7 +58,7 @@ TEST(TupleTest, TupleSizeVMatchesStd) {
 template <typename T>
 constexpr void tuple_size_v_is_alias() {
   static_assert(&cpp17::tuple_size_v<T> == &std::tuple_size_v<T>, "");
-};
+}
 
 TEST(TupleTest, TupleSizeIsAliasForStdWhenAvailable) {
   tuple_size_v_is_alias<liar>();

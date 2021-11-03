@@ -233,7 +233,7 @@ class DirectoryWrapper {
     AddEntry(file_name, std::move(file));
   }
 
-  std::shared_ptr<vfs::PseudoDir>& dir() { return dir_; };
+  std::shared_ptr<vfs::PseudoDir>& dir() { return dir_; }
 
  private:
   std::shared_ptr<vfs::PseudoDir> dir_;

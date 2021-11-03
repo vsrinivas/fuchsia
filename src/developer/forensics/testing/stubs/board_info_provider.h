@@ -30,7 +30,7 @@ class BoardInfoProvider : public BoardInfoProviderBase {
 class BoardInfoProviderNeverReturns : public BoardInfoProviderBase {
  public:
   // |fuchsia::hwinfo::Board|
-  STUB_METHOD_DOES_NOT_RETURN(GetInfo, GetInfoCallback);
+  STUB_METHOD_DOES_NOT_RETURN(GetInfo, GetInfoCallback)
 };
 
 }  // namespace stubs

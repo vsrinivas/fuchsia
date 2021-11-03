@@ -286,7 +286,7 @@ void RegisterTests() {
       PingLatency<Ipv6>);
 }
 
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 }  // namespace
 
 int main(int argc, char** argv) {

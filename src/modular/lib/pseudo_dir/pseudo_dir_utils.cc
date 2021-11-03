@@ -41,4 +41,4 @@ std::unique_ptr<vfs::PseudoDir> MakeFilePathWithContents(std::string_view file_p
   return config_dir;
 }
 
-};  // namespace modular
+}  // namespace modular

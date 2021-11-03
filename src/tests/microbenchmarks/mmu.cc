@@ -27,8 +27,8 @@ constexpr size_t kSize = MB(1);
 
 struct Helper {
   Helper() {
-    ASSERT_OK(zx::vmar::root_self()->allocate(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_SPECIFIC, 0,
-                                              GB(1), &vmar, &vmar_base));
+    ASSERT_OK(zx::vmar::root_self()->allocate(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_SPECIFIC, 0, GB(1),
+                                              &vmar, &vmar_base));
 
     const uint64_t vmo_size = MB(4);
     ASSERT_OK(zx::vmo::create(vmo_size, 0, &vmo));
@@ -124,6 +124,6 @@ void RegisterTests() {
   perftest::RegisterTest("Mmu/MapUnmap", MmuMapUnmapTest);
   perftest::RegisterTest("Mmu/MapUnmapWithFaults", MmuMapUnmapWithFaultsTest);
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

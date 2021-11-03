@@ -44,7 +44,7 @@ class FakeItems : public Items {
     } else {
       callback(zx::vmo(ZX_HANDLE_INVALID));
     }
-  };
+  }
 
   void SetFile(const char *filename, const char *payload, uint64_t payload_len) {
     filename_ = std::string(filename);

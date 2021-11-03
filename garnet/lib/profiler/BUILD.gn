@@ -70,6 +70,8 @@ source_set("profiler_lib") {
 
   # gpertools sources do not build with Wconversion.
   configs += [ "//build/config:Wno-conversion" ]
+
+  cflags = [ "-Wno-extra-semi" ]
 }
 
 static_library("profiler_static") {

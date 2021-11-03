@@ -34,6 +34,6 @@ class IntegrationTest : public gtest::RealLoopFixture {
   std::unique_ptr<sys::testing::Realm> realm_ = nullptr;
 };
 
-};  // namespace codelab::testing
+}  // namespace codelab::testing
 
 #endif  // EXAMPLES_DIAGNOSTICS_INSPECT_CODELAB_CPP_TESTING_INTEGRATION_TEST_H_

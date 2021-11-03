@@ -48,7 +48,7 @@ static void DumpDirectoryEntry(const DirectoryEntry* entry) {
 
 uint32_t FsToDeviceBlocks(uint32_t fs_block, uint32_t disk_block_size) {
   return fs_block * (kFactoryfsBlockSize / disk_block_size);
-};
+}
 
 zx_status_t Factoryfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out) {
   auto root = fbl::MakeRefCounted<Directory>(*this, std::string_view());

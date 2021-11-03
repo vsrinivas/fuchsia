@@ -33,7 +33,7 @@ struct TakeScreenshotResponse {
   bool success;
 
   TakeScreenshotResponse(fuchsia::ui::scenic::ScreenshotData data, bool success)
-      : screenshot(std::move(data)), success(success){};
+      : screenshot(std::move(data)), success(success) {}
 };
 
 using ScenicBase = MULTI_BINDING_STUB_FIDL_SERVER(fuchsia::ui::scenic, Scenic);
@@ -63,13 +63,13 @@ class ScenicAlwaysReturnsFalse : public ScenicBase {
 class ScenicClosesConnection : public ScenicBase {
  public:
   // |fuchsia::ui::scenic::Scenic|.
-  STUB_METHOD_CLOSES_ALL_CONNECTIONS(TakeScreenshot, TakeScreenshotCallback);
+  STUB_METHOD_CLOSES_ALL_CONNECTIONS(TakeScreenshot, TakeScreenshotCallback)
 };
 
 class ScenicNeverReturns : public ScenicBase {
  public:
   // |fuchsia::ui::scenic::Scenic|.
-  STUB_METHOD_DOES_NOT_RETURN(TakeScreenshot, TakeScreenshotCallback);
+  STUB_METHOD_DOES_NOT_RETURN(TakeScreenshot, TakeScreenshotCallback)
 };
 
 }  // namespace stubs

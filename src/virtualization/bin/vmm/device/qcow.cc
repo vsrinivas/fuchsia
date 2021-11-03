@@ -222,7 +222,7 @@ void QcowFile::LoadLookupTable(BlockDispatcher* disp, BlockDispatcher::Callback 
 
   lookup_table_ = std::make_unique<LookupTable>(header_.cluster_bits, header_.size);
   lookup_table_->Load(header_, disp, std::move(callback));
-};
+}
 
 void QcowFile::ReadAt(BlockDispatcher* disp, void* data, uint64_t size, uint64_t off,
                       BlockDispatcher::Callback callback) {

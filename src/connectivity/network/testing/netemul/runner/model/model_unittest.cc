@@ -277,7 +277,7 @@ TEST_F(ModelTest, NetworkNoName) {
 
   const char* json2 = R"({"networks":[{"name":""}]})";
   ExpectFailedParse(json2, "network with empty name accepted");
-};
+}
 
 TEST_F(ModelTest, EndpointNoName) {
   const char* json = R"({"networks":[{"name":"net","endpoints":[{}]}]})";
@@ -285,7 +285,7 @@ TEST_F(ModelTest, EndpointNoName) {
 
   const char* json2 = R"({"networks":[{"name":"net","endpoints":[{"name":""}]}]})";
   ExpectFailedParse(json2, "endpoint with empty name accepted");
-};
+}
 
 TEST_F(ModelTest, EndpointBadMtu) {
   const char* json = R"({"networks":[{"name":"net","endpoints":[{"name":"a","mtu":0}]}]})";

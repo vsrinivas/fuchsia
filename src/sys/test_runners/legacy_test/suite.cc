@@ -107,7 +107,7 @@ void Suite::CaseIterator::GetNext(GetNextCallback callback) {
     // this would be removed
     done_callback_(this);
   }
-};
+}
 
 void Suite::GetTests(fidl::InterfaceRequest<fuchsia::test::CaseIterator> iterator) {
   auto case_iterator = std::make_unique<CaseIterator>(

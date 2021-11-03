@@ -39,7 +39,7 @@ class DestructionSentinel {
     }
     is_destructed_ptr_ = old_is_destructed_ptr;
     return false;
-  };
+  }
 
  private:
   bool* is_destructed_ptr_ = nullptr;

@@ -39,7 +39,7 @@ class ProbeTest : public ::testing::Test, public simulation::StationIfc {
       : ap_1_(&env_, kAp1Bssid, kAp1Ssid, kAp1TxInfo.channel),
         ap_2_(&env_, kAp2Bssid, kAp2Ssid, kAp2TxInfo.channel) {
     env_.AddStation(this);
-  };
+  }
 
   simulation::Environment env_;
   simulation::FakeAp ap_1_;

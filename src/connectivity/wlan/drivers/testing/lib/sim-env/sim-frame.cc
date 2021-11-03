@@ -16,7 +16,7 @@ SsidInformationElement::SsidInformationElement(
     const wlan::simulation::SsidInformationElement& ssid_ie) {
   ssid_.len = ssid_ie.ssid_.len;
   std::memcpy(ssid_.data, ssid_ie.ssid_.data, ssid_.len);
-};
+}
 
 InformationElement::SimIeType SsidInformationElement::IeType() const { return IE_TYPE_SSID; }
 

@@ -28,7 +28,7 @@ class StorageWatchdog {
         return used * 100 / avail;
       }
       return 0;
-    };
+    }
   };
   StorageUsage GetStorageUsage();
   void CheckStorage(async_dispatcher_t* dispatcher,

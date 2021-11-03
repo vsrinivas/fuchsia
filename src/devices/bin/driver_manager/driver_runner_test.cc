@@ -47,7 +47,7 @@ class FakeContext : public fpromise::context {
 
 fidl::AnyTeardownObserver TeardownWatcher(size_t index, std::vector<size_t>& indices) {
   return fidl::ObserveTeardown([&indices = indices, index] { indices.emplace_back(index); });
-};
+}
 
 class TestRealm : public fcomponent::testing::Realm_TestBase {
  public:

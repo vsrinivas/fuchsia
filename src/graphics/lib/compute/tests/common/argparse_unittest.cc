@@ -26,7 +26,7 @@ class TestHelpOutput {
   text() const
   {
     return text_;
-  };
+  }
 
   // |progname| is program's command-line name.
   // |description| is short program description.

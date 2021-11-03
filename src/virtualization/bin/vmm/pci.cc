@@ -14,9 +14,9 @@
 
 #include <algorithm>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 #include <libfdt.h>
-__END_CDECLS;
+__END_CDECLS
 
 namespace {
 

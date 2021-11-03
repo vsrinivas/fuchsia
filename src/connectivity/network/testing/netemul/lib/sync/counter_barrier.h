@@ -19,7 +19,7 @@ class CounterBarrier {
   using Callback = fit::function<void(bool)>;
 
   explicit CounterBarrier(async_dispatcher_t* dispatcher);
-  ;
+
   ~CounterBarrier();
 
   void AddWatch(uint32_t count, int64_t timeout, Callback callback);

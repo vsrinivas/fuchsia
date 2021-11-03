@@ -30,7 +30,7 @@ class DataTest : public ::testing::Test, public simulation::StationIfc {
   std::vector<uint8_t> CreateEthernetFrame(common::MacAddr dstAddr, common::MacAddr srcAddr,
                                            uint16_t ethType);
 
-  DataTest() : ap_(&env_, kApBssid, kApSsid, kDefaultTxInfo.channel) { env_.AddStation(this); };
+  DataTest() : ap_(&env_, kApBssid, kApSsid, kDefaultTxInfo.channel) { env_.AddStation(this); }
   void FinishAuth(common::MacAddr addr);
   void FinishAssoc(common::MacAddr addr);
   void ScheduleTx(common::MacAddr apAddr, common::MacAddr srcAddr, common::MacAddr dstAddr,

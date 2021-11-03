@@ -910,7 +910,7 @@ std::vector<NvmSection> GetDefaultNvmSections() {
           .data = {},
       }};
   return kDefaultNvmSections;
-};
+}
 
 }  // namespace
 }  // namespace wlan::testing

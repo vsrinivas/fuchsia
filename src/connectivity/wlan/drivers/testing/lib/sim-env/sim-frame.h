@@ -59,7 +59,7 @@ class InformationElement {
 // IEEE Std 802.11-2016, 9.4.2.2
 class SsidInformationElement : public InformationElement {
  public:
-  explicit SsidInformationElement(const cssid_t& ssid) : ssid_(ssid){};
+  explicit SsidInformationElement(const cssid_t& ssid) : ssid_(ssid) {}
 
   SsidInformationElement(const SsidInformationElement& ssid_ie);
 
@@ -79,7 +79,7 @@ class CsaInformationElement : public InformationElement {
     channel_switch_mode_ = switch_mode;
     new_channel_number_ = new_channel;
     channel_switch_count_ = switch_count;
-  };
+  }
 
   CsaInformationElement(const CsaInformationElement& csa_ie);
 
@@ -123,7 +123,7 @@ class SimManagementFrame : public SimFrame {
   SimManagementFrame() = default;
 
   SimManagementFrame(const common::MacAddr& src, const common::MacAddr& dst)
-      : src_addr_(src), dst_addr_(dst){};
+      : src_addr_(src), dst_addr_(dst) {}
 
   SimManagementFrame(const SimManagementFrame& mgmt_frame);
   ~SimManagementFrame() override;
@@ -171,7 +171,7 @@ class SimBeaconFrame : public SimManagementFrame {
 class SimProbeReqFrame : public SimManagementFrame {
  public:
   SimProbeReqFrame() = default;
-  explicit SimProbeReqFrame(const common::MacAddr& src) : SimManagementFrame(src, {}){};
+  explicit SimProbeReqFrame(const common::MacAddr& src) : SimManagementFrame(src, {}) {}
 
   SimProbeReqFrame(const SimProbeReqFrame& probe_req);
 
@@ -204,7 +204,7 @@ class SimAssocReqFrame : public SimManagementFrame {
   SimAssocReqFrame() = default;
   explicit SimAssocReqFrame(const common::MacAddr& src, const common::MacAddr bssid,
                             const cssid_t& ssid)
-      : SimManagementFrame(src, {}), bssid_(bssid), ssid_(ssid){};
+      : SimManagementFrame(src, {}), bssid_(bssid), ssid_(ssid) {}
 
   SimAssocReqFrame(const SimAssocReqFrame& assoc_req);
 
@@ -223,7 +223,7 @@ class SimAssocRespFrame : public SimManagementFrame {
   SimAssocRespFrame() = default;
   explicit SimAssocRespFrame(const common::MacAddr& src, const common::MacAddr& dst,
                              ::fuchsia::wlan::ieee80211::StatusCode status)
-      : SimManagementFrame(src, dst), status_(status){};
+      : SimManagementFrame(src, dst), status_(status) {}
 
   SimAssocRespFrame(const SimAssocRespFrame& assoc_resp);
 
@@ -242,7 +242,7 @@ class SimDisassocReqFrame : public SimManagementFrame {
   SimDisassocReqFrame() = default;
   explicit SimDisassocReqFrame(const common::MacAddr& src, const common::MacAddr& dst,
                                ::fuchsia::wlan::ieee80211::ReasonCode reason)
-      : SimManagementFrame(src, dst), reason_(reason){};
+      : SimManagementFrame(src, dst), reason_(reason) {}
 
   SimDisassocReqFrame(const SimDisassocReqFrame& disassoc_req);
 
@@ -261,7 +261,7 @@ class SimAuthFrame : public SimManagementFrame {
   SimAuthFrame() = default;
   explicit SimAuthFrame(const common::MacAddr& src, const common::MacAddr& dst, uint16_t seq,
                         SimAuthType auth_type, ::fuchsia::wlan::ieee80211::StatusCode status)
-      : SimManagementFrame(src, dst), seq_num_(seq), auth_type_(auth_type), status_(status){};
+      : SimManagementFrame(src, dst), seq_num_(seq), auth_type_(auth_type), status_(status) {}
 
   SimAuthFrame(const SimAuthFrame& auth);
 
@@ -285,7 +285,7 @@ class SimDeauthFrame : public SimManagementFrame {
   SimDeauthFrame() = default;
   explicit SimDeauthFrame(const common::MacAddr& src, const common::MacAddr& dst,
                           ::fuchsia::wlan::ieee80211::ReasonCode reason)
-      : SimManagementFrame(src, dst), reason_(reason){};
+      : SimManagementFrame(src, dst), reason_(reason) {}
 
   SimDeauthFrame(const SimDeauthFrame& deauth);
 

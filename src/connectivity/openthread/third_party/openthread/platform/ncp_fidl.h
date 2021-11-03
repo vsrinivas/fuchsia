@@ -72,7 +72,7 @@ void otNcpInit(otInstance* a_instance);
  */
 NcpFidl* otNcpGetInstance();
 
-};  // namespace Ncp
-};  // namespace ot
+}  // namespace Ncp
+}  // namespace ot
 
 #endif  // SRC_CONNECTIVITY_OPENTHREAD_THIRD_PARTY_OPENTHREAD_PLATFORM_NCP_FIDL_H_

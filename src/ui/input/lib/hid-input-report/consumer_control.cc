@@ -84,7 +84,7 @@ ParseResult ConsumerControl::ParseInputReportDescriptor(
 ParseResult ConsumerControl::ParseReportDescriptor(
     const hid::ReportDescriptor& hid_report_descriptor) {
   return ParseInputReportDescriptor(hid_report_descriptor);
-};
+}
 
 ParseResult ConsumerControl::CreateDescriptor(
     fidl::AnyArena& allocator, fuchsia_input_report::wire::DeviceDescriptor& descriptor) {

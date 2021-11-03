@@ -97,6 +97,6 @@ void RegisterTests() {
   perftest::RegisterTest("Event/WaitForManyWithAlreadySignaledEvent",
                          WaitForManyWithAlreadySignaledEventTest);
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

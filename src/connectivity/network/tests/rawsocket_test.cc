@@ -473,4 +473,4 @@ INSTANTIATE_TEST_SUITE_P(AllRawSocketTests, RawSocketTest,
                          testing::Combine(testing::Values(AF_INET, AF_INET6),
                                           testing::Values(IPPROTO_TCP, IPPROTO_UDP, IPPROTO_RAW)));
 
-};  // namespace
+}  // namespace

@@ -17,7 +17,7 @@ using ::fuchsia::fuzzer::Options;
 
 // Define defaults.
 #define FUCHSIA_FUZZER_OPTION(type, option, Option, default_value) \
-  constexpr type kDefault##Option = default_value;
+  constexpr type kDefault##Option = default_value
 #include "src/sys/fuzzing/common/options.inc"
 #undef FUCHSIA_FUZZER_OPTION
 

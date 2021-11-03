@@ -21,7 +21,7 @@ class MockScenicSession : public scenic::Session {
   void Flush() override {
     num_flushed_++;
     commands_.clear();
-  };
+  }
 
   int64_t num_flushed_ = 0;
   size_t num_commands() { return commands_.size(); }

@@ -121,7 +121,7 @@ void DevfsVnode::Bind(BindRequestView request, BindCompleter::Sync& completer) {
       }
     });
   }
-};
+}
 
 void DevfsVnode::GetDevicePerformanceStates(GetDevicePerformanceStatesRequestView request,
                                             GetDevicePerformanceStatesCompleter::Sync& completer) {
@@ -251,7 +251,7 @@ void DevfsVnode::RunCompatibilityTests(RunCompatibilityTestsRequestView request,
   if (status != ZX_OK) {
     shared_completer->Reply(status);
   }
-};
+}
 
 void DevfsVnode::GetDevicePowerCaps(GetDevicePowerCapsRequestView request,
                                     GetDevicePowerCapsCompleter::Sync& completer) {
@@ -268,7 +268,7 @@ void DevfsVnode::GetDevicePowerCaps(GetDevicePowerCapsRequestView request,
   completer.Reply(fuchsia_device::wire::ControllerGetDevicePowerCapsResult::WithResponse(
       fidl::ObjectView<fuchsia_device::wire::ControllerGetDevicePowerCapsResponse>::FromExternal(
           &response)));
-};
+}
 
 void DevfsVnode::SetPerformanceState(SetPerformanceStateRequestView request,
                                      SetPerformanceStateCompleter::Sync& completer) {
@@ -318,7 +318,7 @@ void DevfsVnode::GetPowerStateMapping(GetPowerStateMappingRequestView request,
   completer.Reply(fuchsia_device::wire::ControllerGetPowerStateMappingResult::WithResponse(
       fidl::ObjectView<fuchsia_device::wire::ControllerGetPowerStateMappingResponse>::FromExternal(
           &response)));
-};
+}
 
 void DevfsVnode::Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) {
   dev_->suspend_cb = [completer = completer.ToAsync()](zx_status_t status,

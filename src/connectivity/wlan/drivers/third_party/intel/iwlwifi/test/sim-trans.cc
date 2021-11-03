@@ -49,7 +49,7 @@ namespace {
 class SimTransDevice : public ::wlan::iwlwifi::WlanphyImplDevice {
  public:
   explicit SimTransDevice(zx_device_t* parent, iwl_trans* drvdata)
-      : WlanphyImplDevice(parent), drvdata_(drvdata){};
+      : WlanphyImplDevice(parent), drvdata_(drvdata) {}
   void DdkInit(::ddk::InitTxn txn) override { txn.Reply(ZX_OK); }
   void DdkUnbind(::ddk::UnbindTxn txn) override {
     struct iwl_trans* trans = drvdata_;
@@ -58,7 +58,7 @@ class SimTransDevice : public ::wlan::iwlwifi::WlanphyImplDevice {
     }
     free(trans);
     txn.Reply();
-  };
+  }
 
   iwl_trans* drvdata() override { return drvdata_; }
   const iwl_trans* drvdata() const override { return drvdata_; }

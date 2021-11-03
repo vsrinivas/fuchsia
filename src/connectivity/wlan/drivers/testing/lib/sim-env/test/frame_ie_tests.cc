@@ -283,4 +283,4 @@ TEST_F(FrameIeTest, DeepCopyQosDataFrame) {
   EXPECT_EQ(copied_qos_data_frame.payload_, kDefaultPayload);
 }
 
-};  // namespace wlan::testing
+}  // namespace wlan::testing

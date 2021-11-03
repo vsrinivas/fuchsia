@@ -233,7 +233,7 @@ zx_status_t Keyboard::StartReading() {
       [this](fidl::WireResponse<fuchsia_input_report::InputReportsReader::ReadInputReports>*
                  response) { InputCallback(response->result); });
   return ZX_OK;
-};
+}
 
 void Keyboard::on_fidl_error(fidl::UnbindInfo info) {
   printf("vc: Keyboard Reader FIDL error: %s.\n", info.FormatDescription().c_str());

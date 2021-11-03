@@ -357,7 +357,7 @@ struct SockOptParam {
         arg(std::move(arg)),
         level(level),
         optname(optname),
-        optval(std::move(optval)){};
+        optval(std::move(optval)) {}
 
   std::string name;
   std::string arg;

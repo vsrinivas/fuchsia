@@ -66,7 +66,7 @@ class SpinelFidlInterface {
 
   std::optional<OtStackCallBack*> ot_stack_callback_ptr_;
 };  // SpinelFidlInterface
-};  // namespace Fuchsia
-};  // namespace ot
+}  // namespace Fuchsia
+}  // namespace ot
 
 #endif  // SRC_CONNECTIVITY_OPENTHREAD_THIRD_PARTY_OPENTHREAD_PLATFORM_SPINEL_FIDL_INTERFACE_H_

@@ -381,7 +381,7 @@ struct zx_device
 
   bool Unbound();
 
-  DriverHostContext* driver_host_context() const { return driver_host_context_; };
+  DriverHostContext* driver_host_context() const { return driver_host_context_; }
   bool complete_bind_rebind_after_init() const { return complete_bind_rebind_after_init_; }
   void set_complete_bind_rebind_after_init(bool value) { complete_bind_rebind_after_init_ = value; }
 

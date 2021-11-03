@@ -300,4 +300,4 @@ INSTANTIATE_TEST_SUITE_P(AllPacketSocketTests, GenericPacketSocketTest,
                                  Values(0, ETH_P_ALL, ETH_P_IP, ETH_P_IPV6, ETH_P_ARP,
                                         ETH_P_PHONET)));
 
-};  // namespace
+}  // namespace

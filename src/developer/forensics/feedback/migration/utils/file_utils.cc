@@ -31,7 +31,7 @@ fbl::unique_fd IntoFd(::fidl::InterfaceHandle<fuchsia::io::Directory> dir) {
   }
 
   return fd;
-};
+}
 
 ::fidl::InterfaceHandle<fuchsia::io::Directory> IntoInterfaceHandle(fbl::unique_fd fd) {
   ::fidl::InterfaceHandle<fuchsia::io::Directory> handle;

@@ -25,4 +25,4 @@ FIDL_FUZZER_DEFINITION(
     // client and server work from the same thread/loop/dispatcher.
     ::fidl::fuzzing::ServerProviderDispatcherMode::kFromCaller,
     // All remaining parameters forwarded to the `EchoServer` constructor.
-);
+)

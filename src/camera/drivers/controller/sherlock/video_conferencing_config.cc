@@ -67,7 +67,7 @@ static fuchsia::camera2::hal::StreamConfig VideoConfig(bool extended_fov) {
   stream.set_buffer_count_for_camping(kGe2dBufferForCamping);
   stream.set_min_buffer_count(kGe2dBufferForCamping + kNumClientBuffers + kExtraBuffers);
   return stream.ConvertToStreamConfig();
-};
+}
 
 /*****************************
  *  EXTERNAL CONFIGURATIONS  *

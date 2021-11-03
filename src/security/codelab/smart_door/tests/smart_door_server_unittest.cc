@@ -32,7 +32,7 @@ class SmartDoorMemoryClientFake : public SmartDoorMemoryClient {
     buffer = storage;
     return true;
   }
-  ~SmartDoorMemoryClientFake(){};
+  ~SmartDoorMemoryClientFake() {}
 
  private:
   std::vector<uint8_t> storage;

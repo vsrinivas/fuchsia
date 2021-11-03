@@ -20,7 +20,7 @@ fuchsia::ui::activity::DiscreteActivity DiscreteActivity() {
   fuchsia::ui::activity::DiscreteActivity activity;
   activity.set_generic(std::move(generic));
   return activity;
-};
+}
 
 constexpr activity::OngoingActivityId kActivityId = 1234u;
 

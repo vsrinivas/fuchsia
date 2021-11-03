@@ -60,7 +60,7 @@ std::filesystem::path GetSelfDirectory() {
 bool EnvironmentHasVarname(const char* env, const char* varname) {
   std::string prefix = std::string(varname) + "=";
   return !memcmp(prefix.c_str(), env, prefix.size());
-};
+}
 
 }  // namespace
 

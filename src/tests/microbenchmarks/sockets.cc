@@ -51,6 +51,6 @@ void RegisterTests() {
     perftest::RegisterTest(name.c_str(), SocketWriteReadTest, message_size);
   }
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

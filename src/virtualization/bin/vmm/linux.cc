@@ -16,9 +16,9 @@
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 #include <libfdt.h>
-__END_CDECLS;
+__END_CDECLS
 
 #if __aarch64__
 // This address works for direct-mapping of host memory. This address is chosen

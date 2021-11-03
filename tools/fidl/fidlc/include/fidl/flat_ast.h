@@ -200,7 +200,7 @@ struct Decl : public Attributable {
       case Kind::kTypeAlias:
         return AttributePlacement::kTypeAliasDecl;
     }
-  };
+  }
 
   Decl(Kind kind, std::unique_ptr<AttributeList> attributes, Name name)
       : Attributable(AttributePlacement(kind), std::move(attributes)),
@@ -985,7 +985,7 @@ class AttributeArgSchema {
                               SpecialCase special_case = SpecialCase::kNone)
       : type_(type), optionality_(optionality), special_case_(special_case) {
     assert(type != ConstantValue::Kind::kDocComment);
-  };
+  }
 
   bool IsOptional() const { return optionality_ == Optionality::kOptional; }
 

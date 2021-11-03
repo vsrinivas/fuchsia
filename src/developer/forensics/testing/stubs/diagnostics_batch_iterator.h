@@ -61,7 +61,7 @@ class DiagnosticsBatchIteratorNeverResponds : public DiagnosticsBatchIteratorBas
   DiagnosticsBatchIteratorNeverResponds() {}
 
   // |fuchsia::diagnostics::BatchIterator|
-  STUB_METHOD_DOES_NOT_RETURN(GetNext, GetNextCallback);
+  STUB_METHOD_DOES_NOT_RETURN(GetNext, GetNextCallback)
 };
 
 class DiagnosticsBatchIteratorReturnsError : public DiagnosticsBatchIteratorBase {

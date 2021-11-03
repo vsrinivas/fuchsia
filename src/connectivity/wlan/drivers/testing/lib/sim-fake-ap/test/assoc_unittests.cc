@@ -30,7 +30,7 @@ constexpr auto kApDisassocReason = wlan_ieee80211::ReasonCode::INVALID_AUTHENTIC
 
 class AssocTest : public ::testing::Test, public simulation::StationIfc {
  public:
-  AssocTest() : ap_(&env_, kApBssid, kApSsid, kDefaultTxInfo.channel) { env_.AddStation(this); };
+  AssocTest() : ap_(&env_, kApBssid, kApSsid, kDefaultTxInfo.channel) { env_.AddStation(this); }
   void DisassocFromAp(const common::MacAddr& sta, wlan_ieee80211::ReasonCode reason);
   void FinishAuth();
   simulation::Environment env_;

@@ -8,7 +8,7 @@ namespace media::audio::test {
 
 MessageTransceiver::MessageTransceiver(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
-MessageTransceiver::~MessageTransceiver() { Close(); };
+MessageTransceiver::~MessageTransceiver() { Close(); }
 
 zx_status_t MessageTransceiver::Init(zx::channel channel,
                                      IncomingMessageCallback incoming_message_callback,

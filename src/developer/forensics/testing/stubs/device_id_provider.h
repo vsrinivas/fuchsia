@@ -48,7 +48,7 @@ class DeviceIdProvider : public DeviceIdProviderBase {
 class DeviceIdProviderNeverReturns : public DeviceIdProviderBase {
  public:
   // |fuchsia::feedback::DeviceIdProvider|
-  STUB_METHOD_DOES_NOT_RETURN(GetId, GetIdCallback);
+  STUB_METHOD_DOES_NOT_RETURN(GetId, GetIdCallback)
 };
 
 class DeviceIdProviderExpectsOneCall : public DeviceIdProviderBase {

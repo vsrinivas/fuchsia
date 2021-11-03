@@ -104,7 +104,7 @@ class FakeDeviceImpl : public ddk::NetworkPortProtocol<FakeDeviceImpl>,
         .ctx = this,
     };
     return ddk::NetworkDeviceImplProtocolClient(&proto);
-  };
+  }
 
   void NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo) {}
   void NetworkDeviceImplReleaseVmo(uint8_t vmo_id) {}
@@ -253,7 +253,7 @@ void RegisterTests() {
                            LatencyTest<TxTestSession>, batch_size);
   }
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 int main(int argc, char** argv) {
   constexpr char kTestSuiteName[] = "fuchsia.network.device";

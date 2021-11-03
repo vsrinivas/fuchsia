@@ -208,7 +208,7 @@ class TestVirtioDevice : public virtio::Device, public DeviceType {
 
   explicit TestVirtioDevice(zx_device_t* bus_device, zx::bti bti,
                             std::unique_ptr<virtio::Backend> backend)
-      : virtio::Device(bus_device, std::move(bti), std::move(backend)), DeviceType(bus_device){};
+      : virtio::Device(bus_device, std::move(bti), std::move(backend)), DeviceType(bus_device) {}
 
   zx_status_t Init() final {
     // Initialize the first virtqueue.
@@ -218,8 +218,8 @@ class TestVirtioDevice : public virtio::Device, public DeviceType {
     }
     return DdkAdd(tag());
   }
-  void IrqRingUpdate() final{};
-  void IrqConfigChange() final{};
+  void IrqRingUpdate() final {}
+  void IrqConfigChange() final {}
   const char* tag() const final { return "test"; }
   void DdkUnbind(ddk::UnbindTxn txn) {
     txn.Reply();

@@ -39,7 +39,7 @@ class AuthTest : public ::testing::Test, public simulation::StationIfc {
  public:
   struct AuthResp {
     AuthResp(uint16_t seq_num, simulation::SimAuthType auth_type, wlan_ieee80211::StatusCode status)
-        : seq_num_(seq_num), auth_type_(auth_type), status_(status){};
+        : seq_num_(seq_num), auth_type_(auth_type), status_(status) {}
 
     uint16_t seq_num_;
     simulation::SimAuthType auth_type_;

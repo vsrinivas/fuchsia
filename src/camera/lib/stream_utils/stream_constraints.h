@@ -33,7 +33,7 @@ namespace camera {
 
 struct StreamConstraints {
  public:
-  StreamConstraints(){};
+  StreamConstraints() {}
   StreamConstraints(fuchsia::camera2::CameraStreamType type) : stream_type_(type) {}
 
   void AddImageFormat(uint32_t width, uint32_t height, fuchsia::sysmem::PixelFormatType format,

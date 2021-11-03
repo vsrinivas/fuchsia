@@ -100,17 +100,17 @@ TEST_F(InterpreterTest, AssignString) {
     CHECK_RESULT(1, #modified_value);                                                     \
   }
 
-ASSIGN_TEST(AssignInt8, builder.TypeInt8(), 10, -30);
-ASSIGN_TEST(AssignUint8, builder.TypeUint8(), 10, 30);
+ASSIGN_TEST(AssignInt8, builder.TypeInt8(), 10, -30)
+ASSIGN_TEST(AssignUint8, builder.TypeUint8(), 10, 30)
 
-ASSIGN_TEST(AssignInt16, builder.TypeInt16(), 1000, -3000);
-ASSIGN_TEST(AssignUint16, builder.TypeUint16(), 1000, 3000);
+ASSIGN_TEST(AssignInt16, builder.TypeInt16(), 1000, -3000)
+ASSIGN_TEST(AssignUint16, builder.TypeUint16(), 1000, 3000)
 
-ASSIGN_TEST(AssignInt32, builder.TypeInt32(), 100000, -300000);
-ASSIGN_TEST(AssignUint32, builder.TypeUint32(), 100000, 300000);
+ASSIGN_TEST(AssignInt32, builder.TypeInt32(), 100000, -300000)
+ASSIGN_TEST(AssignUint32, builder.TypeUint32(), 100000, 300000)
 
-ASSIGN_TEST(AssignInt64, builder.TypeInt64(), 10000000000, -30000000000);
-ASSIGN_TEST(AssignUint64, builder.TypeUint64(), 10000000000, 30000000000);
+ASSIGN_TEST(AssignInt64, builder.TypeInt64(), 10000000000, -30000000000)
+ASSIGN_TEST(AssignUint64, builder.TypeUint64(), 10000000000, 30000000000)
 
 TEST_F(InterpreterTest, AssignObject) {
   constexpr uint64_t kFileId = 1;

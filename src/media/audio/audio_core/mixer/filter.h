@@ -44,7 +44,7 @@ class Filter {
   int64_t side_length() const { return side_length_; }
   int32_t num_frac_bits() const { return num_frac_bits_; }
   int64_t frac_size() const { return frac_size_; }
-  double rate_conversion_ratio() const { return rate_conversion_ratio_; };
+  double rate_conversion_ratio() const { return rate_conversion_ratio_; }
 
   // used for debugging purposes only
   virtual void Display() = 0;

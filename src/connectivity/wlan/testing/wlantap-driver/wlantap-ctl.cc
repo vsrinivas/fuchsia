@@ -92,7 +92,7 @@ struct WlantapCtl : fidl::WireServer<wlantap::WlantapCtl> {
     } else {
       completer.Reply(ZX_OK);
     }
-  };
+  }
 
   static zx_status_t DdkMessage(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     auto self = static_cast<WlantapCtl*>(ctx);

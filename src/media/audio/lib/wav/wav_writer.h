@@ -77,12 +77,12 @@ class WavWriter<false> {
   bool Initialize(const char* const file_name, fuchsia::media::AudioSampleFormat sample_format,
                   uint16_t channel_count, uint32_t frame_rate, uint16_t bits_per_sample) {
     return true;
-  };
-  bool Write(void* const buffer, uint32_t num_bytes) { return true; };
-  bool UpdateHeader() { return true; };
-  bool Reset() { return true; };
-  bool Close() { return true; };
-  bool Delete() { return true; };
+  }
+  bool Write(void* const buffer, uint32_t num_bytes) { return true; }
+  bool UpdateHeader() { return true; }
+  bool Reset() { return true; }
+  bool Close() { return true; }
+  bool Delete() { return true; }
 };
 
 }  // namespace audio

@@ -74,4 +74,4 @@ fpromise::result<std::string_view, Lookup::Status> Lookup::String(uint64_t messa
   return fpromise::ok(std::string_view(result));
 }
 
-};  // namespace intl
+}  // namespace intl

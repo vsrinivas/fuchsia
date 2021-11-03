@@ -87,9 +87,9 @@ class Capture {
       Capture* capture, const CaptureState& state, CaptureLevel level,
       const std::vector<std::string>& rooted_vmo_names = kDefaultRootedVmoNames);
 
-  zx_time_t time() const { return time_; };
-  const zx_info_kmem_stats_t& kmem() const { return kmem_; };
-  const zx_info_kmem_stats_extended_t& kmem_extended() const { return kmem_extended_; };
+  zx_time_t time() const { return time_; }
+  const zx_info_kmem_stats_t& kmem() const { return kmem_; }
+  const zx_info_kmem_stats_extended_t& kmem_extended() const { return kmem_extended_; }
 
   const std::unordered_map<zx_koid_t, Process>& koid_to_process() const { return koid_to_process_; }
 

@@ -46,7 +46,7 @@ class PseudoDirServer final {
   void Serve(zx::channel request);
 
   // Returns the |pseudo_dir_| to be served.
-  vfs::PseudoDir* pseudo_dir() const { return pseudo_dir_.get(); };
+  vfs::PseudoDir* pseudo_dir() const { return pseudo_dir_.get(); }
 
  private:
   // This loop is configured to attach to its own thread.

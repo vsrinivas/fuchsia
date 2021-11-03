@@ -25,7 +25,7 @@ static zx_status_t test_rxrpc(void* ctx, zx_handle_t channel) {
   // This won't actually get called, since the other half doesn't send
   // messages at the moment
   __builtin_trap();
-};
+}
 
 static zx_protocol_device_t test_device_protocol = {
     .version = DEVICE_OPS_VERSION,

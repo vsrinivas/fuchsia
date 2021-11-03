@@ -44,6 +44,6 @@ void RegisterTests() {
   perftest::RegisterSimpleTest<OpenTest>("Filesystem_Open");
   perftest::RegisterTest("Filesystem_Fstat", FstatTest);
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

@@ -46,7 +46,7 @@ class CrashReporter : public CrashReporterBase {
 class CrashReporterClosesConnection : public CrashReporterBase {
  public:
   // |fuchsia::feedback::CrashReporter|
-  STUB_METHOD_CLOSES_CONNECTION(File, fuchsia::feedback::CrashReport, FileCallback);
+  STUB_METHOD_CLOSES_CONNECTION(File, fuchsia::feedback::CrashReport, FileCallback)
 };
 
 class CrashReporterAlwaysReturnsError : public CrashReporterBase {

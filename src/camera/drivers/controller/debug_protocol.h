@@ -27,7 +27,7 @@ class DebugImpl : public fuchsia::camera2::debug::Debug {
             fit::closure on_connection_closed);
   void SetDefaultSensorMode(uint32_t mode, SetDefaultSensorModeCallback callback) override;
 
-  void Shutdown(){};
+  void Shutdown() {}
 
  private:
   fidl::Binding<fuchsia::camera2::debug::Debug> binding_;

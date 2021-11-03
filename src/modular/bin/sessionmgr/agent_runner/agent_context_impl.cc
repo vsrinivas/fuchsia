@@ -53,7 +53,7 @@ void GetFidlDirectoryEntries(fuchsia::io::Directory* dir,
       });
 }
 
-};  // namespace
+}  // namespace
 
 class AgentContextImpl::FinishInitializeCall : public Operation<> {
  public:

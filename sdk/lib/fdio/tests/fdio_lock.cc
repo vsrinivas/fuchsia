@@ -75,7 +75,7 @@ const ssize_t FILE_SIZE = 1024;
 //
 class LockThread {
  public:
-  LockThread(int fd, bool exclusive) : fd_(fd), exclusive_(exclusive){};
+  LockThread(int fd, bool exclusive) : fd_(fd), exclusive_(exclusive) {}
 
   ~LockThread() { lock_thread_.join(); }
 

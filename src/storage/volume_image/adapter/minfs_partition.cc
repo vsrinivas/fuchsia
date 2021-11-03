@@ -71,7 +71,7 @@ class PatchedSuperblockReader final : public Reader {
     }
 
     return fpromise::ok();
-  };
+  }
 
   minfs::Superblock& superblock() { return superblock_; }
 

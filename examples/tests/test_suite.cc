@@ -155,6 +155,6 @@ void CaseIterator::GetNext(GetNextCallback callback) {
   if (bytes_used == 0) {
     done_callback_(this);
   }
-};
+}
 
 }  // namespace example

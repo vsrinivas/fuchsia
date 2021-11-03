@@ -41,25 +41,25 @@ class EromDescriptor : public wlan::common::BitField<uint32_t> {
     kEndOfTable = 3,
   };
 
-  WLAN_BIT_FIELD(valid, 0, 1);
-  WLAN_BIT_FIELD(type, 1, 2);
-  WLAN_BIT_FIELD(addr_64bit, 3, 1);
+  WLAN_BIT_FIELD(valid, 0, 1)
+  WLAN_BIT_FIELD(type, 1, 2)
+  WLAN_BIT_FIELD(addr_64bit, 3, 1)
 };
 
 class EromComponentDescriptorLow : public EromDescriptor {
  public:
-  WLAN_BIT_FIELD(part_class, 4, 4);
-  WLAN_BIT_FIELD(part_num, 8, 12);
-  WLAN_BIT_FIELD(designer, 20, 12);
+  WLAN_BIT_FIELD(part_class, 4, 4)
+  WLAN_BIT_FIELD(part_num, 8, 12)
+  WLAN_BIT_FIELD(designer, 20, 12)
 };
 
 class EromComponentDescriptorHigh : public EromDescriptor {
  public:
-  WLAN_BIT_FIELD(num_mport, 4, 5);
-  WLAN_BIT_FIELD(num_sport, 9, 5);
-  WLAN_BIT_FIELD(num_mwrap, 14, 5);
-  WLAN_BIT_FIELD(num_swrap, 19, 5);
-  WLAN_BIT_FIELD(revision, 24, 8);
+  WLAN_BIT_FIELD(num_mport, 4, 5)
+  WLAN_BIT_FIELD(num_sport, 9, 5)
+  WLAN_BIT_FIELD(num_mwrap, 14, 5)
+  WLAN_BIT_FIELD(num_swrap, 19, 5)
+  WLAN_BIT_FIELD(revision, 24, 8)
 };
 
 constexpr size_t kEromSecondaryDescriptorAddrBaseMultiplier = 0x1000;
@@ -80,22 +80,22 @@ class EromSecondaryDescriptor : public EromDescriptor {
     kMwrap = 3,
   };
 
-  WLAN_BIT_FIELD(size_type, 4, 2);
-  WLAN_BIT_FIELD(secondary_type, 6, 2);
-  WLAN_BIT_FIELD(port_num, 8, 4);
-  WLAN_BIT_FIELD(addr_base, 12, 20);
+  WLAN_BIT_FIELD(size_type, 4, 2)
+  WLAN_BIT_FIELD(secondary_type, 6, 2)
+  WLAN_BIT_FIELD(port_num, 8, 4)
+  WLAN_BIT_FIELD(addr_base, 12, 20)
 };
 
 class BuscoreCoreControl : public wlan::common::AddressableBitField<uint16_t, uint32_t, 0x0408> {
  public:
-  WLAN_BIT_FIELD(clock, 0, 1);
-  WLAN_BIT_FIELD(fgc, 1, 1);
+  WLAN_BIT_FIELD(clock, 0, 1)
+  WLAN_BIT_FIELD(fgc, 1, 1)
 };
 
 class BuscoreCoreResetControl
     : public wlan::common::AddressableBitField<uint16_t, uint32_t, 0x0800> {
  public:
-  WLAN_BIT_FIELD(reset, 0, 1);
+  WLAN_BIT_FIELD(reset, 0, 1)
 };
 
 }  // namespace

@@ -154,7 +154,7 @@ class ActivityCtl {
       }
     }
     return ZX_OK;
-  };
+  }
 
   void ForceState(fuchsia::ui::activity::State state) {
     control_conn_ = context_->svc()->Connect<fuchsia::ui::activity::control::Control>();

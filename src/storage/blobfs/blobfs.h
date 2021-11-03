@@ -197,7 +197,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // default cache policy should be used.
   std::optional<CachePolicy> pager_backed_cache_policy() const {
     return pager_backed_cache_policy_;
-  };
+  }
 
   zx::status<std::unique_ptr<Superblock>> ReadBackupSuperblock();
 

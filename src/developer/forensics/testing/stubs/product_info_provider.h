@@ -33,7 +33,7 @@ class ProductInfoProviderNeverReturns : public ProductInfoProviderBase {
   ProductInfoProviderNeverReturns() {}
 
   // |fuchsia::hwinfo::Product|
-  STUB_METHOD_DOES_NOT_RETURN(GetInfo, GetInfoCallback);
+  STUB_METHOD_DOES_NOT_RETURN(GetInfo, GetInfoCallback)
 };
 
 }  // namespace stubs

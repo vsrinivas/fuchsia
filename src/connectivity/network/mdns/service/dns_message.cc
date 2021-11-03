@@ -61,7 +61,7 @@ DnsQuestion::DnsQuestion() {}
 DnsQuestion::DnsQuestion(const std::string& name, DnsType type)
     : name_(DnsName(name)), type_(type) {}
 
-DnsResource::DnsResource(){};
+DnsResource::DnsResource() {}
 
 DnsResource::DnsResource(const std::string& name, DnsType type)
     : name_(DnsName(name)), type_(type) {
@@ -154,7 +154,7 @@ DnsResource::DnsResource(const DnsResource& other) {
     default:
       break;
   }
-};
+}
 
 DnsResource& DnsResource::operator=(const DnsResource& other) {
   name_ = other.name_;
@@ -196,7 +196,7 @@ DnsResource& DnsResource::operator=(const DnsResource& other) {
   }
 
   return *this;
-};
+}
 
 DnsResource::~DnsResource() {
   switch (type_) {
@@ -230,6 +230,6 @@ DnsResource::~DnsResource() {
     default:
       break;
   }
-};
+}
 
 }  // namespace mdns

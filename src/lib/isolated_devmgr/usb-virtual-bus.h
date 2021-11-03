@@ -32,7 +32,7 @@ class USBVirtualBusBase {
                              std::vector<FunctionDescriptor> function_descs);
   void ClearPeripheralDeviceFunctions();
   int GetRootFd();
-  fbl::unique_fd& devfs_root() { return devfs_; };
+  fbl::unique_fd& devfs_root() { return devfs_; }
   fidl::WireSyncClient<fuchsia_hardware_usb_peripheral::Device>& peripheral() {
     return peripheral_;
   }

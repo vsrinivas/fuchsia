@@ -102,7 +102,7 @@ void RegisterTests() {
   }
 }
 
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace
 

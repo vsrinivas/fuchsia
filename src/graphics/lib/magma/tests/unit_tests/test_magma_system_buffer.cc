@@ -22,8 +22,8 @@ class MsdMockBufferManager_Create : public MsdMockBufferManager {
     MsdMockBufferManager::DestroyBuffer(buf);
   }
 
-  bool has_created_buffer() { return has_created_buffer_; };
-  bool has_destroyed_buffer() { return has_destroyed_buffer_; };
+  bool has_created_buffer() { return has_created_buffer_; }
+  bool has_destroyed_buffer() { return has_destroyed_buffer_; }
 
  private:
   bool has_created_buffer_;

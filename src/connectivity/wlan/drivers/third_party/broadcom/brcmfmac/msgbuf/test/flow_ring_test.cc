@@ -70,7 +70,7 @@ void CreateFlowRingAndDependencies(FlowRingAndDependencies* ring_and_deps) {
   ring_and_deps->interface_index = interface_index;
   ring_and_deps->flow_ring_index = flow_ring_index;
   ring_and_deps->flow_ring = *std::move(flow_ring);
-};
+}
 
 // Test creation of the FlowRing.
 TEST(FlowRingTest, CreationParameters) {

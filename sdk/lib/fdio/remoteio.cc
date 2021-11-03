@@ -156,7 +156,7 @@ zx::status<fdio_ptr> fdio::create_with_on_open(fidl::ClientEnd<fio::Node> node) 
     explicit EventHandler(fidl::ClientEnd<fio::Node> client_end)
         : client_end_(std::move(client_end)) {}
 
-    zx::status<fdio_ptr>& result() { return result_; };
+    zx::status<fdio_ptr>& result() { return result_; }
 
     const fidl::ClientEnd<fio::Node>& client_end() const { return client_end_; }
 

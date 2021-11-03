@@ -118,7 +118,7 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
   const fbl::RefPtr<ServiceProviderDirImpl>& incoming_services() const {
     ZX_DEBUG_ASSERT(ns_);
     return ns_->services();
-  };
+  }
 
   void SendOnDirectoryReadyEvent();
 

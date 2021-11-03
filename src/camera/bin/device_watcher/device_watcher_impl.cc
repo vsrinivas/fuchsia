@@ -183,7 +183,7 @@ static std::optional<std::vector<fuchsia::camera3::WatchDevicesEvent>> BuildEven
   }
 
   return events;
-};
+}
 
 void DeviceWatcherImpl::Client::CheckDevicesChanged() {
   if (!callback_) {

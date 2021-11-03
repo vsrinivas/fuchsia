@@ -8,12 +8,12 @@
 namespace f2fs {
 class NameString final {
  public:
-  NameString() : len_(0){};
+  NameString() : len_(0) {}
   NameString(const NameString &) = default;
 
-  std::string_view GetStringView() const { return std::string_view(name_, len_); };
-  char *GetData() { return name_; };
-  uint16_t GetLen() const { return len_; };
+  std::string_view GetStringView() const { return std::string_view(name_, len_); }
+  char *GetData() { return name_; }
+  uint16_t GetLen() const { return len_; }
 
   NameString &operator=(std::string_view name) {
     ZX_ASSERT(name.length() <= kMaxNameLen);

@@ -322,7 +322,7 @@ class CobaltLoggerImpl : public BaseCobaltLoggerImpl {
   CobaltLoggerImpl(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                    uint32_t project_id, size_t max_buffer_size);
 
-  ~CobaltLoggerImpl() override{};
+  ~CobaltLoggerImpl() override {}
 
  protected:
   virtual fidl::InterfacePtr<fuchsia::cobalt::LoggerFactory> ConnectToLoggerFactory() override;

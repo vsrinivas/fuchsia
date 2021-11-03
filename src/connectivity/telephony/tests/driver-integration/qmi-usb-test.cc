@@ -82,9 +82,9 @@ class UsbQmiTest : public ::gtest::RealLoopFixture {
     ASSERT_EQ(result2.value().status, ZX_OK);
   }
 
-  USBVirtualBusQmi& GetVirtBus() { return bus_; };
+  USBVirtualBusQmi& GetVirtBus() { return bus_; }
 
-  fbl::String& GetDevPath() { return devpath_; };
+  fbl::String& GetDevPath() { return devpath_; }
 
  private:
   USBVirtualBusQmi bus_;

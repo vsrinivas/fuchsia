@@ -570,7 +570,7 @@ class TouchInputBase : public gtest::RealLoopFixture {
   uint64_t TimeToUint(const TimeT& time) {
     FX_CHECK(time.get() >= 0);
     return static_cast<uint64_t>(time.get());
-  };
+  }
 
   std::unique_ptr<sys::ComponentContext> context_;
   std::unique_ptr<RealmBuilder> realm_builder_;
@@ -752,7 +752,7 @@ class WebEngineTest : public TouchInputBase {
     async::PostDelayedTask(
         dispatcher(), [this, input_injection_time] { TryInject(input_injection_time); },
         kTapRetryInterval);
-  };
+  }
 
   // Helper method for checking the test.touch.ResponseListener response from a web app.
   void SetResponseExpectationsWeb(float expected_x, float expected_y,

@@ -18,6 +18,6 @@ namespace modular {
 std::unique_ptr<vfs::PseudoDir> MakeFilePathWithContents(std::string_view file_path,
                                                          std::string file_contents);
 
-};  // namespace modular
+}  // namespace modular
 
 #endif  // SRC_MODULAR_LIB_PSEUDO_DIR_PSEUDO_DIR_UTILS_H_

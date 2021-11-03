@@ -173,7 +173,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   bool ShouldCache() const final __TA_EXCLUDES(mutex_);
   void ActivateLowMemory() final __TA_EXCLUDES(mutex_);
 
-  void set_state(BlobState new_state) __TA_REQUIRES(mutex_) { state_ = new_state; };
+  void set_state(BlobState new_state) __TA_REQUIRES(mutex_) { state_ = new_state; }
   BlobState state() const __TA_REQUIRES_SHARED(mutex_) { return state_; }
 
   // After writing the blob, marks the blob as readable.

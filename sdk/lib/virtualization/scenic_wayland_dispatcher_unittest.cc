@@ -170,4 +170,4 @@ TEST_F(ScenicWaylandDispatcherTest, ReceiveViewEvents) {
   ASSERT_EQ(0u, views()->size());
 }
 
-};  // namespace guest
+}  // namespace guest

@@ -72,7 +72,7 @@ class JsonHelper {
     rapidjson::Value value;
     value.SetString(string, alloc_);
     return value;
-  };
+  }
 
   rapidjson::Value Copy(const rapidjson::Value& value) { return rapidjson::Value(value, alloc_); }
 

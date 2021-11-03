@@ -121,14 +121,21 @@ class TestMuxClockTrivial : public BaseClock {
       : BaseClock(name, id), parents_(parents), n_(n), index_(0) {}
 
   /// Clock Gating Control.
-  virtual zx_status_t Enable() override { return ZX_ERR_NOT_SUPPORTED; };
-  virtual zx_status_t Disable() override { return ZX_ERR_NOT_SUPPORTED; };
-  virtual zx_status_t IsHwEnabled(bool* out) override { return ZX_ERR_NOT_SUPPORTED; };
+  virtual zx_status_t Enable() override { return ZX_ERR_NOT_SUPPORTED; }
+  virtual zx_status_t Disable() override { return ZX_ERR_NOT_SUPPORTED; }
+  virtual zx_status_t IsHwEnabled(bool* out) override { return ZX_ERR_NOT_SUPPORTED; }
 
   // Clock frequency control.
-  virtual zx_status_t SetRate(const Hertz rate, const Hertz parent_rate) override { return ZX_ERR_NOT_SUPPORTED; };
-  virtual zx_status_t QuerySupportedRate(const Hertz max, const Hertz parent_rate, Hertz* out) override { return ZX_ERR_NOT_SUPPORTED; };
-  virtual zx_status_t GetRate(const Hertz parent_rate, Hertz* out) override { return ZX_ERR_NOT_SUPPORTED; };
+  virtual zx_status_t SetRate(const Hertz rate, const Hertz parent_rate) override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  virtual zx_status_t QuerySupportedRate(const Hertz max, const Hertz parent_rate,
+                                         Hertz* out) override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  virtual zx_status_t GetRate(const Hertz parent_rate, Hertz* out) override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   zx_status_t SetInput(const uint32_t index) override;
   zx_status_t GetNumInputs(uint32_t* out) override;

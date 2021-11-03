@@ -19,6 +19,8 @@ executable("stacktrace_unittest") {
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+
+  cflags = [ "-Wno-extra-semi" ]
 }
 
 source_set("testutil") {
@@ -27,6 +29,8 @@ source_set("testutil") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+
+  cflags = [ "-Wno-extra-semi" ]
 }
 
 executable("profiler_unittest") {

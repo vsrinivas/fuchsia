@@ -592,7 +592,7 @@ zx_status_t Fusb302::Init() {
   is_thread_running_ = true;
 
   return ZX_OK;
-};
+}
 
 zx_status_t Fusb302::InitInspect() {
   // Device ID

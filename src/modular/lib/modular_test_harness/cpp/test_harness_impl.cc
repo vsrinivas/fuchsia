@@ -53,7 +53,7 @@ constexpr char kSessionAgentFakeInterceptionCmx[] = R"(
 }
 )";
 
-};  // namespace
+}  // namespace
 
 class TestHarnessImpl::InterceptedComponentImpl
     : public fuchsia::modular::testing::InterceptedComponent {

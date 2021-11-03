@@ -78,7 +78,7 @@ std::mutex kMutex;
 
 void __NO_INLINE PrintFunction(ThreadContext* ctx, int i) {
   PRINT("%s: message %d\n", ctx->name.c_str(), i);
-};
+}
 
 int __NO_INLINE ThreadFunction(void* in) {
   ThreadContext* ctx = reinterpret_cast<ThreadContext*>(in);

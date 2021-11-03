@@ -290,7 +290,7 @@ bool AudioClock::is_clock_monotonic() {
   }
 
   return is_clock_monotonic_;
-};
+}
 
 // We pre-qualify the clock, so the following methods should never fail.
 TimelineFunction AudioClock::ref_clock_to_clock_mono() const {

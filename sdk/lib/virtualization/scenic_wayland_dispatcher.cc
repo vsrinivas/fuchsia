@@ -70,4 +70,4 @@ fuchsia::sys::LauncherPtr ScenicWaylandDispatcher::ConnectToLauncher() const {
   return launcher;
 }
 
-};  // namespace guest
+}  // namespace guest

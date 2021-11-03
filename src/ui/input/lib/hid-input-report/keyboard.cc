@@ -111,7 +111,7 @@ ParseResult Keyboard::ParseReportDescriptor(const hid::ReportDescriptor& hid_rep
     return res;
   }
   return ParseOutputReportDescriptor(hid_report_descriptor);
-};
+}
 
 ParseResult Keyboard::CreateDescriptor(fidl::AnyArena& allocator,
                                        fuchsia_input_report::wire::DeviceDescriptor& descriptor) {

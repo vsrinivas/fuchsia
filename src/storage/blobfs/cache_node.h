@@ -68,8 +68,8 @@ class CacheNode : public fs::PagedVnode,
 
   // If the node should have a specific cache discipline, this method returns it. Otherwise, the
   // system-wide policy is applied.
-  std::optional<CachePolicy> overriden_cache_policy() const { return overriden_cache_policy_; };
-  void set_overridden_cache_policy(CachePolicy policy) { overriden_cache_policy_ = policy; };
+  std::optional<CachePolicy> overriden_cache_policy() const { return overriden_cache_policy_; }
+  void set_overridden_cache_policy(CachePolicy policy) { overriden_cache_policy_ = policy; }
 
  protected:
   // Vnode memory management function called when the reference count reaches 0.

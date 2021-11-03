@@ -50,7 +50,7 @@ class DynamicIfTest : public SimTest {
   // How long an individual test will run for. We need an end time because tests run until no more
   // events remain and if ap's are beaconing the test will run indefinitely.
   static constexpr zx::duration kTestDuration = zx::sec(100);
-  DynamicIfTest() : ap_(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel){};
+  DynamicIfTest() : ap_(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel) {}
   void Init();
 
   // How many devices have been registered by the fake devhost

@@ -75,7 +75,7 @@ class ActiveScanTest : public SimTest {
 
   void GetFirmwarePfnMac();
 
-  uint32_t GetNumProbeReqsSeen() { return num_probe_reqs_seen; };
+  uint32_t GetNumProbeReqsSeen() { return num_probe_reqs_seen; }
 
  protected:
   // This is the interface we will use for our single client interface

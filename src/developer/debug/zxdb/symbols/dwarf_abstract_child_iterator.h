@@ -233,7 +233,7 @@ DwarfAbstractChildIteratorBase<Die>::Iter::Iter(const Die& concrete) : cur_die_(
 
   cur_iter_ = cur_die_.begin();
   UpdateAfterIteratorChange();  // In case the current DIE has no children.
-};
+}
 
 // This function does several things:
 //  - Transparently skips nodes we don't need to visit. These are the ones tracked in

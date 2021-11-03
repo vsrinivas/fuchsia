@@ -19,7 +19,7 @@ class FakeEcho : public test::placeholders::Echo {
  public:
   FakeEcho(fidl::InterfaceRequest<test::placeholders::Echo> request) : binding_(this) {
     binding_.Bind(std::move(request));
-  };
+  }
   ~FakeEcho() override {}
   void EchoString(fidl::StringPtr value, EchoStringCallback callback) override {
     callback(answer_);

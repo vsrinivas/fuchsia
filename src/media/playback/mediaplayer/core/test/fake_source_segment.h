@@ -31,7 +31,7 @@ class FakeSourceSegment : public SourceSegment {
 
   void WillDeprovision() override { will_deprovision_called_ = true; }
 
-  int64_t duration_ns() const override { return duration_ns_; };
+  int64_t duration_ns() const override { return duration_ns_; }
 
   bool can_pause() const override { return can_pause_; }
 

@@ -26,9 +26,9 @@ namespace {
 
 class FileWrapper {
  public:
-  const std::string& buffer() { return buffer_; };
+  const std::string& buffer() { return buffer_; }
 
-  vfs::PseudoFile* file() { return file_.get(); };
+  vfs::PseudoFile* file() { return file_.get(); }
 
   static FileWrapper CreateReadWriteFile(std::string initial_str, size_t capacity,
                                          bool start_loop = true) {
@@ -611,7 +611,7 @@ TEST_F(PseudoFileTest, NodeReferenceIsClonedAsNodeReference) {
 
 class FileWrapperWithFailingWriteFn {
  public:
-  vfs::PseudoFile* file() { return file_.get(); };
+  vfs::PseudoFile* file() { return file_.get(); }
 
   static FileWrapperWithFailingWriteFn Create(std::string initial_str, size_t capacity,
                                               zx_status_t write_error) {

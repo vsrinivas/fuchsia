@@ -48,7 +48,7 @@ class TimestampExtrapolator {
   // timestamp.
   std::optional<uint64_t> Extrapolate(size_t offset);
 
-  bool has_information() const { return last_information_.has_value(); };
+  bool has_information() const { return last_information_.has_value(); }
 
  private:
   struct IndexedTimestamp {

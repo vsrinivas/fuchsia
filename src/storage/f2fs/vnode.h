@@ -67,7 +67,7 @@ class VnodeF2fs : public fs::Vnode,
   zx_status_t SyncFile(loff_t start, loff_t end, int datasync);
   bool NeedToSyncDir();
 
-  void fbl_recycle() { RecycleNode(); };
+  void fbl_recycle() { RecycleNode(); }
 
   F2fs *Vfs() __TA_EXCLUDES(mutex_) {
     fs::SharedLock lock(mutex_);
@@ -237,8 +237,8 @@ class VnodeF2fs : public fs::Vnode,
   uint64_t GetSize() const { return size_; }
 #endif  // __Fuchsia__
 
-  void SetParentNid(const ino_t &pino) { parent_ino_ = pino; };
-  ino_t GetParentNid() const { return parent_ino_; };
+  void SetParentNid(const ino_t &pino) { parent_ino_ = pino; }
+  ino_t GetParentNid() const { return parent_ino_; }
 
   void SetGeneration(const uint32_t &gen) { generation_ = gen; }
   uint32_t GetGeneration() const { return generation_; }

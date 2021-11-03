@@ -203,7 +203,7 @@ void Node::DumpOutputDetail(std::ostream& os, const Output& output) const {
 size_t Node::input_count() const {
   FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   return inputs_.size();
-};
+}
 
 Input& Node::input(size_t input_index) {
   FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
@@ -576,8 +576,7 @@ void Node::ConfigureOutputToProvideVmos(
 
 void Node::ConfigureOutputToUseSysmemVmos(
     ServiceProvider* service_provider, uint64_t max_aggregate_payload_size,
-    VmoAllocation vmo_allocation,
-    zx_vm_option_t map_flags,
+    VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
     std::shared_ptr<fuchsia::sysmem::ImageFormatConstraints> video_constraints,
     size_t output_index) {
   FIT_DCHECK_IS_THREAD_VALID(thread_checker_);

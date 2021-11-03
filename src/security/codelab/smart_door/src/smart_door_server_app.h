@@ -22,7 +22,7 @@ class SmartDoorServer : public fuchsia::security::codelabsmartdoor::Access,
                         public fuchsia::security::codelabsmartdoor::AccessReset {
  public:
   SmartDoorServer(std::shared_ptr<SmartDoorMemoryClient> memory_client)
-      : memory_client_(std::move(memory_client)){};
+      : memory_client_(std::move(memory_client)) {}
   SmartDoorServer(fuchsia::security::codelabsmartdoor::MemorySyncPtr memory);
   virtual void AddHomeMember(std::string user_name, std::vector<uint8_t> passphrase,
                              AddHomeMemberCallback callback);

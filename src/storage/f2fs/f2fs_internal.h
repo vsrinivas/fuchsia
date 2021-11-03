@@ -134,7 +134,7 @@ class SuperblockInfo {
   Checkpoint &GetCheckpoint() { return checkpoint_block_.checkpoint_; }
 
 #ifdef __Fuchsia__
-  fbl::Mutex &GetCheckpointMutex() { return checkpoint_mutex_; };
+  fbl::Mutex &GetCheckpointMutex() { return checkpoint_mutex_; }
 
   fs::SharedMutex &GetFsLock(LockType type) { return fs_lock_[static_cast<int>(type)]; }
 
@@ -269,7 +269,7 @@ class SuperblockInfo {
   void SetExtensionList(std::vector<std::string> list) { extension_list_ = std::move(list); }
 
 #ifdef __Fuchsia__
-  fbl::Mutex &GetStatLock() { return stat_lock_; };
+  fbl::Mutex &GetStatLock() { return stat_lock_; }
 #endif  // __Fuchsia__
 
   void AddPageCount(CountType count_type) {

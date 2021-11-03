@@ -28,8 +28,7 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
   static fbl::RefPtr<BufferSet> Create(uint64_t buffer_lifetime_ordinal,
                                        uint64_t buffer_constraints_version_ordinal);
 
-  BufferSet(uint64_t buffer_lifetime_ordinal,
-            uint64_t buffer_constraints_version_ordinal);
+  BufferSet(uint64_t buffer_lifetime_ordinal, uint64_t buffer_constraints_version_ordinal);
 
   ~BufferSet();
 
@@ -134,7 +133,7 @@ class BufferSetManager {
  public:
   BufferSetManager() = default;
 
-  ~BufferSetManager() { FIT_DCHECK_IS_THREAD_VALID(thread_checker_); };
+  ~BufferSetManager() { FIT_DCHECK_IS_THREAD_VALID(thread_checker_); }
 
   // Determines whether this has a current buffer set.
   bool has_current_set() const {

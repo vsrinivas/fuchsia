@@ -119,7 +119,7 @@ class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::S
   bool IsOutstanding(uint32_t buffer_id) override {
     CheckSameThread();
     return outstanding_buffer_ids_.find(buffer_id) != outstanding_buffer_ids_.end();
-  };
+  }
 
   std::tuple<float, float, float, float> GetRegionOfInterest() override {
     return region_of_interest_;

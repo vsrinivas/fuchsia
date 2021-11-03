@@ -105,7 +105,7 @@ class SvgPathSink {
   setLast(double x, double y)
   {
     setLast(x, y, x, y);
-  };
+  }
   void
   setLast(double x, double y, double xp, double yp);
 
