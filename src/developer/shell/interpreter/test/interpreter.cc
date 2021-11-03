@@ -12,15 +12,15 @@
 shell::console::AstBuilder::NodeId NullNode;
 
 TEST_F(InterpreterTest, ContextNotCreated) {
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(1));
+  ASSERT_CALL_OK(shell()->ExecuteExecutionContext(1));
   Finish(kError);
 
   ASSERT_EQ("Execution context 1 not defined.\n", GlobalErrors());
 }
 
 TEST_F(InterpreterTest, ContextCreatedTwice) {
-  ASSERT_CALL_OK(shell().CreateExecutionContext(1));
-  ASSERT_CALL_OK(shell().CreateExecutionContext(1));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(1));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(1));
   Finish(kError);
 
   ASSERT_EQ("Execution context 1 is already in use.\n", GlobalErrors());
@@ -28,8 +28,8 @@ TEST_F(InterpreterTest, ContextCreatedTwice) {
 
 TEST_F(InterpreterTest, NoPendingInstruction) {
   InterpreterTestContext* context = CreateContext();
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
   ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kAnalysisError, context->result);
@@ -41,13 +41,13 @@ TEST_F(InterpreterTest, NoPendingInstruction) {
 TEST_F(InterpreterTest, GlobalExpression) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(context->id));
 
   shell::console::AstBuilder builder(kFileId);
   builder.SetRoot(builder.AddIntegerLiteral(1));
 
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell()->ExecuteExecutionContext(context->id));
 
   Finish(kExecute);
 
@@ -60,13 +60,13 @@ TEST_F(InterpreterTest, GlobalExpression) {
 TEST_F(InterpreterTest, BadAst) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(context->id));
 
   shell::console::AstBuilder builder(kFileId);
   builder.AddIntegerLiteral(1, true);
 
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell()->ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
   ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kAnalysisError, context->result);
@@ -78,7 +78,7 @@ TEST_F(InterpreterTest, BadAst) {
 TEST_F(InterpreterTest, VariableDefinition) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(context->id));
 
   shell::console::AstBuilder builder(kFileId);
   builder.AddVariableDeclaration("foo", builder.TypeUint64(), NullNode, false, true);
@@ -87,8 +87,8 @@ TEST_F(InterpreterTest, VariableDefinition) {
   builder.AddVariableDeclaration("x", builder.TypeUint64(), builder.AddIntegerLiteral(10, false),
                                  true, true);
 
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
-  ASSERT_CALL_OK(shell().DumpExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell()->DumpExecutionContext(context->id));
   Finish(kDump);
 
   ASSERT_FALSE(last_text_result_partial());
@@ -101,7 +101,7 @@ TEST_F(InterpreterTest, VariableDefinition) {
 TEST_F(InterpreterTest, BuiltinTypes) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(context->id));
 
   shell::console::AstBuilder builder(kFileId);
   builder.AddVariableDeclaration("b", builder.TypeBool(), NullNode, false, true);
@@ -119,8 +119,8 @@ TEST_F(InterpreterTest, BuiltinTypes) {
   builder.AddVariableDeclaration("f32", builder.TypeFloat32(), NullNode, false, true);
   builder.AddVariableDeclaration("f64", builder.TypeFloat64(), NullNode, false, true);
 
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
-  ASSERT_CALL_OK(shell().DumpExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell()->DumpExecutionContext(context->id));
   Finish(kDump);
 
   ASSERT_FALSE(last_text_result_partial());
@@ -144,7 +144,7 @@ TEST_F(InterpreterTest, BuiltinTypes) {
 TEST_F(InterpreterTest, Objects) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(context->id));
   shell::console::AstBuilder builder(kFileId);
 
   {
@@ -208,8 +208,8 @@ TEST_F(InterpreterTest, Objects) {
   builder.AddEmitResult(builder.AddVariable("obj3"));
   builder.AddEmitResult(builder.AddVariable("obj4"));
 
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell()->ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
   ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
@@ -225,7 +225,7 @@ TEST_F(InterpreterTest, Objects) {
 TEST_F(InterpreterTest, VariableOk) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(context->id));
 
   shell::console::AstBuilder builder(kFileId);
   builder.AddVariableDeclaration("foo", builder.TypeUint64(), builder.AddIntegerLiteral(1, false),
@@ -239,8 +239,8 @@ TEST_F(InterpreterTest, VariableOk) {
   builder.AddEmitResult(builder.AddVariable("bar"));
   builder.AddEmitResult(builder.AddVariable("groucho"));
 
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell()->ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
   ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
@@ -253,15 +253,15 @@ TEST_F(InterpreterTest, VariableOk) {
 TEST_F(InterpreterTest, VariableNoType) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(context->id));
 
   shell::console::AstBuilder builder(kFileId);
   builder.AddVariableDeclaration("bar", builder.TypeUndef(), NullNode, false, true);
   builder.AddVariableDeclaration("foo", builder.TypeUndef(), builder.AddIntegerLiteral(1, false),
                                  false, true);
 
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell()->ExecuteExecutionContext(context->id));
 
   Finish(kExecute);
   ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kAnalysisError, context->result);
@@ -276,14 +276,14 @@ TEST_F(InterpreterTest, VariableNoType) {
 TEST_F(InterpreterTest, VariableDefinedTwice) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(context->id));
 
   shell::console::AstBuilder builder(kFileId);
   builder.AddVariableDeclaration("bar", builder.TypeUint64(), NullNode, false, true);
   builder.AddVariableDeclaration("bar", builder.TypeUint64(), NullNode, false, true);
 
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell()->ExecuteExecutionContext(context->id));
 
   Finish(kExecute);
   ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kAnalysisError, context->result);
@@ -298,7 +298,7 @@ TEST_F(InterpreterTest, VariableDefinedTwice) {
 TEST_F(InterpreterTest, BadIntegerLiterals) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(context->id));
 
   shell::console::AstBuilder builder(kFileId);
   builder.AddVariableDeclaration("i8p", builder.TypeInt8(), builder.AddIntegerLiteral(0x80, false),
@@ -336,8 +336,8 @@ TEST_F(InterpreterTest, BadIntegerLiterals) {
   builder.AddVariableDeclaration("u64n", builder.TypeUint64(), builder.AddIntegerLiteral(1, true),
                                  true, true);
 
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell()->ExecuteExecutionContext(context->id));
 
   Finish(kExecute);
   ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kAnalysisError, context->result);
@@ -365,7 +365,7 @@ TEST_F(InterpreterTest, BadIntegerLiterals) {
 TEST_F(InterpreterTest, GoodIntegerLiterals) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(context->id));
 
   shell::console::AstBuilder builder(kFileId);
   builder.AddVariableDeclaration("i8p", builder.TypeInt8(), builder.AddIntegerLiteral(0x7f, false),
@@ -406,8 +406,8 @@ TEST_F(InterpreterTest, GoodIntegerLiterals) {
   builder.AddVariableDeclaration("u64n", builder.TypeUint64(), builder.AddIntegerLiteral(0, false),
                                  true, true);
 
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell()->ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
   ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());

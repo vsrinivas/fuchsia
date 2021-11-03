@@ -65,7 +65,7 @@ void InterpreterTest::Finish(FinishAction action, const std::vector<std::string>
   Run(action);
   // Shutdown the interpreter (that also closes the channel => we can't use it anymore after this
   // call).
-  auto errors = shell().Shutdown();
+  auto errors = shell()->Shutdown();
   // Checks if the errors are what we expected.
   bool ok = true;
   if (expected_errors.size() != errors->errors.count()) {

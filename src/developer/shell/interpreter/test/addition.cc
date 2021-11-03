@@ -15,7 +15,7 @@
 TEST_F(InterpreterTest, StringAdditionOk) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(context->id));
 
   shell::console::AstBuilder builder(kFileId);
   builder.AddVariableDeclaration("marx", builder.TypeString(), builder.AddStringLiteral("Marx"),
@@ -41,8 +41,8 @@ TEST_F(InterpreterTest, StringAdditionOk) {
   builder.AddEmitResult(builder.AddVariable("groucho1"));
   builder.AddEmitResult(builder.AddVariable("groucho2"));
 
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell()->ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
   ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
@@ -54,7 +54,7 @@ TEST_F(InterpreterTest, StringAdditionOk) {
 TEST_F(InterpreterTest, StringAdditionEmpty) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(context->id));
 
   shell::console::AstBuilder builder(kFileId);
   builder.AddVariableDeclaration("foo", builder.TypeString(), builder.AddStringLiteral("foo"),
@@ -73,8 +73,8 @@ TEST_F(InterpreterTest, StringAdditionEmpty) {
   builder.AddEmitResult(builder.AddVariable("foo1"));
   builder.AddEmitResult(builder.AddVariable("foo2"));
 
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell()->ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
   ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
@@ -88,7 +88,7 @@ TEST_F(InterpreterTest, StringAdditionEmpty) {
 #define ExecuteAddition(type, with_exceptions, left, right)                           \
   constexpr uint64_t kFileId = 1;                                                     \
   InterpreterTestContext* context = CreateContext();                                  \
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));                        \
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(context->id));                       \
                                                                                       \
   shell::console::AstBuilder builder(kFileId);                                        \
   builder.AddVariableDeclaration("x", type,                                           \
@@ -104,8 +104,8 @@ TEST_F(InterpreterTest, StringAdditionEmpty) {
                                                                                       \
   builder.AddEmitResult(builder.AddVariable("y"));                                    \
                                                                                       \
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));          \
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));                       \
+  ASSERT_CALL_OK(shell()->AddNodes(context->id, builder.DefsAsVectorView()));         \
+  ASSERT_CALL_OK(shell()->ExecuteExecutionContext(context->id));                      \
   Finish(kExecute);
 
 #define DoAdditionTest(name, type, with_exceptions, left, right, result)      \

@@ -13,7 +13,7 @@
   TEST_F(InterpreterTest, name) {                                                              \
     constexpr uint64_t kFileId = 1;                                                            \
     InterpreterTestContext* context = CreateContext();                                         \
-    shell().CreateExecutionContext(context->id);                                               \
+    shell()->CreateExecutionContext(context->id);                                              \
                                                                                                \
     shell::console::AstBuilder builder(kFileId);                                               \
     builder.AddVariableDeclaration("x", type,                                                  \
@@ -25,8 +25,8 @@
                                                   ? builder.AddIntegerLiteral(-right, true)    \
                                                   : builder.AddIntegerLiteral(right, false))); \
                                                                                                \
-    shell().AddNodes(context->id, builder.DefsAsVectorView());                                 \
-    shell().ExecuteExecutionContext(context->id);                                              \
+    shell()->AddNodes(context->id, builder.DefsAsVectorView());                                \
+    shell()->ExecuteExecutionContext(context->id);                                             \
     Finish(kExecute);                                                                          \
                                                                                                \
     ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());                  \
@@ -49,7 +49,7 @@ EmitResultTest(EmitResultUint64, builder.TypeUint64(), 10000000000LL, 3000000000
 TEST_F(InterpreterTest, EmitResultString) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  shell().CreateExecutionContext(context->id);
+  shell()->CreateExecutionContext(context->id);
 
   shell::console::AstBuilder builder(kFileId);
   builder.AddVariableDeclaration("good", builder.TypeString(), builder.AddStringLiteral("good"),
@@ -57,8 +57,8 @@ TEST_F(InterpreterTest, EmitResultString) {
   builder.AddEmitResult(builder.AddAddition(/*with_exceptions=*/true, builder.AddVariable("good"),
                                             builder.AddStringLiteral(" morning")));
 
-  shell().AddNodes(context->id, builder.DefsAsVectorView());
-  shell().ExecuteExecutionContext(context->id);
+  shell()->AddNodes(context->id, builder.DefsAsVectorView());
+  shell()->ExecuteExecutionContext(context->id);
   Finish(kExecute);
 
   ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
@@ -69,7 +69,7 @@ TEST_F(InterpreterTest, EmitResultString) {
 TEST_F(InterpreterTest, EmitObject) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->CreateExecutionContext(context->id));
 
   shell::console::AstBuilder builder(kFileId);
 
@@ -85,8 +85,8 @@ TEST_F(InterpreterTest, EmitObject) {
   shell::console::AstBuilder::NodePair obj2 = builder.CloseObject();
   builder.AddEmitResult(obj2.value_node);
 
-  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
-  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
+  ASSERT_CALL_OK(shell()->AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell()->ExecuteExecutionContext(context->id));
   Finish(kExecute);
 
   ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());
@@ -98,7 +98,7 @@ TEST_F(InterpreterTest, EmitObject) {
 TEST_F(InterpreterTest, EmitMultipleResults) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  shell().CreateExecutionContext(context->id);
+  shell()->CreateExecutionContext(context->id);
 
   shell::console::AstBuilder builder(kFileId);
   builder.AddVariableDeclaration("x", builder.TypeInt64(), builder.AddIntegerLiteral(1250, false),
@@ -110,8 +110,8 @@ TEST_F(InterpreterTest, EmitMultipleResults) {
   builder.AddEmitResult(builder.AddAddition(/*with_exceptions=*/false, builder.AddVariable("x"),
                                             builder.AddIntegerLiteral(1000, true)));
 
-  shell().AddNodes(context->id, builder.DefsAsVectorView());
-  shell().ExecuteExecutionContext(context->id);
+  shell()->AddNodes(context->id, builder.DefsAsVectorView());
+  shell()->ExecuteExecutionContext(context->id);
   Finish(kExecute);
 
   ASSERT_EQ(fuchsia_shell::wire::ExecuteResult::kOk, context->GetResult());

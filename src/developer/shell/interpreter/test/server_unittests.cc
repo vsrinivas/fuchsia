@@ -23,13 +23,13 @@ TEST(Server, ShutdownService) {
 
   // Call |fuchsia.shell/Shell.Shutdown| on the connection.
   fidl::WireSyncClient<fuchsia_shell::Shell> client(std::move(endpoints->client));
-  auto result = client.Shutdown();
+  auto result = client->Shutdown();
   ASSERT_EQ(ZX_OK, result.status()) << "Shutdown failed: " << result.error();
 
   // We should observe the server proactively terminating the connection.
   zx_signals_t observed = ZX_SIGNAL_NONE;
-  ASSERT_EQ(ZX_OK,
-            client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed));
+  ASSERT_EQ(ZX_OK, client.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
+                                                          zx::time::infinite(), &observed));
   ASSERT_EQ(ZX_CHANNEL_PEER_CLOSED, observed);
 
   loop.Shutdown();
