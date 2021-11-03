@@ -669,6 +669,7 @@ test("platform-bus-bti") {
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

@@ -200,20 +200,20 @@ TEST(PbusTest, BoardInfo) {
 
   fidl::WireSyncClient<fuchsia_sysinfo::SysInfo> client(std::move(channel));
   // Get board name.
-  auto board_info = client.GetBoardName();
+  auto board_info = client->GetBoardName();
   EXPECT_OK(board_info.status());
   EXPECT_TRUE(board_info.ok());
   EXPECT_BYTES_EQ(board_info->name.cbegin(), "pbus-test", board_info->name.size());
   EXPECT_EQ(board_info->name.size(), strlen("pbus-test"));
 
   // Get interrupt controller information.
-  auto irq_ctrl_info = client.GetInterruptControllerInfo();
+  auto irq_ctrl_info = client->GetInterruptControllerInfo();
   EXPECT_OK(irq_ctrl_info.status());
   EXPECT_TRUE(irq_ctrl_info.ok());
   EXPECT_NE(nullptr, irq_ctrl_info->info);
 
   // Get board revision information.
-  auto board_revision = client.GetBoardRevision();
+  auto board_revision = client->GetBoardRevision();
   EXPECT_OK(board_revision.status());
   EXPECT_TRUE(board_revision.ok());
 }

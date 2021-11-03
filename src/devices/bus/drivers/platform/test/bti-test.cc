@@ -8,6 +8,7 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/devmgr-launcher/launch.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/time.h>
@@ -86,13 +87,14 @@ TEST(PbusBtiTest, BtiIsSameAfterCrash) {
 
   fbl::unique_fd fd;
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), kDevicePath, &fd));
-  zx::channel chan;
-  ASSERT_OK(fdio_get_service_handle(fd.release(), chan.reset_and_get_address()));
+  zx::status bti_client_end =
+      fdio_cpp::FdioCaller(std::move(fd)).take_as<fuchsia_hardware_btitest::BtiDevice>();
+  ASSERT_OK(bti_client_end.status_value());
 
-  fidl::WireSyncClient<fuchsia_hardware_btitest::BtiDevice> client(std::move(chan));
+  fidl::WireSyncClient client(std::move(*bti_client_end));
   uint64_t koid1;
   {
-    auto result = client.GetKoid();
+    auto result = client->GetKoid();
     ASSERT_OK(result.status());
     koid1 = result->koid;
   }
@@ -102,19 +104,21 @@ TEST(PbusBtiTest, BtiIsSameAfterCrash) {
   ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd), &watcher));
 
   {
-    auto result = client.Crash();
+    auto result = client->Crash();
     ASSERT_OK(result.status());
   }
 
   // We implicitly rely on driver host being rebound in the event of a crash.
   ASSERT_OK(watcher->WaitForRemoval("test-bti", zx::duration::infinite()));
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), kDevicePath, &fd));
-  ASSERT_OK(fdio_get_service_handle(fd.release(), chan.reset_and_get_address()));
-  *client.mutable_channel() = std::move(chan);
+  bti_client_end =
+      fdio_cpp::FdioCaller(std::move(fd)).take_as<fuchsia_hardware_btitest::BtiDevice>();
+  ASSERT_OK(bti_client_end.status_value());
+  client = fidl::BindSyncClient(std::move(*bti_client_end));
 
   uint64_t koid2;
   {
-    auto result = client.GetKoid();
+    auto result = client->GetKoid();
     ASSERT_OK(result.status());
     koid2 = result->koid;
   }
